@@ -12,8 +12,9 @@ The capability's first artefacts, each held to living-docs DEC-001:
   resolution itself is `test_living_docs_points.py`'s);
 - the **LDOC rule set** validating as a method rule set with its origins, and
   a space definition instantiated from the template inheriting it;
-- the **page template** validating — its own fields by the capability's
-  schema, its friction block by the core's.
+- the **page templates** — the signpost and the reference page — each
+  validating: its own fields by the capability's schema, its friction block
+  by the core's.
 
 The validator runs as a subprocess under this interpreter, as the backbone
 runs it (its `--json` findings document); where `pkit validate` runs it, the
@@ -536,9 +537,23 @@ def _template_front_matter(name: str) -> dict[str, Any]:
     return YAML(typ="safe").load(front)
 
 
-def test_the_page_template_validates_its_fields_and_its_friction_block() -> None:
-    front = _template_front_matter("signpost")
-    assert (front["reader"], front["kind"]) == ("user", "signpost")
+#: Every template but the space definition's is a page template, named for its kind:
+#: a kind arrives with its template (RS-LDOC-004; the page schema's `kind`).
+PAGE_TEMPLATES = sorted(
+    path.stem
+    for path in (CAPABILITY / "templates").glob("*.md")
+    if path.stem != "space-definition"
+)
+
+
+def test_the_page_templates_are_the_signpost_and_the_reference_page() -> None:
+    assert PAGE_TEMPLATES == ["reference", "signpost"]
+
+
+@pytest.mark.parametrize("kind", PAGE_TEMPLATES)
+def test_the_page_template_validates_its_fields_and_its_friction_block(kind: str) -> None:
+    front = _template_front_matter(kind)
+    assert (front["reader"], front["kind"]) == ("user", kind)
     assert list(_page_schema().iter_errors(front)) == []
     container = bs.load_backbone_schema(REPO, "container")
     result = bs.validate_container(front, container, wiring=bs.ContainerWiring())

@@ -42,15 +42,19 @@ pre_close_triage_lead_days: 3
 # Keep enforce: false for BROAD tree->README rules — they false-positive on most
 # PRs (see the dry-run audit). Only enforce SURGICAL 1:1 surface->doc couplings.
 # The mandatory `## Doc impact` section stays the universal hard gate.
+#
+# project-kit keeps no rules here (#1010). Its six tree->README rules became
+# page anchors: each README now anchors, in its own front matter, the code it
+# describes, and the enforcing friction check (COR-050; ADR-055 point 5)
+# holds the page to it — a stricter obligation than an advisory rule. The
+# rules' code patterns stay the declared surface (`friction.surface` in
+# .pkit/project/config.yaml), so code no page anchors to is still reported —
+# as uncovered surface, and as living-docs' `code-undocumented` obligation
+# (below). A rule belongs here again only for documentation that is not a
+# page.
 code_path_to_doc_mapping:
   enforce: false
-  rules:
-    - { code: "src/**", docs: [README.md, .pkit/cli/README.md] }
-    - { code: ".pkit/cli/**", docs: [.pkit/cli/README.md, README.md] }
-    - { code: ".pkit/capabilities/project-management/**", docs: [.pkit/capabilities/project-management/README.md] }
-    - { code: ".pkit/capabilities/evidence/**", docs: [.pkit/capabilities/evidence/README.md] }
-    - { code: ".pkit/capabilities/software-engineering/**", docs: [.pkit/capabilities/software-engineering/README.md] }
-    - { code: ".pkit/adapters/**", docs: [.pkit/adapters/README.md] }
+  rules: []
   # To hard-enforce a surgical 1:1 coupling, e.g.:
   #   enforce: true
   #   rules:
@@ -62,8 +66,10 @@ code_path_to_doc_mapping:
 # source contributes are never met by a `## Doc impact` line: a documentation
 # capability's friction on an anchored page is met only by the page changed in
 # the diff, and code nothing documents only once a page anchors it. Each source
-# has its own setting here: advisory (the default) or enforcing. Nothing
-# contributes here yet, so no source is listed, e.g.:
+# has its own setting here: advisory (the default) or enforcing. living-docs
+# contributes the `friction` source — a stale or deferred page, and each
+# declared-surface path no page anchors — and no source is set here, so it
+# stays advisory; to make it block:
 #   doc_check:
 #     sources:
 #       friction: enforcing

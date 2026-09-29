@@ -1,3 +1,22 @@
+---
+reader: maintainer
+kind: reference
+pkit:
+  friction:
+    anchors:
+      path:
+        - src/project_kit/release.py
+        - src/project_kit/changesets.py
+        - src/project_kit/versioning.py
+        - .changie.yaml
+        - .github/workflows/release-pr.yml
+        - .github/workflows/release-tag.yml
+      record: [COR-010, COR-041, PRJ-002, PRJ-004, ADR-040]
+    revalidated:
+      at: 2026-09-29T15:20:31Z
+      outcome: updated
+---
+
 # Release flow — changesets + the release step
 
 *Mechanics for project-kit-the-project's declared, release-driven version

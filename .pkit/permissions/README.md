@@ -1,3 +1,23 @@
+---
+reader: user
+kind: reference
+pkit:
+  friction:
+    anchors:
+      path:
+        - .pkit/permissions/*.py
+        - .pkit/permissions/profiles/**
+        - .pkit/schemas/privilege-catalog.yaml
+        - .pkit/schemas/privilege-catalog.schema.json
+        - .pkit/adapters/claude-code/permission-hook.py
+        - src/project_kit/permissions.py
+        - src/project_kit/workspace.py
+      record: [COR-028, PRJ-006, ADR-002, ADR-003, ADR-004, ADR-009, ADR-014, ADR-016, ADR-021, ADR-025, ADR-060]
+    revalidated:
+      at: 2026-09-29T15:15:34Z
+      outcome: updated
+---
+
 # Permissions — decision core
 
 Propagated, harness-neutral code home for the permission **decision core** (per [COR-028](../decisions/core/COR-028-permission-model-realization.md) and [ADR-003](../../tech-docs/architecture/decisions/ADR-003-permission-core-code-home.md)).

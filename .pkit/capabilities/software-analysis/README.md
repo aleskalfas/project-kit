@@ -1,3 +1,20 @@
+---
+reader: user
+kind: reference
+pkit:
+  friction:
+    anchors:
+      path:
+        - .pkit/capabilities/software-analysis/scripts/**
+        - .pkit/capabilities/software-analysis/schemas/**
+        - .pkit/capabilities/software-analysis/skills/**
+        - .pkit/capabilities/software-analysis/agents/**
+      record: ["software-analysis:DEC-001", COR-049, COR-050, COR-053]
+    revalidated:
+      at: 2026-09-29T15:17:32Z
+      outcome: updated
+---
+
 # software-analysis capability
 
 Keep a written, checkable account of **what your software must do**, and keep it true as the software changes. The account covers who uses it (actors), what they're trying to achieve and how (use cases), the end-to-end paths across several use cases (journeys), and what the words mean (glossary).
@@ -63,7 +80,7 @@ pkit:                           # the methodology's container (COR-053); everyth
 
 **Revalidation record** (`<date>-<subject>.md`): front matter with `change` (a work item, a pull request, or commits), `trigger` (`planned` | `drift` | `scheduled` | `close` | `onboarding`), the date performed, who did it (and who confirmed), and the ids of the artefacts covered. The body has one outcome per artefact, then the gaps and what resolved each.
 
-The friction block (anchors and revalidation) follows the core anchors-and-friction schema, inside the `pkit:` container in each artefact's front matter. The examples above are illustrative until that schema ships.
+The friction block (anchors and revalidation) follows the core anchors-and-friction schema, inside the `pkit:` container in each artefact's front matter; `pkit validate` checks it against that schema, which the backbone ships.
 
 ## Connections (design-ahead)
 

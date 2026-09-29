@@ -1,5 +1,24 @@
 ---
 variant: universal
+reader: user
+kind: reference
+pkit:
+  friction:
+    anchors:
+      path:
+        - src/project_kit/agents.py
+        - src/project_kit/agents_overlay.py
+        - src/project_kit/agent_policy.py
+        - src/project_kit/storyboards.py
+        - src/project_kit/refs.py
+        - src/project_kit/docs_roots.py
+        - .pkit/lifecycle/ownership.py
+        - .pkit/adapters/claude-code/deploy-agents.sh
+        - .pkit/adapters/claude-code/_resolve_agent.py
+      record: [COR-005, COR-006, COR-011, COR-013, COR-014, COR-015, COR-016, COR-026, COR-049, ADR-051, ADR-052]
+    revalidated:
+      at: 2026-09-29T15:15:25Z
+      outcome: updated
 ---
 
 # Agents
@@ -121,7 +140,7 @@ The check covers `owns:` overlap only. It does not verify that a resolved path e
 
 Resolution applies to the **ownership** comparison, not to citation coverage: the bidirectional check still satisfies a `<category>` entry by finding that *placeholder* in the body, deliberately. A core-shipped agent cannot cite an adopter's real paths in its prose without breaking project-neutrality, so the placeholder is the honest thing for the body to carry — the resolved paths are what ownership is judged over.
 
-Additional graph operations live in the `pkit refs` CLI family — show, who-references, rename, rot, graph, lookup. See `.pkit/cli/README.md` for the full surface once it ships.
+Additional graph operations live in the `pkit refs` CLI family — show, who-references, rename, rot, graph, lookup. See `.pkit/cli/README.md` for the full surface.
 
 ## Hooks
 

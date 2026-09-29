@@ -1,6 +1,24 @@
+---
+reader: user
+kind: reference
+pkit:
+  friction:
+    anchors:
+      path:
+        - .pkit/adapters/claude-code/*.sh
+        - .pkit/adapters/claude-code/*.py
+        - .pkit/adapters/claude-code/settings/core/**
+        - .pkit/adapters/claude-code/permission-enforcement.yaml
+        - src/project_kit/visibility.py
+      record: [COR-002, COR-005, COR-028, ADR-002, ADR-004, ADR-009, ADR-014, ADR-052, ADR-060, "project-management:DEC-030"]
+    revalidated:
+      at: 2026-09-29T15:18:46Z
+      outcome: updated
+---
+
 # Claude Code adapter
 
-Translates kit content for the [Claude Code](https://docs.claude.com/en/docs/claude-code/) harness. This adapter is what makes a project-kit-adopting project usable from Claude Code — sets up its permissions, deploys its skills, and (eventually) its agents.
+Translates kit content for the [Claude Code](https://docs.claude.com/en/docs/claude-code/) harness. This adapter is what makes a project-kit-adopting project usable from Claude Code — sets up its permissions and deploys its skills and agents.
 
 ## What this adapter ships
 
@@ -10,6 +28,7 @@ Translates kit content for the [Claude Code](https://docs.claude.com/en/docs/cla
 ├── settings/
 │   ├── core/settings.json             # kit baseline — universal allows + denies
 │   └── project/settings.json          # adopter's project-specific additions
+├── merge-settings.sh                  # merges the settings baseline + project additions into .claude/settings.json
 ├── merge-claude-md.sh                 # ensures root CLAUDE.md loads the kit rules via @-includes
 ├── deploy-skills.sh                   # creates .claude/skills/ symlinks pointing back at .pkit/skills/
 ├── deploy-agents.sh                   # writes resolved agent copies into .claude/agents/
@@ -25,7 +44,7 @@ The kit's permissions story for Claude Code — what allows and denies are pre-c
 - **`core/settings.json`** — kit baseline. Universal allows (`gh`, `git`, `ssh`, common UNIX tools, kit-shipped script execution, agent-tool allows, `Skill(update-config)`) and universal safety denies (`git push --force` variants, `git reset --hard`, `rm -rf` family, `sudo`). The discriminator is "would every project-kit adopter benefit?"
 - **`project/settings.json`** — adopter's project-specific additions on top of the baseline (language tooling, enterprise hosts, project-specific paths). Adopters typically add allows here; denies stay in the kit baseline.
 
-The file Claude Code actually reads is the adopter's `.claude/settings.json`, hand-merged from these two until the merge command lands per COR-002 / COR-004. See **How adopters use this adapter** below.
+The file Claude Code actually reads is the adopter's `.claude/settings.json`, merged from these two by `merge-settings.sh`, which `pkit init`, `pkit sync` and `pkit merge` run (COR-002 / COR-004). See **How adopters use this adapter** below.
 
 Top-level keys outside `permissions` (e.g. `agent`, `model`) in either `core/settings.json` or `project/settings.json` flow through to `.claude/settings.json` with last-write-wins precedence (project overrides core; an existing adopter entry overrides both). Permissions keep their existing union-deduped semantics.
 
@@ -127,7 +146,7 @@ The install/sync runtime (`pkit init` / `pkit sync`) automates all adapter primi
 1. **Permissions.** Hand-merge `settings/core/settings.json` + `settings/project/settings.json` into your project's `.claude/settings.json`. Per COR-002's merge contract: append-only for adopter content, baseline-enforce for safety denies, idempotent. Or just run `merge-settings.sh`.
 2. **Rules include.** Run `.pkit/adapters/claude-code/merge-claude-md.sh`. Ensures the root `CLAUDE.md` includes `@.pkit/rules/core.md` so the kit-shipped hard rules and tool-hygiene conventions load into the agent. Idempotent; never clobbers adopter content.
 3. **Skills.** Run `.pkit/adapters/claude-code/deploy-skills.sh`. Creates the `.claude/skills/` symlinks (tracked in git per the project's `.gitignore`, so a fresh clone has the same environment).
-4. **Agents.** Run `.pkit/adapters/claude-code/deploy-agents.sh` (once agents have content).
+4. **Agents.** Run `.pkit/adapters/claude-code/deploy-agents.sh`.
 5. **Permission enforcement (opt-in).** Run `pkit permissions enable` to register the PreToolUse hook; `pkit permissions disable` to remove it. See *Live permission enforcement* above.
 
 ### Git footprint (per ADR-009)
@@ -136,7 +155,7 @@ This adapter declares its out-of-`.pkit/` deploys as a `footprint:` list in its 
 
 ## Project-kit's own use
 
-project-kit self-hosts: it's the first adopter of its own kit. The `.claude/settings.json` at the repo root and the symlinks under `.claude/skills/` are what's been deployed by hand-following the steps above. When the merge command exists, project-kit re-deploys via the command.
+project-kit self-hosts: it's the first adopter of its own kit. The `.claude/settings.json` at the repo root, the symlinks under `.claude/skills/` and the agent copies under `.claude/agents/` are deployed by `pkit sync`, which on self-host runs the steps above instead of propagating (the CLI reference, `sync`).
 
 ## Codex / other harnesses
 

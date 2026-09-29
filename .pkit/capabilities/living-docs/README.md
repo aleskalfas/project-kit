@@ -1,3 +1,21 @@
+---
+reader: user
+kind: reference
+pkit:
+  friction:
+    anchors:
+      path:
+        - .pkit/capabilities/living-docs/scripts/**
+        - .pkit/capabilities/living-docs/schemas/**
+        - .pkit/capabilities/living-docs/agents/**
+        - .pkit/capabilities/living-docs/templates/**
+      record: ["living-docs:DEC-001", COR-049, COR-050, COR-051, COR-053]
+      artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006]
+    revalidated:
+      at: 2026-09-29T15:23:49Z
+      outcome: updated
+---
+
 # living-docs capability
 
 Keep your documentation **true for the people who read it**, even when an agent writes most of it. Documentation is organised into spaces by audience: user-facing docs for people who use the system, and technical docs for the people and agents who build it. Every page names its reader and is anchored to what makes it true. When those anchors change, drift is detected, and an agent proposes the fix for a person to review. The rule is in [living-docs:DEC-001-living-docs-discipline].
@@ -47,6 +65,7 @@ You never edit `LDOC`; a space's definition inherits it, pinned to its major (`i
 
 - **`space-definition.md`** — a space's definition: a project rule set that inherits `LDOC` and holds the space's own rules, each carrying its friction block in its own container. Copy it to `<definitions>/rule-sets/<space>.md` (below), rename the set, and name the file as the space's `definition`. The user space adds one rule of its own: its readers' paths stay unbroken (DEC-001 point 3).
 - **`signpost.md`** — the page template for the one page kind the decision names: an index-like file that says what a folder holds and where to go (`RS-LDOC-005`). A page of another kind arrives with its template.
+- **`reference.md`** — the page template for a reference page: the page that describes one surface — an area, a capability, an adapter — to the reader who uses it, anchored to the code and decisions it describes.
 
 ## Declaring your spaces
 
@@ -150,7 +169,7 @@ From then on, the friction check flags pages as their anchors change, and the ag
 
 ## What's shipped now, what's next
 
-Shipped: the decision, the project configuration's schema, the declaration of the roots as places and of the definitions location, the validator, the `LDOC` rule set, the space-definition template and the signpost page template with the page's schema, the connections (the readers and reading-evidence points, and the contribution to the documentation check), and the `living-docs` agent that proposes fixes, performs reader-review and onboards existing documentation.
+Shipped: the decision, the project configuration's schema, the declaration of the roots as places and of the definitions location, the validator, the `LDOC` rule set, the space-definition template and the signpost and reference page templates with the page's schema, the connections (the readers and reading-evidence points, and the contribution to the documentation check), and the `living-docs` agent that proposes fixes, performs reader-review and onboards existing documentation.
 
 ## Citing this capability's decisions
 

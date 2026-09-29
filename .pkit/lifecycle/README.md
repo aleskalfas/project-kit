@@ -1,5 +1,34 @@
 ---
 variant: specialized
+reader: user
+kind: reference
+pkit:
+  friction:
+    anchors:
+      path:
+        - .pkit/lifecycle/**
+        - src/project_kit/__init__.py
+        - src/project_kit/manifest.py
+        - src/project_kit/capabilities.py
+        - src/project_kit/capability_plans.py
+        - src/project_kit/connections.py
+        - src/project_kit/data_points.py
+        - src/project_kit/command_runner.py
+        - src/project_kit/provisioning.py
+        - src/project_kit/package_validate.py
+        - src/project_kit/process_dependencies.py
+        - src/project_kit/migrations.py
+        - src/project_kit/sync.py
+        - src/project_kit/upgrade.py
+        - src/project_kit/treecopy.py
+        - src/project_kit/lifecycle_ownership.py
+        - .pkit/schemas/backbone/package.schema.json
+        - .pkit/schemas/backbone/filler.schema.json
+        - hatch_build.py
+      record: [COR-010, COR-017, COR-027, COR-030, COR-031, COR-052, COR-053, ADR-056, ADR-057, ADR-059]
+    revalidated:
+      at: 2026-09-29T15:15:33Z
+      outcome: updated
 ---
 
 # Lifecycle
@@ -10,7 +39,7 @@ The architecture lives here. The rules and rationale (why two tiers, why per-com
 
 Paths and exact YAML shapes are illustrative — the install/sync runtime (per the build roadmap + COR-004) settles them. The shapes here are what every other area of the kit can rely on once the runtime ships.
 
-Developers don't stamp these layouts by hand. The kit ships authoring commands (`pkit new adapter <name>`, `pkit new capability <name>`, `pkit new migration [...]` — specified in `.pkit/cli/README.md` and grounded in COR-005 + COR-017) that scaffold the contract this document defines. Templates for the manifest skeletons and migration scripts live in `.pkit/lifecycle/templates/` so a kit upgrade that changes a contract also updates what gets stamped.
+Developers don't stamp these layouts by hand. The kit ships authoring commands (`pkit new adapter <name>`, `pkit new capability <name>`, `pkit new migration [...]` — specified in `.pkit/cli/README.md` and grounded in COR-005 + COR-017) that scaffold the contract this document defines. The scaffolds are stamped by the CLI's own code, which ships with the binary, so a kit upgrade that changes a contract also updates what gets stamped.
 
 ## Layout
 
@@ -40,7 +69,7 @@ Developers don't stamp these layouts by hand. The kit ships authoring commands (
 
 **Backbone** — the cohesive core that ships together: decisions (CORs and the spec), rules, the CLI / runtime. One coordinated release, one version number.
 
-**Components** — installable, independently-versioned pieces that depend on a backbone version range. Capabilities (`project-management`, `evidence` today; per COR-017) and adapters (`claude-code` today; future `codex` / `cursor` / etc.) are components. Each component declares a semver range of compatible backbone versions in its `package.yaml`. (Per COR-027, the bundle pattern was retired — alternative implementations within a capability live as capability-internal data, not as filesystem-level bundles.)
+**Components** — installable, independently-versioned pieces that depend on a backbone version range. Capabilities (`project-management`, `evidence`, `software-engineering`, `demo-recording`, `software-analysis` and `living-docs` today; per COR-017) and adapters (`claude-code` today; future `codex` / `cursor` / etc.) are components. Each component declares a semver range of compatible backbone versions in its `package.yaml`. (Per COR-027, the bundle pattern was retired — alternative implementations within a capability live as capability-internal data, not as filesystem-level bundles.)
 
 Both tiers use semantic versioning (`major.minor.patch`). Components express compatibility via `requires_backbone: ">=X.Y.Z, <W.0.0"`. Patch-level releases are backward-compatible bug fixes and have no migrations — migration directories are named with the full three-segment target version, with patch always `0` (e.g., `2.1.0/`), and cover all patches within that minor line.
 
@@ -654,7 +683,7 @@ A full worked example demonstrating the upgrade flow across backbone + component
 
 For concrete examples of the contract this document defines, see:
 
-- The kit's own `.pkit/manifest.yaml` for the backbone-manifest shape with one capability + one adapter entry.
+- The kit's own `.pkit/manifest.yaml` for the backbone-manifest shape with adapter and capability entries.
 - `.pkit/migrations/backbone/<X.Y.0>/` for backbone migration script structure.
 - `.pkit/capabilities/project-management/migrations/0.12.0/` for a capability-tier migration that handles file-rename + adopter-state cleanup.
 - `.pkit/adapters/claude-code/migrations/` for adapter-tier migration patterns.
