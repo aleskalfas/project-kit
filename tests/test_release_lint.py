@@ -1,10 +1,11 @@
 """Tests for the objective changeset + changelog format lint (#478).
 
 Covers each objective check (pass on valid, fail on the specific invalid
-input) — the floor field's value and carrier among them — the escape hatch,
-and a dogfood check that the live repo's pending changesets + CHANGELOG.md
-pass. Deliberately does *not* test plain-language / jargon judgment — that is
-out of the objective subset by design."""
+input) — the floor field's value, carrier and target backbone among them —
+the escape hatch, which does not cover the floor field, and a dogfood check
+that the live repo's pending changesets + CHANGELOG.md pass. Deliberately does
+*not* test plain-language / jargon judgment — that is out of the objective
+subset by design."""
 
 from __future__ import annotations
 
@@ -234,7 +235,8 @@ def test_lint_release_format_flags_a_floor_field_on_a_backbone_changeset(tmp_pat
     )
     result = release.lint_release_format(source_kit)
     assert not result.ok
-    assert [v.source for v in result.violations] == ["changeset backbone-minor-x.yaml"]
+    assert result.violations == []
+    assert [v.source for v in result.floor_violations] == ["changeset backbone-minor-x.yaml"]
 
 
 def _floor_changeset(source_kit: Path) -> None:
@@ -256,12 +258,24 @@ def test_lint_release_format_checks_the_backbone_the_release_ships(tmp_path: Pat
 
     refused = release.lint_release_format(source_kit)
     assert not refused.ok
-    assert ["not a release version" in v.message for v in refused.violations] == [True]
+    assert ["not a release version" in v.message for v in refused.floor_violations] == [True]
 
     (source_kit.parent / ".changes" / "unreleased" / "backbone-minor-x.yaml").write_text(
         "component: backbone\nkind: minor\nbody: Ship it.\n", encoding="utf-8"
     )
     assert release.lint_release_format(source_kit).ok
+
+
+def test_escape_hatch_does_not_cover_the_floor_field(tmp_path: Path) -> None:
+    """An invalid floor field blocks every later release on `main`, so the prose
+    lint's escape hatch does not pass it."""
+    source_kit = _kit(tmp_path, requires_backbone='"*"')
+    _floor_changeset(source_kit)
+
+    result = release.lint_release_format(source_kit, skip=True)
+    assert result.skipped
+    assert not result.ok
+    assert len(result.floor_violations) == 1
 
 
 # --- Check 4: CHANGELOG.md structure -------------------------------------

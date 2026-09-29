@@ -25,7 +25,7 @@ import json
 import re
 import subprocess
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
 
@@ -948,7 +948,9 @@ def check_changesets(source_kit: Path, base: str, *, skip: bool = False) -> Guar
 # no-jargon discipline, which is human
 # judgment left to the guide (`.pkit/release/README.md`) and review. Same
 # honest stance as the guard: a **reminder, not a proof**, with an escape
-# hatch for the cases an objective rule necessarily mis-fires on.
+# hatch for the cases an objective rule necessarily mis-fires on. The floor
+# field sits outside the hatch: it is the release's own refusal reported early,
+# and an invalid one blocks every later release on `main`.
 
 # A body that is *only* one of these bare references is the objective proxy for
 # the "no in-body jargon / references" rule — an entry that says nothing to a
@@ -978,12 +980,16 @@ class FormatViolation:
 class LintResult:
     """Outcome of the format lint across all changesets + the changelog."""
 
-    violations: list[FormatViolation]
+    violations: list[FormatViolation]  # the format subset the escape hatch covers
     skipped: bool  # the escape hatch was active
+    # A floor field the release refuses (`lint_floor`), which the escape hatch
+    # does not cover: it is for prose rules that mis-fire, and an invalid floor
+    # field blocks every later release on `main` until it is fixed.
+    floor_violations: list[FormatViolation] = field(default_factory=lambda: [])
 
     @property
     def ok(self) -> bool:
-        return self.skipped or not self.violations
+        return not self.floor_violations and (self.skipped or not self.violations)
 
 
 def lint_changeset(cs: Changeset) -> list[FormatViolation]:
@@ -1086,27 +1092,31 @@ def lint_release_format(source_kit: Path, *, skip: bool = False) -> LintResult:
 
     Passes (ok) when every changeset and the changelog are well-formed, or when
     the escape hatch is active (`skip=True`, wired from a `--skip` flag / the
-    `PKIT_CHANGELOG_LINT_SKIP` env var). Reads committed files only; it needs
-    no PR context, so it runs in the shared check aggregator. A floor field is
-    checked against the components discovered under `source_kit` and the backbone
-    the release would ship (`lint_floor`), which are read only when a changeset
-    carries one.
+    `PKIT_CHANGELOG_LINT_SKIP` env var) — except for a floor field the release
+    would refuse, which fails either way (`LintResult.floor_violations`). Reads
+    committed files only; it needs no PR context, so it runs in the shared check
+    aggregator. A floor field is checked against the components discovered under
+    `source_kit` and the backbone the release would ship (`lint_floor`), which
+    are read only when a changeset carries one.
     """
     repo_root = source_kit.parent
     changesets = load_changesets(repo_root)
-    carries_floor = any(cs.requires_backbone is not None for cs in changesets)
-    components = {c.name: c for c in discover_components(source_kit)} if carries_floor else {}
-    shipped = shipped_backbone(components, changesets) if carries_floor else ""
+    floor_violations: list[FormatViolation] = []
+    if any(cs.requires_backbone is not None for cs in changesets):
+        components = {c.name: c for c in discover_components(source_kit)}
+        shipped = shipped_backbone(components, changesets)
+        for cs in changesets:
+            floor_violations.extend(lint_floor(cs, components, shipped))
+
     violations: list[FormatViolation] = []
     for cs in changesets:
         violations.extend(lint_changeset(cs))
-        violations.extend(lint_floor(cs, components, shipped))
 
     changelog = repo_root / CHANGELOG_NAME
     if changelog.is_file():
         violations.extend(lint_changelog(changelog.read_text(encoding="utf-8")))
 
-    return LintResult(violations=violations, skipped=skip)
+    return LintResult(violations=violations, skipped=skip, floor_violations=floor_violations)
 
 
 # --- The sanctioned release-PR merge path (#475) -------------------------

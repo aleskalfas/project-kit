@@ -1129,8 +1129,9 @@ def release_check(base: str, skip: bool | None) -> None:
     "--skip",
     is_flag=True,
     default=None,
-    help="Escape hatch: pass unconditionally. Also honoured via the "
-    "PKIT_CHANGELOG_LINT_SKIP env var.",
+    help="Escape hatch: pass the format checks unconditionally (a requires_backbone "
+    "floor field is still checked). Also honoured via the PKIT_CHANGELOG_LINT_SKIP "
+    "env var.",
 )
 def release_lint(skip: bool | None) -> None:
     """Format lint: the OBJECTIVE changeset + CHANGELOG.md format subset.
@@ -1146,25 +1147,35 @@ def release_lint(skip: bool | None) -> None:
     reminder, not a proof; see `.pkit/release/README.md`.
 
     Reads committed files only (no PR context), so it runs in the shared check
-    aggregator. Escape hatch: `--skip` or the PKIT_CHANGELOG_LINT_SKIP env var.
+    aggregator. Escape hatch: `--skip` or the PKIT_CHANGELOG_LINT_SKIP env var —
+    except for the floor field, which the release itself refuses: an invalid one
+    fails the lint either way, since it would block every later release on main.
     """
     source_kit = _target_kit()
     skip_active = bool(skip) or _env_flag("PKIT_CHANGELOG_LINT_SKIP")
     result = lint_release_format(source_kit, skip=skip_active)
 
-    if result.skipped:
-        click.echo("changelog lint: skipped (escape hatch active).")
-        return
     if result.ok:
-        click.echo("changelog lint: changesets + CHANGELOG.md are well-formed — ok.")
+        click.echo(
+            "changelog lint: skipped (escape hatch active)."
+            if result.skipped
+            else "changelog lint: changesets + CHANGELOG.md are well-formed — ok."
+        )
         return
-    detail = "\n".join(f"  {v.source}: {v.message}" for v in result.violations)
+    shown = result.floor_violations + ([] if result.skipped else result.violations)
+    detail = "\n".join(f"  {v.source}: {v.message}" for v in shown)
+    advice = (
+        "\n  The escape hatch is active, but it does not cover a requires_backbone "
+        "floor field: the release refuses one it cannot raise, which blocks every "
+        "later release on main. Fix the field."
+        if result.skipped
+        else "\n  Fix the entries above, or apply the escape hatch (--skip / "
+        "PKIT_CHANGELOG_LINT_SKIP) if an objective rule mis-fired — it does not "
+        "cover a requires_backbone floor field. See the format guide in "
+        ".pkit/release/README.md."
+    )
     raise click.ClickException(
-        "changeset / changelog format problems (the objective subset):\n"
-        + detail
-        + "\n  Fix the entries above, or apply the escape hatch (--skip / "
-        "PKIT_CHANGELOG_LINT_SKIP) if an objective rule mis-fired. See the "
-        "format guide in .pkit/release/README.md."
+        "changeset / changelog format problems (the objective subset):\n" + detail + advice
     )
 
 
