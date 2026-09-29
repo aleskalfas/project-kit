@@ -1,3 +1,23 @@
+---
+reader: maintainer
+kind: reference
+pkit:
+  friction:
+    anchors:
+      path:
+        - scripts/check.sh
+        - .githooks/pre-push
+        - .github/workflows/checks.yml
+        - mise.toml
+        - tests/README.md
+        - src/project_kit/router.py
+      record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, ADR-019, ADR-039, ADR-055]
+      artefact: [.pkit/decisions/README.md]
+    revalidated:
+      at: 2026-09-29T15:20:28Z
+      outcome: updated
+---
+
 # Contributing to project-kit
 
 This document is for people working on **project-kit itself** — adding or amending the methodology, evolving the kit's structure, contributing code. It is not synced into adopting projects; it lives only in project-kit's own repo.
@@ -19,7 +39,7 @@ There is one source of truth for "what must pass before this lands": **`scripts/
 The same aggregator runs in two places, so the gate can't drift:
 
 - **Pre-push hook** (`.githooks/pre-push`) — runs it before every push for fast local feedback. Opt in once per clone: `git config core.hooksPath .githooks` (bypass in a pinch with `git push --no-verify`).
-- **CI** (`.github/workflows/checks.yml`) — runs `pkit sync`, then the same aggregator, on a clean Linux runner for every PR and push to `main`: the unbypassable backstop plus the platform / clean-install / post-merge coverage a local hook can't give. **Not active yet:** GitHub Actions is not enabled on this GHE instance (the Actions API 404s — no runners), so this workflow does not run today. It's staged and correct; it lights up automatically once a GHE site admin enables Actions + provisions runners. **Until then the pre-push hook is the only gate that actually runs** — don't assume CI is gating PRs.
+- **CI** (`.github/workflows/checks.yml`) — runs `pkit sync`, then the same aggregator, on a clean Linux runner for every PR and push to `main`: the unbypassable backstop plus the platform / clean-install / post-merge coverage a local hook can't give.
 
 **Writing tests.** Test-authoring guidance lives in [`tests/README.md`](tests/README.md) — in particular the shared adopter-repository fixture (`make_adopter_repo` / `adopter_repo`) to use instead of hand-rolling `git init` + `install_kit` in each test module.
 
@@ -27,7 +47,7 @@ Add a check by editing `scripts/check.sh` once; both the hook and CI pick it up.
 
 **The friction gate, in enforcing mode** ([ADR-055](tech-docs/architecture/decisions/ADR-055-first-adopter-analysis-and-living-docs.md) point 5). The aggregator runs the change check of the anchors-and-friction record ([COR-050](.pkit/decisions/core/COR-050-anchors-and-friction.md)) against the same base as the migration check, and project-kit sets `friction.mode: enforcing` in `.pkit/project/config.yaml`. A pull request then fails on **friction** — an anchored surface changed and the artefact anchored to it carries no answer — on a **dead anchor** or an **anchor of an unresolved kind** it introduced, and on a **marker bump with nothing behind it**; an outdated base is reported, never failed. Answer friction in the same pull request: revalidate the artefact (`outcome: updated` with the content change, or `outcome: unchanged` with a new `unchanged-because`), or defer the anchor with a reason — by hand, or with `uv run pkit friction revalidate` / `uv run pkit friction defer`, which write the block for you. `uv run pkit friction check` shows the same findings locally, uncommitted work included; the CLI reference's "Friction checks" section has the rules. The gate binds a merge only once the aggregator is a required status on `main` — a repository setting the operator applies, not something a script or this guide can do.
 
-**The whole-repository report, on every push to `main`.** The `friction-report` job of `.github/workflows/checks.yml` runs `pkit friction check --all` with the full history on every push to `main` and never fails the push (ADR-055 point 5): every artefact against the current history — stale and deferred debt with the commits they originate in, every dead and over-broad anchor, unanchored artefacts and uncovered surface. Stale debt that slipped past the change check through an outdated base shows up here. Read it in that job's log, or in the run's step summary; `uv run pkit friction check --all` gives the same report locally from HEAD (uncommitted work is not read), and `--json` the machine form. Like the rest of the workflow, the job lights up once Actions is enabled on this instance.
+**The whole-repository report, on every push to `main`.** The `friction-report` job of `.github/workflows/checks.yml` runs `pkit friction check --all` with the full history on every push to `main` and never fails the push (ADR-055 point 5): every artefact against the current history — stale and deferred debt with the commits they originate in, every dead and over-broad anchor, unanchored artefacts and uncovered surface. Stale debt that slipped past the change check through an outdated base shows up here. Read it in that job's log, or in the run's step summary; `uv run pkit friction check --all` gives the same report locally from HEAD (uncommitted work is not read), and `--json` the machine form.
 
 **The escape hatch.** Enforcing mode must never fail on a defect of the tool. When the check fails for any other reason than those findings — it crashes, or anchor resolution or the configuration is wrong — flip the mode to `warning` in a one-line change (`uv run pkit config set friction.mode warning --yes`), disclose the flip in the pull request, file the defect, and revert the flip with the fix. Validation findings — a malformed block, a dangling deferral, a cycle between artefacts — are outside the hatch: they fail `pkit validate` in either mode and are fixed, not waived.
 
@@ -75,7 +95,7 @@ The `core/` corpus is treated as an axiom system. A record may use only:
 - generic English / filesystem / Markdown vocabulary, or
 - references to external tools or specifications named explicitly (e.g. Claude Code, Yeoman).
 
-It must not lean on tooling, commands, or conventions that the kit itself has not yet recorded a decision about. Concretely: do not use `pk sync`, `pk init`, `pk` or any other kit-internal command name inside core records until that name is decided in its own record. Use generic phrasing instead — "the kit's sync operation", "first-time install", "the kit's CLI" — or defer the discussion to a future record.
+It must not lean on tooling, commands, or conventions that the kit itself has not yet recorded a decision about. Concretely: do not use `pkit sync`, `pkit init`, `pkit` or any other kit-internal command name inside core records until that name is decided in its own record. Use generic phrasing instead — "the kit's sync operation", "first-time install", "the kit's CLI" — or defer the discussion to a future record.
 
 When a record needs to reach for something not yet defined, the right move is either to introduce that concept in its own earlier record or to defer the topic to a future one. Forward-pointer "see also" references are fine for navigation, but no record should *depend* on a later one.
 
@@ -85,7 +105,7 @@ This keeps the corpus self-supporting: any reader can start at COR-001 and follo
 
 A core record must be **project-neutral**: written from the perspective of any project that adopts the kit. It describes rules, contracts, and conventions that every adopter follows.
 
-Project-kit-specific decisions — how project-kit-the-project itself is built, the fact that it self-hosts, the choice of CLI binary name `pk`, the choice of templating engine, the distribution channel — belong in `.pkit/decisions/project/` as PRJ records (project-kit's own project-side decisions), not in `core/`.
+Project-kit-specific decisions — how project-kit-the-project itself is built, the fact that it self-hosts, the choice of CLI binary name `pkit`, the choice of templating engine, the distribution channel — belong in `.pkit/decisions/project/` as PRJ records (project-kit's own project-side decisions), not in `core/`.
 
 The test: would this record make sense, and feel applicable, when read in an arbitrary adopting project's repo? If yes → COR. If it leaks project-kit's internals → PRJ.
 
@@ -105,7 +125,7 @@ Adopter-relevance heuristic for the open questions:
 
 A COR captures **durable principles** — rules among viable alternatives, with the rationale that distinguishes them. It does not enumerate operational state: path mappings, command lists, file lists, the current set of bundles, the current set of artifact types.
 
-Operational state belongs in reference docs: per-area READMEs (`.pkit/cli/README.md`, `.pkit/workflow/README.md`, …), the install/sync manifest, area-specific spec files. The COR cross-references the reference doc; the doc owns the listing.
+Operational state belongs in reference docs: per-area READMEs (`.pkit/cli/README.md`, `.pkit/lifecycle/README.md`, …), the install/sync manifest, area-specific spec files. The COR cross-references the reference doc; the doc owns the listing.
 
 Inventory pinned inside a COR has two costs:
 
@@ -139,7 +159,7 @@ This is a principle, not a style sheet: don't pad records with mandated boilerpl
 
 project-kit is itself an adopter of its own kit (it self-hosts), so it has its own PRJ namespace at `.pkit/decisions/project/`. Records there capture project-kit-the-project's own implementation choices: the CLI binary name, the templating engine, distribution channel, self-hosting, and so on.
 
-The process for adding a PRJ record in project-kit's own tree is the same one described in `.pkit/decisions/README.md` for any adopter — pick the next PRJ number, create `PRJ-NNN-slug.md`, follow the schema. The axiom and project-neutrality disciplines do **not** apply to PRJ records: project-kit's project-side records can name `pk`, reference the templating engine, talk about self-hosting, and so on.
+The process for adding a PRJ record in project-kit's own tree is the same one described in `.pkit/decisions/README.md` for any adopter — pick the next PRJ number, create `PRJ-NNN-slug.md`, follow the schema. The axiom and project-neutrality disciplines do **not** apply to PRJ records: project-kit's project-side records can name `pkit`, reference the templating engine, talk about self-hosting, and so on.
 
 ---
 
