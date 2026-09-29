@@ -8,18 +8,11 @@ Only when it has something to say: the one table of when is the capability READM
 
 ## 2. Give each artefact its answer
 
-Each artefact covered ends in one of four outcomes, and each maps onto the answer the core records on the artefact (DEC-001 point 5):
-
-| Outcome | It means | The answer on the artefact |
-|---|---|---|
-| `holds` | the description still stands | `pkit friction revalidate <artefact> --outcome unchanged --because "<why it still holds against this change>"` |
-| `analysis-stale` | the change was meant; the description is out of date | edit the artefact, then `pkit friction revalidate <artefact> --outcome updated` |
-| `code-regressed` | the description is still what is wanted; the change broke it | report the defect, then `pkit friction revalidate <artefact> --outcome unchanged --because "<the description stands; defect <ref> reported>"` |
-| `gap-found` | behaviour nothing describes, or a description with no behaviour | `--outcome updated` where the artefact itself changed; `--outcome unchanged --because "<the gap, and the artefact that fills it>"` where a new artefact closes it |
+Each artefact covered ends in one of four outcomes, and each is recorded on the artefact as one of the core's two answers: the one table of that mapping is the capability README's [Revalidation: four outcomes, two answers](../../README.md#revalidation-four-outcomes-two-answers). Record each artefact's answer as it says, before or with the record.
 
 **A regression is never answered by rewriting the artefact to match the code.** When you cannot tell whether the change was meant — stale, or regressed — a person who knows the intent decides before anything is recorded.
 
-Friction you choose not to resolve yet is not an outcome: defer the anchor with its reason, `pkit friction defer <artefact> --anchor <kind:value> --reason "<why it can wait>"`. It stays in the debt listing until someone revalidates.
+Friction you choose not to resolve yet is not an outcome: it is a deferral of the anchor with its reason, as the same section says. It stays in the debt listing until someone revalidates.
 
 ## 3. Choose the slug
 

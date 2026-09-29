@@ -1,7 +1,9 @@
 ---
 # A revalidation record (software-analysis DEC-001 points 5 and 6): one check
 # of some artefacts against one version of the system, kept only when there is
-# something to say — when is the capability README's "Revalidation records".
+# something to say — when is the capability README's "Revalidation records";
+# what each outcome records on its artefact is its "Revalidation: four
+# outcomes, two answers".
 # Stamp it, never copy it: `pkit analysis new revalidation <slug> --change <ref>
 # --trigger <trigger> --outcome <id>=<outcome> … --because <id>=<why> …
 # [--gap "<gap> => <resolution>"]…` writes `revalidations/<date>-<slug>.md`

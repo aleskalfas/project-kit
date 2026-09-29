@@ -185,16 +185,16 @@ The command owns each file's correctness — its id, its place, the anchors the 
 
 ## Revalidation: four outcomes, two answers
 
-A revalidation ends, for each artefact, in one of four outcomes, and each is recorded on the artefact as one of the core's two answers (DEC-001 point 5; COR-050 point 3). Only the answer on the artefact clears friction.
+A revalidation ends, for each artefact, in one of four outcomes, and each is recorded on the artefact as one of the core's two answers (DEC-001 point 5; COR-050 point 3). Only the answer on the artefact clears friction. This is the one table of that mapping: the skill, the agent and its storyboard, and the record's template point here.
 
 | Outcome | It means | The answer on the artefact |
 |---|---|---|
-| `holds` | the description still stands | `pkit friction revalidate <artefact> --outcome unchanged --because "<why it still holds against this change>"` |
+| `holds` | the description still stands | `pkit friction revalidate <artefact> --outcome unchanged --because "<why it still holds against this change>"` — and where the code it rests on only moved, re-point the anchor first: an edit to the anchors alone changes no content, so it is still `unchanged` (`updated` with no content change is a bump, COR-050 point 5) |
 | `analysis-stale` | the change was meant; the description is out of date | edit the artefact, then `pkit friction revalidate <artefact> --outcome updated` |
-| `code-regressed` | the description is still what is wanted; the change broke it | report the defect, then `--outcome unchanged --because "<the description stands; defect <ref> reported>"` — the artefact is never rewritten to match |
+| `code-regressed` | the description is still what is wanted; the change broke it | report the defect, then `pkit friction revalidate <artefact> --outcome unchanged --because "The description stands: <why it is still wanted>; <commit> broke it — defect <the defect reference> reported."` — the artefact is never rewritten to match |
 | `gap-found` | behaviour nothing describes, or a description with no behaviour | `--outcome updated` where the artefact changed; `--outcome unchanged --because "<the gap, and the artefact that fills it>"` where a new artefact closes it |
 
-Friction you choose not to resolve yet is not an outcome but a deferral: `pkit friction defer <artefact> --anchor <kind:value> --reason "<why it can wait>"`, which keeps it in the debt listing. Whether the analysis was stale or the code regressed is a question of intent — was the change meant? — and where the change's context doesn't say, a person decides before anything is recorded.
+Friction you choose not to resolve yet is not an outcome but a deferral: `pkit friction defer <artefact> --anchor <kind:value> --reason "<why it can wait>"`, which keeps it in the debt listing. Whether the analysis was stale or the code regressed is a question of intent — was the change meant? — and where the change's context doesn't say, a person decides before anything is recorded. Words in angle brackets are for you to fill: the writers refuse a justification or reason that still holds one.
 
 ### Revalidation records
 
