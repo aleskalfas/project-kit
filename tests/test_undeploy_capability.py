@@ -3,9 +3,10 @@
 The primitive removes one capability's deployed skills and agents from
 `.claude/` — what the deploy primitives created for it, recognised by the mark
 each leaves — and nothing else. Skills are deployed by the real
-`deploy-skills.sh`; agents are staged as the resolved copies `deploy-agents.sh`
-writes, carrying its marker (read from that script, so the two cannot drift
-apart unnoticed).
+`deploy-skills.sh`, which deploys only the capabilities the backbone manifest
+registers, so a test registers each capability whose skills it deploys; agents
+are staged as the resolved copies `deploy-agents.sh` writes, carrying its marker
+(read from that script, so the two cannot drift apart unnoticed).
 """
 
 from __future__ import annotations
@@ -16,6 +17,8 @@ import subprocess
 from pathlib import Path
 
 import pytest
+
+from tests.backbone_manifest import register_capabilities
 
 SOURCE_REPO = Path(__file__).resolve().parents[1]
 ADAPTER = SOURCE_REPO / ".pkit" / "adapters" / "claude-code"
@@ -120,6 +123,7 @@ def test_removes_exactly_the_capabilitys_deployed_skills(mock_kit: Path) -> None
     _flat_skill(_cap(mock_kit, "homegrown-extra"), "extra-skill")
     _flat_skill(_cap(mock_kit, "other"), "other-skill")
     (mock_kit / ".pkit" / "skills" / "core" / "core-skill.md").write_text("# c\n", encoding="utf-8")
+    register_capabilities(mock_kit, "homegrown", "homegrown-extra", "other")
     _deploy_skills(mock_kit)
     assert (_skill(mock_kit, "home-folder") / "sub-procedure.md").is_symlink()
 
@@ -141,6 +145,7 @@ def test_leaves_adopter_content_among_the_skills(mock_kit: Path) -> None:
     deploy-skills.sh did not write (absolute, though into the capability), and a
     file an adopter put in the capability's deployed folder."""
     _composite_skill(_cap(mock_kit, "homegrown"), "home-folder")
+    register_capabilities(mock_kit, "homegrown")
     _deploy_skills(mock_kit)
     own = _skill(mock_kit, "mine")
     own.mkdir(parents=True)
@@ -197,7 +202,9 @@ def test_removes_exactly_the_capabilitys_deployed_agents(mock_kit: Path) -> None
 def test_is_idempotent(mock_kit: Path) -> None:
     _flat_skill(_cap(mock_kit, "homegrown"), "home-flat")
     _cap_agent(_cap(mock_kit, "homegrown"), "home-agent")
+    register_capabilities(mock_kit, "homegrown")
     _deploy_skills(mock_kit)
+    assert (_skill(mock_kit, "home-flat") / "SKILL.md").is_symlink()
     _deployed_agent(mock_kit, "home-agent")
     assert _undeploy(mock_kit, "homegrown").returncode == 0
 

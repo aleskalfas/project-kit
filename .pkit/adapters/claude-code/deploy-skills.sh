@@ -26,9 +26,14 @@
 #
 # Behavior:
 # - Project namespace wins on collision (per COR-005).
+# - Capability skills deploy only for the capabilities registered in the
+#   backbone manifest (.pkit/manifest.yaml), not for every directory under
+#   .pkit/capabilities/: a capability unregistered in place keeps its subtree
+#   on disk, and its skills must stop deploying all the same.
 # - Idempotent: correct symlinks report "exists"; mismatched kit-managed
-#   symlinks are updated; stale kit-managed symlinks (target no longer
-#   present in .pkit/skills/) are removed.
+#   symlinks are updated; stale kit-managed symlinks (a skill no longer
+#   shipped by core, project or a registered capability — its source gone, or
+#   its capability unregistered) are removed.
 # - Legacy `.claude/skills/<name>` directory-symlinks (the pre-COR-015
 #   form pointing to the source folder) are detected and replaced with
 #   the new structure.
@@ -53,67 +58,66 @@ mkdir -p "$CLAUDE_SKILLS"
 
 status() { printf "  %-10s %s\n" "$1" "$2"; }
 
-# Resolve a skill name to its expected source path (relative form used
-# in the .claude/skills/<name>/SKILL.md symlink). Project wins on
-# collision; flat form preferred over folder form within a namespace
-# per COR-015's atomic-is-flat bias. Capability skills are checked
-# after core/project per COR-017's collision rules (already-installed
-# project skills win over capability skills, surfaced at install time).
-# Returns 1 if the name is in no source.
-expected_for() {
-    local name="$1"
-    local ns
-    for ns in project core; do
-        if [ -f "$KIT_SKILLS/$ns/$name.md" ]; then
-            echo "../../../.pkit/skills/$ns/$name.md"
-            return 0
-        elif [ -f "$KIT_SKILLS/$ns/$name/$name.md" ]; then
-            echo "../../../.pkit/skills/$ns/$name/$name.md"
-            return 0
-        fi
-    done
-    # Walk installed capabilities for a skill of this name.
-    if [ -d "$KIT_CAPABILITIES" ]; then
-        local cap
-        for cap in "$KIT_CAPABILITIES"/*; do
-            [ -d "$cap" ] || continue
-            local cap_name
-            cap_name="$(basename "$cap")"
-            if [ -f "$cap/skills/$name.md" ]; then
-                echo "../../../.pkit/capabilities/$cap_name/skills/$name.md"
-                return 0
-            elif [ -f "$cap/skills/$name/$name.md" ]; then
-                echo "../../../.pkit/capabilities/$cap_name/skills/$name/$name.md"
-                return 0
-            fi
-        done
-    fi
-    return 1
+# The capability names registered in the backbone manifest, one per line.
+# Empty if the manifest is missing or registers no capability. The same parser
+# as merge-settings.sh's list_installed_capabilities: it depends on the
+# manifest's documented field ordering (kind: before name:), which is
+# core-generated and stable.
+list_registered_capabilities() {
+    local manifest="$ROOT/.pkit/manifest.yaml"
+    [ -f "$manifest" ] || return 0
+    awk '
+        /^[[:space:]]*-[[:space:]]*kind:[[:space:]]*capability[[:space:]]*$/ {
+            in_capability = 1
+            next
+        }
+        /^[[:space:]]*-[[:space:]]*kind:/ {
+            in_capability = 0
+            next
+        }
+        in_capability && match($0, /^[[:space:]]+name:[[:space:]]*[^[:space:]]+/) {
+            sub(/^[[:space:]]+name:[[:space:]]*/, "")
+            print
+            in_capability = 0
+        }
+    ' "$manifest"
 }
 
-# Resolve a skill name to its source folder, if folder-form. Returns
-# the absolute folder path (e.g., /repo/.pkit/skills/core/schema) when
-# the skill ships as a folder; empty otherwise. Uses the same
-# precedence as expected_for: project > core > capability layer.
-source_folder_for() {
+REGISTERED_CAPABILITIES="$(list_registered_capabilities | sort -u)"
+
+# Every folder skills ship from, one per line, in precedence order: project
+# (wins on collision), core, then the skills/ folder of each *registered*
+# capability by name — capability skills after core/project per COR-017's
+# collision rules (already-installed project skills win over capability
+# skills, surfaced at install time). The one place the registered-only rule
+# applies; every resolver below walks this list.
+skill_locations() {
+    echo "$KIT_SKILLS/project"
+    echo "$KIT_SKILLS/core"
+    local cap
+    while IFS= read -r cap; do
+        if [ -n "$cap" ] && [ -d "$KIT_CAPABILITIES/$cap/skills" ]; then
+            echo "$KIT_CAPABILITIES/$cap/skills"
+        fi
+    done <<<"$REGISTERED_CAPABILITIES"
+}
+
+# Resolve a skill name to the source that deploys: the first location in
+# skill_locations shipping it, flat form preferred over folder form within a
+# location per COR-015's atomic-is-flat bias. Prints "<form> <canonical file>",
+# form `flat` or `folder`. Returns 1 if the name is in no location.
+resolve_skill() {
     local name="$1"
-    local ns
-    for ns in project core; do
-        if [ -d "$KIT_SKILLS/$ns/$name" ] && [ -f "$KIT_SKILLS/$ns/$name/$name.md" ]; then
-            echo "$KIT_SKILLS/$ns/$name"
+    local dir
+    while IFS= read -r dir; do
+        if [ -f "$dir/$name.md" ]; then
+            echo "flat $dir/$name.md"
+            return 0
+        elif [ -f "$dir/$name/$name.md" ]; then
+            echo "folder $dir/$name/$name.md"
             return 0
         fi
-    done
-    if [ -d "$KIT_CAPABILITIES" ]; then
-        local cap
-        for cap in "$KIT_CAPABILITIES"/*; do
-            [ -d "$cap" ] || continue
-            if [ -d "$cap/skills/$name" ] && [ -f "$cap/skills/$name/$name.md" ]; then
-                echo "$cap/skills/$name"
-                return 0
-            fi
-        done
-    fi
+    done < <(skill_locations)
     return 1
 }
 
@@ -122,44 +126,45 @@ source_folder_for() {
 # is 3 levels deep (.claude/skills/<name>/), so the prefix is `../../../`.
 relative_source_path() {
     local absolute="$1"
-    local rel="${absolute#$ROOT/}"
+    local rel="${absolute#"$ROOT"/}"
     echo "../../../$rel"
 }
 
-# Deduped list of skill names across core, project, and capability
-# namespaces, in either flat or folder form.
+# The skill's expected source path, in the relative form the
+# .claude/skills/<name>/SKILL.md symlink carries. Returns 1 if the name
+# resolves to no source.
+expected_for() {
+    local form canonical
+    read -r form canonical < <(resolve_skill "$1") || return 1
+    relative_source_path "$canonical"
+}
+
+# The skill's source folder when the source that deploys is folder-form (e.g.,
+# /repo/.pkit/skills/core/schema) — the folder whose siblings deploy beside its
+# SKILL.md. Returns 1 for a flat source, or a name that resolves to none.
+source_folder_for() {
+    local form canonical
+    read -r form canonical < <(resolve_skill "$1") || return 1
+    [ "$form" = "folder" ] || return 1
+    dirname "$canonical"
+}
+
+# Deduped list of skill names across every location in skill_locations, in
+# either flat or folder form.
 list_kit_names() {
-    {
-        local ns entry name
-        for ns in core project; do
-            [ -d "$KIT_SKILLS/$ns" ] || continue
-            for entry in "$KIT_SKILLS/$ns"/*; do
-                [ -e "$entry" ] || continue
-                name="$(basename "$entry")"
-                if [ -f "$entry" ] && [[ "$name" == *.md ]]; then
-                    echo "${name%.md}"
-                elif [ -d "$entry" ]; then
-                    echo "$name"
-                fi
-            done
+    local dir entry name
+    while IFS= read -r dir; do
+        [ -d "$dir" ] || continue
+        for entry in "$dir"/*; do
+            [ -e "$entry" ] || continue
+            name="$(basename "$entry")"
+            if [ -f "$entry" ] && [[ "$name" == *.md ]]; then
+                echo "${name%.md}"
+            elif [ -d "$entry" ]; then
+                echo "$name"
+            fi
         done
-        # Installed capabilities: walk each capability's skills/ directory.
-        if [ -d "$KIT_CAPABILITIES" ]; then
-            local cap
-            for cap in "$KIT_CAPABILITIES"/*; do
-                [ -d "$cap/skills" ] || continue
-                for entry in "$cap/skills"/*; do
-                    [ -e "$entry" ] || continue
-                    name="$(basename "$entry")"
-                    if [ -f "$entry" ] && [[ "$name" == *.md ]]; then
-                        echo "${name%.md}"
-                    elif [ -d "$entry" ]; then
-                        echo "$name"
-                    fi
-                done
-            done
-        fi
-    } | sort -u
+    done < <(skill_locations) | sort -u
 }
 
 # Pass 0: clean up legacy `.claude/skills/<name>` directory-symlinks
@@ -261,11 +266,16 @@ done < <(list_kit_names)
 
 # Pass 2: remove stale kit-managed deploys.
 # - For each .claude/skills/<name>/ directory containing a kit-managed
-#   SKILL.md symlink: if the source skill no longer exists, remove the
-#   whole deployed skill (SKILL.md + any kit-managed sibling symlinks).
-# - For composite skills that still exist: remove any kit-managed
-#   sibling symlinks whose source file is gone (e.g., a sub-procedure
-#   file removed by a skill refactor).
+#   SKILL.md symlink: if the name no longer resolves — its source is gone, or
+#   the capability shipping it is no longer registered — remove the whole
+#   deployed skill (SKILL.md + any kit-managed sibling symlinks).
+# - For skills that still resolve: remove any kit-managed sibling symlink
+#   the source no longer has (e.g., a sub-procedure file removed by a skill
+#   refactor; or every sibling, when the name now resolves to a flat skill —
+#   say an unregistered capability's composite skill giving way to a
+#   same-named flat one).
+# Adopter content — a real file or directory, or a symlink pointing anywhere
+# but into .pkit/skills/ or .pkit/capabilities/ — is never touched.
 shopt -s nullglob
 for skill_dir in "$CLAUDE_SKILLS"/*; do
     [ -d "$skill_dir" ] || continue
@@ -286,26 +296,24 @@ for skill_dir in "$CLAUDE_SKILLS"/*; do
             fi
         done
         rmdir "$skill_dir" 2>/dev/null || true
-        status "removed" ".claude/skills/$name (source skill gone)"
+        status "removed" ".claude/skills/$name (no longer shipped by core, project or a registered capability)"
     else
-        # Source skill still exists. If it's composite, check each
-        # kit-managed sibling symlink against the source folder; remove
-        # any whose source file has been deleted.
+        # The skill still resolves. Check each kit-managed sibling symlink
+        # against its source folder and remove any the source no longer has —
+        # every one, when the source is flat and so has no siblings.
         source_folder="$(source_folder_for "$name" 2>/dev/null || true)"
-        if [ -n "$source_folder" ]; then
-            for entry in "$skill_dir"/*; do
-                [ -L "$entry" ] || continue
-                entry_name="$(basename "$entry")"
-                [ "$entry_name" = "SKILL.md" ] && continue
-                entry_link="$(readlink "$entry")"
-                if [[ "$entry_link" == ../../../.pkit/skills/* ]] || [[ "$entry_link" == ../../../.pkit/capabilities/* ]]; then
-                    if [ ! -e "$source_folder/$entry_name" ]; then
-                        rm "$entry"
-                        status "removed" ".claude/skills/$name/$entry_name (source sibling gone)"
-                    fi
+        for entry in "$skill_dir"/*; do
+            [ -L "$entry" ] || continue
+            entry_name="$(basename "$entry")"
+            [ "$entry_name" = "SKILL.md" ] && continue
+            entry_link="$(readlink "$entry")"
+            if [[ "$entry_link" == ../../../.pkit/skills/* ]] || [[ "$entry_link" == ../../../.pkit/capabilities/* ]]; then
+                if [ -z "$source_folder" ] || [ ! -e "$source_folder/$entry_name" ]; then
+                    rm "$entry"
+                    status "removed" ".claude/skills/$name/$entry_name (source sibling gone)"
                 fi
-            done
-        fi
+            fi
+        done
     fi
 done
 shopt -u nullglob

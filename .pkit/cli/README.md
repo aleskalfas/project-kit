@@ -42,7 +42,7 @@ pkit:
         - src/project_kit/environment.py
       record: [COR-004, COR-012, COR-043, COR-048, COR-049, COR-050, PRJ-001, PRJ-003, PRJ-004, ADR-033, ADR-039, ADR-049, ADR-058, ADR-059]
     revalidated:
-      at: 2026-09-29T18:00:03Z
+      at: 2026-09-29T18:48:04Z
       outcome: updated
 ---
 
@@ -295,7 +295,7 @@ A capability enters a project through one of two verbs, distinguished by where t
 
 **Adopting an already-registered capability.** `register` is idempotent, branching on the recorded origin (COR-031 D2). If the capability is already registered as `incubated-in-repo`, register reports a clean no-op and returns. If it is registered `kit-shipped` — including the origin-unset default that the old manual-registration workaround leaves behind (an absent origin reads back as `kit-shipped`) — register *adopts it in place*: it re-runs the applicable pre-flights (self-consistency, backbone-version, dependency), sets `origin: incubated-in-repo` on the existing registry entry, and reports the change. It does **not** re-copy the subtree (already in place) or re-deploy — this is an origin-state upgrade, not a fresh install — so it is the supported path to protect a manually-registered home-grown capability from `sync` reconciliation. `--dry-run` shows the adoption without writing. (`upgrade` cannot do this: it refreshes deploy but never changes origin.)
 
-**When the same name also ships from kit source (collision — graduation arriving unbidden).** If a capability you register (or adopt) at `.pkit/capabilities/<name>/` *also* exists in the kit source, `register` keeps/adopts the **in-repo (incubated)** copy and **surfaces a note** that a kit-shipped version is available — it never silently shadows either tree. This is the operational precedence for COR-031's collision boundary: the adopter's local copy is the one installed, and `sync` leaves it untouched (D1) — it is the only copy of the adopter's work — while the kit-shipped version is neither installed nor reconciled against; its existence is surfaced so you *know* it is there (COR-031 reserves incubated→kit-shipped **graduation** for a later decision). If instead you want the *kit-shipped* copy of a colliding capability — e.g. your local one was an abandoned experiment — that reverse preference is a known limitation; for now, remove the in-repo copy and run `pkit capabilities install <name>` to take the kit version.
+**When the same name also ships from kit source (collision — graduation arriving unbidden).** If a capability you register (or adopt) at `.pkit/capabilities/<name>/` *also* exists in the kit source, `register` keeps/adopts the **in-repo (incubated)** copy and **surfaces a note** that a kit-shipped version is available — it never silently shadows either tree. This is the operational precedence for COR-031's collision boundary: the adopter's local copy is the one installed, and `sync` leaves it untouched (D1) — it is the only copy of the adopter's work — while the kit-shipped version is neither installed nor reconciled against; its existence is surfaced so you *know* it is there (COR-031 reserves incubated→kit-shipped **graduation** for a later decision). If instead you want the *kit-shipped* copy of a colliding capability — e.g. your local one was an abandoned experiment — that reverse preference is a known limitation; for now, remove the in-repo copy and run `pkit capabilities install <name>` to take the kit version. In the methodology's source repository, run by its own code, the capability's subtree *is* the kit source, so there is no second copy and no note.
 
 If a same-named capability later begins shipping from kit source (graduation, before graduation is specified), `register` surfaces the overlap as a note and registers the in-repo copy; `sync` surfaces the same collision rather than silently shadowing either tree (COR-031 boundary case).
 
@@ -489,7 +489,7 @@ Stamps an agent stub — the unified front matter (COR-013) and the canonical bo
 
 - **`<name>`** is kebab-case, naming the role. The command refuses a name already taken in core, project or any capability, in either layout — the deploy resolves one agent per name, so a second one would mask the first.
 
-- **`--with-storyboard`** stamps folder form (`<name>/<name>.md`) with a sibling `storyboard.md` scaffold (COR-016) whose `consumers:` names the agent, its `namespace` being the capability's name for a capability's agent.
+- **`--with-storyboard`** stamps folder form (`<name>/<name>.md`) with a sibling `storyboard.md` scaffold (COR-016). Both sides of the pair are declared as stamped: the agent's `storyboards:` names `storyboard.md` and its body cites it, and the storyboard's `consumers:` names the agent, its `namespace` being the capability's name for a capability's agent — so the fresh pair passes `pkit refs validate`.
 
 **Coordination with the `agent-author` skill.** The skill carries the namespace choice (universal role, adopter role, or a capability's discipline), the name, and the body drafting; the command is the stamp underneath.
 
@@ -498,7 +498,7 @@ Stamps an agent stub — the unified front matter (COR-013) and the canonical bo
 Stamps a storyboard (COR-016) beside an existing agent: `storyboard.md`, or `<slug>.storyboard.md` with `--scenario`, carrying the three-layer scaffold and a `consumers:` entry naming the agent. A flat agent migrates to folder form first (COR-015, an agent gaining its first helper).
 
 - **`agent`** is the only artifact kind handled today.
-- **`<name>`** is the agent's name. Without `--namespace`, the command looks wherever agents ship from, in the deploy's order — project, core, then capabilities by name — and stamps beside the first agent of that name, the one that deploys.
+- **`<name>`** is the agent's name. Without `--namespace`, the command looks wherever agents ship from, in the deploy's order — project, capabilities by name, then core — and stamps beside the first agent of that name, the one that deploys.
 - **`--namespace <ns>`** pins the lookup to one location: `core`, `project` or a capability name (an unknown capability gets the `new agent` refusal).
 
 Refuses if the storyboard already exists or no agent of that name is found. **Coordination with the `storyboard-author` skill**: the skill walks the framing, tone and scenario drafting after the stamp.

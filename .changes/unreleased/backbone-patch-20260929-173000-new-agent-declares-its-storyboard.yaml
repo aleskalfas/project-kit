@@ -1,0 +1,12 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `pkit new agent <namespace> <name> --with-storyboard` declares the storyboard
+  on the agent as it stamps the pair: the agent's `storyboards:` front matter
+  names the sibling `storyboard.md` and its body cites it, so the fresh pair
+  passes `pkit refs validate` without the author adding the line. The stamped
+  placeholder under "Files you own" no longer cites the overlay file as a path,
+  which `pkit refs validate` reported as an undeclared reference on every fresh
+  agent.

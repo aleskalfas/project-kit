@@ -100,6 +100,8 @@ The flat stamp produces `<agents folder>/<name>.md`, where the agents folder is 
 - Frontmatter scaffolding (`name`, placeholder `description`, default `tools`, empty `reads` / `owns` / `needs`).
 - Body headers: `## When to invoke this agent`, `## Files you own`, `## Key documents to read`, `## How you work`, and a finished `## Intermediate files` section.
 
+The `--with-storyboard` stamp also declares the pair on both sides: the agent's `storyboards:` names the sibling `storyboard.md`, `## How you work` opens with the line loading it, and the storyboard's `consumers:` names the agent — the fresh pair passes `pkit refs validate` as stamped.
+
 Refuses if the name already exists in core, project or any capability (the deploy resolves one agent per name, so a colliding one would silently mask the other), and refuses a capability name that names no capability under `.pkit/capabilities/`.
 
 ### 6. Draft the body

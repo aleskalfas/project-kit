@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-09-29T18:17:41Z
+      at: 2026-09-29T18:48:05Z
       outcome: unchanged
-      unchanged-because: the CLI and adapter READMEs were revalidated for the enforced documentation source and the settings consolidate section; the area map holds
+      unchanged-because: "the CLI, agents, adapter and lifecycle READMEs were revalidated for #1111's capability-namespace and registered-only deploy changes; the area map holds"
 ---
 
 # project-kit

@@ -219,6 +219,15 @@ def test_stamp_lookup_prefers_the_agent_the_deploy_resolves(kit_target: Path) ->
     assert ".pkit/agents/project/shared/" in str(target)
 
 
+def test_stamp_lookup_prefers_a_capability_agent_over_core(kit_target: Path) -> None:
+    """A capability's same-named agent wins over core's, as in deploy-agents.sh."""
+    _make_folder_agent(kit_target, "core", "shared")
+    cap_agent = _make_capability_agent(kit_target, "my-cap", "shared")
+
+    target = storyboards.stamp_new_storyboard(kit_target, "agent", "shared")
+    assert target == cap_agent.parent / "storyboard.md"
+
+
 def test_stamp_namespace_pins_the_capability_agent(kit_target: Path) -> None:
     _make_folder_agent(kit_target, "project", "shared")
     cap_agent = _make_capability_agent(kit_target, "my-cap", "shared")

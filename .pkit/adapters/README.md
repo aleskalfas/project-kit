@@ -11,8 +11,9 @@ pkit:
       record: [COR-005, COR-006, COR-047]
       artefact: [.pkit/adapters/claude-code/README.md]
     revalidated:
-      at: 2026-09-29T17:33:33Z
-      outcome: updated
+      at: 2026-09-29T18:07:16Z
+      outcome: unchanged
+      unchanged-because: the Claude Code adapter README gained a note on agent name-collision precedence and the registered-only skill deploy; the umbrella's account of the adapter holds
 ---
 
 # Adapters
