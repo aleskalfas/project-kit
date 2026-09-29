@@ -11,7 +11,13 @@ backbone through its commands:
 - **recording the analysis location** on first use — `pkit docs
   record-location`, the backbone's one writer of a capability's recorded
   locations (COR-049 point 5), with `--yes`: the stamp runs it when it places
-  an artefact, so invoking the stamp is the consent.
+  an artefact, so invoking the stamp is the consent;
+- **one data point as it resolves** — `pkit connections resolve <address>
+  --json`: the check reads the evidence point the capability defines
+  (DEC-001 point 7) through it. The command exits 1 on a point that does not
+  resolve and still prints its document, so the document decides, never the
+  exit code. A filler never asks for a point: the readers filler reads only
+  the analysis.
 
 Git answers only which commit a name resolves to, and the merge-base of two.
 
@@ -67,6 +73,20 @@ def record_location(root: Path, run: Runner = subprocess.run) -> str | None:
         raise Unreadable(_failed(argv, proc))
     line = (proc.stdout or "").strip()
     return line if line.startswith("recorded ") else None
+
+
+def read_point(root: Path, address: str, run: Runner = subprocess.run) -> Mapping[str, Any]:
+    """The data point `address` as `pkit connections resolve --json` prints it,
+    resolved or not. Raises Unreadable when there is no document to read."""
+    argv = ["pkit", "connections", "resolve", address, "--json"]
+    proc = _run(root, argv, run)
+    try:
+        document = json.loads(proc.stdout or "")
+    except ValueError:
+        document = None
+    if not isinstance(document, Mapping) or "resolved" not in document:
+        raise Unreadable(_failed(argv, proc))
+    return document
 
 
 def commit_of(root: Path, name: str) -> str | None:

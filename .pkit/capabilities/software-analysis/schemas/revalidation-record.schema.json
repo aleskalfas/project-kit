@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "revalidation-record.schema.json",
   "title": "A revalidation record's front matter — software-analysis capability",
-  "description": "The front matter of one revalidation record, a file `<date>-<subject>.md` in `revalidations/` under the analysis location (software-analysis DEC-001 points 5 and 6): one check of some artefacts against one version of the system, kept only when there is something to say — a planned revalidation, or one that finds a gap or a regression. A record is an act, not an anchored artefact: it carries no friction block, and its folder is not a place. It cites artefacts by id, withdrawn ones included. The body gives each artefact's outcome with its justification, then the gaps and what resolved each. Applied by `pkit software-analysis validate`; unknown fields are refused.",
+  "description": "The front matter of one revalidation record, a file `<date>-<subject>.md` in `revalidations/` under the analysis location (software-analysis DEC-001 points 5 and 6): one check of some artefacts against one version of the system, kept only when there is something to say — a planned revalidation, or one that finds a gap or a regression. A record is an act, not an anchored artefact: it carries no friction block, and its folder is not a place. It cites artefacts by id, withdrawn ones included. The body gives each artefact's outcome with its justification, then the gaps and what resolved each. It may copy executed results from the evidence point as support for an outcome, never in place of one. Applied by `pkit software-analysis validate`; unknown fields are refused.",
   "type": "object",
   "additionalProperties": false,
   "required": ["change", "trigger", "date", "by", "outcomes"],
@@ -38,6 +38,13 @@
         "type": "string",
         "enum": ["holds", "analysis-stale", "code-regressed", "gap-found"]
       }
+    },
+    "evidence": {
+      "description": "Optional: the executed results the revalidation drew on, each an entry of the `pkit::analysis:revalidation-evidence` point copied whole, in the point's own entry shape (DEC-001 point 7) — a passing result as support for `holds`, a failing one as a regression's proof. A record copies rather than cites by id: the record is history, while the point holds what its fillers report now, so an id alone would point at nothing once a filler stops reporting that commit. Evidence supports an outcome and never replaces one, so each artefact an entry is for has its outcome above; the check also holds each entry's `id` to its own `<artefact>@<commit>`.",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "revalidation-evidence.schema.json#/$defs/evidence" }
     }
   }
 }

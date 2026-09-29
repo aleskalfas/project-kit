@@ -12,8 +12,8 @@ Checks each artefact's shape and own fields against its companion schema, a
 use case's or journey's heading against its id and title, ids two artefacts
 share, an actor or step the stamp would refuse, a use case not anchored to
 its actor, a journey whose use-case anchors do not match its steps, and the
-revalidation records' front matter and the artefacts they cite.
-`_lib/check.py` states every check and the record point it applies.
+revalidation records' front matter, the artefacts they cite and the evidence
+they copy. `_lib/check.py` states every check and the record point it applies.
 
 The backbone runs it as this capability's validator, the
 `software-analysis:artefacts` member of `pkit validate` (ADR-058): from the
@@ -21,9 +21,11 @@ project root, with `--json` alone and the offline marker set, reading one
 findings document from standard output. It is a query — bounded,
 deterministic, read-only, needing no network — and `pkit init` and `pkit sync`
 provision its dependencies in uv's cache. It reads the analysis in the working
-tree alone, through the backbone's discovery, `pkit friction artefacts`; a
-number another branch took first reads a base, and is `pkit analysis
-check-numbers`' to report.
+tree, through the backbone's discovery, `pkit friction artefacts`, and — when a
+record copies evidence — the evidence point, through `pkit connections
+resolve`, so the same tree gets the same answer as long as the evidence
+fillers read the tree alone; a number another branch took first reads a base,
+and is `pkit analysis check-numbers`' to report.
 
 Usage:
   pkit analysis validate          the summary and the findings
@@ -52,7 +54,8 @@ def main() -> int:
         description=(
             "Check the analysis artefacts (software-analysis DEC-001): shape and required "
             "parts, headings, duplicate ids, what an artefact names, actor and journey "
-            "anchors, revalidation records. Read-only and offline; the working tree alone."
+            "anchors, revalidation records and the evidence they copy. Read-only and "
+            "offline; the working tree, and the evidence point when a record copies evidence."
         ),
     )
     parser.add_argument(

@@ -272,8 +272,11 @@ def test_living_docs_validator_passes_over_this_tree(pkit_on_path: Path) -> None
     assert summary[1].endswith("definition tech-docs/living-docs/rule-sets/user.md.")
     assert summary[2].endswith("definition tech-docs/living-docs/rule-sets/technical.md.")
     # Every place is a page (#1010), each reader resolved against the readers point.
+    # software-analysis contributes the actors of pkit's own analysis (#890, #1001)
+    # as readers under the `act-` prefix, beside living-docs' own two.
     assert summary[4] == (
-        "readers (pkit::documentation:readers): maintainer, user; "
+        "readers (pkit::documentation:readers): act-clone-session, "
+        "act-developer-subagent, act-operator, maintainer, user; "
         f"{len(_project_places())} page reader(s) checked."
     )
 

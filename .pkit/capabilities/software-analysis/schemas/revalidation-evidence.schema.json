@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "revalidation-evidence.schema.json",
+  "title": "Revalidation evidence — the value of pkit::analysis:revalidation-evidence, version 1",
+  "description": "The data point's companion schema (COR-052 point 5; software-analysis DEC-001 point 7): executed results that confirm or refute an analysis artefact at a commit — a test run against a use case, a trace through a journey. This capability runs nothing: the results arrive from a capability that runs them, or from the project's own filler file. One entry per artefact and commit, keyed by the pair: its `id` is `<artefact>@<commit>`. The point is `union`, no default takes part, and its inert policy is `fallback`, because the evidence advises: a revalidation record copies the entries it draws on as support for an artefact's outcome and never in place of one, and only a revalidation or a deferral recorded on the artefact clears friction (COR-050). It reads alone, since two providers of the point are compared by this file alone (COR-053 point 5): its `$defs` carry copies of `analysis.schema.json`'s id, commit and text definitions, their one home, and a test holds each copy equal to its source. The version rises only on a change that breaks existing fillers.",
+  "type": "array",
+  "items": { "$ref": "#/$defs/evidence" },
+  "$defs": {
+    "evidence": {
+      "description": "The result of one executed check, for one artefact at one commit.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "artefact", "commit", "result", "ran"],
+      "properties": {
+        "id": {
+          "description": "The entry's key, the pair it is for: `<artefact>@<commit>`, exactly the entry's own `artefact` and `commit` joined by `@`. A schema cannot compare two fields, so software-analysis' check holds a revalidation record's copy of an entry to it. A record finds the entry by it.",
+          "$ref": "#/$defs/evidence-id"
+        },
+        "artefact": {
+          "description": "The artefact the run confirms or refutes.",
+          "$ref": "#/$defs/artefact-id"
+        },
+        "commit": {
+          "description": "The commit the run was made against: the version of the system the result is true of, by its full name.",
+          "$ref": "#/$defs/commit"
+        },
+        "result": {
+          "description": "`passed`: the run did what the artefact describes — support for `holds`. `failed`: it did not — a regression with proof attached, or a sign the analysis is stale; the revalidation decides which (DEC-001 points 5 and 7).",
+          "enum": ["passed", "failed"]
+        },
+        "ran": {
+          "description": "What was run, so a person can find it and run it again: a test by its name (`tests/test_run.py::test_sandbox`), a trace, a scripted walk through a journey.",
+          "$ref": "#/$defs/text"
+        },
+        "steps": {
+          "description": "The steps and variants the run went through, by their numbers and letters (`2`, `2a`). They are cited, which is why they are never renumbered (DEC-001 point 3).",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[1-9][0-9]*[a-z]*$" }
+        },
+        "where": {
+          "description": "Where the result can be read: a pipeline run, a report file.",
+          "$ref": "#/$defs/text"
+        },
+        "by": {
+          "description": "Who or what ran it: a capability, a pipeline, a person.",
+          "$ref": "#/$defs/text"
+        }
+      }
+    },
+    "text": {
+      "description": "A non-empty line of text.",
+      "type": "string",
+      "minLength": 1
+    },
+    "actor-id": {
+      "description": "An actor's id: `ACT-` and a slug, stable across renames; the key of its entry in the actors' collection file.",
+      "type": "string",
+      "pattern": "^ACT-[a-z][a-z0-9-]*$"
+    },
+    "term-id": {
+      "description": "A glossary term's id: `TERM-` and a slug, separate from the term's display name, so a rename breaks nothing that cites it; the key of its entry in the glossary.",
+      "type": "string",
+      "pattern": "^TERM-[a-z][a-z0-9-]*$"
+    },
+    "use-case-id": {
+      "description": "A use case's id: `UC-` and its number within the project, independent of any grouping by area — three digits, zero-padded, below 1000 (`UC-007`), and no leading zero from 1000 on (`UC-1000`), so each number has one spelling and `UC-0007` is never a second id for `UC-007`.",
+      "type": "string",
+      "pattern": "^UC-(?:[0-9]{3}|[1-9][0-9]{3,})$"
+    },
+    "journey-id": {
+      "description": "A journey's id: `JRN-` and its number within the project — three digits, zero-padded, below 1000, and no leading zero from 1000 on, so each number has one spelling.",
+      "type": "string",
+      "pattern": "^JRN-(?:[0-9]{3}|[1-9][0-9]{3,})$"
+    },
+    "artefact-id": {
+      "description": "The id of any analysis artefact.",
+      "anyOf": [
+        { "$ref": "#/$defs/actor-id" },
+        { "$ref": "#/$defs/term-id" },
+        { "$ref": "#/$defs/use-case-id" },
+        { "$ref": "#/$defs/journey-id" }
+      ]
+    },
+    "commit": {
+      "description": "A commit, by its full hexadecimal name in lower case: 40 digits under SHA-1, 64 under SHA-256. An abbreviated name is refused, so a commit has one spelling and a citation matches an entry exactly.",
+      "type": "string",
+      "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$"
+    },
+    "evidence-id": {
+      "description": "The id of an entry of the evidence point, `pkit::analysis:revalidation-evidence` (DEC-001 point 7): the artefact and the commit the result is for, `<artefact>@<commit>` — an artefact id as above, then a commit's full name. A pattern cannot refer to another, so this one spells the four id shapes and the commit again, here beside them; a test holds them in step.",
+      "type": "string",
+      "pattern": "^(?:ACT-[a-z][a-z0-9-]*|TERM-[a-z][a-z0-9-]*|UC-(?:[0-9]{3}|[1-9][0-9]{3,})|JRN-(?:[0-9]{3}|[1-9][0-9]{3,}))@(?:[0-9a-f]{40}|[0-9a-f]{64})$"
+    }
+  }
+}
