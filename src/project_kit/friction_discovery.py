@@ -55,9 +55,10 @@ is the one reader of those declarations and the one walker of the places:
 - `artefacts_document` — the one walk's answer as a stable document: the
   declared places with the files each matches and the skips validation
   applies, every file read with its place and its front matter's own fields,
-  and every artefact. `pkit friction artefacts --json` prints it, and a
-  capability's script reads where artefacts are through it, never by walking
-  the places itself (ADR-057 points 1 and 2).
+  and every artefact with its anchors — of the working tree, or of a commit.
+  `pkit friction artefacts --json` prints it, and a capability's script reads
+  where artefacts are through it, at head or at another state, never by
+  walking the places or listing a commit itself (ADR-057 points 1 and 2).
 
 Nothing here computes friction: the checks (`friction_check`) read the model
 this module produces. The listing of the working tree has its home in
@@ -1530,21 +1531,29 @@ SKIP_OUTSIDE = "outside-repository"
 _ENCLOSING_PROBES = ("__probe__.md", "__a__/__b__/__probe__.md")
 
 
-def unreadable_configuration(target_root: Path) -> str | None:
+def unreadable_configuration(target_root: Path, tree: RepositoryTree | None = None) -> str | None:
     """Why the backbone configuration cannot be read, or `None` when it can.
 
     Discovery reads the file forgivingly (COR-048 point 4), so one that does not
     parse reads as no places at all. The reading command refuses it instead: a
     script reading its document could not tell nothing declared from nothing
     readable. An absent or empty file is the zero-configuration state, never
-    unreadable. The configuration pass reports the file whole.
+    unreadable. The configuration pass reports the file whole. With a `tree`,
+    the file is the one that state holds.
     """
     path = project_config_path(target_root)
-    if not path.is_file():
-        return None
     rel = path.relative_to(target_root).as_posix()
     try:
-        data = _yaml.load(path.read_text(encoding="utf-8"))
+        if tree is None:
+            if not path.is_file():
+                return None
+            text = path.read_text(encoding="utf-8")
+        else:
+            raw = tree.read_bytes([rel]).get(rel)
+            if raw is None:
+                return None
+            text = raw.decode("utf-8")
+        data = _yaml.load(text)
     except (OSError, UnicodeDecodeError) as exc:
         return f"the configuration {rel} cannot be read: {exc}"
     except YAMLError as exc:
@@ -1554,7 +1563,7 @@ def unreadable_configuration(target_root: Path) -> str | None:
     return None
 
 
-def artefacts_document(target_root: Path) -> dict[str, Any]:
+def artefacts_document(target_root: Path, tree: RepositoryTree | None = None) -> dict[str, Any]:
     """The declared places, the files they hold and the artefacts in them, as one
     stable document — what `pkit friction artefacts --json` prints.
 
@@ -1562,7 +1571,11 @@ def artefacts_document(target_root: Path) -> dict[str, Any]:
     the walk and every file's reading are this module's, never computed again —
     so a capability's script reads where artefacts are through it rather than
     re-reading the declarations or walking the places itself (ADR-057 points 1
-    and 2). The document holds:
+    and 2). With a `tree` — a commit — the same run reads that state instead:
+    its configuration and roots, its installed capabilities and their places,
+    its files; what discovery reads from the working tree whichever state it
+    walks (which folders hold rule sets, which files are synced copies, where a
+    link leads) is read from the working tree here too. The document holds:
 
     - `roots`: the two documentation roots, by audience (COR-049 point 1).
     - `places`: every declared place in walk order — the project's, then each
@@ -1583,12 +1596,19 @@ def artefacts_document(target_root: Path) -> dict[str, Any]:
       mapping) and why it is `unreadable`, if it is.
     - `artefacts`: every artefact, in walk order, with its `path`, `id`, `kind`
       (`document` or `entry`), `location`, `place`, `rule_set`, whether it
-      carries the `container` and a `friction` block, and its own `fields` (its
-      front matter or entry, as written, the container left out).
+      carries the `container` and a `friction` block, its `anchors` by kind as
+      its friction block lists them (the values that are text, in written
+      order), and its own `fields` (its front matter or entry, as written, the
+      container left out).
     """
-    settings = read_friction_settings(target_root)
-    discovery = discover_artefacts(target_root, settings)
-    roots = docs_roots.resolve_roots(target_root)
+    settings = read_friction_settings(target_root, tree)
+    discovery = discover_artefacts(target_root, settings, tree)
+    if tree is None:
+        roots = docs_roots.resolve_roots(target_root)
+    else:
+        config_rel = project_config_path(target_root).relative_to(target_root).as_posix()
+        config = _mapping_loader(target_root, tree)(config_rel)
+        roots = docs_roots.roots_from(config.get(docs_roots.DOCS_KEY))
     declared = declared_places(settings)
     in_order: list[tuple[tuple[int, str, int], Place | MalformedDeclaration]] = [
         (_declaration_order(p.source, p.declaration.pointer), p) for p in declared
@@ -1653,6 +1673,7 @@ def artefacts_document(target_root: Path) -> dict[str, Any]:
                 "rule_set": rule_set_index(artefact.rule_set),
                 "container": artefact.has_container,
                 "friction": artefact.has_friction_block,
+                "anchors": {kind: list(values) for kind, values in artefact.anchors.items()},
                 "fields": _own_fields(artefact.carrier),
             }
             for artefact in discovery.artefacts

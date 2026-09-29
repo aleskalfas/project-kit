@@ -14,7 +14,7 @@ pkit:
       record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, ADR-019, ADR-039, ADR-055, "project-management:DEC-053"]
       artefact: [.pkit/decisions/README.md]
     revalidated:
-      at: 2026-09-29T17:31:16Z
+      at: 2026-09-29T20:44:42Z
       outcome: updated
 ---
 
@@ -28,7 +28,7 @@ If you have a project that has *adopted* project-kit and you want to record deci
 
 ## Running checks
 
-There is one source of truth for "what must pass before this lands": **`scripts/check.sh`** — the check aggregator. It runs the test suite, `pkit validate` (the one umbrella over every registered check of the tree's state — the CLI reference's "validate" section lists the members), and the diff-scoped checks: `pkit migrations check-diff`, the friction change check (`pkit friction check`), the documentation check (`pkit pm check-doc-mapping`) and `pkit release lint`. Run it any time:
+There is one source of truth for "what must pass before this lands": **`scripts/check.sh`** — the check aggregator. It runs the test suite, `pkit validate` (the one umbrella over every registered check of the tree's state — the CLI reference's "validate" section lists the members), and the diff-scoped checks: `pkit migrations check-diff`, the friction change check (`pkit friction check`), software-analysis' number check (`pkit analysis check-numbers` — a use case or journey number the base took first), the documentation check (`pkit pm check-doc-mapping`) and `pkit release lint`. Run it any time:
 
 ```
 ./scripts/check.sh

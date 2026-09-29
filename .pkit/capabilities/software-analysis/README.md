@@ -7,11 +7,12 @@ pkit:
       path:
         - .pkit/capabilities/software-analysis/scripts/**
         - .pkit/capabilities/software-analysis/schemas/**
+        - .pkit/capabilities/software-analysis/templates/**
         - .pkit/capabilities/software-analysis/skills/**
         - .pkit/capabilities/software-analysis/agents/**
       record: ["software-analysis:DEC-001", COR-049, COR-050, COR-053]
     revalidated:
-      at: 2026-09-29T15:17:32Z
+      at: 2026-09-29T20:44:38Z
       outcome: updated
 ---
 
@@ -23,11 +24,11 @@ Install it when your project is past the point where one person holds the whole 
 
 ## How it stays true
 
-Each artefact declares what makes it true and when it was last revalidated. The core friction check (COR-050) flags it when that changes. A **revalidation** then checks it, and ends as *holds*, *analysis was stale*, *code regressed* or *gap found*. A record is kept only when there's something to report. The full rule is in the decision.
+Each artefact declares what makes it true — its anchors — and when it was last revalidated, in the core friction block (COR-050). The core friction check flags it when an anchor changes. A **revalidation** then checks it, and ends as *holds*, *analysis was stale*, *code regressed* or *gap found*. A record is kept only when there's something to report. The full rule is in the decision.
 
 ## Where things live
 
-Under your project's internal documentation root (COR-049; `docs/` by default):
+Under the `analysis/` folder of your internal documentation root (COR-049) — `docs/analysis/` with the default root:
 
 ```
 analysis/
@@ -45,53 +46,134 @@ analysis/
 
 A kind with many files gets a folder, and a kind with one file is a file. Folders appear only when something goes into them. These files belong to your project: uninstalling the capability leaves them in place.
 
-## Templates
+**What the capability declares for you**, in its package metadata: the location `analysis`, a sub-path of the internal root, and the four places inside it that hold anchored artefacts — the glossary, the actors, the use cases and the journeys. The revalidation records describe an act rather than an anchored artefact, so their folder is not a place. The location is **recorded the first time you stamp an artefact**, in `.pkit/capabilities/software-analysis/project/docs-locations.yaml`, so changing the root later moves nothing already written. The capability declares no surface: the code your analysis ought to cover is yours to declare, in the `friction.surface` key of `.pkit/project/config.yaml`.
 
-**Use case** (`UC-NNN-<slug>.md`):
+## Stamping artefacts: `pkit analysis new`
+
+Create artefacts with the stamp, never by copying a template by hand: it gives each one its id, puts it in its place and writes the anchors it must carry. `analysis` is this capability's alias; `pkit software-analysis new` is the same command.
+
+| Command | Writes |
+|---|---|
+| `pkit analysis new actor <slug> [--name <text>]` | the entry `ACT-<slug>` of `use-case-model/actors.md`, with its section |
+| `pkit analysis new term <slug> [--name <text>]` | the entry `TERM-<slug>` of `glossary.md`, with its section |
+| `pkit analysis new use-case <slug> --actor <ACT-id> [--area <area>] [--title <text>]` | `use-case-model/use-cases/[<area>/]UC-NNN-<slug>.md`, its actor anchored |
+| `pkit analysis new journey <slug> --actor <ACT-id> --step <UC-id> --step <UC-id> … [--title <text>]` | `use-case-model/journeys/JRN-NNN-<slug>.md`, its steps anchored |
+
+Every form also takes `--path <glob>` and `--record <id>`, each repeatable: the code that makes the artefact true and the decisions it relies on, written as its path and record anchors. Without them an actor or term is stamped unanchored — the core reports that, and never fails on it.
+
+- **Ids.** A slug is a word: a lowercase letter, then lowercase letters, digits and hyphens. An actor is `ACT-<slug>` and a term `TERM-<slug>`; the stamp refuses an id already held, withdrawn or not, since an id is never used again. A use case or journey takes the **next free number**: one past the highest the working tree and the default branch hold. A number has one spelling — three digits below 1000 (`UC-007`), no leading zero from 1000 on (`UC-1000`); the check refuses another (`UC-0007`), and both the stamp and the duplicate check read it as the number it spells, so it is never a second id. The default branch is `--base <ref>`, else `$PKIT_CHECK_BASE`, else `origin/main`; when it names no commit, the stamp numbers from the working tree alone and says so. A number another branch takes after yours is `pkit analysis check-numbers`' to report (below).
+- **What it writes.** The artefact's own fields from its template, its title or name (the slug, capitalised, by default) — a use case's or journey's title in its front matter and in its heading after the id — and the friction block with the anchors the decision asks for: a use case anchors to its actor, and a journey to the use cases of its steps. The body keeps the template's placeholders, `<…>`, for you to fill.
+- **Collection files.** A new actor or term is added to the file's front matter, and its section to the body, each where its id sorts among those already there; every other byte stays as it was, and the stamp checks the result reads back as the file plus the new entry before writing. Kept sorted, two branches adding different entries touch different places of the file and merge without a conflict unless their ids are neighbours. The file is created from the template the first time.
+- **What it refuses**, writing nothing: an actor, or a step, that is not in the analysis or is withdrawn — the check holds every use case and journey in force to the same; a journey with fewer than two steps; a slug or area that is not a word; an id already held.
+
+The stamp reads the analysis through the core's reading command, `pkit friction artefacts` — the working tree's, and with `--at` the default branch's — and records the location through `pkit docs record-location --yes` (running the stamp is your consent to that write); it never walks the folders itself.
+
+## The artefacts
+
+Each anchored artefact's own fields sit beside the core friction block, which lives inside the `pkit:` container of its front matter (COR-050, COR-053) — the container of a document, or of each entry of a collection. Each kind's own fields have a companion schema in `schemas/`; unknown fields are refused, so a misspelt one is caught. The templates in `templates/` show the full shape.
+
+**Use case** (`schemas/use-case.schema.json`) — one actor's goal and how the system fulfils it:
 
 ```markdown
 ---
 id: UC-003
+title: Run a test suite against a sandbox
 status: active                  # or: withdrawn (file kept, id never reused)
-actor: ACT-test-author
-pkit:                           # the methodology's container (COR-053); everything above it is the use case's own
-  friction:                     # the core friction block (COR-050)
+actor: ACT-tester
+pkit:
+  friction:
     anchors:
-      artefact: [ACT-test-author]
-      path: [src/cli/run.py, src/sandbox/**]
-      record: [ADR-006]
-    revalidated:
-      at: 2026-10-02T09:40:12Z
-      outcome: unchanged
-      unchanged-because: "only the result writer's internals changed"
+      path:
+        - src/cli/run.py
+      record:
+        - ADR-006
+      artefact:
+        - ACT-tester
 ---
 
 # UC-003 — Run a test suite against a sandbox
 
-**Goal:** …   **Starts when:** …
-**Main path:** 1. … 2. … 3. …
-**Variants:** 2a. … 3a. …
+**Goal:** …
+**Starts when:** …
+**Main path:** 1. … 2. …
+**Variants:** 1a. …
 **Done when:** …
 ```
 
-**Journey** (`JRN-NNN-<slug>.md`): the same front matter, with an ordered `steps: [UC-001, UC-002, …]`. Its use-case anchors are written into `anchors` from `steps` by the stamp and check commands; you add the code at the seams. The body gives *Starts*, *Done when*, the ordered steps, and the *seams to watch*.
+The heading is the id and the `title`, `# <id> — <title>`, and the check requires the two to agree: whoever reads only the front matter sees the title the page shows. The title may change; the id does not. Steps are numbered and variants lettered after the step they branch from; both are only ever added, since journeys and evidence cite them.
 
-**Actors / glossary** (collection files): front matter maps each id to its data, and the body has one `## <id>` section per entry. Actor ids start `ACT-` and actors carry `needs`. An artefact deliberately left unanchored carries `unanchored_reason:`. Term ids start `TERM-`; a term carries a display name, `replaces:` for former names, and a definition.
+**Journey** (`schemas/journey.schema.json`) — the same fields, `title` and heading included, plus `steps`: the use cases it passes through, in order, at least two. `steps` is the source; the stamp writes its use cases into the artefact anchors, and the check requires the two to match. Add the code at the seams as path anchors. The body gives where it starts, the ordered steps, the **seams to watch** between them, and when it is done.
 
-**Revalidation record** (`<date>-<subject>.md`): front matter with `change` (a work item, a pull request, or commits), `trigger` (`planned` | `drift` | `scheduled` | `close` | `onboarding`), the date performed, who did it (and who confirmed), and the ids of the artefacts covered. The body has one outcome per artefact, then the gaps and what resolved each.
+**Actors** (`schemas/actor.schema.json`) — a collection file: the front matter maps each id to its entry, and the body has one `## <id> — <name>` section per entry.
 
-The friction block (anchors and revalidation) follows the core anchors-and-friction schema, inside the `pkit:` container in each artefact's front matter; `pkit validate` checks it against that schema, which the backbone ships.
+```yaml
+ACT-tester:
+  name: Test author             # may change; the id does not
+  status: active
+  needs:
+    - Run the suite against a clean sandbox
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/cli/**
+```
+
+**Glossary** (`schemas/term.schema.json`) — the same collection shape, each entry a `name`, a `status`, a one-sentence `definition`, and on a rename the former names, newest first, in `replaces`. The id never changes.
+
+An actor or a term nothing embodies carries `unanchored-because:` — the reason onboarding accepts it unanchored.
+
+**Revalidation record** (`schemas/revalidation-record.schema.json`) — no friction block; copy `templates/revalidation-record.md` to `revalidations/<date>-<subject>.md`:
+
+```yaml
+change: "#123"                  # the work item, pull request or commit range that carried it
+trigger: drift                  # planned | drift | scheduled | close | onboarding
+date: 2026-10-02
+by: Alex                        # a person, or an agent
+confirmed-by: Sam               # optional: who confirmed an agent's outcomes
+outcomes:                       # each artefact covered, withdrawn ones included
+  UC-003: holds                 # holds | analysis-stale | code-regressed | gap-found
+  JRN-001: analysis-stale
+```
+
+The body gives each artefact's outcome with its justification, then the gaps and what resolved each.
+
+## Checking: `pkit analysis validate`
+
+`pkit validate` runs the check as its `software-analysis:artefacts` member, so it runs wherever your check gate runs `pkit validate`; `pkit analysis validate` runs it alone, and `--json` prints the findings document it reads. It is a query: read-only, offline, and `pkit sync` provisions its dependencies. It reads the working tree alone, so the same tree always gets the same answer. It fails on:
+
+- **a file in a place that is not its kind's shape** — a file without front matter, a glossary or actors file that is not a collection, a use-case or journey file holding entries;
+- **missing required parts** — an artefact's own fields against its schema, and a collection entry whose key is not its kind's id;
+- **a use case or journey whose heading is not its id and title** — `# UC-003 — <title>`, the `title` its front matter gives;
+- **duplicate ids** — two artefacts holding one id;
+- **a use case or journey naming what the stamp would refuse** — an actor, or a journey's step, that is not in the analysis, or that is withdrawn while the use case or journey is in force. A withdrawn artefact may name withdrawn ones: it is history;
+- **a use case not anchored to its actor**, so a changed actor would not flag it;
+- **a journey whose use-case anchors do not match its steps** — the message names the anchors to write;
+- **a revalidation record** whose front matter does not fit its schema, or whose outcomes cite an id that is no artefact of the analysis (withdrawn ones are fine).
+
+Friction itself, dead anchors and the friction block's own shape are the core's checks (`pkit validate`'s `friction` member and `pkit friction check`), and so is front matter that does not parse; an unanchored artefact is the core's measure, never an error.
+
+## Numbers another branch took: `pkit analysis check-numbers`
+
+`pkit analysis check-numbers [--base <ref>] [--json]` fails on **a number two branches took**: a use case or journey numbered in your working tree whose number the default branch gave to another file since your branch left it. The first to reach the default branch keeps the number; renumber yours before merging (`pkit analysis new` gives the next free one). A use case you moved into an area is not a collision, and once the default branch is merged in, a number both took is two files holding one id, which `pkit validate` reports as a duplicate.
+
+It reads the default branch — its tip, and where your branch left it — so it answers about your change rather than the tree, and it is not a member of `pkit validate`: run it as a line of its own in your check gate, beside `pkit friction check`, with the same base. The base is `--base <ref>`, else `$PKIT_CHECK_BASE`, else `origin/main`. Like the friction change check:
+
+- it **fails when the base names no commit** here, or shares no history with `HEAD` — fetch it, or name another — rather than passing without comparing. A working tree that numbers nothing has nothing to compare and needs no base;
+- it **reports an outdated base** — one that moved on after your branch left it, which is when it can have taken a number since — and never fails on it.
+
+`--json` prints `{schema_version, base, summary, findings}`: `base` is `{ref, tip, commit, outdated}` (`commit` is the merge-base), or `null` when nothing was compared. It is a query: read-only, offline, and `pkit sync` provisions its dependencies.
 
 ## Connections (design-ahead)
 
-Declared in the decision; the package metadata gains them with the first implementation increment. The capability provides the `pkit::analysis` role (COR-053); `pkit::` and `pkit:` are this distribution's literals for the methodology's publisher qualifier and front-matter container ([the lifecycle README, "The methodology's literals"](../../lifecycle/README.md#the-methodologys-literals)).
+Declared in the decision; the package metadata gains them in a later increment. The capability provides the `pkit::analysis` role (COR-053); `pkit::` and `pkit:` are this distribution's literals for the methodology's publisher qualifier and front-matter container ([the lifecycle README, "The methodology's literals"](../../lifecycle/README.md#the-methodologys-literals)).
 
 - **Accepts** `pkit::analysis:revalidation-evidence`: executed results per artefact and commit, supplied by a capability or a [project file](../../lifecycle/README.md#where-a-project-filler-file-lives-the-address-to-path-mapping). Policy `union`, advisory. Evidence informs a revalidation; it doesn't replace one.
 - **Contributes** to `pkit::documentation:readers` with actors and their needs. Inert when no documentation capability is installed.
 
 ## What's shipped now, what's next
 
-This increment ships the decision and this README. Next come: commands to stamp and check artefacts, an authoring skill that guides revalidation, and the declarations of places, surface and connections. Named for later: planned-revalidation and onboarding lifecycles, a supplementary specification (constraints and quality), architecture views, and executable use cases.
+Shipped: the decision; the analysis location and its places; a companion schema and a template for each artefact kind and for the revalidation record; the stamp, `pkit analysis new`; the check, `pkit analysis validate`, a member of `pkit validate`; and the number check, `pkit analysis check-numbers`, a check-gate line of its own. Next come: the connections above, and an authoring skill that guides revalidation. Named for later: planned-revalidation and onboarding lifecycles, a supplementary specification (constraints and quality), architecture views, and executable use cases.
 
 ## Citing this capability's decisions
 

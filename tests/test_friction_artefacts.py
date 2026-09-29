@@ -215,6 +215,14 @@ def test_every_artefact_with_its_place_and_its_own_fields(adopter: AdopterRepo) 
     assert guide["fields"] == {"id": "guide", "reader": "user", "kind": "signpost"}
     assert (guide["container"], guide["friction"]) == (True, True)
     assert rule["fields"] == {"status": "accepted"}
+    # Its anchors, by kind, as its friction block lists them.
+    assert (guide["anchors"], rule["anchors"]) == ({"path": ["src/**"]}, {"path": ["src/**"]})
+
+
+def test_an_artefact_without_anchors_lists_none(adopter: AdopterRepo) -> None:
+    adopter.write({"notes/guide.md": "---\nid: guide\npkit:\n  friction: {}\n---\n"})
+    (guide,) = [a for a in _document()["artefacts"] if a["path"] == "notes/guide.md"]
+    assert (guide["friction"], guide["anchors"]) == (True, {})
 
 
 def test_a_rule_set_file_names_the_rule_set_place_claiming_it(adopter: AdopterRepo) -> None:
@@ -240,6 +248,55 @@ def test_the_document_is_the_one_discovery(adopter: AdopterRepo) -> None:
         a.location for a in discovery.artefacts
     ]
     assert [f["path"] for f in _document()["files"]] == [f.path for f in discovery.files]
+
+
+# --- another state: --at ---------------------------------------------------------------
+
+
+def test_at_a_commit_the_document_is_that_state_s(adopter: AdopterRepo) -> None:
+    """`--at` reads one commit from git objects — its configuration, its places,
+    its files — so a script reads another state through the one discovery."""
+    committed = _document()
+    adopter.commit("state one")
+    adopter.write(
+        {
+            CONFIG: "docs:\n  user: handbook\nfriction:\n  places: [notes]\n",
+            "notes/later.md": ANCHORED.format(id="later"),
+            "tech-docs/evidence/run.md": None,
+        }
+    )
+    now = _document()
+    assert "notes/later.md" in [f["path"] for f in now["files"]]
+    result = _run("--at", "HEAD", "--json")
+    assert result.exit_code == 0, result.output
+    assert json.loads(result.output) == committed
+    assert _run("--at", "HEAD", "--json").output == result.output
+
+
+def test_at_a_commit_the_roots_are_that_state_s(adopter: AdopterRepo) -> None:
+    adopter.commit("state one")
+    adopter.write({CONFIG: "docs:\n  internal: elsewhere\n"})
+    assert _document()["roots"] == {"internal": "elsewhere", "user": "docs"}
+    at_head = json.loads(_run("--at", "HEAD", "--json").output)
+    assert at_head["roots"] == {"internal": "tech-docs", "user": "handbook"}
+
+
+@pytest.mark.parametrize("rev", ["no-such-branch", "-x", ""])
+def test_at_a_name_that_is_no_commit_exits_1(adopter: AdopterRepo, rev: str) -> None:
+    adopter.commit("state one")
+    result = _run("--at", rev, "--json")
+    assert result.exit_code == 1
+    assert "names no commit of this repository" in result.output
+
+
+def test_at_a_commit_whose_configuration_cannot_be_read_exits_1(adopter: AdopterRepo) -> None:
+    adopter.write({CONFIG: "friction: [places\n"})
+    adopter.commit("broken configuration")
+    adopter.write({CONFIG: "friction:\n  places: [notes]\n"})
+    assert _run("--json").exit_code == 0
+    result = _run("--at", "HEAD", "--json")
+    assert result.exit_code == 1
+    assert "the configuration .pkit/project/config.yaml does not parse" in result.output
 
 
 # --- the command -----------------------------------------------------------------------

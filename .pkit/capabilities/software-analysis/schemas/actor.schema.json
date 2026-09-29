@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "actor.schema.json",
+  "title": "An actor's own fields — software-analysis capability",
+  "description": "One entry of the actors' collection file, `use-case-model/actors.md` under the analysis location (software-analysis DEC-001 points 1 to 3): a named role that uses the system, and the needs it brings. The entry is keyed by the actor's id (`analysis.schema.json#/$defs/actor-id`), which sits outside this object; its body section is the one headed by that id. These are the entry's own fields: its friction block sits in the methodology's container beside them and is the core's, validated by the backbone (COR-050, COR-053 point 10). An actor anchors to where the software or a decision embodies it (DEC-001 point 4). Applied by the capability's check, `pkit software-analysis validate` (the `software-analysis:artefacts` member of `pkit validate`); unknown fields are refused, so a misspelt one is never silently ignored.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["name", "status", "needs"],
+  "properties": {
+    "name": {
+      "description": "The actor's display name. It may change; the id does not.",
+      "$ref": "analysis.schema.json#/$defs/text"
+    },
+    "status": {
+      "$ref": "analysis.schema.json#/$defs/status"
+    },
+    "needs": {
+      "description": "What the actor needs from the system, one line each. A user story — a need in one sentence — is an actor's need and a use case's goal, not an artefact of its own (DEC-001 point 1).",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "analysis.schema.json#/$defs/text" }
+    },
+    "unanchored-because": {
+      "$ref": "analysis.schema.json#/$defs/unanchored-because"
+    }
+  }
+}
