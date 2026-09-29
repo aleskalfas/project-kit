@@ -10,9 +10,9 @@ pkit:
         - .pkit/adapters/claude-code/deploy-skills.sh
       record: [COR-003, COR-005, COR-006, COR-013, COR-015, COR-020]
     revalidated:
-      at: 2026-09-29T17:33:44Z
+      at: 2026-09-29T18:03:43Z
       outcome: unchanged
-      unchanged-because: "The skills area and its deploy hold: adapter-author gained a bullet naming the adapter's undeploy script; no skill's layout, deploy or pairing changed."
+      unchanged-because: agent-author gained a body-drafting bullet on a reviewer's scoped read-only claim; the skills area map holds
 ---
 
 # Skills
