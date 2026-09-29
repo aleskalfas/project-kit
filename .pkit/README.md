@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-09-29T21:25:48Z
+      at: 2026-09-29T21:55:59Z
       outcome: unchanged
-      unchanged-because: the CLI README gained the analysis commands, friction artefacts --at and docs record-location, all inside its own sections (#887); the area map holds
+      unchanged-because: the CLI, lifecycle and process READMEs now say the render drops a stale component's journal ignore line while journals are committed, a detail inside their own sections; the area map and each area's one-line description hold
 ---
 
 # project-kit

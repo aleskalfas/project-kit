@@ -367,6 +367,32 @@ def test_config_set_turns_journal_logging_on_and_the_ignore_line_follows(
     assert config["process"] == {"journal": {"enabled": True, "committed": True}}
 
 
+def test_config_set_committing_journals_reports_the_component_entry_the_render_drops(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """A package older than the backbone's ownership of the journal line still
+    claims it; committing the journals drops the entry, and the write says so."""
+    repo = make_adopter_repo(capabilities=("evidence",))
+    stale = ".pkit/capabilities/evidence/project/process/**/*.journal.jsonl"
+    package = repo.root / ".pkit" / "capabilities" / "evidence" / "package.yaml"
+    package.write_text(
+        package.read_text(encoding="utf-8") + f"runtime_ignore:\n  - {stale}\n", encoding="utf-8"
+    )
+    runner = CliRunner()
+
+    enabled = runner.invoke(main, ["config", "set", "process.journal.enabled", "true", "--yes"])
+    committed = runner.invoke(main, ["config", "set", "process.journal.committed", "true", "--yes"])
+
+    assert enabled.exit_code == 0, enabled.output
+    assert "dropped" not in enabled.output
+    assert committed.exit_code == 0, committed.output
+    why = "the backbone owns the journal pattern while journals are committed"
+    assert f"  dropped       evidence '{stale}' — {why}" in committed.output.splitlines()
+    lines = (repo.root / ".pkit" / ".gitignore").read_text(encoding="utf-8").splitlines()
+    assert f"# dropped: evidence '{stale}' — {why}" in lines
+    assert not [line for line in lines if "journal.jsonl" in line and not line.startswith("#")]
+
+
 def test_friction_findings_on_a_valid_configuration_are_pinned(
     make_adopter_repo: MakeAdopterRepo,
 ) -> None:
