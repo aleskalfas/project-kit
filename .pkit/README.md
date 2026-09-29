@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-09-29T17:45:56Z
+      at: 2026-09-29T18:03:44Z
       outcome: unchanged
-      unchanged-because: the process and CLI READMEs were revalidated for opt-in process journal logging; the signpost's map of the areas and their entry points is unaffected
+      unchanged-because: the agents, skills and two capability READMEs were revalidated for the reviewer role's scoped read-only rule; the area map holds
 ---
 
 # project-kit
