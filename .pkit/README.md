@@ -17,8 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-09-29T15:20:29Z
-      outcome: updated
+      at: 2026-09-29T16:17:36Z
+      outcome: unchanged
+      unchanged-because: the lifecycle, CLI and schemas READMEs gained the pkit friction artefacts read command; each area's role, as this map states it, is unchanged
 ---
 
 # project-kit

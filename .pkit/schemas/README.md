@@ -19,7 +19,7 @@ pkit:
         - src/project_kit/working_tree.py
       record: [COR-018, COR-019, COR-020, COR-023, COR-029, COR-048, COR-050, COR-051, COR-052, COR-053, ADR-056, ADR-057]
     revalidated:
-      at: 2026-09-29T15:15:38Z
+      at: 2026-09-29T16:17:22Z
       outcome: updated
 ---
 
