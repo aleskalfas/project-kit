@@ -249,6 +249,11 @@ REPORT: dict[str, Any] = {
             "anchor": {"kind": "path", "value": "**"},
         },
         {
+            "location": "docs/guide.md",
+            "kind": "deferred",
+            "anchor": {"kind": "path", "value": "src/e.py"},
+        },
+        {
             "location": "docs/deferred.md",
             "kind": "deferred",
             "anchor": {"kind": "path", "value": "src/c.py"},
@@ -264,20 +269,13 @@ REPORT: dict[str, Any] = {
 PAGES = ["docs/current.md", "docs/deferred.md", "docs/guide.md"]
 
 
-def test_friction_debt_on_pages_and_uncovered_surface_become_obligations() -> None:
-    """A page's friction names the page, whose answer in the diff meets it; an
-    uncovered path names only the code, since only a page anchoring it meets it."""
+def test_stale_pages_and_uncovered_surface_become_obligations() -> None:
+    """A stale page names the page, whose answer in the diff meets it; an uncovered
+    path names only the code, since only a page anchoring it meets it. A deferred
+    page owes nothing — its deferral is the answer (DEC-053 point 4) — and a stale
+    page's deferred anchor is not in what it owes."""
     obligations = doc_check_lib.obligations(REPORT, PAGES)
     assert obligations == [
-        {
-            "id": "friction:page-stale:docs/deferred.md",
-            "source": "friction",
-            "reason": "page-stale",
-            "document": "docs/deferred.md",
-            "description": (
-                "deferred: path src/c.py deferred — pkit friction explain docs/deferred.md"
-            ),
-        },
         {
             "id": "friction:page-stale:docs/guide.md",
             "source": "friction",
@@ -568,7 +566,8 @@ def test_the_filler_contributes_page_friction_and_uncovered_surface(
     tracked_project: AdopterRepo,
 ) -> None:
     """Through the backbone: the whole-repository check at HEAD, the pages among its
-    artefacts, obligations in project-management's shape beside the mapping's."""
+    artefacts, obligations in project-management's shape beside the mapping's. The
+    stale page owes; the deferred one does not."""
     repo = tracked_project
     page = {"reader": "user", "kind": "signpost"}
     repo.write(
@@ -597,11 +596,10 @@ def test_the_filler_contributes_page_friction_and_uncovered_surface(
     resolved, ours = _living_docs_entries(repo)
     assert resolved["resolved"], resolved["why"]
     assert [(o["id"], o.get("document"), o.get("path")) for o in ours] == [
-        ("friction:page-stale:docs/deferred.md", "docs/deferred.md", None),
         ("friction:page-stale:docs/guide.md", "docs/guide.md", None),
         ("friction:code-undocumented:src/d.py", None, "src/d.py"),
     ]
-    assert ours[1]["description"] == (
+    assert ours[0]["description"] == (
         "stale: path src/a.py changed — pkit friction explain docs/guide.md"
     )
     assert list(_schema(PM_CAPABILITY, "doc-check.schema.json").iter_errors(ours)) == []
@@ -614,7 +612,7 @@ def test_the_filler_contributes_page_friction_and_uncovered_surface(
         check=False,
     )
     assert human.returncode == 0, human.stderr
-    assert human.stdout.splitlines()[0] == "pkit::work-tracking:doc-check: 3 friction obligation(s)"
+    assert human.stdout.splitlines()[0] == "pkit::work-tracking:doc-check: 2 friction obligation(s)"
     # And `pkit validate` passes with the role, both points and the contribution.
     result = CliRunner().invoke(
         main, ["--color", "never", "validate", "--only", "packages", "--only", "connections"]
