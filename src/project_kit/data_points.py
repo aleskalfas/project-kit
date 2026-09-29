@@ -52,7 +52,11 @@ defines is inert — its envelope checked, its value never read.
 `resolve_data_points` reads the repository and the one wiring;
 `shared_resolution` computes it once per run of `pkit validate`
 (`validators.once_per_run`): the `connections` member reports it, and the
-status report shows how each point resolved.
+status report shows how each point resolved. `resolve_point` resolves one
+point alone, for `pkit connections resolve`: only its fillers are asked, so no
+other point's command filler starts. Within a run each point resolves at most
+once, whichever reader asks first, and points never read one another, so a
+point resolved alone is the point resolved among all.
 """
 
 from __future__ import annotations
@@ -218,23 +222,71 @@ def resolve_data_points(target_root: Path) -> DataResolution:
 
 
 def _resolve(target_root: Path) -> DataResolution:
-    wiring = cx.shared_wiring(target_root)
+    """Every data point, each resolved once per run (`_resolved`): the project
+    filler files' findings, then each point's in the wiring's order — the same
+    answer whichever point a reader of the run asked for first."""
+    run = _data_run(target_root)
+    outcomes = [_resolved(run, binding) for binding in _data_points(run.wiring)]
+    findings = [*run.envelope_findings, *(f for o in outcomes for f in o.findings)]
+    return DataResolution(
+        points=tuple(o.point for o in outcomes),
+        filler_files=run.filler_files,
+        findings=tuple(findings),
+        notes=run.notes,
+    )
+
+
+def _data_points(wiring: cx.Wiring) -> list[cx.PointBinding]:
+    """The data points the active providers define, in the wiring's order."""
+    return [p for p in wiring.points if p.point.kind is cx.PointKind.DATA]
+
+
+def _data_run(target_root: Path) -> _Run:
+    """What every data point of a run reads — the one wiring, the point schemas,
+    the project's filler files with their envelopes checked — made once per run."""
+    return validators.once_per_run(
+        ("data-points-run", target_root.resolve()), lambda: _new_run(target_root)
+    )
+
+
+def _new_run(target_root: Path) -> _Run:
     files = cx.project_fillers(target_root)
     schema, notes = _filler_schema(target_root)
     run = _Run(
         root=target_root,
-        wiring=wiring,
+        wiring=cx.shared_wiring(target_root),
         schemas=cx.container_wiring(target_root).points,
         fillers={f.address: f for f in files if f.address is not None},
         prefix=cx.fillers_prefix(target_root).as_posix(),
         envelope=schema,
+        filler_files=len(files),
+        notes=notes,
     )
     run.check_envelopes(files)
-    points = tuple(
-        _Point(run, p).resolve() for p in wiring.points if p.point.kind is cx.PointKind.DATA
-    )
-    return DataResolution(
-        points=points, filler_files=len(files), findings=tuple(run.findings), notes=notes
+    run.envelope_findings = tuple(run.findings)
+    return run
+
+
+@dataclass(frozen=True)
+class _PointOutcome:
+    """One data point resolved, with the findings its resolution made."""
+
+    point: ResolvedPoint
+    findings: tuple[validators.Finding, ...]
+
+
+def _resolved(run: _Run, binding: cx.PointBinding) -> _PointOutcome:
+    """The point `binding` resolved, once per run: its fillers are asked — a command
+    filler started — at most once, whichever reader asks first. Points do not
+    read one another, so a point resolved alone is the point resolved among all."""
+
+    def resolve() -> _PointOutcome:
+        start = len(run.findings)
+        point = _Point(run, binding).resolve()
+        return _PointOutcome(point, tuple(run.findings[start:]))
+
+    return validators.once_per_run(
+        ("data-point", run.root.resolve(), binding.point.address), resolve
     )
 
 
@@ -308,7 +360,10 @@ class _Run:
     fillers: Mapping[str, cx.FillerFile]
     prefix: str
     envelope: Mapping[str, Any] | None  # the filler envelope's schema; None when the tree has none
+    filler_files: int = 0  # files under the fillers prefix, strays included
+    notes: tuple[str, ...] = ()
     findings: list[validators.Finding] = field(default_factory=list[validators.Finding])
+    envelope_findings: tuple[validators.Finding, ...] = ()  # the filler files', before any point
     unsound: dict[str, str] = field(default_factory=dict[str, str])  # address → why it is not read
 
     def add(self, location: str, message: str, severity: validators.Severity) -> None:
@@ -1092,13 +1147,19 @@ def summary_lines(resolution: DataResolution) -> list[str]:
 
 def resolve_point(target_root: Path, address: str) -> tuple[ResolvedPoint | None, str]:
     """The data point `address` resolved, or None with why no active provider
-    defines it — as one run, so the wiring is resolved once for both answers."""
+    defines it — as one run, so the wiring is resolved once for both answers.
+
+    Only that point resolves: its fillers are asked, and no other point's command
+    filler starts. Within a run the wiring, the filler files and any point
+    already resolved are shared (`validators.once_per_run`), so the point is the
+    one `pkit validate` and `pkit status` resolve among all the others."""
 
     def run() -> tuple[ResolvedPoint | None, str]:
-        point = _resolve(target_root).point(address)
-        if point is not None:
-            return point, ""
-        return None, undefined_why(cx.shared_wiring(target_root), address)
+        data_run = _data_run(target_root)
+        for binding in _data_points(data_run.wiring):
+            if binding.point.address == address:
+                return _resolved(data_run, binding).point, ""
+        return None, undefined_why(data_run.wiring, address)
 
     return validators.as_one_run(run)
 

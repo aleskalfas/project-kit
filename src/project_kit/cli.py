@@ -542,8 +542,9 @@ def connections_resolve(address: str, as_json: bool) -> None:
     The resolution `pkit validate` reports and `pkit status` shows (COR-052):
     the point's value — a `single` point's answer, or the entries of a `union`
     or `additive` point, each with its origin — how it resolved, or why it did
-    not, and every filler considered. Read-only; command fillers run as they
-    do there, offline-marked and bounded. It is how a capability's own script
+    not, and every filler considered. Read-only; only this point resolves, so
+    only its command fillers run, as they do there, offline-marked and
+    bounded. It is how a capability's own script
     reads a point it defines without importing the backbone. Exit 0 when the
     point resolves; 1 when it does not, or when no active provider defines it,
     and the output says why.

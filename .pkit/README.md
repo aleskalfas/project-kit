@@ -17,8 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-09-29T15:20:29Z
-      outcome: updated
+      at: 2026-09-29T16:23:58Z
+      outcome: unchanged
+      unchanged-because: the lifecycle and CLI READMEs now say connections resolve resolves only its point; each area's role, as this map states it, is unchanged
 ---
 
 # project-kit
