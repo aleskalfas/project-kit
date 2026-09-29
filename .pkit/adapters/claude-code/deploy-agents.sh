@@ -229,7 +229,7 @@ deploy_one() {
     # The two recovery paths are: (a) rename your agent to keep both,
     # (b) delete this file to let the kit re-deploy its marked version.
     if [ -e "$dest" ] && ! head -n 5 "$dest" | grep -qF "$MARKER"; then
-        status "skipped" ".claude/agents/$name.md (no kit marker — adopter content or pre-marker deploy)"
+        status "skipped" ".claude/agents/$name.md (no kit marker — adopter content, or a copy from before the marker: it is STALE against agents/$name.md; to regenerate it from source, delete it and rerun this script)"
         rm -f "$tmpfile"
         return 0
     fi
