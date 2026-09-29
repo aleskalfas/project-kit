@@ -1,18 +1,23 @@
-"""Tests for the release step: compute, write, broaden-at-release, changelog,
-and consumption (PRJ-002 D3/D4). Plus a cutover check that the legacy
-`version bump` path still works alongside the release path."""
+"""Tests for the release step: compute, write, broaden-at-release, the declared
+floor raise, changelog, and consumption (PRJ-002 D3/D4). Plus a cutover check
+that the legacy `version bump` path still works alongside the release path."""
 
 from __future__ import annotations
 
+import shutil
 import subprocess
 from datetime import date
 from pathlib import Path
+from typing import cast
 
 import click
 import pytest
+from click.testing import CliRunner
 
 from project_kit import changesets, release, versioning
+from project_kit.cli import main
 from project_kit.manifest import read_backbone_manifest
+from project_kit.migrations import parse_version_tuple
 from tests.adopter_repo import GitRepo
 
 
@@ -540,3 +545,299 @@ def test_migration_dir_warns_when_release_moves_no_backbone(tmp_path: Path) -> N
     warnings = release.migration_dir_mismatches(source_kit, plan)
     assert len(warnings) == 1
     assert "backbone/1.6.0" in warnings[0]
+
+
+# --- The declared floor raise (PRJ-002 D4) ----------------------------------
+
+
+def _add_floor(
+    source_kit: Path, component: str, kind: str, name: str, *, value: str = "release"
+) -> None:
+    """A changeset declaring its component needs the backbone the release ships."""
+    directory = changesets.unreleased_dir(source_kit.parent)
+    directory.mkdir(parents=True, exist_ok=True)
+    (directory / name).write_text(
+        f"component: {component}\nkind: {kind}\nbody: Needs the new backbone.\n"
+        f"custom:\n  requires_backbone: {value}\n",
+        encoding="utf-8",
+    )
+
+
+def test_backbone_release_raises_a_declared_floor_to_the_new_backbone(tmp_path: Path) -> None:
+    """The declared component's floor rises to the backbone the release ships; a
+    component that declared nothing keeps its floor — the raise is never automatic."""
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    declared = _write_capability(source_kit, "houseware", "0.3.0", ">=1.0.0,<2.0.0")
+    silent = _write_capability(source_kit, "otherware", "0.1.0", ">=1.0.0,<2.0.0")
+    _add(source_kit, "backbone", "minor", "backbone change", "a.yaml")
+    _add_floor(source_kit, "houseware", "minor", "b.yaml")
+
+    plan = release.compute_release(source_kit)
+    assert plan.shipped_backbone == "1.6.0"
+    assert [r.component.name for r in plan.floor_raises] == ["houseware"]
+    release.apply_release(source_kit, plan, tag=False)
+
+    assert (source_kit / "VERSION").read_text().strip() == "1.6.0"
+    assert 'requires_backbone: ">=1.6.0,<2.0.0"' in declared.read_text()
+    assert "  version: 0.4.0\n" in declared.read_text()
+    assert 'requires_backbone: ">=1.0.0,<2.0.0"' in silent.read_text()
+    adapter = (source_kit / "adapters" / "claude-code" / "package.yaml").read_text()
+    assert 'requires_backbone: ">=0.1.0,<1.7.0"' in adapter  # broadened, floor untouched
+
+
+def test_component_release_raises_a_declared_floor_to_the_current_backbone(
+    tmp_path: Path,
+) -> None:
+    """With no backbone move, the backbone the release ships is the current one."""
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    pkg = _write_capability(source_kit, "houseware", "0.3.0", ">=1.0.0,<2.0.0")
+    _add_floor(source_kit, "houseware", "patch", "a.yaml")
+
+    plan = release.compute_release(source_kit)
+    assert plan.shipped_backbone == "1.5.0"
+    release.apply_release(source_kit, plan, tag=False)
+
+    assert 'requires_backbone: ">=1.5.0,<2.0.0"' in pkg.read_text()
+    assert (source_kit / "VERSION").read_text().strip() == "1.5.0"
+
+
+def test_declared_floor_raise_is_raise_only(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    pkg = _write_capability(source_kit, "houseware", "0.3.0", ">=1.5.0,<2.0.0")
+    _add_floor(source_kit, "houseware", "patch", "a.yaml")
+
+    release.apply_release(source_kit, release.compute_release(source_kit), tag=False)
+
+    assert 'requires_backbone: ">=1.5.0,<2.0.0"' in pkg.read_text()
+    assert "already admits no backbone older than 1.5.0" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(
+    ("component", "kind", "value", "problem"),
+    [
+        ("backbone", "minor", "release", "the backbone has no `requires_backbone`"),
+        ("houseware", "none", "release", "a `none` changeset moves no version"),
+        ("houseware", "minor", "1.6.0", "takes one value, `release`"),
+        ("wildware", "minor", "release", "has a floor the release can raise"),
+    ],
+)
+def test_compute_refuses_a_floor_field_it_cannot_carry(
+    tmp_path: Path, component: str, kind: str, value: str, problem: str
+) -> None:
+    """A declared floor is never dropped silently: the release refuses to plan."""
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    _write_capability(source_kit, "houseware", "0.3.0", ">=1.0.0,<2.0.0")
+    _write_capability(source_kit, "wildware", "0.3.0", "*")
+    _add_floor(source_kit, component, kind, "a.yaml", value=value)
+
+    with pytest.raises(click.ClickException, match="cannot raise a requires_backbone floor") as err:
+        release.compute_release(source_kit)
+    assert problem in err.value.message
+
+
+def test_no_broaden_still_raises_a_declared_floor(tmp_path: Path) -> None:
+    """`--no-broaden` keeps an upper bound as authored; a declared need still stands."""
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    pkg = _write_capability(source_kit, "houseware", "0.3.0", ">=1.0.0,<2.0.0")
+    _add_floor(source_kit, "houseware", "minor", "a.yaml")
+
+    release.apply_release(source_kit, release.compute_release(source_kit), tag=False, broaden=False)
+
+    assert 'requires_backbone: ">=1.5.0,<2.0.0"' in pkg.read_text()
+
+
+def test_no_broaden_refuses_a_floor_the_upper_bound_cannot_hold(tmp_path: Path) -> None:
+    """Raised under an upper bound that excludes the shipped backbone, the range would
+    admit nothing — refused before anything is written."""
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    pkg = _write_capability(source_kit, "houseware", "0.3.0", ">=1.0.0,<1.5.0")
+    _add_floor(source_kit, "houseware", "minor", "a.yaml")
+    before = pkg.read_text()
+
+    plan = release.compute_release(source_kit)
+    with pytest.raises(click.ClickException, match="would admit no backbone"):
+        release.apply_release(source_kit, plan, tag=False, broaden=False)
+
+    assert pkg.read_text() == before
+    assert list(changesets.unreleased_dir(source_kit.parent).glob("*.yaml"))
+
+
+def test_no_broaden_does_not_refuse_a_floor_it_leaves_alone(tmp_path: Path) -> None:
+    """A floor already above the shipped backbone is not raised, so its range is
+    not the release's to refuse."""
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    pkg = _write_capability(source_kit, "houseware", "0.3.0", ">=1.7.0,<2.0.0")
+    _add_floor(source_kit, "houseware", "patch", "a.yaml")
+
+    release.apply_release(source_kit, release.compute_release(source_kit), tag=False, broaden=False)
+
+    assert 'requires_backbone: ">=1.7.0,<2.0.0"' in pkg.read_text()
+    assert "  version: 0.3.1\n" in pkg.read_text()
+
+
+def test_a_pre_release_backbone_is_refused_before_anything_is_written(tmp_path: Path) -> None:
+    """A component release under a pre-release `.pkit/VERSION` ships that
+    pre-release, which no floor is raised to: the release refuses to plan, so
+    `apply` never writes the component's version first and double-bumps on retry."""
+    source_kit = _make_kit(tmp_path, backbone="1.6.0rc1")
+    pkg = _write_capability(source_kit, "houseware", "0.3.0", ">=1.0.0,<2.0.0")
+    _add_floor(source_kit, "houseware", "minor", "a.yaml")
+    before = pkg.read_text()
+
+    with pytest.raises(click.ClickException, match="not a release version") as err:
+        release.compute_release(source_kit)
+    assert "ships backbone '1.6.0rc1'" in err.value.message
+    assert pkg.read_text() == before
+
+
+def test_a_backbone_move_lifts_the_pre_release_refusal(tmp_path: Path) -> None:
+    """Moving the backbone ships a release version, whatever `.pkit/VERSION` held."""
+    source_kit = _make_kit(tmp_path, backbone="1.6.0rc1")
+    pkg = _write_capability(source_kit, "houseware", "0.3.0", ">=1.0.0,<2.0.0")
+    _add(source_kit, "backbone", "patch", "backbone fix", "a.yaml")
+    _add_floor(source_kit, "houseware", "minor", "b.yaml")
+
+    plan = release.compute_release(source_kit)
+    assert plan.shipped_backbone == "1.6.1"
+    release.apply_release(source_kit, plan, tag=False)
+    assert 'requires_backbone: ">=1.6.1,<2.0.0"' in pkg.read_text()
+
+
+def test_a_comment_naming_the_key_is_neither_broadened_nor_raised(tmp_path: Path) -> None:
+    """A comment quoting an older range sits above the key. The broaden and the
+    floor raise both rewrite the key, so the raised range still admits the
+    backbone — were the comment broadened instead, the key would be left
+    `">=1.5.0,<1.5.0"`, admitting nothing."""
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    pkg = _write_capability(source_kit, "houseware", "0.3.0", ">=1.0.0,<1.5.0")
+    comment = '# was requires_backbone: ">=1.0.0,<1.4.0"\n'
+    pkg.write_text(pkg.read_text().replace("requires_backbone:", comment + "requires_backbone:"))
+    _add_floor(source_kit, "houseware", "minor", "a.yaml")
+
+    release.apply_release(source_kit, release.compute_release(source_kit), tag=False)
+
+    text = pkg.read_text()
+    assert comment in text
+    assert 'requires_backbone: ">=1.5.0,<1.6.0"' in text
+
+
+def test_the_empty_range_check_runs_with_the_broaden_too(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The check is not a `--no-broaden` special case: every raise is checked
+    against the range computed in memory. With a broaden that (hypothetically)
+    widens nothing, the raised range would be empty, and nothing is written."""
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    pkg = _write_capability(source_kit, "houseware", "0.3.0", ">=1.0.0,<1.5.0")
+    _add_floor(source_kit, "houseware", "minor", "a.yaml")
+    before = pkg.read_text()
+
+    def widens_nothing(package_text: str, backbone: str) -> tuple[str, str] | None:
+        return None
+
+    monkeypatch.setattr(versioning, "broaden_requires_backbone", widens_nothing)
+
+    plan = release.compute_release(source_kit)
+    with pytest.raises(click.ClickException, match="would admit no backbone"):
+        release.apply_release(source_kit, plan, tag=False)
+
+    assert pkg.read_text() == before
+    assert (source_kit / "VERSION").read_text().strip() == "1.5.0"
+
+
+def test_plan_says_when_the_backbone_does_not_move(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A floor declared in a component-only release resolves to the current
+    backbone, which may predate the change the component needs: `plan` says so."""
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    _write_capability(source_kit, "houseware", "0.3.0", ">=1.0.0,<2.0.0")
+    _add_floor(source_kit, "houseware", "minor", "a.yaml")
+    monkeypatch.chdir(tmp_path)
+
+    result = CliRunner().invoke(main, ["release", "plan"])
+
+    assert result.exit_code == 0, result.output
+    out = result.stdout
+    assert "  houseware: 0.3.0 -> 0.4.0 (minor)\n" in out
+    assert "    requires_backbone floor raised to >=1.5.0\n" in out
+    assert (
+        "    backbone does not move this release; floor raised to current 1.5.0 "
+        "— confirm the needed surface shipped in 1.5.0\n"
+    ) in out
+
+
+def test_plan_says_raised_only_when_the_range_changes(tmp_path: Path) -> None:
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    _write_capability(source_kit, "houseware", "0.3.0", ">=1.7.0,<2.0.0")
+    _add(source_kit, "backbone", "minor", "backbone change", "a.yaml")
+    _add_floor(source_kit, "houseware", "patch", "b.yaml")
+
+    (rel,) = release.compute_release(source_kit).floor_raises
+    assert rel.floor_raise is not None
+    assert not rel.floor_raise.raises
+    assert rel.floor_raise.lines == [
+        "requires_backbone floor stays >=1.7.0 (already at or above 1.6.0)"
+    ]
+
+
+def test_release_summary_carries_the_floor_raise(tmp_path: Path) -> None:
+    """The release-PR workflow builds the PR body from `plan --json`."""
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    _write_capability(source_kit, "houseware", "0.3.0", ">=1.0.0,<2.0.0")
+    _add(source_kit, "backbone", "minor", "backbone change", "a.yaml")
+    _add_floor(source_kit, "houseware", "minor", "b.yaml")
+
+    summary = release.release_summary(source_kit, release.compute_release(source_kit))
+
+    releases = cast("list[dict[str, object]]", summary["releases"])
+    floors = {str(r["component"]): r["requires_backbone_floor"] for r in releases}
+    assert floors["backbone"] is None
+    assert floors["houseware"] == {
+        "from": "1.0.0",
+        "to": "1.6.0",
+        "raised": True,
+        "backbone": "1.6.0",
+        "backbone_moves": True,
+        "lines": ["requires_backbone floor raised to >=1.6.0"],
+    }
+
+
+# --- Dogfood: the release that ships the backbone-owned journal line ---------
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+
+# The backbone release that took the process-journal ignore line over from the
+# project-management package (#1120; its migration is
+# `.pkit/migrations/backbone/1.150.0/001-keep-process-journal-logging.sh`).
+JOURNAL_LINE_BACKBONE = "1.150.0"
+
+
+def test_pending_release_leaves_project_management_on_the_journal_owning_backbone(
+    tmp_path: Path,
+) -> None:
+    """project-management stopped declaring the journal ignore line when the backbone
+    took it over, so on an older backbone its journals go unignored. Applying the
+    pending changesets to a copy of this tree must leave its floor at or above that
+    backbone: until the release that ships it has run, the changeset that dropped
+    the line raises the floor; afterwards the package carries it."""
+    source_kit = tmp_path / ".pkit"
+    source_kit.mkdir()
+    shutil.copy(REPO_ROOT / ".pkit" / "VERSION", source_kit / "VERSION")
+    for package in (REPO_ROOT / ".pkit").rglob("package.yaml"):
+        target = source_kit / package.relative_to(REPO_ROOT / ".pkit")
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(package, target)
+    pending = changesets.unreleased_dir(REPO_ROOT)
+    if pending.is_dir():
+        shutil.copytree(pending, changesets.unreleased_dir(tmp_path))
+
+    plan = release.compute_release(source_kit)
+    release.apply_release(source_kit, plan, tag=False, today=date(2026, 9, 29))
+
+    package = source_kit / "capabilities" / "project-management" / "package.yaml"
+    floor = versioning.requires_backbone_floor(package.read_text(encoding="utf-8"))
+    assert floor is not None
+    assert parse_version_tuple(floor) >= parse_version_tuple(JOURNAL_LINE_BACKBONE)

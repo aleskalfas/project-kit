@@ -27,7 +27,9 @@
 # `.pkit/.gitignore` is rendered by the sync step that runs before migrations,
 # i.e. before this setting existed, so it ignores journals. When the journals
 # are committed, the backbone's journal ignore line is removed here so it does
-# not wait for the next render (which would drop it anyway).
+# not wait for the next render (which would drop it anyway). A component still
+# declaring its own journal line keeps its journals ignored; the migration says
+# so, and `pkit validate` names the component.
 #
 # Idempotent: the first run writes the `process:` block, so every later run takes
 # the first branch and changes nothing; the ignore-line removal is a no-op once
@@ -140,5 +142,12 @@ if [ "$committed" = true ] && [ -f "$GITIGNORE" ] && grep -qxF "$RENDERED_IGNORE
     tmp="$GITIGNORE.tmp"
     grep -vxF "$RENDERED_IGNORE_LINE" "$GITIGNORE" > "$tmp" || true
     mv "$tmp" "$GITIGNORE"
-    echo "  [ok] .pkit/.gitignore no longer ignores process journals (they are committed)"
+    # A component older than this backbone may still declare its own journal
+    # line, which the render keeps; say so rather than claim journals are free.
+    if grep -E '^[^#].*\.journal\.jsonl$' "$GITIGNORE" >/dev/null; then
+        echo "  [warn] removed the backbone's process-journal line from .pkit/.gitignore, but a component still declares its own, so its journals stay ignored"
+        echo "         pkit validate names the component; upgrade it together with the backbone"
+    else
+        echo "  [ok] .pkit/.gitignore no longer ignores process journals (they are committed)"
+    fi
 fi
