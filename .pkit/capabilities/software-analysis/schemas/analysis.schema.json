@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "analysis.schema.json",
+  "title": "Shared shapes of the analysis artefacts — software-analysis capability",
+  "description": "The definitions every companion schema of this capability refers to (software-analysis DEC-001 point 3): each artefact kind's id, the status an artefact carries, and a line of text. One home for each shape: the kinds' schemas (`actor`, `term`, `use-case`, `journey`, `revalidation-record`) `$ref` them here, and the capability's commands read the id patterns from here, so the stamp that allocates an id and the check that judges one never disagree. Not a schema of any file itself.",
+  "$defs": {
+    "text": {
+      "description": "A non-empty line of text.",
+      "type": "string",
+      "minLength": 1
+    },
+    "slug": {
+      "description": "A word: a lowercase letter, then lowercase letters, digits and hyphens — the word a stamp takes and the slug part of an actor's or a term's id.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "status": {
+      "description": "Whether the artefact is in force. An artefact is withdrawn, never deleted: its file or entry stays, and its id is never used again (DEC-001 point 3).",
+      "type": "string",
+      "enum": ["active", "withdrawn"]
+    },
+    "actor-id": {
+      "description": "An actor's id: `ACT-` and a slug, stable across renames; the key of its entry in the actors' collection file.",
+      "type": "string",
+      "pattern": "^ACT-[a-z][a-z0-9-]*$"
+    },
+    "term-id": {
+      "description": "A glossary term's id: `TERM-` and a slug, separate from the term's display name, so a rename breaks nothing that cites it; the key of its entry in the glossary.",
+      "type": "string",
+      "pattern": "^TERM-[a-z][a-z0-9-]*$"
+    },
+    "use-case-id": {
+      "description": "A use case's id: `UC-` and its number within the project, three digits or more, independent of any grouping by area.",
+      "type": "string",
+      "pattern": "^UC-[0-9]{3,}$"
+    },
+    "journey-id": {
+      "description": "A journey's id: `JRN-` and its number within the project, three digits or more.",
+      "type": "string",
+      "pattern": "^JRN-[0-9]{3,}$"
+    },
+    "artefact-id": {
+      "description": "The id of any analysis artefact.",
+      "anyOf": [
+        { "$ref": "#/$defs/actor-id" },
+        { "$ref": "#/$defs/term-id" },
+        { "$ref": "#/$defs/use-case-id" },
+        { "$ref": "#/$defs/journey-id" }
+      ]
+    },
+    "unanchored-because": {
+      "description": "Why the artefact is deliberately left unanchored — an actor no code or decision embodies, say. An unanchored artefact is reported, never an error; this is the reason onboarding accepts it (DEC-001 point 9).",
+      "$ref": "#/$defs/text"
+    }
+  }
+}

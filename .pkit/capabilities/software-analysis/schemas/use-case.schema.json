@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "use-case.schema.json",
+  "title": "A use case's own fields — software-analysis capability",
+  "description": "The front matter of one use case, a file `UC-NNN-<slug>.md` in `use-case-model/use-cases/` under the analysis location, optionally in a folder per functional area (software-analysis DEC-001 points 1 to 3): one actor's goal and how the system fulfils it. The body says when it starts, the main path in numbered steps, the variants lettered after the step they branch from, and when it is done; steps and variants are append-only, since journeys and evidence cite them. These are the use case's own fields: its friction block sits in the methodology's container beside them and is the core's (COR-050, COR-053 point 10). A use case anchors to its actor, as an artefact anchor, and to the code it exercises and the decisions it relies on (DEC-001 point 4); the capability's check requires the actor anchor. Applied by `pkit software-analysis validate`; unknown fields are refused.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "status", "actor"],
+  "properties": {
+    "id": {
+      "$ref": "analysis.schema.json#/$defs/use-case-id"
+    },
+    "status": {
+      "$ref": "analysis.schema.json#/$defs/status"
+    },
+    "actor": {
+      "description": "The actor whose goal this is, by id.",
+      "$ref": "analysis.schema.json#/$defs/actor-id"
+    }
+  }
+}

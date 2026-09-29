@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "journey.schema.json",
+  "title": "A journey's own fields — software-analysis capability",
+  "description": "The front matter of one journey, a file `JRN-NNN-<slug>.md` in `use-case-model/journeys/` under the analysis location (software-analysis DEC-001 points 1 to 4): an end-to-end path one actor takes across several use cases, including the seams between them where the path can break. `steps` is the source: the use cases it lists are written into the friction block's artefact anchors by the stamp, and the capability's check requires the two to match, so the friction check sees every use case the journey passes through. It also anchors to the code at the seams. These are the journey's own fields: its friction block sits in the methodology's container beside them and is the core's (COR-050, COR-053 point 10). Applied by `pkit software-analysis validate`; unknown fields are refused.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "status", "actor", "steps"],
+  "properties": {
+    "id": {
+      "$ref": "analysis.schema.json#/$defs/journey-id"
+    },
+    "status": {
+      "$ref": "analysis.schema.json#/$defs/status"
+    },
+    "actor": {
+      "description": "The actor who takes the journey, by id.",
+      "$ref": "analysis.schema.json#/$defs/actor-id"
+    },
+    "steps": {
+      "description": "The use cases the journey passes through, in order, by id — at least two, since a journey spans several use cases. A use case may appear more than once.",
+      "type": "array",
+      "minItems": 2,
+      "items": { "$ref": "analysis.schema.json#/$defs/use-case-id" }
+    }
+  }
+}

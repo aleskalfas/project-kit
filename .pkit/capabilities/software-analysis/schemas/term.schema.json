@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "term.schema.json",
+  "title": "A glossary term's own fields — software-analysis capability",
+  "description": "One entry of the glossary, `glossary.md` under the analysis location (software-analysis DEC-001 points 1 to 3): a domain word and what it means. The entry is keyed by the term's id (`analysis.schema.json#/$defs/term-id`), which sits outside this object and is separate from the display name, so renaming a term breaks nothing that cites it: the new name goes in `name` and the old one into `replaces`. Its body section is the one headed by the id. These are the entry's own fields: its friction block sits in the methodology's container beside them and is the core's (COR-050, COR-053 point 10). A term anchors to where the software or a decision embodies it (DEC-001 point 4). Applied by the capability's check, `pkit software-analysis validate`; unknown fields are refused.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["name", "status", "definition"],
+  "properties": {
+    "name": {
+      "description": "The term as it is written today.",
+      "$ref": "analysis.schema.json#/$defs/text"
+    },
+    "status": {
+      "$ref": "analysis.schema.json#/$defs/status"
+    },
+    "definition": {
+      "description": "What the term means, in a sentence; the body section says more when it needs to.",
+      "$ref": "analysis.schema.json#/$defs/text"
+    },
+    "replaces": {
+      "description": "The names the term was written as before, newest first — the record of renames (DEC-001 point 1).",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "analysis.schema.json#/$defs/text" }
+    },
+    "unanchored-because": {
+      "$ref": "analysis.schema.json#/$defs/unanchored-because"
+    }
+  }
+}
