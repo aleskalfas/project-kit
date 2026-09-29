@@ -393,7 +393,7 @@ def test_self_update_acts_when_stale_and_allowed(monkeypatch: pytest.MonkeyPatch
     calls: dict = {"install": None, "reexec": 0}
     monkeypatch.setattr(upgrade, "_self_update_tool", lambda v: calls.__setitem__("install", v) or True)
     monkeypatch.setattr(upgrade, "_reexec_after_self_update", lambda: calls.__setitem__("reexec", calls["reexec"] + 1))
-    upgrade._maybe_self_update_tool(None, self_update=True, dry_run=False)
+    upgrade._maybe_self_update_tool(self_update=True, dry_run=False)
     assert calls["install"] == Version("9.9.9")
     assert calls["reexec"] == 1
 
@@ -405,7 +405,7 @@ def test_self_update_degrades_when_not_allowed(
     monkeypatch.setattr(upgrade, "_self_update_allowed", lambda: False)
     installed = {"v": False}
     monkeypatch.setattr(upgrade, "_self_update_tool", lambda v: installed.__setitem__("v", True) or True)
-    upgrade._maybe_self_update_tool(None, self_update=True, dry_run=False)
+    upgrade._maybe_self_update_tool(self_update=True, dry_run=False)
     assert installed["v"] is False
     assert "uv tool install --force" in capsys.readouterr().out  # instruct
 
@@ -417,7 +417,7 @@ def test_self_update_off_instructs(
     monkeypatch.setattr(upgrade, "_self_update_allowed", lambda: True)
     installed = {"v": False}
     monkeypatch.setattr(upgrade, "_self_update_tool", lambda v: installed.__setitem__("v", True) or True)
-    upgrade._maybe_self_update_tool(None, self_update=False, dry_run=False)
+    upgrade._maybe_self_update_tool(self_update=False, dry_run=False)
     assert installed["v"] is False
     assert "uv tool install --force" in capsys.readouterr().out
 
@@ -430,7 +430,7 @@ def test_self_update_install_failure_degrades(
     monkeypatch.setattr(upgrade, "_self_update_tool", lambda v: False)  # install fails
     reexec = {"n": 0}
     monkeypatch.setattr(upgrade, "_reexec_after_self_update", lambda: reexec.__setitem__("n", reexec["n"] + 1))
-    upgrade._maybe_self_update_tool(None, self_update=True, dry_run=False)
+    upgrade._maybe_self_update_tool(self_update=True, dry_run=False)
     assert reexec["n"] == 0
     assert "uv tool install --force" in capsys.readouterr().out
 
@@ -442,7 +442,7 @@ def test_self_update_dry_run_reports_no_install(
     monkeypatch.setattr(upgrade, "_self_update_allowed", lambda: True)
     installed = {"v": False}
     monkeypatch.setattr(upgrade, "_self_update_tool", lambda v: installed.__setitem__("v", True) or True)
-    upgrade._maybe_self_update_tool(None, self_update=True, dry_run=True)
+    upgrade._maybe_self_update_tool(self_update=True, dry_run=True)
     assert installed["v"] is False
     assert "would run" in capsys.readouterr().out
 
@@ -453,7 +453,7 @@ def test_self_update_current_tool_noops(
     _stale(monkeypatch, running="9.9.9", latest="9.9.9")  # equal → current
     installed = {"v": False}
     monkeypatch.setattr(upgrade, "_self_update_tool", lambda v: installed.__setitem__("v", True) or True)
-    upgrade._maybe_self_update_tool(None, self_update=True, dry_run=False)
+    upgrade._maybe_self_update_tool(self_update=True, dry_run=False)
     assert installed["v"] is False
     assert "tool is current" in capsys.readouterr().out
 
@@ -467,10 +467,10 @@ def test_run_tool_update_forwards_no_project(monkeypatch: pytest.MonkeyPatch) ->
     seen: dict = {}
     monkeypatch.setattr(
         upgrade, "_maybe_self_update_tool",
-        lambda tr, *, self_update, dry_run: seen.update(tr=tr, su=self_update),
+        lambda *, self_update, dry_run: seen.update(su=self_update),
     )
     upgrade.run_tool_update(dry_run=False, self_update=True)
-    assert seen["tr"] is None and seen["su"] is True
+    assert seen["su"] is True
 
 
 def test_cli_upgrade_outside_project_updates_tool(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1000,19 +1000,26 @@ def test_tool_staleness_ignores_malformed_tags(
     assert "A newer pkit tool is available: v3.1.0" in capsys.readouterr().out
 
 
-def test_tool_staleness_suppressed_on_source_checkout(
+def test_tool_staleness_not_reached_on_source_checkout_run_by_other_code(
     tmp_path: Path,
     stub_ls_remote: _RecordingRun,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """On a source checkout the check is skipped entirely — no lookup, no output
-    (ADR-044 D3). Uses the router's `is_source_checkout` discriminator."""
+    """In a source checkout the tool check never runs (ADR-044 D3). Under the
+    checkout's own code the self-host branch returns first (the test below);
+    under any other code the refusal to propagate over the source raises first
+    (ADR-059; #1070) — no lookup, no tool output.
+
+    The tree is source-shaped by construction (the two markers) while this
+    suite's checkout is the running code, so sync's test says no: the gap."""
     (tmp_path / "src" / "project_kit").mkdir(parents=True)
     (tmp_path / "src" / "project_kit" / "__init__.py").write_text("", encoding="utf-8")
     (tmp_path / ".pkit" / "cli").mkdir(parents=True)
     (tmp_path / ".pkit" / "cli" / "pkit").write_text("", encoding="utf-8")
+    manifest.write_backbone_manifest(tmp_path, manifest.BackboneManifest(backbone_version="0.1.0"))
 
-    upgrade._maybe_self_update_tool(tmp_path, self_update=True, dry_run=False)
+    with pytest.raises(click.ClickException, match="refusing to upgrade"):
+        upgrade.run_upgrade(tmp_path)
 
     assert stub_ls_remote.ls_remote_calls == []
     assert capsys.readouterr().out == ""

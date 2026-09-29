@@ -8,6 +8,7 @@ metadata:
     - pkit process hand-off
     - pkit process validate
     - pkit process health
+    - pkit capabilities refresh
 composes:
   - new.md
   - couple.md
@@ -20,6 +21,7 @@ gates:
   - COR-038
   - COR-042
   - COR-044
+  - COR-053
 reads:
   paths:
     - .pkit/process/README.md
@@ -55,6 +57,7 @@ Verify each record in `gates:` is `accepted`; halt if any is `proposed` or `supe
 - **COR-038** — cross-process connections. The closed relation vocabulary and the coupling-in-the-subscriber rule that `couple` depends on.
 - **COR-042** — the health surface and the hand-off contract that `hand-off` declares.
 - **COR-044** — this authoring layer, including the shape/teeth split above and the deferred operation family below.
+- **COR-053** — connection points. The role form of an upstream address, the interface version and the mandatory mark that `couple` can stamp, and the generated `depends-on` list it leaves for `pkit capabilities refresh`.
 
 ## Pick the operation
 
