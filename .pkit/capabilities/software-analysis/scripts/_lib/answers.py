@@ -79,6 +79,8 @@ def answer(location: str, verdict: Verdict, anchors: Sequence[Anchor]) -> Answer
     if outcome == STALE:
         content = f"edit {location} to describe what the change made true, and nothing more"
         return Answer(STALE, (content, *fixes), (revalidate(location, "updated"),))
+    if outcome != REGRESSED:
+        return None  # `gap-found` is the reader's, and never proposed
     commits = [c.commit[:12] for a in changed if a.shape != DELIBERATE for c in a.commits]
     broke = ", ".join(dict.fromkeys(commits)) or "the change"
     because = f"The description stands: {WHY_WANTED}; {broke} broke it — defect {DEFECT} reported."
