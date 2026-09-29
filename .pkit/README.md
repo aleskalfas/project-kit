@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-09-29T18:07:17Z
+      at: 2026-09-29T18:03:44Z
       outcome: unchanged
-      unchanged-because: "the CLI and agents READMEs were revalidated for the capability namespace and precedence changes of #1111; the area map holds"
+      unchanged-because: the agents, skills and two capability READMEs were revalidated for the reviewer role's scoped read-only rule; the area map holds
 ---
 
 # project-kit

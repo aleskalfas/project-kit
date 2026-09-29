@@ -80,7 +80,7 @@ You are the **{name}** for this project. <one paragraph: role, scope, what makes
 
 ## Files you own
 
-<List the paths this agent has write authority over. Use `<category-name>` placeholders — the categories of the project's agent overlay — for adopter-specific paths; declare them in frontmatter `reads.patterns` and `owns` as well.>
+<List the paths this agent has write authority over. Use `<category-name>` placeholders — the categories of the project's agent overlay — for adopter-specific paths; declare them in frontmatter `reads.patterns` and `owns` as well. A reviewer owns none; if it can execute, add the `## What read-only covers` section every such reviewer carries, word for word, before `## Intermediate files` (the agents README's "Reviewers" paragraph).>
 
 ## Key documents to read
 
