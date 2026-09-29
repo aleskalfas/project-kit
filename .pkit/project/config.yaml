@@ -61,6 +61,18 @@ friction:
     - .pkit/schemas/README.md
     - .pkit/scratchpad/README.md
     - .pkit/skills/README.md
+  # The declared surface (COR-050 point 8): the code project-kit says ought to
+  # be described. It is the code the project-management code-to-doc mapping
+  # obliged documentation for, kept when the mapping's rules became page
+  # anchors (#1010): what no page anchors to stays counted as uncovered
+  # surface instead of dropping out of sight with the rules.
+  surface:
+    - src/**
+    - .pkit/cli/**
+    - .pkit/capabilities/project-management/**
+    - .pkit/capabilities/evidence/**
+    - .pkit/capabilities/software-engineering/**
+    - .pkit/adapters/**
   # Left out of anchoring and of the measures (COR-050 point 7).
   exclude:
     # scratchpad notes are working drafts, never anchored (ADR-055 point 3)
