@@ -12,7 +12,7 @@ pkit:
         - .pkit/capabilities/software-analysis/agents/**
       record: ["software-analysis:DEC-001", COR-049, COR-050, COR-053]
     revalidated:
-      at: 2026-09-29T22:17:23Z
+      at: 2026-09-29T22:20:07Z
       outcome: updated
 ---
 
@@ -27,7 +27,7 @@ Install it when your project is past the point where one person holds the whole 
 Each artefact declares what makes it true — its anchors — and when it was last revalidated, in the core friction block (COR-050). The core friction check flags it when an anchor changes. A **revalidation** then checks it, and ends as *holds*, *analysis was stale*, *code regressed* or *gap found*. A record is kept only when there's something to report. The full rule is in the decision.
 
 - **Write** the analysis with the `analysis-author` skill, which walks each kind through its stamp, `pkit analysis new` ("Authoring" below).
-- **Resolve** friction with the `analysis-resolver` agent: it proposes each flagged artefact's outcome with its evidence, records it once you confirm, and asks you whenever it can't tell a stale analysis from a regressed code ("The agent" below).
+- **Resolve** friction with the `analysis-resolver` agent: it proposes each flagged artefact's outcome with its evidence, records it once you confirm, and asks you whenever it can't tell a stale analysis from regressed code ("The agent" below).
 
 ## Where things live
 

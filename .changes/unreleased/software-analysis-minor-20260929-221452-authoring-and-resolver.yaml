@@ -18,7 +18,7 @@ body: >
   flagged artefact's outcome (holds, analysis-stale, code-regressed, gap-found)
   with its evidence and, once you confirm, records it through `pkit friction
   revalidate` and `pkit friction defer`; it never rewrites an artefact, and
-  when it cannot tell a stale analysis from a regressed code it writes nothing
+  when it cannot tell a stale analysis from regressed code it writes nothing
   and asks you. `pkit analysis propose <artefact>` is the read-only rule it
   stops by: from `pkit friction explain` and the code an artefact quotes from
   its anchored files, it proposes holds, stale or regressed, leaves the change

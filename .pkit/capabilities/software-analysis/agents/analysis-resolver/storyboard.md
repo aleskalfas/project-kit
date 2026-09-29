@@ -9,7 +9,7 @@ consumers:
 
 ## Framing
 
-This storyboard scripts how the `analysis-resolver` agent resolves the friction on a project's analysis: a drift on a pull request resolved, with one artefact that holds and one the change made stale (the happy path); the stop, where the agent cannot tell a stale analysis from a regressed code and writes nothing; and the person's answer to that stop, a regression recorded with its gap. What the agent concludes about an artefact is judgment; how it shows it, when it stops, and what it writes are fixed here ([software-analysis:DEC-001-software-analysis-discipline] points 5 and 6).
+This storyboard scripts how the `analysis-resolver` agent resolves the friction on a project's analysis: a drift on a pull request resolved, with one artefact that holds and one the change made stale (the happy path); the stop, where the agent cannot tell a stale analysis from regressed code and writes nothing; and the person's answer to that stop, a regression recorded with its gap. What the agent concludes about an artefact is judgment; how it shows it, when it stops, and what it writes are fixed here ([software-analysis:DEC-001-software-analysis-discipline] points 5 and 6).
 
 The scenarios operate on:
 
