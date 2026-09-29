@@ -23,7 +23,14 @@ from pathlib import Path
 import click
 
 from project_kit import treecopy, workspace
-from project_kit.router import looks_like_pkit_install
+from project_kit.router import (
+    can_exec_source_dispatcher,
+    is_route_bypassed,
+    is_routed_child,
+    is_source_checkout,
+    looks_like_pkit_install,
+    source_dispatcher,
+)
 
 # Settings-file template seeded into adopter projects when no
 # project-side overrides exist. Matches the bash dispatcher's heredoc.
@@ -524,6 +531,82 @@ def is_self_host(target_root: Path, source_kit: Path) -> bool:
     route 1 is what keeps the two answers equal (ADR-059 point 4).
     """
     return target_root.resolve() == source_kit.parent.resolve()
+
+
+def refuse_propagation_into_source(target_root: Path, source_kit: Path, *, command: str) -> None:
+    """Refuse to propagate over the methodology's source repository (ADR-059; #1070).
+
+    The gap ADR-059 names: sync's test (`is_self_host`) says *target_root* is
+    not the source, yet the marker test (`router.is_source_checkout`) says it
+    is. The running code is then not the repository's own, and propagating its
+    tree would copy a foreign `.pkit/` over the tree it is built from. Sync and
+    upgrade call this right after their self-host branch, where sync's test has
+    said no and the markers can still be asked — in upgrade, before its bypass
+    guard, because both bypass paths into the gap skip what follows that guard.
+    *command* names the refusing command in the message.
+
+    Nothing overrides the refusal. The gap is a defect path, not a choice:
+    `--force` overrides only sync's capability downgrade guard, and the routing
+    bypass is itself a way into the gap. The remedy is to run the checkout's own
+    code, which the message names.
+    """
+    if is_self_host(target_root, source_kit) or not is_source_checkout(target_root):
+        return
+    dispatcher = source_dispatcher(target_root).relative_to(target_root)
+    lines = [
+        f"refusing to {command} {target_root}: it is the methodology's source "
+        "repository, and the running pkit is not its own code.",
+        "The marker test says it is the source: the package source sits beside the "
+        "in-tree dispatcher.",
+        f"Sync's test says it is not: the running code's methodology tree is "
+        f"{source_kit}, not {target_root / '.pkit'}.",
+        f"`{command}` would copy that tree over the one it is built from (ADR-059). "
+        "Nothing was written, and no flag overrides this refusal.",
+        "How this run reached the source with other code:",
+        *(f"  - {cause}" for cause in _source_gap_causes(target_root)),
+        f"Run this checkout's own code instead: `{dispatcher} {command}` from "
+        f"{target_root}, which re-runs the deploy primitives and propagates nothing.",
+    ]
+    raise click.ClickException("\n       ".join(lines))
+
+
+def _source_gap_causes(target_root: Path) -> list[str]:
+    """The ways this run could have missed route 1 in the source at *target_root*.
+
+    Route 1 runs a source checkout's own code whenever the router runs and can
+    exec the checkout's dispatcher, so a run in the gap skipped the router, had
+    routing suppressed, or met a dispatcher it could not exec. The environment
+    and the dispatcher say which; each that holds is named, and the path with no
+    trace of its own — a start that never went through the router — only when
+    none does.
+    """
+    causes: list[str] = []
+    if is_route_bypassed(os.environ):
+        causes.append(
+            "routing is bypassed (PKIT_NO_ROUTE=1). Set by hand, or by `pkit pin "
+            "<version>` or a pinned `pkit upgrade`, which run a newer release's "
+            "`upgrade` this way (ADR-049). A pin is meaningless in the source; to "
+            "move this checkout to a release, update it with git."
+        )
+    if is_routed_child(os.environ):
+        causes.append(
+            "routing is suppressed (PKIT_ROUTED=1), inherited from a pkit run the "
+            "router re-executed into a project's pinned version."
+        )
+    if not can_exec_source_dispatcher(target_root):
+        dispatcher = source_dispatcher(target_root)
+        causes.append(
+            f"the dispatcher {dispatcher} is not executable, so the router fell back "
+            f"to the running binary. Repair it: `chmod +x {dispatcher}`, or `git "
+            f"checkout -- {dispatcher}`."
+        )
+    if not causes:
+        causes.append(
+            "pkit did not start through the router here: other code was started "
+            "directly — another checkout's dispatcher (a `pkit` linked to it), or "
+            "`python -m project_kit` from another checkout or installation."
+        )
+    return causes
 
 
 def install_kit(target_root: Path, dry_run: bool = False) -> None:
