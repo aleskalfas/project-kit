@@ -109,7 +109,7 @@
     "code_path_to_doc_mapping": {
       "type": "object",
       "additionalProperties": false,
-      "description": "Code-path → doc-path couplings checked by `check-doc-mapping` per DEC-015 + ADR-019. Opt-in: absent or `enforce: false` reports would-fire mappings and exits 0. Keep broad tree→README rules advisory; enforce only surgical 1:1 couplings.",
+      "description": "Code-path → doc-path couplings checked by `check-doc-mapping` per DEC-015 + ADR-019. Opt-in: absent or `enforce: false` reports would-fire mappings and exits 0. Keep broad tree→README rules advisory; enforce only surgical 1:1 couplings. The rules are the always-included default filler of the `pkit::work-tracking:doc-check` point (DEC-053), one obligation per rule; `enforce` is the mapping source's enforcement setting.",
       "properties": {
         "enforce": {
           "type": "boolean",
@@ -120,7 +120,25 @@
           "items": {
             "$ref": "#/$defs/doc_mapping_rule"
           },
-          "description": "The couplings. No rules configured means the check skips."
+          "description": "The couplings. No rules configured, and nothing else filling the doc-check point, means the check skips."
+        }
+      }
+    },
+    "doc_check": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Per-source enforcement of the doc-check point's obligations (DEC-053 point 3). Each source other than the mapping — a documentation capability's, the project filler's — is set here; the mapping keeps its own setting, `code_path_to_doc_mapping.enforce`. Enforcing one source never enforces another.",
+      "properties": {
+        "sources": {
+          "type": "object",
+          "description": "Source → `advisory` (the default for a source not listed: unmet obligations are reported, the check still passes) or `enforcing` (an unmet obligation fails the check). The source is the `source` field of an obligation, a lowercase word such as `friction`.",
+          "propertyNames": {
+            "pattern": "^[a-z][a-z0-9-]*$",
+            "not": { "const": "mapping" }
+          },
+          "additionalProperties": {
+            "enum": ["advisory", "enforcing"]
+          }
         }
       }
     },

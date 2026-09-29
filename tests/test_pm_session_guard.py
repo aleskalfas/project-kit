@@ -508,6 +508,9 @@ _READ_ONLY_EXEMPT = frozenset(
         "pre-check.py",
         "check-mesh.py",
         "check-doc-mapping.py",
+        # The doc-check point's filler (DEC-053): a query the backbone runs —
+        # prints the mapping's obligations, writes nothing.
+        "fill-doc-check.py",
         "validate-issue.py",
         "validate-pr.py",
         # Cascade predicates for the lifecycle fold — both declared READ-ONLY.

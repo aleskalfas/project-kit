@@ -14,6 +14,7 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 from jsonschema import Draft202012Validator
+from ruamel.yaml import YAML
 
 from project_kit import backbone_schemas as bs
 from project_kit import config_validate as cv
@@ -89,22 +90,24 @@ def test_valid_file_with_every_key_is_clean(make_adopter_repo: MakeAdopterRepo) 
     repo = make_adopter_repo(capabilities=("project-management",))
     # The connection entries are checked for real (#983): the named capability
     # must provide the role, and the selected point must be `single` with the
-    # named capability among its contributors.
+    # named capability among its contributors. project-management provides
+    # `pkit::work-tracking` (#1000); a `single` point and a contribution to it
+    # are added beside its own.
     package = repo.pkit / "capabilities" / "project-management" / "package.yaml"
-    package.write_text(
-        package.read_text(encoding="utf-8")
-        + "connections:\n"
-        "  roles: [pkit::work-tracking]\n"
-        "  extension-points:\n"
-        "    accepts:\n"
-        "      pkit::work-tracking:issue-kinds:\n"
-        "        {schema_version: 1, schema: issue-kinds.schema.json, "
-        "description: The kinds., combination: single}\n"
-        "  extensions:\n"
-        "    contributes:\n"
-        "      - {point: pkit::work-tracking:issue-kinds, schema_version: 1}\n",
-        encoding="utf-8",
+    yaml = YAML()
+    data = yaml.load(package.read_text(encoding="utf-8"))
+    connections = data["connections"]
+    connections["extension-points"]["accepts"]["pkit::work-tracking:issue-kinds"] = {
+        "schema_version": 1,
+        "schema": "issue-kinds.schema.json",
+        "description": "The kinds.",
+        "combination": "single",
+    }
+    connections["extensions"]["contributes"].append(
+        {"point": "pkit::work-tracking:issue-kinds", "schema_version": 1}
     )
+    with package.open("w", encoding="utf-8") as handle:
+        yaml.dump(data, handle)
     (package.parent / "schemas" / "issue-kinds.schema.json").write_text("{}", encoding="utf-8")
     (repo.root / "docs").mkdir()
     (repo.root / "docs" / "guide.md").write_text("# Guide\n", encoding="utf-8")
@@ -427,12 +430,13 @@ def test_provider_naming_uninstalled_capability_is_an_error(
 def test_provider_naming_installed_capability_that_does_not_provide_the_role_is_an_error(
     make_adopter_repo: MakeAdopterRepo,
 ) -> None:
-    """The check is real now (#983): the shipped capability declares no roles."""
+    """The check is real now (#983): the shipped capability provides
+    `pkit::work-tracking` (#1000), not `pkit::documentation`."""
     repo = make_adopter_repo(capabilities=("project-management",))
-    _write_config(repo, "connections:\n  providers:\n    pkit::work-tracking: project-management\n")
+    _write_config(repo, "connections:\n  providers:\n    pkit::documentation: project-management\n")
     report = _run(repo)
-    assert _paths(report, cv.Severity.ERROR) == ["/connections/providers/pkit::work-tracking"]
-    assert "does not provide role 'pkit::work-tracking'" in report.errors[0].message
+    assert _paths(report, cv.Severity.ERROR) == ["/connections/providers/pkit::documentation"]
+    assert "does not provide role 'pkit::documentation'" in report.errors[0].message
     assert "no installed capability provides the role" in report.errors[0].message
     assert report.by_severity(cv.Severity.INFO) == ()
 

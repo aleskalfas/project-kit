@@ -151,7 +151,11 @@ commands:
     help: Compare local methodology state against configured mesh peers per DEC-022. Surfaces drift in labels, capability version, members, milestones as warnings. Read-only.
   check-doc-mapping:
     script: scripts/check-doc-mapping.py
-    help: "Enforce the code->doc mapping (DEC-015 + ADR-019). Read-only; exits non-zero when a PR's diff touches mapped code without the mapped doc (with enforce: true). Wire as a required CI status check for a real boundary; override a false positive via a `## Doc impact` line."
+    help: "Check a PR's documentation obligations (DEC-015 + DEC-053 + ADR-019): reads the resolved pkit::work-tracking:doc-check point — the code->doc mapping plus any contributed obligations — and applies it to the diff. Read-only; exits non-zero when an enforced obligation is unmet (the mapping with enforce: true; a contributed source set enforcing) or the point does not resolve. A mapping rule is met by its doc in the diff or a `## Doc impact` line naming the code path; a contributed obligation only by its page changed in the diff. Wire as a required CI status check for a real boundary."
+  fill-doc-check:
+    script: scripts/fill-doc-check.py
+    help: "The default filler of the pkit::work-tracking:doc-check point (DEC-053): print the code->doc mapping as the point's obligations, one per rule; --json prints the filler envelope the backbone reads. A query: read-only, offline, no parameter. Run it once in a fresh environment to provision its dependency before an offline `pkit validate`."
+    query-contract: true
   promote-issue:
     script: scripts/promote-issue.py
     help: "Workflow wrapper (DEC-026): Todo → Backlog with milestone + audit comment. Composes over move-issue."
@@ -215,3 +219,34 @@ commands:
   disable-default-agent:
     script: scripts/disable-default-agent.py
     help: "Deactivate the project-manager default-agent overlay; strips the agent key from .claude/settings.json, removes the live overlay file, and re-runs pkit sync (per DEC-030)."
+# Connection points (COR-053): the role this capability provides and the data
+# point it defines under it. See the README, "Connections".
+connections:
+  roles: [pkit::work-tracking]
+  extension-points:
+    accepts:
+      pkit::work-tracking:doc-check:
+        schema_version: 1
+        schema: doc-check.schema.json
+        description: >-
+          The documentation obligations a pull request owes (DEC-053), before any
+          diff: check-doc-mapping applies them to the pull request's diff. Each
+          names its source and is met by that source's rule — a mapping rule by
+          its document in the diff or a Doc impact line naming the code path, any
+          other obligation only by its page changed in the diff. Each source has
+          its own enforcement setting in this capability's project configuration;
+          contributed sources are advisory by default. Additive, so an obligation
+          leaves only through the project's removal override with its reason; a
+          filler that cannot answer leaves the point unresolved, and the check
+          fails rather than pass on fewer obligations.
+        combination: additive
+        inert: fail
+  extensions:
+    contributes:
+      # The point's always-included default filler: the project's code-to-doc
+      # mapping, printed by this capability's own command, since the mapping is
+      # the project's configuration and a static `default` cannot hold it.
+      - point: pkit::work-tracking:doc-check
+        schema_version: 1
+        command: fill-doc-check
+        description: The code-to-doc mapping of project/config.yaml, one obligation per rule.

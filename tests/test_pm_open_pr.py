@@ -373,3 +373,136 @@ def test_main_refuses_an_unknown_second_closing_issue(op, monkeypatch) -> None:
     )
     assert op.main() == 2
     assert captured == {}
+
+
+# --- main(): `## Doc impact` rendered from the change check (#1000, DEC-053) ----------
+
+FRICTION = {
+    "check": "change",
+    "mode": "enforcing",
+    "findings": [
+        {
+            "artefact": "guide",
+            "location": "docs/guide.md",
+            "kind": "answered",
+            "anchor": {"kind": "code", "value": "src/cli.py"},
+            "answer": "unchanged",
+            "message": "changed in this diff; answered: unchanged — the flags did not move",
+        },
+        {
+            "artefact": "intro",
+            "location": "docs/intro.md",
+            "kind": "revalidated",
+            "anchor": None,
+            "answer": "updated",
+            "message": "revalidated with no changed anchor: updated",
+        },
+        {
+            "artefact": "api",
+            "location": "docs/api.md",
+            "kind": "friction",
+            "anchor": {"kind": "code", "value": "src/api.py"},
+            "answer": None,
+            "message": "changed in this diff; no answer",
+        },
+    ],
+}
+RENDERED = [
+    "- `docs/guide.md` (anchor `code:src/cli.py`): changed in this diff; answered: "
+    "unchanged — the flags did not move",
+    "- `docs/intro.md`: revalidated with no changed anchor: updated",
+]
+
+
+def _doc_impact(body: str) -> list[str]:
+    """The section's lines, without the provenance footer stamped after it."""
+    section = body.split("## Doc impact", 1)[1].split("\n## ", 1)[0]
+    section = section.split("<!-- pkit-provenance", 1)[0]
+    return [ln for ln in section.splitlines() if ln.strip()]
+
+
+def test_the_answers_render_as_the_doc_impact_bullets(op, monkeypatch, capsys) -> None:
+    calls: list[str] = []
+    monkeypatch.setattr(op, "_friction_check", lambda base: calls.append(base) or FRICTION)
+    captured = _stub_main(
+        op,
+        monkeypatch,
+        ["open-pr", "42", "--summary", "s", "--draft", "--yes", "--doc-impact-from-friction"],
+        {42: _open_issue()},
+    )
+    assert op.main() == 3
+    assert calls == ["main"]  # against origin/<base>
+    assert _doc_impact(captured["body"]) == RENDERED
+    out = capsys.readouterr()
+    assert "doc impact: pre-filled from `pkit friction check` (2 answer(s))" in out.out
+    # The page still carrying friction is named; its answer belongs on the page.
+    assert "1 artefact(s) still carry friction with no answer on the page: docs/api.md" in out.err
+
+
+def test_an_authored_doc_impact_section_is_left_as_written(op, monkeypatch, tmp_path) -> None:
+    body = tmp_path / "body.md"
+    body.write_text("Closes #42\n\n## Summary\nx\n\n## Doc impact\nNo doc impact: tests only.\n")
+    monkeypatch.setattr(op, "_friction_check", lambda base: FRICTION)
+    captured = _stub_main(
+        op,
+        monkeypatch,
+        ["open-pr", "42", "--body-file", str(body), "--draft", "--yes", "--doc-impact-from-friction"],
+        {42: _open_issue()},
+    )
+    assert op.main() == 3
+    assert _doc_impact(captured["body"])[0] == "No doc impact: tests only."
+
+
+def test_without_the_flag_the_change_check_is_not_run(op, monkeypatch) -> None:
+    def never(base):
+        raise AssertionError("the change check ran without --doc-impact-from-friction")
+
+    monkeypatch.setattr(op, "_friction_check", never)
+    captured = _stub_main(
+        op, monkeypatch, ["open-pr", "42", "--summary", "s", "--draft", "--yes"], {42: _open_issue()}
+    )
+    assert op.main() == 3
+    assert _doc_impact(captured["body"]) == ["-"]
+
+
+def test_no_document_leaves_the_body_as_it_was(op, monkeypatch) -> None:
+    monkeypatch.setattr(op, "_friction_check", lambda base: None)
+    body, note = op._prefill_doc_impact("## Doc impact\n\n-\n", "main")
+    assert (body, note) == (
+        "## Doc impact\n\n-\n",
+        "not pre-filled — `pkit friction check --json` gave no document",
+    )
+
+
+@pytest.fixture(scope="module")
+def doc_impact():
+    sys.path.insert(0, str(CAP_ROOT / "scripts"))
+    from _lib import doc_impact as module
+
+    return module
+
+
+def test_prefill_fills_only_an_unwritten_section(doc_impact) -> None:
+    lines = ["- `a.md`: updated"]
+    placeholder = "Closes #1\n\n## Doc impact\n\n-\n\n## Test plan\n\n- [x] ok\n"
+    assert doc_impact.prefill(placeholder, lines) == (
+        "Closes #1\n\n## Doc impact\n\n- `a.md`: updated\n\n## Test plan\n\n- [x] ok\n",
+        True,
+    )
+    commented = "## Doc impact\n<!-- say what changed -->\n"
+    assert doc_impact.prefill(commented, lines) == ("## Doc impact\n\n- `a.md`: updated\n", True)
+    absent = "Closes #1\n\n## Summary\nx"
+    assert doc_impact.prefill(absent, lines) == (
+        "Closes #1\n\n## Summary\nx\n\n## Doc impact\n\n- `a.md`: updated\n",
+        True,
+    )
+    written = "## Doc impact\n- Updated README.md\n"
+    assert doc_impact.prefill(written, lines) == (written, False)
+    assert doc_impact.prefill(placeholder, []) == (placeholder, False)
+
+
+def test_only_answers_are_rendered(doc_impact) -> None:
+    assert doc_impact.answer_lines(FRICTION) == RENDERED
+    assert doc_impact.unanswered(FRICTION) == ["docs/api.md"]
+    assert doc_impact.answer_lines({"dormant": True, "findings": []}) == []
+    assert doc_impact.answer_lines({"findings": "garbage"}) == []

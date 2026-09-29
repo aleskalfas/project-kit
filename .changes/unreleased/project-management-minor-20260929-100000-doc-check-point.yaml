@@ -1,0 +1,17 @@
+component: project-management
+kind: minor
+body: >
+  The capability provides the pkit::work-tracking role and defines the
+  pkit::work-tracking:doc-check data point (DEC-053): additive, inert policy
+  fail, companion schema doc-check.schema.json. Its code-to-doc mapping is the
+  always-included default filler — the new query fill-doc-check prints it, one
+  obligation per rule. check-doc-mapping reads the resolved point through
+  `pkit connections resolve` and applies it to the diff: without a documentation
+  capability it prints and exits exactly as before; an obligation another
+  source contributes is met only by its page changed in the diff, never by a
+  `## Doc impact` line; an unresolved point fails the check, naming the filler
+  and the fix. Each contributed source has its own setting,
+  doc_check.sources.<source> (advisory by default); the mapping keeps
+  code_path_to_doc_mapping.enforce. An offline `pkit validate` in a fresh
+  environment needs the filler provisioned first: run `pkit pm fill-doc-check`
+  once.

@@ -56,6 +56,17 @@ code_path_to_doc_mapping:
   #   rules:
   #     - { code: "packages/cli/src/commands/registry.ts", docs: ["packages/cli/README.md"] }
 
+# The rules above are the always-included default filler of the
+# `pkit::work-tracking:doc-check` point, one obligation per rule, and `enforce`
+# above stays the mapping's enforcement setting (DEC-053). Obligations another
+# source contributes — a documentation capability's friction on anchored pages
+# — are met only by the page changed in the diff, never by a `## Doc impact`
+# line, and each source has its own setting here: advisory (the default) or
+# enforcing. Nothing contributes here yet, so no source is listed, e.g.:
+#   doc_check:
+#     sources:
+#       friction: enforcing
+
 # Transitional shim — pre-check.py still requires this field, but the
 # canonical workstreams list lives in project/workstreams.yaml per
 # [project-management:DEC-018-workstream-taxonomy-and-lifecycle].

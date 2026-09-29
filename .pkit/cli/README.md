@@ -137,6 +137,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh   # or: brew install uv
 | `process graph [filters and presets] [--flow \| --mermaid \| --json] [--verbose]` | render the configured process topology (COR-038): the one wiring graph filtered to its process edges — derived, annotated, and the resolved `offers` edges — narrowed by atomic filters and presets. See "Connections commands", the graph relation | no | yes (read-only) |
 | `connections graph [--kind <kind>]... [--flow \| --mermaid \| --json] [--verbose]` | render the one wiring graph (COR-053 point 7): the process definitions' derived and annotated edges with the wiring resolver's data, event and offered-process edges, in the process graph's format; `--kind` narrows to `data`, `process` or `event`. See "Connections commands" | no | yes (read-only) |
 | `connections providers set <role> <capability> [--yes \| --dry-run]` | select the provider of a role: write `connections.providers.<role>` through the consent-gated writer, after checking the capability is installed and declares the role; the diff first, `--dry-run` stops there. The fix a role conflict names. See "Connections commands" | yes | yes — the same selection writes nothing |
+| `connections resolve <address> [--json]` | resolve one data point (COR-052) and print it: its value — a `single` point's answer, or the entries of a `union` or `additive` point with their origins — how it resolved or why not, and every filler considered; `--json` is the stable document a capability's own script reads. Exit 1 when the point does not resolve or nothing defines it. See "Connections commands" | no | yes (read-only) |
 
 ## Lifecycle commands
 
@@ -666,7 +667,7 @@ Writes the tool-written **status** (COR-050 point 10): `last-check`, from the wh
 
 ## Connections commands
 
-The connection points of [COR-053](../decisions/core/COR-053-connection-points.md) — the roles a capability provides, the points their providers define, and the counterparts that plug into them — are declared in package metadata (the lifecycle README, "The connection, documentation and friction blocks") and resolved by the one wiring resolver ("How the wiring is resolved" there). `pkit validate` reports the resolution under `connections` and `versions`, and `pkit status` shows it under "Connections"; this group draws it, and writes the one selection a person makes.
+The connection points of [COR-053](../decisions/core/COR-053-connection-points.md) — the roles a capability provides, the points their providers define, and the counterparts that plug into them — are declared in package metadata (the lifecycle README, "The connection, documentation and friction blocks") and resolved by the one wiring resolver ("How the wiring is resolved" there). `pkit validate` reports the resolution under `connections` and `versions`, and `pkit status` shows it under "Connections"; this group draws it, writes the one selection a person makes, and reads one data point as it resolves.
 
 ### `connections graph [--kind <kind>]... [--flow | --mermaid | --json] [--verbose]`
 
@@ -700,6 +701,14 @@ Selects `<capability>` as the provider of the qualified role `<role>` (`<publish
 - **The fix a role conflict names.** When several installed capabilities provide one role and none is selected, `pkit validate` fails under `connections` naming this command once per provider, and `pkit status` lists a `fix:` line per provider under the role.
 
 The contributor-selection key, `connections.selections`, has no command of its own; `pkit config set connections.selections.<address> <capability>` writes it.
+
+### `connections resolve <address> [--json]`
+
+Resolves the data point `<address>` (`<publisher>::<role>:<point>`) exactly as `pkit validate` reports it and `pkit status` shows it — its fillers combined by its policy ([COR-052](../decisions/core/COR-052-slots.md); the lifecycle README, "How a data point resolves") — and prints it. Read-only: it writes nothing, and command fillers run as they do there, under the query policy (`--json` alone, offline-marked, bounded). It is the seam through which a capability's own script reads a point it defines — a script runs in its own environment and does not import the backbone — and then applies the value itself, since a data point is a value and takes no parameter (COR-052 point 6).
+
+- Without `--json`, the point's lines of the status report's "Data points" section.
+- With `--json`, one stable document: `address`; `defined`; `provider`; `policy` and `inert_policy`; `participation` (the default's, or null); `resolved`, and `why` when not; `value` — null when the point does not resolve, never a partial value; `origin` (a `single` point's answering filler); `entries` (a `union` or `additive` point's, each `{id, origin, replaces, value}`, `origin` being a capability, `project filler` or `the default`); `removals` (each `{id, reason, removed_from}`); `fillers` (each `{source, name, supplies, state, reason, query_contract}`, `state` one of `taken`, `inert`, `passed over`). An address no active provider defines as a data point prints `{address, defined: false, resolved: false, value: null, why}`.
+- Exit `0` when the point resolves; `1` when it does not, or nothing defines it; `2` when `<address>` is not a point address.
 
 ## Process commands
 

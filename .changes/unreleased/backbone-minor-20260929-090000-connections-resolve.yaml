@@ -1,0 +1,9 @@
+component: backbone
+kind: minor
+body: >
+  `pkit connections resolve <address> [--json]` prints one data point as it
+  resolves — its value, or each entry of a union or additive point with its
+  origin, how it resolved or why not, and every filler considered. The JSON
+  document is stable: it is how a capability's own script reads a point it
+  defines without importing the backbone. Read-only; exit 1 when the point
+  does not resolve or nothing defines it.
