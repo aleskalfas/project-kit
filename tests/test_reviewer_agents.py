@@ -162,3 +162,12 @@ def test_deployed_copy_carries_the_same_section(name):
 def test_the_next_reviewers_author_is_pointed_at_the_section():
     assert f"`{SECTION}`" in README.read_text(encoding="utf-8")
     assert f"`{SECTION}`" in AGENT_TEMPLATE
+
+
+def test_every_executing_reviewer_may_write_into_the_workspace() -> None:
+    """The workspace sentence says "write intermediate files there with the
+    file tools"; a reviewer with a shell but no file tool could only reach the
+    workspace through a redirect, judged like any other shell write."""
+    for name, path in EXECUTING_REVIEWERS.items():
+        tools = _split(path)[0].get("tools") or []
+        assert "Write" in tools, f"{name}: an executing reviewer needs Write for the workspace"

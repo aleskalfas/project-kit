@@ -1,7 +1,7 @@
 component: software-engineering
-kind: patch
+kind: minor
 custom:
-  category: Fixed
+  category: Changed
 body: >
   The code-review panel (`code-reviewer`, `security-reviewer`,
   `docs-reviewer`) states its read-only claim precisely: it governs the work
@@ -12,4 +12,4 @@ body: >
   prove a defect), captured output — go in the agent workspace, never loose
   in the repository, where an author's `git add` would commit them, nor in
   `/tmp/`, and a review leaves no file of its own outside the workspace. The
-  descriptions say "Read-only on what it reviews".
+  descriptions say "Read-only on what it reviews". The three panel reviewers gain the `Write` tool, scoped by their bodies to the agent workspace, so a review's working files land there without a prompt instead of through a shell redirect, which the permission hook judges like any other shell write.
