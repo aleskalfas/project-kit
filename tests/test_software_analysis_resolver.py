@@ -20,8 +20,10 @@ analysis never rewritten to match broken code:
   flag: a regression's carries the defect's placeholder, which the writer
   refuses until the person fills it;
 - the **agent's files**: its front matter (Write for the workspace, no Edit,
-  owning no path), the writers it runs and the one it never does, its
-  storyboard's three scenarios, the references, and the deployed copy.
+  owning no path); that it performs the judgment and is no reviewer; that it
+  never runs a writer — its body and storyboard name one only among the
+  commands for the person, never with a consent flag; its storyboard's three
+  scenarios; the references; and the deployed copy.
 """
 
 from __future__ import annotations
@@ -532,12 +534,20 @@ def test_propose_is_reached_under_the_capability_and_its_alias(
 
 # --- the agent's files -------------------------------------------------------------------------
 
-#: The writers the agent runs, after a person's confirmation, and the one it never runs.
-WRITERS = ("pkit friction revalidate", "pkit friction defer", "pkit analysis new revalidation")
-NEVER = "pkit friction record-status"
+#: A writer invoked: the friction writers, and the record stamp.
+WRITES = re.compile(r"friction (?:revalidate|defer|record-status)|analysis new revalidation")
+CONSENT = re.compile(r"--yes\b|--dry-run\b")
+
+#: The one section of the body, and the head of each block in the storyboard, that
+#: list the commands for the person.
+COMMANDS_SECTION = "## Commands for the person"
+COMMANDS_BLOCK = "# Commands for the person"
 
 SCENARIOS = ("Happy path", "The stop", "A regression, recorded")
 SCENARIO_PARTS = ("**Trigger.**", "**Preconditions.**", "### Walkthrough", "### Behind the scenes")
+
+_FENCE = re.compile(r"^[ ]*(?:>[ ]?)?[ ]*```")
+_QUOTED = re.compile(r"^[ ]*(?:>[ ]?)?[ ]*")
 
 
 def _split(path: Path) -> tuple[dict[str, Any], str]:
@@ -545,7 +555,39 @@ def _split(path: Path) -> tuple[dict[str, Any], str]:
     return load(front) or {}, body
 
 
-def test_the_agent_writes_only_through_the_writers_and_the_workspace() -> None:
+def _commands_for_the_person(text: str) -> tuple[str, str]:
+    """(the commands for the person, everything else): the body's section of that
+    name, and each fenced block — in a quote or a list or not — headed by it."""
+    inside: list[str] = []
+    outside: list[str] = []
+    if COMMANDS_SECTION in text:
+        before, after = text.split(COMMANDS_SECTION, 1)
+        section, sep, rest = after.partition("\n## ")
+        inside.append(section)
+        text = before + sep + rest
+    block: list[str] | None = None
+    for line in text.splitlines():
+        if block is None:
+            if _FENCE.match(line):
+                block = []
+            else:
+                outside.append(line)
+            continue
+        if _FENCE.match(line):
+            content = [_QUOTED.sub("", ln) for ln in block]
+            heads = [ln for ln in content if ln.strip()]
+            (inside if heads and heads[0] == COMMANDS_BLOCK else outside).extend(content)
+            block = None
+            continue
+        block.append(line)
+    return "\n".join(inside), "\n".join(outside)
+
+
+def _command_lines(commands: str) -> list[str]:
+    return [line.strip() for line in commands.splitlines() if line.strip().startswith("pkit ")]
+
+
+def test_the_agent_performs_the_judgment_and_never_runs_a_writer() -> None:
     front, body = _split(AGENT)
     assert front["name"] == "analysis-resolver"
     assert set(front["tools"]) == {"Read", "Glob", "Grep", "Bash", "Write"}  # no Edit
@@ -553,19 +595,31 @@ def test_the_agent_writes_only_through_the_writers_and_the_workspace() -> None:
     assert "model" not in front and "effort" not in front
     assert front["storyboards"] == [STORYBOARD.name]
     assert f"`{STORYBOARD.name}`" in body
-    for writer in WRITERS:
-        assert writer in body, writer
-    assert f"never run `{NEVER}`" in body
+    assert "**perform the judgment of the revalidation**" in body
+    assert "You are **not a reviewer**" in body
+    assert "**You never run a writer.**" in body
     assert "`.agent-workspace/analysis-resolver/<change>/`" in body
-    assert "**On `ambiguous` you stop.**" in body
+    assert "#revalidation" not in body  # links the README's table by name, restating none
+    assert WRITES.search(front["description"]) is None
+
+    commands, rest = _commands_for_the_person(body)
+    assert WRITES.findall(rest) == []
+    for writer in ("friction revalidate", "friction defer", "analysis new revalidation"):
+        assert writer in commands, writer
+    assert "record-status" not in commands
+    assert [c for c in _command_lines(commands) if CONSENT.search(c)] == []
+    assert "<the defect reference>" in commands and '--confirmed-by "<your name>"' in commands
 
 
-def test_the_storyboard_scripts_the_three_scenarios() -> None:
+def test_the_storyboard_scripts_the_three_scenarios_and_hands_over_commands() -> None:
     front, body = _split(STORYBOARD)
     assert front["consumers"] == [
         {"kind": "agent", "name": "analysis-resolver", "namespace": "software-analysis"}
     ]
     assert "## Framing" in body and "## Tone" in body
+    assert "**Hold only what depends on the ambiguity.**" in body
+    pattern = body.split("## Invocation pattern", 1)[1].split("\n## ", 1)[0]
+    assert "it returns the proposal" in pattern and "and nothing else" in pattern
     sections = re.split(r"^## Scenario \d+: ", body, flags=re.MULTILINE)[1:]
     titles = [section.splitlines()[0] for section in sections]
     assert len(titles) == len(SCENARIOS)
@@ -575,7 +629,15 @@ def test_the_storyboard_scripts_the_three_scenarios() -> None:
         for part in SCENARIO_PARTS:
             assert part in section, (section.splitlines()[0], part)
     stop = sections[1]
-    assert "**Write nothing in the repository**" in stop
+    assert "**Hold only what depends on the ambiguity.**" in stop
+
+    commands, rest = _commands_for_the_person(body)
+    assert WRITES.findall(rest) == []
+    for writer in ("friction revalidate", "friction defer", "analysis new revalidation"):
+        assert writer in commands, writer
+    assert [c for c in _command_lines(commands) if CONSENT.search(c)] == []
+    # The stop hands over no command for what it asks about.
+    assert WRITES.findall(_commands_for_the_person(stop)[0]) == []
 
 
 def test_refs_find_nothing_in_the_agent_folder() -> None:

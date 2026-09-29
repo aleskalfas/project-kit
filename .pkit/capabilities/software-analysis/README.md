@@ -27,7 +27,7 @@ Install it when your project is past the point where one person holds the whole 
 Each artefact declares what makes it true — its anchors — and when it was last revalidated, in the core friction block (COR-050). The core friction check flags it when an anchor changes. A **revalidation** then checks it, and ends as *holds*, *analysis was stale*, *code regressed* or *gap found*. A record is kept only when there's something to report. The full rule is in the decision.
 
 - **Write** the analysis with the `analysis-author` skill, which walks each kind through its stamp, `pkit analysis new` ("Authoring" below).
-- **Resolve** friction with the `analysis-resolver` agent: it proposes each flagged artefact's outcome with its evidence, records it once you confirm, and asks you whenever it can't tell a stale analysis from regressed code ("The agent" below).
+- **Resolve** friction with the `analysis-resolver` agent: it proposes each flagged artefact's outcome with its evidence and the commands you run to record it, and asks you whenever it can't tell a stale analysis from regressed code ("The agent" below).
 
 ## Where things live
 
@@ -215,17 +215,18 @@ The record never clears friction itself: commit it in the same change as the ans
 
 ## The agent: `analysis-resolver`
 
-The checks say *that* an artefact may no longer be true. Deciding what the change means for it is judgment, and the capability's agent does it. `pkit sync` deploys it with the other agents; in Claude Code it is `.claude/agents/analysis-resolver.md`.
+The checks say *that* an artefact may no longer be true. Deciding what the change means for it is the judgment of a revalidation (DEC-001 point 5), and the capability's agent performs it; it is not a reviewer. `pkit sync` deploys it with the other agents; in Claude Code it is `.claude/agents/analysis-resolver.md`.
 
-| Agent | Use it when | It writes |
+| Agent | Use it when | It hands you |
 |---|---|---|
-| `analysis-resolver` ([`agents/analysis-resolver/`](agents/analysis-resolver/analysis-resolver.md)) | the change check of a pull request, or the whole-repository report, flags analysis artefacts | after you confirm: `pkit friction revalidate`, `pkit friction defer`, and a record through `pkit analysis new revalidation` when a regression or gap was found |
+| `analysis-resolver` ([`agents/analysis-resolver/`](agents/analysis-resolver/analysis-resolver.md)) | the change check of a pull request, or the whole-repository report, flags analysis artefacts | a proposal in the agent workspace, `.agent-workspace/analysis-resolver/<change>/proposal.md`: each artefact's outcome with its evidence and the commands you run to record it, or the question it needs you to answer |
 
-For each flagged artefact, upstream first, it reads `pkit friction explain`, the commits behind the changed anchor and the change's context — the commit messages, the pull request or work item — and proposes an outcome with its evidence. You confirm once, and it records them.
+For each flagged artefact, upstream first, it reads `pkit friction explain`, the commits behind the changed anchor and the change's context — the commit messages, the pull request or work item — and proposes an outcome with its evidence, each quote it read beside its source and whether it was found there.
 
-- **It never rewrites an artefact.** It has no edit tool, and writes files only in the agent workspace, under `.agent-workspace/analysis-resolver/`: an artefact's edit is a diff there, which you apply; the friction writers change only an artefact's `revalidated` block. It never runs `pkit friction record-status`.
-- **It stops where it can't tell stale from regressed.** It writes nothing — no revalidation, no deferral, no record, for any artefact of that run — and asks you: what disagrees, the commit, and the two readings. Your answer, stale or regressed, is what it records.
-- **Not for** another component's artefacts, writing new analysis (the skill's), planned revalidations or onboarding, or running the software.
+- **You run the commands; it runs none.** The proposal lists, per artefact, what you do first — an edit, a defect to report — and the writer commands word for word: `pkit friction revalidate` for the outcome, `pkit friction defer` for what you would rather postpone, and `pkit analysis new revalidation` for a record when there is something to say. None carries `--yes`, so each asks you once. Where the words are yours alone — the defect's reference, your name — a placeholder stands, and the writers refuse it until you fill it. Whether an agent may run the writers itself is for a project record to sanction; none does.
+- **It never rewrites an artefact.** It has no edit tool and writes only in the agent workspace: an artefact's edit is a diff there, which you apply.
+- **It asks where it can't tell stale from regressed.** That artefact, the artefacts downstream of it through the cascade and the record carry the question instead of commands — what disagrees, the commit, and the two readings; every other artefact gets its commands. Your answer is the quote it proposes from next.
+- **Not for** another component's artefacts, writing new analysis (the skill's), reviewing a change, planned revalidations or onboarding, or running the software.
 
 Its scripted flows — a drift resolved, the stop, and a regression recorded with its gap — are in [`agents/analysis-resolver/storyboard.md`](agents/analysis-resolver/storyboard.md).
 
