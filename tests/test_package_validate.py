@@ -30,6 +30,7 @@ from project_kit.manifest import (
     set_capability_origin,
 )
 from tests.adopter_repo import MakeAdopterRepo
+from tests.process_journal_support import set_journal_logging
 
 REPO = Path(__file__).resolve().parents[1]
 
@@ -643,19 +644,43 @@ def test_depends_on_must_carry_the_generated_mark(
 # process-journal ignore line over (#1120).
 STALE_JOURNAL_LINE = ".pkit/capabilities/project-management/project/process/**/*.journal.jsonl"
 
+# The journal settings under which the render drops a component's claim.
+JOURNALS_COMMITTED = process_journal.JournalSettings(enabled=True, committed=True)
+
 
 @pytest.mark.parametrize("pattern", [STALE_JOURNAL_LINE, process_journal.JOURNAL_GLOB])
-def test_a_runtime_ignore_entry_declaring_process_journals_is_warned(
+def test_a_runtime_ignore_entry_declaring_committed_process_journals_is_warned(
     schema: dict[str, Any], component_dir: Path, pattern: str
 ) -> None:
-    """Journals' ignore line is the backbone's; a component declaring it too keeps
-    them ignored when the project commits them — a warning, never an error."""
+    """Journals' ignore line is the backbone's; while the project commits them the
+    render drops a component's claim on them — a warning, never an error."""
     raw = _package(runtime_ignore=[".pkit/capabilities/demo/project/instance/*.json", pattern])
-    findings = _validate(raw, schema, component_dir)
+    findings = pv.validate_package(
+        raw, schema, component_dir=component_dir, expected_name="demo", journal=JOURNALS_COMMITTED
+    )
     assert _messages(findings, pv.Severity.ERROR) == {}
     assert _messages(findings, pv.Severity.WARNING) == {
         "/runtime_ignore/1": pv.journal_claim_message(pattern)
     }
+
+
+@pytest.mark.parametrize(
+    "journal",
+    [
+        process_journal.JournalSettings(),
+        process_journal.JournalSettings(enabled=True, committed=False),
+        process_journal.JournalSettings(enabled=False, committed=True),
+    ],
+)
+def test_a_claim_on_journals_kept_out_of_version_control_is_not_warned(
+    schema: dict[str, Any], component_dir: Path, journal: process_journal.JournalSettings
+) -> None:
+    """While the journals stay ignored the claim is redundant: nothing to warn about."""
+    raw = _package(runtime_ignore=[STALE_JOURNAL_LINE])
+    findings = pv.validate_package(
+        raw, schema, component_dir=component_dir, expected_name="demo", journal=journal
+    )
+    assert findings == []
 
 
 @pytest.mark.parametrize(
@@ -669,7 +694,11 @@ def test_a_runtime_ignore_entry_declaring_process_journals_is_warned(
 def test_a_runtime_ignore_entry_that_is_not_a_journal_is_not_warned(
     schema: dict[str, Any], component_dir: Path, pattern: str
 ) -> None:
-    assert _validate(_package(runtime_ignore=[pattern]), schema, component_dir) == []
+    raw = _package(runtime_ignore=[pattern])
+    findings = pv.validate_package(
+        raw, schema, component_dir=component_dir, expected_name="demo", journal=JOURNALS_COMMITTED
+    )
+    assert findings == []
 
 
 @pytest.mark.parametrize(
@@ -686,6 +715,7 @@ def test_the_journal_warning_names_the_backbone_pattern_and_the_way_out(
     message = pv.journal_claim_message(STALE_JOURNAL_LINE, provenance)
     assert repr(process_journal.JOURNAL_GLOB) in message
     assert "`process.journal.committed: true`" in message
+    assert "the `.pkit/.gitignore` render drops the entry" in message
     assert fix in message
 
 
@@ -985,10 +1015,12 @@ def test_pkit_validate_fails_on_a_package_error(make_adopter_repo: MakeAdopterRe
 def test_pkit_validate_warns_on_an_installed_package_declaring_process_journals(
     make_adopter_repo: MakeAdopterRepo, origin: str, fix: str
 ) -> None:
-    """The reverse skew: an older package on a backbone that owns the journal line.
-    The warning's fix is the one that lasts for where the package comes from."""
+    """The reverse skew: an older package on a backbone that owns the journal line,
+    in a project that commits its journals. The warning's fix is the one that
+    lasts for where the package comes from."""
     adopter = make_adopter_repo(capabilities=("evidence",))
     set_capability_origin(adopter.root, "evidence", origin)
+    set_journal_logging(adopter.root, enabled=True, committed=True)
     package = _installed_package(adopter.root, "evidence")
     stale = ".pkit/capabilities/evidence/project/process/**/*.journal.jsonl"
     package.write_text(
@@ -1001,6 +1033,82 @@ def test_pkit_validate_warns_on_an_installed_package_declaring_process_journals(
     assert "warning  .pkit/capabilities/evidence/package.yaml:/runtime_ignore/0" in result.output
     assert f"→ {stale!r} declares process journals" in result.output
     assert fix in " ".join(result.output.split())
+
+
+def test_pkit_validate_is_silent_on_a_claim_while_journals_are_kept_out(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """Journals the project does not commit stay ignored by the backbone's own
+    line, so the same stale claim is redundant and not warned about."""
+    adopter = make_adopter_repo(capabilities=("evidence",))
+    set_journal_logging(adopter.root, enabled=True, committed=False)
+    package = _installed_package(adopter.root, "evidence")
+    stale = ".pkit/capabilities/evidence/project/process/**/*.journal.jsonl"
+    package.write_text(
+        package.read_text(encoding="utf-8") + f"runtime_ignore:\n  - {stale}\n", encoding="utf-8"
+    )
+
+    result = CliRunner().invoke(main, ["validate", "--no-refs"])
+    assert result.exit_code == 0, result.output
+    assert "0 error(s), 0 warning(s)" in result.output
+
+
+def _declare_aliases(package: Path, *aliases: str) -> None:
+    listed = "".join(f"  - {alias}\n" for alias in aliases)
+    package.write_text(
+        package.read_text(encoding="utf-8") + f"aliases:\n{listed}", encoding="utf-8"
+    )
+
+
+@pytest.mark.parametrize(
+    ("alias", "shadowed_by"),
+    [
+        # A backbone command: every capability name and alias yields to it.
+        ("status", "the backbone command `pkit status`, which every capability name and alias"),
+        # Another capability's own name.
+        ("software-analysis", "the name of capability 'software-analysis', which every alias"),
+        # The same alias, declared by a capability earlier in the manifest.
+        ("analysis", "the same alias of capability 'software-analysis', registered first"),
+    ],
+)
+def test_an_alias_another_name_shadows_is_warned_naming_what_holds_it(
+    make_adopter_repo: MakeAdopterRepo, alias: str, shadowed_by: str
+) -> None:
+    """`software-analysis` comes first in the manifest and declares `analysis`, so
+    the later `evidence` cannot take its name or its alias, nor a backbone command."""
+    adopter = make_adopter_repo(capabilities=("software-analysis", "evidence"))
+    _declare_aliases(_installed_package(adopter.root, "evidence"), "ev", alias)
+
+    result = pv.validate_installed_packages(adopter.root)
+    findings = {
+        (report.file.parent.name, f.path): f for report in result.reports for f in report.findings
+    }
+    assert result.errors == 0 and result.warnings == 1, list(findings)
+    finding = findings[("evidence", "/aliases/1")]
+    assert finding.severity is pv.Severity.WARNING
+    message = " ".join(finding.message.split())
+    assert message.startswith(
+        f"alias {alias!r} of capability 'evidence' is shadowed by {shadowed_by}"
+    )
+    assert f"`pkit {alias}`" in message and "never evidence" in message
+    assert "`pkit evidence …` still reaches it" in message
+
+
+def test_pkit_validate_warns_on_an_alias_another_name_shadows_and_passes(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    adopter = make_adopter_repo(capabilities=("software-analysis", "evidence"))
+    _declare_aliases(_installed_package(adopter.root, "evidence"), "analysis")
+
+    result = CliRunner().invoke(main, ["validate", "--no-refs"])
+    assert result.exit_code == 0, result.output
+    assert "0 error(s), 1 warning(s)" in result.output
+    assert "warning  .pkit/capabilities/evidence/package.yaml:/aliases/0" in result.output
+    output = " ".join(result.output.split())
+    assert (
+        "→ alias 'analysis' of capability 'evidence' is shadowed by the same alias of "
+        "capability 'software-analysis'"
+    ) in output
 
 
 def test_in_the_methodology_source_a_kit_shipped_package_is_its_own() -> None:

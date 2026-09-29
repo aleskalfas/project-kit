@@ -14,9 +14,9 @@ pkit:
         - src/project_kit/workspace.py
       record: [COR-028, PRJ-006, ADR-002, ADR-003, ADR-004, ADR-009, ADR-014, ADR-016, ADR-021, ADR-025, ADR-060]
     revalidated:
-      at: 2026-09-29T19:12:31Z
+      at: 2026-09-29T22:37:42Z
       outcome: unchanged
-      unchanged-because: ADR-009 rule 7's refinement adds the render's inputs, the ownership test and the process-journal pattern; the permissions surface writes its diagnose marker and log, so under that test it still declares their patterns through the backbone seam, exactly as the diagnose section says
+      unchanged-because: ADR-009 rule 7 now gives the backbone's journal choice precedence, so the render drops a component entry for the journal pattern while journals are committed; the diagnose marker and log are ignored through the backbone's own runtime_ignore patterns, not a component's journal claim, so the diagnose section's account of their ignoring through the .pkit/.gitignore render holds after the merge of main
 ---
 
 # Permissions — decision core
