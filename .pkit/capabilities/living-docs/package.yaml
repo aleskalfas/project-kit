@@ -5,3 +5,42 @@ component:
   version: 0.1.0
 description: Living documentation — documentation spaces by audience, every page anchored to what makes it true, drift detected as friction and fixed by reviewed proposals.
 requires_backbone: ">=1.149.0,<2.0.0"
+
+commands:
+  validate:
+    script: scripts/validate.py
+    help: "Validate the documentation spaces (DEC-001): places and their assignment, what is never a page, pages' reader and kind, entry points and definitions; --json prints the findings document `pkit validate` reads. A query: read-only, offline; `pkit sync` provisions its dependencies."
+    query-contract: true
+
+# The `living-docs:spaces` member of `pkit validate` (ADR-058).
+validators:
+  spaces:
+    command: validate
+
+# COR-049 point 4 — the capability's documents, relative to a documentation root.
+docs:
+  locations:
+    user-root:
+      path: .
+      root: user
+      description: The user documentation root itself, a default place of the user space (DEC-001 point 1). Never recorded, so it follows the root.
+    internal-root:
+      path: .
+      root: internal
+      description: The internal documentation root itself, a default place of the technical space (DEC-001 point 1). Never recorded, so it follows the root.
+    definitions:
+      path: living-docs
+      description: Where the spaces' definitions live, in the technical space (DEC-001 point 2); recorded when the first one is placed (COR-049 point 5).
+
+# COR-050 point 1 — where the spaces' pages and this capability's artefacts are found.
+friction:
+  places:
+    - location: user-root
+      path: "**"
+      description: The user space's pages, under the user root.
+    - location: internal-root
+      path: "**"
+      description: The technical space's pages, under the internal root.
+    - location: definitions
+      path: rule-sets
+      description: The spaces' definitions, project rule sets that inherit LDOC (COR-051 point 2).

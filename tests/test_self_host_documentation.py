@@ -13,12 +13,18 @@ realises, over the real repository:
   not, so a new one cannot land unclassified (criterion 2);
 - no declared place is a synced copy, which is what living-docs' place rule
   asks (criterion 3), and the friction pass, which enforces it, walks them all;
-- the analysis location derives under the internal root (criterion 4).
+- the analysis location derives under the internal root (criterion 4);
+- living-docs' own checks pass over this tree end to end: its validator, the
+  shared method `LDOC` and both spaces' definitions inheriting it, and the
+  friction pass over the roots it declares as places (#1003).
 """
 
 from __future__ import annotations
 
 import importlib.util
+import json
+import subprocess
+import sys
 from pathlib import Path, PurePosixPath
 
 import pytest
@@ -27,12 +33,14 @@ from ruamel.yaml import YAML
 
 from project_kit import config_validate as cv
 from project_kit import docs_roots as dr
+from project_kit import rule_sets as rs
 from project_kit.cli import main
 from project_kit.friction_discovery import read_friction_settings
 from project_kit.friction_validate import FrictionFindingKind, validate_friction
 
 REPO = Path(__file__).resolve().parent.parent
-LIVING_DOCS_CONFIG = REPO / ".pkit" / "capabilities" / "living-docs" / "project" / "config.yaml"
+LIVING_DOCS = REPO / ".pkit" / "capabilities" / "living-docs"
+LIVING_DOCS_CONFIG = LIVING_DOCS / "project" / "config.yaml"
 
 # Every README under `.pkit/` that is *not* a place, with the reason ADR-055
 # point 3's principle gives: a README an adopter reads in order to use an area,
@@ -98,11 +106,17 @@ def test_the_status_report_shows_roots_places_and_the_records_inside_the_interna
     lines = [line.strip() for line in result.output.splitlines()]
     assert "user root          docs/   (explicit)" in lines
     assert "internal root      tech-docs/   (explicit)" in lines
-    inside = lines.index("inside root        1 recorded location(s) inside the internal root:")
+    inside = lines.index("inside root        2 recorded location(s) inside the internal root:")
     assert lines[inside + 1] == "adr-records -> tech-docs/architecture/decisions"
-    assert f"places             {len(_project_places())} declared:" in lines
+    # living-docs' definitions location, recorded when the first space
+    # definition was placed there (COR-049 point 5; DEC-001 point 2).
+    assert lines[inside + 2] == "definitions (living-docs) -> tech-docs/living-docs"
+    assert f"places             {len(read_friction_settings(REPO).places)} declared:" in lines
     for place in _project_places():
         assert place in lines, place
+    # living-docs' default places — the roots — and its definitions (DEC-001 points 1 and 2).
+    for place in ("docs/**", "tech-docs/**", "tech-docs/living-docs/rule-sets"):
+        assert f"{place} (living-docs)" in lines, place
 
 
 # --- criterion 2: exactly the adopter-facing `.pkit/` READMEs ----------------
@@ -179,3 +193,54 @@ def test_the_analysis_location_derives_to_tech_docs_analysis() -> None:
     internal = dr.resolve_roots(REPO).internal
     location = dr.derive_location(internal, "analysis", subpaths={"analysis": "analysis"})
     assert location == dr.Location(Path("tech-docs/analysis"), dr.Source.DERIVED)
+
+
+# --- living-docs over this tree (#1003) ---------------------------------------
+
+
+def test_living_docs_validator_passes_over_this_tree() -> None:
+    """The `living-docs:spaces` member of `pkit validate`, run as the backbone runs
+    it (under this interpreter rather than `uv run --script`)."""
+    completed = subprocess.run(
+        [sys.executable, str(LIVING_DOCS / "scripts" / "validate.py"), "--json"],
+        cwd=REPO,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert completed.returncode == 0, completed.stderr
+    document = json.loads(completed.stdout)
+    assert [f for f in document["findings"] if f["severity"] == "error"] == []
+    summary = document["summary"]
+    assert summary[1].endswith("definition tech-docs/living-docs/rule-sets/user.md.")
+    assert summary[2].endswith("definition tech-docs/living-docs/rule-sets/technical.md.")
+    assert summary[4].startswith("reader resolution: dormant until the readers point")
+
+
+def test_the_definitions_location_is_recorded_and_each_space_names_its_definition() -> None:
+    assert dr.recorded_capability_locations(REPO, "living-docs") == {
+        "definitions": "tech-docs/living-docs"
+    }
+    spaces = _living_docs_config()["spaces"]
+    assert {space: entry["definition"] for space, entry in spaces.items()} == {
+        "user": "tech-docs/living-docs/rule-sets/user.md",
+        "technical": "tech-docs/living-docs/rule-sets/technical.md",
+    }
+
+
+def test_ldoc_and_both_space_definitions_validate_and_pin_it() -> None:
+    result = rs.validate_rule_sets(REPO)
+    assert result.errors == ()
+    names = {rule_set.name: rule_set for rule_set in result.discovery.rule_sets}
+    assert names["LDOC"].component == "living-docs"
+    for name in ("USER", "TECH"):
+        assert names[name].component is None
+        assert [str(pin) for _index, pin in names[name].pins] == ["living-docs:LDOC@1"]
+    assert all(check.problem is None for check in rs.pin_checks(result.discovery))
+
+
+def test_the_friction_pass_over_the_declared_roots_has_no_error() -> None:
+    """Declaring the roots as places makes every document under them an
+    artefact; nothing there may fail the pass."""
+    result = validate_friction(REPO)
+    assert result.errors == ()

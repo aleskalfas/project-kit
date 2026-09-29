@@ -1,0 +1,5 @@
+# Documentation locations living-docs has chosen (COR-049 point 5).
+# Recorded the first time each was used; a later change of the
+# documentation roots leaves these untouched. Project-owned.
+locations:
+  definitions: tech-docs/living-docs

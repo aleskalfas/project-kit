@@ -3,8 +3,9 @@
 #
 # The places are declared in the backbone configuration's `friction.places`
 # (.pkit/project/config.yaml), which holds the reasons for the list; this file
-# names each space's entry point and assigns each place to its space. Every
-# place here lies outside both documentation roots, so each must be assigned.
+# names each space's entry point and definition, and assigns each place to its
+# space. Every place here lies outside both documentation roots, so each must
+# be assigned. `pkit living-docs validate` checks all of it.
 
 pkit_schema: living-docs:config
 schema_version: 1
@@ -12,9 +13,11 @@ schema_version: 1
 spaces:
   user:
     entry-point: README.md
+    definition: tech-docs/living-docs/rule-sets/user.md
   technical:
     # until tech-docs/README.md exists (ADR-055 point 3)
     entry-point: CONTRIBUTING.md
+    definition: tech-docs/living-docs/rule-sets/technical.md
 
 places:
   CONTRIBUTING.md: technical

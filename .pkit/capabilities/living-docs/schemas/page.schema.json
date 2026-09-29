@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "page.schema.json",
+  "title": "A page's own fields — living-docs capability",
+  "description": "The fields that make a document a page of a documentation space, in its front matter (living-docs DEC-001 point 4): `reader`, who the page is for, and `kind`, which kind of page it is and so which template it follows. A document is a page only if it carries them; a decision record, a rule-set file and what another component claims never is. They are the page's own fields, outside the methodology's container: its friction block sits in the container and is the core's, validated by the backbone (COR-050, COR-053 point 10). Every other front-matter field is the page's business and is not constrained here. Applied by the capability's validator, `pkit living-docs validate` (the `living-docs:spaces` member of `pkit validate`), to every document in a space's places that carries either field — a Markdown page binds by those fields, not by `pkit_schema:` or `binds_to:`, which bind YAML data files (COR-023). Reader resolution is dormant until the readers point `pkit::documentation:readers` ships: until then `reader` is checked for its shape only.",
+  "type": "object",
+  "required": [
+    "reader",
+    "kind"
+  ],
+  "properties": {
+    "reader": {
+      "description": "The reader the page is for: the id of an entry of the readers point (DEC-001 point 7) — `user` and `maintainer` by default. One reader; the page says only what that reader needs (RS-LDOC-003).",
+      "$ref": "#/$defs/word"
+    },
+    "kind": {
+      "description": "The page's kind, named by the template it follows: pages of a kind follow one format, with a template per kind (RS-LDOC-004). The capability ships the `signpost` template (RS-LDOC-005); a kind is a word, and a kind other than the shipped ones arrives with its template.",
+      "$ref": "#/$defs/word"
+    }
+  },
+  "$defs": {
+    "word": {
+      "description": "A lowercase letter, then lowercase letters, digits and hyphens.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    }
+  }
+}

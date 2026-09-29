@@ -1,6 +1,6 @@
 # The living-docs project configuration: what the capability needs that the
-# backbone does not — each documentation space's entry point, and which space
-# each place outside every documentation root belongs to.
+# backbone does not — each documentation space's entry point and definition,
+# and which space each place outside every documentation root belongs to.
 #
 # Per [living-docs:DEC-001-living-docs-discipline] point 1. The places
 # themselves are declared in the friction key of the backbone configuration
@@ -11,7 +11,9 @@
 #
 # - `spaces` — one entry per space, keyed by its id: `user` and `technical`
 #   are the two every project has; a project may add more. Each names its
-#   `entry-point`, the page a reader of that space starts from.
+#   `entry-point`, the page a reader of that space starts from, and — once it
+#   is written — its `definition`, the project rule set inheriting LDOC under
+#   `<definitions>/rule-sets/` (DEC-001 point 2).
 # - `places` — place → space. A place inside a documentation root belongs to
 #   that root's space and needs no entry here unless the project assigns it
 #   otherwise; a place outside every root must be assigned. A mapping, so each
