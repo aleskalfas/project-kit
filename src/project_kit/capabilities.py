@@ -184,6 +184,24 @@ def find_capability_in_repo(target_root: Path, name: str) -> CapabilitySource | 
     )
 
 
+def authored_in_source(target_root: Path, source_kit: Path, name: str) -> bool:
+    """True when the capability's subtree in *target_root* is its source, not a copy (#1107).
+
+    *source_kit* is the methodology tree the running code resolves
+    (`install.find_source_kit`), the tree `install` and `upgrade` copy a
+    kit-shipped capability from. `<target_root>/.pkit/capabilities/<name>/`
+    lies inside it in the methodology's source repository run by its own code —
+    where sync's test holds (ADR-059 point 2) — and there the subtree is where
+    the capability is authored. The lifecycle then copies nothing onto it and
+    never deletes it: uninstall deletes a kit-shipped subtree only because it is
+    a disposable copy (COR-031 D4), and the source is never a copy. Where other
+    code runs in the source, sync's test says no and the capability verbs refuse
+    instead (`install.refuse_propagation_into_source`).
+    """
+    subtree = target_root / ".pkit" / "capabilities" / name
+    return subtree.resolve().is_relative_to(source_kit.resolve())
+
+
 # Which source a caller wants when a name resolves in more than one place.
 CapabilityOrigin = str  # "kit-shipped" | "incubated-in-repo"
 
@@ -692,17 +710,15 @@ def install_capability(
     Returns the installed path: `<target_root>/.pkit/capabilities/<name>/`.
 
     Refuses to install if the capability is already installed in the
-    adopter — caller must check first via `is_installed` — or if its name
-    is reserved (`refuse_reserved_capability_name`).
+    adopter — caller must check first via `is_installed` — if its name
+    is reserved (`refuse_reserved_capability_name`), or if the source is the
+    destination (`_refuse_copy_onto_itself`; `register_capability_in_source`
+    registers that one).
     """
-    refuse_reserved_capability_name(capability_source.name)
-    if is_installed(target_root, capability_source.name):
-        raise click.ClickException(
-            f"capability {capability_source.name!r} is already installed. "
-            f"Use 'pkit capabilities upgrade {capability_source.name}' to refresh."
-        )
+    _refuse_unregistrable(target_root, capability_source.name)
 
     dest = target_root / ".pkit" / "capabilities" / capability_source.name
+    _refuse_copy_onto_itself(capability_source.path, dest)
     if dry_run:
         return dest
 
@@ -763,12 +779,7 @@ def register_incubated_capability(
     Returns the in-place path: ``<target_root>/.pkit/capabilities/<name>/``.
     """
     name = capability_source.name
-    refuse_reserved_capability_name(name)
-    if is_installed(target_root, name):
-        raise click.ClickException(
-            f"capability {name!r} is already installed. "
-            f"Use 'pkit capabilities upgrade {name}' to refresh."
-        )
+    _refuse_unregistrable(target_root, name)
 
     dest = target_root / ".pkit" / "capabilities" / name
     # The incubated subtree *is* the destination. Assert source == dest so
@@ -788,6 +799,48 @@ def register_incubated_capability(
 
     # Record + activate, but DO NOT copy: the subtree is already in place.
     _register_in_backbone_manifest(target_root, name, origin=INCUBATED_IN_REPO)
+    return dest
+
+
+def register_capability_in_source(
+    target_root: Path,
+    capability_source: CapabilitySource,
+    *,
+    dry_run: bool = False,
+) -> Path:
+    """Register a capability whose source is its destination, without copying (#1107).
+
+    In the methodology's source repository run by its own code
+    (`authored_in_source`), the tree `install_capability` would copy from is
+    the destination itself. As for an incubated capability (COR-031 D3),
+    registration then records the capability and copies nothing. It is
+    registered ``kit-shipped``, the origin `install` gives, as the source
+    registers the capabilities it ships. No per-component receipt is stamped
+    into the subtree: it is authored source, so its install-state lives in the
+    backbone manifest alone, as an incubated capability's does (COR-031 D2).
+    Deploy is the caller's, as after `install_capability`.
+
+    Refuses, as `install_capability` does, a reserved or already-registered
+    name; and a source that is not the destination, which `install_capability`
+    copies in.
+
+    Returns the in-place path: ``<target_root>/.pkit/capabilities/<name>/``.
+    """
+    name = capability_source.name
+    _refuse_unregistrable(target_root, name)
+
+    dest = target_root / ".pkit" / "capabilities" / name
+    if capability_source.path.resolve() != dest.resolve():
+        raise click.ClickException(
+            f"register_capability_in_source expects the capability's source to be its "
+            f"destination {dest}, but it resolved to {capability_source.path}. Use "
+            f"'install_capability' for a capability that must be copied in."
+        )
+
+    if dry_run:
+        return dest
+
+    _register_in_backbone_manifest(target_root, name)
     return dest
 
 
@@ -964,6 +1017,8 @@ def detect_incubated_collisions(
     skips the capability's own tree entirely — making detection order-
     independent and semantically correct (a capability cannot shadow itself),
     leaving only genuine collisions against *other* installed content (#225).
+    `install` of a capability authored in the methodology's source runs it for
+    the same reason: that capability is its own source too (#1107).
     """
     own_dir = target_root / ".pkit" / "capabilities" / capability_source.name
     findings: list[CollisionFinding] = []
@@ -1015,6 +1070,8 @@ def refresh_capability(
             f"use 'pkit capabilities install {capability_source.name}' first."
         )
     dest = target_root / ".pkit" / "capabilities" / capability_source.name
+    # Before the migrations, which would otherwise run against the source first.
+    _refuse_copy_onto_itself(capability_source.path, dest)
 
     installed_version = _read_installed_capability_version(target_root, capability_source.name)
 
@@ -1155,17 +1212,22 @@ class UninstallOutcome:
       copy of authored work, so uninstall unregisters in place and leaves
       the files (``files_deleted=False``), unless the caller opts in to a
       purge.
+
+    Where the subtree is the capability's source (``in_source``, #1107) it is
+    kept whatever the origin.
     """
 
     cap_dir: Path        # the capability's subtree path (deleted or kept)
     origin: str          # kit-shipped | incubated-in-repo
     files_deleted: bool  # whether the subtree was (or would be) removed
+    in_source: bool = False  # the subtree is the capability's source (`authored_in_source`)
 
 
 def uninstall_capability(
     target_root: Path,
     name: str,
     *,
+    source_kit: Path | None = None,
     purge: bool = False,
     dry_run: bool = False,
 ) -> UninstallOutcome:
@@ -1188,6 +1250,13 @@ def uninstall_capability(
     pause-before-destructive-ops discipline). It has no effect on a
     kit-shipped capability, which always deletes.
 
+    Neither applies where the subtree is the capability's source — inside
+    *source_kit*, the tree the running code resolves (`authored_in_source`;
+    the methodology's source repository under its own code). It is never a
+    copy, so it is unregistered in place whatever the origin, and ``purge`` is
+    refused (#1107). *source_kit* defaults to that tree
+    (`install.find_source_kit`), so the guard holds for every caller.
+
     Returns an ``UninstallOutcome`` describing what was (or would be) done.
     """
     if not is_installed(target_root, name):
@@ -1195,15 +1264,26 @@ def uninstall_capability(
             f"capability {name!r} is not installed."
         )
 
-    origin = read_capability_origin(target_root, name)
+    if source_kit is None:
+        from project_kit.install import find_source_kit
+
+        source_kit = find_source_kit()
+    in_source = authored_in_source(target_root, source_kit, name)
     cap_dir = target_root / ".pkit" / "capabilities" / name
+    if in_source and purge:
+        raise click.ClickException(
+            f"refusing to purge {cap_dir}: it is the capability's source, and uninstall "
+            "never deletes a capability's source (ADR-059). Nothing was written."
+        )
+
+    origin = read_capability_origin(target_root, name)
     # An incubated capability keeps its files unless the caller purges; a
-    # kit-shipped one always deletes its disposable copy.
-    delete_files = origin != ORIGIN_INCUBATED_IN_REPO or purge
+    # kit-shipped one always deletes its disposable copy; the source is kept.
+    delete_files = not in_source and (origin != ORIGIN_INCUBATED_IN_REPO or purge)
 
     if dry_run:
         return UninstallOutcome(
-            cap_dir=cap_dir, origin=origin, files_deleted=delete_files
+            cap_dir=cap_dir, origin=origin, files_deleted=delete_files, in_source=in_source
         )
 
     if delete_files and cap_dir.is_dir():
@@ -1211,16 +1291,17 @@ def uninstall_capability(
 
     _unregister_from_backbone_manifest(target_root, name)
     if not delete_files:
-        # Incubated, kept in place: the authored subtree survives, so the
-        # filesystem-keyed adapter deploy primitives won't see the source as
-        # "gone" and won't drop the harness symlinks/copies on their next run.
-        # Drop them here so an unregistered capability stops being active in
-        # the harness (COR-031 D4: uninstall drops stale harness symlinks even
-        # though the source files stay). When the subtree is deleted instead,
-        # deploy's own stale-removal pass handles it, so this is skipped.
+        # Kept in place (incubated, or the source): the authored subtree
+        # survives, so the filesystem-keyed adapter deploy primitives won't see
+        # the source as "gone" and won't drop the harness symlinks/copies on
+        # their next run. Drop them here so an unregistered capability stops
+        # being active in the harness (COR-031 D4: uninstall drops stale harness
+        # symlinks even though the source files stay). When the subtree is
+        # deleted instead, deploy's own stale-removal pass handles it, so this
+        # is skipped.
         undeploy_capability_harness_artifacts(target_root, cap_dir)
     return UninstallOutcome(
-        cap_dir=cap_dir, origin=origin, files_deleted=delete_files
+        cap_dir=cap_dir, origin=origin, files_deleted=delete_files, in_source=in_source
     )
 
 
@@ -1362,6 +1443,44 @@ def _is_kit_propagated_path(target_root: Path, path: Path) -> bool:
 
 def _is_valid_name(name: str) -> bool:
     return bool(_NAME_RE.match(name))
+
+
+def _refuse_unregistrable(target_root: Path, name: str) -> None:
+    """Refuse a reserved name or an already-registered capability.
+
+    The pre-flight every path that registers a capability runs first:
+    `install_capability`, `register_incubated_capability` and
+    `register_capability_in_source`.
+    """
+    refuse_reserved_capability_name(name)
+    if is_installed(target_root, name):
+        raise click.ClickException(
+            f"capability {name!r} is already installed. "
+            f"Use 'pkit capabilities upgrade {name}' to refresh."
+        )
+
+
+def _refuse_copy_onto_itself(source: Path, dest: Path) -> None:
+    """Refuse a capability copy whose source and destination are one tree (#1107).
+
+    In the methodology's source repository run by its own code, the tree a
+    kit-shipped capability is copied from is its destination
+    (`authored_in_source`). A copy there fails on the first file copied onto
+    itself — after the migrations have run against the source — and, with an
+    artefact skipped, prunes that artefact from the source. The CLI takes the
+    in-place paths there; this keeps any other caller of `install_capability`
+    or `refresh_capability` from reaching the copy. Either tree inside the
+    other counts as one: copying would write into the tree being read.
+    """
+    source_resolved, dest_resolved = source.resolve(), dest.resolve()
+    if source_resolved.is_relative_to(dest_resolved) or dest_resolved.is_relative_to(
+        source_resolved
+    ):
+        raise click.ClickException(
+            f"refusing to copy the capability tree at {source} onto itself: the "
+            f"destination {dest} is the same tree, where the capability is authored "
+            "(ADR-059). Nothing was written."
+        )
 
 
 def _read_package_yaml(path: Path) -> CapabilityPackage | None:

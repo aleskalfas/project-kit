@@ -4,8 +4,9 @@ The methodology's source repository is recognised by sync's test (the target is
 the parent of the tree the running code resolves) and by the marker test (the
 package source beside `.pkit/`). Route 1 keeps them equal; where the running
 code is not the repository's own they disagree, and sync and upgrade would copy
-a foreign `.pkit/` over the source, and the capability verbs a foreign
-capability subtree. They refuse instead, and `pkit pin` refuses wherever either
+a foreign `.pkit/` over the source, the capability verbs a foreign capability
+subtree, and uninstall would delete a capability's source as if it were a copy.
+They refuse instead, and `pkit pin` refuses wherever either
 test recognises the source. A deleted dispatcher is one more way into the gap,
 never a way out of the marker test.
 
@@ -247,15 +248,29 @@ _CAPABILITY_SENTINEL = Path(".pkit") / "capabilities" / "evidence" / "README.md"
             "it is built from",
             id="register",
         ),
+        pytest.param(
+            ["uninstall", "evidence", "--force"],
+            "unregister the capability with that code and, where it is registered "
+            "kit-shipped, delete its subtree — here the capability's source, not a copy",
+            id="uninstall",
+        ),
+        pytest.param(
+            ["uninstall", "evidence", "--plan"],
+            "unregister the capability with that code and, where it is registered "
+            "kit-shipped, delete its subtree — here the capability's source, not a copy",
+            id="uninstall-plan",
+        ),
     ],
 )
 def test_capability_verbs_refuse_in_the_source_run_by_other_code(
     source_checkout: Path, monkeypatch: pytest.MonkeyPatch, args: list[str], would: str
 ) -> None:
     """`capabilities install`, `upgrade` and `register` copy or register a
-    capability with the running code's tree, so in the gap they refuse as sync
-    does — with the same message, naming the command as it would be re-run —
-    before any other pre-flight, and write nothing."""
+    capability with the running code's tree, and `uninstall` would delete a
+    kit-shipped one's subtree, which in the source is the capability's source
+    (#1107). In the gap they refuse as sync does — with the same message, naming
+    the command as it would be re-run — before any other pre-flight, and write
+    nothing: the uninstalled capability's subtree is intact."""
     installed = caps.find_capability_in_source(install.find_source_kit(), "evidence")
     assert installed is not None
     caps.install_capability(source_checkout, installed)

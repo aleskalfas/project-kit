@@ -12,7 +12,7 @@ pkit:
       record: ["living-docs:DEC-001", COR-049, COR-050, COR-051, COR-053]
       artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006]
     revalidated:
-      at: 2026-09-29T15:23:49Z
+      at: 2026-09-29T16:17:23Z
       outcome: updated
 ---
 
@@ -95,7 +95,9 @@ A place inside a root belongs to that root's space; list it under `places` only 
 
 ## Validation
 
-`pkit living-docs validate` checks your spaces against the decision; `pkit validate` runs the same check as its `living-docs:spaces` member (`--json` prints the findings document it reads). It is a query: read-only, offline, and `pkit sync` provisions its dependencies. It fails on:
+`pkit living-docs validate` checks your spaces against the decision; `pkit validate` runs the same check as its `living-docs:spaces` member (`--json` prints the findings document it reads). It is a query: read-only, offline, and `pkit sync` provisions its dependencies.
+
+**What it reads.** Where your documents are, it reads from the core, through `pkit friction artefacts --json` — the same discovery `pkit validate` and the friction checks read: your documentation roots, the places your configuration and every installed capability declare, the files each place matches, and each file's front matter. It never reads the declarations or walks the places itself, so it can never disagree with the core about which files a place holds; a synced copy, a place outside the repository and a malformed declaration are skipped exactly as the core skips them. What it decides over that answer is this capability's: which place wins where places nest, which space a place serves, and what a document is. Besides, it reads its own project configuration, and the readers point — only when some page names a reader — through `pkit connections resolve`. When the core gives no reading of the places, that is its one error, and no space is checked. It fails on:
 
 - a place outside every root that holds a document nothing else claims, with no assignment; an assignment naming a place `friction.places` does not declare, or a space nobody declares; a place assigned twice;
 - a project place equal to or enclosing a root; a file two project places claim with equal specificity;

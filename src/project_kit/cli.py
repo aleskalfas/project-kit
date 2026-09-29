@@ -583,9 +583,9 @@ def connections_resolve(address: str, as_json: bool) -> None:
 @main.group("friction")
 def friction() -> None:
     """Anchors and friction (COR-050): the reading commands — the checks, the
-    debt listing, one artefact's explanation — which never write, and the
-    writers — revalidate, defer, record-status — which write one block, only
-    with consent.
+    debt listing, one artefact's explanation, the places and artefacts
+    discovery finds — which never write, and the writers — revalidate, defer,
+    record-status — which write one block, only with consent.
 
     Reference: `.pkit/cli/README.md`, "Friction checks"; the block itself is
     in `.pkit/schemas/README.md`, "The friction block".
@@ -843,6 +843,38 @@ def friction_explain_command(artefact: str, as_json: bool) -> None:
         click.echo(friction_report.render_explain_json(explanation), nl=False)
     else:
         click.echo(friction_report.render_explain_human(explanation), nl=False)
+
+
+@friction.command("artefacts")
+@click.option(
+    "--json", "as_json", is_flag=True, default=False, help="Emit the stable JSON document."
+)
+def friction_artefacts_command(as_json: bool) -> None:
+    """The declared places, the files they hold and the artefacts in them, as
+    discovery finds them (COR-050 point 1).
+
+    One run of the discovery `pkit validate` reads, over the working tree:
+    each place — the project's and each capability's, with its location and
+    root — the files it matches and the skips validation applies (a synced
+    copy, a place outside the repository, a malformed declaration), every file
+    read with its front matter's own fields, and every artefact. Read-only. It
+    is how a capability's own script reads where artefacts are without
+    importing the backbone or walking the places itself. Exit 0 when answered;
+    1 when the configuration cannot be read; 2 on a usage error.
+    """
+    from project_kit import friction_discovery, validators
+
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    problem = friction_discovery.unreadable_configuration(target_root)
+    if problem is not None:
+        raise click.ClickException(f"{problem}; `pkit validate` reports it.")
+    document = validators.as_one_run(lambda: friction_discovery.artefacts_document(target_root))
+    if as_json:
+        click.echo(friction_discovery.render_artefacts_json(document), nl=False)
+    else:
+        click.echo(friction_discovery.render_artefacts_human(document), nl=False)
 
 
 @main.group(invoke_without_command=True)
@@ -2924,6 +2956,12 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
     if caps.read_capability_origin(target_root, name) == caps.INCUBATED_IN_REPO:
         _upgrade_incubated_capability(target_root, source_kit, name, dry_run=dry_run)
         return
+    # The methodology's source run by its own code (ADR-059 point 2): the tree a
+    # kit-shipped capability is refreshed from is its own subtree, so there is
+    # nothing to copy and no migration to run — re-deploy it in place (#1107).
+    if caps.authored_in_source(target_root, source_kit, name):
+        _upgrade_capability_in_source(target_root, source_kit, name, dry_run=dry_run)
+        return
 
     capability_source = caps.find_capability_in_source(source_kit, name)
     if capability_source is None:
@@ -3076,14 +3114,7 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
         # Re-run installed adapter primitives so the harness side picks
         # up any newly-added skills/agents from the upgraded capability,
         # then provision its query commands, as sync would (#1090).
-        from project_kit import install as install_mod
-        ctx = install_mod.InstallContext(
-            target_root=target_root,
-            source_kit=source_kit,
-            dry_run=False,
-        )
-        install_mod.run_installed_adapter_primitives(ctx)
-        install_mod.provision_query_commands(ctx, component=name)
+        _deploy_capability(target_root, source_kit, name)
 
 
 @main.command()
@@ -4507,6 +4538,13 @@ def install_capability_cmd(name: str, dry_run: bool, plan: bool, as_json: bool) 
     # upstream the capability marks mandatory is missing or incompatible.
     _refuse_unmet_mandatory_upstreams(target_root, capability_source)
 
+    # The methodology's source run by its own code (ADR-059 point 2): the tree the
+    # capability would be copied from is its destination. Register it in place —
+    # a copy would put the tree onto itself (#1107).
+    if caps.authored_in_source(target_root, source_kit, name):
+        _install_capability_in_source(target_root, source_kit, capability_source, dry_run=dry_run)
+        return
+
     # Pre-flight: collision detection.
     collisions = caps.detect_collisions(target_root, capability_source)
     skipped: list[tuple[str, str]] = []
@@ -4542,14 +4580,73 @@ def install_capability_cmd(name: str, dry_run: bool, plan: bool, as_json: bool) 
         # what `pkit init` does after its first-time copy. Then provision the
         # capability's query commands, so an offline `pkit validate` answers
         # without a `pkit sync` first (#1090).
-        from project_kit import install as install_mod
-        ctx = install_mod.InstallContext(
-            target_root=target_root,
-            source_kit=source_kit,
-            dry_run=False,
+        _deploy_capability(target_root, source_kit, name)
+
+
+def _install_capability_in_source(
+    target_root: Path,
+    source_kit: Path,
+    capability_source: CapabilitySource,
+    *,
+    dry_run: bool,
+) -> None:
+    """Install a capability whose subtree is its source: register it, copy nothing (#1107).
+
+    In the methodology's source repository run by its own code
+    (`caps.authored_in_source`), the capability `install` finds in the tree the
+    running code resolves is the one at its destination. It is registered in
+    place with origin `kit-shipped` (`caps.register_capability_in_source`) and
+    deployed like any install. Its own skills and agents are no collision
+    against themselves, so only a collision with *other* content is looked for,
+    as `register` does; and since nothing is copied there is nothing to skip, so
+    one is refused rather than resolved.
+    """
+    from project_kit import capabilities as caps
+
+    name = capability_source.name
+    _refuse_collisions_in_place(target_root, capability_source)
+    registered_path = caps.register_capability_in_source(
+        target_root, capability_source, dry_run=dry_run
+    )
+
+    verb, copied = ("Would register", "would be") if dry_run else ("Registered", "was")
+    click.echo(
+        "\n  " + cli_render.style("strong",
+            f"{verb} capability {name!r} v{capability_source.package.version} in place at "
+            f"{registered_path.relative_to(target_root)}/: it is authored in this "
+            f"repository, the methodology's source, so nothing {copied} copied (ADR-059).")
+    )
+
+    if not dry_run:
+        _deploy_capability(target_root, source_kit, name)
+
+
+def _refuse_collisions_in_place(target_root: Path, capability_source: CapabilitySource) -> None:
+    """Refuse a capability registered in place whose artefacts collide with other content.
+
+    `register` (an incubated capability) and `install` of a capability authored in
+    the methodology's source both register a subtree that is already in place:
+    its own artefacts are not collisions against themselves
+    (`caps.detect_incubated_collisions` filters them), and with nothing copied
+    there is no skip to offer — the author renames the artefact instead.
+    """
+    from project_kit import capabilities as caps
+
+    collisions = caps.detect_incubated_collisions(target_root, capability_source)
+    if not collisions:
+        return
+    click.echo(
+        "\n  " + cli_render.style("strong",
+            f"{len(collisions)} naming collision(s) with already-installed content:") + "\n"
+    )
+    for finding in collisions:
+        click.echo(
+            f"    - {finding.artifact_kind} '{finding.artifact_name}' "
+            f"collides with {finding.target_path.relative_to(target_root)}"
         )
-        install_mod.run_installed_adapter_primitives(ctx)
-        install_mod.provision_query_commands(ctx, component=name)
+    raise click.ClickException(
+        "rename the colliding artifact(s) in your capability tree, then retry."
+    )
 
 
 @capabilities.command("register")
@@ -4735,20 +4832,7 @@ def register_capability_cmd(name: str, dry_run: bool) -> None:
     # genuine collision against *other* installed content — refuse on it,
     # since register has no interactive skip path (the adopter authored the
     # tree and would rename the artifact rather than skip-copy it).
-    collisions = caps.detect_incubated_collisions(target_root, capability_source)
-    if collisions:
-        click.echo(
-            "\n  " + cli_render.style("strong",
-                f"{len(collisions)} naming collision(s) with already-installed content:") + "\n"
-        )
-        for finding in collisions:
-            click.echo(
-                f"    - {finding.artifact_kind} '{finding.artifact_name}' "
-                f"collides with {finding.target_path.relative_to(target_root)}"
-            )
-        raise click.ClickException(
-            "rename the colliding artifact(s) in your capability tree, then retry."
-        )
+    _refuse_collisions_in_place(target_root, capability_source)
 
     # Register in place (no copy) + record origin incubated-in-repo.
     registered_path = caps.register_incubated_capability(
@@ -4767,14 +4851,7 @@ def register_capability_cmd(name: str, dry_run: bool) -> None:
         # capability's skills/agents land in the harness (COR-031 D1: deploy
         # is identical regardless of origin) — its query-command provisioning
         # included (#1090).
-        from project_kit import install as install_mod
-        ctx = install_mod.InstallContext(
-            target_root=target_root,
-            source_kit=source_kit,
-            dry_run=False,
-        )
-        install_mod.run_installed_adapter_primitives(ctx)
-        install_mod.provision_query_commands(ctx, component=name)
+        _deploy_capability(target_root, source_kit, name)
 
 
 def _upgrade_incubated_capability(
@@ -4812,14 +4889,66 @@ def _upgrade_incubated_capability(
     )
 
     if not dry_run:
-        from project_kit import install as install_mod
-        ctx = install_mod.InstallContext(
-            target_root=target_root,
-            source_kit=source_kit,
-            dry_run=False,
+        _deploy_capability(target_root, source_kit, name)
+
+
+def _upgrade_capability_in_source(
+    target_root: Path, source_kit: Path, name: str, *, dry_run: bool
+) -> None:
+    """Re-deploy a capability whose subtree is its source — never copy it onto itself (#1107).
+
+    In the methodology's source repository run by its own code
+    (`caps.authored_in_source`), the tree `upgrade` would refresh a kit-shipped
+    capability from is the capability's own subtree. The source is already the
+    state, as sync's self-host path has it: nothing is copied, no receipt is
+    restamped and no migration runs — migrations carry an adopter's copy
+    forward, and this is no copy. What upgrade still refreshes is what follows
+    the tree: the deploy primitives re-run and the capability's query commands
+    are provisioned. The dependency and collision pre-flights are skipped with
+    the copy, as for an incubated capability: nothing new arrives.
+    """
+    from project_kit import capabilities as caps
+
+    source = caps.find_capability_in_source(source_kit, name)
+    if source is None:
+        raise click.ClickException(
+            f"capability {name!r} is registered, but its source at "
+            f".pkit/capabilities/{name}/ is missing or unreadable. Restore it — it is "
+            "the capability's source in this repository, not a copy — then retry."
         )
-        install_mod.run_installed_adapter_primitives(ctx)
-        install_mod.provision_query_commands(ctx, component=name)
+
+    verb, copied = ("Would re-deploy", "would be") if dry_run else ("Re-deployed", "was")
+    ran = "would run" if dry_run else "ran"
+    click.echo(
+        "\n  " + cli_render.style("strong",
+            f"{verb} capability {name!r} v{source.package.version} from its source at "
+            f".pkit/capabilities/{name}/: it is authored in this repository, the "
+            f"methodology's source, so nothing {copied} copied and no migration {ran} "
+            "(ADR-059).")
+    )
+
+    if not dry_run:
+        _deploy_capability(target_root, source_kit, name)
+
+
+def _deploy_capability(target_root: Path, source_kit: Path, name: str) -> None:
+    """Deploy a capability just brought in or refreshed, and provision its query commands.
+
+    The tail `install`, `register` and `upgrade` share: re-run the installed
+    adapter primitives so the harness picks up the capability's skills and
+    agents, then provision its query commands, so an offline `pkit validate`
+    answers without a `pkit sync` first (#1090). Deploy is identical whatever
+    the capability's origin (COR-031 D1).
+    """
+    from project_kit import install as install_mod
+
+    ctx = install_mod.InstallContext(
+        target_root=target_root,
+        source_kit=source_kit,
+        dry_run=False,
+    )
+    install_mod.run_installed_adapter_primitives(ctx)
+    install_mod.provision_query_commands(ctx, component=name)
 
 
 def _check_backbone_satisfied(
@@ -5042,7 +5171,9 @@ def _show_unified_diff(existing: Path, incoming: Path) -> None:
     "--yes",
     is_flag=True,
     default=False,
-    help="Skip the --purge confirmation prompt (for non-interactive use).",
+    help="Skip the confirmation prompts (for non-interactive use): --purge's, and in "
+    "the methodology's source repository the one before unregistering a capability "
+    "whose subtree is its source.",
 )
 @click.option(
     "--dry-run",
@@ -5071,6 +5202,11 @@ def uninstall_capability_cmd(
     (in-repo) capability's subtree is the adopter's only copy of authored
     work, so it is *unregistered in place* — the files stay on disk unless
     you pass --purge (which confirms first).
+
+    In the methodology's source repository the subtree is the capability's
+    source, never a copy, so nothing is deleted whatever the origin: uninstall
+    says what it would have deleted, asks, and unregisters only; --purge is
+    refused (ADR-059; #1107).
     """
     from project_kit import capabilities as caps
 
@@ -5079,11 +5215,31 @@ def uninstall_capability_cmd(
     if target_root is None:
         raise click.ClickException("not in a project tree.")
 
+    source_kit = find_source_kit()
+    # The methodology's source repository run by code that is not its own (the
+    # gap, ADR-059): the subtree is the capability's source, which that code
+    # cannot tell from a copy. Refuse before anything else, the plan included,
+    # as the verbs that write do (#1090, #1107).
+    refuse_propagation_into_source(
+        target_root,
+        source_kit,
+        command=f"capabilities uninstall {name}",
+        would=(
+            "unregister the capability with that code and, where it is registered "
+            "kit-shipped, delete its subtree — here the capability's source, not a copy"
+        ),
+        own_code_does=None,
+    )
+
     if not caps.is_installed(target_root, name):
         raise click.ClickException(f"capability {name!r} is not installed.")
 
     origin = caps.read_capability_origin(target_root, name)
     incubated = origin == caps.INCUBATED_IN_REPO
+    # The methodology's source run by its own code (ADR-059 point 2): the subtree
+    # is the capability's source, which uninstall never deletes (#1107).
+    in_source = caps.authored_in_source(target_root, source_kit, name)
+    subtree = f".pkit/capabilities/{name}/"
 
     if plan:
         # Before the refusal checks: a plan shows what removal would change in the
@@ -5098,6 +5254,14 @@ def uninstall_capability_cmd(
             nl=False,
         )
         return
+
+    if purge and in_source:
+        raise click.ClickException(
+            f"refusing `--purge`: {subtree} is where {name!r} is authored, the "
+            "methodology's source, and uninstall never deletes a capability's source "
+            "(ADR-059). Nothing was written. To remove the capability from the source, "
+            f"delete it with git: `git rm -r .pkit/capabilities/{name}`."
+        )
 
     # Declared-dependent safety check (COR-030): refuse when another installed
     # capability declares this one in its requires_capabilities. This catches
@@ -5155,8 +5319,26 @@ def uninstall_capability_cmd(
             abort=True,
         )
 
+    # A kit-shipped registration is one whose uninstall deletes the subtree. In the
+    # source that subtree is the capability's source, so uninstall does less than
+    # the registration promises: say what it would have deleted and what it does
+    # instead, and ask, unless --yes or --dry-run (#1107). An incubated one is
+    # unregistered in place anyway (COR-031 D4), so there is nothing to ask.
+    if in_source and not incubated:
+        click.echo(
+            f"\n  {name!r} is authored in this repository, the methodology's source: "
+            f"{subtree} is the tree this code installs capabilities from, not a copy of it."
+        )
+        click.echo(
+            "  Uninstalling a kit-shipped capability deletes its subtree; here that would "
+            f"delete {subtree}, the capability's source. Uninstall unregisters it instead "
+            "and deletes nothing (ADR-059)."
+        )
+        if not dry_run and not yes:
+            click.confirm(f"Unregister {name!r} and keep {subtree}?", abort=True)
+
     outcome = caps.uninstall_capability(
-        target_root, name, purge=purge, dry_run=dry_run
+        target_root, name, source_kit=source_kit, purge=purge, dry_run=dry_run
     )
 
     if outcome.files_deleted:
@@ -5166,6 +5348,15 @@ def uninstall_capability_cmd(
                 f"{verb} capability {name!r} from "
                 f"{outcome.cap_dir.relative_to(target_root)}")
         )
+    elif outcome.in_source and not incubated:
+        verb, deleted = ("Would unregister", "would be") if dry_run else ("Unregistered", "was")
+        click.echo(
+            "\n  " + cli_render.style("strong",
+                f"{verb} capability {name!r}; nothing {deleted} deleted: its source "
+                f"stays at {subtree}.")
+        )
+        if not dry_run:
+            click.echo(f"  (`pkit capabilities install {name}` registers it again.)")
     else:
         # Incubated, kept in place (COR-031 D4): unregistered, files retained.
         verb = "Would unregister" if dry_run else "Unregistered"
@@ -5174,7 +5365,8 @@ def uninstall_capability_cmd(
                 f"{verb} incubated capability {name!r} in place; your authored "
                 f"files are kept at {outcome.cap_dir.relative_to(target_root)}/")
         )
-        if not dry_run:
+        # The source refuses --purge, so it is offered only where it applies.
+        if not dry_run and not outcome.in_source:
             click.echo(
                 "  (pass --purge to delete the authored subtree as well.)"
             )
@@ -5188,7 +5380,7 @@ def uninstall_capability_cmd(
         from project_kit import install as install_mod
         ctx = install_mod.InstallContext(
             target_root=target_root,
-            source_kit=find_source_kit(),
+            source_kit=source_kit,
             dry_run=False,
         )
         install_mod.run_installed_adapter_primitives(ctx)
