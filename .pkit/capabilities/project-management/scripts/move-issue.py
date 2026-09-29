@@ -498,8 +498,9 @@ def main() -> int:
             print("aborted.", file=sys.stderr)
             return 0
 
-    # Audit-comment projection (DEC-049): the engine journal records this move
-    # regardless; `audit.projection` controls the GitHub comment projection —
+    # Audit-comment projection (DEC-049): where the project keeps a journal it
+    # records this move regardless; `audit.projection` controls the GitHub
+    # comment projection —
     # `off` posts nothing, `audit` (default) posts only override justifications,
     # `full` posts a provenance-stamped comment for every governed move.
     projection = _audit_projection(config)
@@ -559,7 +560,8 @@ def main() -> int:
     # DEC-049 `full` projection: post a provenance-stamped comment for a governed
     # move not already covered by the bypass audit above, so the governed-vs-
     # ungoverned boundary is visible on the issue. Best-effort — never fails the
-    # move (the engine journal is the canonical record).
+    # move (the canonical record is the journal where one is kept, the tracker
+    # otherwise).
     if projection == "full" and not is_bypass_audit:
         _gh_comment(
             args.issue_number,
@@ -956,16 +958,31 @@ def _landed_moves(
     return "" if events is None else f"state-label-events:{len(events)}"
 
 
+# What a move the engine did not record costs, in each of DEC-049's two modes:
+# with journal logging on the journal is the canonical audit trail and now lacks
+# the move; with it off the tracker is, and the engine keeps no record to miss.
+_JOURNAL_GAP_CLAUSE = (
+    "If this project keeps a journal (journal logging on), the journal is the "
+    "canonical audit trail (DEC-049) and now lacks this move:"
+)
+_TRACKER_TRAIL_CLAUSE = (
+    "If it does not, the tracker is the audit trail and the engine keeps no "
+    "record to miss."
+)
+
+
 def _journal_move(
     issue_number: int, target_state: str, actor: str | None
 ) -> None:
-    """Journal the completed move via `pkit process move` (best-effort).
+    """Hand the completed move to the engine via `pkit process move` (best-effort).
 
     Per the seam-ordering contract: the domain side-effect (the label/board
-    edit) has ALREADY been applied by the caller; this only records the move in
-    the engine's append-only journal. A refusal or a missing `pkit` is logged as
-    a note and never fails the move — live detection stays authoritative, so the
-    next `status` reflects the real position regardless.
+    edit) has ALREADY been applied by the caller; this only records the move,
+    which the engine appends to its journal where the project keeps one
+    (COR-033 point 7) and validates without recording where it does not. A
+    refusal or a missing `pkit` is logged as a warning and never fails the move —
+    live detection stays authoritative, so the next `status` reflects the real
+    position regardless.
 
     `actor` is the invoker's resolved GitHub login. The engine compares it
     against an authorisation artifact's `produced_by` login for the
@@ -993,19 +1010,20 @@ def _journal_move(
         )
     except (OSError, FileNotFoundError):
         print(
-            "  [warn] `pkit` not on PATH — this move was NOT recorded in the engine "
-            "journal (the canonical audit trail, DEC-049). The label/position is "
-            "unaffected (live detection stays authoritative); re-run under `pkit` "
-            "to journal it.",
+            "  [warn] `pkit` not on PATH — the process engine did not record this "
+            f"move. {_JOURNAL_GAP_CLAUSE} re-run under `pkit` to journal it. "
+            f"{_TRACKER_TRAIL_CLAUSE} The label/position is unaffected (live "
+            "detection stays authoritative).",
             file=sys.stderr,
         )
         return
     if proc.returncode != 0:
         detail = (proc.stdout or proc.stderr or "").strip()
         print(
-            "  [warn] this move was NOT recorded in the engine journal (the "
-            f"canonical audit trail, DEC-049): {detail}. The label/position is "
-            "unaffected; `pkit pm history <N> --check-drift` will show the gap.",
+            f"  [warn] the process engine refused this move: {detail}. "
+            f"{_JOURNAL_GAP_CLAUSE} `pkit pm history {issue_number} --check-drift` "
+            f"will show the gap. {_TRACKER_TRAIL_CLAUSE} The label/position is "
+            "unaffected.",
             file=sys.stderr,
         )
 

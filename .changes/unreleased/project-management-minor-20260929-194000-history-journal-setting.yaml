@@ -23,4 +23,5 @@ body: >
   journal length, which no longer grows. A retry of a failed attempt still posts
   nothing new, and the same bypass made again later posts its own comment — one
   audit comment per audited mutation in both modes. With logging on the key is
-  unchanged.
+  unchanged. `move-issue`'s warning for a move the engine did not record now says
+  what that costs in each mode.
