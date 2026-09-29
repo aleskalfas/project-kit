@@ -1,0 +1,16 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  In the methodology's source repository the capability verbs no longer delete
+  or copy onto a capability's authored subtree. Run by the checkout's own code,
+  `pkit capabilities uninstall` of a kit-shipped capability says which subtree
+  it would have deleted, asks, and unregisters it only (`--yes` answers for a
+  non-interactive run); `--purge` is refused there. `capabilities install` of
+  an unregistered capability registers it in place without copying, and
+  `capabilities upgrade` re-deploys it and provisions its query commands with
+  nothing copied and no migration run, where both used to fail with
+  `SameFileError`. Run by other code, `capabilities uninstall` now refuses in
+  the source repository as `install`, `upgrade` and `register` do. A capability
+  copy whose source is its destination is refused before its migrations run.
