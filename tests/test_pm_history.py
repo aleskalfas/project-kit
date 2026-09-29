@@ -49,14 +49,86 @@ def test_render_entry_shows_version_when_present(hist) -> None:
 
 
 def test_read_journal_parses_process_status_json(hist, monkeypatch) -> None:
-    payload = {"journal": [{"actor": "a", "to": "done"}]}
+    payload = {
+        "journal_logging": {"enabled": True, "committed": False},
+        "journal": [{"actor": "a", "to": "done"}],
+    }
 
     def fake_run(cmd, **kwargs):
         assert cmd[:3] == ["pkit", "process", "status"]
         return _Proc(0, json.dumps(payload))
 
     monkeypatch.setattr(hist.subprocess, "run", fake_run)
-    assert hist._read_journal(42) == [{"actor": "a", "to": "done"}]
+    assert hist._read_journal(42) == hist.EngineJournal(
+        enabled=True, entries=[{"actor": "a", "to": "done"}]
+    )
+
+
+def test_read_journal_reports_logging_off(hist, monkeypatch) -> None:
+    payload = {"journal_logging": {"enabled": False, "committed": False}, "journal": []}
+    monkeypatch.setattr(hist.subprocess, "run", lambda cmd, **k: _Proc(0, json.dumps(payload)))
+    assert hist._read_journal(42) == hist.EngineJournal(enabled=False, entries=[])
+
+
+def test_read_journal_from_an_engine_without_the_setting_means_logging_on(
+    hist, monkeypatch
+) -> None:
+    # An engine that predates opt-in logging always kept a journal.
+    payload = {"journal": [{"to": "done"}]}
+    monkeypatch.setattr(hist.subprocess, "run", lambda cmd, **k: _Proc(0, json.dumps(payload)))
+    assert hist._read_journal(42) == hist.EngineJournal(enabled=True, entries=[{"to": "done"}])
+
+
+# --- journal logging off (COR-033 point 7; DEC-049) -----------------------
+
+
+def _run_main(hist, monkeypatch, argv: list[str], journal) -> int:
+    monkeypatch.setattr(sys, "argv", ["history.py", *argv])
+    monkeypatch.setattr(hist, "resolve_capability_root", lambda _root: Path("."))
+    monkeypatch.setattr(hist.bootstrap_gate, "enforce", lambda *a, **k: True)
+    monkeypatch.setattr(hist, "load_adopter_config", lambda _root: {})
+    monkeypatch.setattr(hist.axis_labels, "load_substrate_map", lambda _root: None)
+    monkeypatch.setattr(hist, "_read_journal", lambda _n: journal)
+    return hist.main()
+
+
+def test_history_says_logging_is_not_enabled_instead_of_an_empty_history(
+    hist, monkeypatch, capsys
+) -> None:
+    rc = _run_main(hist, monkeypatch, ["42"], hist.EngineJournal(enabled=False, entries=[]))
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "journal logging is not enabled for this project" in out
+    assert "no journal entries" not in out
+    assert hist.ENABLE_COMMAND in out
+
+
+def test_check_drift_is_skipped_not_passed_when_logging_is_off(
+    hist, monkeypatch, capsys
+) -> None:
+    def no_timeline_read(*_a, **_k):
+        raise AssertionError("the timeline must not be read without a journal to diff")
+
+    monkeypatch.setattr(hist, "_timeline_state_adds", no_timeline_read)
+    rc = _run_main(
+        hist, monkeypatch, ["42", "--check-drift"], hist.EngineJournal(enabled=False, entries=[])
+    )
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "drift check: SKIPPED — journal logging is not enabled for this project" in out
+    assert "NOT a report that no ungoverned change happened" in out
+    assert "no ungoverned state changes detected" not in out
+
+
+def test_history_with_logging_on_and_no_moves_says_none_recorded(
+    hist, monkeypatch, capsys
+) -> None:
+    rc = _run_main(hist, monkeypatch, ["42"], hist.EngineJournal(enabled=True, entries=[]))
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "engine journal (0 entry(ies))" in out
+    assert "no journal entries" in out
+    assert "not enabled" not in out
 
 
 def test_read_journal_none_on_failure(hist, monkeypatch) -> None:

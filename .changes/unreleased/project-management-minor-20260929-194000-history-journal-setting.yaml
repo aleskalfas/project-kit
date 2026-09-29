@@ -1,0 +1,33 @@
+component: project-management
+kind: minor
+custom:
+  category: Changed
+  requires_backbone: release
+body: >
+  `pkit pm history` and `history --check-drift` follow the project's journal
+  setting (`process.journal`, off by default). With journal logging off,
+  `history` reports "journal logging is not enabled for this project", names the
+  tracker (the timeline plus pkit's audit comments) as the audit trail, and gives
+  the command that turns logging on, instead of an empty history; `--check-drift`
+  is skipped with the same reason and exits 0 rather than reporting a clean
+  result. With logging on they behave as before.
+
+  DEC-049 now says where the canonical audit trail lives in each mode — the
+  engine journal where one is kept, the tracker otherwise — and what `history`
+  and `--check-drift` guarantee with committed, clone-local and no journals. The
+  capability no longer declares the process-journal ignore pattern in its
+  `package.yaml`: the backbone owns it and follows the setting. Upgrade the
+  capability together with the backbone: it requires the backbone release that
+  makes process journal logging opt-in, which takes the ignore line over. On
+  that backbone an older version of this capability still declares the line,
+  so with `committed: true` the journals already tracked stay tracked, but new
+  journal files are silently left out of commits until the capability is
+  upgraded. The README gains a "Lifecycle history" section.
+
+  With journal logging off, `move-issue --bypass` keys its audit comment on the
+  issue's count of state-label events on the GitHub timeline instead of the
+  journal length, which no longer grows. A retry of a failed attempt still posts
+  nothing new, and the same bypass made again later posts its own comment — one
+  audit comment per audited mutation in both modes. With logging on the key is
+  unchanged. `move-issue`'s warning for a move the engine did not record now says
+  what that costs in each mode.

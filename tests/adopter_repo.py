@@ -348,7 +348,7 @@ def build_adopter_repo(
     if chdir:
         monkeypatch.chdir(root)
 
-    def _noop(_script: Path, _ctx: install_mod.InstallContext) -> None:
+    def _noop(_script: Path, _ctx: install_mod.InstallContext, *_args: str) -> None:
         return None
 
     monkeypatch.setattr(install_mod, "_run_adapter_primitive", _noop)

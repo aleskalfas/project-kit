@@ -183,9 +183,16 @@ class _FakeGitHub:
         # handoff-issue's "has a handoff landed?" component.
         self.assignment_events = 0
         self.edits: list[list[str]] = []
+        # The label events on the issue's timeline — move-issue's landed-move
+        # count when journal logging is off (#954).
+        self.label_events: list[dict] = []
+        self.fail_edits = False
 
     def plant(self, body: str, *, own: bool = False, edited: bool = False) -> None:
         self.comments.append(_comment(body, own=own, edited=edited))
+
+    def label_event(self, event: str, label: str) -> None:
+        self.label_events.append({"event": event, "label": {"name": label}})
 
     def __call__(self, args, config, **kwargs):
         if list(args[:3]) == ["gh", "api", "graphql"]:
@@ -194,9 +201,21 @@ class _FakeGitHub:
             return subprocess.CompletedProcess(
                 args=args, returncode=0, stdout=json.dumps(payload), stderr="",
             )
+        if list(args[:3]) == ["gh", "api", "--paginate"] and args[3].endswith("/timeline"):
+            events = [*self.label_events, {"event": "commented"}]
+            return subprocess.CompletedProcess(
+                args=args, returncode=0, stdout=json.dumps(events), stderr="",
+            )
         if list(args[:3]) == ["gh", "issue", "edit"]:
+            if self.fail_edits:
+                return subprocess.CompletedProcess(
+                    args=args, returncode=1, stdout="", stderr="HTTP 502",
+                )
             self.edits.append(list(args))
             self.assignment_events += 2
+            for flag, event in (("--remove-label", "unlabeled"), ("--add-label", "labeled")):
+                if flag in args:
+                    self.label_event(event, args[args.index(flag) + 1])
             return subprocess.CompletedProcess(args=args, returncode=0, stdout="", stderr="")
         if "view" in args:
             return subprocess.CompletedProcess(
@@ -252,11 +271,12 @@ def _mp_ci_bypass(mp, reason, scope):
 
 
 def _mi_transition(mi, reason, scope):
-    # move-issue's scope component is the engine-journal length (#901). The
-    # reason is stripped before rendering, as `main` does.
-    journal_length = int(scope.removeprefix("sha"))
+    # move-issue's scope component is the landed-move count — here the
+    # engine-journal length (#901). The reason is stripped before rendering, as
+    # `main` does.
+    landed_moves = scope.removeprefix("sha")
     reason = reason.strip()
-    key = mi._transition_audit_key("todo", "backlog", reason, journal_length)
+    key = mi._transition_audit_key("todo", "backlog", reason, landed_moves)
     invoker = SimpleNamespace(github_login="alice", email="alice@example.test")
     body = mi._render_audit_comment(CAPABILITY_ROOT, invoker, reason) + "\n\n" + key
     return mi._post_transition_audit_once(42, body, key, {})
@@ -615,3 +635,59 @@ def test_main_retry_skips_its_own_exact_audit(script, request, monkeypatch) -> N
     gh.assignment_events -= 2 * len(gh.edits)  # a handoff retry sees the pre-edit timeline
     assert module.main() == 0
     assert len(gh.posted) == audits
+
+
+# ---- move-issue with journal logging off: the same bypass, twice (#954) -
+#
+# With logging off the engine journal never grows, so its length cannot tell a
+# retry from a new mutation. The key counts the issue's state-label events on
+# the timeline instead: a landed move changes the state label, a failed label
+# write changes nothing. Both runs go through `main()` and the real label write.
+
+
+def _wire_move_issue_logging_off(mi, monkeypatch) -> _FakeGitHub:
+    real_label_write = mi._gh_apply_state_label
+    _wire_move_issue(mi, monkeypatch)
+    monkeypatch.setattr(
+        mi, "_engine_status",
+        lambda n: {
+            "position": {"state": "todo"}, "journal": [],
+            "journal_logging": {"enabled": False, "committed": False},
+        },
+    )
+    monkeypatch.setattr(mi, "_gh_apply_state_label", real_label_write)
+    gh = _FakeGitHub()
+    gh.label_event("labeled", "state:todo")
+    monkeypatch.setattr(mi, "gh_run", gh)
+    return gh
+
+
+def test_logging_off_the_same_bypass_made_again_posts_its_own_audit(
+    mi, monkeypatch,
+) -> None:
+    """todo → backlog with a bypass, back to todo, then the same bypass for the
+    same reason: two audited mutations, two audit comments."""
+    gh = _wire_move_issue_logging_off(mi, monkeypatch)
+    assert mi.main() == 0
+    assert gh.edits, "the first move's label write must land"
+    # The issue goes back to Todo.
+    gh.label_event("unlabeled", "state:backlog")
+    gh.label_event("labeled", "state:todo")
+    assert mi.main() == 0
+    assert len(gh.posted) == 2
+    assert gh.posted[0] != gh.posted[1]
+
+
+def test_logging_off_a_retry_after_a_failed_label_write_posts_nothing_new(
+    mi, monkeypatch,
+) -> None:
+    """The control: a failed label write leaves the timeline as it was, so the
+    retry reproduces the comment exactly and skips."""
+    gh = _wire_move_issue_logging_off(mi, monkeypatch)
+    gh.fail_edits = True
+    assert mi.main() == 3
+    assert len(gh.posted) == 1
+    gh.fail_edits = False
+    assert mi.main() == 0
+    assert len(gh.posted) == 1
+    assert gh.edits, "the retry's label write lands"

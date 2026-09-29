@@ -1,8 +1,8 @@
 """Adopter-controlled git footprint (per ADR-009).
 
 Two visibility modes over a per-component-declared footprint, realized entirely
-through the per-clone `.git/info/exclude` — **no committed `.gitignore` is ever
-written**:
+through the per-clone `.git/info/exclude` — **no `.gitignore` the adopter owns is
+ever written**:
 
 - `shared` (default): pkit is committed; pkit's region is kept clear of
   `info/exclude`.
@@ -14,8 +14,14 @@ written**:
 
 `untrack` is also a standalone, footprint-restricted, precondition-guarded verb
 (the one backbone gesture that mutates adopter git-index state, bounded per
-ADR-009 rule 5). pkit co-edits nothing the adopter owns: the only file it writes
-is `info/exclude`, which git owns, and only within its own delimited region.
+ADR-009 rule 5). pkit co-edits nothing the adopter owns: the visibility modes
+write only `info/exclude`, which git owns, and only within its own delimited
+region.
+
+Separately, this module renders the pkit-owned `.pkit/.gitignore` for the
+runtime-local files pkit writes (ADR-009 rule 7), wholesale from the backbone's
+and each installed component's declarations and from the project's
+configuration.
 """
 from __future__ import annotations
 
@@ -25,21 +31,25 @@ from pathlib import Path
 
 import click
 
-from project_kit import cli_render
+from project_kit import cli_render, process_journal
 from project_kit.manifest import read_backbone_manifest
 
 # Core's OWN footprint. Naming `.pkit/` here is not the layering inversion
-# ADR-009 forbids — that rule bars core from naming *adapter*/*capability*
-# paths; core may declare its own directory. Components contribute the rest
-# (e.g. the claude-code adapter's `.claude/` deploys) via package.yaml.
+# ADR-009 rule 1 forbids — rule 1 bars core from naming adapter- or
+# capability-specific footprint paths; core may declare its own directory.
+# Components contribute the rest (e.g. the claude-code adapter's `.claude/`
+# deploys) via package.yaml.
 _BACKBONE_FOOTPRINT: tuple[str, ...] = (".pkit/",)
 
 # Core's OWN runtime-local ignore set (ADR-009 rule 7). The seam analogous
-# to `_BACKBONE_FOOTPRINT`: the runtime-local files core itself owns inside the
-# `.pkit/` subtree, declared here because the backbone has no `package.yaml` to
-# carry them. Naming these is not the layering inversion ADR-009 rule 7 forbids —
-# that rule bars core from naming *adapter*/*capability* paths; these are all
-# core-owned.
+# to `_BACKBONE_FOOTPRINT`, declared here because the backbone has no
+# `package.yaml` to carry it. Rule 7's ownership test decides what belongs here:
+# the tier that writes a runtime file declares its pattern, whoever owns the
+# directory it lands in — so this list holds the runtime-local files core writes
+# under `.pkit/`. The process journals core's engine writes pass the same test,
+# though they land in each capability's `project/` subtree; their pattern
+# follows a setting, so `runtime_ignore()` takes it from `process_journal`, not
+# from this fixed list.
 #
 # Patterns are repo-root-relative strings declared verbatim, exactly as
 # `footprint` declarations are (the aggregator stores them as-given; the T2
@@ -147,8 +157,17 @@ def runtime_ignore(target_root: Path) -> list[str]:
     """Aggregate runtime-local ignore patterns across installed components
     (backbone + permissions seam + each adapter/capability's declared
     `runtime_ignore`). De-duped, order-stable — the source list the T2
-    `.pkit/.gitignore` renderer wholesale-renders from (ADR-009 rule 7)."""
+    `.pkit/.gitignore` renderer wholesale-renders from (ADR-009 rule 7).
+
+    The backbone's contribution has one configured part: the process journal
+    (COR-033 point 7). The engine writes every journal and owns their path —
+    inside each capability's `project/process/` — so the backbone, not a
+    capability, declares the pattern, and declares it unless the project
+    chose to commit its journals (`process_journal.runtime_ignore_patterns`).
+    Because the render is wholesale, the ignore line follows the setting on the
+    next render: install, sync, or a `pkit config set`."""
     out: list[str] = list(_BACKBONE_RUNTIME_IGNORE)
+    out.extend(process_journal.runtime_ignore_patterns(target_root))
     manifest = read_backbone_manifest(target_root)
     if manifest is not None:
         for entry in manifest.components:
@@ -181,8 +200,10 @@ def _dedupe(paths: list[str]) -> list[str]:
 _RUNTIME_IGNORE_PATH = ".pkit/.gitignore"
 
 _RUNTIME_IGNORE_HEADER = (
-    "# pkit-owned — rendered wholesale by `pkit install` / `pkit sync` from each\n"
-    "# installed component's `runtime_ignore:` declaration (ADR-009 rule 7).\n"
+    "# pkit-owned — rendered wholesale from the backbone's own declarations, each\n"
+    "# installed component's `runtime_ignore:` declaration, and the project's\n"
+    "# configuration in `.pkit/project/config.yaml` (ADR-009 rule 7), by\n"
+    "# `pkit install`, `pkit sync`, and a `pkit config set` that changes the result.\n"
     "# DO NOT EDIT: regenerated from scratch every run; hand edits are overwritten.\n"
     "# An uninstalled component's lines are simply absent on the next render.\n"
 )
@@ -248,6 +269,25 @@ def render_runtime_ignore(target_root: Path, *, dry_run: bool = False) -> str:
         f"  rendered      {_RUNTIME_IGNORE_PATH} "
         f"({len(patterns)} pattern(s) from {component_count} component(s))",
     )
+
+
+def refresh_runtime_ignore(target_root: Path) -> str | None:
+    """Re-render an existing `.pkit/.gitignore` whose content no longer matches
+    what the declarations and configuration render to — for a writer that has
+    just changed something the render reads (a configuration write, COR-033
+    point 7). Returns the render's status line, or None when there was nothing
+    to do: the file matches, or there is no rendered file yet (install and sync
+    create it; a configuration write does not)."""
+    path = target_root / ".pkit" / ".gitignore"
+    if not path.is_file():
+        return None
+    try:
+        current = path.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    if current == render_runtime_ignore_content(target_root):
+        return None
+    return render_runtime_ignore(target_root)
 
 
 def _runtime_ignore_component_count(target_root: Path) -> int:
@@ -379,7 +419,9 @@ def untrack(
     # paths) is idempotent rather than a false "staged changes" refusal.
     tracked = _tracked_footprint(target_root, fp)
     if not tracked:
-        return cli_render.style("strong", "untrack: no tracked footprint files — nothing to remove.") + "\n"
+        return cli_render.style(
+            "strong", "untrack: no tracked footprint files — nothing to remove."
+        ) + "\n"
 
     # A still-tracked footprint file carrying a staged *modification* would
     # entangle the removal with a pending index — refuse (ADR-009 rule 5).
@@ -391,7 +433,9 @@ def untrack(
             + "\nCommit or unstage them first."
         )
 
-    lines = [cli_render.style("strong", f"{len(tracked)} tracked footprint file(s) would be removed from the index:")]
+    lines = [cli_render.style(
+        "strong", f"{len(tracked)} tracked footprint file(s) would be removed from the index:"
+    )]
     lines += [f"  {p}" for p in tracked[:20]]
     if len(tracked) > 20:
         lines.append(f"  … and {len(tracked) - 20} more")
@@ -410,7 +454,9 @@ def untrack(
     res = _git(target_root, "rm", "--cached", "--quiet", "--", *tracked)
     if res.returncode != 0:
         raise click.ClickException(f"git rm --cached failed:\n{res.stderr.strip()}")
-    return cli_render.style("strong", f"untracked {len(tracked)} footprint file(s) (working copies kept).") + "\n"
+    return cli_render.style(
+        "strong", f"untracked {len(tracked)} footprint file(s) (working copies kept)."
+    ) + "\n"
 
 
 # --- visibility --------------------------------------------------------------
@@ -434,7 +480,6 @@ def status(target_root: Path) -> str:
         ("pkit visibility shared", "return pkit to committed (default)"),
         ("pkit visibility untrack --dry-run", "preview removing tracked footprint files"),
     ]
-    warn = None
     if private and tracked:
         st = cli_render.status(
             "Visibility", mode, gloss=gloss, placement="header",
@@ -459,13 +504,22 @@ def set_visibility(
     if mode == "shared":
         if dry_run:
             verb = "would clear" if _region_present(target_root) else "no pkit region in"
-            return cli_render.style("strong", f"shared: {verb} .git/info/exclude (pkit committed normally).") + "\n"
+            return cli_render.style(
+                "strong", f"shared: {verb} .git/info/exclude (pkit committed normally)."
+            ) + "\n"
         removed = _remove_region(target_root)
-        msg = "cleared pkit's region from .git/info/exclude" if removed else "no pkit region to clear"
-        return cli_render.style("strong", f"visibility: shared — {msg}; pkit is committed normally.") + "\n"
+        msg = (
+            "cleared pkit's region from .git/info/exclude" if removed
+            else "no pkit region to clear"
+        )
+        return cli_render.style(
+            "strong", f"visibility: shared — {msg}; pkit is committed normally."
+        ) + "\n"
 
     if mode == "private":
-        lines = [cli_render.style("strong", "visibility: private — pkit hidden from the shared tree (this clone).")]
+        lines = [cli_render.style(
+            "strong", "visibility: private — pkit hidden from the shared tree (this clone)."
+        )]
         if dry_run:
             lines.append("")
             lines.append("would write to .git/info/exclude:")

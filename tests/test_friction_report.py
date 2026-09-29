@@ -405,6 +405,33 @@ def test_explain_an_artefact_anchor_lists_each_change_of_the_targets_content(
     assert [c.sha for c in stale.commits] == [first, third]
 
 
+def test_explain_an_artefact_anchor_names_no_merge_that_only_kept_a_sides_content(
+    timeline: Timeline,
+) -> None:
+    def engine(at: str, body: str) -> str:
+        return document(
+            "engine-notes", anchors={"path": ["src/core/**"]}, at=at, outcome="updated", body=body
+        )
+
+    overview = document(
+        "overview", anchors={"artefact": ["engine-notes"]}, at=T1, outcome="updated"
+    )
+    repo = timeline.adopter
+    timeline.start({"docs/a-engine.md": engine(T1, "One."), "docs/b-overview.md": overview})
+    repo.checkout("side", create=True)
+    side = timeline.commit("side: engine notes two", {"docs/a-engine.md": engine(T1, "Two.")})
+    repo.checkout("main")
+    timeline.commit("main: engine notes revalidated only", {"docs/a-engine.md": engine(T2, "One.")})
+    timeline.merge("side")
+
+    # The merge combined both sides' edits of the file, but its content is the side's: the
+    # side's commit is the one change behind the finding, never the merge that kept it.
+    explanation = frep.run_explain(timeline.adopter.root, "overview")
+    (stale,) = explanation.findings
+    assert stale.finding.origin is not None and stale.finding.origin.sha == side
+    assert [c.sha for c in stale.commits] == [side]
+
+
 def test_explain_a_move(timeline: Timeline) -> None:
     timeline.start({"notes/guide.md": guide()}, friction_config(places=("docs", "notes")))
     moved = timeline.rename("notes/guide.md", "docs/guide.md")

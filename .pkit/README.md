@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-09-29T16:59:12Z
+      at: 2026-09-29T21:25:48Z
       outcome: unchanged
-      unchanged-because: the CLI and lifecycle READMEs were revalidated for the connections resolve scope change; the signpost's map of the areas and their entry points is unaffected
+      unchanged-because: the CLI README gained the analysis commands, friction artefacts --at and docs record-location, all inside its own sections (#887); the area map holds
 ---
 
 # project-kit

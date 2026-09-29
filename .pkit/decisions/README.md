@@ -12,8 +12,9 @@ pkit:
         - src/project_kit/rule_sets.py
       record: [COR-001, COR-019, COR-025, COR-051, COR-053]
     revalidated:
-      at: 2026-09-29T15:15:32Z
-      outcome: updated
+      at: 2026-09-29T17:22:05Z
+      outcome: unchanged
+      unchanged-because: refs.py now reads the address word pattern from backbone_schemas instead of repeating it; record and address citation grammar are unchanged
 ---
 
 # Decision records

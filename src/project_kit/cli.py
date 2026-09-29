@@ -48,7 +48,7 @@ from project_kit.scaffolds import (
     stamp_capability,
     stamp_migration,
 )
-from project_kit.agents import stamp_new_agent
+from project_kit.agents import STORYBOARD_FILE, stamp_new_agent
 from project_kit.storyboards import ArtifactKind, stamp_new_storyboard
 from project_kit import friction_check, friction_report, friction_repository, friction_write
 from project_kit import refs as refs_mod
@@ -329,6 +329,103 @@ def config_set(key: str, value: str, yes: bool) -> None:
     click.echo(
         f"set {resolved.dotted} = {typed}  ({project_config.PROJECT_CONFIG_RELPATH.as_posix()})"
     )
+    # The `.pkit/.gitignore` render reads the configuration (the process
+    # journal's ignore line, COR-033 point 7): follow the new value now rather
+    # than at the next sync.
+    from project_kit import visibility as vis
+
+    refreshed = vis.refresh_runtime_ignore(target_root)
+    if refreshed is not None:
+        click.echo(refreshed)
+
+
+@main.group("docs")
+def docs() -> None:
+    """Documentation roots and the locations derived from them (COR-049).
+
+    The roots are the configuration's `docs` key (`pkit config set
+    docs.internal <path>`); `pkit status` shows them and every recorded
+    location. Reference: `.pkit/cli/README.md`, "Configuration file".
+    """
+
+
+@docs.command("record-location")
+@click.argument("capability", metavar="CAPABILITY")
+@click.argument("name", metavar="NAME")
+@click.option(
+    "--yes",
+    is_flag=True,
+    default=False,
+    help="Consent to the write without a prompt (CI). Without it a terminal is asked; "
+    "a non-interactive run refuses.",
+)
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    default=False,
+    help="Say what would be recorded, and write nothing.",
+)
+def docs_record_location(capability: str, name: str, yes: bool, dry_run: bool) -> None:
+    """Record where CAPABILITY's documentation location NAME now lies (COR-049 point 5).
+
+    NAME is a location the capability declares in its package metadata
+    (`docs.locations`), never a path. Until it is recorded it derives from a
+    documentation root; the command writes where it lies now to the
+    capability's `project/docs-locations.yaml`, so a later change of root
+    moves nothing already written. A location already recorded is never
+    overwritten: the command says where it lies and writes nothing. Writing
+    needs consent (COR-048 point 5): a terminal is asked once, `--yes`
+    consents non-interactively, and a non-interactive run without `--yes`
+    refuses and names the command to run; `--dry-run` says what would be
+    recorded and writes nothing. A capability's stamping command runs it with
+    `--yes` when it places the first document there. Exit 1 when CAPABILITY
+    is not installed or declares no location NAME.
+    """
+    from project_kit import docs_roots, project_config
+    from project_kit.friction_discovery import installed_capability_names
+
+    if yes and dry_run:
+        raise click.UsageError(
+            "--yes and --dry-run exclude each other: one writes, the other never does."
+        )
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    if capability not in installed_capability_names(target_root):
+        raise click.ClickException(f"no capability named {capability!r} is installed.")
+    found = docs_roots.capability_location(target_root, capability, name)
+    if found is None:
+        declared = sorted(docs_roots.capability_subpaths(target_root, capability))
+        raise click.ClickException(
+            f"{capability} declares no documentation location {name!r} in its "
+            f"`docs.locations` (declared: {', '.join(declared) or 'none'})."
+        )
+    where = found.path.as_posix()
+    if found.source is docs_roots.Source.EXPLICIT:
+        click.echo(f"{capability} {name} = {where}  (recorded already)")
+        return
+    recorded_in = docs_roots.capability_locations_relpath(capability).as_posix()
+    recording = f"{capability} {name} = {where}  ({recorded_in})"
+    if dry_run:
+        click.echo(f"would record {recording}")
+        click.echo(cli_render.style("strong", "Dry run: nothing written."))
+        return
+    if not yes:
+        if not project_config.stdin_is_tty():
+            rerun = f"pkit docs record-location {shlex.quote(capability)} {shlex.quote(name)}"
+            raise project_config.ConsentRefused(
+                f"refusing to write {recorded_in} without consent: stdin is not a terminal "
+                f"and --yes was not given (COR-048 point 5). Nothing was written.\n"
+                f"To see the change first, run:\n  {rerun} --dry-run\n"
+                f"To consent non-interactively, run:\n  {rerun} --yes"
+            )
+        click.confirm(
+            f"Record {capability} {name} = {where} in {recorded_in}?", default=True, abort=True
+        )
+    docs_roots.record_location(
+        target_root, capability, name, found.path, by="pkit docs record-location"
+    )
+    click.echo(f"recorded {recording}")
 
 
 def _graph_format_options(command: Callable[..., None]) -> Callable[..., None]:
@@ -847,30 +944,48 @@ def friction_explain_command(artefact: str, as_json: bool) -> None:
 
 @friction.command("artefacts")
 @click.option(
+    "--at",
+    "at",
+    metavar="REV",
+    default=None,
+    help="Read the state of commit REV — its configuration, its places and its files — "
+    "from git objects instead of the working tree. Nothing is checked out.",
+)
+@click.option(
     "--json", "as_json", is_flag=True, default=False, help="Emit the stable JSON document."
 )
-def friction_artefacts_command(as_json: bool) -> None:
+def friction_artefacts_command(at: str | None, as_json: bool) -> None:
     """The declared places, the files they hold and the artefacts in them, as
     discovery finds them (COR-050 point 1).
 
-    One run of the discovery `pkit validate` reads, over the working tree:
-    each place — the project's and each capability's, with its location and
-    root — the files it matches and the skips validation applies (a synced
-    copy, a place outside the repository, a malformed declaration), every file
-    read with its front matter's own fields, and every artefact. Read-only. It
-    is how a capability's own script reads where artefacts are without
-    importing the backbone or walking the places itself. Exit 0 when answered;
-    1 when the configuration cannot be read; 2 on a usage error.
+    One run of the discovery `pkit validate` reads, over the working tree —
+    or, with --at, over one commit: each place — the project's and each
+    capability's, with its location and root — the files it matches and the
+    skips validation applies (a synced copy, a place outside the repository, a
+    malformed declaration), every file read with its front matter's own
+    fields, and every artefact with its anchors. Read-only. It is how a
+    capability's own script reads where artefacts are, now or at another
+    state, without importing the backbone or walking the places itself. Exit 0
+    when answered; 1 when the configuration cannot be read or REV names no
+    commit; 2 on a usage error.
     """
     from project_kit import friction_discovery, validators
 
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
-    problem = friction_discovery.unreadable_configuration(target_root)
+    tree = None
+    if at is not None:
+        commit = None if not at or at.startswith("-") else friction_check.commit_of(target_root, at)
+        if commit is None:
+            raise click.ClickException(f"--at {at!r} names no commit of this repository.")
+        tree = friction_check.CommitTree(target_root, commit)
+    problem = friction_discovery.unreadable_configuration(target_root, tree)
     if problem is not None:
         raise click.ClickException(f"{problem}; `pkit validate` reports it.")
-    document = validators.as_one_run(lambda: friction_discovery.artefacts_document(target_root))
+    document = validators.as_one_run(
+        lambda: friction_discovery.artefacts_document(target_root, tree)
+    )
     if as_json:
         click.echo(friction_discovery.render_artefacts_json(document), nl=False)
     else:
@@ -1030,7 +1145,8 @@ def release_plan(as_json: bool) -> None:
     default=False,
     help="Skip widening released components' requires_backbone to cover the "
     "current backbone. Default is to broaden (releasing under backbone X "
-    "asserts compatibility with X); pass this to keep a range as authored.",
+    "asserts compatibility with X); pass this to keep an upper bound as "
+    "authored. A floor a changeset declares is still raised.",
 )
 @click.option("--yes", is_flag=True, default=False, help="Skip the confirmation prompt (CI).")
 def release_apply(tag: bool, push: bool, no_broaden: bool, yes: bool) -> None:
@@ -1043,7 +1159,11 @@ def release_apply(tag: bool, push: bool, no_broaden: bool, yes: bool) -> None:
     On a component release, widens that component's `requires_backbone` to
     cover the repo's current backbone (the version being released under) unless
     `--no-broaden` is given; a backbone release widens every component as
-    before. Both are widen-only. See `.pkit/release/README.md`.
+    before. Both are widen-only. A changeset declaring `requires_backbone:
+    release` raises its component's floor to the backbone the release ships —
+    raise-only, and not skipped by `--no-broaden`; a raise that would leave a
+    range admitting no backbone refuses the release before anything is written.
+    See `.pkit/release/README.md`.
     """
     source_kit = _target_kit()
     plan = compute_release(source_kit)
@@ -1116,38 +1236,53 @@ def release_check(base: str, skip: bool | None) -> None:
     "--skip",
     is_flag=True,
     default=None,
-    help="Escape hatch: pass unconditionally. Also honoured via the "
-    "PKIT_CHANGELOG_LINT_SKIP env var.",
+    help="Escape hatch: pass the format checks unconditionally (a requires_backbone "
+    "floor field is still checked). Also honoured via the PKIT_CHANGELOG_LINT_SKIP "
+    "env var.",
 )
 def release_lint(skip: bool | None) -> None:
     """Format lint: the OBJECTIVE changeset + CHANGELOG.md format subset.
 
     Checks the mechanically-verifiable subset only — a changeset's category is
     a Keep-a-Changelog group, its body is a non-empty sentence (not a bare
-    reference, capitalized, period-ended), and `CHANGELOG.md` headings are
-    well-formed. It does *not* judge plain language / jargon — that is the
-    guide plus review. A reminder, not a proof; see `.pkit/release/README.md`.
+    reference, capitalized, period-ended), a `requires_backbone` floor field
+    says `release` on a version-moving changeset of a capability or adapter
+    whose range is `">=X.Y.Z,<A.B.C"` or `">=X.Y.Z"`, in a release that ships a
+    release version of the backbone, and `CHANGELOG.md` headings are
+    well-formed. It does
+    *not* judge plain language / jargon — that is the guide plus review. A
+    reminder, not a proof; see `.pkit/release/README.md`.
 
     Reads committed files only (no PR context), so it runs in the shared check
-    aggregator. Escape hatch: `--skip` or the PKIT_CHANGELOG_LINT_SKIP env var.
+    aggregator. Escape hatch: `--skip` or the PKIT_CHANGELOG_LINT_SKIP env var —
+    except for the floor field, which the release itself refuses: an invalid one
+    fails the lint either way, since it would block every later release on main.
     """
     source_kit = _target_kit()
     skip_active = bool(skip) or _env_flag("PKIT_CHANGELOG_LINT_SKIP")
     result = lint_release_format(source_kit, skip=skip_active)
 
-    if result.skipped:
-        click.echo("changelog lint: skipped (escape hatch active).")
-        return
     if result.ok:
-        click.echo("changelog lint: changesets + CHANGELOG.md are well-formed — ok.")
+        click.echo(
+            "changelog lint: skipped (escape hatch active)."
+            if result.skipped
+            else "changelog lint: changesets + CHANGELOG.md are well-formed — ok."
+        )
         return
-    detail = "\n".join(f"  {v.source}: {v.message}" for v in result.violations)
+    shown = result.floor_violations + ([] if result.skipped else result.violations)
+    detail = "\n".join(f"  {v.source}: {v.message}" for v in shown)
+    advice = (
+        "\n  The escape hatch is active, but it does not cover a requires_backbone "
+        "floor field: the release refuses one it cannot raise, which blocks every "
+        "later release on main. Fix the field."
+        if result.skipped
+        else "\n  Fix the entries above, or apply the escape hatch (--skip / "
+        "PKIT_CHANGELOG_LINT_SKIP) if an objective rule mis-fired — it does not "
+        "cover a requires_backbone floor field. See the format guide in "
+        ".pkit/release/README.md."
+    )
     raise click.ClickException(
-        "changeset / changelog format problems (the objective subset):\n"
-        + detail
-        + "\n  Fix the entries above, or apply the escape hatch (--skip / "
-        "PKIT_CHANGELOG_LINT_SKIP) if an objective rule mis-fired. See the "
-        "format guide in .pkit/release/README.md."
+        "changeset / changelog format problems (the objective subset):\n" + detail + advice
     )
 
 
@@ -1250,6 +1385,9 @@ def _print_release_plan(plan: ReleasePlan) -> None:
                 f"  {rel.component.name}: {rel.old_version} -> "
                 f"{rel.new_version} ({rel.segment})"
             )
+            if rel.floor_raise is not None:
+                for line in rel.floor_raise.lines:
+                    click.echo(f"    {line}")
             for note in rel.notes:
                 click.echo(f"    - {note}")
     click.echo(f"  changesets to consume: {len(plan.consumed)}")
@@ -4749,7 +4887,9 @@ def register_capability_cmd(name: str, dry_run: bool) -> None:
     # COR-031 boundary: a same-named capability now also ships from kit
     # source (graduation, before graduation is specified). Surface it so the
     # adopter can decide, rather than silently registering the in-repo copy.
-    if resolved.in_kit_source:
+    # In the methodology's source repository the in-repo subtree *is* the kit
+    # source (#1107), so there is no second copy to name.
+    if resolved.in_kit_source and not caps.authored_in_source(target_root, source_kit, name):
         click.echo(
             "\n  " + cli_render.style("strong",
                 f"Note: a capability named {name!r} also ships from kit source. "
@@ -5372,11 +5512,11 @@ def uninstall_capability_cmd(
             )
 
     if not dry_run:
-        # Re-run installed adapter primitives so the harness drops
-        # stale symlinks to the removed capability's content (e.g.,
-        # deploy-skills.sh's "stale removal" pass). Runs for both origins:
-        # an incubated capability's skills/agents must be undeployed even
-        # though its source files stay on disk.
+        # Re-run installed adapter primitives so the harness drops stale
+        # entries of a deleted subtree (e.g., deploy-skills.sh's "stale
+        # removal" pass). A subtree kept on disk was already undeployed
+        # inside `uninstall_capability`, through each adapter's undeploy
+        # primitive, since a deploy re-run cannot see it as gone.
         from project_kit import install as install_mod
         ctx = install_mod.InstallContext(
             target_root=target_root,
@@ -5777,6 +5917,8 @@ def new_agent(namespace: str, name: str, with_storyboard: bool, dry_run: bool) -
 
     With --with-storyboard, stamps folder layout with a sibling storyboard
     scaffold (per COR-016) — for agents driving scripted interaction scenarios.
+    The agent declares the storyboard in its storyboards: front matter and
+    cites it in its body; the storyboard names the agent in consumers:.
     """
     target_root = find_target_root()
     if target_root is None:
@@ -5795,7 +5937,7 @@ def new_agent(namespace: str, name: str, with_storyboard: bool, dry_run: bool) -
     rel = target.relative_to(target_root)
     verb = "Would stamp" if dry_run else "Stamped"
     if with_storyboard:
-        sibling = target.parent / "storyboard.md"
+        sibling = target.parent / STORYBOARD_FILE
         rel_sb = sibling.relative_to(target_root)
         click.echo(f"{verb}: {rel}")
         click.echo(f"{verb}: {rel_sb}")
@@ -5811,7 +5953,7 @@ def new_agent(namespace: str, name: str, with_storyboard: bool, dry_run: bool) -
     type=str,
     default=None,
     help="Where the agent lives: core, project or a capability name. "
-    "Default: the agent the deploy resolves — project, core, then capabilities by name.",
+    "Default: the agent the deploy resolves — project, capabilities by name, then core.",
 )
 @click.option(
     "--scenario",

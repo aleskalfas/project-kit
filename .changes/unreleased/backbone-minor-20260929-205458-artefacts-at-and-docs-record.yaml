@@ -1,0 +1,17 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit friction artefacts --at <rev>` reads one commit instead of the working
+  tree — its configuration, its installed capabilities and their places, its
+  files — from git objects, so a capability's script reads what the default
+  branch or a merge-base holds through the one discovery rather than listing
+  the commit itself. Each artefact in the `--json` document now carries its
+  friction block's `anchors` by kind. A new top-level group, `pkit docs`, holds
+  one command: `pkit docs record-location <capability> <name>` records where a
+  capability's documentation location now lies (COR-049 point 5), once, in the
+  capability's `project/docs-locations.yaml` — asking on a terminal, with
+  `--yes` to consent non-interactively and `--dry-run` to see it first, and
+  refusing a non-interactive run without `--yes`. A capability's stamping
+  command runs it with `--yes` when it places the first document there.

@@ -100,6 +100,8 @@ The flat stamp produces `<agents folder>/<name>.md`, where the agents folder is 
 - Frontmatter scaffolding (`name`, placeholder `description`, default `tools`, empty `reads` / `owns` / `needs`).
 - Body headers: `## When to invoke this agent`, `## Files you own`, `## Key documents to read`, `## How you work`, and a finished `## Intermediate files` section.
 
+The `--with-storyboard` stamp also declares the pair on both sides: the agent's `storyboards:` names the sibling `storyboard.md`, `## How you work` opens with the line loading it, and the storyboard's `consumers:` names the agent — the fresh pair passes `pkit refs validate` as stamped.
+
 Refuses if the name already exists in core, project or any capability (the deploy resolves one agent per name, so a colliding one would silently mask the other), and refuses a capability name that names no capability under `.pkit/capabilities/`.
 
 ### 6. Draft the body
@@ -112,6 +114,7 @@ For each section:
 - **`## Key documents to read`** — paths, record IDs (`COR-NNN`, `PRJ-NNN`), and hook contracts the agent consults at task time. Every entry here must also appear in `reads.{paths,records}` in frontmatter; the validator walks both directions. For scripted-scenario agents (per COR-016), the agent's storyboards belong here too — declared in frontmatter `storyboards:` by their bare sibling filename (`storyboard.md`), cited by that same name in the body, and load-bearing on it. The deploy rewrites the sibling name to the storyboard's source path in the deployed copy, so the source stays portable and the deployed agent still finds it (`.pkit/agents/README.md`, "Storyboards").
 - **`## How you work`** — the agent's procedure or principles. For *judgment-driven* agents (no storyboards), numbered steps if the role follows a fixed sequence; principles + examples if the role is more judgement-bearing. For *scripted-scenario* agents (with `storyboards:` declared), the body is much thinner: it states that the agent's scripted behavior is documented in its declared storyboards, instructs the runtime to load them at session start via the `Read` tool, and may summarize at a high level what scenarios the agent drives — but does **not** restate or sketch the scenarios. The storyboard is the source; the agent body's job is to point at it. Cite authority by record ID rather than restating it (`per COR-005` not "per the skill/command pairing rule").
 - **`## Intermediate files`** — stamped finished: the one sentence every shipped agent carries, sending its intermediate files to the agent workspace (`.agent-workspace/`, the core rules' workspace rule), written with the file tools. Leave the wording as stamped, identical across agents.
+- **A reviewer** — an agent that judges work and returns a verdict or findings — is read-only on what it judges, not on everything: say so with that scope wherever the description or body claims read-only. If it can execute (a shell among its `tools`), add the `## What read-only covers` section just before `## Intermediate files`, copied word for word from a shipped reviewer; it sends every working file of a review — a dumped diff, a reproduction, captured output — to the agent workspace. `.pkit/agents/README.md`'s "Reviewers" paragraph has the rule.
 
 ### 7. Declare hooks (if any)
 

@@ -511,3 +511,96 @@ def test_bump_version_from_prerelease_strips_suffix(tmp_kit: Path) -> None:
     (tmp_kit / "VERSION").write_text("1.2.0rc1\n", encoding="utf-8")
     _, new = versioning.bump_version(tmp_kit, "patch")
     assert new == "1.2.1"
+
+
+# --- the declared floor raise (PRJ-002 D4) -----------------------------------
+
+
+def _package_with(tmp_path: Path, requires_backbone_line: str) -> Path:
+    pkg = tmp_path / "package.yaml"
+    pkg.write_text(
+        "schema_version: 1\n"
+        "component:\n"
+        "  kind: capability\n"
+        "  name: houseware\n"
+        "  version: 0.3.0\n"
+        '# The floor is 1.2.0: requires_backbone: ">=1.2.0" names the reason.\n'
+        f"{requires_backbone_line}\n",
+        encoding="utf-8",
+    )
+    return pkg
+
+
+@pytest.mark.parametrize(
+    ("line", "floor"),
+    [
+        ('requires_backbone: ">=1.2.0,<2.0.0"', "1.2.0"),
+        ('requires_backbone:   ">=1.2.0,<2.0.0"  # why', "1.2.0"),
+        ('requires_backbone: ">=1.2.0"', "1.2.0"),
+        # Shapes whose floor the release does not raise.
+        ("requires_backbone: '>=1.2.0,<2.0.0'", None),
+        ('requires_backbone: ">= 1.2.0,<2.0.0"', None),
+        ('requires_backbone: ">=1.2.0, <2.0.0"', None),
+        ('requires_backbone: "<2.0.0,>=1.2.0"', None),
+        ('requires_backbone: ">=1.2.0rc1,<2.0.0"', None),
+        ('requires_backbone: "*"', None),
+        ("requires_backbone: >=1.2.0", None),
+    ],
+)
+def test_requires_backbone_floor_reads_the_ranges_whose_floor_the_release_raises(
+    tmp_path: Path, line: str, floor: str | None
+) -> None:
+    text = _package_with(tmp_path, line).read_text(encoding="utf-8")
+    assert versioning.requires_backbone_floor(text) == floor
+
+
+def test_raise_floor_rewrites_only_the_floor(tmp_path: Path) -> None:
+    """The lower bound moves; the upper bound, the trailing comment and a comment
+    that mentions the key stay as written."""
+    pkg = _package_with(tmp_path, 'requires_backbone: ">=1.2.0,<2.0.0"  # floor: report link')
+
+    changed = versioning.raise_component_requires_backbone_floor(pkg, "1.6.0")
+
+    assert changed == ">=1.2.0 -> >=1.6.0"
+    text = pkg.read_text(encoding="utf-8")
+    assert 'requires_backbone: ">=1.6.0,<2.0.0"  # floor: report link\n' in text
+    assert '# The floor is 1.2.0: requires_backbone: ">=1.2.0" names the reason.\n' in text
+
+
+def test_raise_floor_is_raise_only(tmp_path: Path) -> None:
+    pkg = _package_with(tmp_path, 'requires_backbone: ">=1.7.0,<2.0.0"')
+    before = pkg.read_text(encoding="utf-8")
+
+    assert versioning.raise_component_requires_backbone_floor(pkg, "1.6.0") is None
+    assert versioning.raise_component_requires_backbone_floor(pkg, "1.7.0") is None
+    assert pkg.read_text(encoding="utf-8") == before
+
+
+@pytest.mark.parametrize(
+    "comment",
+    [
+        '# was requires_backbone: ">=1.0.0,<1.4.0"',
+        '  # requires_backbone: ">=1.0.0,<1.4.0"',
+        'requires_backbone_note: ">=1.0.0,<1.4.0"',
+    ],
+)
+def test_the_broaden_and_the_floor_read_the_key_not_a_line_mentioning_it(comment: str) -> None:
+    """Both rewrites locate the range through one prefix — the top-level key at the
+    start of a line — so a comment quoting an older range is never read, and the
+    two always rewrite the same line."""
+    text = f'{comment}\nrequires_backbone: ">=1.0.0,<1.5.0"\n'
+
+    broadened = versioning.broaden_requires_backbone(text, "1.5.0")
+    assert broadened is not None
+    assert broadened[0] == f'{comment}\nrequires_backbone: ">=1.0.0,<1.6.0"\n'
+    assert versioning.requires_backbone_floor(text) == "1.0.0"
+    raised = versioning.raise_requires_backbone_floor(broadened[0], "1.5.0")
+    assert raised is not None
+    assert raised[0] == f'{comment}\nrequires_backbone: ">=1.5.0,<1.6.0"\n'
+    assert versioning.requires_backbone_range(raised[0]) == ">=1.5.0,<1.6.0"
+
+
+def test_raise_floor_refuses_a_range_with_no_floor(tmp_path: Path) -> None:
+    pkg = _package_with(tmp_path, 'requires_backbone: "*"')
+    with pytest.raises(click.ClickException, match=r"whose floor can be raised to 1\.6\.0"):
+        versioning.raise_component_requires_backbone_floor(pkg, "1.6.0")

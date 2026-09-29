@@ -2,8 +2,8 @@
 
 Every test stands up a real adopter repository (`make_adopter_repo`) and lays
 down real history — dated commits by named authors, renames, a squash merge,
-a shallow clone — before running the check at HEAD. The documents come from
-`tests.friction_documents`.
+merge commits, a shallow clone — before running the check at HEAD. The
+documents come from `tests.friction_documents`.
 """
 
 from __future__ import annotations
@@ -17,6 +17,7 @@ from typing import Any
 import pytest
 from click.testing import CliRunner
 
+from project_kit import friction_check as fc
 from project_kit import friction_repository as fr
 from project_kit.cli import main
 from project_kit.friction_discovery import Anchor
@@ -320,6 +321,143 @@ def test_a_deferral_point_is_judged_against_each_commits_own_parent(timeline: Ti
         ("stale", "docs/guide.md", "path:src/cli/**", history.cli),
         ("deferred", "docs/guide.md", "path:src/cli/**", history.first),
     ]
+
+
+# --- what a merge commit writes itself (#1113) -----------------------------------------
+
+T3 = "2026-10-03T11:20:00Z"
+
+
+def _merge_writing(timeline: Timeline, branch: str, files: dict[str, str]) -> str:
+    """Merge `branch` with `--no-ff` and write `files` into the merge commit itself, as the
+    person resolving it — revalidating the combined state (COR-050 point 3) — does."""
+    timeline.adopter.git("merge", "-q", "--no-ff", "--no-commit", branch)
+    return timeline.commit(f"merge {branch}", files)
+
+
+@dataclass(frozen=True)
+class RevalidatedWhileMerging:
+    """The commits `_revalidated_while_merging` lays down."""
+
+    earlier: str  # topic: the guide revalidated before the CLI changed
+    changed: str  # main: the CLI changed
+    merge: str  # topic: main merged in, the guide revalidated in the merge commit
+
+
+def _revalidated_while_merging(timeline: Timeline) -> RevalidatedWhileMerging:
+    """`base`; on `topic` the guide revalidated; on main the CLI changed; then `topic`
+    merges main with `--no-ff` and revalidates the guide in the merge commit."""
+    repo = timeline.adopter
+    timeline.start({"docs/guide.md": guide()})
+    repo.checkout("topic", create=True)
+    earlier = timeline.commit(
+        "topic: revalidate the guide",
+        {"docs/guide.md": guide(at=T2, because="checked on the topic")},
+    )
+    repo.checkout("main")
+    changed = timeline.commit(
+        "change the CLI", {"src/cli/main.py": "print('cli v2')\n"}, author=ALICE
+    )
+    repo.checkout("topic")
+    merge = _merge_writing(
+        timeline, "main", {"docs/guide.md": guide(at=T3, because="checked against the new CLI")}
+    )
+    return RevalidatedWhileMerging(earlier, changed, merge)
+
+
+def test_a_revalidation_written_in_a_merge_commit_is_the_revalidation_point(
+    timeline: Timeline,
+) -> None:
+    history = _revalidated_while_merging(timeline)
+    result = _run(timeline)
+    # The merge wrote an `at` neither parent had: it is the point, and it reaches the CLI
+    # change. Read without the merge, the point was `earlier`, and the change stale after it.
+    assert _point(result) == history.merge
+    assert _summary(result) == []
+    assert result.artefact_reports[0].state is fr.ArtefactState.CURRENT
+
+
+def test_the_change_check_and_the_whole_repository_check_agree_on_that_point(
+    timeline: Timeline,
+) -> None:
+    history = _revalidated_while_merging(timeline)
+    root = timeline.adopter.root
+
+    # On the branch: the change check reads the revalidation in its diff, the
+    # whole-repository check at the merge commit — the guide is answered in both.
+    change = fc.run_change_check(root, "main")
+    assert [(f.kind, f.answer) for f in change.findings] == [
+        (fc.FindingKind.REVALIDATED, fc.Answer.UNCHANGED)
+    ]
+    assert not change.failed
+    assert _summary(_run(timeline)) == []
+
+    # Merged into main with `--no-ff`: the point is still the branch's merge commit.
+    timeline.adopter.checkout("main")
+    timeline.merge("topic")
+    result = _run(timeline)
+    assert _point(result) == history.merge
+    assert _summary(result) == []
+
+
+def test_a_merge_that_keeps_a_sides_revalidation_is_not_its_point(timeline: Timeline) -> None:
+    repo = timeline.adopter
+    timeline.start({"docs/guide.md": guide()})
+    repo.checkout("side", create=True)
+    revalidated = timeline.commit(
+        "side: revalidate the guide", {"docs/guide.md": guide(at=T2, because="checked on side")}
+    )
+    repo.checkout("main")
+    changed = timeline.commit(
+        "change the CLI", {"src/cli/main.py": "print('cli v2')\n"}, author=ALICE
+    )
+    timeline.commit("main: edit the body", {"docs/guide.md": guide(body="Edited on main.")})
+    merge = timeline.merge("side")
+
+    # The merge combined both sides' edits of the guide, so git lists it among its paths...
+    newest = fr.read_history(repo.root, merge).commits[0]
+    assert (newest.sha, [e.path for e in newest.entries]) == (merge, ["docs/guide.md"])
+    # ...but its `at` is the side's: the side's commit wrote it, before the CLI changed. A
+    # merge keeping one side's timestamp claims no revalidation (COR-050 point 3).
+    result = _run(timeline)
+    assert _point(result) == revalidated
+    assert _summary(result) == [("stale", "docs/guide.md", "path:src/cli/**", changed)]
+
+
+def test_a_deferral_written_in_a_merge_commit_has_its_point_there(timeline: Timeline) -> None:
+    repo = timeline.adopter
+    base = timeline.start({"docs/guide.md": guide()})
+    repo.checkout("topic", create=True)
+    repo.checkout("main")
+    timeline.commit("change the CLI", {"src/cli/main.py": "print('cli v2')\n"}, author=ALICE)
+    repo.checkout("topic")
+    deferred = [("path", "src/cli/**", "the CLI rework is not settled")]
+    merge = _merge_writing(timeline, "main", {"docs/guide.md": guide(deferred=deferred)})
+
+    result = _run(timeline)
+    assert _point(result) == base
+    # The deferral point is the merge, which reaches the CLI change: deferred, not stale.
+    assert _summary(result) == [("deferred", "docs/guide.md", "path:src/cli/**", merge)]
+    assert result.artefact_reports[0].state is fr.ArtefactState.DEFERRED
+
+
+def test_a_merge_reads_each_parent_under_the_files_name_there(timeline: Timeline) -> None:
+    repo = timeline.adopter
+    timeline.start({"notes/guide.md": guide()}, friction_config(places=("docs", "notes")))
+    repo.checkout("side", create=True)
+    revalidated = timeline.commit(
+        "side: revalidate the guide", {"notes/guide.md": guide(at=T2, because="checked on side")}
+    )
+    repo.checkout("main")
+    moved = timeline.rename("notes/guide.md", "docs/guide.md")
+    timeline.commit("main: edit the body", {"docs/guide.md": guide(body="Edited on main.")})
+    timeline.merge("side")
+
+    # The merge's `at` is the side's, read there under the file's old name — so the merge is
+    # not the point. The move on main came after the side's revalidation, with none since.
+    result = _run(timeline)
+    assert _point(result) == revalidated
+    assert _summary(result) == [("stale", "docs/guide.md", None, moved)]
 
 
 # --- the cascade along artefact anchors, upstream first -------------------------------

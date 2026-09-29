@@ -21,8 +21,14 @@ from referencing.jsonschema import DRAFT202012
 from project_kit import backbone_schemas as bs
 from project_kit import capabilities as caps
 from project_kit import package_validate as pv
-from project_kit import refs, scaffolds
+from project_kit import lifecycle_ownership, process_journal, refs, scaffolds
 from project_kit.cli import main
+from project_kit.manifest import (
+    ORIGIN_EXTERNALLY_SOURCED,
+    ORIGIN_INCUBATED_IN_REPO,
+    ORIGIN_KIT_SHIPPED,
+    set_capability_origin,
+)
 from tests.adopter_repo import MakeAdopterRepo
 
 REPO = Path(__file__).resolve().parents[1]
@@ -303,13 +309,19 @@ def test_every_component_requires_the_fields_cor_017_lists(
     }
 
 
-# The address grammar the package schema's patterns must spell: the word of the
-# citation grammar (`refs.ADDRESS_WORD_PATTERN`), which the configuration
+# The address grammar the package schema's patterns must spell: the one address
+# word (`backbone_schemas.ADDRESS_WORD_PATTERN`), which the configuration
 # schema's selection keys admit.
-_ROLE_PATTERN = f"^{refs.ADDRESS_WORD_PATTERN}::{refs.ADDRESS_WORD_PATTERN}$"
+_ROLE_PATTERN = f"^{bs.ADDRESS_WORD_PATTERN}::{bs.ADDRESS_WORD_PATTERN}$"
 _POINT_PATTERN = (
-    f"^{refs.ADDRESS_WORD_PATTERN}::{refs.ADDRESS_WORD_PATTERN}:{refs.ADDRESS_WORD_PATTERN}$"
+    f"^{bs.ADDRESS_WORD_PATTERN}::{bs.ADDRESS_WORD_PATTERN}:{bs.ADDRESS_WORD_PATTERN}$"
 )
+
+
+def test_the_citation_grammar_re_exports_the_one_address_word() -> None:
+    """The word is defined once, in `backbone_schemas`; the citation grammar in
+    `refs` reads that definition rather than repeating it."""
+    assert refs.ADDRESS_WORD_PATTERN is bs.ADDRESS_WORD_PATTERN
 
 
 def test_addresses_share_the_configuration_schema_s_word_pattern(schema: dict[str, Any]) -> None:
@@ -627,6 +639,56 @@ def test_depends_on_must_carry_the_generated_mark(
     assert _validate(_package(connections=connections), schema, component_dir) == []
 
 
+# What the project-management package declared before the backbone took the
+# process-journal ignore line over (#1120).
+STALE_JOURNAL_LINE = ".pkit/capabilities/project-management/project/process/**/*.journal.jsonl"
+
+
+@pytest.mark.parametrize("pattern", [STALE_JOURNAL_LINE, process_journal.JOURNAL_GLOB])
+def test_a_runtime_ignore_entry_declaring_process_journals_is_warned(
+    schema: dict[str, Any], component_dir: Path, pattern: str
+) -> None:
+    """Journals' ignore line is the backbone's; a component declaring it too keeps
+    them ignored when the project commits them — a warning, never an error."""
+    raw = _package(runtime_ignore=[".pkit/capabilities/demo/project/instance/*.json", pattern])
+    findings = _validate(raw, schema, component_dir)
+    assert _messages(findings, pv.Severity.ERROR) == {}
+    assert _messages(findings, pv.Severity.WARNING) == {
+        "/runtime_ignore/1": pv.journal_claim_message(pattern)
+    }
+
+
+@pytest.mark.parametrize(
+    "pattern",
+    [
+        ".pkit/capabilities/demo/project/instance/*.json",
+        ".pkit/capabilities/demo/project/process/notes.md",
+        ".pkit/capabilities/demo/project/journal.jsonl",
+    ],
+)
+def test_a_runtime_ignore_entry_that_is_not_a_journal_is_not_warned(
+    schema: dict[str, Any], component_dir: Path, pattern: str
+) -> None:
+    assert _validate(_package(runtime_ignore=[pattern]), schema, component_dir) == []
+
+
+@pytest.mark.parametrize(
+    ("provenance", "fix"),
+    [
+        (pv.Provenance.OWN, "Drop the entry"),
+        (pv.Provenance.SYNCED, "a synced copy the next sync overwrites, so do not edit it"),
+        (pv.Provenance.PINNED, "move the pin to an author release that drops the entry"),
+    ],
+)
+def test_the_journal_warning_names_the_backbone_pattern_and_the_way_out(
+    provenance: pv.Provenance, fix: str
+) -> None:
+    message = pv.journal_claim_message(STALE_JOURNAL_LINE, provenance)
+    assert repr(process_journal.JOURNAL_GLOB) in message
+    assert "`process.journal.committed: true`" in message
+    assert fix in message
+
+
 @pytest.mark.parametrize(
     ("path_value", "problem"),
     [("../pages", "contains a `..` segment"), ("/srv/docs", "is absolute"), ("a/../b", "contains a `..` segment")],
@@ -907,6 +969,47 @@ def test_pkit_validate_fails_on_a_package_error(make_adopter_repo: MakeAdopterRe
     assert result.exit_code == 1
     assert ".pkit/capabilities/evidence/package.yaml:/component/version" in result.output
     assert "5 is not of type 'string'" in result.output
+
+
+@pytest.mark.parametrize(
+    ("origin", "fix"),
+    [
+        # A synced copy: the next sync overwrites an edit.
+        (ORIGIN_KIT_SHIPPED, "upgrade this component together with the backbone"),
+        # Restored to its pin on every sync (COR-041).
+        (ORIGIN_EXTERNALLY_SOURCED, "move the pin to an author release that drops the entry"),
+        # The project's own file.
+        (ORIGIN_INCUBATED_IN_REPO, "Drop the entry"),
+    ],
+)
+def test_pkit_validate_warns_on_an_installed_package_declaring_process_journals(
+    make_adopter_repo: MakeAdopterRepo, origin: str, fix: str
+) -> None:
+    """The reverse skew: an older package on a backbone that owns the journal line.
+    The warning's fix is the one that lasts for where the package comes from."""
+    adopter = make_adopter_repo(capabilities=("evidence",))
+    set_capability_origin(adopter.root, "evidence", origin)
+    package = _installed_package(adopter.root, "evidence")
+    stale = ".pkit/capabilities/evidence/project/process/**/*.journal.jsonl"
+    package.write_text(
+        package.read_text(encoding="utf-8") + f"runtime_ignore:\n  - {stale}\n", encoding="utf-8"
+    )
+
+    result = CliRunner().invoke(main, ["validate", "--no-refs"])
+    assert result.exit_code == 0, result.output
+    assert "0 error(s), 1 warning(s)" in result.output
+    assert "warning  .pkit/capabilities/evidence/package.yaml:/runtime_ignore/0" in result.output
+    assert f"→ {stale!r} declares process journals" in result.output
+    assert fix in " ".join(result.output.split())
+
+
+def test_in_the_methodology_source_a_kit_shipped_package_is_its_own() -> None:
+    """The source is where a kit-shipped package is authored, so the fix is to edit it."""
+    package = REPO / ".pkit" / "capabilities" / "project-management" / "package.yaml"
+    ownership = lifecycle_ownership.load_ownership(REPO)
+    assert ownership is not None
+    provenance = pv.package_provenance(REPO, package, ORIGIN_KIT_SHIPPED, ownership)
+    assert provenance is pv.Provenance.OWN
 
 
 def test_packages_pass_without_a_schema_in_the_tree_runs_repository_checks_only(

@@ -7,10 +7,12 @@ two kinds a documentation capability owes it (DEC-053 point 4), read from the
 backbone's whole-repository friction check, `pkit friction check --all --json`,
 which judges HEAD against its history (COR-050):
 
-- **`page-stale`** — one per page of the spaces the check reports `stale` or
-  `deferred`: friction debt (COR-050 point 9). Its `document` is the page,
-  whose answer in the diff — updated, unchanged with its justification, or
-  deferred with its reason — meets it.
+- **`page-stale`** — one per page of the spaces the check reports `stale`. Its
+  `document` is the page, whose answer in the diff — updated, unchanged with
+  its justification, or deferred with its reason — meets it. A page the check
+  reports `deferred` gives none: its deferral is the answer (project-management
+  DEC-053 point 4), and `pkit friction debt` reports it as debt — the check
+  would otherwise refuse every later pull request that leaves the page alone.
 - **`code-undocumented`** — one per path of the declared surface that nothing
   anchors (COR-050 point 8). Its `path` is the code, and it names no
   `document`: no page's change answers it, only a page anchoring the path.
@@ -43,8 +45,9 @@ SOURCE = "friction"
 PAGE_STALE = "page-stale"
 CODE_UNDOCUMENTED = "code-undocumented"
 
-#: The artefact states the whole-repository check reports that are friction debt.
-DEBT_STATES = ("stale", "deferred")
+#: The artefact states and finding kinds the whole-repository check reports that
+#: matter here: only `stale` is owed — a `deferred` page carries its answer.
+STALE = "stale"
 UNREACHABLE = "unreachable"
 
 Runner = Callable[..., subprocess.CompletedProcess[str]]
@@ -91,9 +94,9 @@ def read_friction(root: str, run: Runner = subprocess.run) -> Mapping[str, Any]:
 
 
 def obligations(report: Mapping[str, Any], pages: Iterable[str]) -> list[dict[str, Any]]:
-    """The obligations `report` gives rise to: the pages' friction debt, then the
-    uncovered surface, each sorted. Raises NoAnswer when a page's friction
-    cannot be judged in this clone."""
+    """The obligations `report` gives rise to: the stale pages, then the uncovered
+    surface, each sorted. Raises NoAnswer when a page's friction cannot be
+    judged in this clone."""
     if report.get("dormant"):
         return []
     page_set = set(pages)
@@ -109,12 +112,10 @@ def obligations(report: Mapping[str, Any], pages: Iterable[str]) -> list[dict[st
             f"shallow clone's history — fetch the full history (`git fetch --unshallow`)"
         )
     findings = [f for f in report.get("findings") or [] if isinstance(f, Mapping)]
-    stale = sorted(
-        (str(a["location"]), str(a["state"])) for a in reports if a.get("state") in DEBT_STATES
-    )
+    stale = sorted(str(a["location"]) for a in reports if a.get("state") == STALE)
     surface = sorted(str(p) for p in (report.get("measures") or {}).get("uncovered_surface") or [])
     return [
-        *(_page_stale(page, state, findings) for page, state in stale),
+        *(_page_stale(page, findings) for page in stale),
         *(_code_undocumented(path) for path in surface),
     ]
 
@@ -124,7 +125,7 @@ def envelope(value: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     return {"schema_version": POINT_VERSION, "value": list(value)}
 
 
-def _page_stale(page: str, state: str, findings: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+def _page_stale(page: str, findings: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     details = [_detail(f) for f in findings if f.get("location") == page]
     what = ", ".join(d for d in details if d)
     return {
@@ -132,20 +133,19 @@ def _page_stale(page: str, state: str, findings: Sequence[Mapping[str, Any]]) ->
         "source": SOURCE,
         "reason": PAGE_STALE,
         "document": page,
-        "description": f"{state}{': ' + what if what else ''} — pkit friction explain {page}",
+        "description": f"{STALE}{': ' + what if what else ''} — pkit friction explain {page}",
     }
 
 
 def _detail(finding: Mapping[str, Any]) -> str:
-    """One stale or deferred finding, as a few words: which anchor, and what of it."""
-    kind = finding.get("kind")
-    anchor = finding.get("anchor")
-    if kind not in DEBT_STATES:
+    """One stale finding, as a few words: which anchor changed. A page's deferred
+    findings are answered, so they are not what it owes."""
+    if finding.get("kind") != STALE:
         return ""
+    anchor = finding.get("anchor")
     if not isinstance(anchor, Mapping):
-        return "moved with no revalidation" if kind == "stale" else ""
-    verb = "changed" if kind == "stale" else "deferred"
-    return f"{anchor.get('kind')} {anchor.get('value')} {verb}"
+        return "moved with no revalidation"
+    return f"{anchor.get('kind')} {anchor.get('value')} changed"
 
 
 def _code_undocumented(path: str) -> dict[str, Any]:

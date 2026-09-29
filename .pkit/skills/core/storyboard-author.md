@@ -57,7 +57,7 @@ Today the only supported artifact-kind is **agent**. The named agent must alread
 
 The storyboard binds to the agent that drives the scripted scenario. If the agent is currently in flat form (`<name>.md` in its agents folder), stamping the storyboard migrates it to folder form (`<name>/<name>.md` + `<name>/storyboard.md`) per COR-015's first-helper rule.
 
-The command finds the agent in the deploy's order — project, core, then capabilities by name. When the same name exists in more than one place and you mean one the deploy does not pick, name it with `--namespace <ns>` (`core`, `project` or the capability's name).
+The command finds the agent in the deploy's order — project, capabilities by name, then core. When the same name exists in more than one place and you mean one the deploy does not pick, name it with `--namespace <ns>` (`core`, `project` or the capability's name).
 
 ### 3. Decide single-file or per-scenario layout
 

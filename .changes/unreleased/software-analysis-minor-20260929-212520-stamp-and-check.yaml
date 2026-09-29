@@ -1,0 +1,25 @@
+component: software-analysis
+kind: minor
+custom:
+  category: Added
+body: >
+  The capability's first usable release: keep actors, use cases, journeys and
+  glossary terms as anchored artefacts under the `analysis/` folder of your
+  internal documentation root (DEC-001). `pkit analysis new actor|term|use-case|journey
+  <slug>` stamps each from its template with a stable id — `ACT-<slug>`,
+  `TERM-<slug>`, and `UC-NNN` / `JRN-NNN` numbered past the working tree and
+  the default branch — writes the anchors the decision asks for (a use case's
+  actor, a journey's use cases from its steps, and any `--path` / `--record`),
+  and records the analysis location the first time. Each artefact kind, and the
+  revalidation record, has a companion schema and a template carrying the
+  friction block inside the `pkit:` container. `pkit analysis validate`, run by
+  `pkit validate` as its `software-analysis:artefacts` member, fails on
+  duplicate ids, missing required parts, a heading that is not the use case's
+  or journey's id and title, an actor or step the stamp would refuse, a use
+  case not anchored to its actor, a journey whose anchors do not match its
+  steps, and malformed revalidation records, reading the working tree alone. `pkit analysis check-numbers --base
+  <ref>`, a line of its own in your check gate beside `pkit friction check`,
+  fails on a use case or journey number the default branch gave another file
+  since your branch left it, and when the base names no commit. The package
+  metadata declares the `analysis` location and the glossary, actors, use cases
+  and journeys as places.

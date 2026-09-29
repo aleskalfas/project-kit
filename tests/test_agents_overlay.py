@@ -237,6 +237,19 @@ def test_project_namespace_wins_over_core(tmp_path):
     assert found["dup"][0] == "project"
 
 
+def test_capability_wins_over_core_and_project_over_capability(tmp_path):
+    """The agents README's name-collision precedence: project > capability > core."""
+    proj = _project(tmp_path, overlay="")
+    caps = proj / ".pkit" / "capabilities"
+    for name in ("cap-over-core", "project-over-cap"):
+        _agent(caps / "my-cap" / "agents", name)
+    _agent(proj / ".pkit" / "agents" / "core", "cap-over-core")
+    _agent(proj / ".pkit" / "agents" / "project", "project-over-cap")
+    found = ao.discover_kit_agents(proj)
+    assert found["cap-over-core"][0] == "capability:my-cap"
+    assert found["project-over-cap"][0] == "project"
+
+
 # --- status ------------------------------------------------------------------
 
 def test_missing_category_marks_agent_skipped(tmp_path):

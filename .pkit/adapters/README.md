@@ -11,8 +11,9 @@ pkit:
       record: [COR-005, COR-006, COR-047]
       artefact: [.pkit/adapters/claude-code/README.md]
     revalidated:
-      at: 2026-09-29T15:18:47Z
-      outcome: updated
+      at: 2026-09-29T18:07:16Z
+      outcome: unchanged
+      unchanged-because: the Claude Code adapter README gained a note on agent name-collision precedence and the registered-only skill deploy; the umbrella's account of the adapter holds
 ---
 
 # Adapters
@@ -35,7 +36,14 @@ Per COR-005's bundle/adapter pattern: each adapter is an alternative implementat
 
 ## Currently shipped
 
-- **`claude-code/`** — the Claude Code adapter. Ships permissions baseline (settings/), a deploy script for skills (deploy-skills.sh), and the runtime conventions Claude Code expects.
+- **`claude-code/`** — the Claude Code adapter. Ships permissions baseline (settings/), the deploy scripts for skills and agents (deploy-skills.sh, deploy-agents.sh), the undeploy script for one capability (undeploy-capability.sh), and the runtime conventions Claude Code expects.
+
+## Primitives the lifecycle calls
+
+The lifecycle drives an adapter through scripts it finds **by name** in the adapter's directory: `pkit init`, `pkit sync` and the capability verbs walk `.pkit/adapters/<name>/` and run each script present. That name is the whole contract — the lifecycle carries no knowledge of where a harness keeps its skills, agents or settings; the adapter does ([COR-005](../decisions/core/COR-005-bundle-pattern.md), [COR-013](../decisions/core/COR-013-agent-architecture.md)). Every primitive is idempotent: run twice, it changes nothing the second time.
+
+- **Deploy primitives** — `merge-settings.sh`, `merge-claude-md.sh`, `deploy-skills.sh`, `deploy-agents.sh`, run in that order with no arguments whenever the harness side needs (re-)materialising: init, sync, and a capability's install, register, upgrade and uninstall. They deploy what the tree ships and drop what they deployed from a source that is gone. Each is optional; a harness that loads skills from their canonical paths needs no `deploy-skills.sh`, and an absent one is skipped.
+- **Undeploy primitive** — `undeploy-capability.sh <capability-name>`, run when a capability is unregistered but its subtree stays on disk: an incubated capability's uninstall, and any capability's uninstall in the methodology's source repository. The deploy primitives cannot help there — the source files still exist, so a deploy re-run does not see the capability as gone. The script removes what the adapter deployed for that one capability, recognised by the adapter's own deploy mark, and never adopter content. An adapter that deploys nothing per capability can ship one that does nothing. Its absence is **reported**, not skipped: the lifecycle names the adapter in a `warning` line, because that harness keeps the unregistered capability active.
 
 ## Harness requirements
 
@@ -51,7 +59,7 @@ The methodology depends on properties of the harness that hosts it — behaviour
 
 1. Create `.pkit/adapters/<new-harness-name>/`.
 2. Add a `README.md` describing what the harness expects and how this adapter satisfies that.
-3. Author the harness-specific content — typically some combination of settings/config files (matching the harness's format), deploy scripts (translating kit-shipped skills/agents to the harness's expected paths), and any runtime artifacts the harness needs.
+3. Author the harness-specific content — typically some combination of settings/config files (matching the harness's format), deploy scripts (translating kit-shipped skills/agents to the harness's expected paths), an `undeploy-capability.sh` removing one capability's deployed skills/agents (see "Primitives the lifecycle calls" above), and any runtime artifacts the harness needs.
 4. Update this README's "Currently shipped" list.
 
 The structural rule is light because adapters are heterogeneous by nature — Codex's settings format differs from Claude Code's; Cursor may not need a deploy script at all if it loads skills from canonical paths directly. Each adapter ships what's needed; the README of the adapter explains.

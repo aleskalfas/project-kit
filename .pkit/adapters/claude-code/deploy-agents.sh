@@ -16,7 +16,9 @@
 #      agent at `.claude/agents/<name>.md`, not a per-agent directory.
 #
 # Behavior:
-# - Project namespace wins on collision (per COR-005).
+# - Name collision: the project's agent wins, then an installed capability's
+#   (the first by name), then core's (the agents README, "Name-collision
+#   precedence"; COR-026).
 # - Overlay placeholders (`<category-name>`) are resolved from
 #   `overlay.yaml`'s top-level categories, with per-agent values in
 #   `overrides.<name>` taking precedence per COR-013.
@@ -74,35 +76,31 @@ mkdir -p "$CLAUDE_AGENTS"
 
 status() { printf "  %-10s %s\n" "$1" "$2"; }
 
-# Resolve which agent source file to use. Project wins on collision;
-# flat form preferred over folder form within a namespace per COR-015's
-# atomic-is-flat bias.
+# The agent's canonical file in one agents folder, flat form preferred over
+# folder form per COR-015's atomic-is-flat bias; returns 1 when there is none.
+source_in() {
+    local dir="$1"
+    local name="$2"
+    if [ -f "$dir/$name.md" ]; then
+        echo "$dir/$name.md"
+    elif [ -f "$dir/$name/$name.md" ]; then
+        echo "$dir/$name/$name.md"
+    else
+        return 1
+    fi
+}
+
+# Resolve which agent source file to use, by name-collision precedence (the
+# agents README, "Name-collision precedence"): project, then an installed
+# capability (the first by name), then core. A capability's agent is the
+# discipline's specialisation of the core default (COR-026), so it wins over
+# core; the project keeps final authority over both.
 source_for() {
     local name="$1"
-    local ns
-    for ns in project core; do
-        if [ -f "$KIT_AGENTS/$ns/$name.md" ]; then
-            echo "$KIT_AGENTS/$ns/$name.md"
-            return 0
-        elif [ -f "$KIT_AGENTS/$ns/$name/$name.md" ]; then
-            echo "$KIT_AGENTS/$ns/$name/$name.md"
-            return 0
-        fi
+    local dir
+    for dir in "$KIT_AGENTS/project" "$KIT_CAPABILITIES"/*/agents "$KIT_AGENTS/core"; do
+        source_in "$dir" "$name" && return 0
     done
-    # Walk installed capabilities for an agent of this name.
-    if [ -d "$KIT_CAPABILITIES" ]; then
-        local cap
-        for cap in "$KIT_CAPABILITIES"/*; do
-            [ -d "$cap" ] || continue
-            if [ -f "$cap/agents/$name.md" ]; then
-                echo "$cap/agents/$name.md"
-                return 0
-            elif [ -f "$cap/agents/$name/$name.md" ]; then
-                echo "$cap/agents/$name/$name.md"
-                return 0
-            fi
-        done
-    fi
     return 1
 }
 

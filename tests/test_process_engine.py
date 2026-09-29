@@ -10,7 +10,12 @@ real reality to resolve against. Covers:
   refuses; != actor allows),
 - fail-closed on a broken predicate (non-zero exit / bad JSON),
 - journal append + entry shape (validated against the shape contract),
-- the status JSON shape.
+- the status JSON shape,
+- journal logging off (COR-033 point 7): a full lifecycle writes no journal and
+  every verdict matches the same lifecycle with logging on.
+
+The fixtures turn journal logging on (it is off by default), so the tests that
+read the journal exercise it; the logging-off section turns it off again.
 """
 
 from __future__ import annotations
@@ -31,7 +36,10 @@ from project_kit.process import (
     ProcessError,
     load_definition,
     render_status_json,
+    render_status_narrative,
 )
+from project_kit.process_journal import NOT_ENABLED
+from tests.process_journal_support import enable_journal_logging, set_journal_logging
 
 # --- fixture scaffolding --------------------------------------------------
 
@@ -208,6 +216,7 @@ commands:
         "import sys\nsys.stderr.write('boom')\nsys.exit(3)\n",
     )
 
+    enable_journal_logging(repo)
     return repo
 
 
@@ -384,6 +393,129 @@ def test_status_json_after_move_reflects_journal(fixture_repo: Path) -> None:
     assert payload["journal"][0]["to"] == "ready"
 
 
+# --- journal logging off (COR-033 point 7) --------------------------------
+
+
+def _journals(repo: Path) -> list[Path]:
+    return sorted((repo / ".pkit").rglob("*.journal.jsonl"))
+
+
+def _live_status(repo: Path) -> dict:
+    """The parts of the status view that are verdicts: where, what is legal, the
+    wait, the invariants — everything but the journal itself."""
+    payload = json.loads(render_status_json(_engine(repo), actor="agent"))
+    return {k: payload[k] for k in ("position", "legal_moves", "blocked", "invariants")}
+
+
+def _lifecycle_verdicts(repo: Path) -> list[object]:
+    """Drive the fixture process draft -> ready -> done the way a wrapper does
+    (the engine move, then the domain side-effect detection reads) and collect
+    every verdict the engine gives on the way, refusals included."""
+    verdicts: list[object] = [_live_status(repo)]
+    verdicts.append(_engine(repo).can_move("ready", actor="agent")[:2])  # checks fail
+    refused = _engine(repo).move("ready", actor="agent")
+    verdicts.append((refused.ok, refused.reason))
+
+    (repo / "_checks_ok").write_text("", encoding="utf-8")
+    verdicts.append(_engine(repo).can_move("ready", actor="agent")[:2])
+    moved = _engine(repo).move("ready", actor="agent")
+    verdicts.append((moved.ok, moved.reason))
+    _set_state(repo, "ready")
+    verdicts.append(_live_status(repo))
+
+    (repo / "_review").write_text(json.dumps({"by": "bob"}), encoding="utf-8")
+    same_authority = _engine(repo).move("done", actor="bob")
+    verdicts.append((same_authority.ok, same_authority.reason))
+    approved = _engine(repo).move("done", actor="alice")
+    verdicts.append((approved.ok, approved.reason))
+    _set_state(repo, "done")
+    verdicts.append(_live_status(repo))
+    return verdicts
+
+
+def test_logging_off_full_lifecycle_writes_no_journal_and_same_verdicts(
+    fixture_repo: Path, tmp_path_factory: pytest.TempPathFactory
+) -> None:
+    # The same lifecycle twice: once on a copy with logging on (the fixture's
+    # setting), once with it off. Live detection decides everything, so every
+    # verdict matches; only the journal differs.
+    logged = tmp_path_factory.mktemp("logged")
+    shutil.copytree(fixture_repo, logged, dirs_exist_ok=True)
+    set_journal_logging(fixture_repo, enabled=False)
+
+    unlogged_verdicts = _lifecycle_verdicts(fixture_repo)
+    logged_verdicts = _lifecycle_verdicts(logged)
+
+    assert unlogged_verdicts == logged_verdicts
+    assert _journals(fixture_repo) == []
+    assert len(_journals(logged)) == 1
+
+
+def test_logging_off_is_the_default(fixture_repo: Path) -> None:
+    (fixture_repo / ".pkit" / "project" / "config.yaml").unlink()
+    (fixture_repo / "_checks_ok").write_text("", encoding="utf-8")
+    engine = _engine(fixture_repo)
+    assert engine.journal_enabled is False
+
+    result = engine.move("ready", actor="agent")
+
+    assert result.ok is True
+    assert result.journal_entry is None
+    assert not engine.journal_path().exists()
+
+
+def test_logging_off_status_says_so_instead_of_an_empty_history(fixture_repo: Path) -> None:
+    set_journal_logging(fixture_repo, enabled=False)
+    engine = _engine(fixture_repo)
+
+    narrative = render_status_narrative(engine, actor="agent")
+    payload = json.loads(render_status_json(engine, actor="agent"))
+
+    assert NOT_ENABLED in narrative
+    assert "(no recorded moves)" not in narrative
+    assert payload["journal_logging"] == {"enabled": False, "committed": False}
+    assert payload["journal"] == []
+
+
+def test_logging_off_ignores_a_journal_left_on_disk(fixture_repo: Path) -> None:
+    # A project that turned logging off keeps its old journal files; the engine
+    # neither reads nor extends them.
+    (fixture_repo / "_checks_ok").write_text("", encoding="utf-8")
+    engine = _engine(fixture_repo)
+    engine.move("ready", actor="agent")
+    before = engine.journal_path().read_text(encoding="utf-8")
+
+    set_journal_logging(fixture_repo, enabled=False)
+    _set_state(fixture_repo, "draft")
+    off = _engine(fixture_repo)
+    assert off.read_journal() == []
+    off.move("ready", actor="agent")
+    assert off.journal_path().read_text(encoding="utf-8") == before
+
+
+def test_logging_on_reports_its_mode_in_status_json(fixture_repo: Path) -> None:
+    set_journal_logging(fixture_repo, enabled=True, committed=True)
+    payload = json.loads(render_status_json(_engine(fixture_repo), actor="agent"))
+    assert payload["journal_logging"] == {"enabled": True, "committed": True}
+
+
+def test_cli_move_with_logging_off_succeeds_without_a_journal(
+    fixture_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    set_journal_logging(fixture_repo, enabled=False)
+    (fixture_repo / "_checks_ok").write_text("", encoding="utf-8")
+    monkeypatch.chdir(fixture_repo)
+    subprocess.run(["git", "init", "-q"], cwd=fixture_repo, check=True)
+
+    result = CliRunner().invoke(
+        main, ["process", "move", "fixture:demo", "--to", "ready", "--actor", "agent"]
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "moved to 'ready'" in result.output
+    assert _journals(fixture_repo) == []
+
+
 # --- address parsing ------------------------------------------------------
 
 
@@ -517,6 +649,7 @@ commands:
     _write_script(scripts / "kdetect_open.py", _detect("open"))
     _write_script(scripts / "kdetect_shut.py", _detect("shut"))
 
+    enable_journal_logging(repo)
     return repo
 
 

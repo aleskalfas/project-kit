@@ -17,9 +17,8 @@ pkit:
         - .pkit/adapters/claude-code/_resolve_agent.py
       record: [COR-005, COR-006, COR-011, COR-013, COR-014, COR-015, COR-016, COR-026, COR-049, ADR-051, ADR-052]
     revalidated:
-      at: 2026-09-29T16:17:35Z
-      outcome: unchanged
-      unchanged-because: docs_roots gained only a reader of the root a location's declaration names, for pkit friction artefacts; how an agent's overlay locations derive from the roots is unchanged
+      at: 2026-09-29T18:14:54Z
+      outcome: updated
 ---
 
 # Agents
@@ -109,6 +108,8 @@ Body prose cites the same references the frontmatter declares. The validator ext
 The discipline: cite paths in backticks, cite records by ID, mention hooks by name. The validator can extract unambiguously without ad-hoc prose parsing.
 
 **Intermediate files.** Every shipped agent body ends with the same one-sentence section telling the agent to keep its intermediate files in the agent workspace, `.agent-workspace/` at the repository root, and nowhere else outside the repository, writing them with the file tools — a shell redirect into the folder is judged like any other shell write (the workspace rule in `.pkit/rules/core.md`); `pkit new agent` stamps it. Keep the wording identical across bodies, so one search finds every agent that carries it.
+
+**Reviewers.** A reviewer — an agent that judges work and returns a verdict or findings, such as COR-024's reviewer stack or a capability's review panel — is read-only on what it judges: it never changes the work under review or the repository it lives in, no tracked file edited and nothing staged, committed or pushed, because its verdict is worth only its independence. That is the whole claim. It does not mean the reviewer writes nothing: one that can execute, a shell among its tools, may need working files to review well — a dumped diff, a script, a reproduction that executes a payload to prove a defect, captured output — and every one goes in the agent workspace, never loose in the repository, where an author's `git add` sweeps it into a commit, and never in `/tmp/`; a review leaves no file of its own outside the workspace. The rule belongs to the role, not to one agent, so every reviewer that can execute carries the same `## What read-only covers` section just before its `## Intermediate files`, word for word — copy it from a shipped reviewer such as `.pkit/agents/core/methodology-reviewer.md` — and states any read-only claim elsewhere in its body and description with that scope.
 
 ## Reference graph and bidirectional consistency
 
@@ -310,7 +311,7 @@ The values are the harness's own — Claude Code's, the one adapter shipped toda
 
 ## Deploy mechanics
 
-Each adapter (per COR-005) handles its own deploy. For Claude Code today, `.pkit/adapters/claude-code/deploy-agents.sh` walks `.pkit/agents/{core,project}/` and any installed capability's `agents/` folder (per [COR-026](../decisions/core/COR-026-agent-placement-by-discipline.md)), applies the overlay, and writes resolved agent files into `.claude/agents/`. The deploy primitive is invoked by `pkit init` and `pkit sync`; the resolved files are what the harness loads.
+Each adapter (per COR-005) handles its own deploy. For Claude Code today, `.pkit/adapters/claude-code/deploy-agents.sh` walks `.pkit/agents/{core,project}/` and any installed capability's `agents/` folder (per [COR-026](../decisions/core/COR-026-agent-placement-by-discipline.md)), applies the overlay, and writes resolved agent files into `.claude/agents/`. The deploy primitive is invoked by `pkit init` and `pkit sync`; the resolved files are what the harness loads. Its counterpart, the adapter's undeploy primitive (`undeploy-capability.sh <name>` for Claude Code), removes one capability's deployed agents — and skills — when the capability is unregistered but its files stay, the case a deploy re-run cannot see; the lifecycle calls it by name and knows no harness path (the adapters README, "Primitives the lifecycle calls").
 
 ### Name-collision precedence
 
@@ -320,7 +321,9 @@ Three locations can ship agents (core, project, installed capability). On name c
 2. **Capability** (`.pkit/capabilities/<name>/agents/`) wins over **core** (`.pkit/agents/core/`). A capability that ships an agent with the same name as a core agent is opting to override the core surface for adopters who install the capability — the capability's agent is the discipline-specific specialisation; the core's is the universal default. The capability author signals this by shipping the colliding name deliberately.
 3. **Core** (`.pkit/agents/core/`) is the fallback. Used when no project or capability ships the name.
 
-The precedence applies symmetrically across capabilities: if two installed capabilities ship an agent with the same name, the deploy refuses rather than silently picking — same shape as the bundle-collision rule. Adopters disambiguate by uninstalling one capability or by shipping a project-side overlay.
+The Claude Code deploy resolves every name in this order — `source_for` in `.pkit/adapters/claude-code/deploy-agents.sh` looks in the project, then each capability, then core — and the commands that name "the agent that deploys" (`pkit agents`, the ownership check of `pkit refs validate`, `pkit new storyboard` without `--namespace`) resolve it the same way. So when a capability ships the name of a core agent — installed with `override` at the collision prompt, or a core agent arriving later under a name the capability already ships — the capability's agent is the one deployed.
+
+Between capabilities there is no precedence to appeal to. `pkit capabilities install` surfaces a name a second capability already ships and asks per collision (`override` / `skip` / `inspect`); `skip` keeps the installed agent. The deploy does not refuse a collision that reaches it: the first capability by name wins. Resolve it by renaming one agent, skipping it at install, uninstalling one capability, or shipping a project agent of that name.
 
 Per [COR-026](../decisions/core/COR-026-agent-placement-by-discipline.md), discipline-implying agents belong in their capability, not at core. Capability-vs-core name collisions are therefore not the common case — they exist for explicit override scenarios.
 
@@ -453,7 +456,7 @@ pkit new storyboard agent <agent-name> --scenario <slug>   # per-scenario file
 pkit new storyboard agent <agent-name> --namespace <ns>    # pin where the agent lives
 ```
 
-The command finds the agent wherever agents ship from, in the deploy's order — project, core, then capabilities by name — so it stamps beside the agent that deploys. `--namespace` (`core`, `project` or a capability name) looks in that one place instead; a capability name that names no capability gets the same refusal as `pkit new agent`.
+The command finds the agent wherever agents ship from, in the deploy's order — project, capabilities by name, then core — so it stamps beside the agent that deploys. `--namespace` (`core`, `project` or a capability name) looks in that one place instead; a capability name that names no capability gets the same refusal as `pkit new agent`.
 
 The paired `storyboard-author` skill walks the author through framing, tone, and scenario drafting.
 

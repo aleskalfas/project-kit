@@ -40,16 +40,28 @@ _AGENTS_DIR = Path(".pkit") / "agents"
 _NAME_RE = re.compile(r"^[a-z][a-z0-9]*(-[a-z0-9]+)*$")
 
 
+# The storyboard `--with-storyboard` stamps beside the agent (COR-016). The
+# agent declares it by this bare sibling filename — the portable form the
+# agents README prescribes — and its body cites the same name, so the fresh
+# pair is mutually declared and passes `pkit refs validate` as stamped.
+STORYBOARD_FILE = "storyboard.md"
+_STORYBOARDS_KEY = f"storyboards:\n  - {STORYBOARD_FILE}\n"
+_STORYBOARD_LOAD = (
+    f"Load your storyboard from `{STORYBOARD_FILE}` with the Read tool at session "
+    "start and follow it for the scripted scenarios.\n\n"
+)
+
 # Per COR-013's frontmatter schema + agents/README's body conventions.
 # Lists are empty placeholders the author fills in; description is a
 # single-line placeholder the author rewrites. Tools default to a
 # read-oriented set; the author narrows or widens per the agent's role.
+# `{storyboards}` and `{storyboard_load}` are empty for a flat stamp.
 AGENT_TEMPLATE = """\
 ---
 name: {name}
 description: One-line summary of what this agent does and when to invoke it.
 tools: [Read, Glob, Grep, Bash]
-reads:
+{storyboards}reads:
   paths: []
   records: []
   patterns: []
@@ -68,7 +80,7 @@ You are the **{name}** for this project. <one paragraph: role, scope, what makes
 
 ## Files you own
 
-<List the paths this agent has write authority over. Use `<category-name>` placeholders from `.pkit/agents/project/overlay.yaml` for adopter-specific paths; declare them in frontmatter `reads.patterns` and `owns` as well.>
+<List the paths this agent has write authority over. Use `<category-name>` placeholders — the categories of the project's agent overlay — for adopter-specific paths; declare them in frontmatter `reads.patterns` and `owns` as well. A reviewer owns none; if it can execute, add the `## What read-only covers` section every such reviewer carries, word for word, before `## Intermediate files` (the agents README's "Reviewers" paragraph).>
 
 ## Key documents to read
 
@@ -76,7 +88,7 @@ You are the **{name}** for this project. <one paragraph: role, scope, what makes
 
 ## How you work
 
-<Procedural body: numbered steps if the agent follows a fixed sequence; principles if the role is more judgement-bearing. Cite records by ID where authority is invoked.>
+{storyboard_load}<Procedural body: numbered steps if the agent follows a fixed sequence; principles if the role is more judgement-bearing. Cite records by ID where authority is invoked.>
 
 ## Intermediate files
 
@@ -101,7 +113,9 @@ def stamp_new_agent(
     Default: flat layout (`<name>.md`). When `with_storyboard=True`,
     stamps folder layout per COR-015 (`<name>/<name>.md`) plus a sibling
     `storyboard.md` scaffold per COR-016 — for agents that drive
-    scripted interaction scenarios.
+    scripted interaction scenarios. Both sides are declared as stamped: the
+    agent's `storyboards:` names the sibling and its body cites it, and the
+    storyboard's `consumers:` names the agent.
 
     Refuses if the name is already taken anywhere agents ship from — core,
     project, or any capability — since the deploy resolves one agent per
@@ -123,13 +137,18 @@ def stamp_new_agent(
             )
 
     title = _name_to_title(name)
-    content = AGENT_TEMPLATE.format(name=name, title=title)
+    content = AGENT_TEMPLATE.format(
+        name=name,
+        title=title,
+        storyboards=_STORYBOARDS_KEY if with_storyboard else "",
+        storyboard_load=_STORYBOARD_LOAD if with_storyboard else "",
+    )
 
     if with_storyboard:
         # Folder layout per COR-015 + sibling storyboard per COR-016.
         folder_dir = ns_dir / name
         agent_target = folder_dir / f"{name}.md"
-        storyboard_target = folder_dir / "storyboard.md"
+        storyboard_target = folder_dir / STORYBOARD_FILE
         if not dry_run:
             folder_dir.mkdir(parents=True, exist_ok=True)
             agent_target.write_text(content, encoding="utf-8")
@@ -176,18 +195,19 @@ def agents_dir_for(target_root: Path, namespace: Namespace) -> Path:
 def agent_locations(target_root: Path) -> list[tuple[Namespace, Path]]:
     """Every folder agents ship from, as (namespace, folder), in deploy order.
 
-    `project`, `core`, then each capability by name — the order the Claude
-    Code deploy (`deploy-agents.sh`) resolves a name in, so the first location
+    `project`, each capability by name, then `core` — the name-collision
+    precedence the Claude Code deploy (`deploy-agents.sh`) resolves a name by
+    (the agents README, "Name-collision precedence"), so the first location
     holding an agent is the one that deploys. Folders need not exist.
     """
-    locations: list[tuple[Namespace, Path]] = [
-        (ns, target_root / _AGENTS_DIR / ns) for ns in ("project", "core")
+    return [
+        ("project", target_root / _AGENTS_DIR / "project"),
+        *(
+            (cap, target_root / CAPABILITIES_DIR / cap / "agents")
+            for cap in capability_names(target_root)
+        ),
+        ("core", target_root / _AGENTS_DIR / "core"),
     ]
-    locations += [
-        (cap, target_root / CAPABILITIES_DIR / cap / "agents")
-        for cap in capability_names(target_root)
-    ]
-    return locations
 
 
 def find_agent_file(agents_dir: Path, name: str) -> Path | None:

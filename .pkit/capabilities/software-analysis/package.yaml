@@ -5,3 +5,50 @@ component:
   version: 0.1.0
 description: Software analysis — actors, use cases, journeys and glossary kept as anchored artefacts and kept true by revalidation as the software changes.
 requires_backbone: ">=1.149.0,<2.0.0"
+aliases:
+  - analysis
+
+commands:
+  new:
+    script: scripts/new.py
+    help: "Stamp an analysis artefact under the analysis location (DEC-001 points 2 and 3): `new use-case <slug> --actor <ACT-id> [--area <area>]`, `new journey <slug> --actor <ACT-id> --step <UC-id> --step <UC-id> …`, `new actor <slug>`, `new term <slug>`; each takes --title or --name, and --path and --record for its anchors. A use case or journey gets the next free number on the default branch and in the working tree; an actor or term is `ACT-<slug>` / `TERM-<slug>`. Records the analysis location on first use."
+  validate:
+    script: scripts/validate.py
+    help: "Check the analysis artefacts in the working tree (DEC-001 points 3 and 4): each artefact's own fields against its companion schema, a use case's or journey's heading against its id and title, ids shared by two artefacts, an actor or step the stamp would refuse, a use case not anchored to its actor, a journey whose use-case anchors do not match its steps, and the revalidation records' front matter and the artefacts they cite; --json prints the findings document `pkit validate` reads. A query: read-only, offline; `pkit sync` provisions its dependencies."
+    query-contract: true
+  check-numbers:
+    script: scripts/check-numbers.py
+    help: "Report a use case or journey whose number the default branch gave another file since this branch left it (DEC-001 point 3): the first to reach the default branch keeps the number. `--base <ref>` names the default branch (else $PKIT_CHECK_BASE, else origin/main); --json prints the document. Answers about a change, not the tree, so it is a check-gate line of its own and not a validator (ADR-058 point 7). Exit 1 on a collision, or when the base names no commit or shares no history with HEAD; an outdated base is reported and never fails. A query: read-only, offline; `pkit sync` provisions its dependencies."
+    query-contract: true
+
+# The `software-analysis:artefacts` member of `pkit validate` (ADR-058). The
+# number comparison reads a base, so it is not one (ADR-058 point 7).
+validators:
+  artefacts:
+    command: validate
+
+# COR-049 point 4 — where the analysis lives, relative to the internal root.
+docs:
+  locations:
+    analysis:
+      path: analysis
+      description: The analysis (DEC-001 point 2) — the glossary, the use-case model and the revalidation records; recorded the first time an artefact is stamped (COR-049 point 5), so a later change of root moves nothing.
+
+# COR-050 point 1 — the places holding this capability's anchored artefacts.
+# The revalidation records are an act, not an anchored artefact, so their
+# folder is not a place (DEC-001 point 2). No surface: the project declares the
+# code its analysis ought to cover.
+friction:
+  places:
+    - location: analysis
+      path: glossary.md
+      description: The glossary, one entry per term.
+    - location: analysis
+      path: use-case-model/actors.md
+      description: The actors, one entry per actor.
+    - location: analysis
+      path: use-case-model/use-cases
+      description: The use cases, one file each, in folders by functional area when the project groups them.
+    - location: analysis
+      path: use-case-model/journeys
+      description: The journeys, one file each.

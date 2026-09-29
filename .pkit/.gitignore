@@ -1,5 +1,7 @@
-# pkit-owned — rendered wholesale by `pkit install` / `pkit sync` from each
-# installed component's `runtime_ignore:` declaration (ADR-009 rule 7).
+# pkit-owned — rendered wholesale from the backbone's own declarations, each
+# installed component's `runtime_ignore:` declaration, and the project's
+# configuration in `.pkit/project/config.yaml` (ADR-009 rule 7), by
+# `pkit install`, `pkit sync`, and a `pkit config set` that changes the result.
 # DO NOT EDIT: regenerated from scratch every run; hand edits are overwritten.
 # An uninstalled component's lines are simply absent on the next render.
 
@@ -9,5 +11,5 @@ permissions/project/diagnose-log.jsonl
 permissions/project/sandbox-provenance.yaml
 permissions/project/active-profile.yaml
 permissions/project/profile-realized-allows.yaml
-capabilities/project-management/project/process/**/*.journal.jsonl
+capabilities/*/project/process/**/*.journal.jsonl
 capabilities/project-management/project/instance/*.json

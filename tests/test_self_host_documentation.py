@@ -19,7 +19,10 @@ realises, over the real repository:
   friction pass over the roots it declares as places (#1003);
 - every declared place is a page — its reader, a kind with a template, a
   friction block anchoring what it describes and a revalidation — and the
-  code-to-doc mapping keeps no rule a page's anchors now carry (#1010).
+  code-to-doc mapping keeps no rule a page's anchors now carry (#1010);
+- the declared surface names only what a page should describe: every file
+  under the retired rules' trees is in it or left out for a named reason
+  (#1012).
 """
 
 from __future__ import annotations
@@ -64,6 +67,33 @@ NOT_PLACES: dict[str, str] = {
     ".pkit/migrations/backbone/README.md": "maintainer-facing: the migration scripts",
     ".pkit/capabilities/project-management/migrations/README.md": (
         "maintainer-facing: the capability's migration scripts"
+    ),
+}
+
+# The trees of the code-to-doc mapping's retired rules (#1010), which the
+# declared surface covers.
+SURFACE_TREES = (
+    "src/",
+    ".pkit/cli/",
+    ".pkit/capabilities/project-management/",
+    ".pkit/capabilities/evidence/",
+    ".pkit/capabilities/software-engineering/",
+    ".pkit/adapters/",
+)
+
+# What the declared surface leaves out of those trees, since nothing should
+# anchor it (#1012) — the reasons the surface's comment in
+# .pkit/project/config.yaml gives.
+NOT_SURFACE: dict[str, str] = {
+    "**/migrations/**": "one-off upgrade steps, each describing itself",
+    "**/package.yaml": "component metadata whose version the release step rewrites",
+    "**/manifest.yaml": "install state the capability lifecycle writes",
+    ".pkit/capabilities/*/project/**": "the project's own configuration of a capability",
+    ".pkit/capabilities/*/README.md": "the page itself",
+    ".pkit/adapters/README.md": "the page itself",
+    ".pkit/adapters/*/README.md": "the page itself",
+    ".pkit/capabilities/evidence/agents/.gitkeep": (
+        "evidence ships no agent yet; the placeholder holds the folder open in git"
     ),
 }
 
@@ -332,15 +362,30 @@ def test_the_mapping_keeps_no_rule_a_page_anchor_carries() -> None:
     assert carried == []
 
 
-def test_the_declared_surface_is_what_the_retired_mapping_obliged() -> None:
+def test_every_file_of_the_retired_mapping_s_trees_is_surface_or_left_out_for_a_reason() -> None:
     """The retired rules' code stays declared as the surface that ought to be
-    described (COR-050 point 8), so what no page anchors to is still counted."""
-    surface = [entry.value for entry in read_friction_settings(REPO).surface]
-    assert surface == [
-        "src/**",
-        ".pkit/cli/**",
-        ".pkit/capabilities/project-management/**",
-        ".pkit/capabilities/evidence/**",
-        ".pkit/capabilities/software-engineering/**",
-        ".pkit/adapters/**",
-    ]
+    described (COR-050 point 8), so what no page anchors to is still counted —
+    and, with the friction source enforcing (#1012), blocks a pull request. So
+    the surface names only what a page should describe: every file under the
+    rules' trees is in it or matches a reason in NOT_SURFACE, never both, and a
+    new file cannot land unsorted."""
+    files = working_tree(REPO).files()
+    in_trees = {rel for rel in files if rel.startswith(SURFACE_TREES)}
+    surface = [pattern_matcher(entry.value) for entry in read_friction_settings(REPO).surface]
+    left_out = [pattern_matcher(pattern) for pattern in NOT_SURFACE]
+    declared = {rel for rel in in_trees if any(m(rel) for m in surface)}
+    excluded = {rel for rel in in_trees if any(m(rel) for m in left_out)}
+    unsorted = sorted(in_trees - declared - excluded)
+    assert unsorted == [], (
+        f"{unsorted}: a file under the declared surface's trees is either code a page "
+        "should describe — name it in `friction.surface` of .pkit/project/config.yaml and "
+        "anchor it from a page — or something nothing should anchor, named in NOT_SURFACE "
+        "here and in that file's comment with the reason."
+    )
+    assert sorted(declared & excluded) == []
+    # The surface reaches outside none of the trees, and every reason still applies.
+    assert all(
+        rel.startswith(SURFACE_TREES) for rel in files if any(m(rel) for m in surface)
+    )
+    stale = [p for p, m in zip(NOT_SURFACE, left_out) if not any(m(rel) for rel in excluded)]
+    assert stale == []

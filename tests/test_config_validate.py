@@ -57,7 +57,9 @@ def test_shipped_config_schema_is_draft_2020_12_without_a_version_key() -> None:
     # No version key in the file (ADR-056 point 3); the backbone owns the shape.
     assert "schema_version" not in schema["properties"]
     assert schema["additionalProperties"] is False
-    assert set(schema["properties"]) == {"name", "docs", "friction", "connections", "project"}
+    assert set(schema["properties"]) == {
+        "name", "docs", "friction", "connections", "process", "project",
+    }
 
 
 def test_installed_tree_ships_the_config_schema(make_adopter_repo: MakeAdopterRepo) -> None:
@@ -314,6 +316,55 @@ def test_friction_mode_value_is_checked(make_adopter_repo: MakeAdopterRepo) -> N
     _write_config(repo, "friction:\n  mode: off\n  status-job: weekly\n")
     report = _run(repo)
     assert _paths(report, cv.Severity.ERROR) == ["/friction/mode", "/friction/status-job"]
+
+
+# --- process journal logging (COR-033 point 7) -----------------------------
+
+
+def test_process_journal_settings_validate(make_adopter_repo: MakeAdopterRepo) -> None:
+    repo = make_adopter_repo()
+    _write_config(repo, "process:\n  journal:\n    enabled: true\n    committed: false\n")
+    assert _run(repo).findings == ()
+
+
+def test_process_journal_values_must_be_booleans(make_adopter_repo: MakeAdopterRepo) -> None:
+    repo = make_adopter_repo()
+    _write_config(repo, "process:\n  journal:\n    enabled: 'yes'\n    committed: 1\n")
+    report = _run(repo)
+    assert _paths(report, cv.Severity.ERROR) == [
+        "/process/journal/committed", "/process/journal/enabled",
+    ]
+
+
+def test_unknown_process_journal_key_names_the_nearest_known_key(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    repo = make_adopter_repo()
+    _write_config(repo, "process:\n  journal:\n    enable: true\n")
+    report = _run(repo)
+    assert _paths(report, cv.Severity.ERROR) == ["/process/journal/enable"]
+    assert "did you mean 'enabled'" in report.errors[0].message
+
+
+def test_config_set_turns_journal_logging_on_and_the_ignore_line_follows(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    repo = make_adopter_repo()
+    gitignore = repo.root / ".pkit" / ".gitignore"
+    assert "journal.jsonl" in gitignore.read_text(encoding="utf-8")
+    runner = CliRunner()
+
+    enabled = runner.invoke(main, ["config", "set", "process.journal.enabled", "true", "--yes"])
+    committed = runner.invoke(
+        main, ["config", "set", "process.journal.committed", "true", "--yes"]
+    )
+
+    assert enabled.exit_code == 0, enabled.output
+    assert committed.exit_code == 0, committed.output
+    assert "rendered      .pkit/.gitignore" in committed.output
+    assert "journal.jsonl" not in gitignore.read_text(encoding="utf-8")
+    config = YAML(typ="safe").load(report_context.project_config_path(repo.root).read_text())
+    assert config["process"] == {"journal": {"enabled": True, "committed": True}}
 
 
 def test_friction_findings_on_a_valid_configuration_are_pinned(

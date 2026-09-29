@@ -4,17 +4,21 @@ component:
   name: project-management
   version: 0.54.0
 description: Project-management discipline realized from the pm-workflow methodology — issue hierarchy, state machine, body validation, naming conventions — encoded as schemas a methodology-agnostic engine (skills + agent) consumes at runtime.
-# Floor 1.144.0: create-issue --from-report invokes the backbone's
-# `pkit report link` (shipped in v1.144.0) per DEC-048's one-linker rule.
+# The floor is the newest backbone this package needs: `pkit report link`
+# (shipped in v1.144.0), which create-issue --from-report invokes per DEC-048's
+# one-linker rule; and the backbone release that took over the process-journal
+# ignore line this package no longer declares — the changeset that dropped the
+# line raises the floor to it at that release (`requires_backbone: release`).
 requires_backbone: ">=1.144.0,<2.0.0"
 aliases:
   - pm
 # Runtime-local files this capability owns under `.pkit/` (ADR-009 rule 7).
 # Declared repo-root-relative, exactly as `footprint:` is; the renderer rebases
-# onto the `.pkit/`-relative form `.pkit/.gitignore` needs. The process journal
-# is per-clone audit state, not shared methodology content.
+# onto the `.pkit/`-relative form `.pkit/.gitignore` needs. The issue-lifecycle
+# journals under `project/process/` are not declared here: the process engine
+# writes them, and the backbone ignores them unless the project chose to commit
+# them (`process.journal` in `.pkit/project/config.yaml`, COR-033 point 7).
 runtime_ignore:
-  - .pkit/capabilities/project-management/project/process/**/*.journal.jsonl
   - .pkit/capabilities/project-management/project/instance/*.json
 commands:
   pre-check:

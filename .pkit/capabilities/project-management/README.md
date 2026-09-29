@@ -15,7 +15,7 @@ pkit:
         - .pkit/capabilities/project-management/decisions/**
       record: [COR-017, COR-020, COR-021, COR-023, COR-039, COR-053, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050]
     revalidated:
-      at: 2026-09-29T15:23:50Z
+      at: 2026-09-29T18:35:28Z
       outcome: updated
 ---
 
@@ -194,7 +194,7 @@ Each kit-label check runs only where the kit's own `<axis>:*` labels are that ax
 | `mandatory-issue-state.yaml` present + valid | schema / DEC-019 |
 | Mesh config URIs valid | config / DEC-022 |
 | `hooks.yaml` shape + per-kind validation | hooks / DEC-024 |
-| `review:` block valid | config / DEC-027 + DEC-028 |
+| `review:` block valid; each contributed-reviewer opt-out listed with its reason | config / DEC-027 + DEC-028 + DEC-032 |
 | Title-prefix alignment (sample of open issues) | data quality — new in v0.17.0 (advisory: warns, never fails) |
 
 ### 4b. (Optional) Smoke-test the installation
@@ -322,7 +322,11 @@ Every doubt resolves toward posting again, never toward skipping: comments that 
 
 The keys, by writer:
 
-- **Transition audit (`move-issue --bypass`, key `move-issue`).** The comment is the canonical audit line from [project-management:DEC-049-audit-journal-model]'s one schema template (`<!-- pkit-audit -->` marker first). The digest hashes the transition (from and to), the stripped reason, and the issue's engine-journal length. It is posted **before** the label write, so the justification survives a failed mutation. A retry of that attempt reproduces the comment exactly (the journal is written only after the label write succeeds) and posts nothing new. A different reason posts its own comment, and so does the same transition for the same reason after the move has landed, because the journal has grown. A retry also posts again when the engine is reachable on one attempt and not the other. The key relies on the journal recording each landed move: when it does not — the journal write is best-effort and can fail after the label write succeeds, or a move is made outside pkit — a later bypass identical in transition and reason reproduces the old comment and is skipped (`history --check-drift` flags the out-of-band case). At `audit.projection: full` an unbypassed move's provenance comment is posted only *after* a successful label write, so a failed attempt leaves none to repeat.
+- **Transition audit (`move-issue --bypass`, key `move-issue`).** The comment is the canonical audit line from [project-management:DEC-049-audit-journal-model]'s one schema template (`<!-- pkit-audit -->` marker first). It is posted **before** the label write, so the justification survives a failed mutation. The digest hashes the transition (from and to), the stripped reason, and a count of the moves that have landed on the issue: a failed attempt leaves the count as it was, and a landed move grows it. So a retry of a failed attempt reproduces the comment exactly and posts nothing new, a different reason posts its own comment, and so does the same transition for the same reason made again later. What counts the moves follows the project's journal setting (`process.journal`, the process README's "The journal — optional audit"):
+  - **Logging on:** the issue's engine-journal length. The journal is written only after the label write succeeds. The key relies on the journal recording each landed move: when it does not — the journal write is best-effort and can fail after the label write succeeds, or a move is made outside pkit — a later bypass identical in transition and reason reproduces the old comment and is skipped (`history --check-drift` flags the out-of-band case).
+  - **Logging off (the default):** the issue's count of state-label events on the GitHub timeline — state labels put on and taken off — read from the timeline just before posting. A landed move changes the state label, and a failed label write changes nothing. State-label changes made outside pkit only ever make a later bypass post again.
+
+  The count is empty when it cannot be known: the engine is unreachable, the timeline cannot be read, or, with logging off, a board or a derivation carries `state`, so `move-issue` writes no label and the timeline has no move to count. An empty count differs from every known one, so a retry across that boundary posts again, but two attempts that both fall there look alike. At `audit.projection: full` an unbypassed move's provenance comment is posted only *after* a successful label write, so a failed attempt leaves none to repeat.
 - **`done-work`'s per-reviewer override (key `done-work-reviewer-override`).** The same canonical line, with the per-reviewer detail as prose below it. The digest hashes the reviewer, the reason and HEAD ([project-management:DEC-050-per-reviewer-override]).
 - **`done-work`'s whole-gate bypass and CI bypass, and `merge-pr`'s CI bypass (keys `done-work-bypass`, `done-work-ci-bypass`, `merge-pr-ci-bypass`).** The first line is still the comment's `<!-- pkit-hook: <name> -->` kind marker. The digest hashes the stripped reason and the PR's head commit, so a second bypass with a different reason, or the same reason after new commits, is recorded, and a retry on an unchanged head is not. The prose names the short head commit too (`… at PR head 0123abc`), so two bypasses with the same reason either side of a force-push are told apart by a reader, not just by the hidden key. A CI-bypass retry whose set of failing checks changed renders a different comment and posts again. All `done-work` audit comments post before the merge.
 - **`handoff-issue` (key `handoff-issue`).** The first line is the `<!-- pkit-hook: handoff-issue -->` kind marker, then `Handoff: @<from> → @<to> (<date>, reason: <reason>)`. The digest hashes from, to, the stripped reason, and the issue's count of assignment events (assigned plus unassigned), read with one GraphQL call just before posting. The comment posts **before** the reassignment. A successful handoff adds at least one assignment event and a failed one adds none, so a retry of a failed attempt reproduces the comment and posts nothing new, while A→B, B→A, then A→B again for the same reason is recorded each time. If the count cannot be read the component is empty; that differs from any readable count, so a retry across that boundary posts again, but two attempts that both fail to read it look alike. Assignments made outside pkit only ever make a later handoff post again. The date is in the prose, so a retry on a later day posts a second comment.
@@ -478,6 +482,18 @@ pkit pm show-pr 320 --field review             # -> latest verdict token + reaso
 pkit pm show-pr 320 --field review-history     # -> every verdict per reviewer, oldest first
 ```
 
+#### Lifecycle history — `history` (per [project-management:DEC-049-audit-journal-model])
+
+`pkit pm history <N>` renders issue `#N`'s engine journal — each pkit-governed move with its time, actor, transition and pkit version — and `--check-drift` diffs it against the GitHub timeline's state-label events, flagging each state change the journal has no entry for (exit 3): an out-of-band edit, or a governed move that failed to journal. Both read the journal through the backbone's process engine (`pkit process status --json`), so what they can show depends on the project's journal setting — `process.journal` in `.pkit/project/config.yaml`, off by default (the process README, "The journal — optional audit"):
+
+| Setting | `history` | `--check-drift` | The canonical audit trail |
+|---|---|---|---|
+| Off (default) | "journal logging is not enabled for this project", where the audit trail is instead, and the command that turns logging on — never an empty history | **skipped** with the same reason, exit 0 — never a clean verdict | the tracker: the timeline plus pkit's audit comments (`audit.projection`; at `full` every governed move carries a provenance comment) |
+| `enabled: true`, `committed: false` | the moves governed from this clone | compares the timeline against this clone's moves only, so a move governed from another clone reads as drift — sound for a single-clone workflow | this clone's journal |
+| `enabled: true`, `committed: true` | every governed move, from any clone | compares against the shared record | the committed journal |
+
+Turn logging on with `pkit config set process.journal.enabled true --yes` (add `process.journal.committed true` to commit the journals). The drift check also needs a label to carry `state`; where the board or a derivation carries it, the check is skipped in every mode ([project-management:DEC-051-axis-carriage-activation]).
+
 #### Report-context read verb — `context-workstream` (per pkit ADR-050)
 
 `pkit pm context-workstream` prints the **current workstream** — resolved
@@ -547,6 +563,27 @@ For the local-agent path, run `pkit project-management review-pr <N>` after `rev
 Each reviewer subprocess is capped by a wall-clock **timeout** (seconds). It is a single uniform knob applied to every reviewer — deliberately not a per-agent map (COR-007). Resolution precedence: the `--timeout <seconds>` flag > the `PKIT_REVIEW_AGENT_TIMEOUT` env var > the default **1200**. The default is a *generous ceiling*, not a typical wait: reviewer agent runs are slow and variable (observed 300s to >600s on the same reviewer), so 1200s is meant to be hit only by a genuinely hung agent. (It was raised twice as the ceiling kept getting hit: 300s originally killed heavier reviewers out of the box — e.g. `code-reviewer` needs ~323s — and 600s still timed `code-reviewer` out on a real panel review.) A non-integer, zero, or negative value is a usage error (fail fast) rather than a silent fall-back (an empty or unset `PKIT_REVIEW_AGENT_TIMEOUT` is treated as absent and falls through to the default). When a timeout fires, the reviewer subprocess is killed, no verdict is posted, and `review-pr` exits 3 — so the DEC-028 approval gate stays unsatisfied for that reviewer until a re-run. Raise it further for an unusually slow reviewer with `pkit project-management review-pr <N> --timeout 1800`, or set `PKIT_REVIEW_AGENT_TIMEOUT` once in your environment.
 
 Each reviewer subprocess also reasons at one uniform **effort** level (#1046). A headless reviewer would otherwise inherit the operator's own interactive effort from their user settings, which a review pass rarely needs — and the only way to lower it was to lower the operator's own sessions with it. Resolution precedence: the `--effort <level>` flag > the `PKIT_REVIEW_AGENT_EFFORT` env var > `review.agents.effort` in the project config > unset, in which case nothing is passed and the harness default applies. Levels are the harness's own: `low`, `medium`, `high`, `xhigh`, `max`; anything else is a usage error naming its source, never a silent fall-back. Like the timeout, it is one value for every reviewer, not a per-agent map (COR-007) — per-agent model and effort policy belongs to agent front matter and its overlay override (#1047; the agents README, "Model and effort"). The two compose with one precedence: a value this knob resolves **wins** over a reviewer's front-matter or overlay effort — a run-time knob over a declaration, passed as the reviewer session's `--effort`; when the knob resolves nothing, nothing is passed and the reviewer's own effective effort applies (the harness default when that is unset too). Set it once in `review.agents.effort:`; raise it for one run with `pkit project-management review-pr <N> --effort high`.
+
+#### Opting out of a contributed reviewer (per [project-management:DEC-032-conditional-reviewer-requirements])
+
+An installed capability can contribute a required reviewer to the agent-mode gate — `software-engineering`, for instance, requires `code-reviewer`, `security-reviewer` and `docs-reviewer` on a code-carrying PR. Installing the capability is what turns its contributions on; there is no enable switch. When you want a capability's other content but not one of its gates, opt out of that one contribution in `project/config.yaml`:
+
+```yaml
+review:
+  agents:
+    local_registered:
+      - name: pm-reviewer
+    contributed_opt_out:
+      - capability: software-engineering    # the installed capability contributing it
+        reviewer: docs-reviewer             # the reviewer to stop requiring
+        reason: "Docs are reviewed by the tech-writing team."   # required
+```
+
+- **What it withdraws.** Every rule the named capability contributes for the named reviewer, diff-floor and classification alike. `review-pr` no longer invokes that reviewer and `done-work` no longer requires its APPROVED — no `--bypass` needed. The capability stays installed and its other contributions still apply (here `code-reviewer` and `security-reviewer`). An opted-out reviewer need not be deployed.
+- **What it never withdraws.** A reviewer you register yourself in `local_registered`, and the same reviewer contributed by another capability. The opt-out removes one capability's contribution, not the reviewer.
+- **Where it shows.** `pkit project-management pre-check` lists each opt-out as a `[skip]` line naming the reviewer, the capability and your reason. `review-pr` prints ``opted out: <reviewer> (capability `<capability>`) — <reason>`` under the reviewers it invokes, and a `done-work` refusal names it after the required set.
+- **Validation.** Each entry carries exactly `capability`, `reviewer` and a non-empty `reason`, and names a pair once; the config schema checks this at `pkit validate`. An entry naming a capability that is not installed, or a reviewer that capability does not contribute — a typo, or an entry left behind when you uninstall the capability — is an error: `pre-check` fails on it, and `review-pr` and `done-work` refuse until you fix or remove it, so an opt-out you meant never silently fails to apply.
+- **Yours to keep.** The opt-out lives in your `project/config.yaml`, which `pkit sync` and capability upgrades never touch.
 
 #### Freeform comments — `comment-issue` / `comment-pr` (per [project-management:DEC-047-freeform-comment-verb])
 
@@ -754,7 +791,7 @@ The capability provides the `pkit::work-tracking` role (COR-053); `pkit::` is th
 - **An unresolved point fails the check** (exit 1), naming each filler that could not answer and its fix — update it, pin it, or uninstall it — rather than pass on fewer obligations than it should. The mapping's own filler needs no step of yours: `pkit init` and `pkit sync` provision its dependency for the offline run ([the lifecycle README, "How dependencies are provisioned before an offline run"](../../lifecycle/README.md#the-methodologys-literals)); if it is not provisioned, its reason says so and names `pkit sync`.
 - **A removal override** in the project's filler file (`docs/pkit/fillers/pkit/work-tracking/doc-check.yaml`, with `remove: [{id, reason}]`) takes an obligation out; the check prints each one removed, with its reason.
 
-**Enforcement is per source** (DEC-053 point 3). The mapping keeps its setting, `code_path_to_doc_mapping.enforce`. Every other source is set in `project/config.yaml` under `doc_check.sources.<source>` — `advisory`, the default for a source not listed (unmet obligations are reported, the check passes), or `enforcing` (an unmet obligation fails it). Enforcing one source never enforces another, and `doc_check.sources.mapping` is refused: the mapping has its setting. As before, the real boundary is wiring `check-doc-mapping` as a required CI status check.
+**Enforcement is per source** (DEC-053 point 3). The mapping keeps its setting, `code_path_to_doc_mapping.enforce`. Every other source is set in `project/config.yaml` under `doc_check.sources.<source>` — `advisory`, the default for a source not listed (unmet obligations are reported, the check passes), or `enforcing` (an unmet obligation fails it). Enforcing one source never enforces another, and `doc_check.sources.mapping` is refused: the mapping has its setting. As before, the real boundary is wiring `check-doc-mapping` as a required CI status check: one line of the project's check gate, `pkit pm check-doc-mapping --base "<base>"`, against the same base as the core change check (`pkit friction check --base "<base>"`) — both diff the head against its merge-base with that ref — with the gate a required status on the default branch.
 
 ```yaml
 code_path_to_doc_mapping:

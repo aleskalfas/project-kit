@@ -138,6 +138,16 @@ Live evaluation is authoritative over any journal entry. Both shipped reasons
 resolve from one subject's reality; the cross-subject reasons and the
 hooks/selection slots stay deferred per COR-034.
 
+The journal is optional audit (COR-033 point 7): the engine writes and reads it
+only when the project enables journal logging (`process.journal.enabled` in the
+backbone configuration, read by `process_journal`). With logging off — the
+default — a `move` validates and succeeds exactly as with it on, and writes
+nothing; `reconcile_blocked` has nothing to record; `read_journal` is empty and
+the status view says logging is off rather than showing an empty history.
+Position, gates, invariants and the live blocked overlay never read the journal,
+so every verdict is the same in both modes; only the wait's `since` (audit
+colour, read from the journal) is absent when logging is off.
+
 Scope notes for this slice:
 
 - *Multi-prompt-per-state is out of scope.* `_current_prompt` surfaces the
@@ -175,7 +185,7 @@ from typing import Any
 from jsonschema import Draft202012Validator
 from ruamel.yaml import YAML
 
-from project_kit import cli_render
+from project_kit import cli_render, process_journal
 from project_kit.command_runner import Ending, registered_commands, run_command
 from project_kit.validators import Finding, Outcome
 from project_kit.install import find_target_root
@@ -614,7 +624,9 @@ class BlockedState:
 
 @dataclass(frozen=True)
 class MoveResult:
-    """The outcome of an attempted move."""
+    """The outcome of an attempted move. `journal_entry` is the entry the move
+    appended — None when the move was refused, or when the project keeps no
+    journal (COR-033 point 7)."""
 
     ok: bool
     reason: str
@@ -763,6 +775,21 @@ class ProcessEngine:
             repo_root=repo_root,
             subject=subject,
         )
+        # COR-033 point 7: read on first use, once per engine — an inner engine
+        # built only to resolve a position never touches the journal.
+        self._journal_settings: process_journal.JournalSettings | None = None
+
+    @property
+    def journal_settings(self) -> process_journal.JournalSettings:
+        """The project's journal-logging choice (COR-033 point 7)."""
+        if self._journal_settings is None:
+            self._journal_settings = process_journal.read_settings(self.repo_root)
+        return self._journal_settings
+
+    @property
+    def journal_enabled(self) -> bool:
+        """Whether the engine keeps a journal for this project. Off by default."""
+        return self.journal_settings.enabled
 
     @classmethod
     def for_subject(
@@ -1839,11 +1866,21 @@ class ProcessEngine:
         return False, f"gate refused: {first.outcome.reason}", position
 
     def move(self, to_state: str, actor: str) -> MoveResult:
-        """Execute a legal move: validate, then append a journal entry. Refuses
-        (no journal write) when `can_move` refuses."""
+        """Execute a legal move: validate, then append a journal entry when the
+        project keeps a journal. Refuses (no journal write) when `can_move`
+        refuses. The verdict — allowed or refused, and why — is the same with
+        journal logging on or off (COR-033 point 7): with it off, a legal move
+        succeeds and records nothing."""
         allowed, reason, position = self.can_move(to_state, actor)
         if not allowed:
             return MoveResult(ok=False, reason=reason)
+        if not self.journal_enabled:
+            # Deliberately skips the wait reconcile below too, not only the move
+            # entry: `reconcile_blocked` only journals the wait's enter/resume
+            # audit, and with no journal there is nothing to record. Blocked-ness
+            # is the live overlay (`evaluate_blocked`), recomputed on every read
+            # and authoritative either way, so no verdict is lost here.
+            return MoveResult(ok=True, reason=reason)
 
         check = next(
             c
@@ -1896,7 +1933,12 @@ class ProcessEngine:
 
         The journal is the intent log; the CURRENT blocked-ness is always the
         live `evaluate_blocked`, authoritative over what is journaled here.
+
+        With journal logging off (COR-033 point 7) there is nothing to record:
+        it returns None without evaluating anything.
         """
+        if not self.journal_enabled:
+            return None
         if assume_state is not None:
             # Reconcile as if the subject is AT the move's target (G2): build a
             # synthetic, determinate position for it and precheck its outgoing
@@ -1989,7 +2031,14 @@ class ProcessEngine:
     def read_journal(self) -> list[dict[str, Any]]:
         """Read the append-only journal, oldest first. Skips unparseable lines
         rather than failing — the journal is an audit trail, best-effort to read
-        for the status view."""
+        for the status view.
+
+        Empty when the project keeps no journal (COR-033 point 7), even if an
+        earlier journal file is still on disk: logging off means the engine
+        neither writes nor reads one. Callers that show history check
+        `journal_enabled` and say so rather than presenting the empty list."""
+        if not self.journal_enabled:
+            return []
         path = self.journal_path()
         if not path.is_file():
             return []
@@ -2321,11 +2370,14 @@ def render_status_narrative(engine: ProcessEngine, actor: str) -> str:
             lines.append(f"    folds {cascade.address} ({cascade.op})")
             lines.append(f"    fold: {cascade.reason}")
 
-    # How it got here (journal).
+    # How it got here (journal — kept only when the project enables it, COR-033
+    # point 7; with it off, say so rather than showing an empty history).
     journal = engine.read_journal()
     lines.append("")
     lines.append("  " + cli_render.style("heading", "How it got here:"))
-    if not journal:
+    if not engine.journal_enabled:
+        lines.append(f"    ({process_journal.NOT_ENABLED})")
+    elif not journal:
         lines.append("    (no recorded moves)")
     else:
         for entry in journal:
@@ -2521,6 +2573,11 @@ def render_status_json(engine: ProcessEngine, actor: str) -> str:
             }
             for inv in engine.evaluate_invariants()
         ],
+        # COR-033 point 7: the journal is optional audit. `journal_logging` says
+        # whether this project keeps one (and whether it commits it), so a reader
+        # can tell "logging is off" from "no moves recorded yet" — `journal` is
+        # the empty list in both.
+        "journal_logging": engine.journal_settings.as_dict(),
         "journal": engine.read_journal(),
         "legal_moves": [
             {

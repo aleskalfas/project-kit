@@ -1,0 +1,34 @@
+component: backbone
+kind: minor
+custom:
+  category: Changed
+body: >
+  Process journal logging is opt-in and off by default (COR-033 point 7). The
+  process engine keeps its per-subject journal only when
+  `.pkit/project/config.yaml` sets `process.journal.enabled: true`; with it
+  unset the engine writes and reads no journal, and every verdict — position,
+  gates, invariants, the live blocked overlay, whether a move is allowed — is
+  unchanged, because none of them ever read the journal. Only the audit goes:
+  no move or wait entries, and no `since` on a wait. `pkit process status`
+  says "journal logging is not enabled for this project" instead of an empty
+  history, and its `--json` gains `journal_logging: {enabled, committed}`
+  beside `journal`.
+
+  When logging is on, `process.journal.committed` chooses between committing
+  the journals (`true`) and keeping them per clone (`false`, the default). The
+  rendered `.pkit/.gitignore` follows it: the backbone now declares the journal
+  pattern `.pkit/capabilities/*/project/process/**/*.journal.jsonl` itself
+  (the engine owns the path) and drops it only for committed journals. `pkit
+  config set` re-renders `.pkit/.gitignore` at once when the new value changes
+  it. `pkit validate` checks both keys (booleans, unknown keys refused with the
+  nearest known one).
+
+  Upgrading keeps behaviour: the backbone migration
+  `1.150.0/001-keep-process-journal-logging.sh` records `enabled: true` for a
+  project it finds keeping journals, with `committed` following whether those
+  journals are tracked by git, and writes nothing otherwise. Upgrade the
+  project-management capability together with the backbone: an older version
+  still declares its own journal ignore line, which leaves new journal files
+  out of commits even with `committed: true`. Documented in the
+  process README ("The journal — optional audit") and the CLI reference's
+  configuration table.

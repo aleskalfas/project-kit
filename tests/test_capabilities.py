@@ -2124,33 +2124,188 @@ def test_uninstall_incubated_keeps_subtree_and_drops_registry(
     assert (cap_dir / "skills" / "home-skill.md").read_text(encoding="utf-8") == skill_before
 
 
-def test_uninstall_incubated_clears_deployed_harness_symlinks(
+# The real adapter-script runner, taken before any fixture replaces it: the
+# adopter-repo fixture stubs every adapter script out, and the undeploy tests
+# below run the real one.
+_RUN_ADAPTER_PRIMITIVE = install_mod._run_adapter_primitive  # pyright: ignore[reportPrivateUsage]
+
+_UNDEPLOY = install_mod.ADAPTER_UNDEPLOY_PRIMITIVE
+
+
+def _record_adapter_scripts(monkeypatch) -> list[tuple[str, str, tuple[str, ...]]]:
+    """Record each adapter script the lifecycle runs, as (adapter, script, arguments)."""
+    calls: list[tuple[str, str, tuple[str, ...]]] = []
+
+    def _record(script: Path, _ctx: install_mod.InstallContext, *args: str) -> None:
+        calls.append((script.parent.name, script.name, args))
+
+    monkeypatch.setattr(install_mod, "_run_adapter_primitive", _record)
+    return calls
+
+
+def _add_adapter(root: Path, name: str, *, undeploy: str | None) -> Path:
+    """Install a further adapter; with `undeploy`, it ships that script as its undeploy one."""
+    adapter = root / ".pkit" / "adapters" / name
+    adapter.mkdir(parents=True)
+    (adapter / "README.md").write_text(f"# {name}\n", encoding="utf-8")
+    if undeploy is not None:
+        script = adapter / _UNDEPLOY
+        script.write_text(undeploy, encoding="utf-8")
+        script.chmod(0o755)
+    return adapter
+
+
+def test_uninstall_incubated_undeploys_through_the_adapter_primitive(
     kit_target: Path, kit_source: Path, monkeypatch
 ) -> None:
-    """Unregister-in-place drops the capability's deployed skills/agents though its files stay."""
+    """Unregister-in-place runs the claude-code adapter's own undeploy primitive: the
+    capability's deployed skill and agent go though its files stay, and an adopter's
+    agent stays."""
     cap_dir = _register_incubated_via_cli(
         kit_target, kit_source, monkeypatch, "homegrown",
         with_skills=("home-skill",), with_agents=("home-agent",),
     )
+    monkeypatch.setattr(install_mod, "_run_adapter_primitive", _RUN_ADAPTER_PRIMITIVE)
 
-    # Simulate the harness deploy: a skill symlink into the capability subtree
-    # and a resolved-copy agent keyed by name.
+    # As the claude-code deploy primitives leave them: a relative SKILL.md link
+    # into the capability, and a resolved agent copy carrying deploy-agents.sh's marker.
+    adapter = kit_target / ".pkit" / "adapters" / "claude-code"
+    marker = next(
+        line.removeprefix('MARKER="').removesuffix('"')
+        for line in (adapter / "deploy-agents.sh").read_text(encoding="utf-8").splitlines()
+        if line.startswith('MARKER="')
+    )
     deployed_skill = kit_target / ".claude" / "skills" / "home-skill"
     deployed_skill.mkdir(parents=True)
     (deployed_skill / "SKILL.md").symlink_to(
-        cap_dir / "skills" / "home-skill.md"
+        "../../../.pkit/capabilities/homegrown/skills/home-skill.md"
     )
-    deployed_agent = kit_target / ".claude" / "agents" / "home-agent.md"
-    deployed_agent.parent.mkdir(parents=True, exist_ok=True)
-    deployed_agent.write_text("resolved copy\n", encoding="utf-8")
+    agents = kit_target / ".claude" / "agents"
+    agents.mkdir(parents=True, exist_ok=True)
+    deployed_agent = agents / "home-agent.md"
+    deployed_agent.write_text(f"---\n{marker}\nname: home-agent\n---\n", encoding="utf-8")
+    adopters_agent = agents / "mine.md"
+    adopters_agent.write_text("---\nname: mine\n---\n", encoding="utf-8")
 
-    caps.uninstall_capability(kit_target, "homegrown")
+    outcome = caps.uninstall_capability(kit_target, "homegrown")
 
-    # Deployed harness artifacts dropped; the authored source subtree kept.
+    assert outcome.adapters_without_undeploy == ()
     assert not deployed_skill.exists()
     assert not deployed_agent.exists()
+    assert adopters_agent.is_file()
     assert cap_dir.is_dir()
     assert (cap_dir / "skills" / "home-skill.md").is_file()
+    assert (cap_dir / "agents" / "home-agent.md").is_file()
+    assert not caps.is_installed(kit_target, "homegrown")
+
+
+def test_uninstall_in_place_runs_each_adapters_undeploy_primitive(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    """Every installed adapter's undeploy primitive runs, found as the deploy primitives
+    are found, and each is told the capability's name and nothing else."""
+    _register_incubated_via_cli(kit_target, kit_source, monkeypatch, "homegrown")
+    _add_adapter(kit_target, "second-harness", undeploy="#!/bin/sh\nexit 0\n")
+    calls = _record_adapter_scripts(monkeypatch)
+
+    outcome = caps.uninstall_capability(kit_target, "homegrown")
+
+    assert calls == [
+        ("claude-code", _UNDEPLOY, ("homegrown",)),
+        ("second-harness", _UNDEPLOY, ("homegrown",)),
+    ]
+    assert outcome.adapters_without_undeploy == ()
+
+
+def test_uninstall_in_place_reports_an_adapter_without_undeploy_primitive(
+    kit_target: Path, kit_source: Path, monkeypatch, capsys
+) -> None:
+    """An adapter that ships no undeploy primitive is named, not skipped silently; the
+    adapters that ship one still run."""
+    _register_incubated_via_cli(kit_target, kit_source, monkeypatch, "homegrown")
+    _add_adapter(kit_target, "bare-harness", undeploy=None)
+    calls = _record_adapter_scripts(monkeypatch)
+    capsys.readouterr()
+
+    outcome = caps.uninstall_capability(kit_target, "homegrown")
+
+    assert outcome.adapters_without_undeploy == ("bare-harness",)
+    said = " ".join(capsys.readouterr().out.split())
+    assert (
+        f"warning adapter 'bare-harness' ships no {_UNDEPLOY}: capability 'homegrown' "
+        "stays deployed in its harness." in said
+    )
+    assert calls == [("claude-code", _UNDEPLOY, ("homegrown",))]
+    assert not caps.is_installed(kit_target, "homegrown")
+
+
+def test_cli_uninstall_reports_an_adapter_without_undeploy_primitive(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    _register_incubated_via_cli(kit_target, kit_source, monkeypatch, "homegrown")
+    _add_adapter(kit_target, "bare-harness", undeploy=None)
+
+    result = CliRunner().invoke(main, ["capabilities", "uninstall", "homegrown"])
+
+    assert result.exit_code == 0, result.output
+    assert f"adapter 'bare-harness' ships no {_UNDEPLOY}" in result.output
+
+
+def test_a_failing_undeploy_primitive_leaves_the_capability_registered(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    """The undeploy runs before the unregister, so a failure leaves the uninstall re-runnable."""
+    _register_incubated_via_cli(kit_target, kit_source, monkeypatch, "homegrown")
+    _add_adapter(kit_target, "broken-harness", undeploy="#!/bin/sh\nexit 3\n")
+    monkeypatch.setattr(install_mod, "_run_adapter_primitive", _RUN_ADAPTER_PRIMITIVE)
+
+    with pytest.raises(click.ClickException, match="exited with status 3"):
+        caps.uninstall_capability(kit_target, "homegrown")
+
+    assert caps.is_installed(kit_target, "homegrown")
+
+
+def test_uninstall_kit_shipped_leaves_undeploy_to_the_deploy_rerun(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    """A deleted subtree needs no undeploy primitive: the caller's deploy re-run drops
+    the harness entries of a source that is gone."""
+    _stage_capability_in_source(kit_source, "evidence", with_skills=("ev-skill",))
+    source = caps.find_capability_in_source(kit_source, "evidence")
+    assert source is not None
+    caps.install_capability(kit_target, source)
+    calls = _record_adapter_scripts(monkeypatch)
+
+    outcome = caps.uninstall_capability(kit_target, "evidence")
+
+    assert outcome.files_deleted is True
+    assert calls == []
+
+
+# The capability lifecycle's modules. Where a harness keeps skills and agents is
+# its adapter's knowledge (COR-013); the lifecycle reaches it through the adapter
+# primitives only.
+_LIFECYCLE_MODULES = (
+    "capabilities.py",
+    "capability_plans.py",
+    "lifecycle_ownership.py",
+    "manifest.py",
+    "migrations.py",
+    "upgrade.py",
+)
+
+
+@pytest.mark.parametrize("module", _LIFECYCLE_MODULES)
+def test_the_lifecycle_carries_no_harness_path(module: str) -> None:
+    source = Path(install_mod.__file__).with_name(module).read_text(encoding="utf-8")
+
+    hits = [
+        f"{number}: {line.strip()}"
+        for number, line in enumerate(source.splitlines(), start=1)
+        if ".claude" in line
+    ]
+
+    assert hits == [], f"{module} names a harness path:\n" + "\n".join(hits)
 
 
 def test_uninstall_incubated_purge_deletes_subtree(
