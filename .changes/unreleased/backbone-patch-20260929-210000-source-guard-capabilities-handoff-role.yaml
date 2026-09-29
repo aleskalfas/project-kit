@@ -1,0 +1,20 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  A source checkout whose dispatcher `.pkit/cli/pkit` has been deleted is still
+  recognised as the methodology's source repository: the marker test is the
+  package source beside `.pkit/` (ADR-059 point 3), so the router's warning says
+  the checkout carries the package source but no dispatcher and names
+  `git checkout -- .pkit/cli/pkit`, and a sync or upgrade run by other code
+  refuses rather than propagating over it. `pkit capabilities install`,
+  `upgrade` and `register` refuse the same way in the source repository when
+  the running code is not its own, with the same message, before any other
+  pre-flight. The refusal's first line now reads "refusing to run `<command>`
+  in <root>". `capabilities install`, `register` and `upgrade` provision the
+  capability's query commands after deploying it, printing the lines `sync`
+  prints, so `pkit validate` answers offline without a `pkit sync` first.
+  `pkit process hand-off` resolves a role-addressed upstream through the
+  wiring, as `health` and `couple` do, validating the trigger against the
+  offered process instead of warning that it does not resolve.
