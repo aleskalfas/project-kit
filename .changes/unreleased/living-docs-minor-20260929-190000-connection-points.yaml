@@ -17,5 +17,7 @@ body: >
   to the work-tracking role's `pkit::work-tracking:doc-check` point: one
   `page-stale` obligation per page the whole-repository friction check reports
   stale or deferred, and one `code-undocumented` obligation per uncovered surface
-  path, each with the source `friction`. The contribution is inert when no
-  work-tracking capability is installed.
+  path, each with the source `friction`. A `code-undocumented` obligation names
+  the code as `path` and no `document`: a page changing never meets it, only a
+  page anchoring the path, after which the command no longer gives it. The
+  contribution is inert when no work-tracking capability is installed.

@@ -16,7 +16,8 @@ Three layers:
   unresolved, which the validator reports once rather than per page;
 - the contribution through the real backbone: obligations in
   project-management's shape, read from the whole-repository friction check,
-  and inert when no work-tracking provider is installed.
+  and inert when no work-tracking provider is installed; and project-management's
+  check over them, where an uncovered path is met only once a page anchors it.
 
 The capability's scripts are pointed at this interpreter in the adopter copy,
 and the `pkit` they read through is the real CLI under this interpreter
@@ -264,7 +265,9 @@ PAGES = ["docs/current.md", "docs/deferred.md", "docs/guide.md"]
 
 
 def test_friction_debt_on_pages_and_uncovered_surface_become_obligations() -> None:
-    obligations = doc_check_lib.obligations(REPORT, PAGES, "tech-docs")
+    """A page's friction names the page, whose answer in the diff meets it; an
+    uncovered path names only the code, since only a page anchoring it meets it."""
+    obligations = doc_check_lib.obligations(REPORT, PAGES)
     assert obligations == [
         {
             "id": "friction:page-stale:docs/deferred.md",
@@ -289,7 +292,6 @@ def test_friction_debt_on_pages_and_uncovered_surface_become_obligations() -> No
             "id": "friction:code-undocumented:src/d.py",
             "source": "friction",
             "reason": "code-undocumented",
-            "document": "tech-docs/**",
             "path": "src/d.py",
             "description": "src/d.py is in the declared surface and nothing anchors it — "
             "anchor it from a page",
@@ -298,7 +300,6 @@ def test_friction_debt_on_pages_and_uncovered_surface_become_obligations() -> No
             "id": "friction:code-undocumented:src/z.py",
             "source": "friction",
             "reason": "code-undocumented",
-            "document": "tech-docs/**",
             "path": "src/z.py",
             "description": "src/z.py is in the declared surface and nothing anchors it — "
             "anchor it from a page",
@@ -315,17 +316,17 @@ def test_a_page_whose_friction_cannot_be_judged_is_no_answer() -> None:
     with pytest.raises(
         doc_check_lib.NoAnswer, match=r"friction on docs/guide\.md cannot be judged"
     ):
-        doc_check_lib.obligations(report, PAGES, "tech-docs")
+        doc_check_lib.obligations(report, PAGES)
     # Only a page's: an unjudged artefact that is not a page leaves the answer whole.
-    answer = doc_check_lib.obligations(report, ["docs/other.md"], "docs")
-    assert [(o["reason"], o["document"]) for o in answer] == [
-        ("code-undocumented", "docs/**"),
-        ("code-undocumented", "docs/**"),
+    answer = doc_check_lib.obligations(report, ["docs/other.md"])
+    assert [(o["reason"], o["path"]) for o in answer] == [
+        ("code-undocumented", "src/d.py"),
+        ("code-undocumented", "src/z.py"),
     ]
 
 
 def test_a_dormant_check_owes_nothing() -> None:
-    assert doc_check_lib.obligations({"dormant": True, "artefacts": []}, PAGES, "docs") == []
+    assert doc_check_lib.obligations({"dormant": True, "artefacts": []}, PAGES) == []
 
 
 # --- reader resolution through the backbone ------------------------------------------------
@@ -589,10 +590,10 @@ def test_the_filler_contributes_page_friction_and_uncovered_surface(
 
     resolved, ours = _living_docs_entries(repo)
     assert resolved["resolved"], resolved["why"]
-    assert [(o["id"], o["document"]) for o in ours] == [
-        ("friction:page-stale:docs/deferred.md", "docs/deferred.md"),
-        ("friction:page-stale:docs/guide.md", "docs/guide.md"),
-        ("friction:code-undocumented:src/d.py", "tech-docs/**"),
+    assert [(o["id"], o.get("document"), o.get("path")) for o in ours] == [
+        ("friction:page-stale:docs/deferred.md", "docs/deferred.md", None),
+        ("friction:page-stale:docs/guide.md", "docs/guide.md", None),
+        ("friction:code-undocumented:src/d.py", None, "src/d.py"),
     ]
     assert ours[1]["description"] == (
         "stale: path src/a.py changed — pkit friction explain docs/guide.md"
@@ -613,3 +614,88 @@ def test_the_filler_contributes_page_friction_and_uncovered_surface(
         main, ["--color", "never", "validate", "--only", "packages", "--only", "connections"]
     )
     assert result.exit_code == 0, result.output
+
+
+def _track(repo: AdopterRepo, config: str) -> None:
+    """project-management's configuration, and the stamp its check's gate reads."""
+    repo.write(
+        {
+            f"{PM}/project/config.yaml": (
+                "schema_version: 1\ndefault_branch: main\nworkstreams: []\n" + config
+            ),
+            f"{PM}/project/bootstrap-stamp.yaml": (
+                "schema_version: 1\n"
+                "bootstrap:\n"
+                "  completed_at: '2026-01-01T00:00:00+00:00'\n"
+                "  capability_version: 0.0.0-test\n"
+                "  by: bootstrap\n"
+                "  repo:\n"
+            ),
+        }
+    )
+
+
+def _check_doc_mapping(repo: AdopterRepo, body: Path) -> subprocess.CompletedProcess[str]:
+    """project-management's check of the branch against `base`, reading the point
+    through the real `pkit` first on PATH."""
+    env = {k: v for k, v in os.environ.items() if k != "PKIT_OFFLINE"}
+    script = repo.root / PM / "scripts" / "check-doc-mapping.py"
+    return subprocess.run(
+        [sys.executable, str(script), "--base", "base", "--pr-body-file", str(body)],
+        cwd=repo.root,
+        capture_output=True,
+        text=True,
+        env=env,
+        check=False,
+    )
+
+
+def test_an_uncovered_path_is_unmet_until_a_page_on_the_branch_anchors_it(
+    tracked_project: AdopterRepo, tmp_path: Path
+) -> None:
+    """One branch in two states, through the real friction check, filler, point and
+    check. A change under the internal root that anchors nothing leaves the path
+    unmet, and so does a `## Doc impact` line naming it; once a page on the branch
+    anchors the path, the filler — reading HEAD — no longer gives the obligation."""
+    repo = tracked_project
+    _track(
+        repo,
+        "code_path_to_doc_mapping:\n"
+        "  rules:\n"
+        "    - { code: 'lib/**', docs: [tech-docs/lib.md] }\n"
+        "doc_check:\n"
+        "  sources:\n"
+        "    friction: enforcing\n",
+    )
+    repo.write({"src/d.py": "D = 1\n"})
+    repo.commit("base")
+    repo.git("branch", "base")
+    body = tmp_path / "body.md"
+    body.write_text(
+        "## Doc impact\n- src/d.py: described in tech-docs/README.md\n", encoding="utf-8"
+    )
+
+    readme = _page("maintainer") + "\n`src/d.py` holds D.\n"
+    repo.commit("describe d", {"tech-docs/README.md": readme})
+    unmet = _check_doc_mapping(repo, body)
+    assert (unmet.returncode, unmet.stdout, unmet.stderr) == (
+        1,
+        "check-doc-mapping: 1 rule(s), 1 changed file(s), mode=advisory\n"
+        "check-doc-mapping: 1 contributed obligation(s) from friction\n"
+        "  ✗ [friction] src/d.py → no page anchors it (code-undocumented); "
+        "anchor `src/d.py` from a page\n",
+        "\n[refused] 1 friction obligation(s) unanchored — anchor each path from a page; "
+        "a `## Doc impact` line does not meet them.\n",
+    )
+
+    page = friction_document(
+        None, anchors={"path": ["src/d.py"]}, reader="maintainer", kind="signpost"
+    )
+    repo.commit("anchor d", {"tech-docs/d.md": page})
+    met = _check_doc_mapping(repo, body)
+    assert (met.returncode, met.stdout, met.stderr) == (
+        0,
+        "check-doc-mapping: 1 rule(s), 2 changed file(s), mode=advisory\n"
+        "check-doc-mapping: all touched mappings satisfied.\n",
+        "",
+    )

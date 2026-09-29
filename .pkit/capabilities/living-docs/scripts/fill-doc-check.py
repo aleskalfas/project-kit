@@ -44,16 +44,14 @@ from typing import Any
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import doc_check, spaces  # noqa: E402
-from _lib.declarations import project_root, read_declarations  # noqa: E402
+from _lib.declarations import project_root  # noqa: E402
 
 
 def obligations(root: Path) -> list[dict[str, Any]]:
     """The point's obligations for the project at `root`. Raises NoAnswer."""
     if not doc_check.has_commit(str(root)):
         return []  # nothing committed: no HEAD to judge, so nothing is owed
-    report = doc_check.read_friction(str(root))
-    internal_root = read_declarations(root).internal_root
-    return doc_check.obligations(report, spaces.pages(root), internal_root)
+    return doc_check.obligations(doc_check.read_friction(str(root)), spaces.pages(root))
 
 
 def main() -> int:
@@ -80,7 +78,7 @@ def main() -> int:
         return 0
     print(f"{doc_check.POINT}: {len(value)} {doc_check.SOURCE} obligation(s)")
     for obligation in value:
-        subject = obligation.get("path", obligation["document"])
+        subject = obligation.get("path") or obligation["document"]
         print(f"  {obligation['reason']}  {subject} — {obligation['description']}")
     return 0
 

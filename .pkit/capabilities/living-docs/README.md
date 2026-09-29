@@ -107,8 +107,8 @@ An analysis capability, such as software-analysis, can supply readers too, under
 
 **Contributes to `pkit::work-tracking:doc-check`**, the documentation check of a work-tracking capability such as project-management ([project-management:DEC-053-doc-check-slot]). Its command, `fill-doc-check`, reads the core's whole-repository friction check at HEAD (`pkit friction check --all --json`) and prints obligations with the source `friction`:
 
-- `page-stale` — one per page the check reports stale or deferred. The page's answer in the pull request's diff meets it.
-- `code-undocumented` — one per path of the declared surface that nothing anchors, naming the code as `path` and the internal root as `document`. It leaves the point once a page anchors the code.
+- `page-stale` — one per page the check reports stale or deferred, naming the page as `document`. The page's answer in the pull request's diff meets it.
+- `code-undocumented` — one per path of the declared surface that nothing anchors, naming the code as `path` and no `document`: no page's change meets it, only a page anchoring the path. The command reads HEAD, so the obligation leaves the point once a page on the branch anchors the code; until then the check reports it unmet, with the fix — anchor the path from a page.
 
 The work-tracking capability decides whether `friction` obligations block. With project-management they are advisory until you set `doc_check.sources.friction: enforcing`. A repository with no commit yet owes nothing. If a page's friction lies beyond a shallow clone's history, the command gives no answer: the check then reports itself unresolved rather than pass on fewer obligations, so fetch the full history. `pkit living-docs fill-doc-check` lists the obligations, and `--json` prints what the backbone reads. The contribution is inert when no work-tracking capability is installed.
 

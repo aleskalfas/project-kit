@@ -12,10 +12,10 @@ which judges HEAD against its history (COR-050):
   whose answer in the diff — updated, unchanged with its justification, or
   deferred with its reason — meets it.
 - **`code-undocumented`** — one per path of the declared surface that nothing
-  anchors (COR-050 point 8). Its `path` is the code; its `document` is where a
-  new page of the technical space goes, the internal root (DEC-001 point 1).
-  The obligation leaves the point once a page anchors the code, since the
-  check reads HEAD: that is how it is met (DEC-053 point 2).
+  anchors (COR-050 point 8). Its `path` is the code, and it names no
+  `document`: no page's change answers it, only a page anchoring the path.
+  The obligation leaves the point once one does, since the check reads HEAD:
+  that is how it is met (DEC-053 point 2).
 
 Every obligation's source is `friction` — the signal, never the capability that
 reads it, so another provider of the documentation role contributes under the
@@ -90,9 +90,7 @@ def read_friction(root: str, run: Runner = subprocess.run) -> Mapping[str, Any]:
     return document
 
 
-def obligations(
-    report: Mapping[str, Any], pages: Iterable[str], internal_root: str
-) -> list[dict[str, Any]]:
+def obligations(report: Mapping[str, Any], pages: Iterable[str]) -> list[dict[str, Any]]:
     """The obligations `report` gives rise to: the pages' friction debt, then the
     uncovered surface, each sorted. Raises NoAnswer when a page's friction
     cannot be judged in this clone."""
@@ -117,7 +115,7 @@ def obligations(
     surface = sorted(str(p) for p in (report.get("measures") or {}).get("uncovered_surface") or [])
     return [
         *(_page_stale(page, state, findings) for page, state in stale),
-        *(_code_undocumented(path, internal_root) for path in surface),
+        *(_code_undocumented(path) for path in surface),
     ]
 
 
@@ -150,12 +148,11 @@ def _detail(finding: Mapping[str, Any]) -> str:
     return f"{anchor.get('kind')} {anchor.get('value')} {verb}"
 
 
-def _code_undocumented(path: str, internal_root: str) -> dict[str, Any]:
+def _code_undocumented(path: str) -> dict[str, Any]:
     return {
         "id": f"{SOURCE}:{CODE_UNDOCUMENTED}:{path}",
         "source": SOURCE,
         "reason": CODE_UNDOCUMENTED,
-        "document": "**" if internal_root == "." else f"{internal_root}/**",
         "path": path,
         "description": f"{path} is in the declared surface and nothing anchors it — "
         f"anchor it from a page",
