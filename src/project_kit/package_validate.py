@@ -30,10 +30,12 @@ passes, in order, each producing findings located by JSON Pointer:
    (`query-contract: true`, ADR-057 point 3 and ADR-058), a contribution
    names `command` or `value` but not both, documentation locations are
    relative sub-paths, friction places lie inside a declared location or the
-   project, and the generated `depends-on` list says what the component's
-   process definitions generate (`process_dependencies.staleness`, COR-053
-   point 4) — a stale copy names `pkit capabilities refresh <name>` as the
-   fix. All ERRORs.
+   project, an offered process point names a definition of the component whose
+   `interface.version`, where it declares one, equals the point's
+   `schema_version` (COR-053 point 5), and the generated `depends-on` list says
+   what the component's process definitions generate
+   (`process_dependencies.staleness`, COR-053 point 4) — a stale copy names
+   `pkit capabilities refresh <name>` as the fix. All ERRORs.
 
 The checks across packages — roles and their providers, counterparts against
 point versions, mandatory marks and cycles, fingerprints, the version
@@ -479,7 +481,8 @@ def _connection_findings(
     component_dir: Path,
     command_leaves: Mapping[tuple[str, ...], Mapping[Any, Any]],
 ) -> list[PackageFinding]:
-    """The `connections` block against the roles it provides, its `schemas/` and `commands:`."""
+    """The `connections` block against the roles it provides, its `schemas/` (the
+    companion schemas and the process definitions it offers) and `commands:`."""
     findings: list[PackageFinding] = []
     _error = _error_appender(findings)
 
@@ -529,6 +532,10 @@ def _connection_findings(
                 elif point.get("kind") == "event":
                     check_companion(f"{path}/schema", point.get("schema"))
                     check_command(f"{path}/command", point.get("command"))
+                elif point.get("kind") == "process":
+                    findings.extend(
+                        _offered_process_findings(path, str(address), point, component_dir)
+                    )
 
     extensions = connections.get("extensions")
     if isinstance(extensions, Mapping):
@@ -560,6 +567,48 @@ def _connection_findings(
                     )
 
     return findings
+
+
+def _offered_process_findings(
+    path: str, address: str, point: Mapping[Any, Any], component_dir: Path
+) -> list[PackageFinding]:
+    """An offered process point against the definition it offers: the definition
+    exists, and the point's `schema_version` is its `interface.version` — the
+    integer the definition declares and the offer carries (COR-036 as refined by
+    COR-053 point 5), so the two cannot drift apart silently. A definition that
+    declares no interface version has none to disagree with."""
+    process_id = point.get("process")
+    if not isinstance(process_id, str) or not process_id:
+        return []  # the shape pass reports it
+    component = component_dir.name
+    found = process_dependencies.offered_definition(component_dir, process_id)
+    if found is None:
+        return [
+            PackageFinding(
+                f"{path}/process",
+                Severity.ERROR,
+                f"offered process point {address!r} names process {process_id!r}, which no "
+                f"definition under {component}/{process_dependencies.SCHEMAS_DIR}/ declares.",
+            )
+        ]
+    definition_file, process = found
+    offered = point.get("schema_version")
+    declared = process_dependencies.interface_version(process)
+    if not isinstance(offered, int) or isinstance(offered, bool):
+        return []  # the shape pass reports it
+    if declared is None or declared == offered:
+        return []
+    definition = f"{component}/{definition_file.relative_to(component_dir).as_posix()}"
+    return [
+        PackageFinding(
+            f"{path}/schema_version",
+            Severity.ERROR,
+            f"offered process point {address!r} is at schema_version {offered} in "
+            f"{component}/{process_dependencies.PACKAGE_FILE}, but its definition {definition} "
+            f"declares interface.version {declared}: an offered process carries its "
+            f"definition's interface version, so the two must be equal (COR-053 point 5).",
+        )
+    ]
 
 
 def _component_name(raw: Mapping[Any, Any], expected: str | None, component_dir: Path) -> str:

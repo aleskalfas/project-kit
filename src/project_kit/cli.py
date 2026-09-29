@@ -6278,8 +6278,11 @@ def process_new(
 @click.option("--state", "state_id", required=True,
               help="The hosting state of the coupling (a state of ADDRESS; the hosting "
                    "state has no semantic effect on any check — audit colour, COR-042).")
-@click.option("--upstream", required=True, metavar="<capability>:<process-id>",
-              help="The upstream process this definition depends on.")
+@click.option("--upstream", required=True,
+              metavar="<capability>:<process-id>|<publisher>::<role>:<point>",
+              help="The upstream process this definition depends on: by implementation, "
+                   "or by role — the process offered at that address by whichever "
+                   "capability is the role's active provider (COR-053 point 2).")
 @click.option("--relation", required=True,
               help="The connection kind, from COR-038's closed set as the shape contract "
                    "declares it (read as data — a new relation kind is an enum value, "
@@ -6289,6 +6292,15 @@ def process_new(
                    "engine — no eventing); from the shape contract's set.")
 @click.option("--why", required=True,
               help="The human-readable reason the render surfaces (required, COR-038).")
+@click.option("--version", "interface_version", type=click.IntRange(min=1), default=None,
+              metavar="<n>",
+              help="The upstream interface version this connection targets: it connects "
+                   "only to an offered process at an equal version (COR-053 point 5).")
+@click.option("--mandatory", "mandatory", default=None, metavar="<reason>",
+              help="Mark the connection mandatory, with the reason every refusal and "
+                   "warning it causes quotes: the capability lifecycle then refuses to "
+                   "install or upgrade this capability while the upstream is missing "
+                   "(COR-053 point 6).")
 @click.option("--dry-run", "dry_run", is_flag=True, default=False,
               help="Report what would change without writing anything.")
 def process_couple(
@@ -6298,20 +6310,28 @@ def process_couple(
     relation: str,
     mode: str,
     why: str,
+    interface_version: int | None,
+    mandatory: str | None,
     dry_run: bool,
 ) -> None:
     """Author a `depends_on` coupling into the invoker-named definition.
 
     Appends the entry to ADDRESS's hosting state (COR-038: coupling lives in
-    the SUBSCRIBER's definition — the upstream is never touched). The entry is
-    inert metadata the runtime engine never evaluates; the definition
-    `version` is NOT bumped (additive inert edit, COR-044). An upstream that
-    does not resolve here is declarable (warned, not refused).
+    the SUBSCRIBER's definition — the upstream is never touched), with
+    `version` and the `mandatory` mark when given. The entry is inert metadata
+    the runtime engine never evaluates; the definition `version` is NOT bumped
+    (additive inert edit, COR-044). An upstream that does not resolve here — a
+    role address through the wiring — is declarable (warned, not refused).
 
     An entry is identified by (upstream, relation, mode) — one state may
     legally depend on the same upstream in two different ways. Idempotent on
     the identical entry; refuses when that key is already declared with a
-    DIFFERENT why.
+    DIFFERENT why, version or mark.
+
+    The stamp writes the definition only. When the capability's generated
+    `depends-on` list in package.yaml is left stale, it ends by naming
+    `pkit capabilities refresh <capability>` — run it; `pkit validate` fails
+    until the list follows the definitions (COR-053 point 4).
     """
     from project_kit import process_authoring as authoring
 
@@ -6325,26 +6345,40 @@ def process_couple(
             relation=relation,
             mode=mode,
             why=why,
+            version=interface_version,
+            mandatory=mandatory,
             dry_run=dry_run,
         )
     except authoring.ProcessAuthoringError as exc:
         raise click.ClickException(str(exc)) from exc
 
     rel = result.definition_path.relative_to(repo_root)
+    edge = ", ".join(
+        [relation, mode]
+        + ([f"v{interface_version}"] if interface_version is not None else [])
+        + (["mandatory"] if mandatory is not None else [])
+    )
     if not result.changed:
         click.echo(
             f"Already declared: {address} state {result.state_id!r} -> "
-            f"{upstream} ({relation}, {mode}); nothing to do."
+            f"{upstream} ({edge}); nothing to do."
         )
     else:
         click.echo(
             f"{'Would couple' if dry_run else 'Coupled'}: {address} state "
-            f"{result.state_id!r} -> {upstream} ({relation}, {mode}) in {rel} "
-            "(version unchanged)."
+            f"{result.state_id!r} -> {upstream} ({edge}) in {rel} "
+            "(definition version unchanged)."
         )
     _echo_authoring_warnings(result.warnings)
     if dry_run:
         click.echo("Dry run — nothing was written.")
+    if result.refresh_command is not None:
+        state = "after a real run would be" if dry_run else "is"
+        click.echo(
+            f"Next: `{result.refresh_command}` — the generated `depends-on` list in the "
+            f"capability's package.yaml {state} stale against its process definitions, "
+            "and `pkit validate` fails until it is regenerated (COR-053 point 4)."
+        )
 
 
 @process.command("hand-off")

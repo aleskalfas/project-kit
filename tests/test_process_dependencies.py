@@ -210,6 +210,55 @@ def test_a_list_without_the_generated_mark_is_stale(tmp_path: Path) -> None:
     assert stale is not None and "not marked `generated: true`" in stale.message("flow")
 
 
+def test_a_pending_entry_counts_as_declared(tmp_path: Path) -> None:
+    """What the coupling stamp's preview asks: would writing this entry leave the list
+    stale? Read from the package file on disk."""
+    cap_dir = _capability(
+        tmp_path,
+        _with_list([{"process": ISSUES}]),
+        flow=_definition("flow", [_coupling(ISSUES)]),
+    )
+    assert deps.package_staleness(cap_dir) is None
+    # Another way of depending on a listed upstream generates no new entry ...
+    other_way = _coupling(ISSUES, relation="informational")
+    assert deps.package_staleness(cap_dir, pending=[other_way]) is None
+    # ... a new upstream, a targeted version or a mark does.
+    for pending, missing in (
+        (_coupling(REVIEW), Entry(REVIEW)),
+        (_coupling(ISSUES, version=2), Entry(ISSUES, 2)),
+        (_coupling(ISSUES, mandatory={"reason": "r"}), Entry(ISSUES, None, "r")),
+    ):
+        stale = deps.package_staleness(cap_dir, pending=[pending])
+        assert stale is not None and stale.missing == (missing,)
+        assert f"`{deps.refresh_command('flow')}`" in stale.message("flow")
+    # Nothing was written: the definitions still generate what the list holds.
+    assert deps.package_staleness(cap_dir) is None
+
+
+def test_package_staleness_does_not_guess_about_a_package_it_cannot_read(tmp_path: Path) -> None:
+    cap_dir = _capability(
+        tmp_path, "component: [unclosed\n", flow=_definition("flow", [_coupling(ISSUES)])
+    )
+    assert deps.package_staleness(cap_dir) is None
+
+
+def test_an_offered_definition_is_found_by_id_the_file_named_after_it_first(
+    tmp_path: Path,
+) -> None:
+    cap_dir = _capability(
+        tmp_path,
+        # `older.yaml` sorts first and declares the same id; the id's own file wins.
+        older=_definition("intake"),
+        intake=_definition("intake"),
+        build=_definition("build"),
+    )
+    found = deps.offered_definition(cap_dir, "intake")
+    assert found is not None and found[0].name == "intake.yaml"
+    found = deps.offered_definition(cap_dir, "build")
+    assert found is not None and deps.interface_version(found[1]) is None
+    assert deps.offered_definition(cap_dir, "nowhere") is None
+
+
 # --- validation fails on a stale copy, naming the fix ---------------------------------
 
 
