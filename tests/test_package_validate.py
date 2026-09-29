@@ -21,8 +21,14 @@ from referencing.jsonschema import DRAFT202012
 from project_kit import backbone_schemas as bs
 from project_kit import capabilities as caps
 from project_kit import package_validate as pv
-from project_kit import process_journal, refs, scaffolds
+from project_kit import lifecycle_ownership, process_journal, refs, scaffolds
 from project_kit.cli import main
+from project_kit.manifest import (
+    ORIGIN_EXTERNALLY_SOURCED,
+    ORIGIN_INCUBATED_IN_REPO,
+    ORIGIN_KIT_SHIPPED,
+    set_capability_origin,
+)
 from tests.adopter_repo import MakeAdopterRepo
 
 REPO = Path(__file__).resolve().parents[1]
@@ -666,11 +672,21 @@ def test_a_runtime_ignore_entry_that_is_not_a_journal_is_not_warned(
     assert _validate(_package(runtime_ignore=[pattern]), schema, component_dir) == []
 
 
-def test_the_journal_warning_names_the_backbone_pattern_and_the_way_out() -> None:
-    message = pv.journal_claim_message(STALE_JOURNAL_LINE)
+@pytest.mark.parametrize(
+    ("provenance", "fix"),
+    [
+        (pv.Provenance.OWN, "Drop the entry"),
+        (pv.Provenance.SYNCED, "a synced copy the next sync overwrites, so do not edit it"),
+        (pv.Provenance.PINNED, "move the pin to an author release that drops the entry"),
+    ],
+)
+def test_the_journal_warning_names_the_backbone_pattern_and_the_way_out(
+    provenance: pv.Provenance, fix: str
+) -> None:
+    message = pv.journal_claim_message(STALE_JOURNAL_LINE, provenance)
     assert repr(process_journal.JOURNAL_GLOB) in message
     assert "`process.journal.committed: true`" in message
-    assert "Upgrade this component together with the backbone" in message
+    assert fix in message
 
 
 @pytest.mark.parametrize(
@@ -955,11 +971,24 @@ def test_pkit_validate_fails_on_a_package_error(make_adopter_repo: MakeAdopterRe
     assert "5 is not of type 'string'" in result.output
 
 
+@pytest.mark.parametrize(
+    ("origin", "fix"),
+    [
+        # A synced copy: the next sync overwrites an edit.
+        (ORIGIN_KIT_SHIPPED, "upgrade this component together with the backbone"),
+        # Restored to its pin on every sync (COR-041).
+        (ORIGIN_EXTERNALLY_SOURCED, "move the pin to an author release that drops the entry"),
+        # The project's own file.
+        (ORIGIN_INCUBATED_IN_REPO, "Drop the entry"),
+    ],
+)
 def test_pkit_validate_warns_on_an_installed_package_declaring_process_journals(
-    make_adopter_repo: MakeAdopterRepo,
+    make_adopter_repo: MakeAdopterRepo, origin: str, fix: str
 ) -> None:
-    """The reverse skew: an older package on a backbone that owns the journal line."""
+    """The reverse skew: an older package on a backbone that owns the journal line.
+    The warning's fix is the one that lasts for where the package comes from."""
     adopter = make_adopter_repo(capabilities=("evidence",))
+    set_capability_origin(adopter.root, "evidence", origin)
     package = _installed_package(adopter.root, "evidence")
     stale = ".pkit/capabilities/evidence/project/process/**/*.journal.jsonl"
     package.write_text(
@@ -971,6 +1000,16 @@ def test_pkit_validate_warns_on_an_installed_package_declaring_process_journals(
     assert "0 error(s), 1 warning(s)" in result.output
     assert "warning  .pkit/capabilities/evidence/package.yaml:/runtime_ignore/0" in result.output
     assert f"→ {stale!r} declares process journals" in result.output
+    assert fix in " ".join(result.output.split())
+
+
+def test_in_the_methodology_source_a_kit_shipped_package_is_its_own() -> None:
+    """The source is where a kit-shipped package is authored, so the fix is to edit it."""
+    package = REPO / ".pkit" / "capabilities" / "project-management" / "package.yaml"
+    ownership = lifecycle_ownership.load_ownership(REPO)
+    assert ownership is not None
+    provenance = pv.package_provenance(REPO, package, ORIGIN_KIT_SHIPPED, ownership)
+    assert provenance is pv.Provenance.OWN
 
 
 def test_packages_pass_without_a_schema_in_the_tree_runs_repository_checks_only(
