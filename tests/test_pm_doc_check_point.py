@@ -461,22 +461,48 @@ def test_an_unresolved_point_fails_the_check_naming_the_filler_and_the_fix(
     ]
 
 
+# What uv prints when the offline run misses its cache (uv 0.9.30, verbatim; the
+# query policy's reading of it is pinned in `test_provisioning.py`).
+_UV_OFFLINE_MISS = (
+    "  × No solution found when resolving script dependencies:\n"
+    "  ╰─▶ Because ruamel-yaml was not found in the cache and you require\n"
+    "      ruamel-yaml>=0.18, we can conclude that your requirements are\n"
+    "      unsatisfiable.\n\n"
+    "      hint: Packages were unavailable because the network was disabled. When\n"
+    "      the network is disabled, registry packages may only be read from the\n"
+    "      cache.\n"
+)
+
+
+@pytest.mark.parametrize(
+    ("body", "reason"),
+    [
+        # The likeliest real failure: its dependency not provisioned for the offline run.
+        (
+            f"sys.stderr.buffer.write({_UV_OFFLINE_MISS.encode()!r})\nsys.exit(1)\n",
+            "command 'fill-doc-check': environment not provisioned — run `pkit sync` (its "
+            "dependencies are not in uv's cache, and a query runs offline)",
+        ),
+        ("sys.exit(3)\n", "command 'fill-doc-check' exited 3"),
+    ],
+)
 def test_the_mapping_s_own_filler_giving_no_answer_fails_the_check(
-    project: AdopterRepo, tmp_path: Path
+    project: AdopterRepo, tmp_path: Path, body: str, reason: str
 ) -> None:
-    """The likeliest real failure — its dependency not provisioned for the offline
-    run — ends the same way as any other: no answer, the point unresolved, never
-    a pass on no obligations. The fix names the filler's own verb."""
+    """No answer ends the same way whatever the cause: the point unresolved,
+    never a pass on no obligations. The reason says which cause it was — an
+    environment not provisioned names `pkit sync` — and the fix names the
+    filler's own verb."""
     _pm_file(project, "scripts/fill-doc-check.py").write_text(
-        f"#!{sys.executable}\nimport sys\nsys.exit(3)\n", encoding="utf-8"
+        f"#!{sys.executable}\nimport sys\n{body}", encoding="utf-8"
     )
     run = _check(project, tmp_path, {"src/a.py": "a\n"})
     assert (run.returncode, run.stdout) == (1, "")
     lines = run.stderr.splitlines()
-    assert lines[1] == f"  inert: {PM} (command 'fill-doc-check'): command 'fill-doc-check' exited 3"
+    assert lines[1] == f"  inert: {PM} (command 'fill-doc-check'): {reason}"
     assert lines[2] == (
-        "  fix: run `pkit pm fill-doc-check` to see why it gives no answer; run once "
-        "online, it also provisions its dependency for the offline run."
+        "  fix: run `pkit pm fill-doc-check` to see why it gives no answer; when its "
+        "environment is not provisioned, `pkit sync` provisions it for the offline run."
     )
 
 

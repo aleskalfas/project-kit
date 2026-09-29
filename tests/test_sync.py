@@ -37,7 +37,7 @@ def test_sync_self_host_runs_deploy_primitives_only(monkeypatch: pytest.MonkeyPa
     source_repo = install.find_source_kit().parent
     monkeypatch.chdir(source_repo)
 
-    called = {"deploy": 0, "render": 0, "workspace": 0}
+    called = {"deploy": 0, "render": 0, "workspace": 0, "provision": 0}
 
     def _spy_deploy(_ctx: install.InstallContext) -> None:
         called["deploy"] += 1
@@ -55,10 +55,16 @@ def test_sync_self_host_runs_deploy_primitives_only(monkeypatch: pytest.MonkeyPa
     def _spy_workspace(_ctx: install.InstallContext) -> None:
         called["workspace"] += 1
 
+    # And the provisioning step, which must not ask uv about the real checkout's
+    # query commands here.
+    def _spy_provision(_ctx: install.InstallContext) -> None:
+        called["provision"] += 1
+
     monkeypatch.setattr(install, "run_installed_adapter_primitives", _spy_deploy)
     monkeypatch.setattr(install, "_install_area", _no_propagate)
     monkeypatch.setattr(install, "_render_runtime_ignore", _spy_render)
     monkeypatch.setattr(install, "ensure_agent_workspace", _spy_workspace)
+    monkeypatch.setattr(install, "provision_query_commands", _spy_provision)
 
     sync.run_sync(source_repo)  # must not raise
 
@@ -69,6 +75,8 @@ def test_sync_self_host_runs_deploy_primitives_only(monkeypatch: pytest.MonkeyPa
     assert called["render"] == 1
     # So is the workspace step (#1043): the methodology's own checkout gets one.
     assert called["workspace"] == 1
+    # And provisioning (#1092): it readies the checkout for an offline validate.
+    assert called["provision"] == 1
 
 
 def test_sync_renders_runtime_ignore_on_normal_path(installed_target: Path) -> None:

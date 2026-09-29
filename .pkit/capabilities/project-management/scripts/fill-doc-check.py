@@ -24,10 +24,10 @@ It is exempt from the bootstrap gate (`_lib/bootstrap_gate.EXEMPT_VERBS`): it
 reports what the config says — no config, no obligations — and the verb that
 acts on the point, `check-doc-mapping`, stays gated.
 
-Offline, `uv` resolves this script's one dependency from its cache, so a fresh
-environment provisions it first by running it once through the dispatcher:
-`pkit pm fill-doc-check`. Until then the filler gives no answer and the point,
-whose inert policy is `fail`, does not resolve.
+Offline, `uv` resolves this script's one dependency from its cache; `pkit init`
+and `pkit sync` provision it there, as they do for every query command. Until
+then the filler gives no answer — its environment not provisioned — and the
+point, whose inert policy is `fail`, does not resolve.
 
 Usage:
   pkit pm fill-doc-check           one line per obligation, for a person

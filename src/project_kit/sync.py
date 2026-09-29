@@ -82,6 +82,10 @@ def run_sync(target_root: Path, dry_run: bool = False, force: bool = False) -> N
         # ignores would never render in self-host (or any adapter-less) sync.
         install._render_runtime_ignore(ctx)  # pyright: ignore[reportPrivateUsage]
         install.ensure_agent_workspace(ctx)
+        # The query commands' environments (#1092): here it readies the
+        # methodology's own checkout — a fresh clone, a CI runner — for an
+        # offline `pkit validate`.
+        install.provision_query_commands(ctx)
         click.echo()
         click.echo("Self-host sync complete (deploy primitives re-run).")
         return
@@ -147,6 +151,11 @@ def run_sync(target_root: Path, dry_run: bool = False, force: bool = False) -> N
     # The agent workspace and its local git exclusion (#1043) — a core step,
     # also run on the self-host path above.
     install.ensure_agent_workspace(ctx)
+
+    # Every registered query command's environment, resolved once, online
+    # (#1092) — after the capability refresh, so a newly shipped query command
+    # is provisioned by the sync that brings it. Also run on the self-host path.
+    install.provision_query_commands(ctx)
 
     click.echo()
     click.echo("Sync complete.")
