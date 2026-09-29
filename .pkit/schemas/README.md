@@ -19,9 +19,8 @@ pkit:
         - src/project_kit/working_tree.py
       record: [COR-018, COR-019, COR-020, COR-023, COR-029, COR-048, COR-050, COR-051, COR-052, COR-053, ADR-056, ADR-057]
     revalidated:
-      at: 2026-09-29T17:22:06Z
-      outcome: unchanged
-      unchanged-because: backbone_schemas.py now holds the one definition of the address word pattern that refs re-exports; the word a filler path part must be, and the schemas' patterns, are unchanged
+      at: 2026-09-29T18:56:18Z
+      outcome: updated
 ---
 
 # Schemas
