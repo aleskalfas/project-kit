@@ -1003,6 +1003,64 @@ def test_pkit_validate_warns_on_an_installed_package_declaring_process_journals(
     assert fix in " ".join(result.output.split())
 
 
+def _declare_aliases(package: Path, *aliases: str) -> None:
+    listed = "".join(f"  - {alias}\n" for alias in aliases)
+    package.write_text(
+        package.read_text(encoding="utf-8") + f"aliases:\n{listed}", encoding="utf-8"
+    )
+
+
+@pytest.mark.parametrize(
+    ("alias", "shadowed_by"),
+    [
+        # A backbone command: every capability name and alias yields to it.
+        ("status", "the backbone command `pkit status`, which every capability name and alias"),
+        # Another capability's own name.
+        ("software-analysis", "the name of capability 'software-analysis', which every alias"),
+        # The same alias, declared by a capability earlier in the manifest.
+        ("analysis", "the same alias of capability 'software-analysis', registered first"),
+    ],
+)
+def test_an_alias_another_name_shadows_is_warned_naming_what_holds_it(
+    make_adopter_repo: MakeAdopterRepo, alias: str, shadowed_by: str
+) -> None:
+    """`software-analysis` comes first in the manifest and declares `analysis`, so
+    the later `evidence` cannot take its name or its alias, nor a backbone command."""
+    adopter = make_adopter_repo(capabilities=("software-analysis", "evidence"))
+    _declare_aliases(_installed_package(adopter.root, "evidence"), "ev", alias)
+
+    result = pv.validate_installed_packages(adopter.root)
+    findings = {
+        (report.file.parent.name, f.path): f for report in result.reports for f in report.findings
+    }
+    assert result.errors == 0 and result.warnings == 1, list(findings)
+    finding = findings[("evidence", "/aliases/1")]
+    assert finding.severity is pv.Severity.WARNING
+    message = " ".join(finding.message.split())
+    assert message.startswith(
+        f"alias {alias!r} of capability 'evidence' is shadowed by {shadowed_by}"
+    )
+    assert f"`pkit {alias}`" in message and "never evidence" in message
+    assert "`pkit evidence …` still reaches it" in message
+
+
+def test_pkit_validate_warns_on_an_alias_another_name_shadows_and_passes(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    adopter = make_adopter_repo(capabilities=("software-analysis", "evidence"))
+    _declare_aliases(_installed_package(adopter.root, "evidence"), "analysis")
+
+    result = CliRunner().invoke(main, ["validate", "--no-refs"])
+    assert result.exit_code == 0, result.output
+    assert "0 error(s), 1 warning(s)" in result.output
+    assert "warning  .pkit/capabilities/evidence/package.yaml:/aliases/0" in result.output
+    output = " ".join(result.output.split())
+    assert (
+        "→ alias 'analysis' of capability 'evidence' is shadowed by the same alias of "
+        "capability 'software-analysis'"
+    ) in output
+
+
 def test_in_the_methodology_source_a_kit_shipped_package_is_its_own() -> None:
     """The source is where a kit-shipped package is authored, so the fix is to edit it."""
     package = REPO / ".pkit" / "capabilities" / "project-management" / "package.yaml"
