@@ -159,6 +159,98 @@ def test_deploy_project_wins_over_core_collision(mock_kit: Path) -> None:
     assert "# Project version" in content
 
 
+# --- name-collision precedence: project > capability > core (the agents README) ---
+
+
+def _write_capability_agent(root: Path, capability: str, name: str, where: str) -> Path:
+    """A flat agent in `capability` (with its package.yaml), described as coming from `where`."""
+    cap_dir = root / ".pkit" / "capabilities" / capability
+    (cap_dir / "agents").mkdir(parents=True, exist_ok=True)
+    (cap_dir / "package.yaml").write_text(
+        f"component:\n  kind: capability\n  name: {capability}\n  version: 0.1.0\n",
+        encoding="utf-8",
+    )
+    source = cap_dir / "agents" / f"{name}.md"
+    source.write_text(f"---\nname: {name}\ndescription: From {where}.\n---\n\n# {name}\n", encoding="utf-8")
+    return source
+
+
+def _write_area_agent(root: Path, namespace: str, name: str) -> None:
+    _write_agent(root, namespace, name, f"---\nname: {name}\ndescription: From {namespace}.\n---\n\n# {name}\n")
+
+
+def _deployed_description(root: Path, name: str) -> str:
+    return _deployed_front_matter(root, name)["description"]
+
+
+def test_deploy_capability_wins_over_core_collision(mock_kit: Path) -> None:
+    """A capability's agent is the discipline's specialisation of core's (COR-026)."""
+    _write_area_agent(mock_kit, "core", "shared")
+    _write_capability_agent(mock_kit, "my-cap", "shared", "my-cap")
+
+    result = _run_deploy(mock_kit)
+    assert result.returncode == 0, result.stderr
+    assert _deployed_description(mock_kit, "shared") == "From my-cap."
+
+
+def test_deploy_project_wins_over_capability_collision(mock_kit: Path) -> None:
+    _write_area_agent(mock_kit, "core", "shared")
+    _write_capability_agent(mock_kit, "my-cap", "shared", "my-cap")
+    _write_area_agent(mock_kit, "project", "shared")
+
+    result = _run_deploy(mock_kit)
+    assert result.returncode == 0, result.stderr
+    assert _deployed_description(mock_kit, "shared") == "From project."
+
+
+def test_deploy_takes_the_first_capability_by_name_between_two(mock_kit: Path) -> None:
+    _write_capability_agent(mock_kit, "b-cap", "twin", "b-cap")
+    _write_capability_agent(mock_kit, "a-cap", "twin", "a-cap")
+
+    result = _run_deploy(mock_kit)
+    assert result.returncode == 0, result.stderr
+    assert _deployed_description(mock_kit, "twin") == "From a-cap."
+
+
+def test_the_python_resolvers_pick_the_agent_the_deploy_writes(mock_kit: Path) -> None:
+    """`pkit agents`, the refs ownership check and `pkit new storyboard` name "the
+    agent that deploys" through their own resolvers; each must pick the source
+    `deploy-agents.sh` writes, for every shape of collision."""
+    from project_kit import agents, agents_overlay
+
+    for namespace, names in {
+        "core": ("core-only", "core-and-cap", "all-three"),
+        "project": ("project-and-cap", "all-three"),
+    }.items():
+        for name in names:
+            _write_area_agent(mock_kit, namespace, name)
+    for name in ("cap-only", "core-and-cap", "project-and-cap", "all-three"):
+        _write_capability_agent(mock_kit, "my-cap", name, "my-cap")
+
+    result = _run_deploy(mock_kit)
+    assert result.returncode == 0, result.stderr
+
+    winners = agents_overlay.discover_kit_agents(mock_kit)
+    expected = {
+        "core-only": "From core.",
+        "cap-only": "From my-cap.",
+        "core-and-cap": "From my-cap.",
+        "project-and-cap": "From project.",
+        "all-three": "From project.",
+    }
+    assert set(winners) == set(expected)
+    for name, description in expected.items():
+        assert _deployed_description(mock_kit, name) == description, name
+        source = winners[name][1]
+        assert f"description: {description}" in source.read_text(encoding="utf-8"), name
+        first = next(
+            found
+            for _, folder in agents.agent_locations(mock_kit)
+            if (found := agents.find_agent_file(folder, name)) is not None
+        )
+        assert first == source, name
+
+
 def test_deploy_unresolved_category_degrades_not_aborts(mock_kit: Path) -> None:
     """An overlay category an agent references but the overlay doesn't define is
     an adopter-config gap, NOT a fatal error (#287). The agent is skipped loudly

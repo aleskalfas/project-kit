@@ -303,13 +303,19 @@ def test_every_component_requires_the_fields_cor_017_lists(
     }
 
 
-# The address grammar the package schema's patterns must spell: the word of the
-# citation grammar (`refs.ADDRESS_WORD_PATTERN`), which the configuration
+# The address grammar the package schema's patterns must spell: the one address
+# word (`backbone_schemas.ADDRESS_WORD_PATTERN`), which the configuration
 # schema's selection keys admit.
-_ROLE_PATTERN = f"^{refs.ADDRESS_WORD_PATTERN}::{refs.ADDRESS_WORD_PATTERN}$"
+_ROLE_PATTERN = f"^{bs.ADDRESS_WORD_PATTERN}::{bs.ADDRESS_WORD_PATTERN}$"
 _POINT_PATTERN = (
-    f"^{refs.ADDRESS_WORD_PATTERN}::{refs.ADDRESS_WORD_PATTERN}:{refs.ADDRESS_WORD_PATTERN}$"
+    f"^{bs.ADDRESS_WORD_PATTERN}::{bs.ADDRESS_WORD_PATTERN}:{bs.ADDRESS_WORD_PATTERN}$"
 )
+
+
+def test_the_citation_grammar_re_exports_the_one_address_word() -> None:
+    """The word is defined once, in `backbone_schemas`; the citation grammar in
+    `refs` reads that definition rather than repeating it."""
+    assert refs.ADDRESS_WORD_PATTERN is bs.ADDRESS_WORD_PATTERN
 
 
 def test_addresses_share_the_configuration_schema_s_word_pattern(schema: dict[str, Any]) -> None:

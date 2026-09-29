@@ -13,9 +13,8 @@ pkit:
         - src/project_kit/visibility.py
       record: [COR-002, COR-005, COR-028, ADR-002, ADR-004, ADR-009, ADR-014, ADR-052, ADR-060, "project-management:DEC-030"]
     revalidated:
-      at: 2026-09-29T18:35:33Z
-      outcome: unchanged
-      unchanged-because: this branch's visibility.py changes stay inside the backbone's rendered .pkit/.gitignore (the configured process-journal ignore line and its re-render after pkit config set); the adapter's footprint list and how visibility private and shared route it, all this page says of that module, are untouched
+      at: 2026-09-29T18:48:03Z
+      outcome: updated
 ---
 
 # Claude Code adapter
@@ -69,13 +68,19 @@ Adopter content is never clobbered. Both `@.pkit/rules/core.md` (kit-owned, refr
 
 ### `deploy-skills.sh`
 
-Walks `.pkit/skills/{core,project}/<name>/` and creates relative symlinks at `.claude/skills/<name>/` so Claude Code can discover and load the skills. Idempotent; safe to re-run; skips non-kit-managed content under `.claude/skills/`. Per COR-005's adapter pattern, this is the Claude-Code-specific deployment for the harness-agnostic skill content stored at `.pkit/skills/`.
+Walks `.pkit/skills/{core,project}/` and creates relative symlinks at `.claude/skills/<name>/` so Claude Code can discover and load the skills. Idempotent; safe to re-run; skips non-kit-managed content under `.claude/skills/`. Per COR-005's adapter pattern, this is the Claude-Code-specific deployment for the harness-agnostic skill content stored at `.pkit/skills/`.
+
+**Capability skills: registered capabilities only.** A capability's `skills/` folder deploys when the capability is registered in `.pkit/manifest.yaml`, not because its directory sits under `.pkit/capabilities/` — a capability unregistered in place (an incubated one, or one in the methodology's source repository) keeps its subtree on disk, and its skills must stop deploying all the same. On a name collision the project's skill wins, then core's, then a registered capability's (the first by name).
+
+**Stale removal.** Each run removes a deployed skill whose name no longer resolves — its source gone, or its capability no longer registered — so the deploy after an unregister drops that capability's skills. It also removes a deployed sub-procedure link the winning source no longer has. Only the deploy's own entries are removed — symlinks into `.pkit/skills/` or `.pkit/capabilities/`; a real file or directory, or a symlink pointing elsewhere, is adopter content and is left alone.
 
 A listed skill whose canonical file doesn't resolve — most commonly a composite skill folder mid-build (per COR-020): sub-procedures present but no `<name>/<name>.md` dispatcher yet — is **skipped loudly** (a `skipped` status line naming the skill and defect, plus a remediation hint), not treated as fatal. The rest of the skills deploy and the run exits 0 with an end-of-run summary. This is deliberate: one half-built incubated skill must never abort a whole-project `pkit sync`/`upgrade`. `deploy-agents.sh` applies the same degrade-loudly discipline to an agent folder with no canonical `<name>/<name>.md` (and to an overlay category left undefined in a **hard** channel — `owns`/`needs`/`answers`/`reads.paths`/`reads.records`; a category referenced *only* via `reads.patterns` is an optional read per [ADR-052](../../../tech-docs/architecture/decisions/ADR-052-optional-read-category-empty-tolerance.md), whose absence drops the item and still deploys the agent; a *bare* optional key — present with no value — deploys the same way but prints a `warning` status line naming it).
 
 ### `deploy-agents.sh`
 
 Writes each kit-shipped agent as a **resolved copy** at `.claude/agents/<name>.md` — copies, not symlinks, because the source carries overlay placeholders the deploy substitutes (the agents README, "Deploy mechanics"). `_resolve_agent.py` resolves one agent: it substitutes the `<category>` placeholders from `.pkit/agents/project/overlay.yaml` and carries the agent's execution policy into the deployed front matter.
+
+**Name collisions.** When more than one location ships an agent of one name, the project's is deployed, else an installed capability's (the first by capability name), else core's — a capability's agent is the discipline's specialisation of a core default ([COR-026](../../decisions/core/COR-026-agent-placement-by-discipline.md)). The agents README, "Name-collision precedence", states the rule and the collisions between capabilities.
 
 **Model and effort** (#1047). Claude Code reads a `model:` and an `effort:` key from an agent definition's front matter (verified against Claude Code 2.1.283: `effort` takes `low`, `medium`, `high`, `xhigh`, `max`, or an integer; `model` takes `inherit`, an alias or a full model name). The resolver writes both under those names, taking each from the overlay's `overrides.<agent>.model` / `.effort` when set, else from the agent's front matter. It writes **nothing** for an absent or `inherit` value — so a shipped agent that sets neither deploys exactly as before, and the harness default applies: a dispatched agent inherits its caller's model and effort. A value outside the accepted set (the named effort levels only; the integer form is not part of the methodology's vocabulary) is not written: the agent still deploys, inherits, and the run prints a `warning` line naming the value. The accepted values, the precedence and the `pkit agents` report are specified in the agents README, "Model and effort".
 

@@ -195,8 +195,8 @@ def _locate_agent(
 
     With `namespace`, only that namespace's folder is searched (an unknown
     namespace gets the shared refusal). Without it, every location agents ship
-    from is searched in the deploy's order — project, core, then capabilities
-    by name — so the agent found is the one that deploys.
+    from is searched in the deploy's order — project, capabilities by name,
+    then core — so the agent found is the one that deploys.
     """
     if namespace is not None:
         ns_dir = agents_dir_for(target_root, namespace)

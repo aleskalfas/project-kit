@@ -1,0 +1,15 @@
+component: claude-code
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `deploy-skills.sh` deploys a capability's skills only when the capability is
+  registered in `.pkit/manifest.yaml`, not for every directory under
+  `.pkit/capabilities/`, and its stale-removal pass drops the deployed skills
+  of a capability that is no longer registered. A capability unregistered in
+  place keeps its subtree on disk, so the deploy that follows — the
+  uninstall's own, or the next `pkit sync` — used to put its skills back. A
+  skill that resolves to a flat source also no longer carries the sub-procedure
+  links of a lower-precedence composite skill of the same name. Adopter content
+  under `.claude/skills/` — anything but the deploy's own symlinks into
+  `.pkit/` — is never touched.

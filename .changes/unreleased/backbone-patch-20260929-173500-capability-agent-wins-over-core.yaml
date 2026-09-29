@@ -1,0 +1,11 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `pkit agents`, the ownership check of `pkit refs validate` and
+  `pkit new storyboard` without `--namespace` resolve a name shipped by both a
+  capability and core to the capability's agent, the one the Claude Code
+  deploy now writes — the agents README's precedence: project, then an
+  installed capability, then core. The agents README states how the deploy
+  realises it and what happens when two capabilities ship one name.

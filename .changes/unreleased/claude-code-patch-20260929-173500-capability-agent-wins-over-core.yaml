@@ -1,0 +1,11 @@
+component: claude-code
+kind: patch
+custom:
+  category: Fixed
+body: >
+  When a capability ships an agent with the same name as a core agent,
+  `deploy-agents.sh` deploys the capability's, as the agents README's
+  name-collision precedence has always said: the project's agent, then an
+  installed capability's, then core's. It used to look in core before the
+  capabilities, so a capability's specialisation of a core agent never
+  deployed — not even after `override` at the install collision prompt.

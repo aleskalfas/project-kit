@@ -294,6 +294,18 @@ def test_install_dry_run_in_the_source_writes_nothing(source_repo: Path) -> None
     assert _snapshot(_cap_dir(source_repo)) == before
 
 
+def test_register_in_the_source_names_no_second_copy(source_repo: Path) -> None:
+    """The in-repo tree and the kit source are one tree here, so `register` has no
+    same-named kit-shipped capability to surface (the COR-031 boundary note is for
+    an adopter whose incubated capability later ships from the kit too)."""
+    result = CliRunner().invoke(main, ["capabilities", "register", _NAME])
+
+    assert result.exit_code == 0, result.output
+    assert "ships from kit source" not in _output(result)
+    assert "kit-shipped one is not installed" not in _output(result)
+    assert caps.is_installed(source_repo, _NAME)
+
+
 def test_upgrade_redeploys_an_authored_capability_without_copying(
     source_repo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

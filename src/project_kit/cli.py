@@ -48,7 +48,7 @@ from project_kit.scaffolds import (
     stamp_capability,
     stamp_migration,
 )
-from project_kit.agents import stamp_new_agent
+from project_kit.agents import STORYBOARD_FILE, stamp_new_agent
 from project_kit.storyboards import ArtifactKind, stamp_new_storyboard
 from project_kit import friction_check, friction_report, friction_repository, friction_write
 from project_kit import refs as refs_mod
@@ -4757,7 +4757,9 @@ def register_capability_cmd(name: str, dry_run: bool) -> None:
     # COR-031 boundary: a same-named capability now also ships from kit
     # source (graduation, before graduation is specified). Surface it so the
     # adopter can decide, rather than silently registering the in-repo copy.
-    if resolved.in_kit_source:
+    # In the methodology's source repository the in-repo subtree *is* the kit
+    # source (#1107), so there is no second copy to name.
+    if resolved.in_kit_source and not caps.authored_in_source(target_root, source_kit, name):
         click.echo(
             "\n  " + cli_render.style("strong",
                 f"Note: a capability named {name!r} also ships from kit source. "
@@ -5785,6 +5787,8 @@ def new_agent(namespace: str, name: str, with_storyboard: bool, dry_run: bool) -
 
     With --with-storyboard, stamps folder layout with a sibling storyboard
     scaffold (per COR-016) — for agents driving scripted interaction scenarios.
+    The agent declares the storyboard in its storyboards: front matter and
+    cites it in its body; the storyboard names the agent in consumers:.
     """
     target_root = find_target_root()
     if target_root is None:
@@ -5803,7 +5807,7 @@ def new_agent(namespace: str, name: str, with_storyboard: bool, dry_run: bool) -
     rel = target.relative_to(target_root)
     verb = "Would stamp" if dry_run else "Stamped"
     if with_storyboard:
-        sibling = target.parent / "storyboard.md"
+        sibling = target.parent / STORYBOARD_FILE
         rel_sb = sibling.relative_to(target_root)
         click.echo(f"{verb}: {rel}")
         click.echo(f"{verb}: {rel_sb}")
@@ -5819,7 +5823,7 @@ def new_agent(namespace: str, name: str, with_storyboard: bool, dry_run: bool) -
     type=str,
     default=None,
     help="Where the agent lives: core, project or a capability name. "
-    "Default: the agent the deploy resolves — project, core, then capabilities by name.",
+    "Default: the agent the deploy resolves — project, capabilities by name, then core.",
 )
 @click.option(
     "--scenario",

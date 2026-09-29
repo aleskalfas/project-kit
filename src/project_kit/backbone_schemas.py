@@ -78,6 +78,12 @@ FUNCTIONALITY_BLOCKS: frozenset[str] = frozenset({"friction"})
 ROLE_QUALIFIER_SEPARATOR = "::"
 POINT_SEPARATOR = ":"
 
+# A part of a role or point address: a word, the words the configuration's
+# selection keys admit. The one definition of the address word — `refs`
+# re-exports it for the citation grammar, and the package and configuration
+# schemas spell it in their address patterns.
+ADDRESS_WORD_PATTERN = "[a-z][a-z0-9-]*"
+
 # The version field every point block carries (COR-052 point 5, COR-053
 # point 10).
 POINT_VERSION_FIELD = "schema_version"
@@ -279,8 +285,8 @@ FILLER_SCHEMA_KIND = "filler"
 # A filler file's suffix: the one dot of the path.
 FILLER_SUFFIX = ".yaml"
 
-# A part of a valid address: the words the configuration's selection keys admit.
-_WORD = re.compile(r"^[a-z][a-z0-9-]*$")
+# A part of a valid address, whole.
+_WORD = re.compile(rf"^{ADDRESS_WORD_PATTERN}$")
 
 
 def filler_subpath(address: str) -> PurePosixPath | None:
