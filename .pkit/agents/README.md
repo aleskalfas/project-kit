@@ -28,7 +28,7 @@ Per COR-015, an agent takes one of two forms:
         └── (supporting files)
 ```
 
-The flat form is the default for new agents; promote to folder form only when a sibling helper materialises. Both `core/` and `project/` follow COR-003's universal pattern. An adopter's `overlay.yaml` lives at the top of `project/`; per-agent overrides for that overlay live inside it under the `overrides:` key.
+The flat form is the default for new agents; promote to folder form only when a sibling helper materialises. Both `core/` and `project/` follow COR-003's universal pattern. A capability ships its agents in the same two forms under its own `agents/` folder, `.pkit/capabilities/<capability>/agents/` (COR-017, COR-026). An adopter's `overlay.yaml` lives at the top of `project/`; per-agent overrides for that overlay live inside it under the `overrides:` key.
 
 ## Frontmatter schema
 
@@ -324,10 +324,20 @@ Per COR-014, the universal-applicability test governs what ships where:
 The methodology ships an authoring command paired with a skill (per COR-005):
 
 ```
-pkit new agent <name>
+pkit new agent <namespace> <name> [--with-storyboard]
 ```
 
-The paired `agent-author` skill carries the slug-choice judgement, the body-drafting walkthrough, and the citation discipline. Ships in a future PR; until then, hand-stamp using this README as the spec and the existing agents in `core/` as reference shape.
+`<namespace>` is where the agent lives:
+
+| Namespace | Stamps at |
+|---|---|
+| `core` | `.pkit/agents/core/<name>.md` |
+| `project` | `.pkit/agents/project/<name>.md` |
+| *a capability name* | `.pkit/capabilities/<capability>/agents/<name>.md` |
+
+A namespace that is not `core` or `project` is a capability name — the home of a discipline-implying agent per [COR-026](../decisions/core/COR-026-agent-placement-by-discipline.md). The capability must exist under `.pkit/capabilities/` (the command refuses otherwise, listing the ones that do, the same refusal `pkit new decision <capability>` gives); its `agents/` folder is created on first use. The command refuses a name already taken in core, project or any capability, since the deploy resolves one agent per name. `--with-storyboard` stamps folder form with a sibling storyboard scaffold (see "Storyboards").
+
+The paired `agent-author` skill carries the namespace and slug-choice judgement, the body-drafting walkthrough, and the citation discipline.
 
 ## The matrix
 
@@ -360,11 +370,13 @@ A single `storyboard.md` may carry multiple scenarios when they share framing an
 Storyboards live as **sibling helper files** of the agent in folder-form per COR-015:
 
 ```
-.pkit/agents/<namespace>/<owning-agent>/
+.pkit/agents/<namespace>/<owning-agent>/           # or .pkit/capabilities/<capability>/agents/<owning-agent>/
 ├── <owning-agent>.md          # the agent: declares storyboards, loads them at session start
 ├── storyboard.md              # one storyboard file (covers one or more scenarios)
 └── <scenario-slug>.storyboard.md   # per-scenario file (when scenarios diverge)
 ```
+
+A capability's agent keeps its storyboards the same way, in its folder under the capability's `agents/`.
 
 **Source-only, runtime-readable via source path.** Storyboards are not propagated by the adapter — they stay at their source location. At runtime the agent reads them directly from the source path via its `Read` tool: the harness's working directory is the project root, and `.pkit/` is committed alongside the project tree, so the path resolves cleanly. The agent body's reference to its storyboard is therefore **load-bearing** — the body declares the storyboard in frontmatter and instructs the runtime to load and follow it.
 
@@ -376,17 +388,21 @@ The consumer/storyboard relationship is **two-sided** in frontmatter per COR-016
 
 **Agent side:**
 
-```yaml
+```markdown
 ---
 name: review-agent
 description: ...
 tools: [Read, Edit, ...]      # Read is required when storyboards are declared
 storyboards:
-  - .pkit/agents/project/review-agent/storyboard.md
+  - storyboard.md
 ---
+
+Load your storyboard from `storyboard.md` with the Read tool at session start and follow it.
 ```
 
-`storyboards:` is a list of paths, each either project-root-relative (`.pkit/agents/project/<agent>/storyboard.md`) or a **bare sibling filename** (`storyboard.md`) resolved against the agent's own directory — the natural form when the storyboard sits beside the agent (e.g. a capability agent). Each entry must resolve to a file on disk; the agent body must cite the path.
+`storyboards:` is a list of paths. **Declare a storyboard by its bare sibling filename** (`storyboard.md`, `<scenario-slug>.storyboard.md`), resolved against the agent's own directory, and cite the same name in the body, as the example does. The sibling form is the convention because it stays right wherever the agent's folder lives — core, project, or a capability — and when the folder moves.
+
+The deployed copy is what makes that work at run time. The adapter's deploy writes the agent somewhere else (for Claude Code, `.claude/agents/<name>.md`), where a bare `storyboard.md` resolves to nothing; so the deploy rewrites each entry naming a file beside the source to the storyboard's **project-root-relative source path**, in `storyboards:` and wherever the body cites it (`storyboard.md` becomes `.pkit/agents/project/review-agent/storyboard.md`, or `.pkit/capabilities/<capability>/agents/<agent>/storyboard.md` for a capability's agent). The deployed agent reads the storyboard from its source path, as "Location and lifecycle" above requires. A project-root-relative entry is also accepted and deploys unchanged. Each entry must resolve to a file on disk; the agent body must cite the entry as written.
 
 **Storyboard side:**
 
@@ -401,11 +417,11 @@ consumers:
 # Storyboard: ...
 ```
 
-`consumers:` is a non-empty list. Each entry identifies one artifact that drives the storyboard's scenarios — today always an agent (`kind: agent`); future application classes (CLI flows, migrations) will add their own kinds.
+`consumers:` is a non-empty list. Each entry identifies one artifact that drives the storyboard's scenarios — today always an agent (`kind: agent`); future application classes (CLI flows, migrations) will add their own kinds. An agent's `namespace` is `core` or `project` for an agent in this area, and the capability's name for a capability's agent.
 
 The list form rather than a single `agent:` scalar is intentional: today every storyboard has exactly one consumer, but the shape supports future shared cases without schema change. `pkit new storyboard` fills the frontmatter automatically.
 
-`pkit refs validate` enforces the two-sided relationship: each agent's declared storyboards exist and are cited in the body; each storyboard's declared consumers exist and back-reference; orphan storyboards (files in an agent folder that no agent declares) are flagged.
+`pkit refs validate` enforces the two-sided relationship: each agent's declared storyboards exist and are cited in the body; each storyboard's declared consumers exist and back-reference; orphan storyboards (files in an agent folder that no agent declares) are flagged. It walks every agent folder that can hold a storyboard — this area's and each capability's `agents/` — and compares a declared entry with a storyboard on disk by the file the entry resolves to, so the sibling and the project-root-relative forms name the same storyboard.
 
 ### Authoring
 
@@ -414,11 +430,14 @@ Stamp via:
 ```
 pkit new storyboard agent <agent-name>                 # single storyboard for the agent
 pkit new storyboard agent <agent-name> --scenario <slug>   # per-scenario file
+pkit new storyboard agent <agent-name> --namespace <ns>    # pin where the agent lives
 ```
+
+The command finds the agent wherever agents ship from, in the deploy's order — project, core, then capabilities by name — so it stamps beside the agent that deploys. `--namespace` (`core`, `project` or a capability name) looks in that one place instead; a capability name that names no capability gets the same refusal as `pkit new agent`.
 
 The paired `storyboard-author` skill walks the author through framing, tone, and scenario drafting.
 
-For new agents that will drive a scripted scenario from the start, `pkit new agent <ns> <name> --with-storyboard` stamps folder layout with a sibling storyboard scaffold in one gesture.
+For new agents that will drive a scripted scenario from the start, `pkit new agent <namespace> <name> --with-storyboard` stamps folder layout with a sibling storyboard scaffold in one gesture — in a capability's `agents/` folder when the namespace is a capability name.
 
 ## Where this content came from
 
