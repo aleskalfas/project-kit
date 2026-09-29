@@ -214,7 +214,10 @@ def test_living_docs_validator_passes_over_this_tree() -> None:
     summary = document["summary"]
     assert summary[1].endswith("definition tech-docs/living-docs/rule-sets/user.md.")
     assert summary[2].endswith("definition tech-docs/living-docs/rule-sets/technical.md.")
-    assert summary[4].startswith("reader resolution: dormant until the readers point")
+    # No page names a reader yet, so the readers point is not read.
+    assert summary[4] == (
+        "readers: no page names one yet, so pkit::documentation:readers is not read."
+    )
 
 
 def test_the_definitions_location_is_recorded_and_each_space_names_its_definition() -> None:

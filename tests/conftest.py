@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+import os
+import sys
 from collections.abc import Sequence
 from pathlib import Path
 
@@ -41,3 +43,18 @@ def adopter_repo(make_adopter_repo: MakeAdopterRepo) -> AdopterRepo:
     """An adopter repository at `tmp_path` with the backbone installed and the
     scripted history laid down (`adopter_repo.history` holds the SHAs)."""
     return make_adopter_repo(history=True)
+
+
+@pytest.fixture
+def pkit_on_path(tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """A `pkit` that is the real CLI under this interpreter, first on PATH, for the
+    capability scripts a test runs that read through the backbone — `pkit
+    connections resolve`, `pkit friction check`. It bypasses the entry-point
+    router, so no test reaches `uv` or the network. Returns its directory, which
+    lies outside the adopter repository."""
+    bin_dir = tmp_path_factory.mktemp("pkit-bin")
+    pkit = bin_dir / "pkit"
+    pkit.write_text(f'#!/bin/sh\nexec "{sys.executable}" -m project_kit "$@"\n', encoding="utf-8")
+    pkit.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}")
+    return bin_dir
