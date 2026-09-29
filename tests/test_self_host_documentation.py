@@ -12,7 +12,7 @@ realises, over the real repository:
   README under `.pkit/` is either a place or named here with the reason it is
   not, so a new one cannot land unclassified (criterion 2);
 - no declared place is a synced copy, which is what living-docs' place rule
-  asks (criterion 3);
+  asks (criterion 3), and the friction pass, which enforces it, walks them all;
 - the analysis location derives under the internal root (criterion 4);
 - living-docs' own checks pass over this tree end to end: its validator, the
   shared method `LDOC` and both spaces' definitions inheriting it, and the
@@ -33,10 +33,10 @@ from ruamel.yaml import YAML
 
 from project_kit import config_validate as cv
 from project_kit import docs_roots as dr
-from project_kit import friction_validate as fv
 from project_kit import rule_sets as rs
 from project_kit.cli import main
 from project_kit.friction_discovery import read_friction_settings
+from project_kit.friction_validate import FrictionFindingKind, validate_friction
 
 REPO = Path(__file__).resolve().parent.parent
 LIVING_DOCS = REPO / ".pkit" / "capabilities" / "living-docs"
@@ -156,6 +156,14 @@ def test_no_declared_place_is_a_synced_copy() -> None:
     assert [p for p in _project_places() if own.is_synced_copy(REPO, p)] == []
 
 
+def test_the_friction_pass_refuses_none_of_the_places() -> None:
+    """The backbone's check of the rule (COR-050 point 14) agrees: every declared
+    place is walked, since `.pkit/` is the source here."""
+    result = validate_friction(REPO)
+    assert result.discovery.synced == ()
+    assert [f.where for f in result.findings if f.kind is FrictionFindingKind.SYNCED_PLACE] == []
+
+
 def test_every_place_is_assigned_to_one_declared_space_with_its_entry_point() -> None:
     """Every place here lies outside both roots, so each is assigned (DEC-001 point 1)."""
     config = _living_docs_config()
@@ -234,5 +242,5 @@ def test_ldoc_and_both_space_definitions_validate_and_pin_it() -> None:
 def test_the_friction_pass_over_the_declared_roots_has_no_error() -> None:
     """Declaring the roots as places makes every document under them an
     artefact; nothing there may fail the pass."""
-    result = fv.validate_friction(REPO)
+    result = validate_friction(REPO)
     assert result.errors == ()

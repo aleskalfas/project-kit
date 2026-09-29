@@ -1,0 +1,18 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  The friction pass of `pkit validate` refuses a synced tree as a place (COR-050
+  point 14, refined): a file a declared place matches — the project's or a
+  capability's, each glob expanded and each match tested — that a sync writes
+  into the repository is no longer walked, and the place is a `synced-place`
+  error at its declaration naming the synced matches, dormant or not; the
+  place's other matches are still walked. The question is the tree's own
+  ownership predicate's (`is_synced_copy` in `.pkit/lifecycle/ownership.py`),
+  keyed on a capability's recorded origin and on whether the repository is the
+  methodology's source, so a backbone area's or a `kit-shipped` capability's
+  README is refused in an adopter and remains a place in the source repository.
+  A tree without the ownership module gets an `ownership-unavailable` report and
+  every match is walked. The backbone now loads the tree's ownership module
+  through one loader, which leaves no bytecode cache in the tree.
