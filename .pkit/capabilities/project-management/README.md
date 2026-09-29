@@ -1,3 +1,24 @@
+---
+reader: user
+kind: reference
+pkit:
+  friction:
+    anchors:
+      path:
+        - .pkit/capabilities/project-management/scripts/**
+        - .pkit/capabilities/project-management/schemas/**
+        - .pkit/capabilities/project-management/agents/**
+        - .pkit/capabilities/project-management/skills/**
+        - .pkit/capabilities/project-management/templates/**
+        - .pkit/capabilities/project-management/permissions/**
+        - .pkit/capabilities/project-management/adapters/**
+        - .pkit/capabilities/project-management/decisions/**
+      record: [COR-017, COR-020, COR-021, COR-023, COR-039, COR-053, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050]
+    revalidated:
+      at: 2026-09-29T15:17:30Z
+      outcome: updated
+---
+
 # project-management capability
 
 A project-management discipline an adopter installs to get a team-wide rulebook for filing, validating, and transitioning work — encoded as data the engine reads at runtime. Issue hierarchy, state machine, body shape, title format, branch and PR conventions, validation severity, and time containers are all schemas; the skills and agent are methodology-agnostic and act on whatever the schemas say.
@@ -23,7 +44,7 @@ The authority signal for distillation is pm-workflow's `main` branch. Capability
 - `decisions/DEC-NNN-*.md` — principles distilled from pm-workflow's METs (1:1). Some are schema-backed; others ship as policy prose adopters read.
 - `schemas/<name>.yaml` + `<name>.schema.json` — the operationally-material rules in data form: issue hierarchy, workflow state machine, body shape, title regexes, label classification, git conventions, validation severity, time containers.
 - `skills/pm/` — the composite engine skill (`pm.md` dispatcher + `create-issue.md` + `validate-body.md` + `transition-state.md` sub-procedures, per COR-020). Methodology-agnostic; reads schemas at runtime.
-- `agents/project-manager.md` — orchestrates the three skills, enforces methodology gates.
+- `agents/project-manager/project-manager.md` (with its storyboard) — orchestrates the three skills, enforces methodology gates.
 - `templates/{EPIC,Feature,Umbrella,Task,PR}.md` — body shapes adopters fill in.
 - `scripts/pre-check.py` — read-only diagnostic verifying every methodology prerequisite is in place (DEC-017). Hard-gate on every pm operation.
 - `scripts/bootstrap.py` — first-time setup. Creates the required initial GitHub state (labels per classification axes; optionally a starter EPIC). Additive idempotent.
@@ -814,11 +835,11 @@ The capability evolves on a versioned rollout pinned by [project-management:DEC-
 | **v0.6.0** | Mandatory-issue-state enforcement (per [project-management:DEC-019-mandatory-issue-state]) — `schemas/mandatory-issue-state.yaml`; `create-issue.py` auto-adds to the configured board; default-to-filer assignment; `assign-issue.py` reassignment script; `validate-issue.py` checks; `templates/.github/workflows/pm-issue-check.yml` post-check workflow template |
 | **v0.7.0+** | Methodology-mesh (per [project-management:DEC-022-methodology-mesh]) — cross-repo state coordination via per-repo `mesh_peers:` (with optional `mesh_source:` governance-repo pointer); `check-mesh.py` diagnostic; `templates/.github/workflows/pm-mesh-check.yml` scheduled workflow; drift surfaces as warnings, not enforced |
 
-At v1 (v0.3.0+), invocation is **direct-path** — `.pkit/capabilities/project-management/scripts/<verb>-<subject>.py`. When the kit's capability-command CLI dispatch lands (kit issue [#112](https://github.com/aleskalfas/project-kit/issues/112)), the same scripts surface via `pkit pm <verb> <subject>` with no script changes.
+The scripts surface as `pkit pm <verb>-<subject>` through the kit's capability-command dispatch (COR-021), and stay invocable by direct path — `.pkit/capabilities/project-management/scripts/<verb>-<subject>.py`.
 
 ## Authority — membership lifecycle (v0.3.0+)
 
-Once v0.3.0 lands, every mutating verb-subject script checks a project-side **`members.yaml`** before proceeding, per [project-management:DEC-021-team-membership-gate]. Two modes:
+Every mutating verb-subject script checks a project-side **`members.yaml`** before proceeding, per [project-management:DEC-021-team-membership-gate]. Two modes:
 
 - **Open mode** — `members.yaml` is absent or has an empty list. Any invoker with repo access passes the gate. This is the install default.
 - **Closed mode** — `members.yaml` lists ≥1 member. Only listed members pass; non-members get a structured refusal with a remediation hint pointing at `add-member.py`.

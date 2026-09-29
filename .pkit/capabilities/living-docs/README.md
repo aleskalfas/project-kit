@@ -1,3 +1,21 @@
+---
+reader: user
+kind: reference
+pkit:
+  friction:
+    anchors:
+      path:
+        - .pkit/capabilities/living-docs/scripts/**
+        - .pkit/capabilities/living-docs/schemas/**
+        - .pkit/capabilities/living-docs/agents/**
+        - .pkit/capabilities/living-docs/templates/**
+      record: ["living-docs:DEC-001", COR-049, COR-050, COR-051, COR-053]
+      artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006]
+    revalidated:
+      at: 2026-09-29T15:17:29Z
+      outcome: updated
+---
+
 # living-docs capability
 
 Keep your documentation **true for the people who read it**, even when an agent writes most of it. Documentation is organised into spaces by audience: user-facing docs for people who use the system, and technical docs for the people and agents who build it. Every page names its reader and is anchored to what makes it true. When those anchors change, drift is detected, and an agent proposes the fix for a person to review. The rule is in [living-docs:DEC-001-living-docs-discipline].

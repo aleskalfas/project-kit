@@ -1,3 +1,20 @@
+---
+reader: user
+kind: reference
+pkit:
+  friction:
+    anchors:
+      path:
+        - .pkit/capabilities/demo-recording/scripts/**
+        - .pkit/capabilities/demo-recording/schemas/**
+        - .pkit/capabilities/demo-recording/skills/**
+        - .pkit/capabilities/demo-recording/decisions/**
+      record: [COR-007, COR-016, COR-017, COR-020, COR-021, COR-023]
+    revalidated:
+      at: 2026-09-29T15:17:26Z
+      outcome: updated
+---
+
 # demo-recording capability
 
 Screen-recorded CLI demos, driven by an **executable markdown storyboard**. An author writes a plain markdown file — a title, step headings, and fenced directive blocks — and the engine both *reads* it (it renders as a coherent narrative in any markdown viewer) and *runs* it (typing narration and commands into a recording window on macOS). The same document is the script a colleague reads and the program the recorder executes. Install this when your project wants repeatable, consistently-framed recorded terminal demos without hand-writing keystroke-injection plumbing per demo.
@@ -58,7 +75,7 @@ demo/<name>/
 └── recordings/        # output (.mov + .mp4); created on first take
 ```
 
-Write storyboards, author hooks, and record via the `demo-recording` skill — its `storyboard-author`, `hook-author`, and `record` operations respectively.
+Write storyboards, author hooks, and record via the `demo-recording` skill — its `storyboard-author`, `hook-author`, and `start` operations respectively.
 
 ## The storyboard format
 
