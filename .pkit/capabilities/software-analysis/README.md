@@ -135,7 +135,7 @@ outcomes:                       # each artefact covered, withdrawn ones included
   UC-003: holds                 # holds | analysis-stale | code-regressed | gap-found
   JRN-001: analysis-stale
 evidence:                       # optional: executed results drawn on, by their ids
-  - UC-003@1a2b3c4              # <artefact>@<commit>, in the evidence point (Connections, below)
+  - UC-003@78981922613b2afb6025042ff6bd878ac1994e85   # <artefact>@<commit>, in the evidence point (Connections, below)
 ```
 
 The body gives each artefact's outcome with its justification, then the gaps and what resolved each. Evidence supports an outcome and never stands in for one: each artefact the record cites evidence for has its outcome.
@@ -180,9 +180,9 @@ Declared in the package metadata's `connections` block (COR-053), as the decisio
 ```yaml
 schema_version: 1
 value:
-  - id: UC-003@1a2b3c4            # <artefact>@<commit>: the pair the entry is for
+  - id: UC-003@78981922613b2afb6025042ff6bd878ac1994e85   # <artefact>@<commit>: the pair the entry is for
     artefact: UC-003
-    commit: "1a2b3c4"             # the version the result is true of; quoted, as digits alone read as a number
+    commit: "78981922613b2afb6025042ff6bd878ac1994e85"    # the version the result is true of, by its full name; quoted, as digits alone read as a number
     result: passed                # passed | failed
     ran: tests/test_run.py::test_sandbox    # what was run, so it can be found and run again
     steps: ["1", "2", "2a"]       # optional: the steps and variants it went through
@@ -190,7 +190,7 @@ value:
     by: the pipeline              # optional: who or what ran it
 ```
 
-The entry's shape is `schemas/revalidation-evidence.schema.json`; its ids' shapes are `schemas/analysis.schema.json`'s, as every other id's. The point is `union`: entries from every filler merge by id, and yours replaces a capability's with the same id, or drops one with `remove` and a reason. No default takes part, so while nothing fills it the point is unresolved — `pkit connections resolve pkit::analysis:revalidation-evidence --json` says `unfilled`, and nothing fails on it. Its inert policy is `fallback`: evidence advises, so a filler that cannot answer is warned, and the rest still count.
+The entry's shape is `schemas/revalidation-evidence.schema.json`. It reads alone, since two providers of one point are compared by that file alone (COR-053 point 5), so it carries a copy of the id shapes whose one home is `schemas/analysis.schema.json`; a test holds the copy equal to its source. A commit is written by its **full name** — 40 hexadecimal digits, or 64 under SHA-256 — and a short name such as `7898192` is refused, so a pair has one spelling and a record's citation matches an entry exactly. The point is `union`: entries from every filler merge by id, and yours replaces a capability's with the same id, or drops one with `remove` and a reason. The id is the artefact and the commit alone, so two results for the same artefact at the same commit share one id. From two capabilities — one running the tests and another tracing the journeys, say — that is a collision under `union`: the point does not resolve, its reason naming both, until your filler gives the id itself (COR-052 point 4); and a result your filler gives replaces a capability's for the same pair. That stands until the key is refined to tell such results apart. No default takes part, so while nothing fills it the point is unresolved — `pkit connections resolve pkit::analysis:revalidation-evidence --json` says `unfilled`, and nothing fails on it. Its inert policy is `fallback`: evidence advises, so a filler that cannot answer is warned, and the rest still count.
 
 **Evidence informs a revalidation and never replaces it.** A revalidation record cites the evidence it drew on under `evidence` (The artefacts, above): a passing result as support for *holds*, a failing one as a regression's proof. The record still gives each artefact its outcome — the check fails a record that cites evidence for an artefact without one — and only a revalidation or a deferral recorded on the artefact clears friction (COR-050).
 

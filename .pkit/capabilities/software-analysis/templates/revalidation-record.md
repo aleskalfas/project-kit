@@ -16,8 +16,8 @@ by: <who performed it — a person, or an agent>
 confirmed-by: <the person who confirmed an agent's outcomes>   # optional
 outcomes:                         # each artefact covered, by id, withdrawn ones included
   UC-000: holds                   # holds | analysis-stale | code-regressed | gap-found
-# evidence:                       # optional: executed results drawn on, `<artefact>@<commit>`
-#   - UC-000@1a2b3c4              # supports an outcome above, never stands in for one
+# evidence:                       # optional: executed results drawn on, `<artefact>@<commit>`, the commit's full name
+#   - UC-000@0000000000000000000000000000000000000000   # supports an outcome above, never stands in for one
 ---
 
 # <Date> — <Subject>

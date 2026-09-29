@@ -7,10 +7,10 @@ body: >
   Connections (DEC-001 points 7 and 8): the capability provides the
   `pkit::analysis` role and defines the `pkit::analysis:revalidation-evidence`
   data point under it — executed results that confirm or refute an artefact at
-  a commit, one entry per artefact and commit keyed `<artefact>@<commit>`,
-  `union`, no default, inert policy `fallback` — with its companion schema,
-  `schemas/revalidation-evidence.schema.json`, filled by a capability or by
-  the project's filler file. A revalidation record may cite the evidence it
+  a commit, one entry per artefact and commit keyed `<artefact>@<commit>`, the
+  commit by its full name, `union`, no default, inert policy `fallback` — with
+  its companion schema, `schemas/revalidation-evidence.schema.json`, which
+  reads alone, filled by a capability or by the project's filler file. A revalidation record may cite the evidence it
   drew on under `evidence`; `pkit analysis validate` fails a record citing
   evidence for an artefact it gives no outcome, since evidence supports an
   outcome and never replaces one, and warns on a citation the point does not

@@ -60,6 +60,10 @@ READERS = "pkit::documentation:readers"
 EVIDENCE_FILLER = "tech-docs/pkit/fillers/pkit/analysis/revalidation-evidence.yaml"
 RECORD = "tech-docs/analysis/revalidations/2026-10-01-first-run.md"
 
+#: Commits by their full names, as the evidence point writes them.
+SHA = "78981922613b2afb6025042ff6bd878ac1994e85"
+OTHER = "d670460b4b4aece5915caf5c68d12f560a9fe3e4"
+
 
 @pytest.fixture
 def project(
@@ -155,9 +159,9 @@ def test_the_package_provides_the_role_and_declares_the_point_and_the_contributi
 
 
 EVIDENCE_ENTRY = {
-    "id": "UC-003@1a2b3c4",
+    "id": f"UC-003@{SHA}",
     "artefact": "UC-003",
-    "commit": "1a2b3c4",
+    "commit": SHA,
     "result": "passed",
     "ran": "tests/test_run.py::test_sandbox",
     "steps": ["1", "2", "2a"],
@@ -173,9 +177,11 @@ def test_the_evidence_schema_keys_an_entry_by_artefact_and_commit() -> None:
     assert list(schema.iter_errors([required])) == []
     for broken in (
         {**EVIDENCE_ENTRY, "id": "UC-003"},
-        {**EVIDENCE_ENTRY, "id": "UC-3@1a2b3c4"},
+        {**EVIDENCE_ENTRY, "id": f"UC-3@{SHA}"},
         {**EVIDENCE_ENTRY, "artefact": "user"},
         {**EVIDENCE_ENTRY, "commit": "HEAD"},
+        {**EVIDENCE_ENTRY, "commit": SHA[:7]},  # a short name: one pair, one spelling
+        {**EVIDENCE_ENTRY, "id": f"UC-003@{SHA[:7]}"},
         {**EVIDENCE_ENTRY, "result": "flaky"},
         {**EVIDENCE_ENTRY, "ran": ""},
         {**EVIDENCE_ENTRY, "steps": ["two"]},
@@ -341,7 +347,7 @@ def _evidence(*entries: Mapping[str, Any]) -> str:
     return json.dumps({"schema_version": 1, "value": list(entries)}, indent=2) + "\n"
 
 
-def _entry(artefact: str, commit: str = "1a2b3c4", result: str = "passed") -> dict[str, str]:
+def _entry(artefact: str, commit: str = SHA, result: str = "passed") -> dict[str, str]:
     return {
         "id": f"{artefact}@{commit}",
         "artefact": artefact,
@@ -364,8 +370,8 @@ def test_the_evidence_point_resolves_from_the_project_filler(project: AdopterRep
     assert resolved["resolved"], resolved["why"]
     assert (resolved["policy"], resolved["inert_policy"]) == ("union", "fallback")
     assert [(e["id"], e["origin"]) for e in resolved["entries"]] == [
-        ("UC-001@1a2b3c4", "project filler"),
-        ("UC-002@1a2b3c4", "project filler"),
+        (f"UC-001@{SHA}", "project filler"),
+        (f"UC-002@{SHA}", "project filler"),
     ]
     # An entry its schema refuses is the project's error, whatever the inert policy.
     project.write({EVIDENCE_FILLER: _evidence({**_entry("UC-001"), "result": "flaky"})})
@@ -396,7 +402,7 @@ def test_a_record_cites_evidence_as_support_for_an_outcome(project: AdopterRepo)
             EVIDENCE_FILLER: _evidence(_entry("UC-001"), _entry("UC-002", result="failed")),
             RECORD: _record(
                 {"UC-001": "holds", "UC-002": "code-regressed"},
-                ["UC-001@1a2b3c4", "UC-002@1a2b3c4"],
+                [f"UC-001@{SHA}", f"UC-002@{SHA}"],
             ),
         }
     )
@@ -412,13 +418,13 @@ def test_evidence_never_replaces_an_outcome(project: AdopterRepo) -> None:
     project.write(
         {
             EVIDENCE_FILLER: _evidence(_entry("UC-001"), _entry("UC-002")),
-            RECORD: _record({"UC-001": "holds"}, ["UC-001@1a2b3c4", "UC-002@1a2b3c4"]),
+            RECORD: _record({"UC-001": "holds"}, [f"UC-001@{SHA}", f"UC-002@{SHA}"]),
         }
     )
     assert _findings(_check(project), "error") == [
         (
             f"{RECORD}:/evidence/1",
-            "cites evidence UC-002@1a2b3c4 for UC-002, to which it gives no outcome: evidence "
+            f"cites evidence UC-002@{SHA} for UC-002, to which it gives no outcome: evidence "
             "supports a revalidation's outcome and never replaces it — give UC-002 its "
             "outcome, or drop the citation (DEC-001 point 7)",
         )
@@ -440,7 +446,7 @@ def test_a_citation_the_point_does_not_hold_only_warns(project: AdopterRepo) -> 
     project.write(
         {
             EVIDENCE_FILLER: _evidence(_entry("UC-001")),
-            RECORD: _record({"UC-001": "holds"}, ["UC-001@deadbee"]),
+            RECORD: _record({"UC-001": "holds"}, [f"UC-001@{OTHER}"]),
         }
     )
     document = _check(project)
@@ -448,7 +454,7 @@ def test_a_citation_the_point_does_not_hold_only_warns(project: AdopterRepo) -> 
     assert _findings(document, "warning") == [
         (
             f"{RECORD}:/evidence/0",
-            f"cites evidence UC-001@deadbee, which {EVIDENCE} does not hold: cite an entry the "
+            f"cites evidence UC-001@{OTHER}, which {EVIDENCE} does not hold: cite an entry the "
             "point holds, by its `<artefact>@<commit>` id, or drop the citation (DEC-001 "
             "point 7)",
         )
@@ -461,7 +467,7 @@ def test_an_unresolved_evidence_point_is_one_warning(project: AdopterRepo) -> No
     project.write(
         {
             RECORD: _record(
-                {"UC-001": "holds", "UC-002": "holds"}, ["UC-001@1a2b3c4", "UC-002@1a2b3c4"]
+                {"UC-001": "holds", "UC-002": "holds"}, [f"UC-001@{SHA}", f"UC-002@{SHA}"]
             )
         }
     )
@@ -500,7 +506,7 @@ def test_the_point_is_read_only_when_a_record_cites_evidence(
     document = _check(project)
     assert document["findings"] == []
     assert len(document["summary"]) == 1
-    project.write({RECORD: _record({"UC-001": "holds"}, ["UC-001@1a2b3c4"])})
+    project.write({RECORD: _record({"UC-001": "holds"}, [f"UC-001@{SHA}"])})
     ((location, message),) = _findings(_check(project), "warning")
     assert location == EVIDENCE
     assert f"`pkit connections resolve {EVIDENCE} --json` exited 3" in message
