@@ -25,8 +25,8 @@ body: >
 
   `pkit validate` warns, without failing, when an installed component's
   `runtime_ignore` still declares the process journals, whose ignore line the
-  backbone owns: such an entry keeps journals ignored even when the project
-  commits them. The warning names the fix for where the package comes from:
+  backbone owns: while journals are committed the render leaves such an entry
+  out, and the warning names the fix for where the package comes from:
   upgrade a methodology-shipped component together with the backbone, move an
   externally sourced one's pin to a release that drops the entry, or drop the
   entry from the project's own package.

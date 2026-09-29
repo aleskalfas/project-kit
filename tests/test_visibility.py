@@ -136,13 +136,13 @@ def test_runtime_ignore_tolerates_component_without_key(repo: Path) -> None:
 _JOURNAL_SAMPLE = ".pkit/capabilities/any-capability/project/process/some-process/7.journal.jsonl"
 
 
-def _journal_ignored(repo: Path) -> bool:
+def _journal_ignored(repo: Path, sample: str = _JOURNAL_SAMPLE) -> bool:
     vis.render_runtime_ignore(repo)
-    target = repo / _JOURNAL_SAMPLE
+    target = repo / sample
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text("{}\n", encoding="utf-8")
     res = subprocess.run(
-        ["git", "check-ignore", "-q", _JOURNAL_SAMPLE],
+        ["git", "check-ignore", "-q", sample],
         cwd=repo, capture_output=True, text=True, check=False,
     )
     return res.returncode == 0
@@ -182,6 +182,90 @@ def test_refresh_rerenders_only_a_stale_rendered_file(repo: Path) -> None:
     set_journal_logging(repo, enabled=True, committed=True)
     assert vis.refresh_runtime_ignore(repo) is not None
     assert "journal.jsonl" not in (repo / ".pkit" / ".gitignore").read_text(encoding="utf-8")
+
+
+# --- the backbone's journal choice takes precedence (ADR-009 rule 7, #1134) ---
+#
+# A package older than the backbone's ownership of the journal line still
+# declares it. While the project commits its journals the render leaves the
+# entry out and names it in a comment line; otherwise the entry renders as
+# declared, redundant beside the backbone's own line.
+
+_STALE_CLAIM = ".pkit/capabilities/stale/project/process/**/*.journal.jsonl"
+_STALE_SAMPLE = ".pkit/capabilities/stale/project/process/some-process/7.journal.jsonl"
+_WHY = "the backbone owns the journal pattern while journals are committed"
+
+
+def _gitignore_lines(repo: Path) -> list[str]:
+    return (repo / ".pkit" / ".gitignore").read_text(encoding="utf-8").splitlines()
+
+
+def test_committed_journals_drop_a_component_claim_on_them(repo: Path) -> None:
+    _install_capability_with_runtime_ignore(
+        repo, "stale", [".pkit/capabilities/stale/project/run.log", _STALE_CLAIM]
+    )
+    set_journal_logging(repo, enabled=True, committed=True)
+
+    resolved = vis.resolve_runtime_ignore(repo)
+    assert _STALE_CLAIM not in resolved.patterns
+    assert ".pkit/capabilities/stale/project/run.log" in resolved.patterns
+    assert resolved.dropped == (vis.DroppedEntries("stale", (_STALE_CLAIM,)),)
+    assert resolved.components == 2
+    assert vis.runtime_ignore(repo) == list(resolved.patterns)
+
+    # The journals the stale package claimed are committed after all...
+    assert not _journal_ignored(repo, _STALE_SAMPLE)
+    lines = _gitignore_lines(repo)
+    assert not [line for line in lines if "journal.jsonl" in line and not line.startswith("#")]
+    # ...and a reader of the file sees why the entry is absent.
+    assert f"# dropped: stale '{_STALE_CLAIM}' — {_WHY}" in lines
+
+
+def test_one_dropped_line_per_component_names_each_entry(repo: Path) -> None:
+    legacy = ".pkit/capabilities/stale/project/process/legacy/*.journal.jsonl"
+    _install_capability_with_runtime_ignore(repo, "stale", [_STALE_CLAIM, legacy, _STALE_CLAIM])
+    set_journal_logging(repo, enabled=True, committed=True)
+
+    resolved = vis.resolve_runtime_ignore(repo)
+    assert resolved.dropped == (vis.DroppedEntries("stale", (_STALE_CLAIM, legacy)),)
+    # A component whose every entry is dropped contributes nothing to the render.
+    assert resolved.components == 1
+    comments = [
+        line
+        for line in vis.render_runtime_ignore_content(repo).splitlines()
+        if line.startswith("# dropped:")
+    ]
+    assert comments == [f"# dropped: stale '{_STALE_CLAIM}', '{legacy}' — {_WHY}"]
+
+
+@pytest.mark.parametrize(("enabled", "committed"), [(False, False), (True, False), (False, True)])
+def test_ignored_journals_render_a_component_claim_as_declared(
+    repo: Path, enabled: bool, committed: bool
+) -> None:
+    _install_capability_with_runtime_ignore(repo, "stale", [_STALE_CLAIM])
+    set_journal_logging(repo, enabled=enabled, committed=committed)
+
+    resolved = vis.resolve_runtime_ignore(repo)
+    assert JOURNAL_GLOB in resolved.patterns
+    assert _STALE_CLAIM in resolved.patterns
+    assert resolved.dropped == ()
+    assert "# dropped:" not in vis.render_runtime_ignore_content(repo)
+    assert _journal_ignored(repo, _STALE_SAMPLE)
+
+
+def test_refresh_reports_the_entries_the_render_drops(repo: Path) -> None:
+    _install_capability_with_runtime_ignore(repo, "stale", [_STALE_CLAIM])
+    vis.render_runtime_ignore(repo)
+    set_journal_logging(repo, enabled=True, committed=True)
+
+    refreshed = vis.refresh_runtime_ignore(repo)
+    assert refreshed is not None
+    assert refreshed.dropped == (vis.DroppedEntries("stale", (_STALE_CLAIM,)),)
+    assert refreshed.report().splitlines()[1:] == [
+        f"  dropped       stale '{_STALE_CLAIM}' — {_WHY}"
+    ]
+    # Re-rendered and current again: nothing more to do or report.
+    assert vis.refresh_runtime_ignore(repo) is None
 
 
 # --- runtime-ignore renderer (ADR-009 rule 7) -----------------------
@@ -242,11 +326,11 @@ def test_render_drops_uninstalled_component_lines(repo: Path) -> None:
 
 def test_render_component_count_reflects_declaring_components(repo: Path) -> None:
     # Backbone seam alone = 1 component.
-    assert vis._runtime_ignore_component_count(repo) == 1
+    assert vis.resolve_runtime_ignore(repo).components == 1
     # Adding a capability that declares runtime_ignore bumps the count.
     _install_capability_with_runtime_ignore(
         repo, "demo", [".pkit/capabilities/demo/project/run.log"])
-    assert vis._runtime_ignore_component_count(repo) == 2
+    assert vis.resolve_runtime_ignore(repo).components == 2
 
 
 def test_rendered_gitignore_actually_matches_declared_path(repo: Path) -> None:
