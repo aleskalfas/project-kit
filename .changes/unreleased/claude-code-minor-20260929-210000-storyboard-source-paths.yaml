@@ -1,0 +1,12 @@
+component: claude-code
+kind: minor
+custom:
+  category: Added
+body: >
+  The agent deploy rebases an agent's storyboards onto their source paths. A
+  source that declares a storyboard by its bare sibling filename
+  (`storyboard.md`) is deployed with that entry rewritten to the storyboard's
+  project-root-relative path, in `storyboards:` and wherever the body cites it
+  as a whole path, so the copy in `.claude/agents/` reads the storyboard from
+  where it lives; an entry already written as a source path deploys unchanged.
+  The adapter README documents it under `deploy-agents.sh`.

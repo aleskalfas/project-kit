@@ -112,6 +112,8 @@ curl -LsSf https://astral.sh/uv/install.sh | sh   # or: brew install uv
 | `new capability <name>` | scaffold a new capability (per COR-017); refuses the reserved name `core`, which names the core schemas area (`install` and `register` refuse it too) | yes | no — refuses if capability already exists |
 | `new migration [...]` | scaffold a migration script in the right `<major>.<minor>.0/` directory | yes | no — emits a fresh, numbered file each call |
 | `new decision <namespace> <slug>` | scaffold a new decision record stub (frontmatter + four sections + next number in namespace) | yes | no — refuses if a record with that slug already exists |
+| `new agent <namespace> <name> [--with-storyboard]` | stamp an agent stub in `core`, `project` or a capability's `agents/` folder (per COR-013 + COR-015; see "Authoring commands") | yes | no — refuses a name already taken in core, project or any capability |
+| `new storyboard agent <name> [--namespace <ns>] [--scenario <slug>]` | stamp a storyboard beside an agent, wherever it lives (per COR-016; see "Authoring commands") | yes | no — refuses if the storyboard already exists |
 | `new scratchpad <slug>` | stamp a new active-state scratchpad note (per COR-012) | yes | no — refuses if the slug is already in use across any state |
 | `scratchpad done <slug> [--produced <ref>...]` | move a note from `active/` (or `reported/`, removing that lazy directory when it empties) to `done/`, append `retired`/`produced` to frontmatter | yes | no — refuses if no active or reported note matches |
 | `scratchpad drop <slug>` | move a note from `active/` (or `reported/`) to `dropped/`, append `retired` to frontmatter | yes | no — refuses if no active or reported note matches |
@@ -448,6 +450,36 @@ The stamped file includes:
 Refuses if a record with the same slug already exists in the id-space, or if the namespace is invalid — for a capability namespace, "invalid" means no capability of that name exists under `.pkit/capabilities/`.
 
 **Coordination with the `decision-author` skill.** Per COR-006's discriminator: a command stamps deterministically, a skill drafts content conversationally. The `decision-author` skill (`.pkit/skills/core/decision-author.md`) calls `pkit new decision <namespace> <slug>` for the stub, then walks the author through filling the body — content drafting, discipline self-checks, and approval. Authors who don't need the conversational help can call the command directly.
+
+### `new agent <namespace> <name> [--with-storyboard] [--dry-run]`
+
+Stamps an agent stub — the unified front matter (COR-013) and the canonical body sections — flat as `<name>.md` (COR-015). The spec for what goes in it is `.pkit/agents/README.md`.
+
+- **`<namespace>`** is one of:
+
+  | Namespace | Location |
+  |---|---|
+  | `core` | `.pkit/agents/core/` |
+  | `project` | `.pkit/agents/project/` |
+  | *a capability name* | `.pkit/capabilities/<capability>/agents/` (COR-017, COR-026) |
+
+  A `<namespace>` that is not `core` or `project` is interpreted as a capability name, as for `new decision`: the command refuses if no capability of that name exists under `.pkit/capabilities/`, naming the ones that do, and creates the capability's `agents/` folder on first use.
+
+- **`<name>`** is kebab-case, naming the role. The command refuses a name already taken in core, project or any capability, in either layout — the deploy resolves one agent per name, so a second one would mask the first.
+
+- **`--with-storyboard`** stamps folder form (`<name>/<name>.md`) with a sibling `storyboard.md` scaffold (COR-016) whose `consumers:` names the agent, its `namespace` being the capability's name for a capability's agent.
+
+**Coordination with the `agent-author` skill.** The skill carries the namespace choice (universal role, adopter role, or a capability's discipline), the name, and the body drafting; the command is the stamp underneath.
+
+### `new storyboard agent <name> [--namespace <ns>] [--scenario <slug>] [--dry-run]`
+
+Stamps a storyboard (COR-016) beside an existing agent: `storyboard.md`, or `<slug>.storyboard.md` with `--scenario`, carrying the three-layer scaffold and a `consumers:` entry naming the agent. A flat agent migrates to folder form first (COR-015, an agent gaining its first helper).
+
+- **`agent`** is the only artifact kind handled today.
+- **`<name>`** is the agent's name. Without `--namespace`, the command looks wherever agents ship from, in the deploy's order — project, core, then capabilities by name — and stamps beside the first agent of that name, the one that deploys.
+- **`--namespace <ns>`** pins the lookup to one location: `core`, `project` or a capability name (an unknown capability gets the `new agent` refusal).
+
+Refuses if the storyboard already exists or no agent of that name is found. **Coordination with the `storyboard-author` skill**: the skill walks the framing, tone and scenario drafting after the stamp.
 
 ### `new scratchpad <slug>`
 

@@ -1,0 +1,10 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The deployed `project-manager` agent finds its batch-planning storyboard. Its
+  source cites the storyboard by the sibling name `storyboard.md` and no longer
+  calls it the file beside the agent, which the deployed copy in
+  `.claude/agents/` is not; the deploy writes the storyboard's source path into
+  that copy, which is where the agent loads it from.

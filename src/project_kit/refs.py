@@ -1566,15 +1566,20 @@ def _validate_storyboards(artifacts: list[Artifact], target_root: Path) -> list[
     - The consumer body cites the path (load-bearing reference).
     - `Read` is in `tools` so the runtime can load the file.
 
-    Storyboard side (frontmatter `consumers:`):
+    Storyboard side (frontmatter `consumers:`), for every storyboard in an
+    agent folder — the agents area's or a capability's:
     - Frontmatter must be present and `consumers:` must be a non-empty list.
     - Each consumer entry must name an existing artifact whose `storyboards:`
       includes this storyboard's path (back-reference).
     - Storyboard files present in a consumer's folder must declare that
       consumer (orphan check).
+
+    A declared entry and a storyboard on disk are compared by the file the
+    entry resolves to, so the bare sibling form and the project-root-relative
+    form name the same storyboard.
     """
     issues: list[Issue] = []
-    declared_storyboards: dict[str, list[Artifact]] = {}
+    declared_storyboards: dict[Path, list[Artifact]] = {}
 
     # Consumer-side checks (existing).
     for art in artifacts:
@@ -1593,17 +1598,8 @@ def _validate_storyboards(artifacts: list[Artifact], target_root: Path) -> list[
                 )
             )
         for sb_path in sorted(art.declared.storyboards):
-            declared_storyboards.setdefault(sb_path, []).append(art)
-            if Path(sb_path).is_absolute():
-                candidate = Path(sb_path)
-            else:
-                # A storyboard is declared either target-root-relative (per
-                # agents/README.md) or as a bare sibling filename — the natural
-                # form for a capability agent whose storyboard sits beside it.
-                # Resolve against the agent's own directory first, then the
-                # target root (#584).
-                sibling = art.path.parent / sb_path
-                candidate = sibling if sibling.is_file() else target_root / sb_path
+            candidate = _storyboard_file(art, sb_path, target_root)
+            declared_storyboards.setdefault(candidate, []).append(art)
             if not candidate.is_file():
                 issues.append(
                     Issue(
@@ -1624,8 +1620,8 @@ def _validate_storyboards(artifacts: list[Artifact], target_root: Path) -> list[
                 )
             )
 
-    # Storyboard-side checks. Walk every storyboard file in the agents
-    # area and verify its `consumers:` frontmatter against the declared
+    # Storyboard-side checks. Walk every storyboard file in an agent folder
+    # and verify its `consumers:` frontmatter against the declared
     # back-references collected above.
     for storyboard_path in _walk_storyboard_files(target_root):
         rel = str(storyboard_path.relative_to(target_root))
@@ -1681,7 +1677,7 @@ def _validate_storyboards(artifacts: list[Artifact], target_root: Path) -> list[
                 )
                 continue
             consumer_artifacts_found.append(consumer)
-            if rel not in consumer.declared.storyboards:
+            if consumer not in declared_storyboards.get(storyboard_path, []):
                 issues.append(
                     Issue(
                         location=rel,
@@ -1714,7 +1710,7 @@ def _validate_storyboards(artifacts: list[Artifact], target_root: Path) -> list[
     # consumer's `storyboards:` declares.
     for storyboard_path in _walk_storyboard_files(target_root):
         rel = str(storyboard_path.relative_to(target_root))
-        if rel not in declared_storyboards:
+        if storyboard_path not in declared_storyboards:
             issues.append(
                 Issue(
                     location=rel,
@@ -1734,20 +1730,49 @@ def _location(art: Artifact, target_root: Path) -> str:
     )
 
 
+def _storyboard_file(art: Artifact, declared: str, target_root: Path) -> Path:
+    """The file a `storyboards:` entry names.
+
+    An entry is either project-root-relative or a bare sibling filename — the
+    portable form, resolved against the agent's own directory first (#584);
+    the deploy rewrites a sibling entry to the source path in the deployed
+    copy. An absolute entry is taken as written.
+    """
+    if Path(declared).is_absolute():
+        return Path(declared)
+    sibling = art.path.parent / declared
+    return sibling if sibling.is_file() else target_root / declared
+
+
 def _walk_storyboard_files(target_root: Path) -> list[Path]:
-    """All `storyboard.md` and `*.storyboard.md` files under .pkit/agents/."""
-    agents_dir = target_root / ".pkit" / "agents"
-    if not agents_dir.is_dir():
-        return []
+    """All `storyboard.md` and `*.storyboard.md` files in an agent folder.
+
+    The agents area (`.pkit/agents/`) and every capability's agents folder
+    (`.pkit/capabilities/<cap>/agents/`, COR-017) — wherever an agent can own
+    a storyboard.
+    """
+    roots = [target_root / ".pkit" / "agents"]
+    caps_dir = target_root / ".pkit" / "capabilities"
+    if caps_dir.is_dir():
+        roots += sorted(cap / "agents" for cap in caps_dir.iterdir() if cap.is_dir())
     found: list[Path] = []
-    for path in agents_dir.rglob("*.md"):
-        name = path.name
-        if name == "storyboard.md" or name.endswith(".storyboard.md"):
-            found.append(path)
+    for root in roots:
+        if not root.is_dir():
+            continue
+        for path in root.rglob("*.md"):
+            name = path.name
+            if name == "storyboard.md" or name.endswith(".storyboard.md"):
+                found.append(path)
     return sorted(found)
 
 
 def _find_agent(artifacts: list[Artifact], name: str | None, namespace: str | None) -> Artifact | None:
+    """The agent a storyboard's `consumers:` entry names.
+
+    `namespace` is `core` or `project` for an agent in the agents area, or the
+    capability's name for a capability's agent — capability agents load with
+    `namespace="core"`, so their capability is what identifies them.
+    """
     if not name:
         return None
     for art in artifacts:
@@ -1755,7 +1780,8 @@ def _find_agent(artifacts: list[Artifact], name: str | None, namespace: str | No
             continue
         if art.name != name:
             continue
-        if namespace is not None and art.namespace != namespace:
+        where = art.capability if art.capability is not None else art.namespace
+        if namespace is not None and where != namespace:
             continue
         return art
     return None
