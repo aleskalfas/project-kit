@@ -1,0 +1,15 @@
+component: backbone
+kind: patch
+custom:
+  category: Added
+body: >
+  `pkit validate`'s packages member now warns on a capability alias another
+  name shadows. The dispatcher gives a top-level name to a backbone command
+  first, then to a capability's own name, then to the first capability in
+  manifest order that declares it as an alias. Before, an alias that lost this
+  order reached nothing and nothing said so. The warning is located at the
+  `aliases` entry and names the alias, its capability and what holds the name:
+  the backbone command, the other capability's name, or the capability that
+  declared the same alias first. It reads the same table the dispatcher binds,
+  so the two cannot disagree. It is a warning because `pkit <capability> …`
+  still reaches the capability.
