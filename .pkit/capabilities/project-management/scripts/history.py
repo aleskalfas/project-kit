@@ -58,7 +58,7 @@ from pathlib import Path
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import axis_carriage, axis_labels, bootstrap_gate  # noqa: E402
+from _lib import axis_carriage, axis_labels, bootstrap_gate, state_timeline  # noqa: E402
 from _lib.gh import gh_run, load_adopter_config  # noqa: E402
 from _lib.membership import resolve_capability_root  # noqa: E402
 
@@ -237,8 +237,7 @@ def _report_drift(
     is a different feature, governed by the board read-path contract and not
     built here.
     """
-    carried = axis_carriage.carriage("state", config, substrate_map)
-    if carried not in ("kit-label", "adopter-label"):
+    if not state_timeline.label_carries_state(config, substrate_map):
         print(
             f"\ndrift check: SKIPPED — state is carried "
             f"{axis_carriage.describe('state', config, substrate_map)}, so the "
@@ -281,42 +280,21 @@ def _timeline_state_adds(
     substrate_map: axis_labels.SubstrateMap | None = None,
 ) -> list[dict] | None:
     """GitHub timeline `labeled` events for STATE labels — the observed state
-    changes. None on gh failure. Each item: {created_at, actor, label}.
+    changes. None on gh failure. Each item: {event, created_at, actor, label}.
 
+    Read through `_lib/state_timeline`, the one reader `move-issue` shares.
     Which names count is `axis_labels.carried_labels`, the map-aware counterpart
-    to the inline `startswith("state:")` this replaces: the kit's prefix OR the
-    adopter's declared vocabulary under a `label` binding. The union is
-    deliberate and is the seam's own rule — a repo mid-adoption can hold a stale
-    `state:todo` beside the adopter's `Ready`, and both are observed changes.
-    Only the caller decides whether the scan is meaningful at all; this function
-    is given a substrate it can read.
+    to the inline `startswith("state:")` this replaced: the kit's prefix OR the
+    adopter's declared vocabulary under a `label` binding. Only the caller
+    decides whether the scan is meaningful at all; this function is given a
+    substrate it can read.
     """
-    proc = gh_run(
-        [
-            "gh", "api", "--paginate",
-            f"repos/{{owner}}/{{repo}}/issues/{issue_number}/timeline",
-        ],
-        config, check=False,
+    events = state_timeline.state_label_events(
+        issue_number, config, substrate_map, run=gh_run,
     )
-    if proc.returncode != 0:
+    if events is None:
         return None
-    try:
-        events = json.loads(proc.stdout)
-    except json.JSONDecodeError:
-        return None
-    out: list[dict] = []
-    for ev in events if isinstance(events, list) else []:
-        if not isinstance(ev, dict) or ev.get("event") != "labeled":
-            continue
-        label = (ev.get("label") or {}).get("name", "")
-        if not axis_labels.carried_labels("state", [label], substrate_map):
-            continue
-        out.append({
-            "created_at": ev.get("created_at", "?"),
-            "actor": (ev.get("actor") or {}).get("login", "?"),
-            "label": label,
-        })
-    return out
+    return [ev for ev in events if ev["event"] == state_timeline.LABELED]
 
 
 if __name__ == "__main__":
