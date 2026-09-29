@@ -14,8 +14,9 @@ pkit:
       record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, ADR-019, ADR-039, ADR-055]
       artefact: [.pkit/decisions/README.md]
     revalidated:
-      at: 2026-09-29T15:23:53Z
-      outcome: updated
+      at: 2026-09-29T16:17:35Z
+      outcome: unchanged
+      unchanged-because: tests/README.md only adds pkit friction artefacts to the commands pkit_on_path serves; the check aggregator, the hook and the gate are unchanged
 ---
 
 # Contributing to project-kit

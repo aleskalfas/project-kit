@@ -20,8 +20,9 @@ status`, `pkit connections resolve` — as a query (COR-052 point 6): from the
 project root, with `--json` alone and the offline marker set. It takes no
 parameter: it reads the repository — HEAD and its history, through `pkit
 friction check --all --json`, and which documents are pages, from the working
-tree — writes nothing and needs no network. The contribution is inert while no
-capability provides the work-tracking role; nothing here asks.
+tree through `pkit friction artefacts --json` — writes nothing and needs no
+network. The contribution is inert while no capability provides the
+work-tracking role; nothing here asks.
 
 Usage:
   pkit living-docs fill-doc-check           one line per obligation, for a person
@@ -29,8 +30,9 @@ Usage:
 
 Exit codes:
   0  answered
-  1  no answer: the friction check gave no document, or a page's friction lies
-     beyond a shallow clone's history — never an empty answer in its place
+  1  no answer: the friction check or the places gave no document, or a page's
+     friction lies beyond a shallow clone's history — never an empty answer in
+     its place
 """
 
 from __future__ import annotations
@@ -44,6 +46,7 @@ from typing import Any
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import doc_check, spaces  # noqa: E402
+from _lib.artefacts import Unreadable  # noqa: E402
 from _lib.declarations import project_root  # noqa: E402
 
 
@@ -51,7 +54,12 @@ def obligations(root: Path) -> list[dict[str, Any]]:
     """The point's obligations for the project at `root`. Raises NoAnswer."""
     if not doc_check.has_commit(str(root)):
         return []  # nothing committed: no HEAD to judge, so nothing is owed
-    return doc_check.obligations(doc_check.read_friction(str(root)), spaces.pages(root))
+    report = doc_check.read_friction(str(root))
+    try:
+        pages = spaces.pages(root)
+    except Unreadable as exc:
+        raise doc_check.NoAnswer(f"the pages cannot be told: {exc}") from exc
+    return doc_check.obligations(report, pages)
 
 
 def main() -> int:

@@ -486,13 +486,19 @@ def test_an_out_of_step_contributor_leaves_the_whole_readers_point_unresolved(
 
 def test_the_point_is_read_only_when_some_page_names_a_reader(
     docs_project: AdopterRepo,
+    pkit_on_path: Path,
     tmp_path_factory: pytest.TempPathFactory,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A `pkit` that answers nothing is never asked while no page names a reader;
-    once one does, no document is an unresolved point, never a pass."""
+    """A `pkit` that answers nothing for the point is never asked while no page names
+    a reader; once one does, no document is an unresolved point, never a pass. The
+    places are read through `pkit` whatever the pages say, so only the point's read
+    is broken."""
     broken = tmp_path_factory.mktemp("broken-pkit")
-    (broken / "pkit").write_text("#!/bin/sh\nexit 3\n", encoding="utf-8")
+    (broken / "pkit").write_text(
+        f'#!/bin/sh\nif [ "$1" = connections ]; then exit 3; fi\nexec "{pkit_on_path}/pkit" "$@"\n',
+        encoding="utf-8",
+    )
     (broken / "pkit").chmod(0o755)
     monkeypatch.setenv("PATH", f"{broken}{os.pathsep}{os.environ['PATH']}")
     docs_project.write(
