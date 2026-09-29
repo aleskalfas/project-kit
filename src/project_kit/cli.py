@@ -5380,11 +5380,11 @@ def uninstall_capability_cmd(
             )
 
     if not dry_run:
-        # Re-run installed adapter primitives so the harness drops
-        # stale symlinks to the removed capability's content (e.g.,
-        # deploy-skills.sh's "stale removal" pass). Runs for both origins:
-        # an incubated capability's skills/agents must be undeployed even
-        # though its source files stay on disk.
+        # Re-run installed adapter primitives so the harness drops stale
+        # entries of a deleted subtree (e.g., deploy-skills.sh's "stale
+        # removal" pass). A subtree kept on disk was already undeployed
+        # inside `uninstall_capability`, through each adapter's undeploy
+        # primitive, since a deploy re-run cannot see it as gone.
         from project_kit import install as install_mod
         ctx = install_mod.InstallContext(
             target_root=target_root,

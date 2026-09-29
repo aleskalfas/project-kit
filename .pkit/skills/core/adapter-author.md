@@ -84,6 +84,7 @@ Add the artifacts the harness needs. Common shapes:
 
 - **Settings file(s)** — typically a `core/` + `project/` split inside a `settings/` directory (universal area pattern applied internally), with a `merge-settings.sh` primitive that combines them into the harness's expected fixed-path file (per COR-002).
 - **Deploy script(s)** — typically `deploy-skills.sh` (and later `deploy-agents.sh`) that symlinks `.pkit/skills/<…>/` into the harness's expected location.
+- **Undeploy script** — `undeploy-capability.sh <capability-name>`, removing what the deploy scripts put in the harness for that one capability, recognised by their deploy mark. The lifecycle runs it when it unregisters a capability whose files stay, and names an adapter that ships none in a warning (the adapters README, "Primitives the lifecycle calls").
 - **Hook configuration** — if the harness supports hooks.
 
 Skills, agents, and decisions live in their own harness-agnostic areas (per COR-006); the adapter only translates them at deploy time.
