@@ -175,24 +175,31 @@ def test_floor_field_on_a_backbone_changeset_fails(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    ("requires_backbone", "kind", "component"),
+    ("requires_backbone", "kind"),
     [
-        ('"*"', "capability", "houseware"),  # no floor to raise
-        ('"<2.0.0,>=1.0.0"', "capability", "houseware"),  # does not open with the floor
-        ("'>=1.0.0,<2.0.0'", "capability", "houseware"),  # a shape the broaden cannot widen
-        ('">=1.0.0, <2.0.0"', "capability", "houseware"),  # likewise
-        ('">=1.0.0,<2.0.0"', "bundle", "houseware"),  # not a capability or adapter
-        ('">=1.0.0,<2.0.0"', "capability", "nowhere"),  # no such component
+        ('"*"', "capability"),  # no floor to raise
+        ('"<2.0.0,>=1.0.0"', "capability"),  # does not open with the floor
+        ("'>=1.0.0,<2.0.0'", "capability"),  # single-quoted
+        ('">=1.0.0, <2.0.0"', "capability"),  # spaced
+        ('">=1.0.0,<2.0.0"', "bundle"),  # not a capability or adapter
     ],
 )
 def test_floor_field_on_a_component_without_a_floor_to_raise_fails(
-    tmp_path: Path, requires_backbone: str, kind: str, component: str
+    tmp_path: Path, requires_backbone: str, kind: str
 ) -> None:
     components = _components(tmp_path, requires_backbone=requires_backbone, kind=kind)
-    violations = release.lint_floor(_floor(component), components, SHIPPED)
+    violations = release.lint_floor(_floor(), components, SHIPPED)
     assert [v.message for v in violations] == [
-        f"{component!r} is not a capability or adapter whose `requires_backbone` has a "
+        "'houseware' is not a capability or adapter whose `requires_backbone` has a "
         'floor the release can raise (a range of the form ">=X.Y.Z,<A.B.C" or ">=X.Y.Z").'
+    ]
+
+
+def test_floor_field_on_an_unknown_component_says_so(tmp_path: Path) -> None:
+    violations = release.lint_floor(_floor("nowhere"), _components(tmp_path), SHIPPED)
+    assert [v.message for v in violations] == [
+        "names unknown component 'nowhere', so there is no floor to raise. "
+        "Known: backbone, houseware."
     ]
 
 

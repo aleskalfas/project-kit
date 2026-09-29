@@ -1038,7 +1038,8 @@ def release_plan(as_json: bool) -> None:
     default=False,
     help="Skip widening released components' requires_backbone to cover the "
     "current backbone. Default is to broaden (releasing under backbone X "
-    "asserts compatibility with X); pass this to keep a range as authored.",
+    "asserts compatibility with X); pass this to keep an upper bound as "
+    "authored. A floor a changeset declares is still raised.",
 )
 @click.option("--yes", is_flag=True, default=False, help="Skip the confirmation prompt (CI).")
 def release_apply(tag: bool, push: bool, no_broaden: bool, yes: bool) -> None:

@@ -8,6 +8,7 @@ import shutil
 import subprocess
 from datetime import date
 from pathlib import Path
+from typing import cast
 
 import click
 import pytest
@@ -780,6 +781,28 @@ def test_plan_says_raised_only_when_the_range_changes(tmp_path: Path) -> None:
     assert rel.floor_raise.lines == [
         "requires_backbone floor stays >=1.7.0 (already at or above 1.6.0)"
     ]
+
+
+def test_release_summary_carries_the_floor_raise(tmp_path: Path) -> None:
+    """The release-PR workflow builds the PR body from `plan --json`."""
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    _write_capability(source_kit, "houseware", "0.3.0", ">=1.0.0,<2.0.0")
+    _add(source_kit, "backbone", "minor", "backbone change", "a.yaml")
+    _add_floor(source_kit, "houseware", "minor", "b.yaml")
+
+    summary = release.release_summary(source_kit, release.compute_release(source_kit))
+
+    releases = cast("list[dict[str, object]]", summary["releases"])
+    floors = {str(r["component"]): r["requires_backbone_floor"] for r in releases}
+    assert floors["backbone"] is None
+    assert floors["houseware"] == {
+        "from": "1.0.0",
+        "to": "1.6.0",
+        "raised": True,
+        "backbone": "1.6.0",
+        "backbone_moves": True,
+        "lines": ["requires_backbone floor raised to >=1.6.0"],
+    }
 
 
 # --- Dogfood: the release that ships the backbone-owned journal line ---------

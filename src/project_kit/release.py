@@ -113,7 +113,8 @@ class FloorRaise:
 
     @property
     def lines(self) -> list[str]:
-        """What `release plan` prints under the component's bump."""
+        """What `release plan` prints under the component's bump, and its `--json`
+        carries for the release PR's body."""
         lines = [
             f"requires_backbone floor raised to >={self.new_floor}"
             if self.raises
@@ -308,9 +309,13 @@ def floor_problems(cs: Changeset, components: Mapping[str, Component], shipped: 
             f"{cs.component!r} changes what it requires — declare patch, minor or major."
         )
     component = components.get(cs.component)
-    if (
-        component is None
-        or component.kind not in ("capability", "adapter")
+    if component is None:
+        problems.append(
+            f"names unknown component {cs.component!r}, so there is no floor to raise. "
+            f"Known: {', '.join(sorted(components))}."
+        )
+    elif (
+        component.kind not in ("capability", "adapter")
         or versioning.requires_backbone_floor(component.version_path.read_text(encoding="utf-8"))
         is None
     ):
@@ -636,8 +641,9 @@ def release_summary(source_kit: Path, plan: ReleasePlan) -> dict[str, object]:
 
     Emitted as JSON by `pkit release plan --json` so the release-PR workflow
     can decide whether to open a release PR (`empty`), name the branch/tag
-    (`backbone_version`), render the PR body (`releases`), and surface the
-    migration-dir prediction warnings (`migration_warnings`).
+    (`backbone_version`), render the PR body (`releases`, each with the floor
+    raise a changeset declared for it, or null), and surface the migration-dir
+    prediction warnings (`migration_warnings`).
     """
     backbone = plan.backbone
     return {
@@ -650,11 +656,28 @@ def release_summary(source_kit: Path, plan: ReleasePlan) -> dict[str, object]:
                 "new_version": rel.new_version,
                 "segment": rel.segment,
                 "notes": list(rel.notes),
+                "requires_backbone_floor": _floor_summary(rel.floor_raise),
             }
             for rel in plan.releases
         ],
         "changesets_consumed": len(plan.consumed),
         "migration_warnings": migration_dir_mismatches(source_kit, plan),
+    }
+
+
+def _floor_summary(floor: FloorRaise | None) -> dict[str, object] | None:
+    """One release's declared floor raise for `release_summary`: the floors before
+    and after, whether the range changes, the backbone it names and whether the
+    release moves it, and the lines `release plan` prints for it."""
+    if floor is None:
+        return None
+    return {
+        "from": floor.old_floor,
+        "to": floor.new_floor,
+        "raised": floor.raises,
+        "backbone": floor.backbone,
+        "backbone_moves": floor.backbone_moves,
+        "lines": floor.lines,
     }
 
 
