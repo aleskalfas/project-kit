@@ -8,10 +8,12 @@
 # ///
 """software-analysis capability — validate: the analysis artefacts (DEC-001).
 
-Checks each artefact's shape and own fields against its companion schema, ids
-two artefacts share, a use case not anchored to its actor, a journey whose
-use-case anchors do not match its steps, and the revalidation records' front
-matter. `_lib/check.py` states every check and the record point it applies.
+Checks each artefact's shape and own fields against its companion schema, a
+use case's or journey's heading against its id and title, ids two artefacts
+share, an actor or step the stamp would refuse, a use case not anchored to
+its actor, a journey whose use-case anchors do not match its steps, and the
+revalidation records' front matter and the artefacts they cite.
+`_lib/check.py` states every check and the record point it applies.
 
 The backbone runs it as this capability's validator, the
 `software-analysis:artefacts` member of `pkit validate` (ADR-058): from the
@@ -49,8 +51,8 @@ def main() -> int:
         prog="pkit analysis validate",
         description=(
             "Check the analysis artefacts (software-analysis DEC-001): shape and required "
-            "parts, duplicate ids, actor and journey anchors, revalidation records. "
-            "Read-only and offline; the working tree alone."
+            "parts, headings, duplicate ids, what an artefact names, actor and journey "
+            "anchors, revalidation records. Read-only and offline; the working tree alone."
         ),
     )
     parser.add_argument(
