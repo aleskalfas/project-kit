@@ -1,3 +1,22 @@
+---
+reader: user
+kind: reference
+pkit:
+  friction:
+    anchors:
+      path:
+        - .pkit/capabilities/software-engineering/agents/**
+        - .pkit/capabilities/software-engineering/review-contributions.yaml
+        - .pkit/capabilities/software-engineering/decisions/**
+        - .pkit/capabilities/software-engineering/scripts/**
+        - .pkit/capabilities/software-engineering/schemas/**
+        - .pkit/capabilities/software-engineering/skills/**
+      record: [COR-013, COR-024, COR-026, COR-030, ADR-013, ADR-052, "project-management:DEC-015", "project-management:DEC-028", "project-management:DEC-032"]
+    revalidated:
+      at: 2026-09-29T15:23:52Z
+      outcome: updated
+---
+
 # software-engineering capability
 
 Formalises the discipline of **authoring code under a project's own conventions** — and reviewing it. It ships a *producer* agent, `software-engineer`, that writes and edits code by reading the project's conventions corpus and conforming to it, plus a **code-review panel** of three *reviewer* agents that check code at merge time and fold through the project-management merge gate. So the code an agent produces is clean, stable, and extensible by *this* project's standards, consistently across sessions, without the conventions being re-explained each time — and code that reaches the gate is actually reviewed. Install it in any project where agents write code; skip it where they don't (it's opt-in for exactly that reason, per [COR-026](../../decisions/core/COR-026-agent-placement-by-discipline.md)).

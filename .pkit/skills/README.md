@@ -1,12 +1,24 @@
 ---
 variant: universal
+reader: user
+kind: reference
+pkit:
+  friction:
+    anchors:
+      path:
+        - .pkit/skills/core/**
+        - .pkit/adapters/claude-code/deploy-skills.sh
+      record: [COR-003, COR-005, COR-006, COR-013, COR-015, COR-020]
+    revalidated:
+      at: 2026-09-29T15:15:41Z
+      outcome: updated
 ---
 
 # Skills
 
 Installable agent skills — harness-agnostic instructions that the adapter (per COR-005) deploys into the active AI harness. A skill is a Markdown file with frontmatter (name, description, optional metadata) and a procedural body. Atomic skills live as a single file; skills with sibling helpers (templates, references, scripts) live in a per-name folder. The file-layout rule is recorded in COR-015.
 
-Skills are the **conversational, judgement-bearing** half of the methodology's authoring loop (per COR-006's discriminator). For authoring tasks where the methodology also ships a deterministic command (`pkit new decision`, `pkit new bundle`, etc.), the skill is the agent-facing entry point; the script is the substrate underneath. The pairing is recorded in COR-005's "Skill / command pairing" section. Each paired skill declares `wraps_command` in its frontmatter so the pairing is queryable.
+Skills are the **conversational, judgement-bearing** half of the methodology's authoring loop (per COR-006's discriminator). For authoring tasks where the methodology also ships a deterministic command (`pkit new decision`, `pkit new adapter`, etc.), the skill is the agent-facing entry point; the script is the substrate underneath. The pairing is recorded in COR-005's "Skill / command pairing" section. Each paired skill declares `wraps_command` in its frontmatter so the pairing is queryable.
 
 ## Layout
 
@@ -35,11 +47,16 @@ The `core/` + `project/` split is the universal area pattern (per COR-003): core
 Core-shipped skills currently in `core/`:
 
 - **`decision-author`** — paired with `pkit new decision`. Walks the author through a new COR or PRJ record: disciplines (axiom / project-neutrality / principles-not-inventory), slug, command invocation for the stub, body drafting, self-checks, commit. See `.pkit/skills/core/decision-author.md`.
-- **`bundle-author`** — paired with `pkit new bundle`. Walks the author through adding a new bundle to a bundle-based area: area selection, contract review, scaffold, README + config template + internals drafting, self-checks, commit. See `.pkit/skills/core/bundle-author.md`.
 - **`adapter-author`** — paired with `pkit new adapter`. Walks the author through adding a new harness adapter at `.pkit/adapters/<name>/`: contract review, scaffold, README + harness-specific content drafting, self-checks, commit. See `.pkit/skills/core/adapter-author.md`.
 - **`migration-author`** — paired with `pkit new migration`. Walks the author through adding a new migration script: tier / scope / version / slug selection, scaffold, idempotent-body drafting, self-checks, commit. See `.pkit/skills/core/migration-author.md`.
 - **`area-author`** — paired with `pkit new area`. Walks the author through adding a new top-level area: name + variant selection, scaffold, README drafting per the variant's layout, self-checks, commit. See `.pkit/skills/core/area-author.md`.
 - **`scratchpad-author`** — paired with `pkit new scratchpad`. Walks the author through starting an exploratory note: slug, date stamping, framing prompts, retirement guidance. See `.pkit/skills/core/scratchpad-author.md`.
+- **`agent-author`** — paired with `pkit new agent`. Walks the author through a new agent: frontmatter shape, citation discipline and body conventions (COR-013). See `.pkit/skills/core/agent-author.md`.
+- **`capability-author`** — paired with `pkit new capability`. Walks the author through packaging a discipline as a capability: layout, package metadata and the COR-017 contract. See `.pkit/skills/core/capability-author.md`.
+- **`storyboard-author`** — paired with `pkit new storyboard`. Walks the author through a storyboard for a scripted interaction scenario (COR-016): framing, tone and each scenario. See `.pkit/skills/core/storyboard-author.md`.
+- **`report-author`** — paired with `pkit report`. Helps a user compose and file a bug, change-request or feedback report to the upstream project. See `.pkit/skills/core/report-author.md`.
+- **`schema`** — a composite skill (COR-020), paired with `pkit new schema`, `pkit schemas add` and `pkit schemas rename`: author a schema, extend or rename an entry, or distill schemas from an upstream. See `.pkit/skills/core/schema/schema.md`.
+- **`process`** — a composite skill (COR-020), paired with `pkit process new`, `couple` and `hand-off`: a process definition's shape. See `.pkit/skills/core/process/process.md`.
 
 ## Frontmatter
 

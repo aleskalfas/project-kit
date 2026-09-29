@@ -16,7 +16,10 @@ realises, over the real repository:
 - the analysis location derives under the internal root (criterion 4);
 - living-docs' own checks pass over this tree end to end: its validator, the
   shared method `LDOC` and both spaces' definitions inheriting it, and the
-  friction pass over the roots it declares as places (#1003).
+  friction pass over the roots it declares as places (#1003);
+- every declared place is a page — its reader, a kind with a template, a
+  friction block anchoring what it describes and a revalidation — and the
+  code-to-doc mapping keeps no rule a page's anchors now carry (#1010).
 """
 
 from __future__ import annotations
@@ -29,18 +32,29 @@ from pathlib import Path, PurePosixPath
 
 import pytest
 from click.testing import CliRunner
+from jsonschema import Draft202012Validator
 from ruamel.yaml import YAML
 
 from project_kit import config_validate as cv
 from project_kit import docs_roots as dr
 from project_kit import rule_sets as rs
 from project_kit.cli import main
-from project_kit.friction_discovery import read_friction_settings
+from project_kit.friction_discovery import (
+    pattern_matcher,
+    read_friction_settings,
+    split_front_matter,
+)
 from project_kit.friction_validate import FrictionFindingKind, validate_friction
+from project_kit.working_tree import working_tree
 
 REPO = Path(__file__).resolve().parent.parent
 LIVING_DOCS = REPO / ".pkit" / "capabilities" / "living-docs"
 LIVING_DOCS_CONFIG = LIVING_DOCS / "project" / "config.yaml"
+PM_CONFIG = REPO / ".pkit" / "capabilities" / "project-management" / "project" / "config.yaml"
+
+#: The reader each space's pages are written for — the readers point's
+#: defaults, one per mandatory space (living-docs DEC-001 point 7).
+SPACE_READER = {"user": "user", "technical": "maintainer"}
 
 # Every README under `.pkit/` that is *not* a place, with the reason ADR-055
 # point 3's principle gives: a README an adopter reads in order to use an area,
@@ -214,9 +228,10 @@ def test_living_docs_validator_passes_over_this_tree() -> None:
     summary = document["summary"]
     assert summary[1].endswith("definition tech-docs/living-docs/rule-sets/user.md.")
     assert summary[2].endswith("definition tech-docs/living-docs/rule-sets/technical.md.")
-    # No page names a reader yet, so the readers point is not read.
+    # Every place is a page (#1010), each reader resolved against the readers point.
     assert summary[4] == (
-        "readers: no page names one yet, so pkit::documentation:readers is not read."
+        "readers (pkit::documentation:readers): maintainer, user; "
+        f"{len(_project_places())} page reader(s) checked."
     )
 
 
@@ -247,3 +262,84 @@ def test_the_friction_pass_over_the_declared_roots_has_no_error() -> None:
     artefact; nothing there may fail the pass."""
     result = validate_friction(REPO)
     assert result.errors == ()
+
+
+# --- the pages: every place anchored and revalidated (#1010) -----------------
+
+
+def _front_matter(place: str) -> dict:
+    front, _body = split_front_matter((REPO / place).read_text(encoding="utf-8"))
+    assert front is not None, f"{place}: no front matter"
+    return YAML(typ="safe").load(front)
+
+
+def _friction(front: dict) -> dict:
+    return (front.get("pkit") or {}).get("friction") or {}
+
+
+@pytest.mark.parametrize("place", _project_places())
+def test_every_declared_place_is_a_page_anchored_and_revalidated(place: str) -> None:
+    """A place's document is a page (living-docs DEC-001 point 4): its reader —
+    the one its space serves — and a kind whose template the capability ships
+    (RS-LDOC-004), then a friction block that anchors what the page describes
+    and records its revalidation (COR-050 points 2 and 3)."""
+    front = _front_matter(place)
+    schema = json.loads((LIVING_DOCS / "schemas" / "page.schema.json").read_text(encoding="utf-8"))
+    assert list(Draft202012Validator(schema).iter_errors(front)) == [], place
+    space = _living_docs_config()["places"][place]
+    assert front["reader"] == SPACE_READER[space], place
+    assert (LIVING_DOCS / "templates" / f"{front['kind']}.md").is_file(), place
+    friction = _friction(front)
+    anchors = friction.get("anchors") or {}
+    assert any(anchors.values()), f"{place}: no anchor"
+    revalidated = friction.get("revalidated") or {}
+    assert revalidated.get("at") and revalidated.get("outcome") in ("updated", "unchanged"), place
+
+
+def test_no_page_path_anchors_another_page() -> None:
+    """A page grounded by another page names it as an artefact, never by path:
+    a path anchor wakes on the other page's revalidation marker, which is not
+    content, and would make every revalidation cascade (COR-050 point 5)."""
+    places = _project_places()
+    crossed = sorted(
+        (place, anchor, other)
+        for place in places
+        for anchor in (_friction(_front_matter(place)).get("anchors") or {}).get("path", [])
+        for other in places
+        if other != place and pattern_matcher(anchor)(other)
+    )
+    assert crossed == []
+
+
+def test_the_mapping_keeps_no_rule_a_page_anchor_carries() -> None:
+    """The code-to-doc mapping's rules became page anchors (#1010): a rule whose
+    document is a page that anchors part of the rule's code is converted, and
+    stays out of the mapping — the page's friction holds the obligation now
+    (project-management DEC-053). A rule may remain only for a document that
+    is not a page."""
+    mapping = YAML(typ="safe").load(PM_CONFIG.read_text(encoding="utf-8"))
+    rules = (mapping.get("code_path_to_doc_mapping") or {}).get("rules") or []
+    files = working_tree(REPO).files()
+    pages = {place: _friction(_front_matter(place)) for place in _project_places()}
+    carried = []
+    for rule in rules:
+        code = [rel for rel in files if pattern_matcher(rule["code"])(rel)]
+        for doc in rule.get("docs", []):
+            anchors = ((pages.get(doc) or {}).get("anchors") or {}).get("path", [])
+            if any(pattern_matcher(anchor)(rel) for anchor in anchors for rel in code):
+                carried.append((rule["code"], doc))
+    assert carried == []
+
+
+def test_the_declared_surface_is_what_the_retired_mapping_obliged() -> None:
+    """The retired rules' code stays declared as the surface that ought to be
+    described (COR-050 point 8), so what no page anchors to is still counted."""
+    surface = [entry.value for entry in read_friction_settings(REPO).surface]
+    assert surface == [
+        "src/**",
+        ".pkit/cli/**",
+        ".pkit/capabilities/project-management/**",
+        ".pkit/capabilities/evidence/**",
+        ".pkit/capabilities/software-engineering/**",
+        ".pkit/adapters/**",
+    ]

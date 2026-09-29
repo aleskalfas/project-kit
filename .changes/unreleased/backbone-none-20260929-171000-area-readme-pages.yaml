@@ -1,0 +1,10 @@
+component: backbone
+kind: none
+body: >
+  The area READMEs under .pkit/ carry page front matter: a reader, a kind and a
+  friction block anchoring the code and decisions each describes, revalidated;
+  a few statements the code had outgrown are corrected in place (retired
+  commands and skills, moved paths, the rules area's project.md). Adopters
+  receive the front matter on sync and it is inert there — a synced tree is
+  never a place, so nothing reads it (ADR-055, "Anchors in shipped READMEs
+  propagate"). No contract changes.

@@ -1,0 +1,12 @@
+component: project-management
+kind: none
+body: >
+  The capability README carries page front matter — reader, kind and a
+  friction block anchoring the scripts, schemas, agents, skill, templates,
+  permissions, adapter overlay and decisions it describes — and corrects the
+  project-manager agent's path and the capability-command dispatch it
+  described as future. project-kit's own code-to-doc mapping, in the
+  capability's project tier, is emptied because page anchors now carry its
+  rules; that file is project-kit's configuration, never synced, so adopters'
+  mappings and the shipped example are untouched. Inert in an adopting
+  project: a synced tree is never a place (ADR-055).

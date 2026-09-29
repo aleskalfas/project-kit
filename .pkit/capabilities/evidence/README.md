@@ -1,3 +1,20 @@
+---
+reader: user
+kind: reference
+pkit:
+  friction:
+    anchors:
+      path:
+        - .pkit/capabilities/evidence/scripts/**
+        - .pkit/capabilities/evidence/schemas/**
+        - .pkit/capabilities/evidence/skills/**
+        - .pkit/capabilities/evidence/decisions/**
+      record: [COR-007, COR-017, COR-020, COR-021]
+    revalidated:
+      at: 2026-09-29T15:17:28Z
+      outcome: updated
+---
+
 # evidence capability
 
 A lightweight citation discipline for projects that make factual claims grounded in external sources. Every factual claim in adopter-authored text carries an inline `[ev:slug]` token; every slug resolves to a record in a per-directory `evidence.yaml` carrying the verbatim excerpt and source pointer. A validator script enforces the chain.
@@ -17,8 +34,7 @@ Skip it for projects whose claims are about their own internals — `pkit refs v
 - `decisions/DEC-001-citation-discipline.md` — the `[ev:slug]` token convention and slug grammar.
 - `decisions/DEC-002-evidence-record-schema.md` — the per-directory `evidence.yaml` shape with `schema_version: 1`.
 - `decisions/DEC-003-validation-model.md` — the validator's contract (what's checked, what fails, exit codes).
-- `skills/evidence-add.md` — walks an author through capturing a new record and citing it in prose.
-- `skills/evidence-validate.md` — walks an author through running the validator and resolving findings.
+- `skills/evidence/` — the `evidence` skill, a composite (COR-020) dispatching to two operations: `add.md` walks an author through capturing a new record and citing it in prose; `validate.md` through running the validator and resolving findings.
 - `scripts/validate.py` — the validator. PEP 723 self-contained Python script. Surfaces as `pkit evidence validate` per the capability-command-dispatch convention (per COR-021).
 
 ## Adopter setup
@@ -36,7 +52,7 @@ schema_version: 1
 records: []
 ```
 
-Author the first record using the `evidence-add` skill, cite it in prose with `[ev:<slug>]`, and run the validator:
+Author the first record using the `evidence` skill's add operation, cite it in prose with `[ev:<slug>]`, and run the validator:
 
 ```
 pkit evidence validate <scope-dir>
