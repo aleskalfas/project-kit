@@ -457,7 +457,7 @@
     },
     "journal_entry": {
       "type": "object",
-      "description": "An append-only runtime record the engine writes (the memory + audit trail). Not authored by capabilities; published here so tooling can validate journals. Two kinds: a MOVE entry (the default -- a guarded move was taken; carries to/trigger/actor) and a WAIT entry (COR-034 -- a `blocked` enter/resume event, distinguished by `event`). The journal is the audit trail; the CURRENT blocked-ness is always the live evaluation (for awaiting-human, whether the pending move has been taken; for awaiting-condition, the `resume_when` predicate), authoritative over any entry here.",
+      "description": "An append-only record the engine writes when the project enables journal logging (COR-033 point 7) -- optional audit that no verdict reads. Not authored by capabilities; published here so tooling can validate journals. Two kinds: a MOVE entry (the default -- a guarded move was taken; carries to/trigger/actor) and a WAIT entry (COR-034 -- a `blocked` enter/resume event, distinguished by `event`). The journal is the audit trail; the CURRENT blocked-ness is always the live evaluation (for awaiting-human, whether the pending move has been taken; for awaiting-condition, the `resume_when` predicate), authoritative over any entry here.",
       "required": ["ts", "subject"],
       "additionalProperties": true,
       "properties": {

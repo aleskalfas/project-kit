@@ -15,9 +15,8 @@ pkit:
         - .pkit/capabilities/project-management/decisions/**
       record: [COR-017, COR-020, COR-021, COR-023, COR-039, COR-053, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050]
     revalidated:
-      at: 2026-09-29T18:03:42Z
-      outcome: unchanged
-      unchanged-because: pm-reviewer scoped its read-only claim and gained Write for the workspace; the README's description of the reviewer holds
+      at: 2026-09-29T18:35:28Z
+      outcome: updated
 ---
 
 # project-management capability
@@ -323,7 +322,11 @@ Every doubt resolves toward posting again, never toward skipping: comments that 
 
 The keys, by writer:
 
-- **Transition audit (`move-issue --bypass`, key `move-issue`).** The comment is the canonical audit line from [project-management:DEC-049-audit-journal-model]'s one schema template (`<!-- pkit-audit -->` marker first). The digest hashes the transition (from and to), the stripped reason, and the issue's engine-journal length. It is posted **before** the label write, so the justification survives a failed mutation. A retry of that attempt reproduces the comment exactly (the journal is written only after the label write succeeds) and posts nothing new. A different reason posts its own comment, and so does the same transition for the same reason after the move has landed, because the journal has grown. A retry also posts again when the engine is reachable on one attempt and not the other. The key relies on the journal recording each landed move: when it does not — the journal write is best-effort and can fail after the label write succeeds, or a move is made outside pkit — a later bypass identical in transition and reason reproduces the old comment and is skipped (`history --check-drift` flags the out-of-band case). At `audit.projection: full` an unbypassed move's provenance comment is posted only *after* a successful label write, so a failed attempt leaves none to repeat.
+- **Transition audit (`move-issue --bypass`, key `move-issue`).** The comment is the canonical audit line from [project-management:DEC-049-audit-journal-model]'s one schema template (`<!-- pkit-audit -->` marker first). It is posted **before** the label write, so the justification survives a failed mutation. The digest hashes the transition (from and to), the stripped reason, and a count of the moves that have landed on the issue: a failed attempt leaves the count as it was, and a landed move grows it. So a retry of a failed attempt reproduces the comment exactly and posts nothing new, a different reason posts its own comment, and so does the same transition for the same reason made again later. What counts the moves follows the project's journal setting (`process.journal`, the process README's "The journal — optional audit"):
+  - **Logging on:** the issue's engine-journal length. The journal is written only after the label write succeeds. The key relies on the journal recording each landed move: when it does not — the journal write is best-effort and can fail after the label write succeeds, or a move is made outside pkit — a later bypass identical in transition and reason reproduces the old comment and is skipped (`history --check-drift` flags the out-of-band case).
+  - **Logging off (the default):** the issue's count of state-label events on the GitHub timeline — state labels put on and taken off — read from the timeline just before posting. A landed move changes the state label, and a failed label write changes nothing. State-label changes made outside pkit only ever make a later bypass post again.
+
+  The count is empty when it cannot be known: the engine is unreachable, the timeline cannot be read, or, with logging off, a board or a derivation carries `state`, so `move-issue` writes no label and the timeline has no move to count. An empty count differs from every known one, so a retry across that boundary posts again, but two attempts that both fall there look alike. At `audit.projection: full` an unbypassed move's provenance comment is posted only *after* a successful label write, so a failed attempt leaves none to repeat.
 - **`done-work`'s per-reviewer override (key `done-work-reviewer-override`).** The same canonical line, with the per-reviewer detail as prose below it. The digest hashes the reviewer, the reason and HEAD ([project-management:DEC-050-per-reviewer-override]).
 - **`done-work`'s whole-gate bypass and CI bypass, and `merge-pr`'s CI bypass (keys `done-work-bypass`, `done-work-ci-bypass`, `merge-pr-ci-bypass`).** The first line is still the comment's `<!-- pkit-hook: <name> -->` kind marker. The digest hashes the stripped reason and the PR's head commit, so a second bypass with a different reason, or the same reason after new commits, is recorded, and a retry on an unchanged head is not. The prose names the short head commit too (`… at PR head 0123abc`), so two bypasses with the same reason either side of a force-push are told apart by a reader, not just by the hidden key. A CI-bypass retry whose set of failing checks changed renders a different comment and posts again. All `done-work` audit comments post before the merge.
 - **`handoff-issue` (key `handoff-issue`).** The first line is the `<!-- pkit-hook: handoff-issue -->` kind marker, then `Handoff: @<from> → @<to> (<date>, reason: <reason>)`. The digest hashes from, to, the stripped reason, and the issue's count of assignment events (assigned plus unassigned), read with one GraphQL call just before posting. The comment posts **before** the reassignment. A successful handoff adds at least one assignment event and a failed one adds none, so a retry of a failed attempt reproduces the comment and posts nothing new, while A→B, B→A, then A→B again for the same reason is recorded each time. If the count cannot be read the component is empty; that differs from any readable count, so a retry across that boundary posts again, but two attempts that both fail to read it look alike. Assignments made outside pkit only ever make a later handoff post again. The date is in the prose, so a retry on a later day posts a second comment.
@@ -478,6 +481,18 @@ pkit pm show-pr 320 --field cc-type            # -> e.g. `feat(pm)`
 pkit pm show-pr 320 --field review             # -> latest verdict token + reasons per reviewer
 pkit pm show-pr 320 --field review-history     # -> every verdict per reviewer, oldest first
 ```
+
+#### Lifecycle history — `history` (per [project-management:DEC-049-audit-journal-model])
+
+`pkit pm history <N>` renders issue `#N`'s engine journal — each pkit-governed move with its time, actor, transition and pkit version — and `--check-drift` diffs it against the GitHub timeline's state-label events, flagging each state change the journal has no entry for (exit 3): an out-of-band edit, or a governed move that failed to journal. Both read the journal through the backbone's process engine (`pkit process status --json`), so what they can show depends on the project's journal setting — `process.journal` in `.pkit/project/config.yaml`, off by default (the process README, "The journal — optional audit"):
+
+| Setting | `history` | `--check-drift` | The canonical audit trail |
+|---|---|---|---|
+| Off (default) | "journal logging is not enabled for this project", where the audit trail is instead, and the command that turns logging on — never an empty history | **skipped** with the same reason, exit 0 — never a clean verdict | the tracker: the timeline plus pkit's audit comments (`audit.projection`; at `full` every governed move carries a provenance comment) |
+| `enabled: true`, `committed: false` | the moves governed from this clone | compares the timeline against this clone's moves only, so a move governed from another clone reads as drift — sound for a single-clone workflow | this clone's journal |
+| `enabled: true`, `committed: true` | every governed move, from any clone | compares against the shared record | the committed journal |
+
+Turn logging on with `pkit config set process.journal.enabled true --yes` (add `process.journal.committed true` to commit the journals). The drift check also needs a label to carry `state`; where the board or a derivation carries it, the check is skipped in every mode ([project-management:DEC-051-axis-carriage-activation]).
 
 #### Report-context read verb — `context-workstream` (per pkit ADR-050)
 

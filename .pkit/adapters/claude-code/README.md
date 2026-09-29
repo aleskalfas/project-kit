@@ -13,8 +13,9 @@ pkit:
         - src/project_kit/visibility.py
       record: [COR-002, COR-005, COR-028, ADR-002, ADR-004, ADR-009, ADR-014, ADR-052, ADR-060, "project-management:DEC-030"]
     revalidated:
-      at: 2026-09-29T18:48:03Z
-      outcome: updated
+      at: 2026-09-29T18:56:19Z
+      outcome: unchanged
+      unchanged-because: this branch's visibility.py change stays inside the backbone's rendered .pkit/.gitignore (the configured process-journal ignore line); the adapter's settings merge and deploy notes are untouched
 ---
 
 # Claude Code adapter

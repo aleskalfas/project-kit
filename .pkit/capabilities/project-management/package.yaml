@@ -11,10 +11,11 @@ aliases:
   - pm
 # Runtime-local files this capability owns under `.pkit/` (ADR-009 rule 7).
 # Declared repo-root-relative, exactly as `footprint:` is; the renderer rebases
-# onto the `.pkit/`-relative form `.pkit/.gitignore` needs. The process journal
-# is per-clone audit state, not shared methodology content.
+# onto the `.pkit/`-relative form `.pkit/.gitignore` needs. The issue-lifecycle
+# journals under `project/process/` are not declared here: the process engine
+# writes them, and the backbone ignores them unless the project chose to commit
+# them (`process.journal` in `.pkit/project/config.yaml`, COR-033 point 7).
 runtime_ignore:
-  - .pkit/capabilities/project-management/project/process/**/*.journal.jsonl
   - .pkit/capabilities/project-management/project/instance/*.json
 commands:
   pre-check:

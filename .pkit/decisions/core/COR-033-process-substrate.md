@@ -16,19 +16,28 @@ Two constraints shape how. First, only one instance is *shipped* today, so the e
 
 **In plain terms:** build the state-machine *mechanism* once, in the backbone, and let each discipline plug its own staged process into it — so every process gets consistent memory, validation, and self-explanation for free, and only a minimal core ships first.
 
-The methodology adopts a shared, **content-free process substrate** — a state machine of states + guarded transitions + a per-subject position + an append-only journal + a self-explaining status view — that capability-owned **process definitions** bind to. The backbone owns the shape and the engine; each capability owns its own process definition.
+The methodology adopts a shared, **content-free process substrate** — a state machine of states + guarded transitions + a per-subject position + a self-explaining status view, with an optional append-only journal as audit — that capability-owned **process definitions** bind to. The backbone owns the shape and the engine; each capability owns its own process definition.
 
 **P1 — Vocabulary (one substrate, two altitudes).** *State machine* is the content-free substrate. A *process* is one discipline's substrate-bound journey over its own subjects (the depth altitude). An *orchestration* is a system of interacting processes (the breadth altitude). A discipline's existing lifecycle artifact is, under this scheme, a process definition and need not be renamed.
 
 **P2 — Ownership.** The backbone owns the process *shape contract* (a shared schema fragment) and the engine. Each capability ships its **own** process definition as an instance that conforms to the shape and binds via the existing grammar (COR-023), addressable as `<capability>:<process-id>`. The substrate adds no new binding mechanism; capabilities stay independent, self-describing peers.
 
-**P3 — The engine is a deterministic validator and a self-explaining memory.** Given a definition and observable reality, "where is this subject", "may it move from here to there", and "is it valid" are *definite* answers. The status view renders where the subject is, why, how it got there, and what it may do next — each with a **live** check, and the live check is authoritative over any prose label.
+**P3 — The engine is a deterministic validator and a self-explaining memory.** Given a definition and observable reality, "where is this subject", "may it move from here to there", and "is it valid" are *definite* answers. The status view renders where the subject is, why, how it got there (where the project keeps a journal, P7), and what it may do next — each with a **live** check, and the live check is authoritative over any prose label or journal entry.
 
 **P4 — Gates must be checkable.** Every transition gate reduces to either a deterministic predicate the engine evaluates, or a recorded authorisation artifact the engine confirms exists **and that was produced by a different authority than the actor being gated**. An actor's own assertion that a gate passed is never sufficient — a judgment gate must leave a cross-authority, checkable trace.
 
-**P5 — Name broad, ship narrow.** The shape *names* the full design space; the engine *ships* only the minimal core — a single subject, state inferred from reality, guarded transitions, position, journal, and the status view. Richer capabilities — multiple keyed subjects, stored or hybrid state detection, transition side-effects, position-independent invariants, cross-subject breadth, dynamic (data-resolved or open) structure, and composition of one process inside another — are **named extension points that stay unbuilt until a real binding needs one** (COR-016). The full shape lives in the process area's reference, not in this record.
+**P5 — Name broad, ship narrow.** The shape *names* the full design space; the engine *ships* only the minimal core — a single subject, state inferred from reality, guarded transitions, position, and the status view — plus the optional journal of P7. Richer capabilities — multiple keyed subjects, stored or hybrid state detection, transition side-effects, position-independent invariants, cross-subject breadth, dynamic (data-resolved or open) structure, and composition of one process inside another — are **named extension points that stay unbuilt until a real binding needs one** (COR-016). The full shape lives in the process area's reference, not in this record.
 
 **P6 — Determinism survives dynamic structure.** A process may enumerate its transitions statically, resolve them at runtime from data over a *known* set of blocks, or declare an *open region* bounded only by invariants and an exit gate. In every case the engine stays a deterministic validator — a resolver returns a definite set; an open region reduces to a definite boundary check.
+
+**P7 — The journal is optional audit, off unless the project turns it on.** The engine can keep an append-only journal per subject: an entry for each move it executes, recording who moved the subject, from where to where, and under which version. The journal is audit, never runtime. Position is re-derived from reality every time (P3), so nothing the engine decides reads the journal, and a project that keeps none gets the same answers to "where is this subject", "may it move", and "is it valid".
+
+- **The project's choice.** Keeping a journal is one project-level declaration. Absent it, the engine keeps no journal.
+- **Committed or clone-local.** A project that keeps a journal also declares whether the journals are committed with the project — shared, reviewable, and outliving any one clone — or kept local to each clone and excluded from version control. The version-control ignore rules follow that declaration, so the default for journal files is excluded and only an explicit "committed" lets them in.
+- **Honest when absent.** Anything that shows a subject's history says plainly that the project keeps no journal, rather than presenting an empty history as if nothing had happened, and a check that compares the journal with another record does not run without one.
+- **Writers.** The declaration is written by the project, and by one upgrade migration (COR-010): a project found keeping journals has "keep" recorded, with committed-or-not following whether those journals are under version control. No upgrade silently stops a journal a project relies on.
+
+The declaration lives in the project's backbone configuration (see COR-048); the process area's reference names its key and both modes.
 
 ## Rationale
 
@@ -40,17 +49,22 @@ Checkable, cross-authority gates (P4) are the substrate's load-bearing guarantee
 
 Name-broad / ship-narrow (P5–P6) follows directly from the grounding constraint: with one shipped instance, designing every variation axis now would lock in guesses about variation that has not yet appeared — the precise failure extract-on-recurrence warns against. Naming the space preserves the general vision; shipping only the grounded core keeps the substrate honest. Each deferred capability becomes real when a second binding actually disagrees with the first.
 
+The journal is optional (P7) because an audit trail is only as good as where it lives, and no single place suits every project. Kept in one clone and excluded from version control, it vanishes with that clone and never reaches review, so nothing can rely on it as audit. Committed, it is durable and reviewable, but it adds a changed file to every move, which many projects do not want. Since nothing the engine decides reads the journal (P3), making it the project's choice costs no guarantee. A project that needs a durable trail commits it; a project content with its tracker's own history keeps none; a project that wants a local how-we-got-here keeps it per clone. Defaulting to none means no project carries a trail it did not choose, and saying so plainly when it is absent stops an empty history from passing for a quiet one.
+
 ### Alternatives considered
 
 - **Generalise the shipped capability's schema in place.** Rejected — couples the shared shape to one capability's cadence and bleeds its domain-specific fields into the shared form.
 - **A central content-bearing process schema everything binds to.** Rejected — needs a change to the binding grammar (COR-023) and weakens capability independence.
 - **Leave each discipline to hand-roll its own engine.** Rejected — the shape recurs across instances; duplicated engines drift (COR-007).
+- **Always keep the journal, committed.** Rejected — a changed file on every move, for every project, whether or not it wants the trail.
+- **Always keep the journal, clone-local.** Rejected — a trail that is not shared and does not outlive its clone cannot be relied on as audit, yet reads as if it could.
 
 ## Implications
 
 - **A new backbone responsibility.** The backbone hosts a process shape contract (a shared schema fragment) and the engine (operations to resolve a subject's position, validate a move, execute a move, run invariants, and render the status view). This is a surface change; the affected component's version bumps per the project's version policy.
 - **Grounding (the acceptance-gate of COR-007).** The substrate ships with the project-management process **rebound** onto it — proving the shape against the one shipped instance, with that capability's breadth, closure, and PR-sub-lifecycle fields kept capability-local — plus **one new concrete binding** as the grounded second instance.
 - **Migration.** The rebind is an adopter-breaking schema-shape change, so it ships a migration at the capability tier in the same change-set (COR-010): idempotent and value-preserving (a shape transform that detects already-migrated state). A second migration is budgeted for when the breadth/orchestration layer later moves a capability's cross-subject fields into the shared shape.
+- **Journal declaration (P7).** One project-level declaration with two settings — keep a journal (default: no) and commit it (default: no; meaningful only when kept) — read forgivingly by the engine and by the ignore-rule rendering, and checked strictly by validation. Adding it is a surface change of a runtime default, so it ships with the upgrade migration P7 names.
 - **Deferred extension points.** Each named-but-unbuilt capability in P5 is its own future decision when a binding demands it — not pre-authorised here.
 - **Acceptance gate.** This record must be **accepted** before any capability is rebound or newly bound to the substrate; downstream capability records cite it.
 - **Relationship to existing decisions.** The binding grammar (COR-023) is confirmed sufficient and left unchanged; this record is a worked application of extract-on-recurrence (COR-007) and of name-broad / ship-narrow (COR-016).

@@ -19,6 +19,9 @@
     "connections": {
       "$ref": "#/$defs/connections"
     },
+    "process": {
+      "$ref": "#/$defs/process"
+    },
     "project": {
       "title": "The reserved `project` block (COR-048 point 2)",
       "description": "Keys owned by the project's own decision records. Checked only for being well-formed — a mapping — and otherwise not inspected; project-supplied schemas for it are deferred until a real need appears.",
@@ -103,6 +106,30 @@
           "patternProperties": {
             "^[a-z][a-z0-9-]*::[a-z][a-z0-9-]*:[a-z][a-z0-9-]*$": {
               "$ref": "#/$defs/capability-name"
+            }
+          }
+        }
+      }
+    },
+    "process": {
+      "title": "Process settings (COR-033 point 7)",
+      "description": "The project's settings for the process engine, in the block named for the functionality.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "journal": {
+          "title": "Journal logging (COR-033 point 7)",
+          "description": "Whether the process engine keeps an append-only, per-subject journal of the moves it validates and executes — optional audit, never the source of truth: position is always re-derived from reality, so no verdict depends on it. Written by the project (by hand, or `pkit config set`) and by the upgrade migration that introduced the key, which records logging as on for a project that already kept journals.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "description": "Keep the journal. Default `false`: the engine writes and reads no journal, and the commands that show history say journal logging is not enabled.",
+              "type": "boolean"
+            },
+            "committed": {
+              "description": "When logging is on, whether the journals are committed with the project (`true` — shared, reviewable, kept across clones) or kept local to each clone and ignored by version control (`false`). The rendered `.pkit/.gitignore` follows it. Default `false`; without `enabled` it has no effect and journals stay ignored.",
+              "type": "boolean"
             }
           }
         }

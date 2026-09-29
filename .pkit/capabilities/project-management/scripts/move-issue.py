@@ -78,6 +78,7 @@ from _lib import bootstrap_gate  # noqa: E402
 from _lib import classification_rules  # noqa: E402
 from _lib import lifecycle_inference as infer  # noqa: E402
 from _lib import session_guard  # noqa: E402
+from _lib import state_timeline  # noqa: E402
 # The one fetch / scan / post-once wiring every audit writer shares (#902).
 from _lib.comment import post_audit_once  # noqa: E402
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
@@ -497,8 +498,9 @@ def main() -> int:
             print("aborted.", file=sys.stderr)
             return 0
 
-    # Audit-comment projection (DEC-049): the engine journal records this move
-    # regardless; `audit.projection` controls the GitHub comment projection —
+    # Audit-comment projection (DEC-049): where the project keeps a journal it
+    # records this move regardless; `audit.projection` controls the GitHub
+    # comment projection —
     # `off` posts nothing, `audit` (default) posts only override justifications,
     # `full` posts a provenance-stamped comment for every governed move.
     projection = _audit_projection(config)
@@ -515,13 +517,14 @@ def main() -> int:
         # through rather than posting their own (killing the #672 double-post).
         #
         # Posted BEFORE the mutation so the justification survives a failed
-        # label write (DEC-049's `audit` floor), and posted at most once per
+        # label write (DEC-049's `audit` floor), and posted exactly once per
         # mutation: a retry of that failed attempt finds its own comment by the
-        # idempotency key and skips (#901).
+        # idempotency key and skips (#901), while the same transition made again
+        # later has a grown landed-move count and posts its own (#954).
         reason = (args.bypass_reason or "").strip()
         key = _transition_audit_key(
             current_state, args.to, reason,
-            _journal_length_from_status(engine_status),
+            _landed_moves(args.issue_number, engine_status, config, substrate_map),
         )
         audit_comment = (
             _render_audit_comment(capability_root, invoker, reason) + "\n\n" + key
@@ -557,7 +560,8 @@ def main() -> int:
     # DEC-049 `full` projection: post a provenance-stamped comment for a governed
     # move not already covered by the bypass audit above, so the governed-vs-
     # ungoverned boundary is visible on the issue. Best-effort — never fails the
-    # move (the engine journal is the canonical record).
+    # move (the canonical record is the journal where one is kept, the tracker
+    # otherwise).
     if projection == "full" and not is_bypass_audit:
         _gh_comment(
             args.issue_number,
@@ -738,21 +742,19 @@ def _severity_from_token(token: str) -> str:
 
 
 def _transition_audit_key(
-    from_state: str, to_state: str, reason: str, journal_length: int | None
+    from_state: str, to_state: str, reason: str, landed_moves: str
 ) -> str:
     """The idempotency key for one audited transition (#901).
 
     A retry must reproduce it exactly, and a genuinely new audited mutation must
     not. The components are what a retry repeats — the transition, the stripped
-    reason — plus the issue's engine-journal length, which stays put across a
-    failed attempt (the journal is written only after the label write succeeds)
-    and has grown by the time the issue could make the same transition again.
-    Without it, an issue moved back and re-promoted for the same reason would
-    lose its second audit comment, breaking DEC-049's one comment per audited
-    mutation from the other side. An unreachable engine contributes an empty
-    component: the key is then (transition, reason) alone, and differs from any
-    key minted while the engine was reachable, so a retry across that boundary
-    posts again — the safe direction for an audit trail.
+    reason — plus `landed_moves` (`_landed_moves`), which stays put across a
+    failed attempt and has grown by the time the issue could make the same
+    transition again. Without it, an issue moved back and re-promoted for the
+    same reason would lose its second audit comment, breaking DEC-049's one
+    comment per audited mutation from the other side. An empty `landed_moves`
+    differs from every known one, so a retry across that boundary posts again —
+    the safe direction for an audit trail.
 
     Hashed rather than interpolated (by `_lib.audit.audit_key`) so the reason
     cannot close the HTML comment early; the readable reason is in the comment's
@@ -763,7 +765,7 @@ def _transition_audit_key(
         from_state or "",
         to_state,
         reason.strip(),
-        "" if journal_length is None else str(journal_length),
+        landed_moves,
     )
 
 
@@ -852,8 +854,9 @@ def _engine_status(issue_number: int) -> dict | None:
     when the engine cannot be reached or answers with something unparseable.
 
     One read serves two consumers: `_position_from_status` (where the issue is)
-    and `_journal_length_from_status` (how many governed moves it has had, which
-    keys the transition audit's retry detection).
+    and `_landed_moves` (whether the project keeps a journal and, where it does,
+    how many governed moves it holds — which keys the transition audit's retry
+    detection).
     """
     try:
         proc = subprocess.run(
@@ -906,16 +909,80 @@ def _journal_length_from_status(status: dict | None) -> int | None:
     return len(journal) if isinstance(journal, list) else None
 
 
+def _journal_logging_off(status: dict | None) -> bool:
+    """Whether the engine says this project keeps no journal (COR-033 point 7).
+
+    Only an explicit `journal_logging.enabled: false` says so. A payload without
+    the field comes from an engine that predates the setting and always kept a
+    journal, and no payload at all says nothing either way.
+    """
+    logging = status.get("journal_logging") if isinstance(status, dict) else None
+    return isinstance(logging, dict) and logging.get("enabled", True) is False
+
+
+def _landed_moves(
+    issue_number: int,
+    status: dict | None,
+    config: dict,
+    substrate_map: axis_labels.SubstrateMap | None,
+) -> str:
+    """The transition audit key's "has a move landed since?" component.
+
+    It must stay put across a failed attempt and its retry, and have grown by the
+    time the issue could make the same transition again. What counts the moves
+    follows where the project's audit trail is (DEC-049):
+
+    * Where the project keeps a journal: the journal's length, as a bare number.
+      A move is journaled only after its label write succeeds (#901).
+    * Where it keeps none: the issue's count of state-label events on the GitHub
+      timeline, labels put on and taken off (#954). A landed move changes the
+      state label, and a failed label write changes nothing. The count is
+      tagged, so it can never equal a journal length read on another attempt,
+      after the project turned logging on or off.
+    * Empty when it cannot be known: the engine is unreachable, the timeline
+      cannot be read, or no label carries state (a board or a derivation does,
+      and `move-issue` writes no label there). Two attempts that both land here
+      look alike.
+
+    The timeline is read only in the second case, and only on the bypass path
+    that keys an audit comment.
+    """
+    if not _journal_logging_off(status):
+        length = _journal_length_from_status(status)
+        return "" if length is None else str(length)
+    if not state_timeline.label_carries_state(config, substrate_map):
+        return ""
+    events = state_timeline.state_label_events(
+        issue_number, config, substrate_map, run=gh_run,
+    )
+    return "" if events is None else f"state-label-events:{len(events)}"
+
+
+# What a move the engine did not record costs, in each of DEC-049's two modes:
+# with journal logging on the journal is the canonical audit trail and now lacks
+# the move; with it off the tracker is, and the engine keeps no record to miss.
+_JOURNAL_GAP_CLAUSE = (
+    "If this project keeps a journal (journal logging on), the journal is the "
+    "canonical audit trail (DEC-049) and now lacks this move:"
+)
+_TRACKER_TRAIL_CLAUSE = (
+    "If it does not, the tracker is the audit trail and the engine keeps no "
+    "record to miss."
+)
+
+
 def _journal_move(
     issue_number: int, target_state: str, actor: str | None
 ) -> None:
-    """Journal the completed move via `pkit process move` (best-effort).
+    """Hand the completed move to the engine via `pkit process move` (best-effort).
 
     Per the seam-ordering contract: the domain side-effect (the label/board
-    edit) has ALREADY been applied by the caller; this only records the move in
-    the engine's append-only journal. A refusal or a missing `pkit` is logged as
-    a note and never fails the move — live detection stays authoritative, so the
-    next `status` reflects the real position regardless.
+    edit) has ALREADY been applied by the caller; this only records the move,
+    which the engine appends to its journal where the project keeps one
+    (COR-033 point 7) and validates without recording where it does not. A
+    refusal or a missing `pkit` is logged as a warning and never fails the move —
+    live detection stays authoritative, so the next `status` reflects the real
+    position regardless.
 
     `actor` is the invoker's resolved GitHub login. The engine compares it
     against an authorisation artifact's `produced_by` login for the
@@ -943,19 +1010,20 @@ def _journal_move(
         )
     except (OSError, FileNotFoundError):
         print(
-            "  [warn] `pkit` not on PATH — this move was NOT recorded in the engine "
-            "journal (the canonical audit trail, DEC-049). The label/position is "
-            "unaffected (live detection stays authoritative); re-run under `pkit` "
-            "to journal it.",
+            "  [warn] `pkit` not on PATH — the process engine did not record this "
+            f"move. {_JOURNAL_GAP_CLAUSE} re-run under `pkit` to journal it. "
+            f"{_TRACKER_TRAIL_CLAUSE} The label/position is unaffected (live "
+            "detection stays authoritative).",
             file=sys.stderr,
         )
         return
     if proc.returncode != 0:
         detail = (proc.stdout or proc.stderr or "").strip()
         print(
-            "  [warn] this move was NOT recorded in the engine journal (the "
-            f"canonical audit trail, DEC-049): {detail}. The label/position is "
-            "unaffected; `pkit pm history <N> --check-drift` will show the gap.",
+            f"  [warn] the process engine refused this move: {detail}. "
+            f"{_JOURNAL_GAP_CLAUSE} `pkit pm history {issue_number} --check-drift` "
+            f"will show the gap. {_TRACKER_TRAIL_CLAUSE} The label/position is "
+            "unaffected.",
             file=sys.stderr,
         )
 

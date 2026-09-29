@@ -20,6 +20,8 @@ from project_kit.manifest import (
     read_backbone_manifest,
     write_backbone_manifest,
 )
+from project_kit.process_journal import JOURNAL_GLOB
+from tests.process_journal_support import set_journal_logging
 
 
 def _git(root: Path, *args: str) -> str:
@@ -124,8 +126,62 @@ def test_runtime_ignore_is_deduped_and_order_stable(repo: Path) -> None:
 
 def test_runtime_ignore_tolerates_component_without_key(repo: Path) -> None:
     # The adapter in `repo` declares `footprint:` but no `runtime_ignore:` —
-    # absence contributes nothing beyond the backbone seam.
-    assert vis.runtime_ignore(repo) == list(vis._BACKBONE_RUNTIME_IGNORE)
+    # absence contributes nothing beyond the backbone seam (whose configured
+    # part, the process journal, is ignored by default).
+    assert vis.runtime_ignore(repo) == [*vis._BACKBONE_RUNTIME_IGNORE, JOURNAL_GLOB]
+
+
+# --- the process journal's ignore line follows the setting (COR-033 point 7) ---
+
+_JOURNAL_SAMPLE = ".pkit/capabilities/any-capability/project/process/some-process/7.journal.jsonl"
+
+
+def _journal_ignored(repo: Path) -> bool:
+    vis.render_runtime_ignore(repo)
+    target = repo / _JOURNAL_SAMPLE
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text("{}\n", encoding="utf-8")
+    res = subprocess.run(
+        ["git", "check-ignore", "-q", _JOURNAL_SAMPLE],
+        cwd=repo, capture_output=True, text=True, check=False,
+    )
+    return res.returncode == 0
+
+
+def test_journals_are_ignored_when_logging_is_off(repo: Path) -> None:
+    # Off by default: no journal is written, and a stray one stays out of git.
+    assert JOURNAL_GLOB in vis.runtime_ignore(repo)
+    assert _journal_ignored(repo)
+
+
+def test_journals_are_ignored_when_logging_is_clone_local(repo: Path) -> None:
+    set_journal_logging(repo, enabled=True, committed=False)
+    assert JOURNAL_GLOB in vis.runtime_ignore(repo)
+    assert _journal_ignored(repo)
+
+
+def test_journals_are_not_ignored_when_the_project_commits_them(repo: Path) -> None:
+    set_journal_logging(repo, enabled=True, committed=True)
+    assert JOURNAL_GLOB not in vis.runtime_ignore(repo)
+    assert not _journal_ignored(repo)
+
+
+def test_committed_without_enabled_keeps_journals_ignored(repo: Path) -> None:
+    set_journal_logging(repo, enabled=False, committed=True)
+    assert JOURNAL_GLOB in vis.runtime_ignore(repo)
+
+
+def test_refresh_rerenders_only_a_stale_rendered_file(repo: Path) -> None:
+    # No rendered file yet: a configuration write does not create one.
+    assert vis.refresh_runtime_ignore(repo) is None
+    assert not (repo / ".pkit" / ".gitignore").exists()
+    # Rendered and current: nothing to do.
+    vis.render_runtime_ignore(repo)
+    assert vis.refresh_runtime_ignore(repo) is None
+    # The setting changed what the render says: re-rendered.
+    set_journal_logging(repo, enabled=True, committed=True)
+    assert vis.refresh_runtime_ignore(repo) is not None
+    assert "journal.jsonl" not in (repo / ".pkit" / ".gitignore").read_text(encoding="utf-8")
 
 
 # --- runtime-ignore renderer (ADR-009 rule 7) -----------------------
@@ -216,38 +272,34 @@ def test_rendered_gitignore_actually_matches_declared_path(repo: Path) -> None:
     assert res2.returncode == 1
 
 
-# --- first real per-component declaration: project-management journal --------
+# --- the real declarations: project-management and the source tree -----------
 #
 # The fixture-driven tests above prove the per-component reader/render path on
-# synthetic capabilities. This pair pins the FIRST real declaration shipped in
-# the source tree (T3a, EPIC #154): the project-management capability declares
-# its process journal in its own package.yaml, so the path must flow through the
-# real reader and land in the committed `.pkit/.gitignore` that git honours.
+# synthetic capabilities. These pin the real declarations shipped in the source
+# tree: the project-management capability declares its clone-local instance file
+# in its own package.yaml (the process journals it drives are the engine's, and
+# the backbone declares them — COR-033 point 7), and project-kit's own journals
+# are clone-local (`process.journal` in `.pkit/project/config.yaml`), so the
+# committed `.pkit/.gitignore` git honours must ignore them.
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 _PM_PACKAGE = (
     _REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "package.yaml"
 )
-_PM_JOURNAL_DECL = (
-    ".pkit/capabilities/project-management/project/process/**/*.journal.jsonl"
-)
-# The clone-local instance-id runtime file (DEC-035 / set-instance, #518) — a
-# second per-clone runtime declaration alongside the process journal.
+# The clone-local instance-id runtime file (DEC-035 / set-instance, #518).
 _PM_INSTANCE_DECL = ".pkit/capabilities/project-management/project/instance/*.json"
 
 
-def test_pm_capability_declares_journal_in_package_yaml() -> None:
-    # The real reader sees both per-clone runtime patterns in the shipped
-    # package.yaml, in declaration order.
-    assert vis._read_runtime_ignore_decl(_PM_PACKAGE) == [
-        _PM_JOURNAL_DECL,
-        _PM_INSTANCE_DECL,
-    ]
+def test_pm_capability_declares_its_instance_file_but_not_the_journal() -> None:
+    # The real reader sees the one per-clone runtime pattern pm owns; the
+    # journal is not pm's to declare.
+    assert vis._read_runtime_ignore_decl(_PM_PACKAGE) == [_PM_INSTANCE_DECL]
 
 
 def test_committed_pkit_gitignore_ignores_pm_journal() -> None:
-    # The committed `.pkit/.gitignore` (rendered from the real declarations) must
-    # actually ignore a project-management process-journal path — ask git itself,
+    # project-kit keeps clone-local journals, so the committed `.pkit/.gitignore`
+    # (rendered from the real declarations and configuration) must actually
+    # ignore a project-management process-journal path — ask git itself,
     # against the real rendered file in the source tree.
     rendered = _REPO_ROOT / ".pkit" / ".gitignore"
     assert rendered.is_file(), "the source tree must ship a rendered .pkit/.gitignore"

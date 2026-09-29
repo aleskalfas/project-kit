@@ -329,6 +329,14 @@ def config_set(key: str, value: str, yes: bool) -> None:
     click.echo(
         f"set {resolved.dotted} = {typed}  ({project_config.PROJECT_CONFIG_RELPATH.as_posix()})"
     )
+    # The `.pkit/.gitignore` render reads the configuration (the process
+    # journal's ignore line, COR-033 point 7): follow the new value now rather
+    # than at the next sync.
+    from project_kit import visibility as vis
+
+    refreshed = vis.refresh_runtime_ignore(target_root)
+    if refreshed is not None:
+        click.echo(refreshed)
 
 
 def _graph_format_options(command: Callable[..., None]) -> Callable[..., None]:

@@ -885,11 +885,11 @@ class _FakeIssueComments:
         raise AssertionError(f"unexpected gh call: {cmd}")
 
 
-def _post(mi, from_state, to_state, reason, journal_length):
+def _post(mi, from_state, to_state, reason, landed_moves):
     # `main` strips the reason before rendering and keying; mirror it.
     reason = reason.strip()
     invoker = SimpleNamespace(github_login="alice", email="alice@x.io")
-    key = mi._transition_audit_key(from_state, to_state, reason, journal_length)
+    key = mi._transition_audit_key(from_state, to_state, reason, landed_moves)
     body = mi._render_audit_comment(_CAP_ROOT, invoker, reason) + "\n\n" + key
     return mi._post_transition_audit_once(42, body, key, {})
 
@@ -897,18 +897,18 @@ def _post(mi, from_state, to_state, reason, journal_length):
 def test_retried_bypass_posts_no_second_audit_comment(mi, monkeypatch) -> None:
     gh = _FakeIssueComments()
     monkeypatch.setattr(mi, "gh_run", gh)
-    assert _post(mi, "todo", "backlog", "verbal PM approval", 3)
+    assert _post(mi, "todo", "backlog", "verbal PM approval", "3")
     # The label write failed, so the journal did not grow; the retry reproduces
     # the transition, the reason and the journal length exactly.
-    assert _post(mi, "todo", "backlog", "  verbal PM approval ", 3)
+    assert _post(mi, "todo", "backlog", "  verbal PM approval ", "3")
     assert gh.posts == 1
 
 
 def test_bypass_with_a_different_reason_still_posts(mi, monkeypatch) -> None:
     gh = _FakeIssueComments()
     monkeypatch.setattr(mi, "gh_run", gh)
-    assert _post(mi, "todo", "backlog", "verbal PM approval", 3)
-    assert _post(mi, "todo", "backlog", "sprint planning decision", 3)
+    assert _post(mi, "todo", "backlog", "verbal PM approval", "3")
+    assert _post(mi, "todo", "backlog", "sprint planning decision", "3")
     assert gh.posts == 2
 
 
@@ -917,8 +917,8 @@ def test_same_bypass_after_the_move_landed_posts_again(mi, monkeypatch) -> None:
     for the same reason — has a longer journal, so it gets its own comment."""
     gh = _FakeIssueComments()
     monkeypatch.setattr(mi, "gh_run", gh)
-    assert _post(mi, "todo", "backlog", "verbal PM approval", 3)
-    assert _post(mi, "todo", "backlog", "verbal PM approval", 5)
+    assert _post(mi, "todo", "backlog", "verbal PM approval", "3")
+    assert _post(mi, "todo", "backlog", "verbal PM approval", "5")
     assert gh.posts == 2
 
 
@@ -932,7 +932,7 @@ def test_unreadable_comments_post_rather_than_skip(mi, monkeypatch) -> None:
         return SimpleNamespace(returncode=0, stdout="", stderr="")
 
     monkeypatch.setattr(mi, "gh_run", gh)
-    assert _post(mi, "todo", "backlog", "reason", 0)
+    assert _post(mi, "todo", "backlog", "reason", "0")
     assert len(posted) == 1
 
 
@@ -943,19 +943,28 @@ def test_failed_post_is_reported_so_the_move_aborts(mi, monkeypatch) -> None:
         return SimpleNamespace(returncode=1, stdout="", stderr="denied")
 
     monkeypatch.setattr(mi, "gh_run", gh)
-    assert _post(mi, "todo", "backlog", "reason", 0) is False
+    assert _post(mi, "todo", "backlog", "reason", "0") is False
 
 
 def test_transition_audit_key_components(mi) -> None:
-    key = mi._transition_audit_key("todo", "backlog", "why", 2)
+    key = mi._transition_audit_key("todo", "backlog", "why", "2")
     assert key.startswith(mi.TRANSITION_AUDIT_KEY_PREFIX) and key.endswith(" -->")
-    assert key == mi._transition_audit_key("todo", "backlog", " why ", 2)
-    assert key != mi._transition_audit_key("todo", "in-progress", "why", 2)
-    assert key != mi._transition_audit_key("backlog", "backlog", "why", 2)
-    assert key != mi._transition_audit_key("todo", "backlog", "why", 3)
-    assert key != mi._transition_audit_key("todo", "backlog", "why", None)
+    assert key == mi._transition_audit_key("todo", "backlog", " why ", "2")
+    assert key != mi._transition_audit_key("todo", "in-progress", "why", "2")
+    assert key != mi._transition_audit_key("backlog", "backlog", "why", "2")
+    assert key != mi._transition_audit_key("todo", "backlog", "why", "3")
+    assert key != mi._transition_audit_key("todo", "backlog", "why", "")
+    assert key != mi._transition_audit_key("todo", "backlog", "why", "state-label-events:2")
     # A reason that tries to close the HTML comment cannot: it is hashed.
-    assert "-->" not in mi._transition_audit_key("todo", "backlog", "x --> y", 2)[:-4]
+    assert "-->" not in mi._transition_audit_key("todo", "backlog", "x --> y", "2")[:-4]
+
+
+def test_logging_on_key_is_unchanged_by_the_logging_off_fix(mi) -> None:
+    """With a journal kept, the landed-move component is the bare journal length
+    — the same key a pre-#954 move-issue minted, so a retry across the upgrade
+    is still recognised."""
+    expected = mi._audit.audit_key("move-issue", "todo", "backlog", "why", "2")
+    assert mi._transition_audit_key("todo", "backlog", "why", "2") == expected
 
 
 def test_journal_length_and_position_read_one_status(mi) -> None:
@@ -966,6 +975,80 @@ def test_journal_length_and_position_read_one_status(mi) -> None:
     assert mi._journal_length_from_status(None) is None
     assert mi._position_from_status(None) is None
     assert mi._position_from_status({"position": {"indeterminate": True}}) is None
+
+
+# ---- the landed-move component, in both journal modes (#954) ----------
+
+_LOGGING_OFF = {
+    "position": {"state": "todo"}, "journal": [],
+    "journal_logging": {"enabled": False, "committed": False},
+}
+
+
+class _TimelineGh:
+    """A `gh_run` stand-in answering only the issue's timeline read."""
+
+    def __init__(self, events: list[dict], returncode: int = 0) -> None:
+        self.events = events
+        self.returncode = returncode
+        self.calls = 0
+
+    def __call__(self, cmd, config, check=False):
+        assert cmd[:3] == ["gh", "api", "--paginate"], cmd
+        assert cmd[3].endswith("/issues/42/timeline")
+        self.calls += 1
+        return SimpleNamespace(
+            returncode=self.returncode, stdout=_json.dumps(self.events), stderr="",
+        )
+
+
+def _no_gh(*_a, **_k):  # pragma: no cover - must not run
+    raise AssertionError("the landed-move count must not read the timeline here")
+
+
+def test_journal_logging_off_needs_the_engine_to_say_so(mi) -> None:
+    assert mi._journal_logging_off(_LOGGING_OFF)
+    assert not mi._journal_logging_off({"journal_logging": {"enabled": True}, "journal": []})
+    # An engine that predates the setting always kept a journal.
+    assert not mi._journal_logging_off({"journal": []})
+    # No payload says nothing either way.
+    assert not mi._journal_logging_off(None)
+
+
+def test_landed_moves_is_the_journal_length_where_a_journal_is_kept(mi, monkeypatch) -> None:
+    monkeypatch.setattr(mi, "gh_run", _no_gh)
+    kept = {"journal_logging": {"enabled": True, "committed": False}, "journal": [{}, {}]}
+    assert mi._landed_moves(42, kept, {}, None) == "2"
+    assert mi._landed_moves(42, {"journal": [{}, {}]}, {}, None) == "2"
+    # An unreachable engine: unknown, as before logging became optional.
+    assert mi._landed_moves(42, None, {}, None) == ""
+
+
+def test_landed_moves_counts_state_label_events_when_logging_is_off(mi, monkeypatch) -> None:
+    """Labels put on and taken off both count; other labels and events do not."""
+    events = [
+        {"event": "labeled", "label": {"name": "state:todo"}},
+        {"event": "labeled", "label": {"name": "type:task"}},
+        {"event": "commented"},
+        {"event": "unlabeled", "label": {"name": "state:todo"}},
+        {"event": "labeled", "label": {"name": "state:backlog"}},
+    ]
+    gh = _TimelineGh(events)
+    monkeypatch.setattr(mi, "gh_run", gh)
+    assert mi._landed_moves(42, _LOGGING_OFF, {}, None) == "state-label-events:3"
+    assert gh.calls == 1
+
+
+def test_landed_moves_is_empty_when_the_timeline_cannot_be_read(mi, monkeypatch) -> None:
+    monkeypatch.setattr(mi, "gh_run", _TimelineGh([], returncode=1))
+    assert mi._landed_moves(42, _LOGGING_OFF, {}, None) == ""
+
+
+def test_landed_moves_reads_no_timeline_when_no_label_carries_state(mi, monkeypatch) -> None:
+    """A board carries state, so `move-issue` writes no label and the timeline's
+    label events say nothing about moves."""
+    monkeypatch.setattr(mi, "gh_run", _no_gh)
+    assert mi._landed_moves(42, _LOGGING_OFF, {"has_projects_v2_board": True}, None) == ""
 
 
 def test_audit_comment_is_posted_before_the_label_write() -> None:

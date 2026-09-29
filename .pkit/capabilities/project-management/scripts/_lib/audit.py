@@ -1,7 +1,8 @@
 """The DEC-049 audit-comment primitives — one canonical format, one knob.
 
 [project-management:DEC-049] makes the engine journal the canonical audit trail
-and GitHub comments a *configurable, provenance-stamped projection* of it. Two
+where the project keeps one, and the tracker where it does not, and GitHub
+comments a *configurable, provenance-stamped projection* of what pkit governs. Two
 consequences bind every audit-comment writer, and this module owns both so no
 writer re-derives them (COR-007):
 
@@ -11,7 +12,8 @@ writer re-derives them (COR-007):
     uniform `<!-- pkit-audit -->` marker. #672's divergence came from a writer
     hardcoding its own `[audit] …` line; the fix is that nobody hardcodes one.
   * **One projection knob.** `audit.projection` (`off` | `audit` | `full`,
-    default `audit`) decides how much of the journal is projected as comments.
+    default `audit`) decides how much of what pkit governs is projected as
+    comments.
 
 Writers that need to say *more* than the template's actor/reason (e.g.
 `done-work`'s per-reviewer override, which must also record which reviewer was
