@@ -8,7 +8,10 @@ behaviour:
 - journals, none tracked → `enabled: true`, `committed: false`;
 - journals, some tracked → `enabled: true`, `committed: true`, and the journal
   line the pre-migration render left in `.pkit/.gitignore` is removed;
-- a `process:` block already declared → left alone;
+- `process` already declared, as a block key or inside a flow mapping → left
+  alone; a commented-out key does not count;
+- a configuration that is one flow mapping without `process` → not written (a
+  block key cannot be appended to it), with the command that turns logging on;
 - a second run changes nothing.
 """
 
@@ -18,6 +21,7 @@ import json
 import subprocess
 from pathlib import Path
 
+import pytest
 from ruamel.yaml import YAML
 
 from project_kit import process_journal, project_config
@@ -152,6 +156,69 @@ def test_a_declared_process_block_is_left_alone(tmp_path: Path) -> None:
     assert result.returncode == 0, result.stderr
     assert "[skip]" in result.stdout
     assert _config_path(root).read_text(encoding="utf-8") == declared
+
+
+@pytest.mark.parametrize(
+    "declared",
+    [
+        pytest.param("{name: example, process: {journal: {enabled: false}}}\n", id="flow"),
+        pytest.param(
+            "{\n  name: example,\n  process: {journal: {enabled: false}}\n}\n",
+            id="flow-multiline",
+        ),
+        pytest.param('{"process": {"journal": {"enabled": false}}}\n', id="json"),
+        pytest.param('"process":\n  journal:\n    enabled: false\n', id="quoted-block"),
+        pytest.param("process :  # ours\n  journal:\n    enabled: false\n", id="spaced-block"),
+    ],
+)
+def test_a_declared_process_key_in_any_style_is_left_alone(
+    tmp_path: Path, declared: str
+) -> None:
+    """Appending a second `process:` would be a duplicate key; for a flow-style
+    document, any appended block would not parse at all."""
+    root = _project(tmp_path, journal=True)
+    _config_path(root).parent.mkdir(parents=True)
+    _config_path(root).write_text(declared, encoding="utf-8")
+
+    result = _run(root)
+
+    assert result.returncode == 0, result.stderr
+    assert "[skip]" in result.stdout
+    assert _config_path(root).read_text(encoding="utf-8") == declared
+
+
+def test_a_commented_out_process_key_does_not_count(tmp_path: Path) -> None:
+    root = _project(tmp_path, journal=True)
+    _config_path(root).parent.mkdir(parents=True)
+    _config_path(root).write_text(
+        "# process:\n#   journal:\n#     enabled: false\nname: example  # process: no\n",
+        encoding="utf-8",
+    )
+
+    assert _run(root).returncode == 0
+
+    assert _config(root)["process"] == {"journal": {"enabled": True, "committed": False}}
+    _assert_valid(root)
+
+
+def test_a_flow_style_configuration_without_process_is_not_written(tmp_path: Path) -> None:
+    """A block key cannot follow a flow-mapping root: the file is left valid and
+    the operator is told how to keep logging on — twice, idempotently."""
+    root = _project(tmp_path, journal=True, tracked=True)
+    _config_path(root).parent.mkdir(parents=True)
+    flow = "# ours\n---\n{name: example, friction: {mode: warning}}\n"
+    _config_path(root).write_text(flow, encoding="utf-8")
+
+    for _ in range(2):
+        result = _run(root)
+
+        assert result.returncode == 0, result.stderr
+        assert "[warn]" in result.stdout
+        assert "pkit config set process.journal.enabled true --yes" in result.stdout
+        assert "pkit config set process.journal.committed true --yes" in result.stdout
+        assert _config_path(root).read_text(encoding="utf-8") == flow
+        assert (root / ".pkit" / ".gitignore").read_text(encoding="utf-8") == GITIGNORE_BEFORE
+    _assert_valid(root)
 
 
 def test_second_run_changes_nothing(tmp_path: Path) -> None:
