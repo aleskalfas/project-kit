@@ -42,8 +42,9 @@ pkit:
         - src/project_kit/environment.py
       record: [COR-004, COR-012, COR-043, COR-048, COR-049, COR-050, PRJ-001, PRJ-003, PRJ-004, ADR-033, ADR-039, ADR-049, ADR-058, ADR-059]
     revalidated:
-      at: 2026-09-29T18:56:18Z
-      outcome: updated
+      at: 2026-09-29T19:12:30Z
+      outcome: unchanged
+      unchanged-because: visibility.py's change is comments, the header text of the rendered .pkit/.gitignore and line wrapping, with every command output kept; the page quotes no header text, and its config-set re-render note and visibility rows already say what the new header names
 ---
 
 # Command-line interface
