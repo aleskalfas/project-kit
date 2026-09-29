@@ -1,0 +1,21 @@
+component: software-analysis
+kind: minor
+custom:
+  category: Added
+body: >
+  Connections (DEC-001 points 7 and 8): the capability provides the
+  `pkit::analysis` role and defines the `pkit::analysis:revalidation-evidence`
+  data point under it — executed results that confirm or refute an artefact at
+  a commit, one entry per artefact and commit keyed `<artefact>@<commit>`,
+  `union`, no default, inert policy `fallback` — with its companion schema,
+  `schemas/revalidation-evidence.schema.json`, filled by a capability or by
+  the project's filler file. A revalidation record may cite the evidence it
+  drew on under `evidence`; `pkit analysis validate` fails a record citing
+  evidence for an artefact it gives no outcome, since evidence supports an
+  outcome and never replaces one, and warns on a citation the point does not
+  hold. The capability contributes its actors in force to
+  `pkit::documentation:readers` through a new query command, `pkit analysis
+  fill-readers`: each actor a reader whose id is the actor's id in lower case
+  (`ACT-tester` → `act-tester`) and whose description is its name and needs.
+  The contribution is inert when no capability provides the documentation
+  role.

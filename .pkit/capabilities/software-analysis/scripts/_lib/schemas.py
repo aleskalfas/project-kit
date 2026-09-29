@@ -74,6 +74,12 @@ def slug_pattern() -> re.Pattern[str]:
     return re.compile(definition("slug")["pattern"])
 
 
+@functools.cache
+def evidence_id_pattern() -> re.Pattern[str]:
+    """The pattern an evidence id has, `<artefact>@<commit>` (DEC-001 point 7)."""
+    return re.compile(definition("evidence-id")["pattern"])
+
+
 def errors(kind: str, fields: Mapping[str, Any]) -> list[tuple[str, str]]:
     """Each way `fields` falls short of the kind's schema: a JSON Pointer into
     them and the message, in a stable order."""

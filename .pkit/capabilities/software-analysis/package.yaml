@@ -20,6 +20,10 @@ commands:
     script: scripts/check-numbers.py
     help: "Report a use case or journey whose number the default branch gave another file since this branch left it (DEC-001 point 3): the first to reach the default branch keeps the number. `--base <ref>` names the default branch (else $PKIT_CHECK_BASE, else origin/main); --json prints the document. Answers about a change, not the tree, so it is a check-gate line of its own and not a validator (ADR-058 point 7). Exit 1 on a collision, or when the base names no commit or shares no history with HEAD; an outdated base is reported and never fails. A query: read-only, offline; `pkit sync` provisions its dependencies."
     query-contract: true
+  fill-readers:
+    script: scripts/fill-readers.py
+    help: "This capability's filler of the pkit::documentation:readers point (DEC-001 point 8): one reader per actor in force, its id the actor's id in lower case (`ACT-tester` → `act-tester`) and its description the actor's name and needs; --json prints the filler envelope the backbone reads. A query: read-only, offline, no parameter; `pkit sync` provisions its dependencies."
+    query-contract: true
 
 # The `software-analysis:artefacts` member of `pkit validate` (ADR-058). The
 # number comparison reads a base, so it is not one (ADR-058 point 7).
@@ -52,3 +56,33 @@ friction:
     - location: analysis
       path: use-case-model/journeys
       description: The journeys, one file each.
+
+# COR-053 — the analysis role, the evidence point defined under it, and the
+# contribution to the documentation role's readers point (DEC-001 points 7
+# and 8). See the README, "Connections".
+connections:
+  roles: [pkit::analysis]
+  extension-points:
+    accepts:
+      pkit::analysis:revalidation-evidence:
+        schema_version: 1
+        schema: revalidation-evidence.schema.json
+        description: >-
+          Executed results that confirm or refute an analysis artefact at a
+          commit — a test run against a use case, a trace through a journey —
+          one entry per artefact and commit, keyed by the pair. Supplied by a
+          capability that runs such checks, or by the project; this capability
+          runs none. Advisory: a revalidation record cites evidence as support
+          for an artefact's outcome and never in place of one, so a filler that
+          cannot answer is warned and the rest still count.
+        combination: union
+        inert: fallback
+  extensions:
+    contributes:
+      # The actors in force as readers of the documentation, read from the
+      # analysis in the working tree. Inert while no capability provides the
+      # documentation role.
+      - point: pkit::documentation:readers
+        schema_version: 1
+        command: fill-readers
+        description: One reader per actor in force, its id the actor's id in lower case and its description the actor's name and needs.

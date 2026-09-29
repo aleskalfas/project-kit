@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "revalidation-evidence.schema.json",
+  "title": "Revalidation evidence — the value of pkit::analysis:revalidation-evidence, version 1",
+  "description": "The data point's companion schema (COR-052 point 5; software-analysis DEC-001 point 7): executed results that confirm or refute an analysis artefact at a commit — a test run against a use case, a trace through a journey. This capability runs nothing: the results arrive from a capability that runs them, or from the project's own filler file. One entry per artefact and commit, keyed by the pair: its `id` is `<artefact>@<commit>`. The point is `union`, no default takes part, and its inert policy is `fallback`, because the evidence advises: a revalidation record cites it as support for an artefact's outcome and never in place of one, and only a revalidation or a deferral recorded on the artefact clears friction (COR-050). The ids' shapes are `analysis.schema.json`'s, their one home. The version rises only on a change that breaks existing fillers.",
+  "type": "array",
+  "items": { "$ref": "#/$defs/evidence" },
+  "$defs": {
+    "evidence": {
+      "description": "The result of one executed check, for one artefact at one commit.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "artefact", "commit", "result", "ran"],
+      "properties": {
+        "id": {
+          "description": "The entry's key, the pair it is for: `<artefact>@<commit>`, the two fields below. A revalidation record cites the entry by it.",
+          "$ref": "analysis.schema.json#/$defs/evidence-id"
+        },
+        "artefact": {
+          "description": "The artefact the run confirms or refutes.",
+          "$ref": "analysis.schema.json#/$defs/artefact-id"
+        },
+        "commit": {
+          "description": "The commit the run was made against: the version of the system the result is true of.",
+          "$ref": "analysis.schema.json#/$defs/commit"
+        },
+        "result": {
+          "description": "`passed`: the run did what the artefact describes — support for `holds`. `failed`: it did not — a regression with proof attached, or a sign the analysis is stale; the revalidation decides which (DEC-001 points 5 and 7).",
+          "enum": ["passed", "failed"]
+        },
+        "ran": {
+          "description": "What was run, so a person can find it and run it again: a test by its name (`tests/test_run.py::test_sandbox`), a trace, a scripted walk through a journey.",
+          "$ref": "analysis.schema.json#/$defs/text"
+        },
+        "steps": {
+          "description": "The steps and variants the run went through, by their numbers and letters (`2`, `2a`). They are cited, which is why they are never renumbered (DEC-001 point 3).",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[1-9][0-9]*[a-z]*$" }
+        },
+        "where": {
+          "description": "Where the result can be read: a pipeline run, a report file.",
+          "$ref": "analysis.schema.json#/$defs/text"
+        },
+        "by": {
+          "description": "Who or what ran it: a capability, a pipeline, a person.",
+          "$ref": "analysis.schema.json#/$defs/text"
+        }
+      }
+    }
+  }
+}

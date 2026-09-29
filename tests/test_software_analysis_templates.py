@@ -3,8 +3,8 @@
 Held to software-analysis DEC-001 points 1 to 6:
 
 - one **companion schema** per kind — actor, term, use case, journey,
-  revalidation record — each valid Draft 2020-12, sharing one home for the id
-  shapes (`analysis.schema.json`);
+  revalidation record — and the evidence point's (#1001), each valid Draft
+  2020-12, sharing one home for the id shapes (`analysis.schema.json`);
 - each anchored kind's **template** carrying the friction block inside the
   methodology's container — in the front matter of a document, in each entry
   of a collection — valid against the core's container schema and against the
@@ -67,10 +67,51 @@ def _template(name: str) -> dict[str, Any]:
 
 
 def test_the_schemas_are_one_per_kind_and_valid() -> None:
+    """One per kind, the shared definitions, and the evidence point's companion (#1001)."""
     stems = _stems()
-    assert stems == ["actor", "analysis", "journey", "revalidation-record", "term", "use-case"]
+    assert stems == [
+        "actor",
+        "analysis",
+        "journey",
+        "revalidation-evidence",
+        "revalidation-record",
+        "term",
+        "use-case",
+    ]
     for stem in stems:
         Draft202012Validator.check_schema(_schema(stem))
+
+
+@pytest.mark.parametrize(
+    "artefact",
+    [
+        "ACT-tester",
+        "TERM-sandbox",
+        "UC-007",
+        "UC-1000",
+        "JRN-001",
+        "ACT-Tester",
+        "UC-0007",
+        "JRN-1",
+        "USER-x",
+        "UC-007@1a2b3c4",
+        "",
+    ],
+)
+def test_an_evidence_id_is_an_artefact_id_and_a_commit(artefact: str) -> None:
+    """A pattern cannot refer to another, so the evidence id spells the four id
+    shapes again beside them: held in step, it admits `<artefact>@<commit>` exactly
+    when the artefact id does."""
+    definitions = _schema("analysis")["$defs"]
+    evidence_id = re.compile(definitions["evidence-id"]["pattern"])
+    commit = re.compile(definitions["commit"]["pattern"])
+    is_artefact = any(
+        re.match(definitions[f"{kind}-id"]["pattern"], artefact)
+        for kind in ("actor", "term", "use-case", "journey")
+    )
+    assert bool(evidence_id.match(f"{artefact}@1a2b3c4")) is is_artefact
+    assert commit.match("1a2b3c4") and not commit.match("HEAD")
+    assert not evidence_id.match(f"{artefact}@HEAD")
 
 
 @pytest.mark.parametrize(

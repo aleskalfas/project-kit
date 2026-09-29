@@ -33,8 +33,15 @@ What is checked, each against the record's words:
   analysis, withdrawn ones included. The records are not anchored artefacts
   and lie in no place, so they are read from their folder under the analysis
   location.
+- **Evidence a record cites** (point 7) supports an outcome and never replaces
+  one: evidence for an artefact the record gives no outcome is an error, read
+  from the record alone. Whether the evidence point holds each cited id is
+  read from the point as it resolves (`_lib/evidence.py`), only when some
+  record cites evidence; the evidence advises, so a citation the point does
+  not hold, or a point that does not resolve, is a warning and never fails.
 
-It reads the working tree alone, so the same tree always answers the same.
+It reads the working tree alone — and, when a record cites evidence, the
+evidence point — so the same tree always answers the same.
 
 **Not here.** A number two branches took (point 3) is `pkit analysis
 check-numbers`' (`_lib/numbers.py`): it reads the default branch, so it answers
@@ -53,8 +60,8 @@ from pathlib import Path
 
 from ruamel.yaml.error import YAMLError
 
-from _lib import backbone, markdown, schemas
-from _lib.findings import ERROR, Finding, Outcome, at
+from _lib import backbone, evidence, markdown, schemas
+from _lib.findings import ERROR, WARNING, Finding, Outcome, at
 from _lib.model import (
     ACTOR,
     ID_SHAPE,
@@ -72,6 +79,9 @@ from _lib.model import (
 
 #: Where in an artefact its artefact anchors sit.
 ARTEFACT_ANCHORS = "/pkit/friction/anchors/artefact"
+
+#: One evidence citation of a record: where it is written, and the evidence id.
+Citation = tuple[str, str]
 
 
 def check(root: Path) -> Outcome:
@@ -99,7 +109,12 @@ def check(root: Path) -> Outcome:
     outcome.findings += _references(analysis)
     outcome.findings += _actor_anchors(analysis)
     outcome.findings += _journey_anchors(analysis)
-    outcome.findings += _record_findings(root, records, analysis)
+    record_findings, citations = _record_findings(root, records, analysis)
+    outcome.findings += record_findings
+    if citations:
+        summary, held = _evidence_held(root, citations)
+        outcome.summary.append(summary)
+        outcome.findings += held
     return outcome
 
 
@@ -297,8 +312,13 @@ def _records(root: Path, location: str) -> list[Path]:
     )
 
 
-def _record_findings(root: Path, records: list[Path], analysis: Analysis) -> list[Finding]:
+def _record_findings(
+    root: Path, records: list[Path], analysis: Analysis
+) -> tuple[list[Finding], list[Citation]]:
+    """What the records' front matter breaks, and the evidence they cite, each id
+    well-formed."""
     found: list[Finding] = []
+    citations: list[Citation] = []
     for path in records:
         rel = path.relative_to(root).as_posix()
         try:
@@ -325,7 +345,10 @@ def _record_findings(root: Path, records: list[Path], analysis: Analysis) -> lis
         for pointer, message in schemas.errors(schemas.RECORD, data):
             found.append(Finding(ERROR, at(rel, pointer), message))
         found += _cited(rel, data.get("outcomes"), analysis)
-    return found
+        cited = _evidence_cited(rel, data.get("evidence"))
+        found += _evidence_without_outcome(cited, data.get("outcomes"))
+        citations += cited
+    return found, citations
 
 
 def _cited(rel: str, outcomes: object, analysis: Analysis) -> list[Finding]:
@@ -345,3 +368,82 @@ def _cited(rel: str, outcomes: object, analysis: Analysis) -> list[Finding]:
         and any(schemas.id_pattern(kind).match(cited) for kind in KINDS)
         and analysis.find(cited) is None
     ]
+
+
+# --- evidence a record cites (DEC-001 point 7) ---------------------------------------------
+
+
+def _evidence_cited(rel: str, cited: object) -> list[Citation]:
+    """The well-formed evidence ids a record cites, each where it is written; the
+    schema reports the rest."""
+    if not isinstance(cited, list):
+        return []
+    pattern = schemas.evidence_id_pattern()
+    return [
+        (at(rel, f"/evidence/{index}"), evidence_id)
+        for index, evidence_id in enumerate(cited)
+        if isinstance(evidence_id, str) and pattern.match(evidence_id)
+    ]
+
+
+def _evidence_without_outcome(cited: list[Citation], outcomes: object) -> list[Finding]:
+    """Evidence supports an artefact's outcome and never replaces it: each artefact a
+    record cites evidence for has its outcome in the record."""
+    if not isinstance(outcomes, dict):
+        return []  # the schema reports it
+    found: list[Finding] = []
+    for location, evidence_id in cited:
+        artefact = evidence.artefact_of(evidence_id)
+        if artefact in outcomes:
+            continue
+        found.append(
+            Finding(
+                ERROR,
+                location,
+                f"cites evidence {evidence_id} for {artefact}, to which it gives no outcome: "
+                f"evidence supports a revalidation's outcome and never replaces it — give "
+                f"{artefact} its outcome, or drop the citation (DEC-001 point 7)",
+            )
+        )
+    return found
+
+
+def _evidence_held(root: Path, cited: list[Citation]) -> tuple[str, list[Finding]]:
+    """Whether the evidence point holds each cited id: a summary line, and a warning
+    for each it does not — or one, when the point does not resolve. The evidence
+    advises (DEC-001 point 7), so nothing here fails."""
+    held = evidence.read_evidence(root)
+    if not held.resolved:
+        why = held.why.rstrip(".")
+        return (
+            f"evidence ({evidence.POINT}) unresolved: {len(cited)} citation(s) not checked.",
+            [
+                Finding(
+                    WARNING,
+                    evidence.POINT,
+                    f"evidence unresolved — {why}{_inert(held)}. No record's citation can be "
+                    f"checked until the point resolves; evidence advises, so nothing fails on "
+                    f"it (DEC-001 point 7)",
+                )
+            ],
+        )
+    found = [
+        Finding(
+            WARNING,
+            location,
+            f"cites evidence {evidence_id}, which {evidence.POINT} does not hold"
+            f"{_inert(held)}: cite an entry the point holds, by its `<artefact>@<commit>` "
+            f"id, or drop the citation (DEC-001 point 7)",
+        )
+        for location, evidence_id in cited
+        if evidence_id not in held.ids
+    ]
+    return (
+        f"evidence ({evidence.POINT}): {len(held.ids)} held; {len(cited)} citation(s) checked.",
+        found,
+    )
+
+
+def _inert(held: evidence.Evidence) -> str:
+    """The fillers that went inert, whose entries the point lacks."""
+    return f" — inert: {'; '.join(held.inert)}" if held.inert else ""

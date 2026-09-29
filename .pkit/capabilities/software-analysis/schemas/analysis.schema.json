@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "analysis.schema.json",
   "title": "Shared shapes of the analysis artefacts — software-analysis capability",
-  "description": "The definitions every companion schema of this capability refers to (software-analysis DEC-001 point 3): each artefact kind's id, the status an artefact carries, and a line of text. One home for each shape: the kinds' schemas (`actor`, `term`, `use-case`, `journey`, `revalidation-record`) `$ref` them here, and the capability's commands read the id patterns from here, so the stamp that allocates an id and the check that judges one never disagree. Not a schema of any file itself.",
+  "description": "The definitions every companion schema of this capability refers to (software-analysis DEC-001 points 3 and 7): each artefact kind's id, the status an artefact carries, a line of text, and the id of a piece of evidence with the commit it names. One home for each shape: the kinds' schemas (`actor`, `term`, `use-case`, `journey`, `revalidation-record`) and the evidence point's (`revalidation-evidence`) `$ref` them here, and the capability's commands read the id patterns from here, so the stamp that allocates an id and the check that judges one never disagree. Not a schema of any file itself.",
   "$defs": {
     "text": {
       "description": "A non-empty line of text.",
@@ -47,6 +47,16 @@
         { "$ref": "#/$defs/use-case-id" },
         { "$ref": "#/$defs/journey-id" }
       ]
+    },
+    "commit": {
+      "description": "A commit, by its full or abbreviated hexadecimal name.",
+      "type": "string",
+      "pattern": "^[0-9a-f]{7,64}$"
+    },
+    "evidence-id": {
+      "description": "The id of an entry of the evidence point, `pkit::analysis:revalidation-evidence` (DEC-001 point 7), and how a revalidation record cites it: the artefact and the commit the result is for, `<artefact>@<commit>` (`UC-003@1a2b3c4`) — an artefact id as above, then a commit. A pattern cannot refer to another, so this one spells the four id shapes again, here beside them; a test holds the two in step.",
+      "type": "string",
+      "pattern": "^(?:ACT-[a-z][a-z0-9-]*|TERM-[a-z][a-z0-9-]*|UC-(?:[0-9]{3}|[1-9][0-9]{3,})|JRN-(?:[0-9]{3}|[1-9][0-9]{3,}))@[0-9a-f]{7,64}$"
     },
     "unanchored-because": {
       "description": "Why the artefact is deliberately left unanchored — an actor no code or decision embodies, say. An unanchored artefact is reported, never an error; this is the reason onboarding accepts it (DEC-001 point 9).",
