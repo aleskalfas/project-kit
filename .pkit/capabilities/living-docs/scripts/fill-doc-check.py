@@ -12,8 +12,9 @@ This capability's filler of the `pkit::work-tracking:doc-check` data point
 (DEC-001 point 7; project-management DEC-053 point 4): friction on anchored
 pages and uncovered surface, as the point's obligations — one `page-stale` per
 page of the spaces the backbone's whole-repository friction check reports
-stale or deferred, one `code-undocumented` per path of the declared surface
-that nothing anchors. `_lib/doc_check.py` states the shape of each.
+stale, one `code-undocumented` per path of the declared surface that nothing
+anchors. A deferred page gives none: its deferral is the answer.
+`_lib/doc_check.py` states the shape of each.
 
 The backbone runs it wherever the point resolves — `pkit validate`, `pkit
 status`, `pkit connections resolve` — as a query (COR-052 point 6): from the

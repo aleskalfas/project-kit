@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-09-29T18:14:55Z
+      at: 2026-09-29T18:17:41Z
       outcome: unchanged
-      unchanged-because: "the CLI and agents READMEs were revalidated for #1111's capability-namespace and deploy-precedence changes; the area map holds"
+      unchanged-because: the CLI and adapter READMEs were revalidated for the enforced documentation source and the settings consolidate section; the area map holds
 ---
 
 # project-kit

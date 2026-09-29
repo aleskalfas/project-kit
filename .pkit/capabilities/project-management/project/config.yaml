@@ -67,12 +67,17 @@ code_path_to_doc_mapping:
 # capability's friction on an anchored page is met only by the page changed in
 # the diff, and code nothing documents only once a page anchors it. Each source
 # has its own setting here: advisory (the default) or enforcing. living-docs
-# contributes the `friction` source — a stale or deferred page, and each
-# declared-surface path no page anchors — and no source is set here, so it
-# stays advisory; to make it block:
-#   doc_check:
-#     sources:
-#       friction: enforcing
+# contributes the `friction` source — a stale page (a deferred one carries its
+# answer and owes nothing), and each declared-surface path no page anchors —
+# and project-kit enforces it (#1012):
+# a pull request leaving either is refused by `check-doc-mapping`, as the core
+# friction check refuses the stale page. The declared surface was narrowed to
+# what a page should describe and fully anchored first, so the point held no
+# obligation when the setting took effect; CONTRIBUTING.md says what to do
+# when the check refuses.
+doc_check:
+  sources:
+    friction: enforcing
 
 # Transitional shim — pre-check.py still requires this field, but the
 # canonical workstreams list lives in project/workstreams.yaml per

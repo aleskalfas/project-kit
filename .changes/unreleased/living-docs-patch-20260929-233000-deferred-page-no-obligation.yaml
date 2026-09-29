@@ -1,0 +1,13 @@
+component: living-docs
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `pkit living-docs fill-doc-check` gives a `page-stale` obligation for a page
+  the whole-repository friction check reports stale, no longer for one it
+  reports deferred: a deferral is the page's answer (project-management DEC-053
+  point 4), so a deferred page owes the documentation check nothing, and
+  `pkit friction debt` keeps reporting it until the page is revalidated.
+  Before, the check refused every pull request that left a deferred page
+  untouched. A stale page's description names only its changed anchors, not
+  the ones it has deferred.
