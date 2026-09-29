@@ -617,7 +617,7 @@ def test_declared_floor_raise_is_raise_only(
         ("backbone", "minor", "release", "the backbone has no `requires_backbone`"),
         ("houseware", "none", "release", "a `none` changeset moves no version"),
         ("houseware", "minor", "1.6.0", "takes one value, `release`"),
-        ("wildware", "minor", "release", "opens with a `>=` floor to raise"),
+        ("wildware", "minor", "release", "has a floor the release can raise"),
     ],
 )
 def test_compute_refuses_a_floor_field_it_cannot_carry(
@@ -659,6 +659,19 @@ def test_no_broaden_refuses_a_floor_the_upper_bound_cannot_hold(tmp_path: Path) 
 
     assert pkg.read_text() == before
     assert list(changesets.unreleased_dir(source_kit.parent).glob("*.yaml"))
+
+
+def test_no_broaden_does_not_refuse_a_floor_it_leaves_alone(tmp_path: Path) -> None:
+    """A floor already above the shipped backbone is not raised, so its range is
+    not the release's to refuse."""
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    pkg = _write_capability(source_kit, "houseware", "0.3.0", ">=1.7.0,<2.0.0")
+    _add_floor(source_kit, "houseware", "patch", "a.yaml")
+
+    release.apply_release(source_kit, release.compute_release(source_kit), tag=False, broaden=False)
+
+    assert 'requires_backbone: ">=1.7.0,<2.0.0"' in pkg.read_text()
+    assert "  version: 0.3.1\n" in pkg.read_text()
 
 
 # --- Dogfood: the release that ships the backbone-owned journal line ---------

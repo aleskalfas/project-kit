@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-09-29T19:26:34Z
+      at: 2026-09-29T19:44:54Z
       outcome: unchanged
-      unchanged-because: the lifecycle, CLI and process READMEs gained the declared requires_backbone floor raise and the journal-pattern package warning inside their own sections; each area's one-line summary in this map still holds
+      unchanged-because: the CLI README's release rows now name the one requires_backbone range shape whose floor the release raises; its area-map line (the pkit command surface) still holds, as do the lifecycle and process lines
 ---
 
 # project-kit

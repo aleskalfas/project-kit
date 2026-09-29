@@ -137,8 +137,12 @@ def _floor(
     )
 
 
-def test_floor_field_on_a_capability_with_a_floor_passes(tmp_path: Path) -> None:
-    assert release.lint_floor(_floor(), _components(tmp_path)) == []
+@pytest.mark.parametrize("requires_backbone", ['">=1.0.0,<2.0.0"', '">=1.0.0"'])
+def test_floor_field_on_a_capability_with_a_floor_passes(
+    tmp_path: Path, requires_backbone: str
+) -> None:
+    components = _components(tmp_path, requires_backbone=requires_backbone)
+    assert release.lint_floor(_floor(), components) == []
 
 
 def test_a_changeset_without_the_floor_field_is_not_checked() -> None:
@@ -158,6 +162,8 @@ def test_floor_field_on_a_backbone_changeset_fails(tmp_path: Path) -> None:
     [
         ('"*"', "capability", "houseware"),  # no floor to raise
         ('"<2.0.0,>=1.0.0"', "capability", "houseware"),  # does not open with the floor
+        ("'>=1.0.0,<2.0.0'", "capability", "houseware"),  # a shape the broaden cannot widen
+        ('">=1.0.0, <2.0.0"', "capability", "houseware"),  # likewise
         ('">=1.0.0,<2.0.0"', "bundle", "houseware"),  # not a capability or adapter
         ('">=1.0.0,<2.0.0"', "capability", "nowhere"),  # no such component
     ],
@@ -168,8 +174,8 @@ def test_floor_field_on_a_component_without_a_floor_to_raise_fails(
     components = _components(tmp_path, requires_backbone=requires_backbone, kind=kind)
     violations = release.lint_floor(_floor(component), components)
     assert [v.message for v in violations] == [
-        f"{component!r} is not a capability or adapter whose `requires_backbone` range "
-        "opens with a `>=` floor to raise."
+        f"{component!r} is not a capability or adapter whose `requires_backbone` has a "
+        'floor the release can raise (a range of the form ">=X.Y.Z,<A.B.C" or ">=X.Y.Z").'
     ]
 
 

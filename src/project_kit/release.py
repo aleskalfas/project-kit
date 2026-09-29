@@ -200,8 +200,8 @@ def floor_problems(cs: Changeset, components: Mapping[str, Component]) -> list[s
     changeset carries none.
 
     The field raises the floor of a capability or adapter whose `requires_backbone`
-    range opens with a `>=` bound (`versioning.requires_backbone_floor`, the same
-    locator the raise rewrites through), on a changeset that moves the component's
+    has the shape the release rewrites (`versioning.requires_backbone_floor`, the
+    same locator the raise rewrites through), on a changeset that moves the component's
     version — a raised floor changes what the component requires, which is surface
     and is never shipped under an unchanged version. One reader for the release
     step, which refuses, and the lint, which reports.
@@ -234,7 +234,8 @@ def floor_problems(cs: Changeset, components: Mapping[str, Component]) -> list[s
     ):
         problems.append(
             f"{cs.component!r} is not a capability or adapter whose `requires_backbone` "
-            f"range opens with a `>=` floor to raise."
+            'has a floor the release can raise (a range of the form ">=X.Y.Z,<A.B.C" '
+            'or ">=X.Y.Z").'
         )
     return problems
 
@@ -373,12 +374,19 @@ def _raise_declared_floors(source_kit: Path, plan: ReleasePlan) -> None:
 
 
 def _refuse_floors_past_the_upper_bound(plan: ReleasePlan) -> None:
-    """Refuse, before anything is written, a floor raise whose range does not
+    """Refuse, before anything is written, a floor raise whose upper bound does not
     admit the shipped backbone: raised to it, the range would admit nothing. Only
-    reachable without the broaden, which otherwise widens the upper bound first."""
+    reachable without the broaden, which otherwise widens that bound first — the
+    raise holds to the one shape the broaden rewrites (`requires_backbone_floor`)."""
     from project_kit.connections import REQUIRES_BACKBONE_KEY, range_admits, read_package
 
+    target = parse_version_tuple(plan.shipped_backbone)
     for rel in plan.floor_raises:
+        floor = versioning.requires_backbone_floor(
+            rel.component.version_path.read_text(encoding="utf-8")
+        )
+        if floor is None or parse_version_tuple(floor) >= target:
+            continue  # nothing is raised: `compute_release` refused the first, the second stays
         package = read_package(rel.component.version_path)
         declared = package.get(REQUIRES_BACKBONE_KEY) if package else None
         if range_admits(declared, plan.shipped_backbone) is False:

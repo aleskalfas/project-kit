@@ -63,11 +63,13 @@ _PEP440_RE = re.compile(r"^(\d+)\.(\d+)\.(\d+)(?:(a|b|rc)(\d+))?$")
 
 _REQUIRES_BACKBONE_RE = re.compile(r'(requires_backbone:\s*"[^"]*,<)(\d+)\.(\d+)\.(\d+)')
 
-# The floor a `requires_backbone` range opens with — its `>=X.Y.Z` — on the
-# top-level key's own line, the value quoted either way. Anchored to the start of
-# a line so a comment that mentions the key is never read or rewritten.
+# The floor a `requires_backbone` range opens with — its `>=X.Y.Z` — in the one
+# shape the broaden also rewrites: `">=X.Y.Z,<A.B.C"`, or `">=X.Y.Z"` with no
+# upper bound. Holding the raise to that shape means a raised floor always sits
+# under an upper bound the broaden widened, or under none. Anchored to the start
+# of a line so a comment that mentions the key is never read or rewritten.
 _REQUIRES_BACKBONE_FLOOR_RE = re.compile(
-    r"""(?m)^(requires_backbone:[ \t]*["'][ \t]*>=[ \t]*)(\d+\.\d+\.\d+)(?=[ \t]*[,"'])"""
+    r'(?m)^(requires_backbone:[ \t]*">=)(\d+\.\d+\.\d+)(?=,<\d+\.\d+\.\d+"|")'
 )
 
 
@@ -440,12 +442,14 @@ def broaden_component_requires_backbone(pkg_file: Path, backbone: str) -> str | 
 
 
 def requires_backbone_floor(package_text: str) -> str | None:
-    """The `>=X.Y.Z` floor a package file's `requires_backbone` range opens with.
+    """The `>=X.Y.Z` floor of a package file's `requires_backbone`, when the range
+    has the shape the release rewrites: `">=X.Y.Z,<A.B.C"` or `">=X.Y.Z"`.
 
-    None when there is none to raise: no `requires_backbone` line, a range that
-    does not open with a `>=` bound, or a value that is not quoted. The floor
-    raise reads the range through this one locator, so what it can raise and
-    what the release lint accepts are the same set.
+    None otherwise — no `requires_backbone` line, a range that does not open
+    with the floor, or one quoted or spaced another way (which the broaden
+    cannot widen either). The floor raise reads the range through this one
+    locator, so what it can raise and what the release lint accepts are the
+    same set.
     """
     match = _REQUIRES_BACKBONE_FLOOR_RE.search(package_text)
     return match.group(2) if match else None
@@ -458,7 +462,7 @@ def raise_component_requires_backbone_floor(pkg_file: Path, backbone: str) -> st
     only for a component whose changeset declares it needs the backbone a
     release ships. **Raise-only** — a floor already at or above `backbone` is
     left untouched. Rewrites the one `>=X.Y.Z` in place (not a YAML round-trip),
-    so quoting, the upper bound and trailing comments survive.
+    so the upper bound and trailing comments survive.
 
     Returns a human-readable `old -> new` floor string when it rewrote the
     floor, `None` when the floor already admitted nothing older. Raises
@@ -474,7 +478,8 @@ def raise_component_requires_backbone_floor(pkg_file: Path, backbone: str) -> st
     match = _REQUIRES_BACKBONE_FLOOR_RE.search(original)
     if match is None:
         raise click.ClickException(
-            f"{pkg_file}: requires_backbone has no `>=` floor to raise to {backbone}"
+            f'{pkg_file}: requires_backbone is not a range of the form ">=X.Y.Z,<A.B.C" '
+            f"whose floor can be raised to {backbone}"
         )
     floor = match.group(2)
     if parse_version_tuple(floor) >= parse_version_tuple(backbone):

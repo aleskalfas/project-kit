@@ -14,7 +14,8 @@ body: >
   `pkit release plan` shows each floor it will raise. `pkit release lint`, and
   `plan` and `apply` themselves, refuse the field on a backbone changeset, on a
   `none` changeset, on a component that is not a capability or adapter whose
-  range opens with a `>=` floor, and with any value but `release`.
+  range is `">=X.Y.Z,<A.B.C"` or `">=X.Y.Z"` (the shape the upper-bound broaden
+  also rewrites), and with any value but `release`.
 
   `pkit validate` warns, without failing, when an installed component's
   `runtime_ignore` still declares the process journals, whose ignore line the

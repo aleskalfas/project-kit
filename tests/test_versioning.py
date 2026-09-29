@@ -535,15 +535,19 @@ def _package_with(tmp_path: Path, requires_backbone_line: str) -> Path:
     ("line", "floor"),
     [
         ('requires_backbone: ">=1.2.0,<2.0.0"', "1.2.0"),
-        ("requires_backbone: '>=1.2.0,<2.0.0'", "1.2.0"),
-        ('requires_backbone: ">= 1.2.0, <2.0.0"', "1.2.0"),
+        ('requires_backbone:   ">=1.2.0,<2.0.0"  # why', "1.2.0"),
         ('requires_backbone: ">=1.2.0"', "1.2.0"),
-        ('requires_backbone: "<2.0.0,>=1.2.0"', None),  # does not open with the floor
+        # Shapes the broaden cannot widen either, so no floor is raised in them.
+        ("requires_backbone: '>=1.2.0,<2.0.0'", None),
+        ('requires_backbone: ">= 1.2.0,<2.0.0"', None),
+        ('requires_backbone: ">=1.2.0, <2.0.0"', None),
+        ('requires_backbone: "<2.0.0,>=1.2.0"', None),
+        ('requires_backbone: ">=1.2.0rc1,<2.0.0"', None),
         ('requires_backbone: "*"', None),
-        ("requires_backbone: >=1.2.0", None),  # unquoted
+        ("requires_backbone: >=1.2.0", None),
     ],
 )
-def test_requires_backbone_floor_reads_the_range_s_opening_bound(
+def test_requires_backbone_floor_reads_the_one_shape_the_release_rewrites(
     tmp_path: Path, line: str, floor: str | None
 ) -> None:
     text = _package_with(tmp_path, line).read_text(encoding="utf-8")
@@ -551,15 +555,15 @@ def test_requires_backbone_floor_reads_the_range_s_opening_bound(
 
 
 def test_raise_floor_rewrites_only_the_floor(tmp_path: Path) -> None:
-    """The lower bound moves; the upper bound, the quoting, the trailing comment and
-    a comment that mentions the key stay as written."""
-    pkg = _package_with(tmp_path, "requires_backbone: '>=1.2.0,<2.0.0'  # floor: report link")
+    """The lower bound moves; the upper bound, the trailing comment and a comment
+    that mentions the key stay as written."""
+    pkg = _package_with(tmp_path, 'requires_backbone: ">=1.2.0,<2.0.0"  # floor: report link')
 
     changed = versioning.raise_component_requires_backbone_floor(pkg, "1.6.0")
 
     assert changed == ">=1.2.0 -> >=1.6.0"
     text = pkg.read_text(encoding="utf-8")
-    assert "requires_backbone: '>=1.6.0,<2.0.0'  # floor: report link\n" in text
+    assert 'requires_backbone: ">=1.6.0,<2.0.0"  # floor: report link\n' in text
     assert '# The floor is 1.2.0: requires_backbone: ">=1.2.0" names the reason.\n' in text
 
 
@@ -574,5 +578,5 @@ def test_raise_floor_is_raise_only(tmp_path: Path) -> None:
 
 def test_raise_floor_refuses_a_range_with_no_floor(tmp_path: Path) -> None:
     pkg = _package_with(tmp_path, 'requires_backbone: "*"')
-    with pytest.raises(click.ClickException, match="no `>=` floor to raise"):
+    with pytest.raises(click.ClickException, match=r"whose floor can be raised to 1\.6\.0"):
         versioning.raise_component_requires_backbone_floor(pkg, "1.6.0")

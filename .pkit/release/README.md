@@ -13,7 +13,7 @@ pkit:
         - .github/workflows/release-tag.yml
       record: [COR-010, COR-041, PRJ-002, PRJ-004, ADR-040]
     revalidated:
-      at: 2026-09-29T19:26:29Z
+      at: 2026-09-29T19:33:00Z
       outcome: updated
 ---
 
@@ -79,9 +79,10 @@ custom:
   of the component's `requires_backbone` range to that version (the floor raise,
   below). Top-level or under `custom:`, like `category` and `pr`.
 - It belongs on a **version-moving changeset** (`patch` / `minor` / `major`) of
-  a **capability or adapter whose range opens with a `>=` floor** — a raised
-  floor changes what the component requires, which is surface and never ships
-  under an unchanged version. `pkit release lint` refuses it on a backbone
+  a **capability or adapter whose range is `">=X.Y.Z,<A.B.C"` or `">=X.Y.Z"`**
+  — the shape the broaden also rewrites — since a raised floor changes what the
+  component requires, which is surface and never ships under an unchanged
+  version. `pkit release lint` refuses it on a backbone
   changeset, on a `none` changeset, on a component with no such range, and with
   any other value; `pkit release plan` and `apply` refuse to compute a release
   from such a changeset rather than drop the declaration.
@@ -288,14 +289,18 @@ moves, else the current one.
   without a changeset saying so, and a component that declared nothing keeps
   its floor however far the backbone moves.
 - **Raise-only.** A floor already at or above that backbone is left as it is.
-- **After the broaden**, so the raised floor sits under an upper bound that
-  admits it. `--no-broaden` does not skip the raise — the need was declared —
-  and when the authored upper bound does not admit the shipped backbone, the
-  raise would leave a range that admits nothing, so `apply` refuses before
-  writing anything; drop `--no-broaden` or widen the upper bound.
-- The rewrite touches the one `>=X.Y.Z` in place, like the broaden: quoting,
-  the upper bound and comments survive, and the release PR's `package.yaml`
-  diff stays inside the release footprint the changeset guard exempts.
+- **In the broaden's shape, after the broaden.** Only a range of the form
+  `">=X.Y.Z,<A.B.C"` (or `">=X.Y.Z"`, with no upper bound) is raised — the
+  shape the broaden widens — and the raise runs after the broaden, so a raised
+  floor always sits under an upper bound that admits it, or under none. Any
+  other shape (single-quoted, spaced, the floor not first) is refused up front,
+  by the lint and by `plan`. `--no-broaden` does not skip the raise — the need
+  was declared — and when the authored upper bound does not admit the shipped
+  backbone, the raise would leave a range that admits nothing, so `apply`
+  refuses before writing anything; drop `--no-broaden` or widen the upper bound.
+- The rewrite touches the one `>=X.Y.Z` in place, like the broaden: the upper
+  bound and comments survive, and the release PR's `package.yaml` diff stays
+  inside the release footprint the changeset guard exempts.
 
 **Tagging is a separate, anchored step** (COR-004's each-step-its-own-command
 principle — the same reason `version bump` and `version tag` are distinct).
@@ -551,8 +556,9 @@ shared aggregator (`scripts/check.sh`), which both the local pre-push hook and
    category still is).
 3. **Changeset floor field** — a `requires_backbone` field must say `release`,
    on a version-moving changeset of a capability or adapter whose
-   `requires_backbone` range opens with a `>=` floor. It fails on the backbone,
-   on a `none` changeset, and on a component with no floor to raise — the same
+   `requires_backbone` is `">=X.Y.Z,<A.B.C"` or `">=X.Y.Z"`. It fails on the
+   backbone, on a `none` changeset, and on a component with no floor in that
+   shape to raise — the same
    check `release plan` / `apply` refuse on, so the lint reports it before the
    release does. The components are read only when a changeset carries the
    field.

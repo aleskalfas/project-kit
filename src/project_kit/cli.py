@@ -1136,7 +1136,8 @@ def release_lint(skip: bool | None) -> None:
     a Keep-a-Changelog group, its body is a non-empty sentence (not a bare
     reference, capitalized, period-ended), a `requires_backbone` floor field
     says `release` on a version-moving changeset of a capability or adapter
-    with a `>=` floor, and `CHANGELOG.md` headings are well-formed. It does
+    whose range is `">=X.Y.Z,<A.B.C"` or `">=X.Y.Z"`, and `CHANGELOG.md`
+    headings are well-formed. It does
     *not* judge plain language / jargon — that is the guide plus review. A
     reminder, not a proof; see `.pkit/release/README.md`.
 
