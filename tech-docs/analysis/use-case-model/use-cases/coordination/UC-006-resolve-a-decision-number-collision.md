@@ -9,8 +9,6 @@ pkit:
       path:
         - src/project_kit/decisions.py
         - src/project_kit/decisions_validate.py
-      record:
-        - software-analysis:DEC-001
       artefact:
         - ACT-clone-session
         - .pkit/decisions/README.md
@@ -35,9 +33,13 @@ pkit:
 **Variants:** each lettered after the step it branches from; steps and variants are only ever added, never renumbered.
 
 - **1a.** The default branch cannot be fetched (offline). The number comes from the working tree alone, with a warning.
-- **5a.** The record being renumbered has already landed on the default branch under this branch's slug. The command refuses: renumbering a landed record would break the default branch.
+- **5a.** The record being renumbered has already landed on the default branch. The command refuses: renumbering a landed record would break the default branch.
 - **5b.** The new number is already held on the default branch. The command refuses and names the next free one.
 
 **Done when:** Both records are on the default branch under distinct numbers, and nothing is left to renumber after the merge.
 
-**Design:** Situation S6 of the coordination design walk. Built today: minting from the working tree alone (`src/project_kit/decisions.py`), and the check that no two records in one tree share an id (`decisions_validate.py`). Intended, not built yet — EPIC #943: minting from the default branch, `validate --against`, `renumber`, and a core record for provisional numbering. A number is never reserved remotely, since an abandoned branch would strand it. The analysis capability already numbers use cases and journeys the same way, first to the default branch keeping the number (`pkit analysis check-numbers`).
+**Design:** Situation S6 of the coordination design walk. Built today: minting from the working tree alone (`src/project_kit/decisions.py`), and the check that no two records in one tree share an id (`decisions_validate.py`). Intended, not built yet — EPIC #943 (F3): minting from the default branch, `validate --against` and `renumber`, which land in the code anchored here, and a core record for provisional numbering, which F3 adds as this use case's record anchor when it is accepted, revalidating the use case. Until then no accepted record decides how decision numbers are minted: the decisions README says how records are numbered today, and is the artefact anchor. A number is never reserved remotely, since an abandoned branch would strand it. The analysis capability numbers use cases and journeys the same way, first to the default branch keeping the number (`pkit analysis check-numbers`); the core record would generalise that rule to decision records.
+
+**Gaps** (revalidation `2026-09-29-multi-clone-coordination`):
+
+- **H, at 5a.** The design walked had `renumber` refuse "if `<old>` is on the default branch under another slug" — exactly the collision it exists to resolve. Proposed fix (pending authorisation; carried by F3 T3.2 of EPIC #943): refuse when the record being renumbered has already landed on the default branch, or when `<new>` is held there. Open: how "already landed" is recognised — by this branch's slug on the default branch, or by the record having existed at the merge-base, which a changed or coinciding slug cannot mislead.

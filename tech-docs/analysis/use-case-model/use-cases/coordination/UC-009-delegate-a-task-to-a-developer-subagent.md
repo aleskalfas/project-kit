@@ -10,8 +10,8 @@ pkit:
         - .pkit/capabilities/project-management/agents/project-manager/project-manager.md
         - .pkit/capabilities/project-management/scripts/_lib/instance_identity.py
         - .pkit/capabilities/software-engineering/agents/software-engineer.md
+        - .pkit/capabilities/project-management/scripts/start-work.py
       record:
-        - project-management:DEC-029
         - project-management:DEC-035
         - software-engineering:DEC-001
       artefact:
@@ -30,7 +30,7 @@ pkit:
 1. The clone session starts the Task (`start-work --next`): the Task becomes this clone's and in progress, with an intent note saying where it is heading.
 2. It dispatches the developer subagent with the Task, usually into an isolated worktree of the clone.
 3. The subagent writes and commits the code on the Task's branch, and pushes it.
-4. Whenever the subagent touches the tracker — to open the pull request, say — it acts as its clone: the worktree reads the clone's instance id, so ownership and the guards apply as they do in the clone.
+4. Whenever the subagent touches the tracker — to open the pull request, say — it acts as its clone: ownership and the guards apply as they do in the clone (gap J).
 5. The subagent hands back its result; the clone session reviews it and moves the Task on.
 
 **Variants:** each lettered after the step it branches from; steps and variants are only ever added, never renumbered.
@@ -41,4 +41,8 @@ pkit:
 
 **Done when:** The Task's work is on its branch or merged, and its ownership and latest intent note are its clone's — whichever session did the work.
 
-**Design:** Situation S9 of the coordination design walk. Built today: the project-manager agent and how it dispatches helpers (project-management DEC-029), the software-engineer agent (software-engineering DEC-001), and the clone-local instance id (DEC-035) — which a worktree does not see today, since it is read from a git-ignored file under the working tree's own root. Intended, not built yet — EPIC #943: `start-work --next`, and one instance id for every worktree of a clone.
+**Design:** Situation S9 of the coordination design walk. Built today: the software-engineer agent the clone session dispatches (software-engineering DEC-001), and the clone-local instance id (DEC-035) — which a worktree does not see today, since it is read from a git-ignored file under the working tree's own root. No record decides how a clone session delegates a Task to a developer subagent: that is practice today, not a decision, so step 2 has no record anchor. Intended, not built yet: `start-work --next` is EPIC #943's (F1), in `start-work.py`; one instance id for every worktree of a clone is #1140, under EPIC #508, in `_lib/instance_identity.py`. Both paths are anchored here.
+
+**Gaps** (revalidation `2026-09-29-multi-clone-coordination`):
+
+- **J, at step 4.** The instance id is read from a git-ignored file under the working tree's own root, and an isolated worktree has none, so tracker commands a subagent runs there act as a clone that never opted in: no claim, no clash guard, and work it starts missing from its clone's position. Proposed fix (pending authorisation; carried by #1140, under EPIC #508): a worktree inherits its clone's instance id through git's common directory. Open: whether a worktree's own id file wins, so that a worktree may act as an instance of its own (#1140 proposes it does). Either way it refines DEC-035 point 1, which makes the id clone-local.
