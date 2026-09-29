@@ -2691,6 +2691,9 @@ def pin(version: str | None) -> None:
     the pinned version serves every command; a global-tool upgrade no longer moves
     this project. Raise the pin later with `pkit upgrade`; remove it with
     `pkit unpin`.
+
+    Refused in the methodology's source repository, where the router runs the
+    checkout's own code before any pin is read (ADR-059).
     """
     target_root = find_target_root()
     if target_root is None:

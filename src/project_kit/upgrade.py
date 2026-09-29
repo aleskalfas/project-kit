@@ -67,6 +67,7 @@ from project_kit.router import (
     DISTRIBUTION_GIT_URL,
     is_route_bypassed,
     is_routed_child,
+    is_source_checkout,
     pin_file_path,
     read_version_pin,
     run_bypassed,
@@ -286,10 +287,38 @@ def freeze_at_content(target_root: Path) -> None:
     tool is ahead of the project's synced content, freezing at the binary version
     would bake in a code-vs-content mismatch; freezing at content keeps the
     version⟺content invariant intact. Refuses when the manifest is absent (there
-    is no recorded content version to pin against).
+    is no recorded content version to pin against), and in the methodology's
+    source repository (`_refuse_pin_in_source`).
     """
+    _refuse_pin_in_source(target_root)
     current = _require_backbone_version(target_root)
     freeze_pin(target_root, current)
+
+
+def _refuse_pin_in_source(target_root: Path) -> None:
+    """Refuse `pkit pin` in the methodology's source repository (ADR-059; #1070).
+
+    A pin is meaningless there. The router's route 1 execs the checkout's own
+    dispatcher before any pin is read, and where it cannot, it falls back to the
+    running binary, never to a pin (ADR-039). `pin` normally runs under route 1,
+    so sync's test recognises the source. In the gap only the markers do, and a
+    pin is as meaningless there, while `pin <newer>` would run a release's
+    `upgrade` over the checkout. So either test refuses, before anything is
+    read or written.
+    """
+    if not (is_self_host(target_root, find_source_kit()) or is_source_checkout(target_root)):
+        return
+    pin_path = pin_file_path(target_root).relative_to(target_root)
+    raise click.ClickException(
+        f"refusing to pin {target_root}: it is the methodology's source repository, and "
+        "a pin is meaningless in the methodology's source: route 1 runs its own code "
+        "before any pin is read.\n"
+        "       Here the router runs this checkout's own dispatcher (or, when it cannot, "
+        f"the running binary) and never reads {pin_path} (ADR-039, ADR-059). Nothing "
+        "was written.\n"
+        "       To move this checkout to another release, update it with git: its "
+        ".pkit/ moves with its code."
+    )
 
 
 def reconcile_pin(target_root: Path, version: str) -> None:
@@ -312,8 +341,11 @@ def reconcile_pin(target_root: Path, version: str) -> None:
     build-metadata forms are refused at the boundary, because the router's route-2
     can only route a bare `v<semver>` tag (branch/sha pins need a router change and
     are deferred). A project with no `.pkit/manifest.yaml` (no recorded content
-    version) is refused too — there is nothing to order the target against.
+    version) is refused too — there is nothing to order the target against — and
+    so is the methodology's source repository (`_refuse_pin_in_source`), first,
+    so a newer target never bootstraps a release's `upgrade` over it.
     """
+    _refuse_pin_in_source(target_root)
     normalized = _normalize_pin_version(version)
     current = _require_backbone_version(target_root)
     order = _pin_order(normalized, current)

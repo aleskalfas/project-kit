@@ -4,7 +4,8 @@ The methodology's source repository is recognised by sync's test (the target is
 the parent of the tree the running code resolves) and by the marker test (the
 package source beside the in-tree dispatcher). Route 1 keeps them equal; where
 the running code is not the repository's own they disagree, and sync and
-upgrade would copy a foreign `.pkit/` over the source. They refuse instead.
+upgrade would copy a foreign `.pkit/` over the source. They refuse instead, and
+`pkit pin` refuses wherever either test recognises the source.
 
 Each path into the gap is exercised without taking it for real: the fixture
 tree carries both markers while this suite's checkout is the running code, so
@@ -20,8 +21,10 @@ from pathlib import Path
 
 import click
 import pytest
+from click.testing import CliRunner
 
 from project_kit import install, manifest, router, upgrade
+from project_kit.cli import main
 from project_kit.sync import run_sync
 from tests.adopter_repo import MakeAdopterRepo
 
@@ -200,4 +203,38 @@ def test_a_start_without_the_router_is_named(source_checkout: Path) -> None:
     with pytest.raises(click.ClickException, match="did not start through the router"):
         run_sync(source_checkout)
 
+    _assert_untouched(source_checkout)
+
+
+# --- `pkit pin` refuses in the source repository ---------------------------------
+
+
+@pytest.mark.parametrize("args", [["pin"], ["pin", "99.0.0"]], ids=["freeze", "newer"])
+@pytest.mark.parametrize("test_holding", ["sync's test", "markers only"])
+def test_pin_refuses_in_the_source_repository(
+    source_checkout: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    args: list[str],
+    test_holding: str,
+) -> None:
+    """Under route 1 the running code is the checkout's own and sync's test holds;
+    in the gap only the markers do. A pin is meaningless either way, and a newer
+    target must never bootstrap a release's upgrade over the checkout."""
+    if test_holding == "sync's test":
+        # Route 1: the running code's tree is this repository's own `.pkit/`.
+        monkeypatch.setattr(upgrade, "find_source_kit", lambda: source_checkout / ".pkit")
+
+    def _no_bootstrap(*_a: object, **_k: object) -> int:
+        raise AssertionError("a refused pin must not bootstrap a release's upgrade")
+
+    monkeypatch.setattr(upgrade, "run_bypassed", _no_bootstrap)
+
+    result = CliRunner().invoke(main, args)
+
+    assert result.exit_code != 0
+    assert f"refusing to pin {source_checkout}" in result.output
+    assert (
+        "a pin is meaningless in the methodology's source: route 1 runs its own code "
+        "before any pin is read"
+    ) in " ".join(result.output.split())
     _assert_untouched(source_checkout)
