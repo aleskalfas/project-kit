@@ -43,13 +43,9 @@ run() {
   fi
 }
 
-# Provision the query commands `pkit validate` runs offline (the lifecycle
-# README, "How dependencies are provisioned before an offline run"): an offline
-# `uv run --script` resolves a script's dependencies from uv's cache only, and
-# `uv sync` does not put them there. Running the doc-check point's filler once
-# through the dispatcher, online, does — without it a fresh runner leaves the
-# point unresolved and `validate` fails.
-run "provision"          uv run pkit pm fill-doc-check
+# The query commands `pkit validate` runs offline are provisioned by `pkit sync`
+# (the lifecycle README, "How dependencies are provisioned before an offline
+# run") — which CI runs on checkout, and a clone runs once — not by this gate.
 run "tests"              uv run pytest -q
 run "validate"           uv run pkit validate
 run "migrations check"   uv run pkit migrations check-diff --base "${BASE}"

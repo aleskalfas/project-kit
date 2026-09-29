@@ -14,10 +14,12 @@ There is one source of truth for "what must pass before this lands": **`scripts/
 ./scripts/check.sh
 ```
 
+`pkit validate` runs the capabilities' query commands offline, so on a fresh clone run `uv run pkit sync` once first: it provisions their environments into uv's cache (CI does the same on checkout). Without it, validate names the missing step — "environment not provisioned — run `pkit sync`".
+
 The same aggregator runs in two places, so the gate can't drift:
 
 - **Pre-push hook** (`.githooks/pre-push`) — runs it before every push for fast local feedback. Opt in once per clone: `git config core.hooksPath .githooks` (bypass in a pinch with `git push --no-verify`).
-- **CI** (`.github/workflows/checks.yml`) — runs the same aggregator on a clean Linux runner for every PR and push to `main`: the unbypassable backstop plus the platform / clean-install / post-merge coverage a local hook can't give. **Not active yet:** GitHub Actions is not enabled on this GHE instance (the Actions API 404s — no runners), so this workflow does not run today. It's staged and correct; it lights up automatically once a GHE site admin enables Actions + provisions runners. **Until then the pre-push hook is the only gate that actually runs** — don't assume CI is gating PRs.
+- **CI** (`.github/workflows/checks.yml`) — runs `pkit sync`, then the same aggregator, on a clean Linux runner for every PR and push to `main`: the unbypassable backstop plus the platform / clean-install / post-merge coverage a local hook can't give. **Not active yet:** GitHub Actions is not enabled on this GHE instance (the Actions API 404s — no runners), so this workflow does not run today. It's staged and correct; it lights up automatically once a GHE site admin enables Actions + provisions runners. **Until then the pre-push hook is the only gate that actually runs** — don't assume CI is gating PRs.
 
 **Writing tests.** Test-authoring guidance lives in [`tests/README.md`](tests/README.md) — in particular the shared adopter-repository fixture (`make_adopter_repo` / `adopter_repo`) to use instead of hand-rolling `git init` + `install_kit` in each test module.
 
