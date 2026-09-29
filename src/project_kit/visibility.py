@@ -1,8 +1,8 @@
 """Adopter-controlled git footprint (per ADR-009).
 
 Two visibility modes over a per-component-declared footprint, realized entirely
-through the per-clone `.git/info/exclude` — **no committed `.gitignore` is ever
-written**:
+through the per-clone `.git/info/exclude` — **no `.gitignore` the adopter owns is
+ever written**:
 
 - `shared` (default): pkit is committed; pkit's region is kept clear of
   `info/exclude`.
@@ -14,8 +14,14 @@ written**:
 
 `untrack` is also a standalone, footprint-restricted, precondition-guarded verb
 (the one backbone gesture that mutates adopter git-index state, bounded per
-ADR-009 rule 5). pkit co-edits nothing the adopter owns: the only file it writes
-is `info/exclude`, which git owns, and only within its own delimited region.
+ADR-009 rule 5). pkit co-edits nothing the adopter owns: the visibility modes
+write only `info/exclude`, which git owns, and only within its own delimited
+region.
+
+Separately, this module renders the pkit-owned `.pkit/.gitignore` for the
+runtime-local files pkit writes (ADR-009 rule 7), wholesale from the backbone's
+and each installed component's declarations and from the project's
+configuration.
 """
 from __future__ import annotations
 
@@ -29,17 +35,21 @@ from project_kit import cli_render, process_journal
 from project_kit.manifest import read_backbone_manifest
 
 # Core's OWN footprint. Naming `.pkit/` here is not the layering inversion
-# ADR-009 forbids — that rule bars core from naming *adapter*/*capability*
-# paths; core may declare its own directory. Components contribute the rest
-# (e.g. the claude-code adapter's `.claude/` deploys) via package.yaml.
+# ADR-009 rule 1 forbids — rule 1 bars core from naming adapter- or
+# capability-specific footprint paths; core may declare its own directory.
+# Components contribute the rest (e.g. the claude-code adapter's `.claude/`
+# deploys) via package.yaml.
 _BACKBONE_FOOTPRINT: tuple[str, ...] = (".pkit/",)
 
 # Core's OWN runtime-local ignore set (ADR-009 rule 7). The seam analogous
-# to `_BACKBONE_FOOTPRINT`: the runtime-local files core itself owns inside the
-# `.pkit/` subtree, declared here because the backbone has no `package.yaml` to
-# carry them. Naming these is not the layering inversion ADR-009 rule 7 forbids —
-# that rule bars core from naming *adapter*/*capability* paths; these are all
-# core-owned.
+# to `_BACKBONE_FOOTPRINT`, declared here because the backbone has no
+# `package.yaml` to carry it. Rule 7's ownership test decides what belongs here:
+# the tier that writes a runtime file declares its pattern, whoever owns the
+# directory it lands in — so this list holds the runtime-local files core writes
+# under `.pkit/`. The process journals core's engine writes pass the same test,
+# though they land in each capability's `project/` subtree; their pattern
+# follows a setting, so `runtime_ignore()` takes it from `process_journal`, not
+# from this fixed list.
 #
 # Patterns are repo-root-relative strings declared verbatim, exactly as
 # `footprint` declarations are (the aggregator stores them as-given; the T2
@@ -190,8 +200,10 @@ def _dedupe(paths: list[str]) -> list[str]:
 _RUNTIME_IGNORE_PATH = ".pkit/.gitignore"
 
 _RUNTIME_IGNORE_HEADER = (
-    "# pkit-owned — rendered wholesale by `pkit install` / `pkit sync` from each\n"
-    "# installed component's `runtime_ignore:` declaration (ADR-009 rule 7).\n"
+    "# pkit-owned — rendered wholesale from the backbone's own declarations, each\n"
+    "# installed component's `runtime_ignore:` declaration, and the project's\n"
+    "# configuration in `.pkit/project/config.yaml` (ADR-009 rule 7), by\n"
+    "# `pkit install`, `pkit sync`, and a `pkit config set` that changes the result.\n"
     "# DO NOT EDIT: regenerated from scratch every run; hand edits are overwritten.\n"
     "# An uninstalled component's lines are simply absent on the next render.\n"
 )
