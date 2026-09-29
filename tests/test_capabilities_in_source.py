@@ -228,6 +228,26 @@ def test_an_incubated_capability_in_the_source_unregisters_in_place_as_before(
     assert _snapshot(_cap_dir(source_repo)) == before
 
 
+def test_uninstall_undeploys_the_kept_source_through_the_adapters(
+    source_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The subtree stays, so a deploy re-run would not see the capability as gone: each
+    adapter's undeploy primitive is told its name, as for an incubated one."""
+    _registered(source_repo)
+    ran: list[tuple[str, tuple[str, ...]]] = []
+
+    def _record(script: Path, _ctx: install.InstallContext, *args: str) -> None:
+        ran.append((script.name, args))
+
+    monkeypatch.setattr(install, "_run_adapter_primitive", _record)
+
+    outcome = caps.uninstall_capability(source_repo, _NAME)
+
+    assert outcome.in_source and not outcome.files_deleted
+    assert ran == [(install.ADAPTER_UNDEPLOY_PRIMITIVE, (_NAME,))]
+    assert outcome.adapters_without_undeploy == ()
+
+
 def test_the_library_never_deletes_the_source(source_repo: Path) -> None:
     """The guard is structural: a caller that skips the CLI still cannot delete it."""
     before = _registered(source_repo)

@@ -1,0 +1,15 @@
+component: backbone
+kind: minor
+custom:
+  category: Changed
+body: >
+  Uninstalling a capability whose subtree stays on disk — an incubated one, or
+  any capability in the methodology's source repository — now removes its
+  deployed skills and agents through each installed adapter's undeploy
+  primitive, `undeploy-capability.sh <name>`, found by name as the deploy
+  primitives are. The lifecycle no longer reaches into a harness's layout
+  itself. An adapter that ships no undeploy primitive is named in a `warning`
+  line, since its harness still carries the capability, and the uninstall
+  result lists it. The undeploy runs before the registry entry is removed, so
+  a failing adapter leaves the capability registered and the uninstall
+  re-runnable.

@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-09-29T16:59:12Z
+      at: 2026-09-29T17:33:47Z
       outcome: unchanged
-      unchanged-because: the CLI and lifecycle READMEs were revalidated for the connections resolve scope change; the signpost's map of the areas and their entry points is unaffected
+      unchanged-because: "The area table holds: the adapters, lifecycle, CLI and agents READMEs gained the undeploy primitive beside the deploy ones, and each area's one-line purpose here is unchanged."
 ---
 
 # project-kit

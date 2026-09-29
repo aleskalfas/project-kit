@@ -11,8 +11,9 @@ pkit:
         - src/project_kit/install.py
       record: [COR-001, COR-014]
     revalidated:
-      at: 2026-09-29T15:15:37Z
-      outcome: updated
+      at: 2026-09-29T17:33:43Z
+      outcome: unchanged
+      unchanged-because: "The rules include wiring holds: install.py gained only the runner that calls each adapter's undeploy primitive on an in-place uninstall; merge-claude-md.sh and how init and sync run it are untouched."
 ---
 
 # Rules
