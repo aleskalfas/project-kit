@@ -12,6 +12,15 @@ commands:
   new:
     script: scripts/new.py
     help: "Stamp an analysis artefact under the analysis location (DEC-001 points 2 and 3): `new use-case <slug> --actor <ACT-id> [--area <area>]`, `new journey <slug> --actor <ACT-id> --step <UC-id> --step <UC-id> …`, `new actor <slug>`, `new term <slug>`; each takes --title or --name, and --path and --record for its anchors. A use case or journey gets the next free number on the default branch and in the working tree; an actor or term is `ACT-<slug>` / `TERM-<slug>`. Records the analysis location on first use."
+  validate:
+    script: scripts/validate.py
+    help: "Check the analysis artefacts (DEC-001 points 3 and 4): each artefact's own fields against its companion schema, ids shared by two artefacts, a use case not anchored to its actor, a journey whose use-case anchors do not match its steps, a number the default branch took first, and the revalidation records' front matter; --json prints the findings document `pkit validate` reads. A query: read-only, offline; `pkit sync` provisions its dependencies."
+    query-contract: true
+
+# The `software-analysis:artefacts` member of `pkit validate` (ADR-058).
+validators:
+  artefacts:
+    command: validate
 
 # COR-049 point 4 — where the analysis lives, relative to the internal root.
 docs:
