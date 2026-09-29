@@ -13,9 +13,9 @@ pkit:
         - src/project_kit/visibility.py
       record: [COR-002, COR-005, COR-028, ADR-002, ADR-004, ADR-009, ADR-014, ADR-052, ADR-060, "project-management:DEC-030"]
     revalidated:
-      at: 2026-09-29T19:12:27Z
+      at: 2026-09-29T21:56:03Z
       outcome: unchanged
-      unchanged-because: ADR-009 rule 7 now states the render's inputs and the ownership test, and visibility.py's change is comments, the rendered .pkit/.gitignore header and line wrapping; this page covers only the adapter's footprint declaration and the visibility modes (rules 1 to 3), which neither change touches
+      unchanged-because: ADR-009 rule 7 now gives the backbone's journal choice precedence, and visibility.py's render drops a component entry claiming committed journals; this page covers only the adapter's footprint declaration and the visibility modes (rules 1 to 3), and the adapter declares no runtime_ignore, so neither change touches it
 ---
 
 # Claude Code adapter
