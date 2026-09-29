@@ -12,7 +12,7 @@ pkit:
         - .pkit/capabilities/software-analysis/agents/**
       record: ["software-analysis:DEC-001", COR-049, COR-050, COR-053]
     revalidated:
-      at: 2026-09-29T20:44:38Z
+      at: 2026-09-29T22:14:49Z
       outcome: updated
 ---
 
@@ -25,6 +25,9 @@ Install it when your project is past the point where one person holds the whole 
 ## How it stays true
 
 Each artefact declares what makes it true — its anchors — and when it was last revalidated, in the core friction block (COR-050). The core friction check flags it when an anchor changes. A **revalidation** then checks it, and ends as *holds*, *analysis was stale*, *code regressed* or *gap found*. A record is kept only when there's something to report. The full rule is in the decision.
+
+- **Write** the analysis with the `analysis-author` skill, which walks each kind through its stamp, `pkit analysis new` ("Authoring" below).
+- **Resolve** friction with the `analysis-resolver` agent: it proposes each flagged artefact's outcome with its evidence, records it once you confirm, and asks you whenever it can't tell a stale analysis from a regressed code ("The agent" below).
 
 ## Where things live
 
@@ -54,12 +57,13 @@ Create artefacts with the stamp, never by copying a template by hand: it gives e
 
 | Command | Writes |
 |---|---|
-| `pkit analysis new actor <slug> [--name <text>]` | the entry `ACT-<slug>` of `use-case-model/actors.md`, with its section |
-| `pkit analysis new term <slug> [--name <text>]` | the entry `TERM-<slug>` of `glossary.md`, with its section |
+| `pkit analysis new actor <slug> [--name <text>] [--unanchored-because <text>]` | the entry `ACT-<slug>` of `use-case-model/actors.md`, with its section |
+| `pkit analysis new term <slug> [--name <text>] [--unanchored-because <text>]` | the entry `TERM-<slug>` of `glossary.md`, with its section |
 | `pkit analysis new use-case <slug> --actor <ACT-id> [--area <area>] [--title <text>]` | `use-case-model/use-cases/[<area>/]UC-NNN-<slug>.md`, its actor anchored |
 | `pkit analysis new journey <slug> --actor <ACT-id> --step <UC-id> --step <UC-id> … [--title <text>]` | `use-case-model/journeys/JRN-NNN-<slug>.md`, its steps anchored |
+| `pkit analysis new revalidation <slug> --change <ref> --trigger <trigger> --outcome <id>=<outcome> … [--gap <text> --resolution <text>]…` | a revalidation record, `revalidations/<date>-<slug>.md` — only one with something to say ("Revalidation records" below) |
 
-Every form also takes `--path <glob>` and `--record <id>`, each repeatable: the code that makes the artefact true and the decisions it relies on, written as its path and record anchors. Without them an actor or term is stamped unanchored — the core reports that, and never fails on it.
+Every artefact form also takes `--path <glob>` and `--record <id>`, each repeatable: the code that makes the artefact true and the decisions it relies on, written as its path and record anchors. Without them an actor or term is stamped unanchored — the core reports that, and never fails on it. An actor or term nothing embodies takes `--unanchored-because <why>` instead: the reason is written as its `unanchored-because`, and the stamp refuses it beside `--path` or `--record`.
 
 - **Ids.** A slug is a word: a lowercase letter, then lowercase letters, digits and hyphens. An actor is `ACT-<slug>` and a term `TERM-<slug>`; the stamp refuses an id already held, withdrawn or not, since an id is never used again. A use case or journey takes the **next free number**: one past the highest the working tree and the default branch hold. A number has one spelling — three digits below 1000 (`UC-007`), no leading zero from 1000 on (`UC-1000`); the check refuses another (`UC-0007`), and both the stamp and the duplicate check read it as the number it spells, so it is never a second id. The default branch is `--base <ref>`, else `$PKIT_CHECK_BASE`, else `origin/main`; when it names no commit, the stamp numbers from the working tree alone and says so. A number another branch takes after yours is `pkit analysis check-numbers`' to report (below).
 - **What it writes.** The artefact's own fields from its template, its title or name (the slug, capitalised, by default) — a use case's or journey's title in its front matter and in its heading after the id — and the friction block with the anchors the decision asks for: a use case anchors to its actor, and a journey to the use cases of its steps. The body keeps the template's placeholders, `<…>`, for you to fill.
@@ -123,7 +127,7 @@ ACT-tester:
 
 An actor or a term nothing embodies carries `unanchored-because:` — the reason onboarding accepts it unanchored.
 
-**Revalidation record** (`schemas/revalidation-record.schema.json`) — no friction block; copy `templates/revalidation-record.md` to `revalidations/<date>-<subject>.md`:
+**Revalidation record** (`schemas/revalidation-record.schema.json`) — no friction block; stamped by `pkit analysis new revalidation` from `templates/revalidation-record.md` as `revalidations/<date>-<subject>.md` ("Revalidation records" below):
 
 ```yaml
 change: "#123"                  # the work item, pull request or commit range that carried it
@@ -164,6 +168,68 @@ It reads the default branch — its tip, and where your branch left it — so it
 
 `--json` prints `{schema_version, base, summary, findings}`: `base` is `{ref, tip, commit, outdated}` (`commit` is the merge-base), or `null` when nothing was compared. It is a query: read-only, offline, and `pkit sync` provisions its dependencies.
 
+## Authoring: the `analysis-author` skill
+
+The capability's skills, deployed by `pkit sync` with the others (in Claude Code, under `.claude/skills/`):
+
+| Skill | Paired with | Use it to |
+|---|---|---|
+| `analysis-author` — composite: `actor`, `term`, `use-case`, `journey`, `revalidation-record` ([`skills/analysis-author/`](skills/analysis-author/analysis-author.md)) | `pkit analysis new` | write an actor, a term, a use case, a journey or a revalidation record: choose the slug, the area, the actor and the steps; decide what the artefact anchors to, or why an actor or term stays unanchored; fill the body; run the checks |
+
+The command owns each file's correctness — its id, its place, the anchors the rule asks for — and the skill the choices behind it. One of those choices matters to revalidation later: **quote the code you describe** in backticks, since what an artefact quotes from its anchored code is the first thing the agent reads when that code changes ("The agent" below).
+
+## Revalidation: four outcomes, two answers
+
+A revalidation ends, for each artefact, in one of four outcomes, and each is recorded on the artefact as one of the core's two answers (DEC-001 point 5; COR-050 point 3). Only the answer on the artefact clears friction.
+
+| Outcome | It means | The answer on the artefact |
+|---|---|---|
+| `holds` | the description still stands | `pkit friction revalidate <artefact> --outcome unchanged --because "<why it still holds against this change>"` |
+| `analysis-stale` | the change was meant; the description is out of date | edit the artefact, then `pkit friction revalidate <artefact> --outcome updated` |
+| `code-regressed` | the description is still what is wanted; the change broke it | report the defect, then `--outcome unchanged --because "<the description stands; defect <ref> reported>"` — the artefact is never rewritten to match |
+| `gap-found` | behaviour nothing describes, or a description with no behaviour | `--outcome updated` where the artefact changed; `--outcome unchanged --because "<the gap, and the artefact that fills it>"` where a new artefact closes it |
+
+Friction you choose not to resolve yet is not an outcome but a deferral: `pkit friction defer <artefact> --anchor <kind:value> --reason "<why it can wait>"`, which keeps it in the debt listing. Whether the analysis was stale or the code regressed is a question of intent — was the change meant? — and where the change's context doesn't say, a person decides before anything is recorded.
+
+### Revalidation records
+
+`pkit analysis new revalidation <slug> --change <ref> --trigger <trigger> --outcome <id>=<outcome> … [--because <id>=<text>]… [--gap <text> --resolution <text>]… [--by <who>] [--confirmed-by <who>] [--title <text>]` writes `revalidations/<date>-<slug>.md` under the analysis location, **only when there is something to say** (DEC-001 point 6):
+
+- **It writes** a record for a `planned` revalidation, or one that found a regression or a gap (`code-regressed` or `gap-found`, or a `--gap`). Its front matter names the change that carried it, the trigger, the day, who performed it (git's user name unless `--by` names another, such as the agent) and who confirmed an agent's outcomes; its body gives each outcome with its justification (`--because`, else a placeholder) and each gap with what resolved it — each `--gap` followed by its `--resolution` — or "None found."
+- **It refuses**, writing nothing: a record with nothing to say — every artefact holds, or was updated because the change was meant, and nothing was planned: each artefact's own revalidation is then the record; a regression or gap that names no gap; a gap without its resolution; no outcome, an outcome that is not one of the four, or two for one artefact; an artefact that is not in the analysis (withdrawn ones are fine); a subject already recorded that day.
+
+The record never clears friction itself: commit it in the same change as the answers on the artefacts it covers. `pkit analysis validate` holds it to its schema and to the artefacts it cites.
+
+## The agent: `analysis-resolver`
+
+The checks say *that* an artefact may no longer be true. Deciding what the change means for it is judgment, and the capability's agent does it. `pkit sync` deploys it with the other agents; in Claude Code it is `.claude/agents/analysis-resolver.md`.
+
+| Agent | Use it when | It writes |
+|---|---|---|
+| `analysis-resolver` ([`agents/analysis-resolver/`](agents/analysis-resolver/analysis-resolver.md)) | the change check of a pull request, or the whole-repository report, flags analysis artefacts | after you confirm: `pkit friction revalidate`, `pkit friction defer`, and a record through `pkit analysis new revalidation` when a regression or gap was found |
+
+For each flagged artefact, upstream first, it reads `pkit friction explain`, the commits behind the changed anchor and the change's context — the commit messages, the pull request or work item — and proposes an outcome with its evidence. You confirm once, and it records them.
+
+- **It never rewrites an artefact.** It has no edit tool, and writes files only in the agent workspace, under `.agent-workspace/analysis-resolver/`: an artefact's edit is a diff there, which you apply; the friction writers change only an artefact's `revalidated` block. It never runs `pkit friction record-status`.
+- **It stops where it can't tell stale from regressed.** It writes nothing — no revalidation, no deferral, no record, for any artefact of that run — and asks you: what disagrees, the commit, and the two readings. Your answer, stale or regressed, is what it records.
+- **Not for** another component's artefacts, writing new analysis (the skill's), planned revalidations or onboarding, or running the software.
+
+Its scripted flows — a drift resolved, the stop, and a regression recorded with its gap — are in [`agents/analysis-resolver/storyboard.md`](agents/analysis-resolver/storyboard.md).
+
+### What the evidence decides: `pkit analysis propose`
+
+`pkit analysis propose <artefact> [--contradicted <quote>] [--intended <quote>] [--unintended <quote>] [--json]` is the part of the agent's judgment that needs no judgment, so the stop is one rule you can read. For one flagged artefact it reads `pkit friction explain`, and for each changed path anchor which code the artefact **quotes** — what it writes in backticks — the anchor's files held at its revalidation point, and which of that is gone at HEAD. What the agent read of the change goes in as quotes of where it read it. The rules, in order (`scripts/_lib/resolve.py`):
+
+| Rule | When | Verdict |
+|---|---|---|
+| `nothing-to-resolve` | the artefact is current or unanchored, and no anchor is dead | none |
+| `ground-gone` | an anchored file is gone, code the artefact quotes is gone from it, or the agent reads a contradiction (`--contradicted`, or evidence of one, `--unintended`) where code changed | `analysis-stale` with `--intended`; `code-regressed` with `--unintended`; **ambiguous** with neither, or both |
+| `deliberate-change` | a contradiction where only records or other artefacts changed — which change only on purpose | `analysis-stale`; ambiguous against `--unintended` |
+| `quoted-code-kept` | every changed anchor is a path whose files still hold everything the artefact quotes from them | `holds` |
+| `nothing-decides` | otherwise — the artefact quotes nothing from the changed path, or a record or artefact changed with no contradiction read | `read`: the agent reads the change, and proposes `holds` or `gap-found`, or asks again with what contradicts |
+
+It never proposes `gap-found`: behaviour nothing describes is found by reading. An ambiguous verdict carries the question for a person. `--json` prints `{schema_version, artefact, location, state, head, revalidation_point, verdict, rule, reason, question, anchors, read}`, each changed anchor with its `shape` (`kept`, `gone`, `deliberate`, `unread`), the commits behind it, and what it `quoted` and what is `gone`. It reads HEAD, as the explanation does; exit `1` when the artefact cannot be explained (not committed, not found, or beyond a shallow clone). A query: read-only, offline, and `pkit sync` provisions its dependencies.
+
 ## Connections (design-ahead)
 
 Declared in the decision; the package metadata gains them in a later increment. The capability provides the `pkit::analysis` role (COR-053); `pkit::` and `pkit:` are this distribution's literals for the methodology's publisher qualifier and front-matter container ([the lifecycle README, "The methodology's literals"](../../lifecycle/README.md#the-methodologys-literals)).
@@ -173,7 +239,7 @@ Declared in the decision; the package metadata gains them in a later increment. 
 
 ## What's shipped now, what's next
 
-Shipped: the decision; the analysis location and its places; a companion schema and a template for each artefact kind and for the revalidation record; the stamp, `pkit analysis new`; the check, `pkit analysis validate`, a member of `pkit validate`; and the number check, `pkit analysis check-numbers`, a check-gate line of its own. Next come: the connections above, and an authoring skill that guides revalidation. Named for later: planned-revalidation and onboarding lifecycles, a supplementary specification (constraints and quality), architecture views, and executable use cases.
+Shipped: the decision; the analysis location and its places; a companion schema and a template for each artefact kind and for the revalidation record; the stamp, `pkit analysis new`, revalidation records included; the check, `pkit analysis validate`, a member of `pkit validate`; the number check, `pkit analysis check-numbers`, a check-gate line of its own; the `analysis-author` skill; and the `analysis-resolver` agent with `pkit analysis propose`. Next come: the connections above. Named for later: planned-revalidation and onboarding lifecycles, a supplementary specification (constraints and quality), architecture views, and executable use cases.
 
 ## Citing this capability's decisions
 
