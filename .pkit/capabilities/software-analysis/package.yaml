@@ -20,6 +20,10 @@ commands:
     script: scripts/check-numbers.py
     help: "Report a use case or journey whose number the default branch gave another file since this branch left it (DEC-001 point 3): the first to reach the default branch keeps the number. `--base <ref>` names the default branch (else $PKIT_CHECK_BASE, else origin/main); --json prints the document. Answers about a change, not the tree, so it is a check-gate line of its own and not a validator (ADR-058 point 7). Exit 1 on a collision, or when the base names no commit or shares no history with HEAD; an outdated base is reported and never fails. A query: read-only, offline; `pkit sync` provisions its dependencies."
     query-contract: true
+  propose:
+    script: scripts/propose.py
+    help: "Say which revalidation outcome a flagged artefact's evidence decides (DEC-001 point 5), for the resolving agent: `propose <artefact> [--contradicted <quote>] [--intended <quote>] [--unintended <quote>] [--json]`. Reads `pkit friction explain` and what the artefact quotes from its anchored code at its revalidation point and at HEAD. A proposal (holds, analysis-stale, code-regressed) with the rule and evidence behind it; read, when nothing mechanical decides; or ambiguous — the artefact and the code disagree and nothing says whether the change was meant — with the question for a person. A query: read-only, offline; `pkit sync` provisions its dependencies."
+    query-contract: true
 
 # The `software-analysis:artefacts` member of `pkit validate` (ADR-058). The
 # number comparison reads a base, so it is not one (ADR-058 point 7).
