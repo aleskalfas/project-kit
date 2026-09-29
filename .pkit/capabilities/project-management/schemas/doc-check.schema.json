@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://project-kit/capabilities/project-management/doc-check.schema.json",
   "title": "Documentation obligations — the value of pkit::work-tracking:doc-check, version 1",
-  "description": "The data point's companion schema (COR-052 point 5; project-management:DEC-053 point 1). The value is the documentation obligations a pull request may owe, before any diff: `check-doc-mapping` applies them to a pull request's diff. The point is `additive`, so entries from different sources are keyed never to collide — a mapping obligation by its mapping rule (`mapping:<code pattern>`, `#<n>` for the n-th rule repeating a pattern), any other by source and document (`<source>:<document>`, by convention). An obligation leaves the point only through the project filler's removal override, with its reason. The version rises only on a change that breaks existing fillers.",
+  "description": "The data point's companion schema (COR-052 point 5; project-management:DEC-053 point 1). The value is the documentation obligations a pull request may owe, before any diff: `check-doc-mapping` applies them to a pull request's diff. The point is `additive`, so entries from different sources are keyed never to collide — a mapping obligation by its mapping rule (`mapping:<code pattern>`, `#<n>` for the n-th rule repeating a pattern), any other by source and what it concerns (`<source>:<document or path>`, by convention). An obligation leaves the point only through the project filler's removal override, with its reason. The version rises only on a change that breaks existing fillers.",
   "type": "array",
   "items": { "$ref": "#/$defs/obligation" },
   "$defs": {
@@ -43,30 +43,40 @@
       }
     },
     "contributed-obligation": {
-      "description": "An obligation a documentation capability, or the project filler, contributes. Met only by the page's answer in the diff: a changed file matches `document`. A `## Doc impact` line never meets it; the form of the answer — updated, unchanged with its justification, deferred with its reason — is the core change check's to verify (`pkit friction check`).",
+      "description": "An obligation a documentation capability, or the project filler, contributes. One that names a `document` is met only by the page's answer in the diff: a changed file matches `document`; the form of the answer — updated, unchanged with its justification, deferred with its reason — is the core change check's to verify (`pkit friction check`). One that names no `document` is met only when its filler no longer gives it: the filler reads the pull request's head, so a `code-undocumented` obligation leaves the point once a page anchors its `path`. A `## Doc impact` line never meets either.",
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "source", "reason", "document"],
+      "required": ["id", "source", "reason"],
       "properties": {
         "id": { "$ref": "#/$defs/text" },
         "source": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$", "not": { "const": "mapping" } },
         "reason": {
-          "description": "`page-stale`: an anchored page went stale in this change. `code-undocumented`: new code nothing documents; `document` names the page that would anchor it.",
+          "description": "`page-stale`: an anchored page went stale in this change; it names the page as `document`. `code-undocumented`: code nothing documents; it names the code as `path`, and no `document` when it is met by anchoring that code from a page.",
           "enum": ["page-stale", "code-undocumented"]
         },
         "document": {
-          "description": "The page (a path, or a gitignore-style pattern) whose change in the diff carries the answer.",
+          "description": "The page (a path, or a gitignore-style pattern) whose change in the diff carries the answer. Required for `page-stale`; absent from a `code-undocumented` obligation whose answer is a page anchoring its `path`.",
           "$ref": "#/$defs/text"
         },
         "path": {
-          "description": "The code concerned, when there is one — for `code-undocumented`, the code the page would anchor.",
+          "description": "The code concerned — required for `code-undocumented`, the code a page must anchor.",
           "$ref": "#/$defs/text"
         },
         "description": {
           "description": "One line a person reads in the check's report.",
           "$ref": "#/$defs/text"
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "reason": { "const": "page-stale" } } },
+          "then": { "required": ["document"] }
+        },
+        {
+          "if": { "properties": { "reason": { "const": "code-undocumented" } } },
+          "then": { "required": ["path"] }
+        }
+      ]
     }
   }
 }

@@ -101,20 +101,35 @@ A place inside a root belongs to that root's space; list it under `places` only 
 - a project place equal to or enclosing a root; a file two project places claim with equal specificity;
 - a decision record, a rule-set file or another capability's artefact carrying `reader` or `kind` — none is ever a page;
 - a page whose `reader` or `kind` does not fit `schemas/page.schema.json`;
+- a page whose `reader` the readers point does not hold — the message names the readers it does (Connections, below);
 - an entry point that is not a document of its space — under its root or in a place assigned to it;
 - a definition outside `<definitions>/rule-sets/`, or one that does not inherit `living-docs:LDOC`.
 
-It reports, without failing: a space with no definition yet, roots that are the same folder or nested (onboarding separates them), and — in its summary — the unclassified documents and whether each entry point is a page yet. A synced tree declared as a place is the core's `synced-place` finding, under `friction` (above).
+It reports, without failing: a space with no definition yet, roots that are the same folder or nested (onboarding separates them), and — in its summary — the unclassified documents, whether each entry point is a page yet, and the readers each page's reader was checked against. A synced tree declared as a place is the core's `synced-place` finding, under `friction` (above).
 
-**Dormant: reader resolution.** Whether a page's `reader` names a reader of the readers point is not checked until that point ships (below); until then the reader's shape is checked, and the validator's summary says so.
+## Connections
 
-## Connections (design-ahead)
+The capability provides the `pkit::documentation` role (COR-053); `pkit::` is this distribution's literal for the methodology's publisher qualifier ([the lifecycle README, "The methodology's literals"](../../lifecycle/README.md#the-methodologys-literals)). Under it, it accepts two data points, and it contributes to the work-tracking role's documentation check. `pkit status` shows how each point resolved, and `pkit connections resolve <point>` prints one.
 
-Declared in the decision; the package metadata gains them with the next increment. The capability provides the `pkit::documentation` role (COR-053); `pkit::` is this distribution's literal for the methodology's publisher qualifier ([the lifecycle README, "The methodology's literals"](../../lifecycle/README.md#the-methodologys-literals)).
+**Accepts `pkit::documentation:readers`** (version 1): who reads the documentation and what they need. Each entry is an `id`, which a page names as its `reader`, and a `description` of what that reader needs (`schemas/readers.schema.json`). A `user` and a `maintainer` are built in and always included. The point is `union`, so you add readers, replace one by its id, or drop one with `remove` and a reason, in the point's [project file](../../lifecycle/README.md#where-a-project-filler-file-lives-the-address-to-path-mapping) — `docs/pkit/fillers/pkit/documentation/readers.yaml` with the default internal root:
 
-- **Accepts** `pkit::documentation:readers`: who reads and what they need. It starts with a built-in `user` and `maintainer`. You can add or override readers in a [project file](../../lifecycle/README.md#where-a-project-filler-file-lives-the-address-to-path-mapping), and an analysis capability, such as software-analysis, can supply them too.
-- **Accepts** `pkit::documentation:reading-evidence`: results of executed checks that follow the docs, such as a simulated user running a guide. Advisory.
-- **Contributes** to `pkit::work-tracking:doc-check` with page friction and uncovered surface. Inert when no work-tracking capability is installed.
+```yaml
+schema_version: 1
+value:
+  - id: operator
+    description: Runs the service in production, and needs its settings and what to do when it fails.
+```
+
+An analysis capability, such as software-analysis, can supply readers too, under ids of its own. The validator checks every page's `reader` against the resolved point. Its inert policy is `fail`: if a capability's readers fall out of step with the point's version, the whole point is unresolved rather than checked against whichever readers survived. The validator then reports "readers unresolved" once, not once per page, and `pkit validate` names the fix under `connections`.
+
+**Accepts `pkit::documentation:reading-evidence`** (version 1): results of executed checks that follow the documentation, such as a simulated user running a guide. Each entry is an `id`, `<path>@<commit>`, with the `path` it followed, the `commit`, the `outcome` (`passed` or `failed`) and an optional `description` (`schemas/reading-evidence.schema.json`). `union`, with no default. This capability runs no such check: a capability that does, or your project file, supplies the evidence, and until one does the point shows as unfilled. It is advisory (inert policy `fallback`): a filler that cannot answer is warned about, and the rest still count.
+
+**Contributes to `pkit::work-tracking:doc-check`**, the documentation check of a work-tracking capability such as project-management ([project-management:DEC-053-doc-check-slot]). Its command, `fill-doc-check`, reads the core's whole-repository friction check at HEAD (`pkit friction check --all --json`) and prints obligations with the source `friction`:
+
+- `page-stale` — one per page the check reports stale or deferred, naming the page as `document`. The page's answer in the pull request's diff meets it.
+- `code-undocumented` — one per path of the declared surface that nothing anchors, naming the code as `path` and no `document`: no page's change meets it, only a page anchoring the path. The command reads HEAD, so the obligation leaves the point once a page on the branch anchors the code; until then the check reports it unmet, with the fix — anchor the path from a page.
+
+The work-tracking capability decides whether `friction` obligations block. With project-management they are advisory until you set `doc_check.sources.friction: enforcing`. A repository with no commit yet owes nothing. If a page's friction lies beyond a shallow clone's history, the command gives no answer: the check then reports itself unresolved rather than pass on fewer obligations, so fetch the full history. `pkit living-docs fill-doc-check` lists the obligations, and `--json` prints what the backbone reads. The contribution is inert when no work-tracking capability is installed.
 
 ## The agent: `living-docs`
 
@@ -154,7 +169,7 @@ From then on, the friction check flags pages as their anchors change, and the ag
 
 ## What's shipped now, what's next
 
-Shipped: the decision, the project configuration's schema, the declaration of the roots as places and of the definitions location, the validator, the `LDOC` rule set, the space-definition template and the signpost page template with the page's schema, and the `living-docs` agent that proposes fixes, performs reader-review and onboards existing documentation. Next come the connections: the readers and reading-evidence points, and the contribution to the documentation check.
+Shipped: the decision, the project configuration's schema, the declaration of the roots as places and of the definitions location, the validator, the `LDOC` rule set, the space-definition template and the signpost page template with the page's schema, the connections (the readers and reading-evidence points, and the contribution to the documentation check), and the `living-docs` agent that proposes fixes, performs reader-review and onboards existing documentation.
 
 ## Citing this capability's decisions
 

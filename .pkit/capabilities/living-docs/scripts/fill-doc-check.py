@@ -1,0 +1,87 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.10"
+# dependencies = [
+#   "jsonschema>=4.18",
+#   "ruamel.yaml>=0.18",
+# ]
+# ///
+"""living-docs capability — fill-doc-check: its contribution to the documentation check.
+
+This capability's filler of the `pkit::work-tracking:doc-check` data point
+(DEC-001 point 7; project-management DEC-053 point 4): friction on anchored
+pages and uncovered surface, as the point's obligations — one `page-stale` per
+page of the spaces the backbone's whole-repository friction check reports
+stale or deferred, one `code-undocumented` per path of the declared surface
+that nothing anchors. `_lib/doc_check.py` states the shape of each.
+
+The backbone runs it wherever the point resolves — `pkit validate`, `pkit
+status`, `pkit connections resolve` — as a query (COR-052 point 6): from the
+project root, with `--json` alone and the offline marker set. It takes no
+parameter: it reads the repository — HEAD and its history, through `pkit
+friction check --all --json`, and which documents are pages, from the working
+tree — writes nothing and needs no network. The contribution is inert while no
+capability provides the work-tracking role; nothing here asks.
+
+Usage:
+  pkit living-docs fill-doc-check           one line per obligation, for a person
+  pkit living-docs fill-doc-check --json    the filler envelope {schema_version, value}
+
+Exit codes:
+  0  answered
+  1  no answer: the friction check gave no document, or a page's friction lies
+     beyond a shallow clone's history — never an empty answer in its place
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from pathlib import Path
+from typing import Any
+
+_HERE = Path(__file__).parent
+sys.path.insert(0, str(_HERE))
+from _lib import doc_check, spaces  # noqa: E402
+from _lib.declarations import project_root  # noqa: E402
+
+
+def obligations(root: Path) -> list[dict[str, Any]]:
+    """The point's obligations for the project at `root`. Raises NoAnswer."""
+    if not doc_check.has_commit(str(root)):
+        return []  # nothing committed: no HEAD to judge, so nothing is owed
+    return doc_check.obligations(doc_check.read_friction(str(root)), spaces.pages(root))
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description=(
+            f"Print friction on anchored pages and uncovered surface as the obligations of the "
+            f"{doc_check.POINT} data point (living-docs DEC-001 point 7). Read-only and offline."
+        ),
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Print the filler envelope {schema_version, value}, as the backbone reads it.",
+    )
+    args = parser.parse_args()
+
+    try:
+        value = obligations(project_root())
+    except doc_check.NoAnswer as exc:
+        print(f"error: {exc}; no obligations can be given.", file=sys.stderr)
+        return 1
+    if args.json:
+        print(json.dumps(doc_check.envelope(value), indent=2, ensure_ascii=False))
+        return 0
+    print(f"{doc_check.POINT}: {len(value)} {doc_check.SOURCE} obligation(s)")
+    for obligation in value:
+        subject = obligation.get("path") or obligation["document"]
+        print(f"  {obligation['reason']}  {subject} — {obligation['description']}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

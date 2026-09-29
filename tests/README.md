@@ -17,6 +17,13 @@ and `tests/conftest.py` exposes it as two fixtures:
 Outside a fixture (a plain helper that takes `tmp_path` and `monkeypatch`), call
 `build_adopter_repo(root, monkeypatch=monkeypatch, ...)` directly.
 
+A capability script under test that reads through the backbone — `pkit
+connections resolve`, `pkit friction check` — needs a `pkit` on PATH. The
+`pkit_on_path` fixture puts the real CLI under this interpreter first on PATH,
+bypassing the entry-point router, so the read never reaches `uv` or the
+network. Point the script's own `uv run --script` shebang at `sys.executable`
+in the adopter copy for the same reason.
+
 ### What the `AdopterRepo` offers
 
 - `root`, `pkit` (`root/.pkit`), `source_kit` (the kit the install came from).

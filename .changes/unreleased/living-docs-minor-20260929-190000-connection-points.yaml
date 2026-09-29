@@ -1,0 +1,23 @@
+component: living-docs
+kind: minor
+custom:
+  category: Added
+body: >
+  The capability provides the `pkit::documentation` role and accepts its two data
+  points (DEC-001 point 7). `pkit::documentation:readers` (version 1,
+  `schemas/readers.schema.json`: entries `{id, description}`) is `union`, with a
+  built-in `user` and `maintainer` always included, and inert policy `fail`;
+  `pkit::documentation:reading-evidence` (version 1,
+  `schemas/reading-evidence.schema.json`: entries keyed `<path>@<commit>`) is
+  `union`, with no default, and inert policy `fallback`. The validator now
+  resolves each page's `reader` against the readers point and fails a page whose
+  reader the point does not hold, naming the readers it does; a readers point
+  that does not resolve is reported once, as "readers unresolved", rather than
+  per page. A new query command, `pkit living-docs fill-doc-check`, contributes
+  to the work-tracking role's `pkit::work-tracking:doc-check` point: one
+  `page-stale` obligation per page the whole-repository friction check reports
+  stale or deferred, and one `code-undocumented` obligation per uncovered surface
+  path, each with the source `friction`. A `code-undocumented` obligation names
+  the code as `path` and no `document`: a page changing never meets it, only a
+  page anchoring the path, after which the command no longer gives it. The
+  contribution is inert when no work-tracking capability is installed.

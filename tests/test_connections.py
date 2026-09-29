@@ -1183,16 +1183,25 @@ def test_shipped_capabilities_wire_clean(make_adopter_repo: MakeAdopterRepo) -> 
     )
     wiring = cx.resolve_wiring(repo.root)
     assert wiring.findings == (), [f.message for f in wiring.findings]
-    # The one shipped connection so far (#1000): project-management provides
-    # `pkit::work-tracking`, defines its doc-check point, and fills it with its
-    # own mapping filler.
+    # The shipped connections: project-management provides `pkit::work-tracking`,
+    # defines its doc-check point and fills it with its own mapping filler
+    # (#1000); living-docs provides `pkit::documentation`, defines its readers
+    # and reading-evidence points, and contributes to the doc-check point (#1004).
     assert [(r.role, r.active) for r in wiring.roles] == [
-        ("pkit::work-tracking", "project-management")
+        ("pkit::documentation", "living-docs"),
+        ("pkit::work-tracking", "project-management"),
     ]
-    assert [p.point.address for p in wiring.points] == ["pkit::work-tracking:doc-check"]
-    assert [
+    assert [p.point.address for p in wiring.points] == [
+        "pkit::documentation:readers",
+        "pkit::documentation:reading-evidence",
+        "pkit::work-tracking:doc-check",
+    ]
+    assert sorted(
         (b.counterpart.capability, b.counterpart.command, b.status) for b in wiring.bindings
-    ] == [("project-management", "fill-doc-check", cx.BindingStatus.BOUND)]
+    ) == [
+        ("living-docs", "fill-doc-check", cx.BindingStatus.BOUND),
+        ("project-management", "fill-doc-check", cx.BindingStatus.BOUND),
+    ]
 
 
 # --- `pkit validate` -----------------------------------------------------------------

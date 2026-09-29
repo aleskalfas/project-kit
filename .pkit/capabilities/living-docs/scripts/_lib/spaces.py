@@ -23,6 +23,12 @@ What is checked, each against the record's words:
   core's, and the backbone's `friction` pass validates it. A document that
   nothing claims and that carries neither field is an **unclassified
   document**, counted for onboarding (point 8) and never failed.
+- **Readers** (points 4 and 7). Each page's `reader` resolves against the
+  readers point, `pkit::documentation:readers`, read as it resolves (`readers`)
+  — only when some page names a well-formed reader. A reader the point does not
+  hold fails the page, naming the readers it holds. An unresolved point — a
+  filler out of step, under the point's `fail` policy — is one error, "readers
+  unresolved", never one per page: no reader can be checked against it.
 - **Entry points** (point 1). Each space's entry point resolves to a document
   of that space — under its root, or in a place assigned to it — and is not
   another component's, a record or a rule set. Whether it is already a page
@@ -36,16 +42,19 @@ What is checked, each against the record's words:
 
 **Not here.** A synced tree declared as a place is the backbone's finding,
 under `friction`; the friction block and the rule sets themselves are the
-backbone's `friction` and `rule-sets` passes. **Reader resolution is
-dormant**: a page's `reader` is checked for its shape only, until the readers
-point `pkit::documentation:readers` ships and names the readers it resolves to.
+backbone's `friction` and `rule-sets` passes; an unresolved readers point is
+also the backbone's finding, under `connections`, which names its fix.
+
+`pages` answers which documents are pages without reading the readers point:
+the doc-check filler asks it while the backbone resolves every point, so it
+must not ask the backbone for one.
 """
 
 from __future__ import annotations
 
 import json
 import re
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -72,6 +81,7 @@ from _lib.declarations import (
     read_declarations,
     read_front_matter,
 )
+from _lib.readers import READERS_POINT, Readers, filler_path, read_readers
 
 #: The spaces every project has, and the root each one's new pages go under (DEC-001 point 1).
 USER_SPACE = "user"
@@ -87,9 +97,6 @@ PAGE_SCHEMA = Path(__file__).resolve().parents[2] / "schemas" / "page.schema.jso
 #: The shared method rule set a space's definition inherits (DEC-001 point 2).
 LDOC_FILE = Path(__file__).resolve().parents[2] / "rule-sets" / "ldoc.md"
 LDOC_PIN = re.compile(rf"^{re.escape(CAPABILITY)}:LDOC@(?:0|[1-9][0-9]*)$")
-
-#: The readers point whose shipping wakes reader resolution (DEC-001 point 7).
-READERS_POINT = "pkit::documentation:readers"
 
 #: A decision record's own id, in the four id-spaces of the decision-record
 #: specification: COR, PRJ, ADR and a capability's DEC.
@@ -257,14 +264,37 @@ class _Walk:
     space_of: dict[str, str | None] = field(default_factory=dict)  # unclaimed document -> space
     claims: dict[str, Claim] = field(default_factory=dict)
     pages: dict[str, str | None] = field(default_factory=dict)  # page -> space
+    readers: dict[str, str] = field(default_factory=dict)  # page -> its well-formed reader
     holds: dict[int, str] = field(
         default_factory=dict
     )  # project place index -> a document it holds
     ties: dict[tuple[int, int], list[str]] = field(default_factory=dict)
 
 
-def check(root: Path) -> Outcome:
-    """Every check of this module over the project at `root`."""
+def check(root: Path, read: Callable[[], Readers] = read_readers) -> Outcome:
+    """Every check of this module over the project at `root`; `read` answers the
+    readers point, asked only when some page names a well-formed reader."""
+    decl, refused, walk, outcome = _classify(root)
+    _assignment_findings(decl, refused, walk, outcome)
+    _tie_findings(decl, walk, outcome)
+    entry_notes = _entry_point_findings(decl, walk, outcome)
+    definition_notes = _definition_findings(root, decl, walk, outcome)
+    _separation_findings(decl, outcome)
+    reader_note = _reader_findings(decl, walk, read, outcome)
+    outcome.summary = _summary(decl, walk, entry_notes, definition_notes, reader_note, outcome)
+    return outcome
+
+
+def pages(root: Path) -> list[str]:
+    """The pages of the project's spaces, sorted — what the walk classifies as a
+    page, by the rules above, without reading the readers point."""
+    _decl, _refused, walk, _outcome = _classify(root)
+    return sorted(walk.pages)
+
+
+def _classify(root: Path) -> tuple[Declarations, set[int], _Walk, Outcome]:
+    """The declarations, the refused project places, and the walk over every
+    document the spaces' places reach, with the findings the walk makes."""
     decl = read_declarations(root)
     outcome = Outcome()
     refused = _refused_places(decl, outcome)
@@ -272,14 +302,7 @@ def check(root: Path) -> Outcome:
         *root_places(decl),
         *(Place(p.path, project=p) for p in decl.project_places if p.index not in refused),
     ]
-    walk = _walk(root, decl, places, outcome)
-    _assignment_findings(decl, refused, walk, outcome)
-    _tie_findings(decl, walk, outcome)
-    entry_notes = _entry_point_findings(decl, walk, outcome)
-    definition_notes = _definition_findings(root, decl, walk, outcome)
-    _separation_findings(decl, outcome)
-    outcome.summary = _summary(decl, walk, entry_notes, definition_notes, outcome)
-    return outcome
+    return decl, refused, _walk(root, decl, places, outcome), outcome
 
 
 def known_spaces(decl: Declarations) -> list[str]:
@@ -344,7 +367,11 @@ def _walk(root: Path, decl: Declarations, places: Sequence[Place], outcome: Outc
         walk.space_of[rel] = space
         if declared:
             walk.pages[rel] = space
-            outcome.findings.extend(_page_findings(rel, front or {}, schema))
+            findings, invalid = _page_findings(rel, front or {}, schema)
+            outcome.findings.extend(findings)
+            reader = (front or {}).get("reader")
+            if isinstance(reader, str) and "reader" not in invalid:
+                walk.readers[rel] = reader
         elif not any(matches(path, rel) for path in decl.exclude):
             # Excluded paths are left out of the measures (COR-050 point 7).
             outcome.unclassified.append(rel)
@@ -374,12 +401,16 @@ def _space_of_place(place: Place, decl: Declarations) -> str | None:
 
 def _page_findings(
     rel: str, front: Mapping[str, Any], schema: Draft202012Validator
-) -> list[Finding]:
-    """A page's own fields against the companion schema (DEC-001 point 4)."""
+) -> tuple[list[Finding], set[str]]:
+    """A page's own fields against the companion schema (DEC-001 point 4): the
+    findings, and the fields the schema refuses."""
     findings: list[Finding] = []
+    invalid: set[str] = set()
     for error in sorted(
         schema.iter_errors(dict(front)), key=lambda e: list(map(str, e.absolute_path))
     ):
+        if error.absolute_path:
+            invalid.add(str(error.absolute_path[0]))
         pointer = "/".join(pointer_token(segment) for segment in error.absolute_path)
         location = f"{rel}:/{pointer}" if pointer else rel
         findings.append(
@@ -391,7 +422,47 @@ def _page_findings(
                 f"(schemas/page.schema.json; DEC-001 point 4).",
             )
         )
-    return findings
+    return findings, invalid
+
+
+def _reader_findings(
+    decl: Declarations, walk: _Walk, read: Callable[[], Readers], outcome: Outcome
+) -> str:
+    """Each page's reader resolves against the readers point (DEC-001 points 4 and 7).
+    Returns the summary's line about it."""
+    if not walk.readers:
+        return f"readers: no page names one yet, so {READERS_POINT} is not read."
+    readers = read()
+    if not readers.resolved:
+        outcome.findings.append(
+            Finding(
+                ERROR,
+                READERS_POINT,
+                f"readers unresolved — {readers.why.rstrip('.')}. No page's reader can be "
+                f"checked until "
+                f"the point resolves; `pkit validate` names the fix under `connections` "
+                f"(DEC-001 point 7; COR-052 point 6).",
+            )
+        )
+        return f"readers unresolved: {len(walk.readers)} page reader(s) not checked."
+    known = set(readers.ids)
+    for rel, reader in sorted(walk.readers.items()):
+        if reader in known:
+            continue
+        outcome.findings.append(
+            Finding(
+                ERROR,
+                f"{rel}:/reader",
+                f"{rel} is for reader {reader!r}, which does not resolve: the readers point "
+                f"{READERS_POINT} holds {list(readers.ids)} — name one of them, or add "
+                f"{reader!r} to the point in the project's filler, "
+                f"{filler_path(decl.internal_root)} (DEC-001 points 4 and 7).",
+            )
+        )
+    return (
+        f"readers ({READERS_POINT}): {', '.join(readers.ids) or 'none'}; "
+        f"{len(walk.readers)} page reader(s) checked."
+    )
 
 
 def _assignment_findings(
@@ -610,6 +681,7 @@ def _summary(
     walk: _Walk,
     entry_notes: Mapping[str, str],
     definition_notes: Mapping[str, str],
+    reader_note: str,
     outcome: Outcome,
 ) -> list[str]:
     spaces = known_spaces(decl)
@@ -623,8 +695,8 @@ def _summary(
     ]
     for space in spaces:
         notes = [n for n in (entry_notes.get(space), definition_notes.get(space)) if n]
-        pages = sum(1 for page_space in walk.pages.values() if page_space == space)
-        lines.append(f"{space}: {pages} page(s); " + "; ".join(notes or ["no entry point"]) + ".")
+        count = sum(1 for page_space in walk.pages.values() if page_space == space)
+        lines.append(f"{space}: {count} page(s); " + "; ".join(notes or ["no entry point"]) + ".")
     by_kind = {
         kind: sum(1 for c in walk.claims.values() if c.kind == kind)
         for kind in ("record", "rule-set", "component", "definition")
@@ -635,10 +707,7 @@ def _summary(
         f"definitions location; {len(outcome.unclassified)} unclassified document(s) for "
         f"onboarding (DEC-001 point 4)."
     )
-    lines.append(
-        f"reader resolution: dormant until the readers point {READERS_POINT} ships — a page's "
-        f"reader is checked for its shape only."
-    )
+    lines.append(reader_note)
     errors = len(outcome.errors)
     lines.append(f"{errors} error(s), {len(outcome.findings) - errors} report(s).")
     return lines
