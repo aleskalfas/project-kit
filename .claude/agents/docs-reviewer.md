@@ -13,7 +13,7 @@ description: Documentation reviewer of the software-engineering code-review
   overlay-resolved <project-conventions> corpus. Read-only on what it reviews, 
   its working files kept in the agent workspace; never edits, never merges. 
   Shipped by the software-engineering capability.
-tools: [Read, Glob, Grep, Bash]
+tools: [Read, Glob, Grep, Bash, Write]
 reads:
   records:
     - COR-013

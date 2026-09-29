@@ -1,7 +1,7 @@
 ---
 name: docs-reviewer
 description: Documentation reviewer of the software-engineering code-review panel. Reviews a PR for documentation completeness (new public surface documented), understandability, and docs-match-behaviour (leaning on [project-management:DEC-015-doc-update-obligations]'s doc-update obligations), then emits a [project-management:DEC-028-agent-as-approver-paths]-format verdict the merge gate consumes. Blocks (CHANGES_REQUESTED) only on missing docs for new public surface or a doc that contradicts the code; posts clarity/style findings as APPROVED-with-comments. Universal doc-review knowledge lives in this body; project-specific rules are read from the overlay-resolved <project-conventions> corpus. Read-only on what it reviews, its working files kept in the agent workspace; never edits, never merges. Shipped by the software-engineering capability.
-tools: [Read, Glob, Grep, Bash]
+tools: [Read, Glob, Grep, Bash, Write]
 reads:
   records:
     - COR-013

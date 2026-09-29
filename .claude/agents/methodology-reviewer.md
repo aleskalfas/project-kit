@@ -5,7 +5,7 @@ description: Review new and changed records, rules, skills, and other
   kit-shipped artifacts against the methodology's disciplines (axiom, 
   project-neutrality, principles-not-inventory, universal applicability, 
   artifact-role placement, roles-not-names).
-tools: [Read, Glob, Grep, Bash, WebFetch]
+tools: [Read, Glob, Grep, Bash, WebFetch, Write]
 gates:
   - COR-006
   - COR-014

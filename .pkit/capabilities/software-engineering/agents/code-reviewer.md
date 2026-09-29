@@ -1,7 +1,7 @@
 ---
 name: code-reviewer
 description: Generalist code reviewer — the "review this PR" headline of the software-engineering code-review panel. Reviews a PR diff for correctness/logic (its core), general code quality, and API-surface / interface design, then emits a [project-management:DEC-028-agent-as-approver-paths]-format verdict the merge gate consumes. Blocks (CHANGES_REQUESTED) only on objective failures in its remit; posts softer/subjective findings as APPROVED-with-comments. Universal review knowledge lives in this body; project-specific rules are read from the overlay-resolved <project-conventions> corpus. Read-only on what it reviews, its working files kept in the agent workspace; never edits, never merges. Shipped by the software-engineering capability.
-tools: [Read, Glob, Grep, Bash]
+tools: [Read, Glob, Grep, Bash, Write]
 reads:
   records:
     - COR-013

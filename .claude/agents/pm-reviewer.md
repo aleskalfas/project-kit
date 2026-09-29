@@ -7,7 +7,7 @@ description: Reviewer agent for the project-management capability's merge gate.
   [project-management:DEC-028]-format verdict comment that done-work consumes. 
   Read-only on what it reviews, its working files kept in the agent workspace; 
   never edits, never merges.
-tools: [Read, Glob, Grep, Bash]
+tools: [Read, Glob, Grep, Bash, Write]
 reads:
   records:
     - COR-001

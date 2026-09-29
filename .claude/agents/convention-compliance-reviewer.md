@@ -5,7 +5,7 @@ description: Review diffs against universal project-kit conventions —
   conventional-commits format, the no-shared-files invariant, branch-naming, 
   surface-change discipline. Flags violations without fixing them; surfaces 
   actionable diagnoses for the author.
-tools: [Read, Glob, Grep, Bash]
+tools: [Read, Glob, Grep, Bash, Write]
 gates:
   - COR-001
   - COR-008
