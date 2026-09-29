@@ -9,9 +9,10 @@
 # adapter pattern. The lifecycle calls it, by this name and with the
 # capability's name as its one argument, when it unregisters a capability whose
 # subtree stays on disk — an incubated capability's uninstall, or any
-# capability's uninstall in the methodology's source repository. The deploy
-# primitives key their stale-removal on whether a source file still exists, and
-# there it does, so re-running them cannot drop the capability. Where the
+# capability's uninstall in the methodology's source repository. The skills
+# deploy reads the registry and drops an unregistered capability's skills on a
+# re-run, but the agents deploy keys its stale-removal on whether a source file
+# still exists, and there it does, so a re-run alone cannot drop the capability. Where the
 # harness keeps skills and agents is this adapter's knowledge, not the
 # lifecycle's (COR-013): the lifecycle knows the script's name and argument only.
 #
