@@ -1215,12 +1215,17 @@ class UninstallOutcome:
 
     Where the subtree is the capability's source (``in_source``, #1107) it is
     kept whatever the origin.
+
+    A kept subtree is undeployed through each adapter's undeploy primitive;
+    ``adapters_without_undeploy`` names the adapters that ship none, whose
+    harness still carries the capability (each is also reported as it runs).
     """
 
     cap_dir: Path        # the capability's subtree path (deleted or kept)
     origin: str          # kit-shipped | incubated-in-repo
     files_deleted: bool  # whether the subtree was (or would be) removed
     in_source: bool = False  # the subtree is the capability's source (`authored_in_source`)
+    adapters_without_undeploy: tuple[str, ...] = ()  # adapters that could not undeploy it
 
 
 def uninstall_capability(
@@ -1239,11 +1244,14 @@ def uninstall_capability(
 
     Origin-aware removal:
     - **kit-shipped** — the subtree is a disposable copy of kit source;
-      delete it and unregister.
+      delete it and unregister. The caller re-runs deploy, whose
+      stale-removal drops the harness entries of the deleted source.
     - **incubated-in-repo** — the subtree is the adopter's only copy of
       authored work; *unregister in place* and leave the files on disk
-      (the destroy-adopter-work hazard COR-031 exists to prevent). The
-      caller re-runs deploy to drop stale harness symlinks either way.
+      (the destroy-adopter-work hazard COR-031 exists to prevent). Its
+      deployed skills and agents are removed through each installed
+      adapter's undeploy primitive (``install.undeploy_capability_from_adapters``),
+      since a deploy re-run cannot see a surviving subtree as gone.
 
     ``purge=True`` is the explicit opt-in that deletes an incubated
     capability's files anyway (the caller must confirm first, honouring the
@@ -1286,77 +1294,32 @@ def uninstall_capability(
             cap_dir=cap_dir, origin=origin, files_deleted=delete_files, in_source=in_source
         )
 
-    if delete_files and cap_dir.is_dir():
-        shutil.rmtree(cap_dir)
+    adapters_without_undeploy: tuple[str, ...] = ()
+    if delete_files:
+        if cap_dir.is_dir():
+            shutil.rmtree(cap_dir)
+        # The subtree is gone, so the deploy primitives' own stale-removal
+        # drops the harness entries on the caller's deploy re-run.
+    else:
+        # Kept in place (incubated, or the source): the subtree survives, so a
+        # deploy re-run, keyed on whether the source file exists, would not drop
+        # the capability's harness entries. Each adapter's undeploy primitive
+        # does (COR-031 D4: uninstall drops them though the files stay). It runs
+        # before the unregister, so a failing adapter leaves the capability
+        # registered and the uninstall re-runnable.
+        from project_kit import install
+
+        ctx = install.InstallContext(target_root=target_root, source_kit=source_kit, dry_run=False)
+        adapters_without_undeploy = install.undeploy_capability_from_adapters(ctx, name)
 
     _unregister_from_backbone_manifest(target_root, name)
-    if not delete_files:
-        # Kept in place (incubated, or the source): the authored subtree
-        # survives, so the filesystem-keyed adapter deploy primitives won't see
-        # the source as "gone" and won't drop the harness symlinks/copies on
-        # their next run. Drop them here so an unregistered capability stops
-        # being active in the harness (COR-031 D4: uninstall drops stale harness
-        # symlinks even though the source files stay). When the subtree is
-        # deleted instead, deploy's own stale-removal pass handles it, so this
-        # is skipped.
-        undeploy_capability_harness_artifacts(target_root, cap_dir)
     return UninstallOutcome(
-        cap_dir=cap_dir, origin=origin, files_deleted=delete_files, in_source=in_source
+        cap_dir=cap_dir,
+        origin=origin,
+        files_deleted=delete_files,
+        in_source=in_source,
+        adapters_without_undeploy=adapters_without_undeploy,
     )
-
-
-def undeploy_capability_harness_artifacts(target_root: Path, cap_dir: Path) -> None:
-    """Drop deployed harness skills/agents whose source lives under *cap_dir*.
-
-    Needed for the incubated unregister-in-place path: the adapter deploy
-    primitives key their stale-removal on whether the *source file* still
-    exists, so a capability whose subtree stays on disk would keep its skills
-    and agents deployed even after it is unregistered. This removes only the
-    deployed entries that resolve into ``cap_dir`` (skill symlinks under
-    ``.claude/skills/`` and resolved-copy agents under ``.claude/agents/``),
-    leaving the authored subtree and any unrelated deployed content untouched.
-
-    Mirrors the adapter's deployed layout (Claude Code):
-    - a skill deploys as ``.claude/skills/<name>/`` with a ``SKILL.md``
-      symlink pointing at the source file;
-    - an agent deploys as a resolved copy ``.claude/agents/<name>.md``.
-
-    Idempotent: a missing harness dir or absent entry is a no-op.
-    """
-    cap_resolved = cap_dir.resolve()
-
-    skills_root = target_root / ".claude" / "skills"
-    if skills_root.is_dir():
-        for skill_dir in skills_root.iterdir():
-            link = skill_dir / "SKILL.md"
-            if not link.is_symlink():
-                continue
-            if _symlink_points_under(link, cap_resolved):
-                shutil.rmtree(skill_dir)
-
-    agents_root = target_root / ".claude" / "agents"
-    if agents_root.is_dir():
-        cap_agents = {
-            p.stem for p in (cap_dir / "agents").glob("*.md")
-        } if (cap_dir / "agents").is_dir() else set()
-        for agent_file in agents_root.glob("*.md"):
-            # Agents deploy as resolved copies (no symlink back to source), so
-            # match by name against the capability's own agents/ directory.
-            if agent_file.stem in cap_agents:
-                agent_file.unlink()
-
-
-def _symlink_points_under(link: Path, root_resolved: Path) -> bool:
-    """True if *link*'s resolved target lives under *root_resolved*."""
-    try:
-        target = link.resolve()
-    except OSError:
-        return False
-    try:
-        target.relative_to(root_resolved)
-    except ValueError:
-        return False
-    return True
 
 
 def find_references(target_root: Path, capability_name: str) -> list[tuple[Path, str]]:

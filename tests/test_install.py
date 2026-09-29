@@ -36,7 +36,7 @@ def stub_adapter_primitives(monkeypatch: pytest.MonkeyPatch) -> None:
     invoked. Tests assert tree shape; primitives are out of scope.
     """
 
-    def _noop(_script: Path, _ctx: install.InstallContext) -> None:
+    def _noop(_script: Path, _ctx: install.InstallContext, *_args: str) -> None:
         return None
 
     monkeypatch.setattr(install, "_run_adapter_primitive", _noop)

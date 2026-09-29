@@ -13,9 +13,8 @@ pkit:
         - src/project_kit/visibility.py
       record: [COR-002, COR-005, COR-028, ADR-002, ADR-004, ADR-009, ADR-014, ADR-052, ADR-060, "project-management:DEC-030"]
     revalidated:
-      at: 2026-09-29T16:25:01Z
-      outcome: unchanged
-      unchanged-because: the layout and the settings section already describe project/settings.json as the project's additions merged over the core baseline; the anchor now names the file
+      at: 2026-09-29T18:00:04Z
+      outcome: updated
 ---
 
 # Claude Code adapter
@@ -34,6 +33,7 @@ Translates kit content for the [Claude Code](https://docs.claude.com/en/docs/cla
 ├── merge-claude-md.sh                 # ensures root CLAUDE.md loads the kit rules via @-includes
 ├── deploy-skills.sh                   # creates .claude/skills/ symlinks pointing back at .pkit/skills/
 ├── deploy-agents.sh                   # writes resolved agent copies into .claude/agents/
+├── undeploy-capability.sh             # removes one capability's deployed skills and agents from .claude/
 ├── _resolve_agent.py                  # resolves one agent: overlay placeholders, model and effort, storyboard paths
 ├── permission-enforcement.yaml        # which permission dimensions this harness realizes, and via which layer
 └── permission-hook.py                 # the PreToolUse enforcement hook (registered by `pkit permissions enable`)
@@ -81,6 +81,17 @@ Writes each kit-shipped agent as a **resolved copy** at `.claude/agents/<name>.m
 **Precedence with `review-pr --effort`.** A run-time effort resolved by `review-pr` (the project-management capability's `--effort` flag, `PKIT_REVIEW_AGENT_EFFORT`, or `review.agents.effort`) wins over the agent's deployed `effort:` — a run-time knob over a declaration. `review-pr` realises it by passing the value as the reviewer session's `--effort`, the harness's session-level setting (the same shape by which a `--model` flag wins over an `--agent`'s `model:`). When `review-pr` resolves none it passes nothing, and the deployed value applies.
 
 **Storyboard references** (#1101). An agent that drives scripted scenarios declares its storyboards (COR-016) in `storyboards:` and cites them in its body. The source names a storyboard by its bare sibling filename (`storyboard.md`), which stays right wherever the agent's folder lives — core, project or a capability. The deployed copy lives in `.claude/agents/`, where that name resolves to nothing, so the resolver rewrites each entry naming a file beside the source to the storyboard's project-root-relative source path, in the list and wherever the body cites the entry as a whole path; the runtime reads the storyboard from there with its `Read` tool. An entry already written as a source path deploys unchanged. The convention is stated in the agents README, "Frontmatter declaration" under "Storyboards".
+
+### `undeploy-capability.sh`
+
+`undeploy-capability.sh <capability-name>` removes one capability's deployed skills and agents from `.claude/` — the inverse of the two deploy scripts above, for that capability alone. The lifecycle runs it when it unregisters a capability whose subtree stays on disk (an incubated capability's uninstall, or any capability's in the methodology's source repository): the deploy scripts drop what they deployed only once its source file is gone, and here it is not. The lifecycle passes the capability's name and knows nothing of `.claude/` (the adapters README, "Primitives the lifecycle calls").
+
+It removes only what the deploy scripts created for the capability, recognised by the mark each leaves:
+
+- **a skill** — a `.claude/skills/<skill>/` whose `SKILL.md` is the relative symlink `deploy-skills.sh` writes into `.pkit/capabilities/<name>/`. Every symlink in that folder pointing into the capability goes, and the folder goes once empty; an adopter's file left in it keeps the folder (a `kept` line says so).
+- **an agent** — a `.claude/agents/<agent>.md` carrying `deploy-agents.sh`'s marker, for an agent the capability ships in its `agents/` folder (flat or folder form). A copy is kept when a project agent of the same name exists: project agents outrank every other source (the agents README, "Name-collision precedence"), so the copy is the project's.
+
+Adopter content — a file that is not such a symlink, a symlink pointing anywhere else, an agent without the marker — and the capability's own subtree are never touched. The script removes what exists for the capability whatever its registration, so it runs the same before or after the unregister; it is idempotent (`Done. Nothing deployed for capability <name>.` on a second run) and exits 2 on anything but one capability name. Status lines: `removed`, `kept`.
 
 ### Live permission enforcement (`permission-hook.py`)
 
@@ -149,7 +160,8 @@ The install/sync runtime (`pkit init` / `pkit sync`) automates all adapter primi
 2. **Rules include.** Run `.pkit/adapters/claude-code/merge-claude-md.sh`. Ensures the root `CLAUDE.md` includes `@.pkit/rules/core.md` so the kit-shipped hard rules and tool-hygiene conventions load into the agent. Idempotent; never clobbers adopter content.
 3. **Skills.** Run `.pkit/adapters/claude-code/deploy-skills.sh`. Creates the `.claude/skills/` symlinks (tracked in git per the project's `.gitignore`, so a fresh clone has the same environment).
 4. **Agents.** Run `.pkit/adapters/claude-code/deploy-agents.sh`.
-5. **Permission enforcement (opt-in).** Run `pkit permissions enable` to register the PreToolUse hook; `pkit permissions disable` to remove it. See *Live permission enforcement* above.
+5. **Undeploy one capability.** Not a setup step: `pkit capabilities uninstall` runs `.pkit/adapters/claude-code/undeploy-capability.sh <name>` where the capability's files stay. Running it by hand is safe, but a capability still registered is deployed again by the next sync.
+6. **Permission enforcement (opt-in).** Run `pkit permissions enable` to register the PreToolUse hook; `pkit permissions disable` to remove it. See *Live permission enforcement* above.
 
 ### Git footprint (per ADR-009)
 
