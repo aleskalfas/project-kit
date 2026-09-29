@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-09-29T16:59:12Z
+      at: 2026-09-29T17:26:06Z
       outcome: unchanged
-      unchanged-because: the CLI and lifecycle READMEs were revalidated for the connections resolve scope change; the signpost's map of the areas and their entry points is unaffected
+      unchanged-because: the CLI reference only states that new agent --with-storyboard declares the storyboard on the agent; the map of the .pkit tree is unchanged
 ---
 
 # project-kit

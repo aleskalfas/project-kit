@@ -40,7 +40,7 @@ pkit:
         - src/project_kit/environment.py
       record: [COR-004, COR-012, COR-043, COR-048, COR-049, COR-050, PRJ-001, PRJ-003, PRJ-004, ADR-033, ADR-039, ADR-049, ADR-058, ADR-059]
     revalidated:
-      at: 2026-09-29T16:58:50Z
+      at: 2026-09-29T17:26:04Z
       outcome: updated
 ---
 
@@ -478,7 +478,7 @@ Stamps an agent stub — the unified front matter (COR-013) and the canonical bo
 
 - **`<name>`** is kebab-case, naming the role. The command refuses a name already taken in core, project or any capability, in either layout — the deploy resolves one agent per name, so a second one would mask the first.
 
-- **`--with-storyboard`** stamps folder form (`<name>/<name>.md`) with a sibling `storyboard.md` scaffold (COR-016) whose `consumers:` names the agent, its `namespace` being the capability's name for a capability's agent.
+- **`--with-storyboard`** stamps folder form (`<name>/<name>.md`) with a sibling `storyboard.md` scaffold (COR-016). Both sides of the pair are declared as stamped: the agent's `storyboards:` names `storyboard.md` and its body cites it, and the storyboard's `consumers:` names the agent, its `namespace` being the capability's name for a capability's agent — so the fresh pair passes `pkit refs validate`.
 
 **Coordination with the `agent-author` skill.** The skill carries the namespace choice (universal role, adopter role, or a capability's discipline), the name, and the body drafting; the command is the stamp underneath.
 

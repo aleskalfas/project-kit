@@ -9,7 +9,7 @@ import click
 import pytest
 from click.testing import CliRunner
 
-from project_kit import agents
+from project_kit import agents, refs
 from project_kit.cli import main
 
 
@@ -205,6 +205,38 @@ def test_stamp_with_storyboard_seeds_storyboard_template(kit_target: Path) -> No
     assert "## Framing" in body
     assert "## Tone" in body
     assert "## Scenario 1" in body
+
+
+def test_stamp_with_storyboard_declares_it_on_the_agent(kit_target: Path) -> None:
+    """The agent's side of the pair (COR-016): `storyboards:` names the sibling by
+    its bare filename and the body cites that name, with Read among the tools."""
+    target = agents.stamp_new_agent(
+        kit_target, name="coordinator", namespace="project", with_storyboard=True
+    )
+    front = _front_matter(target)
+    assert front["storyboards"] == ["storyboard.md"]
+    assert "Read" in front["tools"]
+    assert "`storyboard.md`" in target.read_text(encoding="utf-8").split("---\n", 2)[2]
+
+
+def test_flat_stamp_declares_no_storyboard(kit_target: Path) -> None:
+    target = agents.stamp_new_agent(kit_target, name="plain", namespace="project")
+    assert "storyboards" not in _front_matter(target)
+    assert "storyboard" not in target.read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize("namespace", ["core", "project", "my-cap"])
+@pytest.mark.parametrize("with_storyboard", [False, True], ids=["flat", "with-storyboard"])
+def test_a_fresh_stamp_passes_refs_validate(
+    kit_target: Path, namespace: str, with_storyboard: bool
+) -> None:
+    """What `pkit new agent` writes carries no reference finding before the author
+    touches it — for the storyboard pair, no finding on either side."""
+    _make_capability(kit_target, "my-cap")
+    agents.stamp_new_agent(
+        kit_target, name="coord", namespace=namespace, with_storyboard=with_storyboard
+    )
+    assert refs.validate_corpus(kit_target) == []
 
 
 def test_stamp_with_storyboard_dry_run_writes_nothing(kit_target: Path) -> None:
