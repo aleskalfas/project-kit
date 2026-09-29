@@ -14,8 +14,9 @@ pkit:
         - src/project_kit/workspace.py
       record: [COR-028, PRJ-006, ADR-002, ADR-003, ADR-004, ADR-009, ADR-014, ADR-016, ADR-021, ADR-025, ADR-060]
     revalidated:
-      at: 2026-09-29T15:15:34Z
-      outcome: updated
+      at: 2026-09-29T19:12:31Z
+      outcome: unchanged
+      unchanged-because: ADR-009 rule 7's refinement adds the render's inputs, the ownership test and the process-journal pattern; the permissions surface writes its diagnose marker and log, so under that test it still declares their patterns through the backbone seam, exactly as the diagnose section says
 ---
 
 # Permissions — decision core

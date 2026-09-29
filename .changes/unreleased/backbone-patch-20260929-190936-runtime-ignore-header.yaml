@@ -1,0 +1,12 @@
+component: backbone
+kind: patch
+custom:
+  category: Changed
+body: >
+  The header of the rendered `.pkit/.gitignore` now names everything the file
+  is rendered from: the backbone's own declarations, each installed
+  component's `runtime_ignore:` declaration, and the project's configuration in
+  `.pkit/project/config.yaml`. It also names `pkit config set` beside
+  `pkit install` and `pkit sync` as a command that re-renders it. Only the
+  comment lines change; the ignore patterns are the same, and the next sync
+  rewrites the header.

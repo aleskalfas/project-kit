@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-09-29T19:44:54Z
+      at: 2026-09-29T19:38:40Z
       outcome: unchanged
-      unchanged-because: the CLI README's release rows now name the one requires_backbone range shape whose floor the release raises; its area-map line (the pkit command surface) still holds, as do the lifecycle and process lines
+      unchanged-because: the lifecycle README's runtime_ignore row now states ADR-009 rule 7's ownership test (#1123), a detail of its package-metadata table; the area map holds
 ---
 
 # project-kit
