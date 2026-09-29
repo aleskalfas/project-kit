@@ -40,7 +40,7 @@ pkit:
         - src/project_kit/environment.py
       record: [COR-004, COR-012, COR-043, COR-048, COR-049, COR-050, PRJ-001, PRJ-003, PRJ-004, ADR-033, ADR-039, ADR-049, ADR-058, ADR-059]
     revalidated:
-      at: 2026-09-29T16:58:50Z
+      at: 2026-09-29T17:45:46Z
       outcome: updated
 ---
 
@@ -341,6 +341,8 @@ A project keeps its declarations to the backbone in **one project-owned file**: 
 | `friction.exclude` | Paths or globs the friction checks leave out. | none | COR-050 point 14 |
 | `connections.providers` | The **provider-selection key**: `<publisher>::<role>` → the installed capability that answers the role. | empty | [COR-053](../decisions/core/COR-053-connection-points.md) point 7 (writer: `pkit connections providers set`, "Connections commands") |
 | `connections.selections` | The **contributor-selection key**: `<publisher>::<role>:<point>` → the installed capability whose contribution wins a `single` data point. | empty | [COR-052](../decisions/core/COR-052-slots.md) point 4, COR-053 point 7 |
+| `process.journal.enabled` | Keep the process engine's per-subject journal — optional audit; no verdict reads it. Off: the engine writes and reads none, and `pkit process status` / `pm history` say "journal logging is not enabled for this project". | `false` | [COR-033](../decisions/core/COR-033-process-substrate.md) point 7 (writers: the project, and the 1.150.0 upgrade migration, which records `true` for a project it finds keeping journals) |
+| `process.journal.committed` | When the journal is kept: commit the journals (`true`) or keep them per clone, git-ignored (`false`). The rendered `.pkit/.gitignore` follows it — `pkit config set` re-renders it at once, a hand edit at the next `pkit sync`. No effect while `enabled` is `false`. | `false` | COR-033 point 7 (the 1.150.0 migration sets it to whether the journals it found were tracked) |
 | `project` | Reserved for keys the project's own decision records own. Checked only for being a mapping; never inspected. | empty | COR-048 point 2 |
 
 ```yaml
@@ -352,18 +354,20 @@ friction:
   places: [docs/**/*.md]
 connections:
   providers: { pkit::work-tracking: project-management }
+process:
+  journal: { enabled: true, committed: false }
 project:
   anything-the-project-decides: true
 ```
 
 **Schema.** The file is validated as a whole against `.pkit/schemas/backbone/config.schema.json`, a backbone file schema shipped in the tree and bound to this file by its fixed path ([ADR-056](../../tech-docs/architecture/decisions/ADR-056-backbone-file-schemas-home.md); the schemas README's "Backbone file schemas" section). The file carries **no version key** — the backbone owns its shape and migrates it (COR-010). The first line above is the editor directive the backbone stamps into a file it creates; an editor that reads it validates and completes as you type.
 
-**Strict when checked, forgiving when read** (COR-048 point 4). `pkit validate` runs the configuration pass and reports under a `configuration` heading; commands that merely read a key never fail because of it and use the default (COR-048 point 4); today's only reader, `pkit report`, falls back silently. The findings, each with a JSON Pointer into the file and a severity:
+**Strict when checked, forgiving when read** (COR-048 point 4). `pkit validate` runs the configuration pass and reports under a `configuration` heading; commands that merely read a key never fail because of it and use the default (COR-048 point 4), silently — `pkit report` for `name`, and the process engine and the `.pkit/.gitignore` render for `process.journal`, which read anything but a boolean as the default, off. The findings, each with a JSON Pointer into the file and a severity:
 
 | Severity | Finding |
 |---|---|
 | error | An unknown key at any backbone-owned level, reported with the nearest known key (`unknown key 'doc'; did you mean 'docs'?`). A key of `connections.providers` / `connections.selections` that is not an address of the right form. |
-| error | A wrong type, an invalid `mode` / `status-job` value, an absolute path, a duplicate pattern. A file that does not parse, or is not a mapping. |
+| error | A wrong type (a `process.journal` value that is not `true` / `false` included), an invalid `mode` / `status-job` value, an absolute path, a duplicate pattern. A file that does not parse, or is not a mapping. |
 | error | A documentation root that resolves (after following links) outside the repository or inside `.pkit/` (COR-049 point 1). |
 | warning | A documentation root that does not exist yet, or exists but is not a directory (COR-049 point 7). |
 | error | A friction pattern that leaves the repository — absolute, climbing above the root, or resolving outside it through a link (its nearest existing ancestor is followed, so `docs/linked/sub/**` with `docs/linked` a link out is caught before `sub` exists) (COR-050 point 14). A bare `.` means the whole repository and is accepted. This pass is the one owner of the finding; the friction pass never walks such a pattern. |
@@ -387,7 +391,7 @@ Only errors fail the command. The same repository state always yields the same f
 
 ### `config set <key> <value> [--yes]`
 
-Set one backbone-owned key. `<key>` is dotted (`docs.internal`, `friction.mode`, `connections.providers.pkit::work-tracking`); the command walks it through the configuration schema and refuses an unknown key (naming the nearest known one), any key under the reserved `project` block (the project's own records own it; the backbone never writes it), and a key that holds a mapping or a list (`friction.places` — edit the file). `<value>` is coerced to the key's declared type, and the whole file is validated before the write: `pkit config set friction.mode loud --yes` is refused with the schema's message and writes nothing. On success it prints `set docs.internal = tech-docs  (.pkit/project/config.yaml)`; a file it creates opens with the editor directive. Runs under the `kit` privilege like every other `pkit` command — no separate grant. A provider selection has its own command, `pkit connections providers set <role> <capability>`, which also checks that the capability declares the role and shows the diff first ("Connections commands").
+Set one backbone-owned key. `<key>` is dotted (`docs.internal`, `friction.mode`, `connections.providers.pkit::work-tracking`); the command walks it through the configuration schema and refuses an unknown key (naming the nearest known one), any key under the reserved `project` block (the project's own records own it; the backbone never writes it), and a key that holds a mapping or a list (`friction.places` — edit the file). `<value>` is coerced to the key's declared type, and the whole file is validated before the write: `pkit config set friction.mode loud --yes` is refused with the schema's message and writes nothing. On success it prints `set docs.internal = tech-docs  (.pkit/project/config.yaml)`; a file it creates opens with the editor directive. When the new value changes what the rendered `.pkit/.gitignore` would say — today only `process.journal` does — it re-renders that file at once and prints the render's line, rather than leaving it for the next `pkit sync`. Runs under the `kit` privilege like every other `pkit` command — no separate grant. A provider selection has its own command, `pkit connections providers set <role> <capability>`, which also checks that the capability declares the role and shows the diff first ("Connections commands").
 
 ## Authoring commands
 

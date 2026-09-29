@@ -33,6 +33,7 @@ from pathlib import Path
 import pytest
 
 from project_kit.process import ProcessEngine, load_definition
+from tests.process_journal_support import enable_journal_logging
 
 # Two states resolved by detection predicates; one gated transition. The ONLY
 # difference between the two fixtures is whether the current state carries a
@@ -167,6 +168,8 @@ commands:
         "sys.exit(0)\n",
     )
 
+    # The move-identity test compares the journaled edges, so keep a journal.
+    enable_journal_logging(repo)
     return repo
 
 

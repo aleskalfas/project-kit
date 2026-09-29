@@ -12,8 +12,9 @@ pkit:
         - src/project_kit/visibility.py
       record: [COR-002, COR-005, COR-028, ADR-002, ADR-004, ADR-009, ADR-014, ADR-052, ADR-060, "project-management:DEC-030"]
     revalidated:
-      at: 2026-09-29T15:18:46Z
-      outcome: updated
+      at: 2026-09-29T17:45:54Z
+      outcome: unchanged
+      unchanged-because: visibility.py gained the process journal's configured ignore line and a refresh after a configuration write; the adapter's footprint declaration and the shared/private visibility modes this page describes are unaffected
 ---
 
 # Claude Code adapter

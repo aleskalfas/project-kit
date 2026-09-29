@@ -47,6 +47,7 @@ from project_kit.process import (
     render_status_json,
     render_status_narrative,
 )
+from tests.process_journal_support import enable_journal_logging, set_journal_logging
 
 _ANSI = re.compile(r"\x1b\[[0-9;]*m")
 
@@ -186,6 +187,9 @@ commands:
         "else:\n"
         "    print(json.dumps({'exists': False, 'reason': 'no verdict'}))\n",
     )
+    # The wait's enter/resume events are journal entries; keep a journal so the
+    # tests can read them (the logging-off tests turn it off again).
+    enable_journal_logging(repo)
     return repo
 
 
@@ -344,6 +348,37 @@ def test_since_read_from_open_enter_entry(paused_repo: Path) -> None:
     blocked = _live_blocked(paused_repo)
     assert blocked is not None
     assert blocked.since == enter["ts"]
+
+
+# --- journal logging off (COR-033 point 7) --------------------------------
+
+
+def test_logging_off_the_wait_is_still_live_but_nothing_is_journaled(paused_repo: Path) -> None:
+    # The wait is a live overlay; only its audit (enter/resume entries, and the
+    # `since` read from them) needs the journal.
+    set_journal_logging(paused_repo, enabled=False)
+    _set_state(paused_repo, "open")
+
+    assert _engine(paused_repo).move("parked", actor="agent").ok is True
+    _set_state(paused_repo, "parked")
+    blocked = _live_blocked(paused_repo)
+
+    assert blocked is not None and blocked.blocked_on == "awaiting-human"
+    assert blocked.since is None
+    assert _engine(paused_repo).reconcile_blocked(actor="agent") is None
+    assert list(paused_repo.rglob("*.journal.jsonl")) == []
+
+
+def test_logging_off_taking_the_move_clears_the_wait(paused_repo: Path) -> None:
+    set_journal_logging(paused_repo, enabled=False)
+    _set_state(paused_repo, "parked")
+    (paused_repo / "_review").write_text(json.dumps({"by": "bob"}), encoding="utf-8")
+
+    assert _engine(paused_repo).move("done", actor="user").ok is True
+    _set_state(paused_repo, "done")
+
+    assert _live_blocked(paused_repo) is None
+    assert list(paused_repo.rglob("*.journal.jsonl")) == []
 
 
 # --- prompt surfacing on both renderings ----------------------------------

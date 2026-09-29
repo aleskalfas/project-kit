@@ -19,6 +19,17 @@ docs:
   user: docs/
   internal: tech-docs/
 
+# `process.journal` — process journal logging (COR-033 point 7). project-kit
+# kept clone-local journals before logging became opt-in, and `pm history` /
+# `--check-drift` read them, so logging stays on — the rule the 1.150.0 upgrade
+# migration applies to adopters, applied here by hand because the source repo
+# never runs its own migrations. Clone-local: each clone keeps its own journals
+# and `.pkit/.gitignore` ignores them.
+process:
+  journal:
+    enabled: true
+    committed: false
+
 # `friction` — anchors and friction (COR-050 point 14). `enforcing` from the
 # day the check exists (ADR-055 point 5).
 friction:

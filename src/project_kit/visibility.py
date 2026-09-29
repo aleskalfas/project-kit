@@ -25,7 +25,7 @@ from pathlib import Path
 
 import click
 
-from project_kit import cli_render
+from project_kit import cli_render, process_journal
 from project_kit.manifest import read_backbone_manifest
 
 # Core's OWN footprint. Naming `.pkit/` here is not the layering inversion
@@ -147,8 +147,17 @@ def runtime_ignore(target_root: Path) -> list[str]:
     """Aggregate runtime-local ignore patterns across installed components
     (backbone + permissions seam + each adapter/capability's declared
     `runtime_ignore`). De-duped, order-stable — the source list the T2
-    `.pkit/.gitignore` renderer wholesale-renders from (ADR-009 rule 7)."""
+    `.pkit/.gitignore` renderer wholesale-renders from (ADR-009 rule 7).
+
+    The backbone's contribution has one configured part: the process journal
+    (COR-033 point 7). The engine writes every journal and owns their path —
+    inside each capability's `project/process/` — so the backbone, not a
+    capability, declares the pattern, and declares it unless the project
+    chose to commit its journals (`process_journal.runtime_ignore_patterns`).
+    Because the render is wholesale, the ignore line follows the setting on the
+    next render: install, sync, or a `pkit config set`."""
     out: list[str] = list(_BACKBONE_RUNTIME_IGNORE)
+    out.extend(process_journal.runtime_ignore_patterns(target_root))
     manifest = read_backbone_manifest(target_root)
     if manifest is not None:
         for entry in manifest.components:
@@ -248,6 +257,25 @@ def render_runtime_ignore(target_root: Path, *, dry_run: bool = False) -> str:
         f"  rendered      {_RUNTIME_IGNORE_PATH} "
         f"({len(patterns)} pattern(s) from {component_count} component(s))",
     )
+
+
+def refresh_runtime_ignore(target_root: Path) -> str | None:
+    """Re-render an existing `.pkit/.gitignore` whose content no longer matches
+    what the declarations and configuration render to — for a writer that has
+    just changed something the render reads (a configuration write, COR-033
+    point 7). Returns the render's status line, or None when there was nothing
+    to do: the file matches, or there is no rendered file yet (install and sync
+    create it; a configuration write does not)."""
+    path = target_root / ".pkit" / ".gitignore"
+    if not path.is_file():
+        return None
+    try:
+        current = path.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    if current == render_runtime_ignore_content(target_root):
+        return None
+    return render_runtime_ignore(target_root)
 
 
 def _runtime_ignore_component_count(target_root: Path) -> int:

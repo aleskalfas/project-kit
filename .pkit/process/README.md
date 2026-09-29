@@ -14,7 +14,7 @@ pkit:
         - .pkit/schemas/_defs/process.schema.json
       record: [COR-033, COR-034, COR-035, COR-036, COR-037, COR-038, COR-040, COR-042, COR-044, COR-053, ADR-020, ADR-036, ADR-048, ADR-051]
     revalidated:
-      at: 2026-09-29T15:15:35Z
+      at: 2026-09-29T17:45:42Z
       outcome: updated
 ---
 
@@ -28,7 +28,7 @@ Two markers appear below: **core** — ships in the minimal first cut; **deferre
 
 ## Vocabulary — one substrate, two altitudes
 
-- **State machine** — the content-free substrate: states, guarded transitions, a position, a journal. Knows nothing about issues, screens, docs, or trips.
+- **State machine** — the content-free substrate: states, guarded transitions, a position, and — where the project keeps one — a journal. Knows nothing about issues, screens, docs, or trips.
 - **Process** (depth) — one discipline's substrate-bound journey over its own subjects. The thing a capability authors.
 - **Orchestration** (breadth, deferred) — a system of interacting processes (one process embeds or hands off to another). The same substrate one altitude up.
 
@@ -116,7 +116,7 @@ A process declares `subject.cardinality`:
 
 The engine **never enumerates** a keyed process's subjects — it only ever acts on the one it is given. The **one** sanctioned, bounded exception is the **cascade fold** (COR-037, below): a parent reads across the members of *one declared child process* scoped to one parent subject, and only through a capability-supplied membership predicate run one subject at a time — never a containment tree the engine holds, never a general subject-listing API. Everywhere else the never-enumerate discipline is unchanged; pm's *forward* (position) cascade stays capability-local until a binding demands the shared form.
 
-Per-subject **runtime**: a resolved **position** (core), an append-only **journal** (core) — `{ts, subject, from→to, trigger, actor, gate-result, severity, bypass+reason}`, the memory, the how-we-got-here, and the audit trail in one — and a derived **blocked** detection (core, "no legal move") with an optional first-class `blocked{blocked_on, resume_when, assignee?}` wait (core — see below).
+Per-subject **runtime**: a resolved **position** (core) and a derived **blocked** detection (core, "no legal move") with an optional first-class `blocked{blocked_on, resume_when, assignee?}` wait (core — see below). Beside them, **optional audit**: an append-only **journal** — `{ts, subject, from→to, trigger, actor, gate-result, severity, bypass+reason}`, the how-we-got-here — kept only where the project turns journal logging on (off by default; see "The journal" below). Nothing the engine decides reads it.
 
 ### Blocked — a first-class wait (core)
 
@@ -143,7 +143,7 @@ transitions:
   - **`awaiting-condition`** carries a **required `resume_when`** predicate. It is *currently* blocked when (a) it has **no legal move** (the shipped "no legal move" detection — a non-terminal, determinate position out of which no transition is allowed), and (b) its `resume_when` predicate does **not** yet hold. When `resume_when` holds, the engine **auto-clears** the flag — the external fact turning true with no human in the loop. An indeterminate `resume_when` is fail-closed (the subject stays blocked rather than silently resuming).
   - **`awaiting-subprocess-outcome`** (COR-036, single-inner) carries **no `resume_when`** (the schema forbids one, like `awaiting-human`). It is *currently* blocked while the subject sits in a `subprocess` state with **no legal move** — i.e. no `subprocess-outcome` gate currently passes, because the embedded inner process has not reached a *wired* terminal outcome. It is **auto-clearing** like `awaiting-condition`, but the "condition" *is* the recursive resolution carried by the `subprocess-outcome` gates (re-evaluated live in the "no legal move" check) — when a wired inner outcome resolves, a gate opens, a legal move exists, and the wait clears with no human in the loop. A parent parked on an **unwired** inner outcome stays correctly blocked (the author owns outcome→transition wiring, not the engine).
   - **`awaiting-cascade-outcome`** (COR-037, the aggregate fold wait) carries **no `resume_when`** (the schema forbids one, like `awaiting-subprocess-outcome`). It is *currently* blocked while the subject sits at a state whose outgoing `cascade-outcome` gate has **no legal move** — i.e. the fold over the declared child's members has not resolved open. It is **auto-clearing**, the "condition" being the live fold itself (re-evaluated live in the "no legal move" check) — when the fold resolves open (all members reached the outcome, or the threshold is met), the gate opens, a legal move exists, and the wait clears with no human in the loop. Fail-closed throughout: any unresolved member, and the empty member set, hold the fold shut (the parent stays correctly blocked).
-- **The wait is journaled on enter and on resume.** Entering a blocked position appends a `blocked-enter` event; clearing it appends a `blocked-resume` event (each a journal entry — there is *no* separate emission/dispatch channel; the deferred **hooks** slot will react to these journaled transitions when it ships). `since` (the wait's age) is read from the open `blocked-enter` entry; `assignee` is carried from the declaration. **The journal is the audit trail; the CURRENT blocked-ness is always the live evaluation** (for `awaiting-human`, whether the pending move has been taken; for `awaiting-condition`, the `resume_when` predicate), **authoritative over any journal entry** (inheriting the journal-is-intent-log / live-detection-authoritative contract below).
+- **The wait is journaled on enter and on resume — where the project keeps a journal.** With journal logging off the wait is exactly as live and as blocking, `reconcile_blocked` has nothing to record, and `since` is absent (see "The journal" below). With it on, entering a blocked position appends a `blocked-enter` event; clearing it appends a `blocked-resume` event (each a journal entry — there is *no* separate emission/dispatch channel; the deferred **hooks** slot will react to these journaled transitions when it ships). `since` (the wait's age) is read from the open `blocked-enter` entry; `assignee` is carried from the declaration. **The journal is the audit trail; the CURRENT blocked-ness is always the live evaluation** (for `awaiting-human`, whether the pending move has been taken; for `awaiting-condition`, the `resume_when` predicate), **authoritative over any journal entry** (inheriting the journal-is-intent-log / live-detection-authoritative contract below).
 - **Where the journaling happens.** `status` and `evaluate_blocked` are **read-only** (status runs predicates live and must not write). The journaling of enter/resume rides the writing paths only: `move` reconciles the wait against the **target state it just declared**, so a move that parks the subject journals the `blocked-enter` **at park time** — making `since` meaningful immediately, rather than lazily only once the human finally acts — and a move that clears the wait journals the `blocked-resume`. `reconcile_blocked` is also exposed (with no target override) so a binding can journal a self-clearing `awaiting-condition` resume — which needs no human move — on demand against live reality. Because live detection is authoritative, a not-yet-journaled resume never lies about current state.
 - **An `awaiting-human` block carries a `prompt`** — the question — authored on the `user` move and surfaced on that move's per-move emission (and lifted onto the blocked overlay for the human-pause view). The park stops being a silent "your move" and becomes "your move: here's the question." Content-free: the engine carries/surfaces `prompt` and `blocked_on` but never interprets them.
 - **It is orthogonal, not a state.** It annotates the subject at its current position; it adds no state to the process and cannot explode the state space. Position stays inferred; the validator stays deterministic (`resume_when` is a predicate over reality, exactly like detection).
@@ -325,9 +325,9 @@ The backbone exposes the engine as a `pkit process …` surface. The core operat
 
 | Operation | Answers / does |
 |---|---|
-| `status` | where the subject is · why · how it got here (journal) · legal moves with live prechecks · next hint — narrative or `--json` |
+| `status` | where the subject is · why · how it got here (the journal, or "journal logging is not enabled for this project") · legal moves with live prechecks · next hint — narrative or `--json` (which carries `journal_logging: {enabled, committed}` beside `journal`) |
 | `can-move <to>` | validate a candidate move (gate precheck + authorisation); refuse with a self-explaining reason |
-| `move <to>` | execute a legal move; record the journal entry (and run hooks, deferred) |
+| `move <to>` | execute a legal move; record the journal entry where the project keeps a journal (and run hooks, deferred) — the verdict is the same either way |
 | `validate` | run the subject's invariants (COR-035) and report which hold / are violated — narrative or `--json`; exits non-zero on any violation |
 | `health` | walk every declared hand-off contract (COR-042) and report missed hand-offs — upstream subjects at their trigger with no downstream counterpart; takes **no subject**; out-of-runtime, report-only, deterministic; narrative or `--json`; exits non-zero on any miss **or indeterminate** |
 
@@ -352,14 +352,37 @@ Predicates **must be read-only** — `status` runs them live, so a mutating pred
 
 This is canonical guidance for **all** bindings — how a capability wrapper sequences its own domain side-effect against the engine's journal write.
 
-The journal is an **intent log, not the source of truth**. Live detection is authoritative (COR-033 P3): a subject's position is always re-derived by running the detection predicates against current reality, never read back from the journal. So the journal entry the engine appends on a legal `move` records *that a move was taken*, but the next `status` reports the *real* inferred position regardless of what the journal says.
+The journal is an **intent log, not the source of truth**. Live detection is authoritative (COR-033 P3): a subject's position is always re-derived by running the detection predicates against current reality, never read back from the journal. So the journal entry the engine appends on a legal `move` records *that a move was taken*, but the next `status` reports the *real* inferred position regardless of what the journal says. The ordering below is the same whether or not the project keeps a journal; with logging off, step 2 validates the move and records nothing.
 
 The ordering a wrapper follows:
 
 1. The wrapper validates and applies its **domain side-effect** (create the branch, open the PR, edit the label/board) — the change that will make live detection report the new state.
-2. The wrapper calls `pkit process move` (by subprocess) to **journal** the move.
+2. The wrapper calls `pkit process move` (by subprocess) to **journal** the move where a journal is kept.
 
 Because detection is authoritative, the seam is self-correcting in the failure case: if a wrapper's domain side-effect later fails (or partially fails) *after* a journal entry was written, the next `status` runs detection live and reflects the subject's **real** inferred position — the stale journal entry does not lie about where the subject is, it only records the attempt. A wrapper should still surface side-effect failures to its caller; the point is that a failed side-effect cannot corrupt the engine's notion of position. Wrappers must **read position from the engine** (`status --json`) rather than re-inferring it themselves, so there is one source of position truth.
+
+### The journal — optional audit (COR-033 point 7)
+
+The engine can keep an append-only, per-subject journal of the moves it executes and of each wait's enter and resume. It is **audit, not runtime**: position, gates, invariants and the blocked overlay never read it, so every answer the engine gives is the same with it on or off. Keeping it is the project's choice, declared in the backbone configuration file, `.pkit/project/config.yaml` (the CLI reference, "Configuration file"):
+
+```yaml
+process:
+  journal:
+    enabled: false    # default — keep no journal
+    committed: false  # default — when kept, keep it per clone
+```
+
+| Mode | Setting | What the engine does | Journal files in version control | Who can rely on it |
+|---|---|---|---|---|
+| **Off** (default) | `enabled: false`, or no `process` block | writes and reads no journal; `status` says "journal logging is not enabled for this project"; a wait has no `since` | ignored, so a stray file is never committed | nobody — the audit trail is whatever the binding names instead (project-management: the tracker's timeline plus pkit's audit comments) |
+| **Clone-local** | `enabled: true`, `committed: false` | appends an entry per move and per wait event; `status` shows how the subject got here | ignored: each clone keeps its own, absent from pull requests and lost with the clone | the clone that made the moves |
+| **Committed** | `enabled: true`, `committed: true` | the same | not ignored: commit them with the work that moved the subject | everyone — shared, reviewable, durable |
+
+- **Turning it on.** `pkit config set process.journal.enabled true --yes`, and `pkit config set process.journal.committed true --yes` to commit the journals. Logging starts then; nothing is back-filled.
+- **The ignore rules follow the setting.** The backbone contributes the journal pattern (`.pkit/capabilities/*/project/process/**/*.journal.jsonl`) to the rendered `.pkit/.gitignore` — never your root `.gitignore` (ADR-009) — unless the setting is `committed: true` with `enabled: true`. `pkit config set` re-renders the file at once; a hand edit of the configuration takes effect at the next `pkit sync`. A journal already tracked by git stays tracked whatever the file says.
+- **Turning it off** leaves existing journal files where they are; the engine stops reading and extending them.
+- **Where journals live.** In the owning capability's adopter-owned `project/process/` subtree (see Layout). Uninstalling a methodology-shipped capability deletes its directory, journals included; committed journals survive in version-control history.
+- **Upgrading.** The upgrade that introduced the setting keeps logging on for a project it finds keeping journals — `enabled: true`, with `committed` following whether those journals are tracked by git — and writes nothing otherwise, so logging stays off (the backbone migration `1.150.0/001-keep-process-journal-logging.sh`). It decides from the clone it runs in: a project whose journals lived only in other clones turns logging on itself.
 
 ## Binding a process (how a capability uses this)
 
@@ -400,12 +423,14 @@ src/project_kit/process.py          # the engine (in the binary; ADR-020 — NOT
 .pkit/capabilities/<capability>/schemas/<process>.yaml
                                     # each capability's own conforming process definition (instance)
 .pkit/capabilities/<capability>/project/process/<process-id>/<subject>.journal.jsonl
-                                    # per-subject journal — append-only JSONL, COMMITTED (it is the
-                                    # audit trail), in the capability's adopter-owned project/ subtree
-                                    # (sync-safe; the engine owns the path, capabilities don't declare it)
+                                    # per-subject journal — append-only JSONL, written only when the
+                                    # project enables journal logging; committed or git-ignored per
+                                    # `process.journal.committed`; in the capability's adopter-owned
+                                    # project/ subtree (sync-safe; the engine owns the path and the
+                                    # backbone its ignore pattern — capabilities don't declare it)
 ```
 
-The engine ships as a backbone CLI surface (`pkit process …`) homed in the binary per ADR-020 — capabilities never re-implement the state machine, they bind to it. The journal is project-owned, committed data.
+The engine ships as a backbone CLI surface (`pkit process …`) homed in the binary per ADR-020 — capabilities never re-implement the state machine, they bind to it. The journal, where kept, is project-owned data, committed or clone-local as the project chose.
 
 ## Grounding & status
 
