@@ -5,3 +5,36 @@ component:
   version: 0.1.0
 description: Software analysis — actors, use cases, journeys and glossary kept as anchored artefacts and kept true by revalidation as the software changes.
 requires_backbone: ">=1.149.0,<2.0.0"
+aliases:
+  - analysis
+
+commands:
+  new:
+    script: scripts/new.py
+    help: "Stamp an analysis artefact under the analysis location (DEC-001 points 2 and 3): `new use-case <slug> --actor <ACT-id> [--area <area>]`, `new journey <slug> --actor <ACT-id> --step <UC-id> --step <UC-id> …`, `new actor <slug>`, `new term <slug>`; each takes --title or --name, and --path and --record for its anchors. A use case or journey gets the next free number on the default branch and in the working tree; an actor or term is `ACT-<slug>` / `TERM-<slug>`. Records the analysis location on first use."
+
+# COR-049 point 4 — where the analysis lives, relative to the internal root.
+docs:
+  locations:
+    analysis:
+      path: analysis
+      description: The analysis (DEC-001 point 2) — the glossary, the use-case model and the revalidation records; recorded the first time an artefact is stamped (COR-049 point 5), so a later change of root moves nothing.
+
+# COR-050 point 1 — the places holding this capability's anchored artefacts.
+# The revalidation records are an act, not an anchored artefact, so their
+# folder is not a place (DEC-001 point 2). No surface: the project declares the
+# code its analysis ought to cover.
+friction:
+  places:
+    - location: analysis
+      path: glossary.md
+      description: The glossary, one entry per term.
+    - location: analysis
+      path: use-case-model/actors.md
+      description: The actors, one entry per actor.
+    - location: analysis
+      path: use-case-model/use-cases
+      description: The use cases, one file each, in folders by functional area when the project groups them.
+    - location: analysis
+      path: use-case-model/journeys
+      description: The journeys, one file each.
