@@ -369,6 +369,28 @@ def test_resolution_error_collection_names_capability(rpr, rc) -> None:
     assert "not deployed" in msg
 
 
+def test_resolution_error_opt_out_names_the_entry(rpr) -> None:
+    """An invalid contribution opt-out (#148) names the offending entry and
+    points at the config key — not the transient-gh remediation."""
+    resolution = rpr.Resolution(
+        error=rpr.RequiredReviewersError(
+            kind=rpr.ERROR_OPT_OUT,
+            message="the reviewer-contribution opt-out list is invalid",
+            details=(
+                "review.agents.contributed_opt_out[0]: capability "
+                "`ux-ui-design` is not an installed capability contributing "
+                "reviewer requirements",
+            ),
+        )
+    )
+    msg = rpr._resolution_error_message(resolution)
+    assert "fail-closed" in msg
+    assert "contributed_opt_out[0]" in msg
+    assert "`ux-ui-design`" in msg
+    assert "review.agents.contributed_opt_out" in msg.split("Remediation:")[1]
+    assert "transient" not in msg
+
+
 def test_resolution_error_closing_issues(rpr, rc) -> None:
     resolution = rpr.Resolution(
         error=rpr.RequiredReviewersError(
@@ -461,6 +483,32 @@ def test_multi_reviewer_invokes_baseline_plus_contributed(rpr, monkeypatch, tmp_
     rc_code = rpr.main()
     assert rc_code == 0
     assert invoked == ["reviewer", "design-reviewer"]
+
+
+def test_opted_out_contribution_is_listed_with_its_reason(
+    rpr, monkeypatch, tmp_path, capsys,
+) -> None:
+    """#148: review-pr names each opt-out in force, with its reason, next to
+    the reviewers it invokes — and does not invoke the opted-out reviewer."""
+    (opt_out,) = rpr.read_opt_outs({"review": {"agents": {"contributed_opt_out": [{
+        "capability": "software-engineering",
+        "reviewer": "docs-reviewer",
+        "reason": "Docs are reviewed by the tech-writing team.",
+    }]}}}).entries
+    resolution = rpr.Resolution(
+        required_local=("reviewer", "code-reviewer"),
+        contributed_by={"code-reviewer": "software-engineering"},
+        opted_out=(opt_out,),
+    )
+    invoked: list[str] = []
+    _wire_main(rpr, monkeypatch, tmp_path, resolution=resolution, invoked=invoked)
+    assert rpr.main() == 0
+    assert invoked == ["reviewer", "code-reviewer"]
+    out = capsys.readouterr().out
+    assert (
+        "  opted out: docs-reviewer (capability `software-engineering`) — "
+        "Docs are reviewed by the tech-writing team."
+    ) in out
 
 
 def test_fail_closed_resolution_aborts_without_invoking(rpr, monkeypatch, tmp_path) -> None:

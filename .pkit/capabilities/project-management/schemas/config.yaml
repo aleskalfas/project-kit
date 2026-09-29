@@ -91,6 +91,10 @@ has_projects_v2_board: false
 #     effort: medium                  # one uniform reviewer effort; absent = harness default (#1046)
 #     local_registered:
 #       - name: pm-reviewer
+#     contributed_opt_out:            # per DEC-032 — withdraw one contributed reviewer (#148)
+#       - capability: software-engineering
+#         reviewer: docs-reviewer
+#         reason: "Docs are reviewed by the tech-writing team."
 #
 # mesh_peers:                         # per DEC-022
 #   - github://owner/repo

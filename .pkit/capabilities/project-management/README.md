@@ -15,7 +15,7 @@ pkit:
         - .pkit/capabilities/project-management/decisions/**
       record: [COR-017, COR-020, COR-021, COR-023, COR-039, COR-053, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050]
     revalidated:
-      at: 2026-09-29T17:45:44Z
+      at: 2026-09-29T17:38:07Z
       outcome: updated
 ---
 
@@ -194,7 +194,7 @@ Each kit-label check runs only where the kit's own `<axis>:*` labels are that ax
 | `mandatory-issue-state.yaml` present + valid | schema / DEC-019 |
 | Mesh config URIs valid | config / DEC-022 |
 | `hooks.yaml` shape + per-kind validation | hooks / DEC-024 |
-| `review:` block valid | config / DEC-027 + DEC-028 |
+| `review:` block valid; each contributed-reviewer opt-out listed with its reason | config / DEC-027 + DEC-028 + DEC-032 |
 | Title-prefix alignment (sample of open issues) | data quality — new in v0.17.0 (advisory: warns, never fails) |
 
 ### 4b. (Optional) Smoke-test the installation
@@ -559,6 +559,27 @@ For the local-agent path, run `pkit project-management review-pr <N>` after `rev
 Each reviewer subprocess is capped by a wall-clock **timeout** (seconds). It is a single uniform knob applied to every reviewer — deliberately not a per-agent map (COR-007). Resolution precedence: the `--timeout <seconds>` flag > the `PKIT_REVIEW_AGENT_TIMEOUT` env var > the default **1200**. The default is a *generous ceiling*, not a typical wait: reviewer agent runs are slow and variable (observed 300s to >600s on the same reviewer), so 1200s is meant to be hit only by a genuinely hung agent. (It was raised twice as the ceiling kept getting hit: 300s originally killed heavier reviewers out of the box — e.g. `code-reviewer` needs ~323s — and 600s still timed `code-reviewer` out on a real panel review.) A non-integer, zero, or negative value is a usage error (fail fast) rather than a silent fall-back (an empty or unset `PKIT_REVIEW_AGENT_TIMEOUT` is treated as absent and falls through to the default). When a timeout fires, the reviewer subprocess is killed, no verdict is posted, and `review-pr` exits 3 — so the DEC-028 approval gate stays unsatisfied for that reviewer until a re-run. Raise it further for an unusually slow reviewer with `pkit project-management review-pr <N> --timeout 1800`, or set `PKIT_REVIEW_AGENT_TIMEOUT` once in your environment.
 
 Each reviewer subprocess also reasons at one uniform **effort** level (#1046). A headless reviewer would otherwise inherit the operator's own interactive effort from their user settings, which a review pass rarely needs — and the only way to lower it was to lower the operator's own sessions with it. Resolution precedence: the `--effort <level>` flag > the `PKIT_REVIEW_AGENT_EFFORT` env var > `review.agents.effort` in the project config > unset, in which case nothing is passed and the harness default applies. Levels are the harness's own: `low`, `medium`, `high`, `xhigh`, `max`; anything else is a usage error naming its source, never a silent fall-back. Like the timeout, it is one value for every reviewer, not a per-agent map (COR-007) — per-agent model and effort policy belongs to agent front matter and its overlay override (#1047; the agents README, "Model and effort"). The two compose with one precedence: a value this knob resolves **wins** over a reviewer's front-matter or overlay effort — a run-time knob over a declaration, passed as the reviewer session's `--effort`; when the knob resolves nothing, nothing is passed and the reviewer's own effective effort applies (the harness default when that is unset too). Set it once in `review.agents.effort:`; raise it for one run with `pkit project-management review-pr <N> --effort high`.
+
+#### Opting out of a contributed reviewer (per [project-management:DEC-032-conditional-reviewer-requirements])
+
+An installed capability can contribute a required reviewer to the agent-mode gate — `software-engineering`, for instance, requires `code-reviewer`, `security-reviewer` and `docs-reviewer` on a code-carrying PR. Installing the capability is what turns its contributions on; there is no enable switch. When you want a capability's other content but not one of its gates, opt out of that one contribution in `project/config.yaml`:
+
+```yaml
+review:
+  agents:
+    local_registered:
+      - name: pm-reviewer
+    contributed_opt_out:
+      - capability: software-engineering    # the installed capability contributing it
+        reviewer: docs-reviewer             # the reviewer to stop requiring
+        reason: "Docs are reviewed by the tech-writing team."   # required
+```
+
+- **What it withdraws.** Every rule the named capability contributes for the named reviewer, diff-floor and classification alike. `review-pr` no longer invokes that reviewer and `done-work` no longer requires its APPROVED — no `--bypass` needed. The capability stays installed and its other contributions still apply (here `code-reviewer` and `security-reviewer`). An opted-out reviewer need not be deployed.
+- **What it never withdraws.** A reviewer you register yourself in `local_registered`, and the same reviewer contributed by another capability. The opt-out removes one capability's contribution, not the reviewer.
+- **Where it shows.** `pkit project-management pre-check` lists each opt-out as a `[skip]` line naming the reviewer, the capability and your reason. `review-pr` prints ``opted out: <reviewer> (capability `<capability>`) — <reason>`` under the reviewers it invokes, and a `done-work` refusal names it after the required set.
+- **Validation.** Each entry carries exactly `capability`, `reviewer` and a non-empty `reason`, and names a pair once; the config schema checks this at `pkit validate`. An entry naming a capability that is not installed, or a reviewer that capability does not contribute — a typo, or an entry left behind when you uninstall the capability — is an error: `pre-check` fails on it, and `review-pr` and `done-work` refuse until you fix or remove it, so an opt-out you meant never silently fails to apply.
+- **Yours to keep.** The opt-out lives in your `project/config.yaml`, which `pkit sync` and capability upgrades never touch.
 
 #### Freeform comments — `comment-issue` / `comment-pr` (per [project-management:DEC-047-freeform-comment-verb])
 

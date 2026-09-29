@@ -34,16 +34,25 @@ consumers share:
   * unioning the baseline local names with the matched contributed reviewers
     (classification-matched ∪ floor-matched) and de-duplicating, preserving
     baseline-first order.
+  * applying the adopter's per-contribution opt-outs
+    (`review.agents.contributed_opt_out`, `_lib.review_opt_outs`, #148)
+    before any predicate is matched, so an opted-out contribution is neither
+    invoked nor gated — by both consumers alike.
 
 Fail-closed posture (DEC-032 D5)
 --------------------------------
 
-Resolution can fail in three structurally distinct ways, and the result type
+Resolution can fail in four structurally distinct ways, and the result type
 makes a consumer handle each before reading the set:
 
+  * **opt-out invalid** — the adopter's opt-out list is malformed, or names a
+    capability or reviewer no installed capability contributes. The adopter's
+    intent is unknown (a typo'd opt-out means a requirement they meant to
+    withdraw still stands), so the consumer refuses and names the entry.
   * **collection not ok** — a malformed contribution declaration or an
-    installed contribution naming an undeployed agent. The collection's
-    errors are surfaced; the required set is unsatisfiable, not smaller.
+    installed contribution naming an undeployed agent (unless that
+    contribution is opted out). The collection's errors are surfaced; the
+    required set is unsatisfiable, not smaller.
   * **closing-issue resolution unresolvable** — a transient `gh` failure
     resolving `closingIssuesReferences`, malformed JSON, an unreadable
     closing issue's labels, or invalid multi-value data on a
@@ -90,6 +99,15 @@ except ImportError:  # pragma: no cover - exercised via spec-loaded fallback
         collect_contributions as _default_collect_contributions,
     )
 
+try:
+    from _lib.review_opt_outs import NO_OPT_OUTS, ContributionOptOut, OptOuts
+except ImportError:  # pragma: no cover - exercised via spec-loaded fallback
+    from review_opt_outs import (  # type: ignore[no-redef]
+        NO_OPT_OUTS,
+        ContributionOptOut,
+        OptOuts,
+    )
+
 
 # Classification axes the required-reviewer resolution keys contributed
 # match-predicates on (DEC-012), read off a closing issue's `<axis>:<value>`
@@ -118,23 +136,29 @@ ERROR_CLOSING_ISSUES = "closing-issues-unresolvable"
 # Only reached when a floor-carrying rule exists — floor-free collections
 # never fetch the diff (DEC-032 amendment).
 ERROR_CHANGED_FILES = "changed-files-unresolvable"
+# The adopter's `review.agents.contributed_opt_out` list is malformed, or an
+# entry names a capability / reviewer no installed capability contributes
+# (#148). `details` carries one message per problem.
+ERROR_OPT_OUT = "opt-out-invalid"
 
 
 @dataclass(frozen=True)
 class RequiredReviewersError:
     """A structured reason the required set could not be resolved (DEC-032 D5).
 
-    `kind` is `ERROR_COLLECTION`, `ERROR_CLOSING_ISSUES`, or
-    `ERROR_CHANGED_FILES` so a consumer can branch on the failure class
-    without string-matching `message`. For a collection error, `collection`
-    is the failing `ContributionCollection` (its `errors` drive the
-    consumer's refusal text); for a closing-issue or changed-files failure it
-    is `None` and `message` carries the human-readable reason.
+    `kind` is `ERROR_COLLECTION`, `ERROR_CLOSING_ISSUES`,
+    `ERROR_CHANGED_FILES`, or `ERROR_OPT_OUT` so a consumer can branch on the
+    failure class without string-matching `message`. For a collection error,
+    `collection` is the failing `ContributionCollection` (its `errors` drive
+    the consumer's refusal text); for an opt-out error `details` lists each
+    problem, one per offending entry; otherwise both are empty and `message`
+    carries the human-readable reason.
     """
 
     kind: str
     message: str
     collection: ContributionCollection | None = None
+    details: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -150,14 +174,19 @@ class Resolution:
         deploy-resolution status). Empty for the baseline-only branch.
       * `contributed_by` — reviewer-name → contributing-capability map, for
         provenance in messages (baseline reviewers are absent from it).
+      * `opted_out` — the adopter's opt-outs in force (#148): contributions
+        withdrawn from this resolution, each with its reason, for the
+        consumers to show. Project-wide, not per PR: an entry is listed
+        whether or not its contribution would have matched this PR.
 
     On failure (`ok is False`): `error` is populated and the set fields are
-    empty. The two failure kinds are both fail-closed per DEC-032 D5.
+    empty. Every failure kind is fail-closed per DEC-032 D5.
     """
 
     required_local: tuple[str, ...] = ()
     contributed_rules: tuple[ContributionRule, ...] = ()
     contributed_by: dict[str, str] = field(default_factory=dict)
+    opted_out: tuple[ContributionOptOut, ...] = ()
     error: RequiredReviewersError | None = None
 
     @property
@@ -220,6 +249,7 @@ def resolve_required_local_reviewers(
     closing_issue_numbers: ClosingIssueNumbersFn,
     issue_labels: IssueLabelsFn,
     changed_files: ChangedFilesFn,
+    opt_outs: OptOuts = NO_OPT_OUTS,
     collect_contributions: Callable[
         [Path], ContributionCollection
     ] = _default_collect_contributions,
@@ -237,6 +267,12 @@ def resolve_required_local_reviewers(
     this module free of substrate and unit-testable. `collect_contributions`
     is injectable for the same reason and defaults to the real collector.
 
+    `opt_outs` is the adopter's per-contribution opt-out list
+    (`review_opt_outs.read_opt_outs(config)`, #148). Its contributions are
+    withdrawn from the collection before anything is matched, so an opted-out
+    reviewer is neither in `required_local` nor able to fail the collection
+    on an undeployed agent; the baseline term is untouched. Default: none.
+
     The contributed set is the UNION of two match paths (DEC-032 amendment):
 
       * **classification** — rules whose match-predicate holds for the
@@ -251,15 +287,23 @@ def resolve_required_local_reviewers(
     baseline-∪-contributed set; on failure (`ok is False`), `error` carries
     the fail-closed reason (DEC-032 D5) and the set fields are empty.
 
-    Order of the fail-closed checks: the collection is gated FIRST (a
+    Order of the fail-closed checks: the opt-out list's shape first (it needs
+    nothing collected), then the collection with the opt-outs applied (a
     malformed declaration or undeployed contributed agent is unsatisfiable
-    regardless of what the PR closes), then closing-issue resolution, then —
-    only when a floor-carrying contribution is installed — changed-files
-    resolution. Any failing yields a non-ok `Resolution`. A collection with no
-    floor-carrying rule never fetches the diff, so a floor-free project pays
-    no extra `gh` round-trip and cannot fail on a diff it does not consult.
+    regardless of what the PR closes), then that every opt-out names an
+    installed contribution (after the collection, so a broken declaration is
+    reported as itself rather than as an opt-out naming nothing), then
+    closing-issue resolution, then — only when a floor-carrying contribution
+    remains — changed-files resolution. Any failing yields a non-ok
+    `Resolution`. A collection with no floor-carrying rule never fetches the
+    diff, so a floor-free project pays no extra `gh` round-trip and cannot
+    fail on a diff it does not consult.
     """
-    collection = collect_contributions(repo_root)
+    if not opt_outs.ok:
+        return _opt_out_error(opt_outs.errors)
+
+    installed = collect_contributions(repo_root)
+    collection = opt_outs.apply(installed)
     if not collection.ok:
         return Resolution(
             error=RequiredReviewersError(
@@ -268,6 +312,10 @@ def resolve_required_local_reviewers(
                 collection=collection,
             )
         )
+
+    problems = opt_outs.problems_against(installed)
+    if problems:
+        return _opt_out_error(tuple(message for _entry, message in problems))
 
     classifications = _closing_issue_classifications(
         pr_number,
@@ -304,6 +352,18 @@ def resolve_required_local_reviewers(
         required_local=required_local,
         contributed_rules=contributed_rules,
         contributed_by=contributed_by,
+        opted_out=opt_outs.entries,
+    )
+
+
+def _opt_out_error(details: tuple[str, ...]) -> Resolution:
+    """A fail-closed `Resolution` for an invalid opt-out list (#148)."""
+    return Resolution(
+        error=RequiredReviewersError(
+            kind=ERROR_OPT_OUT,
+            message="the reviewer-contribution opt-out list is invalid",
+            details=details,
+        )
     )
 
 
