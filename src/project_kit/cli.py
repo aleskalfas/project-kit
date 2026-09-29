@@ -3073,7 +3073,8 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
 
     if not dry_run:
         # Re-run installed adapter primitives so the harness side picks
-        # up any newly-added skills/agents from the upgraded capability.
+        # up any newly-added skills/agents from the upgraded capability,
+        # then provision its query commands, as sync would (#1090).
         from project_kit import install as install_mod
         ctx = install_mod.InstallContext(
             target_root=target_root,
@@ -3081,6 +3082,7 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
             dry_run=False,
         )
         install_mod.run_installed_adapter_primitives(ctx)
+        install_mod.provision_query_commands(ctx, component=name)
 
 
 @main.command()
@@ -4536,7 +4538,9 @@ def install_capability_cmd(name: str, dry_run: bool, plan: bool, as_json: bool) 
         # the capability's newly-copied skills and agents (e.g.,
         # deploy-skills.sh symlinks them into .claude/skills/).
         # Mirrors what `pkit capabilities upgrade` does after refresh and
-        # what `pkit init` does after its first-time copy.
+        # what `pkit init` does after its first-time copy. Then provision the
+        # capability's query commands, so an offline `pkit validate` answers
+        # without a `pkit sync` first (#1090).
         from project_kit import install as install_mod
         ctx = install_mod.InstallContext(
             target_root=target_root,
@@ -4544,6 +4548,7 @@ def install_capability_cmd(name: str, dry_run: bool, plan: bool, as_json: bool) 
             dry_run=False,
         )
         install_mod.run_installed_adapter_primitives(ctx)
+        install_mod.provision_query_commands(ctx, component=name)
 
 
 @capabilities.command("register")
@@ -4759,7 +4764,8 @@ def register_capability_cmd(name: str, dry_run: bool) -> None:
     if not dry_run:
         # Run the SAME deploy primitives a kit-source install runs, so the
         # capability's skills/agents land in the harness (COR-031 D1: deploy
-        # is identical regardless of origin).
+        # is identical regardless of origin) — its query-command provisioning
+        # included (#1090).
         from project_kit import install as install_mod
         ctx = install_mod.InstallContext(
             target_root=target_root,
@@ -4767,6 +4773,7 @@ def register_capability_cmd(name: str, dry_run: bool) -> None:
             dry_run=False,
         )
         install_mod.run_installed_adapter_primitives(ctx)
+        install_mod.provision_query_commands(ctx, component=name)
 
 
 def _upgrade_incubated_capability(
@@ -4811,6 +4818,7 @@ def _upgrade_incubated_capability(
             dry_run=False,
         )
         install_mod.run_installed_adapter_primitives(ctx)
+        install_mod.provision_query_commands(ctx, component=name)
 
 
 def _check_backbone_satisfied(

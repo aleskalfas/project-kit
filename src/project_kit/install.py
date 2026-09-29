@@ -683,19 +683,24 @@ def ensure_agent_workspace(ctx: InstallContext) -> None:
         click.echo(f"  {verb:<12} {detail}")
 
 
-def provision_query_commands(ctx: InstallContext) -> None:
+def provision_query_commands(ctx: InstallContext, *, component: str | None = None) -> None:
     """Resolve every registered query command's environment once, online (#1092).
 
     A core step shared by `init` and `sync` — self-host included, where it is
     what readies the methodology's own checkout for an offline `pkit validate`.
     Runs after the manifest is stamped, so every registered component is read.
-    Idempotent, and never a failure: a command that cannot be provisioned is a
-    warning line. See `project_kit.provisioning`. Local import, like the
-    renderer's: the package reader stays off the install hot path.
+    The capability verbs that bring one capability in — `capabilities install`,
+    `register` and `upgrade` — run it for that *component* alone, after it is
+    registered, so its query commands answer offline without a `pkit sync`
+    (#1090). Idempotent, and never a failure: a command that cannot be
+    provisioned is a warning line. See `project_kit.provisioning`. Local import,
+    like the renderer's: the package reader stays off the install hot path.
     """
     from project_kit import provisioning
 
-    for verb, detail in provisioning.ensure(ctx.target_root, dry_run=ctx.dry_run):
+    for verb, detail in provisioning.ensure(
+        ctx.target_root, dry_run=ctx.dry_run, component=component
+    ):
         click.echo(f"  {verb:<12} {detail}")
 
 
