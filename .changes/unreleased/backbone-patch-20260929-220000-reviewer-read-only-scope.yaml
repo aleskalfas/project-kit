@@ -1,0 +1,16 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  A reviewer's read-only claim is stated as a property of the reviewer role:
+  it governs the work under review and the repository it lives in, not
+  "writes nothing anywhere", and a reviewer that can execute keeps every
+  working file of a review — a dumped diff, a script, a reproduction (even
+  one that executes a payload to prove a defect), captured output — in the
+  agent workspace, leaving no file of its own outside it. The agents README
+  gains a "Reviewers" paragraph with the rule; the core
+  `methodology-reviewer` and `convention-compliance-reviewer` carry the
+  shared `## What read-only covers` section and scope their read-only
+  claims; the `agent-author` skill and the `pkit new agent` template point a
+  new reviewer's author at the section.

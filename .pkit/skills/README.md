@@ -10,8 +10,9 @@ pkit:
         - .pkit/adapters/claude-code/deploy-skills.sh
       record: [COR-003, COR-005, COR-006, COR-013, COR-015, COR-020]
     revalidated:
-      at: 2026-09-29T15:15:41Z
-      outcome: updated
+      at: 2026-09-29T17:28:46Z
+      outcome: unchanged
+      unchanged-because: agent-author gained one body-drafting bullet on a reviewer's scoped read-only claim and its shared section; the skills area's layout, pairing and deploy described here are unchanged
 ---
 
 # Skills

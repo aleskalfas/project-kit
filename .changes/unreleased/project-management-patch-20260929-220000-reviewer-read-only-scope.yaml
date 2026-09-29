@@ -1,0 +1,13 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The `pm-reviewer` agent states its read-only claim precisely: it never
+  changes the pull request, a tracked file, the repository or the issue
+  tracker, which is not "writes nothing anywhere". Its body gains the
+  `## What read-only covers` section every reviewer that can execute
+  carries: the working files a review needs — a dumped diff, a script, a
+  reproduction, captured output — go in the agent workspace, never loose in
+  the repository, where an author's `git add` would commit them, nor in
+  `/tmp/`, and a review leaves no file of its own outside the workspace.

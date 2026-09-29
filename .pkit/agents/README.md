@@ -17,9 +17,8 @@ pkit:
         - .pkit/adapters/claude-code/_resolve_agent.py
       record: [COR-005, COR-006, COR-011, COR-013, COR-014, COR-015, COR-016, COR-026, COR-049, ADR-051, ADR-052]
     revalidated:
-      at: 2026-09-29T16:17:35Z
-      outcome: unchanged
-      unchanged-because: docs_roots gained only a reader of the root a location's declaration names, for pkit friction artefacts; how an agent's overlay locations derive from the roots is unchanged
+      at: 2026-09-29T17:28:40Z
+      outcome: updated
 ---
 
 # Agents
@@ -109,6 +108,8 @@ Body prose cites the same references the frontmatter declares. The validator ext
 The discipline: cite paths in backticks, cite records by ID, mention hooks by name. The validator can extract unambiguously without ad-hoc prose parsing.
 
 **Intermediate files.** Every shipped agent body ends with the same one-sentence section telling the agent to keep its intermediate files in the agent workspace, `.agent-workspace/` at the repository root, and nowhere else outside the repository, writing them with the file tools — a shell redirect into the folder is judged like any other shell write (the workspace rule in `.pkit/rules/core.md`); `pkit new agent` stamps it. Keep the wording identical across bodies, so one search finds every agent that carries it.
+
+**Reviewers.** A reviewer — an agent that judges work and returns a verdict or findings, such as COR-024's reviewer stack or a capability's review panel — is read-only on what it judges: it never changes the work under review or the repository it lives in, no tracked file edited and nothing staged, committed or pushed, because its verdict is worth only its independence. That is the whole claim. It does not mean the reviewer writes nothing: one that can execute, a shell among its tools, may need working files to review well — a dumped diff, a script, a reproduction that executes a payload to prove a defect, captured output — and every one goes in the agent workspace, never loose in the repository, where an author's `git add` sweeps it into a commit, and never in `/tmp/`; a review leaves no file of its own outside the workspace. The rule belongs to the role, not to one agent, so every reviewer that can execute carries the same `## What read-only covers` section just before its `## Intermediate files`, word for word — copy it from a shipped reviewer such as `.pkit/agents/core/methodology-reviewer.md` — and states any read-only claim elsewhere in its body and description with that scope.
 
 ## Reference graph and bidirectional consistency
 

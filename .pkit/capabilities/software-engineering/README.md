@@ -13,7 +13,7 @@ pkit:
         - .pkit/capabilities/software-engineering/skills/**
       record: [COR-013, COR-024, COR-026, COR-030, ADR-013, ADR-052, "project-management:DEC-015", "project-management:DEC-028", "project-management:DEC-032"]
     revalidated:
-      at: 2026-09-29T15:23:52Z
+      at: 2026-09-29T17:28:42Z
       outcome: updated
 ---
 
@@ -35,7 +35,7 @@ It deliberately ships **no conventions content** — the conventions corpus is a
 
 ## The code-review panel
 
-The panel ([software-engineering:DEC-002-code-review-panel]) closes bug #715: before it, the merge gate assessed conventions but nothing reviewed the code, so a PR with real security defects could pass `APPROVED`. Three read-only reviewer agents each emit the [project-management:DEC-028] verdict grammar (`Reviewer agent (local, <name>): APPROVED | CHANGES_REQUESTED` plus the `<!-- pkit-verdict -->` marker) so they fold through the *existing* binary all-must-approve gate — no new aggregation.
+The panel ([software-engineering:DEC-002-code-review-panel]) closes bug #715: before it, the merge gate assessed conventions but nothing reviewed the code, so a PR with real security defects could pass `APPROVED`. Three reviewer agents each emit the [project-management:DEC-028] verdict grammar (`Reviewer agent (local, <name>): APPROVED | CHANGES_REQUESTED` plus the `<!-- pkit-verdict -->` marker) so they fold through the *existing* binary all-must-approve gate — no new aggregation. Each is read-only on what it reviews — it never changes the pull request or the repository — and keeps the working files a review needs, a dumped diff or a reproduction, in the agent workspace (the agents README's "Reviewers" paragraph).
 
 | Agent | Remit | Blocks (CHANGES_REQUESTED) on | Advises (APPROVED-with-comments) on |
 |---|---|---|---|
