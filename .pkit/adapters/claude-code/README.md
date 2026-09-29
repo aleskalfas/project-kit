@@ -13,7 +13,7 @@ Translates kit content for the [Claude Code](https://docs.claude.com/en/docs/cla
 ├── merge-claude-md.sh                 # ensures root CLAUDE.md loads the kit rules via @-includes
 ├── deploy-skills.sh                   # creates .claude/skills/ symlinks pointing back at .pkit/skills/
 ├── deploy-agents.sh                   # writes resolved agent copies into .claude/agents/
-├── _resolve_agent.py                  # resolves one agent: overlay placeholders, model and effort
+├── _resolve_agent.py                  # resolves one agent: overlay placeholders, model and effort, storyboard paths
 ├── permission-enforcement.yaml        # which permission dimensions this harness realizes, and via which layer
 └── permission-hook.py                 # the PreToolUse enforcement hook (registered by `pkit permissions enable`)
 ```
@@ -58,6 +58,8 @@ Writes each kit-shipped agent as a **resolved copy** at `.claude/agents/<name>.m
 **Model and effort** (#1047). Claude Code reads a `model:` and an `effort:` key from an agent definition's front matter (verified against Claude Code 2.1.283: `effort` takes `low`, `medium`, `high`, `xhigh`, `max`, or an integer; `model` takes `inherit`, an alias or a full model name). The resolver writes both under those names, taking each from the overlay's `overrides.<agent>.model` / `.effort` when set, else from the agent's front matter. It writes **nothing** for an absent or `inherit` value — so a shipped agent that sets neither deploys exactly as before, and the harness default applies: a dispatched agent inherits its caller's model and effort. A value outside the accepted set (the named effort levels only; the integer form is not part of the methodology's vocabulary) is not written: the agent still deploys, inherits, and the run prints a `warning` line naming the value. The accepted values, the precedence and the `pkit agents` report are specified in the agents README, "Model and effort".
 
 **Precedence with `review-pr --effort`.** A run-time effort resolved by `review-pr` (the project-management capability's `--effort` flag, `PKIT_REVIEW_AGENT_EFFORT`, or `review.agents.effort`) wins over the agent's deployed `effort:` — a run-time knob over a declaration. `review-pr` realises it by passing the value as the reviewer session's `--effort`, the harness's session-level setting (the same shape by which a `--model` flag wins over an `--agent`'s `model:`). When `review-pr` resolves none it passes nothing, and the deployed value applies.
+
+**Storyboard references** (#1101). An agent that drives scripted scenarios declares its storyboards (COR-016) in `storyboards:` and cites them in its body. The source names a storyboard by its bare sibling filename (`storyboard.md`), which stays right wherever the agent's folder lives — core, project or a capability. The deployed copy lives in `.claude/agents/`, where that name resolves to nothing, so the resolver rewrites each entry naming a file beside the source to the storyboard's project-root-relative source path, in the list and wherever the body cites the entry as a whole path; the runtime reads the storyboard from there with its `Read` tool. An entry already written as a source path deploys unchanged. The convention is stated in the agents README, "Frontmatter declaration" under "Storyboards".
 
 ### Live permission enforcement (`permission-hook.py`)
 

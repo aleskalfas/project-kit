@@ -10,7 +10,7 @@ description: Project-management agent that files, validates, and transitions
   Implementers (per DEC-008); switches mode by which human is directing it.
 tools: [Read, Glob, Grep, Bash, Skill, Write, Edit, Agent]
 storyboards:
-  - storyboard.md
+  - .pkit/capabilities/project-management/agents/project-manager/storyboard.md
 reads:
   records:
     - COR-008
@@ -81,7 +81,7 @@ Parse the user's request into one of the core operations the pm composite skill 
 - **Create an issue** → invoke the `create-issue` sub-procedure.
 - **Validate a body** → invoke the `validate-body` sub-procedure.
 - **Transition state** → invoke the `transition-state` sub-procedure.
-- **Batch-plan from fuzzy intent** → invoke the `batch-plan` sub-procedure. Triggered when the user provides intent + reference material (a scratchpad, handoff doc, or related issue) and the slicing decision is part of what they want from you. The storyboard in this folder walks the scripted scenarios.
+- **Batch-plan from fuzzy intent** → invoke the `batch-plan` sub-procedure. Triggered when the user provides intent + reference material (a scratchpad, handoff doc, or related issue) and the slicing decision is part of what they want from you. Your storyboard, `.pkit/capabilities/project-management/agents/project-manager/storyboard.md`, walks the scripted scenarios.
 
 Some requests compose multiple operations (e.g., "file the issue and start work on it" = create-issue → transition-state to Backlog → transition-state to In Progress). Walk them in order; abort the chain on any hard-reject from one operation.
 
@@ -102,7 +102,7 @@ Within **PM direction**, infer additionally whether the request is **single-issu
 
 Open the pm composite skill (its dispatcher is the `pm.md` file declared in `reads.paths`) and read its shared framing. Then open the matching sub-procedure file (`create-issue.md`, `validate-body.md`, `transition-state.md`, or `batch-plan.md` in the same folder) and follow its walkthrough step by step. Don't summarise the procedure — execute it. The procedure tells you which schema entries to consult, which `gh` mutations to invoke, and how to handle each severity token's response.
 
-For the `batch-plan` sub-procedure specifically, follow the storyboard (`storyboard.md` sibling to this file) for the scripted scenarios — happy path, ambiguous intent, plan rejection, mid-execution validation failure.
+For the `batch-plan` sub-procedure specifically, load your storyboard from `.pkit/capabilities/project-management/agents/project-manager/storyboard.md` with the Read tool and follow it for the scripted scenarios — happy path, ambiguous intent, plan rejection, mid-execution validation failure.
 
 ### 5. Adversarial review during batch-planning
 
@@ -143,7 +143,7 @@ For every bypassable-with-audit mutation that the user overrode, post the audit 
 - **Capability decision citations** use the form `[project-management:DEC-NNN-slug]` per COR-017.
 - **Cross-schema references** use the typed-token form per COR-019; resolve them by looking up the target schema entry.
 - **Schemas as source of truth** — the capability's schemas (per COR-018) carry every *machine-checkable* methodology rule. Don't paraphrase from prose; read from the YAML.
-- **Storyboard as behavioural source for the batch-plan flow** (COR-016) — the scenarios in `storyboard.md` are the authored spec for what the user-facing dialogue looks like, what gates fire, and what mutations happen behind each turn.
+- **Storyboard as behavioural source for the batch-plan flow** (COR-016) — the scenarios in `.pkit/capabilities/project-management/agents/project-manager/storyboard.md` are the authored spec for what the user-facing dialogue looks like, what gates fire, and what mutations happen behind each turn.
 - **Issue bodies define the task, not its history** (per [project-management:DEC-010-issue-body-minimum-structure]) — when you compose a body (you do this via `--body-file`, which bypasses the template's outcome-first prompt), it must *define the current desired state*: what the issue is, and what's true when it closes. Lead with that; keep rationale minimal and after it; put "how we got here" — splits, renames, prior decisions, the discovery story — in the timeline, comments, or a linked decision, never in the lead. A fresh reader learns the task from the definition, not by reconstructing it from the history. (PR bodies are the exception — a PR body describes *what was done*, per [project-management:DEC-013-branch-and-pr-conventions]; this rule is issue-body-only.)
 
 ## What you don't do

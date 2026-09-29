@@ -74,7 +74,7 @@ Parse the user's request into one of the core operations the pm composite skill 
 - **Create an issue** → invoke the `create-issue` sub-procedure.
 - **Validate a body** → invoke the `validate-body` sub-procedure.
 - **Transition state** → invoke the `transition-state` sub-procedure.
-- **Batch-plan from fuzzy intent** → invoke the `batch-plan` sub-procedure. Triggered when the user provides intent + reference material (a scratchpad, handoff doc, or related issue) and the slicing decision is part of what they want from you. The storyboard in this folder walks the scripted scenarios.
+- **Batch-plan from fuzzy intent** → invoke the `batch-plan` sub-procedure. Triggered when the user provides intent + reference material (a scratchpad, handoff doc, or related issue) and the slicing decision is part of what they want from you. Your storyboard, `storyboard.md`, walks the scripted scenarios.
 
 Some requests compose multiple operations (e.g., "file the issue and start work on it" = create-issue → transition-state to Backlog → transition-state to In Progress). Walk them in order; abort the chain on any hard-reject from one operation.
 
@@ -95,7 +95,7 @@ Within **PM direction**, infer additionally whether the request is **single-issu
 
 Open the pm composite skill (its dispatcher is the `pm.md` file declared in `reads.paths`) and read its shared framing. Then open the matching sub-procedure file (`create-issue.md`, `validate-body.md`, `transition-state.md`, or `batch-plan.md` in the same folder) and follow its walkthrough step by step. Don't summarise the procedure — execute it. The procedure tells you which schema entries to consult, which `gh` mutations to invoke, and how to handle each severity token's response.
 
-For the `batch-plan` sub-procedure specifically, follow the storyboard (`storyboard.md` sibling to this file) for the scripted scenarios — happy path, ambiguous intent, plan rejection, mid-execution validation failure.
+For the `batch-plan` sub-procedure specifically, load your storyboard from `storyboard.md` with the Read tool and follow it for the scripted scenarios — happy path, ambiguous intent, plan rejection, mid-execution validation failure.
 
 ### 5. Adversarial review during batch-planning
 

@@ -5,16 +5,18 @@ it — friction-fix proposals, reader-review, onboarding — always as proposals
 person reviews. These tests hold the contract its files carry:
 
 - the **front matter**: read-only on the repository (no `Edit`, nothing owned),
-  `Write` only for the agent workspace, its storyboard declared by its source
-  path, no model or effort of its own;
+  `Write` only for the agent workspace, its storyboard declared by its bare
+  sibling filename (the agents README's convention), no model or effort of its
+  own;
 - the **references**: `pkit refs validate`'s checks find nothing in the agent's
-  folder (every record and path the body and storyboard cite is declared);
-- the **storyboard**: it names the agent back — the refs checks walk only the
-  agents area's storyboards, not a capability's — and scripts the three
-  scenarios, each with its four parts;
+  folder (every record and path the body and storyboard cite is declared, and
+  the storyboard and the agent name each other);
+- the **storyboard**: it names the agent back by its capability and scripts the
+  three scenarios, each with its four parts;
 - the **deployed copy**: `.claude/agents/living-docs.md` is what the Claude Code
   deploy writes from the source today, so a source edit without a redeploy
-  fails here rather than shipping a stale agent.
+  fails here rather than shipping a stale agent; it carries the storyboard's
+  source path, which is where the runtime reads it from.
 
 The deploy's resolver runs under this interpreter, not through its `uv`
 shebang, so no test reaches `uv` or the network.
@@ -95,12 +97,11 @@ def test_body_says_it_never_applies_or_runs_a_writer(agent):
     assert "`.agent-workspace/living-docs/`" in body
 
 
-def test_storyboard_is_declared_by_its_source_path(agent):
-    """The deployed copy lives elsewhere, so a bare sibling name would not resolve at run time."""
+def test_storyboard_is_declared_as_its_sibling(agent):
+    """The source names the storyboard beside it; the deploy rebases it (see the deployed copy)."""
     front, body = agent
-    declared = front["storyboards"]
-    assert declared == [str(STORYBOARD.relative_to(REPO))]
-    assert declared[0] in body
+    assert front["storyboards"] == [STORYBOARD.name]
+    assert f"`{STORYBOARD.name}`" in body
 
 
 def test_agent_inherits_model_and_effort(agent):
@@ -181,3 +182,12 @@ def test_deployed_copy_matches_the_source():
     assert DEPLOYED.read_text(encoding="utf-8") == expected, (
         "stale deployed copy: run `bash .pkit/adapters/claude-code/deploy-agents.sh`"
     )
+
+
+def test_deployed_copy_reads_the_storyboard_from_its_source_path():
+    """The deployed copy lives in .claude/agents/, so it names the storyboard by its source path."""
+    front, body = _split(DEPLOYED)
+    source_path = str(STORYBOARD.relative_to(REPO))
+    assert front["storyboards"] == [source_path]
+    assert f"`{source_path}`" in body
+    assert (REPO / source_path).is_file()
