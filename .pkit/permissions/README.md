@@ -14,8 +14,9 @@ pkit:
         - src/project_kit/workspace.py
       record: [COR-028, PRJ-006, ADR-002, ADR-003, ADR-004, ADR-009, ADR-014, ADR-016, ADR-021, ADR-025, ADR-060]
     revalidated:
-      at: 2026-09-29T15:15:34Z
-      outcome: updated
+      at: 2026-09-29T18:04:57Z
+      outcome: unchanged
+      unchanged-because: ADR-009's Implications now name the upgrade migration beside visibility untrack; the permissions README's account of footprint visibility holds
 ---
 
 # Permissions — decision core

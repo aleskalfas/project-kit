@@ -12,8 +12,9 @@ pkit:
         - src/project_kit/visibility.py
       record: [COR-002, COR-005, COR-028, ADR-002, ADR-004, ADR-009, ADR-014, ADR-052, ADR-060, "project-management:DEC-030"]
     revalidated:
-      at: 2026-09-29T15:18:46Z
-      outcome: updated
+      at: 2026-09-29T18:04:56Z
+      outcome: unchanged
+      unchanged-because: ADR-009's Implications now name the upgrade migration as the second index-changing gesture under the same limits; the adapter's visibility section describes the untrack command, which is unchanged
 ---
 
 # Claude Code adapter
