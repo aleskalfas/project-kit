@@ -10,18 +10,29 @@ body: >
   and the steps, what to anchor, and when an actor or term is stamped
   `--unanchored-because <why>` instead of anchors. `pkit analysis new
   revalidation <slug> --change <ref> --trigger <trigger> --outcome
-  <id>=<outcome> … [--gap <text> --resolution <text>]…` writes
-  `revalidations/<date>-<slug>.md` only when there is something to say — a
-  planned revalidation, or one that found a regression or a gap — and refuses
-  a routine one, whose artefacts' own revalidations are its record. The
-  `analysis-resolver` agent, deployed with the other agents, proposes each
-  flagged artefact's outcome (holds, analysis-stale, code-regressed, gap-found)
-  with its evidence and, once you confirm, records it through `pkit friction
-  revalidate` and `pkit friction defer`; it never rewrites an artefact, and
-  when it cannot tell a stale analysis from regressed code it writes nothing
-  and asks you. `pkit analysis propose <artefact>` is the read-only rule it
-  stops by: from `pkit friction explain` and the code an artefact quotes from
-  its anchored files, it proposes holds, stale or regressed, leaves the change
-  to be read, or answers ambiguous with the question for a person. It needs
-  the backbone's `pkit friction explain`, so the capability requires the
-  backbone this release ships.
+  <id>=<outcome> … --because <id>=<why> … [--gap "<gap> => <resolution>"]…
+  [--by <who> | --by-agent <name> --confirmed-by <who>]` writes
+  `revalidations/<date>-<slug>.md`, dated in UTC, only when there is something
+  to say — a planned revalidation, one that found a regression or a gap, or
+  one where a person decided an artefact was stale — and refuses a routine
+  one, an outcome without its justification, and any text still holding a
+  placeholder. `pkit analysis validate` reports a regression still open — a
+  record's `code-regressed` artefact not revalidated since — and warns about
+  `unanchored-because` beside anchors; neither fails. The `analysis-resolver`
+  agent, deployed with the other agents, performs the judgment of a
+  revalidation: it proposes each flagged artefact's outcome (holds,
+  analysis-stale, code-regressed, gap-found) with its evidence and hands you
+  the exact commands that record it, running none of them; where it cannot
+  tell a stale analysis from regressed code it asks you, holding only what
+  depends on the answer. `pkit analysis propose <artefact>` is the read-only
+  rule it proposes by: from `pkit friction explain` and the code an artefact
+  quotes from its anchored files, it proposes holds where the code moved,
+  stale or regressed by the quotes you give it with their sources (a quote
+  from a commit checked against its message), leaves the change to be read
+  with the outcome it leans to, or answers ambiguous with the question, and
+  gives the writer commands for each outcome. It needs three things of the
+  backbone this release ships: `pkit friction explain`; the friction writers,
+  `pkit friction revalidate` and `pkit friction defer`, which its commands
+  are; and `pkit friction artefacts --at` with `pkit docs record-location`,
+  which the stamp reads and records the analysis location through. So the
+  capability requires that backbone.
