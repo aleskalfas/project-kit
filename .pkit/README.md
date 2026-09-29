@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-09-29T18:17:41Z
+      at: 2026-09-29T18:35:38Z
       outcome: unchanged
-      unchanged-because: the CLI and adapter READMEs were revalidated for the enforced documentation source and the settings consolidate section; the area map holds
+      unchanged-because: the process, CLI and schemas READMEs changed only within their own sections for opt-in journal logging (the journal section, the process.journal configuration keys, the config schema's key list); no area was added, moved or renamed, so the area map and its entry points hold
 ---
 
 # project-kit

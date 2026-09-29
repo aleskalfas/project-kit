@@ -15,9 +15,8 @@ pkit:
         - .pkit/capabilities/project-management/decisions/**
       record: [COR-017, COR-020, COR-021, COR-023, COR-039, COR-053, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050]
     revalidated:
-      at: 2026-09-29T18:03:42Z
-      outcome: unchanged
-      unchanged-because: pm-reviewer scoped its read-only claim and gained Write for the workspace; the README's description of the reviewer holds
+      at: 2026-09-29T18:35:28Z
+      outcome: updated
 ---
 
 # project-management capability
