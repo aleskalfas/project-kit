@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-09-29T17:33:47Z
+      at: 2026-09-29T18:07:17Z
       outcome: unchanged
-      unchanged-because: "The area table holds: the adapters, lifecycle, CLI and agents READMEs gained the undeploy primitive beside the deploy ones, and each area's one-line purpose here is unchanged."
+      unchanged-because: "the CLI and agents READMEs were revalidated for the capability namespace and precedence changes of #1111; the area map holds"
 ---
 
 # project-kit
