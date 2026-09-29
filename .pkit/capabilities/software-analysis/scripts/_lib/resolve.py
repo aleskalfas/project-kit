@@ -217,7 +217,7 @@ def propose(artefact: str, state: str, anchors: Sequence[Anchor], intent: Intent
 
 
 def _stale_or_regressed(artefact: str, grounds: Sequence[Anchor], intent: Intent) -> Verdict:
-    what = "; ".join(_disagreement(a) for a in grounds)
+    what = "; ".join(_disagreement(artefact, a) for a in grounds)
     if intent.contradicted is not None:
         what = f"{what}; read: {intent.contradicted}" if what else f"read: {intent.contradicted}"
     if intent.intended is not None and intent.unintended is None:
@@ -243,11 +243,11 @@ def _stale_or_regressed(artefact: str, grounds: Sequence[Anchor], intent: Intent
     )
 
 
-def _disagreement(anchor: Anchor) -> str:
+def _disagreement(artefact: str, anchor: Anchor) -> str:
     if anchor.state == "dead-anchor":
         return f"{anchor.label} resolves to nothing any more"
     if anchor.gone:
-        return f"{anchor.label} no longer holds {_quotes(anchor.gone)}, which it quotes"
+        return f"{anchor.label} no longer holds {_quotes(anchor.gone)}, which {artefact} quotes"
     return f"{anchor.label} changed"
 
 

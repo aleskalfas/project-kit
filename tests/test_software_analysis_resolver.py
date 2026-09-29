@@ -144,7 +144,7 @@ def test_each_shape_of_evidence_decides_what_the_rules_say(
 def test_the_question_names_what_disagrees_the_commit_and_both_readings() -> None:
     verdict = R.propose("UC-001", "stale", [GONE], R.Intent())
     assert isinstance(verdict, R.Ambiguous)
-    assert "path:src/run.py no longer holds `run_suite`, which it quotes" in verdict.question
+    assert "path:src/run.py no longer holds `run_suite`, which UC-001 quotes" in verdict.question
     assert "4c1d2e9aaaaa 'refactor: split the runner'" in verdict.question
     assert "the analysis is stale and UC-001 is updated" in verdict.question
     assert "the code regressed, a defect is reported and UC-001 stays as it is" in (
