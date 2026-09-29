@@ -13,7 +13,7 @@ pkit:
         - .pkit/capabilities/software-engineering/skills/**
       record: [COR-013, COR-024, COR-026, COR-030, ADR-013, ADR-052, "project-management:DEC-015", "project-management:DEC-028", "project-management:DEC-032"]
     revalidated:
-      at: 2026-09-29T15:17:33Z
+      at: 2026-09-29T15:23:52Z
       outcome: updated
 ---
 

@@ -228,9 +228,10 @@ def test_living_docs_validator_passes_over_this_tree() -> None:
     summary = document["summary"]
     assert summary[1].endswith("definition tech-docs/living-docs/rule-sets/user.md.")
     assert summary[2].endswith("definition tech-docs/living-docs/rule-sets/technical.md.")
-    # No page names a reader yet, so the readers point is not read.
+    # Every place is a page (#1010), each reader resolved against the readers point.
     assert summary[4] == (
-        "readers: no page names one yet, so pkit::documentation:readers is not read."
+        "readers (pkit::documentation:readers): maintainer, user; "
+        f"{len(_project_places())} page reader(s) checked."
     )
 
 

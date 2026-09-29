@@ -14,7 +14,7 @@ pkit:
       record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, ADR-019, ADR-039, ADR-055]
       artefact: [.pkit/decisions/README.md]
     revalidated:
-      at: 2026-09-29T15:20:28Z
+      at: 2026-09-29T15:23:53Z
       outcome: updated
 ---
 
