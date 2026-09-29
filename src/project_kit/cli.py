@@ -339,6 +339,55 @@ def config_set(key: str, value: str, yes: bool) -> None:
         click.echo(refreshed)
 
 
+@main.group("docs")
+def docs() -> None:
+    """Documentation roots and the locations derived from them (COR-049).
+
+    The roots are the configuration's `docs` key (`pkit config set
+    docs.internal <path>`); `pkit status` shows them and every recorded
+    location. Reference: `.pkit/cli/README.md`, "Configuration file".
+    """
+
+
+@docs.command("record")
+@click.argument("capability", metavar="CAPABILITY")
+@click.argument("location", metavar="LOCATION")
+def docs_record(capability: str, location: str) -> None:
+    """Record the documentation LOCATION of CAPABILITY where it now lies (COR-049 point 5).
+
+    A location a capability declares in its package metadata derives from a
+    documentation root until it is first used. The command that places the
+    first document there records it, in the capability's
+    `project/docs-locations.yaml`, so a later change of root moves nothing
+    already written. A location already recorded is never overwritten: the
+    command says where it lies and writes nothing. Running it is the consent
+    to the write — a capability's stamping command runs it when it places a
+    document. Exit 1 when CAPABILITY is not installed or declares no LOCATION.
+    """
+    from project_kit import docs_roots
+    from project_kit.friction_discovery import installed_capability_names
+
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    if capability not in installed_capability_names(target_root):
+        raise click.ClickException(f"no capability named {capability!r} is installed.")
+    found = docs_roots.capability_location(target_root, capability, location)
+    if found is None:
+        declared = sorted(docs_roots.capability_subpaths(target_root, capability))
+        raise click.ClickException(
+            f"{capability} declares no documentation location {location!r} in its "
+            f"`docs.locations` (declared: {', '.join(declared) or 'none'})."
+        )
+    where = found.path.as_posix()
+    if found.source is docs_roots.Source.EXPLICIT:
+        click.echo(f"{capability} {location} = {where}  (recorded already)")
+        return
+    docs_roots.record_location(target_root, capability, location, found.path, by="pkit docs record")
+    recorded_in = docs_roots.capability_locations_relpath(capability).as_posix()
+    click.echo(f"recorded {capability} {location} = {where}  ({recorded_in})")
+
+
 def _graph_format_options(command: Callable[..., None]) -> Callable[..., None]:
     """The output options both graph commands share (`process graph`, `connections
     graph`): the adjacency view by default, or one of three other formats."""
@@ -855,30 +904,48 @@ def friction_explain_command(artefact: str, as_json: bool) -> None:
 
 @friction.command("artefacts")
 @click.option(
+    "--at",
+    "at",
+    metavar="REV",
+    default=None,
+    help="Read the state of commit REV — its configuration, its places and its files — "
+    "from git objects instead of the working tree. Nothing is checked out.",
+)
+@click.option(
     "--json", "as_json", is_flag=True, default=False, help="Emit the stable JSON document."
 )
-def friction_artefacts_command(as_json: bool) -> None:
+def friction_artefacts_command(at: str | None, as_json: bool) -> None:
     """The declared places, the files they hold and the artefacts in them, as
     discovery finds them (COR-050 point 1).
 
-    One run of the discovery `pkit validate` reads, over the working tree:
-    each place — the project's and each capability's, with its location and
-    root — the files it matches and the skips validation applies (a synced
-    copy, a place outside the repository, a malformed declaration), every file
-    read with its front matter's own fields, and every artefact. Read-only. It
-    is how a capability's own script reads where artefacts are without
-    importing the backbone or walking the places itself. Exit 0 when answered;
-    1 when the configuration cannot be read; 2 on a usage error.
+    One run of the discovery `pkit validate` reads, over the working tree —
+    or, with --at, over one commit: each place — the project's and each
+    capability's, with its location and root — the files it matches and the
+    skips validation applies (a synced copy, a place outside the repository, a
+    malformed declaration), every file read with its front matter's own
+    fields, and every artefact with its anchors. Read-only. It is how a
+    capability's own script reads where artefacts are, now or at another
+    state, without importing the backbone or walking the places itself. Exit 0
+    when answered; 1 when the configuration cannot be read or REV names no
+    commit; 2 on a usage error.
     """
     from project_kit import friction_discovery, validators
 
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
-    problem = friction_discovery.unreadable_configuration(target_root)
+    tree = None
+    if at is not None:
+        commit = None if not at or at.startswith("-") else friction_check.commit_of(target_root, at)
+        if commit is None:
+            raise click.ClickException(f"--at {at!r} names no commit of this repository.")
+        tree = friction_check.CommitTree(target_root, commit)
+    problem = friction_discovery.unreadable_configuration(target_root, tree)
     if problem is not None:
         raise click.ClickException(f"{problem}; `pkit validate` reports it.")
-    document = validators.as_one_run(lambda: friction_discovery.artefacts_document(target_root))
+    document = validators.as_one_run(
+        lambda: friction_discovery.artefacts_document(target_root, tree)
+    )
     if as_json:
         click.echo(friction_discovery.render_artefacts_json(document), nl=False)
     else:

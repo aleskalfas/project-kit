@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-09-29T18:56:20Z
+      at: 2026-09-29T18:59:02Z
       outcome: unchanged
-      unchanged-because: the process, CLI and schemas READMEs changed only within their own sections for opt-in journal logging; the area map holds
+      unchanged-because: The CLI and schemas READMEs gained friction artefacts --at and docs record; this signpost still points to the same pages for commands and schemas, and names no command those additions change.
 ---
 
 # project-kit

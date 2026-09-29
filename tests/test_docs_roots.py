@@ -327,6 +327,52 @@ def test_record_location_for_a_capability_lands_in_its_project_namespace(
     assert recorded == dr.Location(Path("docs/guides"), dr.Source.EXPLICIT)
 
 
+def _docs_record(*args: str) -> tuple[int, str]:
+    result = CliRunner().invoke(main, ["--color", "never", "docs", "record", *args])
+    return result.exit_code, result.output
+
+
+def test_docs_record_records_a_derived_capability_location_once(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """`pkit docs record` is the backbone's recording on first use for a
+    capability's own script: it writes where the location lies now, once."""
+    repo = make_adopter_repo(capabilities=("project-management",))
+    _write_config(repo, "docs:\n  internal: tech-docs\n")
+    _declare_locations(repo, "project-management", "    guides: {path: guides}\n")
+    recorded_in = ".pkit/capabilities/project-management/project/docs-locations.yaml"
+    assert _docs_record("project-management", "guides") == (
+        0,
+        f"recorded project-management guides = tech-docs/guides  ({recorded_in})\n",
+    )
+    assert dr.recorded_capability_locations(repo.root, "project-management") == {
+        "guides": "tech-docs/guides"
+    }
+    # A later root change moves nothing already recorded, and recording again writes nothing.
+    _set_internal_root(repo, "handbook")
+    before = (repo.root / recorded_in).read_text(encoding="utf-8")
+    assert _docs_record("project-management", "guides") == (
+        0,
+        "project-management guides = tech-docs/guides  (recorded already)\n",
+    )
+    assert (repo.root / recorded_in).read_text(encoding="utf-8") == before
+
+
+def test_docs_record_refuses_what_no_installed_capability_declares(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    repo = make_adopter_repo(capabilities=("project-management",))
+    _declare_locations(repo, "project-management", "    guides: {path: guides}\n")
+    code, output = _docs_record("project-management", "notes")
+    assert code == 1
+    assert "declares no documentation location 'notes'" in output
+    assert "(declared: guides)" in output
+    code, output = _docs_record("living-docs", "definitions")
+    assert code == 1
+    assert "no capability named 'living-docs' is installed" in output
+    assert not dr.capability_locations_path(repo.root, "project-management").exists()
+
+
 def test_a_root_change_after_recording_moves_nothing(make_adopter_repo: MakeAdopterRepo) -> None:
     # COR-049 point 6: recorded locations are explicit; changing a root later
     # affects only locations chosen afterwards.
