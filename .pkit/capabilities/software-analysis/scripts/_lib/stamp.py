@@ -160,7 +160,9 @@ def _check_words(request: Request) -> None:
 
 
 def _check_references(analysis: Analysis, request: Request) -> None:
-    """A use case's and a journey's actor, and a journey's steps, are artefacts in force."""
+    """A use case's and a journey's actor, and a journey's steps, are artefacts in force:
+    what it stamps is in force, and the check holds it to the same rule
+    (`Analysis.unfit`)."""
     if request.kind in NUMBERED:
         if request.actor is None:
             raise Refused(f"{with_article(request.kind)} is one actor's: name it with --actor")
@@ -176,12 +178,12 @@ def _check_references(analysis: Analysis, request: Request) -> None:
 
 
 def _in_force(analysis: Analysis, artefact_id: str, kind: str) -> None:
-    found = analysis.find(artefact_id)
-    if found is None or found.kind != kind:
-        hint = f"`pkit analysis new {kind} <slug>`"
-        raise Refused(f"no {NOUN[kind]} {artefact_id} in the analysis: stamp it first, {hint}")
-    if found.withdrawn:
-        raise Refused(f"{NOUN[kind]} {artefact_id} is withdrawn ({found.location})")
+    problem = analysis.unfit(artefact_id, kind, in_force=True)
+    if problem is None:
+        return
+    if analysis.of(artefact_id, kind) is None:
+        problem += f": stamp it first, `pkit analysis new {kind} <slug>`"
+    raise Refused(problem)
 
 
 # --- the id ----------------------------------------------------------------------------------

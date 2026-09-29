@@ -315,6 +315,86 @@ def test_an_entry_missing_its_parts_or_keyed_by_a_foreign_id_is_reported(
     ]
 
 
+# --- what an artefact names (DEC-001 points 1, 3 and 6) ---------------------------------------
+
+
+def _set(repo: AdopterRepo, rel: str, old: str, new: str) -> None:
+    text = (repo.root / rel).read_text(encoding="utf-8")
+    assert old in text, (rel, old)
+    repo.write({rel: text.replace(old, new, 1)})
+
+
+JOURNEY = f"{JOURNEYS}/JRN-001-first-run.md"
+READ_REPORT = f"{USE_CASES}/UC-002-read-report.md"
+
+
+def test_a_journey_s_actor_is_an_actor_of_the_analysis(project: AdopterRepo) -> None:
+    """A journey's actor is no anchor, so nothing else resolves it."""
+    seed(project)
+    _set(project, JOURNEY, "actor: ACT-tester", "actor: ACT-nobody")
+    assert errors(check(project)) == [
+        (
+            f"{JOURNEY}:/actor",
+            "no actor ACT-nobody in the analysis: what a journey names is in the analysis "
+            "(DEC-001 point 3)",
+        )
+    ]
+
+
+def test_an_artefact_in_force_names_nothing_withdrawn_as_the_stamp_refuses(
+    project: AdopterRepo,
+) -> None:
+    seed(project)
+    stamped(project, "actor", "retired")
+    _set(
+        project, ACTORS, "  name: Retired\n  status: active", "  name: Retired\n  status: withdrawn"
+    )
+    _set(project, READ_REPORT, "actor: ACT-tester", "actor: ACT-retired")
+    _set(project, READ_REPORT, "- ACT-tester", "- ACT-retired")
+    _set(project, f"{USE_CASES}/UC-001-run-suite.md", "status: active", "status: withdrawn")
+    rule = (
+        "rests only on artefacts in force, as the stamp requires — withdraw it too, or name another"
+    )
+    assert errors(check(project)) == [
+        (
+            f"{READ_REPORT}:/actor",
+            f"actor ACT-retired is withdrawn ({ACTORS}#ACT-retired): a use case in force {rule} "
+            "(DEC-001 point 3)",
+        ),
+        (
+            f"{JOURNEY}:/steps/0",
+            f"use case UC-001 is withdrawn ({USE_CASES}/UC-001-run-suite.md): a journey in force "
+            f"{rule} (DEC-001 point 3)",
+        ),
+    ]
+    # The stamp refuses the same, and a withdrawn artefact may name withdrawn ones: it is history.
+    refused = run_script(project, NEW, "use-case", "later", "--actor", "ACT-retired")
+    assert "actor ACT-retired is withdrawn" in refused.stderr
+    _set(project, READ_REPORT, "status: active", "status: withdrawn")
+    _set(project, JOURNEY, "status: active", "status: withdrawn")
+    assert errors(check(project)) == []
+
+
+def test_a_record_cites_artefacts_of_the_analysis_withdrawn_ones_included(
+    project: AdopterRepo,
+) -> None:
+    seed(project)
+    _set(project, JOURNEY, "status: active", "status: withdrawn")
+    record = (CAPABILITY / "templates" / "revalidation-record.md").read_text(encoding="utf-8")
+    cited = record.replace(
+        "  UC-000: holds", "  UC-001: holds\n  JRN-001: analysis-stale\n  UC-009: gap-found"
+    )
+    rel = f"{RECORDS}/2026-10-01-first-run.md"
+    project.write({rel: cited})
+    assert errors(check(project)) == [
+        (
+            f"{rel}:/outcomes/UC-009",
+            "no artefact UC-009 in the analysis: a record's outcomes cite artefacts of the "
+            "analysis by id, withdrawn ones included (DEC-001 point 6)",
+        )
+    ]
+
+
 # --- anchors (DEC-001 point 4) ----------------------------------------------------------------
 
 

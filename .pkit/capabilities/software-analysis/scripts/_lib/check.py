@@ -18,14 +18,21 @@ What is checked, each against the record's words:
   The heading is read from the file discovery names.
 - **Duplicate ids** (point 3). No two artefacts in the analysis share an id,
   a number spelt with other zeros included — as the stamp counts it held.
+- **What a use case or journey names** (points 1 and 3): its actor, and a
+  journey's steps, are an actor and use cases of the analysis; and one in
+  force names none withdrawn. The stamp refuses the same (`Analysis.unfit`),
+  so the check never accepts what the stamp would not write; a withdrawn
+  artefact may name withdrawn ones.
 - **A use case anchors to its actor** (point 4), as an artefact anchor, so a
   changed actor flags it.
 - **A journey's anchors match its steps** (point 4): the use cases among its
   artefact anchors are exactly those `steps` lists, so the friction check sees
   every use case it passes through, and the two cannot drift apart.
 - **Revalidation records** (points 5 and 6): each record's front matter
-  against its schema. The records are not anchored artefacts and lie in no
-  place, so they are read from their folder under the analysis location.
+  against its schema, and the artefacts its outcomes cite are artefacts of the
+  analysis, withdrawn ones included. The records are not anchored artefacts
+  and lie in no place, so they are read from their folder under the analysis
+  location.
 
 It reads the working tree alone, so the same tree always answers the same.
 
@@ -89,9 +96,10 @@ def check(root: Path) -> Outcome:
     outcome.findings += _own_fields(analysis)
     outcome.findings += _headings(root, analysis)
     outcome.findings += _duplicates(analysis)
+    outcome.findings += _references(analysis)
     outcome.findings += _actor_anchors(analysis)
     outcome.findings += _journey_anchors(analysis)
-    outcome.findings += _record_findings(root, records)
+    outcome.findings += _record_findings(root, records, analysis)
     return outcome
 
 
@@ -192,6 +200,42 @@ def _duplicates(analysis: Analysis) -> list[Finding]:
     return found
 
 
+# --- what an artefact names ----------------------------------------------------------------
+
+
+def _references(analysis: Analysis) -> list[Finding]:
+    """A use case's and a journey's actor, and a journey's steps: artefacts of the
+    analysis, and in force for one in force — what the stamp refuses otherwise."""
+    found: list[Finding] = []
+    for artefact in analysis.artefacts:
+        if artefact.kind not in (USE_CASE, JOURNEY):
+            continue
+        named: list[tuple[str, object, str]] = [("/actor", artefact.fields.get("actor"), ACTOR)]
+        steps = artefact.fields.get("steps") if artefact.kind == JOURNEY else None
+        if isinstance(steps, list):
+            named += [(f"/steps/{i}", step, USE_CASE) for i, step in enumerate(steps)]
+        in_force = not artefact.withdrawn
+        for pointer, value, kind in named:
+            if not isinstance(value, str) or not schemas.id_pattern(kind).match(value):
+                continue  # the schema reports it
+            problem = analysis.unfit(value, kind, in_force=in_force)
+            if problem is None:
+                continue
+            if analysis.of(value, kind) is None:
+                rule = f"what {with_article(artefact.kind)} names is in the analysis"
+            else:
+                rule = (
+                    f"{with_article(artefact.kind)} in force rests only on artefacts in force, "
+                    f"as the stamp requires — withdraw it too, or name another"
+                )
+            found.append(
+                Finding(
+                    ERROR, at(artefact.location, pointer), f"{problem}: {rule} (DEC-001 point 3)"
+                )
+            )
+    return found
+
+
 # --- anchors -------------------------------------------------------------------------------
 
 
@@ -253,7 +297,7 @@ def _records(root: Path, location: str) -> list[Path]:
     )
 
 
-def _record_findings(root: Path, records: list[Path]) -> list[Finding]:
+def _record_findings(root: Path, records: list[Path], analysis: Analysis) -> list[Finding]:
     found: list[Finding] = []
     for path in records:
         rel = path.relative_to(root).as_posix()
@@ -280,4 +324,24 @@ def _record_findings(root: Path, records: list[Path]) -> list[Finding]:
             continue
         for pointer, message in schemas.errors(schemas.RECORD, data):
             found.append(Finding(ERROR, at(rel, pointer), message))
+        found += _cited(rel, data.get("outcomes"), analysis)
     return found
+
+
+def _cited(rel: str, outcomes: object, analysis: Analysis) -> list[Finding]:
+    """Each artefact a record's outcomes cite is one of the analysis — withdrawn ones
+    included, since a record cites them too (DEC-001 point 6)."""
+    if not isinstance(outcomes, dict):
+        return []  # the schema reports it
+    return [
+        Finding(
+            ERROR,
+            at(rel, f"/outcomes/{cited}"),
+            f"no artefact {cited} in the analysis: a record's outcomes cite artefacts of the "
+            f"analysis by id, withdrawn ones included (DEC-001 point 6)",
+        )
+        for cited in outcomes
+        if isinstance(cited, str)
+        and any(schemas.id_pattern(kind).match(cited) for kind in KINDS)
+        and analysis.find(cited) is None
+    ]

@@ -137,6 +137,28 @@ class Analysis:
         """The first artefact holding `artefact_id`."""
         return next((a for a in self.artefacts if a.id == artefact_id), None)
 
+    def of(self, artefact_id: str, kind: str) -> Artefact | None:
+        """The artefact of `kind` holding `artefact_id`, or `None`."""
+        found = self.find(artefact_id)
+        return found if found is not None and found.kind == kind else None
+
+    def unfit(self, artefact_id: str, kind: str, *, in_force: bool) -> str | None:
+        """Why an artefact cannot rest on `artefact_id` as its `kind` — a use case on its
+        actor, a journey on its actor and its steps — or `None` when it can.
+
+        What it names is an artefact of the analysis; and an artefact in force rests
+        only on artefacts in force, so a withdrawn actor or step is refused to it. A
+        withdrawn artefact may name a withdrawn one: it is history, as a revalidation
+        record citing a withdrawn artefact is (DEC-001 points 3 and 6). One rule for
+        the stamp, which writes artefacts in force, and the check, so the check never
+        accepts what the stamp refuses to write."""
+        found = self.of(artefact_id, kind)
+        if found is None:
+            return f"no {NOUN[kind]} {artefact_id} in the analysis"
+        if in_force and found.withdrawn:
+            return f"{NOUN[kind]} {artefact_id} is withdrawn ({found.location})"
+        return None
+
 
 def analysis_of(document: Mapping[str, Any]) -> Analysis:
     """The `pkit friction artefacts --json` document as the analysis. Raises
