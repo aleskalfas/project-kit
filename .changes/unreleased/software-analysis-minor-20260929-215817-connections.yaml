@@ -2,6 +2,7 @@ component: software-analysis
 kind: minor
 custom:
   category: Added
+  requires_backbone: release
 body: >
   Connections (DEC-001 points 7 and 8): the capability provides the
   `pkit::analysis` role and defines the `pkit::analysis:revalidation-evidence`
@@ -18,4 +19,6 @@ body: >
   fill-readers`: each actor a reader whose id is the actor's id in lower case
   (`ACT-tester` → `act-tester`) and whose description is its name and needs.
   The contribution is inert when no capability provides the documentation
-  role.
+  role. The check reads the evidence point through `pkit connections resolve`,
+  which the backbone this release ships adds: upgrade the capability together
+  with the backbone.
