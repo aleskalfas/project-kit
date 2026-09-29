@@ -1,0 +1,13 @@
+component: living-docs
+kind: patch
+custom:
+  category: Changed
+body: >
+  The spaces validator reads your documentation roots, the declared places, the
+  files each matches and their front matter through `pkit friction artefacts`,
+  the core's one discovery, instead of reading the declarations and matching
+  paths itself — so it can no longer disagree with the core about which files a
+  place holds. Its findings are the same, with one refinement: a synced copy a
+  place matches, which the core already refuses under `friction`, is no longer
+  also read as a page. When the core gives no reading of the places, the
+  validator answers one error and checks no space.

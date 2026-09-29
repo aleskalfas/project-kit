@@ -13,20 +13,26 @@ The capability's first artefacts, each held to living-docs DEC-001:
 - the **LDOC rule set** validating as a method rule set with its origins, and
   a space definition instantiated from the template inheriting it;
 - the **page template** validating — its own fields by the capability's
-  schema, its friction block by the core's.
+  schema, its friction block by the core's;
+- **one home for discovery**: the capability's scripts read the places and
+  their documents through `pkit friction artefacts` and carry no matcher,
+  listing or place reader of their own (#1099; ADR-057 point 2).
 
 The validator runs as a subprocess under this interpreter, as the backbone
 runs it (its `--json` findings document); where `pkit validate` runs it, the
 script's `uv run --script` shebang is pointed at this interpreter, and the
-`pkit` it reads the readers point through is the real CLI under this
-interpreter (`pkit_on_path`), so no test reaches `uv` or the network.
+`pkit` it reads the places and the readers point through is the real CLI under
+this interpreter (`pkit_on_path`), so no test reaches `uv` or the network.
 project-kit's own configuration passing is in `test_self_host_documentation.py`.
 """
 
 from __future__ import annotations
 
+import ast
 import io
 import json
+import os
+import re
 import subprocess
 import sys
 from collections.abc import Mapping
@@ -464,6 +470,35 @@ def test_a_space_without_a_definition_yet_is_reported(project: AdopterRepo) -> N
     assert reports == [f"{LD_CONFIG}:/spaces/user", f"{LD_CONFIG}:/spaces/technical"]
 
 
+# --- the places, read through the backbone --------------------------------------------
+
+
+def test_places_the_backbone_gives_no_reading_of_are_one_error_and_nothing_checked(
+    project: AdopterRepo,
+    pkit_on_path: Path,
+    tmp_path_factory: pytest.TempPathFactory,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A backbone without the read command: the spaces cannot be told, which is
+    one error — never a pass on no places."""
+    old = tmp_path_factory.mktemp("old-pkit")
+    (old / "pkit").write_text(
+        '#!/bin/sh\nif [ "$1" = friction ]; then echo "Error: No such command." >&2; exit 2; fi\n'
+        f'exec "{pkit_on_path}/pkit" "$@"\n',
+        encoding="utf-8",
+    )
+    (old / "pkit").chmod(0o755)
+    monkeypatch.setenv("PATH", f"{old}{os.pathsep}{os.environ['PATH']}")
+    document = run(project)
+    location, message = only_error(document)
+    assert location == CONFIG
+    assert message.startswith(
+        "the documentation places cannot be read — `pkit friction artefacts --json` exited 2 "
+        "without its document: Error: No such command. No space is checked until they can"
+    )
+    assert document["summary"][0] == "places unreadable: no space checked."
+
+
 # --- separation (DEC-001 point 1) --------------------------------------------------------
 
 
@@ -550,3 +585,80 @@ def test_the_page_template_validates_its_fields_and_its_friction_block() -> None
 @pytest.mark.parametrize("reader", ["User", "", 7, None, ["user"], "a reader"])
 def test_the_page_schema_refuses_a_wrong_reader(reader: Any) -> None:
     assert not _page_schema().is_valid({"reader": reader, "kind": "signpost"})
+
+
+# --- one home for discovery (#1099; ADR-057 point 2) -------------------------------------
+
+#: What re-reading the declarations or walking the places would take — each a
+#: pattern over a script's code (comments and docstrings left out) and what it
+#: would mean. Where artefacts are is the backbone's discovery, read through
+#: `pkit friction artefacts --json`; a second computation of it drifts.
+DISCOVERY_TOKENS = {
+    r"\bfnmatch\b": "a glob matcher (fnmatch)",
+    r"\b(?:import|from)\s+glob\b": "a glob matcher (glob)",
+    r"\.r?glob\(": "a walk by glob",
+    r"compile_glob|_segment_regex|pattern_matcher": "a ported glob matcher",
+    r"['\"]\*\*['\"]": "`**`-matching code",
+    r"\bos\.walk\b": "a walk of the working tree",
+    r"ls-files": "a listing of the working tree",
+    r"\.get\(\s*['\"]friction['\"]|\[\s*['\"]friction['\"]\s*\]": (
+        "`friction.places` parsing (the friction settings)"
+    ),
+    r"\.get\(\s*['\"]locations['\"]|docs-locations": "a capability's locations resolved",
+    r"manifest\.yaml": "the installed capabilities read",
+}
+
+
+def _code(text: str) -> str:
+    """A script's code without its comments and docstrings."""
+    tree = ast.parse(text)
+    for node in ast.walk(tree):
+        body = getattr(node, "body", None)
+        if (
+            isinstance(body, list)
+            and body
+            and isinstance(body[0], ast.Expr)
+            and isinstance(body[0].value, ast.Constant)
+            and isinstance(body[0].value.value, str)
+        ):
+            body[0] = ast.Pass()
+    return ast.unparse(tree)
+
+
+def _discovery_tokens(text: str) -> list[str]:
+    code = _code(text)
+    return [meaning for token, meaning in DISCOVERY_TOKENS.items() if re.search(token, code)]
+
+
+def test_the_guard_recognises_a_ported_discovery() -> None:
+    """The guard is not vacuous: the reading this capability carried before #1099
+    trips it, while prose about the same things does not."""
+    ported = (
+        '"""Places are read from `friction.places`, matched with fnmatch and `**`."""\n'
+        "import fnmatch\n"
+        "def _compile_glob(p):\n    return p.replace('**', '.*')\n"
+        "places = config.get('friction', {}).get('places')\n"
+        "listed = run(['git', 'ls-files'])\n"
+    )
+    assert _discovery_tokens(ported) == [
+        "a glob matcher (fnmatch)",
+        "a ported glob matcher",
+        "`**`-matching code",
+        "a listing of the working tree",
+        "`friction.places` parsing (the friction settings)",
+    ]
+    assert _discovery_tokens('"""fnmatch, `**`, ls-files and manifest.yaml, in prose."""\n') == []
+
+
+def test_the_capability_s_scripts_carry_no_discovery_of_their_own() -> None:
+    """living-docs reads the places, the files each matches and their front matter
+    through `pkit friction artefacts`; no script of it matches, lists or reads a
+    place declaration itself."""
+    scripts = sorted((CAPABILITY / "scripts").rglob("*.py"))
+    assert scripts
+    found = {
+        path.relative_to(CAPABILITY).as_posix(): tokens
+        for path in scripts
+        if (tokens := _discovery_tokens(path.read_text(encoding="utf-8")))
+    }
+    assert found == {}
