@@ -16,6 +16,7 @@ import re
 from typing import Any
 
 from ruamel.yaml import YAML
+from ruamel.yaml.comments import CommentedMap
 
 _FENCE = re.compile(r"^---[ \t]*$", re.MULTILINE)
 
@@ -24,6 +25,7 @@ _H1 = re.compile(r"^#[ \t]+(?P<text>.*?)(?:[ \t]+#+)?[ \t]*$")
 _CODE_FENCE = re.compile(r"^[ ]{0,3}(?P<fence>`{3,}|~{3,})")
 
 _safe = YAML(typ="safe")
+_round_trip = YAML()
 
 
 def front_matter_span(text: str) -> tuple[int, int] | None:
@@ -64,6 +66,16 @@ def heading(body: str) -> str | None:
         if found is not None:
             return found["text"]
     return None
+
+
+def key_lines(yaml_text: str) -> dict[str, int]:
+    """Each top-level key of the YAML mapping, and the line it is written on,
+    counted from 0; empty when the YAML is not a mapping. Raises ruamel's
+    YAMLError when it does not parse."""
+    data = _round_trip.load(io.StringIO(yaml_text))
+    if not isinstance(data, CommentedMap):
+        return {}
+    return {str(key): data.lc.key(key)[0] for key in data}
 
 
 def load(yaml_text: str) -> Any:

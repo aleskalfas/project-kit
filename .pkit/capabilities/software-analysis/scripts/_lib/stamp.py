@@ -9,9 +9,9 @@ the capability's places put it under the analysis location:
   included, since a number is never used again. Numbers two branches take in
   parallel are `pkit analysis check-numbers`' to report (point 3);
 - an **actor** or a **term** is a new entry, `ACT-<slug>` or `TERM-<slug>`, of
-  its collection file — added to its front matter, with its section at the
-  end of the body, every other byte left as it was — the file created from
-  the template the first time.
+  its collection file — added to its front matter, and its section to the
+  body, each where its id sorts, every other byte left as it was — the file
+  created from the template the first time.
 
 It writes the anchors DEC-001 point 4 asks for: a use case's actor, and a
 journey's use cases from its steps, beside the paths and records it is given.
@@ -64,6 +64,9 @@ TITLE = "<Title>"
 #: A journey template's step and seam lines, rewritten from the steps.
 _STEP_LINE = re.compile(r"^\d+\. UC-\d+ — (?P<rest>.*)$")
 _SEAM_LINE = re.compile(r"^- \*\*UC-\d+ → UC-\d+:\*\* (?P<rest>.*)$")
+
+#: A collection entry's section heading, `## <id> — <name>`.
+_SECTION = re.compile(r"^## (?P<id>\S+)")
 
 
 class Refused(Exception):
@@ -268,8 +271,11 @@ def _journey_body(body: str, steps: Sequence[str]) -> str:
 
 def _added_entry(target: Path, place: str, kind: str, new_id: str, request: Request) -> str:
     """The collection file `place` with the new entry: its front matter gains the
-    entry, its body the entry's section at the end, every other byte as it was; the
-    file from the template when it is new."""
+    entry and its body the entry's section, each where the id sorts among those
+    already there, every other byte as it was; the file from the template when it
+    is new. Sorted rather than appended, so two lines of work adding different
+    entries write to different places of the file and merge cleanly unless their
+    ids are neighbours — as the core keeps deferrals sorted (COR-050 point 4)."""
     front, body = _template(kind)
     ((template_id, example),) = dict(markdown.load(front)).items()
     name = _title(request)
@@ -288,14 +294,28 @@ def _added_entry(target: Path, place: str, kind: str, new_id: str, request: Requ
     start, end = span
     try:
         existing = markdown.load(text[start:end])
+        lines = markdown.key_lines(text[start:end])
     except YAMLError as exc:
         raise Refused(f"{place}'s front matter does not parse; fix it first") from exc
     if not isinstance(existing, Mapping):
         raise Refused(f"{place}'s front matter is not a mapping of entries by id")
     if new_id in existing:
         raise Refused(f"{new_id} is held already, in {place}")
-    updated = text[:end] + added + text[end:]
-    updated = updated.rstrip("\n") + "\n\n" + section
+    entry_at = _entry_at(text, start, end, lines, new_id)
+    closing = text.find("\n", end)
+    section_at = None if closing == -1 else _section_at(text, closing + 1, kind, new_id)
+    if section_at is None:
+        updated = text[:entry_at] + added + text[entry_at:]
+        updated = updated.rstrip("\n") + "\n\n" + section
+    else:
+        updated = (
+            text[:entry_at]
+            + added
+            + text[entry_at:section_at]
+            + section.rstrip("\n")
+            + "\n\n"
+            + text[section_at:]
+        )
     new_span = markdown.front_matter_span(updated)
     assert new_span is not None
     wanted = {**existing, new_id: markdown.load(added)[new_id]}
@@ -305,6 +325,29 @@ def _added_entry(target: Path, place: str, kind: str, new_id: str, request: Requ
             f"add the entry by hand"
         )
     return updated
+
+
+def _entry_at(text: str, start: int, end: int, lines: Mapping[str, int], new_id: str) -> int:
+    """Where in `text` the new entry goes: at the line of the first key that sorts
+    after `new_id`, or at the end of the front matter, which spans `start:end`."""
+    after = [line for key, line in lines.items() if key > new_id]
+    if not after:
+        return end
+    return start + sum(len(line) for line in text[start:end].splitlines(True)[: min(after)])
+
+
+def _section_at(text: str, body: int, kind: str, new_id: str) -> int | None:
+    """Where in `text` the new section goes: before the first section of the body,
+    which starts at `body`, headed by an id of `kind` that sorts after `new_id`;
+    `None` for the end."""
+    pattern = schemas.id_pattern(kind)
+    offset = body
+    for line in text[body:].splitlines(True):
+        found = _SECTION.match(line)
+        if found is not None and pattern.match(found["id"]) and found["id"] > new_id:
+            return offset
+        offset += len(line)
+    return None
 
 
 def _container(request: Request, artefacts: Sequence[str]) -> dict[str, Any]:

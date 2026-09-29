@@ -22,6 +22,7 @@ The check is `test_software_analysis_check.py`'s, the schemas and templates
 from __future__ import annotations
 
 import ast
+import re
 from pathlib import Path
 
 import pytest
@@ -180,31 +181,72 @@ def _placeholder_line() -> str:
     return template.rsplit("\n\n", 1)[1]
 
 
+_ADMIN_ONLY = (
+    "---\n"
+    "# The project's own comment, kept.\n"
+    "ACT-admin:\n"
+    "  name: Admin   # inline, kept\n"
+    "  status: active\n"
+    "  needs: [Configure the service]\n"
+    "  pkit: {friction: {anchors: {path: [src/**]}}}\n"
+    "---\n"
+    "\n"
+    "# Actors\n"
+    "\n"
+    "## ACT-admin — Admin\n"
+    "\n"
+    "Runs it.\n"
+)
+
+
 def test_an_entry_is_added_to_a_collection_leaving_every_other_byte(project: AdopterRepo) -> None:
-    existing = (
-        "---\n"
-        "# The project's own comment, kept.\n"
-        "ACT-admin:\n"
-        "  name: Admin   # inline, kept\n"
-        "  status: active\n"
-        "  needs: [Configure the service]\n"
-        "  pkit: {friction: {anchors: {path: [src/**]}}}\n"
-        "---\n"
-        "\n"
-        "# Actors\n"
-        "\n"
-        "## ACT-admin — Admin\n"
-        "\n"
-        "Runs it.\n"
-    )
-    project.write({ACTORS: existing})
+    project.write({ACTORS: _ADMIN_ONLY})
     assert stamped(project, "actor", "tester", "--name", "Test author") == "ACT-tester"
     text = (project.root / ACTORS).read_text(encoding="utf-8")
-    closing = existing.index("---\n", 4)
-    assert text.startswith(existing[:closing])
+    closing = _ADMIN_ONLY.index("---\n", 4)
+    assert text.startswith(_ADMIN_ONLY[:closing])
     assert text[closing:].startswith("ACT-tester:\n  name: Test author\n")
     assert text.endswith("Runs it.\n\n## ACT-tester — Test author\n\n" + _placeholder_line())
     assert list(front(project, ACTORS)) == ["ACT-admin", "ACT-tester"]
+
+
+def test_an_entry_is_added_where_its_id_sorts(project: AdopterRepo) -> None:
+    """Before the first entry and section whose id sorts after it — in the front matter
+    and in the body alike — with every other byte as it was."""
+    project.write({ACTORS: _ADMIN_ONLY})
+    assert stamped(project, "actor", "able", "--name", "Able") == "ACT-able"
+    text = (project.root / ACTORS).read_text(encoding="utf-8")
+    comment = "---\n# The project's own comment, kept.\n"
+    entry = text[len(comment) : text.index("ACT-admin:\n")]
+    assert entry.startswith("ACT-able:\n  name: Able\n")
+    section = "## ACT-able — Able\n\n" + _placeholder_line()
+    rest = _ADMIN_ONLY[len(comment) :].replace("# Actors\n\n", f"# Actors\n\n{section}\n")
+    assert text == comment + entry + rest
+    assert list(front(project, ACTORS)) == ["ACT-able", "ACT-admin"]
+
+
+@pytest.mark.parametrize(
+    ("kind", "rel", "prefix"), [("actor", ACTORS, "ACT"), ("term", GLOSSARY, "TERM")]
+)
+def test_entries_two_branches_add_merge_cleanly(
+    project: AdopterRepo, kind: str, rel: str, prefix: str
+) -> None:
+    """Two lines of work adding different entries write to different places of the
+    collection file, so git merges them without a conflict."""
+    stamped(project, kind, "middle")
+    project.commit("middle")
+    project.checkout("early", create=True)
+    stamped(project, kind, "alpha")
+    project.commit("alpha, on early")
+    project.checkout("main")
+    stamped(project, kind, "zulu")
+    project.commit("zulu, on main")
+    merged = project.git("merge", "--no-edit", "early", check=False)
+    assert merged.returncode == 0, merged.stdout + merged.stderr
+    ids = [f"{prefix}-alpha", f"{prefix}-middle", f"{prefix}-zulu"]
+    assert list(front(project, rel)) == ids
+    text = (project.root / rel).read_text(encoding="utf-8")
+    assert re.findall(r"^## (\S+)", text, flags=re.MULTILINE) == ids
 
 
 def test_numbers_count_the_default_branch_and_withdrawn_use_cases(project: AdopterRepo) -> None:
