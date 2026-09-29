@@ -540,6 +540,71 @@ def test_mandatory_mark_without_a_reason_is_an_error(
     assert _validate(_package(connections=connections), schema, component_dir) == []
 
 
+_REVIEW = "pkit::documentation:review"
+_REVIEW_POINTER = f"/connections/extension-points/offers/{_REVIEW}"
+
+
+def _offering_review(schema_version: int) -> dict[str, Any]:
+    """The package offering the process `review` under its role, at `schema_version`."""
+    connections = _connections()
+    connections["extension-points"]["offers"] = {
+        _REVIEW: {
+            "kind": "process",
+            "schema_version": schema_version,
+            "description": "The review process.",
+            "process": "review",
+        }
+    }
+    return _package(connections=connections)
+
+
+def _write_definition(component_dir: Path, file: str, interface: str = "") -> None:
+    (component_dir / "schemas" / file).write_text(
+        "process:\n  id: review\n  version: 3\n" + interface, encoding="utf-8"
+    )
+
+
+def test_an_offered_process_point_carries_its_definition_s_interface_version(
+    schema: dict[str, Any], component_dir: Path
+) -> None:
+    # Another file than `review.yaml` declares the id: the message names that file.
+    _write_definition(component_dir, "reviewing.yaml", "  interface:\n    version: 1\n")
+    errors = _messages(
+        _validate(_offering_review(2), schema, component_dir), pv.Severity.ERROR
+    )
+    assert errors == {
+        f"{_REVIEW_POINTER}/schema_version": (
+            f"offered process point {_REVIEW!r} is at schema_version 2 in demo/package.yaml, "
+            "but its definition demo/schemas/reviewing.yaml declares interface.version 1: an "
+            "offered process carries its definition's interface version, so the two must be "
+            "equal (COR-053 point 5)."
+        )
+    }
+    # Equal: clean. The definition's own `version` (3) is not the interface's.
+    assert _validate(_offering_review(1), schema, component_dir) == []
+
+
+def test_an_offered_process_point_whose_definition_declares_no_interface_version_is_clean(
+    schema: dict[str, Any], component_dir: Path
+) -> None:
+    _write_definition(component_dir, "review.yaml")
+    assert _validate(_offering_review(2), schema, component_dir) == []
+
+
+def test_an_offered_process_point_names_an_existing_definition(
+    schema: dict[str, Any], component_dir: Path
+) -> None:
+    errors = _messages(
+        _validate(_offering_review(1), schema, component_dir), pv.Severity.ERROR
+    )
+    assert errors == {
+        f"{_REVIEW_POINTER}/process": (
+            f"offered process point {_REVIEW!r} names process 'review', which no definition "
+            "under demo/schemas/ declares."
+        )
+    }
+
+
 def test_depends_on_must_carry_the_generated_mark(
     schema: dict[str, Any], component_dir: Path
 ) -> None:

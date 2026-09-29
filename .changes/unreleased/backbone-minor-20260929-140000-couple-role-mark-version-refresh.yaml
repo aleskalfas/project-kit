@@ -1,0 +1,15 @@
+component: backbone
+kind: minor
+body: >
+  The pkit process couple stamp writes the connection forms COR-053 added. --upstream takes the
+  role form <publisher>::<role>:<point> beside <capability>:<process-id>, resolved through
+  the wiring as pkit process health resolves it; --version <n> writes the upstream interface
+  version the entry targets and --mandatory <reason> the mandatory mark, each only when
+  given. The stamp writes the definition only: when the capability's generated depends-on
+  list is left stale it ends by naming pkit capabilities refresh <capability>, under
+  --dry-run too, and never writes package metadata itself. A re-run with a different
+  version or mark on a declared edge refuses, as a different why already did. The pkit
+  validate packages pass now reports an offered process point whose schema_version differs from its definition's
+  interface.version, naming both values and both files, and an offered process point that
+  names no definition of its capability. The process skill's couple walkthrough asks for
+  the role form, the version and the mark, and ends with the refresh step.

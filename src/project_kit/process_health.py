@@ -443,7 +443,7 @@ def evaluate_contract(
         return _contract_indeterminate(
             contract, "entry declares no upstream address to check against"
         )
-    address, unresolved = _implementation_address(repo_root, contract.upstream, wiring)
+    address, unresolved = implementation_address(repo_root, contract.upstream, wiring)
     if address is None:
         return _contract_indeterminate(
             contract,
@@ -548,7 +548,7 @@ def evaluate_contract(
     )
 
 
-def _implementation_address(
+def implementation_address(
     repo_root: Path, upstream: str, wiring: Wiring | None
 ) -> tuple[str | None, str]:
     """`upstream` as the `<capability>:<process-id>` address the engine loads, with
@@ -556,6 +556,8 @@ def _implementation_address(
 
     The implementation form is returned as written. The role form is the process
     the role's active provider offers at that address (`Wiring.offered_process`).
+    Shared with the coupling stamp (`process_authoring.couple_process`), which
+    warns on an upstream that reaches no definition the way health reports it.
     """
     if not _is_role_address(upstream):
         return upstream, ""
@@ -703,7 +705,7 @@ def _endpoints(
 ) -> tuple[str, ...]:
     """The addresses a `--process` scope matches a contract by: its downstream, its
     upstream as declared, and a role-addressed upstream's implementation too."""
-    address, _unresolved = _implementation_address(repo_root, contract.upstream, wiring)
+    address, _unresolved = implementation_address(repo_root, contract.upstream, wiring)
     return tuple(a for a in (contract.upstream, address, contract.downstream) if a)
 
 

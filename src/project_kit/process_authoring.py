@@ -14,10 +14,15 @@ the disciplines and the walkthrough, this module owns the stamp):
   stub exits non-zero so it can never read as green) and register in the owning
   capability's `package.yaml` commands tree.
 - `couple_process` — append a `depends_on` entry (COR-038) to the invoker-named
-  definition: upstream address, relation + mode validated against the CLOSED
-  substrate vocabularies READ AS DATA from the shape contract (never a
-  hardcoded list — a new relation kind is an enum value this module picks up,
-  never a code change), and the required `why`.
+  definition: upstream address in either form the contract's grammar admits
+  (implementation, or role per COR-053 point 2), relation + mode validated
+  against the CLOSED substrate vocabularies READ AS DATA from the shape
+  contract (never a hardcoded list — a new relation kind is an enum value this
+  module picks up, never a code change), the required `why`, and optionally the
+  targeted interface `version` and the `mandatory` mark (COR-053 points 5 and
+  6). It names `pkit capabilities refresh <capability>` when the capability's
+  generated `depends-on` list is left stale, and never writes package metadata
+  itself: the stamp mutates the named definition and nothing else.
 - `handoff_process` — add a COR-042 hand-off contract (trigger + the two seam
   predicates) to an EXISTING coupling, validating the trigger is a state of the
   upstream definition where that definition is resolvable at authoring time
@@ -55,6 +60,7 @@ from typing import Any
 from jsonschema import Draft202012Validator
 from ruamel.yaml import YAML
 
+from project_kit import process_dependencies
 from project_kit.process import (
     PREDICATE_STUB_MARKER,
     ProcessDefinition,
@@ -64,6 +70,7 @@ from project_kit.process import (
     parse_address,
 )
 from project_kit.process_graph import installed_capabilities
+from project_kit.process_health import implementation_address
 
 _KEBAB_CASE = re.compile(r"^[a-z][a-z0-9-]*$")
 
@@ -104,21 +111,26 @@ def _load_shape_contract(repo_root: Path) -> dict[str, Any]:
     return parsed
 
 
-def _enum_from_contract(repo_root: Path, pointer: tuple[str, ...], label: str) -> list[str]:
-    """One closed vocabulary from the shape contract, addressed by key path.
-
-    `pointer` walks from `$defs` (e.g. `("depends_on", "properties",
-    "relation", "enum")`). A missing/malformed enum is a clean error — the
-    vocabulary is the contract's to declare, never this module's to invent.
-    """
+def _contract_node(repo_root: Path, pointer: tuple[str, ...], label: str) -> Any:
+    """One node of the shape contract, addressed by key path from `$defs` (e.g.
+    `("depends_on", "properties", "relation", "enum")`). A missing node is a
+    clean error — what the contract declares is the contract's to declare,
+    never this module's to invent."""
     node: Any = _load_shape_contract(repo_root)["$defs"]
     for key in pointer:
         if not isinstance(node, dict) or key not in node:
             raise ProcessAuthoringError(
-                f"shape contract declares no {label} vocabulary at "
+                f"shape contract declares no {label} at "
                 f"$defs/{'/'.join(pointer)} — cannot validate against it."
             )
         node = node[key]
+    return node
+
+
+def _enum_from_contract(repo_root: Path, pointer: tuple[str, ...], label: str) -> list[str]:
+    """One closed vocabulary from the shape contract, addressed by key path
+    (`_contract_node`). A missing/malformed enum is a clean error."""
+    node = _contract_node(repo_root, pointer, f"{label} vocabulary")
     if not isinstance(node, list) or not all(isinstance(v, str) for v in node):
         raise ProcessAuthoringError(
             f"shape contract's {label} vocabulary at $defs/{'/'.join(pointer)} "
@@ -139,6 +151,20 @@ def mode_vocabulary(repo_root: Path) -> list[str]:
     return _enum_from_contract(
         repo_root, ("depends_on", "properties", "mode", "enum"), "mode"
     )
+
+
+def upstream_address_pattern(repo_root: Path) -> str:
+    """The `depends_on` upstream address grammar — the implementation form
+    `<capability>:<process-id>` and the role form `<publisher>::<role>:<point>`
+    (COR-053 point 2) — as the shape contract's regular expression."""
+    pointer = ("depends_on", "properties", "upstream", "pattern")
+    node = _contract_node(repo_root, pointer, "upstream address grammar")
+    if not isinstance(node, str):
+        raise ProcessAuthoringError(
+            f"shape contract's upstream address grammar at $defs/{'/'.join(pointer)} "
+            "is not a string."
+        )
+    return node
 
 
 def cardinality_vocabulary(repo_root: Path) -> list[str]:
@@ -932,6 +958,10 @@ class CoupleResult:
     state_id: str
     changed: bool  # False = the identical entry was already declared (no-op)
     warnings: tuple[str, ...] = ()
+    # The command regenerating the capability's `depends-on` list when the list is
+    # stale after the stamp — on a dry run, when the entry would leave it stale;
+    # None when it is fresh.
+    refresh_command: str | None = None
 
 
 def couple_process(
@@ -943,27 +973,41 @@ def couple_process(
     relation: str,
     mode: str,
     why: str,
+    version: int | None = None,
+    mandatory: str | None = None,
     dry_run: bool = False,
 ) -> CoupleResult:
     """Append a `depends_on` entry (COR-038) to the invoker-named definition.
 
     Mutates ONLY the named (subscriber) definition — coupling lives in the
     subscriber, the upstream is untouched (COR-038 / COR-044 owner-scoping by
-    construction). `relation` and `mode` are validated against the closed
-    vocabularies read from the shape contract. The definition `version` is NOT
-    bumped: the entry is additive and inert (COR-044).
+    construction). `upstream` takes either form the shape contract's address
+    grammar admits: `<capability>:<process-id>`, or the role form
+    `<publisher>::<role>:<point>`, which reaches whichever capability is the
+    role's active provider (COR-053 point 2). `relation` and `mode` are
+    validated against the closed vocabularies read from the shape contract.
+    `version` is the upstream interface version the entry targets (COR-053
+    point 5) and `mandatory` the reason for the mandatory mark (point 6); each
+    is written only when given, so the entry is in the definition's own shape.
+    The definition `version` is NOT bumped: the entry is additive and inert
+    (COR-044).
 
     An entry is identified by (upstream, relation, mode) — the shape puts no
     uniqueness constraint on `depends_on`, so one downstream state may legally
     depend on the same upstream in two different ways (an `informational` pull
     beside a `triggered-by` push). Idempotent on the identical entry (that key
-    plus the same `why`): a clean no-op. Same key, different `why`: a genuine
-    divergence, and it refuses — editing a declared edge is deliberate work,
-    never a silent overwrite. Different key: a new, legal entry, appended.
+    plus the same `why`, `version` and mark): a clean no-op. Same key, any of
+    those different: a genuine divergence, and it refuses — editing a declared
+    edge is deliberate work, never a silent overwrite. Different key: a new,
+    legal entry, appended.
+
+    The capability's generated `depends-on` list (COR-053 point 4) is package
+    metadata, which this stamp never writes: when the list is stale afterwards,
+    the result names the command that regenerates it (`refresh_command`).
 
     `dry_run` runs every check and reports what would change, writing nothing.
     """
-    _require_owned_address(repo_root, address)
+    capability, _process_id, capability_dir = _require_owned_address(repo_root, address)
     try:
         definition = load_definition(repo_root, address)
     except ProcessError as exc:
@@ -993,31 +1037,36 @@ def couple_process(
             "a `depends_on` entry requires a `why` — the human-readable reason "
             "the render surfaces (COR-038)."
         )
+    if mandatory is not None and not mandatory.strip():
+        raise ProcessAuthoringError(
+            "a mandatory mark requires a reason — it is shown in every refusal "
+            "and warning the mark causes (COR-053 point 6)."
+        )
 
-    warnings: list[str] = []
-    if ":" not in upstream:
+    if re.fullmatch(upstream_address_pattern(repo_root), upstream) is None:
         raise ProcessAuthoringError(
             f"upstream {upstream!r} is not a process address; expected "
-            "<capability>:<process-id> (COR-038's address grammar)."
+            "<capability>:<process-id>, or by role <publisher>::<role>:<point> "
+            "(the shape contract's address grammar: COR-038, COR-053 point 2)."
         )
-    try:
-        parse_address(upstream)
-    except ProcessError as exc:
-        raise ProcessAuthoringError(str(exc)) from exc
-    try:
-        load_definition(repo_root, upstream)
-    except ProcessError as exc:
-        warnings.append(
-            f"upstream {upstream!r} does not resolve to a definition here "
-            f"({exc}); the entry is inert metadata (COR-038) so this is "
-            "declarable, but a later hand-off contract on it would report "
-            "indeterminate."
-        )
+    unresolved = _unresolved_upstream(repo_root, upstream)
+    warnings = [unresolved] if unresolved is not None else []
 
     rt = _round_trip_yaml()
     original = definition_path.read_text(encoding="utf-8")
     data = rt.load(original)
     state_block = _rt_state_block(data, state_id, definition_path)
+
+    new_entry: dict[str, Any] = {
+        "upstream": upstream,
+        "relation": relation,
+        "mode": mode,
+        "why": why,
+    }
+    if version is not None:
+        new_entry["version"] = version
+    if mandatory is not None:
+        new_entry["mandatory"] = {"reason": mandatory}
 
     existing = state_block.get("depends_on")
     if existing is not None and not isinstance(existing, list):
@@ -1031,21 +1080,22 @@ def couple_process(
         key = (entry.get("upstream"), entry.get("relation"), entry.get("mode"))
         if key != (upstream, relation, mode):
             continue  # a different edge (or a different way of depending) — legal
-        if entry.get("why") == why:
+        differences = _entry_differences(entry, new_entry)
+        if not differences:
             return CoupleResult(
                 definition_path=definition_path,
                 state_id=state_id,
                 changed=False,
                 warnings=tuple(warnings),
+                refresh_command=_refresh_command_if_stale(capability, capability_dir),
             )
         raise ProcessAuthoringError(
             f"state {state_id!r} already declares this coupling on upstream "
-            f"{upstream!r} ({relation}, {mode}) with a DIFFERENT why "
-            f"({entry.get('why')!r}); refusing to overwrite a declared edge — "
+            f"{upstream!r} ({relation}, {mode}) with a DIFFERENT "
+            f"{', '.join(differences)}; refusing to overwrite a declared edge — "
             "edit the definition deliberately."
         )
 
-    new_entry = {"upstream": upstream, "relation": relation, "mode": mode, "why": why}
     if existing is None:
         state_block["depends_on"] = [new_entry]
     else:
@@ -1062,7 +1112,63 @@ def couple_process(
         state_id=state_id,
         changed=True,
         warnings=tuple(warnings),
+        refresh_command=_refresh_command_if_stale(
+            capability, capability_dir, pending=(new_entry,) if dry_run else ()
+        ),
     )
+
+
+def _unresolved_upstream(repo_root: Path, upstream: str) -> str | None:
+    """Why `upstream` reaches no definition here, as the stamp's warning; None when
+    it does. A role address is read through the wiring resolver, as health reads
+    it (`process_health.implementation_address`) — never a resolution of roles
+    of the stamp's own. Unresolved is declarable: the entry is inert metadata."""
+    consequence = (
+        "the entry is inert metadata (COR-038) so this is declarable, but a "
+        "later hand-off contract on it would report indeterminate."
+    )
+    target, why_not = implementation_address(repo_root, upstream, None)
+    if target is None:
+        return (
+            f"upstream role address {upstream!r} does not resolve to an offered "
+            f"process here ({why_not}); {consequence}"
+        )
+    try:
+        load_definition(repo_root, target)
+    except ProcessError as exc:
+        return f"upstream {upstream!r} does not resolve to a definition here ({exc}); {consequence}"
+    return None
+
+
+def _entry_differences(declared: dict[str, Any], wanted: dict[str, Any]) -> list[str]:
+    """What a declared `depends_on` entry says differently from the one asked for,
+    beyond their shared key — each named with the declared value."""
+    differences = [
+        f"{field} ({_declared_value(declared.get(field))})"
+        for field in ("why", "version")
+        if declared.get(field) != wanted.get(field)
+    ]
+    declared_reason = _mark_reason(declared.get("mandatory"))
+    if declared_reason != _mark_reason(wanted.get("mandatory")):
+        differences.append(f"mandatory mark ({_declared_value(declared_reason)})")
+    return differences
+
+
+def _mark_reason(mark: Any) -> Any:
+    return mark.get("reason") if isinstance(mark, dict) else None
+
+
+def _declared_value(value: Any) -> str:
+    return "none declared" if value is None else repr(value)
+
+
+def _refresh_command_if_stale(
+    capability: str, capability_dir: Path, pending: tuple[dict[str, Any], ...] = ()
+) -> str | None:
+    """The refresh command when the capability's generated `depends-on` list is
+    stale against its definitions (plus `pending`, entries not yet written)."""
+    stale = process_dependencies.package_staleness(capability_dir, pending=pending)
+    return process_dependencies.refresh_command(capability) if stale is not None else None
 
 
 def _rt_state_block(data: Any, state_id: str, definition_path: Path) -> Any:

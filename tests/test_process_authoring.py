@@ -18,7 +18,11 @@ These tests pin the load-bearing facts:
 - `couple` appends a `depends_on` entry to the invoker-named definition,
   validating relation/mode against the CLOSED vocabularies READ AS DATA from
   the shape contract (a widened enum is accepted with no code change), and
-  NEVER bumps the definition version (additive inert edit, COR-044);
+  NEVER bumps the definition version (additive inert edit, COR-044); it stamps
+  the role form, the targeted interface version and the mandatory mark in the
+  definition's own shape (COR-053), reads a role address through the wiring,
+  and names `pkit capabilities refresh` while the generated `depends-on` list
+  is stale — never writing package metadata itself;
 - `hand-off` adds the COR-042 contract to an EXISTING coupling only, validates
   the trigger against the upstream definition where resolvable at authoring
   time, scaffolds + registers the seam stubs, and likewise never bumps the
@@ -49,6 +53,7 @@ import pytest
 from click.testing import CliRunner
 
 from project_kit import process_authoring as pa
+from project_kit import process_dependencies as deps
 from project_kit import process_health as ph
 from project_kit import schemas_validate
 from project_kit.cli import main
@@ -823,6 +828,201 @@ def test_couple_warns_on_unresolvable_upstream(authoring_repo: Path) -> None:
     result = _couple_unit(authoring_repo, upstream="elsewhere:thing")
     assert result.changed
     assert any("does not resolve" in w for w in result.warnings)
+
+
+# --- `process couple`: the role form, the version, the mark, the refresh ----
+
+ROLE_SCREEN = "acme::design:screen"
+MARK = "A unit builds only screens the design process readied."
+
+
+def _offer_screen_by_role(repo: Path, schema_version: int = 2) -> None:
+    """`design` provides the role `acme::design` and offers `design:screen` at
+    `ROLE_SCREEN`; both capabilities registered, so the wiring reads them."""
+    package = repo / ".pkit" / "capabilities" / "design" / "package.yaml"
+    package.write_text(
+        package.read_text(encoding="utf-8")
+        + "connections:\n"
+        "  roles:\n"
+        "    - acme::design\n"
+        "  extension-points:\n"
+        "    offers:\n"
+        f"      {ROLE_SCREEN}:\n"
+        "        kind: process\n"
+        f"        schema_version: {schema_version}\n"
+        "        description: The screen design process.\n"
+        "        process: screen\n",
+        encoding="utf-8",
+    )
+    _register_capabilities(repo, "design", "delivery")
+
+
+def _delivery_dir(repo: Path) -> Path:
+    return repo / ".pkit" / "capabilities" / "delivery"
+
+
+@pytest.mark.parametrize(
+    ("overrides", "extra"),
+    [
+        pytest.param({}, {}, id="implementation-address"),
+        pytest.param({"upstream": ROLE_SCREEN}, {}, id="role-address"),
+        pytest.param(
+            {"upstream": ROLE_SCREEN, "version": 2, "mandatory": MARK},
+            {"version": 2, "mandatory": {"reason": MARK}},
+            id="role-address-with-mark-and-version",
+        ),
+    ],
+)
+def test_couple_stamps_the_entry_in_the_definition_s_own_shape(
+    authoring_repo: Path, overrides: dict, extra: dict
+) -> None:
+    _stamp_screen(authoring_repo)
+    _stamp_unit(authoring_repo)
+    _offer_screen_by_role(authoring_repo)
+    result = _couple_unit(authoring_repo, **overrides)
+    assert result.changed
+    assert result.warnings == ()  # both forms resolve: the role one through the wiring
+
+    definition = load_definition(authoring_repo, "delivery:unit")
+    (entry,) = definition.states[0]["depends_on"]
+    upstream = overrides.get("upstream", "design:screen")
+    expected = {
+        "upstream": upstream,
+        "relation": "triggered-by",
+        "mode": "push",
+        "why": "A unit builds the screen the design process readied.",
+        **extra,
+    }
+    assert entry == expected
+    assert list(entry) == list(expected)  # the shape's key order, optional keys last
+    assert pa.lint_process_block(authoring_repo, definition.data) == []
+    assert _definition_version(authoring_repo, "delivery", "unit") == 1
+    # The stamped entry is what the generated list copies (COR-053 point 4).
+    assert deps.generated_entries(_delivery_dir(authoring_repo)) == (
+        deps.Entry(upstream, extra.get("version"), MARK if "mandatory" in extra else None),
+    )
+
+
+def test_couple_names_the_refresh_while_the_generated_list_is_stale(
+    authoring_repo: Path,
+) -> None:
+    _stamp_screen(authoring_repo)
+    _stamp_unit(authoring_repo)
+    delivery = _delivery_dir(authoring_repo)
+    refresh = "pkit capabilities refresh delivery"
+
+    # A preview names it too, and writes nothing — package metadata included.
+    before = _repo_snapshot(authoring_repo)
+    assert _couple_unit(authoring_repo, dry_run=True).refresh_command == refresh
+    assert _repo_snapshot(authoring_repo) == before
+
+    package_before = (delivery / "package.yaml").read_text(encoding="utf-8")
+    assert _couple_unit(authoring_repo).refresh_command == refresh
+    # The stamp writes the definition only: the list is the refresh's to write.
+    assert (delivery / "package.yaml").read_text(encoding="utf-8") == package_before
+    # Until the list is regenerated, a re-run still names it.
+    assert _couple_unit(authoring_repo).refresh_command == refresh
+
+    deps.refresh(delivery)
+    assert _couple_unit(authoring_repo).refresh_command is None
+    # Another way of depending on a listed upstream generates no new entry, so the
+    # list stays fresh — previewed or written; a mark on it would not.
+    other_way = dict(relation="informational", mode="pull", why="A unit reads the screen.")
+    assert _couple_unit(authoring_repo, dry_run=True, **other_way).refresh_command is None
+    assert _couple_unit(authoring_repo, **other_way).refresh_command is None
+    marked = dict(relation="constrained-with", mode="pull", why="Kept in step.", mandatory=MARK)
+    assert _couple_unit(authoring_repo, dry_run=True, **marked).refresh_command == refresh
+
+
+def test_couple_refuses_a_different_version_or_mark_on_a_declared_edge(
+    authoring_repo: Path,
+) -> None:
+    _stamp_screen(authoring_repo)
+    _stamp_unit(authoring_repo)
+    assert _couple_unit(authoring_repo, version=1).changed
+    with pytest.raises(pa.ProcessAuthoringError, match=r"DIFFERENT version \(1\);"):
+        _couple_unit(authoring_repo, version=2)
+    with pytest.raises(
+        pa.ProcessAuthoringError, match=r"DIFFERENT mandatory mark \(none declared\);"
+    ):
+        _couple_unit(authoring_repo, version=1, mandatory=MARK)
+    assert not _couple_unit(authoring_repo, version=1).changed
+
+
+@pytest.mark.parametrize(
+    "upstream",
+    ["design", "Design:Screen", "acme::design", "acme::design:screen:extra", "acme:design:screen"],
+)
+def test_couple_refuses_an_address_outside_the_contract_s_grammar(
+    authoring_repo: Path, upstream: str
+) -> None:
+    _stamp_unit(authoring_repo)
+    with pytest.raises(pa.ProcessAuthoringError, match="not a process address"):
+        _couple_unit(authoring_repo, upstream=upstream)
+    assert "depends_on" not in load_definition(authoring_repo, "delivery:unit").states[0]
+
+
+def test_couple_refuses_a_mandatory_mark_without_a_reason(authoring_repo: Path) -> None:
+    _stamp_unit(authoring_repo)
+    with pytest.raises(pa.ProcessAuthoringError, match="mandatory mark requires a reason"):
+        _couple_unit(authoring_repo, mandatory="   ")
+    assert "depends_on" not in load_definition(authoring_repo, "delivery:unit").states[0]
+
+
+def test_couple_resolves_a_role_address_through_the_wiring(authoring_repo: Path) -> None:
+    _stamp_screen(authoring_repo)
+    _stamp_unit(authoring_repo)
+    # No capability provides the role yet: declarable, warned with the wiring's reason.
+    unresolved = _couple_unit(authoring_repo, upstream=ROLE_SCREEN)
+    assert unresolved.changed
+    (warning,) = unresolved.warnings
+    assert "does not resolve to an offered process" in warning
+    assert "no installed capability provides its role" in warning
+
+    _offer_screen_by_role(authoring_repo)
+    resolved = _couple_unit(
+        authoring_repo,
+        upstream=ROLE_SCREEN,
+        relation="informational",
+        mode="pull",
+        why="A unit reads the screen for context.",
+    )
+    assert resolved.changed and resolved.warnings == ()
+
+
+def test_couple_cli_stamps_the_role_form_mark_and_version_and_names_the_refresh(
+    authoring_repo: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr("project_kit.process.resolve_repo_root", lambda: authoring_repo)
+    _stamp_screen(authoring_repo)
+    _stamp_unit(authoring_repo)
+    _offer_screen_by_role(authoring_repo)
+    couple = [
+        "process", "couple", "delivery:unit",
+        "--state", "building",
+        "--upstream", ROLE_SCREEN,
+        "--relation", "gates-on-readiness",
+        "--mode", "pull",
+        "--why", "A unit starts once the screen is ready.",
+    ]
+    runner = CliRunner()
+
+    result = runner.invoke(main, [*couple, "--version", "2", "--mandatory", MARK])
+    assert result.exit_code == 0, result.output
+    assert f"-> {ROLE_SCREEN} (gates-on-readiness, pull, v2, mandatory)" in result.output
+    assert "(definition version unchanged)" in result.output
+    assert "Next: `pkit capabilities refresh delivery`" in result.output
+    (entry,) = load_definition(authoring_repo, "delivery:unit").states[0]["depends_on"]
+    assert entry["version"] == 2 and entry["mandatory"] == {"reason": MARK}
+
+    deps.refresh(_delivery_dir(authoring_repo))
+    again = runner.invoke(main, [*couple, "--version", "2", "--mandatory", MARK])
+    assert again.exit_code == 0, again.output
+    assert "Already declared" in again.output and "Next:" not in again.output
+
+    # An interface version is a positive integer, as the shape declares it.
+    refused = runner.invoke(main, [*couple, "--version", "0"])
+    assert refused.exit_code != 0
 
 
 # --- `process hand-off`: contract on an existing coupling -------------------
