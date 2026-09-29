@@ -46,6 +46,7 @@ from _lib.model import (
     USE_CASE,
     Analysis,
     Unreadable,
+    identity,
     with_article,
 )
 
@@ -204,12 +205,14 @@ def _base_analysis(root: Path, base: str, notes: list[str]) -> Analysis | None:
 
 def _new_id(kind: str, slug: str, analyses: Sequence[Analysis], base: str) -> str:
     """The next free number for a use case or journey; `<PREFIX>-<slug>` for the rest,
-    refused when the working tree or the default branch holds it already."""
+    refused when the working tree or the default branch holds it already. Ids are
+    compared by what they stand for (`identity`), as the check compares them: a
+    number spelt `UC-0007` is held as `UC-007` is."""
     pattern = schemas.id_pattern(kind)
-    held = {a.id for analysis in analyses for a in analysis.artefacts if a.id}
+    held = {identity(a.id) for analysis in analyses for a in analysis.artefacts if a.id}
     if kind in NUMBERED:
         numbers = [int(i.split("-", 1)[1]) for i in held if pattern.match(i)]
-        return f"{PREFIX[kind]}-{max(numbers, default=0) + 1:03d}"
+        return identity(f"{PREFIX[kind]}-{max(numbers, default=0) + 1}")
     new_id = f"{PREFIX[kind]}-{slug}"
     if new_id in held:
         raise Refused(

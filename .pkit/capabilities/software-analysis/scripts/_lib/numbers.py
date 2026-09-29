@@ -32,7 +32,7 @@ from typing import Any
 
 from _lib import backbone, schemas
 from _lib.findings import ERROR, REPORT, Finding, Outcome
-from _lib.model import NOUN, NUMBERED, Artefact, Unreadable
+from _lib.model import NOUN, NUMBERED, Artefact, Unreadable, identity
 
 #: The version of the `--json` document.
 SCHEMA_VERSION = 1
@@ -100,7 +100,9 @@ def compare(root: Path, ref: str) -> Comparison:
         return Comparison(base, Outcome([line]))
     try:
         on_base = backbone.read_analysis(root, at=base.tip)
-        before = {a.id for a in backbone.read_analysis(root, at=base.commit).artefacts}
+        before = {
+            identity(a.id) for a in backbone.read_analysis(root, at=base.commit).artefacts if a.id
+        }
     except Unreadable as exc:
         raise CannotCompare(f"{ref} could not be read: {exc}") from exc
 
@@ -109,7 +111,9 @@ def compare(root: Path, ref: str) -> Comparison:
         f"{base.commit[:SHORT]})."
     )
     outdated = Finding(REPORT, analysis.location or ".", f"outdated base: {_outdated(base)}")
-    taken = {a.id: a.path for a in on_base.artefacts if a.kind in NUMBERED and a.id}
+    # By what each id stands for, as the stamp and the validator compare ids; the ids
+    # numbered here are those the id schema admits, each its own identity already.
+    taken = {identity(a.id): a.path for a in on_base.artefacts if a.kind in NUMBERED and a.id}
     return Comparison(base, Outcome([line], [outdated, *_collisions(numbered, taken, before, ref)]))
 
 
@@ -150,7 +154,7 @@ def _outdated(base: Base) -> str:
 
 
 def _collisions(
-    numbered: list[Artefact], taken: dict[str, str], before: set[str | None], ref: str
+    numbered: list[Artefact], taken: dict[str, str], before: set[str], ref: str
 ) -> list[Finding]:
     """Each number this branch took that `ref` took too, for another file, since this
     branch left it."""

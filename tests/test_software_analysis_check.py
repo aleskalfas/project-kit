@@ -186,6 +186,26 @@ def test_a_shared_id_is_reported_at_every_later_holder(project: AdopterRepo) -> 
     ]
 
 
+def test_a_number_spelt_with_other_zeros_is_refused_and_shares_the_id(
+    project: AdopterRepo,
+) -> None:
+    """`UC-0002` is no second id for `UC-002`: the schema admits one spelling per number,
+    and the duplicate check counts the two as one id, as the stamp does."""
+    seed(project)
+    text = (project.root / USE_CASES / "UC-002-read-report.md").read_text(encoding="utf-8")
+    alias = f"{USE_CASES}/UC-0002-alias.md"
+    project.write({alias: text.replace("UC-002", "UC-0002")})
+    assert errors(check(project)) == [
+        (f"{alias}:/id", "'UC-0002' does not match '^UC-(?:[0-9]{3}|[1-9][0-9]{3,})$'"),
+        (
+            alias,
+            f"the id UC-0002, UC-002 spelt otherwise, is also held by "
+            f"{USE_CASES}/UC-002-read-report.md: no two artefacts in the analysis share an id, "
+            "and an id is never used again (DEC-001 point 3)",
+        ),
+    ]
+
+
 # --- required parts (DEC-001 points 1 and 3) --------------------------------------------------
 
 
@@ -203,7 +223,12 @@ def test_a_shared_id_is_reported_at_every_later_holder(project: AdopterRepo) -> 
                     "pkit: {friction: {anchors: {artefact: [ACT-tester]}}}\n---\n"
                 )
             },
-            [(f"{USE_CASES}/UC-009-x.md:/id", "'UC-9' does not match '^UC-[0-9]{3,}$'")],
+            [
+                (
+                    f"{USE_CASES}/UC-009-x.md:/id",
+                    "'UC-9' does not match '^UC-(?:[0-9]{3}|[1-9][0-9]{3,})$'",
+                )
+            ],
         ),
         (
             {

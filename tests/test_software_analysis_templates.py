@@ -73,6 +73,27 @@ def test_the_schemas_are_one_per_kind_and_valid() -> None:
         Draft202012Validator.check_schema(_schema(stem))
 
 
+@pytest.mark.parametrize(
+    ("definition", "admitted", "refused"),
+    [
+        (
+            "use-case-id",
+            ["UC-000", "UC-007", "UC-999", "UC-1000", "UC-12345"],
+            ["UC-07", "UC-0007", "UC-01000"],
+        ),
+        ("journey-id", ["JRN-001", "JRN-1000"], ["JRN-1", "JRN-0001"]),
+    ],
+)
+def test_a_number_has_one_spelling(
+    definition: str, admitted: list[str], refused: list[str]
+) -> None:
+    """Three digits below 1000, no leading zero from 1000 on: `UC-0007` is never a
+    second id for `UC-007`."""
+    pattern = re.compile(_schema("analysis")["$defs"][definition]["pattern"])
+    assert [i for i in admitted if not pattern.match(i)] == []
+    assert [i for i in refused if pattern.match(i)] == []
+
+
 def test_every_id_shape_has_one_home() -> None:
     """The kinds' schemas refer to the shared id shapes; none writes its own."""
     for prefix in ("ACT", "TERM", "UC", "JRN"):

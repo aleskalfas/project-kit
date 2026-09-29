@@ -16,7 +16,8 @@ What is checked, each against the record's words:
   title, `# UC-NNN — <title>`: what a reader of the front matter alone sees —
   a data point publishing `{id, title, status}`, say — is what the page shows.
   The heading is read from the file discovery names.
-- **Duplicate ids** (point 3). No two artefacts in the analysis share an id.
+- **Duplicate ids** (point 3). No two artefacts in the analysis share an id,
+  a number spelt with other zeros included — as the stamp counts it held.
 - **A use case anchors to its actor** (point 4), as an artefact anchor, so a
   changed actor flags it.
 - **A journey's anchors match its steps** (point 4): the use cases among its
@@ -58,6 +59,7 @@ from _lib.model import (
     Analysis,
     Artefact,
     Unreadable,
+    identity,
     with_article,
 )
 
@@ -165,20 +167,29 @@ def _headings(root: Path, analysis: Analysis) -> list[Finding]:
 
 
 def _duplicates(analysis: Analysis) -> list[Finding]:
+    """Two artefacts holding one id — compared by what each stands for (`identity`), as
+    the stamp compares them, so `UC-0007` and `UC-007` share one."""
     holders: dict[str, list[Artefact]] = defaultdict(list)
     for artefact in analysis.artefacts:
         if artefact.id is not None:
-            holders[artefact.id].append(artefact)
-    return [
-        Finding(
-            ERROR,
-            later.location,
-            f"the id {artefact_id} is also held by {group[0].location}: no two artefacts in the "
-            f"analysis share an id, and an id is never used again (DEC-001 point 3)",
-        )
-        for artefact_id, group in holders.items()
-        for later in group[1:]
-    ]
+            holders[identity(artefact.id)].append(artefact)
+    found: list[Finding] = []
+    for artefact_id, group in holders.items():
+        # The holder spelling the id the one way first, so the finding lands on another.
+        first, *later = sorted(group, key=lambda a: a.id != artefact_id)
+        for other in later:
+            written = (
+                other.id if other.id == first.id else f"{other.id}, {first.id} spelt otherwise,"
+            )
+            found.append(
+                Finding(
+                    ERROR,
+                    other.location,
+                    f"the id {written} is also held by {first.location}: no two artefacts in "
+                    f"the analysis share an id, and an id is never used again (DEC-001 point 3)",
+                )
+            )
+    return found
 
 
 # --- anchors -------------------------------------------------------------------------------

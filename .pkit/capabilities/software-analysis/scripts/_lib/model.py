@@ -18,6 +18,7 @@ kind's shape is a stray the check reports.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
@@ -40,6 +41,22 @@ NUMBERED = frozenset({USE_CASE, JOURNEY})
 #: How each kind is named in a message, and how its id is written.
 NOUN = {ACTOR: "actor", TERM: "term", USE_CASE: "use case", JOURNEY: "journey"}
 ID_SHAPE = {ACTOR: "ACT-<slug>", TERM: "TERM-<slug>", USE_CASE: "UC-NNN", JOURNEY: "JRN-NNN"}
+
+#: A use case's or journey's id with its number in any number of digits — the
+#: spellings the id schema refuses included.
+_ANY_NUMBER = re.compile(rf"^(?P<prefix>{PREFIX[USE_CASE]}|{PREFIX[JOURNEY]})-(?P<number>[0-9]+)$")
+
+
+def identity(artefact_id: str) -> str:
+    """The id `artefact_id` stands for: a use case's or journey's number in its one
+    spelling, the one the id schema admits — `UC-0007` stands for `UC-007` — any
+    other id as written. The stamp counts a number as held, and the check two
+    artefacts as sharing an id, by this, so the two never disagree."""
+    found = _ANY_NUMBER.match(artefact_id)
+    if found is None:
+        return artefact_id
+    return f"{found['prefix']}-{int(found['number']):03d}"
+
 
 #: The places this capability's package metadata declares (`friction.places`),
 #: by the path each is written with inside the analysis location, and the kind

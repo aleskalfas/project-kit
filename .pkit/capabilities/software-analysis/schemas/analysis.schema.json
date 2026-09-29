@@ -30,14 +30,14 @@
       "pattern": "^TERM-[a-z][a-z0-9-]*$"
     },
     "use-case-id": {
-      "description": "A use case's id: `UC-` and its number within the project, three digits or more, independent of any grouping by area.",
+      "description": "A use case's id: `UC-` and its number within the project, independent of any grouping by area — three digits, zero-padded, below 1000 (`UC-007`), and no leading zero from 1000 on (`UC-1000`), so each number has one spelling and `UC-0007` is never a second id for `UC-007`.",
       "type": "string",
-      "pattern": "^UC-[0-9]{3,}$"
+      "pattern": "^UC-(?:[0-9]{3}|[1-9][0-9]{3,})$"
     },
     "journey-id": {
-      "description": "A journey's id: `JRN-` and its number within the project, three digits or more.",
+      "description": "A journey's id: `JRN-` and its number within the project — three digits, zero-padded, below 1000, and no leading zero from 1000 on, so each number has one spelling.",
       "type": "string",
-      "pattern": "^JRN-[0-9]{3,}$"
+      "pattern": "^JRN-(?:[0-9]{3}|[1-9][0-9]{3,})$"
     },
     "artefact-id": {
       "description": "The id of any analysis artefact.",

@@ -265,6 +265,19 @@ def test_numbers_count_the_default_branch_and_withdrawn_use_cases(project: Adopt
     assert stamped(project, "use-case", "four", "--actor", "ACT-tester") == "UC-004"
 
 
+def test_a_number_spelt_with_other_zeros_counts_as_held(project: AdopterRepo) -> None:
+    """The stamp reads `UC-0007` as the number 7, as the check's duplicate count does, so
+    it never gives a number a file already claims, whatever its spelling — and the ids
+    it gives are the one spelling the schema admits."""
+    stamped(project, "actor", "tester")
+    stamped(project, "use-case", "one", "--actor", "ACT-tester")
+    text = (project.root / USE_CASES / "UC-001-one.md").read_text(encoding="utf-8")
+    project.write({f"{USE_CASES}/UC-0007-misspelt.md": text.replace("UC-001", "UC-0007")})
+    assert stamped(project, "use-case", "two", "--actor", "ACT-tester") == "UC-008"
+    project.write({f"{USE_CASES}/UC-999-last.md": text.replace("UC-001", "UC-999")})
+    assert stamped(project, "use-case", "three", "--actor", "ACT-tester") == "UC-1000"
+
+
 def test_without_the_default_branch_ids_come_from_the_working_tree_and_it_says_so(
     project: AdopterRepo,
 ) -> None:
