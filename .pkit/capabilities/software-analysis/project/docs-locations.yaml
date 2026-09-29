@@ -1,0 +1,5 @@
+# Documentation locations software-analysis has chosen (COR-049 point 5).
+# Recorded the first time each was used; a later change of the
+# documentation roots leaves these untouched. Project-owned.
+locations:
+  analysis: tech-docs/analysis
