@@ -1,0 +1,18 @@
+component: backbone
+kind: minor
+custom:
+  category: Fixed
+body: >
+  Sync and upgrade refuse to propagate over the methodology's source repository
+  when the running code is not the repository's own: where sync's self-host test
+  says no but the checkout's markers (the package source beside the in-tree
+  dispatcher) say source, propagating would copy a foreign tree over the source
+  it is built from (ADR-059). The refusal names both tests and how the run got
+  there — routing bypassed with `PKIT_NO_ROUTE=1` (by hand, or by a `pin` to a
+  newer release or a pinned `upgrade`), an inherited `PKIT_ROUTED=1`, a
+  dispatcher present but not executable, or a start that never went through the
+  router — and points at running the checkout's own code. Nothing overrides it,
+  `--force` included. `pkit pin` refuses in the source repository, where the
+  router runs the checkout's own code before any pin is read. The router's
+  warning for a non-executable dispatcher now points at repairing it, not at
+  `pkit sync`.
