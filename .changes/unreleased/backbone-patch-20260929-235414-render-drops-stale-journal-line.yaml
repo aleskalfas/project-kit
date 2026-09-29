@@ -1,0 +1,22 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  A capability older than the backbone no longer keeps committed process
+  journals out of commits (#1134). Such a package still declares its own
+  journal ignore line in `runtime_ignore`, and the rendered `.pkit/.gitignore`
+  used to keep every component's lines, so with `process.journal.committed:
+  true` new journal files stayed silently ignored until the capability was
+  upgraded. The backbone owns the journal pattern, and its choice now takes
+  precedence: while the project commits its journals, the render leaves out
+  any component entry that declares them and lists it in a comment line
+  (`# dropped: <component> '<entry>' — the backbone owns the journal pattern
+  while journals are committed`). `pkit config set` prints one `dropped` line
+  per such component when it re-renders the file. The `pkit validate` warning
+  on the entry now fires only when the journals are committed, the one case
+  the render drops it; while they stay ignored the entry is redundant. The
+  1.150.0 journal migration says the next `pkit sync` drops a component line
+  it finds left behind. Documented in ADR-009 rule 7, the process README ("The
+  journal — optional audit"), the CLI reference (`config set`, the `packages`
+  check) and the lifecycle README ("Validation: the package schema").

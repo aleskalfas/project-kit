@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-09-29T21:53:35Z
+      at: 2026-09-29T22:37:47Z
       outcome: unchanged
-      unchanged-because: the lifecycle and CLI READMEs gained the shadowed-alias warning of the packages member, inside the package-metadata table, the package-schema validation section and the validate members table (#1131); what each area covers, and the map, hold
+      unchanged-because: the CLI, lifecycle and process READMEs now carry both this branch's account of the render dropping a stale component journal ignore line while journals are committed and main's shadowed-alias warning of the packages member, each inside its own section; the area map and each area's one-line description hold
 ---
 
 # project-kit

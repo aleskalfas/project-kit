@@ -13,9 +13,9 @@ pkit:
         - src/project_kit/visibility.py
       record: [COR-002, COR-005, COR-028, ADR-002, ADR-004, ADR-009, ADR-014, ADR-052, ADR-060, "project-management:DEC-030"]
     revalidated:
-      at: 2026-09-29T21:51:23Z
+      at: 2026-09-29T22:37:40Z
       outcome: unchanged
-      unchanged-because: ADR-009's Implications now name the 1.150.0 upgrade migration as the second bounded index-changing gesture beside visibility untrack (#288); the adapter's visibility section describes the modes and footprint, which do not change
+      unchanged-because: after the merge of main, this branch's change to visibility.py and ADR-009 rule 7 still only drops a component runtime_ignore entry claiming the process journals while the project commits them; this page's Git footprint section covers the adapter's footprint list and the private and shared modes, and the adapter declares no runtime_ignore, so it holds
 ---
 
 # Claude Code adapter
