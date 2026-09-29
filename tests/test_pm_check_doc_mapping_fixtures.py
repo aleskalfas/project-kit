@@ -460,7 +460,8 @@ def enforcing_project(make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path) ->
 
 
 def _merge_gate(repo: AdopterRepo, tmp_path: Path) -> Outcome:
-    """check-doc-mapping on the branch against `base`, as a required status runs it."""
+    """check-doc-mapping on the branch against `base`, as the gate's `doc check`
+    line runs it (`scripts/check.sh`, a required status)."""
     body = tmp_path / "body.md"
     body.write_text(DOC_IMPACT, encoding="utf-8")
     env = {k: v for k, v in os.environ.items() if k != "PKIT_OFFLINE"}
