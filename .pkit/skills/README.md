@@ -10,9 +10,9 @@ pkit:
         - .pkit/adapters/claude-code/deploy-skills.sh
       record: [COR-003, COR-005, COR-006, COR-013, COR-015, COR-020]
     revalidated:
-      at: 2026-09-29T18:03:43Z
+      at: 2026-09-29T18:14:55Z
       outcome: unchanged
-      unchanged-because: agent-author gained a body-drafting bullet on a reviewer's scoped read-only claim; the skills area map holds
+      unchanged-because: deploy-skills.sh now deploys registered capabilities' skills only and agent-author notes that --with-storyboard declares the storyboard; the skills area map holds
 ---
 
 # Skills

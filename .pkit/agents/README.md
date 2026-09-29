@@ -17,7 +17,7 @@ pkit:
         - .pkit/adapters/claude-code/_resolve_agent.py
       record: [COR-005, COR-006, COR-011, COR-013, COR-014, COR-015, COR-016, COR-026, COR-049, ADR-051, ADR-052]
     revalidated:
-      at: 2026-09-29T18:03:41Z
+      at: 2026-09-29T18:14:54Z
       outcome: updated
 ---
 
