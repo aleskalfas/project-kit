@@ -107,13 +107,22 @@ def test_none_changeset_still_validates_category() -> None:
 # --- Check 3: the floor field --------------------------------------------
 
 
-def _components(
-    tmp_path: Path, *, requires_backbone: str = '">=1.0.0,<2.0.0"', kind: str = "capability"
-) -> dict[str, Component]:
-    """The components of a kit holding one component, `houseware`."""
+# The backbone every kit in these tests holds, which a release that does not move
+# it ships.
+SHIPPED = "1.5.0"
+
+
+def _kit(
+    tmp_path: Path,
+    *,
+    requires_backbone: str = '">=1.0.0,<2.0.0"',
+    kind: str = "capability",
+    backbone: str = SHIPPED,
+) -> Path:
+    """A kit holding the backbone and one component, `houseware`."""
     source_kit = tmp_path / ".pkit"
-    source_kit.mkdir()
-    (source_kit / "VERSION").write_text("1.5.0\n", encoding="utf-8")
+    source_kit.mkdir(exist_ok=True)
+    (source_kit / "VERSION").write_text(f"{backbone}\n", encoding="utf-8")
     home = source_kit / "capabilities" / "houseware"
     home.mkdir(parents=True)
     (home / "package.yaml").write_text(
@@ -122,6 +131,14 @@ def _components(
         f"requires_backbone: {requires_backbone}\n",
         encoding="utf-8",
     )
+    return source_kit
+
+
+def _components(
+    tmp_path: Path, *, requires_backbone: str = '">=1.0.0,<2.0.0"', kind: str = "capability"
+) -> dict[str, Component]:
+    """The components of a kit holding one component, `houseware`."""
+    source_kit = _kit(tmp_path, requires_backbone=requires_backbone, kind=kind)
     return {c.name: c for c in discover_components(source_kit)}
 
 
@@ -142,15 +159,15 @@ def test_floor_field_on_a_capability_with_a_floor_passes(
     tmp_path: Path, requires_backbone: str
 ) -> None:
     components = _components(tmp_path, requires_backbone=requires_backbone)
-    assert release.lint_floor(_floor(), components) == []
+    assert release.lint_floor(_floor(), components, SHIPPED) == []
 
 
 def test_a_changeset_without_the_floor_field_is_not_checked() -> None:
-    assert release.lint_floor(_cs(), {}) == []
+    assert release.lint_floor(_cs(), {}, SHIPPED) == []
 
 
 def test_floor_field_on_a_backbone_changeset_fails(tmp_path: Path) -> None:
-    violations = release.lint_floor(_floor("backbone"), _components(tmp_path))
+    violations = release.lint_floor(_floor("backbone"), _components(tmp_path), SHIPPED)
     assert [v.message for v in violations] == [
         "`requires_backbone` is a component's field: the backbone has no "
         "`requires_backbone` to raise."
@@ -172,7 +189,7 @@ def test_floor_field_on_a_component_without_a_floor_to_raise_fails(
     tmp_path: Path, requires_backbone: str, kind: str, component: str
 ) -> None:
     components = _components(tmp_path, requires_backbone=requires_backbone, kind=kind)
-    violations = release.lint_floor(_floor(component), components)
+    violations = release.lint_floor(_floor(component), components, SHIPPED)
     assert [v.message for v in violations] == [
         f"{component!r} is not a capability or adapter whose `requires_backbone` has a "
         'floor the release can raise (a range of the form ">=X.Y.Z,<A.B.C" or ">=X.Y.Z").'
@@ -180,13 +197,22 @@ def test_floor_field_on_a_component_without_a_floor_to_raise_fails(
 
 
 def test_floor_field_with_another_value_fails(tmp_path: Path) -> None:
-    violations = release.lint_floor(_floor(value="1.150.0"), _components(tmp_path))
+    violations = release.lint_floor(_floor(value="1.150.0"), _components(tmp_path), SHIPPED)
     assert any("takes one value, `release`" in v.message for v in violations)
 
 
 def test_floor_field_on_a_none_changeset_fails(tmp_path: Path) -> None:
-    violations = release.lint_floor(_floor(segment="none"), _components(tmp_path))
+    violations = release.lint_floor(_floor(segment="none"), _components(tmp_path), SHIPPED)
     assert any("a `none` changeset moves no version" in v.message for v in violations)
+
+
+def test_floor_field_in_a_release_shipping_a_pre_release_backbone_fails(tmp_path: Path) -> None:
+    """No floor is raised to a pre-release: the lint refuses what `apply` would
+    otherwise refuse only after writing the component's version."""
+    violations = release.lint_floor(_floor(), _components(tmp_path), "1.6.0rc1")
+    assert len(violations) == 1
+    assert "ships backbone '1.6.0rc1'" in violations[0].message
+    assert "not a release version" in violations[0].message
 
 
 def test_lint_release_format_flags_a_floor_field_on_a_backbone_changeset(tmp_path: Path) -> None:
@@ -202,6 +228,33 @@ def test_lint_release_format_flags_a_floor_field_on_a_backbone_changeset(tmp_pat
     result = release.lint_release_format(source_kit)
     assert not result.ok
     assert [v.source for v in result.violations] == ["changeset backbone-minor-x.yaml"]
+
+
+def _floor_changeset(source_kit: Path) -> None:
+    """A pending changeset declaring `houseware` needs the backbone the release ships."""
+    unreleased = source_kit.parent / ".changes" / "unreleased"
+    unreleased.mkdir(parents=True, exist_ok=True)
+    (unreleased / "houseware-minor-x.yaml").write_text(
+        "component: houseware\nkind: minor\nbody: Needs the new backbone.\n"
+        "custom:\n  category: Changed\n  requires_backbone: release\n",
+        encoding="utf-8",
+    )
+
+
+def test_lint_release_format_checks_the_backbone_the_release_ships(tmp_path: Path) -> None:
+    """With no backbone changeset the release ships the current `.pkit/VERSION`;
+    a pre-release there is refused, and a backbone changeset lifts the refusal."""
+    source_kit = _kit(tmp_path, backbone="1.6.0rc1")
+    _floor_changeset(source_kit)
+
+    refused = release.lint_release_format(source_kit)
+    assert not refused.ok
+    assert ["not a release version" in v.message for v in refused.violations] == [True]
+
+    (source_kit.parent / ".changes" / "unreleased" / "backbone-minor-x.yaml").write_text(
+        "component: backbone\nkind: minor\nbody: Ship it.\n", encoding="utf-8"
+    )
+    assert release.lint_release_format(source_kit).ok
 
 
 # --- Check 4: CHANGELOG.md structure -------------------------------------

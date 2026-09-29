@@ -674,6 +674,34 @@ def test_no_broaden_does_not_refuse_a_floor_it_leaves_alone(tmp_path: Path) -> N
     assert "  version: 0.3.1\n" in pkg.read_text()
 
 
+def test_a_pre_release_backbone_is_refused_before_anything_is_written(tmp_path: Path) -> None:
+    """A component release under a pre-release `.pkit/VERSION` ships that
+    pre-release, which no floor is raised to: the release refuses to plan, so
+    `apply` never writes the component's version first and double-bumps on retry."""
+    source_kit = _make_kit(tmp_path, backbone="1.6.0rc1")
+    pkg = _write_capability(source_kit, "houseware", "0.3.0", ">=1.0.0,<2.0.0")
+    _add_floor(source_kit, "houseware", "minor", "a.yaml")
+    before = pkg.read_text()
+
+    with pytest.raises(click.ClickException, match="not a release version") as err:
+        release.compute_release(source_kit)
+    assert "ships backbone '1.6.0rc1'" in err.value.message
+    assert pkg.read_text() == before
+
+
+def test_a_backbone_move_lifts_the_pre_release_refusal(tmp_path: Path) -> None:
+    """Moving the backbone ships a release version, whatever `.pkit/VERSION` held."""
+    source_kit = _make_kit(tmp_path, backbone="1.6.0rc1")
+    pkg = _write_capability(source_kit, "houseware", "0.3.0", ">=1.0.0,<2.0.0")
+    _add(source_kit, "backbone", "patch", "backbone fix", "a.yaml")
+    _add_floor(source_kit, "houseware", "minor", "b.yaml")
+
+    plan = release.compute_release(source_kit)
+    assert plan.shipped_backbone == "1.6.1"
+    release.apply_release(source_kit, plan, tag=False)
+    assert 'requires_backbone: ">=1.6.1,<2.0.0"' in pkg.read_text()
+
+
 def test_a_comment_naming_the_key_is_neither_broadened_nor_raised(tmp_path: Path) -> None:
     """A comment quoting an older range sits above the key. The broaden and the
     floor raise both rewrite the key, so the raised range still admits the

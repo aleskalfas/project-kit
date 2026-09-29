@@ -24,7 +24,7 @@ from __future__ import annotations
 import json
 import re
 import subprocess
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
@@ -122,8 +122,8 @@ class ReleasePlan:
 
     releases: list[ComponentRelease]  # tiers that actually move (segment != none)
     consumed: list[Changeset]  # every pending changeset (incl. `none`) to delete
-    # The backbone version this release ships: the new one when the backbone
-    # moves, else the current one. A declared floor is raised to it.
+    # The backbone version this release ships (`shipped_backbone`). A declared
+    # floor is raised to it.
     shipped_backbone: str
 
     @property
@@ -148,7 +148,8 @@ def compute_release(source_kit: Path) -> ReleasePlan:
     `none`-only components are consumed but do not move. Raises
     `click.ClickException` if a changeset names an unknown component, or
     carries a floor field it cannot carry (`floor_problems`) — a declared floor
-    is never dropped silently.
+    is never dropped silently, and a release that would write part of one is
+    refused before `apply` writes anything.
     """
     components = {c.name: c for c in discover_components(source_kit)}
     changesets = load_changesets(source_kit.parent)
@@ -162,10 +163,11 @@ def compute_release(source_kit: Path) -> ReleasePlan:
             )
         grouped.setdefault(cs.component, []).append(cs)
 
+    shipped = shipped_backbone(components, changesets)
     refused = [
         f"changeset {cs.path.name}: {problem}"
         for cs in changesets
-        for problem in floor_problems(cs, components)
+        for problem in floor_problems(cs, components, shipped)
     ]
     if refused:
         raise click.ClickException(
@@ -175,8 +177,8 @@ def compute_release(source_kit: Path) -> ReleasePlan:
     releases: list[ComponentRelease] = []
     for name in sorted(grouped, key=lambda n: (n != BACKBONE, n)):
         group = grouped[name]
-        top = max(group, key=lambda cs: segment_rank(cs.segment)).segment
-        if top == "none":
+        top = _top_segment(group)
+        if top is None or top == "none":
             continue  # declared no-bump; consumed only
         component = components[name]
         releases.append(
@@ -189,22 +191,42 @@ def compute_release(source_kit: Path) -> ReleasePlan:
             )
         )
 
-    moved = next((r for r in releases if r.component.name == BACKBONE), None)
-    current = components.get(BACKBONE)
-    shipped = moved.new_version if moved else (current.version if current else "")
     return ReleasePlan(releases=releases, consumed=changesets, shipped_backbone=shipped)
 
 
-def floor_problems(cs: Changeset, components: Mapping[str, Component]) -> list[str]:
+def shipped_backbone(components: Mapping[str, Component], changesets: Sequence[Changeset]) -> str:
+    """The backbone version a release of `changesets` ships: the new one when a
+    changeset moves the backbone, else the current `.pkit/VERSION` (empty when the
+    tree has none). A declared floor is raised to it. One reader for the release,
+    which raises to it, and the lint, which checks it can be raised to."""
+    current = components.get(BACKBONE)
+    if current is None:
+        return ""
+    top = _top_segment([cs for cs in changesets if cs.component == BACKBONE])
+    if top is None or top == "none":
+        return current.version
+    return versioning.next_version(current.version, top)  # type: ignore[arg-type]
+
+
+def _top_segment(group: Sequence[Changeset]) -> str | None:
+    """The highest segment among a tier's changesets; None when there are none."""
+    if not group:
+        return None
+    return max(group, key=lambda cs: segment_rank(cs.segment)).segment
+
+
+def floor_problems(cs: Changeset, components: Mapping[str, Component], shipped: str) -> list[str]:
     """Why `cs`'s floor field cannot raise a floor; empty when it can, or when the
     changeset carries none.
 
     The field raises the floor of a capability or adapter whose `requires_backbone`
-    has the shape the release rewrites (`versioning.requires_backbone_floor`, the
-    same locator the raise rewrites through), on a changeset that moves the component's
-    version — a raised floor changes what the component requires, which is surface
-    and is never shipped under an unchanged version. One reader for the release
-    step, which refuses, and the lint, which reports.
+    is a range the release raises (`versioning.requires_backbone_floor`, the
+    same locator the raise rewrites through), on a changeset that moves the
+    component's version — a raised floor changes what the component requires,
+    which is surface and is never shipped under an unchanged version — to
+    `shipped`, the backbone the release ships (`shipped_backbone`), which must be
+    a release version. One reader for the release step, which refuses, and the
+    lint, which reports.
     """
     if cs.requires_backbone is None:
         return []
@@ -236,6 +258,13 @@ def floor_problems(cs: Changeset, components: Mapping[str, Component]) -> list[s
             f"{cs.component!r} is not a capability or adapter whose `requires_backbone` "
             'has a floor the release can raise (a range of the form ">=X.Y.Z,<A.B.C" '
             'or ">=X.Y.Z").'
+        )
+    if not versioning.is_release_version(shipped):
+        problems.append(
+            f"the release ships backbone {shipped!r} — the current `.pkit/VERSION`, since "
+            "no changeset moves the backbone — which is not a release version "
+            "(major.minor.patch), so no floor can be raised to it. Declare a backbone "
+            "change in this release, or release once `.pkit/VERSION` is a release version."
         )
     return problems
 
@@ -922,11 +951,14 @@ def lint_changeset(cs: Changeset) -> list[FormatViolation]:
     return violations
 
 
-def lint_floor(cs: Changeset, components: Mapping[str, Component]) -> list[FormatViolation]:
+def lint_floor(
+    cs: Changeset, components: Mapping[str, Component], shipped: str
+) -> list[FormatViolation]:
     """The floor field of one changeset: what `compute_release` would refuse
-    (`floor_problems`), reported where the changeset is written."""
+    (`floor_problems`, against `shipped`, the backbone the release ships),
+    reported where the changeset is written."""
     where = f"changeset {cs.path.name}"
-    return [FormatViolation(where, problem) for problem in floor_problems(cs, components)]
+    return [FormatViolation(where, problem) for problem in floor_problems(cs, components, shipped)]
 
 
 def lint_changelog(text: str) -> list[FormatViolation]:
@@ -973,17 +1005,19 @@ def lint_release_format(source_kit: Path, *, skip: bool = False) -> LintResult:
     the escape hatch is active (`skip=True`, wired from a `--skip` flag / the
     `PKIT_CHANGELOG_LINT_SKIP` env var). Reads committed files only; it needs
     no PR context, so it runs in the shared check aggregator. A floor field is
-    checked against the components discovered under `source_kit` (`lint_floor`),
-    which are read only when a changeset carries one.
+    checked against the components discovered under `source_kit` and the backbone
+    the release would ship (`lint_floor`), which are read only when a changeset
+    carries one.
     """
     repo_root = source_kit.parent
     changesets = load_changesets(repo_root)
     carries_floor = any(cs.requires_backbone is not None for cs in changesets)
     components = {c.name: c for c in discover_components(source_kit)} if carries_floor else {}
+    shipped = shipped_backbone(components, changesets) if carries_floor else ""
     violations: list[FormatViolation] = []
     for cs in changesets:
         violations.extend(lint_changeset(cs))
-        violations.extend(lint_floor(cs, components))
+        violations.extend(lint_floor(cs, components, shipped))
 
     changelog = repo_root / CHANGELOG_NAME
     if changelog.is_file():
