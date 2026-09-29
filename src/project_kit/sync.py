@@ -41,7 +41,8 @@ def run_sync(target_root: Path, dry_run: bool = False, force: bool = False) -> N
     capability whose source version is *older* than the installed one is
     refreshed anyway (loudly). Without it, such a downgrade is refused so
     a stale source can never silently overwrite a newer installed
-    capability (issue #524).
+    capability (issue #524). It does not override the refusal to propagate
+    over the methodology's source repository (ADR-059; #1070).
     """
     if not (target_root / ".pkit").is_dir():
         raise click.ClickException(f"{target_root}/.pkit/ does not exist. Run 'pkit init' first.")
@@ -84,6 +85,12 @@ def run_sync(target_root: Path, dry_run: bool = False, force: bool = False) -> N
         click.echo()
         click.echo("Self-host sync complete (deploy primitives re-run).")
         return
+
+    # Sync's test has said no, but the markers may still call the target the
+    # methodology's source: the running code is then not the repository's own,
+    # and propagating its tree would overwrite the source (the gap, ADR-059).
+    # Refuse rather than propagate; `--force` does not override it (#1070).
+    install.refuse_propagation_into_source(target_root, source_kit, command="sync")
 
     # Past the self-host short-circuit: this is a real adopter sync, which reads
     # `read_kit_version(source_kit)` and propagates trees from `source_kit`.

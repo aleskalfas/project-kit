@@ -54,7 +54,10 @@ def _make_source_checkout(
     """Materialise the minimal markers of a project-kit source checkout.
 
     Writes a `.pkit/VERSION` when `version` is given; omits it otherwise (the
-    missing-VERSION case route 1 must tolerate)."""
+    missing-VERSION case route 1 must tolerate). Source-shaped by construction,
+    and only ever routed, never synced: every test here that falls through to
+    the CLI stubs `_run_self`, so the refusal to propagate over the source
+    (#1070) is out of reach."""
     (root / "src" / "project_kit").mkdir(parents=True)
     (root / "src" / "project_kit" / "__init__.py").write_text("", encoding="utf-8")
     (root / ".git").mkdir()
@@ -213,6 +216,10 @@ def test_route1_degrades_to_self_when_dispatcher_not_executable(
     assert ran_self == [True]
     err = capsys.readouterr().err
     assert "not executable" in err or "missing" in err
+    # The fallback runs code that is not the checkout's own: the warning names
+    # the repair, not the sync that would refuse there (ADR-059; #1070).
+    assert f"chmod +x {router.source_dispatcher(tmp_path)}" in err
+    assert "Re-run `pkit sync`" not in err
 
 
 # --- Route 1: PKIT_CLI_VERSION stamp (spurious-drift fix, #488) -----------------

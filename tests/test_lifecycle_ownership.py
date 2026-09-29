@@ -470,7 +470,14 @@ def test_the_two_predicates_agree_on_paths_this_repo_does_not_have() -> None:
 # being the methodology's source, never on the path.
 
 def _source_repository(root: Path) -> Path:
-    """Give *root* the two markers of the methodology's source repository."""
+    """Give *root* the two markers of the methodology's source repository.
+
+    Source-shaped by construction. Sync runs over it only in
+    `test_the_source_discriminator_agrees_with_syncs_own_decision`, under the
+    route-1 simulation there, which makes sync's test hold: sync self-hosts and
+    never reaches the refusal to propagate over the source (#1070), which it
+    would meet under this suite's own code instead.
+    """
     (root / "src" / "project_kit").mkdir(parents=True)
     (root / "src" / "project_kit" / "__init__.py").write_text("", encoding="utf-8")
     (root / ".pkit" / "cli").mkdir(parents=True, exist_ok=True)
@@ -550,6 +557,8 @@ def test_the_source_discriminator_agrees_with_syncs_own_decision(
     router execs that tree's dispatcher, which runs that tree's own package — so
     each tree is synced by the code route 1 would run there: its own package
     where the markers hold, and this test's checkout (the tool) everywhere else.
+    Without that simulation the source-shaped tree meets the refusal to propagate
+    over the source, the gap's answer (#1070; `test_source_repository_refusal.py`).
     """
     from project_kit import install, sync
     from project_kit.router import is_source_checkout

@@ -44,7 +44,12 @@ from pathlib import Path
 import click
 from packaging.version import InvalidVersion, Version
 
-from project_kit.install import find_source_kit, is_self_host, refuse_if_source_kit_incomplete
+from project_kit.install import (
+    find_source_kit,
+    is_self_host,
+    refuse_if_source_kit_incomplete,
+    refuse_propagation_into_source,
+)
 from project_kit.manifest import (
     ComponentManifest,
     ComponentRegistryEntry,
@@ -62,7 +67,6 @@ from project_kit.router import (
     DISTRIBUTION_GIT_URL,
     is_route_bypassed,
     is_routed_child,
-    is_source_checkout,
     pin_file_path,
     read_version_pin,
     run_bypassed,
@@ -120,6 +124,13 @@ def run_upgrade(
         run_sync(target_root, dry_run=dry_run)
         return
 
+    # Sync's test has said no, but the markers may still call the target the
+    # methodology's source: the running code is then not the repository's own
+    # (the gap, ADR-059). Refuse here, before the pinned-child branch and the
+    # bypass guard: both bypass paths into the gap set PKIT_NO_ROUTE, which skips
+    # the tool step below, so a refusal placed there would never be reached (#1070).
+    refuse_propagation_into_source(target_root, source_kit, command="upgrade")
+
     # ADR-049: this project may pin a pkit version via `.pkit/version-pin`. Its
     # presence changes what `pkit upgrade` means — an upgrade *raises* the pin
     # (flipped last) rather than floating on the installed tool.
@@ -135,8 +146,9 @@ def run_upgrade(
     # about the `uv`-installed binary, not this project's `.pkit/` content — so it
     # runs before the backbone-version comparison below and its early return, or
     # the stale-tool adopter would still see only "nothing to upgrade" and never
-    # learn the fix lives in `uv`. Best-effort and read-only: it never installs,
-    # never fails the command, and is suppressed on a source checkout (D3).
+    # learn the fix lives in `uv`. Best-effort: it never fails the command, and it
+    # is never reached in a source checkout (D3) — the self-host branch returns
+    # and the source refusal raises above it.
     #
     # ADR-049: suppress it on the bootstrap hop. Inside a `run_bypassed`-launched
     # reconcile (PKIT_NO_ROUTE set), this upgrade is running *under* a pin raise;
@@ -146,7 +158,7 @@ def run_upgrade(
         # Tool axis (ADR-044, amended): self-update the global tool when stale
         # and re-exec to finish under the new version (never returns on a
         # successful self-update); otherwise instruct or report current.
-        _maybe_self_update_tool(target_root, self_update=self_update, dry_run=dry_run)
+        _maybe_self_update_tool(self_update=self_update, dry_run=dry_run)
 
     # Past the self-host short-circuit: a real adopter upgrade reads
     # `read_kit_version(source_kit)` next and propagates from `source_kit` via
@@ -547,23 +559,19 @@ def run_tool_update(dry_run: bool = False, self_update: bool = True) -> None:
     """
     if is_route_bypassed(os.environ):
         return
-    _maybe_self_update_tool(None, self_update=self_update, dry_run=dry_run)
+    _maybe_self_update_tool(self_update=self_update, dry_run=dry_run)
 
 
-def _maybe_self_update_tool(
-    target_root: Path | None, *, self_update: bool, dry_run: bool
-) -> None:
+def _maybe_self_update_tool(*, self_update: bool, dry_run: bool) -> None:
     """Detect a newer released pkit tool and **act** on it (ADR-044, amended):
     self-update the global binary and re-exec, or degrade to instruct.
 
-    - **D3 suppression.** On a source checkout / self-host, reinstalling a released
-      tag over working-tree code is nonsensical — skip entirely (no lookup, no
-      output). `target_root is None` (run outside a project) is never a checkout.
-      It asks the router's marker test after sync's test (the self-host branch
-      above) has said no, so it answers only where the running code is not the
-      checkout's own; there it skips the tool update and upgrade still
-      propagates (ADR-059 point 3; the refusal for that gap is #1070). The
-      markers are in the lifecycle README's "The methodology's literals".
+    - **D3 suppression.** Reinstalling a released tag over a source checkout's
+      working-tree code is nonsensical, and this step is never reached there:
+      `run_upgrade`'s self-host branch returns under the checkout's own code, and
+      its refusal to propagate over the source raises under any other code
+      (ADR-059; #1070) — both before this step. Run outside a project
+      (`run_tool_update`), there is no checkout.
     - **D1 degrade.** Any lookup failure (offline, no credentials, `git` absent,
       timeout) warns and returns; the caller proceeds unchanged.
     - **Act (amended).** When the tool is behind and self-update is allowed
@@ -576,9 +584,6 @@ def _maybe_self_update_tool(
       failed/declined install, or a dry-run) fall back to printing the exact
       command — today's behaviour. Never fails `pkit upgrade`.
     """
-    if target_root is not None and is_source_checkout(target_root):
-        return
-
     latest = _latest_released_version()
     if latest is None:
         click.echo()

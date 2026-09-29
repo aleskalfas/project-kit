@@ -193,6 +193,21 @@ def is_source_checkout(root: Path) -> bool:
     )
 
 
+def source_dispatcher(root: Path) -> Path:
+    """The in-tree dispatcher route 1 execs in the source checkout at `root`."""
+    return root / ".pkit" / "cli" / "pkit"
+
+
+def can_exec_source_dispatcher(root: Path) -> bool:
+    """True when route 1 can exec `root`'s dispatcher and so run that checkout's
+    own code; false sends route 1 to its fallback, running this binary instead.
+
+    Route 1's own condition, shared with the refusal that names the fallback as
+    the way a run reached the methodology's source with foreign code (ADR-059).
+    """
+    return os.access(source_dispatcher(root), os.X_OK)
+
+
 def _resolve_pin(root: Path) -> str | None:
     """The version a project pins via its `.pkit/version-pin` directive (ADR-049).
 
@@ -280,15 +295,23 @@ def _exec_source_dispatcher(root: Path, argv: list[str], environ) -> None:  # ty
     not re-enter this router, and leaving the guard unset preserves the retired
     shim's behaviour where a `pkit` subprocess spawned inside the checkout still
     runs the working tree.
+
+    The fallback runs code that is not the checkout's own, so its warning points
+    at repairing the dispatcher, never at `pkit sync`: run by this binary in the
+    checkout, sync would copy this binary's tree over the source, and it refuses
+    to (ADR-059; #1070).
     """
-    dispatcher = root / ".pkit" / "cli" / "pkit"
-    if os.access(dispatcher, os.X_OK):
+    dispatcher = source_dispatcher(root)
+    if can_exec_source_dispatcher(root):
         _stamp_cli_version(root, environ)
         os.execv(str(dispatcher), [str(dispatcher), *argv])  # replaces this process
     _warn(
         f"source checkout at {root} but {dispatcher} is missing or not "
-        f"executable — running this binary ({running_version()}) instead. "
-        f"Re-run `pkit sync` to restore the dispatcher."
+        f"executable — running this binary ({running_version()}) instead, which "
+        f"is not this checkout's code. Repair the dispatcher: `chmod +x {dispatcher}`, "
+        f"or restore it with `git checkout -- {dispatcher}`. `pkit sync` does not "
+        f"repair it: run by this binary here, it refuses to copy this binary's "
+        f"tree over the checkout."
     )
 
 
