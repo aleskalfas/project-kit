@@ -26,6 +26,7 @@ and the `pkit` they read through is the real CLI under this interpreter
 
 from __future__ import annotations
 
+import ast
 import json
 import os
 import sys
@@ -158,6 +159,28 @@ def test_the_package_provides_the_role_and_declares_the_point_and_the_contributi
     command = package["commands"]["fill-readers"]
     assert command["query-contract"] is True
     assert (CAPABILITY / command["script"]).is_file()
+
+
+def _constant(script: Path, name: str) -> Any:
+    """A module-level constant of one of the capability's scripts, read from its
+    source: the scripts run in their own environment, and their `_lib` is not
+    importable beside living-docs'."""
+    for node in ast.parse(script.read_text(encoding="utf-8")).body:
+        if isinstance(node, ast.Assign) and any(
+            isinstance(target, ast.Name) and target.id == name for target in node.targets
+        ):
+            return ast.literal_eval(node.value)
+    raise AssertionError(f"{script.name} defines no {name}")
+
+
+def test_the_filler_answers_the_point_and_version_the_package_declares() -> None:
+    """The envelope's `schema_version` is the filler's; the version the backbone binds
+    the contribution by is the package's. Held equal, the filler never answers a
+    version the contribution does not declare."""
+    (contribution,) = _package(CAPABILITY)["connections"]["extensions"]["contributes"]
+    readers = CAPABILITY / "scripts" / "_lib" / "readers.py"
+    assert _constant(readers, "POINT") == contribution["point"]
+    assert _constant(readers, "POINT_VERSION") == contribution["schema_version"]
 
 
 EVIDENCE_ENTRY = {
@@ -299,11 +322,30 @@ def test_a_page_may_name_an_actor_as_its_reader(documented: AdopterRepo) -> None
         "readers (pkit::documentation:readers): act-operator, act-tester, maintainer, user; "
         "1 page reader(s) checked."
     ) in document["summary"]
-    # A withdrawn actor is history, not a reader.
+    # A withdrawn actor is history, not a reader: the page naming it fails living-docs'
+    # check, while the analysis, withdrawing an actor soundly, passes its own.
     documented.write({"docs/guide.md": page.format(reader="act-retired")})
     completed = run_script(documented, validate.relative_to(documented.root), "--json")
     ((location, _message),) = _findings(json.loads(completed.stdout), "error")
     assert location == "docs/guide.md:/reader"
+    assert run_script(documented, VALIDATE).returncode == 0
+
+
+def test_an_entry_that_is_no_actor_is_no_reader(documented: AdopterRepo) -> None:
+    """The actors file is judged as a whole, an entry alone: an entry whose key is no
+    actor id is not a reader — the filler skips it and still answers — and the
+    capability's own check reports it."""
+    actors = {
+        "ACT-tester": _actor("Test author", "active", "Run the suite"),
+        "USER-stray": _actor("Stray", "active", "Anything"),
+    }
+    documented.write({ACTORS: f"---\n{json.dumps(actors, indent=2)}\n---\n\n# Actors\n"})
+    completed = run_script(documented, FILL, "--json")
+    assert completed.returncode == 0, completed.stderr
+    assert [reader["id"] for reader in json.loads(completed.stdout)["value"]] == ["act-tester"]
+    assert [e["id"] for e in _resolve(READERS)["entries"]] == ["act-tester", "maintainer", "user"]
+    locations = [location for location, _message in _findings(_check(documented), "error")]
+    assert f"{ACTORS}#USER-stray" in locations
 
 
 def test_no_analysis_contributes_no_reader(documented: AdopterRepo) -> None:
@@ -317,8 +359,9 @@ def test_no_analysis_contributes_no_reader(documented: AdopterRepo) -> None:
 def test_an_actors_file_that_cannot_be_read_leaves_the_readers_unresolved(
     documented: AdopterRepo,
 ) -> None:
-    """The point's inert policy is `fail`: without the actors the filler gives no
-    answer, never an empty one, and no page's reader is checked against the rest."""
+    """A command filler fails closed whatever the point's policy (COR-052 point 6):
+    without the actors it gives no answer, never an empty one; and under the
+    readers point's `fail` policy no page's reader is checked against the rest."""
     _actors(documented)
     documented.write({ACTORS: "---\nACT-tester: [unclosed\n---\n\n# Actors\n"})
     completed = run_script(documented, FILL, "--json")

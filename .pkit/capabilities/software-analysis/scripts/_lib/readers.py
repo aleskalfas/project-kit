@@ -8,12 +8,16 @@ companion schema, `readers.schema.json`, which its provider ships). The
 capability maps its actors onto that shape and keeps its own model to itself:
 
 - **one reader per actor in force**: a withdrawn actor is history, not a
-  reader, and an entry whose key is no actor id is the check's to report;
+  reader, and an entry whose key is no actor id is not a reader either;
 - **its id is the actor's id in lower case**, `ACT-tester` → `act-tester`: a
-  word, as the point asks, and an id of this capability's own. It is never one
-  of the point's default readers, `user` and `maintainer`, which a
-  capability's entry of the same id would replace in the point's `union`, so
-  the actors are added beside them;
+  word, as the point asks, and an id of this capability's own, under the
+  `act-` prefix, beside whatever readers the point's provider supplies
+  (living-docs: `user` and `maintainer`). The prefix is kept rather than
+  stripped: `ACT-user` read as `user` would silently replace a provider's
+  default reader in the point's `union`, where a capability's entry replaces
+  the default's of the same id. The mapping is stable — pages persist a
+  reader's id in their `reader` field — so it never changes but as a break of
+  this contribution;
 - **its description** is the actor's name and needs, with the actor's id, so
   a reader-review reads a page against what the analysis says that reader
   needs.
@@ -22,11 +26,16 @@ The analysis is read through the backbone's reading, `pkit friction artefacts
 --json` (`backbone.read_analysis`): the filler never walks a place, and never
 asks for a point.
 
-**Fail closed.** The point's inert policy is `fail`, so what cannot be answered
-in full is no answer — raised, never an empty list in its place: the backbone
-gives no reading, or the actors' file does not parse or is not a collection. An
-analysis with no actors, or no analysis yet, answers the empty list: there is
-no reader to add.
+**Fail closed.** A command filler fails closed whatever the point's policy
+(COR-052 point 6): what cannot be answered in full is no answer — raised, and
+the command exits 1, never an empty list in its place. That is the actors'
+file as a whole: the backbone gives no reading, or the file's front matter does
+not parse, or it is not a collection. An entry is judged alone: one whose key
+is no actor id is not a reader and is skipped, and `pkit analysis validate`
+reports it; a withdrawn actor gives no reader, so a page naming it fails the
+documentation provider's check while this capability's passes. An analysis
+with no actors, or no analysis yet, answers the empty list: there is no reader
+to add.
 """
 
 from __future__ import annotations
@@ -37,7 +46,8 @@ from typing import Any
 from _lib import schemas
 from _lib.model import ACTOR, Analysis
 
-#: The point, and the version of its companion schema this contribution targets.
+#: The point, and the version of its companion schema this contribution targets —
+#: the package's `contributes` entry declares the same, and a test holds the two equal.
 POINT = "pkit::documentation:readers"
 POINT_VERSION = 1
 
@@ -48,7 +58,8 @@ class NoAnswer(Exception):
 
 def readers(analysis: Analysis) -> list[dict[str, str]]:
     """The readers the analysis's actors map to, sorted by id. Raises NoAnswer when
-    the actors' file cannot be read as a collection of actors."""
+    the actors' file as a whole cannot be read as a collection of actors; an entry
+    that is no actor is skipped."""
     actors_file = analysis.places.get(ACTOR)
     if actors_file is not None and actors_file in analysis.unreadable:
         raise NoAnswer(f"the actors cannot be read: {actors_file}'s front matter does not parse")

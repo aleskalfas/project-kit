@@ -208,11 +208,17 @@ The entry's shape is `schemas/revalidation-evidence.schema.json`. It reads alone
 
 | Actor | Reader |
 |---|---|
-| its id, `ACT-tester` | `act-tester` — the id in lower case: a word, as the point asks, and never one of the point's default readers, so actors are added beside `user` and `maintainer` rather than replacing them |
+| its id, `ACT-tester` | `act-tester` — the id in lower case: a word, as the point asks, under the `act-` prefix, beside whatever readers the documentation provider supplies (living-docs: `user`, `maintainer`). The prefix is kept rather than stripped: `ACT-user` read as `user` would silently replace a provider's default reader in the point's `union`. The mapping is stable, since pages persist a reader's id |
 | its name and needs | the description: `Test author, the analysis' actor ACT-tester. Needs: Run the suite against a clean sandbox; Read a failure's cause.` |
-| withdrawn | no reader: it is history |
+| withdrawn | no reader: it is history. A page still naming it as its reader fails the documentation provider's check (living-docs' validator), while `pkit analysis validate` passes: withdrawing the actor is sound analysis, and the page is what must change |
 
-A page names an actor as its reader by that id (`reader: act-tester`). `pkit analysis fill-readers` prints the readers for you, `--json` the envelope the backbone reads. The filler reads the analysis through the core's reading command, `pkit friction artefacts`, and never walks the folders. The readers point fails closed, so an actors file that does not parse, or is not a collection, is no answer rather than no readers: the point is unresolved, its reason naming the file, until you fix it. **Inert when no capability provides the documentation role**: the contribution is reported as having no active provider, its command never runs, and this capability never requires one.
+A page names an actor as its reader by that id (`reader: act-tester`). `pkit analysis fill-readers` prints the readers for you, `--json` the envelope the backbone reads. The filler reads the analysis through the core's reading command, `pkit friction artefacts`, and never walks the folders.
+
+- **Fail closed, whatever the point's policy** (COR-052 point 6). An actors file that cannot be read as a whole — its front matter does not parse, or it is not a collection — is no answer rather than no readers: the command exits 1, and under living-docs' `fail` policy the readers point is unresolved, its reason naming the file, until you fix it.
+- **An entry is judged alone.** An entry of the actors file whose key is no actor id is not a reader: the filler skips it, and `pkit analysis validate` reports it.
+- **Inert when no capability provides the documentation role**: the contribution is reported as having no active provider, its command never runs, and this capability never requires one.
+
+An install plan predicts the wiring, not the data (COR-053 point 7): it shows this contribution connecting and never runs the filler, so installing software-analysis beside a documentation provider puts the actors file's readability on that provider's validation path — from then on, an actors file that does not parse leaves the readers point unresolved, which `pkit validate` reports as an error.
 
 ## What's shipped now, what's next
 
