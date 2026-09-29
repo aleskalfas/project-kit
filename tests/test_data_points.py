@@ -947,3 +947,91 @@ def test_resolve_refuses_what_is_not_a_point_address(repo: AdopterRepo) -> None:
     result = _resolve_cli("pkit::documentation")
     assert result.exit_code == 2
     assert "is not a point address" in result.output
+
+
+# --- resolving one point asks only its fillers (#1103) ----------------------------------
+
+
+def _two_points_each_filled_by_a_command(repo: AdopterRepo) -> None:
+    """READERS and TOOL, defined by one provider; `notes` fills READERS and
+    `evidence` fills TOOL, each through its command `export`."""
+    accepts = {
+        READERS: {
+            "schema_version": 1,
+            "schema": "readers.schema.json",
+            "description": "Who reads the documentation.",
+            "combination": "union",
+        },
+        TOOL: {
+            "schema_version": 1,
+            "schema": "tool.schema.json",
+            "description": "The tool that renders it.",
+            "combination": "single",
+        },
+    }
+    _stage(repo, "docs-a", {"roles": [DOCS], "extension-points": {"accepts": accepts}})
+    _command_contributor(repo, "notes", _printing(ANSWER))
+    tool = {"schema_version": 1, "value": {"name": "e"}}
+    _command_contributor(repo, "evidence", _printing(tool), address=TOOL)
+
+
+@pytest.fixture
+def started(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    """The capabilities whose command filler the data points start, in order."""
+    names: list[str] = []
+    real = dp.run_command
+
+    def counting(script: Path, *args: Any, **kwargs: Any) -> Any:
+        names.append(Path(script).parts[-3])  # .pkit/capabilities/<name>/scripts/<script>
+        return real(script, *args, **kwargs)
+
+    monkeypatch.setattr(dp, "run_command", counting)
+    return names
+
+
+def test_resolve_starts_only_the_command_fillers_of_the_point_asked_for(
+    repo: AdopterRepo, started: list[str]
+) -> None:
+    _two_points_each_filled_by_a_command(repo)
+    readers = _resolve_cli(READERS, "--json")
+    assert readers.exit_code == 0, readers.output
+    assert json.loads(readers.output)["value"] == ["developer"]
+    assert started == ["notes"]
+    started.clear()
+    tool = _resolve_cli(TOOL, "--json")
+    assert tool.exit_code == 0, tool.output
+    assert json.loads(tool.output)["value"] == {"name": "e"}
+    assert started == ["evidence"]
+
+
+def test_validate_and_status_still_resolve_every_point_once(
+    repo: AdopterRepo, started: list[str]
+) -> None:
+    _two_points_each_filled_by_a_command(repo)
+    result = CliRunner().invoke(main, ["validate", "--no-refs"])
+    assert result.exit_code == 0, result.output
+    assert sorted(started) == ["evidence", "notes"]
+    started.clear()
+    status = CliRunner().invoke(main, ["--color", "never", "status"])
+    assert status.exit_code == 0, status.output
+    assert sorted(started) == ["evidence", "notes"]
+
+
+def test_a_point_resolved_first_is_shared_by_the_whole_resolution_of_the_run(
+    repo: AdopterRepo, started: list[str]
+) -> None:
+    """Within one run, the point asked for first is not resolved again, and the
+    whole resolution is the one a fresh run gives — findings in the same order."""
+    _two_points_each_filled_by_a_command(repo)
+    _filler(repo, "value: [not an envelope\n")  # a filler-file finding, before any point's
+
+    def one_then_all() -> tuple[dp.ResolvedPoint | None, dp.DataResolution]:
+        point, _why = dp.resolve_point(repo.root, TOOL)
+        return point, dp.shared_resolution(repo.root)
+
+    point, whole = validators.as_one_run(one_then_all)
+    assert started == ["evidence", "notes"]
+    assert whole.point(TOOL) == point
+    started.clear()
+    assert whole == dp.resolve_data_points(repo.root)
+    assert sorted(started) == ["evidence", "notes"]
