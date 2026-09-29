@@ -140,6 +140,21 @@ def test_is_source_checkout_false_for_adopter(tmp_path: Path) -> None:
     assert router.is_source_checkout(tmp_path) is False
 
 
+def test_is_source_checkout_true_with_the_dispatcher_deleted(tmp_path: Path) -> None:
+    """The package source beside `.pkit/` is what tells the source from an adopter;
+    the dispatcher is only what route 1 execs, so losing it never makes the
+    checkout an adopter (#1090)."""
+    _make_source_checkout(tmp_path).unlink()
+    assert router.is_source_checkout(tmp_path) is True
+    assert router.source_dispatcher_missing(tmp_path) is True
+
+
+def test_package_source_without_a_pkit_tree_is_not_a_source_checkout(tmp_path: Path) -> None:
+    (tmp_path / "src" / "project_kit").mkdir(parents=True)
+    (tmp_path / "src" / "project_kit" / "__init__.py").write_text("", encoding="utf-8")
+    assert router.is_source_checkout(tmp_path) is False
+
+
 def test_resolve_pin_reads_version_pin(tmp_path: Path) -> None:
     _make_adopter(tmp_path, "1.100.0")
     assert router._resolve_pin(tmp_path) == "1.100.0"
@@ -220,6 +235,29 @@ def test_route1_degrades_to_self_when_dispatcher_not_executable(
     # the repair, not the sync that would refuse there (ADR-059; #1070).
     assert f"chmod +x {router.source_dispatcher(tmp_path)}" in err
     assert "Re-run `pkit sync`" not in err
+
+
+def test_route1_names_a_deleted_dispatcher_and_its_restore(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    no_exec: None,
+    ran_self: list[bool],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A checkout with its dispatcher deleted is still the source: route 1 falls
+    back, and its warning says what is missing and how to restore it, never
+    treating the checkout as an adopter silently (#1090)."""
+    dispatcher = _make_source_checkout(tmp_path)
+    dispatcher.unlink()
+    monkeypatch.chdir(tmp_path)
+
+    router.main(["version"])
+
+    assert ran_self == [True]
+    err = capsys.readouterr().err
+    assert "carries the methodology's package source but no dispatcher" in err
+    assert f"restore it with `git checkout -- {dispatcher}`" in err
+    assert "chmod +x" not in err  # nothing to chmod: the file is gone
 
 
 # --- Route 1: PKIT_CLI_VERSION stamp (spurious-drift fix, #488) -----------------

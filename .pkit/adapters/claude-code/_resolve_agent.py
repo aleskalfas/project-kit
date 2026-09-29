@@ -7,7 +7,8 @@
 
 Invoked by `deploy-agents.sh` once per agent. Reads:
 
-- arg 1: source agent file (`.pkit/agents/{core,project}/<name>/<name>.md`)
+- arg 1: source agent file (`.pkit/agents/{core,project}/<name>/<name>.md`,
+  or a capability's `.pkit/capabilities/<cap>/agents/<name>/<name>.md`)
 - arg 2: agent name (used for per-agent overrides lookup)
 - arg 3: overlay file (`.pkit/agents/project/overlay.yaml`)
 
@@ -28,8 +29,16 @@ from the front matter, each overridable per agent under the overlay's
 default applies; a value the harness does not accept is not written either —
 the agent deploys, inherits, and a `warning:` line names the value.
 
-This script *applies* that last check but does not *define* it. The
-sync-managed predicate and the write-carrying category registry live
+It rebases the agent's storyboards (COR-016) onto their source paths. A source
+declares a storyboard by its bare sibling filename (`storyboard.md`), which
+stays right wherever the agent's folder lives; the deployed copy lives
+elsewhere, where that name resolves to nothing. So each `storyboards:` entry
+naming a file beside the source is rewritten — in the list and wherever the
+body cites it — to that file's project-root-relative path, the path the runtime
+reads it from. An entry already written as a source path is left as written.
+
+The sync-managed check above is one this script *applies* but does not
+*define*. The sync-managed predicate and the write-carrying category registry live
 once, in the lifecycle layer's propagated `.pkit/lifecycle/ownership.py`,
 and this resolver imports them (ADR-051 Decision point 3): re-deriving
 the tier-ownership map per adapter would fork the predicate and silently
@@ -162,6 +171,36 @@ def carry_policy(fm_data: dict, overrides: dict, where_overridden: str, warn) ->
             fm_data.pop(key, None)
         else:
             fm_data[key] = value
+
+
+def rebase_sibling_storyboards(fm_data: dict, body: str, source_file: Path) -> str:
+    """Rewrite each sibling `storyboards:` entry to its source path, and the body alike.
+
+    A sibling entry is one that names a file beside the source (inside the
+    project). Its citations in the body are rewritten where the entry stands as
+    a whole path token — not inside a longer path, and not as the tail of a
+    `<scenario>.storyboard.md` name.
+    """
+    entries = fm_data.get("storyboards")
+    if not isinstance(entries, list):
+        return body
+    source_dir = source_file.resolve().parent
+    for index, entry in enumerate(entries):
+        if not isinstance(entry, str) or Path(entry).is_absolute():
+            continue
+        sibling = (source_dir / entry).resolve()
+        if not sibling.is_file() or TARGET_ROOT not in sibling.parents:
+            continue
+        source_path = sibling.relative_to(TARGET_ROOT).as_posix()
+        if source_path == entry:
+            continue
+        entries[index] = source_path
+        body = re.sub(
+            rf"(?<![\w./-]){re.escape(entry)}(?![\w/-]|\.\w)",
+            lambda _match, path=source_path: path,
+            body,
+        )
+    return body
 
 
 def main(argv: list[str]) -> int:
@@ -326,6 +365,7 @@ def main(argv: list[str]) -> int:
                 fm_data["reads"][k] = expand_list(fm_data["reads"][k], optional=True)
 
     carry_policy(fm_data, policy_overrides, f"overrides.{agent_name}", warn)
+    body = rebase_sibling_storyboards(fm_data, body, Path(source_file))
 
     out = io.StringIO()
     yaml.dump(fm_data, out)

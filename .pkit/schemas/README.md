@@ -1,5 +1,26 @@
 ---
 variant: specialized
+reader: user
+kind: reference
+pkit:
+  friction:
+    anchors:
+      path:
+        - .pkit/schemas/_defs/**
+        - .pkit/schemas/backbone/**
+        - src/project_kit/schemas.py
+        - src/project_kit/schemas_validate.py
+        - src/project_kit/schemas_authoring.py
+        - src/project_kit/data_validate.py
+        - src/project_kit/backbone_schemas.py
+        - src/project_kit/friction_discovery.py
+        - src/project_kit/friction_validate.py
+        - src/project_kit/rule_sets.py
+        - src/project_kit/working_tree.py
+      record: [COR-018, COR-019, COR-020, COR-023, COR-029, COR-048, COR-050, COR-051, COR-052, COR-053, ADR-056, ADR-057]
+    revalidated:
+      at: 2026-09-29T15:15:38Z
+      outcome: updated
 ---
 
 # Schemas

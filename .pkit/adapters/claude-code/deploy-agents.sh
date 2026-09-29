@@ -33,6 +33,10 @@
 #   matter; absent or `inherit` writes no key (the harness default applies).
 #   A value the harness does not accept is not written: the agent deploys,
 #   inherits, and a `warning` status line names the value.
+# - A storyboard the source declares by its bare sibling filename
+#   (`storyboard.md`, COR-016) is rewritten to its project-root-relative source
+#   path in the resolved file — in `storyboards:` and where the body cites it —
+#   so the deployed copy, which lives in `.claude/agents/`, still resolves it.
 # - A listed agent whose canonical source doesn't resolve (e.g. a folder
 #   mid-build with no <name>/<name>.md per COR-015) is likewise skipped
 #   loudly rather than aborting the run (#537).

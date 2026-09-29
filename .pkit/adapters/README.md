@@ -1,5 +1,18 @@
 ---
 variant: adapter-umbrella
+reader: user
+kind: reference
+pkit:
+  friction:
+    anchors:
+      path:
+        - .pkit/schemas/harness-requirements.yaml
+        - .pkit/schemas/harness-requirements.schema.json
+      record: [COR-005, COR-006, COR-047]
+      artefact: [.pkit/adapters/claude-code/README.md]
+    revalidated:
+      at: 2026-09-29T15:18:47Z
+      outcome: updated
 ---
 
 # Adapters

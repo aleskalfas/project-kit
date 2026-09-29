@@ -9,7 +9,8 @@ for every command a registered component declares under the query contract
 whose script carries inline script metadata, they resolve the script's
 environment once, online, through uv's own resolution — `uv sync --script
 <path>`, which resolves the metadata and installs the environment into uv's
-cache without running the script.
+cache without running the script. `pkit capabilities install`, `register` and
+`upgrade` do the same for the one capability they bring in (#1090).
 
 **Idempotent.** Each script is first resolved with `--offline`, the condition
 the query meets. When that succeeds the query will too: nothing is fetched and
@@ -105,13 +106,14 @@ class Provisioning:
         return (self.state.value, label)
 
 
-def query_commands(target_root: Path) -> list[QueryScript]:
+def query_commands(target_root: Path, *, component: str | None = None) -> list[QueryScript]:
     """Every command a registered component — capability or adapter — declares
     under the query contract (`query-contract: true` on its `commands:` leaf),
-    in manifest order, then declaration order."""
+    in manifest order, then declaration order; only `component`'s when named."""
     return [
         QueryScript(owner, command.reference, command.script)
         for owner, component_dir, _package in installed_package_files(target_root)
+        if component is None or owner == component
         for command in registered_commands(component_dir).values()
         if command.entry.get(validators.QUERY_CONTRACT_KEY) is True
     ]
@@ -146,12 +148,18 @@ def provision(command: QueryScript, *, dry_run: bool = False) -> Provisioning:
     return Provisioning(command, State.NOT_PROVISIONED, failure)
 
 
-def ensure(target_root: Path, *, dry_run: bool = False) -> list[tuple[str, str]]:
-    """Provision every query command of the project at `target_root`.
+def ensure(
+    target_root: Path, *, dry_run: bool = False, component: str | None = None
+) -> list[tuple[str, str]]:
+    """Provision every query command of the project at `target_root` — or only
+    `component`'s, for a lifecycle verb that just brought that one in.
 
     Returns one `(verb, detail)` status line per command for the caller to
     print, and none when no component declares a query command."""
-    return [provision(command, dry_run=dry_run).line for command in query_commands(target_root)]
+    return [
+        provision(command, dry_run=dry_run).line
+        for command in query_commands(target_root, component=component)
+    ]
 
 
 def _resolve(script: Path, *, offline: bool) -> str | None:

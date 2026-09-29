@@ -25,8 +25,8 @@ These tests pin the load-bearing facts:
   is stale — never writing package metadata itself;
 - `hand-off` adds the COR-042 contract to an EXISTING coupling only, validates
   the trigger against the upstream definition where resolvable at authoring
-  time, scaffolds + registers the seam stubs, and likewise never bumps the
-  version;
+  time — a role address through the wiring, as couple reads it — scaffolds +
+  registers the seam stubs, and likewise never bumps the version;
 - both mutations are idempotent on the identical declaration and refuse to
   overwrite a DIFFERENT declared edge/contract;
 - the interpretation-only check reports INDETERMINATES only — misses are not
@@ -1096,6 +1096,42 @@ def test_handoff_warns_when_upstream_unresolvable(authoring_repo: Path) -> None:
     result = _handoff_unit(authoring_repo, upstream="elsewhere:thing")
     assert result.changed
     assert any("INDETERMINATE" in w for w in result.warnings)
+
+
+def test_handoff_resolves_a_role_address_through_the_wiring(authoring_repo: Path) -> None:
+    """A role-addressed coupling's upstream is the process the role's active
+    provider offers, as health and couple read it (#1090): the trigger is
+    validated against that definition, and nothing is warned."""
+    _stamp_screen(authoring_repo)
+    _stamp_unit(authoring_repo)
+    _offer_screen_by_role(authoring_repo)
+    _couple_unit(authoring_repo, upstream=ROLE_SCREEN)
+
+    with pytest.raises(pa.ProcessAuthoringError, match="phantom trigger"):
+        _handoff_unit(authoring_repo, upstream=ROLE_SCREEN, trigger="aproved-typo")
+
+    result = _handoff_unit(authoring_repo, upstream=ROLE_SCREEN)
+    assert result.changed
+    assert result.warnings == ()
+    (entry,) = load_definition(authoring_repo, "delivery:unit").states[0]["depends_on"]
+    assert entry["upstream"] == ROLE_SCREEN  # the contract sits on the address as declared
+    assert entry["handoff"]["trigger"] == "ready"
+
+
+def test_handoff_warns_with_the_wiring_s_reason_when_a_role_reaches_no_process(
+    authoring_repo: Path,
+) -> None:
+    _stamp_screen(authoring_repo)
+    _stamp_unit(authoring_repo)
+    _couple_unit(authoring_repo, upstream=ROLE_SCREEN)  # no capability provides the role
+
+    result = _handoff_unit(authoring_repo, upstream=ROLE_SCREEN)
+
+    assert result.changed
+    (warning,) = result.warnings
+    assert "does not resolve to an offered process" in warning
+    assert "no installed capability provides its role" in warning
+    assert "INDETERMINATE" in warning
 
 
 def test_handoff_is_idempotent_and_refuses_conflicts(authoring_repo: Path) -> None:

@@ -1,5 +1,47 @@
 ---
 variant: specialized
+reader: user
+kind: reference
+pkit:
+  friction:
+    anchors:
+      path:
+        - .pkit/cli/**
+        - src/project_kit/cli.py
+        - src/project_kit/__main__.py
+        - src/project_kit/dispatcher.py
+        - src/project_kit/router.py
+        - src/project_kit/cli_render.py
+        - src/project_kit/install.py
+        - src/project_kit/sync.py
+        - src/project_kit/upgrade.py
+        - src/project_kit/merge.py
+        - src/project_kit/workspace.py
+        - src/project_kit/visibility.py
+        - src/project_kit/versioning.py
+        - src/project_kit/status.py
+        - src/project_kit/validate.py
+        - src/project_kit/validators.py
+        - src/project_kit/scaffolds.py
+        - src/project_kit/decisions.py
+        - src/project_kit/scratchpads.py
+        - src/project_kit/permissions.py
+        - src/project_kit/project_config.py
+        - src/project_kit/config_validate.py
+        - src/project_kit/docs_roots.py
+        - src/project_kit/friction_check.py
+        - src/project_kit/friction_repository.py
+        - src/project_kit/friction_report.py
+        - src/project_kit/friction_write.py
+        - src/project_kit/connections_config.py
+        - src/project_kit/wiring_graph.py
+        - src/project_kit/report.py
+        - src/project_kit/report_context.py
+        - src/project_kit/environment.py
+      record: [COR-004, COR-012, COR-043, COR-048, COR-049, COR-050, PRJ-001, PRJ-003, PRJ-004, ADR-033, ADR-039, ADR-049, ADR-058, ADR-059]
+    revalidated:
+      at: 2026-09-29T15:15:31Z
+      outcome: updated
 ---
 
 # Command-line interface
@@ -12,7 +54,7 @@ The design rules governing the CLI's shape — why these commands exist and not 
 
 The CLI is implemented in Python (per PRJ-003), with `.pkit/cli/pkit` as a thin proxy that exec's the Python runtime via `uv` and bypasses to the adapter's shell scripts for `deploy-skills` / `merge-settings` (which are shell to the bone — primitives the adapter ships, not surface commands).
 
-The full COR-004 surface is implemented: `init`, `sync`, `merge`, `upgrade`, `capabilities install / register / uninstall / upgrade / list / show` (per COR-017 + COR-031; `show` and the install and uninstall plans per COR-053 point 8), `status`, `validate`, `version`, `version bump`, `release plan / apply / merge / publish-notes / check / lint / check-shareable` (per PRJ-002 + COR-041), `new decision`, the authoring commands (`area`, `adapter`, `capability`, `agent`, `storyboard`, `schema`, `migration`), and the scratchpad commands (`new scratchpad`, `scratchpad done`, `scratchpad drop`, `scratchpad reported`, `scratchpad list`) per COR-012 + COR-043. Each authoring command ships paired with its skill under `.pkit/skills/core/<name>-author/` per COR-005's "Skill / command pairing". (The `bundle` command family was retired in COR-027 — capabilities subsumed the bundle role.)
+The full COR-004 surface is implemented: `init`, `sync`, `merge`, `upgrade`, `capabilities install / register / uninstall / upgrade / list / show` (per COR-017 + COR-031; `show` and the install and uninstall plans per COR-053 point 8), `status`, `validate`, `version`, `version bump`, `release plan / apply / merge / publish-notes / check / lint / check-shareable` (per PRJ-002 + COR-041), `new decision`, the authoring commands (`area`, `adapter`, `capability`, `agent`, `storyboard`, `schema`, `migration`), and the scratchpad commands (`new scratchpad`, `scratchpad done`, `scratchpad drop`, `scratchpad reported`, `scratchpad list`) per COR-012 + COR-043. Each authoring command ships paired with its skill under `.pkit/skills/core/` per COR-005's "Skill / command pairing". (The `bundle` command family was retired in COR-027 — capabilities subsumed the bundle role.)
 
 ## Installing pkit on PATH
 
@@ -70,6 +112,8 @@ curl -LsSf https://astral.sh/uv/install.sh | sh   # or: brew install uv
 | `new capability <name>` | scaffold a new capability (per COR-017); refuses the reserved name `core`, which names the core schemas area (`install` and `register` refuse it too) | yes | no — refuses if capability already exists |
 | `new migration [...]` | scaffold a migration script in the right `<major>.<minor>.0/` directory | yes | no — emits a fresh, numbered file each call |
 | `new decision <namespace> <slug>` | scaffold a new decision record stub (frontmatter + four sections + next number in namespace) | yes | no — refuses if a record with that slug already exists |
+| `new agent <namespace> <name> [--with-storyboard]` | stamp an agent stub in `core`, `project` or a capability's `agents/` folder (per COR-013 + COR-015; see "Authoring commands") | yes | no — refuses a name already taken in core, project or any capability |
+| `new storyboard agent <name> [--namespace <ns>] [--scenario <slug>]` | stamp a storyboard beside an agent, wherever it lives (per COR-016; see "Authoring commands") | yes | no — refuses if the storyboard already exists |
 | `new scratchpad <slug>` | stamp a new active-state scratchpad note (per COR-012) | yes | no — refuses if the slug is already in use across any state |
 | `scratchpad done <slug> [--produced <ref>...]` | move a note from `active/` (or `reported/`, removing that lazy directory when it empties) to `done/`, append `retired`/`produced` to frontmatter | yes | no — refuses if no active or reported note matches |
 | `scratchpad drop <slug>` | move a note from `active/` (or `reported/`) to `dropped/`, append `retired` to frontmatter | yes | no — refuses if no active or reported note matches |
@@ -183,7 +227,7 @@ Re-runs propagation only. Pulls current canonical core content into your project
 
 On **self-host** (project-kit itself, where the source *is* the installed `.pkit/`), propagation would copy files onto themselves — so `sync` skips propagation and runs only the adapter deploy primitives instead, re-wiring the harness (`.claude/` agents, skills, settings, CLAUDE.md) from the source you just edited. This is the self-host way to apply source edits to the harness; you don't (and can't) `sync`/`upgrade` project-kit onto itself otherwise. (The downgrade guard reconciles capabilities, which self-host skips, so it never fires there.)
 
-**Refused in the methodology's source repository when the running code is not its own** ([ADR-059](../../tech-docs/architecture/decisions/ADR-059-methodology-source-repository.md)). Self-host is recognised by sync's test: the project is the parent of the methodology tree the running code resolves. The entry-point router makes that the normal case, because in a source checkout it runs that checkout's own dispatcher. A run that misses the router's source-checkout route reaches the checkout with other code — an installed release, or another checkout's — and sync's test then says no while the checkout's markers (the package source beside the in-tree dispatcher) still say source. Propagating would copy that code's tree over the source it is built from, so `sync` refuses: it exits non-zero, writes nothing, names both tests, and says how the run got there — routing bypassed with `PKIT_NO_ROUTE=1` (by hand, or by a `pin` to a newer release or a pinned `upgrade`, which run that release's `upgrade` this way), routing suppressed by an inherited `PKIT_ROUTED=1`, a dispatcher that is present but not executable, or a start that never went through the router. **Nothing overrides the refusal** — not `--force` (which overrides only the capability downgrade guard), not `--dry-run`, not the bypass, which is itself a way in: the situation is a defect to repair, not a choice. The remedy is to run the checkout's own code, `.pkit/cli/pkit sync` from its root, after restoring the dispatcher's executable bit if that was the cause.
+**Refused in the methodology's source repository when the running code is not its own** ([ADR-059](../../tech-docs/architecture/decisions/ADR-059-methodology-source-repository.md)). Self-host is recognised by sync's test: the project is the parent of the methodology tree the running code resolves. The entry-point router makes that the normal case, because in a source checkout it runs that checkout's own dispatcher. A run that misses the router's source-checkout route reaches the checkout with other code — an installed release, or another checkout's — and sync's test then says no while the checkout's marker (the package source beside its `.pkit/`) still says source. Propagating would copy that code's tree over the source it is built from, so `sync` refuses: it exits non-zero, writes nothing, names both tests, and says how the run got there — routing bypassed with `PKIT_NO_ROUTE=1` (by hand, or by a `pin` to a newer release or a pinned `upgrade`, which run that release's `upgrade` this way), routing suppressed by an inherited `PKIT_ROUTED=1`, a dispatcher that is present but not executable, a dispatcher that has been deleted, or a start that never went through the router. The dispatcher is not a marker, so a checkout that has lost it is still the source — the router's warning says the checkout "carries the methodology's package source but no dispatcher" and names `git checkout -- .pkit/cli/pkit` — never an adopter to propagate over. **Nothing overrides the refusal** — not `--force` (which overrides only the capability downgrade guard), not `--dry-run`, not the bypass, which is itself a way in: the situation is a defect to repair, not a choice. The remedy is to run the checkout's own code, `.pkit/cli/pkit sync` from its root, after restoring the dispatcher's executable bit or the dispatcher itself if that was the cause.
 
 ### `merge [<target>...]`
 
@@ -243,6 +287,10 @@ A capability enters a project through one of two verbs, distinguished by where t
 **When the same name also ships from kit source (collision — graduation arriving unbidden).** If a capability you register (or adopt) at `.pkit/capabilities/<name>/` *also* exists in the kit source, `register` keeps/adopts the **in-repo (incubated)** copy and **surfaces a note** that a kit-shipped version is available — it never silently shadows either tree. This is the operational precedence for COR-031's collision boundary: the adopter's local copy is the one installed, and `sync` leaves it untouched (D1) — it is the only copy of the adopter's work — while the kit-shipped version is neither installed nor reconciled against; its existence is surfaced so you *know* it is there (COR-031 reserves incubated→kit-shipped **graduation** for a later decision). If instead you want the *kit-shipped* copy of a colliding capability — e.g. your local one was an abandoned experiment — that reverse preference is a known limitation; for now, remove the in-repo copy and run `pkit capabilities install <name>` to take the kit version.
 
 If a same-named capability later begins shipping from kit source (graduation, before graduation is specified), `register` surfaces the overlap as a note and registers the in-repo copy; `sync` surfaces the same collision rather than silently shadowing either tree (COR-031 boundary case).
+
+**Refused in the methodology's source repository when the running code is not its own** ([ADR-059](../../tech-docs/architecture/decisions/ADR-059-methodology-source-repository.md)). `capabilities install`, `capabilities upgrade` (which refreshes an installed capability from source) and `capabilities register` copy or register a capability with the running code's tree. In a source checkout reached by other code they refuse exactly as [`sync`](#sync) does, with the same message — both tests, how the run got there, `Nothing was written, and no flag overrides this refusal` — before any other pre-flight, `--plan` and `--dry-run` included. The remedy names the command as it would be re-run under the checkout's own dispatcher, `.pkit/cli/pkit capabilities install <name>` and so on.
+
+**Query-command environments.** `capabilities install`, `capabilities register` and `capabilities upgrade` end, after deploying the capability, with the provisioning step `init` and `sync` run (see [`sync`](#sync)), scoped to that capability: each query command it registers is resolved once, online, and reported with the line `sync` prints — `provisioned`, `unchanged … already provisioned`, `skipped`, or a `warning` that never fails the command. An offline `pkit validate` then answers for it without a `pkit sync` first. Other components' commands are left to `sync`, and `--dry-run` provisions nothing.
 
 ### Mandatory process connections: refused, or warned and forced
 
@@ -339,7 +387,7 @@ Set one backbone-owned key. `<key>` is dotted (`docs.internal`, `friction.mode`,
 
 The `new` family scaffolds first-class methodology elements — areas, adapters, capabilities, migrations — by stamping the contract their owning record fixes (COR-005 for adapters, COR-010 for the manifest layer and migrations, COR-011 for areas, COR-017 for capabilities). Every `new` command is a one-shot generator: it refuses to overwrite existing targets, and the output is a directory or file the rest of the CLI surface (`status`, `sync`, `upgrade`, etc.) recognises immediately. No manual manifest edits are needed after a scaffold call.
 
-Templates live where the contract they instantiate lives — `.pkit/lifecycle/templates/` for migration scripts and per-component manifest skeletons; `.pkit/cli/scaffolds/` for area, adapter, and capability directory shapes — so a kit upgrade that changes a contract also updates what gets stamped.
+The shapes are stamped by the CLI's own scaffolding code (`src/project_kit/scaffolds.py`), which ships with the binary, so a kit upgrade that changes a contract also updates what gets stamped.
 
 ### `new area <name> [--variant <variant>]`
 
@@ -406,7 +454,37 @@ The stamped file includes:
 
 Refuses if a record with the same slug already exists in the id-space, or if the namespace is invalid — for a capability namespace, "invalid" means no capability of that name exists under `.pkit/capabilities/`.
 
-**Coordination with the `decision-author` skill.** Per COR-006's discriminator: a command stamps deterministically, a skill drafts content conversationally. The `decision-author` skill (`.pkit/skills/core/decision-author/`) calls `pkit new decision <namespace> <slug>` for the stub, then walks the author through filling the body — content drafting, discipline self-checks, and approval. Authors who don't need the conversational help can call the command directly.
+**Coordination with the `decision-author` skill.** Per COR-006's discriminator: a command stamps deterministically, a skill drafts content conversationally. The `decision-author` skill (`.pkit/skills/core/decision-author.md`) calls `pkit new decision <namespace> <slug>` for the stub, then walks the author through filling the body — content drafting, discipline self-checks, and approval. Authors who don't need the conversational help can call the command directly.
+
+### `new agent <namespace> <name> [--with-storyboard] [--dry-run]`
+
+Stamps an agent stub — the unified front matter (COR-013) and the canonical body sections — flat as `<name>.md` (COR-015). The spec for what goes in it is `.pkit/agents/README.md`.
+
+- **`<namespace>`** is one of:
+
+  | Namespace | Location |
+  |---|---|
+  | `core` | `.pkit/agents/core/` |
+  | `project` | `.pkit/agents/project/` |
+  | *a capability name* | `.pkit/capabilities/<capability>/agents/` (COR-017, COR-026) |
+
+  A `<namespace>` that is not `core` or `project` is interpreted as a capability name, as for `new decision`: the command refuses if no capability of that name exists under `.pkit/capabilities/`, naming the ones that do, and creates the capability's `agents/` folder on first use.
+
+- **`<name>`** is kebab-case, naming the role. The command refuses a name already taken in core, project or any capability, in either layout — the deploy resolves one agent per name, so a second one would mask the first.
+
+- **`--with-storyboard`** stamps folder form (`<name>/<name>.md`) with a sibling `storyboard.md` scaffold (COR-016) whose `consumers:` names the agent, its `namespace` being the capability's name for a capability's agent.
+
+**Coordination with the `agent-author` skill.** The skill carries the namespace choice (universal role, adopter role, or a capability's discipline), the name, and the body drafting; the command is the stamp underneath.
+
+### `new storyboard agent <name> [--namespace <ns>] [--scenario <slug>] [--dry-run]`
+
+Stamps a storyboard (COR-016) beside an existing agent: `storyboard.md`, or `<slug>.storyboard.md` with `--scenario`, carrying the three-layer scaffold and a `consumers:` entry naming the agent. A flat agent migrates to folder form first (COR-015, an agent gaining its first helper).
+
+- **`agent`** is the only artifact kind handled today.
+- **`<name>`** is the agent's name. Without `--namespace`, the command looks wherever agents ship from, in the deploy's order — project, core, then capabilities by name — and stamps beside the first agent of that name, the one that deploys.
+- **`--namespace <ns>`** pins the lookup to one location: `core`, `project` or a capability name (an unknown capability gets the `new agent` refusal).
+
+Refuses if the storyboard already exists or no agent of that name is found. **Coordination with the `storyboard-author` skill**: the skill walks the framing, tone and scenario drafting after the stamp.
 
 ### `new scratchpad <slug>`
 
@@ -421,7 +499,7 @@ The stamped file includes:
 
 Supports `--dry-run`.
 
-**Coordination with the `scratchpad-author` skill.** The paired skill (`.pkit/skills/core/scratchpad-author/`) carries the slug-choice judgement, the topic-boundary discipline, and the body-drafting opening prompt. Authors who don't need the conversational help can call the command directly.
+**Coordination with the `scratchpad-author` skill.** The paired skill (`.pkit/skills/core/scratchpad-author.md`) carries the slug-choice judgement, the topic-boundary discipline, and the body-drafting opening prompt. Authors who don't need the conversational help can call the command directly.
 
 ## Scratchpad commands
 
@@ -786,7 +864,7 @@ The stamp under the skill's `couple` operation: append a `depends_on` entry ([CO
 
 The stamp under the skill's `hand-off` operation: add a [COR-042](../decisions/core/COR-042-process-health.md) hand-off contract — the `handoff` sub-block (trigger + the two seam predicate refs) — to an **existing** coupling on the invoker-named definition. Refuses when no `depends_on` entry for the upstream exists (`process couple` first); `--state` disambiguates when the same upstream is coupled on several states.
 
-- **Trigger validated where resolvable:** when the upstream definition loads, a trigger that is not one of its states is refused (a phantom trigger would report indeterminate forever); an unresolvable upstream degrades to a warning — health reports the contract indeterminate until it resolves, never silently green. Declare a **stable** trigger state (the ephemeral-trigger authoring smell, COR-042).
+- **Trigger validated where resolvable:** when the upstream definition loads, a trigger that is not one of its states is refused (a phantom trigger would report indeterminate forever); an unresolvable upstream degrades to a warning — health reports the contract indeterminate until it resolves, never silently green. A role-addressed upstream (`<publisher>::<role>:<point>`) is resolved through the wiring resolver, as `health` and `couple` resolve it: the trigger is checked against the process the role's active provider offers there, and a role that reaches no offered process is warned about with the resolver's reason. Declare a **stable** trigger state (the ephemeral-trigger authoring smell, COR-042).
 - `--candidates` / `--resolve` name commands of the **declaring** capability: unregistered names are scaffolded as fail-closed seam stubs (ADR-048 payload shapes — `{candidates: [...]}` / `{downstream: [...]}`) and registered in `package.yaml`; already-registered names are reused untouched. A name whose derived script path is already taken by an unregistered file refuses rather than overwriting it, with the definition left unedited.
 - **No version bump** (additive, report-only edit). Idempotent on the identical contract; refuses to overwrite a different one (repair route above). The authoring done-signal afterwards is `pkit process health --interpretation-only --process <addr>` reporting **no indeterminates** — never a zero miss-count, and scoped to your own address rather than the whole project.
 

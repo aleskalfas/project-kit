@@ -1,3 +1,26 @@
+---
+reader: user
+kind: reference
+pkit:
+  friction:
+    anchors:
+      path:
+        - pyproject.toml
+        - src/project_kit/router.py
+        - src/project_kit/install.py
+        - src/project_kit/merge.py
+        - src/project_kit/upgrade.py
+        - src/project_kit/decisions_validate.py
+        - src/project_kit/migrations.py
+        - src/project_kit/refs.py
+        - .pkit/adapters/claude-code/merge-claude-md.sh
+        - .pkit/adapters/claude-code/merge-settings.sh
+      record: [COR-001, COR-002, COR-017, PRJ-001, PRJ-004, ADR-049]
+    revalidated:
+      at: 2026-09-29T15:20:26Z
+      outcome: updated
+---
+
 # project-kit
 
 > Install a working methodology into your AI-assisted project — and keep it maintained, like a dependency.

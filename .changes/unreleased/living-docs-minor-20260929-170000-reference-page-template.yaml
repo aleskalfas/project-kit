@@ -1,0 +1,8 @@
+component: living-docs
+kind: minor
+custom:
+  category: Added
+body: >
+  A reference page template joins the signpost template, so a page that
+  describes one surface to its reader — an area, a capability, an adapter —
+  has a format of its own.

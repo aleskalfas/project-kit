@@ -30,6 +30,7 @@ reads:
     - .pkit/capabilities/living-docs/README.md
     - .pkit/capabilities/living-docs/rule-sets/ldoc.md
     - .pkit/capabilities/living-docs/templates/signpost.md
+    - .pkit/capabilities/living-docs/templates/reference.md
     - .pkit/capabilities/living-docs/templates/space-definition.md
     - .pkit/capabilities/living-docs/project/config.yaml
     - .pkit/project/config.yaml
@@ -82,7 +83,7 @@ The one write outside the workspace is a reader-review's findings posted as a pu
 - `.pkit/capabilities/living-docs/rule-sets/ldoc.md` — the shared method, `LDOC`: the rules reader-review cites, `[living-docs:RS-LDOC-001]` to `[living-docs:RS-LDOC-006]`.
 - `.pkit/capabilities/living-docs/project/config.yaml` — each space's entry point and definition, and the space each place outside the roots belongs to. A space's definition is a rule set that inherits `LDOC` and adds the space's own rules (COR-051).
 - `.pkit/project/config.yaml` — the backbone configuration: the documentation roots (COR-049) and the friction key's places, declared surface and excluded paths (COR-050 point 14).
-- `.pkit/capabilities/living-docs/templates/signpost.md` — the template of the one page kind shipped so far; a page's format is its kind's template. `.pkit/capabilities/living-docs/templates/space-definition.md` — the template a space's definition starts from.
+- `.pkit/capabilities/living-docs/templates/signpost.md` and `.pkit/capabilities/living-docs/templates/reference.md` — the templates of the page kinds shipped so far, a signpost into a folder and a reference page describing one surface; a page's format is its kind's template. `.pkit/capabilities/living-docs/templates/space-definition.md` — the template a space's definition starts from.
 - COR-050 — anchors, friction, the three answers (updated, unchanged with its reason, deferred), and the writers that give them.
 - COR-053 — the points you read are addressed by role, so any provider of the role answers them.
 

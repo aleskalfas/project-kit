@@ -1,5 +1,34 @@
 ---
 variant: specialized
+reader: user
+kind: reference
+pkit:
+  friction:
+    anchors:
+      path:
+        - .pkit/lifecycle/**
+        - src/project_kit/__init__.py
+        - src/project_kit/manifest.py
+        - src/project_kit/capabilities.py
+        - src/project_kit/capability_plans.py
+        - src/project_kit/connections.py
+        - src/project_kit/data_points.py
+        - src/project_kit/command_runner.py
+        - src/project_kit/provisioning.py
+        - src/project_kit/package_validate.py
+        - src/project_kit/process_dependencies.py
+        - src/project_kit/migrations.py
+        - src/project_kit/sync.py
+        - src/project_kit/upgrade.py
+        - src/project_kit/treecopy.py
+        - src/project_kit/lifecycle_ownership.py
+        - .pkit/schemas/backbone/package.schema.json
+        - .pkit/schemas/backbone/filler.schema.json
+        - hatch_build.py
+      record: [COR-010, COR-017, COR-027, COR-030, COR-031, COR-052, COR-053, ADR-056, ADR-057, ADR-059]
+    revalidated:
+      at: 2026-09-29T15:15:33Z
+      outcome: updated
 ---
 
 # Lifecycle
@@ -10,7 +39,7 @@ The architecture lives here. The rules and rationale (why two tiers, why per-com
 
 Paths and exact YAML shapes are illustrative — the install/sync runtime (per the build roadmap + COR-004) settles them. The shapes here are what every other area of the kit can rely on once the runtime ships.
 
-Developers don't stamp these layouts by hand. The kit ships authoring commands (`pkit new adapter <name>`, `pkit new capability <name>`, `pkit new migration [...]` — specified in `.pkit/cli/README.md` and grounded in COR-005 + COR-017) that scaffold the contract this document defines. Templates for the manifest skeletons and migration scripts live in `.pkit/lifecycle/templates/` so a kit upgrade that changes a contract also updates what gets stamped.
+Developers don't stamp these layouts by hand. The kit ships authoring commands (`pkit new adapter <name>`, `pkit new capability <name>`, `pkit new migration [...]` — specified in `.pkit/cli/README.md` and grounded in COR-005 + COR-017) that scaffold the contract this document defines. The scaffolds are stamped by the CLI's own code, which ships with the binary, so a kit upgrade that changes a contract also updates what gets stamped.
 
 ## Layout
 
@@ -40,7 +69,7 @@ Developers don't stamp these layouts by hand. The kit ships authoring commands (
 
 **Backbone** — the cohesive core that ships together: decisions (CORs and the spec), rules, the CLI / runtime. One coordinated release, one version number.
 
-**Components** — installable, independently-versioned pieces that depend on a backbone version range. Capabilities (`project-management`, `evidence` today; per COR-017) and adapters (`claude-code` today; future `codex` / `cursor` / etc.) are components. Each component declares a semver range of compatible backbone versions in its `package.yaml`. (Per COR-027, the bundle pattern was retired — alternative implementations within a capability live as capability-internal data, not as filesystem-level bundles.)
+**Components** — installable, independently-versioned pieces that depend on a backbone version range. Capabilities (`project-management`, `evidence`, `software-engineering`, `demo-recording`, `software-analysis` and `living-docs` today; per COR-017) and adapters (`claude-code` today; future `codex` / `cursor` / etc.) are components. Each component declares a semver range of compatible backbone versions in its `package.yaml`. (Per COR-027, the bundle pattern was retired — alternative implementations within a capability live as capability-internal data, not as filesystem-level bundles.)
 
 Both tiers use semantic versioning (`major.minor.patch`). Components express compatibility via `requires_backbone: ">=X.Y.Z, <W.0.0"`. Patch-level releases are backward-compatible bug fixes and have no migrations — migration directories are named with the full three-segment target version, with patch always `0` (e.g., `2.1.0/`), and cover all patches within that minor line.
 
@@ -292,7 +321,7 @@ These strings are this distribution's choice, not a principle: another distribut
 | The one constant declaration that a command honours the query contract — bounded, deterministic, read-only, needing no network (ADR-057 point 3) | **`query-contract: true`** | On a `commands:` leaf, beside `script` and `help`. Required on the command a validator names and on a command filler: the `packages` member reports one without it, and the runner — the validator registry, the data points' resolution — refuses it. |
 | The offline marker, "so a well-behaved command can tell" (ADR-057 point 3) | **`PKIT_OFFLINE=1`**, with **`UV_OFFLINE=1`** beside it | The environment of every query command the backbone starts — validators and command fillers. `PKIT_OFFLINE` is what a command reads; `UV_OFFLINE` is honoured by `uv`, so a script with a `uv run --script` shebang resolves its dependencies from uv's cache and never fetches. |
 
-**How dependencies are provisioned before an offline run.** A query never fetches, so a script's dependencies must already be in uv's cache when it runs. **`pkit init` and `pkit sync` put them there**, as one of their steps (self-host included): for every command a registered component — capability or adapter — declares with `query-contract: true`, whose script carries inline script metadata (a `# /// script` block), they resolve the script's environment once, online, with uv's own resolution — `uv sync --script <script>`, which resolves the metadata and installs the environment into uv's cache **without running the script**. The step prints one line per query command:
+**How dependencies are provisioned before an offline run.** A query never fetches, so a script's dependencies must already be in uv's cache when it runs. **`pkit init` and `pkit sync` put them there**, as one of their steps (self-host included), and `pkit capabilities install`, `register` and `upgrade` run the same step for the one capability they bring in: for every command a registered component — capability or adapter — declares with `query-contract: true`, whose script carries inline script metadata (a `# /// script` block), they resolve the script's environment once, online, with uv's own resolution — `uv sync --script <script>`, which resolves the metadata and installs the environment into uv's cache **without running the script**. The step prints one line per query command:
 
 | Line | When |
 |---|---|
@@ -305,11 +334,11 @@ A dry run asks uv nothing and prints `would provision` for each script with inli
 
 A query whose environment is not provisioned exits with uv's report that a dependency is not in its cache and the network is disabled; the query policy recognises it on standard error and names it, rather than reporting the exit: **"environment not provisioned — run `pkit sync`"** — an error finding for a validator, the reason an inert filler gives for a command filler, and distinct from a command that answered nothing.
 
-**Two more, for recognising the methodology's source repository.** [ADR-059](../../tech-docs/architecture/decisions/ADR-059-methodology-source-repository.md) defines the source repository as the one whose `.pkit/` is the methodology's own tree. Code that must recognise it without knowing which code runs does so by two files at the repository root, and their paths name this distribution's package and dispatcher. In this distribution:
+**Two more, for recognising the methodology's source repository.** [ADR-059](../../tech-docs/architecture/decisions/ADR-059-methodology-source-repository.md) defines the source repository as the one whose `.pkit/` is the methodology's own tree. Code that must recognise it without knowing which code runs does so by the package source beside the `.pkit/` tree at the repository root; the package's path, and the path of the dispatcher the router execs there, are this distribution's names. In this distribution:
 
 | In the records | Here | Where it is written |
 |---|---|---|
-| The marker files that recognise the source repository on the tree's side (ADR-059 point 3) | **`src/project_kit/__init__.py`** beside **`.pkit/cli/pkit`**, both required | Nowhere by a project. They are read at a repository root by the entry-point router's first route (`project_kit.router.is_source_checkout`) and by the ownership predicate (`is_methodology_source`, "The ownership predicates" below). Both copies cite this table, and a test holds them equal. |
+| The marker that recognises the source repository on the tree's side (ADR-059 point 3) | **`src/project_kit/__init__.py`** beside the **`.pkit/`** tree. The in-tree dispatcher **`.pkit/cli/pkit`** is what the router's first route execs, not a marker: a checkout whose dispatcher was deleted is still the source, and the dispatcher is reported missing | Nowhere by a project. They are read at a repository root by the entry-point router's first route (`project_kit.router.is_source_checkout`) and by the ownership predicate (`is_methodology_source`, "The ownership predicates" below). Both copies cite this table, and a test holds them equal. |
 
 An adopter has the dispatcher but never the package source. Unlike the literals above, no project writes these, so changing them means changing the two copies together, not migrating an adopter's files.
 
@@ -319,7 +348,7 @@ The backbone runs the commands a component registers through one runner, `projec
 
 - **The lookup.** A command is a leaf of the `commands:` tree ("Field layout and casing" above), and one walk reads the tree: a command reference — a path of tokens — names a leaf through it. The dispatcher (`pkit <capability> <command>`), package validation, the validator registry, the process engine's predicate runner and the report builder (`pkit report`, asking the project-management capability for the workstream) all read the tree this way, so each resolves a leaf to the same script. A process predicate's `run:` names a leaf by its own name rather than its path (the process README, "The predicate runner").
 - **The run.** The leaf's script is started with an explicit argument list — never a shell string — from the project root, in its own process group, with standard output and standard error captured: standard output is the answer, one JSON document and nothing else unless the policy reads it as text; standard error is diagnostics. The run is **bounded by thirty seconds**, a fixed backbone constant (`COMMAND_TIMEOUT_SECONDS`), not a setting (ADR-057 point 3). Exceeding it **kills the whole process group** — a script with a `uv run --script` shebang starts its interpreter as a grandchild, which killing the script alone would leave running — and an interrupt of `pkit` itself kills the group too. A run that does not start, exits non-zero, overruns, or prints anything but the answer its policy reads is never an answer; what it is instead is the policy's.
-- **Provisioning, before any run.** A query runs offline, so the environment its script needs is prepared beforehand, not by the run: **provisioning is a step of `pkit init` and `pkit sync`**, which resolve every registered query command's environment once, online ("How dependencies are provisioned before an offline run" above). A query whose environment is not provisioned gives the no-answer "environment not provisioned — run `pkit sync`".
+- **Provisioning, before any run.** A query runs offline, so the environment its script needs is prepared beforehand, not by the run: **provisioning is a step of `pkit init` and `pkit sync`**, which resolve every registered query command's environment once, online — and of the capability verbs that bring a capability in, for that capability's commands ("How dependencies are provisioned before an offline run" above). A query whose environment is not provisioned gives the no-answer "environment not provisioned — run `pkit sync`".
 - **The policies.**
 
   | Policy | Run by | Arguments and environment | The answer | No answer is |
@@ -655,7 +684,7 @@ It lives here rather than in the CLI package for the reason [ADR-003](../../tech
 
 `is_sync_managed` is deliberately **conservative under `.pkit/`**: anything the map does not recognise as project-owned reads as sync-managed. A false "not managed" would hand out write authority over kit content, which is the costlier direction and why the bias points this way. But the cost of a false "managed" was understated here as "a rejected overlay entry the adopter re-points": when the misjudged path is the adopter's *own* file, there is nowhere else to point, and they are simply locked out of it. That is what #823 turned out to be — the adapter settings pair, missed because the tier rule was depth-1. The bias stays; the map has to be right about the adopter's tier at every depth for the bias to be safe.
 
-A **third** question builds on the first: `is_synced_copy(target_root, path)` — *does this path arrive here as a copy a sync makes from the methodology's source?* Documentation places ask it: a synced copy is never a place, so that a sync never shows up as friction in the project's own history ([living-docs:DEC-001-living-docs-discipline] point 1). Its consumer is the friction pass, which loads this module from the tree and tests every match of every declared place with it (`synced-place`, the schemas README, "The friction block"). It is `is_sync_managed` **and** the repository not being the methodology's own source (`is_methodology_source`). The source repository is the one whose `.pkit/` is the methodology's own tree. The tool recognises it by sync's self-host test, which the ownership module cannot import, so the predicate recognises it by the two marker files in "The methodology's literals" above, the same two the entry-point router uses. The router's first route is what keeps the predicate's answer equal to sync's, and tests hold the predicate both to the router's markers and to sync's own decision ([ADR-059](../../tech-docs/architecture/decisions/ADR-059-methodology-source-repository.md)). The difference from `is_sync_managed` is deliberate. In the source repository the kit's trees stay the kit's to manage — write authority does not move — yet none of them is a copy, because the tree is what a sync would copy from; its self-host sync re-runs the deploy primitives and propagates nothing ([ADR-055](../../tech-docs/architecture/decisions/ADR-055-first-adopter-analysis-and-living-docs.md) point 3). In an adopter, the backbone's trees and a `kit-shipped` capability's are copies; an `incubated-in-repo` capability, an unregistered one and every `project/` tier are not. The verdict keys on origin and on the repository, never on the path, so the same `.pkit/` README is a place in the source and refused in an adopter.
+A **third** question builds on the first: `is_synced_copy(target_root, path)` — *does this path arrive here as a copy a sync makes from the methodology's source?* Documentation places ask it: a synced copy is never a place, so that a sync never shows up as friction in the project's own history ([living-docs:DEC-001-living-docs-discipline] point 1). Its consumer is the friction pass, which loads this module from the tree and tests every match of every declared place with it (`synced-place`, the schemas README, "The friction block"). It is `is_sync_managed` **and** the repository not being the methodology's own source (`is_methodology_source`). The source repository is the one whose `.pkit/` is the methodology's own tree. The tool recognises it by sync's self-host test, which the ownership module cannot import, so the predicate recognises it by the marker in "The methodology's literals" above — the package source beside the `.pkit/` tree, the same test the entry-point router runs (the dispatcher is not a marker). The router's first route is what keeps the predicate's answer equal to sync's, and tests hold the predicate both to the router's markers and to sync's own decision ([ADR-059](../../tech-docs/architecture/decisions/ADR-059-methodology-source-repository.md)). The difference from `is_sync_managed` is deliberate. In the source repository the kit's trees stay the kit's to manage — write authority does not move — yet none of them is a copy, because the tree is what a sync would copy from; its self-host sync re-runs the deploy primitives and propagates nothing ([ADR-055](../../tech-docs/architecture/decisions/ADR-055-first-adopter-analysis-and-living-docs.md) point 3). In an adopter, the backbone's trees and a `kit-shipped` capability's are copies; an `incubated-in-repo` capability, an unregistered one and every `project/` tier are not. The verdict keys on origin and on the repository, never on the path, so the same `.pkit/` README is a place in the source and refused in an adopter.
 
 ## Worked example
 
@@ -663,7 +692,7 @@ A full worked example demonstrating the upgrade flow across backbone + component
 
 For concrete examples of the contract this document defines, see:
 
-- The kit's own `.pkit/manifest.yaml` for the backbone-manifest shape with one capability + one adapter entry.
+- The kit's own `.pkit/manifest.yaml` for the backbone-manifest shape with adapter and capability entries.
 - `.pkit/migrations/backbone/<X.Y.0>/` for backbone migration script structure.
 - `.pkit/capabilities/project-management/migrations/0.12.0/` for a capability-tier migration that handles file-rename + adopter-state cleanup.
 - `.pkit/adapters/claude-code/migrations/` for adapter-tier migration patterns.

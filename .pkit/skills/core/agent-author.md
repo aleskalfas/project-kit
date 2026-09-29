@@ -1,6 +1,6 @@
 ---
 name: agent-author
-description: Author a new agent (persistent role at .pkit/agents/<namespace>/<name>.md) with proper frontmatter shape, citation discipline, and body conventions per COR-013. Use when adding a role for an AI tooling integration to delegate against.
+description: Author a new agent (persistent role at .pkit/agents/<namespace>/<name>.md, or in a capability's agents/ folder) with proper frontmatter shape, citation discipline, and body conventions per COR-013. Use when adding a role for an AI tooling integration to delegate against.
 metadata:
   wraps_command: pkit new agent
 gates:
@@ -13,6 +13,7 @@ reads:
   records:
     - COR-008
     - COR-014
+    - COR-026
   paths:
     - .pkit/agents/README.md
     - .pkit/decisions/README.md
@@ -21,7 +22,7 @@ reads:
 
 # Authoring an agent
 
-This skill walks through adding a new **agent** under `.pkit/agents/{core,project}/`. Agents are the persistent-role artifact kind (per COR-006); each names a scope of authority and judgement, declares the references it consults and the paths it owns, and gives the AI tooling a stable identity to delegate against.
+This skill walks through adding a new **agent** under `.pkit/agents/{core,project}/` or a capability's `agents/` folder. Agents are the persistent-role artifact kind (per COR-006); each names a scope of authority and judgement, declares the references it consults and the paths it owns, and gives the AI tooling a stable identity to delegate against.
 
 ## Acceptance gate (run first)
 
@@ -47,14 +48,15 @@ Per COR-006's discriminator, agents are *role-bearing* artifacts: a persistent i
 
 An agent has *judgement*, *write authority over paths*, and *staying power across sessions*. A one-off task or a procedure you walk through once doesn't need an agent — a skill carries it more cheaply.
 
-### 2. Pick a namespace (core vs project)
+### 2. Pick a namespace (core, project, or a capability)
 
-Per COR-014's universal-applicability test:
+Per COR-014's universal-applicability test and COR-026's placement rule:
 
 - **`core`** — the agent's role is useful to *any* adopting project. Methodology disciplines, code review against universal conventions, coordinator templates adopters specialise via overlay. Ships with the methodology; refreshes on every sync.
-- **`project`** — the agent is tied to this adopter's stack, language, or product. Implementer agents (`software-engineer`, `qa-engineer`), domain reviewers, customised coordinators. Authored per project; never propagated.
+- **`project`** — the agent is tied to this adopter's stack, language, or product. Implementer agents (`qa-engineer`), domain reviewers, customised coordinators. Authored per project; never propagated.
+- **a capability name** — the agent implies a discipline a capability ships (issues and pull requests, documentation, code authoring): it lives in that capability, at `.pkit/capabilities/<capability>/agents/`. The capability must already exist — author it first (`capability-author`) rather than parking the agent at core. The code-authoring `software-engineer` is the example: it ships in the `software-engineering` capability.
 
-If you're not sure, the question to ask: *would `example-brownfield` and `example-greenfield` both benefit from this agent in identical form?* Yes → core. Otherwise → project.
+If you're not sure, the questions to ask: *would an adopter who installed none of the methodology's capabilities find this agent useful?* No → the capability whose discipline it presupposes. Yes → *would `example-brownfield` and `example-greenfield` both benefit from it in identical form?* Yes → core. Otherwise → project.
 
 ### 3. Pick a name
 
@@ -82,6 +84,7 @@ For a judgment-driven agent (flat layout):
 ```
 pkit new agent core <name>            # for a universal role
 pkit new agent project <name>         # for an adopter-specific role
+pkit new agent <capability> <name>    # for a capability's discipline
 ```
 
 For an agent that drives one or more scripted scenarios (folder layout + sibling storyboard):
@@ -89,14 +92,15 @@ For an agent that drives one or more scripted scenarios (folder layout + sibling
 ```
 pkit new agent core <name> --with-storyboard
 pkit new agent project <name> --with-storyboard
+pkit new agent <capability> <name> --with-storyboard
 ```
 
-The flat stamp produces `.pkit/agents/<namespace>/<name>.md`. The `--with-storyboard` stamp produces `.pkit/agents/<namespace>/<name>/<name>.md` plus a sibling `.pkit/agents/<namespace>/<name>/storyboard.md` scaffold. Both contain:
+The flat stamp produces `<agents folder>/<name>.md`, where the agents folder is `.pkit/agents/<namespace>/` for `core` / `project` and `.pkit/capabilities/<capability>/agents/` for a capability (created on first use). The `--with-storyboard` stamp produces `<agents folder>/<name>/<name>.md` plus a sibling `storyboard.md` scaffold. Both contain:
 
 - Frontmatter scaffolding (`name`, placeholder `description`, default `tools`, empty `reads` / `owns` / `needs`).
 - Body headers: `## When to invoke this agent`, `## Files you own`, `## Key documents to read`, `## How you work`, and a finished `## Intermediate files` section.
 
-Refuses if the name already exists in either namespace (project > core resolution means a colliding name would silently mask the core version).
+Refuses if the name already exists in core, project or any capability (the deploy resolves one agent per name, so a colliding one would silently mask the other), and refuses a capability name that names no capability under `.pkit/capabilities/`.
 
 ### 6. Draft the body
 
@@ -105,7 +109,7 @@ For each section:
 - **Description (frontmatter)** — single sentence; what the agent does and when to invoke it. This surfaces in the harness's agent picker; the first 1,500 chars compete with every other agent's description for the model's attention. Lead with the load-bearing keywords.
 - **`## When to invoke this agent`** — bullet list of trigger conditions. Concrete; an author scanning the list should know whether their situation matches.
 - **`## Files you own`** — the paths this agent has write authority over. Per the bidirectional reference-graph rule (COR-013), every path here must also appear in frontmatter `owns:`. Use `<category-name>` placeholders for adopter-specific paths; declare each in `reads.patterns` so the deploy-time substitution covers them.
-- **`## Key documents to read`** — paths, record IDs (`COR-NNN`, `PRJ-NNN`), and hook contracts the agent consults at task time. Every entry here must also appear in `reads.{paths,records}` in frontmatter; the validator walks both directions. For scripted-scenario agents (per COR-016), the agent's storyboards belong here too — declared in frontmatter `storyboards:` and load-bearing on the body.
+- **`## Key documents to read`** — paths, record IDs (`COR-NNN`, `PRJ-NNN`), and hook contracts the agent consults at task time. Every entry here must also appear in `reads.{paths,records}` in frontmatter; the validator walks both directions. For scripted-scenario agents (per COR-016), the agent's storyboards belong here too — declared in frontmatter `storyboards:` by their bare sibling filename (`storyboard.md`), cited by that same name in the body, and load-bearing on it. The deploy rewrites the sibling name to the storyboard's source path in the deployed copy, so the source stays portable and the deployed agent still finds it (`.pkit/agents/README.md`, "Storyboards").
 - **`## How you work`** — the agent's procedure or principles. For *judgment-driven* agents (no storyboards), numbered steps if the role follows a fixed sequence; principles + examples if the role is more judgement-bearing. For *scripted-scenario* agents (with `storyboards:` declared), the body is much thinner: it states that the agent's scripted behavior is documented in its declared storyboards, instructs the runtime to load them at session start via the `Read` tool, and may summarize at a high level what scenarios the agent drives — but does **not** restate or sketch the scenarios. The storyboard is the source; the agent body's job is to point at it. Cite authority by record ID rather than restating it (`per COR-005` not "per the skill/command pairing rule").
 - **`## Intermediate files`** — stamped finished: the one sentence every shipped agent carries, sending its intermediate files to the agent workspace (`.agent-workspace/`, the core rules' workspace rule), written with the file tools. Leave the wording as stamped, identical across agents.
 

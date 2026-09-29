@@ -1,0 +1,8 @@
+component: demo-recording
+kind: none
+body: >
+  The capability README carries page front matter — reader, kind and a
+  friction block anchoring the scripts, schemas, skill and decisions it
+  describes — and names the skill's `start` operation for recording, which it
+  called `record`. Inert in an adopting project: a synced tree is never a
+  place (ADR-055).

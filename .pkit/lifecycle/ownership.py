@@ -368,18 +368,19 @@ def sync_managed_offences(
 
 # The methodology's source repository, told apart the way the entry-point router
 # tells it (`project_kit.router.is_source_checkout`): the package source beside
-# the in-tree dispatcher. An adopter has the dispatcher, never the package
-# source. The source repository is the one whose `.pkit/` is the methodology's
-# own tree (ADR-059 in project-kit's architecture decisions). The tool
-# recognises it by sync's self-host test, which this module cannot ask: it
+# the `.pkit/` tree. An adopter has `.pkit/`, never the package source. The
+# in-tree dispatcher is not a marker — a checkout whose dispatcher was deleted
+# is still the source. The source repository is the one whose `.pkit/` is the
+# methodology's own tree (ADR-059 in project-kit's architecture decisions). The
+# tool recognises it by sync's self-host test, which this module cannot ask: it
 # cannot import the tool that knows which code is running. These markers are
 # the tree side's test, and the router's first route keeps the two answers
 # equal. The paths are this distribution's literals, listed in the lifecycle
 # README's "The methodology's literals". Tests hold this copy to the router's
 # markers and to sync's own decision.
 _SOURCE_MARKERS: tuple[tuple[str, ...], ...] = (
-    ("src", "project_kit", "__init__.py"),
-    (".pkit", "cli", "pkit"),
+    ("src", "project_kit", "__init__.py"),  # a file: the package source
+    (".pkit",),                             # a directory: the methodology's tree
 )
 
 
@@ -390,7 +391,8 @@ def is_methodology_source(target_root: Path | str) -> bool:
     primitives only — so no tree in it is a synced copy, whatever its origin.
     """
     root = Path(target_root)
-    return all(root.joinpath(*marker).is_file() for marker in _SOURCE_MARKERS)
+    package, tree = (root.joinpath(*marker) for marker in _SOURCE_MARKERS)
+    return package.is_file() and tree.is_dir()
 
 
 def is_synced_copy(target_root: Path | str, raw_path: str) -> bool:

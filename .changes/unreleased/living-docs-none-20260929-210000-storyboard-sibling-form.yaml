@@ -1,0 +1,6 @@
+component: living-docs
+kind: none
+body: >
+  The `living-docs` agent's source declares its storyboard by the sibling name
+  `storyboard.md`, the agents README's convention; the deploy rewrites it to the
+  source path, so the deployed agent is unchanged.

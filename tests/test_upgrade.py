@@ -1018,7 +1018,7 @@ def test_tool_staleness_not_reached_on_source_checkout_run_by_other_code(
     (tmp_path / ".pkit" / "cli" / "pkit").write_text("", encoding="utf-8")
     manifest.write_backbone_manifest(tmp_path, manifest.BackboneManifest(backbone_version="0.1.0"))
 
-    with pytest.raises(click.ClickException, match="refusing to upgrade"):
+    with pytest.raises(click.ClickException, match="refusing to run `upgrade`"):
         upgrade.run_upgrade(tmp_path)
 
     assert stub_ls_remote.ls_remote_calls == []

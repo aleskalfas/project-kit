@@ -31,6 +31,7 @@ from project_kit.install import (
     find_target_root,
     install_kit,
     refuse_if_pkit_present,
+    refuse_propagation_into_source,
     source_checkout_root,
     resolve_init_target,
     scan_pkit_installs,
@@ -47,7 +48,7 @@ from project_kit.scaffolds import (
     stamp_capability,
     stamp_migration,
 )
-from project_kit.agents import Namespace as AgentNamespace, stamp_new_agent
+from project_kit.agents import stamp_new_agent
 from project_kit.storyboards import ArtifactKind, stamp_new_storyboard
 from project_kit import friction_check, friction_report, friction_repository, friction_write
 from project_kit import refs as refs_mod
@@ -2925,13 +2926,25 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
             f"{target_root}/.pkit/ does not exist. Run 'pkit init' first."
         )
 
+    source_kit = find_source_kit()
+    # The methodology's source repository run by code that is not its own (the
+    # gap, ADR-059): refuse before anything is read or written (#1090).
+    refuse_propagation_into_source(
+        target_root,
+        source_kit,
+        command=f"capabilities upgrade {name}",
+        would=(
+            "refresh the capability with that code — a kit-shipped one from that "
+            "tree, over the one it is built from"
+        ),
+        own_code_does=None,
+    )
+
     if not caps.is_installed(target_root, name):
         raise click.ClickException(
             f"capability {name!r} is not installed. "
             f"Use `pkit capabilities install {name}` first."
         )
-
-    source_kit = find_source_kit()
 
     # Origin-aware branch (COR-031 D1/D4): an incubated (in-repo) capability has
     # no kit source to reconcile against — the working tree *is* the source. It
@@ -3092,7 +3105,8 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
 
     if not dry_run:
         # Re-run installed adapter primitives so the harness side picks
-        # up any newly-added skills/agents from the upgraded capability.
+        # up any newly-added skills/agents from the upgraded capability,
+        # then provision its query commands, as sync would (#1090).
         from project_kit import install as install_mod
         ctx = install_mod.InstallContext(
             target_root=target_root,
@@ -3100,6 +3114,7 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
             dry_run=False,
         )
         install_mod.run_installed_adapter_primitives(ctx)
+        install_mod.provision_query_commands(ctx, component=name)
 
 
 @main.command()
@@ -4441,11 +4456,23 @@ def install_capability_cmd(name: str, dry_run: bool, plan: bool, as_json: bool) 
             f"{target_root}/.pkit/ does not exist. Run 'pkit init' first."
         )
 
+    source_kit = find_source_kit()
+    # The methodology's source repository run by code that is not its own (the
+    # gap, ADR-059): the install would copy the running code's capability
+    # subtree into the tree it is built from. Refuse before anything else —
+    # the plan included, since the install it previews would refuse (#1090).
+    refuse_propagation_into_source(
+        target_root,
+        source_kit,
+        command=f"capabilities install {name}",
+        would="copy the capability's subtree from that tree into the one it is built from",
+        own_code_does=None,
+    )
+
     # A reserved name is refused before lookup, so the refusal names the
     # reservation rather than reporting the capability as missing.
     caps.refuse_reserved_capability_name(name)
 
-    source_kit = find_source_kit()
     capability_source = caps.find_capability_in_source(source_kit, name)
     if capability_source is None:
         raise click.ClickException(
@@ -4543,7 +4570,9 @@ def install_capability_cmd(name: str, dry_run: bool, plan: bool, as_json: bool) 
         # the capability's newly-copied skills and agents (e.g.,
         # deploy-skills.sh symlinks them into .claude/skills/).
         # Mirrors what `pkit capabilities upgrade` does after refresh and
-        # what `pkit init` does after its first-time copy.
+        # what `pkit init` does after its first-time copy. Then provision the
+        # capability's query commands, so an offline `pkit validate` answers
+        # without a `pkit sync` first (#1090).
         from project_kit import install as install_mod
         ctx = install_mod.InstallContext(
             target_root=target_root,
@@ -4551,6 +4580,7 @@ def install_capability_cmd(name: str, dry_run: bool, plan: bool, as_json: bool) 
             dry_run=False,
         )
         install_mod.run_installed_adapter_primitives(ctx)
+        install_mod.provision_query_commands(ctx, component=name)
 
 
 @capabilities.command("register")
@@ -4595,6 +4625,19 @@ def register_capability_cmd(name: str, dry_run: bool) -> None:
             f"{target_root}/.pkit/ does not exist. Run 'pkit init' first."
         )
 
+    source_kit = find_source_kit()
+    # The methodology's source repository run by code that is not its own (the
+    # gap, ADR-059): registering writes install-state with that code. Refuse
+    # before anything else, as `install` does (#1090).
+    refuse_propagation_into_source(
+        target_root,
+        source_kit,
+        command=f"capabilities register {name}",
+        would="register the capability with that code, writing install-state into the tree "
+        "it is built from",
+        own_code_does=None,
+    )
+
     # A reserved name is refused before resolution, as in `install`.
     caps.refuse_reserved_capability_name(name)
 
@@ -4602,7 +4645,6 @@ def register_capability_cmd(name: str, dry_run: bool) -> None:
     # Consulting both trees lets us surface the COR-031 boundary case where
     # a same-named capability now also ships from kit source — graduation
     # arriving unbidden — rather than silently shadowing it.
-    source_kit = find_source_kit()
     resolved = caps.resolve_capability_source(
         name,
         source_kit=source_kit,
@@ -4754,7 +4796,8 @@ def register_capability_cmd(name: str, dry_run: bool) -> None:
     if not dry_run:
         # Run the SAME deploy primitives a kit-source install runs, so the
         # capability's skills/agents land in the harness (COR-031 D1: deploy
-        # is identical regardless of origin).
+        # is identical regardless of origin) — its query-command provisioning
+        # included (#1090).
         from project_kit import install as install_mod
         ctx = install_mod.InstallContext(
             target_root=target_root,
@@ -4762,6 +4805,7 @@ def register_capability_cmd(name: str, dry_run: bool) -> None:
             dry_run=False,
         )
         install_mod.run_installed_adapter_primitives(ctx)
+        install_mod.provision_query_commands(ctx, component=name)
 
 
 def _upgrade_incubated_capability(
@@ -4806,6 +4850,7 @@ def _upgrade_incubated_capability(
             dry_run=False,
         )
         install_mod.run_installed_adapter_primitives(ctx)
+        install_mod.provision_query_commands(ctx, component=name)
 
 
 def _check_backbone_satisfied(
@@ -5541,7 +5586,7 @@ def new_migration(
 
 
 @new.command("agent")
-@click.argument("namespace", type=click.Choice(["core", "project"]))
+@click.argument("namespace")
 @click.argument("name")
 @click.option(
     "--with-storyboard",
@@ -5558,7 +5603,16 @@ def new_migration(
     help="Show what would be stamped without writing the file (per COR-004).",
 )
 def new_agent(namespace: str, name: str, with_storyboard: bool, dry_run: bool) -> None:
-    """Stamp a new agent stub at .pkit/agents/<namespace>/<name>.md (per COR-013 + COR-015).
+    """Stamp a new agent stub (per COR-013 + COR-015).
+
+    Namespaces:
+      core           → .pkit/agents/core/<name>.md
+      project        → .pkit/agents/project/<name>.md
+      <capability>   → .pkit/capabilities/<capability>/agents/<name>.md (COR-017, COR-026)
+
+    Any NAMESPACE that is not core/project is interpreted as a capability
+    name; the command refuses if no such capability exists, and creates its
+    agents/ folder on first use.
 
     With --with-storyboard, stamps folder layout with a sibling storyboard
     scaffold (per COR-016) — for agents driving scripted interaction scenarios.
@@ -5573,7 +5627,7 @@ def new_agent(namespace: str, name: str, with_storyboard: bool, dry_run: bool) -
     target = stamp_new_agent(
         target_root,
         name=name,
-        namespace=_cast_agent_namespace(namespace),
+        namespace=namespace,
         with_storyboard=with_storyboard,
         dry_run=dry_run,
     )
@@ -5588,15 +5642,16 @@ def new_agent(namespace: str, name: str, with_storyboard: bool, dry_run: bool) -
         click.echo(f"{verb}: {rel}")
 
 
-def _cast_agent_namespace(value: str) -> AgentNamespace:
-    if value == "core":
-        return "core"
-    return "project"
-
-
 @new.command("storyboard")
 @click.argument("artifact_kind", type=click.Choice(["agent"]))
 @click.argument("name")
+@click.option(
+    "--namespace",
+    type=str,
+    default=None,
+    help="Where the agent lives: core, project or a capability name. "
+    "Default: the agent the deploy resolves — project, core, then capabilities by name.",
+)
 @click.option(
     "--scenario",
     type=str,
@@ -5613,16 +5668,18 @@ def _cast_agent_namespace(value: str) -> AgentNamespace:
 def new_storyboard(
     artifact_kind: str,
     name: str,
+    namespace: str | None,
     scenario: str | None,
     dry_run: bool,
 ) -> None:
     """Stamp a storyboard sibling to an implementing artifact (per COR-016).
 
     Today's only supported artifact-kind is `agent`. The command resolves
-    the named agent (in either namespace, either flat or folder form);
-    if the agent is currently flat, it migrates to folder form first per
-    COR-015. Future application classes (cli, migration, tutorial) slot
-    in as additional artifact-kind values without renaming this command.
+    the named agent — in core, project or a capability's agents/ folder,
+    flat or folder form; --namespace pins where to look. If the agent is
+    currently flat, it migrates to folder form first per COR-015. Future
+    application classes (cli, migration, tutorial) slot in as additional
+    artifact-kind values without renaming this command.
     """
     target_root = find_target_root()
     if target_root is None:
@@ -5635,6 +5692,7 @@ def new_storyboard(
         target_root,
         kind=_cast_artifact_kind(artifact_kind),
         name=name,
+        namespace=namespace,
         scenario=scenario,
         dry_run=dry_run,
     )

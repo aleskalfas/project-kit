@@ -509,6 +509,92 @@ def test_deploy_picks_up_agents_from_installed_capabilities(mock_kit: Path) -> N
     assert "evidence-reviewer" in deployed.read_text()
 
 
+# --- storyboard references (#1101) --------------------------------------------
+
+
+def _capability_agent_with_storyboards(root: Path, body: str, *entries: str) -> Path:
+    """A folder-form capability agent declaring `entries`, each written beside it."""
+    folder = root / ".pkit" / "capabilities" / "cap" / "agents" / "scripted"
+    folder.mkdir(parents=True)
+    for entry in entries:
+        (folder / Path(entry).name).write_text("---\nconsumers: []\n---\n# SB\n", encoding="utf-8")
+    listed = "".join(f"  - {entry}\n" for entry in entries)
+    (folder / "scripted.md").write_text(
+        f"---\nname: scripted\ndescription: t\ntools: [Read]\nstoryboards:\n{listed}---\n\n{body}",
+        encoding="utf-8",
+    )
+    return folder
+
+
+def test_deploy_rewrites_a_sibling_storyboard_to_its_source_path(mock_kit: Path) -> None:
+    """The copy in .claude/agents/ cannot resolve a bare sibling, so the deploy rebases it."""
+    folder = _capability_agent_with_storyboards(
+        mock_kit,
+        "Load `storyboard.md` at session start; storyboard.md is the source.\n",
+        "storyboard.md",
+    )
+    result = _run_deploy(mock_kit)
+    assert result.returncode == 0, result.stderr
+
+    source_path = ".pkit/capabilities/cap/agents/scripted/storyboard.md"
+    assert _deployed_front_matter(mock_kit, "scripted")["storyboards"] == [source_path]
+    deployed = (mock_kit / ".claude" / "agents" / "scripted.md").read_text(encoding="utf-8")
+    assert f"Load `{source_path}` at session start; {source_path} is the source." in deployed
+    # The deployed reference resolves from the project root, where the runtime reads it.
+    assert (mock_kit / source_path).is_file()
+    # The source keeps the portable sibling form.
+    assert "  - storyboard.md\n" in (folder / "scripted.md").read_text(encoding="utf-8")
+
+
+def test_deploy_rewrites_whole_tokens_only(mock_kit: Path) -> None:
+    """`storyboard.md` inside a scenario file's name, or inside a longer path, is left alone."""
+    _capability_agent_with_storyboards(
+        mock_kit,
+        "Read `storyboard.md` and `review.storyboard.md`; not `docs/storyboard.md`.\n",
+        "storyboard.md",
+        "review.storyboard.md",
+    )
+    result = _run_deploy(mock_kit)
+    assert result.returncode == 0, result.stderr
+
+    base = ".pkit/capabilities/cap/agents/scripted"
+    assert _deployed_front_matter(mock_kit, "scripted")["storyboards"] == [
+        f"{base}/storyboard.md",
+        f"{base}/review.storyboard.md",
+    ]
+    deployed = (mock_kit / ".claude" / "agents" / "scripted.md").read_text(encoding="utf-8")
+    expected = (
+        f"Read `{base}/storyboard.md` and `{base}/review.storyboard.md`; "
+        "not `docs/storyboard.md`."
+    )
+    assert expected in deployed
+
+
+def test_deploy_leaves_a_source_path_storyboard_as_written(mock_kit: Path) -> None:
+    source_path = ".pkit/capabilities/cap/agents/scripted/storyboard.md"
+    _capability_agent_with_storyboards(mock_kit, f"Load `{source_path}`.\n", source_path)
+    result = _run_deploy(mock_kit)
+    assert result.returncode == 0, result.stderr
+
+    assert _deployed_front_matter(mock_kit, "scripted")["storyboards"] == [source_path]
+    deployed = (mock_kit / ".claude" / "agents" / "scripted.md").read_text(encoding="utf-8")
+    assert f"Load `{source_path}`." in deployed
+
+
+def test_committed_deployed_storyboards_resolve() -> None:
+    """Every committed deployed agent's storyboards resolve from the project root and are cited."""
+    from ruamel.yaml import YAML
+
+    checked = 0
+    for deployed in sorted((SOURCE_REPO / ".claude" / "agents").glob("*.md")):
+        _, front, body = deployed.read_text(encoding="utf-8").split("---\n", 2)
+        for entry in (YAML(typ="safe").load(front) or {}).get("storyboards") or []:
+            checked += 1
+            assert (SOURCE_REPO / entry).is_file(), f"{deployed.name}: {entry} does not resolve"
+            assert entry in body, f"{deployed.name}: body does not cite {entry}"
+    assert checked, "no deployed agent declares a storyboard — the check has nothing to hold"
+
+
 # --- stale-removal pass ------------------------------------------------------
 
 # The frontmatter marker deploy-agents.sh stamps into its own deployed copies.

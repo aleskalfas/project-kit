@@ -558,6 +558,19 @@ def test_one_marker_alone_is_not_the_source(tmp_path: Path) -> None:
     assert own.is_methodology_source(root) is False
 
 
+def _dispatcher_deleted(root: Path) -> Path:
+    (root / ".pkit" / "cli" / "pkit").unlink()
+    return root
+
+
+def test_the_source_with_its_dispatcher_deleted_is_still_the_source(tmp_path: Path) -> None:
+    """The dispatcher is what route 1 execs, not what tells the source from an
+    adopter: with it deleted the kit's trees there are still originals (#1090)."""
+    root = _dispatcher_deleted(_source_repository(_project(tmp_path)))
+    assert own.is_methodology_source(root) is True
+    assert own.is_synced_copy(root, ".pkit/decisions/README.md") is False
+
+
 def test_the_source_discriminator_is_the_routers(tmp_path: Path) -> None:
     """One idea of "the methodology's source", held by two modules that cannot share code.
 
@@ -568,7 +581,11 @@ def test_the_source_discriminator_is_the_routers(tmp_path: Path) -> None:
 
     adopter = _project(tmp_path)
     source = _source_repository(_project(tmp_path / "src-repo"))
-    for root in (adopter, source, REPO):
+    no_dispatcher = _dispatcher_deleted(_source_repository(_project(tmp_path / "no-dispatcher")))
+    package_only = tmp_path / "package-only"
+    (package_only / "src" / "project_kit").mkdir(parents=True)
+    (package_only / "src" / "project_kit" / "__init__.py").write_text("", encoding="utf-8")
+    for root in (adopter, source, no_dispatcher, package_only, REPO):
         assert own.is_methodology_source(root) is is_source_checkout(root), root
 
 

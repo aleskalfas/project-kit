@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import click
@@ -177,6 +178,88 @@ def test_stamp_project_wins_over_core_collision(kit_target: Path) -> None:
 
     target = storyboards.stamp_new_storyboard(kit_target, "agent", "shared")
     assert ".pkit/agents/project/shared/" in str(target)
+
+
+def _make_capability_agent(root: Path, capability: str, name: str, *, flat: bool = False) -> Path:
+    """An agent inside a capability (the capability carries a package.yaml)."""
+    cap_dir = root / ".pkit" / "capabilities" / capability
+    cap_dir.mkdir(parents=True, exist_ok=True)
+    (cap_dir / "package.yaml").write_text(
+        f"component:\n  kind: capability\n  name: {capability}\n  version: 0.1.0\n",
+        encoding="utf-8",
+    )
+    agents_dir = cap_dir / "agents"
+    target = agents_dir / f"{name}.md" if flat else agents_dir / name / f"{name}.md"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(f"---\nname: {name}\ndescription: t\n---\n\n# {name}\n", encoding="utf-8")
+    return target
+
+
+def test_stamp_finds_a_capability_agent_and_names_its_capability(kit_target: Path) -> None:
+    """A flat capability agent migrates to folder form; the consumer namespace is the capability."""
+    flat = _make_capability_agent(kit_target, "my-cap", "cap-agent", flat=True)
+
+    target = storyboards.stamp_new_storyboard(kit_target, "agent", "cap-agent")
+
+    folder = kit_target / ".pkit" / "capabilities" / "my-cap" / "agents" / "cap-agent"
+    assert target == folder / "storyboard.md"
+    assert (folder / "cap-agent.md").is_file()
+    assert not flat.exists()
+    body = target.read_text(encoding="utf-8")
+    assert "name: cap-agent" in body
+    assert "namespace: my-cap" in body
+
+
+def test_stamp_lookup_prefers_the_agent_the_deploy_resolves(kit_target: Path) -> None:
+    """Project wins over a capability's same-named agent, as in deploy-agents.sh."""
+    _make_folder_agent(kit_target, "project", "shared")
+    _make_capability_agent(kit_target, "my-cap", "shared")
+
+    target = storyboards.stamp_new_storyboard(kit_target, "agent", "shared")
+    assert ".pkit/agents/project/shared/" in str(target)
+
+
+def test_stamp_namespace_pins_the_capability_agent(kit_target: Path) -> None:
+    _make_folder_agent(kit_target, "project", "shared")
+    cap_agent = _make_capability_agent(kit_target, "my-cap", "shared")
+
+    target = storyboards.stamp_new_storyboard(
+        kit_target, "agent", "shared", namespace="my-cap"
+    )
+    assert target == cap_agent.parent / "storyboard.md"
+    assert "namespace: my-cap" in target.read_text(encoding="utf-8")
+
+
+def test_stamp_namespace_pins_core_over_project(kit_target: Path) -> None:
+    _make_folder_agent(kit_target, "core", "shared")
+    _make_folder_agent(kit_target, "project", "shared")
+
+    target = storyboards.stamp_new_storyboard(
+        kit_target, "agent", "shared", namespace="core"
+    )
+    assert ".pkit/agents/core/shared/" in str(target)
+
+
+def test_stamp_namespace_refuses_an_agent_not_there(kit_target: Path) -> None:
+    _make_folder_agent(kit_target, "project", "elsewhere")
+    with pytest.raises(
+        click.ClickException, match=re.escape("no agent named 'elsewhere' in .pkit/agents/core/")
+    ):
+        storyboards.stamp_new_storyboard(kit_target, "agent", "elsewhere", namespace="core")
+
+
+def test_stamp_namespace_refuses_unknown_capability(kit_target: Path) -> None:
+    with pytest.raises(click.ClickException, match="unknown namespace 'nope'"):
+        storyboards.stamp_new_storyboard(kit_target, "agent", "anything", namespace="nope")
+
+
+def test_cli_namespace_option(kit_target: Path) -> None:
+    _make_capability_agent(kit_target, "my-cap", "cap-agent")
+    result = CliRunner().invoke(
+        main, ["new", "storyboard", "agent", "cap-agent", "--namespace", "my-cap"]
+    )
+    assert result.exit_code == 0, result.output
+    assert "Stamped: .pkit/capabilities/my-cap/agents/cap-agent/storyboard.md" in result.output
 
 
 def test_stamp_rejects_unknown_artifact_kind() -> None:
