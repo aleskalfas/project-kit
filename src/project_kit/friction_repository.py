@@ -14,14 +14,16 @@ it. The points come from git, never from a ledger (point 9):
   A deferral covers its anchor up to its point only.
 
 **Reading history — from git alone, per file and bounded.** One `git log
---name-status -M` from HEAD lists every commit with the paths it touched
-(`read_history`); everything else is matched against that listing in memory:
+--name-status -M -c` from HEAD lists every commit with the paths it touched
+(`read_history`) — a merge commit with the paths it changed against every
+parent, git's combined diff, so what a merge itself wrote is read like any
+other commit; everything else is matched against that listing in memory:
 which commits a point reaches (its ancestors, from the parent lists), each
 file's names over time with renames followed (`History.versions`), and which
 commits touched a path (`History.touched`). A file's earlier versions are
 read, newest first, through one `git cat-file --batch` process (`BlobReader`)
 and parsed by the same reading as the present (`parse_artefacts`), each
-judged against the file's state at its commit's own first parent — what `git
+judged against the file's state at each parent of its commit — what `git
 log` diffed it against, never whatever the log lists next — and no blob is
 read beyond the oldest point in question: never one log per anchor, never a
 file's contents through its history for their own sake.
@@ -247,12 +249,40 @@ class RepositoryCheck:
 
 
 @dataclass(frozen=True)
+class MergeEntry(DiffEntry):
+    """A path a merge commit changed against every parent, as git's combined diff lists it.
+
+    What the merge wrote itself — resolving a conflict, or revalidating while
+    merging — never what it took from one side, which that side's commits
+    carry. `sources` is the file's name at each parent, in parent order;
+    `None` where that parent has no such file. The status reads as a single
+    commit's would: `A` when no parent has the file, `D` when the merge
+    removed it, `R` from `old_path` when every parent has it under that one
+    other name, `M` otherwise.
+    """
+
+    sources: tuple[str | None, ...] = ()
+
+
+@dataclass(frozen=True)
 class Version:
     """One state of a file in its history: the commit that produced it and the file's name then."""
 
     index: int  # the commit's position in the log: 0 is the newest
     path: str
     entry: DiffEntry
+
+    @property
+    def sources(self) -> tuple[str | None, ...]:
+        """The file's name at each parent of the commit, in parent order; `None` where none."""
+        entry = self.entry
+        if isinstance(entry, MergeEntry):
+            return entry.sources
+        if entry.status == "A":
+            return (None,)
+        if entry.status == "R" and entry.old_path is not None:
+            return (entry.old_path,)
+        return (self.path,)
 
 
 class History:
@@ -264,9 +294,9 @@ class History:
     log`: which commits a point reaches (`ancestors`), which commits touched
     a path (`touched`), and what names a file had over time (`versions`,
     renames followed as git's rename detection paired them). A merge commit
-    lists no paths, as `git log` prints none for it: the commits it merges
-    carry the changes. `shallow` names the commits at which a shallow
-    clone's history is cut.
+    lists only the paths it changed against every parent (`MergeEntry`): what
+    it took from one side, that side's commits carry. `shallow` names the
+    commits at which a shallow clone's history is cut.
     """
 
     def __init__(self, commits: Sequence[Commit], shallow: frozenset[str]) -> None:
@@ -346,10 +376,15 @@ class History:
 
 
 def read_history(root: Path, head: str) -> History:
-    """`git log --name-status -M` from `head`: one listing for the whole check.
+    """`git log --name-status -M -c` from `head`: one listing for the whole check.
 
-    `--date-order` keeps every parent after all of its children, so the log
-    order the walks rely on is a topological one even under skewed clocks.
+    `-c` lists a merge commit with the paths it changed against every parent
+    — git's combined diff — and `--combined-all-paths` with the file's name
+    at each parent; without them a merge lists nothing, and what it wrote
+    itself, a revalidation among it, would go unseen. It adds the merges'
+    diffs to the same one log, never a further one. `--date-order` keeps
+    every parent after all of its children, so the log order the walks rely
+    on is a topological one even under skewed clocks.
     `--root` lists the root commit's paths — and a shallow clone's boundary
     commit's, which git shows as a root — whatever `log.showRoot` says.
     """
@@ -365,6 +400,8 @@ def read_history(root: Path, head: str) -> History:
         _LOG_FORMAT,
         "--name-status",
         "-M",
+        "-c",
+        "--combined-all-paths",
         head,
         "--",
     ).stdout
@@ -377,17 +414,48 @@ def read_history(root: Path, head: str) -> History:
         rest = fields[5:]
         if rest and rest[0].startswith("\n"):
             rest[0] = rest[0][1:]
+        tokens = [token for token in rest if token]
+        listed = tuple(parents.split())
+        entries = (
+            _merge_entries(tokens, len(listed)) if len(listed) > 1 else parse_name_status(tokens)
+        )
         commits.append(
             Commit(
                 sha=sha,
-                parents=tuple(parents.split()),
+                parents=listed,
                 author=author,
                 date=datetime.fromisoformat(date),
                 subject=subject,
-                entries=tuple(parse_name_status([token for token in rest if token])),
+                entries=tuple(entries),
             )
         )
     return History(commits, _shallow_commits(root))
+
+
+def _merge_entries(tokens: Sequence[str], parents: int) -> list[DiffEntry]:
+    """The entries of a merge commit in a NUL-separated combined listing (`MergeEntry`).
+
+    Each is one status letter per parent, the file's name at each parent, and
+    its name in the merge: `-c --combined-all-paths --name-status -z`.
+    """
+    entries: list[DiffEntry] = []
+    width = parents + 2
+    for start in range(0, len(tokens) - width + 1, width):
+        letters = tokens[start]
+        named = tokens[start + 1 : start + 1 + parents]
+        path = tokens[start + 1 + parents]
+        sources = tuple(
+            None if letter == "A" else name for letter, name in zip(letters, named, strict=True)
+        )
+        status, old_path = "M", None
+        if all(source is None for source in sources):
+            status = "A"
+        elif set(letters) == {"D"}:
+            status = "D"
+        elif set(letters) == {"R"} and len(set(sources)) == 1:
+            status, old_path = "R", sources[0]
+        entries.append(MergeEntry(status, path, old_path, None, sources))
+    return entries
 
 
 def _shallow_commits(root: Path) -> frozenset[str]:
@@ -496,32 +564,34 @@ class _Walker:
         """`artefact` as it was at `version`: the document, or the entry under the same id."""
         return self._same(self._history.commits[version.index].sha, version.path, artefact)
 
-    def same_before(self, version: Version, artefact: Artefact) -> Artefact | None:
-        """`artefact` as the file stood at the first parent of `version`'s commit.
+    def same_in_parents(self, version: Version, artefact: Artefact) -> tuple[Artefact | None, ...]:
+        """`artefact` as the file stood at each parent of `version`'s commit, in parent order.
 
-        That is the state `git log` diffed the version against, read under
-        the file's name there; `None` at a root, or where the file was added.
+        Those are the states `git log` diffed the version against, each read
+        under the file's name at that parent; `None` where a parent has no
+        such file, and a root's one `None`.
         """
-        entry = version.entry
         parents = self._history.commits[version.index].parents
-        if entry.status == "A" or not parents:
-            return None
-        path = (
-            entry.old_path if entry.status == "R" and entry.old_path is not None else version.path
+        if not parents:
+            return (None,)
+        return tuple(
+            None if source is None else self._same(parent, source, artefact)
+            for parent, source in zip(parents, version.sources, strict=True)
         )
-        return self._same(parents[0], path, artefact)
 
     def points(self, artefact: Artefact) -> Points:
         """Walk back from HEAD until the revalidation point and every deferral point are found.
 
-        Each version is judged against the file's state at its commit's own
-        first parent: a point is the newest commit, in log order, at which the
-        marker — or the deferral entry — differs from that parent's. So a
-        version on a merged branch is compared with its own ancestor, never
-        with whatever the log lists next. When no listed commit shows the
-        change (it was made while resolving a merge), the point is the commit
-        that added the file. Once every point is found the walk goes on
-        without reading a blob, for the file's names and its renames.
+        Each version is judged against the file's state at each parent of its
+        commit: a point is the newest commit, in log order, at which the
+        marker — or the deferral entry — differs from every parent's (`_changed`).
+        So a version on a merged branch is compared with its own ancestor,
+        never with whatever the log lists next; a merge commit that wrote a
+        new marker while merging is that marker's point, and one that kept a
+        side's marker is not — the side's own commit is. When no listed
+        commit shows the change, the point is the commit that added the file.
+        Once every point is found the walk goes on without reading a blob,
+        for the file's names and its renames.
         """
         at = parsed_at(artefact)
 
@@ -543,8 +613,7 @@ class _Walker:
         for version in self._history.versions(artefact.path):
             oldest = version
             own.add(version.path)
-            if version.entry.old_path is not None:
-                own.add(version.entry.old_path)
+            own.update(source for source in version.sources if source is not None)
             if version.entry.status == "R":
                 renames.append(version)
             if revalidation is not None and not pending:
@@ -559,11 +628,11 @@ class _Walker:
                     )
                 break
             here = self.same_at(version, artefact)
-            before = self.same_before(version, artefact)
-            if revalidation is None and marker(here) != marker(before):
+            before = self.same_in_parents(version, artefact)
+            if revalidation is None and _changed(marker, here, before):
                 revalidation = version.index
             for anchor in list(pending):
-                if _defers(here, anchor) and not _defers(before, anchor):
+                if _defers(here, anchor) and not any(_defers(p, anchor) for p in before):
                     pending.discard(anchor)
                     deferral_points[anchor] = version.index
 
@@ -576,8 +645,8 @@ class _Walker:
                 "the commit that added its file (none in this clone touches it)",
             )
         if unreachable is None:
-            # No listed commit shows the change: it was made while resolving a
-            # merge, which lists nothing. The file's own addition is the point.
+            # No listed commit shows the change: the file's history, as git's
+            # rename detection pairs it, ends first. Its oldest state is the point.
             if revalidation is None:
                 revalidation = oldest.index
             for anchor in pending:
@@ -597,6 +666,20 @@ class _Walker:
 
 def _defers(artefact: Artefact | None, anchor: Anchor) -> bool:
     return artefact is not None and any(d.anchor == anchor for d in artefact.deferrals)
+
+
+def _changed(
+    value: Callable[[Artefact | None], Any],
+    here: Artefact | None,
+    parents: Sequence[Artefact | None],
+) -> bool:
+    """Whether a commit changed `value`: it differs from its value at every parent of the commit.
+
+    One parent for a single commit. A merge commit changed it only when it
+    wrote a value no parent had — one kept from a side is that side's change.
+    """
+    now = value(here)
+    return all(value(parent) != now for parent in parents)
 
 
 @dataclass(frozen=True)
@@ -1066,8 +1149,9 @@ def _changes(
     A path or a record: `_Judge.change` names the first such commit, and asked
     again with each answer covered it names the next, so the rule is the
     check's own. An artefact: each commit at which the target's content
-    differs from its content at the commit's first parent — the check asks
-    only whether the content at HEAD differs from the content the point saw.
+    differs from its content at every parent of the commit (`_changed`) — the
+    check asks only whether the content at HEAD differs from the content the
+    point saw.
     """
     if anchor.kind == "artefact":
         target = judge.head.find(anchor.value)
@@ -1078,8 +1162,11 @@ def _changes(
             version.index
             for version in judge.history.versions(target.path)
             if version.index not in covered
-            and _content_of(walker.same_at(version, target))
-            != _content_of(walker.same_before(version, target))
+            and _changed(
+                _content_of,
+                walker.same_at(version, target),
+                walker.same_in_parents(version, target),
+            )
         }
     found: set[int] = set()
     while True:
@@ -1305,6 +1392,7 @@ __all__ = [
     "BlobReader",
     "Commit",
     "History",
+    "MergeEntry",
     "RepositoryCheck",
     "RepositoryFinding",
     "RepositoryFindingKind",
