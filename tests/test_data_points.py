@@ -836,3 +836,114 @@ def test_status_on_a_fresh_install_defines_no_point(repo: AdopterRepo) -> None:
         f"    fillers            {FILLERS}/   (0 file(s))",
         "    points             none defined",
     ]
+
+
+# --- `pkit connections resolve`: the read a capability's script consumes ----------------
+
+
+def _resolve_cli(*args: str) -> Any:
+    return CliRunner().invoke(main, ["connections", "resolve", *args])
+
+
+def test_resolve_prints_the_point_as_the_status_report_resolves_it(repo: AdopterRepo) -> None:
+    _provider(repo, combination="additive", default={"value": ["d1"], "participation": "always"})
+    _command_contributor(repo, "notes", _printing({"schema_version": 1, "value": ["n1"]}))
+    _filler(
+        repo,
+        {
+            "schema_version": 1,
+            "value": [{"id": "p1", "role": "owner"}],
+            "remove": [{"id": "d1", "reason": "Not ours."}],
+        },
+    )
+    result = _resolve_cli(READERS, "--json")
+    assert result.exit_code == 0, result.output
+    assert json.loads(result.output) == {
+        "address": READERS,
+        "defined": True,
+        "provider": "docs-a",
+        "policy": "additive",
+        "inert_policy": "fallback",
+        "participation": "always",
+        "resolved": True,
+        "why": "",
+        "value": [{"id": "p1", "role": "owner"}, "n1"],
+        "origin": "",
+        "entries": [
+            {"id": "p1", "origin": dp.PROJECT, "replaces": [], "value": {"id": "p1", "role": "owner"}},
+            {"id": "n1", "origin": "notes", "replaces": [], "value": "n1"},
+        ],
+        "removals": [{"id": "d1", "reason": "Not ours.", "removed_from": [dp.DEFAULT]}],
+        "fillers": [
+            {
+                "source": "project filler",
+                "name": READERS_FILE,
+                "supplies": "file",
+                "state": "taken",
+                "reason": "",
+                "query_contract": None,
+            },
+            {
+                "source": "contribution",
+                "name": "notes",
+                "supplies": "command 'export'",
+                "state": "taken",
+                "reason": "",
+                "query_contract": True,
+            },
+            {
+                "source": "default",
+                "name": "docs-a",
+                "supplies": "always",
+                "state": "taken",
+                "reason": "",
+                "query_contract": None,
+            },
+        ],
+    }
+    # The filler command ran as it does under `pkit validate`: `--json` alone, offline.
+    assert _runs(repo) == [[["--json"], "1", "1"]]
+    # Without --json, exactly the status report's lines for the point.
+    human = _resolve_cli(READERS)
+    assert human.exit_code == 0
+    status = CliRunner().invoke(main, ["status"]).output
+    assert human.output.splitlines() == _data_points_section(status).splitlines()[2:]
+
+
+def test_resolve_an_unresolved_point_exits_1_with_no_value(repo: AdopterRepo) -> None:
+    _provider(repo, inert="fail")
+    _contributor(repo, "evidence", ["operator"])
+    _contributor(repo, "notes", [{"id": 7}])
+    result = _resolve_cli(READERS, "--json")
+    assert result.exit_code == 1
+    document = json.loads(result.output)
+    assert (document["resolved"], document["value"], document["entries"]) == (False, None, [])
+    assert document["why"] == "a filler meant to answer is inert, and the point's inert policy is `fail`"
+    states = {f["name"]: (f["state"], f["reason"]) for f in document["fillers"]}
+    assert states["notes"][0] == "inert"
+    assert states["evidence"] == ("passed over", "answered, but the point does not resolve")
+
+
+def test_resolve_an_address_nothing_defines_exits_1_and_says_why(repo: AdopterRepo) -> None:
+    result = _resolve_cli(READERS, "--json")
+    assert result.exit_code == 1
+    assert json.loads(result.output) == {
+        "address": READERS,
+        "defined": False,
+        "resolved": False,
+        "value": None,
+        "why": "role 'pkit::documentation' has no active provider",
+    }
+    _provider(repo)
+    human = _resolve_cli(TOOL)
+    assert human.exit_code == 1
+    assert human.output == (
+        f"{TOOL}: not defined — 'docs-a', the active provider of role "
+        f"'pkit::documentation', defines no data point '{TOOL}'\n"
+    )
+
+
+def test_resolve_refuses_what_is_not_a_point_address(repo: AdopterRepo) -> None:
+    result = _resolve_cli("pkit::documentation")
+    assert result.exit_code == 2
+    assert "is not a point address" in result.output

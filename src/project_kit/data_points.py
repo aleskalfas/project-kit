@@ -367,15 +367,19 @@ class _Run:
                 )
 
     def _undefined(self, address: str) -> str:
-        """Why no active provider defines the data point `address`."""
-        role = role_of(address) or address
-        binding = self.wiring.role(role)
-        if binding is None or binding.active is None:
-            return f"role {role!r} has no active provider"
-        return (
-            f"{binding.active!r}, the active provider of role {role!r}, defines no data "
-            f"point {address!r}"
-        )
+        return undefined_why(self.wiring, address)
+
+
+def undefined_why(wiring: cx.Wiring, address: str) -> str:
+    """Why no active provider defines the data point `address`."""
+    role = role_of(address) or address
+    binding = wiring.role(role)
+    if binding is None or binding.active is None:
+        return f"role {role!r} has no active provider"
+    return (
+        f"{binding.active!r}, the active provider of role {role!r}, defines no data "
+        f"point {address!r}"
+    )
 
 
 @dataclass
@@ -1081,3 +1085,63 @@ def summary_lines(resolution: DataResolution) -> list[str]:
         f"{resolution.filler_files} project filler file(s).",
         *resolution.notes,
     ]
+
+
+# --- `pkit connections resolve` ------------------------------------------------
+
+
+def resolve_point(target_root: Path, address: str) -> tuple[ResolvedPoint | None, str]:
+    """The data point `address` resolved, or None with why no active provider
+    defines it — as one run, so the wiring is resolved once for both answers."""
+
+    def run() -> tuple[ResolvedPoint | None, str]:
+        point = _resolve(target_root).point(address)
+        if point is not None:
+            return point, ""
+        return None, undefined_why(cx.shared_wiring(target_root), address)
+
+    return validators.as_one_run(run)
+
+
+def point_document(point: ResolvedPoint) -> dict[str, Any]:
+    """One resolved data point as the stable document `pkit connections resolve
+    --json` prints — the read a capability's own script uses to consume a point
+    it defines, without importing this package (the CLI README, "Connections
+    commands"). Everything the status report shows, as data: `value` is None
+    when the point does not resolve, and never a partial value."""
+    return {
+        "address": point.address,
+        "defined": True,
+        "provider": point.provider,
+        "policy": point.policy,
+        "inert_policy": point.inert_policy,
+        "participation": point.participation,
+        "resolved": point.resolved,
+        "why": point.why,
+        "value": point.value if point.resolved else None,
+        "origin": point.origin,
+        "entries": [
+            {"id": e.id, "origin": e.origin, "replaces": list(e.replaces), "value": e.value}
+            for e in point.entries
+        ],
+        "removals": [
+            {"id": r.id, "reason": r.reason, "removed_from": list(r.removed_from)}
+            for r in point.removals
+        ],
+        "fillers": [
+            {
+                "source": f.source.value,
+                "name": f.name,
+                "supplies": f.supplies,
+                "state": f.state.value,
+                "reason": f.reason,
+                "query_contract": f.query_contract,
+            }
+            for f in point.fillers
+        ],
+    }
+
+
+def undefined_document(address: str, why: str) -> dict[str, Any]:
+    """The document for an address no active provider defines as a data point."""
+    return {"address": address, "defined": False, "resolved": False, "why": why, "value": None}

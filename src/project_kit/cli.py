@@ -329,6 +329,64 @@ def config_set(key: str, value: str, yes: bool) -> None:
     )
 
 
+@main.group("connections")
+def connections_group() -> None:
+    """Connection points (COR-053): read what a data point resolves to.
+
+    The wiring the installed packages and the configuration resolve to is
+    reported by `pkit validate` (its `connections` member) and shown by `pkit
+    status`. Reference: `.pkit/cli/README.md`, "Connections commands".
+    """
+
+
+@connections_group.command("resolve")
+@click.argument("address", metavar="ADDRESS")
+@click.option(
+    "--json", "as_json", is_flag=True, default=False, help="Emit the stable JSON document."
+)
+def connections_resolve(address: str, as_json: bool) -> None:
+    """Resolve the data point ADDRESS (`<publisher>::<role>:<point>`) and print it.
+
+    The resolution `pkit validate` reports and `pkit status` shows (COR-052):
+    the point's value — a `single` point's answer, or the entries of a `union`
+    or `additive` point, each with its origin — how it resolved, or why it did
+    not, and every filler considered. Read-only; command fillers run as they
+    do there, offline-marked and bounded. It is how a capability's own script
+    reads a point it defines without importing the backbone. Exit 0 when the
+    point resolves; 1 when it does not, or when no active provider defines it,
+    and the output says why.
+    """
+    import json
+
+    from project_kit import backbone_schemas
+    from project_kit import data_points
+    from project_kit.status import _data_point_lines  # pyright: ignore[reportPrivateUsage]
+
+    if backbone_schemas.filler_subpath(address) is None:
+        raise click.BadParameter(
+            f"{address!r} is not a point address: `<publisher>::<role>:<point>`, each part "
+            "a lowercase word.",
+            param_hint="ADDRESS",
+        )
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    point, why = data_points.resolve_point(target_root, address)
+    if as_json:
+        document = (
+            data_points.point_document(point)
+            if point is not None
+            else data_points.undefined_document(address, why)
+        )
+        click.echo(json.dumps(document, indent=2, sort_keys=True, ensure_ascii=False))
+    elif point is not None:
+        click.echo("\n".join(_data_point_lines(point)))
+    else:
+        click.echo(f"{address}: not defined — {why}")
+    if point is None or not point.resolved:
+        raise SystemExit(1)
+
+
 @main.group("friction")
 def friction() -> None:
     """Anchors and friction (COR-050): the reading commands — the checks, the

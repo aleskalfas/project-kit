@@ -431,6 +431,8 @@ A filler command lacking the declaration, or a contribution naming both `command
 
 **What `pkit status` shows** (COR-052 point 7), under "Data points": where the project's filler files live and how many there are; how many points are defined, resolved and unresolved; then per point its policy, inert policy and default participation, and whether it resolved or why not; its value — a `single` point's answer with the filler that gave it, or each entry of a `union` or `additive` point with its origin and what it replaced; each removal override with its reason and the fillers it removed from; and every filler considered — `taken`, `inert` or `passed over`, with the reason — a command filler saying whether its command declares the query contract.
 
+**Reading one point from a script.** `pkit connections resolve <address> --json` prints the same resolution of one point as a stable document (the CLI README, "Connections commands"). It is how a component's own script reads a point it defines — a capability script runs in its own environment and does not import the backbone — before applying the value itself: the consumer, not the point, knows what the value is applied to.
+
 ## The component registry
 
 The backbone manifest's `components` list is the canonical install record.
