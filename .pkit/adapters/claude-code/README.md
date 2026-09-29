@@ -13,9 +13,8 @@ pkit:
         - src/project_kit/visibility.py
       record: [COR-002, COR-005, COR-028, ADR-002, ADR-004, ADR-009, ADR-014, ADR-052, ADR-060, "project-management:DEC-030"]
     revalidated:
-      at: 2026-09-29T18:09:48Z
-      outcome: unchanged
-      unchanged-because: the project-side settings file joined this page's anchors so its changes raise friction here; the page's text already describes the settings merge and its project-additions side, and no sentence changes
+      at: 2026-09-29T18:48:03Z
+      outcome: updated
 ---
 
 # Claude Code adapter
