@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-09-29T18:56:20Z
+      at: 2026-09-29T19:29:45Z
       outcome: unchanged
-      unchanged-because: the process, CLI and schemas READMEs changed only within their own sections for opt-in journal logging; the area map holds
+      unchanged-because: the lifecycle README's runtime_ignore row now states ADR-009 rule 7's ownership test (#1123), a detail of its package-metadata table; the area map holds
 ---
 
 # project-kit
