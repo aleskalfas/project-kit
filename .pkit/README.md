@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-09-29T18:56:20Z
+      at: 2026-09-29T19:26:34Z
       outcome: unchanged
-      unchanged-because: the process, CLI and schemas READMEs changed only within their own sections for opt-in journal logging; the area map holds
+      unchanged-because: the lifecycle, CLI and process READMEs gained the declared requires_backbone floor raise and the journal-pattern package warning inside their own sections; each area's one-line summary in this map still holds
 ---
 
 # project-kit

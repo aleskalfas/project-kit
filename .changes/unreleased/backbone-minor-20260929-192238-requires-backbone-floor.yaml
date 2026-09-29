@@ -15,3 +15,9 @@ body: >
   `plan` and `apply` themselves, refuse the field on a backbone changeset, on a
   `none` changeset, on a component that is not a capability or adapter whose
   range opens with a `>=` floor, and with any value but `release`.
+
+  `pkit validate` warns, without failing, when an installed component's
+  `runtime_ignore` still declares the process journals, whose ignore line the
+  backbone owns: such an entry keeps journals ignored even when the project
+  commits them, and the warning says to upgrade the component together with the
+  backbone.

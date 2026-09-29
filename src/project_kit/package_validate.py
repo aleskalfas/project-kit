@@ -35,7 +35,10 @@ passes, in order, each producing findings located by JSON Pointer:
    `schema_version` (COR-053 point 5), and the generated `depends-on` list says
    what the component's process definitions generate
    (`process_dependencies.staleness`, COR-053 point 4) — a stale copy names
-   `pkit capabilities refresh <name>` as the fix. All ERRORs.
+   `pkit capabilities refresh <name>` as the fix. All ERRORs but one WARNING:
+   a `runtime_ignore` entry that declares the process journals, whose ignore
+   line the backbone owns (`process_journal.claims_journals`) — the mark of a
+   component older than the backbone it runs on.
 
 The checks across packages — roles and their providers, counterparts against
 point versions, mandatory marks and cycles, fingerprints, the version
@@ -58,7 +61,7 @@ from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path, PurePosixPath, PureWindowsPath
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from jsonschema import Draft202012Validator
 from packaging.specifiers import InvalidSpecifier, SpecifierSet
@@ -67,7 +70,7 @@ from referencing import Registry, Resource
 from referencing.jsonschema import DRAFT202012
 from ruamel.yaml import YAML
 
-from project_kit import process_dependencies, validators
+from project_kit import process_dependencies, process_journal, validators
 from project_kit.backbone_schemas import (
     BackboneSchemaMissing,
     expand_schema_error,
@@ -96,8 +99,9 @@ _yaml = YAML(typ="safe")
 
 
 class Severity(Enum):
-    """Whether a finding fails the check. Warnings never do; the one source of them
-    is an unknown key under a schema that leaves its object open (pass 2)."""
+    """Whether a finding fails the check. Warnings never do; their two sources are
+    an unknown key under a schema that leaves its object open (pass 2) and a
+    `runtime_ignore` entry declaring the process journals (pass 3)."""
 
     ERROR = "error"
     WARNING = "warning"
@@ -389,6 +393,14 @@ def _repository_findings(
             for index, value in enumerate(values):
                 _check_relative(findings, f"/{key}/{index}", value, "a repository-relative path")
 
+    for index, pattern in enumerate(_items(raw.get("runtime_ignore"))):
+        if isinstance(pattern, str) and process_journal.claims_journals(pattern):
+            findings.append(
+                PackageFinding(
+                    f"/runtime_ignore/{index}", Severity.WARNING, journal_claim_message(pattern)
+                )
+            )
+
     commands = raw.get("commands")
     leaves = command_leaves(commands) if isinstance(commands, Mapping) else {}
     for tokens, leaf in leaves.items():
@@ -611,6 +623,18 @@ def _offered_process_findings(
     ]
 
 
+def journal_claim_message(pattern: str) -> str:
+    """The warning on a `runtime_ignore` entry that declares process journals
+    (`process_journal.claims_journals`): what it breaks, and the way out."""
+    return (
+        f"{pattern!r} declares process journals, whose ignore line the backbone owns: it "
+        f"ignores {process_journal.JOURNAL_GLOB!r} unless the project commits its journals "
+        f"(`process.journal.committed: true`, COR-033 point 7). Declared here too, it keeps "
+        f"them ignored when the project commits them. Upgrade this component together with "
+        f"the backbone, to a version that leaves the line to the backbone, or drop the entry."
+    )
+
+
 def _component_name(raw: Mapping[Any, Any], expected: str | None, component_dir: Path) -> str:
     """The component's name for a message: as the package declares it, else the
     name its directory gives it."""
@@ -775,6 +799,11 @@ def _locate(target_root: Path, file: Path, finding: PackageFinding) -> str:
 
 def _kind(value: Any) -> str:
     return "null" if value is None else type(value).__name__
+
+
+def _items(value: object) -> list[object]:
+    """`value`'s items when it is a list, else none (the shape pass reports the type)."""
+    return cast("list[object]", value) if isinstance(value, list) else []
 
 
 def _token(segment: Any) -> str:
