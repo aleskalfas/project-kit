@@ -154,7 +154,7 @@ def test_a_shared_id_is_reported_at_every_later_holder(project: AdopterRepo) -> 
         (
             {
                 f"{USE_CASES}/UC-009-x.md": (
-                    "---\nid: UC-9\nstatus: active\nactor: ACT-tester\n"
+                    "---\nid: UC-9\ntitle: X\nstatus: active\nactor: ACT-tester\n"
                     "pkit: {friction: {anchors: {artefact: [ACT-tester]}}}\n---\n"
                 )
             },
@@ -168,6 +168,7 @@ def test_a_shared_id_is_reported_at_every_later_holder(project: AdopterRepo) -> 
                 )
             },
             [
+                (f"{USE_CASES}/UC-009-x.md", "'title' is a required property"),
                 (
                     f"{USE_CASES}/UC-009-x.md",
                     "Additional properties are not allowed ('owner' was unexpected)",
@@ -196,6 +197,35 @@ def test_missing_or_misshapen_parts_are_reported(
     stamped(project, "actor", "tester")
     project.write(dict(files))
     assert errors(check(project)) == expected
+
+
+def test_a_heading_other_than_the_id_and_title_is_reported(project: AdopterRepo) -> None:
+    """The front matter's `title` is what a reader of the front matter alone sees — a data
+    point publishing `{id, title, status}` — so the page's heading must say the same."""
+    seed(project)
+    rel = f"{USE_CASES}/UC-002-read-report.md"
+    text = (project.root / rel).read_text(encoding="utf-8")
+    assert "\n# UC-002 — Read report\n" in text
+    renamed = text.replace("title: Read report", "title: Read the report")
+    project.write({rel: renamed})
+    wanted = (
+        "a use case opens with `# UC-002 — Read the report`, so what a reader of its front "
+        "matter sees is what the page shows — write the heading, or change `title`"
+    )
+    assert errors(check(project)) == [
+        (
+            rel,
+            "its heading, `# UC-002 — Read report`, is not its id and its front matter's "
+            f"title: {wanted}",
+        )
+    ]
+    # A heading inside fenced code is no heading.
+    fenced = renamed.replace("# UC-002 — Read report", "```\n# UC-002 — Read the report\n```")
+    project.write({rel: fenced})
+    assert errors(check(project)) == [(rel, f"has no heading: {wanted}")]
+    # Closing hashes are no part of the heading's text.
+    project.write({rel: renamed.replace("# UC-002 — Read report", "# UC-002 — Read the report #")})
+    assert errors(check(project)) == []
 
 
 def test_an_entry_missing_its_parts_or_keyed_by_a_foreign_id_is_reported(

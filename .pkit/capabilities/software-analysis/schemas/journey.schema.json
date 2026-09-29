@@ -5,10 +5,14 @@
   "description": "The front matter of one journey, a file `JRN-NNN-<slug>.md` in `use-case-model/journeys/` under the analysis location (software-analysis DEC-001 points 1 to 4): an end-to-end path one actor takes across several use cases, including the seams between them where the path can break. `steps` is the source: the use cases it lists are written into the friction block's artefact anchors by the stamp, and the capability's check requires the two to match, so the friction check sees every use case the journey passes through. It also anchors to the code at the seams. These are the journey's own fields: its friction block sits in the methodology's container beside them and is the core's (COR-050, COR-053 point 10). Applied by `pkit software-analysis validate`; unknown fields are refused.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["id", "status", "actor", "steps"],
+  "required": ["id", "title", "status", "actor", "steps"],
   "properties": {
     "id": {
       "$ref": "analysis.schema.json#/$defs/journey-id"
+    },
+    "title": {
+      "description": "The journey's title. The body's heading repeats it after the id, `# JRN-NNN — <title>`, and the capability's check requires the two to match, so a reader of the front matter alone sees the title the page shows. It may change; the id does not.",
+      "$ref": "analysis.schema.json#/$defs/text"
     },
     "status": {
       "$ref": "analysis.schema.json#/$defs/status"

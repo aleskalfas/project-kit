@@ -3,11 +3,13 @@
 # one actor takes across several use cases, and the seams between them where
 # the path can break. Stamp it, never copy it: `pkit analysis new journey
 # <slug> --actor <ACT-id> --step <UC-id> --step <UC-id> …` numbers it, writes
-# `steps` and, from them, its use-case anchors, and writes it to
+# its title, `steps` and, from them, its use-case anchors, and writes it to
 # `use-case-model/journeys/` under the analysis location. `steps` is the
-# source: `pkit analysis validate` requires the use-case anchors to match it.
-# Its own fields' shape is `schemas/journey.schema.json`.
+# source: `pkit analysis validate` requires the use-case anchors to match it,
+# and the heading to be the id and title the front matter gives. Its own
+# fields' shape is `schemas/journey.schema.json`.
 id: JRN-000                       # stamped: the next free number, never reused
+title: <Title>                    # --title; the heading below repeats it after the id
 status: active                    # or withdrawn: the file stays and its id is never reused
 actor: ACT-actor                  # the actor who takes the journey
 steps: [UC-000, UC-001]           # the use cases it passes through, in order

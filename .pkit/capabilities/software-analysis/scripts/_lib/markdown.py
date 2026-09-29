@@ -3,8 +3,9 @@
 A text has front matter when it opens with a `---` line closed by the next
 `---` line — the rule the backbone's discovery reads artefacts by. Where
 artefacts are is never read here: the stamp reads the templates and the
-collection file it adds an entry to, and the check reads the revalidation
-records, which are not artefacts and lie in no place.
+collection file it adds an entry to, and the check reads the heading of a
+file discovery names and the revalidation records, which are not artefacts
+and lie in no place.
 """
 
 from __future__ import annotations
@@ -17,6 +18,10 @@ from typing import Any
 from ruamel.yaml import YAML
 
 _FENCE = re.compile(r"^---[ \t]*$", re.MULTILINE)
+
+#: A level-one heading, its closing hashes left out; and the opening of fenced code.
+_H1 = re.compile(r"^#[ \t]+(?P<text>.*?)(?:[ \t]+#+)?[ \t]*$")
+_CODE_FENCE = re.compile(r"^[ ]{0,3}(?P<fence>`{3,}|~{3,})")
 
 _safe = YAML(typ="safe")
 
@@ -40,6 +45,25 @@ def split(text: str) -> tuple[str | None, str]:
     closing_end = text.find("\n", end)
     body = "" if closing_end == -1 else text[closing_end + 1 :]
     return text[start:end], body.lstrip("\n")
+
+
+def heading(body: str) -> str | None:
+    """The text of the body's first level-one heading, `# …`, outside fenced code;
+    `None` without one."""
+    fence: str | None = None
+    for line in body.splitlines():
+        opening = _CODE_FENCE.match(line)
+        if fence is not None:
+            if opening is not None and opening["fence"].startswith(fence):
+                fence = None
+            continue
+        if opening is not None:
+            fence = opening["fence"]
+            continue
+        found = _H1.match(line)
+        if found is not None:
+            return found["text"]
+    return None
 
 
 def load(yaml_text: str) -> Any:

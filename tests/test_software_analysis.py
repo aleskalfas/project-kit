@@ -139,20 +139,30 @@ def test_use_cases_and_journeys_are_numbered_in_order_with_their_anchors(
     run_suite = front(project, f"{USE_CASES}/UC-001-run-suite.md")
     assert run_suite == {
         "id": "UC-001",
+        "title": "Run suite",
         "status": "active",
         "actor": "ACT-tester",
         "pkit": {"friction": {"anchors": {"path": ["src/run.py"], "artefact": ["ACT-tester"]}}},
     }
+    body = (project.root / USE_CASES / "UC-001-run-suite.md").read_text(encoding="utf-8")
+    assert "\n# UC-001 — Run suite\n" in body
     journey = front(project, f"{JOURNEYS}/JRN-001-first-run.md")
+    assert journey["title"] == "First run"
     assert journey["steps"] == ["UC-001", "UC-002"]
     assert journey["pkit"] == {"friction": {"anchors": {"artefact": ["UC-001", "UC-002"]}}}
     body = (project.root / JOURNEYS / "JRN-001-first-run.md").read_text(encoding="utf-8")
     assert "# JRN-001 — First run\n" in body
     assert "1. UC-001 — " in body and "2. UC-002 — " in body and "UC-000" not in body
     assert "- **UC-001 → UC-002:** " in body
-    area = stamped(project, "use-case", "export", "--actor", "ACT-tester", "--area", "reports")
+    title = ("--title", "Export: the report as a file")
+    area = stamped(
+        project, "use-case", "export", "--actor", "ACT-tester", "--area", "reports", *title
+    )
     assert area == "UC-003"
-    assert (project.root / USE_CASES / "reports" / "UC-003-export.md").is_file()
+    exported = f"{USE_CASES}/reports/UC-003-export.md"
+    assert front(project, exported)["title"] == "Export: the report as a file"
+    body = (project.root / exported).read_text(encoding="utf-8")
+    assert "\n# UC-003 — Export: the report as a file\n" in body
 
 
 def test_every_stamped_artefact_passes_the_core_s_friction_pass(project: AdopterRepo) -> None:

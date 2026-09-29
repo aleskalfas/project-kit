@@ -225,6 +225,7 @@ def _document(kind: str, new_id: str, request: Request) -> str:
     data = dict(markdown.load(front))
     template_id = str(data["id"])
     data["id"] = new_id
+    data["title"] = _title(request)
     data["actor"] = request.actor
     if kind == JOURNEY:
         data["steps"] = list(request.steps)

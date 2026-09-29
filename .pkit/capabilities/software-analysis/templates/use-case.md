@@ -1,11 +1,13 @@
 ---
 # A use case (software-analysis DEC-001 points 1, 3 and 4): one actor's goal
 # and how the system fulfils it. Stamp it, never copy it: `pkit analysis new
-# use-case <slug> --actor <ACT-id>` numbers it, fills its actor and the actor
-# anchor, and writes it to `use-case-model/use-cases/` under the analysis
-# location (`--area <area>` for a folder per functional area). Its own fields'
+# use-case <slug> --actor <ACT-id>` numbers it, fills its title, its actor and
+# the actor anchor, and writes it to `use-case-model/use-cases/` under the
+# analysis location (`--area <area>` for a folder per functional area). Its
+# heading is its id and title, as the front matter gives them. Its own fields'
 # shape is `schemas/use-case.schema.json`; the friction block is the core's.
 id: UC-000                        # stamped: the next free number, never reused
+title: <Title>                    # --title; the heading below repeats it after the id
 status: active                    # or withdrawn: the file stays and its id is never reused
 actor: ACT-actor                  # the actor whose goal this is
 pkit:

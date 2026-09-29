@@ -8,9 +8,14 @@ What is checked, each against the record's words:
   each. A file without front matter, a collection file that is not one, or a
   use-case or journey file holding entries, is an error.
 - **Missing required parts** (points 1 and 3). Each artefact's own fields
-  against its kind's companion schema — its id, its status, its actor, its
-  steps, its needs, its definition — and an entry's id against its kind's id.
-  Unknown fields are refused, so a misspelt one is never silently ignored.
+  against its kind's companion schema — its id, its title, its status, its
+  actor, its steps, its needs, its definition — and an entry's id against its
+  kind's id. Unknown fields are refused, so a misspelt one is never silently
+  ignored.
+- **A use case's and a journey's heading** is its id and its front matter's
+  title, `# UC-NNN — <title>`: what a reader of the front matter alone sees —
+  a data point publishing `{id, title, status}`, say — is what the page shows.
+  The heading is read from the file discovery names.
 - **Duplicate ids** (point 3). No two artefacts in the analysis share an id.
 - **A use case anchors to its actor** (point 4), as an artefact anchor, so a
   changed actor flags it.
@@ -80,6 +85,7 @@ def check(root: Path) -> Outcome:
     outcome.summary.append(_counts(analysis, len(records)))
     outcome.findings += [Finding(ERROR, s.path, s.why) for s in analysis.strays]
     outcome.findings += _own_fields(analysis)
+    outcome.findings += _headings(root, analysis)
     outcome.findings += _duplicates(analysis)
     outcome.findings += _actor_anchors(analysis)
     outcome.findings += _journey_anchors(analysis)
@@ -113,6 +119,45 @@ def _own_fields(analysis: Analysis) -> list[Finding]:
             )
         for pointer, message in schemas.errors(artefact.kind, artefact.fields):
             found.append(Finding(ERROR, at(artefact.location, pointer), message))
+    return found
+
+
+def _headings(root: Path, analysis: Analysis) -> list[Finding]:
+    """A use case's and a journey's heading reads `<id> — <title>`, as its front matter
+    gives them."""
+    found: list[Finding] = []
+    for artefact in analysis.artefacts:
+        title = artefact.fields.get("title")
+        if (
+            artefact.entry
+            or artefact.id is None
+            or not schemas.id_pattern(artefact.kind).match(artefact.id)
+            or not isinstance(title, str)
+            or not title
+        ):
+            continue  # an entry has no heading of its own; the schema reports the rest
+        try:
+            _front, body = markdown.split((root / artefact.path).read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError):
+            continue  # the core reports a file it cannot read
+        wanted = f"{artefact.id} — {title}"
+        written = markdown.heading(body)
+        if written == wanted:
+            continue
+        what = (
+            "has no heading"
+            if written is None
+            else f"its heading, `# {written}`, is not its id and its front matter's title"
+        )
+        found.append(
+            Finding(
+                ERROR,
+                artefact.location,
+                f"{what}: {with_article(artefact.kind)} opens with `# {wanted}`, so what a "
+                f"reader of its front matter sees is what the page shows — write the heading, "
+                f"or change `title`",
+            )
+        )
     return found
 
 

@@ -62,7 +62,7 @@ Create artefacts with the stamp, never by copying a template by hand: it gives e
 Every form also takes `--path <glob>` and `--record <id>`, each repeatable: the code that makes the artefact true and the decisions it relies on, written as its path and record anchors. Without them an actor or term is stamped unanchored — the core reports that, and never fails on it.
 
 - **Ids.** A slug is a word: a lowercase letter, then lowercase letters, digits and hyphens. An actor is `ACT-<slug>` and a term `TERM-<slug>`; the stamp refuses an id already held, withdrawn or not, since an id is never used again. A use case or journey takes the **next free number**: one past the highest the working tree and the default branch hold. The default branch is `--base <ref>`, else `$PKIT_CHECK_BASE`, else `origin/main`; when it names no commit, the stamp numbers from the working tree alone and says so. A number another branch takes after yours is `pkit analysis check-numbers`' to report (below).
-- **What it writes.** The artefact's own fields from its template, its title or name (the slug, capitalised, by default), and the friction block with the anchors the decision asks for: a use case anchors to its actor, and a journey to the use cases of its steps. The body keeps the template's placeholders, `<…>`, for you to fill.
+- **What it writes.** The artefact's own fields from its template, its title or name (the slug, capitalised, by default) — a use case's or journey's title in its front matter and in its heading after the id — and the friction block with the anchors the decision asks for: a use case anchors to its actor, and a journey to the use cases of its steps. The body keeps the template's placeholders, `<…>`, for you to fill.
 - **Collection files.** A new actor or term is added to the end of the file's front matter and its section to the end of the body; every other byte stays as it was, and the stamp checks the result reads back as the file plus the new entry before writing. The file is created from the template the first time.
 - **What it refuses**, writing nothing: an actor, or a step, that is not in the analysis or is withdrawn; a journey with fewer than two steps; a slug or area that is not a word; an id already held.
 
@@ -77,6 +77,7 @@ Each anchored artefact's own fields sit beside the core friction block, which li
 ```markdown
 ---
 id: UC-003
+title: Run a test suite against a sandbox
 status: active                  # or: withdrawn (file kept, id never reused)
 actor: ACT-tester
 pkit:
@@ -99,9 +100,9 @@ pkit:
 **Done when:** …
 ```
 
-Steps are numbered and variants lettered after the step they branch from; both are only ever added, since journeys and evidence cite them.
+The heading is the id and the `title`, `# <id> — <title>`, and the check requires the two to agree: whoever reads only the front matter sees the title the page shows. The title may change; the id does not. Steps are numbered and variants lettered after the step they branch from; both are only ever added, since journeys and evidence cite them.
 
-**Journey** (`schemas/journey.schema.json`) — the same fields, plus `steps`: the use cases it passes through, in order, at least two. `steps` is the source; the stamp writes its use cases into the artefact anchors, and the check requires the two to match. Add the code at the seams as path anchors. The body gives where it starts, the ordered steps, the **seams to watch** between them, and when it is done.
+**Journey** (`schemas/journey.schema.json`) — the same fields, `title` and heading included, plus `steps`: the use cases it passes through, in order, at least two. `steps` is the source; the stamp writes its use cases into the artefact anchors, and the check requires the two to match. Add the code at the seams as path anchors. The body gives where it starts, the ordered steps, the **seams to watch** between them, and when it is done.
 
 **Actors** (`schemas/actor.schema.json`) — a collection file: the front matter maps each id to its entry, and the body has one `## <id> — <name>` section per entry.
 
@@ -143,6 +144,7 @@ The body gives each artefact's outcome with its justification, then the gaps and
 
 - **a file in a place that is not its kind's shape** — a file without front matter, a glossary or actors file that is not a collection, a use-case or journey file holding entries;
 - **missing required parts** — an artefact's own fields against its schema, and a collection entry whose key is not its kind's id;
+- **a use case or journey whose heading is not its id and title** — `# UC-003 — <title>`, the `title` its front matter gives;
 - **duplicate ids** — two artefacts holding one id;
 - **a use case not anchored to its actor**, so a changed actor would not flag it;
 - **a journey whose use-case anchors do not match its steps** — the message names the anchors to write;

@@ -104,6 +104,13 @@ def test_a_collection_template_carries_the_friction_block_in_each_entry(
         assert _schema_errors(schema, {k: v for k, v in entry.items() if k != "pkit"}) == []
 
 
+@pytest.mark.parametrize("template", ["use-case", "journey"])
+def test_a_document_template_s_heading_is_its_id_and_title(template: str) -> None:
+    text = (CAPABILITY / "templates" / f"{template}.md").read_text(encoding="utf-8")
+    data = _template(template)
+    assert f"\n# {data['id']} — {data['title']}\n" in text
+
+
 def test_the_journey_template_anchors_its_steps() -> None:
     data = _template("journey")
     assert data["pkit"]["friction"]["anchors"]["artefact"] == data["steps"]
@@ -118,11 +125,33 @@ def test_the_revalidation_record_template_is_no_anchored_artefact() -> None:
 @pytest.mark.parametrize(
     ("stem", "instance", "message"),
     [
-        ("use-case", {"id": "UC-7", "status": "active", "actor": "ACT-a"}, "does not match"),
+        (
+            "use-case",
+            {"id": "UC-7", "title": "T", "status": "active", "actor": "ACT-a"},
+            "does not match",
+        ),
+        ("use-case", {"id": "UC-007", "status": "active", "actor": "ACT-a"}, "'title' is a"),
         (
             "journey",
-            {"id": "JRN-001", "status": "active", "actor": "ACT-a", "steps": ["UC-001"]},
+            {
+                "id": "JRN-001",
+                "title": "T",
+                "status": "active",
+                "actor": "ACT-a",
+                "steps": ["UC-001"],
+            },
             "is too short",
+        ),
+        (
+            "journey",
+            {
+                "id": "JRN-001",
+                "title": "",
+                "status": "active",
+                "actor": "ACT-a",
+                "steps": ["UC-001", "UC-002"],
+            },
+            "should be non-empty",
         ),
         ("actor", {"name": "A", "status": "active", "needs": []}, "should be non-empty"),
         (
