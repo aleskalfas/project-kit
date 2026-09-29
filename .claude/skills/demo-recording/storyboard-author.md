@@ -1,1 +1,0 @@
-../../../.pkit/capabilities/demo-recording/skills/demo-recording/storyboard-author.md
