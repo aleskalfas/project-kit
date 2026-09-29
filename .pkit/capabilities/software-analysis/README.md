@@ -12,7 +12,7 @@ pkit:
         - .pkit/capabilities/software-analysis/agents/**
       record: ["software-analysis:DEC-001", COR-049, COR-050, COR-053]
     revalidated:
-      at: 2026-09-29T19:25:30Z
+      at: 2026-09-29T20:44:38Z
       outcome: updated
 ---
 
@@ -54,7 +54,7 @@ Create artefacts with the stamp, never by copying a template by hand: it gives e
 
 | Command | Writes |
 |---|---|
-| `pkit analysis new actor <slug> [--name <text>]` | the entry `ACT-<slug>` of `use-case-model/actors.md`, with its section at the end of the body |
+| `pkit analysis new actor <slug> [--name <text>]` | the entry `ACT-<slug>` of `use-case-model/actors.md`, with its section |
 | `pkit analysis new term <slug> [--name <text>]` | the entry `TERM-<slug>` of `glossary.md`, with its section |
 | `pkit analysis new use-case <slug> --actor <ACT-id> [--area <area>] [--title <text>]` | `use-case-model/use-cases/[<area>/]UC-NNN-<slug>.md`, its actor anchored |
 | `pkit analysis new journey <slug> --actor <ACT-id> --step <UC-id> --step <UC-id> … [--title <text>]` | `use-case-model/journeys/JRN-NNN-<slug>.md`, its steps anchored |

@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-09-29T19:47:31Z
+      at: 2026-09-29T20:44:44Z
       outcome: unchanged
-      unchanged-because: The CLI and schemas READMEs gained friction artefacts --at and docs record, merged with main's lifecycle and CLI revalidations; this signpost still points to the same pages and names no command those changes touch.
+      unchanged-because: The CLI README's docs command became docs record-location with its --yes and --dry-run consent, beside friction artefacts --at already signposted; this page still points to the same pages and names no command those changes touch.
 ---
 
 # project-kit
