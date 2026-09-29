@@ -38,7 +38,6 @@ apart, and ``pkit agents`` reports each agent's effective setting, resolved by
 """
 from __future__ import annotations
 
-import importlib.util
 import io
 import re
 import subprocess
@@ -50,7 +49,7 @@ from typing import Any
 import click
 from ruamel.yaml import YAML
 
-from project_kit import agent_policy, cli_render, docs_roots
+from project_kit import agent_policy, cli_render, docs_roots, lifecycle_ownership
 
 # Conventional default paths for well-known overlay categories, relative to
 # the project root, **under the default documentation root** — the fallback
@@ -74,39 +73,18 @@ def conventional_category_defaults(target_root: Path) -> dict[str, str]:
     return docs_roots.conventional_locations(target_root)
 
 
-def _ownership_mod(target_root: Path) -> Any | None:
-    """Load the lifecycle layer's ownership module from *target_root*, or None.
-
-    The same-code gesture ADR-003 established for the permission core, applied
-    to the tier-ownership predicate ADR-051 requires be implemented once: the
-    module lives in-tree at `.pkit/lifecycle/ownership.py` because an adapter's
-    deploy resolver runs where `project_kit` is not importable, and the backbone
-    reads *that* copy rather than keeping its own.
-
-    Returns None when the module is absent — a tree that has not synced since
-    the lifecycle layer started carrying it. Callers degrade (the pre-ADR-051
-    behaviour) rather than failing; the deploy resolver, whose check is the
-    load-bearing one, fails loudly instead.
-    """
-    path = target_root / ".pkit" / "lifecycle" / "ownership.py"
-    if not path.is_file():
-        return None
-    spec = importlib.util.spec_from_file_location("pkit_lifecycle_ownership", path)
-    if spec is None or spec.loader is None:
-        return None
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
-
-
 def write_carrying_categories(target_root: Path) -> frozenset[str]:
     """Overlay categories that carry write authority and ship as `[]` (ADR-051).
 
-    Read from the shared ownership module so the set is declared once. An
-    unreachable module yields the empty set, which makes every category take the
-    conventional-default path — the behaviour that predates the category.
+    Read from the tree's `.pkit/lifecycle/ownership.py`, through the backbone's
+    one loader of it (`lifecycle_ownership`), so the set is declared once. An
+    unreachable module — a tree that has not synced since the lifecycle area
+    started carrying it — yields the empty set, which makes every category take
+    the conventional-default path, the behaviour that predates the category.
+    The deploy resolver, whose check is the load-bearing one, fails loudly
+    instead.
     """
-    mod = _ownership_mod(target_root)
+    mod = lifecycle_ownership.load_ownership(target_root)
     if mod is None:
         return frozenset()
     return frozenset(mod.WRITE_CARRYING_CATEGORIES)

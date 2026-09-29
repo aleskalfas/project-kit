@@ -304,6 +304,32 @@ def test_backbone_reads_the_registry_rather_than_restating_it() -> None:
     assert "ownership.py" in text
 
 
+def test_friction_asks_the_tree_whether_a_place_is_a_synced_copy() -> None:
+    """The friction pass calls the tree's predicate; it keeps no copy of the rule."""
+    text = (REPO / "src" / "project_kit" / "friction_discovery.py").read_text(encoding="utf-8")
+    assert "is_synced_copy" in text and "load_ownership" in text
+    for token in (*_FORKED_RULE_TOKENS, "is_sync_managed", "_SOURCE_MARKERS"):
+        assert token not in text, token
+
+
+def test_the_backbone_loads_the_tree_s_module_without_writing_into_the_tree(
+    tmp_path: Path,
+) -> None:
+    """Reading commands ask it, and a reading command writes nothing: no
+    bytecode cache is left beside the module."""
+    from project_kit import lifecycle_ownership
+
+    root = _project(tmp_path)
+    lifecycle = root / ".pkit" / "lifecycle"
+    lifecycle.mkdir()
+    (lifecycle / "ownership.py").write_bytes(OWNERSHIP_PATH.read_bytes())
+    module = lifecycle_ownership.load_ownership(root)
+    assert module is not None
+    assert module.is_synced_copy(root, ".pkit/cli/README.md") is True
+    assert [p.name for p in lifecycle.iterdir()] == ["ownership.py"]
+    assert lifecycle_ownership.load_ownership(tmp_path / "unsynced") is None
+
+
 # --- nested adopter tiers (#823) ---------------------------------------------
 #
 # The tier rule was depth-1: it saw `.pkit/<area>/project/` and missed

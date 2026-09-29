@@ -39,6 +39,10 @@ is the one reader of those declarations and the one walker of the places:
   document (ADR-056 point 2). `parse_artefacts` is the reading of one file's
   text this walk applies; the whole-repository check applies it to a file's
   earlier versions too, so history is read by the same rule as the present.
+  A file a declared place matches that is a synced copy is not walked — a
+  place is never a synced tree (COR-050 point 14) — and is kept as a
+  `SyncedMatch` for the validation pass to report; the question is the tree's
+  own ownership predicate's (`synced_copy_test`), never re-derived here.
 - `RepositoryTree` — the seam through which discovery lists and reads one
   state of the repository, matching every listing by one rule
   (`listed_files_in_place`, `compile_glob`, `pattern_matches`). Without a
@@ -69,7 +73,7 @@ from typing import Any, Protocol
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
-from project_kit import docs_roots
+from project_kit import docs_roots, lifecycle_ownership
 from project_kit.backbone_schemas import CONTAINER_KEY, as_written
 from project_kit.manifest import read_backbone_manifest
 from project_kit.report_context import project_config_path
@@ -563,6 +567,37 @@ def declared_places(settings: FrictionSettings) -> tuple[Place, ...]:
     return tuple(Place(pattern=p.resolved, declaration=p) for p in settings.places)
 
 
+@dataclass(frozen=True)
+class SyncedMatch:
+    """A file a declared place matches that is a synced copy, so it is not walked.
+
+    A place is never a synced tree (COR-050 point 14): a tree the methodology's
+    sync writes into the project, where every refresh would otherwise show up
+    as friction in the project's own history. The validation pass reports it at
+    the place's declaration.
+    """
+
+    place: Place
+    path: str  # repository-relative
+
+
+def synced_copy_test(target_root: Path) -> Callable[[str], bool] | None:
+    """Whether a repository-relative path arrives here as a synced copy, or None.
+
+    The tree's own predicate, `is_synced_copy` of `.pkit/lifecycle/ownership.py`,
+    loaded through the backbone's one loader of it: keyed on the capability's
+    recorded origin (COR-031) and on whether this repository is the one the
+    methodology is authored in, never on the path — so the same `.pkit/` README
+    is a place in that repository and a synced copy everywhere else (living-docs
+    DEC-001 point 1). It reads the working tree's install state. None when the
+    tree carries no ownership module, which the validation pass reports.
+    """
+    ownership = lifecycle_ownership.load_ownership(target_root)
+    if ownership is None:
+        return None
+    return functools.partial(ownership.is_synced_copy, target_root)
+
+
 def is_inside_repository(target_root: Path, pattern: str) -> bool:
     """Whether a declared path or glob stays inside the repository (COR-050 point 14).
 
@@ -1043,13 +1078,15 @@ class Discovery:
     """What a walk of the declared places found, in deterministic order.
 
     `places` are the declared places followed by the rule-set places not
-    already among them.
+    already among them. `synced` holds the files a declared place matched that
+    are synced copies, which were not walked (COR-050 point 14).
     """
 
     settings: FrictionSettings
     places: tuple[Place, ...]
     artefacts: tuple[Artefact, ...]
     unreadable: tuple[UnreadableFile, ...]
+    synced: tuple[SyncedMatch, ...] = ()
 
     @property
     def with_container(self) -> tuple[Artefact, ...]:
@@ -1091,6 +1128,13 @@ def discover_artefacts(
     every file are that state's; without one, the settings are read from disk
     and the listing is the working tree's one listing (`working_tree`) — the
     one the change check reads as its head. A link is never read as a document.
+
+    A file a declared place matches that is a synced copy is never walked
+    under that place, whichever state is walked (`synced_copy_test`, read on
+    the working tree's install state): it is recorded in `synced` for the
+    validation pass, and the place's other matches are walked. A rule-set place
+    is not a declared place, so a method rule set that arrives by sync is still
+    read as the location rule says (COR-051 point 2).
     """
     settings = settings if settings is not None else read_friction_settings(target_root, tree)
     # Which rule-set folders are places is read from the working tree even when
@@ -1100,6 +1144,7 @@ def discover_artefacts(
     # without a repository being demanded.
     rule_set_places_found = rule_set_places(target_root, settings)
     places = declared_places(settings)
+    declared = frozenset(places)
     places += tuple(r.place for r in rule_set_places_found if r.place not in places)
     if not places:
         return Discovery(settings=settings, places=places, artefacts=(), unreadable=())
@@ -1110,13 +1155,19 @@ def discover_artefacts(
         for rel in listed_files_in_place(rule_set_place.place, files):
             if PurePosixPath(rel).name != RULE_SETS_SIGNPOST:
                 claimed.setdefault(rel, rule_set_place)
+    is_synced_copy = synced_copy_test(target_root) if declared else None
     matched: list[tuple[Place, str]] = []
+    synced: list[SyncedMatch] = []
     seen: set[str] = set()
     for place in places:
         for rel in listed_files_in_place(place, files):
-            if rel not in seen:
-                seen.add(rel)
-                matched.append((place, rel))
+            if rel in seen:
+                continue
+            if place in declared and is_synced_copy is not None and is_synced_copy(rel):
+                synced.append(SyncedMatch(place=place, path=rel))
+                continue
+            seen.add(rel)
+            matched.append((place, rel))
 
     artefacts: list[Artefact] = []
     unreadable: list[UnreadableFile] = []
@@ -1143,6 +1194,7 @@ def discover_artefacts(
         places=places,
         artefacts=tuple(artefacts),
         unreadable=tuple(unreadable),
+        synced=tuple(synced),
     )
 
 

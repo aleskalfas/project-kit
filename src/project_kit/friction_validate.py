@@ -10,6 +10,12 @@ settings that declare them, this pass reports:
   through a link included; reported whenever it is declared, dormant or not,
   because a place nothing is found under must never look like a place with
   nothing in it (COR-050 point 7);
+- **a place matching a synced copy** — a declared place, the project's or a
+  capability's, whose path or glob matches a file the methodology's sync
+  writes into the repository, as the tree's ownership predicate judges it
+  (`Discovery.synced`); discovery did not walk that file and walked the
+  place's other matches. Reported at the place's declaration whenever it is
+  declared, dormant or not: a place is never a synced tree (COR-050 point 14);
 - **a capability surface entry not read** — `friction.surface` not a list of
   repository-relative paths, or an entry in it that is not a path; reported
   whenever it is declared, for the same reason: a surface nothing is measured
@@ -39,8 +45,11 @@ outside the repository — are the configuration pass's findings
 (`config_validate`, which owns the file), and a capability's `friction` block
 is the packages pass's, which judges its shape but cannot know where a place
 resolves; so a capability place the walk does not follow, and a surface entry
-it does not read, are reported here too. This pass never walks a place that
-leaves the repository. What it does not do either: compute friction, resolve
+it does not read, are reported here too — as is a place of either kind that
+matches a synced copy, which only the walk can tell. This pass never walks a
+place that leaves the repository, nor a synced copy a declared place matches.
+Without the tree's ownership module no match can be told a synced copy; that
+is a report, not an error. What it does not do either: compute friction, resolve
 path anchors against git, or report dead anchors — those are the two checks'
 findings (COR-050 points 6 and 7), later Tasks. What the container validator
 reports rather than judges — a role block whose role has no active provider, a
@@ -50,7 +59,8 @@ reports (never errors) so `pkit validate` can show them.
 Dormant until used (COR-050 point 15): with no places declared, or nothing in
 them to judge — no artefact carrying the container and no file it failed to
 parse — the pass reports nothing but its counts, any capability place the walk
-does not follow and any capability surface entry it does not read.
+does not follow, any place matching a synced copy and any capability surface
+entry it does not read.
 """
 
 from __future__ import annotations
@@ -60,7 +70,6 @@ from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 
-
 from project_kit import backbone_schemas as bs
 from project_kit import connections, validators
 from project_kit.friction_discovery import (
@@ -68,11 +77,14 @@ from project_kit.friction_discovery import (
     Artefact,
     Discovery,
     FrictionSettings,
+    SettingsPath,
     UnreadableFile,
     discover_artefacts,
     is_inside_repository,
     read_friction_settings,
+    synced_copy_test,
 )
+from project_kit.lifecycle_ownership import OWNERSHIP_MODULE
 
 Severity = bs.Severity
 
@@ -80,6 +92,8 @@ Severity = bs.Severity
 class FrictionFindingKind(Enum):
     MALFORMED_PLACE = "malformed-place"  # a capability place not in the schema's shape
     PLACE_OUTSIDE_REPOSITORY = "place-outside-repository"  # a capability place leaving it
+    SYNCED_PLACE = "synced-place"  # a place, project or capability, matching a synced copy
+    OWNERSHIP_UNAVAILABLE = "ownership-unavailable"  # no predicate to tell a synced copy
     MALFORMED_SURFACE = "malformed-surface"  # a capability surface entry not in the shape
     MALFORMED_BLOCK = "malformed-block"
     UNPARSABLE_FRONT_MATTER = "unparsable-front-matter"
@@ -127,9 +141,9 @@ class FrictionValidation:
 def validate_friction(target_root: Path) -> FrictionValidation:
     """Run the pass over the project at `target_root`.
 
-    A capability place the walk does not follow, and a capability surface
-    entry not read, are reported whenever declared. Unparsable front matter is
-    reported whenever places are declared:
+    A capability place the walk does not follow, a place matching a synced
+    copy, and a capability surface entry not read, are reported whenever
+    declared. Unparsable front matter is reported whenever places are declared:
     a file that fails to parse also keeps the pass awake (`Discovery.is_dormant`),
     so a YAML typo in the only container-carrying file is an error, not silence.
     The container, deferral and cycle findings run only when the pass is awake.
@@ -138,6 +152,7 @@ def validate_friction(target_root: Path) -> FrictionValidation:
     discovery = discover_artefacts(target_root, settings)
     findings: list[FrictionFinding] = []
     findings.extend(_capability_place_findings(target_root, settings))
+    findings.extend(_synced_place_findings(target_root, discovery))
     findings.extend(_capability_surface_findings(settings))
     findings.extend(_unreadable_findings(discovery))
     if not discovery.is_dormant:
@@ -191,6 +206,66 @@ def _capability_place_findings(
                     f"point 14)."
                 ),
             )
+
+
+# The finding about a place matching a synced copy, and how many of its
+# matches the message names before it counts the rest.
+SYNCED_KINDS = frozenset({FrictionFindingKind.SYNCED_PLACE})
+_SYNCED_SHOWN = 3
+
+
+def _synced_place_findings(target_root: Path, discovery: Discovery) -> Iterable[FrictionFinding]:
+    """Each declared place, the project's or a capability's, matching a synced copy.
+
+    One error per declaration, at the place's own entry, naming the matches
+    discovery did not walk because they are synced copies (`Discovery.synced`);
+    the place's other matches were walked. Reported whenever declared, dormant
+    or not: a place every match of which is refused holds nothing, and must
+    never look like an empty place. Without the tree's ownership module nothing
+    can be told a synced copy, so every match was walked and a report says so.
+    """
+    if discovery.settings.places and synced_copy_test(target_root) is None:
+        yield FrictionFinding(
+            location=OWNERSHIP_MODULE.as_posix(),
+            pointer="",
+            severity=Severity.REPORT,
+            kind=FrictionFindingKind.OWNERSHIP_UNAVAILABLE,
+            message=(
+                "the tree carries no ownership module, so no place is checked for synced "
+                "copies and every match is walked (run `pkit sync`)."
+            ),
+        )
+        return
+    matches: dict[SettingsPath, list[str]] = {}
+    for match in discovery.synced:
+        matches.setdefault(match.place.declaration, []).append(match.path)
+    for declaration, paths in matches.items():
+        yield FrictionFinding(
+            location=declaration.file,
+            pointer=declaration.pointer,
+            severity=Severity.ERROR,
+            kind=FrictionFindingKind.SYNCED_PLACE,
+            message=_synced_place_message(declaration, paths),
+        )
+
+
+def _synced_place_message(declaration: SettingsPath, paths: list[str]) -> str:
+    who = "capability place" if declaration.is_capability else "place"
+    at = "" if declaration.resolved == declaration.value else f" (at {declaration.resolved!r})"
+    if paths == [declaration.resolved]:
+        what, them = "is a synced copy", "it"
+    else:
+        shown = ", ".join(repr(p) for p in paths[:_SYNCED_SHOWN])
+        if len(paths) > _SYNCED_SHOWN:
+            shown += f" and {len(paths) - _SYNCED_SHOWN} more"
+        count = "a synced copy" if len(paths) == 1 else f"{len(paths)} synced copies"
+        what, them = f"matches {count}: {shown}", "it" if len(paths) == 1 else "them"
+    return (
+        f"{who} {declaration.value!r}{at} {what} — the methodology's sync writes {them} "
+        f"into this repository, so friction discovery does not walk {them}; a place is "
+        f"never a synced tree: narrow it to the project's own files or remove it (COR-050 "
+        f"point 14)."
+    )
 
 
 # The finding about a capability surface entry not read.
@@ -431,15 +506,18 @@ def summary_lines(result: FrictionValidation) -> list[str]:
 
     Dormant: the counts alone (COR-050 point 15). Awake: the counts, errors and
     reports included; the findings themselves follow as the member's findings.
-    A capability place the walk does not follow, and a capability surface
-    entry not read, are counted in either case, so the line never reads as
-    nothing declared while one was.
+    A capability place the walk does not follow, a place matching a synced
+    copy, and a capability surface entry not read, are counted in either case,
+    so the line never reads as nothing declared while one was.
     """
     d = result.discovery
     places, artefacts, carrying = len(d.places), len(d.artefacts), len(d.with_container)
     unfollowed = sum(1 for f in result.findings if f.kind in PLACE_KINDS)
+    synced = sum(1 for f in result.findings if f.kind in SYNCED_KINDS)
     unread = sum(1 for f in result.findings if f.kind in SURFACE_KINDS)
     not_walked = f"; {unfollowed} capability place(s) not walked" if unfollowed else ""
+    if synced:
+        not_walked += f"; {synced} place(s) matching a synced copy"
     if unread:
         not_walked += f"; {unread} capability surface entr{'y' if unread == 1 else 'ies'} not read"
     if not d.places and not unfollowed and not unread:
