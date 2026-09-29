@@ -11,6 +11,7 @@ pkit:
         - src/project_kit/process_dependencies.py
         - src/project_kit/process_graph.py
         - src/project_kit/process_health.py
+        - src/project_kit/process_journal.py
         - .pkit/schemas/_defs/process.schema.json
       record: [COR-033, COR-034, COR-035, COR-036, COR-037, COR-038, COR-040, COR-042, COR-044, COR-053, ADR-020, ADR-036, ADR-048, ADR-051]
     revalidated:
