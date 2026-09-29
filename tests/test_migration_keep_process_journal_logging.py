@@ -36,7 +36,9 @@ MIGRATION = (
     / "001-keep-process-journal-logging.sh"
 )
 CONFIG_SCHEMA = REPO_ROOT / ".pkit" / "schemas" / "backbone" / "config.schema.json"
-JOURNAL = Path(".pkit/capabilities/project-management/project/process/issue-lifecycle/42.journal.jsonl")
+JOURNAL = Path(
+    ".pkit/capabilities/project-management/project/process/issue-lifecycle/42.journal.jsonl"
+)
 RENDERED_LINE = "capabilities/*/project/process/**/*.journal.jsonl"
 GITIGNORE_BEFORE = (
     "# pkit-owned — rendered\n\n**/__pycache__/\n"
@@ -109,8 +111,8 @@ def test_clone_local_journals_keep_logging_on_uncommitted(tmp_path: Path) -> Non
     assert result.returncode == 0, result.stderr
     assert _config(root)["process"] == {"journal": {"enabled": True, "committed": False}}
     assert process_journal.read_settings(root) == process_journal.JournalSettings(True, False)
-    assert _config_path(root).read_text(encoding="utf-8").startswith(
-        project_config.EDITOR_DIRECTIVE
+    assert (
+        _config_path(root).read_text(encoding="utf-8").startswith(project_config.EDITOR_DIRECTIVE)
     )
     assert (root / ".pkit" / ".gitignore").read_text(encoding="utf-8") == GITIGNORE_BEFORE
     _assert_valid(root)
@@ -133,7 +135,9 @@ def test_an_existing_configuration_keeps_its_content(tmp_path: Path) -> None:
     root = _project(tmp_path, journal=True)
     _config_path(root).parent.mkdir(parents=True)
     # No trailing newline: the appended block must still start on its own line.
-    _config_path(root).write_text("# ours\nname: example\nfriction:\n  mode: warning", encoding="utf-8")
+    _config_path(root).write_text(
+        "# ours\nname: example\nfriction:\n  mode: warning", encoding="utf-8"
+    )
 
     assert _run(root).returncode == 0
 
@@ -171,9 +175,7 @@ def test_a_declared_process_block_is_left_alone(tmp_path: Path) -> None:
         pytest.param("process :  # ours\n  journal:\n    enabled: false\n", id="spaced-block"),
     ],
 )
-def test_a_declared_process_key_in_any_style_is_left_alone(
-    tmp_path: Path, declared: str
-) -> None:
+def test_a_declared_process_key_in_any_style_is_left_alone(tmp_path: Path, declared: str) -> None:
     """Appending a second `process:` would be a duplicate key; for a flow-style
     document, any appended block would not parse at all."""
     root = _project(tmp_path, journal=True)
