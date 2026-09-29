@@ -1,0 +1,21 @@
+component: living-docs
+kind: minor
+custom:
+  category: Added
+body: >
+  The capability ships its agent, `living-docs` (DEC-001 points 5, 6 and 8),
+  which the deploy writes with the other agents. It proposes and never applies:
+  it is read-only on the repository, never runs a friction writer, and lands
+  every proposal in the agent workspace, under `.agent-workspace/living-docs/`.
+  It resolves a stale or deferred page's friction by proposing the page change
+  with its evidence (the commits behind the changed anchor, the anchor to
+  re-point or the text to rewrite) as a diff and a pull-request body. It reads a
+  page as its declared reader against `LDOC` and its space's rules and writes a
+  findings record, each finding citing its rule and passage, only when
+  something was found; as a pull-request comment only when asked. On a project
+  with existing documentation it proposes one onboarding plan (each
+  unclassified document's space, splits and rewrites, the anchors each
+  statement needs, which code-to-doc mapping rules become page anchors) behind
+  a single approval gate, and drafts the changes only once it is approved. Its
+  scripted flows are in the sibling `storyboard.md`; the capability README
+  documents the agent and the onboarding path.
