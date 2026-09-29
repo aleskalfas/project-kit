@@ -9,7 +9,9 @@
 
 Validates an existing GitHub issue against the methodology's body
 shape: title regex per type, per-type required sections, classification
-axes presence + uniqueness, parent-ref first line. Emits findings
+axes presence + uniqueness, parent-ref first line, and — where the
+software-analysis capability is installed — that every use case the body
+cites exists on the default branch (DEC-054). Emits findings
 tagged by the severity tokens from validation-severity.yaml (hard-
 reject / bypassable-with-audit / warning).
 
@@ -69,6 +71,7 @@ from _lib.placeholder_detection import (  # noqa: E402
     detect_placeholder_residuals,
 )
 from _lib.structural_type import infer_structural_type  # noqa: E402
+from _lib import use_case_citations  # noqa: E402
 
 
 SEVERITY_HARD_REJECT = "hard-reject"
@@ -165,6 +168,13 @@ def main() -> int:
     if issue is None:
         return 2
 
+    # The use cases the body's citations are checked against (DEC-054): read
+    # from the default branch only when the body cites one and software-analysis
+    # is installed; None otherwise, and the rule stays inert.
+    use_cases = use_case_citations.read_for(
+        str(issue.get("body") or ""), capability_root.parent.parent.parent, config
+    )
+
     # The adopter's substrate-map (DEC-036 / ADR-026), loaded once and threaded
     # into the validation. None ⇒ greenfield (no map). The type-presence gate
     # and the hierarchy mode below both read it, so load it here rather than
@@ -194,6 +204,7 @@ def main() -> int:
         phase=args.phase,
         hierarchy=hierarchy,
         substrate_map=substrate_map,
+        use_cases=use_cases,
     )
 
     if args.json:
@@ -233,6 +244,7 @@ def _validate_issue(
     phase: str = PHASE_TRANSITION,
     hierarchy: str = axis_labels.HIERARCHY_GATED,
     substrate_map: "axis_labels.SubstrateMap | None" = None,
+    use_cases: use_case_citations.UseCases | use_case_citations.Unreadable | None = None,
 ) -> list[Finding]:
     findings: list[Finding] = []
     title = str(issue.get("title", ""))
@@ -803,6 +815,11 @@ def _validate_issue(
                 "body contains file:line references; line numbers go stale.",
             )
         )
+    # Use-case citations (DEC-054), beside the predicted-decision-id rule and
+    # at its severity. `use_cases` is None where software-analysis is not
+    # installed or nothing is cited: no finding.
+    for sev, label, detail in use_case_citations.check(body, use_cases):
+        findings.append(Finding(sev, label, detail))
 
     return findings
 

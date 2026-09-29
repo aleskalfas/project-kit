@@ -131,6 +131,14 @@ universal_body_rules:
       exist.
     severity: "[validation-severity:warning]"
   - rule: |
+      No citations of use cases that do not exist. Where the
+      software-analysis capability is installed, every use-case id
+      (`UC-NNN`) a body cites must be a use case on the default branch —
+      a use-case number is settled only when its use case lands there.
+      Reported like a predicted decision ID, at the same severity; inert
+      where software-analysis is not installed. Per DEC-054.
+    severity: "[validation-severity:warning]"
+  - rule: |
       Checkboxes follow the close-gate rule (every box ticked before
       Done) and the living-document edit rules (wording free; scope
       changes gated by author).

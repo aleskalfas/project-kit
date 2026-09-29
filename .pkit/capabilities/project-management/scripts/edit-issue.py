@@ -90,6 +90,7 @@ from _lib.membership import (  # noqa: E402
 from _lib.milestone import Milestone, resolve_milestone  # noqa: E402
 from _lib.structural_type import infer_structural_type  # noqa: E402
 from _lib.substrate_writes import clear_milestone, write_milestone  # noqa: E402
+from _lib import use_case_citations  # noqa: E402
 
 
 SEVERITY_HARD_REJECT = "hard-reject"
@@ -399,6 +400,14 @@ def main() -> int:
             classification=classification,
             check_title=title_changed,
             check_body=body_changed,
+            # Read only for a body edit that cites a use case (DEC-054).
+            use_cases=(
+                use_case_citations.read_for(
+                    new_body, capability_root.parent.parent.parent, config
+                )
+                if body_changed
+                else None
+            ),
         )
         _print_findings(findings)
 
@@ -717,6 +726,7 @@ def _validate(
     classification: dict | None = None,
     check_title: bool = True,
     check_body: bool = True,
+    use_cases: use_case_citations.UseCases | use_case_citations.Unreadable | None = None,
 ) -> list[Finding]:
     """Apply the body + title validators used by validate-issue.py.
 
@@ -855,6 +865,10 @@ def _validate(
                 "body contains file:line references; line numbers go stale.",
             )
         )
+    # Use-case citations (DEC-054), parity with validate-issue: inert where
+    # `use_cases` is None (software-analysis not installed, nothing cited).
+    for sev, label, detail in use_case_citations.check(body, use_cases):
+        findings.append(Finding(sev, label, detail))
 
     # Scope to the fields being changed (#583). Findings are labelled
     # `title.*` / `body.*`; drop the ones for an axis the caller is not editing

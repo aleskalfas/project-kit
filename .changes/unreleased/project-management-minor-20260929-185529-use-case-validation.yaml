@@ -1,0 +1,13 @@
+component: project-management
+kind: minor
+custom:
+  category: Added
+body: >
+  With the software-analysis capability installed, batch planning reads your
+  use cases before it slices the work, offers to have missing ones written
+  first, and names the use cases each planned issue satisfies in a
+  `## Use cases` section. `validate-issue` and `edit-issue` warn when a body
+  cites a use case (`UC-NNN`) that is not on the default branch: like a
+  predicted decision id, its number is a guess until the use case lands. They
+  say so when the default branch cannot be read. Without software-analysis
+  nothing changes.
