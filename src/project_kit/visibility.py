@@ -419,7 +419,9 @@ def untrack(
     # paths) is idempotent rather than a false "staged changes" refusal.
     tracked = _tracked_footprint(target_root, fp)
     if not tracked:
-        return cli_render.style("strong", "untrack: no tracked footprint files — nothing to remove.") + "\n"
+        return cli_render.style(
+            "strong", "untrack: no tracked footprint files — nothing to remove."
+        ) + "\n"
 
     # A still-tracked footprint file carrying a staged *modification* would
     # entangle the removal with a pending index — refuse (ADR-009 rule 5).
@@ -431,7 +433,9 @@ def untrack(
             + "\nCommit or unstage them first."
         )
 
-    lines = [cli_render.style("strong", f"{len(tracked)} tracked footprint file(s) would be removed from the index:")]
+    lines = [cli_render.style(
+        "strong", f"{len(tracked)} tracked footprint file(s) would be removed from the index:"
+    )]
     lines += [f"  {p}" for p in tracked[:20]]
     if len(tracked) > 20:
         lines.append(f"  … and {len(tracked) - 20} more")
@@ -450,7 +454,9 @@ def untrack(
     res = _git(target_root, "rm", "--cached", "--quiet", "--", *tracked)
     if res.returncode != 0:
         raise click.ClickException(f"git rm --cached failed:\n{res.stderr.strip()}")
-    return cli_render.style("strong", f"untracked {len(tracked)} footprint file(s) (working copies kept).") + "\n"
+    return cli_render.style(
+        "strong", f"untracked {len(tracked)} footprint file(s) (working copies kept)."
+    ) + "\n"
 
 
 # --- visibility --------------------------------------------------------------
@@ -474,7 +480,6 @@ def status(target_root: Path) -> str:
         ("pkit visibility shared", "return pkit to committed (default)"),
         ("pkit visibility untrack --dry-run", "preview removing tracked footprint files"),
     ]
-    warn = None
     if private and tracked:
         st = cli_render.status(
             "Visibility", mode, gloss=gloss, placement="header",
@@ -499,13 +504,22 @@ def set_visibility(
     if mode == "shared":
         if dry_run:
             verb = "would clear" if _region_present(target_root) else "no pkit region in"
-            return cli_render.style("strong", f"shared: {verb} .git/info/exclude (pkit committed normally).") + "\n"
+            return cli_render.style(
+                "strong", f"shared: {verb} .git/info/exclude (pkit committed normally)."
+            ) + "\n"
         removed = _remove_region(target_root)
-        msg = "cleared pkit's region from .git/info/exclude" if removed else "no pkit region to clear"
-        return cli_render.style("strong", f"visibility: shared — {msg}; pkit is committed normally.") + "\n"
+        msg = (
+            "cleared pkit's region from .git/info/exclude" if removed
+            else "no pkit region to clear"
+        )
+        return cli_render.style(
+            "strong", f"visibility: shared — {msg}; pkit is committed normally."
+        ) + "\n"
 
     if mode == "private":
-        lines = [cli_render.style("strong", "visibility: private — pkit hidden from the shared tree (this clone).")]
+        lines = [cli_render.style(
+            "strong", "visibility: private — pkit hidden from the shared tree (this clone)."
+        )]
         if dry_run:
             lines.append("")
             lines.append("would write to .git/info/exclude:")
