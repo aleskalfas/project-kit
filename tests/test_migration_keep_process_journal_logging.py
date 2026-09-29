@@ -7,7 +7,8 @@ behaviour:
 - no journals → nothing written (the new default, off, applies);
 - journals, none tracked → `enabled: true`, `committed: false`;
 - journals, some tracked → `enabled: true`, `committed: true`, and the journal
-  line the pre-migration render left in `.pkit/.gitignore` is removed;
+  line the pre-migration render left in `.pkit/.gitignore` is removed — a
+  component's own journal line, which stays, is reported rather than hidden;
 - `process` already declared, as a block key or inside a flow mapping → left
   alone; a commented-out key does not count;
 - a configuration that is one flow mapping without `process` → not written (a
@@ -128,7 +129,27 @@ def test_tracked_journals_keep_logging_on_committed(tmp_path: Path) -> None:
     gitignore = (root / ".pkit" / ".gitignore").read_text(encoding="utf-8")
     assert RENDERED_LINE not in gitignore
     assert "capabilities/project-management/project/instance/*.json" in gitignore
+    assert "[ok] .pkit/.gitignore no longer ignores process journals" in result.stdout
     _assert_valid(root)
+
+
+def test_a_component_still_declaring_journals_is_reported_not_hidden(tmp_path: Path) -> None:
+    """An older component's own journal line survives the backbone's removal, so
+    the migration does not claim journals are no longer ignored."""
+    root = _project(tmp_path, journal=True, tracked=True)
+    component_line = "capabilities/project-management/project/process/**/*.journal.jsonl"
+    gitignore = root / ".pkit" / ".gitignore"
+    gitignore.write_text(GITIGNORE_BEFORE + f"{component_line}\n", encoding="utf-8")
+
+    result = _run(root)
+
+    assert result.returncode == 0, result.stderr
+    text = gitignore.read_text(encoding="utf-8")
+    assert RENDERED_LINE not in text
+    assert component_line in text
+    assert "no longer ignores process journals" not in result.stdout
+    assert "[warn] removed the backbone's process-journal line" in result.stdout
+    assert "pkit validate names the component" in result.stdout
 
 
 def test_an_existing_configuration_keeps_its_content(tmp_path: Path) -> None:
