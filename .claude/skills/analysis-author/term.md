@@ -1,0 +1,1 @@
+../../../.pkit/capabilities/software-analysis/skills/analysis-author/term.md
