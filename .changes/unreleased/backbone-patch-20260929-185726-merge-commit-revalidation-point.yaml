@@ -1,0 +1,15 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  A revalidation written in a merge commit is now the artefact's revalidation
+  point. The whole-repository friction check (`pkit friction check --all`), and
+  `friction debt`, `friction explain` and `friction record-status` with it, read
+  the paths a merge commit changed against every parent, so a merge that writes
+  a new `at`, as when resolving a conflict by revalidating the combined state,
+  is the point, and a deferral a merge introduces has its point there. Before,
+  the merge was skipped and an older commit taken as the point, so a page
+  revalidated while merging the base branch read as stale there although the
+  change check had accepted it. A merge that only keeps one side's `at` is still
+  not the point: that side's commit is.
