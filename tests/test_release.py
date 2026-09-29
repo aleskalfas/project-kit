@@ -4,6 +4,7 @@ that the legacy `version bump` path still works alongside the release path."""
 
 from __future__ import annotations
 
+import shutil
 import subprocess
 from datetime import date
 from pathlib import Path
@@ -13,6 +14,7 @@ import pytest
 
 from project_kit import changesets, release, versioning
 from project_kit.manifest import read_backbone_manifest
+from project_kit.migrations import parse_version_tuple
 from tests.adopter_repo import GitRepo
 
 
@@ -657,3 +659,41 @@ def test_no_broaden_refuses_a_floor_the_upper_bound_cannot_hold(tmp_path: Path) 
 
     assert pkg.read_text() == before
     assert list(changesets.unreleased_dir(source_kit.parent).glob("*.yaml"))
+
+
+# --- Dogfood: the release that ships the backbone-owned journal line ---------
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+
+# The backbone release that took the process-journal ignore line over from the
+# project-management package (#1120; its migration is
+# `.pkit/migrations/backbone/1.150.0/001-keep-process-journal-logging.sh`).
+JOURNAL_LINE_BACKBONE = "1.150.0"
+
+
+def test_pending_release_leaves_project_management_on_the_journal_owning_backbone(
+    tmp_path: Path,
+) -> None:
+    """project-management stopped declaring the journal ignore line when the backbone
+    took it over, so on an older backbone its journals go unignored. Applying the
+    pending changesets to a copy of this tree must leave its floor at or above that
+    backbone: until the release that ships it has run, the changeset that dropped
+    the line raises the floor; afterwards the package carries it."""
+    source_kit = tmp_path / ".pkit"
+    source_kit.mkdir()
+    shutil.copy(REPO_ROOT / ".pkit" / "VERSION", source_kit / "VERSION")
+    for package in (REPO_ROOT / ".pkit").rglob("package.yaml"):
+        target = source_kit / package.relative_to(REPO_ROOT / ".pkit")
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(package, target)
+    pending = changesets.unreleased_dir(REPO_ROOT)
+    if pending.is_dir():
+        shutil.copytree(pending, changesets.unreleased_dir(tmp_path))
+
+    plan = release.compute_release(source_kit)
+    release.apply_release(source_kit, plan, tag=False, today=date(2026, 9, 29))
+
+    package = source_kit / "capabilities" / "project-management" / "package.yaml"
+    floor = versioning.requires_backbone_floor(package.read_text(encoding="utf-8"))
+    assert floor is not None
+    assert parse_version_tuple(floor) >= parse_version_tuple(JOURNAL_LINE_BACKBONE)
