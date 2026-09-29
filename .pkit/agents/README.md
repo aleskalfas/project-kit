@@ -17,9 +17,9 @@ pkit:
         - .pkit/adapters/claude-code/_resolve_agent.py
       record: [COR-005, COR-006, COR-011, COR-013, COR-014, COR-015, COR-016, COR-026, COR-049, ADR-051, ADR-052]
     revalidated:
-      at: 2026-09-29T16:17:35Z
+      at: 2026-09-29T17:22:04Z
       outcome: unchanged
-      unchanged-because: docs_roots gained only a reader of the root a location's declaration names, for pkit friction artefacts; how an agent's overlay locations derive from the roots is unchanged
+      unchanged-because: refs.py now reads the address word pattern from backbone_schemas instead of repeating it; the body parser convention and the citation grammar are unchanged
 ---
 
 # Agents

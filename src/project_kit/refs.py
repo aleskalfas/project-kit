@@ -50,6 +50,7 @@ from typing import Any, Literal
 from ruamel.yaml import YAML
 
 from project_kit import agent_policy, agents_overlay, connections, rule_sets
+from project_kit.backbone_schemas import ADDRESS_WORD_PATTERN
 from project_kit.package_validate import POINT_SEPARATOR, ROLE_QUALIFIER
 from project_kit.validators import Finding, Outcome, Severity, counts_line, location_of
 
@@ -885,10 +886,9 @@ QUALIFIED_RULE_CITATION_RE = re.compile(
 
 # Role and point addresses as typed tokens (COR-019, refined per COR-053):
 # `[<publisher>::<role>]` and `[<publisher>::<role>:<point>]`, every part a word
-# — the words the configuration's selection keys admit. `ADDRESS_PATTERN` is
-# the text inside the brackets, and `refs.schema.json#/$defs/address_token` its
-# bracketed form in data.
-ADDRESS_WORD_PATTERN = "[a-z][a-z0-9-]*"
+# — `ADDRESS_WORD_PATTERN`, defined once in `backbone_schemas` and re-exported
+# here. `ADDRESS_PATTERN` is the text inside the brackets, and
+# `refs.schema.json#/$defs/address_token` its bracketed form in data.
 ADDRESS_PATTERN = (
     f"{ADDRESS_WORD_PATTERN}{ROLE_QUALIFIER}{ADDRESS_WORD_PATTERN}"
     f"(?:{POINT_SEPARATOR}{ADDRESS_WORD_PATTERN})?"

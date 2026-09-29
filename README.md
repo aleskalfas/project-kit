@@ -17,8 +17,9 @@ pkit:
         - .pkit/adapters/claude-code/merge-settings.sh
       record: [COR-001, COR-002, COR-017, PRJ-001, PRJ-004, ADR-049]
     revalidated:
-      at: 2026-09-29T15:20:26Z
-      outcome: updated
+      at: 2026-09-29T17:22:03Z
+      outcome: unchanged
+      unchanged-because: refs.py now reads the address word pattern from backbone_schemas instead of repeating it; the citation grammar and what refs validate reports are unchanged
 ---
 
 # project-kit
