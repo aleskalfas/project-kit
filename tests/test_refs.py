@@ -967,6 +967,91 @@ def test_validate_storyboards_quiet_when_no_storyboards_declared(kit_target: Pat
     ), f"unexpected storyboard findings on storyboardless agent: {issues}"
 
 
+# --- capability storyboards (#1101) ---------------------------------
+
+
+#: The storyboard `_make_capability_storyboarded_agent` writes, project-root-relative.
+_CAP_STORYBOARD = ".pkit/capabilities/cap/agents/cap-agent/storyboard.md"
+
+
+def _make_capability_storyboarded_agent(
+    root: Path, *, declared: str = "storyboard.md", consumer_ns: str = "cap"
+) -> tuple[Path, Path]:
+    """Capability `cap`'s agent `cap-agent`, folder form, with a sibling storyboard.
+
+    The agent declares the storyboard as `declared` (the bare sibling by default)
+    and cites it; the storyboard names the agent with `consumer_ns` (the
+    capability's name by default).
+    """
+    folder = root / ".pkit" / "capabilities" / "cap" / "agents" / "cap-agent"
+    folder.mkdir(parents=True)
+    agent_file = folder / "cap-agent.md"
+    agent_file.write_text(
+        f"---\nname: cap-agent\ndescription: t\ntools: [Read]\nstoryboards:\n  - {declared}\n"
+        f"---\n# A\nLoad `{declared}` at session start.\n",
+        encoding="utf-8",
+    )
+    sb_file = folder / "storyboard.md"
+    sb_file.write_text(
+        f"---\nconsumers:\n  - kind: agent\n    name: cap-agent\n    namespace: {consumer_ns}\n"
+        f"---\n\n# Storyboard\n",
+        encoding="utf-8",
+    )
+    return agent_file, sb_file
+
+
+def _storyboard_findings(root: Path, location_prefix: str) -> list[str]:
+    return [
+        i.diagnosis
+        for i in refs.validate_corpus(root)
+        if i.location.startswith(location_prefix) and "storyboard" in i.diagnosis.lower()
+    ]
+
+
+def test_capability_storyboard_quiet_on_clean_pair(kit_target: Path) -> None:
+    """A capability agent declaring its sibling storyboard, named back by capability."""
+    _make_capability_storyboarded_agent(kit_target)
+    assert _storyboard_findings(kit_target, ".pkit/capabilities/cap") == []
+
+
+def test_capability_storyboard_root_relative_form_names_the_same_file(kit_target: Path) -> None:
+    """The project-root-relative form satisfies the link-back as the sibling form does."""
+    _make_capability_storyboarded_agent(kit_target, declared=_CAP_STORYBOARD)
+    assert _storyboard_findings(kit_target, ".pkit/capabilities/cap") == []
+
+
+def test_capability_storyboard_broken_link_back_is_flagged(kit_target: Path) -> None:
+    """The storyboard names the agent, but the agent does not declare the storyboard."""
+    agent_file, _ = _make_capability_storyboarded_agent(kit_target)
+    agent_file.write_text(
+        "---\nname: cap-agent\ndescription: t\ntools: [Read]\n---\n# A\n", encoding="utf-8"
+    )
+
+    findings = _storyboard_findings(kit_target, _CAP_STORYBOARD)
+    assert any(
+        "consumer agent cap/cap-agent" in f and "does not include this path" in f
+        for f in findings
+    ), findings
+    assert any("no agent declares it" in f for f in findings), findings
+
+
+def test_capability_storyboard_naming_a_missing_agent_is_flagged(kit_target: Path) -> None:
+    """A capability agent is named by its capability; `core` names no such agent."""
+    _make_capability_storyboarded_agent(kit_target, consumer_ns="core")
+
+    findings = _storyboard_findings(kit_target, _CAP_STORYBOARD)
+    expected = "consumer agent core/cap-agent but no such agent exists"
+    assert any(expected in f for f in findings), findings
+
+
+def test_capability_storyboard_without_consumers_is_flagged(kit_target: Path) -> None:
+    _, sb_file = _make_capability_storyboarded_agent(kit_target)
+    sb_file.write_text("# Storyboard\n\nNo front matter.\n", encoding="utf-8")
+
+    findings = _storyboard_findings(kit_target, _CAP_STORYBOARD)
+    assert any("missing a non-empty `consumers:`" in f for f in findings), findings
+
+
 # --- rot detection --------------------------------------------------
 
 

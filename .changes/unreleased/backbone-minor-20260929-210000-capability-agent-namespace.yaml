@@ -1,0 +1,25 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit new agent <namespace> <name>` accepts a capability name as the
+  namespace, the way `pkit new decision <capability>` does: the agent stamps
+  under `.pkit/capabilities/<capability>/agents/` (with `--with-storyboard`,
+  in folder form with a sibling storyboard whose consumer namespace is the
+  capability's name), the capability must exist — an unknown name is refused
+  with the capabilities that do — and its `agents/` folder is created on first
+  use; `core` and `project` are unchanged. The command now refuses a name
+  already taken in any capability as well as in core or project. `pkit new
+  storyboard agent <name>` finds an agent in a capability's `agents/` folder
+  too, in the deploy's order (project, core, then capabilities by name), and a
+  new `--namespace <ns>` option pins where to look. `pkit refs validate` checks
+  a capability agent's storyboards as it checks those under `.pkit/agents/` —
+  the storyboard names its agent by the capability, the agent declares the
+  storyboard back, and an undeclared storyboard in the folder is reported —
+  comparing a declared entry with the file by the path it resolves to, so the
+  bare sibling form and the project-root-relative form name the same
+  storyboard. The agents README, the `agent-author` and `storyboard-author`
+  skills and the CLI reference document the capability namespace and the
+  storyboard reference convention: declare a storyboard by its bare sibling
+  filename; the deploy rewrites it to the source path in the deployed copy.
