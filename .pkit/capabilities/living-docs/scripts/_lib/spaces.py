@@ -40,14 +40,22 @@ What is checked, each against the record's words:
 - **Separation** (point 1). Roots that are the same folder, or nested, are
   reported for onboarding to clear, never failed.
 
+**Where the documents are is read, never computed here.** The roots, every
+place the project and each capability declares, the files each one matches and
+each file's front matter are the backbone's artefact discovery, read once
+through `pkit friction artefacts --json` (`artefacts`). What this module
+decides over that answer is DEC-001's: which of several matching places wins,
+the space a place serves, and what a document is.
+
 **Not here.** A synced tree declared as a place is the backbone's finding,
-under `friction`; the friction block and the rule sets themselves are the
-backbone's `friction` and `rule-sets` passes; an unresolved readers point is
-also the backbone's finding, under `connections`, which names its fix.
+under `friction` — such a file is not among the documents a place matches; the
+friction block and the rule sets themselves are the backbone's `friction` and
+`rule-sets` passes; an unresolved readers point is also the backbone's finding,
+under `connections`, which names its fix.
 
 `pages` answers which documents are pages without reading the readers point:
 the doc-check filler asks it while the backbone resolves every point, so it
-must not ask the backbone for one.
+must not ask the backbone for one. Reading the places resolves no point.
 """
 
 from __future__ import annotations
@@ -56,11 +64,12 @@ import json
 import re
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 from typing import Any
 
 from jsonschema import Draft202012Validator
 
+from _lib.artefacts import Document, Unreadable, read_artefacts
 from _lib.declarations import (
     BACKBONE_CONFIG,
     CAPABILITIES_DIR,
@@ -70,16 +79,14 @@ from _lib.declarations import (
     USER_ROOT,
     Declarations,
     ProjectPlace,
-    is_glob,
+    has_wildcard,
+    is_markdown_file,
     is_within,
     literal_prefix,
     literal_text_prefix,
-    markdown_listing,
-    matches,
     normalise,
     pointer_token,
     read_declarations,
-    read_front_matter,
 )
 from _lib.readers import READERS_POINT, Readers, filler_path, read_readers
 
@@ -95,21 +102,15 @@ PAGE_FIELDS = ("reader", "kind")
 PAGE_SCHEMA = Path(__file__).resolve().parents[2] / "schemas" / "page.schema.json"
 
 #: The shared method rule set a space's definition inherits (DEC-001 point 2).
-LDOC_FILE = Path(__file__).resolve().parents[2] / "rule-sets" / "ldoc.md"
 LDOC_PIN = re.compile(rf"^{re.escape(CAPABILITY)}:LDOC@(?:0|[1-9][0-9]*)$")
 
 #: A decision record's own id, in the four id-spaces of the decision-record
 #: specification: COR, PRJ, ADR and a capability's DEC.
 RECORD_ID = re.compile(r"^(?:COR|PRJ|ADR|DEC)-[0-9]{3,}$")
 
-#: The folder name that makes a Markdown file a rule-set file (COR-051 point 2),
-#: and the signpost such a folder may hold, which is not one.
+#: The folder of the definitions location the spaces' definitions live in, where
+#: the backbone reads them as project rule sets (COR-051 point 2).
 RULE_SETS = "rule-sets"
-SIGNPOST = "README.md"
-
-#: Probes for "a place equal to or enclosing a root": a place encloses a root
-#: when it reaches a document directly in the root and one three folders deep.
-_PROBES = ("__living-docs-probe__.md", "__a__/__b__/__living-docs-probe__.md")
 
 ERROR, REPORT = "error", "report"
 
@@ -162,30 +163,35 @@ class Place:
         glob; any project place beats a root, and the nested root the outer one."""
         if self.project is None:
             return (0, len(_parts(self.pattern)))
-        if is_glob(self.pattern):
+        if has_wildcard(self.pattern):
             return (1, len(literal_text_prefix(self.pattern)))
         if self.pattern == path:
             return (3, 0)
         return (2, len(_parts(self.pattern)))
 
 
+#: A place of the spaces with the indices of the backbone's places it stands
+#: for — the files those places match are the files it reaches.
+Reach = tuple[frozenset[int], Place]
+
+
 def _parts(path: str) -> tuple[str, ...]:
     return () if path == "." else tuple(path.split("/"))
 
 
-def root_places(decl: Declarations) -> list[Place]:
-    """The two roots as places; one place when they are the same folder."""
+def root_places(decl: Declarations) -> list[Reach]:
+    """The two roots as places, each standing for this capability's place that is
+    the root; one place when they are the same folder."""
+    of = {
+        audience: frozenset(i for i, root in decl.root_places.items() if root == audience)
+        for audience in (USER_ROOT, INTERNAL_ROOT)
+    }
     if decl.user_root == decl.internal_root:
-        return [Place(decl.user_root)]
+        return [(of[USER_ROOT] | of[INTERNAL_ROOT], Place(decl.user_root))]
     return [
-        Place(decl.user_root, audience=USER_ROOT),
-        Place(decl.internal_root, audience=INTERNAL_ROOT),
+        (of[USER_ROOT], Place(decl.user_root, audience=USER_ROOT)),
+        (of[INTERNAL_ROOT], Place(decl.internal_root, audience=INTERNAL_ROOT)),
     ]
-
-
-def encloses(pattern: str, root: str) -> bool:
-    """Whether a place is the root or encloses it: it reaches every document in it."""
-    return all(matches(pattern, f"{root}/{probe}") for probe in _PROBES)
 
 
 def root_space(path: str, decl: Declarations) -> str | None:
@@ -224,33 +230,22 @@ class Claim:
         }[self.kind]
 
 
-def claim_of(rel: str, front: Mapping[str, Any] | None, decl: Declarations) -> Claim | None:
-    """Who claims `rel`, if it is not a page; `None` when nothing does (DEC-001 points 1 and 4)."""
+def claim_of(rel: str, document: Document, decl: Declarations) -> Claim | None:
+    """Who claims `rel`, if it is not a page; `None` when nothing does (DEC-001 points 1
+    and 4). Another component claims it when a place it declares matches it; it
+    is a rule-set file when the backbone's location rule claims it (COR-051 point 2)."""
     if decl.definitions is not None and is_within(rel, decl.definitions):
         return Claim("definition", decl.definitions)
-    for place in decl.component_places:
-        if matches(place.pattern, rel):
-            return Claim("component", place.component)
-    if _is_rule_set_file(rel, decl):
+    for index in document.places:
+        component = decl.component_places.get(index)
+        if component is not None:
+            return Claim("component", component)
+    if document.rule_set:
         return Claim("rule-set", rel)
-    record = front.get("id") if front is not None else None
+    record = document.fields.get("id") if document.fields is not None else None
     if isinstance(record, str) and RECORD_ID.match(record):
         return Claim("record", record)
     return None
-
-
-def _is_rule_set_file(rel: str, decl: Declarations) -> bool:
-    """The backbone's location rule for a project rule set (COR-051 point 2): in the
-    internal root's `rule-sets/`, or in a project place whose path has that segment.
-    A capability's own `rule-sets/` is its place, claimed before this."""
-    if PurePosixPath(rel).name == SIGNPOST:
-        return False
-    if is_within(rel, f"{decl.internal_root}/{RULE_SETS}"):
-        return True
-    return any(
-        RULE_SETS in _parts(place.path) and matches(place.path, rel)
-        for place in decl.project_places
-    )
 
 
 # --- the check ----------------------------------------------------------------
@@ -260,7 +255,6 @@ def _is_rule_set_file(rel: str, decl: Declarations) -> bool:
 class _Walk:
     """One pass over the documents of the spaces' places."""
 
-    listing: set[str]
     space_of: dict[str, str | None] = field(default_factory=dict)  # unclaimed document -> space
     claims: dict[str, Claim] = field(default_factory=dict)
     pages: dict[str, str | None] = field(default_factory=dict)  # page -> space
@@ -273,12 +267,16 @@ class _Walk:
 
 def check(root: Path, read: Callable[[], Readers] = read_readers) -> Outcome:
     """Every check of this module over the project at `root`; `read` answers the
-    readers point, asked only when some page names a well-formed reader."""
-    decl, refused, walk, outcome = _classify(root)
+    readers point, asked only when some page names a well-formed reader. When
+    the backbone gives no reading of the places, that is the one finding."""
+    try:
+        decl, refused, walk, outcome = _classify(root)
+    except Unreadable as exc:
+        return _unreadable(exc)
     _assignment_findings(decl, refused, walk, outcome)
     _tie_findings(decl, walk, outcome)
-    entry_notes = _entry_point_findings(decl, walk, outcome)
-    definition_notes = _definition_findings(root, decl, walk, outcome)
+    entry_notes = _entry_point_findings(root, decl, walk, outcome)
+    definition_notes = _definition_findings(decl, outcome)
     _separation_findings(decl, outcome)
     reader_note = _reader_findings(decl, walk, read, outcome)
     outcome.summary = _summary(decl, walk, entry_notes, definition_notes, reader_note, outcome)
@@ -287,7 +285,8 @@ def check(root: Path, read: Callable[[], Readers] = read_readers) -> Outcome:
 
 def pages(root: Path) -> list[str]:
     """The pages of the project's spaces, sorted — what the walk classifies as a
-    page, by the rules above, without reading the readers point."""
+    page, by the rules above, without reading the readers point. Raises
+    Unreadable when the backbone gives no reading of the places."""
     _decl, _refused, walk, _outcome = _classify(root)
     return sorted(walk.pages)
 
@@ -295,14 +294,35 @@ def pages(root: Path) -> list[str]:
 def _classify(root: Path) -> tuple[Declarations, set[int], _Walk, Outcome]:
     """The declarations, the refused project places, and the walk over every
     document the spaces' places reach, with the findings the walk makes."""
-    decl = read_declarations(root)
+    decl = read_declarations(root, read_artefacts(root))
     outcome = Outcome()
     refused = _refused_places(decl, outcome)
-    places = [
+    places: list[Reach] = [
         *root_places(decl),
-        *(Place(p.path, project=p) for p in decl.project_places if p.index not in refused),
+        *(
+            (frozenset({p.index}), Place(p.path, project=p))
+            for p in decl.project_places
+            if p.index not in refused
+        ),
     ]
-    return decl, refused, _walk(root, decl, places, outcome), outcome
+    return decl, refused, _walk(decl, places, outcome), outcome
+
+
+def _unreadable(exc: Unreadable) -> Outcome:
+    """The answer when the places cannot be read: one error, and nothing checked."""
+    outcome = Outcome()
+    outcome.findings.append(
+        Finding(
+            ERROR,
+            BACKBONE_CONFIG,
+            f"the documentation places cannot be read — {str(exc).rstrip('.')}. No space is "
+            f"checked until they can: {CAPABILITY} reads the roots, the places and the "
+            f"documents in them through the backbone's `pkit friction artefacts --json` "
+            f"(DEC-001 point 1).",
+        )
+    )
+    outcome.summary = ["places unreadable: no space checked.", "1 error(s), 0 report(s)."]
+    return outcome
 
 
 def known_spaces(decl: Declarations) -> list[str]:
@@ -317,7 +337,7 @@ def _refused_places(decl: Declarations, outcome: Outcome) -> set[int]:
         enclosed = [
             f"the {audience} root {root!r}"
             for audience, root in decl.roots().items()
-            if encloses(place.path, root)
+            if audience in place.encloses
         ]
         if not enclosed:
             continue
@@ -335,18 +355,18 @@ def _refused_places(decl: Declarations, outcome: Outcome) -> set[int]:
     return refused
 
 
-def _walk(root: Path, decl: Declarations, places: Sequence[Place], outcome: Outcome) -> _Walk:
+def _walk(decl: Declarations, places: Sequence[Reach], outcome: Outcome) -> _Walk:
     """Classify every document the spaces' places reach, and validate the pages."""
-    listing = markdown_listing(root)
-    walk = _Walk(listing=set(listing))
+    walk = _Walk()
     schema = Draft202012Validator(json.loads(PAGE_SCHEMA.read_text(encoding="utf-8")))
-    for rel in listing:
-        matched = [place for place in places if matches(place.pattern, rel)]
+    for rel, document in sorted(decl.documents.items()):
+        matching = frozenset(document.places)
+        matched = [place for indices, place in places if indices & matching]
         if not matched:
             continue
-        front = read_front_matter(root, rel)
+        front = document.fields
         declared = [name for name in PAGE_FIELDS if front is not None and name in front]
-        claim = claim_of(rel, front, decl)
+        claim = claim_of(rel, document, decl)
         if claim is not None:
             walk.claims[rel] = claim
             if declared and claim.kind != "definition":
@@ -372,7 +392,7 @@ def _walk(root: Path, decl: Declarations, places: Sequence[Place], outcome: Outc
             reader = (front or {}).get("reader")
             if isinstance(reader, str) and "reader" not in invalid:
                 walk.readers[rel] = reader
-        elif not any(matches(path, rel) for path in decl.exclude):
+        elif not document.excluded:
             # Excluded paths are left out of the measures (COR-050 point 7).
             outcome.unclassified.append(rel)
     return walk
@@ -544,7 +564,9 @@ def _tie_findings(decl: Declarations, walk: _Walk, outcome: Outcome) -> None:
         )
 
 
-def _entry_point_findings(decl: Declarations, walk: _Walk, outcome: Outcome) -> dict[str, str]:
+def _entry_point_findings(
+    root: Path, decl: Declarations, walk: _Walk, outcome: Outcome
+) -> dict[str, str]:
     """Each space's entry point resolves to a document of that space (DEC-001 point 1).
     Returns a note per space for the summary."""
     notes: dict[str, str] = {}
@@ -554,7 +576,7 @@ def _entry_point_findings(decl: Declarations, walk: _Walk, outcome: Outcome) -> 
         entry = normalise(config.entry_point)
         location = f"{LIVING_DOCS_CONFIG}:/spaces/{pointer_token(space)}/entry-point"
         problem: str | None = None
-        if entry not in walk.listing:
+        if entry not in decl.documents and not is_markdown_file(root, entry):
             problem = "is not a Markdown document of the working tree"
         elif entry in walk.claims:
             problem = f"is {walk.claims[entry].described()}, never a page"
@@ -587,14 +609,12 @@ def _entry_point_findings(decl: Declarations, walk: _Walk, outcome: Outcome) -> 
     return notes
 
 
-def _definition_findings(
-    root: Path, decl: Declarations, walk: _Walk, outcome: Outcome
-) -> dict[str, str]:
+def _definition_findings(decl: Declarations, outcome: Outcome) -> dict[str, str]:
     """Each space's definition is a project rule set in the definitions location that
     inherits the shared method (DEC-001 point 2). Returns a note per space."""
     notes: dict[str, str] = {}
     folder = f"{decl.definitions}/{RULE_SETS}" if decl.definitions is not None else None
-    pin = f"{CAPABILITY}:LDOC@{_ldoc_major()}"
+    pin = f"{CAPABILITY}:LDOC@{_ldoc_major(decl)}"
     for space in known_spaces(decl):
         config = decl.spaces.get(space)
         if config is None or config.definition is None:
@@ -621,9 +641,11 @@ def _definition_findings(
                 f"lies outside {folder}/, where the spaces' definitions live and the backbone "
                 f"reads them as rule sets (COR-051 point 2)"
             )
-        elif definition not in walk.listing:
+        elif definition not in decl.documents:
+            # The definitions' folder is a place this capability declares, so a
+            # definition that is a document of the working tree is among them.
             problem = "is not a Markdown document of the working tree"
-        elif not _inherits_ldoc(read_front_matter(root, definition)):
+        elif not _inherits_ldoc(decl.documents[definition].fields):
             problem = f"does not inherit the shared method: add `{pin}` to its `inherits`"
         if problem is not None:
             outcome.findings.append(
@@ -647,11 +669,10 @@ def _inherits_ldoc(front: Mapping[str, Any] | None) -> bool:
     )
 
 
-def _ldoc_major() -> str:
-    """The shared method's major, from its own file: what a definition pins."""
-    front = read_front_matter(LDOC_FILE.parent, LDOC_FILE.name)
-    version = front.get("version") if front is not None else None
-    match = re.match(r"(0|[1-9][0-9]*)\.", version) if isinstance(version, str) else None
+def _ldoc_major(decl: Declarations) -> str:
+    """The shared method's major, from its own rule-set file: what a definition pins."""
+    version = decl.ldoc_version
+    match = re.match(r"(0|[1-9][0-9]*)\.", version) if version is not None else None
     return match.group(1) if match else "<major>"
 
 

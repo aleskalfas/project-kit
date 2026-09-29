@@ -582,9 +582,9 @@ def connections_resolve(address: str, as_json: bool) -> None:
 @main.group("friction")
 def friction() -> None:
     """Anchors and friction (COR-050): the reading commands — the checks, the
-    debt listing, one artefact's explanation — which never write, and the
-    writers — revalidate, defer, record-status — which write one block, only
-    with consent.
+    debt listing, one artefact's explanation, the places and artefacts
+    discovery finds — which never write, and the writers — revalidate, defer,
+    record-status — which write one block, only with consent.
 
     Reference: `.pkit/cli/README.md`, "Friction checks"; the block itself is
     in `.pkit/schemas/README.md`, "The friction block".
@@ -842,6 +842,38 @@ def friction_explain_command(artefact: str, as_json: bool) -> None:
         click.echo(friction_report.render_explain_json(explanation), nl=False)
     else:
         click.echo(friction_report.render_explain_human(explanation), nl=False)
+
+
+@friction.command("artefacts")
+@click.option(
+    "--json", "as_json", is_flag=True, default=False, help="Emit the stable JSON document."
+)
+def friction_artefacts_command(as_json: bool) -> None:
+    """The declared places, the files they hold and the artefacts in them, as
+    discovery finds them (COR-050 point 1).
+
+    One run of the discovery `pkit validate` reads, over the working tree:
+    each place — the project's and each capability's, with its location and
+    root — the files it matches and the skips validation applies (a synced
+    copy, a place outside the repository, a malformed declaration), every file
+    read with its front matter's own fields, and every artefact. Read-only. It
+    is how a capability's own script reads where artefacts are without
+    importing the backbone or walking the places itself. Exit 0 when answered;
+    1 when the configuration cannot be read; 2 on a usage error.
+    """
+    from project_kit import friction_discovery, validators
+
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    problem = friction_discovery.unreadable_configuration(target_root)
+    if problem is not None:
+        raise click.ClickException(f"{problem}; `pkit validate` reports it.")
+    document = validators.as_one_run(lambda: friction_discovery.artefacts_document(target_root))
+    if as_json:
+        click.echo(friction_discovery.render_artefacts_json(document), nl=False)
+    else:
+        click.echo(friction_discovery.render_artefacts_human(document), nl=False)
 
 
 @main.group(invoke_without_command=True)

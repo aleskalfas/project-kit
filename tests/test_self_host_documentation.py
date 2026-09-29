@@ -212,9 +212,10 @@ def test_the_analysis_location_derives_to_tech_docs_analysis() -> None:
 # --- living-docs over this tree (#1003) ---------------------------------------
 
 
-def test_living_docs_validator_passes_over_this_tree() -> None:
+def test_living_docs_validator_passes_over_this_tree(pkit_on_path: Path) -> None:
     """The `living-docs:spaces` member of `pkit validate`, run as the backbone runs
-    it (under this interpreter rather than `uv run --script`)."""
+    it (under this interpreter rather than `uv run --script`), reading the places
+    through this tree's `pkit`."""
     completed = subprocess.run(
         [sys.executable, str(LIVING_DOCS / "scripts" / "validate.py"), "--json"],
         cwd=REPO,
