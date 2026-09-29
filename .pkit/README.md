@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-09-29T16:25:16Z
+      at: 2026-09-29T16:55:46Z
       outcome: unchanged
-      unchanged-because: the CLI reference gained the settings consolidate section and two anchors; what it holds and where it sits, which this signpost says, did not change
+      unchanged-because: the CLI reference gained the settings consolidate section and two anchors, and the lifecycle, CLI and schemas READMEs the friction artefacts read command; each area's role, as this map states it, is unchanged
 ---
 
 # project-kit
