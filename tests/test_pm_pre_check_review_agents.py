@@ -14,6 +14,9 @@ These cover the singleton-cap lift + resolvable-set validation wired into
     through pre-check's `fail` channel.
   * **baseline-only** — no contributions resolves to baseline only, behaving
     as DEC-028 left it (an absent/empty agents block stays a clean skip / ok).
+  * **opt-outs** (#148) — each valid `contributed_opt_out` entry is listed
+    as a skip with its reason and leaves the resolvable set; an entry naming
+    no installed contribution, or a malformed one, fails.
 
 `collect_contributions` is stubbed (the test owns the contributed half), and
 agent deployment is exercised against a real temp `.claude/agents/` tree so
@@ -320,3 +323,129 @@ def test_remote_registered_still_singleton(pc, rc, monkeypatch, tmp_path) -> Non
 
     fails = _fails(results)
     assert any("remote_registered singleton" in r.label for r in fails)
+
+
+# ----- per-contribution opt-out (#148) ------------------------------
+
+
+_DESIGN_OPT_OUT = {
+    "capability": "ux-ui-design",
+    "reviewer": "design-reviewer",
+    "reason": "This project has no UI.",
+}
+
+
+def _config_with_opt_outs(opt_outs, *, local=("reviewer",)):
+    config = _config(local=list(local))
+    config["review"]["agents"]["contributed_opt_out"] = opt_outs
+    return config
+
+
+def test_opt_out_is_listed_with_its_reason(pc, rc, monkeypatch, tmp_path) -> None:
+    """The status line: a valid opt-out is listed as a skip naming the
+    capability, the reviewer and the reason, and the reviewer leaves the
+    resolvable set."""
+    repo_root = _repo_with_agents(tmp_path, "reviewer", "design-reviewer")
+    _stub_collection(
+        pc, rc, monkeypatch,
+        _contributed_collection(rc, "ux-ui-design", "design", "design-reviewer"),
+    )
+
+    results = pc._check_review_block(
+        _config_with_opt_outs([_DESIGN_OPT_OUT]),
+        repo_root / ".pkit" / "capabilities" / "project-management",
+    )
+
+    assert _fails(results) == []
+    (listed,) = [r for r in results if "opted out" in r.label]
+    assert listed.status == "skip"
+    assert listed.label == (
+        "contributed reviewer `design-reviewer` (capability `ux-ui-design`) opted out"
+    )
+    assert "reason: This project has no UI." in listed.detail
+    deployed = [r for r in results if "have deployed agent files" in r.detail]
+    assert deployed and "design-reviewer" not in deployed[0].detail
+
+
+def test_opt_out_status_line_renders_in_the_report(
+    pc, rc, monkeypatch, tmp_path, capsys,
+) -> None:
+    """What the adopter sees: the skip marker, the line, and the reason."""
+    repo_root = _repo_with_agents(tmp_path, "reviewer", "design-reviewer")
+    _stub_collection(
+        pc, rc, monkeypatch,
+        _contributed_collection(rc, "ux-ui-design", "design", "design-reviewer"),
+    )
+    results = pc._check_review_block(
+        _config_with_opt_outs([_DESIGN_OPT_OUT]),
+        repo_root / ".pkit" / "capabilities" / "project-management",
+    )
+    pc._print_human(results)
+    out = capsys.readouterr().out
+    assert (
+        "[skip] contributed reviewer `design-reviewer` (capability "
+        "`ux-ui-design`) opted out"
+    ) in out
+    assert "its merge gate does not apply — reason: This project has no UI." in out
+
+
+def test_opted_out_undeployed_reviewer_does_not_fail(
+    pc, rc, monkeypatch, tmp_path,
+) -> None:
+    """A contributed reviewer that is opted out need not be deployed."""
+    repo_root = _repo_with_agents(tmp_path, "reviewer")  # design-reviewer absent
+    _stub_collection(
+        pc, rc, monkeypatch,
+        _contributed_collection(
+            rc, "ux-ui-design", "design", "design-reviewer", deployed=False,
+        ),
+    )
+
+    results = pc._check_review_block(
+        _config_with_opt_outs([_DESIGN_OPT_OUT]),
+        repo_root / ".pkit" / "capabilities" / "project-management",
+    )
+
+    assert _fails(results) == []
+
+
+@pytest.mark.parametrize("field,value,expected", [
+    ("capability", "no-such-capability", "is not an installed capability"),
+    ("reviewer", "no-such-reviewer", "no reviewer `no-such-reviewer`"),
+])
+def test_opt_out_naming_no_installed_contribution_fails(
+    pc, rc, monkeypatch, tmp_path, field, value, expected,
+) -> None:
+    repo_root = _repo_with_agents(tmp_path, "reviewer", "design-reviewer")
+    _stub_collection(
+        pc, rc, monkeypatch,
+        _contributed_collection(rc, "ux-ui-design", "design", "design-reviewer"),
+    )
+
+    results = pc._check_review_block(
+        _config_with_opt_outs([{**_DESIGN_OPT_OUT, field: value}]),
+        repo_root / ".pkit" / "capabilities" / "project-management",
+    )
+
+    (fail,) = _fails(results)
+    assert expected in fail.detail
+    assert "contributed_opt_out[0]" in fail.detail
+    assert fail.remediation is not None
+    assert not [r for r in results if "opted out" in r.label]
+
+
+def test_malformed_opt_out_fails(pc, rc, monkeypatch, tmp_path) -> None:
+    repo_root = _repo_with_agents(tmp_path, "reviewer", "design-reviewer")
+    _stub_collection(
+        pc, rc, monkeypatch,
+        _contributed_collection(rc, "ux-ui-design", "design", "design-reviewer"),
+    )
+
+    results = pc._check_review_block(
+        _config_with_opt_outs([{"capability": "ux-ui-design", "reviewer": "design-reviewer"}]),
+        repo_root / ".pkit" / "capabilities" / "project-management",
+    )
+
+    fails = _fails(results)
+    assert len(fails) == 1
+    assert "contributed_opt_out[0].reason" in fails[0].detail

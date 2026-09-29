@@ -20,8 +20,10 @@ followed by free-form commentary the agent produces.
 
 The required set is resolved per PR (DEC-032 D1) as the baseline
 (`review.agents.local_registered:`) UNIONED with every contributed reviewer
-whose match-predicate matches the classification of any issue the PR closes.
-Crucially, this resolution is the SAME shared helper `done-work`'s gate
+whose match-predicate matches the classification of any issue the PR closes,
+less any contribution the project opts out of
+(`review.agents.contributed_opt_out:`, #148 — listed in the output with its
+reason). Crucially, this resolution is the SAME shared helper `done-work`'s gate
 checks (`_lib.required_reviewers.resolve_required_local_reviewers`), so the
 set `review-pr` invokes equals the set the gate later checks — the
 developer-at-keyboard flow produces exactly the verdicts the gate needs, with
@@ -32,9 +34,9 @@ Gates:
   - PR must exist for the issue's branch.
   - The resolved required-local set must be non-empty.
   - Resolution must succeed: a not-ok contribution collection (malformed
-    declaration / undeployed contributed agent) or an unresolvable
-    closing-issue lookup surfaces as an error and aborts — a required
-    reviewer is never silently skipped (fail-closed, DEC-032 D5),
+    declaration / undeployed contributed agent), an invalid opt-out list, or
+    an unresolvable closing-issue lookup surfaces as an error and aborts — a
+    required reviewer is never silently skipped (fail-closed, DEC-032 D5),
     consistent with the gate's posture.
 
 Side-effects:
@@ -96,11 +98,13 @@ from _lib.closing_issue_fetchers import (  # noqa: E402
 from _lib.required_reviewers import (  # noqa: E402
     ERROR_CLOSING_ISSUES,
     ERROR_COLLECTION,
+    ERROR_OPT_OUT,
     RequiredReviewersError,
     Resolution,
     resolve_required_local_reviewers,
 )
 from _lib.review_contributions import collect_contributions  # noqa: E402
+from _lib.review_opt_outs import OPT_OUT_PATH, read_opt_outs  # noqa: E402
 
 
 # ---- per-agent reviewer timeout (issue #766) -------------------------
@@ -345,6 +349,11 @@ def main() -> int:
     required_local = list(resolution.required_local)
     contributed_by = dict(resolution.contributed_by)
     print(f"  agents: {', '.join(required_local)}")
+    for opt_out in resolution.opted_out:
+        print(
+            f"  opted out: {opt_out.reviewer} (capability "
+            f"`{opt_out.capability}`) — {opt_out.reason}"
+        )
     print(f"  timeout: {agent_timeout}s per agent")
     if agent_effort is None:
         print("  effort: harness default")
@@ -600,8 +609,9 @@ def _resolve_required_local(
 
     Delegates to `_lib.required_reviewers.resolve_required_local_reviewers` —
     the SAME resolution `done-work`'s gate-checker calls — wiring in this
-    script's own `gh`-backed closing-issue, label, and changed-files fetchers.
-    Because both
+    script's own `gh`-backed closing-issue, label, and changed-files fetchers
+    and the project's contribution opt-outs (#148), read from `config` the
+    same way the gate reads them. Because both
     consumers go through one helper, the set this command invokes equals the
     set the gate later checks (DEC-032 D4, no divergence). Returns a
     `Resolution`; a non-ok result aborts (fail-closed, DEC-032 D5).
@@ -629,6 +639,7 @@ def _resolve_required_local(
         changed_files=lambda n: _pr_changed_files_fetch(
             n, config, gh_run=gh_run
         ),
+        opt_outs=read_opt_outs(config),
         collect_contributions=collect_contributions,
     )
 
@@ -660,6 +671,14 @@ def _resolution_error_message(resolution: Resolution) -> str:
         lines.append(
             "  Remediation: redeploy the contributing capability's agents, "
             "uninstall it, or fix the malformed contribution declaration."
+        )
+    elif error.kind == ERROR_OPT_OUT:
+        for detail in error.details:
+            lines.append(f"  → {detail}")
+        lines.append(
+            f"  Remediation: fix or remove the entry in `{OPT_OUT_PATH}` "
+            "(project/config.yaml) — each names an installed capability, a "
+            "reviewer it contributes, and a reason."
         )
     else:
         lines.append(f"  → {error.message}")

@@ -49,7 +49,17 @@ from _lib import axis_carriage, axis_labels, bootstrap_gate  # noqa: E402
 from _lib.classification_rules import title_prefix_by_value  # noqa: E402
 from _lib.agents import agent_deploy_path, agent_is_deployed  # noqa: E402
 from _lib.gh import gh_project_run  # noqa: E402
-from _lib.review_contributions import collect_contributions  # noqa: E402
+from _lib.review_contributions import (  # noqa: E402
+    ContributionCollection,
+    collect_contributions,
+)
+from _lib.review_opt_outs import (  # noqa: E402
+    NO_OPT_OUTS,
+    OPT_OUT_KEY,
+    OPT_OUT_PATH,
+    OptOuts,
+    parse_opt_outs,
+)
 from _lib.label_contributions import collect_label_contributions  # noqa: E402
 
 
@@ -2447,6 +2457,13 @@ def _check_review_block(
     return results
 
 
+# Remediation for every opt-out problem pre-check reports (#148).
+_OPT_OUT_REMEDIATION = (
+    f"Fix or remove the entry in `{OPT_OUT_PATH}` — each names an installed "
+    "capability, a reviewer it contributes, and a reason. See DEC-032."
+)
+
+
 def _check_review_agents(
     agents: dict[str, Any], repo_root: Path
 ) -> list[CheckResult]:
@@ -2469,6 +2486,14 @@ def _check_review_agents(
          collected by the shared DEC-032 collector (reused, not
          re-implemented), whose own `ContributionError`s (malformed
          declaration, undeployed agent) are surfaced through this check too.
+
+      3. **Opt-outs** (`contributed_opt_out`, #148). A malformed list, or an
+         entry naming a capability / reviewer no installed capability
+         contributes, fails — the gate refuses on it too. A valid opt-out
+         withdraws its contribution from the resolvable set (an opted-out
+         reviewer need not be deployed) and is listed as a `skip` line naming
+         the capability, the reviewer and the reason: this is the surface
+         that shows a contribution is opted out.
     """
     results: list[CheckResult] = []
 
@@ -2483,8 +2508,25 @@ def _check_review_agents(
     )
     results.extend(local_results)
 
-    # 2. Resolvable set: baseline ∪ contributed, each name → deployed file.
-    results.extend(_check_resolvable_reviewer_set(baseline_names, repo_root))
+    # 3. Opt-outs, shape first: a malformed list applies nothing. Checking
+    #    them against the installed contributions, and listing them, happens
+    #    with the resolvable set below, which reads the same collection.
+    opt_outs = parse_opt_outs(agents.get(OPT_OUT_KEY))
+    results.extend(
+        CheckResult(
+            f"{OPT_OUT_PATH} valid",
+            "fail",
+            message,
+            remediation=_OPT_OUT_REMEDIATION,
+        )
+        for message in opt_outs.errors
+    )
+
+    # 2. Resolvable set: baseline ∪ contributed less the opt-outs, each name
+    #    → deployed file.
+    results.extend(
+        _check_resolvable_reviewer_set(baseline_names, repo_root, opt_outs)
+    )
 
     return results
 
@@ -2579,21 +2621,30 @@ def _check_local_registered(entries: Any) -> tuple[list[str], list[CheckResult]]
 
 
 def _check_resolvable_reviewer_set(
-    baseline_names: list[str], repo_root: Path
+    baseline_names: list[str],
+    repo_root: Path,
+    opt_outs: OptOuts = NO_OPT_OUTS,
 ) -> list[CheckResult]:
     """Validate every name in the resolvable set has a deployed agent file.
 
     The resolvable set is the baseline `local_registered` names unioned with
     every reviewer name a manifest-registered capability contributes
-    (DEC-032 D1/D3). A name with no deployed agent file is an unsatisfiable
-    merge gate: surfaced as a `fail` with redeploy/uninstall remediation, not
-    a silent pass. The contributed half — and any malformed-declaration /
-    undeployed-agent problem the collector finds — comes from the shared
-    DEC-032 collector, gated on its `ok` / `has_blocking_errors` channel.
+    (DEC-032 D1/D3), less the contributions the project opts out of (#148) —
+    withdrawn the same way the resolver withdraws them, so an opted-out
+    reviewer need not be deployed. A name with no deployed agent file is an
+    unsatisfiable merge gate: surfaced as a `fail` with redeploy/uninstall
+    remediation, not a silent pass. The contributed half — and any
+    malformed-declaration / undeployed-agent problem the collector finds —
+    comes from the shared DEC-032 collector, gated on its `ok` /
+    `has_blocking_errors` channel.
+
+    Each opt-out naming a contribution that is not installed is a `fail`;
+    each valid one is listed as a `skip` with its reason.
     """
     results: list[CheckResult] = []
 
-    collection = collect_contributions(repo_root)
+    installed = collect_contributions(repo_root)
+    collection = opt_outs.apply(installed)
 
     # Surface the collector's own structured errors (malformed declaration,
     # parse error, undeployed contributed agent). Each is blocking per the
@@ -2611,10 +2662,12 @@ def _check_resolvable_reviewer_set(
             str(error),
             remediation=(
                 "Fix the capability's review-contributions declaration, "
-                "redeploy its reviewer agent, or uninstall the capability. "
-                "See DEC-032."
+                "redeploy its reviewer agent, opt out of the contribution in "
+                f"`{OPT_OUT_PATH}`, or uninstall the capability. See DEC-032."
             ),
         ))
+
+    results.extend(_opt_out_results(opt_outs, installed))
 
     # Build the resolvable set: baseline ∪ contributed reviewer names. A
     # contributed rule the collector already flagged undeployed
@@ -2653,7 +2706,8 @@ def _check_resolvable_reviewer_set(
                 f"agent file not found at {agent_file}",
                 remediation=(
                     f"Either remove `{name}` from the reviewer set (drop it "
-                    "from `local_registered`, or uninstall the capability "
+                    "from `local_registered`, opt out of the contribution in "
+                    f"`{OPT_OUT_PATH}`, or uninstall the capability "
                     "contributing it) or deploy the agent at "
                     f"`.claude/agents/{name}.md`."
                 ),
@@ -2666,6 +2720,37 @@ def _check_resolvable_reviewer_set(
             f"{', '.join(resolvable)}",
         ))
 
+    return results
+
+
+def _opt_out_results(
+    opt_outs: OptOuts, installed: ContributionCollection
+) -> list[CheckResult]:
+    """One line per configured opt-out: a `fail` or its listing (#148).
+
+    An entry naming a capability or reviewer that no installed capability
+    contributes is a `fail` (the resolver refuses on it too). Every other
+    entry is listed as a `skip` — the contributed requirement is skipped —
+    naming the capability, the reviewer and the adopter's reason, so the
+    opt-out is visible wherever the resolvable set is.
+    """
+    problems = dict(opt_outs.problems_against(installed))
+    results: list[CheckResult] = []
+    for entry in opt_outs.entries:
+        if entry in problems:
+            results.append(CheckResult(
+                f"{OPT_OUT_PATH} entry names an installed contribution",
+                "fail",
+                problems[entry],
+                remediation=_OPT_OUT_REMEDIATION,
+            ))
+            continue
+        results.append(CheckResult(
+            f"contributed reviewer `{entry.reviewer}` (capability "
+            f"`{entry.capability}`) opted out",
+            "skip",
+            f"its merge gate does not apply — reason: {entry.reason}",
+        ))
     return results
 
 
