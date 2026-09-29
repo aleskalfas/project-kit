@@ -12,9 +12,11 @@
 #     packages, connections, versions, friction, rule-sets, decisions, refs,
 #     process, data) and each installed capability's. One line, so nothing
 #     registered can be forgotten here; it fails on errors only.
-#   - the diff-scoped checks — migration coverage, the friction change check
-#     and the changelog lint read a base ref and answer about the CHANGE, not
-#     the tree. They are not validators and stay their own lines.
+#   - the diff-scoped checks — migration coverage, the friction change check,
+#     the documentation check (project-management's `check-doc-mapping`, the
+#     obligations of the doc-check point against the diff) and the changelog
+#     lint read a base ref and answer about the CHANGE, not the tree. They are
+#     not validators and stay their own lines.
 #
 # Runs every check (does not stop at the first failure) and reports a summary,
 # so one run surfaces all problems. Exits non-zero if any check failed.
@@ -26,8 +28,9 @@
 set -uo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
-# Base ref for the diff-scoped checks (migration coverage, friction). CI
-# overrides via env for PRs; locally it defaults to the tracked main.
+# Base ref for the diff-scoped checks (migration coverage, friction, doc
+# check); each diffs HEAD against its merge-base with this ref. CI overrides
+# via env for PRs; locally it defaults to the tracked main.
 BASE="${PKIT_CHECK_BASE:-origin/main}"
 
 fail=0
@@ -50,6 +53,7 @@ run "tests"              uv run pytest -q
 run "validate"           uv run pkit validate
 run "migrations check"   uv run pkit migrations check-diff --base "${BASE}"
 run "friction check"     uv run pkit friction check --base "${BASE}"
+run "doc check"          uv run pkit pm check-doc-mapping --base "${BASE}"
 run "changelog lint"     uv run pkit release lint
 
 echo

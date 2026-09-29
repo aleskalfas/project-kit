@@ -11,12 +11,11 @@ pkit:
         - mise.toml
         - tests/README.md
         - src/project_kit/router.py
-      record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, ADR-019, ADR-039, ADR-055]
+      record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, ADR-019, ADR-039, ADR-055, "project-management:DEC-053"]
       artefact: [.pkit/decisions/README.md]
     revalidated:
-      at: 2026-09-29T16:17:35Z
-      outcome: unchanged
-      unchanged-because: tests/README.md only adds pkit friction artefacts to the commands pkit_on_path serves; the check aggregator, the hook and the gate are unchanged
+      at: 2026-09-29T17:31:16Z
+      outcome: updated
 ---
 
 # Contributing to project-kit
@@ -29,7 +28,7 @@ If you have a project that has *adopted* project-kit and you want to record deci
 
 ## Running checks
 
-There is one source of truth for "what must pass before this lands": **`scripts/check.sh`** — the check aggregator. It runs the test suite, `pkit validate` (the one umbrella over every registered check of the tree's state — the CLI reference's "validate" section lists the members), and the diff-scoped checks: `pkit migrations check-diff`, the friction change check (`pkit friction check`) and `pkit release lint`. Run it any time:
+There is one source of truth for "what must pass before this lands": **`scripts/check.sh`** — the check aggregator. It runs the test suite, `pkit validate` (the one umbrella over every registered check of the tree's state — the CLI reference's "validate" section lists the members), and the diff-scoped checks: `pkit migrations check-diff`, the friction change check (`pkit friction check`), the documentation check (`pkit pm check-doc-mapping`) and `pkit release lint`. Run it any time:
 
 ```
 ./scripts/check.sh
@@ -50,7 +49,12 @@ Add a check by editing `scripts/check.sh` once; both the hook and CI pick it up.
 
 **The whole-repository report, on every push to `main`.** The `friction-report` job of `.github/workflows/checks.yml` runs `pkit friction check --all` with the full history on every push to `main` and never fails the push (ADR-055 point 5): every artefact against the current history — stale and deferred debt with the commits they originate in, every dead and over-broad anchor, unanchored artefacts and uncovered surface. Stale debt that slipped past the change check through an outdated base shows up here. Read it in that job's log, or in the run's step summary; `uv run pkit friction check --all` gives the same report locally from HEAD (uncommitted work is not read), and `--json` the machine form.
 
-**The escape hatch.** Enforcing mode must never fail on a defect of the tool. When the check fails for any other reason than those findings — it crashes, or anchor resolution or the configuration is wrong — flip the mode to `warning` in a one-line change (`uv run pkit config set friction.mode warning --yes`), disclose the flip in the pull request, file the defect, and revert the flip with the fix. Validation findings — a malformed block, a dangling deferral, a cycle between artefacts — are outside the hatch: they fail `pkit validate` in either mode and are fixed, not waived.
+**The documentation check, with the pages' friction enforced** ([project-management:DEC-053](.pkit/capabilities/project-management/decisions/DEC-053-doc-check-slot.md) point 3). Beside the core check, project-management's documentation check holds a pull request to the obligations of the documentation-check point, `pkit::work-tracking:doc-check`, and each source of obligations has its own setting in `.pkit/capabilities/project-management/project/config.yaml`. project-kit **enforces the `friction` source**, the one living-docs contributes, read at the branch's head: a **stale page** (`page-stale`), and a **path of the declared surface no page anchors** (`code-undocumented`). The code-to-doc **mapping** stays advisory, with no rules — they became page anchors. A `## Doc impact` line meets neither friction obligation. The aggregator runs it as its `doc check` line, against the same base as the friction change check, so it binds a merge once the aggregator is a required status on `main`. Run it alone with `uv run pkit pm check-doc-mapping` (against `origin/main`); `uv run pkit living-docs fill-doc-check` lists what the head owes. When it refuses:
+
+- **`<page> → no answer in the diff (page-stale)`** — something the page anchors changed. `uv run pkit friction explain <page>` names what changed and the command that clears it; answer on the page in this pull request by revalidating it — `uv run pkit friction revalidate <page> --outcome updated` with the content change, or `--outcome unchanged --because "<why>"`, or defer the anchor with its reason (`uv run pkit friction defer`). A deferral answers both checks and owes nothing afterwards: a deferred page gives no obligation, and `uv run pkit friction debt` lists it as debt until someone revalidates it.
+- **`<path> → no page anchors it (code-undocumented)`** — new code in the declared surface that no page describes. Anchor it from the page that describes it: add the path to the page's `pkit.friction.anchors.path`, describe it there, and revalidate the page (`--outcome updated`). If no page should ever describe it, narrow the declared surface instead — `friction.surface` in `.pkit/project/config.yaml` — and give the reason in that file's comment and in `NOT_SURFACE` of `tests/test_self_host_documentation.py`, which fails on a file under the surface's trees that is neither.
+
+**The escape hatch.** Enforcing mode must never fail on a defect of the tool. When the check fails for any other reason than those findings — it crashes, or anchor resolution or the configuration is wrong — flip the mode to `warning` in a one-line change (`uv run pkit config set friction.mode warning --yes`), disclose the flip in the pull request, file the defect, and revert the flip with the fix. The documentation check takes the same hatch: set `doc_check.sources.friction: advisory` in project-management's project configuration. Validation findings — a malformed block, a dangling deferral, a cycle between artefacts — are outside the hatch: they fail `pkit validate` in either mode and are fixed, not waived.
 
 **Optional task runner.** A [`mise.toml`](mise.toml) provides convenience aliases over the underlying `uv run ...` commands — `mise tasks` lists them, `mise run check` runs the lint/format/typecheck/test bundle. After cloning, run `mise trust` once to enable the task runner: mise gates untrusted config by design, so a fresh clone prints a "not trusted" error on every shell until you do. Not using mise? Run the `uv run ...` commands (or `./scripts/check.sh`) directly — mise is sugar, not a requirement.
 

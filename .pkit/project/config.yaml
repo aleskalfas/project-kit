@@ -76,14 +76,53 @@ friction:
   # be described. It is the code the project-management code-to-doc mapping
   # obliged documentation for, kept when the mapping's rules became page
   # anchors (#1010): what no page anchors to stays counted as uncovered
-  # surface instead of dropping out of sight with the rules.
+  # surface instead of dropping out of sight with the rules. Each path of it no
+  # page anchors is an obligation living-docs contributes to the documentation
+  # check, which project-kit enforces (#1012), so the surface names only what a
+  # page should describe. Component trees are named by their parts; these are
+  # left out, since nothing should anchor them:
+  #   - `migrations/` — one-off upgrade steps `pkit upgrade` runs once, each
+  #     describing itself in its header; the lifecycle README describes the
+  #     framework (COR-010).
+  #   - `package.yaml` — component metadata whose version the release step
+  #     rewrites on `main`: a page anchored to it would go stale on every
+  #     release.
+  #   - project-management's `manifest.yaml` — install state the capability
+  #     lifecycle writes, not source.
+  #   - project-management's `project/` — project-kit's own configuration of the
+  #     capability, a project tier; the README describes the settings through
+  #     the schemas it anchors, not the values project-kit chose.
+  #   - each component's README, and the adapters' — the page itself, not what
+  #     a page describes.
+  #   - evidence's `agents/` — it holds only the `.gitkeep` that keeps the
+  #     folder in git until an agent lands; name it here then.
+  # `tests/test_self_host_documentation.py` holds every file under these trees
+  # to the surface or one of these reasons, so a new one cannot land unsorted.
   surface:
     - src/**
     - .pkit/cli/**
-    - .pkit/capabilities/project-management/**
-    - .pkit/capabilities/evidence/**
-    - .pkit/capabilities/software-engineering/**
-    - .pkit/adapters/**
+    - .pkit/capabilities/project-management/adapters/**
+    - .pkit/capabilities/project-management/agents/**
+    - .pkit/capabilities/project-management/decisions/**
+    - .pkit/capabilities/project-management/permissions/**
+    - .pkit/capabilities/project-management/schemas/**
+    - .pkit/capabilities/project-management/scripts/**
+    - .pkit/capabilities/project-management/skills/**
+    - .pkit/capabilities/project-management/templates/**
+    - .pkit/capabilities/evidence/decisions/**
+    - .pkit/capabilities/evidence/schemas/**
+    - .pkit/capabilities/evidence/scripts/**
+    - .pkit/capabilities/evidence/skills/**
+    - .pkit/capabilities/software-engineering/agents/**
+    - .pkit/capabilities/software-engineering/decisions/**
+    - .pkit/capabilities/software-engineering/review-contributions.yaml
+    - .pkit/capabilities/software-engineering/schemas/**
+    - .pkit/capabilities/software-engineering/scripts/**
+    - .pkit/capabilities/software-engineering/skills/**
+    - .pkit/adapters/claude-code/*.py
+    - .pkit/adapters/claude-code/*.sh
+    - .pkit/adapters/claude-code/permission-enforcement.yaml
+    - .pkit/adapters/claude-code/settings/**
   # Left out of anchoring and of the measures (COR-050 point 7).
   exclude:
     # scratchpad notes are working drafts, never anchored (ADR-055 point 3)

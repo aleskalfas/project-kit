@@ -8,13 +8,14 @@ pkit:
         - .pkit/adapters/claude-code/*.sh
         - .pkit/adapters/claude-code/*.py
         - .pkit/adapters/claude-code/settings/core/**
+        - .pkit/adapters/claude-code/settings/project/settings.json
         - .pkit/adapters/claude-code/permission-enforcement.yaml
         - src/project_kit/visibility.py
       record: [COR-002, COR-005, COR-028, ADR-002, ADR-004, ADR-009, ADR-014, ADR-052, ADR-060, "project-management:DEC-030"]
     revalidated:
-      at: 2026-09-29T17:45:54Z
+      at: 2026-09-29T18:09:48Z
       outcome: unchanged
-      unchanged-because: visibility.py gained the process journal's configured ignore line and a refresh after a configuration write; the adapter's footprint declaration and the shared/private visibility modes this page describes are unaffected
+      unchanged-because: the project-side settings file joined this page's anchors so its changes raise friction here; the page's text already describes the settings merge and its project-additions side, and no sentence changes
 ---
 
 # Claude Code adapter
