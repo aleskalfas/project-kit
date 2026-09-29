@@ -7,7 +7,12 @@ body: >
   files each matches and their front matter through `pkit friction artefacts`,
   the core's one discovery, instead of reading the declarations and matching
   paths itself — so it can no longer disagree with the core about which files a
-  place holds. Its findings are the same, with one refinement: a synced copy a
-  place matches, which the core already refuses under `friction`, is no longer
-  also read as a page. When the core gives no reading of the places, the
-  validator answers one error and checks no space.
+  place holds. Its findings are the same except where the core's reading now
+  wins: a synced copy a place matches, which the core already refuses under
+  `friction`, is no longer also read as a page; a file the core's rule-set
+  location rule claims is a rule-set file rather than a page; a
+  `friction.places` written as a single string counts as one place; a
+  git-ignored entry point reads "lies in no place of any space" rather than "is
+  not a Markdown document of the working tree"; and a YAML date in `reader` or
+  `kind` reaches the schema as its written text. When the core gives no reading
+  of the places, the validator answers one error and checks no space.
