@@ -9,16 +9,24 @@ body: >
   `requires_backbone` range to that backbone version: the new one when the
   backbone moves in the same release, else the current one. The raise is
   raise-only and never automatic, runs after the upper-bound broaden, and is not
-  skipped by `--no-broaden`, which instead refuses the release before writing
-  anything when the authored upper bound would leave the raised range empty.
-  `pkit release plan` shows each floor it will raise. `pkit release lint`, and
-  `plan` and `apply` themselves, refuse the field on a backbone changeset, on a
-  `none` changeset, on a component that is not a capability or adapter whose
-  range is `">=X.Y.Z,<A.B.C"` or `">=X.Y.Z"` (the shape the upper-bound broaden
-  also rewrites), and with any value but `release`.
+  skipped by `--no-broaden`. Before writing anything, `apply` computes every
+  raised range as it will write it and refuses the release if one would admit no
+  backbone; the broaden and the raise both rewrite the top-level key, never a
+  comment that mentions it. `pkit release plan` shows each floor under the
+  component's bump, says "raised" only when the range changes, and adds a notice
+  when the backbone does not move in that release, since the current backbone
+  may lack the change the component needs; `plan --json` carries each raise, and
+  the release PR's body lists it. `pkit release lint`, and `plan` and `apply`
+  themselves, refuse the field on a backbone changeset, on a `none` changeset,
+  on an unknown component or one that is not a capability or adapter with a
+  range of `">=X.Y.Z,<A.B.C"` or `">=X.Y.Z"`, with any value but `release`, and
+  in a release that would ship a pre-release backbone. The lint's escape hatch
+  does not cover the field, since an invalid one blocks every later release.
 
   `pkit validate` warns, without failing, when an installed component's
   `runtime_ignore` still declares the process journals, whose ignore line the
   backbone owns: such an entry keeps journals ignored even when the project
-  commits them, and the warning says to upgrade the component together with the
-  backbone.
+  commits them. The warning names the fix for where the package comes from:
+  upgrade a methodology-shipped component together with the backbone, move an
+  externally sourced one's pin to a release that drops the entry, or drop the
+  entry from the project's own package.
