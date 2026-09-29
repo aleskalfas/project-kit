@@ -96,6 +96,40 @@ _PR_NUMBER_RE = re.compile(r"(\d+)\D*$")
 
 
 @dataclass(frozen=True)
+class FloorRaise:
+    """What a declared floor raise does to one component's `requires_backbone`."""
+
+    old_floor: str  # the floor the package declares
+    new_floor: str  # the shipped backbone, or the old floor when that is already higher
+    backbone: str  # the backbone the release ships, which the declaration names
+    # False when the release does not move the backbone: the declaration then
+    # resolves to the current one, which may predate the change the component needs.
+    backbone_moves: bool
+
+    @property
+    def raises(self) -> bool:
+        """Whether the raise changes the range (it is raise-only)."""
+        return self.new_floor != self.old_floor
+
+    @property
+    def lines(self) -> list[str]:
+        """What `release plan` prints under the component's bump."""
+        lines = [
+            f"requires_backbone floor raised to >={self.new_floor}"
+            if self.raises
+            else f"requires_backbone floor stays >={self.old_floor} "
+            f"(already at or above {self.backbone})"
+        ]
+        if not self.backbone_moves:
+            resolved = "floor raised to" if self.raises else "the declared floor resolves to"
+            lines.append(
+                f"backbone does not move this release; {resolved} current {self.backbone} "
+                f"— confirm the needed surface shipped in {self.backbone}"
+            )
+        return lines
+
+
+@dataclass(frozen=True)
 class ComponentRelease:
     """A single tier's computed bump within a release."""
 
@@ -104,6 +138,7 @@ class ComponentRelease:
     old_version: str
     new_version: str
     changesets: list[Changeset]  # the source changesets (carry notes + categories)
+    floor_raise: FloorRaise | None = None  # set when a changeset declares the floor field
 
     @property
     def notes(self) -> list[str]:
@@ -113,7 +148,7 @@ class ComponentRelease:
     @property
     def raises_floor(self) -> bool:
         """Whether a changeset declares this component needs the release's backbone."""
-        return any(cs.raises_floor for cs in self.changesets)
+        return self.floor_raise is not None
 
 
 @dataclass(frozen=True)
@@ -136,7 +171,7 @@ class ReleasePlan:
 
     @property
     def floor_raises(self) -> list[ComponentRelease]:
-        """The moving components whose floor this release raises."""
+        """The moving components a changeset declares need the release's backbone."""
         return [r for r in self.releases if r.raises_floor]
 
 
@@ -174,6 +209,8 @@ def compute_release(source_kit: Path) -> ReleasePlan:
             "cannot raise a requires_backbone floor:\n  " + "\n  ".join(refused)
         )
 
+    backbone_top = _top_segment(grouped.get(BACKBONE, []))
+    backbone_moves = backbone_top is not None and backbone_top != "none"
     releases: list[ComponentRelease] = []
     for name in sorted(grouped, key=lambda n: (n != BACKBONE, n)):
         group = grouped[name]
@@ -188,6 +225,7 @@ def compute_release(source_kit: Path) -> ReleasePlan:
                 old_version=component.version,
                 new_version=versioning.next_version(component.version, top),  # type: ignore[arg-type]
                 changesets=group,
+                floor_raise=_floor_raise(component, group, shipped, backbone_moves),
             )
         )
 
@@ -213,6 +251,28 @@ def _top_segment(group: Sequence[Changeset]) -> str | None:
     if not group:
         return None
     return max(group, key=lambda cs: segment_rank(cs.segment)).segment
+
+
+def _floor_raise(
+    component: Component, group: Sequence[Changeset], shipped: str, backbone_moves: bool
+) -> FloorRaise | None:
+    """The floor raise a moving component's changesets declare, or None when none
+    does. Read before anything is written; `floor_problems` has already refused a
+    component without a floor to raise."""
+    if not any(cs.raises_floor for cs in group):
+        return None
+    floor = versioning.requires_backbone_floor(component.version_path.read_text(encoding="utf-8"))
+    if floor is None:
+        raise click.ClickException(
+            f"{component.name}: requires_backbone has no floor the release can raise"
+        )
+    raised = parse_version_tuple(floor) < parse_version_tuple(shipped)
+    return FloorRaise(
+        old_floor=floor,
+        new_floor=shipped if raised else floor,
+        backbone=shipped,
+        backbone_moves=backbone_moves,
+    )
 
 
 def floor_problems(cs: Changeset, components: Mapping[str, Component], shipped: str) -> list[str]:

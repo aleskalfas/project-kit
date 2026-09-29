@@ -11,8 +11,10 @@ from pathlib import Path
 
 import click
 import pytest
+from click.testing import CliRunner
 
 from project_kit import changesets, release, versioning
+from project_kit.cli import main
 from project_kit.manifest import read_backbone_manifest
 from project_kit.migrations import parse_version_tuple
 from tests.adopter_repo import GitRepo
@@ -742,6 +744,42 @@ def test_the_empty_range_check_runs_with_the_broaden_too(
 
     assert pkg.read_text() == before
     assert (source_kit / "VERSION").read_text().strip() == "1.5.0"
+
+
+def test_plan_says_when_the_backbone_does_not_move(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A floor declared in a component-only release resolves to the current
+    backbone, which may predate the change the component needs: `plan` says so."""
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    _write_capability(source_kit, "houseware", "0.3.0", ">=1.0.0,<2.0.0")
+    _add_floor(source_kit, "houseware", "minor", "a.yaml")
+    monkeypatch.chdir(tmp_path)
+
+    result = CliRunner().invoke(main, ["release", "plan"])
+
+    assert result.exit_code == 0, result.output
+    out = result.stdout
+    assert "  houseware: 0.3.0 -> 0.4.0 (minor)\n" in out
+    assert "    requires_backbone floor raised to >=1.5.0\n" in out
+    assert (
+        "    backbone does not move this release; floor raised to current 1.5.0 "
+        "— confirm the needed surface shipped in 1.5.0\n"
+    ) in out
+
+
+def test_plan_says_raised_only_when_the_range_changes(tmp_path: Path) -> None:
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    _write_capability(source_kit, "houseware", "0.3.0", ">=1.7.0,<2.0.0")
+    _add(source_kit, "backbone", "minor", "backbone change", "a.yaml")
+    _add_floor(source_kit, "houseware", "patch", "b.yaml")
+
+    (rel,) = release.compute_release(source_kit).floor_raises
+    assert rel.floor_raise is not None
+    assert not rel.floor_raise.raises
+    assert rel.floor_raise.lines == [
+        "requires_backbone floor stays >=1.7.0 (already at or above 1.6.0)"
+    ]
 
 
 # --- Dogfood: the release that ships the backbone-owned journal line ---------

@@ -1266,8 +1266,9 @@ def _print_release_plan(plan: ReleasePlan) -> None:
                 f"  {rel.component.name}: {rel.old_version} -> "
                 f"{rel.new_version} ({rel.segment})"
             )
-            if rel.raises_floor:
-                click.echo(f"    requires_backbone floor raised to >={plan.shipped_backbone}")
+            if rel.floor_raise is not None:
+                for line in rel.floor_raise.lines:
+                    click.echo(f"    {line}")
             for note in rel.notes:
                 click.echo(f"    - {note}")
     click.echo(f"  changesets to consume: {len(plan.consumed)}")
