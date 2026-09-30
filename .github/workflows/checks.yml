@@ -58,18 +58,16 @@ jobs:
       # component, or the `skip-changeset` label (surfaced below as
       # PKIT_CHANGESET_SKIP).
       #
-      # Release PRs (`release/*` head from release-pr.yml) raise the escape
-      # hatch too: their diff is `pkit release apply`'s output (version bumps +
-      # CHANGELOG + the changesets it just consumed, and here the self-host
-      # manifest's backbone_version), which would trip the surface check with
-      # no changeset present. This belt goes by the branch name, which anyone
-      # can choose — review of the release PR stands behind it. The guard still
-      # runs on every PR, because no escape hatch waives the floor tie; a
-      # release diff only deletes changesets, so it declares no floor.
+      # Release PRs (from release-pr.yml) need no hatch: the guard recognises a
+      # diff that is only what `pkit release apply` writes — versions, the
+      # self-host manifest's backbone_version, CHANGELOG, the changesets it
+      # consumed — by its content, whatever the branch is called, and passes
+      # its surface check. The floor tie runs on every PR; a release diff only
+      # deletes changesets, so it declares no floor.
       - name: Changeset guard (surface change ⇒ changeset; floor ⇒ its component)
         if: github.event_name == 'pull_request'
         env:
-          PKIT_CHANGESET_SKIP: ${{ (contains(github.event.pull_request.labels.*.name, 'skip-changeset') || startsWith(github.head_ref, 'release/')) && '1' || '' }}
+          PKIT_CHANGESET_SKIP: ${{ contains(github.event.pull_request.labels.*.name, 'skip-changeset') && '1' || '' }}
         run: uv run pkit release check --base "origin/${{ github.event.pull_request.base.ref }}"
 
   # The whole-repository friction check (COR-050 point 6; ADR-055 point 5) on

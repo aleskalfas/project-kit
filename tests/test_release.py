@@ -426,6 +426,44 @@ def test_apply_backbone_bump_preserves_other_manifest_keys(tmp_path: Path) -> No
     assert updated.components[0].kind == "adapter"
 
 
+def test_apply_backbone_bump_rewrites_only_the_manifest_backbone_version_line(
+    tmp_path: Path,
+) -> None:
+    """The one `backbone_version:` line is rewritten in place: a comment and an
+    explicit default `origin:`, which a YAML round-trip drops, keep every byte —
+    so the release's manifest diff is the line the changeset guard admits (#1161)."""
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    original = (
+        "schema_version: 1\n"
+        "# The self-host install record (PRJ-007).\n"
+        "backbone_version: 1.5.0\n"
+        "components:\n"
+        "  - kind: adapter\n"
+        "    name: claude-code\n"
+        "    manifest: .pkit/adapters/claude-code/project/manifest.yaml\n"
+        "    origin: kit-shipped\n"
+    )
+    manifest = source_kit / "manifest.yaml"
+    manifest.write_text(original, encoding="utf-8")
+    _add(source_kit, "backbone", "minor", "x", "a.yaml")
+
+    release.apply_release(source_kit, release.compute_release(source_kit), tag=False)
+
+    assert manifest.read_text(encoding="utf-8") == original.replace(
+        "backbone_version: 1.5.0", "backbone_version: 1.6.0"
+    )
+
+
+def test_apply_refuses_a_manifest_with_no_backbone_version_line(tmp_path: Path) -> None:
+    """A self-host manifest the release cannot keep current is refused, naming it."""
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    (source_kit / "manifest.yaml").write_text("schema_version: 1\ncomponents: []\n")
+    _add(source_kit, "backbone", "minor", "x", "a.yaml")
+
+    with pytest.raises(click.ClickException, match="`backbone_version:` line"):
+        release.apply_release(source_kit, release.compute_release(source_kit), tag=False)
+
+
 def test_apply_capability_only_release_leaves_manifest_backbone(tmp_path: Path) -> None:
     """A capability-only release does not move the backbone, so the self-host
     manifest's `backbone_version` is untouched (PRJ-007)."""

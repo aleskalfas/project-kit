@@ -21,9 +21,9 @@ pkit:
       artefact:
         - ACT-operator
     revalidated:
-      at: 2026-09-30T06:58:24Z
+      at: 2026-09-30T18:10:06Z
       outcome: unchanged
-      unchanged-because: "project-management's config no longer declares default_branch: the default branch is the backbone's repository.default-branch, main when undeclared (COR-054), so landed work is still read from the same branch, and the Milestone categories this use case relies on are unchanged"
+      unchanged-because: on this branch release.py changes only how the changeset guard recognises a release pull request, by one list of the files and lines the release writes with the self-host manifest's backbone_version among them, and rewrites that manifest line in place; the use case's release scope, gate, stabilisation guards and the release pull request that closes no issue are untouched, so its steps hold
 ---
 
 # UC-005 — Cut a release while unfinished work remains
