@@ -3,6 +3,7 @@
 # requires-python = ">=3.10"
 # dependencies = [
 #   "ruamel.yaml>=0.18",
+#   "pathspec>=0.12",
 # ]
 # ///
 """Project-management capability — done-work (DEC-026 workflow wrapper).
@@ -224,8 +225,11 @@ from _lib.review_opt_outs import OPT_OUT_PATH, read_opt_outs  # noqa: E402
 from _lib.required_reviewers import (  # noqa: E402
     ERROR_CLOSING_ISSUES,
     ERROR_COLLECTION,
+    ERROR_NOT_CODE,
     ERROR_OPT_OUT,
+    NOT_CODE_PATH,
     Resolution,
+    read_not_code,
     resolve_required_local_reviewers,
 )
 from _lib.structural_type import infer_structural_type  # noqa: E402
@@ -1463,9 +1467,9 @@ def _resolve_required_local(
     `gh_get_issue` as module globals, looked up at call time, so the agent-gate
     tests' monkeypatches of `collect_contributions` / `gh_run` / `gh_get_issue`
     on this module stay effective. The project's contribution opt-outs (#148)
-    are read from `config` exactly as `review-pr` reads them. Returns a
-    `Resolution`; the caller maps a non-ok result to a `_GateResult` refusal
-    (fail-closed, DEC-032 D5).
+    and not-code list (#1178) are read from `config` exactly as `review-pr`
+    reads them. Returns a `Resolution`; the caller maps a non-ok result to a
+    `_GateResult` refusal (fail-closed, DEC-032 D5).
     """
     return resolve_required_local_reviewers(
         pr_number,
@@ -1481,6 +1485,7 @@ def _resolve_required_local(
             n, config, gh_run=gh_run
         ),
         opt_outs=read_opt_outs(config),
+        not_code=read_not_code(config),
         collect_contributions=collect_contributions,
     )
 
@@ -1507,6 +1512,8 @@ def _resolution_refusal(
         message = _closing_issue_unresolvable_refusal(error.message)
     elif error.kind == ERROR_OPT_OUT:
         message = _opt_out_invalid_refusal(error.details)
+    elif error.kind == ERROR_NOT_CODE:
+        message = _not_code_invalid_refusal(error.details)
     else:
         # Defensive: any other (unexpected) kind still fails closed.
         message = error.message
@@ -1646,6 +1653,27 @@ def _opt_out_invalid_refusal(details: tuple[str, ...]) -> str:
         f"              a) Fix or remove the entry in `{OPT_OUT_PATH}` "
         "(project/config.yaml) — each names an installed capability, a "
         "reviewer it contributes, and a reason, or",
+        "              b) Merge with `done-work --bypass \"<reason>\"`.",
+    ])
+    return "\n".join(lines)
+
+
+def _not_code_invalid_refusal(details: tuple[str, ...]) -> str:
+    """Refusal text when the not-code list is invalid (#1178).
+
+    A malformed `review.floors.not_code` leaves unknown which paths the adopter
+    meant to leave out of the diff-property floors — the gate refuses rather
+    than guess which floor reviewers the PR requires.
+    """
+    lines = [
+        "[refused] agent-mode approval gate cannot be resolved — the "
+        "not-code list is invalid.",
+    ]
+    lines.extend(f"            → {detail}" for detail in details)
+    lines.extend([
+        "            Remediation:",
+        f"              a) Fix `{NOT_CODE_PATH}` (project/config.yaml) — a "
+        "list of path patterns, or remove it for the default, or",
         "              b) Merge with `done-work --bypass \"<reason>\"`.",
     ])
     return "\n".join(lines)

@@ -120,6 +120,7 @@ def _wire(
     closing_refs_stdout=None,
     issue_fetch_none=(),
     commits=None,
+    changed_files=("README.md",),
 ):
     """Stub collect_contributions + the gh layer for one gate check.
 
@@ -135,6 +136,9 @@ def _wire(
         returns None (label fetch failed).
       * `commits` — override the commits payload (e.g. `[]` to remove the
         freshness anchor).
+
+    `changed_files` is the PR's diff (`gh pr diff --name-only`), read only
+    when a floor-carrying contribution is installed.
     """
     closing_issue_labels = closing_issue_labels or {}
     commits = [{"committedDate": _COMMIT_TS}] if commits is None else commits
@@ -158,6 +162,11 @@ def _wire(
             return subprocess.CompletedProcess(
                 args=args, returncode=0,
                 stdout=json.dumps({"closingIssuesReferences": refs}), stderr="",
+            )
+        if args[:3] == ["gh", "pr", "diff"]:
+            return subprocess.CompletedProcess(
+                args=args, returncode=0,
+                stdout="".join(f"{path}\n" for path in changed_files), stderr="",
             )
         # gh pr view --json author,comments,commits
         return subprocess.CompletedProcess(
@@ -752,3 +761,61 @@ def test_opt_out_naming_no_contribution_refuses(dw, rc, monkeypatch) -> None:
     assert "opt-out list is invalid" in result.refusal_message
     assert "contributed_opt_out[0]" in result.refusal_message
     assert "no reviewer `ui-reviewer`" in result.refusal_message
+
+
+# ---- the not-code list (#1178) ------------------------------------------
+#
+# The gate reads `review.floors.not_code` from the config exactly as review-pr
+# does, so a changeset-only diff does not require a floor reviewer here either.
+
+_CHANGESET = ".changes/unreleased/project-management-none-20261001-wording.yaml"
+
+
+def _code_floor_collection(rc):
+    """software-engineering's code-reviewer on the `touches-code` floor."""
+    rule = rc.ContributionRule(
+        capability="software-engineering",
+        predicate={},
+        reviewer="code-reviewer",
+        floor=rc.FLOOR_TOUCHES_CODE,
+    )
+    return rc.ContributionCollection(rules=(rule,))
+
+
+def test_changeset_only_diff_needs_no_floor_reviewer(dw, rc, monkeypatch) -> None:
+    _wire(
+        dw, monkeypatch,
+        collection=_code_floor_collection(rc),
+        comments=[_local_verdict_comment("reviewer", "APPROVED")],
+        changed_files=("README.md", _CHANGESET),
+    )
+    result = dw._check_agent_gate(99, {}, _config(), "resolved", CAP_ROOT)
+    assert result.passed is True, result.refusal_message
+    assert "code-reviewer" not in result.passed_via
+
+
+def test_changeset_with_code_needs_the_floor_reviewer(dw, rc, monkeypatch) -> None:
+    _wire(
+        dw, monkeypatch,
+        collection=_code_floor_collection(rc),
+        comments=[_local_verdict_comment("reviewer", "APPROVED")],
+        changed_files=(_CHANGESET, "src/app.py"),
+    )
+    result = dw._check_agent_gate(99, {}, _config(), "resolved", CAP_ROOT)
+    assert result.passed is False
+    assert "code-reviewer" in result.refusal_message
+
+
+def test_malformed_not_code_refuses(dw, rc, monkeypatch) -> None:
+    _wire(
+        dw, monkeypatch,
+        collection=_code_floor_collection(rc),
+        comments=[_local_verdict_comment("reviewer", "APPROVED")],
+        changed_files=(_CHANGESET,),
+    )
+    config = _config()
+    config["review"]["floors"] = {"not_code": ".changes/**"}
+    result = dw._check_agent_gate(99, {}, config, "resolved", CAP_ROOT)
+    assert result.passed is False
+    assert "not-code list is invalid" in result.refusal_message
+    assert "`review.floors.not_code` must be a list" in result.refusal_message

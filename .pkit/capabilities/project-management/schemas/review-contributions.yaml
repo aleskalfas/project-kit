@@ -43,7 +43,10 @@ schema_version: 1
 #     reviewer is required whenever the diff matches the property, even for
 #     an unclassified / `type:docs` PR. One floor kind: `touches-code`
 #     (the diff touches any non-documentation file). The floor backstops
-#     the classification gate-escape for a code-review reviewer.
+#     the classification gate-escape for a code-review reviewer. A changed
+#     path the adopting project lists as not code — `review.floors.not_code`
+#     in its pm `project/config.yaml`, `.changes/**` (changesets) when unset
+#     — is excluded: it satisfies no floor.
 #
 # A `match.<axis>` value may be a single string, the `"*"` wildcard, OR a
 # list of strings:

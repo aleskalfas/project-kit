@@ -3,6 +3,7 @@
 # requires-python = ">=3.10"
 # dependencies = [
 #   "ruamel.yaml>=0.18",
+#   "pathspec>=0.12",
 # ]
 # ///
 """Project-management capability — review-pr (DEC-028 + DEC-032 invocation).
@@ -34,10 +35,10 @@ Gates:
   - PR must exist for the issue's branch.
   - The resolved required-local set must be non-empty.
   - Resolution must succeed: a not-ok contribution collection (malformed
-    declaration / undeployed contributed agent), an invalid opt-out list, or
-    an unresolvable closing-issue lookup surfaces as an error and aborts — a
-    required reviewer is never silently skipped (fail-closed, DEC-032 D5),
-    consistent with the gate's posture.
+    declaration / undeployed contributed agent), an invalid opt-out or
+    not-code list, or an unresolvable closing-issue lookup surfaces as an
+    error and aborts — a required reviewer is never silently skipped
+    (fail-closed, DEC-032 D5), consistent with the gate's posture.
 
 Side-effects:
   - For each locally-registered agent: invoke (via the harness's agent
@@ -98,9 +99,12 @@ from _lib.closing_issue_fetchers import (  # noqa: E402
 from _lib.required_reviewers import (  # noqa: E402
     ERROR_CLOSING_ISSUES,
     ERROR_COLLECTION,
+    ERROR_NOT_CODE,
     ERROR_OPT_OUT,
+    NOT_CODE_PATH,
     RequiredReviewersError,
     Resolution,
+    read_not_code,
     resolve_required_local_reviewers,
 )
 from _lib.review_contributions import collect_contributions  # noqa: E402
@@ -610,8 +614,8 @@ def _resolve_required_local(
     Delegates to `_lib.required_reviewers.resolve_required_local_reviewers` —
     the SAME resolution `done-work`'s gate-checker calls — wiring in this
     script's own `gh`-backed closing-issue, label, and changed-files fetchers
-    and the project's contribution opt-outs (#148), read from `config` the
-    same way the gate reads them. Because both
+    and the project's contribution opt-outs (#148) and not-code list (#1178),
+    read from `config` the same way the gate reads them. Because both
     consumers go through one helper, the set this command invokes equals the
     set the gate later checks (DEC-032 D4, no divergence). Returns a
     `Resolution`; a non-ok result aborts (fail-closed, DEC-032 D5).
@@ -640,6 +644,7 @@ def _resolve_required_local(
             n, config, gh_run=gh_run
         ),
         opt_outs=read_opt_outs(config),
+        not_code=read_not_code(config),
         collect_contributions=collect_contributions,
     )
 
@@ -679,6 +684,13 @@ def _resolution_error_message(resolution: Resolution) -> str:
             f"  Remediation: fix or remove the entry in `{OPT_OUT_PATH}` "
             "(project/config.yaml) — each names an installed capability, a "
             "reviewer it contributes, and a reason."
+        )
+    elif error.kind == ERROR_NOT_CODE:
+        for detail in error.details:
+            lines.append(f"  → {detail}")
+        lines.append(
+            f"  Remediation: fix `{NOT_CODE_PATH}` (project/config.yaml) — a "
+            "list of path patterns — or remove it for the default."
         )
     else:
         lines.append(f"  → {error.message}")

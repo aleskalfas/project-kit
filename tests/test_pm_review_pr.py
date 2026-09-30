@@ -552,6 +552,21 @@ def test_undeployed_contributed_agent_aborts(rpr, rc, monkeypatch, tmp_path) -> 
     assert invoked == []
 
 
+def test_resolution_error_not_code_names_the_key(rpr) -> None:
+    resolution = rpr.Resolution(
+        error=rpr.RequiredReviewersError(
+            kind=rpr.ERROR_NOT_CODE,
+            message="the not-code list is invalid",
+            details=("`review.floors.not_code` must be a list, got str",),
+        )
+    )
+    msg = rpr._resolution_error_message(resolution)
+    assert "fail-closed" in msg
+    assert "must be a list, got str" in msg
+    assert "review.floors.not_code" in msg.split("Remediation:")[1]
+    assert "transient" not in msg
+
+
 # ---- native GitHub review delivery (DEC-028, amended) ----------------
 
 import json as _json  # noqa: E402
