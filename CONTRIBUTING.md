@@ -14,9 +14,9 @@ pkit:
       record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, ADR-019, ADR-039, ADR-055, "project-management:DEC-053"]
       artefact: [.pkit/decisions/README.md]
     revalidated:
-      at: 2026-09-30T05:35:13Z
+      at: 2026-09-30T06:54:16Z
       outcome: unchanged
-      unchanged-because: checks.yml's changeset guard step now runs on every pull request, with a release/* head folded into the escape hatch so the floor tie is never waived; the guide's CI paragraph describes the check aggregator and the friction-report job, not that step, so it holds
+      unchanged-because: COR-050 point 7 now reads each state under its own excluded paths, counts a change to them as a change and asks nothing of an excluded artefact; the guide's friction-gate and report paragraphs name neither the exclusions nor how a state is read, so they hold
 ---
 
 # Contributing to project-kit

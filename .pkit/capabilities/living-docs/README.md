@@ -12,8 +12,9 @@ pkit:
       record: ["living-docs:DEC-001", COR-049, COR-050, COR-051, COR-053]
       artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006]
     revalidated:
-      at: 2026-09-30T03:24:48Z
-      outcome: updated
+      at: 2026-09-30T06:54:17Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 7 now reads each state under its own excluded paths and asks nothing of an excluded artefact; the README names friction.exclude only as a configuration key and says the core check flags a page whose anchors changed, which a change to the exclusions over them now is, so it holds
 ---
 
 # living-docs capability
