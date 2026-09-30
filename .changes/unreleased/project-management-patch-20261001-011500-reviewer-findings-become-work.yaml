@@ -1,0 +1,17 @@
+component: project-management
+kind: patch
+custom:
+  category: Changed
+body: >
+  The pm skill states how reviewer findings become work (#1180).
+  `create-issue` scopes a follow-up a reviewer produced: it gets a Milestone
+  only when it blocks an acceptance criterion of that Milestone's work or is
+  a correctness defect in a shipped gate, and otherwise is filed without
+  one, or on the rolling maintenance Milestone, and waits. `batch-plan`
+  treats two Tasks whose implementation notes name overlapping source files
+  as one module: the later carries a `Blocked by: #N` line and the two are
+  dispatched one at a time, while Tasks in different modules run in
+  parallel. `transition-state` runs `review-pr` once every check on the
+  PR's head commit has passed, and the project-manager agent dispatches a
+  request for verdicts to that step. The capability README names the rules
+  and where each is stated.
