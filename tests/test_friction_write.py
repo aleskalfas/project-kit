@@ -147,6 +147,30 @@ def test_revalidate_unchanged_needs_a_justification_and_updated_takes_none(
         fw.plan_revalidate(repo.root, "guide", outcome="updated", because="why")
 
 
+def test_a_placeholder_left_unfilled_is_refused_and_code_in_brackets_is_not(
+    repo: AdopterRepo,
+) -> None:
+    """A command shown for a person writes what they supply as a placeholder; run as
+    shown, it would write the placeholder as the justification or the reason."""
+    _put(repo, GUIDE)
+    shown = (
+        "<why the content still holds>",
+        "the flag moved; defect <the defect reference> reported",
+    )
+    for because in shown:
+        with pytest.raises(fw.FrictionWriteError, match="still holds the placeholder"):
+            fw.plan_revalidate(repo.root, "guide", outcome="unchanged", because=because)
+    with pytest.raises(fw.FrictionWriteError, match="`--reason` still holds the placeholder"):
+        fw.plan_defer(repo.root, "guide", anchor="src/cli/**", reason="<why it can wait>")
+    result = _cli("revalidate", "guide", "--outcome", "unchanged", "--because", shown[1], "--yes")
+    assert result.exit_code != 0 and "'<the defect reference>'" in result.output
+    assert _read(repo) == GUIDE
+
+    code = "parse() now returns Vec<u8> and a Map<String, int>; a < b and c > d still hold"
+    fw.write(fw.plan_revalidate(repo.root, "guide", outcome="unchanged", because=code, now=NOW))
+    assert _block(repo)["revalidated"]["unchanged-because"] == code
+
+
 def test_revalidate_updated_drops_the_old_justification(repo: AdopterRepo) -> None:
     _put(repo, GUIDE)
     fw.write(fw.plan_revalidate(repo.root, "guide", outcome="updated", now=NOW))
@@ -812,10 +836,7 @@ def test_the_read_back_reads_a_role_block_against_the_wiring(repo: AdopterRepo) 
     (#1054 made the wiring a required input of the container check; #1055's
     read-back met it without one.)"""
     role_block = (
-        "  documentation:\n"
-        "    reading-evidence:\n"
-        "      schema_version: 1\n"
-        "      last-run: never\n"
+        "  documentation:\n    reading-evidence:\n      schema_version: 1\n      last-run: never\n"
     )
     _put(repo, HEAD + REVALIDATED + role_block + TAIL)
     plan = fw.plan_defer(repo.root, "guide", anchor="path:src/cli/**", reason="the redesign")

@@ -5,13 +5,14 @@ commands, each naming what it writes and writing only with consent (point 13):
 
 - `revalidate` rewrites the `revalidated` block: a fresh `at`, the outcome,
   and — for `unchanged` — an `unchanged-because` that must differ from the one
-  already written (point 3). It re-states the deferrals the person keeps:
-  each kept one is named on the command line (`--keep`) or confirmed at the
-  prompt; every other entry is removed (point 4).
+  already written (point 3), and that holds no placeholder left unfilled. It
+  re-states the deferrals the person keeps: each kept one is named on the
+  command line (`--keep`) or confirmed at the prompt; every other entry is
+  removed (point 4).
 - `defer` writes the `deferred` list inside `revalidated` — one entry added,
   or an existing entry's reason reworded — and never touches `at`: a deferral
   is not a revalidation (point 4). An anchor the artefact does not carry is
-  refused.
+  refused, and so is a reason that holds a placeholder left unfilled.
 - `record-status` writes the tool-written `last-check` block from the
   whole-repository check at HEAD, only when the state it records changes
   (point 10): `as-of` moving on alone is no change, so a status that holds is
@@ -98,6 +99,13 @@ _UTC_TIMESTAMP = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9
 
 # How much of a commit the summary shows.
 _SHORT = 12
+
+#: A placeholder: words in angle brackets, as a command shown for a person to run
+#: writes what they supply — `<why the content still holds>`. A justification or a
+#: reason still holding one says nothing, so the writers refuse it. A word with no
+#: space in its brackets (`Vec<u8>`) or opening in capitals (`Map<String, int>`) is
+#: code, not a placeholder.
+PLACEHOLDER = re.compile(r"<[a-z][^<>\n]*\s[^<>\n]*>")
 
 _safe = YAML(typ="safe")
 
@@ -338,9 +346,9 @@ def plan_revalidate(
     the outcome, the justification for `unchanged`, and the kept deferrals.
     A deferral is kept when `keep` names it or `confirm_keep` says so; the
     rest are removed. Refused: an unknown outcome, `unchanged` without a
-    justification or with the one already written, a justification with
-    `updated`, and keeping a deferral the artefact does not carry or whose
-    anchor it no longer declares.
+    justification, with the one already written or with a placeholder left
+    unfilled (`PLACEHOLDER`), a justification with `updated`, and keeping a
+    deferral the artefact does not carry or whose anchor it no longer declares.
     """
     if outcome not in OUTCOMES:
         raise FrictionWriteError(f"the outcome is `updated` or `unchanged`, not {outcome!r}.")
@@ -356,6 +364,8 @@ def plan_revalidate(
             "`--because` is the justification of an `unchanged` outcome; an `updated` "
             "revalidation carries none — its answer is the changed content. Nothing was written."
         )
+    if justification:
+        _filled(justification, "--because")
 
     source = _read_source(target_root, find_artefact(target_root, reference))
     artefact = source.artefact
@@ -461,7 +471,8 @@ def plan_defer(target_root: Path, reference: str, *, anchor: str, reason: str) -
     list sorted. `at`, `outcome` and `unchanged-because` are left byte for
     byte: a deferral is not a revalidation, and an artefact never revalidated
     gets a `revalidated` block holding `deferred` alone. Refused: an empty
-    anchor or reason, and an anchor the artefact does not carry.
+    anchor or reason, a reason with a placeholder left unfilled, and an anchor
+    the artefact does not carry.
     """
     anchor_text = anchor.strip()
     text = reason.strip()
@@ -474,6 +485,7 @@ def plan_defer(target_root: Path, reference: str, *, anchor: str, reason: str) -
         raise FrictionWriteError(
             "a deferral carries its reason: give `--reason`. Nothing was written."
         )
+    _filled(text, "--reason")
 
     source = _read_source(target_root, find_artefact(target_root, reference))
     artefact = source.artefact
@@ -987,6 +999,17 @@ def ask_keep(anchor: Anchor, reason: str) -> bool:
     return click.confirm(
         f"Keep the deferral of {anchor.kind}:{anchor.value}{shown}?", default=False
     )
+
+
+def _filled(text: str, flag: str) -> None:
+    """Refuse `text` while it still holds a placeholder: the words are the person's."""
+    found = PLACEHOLDER.search(text)
+    if found is not None:
+        raise FrictionWriteError(
+            f"`{flag}` still holds the placeholder {found.group(0)!r}: write in its place what "
+            f"it asks for — the one piece of judgment the tool cannot supply (COR-050 point "
+            f"3). Nothing was written."
+        )
 
 
 def command_line(*words: str) -> str:

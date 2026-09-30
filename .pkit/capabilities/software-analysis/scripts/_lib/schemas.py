@@ -78,6 +78,16 @@ def slug_pattern() -> re.Pattern[str]:
     return re.compile(definition("slug")["pattern"])
 
 
+def record_triggers() -> tuple[str, ...]:
+    """What can trigger a revalidation, as its record's schema words them (DEC-001 point 5)."""
+    return tuple(_schemas()[RECORD]["properties"]["trigger"]["enum"])
+
+
+def record_outcomes() -> tuple[str, ...]:
+    """How a revalidation ends for an artefact, as its record's schema words them."""
+    return tuple(_schemas()[RECORD]["properties"]["outcomes"]["additionalProperties"]["enum"])
+
+
 @functools.cache
 def _evidence_entry() -> Draft202012Validator:
     return Draft202012Validator(

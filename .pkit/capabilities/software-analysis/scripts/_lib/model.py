@@ -72,6 +72,15 @@ KIND_OF_PLACE = {
 #: describe an act and are not anchored artefacts, so it is not a place.
 REVALIDATIONS = "revalidations"
 
+#: The methodology's front-matter container, and the friction block's keys that
+#: lead to an artefact's revalidation marker (COR-050 points 1 and 3).
+CONTAINER = "pkit"
+REVALIDATED_AT = ("friction", "revalidated", "at")
+
+#: The field an actor or a term nothing embodies carries instead of anchors: the
+#: reason onboarding accepts it unanchored (DEC-001 point 9).
+UNANCHORED_BECAUSE = "unanchored-because"
+
 #: The version of `pkit friction artefacts --json` this reading understands, and
 #: the key of each artefact's anchors in it — added within that version, so a
 #: backbone that predates it answers the same version without the key.
