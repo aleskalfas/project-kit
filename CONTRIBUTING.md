@@ -14,9 +14,8 @@ pkit:
       record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, ADR-019, ADR-039, ADR-055, "project-management:DEC-053"]
       artefact: [.pkit/decisions/README.md]
     revalidated:
-      at: 2026-09-30T12:51:57Z
-      outcome: unchanged
-      unchanged-because: COR-050 now reads a change to friction.exclude as a change to the path anchors whose files it moves (a narrowing always answered, a widening only where a file it took changed, otherwise reported) and owes no answer from an excluded artefact while judging its marker, and, from main, lets a person write unanchored-because instead of anchors, listed apart in the measure and never counted; the guide's gate, report and escape-hatch paragraphs name the checks, the findings that fail and the report's measures without either detail, so they hold
+      at: 2026-09-30T14:27:03Z
+      outcome: updated
 ---
 
 # Contributing to project-kit
