@@ -42,7 +42,7 @@ pkit:
         - src/project_kit/environment.py
       record: [COR-004, COR-012, COR-043, COR-048, COR-049, COR-050, PRJ-001, PRJ-003, PRJ-004, ADR-033, ADR-039, ADR-049, ADR-058, ADR-059]
     revalidated:
-      at: 2026-09-30T08:38:29Z
+      at: 2026-09-30T08:40:50Z
       outcome: updated
 ---
 
@@ -701,7 +701,7 @@ The **change check** (COR-050 point 6): every artefact with an anchor that chang
 | `revalidated` | A revalidation in the change with no changed anchor behind it. | no |
 | `left-out` | A widened `friction.exclude` took files from a path anchor, and the change changes none of them: reported, never owed. | no |
 | `outdated-base` | The tip of `<ref>` is not an ancestor of HEAD: results hold only against an up-to-date base — merge or rebase, and run again. | never |
-| `unreadable` | Front matter in a place that does not parse, or a base whose `friction.exclude` does not read; `pkit validate` fails on either. | no |
+| `unreadable` | Front matter in a place that does not parse, which `pkit validate` fails on; or a base whose `friction.exclude` does not read, read under head's. | no |
 
 - **Modes** (point 12), from `friction.mode` in the configuration file. `warning`, the default, reports and exits `0`; `enforcing` exits `1` on friction, a bump, a dead anchor or an unresolved kind, and never on an outdated base. A malformed block, a dangling deferral or a cycle is validation's finding and fails `pkit validate` in either mode. A value that is not a mode reads as `warning` with a warning line, and `pkit validate` fails on it, so enforcement is never switched off silently. **Dormant** — the counts only, exit `0`, no repository demanded — while no place is declared or nothing in the places carries the container (point 15). The check binds only where the project makes it a required status of its continuous integration ([ADR-019](../../tech-docs/architecture/decisions/ADR-019-enforcement-gate-mechanism-vs-boundary.md) for the mechanism-versus-boundary split).
 - **`--json`** emits one stable document, keys sorted, identical for the same repository state: `check` (`change`), `mode`, `dormant`, `failed`, `base` (`ref`, `tip`, `commit` — the merge-base compared against — and `outdated`), `head` (`commit`, `uncommitted_paths`), `counts` (places, artefacts, those carrying the container, one count per finding kind) and `findings` in report order, each with `artefact` (its id), `location` (`path`, or `path#id` for a collection entry), `kind`, `anchor` (`{kind, value}` or `null`), `answer` (`updated`, `unchanged`, `deferred`, `new` or `null`) and `message`. Other components — a work-tracking capability rendering a pull request's documentation impact, say — read this, never the human view.
