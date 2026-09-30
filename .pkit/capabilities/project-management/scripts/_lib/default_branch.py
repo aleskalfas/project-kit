@@ -45,9 +45,11 @@ from typing import Any
 BACKBONE_KEY = "repository.default-branch"
 ALIAS_KEY = "default_branch"
 
-#: The backbone's reading command, and how long pm waits for it.
+#: The backbone's reading command, how long pm waits for it, and the version of its
+#: document pm reads — another is refused rather than misread.
 ARGV = ("pkit", "repository", "base", "--json")
 TIMEOUT = 60
+VERSION = 1
 
 #: The backbone's source for a declared name (`default_branch.source`).
 DECLARED = "configuration"
@@ -187,6 +189,9 @@ def _ask(explicit: str | None, run: Runner) -> Reading:
         document = json.loads(proc.stdout or "")
     except ValueError as exc:
         raise _unanswered(command, "its answer is not JSON") from exc
+    version = document.get("schema_version") if isinstance(document, Mapping) else None
+    if version != VERSION:
+        raise _unanswered(command, f"it answered schema_version {version!r}; pm reads {VERSION}")
     found = _reading(document)
     if found is None:
         raise _unanswered(command, "its answer names no default branch or base")

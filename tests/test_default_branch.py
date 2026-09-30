@@ -836,6 +836,7 @@ def _answering(name: str | None, source: str = "default", stderr: str = "") -> A
         if name is None:
             return subprocess.CompletedProcess(argv, 1, "", "Error: no")
         document = {
+            "schema_version": 1,
             "default_branch": {"name": name, "source": source, "ref": name, "commit": "c"},
             "base": {"ref": name, "tip": "c", "fork": "c", "problem": None},
         }
@@ -913,9 +914,10 @@ def _exiting(code: int, stdout: str, stderr: str = "") -> Any:
             _exiting(2, "", "Usage: pkit\nError: No such command 'repository'.\n"),
             "the installed backbone predates it — upgrade it",
         ),
-        (_exiting(0, "{}"), "names no default"),
+        (_exiting(0, '{"schema_version": 1}'), "names no default"),
+        (_exiting(0, '{"schema_version": 2}'), "it answered schema_version 2; pm reads 1"),
     ],
-    ids=["no-pkit", "timeout", "failed", "older-backbone", "no-answer"],
+    ids=["no-pkit", "timeout", "failed", "older-backbone", "no-answer", "another-version"],
 )
 def test_pm_never_guesses_when_the_backbone_cannot_answer(
     fresh_pm: Any, run: Any, cause: str
