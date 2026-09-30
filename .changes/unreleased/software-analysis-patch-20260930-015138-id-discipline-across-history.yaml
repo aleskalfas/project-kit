@@ -32,5 +32,7 @@ body: >
   reported there: the duplicate check catches the two files after the merge. The stamp
   writes each file whole — to a temporary file beside it, then moved over it —
   records the analysis location only once the file is written, puts the file
-  back if recording fails, keeps a collection file's bytes outside the entry
-  it adds, and refuses a collection file with CRLF line endings, saying why.
+  back if recording fails, and keeps a collection file's bytes outside the
+  entry it adds — its line endings included: a file whose every line ends
+  CRLF, as a `core.autocrlf` checkout writes it, stays CRLF, and one with
+  mixed line endings is refused, saying so.

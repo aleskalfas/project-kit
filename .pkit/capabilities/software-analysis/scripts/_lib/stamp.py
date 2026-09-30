@@ -33,9 +33,10 @@ the backbone (COR-049 point 5) — after the write, so a write that fails leaves
 the recorded locations untouched, and a recording that fails puts the file
 back as it was: a refused stamp writes nothing (`write_and_record`). Every file is written
 whole, to a temporary file beside it then moved over it, keeping its mode; a
-collection file keeps every byte but the entry and section it gains, and one
-with CRLF line endings is refused, since its fences would be misread and the
-lines added would mix line endings. Where the analysis is, and what it holds, is
+collection file keeps every byte but the entry and section it gains, its line
+endings too: one whose every line ends CRLF, as a checkout with
+`core.autocrlf` writes it, is edited as LF and written back CRLF, and one
+with mixed line endings is refused. Where the analysis is, and what it holds, is
 read through the backbone's discovery — the working tree's and the default
 branch's tip — never by walking the places. The default branch's history is
 read for a use case or journey alone, as the tree is (`_lib/history.py`): one
@@ -463,15 +464,35 @@ def _added_entry(target: Path, place: str, kind: str, new_id: str, request: Requ
         return f"---\n{added}---\n\n{preamble}{section}"
 
     try:
-        text = target.read_bytes().decode("utf-8")  # as written: no line ending translated
+        written = target.read_bytes().decode("utf-8")  # as written: no line ending translated
     except (OSError, UnicodeDecodeError) as exc:
         raise Refused(f"{place} could not be read: {exc}") from exc
-    if "\r" in text:
-        raise Refused(
-            f"{place} has CRLF line endings: the stamp reads a front matter's `---` fences "
-            f"as LF lines and adds its entry and section as LF lines, so it would misread "
-            f"the file or mix its line endings — convert the file to LF, then stamp again"
-        )
+    crlf = _crlf(written, place)
+    text = written.replace("\r\n", "\n") if crlf else written
+    updated = _inserted(text, place, kind, new_id, added, section)
+    return updated.replace("\n", "\r\n") if crlf else updated
+
+
+def _crlf(text: str, place: str) -> bool:
+    """Whether every line of `text` ends CRLF, as a checkout with `core.autocrlf` writes
+    one — the stamp then edits it as LF and writes it back as CRLF, so every byte but
+    the entry's and the section's is kept; `False` for LF. Mixed line endings are
+    refused: which ending the new lines take cannot be told."""
+    if "\r" not in text:
+        return False
+    if text.count("\r\n") == text.count("\n") == text.count("\r"):
+        return True
+    raise Refused(
+        f"{place} has mixed line endings — some lines end CRLF, others LF or a lone CR: the "
+        f"stamp writes its lines with the file's own ending, and this file has no one ending "
+        f"— make them one, then stamp again"
+    )
+
+
+def _inserted(text: str, place: str, kind: str, new_id: str, added: str, section: str) -> str:
+    """The LF collection file `text` with the entry `added` in its front matter and its
+    `section` in its body, each where `new_id` sorts; refused when it is no collection
+    file, holds `new_id` already, or would not read back as it is plus the entry."""
     span = markdown.front_matter_span(text)
     if span is None:
         raise Refused(f"{place} has no front matter: it is not a collection file")

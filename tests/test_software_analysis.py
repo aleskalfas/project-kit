@@ -264,17 +264,32 @@ def test_a_collection_file_is_replaced_whole_keeping_its_mode(project: AdopterRe
     assert sorted(p.name for p in actors.parent.iterdir()) == ["actors.md"]
 
 
-def test_a_collection_file_with_crlf_line_endings_is_refused(project: AdopterRepo) -> None:
-    crlf = _ADMIN_ONLY.replace("\n", "\r\n")
-    project.write({ACTORS: crlf})
+def test_a_collection_file_with_crlf_line_endings_stays_crlf(project: AdopterRepo) -> None:
+    """A checkout with `core.autocrlf` writes every collection file CRLF: the stamp edits
+    it as LF and writes it back CRLF, so it is byte for byte the LF result with every
+    line ending CRLF — the file's own bytes kept, the entry's and the section's lines
+    ending as the file's do."""
+    project.write({ACTORS: _ADMIN_ONLY})
+    stamped(project, "actor", "able")
+    stamped(project, "actor", "tester")
+    as_lf = (project.root / ACTORS).read_bytes()
+    project.write({ACTORS: _ADMIN_ONLY.replace("\n", "\r\n")})
+    stamped(project, "actor", "able")
+    stamped(project, "actor", "tester")
+    assert (project.root / ACTORS).read_bytes() == as_lf.replace(b"\n", b"\r\n")
+
+
+def test_a_collection_file_with_mixed_line_endings_is_refused(project: AdopterRepo) -> None:
+    mixed = _ADMIN_ONLY.replace("\n", "\r\n", 3)
+    project.write({ACTORS: mixed})
     completed = new(project, "actor", "tester")
     assert completed.returncode == 1
     assert completed.stderr.startswith(
-        f"refused: {ACTORS} has CRLF line endings: the stamp reads a front matter's `---` "
-        "fences as LF lines and adds its entry and section as LF lines, so it would misread "
-        "the file or mix its line endings — convert the file to LF, then stamp again"
+        f"refused: {ACTORS} has mixed line endings — some lines end CRLF, others LF or a lone "
+        "CR: the stamp writes its lines with the file's own ending, and this file has no one "
+        "ending — make them one, then stamp again"
     )
-    assert (project.root / ACTORS).read_bytes() == crlf.encode("utf-8")
+    assert (project.root / ACTORS).read_bytes() == mixed.encode("utf-8")
 
 
 def test_a_write_that_fails_records_no_location(project: AdopterRepo) -> None:
