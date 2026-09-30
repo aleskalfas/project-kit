@@ -533,10 +533,18 @@ def test_without_the_default_branch_ids_come_from_the_working_tree_and_it_says_s
         (("actor", "tester"), "ACT-tester is held already"),
         (("use-case", "one", "--actor", "ACT-retired"), "actor ACT-retired is withdrawn"),
         (
-            ("use-case", "two", "--actor", "ACT-tester", "--title", "<the goal as it reads>"),
-            "--title still holds the placeholder '<the goal as it reads>'",
+            ("use-case", "two", "--actor", "ACT-tester", "--title", "<Title>"),
+            "--title still holds the placeholder '<Title>'",
         ),
-        (("actor", "admin", "--name", "<who this is>"), "--name still holds the placeholder"),
+        (("actor", "admin", "--name", "<Display name>"), "--name still holds the placeholder"),
+        (
+            ("term", "sandbox", "--name", "The <Term>"),
+            "--name still holds the placeholder '<Term>'",
+        ),
+        (
+            ("actor", "sponsor", "--unanchored-because", "<why>"),
+            "--unanchored-because still holds the placeholder '<why>'",
+        ),
     ],
 )
 def test_a_stamp_refuses_what_it_cannot_ground(

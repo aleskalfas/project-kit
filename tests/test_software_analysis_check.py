@@ -90,8 +90,8 @@ def test_what_the_stamp_writes_passes_the_check_once_its_placeholders_are_filled
     project: AdopterRepo,
 ) -> None:
     """What only a person can write the stamp leaves as the template's placeholders, and
-    the check fails each until it is written: in an own field, by the placeholder's
-    shape; in a body or a section, by the template's own placeholder texts."""
+    the check fails each until it is written — in an own field, a body or a section,
+    matched against the placeholders the templates shipped."""
     seed(project)
     stamped(project, "use-case", "export", "--actor", "ACT-tester", "--area", "reports")
     stamped(project, "term", "sandbox", "--record", "ADR-001")
@@ -181,6 +181,46 @@ def test_a_backbone_without_anchors_in_its_document_is_unreadable(
     refused = run_script(project, NEW, "use-case", "more", "--actor", "ACT-tester")
     assert refused.returncode == 1
     assert "without the `anchors` key" in refused.stderr
+
+
+def test_a_placeholder_is_a_text_the_templates_shipped_never_a_shape(
+    project: AdopterRepo,
+) -> None:
+    """The placeholders a shape would take for code — capitalised, with no space — are
+    caught, since they are texts the templates shipped; words of the artefact's own in
+    angle brackets are not, whatever their shape."""
+    seed(project)
+    stamped(project, "term", "session", "--name", "Session")
+    fill(project)
+    _set(
+        project,
+        GLOSSARY,
+        "  definition: what the term means, in one sentence",
+        "  definition: Maps <user id> to a session.",
+    )
+    _set(project, ACTORS, "  name: Tester", "  name: <Display name>")
+    run_suite = f"{USE_CASES}/UC-001-run-suite.md"
+    _set(project, run_suite, "title: Run suite", "title: <Title>")
+    _set(project, run_suite, "# UC-001 — Run suite", "# UC-001 — <Title>")
+    rule = "write in its place what it asks for — until then it says nothing of the"
+    assert errors(check(project)) == [
+        (
+            f"{ACTORS}#ACT-tester:/name",
+            f"still holds the placeholder '<Display name>': {rule} actor (DEC-001 point 1)",
+        ),
+        (
+            f"{run_suite}:/title",
+            f"still holds the placeholder '<Title>': {rule} use case (DEC-001 point 1)",
+        ),
+        (
+            run_suite,
+            "its body still holds the template's placeholder '<Title>': write in each one's "
+            "place what it asks for, or remove it (DEC-001 point 1)",
+        ),
+    ]
+    # The stamp reads what it is given the same way.
+    reason = ("--unanchored-because", "The <user id> service stands for it; no code of ours.")
+    assert stamped(project, "actor", "gateway", *reason) == "ACT-gateway"
 
 
 def test_the_validator_reads_the_working_tree_alone(

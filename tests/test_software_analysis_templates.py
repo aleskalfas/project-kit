@@ -14,6 +14,7 @@ Held to software-analysis DEC-001 points 1 to 6:
 
 from __future__ import annotations
 
+import ast
 import json
 import re
 from typing import Any, cast
@@ -262,6 +263,66 @@ def test_the_revalidation_record_template_shows_an_evidence_copy() -> None:
     record = {**_template("revalidation-record"), "evidence": shown["evidence"]}
     assert entry["artefact"] in record["outcomes"]
     assert _schema_errors("revalidation-record", record) == []
+
+
+#: A text in angle brackets, as a template or a command writes a placeholder.
+_BRACKETED = re.compile(r"<[^<>\n]+>")
+
+#: A placeholder a skill's command shows for a text the artefact stamp writes.
+_SHOWN = re.compile(r'--(?:title|name|unanchored-because) "(<[^"]+>)"')
+
+
+def _texts(value: Any) -> list[str]:
+    """Each text in a parsed YAML value."""
+    if isinstance(value, str):
+        return [value]
+    items: list[Any] = []
+    if isinstance(value, dict):
+        items = list(cast(dict[Any, Any], value).values())
+    elif isinstance(value, list):
+        items = cast(list[Any], value)
+    return [text for item in items for text in _texts(item)]
+
+
+def _shipped(name: str) -> tuple[str, ...]:
+    """A tuple `_lib/placeholder.py` defines, read from its source: the scripts run in
+    their own environment, and their `_lib` is not importable here."""
+    source = (CAPABILITY / "scripts" / "_lib" / "placeholder.py").read_text(encoding="utf-8")
+    for node in ast.parse(source).body:
+        if (
+            isinstance(node, ast.Assign)
+            and isinstance(node.targets[0], ast.Name)
+            and node.targets[0].id == name
+        ):
+            return tuple(ast.literal_eval(node.value))
+    raise AssertionError(f"_lib/placeholder.py defines no {name}")
+
+
+def test_every_placeholder_shipped_is_in_the_append_only_lists() -> None:
+    """The check and the stamp match an artefact against the placeholders ever shipped,
+    exactly: each one the artefact templates hold — in a front matter's value or a
+    body — and each the skill's commands show for a title, a name or a reason is in
+    the lists, so rewording a template adds its new placeholder beside the old, which
+    stays detectable in what was stamped before."""
+    in_templates, in_commands = _shipped("IN_TEMPLATES"), _shipped("IN_COMMANDS")
+    assert len(set(in_templates)) == len(in_templates)
+    shipped: set[str] = set()
+    for name in ("actors", "glossary", "use-case", "journey"):
+        text = (CAPABILITY / "templates" / f"{name}.md").read_text(encoding="utf-8")
+        _front, body = fd.split_front_matter(text)
+        for value in [*_texts(_template(name)), body]:
+            shipped |= set(_BRACKETED.findall(value))
+    assert "<Title>" in shipped and "<Display name>" in shipped and "<Term>" in shipped
+    assert shipped <= set(in_templates), sorted(shipped - set(in_templates))
+    skill = CAPABILITY / "skills" / "analysis-author"
+    shown = {
+        found
+        for page in sorted(skill.glob("*.md"))
+        if page.name != "revalidation-record.md"  # the record stamp reads a text by shape
+        for found in _SHOWN.findall(page.read_text(encoding="utf-8"))
+    }
+    assert "<why>" in shown
+    assert shown <= set(in_templates) | set(in_commands), sorted(shown - set(in_templates))
 
 
 @pytest.mark.parametrize(

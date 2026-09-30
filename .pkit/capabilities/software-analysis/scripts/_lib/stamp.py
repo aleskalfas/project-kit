@@ -25,8 +25,9 @@ An actor or a term nothing embodies is stamped with the reason instead, its
 is stamped by `_lib/revalidation.py`.
 What only a person can write the stamp leaves as the template's placeholders —
 an actor's need, a term's definition, a body's goal and steps — which the
-check fails until each is filled (`left_to_fill`); a title, a name or a reason
-given to it still holding a placeholder it refuses.
+check fails until each is filled; a title, a name or a reason given to it
+still holding one the templates or the skill's commands shipped it refuses
+(`_lib/placeholder.py`).
 Once the first artefact is written it records the analysis location through
 the backbone (COR-049 point 5) — after the write, so a write that fails leaves
 the recorded locations untouched, and a recording that fails puts the file
@@ -48,7 +49,6 @@ stamp says so.
 from __future__ import annotations
 
 import contextlib
-import functools
 import io
 import os
 import re
@@ -81,7 +81,7 @@ from _lib.model import (
     number_of,
     with_article,
 )
-from _lib.placeholder import unfilled
+from _lib.placeholder import left_in
 
 #: Each kind's template, in the capability's own tree.
 TEMPLATES = Path(__file__).resolve().parents[2] / "templates"
@@ -101,9 +101,6 @@ _SEAM_LINE = re.compile(r"^- \*\*UC-\d+ → UC-\d+:\*\* (?P<rest>.*)$")
 
 #: A collection entry's section heading, `## <id> — <name>`.
 _SECTION = re.compile(r"^## (?P<id>\S+)")
-
-#: A text in angle brackets, as a template writes what a person fills.
-_BRACKETED = re.compile(r"<[^<>\n]+>")
 
 
 class Refused(Exception):
@@ -262,18 +259,19 @@ def _check_words(request: Request) -> None:
 
 
 def _check_placeholders(request: Request) -> None:
-    """The words given are the person's: one still holding a placeholder is refused,
-    as the record stamp and the backbone's writers refuse one — the check fails an
-    artefact's field holding one (`_lib/check.py`)."""
+    """The words given are the person's: one still holding a placeholder the templates
+    or the skill's commands shipped is refused — matched exactly, as the check matches
+    an artefact's fields (`_lib/placeholder.py`), so words of the person's own in angle
+    brackets are theirs to write."""
     flag = "--name" if request.kind in COLLECTIONS else "--title"
     for option, text in (
         (flag, request.title),
         ("--unanchored-because", request.unanchored_because),
     ):
-        placeholder = unfilled(text or "")
-        if placeholder is not None:
+        held = left_in(text or "")
+        if held:
             raise Refused(
-                f"{option} still holds the placeholder {placeholder!r}: write in its place what "
+                f"{option} still holds the placeholder {held[0]!r}: write in its place what "
                 f"it asks for"
             )
 
@@ -561,23 +559,6 @@ def _container(request: Request, artefacts: Sequence[str]) -> dict[str, Any]:
 
 def _title(request: Request) -> str:
     return request.title or request.slug.replace("-", " ").capitalize()
-
-
-@functools.cache
-def left_to_fill() -> frozenset[str]:
-    """The placeholders a stamp leaves in an artefact's body for a person to fill: each
-    text in angle brackets of the artefact templates' bodies, but the title and the
-    name the stamp writes in their place. The check fails a body still holding one,
-    matched exactly, so code a body quotes is never taken for one."""
-    written = {TITLE}
-    left: set[str] = set()
-    for kind in TEMPLATE_OF:
-        front, body = _template(kind)
-        if kind in COLLECTIONS:
-            ((_example_id, example),) = dict(markdown.load(front)).items()
-            written.add(str(example["name"]))
-        left |= set(_BRACKETED.findall(body))
-    return frozenset(left - written)
 
 
 def _template(kind: str) -> tuple[str, str]:

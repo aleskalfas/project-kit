@@ -15,7 +15,11 @@ body: >
   analysis, for the stamp and the check alike. `pkit analysis validate` reports such files — front matter that does not
   parse, or a name carrying a number the front matter does not give — and
   fails on a placeholder the stamp left unfilled, in an own field or the
-  body. `pkit analysis check-numbers` knows an artefact by its id, not its
+  body, matched against every placeholder the templates and the skill's
+  commands ever shipped (`<Title>` and `<Term>` included), so a reworded
+  template never hides an old one and words of an artefact's own in angle
+  brackets are never refused; the stamp refuses a title, name or reason
+  still holding one. `pkit analysis check-numbers` knows an artefact by its id, not its
   path, and reads a number from a file's name as well as its front matter on
   both sides; a number the default branch took since the fork and removed is
   still taken, as the stamp counts it. A move, or a stacked branch's own work

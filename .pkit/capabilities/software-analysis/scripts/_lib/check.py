@@ -17,11 +17,13 @@ What is checked, each against the record's words:
   ignored.
 - **A placeholder left** (point 1). What the stamp leaves a person to write —
   an actor's need, a term's definition, a use case's goal and steps — is no
-  part of the analysis until written: an own field still holding words in
-  angle brackets (`_lib/placeholder.py`, the shape the backbone's writers
-  refuse), or a body — a collection entry's section — still holding one of
-  the template's placeholders, matched exactly (`stamp.left_to_fill`), so
-  code a body quotes is never taken for one, is an error.
+  part of the analysis until written: an own field still holding a
+  placeholder the templates or the skill's commands ever shipped, or a body —
+  a collection entry's section, heading included — still holding one of the
+  templates', is an error. Matched exactly against those texts
+  (`_lib/placeholder.py`), so a capitalised one (`<Title>`) is caught and
+  words of the artefact's own in angle brackets — code a body quotes — never
+  are.
 - **A use case's and a journey's heading** is its id and its front matter's
   title, `# UC-NNN — <title>`: what a reader of the front matter alone sees —
   a data point publishing `{id, title, status}`, say — is what the page shows.
@@ -95,7 +97,7 @@ from typing import Any
 
 from ruamel.yaml.error import YAMLError
 
-from _lib import backbone, evidence, markdown, schemas, stamp
+from _lib import backbone, evidence, markdown, schemas
 from _lib.findings import ERROR, REPORT, WARNING, Finding, Outcome, at
 from _lib.model import (
     ACTOR,
@@ -117,7 +119,7 @@ from _lib.model import (
     identity,
     with_article,
 )
-from _lib.placeholder import unfilled
+from _lib.placeholder import IN_TEMPLATES, left_in
 
 #: Where in an artefact its artefact anchors sit.
 ARTEFACT_ANCHORS = f"/{CONTAINER}/friction/anchors/artefact"
@@ -224,22 +226,23 @@ def _own_fields(analysis: Analysis) -> list[Finding]:
 
 
 def _placeholders(root: Path, analysis: Analysis) -> list[Finding]:
-    """What a person was left to write and has not: a placeholder in an artefact's own
-    fields — words in angle brackets, as the backbone's writers refuse them — and one
-    of the template's placeholders still in its body, or its section of a collection
-    file (DEC-001 point 1)."""
-    left = stamp.left_to_fill()
+    """What a person was left to write and has not (DEC-001 point 1): a placeholder the
+    templates or the skill's commands shipped, still in an artefact's own fields, and
+    one of the templates' still in its body — or its section of a collection file,
+    heading included. Matched exactly (`_lib/placeholder.py`), so words of the
+    artefact's own in angle brackets — `maps <user id> to a session`, code a body
+    quotes — are never taken for one."""
     texts: dict[str, str | None] = {}
     found: list[Finding] = []
     for artefact in analysis.artefacts:
         for pointer, text in _strings(artefact.fields):
-            placeholder = unfilled(text)
-            if placeholder is not None:
+            held = left_in(text)
+            if held:
                 found.append(
                     Finding(
                         ERROR,
                         at(artefact.location, pointer),
-                        f"still holds the placeholder {placeholder!r}: write in its place what "
+                        f"still holds the placeholder {held[0]!r}: write in its place what "
                         f"it asks for — until then it says nothing of the {NOUN[artefact.kind]} "
                         f"(DEC-001 point 1)",
                     )
@@ -251,8 +254,8 @@ def _placeholders(root: Path, analysis: Analysis) -> list[Finding]:
             continue  # the core reports a file it cannot read
         _front, body = markdown.split(text)
         if artefact.entry and artefact.id is not None:
-            body = markdown.section(body, artefact.id)
-        held = sorted((body.find(p), p) for p in left if p in body)
+            body = markdown.section(body, artefact.id, heading=True)
+        held = left_in(body, IN_TEMPLATES)
         if not held:
             continue
         more = f" and {len(held) - 1} more" if len(held) > 1 else ""
@@ -261,7 +264,7 @@ def _placeholders(root: Path, analysis: Analysis) -> list[Finding]:
             Finding(
                 ERROR,
                 artefact.location,
-                f"{where} still holds the template's placeholder {held[0][1]!r}{more}: write in "
+                f"{where} still holds the template's placeholder {held[0]!r}{more}: write in "
                 f"each one's place what it asks for, or remove it (DEC-001 point 1)",
             )
         )
