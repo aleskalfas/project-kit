@@ -628,10 +628,11 @@ def test_the_page_schema_refuses_a_wrong_reader(reader: Any) -> None:
 
 # --- one home for discovery (#1099; ADR-057 point 2) -------------------------------------
 
-#: What re-reading the declarations or walking the places would take — each a
-#: pattern over a script's code (comments and docstrings left out) and what it
-#: would mean. Where artefacts are is the backbone's discovery, read through
-#: `pkit friction artefacts --json`; a second computation of it drifts.
+#: What re-reading the declarations, walking the places or matching an anchor would
+#: take — each a pattern over a script's code (comments and docstrings left out)
+#: and what it would mean. Where artefacts are is the backbone's discovery, read
+#: through `pkit friction artefacts --json`, and what an anchor matches its
+#: explanation's, `pkit friction explain --json`; a second computation drifts.
 DISCOVERY_TOKENS = {
     r"\bfnmatch\b": "a glob matcher (fnmatch)",
     r"\b(?:import|from)\s+glob\b": "a glob matcher (glob)",
@@ -645,6 +646,7 @@ DISCOVERY_TOKENS = {
     ),
     r"\.get\(\s*['\"]locations['\"]|docs-locations": "a capability's locations resolved",
     r"manifest\.yaml": "the installed capabilities read",
+    r":\([^)]*\bglob\b[^)]*\)|GIT_GLOB_PATHSPECS": "a pattern matched as git's glob pathspec",
 }
 
 

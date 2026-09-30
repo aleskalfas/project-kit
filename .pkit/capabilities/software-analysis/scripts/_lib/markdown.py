@@ -71,17 +71,15 @@ def heading(body: str) -> str | None:
     return None
 
 
-def section(body: str, entry: str, *, heading: bool = False) -> str:
-    """The body section headed by a collection entry's id, `## <id> …`, up to the next
-    `## ` section — by that heading alone, and with it when `heading`; `""` without one."""
+def section(body: str, entry: str) -> str:
+    """The body section headed by a collection entry's id, `## <id> …`, with its
+    heading, up to the next `## ` section — by that heading alone; `""` without one."""
     lines: list[str] = []
     inside = False
     for line in body.splitlines():
         found = _SECTION.match(line)
         if found is not None:
             inside = found["id"] == entry
-            if not (inside and heading):
-                continue
         if inside:
             lines.append(line)
     return "\n".join(lines)
