@@ -37,8 +37,11 @@ deferral, with its point's origin and, in the human view, its age;
 *left-out* — a widening of `friction.exclude` since the point that asks
 nothing; dead anchors and unresolved kinds, all of them, not only a
 change's; *over-broad* anchors. Then the two measures: unanchored artefacts
-within the places and uncovered surface, excluded paths ignored. It never
-fails (point 12): exit 0 in either mode. Dormant while no place is declared.
+within the places — the forgotten ones counted, and those whose block gives
+the reason a person accepted them with none (`unanchored-because`, point 1)
+listed apart with it, never counted — and uncovered surface, excluded paths
+ignored. It never fails (point 12): exit 0 in either mode. Dormant while no
+place is declared.
 
 **An artefact under an excluded path** (point 7) is left out of the measures
 — the unanchored listing and its count — and so of the debt: it is never
@@ -257,6 +260,23 @@ class ArtefactReport:
 
 
 @dataclass(frozen=True)
+class AcceptedUnanchored:
+    """An artefact with no anchors whose block gives the reason a person accepted it so.
+
+    The unanchored measure lists it apart from the forgotten ones and never
+    counts it (COR-050 points 1 and 8). `reason` is its `unanchored-because`,
+    whitespace folded.
+    """
+
+    artefact: str  # the artefact's id
+    location: str  # `path`, or `path#id` for a collection entry
+    reason: str
+
+    def as_json(self) -> dict[str, str]:
+        return {"artefact": self.artefact, "location": self.location, "reason": self.reason}
+
+
+@dataclass(frozen=True)
 class RepositoryCheck:
     """The outcome of one run of the whole-repository check. It never fails."""
 
@@ -270,7 +290,12 @@ class RepositoryCheck:
     shallow: bool | None  # `None` only while dormant
     artefact_reports: tuple[ArtefactReport, ...]  # in report order
     findings: tuple[RepositoryFinding, ...]  # in report order
-    unanchored: tuple[str, ...]  # locations of artefacts without anchors, excluded ones left out
+    # Locations of artefacts without anchors and without an accepted reason — the
+    # forgotten ones, the only ones counted — excluded ones left out (point 8).
+    unanchored: tuple[str, ...]
+    # Artefacts without anchors whose block gives the reason they have none: listed
+    # apart, never counted (points 1 and 8); excluded ones left out.
+    accepted_unanchored: tuple[AcceptedUnanchored, ...]
     excluded: int  # artefacts under an excluded path, left out of the measures (point 7)
     surface: int  # paths of the declared surface at HEAD, excluded ones left out
     uncovered: tuple[str, ...]  # those of them no artefact anchors to (point 8)
@@ -1269,6 +1294,7 @@ def run_repository_check(
             )
         )
     surface, uncovered = _uncovered_surface(head, discovery)
+    unanchored, accepted = _unanchored(discovery)
     return RepositoryCheck(
         mode=settings.mode_or_default,
         mode_as_written=settings.mode,
@@ -1280,13 +1306,30 @@ def run_repository_check(
         shallow=bool(history.shallow),
         artefact_reports=tuple(reports),
         findings=tuple(findings),
-        unanchored=tuple(
-            a.location for a in discovery.artefacts if not a.excluded and not anchors_of(a)
-        ),
+        unanchored=unanchored,
+        accepted_unanchored=accepted,
         excluded=sum(1 for a in discovery.artefacts if a.excluded),
         surface=surface,
         uncovered=uncovered,
     )
+
+
+def _unanchored(discovery: Discovery) -> tuple[tuple[str, ...], tuple[AcceptedUnanchored, ...]]:
+    """The unanchored measure (COR-050 point 8), in walk order: the locations of the
+    artefacts with no anchors and no reason — the forgotten ones — and, apart, those
+    whose block gives the reason a person accepted them with none (point 1).
+    Excluded artefacts are in neither (point 7)."""
+    forgotten: list[str] = []
+    accepted: list[AcceptedUnanchored] = []
+    for artefact in discovery.artefacts:
+        if artefact.excluded or anchors_of(artefact):
+            continue
+        reason = artefact.unanchored_because
+        if reason is None:
+            forgotten.append(artefact.location)
+        else:
+            accepted.append(AcceptedUnanchored(artefact.id, artefact.location, reason))
+    return tuple(forgotten), tuple(accepted)
 
 
 def _dormant(mode: str, mode_as_written: Any, *, places: int) -> RepositoryCheck:
@@ -1302,6 +1345,7 @@ def _dormant(mode: str, mode_as_written: Any, *, places: int) -> RepositoryCheck
         artefact_reports=(),
         findings=(),
         unanchored=(),
+        accepted_unanchored=(),
         excluded=0,
         surface=0,
         uncovered=(),
@@ -1898,6 +1942,7 @@ def render_json(result: RepositoryCheck) -> str:
         "findings": [finding.as_json() for finding in result.findings],
         "measures": {
             "unanchored": list(result.unanchored),
+            "accepted_unanchored": [entry.as_json() for entry in result.accepted_unanchored],
             "uncovered_surface": list(result.uncovered),
         },
     }
@@ -2042,11 +2087,22 @@ def _measure_lines(result: RepositoryCheck) -> list[str]:
     ]
     measured = result.artefacts - result.excluded
     unanchored = f"  Unanchored artefacts: {len(result.unanchored)} of {measured} in the places"
+    accepted = result.accepted_unanchored
+    notes: list[str] = []
+    if accepted:
+        notes.append(f"{len(accepted)} accepted with a reason, listed apart")
     if result.excluded:
-        left_out = counted(result.excluded, "artefact", "artefacts")
-        unanchored += f" (excluded paths left out: {left_out})"
+        notes.append(
+            f"excluded paths left out: {counted(result.excluded, 'artefact', 'artefacts')}"
+        )
+    if notes:
+        unanchored += f" ({'; '.join(notes)})"
     lines.append(unanchored)
     lines.extend(f"    {location}" for location in result.unanchored)
+    if accepted:
+        lines.append(f"  Accepted unanchored: {len(accepted)}, not counted — each with its reason")
+        width = max(len(entry.location) for entry in accepted)
+        lines.extend(f"    {entry.location:{width}}  {entry.reason}" for entry in accepted)
     if result.surface:
         surface = f"{len(result.uncovered)} of {result.surface} paths in the declared surface"
     else:
@@ -2086,6 +2142,7 @@ __all__ = [
     "LET_BACK_IN",
     "OVER_BROAD_SHARE",
     "REPOSITORY_SCHEMA_VERSION",
+    "AcceptedUnanchored",
     "AnchorFiles",
     "ArtefactCheck",
     "ArtefactReport",

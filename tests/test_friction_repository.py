@@ -618,6 +618,52 @@ def test_the_two_measures(timeline: Timeline) -> None:
     assert "Uncovered surface: 1 of 2 paths in the declared surface" in human
 
 
+def test_an_artefact_accepted_unanchored_is_listed_apart_and_never_counted(
+    timeline: Timeline,
+) -> None:
+    """COR-050 points 1 and 8: an artefact whose block gives the reason a person accepted
+    it with no anchors is listed apart, with its reason; only the forgotten ones count.
+    An excluded one is in neither list (point 7)."""
+    sponsor = "No code embodies the sponsor: it funds the project."
+    timeline.start(
+        {
+            "docs/guide.md": guide(),
+            "docs/plain.md": "---\ntitle: Plain\n---\n\nText.\n",
+            "docs/sponsor.md": document("sponsor", unanchored_because=sponsor),
+            "docs/index.md": document(None, unanchored_because="A signpost:\n  lists   pages."),
+            "docs/generated/api.md": document("api", unanchored_because="Generated."),
+        },
+        friction_config(exclude=["docs/generated"]),
+    )
+    result = _run(timeline)
+    assert result.unanchored == ("docs/plain.md",)
+    assert result.accepted_unanchored == (
+        fr.AcceptedUnanchored("docs/index.md", "docs/index.md", "A signpost: lists pages."),
+        fr.AcceptedUnanchored("sponsor", "docs/sponsor.md", sponsor),
+    )
+    # Nothing to judge: an accepted artefact has no anchors, so no state either.
+    assert [r.location for r in result.artefact_reports] == ["docs/guide.md"]
+
+    human = fr.render_human(result, now=NOW)
+    counted = (
+        "Unanchored artefacts: 1 of 4 in the places (2 accepted with a reason, listed apart; "
+        "excluded paths left out: 1 artefact)"
+    )
+    assert counted in human
+    assert "  Accepted unanchored: 2, not counted — each with its reason" in human
+    assert f"    docs/sponsor.md  {sponsor}" in human
+    measures = json.loads(fr.render_json(result))["measures"]
+    assert measures["unanchored"] == ["docs/plain.md"]
+    assert measures["accepted_unanchored"] == [
+        {
+            "artefact": "docs/index.md",
+            "location": "docs/index.md",
+            "reason": "A signpost: lists pages.",
+        },
+        {"artefact": "sponsor", "location": "docs/sponsor.md", "reason": sponsor},
+    ]
+
+
 def test_the_measures_are_reported_while_nothing_is_anchored_yet(timeline: Timeline) -> None:
     timeline.start(
         {"docs/plain.md": "---\ntitle: Plain\n---\n\nText.\n"}, friction_config(surface=["src"])
@@ -1081,7 +1127,11 @@ def test_json_document_shape(timeline: Timeline) -> None:
     assert sorted(doc["head"]) == ["commit", "uncommitted_paths"]
     assert doc["counts"]["stale"] == 1 and doc["counts"]["checked"] == 1
     assert doc["states"] == {"current": 0, "deferred": 0, "stale": 1, "unreachable": 0}
-    assert doc["measures"] == {"unanchored": [], "uncovered_surface": []}
+    assert doc["measures"] == {
+        "accepted_unanchored": [],
+        "unanchored": [],
+        "uncovered_surface": [],
+    }
     (finding,) = doc["findings"]
     assert finding == {
         "artefact": "guide",

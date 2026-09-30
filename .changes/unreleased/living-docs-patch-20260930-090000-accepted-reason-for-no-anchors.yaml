@@ -1,0 +1,16 @@
+component: living-docs
+kind: patch
+custom:
+  category: Added
+  requires_backbone: release
+body: >
+  `pkit living-docs validate` reads the accepted reason for a page having no
+  anchors — the core friction block's `unanchored-because` (COR-050 point 1)
+  — and counts the pages left unanchored in its summary: those without an
+  accepted reason, the onboarding work still to do, and apart from them those
+  accepted with one (DEC-001 point 8, which now names the field). The human
+  view lists both, each accepted page with its reason; an excluded page is in
+  neither, and neither count fails. It reads each page's anchors and reason
+  from `pkit friction artefacts --json`, whose `unanchored_because` comes with
+  the backbone this release ships: upgrade the capability together with the
+  backbone.

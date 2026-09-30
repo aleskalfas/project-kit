@@ -57,10 +57,6 @@
       "description": "The id of an entry of the evidence point, `pkit::analysis:revalidation-evidence` (DEC-001 point 7): the artefact and the commit the result is for, `<artefact>@<commit>` — an artefact id as above, then a commit's full name. A pattern cannot refer to another, so this one spells the four id shapes and the commit again, here beside them; a test holds them in step.",
       "type": "string",
       "pattern": "^(?:ACT-[a-z][a-z0-9-]*|TERM-[a-z][a-z0-9-]*|UC-(?:[0-9]{3}|[1-9][0-9]{3,})|JRN-(?:[0-9]{3}|[1-9][0-9]{3,}))@(?:[0-9a-f]{40}|[0-9a-f]{64})$"
-    },
-    "unanchored-because": {
-      "description": "Why the artefact is deliberately left unanchored — an actor no code or decision embodies, say. An unanchored artefact is reported, never an error; this is the reason onboarding accepts it (DEC-001 point 9).",
-      "$ref": "#/$defs/text"
     }
   }
 }

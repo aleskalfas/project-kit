@@ -9,7 +9,7 @@ requires_backbone: ">=1.149.0,<2.0.0"
 commands:
   validate:
     script: scripts/validate.py
-    help: "Validate the documentation spaces (DEC-001): places and their assignment, what is never a page, pages' reader and kind, each reader against the readers point, entry points and definitions; --json prints the findings document `pkit validate` reads. A query: read-only, offline; `pkit sync` provisions its dependencies."
+    help: "Validate the documentation spaces (DEC-001): places and their assignment, what is never a page, pages' reader and kind, each reader against the readers point, entry points and definitions, and counts the pages left unanchored without an accepted reason apart from those accepted with one (DEC-001 point 8); --json prints the findings document `pkit validate` reads. A query: read-only, offline; `pkit sync` provisions its dependencies."
     query-contract: true
   fill-doc-check:
     script: scripts/fill-doc-check.py

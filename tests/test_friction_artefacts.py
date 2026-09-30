@@ -225,7 +225,25 @@ def test_every_artefact_with_its_place_and_its_own_fields(adopter: AdopterRepo) 
 def test_an_artefact_without_anchors_lists_none(adopter: AdopterRepo) -> None:
     adopter.write({"notes/guide.md": "---\nid: guide\npkit:\n  friction: {}\n---\n"})
     (guide,) = [a for a in _document()["artefacts"] if a["path"] == "notes/guide.md"]
-    assert (guide["friction"], guide["anchors"]) == (True, {})
+    assert (guide["friction"], guide["anchors"], guide["unanchored_because"]) == (True, {}, None)
+
+
+def test_an_artefact_accepted_unanchored_carries_its_reason(adopter: AdopterRepo) -> None:
+    """COR-050 point 1: the reason a person accepted it with no anchors, folded, and a
+    key added within the document's version."""
+    reason = "A signpost:\n  nothing   it lists is its own."
+    block = json.dumps({"friction": {"unanchored-because": reason}})
+    adopter.write({"notes/guide.md": f"---\nid: guide\npkit: {block}\n---\n"})
+    document = _document()
+    assert document["schema_version"] == 1
+    artefacts = {a["path"]: a for a in document["artefacts"]}
+    guide = artefacts["notes/guide.md"]
+    assert (guide["anchors"], guide["unanchored_because"]) == (
+        {},
+        "A signpost: nothing it lists is its own.",
+    )
+    assert "unanchored-because" not in guide["fields"]  # inside the container, not its own
+    assert artefacts["tech-docs/evidence/run.md"]["unanchored_because"] is None
 
 
 def test_a_rule_set_file_names_the_rule_set_place_claiming_it(adopter: AdopterRepo) -> None:

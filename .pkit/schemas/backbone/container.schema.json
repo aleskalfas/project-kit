@@ -40,12 +40,16 @@
     },
     "friction": {
       "title": "The `friction` functionality block (COR-050)",
-      "description": "Anchors, the last revalidation on a person's decision, and a tool-written `last-check` status. Backbone-owned: no version; unknown keys refused (COR-050 point 2).",
+      "description": "Anchors — or, for an artefact with nothing to anchor to, the reason a person accepted it with none — the last revalidation on a person's decision, and a tool-written `last-check` status. Backbone-owned: no version; unknown keys refused (COR-050 point 2).",
       "type": "object",
       "additionalProperties": false,
       "properties": {
         "anchors": {
           "$ref": "#/$defs/anchors"
+        },
+        "unanchored-because": {
+          "description": "Why the artefact has no anchors: the reason a person accepted it unanchored, such as a person's part in the work that no code carries out (COR-050 point 1). The unanchored measure lists such an artefact apart, with this reason, and counts only those without one (point 8). It stands instead of anchors, never beside them: validation refuses the pair (point 12), with its own finding rather than a shape error here.",
+          "$ref": "#/$defs/non-empty-string"
         },
         "revalidated": {
           "$ref": "#/$defs/revalidated"

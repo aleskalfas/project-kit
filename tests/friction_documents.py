@@ -38,6 +38,7 @@ def document(
     outcome: str | None = None,
     because: str | None = None,
     deferred: list[tuple[str, str, str]] | None = None,
+    unanchored_because: str | None = None,
     body: str = "Body.",
     **fields: Any,
 ) -> str:
@@ -59,6 +60,8 @@ def document(
     block: dict[str, Any] = {}
     if anchors is not None:
         block["anchors"] = anchors
+    if unanchored_because is not None:
+        block["unanchored-because"] = unanchored_because
     if revalidated:
         block["revalidated"] = revalidated
     front["pkit"] = {"friction": block}

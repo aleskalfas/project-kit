@@ -1,0 +1,24 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  An artefact with nothing to anchor to may carry `unanchored-because:
+  <reason>` in its `friction` block instead of anchors — the reason a person
+  accepted it with none, such as a person's part in the work that no code
+  carries out (COR-050 point 1). The container schema admits the key,
+  non-empty text; `pkit validate`'s friction member refuses it beside anchors
+  (`unanchored-beside-anchors`, point 12), and the friction writers refuse to
+  write over such a block. The unanchored measure counts only the artefacts
+  without a reason (point 8): `pkit friction check --all` lists those accepted
+  with a reason apart, each with its reason, under `Accepted unanchored`, and
+  its `--json` gains `measures.accepted_unanchored` (`artefact`, `location`,
+  `reason`) beside `measures.unanchored`, which now holds those without a
+  reason alone. `pkit friction debt` shows the same measure after the debt —
+  those without a reason counted and named in its title line, the accepted
+  apart — and its `--json` gains
+  `counts.unanchored`, `unanchored` and `accepted_unanchored`. `pkit friction
+  explain` shows an artefact's reason under its state, and its `--json` gains
+  `unanchored_because`; `pkit friction artefacts --json` gives every artefact
+  its `unanchored_because` (the document's `schema_version` stays 1: a key
+  added).

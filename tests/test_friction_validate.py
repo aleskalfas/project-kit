@@ -932,6 +932,65 @@ def test_dangling_deferral_is_an_error_naming_the_anchor(adopter: AdopterRepo) -
     assert "record anchor 'COR-050'" in second.message
 
 
+def test_unanchored_because_alone_is_accepted_and_beside_anchors_is_an_error(
+    adopter: AdopterRepo,
+) -> None:
+    """COR-050 points 1 and 12: the reason stands instead of anchors, never beside them —
+    in a document, in a collection entry and in a rule alike."""
+    reason = {"unanchored-because": "No code embodies it."}
+    adopter.write(
+        {
+            CONFIG: _config(["docs"]),
+            "docs/alone.md": _document("alone", **reason),
+            "docs/empty.md": _document("empty", anchors={}, **reason),
+            "docs/beside.md": _document(
+                "beside", anchors={"path": ["src/**"], "record": ["COR-050"]}, **reason
+            ),
+            "docs/actors.md": (
+                "---\nACT-a:\n  pkit: {friction: {unanchored-because: None of ours.}}\n"
+                "ACT-b:\n  pkit:\n    friction:\n      anchors: {artefact: [ACT-a]}\n"
+                "      unanchored-because: Stale.\n---\n"
+            ),
+            "docs/rule-sets/cmn.md": (  # the internal root's rule-set folder: a rule's block
+                "---\nrule-set: CMN\nversion: 1.0.0\nrules:\n  RS-CMN-001:\n    status: draft\n"
+                "    pkit: {friction: {anchors: {path: [src/**]}, unanchored-because: No.}}\n---\n"
+                "\n## RS-CMN-001 — One\n\nStatement.\n"
+            ),
+        }
+    )
+    result = fv.validate_friction(adopter.root)
+
+    beside = [
+        (f.location, f.pointer, f.message)
+        for f in result.errors
+        if f.kind is fv.FrictionFindingKind.UNANCHORED_BESIDE_ANCHORS
+    ]
+    pointer = "/pkit/friction/unanchored-because"
+    assert [(location, at) for location, at, _message in beside] == [
+        ("docs/actors.md#ACT-b", pointer),
+        ("docs/beside.md", pointer),
+        ("docs/rule-sets/cmn.md#RS-CMN-001", pointer),
+    ]
+    message = beside[1][2]
+    assert "stands beside anchors (path, record)" in message
+    assert "remove the reason, or the anchors (COR-050 point 1)" in message
+    assert len(result.errors) == 3, [f.message for f in result.errors]
+    accepted = {a.location: a.unanchored_because for a in result.discovery.artefacts}
+    assert accepted["docs/alone.md"] == "No code embodies it."
+    assert accepted["docs/actors.md#ACT-a"] == "None of ours."
+
+
+def test_an_empty_unanchored_because_is_a_malformed_block(adopter: AdopterRepo) -> None:
+    empty = _document("a", **{"unanchored-because": ""})
+    adopter.write({CONFIG: _config(["docs"]), "docs/a.md": empty})
+    result = fv.validate_friction(adopter.root)
+    (finding,) = result.errors
+    assert finding.kind is fv.FrictionFindingKind.MALFORMED_BLOCK
+    assert finding.pointer == "/pkit/friction/unanchored-because"
+    (artefact,) = result.discovery.artefacts
+    assert artefact.unanchored_because is None  # no reason: counted as forgotten
+
+
 def test_two_artefact_cycle_and_self_cycle_are_each_reported_once(adopter: AdopterRepo) -> None:
     adopter.write(
         {

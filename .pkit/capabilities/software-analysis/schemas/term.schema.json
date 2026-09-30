@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "term.schema.json",
   "title": "A glossary term's own fields — software-analysis capability",
-  "description": "One entry of the glossary, `glossary.md` under the analysis location (software-analysis DEC-001 points 1 to 3): a domain word and what it means. The entry is keyed by the term's id (`analysis.schema.json#/$defs/term-id`), which sits outside this object and is separate from the display name, so renaming a term breaks nothing that cites it: the new name goes in `name` and the old one into `replaces`. Its body section is the one headed by the id. These are the entry's own fields: its friction block sits in the methodology's container beside them and is the core's (COR-050, COR-053 point 10). A term anchors to where the software or a decision embodies it (DEC-001 point 4). Applied by the capability's check, `pkit software-analysis validate`; unknown fields are refused.",
+  "description": "One entry of the glossary, `glossary.md` under the analysis location (software-analysis DEC-001 points 1 to 3): a domain word and what it means. The entry is keyed by the term's id (`analysis.schema.json#/$defs/term-id`), which sits outside this object and is separate from the display name, so renaming a term breaks nothing that cites it: the new name goes in `name` and the old one into `replaces`. Its body section is the one headed by the id. These are the entry's own fields: its friction block sits in the methodology's container beside them and is the core's (COR-050, COR-053 point 10). A term anchors to where the software or a decision embodies it (DEC-001 point 4); one nothing embodies carries the reason it has none as `unanchored-because` in its friction block, the core's key, never among these fields (DEC-001 point 9; COR-050 point 1). Applied by the capability's check, `pkit software-analysis validate`; unknown fields are refused.",
   "type": "object",
   "additionalProperties": false,
   "required": ["name", "status", "definition"],
@@ -24,9 +24,6 @@
       "minItems": 1,
       "uniqueItems": true,
       "items": { "$ref": "analysis.schema.json#/$defs/text" }
-    },
-    "unanchored-because": {
-      "$ref": "analysis.schema.json#/$defs/unanchored-because"
     }
   }
 }

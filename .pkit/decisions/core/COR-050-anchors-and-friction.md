@@ -24,7 +24,7 @@ Three terms recur. The **revalidation point** of an artefact is the last commit 
 
 1. **Artefacts.** An artefact is either a document with front matter, or one keyed entry in a collection file whose front matter maps entries by id. Each artefact carries its own anchors and its own revalidation. A collection entry's content is its data entry together with the body section headed by its id, if there is one, so that editing an entry's prose is a change to it. The backbone looks for artefacts only in the **places declared to hold anchored artefacts**, so unrelated front matter elsewhere is never misread. Components declare their places in their own package metadata, relative to the document locations they resolve under COR-049; a project declares its own in the backbone configuration. A component may also declare, in the same way, folders of **held documents**: files that belong to it but are not artefacts, such as a log of reviews it has carried out. Such files often sit inside a place another component or the project declares, where they would otherwise be read as unanchored artefacts. The backbone lists each held document with the component that declares it, and no place reads one as an artefact — its own and the rule-set folders included — so neither measure (point 8) counts it. Excluded paths (point 7) reach held documents too: the listing marks one under an excluded path, and its component counts it no more than the measures count an excluded artefact. A held folder lies within one of the component's declared locations and never equals or encloses a documentation root or another declaration's place.
 
-   Everything this record owns in an artefact sits in **one functionality block, named `friction`**, inside the methodology's front-matter container (refinement per COR-053, point 10). For a document the container is in its front matter; for a collection entry it is inside the entry, so each entry carries its own block. The artefact's own fields — its id, status, whatever defines it — stay outside the container and belong to the component that defines the artefact. The functionality's key is the same word as its command group, so a reader sees one name in the file, in the command and in the configuration (the one-name-per-functionality rule of COR-053). The keys this record names are decided here because people write them; layout and casing beyond them belong to the schema the backbone ships.
+   Everything this record owns in an artefact sits in **one functionality block, named `friction`**, inside the methodology's front-matter container (refinement per COR-053, point 10). For a document the container is in its front matter; for a collection entry it is inside the entry, so each entry carries its own block. The artefact's own fields — its id, status, whatever defines it — stay outside the container and belong to the component that defines the artefact. The functionality's key is the same word as its command group, so a reader sees one name in the file, in the command and in the configuration (the one-name-per-functionality rule of COR-053). The keys this record names are decided here because people write them; layout and casing beyond them belong to the schema the backbone ships. An artefact with nothing to anchor to may carry, instead of anchors, `unanchored-because: <reason>` in its block — written on a person's decision, like a revalidation (point 3) — saying why it has none, such as a person's part in the work that no code carries out.
 
 2. **Anchors.** An artefact lists its anchors in its block, grouped by kind. The backbone resolves three kinds:
    - a **path**: a file or glob, relative to the repository root, where `**` matches across folders;
@@ -68,7 +68,7 @@ Three terms recur. The **revalidation point** of an artefact is the last commit 
 ### What is reported, and what fails
 
 8. **Two measures, not failures.**
-   - **Unanchored artefacts**, within the declared places.
+   - **Unanchored artefacts**, within the declared places. An artefact whose block gives a reason for having none (point 1) is listed apart, with its reason, and not counted; the count is of those without one.
    - **Uncovered surface:** paths within the *declared surface* that no artefact anchors to. The declared surface is what a component (in its package metadata) or the project (in the backbone configuration) says ought to be described.
 
    Both are reported and neither fails a check. Friction alone reads zero where nothing is anchored yet; these two measures show what remains.
@@ -82,7 +82,7 @@ Three terms recur. The **revalidation point** of an artefact is the last commit 
 12. **Warning or enforcing, and who owns which finding.** The checks are read-only.
     - **The change check finds:** friction of the pull request, dead anchors of the pull request, a bump with nothing behind it, and an outdated base. In **warning mode** it reports them and passes. In **enforcing mode** it fails on the first three; an outdated base is reported, never failed, since the fix is to update the branch and run again.
     - **Reported only, in every mode:** the two measures, over-broad anchors, kept deferrals and their age, the whole-repository check's findings — it does not fail other work on friction that was already there.
-    - **Validation owns:** a malformed block, a friction block in a held document, a dangling deferral, a cycle between artefacts, an invalid mode value, a settings path outside the repository. These fail validation wherever the project runs it, in either mode, because the project can fix them.
+    - **Validation owns:** a malformed block, an `unanchored-because` beside anchors, a friction block in a held document, a dangling deferral, a cycle between artefacts, an invalid mode value, a settings path outside the repository. These fail validation wherever the project runs it, in either mode, because the project can fix them.
 
     The check only becomes binding when the project makes it a required status in its continuous integration. That is the project's choice. An invalid mode value is a validation error, so enforcement is never switched off silently.
 
@@ -114,6 +114,8 @@ Three terms recur. The **revalidation point** of an artefact is the last commit 
 
 **Why the container is not content.** The after-merge job, another functionality's block, a role's bookkeeping about the artefact: none of them changes what the artefact says. Excluding the container is what lets the job write without waking every dependant, and what keeps the change check from flagging its own bookkeeping.
 
+**Why an artefact accepted without anchors is listed apart, not counted or hidden.** Some artefacts have nothing to anchor to, such as a person's part in the work that no code carries out. Counted as unanchored, they keep the measure from ever reaching zero, and people learn to ignore it; left out silently, they would vanish from the report, and nobody could later see how many a person had waved through, or why. Listing them apart, each with its reason, keeps both the count and the judgment in view. The reason says why there are no anchors, so beside anchors it contradicts them, and validation refuses the pair.
+
 **Why uncovered surface is declared, not everything.** Counting every file in the repository as needing description would make the measure pure noise on day one. The measure means something only against a surface someone has said ought to be described.
 
 **Why dead anchors are errors.** A glob that matches nothing produces no friction, for ever. Silence would look like health.
@@ -135,6 +137,7 @@ Three terms recur. The **revalidation point** of an artefact is the last commit 
 - **Keeping either timestamp on a conflicting revalidation, the merge becoming the new point.** Rejected in favour of revalidating the combined state; the merge would claim a revalidation nobody made.
 - **Organising the block per anchor, or splitting it strictly by writer.** Rejected. The first puts the tool and people on the same lines; the second adds a level that carries no meaning.
 - **One copy per component.** Rejected. Separate engines drift apart, and the components would disagree about what is stale.
+- **Excluding the artefact's path instead.** Rejected. Exclusion is per file, so it cannot waive one entry of a collection, and it keeps no reason beside the artefact.
 
 ## Implications
 
