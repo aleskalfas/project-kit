@@ -13,6 +13,7 @@ pkit:
         - src/project_kit/capability_plans.py
         - src/project_kit/connections.py
         - src/project_kit/data_points.py
+        - src/project_kit/run_cache.py
         - src/project_kit/command_runner.py
         - src/project_kit/provisioning.py
         - src/project_kit/package_validate.py
@@ -27,7 +28,7 @@ pkit:
         - hatch_build.py
       record: [COR-010, COR-017, COR-027, COR-030, COR-031, COR-052, COR-053, ADR-056, ADR-057, ADR-059]
     revalidated:
-      at: 2026-09-30T00:38:32Z
+      at: 2026-09-30T01:00:44Z
       outcome: updated
 ---
 
