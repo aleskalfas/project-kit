@@ -682,6 +682,14 @@ _PLANNERS: dict[str, Callable[..., fw.Plan]] = {
             {"anchor": "COR-050", "reason": "amended"},
             id="rule-defer",
         ),
+        pytest.param(
+            RULE_SET_PATH,
+            RULE_SET,
+            "revalidate",
+            "RS-CMN-001",
+            {"outcome": "unchanged", "because": "the record's amendment is editorial", "now": NOW},
+            id="rule-revalidate",
+        ),
     ],
 )
 def test_a_crlf_file_is_written_back_with_crlf_byte_for_byte(
