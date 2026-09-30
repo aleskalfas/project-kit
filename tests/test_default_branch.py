@@ -806,10 +806,11 @@ def _use_case(number: str) -> str:
 # --- pm reads through the backbone, never guessing ------------------------------------------
 
 
-def _load_pm_default_branch() -> ModuleType:
-    """pm's `_lib.default_branch`, imported as its scripts import it: `_lib` is on the path
-    only while it loads, since another capability's `_lib` is not importable beside it."""
-    scripts = str(PM / "scripts")
+def _load_lib(capability: Path, module: str) -> ModuleType:
+    """A capability's `_lib` module, imported as its scripts import it: `_lib` is on the
+    path only while it loads, since another capability's `_lib` is not importable beside
+    it."""
+    scripts = str(capability / "scripts")
 
     def ours() -> list[str]:
         return [k for k in sys.modules if k == "_lib" or k.startswith("_lib.")]
@@ -817,7 +818,7 @@ def _load_pm_default_branch() -> ModuleType:
     saved = {k: sys.modules.pop(k) for k in ours()}
     sys.path.insert(0, scripts)
     try:
-        return importlib.import_module("_lib.default_branch")
+        return importlib.import_module(module)
     finally:
         sys.path.remove(scripts)
         for key in ours():
@@ -825,7 +826,8 @@ def _load_pm_default_branch() -> ModuleType:
         sys.modules.update(saved)
 
 
-PM_BRANCH: Any = _load_pm_default_branch()
+PM_BRANCH: Any = _load_lib(PM, "_lib.default_branch")
+SA_BACKBONE: Any = _load_lib(SA, "_lib.backbone")
 
 
 def _answering(name: str | None, source: str = "default", stderr: str = "") -> Any:
@@ -936,6 +938,33 @@ def test_pm_passes_on_what_the_backbone_says(
     run = _answering("main", stderr="warning: the default branch 'main' is read from the local\n")
     assert fresh_pm.name({}, run=run) == "main"
     assert capsys.readouterr().err == "warn: the default branch 'main' is read from the local\n"
+
+
+@pytest.mark.parametrize(
+    ("code", "stdout", "stderr", "said"),
+    [
+        (
+            0,
+            '{"schema_version": 2, "default_branch": {}, "base": {}}',
+            "",
+            "answered schema_version 2; this capability reads 1",
+        ),
+        (2, "", "Error: No such command 'repository'.\n", "predates it — upgrade it"),
+        (1, "", "Error: no\n", "exited 1: Error: no"),
+    ],
+    ids=["another-version", "older-backbone", "failed"],
+)
+def test_software_analysis_refuses_a_reading_it_cannot_read(
+    tmp_path: Path, code: int, stdout: str, stderr: str, said: str
+) -> None:
+    """Like pm, software-analysis reads what is settled at the version it knows, or not at
+    all: the stamp and the number check refuse on it rather than guess (COR-054 point 4)."""
+
+    def run(argv: list[str], **_kwargs: Any) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(argv, code, stdout, stderr)
+
+    with pytest.raises(SA_BACKBONE.Unreadable, match=re.escape(said)):
+        SA_BACKBONE.settled(tmp_path, run=run)
 
 
 # --- no reader resolves on its own -----------------------------------------------------------
