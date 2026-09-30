@@ -21,9 +21,9 @@ pkit:
       artefact:
         - ACT-operator
     revalidated:
-      at: 2026-09-30T14:44:07Z
+      at: 2026-09-30T17:34:57Z
       outcome: unchanged
-      unchanged-because: release.py changed only in how the changeset guard recognises a release pull request, by the files and lines the release writes with the self-host manifest's backbone_version among them, and in rewriting that manifest line in place; the use case's release scope, gate, stabilisation guards and the release pull request closing no issue are about issue scope, not the changeset guard, so its steps hold
+      unchanged-because: release.py changed again only in the changeset guard's list of what a release writes, whose requires_backbone line now matches only the ranges the broaden and a declared floor rewrite; the use case's release scope, gate, stabilisation guards and the release pull request closing no issue are about issue scope, not how the guard reads a package.yaml line, so its steps hold
 ---
 
 # UC-005 — Cut a release while unfinished work remains
