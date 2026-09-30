@@ -146,15 +146,22 @@ def test_parse_changeset_defaults_category_and_pr_to_none_when_absent(tmp_path: 
         ("requires_backbone: release\n", "release", True),
         ("custom:\n  requires_backbone: '1.150.0'\n", "1.150.0", False),
         ("requires_backbone: 1.144.0\n", "1.144.0", False),  # unquoted, still a string
-        ("requires_backbone: true\n", "True", False),
+        # YAML reads these as a number or a boolean; the field keeps what was written.
+        ("requires_backbone: true\n", "true", False),
+        ("requires_backbone: 1.150\n", "1.150", False),
+        ("custom:\n  requires_backbone: 1.150  # the release\n", "1.150", False),
+        ("custom:\n  requires_backbone: 1.10\nrequires_backbone: 2.0\n", "1.10", False),
+        ("requires_backbone: 1.10\ncustom:\n  pr: '1'\n", "1.10", False),
+        ("requires_backbone: '  1.144.0 '\n", "1.144.0", False),
     ],
 )
 def test_parse_changeset_reads_the_floor_field_as_written(
     tmp_path: Path, layout: str, written: str, names_release: bool
 ) -> None:
-    """The floor field is read top-level or under `custom:` and kept as written;
-    `release` names the backbone the release ships — the release step and its
-    lint judge every other value."""
+    """The floor field is read top-level or under `custom:` and kept as written —
+    a value YAML reads as a number as its text in the file, so `1.150` is not
+    judged as 1.15; `release` names the backbone the release ships — the release
+    step and its lint judge every other value."""
     source_kit = _make_kit(tmp_path)
     directory = changesets.unreleased_dir(source_kit.parent)
     directory.mkdir(parents=True, exist_ok=True)
@@ -166,6 +173,37 @@ def test_parse_changeset_reads_the_floor_field_as_written(
     cs = changesets.parse_changeset(path)
     assert cs.requires_backbone == written
     assert cs.names_release is names_release
+
+
+@pytest.mark.parametrize(
+    "layout",
+    [
+        "requires_backbone: '   '\n",
+        "requires_backbone:\n",
+        "custom:\n  requires_backbone: ''\n",
+        "custom:\n  requires_backbone: ' '\nrequires_backbone: ''\n",
+    ],
+)
+def test_parse_changeset_reads_an_empty_floor_field_as_none(tmp_path: Path, layout: str) -> None:
+    """An empty or whitespace-only value declares no floor."""
+    source_kit = _make_kit(tmp_path)
+    directory = changesets.unreleased_dir(source_kit.parent)
+    directory.mkdir(parents=True, exist_ok=True)
+    path = directory / "cs.yaml"
+    path.write_text(
+        f"component: project-management\nkind: minor\nbody: A thing.\n{layout}",
+        encoding="utf-8",
+    )
+    assert changesets.parse_changeset(path).requires_backbone is None
+
+
+def test_parse_changeset_text_reads_a_changeset_from_another_revision(tmp_path: Path) -> None:
+    cs = changesets.parse_changeset_text(
+        "component: houseware\nkind: patch\nbody: Needs it.\nrequires_backbone: '1.4.0'\n",
+        tmp_path / "houseware-patch.yaml",
+    )
+    assert (cs.component, cs.segment, cs.requires_backbone) == ("houseware", "patch", "1.4.0")
+    assert cs.path == tmp_path / "houseware-patch.yaml"
 
 
 def test_parse_changeset_none_kind_needs_no_category(tmp_path: Path) -> None:

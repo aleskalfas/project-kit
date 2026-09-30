@@ -34,8 +34,10 @@ squash/rebase) and the changelog degrades gracefully when it is absent.
 `requires_backbone` declares that the component needs a backbone: the release
 step raises the lower bound of the component's `requires_backbone` range to it.
 `release` names the backbone the release ships; an explicit `X.Y.Z` names an
-already-shipped one, at or below the current backbone. The parser keeps
-whatever was written; the release step and its lint refuse any other value,
+already-shipped one — a release the tree records, at or below the current
+backbone. The parser keeps
+whatever was written — an unquoted number as its text in the file, and an empty
+value as no field at all; the release step and its lint refuse any other value,
 and the field on a changeset that cannot carry it
 (`project_kit.release.floor_problems`).
 
@@ -177,7 +179,14 @@ def discover_components(source_kit: Path) -> list[Component]:
 
 def parse_changeset(path: Path) -> Changeset:
     """Parse one changeset file. Raises `click.ClickException` on a bad shape."""
-    loaded: object = _yaml.load(path.read_text(encoding="utf-8")) or {}
+    return parse_changeset_text(path.read_text(encoding="utf-8"), path)
+
+
+def parse_changeset_text(text: str, path: Path) -> Changeset:
+    """Parse a changeset from its text, as the file at `path` holds it — or held
+    it, when the text is read from another revision. Raises
+    `click.ClickException` on a bad shape."""
+    loaded: object = _yaml.load(text) or {}
     data = _as_mapping(loaded)
     if not isinstance(loaded, dict):
         raise click.ClickException(f"changeset {path.name} is not a YAML mapping")
@@ -200,7 +209,6 @@ def parse_changeset(path: Path) -> Changeset:
     custom = _as_mapping(data.get("custom"))
     category = custom.get("category") or data.get("category")
     pr = custom.get("pr") or data.get("pr")
-    floor = custom.get(FLOOR_FIELD) or data.get(FLOOR_FIELD)
 
     return Changeset(
         component=str(component),
@@ -209,8 +217,39 @@ def parse_changeset(path: Path) -> Changeset:
         path=path,
         category=str(category).strip() if category else None,
         pr=str(pr).strip() if pr else None,
-        requires_backbone=str(floor).strip() if floor else None,
+        requires_backbone=_floor_field(custom, data, text),
     )
+
+
+def _floor_field(custom: dict[str, Any], data: dict[str, Any], text: str) -> str | None:
+    """The floor field as written, under `custom:` first, then top-level; None
+    when neither carries a value — an empty or whitespace-only one declares
+    nothing.
+
+    YAML reads an unquoted `1.150` as the number 1.15, which would name a
+    different version than the one written, so a value that is not a string is
+    kept as its text in the file, for the release step to refuse by what the
+    author wrote."""
+    for source, nested in ((custom, True), (data, False)):
+        value = source.get(FLOOR_FIELD)
+        if value is None:
+            continue
+        if isinstance(value, str):
+            if value.strip():
+                return value.strip()
+            continue
+        return _scalar_as_written(text, FLOOR_FIELD, nested=nested) or str(value)
+    return None
+
+
+def _scalar_as_written(text: str, key: str, *, nested: bool) -> str | None:
+    """The text of `key`'s scalar value on its line in `text` — on an indented
+    line when `nested` (under `custom:`), else at the start of one."""
+    line = rf"(?m)^([ \t]*){re.escape(key)}:[ \t]*([^\s#][^#\n]*?)[ \t]*(?:#[^\n]*)?$"
+    for match in re.finditer(line, text):
+        if bool(match.group(1)) == nested:
+            return match.group(2)
+    return None
 
 
 def _as_mapping(value: object) -> dict[str, Any]:
