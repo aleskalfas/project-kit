@@ -7,6 +7,7 @@ Sub-procedure of the pm composite skill (`pm.md` in this folder). Per [project-m
 - The user wants to **move** an issue forward through the lifecycle (Todo → Backlog → In Progress → Review).
 - The user wants to **close** an issue (PR-merge-driven closure or explicit won't-do gesture per [project-management:DEC-006-state-machine-and-cascade]).
 - The user wants to **reopen** a closed issue (e.g., it regressed).
+- The PR of an issue in Review needs its **reviewer verdicts** (the review step below).
 - The agent is running a cascade pass after a child's state changed (the scripts handle the cascade internally; this sub-procedure is the entry point).
 
 This operation **does mutate** issue state. Every mutation is gated by the membership predicate (per [project-management:DEC-021-team-membership-gate]) + the schema's authorisation field + the checkbox close-gate (on closure paths) per [project-management:DEC-007-checkbox-validation].
@@ -33,6 +34,13 @@ Dispatch to the script via the kit-level capability-command dispatcher (per [pki
 pkit project-management move-issue <N> --to <todo|backlog|in-progress|review|done> \
   [--bypass --bypass-reason "<text>"] [--no-cascade] [--dry-run] [--yes]
 ```
+
+**Request the reviewer verdicts** on the PR of an issue in Review (agent review mode, per [project-management:DEC-028-agent-as-approver-paths]):
+```
+gh pr checks <PR> --watch
+pkit project-management review-pr <N>
+```
+`review-pr` runs once every check on the PR's head commit has passed; `gh pr checks --watch` waits for them, and as a read it is open to the project-manager. The reviewers judge that head, and the merge gate counts no verdict older than the PR's latest commit, so reviewing a head whose CI then fails spends a round of verdicts on a commit the fix replaces. (`<N>` is the issue, `<PR>` its pull request.)
 
 **Close (won't-do):**
 ```
