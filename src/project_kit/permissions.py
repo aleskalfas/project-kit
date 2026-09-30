@@ -1165,7 +1165,7 @@ def _hook_runtime_check(target_root: Path) -> tuple[bool, str]:
         return False, f"could not launch hook: {exc!r}"
 
 
-# ---- OS confinement write probe (ADR-002 point 4 / ADR-014 §6) -------------
+# ---- OS confinement write probe (ADR-004 / ADR-014 §6) ---------------------
 #
 # `sandbox enable` reports config-ON, but Claude Code silently runs unconfined
 # when the box cannot initialize unless `failIfUnavailable: true` is set
@@ -1683,7 +1683,7 @@ def sandbox_enable(target_root: Path, strict: bool = False,
             "  enable` for the detailed warning. State surfaced in `pkit permissions overview`.",
         ]
 
-    # Actual-confinement write probe (ADR-002 point 4 / ADR-014 §6): verify
+    # Actual-confinement write probe (ADR-004 / ADR-014 §6): verify
     # the sandbox is ACTUALLY confining — not just that the config reads ON.
     # A write outside the workspace succeeds when the session runs unconfined
     # (box can't init without failIfUnavailable, or this is a plain terminal).
@@ -1759,7 +1759,7 @@ def sandbox_disable(target_root: Path) -> str:
 def sandbox_status(target_root: Path) -> str:
     """Render the sandbox confinement state (read-only), including the actual-
     confinement write probe so `sandbox status` reports config-ON-but-not-
-    confining loudly (ADR-002 point 4 / ADR-014 §6)."""
+    confining loudly (ADR-004 / ADR-014 §6)."""
     sb = _sandbox_block(target_root)
     enabled = sb.get("enabled") is True
     lines = [cli_render.style("title", "Sandbox confinement — prompt-free scripting inside the OS box (ADR-004)"), ""]

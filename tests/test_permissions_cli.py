@@ -3116,7 +3116,7 @@ def test_overview_no_fault_when_runtime_healthy(tmp_path, monkeypatch):
 
 def test_overview_sandbox_on_surfaces_confinement_probe(tmp_path, monkeypatch):
     """When sandbox is ON, `overview` runs the confinement write probe and reports
-    its outcome — either verified or NOT-CONFINING (ADR-002 point 4 / ADR-014 §6)."""
+    its outcome — either verified or NOT-CONFINING (ADR-004 / ADR-014 §6)."""
     from project_kit import permissions as perm
     proj = _with_adapter(_setup(tmp_path))
     monkeypatch.setattr(perm, "_hook_runtime_check", lambda _r: (False, "no hook"))
@@ -3137,7 +3137,7 @@ def test_overview_sandbox_on_surfaces_confinement_probe(tmp_path, monkeypatch):
 
 def test_sandbox_status_surfaces_confinement_write_probe(tmp_path, monkeypatch):
     """sandbox status reports actual-confinement write probe: VERIFIED or NOT CONFINING
-    (ADR-002 point 4 / ADR-014 §6)."""
+    (ADR-004 / ADR-014 §6)."""
     from project_kit import permissions as perm
     proj = _with_adapter(_setup(tmp_path))
     monkeypatch.setattr(perm, "_hook_runtime_check", lambda _r: (True, "ok"))
