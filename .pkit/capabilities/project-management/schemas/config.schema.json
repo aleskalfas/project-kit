@@ -2,11 +2,10 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "config.schema.json",
   "title": "Adopter config — project-management capability",
-  "description": "Formal shape of the adopter's `project/config.yaml` — the one file every project-management adopter hand-edits at install time (default branch, `gh:` host/owner per DEC-023, Projects-v2 board flags + cached ids, doc-path mappings per DEC-015, milestone categories per DEC-016, review mode + registered agents per DEC-027 / DEC-028, methodology-mesh peers per DEC-022). `additionalProperties: false` is load-bearing: every reader accesses this file through defensive `.get()`, so an unknown or misspelled key would otherwise be silently ignored and degrade behaviour (e.g. `has_projects_v2_boards` with a trailing `s` falls back to label mode unnoticed) — the schema turns that into a loud refusal naming the offending key. Required keys mirror `pre-check.py`'s REQUIRED_ADOPTER_CONFIG_FIELDS so shape validation and the pre-check gate agree. Document-shaped schema: the file IS the resource (no top-level id collection). Companion per COR-018.",
+  "description": "Formal shape of the adopter's `project/config.yaml` — the one file every project-management adopter hand-edits at install time (`gh:` host/owner per DEC-023, Projects-v2 board flags + cached ids, doc-path mappings per DEC-015, milestone categories per DEC-016, review mode + registered agents per DEC-027 / DEC-028, methodology-mesh peers per DEC-022). `additionalProperties: false` is load-bearing: every reader accesses this file through defensive `.get()`, so an unknown or misspelled key would otherwise be silently ignored and degrade behaviour (e.g. `has_projects_v2_boards` with a trailing `s` falls back to label mode unnoticed) — the schema turns that into a loud refusal naming the offending key. Required keys mirror `pre-check.py`'s REQUIRED_ADOPTER_CONFIG_FIELDS so shape validation and the pre-check gate agree. Document-shaped schema: the file IS the resource (no top-level id collection). Companion per COR-018.",
   "type": "object",
   "required": [
     "schema_version",
-    "default_branch",
     "workstreams"
   ],
   "additionalProperties": false,
@@ -32,7 +31,7 @@
     "default_branch": {
       "type": "string",
       "minLength": 1,
-      "description": "The repo's default branch. Drives branch-name generation and base-branch enforcement per DEC-013; pre-check verifies it matches the live repo.",
+      "description": "DEPRECATED alias of the backbone's `repository.default-branch` (COR-054): declare the default branch once, in `.pkit/project/config.yaml`, for every reader. Read through the backbone: while the backbone declares none, this value still names the branch pm cuts work from and targets pull requests at (DEC-013), with a warning to move it; once the backbone declares one, this key never overrides it and is ignored, with a warning. Optional; remove it once the backbone declares the branch — a project on `main` needs neither.",
       "pattern": "^[^\\n\\r]+$"
     },
     "workstreams": {

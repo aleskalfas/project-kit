@@ -1,0 +1,18 @@
+component: project-management
+kind: patch
+custom:
+  category: Deprecated
+  requires_backbone: release
+body: >
+  The default branch is the backbone's `repository.default-branch` (COR-054,
+  #1128), read through `pkit friction artefacts --json`: start-work, the
+  pull-request verbs, the local clean-up after a merge and pre-check's
+  default-branch check all read it there, and `check-doc-mapping` takes its
+  default base from the same document (`$PKIT_CHECK_BASE`, else the default
+  branch) instead of a fixed `origin/main`. The capability's own
+  `default_branch` is now a deprecated alias, no longer required: while the
+  backbone declares none, a value there still names the branch, with a warning
+  to declare it once (`pkit config set repository.default-branch <name>
+  --yes`); once the backbone declares one, it never overrides it and is
+  ignored, with a warning. No migration: the backbone's default is `main`, as
+  the key's was.

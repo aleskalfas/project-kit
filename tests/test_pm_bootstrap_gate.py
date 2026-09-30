@@ -233,7 +233,9 @@ def test_stamped_but_config_missing_a_required_key_is_refused(gate, tmp_path):
     outcome = gate.evaluate(cap)
     assert not outcome.ok
     assert "missing required key(s)" in outcome.reason
-    assert "default_branch" in outcome.reason
+    # `default_branch` is no longer required: an alias of the backbone's key (COR-054).
+    assert "workstreams" in outcome.reason
+    assert "default_branch" not in outcome.reason
 
 
 def test_stamped_but_config_with_a_misspelled_key_is_refused(gate, tmp_path):

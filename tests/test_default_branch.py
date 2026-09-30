@@ -15,10 +15,14 @@ base and nothing else. The readers agree because they read the one answer:
 
 from __future__ import annotations
 
+import importlib
 import json
 import re
 import subprocess
+import sys
+from collections.abc import Iterator
 from pathlib import Path
+from types import ModuleType
 from typing import Any
 
 import pytest
@@ -28,8 +32,8 @@ from jsonschema import Draft202012Validator
 from project_kit import default_branch as db
 from project_kit import friction_check as fc
 from project_kit.cli import main
-from tests.adopter_repo import GitRepo
-from tests.analysis_repo import CONFIG
+from tests.adopter_repo import AdopterRepo, GitRepo, MakeAdopterRepo
+from tests.analysis_repo import CONFIG, NUMBERS, installed, run_script, seed
 
 # The guard's reading of a script's code, shared rather than copied.
 from tests.test_living_docs_spaces import _code  # pyright: ignore[reportPrivateUsage]
@@ -265,6 +269,224 @@ def test_a_value_read_as_the_default_is_warned_about(
     assert "warning: repository.default-branch 'two words' is not a branch name" in (result.stderr)
 
 
+# --- all three readers agree ----------------------------------------------------------------
+
+
+_PM_READING = """
+import json, sys
+sys.path.insert(0, sys.argv[1])
+from _lib import default_branch, lifecycle_inference
+print(json.dumps({
+    "name": lifecycle_inference.resolve_base_branch({}, "EPIC: #1"),
+    "check_base": default_branch.check_base()[0],
+}))
+"""
+
+
+def _pm(repo: AdopterRepo) -> dict[str, Any]:
+    """project-management's reading, run in the repository as its scripts run."""
+    completed = subprocess.run(
+        [sys.executable, "-c", _PM_READING, str(PM / "scripts")],
+        cwd=repo.root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert completed.returncode == 0, completed.stderr
+    return json.loads(completed.stdout)
+
+
+def _friction_base(repo: AdopterRepo) -> dict[str, Any]:
+    completed = subprocess.run(
+        ["pkit", "friction", "check", "--json"],
+        cwd=repo.root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert completed.stdout, completed.stderr
+    return json.loads(completed.stdout)["base"]
+
+
+def _numbers_base(repo: AdopterRepo) -> dict[str, Any]:
+    completed = run_script(repo, NUMBERS, "--json")
+    assert completed.returncode == 0, completed.stderr
+    return json.loads(completed.stdout)["base"]
+
+
+def _settled(repo: AdopterRepo) -> dict[str, Any]:
+    completed = subprocess.run(
+        ["pkit", "friction", "artefacts", "--json"],
+        cwd=repo.root,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    document = json.loads(completed.stdout)
+    return {"default_branch": document["default_branch"], "base": document["base"]}
+
+
+@pytest.fixture
+def project(
+    make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> Iterator[AdopterRepo]:
+    """software-analysis seeded on `main`, which then becomes `trunk`, declared the
+    default branch; work goes on on `topic`, and `trunk` moves on after it left."""
+    repo = installed(make_adopter_repo, monkeypatch)
+    seed(repo)
+    repo.commit("seeded")
+    repo.git("branch", "-m", "main", TRUNK)
+    _declare(repo, TRUNK, extra="docs:\n  internal: tech-docs\n")
+    repo.commit("the default branch is trunk")
+    repo.checkout("topic", create=True)
+    repo.commit("work on topic", {"src/topic.py": "print('topic')\n"})
+    repo.checkout(TRUNK)
+    repo.commit("trunk moves on", {"src/trunk.py": "print('trunk')\n"})
+    repo.checkout("topic")
+    yield repo
+
+
+def test_all_three_readers_agree_on_a_default_branch_that_is_not_main(
+    project: AdopterRepo, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    trunk = project.git("rev-parse", TRUNK).stdout.strip()
+    fork = project.git("merge-base", TRUNK, "HEAD").stdout.strip()
+    expected = {"ref": TRUNK, "tip": trunk, "commit": fork, "outdated": True}
+
+    # No remote: the local branch, the same commit for every reader.
+    assert _friction_base(project) == expected
+    assert _numbers_base(project) == expected
+    settled = _settled(project)
+    assert settled["default_branch"] == {
+        "name": TRUNK,
+        "source": db.DECLARED,
+        "ref": TRUNK,
+        "commit": trunk,
+    }
+    assert (settled["base"]["ref"], settled["base"]["tip"], settled["base"]["fork"]) == (
+        TRUNK,
+        trunk,
+        fork,
+    )
+    assert _pm(project) == {"name": TRUNK, "check_base": TRUNK}
+
+    # A remote holding it: its tracking reference first, for every reader — even when
+    # the local branch has moved on past it.
+    _with_origin(project, tmp_path)
+    project.checkout(TRUNK)
+    project.commit("unpushed", {"src/unpushed.py": "print('u')\n"})
+    project.checkout("topic")
+    remote = {**expected, "ref": f"origin/{TRUNK}"}
+    assert _friction_base(project) == remote
+    assert _numbers_base(project) == remote
+    assert _settled(project)["default_branch"]["ref"] == f"origin/{TRUNK}"
+    assert _pm(project) == {"name": TRUNK, "check_base": f"origin/{TRUNK}"}
+
+    # The override: the diff-scoped readers compare with it; the default branch is
+    # still the declaration, for pm and for the document alike.
+    monkeypatch.setenv(db.CHECK_BASE_ENV, TRUNK)
+    local = {
+        "ref": TRUNK,
+        "tip": project.git("rev-parse", TRUNK).stdout.strip(),
+        "commit": fork,
+        "outdated": True,
+    }
+    assert _friction_base(project) == local
+    assert _numbers_base(project) == local
+    settled = _settled(project)
+    assert (settled["base"]["ref"], settled["base"]["source"]) == (TRUNK, db.ENVIRONMENT)
+    assert settled["default_branch"]["ref"] == f"origin/{TRUNK}"
+    assert _pm(project) == {"name": TRUNK, "check_base": TRUNK}
+
+
+# --- pm's own key, a deprecated alias --------------------------------------------------------
+
+
+def _load_pm_default_branch() -> ModuleType:
+    """pm's `_lib.default_branch`, imported as its scripts import it: `_lib` is on the path
+    only while it loads, since another capability's `_lib` is not importable beside it."""
+    scripts = str(PM / "scripts")
+
+    def ours() -> list[str]:
+        return [k for k in sys.modules if k == "_lib" or k.startswith("_lib.")]
+
+    saved = {k: sys.modules.pop(k) for k in ours()}
+    sys.path.insert(0, scripts)
+    try:
+        return importlib.import_module("_lib.default_branch")
+    finally:
+        sys.path.remove(scripts)
+        for key in ours():
+            del sys.modules[key]
+        sys.modules.update(saved)
+
+
+PM_BRANCH: Any = _load_pm_default_branch()
+
+
+def _answering(name: str | None, source: str = "default") -> Any:
+    """A runner standing in for `pkit friction artefacts --json`: `None` answers nothing."""
+
+    def run(argv: list[str], **_kwargs: Any) -> subprocess.CompletedProcess[str]:
+        assert argv == list(PM_BRANCH.ARGV)
+        if name is None:
+            return subprocess.CompletedProcess(argv, 1, "", "error: no")
+        document = {
+            "default_branch": {"name": name, "source": source, "ref": name, "commit": "c"},
+            "base": {"ref": name, "tip": "c", "fork": "c", "problem": None},
+        }
+        return subprocess.CompletedProcess(argv, 0, json.dumps(document), "")
+
+    return run
+
+
+@pytest.fixture
+def fresh_pm(monkeypatch: pytest.MonkeyPatch) -> Any:
+    monkeypatch.setattr(PM_BRANCH, "_read", {})
+    monkeypatch.setattr(PM_BRANCH, "_warned", set[str]())
+    return PM_BRANCH
+
+
+@pytest.mark.parametrize(
+    ("backbone", "alias", "expected", "warning"),
+    [
+        ((TRUNK, db.DECLARED), None, TRUNK, None),
+        (("main", db.DEFAULTED), None, "main", None),
+        (("main", db.DEFAULTED), "develop", "develop", "is deprecated: declare the default"),
+        ((TRUNK, db.DECLARED), "develop", TRUNK, "is deprecated and ignored"),
+        ((TRUNK, db.DECLARED), TRUNK, TRUNK, "is deprecated and redundant"),
+        ((None, db.DEFAULTED), "develop", "develop", None),
+        ((None, db.DEFAULTED), None, "main", None),
+    ],
+    ids=[
+        "declared",
+        "defaulted",
+        "alias-while-undeclared",
+        "alias-never-overrides",
+        "alias-redundant",
+        "unanswered-alias",
+        "unanswered",
+    ],
+)
+def test_pm_s_default_branch_is_the_backbone_s_its_own_key_an_alias(
+    fresh_pm: Any,
+    capsys: pytest.CaptureFixture[str],
+    backbone: tuple[str | None, str],
+    alias: str | None,
+    expected: str,
+    warning: str | None,
+) -> None:
+    config = {} if alias is None else {"default_branch": alias}
+    run = _answering(*backbone)
+    assert fresh_pm.name(config, run=run) == expected
+    assert fresh_pm.name(config, run=run) == expected
+    err = capsys.readouterr().err
+    if warning is None:
+        assert err == ""
+    else:
+        assert err.count("warn: ") == 1 and warning in err
+
+
 # --- no reader resolves on its own -----------------------------------------------------------
 
 #: What resolving a base by hand takes, in a script's code.
@@ -305,3 +527,16 @@ def test_software_analysis_resolves_no_base_of_its_own() -> None:
         if (tokens := _base_tokens(path.read_text(encoding="utf-8")))
     }
     assert found == {}
+
+
+def test_pm_reads_its_default_branch_key_in_one_place() -> None:
+    """Every pm reading of `default_branch` goes through `_lib/default_branch.py`, which
+    reads the backbone's first (COR-054 point 1)."""
+    read = re.compile(r"\.get\(\s*['\"]default_branch['\"]")
+    scripts = sorted((PM / "scripts").rglob("*.py"))
+    found = [
+        path.relative_to(PM).as_posix()
+        for path in scripts
+        if read.search(_code(path.read_text(encoding="utf-8")))
+    ]
+    assert found == []

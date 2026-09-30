@@ -15,7 +15,7 @@ pkit:
         - .pkit/capabilities/project-management/decisions/**
       record: [COR-017, COR-020, COR-021, COR-023, COR-039, COR-053, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050]
     revalidated:
-      at: 2026-09-29T18:35:28Z
+      at: 2026-09-30T06:58:18Z
       outcome: updated
 ---
 
@@ -84,7 +84,6 @@ Create `.pkit/capabilities/project-management/project/config.yaml` declaring the
 
 ```yaml
 schema_version: 1
-default_branch: main                  # the repo's default branch
 has_projects_v2_board: false          # set true + projects_v2_board_id when a board is configured
 workstreams:                          # one entry per allowed workstream value
   - capabilities
@@ -112,6 +111,14 @@ Further optional blocks are documented where the features that read them are des
 
 This config is adopter-owned. The capability's schemas are immutable kit-shipped content per the no-shared-files invariant; the config is the seam where adopter-specific values plug in.
 
+#### The default branch is the backbone's
+
+The branch work is cut from, pull requests target (DEC-013), `merge-pr` and `done-work` switch back to, and `pre-check` holds to the repository's default is **declared once, for every reader, in the backbone configuration**: `repository.default-branch` in `.pkit/project/config.yaml`, `main` when undeclared ([COR-054](../../decisions/core/COR-054-default-branch.md); the CLI reference, "Configuration file"). A project on another branch declares it there — `pkit config set repository.default-branch develop --yes` — and the core friction check, software-analysis' number check and this capability then read the same branch. pm reads it through the backbone (`pkit friction artefacts --json`, its `default_branch`) and never resolves it itself; so does `check-doc-mapping` for its default base, `$PKIT_CHECK_BASE`, else the default branch (its `base`).
+
+| Key | State | Meaning |
+|---|---|---|
+| `default_branch` | **deprecated alias** of the backbone's `repository.default-branch`, optional | While the backbone declares none, a value here still names the branch — so a project on another branch keeps working — and every verb that reads it warns: declare it once in the backbone configuration and remove it here. Once the backbone declares one, this key never overrides it: it is ignored, with a warning when the two differ. Equal to the backbone's, it is only redundant, and says so. No migration: the backbone's default is `main`, as this key's was. |
+
 #### The config has a schema — unknown keys are refused
 
 `config.yaml` ships a companion JSON Schema at `schemas/config.schema.json`, bound to the installed config path by a COR-023 `binds_to:` glob in `schemas/config.yaml`. Validate a hand-edited config with:
@@ -122,7 +129,7 @@ pkit data validate .pkit/capabilities/project-management/project/config.yaml
 
 The schema sets **`additionalProperties: false`**, so an unknown or misspelled key is a loud refusal naming the offending key rather than a silent default. This matters because every reader gets at the file through defensive `.get()` access: before the schema existed, `has_projects_v2_boards` (trailing `s`) validated fine and left the adopter in label-fallback mode, discovered only when classification landed in the wrong substrate. `pre-check` covers value-level problems (the board id resolves, the branch matches, the host is reachable) but cannot see a key that was never read; the schema covers exactly that gap. `schemas/config.yaml` is also the shipped reference instance — a valid minimal config with every optional key listed as a comment.
 
-The schema's required set (`schema_version`, `default_branch`, `workstreams`) mirrors `pre-check`'s, so the two gates agree. `workstreams:` is required only as the transitional shim described below; it drops from both when the shim does.
+The schema's required set (`schema_version`, `workstreams`) mirrors `pre-check`'s, so the two gates agree; `default_branch` left it when it became an alias of the backbone's key. `workstreams:` is required only as the transitional shim described below; it drops from both when the shim does.
 
 #### The `gh:` block (per [project-management:DEC-023-gh-host-and-owner])
 

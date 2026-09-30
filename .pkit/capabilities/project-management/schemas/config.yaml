@@ -1,7 +1,7 @@
 # Adopter config shape — binding carrier for the project-management capability.
 #
 # The real config lives in an adopter's `project/config.yaml`: the one file
-# every adopter hand-edits at install time (default branch, `gh:` host/owner,
+# every adopter hand-edits at install time (`gh:` host/owner,
 # Projects-v2 board flags, doc-path mappings, milestone categories, review
 # mode, mesh peers). This kit-shipped schema file exists so that:
 #   (a) it declares the COR-023 `binds_to:` glob, letting `pkit data validate`
@@ -47,9 +47,12 @@ pkit_schema: project-management:config
 
 # --- reference instance -------------------------------------------------
 
-# The repo's default branch — drives branch-name generation and base-branch
-# enforcement (per [project-management:DEC-013-branch-and-pr-conventions]).
-default_branch: main
+# The repo's default branch — what work is cut from and pull requests target
+# (per [project-management:DEC-013-branch-and-pr-conventions]) — is declared
+# once, for every reader, as the backbone's `repository.default-branch` in
+# `.pkit/project/config.yaml` (COR-054), `main` when undeclared. The
+# `default_branch:` key this file used to require is a deprecated alias of it:
+# not listed here, and read only while the backbone declares none.
 
 # Legacy shim: the canonical workstream taxonomy lives in
 # `project/workstreams.yaml` (per [project-management:DEC-018-workstream-

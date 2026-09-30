@@ -9,9 +9,10 @@ schema_version: 1
 # filename: it makes the binding independent of the glob entirely).
 pkit_schema: project-management:config
 
-# Default branch for branch-name generation + base-branch enforcement
-# (per [project-management:DEC-013-branch-and-pr-conventions]).
-default_branch: main
+# The default branch (branch-name generation + base-branch enforcement, per
+# [project-management:DEC-013-branch-and-pr-conventions]) is the backbone's
+# `repository.default-branch` (COR-054), `main` by default; this file no
+# longer declares it — its `default_branch` key is a deprecated alias.
 
 # GitHub host for `gh api` calls in capability scripts. `gh issue create`
 # / `edit` auto-infer the host from the git remote; `gh api` does not,

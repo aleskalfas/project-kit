@@ -57,7 +57,8 @@ keep those advisory (enforce: false) or don't map them. The mandatory
 `## Doc impact` section remains the universal hard gate; this adds targeted
 enforcement on couplings that genuinely move together.
 
-Diff source: `--base <ref>` (default origin/main). Changed files come from
+Diff source: `--base <ref>` (default: $PKIT_CHECK_BASE, else the default branch,
+as the backbone names the base, COR-054). Changed files come from
 `git diff --name-only --diff-filter=ACMRT <base>...HEAD` — added/copied/
 modified/renamed/type-changed; a *deletion* of a code file does not demand a
 doc.
@@ -89,7 +90,7 @@ from ruamel.yaml import YAML
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate, doc_check  # noqa: E402
+from _lib import bootstrap_gate, default_branch, doc_check  # noqa: E402
 from _lib.gh import gh_run, load_adopter_config  # noqa: E402
 from _lib.membership import (  # noqa: E402
     CAPABILITY_NAME,
@@ -167,8 +168,11 @@ def main() -> int:
         ),
     )
     parser.add_argument(
-        "--base", default="origin/main",
-        help="Base ref to diff HEAD against (default: origin/main).",
+        "--base", default=None,
+        help=(
+            "Base ref to diff HEAD against (default: $PKIT_CHECK_BASE, else the "
+            "default branch — the base the backbone names, COR-054)."
+        ),
     )
     parser.add_argument(
         "--pr-body-file", default=None,
@@ -222,7 +226,11 @@ def main() -> int:
         print("check-doc-mapping: no rules configured; skipped.")
         return 0
 
-    changed = _changed_files(args.base)
+    base, no_base = (args.base, None) if args.base is not None else default_branch.check_base()
+    if base is None:
+        print(f"error: no base to diff against: {no_base}", file=sys.stderr)
+        return 2
+    changed = _changed_files(base)
     if changed is None:
         return 2
     changed_set = set(changed)
