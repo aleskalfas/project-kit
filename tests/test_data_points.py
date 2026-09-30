@@ -3,12 +3,16 @@ filler file and its envelope, capability contributions, the definer's default
 and how it takes part, the three policies with precedence, whole-entry and
 removal overrides, the contributor selection, the inert policy — and the
 `connections` member of `pkit validate` that reports it, over one wiring per run,
-each point resolved once across the processes the run starts (#1144)."""
+each point resolved once across the processes the run starts, unless its first
+reader ran short of time, and never served to a shell a run's variables were
+left in (#1144)."""
 
 from __future__ import annotations
 
 import json
 import os
+import re
+import shutil
 import sys
 import time
 from pathlib import Path
@@ -23,7 +27,7 @@ from project_kit import command_runner
 from project_kit import connections as cx
 from project_kit import data_points as dp
 from project_kit import package_validate as pv
-from project_kit import validators
+from project_kit import run_cache, validators
 from project_kit.cli import main
 from project_kit.manifest import (
     ComponentRegistryEntry,
@@ -1046,18 +1050,23 @@ def test_a_point_resolved_first_is_shared_by_the_whole_resolution_of_the_run(
 # --- one resolution across the processes of a `pkit validate` run (#1144) -------
 
 
-def _point_reader(repo: AdopterRepo, name: str, address: str = READERS) -> None:
+def _point_reader(
+    repo: AdopterRepo, name: str, address: str = READERS, *, order: int | None = None
+) -> None:
     """A capability whose validator reads `address` as a capability script does —
     `pkit connections resolve --json`, in a process of its own — and reports
     where the document came from, and why the point does not resolve, with each
-    inert filler's reason."""
+    inert filler's reason. `order` places it among the backbone's members."""
     leaf = {"script": "scripts/check.py", "help": "Read the point.", "query-contract": True}
+    validator: dict[str, Any] = {"command": "check"}
+    if order is not None:
+        validator["order"] = order
     _stage(
         repo,
         name,
         {},
         commands={"check": leaf},
-        validators={"points": {"command": "check"}},
+        validators={"points": validator},
     )
     script = repo.pkit / "capabilities" / name / "scripts" / "check.py"
     script.write_text(
@@ -1116,10 +1125,13 @@ def test_outside_a_validate_run_a_reading_command_resolves_the_point_itself(
 def test_a_filler_a_nested_reader_starts_ends_by_the_outer_deadline_and_is_named(
     repo: AdopterRepo, pkit_on_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    # The filler hangs, having started a `pkit` reading command of its own. The
-    # nested `pkit connections resolve` bounds it by what remains of the
-    # validator's run, less the time the validator keeps to answer: the filler
-    # is the one named, and its child ends with the run.
+    # The filler hangs, having started a process of its own. The nested `pkit
+    # connections resolve` bounds it by what remains of the validator's run, less
+    # the time the validator keeps to answer: the validator answers, the filler is
+    # the one named — with the time its caller had left — and its child ends with
+    # the run. The validator keeps most of its bound to answer, and the filler
+    # gets six seconds to start in, so a loaded machine starting the interpreters
+    # cannot change who overran.
     _provider(repo, inert="fail")
     body = (
         "import subprocess\n"
@@ -1129,14 +1141,16 @@ def test_a_filler_a_nested_reader_starts_ends_by_the_outer_deadline_and_is_named
     )
     _command_contributor(repo, "evidence", body)
     _point_reader(repo, "reader")
-    monkeypatch.setattr(command_runner, "COMMAND_TIMEOUT_SECONDS", 6)
-    monkeypatch.setattr(command_runner, "ANSWER_MARGIN_SECONDS", 3)
-    started = time.monotonic()
+    monkeypatch.setattr(command_runner, "COMMAND_TIMEOUT_SECONDS", 16)
+    monkeypatch.setattr(command_runner, "ANSWER_MARGIN_SECONDS", 10)
     result = CliRunner().invoke(main, ["validate", "--only", "reader:points"])
-    assert time.monotonic() - started < 6  # the validator answered within its bound
     assert result.exit_code == 1, result.output
+    assert "command 'check'" not in result.output  # the validator itself answered
     assert "from resolution" in result.output
-    assert "evidence: command 'export' did not answer within " in result.output
+    assert re.search(
+        r"evidence: command 'export' did not answer within the [0-9.]+ s its caller had left",
+        result.output,
+    ), result.output
     child = int((repo.root / ".git" / "child.pid").read_text())
     for _ in range(50):
         try:
@@ -1147,6 +1161,54 @@ def test_a_filler_a_nested_reader_starts_ends_by_the_outer_deadline_and_is_named
     else:
         os.kill(child, 9)
         pytest.fail("the filler's child outlived the run")
+
+
+def test_a_reader_short_of_time_leaves_the_point_to_a_reader_with_more(
+    repo: AdopterRepo, pkit_on_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A validator ordered before `connections` keeps almost all of its bound to
+    # answer, so its nested reader has too little time for the filler, which
+    # takes two seconds. That no-answer is the reader's own and is not kept: the
+    # `connections` member, with a bound of its own, resolves the point, and a
+    # validator after it reads that resolution from the run cache.
+    _provider(repo)
+    _command_contributor(repo, "evidence", "time.sleep(2)\n" + _printing(ANSWER))
+    _point_reader(repo, "early", order=1)
+    _point_reader(repo, "late")
+    monkeypatch.setattr(command_runner, "COMMAND_TIMEOUT_SECONDS", 12)
+    monkeypatch.setattr(command_runner, "ANSWER_MARGIN_SECONDS", 11)
+    result = CliRunner().invoke(main, ["validate", "--no-refs"])
+    assert result.exit_code == 1, result.output  # the early reader's finding
+    # It ran out of the time its caller had left, or had none left to start in.
+    short = rf"within the [0-9.]+ s its caller had left|{re.escape(command_runner.NO_TIME_LEFT)}"
+    assert re.search(short, result.output), result.output
+    assert "1 data point(s): 1 resolved" in result.output
+    sources = [
+        line.strip() for line in result.output.splitlines() if line.strip().startswith("from ")
+    ]
+    assert sources == ["from resolution", "from run-cache"]
+
+
+def test_variables_a_shell_kept_from_a_run_never_serve_its_points(
+    repo: AdopterRepo, monkeypatch: pytest.MonkeyPatch, tmp_path_factory: pytest.TempPathFactory
+) -> None:
+    # A run's cache, copied before the run removed it, and its deadline and
+    # strays directory, left in a shell: `pkit connections resolve` there
+    # resolves the point itself.
+    _provider(repo)
+    _command_contributor(repo, "evidence", _printing(ANSWER))
+    with run_cache.opened():
+        dp.resolve_point(repo.root, READERS)
+        stale = tmp_path_factory.mktemp("stale") / "cache"
+        shutil.copytree(os.environ[run_cache.CACHE_ENV], stale)
+    assert list(stale.glob("*.json"))  # the run kept the point
+    _log(repo).unlink()
+    monkeypatch.setenv(run_cache.CACHE_ENV, str(stale))
+    monkeypatch.setenv(command_runner.DEADLINE_ENV, f"{time.time() + 20:.3f}")
+    monkeypatch.setenv(command_runner.STRAYS_ENV, str(stale.parent / "strays-removed"))
+    document = json.loads(_resolve_cli(READERS, "--json").output)
+    assert (document["from"], document["resolved"]) == ("resolution", True)
+    assert len(_runs(repo)) == 1
 
 
 def test_a_resolved_point_reads_back_from_its_document(repo: AdopterRepo) -> None:

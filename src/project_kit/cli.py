@@ -642,11 +642,12 @@ def connections_resolve(address: str, as_json: bool) -> None:
     not, and every filler considered. Read-only; only this point resolves, so
     only its command fillers run, as they do there, offline-marked and
     bounded. Inside a run of `pkit validate` — a validator reading the point —
-    it prints the point as the run resolved it, resolving nothing (`from:
-    run-cache` in the document). It is how a capability's own script
-    reads a point it defines without importing the backbone. Exit 0 when the
-    point resolves; 1 when it does not, or when no active provider defines it,
-    and the output says why.
+    it reads the point from the run cache when the run has already resolved it
+    (`from: run-cache` in the document); otherwise it resolves the point and
+    caches it, so its fillers run once per validate. It is how a capability's
+    own script reads a point it defines without importing the backbone. Exit 0
+    when the point resolves; 1 when it does not, or when no active provider
+    defines it, and the output says why.
     """
     import json
 

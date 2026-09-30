@@ -27,8 +27,10 @@ defines, combines the point's fillers into one value by its declaration:
   takes no parameter. Its `commands:` leaf must declare the query contract
   (`query-contract: true`), or it is not run; it is run through the shared
   runner under the query policy — from the project root with `--json` alone,
-  the offline marker set, in its own process group, bounded — and prints one
-  filler envelope, `{schema_version, value}`, at the point's version. An
+  the offline marker set, in its own process group, bounded (read inside
+  another run, by the time that run has left, in the outermost run's group) —
+  and prints one filler envelope, `{schema_version, value}`, at the point's
+  version. An
   abnormal exit, a timeout, output that is not that envelope, or a value that
   does not fit is no answer — never an empty one. The declaration is trusted,
   not enforced: nothing here holds the command to no network (ADR-057 point
@@ -59,9 +61,12 @@ once, whichever reader asks first, and points never read one another, so a
 point resolved alone is the point resolved among all. A run of `pkit validate`
 spans processes — a capability's validator reads a point through `pkit
 connections resolve` — so each resolved point is also kept in the run cache
-(`run_cache`), with the findings its resolution made: whichever process of the
-run asks first resolves it, and every other reads it (`shared_point`), its
-fillers never started twice.
+(`run_cache`), with the findings its resolution made and the bound it was
+resolved under: whichever process of the run asks first resolves it, and every
+other reads it (`shared_point`), its fillers started once. One resolution is
+never kept: one in which a command filler gave no answer for want of the time
+its asker had left (`CommandRun.clipped`) — a reader with more time might get
+an answer, so the next reader resolves the point itself.
 """
 
 from __future__ import annotations
@@ -284,7 +289,12 @@ def _resolved(run: _Run, binding: cx.PointBinding) -> _PointOutcome:
     """The point `binding` resolved, once per run: its fillers are asked — a command
     filler started — at most once, whichever reader asks first, in this process
     or, through the run cache, in any process `pkit validate` started. Points do
-    not read one another, so a point resolved alone is the point resolved among all."""
+    not read one another, so a point resolved alone is the point resolved among all.
+
+    A resolution in which a command filler ran out of the time its asker had
+    left is not put in the run cache: another process of the run may have more
+    time, and reads the point by resolving it. Within this process it is kept —
+    no later reader here has more time than the first."""
     address = binding.point.address
 
     def resolve() -> _PointOutcome:
@@ -292,9 +302,10 @@ def _resolved(run: _Run, binding: cx.PointBinding) -> _PointOutcome:
         if shared is not None:
             return shared
         start = len(run.findings)
-        point = _Point(run, binding).resolve()
-        outcome = _PointOutcome(point, tuple(run.findings[start:]))
-        run_cache.write(_cache_key(run.root, address), _entry_of(outcome))
+        resolution = _Point(run, binding)
+        outcome = _PointOutcome(resolution.resolve(), tuple(run.findings[start:]))
+        if not resolution.clipped:
+            run_cache.write(_cache_key(run.root, address), _entry_of(outcome, resolution.bound))
         return outcome
 
     return validators.once_per_run(("data-point", run.root.resolve(), address), resolve)
@@ -307,10 +318,13 @@ def _cache_key(target_root: Path, address: str) -> str:
     return f"data-point {target_root.resolve()} {address}"
 
 
-def _entry_of(outcome: _PointOutcome) -> dict[str, Any]:
-    """A resolved point as the run cache keeps it: its document and the findings
-    its resolution made, which the `connections` member reports."""
+def _entry_of(outcome: _PointOutcome, bound: float | None) -> dict[str, Any]:
+    """A resolved point as the run cache keeps it: its document, the findings its
+    resolution made, which the `connections` member reports, and the tightest
+    bound a command filler of it ran under — the first asker's; None when none
+    ran."""
     return {
+        "bound": bound,
         "point": point_document(outcome.point),
         "findings": [
             {
@@ -503,6 +517,10 @@ class _Point:
     fillers: list[Filler] = field(default_factory=list[Filler])
     inert: list[_Candidate] = field(default_factory=list[_Candidate])
     validator: Draft202012Validator | None = None
+    # The command fillers' runs: the tightest bound one ran under, and whether one
+    # gave no answer for want of the time its asker had left (`CommandRun.clipped`).
+    bound: float | None = None
+    clipped: bool = False
     address: str = field(init=False)
     policy: str = field(init=False)
     inert_policy: str = field(init=False)
@@ -703,7 +721,9 @@ class _Point:
             cwd=self.run.root,
             extra_env=validators.OFFLINE_MARKER,
         )
+        self.bound = run.bound_seconds if self.bound is None else min(self.bound, run.bound_seconds)
         if run.ending is not Ending.ANSWERED:
+            self.clipped = self.clipped or run.clipped
             return _no_answer(validators.why_no_answer(run, reference).rstrip("."))
         return self._envelope_answer(reference, run.document)
 
@@ -1224,8 +1244,9 @@ def resolve_point(target_root: Path, address: str) -> tuple[ResolvedPoint | None
 def shared_point(target_root: Path, address: str) -> ResolvedPoint | None:
     """The data point `address` as the run in progress already resolved it — in
     `pkit validate`, or in another command the run started — or None: outside
-    a run, or not yet resolved in it. Read before `resolve_point`, it spares
-    even the wiring (the run cache, `run_cache`)."""
+    a live run, or not yet kept in it (`_resolved` keeps no resolution cut short
+    by its asker's time). Read before `resolve_point`, it spares even the wiring
+    (the run cache, `run_cache`)."""
     shared = _shared_outcome(target_root, address)
     return shared.point if shared is not None else None
 
