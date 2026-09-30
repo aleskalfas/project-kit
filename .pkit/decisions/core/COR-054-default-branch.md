@@ -1,7 +1,7 @@
 ---
 id: COR-054
 title: A project declares its default branch once, and every reader resolves it the same way
-status: proposed
+status: accepted
 date: 2026-09-30
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
