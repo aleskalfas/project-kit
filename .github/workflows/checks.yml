@@ -49,22 +49,27 @@ jobs:
           PKIT_CHECK_BASE: origin/${{ github.event.pull_request.base.ref || 'main' }}
         run: ./scripts/check.sh
 
-      # Surface-without-changeset guard (PRJ-002). PR-scoped: it needs the PR
-      # base ref and the PR labels (the `skip-changeset` escape hatch), neither
-      # of which a local pre-push hook has — so it lives here, not in
-      # scripts/check.sh. Escape hatches: a `none` changeset for the component,
-      # or the `skip-changeset` label (surfaced below as PKIT_CHANGESET_SKIP).
+      # Changeset guard (PRJ-002). PR-scoped: it needs the PR base ref and the
+      # PR labels (the `skip-changeset` escape hatch), neither of which a local
+      # pre-push hook has — so it lives here, not in scripts/check.sh. Two
+      # checks: a surface change carries a changeset, and a requires_backbone
+      # floor the PR declares rides on a change to its component or a release
+      # of it. Escape hatches for the surface check: a `none` changeset for the
+      # component, or the `skip-changeset` label (surfaced below as
+      # PKIT_CHANGESET_SKIP).
       #
-      # Release PRs (`release/*` head from release-pr.yml) are skipped here as a
-      # belt: their diff is exactly `pkit release apply`'s footprint (version
-      # bumps + CHANGELOG + the changesets it just consumed), which would trip
-      # the guard with no changeset present. The guard *also* self-exempts that
-      # diff shape (release.py `is_release_diff`) — the primary, self-contained
-      # check — so this `if:` guard is defence-in-depth, not the sole line.
-      - name: Changeset guard (surface change ⇒ changeset)
-        if: github.event_name == 'pull_request' && !startsWith(github.head_ref, 'release/')
+      # Release PRs (`release/*` head from release-pr.yml) raise the escape
+      # hatch too: their diff is `pkit release apply`'s output (version bumps +
+      # CHANGELOG + the changesets it just consumed, and here the self-host
+      # manifest's backbone_version), which would trip the surface check with
+      # no changeset present. This belt goes by the branch name, which anyone
+      # can choose — review of the release PR stands behind it. The guard still
+      # runs on every PR, because no escape hatch waives the floor tie; a
+      # release diff only deletes changesets, so it declares no floor.
+      - name: Changeset guard (surface change ⇒ changeset; floor ⇒ its component)
+        if: github.event_name == 'pull_request'
         env:
-          PKIT_CHANGESET_SKIP: ${{ contains(github.event.pull_request.labels.*.name, 'skip-changeset') && '1' || '' }}
+          PKIT_CHANGESET_SKIP: ${{ (contains(github.event.pull_request.labels.*.name, 'skip-changeset') || startsWith(github.head_ref, 'release/')) && '1' || '' }}
         run: uv run pkit release check --base "origin/${{ github.event.pull_request.base.ref }}"
 
   # The whole-repository friction check (COR-050 point 6; ADR-055 point 5) on

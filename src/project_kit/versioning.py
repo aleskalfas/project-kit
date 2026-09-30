@@ -64,6 +64,11 @@ PreKind = Literal["a", "b", "rc"]
 # input gate is the inverse — it requires a suffix).
 _SEMVER_RE = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
 
+# A release version as it is written once released: strict semver with no part
+# padded by a leading zero (`1.50.0`, never `1.050.0`), so a floor names the
+# version the way its release heading and tag spell it.
+_RELEASE_VERSION_RE = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
+
 # PEP 440-aware: optional pre-release suffix `(a|b|rc)<N>` directly
 # appended (no separator) per PEP 440's normal form for pre-releases.
 # Captures: major, minor, patch, kind (or empty), counter (or empty).
@@ -464,8 +469,15 @@ def broaden_requires_backbone(package_text: str, backbone: str) -> tuple[str, st
 
 def is_release_version(version: str) -> bool:
     """Whether `version` is a release version, `major.minor.patch` with no
-    pre-release suffix — the only kind a `requires_backbone` floor is raised to."""
-    return _SEMVER_RE.match(version) is not None
+    pre-release suffix and no part padded by a leading zero — the only kind a
+    `requires_backbone` floor is raised to."""
+    return _RELEASE_VERSION_RE.match(version) is not None
+
+
+def is_version(version: str) -> bool:
+    """Whether `version` is a backbone version this module reads,
+    `major.minor.patch[(a|b|rc)N]` — a release or a pre-release."""
+    return _PEP440_RE.match(version) is not None
 
 
 def is_at_or_below(version: str, ceiling: str) -> bool:
@@ -535,7 +547,8 @@ def raise_requires_backbone_floor(package_text: str, backbone: str) -> tuple[str
     """
     if not is_release_version(backbone):
         raise click.ClickException(
-            f"backbone version {backbone!r} is not a release version (expected major.minor.patch)"
+            f"backbone version {backbone!r} is not a release version (expected "
+            "major.minor.patch, no leading zeros)"
         )
     match = _REQUIRES_BACKBONE_FLOOR_RE.search(package_text)
     if match is None:

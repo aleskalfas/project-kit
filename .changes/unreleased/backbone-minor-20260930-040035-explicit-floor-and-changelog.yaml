@@ -4,13 +4,19 @@ custom:
   category: Added
 body: >
   A changeset's `requires_backbone` can now name an already-shipped backbone,
-  `X.Y.Z` at or below the current `.pkit/VERSION`, for a component whose need an
-  older backbone meets, so its floor is no longer raised to the current backbone
-  down to the patch; `release` keeps naming the backbone the release ships, and
-  a version above the current backbone or a pre-release is refused by `pkit
-  release lint`, `plan` and `apply`. The floor goes to the highest backbone a
-  component's changesets name. `pkit release apply` states each raised floor at
-  the end of the component's changelog entry ("Requires backbone >=X.Y.Z."), and
-  `plan --json` carries the declared backbone and that sentence beside each
-  raise. `pkit release check` now also refuses a pull request that adds or edits
-  a changeset declaring a floor for a component its diff does not touch.
+  an `X.Y.Z` that `CHANGELOG.md` records as released at or below the current
+  `.pkit/VERSION`, for a component whose need an older backbone meets, so its
+  floor is no longer raised to the current backbone down to the patch;
+  `release` keeps naming the backbone the release ships, and a version above
+  the current backbone, one never released, a pre-release or one with a
+  leading zero is refused by `pkit release lint`, `plan` and `apply`, each
+  saying how to fix it. The floor goes to the highest backbone a component's
+  changesets name. `pkit release apply` states each raised floor at the end of
+  the component's changelog entry ("Requires backbone >=X.Y.Z."), warns before
+  confirming when `--no-broaden` leaves a raised range excluding the backbone
+  it ships, and `plan --json` carries the declared backbone, whether `release`
+  or an explicit version set it, and that sentence beside each raise. `pkit
+  release check` now also refuses a pull request that declares a floor for a
+  component it neither changes nor releases, whatever its labels; a floor-only
+  `patch` changeset for the component is the way to declare a need found after
+  it shipped.
