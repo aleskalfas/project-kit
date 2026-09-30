@@ -7,7 +7,8 @@
 # ///
 """Project-management capability — done-work (DEC-026 workflow wrapper).
 
-Transitions Review → Done by squash-merging the PR. Per DEC-026:
+Transitions Review → Done by squash-merging the PR (an issue still In Progress
+goes through Review first, #1162). Per DEC-026:
 
     done-work <N> [--bypass "<reason>"] [--bypass-ci "<reason>"]
                   [--skip-checkbox-gate]
@@ -107,6 +108,16 @@ Side-effects, in order (#878; the merge mechanic itself lives once in
     the CI-bypass comment on the PR if `--bypass-ci` overrode a non-green CI
     gate. Each is keyed and posted at most once per act (above). A post that
     fails aborts the run before the merge (exit 2).
+  - Only when the issue never reached Review (#1162) — a Task still In
+    Progress, its PR opened without `review-work` — `move-issue.py --to
+    review`, the last step before the merge. workflow.yaml declares no In
+    Progress → Done for a Task; its move to done is Review → Done, the one the
+    merge makes below, so the issue goes through Review in two declared moves
+    rather than ending on a refused one. It runs before the merge because once
+    the merge lands GitHub may close the issue at any moment, and a closed
+    issue reads as done. The PR is open and ready here, which is what Review
+    means, so the move holds if the merge fails; if the move itself fails, the
+    run stops without merging.
   - `gh pr merge --squash --subject <PR title>` — WITHOUT `--delete-branch`:
     that flag makes gh check out the default branch locally and delete the
     local head, and the whole `gh pr merge` exits non-zero when the working
@@ -150,7 +161,12 @@ from ruamel.yaml import YAML
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
+from _lib import axis_labels  # noqa: E402
 from _lib import bootstrap_gate  # noqa: E402
+# The position and transition-table readers move-issue and start-work use, so
+# the move done-work makes ahead of the merge (#1162) and the move it leads to
+# cannot disagree about where the issue is or what it may do.
+from _lib import lifecycle_inference as infer  # noqa: E402
 from _lib import pr_merge  # noqa: E402
 from _lib import session_guard  # noqa: E402
 from _lib.ci_checks import evaluate_ci_gate  # noqa: E402
@@ -212,13 +228,17 @@ from _lib.required_reviewers import (  # noqa: E402
     Resolution,
     resolve_required_local_reviewers,
 )
+from _lib.structural_type import infer_structural_type  # noqa: E402
 
 
 def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
     """Fetch the issue's labels (review-mode resolution, DEC-027), body (the
-    DEC-007 checkbox pre-flight) and state (an issue already closed is not
-    gated, #1086) in one round-trip."""
-    return gh_get_issue(issue_number, config, fields="labels,body,state")
+    DEC-007 checkbox pre-flight), state (an issue already closed is not gated,
+    #1086), and title and milestone (with the labels and state, where the issue
+    is in its lifecycle and what it may move to, #1162) in one round-trip."""
+    return gh_get_issue(
+        issue_number, config, fields="title,labels,body,state,milestone",
+    )
 
 
 # The whole-gate and CI-bypass audit comments' first-line kind markers. They
@@ -455,13 +475,7 @@ def main() -> int:
 
     # Resolve review mode per DEC-027 (issue labels read from the PR view above).
     issue = _gh_get_issue(args.issue_number, config)
-    issue_labels = []
-    if issue:
-        issue_labels = [
-            lbl.get("name", "") if isinstance(lbl, dict) else str(lbl)
-            for lbl in (issue.get("labels") or [])
-        ]
-    mode_resolution = resolve_mode(config, issue_labels=issue_labels)
+    mode_resolution = resolve_mode(config, issue_labels=_label_names(issue))
     print(f"  mode: {mode_resolution.mode} ({mode_resolution.source})")
 
     # Per-reviewer override (DEC-050) — a --bypass-family member. Reason is
@@ -644,6 +658,10 @@ def main() -> int:
         print(f"  checkbox-gate: {checkbox_gate.passed_via} (#{closing_issue.number})")
     to_close = [c.number for c in closing if not c.already_closed]
 
+    # The declared move the issue makes before the merge when it never reached
+    # Review (#1162), so that the merge's own move to done is a declared one.
+    lead_in = _lead_in_to_done(issue, capability_root, yaml_loader)
+
     # CI-status gate (#498). A satisfied approval gate is not evidence CI
     # passed — refuse to land a PR whose checks are red or still running. The
     # general `--bypass` (approval gate) does NOT clear this one: overriding a
@@ -681,11 +699,17 @@ def main() -> int:
     print(f"done-work: #{args.issue_number}")
     print(f"  PR:      #{pr_number}")
     print(f"  gate:    {gate_result.passed_via}")
+    if lead_in is not None:
+        print(f"  lead-in: {lead_in.describe()}")
 
     if args.dry_run:
+        lead_in_step = (
+            f"move #{args.issue_number} to {lead_in.to_state}, "
+            if lead_in is not None else ""
+        )
         print(
-            f"(dry-run: would post bypass audit (if any), squash-merge "
-            f"--subject {pr_title!r}, call move-issue, close and cascade "
+            f"(dry-run: would post bypass audit (if any), {lead_in_step}"
+            f"squash-merge --subject {pr_title!r}, call move-issue, close and cascade "
             f"{_issue_list(to_close) or 'no issue'} through close-issue, then "
             f"best-effort cleanup: delete remote branch {branch!r}, checkout "
             f"main + pull, delete local branch.)"
@@ -750,6 +774,26 @@ def main() -> int:
                 file=sys.stderr,
             )
             return 2
+
+    # The lead-in move (#1162), last before the merge, so only the merge stands
+    # between it and the move to done. It is made before the merge rather than
+    # after it: once the merge lands GitHub may close the issue at any moment,
+    # and a closed issue reads as done, from which there is no move to review.
+    # A failure stops the run here, while nothing irreversible has happened.
+    if lead_in is not None:
+        lead_in_rc = _invoke_move_issue(
+            args.issue_number, lead_in.to_state, args.capability_root,
+        )
+        if lead_in_rc != 0:
+            print(
+                f"error: move-issue exited {lead_in_rc} moving "
+                f"#{args.issue_number} {lead_in.from_state} → {lead_in.to_state} "
+                f"ahead of the merge, so PR #{pr_number} was NOT merged. Fix "
+                "what move-issue reported, then re-run `done-work "
+                f"{args.issue_number}`.",
+                file=sys.stderr,
+            )
+            return lead_in_rc
 
     # Squash-merge with an explicit subject so the landed commit subject
     # equals the gate-validated PR title regardless of commit count
@@ -2171,6 +2215,82 @@ def _check_pr_placeholder(
     )
 
 
+# ---- lead-in to done (#1162) -------------------------------------------
+
+# The state the merge moves the issue done-work runs for into.
+DONE_STATE = "done"
+
+
+@dataclass(frozen=True)
+class _LeadIn:
+    """The declared move the issue makes ahead of the merge (#1162)."""
+
+    from_state: str
+    to_state: str
+
+    def describe(self) -> str:
+        return (
+            f"{self.from_state} → {self.to_state} before the merge, "
+            f"{self.to_state} → {DONE_STATE} after it (workflow.yaml declares "
+            f"no {self.from_state} → {DONE_STATE} for this issue's type)"
+        )
+
+
+def _lead_in_to_done(
+    issue: dict | None, capability_root: Path, yaml_loader: YAML,
+) -> _LeadIn | None:
+    """The move the issue must make before the merge's move to done, or None.
+
+    After the merge done-work runs `move-issue --to done`, and workflow.yaml
+    says which states may make that move. For a Task, In Progress is not one
+    of them: the merge's move is Review → Done. A Task whose PR was opened
+    without `review-work` (from a worktree, say) is still In Progress when
+    done-work runs. So done-work first makes the declared move that leads to
+    done, In Progress → Review, and the merge then makes the declared Review →
+    Done. The PR is open and ready by then (a draft is refused earlier), which
+    is what Review means, so the move holds even if the merge that follows
+    fails.
+
+    Where the issue is, what type it is and what it may move to are read with
+    the readers move-issue and start-work use, so this cannot disagree with the
+    move it precedes. None when the issue needs no lead-in (it is done already,
+    or done is a declared move from where it is), when no single declared move
+    leads to done, or when the issue or its type cannot be read. The move to
+    done then runs as it always has and reports what it finds.
+    """
+    if issue is None:
+        return None
+    labels = _label_names(issue)
+    structural_type = infer_structural_type(
+        str(issue.get("title") or ""),
+        _read_schema(capability_root, "issue-types.yaml", yaml_loader),
+        classification=_read_schema(
+            capability_root, "classification.yaml", yaml_loader,
+        ),
+        labels=labels,
+    )
+    if structural_type is None:
+        return None
+    current = infer.infer_current_state(
+        state=str(issue.get("state") or "").lower(),
+        milestone=issue.get("milestone") or {},
+        labels=labels,
+        substrate_map=axis_labels.load_substrate_map(capability_root),
+    )
+    if current == DONE_STATE:
+        return None
+    workflow = _read_schema(capability_root, "workflow.yaml", yaml_loader)
+    targets = infer.legal_targets(workflow, current, structural_type)
+    if DONE_STATE in targets:
+        return None
+    for target in targets:
+        if target != current and DONE_STATE in infer.legal_targets(
+            workflow, target, structural_type,
+        ):
+            return _LeadIn(from_state=current, to_state=target)
+    return None
+
+
 # ---- helpers -----------------------------------------------------------
 
 
@@ -2270,16 +2390,30 @@ def _read_members(capability_root: Path, yaml_loader: YAML) -> list[dict]:
     return members if isinstance(members, list) else []
 
 
-def _criteria_headings(capability_root: Path, yaml_loader: YAML) -> frozenset[str]:
-    """The criteria-section headings from `schemas/body-format.yaml`, so the
-    checkbox gate numbers boxes as `check-criterion` does. Fail-open to the
-    historical literal when the schema cannot be read (`checkbox_headings`)."""
-    path = capability_root / "schemas" / "body-format.yaml"
+def _label_names(issue: dict | None) -> list[str]:
+    """The names of a fetched issue's labels; none for an unread issue."""
+    return [
+        lbl.get("name", "") if isinstance(lbl, dict) else str(lbl)
+        for lbl in ((issue or {}).get("labels") or [])
+    ]
+
+
+def _read_schema(capability_root: Path, name: str, yaml_loader: YAML) -> dict:
+    """A capability schema from `schemas/<name>`, or an empty mapping when it is
+    missing or cannot be read — each caller says what an empty one means."""
+    path = capability_root / "schemas" / name
     try:
         data = yaml_loader.load(path.read_text(encoding="utf-8")) if path.is_file() else {}
     except Exception:
         data = {}
-    return checkbox_headings(data if isinstance(data, dict) else {})
+    return data if isinstance(data, dict) else {}
+
+
+def _criteria_headings(capability_root: Path, yaml_loader: YAML) -> frozenset[str]:
+    """The criteria-section headings from `schemas/body-format.yaml`, so the
+    checkbox gate numbers boxes as `check-criterion` does. Fail-open to the
+    historical literal when the schema cannot be read (`checkbox_headings`)."""
+    return checkbox_headings(_read_schema(capability_root, "body-format.yaml", yaml_loader))
 
 
 if __name__ == "__main__":

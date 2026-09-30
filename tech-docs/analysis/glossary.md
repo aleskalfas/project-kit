@@ -107,9 +107,9 @@ TERM-stabilisation:
           - project-management:DEC-014
           - ADR-019
       revalidated:
-        at: 2026-09-30T09:26:27Z
+        at: 2026-09-30T17:57:53Z
         outcome: unchanged
-        unchanged-because: start-work now cuts the branch from the commit the backbone resolves its base to, and refuses when the backbone cannot say which branch is settled (COR-054); the stabilisation's freeze, its guards and its required status are untouched
+        unchanged-because: done-work's change is the declared In Progress → Review move it makes just before the merge for an issue that never reached Review, so the merge's move to Done is a declared one; what a stabilisation is, and what it lets start or land on the default branch, did not change
 ---
 
 # Glossary
