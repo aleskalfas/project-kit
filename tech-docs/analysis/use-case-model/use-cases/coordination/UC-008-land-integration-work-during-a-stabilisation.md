@@ -19,9 +19,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-09-30T06:40:07Z
+      at: 2026-09-30T15:10:12Z
       outcome: unchanged
-      unchanged-because: open-pr's change is that --doc-impact-from-friction leaves the Doc impact section unrendered when the friction check answers a schema_version other than 1; which branch a pull request targets, and how integration work reaches the default branch during a stabilisation, did not change
+      unchanged-because: done-work's change is the lifecycle move it makes before the merge for an issue still In Progress, In Progress to Review; the branch a pull request targets, and how integration-branch work reaches the default branch during a stabilisation, did not change
 ---
 
 # UC-008 — Land integration-branch work during a stabilisation

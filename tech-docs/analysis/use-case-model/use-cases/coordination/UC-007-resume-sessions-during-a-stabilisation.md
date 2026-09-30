@@ -19,6 +19,10 @@ pkit:
         - ADR-019
       artefact:
         - ACT-clone-session
+    revalidated:
+      at: 2026-09-30T15:10:10Z
+      outcome: unchanged
+      unchanged-because: done-work now moves a closing issue still In Progress to Review just before the merge instead of warning after it; how sessions resume during a stabilisation, and which work may land on the default branch while it is on, did not change
 ---
 
 # UC-007 — Resume sessions killed during a stabilisation

@@ -19,6 +19,10 @@ pkit:
         - ADR-019
       artefact:
         - ACT-operator
+    revalidated:
+      at: 2026-09-30T15:10:13Z
+      outcome: unchanged
+      unchanged-because: done-work's change is the declared move to Review it makes before the merge when the closing issue never reached Review; stabilising a Milestone, release scope, and the guards on starting and landing work did not change
 ---
 
 # UC-010 — Stabilise a Milestone for a release
