@@ -528,6 +528,41 @@ def test_explain_in_a_shallow_clone(timeline: Timeline, tmp_path: Path) -> None:
     assert finding.clears == "fetch the full history (`git fetch --unshallow`) and run again"
 
 
+def test_explain_a_deferral_point_beyond_a_shallow_clone(
+    timeline: Timeline, tmp_path: Path
+) -> None:
+    """The revalidation point is in the clone, a kept deferral's point is not: the artefact is
+    not judged, but the files its path anchor stood on at the point are listed all the same."""
+    repo = timeline.adopter
+    timeline.start({"docs/guide.md": guide()})
+    kept = [("path", "src/cli/**", "waiting")]
+    timeline.commit("defer the guide", {"docs/guide.md": guide(deferred=kept)})
+    timeline.commit("cli 2", {"src/cli/main.py": "print('cli 2')\n"})
+    revalidated = timeline.commit(
+        "revalidate the guide",
+        {"docs/guide.md": guide(at=T2, because="still as described", deferred=kept)},
+    )
+    timeline.commit("cli 3", {"src/cli/main.py": "print('cli 3')\n"})
+    shallow = tmp_path / "shallow"
+    # Three commits: `cli 3`, the revalidation, and `cli 2`, where the clone is cut.
+    repo.git("clone", "-q", "--depth", "3", f"file://{repo.root}", str(shallow))
+
+    explanation = frep.run_explain(shallow, "guide")
+    assert (explanation.state, explanation.shallow) == ("unreachable", True)
+    assert explanation.report is not None and explanation.report.revalidation_point is not None
+    assert explanation.report.revalidation_point.sha == revalidated
+    assert [(a, p) for a, p in explanation.report.deferral_points] == [(CLI, None)]
+    assert [(a.state, a.files) for a in explanation.anchors] == [
+        ("unreachable", fr.AnchorFiles(("src/cli/main.py",), ("src/cli/main.py",), ()))
+    ]
+    (finding,) = explanation.findings
+    assert finding.finding.kind is fr.RepositoryFindingKind.UNREACHABLE
+    assert "the deferral point of path src/cli/**" in finding.finding.message
+    assert finding.commits == ()
+    doc = json.loads(frep.render_explain_json(explanation))
+    assert doc["anchors"][0]["files"]["point"] == ["src/cli/main.py"]
+
+
 def test_explain_json_document_shape(timeline: Timeline) -> None:
     base = timeline.start({"docs/guide.md": guide()})
     changed = timeline.commit("change the CLI", {"src/cli/main.py": "print('2')\n"}, author=ALICE)
