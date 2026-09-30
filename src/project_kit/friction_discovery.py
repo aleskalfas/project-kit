@@ -805,9 +805,10 @@ def _held_overlaps(
     each (`held_folders`); none when it keeps them.
 
     The roots are judged as the document's `encloses` judges them (`_encloses`).
-    Another declaration's place is refused only when the folder reaches every
-    file it could hold; its own component's place, another held folder and a
-    rule-set folder whenever they could share a file (`_could_share`).
+    Another declaration's place is refused only when it lies within the folder,
+    which would empty it (`_lies_within`); its own component's place, another
+    held folder and a rule-set folder whenever they could share a file
+    (`_could_share`).
     """
     folder = _normal(held.pattern)
     clauses = [
