@@ -1,0 +1,10 @@
+component: software-analysis
+kind: patch
+custom:
+  category: Fixed
+body: >
+  A revalidation record under a path `friction.exclude` leaves out is no longer
+  counted or checked by `pkit analysis validate`, as an excluded artefact is no
+  part of the analysis. The check reads the core's listing of held files, which
+  now says whether each is excluded; with a backbone whose listing does not say
+  so yet, every held record still counts.

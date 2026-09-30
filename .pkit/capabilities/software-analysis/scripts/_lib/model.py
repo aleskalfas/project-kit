@@ -131,8 +131,10 @@ SCHEMA_VERSION = 1
 ANCHORS = "anchors"
 
 #: The key of the folders of held documents in that document, each declared as a
-#: place is, with the files it holds (COR-050 point 1).
+#: place is, with the files it holds (COR-050 point 1), and of the files they
+#: hold, each saying whether `friction.exclude` leaves it out.
 HELD = "held"
+HELD_FILES = "held_files"
 
 
 class Unreadable(Exception):
@@ -183,7 +185,8 @@ class Analysis:
     alone. `records` are the revalidation records, by path: the files this
     capability's held folder of them holds in the reading — the working tree's
     listing, so a record git ignores is not one, and every Markdown file
-    beneath the folder, nested ones included. `records_unheld` says why that
+    beneath the folder, nested ones included — less those `friction.exclude`
+    leaves out, as it leaves out an artefact. `records_unheld` says why that
     folder holds nothing, when it does not: the backbone skipped it (its
     validation says why), or the reading declares no such folder.
     """
@@ -277,7 +280,7 @@ def analysis_of(document: Mapping[str, Any]) -> Analysis:
         places[kind] = path
         location = location or _text(where.get("path"))
 
-    records, unheld = _records(document.get(HELD))
+    records, unheld = _records(document.get(HELD), document.get(HELD_FILES))
     kind_of_file: dict[str, str] = {}
     unreadable: dict[str, str] = {}
     no_front_matter: list[str] = []
@@ -350,10 +353,12 @@ def analysis_of(document: Mapping[str, Any]) -> Analysis:
     )
 
 
-def _records(held: Any) -> tuple[tuple[str, ...], str | None]:
+def _records(held: Any, held_files: Any) -> tuple[tuple[str, ...], str | None]:
     """The revalidation records — the files the document's declaration of this
-    capability's folder of them holds — and why it holds none, when it holds
-    nothing: the backbone skipped it, or the document declares no such folder."""
+    capability's folder of them holds, less those it lists as excluded — and why it
+    holds none, when it holds nothing: the backbone skipped it, or the document
+    declares no such folder."""
+    excluded = {str(f.get("path")) for f in _mappings(held_files) if f.get("excluded") is True}
     for entry in _mappings(held):
         where = entry.get("location")
         if (
@@ -366,7 +371,9 @@ def _records(held: Any) -> tuple[tuple[str, ...], str | None]:
             if isinstance(skipped, Mapping):
                 return (), f"the backbone skipped it ({skipped.get('reason')})"
             files = entry.get("files")
-            return tuple(sorted(str(f) for f in files)) if isinstance(files, list) else (), None
+            if not isinstance(files, list):
+                return (), None
+            return tuple(sorted(str(f) for f in files if str(f) not in excluded)), None
     return (), "the backbone's reading declares no such folder of this capability's"
 
 
