@@ -765,11 +765,14 @@ def test_friction_places_lie_inside_a_declared_location_or_the_project(
     }
 
 
-def test_friction_held_folders_are_written_and_checked_as_places_are(
+def test_friction_held_folders_name_a_location_and_are_folders_in_it(
     schema: dict[str, Any], component_dir: Path
 ) -> None:
-    """The schema accepts the held list in the place shape and refuses another key
-    in an entry; the repository checks hold its paths and locations as a place's."""
+    """A held folder is written as a place is, but names the location it lies within
+    and is a folder there — never a glob (COR-050 point 1). The schema says so and
+    refuses another key in an entry; the repository checks hold its path and
+    location as a place's, and repeat the two held rules for a tree without a
+    schema, with the same locations."""
     raw = _package(
         docs={"locations": {"records": {"path": "records"}}},
         friction={
@@ -778,11 +781,13 @@ def test_friction_held_folders_are_written_and_checked_as_places_are(
                 {"path": "notes/acts"},
                 {"location": "logs", "path": "runs"},
                 {"location": "records", "path": "../outside"},
+                {"location": "records", "path": "runs/*"},
             ]
         },
     )
     errors = _messages(_validate(raw, schema, component_dir), pv.Severity.ERROR)
     assert errors == {
+        "/friction/held/1": "'location' is a required property",
         "/friction/held/2/location": (
             "held folder names location 'logs', which `docs.locations` does not declare "
             "(declared: ['records'])."
@@ -791,10 +796,26 @@ def test_friction_held_folders_are_written_and_checked_as_places_are(
             "'../outside' is not a path relative to its location or the project: it contains "
             "a `..` segment."
         ),
+        "/friction/held/4/path": "'runs/*' does not match '^[^*?\\\\[]+$'",
     }
-    raw = _package(friction={"held": [{"path": "revalidations", "kind": "records"}]})
+    raw["friction"]["held"].append({"location": "records", "path": "runs", "kind": "records"})
     errors = _messages(_validate(raw, schema, component_dir), pv.Severity.ERROR)
-    assert list(errors) == ["/friction/held/0/kind"]
+    assert "/friction/held/5/kind" in errors
+
+    without_schema = _messages(_validate(raw, None, component_dir), pv.Severity.ERROR)
+    assert without_schema["/friction/held/1"] == (
+        "held folder names no `location`: a held folder lies within one of the component's "
+        "`docs.locations` (COR-050 point 1)."
+    )
+    assert without_schema["/friction/held/4/path"] == (
+        "held folder 'runs/*' is a glob: a held folder is a folder (COR-050 point 1)."
+    )
+    assert set(without_schema) == {
+        "/friction/held/1",
+        "/friction/held/2/location",
+        "/friction/held/3/path",
+        "/friction/held/4/path",
+    }
 
 
 def test_legacy_messages_are_kept_and_run_without_a_schema(component_dir: Path) -> None:

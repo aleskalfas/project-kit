@@ -25,13 +25,20 @@ is the one reader of those declarations and the one walker of the places:
   locations, puts it: its recorded location, else its declared sub-path under
   the root it names (COR-049 points 4 and 5; COR-050 point 1); without one,
   repository-relative.
-- `declared_held` — the folders of **held documents** a capability declares
-  (`friction.held`, COR-050 point 1): files it owns that are not artefacts,
-  such as the record of an act. A held folder is written and resolved as a
-  place is, and matched as a place is, but nothing in it is walked as an
-  artefact: no place — a root, another component's or the project's — reads a
-  held file, so neither measure counts it. Held folders are a component's
-  alone; a project leaves files out with `exclude`.
+- `held_folders` — the folders of **held documents** a capability declares
+  (`friction.held`, COR-050 point 1): files that belong to it but are not
+  artefacts, such as a log of reviews it carried out. A held folder is written
+  as a place is, with a `location` it lies within and a folder — never a glob
+  — as its `path`, and matched as a place is, but nothing in it is walked as
+  an artefact: no place — a root, another component's or the project's, its
+  own or a rule-set folder — reads a held file, so neither measure counts it.
+  It is bounded: one that equals or encloses a documentation root or another
+  declaration's place, or shares a file with another held folder, its own
+  component's place or a rule-set folder, holds nothing and says why
+  (`HeldFolder.skipped`) — one holder per file, and rules stay artefacts
+  (COR-051 point 2). A project declares none: it narrows its own places, and
+  keeps what must not count out of the measures with `exclude` (COR-050
+  point 14).
 - `rule_set_places` / `rule_set_files` — the location rule for rule-set files
   (COR-051 point 2, ADR-056 point 2): the places declared to hold rule sets,
   each with the component that owns the sets in it, and the Markdown files
@@ -51,8 +58,9 @@ is the one reader of those declarations and the one walker of the places:
   `SyncedMatch` for the validation pass to report; the question is the tree's
   own ownership predicate's (`synced_copy_test`), never re-derived here. A
   held file is not walked by any place either: it is kept as a `HeldFile`,
-  with its owner and the places that match it, and read only for its front
-  matter — a friction block in it is a validation finding (COR-050 point 12).
+  with the folder holding it and the places that match it, and read only for
+  its front matter — a friction block anywhere in it is a validation finding
+  (COR-050 point 12).
 - `FrictionSettings.exclusion` — the one decision of what `friction.exclude`
   leaves out (COR-050 point 7). The walk records it on every file and
   artefact it reads (`excluded_by`), so the measures read it from the
@@ -70,8 +78,8 @@ is the one reader of those declarations and the one walker of the places:
 - `artefacts_document` — the one walk's answer as a stable document: the
   declared places with the files each matches and the skips validation
   applies, every file read with its place and its front matter's own fields,
-  every artefact with its anchors, and every held file with its owner — of the
-  working tree, or of a commit.
+  every artefact with its anchors, and the held folders, declared as places
+  are, with every file each holds — of the working tree, or of a commit.
   `pkit friction artefacts --json` prints it, and a capability's script reads
   where artefacts are through it, at head or at another state, never by
   walking the places or listing a commit itself (ADR-057 points 1 and 2).
@@ -92,7 +100,7 @@ from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from enum import Enum
 from pathlib import Path, PurePosixPath
-from typing import Any, Protocol
+from typing import Any, Protocol, cast
 
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
@@ -260,7 +268,8 @@ class FrictionSettings:
     uses, falling back to the default for anything it does not recognise.
     `exclusion` is the one decision of what `exclude` leaves out. `held` are
     the capabilities' folders of held documents, resolved as their places are;
-    a project declares none.
+    a project declares none. `internal_root` and `user_root` are the
+    documentation roots, read from the same state.
     """
 
     mode: Any
@@ -268,10 +277,16 @@ class FrictionSettings:
     surface: tuple[SettingsPath, ...]
     exclude: tuple[SettingsPath, ...]
     internal_root: str  # the documentation root a location resolves under by default
+    user_root: str
     malformed_places: tuple[MalformedDeclaration, ...] = ()
     malformed_surface: tuple[MalformedDeclaration, ...] = ()
     held: tuple[SettingsPath, ...] = ()
     malformed_held: tuple[MalformedDeclaration, ...] = ()
+
+    @property
+    def roots(self) -> dict[str, str]:
+        """The documentation roots by audience, repository-relative (COR-049 point 1)."""
+        return {docs_roots.INTERNAL_KEY: self.internal_root, docs_roots.USER_KEY: self.user_root}
 
     @property
     def mode_or_default(self) -> str:
@@ -360,6 +375,7 @@ def read_friction_settings(
         surface=tuple(surface),
         exclude=tuple(exclude),
         internal_root=roots.internal.as_posix(),
+        user_root=roots.user.as_posix(),
         malformed_places=tuple(malformed_places),
         malformed_surface=tuple(malformed_surface),
         held=tuple(held),
@@ -412,6 +428,8 @@ def _capability_places(
     — the one reading, `docs_roots.read_capability_locations` — puts it: its
     recorded location, else its declared `{path, root?}` under the root it
     names (COR-049 points 4 and 5). Without one, `path` is repository-relative.
+    A held folder lies within one of the capability's locations, so it names
+    one, and its `path` is a folder inside it (`_resolve_capability_place`).
     Only that shape is read: an entry written as plain text or in any other
     shape, or naming a location the capability does not declare or that the
     reading cannot place, gives the walk nothing it could follow, so it is
@@ -435,7 +453,7 @@ def _capability_places(
     location_roots = docs_roots.declared_location_roots(package)
     for index, entry in enumerate(raw):
         entry_pointer = f"{pointer}/{index}"
-        resolved = _resolve_capability_place(entry, locations, noun)
+        resolved = _resolve_capability_place(entry, locations, key)
         if isinstance(resolved, _Unresolved):
             malformed.append(
                 MalformedDeclaration(
@@ -466,17 +484,20 @@ def _capability_places(
 def _resolve_capability_place(
     entry: Any,
     locations: Mapping[str, docs_roots.Location | docs_roots.UnreadableLocation],
-    noun: str = _ENTRY_NOUN[PLACES_KEY],
+    key: str = PLACES_KEY,
 ) -> tuple[str, str, tuple[str, str] | None] | _Unresolved:
-    """`(path, pattern, location)` for a place — or a held folder, the `noun` a
-    finding calls it — in the schema's shape, else why it is not.
+    """`(path, pattern, location)` for an entry of the `key` list — a place, or a
+    held folder — in the schema's shape, else why it is not.
 
     `path` is the entry's own, `pattern` the repository-relative form the walk
     follows, and `location` the `(name, where it lies)` of the location it
-    names, or `None`. Whether the pattern stays inside the repository is left
-    to the validation pass, which follows links on disk; here only the shape
-    is judged.
+    names, or `None`. A held folder lies within one of the capability's
+    locations (COR-050 point 1): it names one, and its `path` is a folder there
+    — no glob, nothing absolute, no `..` segment. Whether the pattern stays
+    inside the repository is left to the validation pass, which follows links
+    on disk; here only the shape is judged.
     """
+    noun = _ENTRY_NOUN[key]
     if not isinstance(entry, Mapping):
         return _Unresolved(f"the {noun} is {_shape(entry)}, not an object `{{path, location?}}`")
     written = entry.get(PATH_KEY)
@@ -485,6 +506,15 @@ def _resolve_capability_place(
         if written is None:
             return _Unresolved(f"the {noun} has no `path`")
         return _Unresolved(f"the {noun}'s `path` is {_shape(written)}, not a path or glob")
+    if key == HELD_KEY:
+        outside = _held_path_problem(path)
+        if outside is not None:
+            return _Unresolved(f"the held folder's `path` {path!r} {outside}")
+        if LOCATION_KEY not in entry:
+            return _Unresolved(
+                "the held folder names no `location`: a held folder lies within one of the "
+                "component's `docs.locations`"
+            )
     if LOCATION_KEY not in entry:
         return path, _join_posix(path), None
     location = entry.get(LOCATION_KEY)
@@ -504,7 +534,20 @@ def _resolve_capability_place(
             f"the {noun} names location {location!r}, whose `docs.locations` entry {where.reason}"
         )
     folder = where.path.as_posix()
-    return path, _join_posix(folder, path), (location, folder)
+    pattern = _join_posix(folder, path)
+    if key == HELD_KEY:  # a folder, with no `..` of its own: its normal form is the folder
+        pattern = os.path.normpath(pattern).replace(os.sep, "/")
+    return path, pattern, (location, folder)
+
+
+def _held_path_problem(path: str) -> str | None:
+    """Why a held folder's `path` is not a folder within its location, or `None`."""
+    if any(ch in _GLOB_CHARS for ch in path):
+        return "is a glob, not a folder"
+    parts = PurePosixPath(path).parts
+    if PurePosixPath(path).is_absolute() or ".." in parts:
+        return "leaves its location (absolute, or with a `..` segment)"
+    return None
 
 
 def _capability_surface(
@@ -664,14 +707,197 @@ def declared_places(settings: FrictionSettings) -> tuple[Place, ...]:
     return tuple(Place(pattern=p.resolved, declaration=p) for p in settings.places)
 
 
-def declared_held(settings: FrictionSettings) -> tuple[Place, ...]:
-    """The folders of held documents, each capability's by name in written order.
+def capability_name(source: str) -> str:
+    """The component a declaration's `source` names: `capability:<name>` gives
+    `<name>`; any other source is returned as it is."""
+    prefix = "capability:"
+    return source[len(prefix) :] if source.startswith(prefix) else source
 
-    A held folder is declared, resolved and matched as a place is — so it is
-    carried as one — but it is not a place: what it matches is never walked as
-    an artefact (COR-050 point 1).
+
+@dataclass(frozen=True)
+class Skip:
+    """Why a declaration holds nothing: a `reason` a reader can tell apart
+    (`SKIP_MALFORMED`, `SKIP_OUTSIDE`, `SKIP_OVERLAP`) and its `detail`."""
+
+    reason: str
+    detail: str
+
+
+@dataclass(frozen=True)
+class HeldFolder:
+    """A folder of held documents a capability declares (COR-050 point 1).
+
+    `place` carries it as a place is carried — its resolved pattern and its
+    declaration — because it is written, resolved and matched as one; it is not
+    a place, and no place walks what it holds. `skipped` is `None` for a folder
+    that holds its files, else why it holds nothing: it leaves the repository
+    (`SKIP_OUTSIDE`), or it overlaps what another declaration reaches
+    (`SKIP_OVERLAP`, `held_folders`). A folder that holds nothing leaves its
+    files to the places matching them, and its declaration carries the finding.
     """
-    return tuple(Place(pattern=h.resolved, declaration=h) for h in settings.held)
+
+    place: Place
+    skipped: Skip | None = None
+
+    @property
+    def pattern(self) -> str:
+        """The repository-relative folder, as the walk matches it."""
+        return self.place.pattern
+
+    @property
+    def declaration(self) -> SettingsPath:
+        return self.place.declaration
+
+    @property
+    def component(self) -> str:
+        """The capability that declares it."""
+        return capability_name(self.place.source)
+
+
+def held_folders(
+    target_root: Path,
+    settings: FrictionSettings,
+    rule_sets: Sequence[RuleSetPlace] | None = None,
+) -> tuple[HeldFolder, ...]:
+    """The folders of held documents, each capability's by name in written order,
+    each with why it holds nothing, if it does (COR-050 point 1).
+
+    A held folder is bounded, so that every held file has one holder and no
+    declaration empties what another declares. One that leaves the repository —
+    through its location or a link — holds nothing (`SKIP_OUTSIDE`), and so
+    does one that equals or encloses a documentation root or another
+    declaration's place, or shares files with its own component's place,
+    another held folder or a rule-set folder, whose files the location rule
+    reads as rules (`SKIP_OVERLAP`; COR-051 point 2). Lying inside another
+    declaration's place — a root's, say — is what a held folder is for: that
+    place leaves its files out. Judged on the declarations, never on which files
+    exist, so a folder empty today is judged as it will be read. `rule_sets` are
+    the rule-set places, when the caller has them (`rule_set_places`).
+    """
+    if not settings.held:
+        return ()
+    if rule_sets is None:
+        rule_sets = rule_set_places(target_root, settings)
+    inside = [h for h in settings.held if is_inside_repository(target_root, h.resolved)]
+    folders: list[HeldFolder] = []
+    for held in settings.held:
+        place = Place(pattern=held.resolved, declaration=held)
+        if held not in inside:
+            detail = (
+                f"{held.resolved!r} leaves the repository — its location lies outside it, or "
+                f"it resolves outside it through a link — so nothing under it is held"
+            )
+            folders.append(HeldFolder(place, Skip(SKIP_OUTSIDE, detail)))
+            continue
+        clauses = _held_overlaps(place, settings, rule_sets, [h for h in inside if h != held])
+        skipped = Skip(SKIP_OVERLAP, "; ".join(clauses)) if clauses else None
+        folders.append(HeldFolder(place, skipped))
+    return tuple(folders)
+
+
+def _held_overlaps(
+    held: Place,
+    settings: FrictionSettings,
+    rule_sets: Sequence[RuleSetPlace],
+    others: Sequence[SettingsPath],
+) -> list[str]:
+    """How a held folder inside the repository oversteps its bounds, one clause
+    each (`held_folders`); none when it keeps them.
+
+    The roots are judged as the document's `encloses` judges them (`_encloses`).
+    Another declaration's place is refused only when the folder reaches every
+    file it could hold; its own component's place, another held folder and a
+    rule-set folder whenever they could share a file (`_could_share`).
+    """
+    folder = _normal(held.pattern)
+    clauses = [
+        f"equals or encloses the {audience} documentation root {root!r}"
+        for audience, root in settings.roots.items()
+        if _encloses(held, root)
+    ]
+    rule_set_patterns = {_normal(r.pattern) for r in rule_sets}
+    for place in declared_places(settings):
+        shown = _normal(place.pattern)
+        if shown in rule_set_patterns:
+            continue  # a rule-set folder, judged as one below
+        if place.source == held.source:
+            if _could_share(place.pattern, folder):
+                clauses.append(f"overlaps its own place {shown!r}")
+        elif _lies_within(place.pattern, folder):
+            clauses.append(f"equals or encloses {_declarer(place.source)}'s place {shown!r}")
+    clauses += [
+        f"overlaps the rule-set folder {_normal(r.pattern)!r}, whose files are rules "
+        f"(COR-051 point 2)"
+        for r in rule_sets
+        if _could_share(r.pattern, folder)
+    ]
+    clauses += [
+        f"overlaps {_declarer(other.source)}'s held folder {other.resolved!r}"
+        if other.source != held.source
+        else f"overlaps its own held folder {other.resolved!r}"
+        for other in others
+        if _could_share(other.resolved, folder)
+    ]
+    return clauses
+
+
+def _normal(pattern: str) -> str:
+    """A declared path or glob in its normal form, with `/` separators."""
+    return os.path.normpath(pattern).replace(os.sep, "/")
+
+
+def _declarer(source: str) -> str:
+    """Who a declaration's `source` is, for a message: `the project`, or the component."""
+    return "the project" if source == "project" else capability_name(source)
+
+
+def _lies_within(pattern: str, folder: str) -> bool:
+    """Whether every file `pattern` could match lies at or beneath the literal `folder`."""
+    normalised = _normal(pattern)
+    return folder == "." or normalised == folder or normalised.startswith(folder + "/")
+
+
+def _could_share(pattern: str, folder: str) -> bool:
+    """Whether `pattern` — a path or a glob, read as a place reads it — could match
+    a file at or beneath the literal `folder`.
+
+    A path without glob characters shares files with the folder when one of the
+    two lies within the other. A glob is walked segment by segment against the
+    folder's segments — `**` spanning any number of them — and could match
+    beneath it when it has segments left once the folder's are consumed.
+    """
+    normalised = _normal(pattern)
+    if "." in (normalised, folder):
+        return True
+    if not any(ch in _GLOB_CHARS for ch in normalised):
+        return _lies_within(normalised, folder) or folder.startswith(normalised + "/")
+    segments = normalised.split("/")
+
+    def spanned(states: set[int]) -> set[int]:
+        """`states` with every state a `**` may skip past, matching no segment."""
+        pending = list(states)
+        while pending:
+            index = pending.pop()
+            if index < len(segments) and segments[index] == "**" and index + 1 not in states:
+                states.add(index + 1)
+                pending.append(index + 1)
+        return states
+
+    states = spanned({0})
+    for part in folder.split("/"):
+        following: set[int] = set()
+        for index in states:
+            if index >= len(segments):
+                continue
+            segment = segments[index]
+            if segment == "**":
+                following.add(index)
+            elif re.fullmatch(_segment_regex(segment), part):
+                following.add(index + 1)
+        states = spanned(following)
+        if not states:
+            return False
+    return any(index < len(segments) for index in states)
 
 
 @dataclass(frozen=True)
@@ -692,19 +918,20 @@ class SyncedMatch:
 class HeldFile:
     """A Markdown file a component holds, which is not an artefact (COR-050 point 1).
 
-    No place walks it — a root, another component's or the project's — so it
-    is never an artefact, and neither measure counts it. `folder` is the held
-    folder holding it: the first declaration matching it, whose `source` names
-    its owner. `places` are the places that match it and so left it out, in
-    walk order. It is read for its front matter alone: `front_matter` as
-    written when that is a mapping, `unreadable` why the file or its front
-    matter could not be read, and `blocks` the location — `path`, or `path#id`
-    for an entry — of every friction block in it, which validation refuses
-    (COR-050 point 12).
+    No place walks it — a root, another component's or the project's, its own
+    or a rule-set folder — so it is never an artefact, and neither measure
+    counts it. `folder` is the held folder holding it — the one, since held
+    folders never share a file (`held_folders`) — whose declaration names its
+    owner. `places` are the places that match it and so left it out, in walk
+    order. It is read for its front matter alone: `front_matter` as written
+    when that is a mapping, `unreadable` why the file or its front matter could
+    not be read, and `blocks` the JSON Pointer, in the front matter, of every
+    friction block anywhere in it — the document's own, an entry's, a rule's
+    under `rules`, or deeper — which validation refuses (COR-050 point 12).
     """
 
     path: str
-    folder: Place
+    folder: HeldFolder
     places: tuple[Place, ...]
     front_matter: Mapping[str, Any] | None
     unreadable: str | None
@@ -712,7 +939,24 @@ class HeldFile:
 
     @property
     def owner(self) -> str:
-        return self.folder.source
+        """The declaration's `source`: `capability:<name>`."""
+        return self.folder.place.source
+
+    @property
+    def component(self) -> str:
+        """The capability holding it."""
+        return self.folder.component
+
+
+def held_message(held: HeldFile) -> str:
+    """What a command that reads artefacts says of a held document it was asked
+    about: whose it is, where that is declared, and that it is no artefact."""
+    declaration = held.folder.declaration
+    return (
+        f"{held.path} is held by {held.component} — in its held folder {declaration.value!r}, "
+        f"{declaration.file}:{declaration.pointer} — and is not an artefact: a held document "
+        f"carries no friction block (COR-050 point 1)."
+    )
 
 
 def synced_copy_test(target_root: Path) -> Callable[[str], bool] | None:
@@ -1248,8 +1492,10 @@ class Discovery:
     (some of them declared places). `synced` holds the files a declared place
     matched that are synced copies, which were not walked (COR-050 point 14).
     `files` holds every file the walk read, by path — a link is never read, so
-    never one of them. `held` holds every file a held folder holds, by path,
-    whether or not a place matches it; none of them is walked (COR-050 point 1).
+    never one of them. `held_folders` are the folders of held documents, each
+    with why it holds nothing, if it does; `held` every file one holds, by
+    path, whether or not a place matches it — none of them is walked (COR-050
+    point 1).
     """
 
     settings: FrictionSettings
@@ -1259,6 +1505,7 @@ class Discovery:
     synced: tuple[SyncedMatch, ...] = ()
     files: tuple[DiscoveredFile, ...] = ()
     rule_set_places: tuple[RuleSetPlace, ...] = ()
+    held_folders: tuple[HeldFolder, ...] = ()
     held: tuple[HeldFile, ...] = ()
 
     @property
@@ -1281,6 +1528,10 @@ class Discovery:
             if reference in artefact.identifiers:
                 return artefact
         return None
+
+    def holding(self, path: str) -> HeldFile | None:
+        """The held file at the repository-relative `path`, or None."""
+        return next((held for held in self.held if held.path == path), None)
 
 
 def discover_artefacts(
@@ -1310,9 +1561,10 @@ def discover_artefacts(
     read as the location rule says (COR-051 point 2).
 
     A file a held folder holds is walked by no place, whichever state is walked
-    (COR-050 point 1): it is recorded in `held` with the folder holding it — the
-    first in declaration order — and the places that match it, and read for its
-    front matter alone. A link is never held, as it is never read.
+    (COR-050 point 1): it is recorded in `held` with the folder holding it and
+    the places that match it, and read for its front matter alone. A folder
+    that holds nothing (`held_folders`) leaves its files to the places. A link
+    is never held, as it is never read.
     """
     settings = settings if settings is not None else read_friction_settings(target_root, tree)
     # Which rule-set folders are places is read from the working tree even when
@@ -1324,9 +1576,9 @@ def discover_artefacts(
     places = declared_places(settings)
     declared = frozenset(places)
     places += tuple(r.place for r in rule_set_places_found if r.place not in places)
-    held_folders = declared_held(settings)
-    if not places and not held_folders:
+    if not places and not settings.held:
         return Discovery(settings=settings, places=places, artefacts=(), unreadable=())
+    folders = held_folders(target_root, settings, rule_set_places_found)
     listing = tree if tree is not None else working_tree(target_root)
     files = listing.files()
     claimed: dict[str, RuleSetPlace] = {}
@@ -1334,10 +1586,11 @@ def discover_artefacts(
         for rel in listed_files_in_place(rule_set_place.place, files):
             if PurePosixPath(rel).name != RULE_SETS_SIGNPOST:
                 claimed.setdefault(rel, rule_set_place)
-    holder: dict[str, Place] = {}  # each held file: the folder holding it
-    for folder in held_folders:
-        for rel in listed_files_in_place(folder, files):
-            holder.setdefault(rel, folder)
+    holder: dict[str, HeldFolder] = {}  # each held file: the folder holding it
+    for folder in folders:
+        if folder.skipped is None:
+            for rel in listed_files_in_place(folder.place, files):
+                holder.setdefault(rel, folder)
     is_synced_copy = synced_copy_test(target_root) if declared else None
     matched: list[tuple[Place, str]] = []
     synced: list[SyncedMatch] = []
@@ -1400,24 +1653,46 @@ def discover_artefacts(
         synced=tuple(synced),
         files=tuple(sorted(read, key=lambda f: f.path)),
         rule_set_places=rule_set_places_found,
+        held_folders=folders,
         held=tuple(held),
     )
 
 
 def _held_file(
-    rel: str, folder: Place, places: tuple[Place, ...], text: str | _ReadFailure
+    rel: str, folder: HeldFolder, places: tuple[Place, ...], text: str | _ReadFailure
 ) -> HeldFile:
-    """A held file, read for its front matter and any friction block in it.
+    """A held file, read for its front matter and every friction block in it.
 
-    Read as a file in a place is read (`_read_artefacts`), so a friction block is
-    found wherever the one reading would find an artefact's — the document's own,
-    or an entry's — though none of what it reads becomes an artefact.
+    Its front matter is parsed as a file in a place is (`_parsed_front_matter`),
+    and searched whole for a friction block (`_friction_blocks`): no reading of
+    it as an artefact is assumed, so a block is found wherever it is written —
+    as a document's, an entry's, a rule's, or deeper.
     """
     if isinstance(text, _ReadFailure):
         return HeldFile(rel, folder, places, front_matter=None, unreadable=text.reason, blocks=())
-    front_matter, read_as, reason = _read_artefacts(rel, folder, text)
-    blocks = tuple(a.location for a in read_as if a.has_friction_block)
+    front_matter, _body, reason = _parsed_front_matter(text)
+    blocks = tuple(_friction_blocks(front_matter, "")) if front_matter is not None else ()
     return HeldFile(rel, folder, places, front_matter, unreadable=reason, blocks=blocks)
+
+
+def _friction_blocks(value: Any, pointer: str) -> Iterator[str]:
+    """The JSON Pointer of every friction block in a parsed value, in written order:
+    each mapping whose container holds the `friction` key, and within it, deeper."""
+    if isinstance(value, Mapping):
+        mapping = cast("Mapping[Any, Any]", value)
+        container = mapping.get(CONTAINER_KEY)
+        if isinstance(container, Mapping) and FRICTION_KEY in container:
+            yield f"{pointer}/{CONTAINER_KEY}/{FRICTION_KEY}"
+        for key, item in mapping.items():
+            yield from _friction_blocks(item, f"{pointer}/{_pointer_token(key)}")
+    elif isinstance(value, list):
+        for index, item in enumerate(cast("list[Any]", value)):
+            yield from _friction_blocks(item, f"{pointer}/{index}")
+
+
+def _pointer_token(key: Any) -> str:
+    """One JSON Pointer reference token (RFC 6901 escaping)."""
+    return str(key).replace("~", "~0").replace("/", "~1")
 
 
 @dataclass(frozen=True)
@@ -1481,19 +1756,27 @@ def _read_artefacts(
 ) -> tuple[Mapping[str, Any] | None, list[Artefact], str | None]:
     """`parse_artefacts`, with the file's front matter as written when it is a
     mapping: `(front_matter, artefacts, reason)`."""
+    written, body, reason = _parsed_front_matter(text)
+    if written is None:
+        return None, [], reason
+    return written, _artefacts_of_file(rel, place, written, body, rule_set=rule_set), None
+
+
+def _parsed_front_matter(text: str) -> tuple[Mapping[str, Any] | None, str, str | None]:
+    """A file's front matter as written when it is a mapping, its body, and why the
+    front matter does not parse, if it does not: `(front_matter, body, reason)`."""
     if "\r" in text:
         text = text.replace("\r\n", "\n").replace("\r", "\n")
     front_matter, body = split_front_matter(text)
     if front_matter is None:
-        return None, [], None
+        return None, body, None
     try:
         data = _yaml.load(io.StringIO(front_matter))
     except YAMLError as exc:
-        return None, [], _yaml_reason(exc)
+        return None, body, _yaml_reason(exc)
     if not isinstance(data, Mapping):
-        return None, [], None
-    written = as_written(data)
-    return written, _artefacts_of_file(rel, place, written, body, rule_set=rule_set), None
+        return None, body, None
+    return as_written(data), body, None
 
 
 def _artefacts_of_file(
@@ -1671,10 +1954,13 @@ def _yaml_reason(exc: YAMLError) -> str:
 #: raises it; a key added does not.
 ARTEFACTS_SCHEMA_VERSION = 1
 
-#: Why a declared place holds no files: a capability place discovery cannot
-#: read in the package schema's shape, or a place that leaves the repository.
+#: Why a declared place or held folder holds no files: a capability declaration
+#: discovery cannot read in the package schema's shape, or one that leaves the
+#: repository; and, for a held folder only, one that oversteps its bounds
+#: (`held_folders`, COR-050 point 1).
 SKIP_MALFORMED = "malformed"
 SKIP_OUTSIDE = "outside-repository"
+SKIP_OVERLAP = "overlap"
 
 #: What a place must match to enclose a documentation root: a document directly
 #: in the root and one three folders beneath it, read as the place reads a
@@ -1751,11 +2037,18 @@ def artefacts_document(target_root: Path, tree: RepositoryTree | None = None) ->
       its friction block lists them (the values that are text, in written
       order), and its own `fields` (its front matter or entry, as written, the
       container left out).
-    - `held`: every file a component holds that is not an artefact (COR-050
-      point 1), by path, with its owner — the held folder's declaration
-      (`source`, `file`, `pointer`, `written`, `location`) — the `places` that
-      match it and so did not walk it (indices into `places`), its front
-      matter's own `fields` and why it is `unreadable`, if it is.
+    - `held`: every folder of held documents a capability declares (COR-050
+      point 1), in declaration order — each capability's by name, in written
+      order, a malformed declaration where it was written — declared as a place
+      is: `source`, `file`, `pointer`, the path `written`, the `location` it
+      lies within, the resolved `path`, the `files` it holds (none is walked by
+      any place), and `skipped` — why it holds nothing (`malformed`,
+      `outside-repository`, `overlap`), with the detail. A folder holding
+      nothing because nothing is in it yet is listed with no files.
+    - `held_files`: every file a held folder holds, by path, with the folder
+      holding it (`held`, an index into `held`), the `places` that match it and
+      so did not walk it (indices into `places`), its front matter's own
+      `fields` and why it is `unreadable`, if it is.
     """
     settings = read_friction_settings(target_root, tree)
     discovery = discover_artefacts(target_root, settings, tree)
@@ -1786,6 +2079,18 @@ def artefacts_document(target_root: Path, tree: RepositoryTree | None = None) ->
 
     def rule_set_index(rule_set: RuleSetPlace | None) -> int | None:
         return index[rule_set.place] if rule_set is not None else None
+
+    held_order: list[tuple[tuple[int, str, int], HeldFolder | MalformedDeclaration]] = [
+        (_declaration_order(f.place.source, f.declaration.pointer), f)
+        for f in discovery.held_folders
+    ]
+    held_order += [(_declaration_order(m.source, m.pointer), m) for m in settings.malformed_held]
+    held_order.sort(key=lambda item: item[0])
+    held_entries = [entry for _order, entry in held_order]
+    held_index = {entry: i for i, entry in enumerate(held_entries)}
+    held_of: dict[HeldFolder, list[str]] = {}
+    for held in discovery.held:
+        held_of.setdefault(held.folder, []).append(held.path)
 
     return {
         "schema_version": ARTEFACTS_SCHEMA_VERSION,
@@ -1834,13 +2139,15 @@ def artefacts_document(target_root: Path, tree: RepositoryTree | None = None) ->
             for artefact in discovery.artefacts
         ],
         "held": [
+            _malformed_held_entry(entry)
+            if isinstance(entry, MalformedDeclaration)
+            else _held_entry(entry, held_of.get(entry, []))
+            for entry in held_entries
+        ],
+        "held_files": [
             {
                 "path": held.path,
-                "source": held.owner,
-                "file": held.folder.declaration.file,
-                "pointer": held.folder.declaration.pointer,
-                "written": held.folder.declaration.value,
-                "location": _location_entry(held.folder.declaration.location),
+                "held": held_index[held.folder],
                 "places": [index[place] for place in held.places],
                 "fields": _own_fields(held.front_matter),
                 "unreadable": held.unreadable,
@@ -1897,6 +2204,35 @@ def _place_entry(
     }
 
 
+def _held_entry(folder: HeldFolder, files: Sequence[str]) -> dict[str, Any]:
+    """A folder of held documents as the document declares it, beside the places."""
+    declaration = folder.declaration
+    skipped = folder.skipped
+    return {
+        "source": declaration.source,
+        "file": declaration.file,
+        "pointer": declaration.pointer,
+        "written": declaration.value,
+        "location": _location_entry(declaration.location),
+        "path": folder.place.pattern,
+        "files": list(files),
+        "skipped": {"reason": skipped.reason, "detail": skipped.detail} if skipped else None,
+    }
+
+
+def _malformed_held_entry(declaration: MalformedDeclaration) -> dict[str, Any]:
+    return {
+        "source": declaration.source,
+        "file": declaration.file,
+        "pointer": declaration.pointer,
+        "written": None,
+        "location": None,
+        "path": None,
+        "files": [],
+        "skipped": {"reason": SKIP_MALFORMED, "detail": declaration.reason},
+    }
+
+
 def _location_entry(location: PlaceLocation | None) -> dict[str, Any] | None:
     """The documentation location a capability's place or held folder names, or `None`."""
     if location is None:
@@ -1942,22 +2278,15 @@ def render_artefacts_json(document: Mapping[str, Any]) -> str:
 
 def render_artefacts_human(document: Mapping[str, Any]) -> str:
     """One line per place, then the counts of files and artefacts, then — when a
-    component holds any — the count of held documents, by owner."""
+    component declares any — one line per held folder, with the files it holds."""
     places = document["places"]
     lines = [f"{len(places)} place(s):"]
     for place in places:
-        where = place["path"]
-        if where is None:
-            where = f"{place['file']} {place['pointer']}"
         owner = place["source"] if place["declared"] else f"{place['source']}, rule sets"
-        if place["location"] is not None:
-            owner += f", location {place['location']['name']}"
-        line = f"  {where}  ({owner})  {len(place['files'])} file(s)"
+        line = _declaration_line(place, owner)
         if place["synced"]:
             line += f"; {len(place['synced'])} synced copy(ies) not walked"
-        if place["skipped"] is not None:
-            line += f"; skipped, {place['skipped']['reason']}: {place['skipped']['detail']}"
-        lines.append(line)
+        lines.append(_skipped(place, line))
     files = document["files"]
     artefacts = document["artefacts"]
     lines.append(
@@ -1971,9 +2300,24 @@ def render_artefacts_human(document: Mapping[str, Any]) -> str:
     )
     held = document["held"]
     if held:
-        owners: dict[str, int] = {}
-        for entry in held:
-            owners[entry["source"]] = owners.get(entry["source"], 0) + 1
-        by = ", ".join(f"{count} by {owner}" for owner, count in sorted(owners.items()))
-        lines.append(f"{len(held)} held document(s), walked by no place: {by}.")
+        lines.append(f"{len(held)} held folder(s), whose files no place walks:")
+        lines += [_skipped(entry, _declaration_line(entry, entry["source"])) for entry in held]
     return "\n".join(lines) + "\n"
+
+
+def _declaration_line(entry: Mapping[str, Any], owner: str) -> str:
+    """A declared place's or held folder's line: where, whose, how many files."""
+    where = entry["path"]
+    if where is None:
+        where = f"{entry['file']} {entry['pointer']}"
+    if entry["location"] is not None:
+        owner += f", location {entry['location']['name']}"
+    return f"  {where}  ({owner})  {len(entry['files'])} file(s)"
+
+
+def _skipped(entry: Mapping[str, Any], line: str) -> str:
+    """`line`, with why the declaration holds nothing, when it does not."""
+    skipped = entry["skipped"]
+    if skipped is None:
+        return line
+    return f"{line}; skipped, {skipped['reason']}: {skipped['detail']}"

@@ -692,6 +692,7 @@ HELD_RUNS = (
     "    - {location: runs, path: records, description: The run records.}\n"
 )
 RECORD = "docs/evidence/records/2026-10-01-run.md"
+HELD_POINTER = "/friction/held/0"
 
 
 def test_a_held_document_is_walked_by_no_place_and_neither_measure_counts_it(
@@ -714,13 +715,14 @@ def test_a_held_document_is_walked_by_no_place_and_neither_measure_counts_it(
 
     assert [a.path for a in discovery.artefacts] == ["docs/plain.md"]
     assert [f.path for f in discovery.files] == ["docs/plain.md"]
-    (held,) = discovery.held
-    assert (held.path, held.owner, held.folder.declaration.pointer) == (
-        RECORD,
-        "capability:evidence",
-        "/friction/held/0",
+    (folder,) = discovery.held_folders
+    assert (folder.pattern, folder.component, folder.skipped) == (
+        "docs/evidence/records",
+        "evidence",
+        None,
     )
-    assert held.folder.pattern == "docs/evidence/records"
+    (held,) = discovery.held
+    assert (held.path, held.owner, held.folder) == (RECORD, "capability:evidence", folder)
     assert [p.pattern for p in held.places] == ["docs"]
     assert held.front_matter == {"date": "2026-10-01"}
     assert (held.unreadable, held.blocks) == (None, ())
@@ -732,19 +734,25 @@ def test_a_held_document_is_walked_by_no_place_and_neither_measure_counts_it(
     assert repository.unanchored == ("docs/plain.md",)
 
 
-def test_a_friction_block_in_a_held_document_fails_validation_even_while_dormant(
+def test_a_friction_block_anywhere_in_a_held_document_fails_validation_even_while_dormant(
     make_adopter_repo: MakeAdopterRepo,
 ) -> None:
     """A held document is not an artefact, so nothing would read a block written
-    into it: validation refuses one — in the document's own front matter or in an
-    entry — located at the block, whether any place is declared or not."""
+    into it: validation refuses one wherever it is written — the document's own,
+    an entry's, a rule's under `rules` — located at the block, whether any place
+    is declared or not."""
     adopter = make_adopter_repo(capabilities=("evidence",))
     _evidence_declares(adopter, HELD_RUNS)
     entries = "docs/evidence/records/entries.md"
+    rules = "docs/evidence/records/rules.md"
     adopter.write(
         {
             RECORD: _document("run", anchors={"path": ["src/**"]}),
             entries: "---\nRUN-1:\n  pkit:\n    friction:\n      anchors: {path: [src/**]}\n---\n",
+            rules: (
+                "---\nrule-set: RUNS\nrules:\n  RS-RUNS-001:\n    status: accepted\n"
+                "    pkit:\n      friction:\n        anchors: {path: [src/**]}\n---\n"
+            ),
             "docs/evidence/records/clean.md": "---\ndate: '2026-10-02'\n---\n",
         }
     )
@@ -753,17 +761,17 @@ def test_a_friction_block_in_a_held_document_fails_validation_even_while_dormant
     assert result.is_dormant
     assert [(f.kind, f.location, f.pointer) for f in result.errors] == [
         (fv.FrictionFindingKind.HELD_BLOCK, RECORD, "/pkit/friction"),
-        (fv.FrictionFindingKind.HELD_BLOCK, f"{entries}#RUN-1", "/pkit/friction"),
+        (fv.FrictionFindingKind.HELD_BLOCK, entries, "/RUN-1/pkit/friction"),
+        (fv.FrictionFindingKind.HELD_BLOCK, rules, "/rules/RS-RUNS-001/pkit/friction"),
     ]
     assert result.errors[0].message == (
-        "a friction block in a document held by capability:evidence (its held folder "
-        f"'records', {EVIDENCE_PACKAGE}:/friction/held/0): a held document is not an "
-        "artefact, so no check reads its anchors or its revalidation — remove the block "
-        "(COR-050 points 1 and 12)."
+        f"a friction block in a document held by evidence (its held folder 'records', "
+        f"{EVIDENCE_PACKAGE}:{HELD_POINTER}): a held document is not an artefact, so no check "
+        f"reads its anchors or its revalidation — remove the block (COR-050 points 1 and 12)."
     )
     assert fv.summary_lines(result) == [
         "0 place(s), 0 artefact(s), none carrying the `pkit` container; dormant; "
-        "2 held-document finding(s)."
+        "3 finding(s) on held folders and documents."
     ]
 
     cli = CliRunner().invoke(main, ["validate", "--no-refs"])
@@ -772,12 +780,41 @@ def test_a_friction_block_in_a_held_document_fails_validation_even_while_dormant
     assert f"error    {RECORD}:/pkit/friction" in friction
 
 
+def test_a_held_document_whose_front_matter_does_not_parse_fails_validation(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """A typo in a held document's front matter would hide a friction block from
+    the search, so it is an error of its own — dormant or not — and the document
+    lists why it is unreadable."""
+    adopter = make_adopter_repo(capabilities=("evidence",))
+    _evidence_declares(adopter, HELD_RUNS)
+    adopter.write({RECORD: "---\ndate: [2026\npkit:\n  friction: {}\n---\n"})
+    result = fv.validate_friction(adopter.root)
+
+    assert result.is_dormant
+    (held,) = result.discovery.held
+    assert held.unreadable is not None and held.blocks == ()
+    (finding,) = result.errors
+    assert (finding.kind, finding.location, finding.pointer) == (
+        fv.FrictionFindingKind.HELD_UNPARSABLE,
+        RECORD,
+        "",
+    )
+    assert finding.message.startswith(f"front matter does not parse ({held.unreadable}); ")
+    assert finding.message.endswith(
+        "the document is held by evidence (its held folder 'records', "
+        f"{EVIDENCE_PACKAGE}:{HELD_POINTER}), and a friction block in it could not be looked "
+        "for — fix the YAML (COR-050 points 1 and 12)."
+    )
+
+
 def test_a_held_folder_in_another_shape_is_a_finding_and_holds_nothing(
     make_adopter_repo: MakeAdopterRepo,
 ) -> None:
-    """A held folder is written as a place is: one discovery cannot read is an
-    error at its entry, and holds nothing — so a place matching its documents
-    walks them as artefacts."""
+    """A held folder names the location it lies within, and is a folder there: one
+    discovery cannot read — plain text, no location, a location not declared, a
+    glob, a path leaving its location — is an error at its entry, and holds
+    nothing, so a place matching its documents walks them as artefacts."""
     adopter = make_adopter_repo(capabilities=("evidence",))
     _evidence_declares(
         adopter,
@@ -787,12 +824,15 @@ def test_a_held_folder_in_another_shape_is_a_finding_and_holds_nothing(
         "friction:\n"
         "  held:\n"
         "    - records\n"
-        "    - {location: logs, path: records}\n",
+        "    - {path: '.'}\n"
+        "    - {location: logs, path: records}\n"
+        "    - {location: runs, path: 'records/*'}\n"
+        "    - {location: runs, path: '../records'}\n",
     )
     adopter.write({CONFIG: _config(["docs"]), RECORD: "---\ndate: '2026-10-01'\n---\n"})
     result = fv.validate_friction(adopter.root)
 
-    assert result.discovery.held == ()
+    assert (result.discovery.held_folders, result.discovery.held) == ((), ())
     assert [a.path for a in result.discovery.artefacts] == [RECORD]
     assert {f.kind for f in result.errors} == {fv.FrictionFindingKind.MALFORMED_HELD}
     reasons = {f.pointer: f.message.split(", so friction discovery")[0] for f in result.errors}
@@ -801,8 +841,17 @@ def test_a_held_folder_in_another_shape_is_a_finding_and_holds_nothing(
             "the held folder is text ('records'), not an object `{path, location?}`"
         ),
         "/friction/held/1": (
+            "the held folder names no `location`: a held folder lies within one of the "
+            "component's `docs.locations`"
+        ),
+        "/friction/held/2": (
             "the held folder names location 'logs', which `docs.locations` does not declare "
             "(declared: ['runs'])"
+        ),
+        "/friction/held/3": "the held folder's `path` 'records/*' is a glob, not a folder",
+        "/friction/held/4": (
+            "the held folder's `path` '../records' leaves its location (absolute, or with a "
+            "`..` segment)"
         ),
     }
 
@@ -815,6 +864,38 @@ def test_a_held_folder_in_another_shape_is_a_finding_and_holds_nothing(
     assert finding.message.startswith(
         "`friction.held` is a mapping, not a list of held folders, so friction discovery "
         "holds nothing under it"
+    )
+
+
+def test_a_held_folder_leaving_the_repository_through_a_link_is_a_finding(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """A held folder whose location is a link out of the repository holds nothing,
+    and is reported where it is declared, as a place would be — the document
+    names why it is skipped."""
+    adopter = make_adopter_repo(capabilities=("evidence",))
+    outside = adopter.root.parent / f"{adopter.root.name}-outside"  # beside the repository
+    (outside / "records").mkdir(parents=True)
+    (outside / "records" / "run.md").write_text("---\ndate: '2026-10-01'\n---\n")
+    (adopter.root / "docs").mkdir()
+    (adopter.root / "docs" / "evidence").symlink_to(outside, target_is_directory=True)
+    _evidence_declares(adopter, HELD_RUNS)
+    result = fv.validate_friction(adopter.root)
+
+    (folder,) = result.discovery.held_folders
+    assert folder.skipped is not None and folder.skipped.reason == fd.SKIP_OUTSIDE
+    assert result.discovery.held == ()
+    (finding,) = result.errors
+    assert (finding.kind, finding.location, finding.pointer) == (
+        fv.FrictionFindingKind.HELD_OUTSIDE_REPOSITORY,
+        EVIDENCE_PACKAGE,
+        HELD_POINTER,
+    )
+    assert finding.message.startswith(
+        "held folder 'records' resolves to 'docs/evidence/records', which leaves the repository"
+    )
+    assert fv.summary_lines(result)[0].endswith(
+        "; dormant; 1 finding(s) on held folders and documents."
     )
 
 

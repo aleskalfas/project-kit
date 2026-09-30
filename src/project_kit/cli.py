@@ -966,8 +966,8 @@ def friction_artefacts_command(at: str | None, as_json: bool) -> None:
     capability's, with its location and root — the files it matches and the
     skips validation applies (a synced copy, a place outside the repository, a
     malformed declaration), every file read with its front matter's own
-    fields, every artefact with its anchors, and every document a component
-    holds that is not an artefact, with its owner. Read-only. It is how a
+    fields, every artefact with its anchors, and each folder of held documents
+    a component declares, with the files it holds. Read-only. It is how a
     capability's own script reads where artefacts are, now or at another
     state, without importing the backbone or walking the places itself. Exit 0
     when answered; 1 when the configuration cannot be read or REV names no

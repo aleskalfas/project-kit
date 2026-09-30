@@ -6,8 +6,8 @@ backbone file schema, `.pkit/schemas/backbone/package.schema.json` (ADR-056):
 the fields the shipped package files use today plus the blocks the newer
 records add — `connections` (COR-053 point 3), `docs.locations` (COR-049 point
 4), `friction.places` / `friction.held` / `friction.surface` (COR-050 points 1
-and 8). Three
-passes, in order, each producing findings located by JSON Pointer:
+and 8). Three passes, in order, each producing findings located by JSON
+Pointer:
 
 1. **Shape** — the JSON Schema pass. Known keys are strictly typed, and the
    schema closes every object it declares (`additionalProperties: false`),
@@ -30,8 +30,9 @@ passes, in order, each producing findings located by JSON Pointer:
    command and every validator's command declares the query contract
    (`query-contract: true`, ADR-057 point 3 and ADR-058), a contribution
    names `command` or `value` but not both, documentation locations are
-   relative sub-paths, friction places and held folders lie inside a declared
-   location or the project, an offered process point names a definition of the component whose
+   relative sub-paths, friction places lie inside a declared location or the
+   project and held folders inside a declared location, an offered process
+   point names a definition of the component whose
    `interface.version`, where it declares one, equals the point's
    `schema_version` (COR-053 point 5), and the generated `depends-on` list says
    what the component's process definitions generate
@@ -46,12 +47,19 @@ passes, in order, each producing findings located by JSON Pointer:
    a synced copy's component together with the backbone, and moves an
    externally sourced one's pin.
 
-One check across packages is this pass's, over the installed components only:
-an `aliases` entry another name shadows — a backbone command, another
+Two checks across packages are this pass's, over the installed components
+only. An `aliases` entry another name shadows — a backbone command, another
 capability's name, or the same alias a capability earlier in the manifest
 declares — is a WARNING at the entry, read from the table the dispatcher binds
 (`dispatcher.installed_alias_table`), so the finding and `pkit <alias>` never
 disagree. The alias is a shorthand; the capability's own name still reaches it.
+And a folder of held documents that oversteps its bounds (COR-050 point 1) —
+equal to or enclosing a documentation root or another declaration's place, or
+sharing files with its own component's place, another held folder or a
+rule-set folder — is an ERROR at its `friction.held` entry, read from friction
+discovery's one judgment of it (`friction_discovery.held_folders`), which also
+leaves it holding nothing: every held file has one holder, and no declaration
+empties another's.
 
 The other checks across packages — roles and their providers, counterparts
 against point versions, mandatory marks and cycles, fingerprints, the version
@@ -522,20 +530,33 @@ def _repository_findings(
     friction = raw.get("friction")
     if isinstance(friction, Mapping):
         # A held folder is written as a place is (COR-050 point 1), so both lists
-        # are held to the same two checks.
+        # are held to the same two checks; a held folder also names the location
+        # it lies within, and is a folder there, never a glob — which the schema
+        # says too, and this pass repeats for a tree without one.
         for key, noun in (("places", "place"), ("held", "held folder")):
-            entries = friction.get(key)
-            if not isinstance(entries, list):
-                continue
-            for index, place in enumerate(entries):
-                if not isinstance(place, Mapping):
+            for index, entry in enumerate(_items(friction.get(key))):
+                if not isinstance(entry, Mapping):
                     continue
-                _check_relative(
+                place = cast("Mapping[str, Any]", entry)
+                path = place.get("path")
+                relative = _check_relative(
                     findings,
                     f"/friction/{key}/{index}/path",
-                    place.get("path"),
+                    path,
                     "a path relative to its location or the project",
                 )
+                if key == "held" and "location" not in place:
+                    _error(
+                        f"/friction/{key}/{index}",
+                        "held folder names no `location`: a held folder lies within one of the "
+                        "component's `docs.locations` (COR-050 point 1).",
+                    )
+                if key == "held" and relative and any(c in "*?[" for c in str(path)):
+                    _error(
+                        f"/friction/{key}/{index}/path",
+                        f"held folder {path!r} is a glob: a held folder is a folder "
+                        f"(COR-050 point 1).",
+                    )
                 location = place.get("location")
                 if isinstance(location, str) and location not in location_names:
                     declared = f" (declared: {sorted(location_names)})." if location_names else "."
@@ -869,11 +890,13 @@ def validate_installed_packages(target_root: Path) -> PackagesPass:
     that lasts, and under the project's journal settings, so an entry is warned
     on exactly when the `.pkit/.gitignore` render drops it; then add, to each
     capability's report, the aliases of it another name shadows
-    (`_shadowed_alias_findings`)."""
+    (`_shadowed_alias_findings`) and the held folders of it that overstep their
+    bounds (`_held_folder_findings`)."""
     schema, note = load_package_schema(target_root)
     ownership = lifecycle_ownership.load_ownership(target_root)
     journal = process_journal.read_settings(target_root)
     shadowed = _shadowed_alias_findings(target_root)
+    unbounded = _held_folder_findings(target_root)
     reports = [
         _with_pass(
             validate_package_file(
@@ -884,7 +907,9 @@ def validate_installed_packages(target_root: Path) -> PackagesPass:
                 provenance=package_provenance(target_root, package, entry.origin, ownership),
                 journal=journal,
             ),
-            shadowed.get(entry.name, []) if entry.kind == "capability" else [],
+            [*shadowed.get(entry.name, []), *unbounded.get(entry.name, [])]
+            if entry.kind == "capability"
+            else [],
         )
         for entry, component_dir, package in _registered_packages(target_root)
     ]
@@ -913,6 +938,37 @@ def _shadowed_alias_findings(target_root: Path) -> dict[str, list[PackageFinding
                 f"/{ALIASES_KEY}/{shadow.alias.index}",
                 Severity.WARNING,
                 shadowed_alias_message(shadow),
+            )
+        )
+    return out
+
+
+def _held_folder_findings(target_root: Path) -> dict[str, list[PackageFinding]]:
+    """Each installed capability's held folders that overstep their bounds, as errors
+    located at the entry, keyed by the capability (COR-050 point 1).
+
+    Read from friction discovery's one judgment (`held_folders`, over the same
+    settings discovery reads), so what is reported is exactly what discovery
+    leaves holding nothing. A held folder discovery cannot read, or one leaving
+    the repository, is the friction pass's finding.
+    """
+    from project_kit import friction_discovery as fd  # discovery reads package metadata too
+
+    settings = fd.read_friction_settings(target_root)
+    out: dict[str, list[PackageFinding]] = {}
+    for folder in fd.held_folders(target_root, settings):
+        if folder.skipped is None or folder.skipped.reason != fd.SKIP_OVERLAP:
+            continue
+        declared = folder.declaration
+        out.setdefault(folder.component, []).append(
+            PackageFinding(
+                declared.pointer,
+                Severity.ERROR,
+                f"held folder {declared.value!r} (at {declared.resolved!r}) "
+                f"{folder.skipped.detail}, so it holds nothing and the places matching its files "
+                f"read them as artefacts: a held folder never equals or encloses a documentation "
+                f"root or another declaration's place, and shares no file with its own "
+                f"component's place, another held folder or a rule-set folder (COR-050 point 1).",
             )
         )
     return out
