@@ -150,7 +150,7 @@ For clarifications, scope tweaks, or refinements that do not invalidate the orig
 
 Two in-body markers are *not* narration of a revision and are correct to keep: the **superseded-by** line a superseded record carries, and a **forward refinement pointer** naming a later record that extends this one (the `(refinement per <record>)` sub-section form). Both point at another record rather than at a discarded belief.
 
-`pkit decisions validate` reports each line of a record that narrates its own revision — an amendment heading or marker (`## Amendment (…)`, `**Amendment 1**`, `**Amended by …**`), a revision stamped with an issue number or a date (`**Update (#252)**`, `(clarified, #813)`), or change-log phrasing ("this record originally…", "previously we believed…") — naming the file and line. A superseded record and code are not read, and the two markers above match none of these shapes. The report does not fail the command: it points at what to fold back in.
+`pkit decisions validate` reports each line of a record that narrates its own revision — an amendment heading or marker (`## Amendment (…)`, `**Amendment 1**`, `**Amended by …**`), a revision stamped with an issue number or a date (`**Update (#252)**`, `(clarified, #813)`), or change-log phrasing ("this record originally…", "previously we believed…") — naming the file and line. A superseded record and code are not read, and neither is a record that arrives as a synced copy — a core record, or a kit-shipped capability's, in your project — since it is refined where it is authored and an edit here is overwritten by the next sync. The two markers above match none of these shapes. The report does not fail the command: it points at what to fold back in.
 
 ## Adding a record
 

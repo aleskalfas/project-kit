@@ -4306,11 +4306,11 @@ def decisions_validate() -> None:
     claimed twice across the rule sets. Exits non-zero on any duplicate or
     mismatch.
 
-    Then reports, without failing, every line of a record that is not
-    superseded where it narrates its own revision — an amendment heading or
-    marker, a revision stamped with an issue number or a date, change-log
-    phrasing — since a record is refined in place and git history is its
-    change log.
+    Then reports, without failing, every line of a record that is neither
+    superseded nor a synced copy where it narrates its own revision — an
+    amendment heading or marker, a revision stamped with an issue number or a
+    date, change-log phrasing — since a record is refined in place and git
+    history is its change log.
     """
     from project_kit import decisions_validate as decisions_mod
 

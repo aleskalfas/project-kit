@@ -11,6 +11,7 @@ from click.testing import CliRunner
 from project_kit import decisions_validate
 from project_kit.cli import main
 from project_kit.validators import Severity
+from tests.adopter_repo import MakeAdopterRepo
 
 
 def _write_record(
@@ -338,6 +339,42 @@ def test_a_superseded_record_is_not_read(project: Path) -> None:
     body = "*Superseded by [COR-002].*\n\n## Amendment (2026-08-09)\n"
     _write_record(core / "COR-001-a.md", "COR-001", body, status="superseded")
     assert decisions_validate.revision_narration(project) == ()
+
+
+_NARRATING_BODY = "## Decision\n\n## Amendment (2026-08-09)\n"
+
+
+def test_a_synced_copy_is_not_read_and_the_projects_own_record_is(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """In an adopter, a core record and a kit-shipped capability's arrive as synced
+    copies: refined where they are authored, so an edit here would be overwritten."""
+    repo = make_adopter_repo(capabilities=("living-docs",))
+    decisions = repo.root / ".pkit" / "decisions"
+    _write_record(decisions / "core" / "COR-900-a.md", "COR-900", _NARRATING_BODY)
+    capability = repo.root / ".pkit" / "capabilities" / "living-docs" / "decisions"
+    _write_record(capability / "DEC-900-a.md", "DEC-900", _NARRATING_BODY)
+    _write_record(decisions / "project" / "PRJ-900-a.md", "PRJ-900", _NARRATING_BODY)
+
+    narration = decisions_validate.revision_narration(repo.root)
+
+    assert [issue.location for issue in narration] == [".pkit/decisions/project/PRJ-900-a.md:11"]
+
+
+def test_the_methodology_source_reads_its_own_core_records(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """Where the methodology is authored nothing is a copy, so a core record is read."""
+    repo = make_adopter_repo()
+    package = repo.root / "src" / "project_kit" / "__init__.py"
+    package.parent.mkdir(parents=True)
+    package.write_text("", encoding="utf-8")
+    core = repo.root / ".pkit" / "decisions" / "core"
+    _write_record(core / "COR-900-a.md", "COR-900", _NARRATING_BODY)
+
+    narration = decisions_validate.revision_narration(repo.root)
+
+    assert ".pkit/decisions/core/COR-900-a.md:11" in [issue.location for issue in narration]
 
 
 def test_narration_is_not_an_id_issue(project: Path) -> None:

@@ -47,7 +47,12 @@ the record once said. Each is a report naming the file and line. The two
 permitted markers — a superseded-by line and a forward refinement pointer
 (`(refinement per <record>)`) — match none of the shapes. Fenced code and
 inline code are quoted material and are not read. A superseded record is
-preserved as it stood, so it is not read either.
+preserved as it stood, so it is not read either. Nor is a record that arrives
+here as a synced copy — a core record, or a kit-shipped capability's, in a
+project that is not the methodology's source (`is_synced_copy` of the tree's
+`.pkit/lifecycle/ownership.py`): it is refined where it is authored, and an
+edit here would be overwritten by the next sync. A tree without that module
+has every record read.
 """
 
 from __future__ import annotations
@@ -58,7 +63,7 @@ from pathlib import Path
 
 import click
 
-from project_kit import cli_render, rule_sets
+from project_kit import cli_render, lifecycle_ownership, rule_sets
 from project_kit.decisions import resolve_adr_records_dir
 from project_kit.validators import Finding, Outcome, Severity
 
@@ -276,15 +281,20 @@ def discover_decision_records(target_root: Path) -> list[DecisionRecord]:
 
 
 def revision_narration(target_root: Path) -> tuple[DecisionIssue, ...]:
-    """Every place a record that is not superseded narrates its own revision.
+    """Every place a record the project refines narrates its own revision.
 
     One report per line, at `<path>:<line>`, naming the shape found and quoting
-    it (see the module docstring for the shapes and what is not read). Reports,
-    never errors: the shapes are read from prose, so a finding asks a person to
-    look rather than blocking a change.
+    it (see the module docstring for the shapes and what is not read — a
+    superseded record, and one that arrives as a synced copy). Reports, never
+    errors: the shapes are read from prose, so a finding asks a person to look
+    rather than blocking a change.
     """
+    ownership = lifecycle_ownership.load_ownership(target_root)
     reports: list[DecisionIssue] = []
     for record in discover_decision_records(target_root):
+        rel = _rel(record.path, target_root)
+        if ownership is not None and ownership.is_synced_copy(target_root, rel):
+            continue  # refined where it is authored; an edit here is overwritten by sync
         try:
             text = record.path.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError):
@@ -293,7 +303,6 @@ def revision_narration(target_root: Path) -> tuple[DecisionIssue, ...]:
         status = _FRONTMATTER_STATUS_RE.search(frontmatter or "")
         if status is not None and status.group(1) == "superseded":
             continue
-        rel = _rel(record.path, target_root)
         reports.extend(
             DecisionIssue(
                 location=f"{rel}:{line}",
