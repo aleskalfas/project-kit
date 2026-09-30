@@ -611,7 +611,10 @@ def test_an_artefact_excluded_in_the_diff_owes_no_answer_and_one_let_in_does(
     _start(repo, files, config=friction_config(exclude=["docs/generated"]))
     repo.commit(
         "change the CLI, and exclude the guide instead",
-        {"src/cli/main.py": "print('cli v2')\n", CONFIG: friction_config(exclude=["docs/guide.md"])},
+        {
+            "src/cli/main.py": "print('cli v2')\n",
+            CONFIG: friction_config(exclude=["docs/guide.md"]),
+        },
     )
     assert _summary(_run(repo)) == [("friction", "docs/generated/cli.md", "path:src/cli/**", None)]
 
