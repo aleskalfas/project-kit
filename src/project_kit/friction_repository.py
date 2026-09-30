@@ -721,7 +721,7 @@ class _Judge:
         """A path anchor matching more than `OVER_BROAD_SHARE` of the tracked files (point 7)."""
         if anchor.kind != "path" or not self._tracked:
             return None
-        matched = len(self.head.matching(anchor.value))
+        matched = sum(map(self.head.stands_on(anchor.value), self.head.files))
         total = len(self._tracked)
         if matched <= total * OVER_BROAD_SHARE:
             return None
@@ -740,25 +740,37 @@ class _Judge:
             self._matching[pattern] = found
         return found
 
-    def change(self, anchor: Anchor, covered: frozenset[int], own: frozenset[str]) -> Change | None:
-        """Whether a live anchor of a core kind changed outside `covered`, and where (point 5)."""
+    def changes(self, anchor: Anchor, covered: frozenset[int], own: frozenset[str]) -> set[int]:
+        """Every commit outside `covered` that changed a live path or record anchor (point 5).
+
+        A path anchor: each commit that touched a path it stands on in history,
+        the artefact's own names (`own`) left out. A record anchor: each commit
+        that changed the content of the record's file. One pass over the
+        history's listing, however many there are.
+        """
         if anchor.kind == "path":
-            after = {
+            return {
                 index
                 for rel in self.matching_paths(anchor.value) - own
                 for index in self.history.touched(rel)
                 if index not in covered
             }
-            return Change(max(after)) if after else None
-        if anchor.kind == "record":
-            rel = self.head.record_path(anchor.value)
-            if rel is None:
-                return None
-            after = [
-                v.index
-                for v in self.history.versions(rel)
-                if v.index not in covered and v.entry.changes_content
-            ]
+        rel = self.head.record_path(anchor.value) if anchor.kind == "record" else None
+        if rel is None:
+            return set()
+        return {
+            v.index
+            for v in self.history.versions(rel)
+            if v.index not in covered and v.entry.changes_content
+        }
+
+    def change(self, anchor: Anchor, covered: frozenset[int], own: frozenset[str]) -> Change | None:
+        """Whether a live anchor of a core kind changed outside `covered`, and where (point 5).
+
+        The first such commit: for a path or a record, the oldest of `changes`.
+        """
+        if anchor.kind in ("path", "record"):
+            after = self.changes(anchor, covered, own)
             return Change(max(after)) if after else None
         target = self.head.find(anchor.value)
         if target is None:
@@ -1192,12 +1204,11 @@ def _changes(
     """Every commit outside `covered` that changed a live anchor's target (COR-050 point 5),
     or that touched a path a dead path anchor matched in history.
 
-    A path or a record: `_Judge.change` names the first such commit, and asked
-    again with each answer covered it names the next, so the rule is the
-    check's own. An artefact: each commit at which the target's content
-    differs from its content at every parent of the commit (`_changed`) — the
-    check asks only whether the content at HEAD differs from the content the
-    point saw.
+    A path or a record: `_Judge.changes`, whose oldest is the check's own
+    origin, so the rule is the check's. An artefact: each commit at which the
+    target's content differs from its content at every parent of the commit
+    (`_changed`) — the check asks only whether the content at HEAD differs
+    from the content the point saw.
     """
     if anchor.kind == "artefact":
         target = judge.head.find(anchor.value)
@@ -1214,13 +1225,7 @@ def _changes(
                 walker.same_in_parents(version, target),
             )
         }
-    found: set[int] = set()
-    while True:
-        change = judge.change(anchor, covered, own)
-        if change is None or change.origin in covered:
-            return found
-        found.add(change.origin)
-        covered = covered | {change.origin}
+    return judge.changes(anchor, covered, own)
 
 
 def _content_of(artefact: Artefact | None) -> tuple[str, dict[str, Any]] | None:
