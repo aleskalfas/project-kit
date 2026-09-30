@@ -627,8 +627,8 @@ def test_explain_lists_each_path_anchors_files_at_the_point_and_at_head(
     ]
     by_anchor = {f.finding.anchor: f for f in explanation.findings}
     assert [c.commit.sha for c in by_anchor[CLI].commits] == [reworked]
-    # A dead anchor's commits are those that touched a file it stood on: excluded ones never
-    # count, and a record that resolves to nothing names no file whose history could be read.
+    # A dead anchor's commits say where the files it matched went: excluded ones never count,
+    # and a record that resolves to nothing names no file whose history could be read.
     assert by_anchor[Anchor("path", "src/cli/vendor/**")].commits == ()
     assert by_anchor[Anchor("record", "ADR-404")].commits == ()
 
@@ -726,38 +726,69 @@ def test_a_dead_path_anchor_says_whether_it_matches_no_file_or_only_excluded_one
     assert "src/clj/**         dead-anchor  matches no file" in human
 
 
-def test_explain_names_the_commits_behind_a_dead_path_anchor(timeline: Timeline) -> None:
+def test_explain_names_where_a_dead_path_anchors_files_went(timeline: Timeline) -> None:
+    """For each file the anchor matched, the last commit that touched it — its removal or its
+    rename away — even where the artefact was revalidated over the dead anchor since."""
     anchors = {"path": ["src/cli/**", "src/old/**"]}
     old = {"src/old/a.py": "A = 1\n", "src/old/b.py": "B = 1\n"}
     timeline.start({"docs/guide.md": guide(anchors=anchors), **old})
-    changed = timeline.commit("change the old code", {"src/old/a.py": "A = 2\n"}, author=ALICE)
-    timeline.commit("unrelated", {"README.txt": "Hello.\n"})
-    removed = timeline.commit(
-        "remove the old code", {"src/old/a.py": None, "src/old/b.py": None}, author=BOB
+    timeline.commit("change the old code", {"src/old/a.py": "A = 2\n"}, author=ALICE)
+    moved = timeline.rename("src/old/b.py", "src/new/b.py")
+    removed = timeline.commit("remove the old code", {"src/old/a.py": None}, author=BOB)
+    # Warning mode lets a revalidation stand over a dead anchor: the point is after both.
+    revalidated = timeline.commit(
+        "revalidate the guide",
+        {"docs/guide.md": guide(anchors=anchors, at=T2, because="the CLI surface holds")},
     )
 
     explanation = frep.run_explain(timeline.adopter.root, "guide")
+    assert explanation.report is not None and explanation.report.revalidation_point is not None
+    assert explanation.report.revalidation_point.sha == revalidated
     old_anchor = Anchor("path", "src/old/**")
     (dead,) = explanation.findings
     assert (dead.finding.kind.value, dead.finding.anchor) == ("dead-anchor", old_anchor)
-    assert [c.commit.sha for c in dead.commits] == [changed, removed]
+    # The earlier change to a file is not where it went; the rename names only its old path.
+    assert [(c.commit.sha, c.paths) for c in dead.commits] == [
+        (moved, ("src/old/b.py",)),
+        (removed, ("src/old/a.py",)),
+    ]
+    # `changes` counts a stale anchor's commits only: these are no changes to answer.
     assert [(a.anchor, a.state, a.changes, a.files) for a in explanation.anchors] == [
         (CLI, "current", 0, fr.AnchorFiles(("src/cli/main.py",), ("src/cli/main.py",), ())),
-        (
-            old_anchor,
-            "dead-anchor",
-            0,
-            fr.AnchorFiles(("src/old/a.py", "src/old/b.py"), (), ()),
-        ),
+        (old_anchor, "dead-anchor", 0, fr.AnchorFiles((), (), ())),
     ]
     (finding,) = json.loads(frep.render_explain_json(explanation))["findings"]
-    assert [(c["commit"], c["change"]) for c in finding["commits"]] == [
-        (changed, "change the old code"),
-        (removed, "remove the old code"),
+    assert [(c["commit"], c["change"], c["paths"]) for c in finding["commits"]] == [
+        (moved, "rename src/old/b.py -> src/new/b.py", ["src/old/b.py"]),
+        (removed, "remove the old code", ["src/old/a.py"]),
     ]
     human = frep.render_explain_human(explanation, now=NOW)
-    assert "    its files changed in, oldest first:" in human
-    assert f"{removed[:12]}  2026-01-05  Bob    remove the old code" in human
+    assert "    where its files went, oldest first:" in human
+    assert f"{removed[:12]}  2026-01-05  Bob        remove the old code" in human
+
+
+def test_a_deferral_of_a_dead_path_anchor_postpones_no_commits(timeline: Timeline) -> None:
+    """A deferral postpones friction (COR-050 point 4) and a dead anchor is an error (point 7):
+    the deferred finding lists nothing, and the dead-anchor finding says where its files went."""
+    anchors = {"path": ["src/cli/**", "src/old/**"]}
+    timeline.start({"docs/guide.md": guide(anchors=anchors), "src/old/a.py": "A = 1\n"})
+    timeline.commit("change the old code", {"src/old/a.py": "A = 2\n"})
+    timeline.commit(
+        "defer the old code",
+        {"docs/guide.md": guide(anchors=anchors, deferred=[("path", "src/old/**", "going")])},
+    )
+    removed = timeline.commit("remove the old code", {"src/old/a.py": None})
+
+    explanation = frep.run_explain(timeline.adopter.root, "guide")
+    old_anchor = Anchor("path", "src/old/**")
+    assert [
+        (f.finding.kind.value, f.finding.anchor, [c.commit.sha for c in f.commits])
+        for f in explanation.findings
+    ] == [("deferred", old_anchor, []), ("dead-anchor", old_anchor, [removed])]
+    assert [(a.anchor, a.state, a.changes) for a in explanation.anchors] == [
+        (CLI, "current", 0),
+        (old_anchor, "dead-anchor", 0),
+    ]
 
 
 def test_explain_carries_the_artefacts_body(timeline: Timeline) -> None:

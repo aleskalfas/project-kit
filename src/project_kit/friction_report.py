@@ -28,7 +28,7 @@ never the working tree, as the check does; neither writes anything.
   each path anchor's files at the revalidation point and at HEAD, matched as
   the check decides a dead anchor, `friction.exclude` applied, and the files
   it leaves out; each commit's paths behind its finding, what the check read
-  as the change (`fr.CommitBehind`); the commits behind a dead path anchor;
+  as the change (`fr.CommitBehind`); where a dead path anchor's files went;
   and the artefact's body as discovery reads it — for a collection entry, the
   section headed by its id.
 """
@@ -357,7 +357,8 @@ class ExplainedAnchor:
 
     anchor: Anchor
     state: str  # a finding kind, `current`, or `unreachable` when the artefact is not judged
-    changes: int  # commits behind its staleness
+    # Commits behind its staleness only: a dead anchor's commits say where its files went.
+    changes: int
     over_broad: bool
     files: fr.AnchorFiles | None = None
 
@@ -601,7 +602,7 @@ _STATE_GLOSS = {
 _COMMITS_LABEL = {
     _Kind.STALE: "changed in, oldest first",
     _Kind.DEFERRED: "postpones, oldest first",
-    _Kind.DEAD_ANCHOR: "its files changed in, oldest first",
+    _Kind.DEAD_ANCHOR: "where its files went, oldest first",
 }
 
 _ANCHOR_GLOSS = {

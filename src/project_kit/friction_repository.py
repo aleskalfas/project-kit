@@ -1061,11 +1061,14 @@ class TracedFinding:
     touched (`CommitBehind`). Stale on an anchor: every commit outside what
     the points cover that changed the anchor, the finding's origin among them;
     stale by a move: the rename. Deferred: the changes the deferral postpones —
-    after the revalidation point, up to the deferral point. A dead `path`
-    anchor: every commit after the revalidation point that touched a path it
-    matched — how its files went; a dead record or artefact anchor names no
-    file whose history could be read. Any other finding, or an artefact whose
-    points lie beyond a shallow clone: none.
+    after the revalidation point, up to the deferral point; none for a dead
+    anchor, whose deferral postpones no friction (COR-050 point 4) since the
+    anchor is an error (point 7). A dead `path` anchor: where its files went —
+    for each path it matched in history, the last commit that touched it,
+    whether before or after the revalidation point, so an anchor revalidated
+    over while dead still shows its deletions; a dead record or artefact
+    anchor names no file whose history could be read. Any other finding, or an
+    artefact whose points lie beyond a shallow clone: none.
     """
 
     finding: RepositoryFinding
@@ -1215,7 +1218,7 @@ def _traced(
             and anchor is not None
             and anchor.kind == "path"
         ):
-            behind.update(_changes(judge, anchor, reached, points.own_paths))
+            behind.update(_where_it_went(judge, anchor, points.own_paths))
         elif (
             finding.kind is RepositoryFindingKind.DEFERRED
             and anchor in deferral_points
@@ -1274,11 +1277,17 @@ def _touched_by(history: History, paths: frozenset[str], commits: set[int]) -> d
     return touched
 
 
+def _where_it_went(judge: _Judge, anchor: Anchor, own: frozenset[str]) -> set[int]:
+    """Where a dead path anchor's files went: for each path it matched in history, the
+    artefact's own names left out, the last commit that touched it — its removal, or its
+    rename away — wherever that lies against the revalidation point."""
+    return {judge.history.touched(rel)[0] for rel in judge.matching_paths(anchor.value) - own}
+
+
 def _changes(
     judge: _Judge, anchor: Anchor, covered: frozenset[int], own: frozenset[str]
 ) -> set[int]:
-    """Every commit outside `covered` that changed a live anchor's target (COR-050 point 5),
-    or that touched a path a dead path anchor matched in history.
+    """Every commit outside `covered` that changed a live anchor's target (COR-050 point 5).
 
     A path or a record: `_Judge.changes`, whose oldest is the check's own
     origin, so the rule is the check's. An artefact: each commit at which the
