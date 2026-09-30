@@ -9,17 +9,25 @@
   included, under the primitive and under the predicate policy (the query
   policy's case is `test_validators`) — and an interrupt kills it too;
 - a run inside a run (#1144): every run tells its command its deadline; a
-  nested run takes the time remaining, joins its caller's group, and starts
-  nothing with none left; the outer deadline and an interrupt reach a nested
-  run's command and what it started; the innermost overrun is the one named,
-  and what it started ends with the outermost run;
+  nested run takes the time remaining, rounded down, joins the outermost
+  group, and starts nothing with none left; variables left in a shell never
+  make a run nested; the outer deadline and an interrupt reach a nested run's
+  command and what it started; the innermost overrun is named with the time
+  its caller had left; what a nested run that did not end by itself started
+  ends with the outermost run — killed by its own deadline or by anyone else —
+  and nothing is swept when every nested run ended by itself; a `uv run
+  --script` interpreter stays in the group;
 - the predicate policy passes the subject and `--json` and leaves the
-  environment as it is: no offline marker, a predicate may reach the network.
+  environment as it is but for the run's deadline: no offline marker, a
+  predicate may reach the network.
 """
 
 from __future__ import annotations
 
+import json
 import os
+import shutil
+import signal
 import stat
 import subprocess
 import sys
@@ -287,27 +295,32 @@ _STARTS_A_CHILD = (
     "time.sleep(60)\n"
 )
 
-# A command that prints what the runner told it, as JSON.
+# A command that prints what the runner told it and where it runs, as JSON.
 _TELLS_ITS_RUN = (
     "import json, os\n"
+    "strays = os.environ.get('PKIT_COMMAND_STRAYS')\n"
     "print(json.dumps({'deadline': os.environ.get('PKIT_COMMAND_DEADLINE'),"
-    " 'strays': os.environ.get('PKIT_COMMAND_STRAYS'),"
+    " 'strays': strays, 'live': bool(strays) and os.path.isdir(strays),"
     " 'pid': os.getpid(), 'pgid': os.getpgrp(), 'sid': os.getsid(0)}))\n"
 )
 
 
 def _nested_runner(path: Path, then: str = "") -> Path:
-    """A command that runs the script its argument names through this runner — as
-    a `pkit` a query starts runs a filler — prints how that run ended, then runs
-    `then`. Under this interpreter, so it imports the runner under test."""
+    """A command that runs the script its first argument names, with the rest as
+    its arguments, through this runner — as a `pkit` a query starts runs a
+    filler — prints how that run ended and where it ran, then runs `then`.
+    Under this interpreter, so it imports the runner under test."""
     path.write_text(
         f"#!{sys.executable}\n"
-        "import json, sys, time\n"
+        "import json, os, sys, time\n"
         "from pathlib import Path\n"
         "from project_kit.command_runner import run_command\n"
-        "run = run_command(Path(sys.argv[1]), [], cwd=Path.cwd())\n"
-        "print(json.dumps({'ending': run.ending.value, 'bound': run.bound_seconds}), flush=True)\n"
-        + then,
+        "run = run_command(Path(sys.argv[1]), sys.argv[2:], cwd=Path.cwd())\n"
+        "print(json.dumps({'ending': run.ending.value, 'bound': run.bound_seconds,"
+        " 'clipped': run.clipped, 'document': run.document,"
+        " 'deadline': os.environ.get('PKIT_COMMAND_DEADLINE'),"
+        " 'strays': os.environ.get('PKIT_COMMAND_STRAYS'),"
+        " 'pid': os.getpid(), 'pgid': os.getpgrp()}), flush=True)\n" + then,
         encoding="utf-8",
     )
     path.chmod(path.stat().st_mode | stat.S_IXUSR)
@@ -324,55 +337,57 @@ def _pids(script: Path) -> list[int]:
     pytest.fail(f"{script.name} never started")
 
 
-@pytest.fixture
-def outermost(monkeypatch: pytest.MonkeyPatch) -> None:
-    """This process runs inside no run, whatever started the test suite."""
-    monkeypatch.delenv(command_runner.DEADLINE_ENV, raising=False)
-    monkeypatch.delenv(command_runner.STRAYS_ENV, raising=False)
-
-
 def test_a_run_tells_its_command_its_deadline_and_gives_it_a_group_of_its_own(
-    tmp_path: Path, outermost: None
+    tmp_path: Path,
 ) -> None:
     started = time.time()
     run = run_command(_script(tmp_path / "tell.py", _TELLS_ITS_RUN), [], cwd=tmp_path)
     assert (run.ending, run.bound_seconds) == (Ending.ANSWERED, 30)
     told = run.document
     assert told["pid"] == told["pgid"] == told["sid"]  # a session and a group of its own
-    # Its own end less the time the command keeps to answer.
+    # Its own end less the time the command keeps to answer, to the millisecond.
     margin = command_runner.ANSWER_MARGIN_SECONDS
-    assert started + 30 - margin - 0.01 <= float(told["deadline"]) <= time.time() + 30 - margin
-    assert told["strays"] and not Path(told["strays"]).exists()  # named, not created
+    assert started + 30 - margin - 0.001 <= float(told["deadline"]) <= time.time() + 30 - margin
+    # The strays directory lives while the command runs, and not after.
+    assert told["live"] and not Path(told["strays"]).exists()
 
 
-def test_a_run_inside_a_run_takes_the_time_remaining_and_joins_its_callers_group(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+def test_a_run_inside_a_run_takes_the_time_remaining_and_joins_the_outermost_group(
+    tmp_path: Path,
 ) -> None:
-    inherited = time.time() + 5
-    monkeypatch.setenv(command_runner.DEADLINE_ENV, f"{inherited:.3f}")
-    monkeypatch.setenv(command_runner.STRAYS_ENV, str(tmp_path / "strays"))
-    run = run_command(_script(tmp_path / "tell.py", _TELLS_ITS_RUN), [], cwd=tmp_path)
-    assert run.ending is Ending.ANSWERED
-    assert 4 <= run.bound_seconds <= 5  # the time remaining, never its own thirty seconds
-    told = run.document
-    assert told["pgid"] == os.getpgrp()  # the caller's group, which the outer kill reaches
-    assert float(told["deadline"]) <= inherited - command_runner.ANSWER_MARGIN_SECONDS + 0.01
-    assert told["strays"] == str(tmp_path / "strays")  # the outermost run's record, passed on
+    tell = _script(tmp_path / "tell.py", _TELLS_ITS_RUN)
+    run = run_command(_nested_runner(tmp_path / "caller.py"), [str(tell)], cwd=tmp_path)
+    assert run.ending is Ending.ANSWERED, run.stderr
+    nested = run.document
+    assert nested["ending"] == "answered"
+    # The time its caller has left, never a run's own thirty seconds.
+    assert 0 < nested["bound"] <= 30 - command_runner.ANSWER_MARGIN_SECONDS
+    told = nested["document"]
+    # The group the caller leads — the one the outermost run started and kills.
+    assert told["pgid"] == told["sid"] == nested["pgid"] == nested["pid"]
+    # Its deadline never falls after its caller's less the margin: the bound is
+    # rounded down, not to the nearest tenth.
+    caller_deadline = float(nested["deadline"])
+    assert float(told["deadline"]) <= caller_deadline - command_runner.ANSWER_MARGIN_SECONDS + 1e-6
+    # The outermost run's strays directory, passed on and live; gone after it.
+    assert told["strays"] == nested["strays"] and told["live"]
+    assert not Path(nested["strays"]).exists()
 
 
 def test_a_run_inside_a_run_with_no_time_left_does_not_start_its_command(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv(command_runner.DEADLINE_ENV, f"{time.time() - 1:.3f}")
-    script = _script(tmp_path / "touch.py", "open(__file__ + '.ran', 'w')\nprint('{}')\n")
-    run = run_command(script, [], cwd=tmp_path)
-    assert (run.ending, run.bound_seconds, run.detail) == (
-        Ending.NOT_STARTED,
-        0,
-        command_runner.NO_TIME_LEFT,
-    )
+    # A margin as long as the bound: the caller is told a deadline already due.
+    monkeypatch.setattr(command_runner, "COMMAND_TIMEOUT_SECONDS", 10)
+    monkeypatch.setattr(command_runner, "ANSWER_MARGIN_SECONDS", 10)
+    touch = _script(tmp_path / "touch.py", "open(__file__ + '.ran', 'w')\nprint('{}')\n")
+    run = run_command(_nested_runner(tmp_path / "caller.py"), [str(touch)], cwd=tmp_path)
+    assert run.ending is Ending.ANSWERED, run.stderr
+    nested = run.document
+    assert (nested["ending"], nested["bound"], nested["clipped"]) == ("not-started", 0, True)
     assert not (tmp_path / "touch.py.ran").exists()
-    assert validators.why_no_answer(run, "fill") == (
+    no_time = CommandRun(Ending.NOT_STARTED, 0, detail=command_runner.NO_TIME_LEFT)
+    assert validators.why_no_answer(no_time, "fill") == (
         f"command 'fill' could not start: {command_runner.NO_TIME_LEFT}"
     )
 
@@ -386,8 +401,37 @@ def test_a_deadline_that_is_no_number_is_no_run(
     assert run.document["pgid"] == run.document["pid"]
 
 
+def test_variables_left_in_a_shell_never_make_a_run_nested(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    tell = _script(tmp_path / "tell.py", _TELLS_ITS_RUN)
+    # A deadline, and a strays directory its run removed when it ended.
+    monkeypatch.setenv(command_runner.DEADLINE_ENV, f"{time.time() + 20:.3f}")
+    monkeypatch.setenv(command_runner.STRAYS_ENV, str(tmp_path / "gone"))
+    run = run_command(tell, [], cwd=tmp_path)
+    assert (run.ending, run.bound_seconds) == (Ending.ANSWERED, 30)
+    told = run.document
+    assert told["pid"] == told["pgid"] == told["sid"]  # a session of its own
+    assert told["strays"] != str(tmp_path / "gone") and told["live"]  # a directory of its own
+    # A terminal's job runs in a group of its own inside the terminal's session:
+    # there even a directory that still exists does not make the run nested.
+    (tmp_path / "live").mkdir()
+    monkeypatch.setenv(command_runner.STRAYS_ENV, str(tmp_path / "live"))
+    job = subprocess.run(
+        [str(_nested_runner(tmp_path / "job.py")), str(tell)],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=True,
+        process_group=0,
+    )
+    shown = json.loads(job.stdout)
+    assert shown["bound"] == 30
+    assert shown["document"]["pid"] == shown["document"]["pgid"] == shown["document"]["sid"]
+
+
 def test_the_outer_deadline_ends_a_nested_run_and_everything_its_command_started(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, outermost: None
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     # The caller hangs after its nested run: only the outer kill can end it, and
     # the filler's child, which the nested run could not reach, goes with it.
@@ -404,7 +448,7 @@ def test_the_outer_deadline_ends_a_nested_run_and_everything_its_command_started
 
 
 def test_an_interrupt_of_the_outer_run_ends_a_nested_run_s_command(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, outermost: None
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     # A nested run's command shares the outer run's group, so the one kill an
     # interrupt sends reaches it — in a session of its own, it would outlive it.
@@ -425,22 +469,105 @@ def test_an_interrupt_of_the_outer_run_ends_a_nested_run_s_command(
 
 
 def test_the_innermost_overrun_is_named_and_what_it_started_ends_with_the_outermost_run(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, outermost: None
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     # The nested run's deadline comes first, so its caller answers in time, naming
-    # the overrun; the filler's child it could not kill ends with the outer run.
+    # the overrun with the time it had; the filler's child it could not kill ends
+    # with the outer run. A margin long enough for a loaded machine to start the
+    # caller and the filler inside the caller's time.
     filler = _script(tmp_path / "filler.py", _STARTS_A_CHILD)
     caller = _nested_runner(tmp_path / "caller.py")
-    monkeypatch.setattr(command_runner, "COMMAND_TIMEOUT_SECONDS", 6)
-    monkeypatch.setattr(command_runner, "ANSWER_MARGIN_SECONDS", 2.5)
-    started = time.monotonic()
+    monkeypatch.setattr(command_runner, "COMMAND_TIMEOUT_SECONDS", 12)
+    monkeypatch.setattr(command_runner, "ANSWER_MARGIN_SECONDS", 8)
     run = run_command(caller, [str(filler)], cwd=tmp_path)
-    assert time.monotonic() - started < 6  # answered within the outer bound
-    assert run.ending is Ending.ANSWERED
-    assert run.document["ending"] == "timed-out"
-    assert 0 < run.document["bound"] < 3.5  # the time remaining, less the caller's margin
+    assert run.ending is Ending.ANSWERED, run.stderr  # the caller answered: the overrun is not its
+    nested = run.document
+    assert (nested["ending"], nested["clipped"]) == ("timed-out", True)
+    assert 0 < nested["bound"] <= 12 - 8  # the time its caller had left
+    overrun = CommandRun(Ending.TIMED_OUT, nested["bound"])
+    assert validators.why_no_answer(overrun, "fill") == (
+        f"command 'fill' did not answer within the {nested['bound']} s its caller had left."
+    )
     for pid in _pids(filler):
         _assert_gone(pid)
+    assert not Path(nested["strays"]).exists()
+
+
+def test_what_a_nested_run_killed_by_anyone_else_started_ends_with_the_outermost_run(
+    tmp_path: Path,
+) -> None:
+    # A validator that starts `pkit` under a timeout of its own kills it without a
+    # word to the runner. The killed run's marker stays, so the outermost run,
+    # whose command answers in time, ends what the killed run had started.
+    filler = _script(tmp_path / "filler.py", _STARTS_A_CHILD)
+    caller = _nested_runner(tmp_path / "caller.py")
+    record = f"{filler}.pids"
+    argv = [str(caller), str(filler)]
+    killer = _script(
+        tmp_path / "killer.py",
+        "import os, subprocess, time\n"
+        f"caller = subprocess.Popen({argv!r}, stdout=subprocess.DEVNULL)\n"
+        "for _ in range(100):\n"
+        f"    if os.path.isfile({record!r}) and open({record!r}).read():\n"
+        "        break\n"
+        "    time.sleep(0.1)\n"
+        "caller.kill()\n"
+        "caller.wait()\n"
+        "print('{}')\n",
+    )
+    run = run_command(killer, [], cwd=tmp_path)
+    assert run.ending is Ending.ANSWERED, run.stderr
+    for pid in _pids(filler):
+        _assert_gone(pid)
+
+
+def test_a_group_whose_nested_runs_all_ended_by_themselves_is_left_alone(
+    tmp_path: Path,
+) -> None:
+    # Only a marker left behind sweeps the group: a process a command leaves
+    # running on purpose — a daemon a `git` call starts — outlives the run, as it
+    # does when no run is nested.
+    spawner = _script(
+        tmp_path / "spawner.py",
+        "import subprocess, sys\n"
+        "child = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(60)'],"
+        " stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)\n"
+        "open(sys.argv[0] + '.pids', 'w').write(str(child.pid))\n"
+        "print('{}')\n",
+    )
+    run = run_command(_nested_runner(tmp_path / "caller.py"), [str(spawner)], cwd=tmp_path)
+    assert run.ending is Ending.ANSWERED, run.stderr
+    assert run.document["ending"] == "answered"
+    [child] = _pids(spawner)
+    try:
+        os.kill(child, 0)  # still running: nothing swept the group
+    finally:
+        os.kill(child, signal.SIGKILL)
+    assert not Path(run.document["strays"]).exists()
+
+
+@pytest.mark.skipif(shutil.which("uv") is None, reason="needs uv on the PATH")
+def test_the_interpreter_a_uv_run_script_starts_stays_in_the_outermost_group(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A `uv run --script` shebang starts the script's interpreter as uv's child;
+    # were either to leave the group, the outermost kill would not reach it.
+    monkeypatch.setenv("UV_OFFLINE", "1")  # no dependencies: nothing to fetch
+    monkeypatch.setenv("UV_PYTHON", sys.executable)
+    probe = tmp_path / "probe.py"
+    probe.write_text(
+        "#!/usr/bin/env -S uv run --script\n# /// script\n# dependencies = []\n# ///\n"
+        + _TELLS_ITS_RUN,
+        encoding="utf-8",
+    )
+    probe.chmod(probe.stat().st_mode | stat.S_IXUSR)
+    run = run_command(_nested_runner(tmp_path / "caller.py"), [str(probe)], cwd=tmp_path)
+    assert run.ending is Ending.ANSWERED, run.stderr
+    nested = run.document
+    assert nested["ending"] == "answered", nested
+    told = nested["document"]
+    assert told["pid"] != nested["pid"]
+    assert told["pgid"] == told["sid"] == nested["pgid"] == nested["pid"]
 
 
 # --- the predicate policy ------------------------------------------------------

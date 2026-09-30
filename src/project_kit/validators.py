@@ -41,7 +41,8 @@ runner the backbone uses for every command it runs on a component's behalf
 (`command_runner`, ADR-057 point 5): from the project root with the one
 argument `--json`, the offline marker set in its environment, in its own
 process group, bounded by the backbone's one command bound and killed as a
-group when it overruns, reading one JSON document — and nothing else — from
+group when it overruns — inside another run, by the time that run has left and
+in the outermost run's group — reading one JSON document — and nothing else — from
 its standard output:
 `{"summary": [...], "findings": [{"severity", "location", "message"}, ...]}`;
 diagnostics go to standard error. No answer — a leaf without the declaration,
@@ -381,7 +382,8 @@ def run_query(target_root: Path, script: Path, *, location: str, reference: str)
     """Run one validator command under the query policy and read its answer (the
     contract in the module docstring): with `--json` and the offline marker set,
     through the shared runner — from the project root, in its own process group,
-    bounded by `command_runner.COMMAND_TIMEOUT_SECONDS`. No answer is an error
+    bounded by `command_runner.COMMAND_TIMEOUT_SECONDS` (inside another run, by
+    the time it has left, in the outermost run's group). No answer is an error
     finding at `location` — the validator's own entry in the package file — so
     the umbrella fails closed."""
     if not script.is_file():
@@ -413,7 +415,7 @@ def why_no_answer(run: CommandRun, reference: str) -> str:
     if run.ending is Ending.NOT_STARTED:
         return f"command {reference!r} could not start: {run.detail}"
     if run.ending is Ending.TIMED_OUT:
-        return f"command {reference!r} did not answer within {run.bound_seconds} s."
+        return f"command {reference!r} did not answer within {run.bound_described}."
     if not_provisioned(run):
         return (
             f"command {reference!r}: {NOT_PROVISIONED} (its dependencies are not in "

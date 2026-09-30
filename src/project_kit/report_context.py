@@ -114,7 +114,8 @@ def pm_workstream(target_root: Path) -> str | None:
     `context-workstream` read verb: resolved through the dispatcher's lookup
     (COR-021) and run through the backbone's command runner under the
     context-read policy — from the project root, with no arguments and the
-    environment unchanged (the verb asks the tracker), bounded by
+    environment unchanged but for the run's deadline (the verb asks the
+    tracker), bounded by
     `command_runner.COMMAND_TIMEOUT_SECONDS`, the value read as text.
 
     Optional on every axis: capability not installed, verb not declared,
@@ -132,7 +133,7 @@ def pm_workstream(target_root: Path) -> str | None:
     if run.ending is Ending.TIMED_OUT:
         click.echo(
             f"warning: workstream omitted — {_WORKSTREAM_CAPABILITY} "
-            f"{_WORKSTREAM_VERB} did not answer within {run.bound_seconds} s "
+            f"{_WORKSTREAM_VERB} did not answer within {run.bound_described} "
             "and was stopped; pass --workstream to name it.",
             err=True,
         )
