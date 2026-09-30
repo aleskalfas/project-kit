@@ -717,7 +717,7 @@ The **whole-repository check** (COR-050 point 6): every artefact in the declared
 
 | Kind | Meaning |
 |---|---|
-| `stale` | An anchor changed after the revalidation point beyond what a deferral covers, or the artefact moved after it with no revalidation. Carries its origin. |
+| `stale` | An anchor changed after the revalidation point beyond what a deferral covers, or the artefact moved after it with no revalidation. Carries its origin; an origin that changed `friction.exclude` over the anchor's files says so (`…, which changed `friction.exclude` over its files`). |
 | `deferred` | A deferral, with its point as origin; the human view adds its age. For the artefact's state, stale wins over deferred (point 10). |
 | `dead-anchor` | At HEAD the anchor resolves to nothing — every one, not only a change's (point 7). A `path` anchor says which way, as the change check's does: it matches no file, or only excluded files, with how many; one a `friction.exclude` added since the revalidation point left standing on nothing names that commit — `matches only excluded files (1), excluded since <commit> "<change>" (<author>, <date>)`. |
 | `unresolved-kind` | An anchor of a kind no installed component resolves. |

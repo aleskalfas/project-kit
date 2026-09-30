@@ -718,7 +718,13 @@ def test_an_exclusion_widened_since_the_point_is_stale_never_silence(timeline: T
 
     result = _run(timeline)
     assert _summary(result) == [("stale", "docs/guide.md", "path:src/cli/**", widened)]
-    assert f'first in {widened[:12]} "exclude the generated code"' in result.findings[0].message
+    assert (
+        f'first in {widened[:12]} "exclude the generated code" (Alice, '
+        in result.findings[0].message
+    )
+    assert "), which changed `friction.exclude` over its files — revalidate the artefact" in (
+        result.findings[0].message
+    )
 
 
 def test_an_exclusion_narrowed_since_the_point_is_stale_from_the_narrowing(
@@ -734,6 +740,7 @@ def test_an_exclusion_narrowed_since_the_point_is_stale_from_the_narrowing(
 
     result = _run(timeline)
     assert _summary(result) == [("stale", "docs/guide.md", "path:src/cli/**", narrowed)]
+    assert "which changed `friction.exclude` over its files" in result.findings[0].message
 
 
 def test_an_exclusion_that_changed_nothing_the_anchor_stood_on_is_no_change(
@@ -793,9 +800,7 @@ def test_the_two_checks_agree_on_an_exclusion_change_and_an_excluded_artefact(
         {CONFIG: friction_config(exclude=["docs/generated", "src/cli/generated"])},
     )
     change = fc.run_change_check(repo.root, "main")
-    assert [(f.kind.value, f.location) for f in change.findings] == [
-        ("friction", "docs/guide.md")
-    ]
+    assert [(f.kind.value, f.location) for f in change.findings] == [("friction", "docs/guide.md")]
     repo.checkout("main")
     timeline.merge("topic")
     result = _run(timeline)

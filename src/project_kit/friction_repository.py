@@ -748,6 +748,7 @@ class Change:
     """The first commit, after what a point covers, in which an anchor's target changed."""
 
     origin: int  # the log index of that commit
+    exclusion: bool = False  # it changed `friction.exclude` over the anchor's files (point 7)
 
 
 class _Judge:
@@ -963,11 +964,15 @@ class _Judge:
     ) -> Change | None:
         """Whether a live anchor of a core kind changed outside `covered`, and where (point 5).
 
-        The first such commit: for a path or a record, the oldest of `changes`.
+        The first such commit: for a path or a record, the oldest of `changes`,
+        saying whether it is one that changed `friction.exclude` over the anchor.
         """
         if anchor.kind in ("path", "record"):
             after = self.changes(anchor, covered, own, point)
-            return Change(max(after)) if after else None
+            if not after:
+                return None
+            origin = max(after)
+            return Change(origin, origin in self.exclusion_commits(anchor, point, covered, own))
         target = self.head.find(anchor.value)
         if target is None:
             return None
@@ -1172,6 +1177,8 @@ def _check_artefact(
             f"changed after its revalidation point {point.short} ({point.day}): first in "
             f'{origin.short} "{origin.subject}" ({origin.author}, {origin.day})'
         )
+        if change.exclusion:
+            message += ", which changed `friction.exclude` over its files"
         if deferral_point is not None:
             message += (
                 f"; its deferral at {commits[deferral_point].short} covers only earlier changes"
