@@ -39,13 +39,18 @@ collection file keeps every byte but the entry and section it gains, its line
 endings too: one whose every line ends CRLF, as a checkout with
 `core.autocrlf` writes it, is edited as LF and written back CRLF, and one
 with mixed line endings is refused. Where the analysis is, and what it holds, is
-read through the backbone's discovery — the working tree's and the default
-branch's tip — never by walking the places. The default branch's history is
-read for a use case or journey alone, as the tree is (`_lib/history.py`): one
-`git log` of the paths ever added under the kind's place, each number read
+read through the backbone's discovery — the working tree's and the settled
+state's — never by walking the places. The settled state is what the stamp
+allocates past (COR-054 point 3): the default branch's commit, and the base
+named on its command line when one is — never the base a pipeline names for
+its checks — as the backbone resolves them (`pkit repository base`); one that
+resolves nowhere refuses the stamp with the backbone's reason and fix, since
+numbering without it would be a guess (point 4). Their history is read for a
+use case or journey alone, as the tree is (`_lib/history.py`): one `git log`
+per commit of the paths ever added under the kind's place, each number read
 from the file's name, counted when the discovery at the commit that added it
 held it as a file of the place, not excluded — asked only of a number past
-the tree's and the tip's. A shallow clone's history stops early, and the
+the tree's and the tips'. A shallow clone's history stops early, and the
 stamp says so.
 """
 
@@ -144,14 +149,12 @@ def stamp(
     *,
     record: Recorder = backbone.record_location,
 ) -> Stamped:
-    """Stamp `request` in the project at `root`, numbering against the base `base` —
-    without one, the base the backbone names: `$PKIT_CHECK_BASE`, else the default
-    branch (COR-054)."""
+    """Stamp `request` in the project at `root`, numbering past the default branch and,
+    when one is named, the base `base` (COR-054 point 3)."""
     try:
-        analysis = backbone.read_analysis(root, base=base)
+        analysis = backbone.read_analysis(root)
     except Unreadable as exc:
         raise Refused(f"the analysis could not be read: {exc}") from exc
-    named = analysis.base.ref if analysis.base is not None else base or "the default branch"
     kind = request.kind
     place = analysis.places.get(kind)
     if place is None:
@@ -165,7 +168,9 @@ def stamp(
     _check_references(analysis, request)
 
     notes: list[str] = []
-    held, past = _held(root, analysis, kind, named, notes)
+    tips = _settled(root, base)
+    named = " and ".join(dict.fromkeys(ref for ref, _commit in tips))
+    held, past = _held(root, analysis, kind, tips, notes)
     new_id = _new_id(kind, request.slug, held, named)
     if past is not None:
         notes.append(
@@ -362,43 +367,63 @@ def _in_force(analysis: Analysis, artefact_id: str, kind: str) -> None:
 # --- the id ----------------------------------------------------------------------------------
 
 
-def _held(
-    root: Path, analysis: Analysis, kind: str, base: str, notes: list[str]
-) -> tuple[set[str], history.Given | None]:
-    """Every id held, as `identity` spells it — in the working tree, and at the default
-    branch's tip, a file's number read from its name too (`Analysis.held`) — and, for
-    a use case or journey, the number of its kind past all of them that the default
-    branch's history gave a file gone since, which counts as held too (DEC-001 point
-    3; `_lib/history.py`). An actor's or term's id is a slug a person chooses, and a
-    withdrawn one stays in its collection file, so no history is read for one.
-    Without the default branch, the working tree's alone, with a note saying why. The
-    tip is the one the backbone names beside the working tree's reading (COR-054)."""
-    held = analysis.held()
-    tip = analysis.base.tip if analysis.base is not None else None
-    if tip is None:
-        notes.append(
-            f"{base} names no commit here, so ids were taken from the working tree alone; "
-            f"`pkit analysis check-numbers` compares them once it resolves"
-        )
-        return held, None
+def _settled(root: Path, base: str | None) -> list[tuple[str, str]]:
+    """What the stamp allocates past, as the backbone resolves it (COR-054 point 3):
+    the default branch, and `base` when one is named on the command line — each as
+    `(ref, commit)`, one entry per commit. Never the base a pipeline names for its
+    checks, which only a comparison reads. Refused, with the backbone's reason and
+    fix, when either resolves nowhere (point 4)."""
     try:
-        on_base = backbone.read_analysis(root, at=tip)
+        branch = backbone.settled(root).default_branch
+        named = backbone.settled(root, base).base if base is not None else None
     except Unreadable as exc:
-        notes.append(f"{base} could not be read ({exc}); ids were taken from the working tree")
-        return held, None
-    held |= on_base.held()
+        raise Refused(f"what the default branch holds could not be read: {exc}") from exc
+    if branch.ref is None or branch.commit is None:
+        raise Refused(branch.problem or f"the default branch {branch.name!r} resolves nowhere")
+    tips = {branch.commit: branch.ref}
+    if named is not None:
+        if named.tip is None:
+            raise Refused(named.problem or f"the base {base!r} resolves nowhere")
+        tips.setdefault(named.tip, named.ref)
+    return [(ref, commit) for commit, ref in tips.items()]
+
+
+def _held(
+    root: Path,
+    analysis: Analysis,
+    kind: str,
+    tips: list[tuple[str, str]],
+    notes: list[str],
+) -> tuple[set[str], history.Given | None]:
+    """Every id held, as `identity` spells it — in the working tree, and at each
+    settled tip, a file's number read from its name too (`Analysis.held`) — and, for
+    a use case or journey, the number of its kind past all of them that a tip's
+    history gave a file gone since, which counts as held too (DEC-001 point 3;
+    `_lib/history.py`). An actor's or term's id is a slug a person chooses, and a
+    withdrawn one stays in its collection file, so no history is read for one."""
+    held = analysis.held()
+    named = " and ".join(ref for ref, _commit in tips)
+    readings = [analysis]
+    for ref, tip in tips:
+        try:
+            on_tip = backbone.read_analysis(root, at=tip)
+        except Unreadable as exc:
+            raise Refused(f"{ref} could not be read: {exc}") from exc
+        held |= on_tip.held()
+        readings.append(on_tip)
     if kind not in NUMBERED:
         return held, None
     if backbone.is_shallow(root):
         notes.append(
-            f"history: shallow clone — {base}'s history was read back to where the clone "
+            f"history: shallow clone — {named}'s history was read back to where the clone "
             f"stops, so a number a file was given before it is not counted; fetch the full "
             f"history (`git fetch --unshallow`) to count every one"
         )
-    folders = {state.places[kind] for state in (analysis, on_base) if kind in state.places}
+    folders = {state.places[kind] for state in readings if kind in state.places}
     top = max(_numbers(kind, held), default=0)
-    judge = history.Judge(root, (analysis, on_base))
-    past = history.highest(judge, history.given(root, tip, folders), kind, above=top)
+    judge = history.Judge(root, readings)
+    given = [number for _ref, tip in tips for number in history.given(root, tip, folders)]
+    past = history.highest(judge, given, kind, above=top)
     if past is not None:
         held.add(past.id)
     return held, past

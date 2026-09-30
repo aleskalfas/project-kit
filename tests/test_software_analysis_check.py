@@ -233,13 +233,14 @@ def test_the_validator_reads_the_working_tree_alone(
     stamped(project, "actor", "tester")
     project.commit("an actor")
     project.checkout("topic", create=True)
+    # Numbered on each line of work before either landed: UC-001 twice, the number
+    # main took after this branch left it.
+    assert stamped(project, "use-case", "ours", "--actor", "ACT-tester") == "UC-001"
+    project.commit("UC-001 on topic")
     project.checkout(MAIN)
-    stamped(project, "use-case", "theirs", "--actor", "ACT-tester")
+    assert stamped(project, "use-case", "theirs", "--actor", "ACT-tester") == "UC-001"
     project.commit("UC-001 on main")
     project.checkout("topic")
-    # Numbered against this branch alone: UC-001, the number main took since.
-    ours = run_script(project, NEW, "use-case", "ours", "--actor", "ACT-tester", "--base", "topic")
-    assert ours.stdout.splitlines()[-1] == f"stamped UC-001 at {USE_CASES}/UC-001-ours.md"
     fill(project)
     answers = [check(project)]
     for base in (MAIN, "no-such-branch"):
