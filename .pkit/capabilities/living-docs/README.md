@@ -12,8 +12,9 @@ pkit:
       record: ["living-docs:DEC-001", COR-049, COR-050, COR-051, COR-053]
       artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006]
     revalidated:
-      at: 2026-09-30T06:40:04Z
-      outcome: updated
+      at: 2026-09-30T09:07:27Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 7 reads a narrowing of the excluded paths as a change to the path anchors it covers and a widening as one only where a file it takes changed while anchored; the README names friction.exclude only as a configuration key and says the core check flags a page whose anchors changed, which such an exclusion change is, so it holds
 ---
 
 # living-docs capability
