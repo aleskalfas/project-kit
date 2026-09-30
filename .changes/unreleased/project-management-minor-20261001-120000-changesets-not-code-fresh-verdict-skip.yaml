@@ -2,6 +2,7 @@ component: project-management
 kind: minor
 custom:
   category: Added
+  pr: 1187
 body: >
   A PR that changes only documentation and its changeset no longer draws the
   code-review panel (#1178). `review.floors.not_code` in the pm
