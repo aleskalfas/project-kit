@@ -96,16 +96,16 @@ _SENTENCE_ENDS = (".", "!", "?")
 _LIST_ITEM_RE = re.compile(r"^[ \t]*(?:[-*+]|\d+[.)])[ \t]+\S")
 
 
-# --- What a release writes: one list, read by the release step and the guard
+# --- What a release writes: one list, shared by the release step and the guard
 #
 # `pkit release apply` writes the files `release_writes` names and nothing else,
 # and the changeset guard recognises a release diff as those files and nothing
 # else (`is_release_diff`). The list is made of what the writers write through:
 # the version files `discover_components` finds, the self-host manifest, the
 # changelog and the changesets directory, and the pattern of each line rewritten
-# in place — the version and manifest lines, which the writers below rewrite
-# through the same patterns, and the requires_backbone line versioning.py
-# rewrites — which the guard admits a changed line by. A write the release step
+# in place — the version and manifest lines below, and versioning.py's
+# `requires_backbone` lines, each the pattern its writer rewrites the line
+# through — which the guard admits a changed line by. A write the release step
 # gains joins the list in the same change, or the guard reads every release
 # making it as an ordinary surface change (#1161).
 
@@ -114,9 +114,6 @@ _LIST_ITEM_RE = re.compile(r"^[ \t]*(?:[-*+]|\d+[.)])[ \t]+\S")
 # regex (not a YAML round-trip) to preserve quoting, key order, and trailing
 # comments — same discipline as versioning.py's requires_backbone rewrite.
 _PACKAGE_VERSION_LINE_RE = re.compile(r"(?m)^(\s+version:\s*)(\d+\.\d+\.\d+)")
-# A package.yaml's `requires_backbone:` line, which the broaden and the declared
-# floor raise rewrite (through versioning.py's own anchored patterns).
-_PACKAGE_REQUIRES_LINE_RE = re.compile(r"^\s*requires_backbone:\s*.+$")
 # The self-host manifest's `backbone_version:` line, which a backbone release
 # rewrites (PRJ-007), under the source kit.
 _MANIFEST_BACKBONE_LINE_RE = re.compile(r"(?m)^(backbone_version:[ \t]*)(\S+)")
@@ -147,8 +144,8 @@ def release_writes(source_kit: Path) -> tuple[ReleaseWrite, ...]:
     """The files `pkit release apply` writes in `source_kit`'s repo, and how:
 
     - each component's version file — the backbone's `VERSION` whole, a
-      `package.yaml` only in its `version:` and `requires_backbone:` lines (the
-      version, the broaden, a declared floor);
+      `package.yaml` only in its `version:` line and a `requires_backbone:` line
+      of the shapes the broaden and a declared floor rewrite;
     - the self-host manifest's `backbone_version:` line, on a backbone release
       (`_sync_self_host_manifest_backbone`, PRJ-007);
     - `CHANGELOG.md`, created or prepended;
@@ -156,7 +153,7 @@ def release_writes(source_kit: Path) -> tuple[ReleaseWrite, ...]:
       only changesets is none.
     """
     repo_root = source_kit.parent
-    package_lines = (_PACKAGE_VERSION_LINE_RE, _PACKAGE_REQUIRES_LINE_RE)
+    package_lines = (_PACKAGE_VERSION_LINE_RE, *versioning.REQUIRES_BACKBONE_RELEASE_LINES)
     versions = [
         ReleaseWrite(
             _repo_rel(repo_root, component.version_path),

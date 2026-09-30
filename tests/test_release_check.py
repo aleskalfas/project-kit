@@ -626,6 +626,28 @@ def test_a_manifest_edit_beside_backbone_version_is_not_the_release(tmp_path: Pa
     assert not result.ok
 
 
+def test_a_requires_backbone_range_the_release_never_writes_is_not_the_release(
+    tmp_path: Path,
+) -> None:
+    """The guard admits a changed `requires_backbone` line only in the shapes the
+    broaden and the floor raise rewrite; a range opened to `*` riding along is a
+    real edit, so the guard runs normally."""
+    source_kit = _make_repo(tmp_path)
+    _v1_149_base(source_kit)
+    _v1_149_release(source_kit)
+    _commit_change(
+        source_kit,
+        ".pkit/capabilities/software-engineering/package.yaml",
+        _package("capability", "software-engineering", "0.2.0", "*"),
+    )
+
+    result = release.check_changesets(source_kit, "main")
+
+    assert not release.is_release_diff(source_kit, "main")
+    assert not result.release_exempt
+    assert not result.ok
+
+
 def test_a_diff_that_only_consumes_changesets_is_not_a_release(tmp_path: Path) -> None:
     source_kit = _make_repo(tmp_path)
     _v1_149_base(source_kit)

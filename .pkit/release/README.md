@@ -628,16 +628,18 @@ ones it just consumed. The guard recognises a release diff **by its content**,
 against one list of what a release writes (`release_writes` in
 `project_kit/release.py`), made of the files and line patterns the release step
 writes through — each file, the status the write leaves, and, for a file
-rewritten in place, the only lines it changes (a `package.yaml`'s `version:`
-and `requires_backbone:`, the manifest's `backbone_version:`). A diff that is
-*only* those writes, and more than the consumed changesets, is the release
-itself, not a new surface change, and passes the surface check with no
-`skip-changeset` label. The signal is the
+rewritten in place, the only lines it changes, through the patterns the
+writers rewrite them by (a `package.yaml`'s `version:` line and a
+`requires_backbone:` range the broaden widens or a declared floor raises, the
+manifest's `backbone_version:`). A diff that is *only* those writes, and more
+than the consumed changesets, is the release itself, not a new surface change,
+and passes the surface check with no `skip-changeset` label. The signal is the
 content rather than the branch name, so it is self-contained (works locally
 and in CI, on any branch, in any adopter's repo) and a branch named `release/*`
 does not produce it; CI raises no hatch for one. It is strict — a single stray
 file or line outside the list (a `src/` edit riding along, a manifest line
-beside `backbone_version`) makes the diff no longer the release, so the guard
+beside `backbone_version`, a `requires_backbone` range the release never
+writes, such as `"*"`) makes the diff no longer the release, so the guard
 runs normally and the exemption can never smuggle real surface through. A write
 the release step gains joins the list in the same change; otherwise the guard
 fails the next release PR that makes it.
