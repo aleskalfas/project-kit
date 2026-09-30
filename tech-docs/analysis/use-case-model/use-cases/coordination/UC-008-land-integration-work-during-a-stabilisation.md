@@ -19,9 +19,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-09-30T09:26:38Z
+      at: 2026-09-30T17:57:56Z
       outcome: unchanged
-      unchanged-because: start-work now cuts the branch from the commit the backbone resolves its base to — the remote's copy, the local branch only without a remote — and refuses when the backbone cannot say which branch is settled (COR-054); an integration branch resolves the same way, and open-pr names it to the change check while its PR still targets it, so where the arc's work lands is unchanged
+      unchanged-because: done-work's change is the lifecycle move it makes before the merge for an issue still In Progress, In Progress to Review; the branch a pull request targets, and how integration-branch work reaches the default branch during a stabilisation, did not change
 ---
 
 # UC-008 — Land integration-branch work during a stabilisation
