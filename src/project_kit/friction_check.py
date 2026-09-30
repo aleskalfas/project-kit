@@ -1247,7 +1247,8 @@ def render_json(result: ChangeCheck) -> str:
 
 _LEGEND: dict[FindingKind, str] = {
     FindingKind.FRICTION: (
-        "an anchor, the anchor list or the artefact's place changed, and no answer stands"
+        "an anchor, the anchor list or the artefact's place changed, or `friction.exclude` let "
+        "it back in, and no answer stands"
     ),
     FindingKind.ANSWERED: "the artefact answers the change: updated, unchanged, deferred or new",
     FindingKind.REVALIDATED: "revalidated in this diff with no changed anchor",
