@@ -673,11 +673,12 @@ def _track(repo: AdopterRepo, config: str) -> None:
 
 def _check_doc_mapping(repo: AdopterRepo, body: Path) -> subprocess.CompletedProcess[str]:
     """project-management's check of the branch against `base`, reading the point
-    through the real `pkit` first on PATH."""
+    through the real `pkit` first on PATH. The base is named as a reference, read as
+    named, so the backbone has nothing to say of it on standard error (COR-054)."""
     env = {k: v for k, v in os.environ.items() if k != "PKIT_OFFLINE"}
     script = repo.root / PM / "scripts" / "check-doc-mapping.py"
     return subprocess.run(
-        [sys.executable, str(script), "--base", "base", "--pr-body-file", str(body)],
+        [sys.executable, str(script), "--base", "refs/heads/base", "--pr-body-file", str(body)],
         cwd=repo.root,
         capture_output=True,
         text=True,
