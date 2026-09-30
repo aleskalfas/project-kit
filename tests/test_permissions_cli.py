@@ -2501,7 +2501,7 @@ def _extract_func_source(source: str, name: str) -> str:
 
 
 def test_decide_verdict_path_byte_identical_to_main():
-    # ADR-032 (corrected): `load_model` gains an additive edit to read
+    # ADR-032: `load_model` gains an additive edit to read
     # `active_profile` from its per-machine home, so decide.py is NOT frozen
     # whole-file. What MUST stay byte-identical is the `decide()` VERDICT path —
     # the verdict logic, not the model-loader. Guard exactly that function (and

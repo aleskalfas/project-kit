@@ -1327,14 +1327,14 @@ def disable(target_root: Path) -> str:
 # per-invocation `--dangerously-allow-unconfined` operator gesture; it is never
 # persisted as a default — re-running `enable` without it restores the floor.
 #
-# Reconciliation of ADR-005's `allowUnsandboxedCommands: false` requirement:
-# NOT required for safety. The unsandboxed *fail-over* path (a command that
+# `allowUnsandboxedCommands: false` is NOT required for safety (ADR-005
+# point 6). The unsandboxed *fail-over* path (a command that
 # fails inside the box retried outside via `dangerouslyDisableSandbox`) rides
 # the normal permission flow — allowlist or prompt — and is never auto-allowed;
 # only *sandboxed* commands are auto-approved. Forcing `false` breaks legit
 # fail-over (`git push` / `gh` need network/SSH reach the box blocks), so the
 # key is left at harness default; `--strict` writes it as optional hardening.
-# The reconciliation note lives in ADR-005.
+# The reasoning lives in ADR-005's Rationale.
 #
 # Writes are additive over the operator's `sandbox` block: operator keys
 # (`excludedCommands`, `network`, extra `denyRead` entries, …) survive both

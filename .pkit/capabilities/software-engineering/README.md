@@ -13,8 +13,9 @@ pkit:
         - .pkit/capabilities/software-engineering/skills/**
       record: [COR-013, COR-024, COR-026, COR-030, ADR-013, ADR-052, "project-management:DEC-015", "project-management:DEC-028", "project-management:DEC-032"]
     revalidated:
-      at: 2026-09-29T18:03:42Z
-      outcome: updated
+      at: 2026-09-30T22:36:07Z
+      outcome: unchanged
+      unchanged-because: ADR-013 states the same seam and names the same second consumer without a dated update marker (#860)
 ---
 
 # software-engineering capability
