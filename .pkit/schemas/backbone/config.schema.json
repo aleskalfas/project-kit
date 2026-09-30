@@ -145,9 +145,9 @@
       "additionalProperties": false,
       "properties": {
         "default-branch": {
-          "description": "The branch the project's settled work lands on — declared once, for every reader (COR-054 point 1). Resolved as the remote-tracking reference `origin/<name>` when it names a commit, else the local branch `<name>` (point 2); a comparison's base named for one run (`--base`, `$PKIT_CHECK_BASE`) replaces it for that run only (point 3). A branch name: no whitespace, not starting with `-`. Default `main`. Written by the project, by hand or `pkit config set`.",
+          "description": "The name of the branch the project's pull requests merge into — declared once, for every reader (COR-054 point 1). Resolved as the remote-tracking reference of the branch's upstream, else `origin/<name>`, and as the local branch only when there is no remote (point 2); a comparison's base named for one run (`--base`, `$PKIT_CHECK_BASE`) replaces it for that run only (point 3). A branch name as git accepts one, and not a reference: no `origin/` or `refs/` prefix. Default `main`. Written by the project, by hand or `pkit config set`, and by the upgrade migration that retires a component's own setting for it.",
           "type": "string",
-          "pattern": "^[^\\s-]\\S*$"
+          "pattern": "^(?![-/.])(?!origin/)(?!refs/)(?!HEAD$)(?!@$)(?!.*\\.\\.)(?!.*@\\{)(?!.*//)(?!.*/\\.)(?!.*\\.lock(?:/|$))(?!.*[/.]$)[^\\x00-\\x20\\x7f~^:?*\\[\\\\]+$"
         }
       }
     },

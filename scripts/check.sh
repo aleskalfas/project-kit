@@ -30,10 +30,11 @@
 set -uo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
-# Base ref for the diff-scoped checks (migration coverage, friction, analysis
-# numbers, doc check); each compares HEAD with its merge-base with this ref. CI
-# overrides via env for PRs; locally it defaults to the tracked main.
-BASE="${PKIT_CHECK_BASE:-origin/main}"
+# The diff-scoped checks (migration coverage, friction, analysis numbers, doc
+# check) each read their base themselves, one way (COR-054): $PKIT_CHECK_BASE
+# when it is set — CI sets it to the pull request's target — else the project's
+# default branch, as `pkit repository base` shows it. So no line here passes
+# --base: every line exercises the rule a contributor's own run does.
 
 fail=0
 run() {
@@ -53,10 +54,10 @@ run() {
 # run") — which CI runs on checkout, and a clone runs once — not by this gate.
 run "tests"              uv run pytest -q
 run "validate"           uv run pkit validate
-run "migrations check"   uv run pkit migrations check-diff --base "${BASE}"
-run "friction check"     uv run pkit friction check --base "${BASE}"
-run "analysis numbers"   uv run pkit analysis check-numbers --base "${BASE}"
-run "doc check"          uv run pkit pm check-doc-mapping --base "${BASE}"
+run "migrations check"   uv run pkit migrations check-diff
+run "friction check"     uv run pkit friction check
+run "analysis numbers"   uv run pkit analysis check-numbers
+run "doc check"          uv run pkit pm check-doc-mapping
 run "changelog lint"     uv run pkit release lint
 
 echo

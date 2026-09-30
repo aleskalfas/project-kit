@@ -5,16 +5,15 @@ custom:
 body: >
   One meaning of the default branch for every reader of settled state (COR-054,
   #1128). The backbone configuration gains `repository.default-branch` — the
-  branch the project's settled work lands on, declared once, `main` when
-  absent — resolved as `origin/<name>` when that names a commit, else the local
-  `<name>`, and reported with the fixes when neither does, never guessed. The
-  friction change check's default base is now that branch — `--base`, else
-  `$PKIT_CHECK_BASE`, else the default branch — where it used to be a fixed
-  `origin/main`: in a clone without the remote's copy it compares with the
-  local branch instead of refusing, and a project that declares another branch
-  compares with it. `pkit friction artefacts` gains `--base <ref>` and two keys,
-  `default_branch` (name, source, ref, commit) and `base` (ref, source, tip,
-  fork, outdated, problem), with two lines in its human view, so a capability's
-  script — a filler included — reads which commit is settled there and never
-  resolves a base or computes a merge-base itself. A value that is not a
-  branch name reads as `main` with a warning; `pkit validate` fails on it.
+  branch the project's pull requests merge into, declared once, `main` when
+  absent, a branch name as git accepts one and not a reference. It resolves to
+  the remote-tracking reference of the branch's upstream, else `origin/<name>`,
+  and to the local branch only when there is no remote, which every reader says
+  on a `warning:` line; when nothing resolves it is reported with the fixes,
+  never guessed. Any branch named as a base resolves the same way. New
+  `pkit repository base [--base <ref>] [--json]` reads the default branch and
+  the base a comparison reads — `--base`, else `$PKIT_CHECK_BASE`, else the
+  default branch — with its commit and where HEAD left it, so a capability's
+  script never resolves a base or computes a merge-base itself. The friction
+  change check, `pkit migrations check-diff` and `pkit release check` default
+  to that base where they used to take a fixed `origin/main`.
