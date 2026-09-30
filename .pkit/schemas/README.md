@@ -19,7 +19,7 @@ pkit:
         - src/project_kit/working_tree.py
       record: [COR-018, COR-019, COR-020, COR-023, COR-029, COR-048, COR-050, COR-051, COR-052, COR-053, ADR-056, ADR-057]
     revalidated:
-      at: 2026-09-30T06:49:58Z
+      at: 2026-09-30T08:01:47Z
       outcome: updated
 ---
 
@@ -430,7 +430,7 @@ pkit:                                     RS-CMN-001:
 | Key | Meaning |
 |---|---|
 | `anchors` | What makes the artefact true, grouped by kind — `path` (files or globs relative to the repository root, `**` across folders), `record` (an identified record, such as a decision), `artefact` (another artefact by its id; a document may also be named by its repository-relative path). Each list is non-empty with unique entries. An artefact without anchors is *unanchored* — reported, never an error. |
-| `unanchored-because` | Instead of `anchors`, for an artefact with nothing to anchor to: the reason a person accepted it with none, such as a role no code embodies — non-empty text (COR-050 point 1). The unanchored measure lists such an artefact apart, with its reason, and counts only those without one (point 8; the CLI README, "friction check --all"). It never stands beside anchors: validation refuses the pair (below). |
+| `unanchored-because` | Instead of `anchors`, for an artefact with nothing to anchor to: the reason a person accepted it with none, such as a person's part in the work that no code carries out — non-empty text (COR-050 point 1). The unanchored measure lists such an artefact apart, with its reason, and counts only those without one (point 8; the CLI README, "friction check --all"). It never stands beside anchors: validation refuses the pair (below). |
 | `revalidated` | The last revalidation, written on a person's decision — by hand, or with `pkit friction revalidate` and `pkit friction defer`. `at` — a UTC timestamp `YYYY-MM-DDTHH:MM:SSZ`; the revalidation point is the last commit in which its parsed value changed. `outcome` — `updated` or `unchanged`; `at` and `outcome` come together. `unchanged-because` — required with `outcome: unchanged`: why the content still holds against *this* change. `deferred` — one entry per anchor whose friction is deliberately postponed: `anchor: {kind, value}` plus a `reason`; kept sorted by anchor. An artefact never yet revalidated may carry `deferred` alone; an empty `revalidated` is refused. |
 | `last-check` | Tool-written only — by `pkit friction record-status`, the command the after-merge job runs, and only when the status changes: `state` (`current` / `stale` / `deferred`), `as-of` (the commit checked against), `since` (where staleness came from). Never read for friction. |
 

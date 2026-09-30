@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-09-30T06:50:02Z
+      at: 2026-09-30T08:02:11Z
       outcome: unchanged
-      unchanged-because: the CLI README now documents the unanchored measure's accepted-with-a-reason listing in check --all, debt and explain, and the schemas README the block's unanchored-because and the validation finding beside anchors; the area map's one-line descriptions of cli/ and schemas/ hold
+      unchanged-because: the CLI README now documents the unanchored measure listing the artefacts accepted with a reason apart and counting those without one, in check --all, debt and explain, and the schemas README the block's unanchored-because and its validation finding beside anchors; the area map's one-line descriptions of cli/ and schemas/ still hold
 ---
 
 # project-kit

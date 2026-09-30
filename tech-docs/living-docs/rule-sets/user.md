@@ -10,9 +10,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001"]}
         revalidated:
-          at: 2026-09-30T07:06:12Z
+          at: 2026-09-30T08:02:16Z
           outcome: unchanged
-          unchanged-because: living-docs DEC-001 point 8 now names the accepted reason for a page with no anchors as the core friction block's unanchored-because; the paths the user space's readers take through its pages are unchanged
+          unchanged-because: living-docs DEC-001 point 8 now says an accepted reason for a page with no anchors is the core's unanchored-because in its friction block, written on a person's decision, and that the unanchored measure lists such a page apart without counting it; the paths the user space's readers take through its pages do not change
 ---
 
 # The user space's definition

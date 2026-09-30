@@ -14,9 +14,9 @@ pkit:
       record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, ADR-019, ADR-039, ADR-055, "project-management:DEC-053"]
       artefact: [.pkit/decisions/README.md]
     revalidated:
-      at: 2026-09-30T06:45:50Z
+      at: 2026-09-30T08:02:09Z
       outcome: unchanged
-      unchanged-because: COR-050 now lets an artefact carry the reason it has no anchors, lists such artefacts apart in the unanchored measure and has validation refuse the reason beside anchors; the guide's gate, report and escape-hatch paragraphs name the checks and the report's contents without their detail, so they hold
+      unchanged-because: COR-050 now lets a person's decision write, instead of anchors, the reason an artefact has none, lists such an artefact apart in the unanchored measure without counting it, has validation refuse the reason beside anchors and rejects excluding its path instead; the guide's gate, report and escape-hatch paragraphs name the checks and the report without that detail, so they hold
 ---
 
 # Contributing to project-kit

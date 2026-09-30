@@ -12,7 +12,7 @@ pkit:
       record: ["living-docs:DEC-001", COR-049, COR-050, COR-051, COR-053]
       artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006]
     revalidated:
-      at: 2026-09-30T07:06:34Z
+      at: 2026-09-30T08:01:49Z
       outcome: updated
 ---
 
@@ -165,7 +165,7 @@ On a project that already has documentation, nothing is anchored yet, so onboard
    - **mapping** — if you keep a code-to-doc mapping (the project-management capability's, read through the work-tracking role's documentation-check point), which of its rules become path anchors on the pages they name, narrowed where an anchor would match most of the repository. Retiring the mapping is a separate change, for whoever owns it.
 3. **Review the plan at its single gate**: approve, revise, or reject. Nothing is drafted before you approve; a revision comes back to the gate; a rejection drafts nothing.
 4. **Review the changes it drafts.** On approval it writes one reviewable change per step into `.agent-workspace/living-docs/onboarding/` — diffs and pull-request bodies — and stops. You apply them and open the pull requests. A page new in its change counts as revalidated there, so it needs no writer.
-5. **Repeat until done.** Onboarding is complete when the declared surface is covered and no page is left unanchored without a reason you accepted. A page that has nothing to anchor to carries that reason in its friction block, `unanchored-because: <why>` instead of anchors — the core's key (COR-050 point 1), which the core refuses beside anchors. `pkit friction check --all` shows both measures, listing the pages accepted with a reason apart from the forgotten ones and counting only the forgotten; `pkit living-docs validate` counts the pages of your spaces each way in its summary and lists them.
+5. **Repeat until done.** Onboarding is complete when the declared surface is covered and no page is left unanchored without a reason you accepted. A page that has nothing to anchor to carries that reason in its friction block, `unanchored-because: <why>` instead of anchors — the core's key (COR-050 point 1), which the core refuses beside anchors. `pkit friction check --all` shows both measures, listing the pages accepted with a reason apart and counting only those without one; `pkit living-docs validate` counts the pages of your spaces each way in its summary and lists them.
 
 From then on, the friction check flags pages as their anchors change, and the agent proposes each fix.
 

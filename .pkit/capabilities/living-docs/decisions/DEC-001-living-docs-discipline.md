@@ -79,7 +79,7 @@ This record decides how this capability uses them.
    - which anchors each statement should carry;
    - which existing mappings from code to documentation, if the project keeps any, become page anchors. Retiring such mappings is a separate change for whoever owns them.
 
-   Every proposal cites its evidence and passes a person's review, and moves land as ordinary reviewable changes. Onboarding is complete when the declared surface is covered and no page is left unanchored without an accepted reason. The accepted reason is the one a person gave for the page having no anchors, written in its friction block as the core's `unanchored-because`, which the core's unanchored measure lists apart and does not count (COR-050 points 1 and 8).
+   Every proposal cites its evidence and passes a person's review, and moves land as ordinary reviewable changes. Onboarding is complete when the declared surface is covered and no page is left unanchored without an accepted reason. An accepted reason is the core's `unanchored-because` in the page's friction block, written on a person's decision (COR-050 point 1); the unanchored measure lists such a page apart and does not count it (point 8).
 
 9. **Independent.** The capability works without any analysis, work-tracking or testing component, and each of them can enrich it through its connection points.
 

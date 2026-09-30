@@ -48,7 +48,7 @@
           "$ref": "#/$defs/anchors"
         },
         "unanchored-because": {
-          "description": "Why the artefact has no anchors: the reason a person accepted it unanchored, such as a role no code embodies (COR-050 point 1). The unanchored measure lists such an artefact apart, with this reason, and counts only those without one (point 8). It stands instead of anchors, never beside them: validation refuses the pair (point 12), with its own finding rather than a shape error here.",
+          "description": "Why the artefact has no anchors: the reason a person accepted it unanchored, such as a person's part in the work that no code carries out (COR-050 point 1). The unanchored measure lists such an artefact apart, with this reason, and counts only those without one (point 8). It stands instead of anchors, never beside them: validation refuses the pair (point 12), with its own finding rather than a shape error here.",
           "$ref": "#/$defs/non-empty-string"
         },
         "revalidated": {
