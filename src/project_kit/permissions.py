@@ -1313,7 +1313,7 @@ def disable(target_root: Path) -> str:
 
 # ---- sandbox confinement (ADR-004 / ADR-005, #274) --------------------------
 #
-# The sandbox writer ADR-005 deferred: turn on Claude Code's OS sandbox
+# The sandbox writer (ADR-008 rule 2): turn on Claude Code's OS sandbox
 # (macOS Seatbelt / Linux bubblewrap) with `autoAllowBashIfSandboxed`, so
 # scripting (bash / python3) runs prompt-free INSIDE the box instead of
 # prompting the operator. This closes the autonomous profile's documented gap
