@@ -27,7 +27,10 @@ working here — the default author of a revalidation record — for the stamp,
 every path a history ever added under the places the backbone names, so a
 number whose file is gone from the default branch is still counted held
 (`added_paths`: one `git log`, since the backbone's reading is of one state,
-not of a history); and, for the
+not of a history); for the number comparison, which versions of those files a
+branch's own history wrote, and which the default branch holds, so a number
+the default branch took by landing this branch's own work is told from one it
+took for another (`blobs_written`, `blob_of`); and, for the
 proposal, a file's text at a commit, whether a path anchor's files held a piece
 of code at a commit, which commits touched them, which files anywhere in the
 tree held a piece of code, which of an anchor's files were renamed and where
@@ -236,6 +239,40 @@ def added_paths(root: Path, commit: str, folders: Iterable[str]) -> set[str]:
         *pathspecs,
     )
     return {line for line in (listed or "").splitlines() if line}
+
+
+def blobs_written(root: Path, since: str, folders: Iterable[str]) -> set[str]:
+    """Every version of a file under `folders` a commit after `since` up to HEAD wrote,
+    by its blob — through one `git log`; empty when there are no folders, or git
+    cannot answer. A file's content, not its path, is what two histories share when
+    one landed the other's work under another commit, as a squash does."""
+    pathspecs = [f":(literal){folder}" for folder in sorted(set(folders))]
+    if not pathspecs or not since or since.startswith("-"):
+        return set()
+    listed = _git(
+        root,
+        "log",
+        f"{since}..HEAD",
+        "--no-renames",
+        "--format=",
+        "--raw",
+        "--no-abbrev",
+        "--",
+        *pathspecs,
+    )
+    written: set[str] = set()
+    for line in (listed or "").splitlines():
+        fields = line.split("\t", 1)[0].split()
+        if line.startswith(":") and len(fields) >= 4 and fields[3].strip("0"):
+            written.add(fields[3])
+    return written
+
+
+def blob_of(root: Path, commit: str, path: str) -> str | None:
+    """The blob `path` holds at `commit`, or `None` when it holds none there."""
+    if not commit or commit.startswith("-"):
+        return None
+    return _git(root, "rev-parse", "--verify", "--quiet", f"{commit}:{path}")
 
 
 def user_name(root: Path) -> str | None:
