@@ -24,6 +24,7 @@ from __future__ import annotations
 import ast
 import re
 from pathlib import Path
+from typing import Any
 
 import pytest
 from click.testing import CliRunner
@@ -56,6 +57,7 @@ from tests.analysis_repo import (
 # The living-docs guard's reading of a script's code: one list of what re-deriving
 # discovery would take, shared rather than copied.
 from tests.test_living_docs_spaces import (
+    _code,  # pyright: ignore[reportPrivateUsage]
     _discovery_tokens,  # pyright: ignore[reportPrivateUsage]
 )
 
@@ -79,22 +81,37 @@ def test_the_package_declares_the_analysis_location_and_one_place_per_kind(
     ours = [p.resolved for p in settings.places if p.source == "capability:software-analysis"]
     assert ours == [GLOSSARY, ACTORS, USE_CASES, JOURNEYS]
     assert not any(RECORDS in place for place in ours)  # an act, not an anchored artefact
+    # ... so the records' folder is held (COR-050 point 1): no place reads a record.
+    assert [(h.source, h.resolved) for h in settings.held] == [
+        ("capability:software-analysis", RECORDS)
+    ]
     assert [p.resolved for p in settings.surface if p.source.startswith("capability:")] == []
 
 
-def _kind_of_place_keys() -> list[str]:
-    """The places `_lib/model.py` knows, read from its source: the scripts run in
+def _model_value(name: str) -> ast.expr:
+    """What `_lib/model.py` assigns to `name`, read from its source: the scripts run in
     their own environment, and their `_lib` is not importable beside living-docs'."""
     source = (CAPABILITY / "scripts" / "_lib" / "model.py").read_text(encoding="utf-8")
     for node in ast.parse(source).body:
         if (
             isinstance(node, ast.Assign)
             and isinstance(node.targets[0], ast.Name)
-            and node.targets[0].id == "KIND_OF_PLACE"
-            and isinstance(node.value, ast.Dict)
+            and node.targets[0].id == name
         ):
-            return [str(ast.literal_eval(key)) for key in node.value.keys if key is not None]
-    raise AssertionError("_lib/model.py defines no KIND_OF_PLACE")
+            return node.value
+    raise AssertionError(f"_lib/model.py defines no {name}")
+
+
+def _kind_of_place_keys() -> list[str]:
+    """The places `_lib/model.py` knows: the keys of its KIND_OF_PLACE."""
+    value = _model_value("KIND_OF_PLACE")
+    assert isinstance(value, ast.Dict)
+    return [str(ast.literal_eval(key)) for key in value.keys if key is not None]
+
+
+def _model_constant(name: str) -> Any:
+    """A literal constant `_lib/model.py` defines."""
+    return ast.literal_eval(_model_value(name))
 
 
 def test_the_scripts_know_each_place_by_the_package_s_own_words() -> None:
@@ -102,6 +119,16 @@ def test_the_scripts_know_each_place_by_the_package_s_own_words() -> None:
     places: list[dict[str, str]] = package["friction"]["places"]
     assert sorted(place["path"] for place in places) == sorted(_kind_of_place_keys())
     assert {place["location"] for place in places} == {"analysis"}
+
+
+def test_the_scripts_know_the_records_folder_by_the_package_s_own_words() -> None:
+    """The records are read from the backbone's declaration of the held folder the
+    package declares (`_lib/model.py`'s REVALIDATIONS), the one the stamp writes into."""
+    package = load((CAPABILITY / "package.yaml").read_text(encoding="utf-8"))
+    held: list[dict[str, str]] = package["friction"]["held"]
+    assert [(h["location"], h["path"]) for h in held] == [
+        ("analysis", _model_constant("REVALIDATIONS"))
+    ]
 
 
 @pytest.mark.parametrize("namespace", ["analysis", "software-analysis"])
@@ -338,3 +365,17 @@ def test_the_capability_s_scripts_carry_no_discovery_of_their_own() -> None:
         if (tokens := _discovery_tokens(path.read_text(encoding="utf-8")))
     }
     assert found == {}
+
+
+def test_the_records_are_read_from_the_held_list_never_by_listing_their_folder() -> None:
+    """The revalidation records are the files discovery lists as held (COR-050
+    point 1), from the working tree's one listing — so a draft git ignores is no
+    record. No script lists a folder itself to find them."""
+    listing = re.compile(r"\.iterdir\(|\bos\.listdir\b|\bos\.scandir\b")
+    scripts = sorted((CAPABILITY / "scripts").rglob("*.py"))
+    found = [
+        path.relative_to(CAPABILITY).as_posix()
+        for path in scripts
+        if listing.search(_code(path.read_text(encoding="utf-8")))
+    ]
+    assert found == []

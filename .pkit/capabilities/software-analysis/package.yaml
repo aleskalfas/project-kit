@@ -42,10 +42,11 @@ docs:
       path: analysis
       description: The analysis (DEC-001 point 2) — the glossary, the use-case model and the revalidation records; recorded the first time an artefact is stamped (COR-049 point 5), so a later change of root moves nothing.
 
-# COR-050 point 1 — the places holding this capability's anchored artefacts.
-# The revalidation records are an act, not an anchored artefact, so their
-# folder is not a place (DEC-001 point 2). No surface: the project declares the
-# code its analysis ought to cover.
+# COR-050 point 1 — the places holding this capability's anchored artefacts,
+# and its folder of held documents: the revalidation records describe an act
+# and are not anchored artefacts, so their folder is not a place but held — no
+# other component's place reads them as artefacts (DEC-001 point 2). No
+# surface: the project declares the code its analysis ought to cover.
 friction:
   places:
     - location: analysis
@@ -60,6 +61,10 @@ friction:
     - location: analysis
       path: use-case-model/journeys
       description: The journeys, one file each.
+  held:
+    - location: analysis
+      path: revalidations
+      description: The revalidation records, one file each — the record of an act, not an anchored artefact.
 
 # COR-053 — the analysis role, the evidence point defined under it, and the
 # contribution to the documentation role's readers point (DEC-001 points 7

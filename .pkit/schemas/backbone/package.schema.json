@@ -566,6 +566,13 @@
         "surface": {
           "description": "Repository-relative path globs this component says ought to be described; paths in it that no artefact anchors to are reported as uncovered (COR-050 point 8).",
           "$ref": "#/$defs/path-list"
+        },
+        "held": {
+          "description": "Folders of held documents: files this component owns that are not artefacts, such as a log of reviews it has carried out (COR-050 point 1). Each lies within one of the component's declared locations; no place reads one of its files as an artefact.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/friction-held"
+          }
         }
       }
     },
@@ -582,6 +589,34 @@
         },
         "path": {
           "$ref": "#/$defs/relative-path"
+        },
+        "description": {
+          "$ref": "#/$defs/non-empty-string"
+        }
+      }
+    },
+    "friction-held": {
+      "description": "A folder of held documents: `path`, a folder — never a glob — inside the declared location `location` names (COR-050 point 1).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "location",
+        "path"
+      ],
+      "properties": {
+        "location": {
+          "description": "A name from `docs.locations`; the folder lies inside it.",
+          "$ref": "#/$defs/location-name"
+        },
+        "path": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/relative-path"
+            },
+            {
+              "pattern": "^[^*?\\[]+$"
+            }
+          ]
         },
         "description": {
           "$ref": "#/$defs/non-empty-string"
