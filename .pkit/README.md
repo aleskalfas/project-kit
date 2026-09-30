@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-09-30T14:27:04Z
+      at: 2026-09-30T18:39:12Z
       outcome: unchanged
-      unchanged-because: the CLI README gains pkit repository base and the repository key beside main's exclusion reading, the schemas README lists the repository block; the area map holds
+      unchanged-because: the CLI README now states how a file's line endings are read and that the writers keep them, and the schemas README lists the mixed-line-endings finding, beside main's default-branch key and repository block; the area map's one-line descriptions of cli/ and schemas/ name the command surface and the schemas, not how a file is read, so they hold
 ---
 
 # project-kit
