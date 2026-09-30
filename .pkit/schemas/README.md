@@ -19,8 +19,9 @@ pkit:
         - src/project_kit/working_tree.py
       record: [COR-018, COR-019, COR-020, COR-023, COR-029, COR-048, COR-050, COR-051, COR-052, COR-053, ADR-056, ADR-057]
     revalidated:
-      at: 2026-09-29T18:59:01Z
-      outcome: updated
+      at: 2026-09-30T00:38:34Z
+      outcome: unchanged
+      unchanged-because: ADR-057 now states the nested-run rule in point 3 and says in point 2 that a validate run resolves each data point once across the processes it starts; this README cites the record only for point 2's one listing of the working tree and the anchor-kind registry, which hold
 ---
 
 # Schemas
