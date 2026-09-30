@@ -38,7 +38,7 @@ This record decides what the capability keeps, where, and how it stays true.
 
    **A kind with many files gets its own folder; a kind with one file is a file.** Folders appear only when something goes into them.
    - **Location.** The `analysis` sub-path is declared in the capability's package metadata. Its location is recorded on first use in the capability's own project configuration, as the documentation-roots record requires (COR-049). A later change of root therefore never moves an existing analysis.
-   - **Places.** The capability declares the glossary, actors, use cases and journeys as places holding anchored artefacts (COR-050). Revalidation records describe an act, and are not anchored artefacts, so they are not a declared place.
+   - **Places.** The capability declares the glossary, actors, use cases and journeys as places holding anchored artefacts (COR-050). Revalidation records describe an act and are not anchored artefacts, so their folder is not a place: the capability declares it as a folder of held documents (COR-050 point 1), which discovery lists and no other component's place reads as artefacts.
    - **Surface.** The capability declares no surface by default, since it cannot know a project's code. The project declares which paths its analysis ought to cover, in the friction key of its backbone configuration (COR-050).
    - **Ownership.** The artefacts live outside the capability's own subtree, so uninstalling the capability never removes them.
 

@@ -478,3 +478,67 @@ def test_revalidation_records_are_held_to_their_schema(project: AdopterRepo) -> 
             "the date, who performed it and each artefact's outcome (DEC-001 point 6)",
         ),
     ]
+
+
+def test_the_records_are_the_held_files_so_a_draft_git_ignores_is_not_checked(
+    project: AdopterRepo,
+) -> None:
+    """The records are read from the held list of `pkit friction artefacts` (COR-050
+    point 1), which is the working tree's one listing: a draft the project keeps
+    git-ignored in the folder is not a record, whatever it holds."""
+    seed(project)
+    record = (CAPABILITY / "templates" / "revalidation-record.md").read_text(encoding="utf-8")
+    good = record.replace('"#000"', '"#887"').replace("UC-000", "UC-001")
+    project.write(
+        {
+            ".gitignore": "draft-*.md\n",
+            f"{RECORDS}/2026-10-01-first-run.md": good,
+            f"{RECORDS}/draft-idea.md": "# Not yet a record\n",
+        }
+    )
+    document = check(project)
+    assert "; 1 revalidation record(s)." in document["summary"][0]
+    assert errors(document) == []
+    project.write({".gitignore": None})
+    document = check(project)
+    assert "; 2 revalidation record(s)." in document["summary"][0]
+    assert [location for location, _message in errors(document)] == [f"{RECORDS}/draft-idea.md"]
+
+
+#: A `pkit` answering `friction artefacts` as a backbone from before the document
+#: carried `held`: the real answer, with the key taken out.
+_PRE_HELD_PKIT = """#!{python}
+import json, subprocess, sys
+done = subprocess.run([sys.executable, "-m", "project_kit", *sys.argv[1:]],
+                      capture_output=True, text=True)
+out = done.stdout
+if sys.argv[1:3] == ["friction", "artefacts"] and done.returncode == 0:
+    document = json.loads(out)
+    del document["held"]
+    out = json.dumps(document)
+sys.stdout.write(out)
+sys.stderr.write(done.stderr)
+sys.exit(done.returncode)
+"""
+
+
+def test_a_backbone_without_held_documents_in_its_document_is_unreadable(
+    project: AdopterRepo, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Read as none, a missing `held` list would find no record, and check none;
+    the check says what is missing instead."""
+    seed(project)
+    older = tmp_path / "pre-held-backbone"
+    older.mkdir()
+    (older / "pkit").write_text(_PRE_HELD_PKIT.format(python=sys.executable), encoding="utf-8")
+    (older / "pkit").chmod(0o755)
+    monkeypatch.setenv("PATH", f"{older}{os.pathsep}{os.environ['PATH']}")
+    document = check(project)
+    assert document["summary"] == ["the analysis could not be read; nothing checked."]
+    ((location, message),) = errors(document)
+    assert location == "."
+    assert message == (
+        "the places could not be read: `pkit friction artefacts` gave no `held` list, which "
+        "this capability reads its revalidation records from: the installed backbone "
+        "predates it — upgrade it (`pkit upgrade`)"
+    )

@@ -1,0 +1,15 @@
+component: software-analysis
+kind: minor
+custom:
+  category: Changed
+  requires_backbone: release
+body: >
+  The revalidation records' folder is declared as the capability's folder of
+  held documents (`friction.held`, DEC-001 point 2; COR-050 point 1), so a
+  record under the internal root is no longer an unanchored artefact in the
+  friction measures, nor a document a documentation capability counts as
+  unclassified. `pkit analysis validate` finds the records in the `held` list
+  of `pkit friction artefacts --json` instead of listing the folder, so a
+  draft git ignores is no longer checked. It needs the backbone this release
+  ships, whose document carries that list, so the capability requires it; on
+  an older backbone the check says the list is missing.

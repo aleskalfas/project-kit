@@ -30,9 +30,10 @@ What is checked, each against the record's words:
   every use case it passes through, and the two cannot drift apart.
 - **Revalidation records** (points 5 and 6): each record's front matter
   against its schema, and the artefacts its outcomes cite are artefacts of the
-  analysis, withdrawn ones included. The records are not anchored artefacts
-  and lie in no place, so they are read from their folder under the analysis
-  location.
+  analysis, withdrawn ones included. The records are not anchored artefacts:
+  their folder is the capability's folder of held documents (COR-050 point 1),
+  so the records are the files the backbone's reading lists as held there —
+  from the working tree's one listing, so a draft git ignores is not checked.
 - **Evidence a record copies** (point 7). A record keeps each evidence entry
   it draws on whole, in the evidence point's entry shape: the record is
   history, and the point holds only what its fillers report now. From the
@@ -91,7 +92,6 @@ from _lib.model import (
     KINDS,
     NOUN,
     REVALIDATED_AT,
-    REVALIDATIONS,
     UNANCHORED_BECAUSE,
     USE_CASE,
     Analysis,
@@ -134,7 +134,7 @@ def check(root: Path) -> Outcome:
         )
         return outcome
 
-    records = _records(root, analysis.location)
+    records = list(analysis.records)
     outcome.summary.append(_counts(analysis, len(records)))
     outcome.findings += [Finding(ERROR, s.path, s.why) for s in analysis.strays]
     outcome.findings += _own_fields(analysis)
@@ -352,28 +352,18 @@ def _unique(values: Iterable[str]) -> list[str]:
 # --- revalidation records ------------------------------------------------------------------
 
 
-def _records(root: Path, location: str) -> list[Path]:
-    """The revalidation records: the Markdown files directly in their folder."""
-    folder = root / location / REVALIDATIONS
-    if not folder.is_dir() or folder.is_symlink():
-        return []
-    return sorted(
-        p for p in folder.iterdir() if p.suffix == ".md" and p.is_file() and not p.is_symlink()
-    )
-
-
 def _record_findings(
-    root: Path, records: list[Path], analysis: Analysis
+    root: Path, records: list[str], analysis: Analysis
 ) -> tuple[list[Finding], list[Copy], list[Record]]:
     """What the records' front matter breaks, the evidence entries they copy that
-    are fit to compare with the point, and the records whose front matter was read."""
+    are fit to compare with the point, and the records whose front matter was read.
+    `records` are repository-relative, as the backbone lists them held."""
     found: list[Finding] = []
     copies: list[Copy] = []
     read: list[Record] = []
-    for path in records:
-        rel = path.relative_to(root).as_posix()
+    for rel in records:
         try:
-            front, _body = markdown.split(path.read_text(encoding="utf-8"))
+            front, _body = markdown.split((root / rel).read_text(encoding="utf-8"))
             data = markdown.load(front) if front is not None else None
         except (OSError, UnicodeDecodeError) as exc:
             found.append(Finding(ERROR, rel, f"cannot be read: {exc}"))

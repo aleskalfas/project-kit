@@ -13,7 +13,9 @@ What this module decides over the answer is DEC-001's: each place of this
 capability holds one kind of artefact (point 2) — the glossary and the actors
 are collection files, one keyed entry per artefact; a use case and a journey
 are a document each — and a file in a place that holds no artefact of its
-kind's shape is a stray the check reports.
+kind's shape is a stray the check reports. The revalidation records are not
+artefacts: their folder is this capability's folder of held documents (COR-050
+point 1), and the records are the files the answer lists as held in it.
 """
 
 from __future__ import annotations
@@ -69,7 +71,9 @@ KIND_OF_PLACE = {
 }
 
 #: The revalidation records' folder inside the analysis location. The records
-#: describe an act and are not anchored artefacts, so it is not a place.
+#: describe an act and are not anchored artefacts, so it is not a place: the
+#: package declares it as its folder of held documents (`friction.held`), by
+#: this path. A test holds this to the package.
 REVALIDATIONS = "revalidations"
 
 #: The methodology's front-matter container, and the friction block's keys that
@@ -81,11 +85,13 @@ REVALIDATED_AT = ("friction", "revalidated", "at")
 #: reason onboarding accepts it unanchored (DEC-001 point 9).
 UNANCHORED_BECAUSE = "unanchored-because"
 
-#: The version of `pkit friction artefacts --json` this reading understands, and
-#: the key of each artefact's anchors in it — added within that version, so a
-#: backbone that predates it answers the same version without the key.
+#: The version of `pkit friction artefacts --json` this reading understands, the
+#: key of each artefact's anchors in it, and the key of the held documents —
+#: each added within that version, so a backbone that predates one answers the
+#: same version without it.
 SCHEMA_VERSION = 1
 ANCHORS = "anchors"
+HELD = "held"
 
 
 class Unreadable(Exception):
@@ -130,7 +136,10 @@ class Analysis:
     `location` is where it lies, repository-relative, and `places` where each
     kind's place resolves — both `None`/empty when the reading holds none of
     this capability's places. `unreadable` names the files whose front matter
-    does not parse: the backbone's friction pass reports them.
+    does not parse: the backbone's friction pass reports them. `records` are
+    the revalidation records, by path: the files the reading lists as held in
+    this capability's folder of them — the working tree's listing, so a record
+    git ignores is not one.
     """
 
     location: str | None
@@ -138,6 +147,7 @@ class Analysis:
     artefacts: tuple[Artefact, ...]
     strays: tuple[Stray, ...]
     unreadable: tuple[str, ...]
+    records: tuple[str, ...]
 
     def of_kind(self, kind: str) -> list[Artefact]:
         return [a for a in self.artefacts if a.kind == kind]
@@ -172,12 +182,19 @@ class Analysis:
 def analysis_of(document: Mapping[str, Any]) -> Analysis:
     """The `pkit friction artefacts --json` document as the analysis. Raises
     Unreadable for a document this reading does not understand — another
-    version, or an artefact of this capability's places without its anchors,
-    which reading as none would report every use case as not anchored."""
+    version; an artefact of this capability's places without its anchors,
+    which reading as none would report every use case as not anchored; or no
+    held documents, which reading as none would find no revalidation record."""
     if document.get("schema_version") != SCHEMA_VERSION:
         raise Unreadable(
             f"`pkit friction artefacts` answered schema_version "
             f"{document.get('schema_version')!r}; this capability reads {SCHEMA_VERSION}"
+        )
+    if HELD not in document:
+        raise Unreadable(
+            f"`pkit friction artefacts` gave no `{HELD}` list, which this capability reads its "
+            f"revalidation records from: the installed backbone predates it — upgrade it "
+            f"(`pkit upgrade`)"
         )
     kind_of_place: dict[int, str] = {}
     places: dict[str, str] = {}
@@ -259,7 +276,25 @@ def analysis_of(document: Mapping[str, Any]) -> Analysis:
         artefacts=tuple(a for a in artefacts if a.path not in strays),
         strays=tuple(sorted(strays.values(), key=lambda s: s.path)),
         unreadable=tuple(unreadable),
+        records=tuple(sorted(_records(document.get(HELD)))),
     )
+
+
+def _records(held: Any) -> list[str]:
+    """The files the document lists as held in this capability's folder of
+    revalidation records, as its package declares it."""
+    records: list[str] = []
+    for entry in _mappings(held):
+        where = entry.get("location")
+        if (
+            entry.get("source") == f"capability:{CAPABILITY}"
+            and entry.get("written") == REVALIDATIONS
+            and isinstance(where, Mapping)
+            and where.get("name") == LOCATION
+            and isinstance(entry.get("path"), str)
+        ):
+            records.append(entry["path"])
+    return records
 
 
 def _misshapen(kind: str) -> str:
