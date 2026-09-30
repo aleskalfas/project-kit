@@ -1,0 +1,12 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `close-milestone` sees a Milestone's children however many issues the
+  repository has. It read only the newest 500 issues, so in a larger tracker a
+  child filed earlier was missed, and a content-based Milestone could close
+  over an open child it never saw. It now reads the issues through the
+  containment seam, which fetches up to its 5000-issue ceiling and says whether
+  it saw every issue; a read that reached the ceiling is refused, naming it,
+  rather than answered from.
