@@ -224,7 +224,12 @@ claude --agent project-manager "File an EPIC for <outcome>"
 
 The project-manager walks the methodology end-to-end: picks a title matching the EPIC pattern, fills the body against the template, validates against the body-format and validation-severity schemas, creates the GitHub issue, runs the cascade check.
 
-**How review findings become work.** Four rules keep a review from multiplying the work it reviews, each stated in the procedure where it applies. A follow-up a reviewer produces gets a Milestone only when it blocks that Milestone's work or is a correctness defect in a shipped gate, and otherwise waits ([create-issue](skills/pm/create-issue.md), intent recognition). Tasks whose implementation notes name the same source files are filed with a blocked-by line and built one at a time, while Tasks in different modules run in parallel ([batch-plan](skills/pm/batch-plan.md), the slicing step). `review-pr` runs once CI is green on the head it will review ([transition-state](skills/pm/transition-state.md), the review step). A fix round carries only the findings a reviewer marked blocking, and each advisory is answered in the PR body or filed as a follow-up under the first rule — the builder's side of that is the `software-engineer` agent's, in the software-engineering capability.
+**How review findings become work.** Four rules keep a review from multiplying the work it reviews; each is stated in the procedure where it applies:
+
+- whether a follow-up a reviewer produced gets a Milestone — [create-issue](skills/pm/create-issue.md), intent recognition;
+- the order of Tasks that change the same files — [batch-plan](skills/pm/batch-plan.md), the slicing step;
+- when `review-pr` runs — [transition-state](skills/pm/transition-state.md), the review step;
+- what a fix round carries — the same review step, and for the builder's side the builder agent, where the project deploys one.
 
 #### Issue body — parent-ref first line
 
