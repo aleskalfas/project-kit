@@ -3,8 +3,9 @@
 Where artefacts are is computed once, by the backbone's artefact discovery
 (ADR-057 point 2): the documentation roots, the places the project and every
 installed capability declare — a capability's inside the location it names —
-which files each one matches, and the skips validation applies (a synced copy,
-a place outside the repository, a malformed declaration). A capability script
+which files each one matches, the skips validation applies (a synced copy, a
+place outside the repository, a malformed declaration), and the documents a
+component holds that are not artefacts, with their owner. A capability script
 runs in its own environment and never imports the backbone, so it reads that
 answer through the backbone's read command, `pkit friction artefacts --json`
 (the lifecycle README, "How a registered command is run"), and never re-reads
@@ -62,26 +63,29 @@ class DeclaredPlace:
     @property
     def capability(self) -> str | None:
         """The capability that declares it, for a capability's place."""
-        prefix = "capability:"
-        return self.source[len(prefix) :] if self.source.startswith(prefix) else None
+        return capability_of(self.source)
 
 
 @dataclass(frozen=True)
 class Document:
     """One Markdown file a place matches: the places matching it, whether it is a
-    rule-set file, whether `friction.exclude` leaves it out, and its front
-    matter's own fields (`None` without a front-matter mapping)."""
+    rule-set file, whether `friction.exclude` leaves it out, its front matter's
+    own fields (`None` without a front-matter mapping), and — for a document a
+    component holds, which no place walks (COR-050 point 1) — the capability
+    holding it."""
 
     path: str
     places: tuple[int, ...]
     rule_set: bool
     excluded: bool
     fields: Mapping[str, Any] | None
+    held_by: str | None = None
 
 
 @dataclass(frozen=True)
 class Reading:
-    """The backbone's answer: the roots by audience, the places, the documents by path."""
+    """The backbone's answer: the roots by audience, the places, the documents by
+    path — the files the places read, and the documents components hold."""
 
     roots: Mapping[str, str]
     places: tuple[DeclaredPlace, ...]
@@ -126,15 +130,44 @@ def reading_of(document: Mapping[str, Any]) -> Reading:
     documents = {}
     for entry in _mappings(document.get("files")):
         path = str(entry.get("path"))
-        fields = entry.get("fields")
         documents[path] = Document(
             path=path,
-            places=tuple(i for i in entry.get("places") or [] if isinstance(i, int)),
+            places=_indices(entry.get("places")),
             rule_set=entry.get("rule_set") is not None,
             excluded=bool(entry.get("excluded")),
-            fields=fields if isinstance(fields, Mapping) else None,
+            fields=_fields(entry.get("fields")),
+        )
+    # A held document is walked by no place, so it is never among the files; it
+    # carries the places matching it and the held folder holding it, whose
+    # declaration names its owner (COR-050 point 1).
+    owners = [str(entry.get("source")) for entry in _mappings(document.get("held"))]
+    for entry in _mappings(document.get("held_files")):
+        path = str(entry.get("path"))
+        folder = entry.get("held")
+        source = owners[folder] if isinstance(folder, int) and 0 <= folder < len(owners) else ""
+        documents[path] = Document(
+            path=path,
+            places=_indices(entry.get("places")),
+            rule_set=False,
+            excluded=False,
+            fields=_fields(entry.get("fields")),
+            held_by=capability_of(source) or source,
         )
     return Reading(roots=roots, places=places, documents=documents)
+
+
+def capability_of(source: str) -> str | None:
+    """The capability a declaration's `source` names — `capability:<name>` — or `None`."""
+    prefix = "capability:"
+    return source[len(prefix) :] if source.startswith(prefix) else None
+
+
+def _indices(value: Any) -> tuple[int, ...]:
+    return tuple(i for i in value if isinstance(i, int)) if isinstance(value, list) else ()
+
+
+def _fields(value: Any) -> Mapping[str, Any] | None:
+    return value if isinstance(value, Mapping) else None
 
 
 def _place(index: int, entry: Mapping[str, Any]) -> DeclaredPlace:

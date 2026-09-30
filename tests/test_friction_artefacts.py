@@ -11,6 +11,9 @@ calls instead of re-reading the declarations or walking the places itself:
 - every **file** the walk read, with the places matching it, its rule-set
   claim, whether it is excluded, and its front matter's own fields;
 - every **artefact**, with its id, kind, place and own fields;
+- every **folder of held documents**, declared as a place is, and every file it
+  holds, with the places that left it out — never a file or an artefact of any
+  place (#1130);
 - the exit codes: 0 answered, 1 when the configuration cannot be read, 2 on a
   usage error — and the same bytes for the same state.
 """
@@ -300,6 +303,110 @@ def test_at_a_commit_whose_configuration_cannot_be_read_exits_1(adopter: Adopter
 
 
 # --- the command -----------------------------------------------------------------------
+
+
+# --- held documents (COR-050 point 1) -------------------------------------------------------
+
+
+def test_held_folders_are_declared_as_places_are_with_the_files_each_holds(
+    adopter: AdopterRepo,
+) -> None:
+    """A folder of held documents is declared as a place is — its owner, where it is
+    written, its location and resolved path, the files it holds and why it is
+    skipped — and each held file is listed apart, with the folder holding it and
+    the places that left it out; it is never among the files or the artefacts. A
+    folder holding nothing yet is listed with no files; a malformed one where it
+    was written. Keys added: the version stays."""
+    package = adopter.root / EVIDENCE_PACKAGE
+    package.write_text(
+        package.read_text(encoding="utf-8").replace(
+            "    guides: {path: guides, root: user}\n",
+            "    guides: {path: guides, root: user}\n    logs: {path: logs}\n",
+        )
+        + "  held:\n"
+        "    - {location: logs, path: records, description: Run records.}\n"
+        "    - {location: logs, path: empty}\n"
+        "    - {path: stray}\n",
+        encoding="utf-8",
+    )
+    config = adopter.root / CONFIG
+    config.write_text(
+        config.read_text(encoding="utf-8").replace(
+            "places: [notes, notes/rules.md]", "places: [notes, notes/rules.md, tech-docs/logs]"
+        ),
+        encoding="utf-8",
+    )
+    record = "tech-docs/logs/records/2026-10-01-run.md"
+    adopter.write({record: "---\ndate: '2026-10-01'\n---\n\n# A run\n"})
+    document = _document()
+
+    assert fd.ARTEFACTS_SCHEMA_VERSION == 1
+    assert document["schema_version"] == 1
+    logs = {"name": "logs", "path": "tech-docs/logs", "root": "internal"}
+    declared = {"source": "capability:evidence", "file": EVIDENCE_PACKAGE}
+    assert document["held"] == [
+        {
+            **declared,
+            "pointer": "/friction/held/0",
+            "written": "records",
+            "location": logs,
+            "path": "tech-docs/logs/records",
+            "files": [record],
+            "skipped": None,
+        },
+        {
+            **declared,
+            "pointer": "/friction/held/1",
+            "written": "empty",
+            "location": logs,
+            "path": "tech-docs/logs/empty",
+            "files": [],
+            "skipped": None,
+        },
+        {
+            **declared,
+            "pointer": "/friction/held/2",
+            "written": None,
+            "location": None,
+            "path": None,
+            "files": [],
+            "skipped": {
+                "reason": "malformed",
+                "detail": (
+                    "the held folder names no `location`: a held folder lies within one of "
+                    "the component's `docs.locations`"
+                ),
+            },
+        },
+    ]
+    assert document["held_files"] == [
+        {
+            "path": record,
+            "held": 0,
+            "places": [2],
+            "fields": {"date": "2026-10-01"},
+            "unreadable": None,
+        }
+    ]
+    assert document["places"][2]["path"] == "tech-docs/logs"
+    assert record not in document["places"][2]["files"]
+    assert record not in [f["path"] for f in document["files"]]
+    assert record not in [a["path"] for a in document["artefacts"]]
+    human = _run().output.rstrip().split("\n")
+    assert human[-4:] == [
+        "3 held folder(s), whose files no place walks:",
+        "  tech-docs/logs/records  (capability:evidence, location logs)  1 file(s)",
+        "  tech-docs/logs/empty  (capability:evidence, location logs)  0 file(s)",
+        f"  {EVIDENCE_PACKAGE} /friction/held/2  (capability:evidence)  0 file(s); skipped, "
+        "malformed: the held folder names no `location`: a held folder lies within one of the "
+        "component's `docs.locations`",
+    ]
+
+
+def test_without_a_held_folder_the_lists_are_empty(adopter: AdopterRepo) -> None:
+    document = _document()
+    assert (document["held"], document["held_files"]) == ([], [])
+    assert "held folder" not in _run().output
 
 
 def test_the_same_state_prints_the_same_bytes(adopter: AdopterRepo) -> None:

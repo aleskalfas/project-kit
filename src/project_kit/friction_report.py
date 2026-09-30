@@ -65,6 +65,7 @@ from project_kit.friction_discovery import (
     ResolverCommand,
     SettingsPath,
     discover_artefacts,
+    held_message,
 )
 from project_kit.friction_write import command_line
 
@@ -463,11 +464,15 @@ def _named(reference: str) -> Callable[[Discovery], Artefact]:
 
     Its location first — `path` for a document, `path#id` for a collection
     entry — then any identifier an artefact anchor may use: its id, a
-    document's path, a method rule's `<component>:<id>`.
+    document's path, a method rule's `<component>:<id>`. A document a component
+    holds is named with its owner, as the writers name it.
     """
 
     def select(discovery: Discovery) -> Artefact:
         file_part = reference.split("#", 1)[0]
+        held = discovery.holding(file_part)
+        if held is not None:  # a component's document, not an artefact (COR-050 point 1)
+            raise FrictionReportError(f"{held_message(held)} There is nothing to explain.")
         for unreadable in discovery.unreadable:
             if unreadable.path == file_part:
                 raise FrictionReportError(

@@ -1,0 +1,28 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  A capability may declare folders of held documents — files that belong to
+  it but are not artefacts, such as a log of reviews it carried out — in its
+  package metadata, as `friction.held: [{location, path, description}]`:
+  `path` a folder, never a glob, inside the declared location `location`
+  names (COR-050 point 1). No place — a documentation root, another
+  capability's place or the project's — walks a held file, so it is never an
+  artefact, and neither the unanchored measure nor uncovered surface counts
+  it. A held folder is bounded: one that equals or encloses a documentation
+  root or another declaration's place, or shares a file with its own
+  capability's place, another held folder or a rule-set folder, holds
+  nothing, and `pkit validate`'s packages member refuses it at its entry.
+  `pkit friction artefacts --json` declares each held folder under a new
+  `held` key, as a place is declared — owner, location, resolved path, the
+  files it holds and why it is skipped (`malformed`, `outside-repository`,
+  `overlap`) — and lists each held file under `held_files` with its folder,
+  the places that match it, its front matter's own fields and why it is
+  unreadable; the document's `schema_version` stays 1 (keys added). `pkit
+  validate`'s friction member refuses, dormant or not, a held folder it
+  cannot read (`malformed-held`) or that leaves the repository
+  (`held-outside-repository`), a held document whose front matter does not
+  parse (`held-unparsable-front-matter`), and a friction block anywhere in a
+  held document (`held-friction-block`). The friction writers and `pkit
+  friction explain`, named a held document, say which capability holds it.

@@ -69,6 +69,7 @@ from project_kit.friction_discovery import (
     Artefact,
     ArtefactKind,
     discover_artefacts,
+    held_message,
     parse_artefacts,
     split_front_matter,
 )
@@ -127,9 +128,14 @@ def find_artefact(target_root: Path, reference: str) -> Artefact:
     Its location first — `path` for a document, `path#id` for a collection
     entry — then any identifier an artefact anchor may use (its id; a
     document's path; a method rule's `<component>:<id>`). A reference naming
-    none, or more than one, is refused with what it could have meant.
+    none, or more than one, is refused with what it could have meant — and one
+    naming a document a component holds says whose it is: a held document is
+    no artefact, and carries no block to write (COR-050 point 1).
     """
     discovery = discover_artefacts(target_root)
+    held = discovery.holding(reference.split("#", 1)[0])
+    if held is not None:
+        raise FrictionWriteError(f"{held_message(held)} Nothing was written.")
     if not discovery.places:
         raise FrictionWriteError(
             "no places are declared (`friction.places` in .pkit/project/config.yaml, or a "

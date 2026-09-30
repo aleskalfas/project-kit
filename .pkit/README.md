@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-09-30T04:01:22Z
+      at: 2026-09-30T04:12:40Z
       outcome: unchanged
-      unchanged-because: the CLI README now says a changeset's floor field can name an already-shipped backbone, that the changelog states a raised floor and that the changeset guard ties a floor to the component the pull request touches; the area map's one-line description of cli/ holds
+      unchanged-because: with main's nested-run change merged, the lifecycle, CLI and schemas READMEs also bound a capability's folders of held documents and declare them beside the places in pkit friction artefacts (#1130), inside their friction sections; the area map and each area's one-line description hold
 ---
 
 # project-kit
