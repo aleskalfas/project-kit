@@ -43,9 +43,8 @@ pkit:
         - src/project_kit/environment.py
       record: [COR-004, COR-012, COR-043, COR-048, COR-049, COR-050, COR-054, PRJ-001, PRJ-003, PRJ-004, ADR-033, ADR-039, ADR-049, ADR-058, ADR-059]
     revalidated:
-      at: 2026-09-30T18:10:03Z
-      outcome: unchanged
-      unchanged-because: on this branch cli.py changes only the wording of the notice release check prints for a release pull request, and versioning.py only gains a public name for the two requires_backbone patterns its broaden and floor raise rewrite through, which the changeset guard reads; the page's release check row names the guard's two checks, its escape hatch and the floor tie, never that notice or those patterns, so it holds
+      at: 2026-09-30T19:20:59Z
+      outcome: updated
 ---
 
 # Command-line interface
