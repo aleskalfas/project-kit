@@ -4305,6 +4305,12 @@ def decisions_validate() -> None:
     filename number, and that no rule id (`RS-<SET>-NNN`, COR-051) is
     claimed twice across the rule sets. Exits non-zero on any duplicate or
     mismatch.
+
+    Then reports, without failing, every line of a record that is not
+    superseded where it narrates its own revision — an amendment heading or
+    marker, a revision stamped with an issue number or a date, change-log
+    phrasing — since a record is refined in place and git history is its
+    change log.
     """
     from project_kit import decisions_validate as decisions_mod
 
@@ -4313,6 +4319,7 @@ def decisions_validate() -> None:
         raise click.ClickException("not in a project tree.")
     report = decisions_mod.validate_decision_ids(target_root)
     decisions_mod.print_report(report)
+    decisions_mod.print_narration(decisions_mod.revision_narration(target_root))
     if not report.is_clean:
         raise click.ClickException(
             f"{len(report.issues)} decision-id issue(s) found."

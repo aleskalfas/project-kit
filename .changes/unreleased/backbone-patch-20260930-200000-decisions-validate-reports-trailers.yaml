@@ -1,0 +1,18 @@
+component: backbone
+kind: patch
+custom:
+  category: Added
+body: >
+  `pkit decisions validate`, and the `decisions` member of `pkit validate`,
+  report each line of a record that narrates its own revision instead of
+  stating what is true: an amendment heading or marker (`## Amendment (…)`,
+  `**Amendment 1**`, `**Amended by …**`), a revision stamped with an issue
+  number or a date (`**Update (#252)**`, `(clarified, #813)`), and change-log
+  phrasing ("this record originally…", "previously we believed…"). Each is a
+  report naming the file and line, never an error, so the command's exit code
+  is unchanged. A superseded record and code are not read, and the two permitted
+  in-body markers — a superseded-by line and a `(refinement per <record>)`
+  pointer — match none of the shapes. The `architect` agent and the
+  `decision-author` skill carry the refine-in-place procedure: fold a correction
+  into the section it belongs to, with no dated block or change residue, and
+  supersede only when the decision is overturned.

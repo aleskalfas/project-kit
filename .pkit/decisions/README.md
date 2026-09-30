@@ -12,9 +12,8 @@ pkit:
         - src/project_kit/rule_sets.py
       record: [COR-001, COR-019, COR-025, COR-051, COR-053]
     revalidated:
-      at: 2026-09-29T17:22:05Z
-      outcome: unchanged
-      unchanged-because: refs.py now reads the address word pattern from backbone_schemas instead of repeating it; record and address citation grammar are unchanged
+      at: 2026-09-30T21:15:54Z
+      outcome: updated
 ---
 
 # Decision records
@@ -150,6 +149,8 @@ For clarifications, scope tweaks, or refinements that do not invalidate the orig
 **Editing in place means editing in place.** A correction is folded into the body so the record simply states what is true; it is not appended as an amendment section, a dated correction marker, or a "previously we believed" passage. Those turn a record into a changelog with a statement buried in it, and each one looks like diligence, so the habit spreads by imitation. If a record was wrong about a fact and the decision has not changed, fix the sentence. If the decision changed, supersede.
 
 Two in-body markers are *not* narration of a revision and are correct to keep: the **superseded-by** line a superseded record carries, and a **forward refinement pointer** naming a later record that extends this one (the `(refinement per <record>)` sub-section form). Both point at another record rather than at a discarded belief.
+
+`pkit decisions validate` reports each line of a record that narrates its own revision — an amendment heading or marker (`## Amendment (…)`, `**Amendment 1**`, `**Amended by …**`), a revision stamped with an issue number or a date (`**Update (#252)**`, `(clarified, #813)`), or change-log phrasing ("this record originally…", "previously we believed…") — naming the file and line. A superseded record and code are not read, and the two markers above match none of these shapes. The report does not fail the command: it points at what to fold back in.
 
 ## Adding a record
 
