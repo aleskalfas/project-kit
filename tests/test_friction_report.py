@@ -856,7 +856,8 @@ def test_explain_names_an_exclusion_added_since_the_point_as_why_an_anchor_is_de
     """Each state is read under its own `friction.exclude` (COR-050 point 7): the point's
     files are what the anchor stood on there, so an anchor an exclusion killed since shows
     them; its finding says `excluded since <commit>`, and that commit is where its files
-    went — the configuration file its change. The anchor that lost a file to it is stale."""
+    went — the configuration file its change. The anchor that lost a file to it, which
+    did not change, is reported with that commit behind it, and stays current."""
     anchors = {"path": ["src/cli/**", "src/cli/generated/**"]}
     generated = {"src/cli/generated/table.py": "T = 1\n"}
     base = timeline.start({"docs/guide.md": guide(anchors=anchors), **generated})
@@ -872,7 +873,7 @@ def test_explain_names_an_exclusion_added_since_the_point_as_why_an_anchor_is_de
     assert [(a.anchor.value, a.state, a.files) for a in explanation.anchors] == [
         (
             "src/cli/**",
-            "stale",
+            "current",
             fr.AnchorFiles(
                 point=("src/cli/generated/table.py", "src/cli/main.py"),
                 head=("src/cli/main.py",),
@@ -897,9 +898,11 @@ def test_explain_names_an_exclusion_added_since_the_point_as_why_an_anchor_is_de
         f'code" (Alice, {day})'
     )
     assert [(c.commit.sha, c.paths) for c in dead.commits] == [(widened, (CONFIG,))]
-    stale = by_anchor[CLI]
-    assert stale.finding.origin is not None and stale.finding.origin.sha == widened
-    assert [(c.commit.sha, c.paths) for c in stale.commits] == [(widened, (CONFIG,))]
+    left_out = by_anchor[CLI]
+    assert left_out.finding.kind is fr.RepositoryFindingKind.LEFT_OUT
+    assert left_out.finding.origin is not None and left_out.finding.origin.sha == widened
+    assert [(c.commit.sha, c.paths) for c in left_out.commits] == [(widened, (CONFIG,))]
+    assert left_out.clears.startswith("nothing is owed")
 
     doc = json.loads(frep.render_explain_json(explanation))
     listed = {a["value"]: a["files"] for a in doc["anchors"]}
@@ -910,6 +913,46 @@ def test_explain_names_an_exclusion_added_since_the_point_as_why_an_anchor_is_de
     }
     human = frep.render_explain_human(explanation, now=NOW)
     assert f"matches only excluded files (1), excluded since {widened[:12]}" in human
+    assert "    left out in, oldest first:" in human
+
+
+def test_explain_names_the_edit_a_later_widening_left_out(timeline: Timeline) -> None:
+    """A widening never erases a change made before it (COR-050 point 7): the stale anchor's
+    origin is the edit — its author and date — and the widening is behind it too."""
+    generated = {"src/cli/generated/table.py": "T = 1\n"}
+    timeline.start({"docs/guide.md": guide(), **generated})
+    edited = timeline.commit(
+        "regenerate the table", {"src/cli/generated/table.py": "T = 2\n"}, author=BOB
+    )
+    widened = timeline.commit(
+        "exclude the generated code",
+        {CONFIG: friction_config(exclude=["src/cli/generated"])},
+        author=ALICE,
+    )
+
+    explanation = frep.run_explain(timeline.adopter.root, "guide")
+    (stale,) = explanation.findings
+    assert stale.finding.kind is fr.RepositoryFindingKind.STALE
+    assert stale.finding.origin is not None
+    assert (stale.finding.origin.sha, stale.finding.origin.author) == (edited, "Bob")
+    assert [(c.commit.sha, c.paths) for c in stale.commits] == [
+        (edited, ("src/cli/generated/table.py",)),
+        (widened, (CONFIG,)),
+    ]
+    day = (HISTORY_EPOCH + timedelta(days=2)).date().isoformat()
+    assert f'first in {edited[:12]} "regenerate the table" (Bob, {day})' in stale.finding.message
+
+
+def test_explain_says_how_an_artefact_let_back_in_is_answered(timeline: Timeline) -> None:
+    timeline.start({"docs/generated/cli.md": guide()}, friction_config(exclude=["docs/generated"]))
+    narrowed = timeline.commit("stop excluding the generated pages", {CONFIG: friction_config()})
+
+    explanation = frep.run_explain(timeline.adopter.root, "guide")
+    (stale,) = explanation.findings
+    assert stale.finding.message.startswith(fr.LET_BACK_IN)
+    assert stale.clears == "revalidate the artefact: letting it back in cannot be deferred"
+    assert [(c.commit.sha, c.paths) for c in stale.commits] == [(narrowed, (CONFIG,))]
+    assert "    let back in:" in frep.render_explain_human(explanation, now=NOW)
 
 
 def test_explain_names_where_a_dead_path_anchors_files_went(timeline: Timeline) -> None:

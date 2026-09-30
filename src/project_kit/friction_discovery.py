@@ -268,10 +268,14 @@ class FrictionSettings:
     `mode` is the raw value as written — `None` when absent; the configuration
     pass judges it against the schema — and `mode_or_default` is what a reader
     uses, falling back to the default for anything it does not recognise.
-    `exclusion` is the one decision of what `exclude` leaves out. `held` are
-    the capabilities' folders of held documents, resolved as their places are;
-    a project declares none. `internal_root` and `user_root` are the
-    documentation roots, read from the same state.
+    `exclusion` is the one decision of what `exclude` leaves out;
+    `exclude_unreadable` says why `exclude` could not be read in full — the
+    configuration file does not parse, or the key or an entry of it has the
+    wrong shape — so a check comparing two states never reads a state whose
+    exclusions it could not read as one that excludes nothing (COR-050 point
+    7). `held` are the capabilities' folders of held documents, resolved as
+    their places are; a project declares none. `internal_root` and
+    `user_root` are the documentation roots, read from the same state.
     """
 
     mode: Any
@@ -284,6 +288,7 @@ class FrictionSettings:
     malformed_surface: tuple[MalformedDeclaration, ...] = ()
     held: tuple[SettingsPath, ...] = ()
     malformed_held: tuple[MalformedDeclaration, ...] = ()
+    exclude_unreadable: str | None = None
 
     @property
     def roots(self) -> dict[str, str]:
@@ -335,7 +340,7 @@ def read_friction_settings(
     """
     load = _mapping_loader(target_root, tree)
     config_rel = project_config_path(target_root).relative_to(target_root).as_posix()
-    config = load(config_rel)
+    config, unparsed = _yaml_reader(target_root, tree)(config_rel)
     roots = docs_roots.roots_from(config.get(docs_roots.DOCS_KEY))
 
     friction = _mapping_or_empty(config.get(FRICTION_KEY))
@@ -387,7 +392,33 @@ def read_friction_settings(
         malformed_surface=tuple(malformed_surface),
         held=tuple(held),
         malformed_held=tuple(malformed_held),
+        exclude_unreadable=_exclude_unreadable(config, unparsed),
     )
+
+
+def _exclude_unreadable(config: Mapping[str, Any], unparsed: str | None) -> str | None:
+    """Why the configuration's `friction.exclude` cannot be read in full, else `None`.
+
+    An absent file, key or list excludes nothing, which is a reading; a file
+    that does not parse, a `friction` or `exclude` of the wrong shape, or an
+    entry that is no path is not one — the forgiving reader would see nothing
+    excluded where the state excluded something.
+    """
+    if unparsed is not None:
+        return f"the configuration file {unparsed}"
+    friction = config.get(FRICTION_KEY)
+    if friction is None:
+        return None
+    if not isinstance(friction, Mapping):
+        return f"`{FRICTION_KEY}` is {_shape(friction)}, not a mapping"
+    exclude = cast(Mapping[str, Any], friction).get("exclude")
+    if exclude is None or isinstance(exclude, str):
+        return None
+    if not isinstance(exclude, list):
+        return f"`{FRICTION_KEY}.exclude` is {_shape(exclude)}, not a list"
+    if any(not (isinstance(item, str) and item.strip()) for item in cast(list[Any], exclude)):
+        return f"`{FRICTION_KEY}.exclude` holds an entry that is not a path"
+    return None
 
 
 def installed_capability_names(target_root: Path, tree: RepositoryTree | None = None) -> list[str]:
@@ -631,40 +662,55 @@ def _mapping_loader(
     target_root: Path, tree: RepositoryTree | None
 ) -> Callable[[str], dict[str, Any]]:
     """A reader of repository-relative YAML files as mappings: from disk, or from `tree`."""
+    read = _yaml_reader(target_root, tree)
+    return lambda rel: read(rel)[0]
+
+
+def _yaml_reader(
+    target_root: Path, tree: RepositoryTree | None
+) -> Callable[[str], tuple[dict[str, Any], str | None]]:
+    """A reader of repository-relative YAML files as mappings, with why one does not
+    read: `({}, None)` for an absent file, `({}, <why>)` for one that is there but is
+    no YAML mapping. From disk, or from `tree`."""
     if tree is None:
         return lambda rel: _load_mapping(target_root / rel)
 
-    def load(rel: str) -> dict[str, Any]:
+    def load(rel: str) -> tuple[dict[str, Any], str | None]:
         raw = tree.read_bytes([rel]).get(rel)
         if raw is None:
-            return {}
+            return {}, None
         try:
             return _parse_mapping(raw.decode("utf-8"))
         except UnicodeDecodeError:
-            return {}
+            return {}, "is not UTF-8 text"
 
     return load
 
 
-def _load_mapping(path: Path) -> dict[str, Any]:
-    """A YAML file as a mapping with text keys; `{}` when absent, unparsable or not a mapping."""
+def _load_mapping(path: Path) -> tuple[dict[str, Any], str | None]:
+    """A YAML file as a mapping with text keys, and why it does not read (`_yaml_reader`)."""
     if not path.is_file():
-        return {}
+        return {}, None
     try:
         return _parse_mapping(path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeDecodeError):
-        return {}
+    except OSError as exc:
+        return {}, f"cannot be read ({exc.strerror or exc})"
+    except UnicodeDecodeError:
+        return {}, "is not UTF-8 text"
 
 
-def _parse_mapping(text: str) -> dict[str, Any]:
-    """YAML text as a mapping with text keys; `{}` when unparsable or not a mapping."""
+def _parse_mapping(text: str) -> tuple[dict[str, Any], str | None]:
+    """YAML text as a mapping with text keys, and why it is none: it does not parse,
+    or it is no mapping. Empty text is an empty mapping."""
     try:
         data = _yaml.load(text)
     except YAMLError:
-        return {}
+        return {}, "does not parse as YAML"
+    if data is None:
+        return {}, None
     if not isinstance(data, Mapping):
-        return {}
-    return {str(k): v for k, v in data.items()}
+        return {}, f"is {_shape(data)}, not a mapping"
+    return {str(k): v for k, v in cast(Mapping[Any, Any], data).items()}, None
 
 
 def _mappings(items: list[Any]) -> Iterator[Mapping[str, Any]]:

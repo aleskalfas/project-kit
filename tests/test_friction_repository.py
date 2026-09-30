@@ -705,9 +705,12 @@ def test_an_artefact_under_an_excluded_path_is_left_out_of_the_measures(
 GENERATED = {"src/cli/generated/table.py": "T = 1\n"}
 
 
-def test_an_exclusion_widened_since_the_point_is_stale_never_silence(timeline: Timeline) -> None:
-    """The point is read under its own `friction.exclude`: a file the anchor stood on there
-    that HEAD's leaves out is a change, whose origin is the commit that widened it."""
+def test_a_widening_over_files_that_did_not_change_is_reported_not_stale(
+    timeline: Timeline,
+) -> None:
+    """The point is read under its own `friction.exclude`: HEAD's leaves out a file the
+    anchor stood on there, but nothing changed it while the anchor stood on it — a change
+    made once it was left out is not the anchor's — so it is reported, never owed."""
     timeline.start({"docs/guide.md": guide(), **GENERATED})
     widened = timeline.commit(
         "exclude the generated code",
@@ -717,30 +720,130 @@ def test_an_exclusion_widened_since_the_point_is_stale_never_silence(timeline: T
     timeline.commit("regenerate, excluded", {"src/cli/generated/table.py": "T = 2\n"})
 
     result = _run(timeline)
-    assert _summary(result) == [("stale", "docs/guide.md", "path:src/cli/**", widened)]
+    assert _summary(result) == [("left-out", "docs/guide.md", "path:src/cli/**", widened)]
+    assert result.findings[0].message == (
+        "`friction.exclude` now leaves out 1 file this anchor stood on at its revalidation "
+        "point (src/cli/generated/table.py); no change to it since, left out in "
+        f'{widened[:12]} "exclude the generated code" (Alice, '
+        f"{(HISTORY_EPOCH + timedelta(days=2)).date().isoformat()})"
+    )
+    assert result.artefact_reports[0].state is fr.ArtefactState.CURRENT
+
+
+def test_a_widening_never_erases_a_change_made_before_it(timeline: Timeline) -> None:
+    """A file the anchor stood on, changed while it did, then left out: the change is still
+    the anchor's, its origin the edit — never the widening that came after."""
+    timeline.start({"docs/guide.md": guide(), **GENERATED})
+    edited = timeline.commit(
+        "regenerate the table", {"src/cli/generated/table.py": "T = 2\n"}, author=BOB
+    )
+    timeline.commit(
+        "exclude the generated code", {CONFIG: friction_config(exclude=["src/cli/generated"])}
+    )
+
+    result = _run(timeline)
+    assert _summary(result) == [("stale", "docs/guide.md", "path:src/cli/**", edited)]
     assert (
-        f'first in {widened[:12]} "exclude the generated code" (Alice, '
-        in result.findings[0].message
+        f"; `friction.exclude` changed over it since (now leaves out src/cli/generated/table.py, "
+        f"changed since its revalidation point ({edited[:12]})) — revalidate"
+    ) in result.findings[0].message
+
+
+def test_a_file_added_after_the_point_and_then_left_out_stays_a_change(
+    timeline: Timeline,
+) -> None:
+    """COR-050 point 7: the files an anchor stood on are sought among those touched since
+    the point too, so a file added under it — a change nobody answered — is not erased by a
+    later widening that leaves it out."""
+    timeline.start({"docs/guide.md": guide()})
+    added = timeline.commit("generate a table", GENERATED, author=ALICE)
+    timeline.commit(
+        "exclude the generated code", {CONFIG: friction_config(exclude=["src/cli/generated"])}
     )
-    assert "), which changed `friction.exclude` over its files — revalidate the artefact" in (
-        result.findings[0].message
+
+    result = _run(timeline)
+    assert _summary(result) == [("stale", "docs/guide.md", "path:src/cli/**", added)]
+    assert (
+        f"(now leaves out src/cli/generated/table.py, changed since its revalidation point "
+        f"({added[:12]}))"
+    ) in result.findings[0].message
+
+
+def test_a_widening_never_hides_a_change_to_the_same_anchor(timeline: Timeline) -> None:
+    """A change to a file the anchor stands on at both states is stale as ever; the widening
+    beside it, over a file that did not change, is reported apart and asks nothing."""
+    timeline.start({"docs/guide.md": guide(), **GENERATED})
+    changed = timeline.commit(
+        "change the CLI, and exclude the generated code",
+        {
+            "src/cli/main.py": "print('cli v2')\n",
+            CONFIG: friction_config(exclude=["src/cli/generated"]),
+        },
     )
+    result = _run(timeline)
+    assert _summary(result) == [
+        ("stale", "docs/guide.md", "path:src/cli/**", changed),
+        ("left-out", "docs/guide.md", "path:src/cli/**", changed),
+    ]
+    assert "`friction.exclude`" not in result.findings[0].message
+    human = fr.render_human(result, now=NOW)
+    assert "1 stale, 1 left-out anchor" in human
+    assert "  left-out  `friction.exclude` took files from an anchor" in human
 
 
 def test_an_exclusion_narrowed_since_the_point_is_stale_from_the_narrowing(
     timeline: Timeline,
 ) -> None:
     """A change made while the file was left out is no change to the anchor: the narrowing
-    that let the file in is, so the debt is dated from it — never from older commits."""
+    that let the file in is, so the debt is dated from it — never from older commits — and
+    the change made while it was left out is named."""
     timeline.start(
         {"docs/guide.md": guide(), **GENERATED}, friction_config(exclude=["src/cli/generated"])
     )
-    timeline.commit("regenerate, still excluded", {"src/cli/generated/table.py": "T = 2\n"})
+    regenerated = timeline.commit(
+        "regenerate, still excluded", {"src/cli/generated/table.py": "T = 2\n"}
+    )
     narrowed = timeline.commit("stop excluding the generated code", {CONFIG: friction_config()})
 
     result = _run(timeline)
     assert _summary(result) == [("stale", "docs/guide.md", "path:src/cli/**", narrowed)]
-    assert "which changed `friction.exclude` over its files" in result.findings[0].message
+    assert (
+        f"; `friction.exclude` changed over it since (now lets in src/cli/generated/table.py, "
+        f"changed since it was left out ({regenerated[:12]}))"
+    ) in result.findings[0].message
+
+
+def test_a_change_made_while_left_out_counts_where_the_point_and_head_leave_it_in(
+    timeline: Timeline,
+) -> None:
+    """Each check compares two states: excluded after the point, changed, and let back in to
+    the point's exclusions, the file is one the anchor stands on at both, and its change
+    counts. Where HEAD leaves it out, the same change does not."""
+    timeline.start({"docs/guide.md": guide(), **GENERATED})
+    timeline.commit(
+        "exclude the generated code", {CONFIG: friction_config(exclude=["src/cli/generated"])}
+    )
+    edited = timeline.commit("regenerate, excluded", {"src/cli/generated/table.py": "T = 2\n"})
+    assert [kind for kind, *_ in _summary(_run(timeline))] == ["left-out"]
+
+    timeline.commit("stop excluding the generated code", {CONFIG: friction_config()})
+    result = _run(timeline)
+    assert _summary(result) == [("stale", "docs/guide.md", "path:src/cli/**", edited)]
+    assert "`friction.exclude`" not in result.findings[0].message
+
+
+def test_a_file_removed_under_a_later_exclusion_is_a_change_never_left_out(
+    timeline: Timeline,
+) -> None:
+    timeline.start({"docs/guide.md": guide(), **GENERATED})
+    removed = timeline.commit("drop the table", {"src/cli/generated/table.py": None})
+    timeline.commit(
+        "exclude where it was", {CONFIG: friction_config(exclude=["src/cli/generated"])}
+    )
+
+    result = _run(timeline)
+    assert _summary(result) == [("stale", "docs/guide.md", "path:src/cli/**", removed)]
+    assert "now leaves out" not in result.findings[0].message
 
 
 def test_an_exclusion_that_changed_nothing_the_anchor_stood_on_is_no_change(
@@ -760,6 +863,23 @@ def test_an_exclusion_that_changed_nothing_the_anchor_stood_on_is_no_change(
     result = _run(timeline)
     assert _summary(result) == []
     assert result.artefact_reports[0].state is fr.ArtefactState.CURRENT
+
+
+def test_record_and_artefact_anchors_are_untouched_by_an_exclusion(timeline: Timeline) -> None:
+    record = ".pkit/decisions/core/COR-050-anchors-and-friction.md"
+    target = document("target", anchors={"path": ["src/core/**"]}, at=T1, outcome="updated")
+    anchored = guide(anchors={"record": ["COR-050"], "artefact": ["target"]})
+    timeline.start({"docs/guide.md": anchored, "docs/target.md": target})
+    timeline.commit(
+        "exclude the record and the target",
+        {CONFIG: friction_config(exclude=[".pkit/decisions", "docs/target.md"])},
+    )
+    result = _run(timeline)
+    assert [(f.kind.value, f.location) for f in result.findings] == []
+
+    text = (timeline.adopter.root / record).read_text(encoding="utf-8")
+    amended = timeline.commit("amend the record", {record: text + "\nAmended.\n"})
+    assert _summary(_run(timeline)) == [("stale", "docs/guide.md", "record:COR-050", amended)]
 
 
 def test_a_dead_anchor_names_the_exclusion_added_since_the_point(timeline: Timeline) -> None:
@@ -785,13 +905,14 @@ def test_the_two_checks_agree_on_an_exclusion_change_and_an_excluded_artefact(
     timeline: Timeline,
 ) -> None:
     """What the change check asks of a pull request, the whole-repository check reports once
-    it lands unanswered, and what one leaves alone the other does (#1152): a widened
-    exclusion is friction, then stale; an excluded artefact is asked nothing, then never
-    judged stale."""
+    it lands unanswered, and what one only reports the other does (#1152): a widening over
+    a file the change leaves alone is reported by both; one over a file it changes is
+    friction, then stale; an excluded artefact is asked nothing, then never judged stale."""
     repo = timeline.adopter
     generated = document("gen-cli", anchors={"path": ["src/cli/**"]}, at=T1, outcome="updated")
+    listing = {"src/cli/tables/list.py": "L = 1\n"}
     timeline.start(
-        {"docs/guide.md": guide(), "docs/generated/cli.md": generated, **GENERATED},
+        {"docs/guide.md": guide(), "docs/generated/cli.md": generated, **GENERATED, **listing},
         friction_config(exclude=["docs/generated"]),
     )
     repo.checkout("topic", create=True)
@@ -800,12 +921,86 @@ def test_the_two_checks_agree_on_an_exclusion_change_and_an_excluded_artefact(
         {CONFIG: friction_config(exclude=["docs/generated", "src/cli/generated"])},
     )
     change = fc.run_change_check(repo.root, "main")
-    assert [(f.kind.value, f.location) for f in change.findings] == [("friction", "docs/guide.md")]
+    assert [(f.kind.value, f.location) for f in change.findings] == [("left-out", "docs/guide.md")]
     repo.checkout("main")
     timeline.merge("topic")
     result = _run(timeline)
-    assert _summary(result) == [("stale", "docs/guide.md", "path:src/cli/**", widened)]
-    assert [r.location for r in result.artefact_reports] == ["docs/guide.md"]
+    assert _summary(result) == [("left-out", "docs/guide.md", "path:src/cli/**", widened)]
+    assert [(r.location, r.state) for r in result.artefact_reports] == [
+        ("docs/guide.md", fr.ArtefactState.CURRENT)
+    ]
+
+    repo.checkout("second", create=True)
+    edited = timeline.commit(
+        "regenerate the list, and exclude it",
+        {
+            "src/cli/tables/list.py": "L = 2\n",
+            CONFIG: friction_config(
+                exclude=["docs/generated", "src/cli/generated", "src/cli/tables"]
+            ),
+        },
+    )
+    change = fc.run_change_check(repo.root, "main")
+    assert [(f.kind.value, f.location) for f in change.findings] == [("friction", "docs/guide.md")]
+    assert "(now leaves out src/cli/tables/list.py, which this diff also changes)" in (
+        change.findings[0].message
+    )
+    repo.checkout("main")
+    timeline.merge("second")
+    result = _run(timeline)
+    assert _summary(result) == [("stale", "docs/guide.md", "path:src/cli/**", edited)]
+    assert (
+        f"(now leaves out src/cli/tables/list.py, changed since its revalidation point "
+        f"({edited[:12]}), and src/cli/generated/table.py)"
+    ) in result.findings[0].message
+
+
+def test_an_artefact_let_back_in_is_stale_from_the_narrowing_in_both_checks(
+    timeline: Timeline,
+) -> None:
+    """COR-050 point 7, as a move is read (point 3): the change check asks an artefact a
+    narrowing lets back in to revalidate in that change, and unanswered, the
+    whole-repository check finds it stale from the commit that let it in."""
+    repo = timeline.adopter
+    timeline.start(
+        {"docs/guide.md": guide(), "docs/generated/cli.md": guide()},
+        friction_config(exclude=["docs/generated"]),
+    )
+    repo.checkout("topic", create=True)
+    narrowed = timeline.commit("stop excluding the generated pages", {CONFIG: friction_config()})
+    change = fc.run_change_check(repo.root, "main")
+    assert [(f.kind.value, f.location, f.anchor) for f in change.findings] == [
+        ("friction", "docs/generated/cli.md", None)
+    ]
+    repo.checkout("main")
+    timeline.merge("topic")
+
+    result = _run(timeline)
+    assert _summary(result) == [("stale", "docs/generated/cli.md", None, narrowed)]
+    assert result.findings[0].message.startswith(
+        f'let back in by `friction.exclude` in {narrowed[:12]} "stop excluding the generated pages"'
+    )
+
+    timeline.commit(
+        "revalidate the page let back in",
+        {"docs/generated/cli.md": guide(at=T2, because="the page still describes the CLI")},
+    )
+    assert _summary(_run(timeline)) == []
+
+
+def test_a_point_whose_exclusions_do_not_read_is_reported_and_read_as_head(
+    timeline: Timeline,
+) -> None:
+    """A revalidation point whose `friction.exclude` cannot be read is not one that leaves
+    nothing out: no widening is made up from it, and the point is named."""
+    point = timeline.start({"docs/guide.md": guide(), **GENERATED}, friction_config(exclude=5))
+    timeline.commit(
+        "write the exclusions as a list", {CONFIG: friction_config(exclude=["src/cli/generated"])}
+    )
+    result = _run(timeline)
+    assert _summary(result) == [("unreadable", CONFIG, None, point)]
+    assert f'`friction.exclude` does not read at {point[:12]} "base"' in result.findings[0].message
+    assert result.artefact_reports[0].state is fr.ArtefactState.CURRENT
 
 
 # --- modes, dormancy, the working tree, output ----------------------------------------------
