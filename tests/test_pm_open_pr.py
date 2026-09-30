@@ -10,6 +10,7 @@ import importlib.util
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 from types import ModuleType, SimpleNamespace
 
 import pytest
@@ -278,14 +279,20 @@ def test_build_pr_body_template_without_closes_placeholder(op, tmp_path) -> None
 CAP_ROOT = REPO_ROOT / ".pkit" / "capabilities" / "project-management"
 
 
-def _backbone_says_main(op, monkeypatch) -> None:
+def _no_config(_root: Path) -> dict[str, Any]:
+    """An adopter config declaring nothing: the default branch is the backbone's."""
+    return {}
+
+
+def _backbone_says_main(op: Any, monkeypatch: pytest.MonkeyPatch) -> None:
     """The backbone's reading, stood in for: the default branch `main` (COR-054)."""
     lib = op.default_branch
     monkeypatch.setattr(lib, "_read", {})
 
-    def ask(explicit, _run):
+    def ask(explicit: str | None, _run: Any) -> Any:
         branch = lib.Branch("main", False, "origin/main", "c0ffee", None)
-        return lib.Reading(branch, lib.Base(f"origin/{explicit or 'main'}", "c0ffee", "c0ffee", None))
+        base = lib.Base(f"origin/{explicit or 'main'}", "c0ffee", "c0ffee", None)
+        return lib.Reading(branch, base)
 
     monkeypatch.setattr(lib, "_ask", ask)
 
@@ -296,7 +303,7 @@ def _stub_main(op, monkeypatch, argv: list[str], issues: dict[int, dict]) -> dic
     monkeypatch.setattr(op, "resolve_capability_root", lambda _explicit: CAP_ROOT)
     monkeypatch.setattr(op.bootstrap_gate, "enforce", lambda *a, **k: True)
     monkeypatch.setattr(op.session_guard, "enforce", lambda **k: True)
-    monkeypatch.setattr(op, "load_adopter_config", lambda _root: {})
+    monkeypatch.setattr(op, "load_adopter_config", _no_config)
     _backbone_says_main(op, monkeypatch)
     monkeypatch.setattr(op, "_read_members", lambda *a: [])
     monkeypatch.setattr(
@@ -453,11 +460,18 @@ def test_the_answers_render_as_the_doc_impact_bullets(op, monkeypatch, capsys) -
     assert "1 artefact(s) still carry friction with no answer on the page: docs/api.md" in out.err
 
 
-def test_a_pr_against_another_base_is_checked_against_that_base(op, monkeypatch) -> None:
+def test_a_pr_against_another_base_is_checked_against_that_base(
+    op: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """An integration branch is named to the change check, which resolves it as every
     branch named as a base (COR-054 point 2); only the default branch goes unnamed."""
     calls: list[str | None] = []
-    monkeypatch.setattr(op, "_friction_check", lambda base: calls.append(base) or FRICTION)
+
+    def check(base: str | None) -> dict[str, Any]:
+        calls.append(base)
+        return FRICTION
+
+    monkeypatch.setattr(op, "_friction_check", check)
     _stub_main(
         op,
         monkeypatch,
@@ -477,11 +491,11 @@ def test_a_pr_against_another_base_is_checked_against_that_base(op, monkeypatch)
     ],
 )
 def test_the_change_check_is_named_a_base_only_when_it_is_not_its_own(
-    op, monkeypatch, base, argv
+    op: Any, monkeypatch: pytest.MonkeyPatch, base: str | None, argv: list[str]
 ) -> None:
     seen: list[list[str]] = []
 
-    def run(cmd, **_kwargs):
+    def run(cmd: list[str], **_kwargs: Any) -> subprocess.CompletedProcess[str]:
         seen.append(cmd)
         return subprocess.CompletedProcess(cmd, 0, "{}", "")
 

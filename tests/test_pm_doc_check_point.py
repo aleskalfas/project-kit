@@ -396,7 +396,14 @@ def _check(
     }
     env.pop("PKIT_OFFLINE", None)
     return subprocess.run(
-        [sys.executable, str(repo.root / CHECK), "--base", "refs/heads/base", "--pr-body-file", str(body_file)],
+        [
+            sys.executable,
+            str(repo.root / CHECK),
+            "--base",
+            "refs/heads/base",
+            "--pr-body-file",
+            str(body_file),
+        ],
         cwd=repo.root,
         capture_output=True,
         text=True,

@@ -14,6 +14,7 @@ import importlib.util
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -253,7 +254,7 @@ def _fake_git(monkeypatch, lib, *, checkout_stderr="", pull_stderr="", branch_d_
 
 
 @pytest.fixture(autouse=True)
-def backbone(lib, monkeypatch):
+def backbone(lib: Any, monkeypatch: pytest.MonkeyPatch) -> Any:
     """Stand in for the backbone's reading: `answer(name)` declares the default branch,
     `answer(None)` makes the backbone unable to say. `main`, undeclared, by default."""
     reading = lib.default_branch
@@ -261,7 +262,7 @@ def backbone(lib, monkeypatch):
     def answer(name: str | None, declared: bool = True) -> None:
         monkeypatch.setattr(reading, "_read", {})
 
-        def ask(explicit, _run):
+        def ask(explicit: str | None, _run: Any) -> Any:
             if name is None:
                 raise reading.Unanswered("no pkit here")
             branch = reading.Branch(name, declared, f"origin/{name}", "c0ffee", None)
@@ -273,7 +274,9 @@ def backbone(lib, monkeypatch):
     return answer
 
 
-def test_cleanup_local_sequence_on_the_declared_default_branch(lib, monkeypatch, capsys, backbone):
+def test_cleanup_local_sequence_on_the_declared_default_branch(
+    lib: Any, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], backbone: Any
+) -> None:
     """checkout <default branch> → pull --ff-only → branch -D <head>; the default
     branch is the one the backbone declares (COR-054), not a hardcoded main."""
     backbone("develop")
@@ -294,8 +297,8 @@ def test_cleanup_local_defaults_to_main_when_config_is_silent(lib, monkeypatch):
 
 
 def test_cleanup_local_is_skipped_when_the_backbone_cannot_say(
-    lib, monkeypatch, capsys, backbone
-):
+    lib: Any, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], backbone: Any
+) -> None:
     """No switching to a guessed branch (COR-054 point 4): the clean-up is skipped with
     the cause, and the merge — already durable — does not fail."""
     backbone(None)
