@@ -17,9 +17,9 @@ pkit:
         - .pkit/adapters/claude-code/merge-settings.sh
       record: [COR-001, COR-002, COR-017, PRJ-001, PRJ-004, ADR-049]
     revalidated:
-      at: 2026-09-30T21:21:37Z
+      at: 2026-09-30T22:51:05Z
       outcome: unchanged
-      unchanged-because: the ADRs state the same decisions without their dated trailers, and references cite their points instead of their amendments (#860)
+      unchanged-because: decisions validate also warns of revision narration in a record, a warning that never fails the command; the page names the command for what gates on day one, decision-id uniqueness, which is unchanged
 ---
 
 # project-kit

@@ -21,9 +21,9 @@ pkit:
       artefact:
         - ACT-operator
     revalidated:
-      at: 2026-09-30T18:10:06Z
+      at: 2026-09-30T23:08:01Z
       outcome: unchanged
-      unchanged-because: on this branch release.py changes only how the changeset guard recognises a release pull request, by one list of the files and lines the release writes with the self-host manifest's backbone_version among them, and rewrites that manifest line in place; the use case's release scope, gate, stabilisation guards and the release pull request that closes no issue are untouched, so its steps hold
+      unchanged-because: on this branch _lib/milestone.py gains the Milestone reads close-milestone used to hold (close-trigger, children, now through the containment seam past the newest 500 issues) and the closure cascade reports when a content-based Milestone became closeable without closing it; releasing with unfinished work — the milestone's scope, what moves and what stays — is untouched, so the use case holds
 ---
 
 # UC-005 — Cut a release while unfinished work remains
