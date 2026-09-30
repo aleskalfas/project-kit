@@ -42,7 +42,7 @@ pkit:
         - src/project_kit/environment.py
       record: [COR-004, COR-012, COR-043, COR-048, COR-049, COR-050, PRJ-001, PRJ-003, PRJ-004, ADR-033, ADR-039, ADR-049, ADR-058, ADR-059]
     revalidated:
-      at: 2026-09-30T12:51:48Z
+      at: 2026-09-30T15:10:16Z
       outcome: updated
 ---
 
@@ -682,7 +682,8 @@ The `friction` command group is everything the anchors-and-friction functionalit
 - **Names what it writes, and writes only that.** Each command rewrites one key of the artefact's `friction` block — `revalidated`, the `deferred` list inside it, or `last-check` — and prints the key, the file and the lines it occupies. Every other byte of the file stays as it was: the lines from that key through the end of its value are replaced, or, in a block written in flow style (`pkit: { friction: { … } }`), that key's characters inside the braces. Entries are kept in one order — deferrals by anchor kind, then value; keys in the schema's order — so the same input writes the same bytes, and parallel branches deferring different anchors touch different lines.
 - **Writes only what validation accepts.** Before anything is written the result is read back: the front matter must hold exactly what it held with that one key replaced, and the artefact must pass validation's own judgments of a block (the shape, `unanchored-because` beside anchors, dangling deferrals). A block that would not validate — a typo elsewhere in it, say — is refused, and nothing is written; fix it first (`pkit validate`).
 - **Writes only with consent** — the consent rule of the configuration writer (COR-048 point 5), applied to the project's artefacts: `--yes` consents non-interactively; on a terminal without it the command shows the diff and asks; `--dry-run` shows the diff and writes nothing; a non-interactive run with neither refuses, writes nothing, and names the command to run with `--dry-run` and with `--yes`. `--yes` and `--dry-run` together are refused. A command with nothing to write says why and exits `0`.
-- **Naming the artefact and an anchor.** `<artefact>` is its location — `path` for a document, `path#id` for a collection entry — or its id (a document's path works too); a name that fits more than one artefact is refused with the candidates, and a document a component holds (COR-050 point 1) is refused naming the component and where its held folder is declared: it is not an artefact. An anchor is `kind:value` (`path:src/cli/**`, `record:software-analysis:DEC-001`) or a bare value, when only one anchor of the artefact has it. An artefact with no `friction` block is refused: declare its anchors first. Files with carriage-return line endings are refused rather than rewritten.
+- **Naming the artefact and an anchor.** `<artefact>` is its location — `path` for a document, `path#id` for a collection entry — or its id (a document's path works too); a name that fits more than one artefact is refused with the candidates, and a document a component holds (COR-050 point 1) is refused naming the component and where its held folder is declared: it is not an artefact. An anchor is `kind:value` (`path:src/cli/**`, `record:software-analysis:DEC-001`) or a bare value, when only one anchor of the artefact has it. An artefact with no `friction` block is refused: declare its anchors first.
+- **Keeps the file's line endings.** The edit is made in the file read with `\n`, as discovery reads it, and written back in the one line ending the file is written with: a file with `\r\n` stays one, byte for byte outside the key it replaces. A file that mixes line endings is refused, and nothing is written — no one line ending would keep its other bytes; `pkit validate` reports it.
 
 ### `friction check [--base <ref>] [--json]`
 

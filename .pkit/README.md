@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-09-30T12:52:00Z
+      at: 2026-09-30T15:10:21Z
       outcome: unchanged
-      unchanged-because: the CLI and schemas READMEs now read a narrowing of friction.exclude as a change and a widening as one only where a file it took changed, ask an artefact let back in to revalidate and read each state under its own exclusions, beside main's schema_version on every reading document and the artefacts accepted unanchored with a reason listed apart; the area map's one-line descriptions of cli/ and schemas/ name the command surface and the schemas, not the checks' readings or the block's fields, so they hold
+      unchanged-because: the CLI and schemas READMEs now read a file whatever its line endings, report one that mixes them, and have the writers keep a CRLF file's line endings; the area map's one-line descriptions of cli/ and schemas/ name the command surface and the schemas, not how a file is read, so they hold
 ---
 
 # project-kit

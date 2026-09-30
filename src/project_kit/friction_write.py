@@ -25,7 +25,11 @@ other byte of the file as it was. Before anything is written the result is
 read back: the front matter must parse to exactly what it held with that one
 key replaced, and the artefact must pass validation's per-artefact judgments
 (`friction_validate.block_findings`), so a writer never writes what `pkit
-validate` would refuse. Entries are kept in one order — deferrals by anchor
+validate` would refuse. The edit is made in the file read with `\\n` line
+breaks, as discovery reads it, and written back in the one line break the
+file is written with — a `\\r\\n` file stays one, byte for byte outside the
+key; a file that mixes them is refused, since no one line break would keep
+its other bytes, and validation reports it. Entries are kept in one order — deferrals by anchor
 kind, then value; keys in the schema's order (`anchors`, `unanchored-because`,
 `revalidated`, `last-check`; `at`, `outcome`, `unchanged-because`,
 `deferred`) — so the same input always writes the same bytes.
@@ -71,8 +75,10 @@ from project_kit.friction_discovery import (
     ArtefactKind,
     discover_artefacts,
     held_message,
+    line_break,
     parse_artefacts,
     split_front_matter,
+    universal_newlines,
 )
 from project_kit.friction_validate import block_findings
 from project_kit.project_config import stdin_is_tty
@@ -170,28 +176,43 @@ def find_artefact(target_root: Path, reference: str) -> Artefact:
 
 @dataclass(frozen=True)
 class _Source:
-    """The artefact's file as read for the edit, and the artefact re-read from exactly that text."""
+    """The artefact's file as read for the edit, and the artefact re-read from exactly that text.
+
+    `written` is the file as it is on disk; `text` the same file with its line
+    breaks read as `\\n` (`universal_newlines`), which every edit is made in,
+    and `newline` the one line break the file is written with, which
+    `as_written` gives an edited text back.
+    """
 
     rel: str  # the file, relative to the project root
     path: Path  # the file written — links resolved, so a link stays a link
+    written: str
     text: str
+    newline: str
     offset: int  # where the front matter's YAML starts in `text`
     front_matter: str
     artefact: Artefact
+
+    def as_written(self, text: str) -> str:
+        """`text`, edited with `\\n` line breaks, in the line break the file is written with."""
+        return text if self.newline == "\n" else text.replace("\n", self.newline)
 
 
 def _read_source(target_root: Path, found: Artefact) -> _Source:
     path = (target_root / found.path).resolve()
     try:
-        text = path.read_bytes().decode("utf-8")
+        written = path.read_bytes().decode("utf-8")
     except (OSError, UnicodeDecodeError) as exc:
         raise FrictionWriteError(f"cannot read {found.path}: {exc}. Nothing was written.") from exc
-    if "\r" in text:
+    newline = line_break(written)
+    if newline is None:
         raise FrictionWriteError(
-            f"{found.path} holds carriage returns (`\\r`, as in Windows line endings); the "
-            f"writers keep every other byte of a file as it was only for `\\n` line endings. "
-            f"Nothing was written."
+            f"{found.path} mixes line endings (`\\n` on some lines, `\\r\\n` or a lone `\\r` on "
+            f"others); the writers keep every other byte of a file as it was, which no one line "
+            f"ending would — write it with one first (`pkit validate` reports it). Nothing was "
+            f"written."
         )
+    text = universal_newlines(written)
     front_matter, _body = split_front_matter(text)
     artefacts, reason = parse_artefacts(found.path, found.place, text, rule_set=found.rule_set)
     same = [a for a in artefacts if a.kind is found.kind and a.id == found.id]
@@ -203,7 +224,9 @@ def _read_source(target_root: Path, found: Artefact) -> _Source:
     return _Source(
         rel=found.path,
         path=path,
+        written=written,
         text=text,
+        newline=newline,
         offset=text.index("\n") + 1,
         front_matter=front_matter,
         artefact=same[0],
@@ -649,8 +672,8 @@ def _unchanged(
         target=target,
         rel=source.rel,
         path=source.path,
-        before=source.text,
-        after=source.text,
+        before=source.written,
+        after=source.written,
         items=(),
         unchanged=why,
         notes=notes,
@@ -691,8 +714,8 @@ def _plan(
         target=_target(parent, key),
         rel=source.rel,
         path=source.path,
-        before=source.text,
-        after=after,
+        before=source.written,
+        after=source.as_written(after),
         items=items,
         first_line=first,
         last_line=last,
