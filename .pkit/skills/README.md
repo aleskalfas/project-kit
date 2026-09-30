@@ -10,9 +10,9 @@ pkit:
         - .pkit/adapters/claude-code/deploy-skills.sh
       record: [COR-003, COR-005, COR-006, COR-013, COR-015, COR-020]
     revalidated:
-      at: 2026-09-30T21:15:57Z
+      at: 2026-09-30T22:51:08Z
       outcome: unchanged
-      unchanged-because: decision-author's refinement and supersession variations gain the refine-in-place procedure; the index describes the skill as the walkthrough for a new record, which it still is
+      unchanged-because: decision-author's refinement and supersession variations point at the decisions README for editing an existing record; the index describes the skill as the walkthrough for a new record, which it still is
 ---
 
 # Skills
