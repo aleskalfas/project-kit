@@ -5,14 +5,18 @@ composition, milestone→child resolution (native field + textual ref union),
 and — mirroring the AC — content-based close with all children closed
 (succeeds), with an open child (refuses), --dry-run previews without
 mutating, the audit note is written on a real close, and the gh mutation
-routes through the validated `_lib.gh` seam (monkeypatched).
+routes through the validated `_lib.gh` seam (monkeypatched). Also pins that a
+close writes nothing to the Milestone's open children — no rollforward (#387).
 """
 
 from __future__ import annotations
 
 import importlib.util
+import json
+import subprocess
 import sys
 from pathlib import Path
+from types import ModuleType
 from unittest.mock import MagicMock
 
 import pytest
@@ -135,7 +139,9 @@ def test_compose_close_description_appends_audit_line(cm) -> None:
     assert "3 child issue(s) closed" in out
 
 
-def test_compose_close_description_notes_rolled_forward(cm) -> None:
+def test_compose_close_description_counts_open_children_as_not_rolled_forward(cm) -> None:
+    """The close moves no child (#387), so the audit record must not claim a
+    rollforward that did not happen."""
     out = cm._compose_close_description(
         "",
         close_trigger="date-based",
@@ -143,7 +149,8 @@ def test_compose_close_description_notes_rolled_forward(cm) -> None:
         open_count=1,
     )
     assert cm._AUDIT_MARKER in out
-    assert "1 rolled forward" in out
+    assert "1 still open, not rolled forward" in out
+    assert "1 rolled forward" not in out
 
 
 def test_compose_close_description_is_idempotent(cm) -> None:
@@ -262,6 +269,19 @@ def _prime_main(monkeypatch, cm, *, milestone, children):
     Returns the MagicMock standing in for _gh_close_milestone so a test can
     assert whether (and with what description) the real close was attempted.
     """
+    _pass_gates(monkeypatch, cm)
+    monkeypatch.setattr(cm, "_read_yaml", lambda path, loader: {
+        "types": {"epic": {"title_prefix": "EPIC", "title_case": "upper"}}
+    })
+    monkeypatch.setattr(cm, "_gh_get_milestone", lambda n, config: milestone)
+    monkeypatch.setattr(cm, "_gh_list_milestone_children", lambda n, t, config, types, classification=None: children)
+    close_mock = MagicMock(return_value=True)
+    monkeypatch.setattr(cm, "_gh_close_milestone", close_mock)
+    return close_mock
+
+
+def _pass_gates(monkeypatch: pytest.MonkeyPatch, cm: ModuleType) -> None:
+    """Let main() past its startup gates: membership, foreign-repo guard, bootstrap."""
     monkeypatch.setattr(cm, "resolve_capability_root", lambda p: REPO_ROOT)
     monkeypatch.setattr(cm, "load_adopter_config", lambda root: {})
     monkeypatch.setattr(cm, "_read_members", lambda root, loader: [])
@@ -273,14 +293,6 @@ def _prime_main(monkeypatch, cm, *, milestone, children):
     # capability root is the kit repo root, which carries no adopter tree to
     # stamp, so neutralise the gate here — as the line above does for the guard.
     monkeypatch.setattr(cm.bootstrap_gate, "enforce", lambda *a, **kw: True)
-    monkeypatch.setattr(cm, "_read_yaml", lambda path, loader: {
-        "types": {"epic": {"title_prefix": "EPIC", "title_case": "upper"}}
-    })
-    monkeypatch.setattr(cm, "_gh_get_milestone", lambda n, config: milestone)
-    monkeypatch.setattr(cm, "_gh_list_milestone_children", lambda n, t, config, types, classification=None: children)
-    close_mock = MagicMock(return_value=True)
-    monkeypatch.setattr(cm, "_gh_close_milestone", close_mock)
-    return close_mock
 
 
 def _args(**over):
@@ -351,3 +363,103 @@ def test_main_already_closed_is_noop(cm, monkeypatch) -> None:
     rc = cm.main()
     assert rc == 0
     close_mock.assert_not_called()
+
+
+# --- closing never moves open children (#387) -------------------------
+#
+# time-containers.yaml's rollforward_behaviour says a date-based close moves
+# its open children to the next Milestone; close-milestone does not do that.
+# These tests fake gh at the gh_run seam and record every call, so they pin
+# the whole effect of a close: one write, the Milestone's own PATCH. If
+# rollforward is ever automated they fail — update the pm README's "Closing a
+# Milestone never moves its open children" paragraph along with them.
+
+# Milestone #6's children: #10 closed; #11 open via the native field; #12 open
+# via the first-line ref only. #13 belongs to another milestone.
+_MIXED_ROWS = [
+    _row(10, "CLOSED", title="[Task] shipped", milestone={"number": 6}),
+    _row(11, "OPEN", title="[Task] in flight", milestone={"number": 6}),
+    _row(12, "OPEN", title="[Task] not started", body="Milestone: [#6](../milestone/6)\n"),
+    _row(13, "OPEN", title="[Task] elsewhere", milestone={"number": 7}),
+]
+
+
+def _record_gh(
+    monkeypatch: pytest.MonkeyPatch,
+    cm: ModuleType,
+    *,
+    milestone: dict[str, object],
+    rows: list[dict[str, object]],
+) -> list[list[str]]:
+    """Fake gh_run: answer the milestone GET and the issue list, record every call."""
+    calls: list[list[str]] = []
+
+    def fake_gh_run(
+        args: list[str], config: dict[str, object], **kwargs: object
+    ) -> subprocess.CompletedProcess[str]:
+        calls.append(list(args))
+        stdout = ""
+        if args[:3] == ["gh", "issue", "list"]:
+            stdout = json.dumps(rows)
+        elif _is_milestone_get(args):
+            stdout = json.dumps(milestone)
+        return subprocess.CompletedProcess(args, 0, stdout=stdout, stderr="")
+
+    monkeypatch.setattr(cm, "gh_run", fake_gh_run)
+    return calls
+
+
+def _is_milestone_get(args: list[str]) -> bool:
+    return args[:2] == ["gh", "api"] and "-X" not in args
+
+
+def _writes(calls: list[list[str]]) -> list[list[str]]:
+    """The recorded calls that change something: all but the two reads."""
+    return [c for c in calls if c[:3] != ["gh", "issue", "list"] and not _is_milestone_get(c)]
+
+
+@pytest.mark.parametrize(
+    ("description", "due_on", "force"),
+    [
+        pytest.param("Close trigger: date-based", None, False, id="date-based"),
+        pytest.param("Sprint 6", "2026-07-01T00:00:00Z", False, id="date-based-inferred"),
+        pytest.param("Close trigger: content-based", None, True, id="content-based-forced"),
+        pytest.param("Close trigger: either", None, True, id="either-forced"),
+    ],
+)
+def test_a_close_with_open_children_writes_only_the_milestone(
+    cm, monkeypatch, capsys, description, due_on, force
+) -> None:
+    """The open children keep their native field, first-line ref and state:
+    nothing is written to them, so they stay on the closed Milestone."""
+    _pass_gates(monkeypatch, cm)
+    milestone = _ms(description=description, due_on=due_on)
+    calls = _record_gh(monkeypatch, cm, milestone=milestone, rows=_MIXED_ROWS)
+    monkeypatch.setattr(cm.argparse.ArgumentParser, "parse_args", lambda self: _args(force=force))
+
+    assert cm.main() == 0
+
+    (patch,) = _writes(calls)
+    assert patch[:4] == ["gh", "api", "-X", "PATCH"]
+    assert patch[4].endswith("/milestones/6")
+    assert "state=closed" in patch
+    audit = next(a for a in patch if a.startswith("description="))
+    assert "1 child issue(s) closed; 2 still open, not rolled forward" in audit
+
+    out, err = capsys.readouterr()
+    assert "#11" in out and "#12" in out and "#13" not in out
+    assert "does NOT roll them forward" in err
+    assert "edit-issue <n> --milestone <next>" in err
+
+
+@pytest.mark.parametrize("trigger", ["content-based", "either"])
+def test_open_children_hold_an_unforced_close_and_nothing_is_written(
+    cm, monkeypatch, trigger
+) -> None:
+    _pass_gates(monkeypatch, cm)
+    milestone = _ms(description=f"Close trigger: {trigger}")
+    calls = _record_gh(monkeypatch, cm, milestone=milestone, rows=_MIXED_ROWS)
+    monkeypatch.setattr(cm.argparse.ArgumentParser, "parse_args", lambda self: _args())
+
+    assert cm.main() == 1
+    assert _writes(calls) == []
