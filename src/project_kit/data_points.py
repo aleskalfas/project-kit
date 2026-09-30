@@ -27,8 +27,10 @@ defines, combines the point's fillers into one value by its declaration:
   takes no parameter. Its `commands:` leaf must declare the query contract
   (`query-contract: true`), or it is not run; it is run through the shared
   runner under the query policy — from the project root with `--json` alone,
-  the offline marker set, in its own process group, bounded — and prints one
-  filler envelope, `{schema_version, value}`, at the point's version. An
+  the offline marker set, in its own process group, bounded (read inside
+  another run, by the time that run has left, in the outermost run's group) —
+  and prints one filler envelope, `{schema_version, value}`, at the point's
+  version. An
   abnormal exit, a timeout, output that is not that envelope, or a value that
   does not fit is no answer — never an empty one. The declaration is trusted,
   not enforced: nothing here holds the command to no network (ADR-057 point
@@ -56,7 +58,15 @@ status report shows how each point resolved. `resolve_point` resolves one
 point alone, for `pkit connections resolve`: only its fillers are asked, so no
 other point's command filler starts. Within a run each point resolves at most
 once, whichever reader asks first, and points never read one another, so a
-point resolved alone is the point resolved among all.
+point resolved alone is the point resolved among all. A run of `pkit validate`
+spans processes — a capability's validator reads a point through `pkit
+connections resolve` — so each resolved point is also kept in the run cache
+(`run_cache`), with the findings its resolution made and the bound it was
+resolved under: whichever process of the run asks first resolves it, and every
+other reads it (`shared_point`), its fillers started once. One resolution is
+never kept: one in which a command filler gave no answer for want of the time
+its asker had left (`CommandRun.clipped`) — a reader with more time might get
+an answer, so the next reader resolves the point itself.
 """
 
 from __future__ import annotations
@@ -73,7 +83,7 @@ from referencing.exceptions import Unresolvable
 
 from project_kit import backbone_schemas as bs
 from project_kit import connections as cx
-from project_kit import validators
+from project_kit import run_cache, validators
 from project_kit.command_runner import (
     COMMANDS_KEY,
     Ending,
@@ -277,17 +287,78 @@ class _PointOutcome:
 
 def _resolved(run: _Run, binding: cx.PointBinding) -> _PointOutcome:
     """The point `binding` resolved, once per run: its fillers are asked — a command
-    filler started — at most once, whichever reader asks first. Points do not
-    read one another, so a point resolved alone is the point resolved among all."""
+    filler started — at most once, whichever reader asks first, in this process
+    or, through the run cache, in any process `pkit validate` started. Points do
+    not read one another, so a point resolved alone is the point resolved among all.
+
+    A resolution in which a command filler ran out of the time its asker had
+    left is not put in the run cache: another process of the run may have more
+    time, and reads the point by resolving it. Within this process it is kept —
+    no later reader here has more time than the first."""
+    address = binding.point.address
 
     def resolve() -> _PointOutcome:
+        shared = _shared_outcome(run.root, address)
+        if shared is not None:
+            return shared
         start = len(run.findings)
-        point = _Point(run, binding).resolve()
-        return _PointOutcome(point, tuple(run.findings[start:]))
+        resolution = _Point(run, binding)
+        outcome = _PointOutcome(resolution.resolve(), tuple(run.findings[start:]))
+        if not resolution.clipped:
+            run_cache.write(_cache_key(run.root, address), _entry_of(outcome, resolution.bound))
+        return outcome
 
-    return validators.once_per_run(
-        ("data-point", run.root.resolve(), binding.point.address), resolve
-    )
+    return validators.once_per_run(("data-point", run.root.resolve(), address), resolve)
+
+
+# --- sharing a resolved point across the processes of a run ---------------
+
+
+def _cache_key(target_root: Path, address: str) -> str:
+    return f"data-point {target_root.resolve()} {address}"
+
+
+def _entry_of(outcome: _PointOutcome, bound: float | None) -> dict[str, Any]:
+    """A resolved point as the run cache keeps it: its document, the findings its
+    resolution made, which the `connections` member reports, and the tightest
+    bound a command filler of it ran under — the first asker's; None when none
+    ran."""
+    return {
+        "bound": bound,
+        "point": point_document(outcome.point),
+        "findings": [
+            {
+                "location": f.location,
+                "message": f.message,
+                "severity": f.severity.value,
+                "label": f.label,
+            }
+            for f in outcome.findings
+        ],
+    }
+
+
+def _shared_outcome(target_root: Path, address: str) -> _PointOutcome | None:
+    """The point `address` as another process of the run resolved it, or None:
+    no run cache, the point not yet resolved, or an entry this reading does not
+    understand — a miss, never an error; the point is then resolved here."""
+    entry = run_cache.read(_cache_key(target_root, address))
+    if not isinstance(entry, Mapping):
+        return None
+    shared = cast("Mapping[str, Any]", entry)
+    try:
+        findings = tuple(
+            validators.Finding(
+                str(f["location"]),
+                str(f["message"]),
+                validators.Severity(f["severity"]),
+                str(f["label"]),
+            )
+            for f in cast("list[Mapping[str, Any]]", shared["findings"])
+        )
+        return _PointOutcome(point_from_document(shared["point"]), findings)
+    except (KeyError, TypeError, ValueError):  # not an entry `_entry_of` wrote
+        return None
 
 
 def _filler_schema(target_root: Path) -> tuple[Mapping[str, Any] | None, tuple[str, ...]]:
@@ -446,6 +517,10 @@ class _Point:
     fillers: list[Filler] = field(default_factory=list[Filler])
     inert: list[_Candidate] = field(default_factory=list[_Candidate])
     validator: Draft202012Validator | None = None
+    # The command fillers' runs: the tightest bound one ran under, and whether one
+    # gave no answer for want of the time its asker had left (`CommandRun.clipped`).
+    bound: float | None = None
+    clipped: bool = False
     address: str = field(init=False)
     policy: str = field(init=False)
     inert_policy: str = field(init=False)
@@ -646,7 +721,9 @@ class _Point:
             cwd=self.run.root,
             extra_env=validators.OFFLINE_MARKER,
         )
+        self.bound = run.bound_seconds if self.bound is None else min(self.bound, run.bound_seconds)
         if run.ending is not Ending.ANSWERED:
+            self.clipped = self.clipped or run.clipped
             return _no_answer(validators.why_no_answer(run, reference).rstrip("."))
         return self._envelope_answer(reference, run.document)
 
@@ -1164,15 +1241,33 @@ def resolve_point(target_root: Path, address: str) -> tuple[ResolvedPoint | None
     return validators.as_one_run(run)
 
 
-def point_document(point: ResolvedPoint) -> dict[str, Any]:
+def shared_point(target_root: Path, address: str) -> ResolvedPoint | None:
+    """The data point `address` as the run in progress already resolved it — in
+    `pkit validate`, or in another command the run started — or None: outside
+    a live run, or not yet kept in it (`_resolved` keeps no resolution cut short
+    by its asker's time). Read before `resolve_point`, it spares even the wiring
+    (the run cache, `run_cache`)."""
+    shared = _shared_outcome(target_root, address)
+    return shared.point if shared is not None else None
+
+
+# Where the point a reading command prints came from: resolved by the command
+# itself, or read from what the run in progress resolved (`shared_point`).
+FROM_RESOLUTION = "resolution"
+FROM_RUN_CACHE = "run-cache"
+
+
+def point_document(point: ResolvedPoint, *, source: str = FROM_RESOLUTION) -> dict[str, Any]:
     """One resolved data point as the stable document `pkit connections resolve
     --json` prints — the read a capability's own script uses to consume a point
     it defines, without importing this package (the CLI README, "Connections
     commands"). Everything the status report shows, as data: `value` is None
-    when the point does not resolve, and never a partial value."""
+    when the point does not resolve, and never a partial value. `from` says
+    whether this command resolved it or read the run's resolution."""
     return {
         "address": point.address,
         "defined": True,
+        "from": source,
         "provider": point.provider,
         "policy": point.policy,
         "inert_policy": point.inert_policy,
@@ -1203,6 +1298,47 @@ def point_document(point: ResolvedPoint) -> dict[str, Any]:
     }
 
 
+def point_from_document(document: Mapping[str, Any]) -> ResolvedPoint:
+    """The inverse of `point_document`: the resolved point a document states.
+    Raises KeyError, TypeError or ValueError on a document it did not write."""
+    return ResolvedPoint(
+        address=document["address"],
+        provider=document["provider"],
+        policy=document["policy"],
+        inert_policy=document["inert_policy"],
+        participation=document["participation"],
+        fillers=tuple(
+            Filler(
+                FillerSource(f["source"]),
+                f["name"],
+                f["supplies"],
+                FillerState(f["state"]),
+                f["reason"],
+                f["query_contract"],
+            )
+            for f in document["fillers"]
+        ),
+        resolved=document["resolved"],
+        value=document["value"],
+        origin=document["origin"],
+        entries=tuple(
+            Entry(e["id"], e["value"], e["origin"], tuple(e["replaces"]))
+            for e in document["entries"]
+        ),
+        removals=tuple(
+            Removal(r["id"], r["reason"], tuple(r["removed_from"])) for r in document["removals"]
+        ),
+        why=document["why"],
+    )
+
+
 def undefined_document(address: str, why: str) -> dict[str, Any]:
     """The document for an address no active provider defines as a data point."""
-    return {"address": address, "defined": False, "resolved": False, "why": why, "value": None}
+    return {
+        "address": address,
+        "defined": False,
+        "from": FROM_RESOLUTION,
+        "resolved": False,
+        "why": why,
+        "value": None,
+    }

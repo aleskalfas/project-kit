@@ -41,7 +41,8 @@ runner the backbone uses for every command it runs on a component's behalf
 (`command_runner`, ADR-057 point 5): from the project root with the one
 argument `--json`, the offline marker set in its environment, in its own
 process group, bounded by the backbone's one command bound and killed as a
-group when it overruns, reading one JSON document — and nothing else — from
+group when it overruns — inside another run, by the time that run has left and
+in the outermost run's group — reading one JSON document — and nothing else — from
 its standard output:
 `{"summary": [...], "findings": [{"severity", "location", "message"}, ...]}`;
 diagnostics go to standard error. No answer — a leaf without the declaration,
@@ -49,6 +50,10 @@ an abnormal exit, a timeout, output that is not exactly that document — is an
 *error finding*, never a clean pass: the umbrella fails closed. An exit that is
 uv's report of a dependency missing from its cache is named for what it is, an
 environment not provisioned, with `pkit sync` — which provisions it — as the fix.
+A `pkit` reading command the validator starts stays inside its bound — a
+filler it starts gets the time remaining and the group (`command_runner`, "a
+run inside a run") — and reads a data point the run resolved from the run
+cache (`run_cache`) rather than resolving it again.
 """
 
 from __future__ import annotations
@@ -62,7 +67,7 @@ from typing import Any, TypeVar
 
 from ruamel.yaml import YAML
 
-from project_kit import cli_render
+from project_kit import cli_render, run_cache
 from project_kit.command_runner import (
     COMMANDS_KEY,
     CommandRun,
@@ -377,7 +382,8 @@ def run_query(target_root: Path, script: Path, *, location: str, reference: str)
     """Run one validator command under the query policy and read its answer (the
     contract in the module docstring): with `--json` and the offline marker set,
     through the shared runner — from the project root, in its own process group,
-    bounded by `command_runner.COMMAND_TIMEOUT_SECONDS`. No answer is an error
+    bounded by `command_runner.COMMAND_TIMEOUT_SECONDS` (inside another run, by
+    the time it has left, in the outermost run's group). No answer is an error
     finding at `location` — the validator's own entry in the package file — so
     the umbrella fails closed."""
     if not script.is_file():
@@ -409,7 +415,7 @@ def why_no_answer(run: CommandRun, reference: str) -> str:
     if run.ending is Ending.NOT_STARTED:
         return f"command {reference!r} could not start: {run.detail}"
     if run.ending is Ending.TIMED_OUT:
-        return f"command {reference!r} did not answer within {run.bound_seconds} s."
+        return f"command {reference!r} did not answer within {run.bound_described}."
     if not_provisioned(run):
         return (
             f"command {reference!r}: {NOT_PROVISIONED} (its dependencies are not in "
@@ -556,10 +562,13 @@ def as_one_run(compute: Callable[[], _T]) -> _T:
 
 def run_all(target_root: Path, validators: Iterable[Validator]) -> list[Result]:
     """Run the members in order, as one run: a computation several members read
-    (`once_per_run`) is computed once for all of them."""
+    (`once_per_run`) is computed once for all of them — and a resolved data
+    point once for the `pkit` commands a member starts too, through the run
+    cache (`run_cache`), open for the run's length."""
     token = _RUN_VALUES.set({})
     try:
-        return [Result(v, v.run(target_root)) for v in validators]
+        with run_cache.opened():
+            return [Result(v, v.run(target_root)) for v in validators]
     finally:
         _RUN_VALUES.reset(token)
 

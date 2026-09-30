@@ -14,8 +14,9 @@ pkit:
       record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, ADR-019, ADR-039, ADR-055, "project-management:DEC-053"]
       artefact: [.pkit/decisions/README.md]
     revalidated:
-      at: 2026-09-29T20:44:42Z
-      outcome: updated
+      at: 2026-09-30T02:21:31Z
+      outcome: unchanged
+      unchanged-because: the tests README now also names the autouse fixture that starts every test outside any run of the command runner; this guide only points to it for test-authoring guidance and the adopter-repository fixture, which hold
 ---
 
 # Contributing to project-kit

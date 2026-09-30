@@ -231,6 +231,7 @@ def test_alone_the_contribution_is_inert_and_its_filler_never_runs(project: Adop
     assert _resolve(READERS) == {
         "address": READERS,
         "defined": False,
+        "from": "resolution",
         "resolved": False,
         "value": None,
         "why": "role 'pkit::documentation' has no active provider",

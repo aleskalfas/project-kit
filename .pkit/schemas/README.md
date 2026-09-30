@@ -19,9 +19,9 @@ pkit:
         - src/project_kit/working_tree.py
       record: [COR-018, COR-019, COR-020, COR-023, COR-029, COR-048, COR-050, COR-051, COR-052, COR-053, ADR-056, ADR-057]
     revalidated:
-      at: 2026-09-30T01:39:00Z
+      at: 2026-09-30T03:05:01Z
       outcome: unchanged
-      unchanged-because: discovery now takes a collection entry's section by a heading that opens with its whole id, which is what the body section headed by its id already says here; the places, the one listing and the one exclude decision hold
+      unchanged-because: with main merged, ADR-057 carries this branch's nested-run rule in point 5 and the run cache in point 2 beside main's whole-id entry sections; this README cites the record only for point 2's one listing of the working tree and the anchor-kind registry, which hold
 ---
 
 # Schemas
