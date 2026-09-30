@@ -15,7 +15,8 @@ are collection files, one keyed entry per artefact; a use case and a journey
 are a document each — and a file in a place that holds no artefact of its
 kind's shape is a stray the check reports. The revalidation records are not
 artefacts: their folder is this capability's folder of held documents (COR-050
-point 1), and the records are the files the answer lists as held in it.
+point 1), and the records are the files the answer's declaration of that
+folder holds.
 """
 
 from __future__ import annotations
@@ -85,12 +86,14 @@ REVALIDATED_AT = ("friction", "revalidated", "at")
 #: reason onboarding accepts it unanchored (DEC-001 point 9).
 UNANCHORED_BECAUSE = "unanchored-because"
 
-#: The version of `pkit friction artefacts --json` this reading understands, the
-#: key of each artefact's anchors in it, and the key of the held documents —
-#: each added within that version, so a backbone that predates one answers the
-#: same version without it.
+#: The version of `pkit friction artefacts --json` this reading understands, and
+#: the key of each artefact's anchors in it — added within that version, so a
+#: backbone that predates it answers the same version without the key.
 SCHEMA_VERSION = 1
 ANCHORS = "anchors"
+
+#: The key of the folders of held documents in that document, each declared as a
+#: place is, with the files it holds (COR-050 point 1).
 HELD = "held"
 
 
@@ -137,9 +140,12 @@ class Analysis:
     kind's place resolves — both `None`/empty when the reading holds none of
     this capability's places. `unreadable` names the files whose front matter
     does not parse: the backbone's friction pass reports them. `records` are
-    the revalidation records, by path: the files the reading lists as held in
-    this capability's folder of them — the working tree's listing, so a record
-    git ignores is not one.
+    the revalidation records, by path: the files this capability's held folder
+    of them holds in the reading — the working tree's listing, so a record git
+    ignores is not one, and every Markdown file beneath the folder, nested ones
+    included. `records_unheld` says why that folder holds nothing, when it
+    does not: the backbone skipped it (its validation says why), or the reading
+    declares no such folder.
     """
 
     location: str | None
@@ -148,6 +154,7 @@ class Analysis:
     strays: tuple[Stray, ...]
     unreadable: tuple[str, ...]
     records: tuple[str, ...]
+    records_unheld: str | None = None
 
     def of_kind(self, kind: str) -> list[Artefact]:
         return [a for a in self.artefacts if a.kind == kind]
@@ -182,19 +189,12 @@ class Analysis:
 def analysis_of(document: Mapping[str, Any]) -> Analysis:
     """The `pkit friction artefacts --json` document as the analysis. Raises
     Unreadable for a document this reading does not understand — another
-    version; an artefact of this capability's places without its anchors,
-    which reading as none would report every use case as not anchored; or no
-    held documents, which reading as none would find no revalidation record."""
+    version, or an artefact of this capability's places without its anchors,
+    which reading as none would report every use case as not anchored."""
     if document.get("schema_version") != SCHEMA_VERSION:
         raise Unreadable(
             f"`pkit friction artefacts` answered schema_version "
             f"{document.get('schema_version')!r}; this capability reads {SCHEMA_VERSION}"
-        )
-    if HELD not in document:
-        raise Unreadable(
-            f"`pkit friction artefacts` gave no `{HELD}` list, which this capability reads its "
-            f"revalidation records from: the installed backbone predates it — upgrade it "
-            f"(`pkit upgrade`)"
         )
     kind_of_place: dict[int, str] = {}
     places: dict[str, str] = {}
@@ -216,6 +216,7 @@ def analysis_of(document: Mapping[str, Any]) -> Analysis:
         places[kind] = path
         location = location or _text(where.get("path"))
 
+    records, unheld = _records(document.get(HELD))
     kind_of_file: dict[str, str] = {}
     unreadable: list[str] = []
     no_front_matter: list[str] = []
@@ -276,14 +277,15 @@ def analysis_of(document: Mapping[str, Any]) -> Analysis:
         artefacts=tuple(a for a in artefacts if a.path not in strays),
         strays=tuple(sorted(strays.values(), key=lambda s: s.path)),
         unreadable=tuple(unreadable),
-        records=tuple(sorted(_records(document.get(HELD)))),
+        records=records,
+        records_unheld=unheld,
     )
 
 
-def _records(held: Any) -> list[str]:
-    """The files the document lists as held in this capability's folder of
-    revalidation records, as its package declares it."""
-    records: list[str] = []
+def _records(held: Any) -> tuple[tuple[str, ...], str | None]:
+    """The revalidation records — the files the document's declaration of this
+    capability's folder of them holds — and why it holds none, when it holds
+    nothing: the backbone skipped it, or the document declares no such folder."""
     for entry in _mappings(held):
         where = entry.get("location")
         if (
@@ -291,10 +293,13 @@ def _records(held: Any) -> list[str]:
             and entry.get("written") == REVALIDATIONS
             and isinstance(where, Mapping)
             and where.get("name") == LOCATION
-            and isinstance(entry.get("path"), str)
         ):
-            records.append(entry["path"])
-    return records
+            skipped = entry.get("skipped")
+            if isinstance(skipped, Mapping):
+                return (), f"the backbone skipped it ({skipped.get('reason')})"
+            files = entry.get("files")
+            return tuple(sorted(str(f) for f in files)) if isinstance(files, list) else (), None
+    return (), "the backbone's reading declares no such folder of this capability's"
 
 
 def _misshapen(kind: str) -> str:

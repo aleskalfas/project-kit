@@ -122,8 +122,8 @@ def test_the_scripts_know_each_place_by_the_package_s_own_words() -> None:
 
 
 def test_the_scripts_know_the_records_folder_by_the_package_s_own_words() -> None:
-    """The records are read from the held list by the folder the package declares
-    (`_lib/model.py`'s REVALIDATIONS), the one the stamp writes into."""
+    """The records are read from the backbone's declaration of the held folder the
+    package declares (`_lib/model.py`'s REVALIDATIONS), the one the stamp writes into."""
     package = load((CAPABILITY / "package.yaml").read_text(encoding="utf-8"))
     held: list[dict[str, str]] = package["friction"]["held"]
     assert [(h["location"], h["path"]) for h in held] == [

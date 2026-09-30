@@ -32,8 +32,11 @@ What is checked, each against the record's words:
   against its schema, and the artefacts its outcomes cite are artefacts of the
   analysis, withdrawn ones included. The records are not anchored artefacts:
   their folder is the capability's folder of held documents (COR-050 point 1),
-  so the records are the files the backbone's reading lists as held there —
-  from the working tree's one listing, so a draft git ignores is not checked.
+  so the records are the files the backbone's reading says that folder holds —
+  every Markdown file beneath it, from the working tree's one listing, so a
+  draft git ignores is not checked. When the folder holds nothing because the
+  backbone skipped it, the summary says so and leaves the finding to
+  `pkit validate`.
 - **Evidence a record copies** (point 7). A record keeps each evidence entry
   it draws on whole, in the evidence point's entry shape: the record is
   history, and the point holds only what its fillers report now. From the
@@ -157,6 +160,11 @@ def check(root: Path) -> Outcome:
 def _counts(analysis: Analysis, records: int) -> str:
     kinds = ", ".join(f"{len(analysis.of_kind(k))} {NOUN[k]}(s)" for k in KINDS)
     line = f"analysis at {analysis.location}: {kinds}; {records} revalidation record(s)."
+    if analysis.records_unheld is not None:
+        line += (
+            f" The records' folder holds nothing — {analysis.records_unheld}; `pkit validate` "
+            f"says why."
+        )
     if analysis.unreadable:
         line += f" {len(analysis.unreadable)} file(s) whose front matter does not parse, left to "
         line += "`pkit validate`'s friction member."

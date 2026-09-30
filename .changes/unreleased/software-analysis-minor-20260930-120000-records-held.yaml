@@ -8,8 +8,10 @@ body: >
   held documents (`friction.held`, DEC-001 point 2; COR-050 point 1), so a
   record under the internal root is no longer an unanchored artefact in the
   friction measures, nor a document a documentation capability counts as
-  unclassified. `pkit analysis validate` finds the records in the `held` list
-  of `pkit friction artefacts --json` instead of listing the folder, so a
-  draft git ignores is no longer checked. It needs the backbone this release
-  ships, whose document carries that list, so the capability requires it; on
-  an older backbone the check says the list is missing.
+  unclassified. `pkit analysis validate` reads the records as the files that
+  folder's declaration holds in `pkit friction artefacts --json`, instead of
+  listing the folder: a draft git ignores is no longer checked, and a record
+  in a sub-folder of `revalidations/`, which the check used to skip, is now
+  checked like the rest. When the backbone skips the folder, the check's
+  summary says it holds nothing and `pkit validate` says why. The document is
+  the backbone's this release ships, so the capability requires it.

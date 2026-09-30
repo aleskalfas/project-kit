@@ -27,6 +27,7 @@ from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.analysis_repo import (
     ACTORS,
     CAPABILITY,
+    CONFIG,
     GLOSSARY,
     JOURNEYS,
     MAIN,
@@ -483,9 +484,9 @@ def test_revalidation_records_are_held_to_their_schema(project: AdopterRepo) -> 
 def test_the_records_are_the_held_files_so_a_draft_git_ignores_is_not_checked(
     project: AdopterRepo,
 ) -> None:
-    """The records are read from the held list of `pkit friction artefacts` (COR-050
-    point 1), which is the working tree's one listing: a draft the project keeps
-    git-ignored in the folder is not a record, whatever it holds."""
+    """The records are the files the held folder holds in `pkit friction artefacts`
+    (COR-050 point 1), read from the working tree's one listing: a draft the project
+    keeps git-ignored in the folder is not a record, whatever it holds."""
     seed(project)
     record = (CAPABILITY / "templates" / "revalidation-record.md").read_text(encoding="utf-8")
     good = record.replace('"#000"', '"#887"').replace("UC-000", "UC-001")
@@ -505,40 +506,44 @@ def test_the_records_are_the_held_files_so_a_draft_git_ignores_is_not_checked(
     assert [location for location, _message in errors(document)] == [f"{RECORDS}/draft-idea.md"]
 
 
-#: A `pkit` answering `friction artefacts` as a backbone from before the document
-#: carried `held`: the real answer, with the key taken out.
-_PRE_HELD_PKIT = """#!{python}
-import json, subprocess, sys
-done = subprocess.run([sys.executable, "-m", "project_kit", *sys.argv[1:]],
-                      capture_output=True, text=True)
-out = done.stdout
-if sys.argv[1:3] == ["friction", "artefacts"] and done.returncode == 0:
-    document = json.loads(out)
-    del document["held"]
-    out = json.dumps(document)
-sys.stdout.write(out)
-sys.stderr.write(done.stderr)
-sys.exit(done.returncode)
-"""
-
-
-def test_a_backbone_without_held_documents_in_its_document_is_unreadable(
-    project: AdopterRepo, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Read as none, a missing `held` list would find no record, and check none;
-    the check says what is missing instead."""
+def test_a_record_nested_under_the_folder_is_a_record(project: AdopterRepo) -> None:
+    """The held folder holds every Markdown file beneath it, as a place matches: a
+    record in a sub-folder is checked like one directly in it (the folder was
+    once read by its direct children alone)."""
     seed(project)
-    older = tmp_path / "pre-held-backbone"
-    older.mkdir()
-    (older / "pkit").write_text(_PRE_HELD_PKIT.format(python=sys.executable), encoding="utf-8")
-    (older / "pkit").chmod(0o755)
-    monkeypatch.setenv("PATH", f"{older}{os.pathsep}{os.environ['PATH']}")
-    document = check(project)
-    assert document["summary"] == ["the analysis could not be read; nothing checked."]
-    ((location, message),) = errors(document)
-    assert location == "."
-    assert message == (
-        "the places could not be read: `pkit friction artefacts` gave no `held` list, which "
-        "this capability reads its revalidation records from: the installed backbone "
-        "predates it — upgrade it (`pkit upgrade`)"
+    record = (CAPABILITY / "templates" / "revalidation-record.md").read_text(encoding="utf-8")
+    good = record.replace('"#000"', '"#887"').replace("UC-000", "UC-001")
+    project.write(
+        {
+            f"{RECORDS}/2026-10-01-first-run.md": good,
+            f"{RECORDS}/2026/2026-10-02-nested.md": good.replace("UC-001", "UC-404"),
+        }
     )
+    document = check(project)
+    assert "; 2 revalidation record(s)." in document["summary"][0]
+    assert [location for location, _message in errors(document)] == [
+        f"{RECORDS}/2026/2026-10-02-nested.md:/outcomes/UC-404"
+    ]
+
+
+def test_a_records_folder_the_backbone_skips_is_said_to_hold_nothing(
+    project: AdopterRepo,
+) -> None:
+    """A project place equal to the records' folder oversteps the folder's bounds
+    (COR-050 point 1), so the backbone skips it and `pkit validate` reports it at
+    the declaration: the check reads no record, and says why rather than showing
+    none as if there were none."""
+    seed(project)
+    record = (CAPABILITY / "templates" / "revalidation-record.md").read_text(encoding="utf-8")
+    project.write(
+        {
+            CONFIG: f"docs:\n  internal: tech-docs\nfriction:\n  places: [{RECORDS}]\n",
+            f"{RECORDS}/2026-10-01-first-run.md": record.replace("UC-000", "UC-001"),
+        }
+    )
+    document = check(project)
+    assert document["summary"][0].endswith(
+        "; 0 revalidation record(s). The records' folder holds nothing — the backbone skipped "
+        "it (overlap); `pkit validate` says why."
+    )
+    assert errors(document) == []
