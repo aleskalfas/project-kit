@@ -12,9 +12,9 @@ pkit:
       record: ["living-docs:DEC-001", COR-049, COR-050, COR-051, COR-053]
       artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006]
     revalidated:
-      at: 2026-09-30T14:27:05Z
+      at: 2026-09-30T23:02:02Z
       outcome: unchanged
-      unchanged-because: COR-050 point 6's pointer to COR-054 and main's exclusion reading change no living-docs behaviour; its filler reads the default branch through the backbone
+      unchanged-because: "#840's lint and format pass reshapes the anchored code without changing what it does, so this page still describes it as it is"
 ---
 
 # living-docs capability

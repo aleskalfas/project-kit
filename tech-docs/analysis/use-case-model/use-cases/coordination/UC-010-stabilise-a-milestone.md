@@ -20,9 +20,9 @@ pkit:
       artefact:
         - ACT-operator
     revalidated:
-      at: 2026-09-30T17:57:57Z
+      at: 2026-09-30T23:02:23Z
       outcome: unchanged
-      unchanged-because: done-work's change is the declared move to Review it makes before the merge when the closing issue never reached Review; stabilising a Milestone, release scope, and the guards on starting and landing work did not change
+      unchanged-because: "#840's lint and format pass reshapes the anchored code without changing what it does, so this page still describes it as it is"
 ---
 
 # UC-010 — Stabilise a Milestone for a release

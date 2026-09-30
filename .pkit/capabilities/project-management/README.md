@@ -15,8 +15,9 @@ pkit:
         - .pkit/capabilities/project-management/decisions/**
       record: [COR-017, COR-020, COR-021, COR-023, COR-039, COR-053, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050]
     revalidated:
-      at: 2026-09-30T17:57:52Z
-      outcome: updated
+      at: 2026-09-30T23:02:02Z
+      outcome: unchanged
+      unchanged-because: "#840's lint and format pass reshapes the capability's scripts without changing what they do; its one fix, check-mesh reading its configured peers again, restores behaviour this page already describes"
 ---
 
 # project-management capability

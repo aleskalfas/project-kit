@@ -22,9 +22,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-09-30T09:26:36Z
+      at: 2026-09-30T23:02:17Z
       outcome: unchanged
-      unchanged-because: start-work now cuts the branch from the commit the backbone resolves its base to — the remote's copy, the local branch only without a remote — and refuses when the backbone cannot say which branch is settled (COR-054); resuming after every session died reads the instance id and ownership, not where a branch was cut
+      unchanged-because: "#840's lint and format pass reshapes the anchored code without changing what it does, so this page still describes it as it is"
 ---
 
 # UC-001 — Resume a clone after every session died

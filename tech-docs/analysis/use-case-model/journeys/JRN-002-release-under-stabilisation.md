@@ -14,6 +14,10 @@ pkit:
       artefact:
         - UC-010
         - UC-005
+    revalidated:
+      at: 2026-09-30T23:02:13Z
+      outcome: unchanged
+      unchanged-because: "#840's lint and format pass reshapes the anchored code without changing what it does, so this page still describes it as it is"
 ---
 
 # JRN-002 — Release with unfinished work under a stabilisation

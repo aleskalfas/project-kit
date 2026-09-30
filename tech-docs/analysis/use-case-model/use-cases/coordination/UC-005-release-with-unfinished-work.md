@@ -21,9 +21,9 @@ pkit:
       artefact:
         - ACT-operator
     revalidated:
-      at: 2026-09-30T18:10:06Z
+      at: 2026-09-30T23:02:20Z
       outcome: unchanged
-      unchanged-because: on this branch release.py changes only how the changeset guard recognises a release pull request, by one list of the files and lines the release writes with the self-host manifest's backbone_version among them, and rewrites that manifest line in place; the use case's release scope, gate, stabilisation guards and the release pull request that closes no issue are untouched, so its steps hold
+      unchanged-because: "#840's lint and format pass reshapes the anchored code without changing what it does, so this page still describes it as it is"
 ---
 
 # UC-005 — Cut a release while unfinished work remains

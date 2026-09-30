@@ -11,8 +11,9 @@ pkit:
         - .pkit/capabilities/demo-recording/decisions/**
       record: [COR-007, COR-016, COR-017, COR-020, COR-021, COR-023]
     revalidated:
-      at: 2026-09-29T15:17:26Z
-      outcome: updated
+      at: 2026-09-30T23:02:00Z
+      outcome: unchanged
+      unchanged-because: "#840's lint and format pass reshapes the anchored code without changing what it does, so this page still describes it as it is"
 ---
 
 # demo-recording capability

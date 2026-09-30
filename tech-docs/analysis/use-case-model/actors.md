@@ -40,6 +40,10 @@ ACT-operator:
         record:
           - project-management:DEC-035
           - project-management:DEC-045
+      revalidated:
+        at: 2026-09-30T23:02:10Z
+        outcome: unchanged
+        unchanged-because: "#840's lint and format pass reshapes the anchored code without changing what it does, so this page still describes it as it is"
 ---
 
 # Actors

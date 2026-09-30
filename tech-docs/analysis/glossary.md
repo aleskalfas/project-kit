@@ -24,6 +24,10 @@ TERM-instance:
           - project-management:DEC-035
           - project-management:DEC-043
           - ADR-041
+      revalidated:
+        at: 2026-09-30T23:02:14Z
+        outcome: unchanged
+        unchanged-because: "#840's lint and format pass reshapes the anchored code without changing what it does, so this page still describes it as it is"
 TERM-integration-branch:
   name: Integration branch
   status: active
@@ -48,9 +52,9 @@ TERM-intent-note:
         record:
           - project-management:DEC-044
       revalidated:
-        at: 2026-09-30T09:26:25Z
+        at: 2026-09-30T23:02:15Z
         outcome: unchanged
-        unchanged-because: start-work now cuts the branch from the commit the backbone resolves its base to, and refuses when the backbone cannot say which branch is settled (COR-054); where the first intent note will be written, and what a note is, do not depend on where the branch is cut from
+        unchanged-because: "#840's lint and format pass reshapes the anchored code without changing what it does, so this page still describes it as it is"
 TERM-new-front:
   name: New front
   status: active
@@ -63,9 +67,9 @@ TERM-new-front:
         record:
           - project-management:DEC-004
       revalidated:
-        at: 2026-09-30T09:26:26Z
+        at: 2026-09-30T23:02:15Z
         outcome: unchanged
-        unchanged-because: start-work now cuts the branch from the commit the backbone resolves its base to, and refuses when the backbone cannot say which branch is settled (COR-054); a front is still read from the hierarchy, and the start guard it anchors for is unbuilt
+        unchanged-because: "#840's lint and format pass reshapes the anchored code without changing what it does, so this page still describes it as it is"
 TERM-release-scope:
   name: Release scope
   status: active
@@ -107,9 +111,9 @@ TERM-stabilisation:
           - project-management:DEC-014
           - ADR-019
       revalidated:
-        at: 2026-09-30T17:57:53Z
+        at: 2026-09-30T23:02:16Z
         outcome: unchanged
-        unchanged-because: done-work's change is the declared In Progress → Review move it makes just before the merge for an issue that never reached Review, so the merge's move to Done is a declared one; what a stabilisation is, and what it lets start or land on the default branch, did not change
+        unchanged-because: "#840's lint and format pass reshapes the anchored code without changing what it does, so this page still describes it as it is"
 ---
 
 # Glossary

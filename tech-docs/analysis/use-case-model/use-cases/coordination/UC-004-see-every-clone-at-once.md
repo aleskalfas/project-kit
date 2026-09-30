@@ -16,6 +16,10 @@ pkit:
         - ADR-041
       artefact:
         - ACT-operator
+    revalidated:
+      at: 2026-09-30T23:02:19Z
+      outcome: unchanged
+      unchanged-because: "#840's lint and format pass reshapes the anchored code without changing what it does, so this page still describes it as it is"
 ---
 
 # UC-004 — See every clone's position at once

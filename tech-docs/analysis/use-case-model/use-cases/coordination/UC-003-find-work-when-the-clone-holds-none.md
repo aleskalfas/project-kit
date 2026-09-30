@@ -15,6 +15,10 @@ pkit:
         - project-management:DEC-026
       artefact:
         - ACT-clone-session
+    revalidated:
+      at: 2026-09-30T23:02:18Z
+      outcome: unchanged
+      unchanged-because: "#840's lint and format pass reshapes the anchored code without changing what it does, so this page still describes it as it is"
 ---
 
 # UC-003 — Find work when the clone holds none

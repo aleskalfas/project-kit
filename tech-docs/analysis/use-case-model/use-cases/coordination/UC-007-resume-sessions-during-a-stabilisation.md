@@ -20,9 +20,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-09-30T17:57:54Z
+      at: 2026-09-30T23:02:21Z
       outcome: unchanged
-      unchanged-because: done-work now moves a closing issue still In Progress to Review just before the merge instead of warning after it; how sessions resume during a stabilisation, and which work may land on the default branch while it is on, did not change
+      unchanged-because: "#840's lint and format pass reshapes the anchored code without changing what it does, so this page still describes it as it is"
 ---
 
 # UC-007 — Resume sessions killed during a stabilisation

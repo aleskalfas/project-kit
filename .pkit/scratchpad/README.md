@@ -9,8 +9,9 @@ pkit:
         - src/project_kit/scratchpads.py
       record: [COR-006, COR-012, COR-043]
     revalidated:
-      at: 2026-09-29T15:15:40Z
-      outcome: updated
+      at: 2026-09-30T23:02:10Z
+      outcome: unchanged
+      unchanged-because: "#840's lint and format pass reshapes the anchored code without changing what it does, so this page still describes it as it is"
 ---
 
 # Scratchpad notes

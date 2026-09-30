@@ -43,8 +43,9 @@ pkit:
         - src/project_kit/environment.py
       record: [COR-004, COR-012, COR-043, COR-048, COR-049, COR-050, COR-054, PRJ-001, PRJ-003, PRJ-004, ADR-033, ADR-039, ADR-049, ADR-058, ADR-059]
     revalidated:
-      at: 2026-09-30T19:20:59Z
-      outcome: updated
+      at: 2026-09-30T23:02:04Z
+      outcome: unchanged
+      unchanged-because: "#840's lint and format pass reshapes the anchored code without changing what it does, so this page still describes it as it is"
 ---
 
 # Command-line interface

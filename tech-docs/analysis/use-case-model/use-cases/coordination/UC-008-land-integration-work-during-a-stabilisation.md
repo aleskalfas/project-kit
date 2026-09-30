@@ -19,9 +19,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-09-30T17:57:56Z
+      at: 2026-09-30T23:02:22Z
       outcome: unchanged
-      unchanged-because: done-work's change is the lifecycle move it makes before the merge for an issue still In Progress, In Progress to Review; the branch a pull request targets, and how integration-branch work reaches the default branch during a stabilisation, did not change
+      unchanged-because: "#840's lint and format pass reshapes the anchored code without changing what it does, so this page still describes it as it is"
 ---
 
 # UC-008 — Land integration-branch work during a stabilisation

@@ -12,9 +12,9 @@ pkit:
         - src/project_kit/rule_sets.py
       record: [COR-001, COR-019, COR-025, COR-051, COR-053]
     revalidated:
-      at: 2026-09-29T17:22:05Z
+      at: 2026-09-30T23:02:04Z
       outcome: unchanged
-      unchanged-because: refs.py now reads the address word pattern from backbone_schemas instead of repeating it; record and address citation grammar are unchanged
+      unchanged-because: "#840's lint and format pass reshapes the anchored code without changing what it does; its one fix, pkit refs rename refusing an empty value with a message rather than a traceback, is below this page's level of detail"
 ---
 
 # Decision records
