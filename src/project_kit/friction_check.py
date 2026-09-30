@@ -436,6 +436,13 @@ def uncommitted_paths(root: Path) -> int:
 # --- one side of the diff -----------------------------------------------------
 
 
+# How a dead record or artefact anchor resolves to nothing; a path anchor's is `Side.why_dead`.
+_RESOLVES_NOTHING = {
+    "record": "names no record",
+    "artefact": "names no artefact in the declared places",
+}
+
+
 class Side:
     """One state of the repository as the check reads it: its files and its artefacts."""
 
@@ -477,6 +484,12 @@ class Side:
         listing = self.files if files is None else files
         return tuple(sorted(filter(self.stands_on(pattern), listing)))
 
+    def left_out(self, pattern: str) -> tuple[str, ...]:
+        """The files here a path anchor's `pattern` matches but does not stand on,
+        because `friction.exclude` leaves them out (COR-050 point 7), sorted."""
+        match = pattern_matcher(pattern)
+        return tuple(sorted(rel for rel in self.files if match(rel) and self.excluded(rel)))
+
     def resolves(self, anchor: Anchor) -> bool:
         """Whether an anchor of a core kind resolves to something here (COR-050 point 7)."""
         if anchor.kind == "path":
@@ -484,6 +497,18 @@ class Side:
         if anchor.kind == "record":
             return self.record_path(anchor.value) is not None
         return self.find(anchor.value) is not None
+
+    def why_dead(self, anchor: Anchor) -> str:
+        """How an anchor of a core kind that does not resolve here resolves to nothing.
+
+        A path anchor says which way it is dead (COR-050 point 7): it matches
+        no file, or only files `friction.exclude` leaves out — a typo and a
+        glob over excluded code read apart.
+        """
+        if anchor.kind == "path":
+            excluded = len(self.left_out(anchor.value))
+            return f"matches only excluded files ({excluded})" if excluded else "matches no file"
+        return _RESOLVES_NOTHING[anchor.kind]
 
     def record_path(self, value: str) -> str | None:
         """The file a record anchor names here, through the record resolver, or None."""
@@ -673,13 +698,6 @@ def _anchor_changed(
     return target is not None and (before is None or content(target) != content(before))
 
 
-RESOLVES_NOTHING = {
-    "path": "matches no file (or only excluded ones)",
-    "record": "names no record",
-    "artefact": "names no artefact in the declared places",
-}
-
-
 @dataclass(frozen=True)
 class _Question:
     """Something in the diff the artefact must answer."""
@@ -782,12 +800,12 @@ def _anchor_problem(
     if added:
         return (
             FindingKind.DEAD_ANCHOR,
-            f"{RESOLVES_NOTHING[anchor.kind]}; the anchor was added in this diff",
+            f"{head.why_dead(anchor)}; the anchor was added in this diff",
         )
     if base.resolves(anchor):
         return (
             FindingKind.DEAD_ANCHOR,
-            f"{RESOLVES_NOTHING[anchor.kind]}; the diff removed or moved its target",
+            f"{head.why_dead(anchor)}; the diff removed or moved its target",
         )
     return FindingKind.DEAD_ANCHOR, None
 

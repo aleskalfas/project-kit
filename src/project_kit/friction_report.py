@@ -26,9 +26,10 @@ never the working tree, as the check does; neither writes anything.
   entry — or an id; here it is looked up at HEAD. Its document also carries
   what a capability's reader would otherwise compute again (ADR-057 point 2):
   each path anchor's files at the revalidation point and at HEAD, matched as
-  the check matches them, `friction.exclude` applied; the commits behind a
-  dead path anchor; and the artefact's body as discovery reads it — for a
-  collection entry, the section headed by its id.
+  the check decides a dead anchor, `friction.exclude` applied, and the files
+  it leaves out; the commits behind a dead path anchor; and the artefact's
+  body as discovery reads it — for a collection entry, the section headed by
+  its id.
 """
 
 from __future__ import annotations
@@ -348,8 +349,9 @@ class ExplainedAnchor:
     """One anchor the artefact declares at HEAD, and what the check found about it.
 
     `files`, for a path anchor, are the files it stands on at the revalidation
-    point and at HEAD, as the check matches them (`fr.AnchorFiles`); `None` for
-    another kind.
+    point and at HEAD, as the check decides a dead anchor, and those its glob
+    covers at HEAD that `friction.exclude` leaves out (`fr.AnchorFiles`);
+    `None` for another kind.
     """
 
     anchor: Anchor

@@ -577,7 +577,7 @@ def test_dead_anchors_and_unresolved_kinds_are_all_reported(timeline: Timeline) 
         ("unresolved-kind", "docs/guide.md", "use-case:UC-1", None),
     ]
     assert [f.message for f in result.findings[:2]] == [
-        "matches no file (or only excluded ones)",
+        "matches no file",
         "names no record",
     ]
     assert "no installed component registers a resolver" in result.findings[2].message

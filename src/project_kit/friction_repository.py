@@ -61,7 +61,6 @@ from typing import Any
 
 from project_kit import cli_render
 from project_kit.friction_check import (
-    RESOLVES_NOTHING,
     SHORT,
     CommitTree,
     DiffEntry,
@@ -714,7 +713,7 @@ class _Judge:
         if self.head.resolves(anchor):
             return None
         return RepositoryFinding(
-            RepositoryFindingKind.DEAD_ANCHOR, RESOLVES_NOTHING[anchor.kind], anchor=anchor
+            RepositoryFindingKind.DEAD_ANCHOR, self.head.why_dead(anchor), anchor=anchor
         )
 
     def over_broad(self, anchor: Anchor) -> RepositoryFinding | None:
@@ -1029,8 +1028,8 @@ def _uncovered_surface(head: Side, discovery: Discovery) -> tuple[int, tuple[str
 # `pkit friction explain` judges one artefact exactly as the check does — through
 # `_check_artefact`, on a judge built as `run_repository_check` builds it — and adds,
 # per finding, the commits behind it, read from the same history by the same rules,
-# and per path anchor the files it stands on, matched by the same rule the check
-# decides a dead anchor by (`Side.matching`).
+# and per path anchor the files it stands on, matched by the rule the check decides
+# a dead anchor by (`Side.matching`), with those `friction.exclude` leaves out.
 
 
 @dataclass(frozen=True)
@@ -1053,19 +1052,30 @@ class TracedFinding:
 
 @dataclass(frozen=True)
 class AnchorFiles:
-    """The files a path anchor stands on, at the revalidation point and at HEAD.
+    """The files a path anchor stands on at the revalidation point and at HEAD, and
+    the files at HEAD its glob covers that `friction.exclude` leaves out.
 
-    Each sorted, matched as the check matches an anchor (`Side.matching`):
-    HEAD's `friction.exclude` leaves a file out at either state, the rule the
-    check reads history by. `point` is `None` when the revalidation point lies
-    beyond a shallow clone's history. HEAD's files are empty for a dead anchor.
+    Each sorted. `point` and `head` are matched as the check decides a dead
+    anchor (`Side.matching`) — never as it decides a changed one, which reads
+    the paths commits touched, the artefact's own file left out (a finding's
+    commits carry those). Both states are read under HEAD's exclusions, the
+    rule the check reads history by. `point` is `None` when the revalidation
+    point lies beyond a shallow clone's history. `head` is empty for a dead
+    anchor, and `excluded` (`Side.left_out`) says whether it is dead by a
+    typo — nothing excluded either — or by a glob that covers only excluded
+    files.
     """
 
     point: tuple[str, ...] | None
     head: tuple[str, ...]
+    excluded: tuple[str, ...]
 
     def as_json(self) -> dict[str, list[str] | None]:
-        return {"point": None if self.point is None else list(self.point), "head": list(self.head)}
+        return {
+            "point": None if self.point is None else list(self.point),
+            "head": list(self.head),
+            "excluded": list(self.excluded),
+        }
 
 
 @dataclass(frozen=True)
@@ -1136,7 +1146,8 @@ def run_artefact_check(
 def _anchor_files(
     target_root: Path, head: Side, artefact: Artefact, point: Commit | None
 ) -> dict[Anchor, AnchorFiles]:
-    """Each path anchor's files at the revalidation point and at HEAD (`AnchorFiles`).
+    """Each path anchor's files at the revalidation point and at HEAD, and those
+    `friction.exclude` leaves out at HEAD (`AnchorFiles`).
 
     The point's files are listed from git objects, once, and only when the
     artefact has a path anchor; both states are matched under HEAD's exclusions.
@@ -1149,6 +1160,7 @@ def _anchor_files(
         anchor: AnchorFiles(
             None if listed is None else head.matching(anchor.value, listed),
             head.matching(anchor.value),
+            head.left_out(anchor.value),
         )
         for anchor in anchors
     }

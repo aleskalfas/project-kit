@@ -515,7 +515,9 @@ def test_explain_in_a_shallow_clone(timeline: Timeline, tmp_path: Path) -> None:
     assert (explanation.state, explanation.shallow) == ("unreachable", True)
     assert [a.state for a in explanation.anchors] == ["unreachable"]
     # The point lies beyond the clone, so its files cannot be listed; HEAD's can.
-    assert [a.files for a in explanation.anchors] == [fr.AnchorFiles(None, ("src/cli/main.py",))]
+    assert [a.files for a in explanation.anchors] == [
+        fr.AnchorFiles(None, ("src/cli/main.py",), ())
+    ]
     (finding,) = explanation.findings
     assert finding.finding.kind is fr.RepositoryFindingKind.UNREACHABLE
     assert finding.clears == "fetch the full history (`git fetch --unshallow`) and run again"
@@ -555,7 +557,7 @@ def test_explain_json_document_shape(timeline: Timeline) -> None:
             "state": "stale",
             "changes": 1,
             "over_broad": False,
-            "files": {"point": ["src/cli/main.py"], "head": ["src/cli/main.py"]},
+            "files": {"point": ["src/cli/main.py"], "head": ["src/cli/main.py"], "excluded": []},
         }
     ]
     (finding,) = doc["findings"]
@@ -604,15 +606,16 @@ def test_explain_lists_each_path_anchors_files_at_the_point_and_at_head(
             fr.AnchorFiles(
                 point=("src/cli/main.py", "src/cli/old.py"),
                 head=("src/cli/main.py", "src/cli/new.py"),
+                excluded=("src/cli/vendor/lib.py",),
             ),
         ),
         (
             "src/core/**",
             "current",
-            fr.AnchorFiles(("src/core/engine.py",), ("src/core/engine.py",)),
+            fr.AnchorFiles(("src/core/engine.py",), ("src/core/engine.py",), ()),
         ),
         # Only excluded files match it: dead, standing on nothing at either state.
-        ("src/cli/vendor/**", "dead-anchor", fr.AnchorFiles((), ())),
+        ("src/cli/vendor/**", "dead-anchor", fr.AnchorFiles((), (), ("src/cli/vendor/lib.py",))),
         ("ADR-404", "dead-anchor", None),
     ]
     by_anchor = {f.finding.anchor: f for f in explanation.findings}
@@ -627,6 +630,7 @@ def test_explain_lists_each_path_anchors_files_at_the_point_and_at_head(
     assert listed["src/cli/**"] == {
         "point": ["src/cli/main.py", "src/cli/old.py"],
         "head": ["src/cli/main.py", "src/cli/new.py"],
+        "excluded": ["src/cli/vendor/lib.py"],
     }
     assert listed["ADR-404"] is None
     assert all(
@@ -635,6 +639,39 @@ def test_explain_lists_each_path_anchors_files_at_the_point_and_at_head(
         if files is not None
         for state in ("point", "head")
     )
+
+
+def test_a_dead_path_anchor_says_whether_it_matches_no_file_or_only_excluded_ones(
+    timeline: Timeline,
+) -> None:
+    """A typo and a glob covering only excluded files are both dead (COR-050 point 7), and
+    read apart: the finding's message says which, and `files.excluded` lists what is left out."""
+    anchors = {"path": ["src/cli/**", "src/clj/**", "src/cli/vendor/**"]}
+    vendored = {"src/cli/vendor/a.py": "A = 1\n", "src/cli/vendor/b.py": "B = 1\n"}
+    timeline.start(
+        {"docs/guide.md": guide(anchors=anchors), **vendored},
+        friction_config(exclude=["src/cli/vendor/**"]),
+    )
+
+    explanation = frep.run_explain(timeline.adopter.root, "guide")
+    dead = {
+        f.finding.anchor.value: f.finding.message
+        for f in explanation.findings
+        if f.finding.anchor is not None and f.finding.kind is fr.RepositoryFindingKind.DEAD_ANCHOR
+    }
+    assert dead == {
+        "src/clj/**": "matches no file",
+        "src/cli/vendor/**": "matches only excluded files (2)",
+    }
+    doc = json.loads(frep.render_explain_json(explanation))
+    assert {a["value"]: a["files"]["excluded"] for a in doc["anchors"]} == {
+        "src/cli/**": ["src/cli/vendor/a.py", "src/cli/vendor/b.py"],
+        "src/clj/**": [],
+        "src/cli/vendor/**": ["src/cli/vendor/a.py", "src/cli/vendor/b.py"],
+    }
+    human = frep.render_explain_human(explanation, now=NOW)
+    assert "src/cli/vendor/**  dead-anchor  matches only excluded files (2)" in human
+    assert "src/clj/**         dead-anchor  matches no file" in human
 
 
 def test_explain_names_the_commits_behind_a_dead_path_anchor(timeline: Timeline) -> None:
@@ -653,8 +690,13 @@ def test_explain_names_the_commits_behind_a_dead_path_anchor(timeline: Timeline)
     assert (dead.finding.kind.value, dead.finding.anchor) == ("dead-anchor", old_anchor)
     assert [c.sha for c in dead.commits] == [changed, removed]
     assert [(a.anchor, a.state, a.changes, a.files) for a in explanation.anchors] == [
-        (CLI, "current", 0, fr.AnchorFiles(("src/cli/main.py",), ("src/cli/main.py",))),
-        (old_anchor, "dead-anchor", 0, fr.AnchorFiles(("src/old/a.py", "src/old/b.py"), ())),
+        (CLI, "current", 0, fr.AnchorFiles(("src/cli/main.py",), ("src/cli/main.py",), ())),
+        (
+            old_anchor,
+            "dead-anchor",
+            0,
+            fr.AnchorFiles(("src/old/a.py", "src/old/b.py"), (), ()),
+        ),
     ]
     (finding,) = json.loads(frep.render_explain_json(explanation))["findings"]
     assert [(c["commit"], c["change"]) for c in finding["commits"]] == [
