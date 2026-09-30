@@ -17,6 +17,10 @@ pkit:
       artefact:
         - ACT-clone-session
         - ACT-developer-subagent
+    revalidated:
+      at: 2026-09-30T09:26:39Z
+      outcome: unchanged
+      unchanged-because: start-work now cuts the branch from the commit the backbone resolves its base to — the remote's copy, the local branch only without a remote — and refuses when the backbone cannot say which branch is settled (COR-054); the clone session still starts the Task before it dispatches the subagent
 ---
 
 # UC-009 — Delegate a task to a developer subagent

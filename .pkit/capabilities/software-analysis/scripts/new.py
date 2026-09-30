@@ -20,9 +20,11 @@ time an artefact is placed there (COR-049 point 5):
 - a term, the entry `TERM-<slug>` of `glossary.md`.
 
 A use case or journey takes the next free number on the default branch — every
-number its history ever gave a file included — and in the working tree; `pkit
-analysis check-numbers` reports a number another branch took first.
-`_lib/stamp.py` states the rules.
+number its history ever gave a file included — on a base named with `--base`,
+and in the working tree; `$PKIT_CHECK_BASE`, a pipeline's base for its checks,
+never moves where it numbers from (COR-054 point 3). `pkit analysis
+check-numbers` reports a number another branch took first. `_lib/stamp.py`
+states the rules.
 
 It also writes a revalidation record, `revalidations/<date>-<slug>.md`, and only
 one with something to say — a planned revalidation, one that found a
@@ -107,8 +109,8 @@ def _parser() -> argparse.ArgumentParser:
             "--base",
             metavar="REF",
             default=None,
-            help=f"The default branch whose ids count as taken (default: "
-            f"${backbone.BASE_ENV}, else {backbone.DEFAULT_BASE}).",
+            help="A branch whose ids count as taken beside the default branch's, which always "
+            "do; $PKIT_CHECK_BASE never does.",
         )
         return sub
 
@@ -244,7 +246,7 @@ def _stamp_artefact(args: argparse.Namespace) -> stamp.Stamped:
         records=tuple(args.records),
         unanchored_because=getattr(args, "unanchored_because", None),
     )
-    return stamp.stamp(backbone.project_root(), request, args.base or backbone.default_base())
+    return stamp.stamp(backbone.project_root(), request, args.base)
 
 
 def main() -> int:

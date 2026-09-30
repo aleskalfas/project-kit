@@ -952,7 +952,9 @@ def test_the_base_comes_from_the_environment(repo: AdopterRepo) -> None:
     _start(repo, {"docs/guide.md": guide()})
     result = _cli("--json", env={fc.BASE_ENV: "main"})
     assert result.exit_code == 0, result.output
-    assert json.loads(result.output)["base"]["ref"] == "main"
+    assert json.loads(result.stdout)["base"]["ref"] == "main"
+    # No remote here: the base is read from the local branch, and the check says so.
+    assert "warning: the base 'main' is read from the local branch 'main'" in result.stderr
 
 
 def test_dormant_without_places(repo: AdopterRepo) -> None:
@@ -998,7 +1000,7 @@ def test_json_document_shape(repo: AdopterRepo) -> None:
     repo.commit("change the CLI only", {"src/cli/main.py": "print('j')\n"})
     result = _cli("--base", "main", "--json")
     assert result.exit_code == 1
-    document = json.loads(result.output)
+    document = json.loads(result.stdout)
     assert sorted(document) == [
         "base",
         "check",

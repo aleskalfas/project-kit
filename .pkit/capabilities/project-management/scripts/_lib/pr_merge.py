@@ -36,6 +36,7 @@ import subprocess
 import sys
 from typing import Any
 
+from _lib import default_branch
 from _lib.gh import gh_run
 
 _ALREADY_DELETED_MARKER = "Reference does not exist"
@@ -132,8 +133,10 @@ def cleanup_local(
 ) -> None:
     """Switch to the default branch, fast-forward it, delete the local head — best-effort.
 
-    The default branch is the adopter's `default_branch` (`main` when the
-    config does not declare one). Every step warns with git's reason and
+    The default branch is the project's, as the backbone declares it (COR-054;
+    `_lib/default_branch`); when the backbone cannot say which it is, the
+    clean-up is skipped with the cause rather than switch to a guessed branch.
+    Every step warns with git's reason and
     continues; none can fail the run. When the checkout cannot happen
     (detached HEAD, the default branch checked out in another worktree) the
     pull is skipped — pulling into whatever IS checked out would be wrong —
@@ -145,17 +148,25 @@ def cleanup_local(
     sharing the fork branch's name is not that PR's head, and `-D` would
     discard its unpushed work.
     """
-    default_branch = str(config.get("default_branch") or "main")
+    try:
+        settled = default_branch.name(config)
+    except default_branch.Unanswered as exc:
+        print(
+            f"[warn] the local clean-up is skipped: {exc}. Switch to the default branch, "
+            f"pull it and delete {branch} yourself.",
+            file=sys.stderr,
+        )
+        return
 
     def _git(*argv: str) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
             ["git", *argv], capture_output=True, text=True, check=False,
         )
 
-    proc = _git("checkout", default_branch)
+    proc = _git("checkout", settled)
     if proc.returncode != 0:
         print(
-            f"[warn] git checkout {default_branch} failed: {proc.stderr.strip()}",
+            f"[warn] git checkout {settled} failed: {proc.stderr.strip()}",
             file=sys.stderr,
         )
     else:

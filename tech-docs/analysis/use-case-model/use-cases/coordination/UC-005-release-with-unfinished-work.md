@@ -21,9 +21,9 @@ pkit:
       artefact:
         - ACT-operator
     revalidated:
-      at: 2026-09-30T05:35:17Z
+      at: 2026-09-30T06:58:24Z
       outcome: unchanged
-      unchanged-because: the release step now holds an explicit floor to a release the tree records, sets a tied floor from the explicit declaration, punctuates the changelog sentence and warns before confirming when --no-broaden leaves a range excluding the shipped backbone, and PRJ-002 D4 says so; the operator's path through readiness, deferral, apply and the release pull request is the same
+      unchanged-because: "project-management's config no longer declares default_branch: the default branch is the backbone's repository.default-branch, main when undeclared (COR-054), so landed work is still read from the same branch, and the Milestone categories this use case relies on are unchanged"
 ---
 
 # UC-005 — Cut a release while unfinished work remains

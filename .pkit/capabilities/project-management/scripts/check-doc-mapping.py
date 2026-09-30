@@ -57,10 +57,15 @@ keep those advisory (enforce: false) or don't map them. The mandatory
 `## Doc impact` section remains the universal hard gate; this adds targeted
 enforcement on couplings that genuinely move together.
 
-Diff source: `--base <ref>` (default origin/main). Changed files come from
-`git diff --name-only --diff-filter=ACMRT <base>...HEAD` — added/copied/
-modified/renamed/type-changed; a *deletion* of a code file does not demand a
-doc.
+Diff source: the base — `--base <ref>`, else $PKIT_CHECK_BASE, else the
+default branch — and where HEAD left it, both as the backbone names them
+(`pkit repository base --json`, COR-054), so the check neither resolves a base
+nor computes a merge-base itself. A base that cannot be compared refuses the
+check with the backbone's reason and fix, as the friction change check does; a
+check with no rules and no obligations compares nothing and reads no base.
+Changed files come from `git diff --name-only --diff-filter=ACMRT <fork> HEAD`
+— added/copied/modified/renamed/type-changed; a *deletion* of a code file does
+not demand a doc.
 
 Override (bypassable-with-audit): a line in the PR body's `## Doc impact`
 section that names the triggering code path (or the rule's code glob) marks that
@@ -73,7 +78,8 @@ its filler file); the check prints each one removed.
 Exit codes:
   0  every enforced obligation met (or enforcement off / nothing to check)
   1  an enforced obligation unmet (the mapping with enforce on; a contributed
-     source set enforcing), or the doc-check point does not resolve
+     source set enforcing), the doc-check point does not resolve, or the
+     base cannot be compared
   2  usage error (bad config, git failure, the point unreadable)
 """
 
@@ -89,7 +95,7 @@ from ruamel.yaml import YAML
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate, doc_check  # noqa: E402
+from _lib import bootstrap_gate, default_branch, doc_check  # noqa: E402
 from _lib.gh import gh_run, load_adopter_config  # noqa: E402
 from _lib.membership import (  # noqa: E402
     CAPABILITY_NAME,
@@ -97,11 +103,11 @@ from _lib.membership import (  # noqa: E402
 )
 
 
-def _changed_files(base: str) -> list[str] | None:
-    """Non-deleted files changed between merge-base(base, HEAD) and HEAD."""
+def _changed_files(fork: str) -> list[str] | None:
+    """Non-deleted files changed between `fork` — where HEAD left the base — and HEAD."""
     try:
         proc = subprocess.run(
-            ["git", "diff", "--name-only", "--diff-filter=ACMRT", f"{base}...HEAD"],
+            ["git", "diff", "--name-only", "--diff-filter=ACMRT", fork, "HEAD"],
             capture_output=True, text=True, check=False,
         )
     except FileNotFoundError:
@@ -109,7 +115,7 @@ def _changed_files(base: str) -> list[str] | None:
         return None
     if proc.returncode != 0:
         print(
-            f"error: git diff against {base!r} failed: {proc.stderr.strip()}",
+            f"error: git diff from {fork[:12]} failed: {proc.stderr.strip()}",
             file=sys.stderr,
         )
         return None
@@ -167,8 +173,11 @@ def main() -> int:
         ),
     )
     parser.add_argument(
-        "--base", default="origin/main",
-        help="Base ref to diff HEAD against (default: origin/main).",
+        "--base", default=None,
+        help=(
+            "Base ref to diff HEAD against (default: $PKIT_CHECK_BASE, else the "
+            "default branch — `pkit repository base` shows it, COR-054)."
+        ),
     )
     parser.add_argument(
         "--pr-body-file", default=None,
@@ -222,7 +231,16 @@ def main() -> int:
         print("check-doc-mapping: no rules configured; skipped.")
         return 0
 
-    changed = _changed_files(args.base)
+    try:
+        base = default_branch.check_base(args.base)
+    except default_branch.Unanswered as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+    if base.problem is not None or base.fork is None:
+        why = base.problem or f"the base {base.ref!r} cannot be compared."
+        print(f"error: {why}", file=sys.stderr)
+        return 1
+    changed = _changed_files(base.fork)
     if changed is None:
         return 2
     changed_set = set(changed)

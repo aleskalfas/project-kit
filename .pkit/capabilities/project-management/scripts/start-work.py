@@ -52,6 +52,7 @@ from _lib import (  # noqa: E402
     axis_labels,
     bootstrap_gate,
     classification_rules,
+    default_branch,
     lifecycle_inference as infer,
     session_guard,
 )
@@ -193,7 +194,11 @@ def main() -> int:
     # Branch base (#835): the default branch, or a DEC-013 integration branch when
     # the issue is marked — never the incidental HEAD. Shared with the PR-opening
     # verbs so the PR targets the branch this one was cut from (#903).
-    base = infer.resolve_base_branch(config, str(issue.get("body") or ""))
+    try:
+        base = infer.resolve_base_branch(config, str(issue.get("body") or ""))
+    except default_branch.Unanswered as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
 
     print(f"start-work: #{args.issue_number}")
     print(f"  branch:    {branch_name}")
@@ -439,35 +444,46 @@ def _branch_matches_shape(name: str, issue_number: int) -> bool:
 
 def _create_branch(name: str, base: str) -> bool:
     """Create `name` off `base` — the default branch or a DEC-013 integration
-    branch (#835) — NOT off the incidental `HEAD`. The base is fetched first so the
-    branch is cut from an up-to-date ref; fetch failure (e.g. offline) degrades to
-    the local `base` ref."""
-    fetched = subprocess.run(
-        ["git", "fetch", "origin", base],
-        capture_output=True, text=True, check=False,
-    ).returncode == 0
-    start_point = f"origin/{base}" if fetched else base
+    branch (#835) — NOT off the incidental `HEAD`. It is cut from the commit the
+    backbone resolves `base` to, as it resolves every branch named as a base
+    (COR-054 point 2): the remote-tracking reference of its upstream, else
+    `origin/<base>`, and the local branch only when there is no remote. The
+    remote's copy is fetched first, best-effort, so the cut is up to date; a base
+    that resolves nowhere refuses with the backbone's reason and fix — the branch
+    is never cut from a guess."""
+    _fetch("origin", base)
+    try:
+        found = default_branch.branch(base)
+        remote, slash, _rest = found.ref.partition("/")
+        if found.tip is not None and slash and remote != "origin" and _fetch(remote, base):
+            found = default_branch.branch(base)  # the upstream is another remote's: fetched too
+    except default_branch.Unanswered as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return False
+    if found.tip is None:
+        print(f"error: cannot cut {name!r} from {base!r}: {found.problem}", file=sys.stderr)
+        return False
     proc = subprocess.run(
-        ["git", "checkout", "-b", name, start_point],
+        ["git", "checkout", "-b", name, found.tip],
         capture_output=True, text=True, check=False,
     )
-    if proc.returncode != 0 and start_point != base:
-        # origin/<base> unresolvable (e.g. base not on origin) — fall back to the
-        # local base ref before giving up.
-        start_point = base
-        proc = subprocess.run(
-            ["git", "checkout", "-b", name, base],
-            capture_output=True, text=True, check=False,
-        )
     if proc.returncode != 0:
         print(
-            f"error: git checkout -b {name!r} off {base!r} failed: "
+            f"error: git checkout -b {name!r} off {found.ref!r} failed: "
             f"{proc.stderr.strip()}",
             file=sys.stderr,
         )
         return False
-    print(f"  created branch: {name} (off {start_point})")
+    print(f"  created branch: {name} (off {found.ref} at {found.tip[:12]})")
     return True
+
+
+def _fetch(remote: str, branch: str) -> bool:
+    """Fetch `branch` from `remote`, best-effort: whether it was fetched."""
+    return subprocess.run(
+        ["git", "fetch", remote, branch],
+        capture_output=True, text=True, check=False,
+    ).returncode == 0
 
 
 def _set_assignee(issue_number: int, login: str, config: dict) -> bool:

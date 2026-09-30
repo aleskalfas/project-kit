@@ -48,6 +48,7 @@ from _lib import (  # noqa: E402
     axis_labels,
     bootstrap_gate,
     classification_rules,
+    default_branch,
     pr_validation,
     session_guard,
 )
@@ -92,7 +93,8 @@ def main() -> int:
         help=(
             "Base branch for a newly opened PR (default: the issue's DEC-013 "
             "integration branch when its body carries an `Integration:` marker, "
-            "else the adopter's `default_branch`). Not applied to an existing PR."
+            "else the project's default branch — the backbone's "
+            "`repository.default-branch`, COR-054). Not applied to an existing PR."
         ),
     )
     parser.add_argument(
@@ -174,9 +176,13 @@ def main() -> int:
 
     # Base branch (DEC-013, #903): --base, else the issue's integration marker,
     # else default_branch — the resolution start-work cut the branch by.
-    base = infer.resolve_base_branch(
-        config, str(issue.get("body") or ""), explicit=args.base
-    )
+    try:
+        base = infer.resolve_base_branch(
+            config, str(issue.get("body") or ""), explicit=args.base
+        )
+    except default_branch.Unanswered as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
 
     print(f"review-work: #{args.issue_number}")
     print(f"  branch: {branch}")

@@ -71,6 +71,7 @@ from _lib import (  # noqa: E402
     axis_labels,
     bootstrap_gate,
     classification_rules,
+    default_branch,
     doc_impact,
     pr_validation,
     provenance,
@@ -166,7 +167,7 @@ def main() -> int:
         action="store_true",
         help=(
             "Render the `## Doc impact` section from `pkit friction check --json` "
-            "against origin/<base>: one bullet per answer the changed pages carry. "
+            "against the base: one bullet per answer the changed pages carry. "
             "Fills only an unwritten section (the template's placeholder, empty, "
             "or absent); an authored one is left as it is. Rendering only: the "
             "section meets no documentation obligation (DEC-053)."
@@ -178,7 +179,8 @@ def main() -> int:
         help=(
             "Base branch (default: the closing issue's DEC-013 integration "
             "branch when its body carries an `Integration:` marker, else the "
-            "adopter's `default_branch` in project/config.yaml)."
+            "project's default branch — the backbone's `repository.default-branch`, "
+            "COR-054)."
         ),
     )
     parser.add_argument(
@@ -317,9 +319,13 @@ def main() -> int:
 
     # Base branch (DEC-013, #903): --base, else the closing issue's integration
     # marker, else default_branch — the resolution start-work cut the branch by.
-    base = infer.resolve_base_branch(
-        config, str(issue.get("body") or ""), explicit=args.base
-    )
+    try:
+        base = infer.resolve_base_branch(
+            config, str(issue.get("body") or ""), explicit=args.base
+        )
+    except default_branch.Unanswered as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
 
     # Build the PR body.
     body = _build_pr_body(
@@ -331,7 +337,7 @@ def main() -> int:
         return 2
     doc_impact_note = None
     if args.doc_impact_from_friction:
-        body, doc_impact_note = _prefill_doc_impact(body, base)
+        body, doc_impact_note = _prefill_doc_impact(body, _check_base_for(base, config))
     # Seam: stamp exactly one provenance footer onto the PR body (ADR-037).
     body = provenance.stamp(body, provenance.read_versions(capability_root))
 
@@ -533,10 +539,23 @@ def _strip_html_comments(text: str) -> str:
     return re.sub(r"<!--.*?-->\s*", "", text, flags=re.DOTALL)
 
 
-def _prefill_doc_impact(body: str, base: str) -> tuple[str, str]:
+def _check_base_for(base: str, config: dict) -> str | None:
+    """What the change check is told to compare with for a PR against `base`:
+    nothing for the default branch — the check's own base is that branch — else
+    `base`, which the check resolves as it resolves every branch named as a base
+    (COR-054 point 2). Where the backbone cannot say which the default branch
+    is, `base` is named: the pre-fill never refuses."""
+    try:
+        return None if base == default_branch.name(config) else base
+    except default_branch.Unanswered:
+        return base
+
+
+def _prefill_doc_impact(body: str, base: str | None) -> tuple[str, str]:
     """`body` with its unwritten `## Doc impact` section rendered from the
-    change check's answers, and one line saying what happened. Never refuses:
-    no answers, or no check to read, leave the body as it was."""
+    change check's answers against `base` (`None`: the check's own), and one
+    line saying what happened. Never refuses: no answers, or no check to read,
+    leave the body as it was."""
     document = _friction_check(base)
     if document is None:
         return body, "not pre-filled — `pkit friction check --json` gave no document"
@@ -559,11 +578,13 @@ def _prefill_doc_impact(body: str, base: str) -> tuple[str, str]:
     return body, f"pre-filled from `pkit friction check` ({len(lines)} answer(s))"
 
 
-def _friction_check(base: str) -> dict | None:
-    """`pkit friction check --json` against origin/<base>, or None. The check
-    exits 1 in enforcing mode on friction and still prints its document, so
-    the document decides, not the exit code."""
-    argv = ["pkit", "friction", "check", "--json", "--base", f"origin/{base}"]
+def _friction_check(base: str | None) -> dict | None:
+    """`pkit friction check --json` against `base`, or None. The check resolves the
+    base as it resolves every branch named as one (COR-054 point 2), so for the
+    default branch no `--base` is passed at all: its own base is that branch. It
+    exits 1 in enforcing mode on friction and still prints its document, so the
+    document decides, not the exit code."""
+    argv = ["pkit", "friction", "check", "--json", *(["--base", base] if base else [])]
     try:
         proc = subprocess.run(argv, capture_output=True, text=True, check=False)
     except FileNotFoundError:
