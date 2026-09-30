@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-09-29T23:19:16Z
+      at: 2026-09-30T01:08:24Z
       outcome: unchanged
-      unchanged-because: the CLI README now says the friction writers refuse a justification or reason still holding a placeholder, inside the revalidate and defer sections; the area map and the CLI area's one-line description hold
+      unchanged-because: the CLI README now says the whole-repository check, the debt listing and the explanation leave an artefact under an excluded path out (#1136), inside its friction section; the area map holds
 ---
 
 # project-kit
