@@ -641,7 +641,9 @@ def connections_resolve(address: str, as_json: bool) -> None:
     or `additive` point, each with its origin — how it resolved, or why it did
     not, and every filler considered. Read-only; only this point resolves, so
     only its command fillers run, as they do there, offline-marked and
-    bounded. It is how a capability's own script
+    bounded. Inside a run of `pkit validate` — a validator reading the point —
+    it prints the point as the run resolved it, resolving nothing (`from:
+    run-cache` in the document). It is how a capability's own script
     reads a point it defines without importing the backbone. Exit 0 when the
     point resolves; 1 when it does not, or when no active provider defines it,
     and the output says why.
@@ -661,10 +663,14 @@ def connections_resolve(address: str, as_json: bool) -> None:
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
-    point, why = data_points.resolve_point(target_root, address)
+    point = data_points.shared_point(target_root, address)
+    source, why = data_points.FROM_RUN_CACHE, ""
+    if point is None:
+        source = data_points.FROM_RESOLUTION
+        point, why = data_points.resolve_point(target_root, address)
     if as_json:
         document = (
-            data_points.point_document(point)
+            data_points.point_document(point, source=source)
             if point is not None
             else data_points.undefined_document(address, why)
         )

@@ -7,6 +7,9 @@ removal overrides, the contributor selection, the inert policy — and the
 from __future__ import annotations
 
 import json
+import os
+import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -861,6 +864,7 @@ def test_resolve_prints_the_point_as_the_status_report_resolves_it(repo: Adopter
     assert json.loads(result.output) == {
         "address": READERS,
         "defined": True,
+        "from": "resolution",
         "provider": "docs-a",
         "policy": "additive",
         "inert_policy": "fallback",
@@ -930,6 +934,7 @@ def test_resolve_an_address_nothing_defines_exits_1_and_says_why(repo: AdopterRe
     assert json.loads(result.output) == {
         "address": READERS,
         "defined": False,
+        "from": "resolution",
         "resolved": False,
         "value": None,
         "why": "role 'pkit::documentation' has no active provider",
@@ -1035,3 +1040,131 @@ def test_a_point_resolved_first_is_shared_by_the_whole_resolution_of_the_run(
     started.clear()
     assert whole == dp.resolve_data_points(repo.root)
     assert sorted(started) == ["evidence", "notes"]
+
+
+# --- one resolution across the processes of a `pkit validate` run (#1144) -------
+
+
+def _point_reader(repo: AdopterRepo, name: str, address: str = READERS) -> None:
+    """A capability whose validator reads `address` as a capability script does —
+    `pkit connections resolve --json`, in a process of its own — and reports
+    where the document came from, and why the point does not resolve, with each
+    inert filler's reason."""
+    leaf = {"script": "scripts/check.py", "help": "Read the point.", "query-contract": True}
+    _stage(
+        repo,
+        name,
+        {},
+        commands={"check": leaf},
+        validators={"points": {"command": "check"}},
+    )
+    script = repo.pkit / "capabilities" / name / "scripts" / "check.py"
+    script.write_text(
+        f"#!{sys.executable}\n"
+        "import json, subprocess\n"
+        f"argv = ['pkit', 'connections', 'resolve', {address!r}, '--json']\n"
+        "doc = json.loads(subprocess.run(argv, capture_output=True, text=True).stdout)\n"
+        "inert = [\n"
+        "    f['name'] + ': ' + f['reason'] for f in doc['fillers'] if f['state'] == 'inert'\n"
+        "]\n"
+        "message = '; '.join([doc['why'], *inert])\n"
+        "findings = [] if doc['resolved'] else [\n"
+        "    {'severity': 'error', 'location': 'point', 'message': message}\n"
+        "]\n"
+        "print(json.dumps({'summary': ['from ' + doc['from']], 'findings': findings}))\n",
+        encoding="utf-8",
+    )
+    script.chmod(0o755)
+
+
+def test_within_one_validate_a_point_resolves_once_and_nested_readers_reuse_it(
+    repo: AdopterRepo, pkit_on_path: Path
+) -> None:
+    _provider(repo)
+    _command_contributor(repo, "evidence", _printing(ANSWER))
+    _point_reader(repo, "reader-a")
+    _point_reader(repo, "reader-b")
+    result = CliRunner().invoke(main, ["validate", "--no-refs"])
+    assert result.exit_code == 0, result.output
+    # The `connections` member resolved it; both validators read that resolution.
+    assert len(_runs(repo)) == 1
+    assert result.output.count("from run-cache") == 2, result.output
+    # Without the member, the first reader resolves it and the second reads that.
+    _log(repo).unlink()
+    only = CliRunner().invoke(
+        main, ["validate", "--only", "reader-a:points", "--only", "reader-b:points"]
+    )
+    assert only.exit_code == 0, only.output
+    assert len(_runs(repo)) == 1
+    sources = [
+        line.strip() for line in only.output.splitlines() if line.strip().startswith("from ")
+    ]
+    assert sources == ["from resolution", "from run-cache"]
+
+
+def test_outside_a_validate_run_a_reading_command_resolves_the_point_itself(
+    repo: AdopterRepo, pkit_on_path: Path
+) -> None:
+    _provider(repo)
+    _command_contributor(repo, "evidence", _printing(ANSWER))
+    assert json.loads(_resolve_cli(READERS, "--json").output)["from"] == "resolution"
+    assert json.loads(_resolve_cli(READERS, "--json").output)["from"] == "resolution"
+    assert len(_runs(repo)) == 2
+
+
+def test_a_filler_a_nested_reader_starts_ends_by_the_outer_deadline_and_is_named(
+    repo: AdopterRepo, pkit_on_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # The filler hangs, having started a `pkit` reading command of its own. The
+    # nested `pkit connections resolve` bounds it by what remains of the
+    # validator's run, less the time the validator keeps to answer: the filler
+    # is the one named, and its child ends with the run.
+    _provider(repo, inert="fail")
+    body = (
+        "import subprocess\n"
+        "child = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(60)'])\n"
+        f"open({str(repo.root / '.git' / 'child.pid')!r}, 'w').write(str(child.pid))\n"
+        "time.sleep(60)\n"
+    )
+    _command_contributor(repo, "evidence", body)
+    _point_reader(repo, "reader")
+    monkeypatch.setattr(command_runner, "COMMAND_TIMEOUT_SECONDS", 6)
+    monkeypatch.setattr(command_runner, "ANSWER_MARGIN_SECONDS", 3)
+    started = time.monotonic()
+    result = CliRunner().invoke(main, ["validate", "--only", "reader:points"])
+    assert time.monotonic() - started < 6  # the validator answered within its bound
+    assert result.exit_code == 1, result.output
+    assert "from resolution" in result.output
+    assert "evidence: command 'export' did not answer within " in result.output
+    child = int((repo.root / ".git" / "child.pid").read_text())
+    for _ in range(50):
+        try:
+            os.kill(child, 0)
+        except ProcessLookupError:
+            break
+        time.sleep(0.1)
+    else:
+        os.kill(child, 9)
+        pytest.fail("the filler's child outlived the run")
+
+
+def test_a_resolved_point_reads_back_from_its_document(repo: AdopterRepo) -> None:
+    _provider(repo, combination="additive", default={"value": ["d1"], "participation": "always"})
+    _command_contributor(repo, "notes", _printing({"schema_version": 1, "value": ["n1"]}))
+    _filler(
+        repo,
+        {"schema_version": 1, "value": ["p1"], "remove": [{"id": "d1", "reason": "Not ours."}]},
+    )
+    resolved = _point(repo)
+    assert resolved.resolved and resolved.entries and resolved.removals
+    assert dp.point_from_document(dp.point_document(resolved)) == resolved
+    _provider(
+        repo,
+        combination="additive",
+        default={"value": ["d1"], "participation": "always"},
+        inert="fail",
+    )
+    _command_contributor(repo, "notes", "sys.exit(3)\n")
+    unresolved = _point(repo)
+    assert not unresolved.resolved and unresolved.why
+    assert dp.point_from_document(dp.point_document(unresolved)) == unresolved

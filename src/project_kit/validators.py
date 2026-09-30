@@ -49,6 +49,10 @@ an abnormal exit, a timeout, output that is not exactly that document — is an
 *error finding*, never a clean pass: the umbrella fails closed. An exit that is
 uv's report of a dependency missing from its cache is named for what it is, an
 environment not provisioned, with `pkit sync` — which provisions it — as the fix.
+A `pkit` reading command the validator starts stays inside its bound — a
+filler it starts gets the time remaining and the group (`command_runner`, "a
+run inside a run") — and reads a data point the run resolved from the run
+cache (`run_cache`) rather than resolving it again.
 """
 
 from __future__ import annotations
@@ -62,7 +66,7 @@ from typing import Any, TypeVar
 
 from ruamel.yaml import YAML
 
-from project_kit import cli_render
+from project_kit import cli_render, run_cache
 from project_kit.command_runner import (
     COMMANDS_KEY,
     CommandRun,
@@ -556,10 +560,13 @@ def as_one_run(compute: Callable[[], _T]) -> _T:
 
 def run_all(target_root: Path, validators: Iterable[Validator]) -> list[Result]:
     """Run the members in order, as one run: a computation several members read
-    (`once_per_run`) is computed once for all of them."""
+    (`once_per_run`) is computed once for all of them — and a resolved data
+    point once for the `pkit` commands a member starts too, through the run
+    cache (`run_cache`), open for the run's length."""
     token = _RUN_VALUES.set({})
     try:
-        return [Result(v, v.run(target_root)) for v in validators]
+        with run_cache.opened():
+            return [Result(v, v.run(target_root)) for v in validators]
     finally:
         _RUN_VALUES.reset(token)
 
