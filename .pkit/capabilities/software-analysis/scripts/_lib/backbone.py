@@ -10,7 +10,8 @@ backbone through its commands:
   branch left it. The script never walks a place, in any state, itself;
 - **recording the analysis location** on first use — `pkit docs
   record-location`, the backbone's one writer of a capability's recorded
-  locations (COR-049 point 5), with `--yes`: the stamp runs it when it places
+  locations (COR-049 point 5): with `--dry-run` to ask whether it is recorded
+  already, and with `--yes` when it is not — the stamp runs it when it places
   an artefact, so invoking the stamp is the consent;
 - **one artefact's friction** — `pkit friction explain <artefact> --json`
   (COR-050 point 13): its state, anchors and the commits behind each changed
@@ -198,6 +199,18 @@ def record_location(root: Path, run: Runner = subprocess.run) -> str | None:
         raise Unreadable(_failed(argv, proc))
     line = (proc.stdout or "").strip()
     return line if line.startswith("recorded ") else None
+
+
+def location_recorded(root: Path, run: Runner = subprocess.run) -> bool:
+    """Whether the analysis location is recorded already (COR-049 point 5), as `pkit
+    docs record-location --dry-run` says, writing nothing; `False` when it cannot
+    tell, so the stamp records, and a recording that fails refuses the stamp."""
+    argv = ["pkit", "docs", "record-location", CAPABILITY, LOCATION, "--dry-run"]
+    try:
+        proc = _run(root, argv, run)
+    except Unreadable:
+        return False
+    return proc.returncode == 0 and (proc.stdout or "").strip().endswith("(recorded already)")
 
 
 def read_point(root: Path, address: str, run: Runner = subprocess.run) -> Mapping[str, Any]:

@@ -28,11 +28,13 @@ an actor's need, a term's definition, a body's goal and steps — which the
 check fails until each is filled; a title, a name or a reason given to it
 still holding one the templates or the skill's commands shipped it refuses
 (`_lib/placeholder.py`).
-Once the first artefact is written it records the analysis location through
-the backbone (COR-049 point 5) — after the write, so a write that fails leaves
-the recorded locations untouched, and a recording that fails puts the file
-back as it was: a refused stamp writes nothing (`write_and_record`). Every file is written
-whole, to a temporary file beside it then moved over it, keeping its mode; a
+While the analysis location is not recorded yet, the stamp records it through
+the backbone (COR-049 point 5) once the artefact is written — so a write that
+fails leaves the recorded locations untouched, and a recording that fails puts
+the file back as it was: a refused stamp writes nothing (`write_and_record`); a
+stamp that needs no recording never runs it. A path reached through a link is
+refused: the discovery never reads one. Every file is written whole, to a
+temporary file beside it then moved over it, keeping its mode; a
 collection file keeps every byte but the entry and section it gains, its line
 endings too: one whose every line ends CRLF, as a checkout with
 `core.autocrlf` writes it, is edited as LF and written back CRLF, and one
@@ -167,12 +169,14 @@ def stamp(
 
     if kind in COLLECTIONS:
         target = root / place
+        refuse_links(root, target, place)
         text = _added_entry(target, place, kind, new_id, request)
         location = f"{place}#{new_id}"
     else:
         folder = f"{place}/{request.area}" if request.area else place
         location = f"{folder}/{new_id}-{request.slug}.md"
         target = root / location
+        refuse_links(root, target, location)
         if target.exists():
             raise Refused(f"{location} exists already")
         text = _document(kind, new_id, request)
@@ -186,10 +190,14 @@ def stamp(
 def write_and_record(
     root: Path, target: Path, location: str, text: str, record: Recorder
 ) -> str | None:
-    """Write `text` to `target` whole, then record the analysis location (COR-049 point
-    5), returning the line the recording printed. A write that fails is refused before
-    anything is recorded; a recording that fails puts `target`, and any folder made
-    for it, back as they were: a refused stamp leaves nothing written."""
+    """Write `text` to `target` whole, then — when it is not recorded yet — record the
+    analysis location (COR-049 point 5), returning the line the recording printed. A
+    write that fails is refused before anything is recorded; a recording that fails
+    puts `target`, and any folder made for it, back as they were: a refused stamp
+    leaves nothing written. A stamp that needs no recording never runs it, so never
+    fails on one. A path reached through a link is refused (`refuse_links`)."""
+    refuse_links(root, target, location)
+    recording = not backbone.location_recorded(root)
     before = target.read_bytes() if target.is_file() else None
     made = [folder for folder in (target.parent, *target.parent.parents) if not folder.exists()]
     try:
@@ -198,6 +206,8 @@ def write_and_record(
     except OSError as exc:
         _put_back(target, before, made)
         raise Refused(f"{location} could not be written: {exc}") from exc
+    if not recording:
+        return None
     try:
         return record(root)
     except Unreadable as exc:
@@ -205,6 +215,23 @@ def write_and_record(
         raise Refused(
             f"the analysis location could not be recorded: {exc}; {location} was not written"
         ) from exc
+
+
+def refuse_links(root: Path, target: Path, location: str) -> None:
+    """Refuse `target` when it, or a folder between it and `root`, is a link. The core's
+    discovery never reads a link as a document, nor anything beneath a linked folder,
+    so what the stamp wrote through one would be no part of the analysis — and a file
+    written whole would replace the link it was reached by."""
+    for path in (target, *target.parents):
+        if path == root:
+            return
+        if path.is_symlink():
+            raise Refused(
+                f"{location} is reached through the link {path.relative_to(root).as_posix()}: "
+                f"the core's discovery never reads a link as a document, nor anything beneath "
+                f"a linked folder, so what the stamp wrote there would be no part of the "
+                f"analysis — put the file or folder itself in the link's place, then stamp again"
+            )
 
 
 def write_whole(target: Path, data: bytes) -> None:

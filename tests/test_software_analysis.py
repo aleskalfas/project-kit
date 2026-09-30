@@ -306,10 +306,11 @@ def test_a_write_that_fails_records_no_location(project: AdopterRepo) -> None:
     assert not (project.root / RECORDED).exists()
 
 
-#: A `pkit` whose `docs record-location` fails, and every other command as the real one.
+#: A `pkit` whose `docs record-location --yes` fails, and every other command — the
+#: question whether the location is recorded included — as the real one.
 _FAILING_RECORD = """#!{python}
 import subprocess, sys
-if sys.argv[1:3] == ["docs", "record-location"]:
+if sys.argv[1:3] == ["docs", "record-location"] and "--yes" in sys.argv:
     sys.stderr.write("error: the recorded locations cannot be written\\n")
     sys.exit(1)
 sys.exit(subprocess.run([sys.executable, "-m", "project_kit", *sys.argv[1:]]).returncode)
@@ -339,6 +340,35 @@ def test_a_recording_that_fails_leaves_nothing_written(
         assert (project.root / ACTORS).read_bytes() == before
         assert gone is None or not (project.root / gone).exists()
     assert not (project.root / RECORDED).exists()
+    # Recorded already, the stamp needs no recording and never runs it: it cannot fail on one.
+    project.write({RECORDED: "locations:\n  analysis: tech-docs/analysis\n"})
+    completed = new(project, "actor", "admin")
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout.splitlines() == [f"stamped ACT-admin at {ACTORS}#ACT-admin"]
+
+
+@pytest.mark.parametrize("linked", ["file", "folder"])
+def test_a_place_reached_through_a_link_is_refused(project: AdopterRepo, linked: str) -> None:
+    """The core's discovery reads no link as a document, nor anything beneath a linked
+    folder: an entry or a file written there would be no part of the analysis, and
+    written whole it would replace the link. The stamp refuses it, leaving the link."""
+    project.write({f"shared/{Path(ACTORS).name}": _ADMIN_ONLY})
+    shared = project.root / "shared"
+    link = project.root / (ACTORS if linked == "file" else USE_CASES)
+    link.parent.mkdir(parents=True, exist_ok=True)
+    link.symlink_to(shared / "actors.md" if linked == "file" else shared)
+    rel = ACTORS if linked == "file" else USE_CASES
+    args = ("actor", "tester") if linked == "file" else ("use-case", "one", "--actor", "ACT-x")
+    if linked == "folder":
+        stamped(project, "actor", "x")
+    completed = new(project, *args)
+    assert completed.returncode == 1
+    assert f" is reached through the link {rel}: the core's discovery never reads " in (
+        completed.stderr
+    )
+    assert link.is_symlink()
+    assert (shared / "actors.md").read_text(encoding="utf-8") == _ADMIN_ONLY
+    assert sorted(p.name for p in shared.iterdir()) == ["actors.md"]
 
 
 @pytest.mark.parametrize(

@@ -12,27 +12,30 @@ body: >
   that added it — and a shallow clone is said. It reads a file's number from
   its name as well as its front matter, so a file whose id cannot be read
   still holds it. A file `friction.exclude` leaves out is no part of the
-  analysis, for the stamp and the check alike. `pkit analysis validate` reports such files — front matter that does not
-  parse, or a name carrying a number the front matter does not give — and
-  fails on a placeholder the stamp left unfilled, in an own field or the
-  body, matched against every placeholder the templates and the skill's
-  commands ever shipped (`<Title>` and `<Term>` included), so a reworded
-  template never hides an old one and words of an artefact's own in angle
-  brackets are never refused; the stamp refuses a title, name or reason
-  still holding one. `pkit analysis check-numbers` knows an artefact by its id, not its
-  path, and reads a number from a file's name as well as its front matter on
-  both sides; a number the default branch took since the fork and removed is
-  still taken, as the stamp counts it. A move, or a stacked branch's own work
-  landed byte for byte, is no collision; the default branch's file of the name
-  this branch gives the number, with other bytes — a parent edited after the
-  fork and then squash-merged, or two branches stamping the same slug — is a
+  analysis, for the stamp and the check alike. `pkit analysis validate`
+  reports such files — front matter that does not parse, or a name carrying
+  a number the front matter does not give — and fails on a placeholder the
+  stamp left unfilled, in an own field or the body, matched against every
+  placeholder the templates and the skill's commands ever shipped (`<Title>`
+  and `<Term>` included), so a reworded template never hides an old one and
+  words of an artefact's own in angle brackets are never refused; the stamp
+  refuses a title, name or reason still holding one. `pkit analysis
+  check-numbers` knows an artefact by its id, not its path, and reads a
+  number from a file's name as well as its front matter on both sides; a
+  number the default branch took since the fork and removed is still taken,
+  as the stamp counts it. A move, or a stacked branch's own work landed byte
+  for byte, is no collision; the default branch's file of the name this
+  branch gives the number, with other bytes — a parent edited after the fork
+  and then squash-merged, or two branches stamping the same slug — is a
   warning, "possibly your own work landed: merge the default branch and keep
   one file; otherwise renumber", never an error; a file of another name is a
   collision. A stacked branch that moved its landed file into an area is not
-  reported there: the duplicate check catches the two files after the merge. The stamp
-  writes each file whole — to a temporary file beside it, then moved over it —
-  records the analysis location only once the file is written, puts the file
-  back if recording fails, and keeps a collection file's bytes outside the
-  entry it adds — its line endings included: a file whose every line ends
-  CRLF, as a `core.autocrlf` checkout writes it, stays CRLF, and one with
-  mixed line endings is refused, saying so.
+  reported there: the duplicate check catches the two files after the merge.
+  The stamp writes each file whole — to a temporary file beside it, then
+  moved over it — records the analysis location only once the file is
+  written and only while it is not recorded yet, puts the file back if
+  recording fails, refuses a file or folder reached through a link, and keeps
+  a collection file's bytes outside the entry it adds — its line endings
+  included: a file whose every line ends CRLF, as a `core.autocrlf` checkout
+  writes it, stays CRLF, and one with mixed line endings is refused, saying
+  so.
