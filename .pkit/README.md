@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-09-30T13:12:49Z
+      at: 2026-09-30T12:52:00Z
       outcome: unchanged
-      unchanged-because: the CLI README gains pkit repository base and the repository key, the schemas README lists the repository block, and main's states the friction block's unanchored-because; the signpost's lines for cli/ and schemas/ name the command surface and the schemas, not their commands, keys or fields, so they hold
+      unchanged-because: the CLI and schemas READMEs now read a narrowing of friction.exclude as a change and a widening as one only where a file it took changed, ask an artefact let back in to revalidate and read each state under its own exclusions, beside main's schema_version on every reading document and the artefacts accepted unanchored with a reason listed apart; the area map's one-line descriptions of cli/ and schemas/ name the command surface and the schemas, not the checks' readings or the block's fields, so they hold
 ---
 
 # project-kit

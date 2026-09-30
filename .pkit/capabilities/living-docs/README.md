@@ -12,9 +12,9 @@ pkit:
       record: ["living-docs:DEC-001", COR-049, COR-050, COR-051, COR-053]
       artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006]
     revalidated:
-      at: 2026-09-30T13:12:50Z
+      at: 2026-09-30T12:51:58Z
       outcome: unchanged
-      unchanged-because: "COR-050 point 6 gains a refinement pointer: the change check's default base is the default branch COR-054 resolves; living-docs' filler reads the whole-repository check at HEAD, which takes no base, so its obligations hold"
+      unchanged-because: COR-050 now reads a change to friction.exclude as a change to the path anchors whose files it moves, owes no answer from an excluded artefact and marks a held document under an excluded path, while its unanchored-because (point 1) and the measure listing such an artefact apart (point 8) stay as main gave them; the README names friction.exclude only as a configuration key, says the core check flags a page whose anchors changed, which such an exclusion change is, and keeps an excluded page out of both unanchored lists, so it holds
 ---
 
 # living-docs capability

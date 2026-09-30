@@ -670,6 +670,25 @@ def test_a_record_nested_under_the_folder_is_a_record(project: AdopterRepo) -> N
     ]
 
 
+def test_a_record_friction_exclude_leaves_out_is_not_counted(project: AdopterRepo) -> None:
+    """A record under an excluded path is still held, but the backbone's listing says it is
+    excluded, and the check leaves it out as an excluded artefact is no part of the
+    analysis (COR-050 point 7): neither counted nor checked."""
+    seed(project)
+    record = (CAPABILITY / "templates" / "revalidation-record.md").read_text(encoding="utf-8")
+    good = record.replace('"#000"', '"#887"').replace("UC-000", "UC-001")
+    project.write(
+        {
+            CONFIG: f"docs:\n  internal: tech-docs\nfriction:\n  exclude: [{RECORDS}/archive]\n",
+            f"{RECORDS}/2026-10-01-first-run.md": good,
+            f"{RECORDS}/archive/2026-09-01-imported.md": "# No front matter\n",
+        }
+    )
+    document = check(project)
+    assert "; 1 revalidation record(s)." in document["summary"][0]
+    assert errors(document) == []
+
+
 def test_a_records_folder_the_backbone_skips_is_said_to_hold_nothing(
     project: AdopterRepo,
 ) -> None:
