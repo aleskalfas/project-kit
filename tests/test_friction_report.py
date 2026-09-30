@@ -711,8 +711,9 @@ def test_explain_json_document_shape(timeline: Timeline) -> None:
 def test_explain_lists_each_path_anchors_files_at_the_point_and_at_head(
     timeline: Timeline,
 ) -> None:
-    """Matched as the check matches: a file under `friction.exclude` is never among them,
-    even where the anchor's glob covers it, and a change to it alone is no change."""
+    """Matched as the check decides a dead anchor: a file under `friction.exclude` is never
+    among them, even where the anchor's glob covers it, and a change to it alone is no change;
+    `excluded` lists it."""
     anchors = {
         "path": ["src/cli/**", "src/core/**", "src/cli/vendor/**"],
         "record": ["ADR-404"],
