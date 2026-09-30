@@ -1,0 +1,18 @@
+component: project-management
+kind: patch
+custom:
+  category: Added
+body: >
+  The closure cascade now says when a Milestone became closeable (#414). After
+  `close-issue` closes an issue — in any mode, and so after every `done-work`
+  merge — the cascade checks each Milestone the issue sits in (its native
+  Milestone field, or its `Milestone: [#<n>](../milestone/<n>)` body ref) as it
+  checks each parent issue. A content-based or `either` Milestone whose every
+  child issue is now closed is reported as eligible to close, with the command
+  that closes it (`pkit pm close-milestone <n>`); a Milestone with an open child
+  is reported as not eligible, and a date-based one as closing on its date.
+  Nothing closes the Milestone: closing it stays your gesture. The check reads
+  the close-trigger and the children through the same reads `close-milestone`
+  uses, so a Milestone reported eligible is one it closes without `--force`.
+  The cascade also no longer reads a deprecated plain `Milestone: #<n>` first
+  line as naming issue `#<n>` as a parent.

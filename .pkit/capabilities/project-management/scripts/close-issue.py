@@ -32,6 +32,15 @@ non-terminal label (``state:todo``, ``state:backlog``, ``state:in-progress``,
 logic is shared with ``move-issue`` via ``_lib.labels.reconcile_state_labels_to_done``
 so there is no duplicated label-mutation code.
 
+After closing, every path runs the closure cascade (DEC-006), which reports and
+never closes: each parent issue the body's first line names is checked for
+close eligibility, and so is each Milestone the issue sits in (its native
+Milestone field, or a ``Milestone: [#<n>](../milestone/<n>)`` body ref). A
+content-based (or ``either``) Milestone whose every child issue is closed is
+reported as eligible, with the ``close-milestone`` command that closes it
+(#414); a date-based one closes on its date, so its children closing makes
+nothing eligible.
+
 The ``state`` write is RESOLVED through the substrate-map seam (ADR-026
 sole-constructor + fail-closed), the same as ``move-issue``: greenfield (no
 ``substrate-map.yaml``) writes the kit's own ``state:done``; a present map that
@@ -78,6 +87,7 @@ from _lib import axis_labels  # noqa: E402
 from _lib import containment  # noqa: E402
 from _lib import lifecycle_inference as infer  # noqa: E402
 from _lib import session_guard  # noqa: E402
+from _lib.body_parent_ref import MILESTONE_LABEL  # noqa: E402
 # DEC-007's checkbox close-gate — the ONE implementation (`_lib.checkbox_gate`),
 # shared with done-work, merge-pr and the engine's gate-checkboxes-ticked
 # predicate. Aliased to the local names this script has always used.
@@ -95,6 +105,13 @@ from _lib.membership import (  # noqa: E402
     check_membership,
     resolve_capability_root,
     resolve_invoker_identity,
+)
+from _lib.milestone import (  # noqa: E402
+    CONTENT_TRIGGERS,
+    fetch_milestone,
+    issue_milestones,
+    list_milestone_children,
+    resolve_close_trigger,
 )
 from _lib.structural_type import infer_structural_type  # noqa: E402
 
@@ -486,7 +503,8 @@ def main() -> int:
             f"\n[ok] closed #{args.issue_number} (cascade-eligibility, completed)."
         )
 
-    # Closure cascade — semi-automatic per DEC-006.
+    # Closure cascade — semi-automatic per DEC-006: it reports eligibility and
+    # closes nothing, over the parent issues and the Milestones alike.
     if not args.no_cascade:
         parent_nums = _walk_parent_chain(body)
         if parent_nums:
@@ -497,7 +515,15 @@ def main() -> int:
             for pnum in parent_nums:
                 _check_parent_eligibility(pnum, config)
         else:
-            print("\n[cascade] no parent ref found in body; cascade skipped.")
+            print("\n[cascade] no parent ref found in body; parent check skipped.")
+        milestone_nums = issue_milestones(issue)
+        if milestone_nums:
+            print(
+                f"\n[cascade] milestones to check for eligibility: "
+                f"{', '.join(f'#{n}' for n in milestone_nums)}"
+            )
+            for mnum in milestone_nums:
+                _check_milestone_eligibility(mnum, config, issue_types, classification)
 
     # Fire after_close_issue hooks per DEC-024.
     fire_hooks(
@@ -655,6 +681,53 @@ def _check_parent_eligibility(parent_num: int, config: dict) -> None:
     )
 
 
+def _check_milestone_eligibility(
+    number: int, config: dict, issue_types: dict, classification: dict
+) -> None:
+    """Report whether a Milestone the closed issue sits in became closeable.
+
+    The Milestone counterpart of :func:`_check_parent_eligibility` (#414). A
+    content-based or `either` Milestone is eligible once every child issue is
+    closed — the condition `close-milestone` closes it on, read through the
+    same `_lib.milestone` reads, so the report and the close cannot disagree.
+    A date-based Milestone closes on its date, so its children closing makes
+    nothing eligible. We surface the report with the command that closes the
+    Milestone; we do not close it (DEC-016: closing it is the user's gesture).
+    """
+    milestone = fetch_milestone(number, config)
+    if milestone is None:
+        print(f"  [warn] could not fetch milestone #{number}", file=sys.stderr)
+        return
+    if str(milestone.get("state", "")).lower() == "closed":
+        print(f"  · milestone #{number} already closed")
+        return
+    trigger, inferred = resolve_close_trigger(
+        str(milestone.get("description") or ""), milestone.get("due_on")
+    )
+    trigger_text = f"{trigger} (inferred)" if inferred else trigger
+    if trigger not in CONTENT_TRIGGERS:
+        print(
+            f"  · milestone #{number} open; {trigger_text} — it closes on its "
+            "date, not when its children close"
+        )
+        return
+    children = list_milestone_children(
+        number, str(milestone.get("title", "")), config, issue_types, classification
+    )
+    if children is None:
+        print(f"  [warn] could not list milestone #{number}'s children", file=sys.stderr)
+        return
+    open_count = sum(1 for child in children if child["state"] != "closed")
+    if open_count:
+        print(f"  · milestone #{number} open; not eligible ({open_count} open child issue(s))")
+        return
+    print(
+        f"  · milestone #{number} open; {trigger_text}, all {len(children)} "
+        f"child issue(s) closed — eligible to close: run "
+        f"`pkit pm close-milestone {number}`"
+    )
+
+
 # ---- process-engine cascade delegation (DEC-034 / DEC-033 D5) -------
 #
 # The CHILDREN-HALF of close-eligibility is the shared process engine's
@@ -797,7 +870,12 @@ def _gh_close_issue(issue_number: int, *, reason: str = "completed", config: dic
 
 def _walk_parent_chain(body: str) -> list[int]:
     """Extract parent issue numbers from the body's parent-ref first line. A
-    leading DEC-013 `Integration:` marker is skipped first (#763)."""
+    leading DEC-013 `Integration:` marker is skipped first (#763).
+
+    A milestone ref is not an issue parent — its number names a Milestone —
+    so the deprecated plain `Milestone: #<n>` form yields nothing here; the
+    cascade reaches Milestones through `issue_milestones` instead.
+    """
     if not body:
         return []
     body = infer.strip_integration_marker(body)
@@ -809,7 +887,7 @@ def _walk_parent_chain(body: str) -> list[int]:
                 break
             continue
         m = re.match(r"^([A-Za-z]+):\s+#(\d+)", s)
-        if not m:
+        if not m or m.group(1) == MILESTONE_LABEL:
             break
         out.append(int(m.group(2)))
         break
