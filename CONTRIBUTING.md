@@ -14,9 +14,9 @@ pkit:
       record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, ADR-019, ADR-039, ADR-055, "project-management:DEC-053"]
       artefact: [.pkit/decisions/README.md]
     revalidated:
-      at: 2026-09-30T05:35:13Z
+      at: 2026-09-30T06:45:50Z
       outcome: unchanged
-      unchanged-because: checks.yml's changeset guard step now runs on every pull request, with a release/* head folded into the escape hatch so the floor tie is never waived; the guide's CI paragraph describes the check aggregator and the friction-report job, not that step, so it holds
+      unchanged-because: COR-050 now lets an artefact carry the reason it has no anchors, lists such artefacts apart in the unanchored measure and has validation refuse the reason beside anchors; the guide's gate, report and escape-hatch paragraphs name the checks and the report's contents without their detail, so they hold
 ---
 
 # Contributing to project-kit
