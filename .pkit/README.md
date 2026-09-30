@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-09-30T01:38:59Z
+      at: 2026-09-30T03:05:02Z
       outcome: unchanged
-      unchanged-because: the CLI README's friction explain entry now says each commit carries the paths behind its finding, each path anchor its excluded files, and a dead path anchor where its files went, inside its own section; the area map and each area's one-line description hold
+      unchanged-because: with main merged, the CLI README carries main's friction explain entry and this branch's run-cache and nested-run lines, the lifecycle and process READMEs this branch's run-inside-a-run text; the area map and each area's one-line description hold
 ---
 
 # project-kit

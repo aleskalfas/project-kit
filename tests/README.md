@@ -25,6 +25,13 @@ bypassing the entry-point router, so the read never reaches `uv` or the
 network. Point the script's own `uv run --script` shebang at `sys.executable`
 in the adopter copy for the same reason.
 
+Every test starts outside any run of the backbone's command runner: an autouse
+fixture, `outside_any_run`, clears `PKIT_COMMAND_DEADLINE`,
+`PKIT_COMMAND_STRAYS` and `PKIT_RUN_CACHE`, so a suite started by a command the
+runner runs behaves as one started from a terminal. A test that needs a run
+inside a run starts one for real, through `run_command` (the lifecycle README,
+"A run inside a run").
+
 ### What the `AdopterRepo` offers
 
 - `root`, `pkit` (`root/.pkit`), `source_kit` (the kit the install came from).

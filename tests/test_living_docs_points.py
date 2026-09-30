@@ -533,6 +533,7 @@ def test_the_contribution_is_inert_without_a_work_tracking_provider(
     assert json.loads(resolved.output) == {
         "address": DOC_CHECK,
         "defined": False,
+        "from": "resolution",
         "resolved": False,
         "value": None,
         "why": "role 'pkit::work-tracking' has no active provider",
