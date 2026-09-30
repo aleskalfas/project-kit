@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-09-30T01:37:14Z
+      at: 2026-09-30T01:38:59Z
       outcome: unchanged
-      unchanged-because: the lifecycle, CLI and schemas READMEs now describe a capability's held documents (friction.held) and the held list of pkit friction artefacts (#1130), inside their friction sections; the area map holds
+      unchanged-because: the CLI README's friction explain entry now says each commit carries the paths behind its finding, each path anchor its excluded files, and a dead path anchor where its files went, inside its own section; the area map and each area's one-line description hold
 ---
 
 # project-kit

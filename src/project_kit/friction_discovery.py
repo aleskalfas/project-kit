@@ -161,6 +161,9 @@ _GLOB_CHARS = frozenset("*?[")
 
 _FRONT_MATTER_FENCE = re.compile(r"^---[ \t]*$", re.MULTILINE)
 _HEADING = re.compile(r"^(#{1,6})[ \t]+(.*?)[ \t]*#*[ \t]*$", re.MULTILINE)
+# What continues an id past a heading's opening characters: a word character, or a hyphen or
+# a dot joined to one — so `uc-login` is not the id opening `uc-login-sso` or `uc-login.v2`.
+_ID_CONTINUES = re.compile(r"\w|[-.]\w")
 
 _yaml = YAML(typ="safe")
 
@@ -1634,14 +1637,15 @@ def split_front_matter(text: str) -> tuple[str | None, str]:
 def entry_section(body: str, entry_id: str) -> str:
     """The body section headed by `entry_id` (COR-050 point 1), or `""`.
 
-    A heading whose text is the id, or starts with the id followed by a space
-    or punctuation, opens the section; it runs to the next heading of the same
-    or a higher level.
+    A heading that opens with the id as a whole token — the id, then the end
+    of the heading, whitespace, or punctuation that does not continue an id
+    (`_ID_CONTINUES`) — opens the section; it runs to the next heading of the
+    same or a higher level.
     """
     headings = list(_HEADING.finditer(body))
     for index, match in enumerate(headings):
         title = match.group(2).strip()
-        if title == entry_id or (title.startswith(entry_id) and not title[len(entry_id)].isalnum()):
+        if title.startswith(entry_id) and not _ID_CONTINUES.match(title, len(entry_id)):
             level = len(match.group(1))
             end = len(body)
             for later in headings[index + 1 :]:

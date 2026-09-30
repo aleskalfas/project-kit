@@ -65,7 +65,7 @@ import heapq
 import json
 import re
 import subprocess
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import Enum
@@ -436,6 +436,13 @@ def uncommitted_paths(root: Path) -> int:
 # --- one side of the diff -----------------------------------------------------
 
 
+# How a dead record or artefact anchor resolves to nothing; a path anchor's is `Side.why_dead`.
+_RESOLVES_NOTHING = {
+    "record": "names no record",
+    "artefact": "names no artefact in the declared places",
+}
+
+
 class Side:
     """One state of the repository as the check reads it: its files and its artefacts."""
 
@@ -455,14 +462,53 @@ class Side:
     def find(self, reference: str) -> Artefact | None:
         return self.discovery.find(reference)
 
+    def stands_on(self, pattern: str) -> Callable[[str], bool]:
+        """Whether a path anchor's `pattern` stands on a file: it matches it, and this
+        state's `friction.exclude` does not leave it out (COR-050 points 2 and 7).
+
+        The one rule both checks match a path pattern by: whether an anchor
+        resolves, whether a changed path changed it, what it matched in
+        history, how broad it is, and which paths of the declared surface
+        it anchors — the surface's own patterns are read by it too (point 8).
+        """
+        match = pattern_matcher(pattern)
+        return lambda rel: match(rel) and not self.excluded(rel)
+
+    def matching(self, pattern: str, files: Iterable[str] | None = None) -> tuple[str, ...]:
+        """The files a path anchor's `pattern` stands on (`stands_on`), sorted.
+
+        This state's files by default; with `files`, another listing — a
+        commit's, or every path a history touched — read under this state's
+        exclusions, as the whole-repository check reads history under HEAD's.
+        """
+        listing = self.files if files is None else files
+        return tuple(sorted(filter(self.stands_on(pattern), listing)))
+
+    def left_out(self, pattern: str) -> tuple[str, ...]:
+        """The files here a path anchor's `pattern` matches but does not stand on,
+        because `friction.exclude` leaves them out (COR-050 point 7), sorted."""
+        match = pattern_matcher(pattern)
+        return tuple(sorted(rel for rel in self.files if match(rel) and self.excluded(rel)))
+
     def resolves(self, anchor: Anchor) -> bool:
         """Whether an anchor of a core kind resolves to something here (COR-050 point 7)."""
         if anchor.kind == "path":
-            match = pattern_matcher(anchor.value)
-            return any(match(rel) and not self.excluded(rel) for rel in self.files)
+            return any(map(self.stands_on(anchor.value), self.files))
         if anchor.kind == "record":
             return self.record_path(anchor.value) is not None
         return self.find(anchor.value) is not None
+
+    def why_dead(self, anchor: Anchor) -> str:
+        """How an anchor of a core kind that does not resolve here resolves to nothing.
+
+        A path anchor says which way it is dead (COR-050 point 7): it matches
+        no file, or only files `friction.exclude` leaves out — a typo and a
+        glob over excluded code read apart.
+        """
+        if anchor.kind == "path":
+            excluded = len(self.left_out(anchor.value))
+            return f"matches only excluded files ({excluded})" if excluded else "matches no file"
+        return _RESOLVES_NOTHING[anchor.kind]
 
     def record_path(self, value: str) -> str | None:
         """The file a record anchor names here, through the record resolver, or None."""
@@ -642,8 +688,7 @@ def _anchor_changed(
 ) -> bool:
     """Whether a live anchor of a core kind changed in the diff (COR-050 point 5)."""
     if anchor.kind == "path":
-        match = pattern_matcher(anchor.value)
-        return any(match(rel) and rel not in own and not head.excluded(rel) for rel in diff.paths)
+        return any(map(head.stands_on(anchor.value), diff.paths - own))
     if anchor.kind == "record":
         rel = head.record_path(anchor.value)
         entry = diff.by_path.get(rel) if rel is not None else None
@@ -651,13 +696,6 @@ def _anchor_changed(
     target = head.find(anchor.value)
     before = base.find(anchor.value)
     return target is not None and (before is None or content(target) != content(before))
-
-
-RESOLVES_NOTHING = {
-    "path": "matches no file (or only excluded ones)",
-    "record": "names no record",
-    "artefact": "names no artefact in the declared places",
-}
 
 
 @dataclass(frozen=True)
@@ -762,12 +800,12 @@ def _anchor_problem(
     if added:
         return (
             FindingKind.DEAD_ANCHOR,
-            f"{RESOLVES_NOTHING[anchor.kind]}; the anchor was added in this diff",
+            f"{head.why_dead(anchor)}; the anchor was added in this diff",
         )
     if base.resolves(anchor):
         return (
             FindingKind.DEAD_ANCHOR,
-            f"{RESOLVES_NOTHING[anchor.kind]}; the diff removed or moved its target",
+            f"{head.why_dead(anchor)}; the diff removed or moved its target",
         )
     return FindingKind.DEAD_ANCHOR, None
 
