@@ -1118,6 +1118,26 @@ def test_entry_section_runs_to_the_next_heading_of_equal_or_higher_level() -> No
     assert fd.entry_section(body, "RS-2") == ""
 
 
+def test_entry_section_takes_the_id_as_a_whole_token() -> None:
+    """Two hyphenated ids sharing a prefix: the shorter one's section is never the longer's,
+    whichever comes first."""
+    body = (
+        "## uc-login-sso — Sign in with SSO\n\nsso\n\n"
+        "## uc-login.v2 — Sign in, again\n\nagain\n\n"
+        "## uc-login — Sign in\n\nlogin\n\n"
+        "## uc-login: the details\n\ndetails\n"
+    )
+    assert fd.entry_section(body, "uc-login") == "## uc-login — Sign in\n\nlogin\n"
+    assert fd.entry_section(body, "uc-login-sso") == "## uc-login-sso — Sign in with SSO\n\nsso\n"
+    assert fd.entry_section(body, "uc-login.v2") == "## uc-login.v2 — Sign in, again\n\nagain\n"
+    assert fd.entry_section(body, "uc-log") == ""
+    # Punctuation that continues no id ends it, as the end of the heading does.
+    assert fd.entry_section("## uc-login: Sign in\n\ntext\n", "uc-login") == (
+        "## uc-login: Sign in\n\ntext\n"
+    )
+    assert fd.entry_section("## uc-login.\n\ntext\n", "uc-login") == "## uc-login.\n\ntext\n"
+
+
 def test_is_inside_repository(tmp_path: Path) -> None:
     root = tmp_path / "repo"
     root.mkdir()

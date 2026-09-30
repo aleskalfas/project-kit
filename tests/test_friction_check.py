@@ -383,10 +383,12 @@ def test_an_anchor_added_dead_is_the_pull_requests(repo: AdopterRepo) -> None:
             )
         },
     )
-    assert _summary(_run(repo)) == [
+    result = _run(repo)
+    assert _summary(result) == [
         ("dead-anchor", "docs/guide.md", "path:src/gone/**", None),
         ("answered", "docs/guide.md", None, "unchanged"),
     ]
+    assert result.findings[0].message == "matches no file; the anchor was added in this diff"
 
 
 def test_a_pre_existing_dead_anchor_is_not_the_change_checks(repo: AdopterRepo) -> None:

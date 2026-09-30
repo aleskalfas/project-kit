@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-09-30T01:08:24Z
+      at: 2026-09-30T01:38:59Z
       outcome: unchanged
-      unchanged-because: the CLI README now says the whole-repository check, the debt listing and the explanation leave an artefact under an excluded path out (#1136), inside its friction section; the area map holds
+      unchanged-because: the CLI README's friction explain entry now says each commit carries the paths behind its finding, each path anchor its excluded files, and a dead path anchor where its files went, inside its own section; the area map and each area's one-line description hold
 ---
 
 # project-kit

@@ -80,7 +80,7 @@ The one write outside the workspace is a reader-review's findings posted as a pu
 
 | Command | What you take from it |
 |---|---|
-| `pkit friction explain <page> --json` | one page: its state, anchors, findings, the commits behind each changed anchor, and the writer command that answers each (`answers`) |
+| `pkit friction explain <page> --json` | one page: its state, anchors, findings, the commits behind each changed anchor (each with the `paths` the check read as the anchor's change), where a dead path anchor's files went, and the writer command that answers each (`answers`) |
 | `pkit friction debt --json` | the stale and deferred debt, oldest first — which pages to take |
 | `pkit friction check --all --json` | the whole-repository check, upstream first; its measures (unanchored artefacts, uncovered surface) and over-broad anchors |
 | `pkit living-docs validate` | the spaces, their findings, and the unclassified documents — listed in the plain output, counted in the `--json` summary |
@@ -97,7 +97,7 @@ Read the storyboard. Take the intent from the request's shape; when it is unclea
 
 ### 2. Friction-fix
 
-Start from `pkit friction explain <page> --json`. Read every commit behind a changed anchor with `git show`, limited to what the anchor matches, then read the page against it. For each statement the changed anchor grounds, decide:
+Start from `pkit friction explain <page> --json`. Read every commit behind a changed anchor with `git show <commit> -- <paths>`, taking each commit's own `paths` — what the check read as the anchor's change, the page's own file never among them — and never the anchor's `files`, which are the two trees' view and miss a file that came and went between them. Then read the page against it. A dead path anchor is validation's finding, not yours to judge again, but its finding's commits say where its ground went: each is the removal or the rename away of files it matched (its `paths`), whenever that happened — read them to see what the anchor should point at now. For each statement the changed anchor grounds, decide:
 
 - still true → untouched;
 - no longer true → rewritten to match;

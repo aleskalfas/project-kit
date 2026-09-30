@@ -1,0 +1,25 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit friction explain <artefact> --json` carries what a capability's script
+  reading an artefact's change would otherwise compute again. Each commit in a
+  finding's `commits` has `paths`: what the check read as the change — for a
+  path anchor the paths it matches that the commit touched, excluded paths and
+  the artefact's own file left out; for a record or artefact anchor the file it
+  names; for a move the artefact's file under both names — so a reader runs
+  `git show <commit> -- <paths>` and matches nothing itself. Each path anchor has
+  `files` (`{point, head, excluded}`): the files it stands on at the revalidation
+  point and at HEAD, matched as the check decides a dead anchor, under HEAD's
+  exclusions — the two trees' view, not the change, which `commits[].paths`
+  gives — and the files its glob covers at HEAD that `friction.exclude` leaves
+  out. The artefact's `body` is the text its content is compared on: for a
+  collection entry, the section headed by its id. One key holds more than it
+  did: a dead path anchor's finding, whose `commits` were always empty, now
+  lists where its files went — for each file it matched, the last commit that
+  touched it, its removal or rename away, whether before or after the
+  revalidation point; a deferral of a dead anchor still lists none. Both checks
+  now say which way a path anchor is dead: `matches no file`, or `matches only
+  excluded files (<n>)`, where both read "matches no file (or only excluded
+  ones)" before. The human view lists where a dead path anchor's files went.
