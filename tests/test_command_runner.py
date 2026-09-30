@@ -8,6 +8,11 @@
   exceeding the bound kills the whole process group — a grandchild interpreter
   included, under the primitive and under the predicate policy (the query
   policy's case is `test_validators`) — and an interrupt kills it too;
+- a run inside a run (#1144): every run tells its command its deadline; a
+  nested run takes the time remaining, joins its caller's group, and starts
+  nothing with none left; the outer deadline and an interrupt reach a nested
+  run's command and what it started; the innermost overrun is the one named,
+  and what it started ends with the outermost run;
 - the predicate policy passes the subject and `--json` and leaves the
   environment as it is: no offline marker, a predicate may reach the network.
 """

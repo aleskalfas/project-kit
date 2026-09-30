@@ -2,7 +2,8 @@
 filler file and its envelope, capability contributions, the definer's default
 and how it takes part, the three policies with precedence, whole-entry and
 removal overrides, the contributor selection, the inert policy — and the
-`connections` member of `pkit validate` that reports it, over one wiring per run."""
+`connections` member of `pkit validate` that reports it, over one wiring per run,
+each point resolved once across the processes the run starts (#1144)."""
 
 from __future__ import annotations
 
