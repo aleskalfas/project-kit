@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-09-30T03:24:52Z
+      at: 2026-09-30T03:05:02Z
       outcome: unchanged
-      unchanged-because: the lifecycle, CLI and schemas READMEs now bound a capability's folders of held documents and declare them beside the places in pkit friction artefacts (#1130), inside their friction sections; the area map and each area's one-line description hold
+      unchanged-because: with main merged, the CLI README carries main's friction explain entry and this branch's run-cache and nested-run lines, the lifecycle and process READMEs this branch's run-inside-a-run text; the area map and each area's one-line description hold
 ---
 
 # project-kit

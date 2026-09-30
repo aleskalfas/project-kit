@@ -10,7 +10,18 @@ from pathlib import Path
 
 import pytest
 
+from project_kit import command_runner, run_cache
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo, build_adopter_repo
+
+
+@pytest.fixture(autouse=True)
+def outside_any_run(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Every test starts outside any run of the command runner, whatever started
+    the suite — a `pkit validate` whose validator runs it, say: no inherited
+    deadline, strays directory or run cache (the lifecycle README, "A run
+    inside a run")."""
+    for name in (command_runner.DEADLINE_ENV, command_runner.STRAYS_ENV, run_cache.CACHE_ENV):
+        monkeypatch.delenv(name, raising=False)
 
 
 @pytest.fixture

@@ -15,7 +15,7 @@ pkit:
         - .pkit/schemas/_defs/process.schema.json
       record: [COR-033, COR-034, COR-035, COR-036, COR-037, COR-038, COR-040, COR-042, COR-044, COR-053, ADR-020, ADR-036, ADR-048, ADR-051]
     revalidated:
-      at: 2026-09-29T22:37:16Z
+      at: 2026-09-30T02:18:38Z
       outcome: updated
 ---
 
@@ -338,7 +338,7 @@ The engine is **content-free**: it reads any capability's process definition + t
 
 ### The predicate runner (engine contract)
 
-A predicate's `run:` resolves to a command the owning capability **registers** in its `package.yaml` — a leaf of its `commands:` tree, named by the leaf's own name — not a raw path or shell string; the engine rejects an unregistered name with a self-explaining error. The engine runs the resolved script through the backbone's **one command runner**, the lookup and bounded run it shares with the validator registry's query runner (the lifecycle README, "How a registered command is run"; ADR-057 point 5), under the **predicate policy**: explicit argv — the subject + `--json` — with the working directory at the repo root and the environment unchanged, since a predicate may reach the network (no offline marker is set); in its own process group, bounded by the backbone's thirty-second command bound, and overrunning kills the whole group, so the interpreter a `uv run --script` shebang starts as a grandchild stops too. The engine reads one JSON object from standard output, and:
+A predicate's `run:` resolves to a command the owning capability **registers** in its `package.yaml` — a leaf of its `commands:` tree, named by the leaf's own name — not a raw path or shell string; the engine rejects an unregistered name with a self-explaining error. The engine runs the resolved script through the backbone's **one command runner**, the lookup and bounded run it shares with the validator registry's query runner (the lifecycle README, "How a registered command is run"; ADR-057 point 5), under the **predicate policy**: explicit argv — the subject + `--json` — with the working directory at the repo root and the environment unchanged but for the run's deadline, since a predicate may reach the network (no offline marker is set); in its own process group, bounded by the backbone's thirty-second command bound, and overrunning kills the whole group, so the interpreter a `uv run --script` shebang starts as a grandchild stops too — inside another run, by the time that run has left and in the outermost run's group (the lifecycle README, "A run inside a run"). The engine reads one JSON object from standard output, and:
 
 - **deterministic gate / detection** → uses the predicate's `result`;
 - **authorisation-artifact gate** → reads `{ exists, produced_by }` and computes `result = exists && produced_by != actor` *itself* — the engine enforces cross-authority and **ignores any `result` the predicate supplies** (non-overridable).

@@ -387,9 +387,10 @@ class PredicateRunner:
         # first argv to every predicate, so a keyed predicate resolves the right
         # unit's reality. Singleton processes pass the fixed SINGLETON_SUBJECT.
         # The predicate policy over the shared runner: the caller's environment
-        # unchanged (a predicate may reach the network), and anything but an
-        # answered JSON object — no start, a timeout, a non-zero exit,
-        # unparseable output — is indeterminate, fail-closed.
+        # unchanged but for the run's deadline (a predicate may reach the
+        # network), and anything but an answered JSON object — no start, a
+        # timeout, a non-zero exit, unparseable output — is indeterminate,
+        # fail-closed.
         run = run_command(script, [self.subject, "--json"], cwd=self.repo_root)
         if run.ending is not Ending.ANSWERED or not isinstance(run.document, dict):
             return None

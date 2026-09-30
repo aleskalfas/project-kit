@@ -14,9 +14,9 @@ pkit:
       record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, ADR-019, ADR-039, ADR-055, "project-management:DEC-053"]
       artefact: [.pkit/decisions/README.md]
     revalidated:
-      at: 2026-09-30T03:24:53Z
+      at: 2026-09-30T02:21:31Z
       outcome: unchanged
-      unchanged-because: COR-050 now bounds a folder of held documents (point 1) and says why a project declares none (point 14); the guide's friction gate, whole-repository report and doc check paragraphs name neither held folders nor their bounds, so they hold
+      unchanged-because: the tests README now also names the autouse fixture that starts every test outside any run of the command runner; this guide only points to it for test-authoring guidance and the adopter-repository fixture, which hold
 ---
 
 # Contributing to project-kit
