@@ -491,6 +491,23 @@ def test_the_history_counts_the_files_the_tree_reading_counts(project: AdopterRe
     assert note.startswith(f"UC-2027 follows UC-2026, the number main's history gave {notes} ")
 
 
+def test_a_file_added_before_its_place_was_there_still_counts(project: AdopterRepo) -> None:
+    """The reading at the commit that added a file speaks for it only when the place it
+    lies under was the place then. A file added while the analysis lay elsewhere, and
+    inside the place once the location moved there, held its number while it was there:
+    removed since, it still counts, since a reading that cannot say never frees one."""
+    stamped(project, "actor", "tester")
+    stamped(project, "use-case", "one", "--actor", "ACT-tester")
+    project.commit("UC-001")
+    early = f"{USE_CASES}/UC-007-early.md"
+    text = (project.root / USE_CASES / "UC-001-one.md").read_text(encoding="utf-8")
+    elsewhere = "locations:\n  analysis: old/analysis\n"
+    project.commit("the analysis elsewhere", {RECORDED: elsewhere, early: text})
+    project.commit("the analysis here", {RECORDED: f"locations:\n  analysis: {ANALYSIS}\n"})
+    project.commit("UC-007 removed", {early: None})
+    assert stamped(project, "use-case", "two", "--actor", "ACT-tester") == "UC-008"
+
+
 def test_a_shallow_clone_s_stamp_says_its_history_stops_early(
     project: AdopterRepo, tmp_path: Path
 ) -> None:

@@ -13,16 +13,18 @@ stays held once the file is gone. The backbone reads one state at a time
   held it as a file of its place — a Markdown file there, not left out by
   `friction.exclude` — the files the tree reading counts (`Judge`). A path
   the working tree or the default branch's tip leaves out now is left out,
-  whatever it was.
+  whatever it was. That reading speaks for the path only when the place it
+  lies under was the place then: where the place was elsewhere, or not yet —
+  the location moved there since, or the capability came later — it cannot
+  say, and the path counts.
 
 Only what could change an answer is judged: for the stamp, the numbers past
 the highest the tree and the tip hold, highest first, until one counts
 (`highest`); for the number comparison, the numbers the branch holds that the
 default branch's history gave since the fork and its tip no longer holds
 (`counted`). One reading per commit judged, and none when the history gave
-no such number. A reading that fails counts the path:
-an id is never used again, so a number is never freed on a reading that
-could not be made.
+no such number. A reading that fails counts the path too: an id is never
+used again, so a number is never freed on a reading that could not be made.
 
 Its blind spot is a file never named after its number, and deleted since.
 """
@@ -58,25 +60,36 @@ def given(root: Path, revisions: str, folders: Iterable[str]) -> list[Given]:
 
 
 class Judge:
-    """Whether a number a history gave counts: the backbone's reading at the commit
-    that added the file held it as a file of its place, and no present state — the
-    readings in `present` — leaves the path out. One reading per commit asked."""
+    """Whether a number a history gave counts: no present state — the readings in
+    `present` — leaves the path out, and the backbone's reading at the commit that
+    added the file held it as a file of its place, or cannot say: it failed, or the
+    place the path lies under now was not its place then. One reading per commit."""
 
     def __init__(self, root: Path, present: Iterable[Analysis]) -> None:
+        states = tuple(present)
         self._root = root
-        self._left_out = frozenset().union(*(state.excluded for state in present))
+        self._left_out = frozenset().union(*(state.excluded for state in states))
+        self._kind_of_place = {
+            place: kind for state in states for kind, place in state.places.items()
+        }
         self._at: dict[str, Analysis | None] = {}
 
     def counts(self, number: Given) -> bool:
         if number.path in self._left_out:
             return False
-        if number.commit not in self._at:
+        state = self._reading(number.commit)
+        place = next((p for p in self._kind_of_place if number.path.startswith(f"{p}/")), None)
+        if state is None or place is None or state.places.get(self._kind_of_place[place]) != place:
+            return True  # a reading that cannot speak for the path never frees its number
+        return number.path in state.files
+
+    def _reading(self, commit: str) -> Analysis | None:
+        if commit not in self._at:
             try:
-                self._at[number.commit] = backbone.read_analysis(self._root, at=number.commit)
+                self._at[commit] = backbone.read_analysis(self._root, at=commit)
             except Unreadable:
-                self._at[number.commit] = None
-        state = self._at[number.commit]
-        return state is None or number.path in state.files
+                self._at[commit] = None
+        return self._at[commit]
 
 
 def highest(judge: Judge, numbers: Sequence[Given], kind: str, above: int) -> Given | None:
