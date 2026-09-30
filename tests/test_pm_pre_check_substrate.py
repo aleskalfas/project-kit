@@ -132,7 +132,7 @@ def test_unparseable_map_fails_closed_to_degrade_all(axis_labels, tmp_path: Path
 
 
 def test_matrix_reports_served_and_degraded(pc, axis_labels) -> None:
-    sm = axis_labels.load_substrate_map  # sanity: callable present
+    assert callable(axis_labels.load_substrate_map)  # sanity: callable present
     parsed = axis_labels.SubstrateMap(
         axes={
             "priority": {"label": {"remap": {"High": "P0"}}},

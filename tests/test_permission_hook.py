@@ -15,8 +15,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-import pytest
-
 REPO = Path(__file__).resolve().parent.parent
 HOOK = REPO / ".pkit" / "adapters" / "claude-code" / "permission-hook.py"
 

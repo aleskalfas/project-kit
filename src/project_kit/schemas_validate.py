@@ -54,21 +54,21 @@ from __future__ import annotations
 import datetime as _dt
 import json
 import re
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 
 import click
 from jsonschema import Draft202012Validator
-
-from project_kit import backbone_schemas, cli_render
-from project_kit.validators import Finding, Outcome
 from referencing import Registry, Resource
 from referencing.exceptions import Unresolvable
 from referencing.jsonschema import DRAFT202012
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
+from project_kit import backbone_schemas, cli_render
+from project_kit.validators import Finding, Outcome
 
 _yaml = YAML(typ="safe")
 
@@ -1069,7 +1069,7 @@ def _try_add_to_registry(
     uri = schema.get("$id", schema_path.name)
     try:
         resource = Resource.from_contents(schema, default_specification=DRAFT202012)
-    except Exception as exc:  # noqa: BLE001 — referencing's surface is broad
+    except Exception as exc:  # referencing's surface is broad
         return registry, ValidationIssue(
             location=schema_rel,
             message=f"sibling companion could not be loaded as a Draft 2020-12 "
@@ -1143,10 +1143,10 @@ def _walk_tokens(data: Any, path: tuple[str, ...] = ()) -> Iterator[tuple[str, s
                 assert m is not None
                 pointer = "/" + "/".join(path) + ("/" if path else "") + f"(key){key_str}"
                 yield key_str, m.group(1), m.group(2), pointer
-            yield from _walk_tokens(v, path + (key_str,))
+            yield from _walk_tokens(v, (*path, key_str))
     elif isinstance(data, list):
         for idx, item in enumerate(data):
-            yield from _walk_tokens(item, path + (str(idx),))
+            yield from _walk_tokens(item, (*path, str(idx)))
     elif isinstance(data, str):
         m = _TOKEN_PATTERN.match(data)
         if m:
@@ -1215,7 +1215,7 @@ def _collect_ids(collection: Any) -> list[str] | None:
     (caller treats as a failure).
     """
     if isinstance(collection, dict):
-        return [str(k) for k in collection.keys()]
+        return [str(k) for k in collection]
     if isinstance(collection, list):
         ids: list[str] = []
         for item in collection:
@@ -1249,7 +1249,7 @@ def _walk_keys_from_namespace(
     properties = schema.get("properties")
     if isinstance(properties, dict):
         for prop_name, prop_schema in properties.items():
-            yield from _walk_keys_from_namespace(prop_schema, data_pointer + (prop_name,))
+            yield from _walk_keys_from_namespace(prop_schema, (*data_pointer, prop_name))
 
 
 def _resolve_key_references(
@@ -1283,8 +1283,8 @@ def _resolve_key_references(
             issues.append(
                 ValidationIssue(
                     location=f"{yaml_rel}{path_str}",
-                    message=f"x-pkit-keys-from-namespace targets the schema's own namespace; "
-                    f"remove the annotation (per COR-019).",
+                    message="x-pkit-keys-from-namespace targets the schema's own namespace; "
+                    "remove the annotation (per COR-019).",
                 )
             )
             continue
@@ -1300,7 +1300,7 @@ def _resolve_key_references(
                 )
             )
             continue
-        for key in node.keys():
+        for key in node:
             key_str = str(key)
             if key_str not in result.valid_ids:
                 issues.append(

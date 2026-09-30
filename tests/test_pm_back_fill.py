@@ -553,7 +553,7 @@ def test_gate_refuses_on_auth_failure(bf, tmp_path, monkeypatch) -> None:
     _patch_gate_checks(bf, monkeypatch, auth_ok=False, repo_ok=True)
     gate = bf._residual_pre_check(cap)
     assert gate.passed is False
-    assert any(s == "fail" and "auth" in l.lower() for l, s, _ in gate.checks)
+    assert any(s == "fail" and "auth" in label.lower() for label, s, _ in gate.checks)
 
 
 def test_gate_refuses_on_repo_inaccessible(bf, tmp_path, monkeypatch) -> None:
@@ -569,7 +569,7 @@ def test_gate_refuses_on_map_parse_failure(bf, tmp_path, monkeypatch) -> None:
     _patch_gate_checks(bf, monkeypatch, auth_ok=True, repo_ok=True, map_ok=False)
     gate = bf._residual_pre_check(cap)
     assert gate.passed is False
-    assert any(s == "fail" and "map" in l.lower() for l, s, _ in gate.checks)
+    assert any(s == "fail" and "map" in label.lower() for label, s, _ in gate.checks)
 
 
 def test_gate_skips_map_parse_when_no_map_present(bf, tmp_path, monkeypatch) -> None:
@@ -605,7 +605,7 @@ def test_gate_proceeds_under_a_degraded_axis(bf, tmp_path, monkeypatch) -> None:
     gate = bf._residual_pre_check(cap)
     assert gate.passed is True
     # The gate's checks are ONLY the residual subset — no per-axis disposition line.
-    labels = " ".join(l for l, _, _ in gate.checks).lower()
+    labels = " ".join(label for label, _, _ in gate.checks).lower()
     assert "axis" not in labels
     assert "workstream" not in labels
 

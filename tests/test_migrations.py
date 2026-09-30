@@ -22,7 +22,7 @@ def test_parse_version_tuple_happy_path() -> None:
 
 
 def test_parse_version_tuple_rejects_malformed() -> None:
-    with pytest.raises(click.ClickException, match="major.minor.patch"):
+    with pytest.raises(click.ClickException, match=r"major\.minor\.patch"):
         parse_version_tuple("1.2")
     with pytest.raises(click.ClickException, match="non-integer"):
         parse_version_tuple("a.b.c")

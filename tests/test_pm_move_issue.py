@@ -20,7 +20,6 @@ from pathlib import Path
 
 import pytest
 
-
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = (
     REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "move-issue.py"
@@ -29,11 +28,11 @@ CAPABILITY_ROOT = REPO_ROOT / ".pkit" / "capabilities" / "project-management"
 LIB_PATH = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
 
 sys.path.insert(0, str(LIB_PATH))
-from _lib.structural_type import structural_type_from_kind_label  # noqa: E402
 from _lib.placeholder_detection import (  # noqa: E402
     PHASE_TRANSITION,
     detect_placeholder_residuals,
 )
+from _lib.structural_type import structural_type_from_kind_label  # noqa: E402
 
 
 @pytest.fixture(scope="module")

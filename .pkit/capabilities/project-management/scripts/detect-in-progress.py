@@ -26,8 +26,8 @@ from pathlib import Path
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate  # noqa: E402
-from _lib import lifecycle_predicates as predicates  # noqa: E402
+from _lib import bootstrap_gate
+from _lib import lifecycle_predicates as predicates
 
 
 def main() -> int:

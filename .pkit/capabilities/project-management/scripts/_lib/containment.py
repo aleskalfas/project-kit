@@ -91,9 +91,9 @@ import re
 import subprocess
 from dataclasses import dataclass
 from enum import Enum
+from typing import Any
 
 from _lib import lifecycle_inference as _infer
-from typing import Any
 
 # Sibling module — the gh shell-out helper that pins the adopter's host/owner
 # (DEC-023). Imported the same way `_lib.substrate_writes` does, with a defensive

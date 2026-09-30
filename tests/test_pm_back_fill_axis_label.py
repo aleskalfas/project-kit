@@ -1097,7 +1097,7 @@ def test_partial_set_exits_non_zero_and_names_what_was_not_applied(
     # The value that could be honoured is still in the report...
     assert "Chore" in out.out
     # ...and the one that could not is named, in the summary line on stderr.
-    [summary] = [l for l in out.err.splitlines() if l.startswith("error: --set")]
+    [summary] = [line for line in out.err.splitlines() if line.startswith("error: --set")]
     assert "1 of 2" in summary
     assert "priority=Bogus" in summary
     assert "type=task" not in summary
@@ -1137,7 +1137,7 @@ def test_the_losing_half_of_a_conflicting_repeat_is_named(
     )
     err = capsys.readouterr().err
     assert code == 2
-    [summary] = [l for l in err.splitlines() if l.startswith("error: --set")]
+    [summary] = [line for line in err.splitlines() if line.startswith("error: --set")]
     assert "priority=Low" in summary and "priority=High" not in summary
 
 

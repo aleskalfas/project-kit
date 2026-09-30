@@ -14,13 +14,10 @@ from project_kit.cli import main
 from project_kit.manifest import (
     ORIGIN_INCUBATED_IN_REPO,
     ORIGIN_KIT_SHIPPED,
-    BackboneManifest,
     read_backbone_manifest,
     read_capability_origin,
-    write_backbone_manifest,
 )
 from tests.adopter_repo import MakeAdopterRepo
-
 
 # --- fixtures --------------------------------------------------------
 

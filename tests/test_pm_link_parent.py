@@ -561,7 +561,7 @@ def test_all_open_reads_each_parents_sub_issues_once_over_64_links(
         _issue(200 + i, f"[Task] t{i}", f"Feature: #{features[i % 4]}\n") for i in range(64)
     ]
     fake = FakeGitHub(tracker)
-    rc, out, _ = _run(lp, monkeypatch, capsys, _stage(tmp_path), fake, "--all-open", "--yes")
+    rc, _out, _ = _run(lp, monkeypatch, capsys, _stage(tmp_path), fake, "--all-open", "--yes")
 
     assert rc == 0
     assert len(fake.posts) == 64 + len(features)

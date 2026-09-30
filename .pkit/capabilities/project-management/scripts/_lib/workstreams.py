@@ -24,9 +24,8 @@ themselves and pass the parsed dict to `parse_workstreams()`.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-
 
 SLUG_PATTERN = re.compile(r"^[a-z][a-z0-9-]*[a-z0-9]$")
 WORKSTREAMS_RELATIVE = "project/workstreams.yaml"

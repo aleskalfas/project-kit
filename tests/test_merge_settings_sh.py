@@ -18,7 +18,6 @@ from pathlib import Path
 
 import pytest
 
-
 REPO_ROOT = Path(__file__).resolve().parent.parent
 ADAPTER_SCRIPT = REPO_ROOT / ".pkit" / "adapters" / "claude-code" / "merge-settings.sh"
 

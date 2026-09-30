@@ -27,13 +27,13 @@ from pathlib import Path
 
 import click
 
-from project_kit.validators import Finding, Outcome
 from project_kit.manifest import (
     BackboneManifest,
     ComponentManifest,
     read_backbone_manifest,
     read_component_manifest,
 )
+from project_kit.validators import Finding, Outcome
 
 
 @dataclass(frozen=True)

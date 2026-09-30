@@ -103,7 +103,7 @@ def test_status_detects_kit_skill_in_per_name_dir_symlink_form(installed_target:
     assert "kit-managed" in out
     assert f"{name} ->" in out
     # The name must NOT appear under "user-managed".
-    kit_block, _, rest = out.partition("user-managed")
+    kit_block, _, _rest = out.partition("user-managed")
     assert name in kit_block
 
 

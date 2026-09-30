@@ -33,8 +33,6 @@ Exit codes:
 from __future__ import annotations
 
 import argparse
-import re
-import subprocess
 import sys
 from pathlib import Path
 
@@ -43,10 +41,8 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate  # noqa: E402
-from _lib import axis_carriage  # noqa: E402
-from _lib import axis_labels  # noqa: E402
-from _lib.gh import gh_run, load_adopter_config  # noqa: E402
+from _lib import axis_carriage, axis_labels, bootstrap_gate, session_guard
+from _lib.gh import gh_run, load_adopter_config
 
 # Constraint-1 gate (RF-2, #265): the workstream-label MUTATORS
 # (add/remove/merge/rename/split) create/delete/rename kit `workstream:*` labels
@@ -57,14 +53,13 @@ from _lib.gh import gh_run, load_adopter_config  # noqa: E402
 # REFUSES before any `gh label` op when it trips. Greenfield is unchanged. The
 # richer present-map behaviour (validate-against-the-bound-set, retag) stays the
 # adopt-existing Feature #264; this is just the constraint-1 gate.
-from _lib.membership import (  # noqa: E402
+from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
     resolve_capability_root,
     resolve_invoker_identity,
 )
-from _lib import session_guard  # noqa: E402
-from _lib.workstreams import (  # noqa: E402
+from _lib.workstreams import (
     SLUG_PATTERN,
     parse_workstreams,
     workstreams_path,

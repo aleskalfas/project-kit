@@ -277,12 +277,12 @@ def test_unknown_capability_is_a_problem(oo, rc) -> None:
 
 def test_installed_capability_without_contributions_is_a_problem(oo, rc) -> None:
     parsed = oo.parse_opt_outs([_entry(capability="project-management")])
-    ((_entry_, message),) = parsed.problems_against(_se_collection(rc))
+    ((_, message),) = parsed.problems_against(_se_collection(rc))
     assert "installed but contributes no reviewer requirement" in message
 
 
 def test_unknown_reviewer_is_a_problem_naming_what_is_contributed(oo, rc) -> None:
     parsed = oo.parse_opt_outs([_entry(reviewer="docs-reviwer")])
-    ((_entry_, message),) = parsed.problems_against(_se_collection(rc))
+    ((_, message),) = parsed.problems_against(_se_collection(rc))
     assert "no reviewer `docs-reviwer`" in message
     assert "code-reviewer, docs-reviewer, security-reviewer" in message

@@ -44,7 +44,7 @@ from ruamel.yaml import YAML
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import (  # noqa: E402
+from _lib import (
     axis_labels,
     bootstrap_gate,
     classification_rules,
@@ -52,16 +52,16 @@ from _lib import (  # noqa: E402
     pr_validation,
     session_guard,
 )
-from _lib import lifecycle_inference as infer  # noqa: E402
-from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
-from _lib.membership import (  # noqa: E402
+from _lib import lifecycle_inference as infer
+from _lib.gh import gh_get_issue, gh_run, load_adopter_config
+from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
     resolve_capability_root,
     resolve_invoker_identity,
 )
-from _lib.placeholder_detection import PHASE_TRANSITION  # noqa: E402
-from _lib.review_mode import (  # noqa: E402
+from _lib.placeholder_detection import PHASE_TRANSITION
+from _lib.review_mode import (
     resolve_mode,
     reviewer_role_from_config,
     role_based_reviewers,

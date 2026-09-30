@@ -14,7 +14,6 @@ from typing import Any, cast
 
 import pytest
 
-
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "done-work.py"
 

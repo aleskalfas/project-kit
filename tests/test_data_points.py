@@ -23,11 +23,10 @@ from click.testing import CliRunner
 from ruamel.yaml import YAML
 
 from project_kit import backbone_schemas as bs
-from project_kit import command_runner
+from project_kit import command_runner, run_cache, validators
 from project_kit import connections as cx
 from project_kit import data_points as dp
 from project_kit import package_validate as pv
-from project_kit import run_cache, validators
 from project_kit.cli import main
 from project_kit.manifest import (
     ComponentRegistryEntry,

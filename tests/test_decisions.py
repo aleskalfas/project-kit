@@ -179,7 +179,7 @@ def test_stamp_decision_adr_refuses_when_adr_records_empty_list(kit_target: Path
 def test_stamp_decision_adr_refuses_when_path_inside_pkit(kit_target: Path) -> None:
     _write_overlay(kit_target, "adr-records:\n  - .pkit/decisions/adr/\n")
     (kit_target / ".pkit" / "decisions" / "adr").mkdir(parents=True)
-    with pytest.raises(click.ClickException, match="outside .pkit/"):
+    with pytest.raises(click.ClickException, match=r"outside \.pkit/"):
         decisions.stamp_decision(kit_target, namespace="adr", slug="inside-pkit")
 
 

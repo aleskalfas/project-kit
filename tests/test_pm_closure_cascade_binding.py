@@ -40,7 +40,6 @@ sys.path.insert(0, str(CAP_SCRIPTS))
 from _lib import lifecycle_inference as infer  # noqa: E402
 from _lib import lifecycle_predicates as predicates  # noqa: E402
 
-
 # --- the binding shape (workflow.yaml process.cascade) --------------------
 
 

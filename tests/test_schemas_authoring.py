@@ -20,7 +20,6 @@ from project_kit.schemas_authoring import (
     stamp_new_schema,
 )
 
-
 # Fixtures --------------------------------------------------------------
 
 

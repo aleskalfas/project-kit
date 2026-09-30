@@ -40,7 +40,6 @@ from __future__ import annotations
 import argparse
 import json
 import re
-import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -51,25 +50,21 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate  # noqa: E402
-from _lib import axis_carriage  # noqa: E402
-from _lib import axis_labels  # noqa: E402
-from _lib import classification_rules  # noqa: E402
-from _lib import lifecycle_inference as infer  # noqa: E402
-from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
-from _lib.membership import (  # noqa: E402
+from _lib import axis_carriage, axis_labels, bootstrap_gate, classification_rules
+from _lib import lifecycle_inference as infer
+from _lib.gh import gh_get_issue, load_adopter_config
+from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
     resolve_capability_root,
     resolve_invoker_identity,
 )
-from _lib.placeholder_detection import (  # noqa: E402
+from _lib.placeholder_detection import (
     PHASE_CREATE,
     PHASE_TRANSITION,
     detect_placeholder_residuals,
 )
-from _lib.structural_type import infer_structural_type  # noqa: E402
-
+from _lib.structural_type import infer_structural_type
 
 SEVERITY_HARD_REJECT = "hard-reject"
 SEVERITY_BYPASSABLE = "bypassable-with-audit"
@@ -226,7 +221,7 @@ def _validate_issue(
     capability_root: Path | None = None,
     phase: str = PHASE_TRANSITION,
     hierarchy: str = axis_labels.HIERARCHY_GATED,
-    substrate_map: "axis_labels.SubstrateMap | None" = None,
+    substrate_map: axis_labels.SubstrateMap | None = None,
 ) -> list[Finding]:
     findings: list[Finding] = []
     title = str(issue.get("title", ""))
@@ -793,7 +788,7 @@ def _validate_issue(
 
 def _expected_type_prefixes(
     issue_types: dict,
-    substrate_map: "axis_labels.SubstrateMap | None" = None,
+    substrate_map: axis_labels.SubstrateMap | None = None,
     classification: dict | None = None,
 ) -> list[str]:
     """The bracketed type prefixes a title is expected to carry, for the error text.

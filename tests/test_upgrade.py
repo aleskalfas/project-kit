@@ -235,7 +235,7 @@ def test_compat_reads_the_range_as_the_resolver_does(
     monkeypatch.setattr(upgrade, "find_source_kit", lambda: src)
     monkeypatch.setattr(upgrade, "run_sync", lambda *args, **kwargs: None)
     if refused:
-        with pytest.raises(click.ClickException, match="requires backbone >=0.1.0,<1.5.0"):
+        with pytest.raises(click.ClickException, match=r"requires backbone >=0\.1\.0,<1\.5\.0"):
             upgrade.run_upgrade(installed_target, dry_run=True)
     else:
         upgrade.run_upgrade(installed_target, dry_run=True)
@@ -765,7 +765,6 @@ def _stage_installed_capability(
     the installed state, not the source. The package.yaml is written to the
     installed path so _resolve_compatibility can read it.
     """
-    from project_kit import capabilities as caps
     from project_kit.manifest import (
         ComponentRegistryEntry,
         read_backbone_manifest,
@@ -804,7 +803,7 @@ component:
   kind: capability
   name: {name}
   version: {version}
-  installed_at: '{_dt.datetime.now(_dt.timezone.utc).isoformat()}'
+  installed_at: '{_dt.datetime.now(_dt.UTC).isoformat()}'
 requires_backbone: '{requires_backbone}'
 backend_state: {{}}
 """,

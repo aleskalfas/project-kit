@@ -21,7 +21,6 @@ from unittest.mock import MagicMock
 
 import pytest
 
-
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = (
     REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "promote-issue.py"
@@ -332,7 +331,6 @@ def test_main_milestone_omitted_skips_attach(pi, monkeypatch) -> None:
 def test_main_milestone_omitted_calls_move_issue(pi, monkeypatch, capsys) -> None:
     """move-issue --to backlog is still called on the reason-only path."""
     move_calls: list = []
-    original_invoke = pi._invoke_move_issue
 
     def capturing_invoke(issue_number, target, reason, cap_root, allow_foreign_repo=False):
         move_calls.append((issue_number, target, reason))

@@ -15,7 +15,6 @@ from project_kit import report_context as rc
 from project_kit.command_runner import CommandRun, Ending
 from project_kit.report import kind_marker, parse_report_marker, render_context_line
 
-
 # --- project name: config key ----------------------------------------
 
 

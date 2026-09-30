@@ -328,7 +328,7 @@ def test_install_decision_core_loads_after_propagation(tmp_target: Path) -> None
     from project_kit import permissions as perm
 
     catalog = perm._load_catalog(tmp_target)  # reads .pkit/schemas/privilege-catalog.yaml
-    assert "privileges" in catalog and catalog["privileges"]
+    assert catalog.get("privileges")
     model = perm._load_model(tmp_target)  # imports .pkit/permissions/decide.py
     assert "grants" in model  # guardrail denies synthesized
 

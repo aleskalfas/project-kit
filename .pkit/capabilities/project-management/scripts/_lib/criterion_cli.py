@@ -13,6 +13,7 @@ one place.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import sys
 import tempfile
 from pathlib import Path
@@ -20,8 +21,7 @@ from pathlib import Path
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
-from _lib import provenance
-from _lib import session_guard
+from _lib import provenance, session_guard
 from _lib.criteria import (
     SECTION_CRITERIA,
     SECTION_DOC_IMPACT,
@@ -36,7 +36,6 @@ from _lib.membership import (
     resolve_capability_root,
     resolve_invoker_identity,
 )
-
 
 # How each addressable section names its items in the result lines.
 _ITEM_NOUNS = {
@@ -282,10 +281,8 @@ def _gh_write_body(issue_number: int, body: str, config: dict) -> bool:
             )
             return False
     finally:
-        try:
+        with contextlib.suppress(OSError):
             Path(body_path).unlink(missing_ok=True)
-        except OSError:
-            pass
     return True
 
 

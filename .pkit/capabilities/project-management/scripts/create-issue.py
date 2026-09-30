@@ -67,31 +67,32 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate  # noqa: E402
-from _lib import axis_carriage  # noqa: E402
-from _lib import axis_labels  # noqa: E402
-from _lib import body_parent_ref  # noqa: E402
-from _lib import classification_rules  # noqa: E402
-from _lib import containment  # noqa: E402
-from _lib.containment import link_sub_issue  # noqa: E402
-from _lib.gh import gh_project_run, gh_run, load_adopter_config  # noqa: E402
-from _lib.hooks import fire_hooks  # noqa: E402
-from _lib.membership import (  # noqa: E402
+from _lib import (
+    axis_carriage,
+    axis_labels,
+    body_parent_ref,
+    bootstrap_gate,
+    classification_rules,
+    containment,
+    provenance,
+    session_guard,
+)
+from _lib.containment import link_sub_issue
+from _lib.gh import gh_project_run, gh_run, load_adopter_config
+from _lib.hooks import fire_hooks
+from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
     resolve_capability_root,
     resolve_invoker_identity,
 )
-from _lib.milestone import resolve_milestone  # noqa: E402
-from _lib import provenance  # noqa: E402
-from _lib import session_guard  # noqa: E402
-from _lib.substrate_writes import milestone_create_args  # noqa: E402
-from _lib.placeholder_detection import (  # noqa: E402
+from _lib.milestone import resolve_milestone
+from _lib.placeholder_detection import (
     PHASE_CREATE,
     detect_placeholder_residuals,
 )
-from _lib.structural_type import infer_structural_type  # noqa: E402
-
+from _lib.structural_type import infer_structural_type
+from _lib.substrate_writes import milestone_create_args
 
 VALID_STRUCTURAL_TYPES = ("epic", "feature", "umbrella", "task")
 VALID_KINDS = ("feature", "bug", "docs", "test", "refactor", "maintenance")
@@ -895,7 +896,7 @@ def _build_labels(
     priority: str,
     workstream: str | None,
     config: dict,
-    substrate_map: "axis_labels.SubstrateMap | None",
+    substrate_map: axis_labels.SubstrateMap | None,
 ) -> tuple[list[str], list[str], dict[str, str]]:
     """Resolve the applied-label list for a new issue through the seam (ADR-026).
 

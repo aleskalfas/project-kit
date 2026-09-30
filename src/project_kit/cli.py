@@ -21,8 +21,19 @@ import click
 if TYPE_CHECKING:
     from project_kit.capabilities import CapabilitySource, MandatoryUpstream
 
-from project_kit import __version__
-from project_kit import cli_render
+from project_kit import (
+    __version__,
+    cli_render,
+    default_branch,
+    friction_check,
+    friction_report,
+    friction_repository,
+    friction_write,
+    router,
+    scratchpads,
+)
+from project_kit import refs as refs_mod
+from project_kit.agents import STORYBOARD_FILE, stamp_new_agent
 from project_kit.decisions import stamp_decision
 from project_kit.dispatcher import CapabilityDispatchGroup
 from project_kit.install import (
@@ -32,35 +43,12 @@ from project_kit.install import (
     install_kit,
     refuse_if_pkit_present,
     refuse_propagation_into_source,
-    source_checkout_root,
     resolve_init_target,
     scan_pkit_installs,
+    source_checkout_root,
     sync_remedy,
 )
 from project_kit.merge import run_merge
-from project_kit.scaffolds import (
-    AreaVariant,
-    MigrationScope,
-    MigrationTier,
-    register_kit_shipped_component,
-    stamp_adapter,
-    stamp_area,
-    stamp_capability,
-    stamp_migration,
-)
-from project_kit.agents import STORYBOARD_FILE, stamp_new_agent
-from project_kit.storyboards import ArtifactKind, stamp_new_storyboard
-from project_kit import default_branch, friction_check, friction_report, friction_repository
-from project_kit import friction_write
-from project_kit import refs as refs_mod
-from project_kit import router
-from project_kit import scratchpads
-from project_kit.scratchpads import (
-    stamp_new_scratchpad,
-    stamp_reported,
-    transition_to_done,
-    transition_to_dropped,
-)
 from project_kit.release import (
     ReleasePlan,
     apply_release,
@@ -74,7 +62,24 @@ from project_kit.release import (
     publish_release_notes,
     release_summary,
 )
+from project_kit.scaffolds import (
+    AreaVariant,
+    MigrationScope,
+    MigrationTier,
+    register_kit_shipped_component,
+    stamp_adapter,
+    stamp_area,
+    stamp_capability,
+    stamp_migration,
+)
+from project_kit.scratchpads import (
+    stamp_new_scratchpad,
+    stamp_reported,
+    transition_to_done,
+    transition_to_dropped,
+)
 from project_kit.status import report_status
+from project_kit.storyboards import ArtifactKind, stamp_new_storyboard
 from project_kit.sync import run_sync
 from project_kit.upgrade import (
     freeze_at_content,
@@ -227,7 +232,7 @@ def agents_adopt(agent_name: str) -> None:
         )
         for d in result.dirs_created:
             lines.append(f"  {d}/")
-            lines.append(f"    (seed README.md written explaining the directory's purpose)")
+            lines.append("    (seed README.md written explaining the directory's purpose)")
     if result.categories_wired:
         lines.append(
             cli_render.style(
@@ -738,8 +743,7 @@ def connections_resolve(address: str, as_json: bool) -> None:
     """
     import json
 
-    from project_kit import backbone_schemas
-    from project_kit import data_points
+    from project_kit import backbone_schemas, data_points
     from project_kit.status import _data_point_lines  # pyright: ignore[reportPrivateUsage]
 
     if backbone_schemas.filler_subpath(address) is None:
@@ -3448,8 +3452,8 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
                 f"collides with {finding.target_path.relative_to(target_root)}"
             )
         raise click.ClickException(
-            f"refusing to upgrade with unresolved collisions. "
-            f"Re-run with --interactive to resolve them."
+            "refusing to upgrade with unresolved collisions. "
+            "Re-run with --interactive to resolve them."
         )
 
     new_skipped: list[tuple[str, str]] = []
@@ -5589,7 +5593,6 @@ def _resolve_collision_interactive(target_root, finding, *, dry_run: bool) -> st
     Loops on `inspect` (re-prompts after showing diff) until adopter
     picks override or skip. Returns the final choice as a string.
     """
-    from project_kit import capabilities as caps  # local to avoid cycle
 
     while True:
         click.echo(

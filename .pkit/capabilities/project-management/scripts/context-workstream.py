@@ -61,9 +61,9 @@ from pathlib import Path
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import axis_labels, bootstrap_gate  # noqa: E402
-from _lib.gh import gh_get_issue, load_adopter_config  # noqa: E402
-from _lib.membership import CAPABILITY_NAME, resolve_capability_root  # noqa: E402
+from _lib import axis_labels, bootstrap_gate
+from _lib.gh import gh_get_issue, load_adopter_config
+from _lib.membership import CAPABILITY_NAME, resolve_capability_root
 
 #: The issue number embedded in a `<type>/<N>-<slug>` branch name — the same
 #: derivation `open-pr` uses on its closing-issue path (DEC-013).

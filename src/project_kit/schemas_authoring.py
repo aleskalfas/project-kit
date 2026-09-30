@@ -51,7 +51,6 @@ from project_kit.schemas_validate import (
     validate_path,
 )
 
-
 CollectionForm = Literal["mapping", "list"]
 
 
@@ -716,7 +715,7 @@ def _walk_keys_from_namespace_for_renames(
     if isinstance(properties, dict):
         for prop_name, prop_schema in properties.items():
             yield from _walk_keys_from_namespace_for_renames(
-                prop_schema, target_namespace, data_pointer + (prop_name,)
+                prop_schema, target_namespace, (*data_pointer, prop_name)
             )
 
 

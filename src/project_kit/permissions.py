@@ -21,6 +21,7 @@ verdict against an independent restatement of the declared contract.
 
 from __future__ import annotations
 
+import contextlib
 import fnmatch
 import importlib.util
 import json
@@ -371,7 +372,6 @@ def overview(target_root: Path) -> str:
     else:
         status = "OFF — declared but not enforced live; run `pkit permissions enable`"
     sb = _sandbox_block(target_root)
-    confinement_probe: str | None = None
     if sb.get("enabled") is True:
         sandbox_line = "  sandbox ON — scripting runs prompt-free inside the OS box"
         if sb.get("failIfUnavailable") is not True:
@@ -391,7 +391,6 @@ def overview(target_root: Path) -> str:
                 "box (restart needed) or the sandbox cannot initialize. "
                 "Run `pkit permissions sandbox enable` to re-check."
             )
-            confinement_probe = "allowed"
     else:
         sandbox_line = (
             "  sandbox OFF — scripting prompts; "
@@ -1234,7 +1233,6 @@ def _confinement_write_probe() -> str:
     'allowed' → OS permitted it → NOT confined (or probe ran outside the box).
     'error'   → unexpected error (treat as inconclusive).
     """
-    import tempfile
     import uuid
 
     probe_name = f"pkit-confinement-probe-{uuid.uuid4().hex[:8]}"
@@ -1243,10 +1241,8 @@ def _confinement_write_probe() -> str:
         probe_path = Path(probe_dir) / probe_name
         try:
             probe_path.write_text("x", encoding="utf-8")
-            try:
+            with contextlib.suppress(OSError):
                 probe_path.unlink()
-            except OSError:
-                pass
             return "allowed"
         except PermissionError:
             return "denied"

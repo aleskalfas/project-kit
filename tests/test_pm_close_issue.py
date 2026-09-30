@@ -1,6 +1,6 @@
 """Tests for project-management's close-issue script's pure logic.
 
-Covers checkbox gate detection (`_unticked_boxes`, `_all_boxes_ticked`),
+Covers checkbox gate detection (`_unticked_boxes`, and the gate's `all_boxes_ticked`),
 structural-type inference, parent-chain walking, and — per issue #60 — the
 label-reconciliation helper that close-issue shares with move-issue.
 """
@@ -14,7 +14,6 @@ from unittest.mock import MagicMock
 
 import pytest
 
-
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = (
     REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "close-issue.py"
@@ -22,13 +21,13 @@ SCRIPT_PATH = (
 LIB_PATH = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
 
 sys.path.insert(0, str(LIB_PATH))
+from _lib import axis_labels, checkbox_gate  # noqa: E402
 from _lib.labels import (  # noqa: E402
     NON_TERMINAL_STATE_VALUES,
     TERMINAL_STATE_VALUE,
     _resolve_state_labels,
     reconcile_state_labels_to_done,
 )
-from _lib import axis_labels  # noqa: E402
 
 
 @pytest.fixture(scope="module")
@@ -100,19 +99,19 @@ def test_unticked_boxes_ignores_non_checkbox_dash_lines(ci) -> None:
 
 def test_all_boxes_ticked_true_when_all_ticked(ci) -> None:
     body = "- [x] First\n- [x] Second\n"
-    assert ci._all_boxes_ticked(body) is True
+    assert checkbox_gate.all_boxes_ticked(body) is True
 
 
 def test_all_boxes_ticked_false_when_any_unticked(ci) -> None:
     body = "- [ ] First\n- [x] Second\n"
-    assert ci._all_boxes_ticked(body) is False
+    assert checkbox_gate.all_boxes_ticked(body) is False
 
 
 def test_all_boxes_ticked_true_when_no_boxes_at_all(ci) -> None:
     # An issue with no checkboxes can close per DEC-007 (gate applies only
     # when boxes exist).
     body = "## What\nplain prose."
-    assert ci._all_boxes_ticked(body) is True
+    assert checkbox_gate.all_boxes_ticked(body) is True
 
 
 # --- structural type inference ---------------------------------------

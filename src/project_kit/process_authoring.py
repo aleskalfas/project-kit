@@ -429,7 +429,7 @@ def _command_name(process_id: str, *parts: str) -> str:
     return "-".join([process_id, *parts])
 
 
-def _gate_command_name(process_id: str, transition: "TransitionSpec") -> str:
+def _gate_command_name(process_id: str, transition: TransitionSpec) -> str:
     """A gate stub's command name, derived from the FULL transition key.
 
     A transition is keyed by (from, to, trigger): two edges between the same

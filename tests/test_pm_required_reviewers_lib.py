@@ -787,8 +787,8 @@ def test_opt_out_keeps_another_capabilitys_contribution_of_the_reviewer(rr, rc) 
         reviewer="docs-reviewer",
     )
     collection = rc.ContributionCollection(
-        rules=collection.rules + (other,),
-        capabilities_walked=collection.capabilities_walked + ("tech-writing",),
+        rules=(*collection.rules, other),
+        capabilities_walked=(*collection.capabilities_walked, "tech-writing"),
     )
     res = _resolve(
         rr,

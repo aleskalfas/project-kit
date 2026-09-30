@@ -152,7 +152,7 @@ def test_plan_labels_sets_new_priority(sf) -> None:
 
 
 def test_plan_labels_replaces_stale_priority(sf) -> None:
-    results, add, remove = sf._plan_labels(
+    _results, add, remove = sf._plan_labels(
         priority="High",
         workstream=None,
         current_labels=["priority:Low", "type:feature"],
@@ -174,7 +174,7 @@ def test_plan_labels_idempotent_noop(sf) -> None:
 
 
 def test_plan_labels_batch_priority_and_workstream(sf) -> None:
-    results, add, remove = sf._plan_labels(
+    _results, add, _remove = sf._plan_labels(
         priority="Medium",
         workstream="cli",
         current_labels=[],
@@ -657,7 +657,7 @@ def test_kind_composes_with_priority_workstream_batch(sf, issue_types, classific
     # The aggregate add/remove main builds: kind swap + priority + workstream in
     # one batch, all label writes against a single edit call.
     current = ["type:maintenance", "priority:Low"]
-    k_results, k_add, k_remove, new_title = sf._plan_kind(
+    _k_results, k_add, k_remove, new_title = sf._plan_kind(
         kind="bug",
         title="[Chore] mislabelled defect",
         current_labels=current,
@@ -665,7 +665,7 @@ def test_kind_composes_with_priority_workstream_batch(sf, issue_types, classific
         classification=classification,
         substrate_map=None,
     )
-    a_results, a_add, a_remove = sf._plan_labels(
+    _a_results, a_add, a_remove = sf._plan_labels(
         priority="High",
         workstream="cli",
         current_labels=current,
@@ -705,7 +705,7 @@ def test_plan_parent_prepends_when_absent(sf) -> None:
 
 def test_plan_parent_preserves_milestone_link_form_recognised(sf) -> None:
     body = "Milestone: [#6](../milestone/6)\n\n## What\nx\n"
-    new_body, result = sf._plan_parent(body, "EPIC: #3")
+    new_body, _result = sf._plan_parent(body, "EPIC: #3")
     # The existing first line is a recognised parent-ref, so it is REPLACED
     # (not prepended-before).
     assert new_body.startswith("EPIC: #3\n")

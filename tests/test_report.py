@@ -214,7 +214,7 @@ def test_cli_report_bug_prints_prefilled_url() -> None:
         main, ["report", "bug", "--title", "sandbox bug", "--body", "it broke"]
     )
     assert res.exit_code == 0, res.output
-    assert f"issues/new?" in res.output
+    assert "issues/new?" in res.output
     assert REPORT_TARGET in res.output
     assert "labels=report%3Abug" in res.output  # namespaced label prefill (#663)
     assert "environment block" in res.output.lower()

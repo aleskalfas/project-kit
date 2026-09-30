@@ -20,8 +20,8 @@ from referencing.jsonschema import DRAFT202012
 
 from project_kit import backbone_schemas as bs
 from project_kit import capabilities as caps
-from project_kit import package_validate as pv
 from project_kit import lifecycle_ownership, process_journal, refs, scaffolds
+from project_kit import package_validate as pv
 from project_kit.cli import main
 from project_kit.manifest import (
     ORIGIN_EXTERNALLY_SOURCED,

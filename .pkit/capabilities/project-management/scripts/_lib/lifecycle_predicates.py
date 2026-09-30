@@ -31,12 +31,10 @@ _HERE = Path(__file__).parent.parent
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
-from _lib import axis_labels  # noqa: E402
-from _lib import containment  # noqa: E402
-from _lib import lifecycle_inference as infer  # noqa: E402
-from _lib.gh import gh_run, load_adopter_config  # noqa: E402
-from _lib.membership import resolve_capability_root  # noqa: E402
-
+from _lib import axis_labels, containment
+from _lib import lifecycle_inference as infer
+from _lib.gh import gh_run, load_adopter_config
+from _lib.membership import resolve_capability_root
 
 # A predicate that genuinely COULD NOT evaluate (gh failure, capability
 # missing) carries this marker key. The thin predicate script strips it and

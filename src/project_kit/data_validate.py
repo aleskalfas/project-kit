@@ -39,9 +39,8 @@ from referencing.exceptions import Unresolvable
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
-from project_kit import backbone_schemas
+from project_kit import backbone_schemas, validators
 from project_kit.manifest import read_backbone_manifest
-from project_kit import validators
 from project_kit.schemas_validate import (
     _ID_COLLECTION_ANNOTATION,
     _TOKEN_PATTERN,

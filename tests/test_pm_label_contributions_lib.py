@@ -21,7 +21,6 @@ from pathlib import Path
 
 import pytest
 
-
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS_DIR = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
 LIB_PATH = SCRIPTS_DIR / "_lib" / "label_contributions.py"
@@ -161,7 +160,7 @@ def test_parse_mixed_good_and_bad_entries(lc) -> None:
         ]
     }
     labels, errors = lc.parse_label_contributions(data, "cap")
-    assert [l.id for l in labels] == ["good"]
+    assert [label.id for label in labels] == ["good"]
     assert errors  # the bad entry warned
 
 
@@ -173,7 +172,7 @@ def test_parse_duplicate_id_within_declaration(lc) -> None:
         ]
     }
     labels, errors = lc.parse_label_contributions(data, "cap")
-    assert [l.id for l in labels] == ["dup"]  # first wins
+    assert [label.id for label in labels] == ["dup"]  # first wins
     assert any("duplicate label id" in e.message for e in errors)
 
 

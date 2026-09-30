@@ -50,7 +50,6 @@ from project_kit.command_runner import (
 from project_kit.install import find_target_root
 from project_kit.manifest import read_backbone_manifest
 
-
 _yaml = YAML(typ="safe")
 
 # The package key that lists a capability's other top-level names (`pm` for

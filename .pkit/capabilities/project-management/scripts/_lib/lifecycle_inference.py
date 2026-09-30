@@ -109,7 +109,7 @@ def infer_current_state(
     state: str,
     milestone: dict | None,
     labels: list[str],
-    substrate_map: "axis_labels.SubstrateMap | None" = None,
+    substrate_map: axis_labels.SubstrateMap | None = None,
 ) -> str:
     """Best-effort live position — reproduces move-issue `_infer_current_state`.
 

@@ -230,7 +230,7 @@ def test_process_authoring_targets_is_write_carrying() -> None:
     a review-time event: a core agent citing a write-carrying category some other
     record introduced is the red flag, so the set is pinned rather than sampled.
     """
-    assert own.WRITE_CARRYING_CATEGORIES == frozenset({"process-authoring-targets"})
+    assert frozenset({"process-authoring-targets"}) == own.WRITE_CARRYING_CATEGORIES
 
 
 def test_offences_only_reported_for_write_carrying_categories(tmp_path: Path) -> None:

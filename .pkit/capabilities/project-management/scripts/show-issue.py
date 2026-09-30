@@ -31,7 +31,6 @@ from __future__ import annotations
 import argparse
 import json
 import re
-import subprocess
 import sys
 from pathlib import Path
 
@@ -40,19 +39,17 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate  # noqa: E402
-from _lib import axis_labels  # noqa: E402
-from _lib import provenance  # noqa: E402
-from _lib import lifecycle_inference as infer  # noqa: E402
-from _lib.criteria import DOC_IMPACT_HEADINGS, FALLBACK_HEADINGS, checkbox_headings  # noqa: E402
-from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
-from _lib.membership import (  # noqa: E402
+from _lib import axis_labels, bootstrap_gate, provenance
+from _lib import lifecycle_inference as infer
+from _lib.criteria import DOC_IMPACT_HEADINGS, FALLBACK_HEADINGS, checkbox_headings
+from _lib.gh import gh_get_issue, load_adopter_config
+from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
     resolve_capability_root,
     resolve_invoker_identity,
 )
-from _lib.structural_type import infer_structural_type  # noqa: E402
+from _lib.structural_type import infer_structural_type
 
 
 def main() -> int:
@@ -155,7 +152,7 @@ def _summarise(
     issue: dict,
     issue_types: dict,
     body_format: dict,
-    substrate_map: "axis_labels.SubstrateMap | None" = None,
+    substrate_map: axis_labels.SubstrateMap | None = None,
     classification: dict | None = None,
 ) -> dict:
     title = str(issue.get("title", ""))

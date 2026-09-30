@@ -64,7 +64,6 @@ import json
 import re
 import subprocess
 import sys
-from dataclasses import dataclass
 from pathlib import Path
 
 from ruamel.yaml import YAML
@@ -72,33 +71,26 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import audit as _audit  # noqa: E402
-from _lib import bootstrap_gate  # noqa: E402
-from _lib import axis_labels  # noqa: E402
-from _lib import containment  # noqa: E402
-from _lib import lifecycle_inference as infer  # noqa: E402
-from _lib import session_guard  # noqa: E402
+from _lib import audit as _audit
+from _lib import axis_labels, bootstrap_gate, containment, session_guard
+from _lib import lifecycle_inference as infer
 
 # DEC-007's checkbox close-gate — the ONE implementation (`_lib.checkbox_gate`),
 # shared with done-work, merge-pr and the engine's gate-checkboxes-ticked
 # predicate. Aliased to the local names this script has always used.
-from _lib.checkbox_gate import (  # noqa: E402
-    all_boxes_ticked as _all_boxes_ticked,
-    refusal_message as _checkbox_refusal,
-    unticked_boxes as _unticked_boxes,
-)
-from _lib.comment import post_audit_once  # noqa: E402
-from _lib.gh import gh_get_issue, gh_get_pr, gh_run, load_adopter_config  # noqa: E402
-from _lib.hooks import fire_hooks  # noqa: E402
-from _lib.labels import reconcile_state_labels_to_done  # noqa: E402
-from _lib.membership import (  # noqa: E402
+from _lib.checkbox_gate import refusal_message as _checkbox_refusal
+from _lib.checkbox_gate import unticked_boxes as _unticked_boxes
+from _lib.comment import post_audit_once
+from _lib.gh import gh_get_issue, gh_get_pr, gh_run, load_adopter_config
+from _lib.hooks import fire_hooks
+from _lib.labels import reconcile_state_labels_to_done
+from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
     resolve_capability_root,
     resolve_invoker_identity,
 )
-from _lib.structural_type import infer_structural_type  # noqa: E402
-
+from _lib.structural_type import infer_structural_type
 
 VALID_MODES = ("wont-do", "pr-merge", "cascade-eligibility-close")
 DEFAULT_MODE = "wont-do"
@@ -530,7 +522,7 @@ def _close_leaf_through_pr(
     body: str,
     labels: list[str],
     config: dict,
-    substrate_map: "axis_labels.SubstrateMap | None",
+    substrate_map: axis_labels.SubstrateMap | None,
 ) -> int | None:
     """Close an open leaf as completed through merged PR ``args.pr``.
 

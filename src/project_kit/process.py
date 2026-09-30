@@ -187,8 +187,8 @@ from ruamel.yaml import YAML
 
 from project_kit import cli_render, process_journal
 from project_kit.command_runner import Ending, registered_commands, run_command
-from project_kit.validators import Finding, Outcome
 from project_kit.install import find_target_root
+from project_kit.validators import Finding, Outcome
 
 _yaml = YAML(typ="safe")
 

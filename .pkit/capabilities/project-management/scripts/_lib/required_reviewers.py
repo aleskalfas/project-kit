@@ -78,24 +78,28 @@ own already-imported `gh` helpers.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
-from typing import Callable
 
 from _lib import axis_labels
 
 try:
     from _lib.review_contributions import (
+        FLOOR_TOUCHES_CODE,
         ContributionCollection,
         ContributionRule,
-        FLOOR_TOUCHES_CODE,
+    )
+    from _lib.review_contributions import (
         collect_contributions as _default_collect_contributions,
     )
 except ImportError:  # pragma: no cover - exercised via spec-loaded fallback
     from review_contributions import (  # type: ignore[no-redef]
+        FLOOR_TOUCHES_CODE,
         ContributionCollection,
         ContributionRule,
-        FLOOR_TOUCHES_CODE,
+    )
+    from review_contributions import (
         collect_contributions as _default_collect_contributions,
     )
 
@@ -368,7 +372,7 @@ def _floor_rules(
     pr_number: int,
     *,
     changed_files: ChangedFilesFn,
-) -> "tuple[ContributionRule, ...] | _Unresolvable":
+) -> tuple[ContributionRule, ...] | _Unresolvable:
     """Floor-carrying rules the PR's diff satisfies (DEC-032 amendment).
 
     Short-circuits when no installed contribution carries a floor — a
@@ -618,7 +622,7 @@ def _closing_issue_classifications(
     *,
     closing_issue_numbers: ClosingIssueNumbersFn,
     issue_labels: IssueLabelsFn,
-) -> "list[dict[str, str]] | _Unresolvable":
+) -> list[dict[str, str]] | _Unresolvable:
     """Classification mapping (e.g. `{workstream: design, type: feature}`) per closing issue.
 
     DEC-032 D1's resolution domain is total for the *determinable* cases: a

@@ -85,7 +85,7 @@ def test_duplicate_dec_in_same_capability_fails(project: Path) -> None:
 
     report = decisions_validate.validate_decision_ids(project)
     assert not report.is_clean
-    assert any("capability:alpha :: DEC-001" == i.location for i in report.issues)
+    assert any(i.location == "capability:alpha :: DEC-001" for i in report.issues)
 
 
 # --- cross-space is NOT a collision ------------------------------------
@@ -161,7 +161,7 @@ def test_adr_duplicates_detected_via_overlay(project: Path) -> None:
 
     report = decisions_validate.validate_decision_ids(project)
     assert not report.is_clean
-    assert any("adr :: ADR-001" == i.location for i in report.issues)
+    assert any(i.location == "adr :: ADR-001" for i in report.issues)
 
 
 def test_missing_overlay_does_not_error(project: Path) -> None:

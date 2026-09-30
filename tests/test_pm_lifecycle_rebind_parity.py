@@ -22,7 +22,6 @@ predicate contract, not the network.
 
 from __future__ import annotations
 
-import importlib.util
 import itertools
 import sys
 from pathlib import Path

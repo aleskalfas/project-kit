@@ -71,31 +71,31 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import audit as _audit  # noqa: E402
-from _lib import axis_carriage  # noqa: E402
-from _lib import axis_labels  # noqa: E402
-from _lib import bootstrap_gate  # noqa: E402
-from _lib import classification_rules  # noqa: E402
-from _lib import lifecycle_inference as infer  # noqa: E402
-from _lib import session_guard  # noqa: E402
-from _lib import state_timeline  # noqa: E402
+from _lib import audit as _audit
+from _lib import (
+    axis_carriage,
+    axis_labels,
+    bootstrap_gate,
+    session_guard,
+    state_timeline,
+)
+from _lib import lifecycle_inference as infer
 
 # The one fetch / scan / post-once wiring every audit writer shares (#902).
-from _lib.comment import post_audit_once  # noqa: E402
-from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
-from _lib.hooks import fire_hooks  # noqa: E402
-from _lib.membership import (  # noqa: E402
+from _lib.comment import post_audit_once
+from _lib.gh import gh_get_issue, gh_run, load_adopter_config
+from _lib.hooks import fire_hooks
+from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
     resolve_capability_root,
     resolve_invoker_identity,
 )
-from _lib.placeholder_detection import (  # noqa: E402
+from _lib.placeholder_detection import (
     PHASE_TRANSITION,
     detect_placeholder_residuals,
 )
-from _lib.structural_type import infer_structural_type  # noqa: E402
-
+from _lib.structural_type import infer_structural_type
 
 SEVERITY_HARD_REJECT = "hard-reject"
 SEVERITY_WARNING = "warning"
@@ -606,7 +606,7 @@ def _compute_plan(
     target_state: str,
     state_on_board: bool,
     labels: list[str],
-    substrate_map: "axis_labels.SubstrateMap | None" = None,
+    substrate_map: axis_labels.SubstrateMap | None = None,
 ) -> Plan:
     """The label add/remove pair for a state move, or an empty plan.
 
@@ -769,7 +769,7 @@ def _infer_current_state(
     state: str,
     milestone: dict | None,
     labels: list[str],
-    substrate_map: "axis_labels.SubstrateMap | None" = None,
+    substrate_map: axis_labels.SubstrateMap | None = None,
 ) -> str:
     """Best-effort live state inference.
 
@@ -1103,7 +1103,7 @@ def _cascade_parent(
     parent_num: int,
     target_state: str,
     config: dict,
-    substrate_map: "axis_labels.SubstrateMap | None" = None,
+    substrate_map: axis_labels.SubstrateMap | None = None,
 ) -> bool:
     """Forward cascade — bump parent if it's behind.
 

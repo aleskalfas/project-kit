@@ -50,9 +50,10 @@ Exports:
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 # The shared contribution-collector core (ADR-038). Same import fallback shape as
 # the reviewer collector, so this module loads both as `_lib.label_contributions`

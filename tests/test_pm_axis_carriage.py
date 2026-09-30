@@ -45,7 +45,7 @@ LIB_DIR = SCRIPTS_DIR / "_lib"
 def mod():
     sys.path.insert(0, str(SCRIPTS_DIR))
     try:
-        from _lib import axis_carriage, axis_labels  # noqa: PLC0415
+        from _lib import axis_carriage, axis_labels
 
         yield axis_carriage, axis_labels
     finally:

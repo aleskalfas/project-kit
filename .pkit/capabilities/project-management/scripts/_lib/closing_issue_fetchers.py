@@ -31,7 +31,8 @@ contract — lives here once.
 from __future__ import annotations
 
 import json
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 try:
     from _lib.required_reviewers import _Unresolvable
@@ -52,7 +53,7 @@ def pr_closing_issue_numbers(
     config: dict,
     *,
     gh_run: GhRunFn,
-) -> "list[int] | _Unresolvable":
+) -> list[int] | _Unresolvable:
     """Issue numbers the PR closes, via `gh pr view`'s closingIssuesReferences.
 
     Distinguishes two states DEC-032 D1 treats differently:
@@ -100,7 +101,7 @@ def pr_changed_files(
     config: dict,
     *,
     gh_run: GhRunFn,
-) -> "list[str] | _Unresolvable":
+) -> list[str] | _Unresolvable:
     """The PR's changed-file paths, via `gh pr diff --name-only` (DEC-032 amendment).
 
     Feeds the resolver's diff-property floor (`touches-code`), so the SOURCE of
@@ -143,7 +144,7 @@ def issue_labels(
     config: dict,
     *,
     gh_get_issue: GhGetIssueFn,
-) -> "list | None":
+) -> list | None:
     """Read an issue's labels for classification (None on fetch failure).
 
     The injected per-issue label fetcher the shared resolver calls. A None

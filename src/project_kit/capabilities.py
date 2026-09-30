@@ -31,12 +31,11 @@ judge through the wiring resolver, never by reading process definitions.
 from __future__ import annotations
 
 import datetime as _dt
-import io
 import re
 import shutil
 from dataclasses import dataclass, field
 from pathlib import Path, PurePath
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 import click
 from ruamel.yaml import YAML
@@ -45,15 +44,14 @@ from project_kit import treecopy
 from project_kit.manifest import (
     ORIGIN_INCUBATED_IN_REPO,
     ORIGIN_KIT_SHIPPED,
-    BackboneManifest,
     ComponentManifest,
     ComponentRegistryEntry,
     read_backbone_manifest,
     read_capability_origin,
-    set_capability_origin as _manifest_set_capability_origin,
     write_backbone_manifest,
     write_component_manifest,
 )
+from project_kit.manifest import set_capability_origin as _manifest_set_capability_origin
 from project_kit.migrations import (
     execute_migration_scripts,
     pending_migration_scripts,
@@ -1656,7 +1654,7 @@ def _stamp_component_manifest(
         kind="capability",
         name=capability_source.name,
         version=capability_source.package.version,
-        installed_at=_dt.datetime.now(_dt.timezone.utc).isoformat(),
+        installed_at=_dt.datetime.now(_dt.UTC).isoformat(),
         requires_backbone=capability_source.package.requires_backbone,
         backend_state=backend_state,
     )

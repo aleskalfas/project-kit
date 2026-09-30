@@ -254,6 +254,12 @@ ignore = [
 # the project also writes are not in ruff's confusables table and need no entry.
 allowed-confusables = ["–", "×", "−", "∪", "ℹ"]
 
+[tool.ruff.lint.per-file-ignores]
+# A capability script runs by path and puts its own folder on `sys.path` before
+# it imports its `_lib` package, so code ahead of those imports is the script's
+# shape rather than a stray import (E402, module-import-not-at-top-of-file).
+".pkit/capabilities/**/scripts/**/*.py" = ["E402"]
+
 [tool.pyright]
 include = ["src", "tests"]
 typeCheckingMode = "strict"

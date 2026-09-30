@@ -20,7 +20,6 @@ if str(SCRIPTS_DIR) not in sys.path:
 
 from _lib import comment  # noqa: E402
 
-
 # --- resolve_body ----------------------------------------------------
 
 

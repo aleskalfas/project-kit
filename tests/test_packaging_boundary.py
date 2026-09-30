@@ -313,12 +313,12 @@ def _declared_markers() -> list[str]:
 
 
 def _sdist_kit_entries(sdist: Path) -> set[str]:
-    archive = tarfile.open(sdist)
-    return {
-        name.split("/.pkit/", 1)[1]
-        for name in archive.getnames()
-        if "/.pkit/" in name and archive.getmember(name).isfile()
-    }
+    with tarfile.open(sdist) as archive:
+        return {
+            name.split("/.pkit/", 1)[1]
+            for name in archive.getnames()
+            if "/.pkit/" in name and archive.getmember(name).isfile()
+        }
 
 
 def test_no_adopter_owned_path_ships_in_the_sdist(ownership, built_sdist: Path) -> None:

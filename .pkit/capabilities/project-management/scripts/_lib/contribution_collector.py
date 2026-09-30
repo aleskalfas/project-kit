@@ -51,9 +51,10 @@ swallowed here (ADR-038 rule "why not swallow DEC-030's walker").
 from __future__ import annotations
 
 import enum
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Generic, TypeVar
+from typing import Any, Generic, TypeVar
 
 try:
     from ruamel.yaml import YAML

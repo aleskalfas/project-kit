@@ -45,23 +45,22 @@ from ruamel.yaml.error import YAMLError
 # pre-check and the DEC-032 contribution collector, per COR-007) and the
 # DEC-032 contribution collector itself (reused, not re-implemented).
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _lib import axis_carriage, axis_labels, bootstrap_gate, default_branch  # noqa: E402
-from _lib.classification_rules import title_prefix_by_value  # noqa: E402
-from _lib.agents import agent_deploy_path, agent_is_deployed  # noqa: E402
-from _lib.gh import gh_project_run  # noqa: E402
-from _lib.review_contributions import (  # noqa: E402
+from _lib import axis_carriage, axis_labels, bootstrap_gate, default_branch
+from _lib.agents import agent_deploy_path, agent_is_deployed
+from _lib.classification_rules import title_prefix_by_value
+from _lib.gh import gh_project_run
+from _lib.label_contributions import collect_label_contributions
+from _lib.review_contributions import (
     ContributionCollection,
     collect_contributions,
 )
-from _lib.review_opt_outs import (  # noqa: E402
+from _lib.review_opt_outs import (
     NO_OPT_OUTS,
     OPT_OUT_KEY,
     OPT_OUT_PATH,
     OptOuts,
     parse_opt_outs,
 )
-from _lib.label_contributions import collect_label_contributions  # noqa: E402
-
 
 CAPABILITY_NAME = "project-management"
 ADOPTER_CONFIG_PATH = "project/config.yaml"
@@ -351,7 +350,7 @@ def _check_command_on_path(cmd: str) -> CheckResult:
         version_line = proc.stdout.strip().split("\n", maxsplit=1)[0] if proc.stdout else ""
     except OSError:
         version_line = ""
-    detail = f"present" + (f" ({version_line})" if version_line else "")
+    detail = "present" + (f" ({version_line})" if version_line else "")
     return CheckResult(f"`{cmd}` on PATH", "ok", detail)
 
 
@@ -664,7 +663,7 @@ def _check_board(
 def _axis_label_check_skipped(
     axis: str,
     config: dict[str, Any] | None,
-    substrate_map: "axis_labels.SubstrateMap | None",
+    substrate_map: axis_labels.SubstrateMap | None,
 ) -> CheckResult:
     """The skip line for an axis whose kit `<axis>:*` labels are not its substrate.
 
@@ -740,7 +739,7 @@ def _check_substrate_map_parse(capability_root: Path) -> CheckResult:
 
 
 def _check_substrate_capability_matrix(
-    substrate_map: "axis_labels.SubstrateMap",
+    substrate_map: axis_labels.SubstrateMap,
 ) -> list[CheckResult]:
     """Report the per-axis capability matrix when a substrate-map is present.
 
@@ -849,7 +848,7 @@ BOARD_CLAIMED_AXES: tuple[str, ...] = axis_carriage.BOARD_CLAIMABLE_AXES
 BOARD_DECLARABLE_AXES: tuple[str, ...] = ("priority", "workstream")
 
 
-def _axis_declares_board(axis: str, substrate_map: "axis_labels.SubstrateMap") -> bool:
+def _axis_declares_board(axis: str, substrate_map: axis_labels.SubstrateMap) -> bool:
     """Whether the map binds ``axis`` with the `board: true` arm.
 
     Delegates to the seam, which ADR-026 makes the sole reader of binding shape.
@@ -869,7 +868,7 @@ def _axis_declares_board(axis: str, substrate_map: "axis_labels.SubstrateMap") -
 
 def _check_substrate_board_conflict(
     config: dict[str, Any] | None,
-    substrate_map: "axis_labels.SubstrateMap",
+    substrate_map: axis_labels.SubstrateMap,
 ) -> list[CheckResult]:
     """WARN when the board flag and a `label:` binding both speak to one axis.
 
@@ -1027,7 +1026,7 @@ def _board_backed_remediation(axis: str) -> str:
 
 def _check_substrate_board_arm_satisfiable(
     config: dict[str, Any] | None,
-    substrate_map: "axis_labels.SubstrateMap",
+    substrate_map: axis_labels.SubstrateMap,
 ) -> list[CheckResult]:
     """FAIL when the map declares `board: true` and the config declares no board.
 
@@ -1115,7 +1114,7 @@ def _check_substrate_board_arm_satisfiable(
 
 def _check_board_axis_absent_from_map(
     config: dict[str, Any] | None,
-    substrate_map: "axis_labels.SubstrateMap",
+    substrate_map: axis_labels.SubstrateMap,
 ) -> list[CheckResult]:
     """INFORM when a board-declarable axis is absent from a present map, under a board.
 
@@ -1173,7 +1172,7 @@ def _check_board_axis_absent_from_map(
 
 def _check_board_arm_default_has_hook(
     capability_root: Path,
-    substrate_map: "axis_labels.SubstrateMap",
+    substrate_map: axis_labels.SubstrateMap,
 ) -> list[CheckResult]:
     """WARN when a `board:`-armed axis carries a `default:` that nothing writes.
 
@@ -1323,7 +1322,7 @@ def _count_set_board_field_hooks(entries: Any) -> int:
 def _check_labels(
     capability_root: Path,
     config: dict[str, Any] | None,
-    substrate_map: "axis_labels.SubstrateMap | None" = None,
+    substrate_map: axis_labels.SubstrateMap | None = None,
 ) -> list[CheckResult]:
     """Verify the methodology's required labels exist on the repo.
 
@@ -1829,7 +1828,7 @@ def _print_human(results: list[CheckResult]) -> None:
 def _check_state_labels(
     capability_root: Path,
     config: dict[str, Any] | None = None,
-    substrate_map: "axis_labels.SubstrateMap | None" = None,
+    substrate_map: axis_labels.SubstrateMap | None = None,
 ) -> CheckResult:
     """Verify all lifecycle state:* labels exist on the repo.
 
@@ -1927,7 +1926,7 @@ _TITLE_PREFIX_SAMPLE_LIMIT = 50
 
 def _check_title_prefix_alignment(
     capability_root: Path,
-    substrate_map: "axis_labels.SubstrateMap | None" = None,
+    substrate_map: axis_labels.SubstrateMap | None = None,
 ) -> list[CheckResult]:
     """Cross-validate open issue titles against known prefix vocabularies.
 

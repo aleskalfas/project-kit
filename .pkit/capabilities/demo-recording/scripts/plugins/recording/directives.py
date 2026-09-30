@@ -105,7 +105,6 @@ from typing import Any
 
 from storyboards.plugin import Plugin
 
-
 # ---------------------------------------------------------------------------
 # Minimal YAML-like parser (stdlib only, no PyYAML)
 # ---------------------------------------------------------------------------
@@ -181,7 +180,7 @@ def _parse_keys_block(content: str) -> tuple[list[str], list[str]]:
     """
     chords: list[str] = []
     errors: list[str] = []
-    for lineno, raw_line in enumerate(content.splitlines(), start=1):
+    for _lineno, raw_line in enumerate(content.splitlines(), start=1):
         line = raw_line.strip()
         if not line or line.startswith("#"):
             continue

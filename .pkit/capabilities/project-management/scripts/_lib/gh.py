@@ -136,7 +136,9 @@ def gh_run(
     # Always set env unless the caller explicitly passed env=None or env=...
     if "env" not in kwargs:
         kwargs["env"] = gh_env(config)
-    return subprocess.run(args, **kwargs)  # noqa: S603 — args composed from validated config + kit-controlled strings
+    return subprocess.run(
+        args, **kwargs
+    )  # args composed from validated config + kit-controlled strings
 
 
 def gh_get_issue(

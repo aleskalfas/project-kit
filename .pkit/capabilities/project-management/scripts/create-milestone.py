@@ -49,16 +49,16 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate  # noqa: E402
-from _lib.gh import gh_run, load_adopter_config  # noqa: E402
-from _lib import session_guard  # noqa: E402
-from _lib.membership import (  # noqa: E402
+import contextlib
+
+from _lib import bootstrap_gate, session_guard
+from _lib.gh import gh_run, load_adopter_config
+from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
     resolve_capability_root,
     resolve_invoker_identity,
 )
-
 
 VALID_CLOSE_TRIGGERS = ("date-based", "content-based", "either")
 
@@ -238,7 +238,7 @@ def main() -> int:
     print(f"  close_trigger: {close_trigger}")
     if args.due_on:
         print(f"  due_on:        {args.due_on}")
-    print(f"  body:")
+    print("  body:")
     for line in body.splitlines():
         print(f"    {line}")
 
@@ -414,10 +414,8 @@ def _gh_list_milestones(config: dict | None = None) -> list[dict] | None:
                 depth -= 1
                 if depth == 0:
                     chunk = out[start : i + 1]
-                    try:
+                    with contextlib.suppress(json.JSONDecodeError):
                         results.extend(json.loads(chunk))
-                    except json.JSONDecodeError:
-                        pass
         return results
 
 
@@ -446,10 +444,7 @@ def _gh_create_milestone(*, title: str, body: str, due_on: str | None, config: d
     ]
     if due_on:
         # GitHub API expects ISO 8601 with Z; accept date-only and pad.
-        if len(due_on) == 10 and due_on.count("-") == 2:
-            due_iso = f"{due_on}T23:59:59Z"
-        else:
-            due_iso = due_on
+        due_iso = f"{due_on}T23:59:59Z" if len(due_on) == 10 and due_on.count("-") == 2 else due_on
         args.extend(["-f", f"due_on={due_iso}"])
     try:
         proc = subprocess.run(args, capture_output=True, text=True, check=False)

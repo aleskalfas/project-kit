@@ -10,7 +10,6 @@ from click.testing import CliRunner
 from project_kit import refs
 from project_kit.cli import main
 
-
 # --- fixtures -------------------------------------------------------
 
 
@@ -877,7 +876,7 @@ def _make_storyboarded_agent(
 
 def test_validate_storyboard_missing_consumers_frontmatter(kit_target: Path) -> None:
     """A storyboard file without `consumers:` frontmatter is flagged."""
-    agent_file, sb_file = _make_storyboarded_agent(kit_target, "a")
+    _agent_file, sb_file = _make_storyboarded_agent(kit_target, "a")
     sb_file.write_text("# Storyboard\n\nNo frontmatter.\n", encoding="utf-8")
 
     issues = refs.validate_corpus(kit_target)
@@ -886,7 +885,7 @@ def test_validate_storyboard_missing_consumers_frontmatter(kit_target: Path) -> 
 
 def test_validate_storyboard_consumer_back_reference(kit_target: Path) -> None:
     """If a storyboard declares an agent consumer, that agent must declare this storyboard back."""
-    agent_file, sb_file = _make_storyboarded_agent(kit_target, "a")
+    agent_file, _sb_file = _make_storyboarded_agent(kit_target, "a")
     # Strip the storyboards: declaration from the agent — now back-reference fails.
     agent_file.write_text(
         "---\nname: a\ndescription: t\ntools: [Read]\n---\n# A\n",

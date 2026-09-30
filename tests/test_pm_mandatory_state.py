@@ -12,7 +12,6 @@ from pathlib import Path
 
 import pytest
 
-
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = (
     REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "validate-issue.py"
@@ -101,7 +100,8 @@ def _make_issue(*, body: str, labels=None, assignees=None, project_items=None) -
         "title": "[Task] Install the Claude Code CLI inside the sandbox",
         "body": body,
         "labels": [
-            {"name": l} for l in (labels or ["type:feature", "priority:Medium", "workstream:cli"])
+            {"name": label}
+            for label in (labels or ["type:feature", "priority:Medium", "workstream:cli"])
         ],
         "assignees": assignees if assignees is not None else [{"login": "alice"}],
         **({"projectItems": project_items} if project_items is not None else {}),

@@ -102,12 +102,8 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import axis_labels  # noqa: E402
-from _lib import body_parent_ref  # noqa: E402
-from _lib import bootstrap_gate  # noqa: E402
-from _lib import containment  # noqa: E402
-from _lib import session_guard  # noqa: E402
-from _lib.containment import (  # noqa: E402
+from _lib import axis_labels, body_parent_ref, bootstrap_gate, containment, session_guard
+from _lib.containment import (
     LinkOutcome,
     LinkResult,
     NativeParent,
@@ -115,15 +111,14 @@ from _lib.containment import (  # noqa: E402
     SubIssueReads,
     link_sub_issue,
 )
-from _lib.gh import load_adopter_config  # noqa: E402
-from _lib.membership import (  # noqa: E402
+from _lib.gh import load_adopter_config
+from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
     resolve_capability_root,
     resolve_invoker_identity,
 )
-from _lib.structural_type import infer_structural_type  # noqa: E402
-
+from _lib.structural_type import infer_structural_type
 
 VERB = "link-parent"
 

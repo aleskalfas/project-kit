@@ -33,7 +33,6 @@ import click
 
 from project_kit import cli_render
 
-
 _VERSION_DIR_RE = re.compile(r"^\d+\.\d+\.0$")
 
 # A path under one of these prefixes is considered kit-owned (changes

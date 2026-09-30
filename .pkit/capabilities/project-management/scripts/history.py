@@ -58,9 +58,9 @@ from pathlib import Path
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import axis_carriage, axis_labels, bootstrap_gate, state_timeline  # noqa: E402
-from _lib.gh import gh_run, load_adopter_config  # noqa: E402
-from _lib.membership import resolve_capability_root  # noqa: E402
+from _lib import axis_carriage, axis_labels, bootstrap_gate, state_timeline
+from _lib.gh import gh_run, load_adopter_config
+from _lib.membership import resolve_capability_root
 
 _PROCESS_ADDRESS = "project-management:issue-lifecycle"
 

@@ -11,12 +11,10 @@ from __future__ import annotations
 
 import importlib.util
 import sys
-import types
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 LIB_DIR = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "_lib"

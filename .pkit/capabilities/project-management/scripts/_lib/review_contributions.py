@@ -86,10 +86,11 @@ Exports (the types #145/#146/#147 import):
 
 from __future__ import annotations
 
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from types import MappingProxyType
-from typing import Any, Callable, Iterable, Mapping
+from typing import Any
 
 # The shared contribution-collector core (ADR-038). The manifest walk, the
 # per-declaration read, the `ContributionError` type, and the `ERROR_PARSE` /
@@ -146,9 +147,9 @@ class _MatchAny:
     an entity that lacks the axis).
     """
 
-    _instance: "_MatchAny | None" = None
+    _instance: _MatchAny | None = None
 
-    def __new__(cls) -> "_MatchAny":
+    def __new__(cls) -> _MatchAny:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
@@ -208,7 +209,7 @@ class ContributionRule:
     """
 
     capability: str
-    predicate: Mapping[str, "tuple[str, ...] | _MatchAny"]
+    predicate: Mapping[str, tuple[str, ...] | _MatchAny]
     reviewer: str
     floor: str | None = None
     deployed: bool = True
@@ -287,9 +288,7 @@ class ContributionCollection:
             if rule.predicate and _predicate_matches(rule.predicate, classification)
         )
 
-    def reviewers_for_floors(
-        self, satisfied_floors: "Iterable[str]"
-    ) -> tuple[ContributionRule, ...]:
+    def reviewers_for_floors(self, satisfied_floors: Iterable[str]) -> tuple[ContributionRule, ...]:
         """Rules whose diff-property floor is in `satisfied_floors` (DEC-032 amendment).
 
         The diff-keyed counterpart to `reviewers_for`. `satisfied_floors` is the
@@ -347,7 +346,7 @@ class ContributionCollection:
 
 
 def _predicate_matches(
-    predicate: Mapping[str, "tuple[str, ...] | _MatchAny"],
+    predicate: Mapping[str, tuple[str, ...] | _MatchAny],
     classification: Mapping[str, str],
 ) -> bool:
     """True when every axis in `predicate` holds in `classification`.

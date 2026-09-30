@@ -30,7 +30,7 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -202,7 +202,7 @@ def fire_hooks(
                 detail=str(exc),
                 error=str(exc),
             )
-        except Exception as exc:  # noqa: BLE001 — report-and-continue contract
+        except Exception as exc:  # report-and-continue contract
             result = HookResult(
                 index=index,
                 kind=kind,
@@ -544,10 +544,10 @@ def _hook_custom_script(
             timeout=timeout,
             check=False,
         )
-    except subprocess.TimeoutExpired:
-        raise HookFailure(f"script timed out after {timeout}s: {script_rel}")
+    except subprocess.TimeoutExpired as exc:
+        raise HookFailure(f"script timed out after {timeout}s: {script_rel}") from exc
     except (FileNotFoundError, PermissionError) as exc:
-        raise HookFailure(f"script invocation failed: {exc}")
+        raise HookFailure(f"script invocation failed: {exc}") from exc
     if proc.returncode != 0:
         raise HookFailure(f"script exited {proc.returncode}: {proc.stderr.strip() or 'no stderr'}")
     return HookResult(

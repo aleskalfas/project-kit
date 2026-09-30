@@ -16,7 +16,6 @@ from pathlib import Path
 
 import pytest
 
-
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = (
     REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "create-issue.py"
@@ -445,7 +444,7 @@ def test_advisory_softens_requiredness_gate_real_guard(ci) -> None:
     assertion catches explicit. It is not production code.
     """
 
-    def buggy_is_gated(type_entry, hierarchy):  # noqa: ARG001
+    def buggy_is_gated(type_entry, hierarchy):
         # BUG: ignores the hierarchy mode, always gates.
         return True
 

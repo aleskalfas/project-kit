@@ -54,7 +54,6 @@ from _lib import axis_labels  # noqa: E402
 from _lib import lifecycle_inference as infer  # noqa: E402
 from _lib import lifecycle_predicates as predicates  # noqa: E402
 
-
 # --- fixtures: the four substrate-map shapes ------------------------------
 # The AUJ-shaped derive map (#258 / ADR-026 §5): state derived from open/closed
 # + a Blocked label. `from`/`states` carry prose conditions (the schema defers

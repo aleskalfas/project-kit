@@ -161,47 +161,13 @@ from ruamel.yaml import YAML
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import axis_labels  # noqa: E402
-from _lib import bootstrap_gate  # noqa: E402
+from _lib import axis_labels, bootstrap_gate, pr_merge, session_guard
 
 # The position and transition-table readers move-issue and start-work use, so
 # the move done-work makes ahead of the merge (#1162) and the move it leads to
 # cannot disagree about where the issue is or what it may do.
-from _lib import lifecycle_inference as infer  # noqa: E402
-from _lib import pr_merge  # noqa: E402
-from _lib import session_guard  # noqa: E402
-from _lib.ci_checks import evaluate_ci_gate  # noqa: E402
-
-# DEC-007's checkbox close-gate — the ONE implementation (`_lib.checkbox_gate`),
-# shared with close-issue, merge-pr and the engine's gate-checkboxes-ticked
-# predicate.
-from _lib.checkbox_gate import (  # noqa: E402
-    refusal_message as _checkbox_refusal,
-    unticked_box_lines,
-)
-from _lib.criteria import checkbox_headings, tick_hints  # noqa: E402
-from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
-
-# The closing-reference reader `open-pr` and `validate-pr` use, so all three
-# agree on which issues a PR closes (#1086).
-from _lib.pr_validation import extract_closing_issues  # noqa: E402
-from _lib.membership import (  # noqa: E402
-    CAPABILITY_NAME,
-    Identity,
-    check_membership,
-    resolve_capability_root,
-    resolve_invoker_identity,
-)
-from _lib.placeholder_detection import (  # noqa: E402
-    PHASE_TRANSITION,
-    detect_placeholder_residuals,
-)
-from _lib.closing_issue_fetchers import (  # noqa: E402
-    issue_labels as _issue_labels_fetch,
-    pr_changed_files as _pr_changed_files_fetch,
-    pr_closing_issue_numbers as _pr_closing_issue_numbers_fetch,
-)
-from _lib.agent_verdicts import (  # noqa: E402
+from _lib import lifecycle_inference as infer
+from _lib.agent_verdicts import (
     APPROVED,
     CHANGES_REQUESTED,
     PATH_LOCAL,
@@ -213,7 +179,7 @@ from _lib.agent_verdicts import (  # noqa: E402
 
 # DEC-049's canonical audit-comment format + projection knob — the ONE
 # definition (`_lib.audit`), shared with `move-issue`'s transition audit.
-from _lib.audit import (  # noqa: E402
+from _lib.audit import (
     audit_key,
     bypass_audit_key,
     render_audit_comment,
@@ -221,19 +187,46 @@ from _lib.audit import (  # noqa: E402
     short_sha,
 )
 
+# DEC-007's checkbox close-gate — the ONE implementation (`_lib.checkbox_gate`),
+# shared with close-issue, merge-pr and the engine's gate-checkboxes-ticked
+# predicate.
+from _lib.checkbox_gate import refusal_message as _checkbox_refusal
+from _lib.checkbox_gate import unticked_box_lines
+from _lib.ci_checks import evaluate_ci_gate
+from _lib.closing_issue_fetchers import issue_labels as _issue_labels_fetch
+from _lib.closing_issue_fetchers import pr_changed_files as _pr_changed_files_fetch
+from _lib.closing_issue_fetchers import pr_closing_issue_numbers as _pr_closing_issue_numbers_fetch
+
 # The one fetch / scan / post-once wiring every audit writer shares (#902).
-from _lib.comment import fetch_comments, post_audit_once  # noqa: E402
-from _lib.review_contributions import collect_contributions  # noqa: E402
-from _lib.review_mode import resolve_mode  # noqa: E402
-from _lib.review_opt_outs import OPT_OUT_PATH, read_opt_outs  # noqa: E402
-from _lib.required_reviewers import (  # noqa: E402
+from _lib.comment import fetch_comments, post_audit_once
+from _lib.criteria import checkbox_headings, tick_hints
+from _lib.gh import gh_get_issue, gh_run, load_adopter_config
+from _lib.membership import (
+    CAPABILITY_NAME,
+    Identity,
+    check_membership,
+    resolve_capability_root,
+    resolve_invoker_identity,
+)
+from _lib.placeholder_detection import (
+    PHASE_TRANSITION,
+    detect_placeholder_residuals,
+)
+
+# The closing-reference reader `open-pr` and `validate-pr` use, so all three
+# agree on which issues a PR closes (#1086).
+from _lib.pr_validation import extract_closing_issues
+from _lib.required_reviewers import (
     ERROR_CLOSING_ISSUES,
     ERROR_COLLECTION,
     ERROR_OPT_OUT,
     Resolution,
     resolve_required_local_reviewers,
 )
-from _lib.structural_type import infer_structural_type  # noqa: E402
+from _lib.review_contributions import collect_contributions
+from _lib.review_mode import resolve_mode
+from _lib.review_opt_outs import OPT_OUT_PATH, read_opt_outs
+from _lib.structural_type import infer_structural_type
 
 
 def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
@@ -893,8 +886,8 @@ class _GateResult:
         passed: bool,
         passed_via: str = "",
         refusal_message: str = "",
-        override_audits: "list[_OverrideAudit] | None" = None,
-        warnings: "list[str] | None" = None,
+        override_audits: list[_OverrideAudit] | None = None,
+        warnings: list[str] | None = None,
     ):
         self.passed = passed
         self.passed_via = passed_via
@@ -2222,7 +2215,7 @@ def _gh_get_pr_body(pr_number: int | None, config: dict) -> str | None:
 def _check_pr_placeholder(
     pr_body: str,
     pr_number: int | None,
-    capability_root: "Path",
+    capability_root: Path,
 ) -> list[tuple[str, str, str]]:
     """Run residual-placeholder detection on *pr_body* at PHASE_TRANSITION.
 

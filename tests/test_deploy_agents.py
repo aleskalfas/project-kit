@@ -14,7 +14,6 @@ from pathlib import Path
 
 import pytest
 
-
 SOURCE_REPO = Path(__file__).resolve().parents[1]
 DEPLOY_SCRIPT = SOURCE_REPO / ".pkit" / "adapters" / "claude-code" / "deploy-agents.sh"
 RESOLVE_SCRIPT = SOURCE_REPO / ".pkit" / "adapters" / "claude-code" / "_resolve_agent.py"

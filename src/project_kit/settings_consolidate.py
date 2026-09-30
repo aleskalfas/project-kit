@@ -44,7 +44,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-
 SETTINGS_FILENAMES: tuple[str, ...] = ("settings.json", "settings.local.json")
 
 

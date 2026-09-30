@@ -8,7 +8,6 @@ shapes, error UX for unknown subcommands, and the proxy contract
 
 from __future__ import annotations
 
-import os
 import stat
 from pathlib import Path
 
@@ -30,7 +29,6 @@ from project_kit.manifest import (
     write_backbone_manifest,
 )
 from tests.adopter_repo import MakeAdopterRepo
-
 
 # --- fixtures ---------------------------------------------------------
 

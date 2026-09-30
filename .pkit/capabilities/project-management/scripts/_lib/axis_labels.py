@@ -113,9 +113,9 @@ class _Degrade:
     write-label on the indeterminate paths.
     """
 
-    _instance: "_Degrade | None" = None
+    _instance: _Degrade | None = None
 
-    def __new__(cls) -> "_Degrade":
+    def __new__(cls) -> _Degrade:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
@@ -519,7 +519,7 @@ def axis_title_prefix_remap(axis: str, substrate_map: SubstrateMap | None) -> di
 
 
 def hierarchy_disposition(
-    source: "Path | SubstrateMap | None" = None,
+    source: Path | SubstrateMap | None = None,
 ) -> HierarchyMode:
     """The hierarchy MODE in effect — ``gated`` (default) or ``advisory``.
 
@@ -561,7 +561,7 @@ def hierarchy_disposition(
 
 
 def containment_mode(
-    source: "Path | SubstrateMap | None" = None,
+    source: Path | SubstrateMap | None = None,
 ) -> ContainmentMode:
     """The containment SUBSTRATE in effect — ``native`` (default) or ``textual``.
 

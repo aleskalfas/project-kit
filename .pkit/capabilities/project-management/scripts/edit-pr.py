@@ -45,18 +45,16 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate  # noqa: E402
-from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
-from _lib import pr_validation  # noqa: E402
-from _lib import provenance  # noqa: E402
-from _lib import session_guard  # noqa: E402
-from _lib.membership import (  # noqa: E402
+import contextlib
+
+from _lib import bootstrap_gate, pr_validation, provenance, session_guard
+from _lib.gh import gh_get_issue, gh_run, load_adopter_config
+from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
     resolve_capability_root,
     resolve_invoker_identity,
 )
-
 
 SEVERITY_HARD_REJECT = "hard-reject"
 CLOSING_KEYWORD_RE = re.compile(r"\b(?:closes|fixes|resolves)\s+#(\d+)", re.IGNORECASE)
@@ -395,10 +393,8 @@ def _gh_apply_edit(
             )
             return False
     finally:
-        try:
+        with contextlib.suppress(OSError):
             Path(body_path).unlink(missing_ok=True)
-        except OSError:
-            pass
     return True
 
 

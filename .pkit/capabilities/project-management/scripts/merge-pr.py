@@ -76,25 +76,17 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate  # noqa: E402
-from _lib import pr_merge  # noqa: E402
-from _lib.ci_checks import evaluate_ci_gate  # noqa: E402
+from _lib import bootstrap_gate, pr_merge, session_guard
+from _lib.audit import bypass_audit_key, render_ci_bypass_audit_body
 
 # DEC-007's checkbox close-gate — the ONE implementation (`_lib.checkbox_gate`),
 # shared with close-issue, done-work and the engine predicate.
-from _lib.checkbox_gate import unticked_boxes as _unticked_boxes  # noqa: E402
-from _lib.audit import bypass_audit_key, render_ci_bypass_audit_body  # noqa: E402
-from _lib.comment import post_audit_once  # noqa: E402
-from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
-from _lib.hooks import fire_hooks  # noqa: E402
-
-# The one closing-reference reader, shared with done-work, open-pr and
-# validate-pr, so every verb agrees on which issues a PR closes (#1086).
-from _lib.pr_validation import (  # noqa: E402
-    extract_closing_issues as _extract_closing_issues,
-)
-from _lib import session_guard  # noqa: E402
-from _lib.membership import (  # noqa: E402
+from _lib.checkbox_gate import unticked_boxes as _unticked_boxes
+from _lib.ci_checks import evaluate_ci_gate
+from _lib.comment import post_audit_once
+from _lib.gh import gh_get_issue, gh_run, load_adopter_config
+from _lib.hooks import fire_hooks
+from _lib.membership import (
     CAPABILITY_NAME,
     Identity,
     check_membership,
@@ -102,6 +94,9 @@ from _lib.membership import (  # noqa: E402
     resolve_invoker_identity,
 )
 
+# The one closing-reference reader, shared with done-work, open-pr and
+# validate-pr, so every verb agrees on which issues a PR closes (#1086).
+from _lib.pr_validation import extract_closing_issues as _extract_closing_issues
 
 # The CI-bypass audit comment's first-line kind marker. It says WHAT the comment
 # is; it is not what makes the post idempotent — a fixed string recognised in

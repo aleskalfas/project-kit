@@ -157,7 +157,7 @@ APPLIABLE_AXES: tuple[str, ...] = ("type", "priority", "workstream")
 # ----- classification: the re-validate / idempotency predicates ------------
 
 
-class Disposition(str, Enum):  # noqa: UP042 — StrEnum is 3.11+; this script targets >=3.10 (PEP 723 header)
+class Disposition(str, Enum):  # StrEnum is 3.11+; this script targets >=3.10 (PEP 723 header)
     """What the apply loop should do with one proposed change, re-derived at
     apply time against a FRESH per-issue read (never the plan's stale annotation).
 
@@ -278,7 +278,7 @@ def classify_change(change: PlannedChange, fresh: FreshState) -> Disposition:
 # ----- the apply loop ------------------------------------------------------
 
 
-class ApplyOutcome(str, Enum):  # noqa: UP042 — StrEnum is 3.11+; this script targets >=3.10 (PEP 723 header)
+class ApplyOutcome(str, Enum):  # StrEnum is 3.11+; this script targets >=3.10 (PEP 723 header)
     """The recorded outcome of one change after the apply loop handled it."""
 
     APPLIED = "applied"
@@ -331,7 +331,7 @@ def apply_plan(
     for change in changes:
         try:
             fresh = read_fresh(change)
-        except Exception as exc:  # noqa: BLE001 — a single bad read must not abort the corpus
+        except Exception as exc:  # a single bad read must not abort the corpus
             # A fresh read that throws is treated as an indeterminate read for THIS
             # issue: fail closed to an audited skip (never overwrite against an
             # unconfirmed value), and continue the loop — a half-applied corpus that

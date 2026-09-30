@@ -67,7 +67,9 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import (  # noqa: E402
+import contextlib
+
+from _lib import (
     axis_labels,
     bootstrap_gate,
     classification_rules,
@@ -77,16 +79,16 @@ from _lib import (  # noqa: E402
     provenance,
     session_guard,
 )
-from _lib import lifecycle_inference as infer  # noqa: E402
-from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
-from _lib.hooks import fire_hooks  # noqa: E402
-from _lib.membership import (  # noqa: E402
+from _lib import lifecycle_inference as infer
+from _lib.gh import gh_get_issue, gh_run, load_adopter_config
+from _lib.hooks import fire_hooks
+from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
     resolve_capability_root,
     resolve_invoker_identity,
 )
-from _lib.placeholder_detection import PHASE_TRANSITION  # noqa: E402
+from _lib.placeholder_detection import PHASE_TRANSITION
 
 
 def main() -> int:
@@ -308,10 +310,7 @@ def main() -> int:
 
     # Derive the PR title.
     summary = args.summary or _summary_from_issue_title(issue_title)
-    if args.scope:
-        pr_title = f"{conv_type}({args.scope}): {summary}"
-    else:
-        pr_title = f"{conv_type}: {summary}"
+    pr_title = f"{conv_type}({args.scope}): {summary}" if args.scope else f"{conv_type}: {summary}"
 
     # Base branch (DEC-013, #903): --base, else the closing issue's integration
     # marker, else default_branch — the resolution start-work cut the branch by.
@@ -620,14 +619,12 @@ def _post_force_audit(pr_number: int, findings: list, config: dict) -> None:
     lines = ["[audit] non-draft PR opened despite validate-at-ready findings (--force):"]
     for f in findings:
         lines.append(f"  - [{f.severity}] {f.label}: {f.detail}")
-    try:
+    with contextlib.suppress(FileNotFoundError):
         gh_run(
             ["gh", "pr", "comment", str(pr_number), "--body", "\n".join(lines)],
             config,
             check=False,
         )
-    except FileNotFoundError:
-        pass
 
 
 def _gh_pr_create(*, title: str, body: str, base: str, draft: bool, config: dict) -> str | None:
@@ -661,10 +658,8 @@ def _gh_pr_create(*, title: str, body: str, base: str, draft: bool, config: dict
             return None
         return proc.stdout.strip() or None
     finally:
-        try:
+        with contextlib.suppress(OSError):
             Path(body_path).unlink(missing_ok=True)
-        except OSError:
-            pass
 
 
 def _read_yaml(path: Path, yaml_loader: YAML) -> dict:

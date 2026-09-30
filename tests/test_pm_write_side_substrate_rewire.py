@@ -55,7 +55,6 @@ if str(SCRIPTS) not in sys.path:
 
 from _lib import axis_labels  # noqa: E402
 
-
 # The AUJ-shaped fixture map (#258), built in-process so the test does not depend
 # on any example file's exact contents.
 AUJ_MAP = axis_labels.SubstrateMap(
@@ -108,7 +107,7 @@ _BOARD_CONFIG = {"has_projects_v2_board": True, "projects_v2_board_id": 7}
 def test_create_issue_emits_mapped_priority_label_not_kit_label(ci) -> None:
     """`--priority High` under the AUJ map emits the adopter's `P0`, never the
     kit's `priority:High`."""
-    labels, advisories, _ = ci._build_labels(
+    labels, _advisories, _ = ci._build_labels(
         kind="task",
         priority="High",
         workstream="cli",

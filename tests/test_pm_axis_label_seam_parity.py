@@ -44,7 +44,6 @@ if str(SCRIPTS) not in sys.path:
 
 from _lib import axis_labels  # noqa: E402
 
-
 # A representative grid per axis. The values mirror what the scripts pass:
 # classification.yaml type/priority values, lifecycle states, workstream slugs.
 GREENFIELD_GRID: dict[str, list[str]] = {

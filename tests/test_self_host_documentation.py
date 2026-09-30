@@ -400,5 +400,7 @@ def test_every_file_of_the_retired_mapping_s_trees_is_surface_or_left_out_for_a_
     assert sorted(declared & excluded) == []
     # The surface reaches outside none of the trees, and every reason still applies.
     assert all(rel.startswith(SURFACE_TREES) for rel in files if any(m(rel) for m in surface))
-    stale = [p for p, m in zip(NOT_SURFACE, left_out) if not any(m(rel) for rel in excluded)]
+    stale = [
+        p for p, m in zip(NOT_SURFACE, left_out, strict=True) if not any(m(rel) for rel in excluded)
+    ]
     assert stale == []

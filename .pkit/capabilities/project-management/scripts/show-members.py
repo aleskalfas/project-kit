@@ -33,9 +33,9 @@ from ruamel.yaml.error import YAMLError
 # script's deps inline; shared helpers live at scripts/_lib/).
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate  # noqa: E402
-from _lib.gh import gh_run, load_adopter_config  # noqa: E402
-from _lib.membership import (  # noqa: E402
+from _lib import bootstrap_gate
+from _lib.gh import load_adopter_config
+from _lib.membership import (
     CAPABILITY_NAME,
     MEMBERS_RELATIVE,
     check_membership,

@@ -57,16 +57,12 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import axis_carriage  # noqa: E402
-from _lib import axis_labels  # noqa: E402
-from _lib import bootstrap_gate  # noqa: E402
-from _lib import session_guard  # noqa: E402
-from _lib.gh import gh_run  # noqa: E402
-from _lib.label_contributions import (  # noqa: E402
+from _lib import axis_carriage, axis_labels, bootstrap_gate, session_guard
+from _lib.gh import gh_run
+from _lib.label_contributions import (
     LabelContribution,
     collect_label_contributions,
 )
-
 
 CAPABILITY_NAME = "project-management"
 ADOPTER_CONFIG_PATH = "project/config.yaml"
@@ -507,8 +503,8 @@ def _confirm_apply(repo: str) -> bool:
     """Single confirmation prompt naming the target repo."""
     if not sys.stdin.isatty():
         print(
-            f"  ! Non-interactive shell; refusing to apply without explicit confirmation.\n"
-            f"    Re-run from an interactive shell, or pass --yes after reviewing the plan."
+            "  ! Non-interactive shell; refusing to apply without explicit confirmation.\n"
+            "    Re-run from an interactive shell, or pass --yes after reviewing the plan."
         )
         return False
     while True:

@@ -1023,7 +1023,7 @@ def _restamp_component_manifest_version(
     import datetime as _dt
 
     manifest.version = new_version
-    manifest.installed_at = _dt.datetime.now(_dt.timezone.utc).isoformat()
+    manifest.installed_at = _dt.datetime.now(_dt.UTC).isoformat()
     write_component_manifest(manifest_path, manifest)
 
 

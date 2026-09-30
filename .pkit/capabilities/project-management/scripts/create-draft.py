@@ -47,11 +47,10 @@ from ruamel.yaml import YAML
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate, default_branch  # noqa: E402
-from _lib import lifecycle_inference as infer  # noqa: E402
-from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
-from _lib import session_guard  # noqa: E402
-from _lib.membership import (  # noqa: E402
+from _lib import bootstrap_gate, default_branch, session_guard
+from _lib import lifecycle_inference as infer
+from _lib.gh import gh_get_issue, gh_run, load_adopter_config
+from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
     resolve_capability_root,

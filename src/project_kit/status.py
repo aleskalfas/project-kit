@@ -253,7 +253,7 @@ def _report_suggestions(target_root: Path, source_kit: Path) -> None:
 
     try:
         found = plans.suggest(target_root, source_kit)
-    except Exception:  # noqa: BLE001 — soft probe
+    except Exception:  # soft probe
         return
     if not found:
         return
@@ -285,7 +285,7 @@ def _report_documentation(target_root: Path) -> None:
     try:
         inside = docs_roots.inside_root(target_root, roots)
         outside = docs_roots.outside_root(target_root, roots)
-    except Exception:  # noqa: BLE001 — soft probe; a broken overlay is validate's finding
+    except Exception:  # soft probe; a broken overlay is validate's finding
         inside, outside = [], []
     for label, where, recorded in (
         ("inside root", "inside", inside),
@@ -318,7 +318,7 @@ def _report_friction(target_root: Path) -> None:
     click.echo("  " + cli_render.style("heading", "Friction"))
     try:
         settings = read_friction_settings(target_root)
-    except Exception:  # noqa: BLE001 — soft probe; a broken configuration is validate's finding
+    except Exception:  # soft probe; a broken configuration is validate's finding
         return
     # A value the reader does not recognise falls back to the default, and says so.
     mode_source = "explicit" if settings.mode == settings.mode_or_default else "default"
@@ -354,7 +354,7 @@ def _report_rule_sets(target_root: Path) -> None:
     try:
         discovery = rule_sets.discover_rule_sets(target_root)
         checks = rule_sets.pin_checks(discovery)
-    except Exception:  # noqa: BLE001 — soft probe; a broken rule set is validate's finding
+    except Exception:  # soft probe; a broken rule set is validate's finding
         return
     if not discovery.rule_sets and not discovery.unreadable:
         click.echo(f"    {'found':<18} none")
@@ -404,7 +404,7 @@ def _report_connections(target_root: Path) -> None:
     click.echo("  " + cli_render.style("heading", "Connections"))
     try:
         wiring = connections.shared_wiring(target_root)
-    except Exception:  # noqa: BLE001 — soft probe; a broken declaration is validate's finding
+    except Exception:  # soft probe; a broken declaration is validate's finding
         return
     for line in (
         *_role_lines(wiring),
@@ -574,7 +574,7 @@ def _report_data_points(target_root: Path) -> None:
     try:
         prefix = connections.fillers_prefix(target_root)
         resolution = data_points.shared_resolution(target_root)
-    except Exception:  # noqa: BLE001 — soft probe; a broken declaration is validate's finding
+    except Exception:  # soft probe; a broken declaration is validate's finding
         return
     click.echo(f"    {'fillers':<18} {prefix.as_posix()}/   ({resolution.filler_files} file(s))")
     if not resolution.points:
@@ -650,7 +650,7 @@ def _report_decisions(target_root: Path) -> None:
 
     try:
         adr_dir = resolve_adr_records_dir(target_root)
-    except Exception:  # noqa: BLE001 — soft probe; absence is fine
+    except Exception:  # soft probe; absence is fine
         return
     adr_count = _count_files(adr_dir, "ADR-*.md")
     click.echo(f"    {'adr':<18} {adr_count} records")
@@ -700,9 +700,9 @@ def _count_artifacts(parent: Path) -> int:
         return 0
     count = 0
     for entry in parent.iterdir():
-        if entry.is_file() and entry.suffix == ".md":
-            count += 1
-        elif entry.is_dir() and (entry / f"{entry.name}.md").is_file():
+        if (entry.is_file() and entry.suffix == ".md") or (
+            entry.is_dir() and (entry / f"{entry.name}.md").is_file()
+        ):
             count += 1
     return count
 
@@ -744,7 +744,7 @@ def _has_kit_marker(agent_file: Path) -> bool:
     """
     try:
         with agent_file.open("r", encoding="utf-8") as f:
-            head = "".join(line for _, line in zip(range(5), f))
+            head = "".join(line for _, line in zip(range(5), f, strict=False))
     except OSError:
         return False
     return _KIT_AGENT_MARKER in head

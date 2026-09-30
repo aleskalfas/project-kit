@@ -55,8 +55,9 @@ naming the entry); `pre-check` reports each as a `fail`.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, replace
-from typing import TYPE_CHECKING, Any, Mapping
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from _lib.review_contributions import ContributionCollection, ContributionRule
@@ -89,7 +90,7 @@ class ContributionOptOut:
     def where(self) -> str:
         return f"{OPT_OUT_PATH}[{self.index}]"
 
-    def covers(self, rule: "ContributionRule") -> bool:
+    def covers(self, rule: ContributionRule) -> bool:
         """True when `rule` is a contribution this opt-out withdraws."""
         return rule.capability == self.capability and rule.reviewer == self.reviewer
 
@@ -111,7 +112,7 @@ class OptOuts:
     def ok(self) -> bool:
         return not self.errors
 
-    def apply(self, collection: "ContributionCollection") -> "ContributionCollection":
+    def apply(self, collection: ContributionCollection) -> ContributionCollection:
         """`collection` without the opted-out rules and their resolution errors.
 
         Filtering happens on the collection's rules, before any predicate is
@@ -136,12 +137,12 @@ class OptOuts:
             errors=tuple(error for error in collection.errors if error not in dropped_errors),
         )
 
-    def withdraws(self, rule: "ContributionRule") -> bool:
+    def withdraws(self, rule: ContributionRule) -> bool:
         """True when any configured opt-out withdraws `rule`."""
         return any(entry.covers(rule) for entry in self.entries)
 
     def problems_against(
-        self, collection: "ContributionCollection"
+        self, collection: ContributionCollection
     ) -> tuple[tuple[ContributionOptOut, str], ...]:
         """Each entry naming a contribution that is not installed, with why.
 

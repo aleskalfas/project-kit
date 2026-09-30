@@ -128,7 +128,7 @@ def load_ownership():
     if not path.is_file():
         raise FileNotFoundError(path)
     sys.path.insert(0, str(path.parent))
-    import ownership  # noqa: PLC0415 — deliberately lazy; see above.
+    import ownership  # deliberately lazy; see above.
 
     return ownership
 

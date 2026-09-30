@@ -246,5 +246,5 @@ def test_sentinels_match_body_format_schema(prov) -> None:
         (CAP_ROOT / "schemas" / "body-format.yaml").read_text(encoding="utf-8")
     )
     marker = schema["provenance_marker"]
-    assert prov.MARKER_START == marker["start_marker"]
-    assert prov.MARKER_END == marker["end_marker"]
+    assert marker["start_marker"] == prov.MARKER_START
+    assert marker["end_marker"] == prov.MARKER_END

@@ -220,8 +220,13 @@ def test_gate_verdicts_behaviour_identical_when_filters_supplied(av) -> None:
         _remote("APPROVED", author="pr-author", ts="2026-06-05T00:00:00Z"),
     ]
     anchor = "2026-06-02T00:00:00Z"
-    local_ok = lambda name: name == "critic"
-    remote_ok = lambda login: login != "pr-author"
+
+    def local_ok(name):
+        return name == "critic"
+
+    def remote_ok(login):
+        return login != "pr-author"
+
     strict = av.gate_verdicts(
         comments,
         min_timestamp=anchor,

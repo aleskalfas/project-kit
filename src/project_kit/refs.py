@@ -489,7 +489,7 @@ def _adr_records_dir_or_none(target_root: Path) -> Path | None:
 
     try:
         return resolve_adr_records_dir(target_root)
-    except Exception:  # noqa: BLE001 — soft resolve; any failure means "not configured"
+    except Exception:  # soft resolve; any failure means "not configured"
         return None
 
 
@@ -708,7 +708,7 @@ class _Rewriter:
     def _classify(token: str) -> str:
         if RECORD_RE.match(token):
             return "record"
-        if HOOK_TOKEN_RE.fullmatch(token) and not token in _YAML_FIELD_PATHS:
+        if HOOK_TOKEN_RE.fullmatch(token) and token not in _YAML_FIELD_PATHS:
             return "hook"
         return "path"
 
@@ -1260,7 +1260,7 @@ def _validate_bidirectional(artifacts: list[Artifact], target_root: Path) -> lis
         # references when explicitly declared).
         file_text_lazy: str | None = None
 
-        def _in_file_text() -> str:
+        def _in_file_text(art: Artifact = art) -> str:
             nonlocal file_text_lazy
             if file_text_lazy is None:
                 file_text_lazy = art.path.read_text(encoding="utf-8")
@@ -1382,7 +1382,7 @@ def _is_decision_link(path: str) -> bool:
     return "/decisions/" in path or bool(_DECISION_LINK_RE.search(path))
 
 
-def _is_intra_capability_path(path: str, art: "Artifact", target_root: Path) -> bool:
+def _is_intra_capability_path(path: str, art: Artifact, target_root: Path) -> bool:
     """A relative path, cited by a capability-owned artifact, that resolves
     inside that capability's own tree.
 

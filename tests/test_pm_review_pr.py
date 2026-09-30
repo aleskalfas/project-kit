@@ -5,10 +5,8 @@ from __future__ import annotations
 import importlib.util
 import sys
 from pathlib import Path
-from types import MappingProxyType
 
 import pytest
-
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS_DIR = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"

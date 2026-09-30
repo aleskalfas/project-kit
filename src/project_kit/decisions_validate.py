@@ -47,9 +47,8 @@ from pathlib import Path
 import click
 
 from project_kit import cli_render, rule_sets
-from project_kit.validators import Finding, Outcome
 from project_kit.decisions import resolve_adr_records_dir
-
+from project_kit.validators import Finding, Outcome
 
 # Frontmatter `id:` line, e.g. `id: COR-001`. Captures prefix + number so the
 # id can be checked against the filename and grouped into an id-space.

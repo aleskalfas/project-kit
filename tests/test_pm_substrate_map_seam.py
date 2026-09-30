@@ -35,7 +35,6 @@ if str(SCRIPTS) not in sys.path:
 
 from _lib import axis_labels  # noqa: E402
 
-
 # The AUJ-shaped fixture map (parsed view). Mirrors the reference instance in
 # schemas/substrate-map.yaml; built in-process so the test does not depend on
 # the example file's exact contents.

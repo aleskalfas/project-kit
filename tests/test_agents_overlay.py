@@ -339,7 +339,7 @@ def test_reconcile_missing_state_adds_stub(tmp_path):
     _agent(proj / ".pkit" / "agents" / "core", "a", owns=["<architecture-docs>"])
     overlay = proj / ".pkit" / "agents" / "project" / "overlay.yaml"
 
-    added, report = ao.reconcile_overlay(proj, write=True)
+    added, _report = ao.reconcile_overlay(proj, write=True)
 
     assert "architecture-docs" in added
     assert "# architecture-docs:" in overlay.read_text()
@@ -441,7 +441,7 @@ def test_reconcile_auto_fills_when_conventional_dir_exists(tmp_path):
     # Create the conventional default directory.
     (proj / "docs" / "architecture").mkdir(parents=True)
 
-    added, report = ao.reconcile_overlay(proj, write=True)
+    added, _report = ao.reconcile_overlay(proj, write=True)
 
     assert "architecture-docs" in added
     text = overlay.read_text()
@@ -522,7 +522,7 @@ def test_reconcile_mixed_auto_fill_and_stub(tmp_path):
     # Only architecture-docs conventional dir exists; adr-records dir does not.
     (proj / "docs" / "architecture").mkdir(parents=True)
 
-    added, report = ao.reconcile_overlay(proj, write=True)
+    added, _report = ao.reconcile_overlay(proj, write=True)
 
     assert set(added) == {"architecture-docs", "adr-records"}
     text = overlay.read_text()
@@ -829,7 +829,7 @@ def test_optional_absent_key_is_not_reported(tmp_path):
 # --- adopt (issue #47) -------------------------------------------------------
 
 
-def _deploy_ok(target_root: Path, agent_name: str) -> bool:  # noqa: ARG001
+def _deploy_ok(target_root: Path, agent_name: str) -> bool:
     """Stub deploy_fn that always succeeds (avoids invoking deploy-agents.sh in tests)."""
     return True
 
@@ -1035,7 +1035,6 @@ def test_adopt_cli_fresh(tmp_path, monkeypatch):
     monkeypatch.chdir(proj)
 
     # Patch adopt_agent to avoid real disk + deploy side-effects.
-    import project_kit.cli as cli_mod
     import project_kit.agents_overlay as ao_mod
 
     called: list[str] = []

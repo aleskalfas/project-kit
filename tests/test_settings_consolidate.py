@@ -16,7 +16,6 @@ from project_kit.settings_consolidate import (
     plan_consolidation,
 )
 
-
 # --- subsumption rules ----------------------------------------------
 
 

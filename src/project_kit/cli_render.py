@@ -429,7 +429,7 @@ def _fmt_row(
         cells.append((str(r.get(m, " "))[:1] or " ") if m else " ")
     for col in sec["columns"]:
         if shown.get(col):
-            cells.append(f"{str(r.get(col, '')):{widths[col]}}")
+            cells.append(f"{r.get(col, '')!s:{widths[col]}}")
     return (INDENT + SEP.join(cells)).rstrip()
 
 
@@ -453,7 +453,7 @@ def view(
     lines = [_fmt_title(title)]
 
     if status and status.get("placement") == "header":
-        lines += [""] + _fmt_status(status)
+        lines += ["", *_fmt_status(status)]
 
     shown = _shown_columns(sections)
     widths = _widths(sections, shown)
@@ -471,11 +471,11 @@ def view(
             lines.append(INDENT + sec["empty"])
 
     if status and status.get("placement") != "header":
-        lines += [""] + _fmt_status(status)
+        lines += ["", *_fmt_status(status)]
 
     if legend:
-        lines += ["", style("heading", "Legend")] + _pairs(list(legend))
+        lines += ["", style("heading", "Legend"), *_pairs(list(legend))]
     if commands:
-        lines += ["", style("heading", "Commands")] + _pairs(list(commands))
+        lines += ["", style("heading", "Commands"), *_pairs(list(commands))]
 
     return "\n".join(lines) + "\n"

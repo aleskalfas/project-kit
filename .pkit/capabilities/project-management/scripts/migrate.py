@@ -43,9 +43,7 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate  # noqa: E402
-from _lib import session_guard  # noqa: E402
-
+from _lib import bootstrap_gate, session_guard
 
 CAPABILITY_NAME = "project-management"
 MIGRATIONS_SUBDIR = "migrations"
@@ -257,7 +255,6 @@ def _apply_migration(migration: Migration, capability_root: Path, *, dry_run: bo
     print()
 
     results: list[ChangeResult] = []
-    fetched_labels: set[str] | None = None
     for change in migration.changes:
         kind = change.get("kind")
         if kind not in RECOGNISED_KINDS:
@@ -340,7 +337,7 @@ def _confirm_change(change: dict[str, Any], *, dry_run: bool) -> bool:
     summary = _describe_change(change)
     if not sys.stdin.isatty():
         print(f"  ! Non-interactive shell; skipping change: {summary}")
-        print(f"    To apply, re-run from an interactive shell.")
+        print("    To apply, re-run from an interactive shell.")
         return False
     while True:
         try:

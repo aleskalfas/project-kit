@@ -20,7 +20,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-
 # The relative path, under the repo root, where the Claude Code adapter
 # deploys an agent named `<name>`. The single place to widen when a
 # second harness ships agent deployment.

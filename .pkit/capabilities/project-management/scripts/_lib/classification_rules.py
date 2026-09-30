@@ -47,9 +47,6 @@ carried before the extraction.
 
 from __future__ import annotations
 
-from typing import Any
-
-
 # The default kind every structural type carries implicitly. A structural type
 # reachable ONLY by this kind is NOT kind-driven at the title level (it uses its
 # structural prefix); a type reachable by some OTHER kind is kind-driven.

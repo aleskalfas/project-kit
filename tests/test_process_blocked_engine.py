@@ -31,13 +31,12 @@ surfacing, and the behaviour-preserving block-less case.
 from __future__ import annotations
 
 import json
+import re
 import stat
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-
-import re
 
 from project_kit import cli_render
 from project_kit.process import (

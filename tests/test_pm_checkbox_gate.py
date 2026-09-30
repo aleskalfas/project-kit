@@ -19,13 +19,11 @@ from pathlib import Path
 
 import pytest
 
-
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
 
 sys.path.insert(0, str(SCRIPTS))
-from _lib import checkbox_gate  # noqa: E402
-from _lib import lifecycle_inference  # noqa: E402
+from _lib import checkbox_gate, lifecycle_inference  # noqa: E402
 
 
 def _load_script(name: str):

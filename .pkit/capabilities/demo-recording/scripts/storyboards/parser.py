@@ -43,7 +43,6 @@ import re
 import sys
 from typing import Any
 
-
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -298,7 +297,8 @@ def main() -> int:
     validate = "--validate" in sys.argv[2:]
     # --json is the default / explicit alias
     try:
-        text = open(path, encoding="utf-8").read()
+        with open(path, encoding="utf-8") as fh:
+            text = fh.read()
     except OSError as exc:
         print(f"parser.py: cannot read {path}: {exc}", file=sys.stderr)
         return 1

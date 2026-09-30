@@ -57,7 +57,7 @@ from project_kit import process_dependencies as deps
 from project_kit import process_health as ph
 from project_kit import schemas_validate
 from project_kit.cli import main
-from project_kit.process import ProcessError, load_definition
+from project_kit.process import load_definition
 from project_kit.schemas_validate import _is_schema_definition
 
 _SOURCE_ROOT = Path(__file__).resolve().parents[1]

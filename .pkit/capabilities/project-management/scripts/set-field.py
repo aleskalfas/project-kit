@@ -155,24 +155,28 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate  # noqa: E402
-from _lib import axis_carriage  # noqa: E402
-from _lib import axis_labels  # noqa: E402
-from _lib import board_fields  # noqa: E402
-from _lib import body_parent_ref  # noqa: E402
-from _lib import classification_rules  # noqa: E402
-from _lib import containment  # noqa: E402
-from _lib import provenance  # noqa: E402
-from _lib import session_guard  # noqa: E402
-from _lib import substrate_writes  # noqa: E402
-from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
-from _lib.membership import (  # noqa: E402
+import contextlib
+
+from _lib import (
+    axis_carriage,
+    axis_labels,
+    board_fields,
+    body_parent_ref,
+    bootstrap_gate,
+    classification_rules,
+    containment,
+    provenance,
+    session_guard,
+    substrate_writes,
+)
+from _lib.gh import gh_get_issue, gh_run, load_adopter_config
+from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
     resolve_capability_root,
     resolve_invoker_identity,
 )
-from _lib.structural_type import infer_structural_type  # noqa: E402
+from _lib.structural_type import infer_structural_type
 
 
 @dataclass(frozen=True)
@@ -575,7 +579,7 @@ def _route_axes(
     priority: str | None,
     workstream: str | None,
     config: dict,
-    substrate_map: "axis_labels.SubstrateMap | None",
+    substrate_map: axis_labels.SubstrateMap | None,
     board_id: int | str | None = None,
 ) -> tuple[dict[str, str], dict[str, str], list[FieldResult]]:
     """Split the requested priority/workstream axes by the substrate that owns them.
@@ -659,7 +663,7 @@ def _plan_labels(
     priority: str | None,
     workstream: str | None,
     current_labels: list[str],
-    substrate_map: "axis_labels.SubstrateMap | None",
+    substrate_map: axis_labels.SubstrateMap | None,
 ) -> tuple[list[FieldResult], list[str], list[str]]:
     """Resolve priority/workstream to add/remove label sets (idempotent).
 
@@ -1022,7 +1026,7 @@ def _plan_kind(
     current_labels: list[str],
     issue_types: dict,
     classification: dict,
-    substrate_map: "axis_labels.SubstrateMap | None",
+    substrate_map: axis_labels.SubstrateMap | None,
 ) -> tuple[list[FieldResult], list[str], list[str], str | None]:
     """Resolve a kind change to a `type:*` label swap + title-prefix realignment.
 
@@ -1403,10 +1407,8 @@ def _gh_write_body(issue_number: int, body: str, config: dict) -> bool:
             )
             return False
     finally:
-        try:
+        with contextlib.suppress(OSError):
             Path(body_path).unlink(missing_ok=True)
-        except OSError:
-            pass
     return True
 
 

@@ -10,11 +10,10 @@ import importlib.util
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any
 from types import ModuleType, SimpleNamespace
+from typing import Any
 
 import pytest
-
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "open-pr.py"

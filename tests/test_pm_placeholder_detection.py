@@ -33,7 +33,6 @@ from _lib.placeholder_detection import (  # noqa: E402
     has_filled_checkbox_items,  # backward-compat alias — must remain importable
 )
 
-
 # ---- extract_placeholder_phrases ------------------------------------
 
 

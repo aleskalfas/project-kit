@@ -267,7 +267,7 @@ def _on_adopter_tier(parts: list[str]) -> bool:
             continue
         if pattern == ("*", "project") and parts[0] in _AREAS_EXCLUDED_FROM_WILDCARD:
             continue
-        if all(want in ("*", have) for want, have in zip(pattern, parts)):
+        if all(want in ("*", have) for want, have in zip(pattern, parts, strict=False)):
             return True
     return False
 

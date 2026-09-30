@@ -80,22 +80,19 @@ from ruamel.yaml import YAML
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate  # noqa: E402
-from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
-from _lib import session_guard  # noqa: E402
-from _lib.agent_verdicts import stamp_verdict  # noqa: E402
-from _lib.membership import (  # noqa: E402
+from _lib import bootstrap_gate, session_guard
+from _lib.agent_verdicts import stamp_verdict
+from _lib.closing_issue_fetchers import issue_labels as _issue_labels_fetch
+from _lib.closing_issue_fetchers import pr_changed_files as _pr_changed_files_fetch
+from _lib.closing_issue_fetchers import pr_closing_issue_numbers as _pr_closing_issue_numbers_fetch
+from _lib.gh import gh_get_issue, gh_run, load_adopter_config
+from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
     resolve_capability_root,
     resolve_invoker_identity,
 )
-from _lib.closing_issue_fetchers import (  # noqa: E402
-    issue_labels as _issue_labels_fetch,
-    pr_changed_files as _pr_changed_files_fetch,
-    pr_closing_issue_numbers as _pr_closing_issue_numbers_fetch,
-)
-from _lib.required_reviewers import (  # noqa: E402
+from _lib.required_reviewers import (
     ERROR_CLOSING_ISSUES,
     ERROR_COLLECTION,
     ERROR_OPT_OUT,
@@ -103,9 +100,8 @@ from _lib.required_reviewers import (  # noqa: E402
     Resolution,
     resolve_required_local_reviewers,
 )
-from _lib.review_contributions import collect_contributions  # noqa: E402
-from _lib.review_opt_outs import OPT_OUT_PATH, read_opt_outs  # noqa: E402
-
+from _lib.review_contributions import collect_contributions
+from _lib.review_opt_outs import OPT_OUT_PATH, read_opt_outs
 
 # ---- per-agent reviewer timeout (issue #766) -------------------------
 #

@@ -38,7 +38,6 @@ Exit codes:
 from __future__ import annotations
 
 import argparse
-import json
 import re
 import subprocess
 import sys
@@ -48,22 +47,22 @@ from ruamel.yaml import YAML
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import (  # noqa: E402
+from _lib import (
     axis_labels,
     bootstrap_gate,
     classification_rules,
     default_branch,
-    lifecycle_inference as infer,
     session_guard,
 )
-from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
-from _lib.membership import (  # noqa: E402
+from _lib import lifecycle_inference as infer
+from _lib.gh import gh_get_issue, gh_run, load_adopter_config
+from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
     resolve_capability_root,
     resolve_invoker_identity,
 )
-from _lib.structural_type import infer_structural_type  # noqa: E402
+from _lib.structural_type import infer_structural_type
 
 TARGET_STATE = "in-progress"
 

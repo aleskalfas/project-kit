@@ -217,7 +217,7 @@ from typing import Any
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import (  # noqa: E402
+from _lib import (
     axis_carriage,
     axis_labels,
     back_fill_apply,
@@ -226,8 +226,8 @@ from _lib import (  # noqa: E402
     session_guard,
     substrate_writes,
 )
-from _lib.gh import gh_run, load_adopter_config  # noqa: E402
-from _lib.hooks import HOOKS_RELATIVE_PATH, load_hooks_file  # noqa: E402
+from _lib.gh import gh_run, load_adopter_config
+from _lib.hooks import HOOKS_RELATIVE_PATH, load_hooks_file
 
 CAPABILITY_NAME = "project-management"
 PLAN_SCHEMA_VERSION = 1

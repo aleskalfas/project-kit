@@ -25,7 +25,6 @@ from pathlib import Path
 
 import pytest
 
-
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS_DIR = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
 CORE_PATH = SCRIPTS_DIR / "_lib" / "contribution_collector.py"

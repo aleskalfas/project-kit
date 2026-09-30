@@ -16,7 +16,6 @@ from pathlib import Path
 
 import pytest
 
-
 REPO_ROOT = Path(__file__).resolve().parent.parent
 GH_PY = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "_lib" / "gh.py"
 

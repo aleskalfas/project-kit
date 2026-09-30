@@ -57,17 +57,14 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import axis_carriage  # noqa: E402
-from _lib import axis_labels  # noqa: E402
-from _lib import bootstrap_gate  # noqa: E402
-from _lib.gh import gh_run, load_adopter_config  # noqa: E402
-from _lib.membership import (  # noqa: E402
+from _lib import axis_carriage, axis_labels, bootstrap_gate
+from _lib.gh import gh_run, load_adopter_config
+from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
     resolve_capability_root,
     resolve_invoker_identity,
 )
-
 
 PEER_URI_RE = re.compile(r"^github://([^/]+)/([^/]+)(/.*)?$")
 
@@ -307,8 +304,8 @@ def _compare(
         for axis in ("type", "priority", "workstream"):
             if not axis_carriage.expects_kit_labels(axis, config, substrate_map):
                 continue
-            local_set = {l for l in local.labels if l.startswith(f"{axis}:")}
-            peer_set = {l for l in peer.labels if l.startswith(f"{axis}:")}
+            local_set = {label for label in local.labels if label.startswith(f"{axis}:")}
+            peer_set = {label for label in peer.labels if label.startswith(f"{axis}:")}
             if local_set != peer_set:
                 drift.append(
                     {

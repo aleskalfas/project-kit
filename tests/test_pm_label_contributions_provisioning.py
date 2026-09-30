@@ -23,7 +23,6 @@ from pathlib import Path
 
 import pytest
 
-
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS_DIR = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
 BOOTSTRAP_PATH = SCRIPTS_DIR / "bootstrap.py"
@@ -169,8 +168,8 @@ def test_bootstrap_contributed_create_does_not_route_through_axis_path(
 
 def _run_check(pc, cap_root: Path, existing_labels: set[str], monkeypatch):
     """Invoke _check_contributed_labels with gh label list mocked."""
-    import subprocess as _sp
     import json as _json
+    import subprocess as _sp
 
     class _Proc:
         returncode = 0

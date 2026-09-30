@@ -983,7 +983,6 @@ def test_sandbox_enable_does_not_accommodate_when_uv_absent(tmp_path, monkeypatc
 def test_sandbox_enable_auto_accommodate_provenance_tagged_narrowing(tmp_path, monkeypatch):
     """The auto-applied uv allowance is recorded in sandbox-provenance.yaml as
     authored by the 'uv' toolkit (the provenance writer — ADR-008 rule 2)."""
-    import json as _json
     from ruamel.yaml import YAML as _YAML
 
     proj = _with_adapter(_setup(tmp_path))
@@ -2773,7 +2772,7 @@ def _hermetic_host_env(monkeypatch):
     monkeypatch.setenv("GIT_CONFIG_SYSTEM", _os.devnull)
 
 
-def _listening_socket() -> tuple[Path, "_socketmod.socket"]:
+def _listening_socket() -> tuple[Path, _socketmod.socket]:
     """A live AF_UNIX listening socket at a SHORT path; caller closes the server.
 
     Bound under a short temp dir, not pytest's `tmp_path`: an AF_UNIX socket
@@ -3352,8 +3351,9 @@ def test_confinement_write_probe_allowed_when_not_sandboxed():
 
 def test_confinement_write_probe_denied_simulation(tmp_path, monkeypatch):
     """Simulate the 'denied' case by making the /tmp write raise PermissionError."""
-    from project_kit import permissions as perm
     import pathlib
+
+    from project_kit import permissions as perm
 
     original_write_text = pathlib.Path.write_text
 

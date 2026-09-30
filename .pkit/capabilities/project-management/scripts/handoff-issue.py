@@ -51,20 +51,18 @@ from ruamel.yaml import YAML
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate  # noqa: E402
-from _lib.audit import audit_key  # noqa: E402
+from _lib import bootstrap_gate, session_guard
+from _lib.audit import audit_key
 
 # The one fetch / scan / post-once wiring every audit writer shares (#902).
-from _lib.comment import post_audit_once  # noqa: E402
-from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
-from _lib import session_guard  # noqa: E402
-from _lib.membership import (  # noqa: E402
+from _lib.comment import post_audit_once
+from _lib.gh import gh_get_issue, gh_run, load_adopter_config
+from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
     resolve_capability_root,
     resolve_invoker_identity,
 )
-
 
 # The handoff audit comment's first-line kind marker. It says WHAT the comment
 # is; it is not what makes the post idempotent — the stamp this replaced

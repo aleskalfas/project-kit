@@ -22,7 +22,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Literal
 
-
 ReviewMode = Literal["agent", "human"]
 DEFAULT_MODE: ReviewMode = "agent"
 

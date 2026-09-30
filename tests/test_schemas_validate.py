@@ -12,7 +12,6 @@ from project_kit.cli import main
 from project_kit.schemas_validate import (
     NamespaceDetail,
     SchemaPair,
-    SchemaSummary,
     TokenResolution,
     detail_namespace,
     discover_schema_pairs,
@@ -23,7 +22,6 @@ from project_kit.schemas_validate import (
     validate_pair,
     validate_path,
 )
-
 
 # --- discovery ------------------------------------------------------
 
@@ -225,7 +223,7 @@ def test_validate_flags_malformed_yaml(tmp_path: Path) -> None:
 
 def test_validate_flags_malformed_companion_json(tmp_path: Path) -> None:
     schemas = _make_capability(tmp_path, "demo")
-    yaml_path, companion = _write_schema_pair(schemas, "alpha", yaml_body=_MINIMAL_YAML)
+    _yaml_path, companion = _write_schema_pair(schemas, "alpha", yaml_body=_MINIMAL_YAML)
     companion.write_text("{ this is not valid json", encoding="utf-8")
     report = validate_all(tmp_path)
     assert not report.is_clean
@@ -235,7 +233,7 @@ def test_validate_flags_malformed_companion_json(tmp_path: Path) -> None:
 def test_validate_flags_invalid_meta_schema(tmp_path: Path) -> None:
     """A companion that's valid JSON but not a valid JSON Schema gets flagged."""
     schemas = _make_capability(tmp_path, "demo")
-    yaml_path, companion = _write_schema_pair(schemas, "alpha", yaml_body=_MINIMAL_YAML)
+    _yaml_path, companion = _write_schema_pair(schemas, "alpha", yaml_body=_MINIMAL_YAML)
     # `type: "fake-type"` is not a valid JSON Schema type keyword
     companion.write_text(
         json.dumps(
@@ -522,7 +520,7 @@ def test_resolver_flags_self_namespace_reference(tmp_path: Path) -> None:
     target_schema = dict(_TARGET_JSON_SCHEMA)
     target_schema["properties"] = dict(target_schema["properties"])
     target_schema["properties"]["self_ref"] = {"type": "string"}
-    target_schema["required"] = list(target_schema["required"]) + ["self_ref"]
+    target_schema["required"] = [*target_schema["required"], "self_ref"]
     _write_schema_pair(
         schemas,
         "target",

@@ -45,7 +45,6 @@ from __future__ import annotations
 import argparse
 import json
 import re
-import subprocess
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -55,20 +54,16 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate  # noqa: E402
-from _lib import axis_labels  # noqa: E402
-from _lib import containment  # noqa: E402
-from _lib import lifecycle_inference as infer  # noqa: E402
-from _lib import session_guard  # noqa: E402
-from _lib.gh import gh_run, load_adopter_config  # noqa: E402
-from _lib.membership import (  # noqa: E402
+from _lib import axis_labels, bootstrap_gate, containment, session_guard
+from _lib import lifecycle_inference as infer
+from _lib.gh import gh_run, load_adopter_config
+from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
     resolve_capability_root,
     resolve_invoker_identity,
 )
-from _lib.structural_type import infer_structural_type  # noqa: E402
-
+from _lib.structural_type import infer_structural_type
 
 CLOSING_KEYWORD_RE = re.compile(r"\b(?:closes|fixes|resolves)\s+#(\d+)", re.IGNORECASE)
 
@@ -646,7 +641,7 @@ def _md_branch(
 ) -> None:
     issue = issues[num]
     indent = "  " * depth
-    state = f" *(closed)*" if issue.state == "closed" else ""
+    state = " *(closed)*" if issue.state == "closed" else ""
     sub_marker = " _(textual)_" if substrate == "textual" else ""
     print(f"{indent}- **[{issue.structural_type or '?'}] #{num}**{state} {issue.title}{sub_marker}")
     linked = [p for p in prs.values() if num in p.closes]

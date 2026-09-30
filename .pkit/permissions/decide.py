@@ -662,7 +662,6 @@ def targets_path_scoped(
 
 def _stdlib_load_yaml(text: str) -> Any:
     """Minimal YAML-subset parser (stdlib-only, no third-party deps)."""
-    import re as _re
 
     # ---- tokeniser helpers -------------------------------------------------
 

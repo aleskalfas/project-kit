@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import importlib.util
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -812,8 +813,9 @@ _SYNTHETIC_YAML_CASES = [
 def _ruamel_load(text: str) -> Any:
     """Parse with ruamel.yaml safe-load (the reference parser)."""
     try:
-        from ruamel.yaml import YAML
         import io
+
+        from ruamel.yaml import YAML
 
         yaml = YAML(typ="safe")
         return yaml.load(io.StringIO(text)) or {}
@@ -2008,8 +2010,9 @@ def test_stdlib_fallback_parses_capability_fragment_identically_to_ruamel(decide
     _stdlib_load_yaml and get byte-identical results.
     """
     try:
-        from ruamel.yaml import YAML
         import io
+
+        from ruamel.yaml import YAML
 
         yaml = YAML(typ="safe")
     except ImportError:
@@ -2304,6 +2307,7 @@ def test_stdlib_fallback_parses_catalog_fragment_identically_to_ruamel(decide_mo
         pytest.skip("ruamel.yaml not available")
     stdlib_result = decide_mod._stdlib_load_yaml(_SCRAPER_FRAGMENT)
     import io
+
     from ruamel.yaml import YAML as _Y
 
     ruamel_result = _Y(typ="safe").load(io.StringIO(_SCRAPER_FRAGMENT)) or {}
