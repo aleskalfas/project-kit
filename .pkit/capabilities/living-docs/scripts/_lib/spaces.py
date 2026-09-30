@@ -12,10 +12,11 @@ What is checked, each against the record's words:
   enclosing a root** is refused. Where places nest the most specific wins; a
   file two project places claim with equal specificity is an error.
 - **What is never a page** (points 1 and 4). A decision record and a rule-set
-  file are anchor targets; a document in another component's place is that
-  component's; a document in this capability's definitions location is its
-  own artefact. None is a page, and one that carries a page's fields says it
-  is one, which is an error — except in the definitions location, where the
+  file are anchor targets; a document in another component's place, or in a
+  folder of held documents another component declares (COR-050 point 1), is
+  that component's; a document in this capability's definitions location is
+  its own artefact. None is a page, and one that carries a page's fields says
+  it is one, which is an error — except in the definitions location, where the
   templates carry them by design.
 - **Pages** (point 4). A document is a page when it carries the `reader` and
   `kind` fields; they are validated by this capability's companion schema,
@@ -216,12 +217,19 @@ def in_root(place: ProjectPlace, decl: Declarations) -> bool:
 
 @dataclass(frozen=True)
 class Claim:
-    """Why a document is not a page of any space: whose artefact it is."""
+    """Why a document is not a page of any space: whose artefact it is.
+
+    `held` marks another component's claim through a folder of held documents
+    rather than a place: the document is that component's, but not an artefact.
+    """
 
     kind: str  # "definition", "component", "rule-set", "record"
     by: str  # the claimant, for a message
+    held: bool = False
 
     def described(self) -> str:
+        if self.held:
+            return f"a document {self.by} holds in a folder it declares (COR-050 point 1)"
         return {
             "definition": f"an artefact of {CAPABILITY}'s definitions location ({self.by})",
             "component": f"an artefact of {self.by}, which declares the place it is in",
@@ -232,10 +240,13 @@ class Claim:
 
 def claim_of(rel: str, document: Document, decl: Declarations) -> Claim | None:
     """Who claims `rel`, if it is not a page; `None` when nothing does (DEC-001 points 1
-    and 4). Another component claims it when a place it declares matches it; it
-    is a rule-set file when the backbone's location rule claims it (COR-051 point 2)."""
+    and 4). Another component claims it when a place or a folder of held documents
+    it declares holds it (COR-050 point 1); it is a rule-set file when the
+    backbone's location rule claims it (COR-051 point 2)."""
     if decl.definitions is not None and is_within(rel, decl.definitions):
         return Claim("definition", decl.definitions)
+    if document.held_by is not None:
+        return Claim("component", document.held_by, held=True)
     for index in document.places:
         component = decl.component_places.get(index)
         if component is not None:
