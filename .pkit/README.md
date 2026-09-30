@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-09-30T01:13:28Z
+      at: 2026-09-30T01:08:24Z
       outcome: unchanged
-      unchanged-because: with main merged, the CLI README carries both the writers' placeholder refusal and this branch's run-cache and nested-run lines, and the lifecycle README its runner section and anchor; the area map and each area's one-line description hold
+      unchanged-because: the CLI README now says the whole-repository check, the debt listing and the explanation leave an artefact under an excluded path out (#1136), inside its friction section; the area map holds
 ---
 
 # project-kit

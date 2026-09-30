@@ -43,6 +43,11 @@ is the one reader of those declarations and the one walker of the places:
   place is never a synced tree (COR-050 point 14) — and is kept as a
   `SyncedMatch` for the validation pass to report; the question is the tree's
   own ownership predicate's (`synced_copy_test`), never re-derived here.
+- `FrictionSettings.exclusion` — the one decision of what `friction.exclude`
+  leaves out (COR-050 point 7). The walk records it on every file and
+  artefact it reads (`excluded_by`), so the measures read it from the
+  artefact; the checks ask it of any other path, never matching the
+  patterns themselves.
 - `RepositoryTree` — the seam through which discovery lists and reads one
   state of the repository, matching every listing by one rule
   (`listed_files_in_place`, `compile_glob`, `pattern_matches`). Without a
@@ -73,7 +78,7 @@ import json
 import os
 import re
 from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import Enum
 from pathlib import Path, PurePosixPath
 from typing import Any, Protocol
@@ -231,6 +236,7 @@ class FrictionSettings:
     `mode` is the raw value as written — `None` when absent; the configuration
     pass judges it against the schema — and `mode_or_default` is what a reader
     uses, falling back to the default for anything it does not recognise.
+    `exclusion` is the one decision of what `exclude` leaves out.
     """
 
     mode: Any
@@ -246,6 +252,21 @@ class FrictionSettings:
         if isinstance(self.mode, str) and self.mode in FRICTION_MODES:
             return self.mode
         return DEFAULT_FRICTION_MODE
+
+    def exclusion(self, path: str) -> SettingsPath | None:
+        """The `exclude` entry that leaves the repository-relative file `path` out, or None.
+
+        The one decision of what is excluded (COR-050 point 7; ADR-057 point 2):
+        the first entry, in written order, whose pattern covers `path` as every
+        friction path is read (`pattern_matcher`). Discovery records it on each
+        file and artefact it finds, so the measures read it from there; the
+        checks ask it of any other path — an anchor's match, the surface.
+        """
+        return next((e for e in self.exclude if pattern_matcher(e.resolved)(path)), None)
+
+    def excluded(self, path: str) -> bool:
+        """Whether `exclude` leaves the repository-relative file `path` out (`exclusion`)."""
+        return self.exclusion(path) is not None
 
 
 def read_friction_settings(
@@ -1033,6 +1054,10 @@ class Artefact:
     - `rule_set`: for a rule, the rule-set place that claimed its file, else
       `None`. The rule-set file is claimed before the container rule
       (ADR-056 point 2), so the rule-set pass validates a rule's container.
+    - `excluded_by`: the `friction.exclude` entry its file lies under, as the
+      walk decided it (`FrictionSettings.exclusion`), else `None`. Such an
+      artefact is left out of the measures (COR-050 point 7); an artefact read
+      from history, never walked, carries `None`.
     """
 
     id: str
@@ -1046,6 +1071,12 @@ class Artefact:
     anchors: Mapping[str, tuple[str, ...]] = field(default_factory=dict)
     revalidated: Mapping[str, Any] | None = None
     rule_set: RuleSetPlace | None = None
+    excluded_by: SettingsPath | None = None
+
+    @property
+    def excluded(self) -> bool:
+        """Whether `friction.exclude` leaves it out (`excluded_by`)."""
+        return self.excluded_by is not None
 
     @property
     def location(self) -> str:
@@ -1120,6 +1151,8 @@ class DiscoveredFile:
     or `None`. `front_matter` is its front matter as written
     (`backbone_schemas.as_written`) when that is a mapping, else `None`;
     `unreadable` says why the file or its front matter could not be read.
+    `excluded_by` is the `friction.exclude` entry it lies under, else `None` —
+    the same decision its artefacts carry.
     """
 
     path: str
@@ -1127,6 +1160,7 @@ class DiscoveredFile:
     rule_set: RuleSetPlace | None
     front_matter: Mapping[str, Any] | None
     unreadable: str | None = None
+    excluded_by: SettingsPath | None = None
 
 
 @dataclass(frozen=True)
@@ -1240,12 +1274,13 @@ def discover_artefacts(
         text = texts[rel]
         if text is None:
             continue  # a link: never read as a document
+        excluded_by = settings.exclusion(rel)
         front_matter: Mapping[str, Any] | None = None
         if isinstance(text, _ReadFailure):
             reason: str | None = text.reason
         else:
             front_matter, found, reason = _read_artefacts(rel, place, text, rule_set=rule_set)
-            artefacts.extend(found)
+            artefacts.extend(replace(a, excluded_by=excluded_by) for a in found)
         if reason is not None:
             unreadable.append(
                 UnreadableFile(path=rel, place=place, reason=reason, rule_set=rule_set)
@@ -1257,6 +1292,7 @@ def discover_artefacts(
                 rule_set=rule_set,
                 front_matter=front_matter,
                 unreadable=reason,
+                excluded_by=excluded_by,
             )
         )
     return Discovery(
@@ -1627,7 +1663,6 @@ def artefacts_document(target_root: Path, tree: RepositoryTree | None = None) ->
     for match in discovery.synced:
         synced_of.setdefault(match.place, []).append(match.path)
     rule_sets = {r.place: r for r in discovery.rule_set_places}
-    excluded = [pattern_matcher(p.resolved) for p in settings.exclude]
 
     def rule_set_index(rule_set: RuleSetPlace | None) -> int | None:
         return index[rule_set.place] if rule_set is not None else None
@@ -1657,7 +1692,7 @@ def artefacts_document(target_root: Path, tree: RepositoryTree | None = None) ->
                 "path": found.path,
                 "places": [index[place] for place in found.places],
                 "rule_set": rule_set_index(found.rule_set),
-                "excluded": any(match(found.path) for match in excluded),
+                "excluded": found.excluded_by is not None,
                 "fields": _own_fields(found.front_matter),
                 "unreadable": found.unreadable,
             }
