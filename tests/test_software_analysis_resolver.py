@@ -19,6 +19,9 @@ analysis never rewritten to match broken code:
 - **the commands for the person** it emits, word for word and with no consent
   flag: a regression's carries the defect's placeholder, which the writer
   refuses until the person fills it;
+- **the explanation's version**: one this capability does not read is refused,
+  and one without `schema_version`, from a backbone before the key, is read as
+  version 1;
 - the **agent's files**: its front matter (Write for the workspace, no Edit,
   owning no path); that it performs the judgment and is no reviewer; that it
   never runs a writer — its body and storyboard name one only among the
@@ -30,6 +33,7 @@ from __future__ import annotations
 
 import importlib
 import json
+import os
 import re
 import shlex
 import subprocess
@@ -521,6 +525,63 @@ def test_an_artefact_that_cannot_be_explained_is_refused(flagged: AdopterRepo) -
     assert completed.returncode == 1
     assert completed.stdout == ""
     assert completed.stderr.startswith("cannot propose: ")
+
+
+#: A `pkit` answering `friction explain` as another backbone would: the real answer
+#: with its `schema_version` set to `$EXPLAIN_VERSION` (JSON), or taken out when that
+#: is empty — a backbone from before the key.
+_ANOTHER_PKIT = """#!{python}
+import json, os, subprocess, sys
+done = subprocess.run([sys.executable, "-m", "project_kit", *sys.argv[1:]],
+                      capture_output=True, text=True)
+out = done.stdout
+if sys.argv[1:3] == ["friction", "explain"] and done.returncode == 0:
+    document = json.loads(out)
+    version = os.environ["EXPLAIN_VERSION"]
+    if version:
+        document["schema_version"] = json.loads(version)
+    else:
+        del document["schema_version"]
+    out = json.dumps(document)
+sys.stdout.write(out)
+sys.stderr.write(done.stderr)
+sys.exit(done.returncode)
+"""
+
+
+def _another_backbone(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, version: str) -> None:
+    """Put `_ANOTHER_PKIT` first on PATH, answering `explain` at `version`."""
+    other = tmp_path / "another-backbone"
+    other.mkdir()
+    (other / "pkit").write_text(_ANOTHER_PKIT.format(python=sys.executable), encoding="utf-8")
+    (other / "pkit").chmod(0o755)
+    monkeypatch.setenv("PATH", f"{other}{os.pathsep}{os.environ['PATH']}")
+    monkeypatch.setenv("EXPLAIN_VERSION", version)
+
+
+@pytest.mark.parametrize("version", ["2", "null", '"1"'])
+def test_an_explanation_of_another_version_is_refused(
+    flagged: AdopterRepo, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, version: str
+) -> None:
+    """A version this capability does not read is refused, never read as the one it knows."""
+    _another_backbone(tmp_path, monkeypatch, version)
+    completed = run_script(flagged, PROPOSE, "UC-001", "--json")
+    assert completed.returncode == 1
+    assert completed.stdout == ""
+    shown = repr(json.loads(version))
+    assert completed.stderr == (
+        f"cannot propose: `pkit friction explain` answered schema_version {shown}; "
+        f"this capability reads 1\n"
+    )
+
+
+def test_an_explanation_without_a_version_reads_as_the_first(
+    flagged: AdopterRepo, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A backbone from before the key answers version 1: the same proposal."""
+    expected = _propose(flagged, "UC-001")
+    _another_backbone(tmp_path, monkeypatch, "")
+    assert _propose(flagged, "UC-001") == expected
 
 
 @pytest.mark.parametrize("namespace", ["analysis", "software-analysis"])
