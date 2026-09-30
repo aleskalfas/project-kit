@@ -1327,14 +1327,16 @@ def disable(target_root: Path) -> str:
 # per-invocation `--dangerously-allow-unconfined` operator gesture; it is never
 # persisted as a default — re-running `enable` without it restores the floor.
 #
-# `allowUnsandboxedCommands: false` is NOT required for safety (ADR-005
-# point 6). The unsandboxed *fail-over* path (a command that
-# fails inside the box retried outside via `dangerouslyDisableSandbox`) rides
-# the normal permission flow — allowlist or prompt — and is never auto-allowed;
-# only *sandboxed* commands are auto-approved. Forcing `false` breaks legit
-# fail-over (`git push` / `gh` need network/SSH reach the box blocks), so the
-# key is left at harness default; `--strict` writes it as optional hardening.
-# The reasoning lives in ADR-005's Rationale.
+# The fail-closed invariant does not rest on `allowUnsandboxedCommands: false`
+# (ADR-005 point 6): the unsandboxed *fail-over* path (a command that fails
+# inside the box retried outside via `dangerouslyDisableSandbox`) rides the
+# normal permission flow — allowlist or prompt — and is never auto-allowed;
+# only *sandboxed* commands are auto-approved. Under the autonomy posture the
+# key is asserted `false` by default (`setup autonomy` enables with the strict
+# seal, ADR-028), so the per-command escape is inert there. Outside it, `false`
+# would break legit fail-over (`git push` / `gh` need network/SSH reach the box
+# blocks), so the key stays at the harness default unless the operator passes
+# `--strict`. The reasoning lives in ADR-005's Rationale.
 #
 # Writes are additive over the operator's `sandbox` block: operator keys
 # (`excludedCommands`, `network`, extra `denyRead` entries, …) survive both
