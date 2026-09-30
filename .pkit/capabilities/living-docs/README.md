@@ -12,8 +12,9 @@ pkit:
       record: ["living-docs:DEC-001", COR-049, COR-050, COR-051, COR-053]
       artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006]
     revalidated:
-      at: 2026-09-30T09:12:08Z
-      outcome: updated
+      at: 2026-09-30T13:12:50Z
+      outcome: unchanged
+      unchanged-because: "COR-050 point 6 gains a refinement pointer: the change check's default base is the default branch COR-054 resolves; living-docs' filler reads the whole-repository check at HEAD, which takes no base, so its obligations hold"
 ---
 
 # living-docs capability
