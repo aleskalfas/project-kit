@@ -5,10 +5,14 @@ custom:
 body: >
   The analysis' id discipline now holds against every history, not only the
   working tree (#1132). `pkit analysis new` numbers a use case or journey past
-  every number the default branch's history ever gave a file, so deleting the
-  highest-numbered one frees nothing, and reads a file's number from its name
-  as well as its front matter, so a file whose id cannot be read still holds
-  it. `pkit analysis validate` reports such files — front matter that does not
+  every number the default branch's history ever gave a file of its place, so
+  deleting the highest-numbered one frees nothing, and names that file when
+  it is the number it follows; the history counts the files the tree reading
+  counts — a Markdown file of the place, judged by the reading at the commit
+  that added it — and a shallow clone is said. It reads a file's number from
+  its name as well as its front matter, so a file whose id cannot be read
+  still holds it. A file `friction.exclude` leaves out is no part of the
+  analysis, for the stamp and the check alike. `pkit analysis validate` reports such files — front matter that does not
   parse, or a name carrying a number the front matter does not give — and
   fails on a placeholder the stamp left unfilled, in an own field or the
   body. `pkit analysis check-numbers` knows an artefact by its id, not its

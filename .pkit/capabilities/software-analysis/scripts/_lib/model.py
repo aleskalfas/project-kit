@@ -13,12 +13,17 @@ What this module decides over the answer is DEC-001's: each place of this
 capability holds one kind of artefact (point 2) — the glossary and the actors
 are collection files, one keyed entry per artefact; a use case and a journey
 are a document each — and a file in a place that holds no artefact of its
-kind's shape is a stray the check reports.
+kind's shape is a stray the check reports. A file the project's
+`friction.exclude` leaves out is no part of the analysis, as it is no part of
+friction (COR-050 point 7): the discovery marks it `excluded`, and the stamp,
+the checks and the filler read nothing of it — only its path is kept, so the
+history reading leaves it out too (`_lib/history.py`).
 """
 
 from __future__ import annotations
 
 import re
+from collections import defaultdict
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
@@ -57,8 +62,19 @@ def identity(artefact_id: str) -> str:
     spelling, the one the id schema admits — `UC-0007` stands for `UC-007` — any
     other id as written. The stamp counts a number as held, and the check two
     artefacts as sharing an id, by this, so the two never disagree."""
+    return number_in(artefact_id) or artefact_id
+
+
+def number_in(artefact_id: str) -> str | None:
+    """The use case's or journey's number `artefact_id` spells, as `identity` spells
+    it; `None` for an id that is no such number."""
     found = _ANY_NUMBER.match(artefact_id)
-    return artefact_id if found is None else _spelt(found)
+    return None if found is None else _spelt(found)
+
+
+def number_of(artefact_id: str) -> int:
+    """The number of a use case's or journey's id as `identity` spells it: 7 for `UC-007`."""
+    return int(artefact_id.split("-", 1)[1])
 
 
 def id_in_name(path: str) -> str | None:
@@ -148,7 +164,9 @@ class Analysis:
     kind's place resolves — both `None`/empty when the reading holds none of
     this capability's places. `files` is every file in one of the places, and
     the kind its place holds, whatever the file holds; `unreadable` the files
-    whose front matter does not parse, each with the backbone's reason.
+    whose front matter does not parse, each with the backbone's reason. A file
+    `friction.exclude` leaves out is in none of these: `excluded` is its path
+    alone.
     """
 
     location: str | None
@@ -157,19 +175,26 @@ class Analysis:
     strays: tuple[Stray, ...]
     unreadable: Mapping[str, str]
     files: Mapping[str, str]
+    excluded: frozenset[str] = frozenset()
 
     def held(self) -> set[str]:
         """Every id this state of the analysis holds, as `identity` spells it: each
-        artefact's own id, and each id a file of a use-case or journey place carries
-        in its name (`id_in_name`) — so a file whose id cannot be read still holds
-        the number its name gives it (DEC-001 point 3)."""
-        own = {identity(a.id) for a in self.artefacts if a.id}
-        named = {
-            name_id
-            for path, kind in self.files.items()
-            if kind in NUMBERED and (name_id := id_in_name(path)) is not None
-        }
-        return own | named
+        artefact's own id, and each number a use case or journey holds (`numbers`)."""
+        return {identity(a.id) for a in self.artefacts if a.id} | set(self.numbers())
+
+    def numbers(self) -> dict[str, set[str]]:
+        """Each use case's or journey's number this state holds, as `identity` spells
+        it, and the files holding it: by its front matter's id, and by the number a
+        file's name carries (`id_in_name`) — so a file whose id cannot be read still
+        holds the number its name gives it (DEC-001 point 3)."""
+        found: dict[str, set[str]] = defaultdict(set)
+        for path, kind in self.files.items():
+            if kind in NUMBERED and (named := id_in_name(path)) is not None:
+                found[named].add(path)
+        for artefact in self.artefacts:
+            if artefact.kind in NUMBERED and artefact.id and (own := number_in(artefact.id)):
+                found[own].add(artefact.path)
+        return dict(found)
 
     def of_kind(self, kind: str) -> list[Artefact]:
         return [a for a in self.artefacts if a.kind == kind]
@@ -234,11 +259,15 @@ def analysis_of(document: Mapping[str, Any]) -> Analysis:
     kind_of_file: dict[str, str] = {}
     unreadable: dict[str, str] = {}
     no_front_matter: list[str] = []
+    excluded: set[str] = set()
     for entry in _mappings(document.get("files")):
         kinds = [kind_of_place[i] for i in entry.get("places") or [] if i in kind_of_place]
         if not kinds:
             continue
         path = str(entry.get("path"))
+        if entry.get("excluded") is True:
+            excluded.add(path)
+            continue
         kind_of_file[path] = kinds[0]
         reason = entry.get("unreadable")
         if reason is not None:
@@ -293,6 +322,7 @@ def analysis_of(document: Mapping[str, Any]) -> Analysis:
         strays=tuple(sorted(strays.values(), key=lambda s: s.path)),
         unreadable=unreadable,
         files=kind_of_file,
+        excluded=frozenset(excluded),
     )
 
 

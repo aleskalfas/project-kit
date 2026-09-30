@@ -22,6 +22,7 @@ The check is `test_software_analysis_check.py`'s, the schemas and templates
 from __future__ import annotations
 
 import ast
+import json
 import os
 import re
 import stat
@@ -47,6 +48,7 @@ from tests.analysis_repo import (
     RECORDED,
     RECORDS,
     USE_CASES,
+    VALIDATE,
     front,
     installed,
     load,
@@ -387,9 +389,86 @@ def test_a_number_deleted_from_the_default_branch_is_never_used_again(
     )
     assert not list((project.root / USE_CASES).rglob("UC-002-*.md"))
     project.checkout("topic", create=True)
-    assert stamped(project, "use-case", "three", "--actor", "ACT-tester") == "UC-003"
+    completed = new(project, "use-case", "three", "--actor", "ACT-tester")
+    assert completed.returncode == 0, completed.stderr
+    note, done = completed.stdout.splitlines()
+    assert done == f"stamped UC-003 at {USE_CASES}/UC-003-three.md"
+    # The history's number is the one it follows: the note names the file it was given.
+    assert note.startswith(
+        f"UC-003 follows UC-002, the number main's history gave {USE_CASES}/reports/UC-002-two.md "
+        "(commit "
+    )
+    assert note.endswith(
+        "), which neither main nor the working tree holds now: a number is never used again "
+        "(DEC-001 point 3)"
+    )
     steps = ("--step", "UC-001", "--step", "UC-003")
     assert stamped(project, "journey", "again", "--actor", "ACT-tester", *steps) == "JRN-002"
+
+
+def test_the_history_counts_the_files_the_tree_reading_counts(project: AdopterRepo) -> None:
+    """A number the history gave is counted only when the backbone's reading at the commit
+    that added the file held it as a file of the place — a Markdown file there, not left
+    out by `friction.exclude`. A non-Markdown file named after a number, removed since,
+    raises nothing; an excluded example raises nothing, present or removed; a Markdown
+    note named after a number held its number while it was there, so it still does, and
+    the stamp names it."""
+    examples = f"{USE_CASES}/examples"
+    config = f"docs:\n  internal: tech-docs\nfriction:\n  exclude:\n    - {examples}\n"
+    stamped(project, "actor", "tester")
+    stamped(project, "use-case", "one", "--actor", "ACT-tester")
+    example = (project.root / USE_CASES / "UC-001-one.md").read_text(encoding="utf-8")
+    project.write(
+        {
+            CONFIG: config,
+            f"{examples}/UC-900-example.md": example.replace("UC-001", "UC-900"),
+            f"{USE_CASES}/UC-800-flow.svg": "<svg/>\n",
+        }
+    )
+    project.commit("UC-001, an excluded example and a diagram")
+    # Present: the example is no part of the analysis, and the diagram no file of the place.
+    assert stamped(project, "use-case", "two", "--actor", "ACT-tester") == "UC-002"
+    checked = json.loads(run_script(project, VALIDATE, "--json").stdout)
+    assert not [f for f in checked["findings"] if f["location"].startswith(examples)]
+    project.commit(
+        "UC-002; the example and the diagram removed",
+        {f"{examples}/UC-900-example.md": None, f"{USE_CASES}/UC-800-flow.svg": None},
+    )
+    # Removed: the history judges each as the reading of its commit did, so neither counts.
+    completed = new(project, "use-case", "three", "--actor", "ACT-tester")
+    assert completed.stdout.splitlines() == [f"stamped UC-003 at {USE_CASES}/UC-003-three.md"]
+    notes = f"{USE_CASES}/UC-2026-notes.md"
+    project.commit("notes", {notes: "Some notes.\n"})
+    project.commit("notes removed", {notes: None})
+    completed = new(project, "use-case", "four", "--actor", "ACT-tester")
+    note, done = completed.stdout.splitlines()
+    assert done == f"stamped UC-2027 at {USE_CASES}/UC-2027-four.md"
+    assert note.startswith(f"UC-2027 follows UC-2026, the number main's history gave {notes} ")
+
+
+def test_a_shallow_clone_s_stamp_says_its_history_stops_early(
+    project: AdopterRepo, tmp_path: Path
+) -> None:
+    """Git's history stops where a shallow clone does: the stamp says so, as the friction
+    report does, rather than number past an unread history in silence."""
+    stamped(project, "actor", "tester")
+    stamped(project, "use-case", "one", "--actor", "ACT-tester")
+    project.commit("UC-001")
+    shallow = tmp_path / "shallow"
+    project.git("clone", "-q", "--depth", "1", f"file://{project.root}", str(shallow))
+    clone = AdopterRepo(shallow, source_kit=project.source_kit)
+    completed = new(clone, "use-case", "two", "--actor", "ACT-tester")
+    assert completed.returncode == 0, completed.stderr
+    note, done = completed.stdout.splitlines()
+    assert note == (
+        "history: shallow clone — main's history was read back to where the clone stops, so a "
+        "number a file was given before it is not counted; fetch the full history (`git fetch "
+        "--unshallow`) to count every one"
+    )
+    assert done == f"stamped UC-002 at {USE_CASES}/UC-002-two.md"
+    # An actor's or term's id is a person's choice: no history is read for one.
+    completed = new(clone, "actor", "admin")
+    assert completed.stdout.splitlines() == [f"stamped ACT-admin at {ACTORS}#ACT-admin"]
 
 
 def test_a_number_a_file_s_name_carries_is_held_whatever_the_file_holds(

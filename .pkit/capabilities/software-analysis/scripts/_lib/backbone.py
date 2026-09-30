@@ -23,11 +23,13 @@ backbone through its commands:
   the analysis.
 
 Git answers which commit a name resolves to, the merge-base of two, who is
-working here — the default author of a revalidation record — for the stamp,
-every path a history ever added under the places the backbone names, so a
-number whose file is gone from the default branch is still counted held
-(`added_paths`: one `git log`, since the backbone's reading is of one state,
-not of a history); for the number comparison, which versions of those files a
+working here — the default author of a revalidation record — whether the clone
+is shallow; for the stamp and the number comparison, each path a history
+added under the folders of the places the backbone names, with the commit that
+added it (`added`: one `git log`, since the backbone's reading is of one state,
+not of a history) — git lists the paths, and which of them were files of a
+place, not left out by `friction.exclude`, the backbone's reading at that
+commit says (`_lib/history.py`); for the number comparison, which versions of those files a
 branch's own history wrote, and which the default branch holds, so a number
 the default branch took by landing this branch's own work is told from one it
 took for another (`blobs_written`, `blob_of`); and, for the
@@ -59,6 +61,12 @@ Runner = Callable[..., subprocess.CompletedProcess[str]]
 #: The base numbers are compared with when none is named, and the variable that names one.
 BASE_ENV = "PKIT_CHECK_BASE"
 DEFAULT_BASE = "origin/main"
+
+#: How many characters of a commit a message shows.
+SHORT = 12
+
+#: What opens a commit's line in `added`'s listing, where no path can start.
+_COMMIT_MARK = "\x01"
 
 
 def default_base() -> str:
@@ -218,27 +226,43 @@ def merge_base(root: Path, one: str, other: str) -> str | None:
     return _git(root, "merge-base", one, other)
 
 
-def added_paths(root: Path, commit: str, folders: Iterable[str]) -> set[str]:
-    """Every path under `folders` that a commit reachable from `commit` added — a
-    rename read as a removal and an addition, so each name a file ever had is
-    there — through one `git log`; empty when there are no folders, or git cannot
-    answer. The folders are the places the backbone's reading names, taken as
-    written."""
+def added(root: Path, revisions: str, folders: Iterable[str]) -> list[tuple[str, str]]:
+    """Each path under `folders` a commit of `revisions` added — a commit and its
+    history, or a range `<from>..<to>` — with that commit, newest first; a rename is
+    read as a removal and an addition, so each name a file ever had is there. One
+    `git log`; empty when there are no folders, or git cannot answer. The folders
+    are the places the backbone's reading names, taken as written: every path
+    beneath them, whatever it is — which were files of a place is the backbone's
+    reading at the commit to say."""
     pathspecs = [f":(literal){folder}" for folder in sorted(set(folders))]
-    if not pathspecs or not commit or commit.startswith("-"):
-        return set()
+    if not pathspecs or not revisions or revisions.startswith("-"):
+        return []
     listed = _git(
         root,
         "log",
-        commit,
+        revisions,
+        "-z",  # every path as written, never quoted
         "--no-renames",
         "--diff-filter=A",
-        "--format=",
+        "--format=%x01%H",  # the commit, after `_COMMIT_MARK`
         "--name-only",
         "--",
         *pathspecs,
     )
-    return {line for line in (listed or "").splitlines() if line}
+    found: list[tuple[str, str]] = []
+    commit = ""
+    for field in (listed or "").split("\0"):
+        field = field.lstrip("\n")  # the line ending a commit's line
+        if field.startswith(_COMMIT_MARK):
+            commit = field[len(_COMMIT_MARK) :]
+        elif field and commit:
+            found.append((commit, field))
+    return found
+
+
+def is_shallow(root: Path) -> bool:
+    """Whether this clone is shallow: its history stops before the first commit."""
+    return _git(root, "rev-parse", "--is-shallow-repository") == "true"
 
 
 def blobs_written(root: Path, since: str, folders: Iterable[str]) -> set[str]:

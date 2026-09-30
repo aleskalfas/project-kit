@@ -7,10 +7,12 @@ the capability's places put it under the analysis location:
   `JRN-NNN-<slug>.md`, numbered with the next free number — one past the
   highest the working tree and the default branch hold, withdrawn ones
   included, and past every number the default branch's history ever gave a
-  file, deleted since or not, since a number is never used again. A file's
-  number is read from its front matter and from its name, so a file whose id
-  cannot be read still holds its number. Numbers two branches take in
-  parallel are `pkit analysis check-numbers`' to report (point 3);
+  file of its place, deleted since or not, since a number is never used
+  again; a note names the file when the history's number is the one it
+  follows. A file's number is read from its front matter and from its name,
+  so a file whose id cannot be read still holds its number. Numbers two
+  branches take in parallel are `pkit analysis check-numbers`' to report
+  (point 3);
 - an **actor** or a **term** is a new entry, `ACT-<slug>` or `TERM-<slug>`, of
   its collection file — added to its front matter, and its section to the
   body, each where its id sorts, every other byte left as it was — the file
@@ -35,11 +37,12 @@ with CRLF line endings is refused, since its fences would be misread and the
 lines added would mix line endings. Where the analysis is, and what it holds, is
 read through the backbone's discovery — the working tree's and the default
 branch's tip — never by walking the places. The default branch's history is
-one `git log` of the paths ever added under the use-case and journey places
-the discovery names (`backbone.added_paths`), each number read from the file's
-name, as the stamp names every file: one computation, where reading the
-discovery at each of the history's commits would be one per commit. A file
-never named after its number, and deleted since, is the one it cannot count.
+read for a use case or journey alone, as the tree is (`_lib/history.py`): one
+`git log` of the paths ever added under the kind's place, each number read
+from the file's name, counted when the discovery at the commit that added it
+held it as a file of the place, not excluded — asked only of a number past
+the tree's and the tip's. A shallow clone's history stops early, and the
+stamp says so.
 """
 
 from __future__ import annotations
@@ -60,7 +63,7 @@ from typing import Any
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
-from _lib import backbone, markdown, schemas
+from _lib import backbone, history, markdown, schemas
 from _lib.model import (
     ACTOR,
     COLLECTIONS,
@@ -74,8 +77,8 @@ from _lib.model import (
     USE_CASE,
     Analysis,
     Unreadable,
-    id_in_name,
     identity,
+    number_of,
     with_article,
 )
 from _lib.placeholder import unfilled
@@ -155,7 +158,14 @@ def stamp(
     _check_references(analysis, request)
 
     notes: list[str] = []
-    new_id = _new_id(kind, request.slug, _held(root, analysis, base, notes), base)
+    held, past = _held(root, analysis, kind, base, notes)
+    new_id = _new_id(kind, request.slug, held, base)
+    if past is not None:
+        notes.append(
+            f"{new_id} follows {past.id}, the number {base}'s history gave {past.path} (commit "
+            f"{past.commit[: backbone.SHORT]}), which neither {base} nor the working tree holds "
+            f"now: a number is never used again (DEC-001 point 3)"
+        )
 
     if kind in COLLECTIONS:
         target = root / place
@@ -319,12 +329,16 @@ def _in_force(analysis: Analysis, artefact_id: str, kind: str) -> None:
 # --- the id ----------------------------------------------------------------------------------
 
 
-def _held(root: Path, analysis: Analysis, base: str, notes: list[str]) -> set[str]:
-    """Every id held, as `identity` spells it: in the working tree, and on the default
-    branch — at its tip, and every number its history ever gave a file, whose file
-    may be gone since (DEC-001 point 3). A file's number is read from its name too,
-    whatever it holds (`Analysis.held`). Without the default branch, the working
-    tree's alone, with a note saying why."""
+def _held(
+    root: Path, analysis: Analysis, kind: str, base: str, notes: list[str]
+) -> tuple[set[str], history.Given | None]:
+    """Every id held, as `identity` spells it — in the working tree, and at the default
+    branch's tip, a file's number read from its name too (`Analysis.held`) — and, for
+    a use case or journey, the number of its kind past all of them that the default
+    branch's history gave a file gone since, which counts as held too (DEC-001 point
+    3; `_lib/history.py`). An actor's or term's id is a slug a person chooses, and a
+    withdrawn one stays in its collection file, so no history is read for one.
+    Without the default branch, the working tree's alone, with a note saying why."""
     held = analysis.held()
     tip = backbone.commit_of(root, base)
     if tip is None:
@@ -332,15 +346,34 @@ def _held(root: Path, analysis: Analysis, base: str, notes: list[str]) -> set[st
             f"{base} names no commit here, so ids were taken from the working tree alone; "
             f"`pkit analysis check-numbers` compares them once it resolves"
         )
-        return held
+        return held, None
     try:
         on_base = backbone.read_analysis(root, at=tip)
     except Unreadable as exc:
         notes.append(f"{base} could not be read ({exc}); ids were taken from the working tree")
-        return held
-    folders = {a.places[k] for a in (analysis, on_base) for k in NUMBERED if k in a.places}
-    in_history = {id_in_name(path) for path in backbone.added_paths(root, tip, folders)}
-    return held | on_base.held() | {i for i in in_history if i is not None}
+        return held, None
+    held |= on_base.held()
+    if kind not in NUMBERED:
+        return held, None
+    if backbone.is_shallow(root):
+        notes.append(
+            f"history: shallow clone — {base}'s history was read back to where the clone "
+            f"stops, so a number a file was given before it is not counted; fetch the full "
+            f"history (`git fetch --unshallow`) to count every one"
+        )
+    folders = {state.places[kind] for state in (analysis, on_base) if kind in state.places}
+    top = max(_numbers(kind, held), default=0)
+    judge = history.Judge(root, (analysis, on_base))
+    past = history.highest(judge, history.given(root, tip, folders), kind, above=top)
+    if past is not None:
+        held.add(past.id)
+    return held, past
+
+
+def _numbers(kind: str, held: set[str]) -> list[int]:
+    """The numbers of `kind` among ids spelt as `identity` spells them."""
+    pattern = schemas.id_pattern(kind)
+    return [number_of(i) for i in held if pattern.match(i)]
 
 
 def _new_id(kind: str, slug: str, held: set[str], base: str) -> str:
@@ -348,10 +381,8 @@ def _new_id(kind: str, slug: str, held: set[str], base: str) -> str:
     refused when the working tree or the default branch holds it already. Ids are
     compared by what they stand for (`identity`), as the check compares them: a
     number spelt `UC-0007` is held as `UC-007` is."""
-    pattern = schemas.id_pattern(kind)
     if kind in NUMBERED:
-        numbers = [int(i.split("-", 1)[1]) for i in held if pattern.match(i)]
-        return identity(f"{PREFIX[kind]}-{max(numbers, default=0) + 1}")
+        return identity(f"{PREFIX[kind]}-{max(_numbers(kind, held), default=0) + 1}")
     new_id = f"{PREFIX[kind]}-{slug}"
     if new_id in held:
         raise Refused(
