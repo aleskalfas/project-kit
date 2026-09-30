@@ -30,6 +30,7 @@ import json
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -227,13 +228,15 @@ def test_stamped_but_missing_config_is_refused(gate, tmp_path):
     assert "adopter config is missing" in outcome.reason
 
 
-def test_stamped_but_config_missing_a_required_key_is_refused(gate, tmp_path):
+def test_stamped_but_config_missing_a_required_key_is_refused(gate: Any, tmp_path: Path) -> None:
     cap = _capability_tree(_repo(tmp_path / "repo"), config="schema_version: 1\n")
     _stamp(gate, cap)
     outcome = gate.evaluate(cap)
     assert not outcome.ok
     assert "missing required key(s)" in outcome.reason
-    assert "default_branch" in outcome.reason
+    # `default_branch` is no longer required: the default branch is the backbone's (COR-054).
+    assert "workstreams" in outcome.reason
+    assert "default_branch" not in outcome.reason
 
 
 def test_stamped_but_config_with_a_misspelled_key_is_refused(gate, tmp_path):

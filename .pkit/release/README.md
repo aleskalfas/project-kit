@@ -577,11 +577,13 @@ trusted — is a downstream change.
 
 ## The surface-without-changeset CI guard
 
-`pkit release check --base <ref>` fails a PR that touches a component's surface
-but ships no changeset for it. Wired as a PR-scoped step in
+`pkit release check [--base <ref>]` fails a PR that touches a component's
+surface but ships no changeset for it. The diff runs from where the branch left
+its base: `--base`, else `$PKIT_CHECK_BASE`, else the project's default branch
+(COR-054; `pkit repository base` shows it). Wired as a PR-scoped step in
 `.github/workflows/checks.yml` (it needs the PR base ref and PR labels, which a
 local pre-push hook lacks — so it is not in `scripts/check.sh`). Run it locally
-with `pkit release check --base origin/main`.
+with `pkit release check`.
 
 **A declared floor rides on its component or a release of it (PRJ-002 D4).**
 From the same diff, the guard also fails a PR that declares a

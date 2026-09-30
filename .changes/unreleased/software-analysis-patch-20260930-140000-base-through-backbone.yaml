@@ -1,0 +1,15 @@
+component: software-analysis
+kind: patch
+custom:
+  category: Changed
+  requires_backbone: release
+body: >
+  `pkit analysis check-numbers` compares with the base the backbone names
+  (COR-054, #1128) — `--base`, else `$PKIT_CHECK_BASE`, else the project's
+  default branch, `repository.default-branch` — where it used to fall back to a
+  fixed `origin/main`, and `pkit analysis new` numbers past the default branch
+  and any `--base` it is given, never past `$PKIT_CHECK_BASE`'s. Both read
+  what is settled through `pkit repository base --json` and no longer resolve a
+  base or compute a merge-base themselves. A base that cannot be compared, or a
+  default branch that resolves nowhere, refuses them with the backbone's reason
+  and fix; the stamp no longer numbers from the working tree alone.

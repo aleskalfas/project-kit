@@ -9,7 +9,7 @@ this interpreter — their `uv run --script` shebang pointed at it — and the
 `pkit_on_path` fixture), so nothing reaches `uv` or the network.
 
 `installed` builds the adopter each test module's `project` fixture returns, with
-`$PKIT_CHECK_BASE` removed: the scripts read the default branch from it when
+`$PKIT_CHECK_BASE` removed: the backbone names the scripts' base from it when
 set, and a developer's own value must not decide what these repositories answer.
 """
 

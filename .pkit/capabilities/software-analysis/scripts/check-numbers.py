@@ -22,15 +22,17 @@ own line of a project's check gate, beside `pkit friction check`, and not a
 member of `pkit validate` (ADR-058 point 7). A query — bounded, deterministic,
 read-only, needing no network — reading the analysis through the backbone's
 discovery, `pkit friction artefacts`, at the working tree and at the base's
-commits, and git for which commits those are, what the base's history added
-since the fork and, for a number both sides took, whether the base's file is
-a version this branch's history wrote, or of a name it gave the number.
+commits — which commits those are the same document names — and git for what
+the base's history added since the fork and, for a number both sides took,
+whether the base's file is a version this branch's history wrote, or of a
+name it gave the number.
 
 Usage:
   pkit analysis check-numbers [--base <ref>]          the summary and the findings
   pkit analysis check-numbers [--base <ref>] --json   {schema_version, base, summary, findings}
 
-The base is `--base`, else `$PKIT_CHECK_BASE`, else `origin/main`.
+The base is `--base`, else `$PKIT_CHECK_BASE`, else the project's default
+branch, as the backbone resolves it for every reader (COR-054).
 
 Exit codes:
   0  compared, and no number collides — a warning never fails — or the
@@ -67,8 +69,8 @@ def main() -> int:
         metavar="REF",
         default=None,
         help=(
-            "The default branch to compare with "
-            f"(default: ${backbone.BASE_ENV}, else {backbone.DEFAULT_BASE})."
+            "The base to compare with (default: $PKIT_CHECK_BASE, else the default branch, "
+            "as the backbone resolves it)."
         ),
     )
     parser.add_argument(
@@ -79,7 +81,7 @@ def main() -> int:
     args = parser.parse_args()
 
     try:
-        comparison = numbers.compare(backbone.project_root(), args.base or backbone.default_base())
+        comparison = numbers.compare(backbone.project_root(), args.base)
     except numbers.CannotCompare as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1

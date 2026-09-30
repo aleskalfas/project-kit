@@ -46,7 +46,7 @@ This record decides what the capability keeps, where, and how it stays true.
 
 3. **Identifiers.** Use cases and journeys are numbered within the project (`UC-NNN`, `JRN-NNN`), independent of any grouping. Moving a use case between areas never changes its id. Actors and terms are keyed by stable ids inside their collection files, with distinct prefixes (`ACT-` for actors, `TERM-` for terms), so that no two artefacts in the analysis share an id.
    - **Append-only.** An artefact is withdrawn, never deleted, and its id is never reused. Inside a use case, steps are numbered and variants are lettered after the step they branch from. Both are append-only too, because journeys and evidence cite them.
-   - **Parallel work.** When two lines of work number a new artefact the same, the first to reach the default branch keeps the number. Validation reports the collision, and the other renumbers before merging.
+   - **Parallel work.** When two lines of work number a new artefact the same, the first to reach the default branch keeps the number. Validation reports the collision, and the other renumbers before merging. A new number is given past what the default branch holds, and past any base the stamp is named, while a collision is judged at the merge at hand — against the base of that comparison, an integration branch included (refinement per COR-054, point 3).
 
 4. **Every artefact says what makes it true.** Each carries anchors and a revalidation in the sense of the anchors-and-friction record (COR-050). Anchors run in one direction only, so they never form a cycle:
    - Actors and terms anchor to where the software or a decision embodies them. An actor with no such anchor is reported as unanchored, which is not an error.

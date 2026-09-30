@@ -50,7 +50,8 @@ from project_kit.scaffolds import (
 )
 from project_kit.agents import STORYBOARD_FILE, stamp_new_agent
 from project_kit.storyboards import ArtifactKind, stamp_new_storyboard
-from project_kit import friction_check, friction_report, friction_repository, friction_write
+from project_kit import default_branch, friction_check, friction_report, friction_repository
+from project_kit import friction_write
 from project_kit import refs as refs_mod
 from project_kit import router
 from project_kit import scratchpads
@@ -427,6 +428,71 @@ def docs_record_location(capability: str, name: str, yes: bool, dry_run: bool) -
         target_root, capability, name, found.path, by="pkit docs record-location"
     )
     click.echo(f"recorded {recording}")
+
+
+@main.group("repository")
+def repository() -> None:
+    """Facts about the repository every reader takes from one place (COR-054).
+
+    The default branch is the configuration's `repository` key (`pkit config
+    set repository.default-branch <name>`). Reference: `.pkit/cli/README.md`,
+    "Configuration file".
+    """
+
+
+@repository.command("base")
+@click.option(
+    "--base",
+    "base_ref",
+    metavar="REF",
+    default=None,
+    help=f"The base to read: REF, instead of ${default_branch.CHECK_BASE_ENV}, else the "
+    "default branch. A branch name resolves as the default branch does.",
+)
+@click.option(
+    "--json", "as_json", is_flag=True, default=False, help="Emit the stable JSON document."
+)
+def repository_base_command(base_ref: str | None, as_json: bool) -> None:
+    """The default branch and the base a comparison reads (COR-054 point 5).
+
+    The default branch: declared (`repository.default-branch`, else `main`)
+    and resolved — the remote-tracking reference of its upstream, else
+    origin/<name>, and the local branch only when there is no remote. The
+    base: REF, else $PKIT_CHECK_BASE, else the default branch — its commit,
+    where HEAD left it and whether it moved on since. A reader that used a
+    local branch, and a declaration read as the default, say so on standard
+    error. Read-only; it runs no discovery. It is how a capability's own
+    script reads which commit is settled, without resolving a branch or
+    computing a merge-base itself. Exit 0 when answered — a branch or base
+    that resolves nowhere is an answer, with its problem; 2 on a usage error.
+    """
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    document = default_branch.reading(target_root, base_ref)
+    _warn_settled(target_root, base_ref)
+    if as_json:
+        click.echo(default_branch.render_json(document), nl=False)
+    else:
+        click.echo(default_branch.render_human(document), nl=False)
+
+
+def _warn_settled(target_root: Path, base_ref: str | None) -> None:
+    """What a reader of settled state says about it: a declaration read as the default
+    (COR-048 point 4), and a branch read from the local branch (COR-054 point 2)."""
+    for warning in default_branch.warnings(target_root, base_ref):
+        click.echo(f"warning: {warning}", err=True)
+
+
+def _settled_base(target_root: Path, base_ref: str | None) -> default_branch.Base:
+    """The base a diff-scoped command compares with — `base_ref`, else
+    `$PKIT_CHECK_BASE`, else the default branch (COR-054 point 3) — with where HEAD
+    left it; the problem, with its fix, refuses the run (point 4)."""
+    found = default_branch.base(target_root, base_ref)
+    if found.problem is not None or found.fork is None:
+        raise click.ClickException(found.problem or f"the base {found.ref!r} cannot be compared.")
+    _warn_settled(target_root, base_ref)
+    return found
 
 
 def _graph_format_options(command: Callable[..., None]) -> Callable[..., None]:
@@ -846,10 +912,10 @@ def friction_record_status_command(artefact: str, yes: bool, dry_run: bool) -> N
     "--base",
     "base_ref",
     metavar="REF",
-    envvar=friction_check.BASE_ENV,
-    default=friction_check.DEFAULT_BASE,
-    show_default=True,
-    help=f"Compare against the merge-base of REF and HEAD (or ${friction_check.BASE_ENV}).",
+    default=None,
+    help=f"Compare against the merge-base of REF and HEAD. Default: ${friction_check.BASE_ENV}, "
+    "else the default branch (`pkit repository base` shows it). A branch name resolves as "
+    "the default branch does.",
 )
 @click.option(
     "--all",
@@ -865,15 +931,16 @@ def friction_record_status_command(artefact: str, yes: bool, dry_run: bool) -> N
 @click.option(
     "--json", "as_json", is_flag=True, default=False, help="Emit the stable JSON document."
 )
-def friction_check_command(base_ref: str, whole_repository: bool, as_json: bool) -> None:
+def friction_check_command(base_ref: str | None, whole_repository: bool, as_json: bool) -> None:
     """The change check (COR-050 point 6): every artefact whose anchor changed in the diff
     carries an answer — updated, unchanged with why, or deferred.
 
     Reads git only and writes nothing: the working tree (uncommitted changes
-    included) against the merge-base of REF. Reports friction, dead anchors of
-    the change, bumps with nothing behind them and an outdated base. Exit 1
-    in enforcing mode on friction, a dead anchor, an unresolved kind or a
-    bump; an outdated base never fails.
+    included) against the merge-base of REF — by default $PKIT_CHECK_BASE,
+    else the default branch (COR-054). Reports friction, dead anchors of the
+    change, bumps with nothing behind them and an outdated base. Exit 1 in
+    enforcing mode on friction, a dead anchor, an unresolved kind or a bump;
+    an outdated base never fails.
 
     With --all, the whole-repository check instead: every artefact at HEAD
     against the current history, each anchor judged from the artefact's
@@ -893,6 +960,7 @@ def friction_check_command(base_ref: str, whole_repository: bool, as_json: bool)
         else:
             click.echo(friction_repository.render_human(report), nl=False)
         return
+    _warn_settled(target_root, base_ref)
     result = friction_check.run_change_check(target_root, base_ref)
     if as_json:
         click.echo(friction_check.render_json(result), nl=False)
@@ -1205,9 +1273,10 @@ def release_apply(tag: bool, push: bool, no_broaden: bool, yes: bool) -> None:
 @release.command("check")
 @click.option(
     "--base",
-    default="origin/main",
-    show_default=True,
-    help="Diff base for surface detection (the PR base ref).",
+    metavar="REF",
+    default=None,
+    help="Diff base for surface detection (the PR base ref). Default: $PKIT_CHECK_BASE, else "
+    "the default branch (`pkit repository base` shows it).",
 )
 @click.option(
     "--skip",
@@ -1216,19 +1285,24 @@ def release_apply(tag: bool, push: bool, no_broaden: bool, yes: bool) -> None:
     help="Escape hatch: pass unconditionally. Also honoured via the "
     "PKIT_CHANGESET_SKIP env var (wired from the `skip-changeset` PR label).",
 )
-def release_check(base: str, skip: bool | None) -> None:
+def release_check(base: str | None, skip: bool | None) -> None:
     """CI guard: fail if a surface-touched component ships no changeset, or the
     PR declares a `requires_backbone` floor for a component it neither touches
     nor moves.
 
-    Escape hatch for the surface check: a `none` changeset for the component,
-    or the `skip-changeset` label (PKIT_CHANGESET_SKIP env). Surface is a human
-    judgment (PRJ-002 D2) — this path heuristic can mis-fire; the override
-    exists. No escape hatch waives the floor tie.
+    The diff is taken from where HEAD left the base — REF, else
+    $PKIT_CHECK_BASE, else the default branch (COR-054); a base that resolves
+    nowhere refuses the run with its fix. Escape hatch for the surface check: a
+    `none` changeset for the component, or the `skip-changeset` label
+    (PKIT_CHANGESET_SKIP env). Surface is a human judgment (PRJ-002 D2) — this
+    path heuristic can mis-fire; the override exists. No escape hatch waives
+    the floor tie.
     """
     source_kit = _target_kit()
+    fork = _settled_base(source_kit.parent, base).fork
+    assert fork is not None  # `_settled_base` refuses a base without one
     skip_active = bool(skip) or _env_flag("PKIT_CHANGESET_SKIP")
-    result = check_changesets(source_kit, base, skip=skip_active)
+    result = check_changesets(source_kit, fork, skip=skip_active)
 
     if result.skipped:
         click.echo(
@@ -3622,9 +3696,10 @@ def migrations() -> None:
 @click.option(
     "--base",
     "base_ref",
-    default="origin/main",
-    show_default=True,
-    help="Base ref to diff against. Default is `origin/main` (CI's typical PR base).",
+    metavar="REF",
+    default=None,
+    help="Base ref to diff against. Default: $PKIT_CHECK_BASE, else the default branch "
+    "(`pkit repository base` shows it).",
 )
 @click.option(
     "--include-working-tree",
@@ -3633,17 +3708,19 @@ def migrations() -> None:
     help="Include staged + unstaged changes in the diff (pre-commit use). "
     "Without this flag, only committed changes are checked (CI's view).",
 )
-def migrations_check_diff(base_ref: str, include_working_tree: bool) -> None:
-    """Verify migration coverage in the diff between `base_ref` and the project state.
+def migrations_check_diff(base_ref: str | None, include_working_tree: bool) -> None:
+    """Verify migration coverage in the diff between the base and the project state.
 
     Walks the diff for migration-triggering changes (renames + deletions
     in kit-owned trees per COR-010 / `.pkit/rules/core.md` rule 7), then
     checks whether the same diff includes a matching migration script.
 
-    Default scope: committed branch changes only (`<base_ref>...HEAD`)
-    — what CI sees on a PR. With `--include-working-tree`, the scope
-    extends to staged + unstaged changes — what's about to be committed.
-    The pre-commit form for local use.
+    The base is REF, else $PKIT_CHECK_BASE, else the default branch
+    (COR-054); the diff starts where HEAD left it, and a base that resolves
+    nowhere refuses the run with its fix. Default scope: committed branch
+    changes only — what CI sees on a PR. With `--include-working-tree`, the
+    scope extends to staged + unstaged changes — what's about to be
+    committed. The pre-commit form for local use.
 
     Exits 0 when covered or no triggers exist; exits 1 when triggers
     exist without matching migrations, listing the affected tiers so the
@@ -3654,9 +3731,11 @@ def migrations_check_diff(base_ref: str, include_working_tree: bool) -> None:
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
+    fork = _settled_base(target_root, base_ref).fork
+    assert fork is not None  # `_settled_base` refuses a base without one
     try:
         report = migrations_mod.check_diff_coverage(
-            target_root, base_ref, include_working_tree=include_working_tree
+            target_root, fork, include_working_tree=include_working_tree
         )
     except RuntimeError as exc:
         raise click.ClickException(str(exc)) from exc

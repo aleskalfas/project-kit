@@ -26,6 +26,7 @@ import json
 import os
 import re
 import stat
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -306,12 +307,20 @@ def test_a_collection_file_with_crlf_line_endings_stays_crlf(project: AdopterRep
     assert (project.root / ACTORS).read_bytes() == as_lf.replace(b"\n", b"\r\n")
 
 
+def _refusal(completed: subprocess.CompletedProcess[str]) -> str:
+    """The stamp's refusal: its standard error less the `warning:` lines the backbone's
+    reading of the default branch passes on (COR-054 point 2)."""
+    return "\n".join(
+        line for line in completed.stderr.splitlines() if not line.startswith("warning:")
+    )
+
+
 def test_a_collection_file_with_mixed_line_endings_is_refused(project: AdopterRepo) -> None:
     mixed = _ADMIN_ONLY.replace("\n", "\r\n", 3)
     project.write({ACTORS: mixed})
     completed = new(project, "actor", "tester")
     assert completed.returncode == 1
-    assert completed.stderr.startswith(
+    assert _refusal(completed) == (
         f"refused: {ACTORS} has mixed line endings — some lines end CRLF, others LF or a lone "
         "CR: the stamp writes its lines with the file's own ending, and this file has no one "
         "ending — make them one, then stamp again"
@@ -327,7 +336,7 @@ def test_a_write_that_fails_records_no_location(project: AdopterRepo) -> None:
     project.write({f"{USE_CASES}/reports": "a file where the area's folder goes\n"})
     completed = new(project, "use-case", "export", "--actor", "ACT-tester", "--area", "reports")
     assert completed.returncode == 1
-    assert completed.stderr.startswith(
+    assert _refusal(completed).startswith(
         f"refused: {USE_CASES}/reports/UC-001-export.md could not be written: "
     )
     assert not (project.root / RECORDED).exists()
@@ -549,10 +558,11 @@ def test_a_shallow_clone_s_stamp_says_its_history_stops_early(
     completed = new(clone, "use-case", "two", "--actor", "ACT-tester")
     assert completed.returncode == 0, completed.stderr
     note, done = completed.stdout.splitlines()
+    # The clone's `main` tracks `origin/main`: the remote's copy is what is read (COR-054).
     assert note == (
-        "history: shallow clone — main's history was read back to where the clone stops, so a "
-        "number a file was given before it is not counted; fetch the full history (`git fetch "
-        "--unshallow`) to count every one"
+        "history: shallow clone — origin/main's history was read back to where the clone "
+        "stops, so a number a file was given before it is not counted; fetch the full history "
+        "(`git fetch --unshallow`) to count every one"
     )
     assert done == f"stamped UC-002 at {USE_CASES}/UC-002-two.md"
     # An actor's or term's id is a person's choice: no history is read for one.
@@ -596,16 +606,36 @@ def test_a_number_spelt_with_other_zeros_counts_as_held(project: AdopterRepo) ->
     assert stamped(project, "use-case", "three", "--actor", "ACT-tester") == "UC-1000"
 
 
-def test_without_the_default_branch_ids_come_from_the_working_tree_and_it_says_so(
-    project: AdopterRepo,
+@pytest.mark.parametrize(
+    ("declared", "base", "refusal"),
+    [
+        (
+            "",
+            ("--base", "origin/main"),
+            "the base 'origin/main' does not resolve to a commit in this repository",
+        ),
+        (
+            "repository:\n  default-branch: trunk\n",
+            (),
+            "the default branch 'trunk' resolves to no commit here",
+        ),
+    ],
+    ids=["named", "declared"],
+)
+def test_without_what_is_settled_the_stamp_refuses_rather_than_guess(
+    project: AdopterRepo, declared: str, base: tuple[str, ...], refusal: str
 ) -> None:
+    """A base named for the stamp, or a declared default branch (COR-054), that names no
+    commit here: numbering from the working tree alone would be a guess, so the stamp
+    refuses with the backbone's reason and fix, and writes nothing (point 4)."""
     stamped(project, "actor", "tester")
-    completed = run_script(project, NEW, "use-case", "one", "--actor", "ACT-tester")
-    assert completed.returncode == 0, completed.stderr
-    assert "origin/main names no commit here, so ids were taken from the working tree" in (
-        completed.stdout
+    project.write({CONFIG: f"docs:\n  internal: tech-docs\n{declared}"})
+    completed = run_script(project, NEW, "use-case", "one", "--actor", "ACT-tester", *base)
+    assert completed.returncode != 0
+    assert refusal in completed.stderr
+    assert not (project.root / USE_CASES).exists() or not list(
+        (project.root / USE_CASES).glob("UC-*.md")
     )
-    assert completed.stdout.splitlines()[-1] == f"stamped UC-001 at {USE_CASES}/UC-001-one.md"
 
 
 @pytest.mark.parametrize(

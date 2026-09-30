@@ -1,0 +1,19 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  One meaning of the default branch for every reader of settled state (COR-054,
+  #1128). The backbone configuration gains `repository.default-branch` — the
+  branch the project's pull requests merge into, declared once, `main` when
+  absent, a branch name as git accepts one and not a reference. It resolves to
+  the remote-tracking reference of the branch's upstream, else `origin/<name>`,
+  and to the local branch only when there is no remote, which every reader says
+  on a `warning:` line; when nothing resolves it is reported with the fixes,
+  never guessed. Any branch named as a base resolves the same way. New
+  `pkit repository base [--base <ref>] [--json]` reads the default branch and
+  the base a comparison reads — `--base`, else `$PKIT_CHECK_BASE`, else the
+  default branch — with its commit and where HEAD left it, so a capability's
+  script never resolves a base or computes a merge-base itself. The friction
+  change check, `pkit migrations check-diff` and `pkit release check` default
+  to that base where they used to take a fixed `origin/main`.

@@ -36,17 +36,22 @@ merge-base holds neither file.
 
 It reads a base, so it answers about a change rather than the tree, and is not
 a validator (ADR-058 point 7): `pkit analysis check-numbers` runs it, a line of
-its own in a project's check gate, as the friction change check is. Like that
+its own in a project's check gate, as the friction change check is. A collision
+is judged at the merge at hand, so the base is the comparison's (COR-054 point
+3): `--base`, else `$PKIT_CHECK_BASE`, else the default branch. Like the change
 check it cannot answer without its base — a base that names no commit, or
-shares no history with HEAD, fails it — except when the working tree numbers
-nothing, where there is nothing to compare. When the base moved on after this
-branch left it — the only case in which it can have taken a number since — that
-is reported, never failed, as the change check reports an outdated base.
+shares no history with HEAD, fails it with the backbone's reason and fix —
+except when the working tree numbers nothing: there is nothing to compare, and
+no base is read (point 4). When the base moved on after this branch left it —
+the only case in which it can have taken a number since — that is reported,
+never failed, as the change check reports an outdated base.
 
-The default branch is read at its tip and at the merge-base through the
-backbone's discovery at a commit (`pkit friction artefacts --at`), and its
-history since the fork as the stamp reads a history (`_lib/history.py`). Git
-answers which commits those are, and — only for a number both sides took —
+Which commits those are the backbone names: `pkit repository base --json`
+carries the base, its tip and where this branch left it (COR-054 point 5), so
+nothing here resolves a base or computes a merge-base. The base is read at its
+tip and at the merge-base through the backbone's discovery at a commit (`pkit
+friction artefacts --at`), and its history since the fork as the stamp reads a
+history (`_lib/history.py`). Git answers — only for a number both sides took —
 which versions of the use-case and journey files this branch's history wrote
 since the merge-base, which the default branch's tip holds, and which files
 this branch's history added (`backbone.blobs_written`, `backbone.blob_of`,
@@ -114,22 +119,26 @@ class Theirs:
     held: bool
 
 
-def compare(root: Path, ref: str) -> Comparison:
-    """Compare the numbers in the working tree at `root` with the default branch `ref`.
-    Raises CannotCompare when it cannot answer."""
+def compare(root: Path, ref: str | None = None) -> Comparison:
+    """Compare the numbers in the working tree at `root` with the base `ref` — without
+    one, the base the backbone names: `$PKIT_CHECK_BASE`, else the default branch
+    (COR-054). Raises CannotCompare when it cannot answer."""
     try:
         analysis = backbone.read_analysis(root)
     except Unreadable as exc:
         raise CannotCompare(f"the analysis could not be read: {exc}") from exc
     ours = analysis.numbers()
     if not ours:
-        line = f"numbers: no use case or journey is numbered here; nothing to compare with {ref}."
+        line = "numbers: no use case or journey is numbered here; nothing to compare, no base read."
         return Comparison(None, Outcome([line]))
 
-    base = _resolve(root, ref)
+    try:
+        base = _resolve(backbone.settled(root, ref).base)
+    except Unreadable as exc:
+        raise CannotCompare(f"the base could not be read: {exc}") from exc
     if not base.outdated:
         line = (
-            f"numbers: this branch contains {ref} ({base.tip[: backbone.SHORT]}); nothing to "
+            f"numbers: this branch contains {base.ref} ({base.tip[: backbone.SHORT]}); nothing to "
             f"collide with."
         )
         return Comparison(base, Outcome([line]))
@@ -137,10 +146,10 @@ def compare(root: Path, ref: str) -> Comparison:
         on_base = backbone.read_analysis(root, at=base.tip)
         before = backbone.read_analysis(root, at=base.commit).held()
     except Unreadable as exc:
-        raise CannotCompare(f"{ref} could not be read: {exc}") from exc
+        raise CannotCompare(f"{base.ref} could not be read: {exc}") from exc
 
     line = (
-        f"numbers: compared with {ref} ({base.tip[: backbone.SHORT]}; this branch left it at "
+        f"numbers: compared with {base.ref} ({base.tip[: backbone.SHORT]}; this branch left it at "
         f"{base.commit[: backbone.SHORT]})."
     )
     outdated = Finding(REPORT, analysis.location or ".", f"outdated base: {_outdated(base)}")
@@ -229,32 +238,13 @@ def _name(path: str) -> str:
     return PurePosixPath(path).name
 
 
-def _resolve(root: Path, ref: str) -> Base:
-    """The base's commit and its merge-base with HEAD, or CannotCompare saying why not —
-    the refusals of the friction change check, for the same reasons."""
-    if not ref or ref.startswith("-"):
-        raise CannotCompare(f"the base {ref!r} is not a revision name.")
-    head = backbone.commit_of(root, "HEAD")
-    if head is None:
-        raise CannotCompare(
-            "HEAD names no commit yet; numbers are compared between a branch and its base, "
-            "so commit first."
-        )
-    tip = backbone.commit_of(root, ref)
-    if tip is None:
-        raise CannotCompare(
-            f"the base {ref!r} does not resolve to a commit in this repository: fetch it "
-            f"(e.g. `git fetch origin main`), or name another with --base or "
-            f"${backbone.BASE_ENV}."
-        )
-    fork = backbone.merge_base(root, tip, head)
-    if fork is None:
-        raise CannotCompare(
-            f"HEAD and the base {ref!r} share no history to compare; in a shallow clone, "
-            f"fetch the history back to where the branch left the base (e.g. `git fetch "
-            f"--unshallow`)."
-        )
-    return Base(ref=ref, tip=tip, commit=fork)
+def _resolve(named: backbone.Base) -> Base:
+    """The base the backbone named — its commit and where HEAD left it — or
+    CannotCompare saying why not: the refusals of the friction change check, in its
+    words, since the backbone resolves the base once for both (COR-054 point 5)."""
+    if named.problem is not None or named.tip is None or named.fork is None:
+        raise CannotCompare(named.problem or f"the base {named.ref!r} cannot be compared.")
+    return Base(ref=named.ref, tip=named.tip, commit=named.fork)
 
 
 def _outdated(base: Base) -> str:

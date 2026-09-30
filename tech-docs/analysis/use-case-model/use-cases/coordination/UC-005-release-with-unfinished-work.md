@@ -21,9 +21,9 @@ pkit:
       artefact:
         - ACT-operator
     revalidated:
-      at: 2026-09-30T17:34:57Z
+      at: 2026-09-30T06:58:24Z
       outcome: unchanged
-      unchanged-because: release.py changed again only in the changeset guard's list of what a release writes, whose requires_backbone line now matches only the ranges the broaden and a declared floor rewrite; the use case's release scope, gate, stabilisation guards and the release pull request closing no issue are about issue scope, not how the guard reads a package.yaml line, so its steps hold
+      unchanged-because: "project-management's config no longer declares default_branch: the default branch is the backbone's repository.default-branch, main when undeclared (COR-054), so landed work is still read from the same branch, and the Milestone categories this use case relies on are unchanged"
 ---
 
 # UC-005 — Cut a release while unfinished work remains

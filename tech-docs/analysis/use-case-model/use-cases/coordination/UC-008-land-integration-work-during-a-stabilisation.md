@@ -19,9 +19,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-09-30T06:40:07Z
+      at: 2026-09-30T09:26:38Z
       outcome: unchanged
-      unchanged-because: open-pr's change is that --doc-impact-from-friction leaves the Doc impact section unrendered when the friction check answers a schema_version other than 1; which branch a pull request targets, and how integration work reaches the default branch during a stabilisation, did not change
+      unchanged-because: start-work now cuts the branch from the commit the backbone resolves its base to — the remote's copy, the local branch only without a remote — and refuses when the backbone cannot say which branch is settled (COR-054); an integration branch resolves the same way, and open-pr names it to the change check while its PR still targets it, so where the arc's work lands is unchanged
 ---
 
 # UC-008 — Land integration-branch work during a stabilisation

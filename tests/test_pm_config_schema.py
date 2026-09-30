@@ -53,7 +53,7 @@ def _errors(validator: Draft202012Validator, doc: Any) -> list[str]:
 
 def _minimal() -> dict[str, Any]:
     """The smallest config the capability accepts — pre-check's required set."""
-    return {"schema_version": 1, "default_branch": "main", "workstreams": []}
+    return {"schema_version": 1, "workstreams": []}
 
 
 # --- accept ---------------------------------------------------------------
@@ -158,7 +158,7 @@ def test_unknown_nested_key_refused(validator: Draft202012Validator) -> None:
 # --- reject: missing required keys ---------------------------------------
 
 
-@pytest.mark.parametrize("missing", ["schema_version", "default_branch", "workstreams"])
+@pytest.mark.parametrize("missing", ["schema_version", "workstreams"])
 def test_missing_required_key_refused(validator: Draft202012Validator, missing: str) -> None:
     """The required set mirrors `pre-check.py`'s REQUIRED_ADOPTER_CONFIG_FIELDS,
     so shape validation and the pre-check gate agree on what a config must
@@ -166,6 +166,15 @@ def test_missing_required_key_refused(validator: Draft202012Validator, missing: 
     doc = _minimal()
     del doc[missing]
     assert any(missing in m for m in _errors(validator, doc))
+
+
+def test_the_default_branch_is_an_optional_deprecated_alias(
+    validator: Draft202012Validator,
+) -> None:
+    """`default_branch` is a deprecated alias of the backbone's
+    `repository.default-branch` (COR-054): no longer required, still accepted."""
+    assert _errors(validator, _minimal()) == []
+    assert _errors(validator, _minimal() | {"default_branch": "develop"}) == []
 
 
 def test_required_set_matches_pre_check() -> None:

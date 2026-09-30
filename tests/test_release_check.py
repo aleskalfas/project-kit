@@ -786,7 +786,7 @@ def test_guard_from_the_checkout_itself_is_silent_and_unchanged(
     _point_interpreter_at(monkeypatch, checkout)
     monkeypatch.chdir(checkout)
 
-    result = CliRunner().invoke(main, ["release", "check", "--base", "main"])
+    result = CliRunner().invoke(main, ["release", "check", "--base", "refs/heads/main"])
 
     assert result.exit_code == 0, result.output
     assert "no surface-touched components" in result.stdout
