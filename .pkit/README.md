@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-09-30T02:19:00Z
+      at: 2026-09-30T01:38:59Z
       outcome: unchanged
-      unchanged-because: the lifecycle README's run-inside-a-run section now states the live-run guard, the markers and what it does not cover, the CLI README the run cache's read-or-resolve rule and the open from field, and the process README the predicate's deadline; the area map and each area's one-line description hold
+      unchanged-because: the CLI README's friction explain entry now says each commit carries the paths behind its finding, each path anchor its excluded files, and a dead path anchor where its files went, inside its own section; the area map and each area's one-line description hold
 ---
 
 # project-kit

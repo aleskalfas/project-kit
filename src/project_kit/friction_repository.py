@@ -50,9 +50,9 @@ A shallow clone whose history stops before a point is reported for the
 artefacts concerned, never guessed at.
 
 The check writes nothing (point 13). The computations it shares with the
-change check — discovery, content, the parsed marker, anchor matching, what a
-dead anchor is, truth-chain order — have their one home in `friction_check`
-and `friction_discovery` (ADR-057 point 2).
+change check — discovery, content, the parsed marker, what a path pattern
+stands on (`Side.stands_on`), what a dead anchor is, truth-chain order — have
+their one home in `friction_check` and `friction_discovery` (ADR-057 point 2).
 """
 
 from __future__ import annotations
@@ -61,7 +61,7 @@ import bisect
 import json
 import subprocess
 from collections.abc import Callable, Iterator, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
@@ -69,7 +69,6 @@ from typing import Any
 
 from project_kit import cli_render
 from project_kit.friction_check import (
-    RESOLVES_NOTHING,
     SHORT,
     CommitTree,
     DiffEntry,
@@ -95,7 +94,6 @@ from project_kit.friction_discovery import (
     ResolverCommand,
     discover_artefacts,
     parse_artefacts,
-    pattern_matcher,
     read_friction_settings,
     registered_anchor_kinds,
     unresolved_kind_reason,
@@ -724,15 +722,14 @@ class _Judge:
         if self.head.resolves(anchor):
             return None
         return RepositoryFinding(
-            RepositoryFindingKind.DEAD_ANCHOR, RESOLVES_NOTHING[anchor.kind], anchor=anchor
+            RepositoryFindingKind.DEAD_ANCHOR, self.head.why_dead(anchor), anchor=anchor
         )
 
     def over_broad(self, anchor: Anchor) -> RepositoryFinding | None:
         """A path anchor matching more than `OVER_BROAD_SHARE` of the tracked files (point 7)."""
         if anchor.kind != "path" or not self._tracked:
             return None
-        match = pattern_matcher(anchor.value)
-        matched = sum(1 for rel in self._tracked if match(rel))
+        matched = sum(map(self.head.stands_on(anchor.value), self.head.files))
         total = len(self._tracked)
         if matched <= total * OVER_BROAD_SHARE:
             return None
@@ -747,32 +744,41 @@ class _Judge:
         """Every path the history touched that `pattern` covers, excluded paths left out."""
         found = self._matching.get(pattern)
         if found is None:
-            match = pattern_matcher(pattern)
-            found = frozenset(
-                rel for rel in self.history.paths if match(rel) and not self.head.excluded(rel)
-            )
+            found = frozenset(self.head.matching(pattern, self.history.paths))
             self._matching[pattern] = found
         return found
 
-    def change(self, anchor: Anchor, covered: frozenset[int], own: frozenset[str]) -> Change | None:
-        """Whether a live anchor of a core kind changed outside `covered`, and where (point 5)."""
+    def changes(self, anchor: Anchor, covered: frozenset[int], own: frozenset[str]) -> set[int]:
+        """Every commit outside `covered` that changed a live path or record anchor (point 5).
+
+        A path anchor: each commit that touched a path it stands on in history,
+        the artefact's own names (`own`) left out. A record anchor: each commit
+        that changed the content of the record's file. One pass over the
+        history's listing, however many there are.
+        """
         if anchor.kind == "path":
-            after = {
+            return {
                 index
                 for rel in self.matching_paths(anchor.value) - own
                 for index in self.history.touched(rel)
                 if index not in covered
             }
-            return Change(max(after)) if after else None
-        if anchor.kind == "record":
-            rel = self.head.record_path(anchor.value)
-            if rel is None:
-                return None
-            after = [
-                v.index
-                for v in self.history.versions(rel)
-                if v.index not in covered and v.entry.changes_content
-            ]
+        rel = self.head.record_path(anchor.value) if anchor.kind == "record" else None
+        if rel is None:
+            return set()
+        return {
+            v.index
+            for v in self.history.versions(rel)
+            if v.index not in covered and v.entry.changes_content
+        }
+
+    def change(self, anchor: Anchor, covered: frozenset[int], own: frozenset[str]) -> Change | None:
+        """Whether a live anchor of a core kind changed outside `covered`, and where (point 5).
+
+        The first such commit: for a path or a record, the oldest of `changes`.
+        """
+        if anchor.kind in ("path", "record"):
+            after = self.changes(anchor, covered, own)
             return Change(max(after)) if after else None
         target = self.head.find(anchor.value)
         if target is None:
@@ -1015,21 +1021,19 @@ def _uncovered_surface(head: Side, discovery: Discovery) -> tuple[int, tuple[str
 
     The surface is what the project and its capabilities say ought to be
     described (COR-050 point 8), excluded paths left out. A path is anchored
-    when any artefact's path anchor matches it, a record anchor names it, or
-    an artefact anchor names the artefact it holds.
+    when any artefact's path anchor stands on it (`Side.stands_on`), a record
+    anchor names it, or an artefact anchor names the artefact it holds.
     """
     surface: set[str] = set()
     for declared in head.settings.surface:
-        match = pattern_matcher(declared.resolved)
-        surface.update(rel for rel in head.files if match(rel) and not head.excluded(rel))
+        surface.update(filter(head.stands_on(declared.resolved), head.files))
     if not surface:
         return 0, ()
     anchored: set[str] = set()
     for artefact in discovery.artefacts:
         for anchor in anchors_of(artefact):
             if anchor.kind == "path":
-                match = pattern_matcher(anchor.value)
-                anchored.update(rel for rel in surface if match(rel))
+                anchored.update(filter(head.stands_on(anchor.value), surface))
             elif anchor.kind == "record":
                 rel = head.record_path(anchor.value)
                 if rel is not None:
@@ -1045,22 +1049,81 @@ def _uncovered_surface(head: Side, discovery: Discovery) -> tuple[int, tuple[str
 #
 # `pkit friction explain` judges one artefact exactly as the check does — through
 # `_check_artefact`, on a judge built as `run_repository_check` builds it — and adds,
-# per finding, the commits behind it, read from the same history by the same rules.
+# per finding, the commits behind it, read from the same history by the same rules,
+# and per path anchor the files it stands on, matched by the rule the check decides
+# a dead anchor by (`Side.matching`), with those `friction.exclude` leaves out.
+
+
+@dataclass(frozen=True)
+class CommitBehind:
+    """One commit behind a finding, and the paths behind the finding it touched.
+
+    `paths`, sorted — what a reader limits the commit to. A path anchor: the
+    paths it stands on in history that the commit touched, the artefact's own
+    file under any of its names left out (`_Judge.matching_paths` less the
+    walk's own paths) — exactly what the check reads as the anchor's change,
+    which the anchor's `AnchorFiles` are not. A record or artefact anchor: the
+    file it names, under the names the commit touched. A move: the artefact's
+    file under both its names. Either side of a rename counts, as the check
+    counts it.
+    """
+
+    commit: Commit
+    paths: tuple[str, ...]
+
+    def as_json(self) -> dict[str, Any]:
+        return {**self.commit.as_json(), "paths": list(self.paths)}
 
 
 @dataclass(frozen=True)
 class TracedFinding:
     """A finding of the whole-repository check about one artefact, and the commits behind it.
 
-    `commits` are oldest first. Stale on an anchor: every commit outside what
+    `commits` are oldest first, each with the paths behind the finding it
+    touched (`CommitBehind`). Stale on an anchor: every commit outside what
     the points cover that changed the anchor, the finding's origin among them;
     stale by a move: the rename. Deferred: the changes the deferral postpones —
-    after the revalidation point, up to the deferral point. Any other finding,
-    or an artefact whose points lie beyond a shallow clone: none.
+    after the revalidation point, up to the deferral point; none for a dead
+    anchor, whose deferral postpones no friction (COR-050 point 4) since the
+    anchor is an error (point 7). A dead `path` anchor: where its files went —
+    for each path it matched in history, the last commit that touched it,
+    whether before or after the revalidation point, so an anchor revalidated
+    over while dead still shows its deletions; a dead record or artefact
+    anchor names no file whose history could be read. Any other finding, or an
+    artefact whose points lie beyond a shallow clone: none.
     """
 
     finding: RepositoryFinding
-    commits: tuple[Commit, ...]
+    commits: tuple[CommitBehind, ...]
+
+
+@dataclass(frozen=True)
+class AnchorFiles:
+    """The files a path anchor stands on at the revalidation point and at HEAD, and
+    the files at HEAD its glob covers that `friction.exclude` leaves out.
+
+    Each sorted. `point` and `head` are matched as the check decides a dead
+    anchor (`Side.matching`) — never as it decides a changed one, which reads
+    the paths commits touched, the artefact's own file left out (a finding's
+    commits carry those). Both states are read under HEAD's exclusions, the
+    rule the check reads history by. `point` is `None` when there is no
+    revalidation point to read: it lies beyond a shallow clone's history, or
+    the artefact is under an excluded path and has no points. `head` is empty
+    for a dead anchor, and `excluded` (`Side.left_out`) says whether it is
+    dead by a typo — nothing excluded either — or by a glob that covers only
+    excluded files.
+    """
+
+    point: tuple[str, ...] | None
+    head: tuple[str, ...]
+    excluded: tuple[str, ...]
+
+    def as_json(self) -> dict[str, list[str] | None]:
+        return {
+            "point": None if self.point is None else list(self.point),
+            "head": list(self.head),
+            "excluded": list(self.excluded),
+        }
 
 
 @dataclass(frozen=True)
@@ -1069,10 +1132,12 @@ class ArtefactCheck:
 
     `report` is `None` when there is nothing to judge — no `friction` block, or
     neither anchors nor deferrals, the artefacts the check passes over — and
-    `findings` are then empty. It is `None` too for an artefact under an
-    excluded path, which is never judged stale or deferred; `findings` are then
-    what the check reports of its declarations. Otherwise both are the check's
-    own for this artefact, the findings in its order.
+    `findings` and `files` are then empty. It is `None` too for an artefact
+    under an excluded path, which is never judged stale or deferred; `findings`
+    are then what the check reports of its declarations. Otherwise both are the
+    check's own for this artefact, the findings in its order. Whenever it is
+    judged, `files` holds each path anchor's files (`AnchorFiles`) — with no
+    point's for an excluded artefact, which has no points.
     """
 
     head: HeadState
@@ -1080,6 +1145,7 @@ class ArtefactCheck:
     artefact: Artefact  # as it stands at HEAD
     report: ArtefactReport | None
     findings: tuple[TracedFinding, ...]
+    files: Mapping[Anchor, AnchorFiles] = field(default_factory=dict[Anchor, AnchorFiles])
 
 
 def run_artefact_check(
@@ -1124,7 +1190,32 @@ def run_artefact_check(
         traced = _traced(artefact, judge, findings)
     finally:
         blobs.close()
-    return ArtefactCheck(head, bool(history.shallow), artefact, report, traced)
+    point = None if report is None else report.revalidation_point
+    files = _anchor_files(target_root, side, artefact, point)
+    return ArtefactCheck(head, bool(history.shallow), artefact, report, traced, files)
+
+
+def _anchor_files(
+    target_root: Path, head: Side, artefact: Artefact, point: Commit | None
+) -> dict[Anchor, AnchorFiles]:
+    """Each path anchor's files at the revalidation point and at HEAD, and those
+    `friction.exclude` leaves out at HEAD (`AnchorFiles`).
+
+    The point's files are listed from git objects, once, and only when the
+    artefact has a path anchor; both states are matched under HEAD's exclusions.
+    """
+    anchors = [anchor for anchor in anchors_of(artefact) if anchor.kind == "path"]
+    if not anchors:
+        return {}
+    listed = None if point is None else CommitTree(target_root, point.sha).files()
+    return {
+        anchor: AnchorFiles(
+            None if listed is None else head.matching(anchor.value, listed),
+            head.matching(anchor.value),
+            head.left_out(anchor.value),
+        )
+        for anchor in anchors
+    }
 
 
 def _traced(
@@ -1152,6 +1243,12 @@ def _traced(
                     covered = covered | history.ancestors(deferral_points[anchor])
                 behind.update(_changes(judge, anchor, covered, points.own_paths))
         elif (
+            finding.kind is RepositoryFindingKind.DEAD_ANCHOR
+            and anchor is not None
+            and anchor.kind == "path"
+        ):
+            behind.update(_where_it_went(judge, anchor, points.own_paths))
+        elif (
             finding.kind is RepositoryFindingKind.DEFERRED
             and anchor in deferral_points
             and judge.problem(anchor) is None
@@ -1162,9 +1259,63 @@ def _traced(
                 for index in _changes(judge, anchor, reached, points.own_paths)
                 if index in postponed
             )
-        commits = tuple(history.commits[index] for index in sorted(behind, reverse=True))
+        touched = (
+            _touched_by(history, _paths_behind(judge, anchor, points.own_paths), behind)
+            if behind
+            else {}
+        )
+        commits = tuple(
+            CommitBehind(history.commits[index], tuple(sorted(touched.get(index, ()))))
+            for index in sorted(behind, reverse=True)
+        )
         traced.append(TracedFinding(finding, commits))
     return tuple(traced)
+
+
+def _paths_behind(judge: _Judge, anchor: Anchor | None, own: frozenset[str]) -> frozenset[str]:
+    """Every path whose change a finding on `anchor` reads (`CommitBehind`).
+
+    A path anchor's paths are the check's own (`_Judge.matching_paths`, less
+    `own`); a record or artefact anchor's the names of the file it names; a
+    move's (no anchor) the artefact's own names.
+    """
+    if anchor is None:
+        return own
+    if anchor.kind == "path":
+        return judge.matching_paths(anchor.value) - own
+    rel: str | None = None
+    if anchor.kind == "record":
+        rel = judge.head.record_path(anchor.value)
+    elif anchor.kind == "artefact":
+        target = judge.head.find(anchor.value)
+        rel = None if target is None else target.path
+    return frozenset() if rel is None else _names(judge.history, rel)
+
+
+def _names(history: History, path: str) -> frozenset[str]:
+    """Every name the file now at `path` had in `history`, renames followed."""
+    names = {path}
+    for version in history.versions(path):
+        names.add(version.path)
+        names.update(source for source in version.sources if source is not None)
+    return frozenset(names)
+
+
+def _touched_by(history: History, paths: frozenset[str], commits: set[int]) -> dict[int, set[str]]:
+    """Of `paths`, those each of `commits` touched, by commit — one pass over their history."""
+    touched: dict[int, set[str]] = {}
+    for rel in paths:
+        for index in history.touched(rel):
+            if index in commits:
+                touched.setdefault(index, set()).add(rel)
+    return touched
+
+
+def _where_it_went(judge: _Judge, anchor: Anchor, own: frozenset[str]) -> set[int]:
+    """Where a dead path anchor's files went: for each path it matched in history, the
+    artefact's own names left out, the last commit that touched it — its removal, or its
+    rename away — wherever that lies against the revalidation point."""
+    return {judge.history.touched(rel)[0] for rel in judge.matching_paths(anchor.value) - own}
 
 
 def _changes(
@@ -1172,12 +1323,11 @@ def _changes(
 ) -> set[int]:
     """Every commit outside `covered` that changed a live anchor's target (COR-050 point 5).
 
-    A path or a record: `_Judge.change` names the first such commit, and asked
-    again with each answer covered it names the next, so the rule is the
-    check's own. An artefact: each commit at which the target's content
-    differs from its content at every parent of the commit (`_changed`) — the
-    check asks only whether the content at HEAD differs from the content the
-    point saw.
+    A path or a record: `_Judge.changes`, whose oldest is the check's own
+    origin, so the rule is the check's. An artefact: each commit at which the
+    target's content differs from its content at every parent of the commit
+    (`_changed`) — the check asks only whether the content at HEAD differs
+    from the content the point saw.
     """
     if anchor.kind == "artefact":
         target = judge.head.find(anchor.value)
@@ -1194,13 +1344,7 @@ def _changes(
                 walker.same_in_parents(version, target),
             )
         }
-    found: set[int] = set()
-    while True:
-        change = judge.change(anchor, covered, own)
-        if change is None or change.origin in covered:
-            return found
-        found.add(change.origin)
-        covered = covered | {change.origin}
+    return judge.changes(anchor, covered, own)
 
 
 def _content_of(artefact: Artefact | None) -> tuple[str, dict[str, Any]] | None:
@@ -1416,11 +1560,13 @@ def _result_line(result: RepositoryCheck) -> str:
 
 __all__ = [
     "OVER_BROAD_SHARE",
+    "AnchorFiles",
     "ArtefactCheck",
     "ArtefactReport",
     "ArtefactState",
     "BlobReader",
     "Commit",
+    "CommitBehind",
     "History",
     "MergeEntry",
     "RepositoryCheck",
