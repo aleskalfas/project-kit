@@ -2967,7 +2967,7 @@ def test_procedural_step_logs_styling_is_never_load_bearing(tmp_path, monkeypatc
     assert cli_render.strip_ansi(always) == never
 
 
-# ---- ADR-002 amendment: enforcement-runtime self-check + ADR-014 zero-dep ---
+# ---- ADR-002 point 4: enforcement-runtime self-check + ADR-014 zero-dep -----
 # Tests for:
 #   (a) `enable` and `sandbox enable` run the self-check and are loud on a dead
 #       hook runtime.
@@ -3001,7 +3001,7 @@ def _with_adapter_and_hook(proj: Path) -> Path:
 
 def test_enable_warns_loudly_when_hook_runtime_dead(tmp_path, monkeypatch):
     """When the hook script is missing (dead runtime), `enable` warns loudly
-    rather than silently proceeding (ADR-002 amendment)."""
+    rather than silently proceeding (ADR-002 point 4)."""
     from project_kit import permissions as perm
     proj = _with_adapter(_setup(tmp_path))
     # Patch _hook_runtime_check to simulate a dead runtime.
@@ -3026,7 +3026,7 @@ def test_enable_no_warning_when_hook_runtime_healthy(tmp_path, monkeypatch):
 
 
 def test_sandbox_enable_warns_loudly_when_hook_runtime_dead(tmp_path, monkeypatch):
-    """When the hook runtime is dead, `sandbox enable` warns loudly (ADR-002 amendment)."""
+    """When the hook runtime is dead, `sandbox enable` warns loudly (ADR-002 point 4)."""
     from project_kit import permissions as perm
     proj = _with_adapter(_setup(tmp_path))
     monkeypatch.setattr(perm, "_hook_runtime_check", lambda _r: (False, "decide.py missing"))
@@ -3077,7 +3077,7 @@ def test_sandbox_enable_confinement_probe_allowed_warns_loudly(tmp_path, monkeyp
 
 def test_overview_surfaces_enforcement_runtime_fault(tmp_path, monkeypatch):
     """When enforcement is ON but the hook can't start, `overview` surfaces it
-    as a loud, diagnosed fault (ADR-002 amendment)."""
+    as a loud, diagnosed fault (ADR-002 point 4)."""
     from project_kit import permissions as perm
     proj = _setup(tmp_path)
     # Register the hook in settings to make enforcement appear ON.
@@ -3098,7 +3098,7 @@ def test_overview_surfaces_enforcement_runtime_fault(tmp_path, monkeypatch):
 
 def test_overview_no_fault_when_runtime_healthy(tmp_path, monkeypatch):
     """When enforcement is ON and the hook runtime is healthy, `overview` reports
-    clean ON status with no fault (ADR-002 amendment)."""
+    clean ON status with no fault (ADR-002 point 4)."""
     from project_kit import permissions as perm
     proj = _with_adapter_and_hook(_setup(tmp_path))
     # Register the hook in settings.
@@ -3116,7 +3116,7 @@ def test_overview_no_fault_when_runtime_healthy(tmp_path, monkeypatch):
 
 def test_overview_sandbox_on_surfaces_confinement_probe(tmp_path, monkeypatch):
     """When sandbox is ON, `overview` runs the confinement write probe and reports
-    its outcome — either verified or NOT-CONFINING (ADR-002 amendment / ADR-014 §6)."""
+    its outcome — either verified or NOT-CONFINING (ADR-002 point 4 / ADR-014 §6)."""
     from project_kit import permissions as perm
     proj = _with_adapter(_setup(tmp_path))
     monkeypatch.setattr(perm, "_hook_runtime_check", lambda _r: (False, "no hook"))
@@ -3137,7 +3137,7 @@ def test_overview_sandbox_on_surfaces_confinement_probe(tmp_path, monkeypatch):
 
 def test_sandbox_status_surfaces_confinement_write_probe(tmp_path, monkeypatch):
     """sandbox status reports actual-confinement write probe: VERIFIED or NOT CONFINING
-    (ADR-002 amendment / ADR-014 §6)."""
+    (ADR-002 point 4 / ADR-014 §6)."""
     from project_kit import permissions as perm
     proj = _with_adapter(_setup(tmp_path))
     monkeypatch.setattr(perm, "_hook_runtime_check", lambda _r: (True, "ok"))
