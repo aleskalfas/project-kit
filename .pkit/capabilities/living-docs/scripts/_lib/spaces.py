@@ -24,6 +24,12 @@ What is checked, each against the record's words:
   core's, and the backbone's `friction` pass validates it. A document that
   nothing claims and that carries neither field is an **unclassified
   document**, counted for onboarding (point 8) and never failed.
+- **Pages left unanchored** (point 8). Onboarding is complete when no page is
+  left unanchored without an accepted reason: a page whose friction block
+  lists no anchor is counted, and listed, unless the block gives the reason a
+  person accepted it with none — its `unanchored-because`, the core's key
+  (COR-050 point 1) — which is counted apart. Both as the backbone reads the
+  block; an excluded page is in neither (COR-050 point 7). Never failed.
 - **Readers** (points 4 and 7). Each page's `reader` resolves against the
   readers point, `pkit::documentation:readers`, read as it resolves (`readers`)
   — only when some page names a well-formed reader. A reader the point does not
@@ -128,11 +134,15 @@ class Finding:
 
 @dataclass
 class Outcome:
-    """What the check answers: summary lines, findings, and the unclassified documents."""
+    """What the check answers: summary lines, findings, the unclassified documents, and
+    the pages left unanchored — without an accepted reason, and apart from them those
+    accepted with one, each with its reason (DEC-001 point 8)."""
 
     summary: list[str] = field(default_factory=list)
     findings: list[Finding] = field(default_factory=list)
     unclassified: list[str] = field(default_factory=list)
+    unanchored: list[str] = field(default_factory=list)
+    accepted_unanchored: list[tuple[str, str]] = field(default_factory=list)
 
     @property
     def errors(self) -> list[Finding]:
@@ -398,6 +408,7 @@ def _walk(decl: Declarations, places: Sequence[Reach], outcome: Outcome) -> _Wal
         walk.space_of[rel] = space
         if declared:
             walk.pages[rel] = space
+            _anchoring(rel, document, outcome)
             findings, invalid = _page_findings(rel, front or {}, schema)
             outcome.findings.extend(findings)
             reader = (front or {}).get("reader")
@@ -407,6 +418,20 @@ def _walk(decl: Declarations, places: Sequence[Reach], outcome: Outcome) -> _Wal
             # Excluded paths are left out of the measures (COR-050 point 7).
             outcome.unclassified.append(rel)
     return walk
+
+
+def _anchoring(rel: str, document: Document, outcome: Outcome) -> None:
+    """A page left unanchored: without an accepted reason, onboarding's work still to
+    do; with one — the block's `unanchored-because` — accepted, apart (DEC-001 point
+    8; COR-050 point 1). An excluded page is left out, as the measures leave it out
+    (COR-050 point 7), and one whose anchoring the backbone does not say is not
+    judged."""
+    if document.excluded or document.anchored is not False:
+        return
+    if document.unanchored_because is None:
+        outcome.unanchored.append(rel)
+    else:
+        outcome.accepted_unanchored.append((rel, document.unanchored_because))
 
 
 def _most_specific(rel: str, matched: Sequence[Place], walk: _Walk) -> Place:
@@ -740,6 +765,11 @@ def _summary(
         f"onboarding (DEC-001 point 4)."
     )
     lines.append(reader_note)
+    lines.append(
+        f"pages unanchored: {len(outcome.unanchored)} without an accepted reason, "
+        f"{len(outcome.accepted_unanchored)} accepted with one (`unanchored-because`); "
+        f"onboarding leaves none without (DEC-001 point 8)."
+    )
     errors = len(outcome.errors)
     lines.append(f"{errors} error(s), {len(outcome.findings) - errors} report(s).")
     return lines

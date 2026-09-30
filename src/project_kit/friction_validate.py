@@ -44,6 +44,11 @@ settings that declare them, this pass reports:
   says of the active roles and their data points (`connections.
   container_wiring`, from the one resolution of the run), whose errors are
   surfaced against the artefact (COR-050 point 2, COR-053 point 10);
+- **`unanchored-because` beside anchors** — the reason an artefact has no
+  anchors, written in a block that lists some: the two contradict each other
+  (COR-050 points 1 and 12). The container schema admits the key alone; the
+  pair is this pass's own finding, so it reads as what it is rather than as a
+  shape error;
 - **a dangling deferral** — a `deferred[].anchor` naming, by kind and value,
   no anchor of the artefact (COR-050 point 4);
 - **a cycle between artefacts** through `anchors.artefact`, with the cycle's
@@ -54,9 +59,9 @@ These fail validation in either mode, because the project can fix them. A
 rule-set file is claimed before the container rule (ADR-056 point 2): its
 front matter and each rule's container are the rule-set pass's findings
 (`rule_sets`), so this pass reports neither, while its rules still take part
-in the deferral and cycle checks like every artefact. The project's settings
-themselves — an invalid `friction.mode`, a place, surface or exclude path
-outside the repository — are the configuration pass's findings
+in the beside-anchors, deferral and cycle checks like every artefact. The
+project's settings themselves — an invalid `friction.mode`, a place, surface
+or exclude path outside the repository — are the configuration pass's findings
 (`config_validate`, which owns the file), and a capability's `friction` block
 is the packages pass's, which judges its shape but cannot know where a place
 resolves; so a capability place the walk does not follow, and a surface entry
@@ -81,7 +86,7 @@ it cannot parse or that carries a friction block.
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -91,6 +96,7 @@ from project_kit import connections, validators
 from project_kit.friction_discovery import (
     FRICTION_KEY,
     SKIP_OUTSIDE,
+    UNANCHORED_BECAUSE_KEY,
     Artefact,
     Discovery,
     FrictionSettings,
@@ -117,6 +123,7 @@ class FrictionFindingKind(Enum):
     HELD_UNPARSABLE = "held-unparsable-front-matter"  # a held document's front matter
     HELD_BLOCK = "held-friction-block"  # a friction block in a document a component holds
     MALFORMED_BLOCK = "malformed-block"
+    UNANCHORED_BESIDE_ANCHORS = "unanchored-beside-anchors"  # the reason for none, and anchors
     UNPARSABLE_FRONT_MATTER = "unparsable-front-matter"
     DANGLING_DEFERRAL = "dangling-deferral"
     CYCLE = "cycle"
@@ -438,6 +445,7 @@ def _artefact_findings(target_root: Path, discovery: Discovery) -> list[Friction
     for artefact in discovery.with_container:
         if schema is not None and artefact.rule_set is None:  # a rule's: the rule-set pass's
             findings.extend(_container_findings(artefact, schema, wiring))
+        findings.extend(_unanchored_beside_anchors(artefact))
         findings.extend(_dangling_deferrals(artefact))
 
     findings.extend(_cycles(discovery))
@@ -447,12 +455,14 @@ def _artefact_findings(target_root: Path, discovery: Discovery) -> list[Friction
 def block_findings(
     artefact: Artefact, schema: dict | None, target_root: Path
 ) -> tuple[FrictionFinding, ...]:
-    """What this pass finds in one artefact's own block: its shape and dangling deferrals.
+    """What this pass finds in one artefact's own block: its shape, a reason for having
+    no anchors beside anchors, and dangling deferrals.
 
     The per-artefact judgments `validate_friction` applies — the container
     schema and the container's rule (skipped when `schema` is `None`, as the
-    pass skips them without a readable schema), then every deferral naming no
-    anchor of the artefact. The cycle check spans artefacts and is not here.
+    pass skips them without a readable schema), then `unanchored-because`
+    beside anchors, then every deferral naming no anchor of the artefact. The
+    cycle check spans artefacts and is not here.
     The writing commands (`friction_write`) read what they would write back
     through this, so a writer never writes a block validation would refuse.
     """
@@ -462,6 +472,7 @@ def block_findings(
         # reads it — an orphan or an inert block is the same finding either way
         wiring = connections.container_wiring(target_root)
         findings.extend(_container_findings(artefact, schema, wiring))
+    findings.extend(_unanchored_beside_anchors(artefact))
     findings.extend(_dangling_deferrals(artefact))
     return tuple(findings)
 
@@ -507,6 +518,33 @@ def _container_findings(
             ),
             message=finding.message,
         )
+
+
+def _unanchored_beside_anchors(artefact: Artefact) -> Iterable[FrictionFinding]:
+    """`unanchored-because` in a block that lists anchors (COR-050 points 1 and 12).
+
+    The reason says why the artefact has none, so beside anchors one of the
+    two is wrong, and the measure would read the artefact as anchored and
+    never show the reason. Any value of the key counts — its shape is the
+    schema's finding — beside any anchor the block lists as text.
+    """
+    friction = artefact.friction
+    if not isinstance(friction, Mapping) or UNANCHORED_BECAUSE_KEY not in friction:
+        return
+    kinds = [kind for kind, values in artefact.anchors.items() if values]
+    if not kinds:
+        return
+    yield FrictionFinding(
+        location=artefact.location,
+        pointer=f"/{bs.CONTAINER_KEY}/{FRICTION_KEY}/{UNANCHORED_BECAUSE_KEY}",
+        severity=Severity.ERROR,
+        kind=FrictionFindingKind.UNANCHORED_BESIDE_ANCHORS,
+        message=(
+            f"`{UNANCHORED_BECAUSE_KEY}` stands beside anchors ({', '.join(kinds)}): the "
+            f"reason says why the artefact has none, so the two contradict each other — "
+            f"remove the reason, or the anchors (COR-050 point 1)."
+        ),
+    )
 
 
 def _dangling_deferrals(artefact: Artefact) -> Iterable[FrictionFinding]:

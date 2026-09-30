@@ -946,8 +946,9 @@ def friction_check_command(base_ref: str | None, whole_repository: bool, as_json
     against the current history, each anchor judged from the artefact's
     revalidation point (derived from git, renames followed). Reports stale
     and deferred debt with their origins, dead anchors, over-broad anchors,
-    unanchored artefacts and uncovered surface. Needs the full history, says
-    so in a shallow clone, and exits 0 in either mode.
+    unanchored artefacts — those accepted with a reason listed apart, never
+    counted — and uncovered surface. Needs the full history, says so in a
+    shallow clone, and exits 0 in either mode.
     """
     target_root = find_target_root()
     if target_root is None:
@@ -979,8 +980,10 @@ def friction_debt_command(as_json: bool) -> None:
 
     Exactly the stale and deferred findings of `pkit friction check --all`, from
     the same run of the whole-repository check: HEAD and its history, never the
-    working tree. Artefacts a shallow clone cannot judge are named apart.
-    Writes nothing; exits 0.
+    working tree. Artefacts a shallow clone cannot judge are named apart. Then
+    its unanchored measure: the artefacts with no anchors and no reason,
+    counted, and apart from them those accepted with the reason their
+    `unanchored-because` gives. Writes nothing; exits 0.
     """
     target_root = find_target_root()
     if target_root is None:
@@ -1004,7 +1007,8 @@ def friction_explain_command(artefact: str, as_json: bool) -> None:
     Every changed anchor is shown with the commits behind it, and each finding
     with the writer command that answers it (`revalidate … --outcome …`,
     `defer … --anchor … --reason …`) or the edit it needs. The findings are
-    those `pkit friction check --all` reports for ARTEFACT. With --json, each
+    those `pkit friction check --all` reports for ARTEFACT; an unanchored one
+    shows the reason its `unanchored-because` gives, if any. With --json, each
     commit also carries its paths (what the check read as the change), each
     path anchor its files at the revalidation point and at HEAD and those
     `friction.exclude` leaves out, and the document the artefact's body.
@@ -1042,7 +1046,8 @@ def friction_artefacts_command(at: str | None, as_json: bool) -> None:
     capability's, with its location and root — the files it matches and the
     skips validation applies (a synced copy, a place outside the repository, a
     malformed declaration), every file read with its front matter's own
-    fields, every artefact with its anchors, and each folder of held documents
+    fields, every artefact with its anchors or the reason it has none, and
+    each folder of held documents
     a component declares, with the files it holds. Read-only. It is how a
     capability's own script reads where artefacts are, now or at another
     state, without importing the backbone or walking the places itself. Exit 0

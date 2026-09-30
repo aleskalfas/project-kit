@@ -24,7 +24,8 @@ documents in them through `pkit friction artefacts`, and the readers point
 through `pkit connections resolve`, only when some page names a reader.
 
 Usage:
-  pkit living-docs validate           the summary, the findings and the unclassified documents
+  pkit living-docs validate           the summary, the findings, the unclassified documents
+                                      and the pages left unanchored
   pkit living-docs validate --json    the findings document {summary, findings}
 
 Exit codes:
@@ -74,6 +75,18 @@ def main() -> int:
         )
         for rel in outcome.unclassified:
             print(f"  {rel}")
+    if outcome.unanchored:
+        print(
+            f"page(s) unanchored without an accepted reason, for onboarding to anchor or accept "
+            f"({len(outcome.unanchored)}):"
+        )
+        for rel in outcome.unanchored:
+            print(f"  {rel}")
+    accepted = outcome.accepted_unanchored
+    if accepted:
+        print(f"page(s) accepted unanchored, each with its reason ({len(accepted)}):")
+        for rel, reason in accepted:
+            print(f"  {rel} — {reason}")
     return 1 if outcome.errors else 0
 
 

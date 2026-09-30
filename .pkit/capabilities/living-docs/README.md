@@ -12,9 +12,8 @@ pkit:
       record: ["living-docs:DEC-001", COR-049, COR-050, COR-051, COR-053]
       artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006]
     revalidated:
-      at: 2026-09-30T09:26:48Z
-      outcome: unchanged
-      unchanged-because: "COR-050 point 6 gains a refinement pointer: the change check's default base is the default branch COR-054 resolves; living-docs' filler reads the whole-repository check at HEAD, which takes no base, so its obligations hold"
+      at: 2026-09-30T09:12:08Z
+      outcome: updated
 ---
 
 # living-docs capability
@@ -108,7 +107,7 @@ A place inside a root belongs to that root's space; list it under `places` only 
 - an entry point that is not a document of its space — under its root or in a place assigned to it;
 - a definition outside `<definitions>/rule-sets/`, or one that does not inherit `living-docs:LDOC`.
 
-It reports, without failing: a space with no definition yet, roots that are the same folder or nested (onboarding separates them), and — in its summary — the unclassified documents, whether each entry point is a page yet, and the readers each page's reader was checked against. A synced tree declared as a place is the core's `synced-place` finding, under `friction` (above).
+It reports, without failing: a space with no definition yet, roots that are the same folder or nested (onboarding separates them), and — in its summary — the unclassified documents, whether each entry point is a page yet, the readers each page's reader was checked against, and the pages left unanchored: those without an accepted reason, onboarding's work still to do, and apart from them those whose friction block gives one as `unanchored-because` (DEC-001 point 8; COR-050 point 1). The human view lists both, each accepted page with its reason; an excluded page is in neither. A synced tree declared as a place is the core's `synced-place` finding, under `friction` (above).
 
 ## Connections
 
@@ -167,7 +166,7 @@ On a project that already has documentation, nothing is anchored yet, so onboard
    - **mapping** — if you keep a code-to-doc mapping (the project-management capability's, read through the work-tracking role's documentation-check point), which of its rules become path anchors on the pages they name, narrowed where an anchor would match most of the repository. Retiring the mapping is a separate change, for whoever owns it.
 3. **Review the plan at its single gate**: approve, revise, or reject. Nothing is drafted before you approve; a revision comes back to the gate; a rejection drafts nothing.
 4. **Review the changes it drafts.** On approval it writes one reviewable change per step into `.agent-workspace/living-docs/onboarding/` — diffs and pull-request bodies — and stops. You apply them and open the pull requests. A page new in its change counts as revalidated there, so it needs no writer.
-5. **Repeat until done.** Onboarding is complete when the declared surface is covered and no page is left unanchored without a reason you accepted — `pkit friction check --all` shows both measures.
+5. **Repeat until done.** Onboarding is complete when the declared surface is covered and no page is left unanchored without a reason you accepted. A page that has nothing to anchor to carries that reason in its friction block, `unanchored-because: <why>` instead of anchors — the core's key (COR-050 point 1), which the core refuses beside anchors. `pkit friction check --all` shows both measures, listing the pages accepted with a reason apart and counting only those without one; `pkit living-docs validate` counts the pages of your spaces each way in its summary and lists them.
 
 From then on, the friction check flags pages as their anchors change, and the agent proposes each fix.
 
