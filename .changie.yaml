@@ -41,7 +41,10 @@ kinds:
 # `category` is the Keep-a-Changelog group (orthogonal to `kind`; defaulted at
 # render, irrelevant for `none`), `pr` is the PR reference used to build
 # the changelog's `([#N])` link (captured here at author time — release-time
-# derivation is unreliable under squash/rebase), and `requires_backbone`
+# derivation is unreliable under squash/rebase): either the pull request's
+# number, linked to that pull request of the GitHub repository `origin` names,
+# or a full URL, linked as written; `pkit release lint` refuses any other
+# shape (see `.pkit/release/README.md`), and `requires_backbone`
 # declares that the component needs a backbone, so the release raises the
 # floor of its `requires_backbone` range to it: `release` for the backbone the
 # release ships, or an already-shipped `X.Y.Z`, quoted, that `CHANGELOG.md`
@@ -62,7 +65,7 @@ custom:
       - Fixed
       - Security
   - key: pr
-    label: PR number or URL (optional)
+    label: PR number (e.g. 465) or full PR URL — either links the entry (optional)
     type: string
     optional: true
   - key: requires_backbone
