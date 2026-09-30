@@ -81,11 +81,25 @@ custom:
     need on backbone surface that has not shipped yet — typically a backbone
     change in the same pull request or one merged beside it.
   - **An explicit `X.Y.Z`** — a backbone that has shipped: a release version
-    (no pre-release suffix) **at or below the current `.pkit/VERSION`**. For a
-    need an older backbone already meets — the component starts using a command
-    that shipped in `1.144.0`, say — so the floor names that backbone instead of
-    the current one down to its patch. A version above the current backbone is
-    refused: it would predict the release, which is what `release` is for.
+    (no pre-release suffix, no leading zero) that the tree **records as
+    released** — a `## X.Y.Z — <date>` release heading in `CHANGELOG.md`, or
+    the backbone the tree carries — **at or below the current
+    `.pkit/VERSION`**. For a need an older backbone already meets — the
+    component starts using a command that shipped in `1.144.0`, say — so the
+    floor names that backbone instead of the current one down to its patch.
+    Quote it: YAML reads an unquoted `1.150` as the number 1.15.
+- An explicit version the tree records no release of — `1.148.7`, or a typo
+  like `1.14.0` — is refused, with the lowest recorded release above it named.
+  The changelog records releases from `1.140.0` on, so a need an older backbone
+  meets names `1.140.0`.
+- A version **above the current `.pkit/VERSION`** is refused: it would predict
+  the release, which is what `release` is for. If `main` released it after the
+  branch was cut, update the branch from `main` instead. The bound is against
+  the backbone the tree carries — in an adopter's repo, the installed one,
+  which a pin or a downgrade can lower. A pending explicit floor above it then
+  blocks the release until the backbone is upgraded or the floor lowered. An
+  adopter's changelog records its own components' releases, keyed by date, so
+  there the explicit version can name only the installed backbone.
 - Two paths serve two needs, so pick by where the surface the component uses
   lives: **unreleased** → `release`; **already shipped** → the version that
   shipped it. Several changesets for one component may declare; the floor goes
@@ -95,7 +109,9 @@ custom:
   declared `none`, or one merged after the component's). The floor then goes
   to the current version, and `plan` and `apply` say so under the component's
   bump: confirm the surface the component needs shipped in it. An explicit
-  version needs no such notice.
+  version needs no such notice; a `release` declaration keeps it even when an
+  explicit one names the same backbone, since its own need may still postdate
+  it.
 - It belongs on a **version-moving changeset** (`patch` / `minor` / `major`) of
   a **capability or adapter whose range is `">=X.Y.Z,<A.B.C"` or `">=X.Y.Z"`**,
   since a raised floor changes what the component requires, which is surface
@@ -105,14 +121,18 @@ custom:
   `1.150.0rc1` is refused; an explicit, shipped version is not). `pkit release
   lint` refuses the field on a backbone changeset, on a `none` changeset, on an
   unknown component or one with no such range, with any other value, with an
-  explicit version above the current backbone or a pre-release one, and with
-  `release` against a pre-release backbone; `pkit release plan` and `apply`
-  refuse to compute a release from such a changeset rather than drop the
-  declaration or write half of it.
-- It rides on a **change to that component**: the pull request that adds or
-  edits the changeset must touch the component's tree, since only the change
-  that creates a need knows it. `pkit release check` refuses it otherwise (the
-  CI guard, below).
+  explicit version that is not one the tree records at or below the current
+  backbone, and with `release` against a pre-release backbone; `pkit release
+  plan` and `apply` refuse to compute a release from such a changeset rather
+  than drop the declaration or write half of it.
+- It rides on a **change to that component, or a release of it**: the pull
+  request that declares the floor touches the component's tree, or the
+  changeset carrying it moves the component's version. The second is the
+  correction path — discovering after a release that the component needs a
+  backbone it never declared, say — a `patch` changeset carrying only the
+  floor, in a pull request that changes nothing else of the component.
+  `pkit release check` refuses a floor with neither behind it (the CI guard,
+  below).
 - The release states the raised floor in the component's changelog entry —
   *Requires backbone >=X.Y.Z.* (below). Say in the changeset's body what the
   adopter must do — typically *upgrade the component together with the
@@ -190,8 +210,11 @@ per section. The reconciliation:
 - A component whose `requires_backbone` floor the release raises carries it
   **once**, at the end of the entry of the changeset that set it and before its
   link: `**project-management 0.55.0** — <entry> Requires backbone >=1.150.0.
-  ([#1120])`. A floor already at or above the declared backbone changes
-  nothing and is not mentioned.
+  ([#1120])`. A period closes an entry that lacks one first; after an entry
+  ending in a list, the sentence is its own paragraph. When an explicit version
+  and `release` name the same backbone, the explicit one's entry carries it. A
+  floor already at or above the declared backbone changes nothing and is not
+  mentioned.
 
 **Rationale (do not "fix" this back).** Keying the section on the backbone
 version and carrying component versions inline is a **deliberate deviation from
@@ -340,9 +363,10 @@ capability's author owns
   version by construction, so it carries neither the notice nor the refusal.
 - **In the changelog.** A raise that changes the range is stated at the end of
   the component's changelog entry — *Requires backbone >=X.Y.Z.* — once per
-  component, on the entry of the changeset that set the floor ("Multi-tier
-  grouping" above). The release notes published from the changelog carry it
-  too.
+  component, on the entry of the changeset that set the floor: the one naming
+  the highest backbone, an explicit version before `release` when both name
+  it, else the first by file name ("Multi-tier grouping" above). The release
+  notes published from the changelog carry it too.
 - **Two range shapes.** Only `">=X.Y.Z,<A.B.C"` — whose upper bound the broaden
   widens — and `">=X.Y.Z"` — which has no upper bound to widen — are raised.
   Any other shape (single-quoted, spaced, the floor not first) is refused up
@@ -356,16 +380,20 @@ capability's author owns
   the raise (the need was declared), so there an authored upper bound at or
   below the declared backbone refuses the release: drop `--no-broaden` or widen
   the upper bound. An upper bound that admits the declared backbone but not the
-  shipped one is left as authored — that is what `--no-broaden` is for.
+  shipped one is left as authored — that is what `--no-broaden` is for — and
+  `apply` warns of it under the plan it prints, before it asks to confirm: the
+  component then ships beside a backbone its range refuses. (`release plan` runs
+  with the broaden, under which no raised range excludes the shipped backbone.)
 - The rewrite touches the one `>=X.Y.Z` in place, like the broaden: the upper
   bound and comments survive, and the release PR's `package.yaml` diff stays
   inside the release footprint the changeset guard exempts. `pkit release plan
   --json` carries each raise (`requires_backbone_floor` on the component's
   release: the floors `from` and `to`, whether it is `raised`, the `declared`
-  backbone, the shipped `backbone` and whether it moves, the plan `lines`, and
-  the `changelog` sentence, null when the range does not change), which the
-  release-PR workflow prints under the bump; the PR body's generated changelog
-  shows the sentence in the component's entry.
+  backbone and whether the declaration that set it `names_release` — `false`
+  for an explicit version — the shipped `backbone` and whether it moves, the
+  plan `lines`, and the `changelog` sentence, null when the range does not
+  change), which the release-PR workflow prints under the bump; the PR body's
+  generated changelog shows the sentence in the component's entry.
 
 **Tagging is a separate, anchored step** (COR-004's each-step-its-own-command
 principle — the same reason `version bump` and `version tag` are distinct).
@@ -553,24 +581,38 @@ but ships no changeset for it. Wired as a PR-scoped step in
 local pre-push hook lacks — so it is not in `scripts/check.sh`). Run it locally
 with `pkit release check --base origin/main`.
 
-**A declared floor rides on its component (PRJ-002 D4).** From the same diff,
-the guard also fails a PR that adds or edits a changeset carrying
-`requires_backbone` for a component whose tree the diff does not touch. A
-floor says the component no longer works on an older backbone — something only
-the change that creates the need knows — so the declaration belongs to the PR
-that changes the component: a backbone PR cannot raise an adapter's floor, and
-a floor-only PR cannot stand in for a hand-written one. Only the changesets
-this diff adds or edits are read; a pending changeset an earlier PR merged was
-checked against that PR's diff. The `skip-changeset` label covers this too, for
-the rare legitimate case — correcting the value in a pending changeset from an
-earlier PR, say.
+**A declared floor rides on its component or a release of it (PRJ-002 D4).**
+From the same diff, the guard also fails a PR that declares a
+`requires_backbone` floor for a component it neither touches nor moves:
 
-**Escape hatches** (so trivia / docs PRs aren't forced into ceremony):
+- **Declares** — the PR adds or edits a changeset, and the floor it carries
+  differs from the one the file held at the merge base (added, or its value or
+  component changed). A note-only edit of a pending floor changeset, or a
+  re-quoting, declares nothing and is not judged; a pending changeset an
+  earlier PR merged was judged on that PR.
+- **Touches** — any changed file under the component's subtree, the same path
+  heuristic as the surface check. A README-only or comment-only edit counts:
+  the guard cannot tell it from a code change, so it holds a declaration to a
+  diff, not to the truth of the need, which review judges.
+- **Moves** — the changeset carrying the floor is `patch` or above. That is the
+  correction path: a need found after the component shipped, declared in a
+  floor-only `patch` changeset for it, passes although the PR touches nothing
+  of the component.
+
+What is left is a floor on a `none` changeset for a component the PR leaves
+alone — which the lint also refuses, since a `none` changeset never carries a
+floor (check 3 below); the guard names the PR that declared it. **No escape
+hatch waives this check**: the `skip-changeset` label, the `release/*` belt and
+the release-PR exemption below all waive the surface check only, and a release
+diff only deletes changesets, so it declares no floor.
+
+**Escape hatches for the surface check** (so trivia / docs PRs aren't forced
+into ceremony):
 
 1. A **`none` changeset** naming the component — an in-repo, reviewable "not a
    surface change" declaration.
 2. The **`skip-changeset` label** — surfaced to the guard as
-   `PKIT_CHANGESET_SKIP=1`; passes unconditionally.
+   `PKIT_CHANGESET_SKIP=1`; passes the surface check unconditionally.
 
 **Release-PR exemption (automatic, no label).** A release PR *is*
 `pkit release apply`'s output — it bumps `.pkit/VERSION` + each moving
@@ -582,14 +624,21 @@ change set is *only* that footprint (VERSION modified, `CHANGELOG.md`
 added/modified, each `package.yaml` touching only its `version:` /
 `requires_backbone:` lines, and `.changes/unreleased/*` files deleted, with
 **nothing else**), it is the release itself, not a new surface change, and
-passes with no `skip-changeset` label. The signal is by diff shape rather than
-branch name so it is self-contained (works locally and in CI, on any branch, in
-any adopter's repo) and cannot be spoofed by a branch name; it is strict — a
-single stray file outside the footprint (e.g. a `src/` edit riding along) makes
-the diff no longer release-shaped, so the guard runs normally and the exemption
-can never smuggle real surface through. `.github/workflows/checks.yml` also
-skips the guard step for a `release/*` head as belt-and-braces on top of this
-guard-level check.
+passes the surface check with no `skip-changeset` label. The signal is by diff
+shape rather than branch name so it is self-contained (works locally and in CI,
+on any branch, in any adopter's repo) and a branch name does not produce it; it
+is strict — a single stray file outside the footprint (e.g. a `src/` edit
+riding along) makes the diff no longer release-shaped, so the guard runs
+normally and the exemption can never smuggle real surface through.
+
+**The `release/*` belt (CI, by branch name).** `.github/workflows/checks.yml`
+raises the escape hatch for a `release/*` head, so there the surface check is
+waived by the branch name alone — which anyone can choose; review of the
+release PR is what stands behind it. The belt is load-bearing in this repo,
+not just belt-and-braces: project-kit's release also rewrites the self-host
+`.pkit/manifest.yaml`'s `backbone_version`, which is outside the footprint
+above. The guard step still runs on every PR, `release/*` included, because
+the floor tie is never waived.
 
 **Limits (read this).** Surface is ultimately a **human judgment** (PRJ-002
 D2); the guard is a **path heuristic** and cannot be exact:
@@ -635,19 +684,25 @@ shared aggregator (`scripts/check.sh`), which both the local pre-push hook and
    category still is).
 3. **Changeset floor field** — a `requires_backbone` field must say `release`
    (in a release that ships a release version of the backbone) or name a
-   release version at or below the current `.pkit/VERSION`, on a
+   release version the tree records (a `CHANGELOG.md` release heading, or the
+   backbone it carries) at or below the current `.pkit/VERSION`, on a
    version-moving changeset of a capability or adapter whose
    `requires_backbone` is `">=X.Y.Z,<A.B.C"` or `">=X.Y.Z"`. It fails on the
    backbone, on a `none` changeset, on an unknown component or one with no
    floor in that shape to raise, on any other value — an explicit version
-   above the current backbone or a pre-release one included — and, for
-   `release`, when the backbone the release would ship is a pre-release — the
-   same check `release plan` / `apply` refuse on, so the lint reports it
-   before the release does. Whether the PR touches the component is the
-   guard's check, not the lint's: the lint reads no diff. The components are read only when a changeset
-   carries the field. **The escape hatch does not cover this check**: it is
-   the release's own refusal, reported early, and an invalid field blocks every
-   later release on `main` until it is fixed.
+   above the current backbone, one the tree records no release of, a
+   pre-release, or one with a leading zero included; an unquoted `1.150`,
+   which YAML reads as a number, is reported as written, with a hint to quote
+   it — and, for `release`, when the backbone the release would ship is a
+   pre-release — the same check `release plan` / `apply` refuse on, so the
+   lint reports it before the release does. An empty value declares no floor.
+   A `.pkit/VERSION` that holds no version is reported once, at that file,
+   since no floor can be checked against it. Whether the PR declared the
+   floor on a change to the component or a release of it is the guard's
+   check, not the lint's: the lint reads no diff. The components are read only
+   when a changeset carries the field. **The escape hatch does not cover this
+   check**: it is the release's own refusal, reported early, and an invalid
+   field blocks every later release on `main` until it is fixed.
 4. **`CHANGELOG.md` structure** — release-section (`## `) headings match the
    generator's shape (`## <version> — <date>` or a date-only `## <date>`; the
    canonical KaC `## [<version>] - <date>` is also accepted), and every
