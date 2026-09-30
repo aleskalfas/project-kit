@@ -31,7 +31,7 @@
     "default_branch": {
       "type": "string",
       "minLength": 1,
-      "description": "DEPRECATED alias of the backbone's `repository.default-branch` (COR-054): declare the default branch once, in `.pkit/project/config.yaml`, for every reader. Read through the backbone: while the backbone declares none, this value still names the branch pm cuts work from and targets pull requests at (DEC-013), with a warning to move it; once the backbone declares one, this key never overrides it and is ignored, with a warning. Optional; remove it once the backbone declares the branch — a project on `main` needs neither.",
+      "description": "DEPRECATED — retired into the backbone's `repository.default-branch` (COR-054), which declares the default branch once for every reader; the 0.55.0 upgrade migration carries a value other than `main` over and removes this key. Until then, a value that differs from the backbone's names the branch pm cuts work from and targets pull requests at (DEC-013) only while the backbone declares none, with a warning; a declared value always wins.",
       "pattern": "^[^\\n\\r]+$"
     },
     "workstreams": {

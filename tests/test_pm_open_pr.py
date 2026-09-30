@@ -7,6 +7,7 @@ branch-pattern lookup, body template substitution.
 from __future__ import annotations
 
 import importlib.util
+import subprocess
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -277,13 +278,26 @@ def test_build_pr_body_template_without_closes_placeholder(op, tmp_path) -> None
 CAP_ROOT = REPO_ROOT / ".pkit" / "capabilities" / "project-management"
 
 
+def _backbone_says_main(op, monkeypatch) -> None:
+    """The backbone's reading, stood in for: the default branch `main` (COR-054)."""
+    lib = op.default_branch
+    monkeypatch.setattr(lib, "_read", {})
+
+    def ask(explicit, _run):
+        branch = lib.Branch("main", False, "origin/main", "c0ffee", None)
+        return lib.Reading(branch, lib.Base(f"origin/{explicit or 'main'}", "c0ffee", "c0ffee", None))
+
+    monkeypatch.setattr(lib, "_ask", ask)
+
+
 def _stub_main(op, monkeypatch, argv: list[str], issues: dict[int, dict]) -> dict:
     """Pass every gate, serve `issues` by number, capture the create call."""
     monkeypatch.setattr(sys, "argv", argv)
     monkeypatch.setattr(op, "resolve_capability_root", lambda _explicit: CAP_ROOT)
     monkeypatch.setattr(op.bootstrap_gate, "enforce", lambda *a, **k: True)
     monkeypatch.setattr(op.session_guard, "enforce", lambda **k: True)
-    monkeypatch.setattr(op, "load_adopter_config", lambda _root: {"default_branch": "main"})
+    monkeypatch.setattr(op, "load_adopter_config", lambda _root: {})
+    _backbone_says_main(op, monkeypatch)
     monkeypatch.setattr(op, "_read_members", lambda *a: [])
     monkeypatch.setattr(
         op, "resolve_invoker_identity", lambda **k: SimpleNamespace(github_login="me")
@@ -431,12 +445,49 @@ def test_the_answers_render_as_the_doc_impact_bullets(op, monkeypatch, capsys) -
         {42: _open_issue()},
     )
     assert op.main() == 3
-    assert calls == ["main"]  # against origin/<base>
+    assert calls == [None]  # the default branch: the change check's own base (COR-054)
     assert _doc_impact(captured["body"]) == RENDERED
     out = capsys.readouterr()
     assert "doc impact: pre-filled from `pkit friction check` (2 answer(s))" in out.out
     # The page still carrying friction is named; its answer belongs on the page.
     assert "1 artefact(s) still carry friction with no answer on the page: docs/api.md" in out.err
+
+
+def test_a_pr_against_another_base_is_checked_against_that_base(op, monkeypatch) -> None:
+    """An integration branch is named to the change check, which resolves it as every
+    branch named as a base (COR-054 point 2); only the default branch goes unnamed."""
+    calls: list[str | None] = []
+    monkeypatch.setattr(op, "_friction_check", lambda base: calls.append(base) or FRICTION)
+    _stub_main(
+        op,
+        monkeypatch,
+        ["open-pr", "42", "--summary", "s", "--draft", "--yes", "--doc-impact-from-friction",
+         "--base", "integration/7-x"],
+        {42: _open_issue()},
+    )
+    assert op.main() == 3
+    assert calls == ["integration/7-x"]
+
+
+@pytest.mark.parametrize(
+    ("base", "argv"),
+    [
+        (None, ["pkit", "friction", "check", "--json"]),
+        ("integration/7-x", ["pkit", "friction", "check", "--json", "--base", "integration/7-x"]),
+    ],
+)
+def test_the_change_check_is_named_a_base_only_when_it_is_not_its_own(
+    op, monkeypatch, base, argv
+) -> None:
+    seen: list[list[str]] = []
+
+    def run(cmd, **_kwargs):
+        seen.append(cmd)
+        return subprocess.CompletedProcess(cmd, 0, "{}", "")
+
+    monkeypatch.setattr(op.subprocess, "run", run)
+    assert op._friction_check(base) == {}
+    assert seen == [argv]
 
 
 def test_an_authored_doc_impact_section_is_left_as_written(op, monkeypatch, tmp_path) -> None:

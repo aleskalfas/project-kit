@@ -134,8 +134,9 @@ def cleanup_local(
     """Switch to the default branch, fast-forward it, delete the local head — best-effort.
 
     The default branch is the project's, as the backbone declares it (COR-054;
-    `_lib/default_branch`, where pm's own `default_branch` is a deprecated
-    alias). Every step warns with git's reason and
+    `_lib/default_branch`); when the backbone cannot say which it is, the
+    clean-up is skipped with the cause rather than switch to a guessed branch.
+    Every step warns with git's reason and
     continues; none can fail the run. When the checkout cannot happen
     (detached HEAD, the default branch checked out in another worktree) the
     pull is skipped — pulling into whatever IS checked out would be wrong —
@@ -147,7 +148,15 @@ def cleanup_local(
     sharing the fork branch's name is not that PR's head, and `-D` would
     discard its unpushed work.
     """
-    settled = default_branch.name(config)
+    try:
+        settled = default_branch.name(config)
+    except default_branch.Unanswered as exc:
+        print(
+            f"[warn] the local clean-up is skipped: {exc}. Switch to the default branch, "
+            f"pull it and delete {branch} yourself.",
+            file=sys.stderr,
+        )
+        return
 
     def _git(*argv: str) -> subprocess.CompletedProcess[str]:
         return subprocess.run(

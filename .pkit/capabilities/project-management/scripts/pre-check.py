@@ -1743,14 +1743,24 @@ def _check_workstreams_file(capability_root: Path) -> CheckResult:
 
 def _check_default_branch(config: dict[str, Any] | None) -> CheckResult:
     """The default branch — the backbone's `repository.default-branch`, read through
-    it (COR-054), pm's `default_branch` a deprecated alias — is the repository's."""
+    it (COR-054) — is the repository's. When the backbone cannot say which it is,
+    the check fails with the cause rather than compare a guess."""
     if config is None:
         return CheckResult(
             "default branch matches config",
             "skip",
             "adopter config not loaded",
         )
-    declared = default_branch.name(config)
+    try:
+        declared = default_branch.name(config)
+    except default_branch.Unanswered as exc:
+        return CheckResult(
+            "default branch matches config",
+            "fail",
+            str(exc),
+            remediation="Make `pkit repository base` answer here — `pkit` on PATH, and a "
+            "backbone recent enough to ship it (`pkit upgrade`).",
+        )
     proc = subprocess.run(
         ["gh", "repo", "view", "--json", "defaultBranchRef"],
         capture_output=True,

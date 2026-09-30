@@ -5,10 +5,13 @@ PR, all through the one shared `lifecycle_inference.resolve_base_branch`:
 
   * an explicit `--base` wins (on the verbs that take one);
   * else the closing issue's `Integration: integration/<slug>` marker;
-  * else the adopter's `default_branch` — never a hardcoded `main`.
+  * else the project's default branch, as the backbone declares it (COR-054) —
+    never a hardcoded `main`, and never a guess: when the backbone cannot say,
+    every verb refuses.
 
 Each test drives the verb's real `main()` with its gates and gh/git seams
-stubbed, and captures the base handed to the mutating call.
+stubbed — the backbone's reading (`pkit repository base --json`) among them —
+and captures the base handed to the mutating call.
 """
 
 from __future__ import annotations
@@ -69,9 +72,8 @@ def _stub_gates(monkeypatch, mod, issue: dict, argv: list[str]) -> None:
     monkeypatch.setattr(mod, "resolve_capability_root", lambda _explicit: CAP_ROOT)
     monkeypatch.setattr(mod.bootstrap_gate, "enforce", lambda *a, **k: True)
     monkeypatch.setattr(mod.session_guard, "enforce", lambda **k: True)
-    monkeypatch.setattr(
-        mod, "load_adopter_config", lambda _root: {"default_branch": DEFAULT_BRANCH}
-    )
+    monkeypatch.setattr(mod, "load_adopter_config", lambda _root: {})
+    _backbone_answers(monkeypatch, mod.infer.default_branch)
     monkeypatch.setattr(mod, "_read_members", lambda *a: [])
     monkeypatch.setattr(
         mod, "resolve_invoker_identity", lambda **k: SimpleNamespace(github_login="me")
@@ -80,6 +82,22 @@ def _stub_gates(monkeypatch, mod, issue: dict, argv: list[str]) -> None:
         mod, "check_membership", lambda *a: SimpleNamespace(allowed=True)
     )
     monkeypatch.setattr(mod, "_gh_get_issue", lambda _n, _config: issue)
+
+
+def _backbone_answers(monkeypatch, lib, *, unanswered: str | None = None) -> None:
+    """The backbone's reading, stood in for: the default branch `trunk`, declared, on
+    `origin`; a base named resolves to its remote-tracking reference."""
+    monkeypatch.setattr(lib, "_read", {})
+    monkeypatch.setattr(lib, "_warned", set())
+
+    def ask(explicit, _run):
+        if unanswered is not None:
+            raise lib.Unanswered(unanswered)
+        branch = lib.Branch(DEFAULT_BRANCH, True, f"origin/{DEFAULT_BRANCH}", "c0ffee", None)
+        ref = f"origin/{explicit or DEFAULT_BRANCH}"
+        return lib.Reading(branch, lib.Base(ref, "c0ffee", "c0ffee", None))
+
+    monkeypatch.setattr(lib, "_ask", ask)
 
 
 def _issue(body: str) -> dict:
@@ -143,9 +161,9 @@ def test_create_draft_targets_the_resolved_base(
 
     def fake_resolve_base_ref(base):
         captured["gate_base"] = base
-        return base
+        return "c0ffee", None
 
-    def fake_commits_beyond(branch, base_ref):
+    def fake_commits_beyond(branch, base_commit):
         return 1
 
     def fake_create_draft(branch, base, title, body, config):
@@ -193,8 +211,45 @@ def _git(cwd: Path, *args: str) -> str:
     ).stdout.strip()
 
 
+@pytest.mark.parametrize(
+    "verb,argv",
+    [
+        ("start-work", ["start-work", "42", "--yes"]),
+        ("open-pr", ["open-pr", "--type", "fix", "--summary", "s", "--draft", "--yes"]),
+        ("create-draft", ["create-draft", "42", "--yes"]),
+        ("review-work", ["review-work", "42", "--yes"]),
+    ],
+)
+def test_every_verb_refuses_when_the_backbone_cannot_say_the_default_branch(
+    verbs, monkeypatch, capsys, verb, argv
+) -> None:
+    """No silent `main` (COR-054 point 4): the verb names the cause and acts on nothing."""
+    mod = verbs[verb]
+    issue = {**_issue(UNMARKED_BODY), "title": "[Task] do thing", "labels": ["state:backlog"]}
+    _stub_gates(monkeypatch, mod, issue, argv)
+    _backbone_answers(monkeypatch, mod.infer.default_branch, unanswered="no pkit here")
+    seams = {
+        "_derive_branch_prefix": lambda *a: "fix",
+        "_existing_branch_for_issue": lambda _n: None,
+        "_find_issue_branch": lambda _n: BRANCH,
+        "_current_branch": lambda: BRANCH,
+    }
+    for name, seam in seams.items():
+        if hasattr(mod, name):
+            monkeypatch.setattr(mod, name, seam)
+
+    def acted(*_a, **_k):
+        raise AssertionError("acted on a guessed branch")
+
+    for name in ("_create_branch", "_gh_pr_create", "_gh_pr_create_draft", "_gh_pr_create_ready"):
+        if hasattr(mod, name):
+            monkeypatch.setattr(mod, name, acted)
+    assert mod.main() == 2
+    assert "error: no pkit here" in capsys.readouterr().err
+
+
 @pytest.fixture
-def integration_clone(tmp_path, monkeypatch):
+def integration_clone(tmp_path, monkeypatch, pkit_on_path):
     """A clone where the integration base exists only as origin/<base>, as
     start-work leaves it: no local integration branch, feature branch cut from
     the remote-tracking ref, one commit ahead."""
@@ -208,16 +263,31 @@ def integration_clone(tmp_path, monkeypatch):
 
 
 def test_an_integration_base_present_only_on_origin_is_found(verbs, integration_clone) -> None:
+    """The backbone resolves it — the remote-tracking reference by its full name — and
+    create-draft counts from the commit it names."""
     mod = verbs["create-draft"]
-    assert mod._resolve_base_ref("integration/foo") == "origin/integration/foo"
-    assert mod._commits_beyond(BRANCH, "origin/integration/foo") == 0
+    tip = _git(integration_clone, "rev-parse", "refs/remotes/origin/integration/foo")
+    assert mod._resolve_base_ref("integration/foo") == (tip, None)
+    assert mod._commits_beyond(BRANCH, tip) == 0
     _git(integration_clone, "commit", "-q", "--allow-empty", "-m", "work")
-    assert mod._commits_beyond(BRANCH, "origin/integration/foo") == 1
+    assert mod._commits_beyond(BRANCH, tip) == 1
+
+
+def test_a_tag_of_the_base_s_name_never_stands_in(verbs, integration_clone) -> None:
+    """A tag `integration/foo` at another commit is not the branch: the remote-tracking
+    reference is read by its full name (COR-054 point 2)."""
+    mod = verbs["create-draft"]
+    tip = _git(integration_clone, "rev-parse", "refs/remotes/origin/integration/foo")
+    _git(integration_clone, "commit", "-q", "--allow-empty", "-m", "elsewhere")
+    _git(integration_clone, "tag", "integration/foo")
+    assert mod._resolve_base_ref("integration/foo") == (tip, None)
 
 
 def test_a_missing_base_is_not_reported_as_no_commits(verbs, integration_clone) -> None:
     mod = verbs["create-draft"]
-    assert mod._resolve_base_ref("integration/absent") is None
+    commit, why = mod._resolve_base_ref("integration/absent")
+    assert commit is None
+    assert why is not None and "git fetch origin integration/absent" in why
 
 
 def test_create_draft_names_a_missing_base_instead_of_claiming_no_commits(
@@ -227,9 +297,9 @@ def test_create_draft_names_a_missing_base_instead_of_claiming_no_commits(
     body = MARKED_BODY
     _stub_gates(monkeypatch, mod, _issue(body), ["create-draft", "42", "--yes"])
     monkeypatch.setattr(mod, "_find_issue_branch", lambda _n: BRANCH)
-    monkeypatch.setattr(mod, "_resolve_base_ref", lambda _b: None)
+    why = f"it does not resolve here: fetch it (e.g. `git fetch origin {INTEGRATION}`)"
+    monkeypatch.setattr(mod, "_resolve_base_ref", lambda _b: (None, why))
     assert mod.main() == 2
     err = capsys.readouterr().err
-    assert "not in this clone" in err
-    assert f"git fetch origin {INTEGRATION}" in err
+    assert f"error: base branch {INTEGRATION!r}: {why}" in err
     assert "no commits beyond" not in err

@@ -1,31 +1,34 @@
-"""The default branch pm works against — the backbone's, read through it (COR-054).
+"""The default branch pm works against, and every base it names — the backbone's (COR-054).
 
 The backbone declares the default branch once — `repository.default-branch` in
-`.pkit/project/config.yaml`, `main` when absent — and resolves it for every
-reader (COR-054 points 1 and 5). pm reads it through the backbone's reading
-command, `pkit friction artefacts --json`, and never reads the declaration,
-`$PKIT_CHECK_BASE` or a remote's reference itself:
+`.pkit/project/config.yaml`, `main` when absent — and resolves it, and any
+branch named as a base, one way for every reader (COR-054 points 1, 2 and 5).
+pm reads both through the backbone's reading command, `pkit repository base
+--json`, and never reads the declaration, `$PKIT_CHECK_BASE` or a remote's
+reference itself, nor computes where a branch left its base:
 
-- `name` is the branch pm cuts work from, targets pull requests at, switches
-  to after a merge and holds the hosting service's default to:
+- `name(config)` is the branch pm targets pull requests at, switches to after
+  a merge and holds the hosting service's default to:
   `lifecycle_inference.resolve_base_branch`, `pr_merge.cleanup_local` and
-  pre-check's default-branch check all read it here;
-- `check_base` is the base a diff-scoped check of pm compares with when none
-  is named: `$PKIT_CHECK_BASE`, else the default branch's resolved reference,
-  as the backbone names it — the base the core change check reads.
+  pre-check's default-branch check read it here;
+- `branch(name)` is a branch named as a base — the default branch, or a
+  DEC-013 integration branch — resolved as the backbone resolves every one:
+  the commit start-work cuts from and create-draft counts commits beyond;
+- `check_base(explicit)` is a diff-scoped check's base and where HEAD left it:
+  `explicit`, else `$PKIT_CHECK_BASE`, else the default branch.
 
-**pm's own `default_branch` is a deprecated alias** of the backbone's key
-(COR-054 point 1). While the backbone declares none, a value there still names
-the branch, so a project on another branch keeps working — with a warning to
-declare it once. Once the backbone declares one, pm's key never overrides it:
-it is ignored, with a warning when the two differ. A value equal to the
-backbone's is only redundant, and says so. Nothing is migrated: the
-backbone's default is `main`, as pm's was.
+**pm never guesses** (COR-054 point 4). When the backbone cannot answer — no
+`pkit`, a timeout, a failed run, a backbone that predates the command —
+`Unanswered` names the cause: a verb that acts on the branch refuses, and a
+reader that only reports warns with it. What the backbone says on standard
+error — a branch read from the local branch, say — is passed on, once.
 
-Reading is forgiving: when the backbone cannot answer — `pkit` absent, a
-backbone that names no default branch, a configuration it cannot read — pm
-reads its own key, else `main`, as it did before, and warns about nothing.
-The backbone is asked once per run, and each warning is given once.
+**pm's own `default_branch` is transitional.** The 0.55.0 upgrade migration
+carries a value other than `main` over to the backbone's key and removes pm's
+in every case (COR-054 point 1). Until a project runs it, a value that differs
+from the backbone's names the branch only while the backbone declares none,
+with a warning to upgrade; a declared value always wins, and pm's is ignored
+with a warning. A value equal to the backbone's says nothing.
 """
 
 from __future__ import annotations
@@ -38,17 +41,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-#: The backbone's key (COR-054 point 1), and pm's deprecated alias of it.
+#: The backbone's key (COR-054 point 1), and pm's transitional one.
 BACKBONE_KEY = "repository.default-branch"
 ALIAS_KEY = "default_branch"
 
-#: The name read when neither the backbone nor the alias can say.
-DEFAULT = "main"
-
-#: The backbone's reading command, and the keys pm reads from its document.
-ARGV = ("pkit", "friction", "artefacts", "--json")
-BRANCH = "default_branch"
-BASE = "base"
+#: The backbone's reading command, and how long pm waits for it.
+ARGV = ("pkit", "repository", "base", "--json")
+TIMEOUT = 60
 
 #: The backbone's source for a declared name (`default_branch.source`).
 DECLARED = "configuration"
@@ -56,71 +55,104 @@ DECLARED = "configuration"
 Runner = Callable[..., subprocess.CompletedProcess[str]]
 
 
-@dataclass(frozen=True)
-class Reading:
-    """What the backbone answered: the default branch's name and whether it was
-    declared, and the base a comparison reads (`None` when it names none it can
-    compare with). `name` is `None` when the backbone did not answer."""
+class Unanswered(Exception):
+    """The backbone did not answer; the message names the cause and what to do."""
 
-    name: str | None
+
+@dataclass(frozen=True)
+class Branch:
+    """The default branch as the backbone declares and resolves it."""
+
+    name: str
     declared: bool
-    check_base: str | None
+    ref: str | None
+    commit: str | None
     problem: str | None
 
 
-_UNANSWERED = Reading(None, False, None, None)
+@dataclass(frozen=True)
+class Base:
+    """A base as the backbone resolves it: the reference read, its commit (`tip`),
+    where HEAD left it (`fork`) — or why not (`problem`); `tip` may name a commit
+    even then, when only the fork is missing."""
 
-#: One reading per working directory and run; one warning per text.
-_read: dict[Path, Reading] = {}
+    ref: str
+    tip: str | None
+    fork: str | None
+    problem: str | None
+
+
+@dataclass(frozen=True)
+class Reading:
+    """One answer of the backbone's reading command."""
+
+    default_branch: Branch
+    base: Base
+
+
+#: One answer per working directory and base named, per run; one warning per text.
+_read: dict[tuple[Path, str | None], Reading | Unanswered] = {}
 _warned: set[str] = set()
 
 
-def read(run: Runner = subprocess.run) -> Reading:
-    """The backbone's answer for the working directory, asked once per run."""
-    here = Path.cwd()
-    if here not in _read:
-        _read[here] = _ask(run)
-    return _read[here]
+def read(explicit: str | None = None, *, run: Runner = subprocess.run) -> Reading:
+    """The backbone's answer for the working directory — with `explicit` the base it
+    reads — asked once per run. Raises Unanswered."""
+    key = (Path.cwd(), explicit)
+    if key not in _read:
+        try:
+            _read[key] = _ask(explicit, run)
+        except Unanswered as exc:
+            _read[key] = exc
+    answer = _read[key]
+    if isinstance(answer, Unanswered):
+        raise answer
+    return answer
 
 
 def name(config: Mapping[str, Any], *, run: Runner = subprocess.run) -> str:
-    """The default branch: the backbone's; pm's `default_branch` an alias of it."""
-    reading = read(run)
+    """The default branch: the backbone's; pm's own `default_branch` only until the
+    upgrade carries it over. Raises Unanswered."""
+    backbone = read(run=run).default_branch
     alias = _alias(config)
-    if reading.name is None:
-        return alias or DEFAULT
-    if alias is None:
-        return reading.name
-    if alias == reading.name:
-        _warn(
-            f"project-management's `{ALIAS_KEY}: {alias}` is deprecated and redundant: the "
-            f"default branch is the backbone's `{BACKBONE_KEY}` (COR-054) — remove it from "
+    if alias is None or alias == backbone.name:
+        return backbone.name
+    if backbone.declared:
+        warn(
+            f"project-management's `{ALIAS_KEY}: {alias}` is ignored: the backbone declares "
+            f"`{BACKBONE_KEY}: {backbone.name}` (COR-054) — remove it from "
             f"project-management's project/config.yaml"
         )
-        return reading.name
-    if reading.declared:
-        _warn(
-            f"project-management's `{ALIAS_KEY}: {alias}` is deprecated and ignored: the "
-            f"backbone declares `{BACKBONE_KEY}: {reading.name}` (COR-054) — remove it from "
-            f"project-management's project/config.yaml"
-        )
-        return reading.name
-    _warn(
-        f"project-management's `{ALIAS_KEY}: {alias}` is deprecated: declare the default "
-        f"branch once, for every reader — `pkit config set {BACKBONE_KEY} {alias} --yes` — "
-        f"and remove it from project-management's project/config.yaml; until then the "
-        f"backbone's checks read `{reading.name}` (COR-054)"
+        return backbone.name
+    warn(
+        f"project-management's `{ALIAS_KEY}: {alias}` names the default branch until the "
+        f"upgrade carries it over (`pkit upgrade`), while the backbone's checks read "
+        f"`{backbone.name}`: declare it once, for every reader — `pkit config set "
+        f"{BACKBONE_KEY} {alias} --yes` — and remove it from project-management's "
+        f"project/config.yaml (COR-054)"
     )
     return alias
 
 
-def check_base(*, run: Runner = subprocess.run) -> tuple[str | None, str | None]:
-    """The base a diff-scoped check compares with when none is named, and why there is
-    none when there is not: `(ref, None)` or `(None, problem)`."""
-    reading = read(run)
-    if reading.check_base is not None:
-        return reading.check_base, None
-    return None, reading.problem or f"`{' '.join(ARGV)}` named no base; name one with --base"
+def branch(named: str, *, run: Runner = subprocess.run) -> Base:
+    """The branch `named` resolved as the backbone resolves every branch named as a
+    base (COR-054 point 2) — asked afresh, since a fetch may just have moved it.
+    Raises Unanswered."""
+    _read.pop((Path.cwd(), named), None)
+    return read(named, run=run).base
+
+
+def check_base(explicit: str | None = None, *, run: Runner = subprocess.run) -> Base:
+    """A diff-scoped check's base: `explicit`, else `$PKIT_CHECK_BASE`, else the default
+    branch, with where HEAD left it (COR-054 point 3). Raises Unanswered."""
+    return read(explicit, run=run).base
+
+
+def warn(text: str) -> None:
+    """Say `text` on standard error, once per run."""
+    if text not in _warned:
+        _warned.add(text)
+        print(f"warn: {text}", file=sys.stderr)
 
 
 def _alias(config: Mapping[str, Any]) -> str | None:
@@ -128,33 +160,73 @@ def _alias(config: Mapping[str, Any]) -> str | None:
     return value.strip() if isinstance(value, str) and value.strip() else None
 
 
-def _ask(run: Runner) -> Reading:
+def _ask(explicit: str | None, run: Runner) -> Reading:
+    argv = [*ARGV, *([f"--base={explicit}"] if explicit is not None else [])]
+    command = f"`{' '.join(argv)}`"
     try:
-        proc = run(list(ARGV), capture_output=True, text=True, check=False, timeout=60)
-    except (OSError, subprocess.TimeoutExpired):
-        return _UNANSWERED
+        proc = run(argv, capture_output=True, text=True, check=False, timeout=TIMEOUT)
+    except FileNotFoundError as exc:
+        raise _unanswered(command, f"`pkit` is not on PATH ({exc})") from exc
+    except subprocess.TimeoutExpired as exc:
+        raise _unanswered(command, f"it did not answer within {TIMEOUT}s") from exc
+    except OSError as exc:
+        raise _unanswered(command, f"it could not be run ({exc})") from exc
+    for line in (proc.stderr or "").splitlines():
+        if line.startswith("warning: "):
+            warn(line.removeprefix("warning: "))
+    if proc.returncode != 0:
+        said = [line for line in (proc.stderr or "").splitlines() if line.strip()]
+        if "No such command" in (proc.stderr or ""):
+            raise _unanswered(
+                command, "the installed backbone predates it — upgrade it (`pkit upgrade`)"
+            )
+        raise _unanswered(
+            command, f"it exited {proc.returncode}" + (f": {said[-1].strip()}" if said else "")
+        )
     try:
-        document = json.loads(proc.stdout or "") if proc.returncode == 0 else None
-    except ValueError:
-        document = None
+        document = json.loads(proc.stdout or "")
+    except ValueError as exc:
+        raise _unanswered(command, "its answer is not JSON") from exc
+    found = _reading(document)
+    if found is None:
+        raise _unanswered(command, "its answer names no default branch or base")
+    return found
+
+
+def _reading(document: Any) -> Reading | None:
     if not isinstance(document, Mapping):
-        return _UNANSWERED
-    branch = document.get(BRANCH)
-    if not isinstance(branch, Mapping) or not isinstance(branch.get("name"), str):
-        return _UNANSWERED
-    base = document.get(BASE)
-    base = base if isinstance(base, Mapping) else {}
-    problem = base.get("problem")
-    ref = base.get("ref") if base.get("tip") else None
+        return None
+    branch_doc = document.get("default_branch")
+    base_doc = document.get("base")
+    if not isinstance(branch_doc, Mapping) or not isinstance(base_doc, Mapping):
+        return None
+    named = branch_doc.get("name")
+    ref = base_doc.get("ref")
+    if not isinstance(named, str) or not isinstance(ref, str):
+        return None
     return Reading(
-        name=branch["name"],
-        declared=branch.get("source") == DECLARED,
-        check_base=ref if isinstance(ref, str) else None,
-        problem=problem if isinstance(problem, str) else None,
+        Branch(
+            name=named,
+            declared=branch_doc.get("source") == DECLARED,
+            ref=_text(branch_doc.get("ref")),
+            commit=_text(branch_doc.get("commit")),
+            problem=_text(branch_doc.get("problem")),
+        ),
+        Base(
+            ref=ref,
+            tip=_text(base_doc.get("tip")),
+            fork=_text(base_doc.get("fork")),
+            problem=_text(base_doc.get("problem")),
+        ),
     )
 
 
-def _warn(text: str) -> None:
-    if text not in _warned:
-        _warned.add(text)
-        print(f"warn: {text}", file=sys.stderr)
+def _text(value: Any) -> str | None:
+    return value if isinstance(value, str) and value else None
+
+
+def _unanswered(command: str, cause: str) -> Unanswered:
+    return Unanswered(
+        f"the backbone did not say which branch is settled — {command}: {cause}; pm does not "
+        f"guess it (COR-054 point 4)"
+    )

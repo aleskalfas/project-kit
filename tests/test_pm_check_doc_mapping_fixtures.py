@@ -49,13 +49,17 @@ SCRIPT = CAPABILITY / "scripts" / "check-doc-mapping.py"
 FILLER = CAPABILITY / "scripts" / "fill-doc-check.py"
 
 # The `pkit` stand-in: `pkit connections resolve <point> --json` from the default
-# filler's real envelope. Records its argv; anything else it is asked fails.
+# filler's real envelope, and `pkit repository base` — the base and where HEAD
+# left it (COR-054) — from the real CLI. Records its argv; anything else it is
+# asked fails.
 PKIT_STANDIN = """\
 import json, subprocess, sys
 log, filler, capability = sys.argv[1:4]
 argv = sys.argv[4:]
 with open(log, "a", encoding="utf-8") as handle:
     handle.write(json.dumps(argv) + "\\n")
+if argv[:2] == ["repository", "base"]:
+    sys.exit(subprocess.run([sys.executable, "-m", "project_kit", *argv]).returncode)
 if argv != ["connections", "resolve", "pkit::work-tracking:doc-check", "--json"]:
     sys.exit(f"unexpected pkit call: {argv}")
 run = subprocess.run(
@@ -214,7 +218,7 @@ def run_fixture(tmp_path: Path, fixture: Fixture) -> Outcome:
             sys.executable,
             str(SCRIPT),
             "--base",
-            "base",
+            "refs/heads/base",  # read as named: no resolution to say anything about
             "--pr-body-file",
             str(body),
             "--capability-root",
@@ -372,12 +376,16 @@ def test_the_mapping_check_prints_exactly_what_it_did(tmp_path: Path, name: str)
 def test_the_rules_it_applies_are_the_ones_the_point_resolves_to(
     tmp_path: Path, name: str
 ) -> None:
-    """The same bytes, and they came through the point: the check read it once.
-    (A malformed mapping is refused before the point is read, as before.)"""
+    """The same bytes, and they came through the point: the check read it once — and,
+    when it compares, read the base through the backbone once, never resolving it
+    itself (COR-054 point 5). (A malformed mapping is refused before the point is
+    read, as before.)"""
     run_fixture(tmp_path, FIXTURES[name])
-    assert pkit_calls(tmp_path) == [
-        '["connections", "resolve", "pkit::work-tracking:doc-check", "--json"]'
-    ]
+    point = '["connections", "resolve", "pkit::work-tracking:doc-check", "--json"]'
+    base = '["repository", "base", "--json", "--base=refs/heads/base"]'
+    calls = pkit_calls(tmp_path)
+    assert calls in ([point], [point, base])
+    assert (calls == [point]) == EXPECTED[name].out.endswith("no rules configured; skipped.\n")
 
 
 def test_every_fixture_has_its_expected_outcome() -> None:
@@ -470,7 +478,7 @@ def _merge_gate(repo: AdopterRepo, tmp_path: Path) -> Outcome:
             sys.executable,
             str(repo.root / PM_REL / "scripts" / "check-doc-mapping.py"),
             "--base",
-            "base",
+            "refs/heads/base",  # read as named, so the backbone has nothing to say of it
             "--pr-body-file",
             str(body),
         ],

@@ -50,9 +50,9 @@ pkit_schema: project-management:config
 # The repo's default branch — what work is cut from and pull requests target
 # (per [project-management:DEC-013-branch-and-pr-conventions]) — is declared
 # once, for every reader, as the backbone's `repository.default-branch` in
-# `.pkit/project/config.yaml` (COR-054), `main` when undeclared. The
-# `default_branch:` key this file used to require is a deprecated alias of it:
-# not listed here, and read only while the backbone declares none.
+# `.pkit/project/config.yaml` (COR-054), `main` when undeclared. This file
+# declares no default branch; the 0.55.0 upgrade retires a `default_branch:`
+# key into the backbone's.
 
 # Legacy shim: the canonical workstream taxonomy lives in
 # `project/workstreams.yaml` (per [project-management:DEC-018-workstream-

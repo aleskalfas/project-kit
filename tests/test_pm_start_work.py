@@ -233,28 +233,58 @@ def test_every_shipped_type_value_resolves_a_branch_prefix(sw) -> None:
 # test_pm_pr_base_branch.py.
 
 
-def test_base_defaults_to_config_default_branch(sw) -> None:
-    assert sw.infer.resolve_base_branch({"default_branch": "trunk"}, "EPIC: #1\n\n## What\nx") == "trunk"
+@pytest.fixture
+def backbone(sw, monkeypatch):
+    """Stand in for the backbone's reading (`pkit repository base --json`): `answer(name,
+    declared=False)` makes it name `name` as the default branch."""
+    lib = sw.infer.default_branch
+
+    def answer(name: str, declared: bool = False) -> None:
+        monkeypatch.setattr(lib, "_read", {})
+        monkeypatch.setattr(lib, "_warned", set())
+
+        def ask(explicit, _run):
+            branch = lib.Branch(name, declared, f"origin/{name}", "c0ffee", None)
+            return lib.Reading(branch, lib.Base(f"origin/{explicit or name}", "c0ffee", "c0ffee", None))
+
+        monkeypatch.setattr(lib, "_ask", ask)
+
+    answer("main")
+    return answer
 
 
-def test_base_defaults_to_main_when_unconfigured(sw) -> None:
+def test_base_defaults_to_the_backbone_s_default_branch(sw, backbone) -> None:
+    backbone("trunk", declared=True)
+    assert sw.infer.resolve_base_branch({}, "EPIC: #1\n\n## What\nx") == "trunk"
+
+
+def test_base_defaults_to_main_when_nothing_is_declared(sw, backbone) -> None:
     assert sw.infer.resolve_base_branch({}, "EPIC: #1\n\n## What\nx") == "main"
 
 
-def test_base_is_integration_branch_when_marked(sw) -> None:
+def test_pm_s_old_key_names_the_branch_only_until_the_upgrade(sw, backbone, capsys) -> None:
+    """Not yet migrated (0.55.0): a value other than the backbone's names the branch while
+    the backbone declares none, with a warning; a declared value always wins."""
+    assert sw.infer.resolve_base_branch({"default_branch": "trunk"}, "EPIC: #1") == "trunk"
+    assert "until the upgrade carries it over" in capsys.readouterr().err
+    backbone("develop", declared=True)
+    assert sw.infer.resolve_base_branch({"default_branch": "trunk"}, "EPIC: #1") == "develop"
+
+
+def test_base_is_integration_branch_when_marked(sw, backbone) -> None:
     body = "Integration: integration/508-multi-instance-ownership\nFeature: #510\n\n## What\nx"
     assert sw.infer.resolve_base_branch({"default_branch": "main"}, body) == (
         "integration/508-multi-instance-ownership"
     )
 
 
-def test_base_ignores_a_malformed_marker(sw) -> None:
+def test_base_ignores_a_malformed_marker(sw, backbone) -> None:
     # A malformed marker is not a valid integration branch — fall back to default.
     body = "Integration: integration/Bad_Slug!!\nFeature: #510\n\n## What\nx"
     assert sw.infer.resolve_base_branch({"default_branch": "main"}, body) == "main"
 
 
-def test_explicit_base_wins_over_marker_and_default(sw) -> None:
+def test_explicit_base_wins_over_marker_and_default(sw, backbone) -> None:
     body = "Integration: integration/508-multi-instance-ownership\nFeature: #510\n"
     assert sw.infer.resolve_base_branch(
         {"default_branch": "trunk"}, body, explicit="release/2"
@@ -289,8 +319,56 @@ def _task(labels: list[str], *, assignees: list[dict] | None = None) -> dict:
     }
 
 
+# ---- _create_branch: cut from the commit the backbone resolves (COR-054) ----
+
+
+def _git(cwd: Path, *args: str) -> str:
+    import subprocess
+
+    return subprocess.run(
+        ["git", "-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", *args],
+        cwd=cwd,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+
+
 @pytest.fixture
-def run_main(sw, monkeypatch):
+def clone_ahead(tmp_path, monkeypatch, pkit_on_path):
+    """A clone of `origin` whose local `main` carries a commit nobody pushed."""
+    source = tmp_path / "source"
+    source.mkdir()
+    _git(source, "init", "-q", "-b", "main")
+    _git(source, "commit", "-q", "--allow-empty", "-m", "shared")
+    work = tmp_path / "work"
+    _git(tmp_path, "clone", "-q", str(source), str(work))
+    _git(work, "commit", "-q", "--allow-empty", "-m", "local only")
+    monkeypatch.chdir(work)
+    return work
+
+
+def test_start_work_cuts_from_the_remote_s_copy_not_a_local_branch_ahead(
+    sw, clone_ahead
+) -> None:
+    shared = _git(clone_ahead, "rev-parse", "origin/main")
+    assert shared != _git(clone_ahead, "rev-parse", "main")
+    assert sw._create_branch("fix/42-thing", "main")
+    assert _git(clone_ahead, "rev-parse", "fix/42-thing") == shared
+
+
+def test_start_work_refuses_a_base_that_resolves_nowhere(sw, clone_ahead, capsys) -> None:
+    """`origin` holds no `integration/absent` and the fetch fails: no branch is cut from a
+    guess — not from the local branch, not from HEAD."""
+    assert not sw._create_branch("fix/42-thing", "integration/absent")
+    err = capsys.readouterr().err
+    assert "cannot cut 'fix/42-thing' from 'integration/absent'" in err
+    assert "git fetch origin integration/absent" in err
+    assert "fix/42-thing" not in _git(clone_ahead, "branch", "--list")
+
+
+@pytest.fixture
+def run_main(sw, monkeypatch, backbone):
     """Returns `run(issue, move_rc=0) -> (rc, mutations)` over stubbed seams."""
     from types import SimpleNamespace
 

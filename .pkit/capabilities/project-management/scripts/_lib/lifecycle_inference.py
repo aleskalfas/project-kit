@@ -283,10 +283,11 @@ def resolve_base_branch(
     Precedence: an `explicit` caller choice (a verb's `--base`) wins; else the
     closing issue's `Integration: integration/<slug>` marker names the base;
     else the project's default branch, as the backbone declares it (COR-054;
-    `_lib/default_branch`, where pm's own `default_branch` is a deprecated
-    alias). A malformed marker is not a branch and falls through to the
-    default. Takes no HEAD input, so the checked-out branch can never leak in
-    (#835)."""
+    `_lib/default_branch`). A malformed marker is not a branch and falls
+    through to the default. Takes no HEAD input, so the checked-out branch can
+    never leak in (#835). Raises `default_branch.Unanswered` when the default
+    branch is needed and the backbone cannot say it: the verbs refuse rather
+    than cut from, or target, a guessed branch."""
     if explicit:
         return explicit
     slug = integration_slug(body)

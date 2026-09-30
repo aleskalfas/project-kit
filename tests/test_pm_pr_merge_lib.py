@@ -4,7 +4,8 @@ One implementation per rule (#882): `done-work` and `merge-pr` both compose
 these three steps rather than carrying a copy. Covers the squash-merge
 command (subject = PR title, no `--delete-branch`), the remote ref delete
 through the API (including the already-deleted answer), and the best-effort
-local cleanup (default branch from config; every failure a warning).
+local cleanup (the default branch the backbone declares, COR-054; every failure
+a warning).
 """
 
 from __future__ import annotations
@@ -251,11 +252,33 @@ def _fake_git(monkeypatch, lib, *, checkout_stderr="", pull_stderr="", branch_d_
     return seen
 
 
-def test_cleanup_local_sequence_on_the_configured_default_branch(lib, monkeypatch, capsys):
-    """checkout <default_branch> → pull --ff-only → branch -D <head>; the
-    default branch is the adopter's `default_branch`, not a hardcoded main."""
+@pytest.fixture(autouse=True)
+def backbone(lib, monkeypatch):
+    """Stand in for the backbone's reading: `answer(name)` declares the default branch,
+    `answer(None)` makes the backbone unable to say. `main`, undeclared, by default."""
+    reading = lib.default_branch
+
+    def answer(name: str | None, declared: bool = True) -> None:
+        monkeypatch.setattr(reading, "_read", {})
+
+        def ask(explicit, _run):
+            if name is None:
+                raise reading.Unanswered("no pkit here")
+            branch = reading.Branch(name, declared, f"origin/{name}", "c0ffee", None)
+            return reading.Reading(branch, reading.Base(f"origin/{name}", "c0ffee", "c0ffee", None))
+
+        monkeypatch.setattr(reading, "_ask", ask)
+
+    answer("main", declared=False)
+    return answer
+
+
+def test_cleanup_local_sequence_on_the_declared_default_branch(lib, monkeypatch, capsys, backbone):
+    """checkout <default branch> → pull --ff-only → branch -D <head>; the default
+    branch is the one the backbone declares (COR-054), not a hardcoded main."""
+    backbone("develop")
     seen = _fake_git(monkeypatch, lib)
-    lib.cleanup_local("fix/42-slug", {"default_branch": "develop"}, cross_repository=False)
+    lib.cleanup_local("fix/42-slug", {}, cross_repository=False)
     assert seen == [
         ["git", "checkout", "develop"],
         ["git", "pull", "--ff-only"],
@@ -268,6 +291,19 @@ def test_cleanup_local_defaults_to_main_when_config_is_silent(lib, monkeypatch):
     seen = _fake_git(monkeypatch, lib)
     lib.cleanup_local("fix/42-slug", {}, cross_repository=False)
     assert seen[0] == ["git", "checkout", "main"]
+
+
+def test_cleanup_local_is_skipped_when_the_backbone_cannot_say(
+    lib, monkeypatch, capsys, backbone
+):
+    """No switching to a guessed branch (COR-054 point 4): the clean-up is skipped with
+    the cause, and the merge — already durable — does not fail."""
+    backbone(None)
+    seen = _fake_git(monkeypatch, lib)
+    lib.cleanup_local("fix/42-slug", {}, cross_repository=False)
+    assert seen == []
+    err = capsys.readouterr().err
+    assert "[warn] the local clean-up is skipped: no pkit here." in err
 
 
 def test_cleanup_local_checkout_failure_skips_pull_still_deletes(lib, monkeypatch, capsys):
