@@ -20,6 +20,10 @@ pkit:
         - ADR-019
       artefact:
         - ACT-operator
+    revalidated:
+      at: 2026-09-30T04:01:25Z
+      outcome: unchanged
+      unchanged-because: the release step now also raises a floor to an already-shipped backbone a changeset names and writes each raised floor into the changelog, and PRJ-002 D4 says so; the operator's path through readiness, deferral, apply and the release pull request is the same
 ---
 
 # UC-005 — Cut a release while unfinished work remains

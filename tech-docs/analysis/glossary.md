@@ -70,6 +70,10 @@ TERM-release-scope:
         record:
           - project-management:DEC-016
           - PRJ-002
+      revalidated:
+        at: 2026-09-30T04:01:23Z
+        outcome: unchanged
+        unchanged-because: PRJ-002 D4 now lets a changeset name an already-shipped backbone as a component's floor, states raised floors in the changelog and ties a floor to the component the pull request changes; which work a release waits for is untouched by how version floors are declared
 TERM-session:
   name: Session
   status: active
