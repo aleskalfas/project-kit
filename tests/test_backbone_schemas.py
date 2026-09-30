@@ -154,6 +154,26 @@ def test_friction_accepts_all_three_anchor_kinds_and_last_check(schema: dict) ->
     assert report.is_clean, _messages(report)
 
 
+def test_friction_accepts_a_reason_for_no_anchors(schema: dict) -> None:
+    """COR-050 point 1: `unanchored-because` instead of anchors. Beside anchors it is
+    validation's own finding (`friction_validate`), never a shape error here."""
+    for block in (
+        _friction(**{"unanchored-because": "No code embodies it."}),
+        _friction(anchors={"path": ["src/**"]}, **{"unanchored-because": "Stale."}),
+    ):
+        report = _validate(schema, block)
+        assert report.is_clean, _messages(report)
+
+
+@pytest.mark.parametrize("reason", ["", 3, ["a list"]], ids=["empty", "number", "list"])
+def test_friction_refuses_a_reason_for_no_anchors_that_is_no_text(
+    schema: dict, reason: object
+) -> None:
+    report = _validate(schema, _friction(**{"unanchored-because": reason}))
+    (finding,) = report.errors
+    assert finding.location == "/pkit/friction/unanchored-because"
+
+
 def test_friction_refuses_unchanged_without_justification(schema: dict) -> None:
     report = _validate(
         schema, _friction(revalidated={"at": "2026-10-02T09:40:12Z", "outcome": "unchanged"})

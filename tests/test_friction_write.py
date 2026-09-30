@@ -606,6 +606,16 @@ def test_a_block_that_would_not_validate_is_not_written(repo: AdopterRepo) -> No
     assert _read(repo) == broken
 
 
+def test_a_reason_for_no_anchors_beside_anchors_is_not_written_over(repo: AdopterRepo) -> None:
+    """Validation refuses `unanchored-because` beside anchors (COR-050 point 12), so a
+    writer reading its result back refuses to write over the pair."""
+    beside = GUIDE.replace("    anchors:\n", "    unanchored-because: Stale.\n    anchors:\n")
+    _put(repo, beside)
+    with pytest.raises(fw.FrictionWriteError, match="stands beside anchors"):
+        fw.plan_revalidate(repo.root, "guide", outcome="updated")
+    assert _read(repo) == beside
+
+
 # --- property: what the writers write reads back, and validates -----------------------------
 
 AWKWARD = (

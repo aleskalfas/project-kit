@@ -26,9 +26,9 @@ read back: the front matter must parse to exactly what it held with that one
 key replaced, and the artefact must pass validation's per-artefact judgments
 (`friction_validate.block_findings`), so a writer never writes what `pkit
 validate` would refuse. Entries are kept in one order — deferrals by anchor
-kind, then value; keys in the schema's order (`anchors`, `revalidated`,
-`last-check`; `at`, `outcome`, `unchanged-because`, `deferred`) — so the same
-input always writes the same bytes.
+kind, then value; keys in the schema's order (`anchors`, `unanchored-because`,
+`revalidated`, `last-check`; `at`, `outcome`, `unchanged-because`,
+`deferred`) — so the same input always writes the same bytes.
 
 **Consent.** `--yes`; or, on a terminal, a confirmation shown with the diff;
 `--dry-run` shows the diff and writes nothing; a non-interactive run with
@@ -65,6 +65,7 @@ from project_kit.friction_check import anchors_of, parsed_at
 from project_kit.friction_discovery import (
     FRICTION_KEY,
     RULES_KEY,
+    UNANCHORED_BECAUSE_KEY,
     Anchor,
     Artefact,
     ArtefactKind,
@@ -90,7 +91,7 @@ UNCHANGED = "unchanged"
 
 # Where each key goes among its siblings: the schema's order, per parent.
 _KEY_ORDER: dict[str, tuple[str, ...]] = {
-    FRICTION_KEY: ("anchors", REVALIDATED, LAST_CHECK),
+    FRICTION_KEY: ("anchors", UNANCHORED_BECAUSE_KEY, REVALIDATED, LAST_CHECK),
     REVALIDATED: (AT, OUTCOME, BECAUSE, DEFERRED),
 }
 
