@@ -15,7 +15,7 @@ pkit:
         - .pkit/capabilities/project-management/decisions/**
       record: [COR-017, COR-020, COR-021, COR-023, COR-039, COR-053, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050]
     revalidated:
-      at: 2026-09-30T21:13:24Z
+      at: 2026-09-30T21:34:54Z
       outcome: updated
 ---
 
@@ -410,6 +410,8 @@ Setting the id touches no issue — the per-issue ownership *marker* is written 
 | `reopen-issue <N> [--reason "<R>"]` | Reopens a closed issue and puts it back into the lifecycle: its state label is removed, so it reads as `backlog` when it has a milestone and `todo` otherwise, and `start-work` (or `promote-issue`) takes it on from there. An open issue still labelled done is repaired the same way. |
 | `edit-issue <N> [--title T] [--body B \| --body-file F \| --append A] [--milestone <M> \| --clear-milestone --reason "<R>"]` | Title / body edit, validated against the title and body rules for the fields edited (see above). `--milestone` attaches the issue to an OPEN milestone or moves it to another — its number or exact title, validated as `create-issue --milestone` validates it, for an issue whose type may carry one; `--clear-milestone` detaches it. A milestone change needs `--reason` and posts an audit comment. See "Attaching an issue to a Milestone" below. |
 
+**The closure cascade reports; it never closes.** Every `close-issue` mode ends with the closure cascade (skip it with `--no-cascade`): each parent issue the body's first line names is checked for close eligibility, and so is each Milestone the issue sits in — see "The closure cascade says when a Milestone became closeable" under the Milestone lifecycle below. A container closes through `--mode=cascade-eligibility-close`, a Milestone through `close-milestone`.
+
 **A PR that closes several issues is closed issue by issue.** GitHub's `Closes #N` closes every issue the PR body names, so `done-work <N>` gates and closes each of them, not only `N`. It reads the closing references with the reader `open-pr` and `validate-pr` use. Before the merge, the checkbox close-gate runs on each, `N` first, and refuses at the first issue that fails, naming it and its unticked boxes. After the merge, each is run through `close-issue <M> --mode=pr-merge --pr <PR>`, `N` first: closed as completed if the merge left it open (a base branch other than the default one, where GitHub does not auto-close), its state label reconciled to done, and its closure cascade run. An issue that was already closed before the merge is skipped with a note, not an error: the merge does not close it, so it is neither gated nor closed again. A close that fails after the merge is a warning naming the `close-issue` re-run; the others still run.
 
 **Why a reopen removes the state label instead of transitioning out of done.** `done` is the workflow's terminal state (`schemas/workflow.yaml`), and the closure cascade folds children against it; a transition out of it would make it an end state that is not one. A reopened issue re-enters the lifecycle where any open issue without a state label sits — the detectors read `backlog` with a milestone and `todo` without — which is where a freshly filed or freshly scheduled issue sits too. No state label is *added*, so the reset does not show as an ungoverned state change (`history --check-drift` counts added state labels). Where the state is derived from open/closed, nothing is removed; where it lives on a Projects-v2 board, reset the board's Status by hand, as for `move-issue`.
@@ -447,11 +449,20 @@ Both run the DEC-021 membership gate and the COR-039 foreign-repo guard at start
 - **date-based** — the date is the trigger, so the Milestone closes even with open children; the command **warns** and lists them.
 - **either** — treated like content-based when open children remain (refuse unless `--force`).
 
-A Milestone's children are resolved the same way the rest of the capability resolves membership: the union of issues carrying the **native GitHub Milestone field** for it and issues whose body carries the textual `Milestone: [#<n>](../milestone/<n>)` ref. Because a Milestone has no comment thread, the audit note is **appended to the description** in the same PATCH that flips `state=closed` (idempotent on re-run), rather than posted as a comment the way `close-issue` does.
+A Milestone's children are resolved the same way the rest of the capability resolves membership: the union of issues carrying the **native GitHub Milestone field** for it and issues whose body carries the textual `Milestone: [#<n>](../milestone/<n>)` ref. The issues are read through the containment seam, which says whether it saw all of them; a read that reached its ceiling is refused rather than answered from, since a child past it may be open. Because a Milestone has no comment thread, the audit note is **appended to the description** in the same PATCH that flips `state=closed` (idempotent on re-run), rather than posted as a comment the way `close-issue` does.
+
+**The closure cascade says when a Milestone became closeable.** When an issue closes — through `close-issue` in any mode, and so after every `done-work` merge — the closure cascade checks each Milestone the issue sits in (its native Milestone field, or its `Milestone:` body ref) the way it checks each parent issue. A content-based or `either` Milestone whose every child issue is now closed is reported with the command that closes it:
+
+```
+[cascade] milestones to check for eligibility: #6
+  · milestone #6 open; content-based, all 3 child issue(s) closed — eligible to close: run `pkit pm close-milestone 6`
+```
+
+A Milestone with an open child is reported as not eligible, with the count of open children, and a date-based Milestone as closing on its date — its children closing makes nothing eligible. The check reads the close-trigger and the children exactly as `close-milestone` does, so a Milestone reported eligible is one `close-milestone` closes without `--force`. The cascade **reports and never closes**: closing the Milestone stays your gesture, as closing a parent issue does.
 
 **Closing a Milestone never moves its open children.** The close writes only the Milestone itself — its state and the audit line — so a child still open when a date-based Milestone closes, or when `--force` closes a content-based or `either` one, stays assigned to the closed Milestone: its native Milestone field and its first-line `Milestone:` ref still name it, and its lifecycle state does not change. The audit line counts such children as still open, not rolled forward. To carry one into the next Milestone, run `edit-issue <N> --milestone <next> --reason "<R>"`: the issue's current milestone may be closed (only the target must be open), and a first-line `Milestone:` ref moves with the native field. A raw `gh issue edit --milestone` changes only the native field, so the closed Milestone would go on counting the child through its first line.
 
-> **Not yet automated:** date-based / `either` closes do **not** roll open children forward to the next Milestone (schema `rollforward_behaviour`) — `close-milestone` only warns and lists them, so reassign them with `edit-issue --milestone` for now. Automated rollforward, and surfacing "milestone now closeable" from the closure cascade when the last child EPIC closes, are follow-ups.
+> **Not yet automated:** date-based / `either` closes do **not** roll open children forward to the next Milestone (schema `rollforward_behaviour`) — `close-milestone` only warns and lists them, so reassign them with `edit-issue --milestone` as above. Automated rollforward is a follow-up (#1175).
 
 ##### Attaching an issue to a Milestone
 

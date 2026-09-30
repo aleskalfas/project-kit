@@ -1680,6 +1680,15 @@ with open(path, encoding="utf-8") as fh:
 def option(name):
     return args[args.index(name) + 1] if name in args else None
 
+if args[:2] == ["issue", "list"]:
+    print(json.dumps([dict(issue, number=int(n)) for n, issue in state["issues"].items()]))
+    sys.exit(0)
+if args[:1] == ["api"] and "/milestones/" in args[1] and "-X" not in args:
+    milestone = state.get("milestones", {}).get(args[1].rsplit("/", 1)[1])
+    if milestone is None:
+        sys.exit(1)
+    print(json.dumps(milestone))
+    sys.exit(0)
 if args[:1] == ["issue"] and len(args) > 2:
     issue = state["issues"].get(args[2])
     if issue is None:
@@ -1751,11 +1760,18 @@ class _EndToEnd:
 
 
 def _run_done_work_end_to_end(
-    dw: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
-    capfd: pytest.CaptureFixture[str], primary_label: str,
+    dw: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capfd: pytest.CaptureFixture[str],
+    primary_label: str,
+    *,
+    milestone: dict[str, Any] | None = None,
 ) -> _EndToEnd:
     """done-work on #42, carrying `primary_label`, with the REAL move-issue and
-    close-issue run against the stateful fake `gh`."""
+    close-issue run against the stateful fake `gh`. With `milestone` (a
+    Milestone as `gh api` returns it), #42 is scheduled into it by its native
+    field — the only issue in it."""
     import shutil
 
     cap_root = tmp_path / ".pkit" / "capabilities" / "project-management"
@@ -1764,14 +1780,21 @@ def _run_done_work_end_to_end(
     shutil.copytree(CAPABILITY_ROOT_DW / "schemas", cap_root / "schemas")
 
     feature = {
-        "title": "[Feature] widgets", "state": "OPEN", "milestone": None,
+        "title": "[Feature] widgets",
+        "state": "OPEN",
+        "milestone": None,
         "labels": [{"name": "state:in-progress"}],
         "body": "## What\n\nw\n\n## Acceptance criteria\n\n- [ ] shipped\n",
     }
+    task = _task(primary_label)
+    milestones: dict[str, dict[str, Any]] = {}
+    if milestone is not None:
+        task["milestone"] = {"number": milestone["number"], "title": milestone["title"]}
+        milestones[str(milestone["number"])] = milestone
     state = {
-        "issues": {"42": _task(primary_label), "7": feature},
-        "pr": {"number": 496, "state": "MERGED",
-               "mergedAt": "2026-09-30T10:00:00Z", "url": "u"},
+        "issues": {"42": task, "7": feature},
+        "milestones": milestones,
+        "pr": {"number": 496, "state": "MERGED", "mergedAt": "2026-09-30T10:00:00Z", "url": "u"},
     }
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
@@ -1851,3 +1874,58 @@ def test_an_issue_in_review_is_closed_as_before(
     ]
     assert run.calls.index(edits[0]) >= run.calls_at_merge
     assert "lead-in" not in run.out
+
+
+# ---- a merge that finishes a Milestone (#414) ---------------------------
+#
+# The closure cascade the post-merge close runs checks the Milestones the
+# closed issue sits in as well as its parents: a content-based Milestone whose
+# last open child the merge closed is reported as closeable, with the command
+# that closes it. The Milestone itself is left open — closing it is the
+# operator's gesture (DEC-016).
+
+
+def test_a_merge_that_closes_a_milestones_last_open_child_says_it_can_close(
+    dw: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capfd: pytest.CaptureFixture[str],
+) -> None:
+    milestone = {
+        "number": 6,
+        "title": "Milestone 6: Widgets",
+        "state": "open",
+        "description": "Close trigger: content-based",
+        "due_on": None,
+    }
+    run = _run_done_work_end_to_end(
+        dw, tmp_path, monkeypatch, capfd, "state:review", milestone=milestone
+    )
+    run.assert_closed_done_one_comment_no_warning()
+    assert "[cascade] milestones to check for eligibility: #6" in run.out
+    assert (
+        "  · milestone #6 open; content-based, all 1 child issue(s) closed — "
+        "eligible to close: run `pkit pm close-milestone 6`"
+    ) in run.out
+    assert not any(c[:1] == ["api"] and "-X" in c for c in run.calls)
+
+
+def test_a_merge_into_a_date_based_milestone_surfaces_no_close(
+    dw: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capfd: pytest.CaptureFixture[str],
+) -> None:
+    milestone = {
+        "number": 6,
+        "title": "Sprint 6",
+        "state": "open",
+        "description": "Close trigger: date-based",
+        "due_on": "2026-10-15T00:00:00Z",
+    }
+    run = _run_done_work_end_to_end(
+        dw, tmp_path, monkeypatch, capfd, "state:review", milestone=milestone
+    )
+    run.assert_closed_done_one_comment_no_warning()
+    assert "  · milestone #6 open; date-based — it closes on its date" in run.out
+    assert "close-milestone" not in run.out

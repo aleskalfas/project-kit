@@ -24,6 +24,7 @@ def _cs(
     *,
     segment: str = "minor",
     category: str | None = None,
+    pr: str | None = None,
     name: str = "backbone-minor-x.yaml",
 ) -> Changeset:
     return Changeset(
@@ -32,10 +33,11 @@ def _cs(
         note=body,
         path=Path(name),
         category=category,
+        pr=pr,
     )
 
 
-# --- Check 1: changeset category enum ------------------------------------
+# --- Check 1: changeset category enum and `pr` shape ---------------------
 
 
 def test_known_category_passes() -> None:
@@ -49,6 +51,44 @@ def test_unknown_category_fails() -> None:
 
 def test_absent_category_is_fine() -> None:
     assert release.lint_changeset(_cs(category=None)) == []
+
+
+@pytest.mark.parametrize(
+    "pr",
+    [
+        "503",
+        "https://github.com/owner/repo/pull/503",
+        "https://github.com/owner/repo/issues/503",
+        "http://example.test/pull/503/files",
+    ],
+)
+def test_a_pr_number_or_url_passes(pr: str) -> None:
+    assert release.lint_changeset(_cs(pr=pr)) == []
+
+
+@pytest.mark.parametrize(
+    "pr",
+    [
+        "#503",
+        "PR 503",
+        "0503",
+        "503abc",
+        "github.com/owner/repo/pull/503",
+        "https://example.test/pulls",
+        "owner/repo#503",
+    ],
+)
+def test_a_pr_of_any_other_shape_fails(pr: str) -> None:
+    violations = release.lint_changeset(_cs(pr=pr))
+    assert [v.message for v in violations] == [
+        f"`pr` is {pr!r} — give the pull request's number (`503`) or its full URL "
+        "(`https://github.com/<owner>/<repo>/pull/503`)."
+    ]
+
+
+def test_a_none_changeset_still_validates_pr() -> None:
+    violations = release.lint_changeset(_cs("", segment="none", pr="#503"))
+    assert any("`pr`" in v.message for v in violations)
 
 
 # --- Check 2: changeset body ---------------------------------------------
@@ -547,6 +587,31 @@ def test_lint_release_format_flags_bad_changeset(tmp_path: Path) -> None:
     assert not result.ok
     # Bad category + lowercase start + missing period = three violations.
     assert len(result.violations) == 3
+
+
+@pytest.mark.parametrize("pr_line", ['pr: "503"', "pr: 503", "custom:\n  pr: 503"])
+def test_lint_release_format_accepts_a_pr_number_however_written(
+    tmp_path: Path, pr_line: str
+) -> None:
+    source_kit = tmp_path / ".pkit"
+    _seed(
+        source_kit,
+        changeset=f"component: backbone\nkind: minor\nbody: Ship it.\n{pr_line}\n",
+        changelog=VALID_CHANGELOG,
+    )
+    assert release.lint_release_format(source_kit).ok
+
+
+def test_lint_release_format_flags_a_pr_of_another_shape(tmp_path: Path) -> None:
+    source_kit = tmp_path / ".pkit"
+    _seed(
+        source_kit,
+        changeset='component: backbone\nkind: minor\nbody: Ship it.\npr: "#503"\n',
+        changelog=VALID_CHANGELOG,
+    )
+    result = release.lint_release_format(source_kit)
+    assert not result.ok
+    assert [v.source for v in result.violations] == ["changeset backbone-minor-x.yaml"]
 
 
 def test_lint_release_format_flags_bad_changelog(tmp_path: Path) -> None:

@@ -20,9 +20,9 @@ pkit:
       artefact:
         - ACT-operator
     revalidated:
-      at: 2026-09-30T21:13:31Z
+      at: 2026-09-30T21:35:03Z
       outcome: unchanged
-      unchanged-because: close-milestone's change is the wording of what a close reports about open children — the audit line counts them as still open, not rolled forward, and the warning names edit-issue --milestone to move them; stabilising a Milestone, release scope, the guards and the close that lifts the stabilisation did not change
+      unchanged-because: on this branch close-milestone reads a Milestone's close-trigger and children through _lib/milestone.py, now through the containment seam past the newest 500 issues, and close-issue's closure cascade reports when a content-based Milestone became closeable without closing it; stabilising a Milestone, release scope, the guards and the required status are untouched, so the use case holds
 ---
 
 # UC-010 — Stabilise a Milestone for a release

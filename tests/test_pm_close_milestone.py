@@ -1,7 +1,8 @@
 """Tests for project-management's close-milestone script.
 
 Covers the pure close-trigger resolution + decision policy, the audit-note
-composition, milestone→child resolution (native field + textual ref union),
+composition, milestone→child resolution (native field + textual ref union,
+read through `_lib.milestone`, the reads close-issue's cascade shares),
 and — mirroring the AC — content-based close with all children closed
 (succeeds), with an open child (refuses), --dry-run previews without
 mutating, the audit note is written on a real close, and the gh mutation
@@ -11,12 +12,14 @@ close writes nothing to the Milestone's open children — no rollforward (#387).
 
 from __future__ import annotations
 
+import importlib
 import importlib.util
 import json
 import subprocess
 import sys
 from pathlib import Path
 from types import ModuleType
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -30,6 +33,9 @@ SCRIPT_PATH = SCRIPTS_DIR / "close-milestone.py"
 # The script does `sys.path.insert(0, <scripts dir>)` and `from _lib...`; make
 # the same dir importable here so loading the module by file path resolves it.
 sys.path.insert(0, str(SCRIPTS_DIR))
+# The shared `_lib` modules the script reads a Milestone through.
+containment: ModuleType = importlib.import_module("_lib.containment")
+ms: ModuleType = importlib.import_module("_lib.milestone")
 
 
 @pytest.fixture(scope="module")
@@ -58,33 +64,33 @@ def issue_types() -> dict:
 # --- close-trigger resolution ----------------------------------------
 
 
-def test_parse_close_trigger_reads_marker(cm) -> None:
-    assert cm._parse_close_trigger("Close trigger: content-based\n\nbody") == "content-based"
-    assert cm._parse_close_trigger("Close trigger: date-based") == "date-based"
-    assert cm._parse_close_trigger("Close trigger: either\n") == "either"
+def test_parse_close_trigger_reads_marker() -> None:
+    assert ms.parse_close_trigger("Close trigger: content-based\n\nbody") == "content-based"
+    assert ms.parse_close_trigger("Close trigger: date-based") == "date-based"
+    assert ms.parse_close_trigger("Close trigger: either\n") == "either"
 
 
-def test_parse_close_trigger_absent_returns_none(cm) -> None:
-    assert cm._parse_close_trigger("Just a plain description") is None
-    assert cm._parse_close_trigger("") is None
+def test_parse_close_trigger_absent_returns_none() -> None:
+    assert ms.parse_close_trigger("Just a plain description") is None
+    assert ms.parse_close_trigger("") is None
     # A non-first-line marker does not count (DEC-016: first line).
-    assert cm._parse_close_trigger("intro\nClose trigger: date-based") is None
+    assert ms.parse_close_trigger("intro\nClose trigger: date-based") is None
 
 
-def test_infer_close_trigger_uses_due_date(cm) -> None:
-    assert cm._infer_close_trigger("2026-07-01T23:59:59Z") == "date-based"
-    assert cm._infer_close_trigger(None) == "content-based"
-    assert cm._infer_close_trigger("") == "content-based"
+def test_infer_close_trigger_uses_due_date() -> None:
+    assert ms.infer_close_trigger("2026-07-01T23:59:59Z") == "date-based"
+    assert ms.infer_close_trigger(None) == "content-based"
+    assert ms.infer_close_trigger("") == "content-based"
 
 
-def test_resolve_close_trigger_marker_wins_over_inference(cm) -> None:
+def test_resolve_close_trigger_marker_wins_over_inference() -> None:
     due = "2026-07-01T00:00:00Z"
     # Marker present → not inferred, even with a due date.
-    assert cm._resolve_close_trigger("Close trigger: content-based", due) == (
+    assert ms.resolve_close_trigger("Close trigger: content-based", due) == (
         "content-based", False,
     )
     # No marker → inferred from the due date.
-    assert cm._resolve_close_trigger("no marker here", due) == ("date-based", True)
+    assert ms.resolve_close_trigger("no marker here", due) == ("date-based", True)
 
 
 # --- decision policy -------------------------------------------------
@@ -167,12 +173,16 @@ def test_compose_close_description_is_idempotent(cm) -> None:
 # --- milestone → child resolution (native + textual union) -----------
 
 
-def _patch_issue_list(monkeypatch, cm, rows) -> None:
-    """Stub gh_run so _gh_list_milestone_children sees a fixed issue list."""
-    proc = MagicMock()
-    proc.returncode = 0
-    proc.stdout = __import__("json").dumps(rows)
-    monkeypatch.setattr(cm, "gh_run", lambda *a, **k: proc)
+def _patch_issue_list(
+    monkeypatch: pytest.MonkeyPatch, rows: list[dict[str, Any]], *, complete: bool = True
+) -> None:
+    """Stub the containment seam's corpus fetch, which list_milestone_children
+    reads the issues through, with a fixed issue list."""
+
+    def fetch(_config: object, **_kwargs: object) -> object:
+        return containment.IssueCorpus(rows=tuple(rows), complete=complete)
+
+    monkeypatch.setattr(containment, "fetch_issue_corpus", fetch)
 
 
 def _row(number, state, *, title="[EPIC] X", body="", milestone=None):
@@ -185,44 +195,74 @@ def _row(number, state, *, title="[EPIC] X", body="", milestone=None):
     }
 
 
-def test_children_resolved_via_native_field(cm, monkeypatch, issue_types) -> None:
-    _patch_issue_list(monkeypatch, cm, [
-        _row(10, "CLOSED", milestone={"number": 6}),
-        _row(11, "OPEN", milestone={"number": 99}),
-    ])
-    children = cm._gh_list_milestone_children(6, "Milestone 6: Sprint", {}, issue_types)
+def test_children_resolved_via_native_field(
+    monkeypatch: pytest.MonkeyPatch, issue_types: dict[str, Any]
+) -> None:
+    _patch_issue_list(
+        monkeypatch,
+        [
+            _row(10, "CLOSED", milestone={"number": 6}),
+            _row(11, "OPEN", milestone={"number": 99}),
+        ],
+    )
+    children = ms.list_milestone_children(6, "Milestone 6: Sprint", {}, issue_types)
     assert [c["number"] for c in children] == [10]
     assert children[0]["type"] == "epic"
     assert children[0]["state"] == "closed"
 
 
-def test_children_resolved_via_textual_ref(cm, monkeypatch, issue_types) -> None:
+def test_children_resolved_via_textual_ref(
+    monkeypatch: pytest.MonkeyPatch, issue_types: dict[str, Any]
+) -> None:
     body = "Milestone: [#6](../milestone/6)\n\n## Acceptance criteria\n"
-    _patch_issue_list(monkeypatch, cm, [
-        _row(20, "OPEN", body=body),
-        _row(21, "OPEN", body="Milestone: [#7](../milestone/7)"),
-    ])
-    children = cm._gh_list_milestone_children(6, "Milestone 6: Sprint", {}, issue_types)
+    _patch_issue_list(
+        monkeypatch,
+        [
+            _row(20, "OPEN", body=body),
+            _row(21, "OPEN", body="Milestone: [#7](../milestone/7)"),
+        ],
+    )
+    children = ms.list_milestone_children(6, "Milestone 6: Sprint", {}, issue_types)
     assert [c["number"] for c in children] == [20]
 
 
-def test_children_union_dedups_and_sorts(cm, monkeypatch, issue_types) -> None:
+def test_children_union_dedups_and_sorts(
+    monkeypatch: pytest.MonkeyPatch, issue_types: dict[str, Any]
+) -> None:
     body = "Milestone: [#6](../milestone/6)"
-    _patch_issue_list(monkeypatch, cm, [
-        _row(30, "CLOSED", body=body, milestone={"number": 6}),
-        _row(12, "CLOSED", milestone={"number": 6}),
-    ])
-    children = cm._gh_list_milestone_children(6, "Milestone 6: Sprint", {}, issue_types)
+    _patch_issue_list(
+        monkeypatch,
+        [
+            _row(30, "CLOSED", body=body, milestone={"number": 6}),
+            _row(12, "CLOSED", milestone={"number": 6}),
+        ],
+    )
+    children = ms.list_milestone_children(6, "Milestone 6: Sprint", {}, issue_types)
     # Present in both substrates → counted once; sorted by number.
     assert [c["number"] for c in children] == [12, 30]
 
 
-def test_children_gh_failure_returns_none(cm, monkeypatch, issue_types) -> None:
-    proc = MagicMock()
-    proc.returncode = 1
-    proc.stderr = "boom"
-    monkeypatch.setattr(cm, "gh_run", lambda *a, **k: proc)
-    assert cm._gh_list_milestone_children(6, "t", {}, issue_types) is None
+def test_children_gh_failure_returns_none(
+    monkeypatch: pytest.MonkeyPatch, issue_types: dict[str, Any]
+) -> None:
+    def failed_fetch(_config: object, **_kwargs: object) -> None:
+        return None
+
+    monkeypatch.setattr(containment, "fetch_issue_corpus", failed_fetch)
+    assert ms.list_milestone_children(6, "t", {}, issue_types) is None
+
+
+def test_children_refuse_a_truncated_issue_list(
+    monkeypatch: pytest.MonkeyPatch,
+    issue_types: dict[str, Any],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A list that reached the seam's ceiling may be missing an open child, so
+    it is refused rather than answered from — the list is what decides whether
+    the Milestone may close."""
+    _patch_issue_list(monkeypatch, [_row(10, "CLOSED", milestone={"number": 6})], complete=False)
+    assert ms.list_milestone_children(6, "t", {}, issue_types) is None
+    assert "ceiling" in capsys.readouterr().err
 
 
 # --- gh mutation routes through the validated _lib seam ---------------
@@ -273,8 +313,12 @@ def _prime_main(monkeypatch, cm, *, milestone, children):
     monkeypatch.setattr(cm, "_read_yaml", lambda path, loader: {
         "types": {"epic": {"title_prefix": "EPIC", "title_case": "upper"}}
     })
-    monkeypatch.setattr(cm, "_gh_get_milestone", lambda n, config: milestone)
-    monkeypatch.setattr(cm, "_gh_list_milestone_children", lambda n, t, config, types, classification=None: children)
+    monkeypatch.setattr(cm, "fetch_milestone", lambda n, config: milestone)
+    monkeypatch.setattr(
+        cm,
+        "list_milestone_children",
+        lambda n, t, config, types, classification=None: children,
+    )
     close_mock = MagicMock(return_value=True)
     monkeypatch.setattr(cm, "_gh_close_milestone", close_mock)
     return close_mock
@@ -369,8 +413,9 @@ def test_main_already_closed_is_noop(cm, monkeypatch) -> None:
 #
 # time-containers.yaml's rollforward_behaviour says a date-based close moves
 # its open children to the next Milestone; close-milestone does not do that.
-# These tests fake gh at the gh_run seam and record every call, so they pin
-# the whole effect of a close: one write, the Milestone's own PATCH. If
+# These tests fake gh at every gh_run seam a close goes through and record
+# every call, so they pin the whole effect of a close: one write, the
+# Milestone's own PATCH. If
 # rollforward is ever automated they fail — update the pm README's "Closing a
 # Milestone never moves its open children" paragraph along with them.
 
@@ -391,7 +436,12 @@ def _record_gh(
     milestone: dict[str, object],
     rows: list[dict[str, object]],
 ) -> list[list[str]]:
-    """Fake gh_run: answer the milestone GET and the issue list, record every call."""
+    """Fake gh_run: answer the milestone GET and the issue list, record every call.
+
+    Faked in the script, where the close's PATCH runs, and in the `_lib`
+    modules it reads the Milestone (`_lib.milestone`) and its children (the
+    containment seam) through, so no call escapes the record.
+    """
     calls: list[list[str]] = []
 
     def fake_gh_run(
@@ -405,7 +455,8 @@ def _record_gh(
             stdout = json.dumps(milestone)
         return subprocess.CompletedProcess(args, 0, stdout=stdout, stderr="")
 
-    monkeypatch.setattr(cm, "gh_run", fake_gh_run)
+    for module in (cm, ms, containment):
+        monkeypatch.setattr(module, "gh_run", fake_gh_run)
     return calls
 
 

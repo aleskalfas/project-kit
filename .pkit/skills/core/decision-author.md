@@ -121,5 +121,5 @@ The record lands as `proposed`. Acceptance is a separate gesture (status flip + 
 
 ## Variations
 
-- **Refining an existing accepted record** — edit the record in place. Git history is the change log; the spec does not duplicate it inside the record. Don't use this skill for refinements that don't introduce a new decision.
-- **Superseding an existing record** — set `supersedes: COR-NNN` in the new record's frontmatter; the superseded record gets a *Superseded by …* line at the top of its body. This skill handles the superseding record's authoring; the in-place edit on the superseded record is a separate step.
+- **Refining an existing accepted record** — not this skill's work: this skill authors new records. A refinement that introduces no new decision is an edit in place, made as `.pkit/decisions/README.md` → "Refining an accepted record" says.
+- **Superseding an existing record** — this skill authors the superseding record; set `supersedes: COR-NNN` in its frontmatter. The edit to the superseded record is a separate step, made as `.pkit/decisions/README.md` → "Refining an accepted record" says.

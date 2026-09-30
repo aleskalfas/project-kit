@@ -13,7 +13,7 @@ pkit:
         - .github/workflows/release-tag.yml
       record: [COR-010, COR-041, PRJ-002, PRJ-004, ADR-040]
     revalidated:
-      at: 2026-09-30T17:34:54Z
+      at: 2026-09-30T21:11:56Z
       outcome: updated
 ---
 
@@ -264,13 +264,25 @@ Two optional fields on a changeset drive the format:
 - **`pr`** — the PR reference for the `([#N])` link. It is **optional and
   captured at author time**: the release step does *not* derive it, because
   squash / rebase makes the commit→PR mapping unreliable (the same reason
-  release tagging is `.pkit/VERSION`-driven, not message-driven). The value is
-  used **verbatim** as the link target (the shipped generator is
-  project-neutral and cannot synthesise a repo URL), and its trailing number
-  is the `#N` label — so **give a full PR URL for a live link**; a bare number
-  still labels the entry but resolves to a non-linking reference. **When `pr`
-  is absent the entry simply carries no link** — the format degrades
-  gracefully.
+  release tagging is `.pkit/VERSION`-driven, not message-driven). It takes
+  **one of two forms**, and `pkit release lint` refuses any other (`#465`,
+  `PR 465`, a URL with no number):
+  - **The pull request's number** (`465`, quoted or not) — the entry is
+    labelled `[#465]` and linked to that pull request of the repository the
+    release runs in: `https://github.com/<owner>/<repo>/pull/465`, the owner
+    and repository read from the **`origin` remote's URL** (any form git
+    records — `https://`, `git@github.com:`, `ssh://`; credentials in the URL
+    are never copied into the link). When the address cannot be derived — no
+    `origin`, or an `origin` not on `github.com` — the entry **keeps its
+    `([#465])` label and no reference line is written**, so it reads as plain
+    text rather than a broken link, and `pkit release apply` warns how many
+    numbers it left unlinked.
+  - **A full URL** (`https://…/pull/465`) — used **verbatim** as the link
+    target, its trailing number the `#N` label. Use it for a pull request in
+    another repository, or where the repository is not on GitHub.
+
+  **When `pr` is absent the entry simply carries no link** — the format
+  degrades gracefully.
 
 Both may be given **top-level** in a hand-written changeset or under changie's
 **`custom:`** map (what `changie new` writes); the parser reads either. A
@@ -282,7 +294,7 @@ component: backbone
 kind: minor
 body: pkit now runs the version each project pins, so one install works everywhere.
 category: Changed
-pr: https://github.com/aleskalfas/project-kit/pull/465
+pr: 465
 ```
 
 ## The release step — `pkit release`
@@ -678,16 +690,20 @@ shared aggregator (`scripts/check.sh`), which both the local pre-push hook and
 
 **What it checks (objective only):**
 
-1. **Changeset category** — when a changeset carries a `category`, it must be
-   one of the Keep-a-Changelog groups (`Added` · `Changed` · `Deprecated` ·
-   `Removed` · `Fixed` · `Security`). Absent is fine (it defaults at render);
-   an *unknown* category fails.
+1. **Changeset category and `pr`** — when a changeset carries a `category`, it
+   must be one of the Keep-a-Changelog groups (`Added` · `Changed` ·
+   `Deprecated` · `Removed` · `Fixed` · `Security`). Absent is fine (it
+   defaults at render); an *unknown* category fails. When it carries a `pr`, it
+   must be the pull request's number (`465`) or an `http(s)://` URL ending in
+   it — the two forms the renderer links (see "The changeset fields behind it"
+   above); anything else (`#465`, `PR 465`, `0465`, a URL with no number)
+   fails. Absent is fine.
 2. **Changeset body** — for a version-moving changeset (not `none`), the body
    must be non-empty, **not solely a bare reference** (`#478` / `ADR-013` /
    `DEC-001` / `COR-010` / a bare URL — the objective proxy for "no
    jargon-only entry"), start capitalized, and end with a period. A `none`
    changeset produces no changelog line, so its body is not linted (its
-   category still is).
+   category and `pr` still are).
 3. **Changeset floor field** — a `requires_backbone` field must say `release`
    (in a release that ships a release version of the backbone) or name a
    release version the tree records (a `CHANGELOG.md` release heading, or the
