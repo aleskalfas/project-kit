@@ -282,6 +282,44 @@ def test_the_container_is_not_content(repo: AdopterRepo) -> None:
     assert _summary(_run(repo)) == []
 
 
+def _crlf(text: str) -> str:
+    return text.replace("\n", "\r\n")
+
+
+def test_a_change_of_line_endings_alone_is_no_change_of_content(repo: AdopterRepo) -> None:
+    """The target's text as it was, only its line endings changed: no dependant is asked,
+    and an `updated` revalidation has no content change behind it (COR-050 point 5)."""
+    _start(repo, _chain())
+    notes = _chain()["docs/a-engine.md"]
+    repo.commit("the engine notes, with CRLF", {"docs/a-engine.md": _crlf(notes)})
+    assert _summary(_run(repo)) == []
+
+    updated = document("engine-notes", anchors={"path": ["src/core/**"]}, at=T2, outcome="updated")
+    repo.commit("and revalidated as updated", {"docs/a-engine.md": _crlf(updated)})
+    result = _run(repo)
+    assert _summary(result) == [("bump", "docs/a-engine.md", None, None)]
+    assert "`outcome: updated`, but the content did not change" in result.findings[0].message
+
+
+def test_a_working_tree_checked_out_with_crlf_is_read_as_git_s_objects_are(
+    repo: AdopterRepo,
+) -> None:
+    """`core.autocrlf=true`: the working tree holds `\\r\\n` and the base `\\n`, and the
+    head's answers read as they would with `\\n` — here, `unchanged` with its reason."""
+    _start(repo, {"docs/guide.md": guide()})
+    repo.git("config", "core.autocrlf", "true")
+    repo.commit("change the CLI", {"src/cli/main.py": "print('cli v2')\n"})
+    because = "a refactor: nothing the guide says moved"
+    repo.write({"docs/guide.md": _crlf(guide(at=T2, because=because))})
+    (finding,) = _run(repo).findings
+    assert (finding.kind, finding.location, finding.answer) == (
+        fc.FindingKind.ANSWERED,
+        "docs/guide.md",
+        fc.Answer.UNCHANGED,
+    )
+    assert because in finding.message
+
+
 # --- new artefacts, the anchor list, moves ------------------------------------------------
 
 

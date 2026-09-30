@@ -15,7 +15,7 @@ from __future__ import annotations
 import copy
 import json
 import random
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -614,6 +614,124 @@ def test_a_reason_for_no_anchors_beside_anchors_is_not_written_over(repo: Adopte
     with pytest.raises(fw.FrictionWriteError, match="stands beside anchors"):
         fw.plan_revalidate(repo.root, "guide", outcome="updated")
     assert _read(repo) == beside
+
+
+# --- line endings ------------------------------------------------------------------------------
+
+RULE_SET_PATH = "docs/rule-sets/cmn.md"
+
+RULE_SET = (
+    "---\n"
+    "name: cmn\n"
+    "rules:\n"
+    "  RS-CMN-001:\n"
+    "    title: Name things\n"
+    "    pkit:\n"
+    "      friction:\n"
+    "        anchors: {record: [COR-050]}\n"
+    "---\n\n## RS-CMN-001 — Name things\n\nUse names.\n"
+)
+
+
+def _crlf(text: str) -> str:
+    """`text` as a clone with `core.autocrlf=true` checks it out: every line ending `\\r\\n`."""
+    return text.replace("\n", "\r\n")
+
+
+#: Each writer's plan, by its command's name.
+_PLANNERS: dict[str, Callable[..., fw.Plan]] = {
+    "revalidate": fw.plan_revalidate,
+    "defer": fw.plan_defer,
+    "record-status": fw.plan_record_status,
+}
+
+
+@pytest.mark.parametrize(
+    ("rel", "text", "command", "reference", "options"),
+    [
+        pytest.param(
+            GUIDE_PATH,
+            GUIDE,
+            "revalidate",
+            "guide",
+            {"outcome": "unchanged", "because": "the change is internal", "now": NOW},
+            id="document-revalidate",
+        ),
+        pytest.param(
+            GUIDE_PATH,
+            GUIDE,
+            "defer",
+            "guide",
+            {"anchor": "src/cli/**", "reason": "later"},
+            id="document-defer",
+        ),
+        pytest.param(GUIDE_PATH, GUIDE, "record-status", "guide", {}, id="document-record-status"),
+        pytest.param(
+            "docs/rules.md",
+            COLLECTION,
+            "revalidate",
+            "docs/rules.md#beta",
+            {"outcome": "updated", "now": NOW},
+            id="entry-revalidate",
+        ),
+        pytest.param(
+            RULE_SET_PATH,
+            RULE_SET,
+            "defer",
+            "RS-CMN-001",
+            {"anchor": "COR-050", "reason": "amended"},
+            id="rule-defer",
+        ),
+        pytest.param(
+            RULE_SET_PATH,
+            RULE_SET,
+            "revalidate",
+            "RS-CMN-001",
+            {"outcome": "unchanged", "because": "the record's amendment is editorial", "now": NOW},
+            id="rule-revalidate",
+        ),
+    ],
+)
+def test_a_crlf_file_is_written_back_with_crlf_byte_for_byte(
+    repo: AdopterRepo,
+    rel: str,
+    text: str,
+    command: str,
+    reference: str,
+    options: dict[str, Any],
+) -> None:
+    """The write a writer plans for the `\\n` file, planned for its `\\r\\n` twin: the
+    same key, the same lines, and every line ending `\\r\\n` — each other byte as it was."""
+    _put(repo, text, rel)
+    repo.commit("base", files=None, date=HISTORY_EPOCH)  # record-status reads HEAD
+    lf = _PLANNERS[command](repo.root, reference, **options)
+    assert lf.changes
+
+    _put(repo, _crlf(text), rel)
+    crlf = _PLANNERS[command](repo.root, reference, **options)
+    fw.write(crlf)
+
+    assert _read(repo, rel) == _crlf(lf.after)
+    assert crlf.before == _crlf(text)
+    assert (crlf.target, crlf.first_line, crlf.last_line, crlf.items) == (
+        lf.target,
+        lf.first_line,
+        lf.last_line,
+        lf.items,
+    )
+    assert _validation_errors(repo) == []
+
+
+def test_a_file_mixing_line_endings_is_refused_and_left_as_it_is(repo: AdopterRepo) -> None:
+    mixed = _crlf(GUIDE).replace("\r\n", "\n", 1)
+    _put(repo, mixed)
+    for plan in (
+        lambda: fw.plan_defer(repo.root, "guide", anchor="src/cli/**", reason="later"),
+        lambda: fw.plan_revalidate(repo.root, "guide", outcome="updated"),
+    ):
+        with pytest.raises(fw.FrictionWriteError, match=f"{GUIDE_PATH} mixes line endings"):
+            plan()
+    assert _read(repo) == mixed
 
 
 # --- property: what the writers write reads back, and validates -----------------------------

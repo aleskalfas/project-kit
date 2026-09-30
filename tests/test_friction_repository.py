@@ -528,6 +528,14 @@ def test_the_container_is_not_content(timeline: Timeline) -> None:
     assert [s[0] for s in _summary(_run(timeline))] == ["deferred"]
 
 
+def test_a_change_of_line_endings_alone_is_no_change_of_content(timeline: Timeline) -> None:
+    """The target committed again with `\\r\\n`, its text as it was: no dependant is stale."""
+    timeline.start(_chain())
+    crlf = _chain()["docs/a-engine.md"].replace("\n", "\r\n")
+    timeline.commit("the engine notes, with CRLF", {"docs/a-engine.md": crlf})
+    assert _summary(_run(timeline)) == []
+
+
 def test_findings_run_upstream_first_along_artefact_anchors(timeline: Timeline) -> None:
     timeline.start(
         {

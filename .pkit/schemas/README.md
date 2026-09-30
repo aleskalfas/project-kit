@@ -19,7 +19,7 @@ pkit:
         - src/project_kit/working_tree.py
       record: [COR-018, COR-019, COR-020, COR-023, COR-029, COR-048, COR-050, COR-051, COR-052, COR-053, ADR-056, ADR-057]
     revalidated:
-      at: 2026-09-30T14:27:02Z
+      at: 2026-09-30T18:39:11Z
       outcome: updated
 ---
 
@@ -447,6 +447,7 @@ Unknown keys anywhere in the block are refused. The block carries no version; it
 - *a held document whose front matter does not parse* (`held-unparsable-front-matter`) — against the document: a friction block in it could not be looked for, so the typo is never a hiding place; reported whenever declared, dormant or not;
 - *a friction block in a held document* (`held-friction-block`) — wherever it is written in the front matter, the document's own, an entry's, a rule's under `rules` or deeper, against the document and a JSON Pointer to the block, naming the folder that holds it: a held document is not an artefact, so nothing reads its anchors or its revalidation; reported whenever declared, dormant or not;
 - *unparsable front matter* in a place — reported whenever places are declared, and it keeps the pass awake, since the check never skips an artefact it cannot parse: a YAML typo in the only container-carrying file is an error, not silence;
+- *mixed line endings* (`mixed-line-endings`) — a file the walk reads, a rule-set file's included, written with more than one kind of line ending, against the file: it is read with every one as `\n`, so a carriage return that is part of a value would be read as a line break, and the friction writers refuse it. A file written with one, `\r\n` included, is read as the same text with `\n` is (the CLI README, "Friction checks");
 - *a malformed block* — the container schema's or the container rule's errors, against `path` (a document) or `path#id` (an entry) and a JSON Pointer into the block;
 - *`unanchored-because` beside anchors* (`unanchored-beside-anchors`) — the reason an artefact has none, in a block that lists some: the two contradict each other, so remove one. The schema admits the key alone; the pair is the pass's own finding, against the key's pointer, for a rule of a rule set too;
 - *a dangling deferral* — a `deferred[].anchor` matching, by kind and value, no anchor of the artefact; the pointer carries the entry's index as written;
