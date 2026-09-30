@@ -1,0 +1,16 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `done-work` on an issue that never reached Review no longer ends on a false
+  warning (#1162). A Task whose PR was opened without `review-work` is still
+  In Progress when `done-work` runs, and `workflow.yaml` declares no In
+  Progress → Done for a Task, so the `move-issue --to done` after the merge
+  was refused. `done-work` then warned "PR merged but move-issue exited 2" and
+  advised a re-run that would fail the same way, while the pr-merge close went
+  on to set `state:done`, and the run exited 2. `done-work` now moves such an
+  issue to Review as the last step before the merge, so the merge makes the
+  declared Review → Done as it does for an issue already in Review. Both moves
+  go through `move-issue`. If the move to Review fails, nothing is merged. An
+  issue already in Review is handled as before.

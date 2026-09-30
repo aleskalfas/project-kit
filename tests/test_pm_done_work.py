@@ -7,7 +7,10 @@ import importlib.util
 import json
 import os
 import sys
+from dataclasses import dataclass
 from pathlib import Path
+from types import ModuleType
+from typing import Any, cast
 
 import pytest
 
@@ -1522,3 +1525,329 @@ def test_both_closing_issues_are_closed_and_cascaded_by_the_real_close_issue(
         assert ["issue", "close", number, "--reason", "completed"] in calls
         assert f"[ok] closed #{number} (pr-merge through PR #496, completed)." in out
     assert out.count("[cascade] parents to check for eligibility: #7") == 2
+
+
+# ---- an issue that never reached Review (#1162) -------------------------
+#
+# workflow.yaml declares a Task's move to done from Review — the merge's move —
+# and no In Progress → Done. A Task whose PR was opened without `review-work`
+# is still In Progress when done-work runs, so `move-issue --to done` after the
+# merge refused, and done-work warned about a state that did not exist while
+# the pr-merge close went on to set state:done. done-work now moves such an
+# issue to Review just before the merge, so each move it makes is a declared
+# one. The tests read the real schemas: the transition table decides.
+
+
+_Issue = dict[str, Any]
+
+
+def _task(state_label: str, *, state: str = "OPEN") -> _Issue:
+    """A Task as `gh issue view` returns it: a parent line, ticked criteria."""
+    return {
+        "title": "[Task] land the widget",
+        "body": (
+            "Feature: #7\n\n## What\n\nLand the widget.\n\n"
+            "## Acceptance criteria\n\n- [x] The widget lands.\n"
+        ),
+        "state": state,
+        "labels": [{"name": state_label}],
+        "milestone": None,
+    }
+
+
+_LEAD_IN_CASES: list[tuple[_Issue | None, tuple[str, str] | None]] = [
+    (_task("state:in-progress"), ("in-progress", "review")),
+    (_task("state:review"), None),
+    (_task("state:review", state="CLOSED"), None),
+    (None, None),
+    ({**_task("state:in-progress"), "title": "no type prefix"}, None),
+    # A container may move In Progress → Done directly; nothing leads in.
+    ({**_task("state:in-progress"), "title": "[Feature] widgets"}, None),
+]
+
+
+@pytest.mark.parametrize(
+    ("issue", "expected"),
+    _LEAD_IN_CASES,
+    ids=[
+        "task-in-progress", "task-in-review", "closed", "unread",
+        "untyped", "container-in-progress",
+    ],
+)
+def test_the_lead_in_is_read_from_the_transition_table(
+    dw: ModuleType, issue: _Issue | None, expected: tuple[str, str] | None,
+) -> None:
+    from ruamel.yaml import YAML
+
+    lead_in = dw._lead_in_to_done(issue, CAPABILITY_ROOT_DW, YAML(typ="safe"))
+    if expected is None:
+        assert lead_in is None
+    else:
+        assert (lead_in.from_state, lead_in.to_state) == expected
+
+
+def _wire_lead_in(
+    dw: ModuleType, monkeypatch: pytest.MonkeyPatch, primary: _Issue,
+    *, move_rc: int = 0,
+) -> dict[str, Any]:
+    """Wire main() with the real schemas and a move stub that records targets."""
+    calls = cast(
+        "dict[str, Any]",
+        _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP, issues={42: primary}),
+    )
+
+    def real_capability_root(arg: Path | None) -> Path:
+        return CAPABILITY_ROOT_DW
+
+    monkeypatch.setattr(dw, "resolve_capability_root", real_capability_root)
+
+    def recording_move(issue_number: int, target: str, cap_root_arg: Path | None) -> int:
+        calls["order"].append(("moved", target))
+        return move_rc if target == "review" else 0
+
+    monkeypatch.setattr(dw, "_invoke_move_issue", recording_move)
+    return calls
+
+
+def test_an_in_progress_issue_moves_to_review_before_the_merge(
+    dw: ModuleType, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str],
+) -> None:
+    calls = _wire_lead_in(dw, monkeypatch, _task("state:in-progress"))
+    rc: int = _run_main(dw, monkeypatch, ["42", "--yes"])
+    captured = capsys.readouterr()
+    assert rc == 0
+    assert calls["order"] == [
+        ("moved", "review"),
+        ("merged", None),
+        ("moved", "done"),
+        ("closed", 42),
+        ("remote_delete", "fix/42-slug"),
+        ("local_cleanup", "fix/42-slug"),
+    ]
+    assert "lead-in: in-progress → review before the merge" in captured.out
+    assert "[warn]" not in captured.err
+
+
+def test_an_issue_in_review_makes_only_the_move_to_done(
+    dw: ModuleType, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str],
+) -> None:
+    calls = _wire_lead_in(dw, monkeypatch, _task("state:review"))
+    rc: int = _run_main(dw, monkeypatch, ["42", "--yes"])
+    captured = capsys.readouterr()
+    assert rc == 0
+    assert calls["order"][:3] == [("merged", None), ("moved", "done"), ("closed", 42)]
+    assert "lead-in" not in captured.out
+
+
+def test_a_failed_move_to_review_stops_the_run_before_the_merge(
+    dw: ModuleType, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str],
+) -> None:
+    calls = _wire_lead_in(dw, monkeypatch, _task("state:in-progress"), move_rc=3)
+    rc: int = _run_main(dw, monkeypatch, ["42", "--yes"])
+    assert rc == 3
+    assert calls["merged"] is False
+    assert calls["closed"] == []
+    assert calls["order"] == [("moved", "review")]
+    err = capsys.readouterr().err
+    assert "moving #42 in-progress → review ahead of the merge" in err
+    assert "PR #496 was NOT merged" in err
+
+
+def test_the_dry_run_names_the_move_to_review_and_makes_none(
+    dw: ModuleType, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str],
+) -> None:
+    calls = _wire_lead_in(dw, monkeypatch, _task("state:in-progress"))
+    rc: int = _run_main(dw, monkeypatch, ["42", "--dry-run"])
+    assert rc == 0
+    assert calls["order"] == []
+    assert "would post bypass audit (if any), move #42 to review, squash-merge" in (
+        capsys.readouterr().out
+    )
+
+
+# A `gh` that keeps what it is told: label edits, closes and comments land in
+# the state file, so a test reads the end state rather than the calls. Like the
+# live case in #1162, the merge does not close the issue on its own.
+_STATEFUL_FAKE_GH = """\
+import json, os, sys
+args = sys.argv[1:]
+with open(os.environ["FAKE_GH_LOG"], "a", encoding="utf-8") as log:
+    log.write(json.dumps(args) + "\\n")
+path = os.environ["FAKE_GH_STATE"]
+with open(path, encoding="utf-8") as fh:
+    state = json.load(fh)
+
+def option(name):
+    return args[args.index(name) + 1] if name in args else None
+
+if args[:1] == ["issue"] and len(args) > 2:
+    issue = state["issues"].get(args[2])
+    if issue is None:
+        sys.exit(1)
+    if args[1] == "view":
+        if option("--json") == "comments":
+            print(json.dumps({"comments": issue.get("comments", [])}))
+        else:
+            print(json.dumps(issue))
+        sys.exit(0)
+    if args[1] == "edit":
+        names = [label["name"] for label in issue["labels"]]
+        names = [n for n in names if n != option("--remove-label")]
+        if option("--add-label") and option("--add-label") not in names:
+            names.append(option("--add-label"))
+        issue["labels"] = [{"name": n} for n in names]
+    elif args[1] == "close":
+        issue["state"] = "CLOSED"
+    elif args[1] == "comment":
+        issue.setdefault("comments", []).append({
+            "body": option("--body"), "viewerDidAuthor": True,
+            "lastEditedAt": None, "author": {"login": "octocat"},
+        })
+    with open(path, "w", encoding="utf-8") as fh:
+        json.dump(state, fh)
+    sys.exit(0)
+if args[:2] == ["pr", "view"]:
+    print(json.dumps(state["pr"]))
+    sys.exit(0)
+if args[:1] == ["api"]:
+    print("octocat")
+sys.exit(0)
+"""
+
+# The process engine as a project without it sees it: its position read is
+# unavailable (move-issue then reads the position itself, from the same `gh`),
+# and it accepts every move it is handed.
+_FAKE_PKIT = """\
+import sys
+sys.exit(1 if sys.argv[1:3] == ["process", "status"] else 0)
+"""
+
+
+@dataclass(frozen=True)
+class _EndToEnd:
+    """What one end-to-end done-work run left behind."""
+
+    rc: int
+    out: str
+    err: str
+    #: Issue #42 as the fake `gh` holds it after the run.
+    end: _Issue
+    #: Every `gh` call, in order, and how many had been made when the merge ran.
+    calls: list[list[str]]
+    calls_at_merge: int
+
+    def state_label_edits(self) -> list[list[str]]:
+        return [c for c in self.calls if c[:3] == ["issue", "edit", "42"]]
+
+    def assert_closed_done_one_comment_no_warning(self) -> None:
+        assert self.rc == 0, self.out + self.err
+        assert self.end["state"] == "CLOSED"
+        assert [label["name"] for label in self.end["labels"]] == ["state:done"]
+        assert len(self.end["comments"]) == 1
+        # The comment records the merge as what moved the issue to done.
+        assert "completed by merged PR #496" in self.end["comments"][0]["body"]
+        assert "[warn]" not in self.err
+        assert _script_error_lines(self.err) == []
+
+
+def _run_done_work_end_to_end(
+    dw: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    capfd: pytest.CaptureFixture[str], primary_label: str,
+) -> _EndToEnd:
+    """done-work on #42, carrying `primary_label`, with the REAL move-issue and
+    close-issue run against the stateful fake `gh`."""
+    import shutil
+
+    cap_root = tmp_path / ".pkit" / "capabilities" / "project-management"
+    cap_root.mkdir(parents=True)
+    _mark_bootstrapped(cap_root)
+    shutil.copytree(CAPABILITY_ROOT_DW / "schemas", cap_root / "schemas")
+
+    feature = {
+        "title": "[Feature] widgets", "state": "OPEN", "milestone": None,
+        "labels": [{"name": "state:in-progress"}],
+        "body": "## What\n\nw\n\n## Acceptance criteria\n\n- [ ] shipped\n",
+    }
+    state = {
+        "issues": {"42": _task(primary_label), "7": feature},
+        "pr": {"number": 496, "state": "MERGED",
+               "mergedAt": "2026-09-30T10:00:00Z", "url": "u"},
+    }
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    for name, script in (("gh", _STATEFUL_FAKE_GH), ("pkit", _FAKE_PKIT)):
+        fake = bin_dir / name
+        fake.write_text(f"#!{sys.executable}\n{script}", encoding="utf-8")
+        fake.chmod(0o755)
+    state_file = tmp_path / "state.json"
+    state_file.write_text(json.dumps(state), encoding="utf-8")
+    log = tmp_path / "gh.log"
+    log.touch()
+    monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}")
+    monkeypatch.setenv("FAKE_GH_STATE", str(state_file))
+    monkeypatch.setenv("FAKE_GH_LOG", str(log))
+    # No session anchor: the foreign-repo guard cannot evaluate and stands aside.
+    monkeypatch.delenv("CLAUDE_PROJECT_DIR", raising=False)
+
+    real_move, real_close = dw._invoke_move_issue, dw._invoke_close_issue
+    _wire_main_seams(
+        dw, monkeypatch, rollup=_GREEN_ROLLUP, issues={42: _task(primary_label)},
+    )
+    def staged_capability_root(arg: Path | None) -> Path:
+        return cap_root
+
+    monkeypatch.setattr(dw, "resolve_capability_root", staged_capability_root)
+    monkeypatch.setattr(dw, "_invoke_move_issue", real_move)
+    monkeypatch.setattr(dw, "_invoke_close_issue", real_close)
+    calls_at_merge: list[int] = []
+
+    def merge(pr_number: int, *, pr_title: str, admin: bool, config: dict[str, Any]) -> bool:
+        calls_at_merge.append(len(log.read_text(encoding="utf-8").splitlines()))
+        return True
+
+    monkeypatch.setattr(dw.pr_merge, "squash_merge", merge)
+
+    rc: int = _run_main(
+        dw, monkeypatch, ["42", "--yes", "--capability-root", str(cap_root)],
+    )
+
+    captured = capfd.readouterr()
+    return _EndToEnd(
+        rc=rc,
+        out=captured.out,
+        err=captured.err,
+        end=json.loads(state_file.read_text(encoding="utf-8"))["issues"]["42"],
+        calls=[json.loads(line) for line in log.read_text(encoding="utf-8").splitlines()],
+        calls_at_merge=calls_at_merge[0],
+    )
+
+
+def test_an_in_progress_issue_ends_closed_and_done_with_one_comment_and_no_warning(
+    dw: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    capfd: pytest.CaptureFixture[str],
+) -> None:
+    run = _run_done_work_end_to_end(dw, tmp_path, monkeypatch, capfd, "state:in-progress")
+    run.assert_closed_done_one_comment_no_warning()
+    edits = run.state_label_edits()
+    assert [option for edit in edits for option in edit[3:]] == [
+        "--add-label", "state:review", "--remove-label", "state:in-progress",
+        "--add-label", "state:done", "--remove-label", "state:review",
+    ]
+    # In Progress → Review before the merge, Review → Done after it.
+    assert run.calls.index(edits[0]) < run.calls_at_merge <= run.calls.index(edits[1])
+    assert "[ok] transitioned #42: in-progress → review" in run.out
+    assert "[ok] transitioned #42: review → done" in run.out
+
+
+def test_an_issue_in_review_is_closed_as_before(
+    dw: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    capfd: pytest.CaptureFixture[str],
+) -> None:
+    run = _run_done_work_end_to_end(dw, tmp_path, monkeypatch, capfd, "state:review")
+    run.assert_closed_done_one_comment_no_warning()
+    edits = run.state_label_edits()
+    assert [edit[3:] for edit in edits] == [
+        ["--add-label", "state:done", "--remove-label", "state:review"],
+    ]
+    assert run.calls.index(edits[0]) >= run.calls_at_merge
+    assert "lead-in" not in run.out
