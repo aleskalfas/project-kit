@@ -15,7 +15,7 @@ pkit:
         - .pkit/capabilities/project-management/decisions/**
       record: [COR-017, COR-020, COR-021, COR-023, COR-039, COR-053, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050]
     revalidated:
-      at: 2026-09-30T17:57:52Z
+      at: 2026-09-30T23:14:07Z
       outcome: updated
 ---
 
@@ -223,6 +223,8 @@ claude --agent project-manager "File an EPIC for <outcome>"
 ```
 
 The project-manager walks the methodology end-to-end: picks a title matching the EPIC pattern, fills the body against the template, validates against the body-format and validation-severity schemas, creates the GitHub issue, runs the cascade check.
+
+**How review findings become work.** Four rules keep a review from multiplying the work it reviews, each stated in the procedure where it applies. A follow-up a reviewer produces gets a Milestone only when it blocks that Milestone's work or is a correctness defect in a shipped gate, and otherwise waits ([create-issue](skills/pm/create-issue.md), intent recognition). Tasks whose implementation notes name the same source files are filed with a blocked-by line and built one at a time, while Tasks in different modules run in parallel ([batch-plan](skills/pm/batch-plan.md), the slicing step). `review-pr` runs once CI is green on the head it will review ([transition-state](skills/pm/transition-state.md), the review step). A fix round carries only the findings a reviewer marked blocking, and each advisory is answered in the PR body or filed as a follow-up under the first rule — the builder's side of that is the `software-engineer` agent's, in the software-engineering capability.
 
 #### Issue body — parent-ref first line
 
