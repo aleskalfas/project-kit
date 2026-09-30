@@ -21,7 +21,9 @@ the capability's places put it under the analysis location:
 It writes the anchors DEC-001 point 4 asks for: a use case's actor, and a
 journey's use cases from its steps, beside the paths and records it is given.
 An actor or a term nothing embodies is stamped with the reason instead, its
-`unanchored-because` (point 9). A revalidation record is not an artefact and
+`unanchored-because` (point 9), written in its friction block: the key is the
+core's, which the unanchored measure reads (COR-050 points 1 and 8). A
+revalidation record is not an artefact and
 is stamped by `_lib/revalidation.py`.
 What only a person can write the stamp leaves as the template's placeholders —
 an actor's need, a term's definition, a body's goal and steps — which the
@@ -480,8 +482,6 @@ def _added_entry(target: Path, place: str, kind: str, new_id: str, request: Requ
     name = _title(request)
     entry = {key: value for key, value in example.items() if key != CONTAINER}
     entry["name"] = name
-    if request.unanchored_because:
-        entry[UNANCHORED_BECAUSE] = request.unanchored_because
     entry[CONTAINER] = _container(request, [])
     heading = body.find(f"## {template_id}")
     preamble, section = body[:heading], body[heading:]
@@ -592,7 +592,10 @@ def _section_at(text: str, body: int, kind: str, new_id: str) -> int | None:
 
 def _container(request: Request, artefacts: Sequence[str]) -> dict[str, Any]:
     """The methodology's container: the friction block with the anchors the stamp
-    knows, in the core schema's order; an empty block when it knows none."""
+    knows, in the core schema's order — or, for an actor or a term nothing
+    embodies, the reason it has none, `unanchored-because`, which the core reads
+    and the unanchored measure lists apart (COR-050 points 1 and 8); an empty
+    block when it knows neither."""
     anchors = {
         kind: list(dict.fromkeys(values))
         for kind, values in (
@@ -602,7 +605,10 @@ def _container(request: Request, artefacts: Sequence[str]) -> dict[str, Any]:
         )
         if values
     }
-    return {"friction": {"anchors": anchors} if anchors else {}}
+    block: dict[str, Any] = {"anchors": anchors} if anchors else {}
+    if request.unanchored_because:
+        block[UNANCHORED_BECAUSE] = request.unanchored_because
+    return {"friction": block}
 
 
 def _title(request: Request) -> str:

@@ -12,7 +12,7 @@ pkit:
         - .pkit/capabilities/software-analysis/agents/**
       record: ["software-analysis:DEC-001", COR-049, COR-050, COR-052, COR-053]
     revalidated:
-      at: 2026-09-30T05:38:28Z
+      at: 2026-09-30T07:01:19Z
       outcome: updated
 ---
 
@@ -63,7 +63,7 @@ Create artefacts with the stamp, never by copying a template by hand: it gives e
 | `pkit analysis new journey <slug> --actor <ACT-id> --step <UC-id> --step <UC-id> … [--title <text>]` | `use-case-model/journeys/JRN-NNN-<slug>.md`, its steps anchored |
 | `pkit analysis new revalidation <slug> --change <ref> --trigger <trigger> --outcome <id>=<outcome> … --because <id>=<why> … [--gap "<gap> => <resolution>"]…` | a revalidation record, `revalidations/<date>-<slug>.md` — only one with something to say ("Revalidation records" below) |
 
-Every artefact form also takes `--path <glob>` and `--record <id>`, each repeatable: the code that makes the artefact true and the decisions it relies on, written as its path and record anchors. Without them an actor or term is stamped unanchored — the core reports that, and never fails on it. An actor or term nothing embodies takes `--unanchored-because <why>` instead: the reason is written as its `unanchored-because`, and the stamp refuses it beside `--path` or `--record`.
+Every artefact form also takes `--path <glob>` and `--record <id>`, each repeatable: the code that makes the artefact true and the decisions it relies on, written as its path and record anchors. Without them an actor or term is stamped unanchored — the core reports that, and never fails on it. An actor or term nothing embodies takes `--unanchored-because <why>` instead: the reason is written as `unanchored-because` in its friction block — the core's key (COR-050 point 1), so the core's unanchored measure lists the artefact apart, with its reason, rather than counting it — and the stamp refuses it beside `--path` or `--record`.
 
 - **Ids.** A slug is a word: a lowercase letter, then lowercase letters, digits and hyphens. An actor is `ACT-<slug>` and a term `TERM-<slug>`; the stamp refuses an id already held, withdrawn or not, since an id is never used again. A use case or journey takes the **next free number**: one past the highest the working tree and the default branch hold, and past every number the default branch's history ever gave a file of its place — one deleted since, against the rule, included; when the history's number is the one it follows, the stamp says which file it was given to. A file's number is read from its front matter and from its name (`UC-007-<slug>.md`, as the stamp names it), so a file whose id can't be read still holds its number. The history counts the files the tree reading counts: one `git log` lists the paths ever added under the kind's place, and a path past the tree's highest number counts unless the core's reading at the commit that added it, the place then where it is now, held it as no file of the place — not a Markdown file there, or left out by `friction.exclude` — so a diagram named `UC-800-flow.svg`, or an excluded example, raises nothing, while a Markdown note named `UC-2026-notes.md` held its number while it was there and still does. A file never named after its number, and deleted since, is the one it can't count. In a shallow clone the history stops where the clone does, and the stamp says so; `git fetch --unshallow` reads it all. An actor's or term's id is a slug a person chooses, not a number the stamp gives, and point 3 keeps a withdrawn one in its collection file, where the stamp refuses it — so no history is read for one, and a slug deleted against the rule is not caught. A number has one spelling — three digits below 1000 (`UC-007`), no leading zero from 1000 on (`UC-1000`); the check refuses another (`UC-0007`), and both the stamp and the duplicate check read it as the number it spells, so it is never a second id. The default branch is `--base <ref>`, else `$PKIT_CHECK_BASE`, else `origin/main`; when it names no commit, the stamp numbers from the working tree alone and says so. A number another branch takes after yours is `pkit analysis check-numbers`' to report (below).
 - **What it writes.** The artefact's own fields from its template, its title or name (the slug, capitalised, by default) — a use case's or journey's title in its front matter and in its heading after the id — and the friction block with the anchors the decision asks for: a use case anchors to its actor, and a journey to the use cases of its steps. What only you can write it leaves as the template's placeholders, `<…>` — an actor's needs, a term's definition, a body's goal and steps — and `pkit analysis validate` fails until you have filled each.
@@ -127,7 +127,18 @@ ACT-tester:
 
 **Glossary** (`schemas/term.schema.json`) — the same collection shape, each entry a `name`, a `status`, a one-sentence `definition`, and on a rename the former names, newest first, in `replaces`. The id never changes.
 
-An actor or a term nothing embodies carries `unanchored-because:` — the reason onboarding accepts it unanchored.
+An actor or a term nothing embodies carries `unanchored-because:` in its friction block instead of anchors — the reason onboarding accepts it unanchored (DEC-001 point 9). The key is the core's, not one of the entry's own fields (COR-050 point 1): `pkit friction check --all` lists the artefact apart with its reason and never counts it as unanchored, and `pkit validate` refuses the reason beside anchors.
+
+```yaml
+ACT-sponsor:
+  name: Sponsor
+  status: active
+  needs:
+    - Sees what the project delivers for its funding
+  pkit:
+    friction:
+      unanchored-because: No code or decision embodies it; it funds the project.
+```
 
 **Revalidation record** (`schemas/revalidation-record.schema.json`) — no friction block; stamped by `pkit analysis new revalidation` from `templates/revalidation-record.md` as `revalidations/<date>-<subject>.md` ("Revalidation records" below):
 
@@ -171,13 +182,12 @@ It warns, and never fails, on:
 
 - **a result at odds with its outcome** — a `failed` result copied for an artefact whose outcome is `holds`, or a `passed` one for `code-regressed`: a passing result supports *holds* and a failing one is a regression's proof, so the outcome or the evidence is likely wrong;
 - **a copy that differs from what the evidence point now holds under its id**: the copy strayed from its source, or the result at that commit was reported again otherwise.
-- **`unanchored-because` beside anchors**: the reason says why an actor or term has none, so one that has anchors says two things at once. The stamp refuses the pair; the warning catches a hand edit.
 
 It says nothing of an id the point no longer holds, or of a point that does not resolve: the record's copy is the evidence, and a filler that stops reporting an old commit is ordinary. It reads the point, through `pkit connections resolve`, only when some record copies evidence.
 
 It reports, and never fails on, **an open regression**: a record's `code-regressed` artefact that has not been revalidated since the record — its `at` falls on no later day (UTC) than the record's date. The defect the record names is still open, or its fix was never revalidated against the artefact. It is worked out from the records and the artefacts each time, never kept in a ledger.
 
-Friction itself, dead anchors and the friction block's own shape are the core's checks (`pkit validate`'s `friction` member and `pkit friction check`), which report front matter that does not parse too; an unanchored artefact is the core's measure, never an error.
+Friction itself, dead anchors and the friction block's own shape are the core's checks (`pkit validate`'s `friction` member and `pkit friction check`), which report front matter that does not parse too; an unanchored artefact is the core's measure, never an error. So is `unanchored-because` beside anchors: the reason says why an actor or term has none, so one that has anchors says two things at once. The stamp refuses the pair, and a hand edit that writes it fails `pkit validate`'s `friction` member (`unanchored-beside-anchors`, COR-050 point 12).
 
 ## Numbers another branch took: `pkit analysis check-numbers`
 

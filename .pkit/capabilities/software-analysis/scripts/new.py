@@ -135,7 +135,10 @@ def _parser() -> argparse.ArgumentParser:
         entry.add_argument(
             "--unanchored-because",
             metavar="TEXT",
-            help="Why nothing embodies it, so it has no anchors (instead of --path/--record).",
+            help=(
+                "Why nothing embodies it, so it has no anchors (instead of --path/--record): "
+                "written as `unanchored-because` in its friction block."
+            ),
         )
     help_text = (
         "A revalidation record, kept only when there is something to say: a planned "

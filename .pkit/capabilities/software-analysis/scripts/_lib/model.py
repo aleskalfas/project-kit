@@ -120,8 +120,10 @@ REVALIDATIONS = "revalidations"
 CONTAINER = "pkit"
 REVALIDATED_AT = ("friction", "revalidated", "at")
 
-#: The field an actor or a term nothing embodies carries instead of anchors: the
-#: reason onboarding accepts it unanchored (DEC-001 point 9).
+#: The key an actor or a term nothing embodies carries in its friction block
+#: instead of anchors: the reason onboarding accepts it unanchored (DEC-001
+#: point 9). The key is the core's (COR-050 point 1): the unanchored measure
+#: lists such an artefact apart, and validation refuses it beside anchors.
 UNANCHORED_BECAUSE = "unanchored-because"
 
 #: The version of `pkit friction artefacts --json` this reading understands, and

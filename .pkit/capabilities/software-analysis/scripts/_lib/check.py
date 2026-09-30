@@ -67,7 +67,7 @@ What is checked, each against the record's words:
   longer holds, or a point that does not resolve, says nothing: the record's
   copy is the evidence.
 
-And two findings that never fail:
+And a finding that never fails:
 
 - **An open regression** (point 5), a report: a record's `code-regressed`
   artefact not revalidated since the record — its `at` on no later day (UTC)
@@ -75,9 +75,6 @@ And two findings that never fail:
   still open, or its fix was never revalidated against the artefact. Derived
   from the records and the artefacts in the working tree each time, never
   kept in a ledger (COR-050 point 9).
-- **`unanchored-because` beside anchors** (point 9), a warning: the reason
-  says why an artefact has no anchors, so one with anchors carrying it says
-  two things at once. The stamp refuses the pair; this catches a hand edit.
 
 It reads the working tree — and, when a record copies evidence, the evidence
 point — so the same tree gets the same answer as long as the evidence fillers
@@ -89,7 +86,10 @@ about a change rather than the tree, and is not a validator (ADR-058 point 7).
 The friction block — its shape, dead anchors, cycles, friction itself — is the
 core's (`pkit validate`'s `friction` member and `pkit friction check`), which
 also reports a front matter that does not parse, as this check does for a file
-in its places. An unanchored artefact is the core's measure, never an error.
+in its places. An unanchored artefact is the core's measure, never an error,
+and so is the reason an actor or a term is accepted with none: the block's
+`unanchored-because`, which the measure lists apart and the core's validation
+refuses beside anchors (COR-050 points 1, 8 and 12; DEC-001 point 9).
 """
 
 from __future__ import annotations
@@ -113,7 +113,6 @@ from _lib.model import (
     NOUN,
     NUMBERED,
     REVALIDATED_AT,
-    UNANCHORED_BECAUSE,
     USE_CASE,
     Analysis,
     Artefact,
@@ -169,7 +168,6 @@ def check(root: Path) -> Outcome:
     outcome.findings += _references(analysis)
     outcome.findings += _actor_anchors(analysis)
     outcome.findings += _journey_anchors(analysis)
-    outcome.findings += _unanchored_beside_anchors(analysis)
     record_findings, copies, read = _record_findings(root, records, analysis)
     outcome.findings += record_findings
     if copies:
@@ -477,20 +475,6 @@ def _journey_anchors(analysis: Analysis) -> list[Finding]:
                 )
             )
     return found
-
-
-def _unanchored_beside_anchors(analysis: Analysis) -> list[Finding]:
-    """An artefact carrying the reason it has no anchors, and anchors (DEC-001 point 9)."""
-    return [
-        Finding(
-            WARNING,
-            at(artefact.location, f"/{UNANCHORED_BECAUSE}"),
-            f"carries `{UNANCHORED_BECAUSE}` beside anchors: the reason says why it has none — "
-            f"drop the reason, or the anchors (DEC-001 point 9)",
-        )
-        for artefact in analysis.artefacts
-        if UNANCHORED_BECAUSE in artefact.fields and any(artefact.anchors.values())
-    ]
 
 
 def _unique(values: Iterable[str]) -> list[str]:

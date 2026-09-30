@@ -16,8 +16,10 @@ Held to software-analysis DEC-001 points 5, 6 and 9:
 - **every word is the person's** — an outcome with no justification, and a text
   still holding a placeholder, are refused rather than written;
 - an **actor or term nothing embodies** is stamped with its reason,
-  `unanchored-because`, instead of anchors, and never with both — and the
-  check warns about an artefact carrying both, written by hand;
+  `unanchored-because`, instead of anchors, and never with both — written in
+  its friction block, the core's key, which the core reads (COR-050 point 1);
+  an artefact carrying both, written by hand, is the core's validation finding,
+  and the reason among the entry's own fields is refused;
 - **an open regression is visible**: the check reports a record's
   `code-regressed` artefact until it is revalidated on a later day than the
   record, and never fails on it.
@@ -26,6 +28,7 @@ Held to software-analysis DEC-001 points 5, 6 and 9:
 from __future__ import annotations
 
 import datetime
+import re
 import subprocess
 from collections.abc import Mapping
 from pathlib import Path
@@ -34,7 +37,7 @@ from typing import Any
 import pytest
 
 from project_kit import friction_write as fw
-from project_kit.friction_validate import validate_friction
+from project_kit.friction_validate import FrictionFindingKind, validate_friction
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.analysis_repo import (
     ACTORS,
@@ -361,11 +364,15 @@ def test_an_actor_or_term_nothing_embodies_carries_its_reason(
     stamped(project, kind, "sponsor", "--unanchored-because", reason)
     fill(project)
     entry = front(project, rel)[f"{prefix}-sponsor"]
-    assert entry["unanchored-because"] == reason
-    assert list(entry)[-2:] == ["unanchored-because", "pkit"]
-    assert entry["pkit"] == {"friction": {}}
+    # In the core friction block, never among the entry's own fields (COR-050 point 1).
+    assert "unanchored-because" not in entry and list(entry)[-1] == "pkit"
+    assert entry["pkit"] == {"friction": {"unanchored-because": reason}}
     assert errors(check(project)) == []
-    assert validate_friction(project.root).errors == ()
+    validation = validate_friction(project.root)
+    assert validation.errors == ()
+    # The core reads it: the unanchored measure lists the artefact apart with it.
+    (sponsor,) = [a for a in validation.discovery.artefacts if a.id == f"{prefix}-sponsor"]
+    assert sponsor.unanchored_because == reason
 
 
 @pytest.mark.parametrize(
@@ -401,13 +408,34 @@ def test_a_use_case_takes_no_unanchored_reason(project: AdopterRepo) -> None:
     assert not any((project.root / USE_CASES).glob("*-idle.md"))
 
 
-def test_unanchored_because_beside_anchors_is_warned_and_never_failed(project: AdopterRepo) -> None:
-    """The stamp refuses the pair; a hand edit that writes it is warned about."""
+def test_unanchored_because_beside_anchors_is_the_core_s_finding(project: AdopterRepo) -> None:
+    """The stamp refuses the pair; a hand edit that writes it into the friction block
+    fails the core's validation (COR-050 point 12), and the capability's check says
+    nothing of it — the key is the core's."""
+    text = (project.root / ACTORS).read_text(encoding="utf-8")
+    block = re.search(r"\n( +)friction:\n", text)
+    assert block is not None
+    indent = block.group(1) + "  "
+    written = f"{block.group(0)}{indent}unanchored-because: No code embodies it.\n"
+    project.write({ACTORS: text.replace(block.group(0), written, 1)})
+    assert front(project, ACTORS)["ACT-tester"]["pkit"]["friction"]["anchors"]
+
+    document = check(project)
+    assert errors(document) == [] and _said(document, "warning") == []
+    (finding,) = validate_friction(project.root).errors
+    assert finding.kind is FrictionFindingKind.UNANCHORED_BESIDE_ANCHORS
+    assert (finding.location, finding.pointer) == (
+        f"{ACTORS}#ACT-tester",
+        "/pkit/friction/unanchored-because",
+    )
+
+
+def test_the_reason_among_an_entry_s_own_fields_is_refused(project: AdopterRepo) -> None:
+    """The reason is the friction block's, not the entry's: written among the entry's
+    own fields, the companion schema refuses it as a field it does not know."""
     text = (project.root / ACTORS).read_text(encoding="utf-8")
     reason = "ACT-tester:\n  unanchored-because: No code embodies it.\n"
     project.write({ACTORS: text.replace("ACT-tester:\n", reason, 1)})
-    document = check(project)
-    ((location, message),) = _said(document, "warning")
-    assert location == f"{ACTORS}#ACT-tester:/unanchored-because"
-    assert "carries `unanchored-because` beside anchors" in message
-    assert errors(document) == []
+    ((location, message),) = errors(check(project))
+    assert location == f"{ACTORS}#ACT-tester"
+    assert "'unanchored-because' was unexpected" in message

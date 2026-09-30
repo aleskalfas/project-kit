@@ -1,0 +1,18 @@
+component: software-analysis
+kind: patch
+custom:
+  category: Changed
+  requires_backbone: release
+body: >
+  `pkit analysis new actor|term --unanchored-because <why>` writes the reason
+  inside the artefact's friction block, `pkit.friction.unanchored-because` —
+  the core's key (COR-050 point 1; DEC-001 point 9) — instead of among the
+  entry's own fields, where the core never read it: the core's unanchored
+  measure now lists an accepted actor or term apart, with its reason, and no
+  longer counts it. The actor and term schemas no longer admit the field among
+  the entry's own fields, and `pkit analysis validate` drops its warning about
+  the reason beside anchors in favour of the core's validation finding
+  (`unanchored-beside-anchors`). The capability is pre-release, so an entry
+  written by an earlier stamp is not migrated: move its `unanchored-because`
+  into its friction block by hand. The key comes with the backbone this
+  release ships: upgrade the capability together with the backbone.

@@ -6,8 +6,9 @@
 # `TERM-<slug>` and its section, creating the file from this template the
 # first time. Renaming a term keeps its id: write the new `name`, and put the
 # old one first in `replaces:`. A term anchors to where the software or a
-# decision embodies it; one nothing embodies carries `unanchored-because:`.
-# Each entry's own fields' shape is `schemas/term.schema.json`.
+# decision embodies it; one nothing embodies carries `unanchored-because:` in
+# its friction block instead of anchors (--unanchored-because). Each entry's
+# own fields' shape is `schemas/term.schema.json`.
 TERM-term:
   name: <Term>                    # as it is written today; may change, the id does not
   status: active                  # or withdrawn: the entry stays and its id is never reused

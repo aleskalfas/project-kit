@@ -5,8 +5,9 @@
 # Stamp entries, never copy them: `pkit analysis new actor <slug>` adds
 # `ACT-<slug>` and its section, creating the file from this template the first
 # time. An actor anchors to where the software or a decision embodies it; one
-# nothing embodies carries `unanchored-because:` instead. Each entry's own
-# fields' shape is `schemas/actor.schema.json`.
+# nothing embodies carries `unanchored-because:` in its friction block instead
+# of anchors (--unanchored-because). Each entry's own fields' shape is
+# `schemas/actor.schema.json`.
 ACT-actor:
   name: <Display name>            # may change; the id does not
   status: active                  # or withdrawn: the entry stays and its id is never reused
