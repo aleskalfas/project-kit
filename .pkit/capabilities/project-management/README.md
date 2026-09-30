@@ -15,7 +15,7 @@ pkit:
         - .pkit/capabilities/project-management/decisions/**
       record: [COR-017, COR-020, COR-021, COR-023, COR-039, COR-053, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050]
     revalidated:
-      at: 2026-09-30T17:57:52Z
+      at: 2026-09-30T23:25:30Z
       outcome: updated
 ---
 
@@ -567,7 +567,9 @@ Mode is resolved per-PR by three layers (highest wins):
 - **human mode** — three-way OR (APPROVED review / `Approved`-prefix comment from non-author / `--bypass`).
 - **agent mode** — DEC-028's gate-checker: at least one configured path (remote-bot OR local-agent) has a fresh APPROVED verdict post-dating the latest commit, plus `--bypass`. The gate counts a verdict only when its comment carries the `<!-- pkit-verdict -->` marker the reviewer path stamps (#593) — a bare `Reviewer agent … APPROVED` line posted by any other path (hand-typed, or a freeform note) does not gate. The read surface (`show-pr --field review`) still displays every verdict-shaped comment, marked or not. Under a reviewer panel (DEC-032's resolved required set), a reviewer's slot is *also* satisfiable by an audited **per-reviewer override** (`--bypass-reviewer`, see below) — a `satisfied-by-override` state distinct from an APPROVED, leaving every other required reviewer gating.
 
-For the local-agent path, run `pkit project-management review-pr <N>` after `review-work` to invoke every registered local agent against the PR diff. Each agent posts a `Reviewer agent (local, <name>): APPROVED|CHANGES_REQUESTED` comment. Re-running re-invokes and posts a fresh verdict (post-date-latest-commit handles staleness).
+For the local-agent path, run `pkit project-management review-pr <N>` after `review-work` to invoke every registered local agent against the PR diff. Each agent posts a `Reviewer agent (local, <name>): APPROVED|CHANGES_REQUESTED` comment.
+
+`review-pr` skips a required reviewer whose verdict is still **fresh**, meaning its latest verdict was posted after the PR's head commit. It decides this the same way `done-work`'s gate reads verdicts, so a skipped reviewer is one the gate counts as it stands: a fresh `APPROVED` satisfies it, and a fresh `CHANGES_REQUESTED` blocks it until you push a fix. For each skipped reviewer it prints `[<name>] fresh verdict <APPROVED|CHANGES_REQUESTED> — not re-run`. A new commit makes every verdict stale, so the next run invokes all of them. Pass `--force` to re-run fresh reviewers too, for example after changing a reviewer agent. If the PR's verdicts cannot be read, `review-pr` runs every required reviewer and says so.
 
 Each reviewer subprocess is capped by a wall-clock **timeout** (seconds). It is a single uniform knob applied to every reviewer — deliberately not a per-agent map (COR-007). Resolution precedence: the `--timeout <seconds>` flag > the `PKIT_REVIEW_AGENT_TIMEOUT` env var > the default **1200**. The default is a *generous ceiling*, not a typical wait: reviewer agent runs are slow and variable (observed 300s to >600s on the same reviewer), so 1200s is meant to be hit only by a genuinely hung agent. (It was raised twice as the ceiling kept getting hit: 300s originally killed heavier reviewers out of the box — e.g. `code-reviewer` needs ~323s — and 600s still timed `code-reviewer` out on a real panel review.) A non-integer, zero, or negative value is a usage error (fail fast) rather than a silent fall-back (an empty or unset `PKIT_REVIEW_AGENT_TIMEOUT` is treated as absent and falls through to the default). When a timeout fires, the reviewer subprocess is killed, no verdict is posted, and `review-pr` exits 3 — so the DEC-028 approval gate stays unsatisfied for that reviewer until a re-run. Raise it further for an unusually slow reviewer with `pkit project-management review-pr <N> --timeout 1800`, or set `PKIT_REVIEW_AGENT_TIMEOUT` once in your environment.
 
@@ -593,6 +595,25 @@ review:
 - **Where it shows.** `pkit project-management pre-check` lists each opt-out as a `[skip]` line naming the reviewer, the capability and your reason. `review-pr` prints ``opted out: <reviewer> (capability `<capability>`) — <reason>`` under the reviewers it invokes, and a `done-work` refusal names it after the required set.
 - **Validation.** Each entry carries exactly `capability`, `reviewer` and a non-empty `reason`, and names a pair once; the config schema checks this at `pkit validate`. An entry naming a capability that is not installed, or a reviewer that capability does not contribute — a typo, or an entry left behind when you uninstall the capability — is an error: `pre-check` fails on it, and `review-pr` and `done-work` refuse until you fix or remove it, so an opt-out you meant never silently fails to apply.
 - **Yours to keep.** The opt-out lives in your `project/config.yaml`, which `pkit sync` and capability upgrades never touch.
+
+#### Paths that are never code — `review.floors.not_code` (per [project-management:DEC-032-conditional-reviewer-requirements])
+
+A contributed reviewer can ride a diff-property **floor**. `software-engineering`'s code-review panel rides `touches-code`, which requires the panel whenever a PR changes any file that is not documentation. Configuration and schema files (`.yaml`, `.json`, …) count as code. So does a changeset under `.changes/`, because it is a YAML file, and every PR that declares a surface change carries one. Without an exclusion, a wording-only PR with its changeset would draw the whole panel.
+
+`review.floors.not_code` lists paths that never count as code. A changed path it matches satisfies no floor, so it never pulls in a floor reviewer. Every other path is judged as before, so a PR that changes a `.py` or a schema alongside its changeset still requires the panel. Reviewers that match the closing issue's classification (like `docs-reviewer` on any typed issue) are not affected.
+
+```yaml
+review:
+  floors:
+    not_code:              # gitignore-style patterns, relative to the repository root
+      - ".changes/**"      # the default when the key is absent
+      - "docs/examples/**" # add your own; the list replaces the default
+```
+
+- **Default.** When the key is absent or has no value, the list is `[".changes/**"]`. If you set the key, your list replaces the default, so keep `.changes/**` in it if you still want changesets excluded. An empty list (`not_code: []`) excludes nothing.
+- **Matching.** Patterns are gitignore-style, the same matching `code_path_to_doc_mapping` uses, and are read against each changed path from the repository root.
+- **Both commands agree.** `review-pr` and `done-work` read the list from the same config through one resolver, so the reviewers `review-pr` invokes are the ones the gate requires.
+- **Validation.** The value must be a list of non-empty strings; the config schema checks this at `pkit validate`. If the value is malformed, `review-pr` and `done-work` refuse and name the problem rather than guess which paths you meant.
 
 #### Freeform comments — `comment-issue` / `comment-pr` (per [project-management:DEC-047-freeform-comment-verb])
 
@@ -654,7 +675,7 @@ It is a member of the `--bypass` family (audited, reason-required), not a new ov
 Two override families run across the mutating commands, and which a command exposes is fixed by the stop it overrides — one question: **is it a `bypassable-with-audit` gate?**
 
 - **`--bypass[-<gate>]`** overrides a gate the severity model *designed* to be bypassable ([project-management:DEC-014-validation-severity-model]'s `bypassable-with-audit`): a **required reason**, and the DEC-014 audit comment posted *before* the mutation. A command with one bypassable gate spells it `--bypass` (`move-issue`, `promote-issue`); a command with several qualifies each — `done-work` carries `--bypass` (approval) **and** `--bypass-ci` (CI), and `merge-pr` carries `--bypass-ci`. `--bypass` never clears a red CI, and vice-versa. A **parameterised, repeatable** family member also lives on `done-work`: `--bypass-reviewer <name> --bypass-reviewer-reason "<r>"` overrides *one* reviewer's slot on the agent-mode approval gate (see the per-reviewer override section above), per DEC-046's 2026-08-21 amendment for [project-management:DEC-050-per-reviewer-override].
-- **`--force`** overrides a **`hard-reject` finding** *or* a **hard script precondition** — a stop the methodology treats as firm. Boolean, no reason. Sites: `edit-issue` / `edit-pr` (body-validation findings), `open-pr` / `review-work` (validate-at-ready), `close-milestone` (open-children), `remove-workstream` (non-zero-issues). It audits **where the substrate can carry it** — an issue/PR comment, a milestone description-append; a bare label (`remove-workstream`) has no annotation surface, so the override shows in output only.
+- **`--force`** overrides a **`hard-reject` finding** *or* a **hard script precondition** — a stop the methodology treats as firm. Boolean, no reason. Sites: `edit-issue` / `edit-pr` (body-validation findings), `open-pr` / `review-work` (validate-at-ready), `close-milestone` (open-children), `remove-workstream` (non-zero-issues), `review-pr` (the fresh-verdict skip; a forced re-run leaves its record as the new verdict comment). It audits **where the substrate can carry it** — an issue/PR comment, a milestone description-append; a bare label (`remove-workstream`) has no annotation surface, so the override shows in output only.
 - **Hard-reject is force-overridable.** DEC-014's `hard-reject` keeps `bypassable: false` (no in-band `--bypass`) but carries an out-of-band operator `--force` layer — recorded as `force_overridable: true` on its schema entry. `--force` is *not* the `--bypass` mechanism; it is a blunter, last-resort override.
 - **Known exception:** `--skip-checkbox-gate` (on `close-issue` and, since #734, on `done-work`) predates this convention and fits neither family — a plain reasonless skip of a `hard-reject` gate. It is documented as discouraged, and both closure paths spell it identically so they cannot diverge. Whether it should become an audited `--bypass "<reason>"` is an open question (#734's deferred follow-up), not a settled shape.
 - **Out of scope:** `merge-pr --admin` is a `gh pr merge --admin` branch-protection passthrough, not a methodology override.

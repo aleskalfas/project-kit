@@ -107,9 +107,9 @@ TERM-stabilisation:
           - project-management:DEC-014
           - ADR-019
       revalidated:
-        at: 2026-09-30T17:57:53Z
+        at: 2026-09-30T23:25:40Z
         outcome: unchanged
-        unchanged-because: done-work's change is the declared In Progress → Review move it makes just before the merge for an issue that never reached Review, so the merge's move to Done is a declared one; what a stabilisation is, and what it lets start or land on the default branch, did not change
+        unchanged-because: done-work's change reads the not-code list and a shared freshness anchor for the review gate; stabilisation's rules for what lands are untouched
 ---
 
 # Glossary
