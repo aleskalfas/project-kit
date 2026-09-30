@@ -245,7 +245,8 @@ def load_hook_providers(target_root: Path) -> list[Provider]:
 
 
 def validate_corpus(target_root: Path) -> list[Issue]:
-    """Run bidirectional consistency + hook closure + same-tier collision + exactly-one-owner + storyboard + capability-, rule- and address-citation + composes + agent-policy checks."""
+    """Run bidirectional consistency + hook closure + same-tier collision + exactly-one-owner +
+    storyboard + capability-, rule- and address-citation + composes + agent-policy checks."""
     artifacts = load_artifacts(target_root)
     providers = load_hook_providers(target_root)
     return check_corpus(artifacts, providers, target_root)
@@ -494,7 +495,8 @@ def _adr_records_dir_or_none(target_root: Path) -> Path | None:
 
 
 def resolve_hook(providers: list[Provider], hook: str) -> Provider | None:
-    """Pick the winning provider for a hook by precedence (project > capability > adapter > core)."""
+    """Pick the winning provider for a hook by precedence (project > capability > adapter >
+    core)."""
     candidates = [p for p in providers if p.hook == hook]
     if not candidates:
         return None
@@ -1007,7 +1009,8 @@ def _is_url(text: str) -> bool:
 
 
 def extract_body_refs(body: str) -> BodyRefs:
-    """Apply the COR-013 parser convention to extract path / record / hook / capability / rule / address refs."""
+    """Apply the COR-013 parser convention to extract path / record / hook / capability / rule /
+    address refs."""
     stripped = _strip_skip_regions(body)
     paths: set[str] = set()
     records: set[str] = set()
@@ -1310,7 +1313,8 @@ def _validate_bidirectional(artifacts: list[Artifact], target_root: Path) -> lis
                 issues.append(
                     Issue(
                         location=loc,
-                        diagnosis=f"frontmatter declares pattern {pat!r} but it is not referenced anywhere.",
+                        diagnosis=f"frontmatter declares pattern {pat!r} but it is not referenced "
+                        "anywhere.",
                     )
                 )
 
@@ -1332,7 +1336,8 @@ def _validate_bidirectional(artifacts: list[Artifact], target_root: Path) -> lis
             issues.append(
                 Issue(
                     location=loc,
-                    diagnosis=f"body cites path {path!r} but it is not declared in frontmatter `reads.paths` or `owns`.",
+                    diagnosis=f"body cites path {path!r} but it is not declared in frontmatter "
+                    "`reads.paths` or `owns`.",
                 )
             )
         for rec in art.body_refs.records:
@@ -1340,7 +1345,8 @@ def _validate_bidirectional(artifacts: list[Artifact], target_root: Path) -> lis
                 issues.append(
                     Issue(
                         location=loc,
-                        diagnosis=f"body cites record {rec!r} but it is not declared in frontmatter `reads.records` or `gates`.",
+                        diagnosis=f"body cites record {rec!r} but it is not declared in "
+                        "frontmatter `reads.records` or `gates`.",
                     )
                 )
         for hk in art.body_refs.hooks:
@@ -1348,7 +1354,8 @@ def _validate_bidirectional(artifacts: list[Artifact], target_root: Path) -> lis
                 issues.append(
                     Issue(
                         location=loc,
-                        diagnosis=f"body mentions hook {hk!r} but it is not declared in frontmatter `needs` or `answers`.",
+                        diagnosis=f"body mentions hook {hk!r} but it is not declared in "
+                        "frontmatter `needs` or `answers`.",
                     )
                 )
 
@@ -1612,7 +1619,8 @@ def _validate_storyboards(artifacts: list[Artifact], target_root: Path) -> list[
                 issues.append(
                     Issue(
                         location=loc,
-                        diagnosis=f"declares storyboard {sb_path!r} but the file does not exist at that path.",
+                        diagnosis=f"declares storyboard {sb_path!r} but the file does not exist at "
+                        "that path.",
                     )
                 )
                 continue
@@ -1624,7 +1632,8 @@ def _validate_storyboards(artifacts: list[Artifact], target_root: Path) -> list[
                 Issue(
                     location=loc,
                     diagnosis=f"declares storyboard {sb_path!r} but the body does not cite it. "
-                    "Load-bearing references must appear in the body so the runtime instruction is explicit.",
+                    "Load-bearing references must appear in the body so the runtime instruction is "
+                    "explicit.",
                 )
             )
 
@@ -1658,7 +1667,8 @@ def _validate_storyboards(artifacts: list[Artifact], target_root: Path) -> list[
                 issues.append(
                     Issue(
                         location=rel,
-                        diagnosis=f"storyboard frontmatter `consumers:` entry is malformed: {entry!r}. "
+                        diagnosis="storyboard frontmatter `consumers:` entry is malformed: "
+                        f"{entry!r}. "
                         "Each entry must be a mapping with `kind`, `name`, and `namespace`.",
                     )
                 )
@@ -1680,7 +1690,8 @@ def _validate_storyboards(artifacts: list[Artifact], target_root: Path) -> list[
                 issues.append(
                     Issue(
                         location=rel,
-                        diagnosis=f"storyboard declares consumer agent {ns}/{name} but no such agent exists.",
+                        diagnosis=f"storyboard declares consumer agent {ns}/{name} but no such "
+                        "agent exists.",
                     )
                 )
                 continue
@@ -1708,7 +1719,8 @@ def _validate_storyboards(artifacts: list[Artifact], target_root: Path) -> list[
                         location=rel,
                         diagnosis=f"storyboard sits in {parent.relative_to(target_root)}/ "
                         f"but none of its declared consumers owns that folder. "
-                        "Move the storyboard to its primary consumer's folder, or update consumers.",
+                        "Move the storyboard to its primary consumer's folder, or update "
+                        "consumers.",
                     )
                 )
 

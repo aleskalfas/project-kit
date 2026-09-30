@@ -92,7 +92,8 @@ def test_stamp_migration_adapter_resolves_component_version(kit_target: Path) ->
 
 
 def test_stamp_migration_capability_resolves_component_version(kit_target: Path) -> None:
-    """Per COR-017 capability tier: migration lands under capabilities/<name>/migrations/<X.Y.0>/."""
+    """Per COR-017 capability tier: migration lands under
+    capabilities/<name>/migrations/<X.Y.0>/."""
     result = stamp_migration(
         kit_target,
         tier="capability",

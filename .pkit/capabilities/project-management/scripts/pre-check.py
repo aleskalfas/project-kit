@@ -1425,11 +1425,12 @@ def _check_labels(
             v for v in priority_values if axis_labels.label("priority", v) not in existing
         ]
         if missing_priority:
+            missing = ", ".join(axis_labels.label("priority", v) for v in missing_priority)
             results.append(
                 CheckResult(
                     "required `priority:*` labels exist",
                     "fail",
-                    f"missing: {', '.join(axis_labels.label('priority', v) for v in missing_priority)}",
+                    f"missing: {missing}",
                     remediation="Run `bootstrap` to create the missing labels.",
                 )
             )
@@ -1450,11 +1451,12 @@ def _check_labels(
         w for w in workstreams if axis_labels.label("workstream", w) not in existing
     ]
     if missing_workstream:
+        missing = ", ".join(axis_labels.label("workstream", w) for w in missing_workstream)
         results.append(
             CheckResult(
                 "required `workstream:*` labels exist",
                 "fail",
-                f"missing: {', '.join(axis_labels.label('workstream', w) for w in missing_workstream)}",
+                f"missing: {missing}",
                 remediation="Run `bootstrap` to create the missing labels.",
             )
         )

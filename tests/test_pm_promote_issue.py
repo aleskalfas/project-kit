@@ -267,7 +267,8 @@ def _wire_main_mocks(
     monkeypatch.setattr(pi, "_read_members", lambda *_a, **_k: [])
     monkeypatch.setattr(pi, "resolve_invoker_identity", lambda **_k: MagicMock())
     monkeypatch.setattr(pi, "check_membership", lambda *_a: _FakeMembership(allowed=True))
-    # This file targets promote-issue's milestone + composition behaviour, not the #747 prerequisite gate (covered in
+    # This file targets promote-issue's milestone + composition behaviour, not the #747 prerequisite
+    # gate (covered in
     # test_pm_bootstrap_gate*.py); the fake capability root above has no tree
     # to stamp, so neutralise the gate here.
     monkeypatch.setattr(pi.bootstrap_gate, "enforce", lambda *a, **kw: True)
@@ -504,7 +505,8 @@ def test_main_reason_required_exits_nonzero(pi, monkeypatch) -> None:
     monkeypatch.setattr(pi, "_read_members", lambda *_a, **_k: [])
     monkeypatch.setattr(pi, "resolve_invoker_identity", lambda **_k: MagicMock())
     monkeypatch.setattr(pi, "check_membership", lambda *_a: _FakeMembership(allowed=True))
-    # This file targets promote-issue's milestone + composition behaviour, not the #747 prerequisite gate (covered in
+    # This file targets promote-issue's milestone + composition behaviour, not the #747 prerequisite
+    # gate (covered in
     # test_pm_bootstrap_gate*.py); the fake capability root above has no tree
     # to stamp, so neutralise the gate here.
     monkeypatch.setattr(pi.bootstrap_gate, "enforce", lambda *a, **kw: True)

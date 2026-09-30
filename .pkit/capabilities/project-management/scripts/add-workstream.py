@@ -28,7 +28,7 @@ Exit codes:
   1  membership refusal / validation refusal / duplicate slug
   2  usage error (capability not found; bad slug)
   3  gh failure (label creation)
-"""
+"""  # noqa: E501 — a usage line is a command, kept whole
 
 from __future__ import annotations
 
@@ -217,7 +217,8 @@ def main() -> int:
     print(f"  target file: {workstreams_path(capability_root)}")
     if kit_labels and not args.skip_label:
         print(
-            f"  label:       create `{axis_labels.label('workstream', args.slug)}` (label-substrate)"
+            f"  label:       create `{axis_labels.label('workstream', args.slug)}` "
+            "(label-substrate)"
         )
     elif kit_label_note is not None:
         print(f"  label:       none — {kit_label_note}")

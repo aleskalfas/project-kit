@@ -33,7 +33,7 @@ Exit codes:
   1  membership refusal
   2  usage error (no categories declared / category not declared / invalid format)
   3  gh failure
-"""
+"""  # noqa: E501 — a usage line is a command, kept whole
 
 from __future__ import annotations
 
@@ -113,7 +113,8 @@ def main() -> int:
         "--capability-root",
         type=Path,
         default=None,
-        help=f"Path to the installed capability's directory (default: <repo-root>/.pkit/capabilities/{CAPABILITY_NAME}/).",
+        help="Path to the installed capability's directory (default: "
+        f"<repo-root>/.pkit/capabilities/{CAPABILITY_NAME}/).",
     )
     parser.add_argument("--dry-run", action="store_true", help="Print the plan; don't invoke gh.")
     parser.add_argument("--yes", action="store_true", help="Skip the confirmation prompt.")

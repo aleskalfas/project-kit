@@ -89,7 +89,8 @@ requires_backbone: "{requires_backbone}"{req_caps_block}
         for n, slug in enumerate(with_decisions, 1):
             num = str(n).zfill(3)
             (decisions_dir / f"DEC-{num}-{slug}.md").write_text(
-                f"---\nid: DEC-{num}\ntitle: {slug}\nstatus: accepted\ndate: 2026-05-18\nauthor: t\n---\n# {slug}\n",
+                f"---\nid: DEC-{num}\ntitle: {slug}\nstatus: accepted\ndate: 2026-05-18\n"
+                f"author: t\n---\n# {slug}\n",
                 encoding="utf-8",
             )
 
@@ -912,7 +913,8 @@ def test_cli_uninstall_not_installed_errors(kit_target: Path) -> None:
 def test_detect_upgrade_collisions_excludes_self_collisions(
     kit_target: Path, kit_source: Path
 ) -> None:
-    """The upgrade-only variant filters out collisions against the upgrading capability's own tree."""
+    """The upgrade-only variant filters out collisions against the upgrading capability's own
+    tree."""
     _stage_capability_in_source(kit_source, "evidence", with_skills=("add-evidence",))
     source = caps.find_capability_in_source(kit_source, "evidence")
     assert source is not None
@@ -1880,7 +1882,8 @@ def test_cli_register_dry_run_writes_nothing(
 def test_cli_register_surfaces_kit_source_overlap(
     kit_target: Path, kit_source: Path, monkeypatch
 ) -> None:
-    """When a same-named capability also ships from kit source, register surfaces it (COR-031 boundary)."""
+    """When a same-named capability also ships from kit source, register surfaces it (COR-031
+    boundary)."""
     _stage_capability_in_source(kit_source, "homegrown")
     _stage_capability_in_repo(kit_target, "homegrown")
     from project_kit import cli as cli_mod
@@ -2489,7 +2492,8 @@ def test_validate_capability_self_consistency_flags_bad_version(
 def test_cli_register_refuses_structurally_invalid_capability(
     kit_target: Path, kit_source: Path, monkeypatch
 ) -> None:
-    """Register refuses an incubated capability that fails its own structural checks (COR-031 D1)."""
+    """Register refuses an incubated capability that fails its own structural checks (COR-031
+    D1)."""
     from project_kit import cli as cli_mod
 
     _stage_capability_in_repo(kit_target, "homegrown")

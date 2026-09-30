@@ -41,7 +41,8 @@ The stamp is adopter state, so it lives in the capability's adopter-owned
 ``project/`` subtree — the one part of the tree ``pkit sync`` preserves
 (``treecopy.refresh_owned_tree`` never overwrites or prunes ``project/``,
 while every kit-owned path refreshes wholesale and root-level orphans are
-pruned; since #812 the capability path also never *seeds* it from source). It deliberately does **not** live in the capability's
+pruned; since #812 the capability path also never *seeds* it from source). It deliberately does
+**not** live in the capability's
 ``manifest.yaml``: that file is re-stamped from scratch by
 ``_stamp_component_manifest`` on every install / refresh, so a stamp written
 there would be erased by the next ``pkit sync``, and — because the kit source

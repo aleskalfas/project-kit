@@ -207,7 +207,8 @@ def main() -> int:
 
     if args.dry_run:
         print(
-            f"(dry-run: would create branch off {base}, set assignee, and call move-issue --to in-progress.)"
+            f"(dry-run: would create branch off {base}, set assignee, and call move-issue --to "
+            "in-progress.)"
         )
         return 0
 

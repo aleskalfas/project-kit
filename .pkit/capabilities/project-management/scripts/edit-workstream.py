@@ -23,7 +23,7 @@ Exit codes:
   0  edited (or dry-run reported)
   1  membership refusal / validation refusal
   2  usage error (slug not found)
-"""
+"""  # noqa: E501 — a usage line is a command, kept whole
 
 from __future__ import annotations
 

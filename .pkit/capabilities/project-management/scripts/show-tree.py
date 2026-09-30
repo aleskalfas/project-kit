@@ -260,11 +260,12 @@ def main() -> int:
             # damage persists after the command exits. The PR half is left out
             # deliberately: the refresh writes from issues alone, so a bounded
             # PR list cannot drop a child from any comment.
-            print(
-                "[refused] children views not refreshed: "
-                f"{_partial_note(limit=args.limit, truncated=corpus_truncated, incomplete_parents=incomplete_parents)}",
-                file=sys.stderr,
+            note = _partial_note(
+                limit=args.limit,
+                truncated=corpus_truncated,
+                incomplete_parents=incomplete_parents,
             )
+            print(f"[refused] children views not refreshed: {note}", file=sys.stderr)
             return 1
         _refresh_children_views(issues, capability_root, config)
 

@@ -15,7 +15,8 @@ from project_kit.cli import main
 
 @pytest.fixture
 def kit_target(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """Minimal tree: `.pkit/agents/{core,project}/`, `.pkit/skills/{core,project}/`, `.pkit/decisions/{core,project}/`."""
+    """Minimal tree: `.pkit/agents/{core,project}/`, `.pkit/skills/{core,project}/`,
+    `.pkit/decisions/{core,project}/`."""
     for area in ("agents", "skills", "decisions"):
         for ns in ("core", "project"):
             (tmp_path / ".pkit" / area / ns).mkdir(parents=True)
@@ -38,7 +39,8 @@ def _write_skill(root: Path, namespace: str, name: str, body: str) -> Path:
 def _write_decision(root: Path, namespace: str, prefix: str, num: str, slug: str) -> Path:
     target = root / ".pkit" / "decisions" / namespace / f"{prefix}-{num}-{slug}.md"
     target.write_text(
-        f"---\nid: {prefix}-{num}\ntitle: Test\nstatus: accepted\ndate: 2026-01-01\nauthor: t\n---\n",
+        f"---\nid: {prefix}-{num}\ntitle: Test\nstatus: accepted\ndate: 2026-01-01\nauthor: t\n"
+        "---\n",
         encoding="utf-8",
     )
     return target
@@ -81,7 +83,10 @@ def test_parser_extracts_hook_names() -> None:
 
 
 def test_parser_skips_fenced_code_blocks() -> None:
-    body = "Outside text references COR-005.\n\n```yaml\nreads:\n  records: [COR-999]\n```\n\nMore text."
+    body = (
+        "Outside text references COR-005.\n\n```yaml\nreads:\n  records: [COR-999]\n```\n\n"
+        "More text."
+    )
     refs_ = refs.extract_body_refs(body)
     assert "COR-005" in refs_.records
     assert "COR-999" not in refs_.records, "fenced code block leaked through"
@@ -714,7 +719,8 @@ def _agent_with_storyboard(root: Path, name: str, sb_path: str) -> Path:
     agent_path = root / ".pkit" / "agents" / "project" / f"{name}.md"
     agent_path.parent.mkdir(parents=True, exist_ok=True)
     agent_path.write_text(
-        f"---\nname: {name}\ndescription: test\ntools: [Read]\nstoryboards:\n  - {sb_path}\n---\n# A\nLoad `{sb_path}` at session start.\n",
+        f"---\nname: {name}\ndescription: test\ntools: [Read]\nstoryboards:\n  - {sb_path}\n---\n"
+        f"# A\nLoad `{sb_path}` at session start.\n",
         encoding="utf-8",
     )
     return agent_path
@@ -760,7 +766,8 @@ def test_validate_storyboards_passes_when_declared_path_exists_and_body_cites(
     storyboard = kit_target / ".pkit" / "agents" / "project" / "a" / "storyboard.md"
     storyboard.parent.mkdir(parents=True)
     storyboard.write_text(
-        "---\nconsumers:\n  - kind: agent\n    name: a\n    namespace: project\n---\n\n# Storyboard\n",
+        "---\nconsumers:\n  - kind: agent\n    name: a\n    namespace: project\n---\n\n"
+        "# Storyboard\n",
         encoding="utf-8",
     )
 
@@ -863,12 +870,14 @@ def _make_storyboarded_agent(
     agent_file = folder / f"{name}.md"
     sb_path_rel = f".pkit/agents/project/{name}/{sb_filename}"
     agent_file.write_text(
-        f"---\nname: {name}\ndescription: t\ntools: [Read]\nstoryboards:\n  - {sb_path_rel}\n---\n# A\nLoad `{sb_path_rel}` at session start.\n",
+        f"---\nname: {name}\ndescription: t\ntools: [Read]\nstoryboards:\n  - {sb_path_rel}\n---\n"
+        f"# A\nLoad `{sb_path_rel}` at session start.\n",
         encoding="utf-8",
     )
     sb_file = folder / sb_filename
     sb_file.write_text(
-        f"---\nconsumers:\n  - kind: agent\n    name: {name}\n    namespace: project\n---\n\n# Storyboard\n",
+        f"---\nconsumers:\n  - kind: agent\n    name: {name}\n    namespace: project\n---\n\n"
+        "# Storyboard\n",
         encoding="utf-8",
     )
     return agent_file, sb_file
@@ -905,7 +914,8 @@ def test_validate_storyboard_consumer_must_exist(kit_target: Path) -> None:
     folder.mkdir(parents=True)
     sb_file = folder / "storyboard.md"
     sb_file.write_text(
-        "---\nconsumers:\n  - kind: agent\n    name: nonexistent\n    namespace: project\n---\n\n# Orphan\n",
+        "---\nconsumers:\n  - kind: agent\n    name: nonexistent\n    namespace: project\n---\n\n"
+        "# Orphan\n",
         encoding="utf-8",
     )
 
@@ -919,7 +929,8 @@ def test_validate_storyboard_unsupported_kind(kit_target: Path) -> None:
     folder.mkdir(parents=True)
     sb_file = folder / "storyboard.md"
     sb_file.write_text(
-        "---\nconsumers:\n  - kind: cli\n    name: pkit-upgrade\n    namespace: core\n---\n\n# Future\n",
+        "---\nconsumers:\n  - kind: cli\n    name: pkit-upgrade\n    namespace: core\n---\n\n"
+        "# Future\n",
         encoding="utf-8",
     )
 

@@ -267,7 +267,8 @@ def _lint_in_memory(repo_root: Path, data: Any, label: str) -> None:
 _STUB_PAYLOADS = {
     "detection": '{"result": <bool>, "reason": "<why>"}',
     "gate": '{"result": <bool>, "reason": "<why>"}',
-    "authorisation-artifact gate": '{"exists": <bool>, "produced_by": "<login>", "reason": "<why>"}',
+    "authorisation-artifact gate": '{"exists": <bool>, "produced_by": "<login>", "reason": '
+    '"<why>"}',
     "entry guard": '{"result": <bool>, "reason": "<why>"}',
     "resume_when": '{"result": <bool>, "reason": "<why>"}',
     "invariant check": '{"result": <bool>, "reason": "<why>"}',

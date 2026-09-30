@@ -77,10 +77,14 @@ LABEL_COLORS = {
 }
 
 LABEL_DESCRIPTIONS = {
-    "type": "Classification axis: structural kind of work (per project-management:DEC-012-classification-axes).",
-    "priority": "Classification axis: triage signal (per project-management:DEC-012-classification-axes).",
-    "workstream": "Classification axis: cross-repo workstream (per project-management:DEC-012-classification-axes).",
-    "state": "Lifecycle state (label-fallback substrate, per project-management workflow.yaml states).",
+    "type": "Classification axis: structural kind of work (per "
+    "project-management:DEC-012-classification-axes).",
+    "priority": "Classification axis: triage signal (per "
+    "project-management:DEC-012-classification-axes).",
+    "workstream": "Classification axis: cross-repo workstream (per "
+    "project-management:DEC-012-classification-axes).",
+    "state": "Lifecycle state (label-fallback substrate, per project-management workflow.yaml "
+    "states).",
 }
 
 
@@ -820,7 +824,7 @@ project's longer-term EPIC structure has crystallised.
 - [ ] Successor EPICs filed covering this project's actual workstreams (each EPIC scoping a workstream's outcome)
 - [ ] Tasks filed during bootstrap migrated under the appropriate successor EPIC once they exist
 - [ ] This EPIC closes when its successors have absorbed all in-flight work
-"""
+"""  # noqa: E501 — each checkbox of the issue body is one line
 
 
 # ----- helpers -------------------------------------------------------

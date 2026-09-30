@@ -32,7 +32,7 @@ Exit codes:
   1  membership refusal / validation refusal
   2  usage error
   3  gh failure
-"""
+"""  # noqa: E501 — a usage line is a command, kept whole
 
 from __future__ import annotations
 
@@ -185,7 +185,8 @@ def main() -> int:
             n = _gh_count_label_uses(axis_labels.label("workstream", loser), config)
             impact[loser] = n
             print(
-                f"  loser {loser!r}: {n if n is not None else '?'} issue(s) tagged {axis_labels.label('workstream', loser)}"
+                f"  loser {loser!r}: {n if n is not None else '?'} issue(s) tagged "
+                f"{axis_labels.label('workstream', loser)}"
             )
     else:
         reason = kit_label_note or "--skip-labels"
@@ -330,7 +331,8 @@ def _gh_merge_label(loser: str, survivor: str, config: dict) -> bool:
         return False
     if delete.returncode != 0 and "not found" not in delete.stderr:
         print(
-            f"[warn] failed to delete `{axis_labels.label('workstream', loser)}`: {delete.stderr.strip()}",
+            f"[warn] failed to delete `{axis_labels.label('workstream', loser)}`: "
+            f"{delete.stderr.strip()}",
             file=sys.stderr,
         )
     return True

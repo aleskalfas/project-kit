@@ -539,7 +539,8 @@ def test_deploy_emits_kit_marker_in_resolved_file(mock_kit: Path) -> None:
 
 
 def test_deploy_skips_existing_user_content_without_marker(mock_kit: Path) -> None:
-    """An adopter-authored agent at the same name is NOT overwritten — `skipped` status, kit's version is dropped.
+    """An adopter-authored agent at the same name is NOT overwritten — `skipped` status, kit's
+    version is dropped.
 
     Regression for the silent-overwrite bug discovered in
     example-brownfield: kit's `product-manager.md` deployed over the
@@ -593,12 +594,14 @@ def test_deploy_updates_its_own_marked_files(mock_kit: Path) -> None:
 
 
 def test_deploy_picks_up_agents_from_installed_capabilities(mock_kit: Path) -> None:
-    """An agent shipped by an installed capability gets deployed alongside core agents (per COR-017)."""
+    """An agent shipped by an installed capability gets deployed alongside core agents (per
+    COR-017)."""
     # No core agent — just an agent inside an installed capability.
     cap_agents_dir = mock_kit / ".pkit" / "capabilities" / "evidence" / "agents"
     cap_agents_dir.mkdir(parents=True)
     (cap_agents_dir / "evidence-reviewer.md").write_text(
-        "---\nname: evidence-reviewer\ndescription: From the evidence capability.\n---\n\n# Reviewer\n",
+        "---\nname: evidence-reviewer\ndescription: From the evidence capability.\n---\n\n"
+        "# Reviewer\n",
         encoding="utf-8",
     )
 

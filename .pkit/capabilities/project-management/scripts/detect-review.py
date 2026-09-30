@@ -7,7 +7,10 @@
 # ///
 """Project-management capability — detect-review (process predicate, DEC-033).
 
-Detection predicate for the 'review' lifecycle state. Resolves the issue's live position via move-issue's exact inference precedence (closed->done; first state:* label; milestone->backlog; else todo) and reports result=True iff it equals 'review'. State meaning: PR open, awaiting human review (Task only).
+Detection predicate for the 'review' lifecycle state. Resolves the issue's live position via
+move-issue's exact inference precedence (closed->done; first state:* label; milestone->backlog; else
+todo) and reports result=True iff it equals 'review'. State meaning: PR open, awaiting human review
+(Task only).
 
 READ-ONLY. The process engine (COR-033) invokes this as
   <script> <issue-number> --json

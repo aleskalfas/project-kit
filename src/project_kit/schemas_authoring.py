@@ -365,9 +365,10 @@ def stamp_new_schema(
     else:
         capability_dir = schemas_dir.parent
         if not capability_dir.is_dir():
+            inside = target_root in capability_dir.parents or capability_dir == target_root
+            shown = capability_dir.relative_to(target_root) if inside else capability_dir
             raise SchemaAuthoringError(
-                f"capability {capability!r} not found at "
-                f"{capability_dir.relative_to(target_root) if target_root in capability_dir.parents or capability_dir == target_root else capability_dir}. "
+                f"capability {capability!r} not found at {shown}. "
                 f"Create the capability first via `pkit new capability`."
             )
         schemas_dir.mkdir(exist_ok=True)

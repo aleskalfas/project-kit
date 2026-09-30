@@ -390,7 +390,8 @@ def run_query(target_root: Path, script: Path, *, location: str, reference: str)
     if not script.is_file():
         return _no_answer(
             location,
-            f"command {reference!r} names script {_rel(script, target_root)!r}, which does not exist.",
+            f"command {reference!r} names script {_rel(script, target_root)!r}, which does not "
+            "exist.",
         )
     run = run_command(script, [QUERY_FLAG], cwd=target_root, extra_env=OFFLINE_MARKER)
     if run.ending is Ending.ANSWERED:
@@ -625,7 +626,8 @@ def _kind(value: Any) -> str:
 
 
 def location_of(path: Path, target_root: Path, pointer: str = "") -> str:
-    """A finding's location: the path relative to the root, then `:` and the pointer when there is one."""
+    """A finding's location: the path relative to the root, then `:` and the pointer when there is
+    one."""
     rel = _rel(path, target_root)
     return f"{rel}:{pointer}" if pointer else rel
 

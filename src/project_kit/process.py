@@ -47,10 +47,11 @@ position and stops; it never descends into B's gate back to A), so it cannot
 deepen the stack; it is bounded-safe incidentally, not by the guard. The guard is
 retained as cheap, correct insurance and as the right seam to extend if
 nesting-through-gates is ever added (at which point the transitive case becomes
-reachable and the stack catches it). While the inner has not reached a wired terminal outcome, the parent is parked as the
-`awaiting-subprocess-outcome` blocked reason — an AUTO-CLEARING overlay reusing
-COR-034's model, where the "condition" is the single-level subprocess resolution
-carried by the subprocess-outcome gates (no `resume_when`; it clears when a wired outcome
+reachable and the stack catches it). While the inner has not reached a wired
+terminal outcome, the parent is parked as the `awaiting-subprocess-outcome`
+blocked reason — an AUTO-CLEARING overlay reusing COR-034's model, where the
+"condition" is the single-level subprocess resolution carried by the
+subprocess-outcome gates (no `resume_when`; it clears when a wired outcome
 resolves and a legal move opens). All coupling lives in the parent; the inner
 references nothing upward, so it stays reusable. Resolution is READ-ONLY.
 

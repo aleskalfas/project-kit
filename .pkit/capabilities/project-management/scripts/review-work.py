@@ -254,7 +254,8 @@ def main() -> int:
             if candidates:
                 reviewers_to_add = candidates
                 print(
-                    f"  human-mode reviewers (role={role}): {', '.join('@' + r for r in candidates)}"
+                    f"  human-mode reviewers (role={role}): "
+                    f"{', '.join('@' + r for r in candidates)}"
                 )
             else:
                 print(

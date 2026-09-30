@@ -34,7 +34,8 @@ def mship():
     assert spec is not None
     assert spec.loader is not None
     module = importlib.util.module_from_spec(spec)
-    # Register in sys.modules so @dataclass can resolve cls.__module__ on Identity / MembershipResult.
+    # Register in sys.modules so @dataclass can resolve cls.__module__ on Identity /
+    # MembershipResult.
     sys.modules[module_name] = module
     spec.loader.exec_module(module)
     return module

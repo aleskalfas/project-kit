@@ -55,7 +55,7 @@ Exit codes:
   2  usage error (issue or PR not found; mode contradicts state; `--pr` outside
      pr-merge mode or on a non-leaf)
   3  gh failure
-"""
+"""  # noqa: E501 — a usage line is a command, kept whole
 
 from __future__ import annotations
 

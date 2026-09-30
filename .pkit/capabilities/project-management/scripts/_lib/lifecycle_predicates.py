@@ -2,7 +2,9 @@
 
 These are the READ-ONLY checks the process engine (COR-033) runs to resolve a
 keyed issue's position and to evaluate its gates. The engine invokes each as a
-plain subprocess `[script, <issue-number>, --json]` through the backbone's command runner — its own process group, killed at the 30-second bound; see the process README's predicate-runner section — (no shell, no `with` args
+plain subprocess `[script, <issue-number>, --json]` through the backbone's command runner — its own
+process group, killed at the 30-second bound; see the process README's predicate-runner section —
+(no shell, no `with` args
 threaded — see the per-state detector scripts for how the target state is
 fixed), reads structured JSON on stdout, and acts on it:
 

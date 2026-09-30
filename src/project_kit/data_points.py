@@ -369,7 +369,10 @@ def _filler_schema(target_root: Path) -> tuple[Mapping[str, Any] | None, tuple[s
     except bs.BackboneSchemaMissing:
         note = "no filler schema present under .pkit/schemas/backbone/; envelopes not checked."
     except bs.BackboneSchemaInvalid:
-        note = "the filler schema does not load (the `schemas` member says why); envelopes not checked."
+        note = (
+            "the filler schema does not load (the `schemas` member says why); envelopes not "
+            "checked."
+        )
     return None, (note,)
 
 

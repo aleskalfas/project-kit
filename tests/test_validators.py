@@ -150,7 +150,8 @@ def test_capability_validators_sort_after_the_backbone_by_order_then_name(
         commands_yaml="commands:\n"
         + _leaf("late", help_text="Late.")
         + _leaf("early", help_text="Early."),
-        validators_yaml="validators:\n  late:\n    command: late\n  early:\n    command: early\n    order: 5\n",
+        validators_yaml="validators:\n  late:\n    command: late\n  early:\n    command: early\n"
+        "    order: 5\n",
     )
     _register(
         adopter.root,
@@ -317,7 +318,8 @@ def test_the_runner_passes_json_and_marks_the_run_offline(adopter: AdopterRepo) 
         "cap",
         script_body=(
             "import json, os, sys\n"
-            'print(json.dumps({"summary": [" ".join(sys.argv[1:]), os.environ.get("PKIT_OFFLINE", ""),'
+            'print(json.dumps({"summary": [" ".join(sys.argv[1:]), os.environ.get("PKIT_OFFLINE", '
+            '""),'
             ' os.environ.get("UV_OFFLINE", ""), os.getcwd()], "findings": []}))\n'
         ),
     )

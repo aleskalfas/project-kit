@@ -279,7 +279,8 @@ def test_validate_path_directory_scans_recursively(tmp_path: Path) -> None:
 
 @pytest.fixture
 def cli_target(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """Project tree with `.pkit/` initialised (no full kit install — just enough for find_target_root)."""
+    """Project tree with `.pkit/` initialised (no full kit install — just enough for
+    find_target_root)."""
     import subprocess
 
     subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)

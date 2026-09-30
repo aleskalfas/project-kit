@@ -110,7 +110,8 @@ def test_stamp_capability_creates_capabilities_dir_if_missing(
 
 
 def test_stamp_capability_does_not_register_in_backbone_manifest(kit_target: Path) -> None:
-    """Capabilities are kit-shipped; adopters register them at install time, not at scaffold time."""
+    """Capabilities are kit-shipped; adopters register them at install time, not at scaffold
+    time."""
     from project_kit import manifest as manifest_mod
 
     stamp_capability(kit_target, name="evidence")

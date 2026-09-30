@@ -46,7 +46,7 @@ Exit codes:
   0  promoted
   1  membership refusal
   2  usage error / gate failure / gh failure
-"""
+"""  # noqa: E501 — a usage line is a command, kept whole
 
 from __future__ import annotations
 
@@ -105,7 +105,8 @@ def main() -> int:
         "--capability-root",
         type=Path,
         default=None,
-        help=f"Path to the installed capability's directory (default: <repo-root>/.pkit/capabilities/{CAPABILITY_NAME}/).",
+        help="Path to the installed capability's directory (default: "
+        f"<repo-root>/.pkit/capabilities/{CAPABILITY_NAME}/).",
     )
     parser.add_argument(
         "--dry-run",

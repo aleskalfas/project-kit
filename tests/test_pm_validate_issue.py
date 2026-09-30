@@ -196,7 +196,8 @@ def test_unknown_title_prefix_is_hard_reject(
 ) -> None:
     issue = _make_issue(
         title="Random title with no prefix",
-        body="Feature: #1\n\n## What\nthing.\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone.",
+        body="Feature: #1\n\n## What\nthing.\n## Acceptance criteria\n- [ ] x\n## Doc impact\n"
+        "none.",
         labels=["type:feature", "priority:Medium", "workstream:cli"],
     )
     findings = vi._validate_issue(

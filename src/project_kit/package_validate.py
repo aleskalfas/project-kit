@@ -795,7 +795,8 @@ def _check_relative(findings: list[PackageFinding], path: str, value: Any, what:
 
 
 def relative_path_problem(value: str) -> str | None:
-    """Why `value` is not a plain relative path (absolute, or climbing with `..`); None when it is."""
+    """Why `value` is not a plain relative path (absolute, or climbing with `..`); None when it
+    is."""
     if PurePosixPath(value).is_absolute() or PureWindowsPath(value).is_absolute():
         return "is absolute"
     if ".." in PurePosixPath(value).parts:

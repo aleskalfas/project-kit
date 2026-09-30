@@ -131,7 +131,8 @@ def ensure(root: Path, *, dry_run: bool = False) -> list[tuple[str, str]]:
         lines.append(
             (
                 "refused",
-                f"{WORKSPACE_DIR} is a symlink, never the workspace — remove the link so a folder can take its place",
+                f"{WORKSPACE_DIR} is a symlink, never the workspace — remove the link so a folder "
+                "can take its place",
             )
         )
     elif folder.is_dir():

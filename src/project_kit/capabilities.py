@@ -1124,7 +1124,7 @@ def _pending_migration_scripts(
     capability_source: CapabilitySource,
     installed_version: str | None,
 ) -> list[Path]:
-    """Collect scripts under `<source>/migrations/<X.Y.0>/` whose minor falls in (installed, source].
+    """Collect scripts under `<source>/migrations/<X.Y.0>/` whose minor is in (installed, source].
 
     Delegates to `migrations.pending_migration_scripts`. Kept as a
     capability-specific wrapper so tests have a stable API and the

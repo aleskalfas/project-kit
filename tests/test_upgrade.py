@@ -707,7 +707,8 @@ def test_upgrade_skips_capability_migrations_in_component_runner(
     cap_dir = installed_target / ".pkit" / "capabilities" / "evidence-fake"
     (cap_dir / "skills").mkdir(parents=True)
     (cap_dir / "package.yaml").write_text(
-        "schema_version: 1\ncomponent:\n  kind: capability\n  name: evidence-fake\n  version: 0.2.0\n"
+        "schema_version: 1\ncomponent:\n  kind: capability\n  name: evidence-fake\n"
+        "  version: 0.2.0\n"
         'requires_backbone: ">=0.1.0,<99.0.0"\n',
         encoding="utf-8",
     )

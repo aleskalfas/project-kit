@@ -7,7 +7,9 @@
 # ///
 """Project-management capability — gate-pr-merged (process predicate, DEC-033).
 
-Authorisation-artifact gate (PR-merge, cross-authority): reports {exists, produced_by} for a merged PR closing this issue. The ENGINE computes result = exists && produced_by != actor (COR-033 P4); this predicate returns only the facts (who merged the PR).
+Authorisation-artifact gate (PR-merge, cross-authority): reports {exists, produced_by} for a merged
+PR closing this issue. The ENGINE computes result = exists && produced_by != actor (COR-033 P4);
+this predicate returns only the facts (who merged the PR).
 
 READ-ONLY. The process engine (COR-033) invokes this as
   <script> <issue-number> --json

@@ -1,4 +1,4 @@
-"""Schema validation — YAML schemas against their JSON Schema companions + cross-file reference resolution.
+"""Schema validation: YAML schemas against JSON Schema companions + cross-file reference resolution.
 
 Per the conventions in `.pkit/schemas/` + COR-018 / COR-019: every
 capability YAML schema ships a companion JSON Schema at the side-by-side

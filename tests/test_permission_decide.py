@@ -119,7 +119,8 @@ def test_rm_rf_denied(decide_mod, catalog):
 
 
 def test_force_push_denied_deny_wins(decide_mod, catalog):
-    # pm has vcs allow; git push --force also matches vcs-history-rewrite (baseline deny) -> deny wins.
+    # pm has vcs allow; git push --force also matches vcs-history-rewrite (baseline deny) -> deny
+    # wins.
     d, _ = decide_mod.decide(
         MODEL, catalog, _bash("git push --force origin main", "agent:project-manager")
     )
@@ -221,7 +222,8 @@ def test_domain_scope_missing_url_denied(decide_mod, catalog):
 
 
 def test_domain_scope_deny_glob_rejected(decide_mod, catalog):
-    """A negation/deny scope glob (starting with '!') is explicitly rejected, not silently applied."""
+    """A negation/deny scope glob (starting with '!') is explicitly rejected, not silently
+    applied."""
     deny_glob_model = {
         "posture": "lenient",
         "grants": [

@@ -69,7 +69,8 @@ def test_resolve_state_ids_reads_from_workflow(bs, tmp_path) -> None:
     schemas_dir.mkdir()
     workflow_path = schemas_dir / "workflow.yaml"
     workflow_path.write_text(
-        "states:\n  - id: todo\n  - id: backlog\n  - id: in-progress\n  - id: review\n  - id: done\n",
+        "states:\n  - id: todo\n  - id: backlog\n  - id: in-progress\n  - id: review\n"
+        "  - id: done\n",
         encoding="utf-8",
     )
     cap_root = tmp_path
@@ -107,7 +108,8 @@ def test_compute_plan_includes_state_labels_in_label_fallback(
     schemas_dir = tmp_path / "schemas"
     schemas_dir.mkdir()
     (schemas_dir / "workflow.yaml").write_text(
-        "states:\n  - id: todo\n  - id: backlog\n  - id: in-progress\n  - id: review\n  - id: done\n",
+        "states:\n  - id: todo\n  - id: backlog\n  - id: in-progress\n  - id: review\n"
+        "  - id: done\n",
         encoding="utf-8",
     )
     project_dir = tmp_path / "project"
@@ -142,7 +144,8 @@ def test_compute_plan_skips_existing_state_labels(
     schemas_dir = tmp_path / "schemas"
     schemas_dir.mkdir()
     (schemas_dir / "workflow.yaml").write_text(
-        "states:\n  - id: todo\n  - id: backlog\n  - id: in-progress\n  - id: review\n  - id: done\n",
+        "states:\n  - id: todo\n  - id: backlog\n  - id: in-progress\n  - id: review\n"
+        "  - id: done\n",
         encoding="utf-8",
     )
 
@@ -172,7 +175,8 @@ def test_compute_plan_omits_state_labels_in_board_mode(
     schemas_dir = tmp_path / "schemas"
     schemas_dir.mkdir()
     (schemas_dir / "workflow.yaml").write_text(
-        "states:\n  - id: todo\n  - id: backlog\n  - id: in-progress\n  - id: review\n  - id: done\n",
+        "states:\n  - id: todo\n  - id: backlog\n  - id: in-progress\n  - id: review\n"
+        "  - id: done\n",
         encoding="utf-8",
     )
 

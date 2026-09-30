@@ -529,8 +529,9 @@ def is_self_host(target_root: Path, source_kit: Path) -> bool:
 
     Code that must answer without knowing which code runs — the entry-point
     router, before any code is chosen, and the propagated ownership predicate —
-    recognises the source by the marker test (`router.is_source_checkout`: the package source beside the `.pkit/` tree) instead (`router.is_source_checkout`);
-    route 1 is what keeps the two answers equal (ADR-059 point 4).
+    recognises the source by the marker test instead (`router.is_source_checkout`:
+    the package source beside the `.pkit/` tree); route 1 is what keeps the two
+    answers equal (ADR-059 point 4).
     """
     return target_root.resolve() == source_kit.parent.resolve()
 

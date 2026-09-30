@@ -3570,7 +3570,8 @@ def test_allow_host_not_auto_accommodated_when_any(tmp_path, monkeypatch):
 
 
 def test_allow_host_remove_cleans_provenance(tmp_path, monkeypatch):
-    """Removing a toolkit with allow-host removes its host from allowedHosts (pkit-authored only)."""
+    """Removing a toolkit with allow-host removes its host from allowedHosts (pkit-authored
+    only)."""
     proj = _with_adapter(_setup(tmp_path))
     _project_toolkit(proj, _toolkit_yaml("my-api", "api.example.com"))
     _run(proj, monkeypatch, "sandbox", "accommodate", "my-api")
@@ -3605,7 +3606,8 @@ def test_allow_host_shipped_github_api_toolkit_present(tmp_path, monkeypatch):
 
 
 def test_allow_host_shipped_anthropic_api_toolkit_present(tmp_path, monkeypatch):
-    """The shipped anthropic-api toolkit is present in the toolkit list as narrowing-but-reported."""
+    """The shipped anthropic-api toolkit is present in the toolkit list as
+    narrowing-but-reported."""
     proj = _setup(tmp_path)
     out = _run(proj, monkeypatch, "sandbox", "toolkit", "list")
     assert "anthropic-api" in out
@@ -3623,7 +3625,8 @@ def test_allow_host_shipped_anthropic_api_toolkit_show(tmp_path, monkeypatch):
 
 
 def test_allow_host_anthropic_api_accommodate_applies_host(tmp_path, monkeypatch):
-    """accommodate anthropic-api writes api.anthropic.com to allowedHosts (single provenance writer)."""
+    """accommodate anthropic-api writes api.anthropic.com to allowedHosts (single provenance
+    writer)."""
     proj = _with_adapter(_setup(tmp_path))
     out = _run(proj, monkeypatch, "sandbox", "accommodate", "anthropic-api")
     assert "narrowing applied" in out

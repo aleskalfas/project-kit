@@ -33,7 +33,7 @@ Exit codes:
   1  membership refusal / validation refusal
   2  usage error
   3  gh failure
-"""
+"""  # noqa: E501 — a usage line is a command, kept whole
 
 from __future__ import annotations
 
@@ -207,7 +207,8 @@ def main() -> int:
     print(f"split-workstream: {args.source} → {', '.join(args.into)}")
     if args.default:
         print(
-            f"  default retag: {axis_labels.label('workstream', args.source)} → {axis_labels.label('workstream', args.default)}"
+            f"  default retag: {axis_labels.label('workstream', args.source)} → "
+            f"{axis_labels.label('workstream', args.default)}"
         )
     else:
         print("  default retag: <none> — issues will be flagged but not retagged")

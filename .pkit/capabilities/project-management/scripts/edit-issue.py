@@ -53,7 +53,7 @@ Exit codes:
   2  usage error (issue not found; no mode specified; milestone matches no
      open milestone)
   3  gh failure
-"""
+"""  # noqa: E501 — a usage line is a command, kept whole
 
 from __future__ import annotations
 

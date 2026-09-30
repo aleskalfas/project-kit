@@ -983,7 +983,8 @@ def test_install_time_check_refuses_the_new_repository_checks_too(
         "schema_version: 1\ncomponent:\n  kind: capability\n  name: homegrown\n  version: 0.1.0\n"
         "requires_backbone: '>=1.0.0'\n"
         "connections:\n  roles: [pkit::documentation]\n  extension-points:\n    accepts:\n"
-        "      pkit::analysis:use-cases: {schema_version: 1, schema: x.schema.json, description: d}\n",
+        "      pkit::analysis:use-cases: {schema_version: 1, schema: x.schema.json, description: "
+        "d}\n",
     )
     problems = caps.validate_capability_self_consistency(source)
     assert any("does not provide" in p for p in problems)

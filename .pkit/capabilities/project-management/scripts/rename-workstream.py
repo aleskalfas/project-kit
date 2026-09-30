@@ -169,7 +169,8 @@ def main() -> int:
     print(f"  file:        {path}")
     if kit_labels and not args.skip_label:
         print(
-            f"  label:       rename `{axis_labels.label('workstream', args.old)}` → `{axis_labels.label('workstream', args.new)}`"
+            f"  label:       rename `{axis_labels.label('workstream', args.old)}` → "
+            f"`{axis_labels.label('workstream', args.new)}`"
         )
     elif kit_label_note is not None:
         print(f"  label:       none — {kit_label_note}")
@@ -246,7 +247,8 @@ def _gh_label_rename(old: str, new: str, config: dict) -> bool:
         return True
     if "not found" in proc.stderr:
         print(
-            f"[info] label `{axis_labels.label('workstream', old)}` not present; nothing to rename.",
+            f"[info] label `{axis_labels.label('workstream', old)}` not present; nothing to "
+            "rename.",
             file=sys.stderr,
         )
         return True

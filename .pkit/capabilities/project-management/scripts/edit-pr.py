@@ -27,7 +27,7 @@ Exit codes:
   1  membership refusal / validation refusal
   2  usage error
   3  gh failure
-"""
+"""  # noqa: E501 — a usage line is a command, kept whole
 
 from __future__ import annotations
 

@@ -706,7 +706,8 @@ def reconcile_overlay(target_root: Path, *, write: bool) -> tuple[list[str], str
             lines.append("")
             lines.append(
                 "Deploy the skipped agent(s):  pkit agents adopt <agent>\n"
-                "Custom doc layout:            uncomment + set real paths in overlay.yaml, then `pkit sync`."
+                "Custom doc layout:            uncomment + set real paths in overlay.yaml, then "
+                "`pkit sync`."
             )
         else:
             lines.append("")
@@ -730,7 +731,8 @@ def reconcile_overlay(target_root: Path, *, write: bool) -> tuple[list[str], str
                 raise FileNotFoundError(f"overlay not found at {path}; run `pkit init` first.")
             block_lines = [
                 "",
-                "# --- added by `pkit agents reconcile` (optional read; the agent already deploys) ---",
+                "# --- added by `pkit agents reconcile` (optional read; the agent already deploys) "
+                "---",
                 "# These categories are OPTIONAL corpus reads: the agent deploys and works",
                 "# without them (as a generalist). Uncomment and set paths to give it your",
                 "# corpus — an enrichment, never a prerequisite.",
@@ -757,7 +759,8 @@ def reconcile_overlay(target_root: Path, *, write: bool) -> tuple[list[str], str
             lines.append(
                 cli_render.style(
                     "strong",
-                    f"{len(commented_hard)} categor(ies) already stubbed but still commented — action needed:",
+                    f"{len(commented_hard)} categor(ies) already stubbed but still commented — "
+                    "action needed:",
                 )
             )
             for cat in commented_hard:
@@ -765,7 +768,8 @@ def reconcile_overlay(target_root: Path, *, write: bool) -> tuple[list[str], str
             lines.append("")
             lines.append(
                 "Deploy the skipped agent(s):  pkit agents adopt <agent>\n"
-                "Custom doc layout:            uncomment + set real paths in overlay.yaml, then `pkit sync`."
+                "Custom doc layout:            uncomment + set real paths in overlay.yaml, then "
+                "`pkit sync`."
             )
         if commented_optional:
             if commented_hard:

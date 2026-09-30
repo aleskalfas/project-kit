@@ -7,7 +7,10 @@
 # ///
 """Project-management capability — detect-backlog (process predicate, DEC-033).
 
-Detection predicate for the 'backlog' lifecycle state. Resolves the issue's live position via move-issue's exact inference precedence (closed->done; first state:* label; milestone->backlog; else todo) and reports result=True iff it equals 'backlog'. State meaning: Scheduled (Milestone assigned); not started.
+Detection predicate for the 'backlog' lifecycle state. Resolves the issue's live position via
+move-issue's exact inference precedence (closed->done; first state:* label; milestone->backlog; else
+todo) and reports result=True iff it equals 'backlog'. State meaning: Scheduled (Milestone
+assigned); not started.
 
 READ-ONLY. The process engine (COR-033) invokes this as
   <script> <issue-number> --json

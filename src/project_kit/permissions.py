@@ -189,14 +189,17 @@ _EXPLAIN_LEGEND = [
     "  allow / deny   the subject may / may not use the privilege",
     "  guardrail      denied for everyone, always — can't be granted around",
     "  posture        lenient = uncovered requests defer to Claude Code · strict = denied",
-    "  ownership      additive = only adds to settings.json · managed = owns the permissions region",
-    "  subjects       all = every agent + operator · operator = the human · agent:<name> = one subagent",
+    "  ownership      additive = only adds to settings.json · managed = owns the permissions "
+    "region",
+    "  subjects       all = every agent + operator · operator = the human · agent:<name> = one "
+    "subagent",
 ]
 _EXPLAIN_COMMANDS = [
     "Commands",
     "  pkit permissions grant <subj> <priv> [--scope G] [--deny]   add a grant",
     "  pkit permissions revoke <subj> <priv>                       remove a grant",
-    "  pkit permissions overview                                   privilege vocabulary + live status",
+    "  pkit permissions overview                                   privilege vocabulary + live "
+    "status",
 ]
 
 
@@ -247,7 +250,8 @@ def explain(target_root: Path, agent: str | None) -> str:
 
     if not any(not is_guardrail_grant(g) for g in model["grants"]):
         lines.append(
-            "\n  (no capability granted to any agent yet — agents fall through to the posture above)"
+            "\n  (no capability granted to any agent yet — agents fall through to the posture "
+            "above)"
         )
 
     lines += [
@@ -1496,7 +1500,8 @@ def _auto_accommodate_narrowing_toolkits(target_root: Path) -> str:
     for tool in applied:
         values += [a.get("value", "") for a in _narrowing(candidates[tool].get("allowances", []))]
     note = (
-        f"auto-accommodated: {', '.join(applied)} (narrowing — {', '.join(v for v in values if v)}; "
+        f"auto-accommodated: {', '.join(applied)} (narrowing — "
+        f"{', '.join(v for v in values if v)}; "
         f"effective on Linux/bubblewrap; inert on macOS per ADR-014)"
     )
     # Mandatory egress reporting (ADR-015 narrowing-but-reported): surface any
@@ -3186,7 +3191,8 @@ def _setup_host_accommodations(target_root: Path) -> tuple[list[str], list[tuple
     if floor:
         nudges.append(
             (
-                f"SSH agent socket is under the credential floor ({floor}); not auto-applied — decide explicitly",
+                f"SSH agent socket is under the credential floor ({floor}); not auto-applied — "
+                "decide explicitly",
                 'pkit permissions sandbox accommodate --socket "$SSH_AUTH_SOCK" --name ssh-agent',
             )
         )
@@ -3277,14 +3283,18 @@ def confinement_list(target_root: Path) -> str:
         "",
         cli_render.style("heading", "Legend"),
         "  →                        accommodated (its narrowing allowances are applied)",
-        "  narrowing                makes the box usable, no reach increase — `sandbox accommodate <tool>`",
-        "  narrowing-but-reported   auto-applied + mandatorily surfaced (allow-host egress; session-wide, not a security boundary)",
-        "  widening                 carves a tool OUT of the box (unconfined) — `sandbox exclude <cmd>` (loud, explicit)",
+        "  narrowing                makes the box usable, no reach increase — `sandbox accommodate "
+        "<tool>`",
+        "  narrowing-but-reported   auto-applied + mandatorily surfaced (allow-host egress; "
+        "session-wide, not a security boundary)",
+        "  widening                 carves a tool OUT of the box (unconfined) — `sandbox exclude "
+        "<cmd>` (loud, explicit)",
         "",
         cli_render.style("heading", "Commands"),
         "  pkit permissions sandbox toolkit show <name>   the exact allowances + effects",
         "  pkit permissions sandbox accommodate <tool>…   apply narrowing allowances (or --detect)",
-        "  pkit permissions sandbox exclude <cmd>         carve a command out of the box (widening)",
+        "  pkit permissions sandbox exclude <cmd>         carve a command out of the box "
+        "(widening)",
     ]
     return "\n".join(lines) + "\n"
 
@@ -3400,7 +3410,8 @@ def accommodate(
             notes = _remove_allowances(target_root, tool)
             _record_accommodation(target_root, tool, add=False)
             lines.append(
-                f"  {tool}: removed — {', '.join(notes) if notes else 'no pkit-authored entries left to remove'}"
+                f"  {tool}: removed — "
+                f"{', '.join(notes) if notes else 'no pkit-authored entries left to remove'}"
             )
             continue
         if not narrowing:
@@ -4875,7 +4886,8 @@ def setup_autonomy(
         _report, decisions_ok = probe(target_root, live=False)
         if not decisions_ok:
             lines += [
-                "  [4/4] verification  ✗ BROKEN — the live decision layer diverges from the declared model",
+                "  [4/4] verification  ✗ BROKEN — the live decision layer diverges from the "
+                "declared model",
                 f"{cont}run `pkit permissions probe` for the per-probe detail",
                 "",
                 "  "
@@ -4885,12 +4897,14 @@ def setup_autonomy(
             ]
             return "\n".join(lines + action_blocks) + "\n", False
         lines += [
-            "  [4/4] verification  ✓ decision layer proven · OS confinement N/A on macOS (#312/#313)",
+            "  [4/4] verification  ✓ decision layer proven · OS confinement N/A on macOS "
+            "(#312/#313)",
             "",
             "  "
             + cli_render.style(
                 "strong",
-                "Result: intent + enforcement armed and proven. OS confinement is skipped on macOS (see above).",
+                "Result: intent + enforcement armed and proven. OS confinement is skipped on macOS "
+                "(see above).",
             ),
         ]
         return "\n".join(lines + action_blocks) + "\n", True
@@ -4899,12 +4913,14 @@ def setup_autonomy(
         # The honest boundary (rule 4): sandbox.enabled is not hot-reloaded.
         lines += [
             "  [4/4] verification  → blocked: sandbox.enabled is not hot-reloaded",
-            f"{cont}restart the session, then re-run — finished steps are skipped and the floor is proven",
+            f"{cont}restart the session, then re-run — finished steps are skipped and the floor is "
+            "proven",
             "",
             "  "
             + cli_render.style(
                 "strong",
-                "Result: configured. Restart the session and re-run to enable the box and prove the goal.",
+                "Result: configured. Restart the session and re-run to enable the box and prove "
+                "the goal.",
             ),
         ]
         return "\n".join(lines + action_blocks) + "\n", True
@@ -4915,7 +4931,8 @@ def setup_autonomy(
     _report, decisions_ok = probe(target_root, live=False)
     if not decisions_ok:
         lines += [
-            "  [4/4] verification  ✗ BROKEN — the live decision layer diverges from the declared model",
+            "  [4/4] verification  ✗ BROKEN — the live decision layer diverges from the declared "
+            "model",
             f"{cont}run `pkit permissions probe` for the per-probe detail",
             "",
             "  "
@@ -4937,13 +4954,16 @@ def setup_autonomy(
         ]
         return "\n".join(lines + action_blocks) + "\n", True
     lines += [
-        "  [4/4] verification  ✓ decision layer proven · OS confinement floor not provable from here",
-        f"{cont}you're outside the box (not yet restarted); re-run after restart — or `pkit permissions probe --live` — to prove it",
+        "  [4/4] verification  ✓ decision layer proven · OS confinement floor not provable from "
+        "here",
+        f"{cont}you're outside the box (not yet restarted); re-run after restart — or `pkit "
+        "permissions probe --live` — to prove it",
         "",
         "  "
         + cli_render.style(
             "strong",
-            "Result: configured and decision-proven. One step left: restart the session, then re-run to prove the OS confinement floor.",
+            "Result: configured and decision-proven. One step left: restart the session, then "
+            "re-run to prove the OS confinement floor.",
         ),
     ]
     return "\n".join(lines + action_blocks) + "\n", True
@@ -5121,7 +5141,8 @@ def diagnose_on(
         f"{hours:.1f}h (auto-expires).\n"
         f"  redaction: {'on (command tail dropped)' if redact else 'OFF (full commands logged)'} · "
         f"size cap: {max_entries} entries (drop-oldest)\n"
-        f"  the log is local + git-ignored: {_diagnose_log_path(target_root).relative_to(target_root)}\n"
+        "  the log is local + git-ignored: "
+        f"{_diagnose_log_path(target_root).relative_to(target_root)}\n"
         f"  run `pkit permissions diagnose report` to see the classified, ranked, "
         f"recommend-only report · `diagnose off` to disarm.\n"
     )
@@ -5451,7 +5472,8 @@ def _diagnose_classify(record: dict[str, Any]) -> str:
 
 _DIAGNOSE_BAND_ORDER = ["defect", "recommend", "judgement", "document"]
 _DIAGNOSE_BAND_HEADING = {
-    "defect": "DEFECTS — prompts the model says never happen; report them, don't allowlist around them",
+    "defect": "DEFECTS — prompts the model says never happen; report them, don't allowlist around "
+    "them",
     "recommend": "RECOMMENDED — remediations pkit recommends (MVP applies NOTHING; recommend-only)",
     "judgement": "NEEDS YOUR JUDGEMENT — real trade-offs only you can settle",
     "document": "CAN'T FIX — document & route around",

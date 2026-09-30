@@ -208,7 +208,8 @@ class LinkResult:
 
 # HTTP statuses that mean "this instance does not support sub-issues" — degrade
 # to a no-op rather than a failure. 410 (gone) and 422 (unprocessable — feature
-# off / not enabled for this repo) say the endpoint is gone or unusable — an invisible repository never
+# off / not enabled for this repo) say the endpoint is gone or unusable — an invisible repository
+# never
 # produces them, so they name feature-absence unambiguously.
 _UNSUPPORTED_STATUSES = (410, 422)
 

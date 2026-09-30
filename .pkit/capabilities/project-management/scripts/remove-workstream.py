@@ -168,7 +168,8 @@ def main() -> int:
         n = _gh_count_label_uses(axis_labels.label("workstream", args.slug), config)
         if n is not None and n > 0 and not args.force:
             print(
-                f"[refused] {n} issue(s) still tagged `{axis_labels.label('workstream', args.slug)}`. "
+                f"[refused] {n} issue(s) still tagged "
+                f"`{axis_labels.label('workstream', args.slug)}`. "
                 "Re-tag them (or use `merge-workstream` to consolidate into "
                 "another slug) first.\n"
                 "  → Pass --force to remove anyway (will leave orphan labels).",

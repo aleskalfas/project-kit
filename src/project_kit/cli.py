@@ -1104,7 +1104,8 @@ def friction_artefacts_command(at: str | None, as_json: bool) -> None:
 @main.group(invoke_without_command=True)
 @click.pass_context
 def version(ctx: click.Context) -> None:
-    """Show this pkit's version, or bump the backbone version of the project at the working directory."""
+    """Show this pkit's version, or bump the backbone version of the project at the working
+    directory."""
     if ctx.invoked_subcommand is None:
         click.echo(f"pkit {__version__}")
 
@@ -1735,7 +1736,8 @@ def init(dry_run: bool, here: bool, yes: bool, root: Path | None) -> None:
             click.echo(
                 f"⚠ WARNING: {target} has a .git that git cannot open (a broken or "
                 f"partial repository).\n"
-                f"       Proceeding because --root is explicit. Run `git -C {shlex.quote(str(target))} "
+                "       Proceeding because --root is explicit. Run `git -C "
+                f"{shlex.quote(str(target))} "
                 f"status` to see why."
             )
         click.echo(f"pkit init -> {target}  (explicit target, --root)")
@@ -1799,7 +1801,8 @@ def init(dry_run: bool, here: bool, yes: bool, root: Path | None) -> None:
             f"repository.\n"
             f"       project-kit will not install inside a repository it cannot "
             f"confirm.\n"
-            f"       Run `git -C {shlex.quote(str(target))} status` to see why, then repair or remove "
+            f"       Run `git -C {shlex.quote(str(target))} status` to see why, then repair or "
+            "remove "
             f"that .git and\n"
             f"       re-run, or install there anyway with `pkit init --root "
             f"{shlex.quote(str(target))}`."
@@ -1889,7 +1892,8 @@ def init(dry_run: bool, here: bool, yes: bool, root: Path | None) -> None:
                 f"directory.\n"
                 f"       This guards against a non-interactive run installing somewhere "
                 f"you are not standing.\n"
-                f"       Re-run with `pkit init --root {shlex.quote(str(target))}` to install there "
+                f"       Re-run with `pkit init --root {shlex.quote(str(target))}` to install "
+                "there "
                 f"explicitly, or cd into it first."
             )
         # Only a git subfolder reaches here (every other off-cwd reason is refused
@@ -3564,7 +3568,8 @@ def refs() -> None:
 
 @refs.command("validate")
 def refs_validate() -> None:
-    """Bidirectional consistency + hook closure + exactly-one-owner check across the artifact corpus."""
+    """Bidirectional consistency + hook closure + exactly-one-owner check across the artifact
+    corpus."""
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
@@ -3869,7 +3874,8 @@ def migrations_check_diff(base_ref: str | None, include_working_tree: bool) -> N
 
 @main.group()
 def permissions() -> None:
-    """Inspect the permission model and reconcile it against live harness state (per COR-028). Read-only."""
+    """Inspect the permission model and reconcile it against live harness state (per COR-028).
+    Read-only."""
 
 
 @permissions.command("explain")
@@ -3887,7 +3893,8 @@ def permissions_explain(agent: str | None) -> None:
 @permissions.command("diff")
 @click.argument("agent", required=False)
 def permissions_diff(agent: str | None) -> None:
-    """Reconcile the model against live `.claude/settings.json` — flags live rules no granted privilege justifies, and dimensions the harness can't enforce."""
+    """Reconcile the model against live `.claude/settings.json` — flags live rules no granted
+    privilege justifies, and dimensions the harness can't enforce."""
     from project_kit import permissions as perm
 
     target_root = find_target_root()
@@ -3910,7 +3917,8 @@ def permissions_catalog() -> None:
 
 @permissions.command("overview")
 def permissions_overview() -> None:
-    """Role-grouped catalog overview: guardrails (deny by default) vs enablers (grant to enable), with provenance and who each is granted to."""
+    """Role-grouped catalog overview: guardrails (deny by default) vs enablers (grant to enable),
+    with provenance and who each is granted to."""
     from project_kit import permissions as perm
 
     target_root = find_target_root()
@@ -4007,7 +4015,8 @@ def permissions_mode(mode: str | None) -> None:
 
 @permissions.command("enable")
 def permissions_enable() -> None:
-    """Turn on live enforcement: register the PreToolUse hook + ensure the native guardrail denies (the double-lock). Opt-in per issue #247."""
+    """Turn on live enforcement: register the PreToolUse hook + ensure the native guardrail denies
+    (the double-lock). Opt-in per issue #247."""
     from project_kit import permissions as perm
 
     target_root = find_target_root()
@@ -4021,7 +4030,8 @@ def permissions_enable() -> None:
 
 @permissions.command("disable")
 def permissions_disable() -> None:
-    """Turn off live enforcement: strip the PreToolUse hook registration (native guardrail denies stay)."""
+    """Turn off live enforcement: strip the PreToolUse hook registration (native guardrail denies
+    stay)."""
     from project_kit import permissions as perm
 
     target_root = find_target_root()
@@ -4035,7 +4045,9 @@ def permissions_disable() -> None:
 
 @permissions.command("apply")
 def permissions_apply() -> None:
-    """Additively realize the model into `.claude/settings.json` (union the projected allow rules + ensure guardrail denies) and report the out-of-harness gap. Additive + idempotent; managed-mode wholesale regeneration is separate."""
+    """Additively realize the model into `.claude/settings.json` (union the projected allow rules +
+    ensure guardrail denies) and report the out-of-harness gap. Additive + idempotent; managed-mode
+    wholesale regeneration is separate."""
     from project_kit import permissions as perm
 
     target_root = find_target_root()
@@ -4050,7 +4062,8 @@ def permissions_apply() -> None:
 @permissions.group("setup", invoke_without_command=True)
 @click.pass_context
 def permissions_setup(ctx: click.Context) -> None:
-    """Goal-oriented setup commands (per ADR-007): stand up a composite goal stepwise + resumably. No goal = list goals."""
+    """Goal-oriented setup commands (per ADR-007): stand up a composite goal stepwise + resumably.
+    No goal = list goals."""
     if ctx.invoked_subcommand is not None:
         return
     from project_kit import permissions as perm
@@ -4120,7 +4133,8 @@ def permissions_setup_autonomy(ctx: click.Context, profile: str, remove_override
 
 @permissions_setup_autonomy.command("down")
 def permissions_setup_autonomy_down() -> None:
-    """Tear the autonomy goal's live switches down (hook + sandbox), reporting residual state loudly."""
+    """Tear the autonomy goal's live switches down (hook + sandbox), reporting residual state
+    loudly."""
     from project_kit import permissions as perm
 
     target_root = find_target_root()
@@ -4169,7 +4183,9 @@ def permissions_probe(subject: str, live: bool) -> None:
 @permissions.group("diagnose", invoke_without_command=True)
 @click.pass_context
 def permissions_diagnose(ctx: click.Context) -> None:
-    """Opt-in permission-prompt diagnostic loop (per PRJ-006): capture deferred (prompted) decisions, classify + rank them, and report remediations it RECOMMENDS. No subcommand = status."""
+    """Opt-in permission-prompt diagnostic loop (per PRJ-006): capture deferred (prompted)
+    decisions, classify + rank them, and report remediations it RECOMMENDS. No subcommand =
+    status."""
     if ctx.invoked_subcommand is not None:
         return
     from project_kit import permissions as perm
@@ -4201,7 +4217,8 @@ def permissions_diagnose(ctx: click.Context) -> None:
     "(redaction is on by default — the tail carries paths/secrets).",
 )
 def permissions_diagnose_on(ttl_seconds: int, no_redact: bool) -> None:
-    """Arm a bounded diagnostic session (TTL-expiring). While armed, the hook appends each deferred decision to a local, git-ignored, size-capped log."""
+    """Arm a bounded diagnostic session (TTL-expiring). While armed, the hook appends each deferred
+    decision to a local, git-ignored, size-capped log."""
     from project_kit import permissions as perm
 
     target_root = find_target_root()
@@ -4217,7 +4234,8 @@ def permissions_diagnose_on(ttl_seconds: int, no_redact: bool) -> None:
 
 @permissions_diagnose.command("off")
 def permissions_diagnose_off() -> None:
-    """Disarm the diagnostic session (remove the armed marker); the captured log is left in place."""
+    """Disarm the diagnostic session (remove the armed marker); the captured log is left in
+    place."""
     from project_kit import permissions as perm
 
     target_root = find_target_root()
@@ -4239,7 +4257,8 @@ def permissions_diagnose_status() -> None:
 
 @permissions_diagnose.command("report")
 def permissions_diagnose_report() -> None:
-    """Print the classified, frequency-ranked, recommend-only report over the captured log. Applies nothing; reports COVERAGE, not a predicted prompt decrement."""
+    """Print the classified, frequency-ranked, recommend-only report over the captured log. Applies
+    nothing; reports COVERAGE, not a predicted prompt decrement."""
     from project_kit import permissions as perm
 
     target_root = find_target_root()
@@ -4251,7 +4270,8 @@ def permissions_diagnose_report() -> None:
 @permissions.group("sandbox", invoke_without_command=True)
 @click.pass_context
 def permissions_sandbox(ctx: click.Context) -> None:
-    """OS-sandbox confinement (per ADR-004): prompt-free scripting inside the box. No subcommand = status."""
+    """OS-sandbox confinement (per ADR-004): prompt-free scripting inside the box. No subcommand =
+    status."""
     if ctx.invoked_subcommand is not None:
         return
     from project_kit import permissions as perm
@@ -4315,7 +4335,8 @@ def permissions_sandbox_disable() -> None:
 
 @permissions_sandbox.group("toolkit")
 def permissions_sandbox_toolkit() -> None:
-    """Confinement toolkits (per ADR-008): per-tool sandbox allowances, classified narrowing/widening."""
+    """Confinement toolkits (per ADR-008): per-tool sandbox allowances, classified
+    narrowing/widening."""
 
 
 @permissions_sandbox_toolkit.command("list")
@@ -4369,7 +4390,8 @@ def permissions_sandbox_toolkit_show(name: str) -> None:
     "--remove",
     is_flag=True,
     default=False,
-    help="Remove the named toolkits' (or the --socket --name) pkit-authored entries (operator entries untouched).",
+    help="Remove the named toolkits' (or the --socket --name) pkit-authored entries (operator "
+    "entries untouched).",
 )
 def permissions_sandbox_accommodate(
     tools: tuple[str, ...], detect: bool, socket_path: str | None, name: str, remove: bool
@@ -4434,7 +4456,8 @@ def permissions_sandbox_exclude(command: str | None, weaker_tls: bool, remove: b
 
 @permissions.group("profile")
 def permissions_profile() -> None:
-    """Named autonomy profiles (per ADR-005): a posture + a layered grant-set you select per project."""
+    """Named autonomy profiles (per ADR-005): a posture + a layered grant-set you select per
+    project."""
 
 
 @permissions_profile.command("list")
@@ -4472,7 +4495,8 @@ def permissions_profile_show(name: str) -> None:
     help="Set the model only; don't realize to settings (run `apply` yourself later).",
 )
 def permissions_profile_activate(name: str, no_apply: bool) -> None:
-    """Activate a profile: set posture + layer its grants, then `apply` (unless --no-apply). Does not enable the hook."""
+    """Activate a profile: set posture + layer its grants, then `apply` (unless --no-apply). Does
+    not enable the hook."""
     from project_kit import permissions as perm
 
     target_root = find_target_root()
@@ -4486,7 +4510,8 @@ def permissions_profile_activate(name: str, no_apply: bool) -> None:
 
 @main.group()
 def decisions() -> None:
-    """Decision-record integrity checks across every id-space (core, project, ADR, per-capability DEC, rules)."""
+    """Decision-record integrity checks across every id-space (core, project, ADR, per-capability
+    DEC, rules)."""
 
 
 @decisions.command("validate")
@@ -4519,7 +4544,8 @@ def decisions_validate() -> None:
 
 @main.group()
 def schemas() -> None:
-    """Validate capability YAML schemas against their JSON Schema companions (per COR-018 + the .pkit/schemas/ area)."""
+    """Validate capability YAML schemas against their JSON Schema companions (per COR-018 + the
+    .pkit/schemas/ area)."""
 
 
 @schemas.command("validate")
@@ -6029,7 +6055,8 @@ def refresh_capability_cmd(name: str, dry_run: bool) -> None:
 
 @main.group()
 def new() -> None:
-    """Scaffold new methodology artifacts: decisions, adapters, migrations, areas, capabilities, schemas, scratchpads, agents, storyboards."""
+    """Scaffold new methodology artifacts: decisions, adapters, migrations, areas, capabilities,
+    schemas, scratchpads, agents, storyboards."""
 
 
 @new.command("decision")
@@ -6612,7 +6639,8 @@ def _load_engine(address: str, subject: str | None) -> ProcessEngine:
 @click.option(
     "--subject",
     default=None,
-    help="Subject key. Required for a keyed process (COR-032); ignored for a singleton (the fixed key is used).",
+    help="Subject key. Required for a keyed process (COR-032); ignored for a singleton (the fixed "
+    "key is used).",
 )
 @click.option(
     "--actor",
@@ -6647,7 +6675,8 @@ def process_status(address: str, subject: str | None, actor: str, as_json: bool)
 @click.option(
     "--subject",
     default=None,
-    help="Subject key. Required for a keyed process (COR-032); ignored for a singleton (the fixed key is used).",
+    help="Subject key. Required for a keyed process (COR-032); ignored for a singleton (the fixed "
+    "key is used).",
 )
 @click.option(
     "--actor",
@@ -6703,7 +6732,8 @@ def _resolve_actor_identity() -> str:
 @click.option(
     "--subject",
     default=None,
-    help="Subject key. Required for a keyed process (COR-032); ignored for a singleton (the fixed key is used).",
+    help="Subject key. Required for a keyed process (COR-032); ignored for a singleton (the fixed "
+    "key is used).",
 )
 @click.option(
     "--actor",
@@ -6734,7 +6764,8 @@ def process_move(address: str, to_state: str, subject: str | None, actor: str | 
 @click.option(
     "--subject",
     default=None,
-    help="Subject key. Required for a keyed process (COR-032); ignored for a singleton (the fixed key is used).",
+    help="Subject key. Required for a keyed process (COR-032); ignored for a singleton (the fixed "
+    "key is used).",
 )
 @click.option(
     "--json",
@@ -6804,7 +6835,8 @@ def process_cascade(address: str, subject: str | None, as_json: bool) -> None:
 @click.option(
     "--subject",
     default=None,
-    help="Subject key. Required for a keyed process (COR-032); ignored for a singleton (the fixed key is used).",
+    help="Subject key. Required for a keyed process (COR-032); ignored for a singleton (the fixed "
+    "key is used).",
 )
 @click.option(
     "--json",
@@ -7475,13 +7507,16 @@ def process_handoff(
     "source",
     type=click.Choice(["derived", "annotated", "resolved"]),
     default=None,
-    help="Atomic filter: keep only edges of this source (`resolved`: the offered-process edges the wiring resolver adds).",
+    help="Atomic filter: keep only edges of this source (`resolved`: the offered-process edges the "
+    "wiring resolver adds).",
 )
 @click.option(
     "--depth",
     type=int,
     default=None,
-    help="Atomic filter: hops from the focused --process (requires --process). Without --direction it is UNDIRECTED (the depth-bounded neighbourhood), distinct from the directed --upstream-of/--downstream-of closures.",
+    help="Atomic filter: hops from the focused --process (requires --process). Without --direction "
+    "it is UNDIRECTED (the depth-bounded neighbourhood), distinct from the directed "
+    "--upstream-of/--downstream-of closures.",
 )
 @click.option(
     "--direction",
