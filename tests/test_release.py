@@ -273,15 +273,124 @@ def test_render_resolves_pr_links_in_trailing_block(tmp_path: Path) -> None:
         pr="https://example.test/pull/470",
     )
     plan = release.compute_release(source_kit)
-    entry = release.render_changelog_entry(plan, date(2026, 7, 3))
+    entry = release.render_changelog_entry(
+        plan, date(2026, 7, 3), repository_url="https://github.com/owner/repo"
+    )
 
-    # Inline `([#N])` on the entry, definition resolved at the foot.
+    # Inline `([#N])` on the entry, definition resolved at the foot: a number
+    # to the repository's pull request, a URL as written.
     assert "- A change. ([#465])" in entry
     assert "- A URL-linked fix. ([#470])" in entry
-    assert "[#465]: 465" in entry
+    assert "[#465]: https://github.com/owner/repo/pull/465" in entry
     assert "[#470]: https://example.test/pull/470" in entry
     # The link block sits below the entries.
-    assert entry.index("### Changed") < entry.index("[#465]: 465")
+    assert entry.index("### Changed") < entry.index("[#465]: ")
+
+
+def test_render_labels_a_pr_number_without_a_link_when_no_repository_is_known(
+    tmp_path: Path,
+) -> None:
+    """#514: a bare number with no repository to link into keeps its label and
+    writes no reference — never the broken `[#465]: 465`."""
+    source_kit = _make_kit(tmp_path)
+    _write_categorised(source_kit, "backbone", "minor", "A change.", "Changed", "a.yaml", pr="465")
+    plan = release.compute_release(source_kit)
+    entry = release.render_changelog_entry(plan, date(2026, 7, 3), repository_url=None)
+
+    assert "- A change. ([#465])" in entry
+    assert "[#465]:" not in entry
+
+
+def test_render_links_a_shared_label_to_the_url_when_the_number_has_no_repository(
+    tmp_path: Path,
+) -> None:
+    """A number and a URL naming the same pull request share one label; with no
+    repository the URL supplies the reference, and both entries link through it."""
+    source_kit = _make_kit(tmp_path)
+    _write_categorised(source_kit, "backbone", "minor", "A change.", "Changed", "a.yaml", pr="465")
+    _write_categorised(
+        source_kit,
+        "backbone",
+        "patch",
+        "A fix.",
+        "Fixed",
+        "b.yaml",
+        pr="https://example.test/pull/465",
+    )
+    plan = release.compute_release(source_kit)
+    entry = release.render_changelog_entry(plan, date(2026, 7, 3))
+
+    assert "- A change. ([#465])" in entry
+    assert "- A fix. ([#465])" in entry
+    assert entry.count("[#465]: ") == 1
+    assert "[#465]: https://example.test/pull/465" in entry
+
+
+def test_apply_links_a_pr_number_to_the_origin_repository(tmp_path: Path) -> None:
+    source_kit = _make_kit(tmp_path)
+    GitRepo(tmp_path).git("remote", "add", "origin", "git@github.com:owner/repo.git")
+    _write_categorised(source_kit, "backbone", "patch", "A fix.", "Fixed", "a.yaml", pr="503")
+
+    release.apply_release(source_kit, release.compute_release(source_kit))
+
+    changelog = (tmp_path / "CHANGELOG.md").read_text(encoding="utf-8")
+    assert "- A fix. ([#503])" in changelog
+    assert "[#503]: https://github.com/owner/repo/pull/503" in changelog
+
+
+def test_apply_without_a_github_origin_labels_a_pr_number_and_says_so(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    source_kit = _make_kit(tmp_path)  # no remote at all
+    _write_categorised(source_kit, "backbone", "patch", "A fix.", "Fixed", "a.yaml", pr="503")
+
+    release.apply_release(source_kit, release.compute_release(source_kit))
+
+    changelog = (tmp_path / "CHANGELOG.md").read_text(encoding="utf-8")
+    assert "- A fix. ([#503])" in changelog
+    assert "[#503]:" not in changelog
+    assert "without a link" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    "remote",
+    [
+        "https://github.com/owner/repo.git",
+        "https://github.com/owner/repo",
+        "https://github.com/owner/repo/",
+        "https://x-access-token:secret@github.com/owner/repo.git",
+        "git@github.com:owner/repo.git",
+        "ssh://git@github.com/owner/repo.git",
+        "ssh://git@github.com:22/owner/repo",
+        "https://GitHub.com/owner/repo.git\n",
+    ],
+)
+def test_github_repository_url_reads_owner_and_name_from_each_remote_form(remote: str) -> None:
+    assert release.github_repository_url(remote) == "https://github.com/owner/repo"
+
+
+@pytest.mark.parametrize(
+    "remote",
+    [
+        "",
+        "https://gitlab.com/owner/repo.git",
+        "git@gitlab.com:owner/repo.git",
+        "https://github.com.example.test/owner/repo",
+        "https://github.com@example.test/owner/repo",
+        "https://github.com/owner",
+        "https://github.com/owner/repo/extra",
+        "/srv/git/repo.git",
+    ],
+)
+def test_github_repository_url_is_none_for_any_other_remote(remote: str) -> None:
+    assert release.github_repository_url(remote) is None
+
+
+def test_origin_repository_url_reads_the_origin_remote(tmp_path: Path) -> None:
+    repo = GitRepo.init(tmp_path)
+    assert release.origin_repository_url(tmp_path) is None
+    repo.git("remote", "add", "origin", "https://github.com/owner/repo.git")
+    assert release.origin_repository_url(tmp_path) == "https://github.com/owner/repo"
 
 
 def test_render_omits_link_when_pr_absent(tmp_path: Path) -> None:

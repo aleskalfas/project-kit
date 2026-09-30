@@ -21,9 +21,9 @@ pkit:
       artefact:
         - ACT-operator
     revalidated:
-      at: 2026-09-30T21:35:01Z
+      at: 2026-09-30T21:11:57Z
       outcome: unchanged
-      unchanged-because: on this branch _lib/milestone.py gains the Milestone reads close-milestone used to hold (close-trigger, children, now read through the containment seam past the newest 500 issues) and close-issue's closure cascade reports a content-based Milestone whose children have all closed; the release readiness, deferral, release gate and release pull request this use case walks are untouched, and closing a Milestone is still close-milestone's gesture, so its steps hold
+      unchanged-because: The release step now links a changelog entry's bare pull-request number to the origin repository and the lint checks the pr field's shape; the use case's concerns - cutting a release with unfinished work, Milestones and the release PR - are untouched.
 ---
 
 # UC-005 — Cut a release while unfinished work remains
