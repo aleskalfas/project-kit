@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-09-30T05:35:11Z
+      at: 2026-09-30T06:58:24Z
       outcome: unchanged
-      unchanged-because: the CLI README's release rows and paragraph now say a floor-only patch changeset is the correction path, that no escape hatch waives the floor tie, that an explicit floor names a release the tree records, and that apply warns before confirming when --no-broaden leaves a range excluding the shipped backbone; the area map's one-line description of cli/ holds
+      unchanged-because: the CLI README gains the repository.default-branch key, the default base of the change check and the default_branch and base keys of friction artefacts, and the schemas README lists the repository key; the area map's one-line descriptions of cli/ and schemas/ hold
 ---
 
 # project-kit

@@ -22,6 +22,9 @@
     "process": {
       "$ref": "#/$defs/process"
     },
+    "repository": {
+      "$ref": "#/$defs/repository"
+    },
     "project": {
       "title": "The reserved `project` block (COR-048 point 2)",
       "description": "Keys owned by the project's own decision records. Checked only for being well-formed — a mapping — and otherwise not inspected; project-supplied schemas for it are deferred until a real need appears.",
@@ -132,6 +135,19 @@
               "type": "boolean"
             }
           }
+        }
+      }
+    },
+    "repository": {
+      "title": "Repository facts (COR-054)",
+      "description": "Facts about the repository that every reader takes from one place.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "default-branch": {
+          "description": "The branch the project's settled work lands on — declared once, for every reader (COR-054 point 1). Resolved as the remote-tracking reference `origin/<name>` when it names a commit, else the local branch `<name>` (point 2); a comparison's base named for one run (`--base`, `$PKIT_CHECK_BASE`) replaces it for that run only (point 3). A branch name: no whitespace, not starting with `-`. Default `main`. Written by the project, by hand or `pkit config set`.",
+          "type": "string",
+          "pattern": "^[^\\s-]\\S*$"
         }
       }
     },

@@ -58,7 +58,7 @@ def test_shipped_config_schema_is_draft_2020_12_without_a_version_key() -> None:
     assert "schema_version" not in schema["properties"]
     assert schema["additionalProperties"] is False
     assert set(schema["properties"]) == {
-        "name", "docs", "friction", "connections", "process", "project",
+        "name", "docs", "friction", "connections", "process", "repository", "project",
     }
 
 

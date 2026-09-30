@@ -50,7 +50,8 @@ from project_kit.scaffolds import (
 )
 from project_kit.agents import STORYBOARD_FILE, stamp_new_agent
 from project_kit.storyboards import ArtifactKind, stamp_new_storyboard
-from project_kit import friction_check, friction_report, friction_repository, friction_write
+from project_kit import default_branch, friction_check, friction_report, friction_repository
+from project_kit import friction_write
 from project_kit import refs as refs_mod
 from project_kit import router
 from project_kit import scratchpads
@@ -846,10 +847,10 @@ def friction_record_status_command(artefact: str, yes: bool, dry_run: bool) -> N
     "--base",
     "base_ref",
     metavar="REF",
-    envvar=friction_check.BASE_ENV,
-    default=friction_check.DEFAULT_BASE,
-    show_default=True,
-    help=f"Compare against the merge-base of REF and HEAD (or ${friction_check.BASE_ENV}).",
+    default=None,
+    help=f"Compare against the merge-base of REF and HEAD. Default: ${friction_check.BASE_ENV}, "
+    "else the default branch (`repository.default-branch`, resolved as origin/<name>, else "
+    "<name>).",
 )
 @click.option(
     "--all",
@@ -865,15 +866,16 @@ def friction_record_status_command(artefact: str, yes: bool, dry_run: bool) -> N
 @click.option(
     "--json", "as_json", is_flag=True, default=False, help="Emit the stable JSON document."
 )
-def friction_check_command(base_ref: str, whole_repository: bool, as_json: bool) -> None:
+def friction_check_command(base_ref: str | None, whole_repository: bool, as_json: bool) -> None:
     """The change check (COR-050 point 6): every artefact whose anchor changed in the diff
     carries an answer — updated, unchanged with why, or deferred.
 
     Reads git only and writes nothing: the working tree (uncommitted changes
-    included) against the merge-base of REF. Reports friction, dead anchors of
-    the change, bumps with nothing behind them and an outdated base. Exit 1
-    in enforcing mode on friction, a dead anchor, an unresolved kind or a
-    bump; an outdated base never fails.
+    included) against the merge-base of REF — by default $PKIT_CHECK_BASE,
+    else the default branch (COR-054). Reports friction, dead anchors of the
+    change, bumps with nothing behind them and an outdated base. Exit 1 in
+    enforcing mode on friction, a dead anchor, an unresolved kind or a bump;
+    an outdated base never fails.
 
     With --all, the whole-repository check instead: every artefact at HEAD
     against the current history, each anchor judged from the artefact's
@@ -892,6 +894,7 @@ def friction_check_command(base_ref: str, whole_repository: bool, as_json: bool)
         else:
             click.echo(friction_repository.render_human(report), nl=False)
         return
+    _warn_default_branch(target_root)
     result = friction_check.run_change_check(target_root, base_ref)
     if as_json:
         click.echo(friction_check.render_json(result), nl=False)
@@ -963,11 +966,20 @@ def friction_explain_command(artefact: str, as_json: bool) -> None:
     "from git objects instead of the working tree. Nothing is checked out.",
 )
 @click.option(
+    "--base",
+    "base_ref",
+    metavar="REF",
+    default=None,
+    help=f"Name the base the document's `base` reads: REF, instead of ${friction_check.BASE_ENV}, "
+    "else the default branch.",
+)
+@click.option(
     "--json", "as_json", is_flag=True, default=False, help="Emit the stable JSON document."
 )
-def friction_artefacts_command(at: str | None, as_json: bool) -> None:
+def friction_artefacts_command(at: str | None, base_ref: str | None, as_json: bool) -> None:
     """The declared places, the files they hold and the artefacts in them, as
-    discovery finds them (COR-050 point 1).
+    discovery finds them (COR-050 point 1), and the default branch and base
+    every reader of settled state reads (COR-054 point 5).
 
     One run of the discovery `pkit validate` reads, over the working tree —
     or, with --at, over one commit: each place — the project's and each
@@ -975,11 +987,15 @@ def friction_artefacts_command(at: str | None, as_json: bool) -> None:
     skips validation applies (a synced copy, a place outside the repository, a
     malformed declaration), every file read with its front matter's own
     fields, every artefact with its anchors, and each folder of held documents
-    a component declares, with the files it holds. Read-only. It is how a
-    capability's own script reads where artefacts are, now or at another
-    state, without importing the backbone or walking the places itself. Exit 0
-    when answered; 1 when the configuration cannot be read or REV names no
-    commit; 2 on a usage error.
+    a component declares, with the files it holds. Then, for the repository
+    as it stands: the default branch — declared, and resolved as origin/<name>,
+    else <name> — and the base a comparison reads, with its commit and where
+    HEAD left it. Read-only. It is how a capability's own script reads where
+    artefacts are, now or at another state, and which commit is settled,
+    without importing the backbone, walking the places or resolving a base
+    itself. Exit 0 when answered — a base that cannot be compared is an
+    answer, with its problem; 1 when the configuration cannot be read or REV
+    names no commit; 2 on a usage error.
     """
     from project_kit import friction_discovery, validators
 
@@ -998,10 +1014,20 @@ def friction_artefacts_command(at: str | None, as_json: bool) -> None:
     document = validators.as_one_run(
         lambda: friction_discovery.artefacts_document(target_root, tree)
     )
+    settled = default_branch.reading(target_root, base_ref)
+    _warn_default_branch(target_root)
     if as_json:
-        click.echo(friction_discovery.render_artefacts_json(document), nl=False)
+        click.echo(friction_discovery.render_artefacts_json({**document, **settled}), nl=False)
     else:
         click.echo(friction_discovery.render_artefacts_human(document), nl=False)
+        click.echo(default_branch.render_human(settled), nl=False)
+
+
+def _warn_default_branch(target_root: Path) -> None:
+    """A declared default branch read as the default says so (COR-048 point 4)."""
+    _name, _source, warning = default_branch.declared(target_root)
+    if warning is not None:
+        click.echo(f"warning: {warning}", err=True)
 
 
 @main.group(invoke_without_command=True)

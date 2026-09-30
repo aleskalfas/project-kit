@@ -72,6 +72,16 @@ def _document() -> dict[str, Any]:
     return json.loads(result.output)
 
 
+def _discovered(document: dict[str, Any]) -> dict[str, Any]:
+    """The document less what is settled — the default branch and the base (COR-054)."""
+    return {k: v for k, v in document.items() if k not in ("default_branch", "base")}
+
+
+def _discovery_lines(output: str) -> list[str]:
+    """The human view less its last two lines, the default branch and the base."""
+    return output.rstrip().split("\n")[:-2]
+
+
 def _evidence_declares(adopter: AdopterRepo, blocks: str) -> None:
     package = adopter.root / EVIDENCE_PACKAGE
     package.write_text(package.read_text(encoding="utf-8") + blocks, encoding="utf-8")
@@ -272,7 +282,8 @@ def test_at_a_commit_the_document_is_that_state_s(adopter: AdopterRepo) -> None:
     assert "notes/later.md" in [f["path"] for f in now["files"]]
     result = _run("--at", "HEAD", "--json")
     assert result.exit_code == 0, result.output
-    assert json.loads(result.output) == committed
+    # What is settled describes the repository as it stands, whichever state is read (COR-054).
+    assert _discovered(json.loads(result.output)) == _discovered(committed)
     assert _run("--at", "HEAD", "--json").output == result.output
 
 
@@ -392,7 +403,7 @@ def test_held_folders_are_declared_as_places_are_with_the_files_each_holds(
     assert record not in document["places"][2]["files"]
     assert record not in [f["path"] for f in document["files"]]
     assert record not in [a["path"] for a in document["artefacts"]]
-    human = _run().output.rstrip().split("\n")
+    human = _discovery_lines(_run().output)
     assert human[-4:] == [
         "3 held folder(s), whose files no place walks:",
         "  tech-docs/logs/records  (capability:evidence, location logs)  1 file(s)",
@@ -419,10 +430,13 @@ def test_without_json_a_line_per_place_and_the_counts(adopter: AdopterRepo) -> N
     assert "  tech-docs/evidence/**/*.md  (capability:evidence, location runs)  1 file(s)" in (
         result.output
     )
-    assert result.output.rstrip().endswith(
-        "6 file(s): 1 excluded, 0 unreadable.\n"
-        "4 artefact(s): 4 carrying the `pkit` container, 4 with a `friction` block."
-    )
+    assert _discovery_lines(result.output)[-2:] == [
+        "6 file(s): 1 excluded, 0 unreadable.",
+        "4 artefact(s): 4 carrying the `pkit` container, 4 with a `friction` block.",
+    ]
+    default_branch, base = result.output.rstrip().split("\n")[-2:]
+    assert default_branch.startswith("Default branch: main (default)")
+    assert base.startswith("Base: main (the default branch)")
 
 
 @pytest.mark.parametrize("config", ["friction: [places\n", "- a list\n"])
