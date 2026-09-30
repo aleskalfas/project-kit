@@ -70,6 +70,10 @@ TERM-release-scope:
         record:
           - project-management:DEC-016
           - PRJ-002
+      revalidated:
+        at: 2026-09-30T05:35:15Z
+        outcome: unchanged
+        unchanged-because: PRJ-002 D4 now also lets a floor ride on a floor-only release of its component, holds an explicit floor to a release the tree records, and says no escape hatch waives the guard's tie; which work a release waits for is untouched by how version floors are declared and checked
 TERM-session:
   name: Session
   status: active

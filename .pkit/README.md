@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-09-30T04:12:40Z
+      at: 2026-09-30T05:35:11Z
       outcome: unchanged
-      unchanged-because: with main's nested-run change merged, the lifecycle, CLI and schemas READMEs also bound a capability's folders of held documents and declare them beside the places in pkit friction artefacts (#1130), inside their friction sections; the area map and each area's one-line description hold
+      unchanged-because: the CLI README's release rows and paragraph now say a floor-only patch changeset is the correction path, that no escape hatch waives the floor tie, that an explicit floor names a release the tree records, and that apply warns before confirming when --no-broaden leaves a range excluding the shipped backbone; the area map's one-line description of cli/ holds
 ---
 
 # project-kit

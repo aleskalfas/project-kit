@@ -4,10 +4,11 @@ A *release* consumes the pending changesets under `.changes/unreleased/`,
 computes each tier's new version from the current state on `main`, writes
 the version numbers, broadens kit-shipped components' `requires_backbone`
 (the broaden moves here per PRJ-002 D4), raises the `requires_backbone` floor
-of each component a changeset declares needs the backbone the release ships
-(also PRJ-002 D4), generates the changelog, deletes the consumed changesets,
-and (for a backbone bump) cuts the tag via the existing `tag_version`
-(PRJ-004).
+of each component a changeset declares needs a backbone — the one the release
+ships, or an already-shipped one the changeset names (also PRJ-002 D4) —
+generates the changelog, which states each raised floor, deletes the consumed
+changesets, and (for a backbone bump) cuts the tag via the existing
+`tag_version` (PRJ-004).
 
 Cutover note (PRJ-002 D-implications): this module *adds* the release-
 authority path; it does not retire `pkit version bump`. Both broaden
@@ -24,7 +25,7 @@ from __future__ import annotations
 import json
 import re
 import subprocess
-from collections.abc import Mapping, Sequence
+from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
@@ -40,6 +41,7 @@ from project_kit.changesets import (
     Component,
     discover_components,
     load_changesets,
+    parse_changeset_text,
     segment_rank,
     unreleased_dir,
 )
@@ -94,17 +96,33 @@ DEFAULT_CATEGORY = "Changed"
 # full URL (`.../pull/465`) both yield the `[#465]` link label.
 _PR_NUMBER_RE = re.compile(r"(\d+)\D*$")
 
+# What ends a changelog note as a sentence, and a Markdown list item (`- x`,
+# `* x`, `+ x`, `1. x`, `1) x`) — the shapes `_with_sentence` punctuates around.
+_SENTENCE_ENDS = (".", "!", "?")
+_LIST_ITEM_RE = re.compile(r"^[ \t]*(?:[-*+]|\d+[.)])[ \t]+\S")
+
 
 @dataclass(frozen=True)
 class FloorRaise:
     """What a declared floor raise does to one component's `requires_backbone`."""
 
     old_floor: str  # the floor the package declares
-    new_floor: str  # the shipped backbone, or the old floor when that is already higher
-    backbone: str  # the backbone the release ships, which the declaration names
-    # False when the release does not move the backbone: the declaration then
-    # resolves to the current one, which may predate the change the component needs.
+    new_floor: str  # the declared floor, or the old floor when that is already higher
+    declared: str  # the highest backbone the component's changesets name (`declared_floor`)
+    backbone: str  # the backbone the release ships, which `release` names
+    # False when the release does not move the backbone: `release` then names the
+    # current one, which may predate the change the component needs.
     backbone_moves: bool
+    # The changeset whose declaration sets the floor: the first naming `declared`,
+    # an explicit version before `release` when both name it (`_floor_raise`).
+    setter: Changeset
+    release_declared: bool  # some changeset of the component says `release`
+
+    @property
+    def names_release(self) -> bool:
+        """Whether the declaration that sets the floor says `release`, rather than
+        naming an explicit version."""
+        return self.setter.names_release
 
     @property
     def raises(self) -> bool:
@@ -114,20 +132,28 @@ class FloorRaise:
     @property
     def lines(self) -> list[str]:
         """What `release plan` prints under the component's bump, and its `--json`
-        carries for the release PR's body."""
+        carries for the release PR's body. The notice that the backbone does not
+        move follows any `release` declaration, even one an explicit version ties:
+        the need behind it may still postdate the current backbone."""
         lines = [
             f"requires_backbone floor raised to >={self.new_floor}"
             if self.raises
             else f"requires_backbone floor stays >={self.old_floor} "
-            f"(already at or above {self.backbone})"
+            f"(already at or above {self.declared})"
         ]
-        if not self.backbone_moves:
+        if self.release_declared and not self.backbone_moves:
             resolved = "floor raised to" if self.raises else "the declared floor resolves to"
             lines.append(
                 f"backbone does not move this release; {resolved} current {self.backbone} "
                 f"— confirm the needed surface shipped in {self.backbone}"
             )
         return lines
+
+    @property
+    def changelog_sentence(self) -> str | None:
+        """What the component's changelog entry says of the raise; None when the
+        range does not change."""
+        return f"Requires backbone >={self.new_floor}." if self.raises else None
 
 
 @dataclass(frozen=True)
@@ -148,8 +174,18 @@ class ComponentRelease:
 
     @property
     def raises_floor(self) -> bool:
-        """Whether a changeset declares this component needs the release's backbone."""
+        """Whether a changeset declares this component needs a backbone."""
         return self.floor_raise is not None
+
+    @property
+    def floor_entry(self) -> Changeset | None:
+        """The changeset whose changelog entry states the raised floor: the one
+        whose declaration sets it (`FloorRaise.setter`). None when the release
+        leaves the floor as it is."""
+        floor = self.floor_raise
+        if floor is None or not floor.raises:
+            return None
+        return floor.setter
 
 
 @dataclass(frozen=True)
@@ -158,8 +194,8 @@ class ReleasePlan:
 
     releases: list[ComponentRelease]  # tiers that actually move (segment != none)
     consumed: list[Changeset]  # every pending changeset (incl. `none`) to delete
-    # The backbone version this release ships (`shipped_backbone`). A declared
-    # floor is raised to it.
+    # The backbone version this release ships (`shipped_backbone`). A floor
+    # declared `release` is raised to it.
     shipped_backbone: str
 
     @property
@@ -172,7 +208,7 @@ class ReleasePlan:
 
     @property
     def floor_raises(self) -> list[ComponentRelease]:
-        """The moving components a changeset declares need the release's backbone."""
+        """The moving components a changeset declares need a backbone."""
         return [r for r in self.releases if r.raises_floor]
 
 
@@ -200,10 +236,15 @@ def compute_release(source_kit: Path) -> ReleasePlan:
         grouped.setdefault(cs.component, []).append(cs)
 
     shipped = shipped_backbone(components, changesets)
+    released = (
+        recorded_backbone_releases(source_kit.parent, components)
+        if any(cs.requires_backbone is not None for cs in changesets)
+        else frozenset[str]()
+    )
     refused = [
         f"changeset {cs.path.name}: {problem}"
         for cs in changesets
-        for problem in floor_problems(cs, components, shipped)
+        for problem in floor_problems(cs, components, shipped, released)
     ]
     if refused:
         raise click.ClickException(
@@ -236,8 +277,8 @@ def compute_release(source_kit: Path) -> ReleasePlan:
 def shipped_backbone(components: Mapping[str, Component], changesets: Sequence[Changeset]) -> str:
     """The backbone version a release of `changesets` ships: the new one when a
     changeset moves the backbone, else the current `.pkit/VERSION` (empty when the
-    tree has none). A declared floor is raised to it. One reader for the release,
-    which raises to it, and the lint, which checks it can be raised to."""
+    tree has none). A floor declared `release` is raised to it. One reader for the
+    release, which raises to it, and the lint, which checks it can be raised to."""
     current = components.get(BACKBONE)
     if current is None:
         return ""
@@ -254,48 +295,78 @@ def _top_segment(group: Sequence[Changeset]) -> str | None:
     return max(group, key=lambda cs: segment_rank(cs.segment)).segment
 
 
+def declared_floor(cs: Changeset, shipped: str) -> str | None:
+    """The backbone `cs`'s floor field names: `shipped`, the backbone the release
+    ships, for `release`, else the version the field gives. None when the
+    changeset carries no floor field."""
+    if cs.requires_backbone is None:
+        return None
+    return shipped if cs.names_release else cs.requires_backbone
+
+
 def _floor_raise(
     component: Component, group: Sequence[Changeset], shipped: str, backbone_moves: bool
 ) -> FloorRaise | None:
     """The floor raise a moving component's changesets declare, or None when none
-    does. Read before anything is written; `floor_problems` has already refused a
-    component without a floor to raise."""
-    if not any(cs.raises_floor for cs in group):
+    does: to the highest backbone they name. Read before anything is written;
+    `floor_problems` has already refused a component without a floor to raise and
+    any name that is not a release version.
+
+    The declaration naming that backbone sets the floor, and its changelog entry
+    says so. When an explicit version and `release` name the same backbone, the
+    explicit one sets it — it vouches that backbone has shipped — and among equal
+    declarations the first in filename order does, so the choice never depends on
+    anything but the changesets."""
+    declarations = [
+        (cs, floor) for cs in group if (floor := declared_floor(cs, shipped)) is not None
+    ]
+    if not declarations:
         return None
+    setter, declared = max(
+        declarations, key=lambda d: (parse_version_tuple(d[1]), not d[0].names_release)
+    )
     floor = versioning.requires_backbone_floor(component.version_path.read_text(encoding="utf-8"))
     if floor is None:
         raise click.ClickException(
             f"{component.name}: requires_backbone has no floor the release can raise"
         )
-    raised = parse_version_tuple(floor) < parse_version_tuple(shipped)
+    raised = parse_version_tuple(floor) < parse_version_tuple(declared)
     return FloorRaise(
         old_floor=floor,
-        new_floor=shipped if raised else floor,
+        new_floor=declared if raised else floor,
+        declared=declared,
         backbone=shipped,
         backbone_moves=backbone_moves,
+        setter=setter,
+        release_declared=any(cs.names_release for cs, _ in declarations),
     )
 
 
-def floor_problems(cs: Changeset, components: Mapping[str, Component], shipped: str) -> list[str]:
+def floor_problems(
+    cs: Changeset, components: Mapping[str, Component], shipped: str, released: Collection[str]
+) -> list[str]:
     """Why `cs`'s floor field cannot raise a floor; empty when it can, or when the
     changeset carries none.
 
-    The field raises the floor of a capability or adapter whose `requires_backbone`
-    is a range the release raises (`versioning.requires_backbone_floor`, the
-    same locator the raise rewrites through), on a changeset that moves the
-    component's version — a raised floor changes what the component requires,
-    which is surface and is never shipped under an unchanged version — to
-    `shipped`, the backbone the release ships (`shipped_backbone`), which must be
-    a release version. One reader for the release step, which refuses, and the
-    lint, which reports.
+    The field names the backbone the component needs: `release`, the backbone
+    the release ships (`shipped`, from `shipped_backbone`), which must then be a
+    release version; or an explicit release version the tree records as
+    released (`released`, from `recorded_backbone_releases`) at or below the
+    backbone the tree carries — one that has shipped, so the branch states a
+    fact rather than predicting the release (PRJ-002 D4). It raises the floor of
+    a capability or adapter whose `requires_backbone` is a range the release
+    raises (`versioning.requires_backbone_floor`, the same locator the raise
+    rewrites through), on a changeset that moves the component's version — a
+    raised floor changes what the component requires, which is surface and is
+    never shipped under an unchanged version. One reader for the release step,
+    which refuses, and the lint, which reports.
     """
     if cs.requires_backbone is None:
         return []
     problems: list[str] = []
-    if not cs.raises_floor:
-        problems.append(
-            f"`{FLOOR_FIELD}` takes one value, `{FLOOR_RELEASE}` (the backbone this "
-            f"release ships); got {cs.requires_backbone!r}."
+    if not cs.names_release:
+        problems.extend(
+            _explicit_floor_problems(cs.requires_backbone, components.get(BACKBONE), released)
         )
     if cs.component == BACKBONE:
         problems.append(
@@ -324,14 +395,121 @@ def floor_problems(cs: Changeset, components: Mapping[str, Component], shipped: 
             'has a floor the release can raise (a range of the form ">=X.Y.Z,<A.B.C" '
             'or ">=X.Y.Z").'
         )
-    if not versioning.is_release_version(shipped):
+    if cs.names_release and not versioning.is_release_version(shipped):
         problems.append(
             f"the release ships backbone {shipped!r} — the current `.pkit/VERSION`, since "
             "no changeset moves the backbone — which is not a release version "
             "(major.minor.patch), so no floor can be raised to it. Declare a backbone "
-            "change in this release, or release once `.pkit/VERSION` is a release version."
+            "change in this release, name the already-shipped backbone the component "
+            "needs, or release once `.pkit/VERSION` is a release version."
         )
     return problems
+
+
+def _explicit_floor_problems(
+    value: str, current: Component | None, released: Collection[str]
+) -> list[str]:
+    """Why an explicit floor value names no backbone the release can raise to; empty
+    when it names a release the tree records (`recorded_backbone_releases`) at or
+    below `current`, the backbone the tree carries — one that has shipped.
+
+    The bound is the tree's own backbone: on a branch, the backbone `main` had
+    when the branch was cut; in an adopter's repo, the installed one, which a pin
+    or a downgrade can lower below a floor already declared. Either way the
+    release is refused until the two agree, and the message says how."""
+    if not versioning.is_release_version(value):
+        return [_explicit_form_problem(value)]
+    if current is None:
+        return [
+            f"names backbone {value}, but the tree has no current backbone "
+            "(`.pkit/VERSION`) for it to be at or below."
+        ]
+    problem = backbone_version_problem(current)
+    if problem is not None:
+        return [f"names backbone {value}, but {problem}"]
+    if not versioning.is_at_or_below(value, current.version):
+        return [
+            f"names backbone {value}, above the backbone this tree carries "
+            f"({current.version}, its `.pkit/VERSION`): an explicit version names a "
+            "backbone that has shipped, and the release is refused until the tree "
+            f"carries {value} or later. If main has released {value} since this branch "
+            "was cut, update the branch from main; if this tree's backbone is pinned or "
+            "downgraded below it, upgrade the backbone or lower the floor. For the "
+            f"backbone this release ships, say `{FLOOR_RELEASE}`."
+        ]
+    if value not in released:
+        later = sorted(
+            (r for r in released if parse_version_tuple(r) > parse_version_tuple(value)),
+            key=parse_version_tuple,
+        )
+        hint = (
+            f"the lowest release it records above {value} is {later[0]}"
+            if later
+            else "name one it records"
+        )
+        return [
+            f"names backbone {value}, which this tree records no release of — the "
+            f"releases it records are its {CHANGELOG_NAME} release headings and the "
+            f"backbone it carries ({current.version}); {hint}."
+        ]
+    return []
+
+
+def _explicit_form_problem(value: str) -> str:
+    """The problem with an explicit floor value that is not a release version, with
+    a hint for the two slips YAML and habit make likely: an unquoted
+    `major.minor`, which YAML reads as a number, and a part padded with a zero."""
+    problem = (
+        f"`{FLOOR_FIELD}` takes `{FLOOR_RELEASE}` (the backbone this release ships) or "
+        "an already-shipped release version, major.minor.patch with no pre-release "
+        f"suffix or leading zero; got {value!r}."
+    )
+    if re.fullmatch(r"\d+(?:\.\d+)?", value):
+        full = value + ".0" * (2 - value.count("."))
+        return (
+            f"{problem} A version has three parts, and YAML reads an unquoted "
+            f"major.minor such as {value} as a number: write it in full and quoted, "
+            f'`{FLOOR_FIELD}: "{full}"`.'
+        )
+    if re.fullmatch(r"\d+\.\d+\.\d+", value):
+        canonical = ".".join(str(int(part)) for part in value.split("."))
+        return f"{problem} Write it without the leading zero: {canonical}."
+    return problem
+
+
+def backbone_version_problem(current: Component) -> str | None:
+    """Why the backbone the tree carries cannot bound a declared floor — its
+    `.pkit/VERSION` holds no version — or None when it can."""
+    if versioning.is_version(current.version):
+        return None
+    return (
+        f"the backbone this tree carries, {current.version!r} in `.pkit/VERSION`, is not a "
+        "version (major.minor.patch[(a|b|rc)N]), so no floor can be checked against it."
+    )
+
+
+def recorded_backbone_releases(
+    repo_root: Path, components: Mapping[str, Component]
+) -> frozenset[str]:
+    """The backbone releases the tree records: each version its `CHANGELOG.md`
+    keys a release section on (`## X.Y.Z — date`, the heading a backbone release
+    writes), and the backbone it carries (`.pkit/VERSION`) when that is a release
+    version. An explicit floor must name one of them (PRJ-002 D4).
+
+    A tree whose changelog keys no section on a version — an adopter's, whose
+    releases are its own components', dated — records only the backbone it
+    carries."""
+    recorded: set[str] = set()
+    current = components.get(BACKBONE)
+    if current is not None and versioning.is_release_version(current.version):
+        recorded.add(current.version)
+    changelog = repo_root / CHANGELOG_NAME
+    if changelog.is_file():
+        for line in changelog.read_text(encoding="utf-8").splitlines():
+            match = _CHANGELOG_VERSION_HEADING_RE.match(line.rstrip())
+            if match is not None and versioning.is_release_version(match.group(1)):
+                recorded.add(match.group(1))
+    return frozenset(recorded)
 
 
 def apply_release(
@@ -368,12 +546,15 @@ def apply_release(
     the current backbone.
 
     The floor raise is never automatic: it raises the lower bound of each
-    moving component a changeset declares needs the backbone the release ships
-    (`requires_backbone: release`) to `plan.shipped_backbone`, **raise-only**.
-    `--no-broaden` does not skip it — the need was declared. Before anything is
-    written, every raised range is computed in memory as it will be written —
-    broadened first when the broaden runs, then raised — and a range that would
-    admit no backbone refuses the release (`_refuse_empty_raised_ranges`).
+    moving component a changeset declares needs a backbone to the highest one
+    its changesets name (`FloorRaise.declared`) — `plan.shipped_backbone` for
+    `requires_backbone: release`, else the already-shipped version given —
+    **raise-only**, and the changelog entry of the changeset that set it says
+    so. `--no-broaden` does not skip it — the need was declared. Before
+    anything is written, every raised range is computed in memory as it will be
+    written — broadened first when the broaden runs, then raised — and a range
+    that would admit no backbone refuses the release
+    (`check_raised_ranges`).
 
     Tagging is **off by default** and deliberately a separate step, matching
     the codebase's anchoring principle (bump writes; `pkit version tag` tags —
@@ -389,7 +570,7 @@ def apply_release(
         _delete_changesets(plan.consumed)
         return
 
-    _refuse_empty_raised_ranges(plan, broaden=broaden)
+    check_raised_ranges(plan, broaden=broaden)  # the CLI prints its warnings before confirming
 
     backbone = plan.backbone
     for rel in plan.releases:
@@ -427,7 +608,7 @@ def _broaden_at_release(source_kit: Path, plan: ReleasePlan) -> None:
     backbone broaden, which already covers every component including the moved
     one, so the per-component step is only reached for a component release with
     no backbone move. Either way the target is `plan.shipped_backbone` — the new
-    backbone, or the current one — which `_refuse_empty_raised_ranges` broadens
+    backbone, or the current one — which `check_raised_ranges` broadens
     to in memory first.
     """
     backbone = plan.backbone
@@ -453,50 +634,64 @@ def _broaden_at_release(source_kit: Path, plan: ReleasePlan) -> None:
 
 def _raise_declared_floors(source_kit: Path, plan: ReleasePlan) -> None:
     """Raise the `requires_backbone` floor of each component a changeset declares
-    needs the backbone this release ships (PRJ-002 D4). Raise-only; a floor
-    already at or above the shipped backbone is reported and left."""
-    for rel in plan.floor_raises:
+    needs a backbone to the one declared (PRJ-002 D4). Raise-only; a floor
+    already at or above it is reported and left."""
+    for rel in plan.releases:
+        floor = rel.floor_raise
+        if floor is None:
+            continue
         rel_path = rel.component.version_path.relative_to(source_kit)
         changed = versioning.raise_component_requires_backbone_floor(
-            rel.component.version_path, plan.shipped_backbone
+            rel.component.version_path, floor.declared
         )
         if changed is None:
             click.echo(
-                f"  floor of {rel_path} already admits no backbone older than "
-                f"{plan.shipped_backbone}"
+                f"  floor of {rel_path} already admits no backbone older than {floor.declared}"
             )
         else:
             click.echo(f"  raised floor {rel_path}: {changed} (declared by a changeset)")
 
 
-def _refuse_empty_raised_ranges(plan: ReleasePlan, *, broaden: bool) -> None:
+def check_raised_ranges(plan: ReleasePlan, *, broaden: bool) -> list[str]:
     """Refuse, before anything is written, a floor raise that would leave a range
-    admitting no backbone.
+    admitting no backbone; return a warning for each raised range that admits its
+    floor but not the backbone the release ships.
 
     Each raised range is computed in memory as `apply` writes it, through the
     same rewrites: broadened first when the broaden runs — to the shipped
-    backbone, the target of both its shapes — then raised to it. The raised
-    range must admit the shipped backbone, which its floor now names, so the
-    guarantee holds on every raise, with the broaden or without, and whatever
-    else the package file holds. A floor already at or above the shipped
-    backbone is not raised, so its range is not the release's to refuse.
+    backbone, the target of both its shapes — then raised to the declared
+    floor. The raised range must admit that floor, the lowest backbone it now
+    names: a range admitting its own floor admits a backbone, and one that does
+    not admits none. So the guarantee holds on every raise, with the broaden or
+    without, and whatever else the package file holds. A floor already at or
+    above the declared one is not raised, so its range is not the release's to
+    refuse.
+
+    One that admits its floor but not the shipped backbone is written as it is
+    — an upper bound `--no-broaden` keeps as authored may exclude the newest
+    backbone on purpose — but the component then ships beside a backbone its
+    range refuses, which the warning says. With the broaden that cannot happen.
     """
     from project_kit.connections import range_admits
 
     shipped = plan.shipped_backbone
-    for rel in plan.floor_raises:
+    warnings: list[str] = []
+    for rel in plan.releases:
+        floor = rel.floor_raise
+        if floor is None:
+            continue
         text = rel.component.version_path.read_text(encoding="utf-8")
         if broaden:
             broadened = versioning.broaden_requires_backbone(text, shipped)
             text = broadened[0] if broadened is not None else text
         try:
-            raised = versioning.raise_requires_backbone_floor(text, shipped)
+            raised = versioning.raise_requires_backbone_floor(text, floor.declared)
         except click.ClickException as exc:
             raise click.ClickException(f"{rel.component.name}: {exc.message}") from None
         if raised is None:
             continue
         written = versioning.requires_backbone_range(raised[0])
-        if range_admits(written, shipped) is not True:
+        if range_admits(written, floor.declared) is not True:
             remedy = (
                 "widen the range's upper bound"
                 if broaden
@@ -504,10 +699,18 @@ def _refuse_empty_raised_ranges(plan: ReleasePlan, *, broaden: bool) -> None:
             )
             raise click.ClickException(
                 f"{rel.component.name}: a changeset raises its requires_backbone floor to "
-                f"{shipped}, but the range the release would write, {written!r}, does not "
-                f"admit {shipped} — it would admit no backbone. Nothing was written; "
-                f"{remedy}."
+                f"{floor.declared}, but the range the release would write, {written!r}, "
+                f"does not admit {floor.declared} — it would admit no backbone. Nothing was "
+                f"written; {remedy}."
             )
+        if range_admits(written, shipped) is not True:
+            warnings.append(
+                f"{rel.component.name}: the range the release writes, {written!r}, admits "
+                f"the declared floor {floor.declared} but not the backbone this release "
+                f"ships, {shipped}; the upper bound stays as authored"
+                + (" (--no-broaden)." if not broaden else ".")
+            )
+    return warnings
 
 
 def _write_component_version(rel: ComponentRelease) -> None:
@@ -558,8 +761,11 @@ def render_changelog_entry(plan: ReleasePlan, when: date) -> str:
     backbone tag to key on). Entries are grouped under Keep-a-Changelog
     category headings; a component that is *not* the backbone is tagged inline
     with its name + new version so a date-keyed section still surfaces which
-    component moved. `pr` references become reference-style `([#N])` links,
-    resolved in a block at the foot of the section (omitted when absent).
+    component moved. A raised `requires_backbone` floor is stated once per
+    component, at the end of the entry of the changeset that set it
+    (`ComponentRelease.floor_entry`), so an adopter reads what the component now
+    needs. `pr` references become reference-style `([#N])` links, resolved in a
+    block at the foot of the section (omitted when absent).
     """
     backbone = plan.backbone
     if backbone is not None:
@@ -571,10 +777,14 @@ def render_changelog_entry(plan: ReleasePlan, when: date) -> str:
     refs: dict[str, str] = {}  # link label -> target, for the trailing block
     for rel in plan.releases:
         is_backbone = rel.component.name == BACKBONE
+        floor_entry = rel.floor_entry
+        floor_sentence = rel.floor_raise.changelog_sentence if rel.floor_raise else None
         for cs in rel.changesets:
-            if not cs.note:
-                continue
             text = cs.note
+            if cs is floor_entry and floor_sentence:
+                text = _with_sentence(text, floor_sentence)
+            if not text:
+                continue
             if not is_backbone:
                 text = f"**{rel.component.name} {rel.new_version}** — {text}"
             if cs.pr:
@@ -600,6 +810,19 @@ def render_changelog_entry(plan: ReleasePlan, when: date) -> str:
         lines.append("")
 
     return "\n".join(lines).rstrip() + "\n"
+
+
+def _with_sentence(note: str, sentence: str) -> str:
+    """`note` followed by `sentence`, punctuated as prose: a period closes a note
+    that lacks one first, and a note ending in a list item gets the sentence as
+    its own paragraph, so it does not read as part of the item."""
+    if not note:
+        return sentence
+    if _LIST_ITEM_RE.match(note.splitlines()[-1]):
+        return f"{note}\n\n{sentence}"
+    if not note.endswith(_SENTENCE_ENDS):
+        note += "."
+    return f"{note} {sentence}"
 
 
 def _pr_label(pr: str) -> str | None:
@@ -667,17 +890,23 @@ def release_summary(source_kit: Path, plan: ReleasePlan) -> dict[str, object]:
 
 def _floor_summary(floor: FloorRaise | None) -> dict[str, object] | None:
     """One release's declared floor raise for `release_summary`: the floors before
-    and after, whether the range changes, the backbone it names and whether the
-    release moves it, and the lines `release plan` prints for it."""
+    and after, whether the range changes, the backbone the changesets name and
+    whether the declaration that set it says `release` (false: an explicit
+    version), the backbone the release ships and whether it moves, the lines
+    `release plan` prints for it, and the sentence the changelog entry carries
+    (null when the range does not change)."""
     if floor is None:
         return None
     return {
         "from": floor.old_floor,
         "to": floor.new_floor,
         "raised": floor.raises,
+        "declared": floor.declared,
+        "names_release": floor.names_release,
         "backbone": floor.backbone,
         "backbone_moves": floor.backbone_moves,
         "lines": floor.lines,
+        "changelog": floor.changelog_sentence,
     }
 
 
@@ -735,10 +964,22 @@ class GuardResult:
     missing: list[str]  # touched components with no changeset (the violations)
     skipped: bool  # the escape hatch (label / --skip) was active
     release_exempt: bool = False  # the diff is a release-apply footprint (below)
+    # Changesets whose `requires_backbone` floor this diff declares for a component
+    # it neither touches nor moves (`stray_floors`).
+    stray_floors: list[Changeset] = field(default_factory=lambda: [])
+
+    @property
+    def surface_ok(self) -> bool:
+        """The surface check passes, or the escape hatch or the release exemption
+        waives it."""
+        return self.skipped or self.release_exempt or not self.missing
 
     @property
     def ok(self) -> bool:
-        return self.skipped or self.release_exempt or not self.missing
+        """The escape hatch and the release exemption waive the surface check
+        only: a stray floor fails the guard either way. A release diff, which
+        only deletes changesets, declares no floor to be stray."""
+        return self.surface_ok and not self.stray_floors
 
 
 def changed_files(repo_root: Path, base: str) -> list[str]:
@@ -793,12 +1034,19 @@ def _matches_prefix(path: str, prefixes: tuple[str, ...]) -> bool:
 # already-declared ones. We exempt it by *diff shape* — the change set is only
 # release-apply's own footprint — rather than by branch name or an env signal:
 # a diff-shape signal is self-contained (works locally + in CI, on any branch,
-# in any adopter's repo) and cannot be spoofed by naming a branch `release/*`.
+# in any adopter's repo), and naming a branch `release/*` does not produce it.
 # The signal is intentionally strict: if *any* changed file falls outside the
 # footprint (e.g. a stray `src/` edit), the diff is NOT the release itself and
 # the guard runs normally — so the exemption can never smuggle real surface
-# through. The CI belt (checks.yml skipping the step for a `release/*` head) is
-# defence-in-depth on top of this primary, self-contained guard-level check.
+# through.
+#
+# checks.yml adds a branch-name belt: for a `release/*` head it raises the
+# escape hatch, so there the surface check is waived by the branch name alone,
+# which anyone can choose — review of the release PR is what stands behind it.
+# The belt is load-bearing in this repo: its release also rewrites the self-host
+# `.pkit/manifest.yaml` (`_sync_self_host_manifest_backbone`), which is outside
+# this footprint. Neither the belt nor this exemption waives the floor tie
+# (`GuardResult.ok`).
 
 # The only two `package.yaml` keys `apply` rewrites: the component version and
 # (on broaden) its requires_backbone bound. A `package.yaml` in a release diff
@@ -918,24 +1166,110 @@ def _repo_rel(repo_root: Path, path: Path) -> str:
 
 
 def check_changesets(source_kit: Path, base: str, *, skip: bool = False) -> GuardResult:
-    """Run the surface-without-changeset guard against the diff vs `base`.
+    """Run the changeset guard against the diff vs `base`: the surface check and
+    the floor tie.
 
-    Passes (ok) when every surface-touched component has at least one changeset
-    naming it (any kind, including `none`), when the escape hatch is active
-    (`skip=True`, wired from the `skip-changeset` PR label), or when the diff is
-    a **release PR** — exactly `pkit release apply`'s footprint (`is_release_diff`),
-    which has legitimately consumed the changesets it would otherwise need.
+    The surface check passes when every surface-touched component has at least
+    one changeset naming it (any kind, including `none`), when the escape hatch
+    is active (`skip=True`, wired from the `skip-changeset` PR label, and in CI
+    from a `release/*` head), or when the diff is a **release PR** — exactly
+    `pkit release apply`'s footprint (`is_release_diff`), which has legitimately
+    consumed the changesets it would otherwise need. The floor tie
+    (`stray_floors`) is waived by neither: it judges only a floor this diff
+    declares, which a release diff never does, and an escape hatch that could
+    pass one would let any pull request raise any component's floor.
     """
+    repo_root = source_kit.parent
     components = discover_components(source_kit)
-    files = changed_files(source_kit.parent, base)
+    files = changed_files(repo_root, base)
     touched = touched_components(components, files)
 
-    declared = {cs.component for cs in load_changesets(source_kit.parent)}
+    pending = load_changesets(repo_root)
+    declared = {cs.component for cs in pending}
     missing = [name for name in touched if name not in declared]
     release_exempt = bool(missing) and is_release_diff(source_kit, base)
     return GuardResult(
-        touched=touched, missing=missing, skipped=skip, release_exempt=release_exempt
+        touched=touched,
+        missing=missing,
+        skipped=skip,
+        release_exempt=release_exempt,
+        stray_floors=stray_floors(repo_root, base, pending, files, touched),
     )
+
+
+def stray_floors(
+    repo_root: Path,
+    base: str,
+    pending: Sequence[Changeset],
+    files: Sequence[str],
+    touched: Sequence[str],
+) -> list[Changeset]:
+    """The changesets whose `requires_backbone` floor the diff vs `base` declares
+    for a component it neither touches nor moves (PRJ-002 D4).
+
+    A floor says the component no longer works on an older backbone, a claim a
+    change to the component makes true — or, for a need found after the
+    component shipped, a release of the component carrying only the floor. So a
+    declaration rides on a diff touching the component's subtree
+    (`touched_components`, a path heuristic), or on a changeset that moves the
+    component's version (`patch` or above); one on a `none` changeset for a
+    component the diff leaves alone has neither behind it.
+
+    The diff declares a floor when it adds or edits a changeset and the floor
+    it carries differs from the one the file held at the merge base — added, or
+    its value or component changed. A pending changeset an earlier pull request
+    merged, or one this diff edits elsewhere (its note, say), declares nothing
+    here.
+    """
+    changed = set(files)
+    candidates = [
+        cs
+        for cs in pending
+        if cs.requires_backbone is not None
+        and cs.segment == "none"
+        and cs.component not in touched
+        and _repo_rel(repo_root, cs.path) in changed
+    ]
+    if not candidates:
+        return []
+    merge_base = _merge_base(repo_root, base)
+    return [
+        cs
+        for cs in candidates
+        if _declaration_at(repo_root, merge_base, _repo_rel(repo_root, cs.path))
+        != (cs.component, cs.requires_backbone)
+    ]
+
+
+def _merge_base(repo_root: Path, base: str) -> str:
+    """The commit the diff vs `base` is taken from (`base...HEAD`)."""
+    result = subprocess.run(
+        ["git", "merge-base", base, "HEAD"],
+        capture_output=True,
+        text=True,
+        cwd=repo_root,
+        check=True,
+    )
+    return result.stdout.strip()
+
+
+def _declaration_at(repo_root: Path, rev: str, path: str) -> tuple[str, str | None] | None:
+    """The component and floor field of the changeset at `path` in `rev`; None
+    when `rev` has no such file or holds no changeset there."""
+    result = subprocess.run(
+        ["git", "show", f"{rev}:{path}"],
+        capture_output=True,
+        text=True,
+        cwd=repo_root,
+        check=False,
+    )
+    if result.returncode != 0:
+        return None
+    try:
+        cs = parse_changeset_text(result.stdout, repo_root / path)
+    except click.ClickException:
+        return None
+    return cs.component, cs.requires_backbone
 
 
 # --- The changeset + changelog format lint (the OBJECTIVE subset) ---------
@@ -962,8 +1296,10 @@ _BARE_REF_RE = re.compile(r"(?:#\d+|ADR-\d+|DEC-\d+|COR-\d+|https?://\S+)", re.I
 # date-only section (a component-only release with no backbone key). The `—`
 # em-dash is what the generator writes; a plain `-` and the canonical KaC
 # `[version]` brackets are also accepted so a hand-edit in either idiom passes.
+# Group 1 is the version, a backbone release the tree records
+# (`recorded_backbone_releases`).
 _CHANGELOG_VERSION_HEADING_RE = re.compile(
-    r"^## \[?\d+\.\d+\.\d+\]?(?: [—-] \d{4}-\d{2}-\d{2})?$"
+    r"^## \[?(\d+\.\d+\.\d+)\]?(?: [—-] \d{4}-\d{2}-\d{2})?$"
 )
 _CHANGELOG_DATE_HEADING_RE = re.compile(r"^## \d{4}-\d{2}-\d{2}$")
 
@@ -1041,13 +1377,17 @@ def lint_changeset(cs: Changeset) -> list[FormatViolation]:
 
 
 def lint_floor(
-    cs: Changeset, components: Mapping[str, Component], shipped: str
+    cs: Changeset, components: Mapping[str, Component], shipped: str, released: Collection[str]
 ) -> list[FormatViolation]:
     """The floor field of one changeset: what `compute_release` would refuse
-    (`floor_problems`, against `shipped`, the backbone the release ships),
-    reported where the changeset is written."""
+    (`floor_problems`, against `shipped`, the backbone the release ships, and
+    `released`, the backbone releases the tree records), reported where the
+    changeset is written."""
     where = f"changeset {cs.path.name}"
-    return [FormatViolation(where, problem) for problem in floor_problems(cs, components, shipped)]
+    return [
+        FormatViolation(where, problem)
+        for problem in floor_problems(cs, components, shipped, released)
+    ]
 
 
 def lint_changelog(text: str) -> list[FormatViolation]:
@@ -1096,17 +1436,26 @@ def lint_release_format(source_kit: Path, *, skip: bool = False) -> LintResult:
     would refuse, which fails either way (`LintResult.floor_violations`). Reads
     committed files only; it needs no PR context, so it runs in the shared check
     aggregator. A floor field is checked against the components discovered under
-    `source_kit` and the backbone the release would ship (`lint_floor`), which
-    are read only when a changeset carries one.
+    `source_kit`, the backbone the release would ship and the backbone releases
+    the tree records (`lint_floor`), which are read only when a changeset
+    carries one. A `.pkit/VERSION` that holds no version bounds no floor: it is
+    reported once, as a floor violation, instead of each floor.
     """
     repo_root = source_kit.parent
     changesets = load_changesets(repo_root)
     floor_violations: list[FormatViolation] = []
     if any(cs.requires_backbone is not None for cs in changesets):
         components = {c.name: c for c in discover_components(source_kit)}
-        shipped = shipped_backbone(components, changesets)
-        for cs in changesets:
-            floor_violations.extend(lint_floor(cs, components, shipped))
+        current = components.get(BACKBONE)
+        problem = backbone_version_problem(current) if current is not None else None
+        if current is not None and problem is not None:
+            where = _repo_rel(repo_root, current.version_path)
+            floor_violations.append(FormatViolation(where, problem))
+        else:
+            shipped = shipped_backbone(components, changesets)
+            released = recorded_backbone_releases(repo_root, components)
+            for cs in changesets:
+                floor_violations.extend(lint_floor(cs, components, shipped, released))
 
     violations: list[FormatViolation] = []
     for cs in changesets:
