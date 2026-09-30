@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-09-29T22:37:47Z
+      at: 2026-09-30T00:13:15Z
       outcome: unchanged
-      unchanged-because: the CLI, lifecycle and process READMEs now carry both this branch's account of the render dropping a stale component journal ignore line while journals are committed and main's shadowed-alias warning of the packages member, each inside its own section; the area map and each area's one-line description hold
+      unchanged-because: the CLI README's friction explain entry now describes the files each path anchor stands on, the commits behind a dead path anchor and the artefact's body in the JSON document, inside its own section; the area map and each area's one-line description hold
 ---
 
 # project-kit

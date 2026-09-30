@@ -514,6 +514,8 @@ def test_explain_in_a_shallow_clone(timeline: Timeline, tmp_path: Path) -> None:
     explanation = frep.run_explain(shallow, "guide")
     assert (explanation.state, explanation.shallow) == ("unreachable", True)
     assert [a.state for a in explanation.anchors] == ["unreachable"]
+    # The point lies beyond the clone, so its files cannot be listed; HEAD's can.
+    assert [a.files for a in explanation.anchors] == [fr.AnchorFiles(None, ("src/cli/main.py",))]
     (finding,) = explanation.findings
     assert finding.finding.kind is fr.RepositoryFindingKind.UNREACHABLE
     assert finding.clears == "fetch the full history (`git fetch --unshallow`) and run again"
@@ -528,6 +530,7 @@ def test_explain_json_document_shape(timeline: Timeline) -> None:
     assert sorted(doc) == [
         "anchors",
         "artefact",
+        "body",
         "deferral_points",
         "findings",
         "head",
@@ -543,9 +546,17 @@ def test_explain_json_document_shape(timeline: Timeline) -> None:
         "docs/guide.md",
         "stale",
     )
+    assert doc["body"] == "Body.\n"
     assert doc["revalidation_point"]["commit"] == base and doc["deferral_points"] == []
     assert doc["anchors"] == [
-        {"kind": "path", "value": "src/cli/**", "state": "stale", "changes": 1, "over_broad": False}
+        {
+            "kind": "path",
+            "value": "src/cli/**",
+            "state": "stale",
+            "changes": 1,
+            "over_broad": False,
+            "files": {"point": ["src/cli/main.py"], "head": ["src/cli/main.py"]},
+        }
     ]
     (finding,) = doc["findings"]
     assert sorted(finding) == [
@@ -560,6 +571,119 @@ def test_explain_json_document_shape(timeline: Timeline) -> None:
     assert [c["commit"] for c in finding["commits"]] == [changed]
     assert finding["origin"]["commit"] == changed
     assert [a["answer"] for a in finding["answers"]] == ["updated", "unchanged", "deferred"]
+
+
+# --- what a reader of the explanation would otherwise compute again (ADR-057 point 2) -------
+
+
+def test_explain_lists_each_path_anchors_files_at_the_point_and_at_head(
+    timeline: Timeline,
+) -> None:
+    """Matched as the check matches: a file under `friction.exclude` is never among them,
+    even where the anchor's glob covers it, and a change to it alone is no change."""
+    anchors = {
+        "path": ["src/cli/**", "src/core/**", "src/cli/vendor/**"],
+        "record": ["ADR-404"],
+    }
+    config = friction_config(exclude=["src/cli/vendor/**"])
+    vendored = {"src/cli/vendor/lib.py": "LIB = 1\n", "src/cli/old.py": "OLD = 1\n"}
+    base = timeline.start({"docs/guide.md": guide(anchors=anchors), **vendored}, config)
+    reworked = timeline.commit(
+        "rework the CLI",
+        {"src/cli/new.py": "NEW = 1\n", "src/cli/old.py": None, "src/cli/main.py": "print('2')\n"},
+    )
+    timeline.commit("update the vendored library", {"src/cli/vendor/lib.py": "LIB = 2\n"})
+
+    explanation = frep.run_explain(timeline.adopter.root, "guide")
+    assert explanation.report is not None and explanation.report.revalidation_point is not None
+    assert explanation.report.revalidation_point.sha == base
+    assert [(a.anchor.value, a.state, a.files) for a in explanation.anchors] == [
+        (
+            "src/cli/**",
+            "stale",
+            fr.AnchorFiles(
+                point=("src/cli/main.py", "src/cli/old.py"),
+                head=("src/cli/main.py", "src/cli/new.py"),
+            ),
+        ),
+        (
+            "src/core/**",
+            "current",
+            fr.AnchorFiles(("src/core/engine.py",), ("src/core/engine.py",)),
+        ),
+        # Only excluded files match it: dead, standing on nothing at either state.
+        ("src/cli/vendor/**", "dead-anchor", fr.AnchorFiles((), ())),
+        ("ADR-404", "dead-anchor", None),
+    ]
+    by_anchor = {f.finding.anchor: f for f in explanation.findings}
+    assert [c.sha for c in by_anchor[CLI].commits] == [reworked]
+    # A dead anchor's commits are those that touched a file it stood on: excluded ones never
+    # count, and a record that resolves to nothing names no file whose history could be read.
+    assert by_anchor[Anchor("path", "src/cli/vendor/**")].commits == ()
+    assert by_anchor[Anchor("record", "ADR-404")].commits == ()
+
+    doc = json.loads(frep.render_explain_json(explanation))
+    listed = {a["value"]: a["files"] for a in doc["anchors"]}
+    assert listed["src/cli/**"] == {
+        "point": ["src/cli/main.py", "src/cli/old.py"],
+        "head": ["src/cli/main.py", "src/cli/new.py"],
+    }
+    assert listed["ADR-404"] is None
+    assert all(
+        "src/cli/vendor/lib.py" not in files[state]
+        for files in listed.values()
+        if files is not None
+        for state in ("point", "head")
+    )
+
+
+def test_explain_names_the_commits_behind_a_dead_path_anchor(timeline: Timeline) -> None:
+    anchors = {"path": ["src/cli/**", "src/old/**"]}
+    old = {"src/old/a.py": "A = 1\n", "src/old/b.py": "B = 1\n"}
+    timeline.start({"docs/guide.md": guide(anchors=anchors), **old})
+    changed = timeline.commit("change the old code", {"src/old/a.py": "A = 2\n"}, author=ALICE)
+    timeline.commit("unrelated", {"README.txt": "Hello.\n"})
+    removed = timeline.commit(
+        "remove the old code", {"src/old/a.py": None, "src/old/b.py": None}, author=BOB
+    )
+
+    explanation = frep.run_explain(timeline.adopter.root, "guide")
+    old_anchor = Anchor("path", "src/old/**")
+    (dead,) = explanation.findings
+    assert (dead.finding.kind.value, dead.finding.anchor) == ("dead-anchor", old_anchor)
+    assert [c.sha for c in dead.commits] == [changed, removed]
+    assert [(a.anchor, a.state, a.changes, a.files) for a in explanation.anchors] == [
+        (CLI, "current", 0, fr.AnchorFiles(("src/cli/main.py",), ("src/cli/main.py",))),
+        (old_anchor, "dead-anchor", 0, fr.AnchorFiles(("src/old/a.py", "src/old/b.py"), ())),
+    ]
+    (finding,) = json.loads(frep.render_explain_json(explanation))["findings"]
+    assert [(c["commit"], c["change"]) for c in finding["commits"]] == [
+        (changed, "change the old code"),
+        (removed, "remove the old code"),
+    ]
+    human = frep.render_explain_human(explanation, now=NOW)
+    assert "    its files changed in, oldest first:" in human
+    assert f"{removed[:12]}  2026-01-05  Bob    remove the old code" in human
+
+
+def test_explain_carries_the_artefacts_body(timeline: Timeline) -> None:
+    """A document's body; a collection entry's section headed by its id (COR-050 point 1)."""
+    rules = {
+        entry: {"pkit": {"friction": {"anchors": {"path": ["src/core/**"]}}}}
+        for entry in ("RS-1", "RS-2")
+    }
+    body = "## RS-1 — One\n\nOne `first`.\n\n## RS-2 — Two\n\nTwo `second`.\n"
+    timeline.start(
+        {"docs/guide.md": guide(), "docs/rules.md": f"---\n{json.dumps(rules)}\n---\n\n{body}"}
+    )
+    root = timeline.adopter.root
+
+    def body_of(reference: str) -> str:
+        return json.loads(frep.render_explain_json(frep.run_explain(root, reference)))["body"]
+
+    assert body_of("guide") == "Body.\n"
+    assert body_of("RS-1") == "## RS-1 — One\n\nOne `first`.\n"
+    assert body_of("docs/rules.md#RS-2") == "## RS-2 — Two\n\nTwo `second`.\n"
 
 
 # --- read-only, deterministic --------------------------------------------------------------

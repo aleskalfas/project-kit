@@ -928,9 +928,11 @@ def friction_explain_command(artefact: str, as_json: bool) -> None:
     Every changed anchor is shown with the commits behind it, and each finding
     with the writer command that answers it (`revalidate … --outcome …`,
     `defer … --anchor … --reason …`) or the edit it needs. The findings are
-    those `pkit friction check --all` reports for ARTEFACT. ARTEFACT is a
-    location (`path`, or `path#id` for a collection entry) or an id, looked up
-    at HEAD. Writes nothing.
+    those `pkit friction check --all` reports for ARTEFACT. With --json, the
+    document also carries each path anchor's files at the revalidation point
+    and at HEAD (excluded paths left out) and the artefact's body. ARTEFACT is
+    a location (`path`, or `path#id` for a collection entry) or an id, looked
+    up at HEAD. Writes nothing.
     """
     target_root = find_target_root()
     if target_root is None:

@@ -65,7 +65,7 @@ import heapq
 import json
 import re
 import subprocess
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import Enum
@@ -455,11 +455,26 @@ class Side:
     def find(self, reference: str) -> Artefact | None:
         return self.discovery.find(reference)
 
+    def stands_on(self, pattern: str) -> Callable[[str], bool]:
+        """Whether a path anchor's `pattern` stands on a file: it matches it, and this
+        state's `friction.exclude` does not leave it out (COR-050 points 2 and 7)."""
+        match = pattern_matcher(pattern)
+        return lambda rel: match(rel) and not self.excluded(rel)
+
+    def matching(self, pattern: str, files: Iterable[str] | None = None) -> tuple[str, ...]:
+        """The files a path anchor's `pattern` stands on (`stands_on`), sorted.
+
+        This state's files by default; with `files`, another listing — a
+        commit's, or every path a history touched — read under this state's
+        exclusions, as the whole-repository check reads history under HEAD's.
+        """
+        listing = self.files if files is None else files
+        return tuple(sorted(filter(self.stands_on(pattern), listing)))
+
     def resolves(self, anchor: Anchor) -> bool:
         """Whether an anchor of a core kind resolves to something here (COR-050 point 7)."""
         if anchor.kind == "path":
-            match = pattern_matcher(anchor.value)
-            return any(match(rel) and not self.excluded(rel) for rel in self.files)
+            return any(map(self.stands_on(anchor.value), self.files))
         if anchor.kind == "record":
             return self.record_path(anchor.value) is not None
         return self.find(anchor.value) is not None
