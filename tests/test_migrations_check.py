@@ -17,6 +17,18 @@ from project_kit.migrations import (
 )
 
 
+def _make_repo(root: Path) -> None:
+    """A real repository with one commit on `main`: the base the command resolves
+    (COR-054) — the local `main`, with no remote — before the stubbed diff runs."""
+    import subprocess
+
+    identity = ["-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false"]
+    subprocess.run(["git", "init", "-q", "-b", "main"], cwd=root, check=True)
+    subprocess.run(
+        ["git", *identity, "commit", "-q", "--allow-empty", "-m", "base"], cwd=root, check=True
+    )
+
+
 def _make_git_dir(root: Path) -> None:
     """Give `root` a structurally-real `.git/` (objects/ + refs/) so
     `find_target_root` resolves it. A bare/vestigial `.git` no longer qualifies
@@ -420,7 +432,7 @@ def test_cli_check_diff_passes_when_clean(
         import shutil
 
         shutil.copytree(tmp_path / ".pkit", Path.cwd() / ".pkit", dirs_exist_ok=True)
-        _make_git_dir(Path.cwd())
+        _make_repo(Path.cwd())
         result = runner.invoke(main, ["migrations", "check-diff", "--base", "main"])
     assert result.exit_code == 0, result.output
     assert "No migration-triggering" in result.output
@@ -441,7 +453,7 @@ def test_cli_check_diff_fails_when_uncovered(
         import shutil
 
         shutil.copytree(tmp_path / ".pkit", Path.cwd() / ".pkit", dirs_exist_ok=True)
-        _make_git_dir(Path.cwd())
+        _make_repo(Path.cwd())
         result = runner.invoke(main, ["migrations", "check-diff", "--base", "main"])
     assert result.exit_code != 0
     assert "UNCOVERED" in result.output

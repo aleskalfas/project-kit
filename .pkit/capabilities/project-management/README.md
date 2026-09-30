@@ -15,7 +15,7 @@ pkit:
         - .pkit/capabilities/project-management/decisions/**
       record: [COR-017, COR-020, COR-021, COR-023, COR-039, COR-053, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050]
     revalidated:
-      at: 2026-09-30T06:40:06Z
+      at: 2026-09-30T17:22:26Z
       outcome: updated
 ---
 
@@ -84,7 +84,6 @@ Create `.pkit/capabilities/project-management/project/config.yaml` declaring the
 
 ```yaml
 schema_version: 1
-default_branch: main                  # the repo's default branch
 has_projects_v2_board: false          # set true + projects_v2_board_id when a board is configured
 workstreams:                          # one entry per allowed workstream value
   - capabilities
@@ -112,6 +111,14 @@ Further optional blocks are documented where the features that read them are des
 
 This config is adopter-owned. The capability's schemas are immutable kit-shipped content per the no-shared-files invariant; the config is the seam where adopter-specific values plug in.
 
+#### The default branch is the backbone's
+
+The branch work is cut from, pull requests target (DEC-013), `merge-pr` and `done-work` switch back to, and `pre-check` holds to the repository's default is **declared once, for every reader, in the backbone configuration**: `repository.default-branch` in `.pkit/project/config.yaml`, `main` when undeclared ([COR-054](../../decisions/core/COR-054-default-branch.md); the CLI reference, "Configuration file"). A project on another branch declares it there — `pkit config set repository.default-branch develop --yes` — and the core friction check, software-analysis' number check and this capability then read the same branch.
+
+- **Read through the backbone.** pm asks `pkit repository base --json` and never resolves a branch itself: the default branch's name for the verbs; the commit `start-work` cuts from and `create-draft` counts commits beyond, for the default branch and an integration branch alike (COR-054 point 2 — the remote's copy, and the local branch only in a clone with no remote, which the backbone warns about); and the base `check-doc-mapping` compares with and where the branch left it — `--base`, else `$PKIT_CHECK_BASE`, else the default branch (point 3). `open-pr --doc-impact-from-friction` runs the change check with no `--base` for the default branch, so it resolves it as every reader does.
+- **Never a guess** (point 4). When the backbone cannot answer — `pkit` missing, a timeout, a failed run, a backbone older than `pkit repository base` — the verbs that act on the branch (`start-work`, `create-draft`, `open-pr`, `review-work`) refuse, naming the cause; `merge-pr` / `done-work` skip the local clean-up and say so; `pre-check` fails its default-branch check. A base that resolves to no commit refuses `start-work`, `create-draft` and `check-doc-mapping` with the backbone's reason and fix.
+- **pm's own `default_branch` is retired.** The 0.55.0 upgrade migration carries a value other than `main` over to `repository.default-branch` while the backbone declares none, and removes pm's key; only where carrying it over would need a guess (a backbone file it cannot append to, a value that is no branch name) does it keep the key and say how to declare it. Until a project upgrades, a value that differs from the backbone's still names the branch while the backbone declares none, with a warning; a declared value always wins. The schema still accepts the key, as deprecated.
+
 #### The config has a schema — unknown keys are refused
 
 `config.yaml` ships a companion JSON Schema at `schemas/config.schema.json`, bound to the installed config path by a COR-023 `binds_to:` glob in `schemas/config.yaml`. Validate a hand-edited config with:
@@ -122,7 +129,7 @@ pkit data validate .pkit/capabilities/project-management/project/config.yaml
 
 The schema sets **`additionalProperties: false`**, so an unknown or misspelled key is a loud refusal naming the offending key rather than a silent default. This matters because every reader gets at the file through defensive `.get()` access: before the schema existed, `has_projects_v2_boards` (trailing `s`) validated fine and left the adopter in label-fallback mode, discovered only when classification landed in the wrong substrate. `pre-check` covers value-level problems (the board id resolves, the branch matches, the host is reachable) but cannot see a key that was never read; the schema covers exactly that gap. `schemas/config.yaml` is also the shipped reference instance — a valid minimal config with every optional key listed as a comment.
 
-The schema's required set (`schema_version`, `default_branch`, `workstreams`) mirrors `pre-check`'s, so the two gates agree. `workstreams:` is required only as the transitional shim described below; it drops from both when the shim does.
+The schema's required set (`schema_version`, `workstreams`) mirrors `pre-check`'s, so the two gates agree. `workstreams:` is required only as the transitional shim described below; it drops from both when the shim does.
 
 #### The `gh:` block (per [project-management:DEC-023-gh-host-and-owner])
 
@@ -803,7 +810,7 @@ doc_check:
     friction: enforcing         # a documentation capability's page friction
 ```
 
-**The `## Doc impact` section may render the pages' answers.** `open-pr --doc-impact-from-friction` (opt-in) runs `pkit friction check --json` against `origin/<base>` and writes one bullet per answer the changed pages carry into an unwritten section — the template's placeholder, an empty section, or none — and leaves an authored section as it is; a page still carrying friction is named on stderr, to be answered on the page. A check document of a `schema_version` other than 1 is not rendered, and the command says so; one without the key, from a backbone before it, reads as 1 (the CLI README, "Friction checks"). Rendering only: the check never reads the section for a contributed obligation. The section itself stays required on every Task and pull request (DEC-015), whatever fills the point.
+**The `## Doc impact` section may render the pages' answers.** `open-pr --doc-impact-from-friction` (opt-in) runs `pkit friction check --json` against the PR's base — for the default branch with no `--base`, so the check resolves it as every reader does; for an integration branch, that branch, resolved the same way (COR-054) and writes one bullet per answer the changed pages carry into an unwritten section — the template's placeholder, an empty section, or none — and leaves an authored section as it is; a page still carrying friction is named on stderr, to be answered on the page. A check document of a `schema_version` other than 1 is not rendered, and the command says so; one without the key, from a backbone before it, reads as 1 (the CLI README, "Friction checks"). Rendering only: the check never reads the section for a contributed obligation. The section itself stays required on every Task and pull request (DEC-015), whatever fills the point.
 
 ## Permissions
 

@@ -19,6 +19,10 @@ pkit:
         - ADR-019
       artefact:
         - ACT-operator
+    revalidated:
+      at: 2026-09-30T09:26:40Z
+      outcome: unchanged
+      unchanged-because: start-work now cuts the branch from the commit the backbone resolves its base to — the remote's copy, the local branch only without a remote — and refuses when the backbone cannot say which branch is settled (COR-054); the freeze, release scope and the guards are unchanged
 ---
 
 # UC-010 — Stabilise a Milestone for a release

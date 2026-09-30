@@ -25,6 +25,7 @@ from project_kit.friction_check import BASE_ENV
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.analysis_repo import (
     CAPABILITY,
+    CONFIG,
     MAIN,
     NUMBERS,
     USE_CASES,
@@ -354,6 +355,8 @@ def test_a_branch_containing_its_base_has_nothing_to_collide_with(project: Adopt
 
 
 def test_a_working_tree_numbering_nothing_needs_no_base(project: AdopterRepo) -> None:
+    """Nothing numbered, nothing to compare: no base is read, not even one that names no
+    commit here (COR-054 point 4)."""
     stamped(project, "actor", "tester")
     completed = numbers(project, "--base", "origin/main", "--json")
     assert completed.returncode == 0, completed.stderr
@@ -361,7 +364,7 @@ def test_a_working_tree_numbering_nothing_needs_no_base(project: AdopterRepo) ->
         "schema_version": 1,
         "base": None,
         "summary": [
-            "numbers: no use case or journey is numbered here; nothing to compare with origin/main."
+            "numbers: no use case or journey is numbered here; nothing to compare, no base read."
         ],
         "findings": [],
     }
@@ -383,7 +386,7 @@ def test_a_base_that_names_no_commit_fails(project: AdopterRepo, base: str, refu
         completed = numbers(project, f"--base={base}", *json_flag)
         assert completed.returncode == 1
         assert completed.stdout == ""
-        assert completed.stderr.startswith(f"error: {refusal}")
+        assert f"error: {refusal}" in completed.stderr
 
 
 def test_a_base_sharing_no_history_with_head_fails(project: AdopterRepo) -> None:
@@ -395,14 +398,25 @@ def test_a_base_sharing_no_history_with_head_fails(project: AdopterRepo) -> None
     assert "HEAD and the base 'main' share no history to compare" in completed.stderr
 
 
-def test_the_base_is_the_variable_else_origin_main(
+def test_the_base_is_the_variable_else_the_default_branch(
     project: AdopterRepo, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Without `--base`, the base the backbone names (COR-054): the default branch — here
+    the local `main`, since there is no remote, which it says — or a declared one that
+    resolves nowhere, which fails as the change check does; `$PKIT_CHECK_BASE` replaces
+    either."""
     seed(project)
     project.commit("seeded")
-    unnamed = numbers(project)
-    assert unnamed.returncode == 1
-    assert "the base 'origin/main' does not resolve" in unnamed.stderr
+    unnamed = numbers(project, "--json")
+    assert unnamed.returncode == 0, unnamed.stderr
+    assert document(unnamed)["base"]["ref"] == MAIN
+    assert "warning: the default branch 'main' is read from the local branch 'main'" in (
+        unnamed.stderr
+    )
+    project.write({CONFIG: "docs:\n  internal: tech-docs\nrepository:\n  default-branch: trunk\n"})
+    undeclared = numbers(project)
+    assert undeclared.returncode == 1
+    assert "error: the default branch 'trunk' resolves to no commit here" in undeclared.stderr
     monkeypatch.setenv(BASE_ENV, MAIN)
     named = numbers(project, "--json")
     assert named.returncode == 0, named.stderr
