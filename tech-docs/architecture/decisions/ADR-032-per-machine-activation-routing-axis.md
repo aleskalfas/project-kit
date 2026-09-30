@@ -99,7 +99,7 @@ A committable "this project *requires* the sandbox" enforcement policy — disti
 
 - **Sibling to ADR-029; no supersession; ADR-029 gains a forward-pointer.** ADR-029's boundary-effect axis stands exactly as decided. This record adds a second axis OR-composed at the routing point. [ADR-029](ADR-029-move-mutable-sandbox-state-out-of-tracked-settings.md) gains a one-line forward-pointer to this record. No `superseded_by` frontmatter on ADR-029.
 
-- **Realizes ADR-010 rule 3 by construction.** The socket can no longer reach a committed file on any code path. [ADR-010](ADR-010-host-environment-detection.md) rule 3 names the per-machine file as `settings.local.json` (post-ADR-029, `settings.json` is the committed floor) and cites this record as the mechanism. Rule 3's *guarantee* (never committed) is the same decision; it now holds by construction.
+- **Realizes ADR-010 rule 3 by construction.** The socket cannot reach a committed file on any code path. [ADR-010](ADR-010-host-environment-detection.md) rule 3 names the per-machine file as `settings.local.json` (post-ADR-029, `settings.json` is the committed floor) and cites this record as the mechanism. Rule 3's *guarantee* (never committed) is the same decision, held by construction.
 
 - **Routing is data-driven at the write site.** The `socket:ssh-agent` provenance tag in `sandbox-provenance.yaml` is lifted into the routing decision as the host-derived-value signal. No new runtime verdict; the necessity/effect verdicts stay where ADR-008/ADR-029 already run them.
 
