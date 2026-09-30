@@ -181,18 +181,21 @@ Friction itself, dead anchors and the friction block's own shape are the core's 
 
 ## Numbers another branch took: `pkit analysis check-numbers`
 
-`pkit analysis check-numbers [--base <ref>] [--json]` fails on **a number two branches took**: a use case or journey numbered in your working tree whose number the default branch took too since your branch left it, for an artefact of another line of work. The first to reach the default branch keeps the number; renumber yours before merging (`pkit analysis new` gives the next free one). Once the default branch is merged in, a number both took is two files holding one id, which `pkit validate` reports as a duplicate.
+`pkit analysis check-numbers [--base <ref>] [--json]` fails on **a number two branches took**: a use case or journey numbered in your working tree — by its front matter or by its file's name, as the stamp counts a number — whose number the default branch took too since your branch left it, for an artefact of another line of work: its tip holds the number, or its history since gave it a file removed since. The first to reach the default branch keeps the number, and a number is never used again; renumber yours before merging (`pkit analysis new` gives the next free one). Once the default branch is merged in, a number both took is two files holding one id, which `pkit validate` reports as a duplicate.
 
-It knows an artefact by its id, never by its path:
+It knows an artefact by its id, never by its path, and tells your own work landed from another line of work's by the default branch's file for the number — its bytes, then its name:
 
 | Case | Outcome |
 |---|---|
 | a use case moved into an area — on your branch, on the default branch, or both — that the default branch held when your branch left it | no collision: neither side took the number |
-| two branches stamping the same slug, so the same number at the same path, each for its own artefact | a collision, though the paths are one |
-| your branch stacked on a parent that was squash-merged (or rebased) onto the default branch, the parent's use case moved into an area since | no collision: the default branch's file for the number is, byte for byte, a version your branch's history wrote — your own work, landed |
+| the default branch took the number since your branch left it, in a file of another name | **a collision**, an error: renumber yours |
+| the same, the default branch having removed its file since — deleted, or renumbered | a collision all the same: a number is never used again, and the stamp counts it held |
+| your branch stacked on a parent that was squash-merged (or rebased) onto the default branch, its file unchanged since | no collision: the default branch's file for the number is, byte for byte, a version your branch's history wrote — your own work, landed, which git merges as one file |
+| the same, your branch having moved the file into an area since | no collision reported here; once the default branch is merged in, the id is in two files — git pairs no rename where the merge-base holds neither — and the duplicate check catches it there: keep one |
+| the default branch's file for the number has the name a file of your branch has for it — in your working tree, or added by your branch's history — but other bytes: a parent edited after your branch left it, then squash-merged; an edit on the default branch after the squash; a conflict resolved in a rebase; a sibling merged into your branch; or two branches that stamped the same slug | **a warning**, never an error: possibly your own work landed — merge the default branch and keep one file; otherwise renumber yours. Only you know which it is; once merged, git asks which to keep where the two share a path, and the duplicate check names both where they do not |
 | the same number for files two lines of work wrote to the very byte | no collision: git merges them as one file |
 
-It reads the default branch — its tip, and where your branch left it — so it answers about your change rather than the tree, and it is not a member of `pkit validate`: run it as a line of its own in your check gate, beside `pkit friction check`, with the same base. The base is `--base <ref>`, else `$PKIT_CHECK_BASE`, else `origin/main`. Like the friction change check:
+It reads the default branch — its tip, where your branch left it, and its history between, as the stamp reads a history — so it answers about your change rather than the tree, and it is not a member of `pkit validate`: run it as a line of its own in your check gate, beside `pkit friction check`, with the same base. The base is `--base <ref>`, else `$PKIT_CHECK_BASE`, else `origin/main`. Like the friction change check:
 
 - it **fails when the base names no commit** here, or shares no history with `HEAD` — fetch it, or name another — rather than passing without comparing. A working tree that numbers nothing has nothing to compare and needs no base;
 - it **reports an outdated base** — one that moved on after your branch left it, which is when it can have taken a number since — and never fails on it, with the same `base` document `pkit friction check --json` gives.

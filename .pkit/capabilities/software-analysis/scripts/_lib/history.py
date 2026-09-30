@@ -15,10 +15,12 @@ stays held once the file is gone. The backbone reads one state at a time
   the working tree or the default branch's tip leaves out now is left out,
   whatever it was.
 
-Only what could change the stamp's answer is judged: the numbers past the
-highest the tree and the tip hold, highest first, until one counts. One
-reading per commit judged, and none when the history gave no number past the
-tree's and the tip's. A reading that fails counts the path:
+Only what could change an answer is judged: for the stamp, the numbers past
+the highest the tree and the tip hold, highest first, until one counts
+(`highest`); for the number comparison, the numbers the branch holds that the
+default branch's history gave since the fork and its tip no longer holds
+(`counted`). One reading per commit judged, and none when the history gave
+no such number. A reading that fails counts the path:
 an id is never used again, so a number is never freed on a reading that
 could not be made.
 
@@ -86,3 +88,13 @@ def highest(judge: Judge, numbers: Sequence[Given], kind: str, above: int) -> Gi
         key=lambda n: -number_of(n.id),  # stable: the newest file first, for one number
     )
     return next((n for n in past if judge.counts(n)), None)
+
+
+def counted(judge: Judge, numbers: Sequence[Given], ids: Iterable[str]) -> dict[str, Given]:
+    """Each id of `ids` in `numbers` that counts, with the newest file given it that does."""
+    wanted = set(ids)
+    found: dict[str, Given] = {}
+    for number in numbers:
+        if number.id in wanted and number.id not in found and judge.counts(number):
+            found[number.id] = number
+    return found

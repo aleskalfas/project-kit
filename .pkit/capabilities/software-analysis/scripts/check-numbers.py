@@ -9,18 +9,22 @@
 """software-analysis capability — check-numbers: a number the default branch took first.
 
 A use case or journey numbered in the working tree whose number the default
-branch took too since this branch left it, for another line of work's
-artefact: the first to reach the default branch keeps the number, so this one
-renumbers before merging (DEC-001 point 3). An artefact is known by its id,
-not its path; `_lib/numbers.py` states the rule.
+branch took too since this branch left it — its tip holds it, or its history
+since gave it a file gone since — for another line of work's artefact: the
+first to reach the default branch keeps the number, and a number is never used
+again, so this one renumbers before merging (DEC-001 point 3). An artefact is
+known by its id, not its path; a file of the name this branch gives the
+number is a warning — possibly its own work landed; `_lib/numbers.py` states
+the rule.
 
 It reads a base, so it answers about a change rather than the tree: it is its
 own line of a project's check gate, beside `pkit friction check`, and not a
 member of `pkit validate` (ADR-058 point 7). A query — bounded, deterministic,
 read-only, needing no network — reading the analysis through the backbone's
 discovery, `pkit friction artefacts`, at the working tree and at the base's
-commits, and git for which commits those are and, for a number both sides
-took, whether the base's file is a version this branch's history wrote.
+commits, and git for which commits those are, what the base's history added
+since the fork and, for a number both sides took, whether the base's file is
+a version this branch's history wrote, or of a name it gave the number.
 
 Usage:
   pkit analysis check-numbers [--base <ref>]          the summary and the findings
@@ -29,7 +33,8 @@ Usage:
 The base is `--base`, else `$PKIT_CHECK_BASE`, else `origin/main`.
 
 Exit codes:
-  0  compared, and no number collides — or the working tree numbers nothing
+  0  compared, and no number collides — a warning never fails — or the
+     working tree numbers nothing
   1  a number collides; or the numbers cannot be compared — the base names no
      commit, or shares no history with HEAD — said on standard error, with
      nothing on standard output

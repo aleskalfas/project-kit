@@ -77,6 +77,11 @@ def number_of(artefact_id: str) -> int:
     return int(artefact_id.split("-", 1)[1])
 
 
+def kind_numbered(artefact_id: str) -> str:
+    """The kind a use case's or journey's number is of, by its prefix."""
+    return JOURNEY if artefact_id.startswith(f"{PREFIX[JOURNEY]}-") else USE_CASE
+
+
 def id_in_name(path: str) -> str | None:
     """The use case's or journey's id a file's name carries — `UC-007` for
     `…/UC-007-export.md` — as `identity` spells it; `None` for a name carrying none.

@@ -157,10 +157,23 @@ def test_an_id_moved_within_the_branch_is_no_collision(project: AdopterRepo) -> 
     assert [f["severity"] for f in document(completed)["findings"]] == ["report"]
 
 
-def test_two_branches_stamping_the_same_slug_at_the_same_path_collide(
+def _possibly_ours(number: str, path: str) -> str:
+    """The warning for a number main took in a file of the name this branch gives it."""
+    return (
+        f"{number} is numbered on main too, for {path}, since this branch left it, in a file "
+        "of the name this branch gives it: possibly your own work landed — merge main and keep "
+        "one file; otherwise renumber this use case before merging — `pkit analysis new` gives "
+        "the next free one (DEC-001 point 3)"
+    )
+
+
+def test_two_branches_stamping_the_same_slug_are_warned_not_failed(
     project: AdopterRepo,
 ) -> None:
-    """One path, two artefacts: each line of work took UC-002 for its own export."""
+    """One path, two versions: each line of work took UC-002 for an export. That is one
+    line of work's file landed and edited since as much as two artefacts, and only the
+    person can tell which — warned, never failed; merging main brings the two to one
+    path, where git asks which to keep."""
     _left_main(project)
     stamped(project, "use-case", "export", "--actor", "ACT-tester", "--path", "src/run.py")
     project.commit("UC-002 on topic")
@@ -170,10 +183,13 @@ def test_two_branches_stamping_the_same_slug_at_the_same_path_collide(
     project.checkout("topic")
     ours = f"{USE_CASES}/UC-002-export.md"
     completed = numbers(project, "--base", MAIN, "--json")
-    assert completed.returncode == 1, completed.stderr
-    _outdated, collision = document(completed)["findings"]
-    assert (collision["severity"], collision["location"]) == ("error", ours)
-    assert collision["message"].startswith(f"UC-002 is numbered on main too, for {ours}, since ")
+    assert completed.returncode == 0, completed.stderr
+    _outdated, warning = document(completed)["findings"]
+    assert warning == {
+        "severity": "warning",
+        "location": ours,
+        "message": _possibly_ours("UC-002", ours),
+    }
 
 
 def test_a_stacked_branch_whose_parent_squash_merged_is_no_collision(
@@ -182,7 +198,9 @@ def test_a_stacked_branch_whose_parent_squash_merged_is_no_collision(
     """`child` stacked on `parent`, which numbered UC-002; `child` moved it into an area
     and numbered UC-003. `parent` squash-merged: main took UC-002 under a commit of
     its own, but its file is, byte for byte, the version `parent` wrote — this
-    branch's own work landed, not another line of work's number."""
+    branch's own work landed, not another line of work's number. Merging main then
+    leaves two files for UC-002 — git pairs no rename where the merge-base holds
+    neither — and the duplicate check catches it there."""
     _left_main(project)
     project.checkout("parent", create=True)
     stamped(project, "use-case", "two", "--actor", "ACT-tester")
@@ -208,6 +226,93 @@ def test_a_stacked_branch_whose_parent_squash_merged_is_no_collision(
     assert [f["location"] for f in document(completed)["findings"][1:]] == [
         f"{USE_CASES}/UC-003-three.md"
     ]
+    project.git("merge", "-q", "--no-edit", MAIN)
+    fill(project)
+    validated = json.loads(run_script(project, VALIDATE, "--json").stdout)
+    duplicates = [f["message"].split(":")[0] for f in validated["findings"]]
+    assert f"the id UC-002 is also held by {USE_CASES}/UC-002-two.md" in duplicates
+
+
+def test_a_parent_edited_after_the_child_forked_is_a_warning_not_a_collision(
+    project: AdopterRepo,
+) -> None:
+    """`child` forked from `parent` while UC-002 was its first version; `parent` then took
+    a review edit and squash-merged. main holds the edited version, which `child`'s
+    history never wrote — yet it is `child`'s own work, landed: a file of the name
+    `child` gives UC-002 is warned, never failed, and the advice is to merge main."""
+    _left_main(project)
+    project.checkout("parent", create=True)
+    stamped(project, "use-case", "two", "--actor", "ACT-tester")
+    project.commit("UC-002 on parent")
+    project.checkout("child", create=True)
+    stamped(project, "use-case", "three", "--actor", "ACT-tester")
+    project.commit("UC-003 on child")
+    project.checkout("parent")
+    two = f"{USE_CASES}/UC-002-two.md"
+    edited = (project.root / two).read_text(encoding="utf-8").replace("Two", "Two, reviewed")
+    project.commit("review: UC-002's title", {two: edited})
+    project.checkout(MAIN)
+    project.squash_merge("parent")
+    project.checkout("child")
+    completed = numbers(project, "--base", MAIN, "--json")
+    assert completed.returncode == 0, completed.stdout + completed.stderr
+    outdated, warning = document(completed)["findings"]
+    assert outdated["severity"] == "report"
+    assert warning == {
+        "severity": "warning",
+        "location": two,
+        "message": _possibly_ours("UC-002", two),
+    }
+
+
+def test_a_number_the_default_branch_took_and_removed_since_is_still_taken(
+    project: AdopterRepo,
+) -> None:
+    """main numbered UC-002 after `topic` left it, then removed it: the number is still
+    taken — a number is never used again — so `topic`'s UC-002 collides, as the stamp,
+    which counts it held on main, agrees."""
+    _left_main(project)
+    stamped(project, "use-case", "mine", "--actor", "ACT-tester")
+    project.commit("UC-002 on topic")
+    project.checkout(MAIN)
+    stamped(project, "use-case", "theirs", "--actor", "ACT-tester")
+    project.commit("UC-002 on main")
+    theirs = f"{USE_CASES}/UC-002-theirs.md"
+    project.commit("UC-002 removed on main", {theirs: None})
+    # The stamp counts UC-002 held on main, where no file holds it now.
+    assert stamped(project, "use-case", "next", "--actor", "ACT-tester") == "UC-003"
+    project.write({f"{USE_CASES}/UC-003-next.md": None})
+    project.checkout("topic")
+    completed = numbers(project, "--base", MAIN, "--json")
+    assert completed.returncode == 1, completed.stderr
+    _outdated, collision = document(completed)["findings"]
+    assert collision == {
+        "severity": "error",
+        "location": f"{USE_CASES}/UC-002-mine.md",
+        "message": (
+            f"UC-002 was numbered on main since this branch left it, for {theirs}, which main no "
+            "longer holds: a number is never used again, so renumber this use case before "
+            "merging — `pkit analysis new` gives the next free one (DEC-001 point 3)"
+        ),
+    }
+
+
+def test_this_branch_s_numbers_are_read_by_name_and_id_as_main_s_are(
+    project: AdopterRepo,
+) -> None:
+    """A file here whose number is in its name alone — no front matter — holds it, as a
+    file on main does: main taking UC-002 since collides with it."""
+    _left_main(project)
+    draft = f"{USE_CASES}/UC-002-draft.md"
+    project.commit("a draft on topic", {draft: "# A draft\n"})
+    project.checkout(MAIN)
+    stamped(project, "use-case", "two", "--actor", "ACT-tester")
+    project.commit("UC-002 on main")
+    project.checkout("topic")
+    completed = numbers(project, "--base", MAIN, "--json")
+    assert completed.returncode == 1, completed.stderr
+    _outdated, collision = document(completed)["findings"]
+    assert (collision["severity"], collision["location"]) == ("error", draft)
 
 
 def test_a_stale_base_is_reported_as_the_friction_change_check_reports_it(
