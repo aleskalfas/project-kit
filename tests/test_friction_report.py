@@ -203,6 +203,7 @@ def test_debt_json_document_shape(timeline: Timeline) -> None:
     assert result.exit_code == 0, result.output
     doc = json.loads(result.output)
     assert sorted(doc) == [
+        "accepted_unanchored",
         "counts",
         "debt",
         "dormant",
@@ -210,12 +211,13 @@ def test_debt_json_document_shape(timeline: Timeline) -> None:
         "history",
         "report",
         "schema_version",
+        "unanchored",
         "unreachable",
     ]
     assert doc["schema_version"] == frep.DEBT_SCHEMA_VERSION == 1
     assert (doc["report"], doc["dormant"], doc["history"]) == ("debt", False, {"shallow": False})
-    assert doc["counts"] == {"deferred": 1, "stale": 1, "unreachable": 0}
-    assert doc["unreachable"] == []
+    assert doc["counts"] == {"deferred": 1, "stale": 1, "unanchored": 0, "unreachable": 0}
+    assert (doc["unreachable"], doc["unanchored"], doc["accepted_unanchored"]) == ([], [], [])
     stale, deferred = doc["debt"]
     assert stale == {
         "kind": "stale",
@@ -262,6 +264,43 @@ def test_debt_when_there_is_none_and_while_dormant(timeline: Timeline) -> None:
     assert json.loads(_cli("debt", "--json").output)["dormant"] is True
 
 
+def test_debt_lists_the_accepted_unanchored_apart_and_counts_only_the_forgotten(
+    timeline: Timeline,
+) -> None:
+    """COR-050 points 1 and 8: after the debt, the check's unanchored measure — the
+    forgotten artefacts, counted, and apart from them those accepted with a reason."""
+    reason = "No code embodies the sponsor: it funds the project."
+    timeline.start(
+        {
+            "docs/guide.md": guide(),
+            "docs/plain.md": "---\nid: plain\n---\n\nText.\n",
+            "docs/sponsor.md": document("sponsor", unanchored_because=reason),
+        }
+    )
+    timeline.commit("change the CLI", {"src/cli/main.py": "print('2')\n"})
+    listing = frep.run_debt(timeline.adopter.root)
+    assert listing.unanchored == ("docs/plain.md",)
+    assert listing.accepted_unanchored == (
+        fr.AcceptedUnanchored("sponsor", "docs/sponsor.md", reason),
+    )
+
+    human = frep.render_debt_human(listing, now=NOW)
+    assert human.startswith("Friction debt — 1 stale; 1 unanchored")
+    lines = human.splitlines()
+    forgotten = lines.index(next(line for line in lines if line.startswith("UNANCHORED")))
+    accepted = lines.index(next(line for line in lines if line.startswith("ACCEPTED UNANCHORED")))
+    assert lines[forgotten + 1] == "  docs/plain.md"
+    assert lines[accepted + 1] == f"  docs/sponsor.md  {reason}"
+    assert "not counted" in lines[accepted]
+
+    doc = json.loads(_cli("debt", "--json").output)
+    assert doc["counts"] == {"deferred": 0, "stale": 1, "unanchored": 1, "unreachable": 0}
+    assert doc["unanchored"] == ["docs/plain.md"]
+    assert doc["accepted_unanchored"] == [
+        {"artefact": "sponsor", "location": "docs/sponsor.md", "reason": reason}
+    ]
+
+
 def test_debt_leaves_out_an_artefact_under_an_excluded_path(timeline: Timeline) -> None:
     """COR-050 point 7: excluded paths are left out of the measures, the debt with them."""
     _excluded_history(timeline)
@@ -271,7 +310,9 @@ def test_debt_leaves_out_an_artefact_under_an_excluded_path(timeline: Timeline) 
     ]
     result = _cli("debt", "--json")
     assert result.exit_code == 0, result.output
-    assert json.loads(result.output)["counts"] == {"deferred": 0, "stale": 1, "unreachable": 0}
+    doc = json.loads(result.output)
+    assert doc["counts"] == {"deferred": 0, "stale": 1, "unanchored": 0, "unreachable": 0}
+    assert doc["unanchored"] == []  # `docs/generated/api.md` is unanchored, and excluded
 
 
 def test_debt_names_the_artefacts_a_shallow_clone_cannot_judge(
@@ -534,6 +575,33 @@ def test_explain_an_unanchored_artefact(timeline: Timeline) -> None:
     result = _cli("explain", "plain")
     assert result.exit_code == 0, result.output
     assert "State: unanchored" in result.output and "FINDINGS" not in result.output
+    assert "Unanchored because" not in result.output
+
+
+def test_explain_shows_the_reason_an_artefact_is_accepted_unanchored(
+    timeline: Timeline,
+) -> None:
+    """COR-050 point 1: the reason its block gives is shown with its state, and flagged
+    when it stands beside anchors — a pair validation refuses."""
+    reason = "No code embodies the sponsor: it funds the project."
+    timeline.start(
+        {
+            "docs/guide.md": guide(unanchored_because="Stale reason."),
+            "docs/sponsor.md": document("sponsor", unanchored_because=reason),
+        }
+    )
+    result = _cli("explain", "sponsor")
+    assert result.exit_code == 0, result.output
+    assert "State: unanchored" in result.output
+    assert f"  Unanchored because: {reason}\n" in result.output
+    doc = json.loads(_cli("explain", "sponsor", "--json").output)
+    assert (doc["state"], doc["unanchored_because"]) == ("unanchored", reason)
+
+    beside = _cli("explain", "guide").output
+    assert (
+        "Unanchored because: Stale reason.   (beside anchors: pkit validate refuses the pair)"
+        in (beside)
+    )
 
 
 def test_explain_an_excluded_artefact_names_the_setting_that_leaves_it_out(
@@ -679,6 +747,7 @@ def test_explain_json_document_shape(timeline: Timeline) -> None:
         "revalidation_point",
         "schema_version",
         "state",
+        "unanchored_because",
     ]
     assert doc["schema_version"] == frep.EXPLAIN_SCHEMA_VERSION == 1
     assert (doc["report"], doc["artefact"], doc["location"], doc["state"]) == (
@@ -688,7 +757,7 @@ def test_explain_json_document_shape(timeline: Timeline) -> None:
         "stale",
     )
     assert doc["body"] == "Body.\n"
-    assert doc["excluded_by"] is None
+    assert doc["excluded_by"] is None and doc["unanchored_because"] is None
     assert doc["revalidation_point"]["commit"] == base and doc["deferral_points"] == []
     assert doc["anchors"] == [
         {

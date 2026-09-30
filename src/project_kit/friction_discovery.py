@@ -116,6 +116,10 @@ from project_kit.working_tree import WorkingTree, working_tree
 # group (COR-050 point 1, COR-053 point 10).
 FRICTION_KEY = "friction"
 
+# The key of the block an artefact with nothing to anchor to carries instead of
+# anchors: the reason a person accepted it with none (COR-050 point 1).
+UNANCHORED_BECAUSE_KEY = "unanchored-because"
+
 # The package schema's shape a capability place is read in: `{path, location?}`,
 # `location` naming an entry of the capability's `docs.locations`, which
 # `docs_roots.read_capability_locations` resolves.
@@ -1413,6 +1417,15 @@ class Artefact:
         return isinstance(self.container, Mapping) and FRICTION_KEY in self.container
 
     @property
+    def unanchored_because(self) -> str | None:
+        """The reason its block gives for having no anchors (COR-050 point 1), whitespace
+        folded; `None` when it gives none, or no text. Whether it stands beside anchors
+        is validation's to judge, and whether it counts is the unanchored measure's."""
+        reason = _mapping_or_empty(self.friction).get(UNANCHORED_BECAUSE_KEY)
+        folded = " ".join(reason.split()) if isinstance(reason, str) else ""
+        return folded or None
+
+    @property
     def identifiers(self) -> frozenset[str]:
         """What an `anchors.artefact` value may name to reach this artefact.
 
@@ -2036,8 +2049,9 @@ def artefacts_document(target_root: Path, tree: RepositoryTree | None = None) ->
       (`document` or `entry`), `location`, `place`, `rule_set`, whether it
       carries the `container` and a `friction` block, its `anchors` by kind as
       its friction block lists them (the values that are text, in written
-      order), and its own `fields` (its front matter or entry, as written, the
-      container left out).
+      order), its `unanchored_because` — the reason its block gives for having
+      no anchors, whitespace folded, or `None` (COR-050 point 1) — and its own
+      `fields` (its front matter or entry, as written, the container left out).
     - `held`: every folder of held documents a capability declares (COR-050
       point 1), in declaration order — each capability's by name, in written
       order, a malformed declaration where it was written — declared as a place
@@ -2135,6 +2149,7 @@ def artefacts_document(target_root: Path, tree: RepositoryTree | None = None) ->
                 "container": artefact.has_container,
                 "friction": artefact.has_friction_block,
                 "anchors": {kind: list(values) for kind, values in artefact.anchors.items()},
+                "unanchored_because": artefact.unanchored_because,
                 "fields": _own_fields(artefact.carrier),
             }
             for artefact in discovery.artefacts

@@ -16,7 +16,10 @@ never the working tree, as the check does; neither writes anything.
   upstream first. Artefacts whose points lie beyond a shallow clone are
   named apart: their debt cannot be told. An artefact under an excluded
   path is never judged stale or deferred (COR-050 point 7), so it is not
-  listed.
+  listed. After the debt, the check's unanchored measure (point 8): the
+  artefacts with no anchors and no reason, the only ones counted, and apart
+  from them those whose block gives the reason a person accepted them with
+  none (`unanchored-because`, point 1), each with its reason.
 - **`explain`** judges one artefact through `run_artefact_check` — the
   check's own judgment of it, with the commits behind each finding — and
   shows its anchors, its revalidation and deferral points, what changed since
@@ -27,7 +30,9 @@ never the working tree, as the check does; neither writes anything.
   find_artefact`): its location — `path`, or `path#id` for a collection
   entry — or an id; here it is looked up at HEAD. An artefact under an
   excluded path is `excluded`, with the `friction.exclude` entry that leaves
-  it out, and shows only what the check reports of its declarations. Its
+  it out, and shows only what the check reports of its declarations. The
+  reason its block gives for having no anchors (`unanchored-because`, point
+  1) is shown with its state. Its
   document also carries what a capability's reader would otherwise compute
   again (ADR-057 point 2): each path anchor's files at the revalidation point
   and at HEAD, matched as the check decides a dead anchor, `friction.exclude`
@@ -165,13 +170,22 @@ class DebtEntry:
 
 @dataclass(frozen=True)
 class DebtListing:
-    """The debt of every artefact at HEAD, oldest first. It never fails."""
+    """The debt of every artefact at HEAD, oldest first, and the unanchored measure. It
+    never fails.
+
+    `unanchored` and `accepted_unanchored` are the check's measure (COR-050
+    point 8): the artefacts with no anchors and no reason, the only ones
+    counted, and apart from them those whose block gives the reason a person
+    accepted them with none (point 1).
+    """
 
     dormant: bool
     head: HeadState | None  # `None` only while dormant
     shallow: bool | None  # `None` only while dormant
     entries: tuple[DebtEntry, ...]  # oldest first
     unreachable: tuple[fr.ArtefactReport, ...]  # not judged: a point beyond a shallow clone
+    unanchored: tuple[str, ...] = ()  # locations, in walk order
+    accepted_unanchored: tuple[fr.AcceptedUnanchored, ...] = ()  # in walk order
 
     def count(self, kind: fr.RepositoryFindingKind) -> int:
         return sum(1 for e in self.entries if e.finding.kind is kind)
@@ -208,7 +222,15 @@ def run_debt(
     unreachable = tuple(
         r for r in check.artefact_reports if r.state is fr.ArtefactState.UNREACHABLE
     )
-    return DebtListing(False, check.head, bool(check.shallow), tuple(entries), unreachable)
+    return DebtListing(
+        False,
+        check.head,
+        bool(check.shallow),
+        tuple(entries),
+        unreachable,
+        check.unanchored,
+        check.accepted_unanchored,
+    )
 
 
 def _deferral_reasons(
@@ -250,11 +272,14 @@ def render_debt_json(listing: DebtListing) -> str:
         "counts": {
             **{kind.value: listing.count(kind) for kind in DEBT_KINDS},
             "unreachable": len(listing.unreachable),
+            "unanchored": len(listing.unanchored),
         },
         "debt": [entry.as_json() for entry in listing.entries],
         "unreachable": [
             {"artefact": r.artefact, "location": r.location} for r in listing.unreachable
         ],
+        "unanchored": list(listing.unanchored),
+        "accepted_unanchored": [entry.as_json() for entry in listing.accepted_unanchored],
     }
     return json.dumps(document, indent=2, sort_keys=True) + "\n"
 
@@ -279,8 +304,11 @@ def render_debt_human(listing: DebtListing, *, now: datetime | None = None) -> s
     summary = ", ".join(
         f"{listing.count(kind)} {kind.value}" for kind in DEBT_KINDS if listing.count(kind)
     )
+    summary = summary or "nothing stale or deferred"
+    if listing.unanchored:
+        summary += f"; {len(listing.unanchored)} unanchored"
     lines = [
-        f"{title} — {summary or 'nothing stale or deferred'}"
+        f"{title} — {summary}"
         + cli_render.style("muted", "   (the whole report: pkit friction check --all)"),
         "",
         *_header_lines(listing.head, bool(listing.shallow)),
@@ -318,6 +346,7 @@ def render_debt_human(listing: DebtListing, *, now: datetime | None = None) -> s
                 *(f"  {report.location}" for report in listing.unreachable),
             ]
         )
+    lines.extend(_unanchored_lines(listing))
     shown = [kind for kind in DEBT_KINDS if listing.count(kind)]
     if shown:
         width = max(len(kind.value) for kind in shown)
@@ -333,6 +362,36 @@ def render_debt_human(listing: DebtListing, *, now: datetime | None = None) -> s
         ]
     )
     return "\n".join(lines) + "\n"
+
+
+def _unanchored_lines(listing: DebtListing) -> list[str]:
+    """The unanchored measure (COR-050 point 8): the forgotten artefacts, counted, then
+    apart from them those accepted with a reason (point 1), each with its reason."""
+    lines: list[str] = []
+    if listing.unanchored:
+        lines.extend(
+            [
+                "",
+                cli_render.style("heading", "UNANCHORED")
+                + cli_render.style(
+                    "muted",
+                    " — no anchors and no reason: anchor it, or write its unanchored-because",
+                ),
+                *(f"  {location}" for location in listing.unanchored),
+            ]
+        )
+    accepted = listing.accepted_unanchored
+    if accepted:
+        width = max(len(entry.location) for entry in accepted)
+        lines.extend(
+            [
+                "",
+                cli_render.style("heading", "ACCEPTED UNANCHORED")
+                + cli_render.style("muted", " — not counted: the reason a person gave for none"),
+                *(f"  {entry.location:{width}}  {entry.reason}" for entry in accepted),
+            ]
+        )
+    return lines
 
 
 # --- one artefact, explained ---------------------------------------------------------
@@ -618,6 +677,7 @@ def render_explain_json(explanation: Explanation) -> str:
         "location": explanation.artefact.location,
         "body": explanation.artefact.body,
         "state": explanation.state,
+        "unanchored_because": explanation.artefact.unanchored_because,
         "excluded_by": _setting_json(explanation.artefact.excluded_by),
         "revalidation_point": (
             None
@@ -678,6 +738,10 @@ def render_explain_human(explanation: Explanation, *, now: datetime | None = Non
         lines.append(f"  Artefact: {artefact.id}")
     state = explanation.state
     lines.append(f"  State: {state}" + cli_render.style("muted", f"   ({_STATE_GLOSS[state]})"))
+    reason = artefact.unanchored_because
+    if reason is not None:
+        beside = cli_render.style("muted", "   (beside anchors: pkit validate refuses the pair)")
+        lines.append(f"  Unanchored because: {reason}" + (beside if anchors_of(artefact) else ""))
     if artefact.excluded_by is not None:
         lines.append(f"  Excluded by: {_setting_cell(artefact.excluded_by)}")
     lines.extend(_header_lines(explanation.head, explanation.shallow))

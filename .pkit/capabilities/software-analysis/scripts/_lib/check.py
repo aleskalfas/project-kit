@@ -17,10 +17,11 @@ What is checked, each against the record's words:
   ignored.
 - **A placeholder left** (point 1). What the stamp leaves a person to write —
   an actor's need, a term's definition, a use case's goal and steps — is no
-  part of the analysis until written: an own field still holding a
-  placeholder the templates or the skill's commands ever shipped, or a body —
-  a collection entry's section, heading included — still holding one of the
-  templates', is an error. Matched exactly against those texts
+  part of the analysis until written: an own field — or the reason an actor
+  or a term has no anchors, `unanchored-because` in its friction block —
+  still holding a placeholder the templates or the skill's commands ever
+  shipped, or a body — a collection entry's section, heading included —
+  still holding one of the templates', is an error. Matched exactly against those texts
   (`_lib/placeholder.py`), so a capitalised one (`<Title>`) is caught and
   words of the artefact's own in angle brackets — code a body quotes — never
   are.
@@ -67,7 +68,7 @@ What is checked, each against the record's words:
   longer holds, or a point that does not resolve, says nothing: the record's
   copy is the evidence.
 
-And two findings that never fail:
+And a finding that never fails:
 
 - **An open regression** (point 5), a report: a record's `code-regressed`
   artefact not revalidated since the record — its `at` on no later day (UTC)
@@ -75,9 +76,6 @@ And two findings that never fail:
   still open, or its fix was never revalidated against the artefact. Derived
   from the records and the artefacts in the working tree each time, never
   kept in a ledger (COR-050 point 9).
-- **`unanchored-because` beside anchors** (point 9), a warning: the reason
-  says why an artefact has no anchors, so one with anchors carrying it says
-  two things at once. The stamp refuses the pair; this catches a hand edit.
 
 It reads the working tree — and, when a record copies evidence, the evidence
 point — so the same tree gets the same answer as long as the evidence fillers
@@ -89,7 +87,10 @@ about a change rather than the tree, and is not a validator (ADR-058 point 7).
 The friction block — its shape, dead anchors, cycles, friction itself — is the
 core's (`pkit validate`'s `friction` member and `pkit friction check`), which
 also reports a front matter that does not parse, as this check does for a file
-in its places. An unanchored artefact is the core's measure, never an error.
+in its places. An unanchored artefact is the core's measure, never an error,
+and so is the reason an actor or a term is accepted with none: the block's
+`unanchored-because`, which the measure lists apart and the core's validation
+refuses beside anchors (COR-050 points 1, 8 and 12; DEC-001 point 9).
 """
 
 from __future__ import annotations
@@ -126,6 +127,10 @@ from _lib.placeholder import IN_TEMPLATES, left_in
 
 #: Where in an artefact its artefact anchors sit.
 ARTEFACT_ANCHORS = f"/{CONTAINER}/friction/anchors/artefact"
+
+#: Where in an artefact the reason it has no anchors sits: the core's key, in its
+#: friction block (COR-050 point 1), which the stamp writes from a person's words.
+REASON_POINTER = f"/{CONTAINER}/friction/{UNANCHORED_BECAUSE}"
 
 #: The outcome whose record stays open until the artefact is revalidated again.
 REGRESSED = "code-regressed"
@@ -169,7 +174,6 @@ def check(root: Path) -> Outcome:
     outcome.findings += _references(analysis)
     outcome.findings += _actor_anchors(analysis)
     outcome.findings += _journey_anchors(analysis)
-    outcome.findings += _unanchored_beside_anchors(analysis)
     record_findings, copies, read = _record_findings(root, records, analysis)
     outcome.findings += record_findings
     if copies:
@@ -236,15 +240,19 @@ def _own_fields(analysis: Analysis) -> list[Finding]:
 
 def _placeholders(root: Path, analysis: Analysis) -> list[Finding]:
     """What a person was left to write and has not (DEC-001 point 1): a placeholder the
-    templates or the skill's commands shipped, still in an artefact's own fields, and
-    one of the templates' still in its body — or its section of a collection file,
-    heading included. Matched exactly (`_lib/placeholder.py`), so words of the
+    templates or the skill's commands shipped, still in an artefact's own fields or its
+    block's reason for having no anchors, and one of the templates' still in its body —
+    or its section of a collection file, heading included. Matched exactly
+    (`_lib/placeholder.py`), so words of the
     artefact's own in angle brackets — `maps <user id> to a session`, code a body
     quotes — are never taken for one."""
     texts: dict[str, str | None] = {}
     found: list[Finding] = []
     for artefact in analysis.artefacts:
-        for pointer, text in _strings(artefact.fields):
+        written = list(_strings(artefact.fields))
+        if artefact.unanchored_because is not None:
+            written.append((REASON_POINTER, artefact.unanchored_because))
+        for pointer, text in written:
             held = left_in(text)
             if held:
                 found.append(
@@ -477,20 +485,6 @@ def _journey_anchors(analysis: Analysis) -> list[Finding]:
                 )
             )
     return found
-
-
-def _unanchored_beside_anchors(analysis: Analysis) -> list[Finding]:
-    """An artefact carrying the reason it has no anchors, and anchors (DEC-001 point 9)."""
-    return [
-        Finding(
-            WARNING,
-            at(artefact.location, f"/{UNANCHORED_BECAUSE}"),
-            f"carries `{UNANCHORED_BECAUSE}` beside anchors: the reason says why it has none — "
-            f"drop the reason, or the anchors (DEC-001 point 9)",
-        )
-        for artefact in analysis.artefacts
-        if UNANCHORED_BECAUSE in artefact.fields and any(artefact.anchors.values())
-    ]
 
 
 def _unique(values: Iterable[str]) -> list[str]:

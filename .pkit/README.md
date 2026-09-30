@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-09-30T06:34:37Z
+      at: 2026-09-30T09:12:14Z
       outcome: unchanged
-      unchanged-because: the CLI README's friction section now states that every reading command's --json document carries schema_version, and each document's key list names it; the signpost's line for cli/ names the command surface, not the documents' keys
+      unchanged-because: the CLI README's friction section now states that every reading command's --json document carries schema_version, and documents the unanchored measure listing the artefacts accepted with a reason apart and counting only those without one, in check --all, debt and explain; the schemas README now documents the block's unanchored-because and its validation finding beside anchors; the area map's one-line descriptions of cli/ and schemas/ name the command surface and the schemas, not the documents' keys or the block's fields, so they still hold
 ---
 
 # project-kit

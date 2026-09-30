@@ -72,7 +72,14 @@ class Document:
     rule-set file, whether `friction.exclude` leaves it out, its front matter's
     own fields (`None` without a front-matter mapping), and — for a document a
     component holds, which no place walks (COR-050 point 1) — the capability
-    holding it."""
+    holding it.
+
+    `anchored` is whether the file's friction block, read as one document,
+    lists an anchor, and `unanchored_because` the reason it gives for listing
+    none — the reason a person accepted it with none (COR-050 point 1); both as
+    the backbone reads them. `anchored` is `None` when the file is no one
+    document artefact — a collection file, or a held document — or the backbone
+    answered without its anchors."""
 
     path: str
     places: tuple[int, ...]
@@ -80,6 +87,8 @@ class Document:
     excluded: bool
     fields: Mapping[str, Any] | None
     held_by: str | None = None
+    anchored: bool | None = None
+    unanchored_because: str | None = None
 
 
 @dataclass(frozen=True)
@@ -127,15 +136,19 @@ def reading_of(document: Mapping[str, Any]) -> Reading:
     places = tuple(
         _place(index, entry) for index, entry in enumerate(_mappings(document.get("places")))
     )
+    anchoring = _anchoring(document)
     documents = {}
     for entry in _mappings(document.get("files")):
         path = str(entry.get("path"))
+        anchored, because = anchoring.get(path, (None, None))
         documents[path] = Document(
             path=path,
             places=_indices(entry.get("places")),
             rule_set=entry.get("rule_set") is not None,
             excluded=bool(entry.get("excluded")),
             fields=_fields(entry.get("fields")),
+            anchored=anchored,
+            unanchored_because=because,
         )
     # A held document is walked by no place, so it is never among the files; it
     # carries the places matching it and the held folder holding it, whose
@@ -154,6 +167,22 @@ def reading_of(document: Mapping[str, Any]) -> Reading:
             held_by=capability_of(source) or source,
         )
     return Reading(roots=roots, places=places, documents=documents)
+
+
+def _anchoring(document: Mapping[str, Any]) -> dict[str, tuple[bool | None, str | None]]:
+    """For each file that is one document artefact, whether its friction block lists
+    an anchor — `None` when the backbone answered without the artefact's `anchors`,
+    added within the document's version — and the reason it gives for listing none,
+    `unanchored_because`, added the same way (COR-050 point 1). A collection file's
+    entries are artefacts of their own, so it is no one document here."""
+    found: dict[str, tuple[bool | None, str | None]] = {}
+    for entry in _mappings(document.get("artefacts")):
+        if entry.get("kind") != "document":
+            continue
+        anchors = entry.get("anchors")
+        anchored = any(anchors.values()) if isinstance(anchors, Mapping) else None
+        found[str(entry.get("path"))] = (anchored, _text(entry.get("unanchored_because")))
+    return found
 
 
 def capability_of(source: str) -> str | None:

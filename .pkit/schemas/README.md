@@ -19,7 +19,7 @@ pkit:
         - src/project_kit/working_tree.py
       record: [COR-018, COR-019, COR-020, COR-023, COR-029, COR-048, COR-050, COR-051, COR-052, COR-053, ADR-056, ADR-057]
     revalidated:
-      at: 2026-09-30T04:12:39Z
+      at: 2026-09-30T08:01:47Z
       outcome: updated
 ---
 
@@ -430,6 +430,7 @@ pkit:                                     RS-CMN-001:
 | Key | Meaning |
 |---|---|
 | `anchors` | What makes the artefact true, grouped by kind — `path` (files or globs relative to the repository root, `**` across folders), `record` (an identified record, such as a decision), `artefact` (another artefact by its id; a document may also be named by its repository-relative path). Each list is non-empty with unique entries. An artefact without anchors is *unanchored* — reported, never an error. |
+| `unanchored-because` | Instead of `anchors`, for an artefact with nothing to anchor to: the reason a person accepted it with none, such as a person's part in the work that no code carries out — non-empty text (COR-050 point 1). The unanchored measure lists such an artefact apart, with its reason, and counts only those without one (point 8; the CLI README, "friction check --all"). It never stands beside anchors: validation refuses the pair (below). |
 | `revalidated` | The last revalidation, written on a person's decision — by hand, or with `pkit friction revalidate` and `pkit friction defer`. `at` — a UTC timestamp `YYYY-MM-DDTHH:MM:SSZ`; the revalidation point is the last commit in which its parsed value changed. `outcome` — `updated` or `unchanged`; `at` and `outcome` come together. `unchanged-because` — required with `outcome: unchanged`: why the content still holds against *this* change. `deferred` — one entry per anchor whose friction is deliberately postponed: `anchor: {kind, value}` plus a `reason`; kept sorted by anchor. An artefact never yet revalidated may carry `deferred` alone; an empty `revalidated` is refused. |
 | `last-check` | Tool-written only — by `pkit friction record-status`, the command the after-merge job runs, and only when the status changes: `state` (`current` / `stale` / `deferred`), `as-of` (the commit checked against), `since` (where staleness came from). Never read for friction. |
 
@@ -447,6 +448,7 @@ Unknown keys anywhere in the block are refused. The block carries no version; it
 - *a friction block in a held document* (`held-friction-block`) — wherever it is written in the front matter, the document's own, an entry's, a rule's under `rules` or deeper, against the document and a JSON Pointer to the block, naming the folder that holds it: a held document is not an artefact, so nothing reads its anchors or its revalidation; reported whenever declared, dormant or not;
 - *unparsable front matter* in a place — reported whenever places are declared, and it keeps the pass awake, since the check never skips an artefact it cannot parse: a YAML typo in the only container-carrying file is an error, not silence;
 - *a malformed block* — the container schema's or the container rule's errors, against `path` (a document) or `path#id` (an entry) and a JSON Pointer into the block;
+- *`unanchored-because` beside anchors* (`unanchored-beside-anchors`) — the reason an artefact has none, in a block that lists some: the two contradict each other, so remove one. The schema admits the key alone; the pair is the pass's own finding, against the key's pointer, for a rule of a rule set too;
 - *a dangling deferral* — a `deferred[].anchor` matching, by kind and value, no anchor of the artefact; the pointer carries the entry's index as written;
 - *a cycle between artefacts* through `anchors.artefact`, reported once with its path (`A -> B -> A`; a self-anchor is `A -> A`).
 
@@ -456,7 +458,7 @@ The settings themselves are the **configuration pass's** findings, since it owns
 
 The pass is **dormant** — it prints its counts and nothing else about artefacts — when no places are declared, or when nothing in them needs judging: no artefact carries the container and no file failed to parse. Dormancy is about artefacts, not declarations: a capability place the walk cannot follow (`malformed-place`, `place-outside-repository`), a place matching a synced copy (`synced-place`), a capability surface entry it cannot read (`malformed-surface`), a held folder it does not hold (`malformed-held`, `held-outside-repository`), or a held document that does not parse or carries a friction block (`held-unparsable-front-matter`, `held-friction-block`) is reported, and fails `pkit validate`, dormant or not.
 
-A rule-set file is claimed by the rule-set rule before the container rule (ADR-056 point 2), so its unparsable front matter and the malformed container of one of its rules are the `rule-sets` pass's findings, reported once there; the friction pass still takes its rules into the deferral and cycle checks.
+A rule-set file is claimed by the rule-set rule before the container rule (ADR-056 point 2), so its unparsable front matter and the malformed container of one of its rules are the `rule-sets` pass's findings, reported once there; the friction pass still takes its rules into the beside-anchors, deferral and cycle checks.
 
 **Not here.** Friction itself is the `friction` command group's: the change check — the three answers, bumps with nothing behind them, dead anchors of a change, an outdated base, the modes and the `--json` document — is `pkit friction check`, and the whole-repository check — stale and deferred debt derived from git with their origins, every dead anchor, over-broad anchors and the two measures — is `pkit friction check --all`, whose debt `pkit friction debt` lists oldest first and whose findings on one artefact `pkit friction explain` explains; the writers of the block — `revalidate`, `defer`, `record-status`, each writing one key only with consent, and never what this pass would refuse — are its commands too (all in the CLI reference, "Friction checks"). This pass never touches git.
 
