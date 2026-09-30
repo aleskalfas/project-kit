@@ -1,20 +1,23 @@
 ---
 # A revalidation record (software-analysis DEC-001 points 5 and 6): one check
 # of some artefacts against one version of the system, kept only when there is
-# something to say — a planned revalidation, or one that finds a gap or a
-# regression. A routine one that finds everything holds writes no record: each
-# artefact's own revalidation block is the record. Copy it to
-# `revalidations/<date>-<subject>.md` under the analysis location. It is an
-# act, not an anchored artefact, so it carries no friction block. It may copy
+# something to say — when is the capability README's "Revalidation records";
+# what each outcome records on its artefact is its "Revalidation: four
+# outcomes, two answers".
+# Stamp it, never copy it: `pkit analysis new revalidation <slug> --change <ref>
+# --trigger <trigger> --outcome <id>=<outcome> … --because <id>=<why> …
+# [--gap "<gap> => <resolution>"]…` writes `revalidations/<date>-<slug>.md`
+# under the analysis location, and refuses a record with nothing to say. It is
+# an act, not an anchored artefact, so it carries no friction block. It may copy
 # executed results from the evidence point as support for an outcome (DEC-001
 # point 7) — never in place of one — each entry whole, as the record is history
 # and the point holds only what its fillers report now. Its front matter's
 # shape is `schemas/revalidation-record.schema.json`.
 change: "#000"                    # the work item, pull request or range of commits that carried it
 trigger: planned                  # planned | drift | scheduled | close | onboarding
-date: "2026-01-01"                # the day it was performed
+date: "2026-01-01"                # the day it was performed, in UTC
 by: <who performed it — a person, or an agent>
-confirmed-by: <the person who confirmed an agent's outcomes>   # optional
+confirmed-by: <the person who confirmed an agent's outcomes, or decided stale>   # optional
 outcomes:                         # each artefact covered, by id, withdrawn ones included
   UC-000: holds                   # holds | analysis-stale | code-regressed | gap-found
 # evidence:                       # optional: the executed results drawn on, each copied whole from the evidence point
@@ -33,4 +36,4 @@ outcomes:                         # each artefact covered, by id, withdrawn ones
 
 ## Gaps
 
-- <behaviour nothing describes, or a description with no behaviour — and what resolved it: the artefact written, or the defect reported>
+- <behaviour nothing describes, or a description with no behaviour> — **resolved:** <the artefact written, or the defect reported>

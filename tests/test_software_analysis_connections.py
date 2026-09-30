@@ -452,7 +452,12 @@ def test_a_record_copies_evidence_as_support_for_an_outcome(project: AdopterRepo
         }
     )
     document = _check(project)
-    assert document["findings"] == []
+    # The evidence says nothing against the record; UC-002's regression is reported
+    # open, as any is until its artefact is revalidated after the record.
+    assert [f for f in document["findings"] if f["severity"] != "report"] == []
+    ((location, message),) = _findings(document, "report")
+    assert location == f"{RECORD}:/outcomes/UC-002"
+    assert message.startswith("UC-002's regression is open")
     assert document["summary"][1] == (
         f"evidence ({EVIDENCE}): 2 held; 2 copied entry(ies) compared with it."
     )
