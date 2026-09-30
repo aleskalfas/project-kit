@@ -764,8 +764,10 @@ def test_json_document_shape(timeline: Timeline) -> None:
         "history",
         "measures",
         "mode",
+        "schema_version",
         "states",
     ]
+    assert doc["schema_version"] == fr.REPOSITORY_SCHEMA_VERSION == 1
     assert (doc["check"], doc["mode"], doc["dormant"], doc["failed"]) == (
         "repository",
         "enforcing",

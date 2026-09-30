@@ -15,7 +15,7 @@ pkit:
         - .pkit/capabilities/project-management/decisions/**
       record: [COR-017, COR-020, COR-021, COR-023, COR-039, COR-053, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050]
     revalidated:
-      at: 2026-09-29T18:35:28Z
+      at: 2026-09-30T06:40:06Z
       outcome: updated
 ---
 
@@ -803,7 +803,7 @@ doc_check:
     friction: enforcing         # a documentation capability's page friction
 ```
 
-**The `## Doc impact` section may render the pages' answers.** `open-pr --doc-impact-from-friction` (opt-in) runs `pkit friction check --json` against `origin/<base>` and writes one bullet per answer the changed pages carry into an unwritten section — the template's placeholder, an empty section, or none — and leaves an authored section as it is; a page still carrying friction is named on stderr, to be answered on the page. Rendering only: the check never reads the section for a contributed obligation. The section itself stays required on every Task and pull request (DEC-015), whatever fills the point.
+**The `## Doc impact` section may render the pages' answers.** `open-pr --doc-impact-from-friction` (opt-in) runs `pkit friction check --json` against `origin/<base>` and writes one bullet per answer the changed pages carry into an unwritten section — the template's placeholder, an empty section, or none — and leaves an authored section as it is; a page still carrying friction is named on stderr, to be answered on the page. A check document of a `schema_version` other than 1 is not rendered, and the command says so; one without the key, from a backbone before it, reads as 1 (the CLI README, "Friction checks"). Rendering only: the check never reads the section for a contributed obligation. The section itself stays required on every Task and pull request (DEC-015), whatever fills the point.
 
 ## Permissions
 

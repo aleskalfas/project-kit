@@ -110,6 +110,23 @@ def test_agent_inherits_model_and_effort(agent):
     assert "effort" not in front
 
 
+def test_body_refuses_a_friction_document_of_another_version(
+    agent: tuple[dict[str, Any], str],
+) -> None:
+    """The friction documents it reads carry `schema_version`: it reads version 1,
+    refuses any other value, and reads a document without the key as version 1."""
+    _, body = agent
+    section = body.split("## The commands you read", 1)[1].split("\n## ", 1)[0]
+    (refusal,) = [p for p in section.split("\n\n") if "`schema_version`" in p]
+    assert refusal.startswith("**You refuse a friction document of a version you do not read.**")
+    for document in ("`explain`", "`debt`", "`check --all`"):
+        assert document in refusal, document
+    assert "you read version `1`" in refusal
+    assert "stop before reading it" in refusal
+    assert "A document without the key comes from a backbone that predates it" in refusal
+    assert "read it as version `1`" in refusal
+
+
 def test_body_carries_the_three_intents(agent):
     _, body = agent
     for heading in ("### 2. Friction-fix", "### 3. Reader-review", "### 4. Onboarding"):

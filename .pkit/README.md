@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-09-30T05:35:11Z
+      at: 2026-09-30T06:34:37Z
       outcome: unchanged
-      unchanged-because: the CLI README's release rows and paragraph now say a floor-only patch changeset is the correction path, that no escape hatch waives the floor tie, that an explicit floor names a release the tree records, and that apply warns before confirming when --no-broaden leaves a range excluding the shipped backbone; the area map's one-line description of cli/ holds
+      unchanged-because: the CLI README's friction section now states that every reading command's --json document carries schema_version, and each document's key list names it; the signpost's line for cli/ names the command surface, not the documents' keys
 ---
 
 # project-kit

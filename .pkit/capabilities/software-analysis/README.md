@@ -12,7 +12,7 @@ pkit:
         - .pkit/capabilities/software-analysis/agents/**
       record: ["software-analysis:DEC-001", COR-049, COR-050, COR-052, COR-053]
     revalidated:
-      at: 2026-09-30T06:41:21Z
+      at: 2026-09-30T08:15:32Z
       outcome: updated
 ---
 
@@ -267,6 +267,8 @@ Its scripted flows — a drift resolved, the stop, and a regression recorded wit
 ### What the evidence decides: `pkit analysis propose`
 
 `pkit analysis propose <artefact> [--contradicted <quote> --contradicted-from <source>] [--intended <quote> --intended-from <source>] [--unintended <quote> --unintended-from <source>] [--json]` is the part of the agent's judgment that needs no judgment, so what it leans on is a rule you can read. For one flagged artefact it reads `pkit friction explain`, and for each changed path anchor which code the artefact **quotes** — what it writes in backticks — the files the anchor stood on at its revalidation point held, which of that the files it stands on at HEAD no longer hold, and where it went. A quote is matched as a whole word, so a quoted `--out` is gone once only `--output` is left.
+
+**An explanation of another version is refused.** `propose` reads `pkit friction explain` at `schema_version` 1. One that answers any other version is refused with exit 1, naming the version, and nothing is proposed from it; one without the key, from a backbone before it, reads as 1 (the CLI README, "Friction checks").
 
 **What the agent read goes in as quotes, each with its source**: a commit, a URL, or a person. A quote from a commit behind the changed anchors is checked against that commit's message (`git log --format=%B`, whitespace runs read as one space) and shown `verified` or not; any other source cannot be checked here and is shown unverified. The check is shown, never enforced: whether the change was meant is a person's decision, and the proposal puts the evidence beside it.
 
