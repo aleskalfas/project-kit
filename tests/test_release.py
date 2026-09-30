@@ -619,7 +619,9 @@ def test_declared_floor_raise_is_raise_only(
     [
         ("backbone", "minor", "release", "the backbone has no `requires_backbone`"),
         ("houseware", "none", "release", "a `none` changeset moves no version"),
-        ("houseware", "minor", "1.6.0", "takes one value, `release`"),
+        ("houseware", "minor", "latest", "takes `release` (the backbone this release ships)"),
+        ("houseware", "minor", "1.4.0rc1", "no pre-release suffix; got '1.4.0rc1'"),
+        ("houseware", "minor", "1.6.0", "names backbone 1.6.0, above the current backbone 1.5.0"),
         ("wildware", "minor", "release", "has a floor the release can raise"),
     ],
 )
@@ -799,10 +801,188 @@ def test_release_summary_carries_the_floor_raise(tmp_path: Path) -> None:
         "from": "1.0.0",
         "to": "1.6.0",
         "raised": True,
+        "declared": "1.6.0",
         "backbone": "1.6.0",
         "backbone_moves": True,
         "lines": ["requires_backbone floor raised to >=1.6.0"],
+        "changelog": "Requires backbone >=1.6.0.",
     }
+
+
+# --- An explicit, already-shipped floor (PRJ-002 D4) --------------------------
+
+
+def test_an_explicit_floor_names_an_already_shipped_backbone(tmp_path: Path) -> None:
+    """A need an older backbone meets raises the floor to that backbone, not to the
+    one the release ships."""
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    pkg = _write_capability(source_kit, "houseware", "0.3.0", ">=1.0.0,<2.0.0")
+    _add(source_kit, "backbone", "minor", "backbone change", "a.yaml")
+    _add_floor(source_kit, "houseware", "minor", "b.yaml", value="1.3.0")
+
+    plan = release.compute_release(source_kit)
+    (rel,) = plan.floor_raises
+    assert rel.floor_raise is not None
+    assert rel.floor_raise.lines == ["requires_backbone floor raised to >=1.3.0"]
+    release.apply_release(source_kit, plan, tag=False)
+
+    assert 'requires_backbone: ">=1.3.0,<2.0.0"' in pkg.read_text()
+    assert (source_kit / "VERSION").read_text().strip() == "1.6.0"
+
+
+def test_an_explicit_floor_at_the_current_backbone_needs_no_notice(tmp_path: Path) -> None:
+    """The current backbone has shipped, so naming it is accepted; with the version
+    named, a release that does not move the backbone raises no doubt about which
+    one the component needs."""
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    pkg = _write_capability(source_kit, "houseware", "0.3.0", ">=1.0.0,<2.0.0")
+    _add_floor(source_kit, "houseware", "patch", "a.yaml", value="1.5.0")
+
+    plan = release.compute_release(source_kit)
+    (rel,) = plan.floor_raises
+    assert rel.floor_raise is not None
+    assert rel.floor_raise.lines == ["requires_backbone floor raised to >=1.5.0"]
+    release.apply_release(source_kit, plan, tag=False)
+
+    assert 'requires_backbone: ">=1.5.0,<2.0.0"' in pkg.read_text()
+
+
+@pytest.mark.parametrize(
+    ("first", "second", "floor"),
+    [
+        ("1.3.0", "1.4.0", "1.4.0"),
+        ("1.4.0", "1.3.0", "1.4.0"),
+        ("1.3.0", "release", "1.6.0"),
+    ],
+)
+def test_the_highest_declared_floor_is_raised_to(
+    tmp_path: Path, first: str, second: str, floor: str
+) -> None:
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    pkg = _write_capability(source_kit, "houseware", "0.3.0", ">=1.0.0,<2.0.0")
+    _add(source_kit, "backbone", "minor", "backbone change", "a.yaml")
+    _add_floor(source_kit, "houseware", "minor", "b.yaml", value=first)
+    _add_floor(source_kit, "houseware", "patch", "c.yaml", value=second)
+
+    release.apply_release(source_kit, release.compute_release(source_kit), tag=False)
+
+    assert f'requires_backbone: ">={floor},<2.0.0"' in pkg.read_text()
+
+
+def test_an_explicit_floor_stands_under_a_pre_release_backbone(tmp_path: Path) -> None:
+    """A named, shipped backbone is a release version whatever `.pkit/VERSION`
+    holds, so the pre-release refusal of `release` does not reach it."""
+    source_kit = _make_kit(tmp_path, backbone="1.6.0rc1")
+    pkg = _write_capability(source_kit, "houseware", "0.3.0", ">=1.0.0,<2.0.0")
+    _add_floor(source_kit, "houseware", "minor", "a.yaml", value="1.5.0")
+
+    release.apply_release(source_kit, release.compute_release(source_kit), tag=False)
+
+    assert 'requires_backbone: ">=1.5.0,<2.0.0"' in pkg.read_text()
+
+
+def test_the_release_a_pre_release_precedes_has_not_shipped(tmp_path: Path) -> None:
+    source_kit = _make_kit(tmp_path, backbone="1.6.0rc1")
+    _write_capability(source_kit, "houseware", "0.3.0", ">=1.0.0,<2.0.0")
+    _add_floor(source_kit, "houseware", "minor", "a.yaml", value="1.6.0")
+
+    with pytest.raises(click.ClickException, match=r"above the current backbone 1\.6\.0rc1"):
+        release.compute_release(source_kit)
+
+
+def test_no_broaden_checks_an_explicit_floor_against_its_own_range(tmp_path: Path) -> None:
+    """The raised range must admit the floor it names — not the shipped backbone,
+    which an authored upper bound kept by `--no-broaden` may exclude on purpose."""
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    kept = _write_capability(source_kit, "houseware", "0.3.0", ">=1.0.0,<1.4.0")
+    _add_floor(source_kit, "houseware", "minor", "a.yaml", value="1.3.0")
+
+    release.apply_release(source_kit, release.compute_release(source_kit), tag=False, broaden=False)
+    assert 'requires_backbone: ">=1.3.0,<1.4.0"' in kept.read_text()
+
+    empty = _write_capability(source_kit, "otherware", "0.1.0", ">=1.0.0,<1.3.0")
+    _add_floor(source_kit, "otherware", "minor", "b.yaml", value="1.3.0")
+    before = empty.read_text()
+    plan = release.compute_release(source_kit)
+    with pytest.raises(click.ClickException, match=r"does not admit 1\.3\.0"):
+        release.apply_release(source_kit, plan, tag=False, broaden=False)
+    assert empty.read_text() == before
+
+
+# --- The raised floor in the changelog ----------------------------------------
+
+
+def test_the_changelog_entry_states_the_raised_floor(tmp_path: Path) -> None:
+    """The entry of the changeset that set the floor ends with it, before the link;
+    the component's other entries and the backbone's do not repeat it."""
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    _write_capability(source_kit, "houseware", "0.3.0", ">=1.0.0,<2.0.0")
+    _add(source_kit, "backbone", "minor", "Backbone change.", "a.yaml")
+    _add(source_kit, "houseware", "patch", "A house fix.", "b.yaml")
+    directory = changesets.unreleased_dir(source_kit.parent)
+    (directory / "c.yaml").write_text(
+        "component: houseware\nkind: minor\nbody: Uses the new command.\n"
+        "custom:\n  category: Added\n  pr: '12'\n  requires_backbone: release\n",
+        encoding="utf-8",
+    )
+
+    entry = release.render_changelog_entry(release.compute_release(source_kit), date(2026, 9, 30))
+
+    assert (
+        "- **houseware 0.4.0** — Uses the new command. Requires backbone >=1.6.0. ([#12])\n"
+    ) in entry
+    assert "- **houseware 0.4.0** — A house fix.\n" in entry
+    assert "- Backbone change.\n" in entry
+    assert entry.count("Requires backbone") == 1
+
+
+def test_the_changelog_names_the_floor_the_setting_changeset_declared(tmp_path: Path) -> None:
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    _write_capability(source_kit, "houseware", "0.3.0", ">=1.0.0,<2.0.0")
+    _add_floor(source_kit, "houseware", "minor", "a.yaml", value="1.3.0")
+    _add_floor(source_kit, "houseware", "patch", "b.yaml", value="1.4.0")
+    directory = changesets.unreleased_dir(source_kit.parent)
+    (directory / "b.yaml").write_text(
+        (directory / "b.yaml").read_text().replace("Needs the new backbone.", "Needs more."),
+        encoding="utf-8",
+    )
+
+    entry = release.render_changelog_entry(release.compute_release(source_kit), date(2026, 9, 30))
+
+    assert "- **houseware 0.4.0** — Needs the new backbone.\n" in entry
+    assert "- **houseware 0.4.0** — Needs more. Requires backbone >=1.4.0.\n" in entry
+
+
+def test_the_changelog_says_nothing_of_a_floor_that_stays(tmp_path: Path) -> None:
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    _write_capability(source_kit, "houseware", "0.3.0", ">=1.4.0,<2.0.0")
+    _add_floor(source_kit, "houseware", "minor", "a.yaml", value="1.3.0")
+
+    plan = release.compute_release(source_kit)
+    entry = release.render_changelog_entry(plan, date(2026, 9, 30))
+
+    assert "Requires backbone" not in entry
+    summary = release.release_summary(source_kit, plan)
+    (rel,) = cast("list[dict[str, dict[str, object]]]", summary["releases"])
+    assert rel["requires_backbone_floor"]["changelog"] is None
+    assert rel["requires_backbone_floor"]["lines"] == [
+        "requires_backbone floor stays >=1.4.0 (already at or above 1.3.0)"
+    ]
+
+
+def test_apply_writes_the_raised_floor_into_the_changelog(tmp_path: Path) -> None:
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    _write_capability(source_kit, "houseware", "0.3.0", ">=1.0.0,<2.0.0")
+    _add_floor(source_kit, "houseware", "minor", "a.yaml", value="1.4.0")
+
+    release.apply_release(
+        source_kit, release.compute_release(source_kit), tag=False, today=date(2026, 9, 30)
+    )
+
+    changelog = (tmp_path / "CHANGELOG.md").read_text(encoding="utf-8")
+    assert "- **houseware 0.4.0** — Needs the new backbone. Requires backbone >=1.4.0.\n" in (
+        changelog
+    )
 
 
 # --- Dogfood: the release that ships the backbone-owned journal line ---------

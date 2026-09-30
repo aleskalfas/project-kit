@@ -1169,11 +1169,12 @@ def release_apply(tag: bool, push: bool, no_broaden: bool, yes: bool) -> None:
     On a component release, widens that component's `requires_backbone` to
     cover the repo's current backbone (the version being released under) unless
     `--no-broaden` is given; a backbone release widens every component as
-    before. Both are widen-only. A changeset declaring `requires_backbone:
-    release` raises its component's floor to the backbone the release ships —
-    raise-only, and not skipped by `--no-broaden`; a raise that would leave a
-    range admitting no backbone refuses the release before anything is written.
-    See `.pkit/release/README.md`.
+    before. Both are widen-only. A changeset declaring `requires_backbone`
+    raises its component's floor — to the backbone the release ships for
+    `release`, or to the already-shipped `X.Y.Z` it names — raise-only, not
+    skipped by `--no-broaden`, and stated in the component's changelog entry; a
+    raise that would leave a range admitting no backbone refuses the release
+    before anything is written. See `.pkit/release/README.md`.
     """
     source_kit = _target_kit()
     plan = compute_release(source_kit)
@@ -1203,7 +1204,9 @@ def release_apply(tag: bool, push: bool, no_broaden: bool, yes: bool) -> None:
     "PKIT_CHANGESET_SKIP env var (wired from the `skip-changeset` PR label).",
 )
 def release_check(base: str, skip: bool | None) -> None:
-    """CI guard: fail if a surface-touched component ships no changeset.
+    """CI guard: fail if a surface-touched component ships no changeset, or a
+    changeset declares a `requires_backbone` floor for a component the diff does
+    not touch.
 
     Escape hatch: a `none` changeset for the component, or the
     `skip-changeset` label (PKIT_CHANGESET_SKIP env). Surface is a human
@@ -1222,23 +1225,39 @@ def release_check(base: str, skip: bool | None) -> None:
             "footprint (version bumps + CHANGELOG + consumed changesets); exempt — ok."
         )
         return
-    if not result.touched:
-        click.echo("changeset guard: no surface-touched components — ok.")
-        return
-    click.echo(f"changeset guard: touched {', '.join(result.touched)}")
+    if result.touched:
+        click.echo(f"changeset guard: touched {', '.join(result.touched)}")
     if result.ok:
-        click.echo("changeset guard: every touched component has a changeset — ok.")
+        click.echo(
+            "changeset guard: every touched component has a changeset — ok."
+            if result.touched
+            else "changeset guard: no surface-touched components — ok."
+        )
         return
-    raise click.ClickException(
-        "surface change without a changeset for: "
-        + ", ".join(result.missing)
-        + ".\n  Add one with `changie new` (per .pkit/release/README.md), hand-write a "
-        "changeset under .changes/unreleased/, drop a `none` changeset if it moves no "
-        "user-facing surface, or apply the `skip-changeset` label."
-        "\n  Decision-only PR (COR/PRJ/ADR/DEC)? Declare `none` for a design-ahead "
-        "decision (the feature ships in a later PR) or a real changeset for a "
-        "self-executing rule change — see PRJ-002."
-    )
+    problems: list[str] = []
+    if result.missing:
+        problems.append(
+            "surface change without a changeset for: "
+            + ", ".join(result.missing)
+            + ".\n  Add one with `changie new` (per .pkit/release/README.md), hand-write a "
+            "changeset under .changes/unreleased/, drop a `none` changeset if it moves no "
+            "user-facing surface, or apply the `skip-changeset` label."
+            "\n  Decision-only PR (COR/PRJ/ADR/DEC)? Declare `none` for a design-ahead "
+            "decision (the feature ships in a later PR) or a real changeset for a "
+            "self-executing rule change — see PRJ-002."
+        )
+    if result.stray_floors:
+        problems.append(
+            "a requires_backbone floor declared for a component this diff does not touch:\n"
+            + "\n".join(
+                f"  {cs.path.name}: {cs.component!r} (requires_backbone: {cs.requires_backbone})"
+                for cs in result.stray_floors
+            )
+            + "\n  A floor says the component needs that backbone, which the change to the "
+            "component creates: declare it in the changeset of the pull request that "
+            "changes the component, or apply the `skip-changeset` label — see PRJ-002 D4."
+        )
+    raise click.ClickException("\n".join(problems))
 
 
 @release.command("lint")
@@ -1256,9 +1275,10 @@ def release_lint(skip: bool | None) -> None:
     Checks the mechanically-verifiable subset only — a changeset's category is
     a Keep-a-Changelog group, its body is a non-empty sentence (not a bare
     reference, capitalized, period-ended), a `requires_backbone` floor field
-    says `release` on a version-moving changeset of a capability or adapter
-    whose range is `">=X.Y.Z,<A.B.C"` or `">=X.Y.Z"`, in a release that ships a
-    release version of the backbone, and `CHANGELOG.md` headings are
+    says `release` — in a release that ships a release version of the backbone
+    — or names an already-shipped release version, at or below the current
+    backbone, on a version-moving changeset of a capability or adapter whose
+    range is `">=X.Y.Z,<A.B.C"` or `">=X.Y.Z"`, and `CHANGELOG.md` headings are
     well-formed. It does
     *not* judge plain language / jargon — that is the guide plus review. A
     reminder, not a proof; see `.pkit/release/README.md`.

@@ -136,23 +136,25 @@ def test_parse_changeset_defaults_category_and_pr_to_none_when_absent(tmp_path: 
     assert cs.category is None
     assert cs.pr is None
     assert cs.requires_backbone is None
-    assert not cs.raises_floor
+    assert not cs.names_release
 
 
 @pytest.mark.parametrize(
-    ("layout", "written", "raises"),
+    ("layout", "written", "names_release"),
     [
         ("custom:\n  requires_backbone: release\n", "release", True),
         ("requires_backbone: release\n", "release", True),
         ("custom:\n  requires_backbone: '1.150.0'\n", "1.150.0", False),
+        ("requires_backbone: 1.144.0\n", "1.144.0", False),  # unquoted, still a string
         ("requires_backbone: true\n", "True", False),
     ],
 )
 def test_parse_changeset_reads_the_floor_field_as_written(
-    tmp_path: Path, layout: str, written: str, raises: bool
+    tmp_path: Path, layout: str, written: str, names_release: bool
 ) -> None:
     """The floor field is read top-level or under `custom:` and kept as written;
-    only `release` raises a floor — the release step and its lint judge the rest."""
+    `release` names the backbone the release ships — the release step and its
+    lint judge every other value."""
     source_kit = _make_kit(tmp_path)
     directory = changesets.unreleased_dir(source_kit.parent)
     directory.mkdir(parents=True, exist_ok=True)
@@ -163,7 +165,7 @@ def test_parse_changeset_reads_the_floor_field_as_written(
     )
     cs = changesets.parse_changeset(path)
     assert cs.requires_backbone == written
-    assert cs.raises_floor is raises
+    assert cs.names_release is names_release
 
 
 def test_parse_changeset_none_kind_needs_no_category(tmp_path: Path) -> None:

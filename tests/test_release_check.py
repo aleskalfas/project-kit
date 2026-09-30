@@ -128,6 +128,101 @@ def test_touched_components_maps_prefixes_and_subtrees(tmp_path: Path) -> None:
     assert set(touched) == {"backbone", "claude-code"}
 
 
+# --- A declared floor rides on a change to its component (PRJ-002 D4) ------
+
+
+def _add_floor_changeset(source_kit: Path, component: str, value: str = "1.5.0") -> None:
+    directory = changesets.unreleased_dir(source_kit.parent)
+    directory.mkdir(parents=True, exist_ok=True)
+    (directory / f"{component}-minor-floor.yaml").write_text(
+        f"component: {component}\nkind: minor\nbody: Needs the backbone.\n"
+        f"custom:\n  requires_backbone: {value}\n",
+        encoding="utf-8",
+    )
+
+
+def test_a_floor_for_a_component_the_diff_does_not_touch_is_refused(tmp_path: Path) -> None:
+    """A backbone change carrying a floor declaration for an adapter it leaves alone."""
+    source_kit = _make_repo(tmp_path)
+    _add_changeset(source_kit, "backbone", "minor")
+    _add_floor_changeset(source_kit, "claude-code")
+    _commit_change(source_kit, "src/project_kit/foo.py")
+
+    result = release.check_changesets(source_kit, "main")
+
+    assert result.missing == []
+    assert [cs.path.name for cs in result.stray_floors] == ["claude-code-minor-floor.yaml"]
+    assert not result.ok
+
+
+def test_a_floor_riding_on_a_change_to_its_component_passes(tmp_path: Path) -> None:
+    source_kit = _make_repo(tmp_path)
+    _add_floor_changeset(source_kit, "claude-code", "release")
+    _commit_change(source_kit, ".pkit/adapters/claude-code/new-file.md")
+
+    result = release.check_changesets(source_kit, "main")
+
+    assert result.touched == ["claude-code"]
+    assert result.stray_floors == []
+    assert result.ok
+
+
+def test_a_pending_floor_an_earlier_diff_added_is_not_this_diffs(tmp_path: Path) -> None:
+    """Only the changesets the diff adds or edits are tied to it."""
+    source_kit = _make_repo(tmp_path)
+    repo = source_kit.parent
+    _git(repo, "checkout", "-q", "main")
+    _add_floor_changeset(source_kit, "claude-code")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "an earlier pull request")
+    _git(repo, "checkout", "-q", "-B", "feature")
+    _add_changeset(source_kit, "backbone", "minor")
+    _commit_change(source_kit, "src/project_kit/foo.py")
+
+    result = release.check_changesets(source_kit, "main")
+
+    assert result.stray_floors == []
+    assert result.ok
+
+
+def test_editing_a_pending_floor_ties_it_to_this_diff(tmp_path: Path) -> None:
+    source_kit = _make_repo(tmp_path)
+    repo = source_kit.parent
+    _git(repo, "checkout", "-q", "main")
+    _add_floor_changeset(source_kit, "claude-code")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "an earlier pull request")
+    _git(repo, "checkout", "-q", "-B", "feature")
+    _add_floor_changeset(source_kit, "claude-code", "1.4.0")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "lower the declared floor")
+
+    result = release.check_changesets(source_kit, "main")
+
+    assert [cs.requires_backbone for cs in result.stray_floors] == ["1.4.0"]
+    assert not result.ok
+    assert release.check_changesets(source_kit, "main", skip=True).ok
+
+
+def test_release_check_names_a_stray_floor(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    source_kit = _make_repo(tmp_path)
+    _add_floor_changeset(source_kit, "claude-code")
+    _commit_change(source_kit, "docs/notes.md")
+    monkeypatch.chdir(source_kit.parent)
+
+    result = CliRunner().invoke(main, ["release", "check", "--base", "main"])
+
+    assert result.exit_code == 1, result.output
+    assert "no surface-touched components — ok" not in result.stdout
+    assert "a requires_backbone floor declared for a component this diff does not touch" in (
+        result.output
+    )
+    assert "claude-code-minor-floor.yaml: 'claude-code' (requires_backbone: 1.5.0)" in (
+        result.output
+    )
+    assert "surface change without a changeset" not in result.output
+
+
 # --- The release-PR exemption (#503): a release-apply footprint is exempt ---
 
 

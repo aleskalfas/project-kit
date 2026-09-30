@@ -136,10 +136,14 @@ def _kit(
 
 
 def _components(
-    tmp_path: Path, *, requires_backbone: str = '">=1.0.0,<2.0.0"', kind: str = "capability"
+    tmp_path: Path,
+    *,
+    requires_backbone: str = '">=1.0.0,<2.0.0"',
+    kind: str = "capability",
+    backbone: str = SHIPPED,
 ) -> dict[str, Component]:
     """The components of a kit holding one component, `houseware`."""
-    source_kit = _kit(tmp_path, requires_backbone=requires_backbone, kind=kind)
+    source_kit = _kit(tmp_path, requires_backbone=requires_backbone, kind=kind, backbone=backbone)
     return {c.name: c for c in discover_components(source_kit)}
 
 
@@ -204,9 +208,41 @@ def test_floor_field_on_an_unknown_component_says_so(tmp_path: Path) -> None:
     ]
 
 
-def test_floor_field_with_another_value_fails(tmp_path: Path) -> None:
-    violations = release.lint_floor(_floor(value="1.150.0"), _components(tmp_path), SHIPPED)
-    assert any("takes one value, `release`" in v.message for v in violations)
+@pytest.mark.parametrize("value", ["1.0.0", "1.4.9", SHIPPED])
+def test_floor_field_naming_a_shipped_backbone_passes(tmp_path: Path, value: str) -> None:
+    """An explicit release version at or below the current backbone names one that
+    has shipped."""
+    assert release.lint_floor(_floor(value=value), _components(tmp_path), SHIPPED) == []
+
+
+@pytest.mark.parametrize(
+    ("value", "problem"),
+    [
+        ("latest", "takes `release` (the backbone this release ships) or an already-shipped"),
+        ("1.5", "got '1.5'"),
+        ("1.4.0rc1", "major.minor.patch with no pre-release suffix; got '1.4.0rc1'"),
+        ("1.5.1", "names backbone 1.5.1, above the current backbone 1.5.0"),
+        ("1.150.0", "names backbone 1.150.0, above the current backbone 1.5.0"),
+    ],
+)
+def test_floor_field_with_another_value_fails(tmp_path: Path, value: str, problem: str) -> None:
+    violations = release.lint_floor(_floor(value=value), _components(tmp_path), SHIPPED)
+    assert [problem in v.message for v in violations] == [True]
+
+
+def test_an_explicit_floor_is_not_held_to_the_backbone_the_release_ships(
+    tmp_path: Path,
+) -> None:
+    """Only `release` names the shipped backbone, so only it is refused when that is
+    a pre-release; a named version below a pre-release current backbone passes."""
+    components = _components(tmp_path, backbone="1.6.0rc1")
+    assert release.lint_floor(_floor(value="1.5.0"), components, "1.6.0rc1") == []
+    violations = release.lint_floor(_floor(value="1.6.0"), components, "1.6.0rc1")
+    assert [v.message for v in violations] == [
+        "names backbone 1.6.0, above the current backbone 1.6.0rc1: an explicit version "
+        "names a backbone that has shipped. For the backbone this release ships, say "
+        "`release`."
+    ]
 
 
 def test_floor_field_on_a_none_changeset_fails(tmp_path: Path) -> None:

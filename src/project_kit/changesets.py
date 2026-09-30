@@ -31,11 +31,12 @@ It is irrelevant for `none` changesets, which move no version. `pr` is
 captured at author time (release-time derivation is unreliable under
 squash/rebase) and the changelog degrades gracefully when it is absent.
 
-`requires_backbone: release` declares that the component needs the backbone
-the release ships: the release step raises the lower bound of the component's
-`requires_backbone` range to that backbone version. `release` is its one value;
-the parser keeps whatever was written, and the release step and its lint
-refuse anything else, and the field on a changeset that cannot carry it
+`requires_backbone` declares that the component needs a backbone: the release
+step raises the lower bound of the component's `requires_backbone` range to it.
+`release` names the backbone the release ships; an explicit `X.Y.Z` names an
+already-shipped one, at or below the current backbone. The parser keeps
+whatever was written; the release step and its lint refuse any other value,
+and the field on a changeset that cannot carry it
 (`project_kit.release.floor_problems`).
 
 changie also writes a `time` field; it is ignored here. `none` is the escape
@@ -65,8 +66,8 @@ _SEGMENT_RANK = {seg: rank for rank, seg in enumerate(SEGMENTS)}
 BACKBONE = "backbone"
 
 # The changeset field that raises a component's `requires_backbone` floor, named
-# after the package key it writes, and its one value: the backbone this release
-# ships.
+# after the package key it writes, and the value that names the backbone this
+# release ships. Its other value is an explicit, already-shipped `X.Y.Z`.
 FLOOR_FIELD = "requires_backbone"
 FLOOR_RELEASE = "release"
 
@@ -89,8 +90,8 @@ class Changeset:
     requires_backbone: str | None = None  # the floor field as written; see FLOOR_FIELD
 
     @property
-    def raises_floor(self) -> bool:
-        """Whether this changeset declares its component needs the release's backbone."""
+    def names_release(self) -> bool:
+        """Whether the floor field names the backbone this release ships (`release`)."""
         return self.requires_backbone == FLOOR_RELEASE
 
 

@@ -604,3 +604,24 @@ def test_raise_floor_refuses_a_range_with_no_floor(tmp_path: Path) -> None:
     pkg = _package_with(tmp_path, 'requires_backbone: "*"')
     with pytest.raises(click.ClickException, match=r"whose floor can be raised to 1\.6\.0"):
         versioning.raise_component_requires_backbone_floor(pkg, "1.6.0")
+
+
+@pytest.mark.parametrize(
+    ("version", "ceiling", "at_or_below"),
+    [
+        ("1.4.0", "1.5.0", True),
+        ("1.5.0", "1.5.0", True),
+        ("1.5.1", "1.5.0", False),
+        ("1.6.0", "1.5.0", False),
+        # A release sorts above its own pre-releases, which precede it.
+        ("1.4.9", "1.5.0rc1", True),
+        ("1.5.0", "1.5.0rc1", False),
+    ],
+)
+def test_is_at_or_below_orders_by_pep_440(version: str, ceiling: str, at_or_below: bool) -> None:
+    assert versioning.is_at_or_below(version, ceiling) is at_or_below
+
+
+def test_is_at_or_below_refuses_what_is_not_a_version() -> None:
+    with pytest.raises(click.ClickException, match="'latest' is not valid PEP 440"):
+        versioning.is_at_or_below("latest", "1.5.0")

@@ -41,11 +41,13 @@ kinds:
 # `category` is the Keep-a-Changelog group (orthogonal to `kind`; defaulted at
 # render, irrelevant for `none`), `pr` is the PR reference used to build
 # the changelog's `([#N])` link (captured here at author time — release-time
-# derivation is unreliable under squash/rebase), and `requires_backbone:
-# release` declares that the component needs the backbone the release ships,
-# so the release raises the floor of its `requires_backbone` range to it (a
-# capability or adapter's version-moving changeset only; `pkit release lint`
-# refuses it elsewhere).
+# derivation is unreliable under squash/rebase), and `requires_backbone`
+# declares that the component needs a backbone, so the release raises the
+# floor of its `requires_backbone` range to it: `release` for the backbone the
+# release ships, or an already-shipped `X.Y.Z` at or below the current
+# `.pkit/VERSION` (a capability or adapter's version-moving changeset only, in
+# a pull request that changes that component; `pkit release lint` and `pkit
+# release check` refuse it elsewhere).
 custom:
   - key: category
     label: Category (Keep a Changelog)
@@ -63,11 +65,9 @@ custom:
     type: string
     optional: true
   - key: requires_backbone
-    label: Needs the backbone this release ships? (optional; raises the component's floor)
-    type: enum
+    label: Needs a backbone? `release` (the one this release ships) or a shipped X.Y.Z (optional; raises the component's floor)
+    type: string
     optional: true
-    enumOptions:
-      - release
 
 # Collision-free filenames: component + segment + timestamp + a random
 # suffix, so parallel PRs never collide on a changeset filename. Mirrors

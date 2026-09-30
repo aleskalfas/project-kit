@@ -30,8 +30,9 @@ the bump-policy: pre-releases are not a stable compatibility target).
 
 The release step also raises a `requires_backbone` *floor*, and only on
 declaration: `raise_component_requires_backbone_floor` moves one component's
-lower bound up to the backbone a release ships, when a changeset says the
-component needs it. Nothing here raises a floor on its own.
+lower bound up to the backbone a changeset says the component needs — the one
+the release ships, or an already-shipped one the changeset names. Nothing here
+raises a floor on its own.
 
 The `requires_backbone` rewrites use regex (not ruamel.yaml round-trip)
 to preserve quoting style, indentation, and trailing comments. Every one
@@ -51,6 +52,7 @@ from pathlib import Path
 from typing import Literal
 
 import click
+from packaging.version import Version
 
 from project_kit.migrations import parse_version_tuple
 
@@ -466,6 +468,19 @@ def is_release_version(version: str) -> bool:
     return _SEMVER_RE.match(version) is not None
 
 
+def is_at_or_below(version: str, ceiling: str) -> bool:
+    """Whether `version` sorts at or below `ceiling` in PEP 440 order, where a
+    release sorts above its own pre-releases: `1.150.0` is not at or below
+    `1.150.0rc1`, which precedes it. Raises `click.ClickException` when either is
+    not `major.minor.patch[(a|b|rc)N]`."""
+    for value in (version, ceiling):
+        if _PEP440_RE.match(value) is None:
+            raise click.ClickException(
+                f"version {value!r} is not valid PEP 440 (expected major.minor.patch[(a|b|rc)N])"
+            )
+    return Version(version) <= Version(ceiling)
+
+
 def requires_backbone_floor(package_text: str) -> str | None:
     """The `>=X.Y.Z` floor of a package file's `requires_backbone`, when the range
     is one whose floor the release raises: `">=X.Y.Z,<A.B.C"`, whose upper bound
@@ -491,8 +506,8 @@ def raise_component_requires_backbone_floor(pkg_file: Path, backbone: str) -> st
     """Raise one component's `requires_backbone` floor to `backbone`.
 
     The lower-bound counterpart of `broaden_component_requires_backbone`, run
-    only for a component whose changeset declares it needs the backbone a
-    release ships. Rewrites through `raise_requires_backbone_floor`.
+    only for a component whose changeset declares it needs `backbone`. Rewrites
+    through `raise_requires_backbone_floor`.
 
     Returns a human-readable `old -> new` floor string when it rewrote the
     floor, `None` when the floor already admitted nothing older.
