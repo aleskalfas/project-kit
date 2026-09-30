@@ -413,6 +413,7 @@ def test_resolution_error_closing_issues(rpr, rc) -> None:
 
 def _wire_main(
     rpr, monkeypatch, tmp_path, *, resolution, invoked,
+    fresh=None, unreadable=False, argv=(),
 ):
     """Stub main()'s seams; record invoked names into `invoked`.
 
@@ -420,6 +421,10 @@ def _wire_main(
     exercise main's loop without the gh round-trips). Each `_invoke_agent`
     call appends the name to `invoked` and returns an APPROVED verdict; the
     deployed-agent file existence check is satisfied by creating the files.
+
+    `fresh` is what the fresh-verdict read returns (#1178) — reviewer name →
+    token; default none fresh — and `unreadable` makes the read fail instead.
+    Each read is recorded in the returned list. `argv` is extra CLI arguments.
     """
     from types import SimpleNamespace
 
@@ -458,7 +463,17 @@ def _wire_main(
 
     monkeypatch.setattr(rpr, "_invoke_agent", fake_invoke)
     monkeypatch.setattr(rpr, "_post_comment", lambda pr, body, config: True)
-    monkeypatch.setattr(sys, "argv", ["review-pr", "147"])
+
+    reads: list[tuple[int, list[str]]] = []
+
+    def fake_read_fresh(pr_number, required_local, config):
+        reads.append((pr_number, list(required_local)))
+        return None if unreadable else dict(fresh or {})
+
+    monkeypatch.setattr(rpr, "_read_fresh_verdicts", fake_read_fresh)
+    # `--no-native` keeps the native-review delivery (a live `gh` call) out.
+    monkeypatch.setattr(sys, "argv", ["review-pr", "147", "--no-native", *argv])
+    return reads
 
 
 def test_no_contribution_single_reviewer_unchanged(rpr, monkeypatch, tmp_path) -> None:
@@ -550,6 +565,182 @@ def test_undeployed_contributed_agent_aborts(rpr, rc, monkeypatch, tmp_path) -> 
     rc_code = rpr.main()
     assert rc_code == 2
     assert invoked == []
+
+
+# ---- fresh-verdict skip and --force (#1178) --------------------------
+#
+# A required reviewer whose latest verdict post-dates the head commit is not
+# re-run; `--force` re-runs it. What counts as fresh is done-work's own
+# selection (`gate_verdicts` anchored by `latest_commit_timestamp`).
+
+_PANEL = ("reviewer", "code-reviewer")
+
+
+def test_fresh_approved_reviewer_is_not_re_run(
+    rpr, monkeypatch, tmp_path, capsys,
+) -> None:
+    invoked: list[str] = []
+    _wire_main(
+        rpr, monkeypatch, tmp_path,
+        resolution=rpr.Resolution(required_local=_PANEL),
+        invoked=invoked, fresh={"reviewer": "APPROVED"},
+    )
+    assert rpr.main() == 0
+    assert invoked == ["code-reviewer"]
+    out = capsys.readouterr().out
+    assert "  [reviewer] fresh verdict APPROVED — not re-run" in out
+    assert "--force re-runs a reviewer whose verdict is fresh." in out
+
+
+def test_fresh_changes_requested_reviewer_is_not_re_run(
+    rpr, monkeypatch, tmp_path, capsys,
+) -> None:
+    """A fresh CHANGES_REQUESTED is not re-run either: the same head would be
+    reviewed again. A new commit makes it stale."""
+    invoked: list[str] = []
+    _wire_main(
+        rpr, monkeypatch, tmp_path,
+        resolution=rpr.Resolution(required_local=_PANEL),
+        invoked=invoked, fresh={"code-reviewer": "CHANGES_REQUESTED"},
+    )
+    assert rpr.main() == 0
+    assert invoked == ["reviewer"]
+    out = capsys.readouterr().out
+    assert "  [code-reviewer] fresh verdict CHANGES_REQUESTED — not re-run" in out
+
+
+def test_every_reviewer_fresh_invokes_nothing(rpr, monkeypatch, tmp_path) -> None:
+    invoked: list[str] = []
+    _wire_main(
+        rpr, monkeypatch, tmp_path,
+        resolution=rpr.Resolution(required_local=_PANEL),
+        invoked=invoked,
+        fresh={"reviewer": "APPROVED", "code-reviewer": "APPROVED"},
+    )
+    assert rpr.main() == 0
+    assert invoked == []
+
+
+def test_force_re_runs_a_fresh_reviewer(rpr, monkeypatch, tmp_path, capsys) -> None:
+    invoked: list[str] = []
+    reads = _wire_main(
+        rpr, monkeypatch, tmp_path,
+        resolution=rpr.Resolution(required_local=_PANEL),
+        invoked=invoked, fresh={"reviewer": "APPROVED"}, argv=("--force",),
+    )
+    assert rpr.main() == 0
+    assert invoked == ["reviewer", "code-reviewer"]
+    assert reads == []  # --force does not consult the verdicts at all.
+    assert "not re-run" not in capsys.readouterr().out
+
+
+def test_unreadable_verdicts_run_every_reviewer(
+    rpr, monkeypatch, tmp_path, capsys,
+) -> None:
+    invoked: list[str] = []
+    _wire_main(
+        rpr, monkeypatch, tmp_path,
+        resolution=rpr.Resolution(required_local=_PANEL),
+        invoked=invoked, unreadable=True,
+    )
+    assert rpr.main() == 0
+    assert invoked == ["reviewer", "code-reviewer"]
+    assert "fresh verdicts: could not be read" in capsys.readouterr().out
+
+
+def test_dry_run_reports_the_skip(rpr, monkeypatch, tmp_path, capsys) -> None:
+    invoked: list[str] = []
+    _wire_main(
+        rpr, monkeypatch, tmp_path,
+        resolution=rpr.Resolution(required_local=_PANEL),
+        invoked=invoked, fresh={"reviewer": "APPROVED"}, argv=("--dry-run",),
+    )
+    assert rpr.main() == 0
+    assert invoked == []
+    out = capsys.readouterr().out
+    assert "  [reviewer] fresh verdict APPROVED — not re-run" in out
+    assert "  [code-reviewer] (dry-run) would invoke against PR #99" in out
+
+
+_HEAD = [
+    {"committedDate": "2026-06-01T00:00:00Z"},
+    {"oid": "head", "committedDate": "2026-06-02T00:00:00Z"},
+]
+
+
+def _verdict_comment(name, token, ts, *, marked=True, remote=False):
+    first = f"Reviewer agent: {token}" if remote else (
+        f"Reviewer agent (local, {name}): {token}"
+    )
+    body = f"{first}\n\nreasons"
+    if marked:
+        body += "\n\n<!-- pkit-verdict -->"
+    return {"author": {"login": name}, "body": body, "createdAt": ts}
+
+
+def test_fresh_local_verdicts_counts_only_what_the_gate_counts(rpr) -> None:
+    comments = [
+        # after the head, marked, required → fresh
+        _verdict_comment("reviewer", "APPROVED", "2026-06-03T00:00:00Z"),
+        # at the head → stale (strictly after is fresh)
+        _verdict_comment("code-reviewer", "APPROVED", "2026-06-02T00:00:00Z"),
+        # after the head but unmarked → not a gate verdict
+        _verdict_comment("security-reviewer", "APPROVED", "2026-06-03T00:00:00Z",
+                         marked=False),
+        # after the head but not required
+        _verdict_comment("design-reviewer", "APPROVED", "2026-06-03T00:00:00Z"),
+        # a remote verdict is not a local reviewer's
+        _verdict_comment("docs-reviewer", "APPROVED", "2026-06-03T00:00:00Z",
+                         remote=True),
+    ]
+    required = ["reviewer", "code-reviewer", "security-reviewer", "docs-reviewer"]
+    assert rpr._fresh_local_verdicts(comments, _HEAD, required) == {
+        "reviewer": "APPROVED",
+    }
+
+
+def test_fresh_local_verdicts_reads_the_latest_verdict(rpr) -> None:
+    comments = [
+        _verdict_comment("reviewer", "APPROVED", "2026-06-03T00:00:00Z"),
+        _verdict_comment("reviewer", "CHANGES_REQUESTED", "2026-06-04T00:00:00Z"),
+    ]
+    assert rpr._fresh_local_verdicts(comments, _HEAD, ["reviewer"]) == {
+        "reviewer": "CHANGES_REQUESTED",
+    }
+
+
+def test_fresh_local_verdicts_without_a_head_timestamp_is_unknown(rpr) -> None:
+    comments = [_verdict_comment("reviewer", "APPROVED", "2026-06-03T00:00:00Z")]
+    assert rpr._fresh_local_verdicts(comments, [], ["reviewer"]) is None
+    assert rpr._fresh_local_verdicts(comments, [{"oid": "x"}], ["reviewer"]) is None
+
+
+def test_read_fresh_verdicts_fetches_comments_and_commits(rpr, monkeypatch) -> None:
+    calls: list[list[str]] = []
+    payload = {
+        "comments": [
+            _verdict_comment("reviewer", "APPROVED", "2026-06-03T00:00:00Z"),
+        ],
+        "commits": _HEAD,
+    }
+
+    def fake(argv, config, check=False):  # type: ignore[no-untyped-def]
+        calls.append(list(argv))
+        return _Proc(0, _json.dumps(payload))
+
+    monkeypatch.setattr(rpr, "gh_run", fake)
+    assert rpr._read_fresh_verdicts(99, ["reviewer"], {}) == {"reviewer": "APPROVED"}
+    assert calls == [["gh", "pr", "view", "99", "--json", "comments,commits"]]
+
+
+@pytest.mark.parametrize("proc", [
+    lambda: _Proc(1, "", "gh down"),
+    lambda: _Proc(0, "not json"),
+    lambda: _Proc(0, "[]"),
+])
+def test_read_fresh_verdicts_unreadable_is_none(rpr, monkeypatch, proc) -> None:
+    monkeypatch.setattr(rpr, "gh_run", lambda argv, config, check=False: proc())
+    assert rpr._read_fresh_verdicts(99, ["reviewer"], {}) is None
 
 
 def test_resolution_error_not_code_names_the_key(rpr) -> None:

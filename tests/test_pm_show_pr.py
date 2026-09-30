@@ -389,18 +389,6 @@ def test_review_field_commit_without_timestamp_renders_without_marker(sp) -> Non
     assert s["review"][0]["stale"] is False
 
 
-def test_latest_commit_timestamp_prefers_committed_then_authored(sp) -> None:
-    assert sp._latest_commit_timestamp([]) == ""
-    assert sp._latest_commit_timestamp(
-        [{"authoredDate": "2026-06-01T00:00:00Z"}]
-    ) == "2026-06-01T00:00:00Z"
-    assert sp._latest_commit_timestamp([
-        {"committedDate": "2026-06-01T00:00:00Z"},
-        {"committedDate": "2026-06-05T00:00:00Z",
-         "authoredDate": "2026-06-04T00:00:00Z"},
-    ]) == "2026-06-05T00:00:00Z"
-
-
 def test_review_read_surface_is_superset_of_gate_set(sp) -> None:
     # The read surface shows verdicts the gate excludes: a stale one and one
     # from a reviewer the gate's membership filter would drop. Both appear here

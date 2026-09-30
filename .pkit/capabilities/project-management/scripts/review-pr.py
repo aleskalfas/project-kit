@@ -17,7 +17,7 @@ identity. The verdict format is per DEC-028:
 
 followed by free-form commentary the agent produces.
 
-    review-pr <N>
+    review-pr <N> [--force]
 
 The required set is resolved per PR (DEC-032 D1) as the baseline
 (`review.agents.local_registered:`) UNIONED with every contributed reviewer
@@ -41,12 +41,19 @@ Gates:
     (fail-closed, DEC-032 D5), consistent with the gate's posture.
 
 Side-effects:
-  - For each locally-registered agent: invoke (via the harness's agent
-    runtime), capture verdict + body, post as comment.
-  - Idempotent at the PR level: post-dating-latest-commit handles
-    staleness automatically per DEC-028. Re-running invokes the agent(s)
-    again and posts fresh verdicts; prior verdicts remain in the
-    comment history (the gate-checker selects latest-per-agent).
+  - For each required reviewer: invoke (via the harness's agent runtime),
+    capture verdict + body, post as comment.
+  - Skips a required reviewer whose verdict is still fresh (#1178): its
+    latest verdict post-dates the PR's head commit, read with the SAME
+    selection `done-work`'s gate counts (`gate_verdicts`, anchored by
+    `latest_commit_timestamp`), so a skipped reviewer is exactly one the gate
+    would accept as it stands. It prints
+    `[<name>] fresh verdict <APPROVED|CHANGES_REQUESTED> — not re-run`. A new
+    commit makes every verdict stale, so the next run invokes them all;
+    `--force` re-runs a fresh one (per DEC-046, the override of a stop the
+    script makes). Prior verdicts remain in the comment history (the
+    gate-checker selects latest-per-agent). When the PR's verdicts cannot be
+    read, every required reviewer runs.
 
 Agent invocation:
   At v1, the kit invokes Claude Code agents via the `claude` CLI when
@@ -59,7 +66,7 @@ Agent invocation:
   own agent under `.claude/agents/`, or replace the default entirely.
 
 Exit codes:
-  0  all required reviewers invoked + comments posted
+  0  every required reviewer invoked + comment posted, or skipped as fresh
   1  membership refusal
   2  usage error / no agents configured / gh failure / required set
      unresolvable (fail-closed)
@@ -84,7 +91,12 @@ sys.path.insert(0, str(_HERE))
 from _lib import bootstrap_gate  # noqa: E402
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
 from _lib import session_guard  # noqa: E402
-from _lib.agent_verdicts import stamp_verdict  # noqa: E402
+from _lib.agent_verdicts import (  # noqa: E402
+    PATH_LOCAL,
+    gate_verdicts,
+    latest_commit_timestamp,
+    stamp_verdict,
+)
 from _lib.membership import (  # noqa: E402
     CAPABILITY_NAME,
     check_membership,
@@ -247,6 +259,11 @@ def main() -> int:
         "`review.agents.effort` in the project config > unset (the harness "
         "default). One of: " + ", ".join(EFFORT_LEVELS) + ".",
     )
+    parser.add_argument(
+        "--force", action="store_true",
+        help="Re-run every required reviewer, including one whose latest "
+        "verdict post-dates the PR's head commit (skipped otherwise).",
+    )
     session_guard.add_override_argument(parser)
     args = parser.parse_args()
 
@@ -364,9 +381,23 @@ def main() -> int:
     else:
         print(f"  effort: {agent_effort} ({effort_source})")
 
+    # A reviewer whose verdict is still fresh for this head is not re-run
+    # (#1178) unless --force: re-running it reviews the same diff again.
+    fresh: dict[str, str] = {}
+    if not args.force:
+        read = _read_fresh_verdicts(pr_number, required_local, config)
+        if read is None:
+            print("  fresh verdicts: could not be read — every required reviewer runs")
+        else:
+            fresh = read
+
     # For each required reviewer, invoke and post verdict.
     failures = 0
     for name in required_local:
+        if name in fresh:
+            print(f"  [{name}] fresh verdict {fresh[name]} — not re-run")
+            continue
+
         agent_file = repo_root / ".claude" / "agents" / f"{name}.md"
         if not agent_file.is_file():
             provenance = (
@@ -410,6 +441,8 @@ def main() -> int:
         if not args.no_native:
             _deliver_native_review(pr_number, verdict, comment, config)
 
+    if fresh:
+        print("  --force re-runs a reviewer whose verdict is fresh.")
     if failures > 0:
         return 3
     return 0
@@ -647,6 +680,68 @@ def _resolve_required_local(
         not_code=read_not_code(config),
         collect_contributions=collect_contributions,
     )
+
+
+# ---- fresh-verdict skip (#1178) --------------------------------------
+
+
+def _read_fresh_verdicts(
+    pr_number: int | None, required_local: list[str], config: dict,
+) -> dict[str, str] | None:
+    """The required reviewers whose latest verdict on the PR is still fresh.
+
+    Fetches the PR's comments and commits in one round-trip (the fetch
+    `done-work`'s gate makes) and hands them to `_fresh_local_verdicts`.
+    Returns None when they cannot be read — the caller then runs every
+    required reviewer, the direction that can only produce more verdicts.
+    """
+    if pr_number is None:
+        return None
+    proc = gh_run(
+        ["gh", "pr", "view", str(pr_number), "--json", "comments,commits"],
+        config, check=False,
+    )
+    if proc.returncode != 0:
+        return None
+    try:
+        data = json.loads(proc.stdout)
+    except ValueError:
+        return None
+    if not isinstance(data, dict):
+        return None
+    return _fresh_local_verdicts(
+        data.get("comments") or [], data.get("commits") or [], required_local,
+    )
+
+
+def _fresh_local_verdicts(
+    comments: list, commits: list, required_local: list[str],
+) -> dict[str, str] | None:
+    """Reviewer name → verdict token, for each required reviewer whose latest
+    verdict post-dates the PR's head commit.
+
+    The selection is `done-work`'s own: `gate_verdicts` (marker required,
+    latest per reviewer by timestamp, strictly after the anchor) anchored by
+    `latest_commit_timestamp`, scoped to the required local set. So a reviewer
+    this skips is one the gate would count as it stands — a fresh APPROVED
+    satisfies it, a fresh CHANGES_REQUESTED blocks it until a new commit.
+    Only local-path verdicts are read: `review-pr` invokes local reviewers, and
+    a remote verdict is not one of theirs.
+
+    Returns None when the head commit's timestamp cannot be read (no anchor,
+    so freshness is unknown).
+    """
+    anchor = latest_commit_timestamp(commits)
+    if not anchor:
+        return None
+    required = set(required_local)
+    verdicts = gate_verdicts(
+        comments,
+        min_timestamp=anchor,
+        local_reviewer_ok=lambda name: name in required,
+        remote_reviewer_ok=lambda _login: False,
+    )
+    return {v.reviewer: v.token for v in verdicts if v.path == PATH_LOCAL}
 
 
 def _resolution_error_message(resolution: Resolution) -> str:

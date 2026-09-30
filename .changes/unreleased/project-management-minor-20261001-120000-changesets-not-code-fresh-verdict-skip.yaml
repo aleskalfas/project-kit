@@ -1,0 +1,20 @@
+component: project-management
+kind: minor
+custom:
+  category: Added
+body: >
+  A PR that changes only documentation and its changeset no longer draws the
+  code-review panel (#1178). `review.floors.not_code` in the pm
+  `project/config.yaml` lists gitignore-style path patterns that never count
+  as code: a changed path it matches satisfies no diff-property floor, so it
+  never pulls in a `touches-code` reviewer. When the key is absent the list
+  is `.changes/**`, the changesets every surface-changing PR carries. A list
+  you set replaces the default, and `[]` excludes nothing. Every other path
+  is judged as before, so a PR that also changes a `.py` or a schema still
+  requires the panel. `review-pr` and `done-work` read the list the same way
+  and refuse on a malformed one. `review-pr` also skips a required reviewer
+  whose latest verdict was posted after the PR's head commit, reading
+  verdicts the way `done-work`'s gate does. It prints
+  `[<name>] fresh verdict <APPROVED|CHANGES_REQUESTED> — not re-run`, and
+  `--force` re-runs that reviewer. `review-pr` and `done-work` now depend on
+  `pathspec`, which `check-doc-mapping` already uses.

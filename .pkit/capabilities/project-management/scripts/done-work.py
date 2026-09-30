@@ -206,6 +206,7 @@ from _lib.agent_verdicts import (  # noqa: E402
     PATH_REMOTE,
     Verdict,
     gate_verdicts,
+    latest_commit_timestamp,
     latest_verdicts_per_reviewer,
 )
 # DEC-049's canonical audit-comment format + projection knob — the ONE
@@ -1364,20 +1365,14 @@ def _check_agent_gate(
     comments = data.get("comments") or []
     commits = data.get("commits") or []
 
-    # Latest commit timestamp (DEC-028 step 4 freshness anchor). If it cannot
-    # be established (no commits returned, or the last commit carries neither
-    # committedDate nor authoredDate) the freshness boundary is UNKNOWN — so
-    # the gate REFUSES rather than accept every stale verdict as fresh.
-    # Fail-closed per DEC-032 D5; an unestablishable freshness anchor is not
-    # "no freshness check".
-    latest_commit_ts = ""
-    if commits:
-        last = commits[-1]
-        if isinstance(last, dict):
-            # gh pr view returns commits with committedDate field.
-            latest_commit_ts = str(
-                last.get("committedDate") or last.get("authoredDate") or ""
-            )
+    # Latest commit timestamp (DEC-028 step 4 freshness anchor), read by the
+    # SHARED `latest_commit_timestamp` that `review-pr`'s fresh-verdict skip
+    # also reads. If it cannot be established (no commits returned, or the
+    # last commit carries neither committedDate nor authoredDate) the
+    # freshness boundary is UNKNOWN — so the gate REFUSES rather than accept
+    # every stale verdict as fresh. Fail-closed per DEC-032 D5; an
+    # unestablishable freshness anchor is not "no freshness check".
+    latest_commit_ts = latest_commit_timestamp(commits)
     if not latest_commit_ts:
         return refuse(_freshness_unresolvable_refusal(pr_number))
 
