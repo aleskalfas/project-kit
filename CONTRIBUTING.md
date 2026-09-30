@@ -14,9 +14,9 @@ pkit:
       record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, ADR-019, ADR-039, ADR-055, "project-management:DEC-053"]
       artefact: [.pkit/decisions/README.md]
     revalidated:
-      at: 2026-09-30T12:51:57Z
+      at: 2026-09-30T14:44:05Z
       outcome: unchanged
-      unchanged-because: COR-050 now reads a change to friction.exclude as a change to the path anchors whose files it moves (a narrowing always answered, a widening only where a file it took changed, otherwise reported) and owes no answer from an excluded artefact while judging its marker, and, from main, lets a person write unanchored-because instead of anchors, listed apart in the measure and never counted; the guide's gate, report and escape-hatch paragraphs name the checks, the findings that fail and the report's measures without either detail, so they hold
+      unchanged-because: checks.yml changed only in the changeset guard step, which no longer raises the skip-changeset hatch for a release/* head since the guard recognises a release pull request by its content; the guide's CI paragraphs name the sync, the aggregator and the friction-report job, not the guard's hatches, so they hold
 ---
 
 # Contributing to project-kit

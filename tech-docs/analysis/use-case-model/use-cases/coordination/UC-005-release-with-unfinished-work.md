@@ -21,9 +21,9 @@ pkit:
       artefact:
         - ACT-operator
     revalidated:
-      at: 2026-09-30T05:35:17Z
+      at: 2026-09-30T14:44:07Z
       outcome: unchanged
-      unchanged-because: the release step now holds an explicit floor to a release the tree records, sets a tied floor from the explicit declaration, punctuates the changelog sentence and warns before confirming when --no-broaden leaves a range excluding the shipped backbone, and PRJ-002 D4 says so; the operator's path through readiness, deferral, apply and the release pull request is the same
+      unchanged-because: release.py changed only in how the changeset guard recognises a release pull request, by the files and lines the release writes with the self-host manifest's backbone_version among them, and in rewriting that manifest line in place; the use case's release scope, gate, stabilisation guards and the release pull request closing no issue are about issue scope, not the changeset guard, so its steps hold
 ---
 
 # UC-005 — Cut a release while unfinished work remains

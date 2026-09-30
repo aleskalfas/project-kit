@@ -42,8 +42,9 @@ pkit:
         - src/project_kit/environment.py
       record: [COR-004, COR-012, COR-043, COR-048, COR-049, COR-050, PRJ-001, PRJ-003, PRJ-004, ADR-033, ADR-039, ADR-049, ADR-058, ADR-059]
     revalidated:
-      at: 2026-09-30T12:51:48Z
-      outcome: updated
+      at: 2026-09-30T14:44:03Z
+      outcome: unchanged
+      unchanged-because: cli.py changed only the wording of the notice release check prints for a release pull request, which now says the diff is only what release apply writes; this page describes the guard's two checks, its escape hatch and the floor tie, never that notice, so it holds
 ---
 
 # Command-line interface
