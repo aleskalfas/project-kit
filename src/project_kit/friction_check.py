@@ -28,20 +28,26 @@ so it works for any tool and locally before a commit.
   removed and turns its dependants' anchors dead (COR-050 point 6).
 
 **When an anchor changed** (point 5): a *path* anchor when a changed path
-matches it (excluded paths and the artefact's own file ignored); a *record*
-anchor when the record's file changed (a pure rename keeps its content); an
-*artefact* anchor when the target's **content** changed — its body compared
-textually and its own fields compared parsed, never the methodology's
-container. The cascade follows: a dependant sees a change only where its
-target's content changed, so an `unchanged` revalidation stops it.
+matches it that both sides leave in — each side read under its own
+`friction.exclude` (point 7) — the artefact's own file ignored, or when the
+exclusions changed over its files: a file it stood on at the base that head
+leaves out, or one it stands on at head that the base left out
+(`exclusion_change`); a *record* anchor when the record's file changed (a
+pure rename keeps its content); an *artefact* anchor when the target's
+**content** changed — its body compared textually and its own fields
+compared parsed, never the methodology's container. The cascade follows: a
+dependant sees a change only where its target's content changed, so an
+`unchanged` revalidation stops it. An artefact under an excluded path at
+head owes no answer; what it declares is still checked.
 
 **What it reports** (points 7, 11, 12): friction; answers; a bump with
 nothing behind it (`at` changed, but no answer stands); dead anchors *of the
 pull request* (resolving to nothing at head, and either added in the diff or
-with a target the diff removed or moved — dead anchors that were already dead
-are the whole-repository check's); an anchor kind no installed component
-resolves, separately; an outdated base; front matter that does not parse.
-Findings run upstream first along artefact anchors (truth-chain order).
+with a target the diff removed, moved or excluded — dead anchors that were
+already dead are the whole-repository check's); an anchor kind no installed
+component resolves, separately; an outdated base; front matter that does not
+parse. Findings run upstream first along artefact anchors (truth-chain
+order).
 
 **Modes** (point 12): `warning` reports and exits 0; `enforcing` exits 1 on
 friction, dead anchors, unresolved kinds and bumps. An outdated base never
@@ -479,7 +485,7 @@ class Side:
 
         This state's files by default; with `files`, another listing — a
         commit's, or every path a history touched — read under this state's
-        exclusions, as the whole-repository check reads history under HEAD's.
+        exclusions.
         """
         listing = self.files if files is None else files
         return tuple(sorted(filter(self.stands_on(pattern), listing)))
@@ -533,6 +539,57 @@ class Side:
             )
         )
         return candidates[0] if candidates else None
+
+
+# How many of an exclusion change's files a message names before counting the rest.
+_NAMED = 3
+
+
+@dataclass(frozen=True)
+class ExclusionChange:
+    """What `friction.exclude` changing between two states did to one path anchor
+    (COR-050 point 7), the artefact's own file never among it, each sorted:
+    `left_out`, the files it stood on in the earlier state that the later one
+    leaves out — a widening — and `let_in`, the files it stands on in the later
+    state that the earlier one left out — a narrowing. False when empty: the
+    two states leave out the same paths, or the change covers none of its files.
+    """
+
+    left_out: tuple[str, ...] = ()
+    let_in: tuple[str, ...] = ()
+
+    def __bool__(self) -> bool:
+        return bool(self.left_out or self.let_in)
+
+    def describe(self) -> str:
+        """`now leaves out a, b`, `now lets in c`, or both — what the change did."""
+        parts = [f"now leaves out {_listed(self.left_out)}"] if self.left_out else []
+        if self.let_in:
+            parts.append(f"now lets in {_listed(self.let_in)}")
+        return "; ".join(parts)
+
+
+def _listed(paths: Sequence[str]) -> str:
+    named = ", ".join(paths[:_NAMED])
+    rest = len(paths) - _NAMED
+    return f"{named} and {rest} more" if rest > 0 else named
+
+
+def exclusion_change(
+    pattern: str, before: Side, after: Side, own: frozenset[str] = frozenset()
+) -> ExclusionChange:
+    """What `friction.exclude` changing from `before` to `after` did to a path
+    anchor's `pattern` (`ExclusionChange`), each state's files read under its own
+    exclusions (`stands_on`) — the one reading both checks give such a change:
+    the change check between the base and head, the whole-repository check
+    between the revalidation point and HEAD.
+    """
+    if before.settings.excludes_as(after.settings):
+        return ExclusionChange()
+    stood, stands = before.stands_on(pattern), after.stands_on(pattern)
+    left_out = sorted(rel for rel in before.files - own if stood(rel) and after.excluded(rel))
+    let_in = sorted(rel for rel in after.files - own if stands(rel) and before.excluded(rel))
+    return ExclusionChange(tuple(left_out), tuple(let_in))
 
 
 # --- matching an artefact with its base -----------------------------------------
@@ -686,9 +743,15 @@ def _answer_text(answer: Answer, artefact: Artefact, anchor: Anchor | None = Non
 def _anchor_changed(
     anchor: Anchor, own: frozenset[str], head: Side, base: Side, diff: Diff
 ) -> bool:
-    """Whether a live anchor of a core kind changed in the diff (COR-050 point 5)."""
+    """Whether a live anchor of a core kind changed in the diff (COR-050 point 5).
+
+    A path anchor, when a changed path it stands on at both sides — each read
+    under its own exclusions — is not its own file: where only one side leaves a
+    path out, the exclusion change is the question (`_anchor_question`).
+    """
     if anchor.kind == "path":
-        return any(map(head.stands_on(anchor.value), diff.paths - own))
+        stood, stands = base.stands_on(anchor.value), head.stands_on(anchor.value)
+        return any(stood(rel) and stands(rel) for rel in diff.paths - own)
     if anchor.kind == "record":
         rel = head.record_path(anchor.value)
         entry = diff.by_path.get(rel) if rel is not None else None
@@ -706,6 +769,26 @@ class _Question:
     anchor: Anchor | None = None  # a changed anchor; None for the anchor list or a move
 
 
+def _anchor_question(
+    anchor: Anchor, own: frozenset[str], head: Side, base: Side, diff: Diff
+) -> _Question | None:
+    """What the diff asks of a live anchor of a core kind, or `None` (COR-050 points 5 and 7).
+
+    A path anchor is asked first whether `friction.exclude` changed over its
+    files (`exclusion_change`) — widening or narrowing, either is a change to
+    what it stands on — then whether a file it stands on changed.
+    """
+    if anchor.kind == "path":
+        moved = exclusion_change(anchor.value, base, head, own)
+        if moved:
+            return _Question(
+                f"`friction.exclude` changed over it in this diff ({moved.describe()})", anchor
+            )
+    if _anchor_changed(anchor, own, head, base, diff):
+        return _Question("changed in this diff", anchor)
+    return None
+
+
 def _judge(
     artefact: Artefact,
     before: Artefact | None,
@@ -714,7 +797,12 @@ def _judge(
     diff: Diff,
     registry: Mapping[str, ResolverCommand],
 ) -> list[Finding]:
-    """The findings about one head artefact carrying the `friction` block."""
+    """The findings about one head artefact carrying the `friction` block.
+
+    An artefact under an excluded path at head owes no answer (COR-050 point
+    7), as the whole-repository check never judges one stale: only what it
+    declares is checked — the dead anchors and unresolved kinds of the diff.
+    """
 
     def finding(
         kind: FindingKind, message: str, anchor: Anchor | None = None, answer: Answer | None = None
@@ -734,6 +822,8 @@ def _judge(
         kind, message = problem
         if message is not None:
             findings.append(finding(kind, message, anchor))
+    if artefact.excluded:
+        return findings
 
     if before is None:
         message = "new in this diff: counts as revalidated"
@@ -744,9 +834,9 @@ def _judge(
 
     own = frozenset({artefact.path, before.path})
     questions = [
-        _Question("changed in this diff", anchor)
+        question
         for anchor in live
-        if _anchor_changed(anchor, own, head, base, diff)
+        if (question := _anchor_question(anchor, own, head, base, diff)) is not None
     ]
     if frozenset(anchors_of(artefact)) != base_anchors:
         questions.append(_Question("its anchor list changed in this diff"))
@@ -788,6 +878,8 @@ def _anchor_problem(
     The message is `None` when the problem is not the diff's: an anchor that
     was already dead at the base is the whole-repository check's, not this
     check's (COR-050 point 7). A kind nothing resolves is judged the same way.
+    A path anchor the diff's `friction.exclude` left standing on nothing says
+    so: `…, excluded since this diff`.
     """
     reason = unresolved_kind_reason(anchor.kind, registry)
     if reason is not None:
@@ -803,11 +895,20 @@ def _anchor_problem(
             f"{head.why_dead(anchor)}; the anchor was added in this diff",
         )
     if base.resolves(anchor):
+        if anchor.kind == "path" and excluded_since(anchor.value, base, head):
+            return FindingKind.DEAD_ANCHOR, f"{head.why_dead(anchor)}, excluded since this diff"
         return (
             FindingKind.DEAD_ANCHOR,
             f"{head.why_dead(anchor)}; the diff removed or moved its target",
         )
     return FindingKind.DEAD_ANCHOR, None
+
+
+def excluded_since(pattern: str, before: Side, after: Side) -> bool:
+    """Whether `after`'s `friction.exclude` leaves out a file a path anchor's `pattern`
+    stood on at `before` that `after` still holds — for an anchor dead at `after`,
+    the exclusion is why (COR-050 point 7), as both checks name it."""
+    return any(rel in after.files for rel in exclusion_change(pattern, before, after).left_out)
 
 
 def _friction_message(question: _Question, deferral_predates: bool) -> str:

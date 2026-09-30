@@ -511,6 +511,111 @@ def test_excluded_paths_do_not_change_an_anchor(repo: AdopterRepo) -> None:
     assert _summary(_run(repo)) == []
 
 
+# --- a change to `friction.exclude` (COR-050 point 7) ---------------------------------------
+
+_GENERATED = {"src/cli/generated/table.py": "T = 1\n"}
+
+
+def _guide_and_notes() -> dict[str, str]:
+    """`guide` covers the generated code through `src/cli/**`; `notes`, on the engine, does not."""
+    notes = document("notes", anchors={"path": ["src/core/**"]}, at=T1, outcome="updated")
+    return {"docs/guide.md": guide(), "docs/notes.md": notes, **_GENERATED}
+
+
+def test_a_widened_exclusion_is_a_change_the_covered_artefacts_answer(repo: AdopterRepo) -> None:
+    """The anchor loses a file it stood on: a change to what makes the artefact true, never
+    silence — and an artefact whose anchors it does not cover is not asked."""
+    _start(repo, _guide_and_notes())
+    widened = {CONFIG: friction_config(exclude=["src/cli/generated"])}
+    repo.commit("exclude the generated code", widened)
+    result = _run(repo)
+    assert _summary(result) == [("friction", "docs/guide.md", "path:src/cli/**", None)]
+    assert result.findings[0].message == (
+        "`friction.exclude` changed over it in this diff (now leaves out "
+        "src/cli/generated/table.py) and carries no answer: revalidate the artefact, or defer "
+        "the anchor"
+    )
+    assert result.failing
+
+    repo.commit(
+        "the guide holds without the generated code",
+        {"docs/guide.md": guide(at=T2, because="the generated table was never described")},
+    )
+    assert _summary(_run(repo)) == [("answered", "docs/guide.md", "path:src/cli/**", "unchanged")]
+
+
+def test_a_narrowed_exclusion_is_a_change_the_covered_artefacts_answer(repo: AdopterRepo) -> None:
+    """The anchor gains a file it did not stand on: the narrowing is the change, whatever
+    happened to the file while it was left out."""
+    _start(repo, _guide_and_notes(), config=friction_config(exclude=["src/cli/generated"]))
+    repo.commit("regenerate, still excluded", {"src/cli/generated/table.py": "T = 2\n"})
+    assert _summary(_run(repo)) == []
+    repo.commit("stop excluding the generated code", {CONFIG: friction_config()})
+    result = _run(repo)
+    assert _summary(result) == [("friction", "docs/guide.md", "path:src/cli/**", None)]
+    assert "(now lets in src/cli/generated/table.py)" in result.findings[0].message
+
+
+def test_a_file_added_and_excluded_in_the_same_diff_is_no_change(repo: AdopterRepo) -> None:
+    """The anchor never stood on it: nothing was taken away, and nothing it stands on changed."""
+    _start(repo, {"docs/guide.md": guide()})
+    repo.commit(
+        "generate a table, and exclude it",
+        {**_GENERATED, CONFIG: friction_config(exclude=["src/cli/generated"])},
+    )
+    assert _summary(_run(repo)) == []
+
+
+def test_an_exclusion_that_kills_an_anchor_is_named_as_why(repo: AdopterRepo) -> None:
+    anchors = {"path": ["src/cli/**", "src/cli/generated/**"]}
+    _start(repo, {"docs/guide.md": guide(anchors=anchors), **_GENERATED})
+    repo.commit(
+        "exclude the generated code", {CONFIG: friction_config(exclude=["src/cli/generated"])}
+    )
+    result = _run(repo)
+    assert _summary(result) == [
+        ("dead-anchor", "docs/guide.md", "path:src/cli/generated/**", None),
+        ("friction", "docs/guide.md", "path:src/cli/**", None),
+    ]
+    assert result.findings[0].message == "matches only excluded files (1), excluded since this diff"
+
+
+def test_an_artefact_under_an_excluded_path_owes_no_answer(repo: AdopterRepo) -> None:
+    """COR-050 point 7, as the whole-repository check reads it (#1152): an anchor of an
+    excluded artefact changing asks it nothing — while what it declares is still checked."""
+    generated = guide(anchors={"path": ["src/cli/**"]})
+    _start(
+        repo,
+        {"docs/guide.md": guide(), "docs/generated/cli.md": generated},
+        config=friction_config(exclude=["docs/generated"]),
+    )
+    repo.commit(
+        "change the CLI; the generated page gains an anchor that resolves to nothing",
+        {
+            "src/cli/main.py": "print('cli v2')\n",
+            "docs/generated/cli.md": guide(anchors={"path": ["src/cli/**", "src/gone/**"]}),
+        },
+    )
+    assert _summary(_run(repo)) == [
+        ("dead-anchor", "docs/generated/cli.md", "path:src/gone/**", None),
+        ("friction", "docs/guide.md", "path:src/cli/**", None),
+    ]
+
+
+def test_an_artefact_excluded_in_the_diff_owes_no_answer_and_one_let_in_does(
+    repo: AdopterRepo,
+) -> None:
+    """Exclusion is read at head: the artefact a widening covers owes nothing from then on,
+    and one a narrowing lets back in is judged against its base like any other."""
+    files = {"docs/guide.md": guide(), "docs/generated/cli.md": guide()}
+    _start(repo, files, config=friction_config(exclude=["docs/generated"]))
+    repo.commit(
+        "change the CLI, and exclude the guide instead",
+        {"src/cli/main.py": "print('cli v2')\n", CONFIG: friction_config(exclude=["docs/guide.md"])},
+    )
+    assert _summary(_run(repo)) == [("friction", "docs/generated/cli.md", "path:src/cli/**", None)]
+
+
 def test_an_artefact_is_not_anchored_to_its_own_file(repo: AdopterRepo) -> None:
     _start(repo, {"docs/guide.md": guide(anchors={"path": ["docs/**"]})})
     repo.commit(

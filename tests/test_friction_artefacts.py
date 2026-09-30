@@ -384,6 +384,7 @@ def test_held_folders_are_declared_as_places_are_with_the_files_each_holds(
             "path": record,
             "held": 0,
             "places": [2],
+            "excluded": False,
             "fields": {"date": "2026-10-01"},
             "unreadable": None,
         }
@@ -400,6 +401,37 @@ def test_held_folders_are_declared_as_places_are_with_the_files_each_holds(
         f"  {EVIDENCE_PACKAGE} /friction/held/2  (capability:evidence)  0 file(s); skipped, "
         "malformed: the held folder names no `location`: a held folder lies within one of the "
         "component's `docs.locations`",
+    ]
+
+
+def test_a_held_file_says_whether_friction_exclude_leaves_it_out(adopter: AdopterRepo) -> None:
+    """A held document under an excluded path is still held — its owner still claims it, and
+    validation still reads it — and says it is excluded, as a walked file does, so its owner
+    counts it no more than the measures count an excluded artefact (COR-050 point 7)."""
+    package = adopter.root / EVIDENCE_PACKAGE
+    package.write_text(
+        package.read_text(encoding="utf-8").replace(
+            "    guides: {path: guides, root: user}\n",
+            "    guides: {path: guides, root: user}\n    logs: {path: logs}\n",
+        )
+        + "  held:\n    - {location: logs, path: records}\n",
+        encoding="utf-8",
+    )
+    config = adopter.root / CONFIG
+    config.write_text(
+        config.read_text(encoding="utf-8").replace(
+            "exclude: [notes/old.md]", "exclude: [notes/old.md, tech-docs/logs/records/old]"
+        ),
+        encoding="utf-8",
+    )
+    kept, old = "tech-docs/logs/records/kept.md", "tech-docs/logs/records/old/one.md"
+    adopter.write({kept: "# Kept\n", old: "# Old\n"})
+    document = _document()
+    (folder,) = document["held"]
+    assert folder["files"] == [kept, old]
+    assert [(h["path"], h["excluded"]) for h in document["held_files"]] == [
+        (kept, False),
+        (old, True),
     ]
 
 

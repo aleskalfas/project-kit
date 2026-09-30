@@ -700,6 +700,109 @@ def test_an_artefact_under_an_excluded_path_is_left_out_of_the_measures(
     assert (counts["stale"], counts["deferred"]) == (1, 0)
 
 
+# --- each state under its own exclusions (COR-050 point 7) -----------------------------------
+
+GENERATED = {"src/cli/generated/table.py": "T = 1\n"}
+
+
+def test_an_exclusion_widened_since_the_point_is_stale_never_silence(timeline: Timeline) -> None:
+    """The point is read under its own `friction.exclude`: a file the anchor stood on there
+    that HEAD's leaves out is a change, whose origin is the commit that widened it."""
+    timeline.start({"docs/guide.md": guide(), **GENERATED})
+    widened = timeline.commit(
+        "exclude the generated code",
+        {CONFIG: friction_config(exclude=["src/cli/generated"])},
+        author=ALICE,
+    )
+    timeline.commit("regenerate, excluded", {"src/cli/generated/table.py": "T = 2\n"})
+
+    result = _run(timeline)
+    assert _summary(result) == [("stale", "docs/guide.md", "path:src/cli/**", widened)]
+    assert f'first in {widened[:12]} "exclude the generated code"' in result.findings[0].message
+
+
+def test_an_exclusion_narrowed_since_the_point_is_stale_from_the_narrowing(
+    timeline: Timeline,
+) -> None:
+    """A change made while the file was left out is no change to the anchor: the narrowing
+    that let the file in is, so the debt is dated from it — never from older commits."""
+    timeline.start(
+        {"docs/guide.md": guide(), **GENERATED}, friction_config(exclude=["src/cli/generated"])
+    )
+    timeline.commit("regenerate, still excluded", {"src/cli/generated/table.py": "T = 2\n"})
+    narrowed = timeline.commit("stop excluding the generated code", {CONFIG: friction_config()})
+
+    result = _run(timeline)
+    assert _summary(result) == [("stale", "docs/guide.md", "path:src/cli/**", narrowed)]
+
+
+def test_an_exclusion_that_changed_nothing_the_anchor_stood_on_is_no_change(
+    timeline: Timeline,
+) -> None:
+    """A file added and excluded in one commit was never stood on, and a configuration change
+    that leaves the exclusions alone reads as no change at all."""
+    timeline.start({"docs/guide.md": guide()})
+    timeline.commit(
+        "generate a table, and exclude it",
+        {**GENERATED, CONFIG: friction_config(exclude=["src/cli/generated"])},
+    )
+    timeline.commit(
+        "enforce friction",
+        {CONFIG: friction_config(mode="enforcing", exclude=["src/cli/generated"])},
+    )
+    result = _run(timeline)
+    assert _summary(result) == []
+    assert result.artefact_reports[0].state is fr.ArtefactState.CURRENT
+
+
+def test_a_dead_anchor_names_the_exclusion_added_since_the_point(timeline: Timeline) -> None:
+    anchors = {"path": ["src/cli/**", "src/cli/generated/**"]}
+    timeline.start({"docs/guide.md": guide(anchors=anchors), **GENERATED})
+    widened = timeline.commit(
+        "exclude the generated code",
+        {CONFIG: friction_config(exclude=["src/cli/generated"])},
+        author=BOB,
+    )
+    day = (HISTORY_EPOCH + timedelta(days=2)).date().isoformat()
+
+    result = _run(timeline)
+    dead = next(f for f in result.findings if f.kind is fr.RepositoryFindingKind.DEAD_ANCHOR)
+    assert dead.message == (
+        f'matches only excluded files (1), excluded since {widened[:12]} "exclude the generated '
+        f'code" (Bob, {day})'
+    )
+    assert dead.origin is None
+
+
+def test_the_two_checks_agree_on_an_exclusion_change_and_an_excluded_artefact(
+    timeline: Timeline,
+) -> None:
+    """What the change check asks of a pull request, the whole-repository check reports once
+    it lands unanswered, and what one leaves alone the other does (#1152): a widened
+    exclusion is friction, then stale; an excluded artefact is asked nothing, then never
+    judged stale."""
+    repo = timeline.adopter
+    generated = document("gen-cli", anchors={"path": ["src/cli/**"]}, at=T1, outcome="updated")
+    timeline.start(
+        {"docs/guide.md": guide(), "docs/generated/cli.md": generated, **GENERATED},
+        friction_config(exclude=["docs/generated"]),
+    )
+    repo.checkout("topic", create=True)
+    widened = timeline.commit(
+        "exclude the generated code",
+        {CONFIG: friction_config(exclude=["docs/generated", "src/cli/generated"])},
+    )
+    change = fc.run_change_check(repo.root, "main")
+    assert [(f.kind.value, f.location) for f in change.findings] == [
+        ("friction", "docs/guide.md")
+    ]
+    repo.checkout("main")
+    timeline.merge("topic")
+    result = _run(timeline)
+    assert _summary(result) == [("stale", "docs/guide.md", "path:src/cli/**", widened)]
+    assert [r.location for r in result.artefact_reports] == ["docs/guide.md"]
+
+
 # --- modes, dormancy, the working tree, output ----------------------------------------------
 
 

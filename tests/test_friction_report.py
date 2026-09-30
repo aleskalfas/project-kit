@@ -850,6 +850,68 @@ def test_a_dead_path_anchor_says_whether_it_matches_no_file_or_only_excluded_one
     assert "src/clj/**         dead-anchor  matches no file" in human
 
 
+def test_explain_names_an_exclusion_added_since_the_point_as_why_an_anchor_is_dead(
+    timeline: Timeline,
+) -> None:
+    """Each state is read under its own `friction.exclude` (COR-050 point 7): the point's
+    files are what the anchor stood on there, so an anchor an exclusion killed since shows
+    them; its finding says `excluded since <commit>`, and that commit is where its files
+    went — the configuration file its change. The anchor that lost a file to it is stale."""
+    anchors = {"path": ["src/cli/**", "src/cli/generated/**"]}
+    generated = {"src/cli/generated/table.py": "T = 1\n"}
+    base = timeline.start({"docs/guide.md": guide(anchors=anchors), **generated})
+    widened = timeline.commit(
+        "exclude the generated code",
+        {CONFIG: friction_config(exclude=["src/cli/generated"])},
+        author=ALICE,
+    )
+
+    explanation = frep.run_explain(timeline.adopter.root, "guide")
+    assert explanation.report is not None and explanation.report.revalidation_point is not None
+    assert explanation.report.revalidation_point.sha == base
+    assert [(a.anchor.value, a.state, a.files) for a in explanation.anchors] == [
+        (
+            "src/cli/**",
+            "stale",
+            fr.AnchorFiles(
+                point=("src/cli/generated/table.py", "src/cli/main.py"),
+                head=("src/cli/main.py",),
+                excluded=("src/cli/generated/table.py",),
+            ),
+        ),
+        (
+            "src/cli/generated/**",
+            "dead-anchor",
+            fr.AnchorFiles(
+                point=("src/cli/generated/table.py",),
+                head=(),
+                excluded=("src/cli/generated/table.py",),
+            ),
+        ),
+    ]
+    by_anchor = {f.finding.anchor: f for f in explanation.findings}
+    dead = by_anchor[Anchor("path", "src/cli/generated/**")]
+    day = (HISTORY_EPOCH + timedelta(days=2)).date().isoformat()
+    assert dead.finding.message == (
+        f'matches only excluded files (1), excluded since {widened[:12]} "exclude the generated '
+        f'code" (Alice, {day})'
+    )
+    assert [(c.commit.sha, c.paths) for c in dead.commits] == [(widened, (CONFIG,))]
+    stale = by_anchor[CLI]
+    assert stale.finding.origin is not None and stale.finding.origin.sha == widened
+    assert [(c.commit.sha, c.paths) for c in stale.commits] == [(widened, (CONFIG,))]
+
+    doc = json.loads(frep.render_explain_json(explanation))
+    listed = {a["value"]: a["files"] for a in doc["anchors"]}
+    assert listed["src/cli/generated/**"] == {
+        "point": ["src/cli/generated/table.py"],
+        "head": [],
+        "excluded": ["src/cli/generated/table.py"],
+    }
+    human = frep.render_explain_human(explanation, now=NOW)
+    assert f"matches only excluded files (1), excluded since {widened[:12]}" in human
+
+
 def test_explain_names_where_a_dead_path_anchors_files_went(timeline: Timeline) -> None:
     """For each file the anchor matched, the last commit that touched it — its removal or its
     rename away — even where the artefact was revalidated over the dead anchor since."""

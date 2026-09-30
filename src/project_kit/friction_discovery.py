@@ -62,10 +62,12 @@ is the one reader of those declarations and the one walker of the places:
   its front matter — a friction block anywhere in it is a validation finding
   (COR-050 point 12).
 - `FrictionSettings.exclusion` — the one decision of what `friction.exclude`
-  leaves out (COR-050 point 7). The walk records it on every file and
-  artefact it reads (`excluded_by`), so the measures read it from the
+  leaves out (COR-050 point 7). The walk records it on every file, artefact
+  and held file it reads (`excluded_by`), so the measures read it from the
   artefact; the checks ask it of any other path, never matching the
-  patterns themselves.
+  patterns themselves — each state's of its own paths, as discovery over
+  that state reads its settings (`excludes_as` says whether two states
+  leave out the same).
 - `RepositoryTree` — the seam through which discovery lists and reads one
   state of the repository, matching every listing by one rule
   (`listed_files_in_place`, `compile_glob`, `pattern_matches`). Without a
@@ -308,6 +310,11 @@ class FrictionSettings:
     def excluded(self, path: str) -> bool:
         """Whether `exclude` leaves the repository-relative file `path` out (`exclusion`)."""
         return self.exclusion(path) is not None
+
+    def excludes_as(self, other: FrictionSettings) -> bool:
+        """Whether `other` leaves out exactly what this does: the same `exclude` patterns,
+        so no path reads differently under the two (COR-050 point 7)."""
+        return {e.resolved for e in self.exclude} == {e.resolved for e in other.exclude}
 
 
 def read_friction_settings(
@@ -929,6 +936,10 @@ class HeldFile:
     not be read, and `blocks` the JSON Pointer, in the front matter, of every
     friction block anywhere in it — the document's own, an entry's, a rule's
     under `rules`, or deeper — which validation refuses (COR-050 point 12).
+    `excluded_by` is the `friction.exclude` entry it lies under, else `None` —
+    the decision a walked file carries: an excluded held document is still
+    held and read, and its owner leaves it out as the measures leave out an
+    excluded artefact (point 7).
     """
 
     path: str
@@ -937,6 +948,7 @@ class HeldFile:
     front_matter: Mapping[str, Any] | None
     unreadable: str | None
     blocks: tuple[str, ...]
+    excluded_by: SettingsPath | None = None
 
     @property
     def owner(self) -> str:
@@ -1028,9 +1040,7 @@ def _literal_prefix(pattern: str) -> str:
     return "/".join(kept)
 
 
-def files_in_place(
-    target_root: Path, place: Place, tree: WorkingTree | None = None
-) -> list[Path]:
+def files_in_place(target_root: Path, place: Place, tree: WorkingTree | None = None) -> list[Path]:
     """The Markdown files a place matches in the working tree, sorted by repository-relative path.
 
     `listed_files_in_place` over the working tree's one listing (`tree`, by
@@ -1251,7 +1261,6 @@ def rule_set_files(target_root: Path, places: Sequence[RuleSetPlace]) -> dict[Pa
             if path.name != RULE_SETS_SIGNPOST:
                 claimed.setdefault(path, rule_set_place)
     return claimed
-
 
 
 # --- anchor kinds and their resolvers (ADR-057 point 3) ------------------
@@ -1642,7 +1651,10 @@ def discover_artefacts(
             )
         )
     held = [
-        _held_file(rel, holder[rel], tuple(left_out.get(rel, ())), text)
+        replace(
+            _held_file(rel, holder[rel], tuple(left_out.get(rel, ())), text),
+            excluded_by=settings.exclusion(rel),
+        )
         for rel in sorted(holder)
         if (text := texts[rel]) is not None  # a link: never read, so never held
     ]
@@ -2048,8 +2060,10 @@ def artefacts_document(target_root: Path, tree: RepositoryTree | None = None) ->
       nothing because nothing is in it yet is listed with no files.
     - `held_files`: every file a held folder holds, by path, with the folder
       holding it (`held`, an index into `held`), the `places` that match it and
-      so did not walk it (indices into `places`), its front matter's own
-      `fields` and why it is `unreadable`, if it is.
+      so did not walk it (indices into `places`), whether `friction.exclude`
+      leaves it out (`excluded`) — its owner then counts it no more than the
+      measures count an excluded artefact — its front matter's own `fields`
+      and why it is `unreadable`, if it is.
     """
     settings = read_friction_settings(target_root, tree)
     discovery = discover_artefacts(target_root, settings, tree)
@@ -2150,6 +2164,7 @@ def artefacts_document(target_root: Path, tree: RepositoryTree | None = None) ->
                 "path": held.path,
                 "held": held_index[held.folder],
                 "places": [index[place] for place in held.places],
+                "excluded": held.excluded_by is not None,
                 "fields": _own_fields(held.front_matter),
                 "unreadable": held.unreadable,
             }

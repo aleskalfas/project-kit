@@ -1,0 +1,25 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  A change to `friction.exclude` is now read as a change, and both friction
+  checks agree on an artefact under an excluded path. Each state is read under
+  the exclusions it declared: the change check (`pkit friction check`) reads
+  its base under the base's, and the whole-repository check (`pkit friction
+  check --all`), with `friction debt` and `friction explain`, reads an
+  artefact's revalidation point under the point's — no longer every state
+  under HEAD's. Widening `friction.exclude` over files an anchor stood on, or
+  narrowing it to let in files the anchor did not stand on, is friction the
+  covered artefacts answer in the pull request, and stale debt dated from that
+  commit once merged; before, a widening silenced stale findings with no
+  revalidation, and a narrowing made artefacts stale from changes made while
+  the files were left out. A path anchor an exclusion leaves matching only
+  excluded files is dead and says why, `excluded since this diff` or
+  `excluded since <commit>`; `friction explain` lists an anchor's files at the
+  point under the point's exclusions, so one killed by a new exclusion still
+  shows what it stood on, and names the exclusion's commit among where its
+  files went. An artefact under an excluded path owes no answer in the change
+  check, as the whole-repository check never judged it stale; its dead anchors
+  and unresolved kinds are still reported. `pkit friction artefacts --json`
+  gives each held file an `excluded` key.
