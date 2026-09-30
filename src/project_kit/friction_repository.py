@@ -42,9 +42,9 @@ A shallow clone whose history stops before a point is reported for the
 artefacts concerned, never guessed at.
 
 The check writes nothing (point 13). The computations it shares with the
-change check — discovery, content, the parsed marker, anchor matching, what a
-dead anchor is, truth-chain order — have their one home in `friction_check`
-and `friction_discovery` (ADR-057 point 2).
+change check — discovery, content, the parsed marker, what a path pattern
+stands on (`Side.stands_on`), what a dead anchor is, truth-chain order — have
+their one home in `friction_check` and `friction_discovery` (ADR-057 point 2).
 """
 
 from __future__ import annotations
@@ -87,7 +87,6 @@ from project_kit.friction_discovery import (
     ResolverCommand,
     discover_artefacts,
     parse_artefacts,
-    pattern_matcher,
     read_friction_settings,
     registered_anchor_kinds,
     unresolved_kind_reason,
@@ -989,21 +988,19 @@ def _uncovered_surface(head: Side, discovery: Discovery) -> tuple[int, tuple[str
 
     The surface is what the project and its capabilities say ought to be
     described (COR-050 point 8), excluded paths left out. A path is anchored
-    when any artefact's path anchor matches it, a record anchor names it, or
-    an artefact anchor names the artefact it holds.
+    when any artefact's path anchor stands on it (`Side.stands_on`), a record
+    anchor names it, or an artefact anchor names the artefact it holds.
     """
     surface: set[str] = set()
     for declared in head.settings.surface:
-        match = pattern_matcher(declared.resolved)
-        surface.update(rel for rel in head.files if match(rel) and not head.excluded(rel))
+        surface.update(filter(head.stands_on(declared.resolved), head.files))
     if not surface:
         return 0, ()
     anchored: set[str] = set()
     for artefact in discovery.artefacts:
         for anchor in anchors_of(artefact):
             if anchor.kind == "path":
-                match = pattern_matcher(anchor.value)
-                anchored.update(rel for rel in surface if match(rel))
+                anchored.update(filter(head.stands_on(anchor.value), surface))
             elif anchor.kind == "record":
                 rel = head.record_path(anchor.value)
                 if rel is not None:

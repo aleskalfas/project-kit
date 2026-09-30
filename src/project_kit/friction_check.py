@@ -457,7 +457,13 @@ class Side:
 
     def stands_on(self, pattern: str) -> Callable[[str], bool]:
         """Whether a path anchor's `pattern` stands on a file: it matches it, and this
-        state's `friction.exclude` does not leave it out (COR-050 points 2 and 7)."""
+        state's `friction.exclude` does not leave it out (COR-050 points 2 and 7).
+
+        The one rule both checks match a path pattern by: whether an anchor
+        resolves, whether a changed path changed it, what it matched in
+        history, how broad it is, and which paths of the declared surface
+        it anchors — the surface's own patterns are read by it too (point 8).
+        """
         match = pattern_matcher(pattern)
         return lambda rel: match(rel) and not self.excluded(rel)
 
@@ -657,8 +663,7 @@ def _anchor_changed(
 ) -> bool:
     """Whether a live anchor of a core kind changed in the diff (COR-050 point 5)."""
     if anchor.kind == "path":
-        match = pattern_matcher(anchor.value)
-        return any(match(rel) and rel not in own and not head.excluded(rel) for rel in diff.paths)
+        return any(map(head.stands_on(anchor.value), diff.paths - own))
     if anchor.kind == "record":
         rel = head.record_path(anchor.value)
         entry = diff.by_path.get(rel) if rel is not None else None
