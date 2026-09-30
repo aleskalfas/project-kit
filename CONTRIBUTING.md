@@ -14,8 +14,9 @@ pkit:
       record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, ADR-019, ADR-039, ADR-055, "project-management:DEC-053"]
       artefact: [.pkit/decisions/README.md]
     revalidated:
-      at: 2026-09-29T20:44:42Z
-      outcome: updated
+      at: 2026-09-30T01:37:13Z
+      outcome: unchanged
+      unchanged-because: COR-050 now lets a component declare folders of held documents (point 1) and makes a friction block in one a validation finding (point 12); the guide's friction gate, whole-repository report and doc check paragraphs name neither the places nor the validation list, so they hold
 ---
 
 # Contributing to project-kit
