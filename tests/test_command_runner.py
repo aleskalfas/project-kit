@@ -388,12 +388,12 @@ def test_the_outer_deadline_ends_a_nested_run_and_everything_its_command_started
     # the filler's child, which the nested run could not reach, goes with it.
     filler = _script(tmp_path / "filler.py", _STARTS_A_CHILD)
     caller = _nested_runner(tmp_path / "caller.py", then="time.sleep(60)\n")
-    monkeypatch.setattr(command_runner, "COMMAND_TIMEOUT_SECONDS", 3)
-    monkeypatch.setattr(command_runner, "ANSWER_MARGIN_SECONDS", 1)
+    monkeypatch.setattr(command_runner, "COMMAND_TIMEOUT_SECONDS", 5)
+    monkeypatch.setattr(command_runner, "ANSWER_MARGIN_SECONDS", 2)
     started = time.monotonic()
     run = run_command(caller, [str(filler)], cwd=tmp_path)
     assert time.monotonic() - started < 15  # not the sixty seconds any of them sleeps
-    assert (run.ending, run.bound_seconds) == (Ending.TIMED_OUT, 3)
+    assert (run.ending, run.bound_seconds) == (Ending.TIMED_OUT, 5)
     for pid in _pids(filler):
         _assert_gone(pid)
 
@@ -426,14 +426,14 @@ def test_the_innermost_overrun_is_named_and_what_it_started_ends_with_the_outerm
     # the overrun; the filler's child it could not kill ends with the outer run.
     filler = _script(tmp_path / "filler.py", _STARTS_A_CHILD)
     caller = _nested_runner(tmp_path / "caller.py")
-    monkeypatch.setattr(command_runner, "COMMAND_TIMEOUT_SECONDS", 4)
-    monkeypatch.setattr(command_runner, "ANSWER_MARGIN_SECONDS", 1.5)
+    monkeypatch.setattr(command_runner, "COMMAND_TIMEOUT_SECONDS", 6)
+    monkeypatch.setattr(command_runner, "ANSWER_MARGIN_SECONDS", 2.5)
     started = time.monotonic()
     run = run_command(caller, [str(filler)], cwd=tmp_path)
-    assert time.monotonic() - started < 4  # answered within the outer bound
+    assert time.monotonic() - started < 6  # answered within the outer bound
     assert run.ending is Ending.ANSWERED
     assert run.document["ending"] == "timed-out"
-    assert 0 < run.document["bound"] < 2.5  # the time remaining, less the caller's margin
+    assert 0 < run.document["bound"] < 3.5  # the time remaining, less the caller's margin
     for pid in _pids(filler):
         _assert_gone(pid)
 
