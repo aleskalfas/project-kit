@@ -44,7 +44,12 @@ ID_SHAPE = {ACTOR: "ACT-<slug>", TERM: "TERM-<slug>", USE_CASE: "UC-NNN", JOURNE
 
 #: A use case's or journey's id with its number in any number of digits — the
 #: spellings the id schema refuses included.
-_ANY_NUMBER = re.compile(rf"^(?P<prefix>{PREFIX[USE_CASE]}|{PREFIX[JOURNEY]})-(?P<number>[0-9]+)$")
+_NUMBER = rf"(?P<prefix>{PREFIX[USE_CASE]}|{PREFIX[JOURNEY]})-(?P<number>[0-9]+)"
+_ANY_NUMBER = re.compile(rf"^{_NUMBER}$")
+
+#: A file named after the use case or journey it holds, `UC-NNN-<slug>.md`, as the
+#: stamp names one: the number, then a hyphen or the extension.
+_NAMED = re.compile(rf"^{_NUMBER}(?=[-.])")
 
 
 def identity(artefact_id: str) -> str:
@@ -53,8 +58,20 @@ def identity(artefact_id: str) -> str:
     other id as written. The stamp counts a number as held, and the check two
     artefacts as sharing an id, by this, so the two never disagree."""
     found = _ANY_NUMBER.match(artefact_id)
-    if found is None:
-        return artefact_id
+    return artefact_id if found is None else _spelt(found)
+
+
+def id_in_name(path: str) -> str | None:
+    """The use case's or journey's id a file's name carries — `UC-007` for
+    `…/UC-007-export.md` — as `identity` spells it; `None` for a name carrying none.
+    The stamp names each file so, and counts the number a name carries as held
+    whatever the file holds — no front matter, one that does not parse, one naming
+    no id — so a number is never used again because its file cannot be read."""
+    found = _NAMED.match(path.rsplit("/", 1)[-1])
+    return None if found is None else _spelt(found)
+
+
+def _spelt(found: re.Match[str]) -> str:
     return f"{found['prefix']}-{int(found['number']):03d}"
 
 
@@ -129,15 +146,30 @@ class Analysis:
 
     `location` is where it lies, repository-relative, and `places` where each
     kind's place resolves — both `None`/empty when the reading holds none of
-    this capability's places. `unreadable` names the files whose front matter
-    does not parse: the backbone's friction pass reports them.
+    this capability's places. `files` is every file in one of the places, and
+    the kind its place holds, whatever the file holds; `unreadable` the files
+    whose front matter does not parse, each with the backbone's reason.
     """
 
     location: str | None
     places: Mapping[str, str]
     artefacts: tuple[Artefact, ...]
     strays: tuple[Stray, ...]
-    unreadable: tuple[str, ...]
+    unreadable: Mapping[str, str]
+    files: Mapping[str, str]
+
+    def held(self) -> set[str]:
+        """Every id this state of the analysis holds, as `identity` spells it: each
+        artefact's own id, and each id a file of a use-case or journey place carries
+        in its name (`id_in_name`) — so a file whose id cannot be read still holds
+        the number its name gives it (DEC-001 point 3)."""
+        own = {identity(a.id) for a in self.artefacts if a.id}
+        named = {
+            name_id
+            for path, kind in self.files.items()
+            if kind in NUMBERED and (name_id := id_in_name(path)) is not None
+        }
+        return own | named
 
     def of_kind(self, kind: str) -> list[Artefact]:
         return [a for a in self.artefacts if a.kind == kind]
@@ -200,7 +232,7 @@ def analysis_of(document: Mapping[str, Any]) -> Analysis:
         location = location or _text(where.get("path"))
 
     kind_of_file: dict[str, str] = {}
-    unreadable: list[str] = []
+    unreadable: dict[str, str] = {}
     no_front_matter: list[str] = []
     for entry in _mappings(document.get("files")):
         kinds = [kind_of_place[i] for i in entry.get("places") or [] if i in kind_of_place]
@@ -208,8 +240,9 @@ def analysis_of(document: Mapping[str, Any]) -> Analysis:
             continue
         path = str(entry.get("path"))
         kind_of_file[path] = kinds[0]
-        if entry.get("unreadable") is not None:
-            unreadable.append(path)
+        reason = entry.get("unreadable")
+        if reason is not None:
+            unreadable[path] = reason if isinstance(reason, str) else ""
         elif entry.get("fields") is None:
             no_front_matter.append(path)
 
@@ -258,7 +291,8 @@ def analysis_of(document: Mapping[str, Any]) -> Analysis:
         places=places,
         artefacts=tuple(a for a in artefacts if a.path not in strays),
         strays=tuple(sorted(strays.values(), key=lambda s: s.path)),
-        unreadable=tuple(unreadable),
+        unreadable=unreadable,
+        files=kind_of_file,
     )
 
 

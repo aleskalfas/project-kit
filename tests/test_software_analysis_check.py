@@ -206,6 +206,46 @@ def test_a_number_spelt_with_other_zeros_is_refused_and_shares_the_id(
     ]
 
 
+def test_a_file_whose_id_cannot_be_read_is_reported(project: AdopterRepo) -> None:
+    """Front matter that does not parse, or none, or one naming no id: the stamp counts
+    the number the file's name carries, and the check reports the file, never skipping
+    it — an id is never used again, so the one it holds must be readable."""
+    seed(project)
+    broken = f"{USE_CASES}/UC-005-broken.md"
+    bare = f"{USE_CASES}/UC-006-bare.md"
+    no_id = f"{USE_CASES}/UC-007-no-id.md"
+    glossary = "---\nTERM-x: [unclosed\n---\n"
+    project.write(
+        {
+            broken: "---\nid: [unclosed\n---\n",
+            bare: "# No front matter\n",
+            no_id: (
+                "---\ntitle: No id\nstatus: active\nactor: ACT-tester\n"
+                "pkit: {friction: {anchors: {artefact: [ACT-tester]}}}\n---\n\n# No id\n"
+            ),
+            GLOSSARY: glossary,
+        }
+    )
+    found = errors(check(project))
+    assert found[0] == (bare, "has no front matter: every file here is a use case")
+    assert [location for location, _message in found[1:3]] == [GLOSSARY, broken]
+    assert ": the terms it holds cannot be read, ids included, " in found[1][1]
+    assert found[2][1].startswith("its front matter does not parse (")
+    assert found[2][1].endswith(
+        ": what it holds cannot be read, ids included, and an id is never used again "
+        "(DEC-001 point 3); the stamp counts UC-005, the number its name carries, as held — "
+        "fix the front matter"
+    )
+    assert found[3:] == [
+        (no_id, "'id' is a required property"),
+        (
+            no_id,
+            "its name carries UC-007, its front matter no id: the stamp counts UC-007 as held, "
+            "and an id is never used again — write `id: UC-007` (DEC-001 point 3)",
+        ),
+    ]
+
+
 # --- required parts (DEC-001 points 1 and 3) --------------------------------------------------
 
 

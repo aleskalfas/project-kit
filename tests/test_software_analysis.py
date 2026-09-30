@@ -265,6 +265,57 @@ def test_numbers_count_the_default_branch_and_withdrawn_use_cases(project: Adopt
     assert stamped(project, "use-case", "four", "--actor", "ACT-tester") == "UC-004"
 
 
+def test_a_number_deleted_from_the_default_branch_is_never_used_again(
+    project: AdopterRepo,
+) -> None:
+    """Deleting the highest-numbered use case, against the rule, frees nothing: the
+    number is counted over every file the default branch's history held — under
+    every name it had, a move into an area included — as well as the tree."""
+    stamped(project, "actor", "tester")
+    stamped(project, "use-case", "one", "--actor", "ACT-tester")
+    stamped(project, "use-case", "two", "--actor", "ACT-tester")
+    stamped(
+        project, "journey", "trip", "--actor", "ACT-tester", "--step", "UC-001", "--step", "UC-002"
+    )
+    project.commit("UC-001, UC-002 and JRN-001")
+    project.rename(f"{USE_CASES}/UC-002-two.md", f"{USE_CASES}/reports/UC-002-two.md")
+    project.commit(
+        "UC-002 deleted, and JRN-001",
+        {
+            f"{USE_CASES}/reports/UC-002-two.md": None,
+            f"{JOURNEYS}/JRN-001-trip.md": None,
+        },
+    )
+    assert not list((project.root / USE_CASES).rglob("UC-002-*.md"))
+    project.checkout("topic", create=True)
+    assert stamped(project, "use-case", "three", "--actor", "ACT-tester") == "UC-003"
+    steps = ("--step", "UC-001", "--step", "UC-003")
+    assert stamped(project, "journey", "again", "--actor", "ACT-tester", *steps) == "JRN-002"
+
+
+def test_a_number_a_file_s_name_carries_is_held_whatever_the_file_holds(
+    project: AdopterRepo,
+) -> None:
+    """A file with no front matter, one whose front matter does not parse, one naming no
+    id: the stamp cannot read the id each holds, so it counts the number each name
+    carries — in the working tree and on the default branch — and the check reports
+    each file (`test_software_analysis_check.py`)."""
+    stamped(project, "actor", "tester")
+    stamped(project, "use-case", "one", "--actor", "ACT-tester")
+    project.commit("UC-001", {f"{USE_CASES}/UC-004-on-main.md": "# No front matter\n"})
+    project.checkout("topic", create=True)
+    project.write(
+        {
+            f"{USE_CASES}/UC-005-bare.md": "# No front matter\n",
+            f"{USE_CASES}/area/UC-006-broken.md": "---\nid: [unclosed\n---\n",
+            f"{USE_CASES}/UC-0007-no-id.md": "---\ntitle: No id\n---\n",
+        }
+    )
+    assert stamped(project, "use-case", "two", "--actor", "ACT-tester") == "UC-008"
+    project.write({f"{USE_CASES}/UC-0007-no-id.md": None, f"{USE_CASES}/UC-008-two.md": None})
+    assert stamped(project, "use-case", "two", "--actor", "ACT-tester") == "UC-007"
+
+
 def test_a_number_spelt_with_other_zeros_counts_as_held(project: AdopterRepo) -> None:
     """The stamp reads `UC-0007` as the number 7, as the check's duplicate count does, so
     it never gives a number a file already claims, whatever its spelling — and the ids

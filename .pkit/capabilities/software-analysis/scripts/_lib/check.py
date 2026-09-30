@@ -5,8 +5,11 @@ What is checked, each against the record's words:
 - **Shape** (points 1 and 2). Every file in one of the places holds artefacts of
   that place's kind: the glossary and the actors are collection files, one
   entry per artefact keyed by its id; a use case and a journey are a document
-  each. A file without front matter, a collection file that is not one, or a
-  use-case or journey file holding entries, is an error.
+  each. A file without front matter, one whose front matter does not parse, a
+  collection file that is not one, or a use-case or journey file holding
+  entries, is an error: what it holds cannot be read, its ids included, and
+  an id is never used again (point 3) — the stamp then counts the number the
+  file's name carries.
 - **Missing required parts** (points 1 and 3). Each artefact's own fields
   against its kind's companion schema — its id, its title, its status, its
   actor, its steps, its needs, its definition — and an entry's id against its
@@ -18,6 +21,9 @@ What is checked, each against the record's words:
   The heading is read from the file discovery names.
 - **Duplicate ids** (point 3). No two artefacts in the analysis share an id,
   a number spelt with other zeros included — as the stamp counts it held.
+- **An id in a name alone** (point 3). A use case or journey whose file's name
+  carries its number (`UC-007-<slug>.md`) and whose front matter gives no id:
+  the stamp counts the number its name carries, so the front matter says it.
 - **What a use case or journey names** (points 1 and 3): its actor, and a
   journey's steps, are an actor and use cases of the analysis; and one in
   force names none withdrawn. The stamp refuses the same (`Analysis.unfit`),
@@ -67,9 +73,9 @@ read the tree alone.
 check-numbers`' (`_lib/numbers.py`): it reads the default branch, so it answers
 about a change rather than the tree, and is not a validator (ADR-058 point 7).
 The friction block — its shape, dead anchors, cycles, friction itself — is the
-core's (`pkit validate`'s `friction` member and `pkit friction check`); so is a
-front matter that does not parse, which this check counts and leaves to it. An
-unanchored artefact is the core's measure, never an error.
+core's (`pkit validate`'s `friction` member and `pkit friction check`), which
+also reports a front matter that does not parse, as this check does for a file
+in its places. An unanchored artefact is the core's measure, never an error.
 """
 
 from __future__ import annotations
@@ -85,11 +91,13 @@ from _lib import backbone, evidence, markdown, schemas
 from _lib.findings import ERROR, REPORT, WARNING, Finding, Outcome, at
 from _lib.model import (
     ACTOR,
+    COLLECTIONS,
     CONTAINER,
     ID_SHAPE,
     JOURNEY,
     KINDS,
     NOUN,
+    NUMBERED,
     REVALIDATED_AT,
     REVALIDATIONS,
     UNANCHORED_BECAUSE,
@@ -97,6 +105,7 @@ from _lib.model import (
     Analysis,
     Artefact,
     Unreadable,
+    id_in_name,
     identity,
     with_article,
 )
@@ -137,9 +146,11 @@ def check(root: Path) -> Outcome:
     records = _records(root, analysis.location)
     outcome.summary.append(_counts(analysis, len(records)))
     outcome.findings += [Finding(ERROR, s.path, s.why) for s in analysis.strays]
+    outcome.findings += _unreadable(analysis)
     outcome.findings += _own_fields(analysis)
     outcome.findings += _headings(root, analysis)
     outcome.findings += _duplicates(analysis)
+    outcome.findings += _named_alone(analysis)
     outcome.findings += _references(analysis)
     outcome.findings += _actor_anchors(analysis)
     outcome.findings += _journey_anchors(analysis)
@@ -156,14 +167,33 @@ def check(root: Path) -> Outcome:
 
 def _counts(analysis: Analysis, records: int) -> str:
     kinds = ", ".join(f"{len(analysis.of_kind(k))} {NOUN[k]}(s)" for k in KINDS)
-    line = f"analysis at {analysis.location}: {kinds}; {records} revalidation record(s)."
-    if analysis.unreadable:
-        line += f" {len(analysis.unreadable)} file(s) whose front matter does not parse, left to "
-        line += "`pkit validate`'s friction member."
-    return line
+    return f"analysis at {analysis.location}: {kinds}; {records} revalidation record(s)."
 
 
 # --- shape and required parts --------------------------------------------------------------
+
+
+def _unreadable(analysis: Analysis) -> list[Finding]:
+    """A file in one of the places whose front matter does not parse: nothing it holds
+    can be read, its ids included (DEC-001 point 3)."""
+    found: list[Finding] = []
+    for path, reason in sorted(analysis.unreadable.items()):
+        kind = analysis.files.get(path)
+        holds = f"the {NOUN[kind]}s it holds" if kind in COLLECTIONS else "what it holds"
+        named = id_in_name(path) if kind in NUMBERED else None
+        counted = (
+            f"; the stamp counts {named}, the number its name carries, as held" if named else ""
+        )
+        why = f" ({reason})" if reason else ""
+        found.append(
+            Finding(
+                ERROR,
+                path,
+                f"its front matter does not parse{why}: {holds} cannot be read, ids included, "
+                f"and an id is never used again (DEC-001 point 3){counted} — fix the front matter",
+            )
+        )
+    return found
 
 
 def _own_fields(analysis: Analysis) -> list[Finding]:
@@ -248,6 +278,26 @@ def _duplicates(analysis: Analysis) -> list[Finding]:
                     f"the analysis share an id, and an id is never used again (DEC-001 point 3)",
                 )
             )
+    return found
+
+
+def _named_alone(analysis: Analysis) -> list[Finding]:
+    """A use case or journey whose file's name carries its number and whose front matter
+    gives no id: the stamp counts the number the name carries, so the front matter
+    says the same (DEC-001 point 3)."""
+    found: list[Finding] = []
+    for artefact in analysis.artefacts:
+        named = id_in_name(artefact.path)
+        if artefact.entry or artefact.kind not in NUMBERED or artefact.id or named is None:
+            continue
+        found.append(
+            Finding(
+                ERROR,
+                artefact.location,
+                f"its name carries {named}, its front matter no id: the stamp counts {named} "
+                f"as held, and an id is never used again — write `id: {named}` (DEC-001 point 3)",
+            )
+        )
     return found
 
 

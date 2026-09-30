@@ -7,7 +7,7 @@ backbone through its commands:
 - **where the analysis is** — `pkit friction artefacts --json`, the one
   discovery (ADR-057 point 2), at the working tree or, with `--at <commit>`, at
   another state: what the default branch holds, and what it held where this
-  branch left it. The script never walks a place or lists a commit itself;
+  branch left it. The script never walks a place, in any state, itself;
 - **recording the analysis location** on first use — `pkit docs
   record-location`, the backbone's one writer of a capability's recorded
   locations (COR-049 point 5), with `--yes`: the stamp runs it when it places
@@ -23,7 +23,11 @@ backbone through its commands:
   the analysis.
 
 Git answers which commit a name resolves to, the merge-base of two, who is
-working here — the default author of a revalidation record — and, for the
+working here — the default author of a revalidation record — for the stamp,
+every path a history ever added under the places the backbone names, so a
+number whose file is gone from the default branch is still counted held
+(`added_paths`: one `git log`, since the backbone's reading is of one state,
+not of a history); and, for the
 proposal, a file's text at a commit, whether a path anchor's files held a piece
 of code at a commit, which commits touched them, which files anywhere in the
 tree held a piece of code, which of an anchor's files were renamed and where
@@ -41,7 +45,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from pathlib import Path
 from typing import Any
 
@@ -209,6 +213,29 @@ def commit_of(root: Path, name: str) -> str | None:
 def merge_base(root: Path, one: str, other: str) -> str | None:
     """The merge-base of two commits, or `None` when they share no history."""
     return _git(root, "merge-base", one, other)
+
+
+def added_paths(root: Path, commit: str, folders: Iterable[str]) -> set[str]:
+    """Every path under `folders` that a commit reachable from `commit` added — a
+    rename read as a removal and an addition, so each name a file ever had is
+    there — through one `git log`; empty when there are no folders, or git cannot
+    answer. The folders are the places the backbone's reading names, taken as
+    written."""
+    pathspecs = [f":(literal){folder}" for folder in sorted(set(folders))]
+    if not pathspecs or not commit or commit.startswith("-"):
+        return set()
+    listed = _git(
+        root,
+        "log",
+        commit,
+        "--no-renames",
+        "--diff-filter=A",
+        "--format=",
+        "--name-only",
+        "--",
+        *pathspecs,
+    )
+    return {line for line in (listed or "").splitlines() if line}
 
 
 def user_name(root: Path) -> str | None:

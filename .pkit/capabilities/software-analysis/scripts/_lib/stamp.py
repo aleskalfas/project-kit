@@ -6,7 +6,10 @@ the capability's places put it under the analysis location:
 - a **use case** or a **journey** is a new file, `UC-NNN-<slug>.md` or
   `JRN-NNN-<slug>.md`, numbered with the next free number — one past the
   highest the working tree and the default branch hold, withdrawn ones
-  included, since a number is never used again. Numbers two branches take in
+  included, and past every number the default branch's history ever gave a
+  file, deleted since or not, since a number is never used again. A file's
+  number is read from its front matter and from its name, so a file whose id
+  cannot be read still holds its number. Numbers two branches take in
   parallel are `pkit analysis check-numbers`' to report (point 3);
 - an **actor** or a **term** is a new entry, `ACT-<slug>` or `TERM-<slug>`, of
   its collection file — added to its front matter, and its section to the
@@ -21,7 +24,12 @@ is stamped by `_lib/revalidation.py`.
 Before the first artefact is placed it records the analysis location through
 the backbone (COR-049 point 5). Where the analysis is, and what it holds, is
 read through the backbone's discovery — the working tree's and the default
-branch's — never by walking the places.
+branch's tip — never by walking the places. The default branch's history is
+one `git log` of the paths ever added under the use-case and journey places
+the discovery names (`backbone.added_paths`), each number read from the file's
+name, as the stamp names every file: one computation, where reading the
+discovery at each of the history's commits would be one per commit. A file
+never named after its number, and deleted since, is the one it cannot count.
 """
 
 from __future__ import annotations
@@ -51,6 +59,7 @@ from _lib.model import (
     USE_CASE,
     Analysis,
     Unreadable,
+    id_in_name,
     identity,
     with_article,
 )
@@ -126,8 +135,7 @@ def stamp(
     _check_references(analysis, request)
 
     notes: list[str] = []
-    on_base = _base_analysis(root, base, notes)
-    new_id = _new_id(kind, request.slug, [analysis, *([on_base] if on_base else [])], base)
+    new_id = _new_id(kind, request.slug, _held(root, analysis, base, notes), base)
 
     if kind in COLLECTIONS:
         target = root / place
@@ -214,29 +222,36 @@ def _in_force(analysis: Analysis, artefact_id: str, kind: str) -> None:
 # --- the id ----------------------------------------------------------------------------------
 
 
-def _base_analysis(root: Path, base: str, notes: list[str]) -> Analysis | None:
-    """The analysis on the default branch's tip, or `None`, with a note saying why."""
+def _held(root: Path, analysis: Analysis, base: str, notes: list[str]) -> set[str]:
+    """Every id held, as `identity` spells it: in the working tree, and on the default
+    branch — at its tip, and every number its history ever gave a file, whose file
+    may be gone since (DEC-001 point 3). A file's number is read from its name too,
+    whatever it holds (`Analysis.held`). Without the default branch, the working
+    tree's alone, with a note saying why."""
+    held = analysis.held()
     tip = backbone.commit_of(root, base)
     if tip is None:
         notes.append(
             f"{base} names no commit here, so ids were taken from the working tree alone; "
             f"`pkit analysis check-numbers` compares them once it resolves"
         )
-        return None
+        return held
     try:
-        return backbone.read_analysis(root, at=tip)
+        on_base = backbone.read_analysis(root, at=tip)
     except Unreadable as exc:
         notes.append(f"{base} could not be read ({exc}); ids were taken from the working tree")
-        return None
+        return held
+    folders = {a.places[k] for a in (analysis, on_base) for k in NUMBERED if k in a.places}
+    in_history = {id_in_name(path) for path in backbone.added_paths(root, tip, folders)}
+    return held | on_base.held() | {i for i in in_history if i is not None}
 
 
-def _new_id(kind: str, slug: str, analyses: Sequence[Analysis], base: str) -> str:
+def _new_id(kind: str, slug: str, held: set[str], base: str) -> str:
     """The next free number for a use case or journey; `<PREFIX>-<slug>` for the rest,
     refused when the working tree or the default branch holds it already. Ids are
     compared by what they stand for (`identity`), as the check compares them: a
     number spelt `UC-0007` is held as `UC-007` is."""
     pattern = schemas.id_pattern(kind)
-    held = {identity(a.id) for analysis in analyses for a in analysis.artefacts if a.id}
     if kind in NUMBERED:
         numbers = [int(i.split("-", 1)[1]) for i in held if pattern.match(i)]
         return identity(f"{PREFIX[kind]}-{max(numbers, default=0) + 1}")
