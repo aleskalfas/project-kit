@@ -1,0 +1,13 @@
+component: living-docs
+kind: patch
+custom:
+  category: Added
+body: >
+  `pkit living-docs fill-doc-check` gives no answer when `pkit friction check
+  --all --json` carries a `schema_version` other than 1, so the documentation
+  check reports itself unresolved rather than read a document it does not
+  understand, and the `living-docs` agent refuses an `explain`, `debt` or
+  `check --all` document of another version, naming the command and the
+  version, and proposes nothing from it. A document without the key comes from
+  a backbone that predates it and reads as version 1, so an older backbone
+  still works.

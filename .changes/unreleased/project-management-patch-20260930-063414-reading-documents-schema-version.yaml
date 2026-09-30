@@ -1,0 +1,10 @@
+component: project-management
+kind: patch
+custom:
+  category: Added
+body: >
+  `open-pr --doc-impact-from-friction` leaves the `## Doc impact` section as it
+  is, and says why, when `pkit friction check --json` carries a
+  `schema_version` other than 1. A document without the key comes from a
+  backbone that predates it and reads as version 1, so an older backbone still
+  works.

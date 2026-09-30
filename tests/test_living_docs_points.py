@@ -9,7 +9,8 @@ inert `fallback`) — and contributes to the work-tracking role's
 Three layers:
 
 - the pieces — the package declaration, the two companion schemas, reading the
-  readers point's document, the obligations a friction report gives rise to;
+  readers point's document, the obligations a friction report gives rise to, and
+  the report versions read (one without `schema_version` as version 1);
 - reader resolution through the real backbone, in an adopter repository: a
   page's reader resolves against the point or fails naming the page and the
   readers the point holds; an out-of-step contributor leaves the whole point
@@ -325,6 +326,36 @@ def test_a_page_whose_friction_cannot_be_judged_is_no_answer() -> None:
 
 def test_a_dormant_check_owes_nothing() -> None:
     assert doc_check_lib.obligations({"dormant": True, "artefacts": []}, PAGES) == []
+
+
+def _check_answering(document: dict[str, Any]) -> Any:
+    """A runner answering `pkit friction check --all --json` with `document`."""
+
+    def run(argv: list[str], **_kw: Any) -> subprocess.CompletedProcess[str]:
+        assert argv == ["pkit", "friction", "check", "--all", "--json"]
+        return subprocess.CompletedProcess(argv, 0, json.dumps(document), "")
+
+    return run
+
+
+@pytest.mark.parametrize("version", [2, None, "1"])
+def test_a_check_of_another_version_is_no_answer(version: Any) -> None:
+    """A version this capability does not read is no answer — the point fails closed —
+    never read as the one it knows."""
+    run = _check_answering({**REPORT, "schema_version": version})
+    with pytest.raises(doc_check_lib.NoAnswer) as refused:
+        doc_check_lib.read_friction(".", run)
+    assert str(refused.value) == (
+        f"`pkit friction check --all --json` answered schema_version {version!r}; "
+        f"this capability reads 1"
+    )
+
+
+def test_a_check_without_a_version_reads_as_the_first() -> None:
+    """A backbone from before the key answers version 1."""
+    assert doc_check_lib.read_friction(".", _check_answering(REPORT)) == REPORT
+    versioned = {**REPORT, "schema_version": 1}
+    assert doc_check_lib.read_friction(".", _check_answering(versioned)) == versioned
 
 
 # --- reader resolution through the backbone ------------------------------------------------

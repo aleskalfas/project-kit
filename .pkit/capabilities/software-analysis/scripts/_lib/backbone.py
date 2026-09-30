@@ -179,14 +179,27 @@ def _text(value: Any) -> str | None:
     return value if isinstance(value, str) and value else None
 
 
+#: The version of `pkit friction explain --json` this reading understands. A document
+#: without `schema_version` comes from a backbone that predates the key: version 1.
+EXPLAIN_VERSION = 1
+
+
 def explain(root: Path, artefact: str, run: Runner = subprocess.run) -> Mapping[str, Any]:
     """One artefact's friction, explained — `pkit friction explain <artefact> --json`
     (COR-050 point 13): its state, body and revalidation point, its anchors with the
     files each path anchor stands on, and the commits behind each finding with the
-    paths behind it. Raises Unreadable when it is refused or cannot be read."""
+    paths behind it. Raises Unreadable when it is refused, cannot be read, or
+    answers a version this reading does not understand."""
     if not artefact or artefact.startswith("-"):
         raise Unreadable(f"{artefact!r} names no artefact")
-    return _document(root, ["pkit", "friction", "explain", artefact, "--json"], run)
+    document = _document(root, ["pkit", "friction", "explain", artefact, "--json"], run)
+    version = document.get("schema_version", EXPLAIN_VERSION)
+    if version != EXPLAIN_VERSION:
+        raise Unreadable(
+            f"`pkit friction explain` answered schema_version {version!r}; "
+            f"this capability reads {EXPLAIN_VERSION}"
+        )
+    return document
 
 
 def files_holding(
