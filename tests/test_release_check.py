@@ -4,6 +4,7 @@ detection + the escape hatches."""
 from __future__ import annotations
 
 import subprocess
+from datetime import date
 from pathlib import Path
 
 import pytest
@@ -475,6 +476,239 @@ def test_docs_only_diff_is_not_a_release(tmp_path: Path) -> None:
     result = release.check_changesets(source_kit, "main")
     assert not result.release_exempt
     assert result.ok  # not surface at all
+
+
+# --- A release is recognised by what it writes (#1161) -----------------------
+
+_SELF_HOST_MANIFEST = (
+    "schema_version: 1\n"
+    "backbone_version: {version}\n"
+    "components:\n"
+    "  - kind: adapter\n"
+    "    name: claude-code\n"
+    "    manifest: .pkit/adapters/claude-code/project/manifest.yaml\n"
+)
+
+
+def _package(kind: str, name: str, version: str, requires: str, *, comment: str = "") -> str:
+    return (
+        f"schema_version: 1\ncomponent:\n  kind: {kind}\n  name: {name}\n  version: {version}\n"
+        f'{comment}requires_backbone: "{requires}"\n'
+    )
+
+
+def _write_files(repo: Path, files: dict[str, str]) -> None:
+    for relpath, content in files.items():
+        target = repo / relpath
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(content, encoding="utf-8")
+
+
+def _v1_149_base(source_kit: Path) -> None:
+    """Land on `main` what the v1.149.0 release started from — a self-host
+    manifest, two capabilities beside the adapter, a changelog, and a pending
+    changeset for each component — then restart `feature` from it."""
+    repo = source_kit.parent
+    _git(repo, "checkout", "-q", "main")
+    _write_files(
+        repo,
+        {
+            ".pkit/manifest.yaml": _SELF_HOST_MANIFEST.format(version="1.5.0"),
+            ".pkit/adapters/claude-code/package.yaml": _package(
+                "adapter", "claude-code", "0.5.0", ">=0.1.0,<1.6.0"
+            ),
+            ".pkit/capabilities/project-management/package.yaml": _package(
+                "capability",
+                "project-management",
+                "0.53.0",
+                ">=1.4.0,<2.0.0",
+                comment="# Floor 1.4.0: it runs a backbone command.\n",
+            ),
+            ".pkit/capabilities/software-engineering/package.yaml": _package(
+                "capability", "software-engineering", "0.1.0", ">=1.0.0,<2.0.0"
+            ),
+            "CHANGELOG.md": "# Changelog\n\n## 1.5.0 — 2026-08-01\n\n### Added\n\n- Earlier.\n",
+        },
+    )
+    for component in ("backbone", "claude-code", "project-management", "software-engineering"):
+        _add_changeset(source_kit, component, "minor")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "the pull requests the release consumes")
+    _git(repo, "checkout", "-q", "-B", "feature")
+
+
+def _v1_149_release(source_kit: Path, *, manifest: str | None = None) -> None:
+    """Commit the v1.149.0 release commit's shape by hand: the backbone VERSION,
+    three package.yaml files (the adapter's version and requires_backbone, each
+    capability's version only), the self-host manifest's backbone_version,
+    CHANGELOG.md prepended, the consumed changesets deleted. `manifest`
+    replaces the manifest the release writes."""
+    repo = source_kit.parent
+    _write_files(
+        repo,
+        {
+            ".pkit/VERSION": "1.6.0\n",
+            ".pkit/adapters/claude-code/package.yaml": _package(
+                "adapter", "claude-code", "0.6.0", ">=0.1.0,<1.7.0"
+            ),
+            ".pkit/capabilities/project-management/package.yaml": _package(
+                "capability",
+                "project-management",
+                "0.54.0",
+                ">=1.4.0,<2.0.0",
+                comment="# Floor 1.4.0: it runs a backbone command.\n",
+            ),
+            ".pkit/capabilities/software-engineering/package.yaml": _package(
+                "capability", "software-engineering", "0.2.0", ">=1.0.0,<2.0.0"
+            ),
+            ".pkit/manifest.yaml": manifest or _SELF_HOST_MANIFEST.format(version="1.6.0"),
+            "CHANGELOG.md": "# Changelog\n\n## 1.6.0 — 2026-08-24\n\n### Added\n\n- A release.\n\n"
+            "## 1.5.0 — 2026-08-01\n\n### Added\n\n- Earlier.\n",
+        },
+    )
+    for cs in changesets.unreleased_dir(repo).glob("*.yaml"):
+        cs.unlink()
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "chore(release): v1.6.0")
+
+
+def test_a_release_shaped_like_v1_149_0_passes_on_its_content(tmp_path: Path) -> None:
+    """The self-host manifest's backbone_version is a release write: the diff
+    passes the surface check it trips, with no label and no branch name."""
+    source_kit = _make_repo(tmp_path)
+    _v1_149_base(source_kit)
+    _v1_149_release(source_kit)
+
+    result = release.check_changesets(source_kit, "main")
+
+    assert release.is_release_diff(source_kit, "main")
+    assert result.missing == [
+        "backbone",
+        "claude-code",
+        "project-management",
+        "software-engineering",
+    ]
+    assert result.release_exempt
+    assert result.ok
+
+
+def test_release_check_passes_a_release_with_no_escape_hatch(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source_kit = _make_repo(tmp_path)
+    _v1_149_base(source_kit)
+    _v1_149_release(source_kit)
+    monkeypatch.chdir(source_kit.parent)
+    monkeypatch.delenv("PKIT_CHANGESET_SKIP", raising=False)
+
+    result = CliRunner().invoke(main, ["release", "check", "--base", "main"])
+
+    assert result.exit_code == 0, result.output
+    assert "release PR — diff is only what `pkit release apply` writes" in result.stdout
+    assert "escape hatch" not in result.stdout
+
+
+def test_a_manifest_edit_beside_backbone_version_is_not_the_release(tmp_path: Path) -> None:
+    """The release rewrites the manifest's backbone_version line only; a registry
+    entry riding along is a real edit, so the guard runs normally."""
+    source_kit = _make_repo(tmp_path)
+    _v1_149_base(source_kit)
+    _v1_149_release(
+        source_kit,
+        manifest=_SELF_HOST_MANIFEST.format(version="1.6.0")
+        + "  - kind: capability\n    name: extra\n    manifest: extra/manifest.yaml\n",
+    )
+
+    result = release.check_changesets(source_kit, "main")
+
+    assert not release.is_release_diff(source_kit, "main")
+    assert not result.release_exempt
+    assert not result.ok
+
+
+def test_a_requires_backbone_range_the_release_never_writes_is_not_the_release(
+    tmp_path: Path,
+) -> None:
+    """The guard admits a changed `requires_backbone` line only in the shapes the
+    broaden and the floor raise rewrite; a range opened to `*` riding along is a
+    real edit, so the guard runs normally."""
+    source_kit = _make_repo(tmp_path)
+    _v1_149_base(source_kit)
+    _v1_149_release(source_kit)
+    _commit_change(
+        source_kit,
+        ".pkit/capabilities/software-engineering/package.yaml",
+        _package("capability", "software-engineering", "0.2.0", "*"),
+    )
+
+    result = release.check_changesets(source_kit, "main")
+
+    assert not release.is_release_diff(source_kit, "main")
+    assert not result.release_exempt
+    assert not result.ok
+
+
+def test_a_diff_that_only_consumes_changesets_is_not_a_release(tmp_path: Path) -> None:
+    source_kit = _make_repo(tmp_path)
+    _v1_149_base(source_kit)
+    for cs in changesets.unreleased_dir(source_kit.parent).glob("*.yaml"):
+        cs.unlink()
+    _git(source_kit.parent, "add", "-A")
+    _git(source_kit.parent, "commit", "-q", "-m", "drop the changesets")
+
+    assert not release.is_release_diff(source_kit, "main")
+
+
+@pytest.mark.parametrize(
+    ("pending", "floor", "heading"),
+    [
+        # A backbone release: the declared floor rises to the backbone it ships.
+        ((("backbone", "minor", None), ("houseware", "minor", "release")), "1.6.0", "## 1.6.0"),
+        # A component release: the floor rises to an already-shipped backbone.
+        ((("houseware", "patch", "1.5.0"),), "1.5.0", "## 2026-09-30"),
+    ],
+)
+def test_what_release_apply_writes_is_a_release_diff(
+    tmp_path: Path,
+    pending: tuple[tuple[str, str, str | None], ...],
+    floor: str,
+    heading: str,
+) -> None:
+    """The tie between the release step and the guard: the real `apply` — the
+    versions, the broaden, a declared floor and the changelog line stating it
+    (#1135), the self-host manifest, the consumed changesets — committed, is a
+    diff the guard recognises as the release."""
+    source_kit = _make_repo(tmp_path)
+    repo = source_kit.parent
+    _git(repo, "checkout", "-q", "main")
+    _write_files(
+        repo,
+        {
+            ".pkit/manifest.yaml": _SELF_HOST_MANIFEST.format(version="1.5.0"),
+            ".pkit/capabilities/houseware/package.yaml": _package(
+                "capability", "houseware", "0.3.0", ">=1.0.0,<1.5.0"
+            ),
+        },
+    )
+    for component, kind, value in pending:
+        if value is None:
+            _add_changeset(source_kit, component, kind)
+        else:
+            _add_floor_changeset(source_kit, component, value, kind=kind)
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "the pull requests the release consumes")
+    _git(repo, "checkout", "-q", "-B", "feature")
+
+    release.apply_release(source_kit, release.compute_release(source_kit), today=date(2026, 9, 30))
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "chore(release)")
+
+    houseware = (source_kit / "capabilities" / "houseware" / "package.yaml").read_text()
+    assert f'requires_backbone: ">={floor},' in houseware
+    changelog = (repo / "CHANGELOG.md").read_text(encoding="utf-8")
+    assert heading in changelog
+    assert f"Requires backbone >={floor}." in changelog
+    assert release.is_release_diff(source_kit, "main")
 
 
 # --- The root the guard reads (#877): the working directory, not the checkout

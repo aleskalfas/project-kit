@@ -14,8 +14,9 @@ pkit:
       record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, ADR-019, ADR-039, ADR-055, "project-management:DEC-053"]
       artefact: [.pkit/decisions/README.md]
     revalidated:
-      at: 2026-09-30T14:27:03Z
-      outcome: updated
+      at: 2026-09-30T18:10:04Z
+      outcome: unchanged
+      unchanged-because: on this branch checks.yml's changeset guard step stops raising the skip-changeset hatch for a release/* head, since the guard now recognises a release pull request by its content; the guide's CI paragraphs name the sync, the check aggregator and the friction-report job, never the guard's hatches, so they hold
 ---
 
 # Contributing to project-kit

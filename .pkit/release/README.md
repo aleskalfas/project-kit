@@ -13,7 +13,7 @@ pkit:
         - .github/workflows/release-tag.yml
       record: [COR-010, COR-041, PRJ-002, PRJ-004, ADR-040]
     revalidated:
-      at: 2026-09-30T05:35:06Z
+      at: 2026-09-30T17:34:54Z
       outcome: updated
 ---
 
@@ -300,6 +300,8 @@ PR** a human merges — it is *not* auto-run on every merge.
 | `pkit release check-shareable <component>` | no | Pre-sharing lint: is a capability ready to be consumed externally-sourced (COR-041)? (below). |
 
 `apply` in order: writes each tier's version (`.pkit/VERSION` for the backbone,
+and with it the self-host `.pkit/manifest.yaml`'s `backbone_version:` line,
+[PRJ-007](../decisions/project/PRJ-007-release-maintains-self-host-manifest.md);
 the `version:` line in a component's `package.yaml`); **broadens**
 `requires_backbone` (see below); **raises the declared floors** (below);
 prepends a `CHANGELOG.md` entry from the notes, stating each raised floor; and
@@ -386,9 +388,9 @@ capability's author owns
   with the broaden, under which no raised range excludes the shipped backbone.)
 - The rewrite touches the one `>=X.Y.Z` in place, like the broaden: the upper
   bound and comments survive, and the release PR's `package.yaml` diff stays
-  inside the release footprint the changeset guard exempts. `pkit release plan
-  --json` carries each raise (`requires_backbone_floor` on the component's
-  release: the floors `from` and `to`, whether it is `raised`, the `declared`
+  inside what the changeset guard recognises as the release's writes.
+  `pkit release plan --json` carries each raise (`requires_backbone_floor` on
+  the component's release: the floors `from` and `to`, whether it is `raised`, the `declared`
   backbone and whether the declaration that set it `names_release` — `false`
   for an explicit version — the shipped `backbone` and whether it moves, the
   plan `lines`, and the `changelog` sentence, null when the range does not
@@ -605,9 +607,9 @@ What is left is a floor on a `none` changeset for a component the PR leaves
 alone — which the lint also refuses, whatever the diff, since a `none`
 changeset may not carry a floor (check 3 below); what the guard adds is the
 pull request that declared it. **No escape
-hatch waives this check**: the `skip-changeset` label, the `release/*` belt and
-the release-PR exemption below all waive the surface check only, and a release
-diff only deletes changesets, so it declares no floor.
+hatch waives this check**: the `skip-changeset` label and the release-PR
+exemption below both waive the surface check only, and a release diff only
+deletes changesets, so it declares no floor.
 
 **Escape hatches for the surface check** (so trivia / docs PRs aren't forced
 into ceremony):
@@ -618,30 +620,31 @@ into ceremony):
    `PKIT_CHANGESET_SKIP=1`; passes the surface check unconditionally.
 
 **Release-PR exemption (automatic, no label).** A release PR *is*
-`pkit release apply`'s output — it bumps `.pkit/VERSION` + each moving
-`package.yaml`, prepends `CHANGELOG.md`, and **deletes** the consumed
-`.changes/unreleased/*` changesets. That diff would trip the guard (VERSION +
+`pkit release apply`'s output — it bumps `.pkit/VERSION` and each moving
+`package.yaml`, rewrites `requires_backbone` lines (the broaden and any declared
+floor), moves the self-host `.pkit/manifest.yaml`'s `backbone_version` on a
+backbone release, prepends `CHANGELOG.md`, and **deletes** the consumed
+`.changes/unreleased/*` changesets. That diff would trip the guard (VERSION and
 `package.yaml` are surface) while the changesets it would need are exactly the
-ones it just consumed. The guard recognises this by **diff shape** — if the
-change set is *only* that footprint (VERSION modified, `CHANGELOG.md`
-added/modified, each `package.yaml` touching only its `version:` /
-`requires_backbone:` lines, and `.changes/unreleased/*` files deleted, with
-**nothing else**), it is the release itself, not a new surface change, and
-passes the surface check with no `skip-changeset` label. The signal is by diff
-shape rather than branch name so it is self-contained (works locally and in CI,
-on any branch, in any adopter's repo) and a branch name does not produce it; it
-is strict — a single stray file outside the footprint (e.g. a `src/` edit
-riding along) makes the diff no longer release-shaped, so the guard runs
-normally and the exemption can never smuggle real surface through.
-
-**The `release/*` belt (CI, by branch name).** `.github/workflows/checks.yml`
-raises the escape hatch for a `release/*` head, so there the surface check is
-waived by the branch name alone — which anyone can choose; review of the
-release PR is what stands behind it. The belt is load-bearing in this repo,
-not just belt-and-braces: project-kit's release also rewrites the self-host
-`.pkit/manifest.yaml`'s `backbone_version`, which is outside the footprint
-above. The guard step still runs on every PR, `release/*` included, because
-the floor tie is never waived.
+ones it just consumed. The guard recognises a release diff **by its content**,
+against one list of what a release writes (`release_writes` in
+`project_kit/release.py`), made of the files and line patterns the release step
+writes through — each file, the status the write leaves, and, for a file
+rewritten in place, the only lines it changes, through the patterns the
+writers rewrite them by (a `package.yaml`'s `version:` line and a
+`requires_backbone:` range the broaden widens or a declared floor raises, the
+manifest's `backbone_version:`). A diff that is *only* those writes, and more
+than the consumed changesets, is the release itself, not a new surface change,
+and passes the surface check with no `skip-changeset` label. The signal is the
+content rather than the branch name, so it is self-contained (works locally
+and in CI, on any branch, in any adopter's repo) and a branch named `release/*`
+does not produce it; CI raises no hatch for one. It is strict — a single stray
+file or line outside the list (a `src/` edit riding along, a manifest line
+beside `backbone_version`, a `requires_backbone` range the release never
+writes, such as `"*"`) makes the diff no longer the release, so the guard
+runs normally and the exemption can never smuggle real surface through. A write
+the release step gains joins the list in the same change; otherwise the guard
+fails the next release PR that makes it.
 
 **Limits (read this).** Surface is ultimately a **human judgment** (PRJ-002
 D2); the guard is a **path heuristic** and cannot be exact:

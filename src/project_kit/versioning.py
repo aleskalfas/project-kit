@@ -91,6 +91,15 @@ _REQUIRES_BACKBONE_FLOOR_RE = re.compile(
     rf'(?m){_REQUIRES_BACKBONE_KEY}(>=(\d+\.\d+\.\d+)(?:,<\d+\.\d+\.\d+)?)"'
 )
 
+# The `requires_backbone:` lines the release rewrites, as the two rewrites locate
+# them: a range whose upper bound the broaden widens, a range whose floor the
+# release raises. The changeset guard admits a changed `requires_backbone` line in
+# a release's package.yaml by these and no other (`release.release_writes`).
+REQUIRES_BACKBONE_RELEASE_LINES: tuple[re.Pattern[str], ...] = (
+    _REQUIRES_BACKBONE_RE,
+    _REQUIRES_BACKBONE_FLOOR_RE,
+)
+
 
 def _apply_segment(major: int, minor: int, patch: int, segment: Segment) -> tuple[int, int, int]:
     """Apply a semver `segment` bump to a `(major, minor, patch)` trio.
