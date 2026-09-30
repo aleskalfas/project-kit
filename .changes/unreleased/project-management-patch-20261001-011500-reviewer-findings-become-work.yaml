@@ -8,12 +8,15 @@ body: >
   `create-issue` scopes a follow-up a reviewer produced: it gets a Milestone
   only when it blocks an acceptance criterion of that Milestone's work or is
   a correctness defect in a check that already enforces something, and
-  otherwise is filed without
-  one, or on the rolling maintenance Milestone, and waits. `batch-plan`
-  treats two Tasks whose implementation notes name overlapping source files
-  as one module: the later names the earlier in its `## Dependencies`
-  section and is dispatched once the earlier has merged, while Tasks in
-  different modules run in parallel. `transition-state` runs `review-pr` once every check on the
-  PR's head commit has passed, and the project-manager agent dispatches a
-  request for verdicts to that step. The capability README names the rules
-  and where each is stated.
+  otherwise is filed without one, or on the rolling maintenance Milestone,
+  and waits. `batch-plan` treats two Tasks whose implementation notes name
+  overlapping source files as one module: the later names the earlier in its
+  `## Dependencies` section and is dispatched once the earlier has merged,
+  while Tasks in different modules run in parallel. `transition-state` gains
+  a review step: it runs `review-pr` once every check on the PR's head
+  commit has passed (or when the PR has no checks), hands a PR with a
+  failing check back to the builder, and sends only the findings the
+  reviewer marks blocking into a fix round, each advisory being answered in
+  the PR body or filed as a follow-up. The project-manager agent and the pm
+  skill's routing table send a request for verdicts to that step. The
+  capability README points at the procedure that states each rule.

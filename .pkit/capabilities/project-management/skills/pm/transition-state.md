@@ -40,7 +40,9 @@ pkit project-management move-issue <N> --to <todo|backlog|in-progress|review|don
 gh pr checks <PR> --watch
 pkit project-management review-pr <N>
 ```
-`review-pr` runs once every check on the PR's head commit has passed; `gh pr checks --watch` waits for them, and as a read it is open to the project-manager. The reviewers judge that head, and the merge gate counts no verdict older than the PR's latest commit, so reviewing a head whose CI then fails spends a round of verdicts on a commit the fix replaces. (`<N>` is the issue, `<PR>` its pull request.)
+`review-pr` runs once every check on the PR's head commit has passed; `gh pr checks --watch` waits for them, and as a read it is open to the project-manager. The reviewers judge that head, and the merge gate counts no verdict older than the PR's latest commit, so reviewing a head whose CI then fails spends a round of verdicts on a commit the fix replaces. When the PR has no checks configured (`gh pr checks` reports none and exits non-zero), run the review. When a check fails, hand the PR back to the builder and do not run the review. (`<N>` is the issue, `<PR>` its pull request.)
+
+When the verdicts come back, a fix round carries the findings the reviewer marks blocking; each advisory is answered in the PR body or filed as a follow-up, scoped by [create-issue](create-issue.md)'s intent recognition.
 
 **Close (won't-do):**
 ```

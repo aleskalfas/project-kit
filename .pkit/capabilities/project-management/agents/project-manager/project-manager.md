@@ -74,7 +74,7 @@ Parse the user's request into one of the core operations the pm composite skill 
 - **Create an issue** → invoke the `create-issue` sub-procedure.
 - **Validate a body** → invoke the `validate-body` sub-procedure.
 - **Transition state** → invoke the `transition-state` sub-procedure.
-- **Request reviewer verdicts on a PR** → the `transition-state` sub-procedure's review step, which runs `review-pr` only once CI is green on the head the reviewers will judge.
+- **Request reviewer verdicts on a PR** → the `transition-state` sub-procedure's review step.
 - **Batch-plan from fuzzy intent** → invoke the `batch-plan` sub-procedure. Triggered when the user provides intent + reference material (a scratchpad, handoff doc, or related issue) and the slicing decision is part of what they want from you. Your storyboard, `storyboard.md`, walks the scripted scenarios.
 
 Some requests compose multiple operations (e.g., "file the issue and start work on it" = create-issue → transition-state to Backlog → transition-state to In Progress). Walk them in order; abort the chain on any hard-reject from one operation.
