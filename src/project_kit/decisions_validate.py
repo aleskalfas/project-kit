@@ -37,14 +37,19 @@ place to enforce overlay setup — `pkit new decision adr` already does, and
 an adopter may legitimately have no ADRs). Collision detection over the
 spaces that *do* resolve is unaffected.
 
-**Revision narration is reported, never failed** (`revision_narration`). A
-record states what is true and is refined in place; git history is its
+**Revision narration is a warning, never an error** (`revision_narration`).
+A record states what is true and is refined in place; git history is its
 change log (`.pkit/decisions/README.md`, "Refining an accepted record").
 Every record that is not superseded is read for the shapes that narrate a
 revision instead: an amendment heading, an amendment marker, a revision
 stamped with an issue number or a date, and change-log phrasing about what
-the record once said. Each is a report naming the file and line. The two
-permitted markers — a superseded-by line and a forward refinement pointer
+the record once said. Each is a warning naming the file and line. It warns
+for the reason ADR-058 gives reference drift (point 6, "Why drift warns"):
+the shapes are read from prose, and a gate that fails on a heuristic reading
+of prose fails for the wrong reasons. It is not a `report`, which ADR-058
+point 2 keeps for what an owning record says is reported rather than judged —
+narration is judged, since it breaks the README's rule. The two permitted
+markers — a superseded-by line and a forward refinement pointer
 (`(refinement per <record>)`) — match none of the shapes. Fenced code and
 inline code are quoted material and are not read. A superseded record is
 preserved as it stood, so it is not read either. Nor is a record that arrives
@@ -283,14 +288,14 @@ def discover_decision_records(target_root: Path) -> list[DecisionRecord]:
 def revision_narration(target_root: Path) -> tuple[DecisionIssue, ...]:
     """Every place a record the project refines narrates its own revision.
 
-    One report per line, at `<path>:<line>`, naming the shape found and quoting
+    One finding per line, at `<path>:<line>`, naming the shape found and quoting
     it (see the module docstring for the shapes and what is not read — a
-    superseded record, and one that arrives as a synced copy). Reports, never
-    errors: the shapes are read from prose, so a finding asks a person to look
-    rather than blocking a change.
+    superseded record, and one that arrives as a synced copy). Warnings, never
+    errors (ADR-058 point 6): the shapes are read from prose, so a finding asks
+    a person to look rather than blocking a change.
     """
     ownership = lifecycle_ownership.load_ownership(target_root)
-    reports: list[DecisionIssue] = []
+    found: list[DecisionIssue] = []
     for record in discover_decision_records(target_root):
         rel = _rel(record.path, target_root)
         if ownership is not None and ownership.is_synced_copy(target_root, rel):
@@ -303,7 +308,7 @@ def revision_narration(target_root: Path) -> tuple[DecisionIssue, ...]:
         status = _FRONTMATTER_STATUS_RE.search(frontmatter or "")
         if status is not None and status.group(1) == "superseded":
             continue
-        reports.extend(
+        found.extend(
             DecisionIssue(
                 location=f"{rel}:{line}",
                 message=(
@@ -313,7 +318,7 @@ def revision_narration(target_root: Path) -> tuple[DecisionIssue, ...]:
             )
             for line, shape, excerpt in find_revision_narration(text)
         )
-    return tuple(reports)
+    return tuple(found)
 
 
 def find_revision_narration(text: str) -> list[tuple[int, str, str]]:
@@ -368,7 +373,7 @@ def _excerpt(line: str, start: int) -> str:
 def outcome(target_root: Path) -> Outcome:
     """The `decisions` member of `pkit validate`: every record's front matter
     (`validate.decision_frontmatter_issues`) and the id spaces (`validate_decision_ids`),
-    which are errors, then revision narration (`revision_narration`), which is reported."""
+    which are errors, then revision narration (`revision_narration`), which is a warning."""
     from project_kit.validate import decision_frontmatter_issues
 
     front_matter = decision_frontmatter_issues(target_root)
@@ -378,15 +383,15 @@ def outcome(target_root: Path) -> Outcome:
         *(Finding(issue.location, issue.diagnosis) for issue in front_matter),
         *(Finding(issue.location, issue.message) for issue in report.issues),
     )
-    reports = tuple(
-        Finding(issue.location, issue.message, severity=Severity.REPORT) for issue in narration
+    warnings = tuple(
+        Finding(issue.location, issue.message, severity=Severity.WARNING) for issue in narration
     )
     rules = f" and {report.rules_checked} rule(s)" if report.rules_checked else ""
     summary = (
         f"{report.records_checked} decision record(s){rules} checked; "
-        f"{len(errors)} error(s), {len(reports)} report(s).",
+        f"{len(errors)} error(s), {len(warnings)} warning(s).",
     )
-    return Outcome(summary, (*errors, *reports))
+    return Outcome(summary, (*errors, *warnings))
 
 
 def print_report(report: DecisionValidationReport) -> None:
@@ -420,14 +425,14 @@ def print_report(report: DecisionValidationReport) -> None:
 
 
 def print_narration(narration: tuple[DecisionIssue, ...]) -> None:
-    """Render the revision-narration reports, after the id report; nothing when there are none."""
+    """Render the revision-narration warnings, after the id report; nothing when there are none."""
     if not narration:
         return
     click.echo(
         "  "
         + cli_render.style(
             "strong",
-            f"{len(narration)} report(s) of revision narration, which do not fail the "
+            f"{len(narration)} warning(s) of revision narration, which do not fail the "
             'check (.pkit/decisions/README.md, "Refining an accepted record"):',
         )
     )

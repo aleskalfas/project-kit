@@ -1,5 +1,5 @@
 """Tests for `pkit decisions validate`: the decision-id collision check (Feature #162)
-and the revision-narration report (#862)."""
+and the revision-narration warning (#862)."""
 
 from __future__ import annotations
 
@@ -211,7 +211,7 @@ def test_cli_duplicate_exits_nonzero(project: Path, monkeypatch: pytest.MonkeyPa
 #
 # A record states what is true and is refined in place; git history is its
 # change log (`.pkit/decisions/README.md`, "Refining an accepted record").
-# Narration is reported — never an error.
+# Narration is a warning — never an error (ADR-058 point 6).
 
 _CLEAN_BODY = """\
 ## Context
@@ -383,7 +383,7 @@ def test_narration_is_not_an_id_issue(project: Path) -> None:
     assert decisions_validate.validate_decision_ids(project).is_clean
 
 
-def test_the_validate_member_reports_narration_without_failing(project: Path) -> None:
+def test_the_validate_member_warns_of_narration_without_failing(project: Path) -> None:
     core = project / ".pkit" / "decisions" / "core"
     body = "## Decision\n\n> **Amendment (#20) — the stance splits.**\n"
     _write_record(core / "COR-001-a.md", "COR-001", body, status="accepted")
@@ -392,12 +392,12 @@ def test_the_validate_member_reports_narration_without_failing(project: Path) ->
 
     assert outcome.errors == ()
     assert [(f.location, f.severity) for f in outcome.findings] == [
-        (".pkit/decisions/core/COR-001-a.md:11", Severity.REPORT)
+        (".pkit/decisions/core/COR-001-a.md:11", Severity.WARNING)
     ]
-    assert "0 error(s), 1 report(s)." in outcome.summary[0]
+    assert "0 error(s), 1 warning(s)." in outcome.summary[0]
 
 
-def test_cli_reports_narration_and_exits_zero(
+def test_cli_warns_of_narration_and_exits_zero(
     project: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     import subprocess
@@ -409,7 +409,7 @@ def test_cli_reports_narration_and_exits_zero(
     result = CliRunner().invoke(main, ["decisions", "validate"])
     assert result.exit_code == 0, result.output
     assert "No id collisions found" in result.output
-    assert "1 report(s) of revision narration" in result.output
+    assert "1 warning(s) of revision narration" in result.output
     assert ".pkit/decisions/core/COR-001-a.md:11" in result.output
     assert "revision stamp" in result.output
 

@@ -17,9 +17,9 @@ pkit:
         - .pkit/adapters/claude-code/merge-settings.sh
       record: [COR-001, COR-002, COR-017, PRJ-001, PRJ-004, ADR-049]
     revalidated:
-      at: 2026-09-30T21:15:55Z
+      at: 2026-09-30T22:51:05Z
       outcome: unchanged
-      unchanged-because: decisions validate now also reports revision narration in a record, but only as a report that never fails the command; the page names it for what gates on day one, decision-id uniqueness, which is unchanged
+      unchanged-because: decisions validate also warns of revision narration in a record, a warning that never fails the command; the page names the command for what gates on day one, decision-id uniqueness, which is unchanged
 ---
 
 # project-kit
