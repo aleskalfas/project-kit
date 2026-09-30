@@ -1,0 +1,15 @@
+component: living-docs
+kind: patch
+custom:
+  category: Changed
+  requires_backbone: release
+body: >
+  The `living-docs` agent reads each commit behind a changed anchor limited to
+  that commit's own `paths` in `pkit friction explain --json` — what the check
+  read as the anchor's change, the page's own file never among them — instead of
+  re-matching the anchor, and never takes the anchor's `files` for it, which are
+  the revalidation point's and HEAD's view and miss a file that came and went
+  between them. It reads a dead path anchor's commits as where the anchor's
+  files went — their removal or rename away — to see what the anchor should
+  point at now. Both keys come with the backbone this release ships: upgrade
+  the capability together with the backbone.

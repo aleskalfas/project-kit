@@ -27,7 +27,14 @@ never the working tree, as the check does; neither writes anything.
   find_artefact`): its location — `path`, or `path#id` for a collection
   entry — or an id; here it is looked up at HEAD. An artefact under an
   excluded path is `excluded`, with the `friction.exclude` entry that leaves
-  it out, and shows only what the check reports of its declarations.
+  it out, and shows only what the check reports of its declarations. Its
+  document also carries what a capability's reader would otherwise compute
+  again (ADR-057 point 2): each path anchor's files at the revalidation point
+  and at HEAD, matched as the check decides a dead anchor, `friction.exclude`
+  applied, and the files it leaves out; each commit's paths behind its
+  finding, what the check read as the change (`fr.CommitBehind`); where a
+  dead path anchor's files went; and the artefact's body as discovery reads
+  it — for a collection entry, the section headed by its id.
 """
 
 from __future__ import annotations
@@ -343,7 +350,7 @@ class ExplainedFinding:
     """
 
     finding: fr.RepositoryFinding
-    commits: tuple[fr.Commit, ...]  # oldest first
+    commits: tuple[fr.CommitBehind, ...]  # oldest first, each with the paths behind it
     clears: str
     answers: tuple[Answer, ...]
 
@@ -361,12 +368,20 @@ class ExplainedFinding:
 
 @dataclass(frozen=True)
 class ExplainedAnchor:
-    """One anchor the artefact declares at HEAD, and what the check found about it."""
+    """One anchor the artefact declares at HEAD, and what the check found about it.
+
+    `files`, for a path anchor, are the files it stands on at the revalidation
+    point and at HEAD, as the check decides a dead anchor, and those its glob
+    covers at HEAD that `friction.exclude` leaves out (`fr.AnchorFiles`);
+    `None` for another kind.
+    """
 
     anchor: Anchor
     state: str  # a finding kind, `current`, or `unreachable` when the artefact is not judged
-    changes: int  # commits behind its staleness
+    # Commits behind its staleness only: a dead anchor's commits say where its files went.
+    changes: int
     over_broad: bool
+    files: fr.AnchorFiles | None = None
 
     def as_json(self) -> dict[str, Any]:
         return {
@@ -375,6 +390,7 @@ class ExplainedAnchor:
             "state": self.state,
             "changes": self.changes,
             "over_broad": self.over_broad,
+            "files": None if self.files is None else self.files.as_json(),
         }
 
 
@@ -429,7 +445,9 @@ def run_explain(
         unjudged = EXCLUDED
     elif check.report is not None and check.report.state is fr.ArtefactState.UNREACHABLE:
         unjudged = fr.ArtefactState.UNREACHABLE.value
-    anchors = tuple(_anchor_state(anchor, findings, unjudged) for anchor in declared)
+    anchors = tuple(
+        _anchor_state(anchor, findings, unjudged, check.files.get(anchor)) for anchor in declared
+    )
     return Explanation(
         head=check.head,
         shallow=check.shallow,
@@ -549,7 +567,10 @@ _ANCHOR_STATES = (_Kind.DEAD_ANCHOR, _Kind.UNRESOLVED_KIND, _Kind.STALE, _Kind.D
 
 
 def _anchor_state(
-    anchor: Anchor, findings: Sequence[ExplainedFinding], unjudged: str | None
+    anchor: Anchor,
+    findings: Sequence[ExplainedFinding],
+    unjudged: str | None,
+    files: fr.AnchorFiles | None,
 ) -> ExplainedAnchor:
     """An anchor's state: its first finding's kind, else `unjudged` — why the artefact
     was not judged — else `current`."""
@@ -559,7 +580,7 @@ def _anchor_state(
     if state is None:
         state = unjudged or "current"
     changes = sum(len(f.commits) for f in about if f.finding.kind is _Kind.STALE)
-    return ExplainedAnchor(anchor, state, changes, _Kind.OVER_BROAD in kinds)
+    return ExplainedAnchor(anchor, state, changes, _Kind.OVER_BROAD in kinds, files)
 
 
 def render_explain_json(explanation: Explanation) -> str:
@@ -574,6 +595,7 @@ def render_explain_json(explanation: Explanation) -> str:
         "history": {"shallow": explanation.shallow},
         "artefact": explanation.artefact.id,
         "location": explanation.artefact.location,
+        "body": explanation.artefact.body,
         "state": explanation.state,
         "excluded_by": _setting_json(explanation.artefact.excluded_by),
         "revalidation_point": (
@@ -611,6 +633,7 @@ _STATE_GLOSS = {
 _COMMITS_LABEL = {
     _Kind.STALE: "changed in, oldest first",
     _Kind.DEFERRED: "postpones, oldest first",
+    _Kind.DEAD_ANCHOR: "where its files went, oldest first",
 }
 
 _ANCHOR_GLOSS = {
@@ -729,9 +752,9 @@ def _finding_lines(explanation: Explanation, now: datetime) -> list[str]:
             label = _COMMITS_LABEL.get(finding.kind, "behind it")
             if finding.kind is _Kind.STALE and finding.anchor is None:
                 label = "moved in"
-            author_width = max(len(c.author) for c in explained.commits)
+            author_width = max(len(c.commit.author) for c in explained.commits)
             lines.append(f"    {label}:")
-            lines.extend(f"      {_commit_row(c, author_width)}" for c in explained.commits)
+            lines.extend(f"      {_commit_row(c.commit, author_width)}" for c in explained.commits)
         if explained.answers:
             lines.append(f"    clears it — {explained.clears}:")
             width = max(len(a.answer) for a in explained.answers)

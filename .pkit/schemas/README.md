@@ -19,8 +19,9 @@ pkit:
         - src/project_kit/working_tree.py
       record: [COR-018, COR-019, COR-020, COR-023, COR-029, COR-048, COR-050, COR-051, COR-052, COR-053, ADR-056, ADR-057]
     revalidated:
-      at: 2026-09-30T00:15:32Z
-      outcome: updated
+      at: 2026-09-30T01:39:00Z
+      outcome: unchanged
+      unchanged-because: discovery now takes a collection entry's section by a heading that opens with its whole id, which is what the body section headed by its id already says here; the places, the one listing and the one exclude decision hold
 ---
 
 # Schemas
