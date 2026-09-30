@@ -658,9 +658,11 @@ def test_a_stamp_refuses_what_it_cannot_ground(
 
 def test_the_capability_s_scripts_carry_no_discovery_of_their_own() -> None:
     """software-analysis reads the places, the files each matches and their
-    artefacts through `pkit friction artefacts` — at head and at a commit — and
+    artefacts through `pkit friction artefacts` — at head and at a commit — what an
+    anchor matches through `pkit friction explain` — the resolver's reading — and
     records its location through `pkit docs record-location`; no script of it matches,
-    lists or reads a place declaration, or writes a recorded location, itself."""
+    lists or reads a place declaration, matches an anchor, or writes a recorded
+    location, itself."""
     scripts = sorted((CAPABILITY / "scripts").rglob("*.py"))
     assert scripts
     found = {
@@ -669,6 +671,22 @@ def test_the_capability_s_scripts_carry_no_discovery_of_their_own() -> None:
         if (tokens := _discovery_tokens(path.read_text(encoding="utf-8")))
     }
     assert found == {}
+
+
+def test_the_guard_recognises_an_anchor_matched_by_git() -> None:
+    """The guard covers the resolver's reading: the anchor matching it carried before
+    #1157 — an anchor read as git's glob pathspec, in a search or a log — trips it,
+    while prose about the same thing does not."""
+    ported = (
+        "def holds(root, commit, anchor, text):\n"
+        "    return run(['git', 'grep', '-q', '-e', text, commit, '--', f':(glob){anchor}'])\n"
+        "def touched(root, since, anchor):\n"
+        "    return run(['git', 'log', f'{since}..HEAD', '--', ':(top,glob)' + anchor])\n"
+    )
+    assert _discovery_tokens(ported) == ["a pattern matched as git's glob pathspec"]
+    assert _discovery_tokens('"""An anchor read as a `:(glob)` pathspec, in prose."""\n') == []
+    literal = "run(['git', 'grep', '-l', '-e', text, commit, '--', f':(literal){path}'])\n"
+    assert _discovery_tokens(literal) == []
 
 
 def test_the_records_are_read_from_the_held_list_never_by_listing_their_folder() -> None:
