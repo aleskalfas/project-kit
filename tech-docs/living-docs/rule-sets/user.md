@@ -10,9 +10,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001"]}
         revalidated:
-          at: 2026-09-30T03:25:07Z
+          at: 2026-09-30T07:06:12Z
           outcome: unchanged
-          unchanged-because: living-docs DEC-001 point 1 now says a place or a folder of held documents another component declares is that component's, a review log say; the user space's pages, and the paths readers take through them, are unchanged
+          unchanged-because: living-docs DEC-001 point 8 now names the accepted reason for a page with no anchors as the core friction block's unanchored-because; the paths the user space's readers take through its pages are unchanged
 ---
 
 # The user space's definition

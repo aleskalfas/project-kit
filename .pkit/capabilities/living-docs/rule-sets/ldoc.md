@@ -9,9 +9,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001"]}
         revalidated:
-          at: 2026-09-30T03:25:03Z
+          at: 2026-09-30T07:06:21Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 1 now words another component's claim as a place or a folder of held documents it declares, a review log say; a page's anchors still ground every statement it makes, and a held document is no page
+          unchanged-because: DEC-001 point 8 now names where a page's accepted reason for having no anchors is written, the core friction block's unanchored-because; that onboarding may accept a page with none was already point 8's, and a page's anchors still ground every statement it makes
   RS-LDOC-002:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
@@ -19,9 +19,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001"]}
         revalidated:
-          at: 2026-09-30T03:25:04Z
+          at: 2026-09-30T07:06:24Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 1 now says a folder of held documents another component declares belongs to it; stating each fact once and linking to it is about pages, which such a document never is
+          unchanged-because: DEC-001 point 8 now names a page's accepted reason for having no anchors as the core friction block's unanchored-because; stating each fact once and linking to it is untouched by where that reason is written
   RS-LDOC-003:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
@@ -29,9 +29,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001"]}
         revalidated:
-          at: 2026-09-30T03:25:05Z
+          at: 2026-09-30T07:06:25Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 1 now names a component's review log among what it claims; a page still names the one reader it is for, and a held document carries no reader
+          unchanged-because: DEC-001 point 8 now names a page's accepted reason for having no anchors as the core friction block's unanchored-because; a page still names the one reader it is for, anchored or not
   RS-LDOC-004:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
@@ -39,9 +39,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001"]}
         revalidated:
-          at: 2026-09-30T03:25:05Z
+          at: 2026-09-30T07:06:26Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 1 now words held folders as another component's; pages of a kind still follow one format and name their kind, and a held document has none
+          unchanged-because: DEC-001 point 8 now names a page's accepted reason for having no anchors as the core friction block's unanchored-because, inside the container; pages of a kind still follow one format and name their kind in their own fields
   RS-LDOC-005:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
@@ -49,9 +49,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001"]}
         revalidated:
-          at: 2026-09-30T03:25:06Z
+          at: 2026-09-30T07:06:27Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 1 now counts a component's held documents as claimed wherever they sit; an index-like file of a space is still a signpost, whatever a folder beside it holds
+          unchanged-because: DEC-001 point 8 now names a page's accepted reason for having no anchors as the core friction block's unanchored-because; an index-like file is still a signpost to what a folder holds, whatever reason it gives for its anchors
   RS-LDOC-006:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
@@ -59,9 +59,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001"]}
         revalidated:
-          at: 2026-09-30T03:25:07Z
+          at: 2026-09-30T07:06:28Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 1 now words a held folder as one more way a component claims documents; creating nothing ahead of the need for it holds for pages, and a held folder is another component's
+          unchanged-because: DEC-001 point 8 now names a page's accepted reason for having no anchors as the core friction block's unanchored-because, written when a page has nothing to anchor to; creating nothing ahead of the need for it holds
 ---
 
 # LDOC — the shared documentation method

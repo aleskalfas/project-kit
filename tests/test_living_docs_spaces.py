@@ -458,6 +458,55 @@ def test_a_document_carrying_neither_field_is_unclassified_for_onboarding(
     assert "1 unclassified document(s) for onboarding" in document["summary"][3]
 
 
+def test_a_page_left_unanchored_counts_unless_its_block_gives_an_accepted_reason(
+    project: AdopterRepo,
+) -> None:
+    """DEC-001 point 8: onboarding leaves no page unanchored without an accepted reason —
+    the reason the page's friction block gives for having no anchors, the core's
+    `unanchored-because` (COR-050 point 1), read as the backbone reads it. Counted
+    apart, never failed; an anchored page is in neither count."""
+    reason = "A signpost: nothing it lists is its own."
+    project.write(
+        {
+            "docs/sponsor.md": (
+                "---\nreader: user\nkind: signpost\npkit:\n  friction:\n"
+                f"    unanchored-because: '{reason}'\n---\n\n# Sponsor\n"
+            ),
+            "docs/anchored.md": (
+                "---\nreader: user\nkind: signpost\npkit:\n  friction:\n"
+                "    anchors: {path: [README.md]}\n---\n\n# Anchored\n"
+            ),
+        }
+    )
+    document = run(project)
+    assert errors(document) == []
+    (line,) = [line for line in document["summary"] if line.startswith("pages unanchored:")]
+    assert line == (
+        "pages unanchored: 3 without an accepted reason, 1 accepted with one "
+        "(`unanchored-because`); onboarding leaves none without (DEC-001 point 8)."
+    )
+
+    human = subprocess.run(
+        [sys.executable, str(project.root / SCRIPT)],
+        cwd=project.root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert human.returncode == 0, human.stderr
+    lines = human.stdout.splitlines()
+    forgotten = lines.index(
+        "page(s) unanchored without an accepted reason, for onboarding to anchor or accept (3):"
+    )
+    assert lines[forgotten + 1 : forgotten + 4] == [
+        "  README.md",
+        "  docs/guide.md",
+        "  tech-docs/README.md",
+    ]
+    accepted = lines.index("page(s) accepted unanchored, each with its reason (1):")
+    assert lines[accepted + 1] == f"  docs/sponsor.md — {reason}"
+
+
 # --- definitions (DEC-001 point 2) -------------------------------------------------------
 
 
