@@ -16,6 +16,10 @@ analysis never rewritten to match broken code:
 - **moved code** is not the stop: a file renamed, or quoted code carried into
   another file, proposes `holds` with the anchor re-pointed, recorded
   `unchanged`;
+- **what an anchor matches is the explanation's**: the files it stands on, the
+  commits behind each finding with their paths — a dead anchor's, where its
+  files went — and the artefact's body, so a quote surviving only under a
+  `friction.exclude` path is gone;
 - **the commands for the person** it emits, word for word and with no consent
   flag: a regression's carries the defect's placeholder, which the writer
   refuses until the person fills it;
@@ -45,8 +49,10 @@ from project_kit import refs
 from project_kit.cli import main
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.analysis_repo import (
+    ACTORS,
     ANALYSIS,
     CAPABILITY,
+    CONFIG,
     JOURNEYS,
     RECORDS,
     REPO,
@@ -69,6 +75,11 @@ OVERLAY = REPO / ".pkit" / "agents" / "project" / "overlay.yaml"
 RUN = "src/run.py"
 RUN_SUITE = f"{USE_CASES}/UC-001-run-suite.md"
 FIRST_RUN = f"{JOURNEYS}/JRN-001-first-run.md"
+
+#: A file under `src/generated`, which `friction.exclude` leaves out of the actor's `src/**`.
+GENERATED = "src/generated/stub.py"
+#: The placeholder the stamp leaves in an actor's section.
+WHO = "<Who this is, when they come to the system, and what they bring with them.>"
 
 
 # --- the rules, on their own ---------------------------------------------------------------
@@ -306,7 +317,10 @@ def test_the_stop_ambiguous_writes_nothing_and_asks_a_person(flagged: AdopterRep
     assert (anchor["kind"], anchor["value"], anchor["shape"]) == ("path", RUN, "gone")
     assert anchor["quoted"] == ["run_suite", "fast"]
     assert anchor["gone"] == ["run_suite"]
-    assert [c["change"] for c in anchor["commits"]] == ["refactor: tidy the runner"]
+    # Each commit with the paths behind it, as the explanation names them.
+    assert [(c["change"], c["paths"]) for c in anchor["commits"]] == [
+        ("refactor: tidy the runner", [RUN])
+    ]
     assert "Was that meant" in document["question"]
     assert "refactor: tidy the runner" in document["question"]
 
@@ -413,8 +427,10 @@ def test_a_deleted_anchor_is_ambiguous_until_intent_is_quoted(flagged: AdopterRe
     assert document["verdict"] == "ambiguous"
     (anchor,) = document["anchors"]
     assert (anchor["state"], anchor["shape"], anchor["moved_to"]) == ("dead-anchor", "gone", [])
-    # The checks name no commit for a dead anchor; the proposal names the one that did it.
-    assert [c["change"] for c in anchor["commits"]] == ["chore: drop the runner"]
+    # A dead anchor's finding says where its files went: the commit that removed them.
+    assert [(c["change"], c["paths"]) for c in anchor["commits"]] == [
+        ("chore: drop the runner", [RUN])
+    ]
     assert "path:src/run.py resolves to nothing any more" in document["question"]
     assert "'chore: drop the runner'" in document["question"]
     intended = _propose(
@@ -482,6 +498,47 @@ def test_a_quote_found_only_in_a_file_of_another_kind_did_not_move(flagged: Adop
     )
     document = _propose(flagged, "UC-001")
     assert (document["verdict"], document["anchors"][0]["shape"]) == ("ambiguous", "gone")
+
+
+@pytest.mark.parametrize("carried", [False, True], ids=["held-at-the-point", "carried-in"])
+def test_a_quote_surviving_only_under_an_excluded_path_is_gone(
+    make_adopter_repo: MakeAdopterRepo,
+    pkit_on_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    carried: bool,
+) -> None:
+    """An anchor stands on no file `friction.exclude` leaves out, so a quote only such a
+    file still holds is gone — whether it held the quote at the revalidation point or
+    the code was carried into it — never kept, and never moved there: the anchor
+    re-pointed would stand on nothing. The actor is an entry of a collection file,
+    read by the section the explanation gives as its body."""
+    repo = installed(make_adopter_repo, monkeypatch)
+    config = "docs:\n  internal: tech-docs\nfriction:\n  exclude:\n    - src/generated\n"
+    stub = {GENERATED: "from run import run_suite\n"}
+    runner = {CONFIG: config, RUN: "def run_suite(fast=False):\n    print('run')\n"}
+    repo.commit("feat: the runner", runner if carried else {**runner, **stub})
+    seed(repo, filled=False)
+    text = (repo.root / ACTORS).read_text(encoding="utf-8")
+    assert WHO in text
+    repo.write({ACTORS: text.replace(WHO, "The tester starts `run_suite` to check a change.")})
+    repo.commit("docs(analysis): the tester and the suite")
+    change = {RUN: "def execute(fast=False):\n    print('run')\n"}
+    carried_in = {GENERATED: "def run_suite(fast=False):\n    print('run')\n"}
+    repo.commit("refactor: tidy the runner", {**change, **carried_in} if carried else change)
+
+    document = _propose(repo, "ACT-tester")
+    (anchor,) = document["anchors"]
+    assert (anchor["value"], anchor["quoted"], anchor["gone"], anchor["moved_to"]) == (
+        "src/**",
+        ["run_suite"],
+        ["run_suite"],
+        [],
+    )
+    assert (anchor["shape"], document["verdict"], document["rule"]) == (
+        "gone",
+        "ambiguous",
+        "ground-gone",
+    )
 
 
 def test_kept_code_leans_to_holds_and_leaves_the_diff_to_be_read(flagged: AdopterRepo) -> None:
