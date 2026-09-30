@@ -12,7 +12,7 @@ pkit:
         - .pkit/capabilities/software-analysis/agents/**
       record: ["software-analysis:DEC-001", COR-049, COR-050, COR-052, COR-053]
     revalidated:
-      at: 2026-09-30T07:01:19Z
+      at: 2026-09-30T07:13:22Z
       outcome: updated
 ---
 
@@ -167,7 +167,7 @@ The body gives each artefact's outcome with its justification, then the gaps and
 
 - **a file in a place that is not its kind's shape** — a file without front matter, or whose front matter does not parse, a glossary or actors file that is not a collection, a use-case or journey file holding entries. What such a file holds can't be read, its ids included, and an id is never used again, so it is never skipped: the stamp counts the number its name carries;
 - **missing required parts** — an artefact's own fields against its schema, and a collection entry whose key is not its kind's id;
-- **a placeholder left unfilled** — what the stamp leaves for you to write is no part of the analysis until you write it: an own field still holding a placeholder the templates or the skill's commands ever shipped (`<Title>`, an actor's `<what this actor needs …>`, a term's placeholder `definition`), or a body — an actor's or term's section, heading included — still holding one of the templates'. Each is matched against those texts exactly, and the capability keeps every one it ever shipped, so a reworded template never hides an old placeholder, and words of your own in angle brackets — `maps <user id> to a session`, code a body quotes — are never taken for one;
+- **a placeholder left unfilled** — what the stamp leaves for you to write is no part of the analysis until you write it: an own field, or an actor's or term's `unanchored-because` in its friction block, still holding a placeholder the templates or the skill's commands ever shipped (`<Title>`, an actor's `<what this actor needs …>`, a term's placeholder `definition`), or a body — an actor's or term's section, heading included — still holding one of the templates'. Each is matched against those texts exactly, and the capability keeps every one it ever shipped, so a reworded template never hides an old placeholder, and words of your own in angle brackets — `maps <user id> to a session`, code a body quotes — are never taken for one;
 - **a use case or journey whose heading is not its id and title** — `# UC-003 — <title>`, the `title` its front matter gives;
 - **duplicate ids** — two artefacts holding one id;
 - **a use case or journey whose name carries a number its front matter doesn't give** — `UC-007-<slug>.md` with no `id`, or with `id: UC-008`: the stamp counts the number the name carries, so the front matter says the same — write the id, or name the file after it;

@@ -17,10 +17,11 @@ What is checked, each against the record's words:
   ignored.
 - **A placeholder left** (point 1). What the stamp leaves a person to write —
   an actor's need, a term's definition, a use case's goal and steps — is no
-  part of the analysis until written: an own field still holding a
-  placeholder the templates or the skill's commands ever shipped, or a body —
-  a collection entry's section, heading included — still holding one of the
-  templates', is an error. Matched exactly against those texts
+  part of the analysis until written: an own field — or the reason an actor
+  or a term has no anchors, `unanchored-because` in its friction block —
+  still holding a placeholder the templates or the skill's commands ever
+  shipped, or a body — a collection entry's section, heading included —
+  still holding one of the templates', is an error. Matched exactly against those texts
   (`_lib/placeholder.py`), so a capitalised one (`<Title>`) is caught and
   words of the artefact's own in angle brackets — code a body quotes — never
   are.
@@ -113,6 +114,7 @@ from _lib.model import (
     NOUN,
     NUMBERED,
     REVALIDATED_AT,
+    UNANCHORED_BECAUSE,
     USE_CASE,
     Analysis,
     Artefact,
@@ -125,6 +127,10 @@ from _lib.placeholder import IN_TEMPLATES, left_in
 
 #: Where in an artefact its artefact anchors sit.
 ARTEFACT_ANCHORS = f"/{CONTAINER}/friction/anchors/artefact"
+
+#: Where in an artefact the reason it has no anchors sits: the core's key, in its
+#: friction block (COR-050 point 1), which the stamp writes from a person's words.
+REASON_POINTER = f"/{CONTAINER}/friction/{UNANCHORED_BECAUSE}"
 
 #: The outcome whose record stays open until the artefact is revalidated again.
 REGRESSED = "code-regressed"
@@ -234,15 +240,19 @@ def _own_fields(analysis: Analysis) -> list[Finding]:
 
 def _placeholders(root: Path, analysis: Analysis) -> list[Finding]:
     """What a person was left to write and has not (DEC-001 point 1): a placeholder the
-    templates or the skill's commands shipped, still in an artefact's own fields, and
-    one of the templates' still in its body — or its section of a collection file,
-    heading included. Matched exactly (`_lib/placeholder.py`), so words of the
+    templates or the skill's commands shipped, still in an artefact's own fields or its
+    block's reason for having no anchors, and one of the templates' still in its body —
+    or its section of a collection file, heading included. Matched exactly
+    (`_lib/placeholder.py`), so words of the
     artefact's own in angle brackets — `maps <user id> to a session`, code a body
     quotes — are never taken for one."""
     texts: dict[str, str | None] = {}
     found: list[Finding] = []
     for artefact in analysis.artefacts:
-        for pointer, text in _strings(artefact.fields):
+        written = list(_strings(artefact.fields))
+        if artefact.unanchored_because is not None:
+            written.append((REASON_POINTER, artefact.unanchored_because))
+        for pointer, text in written:
             held = left_in(text)
             if held:
                 found.append(

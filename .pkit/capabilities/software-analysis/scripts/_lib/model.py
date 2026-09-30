@@ -132,6 +132,10 @@ UNANCHORED_BECAUSE = "unanchored-because"
 SCHEMA_VERSION = 1
 ANCHORS = "anchors"
 
+#: The key of each artefact's reason for having no anchors in that document,
+#: added within its version: a backbone that predates it gives none.
+REASON = "unanchored_because"
+
 #: The key of the folders of held documents in that document, each declared as a
 #: place is, with the files it holds (COR-050 point 1).
 HELD = "held"
@@ -145,7 +149,9 @@ class Unreadable(Exception):
 class Artefact:
     """One analysis artefact: its kind, its id (`None` for a document that names
     none), where it is — `path`, and `location`, the path or `path#id` of an
-    entry — its own fields and its anchors by kind."""
+    entry — its own fields, its anchors by kind, and the reason its friction
+    block gives for having none (`UNANCHORED_BECAUSE`, whitespace folded, as
+    the backbone reads it; `None` when it gives none)."""
 
     kind: str
     id: str | None
@@ -154,6 +160,7 @@ class Artefact:
     entry: bool
     fields: Mapping[str, Any]
     anchors: Mapping[str, tuple[str, ...]]
+    unanchored_because: str | None = None
 
     def anchored_to(self, anchor_kind: str) -> tuple[str, ...]:
         return self.anchors.get(anchor_kind, ())
@@ -337,6 +344,7 @@ def analysis_of(document: Mapping[str, Any]) -> Analysis:
                 entry=is_entry,
                 fields=fields,
                 anchors=_anchors(entry.get(ANCHORS)),
+                unanchored_because=_text(entry.get(REASON)),
             )
         )
     return Analysis(

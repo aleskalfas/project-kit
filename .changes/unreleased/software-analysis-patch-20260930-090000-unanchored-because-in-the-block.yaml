@@ -12,7 +12,9 @@ body: >
   longer counts it. The actor and term schemas no longer admit the field among
   the entry's own fields, and `pkit analysis validate` drops its warning about
   the reason beside anchors in favour of the core's validation finding
-  (`unanchored-beside-anchors`). The capability is pre-release, so an entry
+  (`unanchored-beside-anchors`); it still fails a placeholder the skill's
+  commands shipped left in the reason, now read from the block through `pkit
+  friction artefacts --json`. The capability is pre-release, so an entry
   written by an earlier stamp is not migrated: move its `unanchored-because`
   into its friction block by hand. The key comes with the backbone this
   release ships: upgrade the capability together with the backbone.

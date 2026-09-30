@@ -430,6 +430,22 @@ def test_unanchored_because_beside_anchors_is_the_core_s_finding(project: Adopte
     )
 
 
+def test_a_placeholder_left_in_the_block_s_reason_fails_the_check(project: AdopterRepo) -> None:
+    """The stamp refuses a placeholder in `--unanchored-because`; one written into the
+    friction block by hand is caught as a placeholder left in an own field is."""
+    stamped(project, "actor", "sponsor", "--unanchored-because", "Nothing embodies it.")
+    fill(project)
+    text = (project.root / ACTORS).read_text(encoding="utf-8")
+    placeholder = "<why nothing embodies it>"
+    project.write({ACTORS: text.replace("Nothing embodies it.", placeholder, 1)})
+    assert front(project, ACTORS)["ACT-sponsor"]["pkit"]["friction"] == {
+        "unanchored-because": placeholder
+    }
+    ((location, message),) = errors(check(project))
+    assert location == f"{ACTORS}#ACT-sponsor:/pkit/friction/unanchored-because"
+    assert f"still holds the placeholder '{placeholder}'" in message
+
+
 def test_the_reason_among_an_entry_s_own_fields_is_refused(project: AdopterRepo) -> None:
     """The reason is the friction block's, not the entry's: written among the entry's
     own fields, the companion schema refuses it as a field it does not know."""
