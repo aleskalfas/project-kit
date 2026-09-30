@@ -27,9 +27,10 @@ never the working tree, as the check does; neither writes anything.
   what a capability's reader would otherwise compute again (ADR-057 point 2):
   each path anchor's files at the revalidation point and at HEAD, matched as
   the check decides a dead anchor, `friction.exclude` applied, and the files
-  it leaves out; the commits behind a dead path anchor; and the artefact's
-  body as discovery reads it — for a collection entry, the section headed by
-  its id.
+  it leaves out; each commit's paths behind its finding, what the check read
+  as the change (`fr.CommitBehind`); the commits behind a dead path anchor;
+  and the artefact's body as discovery reads it — for a collection entry, the
+  section headed by its id.
 """
 
 from __future__ import annotations
@@ -328,7 +329,7 @@ class ExplainedFinding:
     """
 
     finding: fr.RepositoryFinding
-    commits: tuple[fr.Commit, ...]  # oldest first
+    commits: tuple[fr.CommitBehind, ...]  # oldest first, each with the paths behind it
     clears: str
     answers: tuple[Answer, ...]
 
@@ -716,9 +717,9 @@ def _finding_lines(explanation: Explanation, now: datetime) -> list[str]:
             label = _COMMITS_LABEL.get(finding.kind, "behind it")
             if finding.kind is _Kind.STALE and finding.anchor is None:
                 label = "moved in"
-            author_width = max(len(c.author) for c in explained.commits)
+            author_width = max(len(c.commit.author) for c in explained.commits)
             lines.append(f"    {label}:")
-            lines.extend(f"      {_commit_row(c, author_width)}" for c in explained.commits)
+            lines.extend(f"      {_commit_row(c.commit, author_width)}" for c in explained.commits)
         if explained.answers:
             lines.append(f"    clears it — {explained.clears}:")
             width = max(len(a.answer) for a in explained.answers)

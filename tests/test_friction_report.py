@@ -268,7 +268,10 @@ def test_explain_names_each_changed_anchor_with_the_commits_behind_it(timeline: 
     ]
     (stale,) = explanation.findings
     assert stale.finding.origin is not None and stale.finding.origin.sha == first
-    assert [c.sha for c in stale.commits] == [first, second]
+    assert [(c.commit.sha, c.paths) for c in stale.commits] == [
+        (first, ("src/cli/main.py",)),
+        (second, ("src/cli/main.py",)),
+    ]
     assert [(a.answer, a.command) for a in stale.answers] == [
         ("updated", "pkit friction revalidate docs/guide.md --outcome updated"),
         (
@@ -362,8 +365,8 @@ def test_explain_a_deferral_what_it_postpones_and_what_came_after(timeline: Time
 
     explanation = frep.run_explain(timeline.adopter.root, "docs/guide.md")
     stale, postponed = explanation.findings
-    assert (stale.finding.kind.value, [c.sha for c in stale.commits]) == ("stale", [after])
-    assert (postponed.finding.kind.value, [c.sha for c in postponed.commits]) == (
+    assert (stale.finding.kind.value, [c.commit.sha for c in stale.commits]) == ("stale", [after])
+    assert (postponed.finding.kind.value, [c.commit.sha for c in postponed.commits]) == (
         "deferred",
         [before],
     )
@@ -402,7 +405,8 @@ def test_explain_an_artefact_anchor_lists_each_change_of_the_targets_content(
     assert stale.finding.anchor == Anchor("artefact", "engine-notes")
     assert stale.finding.origin is not None and stale.finding.origin.sha == first
     # The middle commit changed only the container: not content, so nothing behind the change.
-    assert [c.sha for c in stale.commits] == [first, third]
+    assert [c.commit.sha for c in stale.commits] == [first, third]
+    assert {c.paths for c in stale.commits} == {("docs/a-engine.md",)}
 
 
 def test_explain_an_artefact_anchor_names_no_merge_that_only_kept_a_sides_content(
@@ -429,7 +433,7 @@ def test_explain_an_artefact_anchor_names_no_merge_that_only_kept_a_sides_conten
     explanation = frep.run_explain(timeline.adopter.root, "overview")
     (stale,) = explanation.findings
     assert stale.finding.origin is not None and stale.finding.origin.sha == side
-    assert [c.sha for c in stale.commits] == [side]
+    assert [c.commit.sha for c in stale.commits] == [side]
 
 
 def test_explain_a_move(timeline: Timeline) -> None:
@@ -438,7 +442,8 @@ def test_explain_a_move(timeline: Timeline) -> None:
 
     explanation = frep.run_explain(timeline.adopter.root, "guide")
     (stale,) = explanation.findings
-    assert (stale.finding.anchor, [c.sha for c in stale.commits]) == (None, [moved])
+    assert (stale.finding.anchor, [c.commit.sha for c in stale.commits]) == (None, [moved])
+    assert [c.paths for c in stale.commits] == [("docs/guide.md", "notes/guide.md")]
     assert stale.clears == "revalidate the artefact: a move cannot be deferred"
     assert [a.answer for a in stale.answers] == ["updated", "unchanged"]
     assert "    moved in:" in frep.render_explain_human(explanation, now=NOW)
@@ -571,6 +576,8 @@ def test_explain_json_document_shape(timeline: Timeline) -> None:
         "origin",
     ]
     assert [c["commit"] for c in finding["commits"]] == [changed]
+    assert sorted(finding["commits"][0]) == ["author", "change", "commit", "date", "paths"]
+    assert finding["commits"][0]["paths"] == ["src/cli/main.py"]
     assert finding["origin"]["commit"] == changed
     assert [a["answer"] for a in finding["answers"]] == ["updated", "unchanged", "deferred"]
 
@@ -619,7 +626,7 @@ def test_explain_lists_each_path_anchors_files_at_the_point_and_at_head(
         ("ADR-404", "dead-anchor", None),
     ]
     by_anchor = {f.finding.anchor: f for f in explanation.findings}
-    assert [c.sha for c in by_anchor[CLI].commits] == [reworked]
+    assert [c.commit.sha for c in by_anchor[CLI].commits] == [reworked]
     # A dead anchor's commits are those that touched a file it stood on: excluded ones never
     # count, and a record that resolves to nothing names no file whose history could be read.
     assert by_anchor[Anchor("path", "src/cli/vendor/**")].commits == ()
@@ -639,6 +646,51 @@ def test_explain_lists_each_path_anchors_files_at_the_point_and_at_head(
         if files is not None
         for state in ("point", "head")
     )
+
+
+def test_a_commits_paths_are_what_the_check_reads_never_the_artefacts_own_file(
+    timeline: Timeline,
+) -> None:
+    """`commits[].paths` is what the change rule reads — the anchor's matched paths the commit
+    touched, less the artefact's own file — while `files` is the two trees' view, own file in."""
+    anchors = {"path": ["docs/**"]}
+    base = timeline.start({"docs/guide.md": guide(anchors=anchors), "docs/notes.txt": "One.\n"})
+    both = timeline.commit(
+        "the guide and its notes",
+        {"docs/guide.md": guide(anchors=anchors, body="Two."), "docs/notes.txt": "Two.\n"},
+    )
+    timeline.commit("the guide alone", {"docs/guide.md": guide(anchors=anchors, body="Three.")})
+
+    explanation = frep.run_explain(timeline.adopter.root, "guide")
+    (stale,) = explanation.findings
+    assert stale.finding.origin is not None and stale.finding.origin.sha == both
+    # The guide's own edits are never its anchor's change: one commit, and not its own file.
+    assert [(c.commit.sha, c.paths) for c in stale.commits] == [(both, ("docs/notes.txt",))]
+    (anchor,) = explanation.anchors
+    assert anchor.files == fr.AnchorFiles(
+        ("docs/guide.md", "docs/notes.txt"), ("docs/guide.md", "docs/notes.txt"), ()
+    )
+    assert explanation.report is not None and explanation.report.revalidation_point is not None
+    assert explanation.report.revalidation_point.sha == base
+
+
+def test_a_file_that_lived_only_between_the_point_and_head_is_in_the_commits_paths(
+    timeline: Timeline,
+) -> None:
+    """Neither tree holds it, so `files` never lists it; the commits that added and removed it
+    changed the anchor, and each names it."""
+    timeline.start({"docs/guide.md": guide()})
+    added = timeline.commit("a scratch module", {"src/cli/scratch.py": "S = 1\n"})
+    removed = timeline.commit("drop the scratch module", {"src/cli/scratch.py": None})
+
+    explanation = frep.run_explain(timeline.adopter.root, "guide")
+    (stale,) = explanation.findings
+    assert [(c.commit.sha, c.paths) for c in stale.commits] == [
+        (added, ("src/cli/scratch.py",)),
+        (removed, ("src/cli/scratch.py",)),
+    ]
+    (anchor,) = explanation.anchors
+    assert anchor.files == fr.AnchorFiles(("src/cli/main.py",), ("src/cli/main.py",), ())
 
 
 def test_a_dead_path_anchor_says_whether_it_matches_no_file_or_only_excluded_ones(
@@ -688,7 +740,7 @@ def test_explain_names_the_commits_behind_a_dead_path_anchor(timeline: Timeline)
     old_anchor = Anchor("path", "src/old/**")
     (dead,) = explanation.findings
     assert (dead.finding.kind.value, dead.finding.anchor) == ("dead-anchor", old_anchor)
-    assert [c.sha for c in dead.commits] == [changed, removed]
+    assert [c.commit.sha for c in dead.commits] == [changed, removed]
     assert [(a.anchor, a.state, a.changes, a.files) for a in explanation.anchors] == [
         (CLI, "current", 0, fr.AnchorFiles(("src/cli/main.py",), ("src/cli/main.py",), ())),
         (

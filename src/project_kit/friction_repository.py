@@ -1033,10 +1033,32 @@ def _uncovered_surface(head: Side, discovery: Discovery) -> tuple[int, tuple[str
 
 
 @dataclass(frozen=True)
+class CommitBehind:
+    """One commit behind a finding, and the paths behind the finding it touched.
+
+    `paths`, sorted — what a reader limits the commit to. A path anchor: the
+    paths it stands on in history that the commit touched, the artefact's own
+    file under any of its names left out (`_Judge.matching_paths` less the
+    walk's own paths) — exactly what the check reads as the anchor's change,
+    which the anchor's `AnchorFiles` are not. A record or artefact anchor: the
+    file it names, under the names the commit touched. A move: the artefact's
+    file under both its names. Either side of a rename counts, as the check
+    counts it.
+    """
+
+    commit: Commit
+    paths: tuple[str, ...]
+
+    def as_json(self) -> dict[str, Any]:
+        return {**self.commit.as_json(), "paths": list(self.paths)}
+
+
+@dataclass(frozen=True)
 class TracedFinding:
     """A finding of the whole-repository check about one artefact, and the commits behind it.
 
-    `commits` are oldest first. Stale on an anchor: every commit outside what
+    `commits` are oldest first, each with the paths behind the finding it
+    touched (`CommitBehind`). Stale on an anchor: every commit outside what
     the points cover that changed the anchor, the finding's origin among them;
     stale by a move: the rename. Deferred: the changes the deferral postpones —
     after the revalidation point, up to the deferral point. A dead `path`
@@ -1047,7 +1069,7 @@ class TracedFinding:
     """
 
     finding: RepositoryFinding
-    commits: tuple[Commit, ...]
+    commits: tuple[CommitBehind, ...]
 
 
 @dataclass(frozen=True)
@@ -1205,9 +1227,51 @@ def _traced(
                 for index in _changes(judge, anchor, reached, points.own_paths)
                 if index in postponed
             )
-        commits = tuple(history.commits[index] for index in sorted(behind, reverse=True))
+        touched = _touched_by(history, _paths_behind(judge, anchor, points.own_paths), behind)
+        commits = tuple(
+            CommitBehind(history.commits[index], tuple(sorted(touched.get(index, ()))))
+            for index in sorted(behind, reverse=True)
+        )
         traced.append(TracedFinding(finding, commits))
     return tuple(traced)
+
+
+def _paths_behind(judge: _Judge, anchor: Anchor | None, own: frozenset[str]) -> frozenset[str]:
+    """Every path whose change a finding on `anchor` reads (`CommitBehind`).
+
+    A path anchor's paths are the check's own (`_Judge.matching_paths`, less
+    `own`); a record or artefact anchor's the names of the file it names; a
+    move's (no anchor) the artefact's own names.
+    """
+    if anchor is None:
+        return own
+    if anchor.kind == "path":
+        return judge.matching_paths(anchor.value) - own
+    if anchor.kind == "record":
+        rel = judge.head.record_path(anchor.value)
+    else:
+        target = judge.head.find(anchor.value)
+        rel = None if target is None else target.path
+    return frozenset() if rel is None else _names(judge.history, rel)
+
+
+def _names(history: History, path: str) -> frozenset[str]:
+    """Every name the file now at `path` had in `history`, renames followed."""
+    names = {path}
+    for version in history.versions(path):
+        names.add(version.path)
+        names.update(source for source in version.sources if source is not None)
+    return frozenset(names)
+
+
+def _touched_by(history: History, paths: frozenset[str], commits: set[int]) -> dict[int, set[str]]:
+    """Of `paths`, those each of `commits` touched, by commit — one pass over their history."""
+    touched: dict[int, set[str]] = {}
+    for rel in paths:
+        for index in history.touched(rel):
+            if index in commits:
+                touched.setdefault(index, set()).add(rel)
+    return touched
 
 
 def _changes(
@@ -1455,6 +1519,7 @@ __all__ = [
     "ArtefactState",
     "BlobReader",
     "Commit",
+    "CommitBehind",
     "History",
     "MergeEntry",
     "RepositoryCheck",
