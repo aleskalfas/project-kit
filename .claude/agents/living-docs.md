@@ -98,6 +98,8 @@ The one write outside the workspace is a reader-review's findings posted as a pu
 | `pkit connections resolve pkit::documentation:readers --json` | the readers: each entry an `id` and a description of who reads and what they need |
 | `pkit connections resolve pkit::work-tracking:doc-check --json` | a code-to-doc mapping, when a work-tracking provider keeps one: the entries whose `source` is `mapping`, each a `code` pattern and the `documents` it obliges |
 
+**You refuse a friction document of a version you do not read.** The `explain`, `debt` and `check --all` documents each carry `schema_version` at the top; you read version `1`. When one carries any other value, stop before reading it: say which command answered which version, that you read `1`, and that the capability and the backbone are out of step — never read it as if it were `1`, and propose nothing from it. A document without the key comes from a backbone that predates it: read it as version `1`.
+
 What validation already judges — places and their assignment, the shape of a page's fields, entry points, definitions, the friction block's shape, dead anchors — you do not judge a second time. When it fails, name the command and its finding instead of re-deriving it.
 
 ## How you work
