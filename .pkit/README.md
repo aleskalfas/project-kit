@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-09-30T01:08:24Z
+      at: 2026-09-30T02:19:00Z
       outcome: unchanged
-      unchanged-because: the CLI README now says the whole-repository check, the debt listing and the explanation leave an artefact under an excluded path out (#1136), inside its friction section; the area map holds
+      unchanged-because: the lifecycle README's run-inside-a-run section now states the live-run guard, the markers and what it does not cover, the CLI README the run cache's read-or-resolve rule and the open from field, and the process README the predicate's deadline; the area map and each area's one-line description hold
 ---
 
 # project-kit
