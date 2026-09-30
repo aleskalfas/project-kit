@@ -1397,10 +1397,16 @@ def _content_of(artefact: Artefact | None) -> tuple[str, dict[str, Any]] | None:
 
 # --- output --------------------------------------------------------------------------
 
+#: The version of the document `render_json` returns. A change a reader could break
+#: against — a key removed, renamed or given another meaning — raises it; a key added
+#: does not. A document without it comes from a backbone that predates it: version 1.
+REPOSITORY_SCHEMA_VERSION = 1
+
 
 def render_json(result: RepositoryCheck) -> str:
     """The stable machine-readable document, in the change check's style (COR-050 Implications)."""
     document = {
+        "schema_version": REPOSITORY_SCHEMA_VERSION,
         "check": "repository",
         "mode": result.mode,
         "dormant": result.dormant,
@@ -1616,6 +1622,7 @@ def _result_line(result: RepositoryCheck) -> str:
 
 __all__ = [
     "OVER_BROAD_SHARE",
+    "REPOSITORY_SCHEMA_VERSION",
     "AcceptedUnanchored",
     "AnchorFiles",
     "ArtefactCheck",

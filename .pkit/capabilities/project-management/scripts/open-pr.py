@@ -32,7 +32,9 @@ Inputs:
     against the base and render the answers the changed pages carry
     (updated, unchanged, deferred, new) as the `## Doc impact` bullets, when
     the section is unwritten: the template's placeholder, empty, or absent.
-    An authored section is never touched. Rendering only (DEC-053 point 2):
+    An authored section is never touched, and a document of a
+    `schema_version` other than 1 is not rendered (one without the key, from
+    a backbone before it, reads as 1). Rendering only (DEC-053 point 2):
     the section meets no documentation obligation; the pages do.
 
 Membership gate per DEC-021 runs at startup.
@@ -538,6 +540,9 @@ def _prefill_doc_impact(body: str, base: str) -> tuple[str, str]:
     document = _friction_check(base)
     if document is None:
         return body, "not pre-filled — `pkit friction check --json` gave no document"
+    unread = doc_impact.unread_version(document)
+    if unread is not None:
+        return body, f"not pre-filled — {unread}"
     still = doc_impact.unanswered(document)
     if still:
         print(

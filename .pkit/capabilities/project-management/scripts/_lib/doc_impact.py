@@ -19,6 +19,10 @@ from typing import Any
 
 HEADING = "## Doc impact"
 
+# The version of `pkit friction check --json` this rendering reads. A document
+# without `schema_version` comes from a backbone that predates the key: version 1.
+SCHEMA_VERSION = 1
+
 # The finding kinds of the change check that carry an answer.
 ANSWER_KINDS = ("answered", "revalidated")
 FRICTION_KIND = "friction"
@@ -41,6 +45,18 @@ def _where(finding: Mapping[str, Any]) -> str:
     if isinstance(anchor, Mapping) and anchor.get("kind"):
         location += f" (anchor `{anchor.get('kind')}:{anchor.get('value')}`)"
     return location
+
+
+def unread_version(document: Mapping[str, Any]) -> str | None:
+    """Why this rendering does not read `document` — a `schema_version` other than
+    the one it reads — or None when it reads it."""
+    version = document.get("schema_version", SCHEMA_VERSION)
+    if version == SCHEMA_VERSION:
+        return None
+    return (
+        f"`pkit friction check --json` answered schema_version {version!r}; "
+        f"this capability reads {SCHEMA_VERSION}"
+    )
 
 
 def answer_lines(document: Mapping[str, Any]) -> list[str]:

@@ -1,0 +1,12 @@
+component: backbone
+kind: patch
+custom:
+  category: Added
+body: >
+  The `--json` documents of `pkit friction check`, `pkit friction check --all`,
+  `pkit friction debt` and `pkit friction explain` carry `schema_version: 1` at
+  their top level, as `pkit friction artefacts --json` already did. Each is
+  raised when a key a reader relies on changes its meaning or goes, never for a
+  key added, so a reader can refuse a version it does not know instead of
+  misreading the document. A document without the key comes from a backbone
+  that predates it and reads as version 1.

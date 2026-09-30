@@ -24,7 +24,9 @@ reads it, so another provider of the documentation role contributes under the
 same enforcement setting — and its id is `friction:<reason>:<page or path>`,
 so no two collide in the point's `additive` merge.
 
-**Fail closed.** A check that gives no document, or a page whose friction lies
+**Fail closed.** A check that gives no document, or one of a `schema_version`
+this reading does not understand (a document without the key comes from a
+backbone that predates it, and reads as version 1), or a page whose friction lies
 beyond a shallow clone's history, is no answer — raised, never an empty list:
 the point is `fail`, and a gate never passes on fewer obligations than it
 should. A repository with no commit owes nothing: there is no HEAD to judge.
@@ -50,6 +52,11 @@ CODE_UNDOCUMENTED = "code-undocumented"
 STALE = "stale"
 UNREACHABLE = "unreachable"
 
+#: The version of `pkit friction check --all --json` this reading understands. A
+#: document without `schema_version` comes from a backbone that predates the key:
+#: version 1.
+CHECK_VERSION = 1
+
 Runner = Callable[..., subprocess.CompletedProcess[str]]
 
 
@@ -74,7 +81,8 @@ def has_commit(root: str, run: Runner = subprocess.run) -> bool:
 
 def read_friction(root: str, run: Runner = subprocess.run) -> Mapping[str, Any]:
     """The whole-repository check's machine-readable document, through `pkit`.
-    Raises NoAnswer when it gives none."""
+    Raises NoAnswer when it gives none, or one of a version this reading does not
+    understand."""
     argv = ["pkit", "friction", "check", "--all", "--json"]
     try:
         proc = run(argv, cwd=root, capture_output=True, text=True, check=False)
@@ -89,6 +97,12 @@ def read_friction(root: str, run: Runner = subprocess.run) -> Mapping[str, Any]:
         raise NoAnswer(
             f"`{' '.join(argv)}` exited {proc.returncode} without its document"
             + (f": {detail[-1]}" if detail else "")
+        )
+    version = document.get("schema_version", CHECK_VERSION)
+    if version != CHECK_VERSION:
+        raise NoAnswer(
+            f"`{' '.join(argv)}` answered schema_version {version!r}; "
+            f"this capability reads {CHECK_VERSION}"
         )
     return document
 

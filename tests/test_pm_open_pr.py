@@ -9,7 +9,7 @@ from __future__ import annotations
 import importlib.util
 import sys
 from pathlib import Path
-from types import SimpleNamespace
+from types import ModuleType, SimpleNamespace
 
 import pytest
 
@@ -472,6 +472,39 @@ def test_no_document_leaves_the_body_as_it_was(op, monkeypatch) -> None:
         "## Doc impact\n\n-\n",
         "not pre-filled — `pkit friction check --json` gave no document",
     )
+
+
+@pytest.mark.parametrize("version", [2, None, "1"])
+def test_a_check_of_another_version_leaves_the_body_as_it_was(
+    op: ModuleType, monkeypatch: pytest.MonkeyPatch, version: object
+) -> None:
+    """A version this capability does not read is not rendered, never read as the one it knows."""
+
+    def check(_base: str) -> dict[str, object]:
+        return {**FRICTION, "schema_version": version}
+
+    monkeypatch.setattr(op, "_friction_check", check)
+    body, note = op._prefill_doc_impact("## Doc impact\n\n-\n", "main")
+    assert (body, note) == (
+        "## Doc impact\n\n-\n",
+        f"not pre-filled — `pkit friction check --json` answered schema_version {version!r}; "
+        "this capability reads 1",
+    )
+
+
+@pytest.mark.parametrize("versioned", [{}, {"schema_version": 1}])
+def test_a_check_without_a_version_reads_as_the_first(
+    op: ModuleType, monkeypatch: pytest.MonkeyPatch, versioned: dict[str, int]
+) -> None:
+    """A backbone from before the key answers version 1: the answers render."""
+
+    def check(_base: str) -> dict[str, object]:
+        return {**FRICTION, **versioned}
+
+    monkeypatch.setattr(op, "_friction_check", check)
+    body, note = op._prefill_doc_impact("## Doc impact\n\n-\n", "main")
+    assert _doc_impact(body) == RENDERED
+    assert note == "pre-filled from `pkit friction check` (2 answer(s))"
 
 
 @pytest.fixture(scope="module")

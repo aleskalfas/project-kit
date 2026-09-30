@@ -210,9 +210,11 @@ def test_debt_json_document_shape(timeline: Timeline) -> None:
         "head",
         "history",
         "report",
+        "schema_version",
         "unanchored",
         "unreachable",
     ]
+    assert doc["schema_version"] == frep.DEBT_SCHEMA_VERSION == 1
     assert (doc["report"], doc["dormant"], doc["history"]) == ("debt", False, {"shallow": False})
     assert doc["counts"] == {"deferred": 1, "stale": 1, "unanchored": 0, "unreachable": 0}
     assert (doc["unreachable"], doc["unanchored"], doc["accepted_unanchored"]) == ([], [], [])
@@ -743,9 +745,11 @@ def test_explain_json_document_shape(timeline: Timeline) -> None:
         "location",
         "report",
         "revalidation_point",
+        "schema_version",
         "state",
         "unanchored_because",
     ]
+    assert doc["schema_version"] == frep.EXPLAIN_SCHEMA_VERSION == 1
     assert (doc["report"], doc["artefact"], doc["location"], doc["state"]) == (
         "explain",
         "guide",
