@@ -25,8 +25,14 @@ What only a person can write the stamp leaves as the template's placeholders —
 an actor's need, a term's definition, a body's goal and steps — which the
 check fails until each is filled (`left_to_fill`); a title, a name or a reason
 given to it still holding a placeholder it refuses.
-Before the first artefact is placed it records the analysis location through
-the backbone (COR-049 point 5). Where the analysis is, and what it holds, is
+Once the first artefact is written it records the analysis location through
+the backbone (COR-049 point 5) — after the write, so a write that fails leaves
+the recorded locations untouched, and a recording that fails puts the file
+back as it was: a refused stamp writes nothing (`write_and_record`). Every file is written
+whole, to a temporary file beside it then moved over it, keeping its mode; a
+collection file keeps every byte but the entry and section it gains, and one
+with CRLF line endings is refused, since its fences would be misread and the
+lines added would mix line endings. Where the analysis is, and what it holds, is
 read through the backbone's discovery — the working tree's and the default
 branch's tip — never by walking the places. The default branch's history is
 one `git log` of the paths ever added under the use-case and journey places
@@ -38,9 +44,13 @@ never named after its number, and deleted since, is the one it cannot count.
 
 from __future__ import annotations
 
+import contextlib
 import functools
 import io
+import os
 import re
+import stat
+import tempfile
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from itertools import pairwise
@@ -159,15 +169,72 @@ def stamp(
             raise Refused(f"{location} exists already")
         text = _document(kind, new_id, request)
 
-    try:
-        recorded = record(root)
-    except Unreadable as exc:
-        raise Refused(f"the analysis location could not be recorded: {exc}") from exc
+    recorded = write_and_record(root, target, location, text, record)
     if recorded:
         notes.insert(0, recorded)
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(text, encoding="utf-8")
     return Stamped(id=new_id, location=location, notes=tuple(notes))
+
+
+def write_and_record(
+    root: Path, target: Path, location: str, text: str, record: Recorder
+) -> str | None:
+    """Write `text` to `target` whole, then record the analysis location (COR-049 point
+    5), returning the line the recording printed. A write that fails is refused before
+    anything is recorded; a recording that fails puts `target`, and any folder made
+    for it, back as they were: a refused stamp leaves nothing written."""
+    before = target.read_bytes() if target.is_file() else None
+    made = [folder for folder in (target.parent, *target.parent.parents) if not folder.exists()]
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        write_whole(target, text.encode("utf-8"))
+    except OSError as exc:
+        _put_back(target, before, made)
+        raise Refused(f"{location} could not be written: {exc}") from exc
+    try:
+        return record(root)
+    except Unreadable as exc:
+        _put_back(target, before, made)
+        raise Refused(
+            f"the analysis location could not be recorded: {exc}; {location} was not written"
+        ) from exc
+
+
+def write_whole(target: Path, data: bytes) -> None:
+    """Write `data` to `target` whole or not at all: to a temporary file beside it, then
+    moved over it, so a failure halfway never leaves it half-written. A file keeps its
+    mode; a new one takes what the umask gives, as any file written here does."""
+    mode = stat.S_IMODE(target.stat().st_mode) if target.exists() else 0o666 & ~_umask()
+    handle, temporary = tempfile.mkstemp(
+        dir=target.parent, prefix=f".{target.name}.", suffix=".tmp"
+    )
+    try:
+        with os.fdopen(handle, "wb") as out:
+            out.write(data)
+            out.flush()
+            os.fsync(out.fileno())
+        os.chmod(temporary, mode)
+        os.replace(temporary, target)
+    except BaseException:
+        with contextlib.suppress(OSError):
+            os.unlink(temporary)
+        raise
+
+
+def _put_back(target: Path, before: bytes | None, made: Sequence[Path]) -> None:
+    """`target` as it was — its bytes, or no file — and the folders made for it gone."""
+    with contextlib.suppress(OSError):
+        if before is not None:
+            write_whole(target, before)
+        elif target.is_file():
+            target.unlink()
+        for folder in made:  # the deepest first
+            folder.rmdir()
+
+
+def _umask() -> int:
+    mask = os.umask(0)
+    os.umask(mask)
+    return mask
 
 
 # --- what the request names ------------------------------------------------------------------
@@ -366,7 +433,16 @@ def _added_entry(target: Path, place: str, kind: str, new_id: str, request: Requ
     if not target.exists():
         return f"---\n{added}---\n\n{preamble}{section}"
 
-    text = target.read_text(encoding="utf-8")
+    try:
+        text = target.read_bytes().decode("utf-8")  # as written: no line ending translated
+    except (OSError, UnicodeDecodeError) as exc:
+        raise Refused(f"{place} could not be read: {exc}") from exc
+    if "\r" in text:
+        raise Refused(
+            f"{place} has CRLF line endings: the stamp reads a front matter's `---` fences "
+            f"as LF lines and adds its entry and section as LF lines, so it would misread "
+            f"the file or mix its line endings — convert the file to LF, then stamp again"
+        )
     span = markdown.front_matter_span(text)
     if span is None:
         raise Refused(f"{place} has no front matter: it is not a collection file")
@@ -384,8 +460,7 @@ def _added_entry(target: Path, place: str, kind: str, new_id: str, request: Requ
     closing = text.find("\n", end)
     section_at = None if closing == -1 else _section_at(text, closing + 1, kind, new_id)
     if section_at is None:
-        updated = text[:entry_at] + added + text[entry_at:]
-        updated = updated.rstrip("\n") + "\n\n" + section
+        updated = _after(text[:entry_at] + added + text[entry_at:], section)
     else:
         updated = (
             text[:entry_at]
@@ -404,6 +479,15 @@ def _added_entry(target: Path, place: str, kind: str, new_id: str, request: Requ
             f"add the entry by hand"
         )
     return updated
+
+
+def _after(text: str, section: str) -> str:
+    """`text` with `section` after it, a blank line between them: every byte of `text`
+    kept — its last line's ending, and its blank lines — and only what separates the
+    two added."""
+    if text.endswith("\n\n"):
+        return text + section
+    return text + ("\n" if text.endswith("\n") else "\n\n") + section
 
 
 def _entry_at(text: str, start: int, end: int, lines: Mapping[str, int], new_id: str) -> int:

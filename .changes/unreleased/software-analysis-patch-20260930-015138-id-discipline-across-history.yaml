@@ -1,0 +1,20 @@
+component: software-analysis
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The analysis' id discipline now holds against every history, not only the
+  working tree (#1132). `pkit analysis new` numbers a use case or journey past
+  every number the default branch's history ever gave a file, so deleting the
+  highest-numbered one frees nothing, and reads a file's number from its name
+  as well as its front matter, so a file whose id cannot be read still holds
+  it. `pkit analysis validate` reports such files — front matter that does not
+  parse, or a name carrying a number the front matter does not give — and
+  fails on a placeholder the stamp left unfilled, in an own field or the
+  body. `pkit analysis check-numbers` knows an artefact by its id, not its
+  path: two branches stamping the same slug at the same path collide, while a
+  move, or a stacked branch's own work landed by a squash, does not. The stamp
+  writes each file whole — to a temporary file beside it, then moved over it —
+  records the analysis location only once the file is written, puts the file
+  back if recording fails, keeps a collection file's bytes outside the entry
+  it adds, and refuses a collection file with CRLF line endings, saying why.

@@ -22,7 +22,10 @@ The check is `test_software_analysis_check.py`'s, the schemas and templates
 from __future__ import annotations
 
 import ast
+import os
 import re
+import stat
+import sys
 from pathlib import Path
 
 import pytest
@@ -223,6 +226,102 @@ def test_an_entry_is_added_where_its_id_sorts(project: AdopterRepo) -> None:
     rest = _ADMIN_ONLY[len(comment) :].replace("# Actors\n\n", f"# Actors\n\n{section}\n")
     assert text == comment + entry + rest
     assert list(front(project, ACTORS)) == ["ACT-able", "ACT-admin"]
+
+
+@pytest.mark.parametrize(
+    ("ending", "between"),
+    [("", "\n\n"), ("\n", "\n"), ("\n\n\n", "")],
+    ids=["none", "one", "three"],
+)
+def test_an_entry_added_last_keeps_the_file_s_ending(
+    project: AdopterRepo, ending: str, between: str
+) -> None:
+    """The section added after the last one keeps every byte of the file before it —
+    no line ending added to its last line, no blank line taken away — and only what
+    separates the two is written."""
+    original = _ADMIN_ONLY.removesuffix("\n") + ending
+    project.write({ACTORS: original})
+    stamped(project, "actor", "tester", "--name", "Test author")
+    text = (project.root / ACTORS).read_text(encoding="utf-8")
+    closing = original.index("---\n", 4)
+    assert text.startswith(original[:closing] + "ACT-tester:\n  name: Test author\n")
+    section = "## ACT-tester — Test author\n\n" + _placeholder_line()
+    assert text.endswith(original[closing:] + between + section)
+
+
+def test_a_collection_file_is_replaced_whole_keeping_its_mode(project: AdopterRepo) -> None:
+    """Written beside itself and moved over, so a failure halfway never leaves it
+    half-written: a new file in its place, with its mode, and nothing left beside it."""
+    project.write({ACTORS: _ADMIN_ONLY})
+    actors = project.root / ACTORS
+    actors.chmod(0o640)
+    inode = actors.stat().st_ino
+    stamped(project, "actor", "tester")
+    assert actors.stat().st_ino != inode
+    assert stat.S_IMODE(actors.stat().st_mode) == 0o640
+    assert sorted(p.name for p in actors.parent.iterdir()) == ["actors.md"]
+
+
+def test_a_collection_file_with_crlf_line_endings_is_refused(project: AdopterRepo) -> None:
+    crlf = _ADMIN_ONLY.replace("\n", "\r\n")
+    project.write({ACTORS: crlf})
+    completed = new(project, "actor", "tester")
+    assert completed.returncode == 1
+    assert completed.stderr.startswith(
+        f"refused: {ACTORS} has CRLF line endings: the stamp reads a front matter's `---` "
+        "fences as LF lines and adds its entry and section as LF lines, so it would misread "
+        "the file or mix its line endings — convert the file to LF, then stamp again"
+    )
+    assert (project.root / ACTORS).read_bytes() == crlf.encode("utf-8")
+
+
+def test_a_write_that_fails_records_no_location(project: AdopterRepo) -> None:
+    """The location is recorded once the artefact is written, never before: a write that
+    fails leaves the recorded locations as they were."""
+    stamped(project, "actor", "tester")
+    (project.root / RECORDED).unlink()  # an analysis whose location was never recorded
+    project.write({f"{USE_CASES}/reports": "a file where the area's folder goes\n"})
+    completed = new(project, "use-case", "export", "--actor", "ACT-tester", "--area", "reports")
+    assert completed.returncode == 1
+    assert completed.stderr.startswith(
+        f"refused: {USE_CASES}/reports/UC-001-export.md could not be written: "
+    )
+    assert not (project.root / RECORDED).exists()
+
+
+#: A `pkit` whose `docs record-location` fails, and every other command as the real one.
+_FAILING_RECORD = """#!{python}
+import subprocess, sys
+if sys.argv[1:3] == ["docs", "record-location"]:
+    sys.stderr.write("error: the recorded locations cannot be written\\n")
+    sys.exit(1)
+sys.exit(subprocess.run([sys.executable, "-m", "project_kit", *sys.argv[1:]]).returncode)
+"""
+
+
+def test_a_recording_that_fails_leaves_nothing_written(
+    project: AdopterRepo, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The artefact written, the location cannot be recorded: the file is put back as it
+    was — a collection's bytes, or no file and no folder made for it."""
+    stamped(project, "actor", "tester")
+    before = (project.root / ACTORS).read_bytes()
+    (project.root / RECORDED).unlink()
+    failing = tmp_path / "failing-record"
+    failing.mkdir()
+    (failing / "pkit").write_text(_FAILING_RECORD.format(python=sys.executable), encoding="utf-8")
+    (failing / "pkit").chmod(0o755)
+    monkeypatch.setenv("PATH", f"{failing}{os.pathsep}{os.environ['PATH']}")
+    for args, gone in (
+        (("actor", "admin"), None),
+        (("use-case", "export", "--actor", "ACT-tester", "--area", "reports"), USE_CASES),
+    ):
+        completed = new(project, *args)
+        assert completed.returncode == 1, completed.stdout
+        assert "the analysis location could not be recorded: " in completed.stderr
+        assert (project.root / ACTORS).read_bytes() == before
+        assert gone is None or not (project.root / gone).exists()
+    assert not (project.root / RECORDED).exists()
 
 
 @pytest.mark.parametrize(
