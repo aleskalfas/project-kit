@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-09-30T08:41:01Z
+      at: 2026-09-30T06:34:37Z
       outcome: unchanged
-      unchanged-because: the CLI and schemas READMEs now read a narrowing of friction.exclude as a change, a widening as one only where a file it takes changed and otherwise as a left-out finding, ask an artefact let back in to revalidate, and read a state whose exclusions do not read as the state it is compared with; the area map's one-line descriptions of cli/ and schemas/ hold
+      unchanged-because: the CLI README's friction section now states that every reading command's --json document carries schema_version, and each document's key list names it; the signpost's line for cli/ names the command surface, not the documents' keys
 ---
 
 # project-kit

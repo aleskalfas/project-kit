@@ -1,0 +1,10 @@
+component: software-analysis
+kind: patch
+custom:
+  category: Added
+body: >
+  `pkit analysis propose` refuses, with exit 1 and nothing proposed, an
+  explanation whose `schema_version` is not 1, naming the version `pkit
+  friction explain` answered. An explanation without the key comes from a
+  backbone that predates it and reads as version 1, so an older backbone still
+  works.

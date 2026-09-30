@@ -12,9 +12,8 @@ pkit:
       record: ["living-docs:DEC-001", COR-049, COR-050, COR-051, COR-053]
       artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006]
     revalidated:
-      at: 2026-09-30T08:37:31Z
-      outcome: unchanged
-      unchanged-because: COR-050 point 7 reads a narrowing of the excluded paths as a change to the path anchors it covers and a widening as one only where a file it takes changed while anchored; the README names friction.exclude only as a configuration key and says the core check flags a page whose anchors changed, which such an exclusion change is, so it holds
+      at: 2026-09-30T06:40:04Z
+      outcome: updated
 ---
 
 # living-docs capability
@@ -132,7 +131,7 @@ An analysis capability, such as software-analysis, can supply readers too, under
 - `page-stale` — one per page the check reports stale, naming the page as `document`. The page's answer in the pull request's diff meets it. A deferred page gives none: its deferral is the answer ([project-management:DEC-053-doc-check-slot] point 4), and `pkit friction debt` keeps reporting it until someone revalidates the page.
 - `code-undocumented` — one per path of the declared surface that nothing anchors, naming the code as `path` and no `document`: no page's change meets it, only a page anchoring the path. The command reads HEAD, so the obligation leaves the point once a page on the branch anchors the code; until then the check reports it unmet, with the fix — anchor the path from a page.
 
-The work-tracking capability decides whether `friction` obligations block. With project-management they are advisory until you set `doc_check.sources.friction: enforcing`. A repository with no commit yet owes nothing. If a page's friction lies beyond a shallow clone's history, the command gives no answer: the check then reports itself unresolved rather than pass on fewer obligations, so fetch the full history. `pkit living-docs fill-doc-check` lists the obligations, and `--json` prints what the backbone reads. The contribution is inert when no work-tracking capability is installed.
+The work-tracking capability decides whether `friction` obligations block. With project-management they are advisory until you set `doc_check.sources.friction: enforcing`. A repository with no commit yet owes nothing. If a page's friction lies beyond a shallow clone's history, the command gives no answer: the check then reports itself unresolved rather than pass on fewer obligations, so fetch the full history. It gives none either when the friction check answers a `schema_version` other than 1, which it does not read; a document without the key, from a backbone before it, reads as 1 (the CLI README, "Friction checks"). `pkit living-docs fill-doc-check` lists the obligations, and `--json` prints what the backbone reads. The contribution is inert when no work-tracking capability is installed.
 
 ## The agent: `living-docs`
 
@@ -151,6 +150,7 @@ What it will not do:
 - **Review a change for missing docs.** That is change review, the code-review panel's documentation reviewer where one is installed; reader-review looks at the page, not the diff.
 - **Test the docs by running the product.** Such results arrive through the reading-evidence point, and the agent reads them when they are there.
 - **Revalidate what is not a page** — a decision record, a rule, another capability's artefact. Its own component does that.
+- **Read a friction document of a version it does not read.** The `explain`, `debt` and `check --all` documents carry a `schema_version`; one other than 1 it refuses, naming the command and the version, and proposes nothing from it. One without the key, from a backbone before it, reads as 1.
 
 Until the readers point resolves, the agent reads a page as the audience DEC-001 gives its space — users for the user space, maintainers for the technical one — and says so. Its scripted flows (a fix proposed, a reader-review that finds nothing, an onboarding plan rejected and revised) are in [`agents/living-docs/storyboard.md`](agents/living-docs/storyboard.md); the agent itself is [`agents/living-docs/living-docs.md`](agents/living-docs/living-docs.md).
 

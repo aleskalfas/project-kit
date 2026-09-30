@@ -970,7 +970,9 @@ def test_json_document_shape(repo: AdopterRepo) -> None:
         "findings",
         "head",
         "mode",
+        "schema_version",
     ]
+    assert document["schema_version"] == fc.CHANGE_SCHEMA_VERSION == 1
     assert (document["check"], document["mode"], document["dormant"], document["failed"]) == (
         "change",
         "enforcing",

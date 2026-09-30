@@ -1211,10 +1211,16 @@ def _outdated_message(base: BaseState) -> str:
 
 # --- output --------------------------------------------------------------------------
 
+#: The version of the document `render_json` returns. A change a reader could break
+#: against — a key removed, renamed or given another meaning — raises it; a key added
+#: does not. A document without it comes from a backbone that predates it: version 1.
+CHANGE_SCHEMA_VERSION = 1
+
 
 def render_json(result: ChangeCheck) -> str:
     """The stable machine-readable document other components consume (COR-050 Implications)."""
     document = {
+        "schema_version": CHANGE_SCHEMA_VERSION,
         "check": "change",
         "mode": result.mode,
         "dormant": result.dormant,

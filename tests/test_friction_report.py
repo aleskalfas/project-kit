@@ -202,7 +202,17 @@ def test_debt_json_document_shape(timeline: Timeline) -> None:
     result = _cli("debt", "--json")
     assert result.exit_code == 0, result.output
     doc = json.loads(result.output)
-    assert sorted(doc) == ["counts", "debt", "dormant", "head", "history", "report", "unreachable"]
+    assert sorted(doc) == [
+        "counts",
+        "debt",
+        "dormant",
+        "head",
+        "history",
+        "report",
+        "schema_version",
+        "unreachable",
+    ]
+    assert doc["schema_version"] == frep.DEBT_SCHEMA_VERSION == 1
     assert (doc["report"], doc["dormant"], doc["history"]) == ("debt", False, {"shallow": False})
     assert doc["counts"] == {"deferred": 1, "stale": 1, "unreachable": 0}
     assert doc["unreachable"] == []
@@ -667,8 +677,10 @@ def test_explain_json_document_shape(timeline: Timeline) -> None:
         "location",
         "report",
         "revalidation_point",
+        "schema_version",
         "state",
     ]
+    assert doc["schema_version"] == frep.EXPLAIN_SCHEMA_VERSION == 1
     assert (doc["report"], doc["artefact"], doc["location"], doc["state"]) == (
         "explain",
         "guide",

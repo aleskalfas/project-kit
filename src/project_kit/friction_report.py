@@ -228,9 +228,17 @@ def _deferral_reasons(
     return reasons
 
 
+#: The version of the document `render_debt_json` returns. A change a reader could
+#: break against — a key removed, renamed or given another meaning — raises it; a key
+#: added does not. A document without it comes from a backbone that predates it:
+#: version 1.
+DEBT_SCHEMA_VERSION = 1
+
+
 def render_debt_json(listing: DebtListing) -> str:
     """The stable machine-readable listing: keys sorted, no ages."""
     document = {
+        "schema_version": DEBT_SCHEMA_VERSION,
         "report": "debt",
         "dormant": listing.dormant,
         "head": (
@@ -597,10 +605,18 @@ def _anchor_state(
     return ExplainedAnchor(anchor, state, changes, _Kind.OVER_BROAD in kinds, files)
 
 
+#: The version of the document `render_explain_json` returns. A change a reader could
+#: break against — a key removed, renamed or given another meaning — raises it; a key
+#: added does not. A document without it comes from a backbone that predates it:
+#: version 1.
+EXPLAIN_SCHEMA_VERSION = 1
+
+
 def render_explain_json(explanation: Explanation) -> str:
     """The stable machine-readable explanation: keys sorted, no ages."""
     report = explanation.report
     document = {
+        "schema_version": EXPLAIN_SCHEMA_VERSION,
         "report": "explain",
         "head": {
             "commit": explanation.head.commit,
@@ -792,7 +808,9 @@ def _finding_lines(explanation: Explanation, now: datetime) -> list[str]:
 __all__ = [
     "BECAUSE",
     "DEBT_KINDS",
+    "DEBT_SCHEMA_VERSION",
     "EXCLUDED",
+    "EXPLAIN_SCHEMA_VERSION",
     "REASON",
     "UNANCHORED",
     "Answer",

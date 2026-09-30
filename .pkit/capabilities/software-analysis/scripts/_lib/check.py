@@ -263,7 +263,7 @@ def _placeholders(root: Path, analysis: Analysis) -> list[Finding]:
             continue  # the core reports a file it cannot read
         _front, body = markdown.split(text)
         if artefact.entry and artefact.id is not None:
-            body = markdown.section(body, artefact.id, heading=True)
+            body = markdown.section(body, artefact.id)
         held = left_in(body, IN_TEMPLATES)
         if not held:
             continue

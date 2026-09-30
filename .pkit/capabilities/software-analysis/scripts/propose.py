@@ -8,9 +8,11 @@
 """software-analysis capability — propose: what a flagged artefact's evidence decides (DEC-001).
 
 For one artefact the friction checks flag, reads the evidence of its change —
-`pkit friction explain`, and what the artefact quotes from its anchored code at
-its revalidation point and at HEAD, and where lost code went (`_lib/reading.py`)
-— and says what it comes to (`_lib/resolve.py` states the rules):
+`pkit friction explain`, which names the files each anchor stands on, the
+commits behind each finding with the paths behind them, and the artefact's
+body; what the artefact quotes from those files at its revalidation point and
+at HEAD; and where lost code went (`_lib/reading.py`) — and says what it comes
+to (`_lib/resolve.py` states the rules):
 
 - a **proposal** — `holds` (the code moved), `analysis-stale` or
   `code-regressed`, with the rule and the evidence that decided it, for the
@@ -188,7 +190,10 @@ def _document(
                 "value": a.value,
                 "state": a.state,
                 "shape": a.shape,
-                "commits": [{"commit": c.commit, "change": c.change} for c in a.commits],
+                "commits": [
+                    {"commit": c.commit, "change": c.change, "paths": list(c.paths)}
+                    for c in a.commits
+                ],
                 "quoted": list(a.quoted),
                 "gone": list(a.gone),
                 "moved_to": list(a.moved_to),
@@ -227,7 +232,7 @@ def _lines(
     lines = [f"{evidence.artefact}  {evidence.location} — {evidence.state}"]
     for anchor in (a for a in evidence.anchors if a.changed):
         lines.append(f"  {anchor.label} ({anchor.state}, {anchor.shape})")
-        lines += [f"    {c.commit[:12]} {c.change}" for c in anchor.commits]
+        lines += [f"    {c.commit[:12]} {c.change}{_paths(c.paths)}" for c in anchor.commits]
         if anchor.quoted:
             gone = f"; gone at HEAD: {_quoted(anchor.gone)}" if anchor.gone else ""
             lines.append(f"    quotes {_quoted(anchor.quoted)}{gone}")
@@ -258,6 +263,12 @@ def _checked(quote: resolve.Quote) -> str:
 
 def _quoted(quotes: tuple[str, ...]) -> str:
     return ", ".join(f"`{q}`" for q in quotes)
+
+
+def _paths(paths: tuple[str, ...]) -> str:
+    """The paths behind a commit, as a human line closes with them: `git show <commit>
+    -- <paths>` is what changed under the anchor."""
+    return f" — {', '.join(paths)}" if paths else ""
 
 
 if __name__ == "__main__":

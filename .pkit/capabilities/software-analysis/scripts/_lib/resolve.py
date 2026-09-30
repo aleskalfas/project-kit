@@ -21,9 +21,10 @@ Each anchor that changed since the artefact's revalidation point — or that
 resolves to nothing any more, which the checks report as a dead anchor rather
 than as a change — has a shape:
 
-- **kept** — a path anchor whose files still hold every piece of code the
-  artefact quotes from them (what it writes in backticks and those files held
-  at its revalidation point, each as a whole word), and it quotes something;
+- **kept** — a path anchor whose files — those it stands on, never one
+  `friction.exclude` leaves out — still hold every piece of code the artefact
+  quotes from them (what it writes in backticks and those files held at its
+  revalidation point, each as a whole word), and it quotes something;
 - **moved** — a path anchor that resolves to nothing any more, or no longer
   holds code the artefact quotes, where that code went somewhere the reading
   can name (`moved_to`): a file renamed, or the code carried into another file.
@@ -54,7 +55,7 @@ And the rules, in the order they apply:
 5. **quoted-code-kept** — every changed anchor *kept*, or *moved* → read,
    leaning to `holds`. That no quoted name vanished is all it shows: behaviour
    can change inside a name that stays, and a quote can survive in a call
-   site, a comment, a test name or an excluded path.
+   site, a comment or a test name.
 6. **nothing-decides** — otherwise: the agent reads the change, and proposes
    `holds` or `gap-found` itself — or reads a contradiction, and asks again.
 
@@ -98,16 +99,22 @@ DELIBERATE_KINDS = frozenset({"record", "artefact"})
 
 @dataclass(frozen=True)
 class Commit:
+    """A commit behind an anchor's finding: its subject, and the paths behind the
+    finding it touched — what a reader limits the commit to (`git show <commit> --
+    <paths>`), as `pkit friction explain` names them."""
+
     commit: str
     change: str  # its subject
+    paths: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
 class Anchor:
     """One anchor of the artefact, as the evidence reads it: its kind and value, its
-    state (`pkit friction explain`'s), the commits behind its change, oldest first,
-    and — for a path — what the artefact quotes from its files, what of that is gone
-    from them at HEAD, and where it went, when the reading can name it."""
+    state (`pkit friction explain`'s), the commits behind its findings (for a dead
+    path anchor, where its files went), and — for a path — what the artefact quotes
+    from its files, what of that is gone from them at HEAD, and where it went, when
+    the reading can name it."""
 
     kind: str
     value: str
