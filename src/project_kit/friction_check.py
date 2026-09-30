@@ -15,10 +15,11 @@ so it works for any tool and locally before a commit.
 - *Head* is the working tree as git sees it: tracked files plus untracked
   ones git does not ignore (`WorkingTree`) — the one listing validation reads
   too (`working_tree`, ADR-057 point 2), so both find the same artefacts in
-  the same working tree. *The base* is the merge-base of
-  the base reference and HEAD, read from git objects (`CommitTree`: `git
-  ls-tree`, then `git cat-file --batch`, the batch form of `git show
-  <rev>:<path>`).
+  the same working tree. *The base* is the merge-base of the base reference
+  — the one named, else `$PKIT_CHECK_BASE`, else the default branch, as
+  `default_branch` resolves it for every reader (COR-054) — and HEAD, read
+  from git objects (`CommitTree`: `git ls-tree`, then `git cat-file
+  --batch`, the batch form of `git show <rev>:<path>`).
 - *The diff* is `git diff -M --name-status <merge-base>` against the working
   tree, plus untracked files as added — so uncommitted work is part of it, and
   the result says how many paths that was.
@@ -92,7 +93,7 @@ from typing import Any, Self, cast
 
 import click
 
-from project_kit import cli_render, refs
+from project_kit import cli_render, default_branch, refs
 from project_kit.backbone_schemas import CONTAINER_KEY
 from project_kit.friction_discovery import (
     CORE_ANCHOR_KINDS,  # noqa: F401 — re-exported: the check's public surface
@@ -115,11 +116,9 @@ from project_kit.working_tree import (
     nul_separated,
 )
 
-#: The base the diff is taken against when none is named (COR-050 point 6),
-#: and the environment variable that overrides it — the one the project's
-#: check aggregator and CI already set for the migration-coverage check.
-DEFAULT_BASE = "origin/main"
-BASE_ENV = "PKIT_CHECK_BASE"
+#: The environment variable that names the base when no reference is given; with
+#: neither, the base is the default branch (COR-054 point 3, `default_branch`).
+BASE_ENV = default_branch.CHECK_BASE_ENV
 
 #: The mode in which the change check fails (COR-050 point 12).
 ENFORCING = "enforcing"
@@ -336,27 +335,15 @@ def head_commit(root: Path) -> str:
     return head
 
 
-def resolve_base(root: Path, ref: str) -> BaseState:
-    """The base reference's commit, its merge-base with HEAD, and whether it moved on."""
-    if not ref or ref.startswith("-"):
-        raise FrictionCheckError(f"the base {ref!r} is not a revision name.")
-    head = head_commit(root)
-    tip = commit_of(root, ref)
-    if tip is None:
-        raise FrictionCheckError(
-            f"the base {ref!r} does not resolve to a commit in this repository: fetch it "
-            f"(e.g. `git fetch origin main`), or name another with --base or {BASE_ENV}."
-        )
-    found = run_git(root, "merge-base", tip, head, accept=(0, 1))
-    commit = found.stdout.decode().strip()
-    if found.returncode != 0 or not commit:
-        raise FrictionCheckError(
-            f"HEAD and the base {ref!r} share no history to compare; in a shallow clone, "
-            f"fetch the history back to where the branch left the base (e.g. `git fetch "
-            f"--unshallow`)."
-        )
-    ancestor = run_git(root, "merge-base", "--is-ancestor", tip, head, accept=(0, 1))
-    return BaseState(ref=ref, tip=tip, commit=commit, outdated=ancestor.returncode != 0)
+def resolve_base(root: Path, ref: str | None = None) -> BaseState:
+    """The base's commit, its merge-base with HEAD, and whether it moved on: `ref`, else
+    `$PKIT_CHECK_BASE`, else the default branch — computed once for every reader
+    (`default_branch.base`, COR-054 point 5)."""
+    head_commit(root)
+    found = default_branch.base(root, ref)
+    if found.problem is not None or found.tip is None or found.fork is None:
+        raise FrictionCheckError(found.problem or f"the base {found.ref!r} cannot be compared.")
+    return BaseState(ref=found.ref, tip=found.tip, commit=found.fork, outdated=bool(found.outdated))
 
 
 @dataclass(frozen=True)
@@ -1104,11 +1091,12 @@ def truth_chain_order(discovery: Discovery) -> list[int]:
 
 def run_change_check(
     target_root: Path,
-    base_ref: str = DEFAULT_BASE,
+    base_ref: str | None = None,
     *,
     registry: Mapping[str, ResolverCommand] | None = None,
 ) -> ChangeCheck:
-    """Run the change check of the working tree against the merge-base of `base_ref`.
+    """Run the change check of the working tree against the merge-base of `base_ref` —
+    without one, `$PKIT_CHECK_BASE`, else the default branch (COR-054 point 3).
 
     Raises `FrictionCheckError` when it cannot run — outside a git repository,
     before the first commit, or with a base that does not resolve — except
@@ -1187,7 +1175,7 @@ def _config_path(root: Path) -> str:
     return project_config_path(root).relative_to(root).as_posix()
 
 
-def _dormant_context(root: Path, base_ref: str) -> tuple[BaseState | None, HeadState | None]:
+def _dormant_context(root: Path, base_ref: str | None) -> tuple[BaseState | None, HeadState | None]:
     """What a dormant run can say about its base and head; it demands neither (point 15)."""
     try:
         base: BaseState | None = resolve_base(root, base_ref)

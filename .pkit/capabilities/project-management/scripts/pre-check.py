@@ -45,7 +45,7 @@ from ruamel.yaml.error import YAMLError
 # pre-check and the DEC-032 contribution collector, per COR-007) and the
 # DEC-032 contribution collector itself (reused, not re-implemented).
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _lib import axis_carriage, axis_labels, bootstrap_gate  # noqa: E402
+from _lib import axis_carriage, axis_labels, bootstrap_gate, default_branch  # noqa: E402
 from _lib.classification_rules import title_prefix_by_value  # noqa: E402
 from _lib.agents import agent_deploy_path, agent_is_deployed  # noqa: E402
 from _lib.gh import gh_project_run  # noqa: E402
@@ -65,7 +65,7 @@ from _lib.label_contributions import collect_label_contributions  # noqa: E402
 
 CAPABILITY_NAME = "project-management"
 ADOPTER_CONFIG_PATH = "project/config.yaml"
-REQUIRED_ADOPTER_CONFIG_FIELDS = ("schema_version", "default_branch", "workstreams")
+REQUIRED_ADOPTER_CONFIG_FIELDS = ("schema_version", "workstreams")
 
 
 @dataclass(frozen=True)
@@ -538,7 +538,7 @@ def _check_adopter_config(
             remediation=(
                 "Author a project-side config at "
                 "`.pkit/capabilities/project-management/project/config.yaml` "
-                "declaring at minimum: schema_version, default_branch, "
+                "declaring at minimum: schema_version, "
                 "workstreams, has_projects_v2_board. See the capability "
                 "README's 'Adopter setup' section."
             ),
@@ -1742,19 +1742,24 @@ def _check_workstreams_file(capability_root: Path) -> CheckResult:
 
 
 def _check_default_branch(config: dict[str, Any] | None) -> CheckResult:
+    """The default branch — the backbone's `repository.default-branch`, read through
+    it (COR-054) — is the repository's. When the backbone cannot say which it is,
+    the check fails with the cause rather than compare a guess."""
     if config is None:
         return CheckResult(
             "default branch matches config",
             "skip",
             "adopter config not loaded",
         )
-    declared = config.get("default_branch")
-    if not declared:
+    try:
+        declared = default_branch.name(config)
+    except default_branch.Unanswered as exc:
         return CheckResult(
             "default branch matches config",
             "fail",
-            "config does not declare `default_branch`",
-            remediation="Add `default_branch: main` (or your project's default) to the config.",
+            str(exc),
+            remediation="Make `pkit repository base` answer here — `pkit` on PATH, and a "
+            "backbone recent enough to ship it (`pkit upgrade`).",
         )
     proc = subprocess.run(
         ["gh", "repo", "view", "--json", "defaultBranchRef"],
@@ -1776,10 +1781,11 @@ def _check_default_branch(config: dict[str, Any] | None) -> CheckResult:
         return CheckResult(
             "default branch matches config",
             "fail",
-            f"config declares `{declared}`; repo's default is `{actual}`",
+            f"the default branch is `{declared}`; repo's default is `{actual}`",
             remediation=(
-                "Update the config's `default_branch` to match the repo's "
-                "default, or update the repo settings."
+                f"Declare the repo's default once, for every reader: `pkit config set "
+                f"{default_branch.BACKBONE_KEY} {actual or '<name>'} --yes` (COR-054) — "
+                "or update the repo settings."
             ),
         )
     return CheckResult("default branch matches config", "ok", f"`{declared}`")

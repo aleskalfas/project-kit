@@ -54,7 +54,7 @@ from __future__ import annotations
 
 import re
 
-from _lib import axis_labels
+from _lib import axis_labels, default_branch
 from _lib.checkbox_gate import unticked_boxes  # noqa: F401 — re-export
 
 # Canonical state ordering (matches move-issue's `order` lists).
@@ -282,15 +282,18 @@ def resolve_base_branch(
 
     Precedence: an `explicit` caller choice (a verb's `--base`) wins; else the
     closing issue's `Integration: integration/<slug>` marker names the base;
-    else the adopter's `default_branch` (`main` only when the config declares
-    none). A malformed marker is not a branch and falls through to the default.
-    Takes no HEAD input, so the checked-out branch can never leak in (#835)."""
+    else the project's default branch, as the backbone declares it (COR-054;
+    `_lib/default_branch`). A malformed marker is not a branch and falls
+    through to the default. Takes no HEAD input, so the checked-out branch can
+    never leak in (#835). Raises `default_branch.Unanswered` when the default
+    branch is needed and the backbone cannot say it: the verbs refuse rather
+    than cut from, or target, a guessed branch."""
     if explicit:
         return explicit
     slug = integration_slug(body)
     if slug:
         return f"integration/{slug}"
-    return str(config.get("default_branch") or "main")
+    return default_branch.name(config)
 
 
 def parent_ref(child_body: str) -> int | None:

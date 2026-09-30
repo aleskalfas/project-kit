@@ -20,9 +20,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-09-30T15:10:10Z
+      at: 2026-09-30T09:26:38Z
       outcome: unchanged
-      unchanged-because: done-work now moves a closing issue still In Progress to Review just before the merge instead of warning after it; how sessions resume during a stabilisation, and which work may land on the default branch while it is on, did not change
+      unchanged-because: start-work now cuts the branch from the commit the backbone resolves its base to — the remote's copy, the local branch only without a remote — and refuses when the backbone cannot say which branch is settled (COR-054); which work may start or land during a stabilisation is unchanged
 ---
 
 # UC-007 — Resume sessions killed during a stabilisation

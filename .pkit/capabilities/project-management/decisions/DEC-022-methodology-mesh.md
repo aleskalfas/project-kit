@@ -70,7 +70,7 @@ The same per-repo-vs-central pattern applies symmetrically to `members.yaml` (pe
 
 **Out of scope at v1:**
 
-- **Adopter config values** (`default_branch`, `projects_v2_board_id`, `pre_close_triage_lead_days`, …) — legitimate per-repo variation.
+- **Adopter config values** (`projects_v2_board_id`, `pre_close_triage_lead_days`, …, and the default branch, now declared in the backbone configuration per COR-054) — legitimate per-repo variation.
 - **Custom (non-methodology) labels** — adopter's own concerns.
 - **Per-milestone close-trigger checks** — handled per-repo by `pre-check.py`.
 - **Workstream-substrate-specific board comparisons** — when both peers use board substrate, the board IS the shared substrate and per-repo comparison is meaningless. The mesh check only compares label substrate.
@@ -130,7 +130,7 @@ The v0.7.0 PR ships:
 
 **Why drift detection is warning-only at v1.** Hard-rejecting on drift would break legitimate transient states. The classic example: renaming a workstream across three repos takes three PRs; the second PR fails mid-flight if drift is hard-reject. Surfacing the drift as a warning, letting the operator finish the third PR, and the warning clearing on the next mesh check is the right shape. Promoting specific drift kinds to higher severity (e.g., member-list divergence) lands when there's evidence the warning is being ignored on cases where it shouldn't be — COR-007 again.
 
-**Why scope is methodology-mandated state only.** Comparing adopter-specific config values (`default_branch`, `pre_close_triage_lead_days`) would force teams to standardise things they have legitimate reasons to vary. The mesh's purpose is to ensure team-shared methodology surface is uniform, not to homogenise adopters.
+**Why scope is methodology-mandated state only.** Comparing adopter-specific config values (the default branch, `pre_close_triage_lead_days`) would force teams to standardise things they have legitimate reasons to vary. The mesh's purpose is to ensure team-shared methodology surface is uniform, not to homogenise adopters.
 
 **Why no per-pm-operation mesh check.** Per-operation drift detection would either be expensive (hit `gh api` for every peer on every command — slow + rate-limit-prone) or stale (cache aggressively → false-negatives). A periodic external check at warning severity is the right shape for state that drifts on a multi-day cadence, not a per-second cadence.
 

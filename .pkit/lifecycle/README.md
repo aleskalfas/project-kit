@@ -28,8 +28,9 @@ pkit:
         - hatch_build.py
       record: [COR-010, COR-017, COR-027, COR-030, COR-031, COR-052, COR-053, ADR-056, ADR-057, ADR-059]
     revalidated:
-      at: 2026-09-30T04:12:39Z
-      outcome: updated
+      at: 2026-09-30T09:26:47Z
+      outcome: unchanged
+      unchanged-because: ADR-057 point 2 gains the default branch's home, project_kit.default_branch; the lifecycle README's command runner, data points and migration framework say nothing of where a base is resolved, and a capability migration still runs as the framework says
 ---
 
 # Lifecycle

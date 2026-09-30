@@ -61,7 +61,7 @@ The project-kit corpus uses the following type vocabulary and branch-naming conv
 - `BREAKING CHANGE: ...` for breakage notes.
 - `Co-Authored-By: ...` trailers.
 
-**Default branch.** The methodology's default branch is **`main`**. New repositories initialise with `main`; existing projects with `master` rename to `main` as part of first-install reconciliation.
+**Default branch.** The methodology recommends **`main`**, and it is a project's default branch when the project declares none. New repositories initialise with `main`; a project whose default branch has another name declares that name instead of renaming the branch (refinement per COR-054).
 
 **Branch naming.** Feature branches follow `<type>/<issue-number>-<slug>`:
 

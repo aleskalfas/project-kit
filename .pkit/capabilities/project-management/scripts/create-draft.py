@@ -18,7 +18,9 @@ Gates per DEC-026:
   - Membership check (open-mode degrades to no-op).
   - A branch exists per `<type>/<N>-<slug>` (created by start-work).
   - At least one commit on the branch not on the base branch (DEC-013:
-    `--base`, else the issue's integration marker, else `default_branch`).
+    `--base`, else the issue's integration marker, else the project's
+    default branch — the backbone's `repository.default-branch`, COR-054),
+    counted from the commit the backbone resolves the base to.
 
 Side-effects:
   - `gh pr create --draft`.
@@ -45,7 +47,7 @@ from ruamel.yaml import YAML
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate  # noqa: E402
+from _lib import bootstrap_gate, default_branch  # noqa: E402
 from _lib import lifecycle_inference as infer  # noqa: E402
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
 from _lib import session_guard  # noqa: E402
@@ -77,8 +79,8 @@ def main() -> int:
         "--base", default=None,
         help=(
             "Base branch (default: the issue's DEC-013 integration branch when "
-            "its body carries an `Integration:` marker, else the adopter's "
-            "`default_branch`)."
+            "its body carries an `Integration:` marker, else the project's "
+            "default branch — the backbone's `repository.default-branch`, COR-054)."
         ),
     )
     parser.add_argument(
@@ -130,26 +132,26 @@ def main() -> int:
         return 2
     # Base branch (DEC-013, #903): --base, else the issue's integration marker,
     # else default_branch — the resolution start-work cut the branch by.
-    base = infer.resolve_base_branch(
-        config, str(issue.get("body") or ""), explicit=args.base
-    )
+    try:
+        base = infer.resolve_base_branch(
+            config, str(issue.get("body") or ""), explicit=args.base
+        )
+    except default_branch.Unanswered as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
 
     # Gate: at least one commit not on the base branch. A base that cannot be
     # found is reported as that, never as "no commits" -- the two need
     # different fixes.
-    base_ref = _resolve_base_ref(base)
-    if base_ref is None:
-        print(
-            f"error: base branch {base!r} is not in this clone (neither "
-            f"{base!r} nor 'origin/{base}'). Run `git fetch origin {base}` "
-            "and re-run.",
-            file=sys.stderr,
-        )
+    base_commit, unresolved = _resolve_base_ref(base)
+    if base_commit is None:
+        print(f"error: base branch {base!r}: {unresolved}", file=sys.stderr)
         return 2
-    ahead = _commits_beyond(branch, base_ref)
+    ahead = _commits_beyond(branch, base_commit)
     if ahead is None:
         print(
-            f"error: could not count commits on {branch!r} beyond {base_ref!r}.",
+            f"error: could not count commits on {branch!r} beyond {base!r} "
+            f"({base_commit[:12]}).",
             file=sys.stderr,
         )
         return 2
@@ -225,29 +227,31 @@ def _find_issue_branch(issue_number: int) -> str | None:
     return None
 
 
-def _resolve_base_ref(base: str) -> str | None:
-    """The ref `base` names in this clone, or None when it resolves nowhere.
+def _resolve_base_ref(base: str) -> tuple[str | None, str | None]:
+    """The commit `base` names in this clone — `(commit, None)` — or why it names
+    none — `(None, why)`.
 
-    An integration base (`integration/<slug>`) is usually present only as the
-    remote-tracking `origin/<base>`: start-work fetches it and cuts the branch
-    from `origin/<base>` without creating a local branch, and git never expands
-    a short name to `refs/remotes/origin/…`. So try the name as given, then
-    `origin/<base>`.
+    The backbone resolves it as it resolves every branch named as a base
+    (COR-054 point 2): the remote-tracking reference of its upstream, else
+    `origin/<base>`, each by its full name, so no tag or other ref of the same
+    short name stands in; the local branch only when there is no remote. An
+    integration base (`integration/<slug>`) is usually present only as the
+    remote-tracking reference: start-work cuts the branch from it without
+    creating a local one.
     """
-    for ref in (base, f"origin/{base}"):
-        proc = subprocess.run(
-            ["git", "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"],
-            capture_output=True, text=True, check=False,
-        )
-        if proc.returncode == 0:
-            return ref
-    return None
+    try:
+        found = default_branch.branch(base)
+    except default_branch.Unanswered as exc:
+        return None, str(exc)
+    if found.tip is None:
+        return None, found.problem or "it resolves to no commit here"
+    return found.tip, None
 
 
-def _commits_beyond(branch: str, base_ref: str) -> int | None:
-    """Commits on `branch` not in `base_ref`, or None when git cannot count."""
+def _commits_beyond(branch: str, base_commit: str) -> int | None:
+    """Commits on `branch` not in `base_commit`, or None when git cannot count."""
     proc = subprocess.run(
-        ["git", "rev-list", "--count", f"{base_ref}..{branch}"],
+        ["git", "rev-list", "--count", f"{base_commit}..{branch}"],
         capture_output=True, text=True, check=False,
     )
     if proc.returncode != 0:

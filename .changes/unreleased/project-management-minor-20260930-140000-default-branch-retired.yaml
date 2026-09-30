@@ -1,0 +1,20 @@
+component: project-management
+kind: minor
+custom:
+  category: Changed
+  requires_backbone: release
+body: >
+  The default branch is the backbone's `repository.default-branch` (COR-054,
+  #1128), read through `pkit repository base --json`: start-work cuts from the
+  commit the backbone resolves the base to, create-draft counts commits beyond
+  it, open-pr's `--doc-impact-from-friction` runs the change check with no
+  `--base` for the default branch, and `check-doc-mapping` diffs from where the
+  branch left the base the backbone names (`$PKIT_CHECK_BASE`, else the default
+  branch) instead of a fixed `origin/main` and a merge-base of its own. An
+  integration branch resolves the same way. When the backbone cannot answer,
+  the verbs that act on the branch refuse, naming the cause, rather than cut
+  from `main`; `check-doc-mapping` refuses a base that cannot be compared with
+  the backbone's reason and fix (exit 1). The capability's own
+  `default_branch` is retired: no longer required, and the 0.55.0 upgrade
+  migration carries a value other than `main` over to the backbone's key and
+  removes it.
