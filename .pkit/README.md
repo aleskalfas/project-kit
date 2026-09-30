@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-09-30T01:08:59Z
+      at: 2026-09-30T01:13:28Z
       outcome: unchanged
-      unchanged-because: the lifecycle README's later edits on this branch only reword when the outermost run sweeps its group and anchor the run cache module; the area map and its one-line description of the lifecycle area hold
+      unchanged-because: with main merged, the CLI README carries both the writers' placeholder refusal and this branch's run-cache and nested-run lines, and the lifecycle README its runner section and anchor; the area map and each area's one-line description hold
 ---
 
 # project-kit
