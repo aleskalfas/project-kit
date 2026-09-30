@@ -1,0 +1,12 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `pkit release check` now recognises a release pull request by what the release
+  writes, so it passes one on its content alone, with no `skip-changeset` label
+  and whatever the branch is called. It read the self-host manifest's
+  `backbone_version`, which a backbone release also moves, as an ordinary surface
+  change. The release step and the check now read one list of the files a release
+  writes and the lines it changes in them, and the release rewrites that manifest
+  line in place, leaving every other byte of the manifest as it was.

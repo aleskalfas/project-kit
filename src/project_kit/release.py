@@ -8,7 +8,8 @@ of each component a changeset declares needs a backbone — the one the release
 ships, or an already-shipped one the changeset names (also PRJ-002 D4) —
 generates the changelog, which states each raised floor, deletes the consumed
 changesets, and (for a backbone bump) cuts the tag via the existing
-`tag_version` (PRJ-004).
+`tag_version` (PRJ-004). The files it writes are one list, `release_writes`,
+which the changeset guard recognises a release diff by.
 
 Cutover note (PRJ-002 D-implications): this module *adds* the release-
 authority path; it does not retire `pkit version bump`. Both broaden
@@ -45,14 +46,7 @@ from project_kit.changesets import (
     segment_rank,
     unreleased_dir,
 )
-from project_kit.manifest import read_backbone_manifest, write_backbone_manifest
 from project_kit.migrations import _VERSION_DIR_RE, parse_version_tuple
-
-# Rewrites a component's `version:` line in its package.yaml. Anchored to a
-# leading indent so top-level `schema_version:` is never matched; regex (not
-# a YAML round-trip) to preserve quoting, key order, and trailing comments —
-# same discipline as versioning.py's requires_backbone rewrite.
-_COMPONENT_VERSION_RE = re.compile(r"(?m)^(\s+version:\s*)(\d+\.\d+\.\d+)")
 
 # Repo-root-relative path prefixes whose changes count as touching the
 # backbone's surface, for the changeset guard. A heuristic — see the "Limits"
@@ -100,6 +94,89 @@ _PR_NUMBER_RE = re.compile(r"(\d+)\D*$")
 # `* x`, `+ x`, `1. x`, `1) x`) — the shapes `_with_sentence` punctuates around.
 _SENTENCE_ENDS = (".", "!", "?")
 _LIST_ITEM_RE = re.compile(r"^[ \t]*(?:[-*+]|\d+[.)])[ \t]+\S")
+
+
+# --- What a release writes: one list, read by the release step and the guard
+#
+# `pkit release apply` writes the files `release_writes` names and nothing else,
+# and the changeset guard recognises a release diff as those files and nothing
+# else (`is_release_diff`). The list is made of what the writers write through:
+# the version files `discover_components` finds, the self-host manifest, the
+# changelog and the changesets directory, and the pattern of each line rewritten
+# in place — the version and manifest lines, which the writers below rewrite
+# through the same patterns, and the requires_backbone line versioning.py
+# rewrites — which the guard admits a changed line by. A write the release step
+# gains joins the list in the same change, or the guard reads every release
+# making it as an ordinary surface change (#1161).
+
+# A component's `version:` line in its package.yaml, which the release rewrites.
+# Anchored to a leading indent so top-level `schema_version:` is never matched;
+# regex (not a YAML round-trip) to preserve quoting, key order, and trailing
+# comments — same discipline as versioning.py's requires_backbone rewrite.
+_PACKAGE_VERSION_LINE_RE = re.compile(r"(?m)^(\s+version:\s*)(\d+\.\d+\.\d+)")
+# A package.yaml's `requires_backbone:` line, which the broaden and the declared
+# floor raise rewrite (through versioning.py's own anchored patterns).
+_PACKAGE_REQUIRES_LINE_RE = re.compile(r"^\s*requires_backbone:\s*.+$")
+# The self-host manifest's `backbone_version:` line, which a backbone release
+# rewrites (PRJ-007), under the source kit.
+_MANIFEST_BACKBONE_LINE_RE = re.compile(r"(?m)^(backbone_version:[ \t]*)(\S+)")
+SELF_HOST_MANIFEST_NAME = "manifest.yaml"
+
+
+@dataclass(frozen=True)
+class ReleaseWrite:
+    """One file `pkit release apply` writes, as the release's diff shows it."""
+
+    path: str  # repo-root-relative, git's path form; ending in `/`, every file under it
+    statuses: str  # the `git diff --name-status` letters the write leaves
+    # The patterns of the only lines the write changes; empty when the release
+    # writes the whole file. A changed line matching none is an edit riding
+    # along, so the diff is not the release.
+    lines: tuple[re.Pattern[str], ...] = ()
+    # False for a write every release makes that is no release on its own: a
+    # diff that only deletes changesets.
+    marks_release: bool = True
+
+    def covers(self, status: str, path: str) -> bool:
+        """Whether a diff entry — its status letter and path — is this write."""
+        named = path.startswith(self.path) if self.path.endswith("/") else path == self.path
+        return named and status in self.statuses
+
+
+def release_writes(source_kit: Path) -> tuple[ReleaseWrite, ...]:
+    """The files `pkit release apply` writes in `source_kit`'s repo, and how:
+
+    - each component's version file — the backbone's `VERSION` whole, a
+      `package.yaml` only in its `version:` and `requires_backbone:` lines (the
+      version, the broaden, a declared floor);
+    - the self-host manifest's `backbone_version:` line, on a backbone release
+      (`_sync_self_host_manifest_backbone`, PRJ-007);
+    - `CHANGELOG.md`, created or prepended;
+    - the consumed changesets, deleted — in every release, but a diff deleting
+      only changesets is none.
+    """
+    repo_root = source_kit.parent
+    package_lines = (_PACKAGE_VERSION_LINE_RE, _PACKAGE_REQUIRES_LINE_RE)
+    versions = [
+        ReleaseWrite(
+            _repo_rel(repo_root, component.version_path),
+            "M",
+            () if component.name == BACKBONE else package_lines,
+        )
+        for component in discover_components(source_kit)
+    ]
+    return (
+        *versions,
+        ReleaseWrite(
+            _repo_rel(repo_root, source_kit / SELF_HOST_MANIFEST_NAME),
+            "M",
+            (_MANIFEST_BACKBONE_LINE_RE,),
+        ),
+        ReleaseWrite(CHANGELOG_NAME, "AM"),
+        ReleaseWrite(
+            _repo_rel(repo_root, unreleased_dir(repo_root)) + "/", "D", marks_release=False
+        ),
+    )
 
 
 @dataclass(frozen=True)
@@ -716,7 +793,7 @@ def check_raised_ranges(plan: ReleasePlan, *, broaden: bool) -> list[str]:
 def _write_component_version(rel: ComponentRelease) -> None:
     path = rel.component.version_path
     original = path.read_text(encoding="utf-8")
-    updated, count = _COMPONENT_VERSION_RE.subn(rf"\g<1>{rel.new_version}", original, count=1)
+    updated, count = _PACKAGE_VERSION_LINE_RE.subn(rf"\g<1>{rel.new_version}", original, count=1)
     if count == 0:
         raise click.ClickException(
             f"could not find a `version:` line to rewrite in {path} "
@@ -738,18 +815,26 @@ def _sync_self_host_manifest_backbone(source_kit: Path, new_version: str) -> Non
 
     Keyed to the backbone-bump branch: a capability-only release never reaches
     this, so `backbone_version` is untouched when the backbone did not move. Only
-    the `backbone_version` field is written; the components registry, schema
-    version, and any comments are round-trip-preserved by `write_backbone_manifest`.
-    A no-op when no manifest exists (an adopter repo running `apply` has no
-    self-host manifest to maintain — this is source-repo-only mechanics).
+    the `backbone_version:` line is rewritten, in place, through the pattern the
+    changeset guard admits it by (`release_writes`): the components registry,
+    schema version, and comments keep every byte, so the release's manifest diff
+    is that one line. A no-op when no manifest exists (an adopter repo running
+    `apply` has no self-host manifest to maintain — this is source-repo-only
+    mechanics).
     """
-    manifest = read_backbone_manifest(source_kit.parent)
-    if manifest is None:
+    path = source_kit / SELF_HOST_MANIFEST_NAME
+    if not path.is_file():
         return
-    if manifest.backbone_version == new_version:
+    text = path.read_text(encoding="utf-8")
+    match = _MANIFEST_BACKBONE_LINE_RE.search(text)
+    if match is None:
+        raise click.ClickException(
+            f"could not find a `backbone_version:` line to rewrite in {path}"
+        )
+    if match.group(2) == new_version:
         return
-    manifest.backbone_version = new_version
-    write_backbone_manifest(source_kit.parent, manifest)
+    updated = f"{text[: match.start(2)]}{new_version}{text[match.end(2) :]}"
+    path.write_text(updated, encoding="utf-8")
     click.echo(f"Self-host manifest backbone_version -> {new_version}")
 
 
@@ -963,7 +1048,7 @@ class GuardResult:
     touched: list[str]  # components whose surface the diff touched
     missing: list[str]  # touched components with no changeset (the violations)
     skipped: bool  # the escape hatch (label / --skip) was active
-    release_exempt: bool = False  # the diff is a release-apply footprint (below)
+    release_exempt: bool = False  # the diff is only what a release writes (below)
     # Changesets whose `requires_backbone` floor this diff declares for a component
     # it neither touches nor moves (`stray_floors`).
     stray_floors: list[Changeset] = field(default_factory=lambda: [])
@@ -1023,37 +1108,24 @@ def _matches_prefix(path: str, prefixes: tuple[str, ...]) -> bool:
     return any(path == p or path.startswith(p) for p in prefixes)
 
 
-# --- Release-PR exemption: recognise the release-apply footprint ----------
+# --- Release-PR exemption: recognise a release by what it writes ------------
 #
 # A release PR (opened by release-pr.yml) is `pkit release apply`'s own output:
-# it bumps `.pkit/VERSION` + each moving `package.yaml`, prepends `CHANGELOG.md`,
-# and *deletes* the consumed `.changes/unreleased/*` changesets. That diff trips
-# the surface guard (VERSION + package.yaml are surface) while the changesets it
-# would need are exactly the files it just consumed — so it would fail with no
-# `skip-changeset` label. It is not a *new* surface change; it is the release of
-# already-declared ones. We exempt it by *diff shape* — the change set is only
-# release-apply's own footprint — rather than by branch name or an env signal:
-# a diff-shape signal is self-contained (works locally + in CI, on any branch,
-# in any adopter's repo), and naming a branch `release/*` does not produce it.
-# The signal is intentionally strict: if *any* changed file falls outside the
-# footprint (e.g. a stray `src/` edit), the diff is NOT the release itself and
-# the guard runs normally — so the exemption can never smuggle real surface
-# through.
-#
-# checks.yml adds a branch-name belt: for a `release/*` head it raises the
-# escape hatch, so there the surface check is waived by the branch name alone,
-# which anyone can choose — review of the release PR is what stands behind it.
-# The belt is load-bearing in this repo: its release also rewrites the self-host
-# `.pkit/manifest.yaml` (`_sync_self_host_manifest_backbone`), which is outside
-# this footprint. Neither the belt nor this exemption waives the floor tie
-# (`GuardResult.ok`).
-
-# The only two `package.yaml` keys `apply` rewrites: the component version and
-# (on broaden) its requires_backbone bound. A `package.yaml` in a release diff
-# is release-shaped only if every changed line is one of these — anything else
-# is a real manifest edit riding along, which must not be exempted.
-_RELEASE_VERSION_LINE_RE = re.compile(r"^\s*version:\s*\d+\.\d+\.\d+\s*$")
-_RELEASE_REQUIRES_LINE_RE = re.compile(r"^\s*requires_backbone:\s*.+$")
+# the version files, `requires_backbone` lines and self-host backbone_version it
+# rewrites, the changelog it prepends, and the consumed `.changes/unreleased/*`
+# changesets it *deletes*. That diff trips the surface guard (VERSION and
+# package.yaml are surface) while the changesets it would need are exactly the
+# files it just consumed — so it would fail with no `skip-changeset` label. It is
+# not a *new* surface change; it is the release of already-declared ones. We
+# exempt it by *content* — the change set is only what the release writes
+# (`release_writes`, the list made of what the release step writes through) —
+# rather than by branch name or an env signal: a content signal is
+# self-contained (works locally + in CI, on any branch, in any adopter's repo),
+# and naming a branch `release/*` does not produce it. The signal is
+# intentionally strict: if *any* changed file or line falls outside the list
+# (e.g. a stray `src/` edit), the diff is NOT the release itself and the guard
+# runs normally — so the exemption can never smuggle real surface through. It
+# waives the surface check only, never the floor tie (`GuardResult.ok`).
 
 
 def _diff_name_status(repo_root: Path, base: str) -> list[tuple[str, str]]:
@@ -1061,8 +1133,8 @@ def _diff_name_status(repo_root: Path, base: str) -> list[tuple[str, str]]:
 
     Status is git's `--name-status` letter (`A`/`M`/`D`/…). Mirrors
     `changed_files`' merge-base scoping (`base...HEAD`). A rename (`Rxxx`) yields
-    its destination path — the source is not part of the release footprint, so a
-    rename is simply not release-shaped and falls through to the normal guard.
+    its destination path — a release renames nothing (`release_writes`), so a
+    rename is simply not the release and falls through to the normal guard.
     """
     result = subprocess.run(
         ["git", "diff", "--name-status", f"{base}...HEAD"],
@@ -1100,64 +1172,41 @@ def _file_diff_lines(repo_root: Path, base: str, path: str) -> list[str]:
     return lines
 
 
-def _is_release_shaped_manifest(repo_root: Path, base: str, path: str) -> bool:
-    """True when a `package.yaml`'s diff touches only version-state lines.
-
-    Every added/removed content line must be a `version:` or `requires_backbone:`
-    line — the two `apply` rewrites. A blank changed line is tolerated (a
-    whitespace-only hunk edge). Any other changed line means a real manifest edit
-    rode along, so the file is not release-shaped.
-    """
-    for line in _file_diff_lines(repo_root, base, path):
-        if not line.strip():
-            continue
-        if _RELEASE_VERSION_LINE_RE.match(line) or _RELEASE_REQUIRES_LINE_RE.match(line):
-            continue
-        return False
-    return True
+def _changes_only(
+    repo_root: Path, base: str, path: str, patterns: tuple[re.Pattern[str], ...]
+) -> bool:
+    """True when every line one file's diff adds or removes matches one of
+    `patterns`. A blank changed line is tolerated (a whitespace-only hunk edge)."""
+    return all(
+        not line.strip() or any(pattern.match(line) for pattern in patterns)
+        for line in _file_diff_lines(repo_root, base, path)
+    )
 
 
 def is_release_diff(source_kit: Path, base: str) -> bool:
-    """True when the diff vs `base` is exactly `pkit release apply`'s footprint.
+    """True when the diff vs `base` is only what `pkit release apply` writes.
 
-    The footprint, and nothing else:
+    Every changed file must be one the release writes (`release_writes`), with a
+    status that write leaves, and — for a file the release rewrites in place —
+    only the lines it rewrites (verified line-by-line); and the diff must write
+    more than the consumed changesets it deletes.
 
-    - `.pkit/VERSION` modified;
-    - `CHANGELOG.md` added or modified;
-    - each moving component's `package.yaml` modified, touching only its
-      `version:` / `requires_backbone:` lines (verified line-by-line);
-    - `.changes/unreleased/*` changesets **deleted** (consumed).
-
-    Any changed file outside this shape (a `src/` edit, a doc, a new file under a
-    component subtree) makes the answer False — the diff is then treated as an
-    ordinary PR and the surface guard runs. An empty diff is not a release.
+    Any other change (a `src/` edit, a doc, a new file under a component subtree,
+    a package.yaml line beside its version and floor) makes the answer False —
+    the diff is then treated as an ordinary PR and the surface guard runs. An
+    empty diff is not a release.
     """
     repo_root = source_kit.parent
-    version_rel = _repo_rel(repo_root, source_kit / "VERSION")
-    unreleased_rel = _repo_rel(repo_root, unreleased_dir(repo_root)) + "/"
-
-    entries = _diff_name_status(repo_root, base)
-    if not entries:
-        return False
-
-    saw_footprint = False  # at least one version-state file (not just deletes)
-    for status, path in entries:
-        version_state = (
-            (path == version_rel and status == "M")
-            or (path == CHANGELOG_NAME and status in ("A", "M"))
-            or (
-                path.endswith("/package.yaml")
-                and status == "M"
-                and _is_release_shaped_manifest(repo_root, base, path)
-            )
-        )
-        if version_state:
-            saw_footprint = True
-        elif path.startswith(unreleased_rel) and status == "D":
-            pass  # a consumed changeset — expected, but not sufficient alone
-        else:
+    writes = release_writes(source_kit)
+    marked = False  # a write that shows a release, not only consumed changesets
+    for status, path in _diff_name_status(repo_root, base):
+        write = next((w for w in writes if w.covers(status, path)), None)
+        if write is None:
             return False  # anything else ⇒ not the release itself
-    return saw_footprint
+        if write.lines and not _changes_only(repo_root, base, path, write.lines):
+            return False  # an edit rode along in a file the release rewrites
+        marked = marked or write.marks_release
+    return marked
 
 
 def _repo_rel(repo_root: Path, path: Path) -> str:
@@ -1171,13 +1220,13 @@ def check_changesets(source_kit: Path, base: str, *, skip: bool = False) -> Guar
 
     The surface check passes when every surface-touched component has at least
     one changeset naming it (any kind, including `none`), when the escape hatch
-    is active (`skip=True`, wired from the `skip-changeset` PR label, and in CI
-    from a `release/*` head), or when the diff is a **release PR** — exactly
-    `pkit release apply`'s footprint (`is_release_diff`), which has legitimately
-    consumed the changesets it would otherwise need. The floor tie
-    (`stray_floors`) is waived by neither: it judges only a floor this diff
-    declares, which a release diff never does, and an escape hatch that could
-    pass one would let any pull request raise any component's floor.
+    is active (`skip=True`, wired from the `skip-changeset` PR label), or when
+    the diff is a **release PR** — only what `pkit release apply` writes
+    (`is_release_diff`), which has legitimately consumed the changesets it would
+    otherwise need. The floor tie (`stray_floors`) is waived by neither: it
+    judges only a floor this diff declares, which a release diff never does, and
+    an escape hatch that could pass one would let any pull request raise any
+    component's floor.
     """
     repo_root = source_kit.parent
     components = discover_components(source_kit)

@@ -1237,8 +1237,8 @@ def release_check(base: str, skip: bool | None) -> None:
         )
     elif result.release_exempt:
         click.echo(
-            "changeset guard: release PR — diff is exactly `pkit release apply`'s "
-            "footprint (version bumps + CHANGELOG + consumed changesets); surface check exempt."
+            "changeset guard: release PR — diff is only what `pkit release apply` "
+            "writes (versions, CHANGELOG, consumed changesets); surface check exempt."
         )
     elif result.touched:
         click.echo(f"changeset guard: touched {', '.join(result.touched)}")
