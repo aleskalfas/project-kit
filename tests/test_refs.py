@@ -1525,6 +1525,16 @@ def test_cli_refs_rename_dry_run(kit_target: Path) -> None:
     assert skill.read_text() == before
 
 
+@pytest.mark.parametrize("old, new", [("", "COR-099"), ("COR-001", "")])
+def test_cli_refs_rename_refuses_an_empty_value(kit_target: Path, old: str, new: str) -> None:
+    # The refusal is a message, not a traceback: the module once raised
+    # `click.ClickException` without importing click, so this was a NameError.
+    result = CliRunner().invoke(main, ["refs", "rename", old, new])
+    assert result.exit_code == 1
+    assert "both old and new values must be non-empty" in result.output
+    assert not isinstance(result.exception, NameError)
+
+
 def test_cli_refs_graph_dot_format(kit_target: Path) -> None:
     body = "---\nname: skill-a\ndescription: t\n---\n# A\n"
     _write_skill(kit_target, "core", "skill-a", body)

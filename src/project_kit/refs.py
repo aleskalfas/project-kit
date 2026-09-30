@@ -47,6 +47,7 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path, PurePosixPath
 from typing import Any, Literal
 
+import click
 from ruamel.yaml import YAML
 
 from project_kit import agent_policy, agents_overlay, connections, rule_sets

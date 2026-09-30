@@ -1,0 +1,7 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `pkit refs rename` with an empty old or new value refuses with a message
+  instead of failing with a Python traceback.
