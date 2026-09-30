@@ -10,9 +10,9 @@ pkit:
         - .pkit/adapters/claude-code/deploy-skills.sh
       record: [COR-003, COR-005, COR-006, COR-013, COR-015, COR-020]
     revalidated:
-      at: 2026-09-29T18:14:55Z
+      at: 2026-09-30T21:15:57Z
       outcome: unchanged
-      unchanged-because: deploy-skills.sh now deploys registered capabilities' skills only and agent-author notes that --with-storyboard declares the storyboard; the skills area map holds
+      unchanged-because: decision-author's refinement and supersession variations gain the refine-in-place procedure; the index describes the skill as the walkthrough for a new record, which it still is
 ---
 
 # Skills
