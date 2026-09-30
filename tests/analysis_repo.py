@@ -15,6 +15,7 @@ set, and a developer's own value must not decide what these repositories answer.
 
 from __future__ import annotations
 
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -100,10 +101,27 @@ def front(repo: AdopterRepo, rel: str) -> dict[str, Any]:
     return load(front_matter)
 
 
-def seed(repo: AdopterRepo) -> None:
-    """An actor, two use cases and a journey through them, stamped."""
+#: A text in angle brackets, as a template writes a placeholder.
+_PLACEHOLDER = re.compile(r"<([^<>\n]+)>")
+
+
+def fill(repo: AdopterRepo) -> None:
+    """Every placeholder the stamp left in the analysis written over with its own words,
+    as a person fills each — the check fails an artefact still holding one."""
+    for path in sorted((repo.root / ANALYSIS).rglob("*.md")):
+        if (repo.root / RECORDS) in path.parents:
+            continue
+        text = path.read_text(encoding="utf-8")
+        path.write_text(_PLACEHOLDER.sub(r"\1", text), encoding="utf-8")
+
+
+def seed(repo: AdopterRepo, *, filled: bool = True) -> None:
+    """An actor, two use cases and a journey through them, stamped — and, unless
+    `filled` is false, their placeholders filled."""
     stamped(repo, "actor", "tester", "--path", "src/**")
     stamped(repo, "use-case", "run-suite", "--actor", "ACT-tester", "--path", "src/run.py")
     stamped(repo, "use-case", "read-report", "--actor", "ACT-tester")
     steps = ("--step", "UC-001", "--step", "UC-002")
     stamped(repo, "journey", "first-run", "--actor", "ACT-tester", *steps)
+    if filled:
+        fill(repo)

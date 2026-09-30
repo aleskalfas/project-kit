@@ -5,19 +5,35 @@ What is checked, each against the record's words:
 - **Shape** (points 1 and 2). Every file in one of the places holds artefacts of
   that place's kind: the glossary and the actors are collection files, one
   entry per artefact keyed by its id; a use case and a journey are a document
-  each. A file without front matter, a collection file that is not one, or a
-  use-case or journey file holding entries, is an error.
+  each. A file without front matter, one whose front matter does not parse, a
+  collection file that is not one, or a use-case or journey file holding
+  entries, is an error: what it holds cannot be read, its ids included, and
+  an id is never used again (point 3) — the stamp then counts the number the
+  file's name carries.
 - **Missing required parts** (points 1 and 3). Each artefact's own fields
   against its kind's companion schema — its id, its title, its status, its
   actor, its steps, its needs, its definition — and an entry's id against its
   kind's id. Unknown fields are refused, so a misspelt one is never silently
   ignored.
+- **A placeholder left** (point 1). What the stamp leaves a person to write —
+  an actor's need, a term's definition, a use case's goal and steps — is no
+  part of the analysis until written: an own field still holding a
+  placeholder the templates or the skill's commands ever shipped, or a body —
+  a collection entry's section, heading included — still holding one of the
+  templates', is an error. Matched exactly against those texts
+  (`_lib/placeholder.py`), so a capitalised one (`<Title>`) is caught and
+  words of the artefact's own in angle brackets — code a body quotes — never
+  are.
 - **A use case's and a journey's heading** is its id and its front matter's
   title, `# UC-NNN — <title>`: what a reader of the front matter alone sees —
   a data point publishing `{id, title, status}`, say — is what the page shows.
   The heading is read from the file discovery names.
 - **Duplicate ids** (point 3). No two artefacts in the analysis share an id,
   a number spelt with other zeros included — as the stamp counts it held.
+- **A name the id disagrees with** (point 3). A use case or journey whose
+  file's name carries a number (`UC-007-<slug>.md`) its front matter does not
+  give — no id, or another: the stamp counts the number its name carries, so
+  the front matter says the same.
 - **What a use case or journey names** (points 1 and 3): its actor, and a
   journey's steps, are an actor and use cases of the analysis; and one in
   force names none withdrawn. The stamp refuses the same (`Analysis.unfit`),
@@ -71,9 +87,9 @@ read the tree alone.
 check-numbers`' (`_lib/numbers.py`): it reads the default branch, so it answers
 about a change rather than the tree, and is not a validator (ADR-058 point 7).
 The friction block — its shape, dead anchors, cycles, friction itself — is the
-core's (`pkit validate`'s `friction` member and `pkit friction check`); so is a
-front matter that does not parse, which this check counts and leaves to it. An
-unanchored artefact is the core's measure, never an error.
+core's (`pkit validate`'s `friction` member and `pkit friction check`), which
+also reports a front matter that does not parse, as this check does for a file
+in its places. An unanchored artefact is the core's measure, never an error.
 """
 
 from __future__ import annotations
@@ -89,20 +105,24 @@ from _lib import backbone, evidence, markdown, schemas
 from _lib.findings import ERROR, REPORT, WARNING, Finding, Outcome, at
 from _lib.model import (
     ACTOR,
+    COLLECTIONS,
     CONTAINER,
     ID_SHAPE,
     JOURNEY,
     KINDS,
     NOUN,
+    NUMBERED,
     REVALIDATED_AT,
     UNANCHORED_BECAUSE,
     USE_CASE,
     Analysis,
     Artefact,
     Unreadable,
+    id_in_name,
     identity,
     with_article,
 )
+from _lib.placeholder import IN_TEMPLATES, left_in
 
 #: Where in an artefact its artefact anchors sit.
 ARTEFACT_ANCHORS = f"/{CONTAINER}/friction/anchors/artefact"
@@ -140,9 +160,12 @@ def check(root: Path) -> Outcome:
     records = list(analysis.records)
     outcome.summary.append(_counts(analysis, len(records)))
     outcome.findings += [Finding(ERROR, s.path, s.why) for s in analysis.strays]
+    outcome.findings += _unreadable(analysis)
     outcome.findings += _own_fields(analysis)
+    outcome.findings += _placeholders(root, analysis)
     outcome.findings += _headings(root, analysis)
     outcome.findings += _duplicates(analysis)
+    outcome.findings += _named_otherwise(analysis)
     outcome.findings += _references(analysis)
     outcome.findings += _actor_anchors(analysis)
     outcome.findings += _journey_anchors(analysis)
@@ -165,13 +188,33 @@ def _counts(analysis: Analysis, records: int) -> str:
             f" The records' folder holds nothing — {analysis.records_unheld}; `pkit validate` "
             f"says why."
         )
-    if analysis.unreadable:
-        line += f" {len(analysis.unreadable)} file(s) whose front matter does not parse, left to "
-        line += "`pkit validate`'s friction member."
     return line
 
 
 # --- shape and required parts --------------------------------------------------------------
+
+
+def _unreadable(analysis: Analysis) -> list[Finding]:
+    """A file in one of the places whose front matter does not parse: nothing it holds
+    can be read, its ids included (DEC-001 point 3)."""
+    found: list[Finding] = []
+    for path, reason in sorted(analysis.unreadable.items()):
+        kind = analysis.files.get(path)
+        holds = f"the {NOUN[kind]}s it holds" if kind in COLLECTIONS else "what it holds"
+        named = id_in_name(path) if kind in NUMBERED else None
+        counted = (
+            f"; the stamp counts {named}, the number its name carries, as held" if named else ""
+        )
+        why = f" ({reason})" if reason else ""
+        found.append(
+            Finding(
+                ERROR,
+                path,
+                f"its front matter does not parse{why}: {holds} cannot be read, ids included, "
+                f"and an id is never used again (DEC-001 point 3){counted} — fix the front matter",
+            )
+        )
+    return found
 
 
 def _own_fields(analysis: Analysis) -> list[Finding]:
@@ -189,6 +232,76 @@ def _own_fields(analysis: Analysis) -> list[Finding]:
         for pointer, message in schemas.errors(artefact.kind, artefact.fields):
             found.append(Finding(ERROR, at(artefact.location, pointer), message))
     return found
+
+
+def _placeholders(root: Path, analysis: Analysis) -> list[Finding]:
+    """What a person was left to write and has not (DEC-001 point 1): a placeholder the
+    templates or the skill's commands shipped, still in an artefact's own fields, and
+    one of the templates' still in its body — or its section of a collection file,
+    heading included. Matched exactly (`_lib/placeholder.py`), so words of the
+    artefact's own in angle brackets — `maps <user id> to a session`, code a body
+    quotes — are never taken for one."""
+    texts: dict[str, str | None] = {}
+    found: list[Finding] = []
+    for artefact in analysis.artefacts:
+        for pointer, text in _strings(artefact.fields):
+            held = left_in(text)
+            if held:
+                found.append(
+                    Finding(
+                        ERROR,
+                        at(artefact.location, pointer),
+                        f"still holds the placeholder {held[0]!r}: write in its place what "
+                        f"it asks for — until then it says nothing of the {NOUN[artefact.kind]} "
+                        f"(DEC-001 point 1)",
+                    )
+                )
+        if artefact.path not in texts:
+            texts[artefact.path] = _read(root / artefact.path)
+        text = texts[artefact.path]
+        if text is None:
+            continue  # the core reports a file it cannot read
+        _front, body = markdown.split(text)
+        if artefact.entry and artefact.id is not None:
+            body = markdown.section(body, artefact.id, heading=True)
+        held = left_in(body, IN_TEMPLATES)
+        if not held:
+            continue
+        more = f" and {len(held) - 1} more" if len(held) > 1 else ""
+        where = "its section" if artefact.entry else "its body"
+        found.append(
+            Finding(
+                ERROR,
+                artefact.location,
+                f"{where} still holds the template's placeholder {held[0]!r}{more}: write in "
+                f"each one's place what it asks for, or remove it (DEC-001 point 1)",
+            )
+        )
+    return found
+
+
+def _strings(value: object, pointer: str = "") -> list[tuple[str, str]]:
+    """Each text in `value`, with the JSON Pointer to it."""
+    if isinstance(value, str):
+        return [(pointer, value)]
+    if isinstance(value, Mapping):
+        items: Iterable[tuple[object, object]] = value.items()
+    elif isinstance(value, list):
+        items = enumerate(value)
+    else:
+        return []
+    return [
+        found
+        for key, item in items
+        for found in _strings(item, f"{pointer}/{str(key).replace('~', '~0').replace('/', '~1')}")
+    ]
+
+
+def _read(path: Path) -> str | None:
+    try:
+        return path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return None
 
 
 def _headings(root: Path, analysis: Analysis) -> list[Finding]:
@@ -256,6 +369,33 @@ def _duplicates(analysis: Analysis) -> list[Finding]:
                     f"the analysis share an id, and an id is never used again (DEC-001 point 3)",
                 )
             )
+    return found
+
+
+def _named_otherwise(analysis: Analysis) -> list[Finding]:
+    """A use case or journey whose file's name carries a number its front matter does
+    not give — no id, or another: the stamp counts the number the name carries, and
+    every number a history gave a file, so the name and the id say the same (DEC-001
+    point 3). An id spelt with other zeros is the same id; the id check reports it."""
+    found: list[Finding] = []
+    for artefact in analysis.artefacts:
+        named = id_in_name(artefact.path)
+        if artefact.entry or artefact.kind not in NUMBERED or named is None:
+            continue
+        if artefact.id is None:
+            message = (
+                f"its name carries {named}, its front matter no id: the stamp counts {named} "
+                f"as held, and an id is never used again — write `id: {named}` (DEC-001 point 3)"
+            )
+        elif identity(artefact.id) != named:
+            message = (
+                f"its name carries {named}, its front matter {artefact.id}: the stamp counts "
+                f"both as held, and an artefact holds one id — name the file after its id, or "
+                f"correct `id` (DEC-001 point 3)"
+            )
+        else:
+            continue
+        found.append(Finding(ERROR, artefact.location, message))
     return found
 
 

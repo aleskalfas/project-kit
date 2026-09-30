@@ -16,12 +16,17 @@ are a document each — and a file in a place that holds no artefact of its
 kind's shape is a stray the check reports. The revalidation records are not
 artefacts: their folder is this capability's folder of held documents (COR-050
 point 1), and the records are the files the answer's declaration of that
-folder holds.
+folder holds. A file the project's `friction.exclude` leaves out is no part of
+the analysis, as it is no part of friction (COR-050 point 7): the discovery
+marks it `excluded`, and the stamp, the checks and the filler read nothing of
+it — only its path is kept, so the history reading leaves it out too
+(`_lib/history.py`).
 """
 
 from __future__ import annotations
 
 import re
+from collections import defaultdict
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
@@ -47,7 +52,12 @@ ID_SHAPE = {ACTOR: "ACT-<slug>", TERM: "TERM-<slug>", USE_CASE: "UC-NNN", JOURNE
 
 #: A use case's or journey's id with its number in any number of digits — the
 #: spellings the id schema refuses included.
-_ANY_NUMBER = re.compile(rf"^(?P<prefix>{PREFIX[USE_CASE]}|{PREFIX[JOURNEY]})-(?P<number>[0-9]+)$")
+_NUMBER = rf"(?P<prefix>{PREFIX[USE_CASE]}|{PREFIX[JOURNEY]})-(?P<number>[0-9]+)"
+_ANY_NUMBER = re.compile(rf"^{_NUMBER}$")
+
+#: A file named after the use case or journey it holds, `UC-NNN-<slug>.md`, as the
+#: stamp names one: the number, then a hyphen or the extension.
+_NAMED = re.compile(rf"^{_NUMBER}(?=[-.])")
 
 
 def identity(artefact_id: str) -> str:
@@ -55,9 +65,37 @@ def identity(artefact_id: str) -> str:
     spelling, the one the id schema admits — `UC-0007` stands for `UC-007` — any
     other id as written. The stamp counts a number as held, and the check two
     artefacts as sharing an id, by this, so the two never disagree."""
+    return number_in(artefact_id) or artefact_id
+
+
+def number_in(artefact_id: str) -> str | None:
+    """The use case's or journey's number `artefact_id` spells, as `identity` spells
+    it; `None` for an id that is no such number."""
     found = _ANY_NUMBER.match(artefact_id)
-    if found is None:
-        return artefact_id
+    return None if found is None else _spelt(found)
+
+
+def number_of(artefact_id: str) -> int:
+    """The number of a use case's or journey's id as `identity` spells it: 7 for `UC-007`."""
+    return int(artefact_id.split("-", 1)[1])
+
+
+def kind_numbered(artefact_id: str) -> str:
+    """The kind a use case's or journey's number is of, by its prefix."""
+    return JOURNEY if artefact_id.startswith(f"{PREFIX[JOURNEY]}-") else USE_CASE
+
+
+def id_in_name(path: str) -> str | None:
+    """The use case's or journey's id a file's name carries — `UC-007` for
+    `…/UC-007-export.md` — as `identity` spells it; `None` for a name carrying none.
+    The stamp names each file so, and counts the number a name carries as held
+    whatever the file holds — no front matter, one that does not parse, one naming
+    no id — so a number is never used again because its file cannot be read."""
+    found = _NAMED.match(path.rsplit("/", 1)[-1])
+    return None if found is None else _spelt(found)
+
+
+def _spelt(found: re.Match[str]) -> str:
     return f"{found['prefix']}-{int(found['number']):03d}"
 
 
@@ -138,23 +176,46 @@ class Analysis:
 
     `location` is where it lies, repository-relative, and `places` where each
     kind's place resolves — both `None`/empty when the reading holds none of
-    this capability's places. `unreadable` names the files whose front matter
-    does not parse: the backbone's friction pass reports them. `records` are
-    the revalidation records, by path: the files this capability's held folder
-    of them holds in the reading — the working tree's listing, so a record git
-    ignores is not one, and every Markdown file beneath the folder, nested ones
-    included. `records_unheld` says why that folder holds nothing, when it
-    does not: the backbone skipped it (its validation says why), or the reading
-    declares no such folder.
+    this capability's places. `files` is every file in one of the places, and
+    the kind its place holds, whatever the file holds; `unreadable` the files
+    whose front matter does not parse, each with the backbone's reason. A file
+    `friction.exclude` leaves out is in none of these: `excluded` is its path
+    alone. `records` are the revalidation records, by path: the files this
+    capability's held folder of them holds in the reading — the working tree's
+    listing, so a record git ignores is not one, and every Markdown file
+    beneath the folder, nested ones included. `records_unheld` says why that
+    folder holds nothing, when it does not: the backbone skipped it (its
+    validation says why), or the reading declares no such folder.
     """
 
     location: str | None
     places: Mapping[str, str]
     artefacts: tuple[Artefact, ...]
     strays: tuple[Stray, ...]
-    unreadable: tuple[str, ...]
+    unreadable: Mapping[str, str]
+    files: Mapping[str, str]
     records: tuple[str, ...]
     records_unheld: str | None = None
+    excluded: frozenset[str] = frozenset()
+
+    def held(self) -> set[str]:
+        """Every id this state of the analysis holds, as `identity` spells it: each
+        artefact's own id, and each number a use case or journey holds (`numbers`)."""
+        return {identity(a.id) for a in self.artefacts if a.id} | set(self.numbers())
+
+    def numbers(self) -> dict[str, set[str]]:
+        """Each use case's or journey's number this state holds, as `identity` spells
+        it, and the files holding it: by its front matter's id, and by the number a
+        file's name carries (`id_in_name`) — so a file whose id cannot be read still
+        holds the number its name gives it (DEC-001 point 3)."""
+        found: dict[str, set[str]] = defaultdict(set)
+        for path, kind in self.files.items():
+            if kind in NUMBERED and (named := id_in_name(path)) is not None:
+                found[named].add(path)
+        for artefact in self.artefacts:
+            if artefact.kind in NUMBERED and artefact.id and (own := number_in(artefact.id)):
+                found[own].add(artefact.path)
+        return dict(found)
 
     def of_kind(self, kind: str) -> list[Artefact]:
         return [a for a in self.artefacts if a.kind == kind]
@@ -218,16 +279,21 @@ def analysis_of(document: Mapping[str, Any]) -> Analysis:
 
     records, unheld = _records(document.get(HELD))
     kind_of_file: dict[str, str] = {}
-    unreadable: list[str] = []
+    unreadable: dict[str, str] = {}
     no_front_matter: list[str] = []
+    excluded: set[str] = set()
     for entry in _mappings(document.get("files")):
         kinds = [kind_of_place[i] for i in entry.get("places") or [] if i in kind_of_place]
         if not kinds:
             continue
         path = str(entry.get("path"))
+        if entry.get("excluded") is True:
+            excluded.add(path)
+            continue
         kind_of_file[path] = kinds[0]
-        if entry.get("unreadable") is not None:
-            unreadable.append(path)
+        reason = entry.get("unreadable")
+        if reason is not None:
+            unreadable[path] = reason if isinstance(reason, str) else ""
         elif entry.get("fields") is None:
             no_front_matter.append(path)
 
@@ -276,9 +342,11 @@ def analysis_of(document: Mapping[str, Any]) -> Analysis:
         places=places,
         artefacts=tuple(a for a in artefacts if a.path not in strays),
         strays=tuple(sorted(strays.values(), key=lambda s: s.path)),
-        unreadable=tuple(unreadable),
+        unreadable=unreadable,
+        files=kind_of_file,
         records=records,
         records_unheld=unheld,
+        excluded=frozenset(excluded),
     )
 
 

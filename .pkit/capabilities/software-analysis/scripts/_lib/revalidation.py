@@ -24,7 +24,9 @@ and a text still holding a placeholder (`_lib/placeholder.py`) is refused too.
 An agent that performed it (`by_agent`) is named only beside the person who
 confirmed it. The artefacts it cites are artefacts of the analysis, withdrawn
 ones included, as the check holds a record (`_lib/check.py`); the front matter
-is held to its schema before anything is written.
+is held to its schema before anything is written. It is written as an
+artefact is (`stamp.write_and_record`): whole, and before the analysis location is
+recorded, so a refused record leaves nothing written.
 """
 
 from __future__ import annotations
@@ -38,7 +40,7 @@ from pathlib import Path
 from _lib import backbone, markdown, schemas
 from _lib.model import REVALIDATIONS, Unreadable
 from _lib.placeholder import unfilled
-from _lib.stamp import TEMPLATES, Recorder, Refused, Stamped, dump
+from _lib.stamp import TEMPLATES, Recorder, Refused, Stamped, dump, write_and_record
 
 TEMPLATE = TEMPLATES / "revalidation-record.md"
 
@@ -140,16 +142,9 @@ def stamp_record(
         raise Refused(f"{location} exists already: name the subject with another slug")
     text = f"---\n{dump(data)}---\n\n{_body(request, outcomes, because)}"
 
-    notes: list[str] = []
-    try:
-        recorded = record(root)
-    except Unreadable as exc:
-        raise Refused(f"the analysis location could not be recorded: {exc}") from exc
-    if recorded:
-        notes.append(recorded)
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(text, encoding="utf-8")
-    return Stamped(id=f"{request.date}-{request.slug}", location=location, notes=tuple(notes))
+    recorded = write_and_record(root, target, location, text, record)
+    notes = (recorded,) if recorded else ()
+    return Stamped(id=f"{request.date}-{request.slug}", location=location, notes=notes)
 
 
 # --- what the request says -------------------------------------------------------------------

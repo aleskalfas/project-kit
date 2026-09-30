@@ -42,6 +42,7 @@ from tests.analysis_repo import (
     NEW,
     RECORDS,
     USE_CASES,
+    fill,
     front,
     installed,
     new,
@@ -358,6 +359,7 @@ def test_an_actor_or_term_nothing_embodies_carries_its_reason(
 ) -> None:
     reason = "No code or decision embodies it: it is who funds the project."
     stamped(project, kind, "sponsor", "--unanchored-because", reason)
+    fill(project)
     entry = front(project, rel)[f"{prefix}-sponsor"]
     assert entry["unanchored-because"] == reason
     assert list(entry)[-2:] == ["unanchored-because", "pkit"]
@@ -374,6 +376,10 @@ def test_an_actor_or_term_nothing_embodies_carries_its_reason(
             "an actor with anchors is not unanchored",
         ),
         (("term", "sponsor", "--unanchored-because", " "), "gives the reason it has no anchors"),
+        (
+            ("actor", "sponsor", "--unanchored-because", "<why nothing embodies it>"),
+            "--unanchored-because still holds the placeholder '<why nothing embodies it>'",
+        ),
     ],
 )
 def test_unanchored_is_refused_with_anchors_or_without_a_reason(

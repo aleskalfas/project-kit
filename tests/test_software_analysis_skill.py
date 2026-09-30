@@ -32,6 +32,7 @@ from tests.analysis_repo import (
     CAPABILITY,
     NEW,
     REPO,
+    fill,
     installed,
     load,
     run_script,
@@ -151,6 +152,7 @@ def test_what_the_walkthroughs_stamp_passes_the_gate_and_carries_the_friction_bl
     completed = run_script(project, NEW, *planned)
     assert completed.returncode == 0, completed.stderr
 
+    fill(project)  # the walkthroughs' "Fill it": the check fails a placeholder left
     assert errors(check(project)) == []
     assert validate_friction(project.root).errors == ()
     listing = subprocess.run(

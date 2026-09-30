@@ -19,9 +19,10 @@ time an artefact is placed there (COR-049 point 5):
 - an actor, the entry `ACT-<slug>` of `use-case-model/actors.md`;
 - a term, the entry `TERM-<slug>` of `glossary.md`.
 
-A use case or journey takes the next free number on the default branch and in
-the working tree; `pkit analysis check-numbers` reports a number another
-branch took first. `_lib/stamp.py` states the rules.
+A use case or journey takes the next free number on the default branch — every
+number its history ever gave a file included — and in the working tree; `pkit
+analysis check-numbers` reports a number another branch took first.
+`_lib/stamp.py` states the rules.
 
 It also writes a revalidation record, `revalidations/<date>-<slug>.md`, and only
 one with something to say — a planned revalidation, one that found a

@@ -2,12 +2,37 @@
 
 When two lines of work number a new use case or journey the same, the first to
 reach the default branch keeps the number, and the other renumbers before
-merging. This is where the other finds out: a use case or journey numbered in
-the working tree whose number the default branch's tip gives another file,
-where the merge-base — where this branch left the default branch — held no
-artefact with that id. A move within the branch (into an area) is not one;
-once the default branch is merged in, a number both took is two files holding
-one id, which the validator reports as a duplicate.
+merging. This is where the other finds out: a number the working tree holds
+that the default branch took too since this branch left it — its tip holds
+it, or its history since the fork gave it a file gone since, as the stamp
+counts a number held — where the merge-base, where this branch left the
+default branch, held no file with that id.
+
+An artefact is known by its id, never by its path, and a number is read from a
+file's name as well as its front matter, on both sides (`Analysis.numbers`):
+
+- **an id moved** within the branch — into an area, say — or on the default
+  branch is no collision: the merge-base held it, so neither side took it;
+- **this branch's own work, landed** — a parent branch squash-merged or
+  rebased onto the default branch while this one was stacked on it — is no
+  collision when the default branch's file for the number is, byte for byte,
+  a version this branch's history wrote, wherever this branch has moved the
+  file since. So is anything two lines of work wrote to the very byte;
+- **a file of the same name** as one this branch holds, or its history since
+  the fork added, for that number, but other bytes, is a warning: possibly
+  this branch's own work landed and edited since — a parent edited after the
+  fork, then squash-merged; an edit on the default branch after the squash; a
+  conflict resolved in a rebase — or two lines of work that stamped the same
+  slug. Merging the default branch in and keeping one file settles the first;
+  renumbering, the second. It never fails: which of the two it is, only the
+  person knows;
+- **a file of another name** is a collision, an error: another line of work
+  took the number for its own artefact.
+
+Once the default branch is merged in, a number both took is two files holding
+one id, which the validator reports as a duplicate — and so is this branch's
+own work landed when it moved the file since: git pairs no rename where the
+merge-base holds neither file.
 
 It reads a base, so it answers about a change rather than the tree, and is not
 a validator (ADR-058 point 7): `pkit analysis check-numbers` runs it, a line of
@@ -19,26 +44,27 @@ branch left it — the only case in which it can have taken a number since — t
 is reported, never failed, as the change check reports an outdated base.
 
 The default branch is read at its tip and at the merge-base through the
-backbone's discovery at a commit (`pkit friction artefacts --at`); git answers
-only which commits those are.
+backbone's discovery at a commit (`pkit friction artefacts --at`), and its
+history since the fork as the stamp reads a history (`_lib/history.py`). Git
+answers which commits those are, and — only for a number both sides took —
+which versions of the use-case and journey files this branch's history wrote
+since the merge-base, which the default branch's tip holds, and which files
+this branch's history added (`backbone.blobs_written`, `backbone.blob_of`,
+`backbone.added`).
 """
 
 from __future__ import annotations
 
-from collections import defaultdict
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
-from _lib import backbone, schemas
-from _lib.findings import ERROR, REPORT, Finding, Outcome
-from _lib.model import NOUN, NUMBERED, Artefact, Unreadable, identity
+from _lib import backbone, history
+from _lib.findings import ERROR, REPORT, WARNING, Finding, Outcome
+from _lib.model import NOUN, NUMBERED, Analysis, Unreadable, kind_numbered
 
 #: The version of the `--json` document.
 SCHEMA_VERSION = 1
-
-#: How many characters of a commit a message shows.
-SHORT = 12
 
 
 class CannotCompare(Exception):
@@ -78,6 +104,16 @@ class Comparison:
         }
 
 
+@dataclass(frozen=True)
+class Theirs:
+    """The default branch's files for a number it took since this branch left it — the
+    files its tip holds, else the one its history gave the number last — and whether
+    its tip holds them."""
+
+    paths: tuple[str, ...]
+    held: bool
+
+
 def compare(root: Path, ref: str) -> Comparison:
     """Compare the numbers in the working tree at `root` with the default branch `ref`.
     Raises CannotCompare when it cannot answer."""
@@ -85,36 +121,112 @@ def compare(root: Path, ref: str) -> Comparison:
         analysis = backbone.read_analysis(root)
     except Unreadable as exc:
         raise CannotCompare(f"the analysis could not be read: {exc}") from exc
-    numbered = [
-        a
-        for a in analysis.artefacts
-        if a.kind in NUMBERED and a.id and schemas.id_pattern(a.kind).match(a.id)
-    ]
-    if not numbered:
+    ours = analysis.numbers()
+    if not ours:
         line = f"numbers: no use case or journey is numbered here; nothing to compare with {ref}."
         return Comparison(None, Outcome([line]))
 
     base = _resolve(root, ref)
     if not base.outdated:
-        line = f"numbers: this branch contains {ref} ({base.tip[:SHORT]}); nothing to collide with."
+        line = (
+            f"numbers: this branch contains {ref} ({base.tip[: backbone.SHORT]}); nothing to "
+            f"collide with."
+        )
         return Comparison(base, Outcome([line]))
     try:
         on_base = backbone.read_analysis(root, at=base.tip)
-        before = {
-            identity(a.id) for a in backbone.read_analysis(root, at=base.commit).artefacts if a.id
-        }
+        before = backbone.read_analysis(root, at=base.commit).held()
     except Unreadable as exc:
         raise CannotCompare(f"{ref} could not be read: {exc}") from exc
 
     line = (
-        f"numbers: compared with {ref} ({base.tip[:SHORT]}; this branch left it at "
-        f"{base.commit[:SHORT]})."
+        f"numbers: compared with {ref} ({base.tip[: backbone.SHORT]}; this branch left it at "
+        f"{base.commit[: backbone.SHORT]})."
     )
     outdated = Finding(REPORT, analysis.location or ".", f"outdated base: {_outdated(base)}")
-    # By what each id stands for, as the stamp and the validator compare ids; the ids
-    # numbered here are those the id schema admits, each its own identity already.
-    taken = {identity(a.id): a.path for a in on_base.artefacts if a.kind in NUMBERED and a.id}
-    return Comparison(base, Outcome([line], [outdated, *_collisions(numbered, taken, before, ref)]))
+    folders = {a.places[k] for a in (analysis, on_base) for k in NUMBERED if k in a.places}
+    theirs = _taken(root, base, analysis, on_base, before, folders, set(ours))
+    findings = _collisions(root, base, ours, theirs, folders) if theirs else []
+    return Comparison(base, Outcome([line], [outdated, *findings]))
+
+
+def _taken(
+    root: Path,
+    base: Base,
+    analysis: Analysis,
+    on_base: Analysis,
+    before: set[str],
+    folders: set[str],
+    ours: set[str],
+) -> dict[str, Theirs]:
+    """Each number of `ours` the default branch took since this branch left it, with its
+    file: one its tip holds, else one its history since the fork gave a file gone
+    since, as the stamp counts it held (`_lib/history.py`) — never one the merge-base
+    held."""
+    at_tip = {i: paths for i, paths in on_base.numbers().items() if i in ours and i not in before}
+    theirs = {i: Theirs(tuple(sorted(paths)), held=True) for i, paths in at_tip.items()}
+    gone = ours - before - set(at_tip)
+    if gone:
+        since = history.given(root, f"{base.commit}..{base.tip}", folders)
+        judge = history.Judge(root, (analysis, on_base))
+        for i, number in history.counted(judge, since, gone).items():
+            theirs[i] = Theirs((number.path,), held=False)
+    return theirs
+
+
+def _collisions(
+    root: Path, base: Base, ours: dict[str, set[str]], theirs: dict[str, Theirs], folders: set[str]
+) -> list[Finding]:
+    """Each number both sides took, found against the file the default branch holds or
+    gave for it: none for this branch's own work landed byte for byte, a warning for a
+    file of a name this branch has for the number, an error for another."""
+    written = backbone.blobs_written(root, base.commit, folders)
+    names = {i: {_name(p) for p in ours[i]} for i in theirs}
+    for number in history.given(root, f"{base.commit}..HEAD", folders):
+        if number.id in names:
+            names[number.id].add(_name(number.path))
+    found: list[Finding] = []
+    for i, their in sorted(theirs.items()):
+        other = [
+            p
+            for p in their.paths
+            if not their.held or backbone.blob_of(root, base.tip, p) not in written
+        ]
+        if not other:
+            continue  # this branch's own work, landed byte for byte
+        path = other[0]
+        severity, message = _message(i, path, their.held, _name(path) in names[i], base.ref)
+        found += [Finding(severity, here, message) for here in sorted(ours[i])]
+    return found
+
+
+def _message(number: str, path: str, held: bool, same_name: bool, ref: str) -> tuple[str, str]:
+    """A finding's severity and message for `number`, which the default branch took for
+    `path` — its tip holds it, or its history gave it (`held`)."""
+    noun = NOUN[kind_numbered(number)]
+    renumber = (
+        f"renumber this {noun} before merging — `pkit analysis new` gives the next free one "
+        f"(DEC-001 point 3)"
+    )
+    if held:
+        taken = f"{number} is numbered on {ref} too, for {path}, since this branch left it"
+        rule = "the first to reach the default branch keeps the number"
+    else:
+        taken = (
+            f"{number} was numbered on {ref} since this branch left it, for {path}, which "
+            f"{ref} no longer holds"
+        )
+        rule = "a number is never used again"
+    if same_name:
+        return WARNING, (
+            f"{taken}, in a file of the name this branch gives it: possibly your own work "
+            f"landed — merge {ref} and keep one file; otherwise {renumber}"
+        )
+    return ERROR, f"{taken}: {rule}, so {renumber}"
+
+
+def _name(path: str) -> str:
+    return PurePosixPath(path).name
 
 
 def _resolve(root: Path, ref: str) -> Base:
@@ -147,31 +259,7 @@ def _resolve(root: Path, ref: str) -> Base:
 
 def _outdated(base: Base) -> str:
     return (
-        f"the base {base.ref} is at {base.tip[:SHORT]}, which is not an ancestor of HEAD: it "
-        f"moved on after this branch left it at {base.commit[:SHORT]}; numbers were compared "
-        f"with its tip — merge or rebase onto {base.ref}, then run again"
+        f"the base {base.ref} is at {base.tip[: backbone.SHORT]}, which is not an ancestor of "
+        f"HEAD: it moved on after this branch left it at {base.commit[: backbone.SHORT]}; "
+        f"numbers were compared with its tip — merge or rebase onto {base.ref}, then run again"
     )
-
-
-def _collisions(
-    numbered: list[Artefact], taken: dict[str, str], before: set[str], ref: str
-) -> list[Finding]:
-    """Each number this branch took that `ref` took too, for another file, since this
-    branch left it."""
-    here: dict[str, set[str]] = defaultdict(set)
-    for artefact in numbered:
-        here[str(artefact.id)].add(artefact.path)
-    return [
-        Finding(
-            ERROR,
-            artefact.location,
-            f"{artefact.id} is numbered on {ref} too, for {taken[str(artefact.id)]}, since this "
-            f"branch left it: the first to reach the default branch keeps the number, so renumber "
-            f"this {NOUN[artefact.kind]} before merging — `pkit analysis new` gives the next free "
-            f"one (DEC-001 point 3)",
-        )
-        for artefact in numbered
-        if artefact.id in taken
-        and artefact.id not in before
-        and taken[str(artefact.id)] not in here[str(artefact.id)]
-    ]

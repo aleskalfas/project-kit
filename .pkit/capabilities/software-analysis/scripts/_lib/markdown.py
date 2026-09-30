@@ -3,9 +3,9 @@
 A text has front matter when it opens with a `---` line closed by the next
 `---` line — the rule the backbone's discovery reads artefacts by. Where
 artefacts are is never read here: the stamp reads the templates and the
-collection file it adds an entry to, and the check reads the heading of a
-file discovery names and the revalidation records, which are not artefacts
-and lie in no place.
+collection file it adds an entry to, and the check reads the heading and the
+body — a collection entry's section — of a file discovery names, and the
+revalidation records, which are not artefacts and lie in no place.
 """
 
 from __future__ import annotations
@@ -23,6 +23,9 @@ _FENCE = re.compile(r"^---[ \t]*$", re.MULTILINE)
 #: A level-one heading, its closing hashes left out; and the opening of fenced code.
 _H1 = re.compile(r"^#[ \t]+(?P<text>.*?)(?:[ \t]+#+)?[ \t]*$")
 _CODE_FENCE = re.compile(r"^[ ]{0,3}(?P<fence>`{3,}|~{3,})")
+
+#: A collection entry's section heading, `## <id> — <name>`.
+_SECTION = re.compile(r"^## (?P<id>\S+)")
 
 _safe = YAML(typ="safe")
 _round_trip = YAML()
@@ -66,6 +69,22 @@ def heading(body: str) -> str | None:
         if found is not None:
             return found["text"]
     return None
+
+
+def section(body: str, entry: str, *, heading: bool = False) -> str:
+    """The body section headed by a collection entry's id, `## <id> …`, up to the next
+    `## ` section — by that heading alone, and with it when `heading`; `""` without one."""
+    lines: list[str] = []
+    inside = False
+    for line in body.splitlines():
+        found = _SECTION.match(line)
+        if found is not None:
+            inside = found["id"] == entry
+            if not (inside and heading):
+                continue
+        if inside:
+            lines.append(line)
+    return "\n".join(lines)
 
 
 def key_lines(yaml_text: str) -> dict[str, int]:

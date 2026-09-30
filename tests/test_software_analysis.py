@@ -22,7 +22,11 @@ The check is `test_software_analysis_check.py`'s, the schemas and templates
 from __future__ import annotations
 
 import ast
+import json
+import os
 import re
+import stat
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -45,6 +49,7 @@ from tests.analysis_repo import (
     RECORDED,
     RECORDS,
     USE_CASES,
+    VALIDATE,
     front,
     installed,
     load,
@@ -253,6 +258,147 @@ def test_an_entry_is_added_where_its_id_sorts(project: AdopterRepo) -> None:
 
 
 @pytest.mark.parametrize(
+    ("ending", "between"),
+    [("", "\n\n"), ("\n", "\n"), ("\n\n\n", "")],
+    ids=["none", "one", "three"],
+)
+def test_an_entry_added_last_keeps_the_file_s_ending(
+    project: AdopterRepo, ending: str, between: str
+) -> None:
+    """The section added after the last one keeps every byte of the file before it —
+    no line ending added to its last line, no blank line taken away — and only what
+    separates the two is written."""
+    original = _ADMIN_ONLY.removesuffix("\n") + ending
+    project.write({ACTORS: original})
+    stamped(project, "actor", "tester", "--name", "Test author")
+    text = (project.root / ACTORS).read_text(encoding="utf-8")
+    closing = original.index("---\n", 4)
+    assert text.startswith(original[:closing] + "ACT-tester:\n  name: Test author\n")
+    section = "## ACT-tester — Test author\n\n" + _placeholder_line()
+    assert text.endswith(original[closing:] + between + section)
+
+
+def test_a_collection_file_is_replaced_whole_keeping_its_mode(project: AdopterRepo) -> None:
+    """Written beside itself and moved over, so a failure halfway never leaves it
+    half-written: a new file in its place, with its mode, and nothing left beside it."""
+    project.write({ACTORS: _ADMIN_ONLY})
+    actors = project.root / ACTORS
+    actors.chmod(0o640)
+    inode = actors.stat().st_ino
+    stamped(project, "actor", "tester")
+    assert actors.stat().st_ino != inode
+    assert stat.S_IMODE(actors.stat().st_mode) == 0o640
+    assert sorted(p.name for p in actors.parent.iterdir()) == ["actors.md"]
+
+
+def test_a_collection_file_with_crlf_line_endings_stays_crlf(project: AdopterRepo) -> None:
+    """A checkout with `core.autocrlf` writes every collection file CRLF: the stamp edits
+    it as LF and writes it back CRLF, so it is byte for byte the LF result with every
+    line ending CRLF — the file's own bytes kept, the entry's and the section's lines
+    ending as the file's do."""
+    project.write({ACTORS: _ADMIN_ONLY})
+    stamped(project, "actor", "able")
+    stamped(project, "actor", "tester")
+    as_lf = (project.root / ACTORS).read_bytes()
+    project.write({ACTORS: _ADMIN_ONLY.replace("\n", "\r\n")})
+    stamped(project, "actor", "able")
+    stamped(project, "actor", "tester")
+    assert (project.root / ACTORS).read_bytes() == as_lf.replace(b"\n", b"\r\n")
+
+
+def test_a_collection_file_with_mixed_line_endings_is_refused(project: AdopterRepo) -> None:
+    mixed = _ADMIN_ONLY.replace("\n", "\r\n", 3)
+    project.write({ACTORS: mixed})
+    completed = new(project, "actor", "tester")
+    assert completed.returncode == 1
+    assert completed.stderr.startswith(
+        f"refused: {ACTORS} has mixed line endings — some lines end CRLF, others LF or a lone "
+        "CR: the stamp writes its lines with the file's own ending, and this file has no one "
+        "ending — make them one, then stamp again"
+    )
+    assert (project.root / ACTORS).read_bytes() == mixed.encode("utf-8")
+
+
+def test_a_write_that_fails_records_no_location(project: AdopterRepo) -> None:
+    """The location is recorded once the artefact is written, never before: a write that
+    fails leaves the recorded locations as they were."""
+    stamped(project, "actor", "tester")
+    (project.root / RECORDED).unlink()  # an analysis whose location was never recorded
+    project.write({f"{USE_CASES}/reports": "a file where the area's folder goes\n"})
+    completed = new(project, "use-case", "export", "--actor", "ACT-tester", "--area", "reports")
+    assert completed.returncode == 1
+    assert completed.stderr.startswith(
+        f"refused: {USE_CASES}/reports/UC-001-export.md could not be written: "
+    )
+    assert not (project.root / RECORDED).exists()
+
+
+#: A `pkit` whose `docs record-location --yes` fails, and every other command — the
+#: question whether the location is recorded included — as the real one.
+_FAILING_RECORD = """#!{python}
+import subprocess, sys
+if sys.argv[1:3] == ["docs", "record-location"] and "--yes" in sys.argv:
+    sys.stderr.write("error: the recorded locations cannot be written\\n")
+    sys.exit(1)
+sys.exit(subprocess.run([sys.executable, "-m", "project_kit", *sys.argv[1:]]).returncode)
+"""
+
+
+def test_a_recording_that_fails_leaves_nothing_written(
+    project: AdopterRepo, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The artefact written, the location cannot be recorded: the file is put back as it
+    was — a collection's bytes, or no file and no folder made for it."""
+    stamped(project, "actor", "tester")
+    before = (project.root / ACTORS).read_bytes()
+    (project.root / RECORDED).unlink()
+    failing = tmp_path / "failing-record"
+    failing.mkdir()
+    (failing / "pkit").write_text(_FAILING_RECORD.format(python=sys.executable), encoding="utf-8")
+    (failing / "pkit").chmod(0o755)
+    monkeypatch.setenv("PATH", f"{failing}{os.pathsep}{os.environ['PATH']}")
+    for args, gone in (
+        (("actor", "admin"), None),
+        (("use-case", "export", "--actor", "ACT-tester", "--area", "reports"), USE_CASES),
+    ):
+        completed = new(project, *args)
+        assert completed.returncode == 1, completed.stdout
+        assert "the analysis location could not be recorded: " in completed.stderr
+        assert (project.root / ACTORS).read_bytes() == before
+        assert gone is None or not (project.root / gone).exists()
+    assert not (project.root / RECORDED).exists()
+    # Recorded already, the stamp needs no recording and never runs it: it cannot fail on one.
+    project.write({RECORDED: "locations:\n  analysis: tech-docs/analysis\n"})
+    completed = new(project, "actor", "admin")
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout.splitlines() == [f"stamped ACT-admin at {ACTORS}#ACT-admin"]
+
+
+@pytest.mark.parametrize("linked", ["file", "folder"])
+def test_a_place_reached_through_a_link_is_refused(project: AdopterRepo, linked: str) -> None:
+    """The core's discovery reads no link as a document, nor anything beneath a linked
+    folder: an entry or a file written there would be no part of the analysis, and
+    written whole it would replace the link. The stamp refuses it, leaving the link."""
+    project.write({f"shared/{Path(ACTORS).name}": _ADMIN_ONLY})
+    shared = project.root / "shared"
+    link = project.root / (ACTORS if linked == "file" else USE_CASES)
+    link.parent.mkdir(parents=True, exist_ok=True)
+    link.symlink_to(shared / "actors.md" if linked == "file" else shared)
+    rel = ACTORS if linked == "file" else USE_CASES
+    args = ("actor", "tester") if linked == "file" else ("use-case", "one", "--actor", "ACT-x")
+    if linked == "folder":
+        stamped(project, "actor", "x")
+    completed = new(project, *args)
+    assert completed.returncode == 1
+    assert f" is reached through the link {rel}: the core's discovery never reads " in (
+        completed.stderr
+    )
+    assert link.is_symlink()
+    assert (shared / "actors.md").read_text(encoding="utf-8") == _ADMIN_ONLY
+    assert sorted(p.name for p in shared.iterdir()) == ["actors.md"]
+
+
+@pytest.mark.parametrize(
     ("kind", "rel", "prefix"), [("actor", ACTORS, "ACT"), ("term", GLOSSARY, "TERM")]
 )
 def test_entries_two_branches_add_merge_cleanly(
@@ -290,6 +436,151 @@ def test_numbers_count_the_default_branch_and_withdrawn_use_cases(project: Adopt
     path = project.root / USE_CASES / "UC-003-three.md"
     path.write_text(path.read_text(encoding="utf-8").replace("active", "withdrawn"), "utf-8")
     assert stamped(project, "use-case", "four", "--actor", "ACT-tester") == "UC-004"
+
+
+def test_a_number_deleted_from_the_default_branch_is_never_used_again(
+    project: AdopterRepo,
+) -> None:
+    """Deleting the highest-numbered use case, against the rule, frees nothing: the
+    number is counted over every file the default branch's history held — under
+    every name it had, a move into an area included — as well as the tree."""
+    stamped(project, "actor", "tester")
+    stamped(project, "use-case", "one", "--actor", "ACT-tester")
+    stamped(project, "use-case", "two", "--actor", "ACT-tester")
+    stamped(
+        project, "journey", "trip", "--actor", "ACT-tester", "--step", "UC-001", "--step", "UC-002"
+    )
+    project.commit("UC-001, UC-002 and JRN-001")
+    project.rename(f"{USE_CASES}/UC-002-two.md", f"{USE_CASES}/reports/UC-002-two.md")
+    project.commit(
+        "UC-002 deleted, and JRN-001",
+        {
+            f"{USE_CASES}/reports/UC-002-two.md": None,
+            f"{JOURNEYS}/JRN-001-trip.md": None,
+        },
+    )
+    assert not list((project.root / USE_CASES).rglob("UC-002-*.md"))
+    project.checkout("topic", create=True)
+    completed = new(project, "use-case", "three", "--actor", "ACT-tester")
+    assert completed.returncode == 0, completed.stderr
+    note, done = completed.stdout.splitlines()
+    assert done == f"stamped UC-003 at {USE_CASES}/UC-003-three.md"
+    # The history's number is the one it follows: the note names the file it was given.
+    assert note.startswith(
+        f"UC-003 follows UC-002, the number main's history gave {USE_CASES}/reports/UC-002-two.md "
+        "(commit "
+    )
+    assert note.endswith(
+        "), which neither main nor the working tree holds now: a number is never used again "
+        "(DEC-001 point 3)"
+    )
+    steps = ("--step", "UC-001", "--step", "UC-003")
+    assert stamped(project, "journey", "again", "--actor", "ACT-tester", *steps) == "JRN-002"
+
+
+def test_the_history_counts_the_files_the_tree_reading_counts(project: AdopterRepo) -> None:
+    """A number the history gave is counted only when the backbone's reading at the commit
+    that added the file held it as a file of the place — a Markdown file there, not left
+    out by `friction.exclude`. A non-Markdown file named after a number, removed since,
+    raises nothing; an excluded example raises nothing, present or removed; a Markdown
+    note named after a number held its number while it was there, so it still does, and
+    the stamp names it."""
+    examples = f"{USE_CASES}/examples"
+    config = f"docs:\n  internal: tech-docs\nfriction:\n  exclude:\n    - {examples}\n"
+    stamped(project, "actor", "tester")
+    stamped(project, "use-case", "one", "--actor", "ACT-tester")
+    example = (project.root / USE_CASES / "UC-001-one.md").read_text(encoding="utf-8")
+    project.write(
+        {
+            CONFIG: config,
+            f"{examples}/UC-900-example.md": example.replace("UC-001", "UC-900"),
+            f"{USE_CASES}/UC-800-flow.svg": "<svg/>\n",
+        }
+    )
+    project.commit("UC-001, an excluded example and a diagram")
+    # Present: the example is no part of the analysis, and the diagram no file of the place.
+    assert stamped(project, "use-case", "two", "--actor", "ACT-tester") == "UC-002"
+    checked = json.loads(run_script(project, VALIDATE, "--json").stdout)
+    assert not [f for f in checked["findings"] if f["location"].startswith(examples)]
+    project.commit(
+        "UC-002; the example and the diagram removed",
+        {f"{examples}/UC-900-example.md": None, f"{USE_CASES}/UC-800-flow.svg": None},
+    )
+    # Removed: the history judges each as the reading of its commit did, so neither counts.
+    completed = new(project, "use-case", "three", "--actor", "ACT-tester")
+    assert completed.stdout.splitlines() == [f"stamped UC-003 at {USE_CASES}/UC-003-three.md"]
+    notes = f"{USE_CASES}/UC-2026-notes.md"
+    project.commit("notes", {notes: "Some notes.\n"})
+    project.commit("notes removed", {notes: None})
+    completed = new(project, "use-case", "four", "--actor", "ACT-tester")
+    note, done = completed.stdout.splitlines()
+    assert done == f"stamped UC-2027 at {USE_CASES}/UC-2027-four.md"
+    assert note.startswith(f"UC-2027 follows UC-2026, the number main's history gave {notes} ")
+
+
+def test_a_file_added_before_its_place_was_there_still_counts(project: AdopterRepo) -> None:
+    """The reading at the commit that added a file speaks for it only when the place it
+    lies under was the place then. A file added while the analysis lay elsewhere, and
+    inside the place once the location moved there, held its number while it was there:
+    removed since, it still counts, since a reading that cannot say never frees one."""
+    stamped(project, "actor", "tester")
+    stamped(project, "use-case", "one", "--actor", "ACT-tester")
+    project.commit("UC-001")
+    early = f"{USE_CASES}/UC-007-early.md"
+    text = (project.root / USE_CASES / "UC-001-one.md").read_text(encoding="utf-8")
+    elsewhere = "locations:\n  analysis: old/analysis\n"
+    project.commit("the analysis elsewhere", {RECORDED: elsewhere, early: text})
+    project.commit("the analysis here", {RECORDED: f"locations:\n  analysis: {ANALYSIS}\n"})
+    project.commit("UC-007 removed", {early: None})
+    assert stamped(project, "use-case", "two", "--actor", "ACT-tester") == "UC-008"
+
+
+def test_a_shallow_clone_s_stamp_says_its_history_stops_early(
+    project: AdopterRepo, tmp_path: Path
+) -> None:
+    """Git's history stops where a shallow clone does: the stamp says so, as the friction
+    report does, rather than number past an unread history in silence."""
+    stamped(project, "actor", "tester")
+    stamped(project, "use-case", "one", "--actor", "ACT-tester")
+    project.commit("UC-001")
+    shallow = tmp_path / "shallow"
+    project.git("clone", "-q", "--depth", "1", f"file://{project.root}", str(shallow))
+    clone = AdopterRepo(shallow, source_kit=project.source_kit)
+    completed = new(clone, "use-case", "two", "--actor", "ACT-tester")
+    assert completed.returncode == 0, completed.stderr
+    note, done = completed.stdout.splitlines()
+    assert note == (
+        "history: shallow clone — main's history was read back to where the clone stops, so a "
+        "number a file was given before it is not counted; fetch the full history (`git fetch "
+        "--unshallow`) to count every one"
+    )
+    assert done == f"stamped UC-002 at {USE_CASES}/UC-002-two.md"
+    # An actor's or term's id is a person's choice: no history is read for one.
+    completed = new(clone, "actor", "admin")
+    assert completed.stdout.splitlines() == [f"stamped ACT-admin at {ACTORS}#ACT-admin"]
+
+
+def test_a_number_a_file_s_name_carries_is_held_whatever_the_file_holds(
+    project: AdopterRepo,
+) -> None:
+    """A file with no front matter, one whose front matter does not parse, one naming no
+    id: the stamp cannot read the id each holds, so it counts the number each name
+    carries — in the working tree and on the default branch — and the check reports
+    each file (`test_software_analysis_check.py`)."""
+    stamped(project, "actor", "tester")
+    stamped(project, "use-case", "one", "--actor", "ACT-tester")
+    project.commit("UC-001", {f"{USE_CASES}/UC-004-on-main.md": "# No front matter\n"})
+    project.checkout("topic", create=True)
+    project.write(
+        {
+            f"{USE_CASES}/UC-005-bare.md": "# No front matter\n",
+            f"{USE_CASES}/area/UC-006-broken.md": "---\nid: [unclosed\n---\n",
+            f"{USE_CASES}/UC-0007-no-id.md": "---\ntitle: No id\n---\n",
+        }
+    )
+    assert stamped(project, "use-case", "two", "--actor", "ACT-tester") == "UC-008"
+    project.write({f"{USE_CASES}/UC-0007-no-id.md": None, f"{USE_CASES}/UC-008-two.md": None})
+    assert stamped(project, "use-case", "two", "--actor", "ACT-tester") == "UC-007"
 
 
 def test_a_number_spelt_with_other_zeros_counts_as_held(project: AdopterRepo) -> None:
@@ -330,6 +621,19 @@ def test_without_the_default_branch_ids_come_from_the_working_tree_and_it_says_s
         (("use-case", "one", "--actor", "ACT-tester", "--area", "Big Area"), "is not a word"),
         (("actor", "tester"), "ACT-tester is held already"),
         (("use-case", "one", "--actor", "ACT-retired"), "actor ACT-retired is withdrawn"),
+        (
+            ("use-case", "two", "--actor", "ACT-tester", "--title", "<Title>"),
+            "--title still holds the placeholder '<Title>'",
+        ),
+        (("actor", "admin", "--name", "<Display name>"), "--name still holds the placeholder"),
+        (
+            ("term", "sandbox", "--name", "The <Term>"),
+            "--name still holds the placeholder '<Term>'",
+        ),
+        (
+            ("actor", "sponsor", "--unanchored-because", "<why>"),
+            "--unanchored-because still holds the placeholder '<why>'",
+        ),
     ],
 )
 def test_a_stamp_refuses_what_it_cannot_ground(
