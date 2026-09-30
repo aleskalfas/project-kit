@@ -38,6 +38,12 @@ settings that declare them, this pass reports:
 - **unparsable front matter** in a declared place — reported whenever places
   are declared, dormant or not, because the check never skips an artefact it
   cannot parse: the broken file may be the one carrying the container;
+- **mixed line endings** — a file the walk read, a rule-set file's included,
+  written with more than one line break (`DiscoveredFile.mixed_line_endings`):
+  discovery reads every one as `\\n`, so a carriage return that is part of a
+  value would be read as a line break, and no writer could keep the file's
+  other bytes; a file written with one, `\\r\\n` included, is read and
+  written as a `\\n` file is;
 - **a malformed block** — the container fails its schema or the container's
   rule, or a compatible point block fails its provider's point schema;
   delegated to `backbone_schemas.validate_container`, handed what the wiring
@@ -125,6 +131,7 @@ class FrictionFindingKind(Enum):
     MALFORMED_BLOCK = "malformed-block"
     UNANCHORED_BESIDE_ANCHORS = "unanchored-beside-anchors"  # the reason for none, and anchors
     UNPARSABLE_FRONT_MATTER = "unparsable-front-matter"
+    MIXED_LINE_ENDINGS = "mixed-line-endings"  # a file written with more than one line break
     DANGLING_DEFERRAL = "dangling-deferral"
     CYCLE = "cycle"
     CONTAINER_REPORT = "container-report"  # an orphaned role block, an inert point block
@@ -175,8 +182,8 @@ def validate_friction(target_root: Path) -> FrictionValidation:
     reported whenever declared. Unparsable front
     matter is reported whenever places are declared: a file that fails to parse
     also keeps the pass awake (`Discovery.is_dormant`), so a YAML typo in the
-    only container-carrying file is an error, not silence. The container,
-    deferral and cycle findings run only when the pass is awake.
+    only container-carrying file is an error, not silence. The line-ending,
+    container, deferral and cycle findings run only when the pass is awake.
     """
     settings = read_friction_settings(target_root)
     discovery = discover_artefacts(target_root, settings)
@@ -188,6 +195,7 @@ def validate_friction(target_root: Path) -> FrictionValidation:
     findings.extend(_held_document_findings(discovery))
     findings.extend(_unreadable_findings(discovery))
     if not discovery.is_dormant:
+        findings.extend(_mixed_line_endings_findings(discovery))
         findings.extend(_artefact_findings(target_root, discovery))
     return FrictionValidation(discovery=discovery, findings=tuple(findings))
 
@@ -431,6 +439,30 @@ def _unreadable_findings(discovery: Discovery) -> Iterable[FrictionFinding]:
                 f"front matter does not parse ({unreadable.reason}); the file is in the "
                 f"declared place {unreadable.place.pattern!r}, so its block cannot be "
                 f"skipped — fix the YAML or move the file out of the place."
+            ),
+        )
+
+
+def _mixed_line_endings_findings(discovery: Discovery) -> Iterable[FrictionFinding]:
+    """A file the walk read that mixes line endings, in the order it lists the files.
+
+    A rule-set file is reported here too: the rule-set pass reads the set's
+    shape, and the line endings are the walk's reading of the file.
+    """
+    for file in discovery.files:
+        if not file.mixed_line_endings:
+            continue
+        yield FrictionFinding(
+            location=file.path,
+            pointer="",
+            severity=Severity.ERROR,
+            kind=FrictionFindingKind.MIXED_LINE_ENDINGS,
+            message=(
+                "mixes line endings (`\\n` on some lines, `\\r\\n` or a lone `\\r` on others); "
+                "friction discovery reads every one as `\\n`, so a carriage return that is part "
+                "of a value would be read as a line break, and the friction writers cannot keep "
+                "the file's other bytes as they are — write it with one kind of line ending "
+                "(COR-050 point 12)."
             ),
         )
 

@@ -1124,6 +1124,66 @@ def test_unparsable_front_matter_as_the_only_file_in_a_place_keeps_the_pass_awak
     assert "docs/broken.md" in cli.output and "dormant" not in cli.output
 
 
+# --- line endings --------------------------------------------------------------
+
+
+def _crlf(text: str) -> str:
+    """`text` as a clone with `core.autocrlf=true` checks it out: every line ending `\\r\\n`."""
+    return text.replace("\n", "\r\n")
+
+
+def _reading(result: fv.FrictionValidation) -> tuple[list[object], list[object], list[object]]:
+    """What the pass read and found — the artefacts, the files, the findings — as two
+    readings of the same text compare."""
+    artefacts: list[object] = [
+        (a.location, a.kind, a.carrier, a.body, a.anchors, a.revalidated, a.deferrals)
+        for a in result.discovery.artefacts
+    ]
+    files: list[object] = [(f.path, f.front_matter, f.unreadable) for f in result.discovery.files]
+    findings: list[object] = [(f.kind, f.where, f.message) for f in result.findings]
+    return artefacts, files, findings
+
+
+@pytest.mark.parametrize(
+    ("rel", "text"),
+    [("docs/guide.md", VALID_DOCUMENT), ("docs/rules.md", COLLECTION)],
+    ids=["document", "collection-entry"],
+)
+def test_a_crlf_file_is_discovered_and_validated_as_its_lf_twin(
+    adopter: AdopterRepo, rel: str, text: str
+) -> None:
+    adopter.write({CONFIG: _config(["docs"]), rel: text})
+    lf = fv.validate_friction(adopter.root)
+    adopter.write({rel: _crlf(text)})
+    crlf = fv.validate_friction(adopter.root)
+
+    assert _reading(crlf) == _reading(lf)
+    assert all(a.has_friction_block for a in crlf.discovery.artefacts)
+    assert "\r" not in "".join(a.body for a in crlf.discovery.artefacts)
+
+
+def test_a_file_mixing_line_endings_is_an_error_naming_it(adopter: AdopterRepo) -> None:
+    """Read all the same — never skipped — but reported, never a silent misread."""
+    other = _document("other", anchors={"path": ["src/**"]})
+    mixed = _crlf(other).replace("\r\n", "\n", 2)  # the first two lines `\n`, the rest `\r\n`
+    adopter.write(
+        {CONFIG: _config(["docs"]), "docs/guide.md": _crlf(VALID_DOCUMENT), "docs/other.md": mixed}
+    )
+    result = fv.validate_friction(adopter.root)
+
+    (finding,) = result.errors
+    assert finding.kind is fv.FrictionFindingKind.MIXED_LINE_ENDINGS
+    assert (finding.location, finding.pointer) == ("docs/other.md", "")
+    assert "mixes line endings" in finding.message
+    assert "write it with one kind of line ending" in finding.message
+    read = {a.path: a for a in result.discovery.artefacts}
+    assert read["docs/other.md"].anchors == {"path": ("src/**",)}
+
+    cli = CliRunner().invoke(main, ["validate", "--no-refs"])
+    assert cli.exit_code == 1, cli.output
+    assert "docs/other.md" in cli.output and "mixes line endings" in cli.output
+
+
 # --- role blocks against the resolved wiring (COR-053 point 10) --------------
 
 # An incubated capability providing `pkit::documentation`, whose one data point
@@ -1384,10 +1444,33 @@ def test_validate_command_is_dormant_and_passes_on_a_fresh_install(adopter: Adop
         ("--- \na: 1\n---\n", ("a: 1\n", "")),  # trailing space on the opening fence
         ("----\na: 1\n---\n", (None, "----\na: 1\n---\n")),  # not a fence
         ("no front matter\n", (None, "no front matter\n")),
+        # Line endings are read universally: both parts come back with `\n`.
+        ("---\r\na: 1\r\n---\r\nbody\r\n", ("a: 1\n", "body\n")),
+        ("---\r\nb: |\r\n  two\r\n  lines\r\n---\r\n", ("b: |\n  two\n  lines\n", "")),
+        ("--- \r\na: 1\r\n---\t\r\n\r\n\r\nbody\r\n", ("a: 1\n", "body\n")),
+        ("---\ra: 1\r---\rbody\r", ("a: 1\n", "body\n")),  # a lone `\r`
+        ("no front matter\r\n", (None, "no front matter\n")),
     ],
 )
 def test_split_front_matter(text: str, expected: tuple[str | None, str]) -> None:
     assert fd.split_front_matter(text) == expected
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("", "\n"),
+        ("one line, no break", "\n"),
+        ("a\nb\n", "\n"),
+        ("a\r\nb\r\n", "\r\n"),
+        ("a\rb\r", "\r"),
+        ("a\r\nb\n", None),
+        ("a\nb\r", None),
+        ("a\r\nb\rc\r\n", None),
+    ],
+)
+def test_line_break_names_the_one_a_text_is_written_with(text: str, expected: str | None) -> None:
+    assert fd.line_break(text) == expected
 
 
 def test_entry_section_runs_to_the_next_heading_of_equal_or_higher_level() -> None:

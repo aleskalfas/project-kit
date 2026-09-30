@@ -53,6 +53,10 @@ is the one reader of those declarations and the one walker of the places:
   document (ADR-056 point 2). `parse_artefacts` is the reading of one file's
   text this walk applies; the whole-repository check applies it to a file's
   earlier versions too, so history is read by the same rule as the present.
+  A text is read whatever its line endings (`universal_newlines`, in
+  `split_front_matter`), so a clone that checks files out with `\\r\\n` finds
+  the blocks and the content one with `\\n` finds; a file mixing them is
+  recorded (`DiscoveredFile.mixed_line_endings`) for the validation pass.
   A file a declared place matches that is a synced copy is not walked — a
   place is never a synced tree (COR-050 point 14) — and is kept as a
   `SyncedMatch` for the validation pass to report; the question is the tree's
@@ -1541,7 +1545,9 @@ class DiscoveredFile:
     (`backbone_schemas.as_written`) when that is a mapping, else `None`;
     `unreadable` says why the file or its front matter could not be read.
     `excluded_by` is the `friction.exclude` entry it lies under, else `None` —
-    the same decision its artefacts carry.
+    the same decision its artefacts carry. `mixed_line_endings` is whether its
+    text is written with more than one line break (`line_break`): it is read
+    with every one as `\\n`, and the validation pass reports it.
     """
 
     path: str
@@ -1550,6 +1556,7 @@ class DiscoveredFile:
     front_matter: Mapping[str, Any] | None
     unreadable: str | None = None
     excluded_by: SettingsPath | None = None
+    mixed_line_endings: bool = False
 
 
 @dataclass(frozen=True)
@@ -1690,9 +1697,11 @@ def discover_artefacts(
             continue  # a link: never read as a document
         excluded_by = settings.exclusion(rel)
         front_matter: Mapping[str, Any] | None = None
+        mixed = False
         if isinstance(text, _ReadFailure):
             reason: str | None = text.reason
         else:
+            mixed = line_break(text) is None
             front_matter, found, reason = _read_artefacts(rel, place, text, rule_set=rule_set)
             artefacts.extend(replace(a, excluded_by=excluded_by) for a in found)
         if reason is not None:
@@ -1707,6 +1716,7 @@ def discover_artefacts(
                 front_matter=front_matter,
                 unreadable=reason,
                 excluded_by=excluded_by,
+                mixed_line_endings=mixed,
             )
         )
     held = [
@@ -1816,8 +1826,10 @@ def parse_artefacts(
     `(artefacts, None)` — empty when the text carries no front matter, or front
     matter that is not a mapping, since neither makes an artefact — or
     `([], reason)` when the front matter does not parse as YAML. Line endings
-    are read universally (`\\r\\n` and `\\r` as `\\n`), as a text file is read,
-    whether the text came from disk or from git.
+    are read universally (`\\r\\n` and `\\r` as `\\n`, `split_front_matter`), as
+    a text file is read, whether the text came from disk or from git — so an
+    artefact whose line endings changed while its text did not has the same
+    content (COR-050 point 5).
     """
     _front_matter, found, reason = _read_artefacts(rel, place, text, rule_set=rule_set)
     return found, reason
@@ -1836,9 +1848,8 @@ def _read_artefacts(
 
 def _parsed_front_matter(text: str) -> tuple[Mapping[str, Any] | None, str, str | None]:
     """A file's front matter as written when it is a mapping, its body, and why the
-    front matter does not parse, if it does not: `(front_matter, body, reason)`."""
-    if "\r" in text:
-        text = text.replace("\r\n", "\n").replace("\r", "\n")
+    front matter does not parse, if it does not: `(front_matter, body, reason)`.
+    Both are read with `\\n` line breaks, whatever the file's (`split_front_matter`)."""
     front_matter, body = split_front_matter(text)
     if front_matter is None:
         return None, body, None
@@ -1971,13 +1982,44 @@ def _artefact(
 # --- Markdown -----------------------------------------------------------
 
 
+def universal_newlines(text: str) -> str:
+    """`text` with every line break read as `\\n` — `\\r\\n`, then a lone `\\r` —
+    as a text file is read."""
+    if "\r" not in text:
+        return text
+    return text.replace("\r\n", "\n").replace("\r", "\n")
+
+
+# A line break in any of the three ways a text may write one (`universal_newlines`).
+_LINE_BREAK = re.compile(r"\r\n|\r|\n")
+
+
+def line_break(text: str) -> str | None:
+    """The one line break `text` is written with — `\\n`, `\\r\\n` or `\\r` — or
+    `None` when it mixes them. A text with no line break reads as written with `\\n`.
+
+    A text written with one is read universally and written back with it
+    unchanged; one that mixes them cannot be, and reads a carriage return that
+    is part of a value as a line break.
+    """
+    found = set(_LINE_BREAK.findall(text))
+    if len(found) > 1:
+        return None
+    return found.pop() if found else "\n"
+
+
 def split_front_matter(text: str) -> tuple[str | None, str]:
     """(front-matter YAML, body) for a Markdown text; `(None, text)` when it has none.
 
-    Front matter is a leading `---` line closed by the next `---` line. The
-    YAML is returned as text so the caller can report a parse failure against
-    the file.
+    Front matter is a leading `---` line closed by the next `---` line. Line
+    endings are read universally first (`universal_newlines`), so a text
+    written with `\\r\\n` has the front matter the same text written with `\\n`
+    has, and both parts — `text` too, when there is none — come back with `\\n`
+    line breaks: the one reading of a file's front matter and body. The YAML
+    is returned as text so the caller can report a parse failure against the
+    file.
     """
+    text = universal_newlines(text)
     if not text.startswith("---"):
         return None, text
     first_line_end = text.find("\n")

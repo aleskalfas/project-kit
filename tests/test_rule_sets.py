@@ -817,6 +817,45 @@ def test_rule_entries_are_discovered_by_the_friction_pass_as_artefacts(
     }
 
 
+def test_a_crlf_rule_set_is_discovered_and_validated_as_its_lf_twin(adopter: AdopterRepo) -> None:
+    """A clone with `core.autocrlf=true` checks the file out with `\\r\\n`: both passes
+    read it as they read the same text with `\\n`."""
+    rel = f"{PROJECT_SETS}/cmn.md"
+    text = rule_set_text(cmn())
+
+    def reading() -> tuple[object, ...]:
+        rule_result = validate(adopter)
+        (rule_set,) = rule_result.discovery.rule_sets
+        friction = fv.validate_friction(adopter.root)
+        return (
+            rule_result.findings,
+            rule_set.front_matter,
+            rule_set.body,
+            [(r.id, r.data, r.section) for r in rule_set.rules],
+            [(a.location, a.carrier, a.body, a.anchors) for a in friction.discovery.artefacts],
+            [(f.kind, f.where) for f in friction.findings],
+        )
+
+    write_set(adopter, rel, cmn())
+    lf = reading()
+    adopter.write({rel: text.replace("\n", "\r\n")})
+    crlf = reading()
+
+    assert crlf == lf
+    assert crlf[0] == ()  # clean, as its twin is
+    assert crlf[4]  # the rules are artefacts
+
+
+def test_a_rule_set_mixing_line_endings_is_the_friction_pass_s_finding(
+    adopter: AdopterRepo,
+) -> None:
+    rel = f"{PROJECT_SETS}/cmn.md"
+    adopter.write({rel: rule_set_text(cmn()).replace("\n", "\r\n", 1)})
+    assert validate(adopter).errors == ()  # the set's shape reads as written
+    (finding,) = fv.validate_friction(adopter.root).errors
+    assert (finding.kind, finding.location) == (fv.FrictionFindingKind.MIXED_LINE_ENDINGS, rel)
+
+
 def test_other_collection_files_are_read_as_before(adopter: AdopterRepo) -> None:
     collection = (
         "---\nname: x\nRS-CMN-001:\n  pkit:\n    friction:\n      anchors: {path: [src/**]}\n---\n"
