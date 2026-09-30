@@ -12,8 +12,7 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = (
-    REPO_ROOT / ".pkit" / "capabilities" / "project-management"
-    / "scripts" / "handoff-issue.py"
+    REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "handoff-issue.py"
 )
 
 
@@ -35,6 +34,7 @@ def test_reassign_calls_add_and_remove(hi, monkeypatch) -> None:
 
     def fake_gh_run(args, config, **kwargs):
         import subprocess
+
         captured["args"] = args
         return subprocess.CompletedProcess(args=args, returncode=0, stdout="", stderr="")
 
@@ -50,6 +50,7 @@ def test_reassign_skips_remove_when_unassigned(hi, monkeypatch) -> None:
 
     def fake_gh_run(args, config, **kwargs):
         import subprocess
+
         captured["args"] = args
         return subprocess.CompletedProcess(args=args, returncode=0, stdout="", stderr="")
 
@@ -63,9 +64,14 @@ def test_reassign_skips_remove_when_unassigned(hi, monkeypatch) -> None:
 def test_reassign_propagates_failure(hi, monkeypatch, capsys) -> None:
     def fake_gh_run(args, config, **kwargs):
         import subprocess
+
         return subprocess.CompletedProcess(
-            args=args, returncode=1, stdout="", stderr="not a collaborator",
+            args=args,
+            returncode=1,
+            stdout="",
+            stderr="not a collaborator",
         )
+
     monkeypatch.setattr(hi, "gh_run", fake_gh_run)
     assert hi._reassign(42, "alice", "bob", {}) is False
     assert "not a collaborator" in capsys.readouterr().err
@@ -73,8 +79,12 @@ def test_reassign_propagates_failure(hi, monkeypatch, capsys) -> None:
 
 def _completed(args, stdout="", returncode=0, stderr=""):
     import subprocess
+
     return subprocess.CompletedProcess(
-        args=args, returncode=returncode, stdout=stdout, stderr=stderr,
+        args=args,
+        returncode=returncode,
+        stdout=stdout,
+        stderr=stderr,
     )
 
 
@@ -103,8 +113,10 @@ def test_assignment_event_count_reads_the_timeline_total(hi, monkeypatch) -> Non
 
     def fake_gh_run(args, config, **kwargs):
         captured["args"] = list(args)
-        return _completed(args, json.dumps({"data": {"repository": {"issue": {
-            "timelineItems": {"totalCount": 4}}}}}))
+        return _completed(
+            args,
+            json.dumps({"data": {"repository": {"issue": {"timelineItems": {"totalCount": 4}}}}}),
+        )
 
     monkeypatch.setattr(hi, "gh_run", fake_gh_run)
     assert hi._assignment_event_count(42, {}) == 4
@@ -121,8 +133,11 @@ def test_assignment_event_count_reads_the_timeline_total(hi, monkeypatch) -> Non
         pytest.param({"stdout": "not json"}, id="not-json"),
         pytest.param({"stdout": json.dumps({"data": {"repository": None}})}, id="no-issue"),
         pytest.param(
-            {"stdout": json.dumps({"data": {"repository": {"issue": {
-                "timelineItems": {"totalCount": "4"}}}}})},
+            {
+                "stdout": json.dumps(
+                    {"data": {"repository": {"issue": {"timelineItems": {"totalCount": "4"}}}}}
+                )
+            },
             id="non-integer",
         ),
     ],
@@ -138,13 +153,27 @@ def test_audit_posts_when_only_someone_elses_legacy_stamp_exists(hi, monkeypatch
 
     def fake_gh_run(args, config, **kwargs):
         if args[:3] == ["gh", "api", "graphql"]:
-            return _completed(args, json.dumps({"data": {"repository": {"issue": {
-                "timelineItems": {"totalCount": 0}}}}}))
+            return _completed(
+                args,
+                json.dumps(
+                    {"data": {"repository": {"issue": {"timelineItems": {"totalCount": 0}}}}}
+                ),
+            )
         if "view" in args:
-            return _completed(args, json.dumps({"comments": [{
-                "body": "<!-- pkit-hook: handoff-issue:alice->bob --> ...",
-                "viewerDidAuthor": False, "includesCreatedEdit": False,
-            }]}))
+            return _completed(
+                args,
+                json.dumps(
+                    {
+                        "comments": [
+                            {
+                                "body": "<!-- pkit-hook: handoff-issue:alice->bob --> ...",
+                                "viewerDidAuthor": False,
+                                "includesCreatedEdit": False,
+                            }
+                        ]
+                    }
+                ),
+            )
         posts.append(args)
         return _completed(args)
 

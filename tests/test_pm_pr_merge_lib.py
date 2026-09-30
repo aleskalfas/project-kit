@@ -55,8 +55,13 @@ def test_both_verbs_compose_the_shared_mechanic(lib) -> None:
     mp = _load_script("merge-pr.py", "pm_merge_pr_for_pr_merge_lib")
     assert dw.pr_merge is lib and mp.pr_merge is lib
     for mod in (dw, mp):
-        for stale in ("_gh_merge", "_gh_pr_merge", "_gh_delete_remote_branch",
-                      "_git_cleanup_local", "_branch_checked_out_worktree"):
+        for stale in (
+            "_gh_merge",
+            "_gh_pr_merge",
+            "_gh_delete_remote_branch",
+            "_git_cleanup_local",
+            "_branch_checked_out_worktree",
+        ):
             assert not hasattr(mod, stale), f"{mod.__name__} still carries {stale}"
 
 
@@ -130,9 +135,13 @@ def test_squash_merge_threads_config_to_gh_run(lib, monkeypatch) -> None:
 
 def test_squash_merge_reports_gh_failure(lib, monkeypatch, capsys) -> None:
     monkeypatch.setattr(
-        lib, "gh_run",
+        lib,
+        "gh_run",
         lambda args, config, **kw: subprocess.CompletedProcess(
-            args=args, returncode=1, stdout="", stderr="Pull request is not mergeable",
+            args=args,
+            returncode=1,
+            stdout="",
+            stderr="Pull request is not mergeable",
         ),
     )
     assert lib.squash_merge(42, pr_title="fix: x", admin=False, config={}) is False
@@ -169,10 +178,15 @@ def test_remote_branch_deleted_via_api(lib, monkeypatch, capsys) -> None:
 
     monkeypatch.setattr(lib, "gh_run", fake_gh_run)
     lib.delete_remote_branch("fix/42-slug", {}, cross_repository=False)
-    assert captured == [[
-        "gh", "api", "-X", "DELETE",
-        "repos/{owner}/{repo}/git/refs/heads/fix/42-slug",
-    ]]
+    assert captured == [
+        [
+            "gh",
+            "api",
+            "-X",
+            "DELETE",
+            "repos/{owner}/{repo}/git/refs/heads/fix/42-slug",
+        ]
+    ]
     assert "deleted remote branch fix/42-slug" in capsys.readouterr().out
 
 
@@ -180,9 +194,12 @@ def test_remote_branch_already_gone_is_not_a_warning(lib, monkeypatch, capsys) -
     """A repository that auto-deletes head branches on merge answers 422
     'Reference does not exist' — reported as already deleted, not warned."""
     monkeypatch.setattr(
-        lib, "gh_run",
+        lib,
+        "gh_run",
         lambda args, config, **kw: subprocess.CompletedProcess(
-            args=args, returncode=1, stdout="",
+            args=args,
+            returncode=1,
+            stdout="",
             stderr="gh: Reference does not exist (HTTP 422)",
         ),
     )
@@ -194,9 +211,13 @@ def test_remote_branch_already_gone_is_not_a_warning(lib, monkeypatch, capsys) -
 
 def test_remote_branch_delete_failure_is_a_warning(lib, monkeypatch, capsys) -> None:
     monkeypatch.setattr(
-        lib, "gh_run",
+        lib,
+        "gh_run",
         lambda args, config, **kw: subprocess.CompletedProcess(
-            args=args, returncode=1, stdout="", stderr="gh: boom (HTTP 500)",
+            args=args,
+            returncode=1,
+            stdout="",
+            stderr="gh: boom (HTTP 500)",
         ),
     )
     lib.delete_remote_branch("fix/42-slug", {}, cross_repository=False)
@@ -208,6 +229,7 @@ def test_remote_branch_delete_failure_is_a_warning(lib, monkeypatch, capsys) -> 
 def test_remote_branch_delete_with_gh_missing_is_a_warning(lib, monkeypatch, capsys) -> None:
     """Best-effort in every failure mode (#920): `gh` absent from PATH warns
     and returns normally rather than raising past the already-landed merge."""
+
     def missing(*a, **k):
         raise FileNotFoundError("gh")
 
@@ -222,6 +244,7 @@ def test_remote_branch_delete_with_gh_missing_is_a_warning(lib, monkeypatch, cap
 def test_remote_branch_delete_with_unrunnable_gh_is_a_warning(lib, monkeypatch, capsys) -> None:
     """A `gh` on PATH that cannot be run (not executable, wrong binary) warns
     too -- the helper's contract is that it never raises (#920)."""
+
     def unrunnable(*a, **k):
         raise PermissionError(13, "Permission denied")
 
@@ -230,6 +253,7 @@ def test_remote_branch_delete_with_unrunnable_gh_is_a_warning(lib, monkeypatch, 
     err = capsys.readouterr().err
     assert "`gh` could not be run" in err
     assert "git push origin --delete fix/42-slug" in err
+
 
 # --- cleanup_local ---------------------------------------------------------
 
@@ -343,7 +367,9 @@ def test_delete_remote_branch_never_touches_base_repo_for_a_fork_pr(lib, monkeyp
     author and may name an unrelated base-repository branch. The API delete
     targets the BASE repo, so for a cross-repository PR no gh call is made."""
     calls: list[list[str]] = []
-    monkeypatch.setattr(lib, "gh_run", lambda args, config, **kw: calls.append(list(args)) or _ok(args))
+    monkeypatch.setattr(
+        lib, "gh_run", lambda args, config, **kw: calls.append(list(args)) or _ok(args)
+    )
     lib.delete_remote_branch("release/1.x", {}, cross_repository=True)
     assert calls == []
     assert "lives in a fork" in capsys.readouterr().out
@@ -353,8 +379,15 @@ def test_cleanup_local_never_force_deletes_a_same_named_branch_for_a_fork_pr(lib
     """A local branch sharing a fork PR's head name is not that PR's head;
     `git branch -D` would discard its unpushed work, so it is not run."""
     import subprocess
+
     seen: list[list[str]] = []
-    monkeypatch.setattr(lib.subprocess, "run", lambda argv, **kw: seen.append(list(argv)) or subprocess.CompletedProcess(argv, 0, stdout="", stderr=""))
+    monkeypatch.setattr(
+        lib.subprocess,
+        "run",
+        lambda argv, **kw: (
+            seen.append(list(argv)) or subprocess.CompletedProcess(argv, 0, stdout="", stderr="")
+        ),
+    )
     lib.cleanup_local("release/1.x", {}, cross_repository=True)
     assert ["git", "branch", "-D", "release/1.x"] not in seen
     assert seen[0] == ["git", "checkout", "main"]
@@ -364,8 +397,8 @@ def test_cross_repository_is_a_required_keyword(lib):
     """No default: every caller must state whether the PR is cross-repository,
     so a later caller cannot silently reintroduce the fork-PR deletion hole."""
     import inspect
+
     for fn in (lib.delete_remote_branch, lib.cleanup_local):
         p = inspect.signature(fn).parameters["cross_repository"]
         assert p.kind is inspect.Parameter.KEYWORD_ONLY
         assert p.default is inspect.Parameter.empty
-

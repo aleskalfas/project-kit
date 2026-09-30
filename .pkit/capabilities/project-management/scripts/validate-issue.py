@@ -153,9 +153,7 @@ def main() -> int:
     issue_types = _read_yaml(capability_root / "schemas" / "issue-types.yaml", yaml_loader)
     titles = _read_yaml(capability_root / "schemas" / "titles.yaml", yaml_loader)
     body_format = _read_yaml(capability_root / "schemas" / "body-format.yaml", yaml_loader)
-    classification = _read_yaml(
-        capability_root / "schemas" / "classification.yaml", yaml_loader
-    )
+    classification = _read_yaml(capability_root / "schemas" / "classification.yaml", yaml_loader)
     config = _read_yaml(capability_root / "project" / "config.yaml", yaml_loader)
     mandatory_state = _read_yaml(
         capability_root / "schemas" / "mandatory-issue-state.yaml", yaml_loader
@@ -201,8 +199,7 @@ def main() -> int:
             "issue_number": args.issue_number,
             "issue_title": issue.get("title", ""),
             "findings": [
-                {"severity": f.severity, "label": f.label, "detail": f.detail}
-                for f in findings
+                {"severity": f.severity, "label": f.label, "detail": f.detail} for f in findings
             ],
         }
         print(json.dumps(out, indent=2))
@@ -210,10 +207,7 @@ def main() -> int:
         _print_findings(args.issue_number, issue, findings)
 
     # Exit code: non-zero on any hard-reject or bypassable.
-    has_blocking = any(
-        f.severity in (SEVERITY_HARD_REJECT, SEVERITY_BYPASSABLE)
-        for f in findings
-    )
+    has_blocking = any(f.severity in (SEVERITY_HARD_REJECT, SEVERITY_BYPASSABLE) for f in findings)
     return 1 if has_blocking else 0
 
 
@@ -405,9 +399,7 @@ def _validate_issue(
                     severity = SEVERITY_WARNING
                 else:
                     severity = _severity_from_token(
-                        classification_rules.mismatch_severity_token(
-                            classification or {}
-                        )
+                        classification_rules.mismatch_severity_token(classification or {})
                     )
                 findings.append(
                     Finding(
@@ -439,9 +431,7 @@ def _validate_issue(
                 kind is not None
                 and structural_type is not None
                 and substrate_map is None
-                and classification_rules.kind_drives_title(
-                    structural_type, classification or {}
-                )
+                and classification_rules.kind_drives_title(structural_type, classification or {})
             ):
                 expected_prefix = classification_rules.title_prefix_by_value(
                     classification or {}
@@ -451,9 +441,7 @@ def _validate_issue(
                 ):
                     findings.append(
                         Finding(
-                            SEVERITY_WARNING
-                            if phase == PHASE_TRANSITION
-                            else SEVERITY_HARD_REJECT,
+                            SEVERITY_WARNING if phase == PHASE_TRANSITION else SEVERITY_HARD_REJECT,
                             "title.kind-prefix-mismatch",
                             f"title prefix does not match the issue's kind: "
                             f"kind {kind!r} (its type:* label) takes "
@@ -589,7 +577,11 @@ def _validate_issue(
     state_fields = (mandatory_state or {}).get("required_fields") or {}
     if not assignees:
         assignee_field = state_fields.get("assignee") or {}
-        sev = _severity_from_token(assignee_field.get("drift_severity")) if assignee_field else SEVERITY_WARNING
+        sev = (
+            _severity_from_token(assignee_field.get("drift_severity"))
+            if assignee_field
+            else SEVERITY_WARNING
+        )
         findings.append(
             Finding(
                 sev,
@@ -620,8 +612,7 @@ def _validate_issue(
                 Finding(
                     sev,
                     "board_membership.missing",
-                    "issue is not on the configured Projects v2 board. "
-                    "Mandatory per DEC-019.",
+                    "issue is not on the configured Projects v2 board. Mandatory per DEC-019.",
                 )
             )
         elif not isinstance(project_items, list):
@@ -669,8 +660,7 @@ def _validate_issue(
                         Finding(
                             severity,
                             "body.required-section",
-                            f"missing required section {heading!r} "
-                            f"({structural_type} body).",
+                            f"missing required section {heading!r} ({structural_type} body).",
                         )
                     )
 
@@ -684,9 +674,7 @@ def _validate_issue(
         # be the strict form regardless of hierarchy.
         malformed_marker = infer.malformed_integration_marker(body)
         if malformed_marker is not None:
-            marker_pattern = str(
-                (body_format.get("integration_marker") or {}).get("pattern") or ""
-            )
+            marker_pattern = str((body_format.get("integration_marker") or {}).get("pattern") or "")
             findings.append(
                 Finding(
                     SEVERITY_HARD_REJECT,
@@ -708,13 +696,9 @@ def _validate_issue(
             if parent_ref_form and not parent_ref_optional and malformed_marker is None:
                 # A leading DEC-013 `Integration:` marker sits ABOVE the parent-ref
                 # (#763); skip it so the parent-ref line is what we validate.
-                first_line = (
-                    infer.strip_integration_marker(body).lstrip().split("\n", 1)[0]
-                )
+                first_line = infer.strip_integration_marker(body).lstrip().split("\n", 1)[0]
                 # New canonical form: `Milestone: [#<N>](../milestone/<N>)`
-                _NEW_MILESTONE_RE = re.compile(
-                    r"^Milestone:\s+\[#(\d+)\]\(\.\./milestone/\1\)\s*$"
-                )
+                _NEW_MILESTONE_RE = re.compile(r"^Milestone:\s+\[#(\d+)\]\(\.\./milestone/\1\)\s*$")
                 # Old (deprecated) form: `Milestone: #<N>` — accepted with
                 # a warning during the grace period; suggests upgrading.
                 _OLD_MILESTONE_RE = re.compile(r"^Milestone:\s+#\d+\s*$")
@@ -807,7 +791,6 @@ def _validate_issue(
     return findings
 
 
-
 def _expected_type_prefixes(
     issue_types: dict,
     substrate_map: "axis_labels.SubstrateMap | None" = None,
@@ -836,9 +819,7 @@ def _expected_type_prefixes(
         rendered = str(prefix).upper() if case == "upper" else str(prefix)
         if rendered:
             prefixes.append(f"[{rendered}]")
-    for kind_prefix in classification_rules.title_prefix_by_value(
-        classification or {}
-    ).values():
+    for kind_prefix in classification_rules.title_prefix_by_value(classification or {}).values():
         bracketed = f"[{kind_prefix}]"
         if isinstance(kind_prefix, str) and kind_prefix and bracketed not in prefixes:
             prefixes.append(bracketed)
@@ -888,7 +869,8 @@ def _read_members(capability_root: Path, yaml_loader: YAML) -> list[dict]:
 def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
     """Fetch issue title/body/labels/assignees via `gh issue view`."""
     return gh_get_issue(
-        issue_number, config,
+        issue_number,
+        config,
         fields="title,body,labels,assignees,projectItems",
     )
 

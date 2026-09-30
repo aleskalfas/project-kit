@@ -24,6 +24,7 @@ and each installed component's declarations and from the project's
 configuration — the backbone's choice for the process journals taking
 precedence over a component entry that still claims them.
 """
+
 from __future__ import annotations
 
 import subprocess
@@ -95,6 +96,7 @@ _yaml_keys = ("footprint", "runtime_ignore")
 
 # --- footprint aggregation ---------------------------------------------------
 
+
 def _component_package_yaml(target_root: Path, kind: str, name: str) -> Path | None:
     if kind == "adapter":
         p = target_root / ".pkit" / "adapters" / name / "package.yaml"
@@ -140,6 +142,7 @@ def footprint(target_root: Path) -> list[str]:
 # keys (`footprint:` / `runtime_ignore:`) sit side-by-side in package.yaml and
 # aggregate identically. This is T1 of EPIC #154 — the *collector*; the
 # `.pkit/.gitignore` renderer that consumes this list is T2.
+
 
 def _read_runtime_ignore_decl(package_yaml: Path) -> list[str]:
     """Read a component's `runtime_ignore:` list from package.yaml (tolerant)."""
@@ -280,7 +283,7 @@ def _render_pattern(pattern: str) -> str:
     """
     prefix = ".pkit/"
     if pattern.startswith(prefix):
-        stripped = pattern[len(prefix):]
+        stripped = pattern[len(prefix) :]
         return stripped if stripped else pattern
     return pattern
 
@@ -367,6 +370,7 @@ def refresh_runtime_ignore(target_root: Path) -> Refreshed | None:
 
 # --- git helpers -------------------------------------------------------------
 
+
 def _git(target_root: Path, *args: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         ["git", *args], cwd=target_root, capture_output=True, text=True, check=False
@@ -413,6 +417,7 @@ def _staged_footprint(target_root: Path, fp: list[str]) -> list[str]:
 
 
 # --- info/exclude region management ------------------------------------------
+
 
 def _strip_region(text: str) -> str:
     """Remove pkit's delimited region (and a trailing blank line) if present."""
@@ -463,6 +468,7 @@ def _remove_region(target_root: Path) -> bool:
 
 # --- untrack -----------------------------------------------------------------
 
+
 def untrack(
     target_root: Path, *, dry_run: bool = False, confirm: Callable[[str], bool] | None = None
 ) -> str:
@@ -480,9 +486,10 @@ def untrack(
     # paths) is idempotent rather than a false "staged changes" refusal.
     tracked = _tracked_footprint(target_root, fp)
     if not tracked:
-        return cli_render.style(
-            "strong", "untrack: no tracked footprint files — nothing to remove."
-        ) + "\n"
+        return (
+            cli_render.style("strong", "untrack: no tracked footprint files — nothing to remove.")
+            + "\n"
+        )
 
     # A still-tracked footprint file carrying a staged *modification* would
     # entangle the removal with a pending index — refuse (ADR-009 rule 5).
@@ -494,9 +501,11 @@ def untrack(
             + "\nCommit or unstage them first."
         )
 
-    lines = [cli_render.style(
-        "strong", f"{len(tracked)} tracked footprint file(s) would be removed from the index:"
-    )]
+    lines = [
+        cli_render.style(
+            "strong", f"{len(tracked)} tracked footprint file(s) would be removed from the index:"
+        )
+    ]
     lines += [f"  {p}" for p in tracked[:20]]
     if len(tracked) > 20:
         lines.append(f"  … and {len(tracked) - 20} more")
@@ -515,26 +524,37 @@ def untrack(
     res = _git(target_root, "rm", "--cached", "--quiet", "--", *tracked)
     if res.returncode != 0:
         raise click.ClickException(f"git rm --cached failed:\n{res.stderr.strip()}")
-    return cli_render.style(
-        "strong", f"untracked {len(tracked)} footprint file(s) (working copies kept)."
-    ) + "\n"
+    return (
+        cli_render.style(
+            "strong", f"untracked {len(tracked)} footprint file(s) (working copies kept)."
+        )
+        + "\n"
+    )
 
 
 # --- visibility --------------------------------------------------------------
+
 
 def status(target_root: Path) -> str:
     fp = footprint(target_root)
     private = _region_present(target_root)
     tracked = _tracked_footprint(target_root, fp)
     mode = "private" if private else "shared"
-    gloss = ("pkit hidden via .git/info/exclude (this clone only)" if private
-             else "pkit committed the ordinary way")
+    gloss = (
+        "pkit hidden via .git/info/exclude (this clone only)"
+        if private
+        else "pkit committed the ordinary way"
+    )
     rows = [{"path": p} for p in fp]
-    sections = [cli_render.section(
-        rows=rows, columns=["path"], header="FOOTPRINT",
-        gloss="aggregated across installed components",
-        empty="(no footprint declared)",
-    )]
+    sections = [
+        cli_render.section(
+            rows=rows,
+            columns=["path"],
+            header="FOOTPRINT",
+            gloss="aggregated across installed components",
+            empty="(no footprint declared)",
+        )
+    ]
     st = cli_render.status("Visibility", mode, gloss=gloss, placement="header")
     commands = [
         ("pkit visibility private", "hide pkit from the shared tree (this clone)"),
@@ -543,17 +563,25 @@ def status(target_root: Path) -> str:
     ]
     if private and tracked:
         st = cli_render.status(
-            "Visibility", mode, gloss=gloss, placement="header",
+            "Visibility",
+            mode,
+            gloss=gloss,
+            placement="header",
             warn=f"{len(tracked)} footprint file(s) still tracked — run `pkit visibility untrack`",
         )
     return cli_render.view(
         title=cli_render.title("Git footprint", mode, gloss="adopter-controlled (ADR-009)"),
-        status=st, sections=sections, commands=commands,
+        status=st,
+        sections=sections,
+        commands=commands,
     )
 
 
 def set_visibility(
-    target_root: Path, mode: str, *, dry_run: bool = False,
+    target_root: Path,
+    mode: str,
+    *,
+    dry_run: bool = False,
     confirm: Callable[[str], bool] | None = None,
 ) -> str:
     """Apply `shared` or `private`. `private` writes the info/exclude region and
@@ -565,22 +593,27 @@ def set_visibility(
     if mode == "shared":
         if dry_run:
             verb = "would clear" if _region_present(target_root) else "no pkit region in"
-            return cli_render.style(
-                "strong", f"shared: {verb} .git/info/exclude (pkit committed normally)."
-            ) + "\n"
+            return (
+                cli_render.style(
+                    "strong", f"shared: {verb} .git/info/exclude (pkit committed normally)."
+                )
+                + "\n"
+            )
         removed = _remove_region(target_root)
         msg = (
-            "cleared pkit's region from .git/info/exclude" if removed
-            else "no pkit region to clear"
+            "cleared pkit's region from .git/info/exclude" if removed else "no pkit region to clear"
         )
-        return cli_render.style(
-            "strong", f"visibility: shared — {msg}; pkit is committed normally."
-        ) + "\n"
+        return (
+            cli_render.style("strong", f"visibility: shared — {msg}; pkit is committed normally.")
+            + "\n"
+        )
 
     if mode == "private":
-        lines = [cli_render.style(
-            "strong", "visibility: private — pkit hidden from the shared tree (this clone)."
-        )]
+        lines = [
+            cli_render.style(
+                "strong", "visibility: private — pkit hidden from the shared tree (this clone)."
+            )
+        ]
         if dry_run:
             lines.append("")
             lines.append("would write to .git/info/exclude:")

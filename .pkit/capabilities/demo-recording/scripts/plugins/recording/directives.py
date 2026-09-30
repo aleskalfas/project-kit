@@ -146,9 +146,7 @@ def _parse_panes_block(content: str) -> tuple[dict[str, int], list[str]]:
         try:
             result[key] = int(val)
         except ValueError:
-            errors.append(
-                f"panes: value for {key!r} must be an integer, got {val!r}"
-            )
+            errors.append(f"panes: value for {key!r} must be an integer, got {val!r}")
     return result, errors
 
 
@@ -161,8 +159,7 @@ def _parse_sleep_block(content: str) -> tuple[int, list[str]]:
     """
     errors: list[str] = []
     stripped = "\n".join(
-        line for line in content.splitlines()
-        if line.strip() and not line.strip().startswith("#")
+        line for line in content.splitlines() if line.strip() and not line.strip().startswith("#")
     ).strip()
     if not stripped:
         return 0, ["sleep: body must be a positive integer (seconds)"]
@@ -353,7 +350,9 @@ class RecordingPlugin(Plugin):
     def _validate_ready(self, content: str) -> list[str]:
         parsed, errors = _parse_ready_block(content)
         if "pattern" not in parsed or not parsed.get("pattern", "").strip():
-            errors.append("ready: missing or empty 'pattern' (terse form: just put the text on its own line)")
+            errors.append(
+                "ready: missing or empty 'pattern' (terse form: just put the text on its own line)"
+            )
         timeout = parsed.get("timeout", "30")
         try:
             t = int(timeout)

@@ -92,7 +92,8 @@ def main() -> int:
     )
     parser.add_argument("issue_number", type=int)
     parser.add_argument(
-        "--check-drift", action="store_true",
+        "--check-drift",
+        action="store_true",
         help="Diff the journal against the GitHub timeline's state-label events "
         "and flag state changes pkit did not author (governance boundary).",
     )
@@ -172,10 +173,17 @@ def _read_journal(issue_number: int) -> EngineJournal | None:
     try:
         proc = subprocess.run(
             [
-                "pkit", "process", "status", _PROCESS_ADDRESS,
-                "--subject", str(issue_number), "--json",
+                "pkit",
+                "process",
+                "status",
+                _PROCESS_ADDRESS,
+                "--subject",
+                str(issue_number),
+                "--json",
             ],
-            capture_output=True, text=True, check=False,
+            capture_output=True,
+            text=True,
+            check=False,
         )
     except OSError:
         return None
@@ -256,21 +264,26 @@ def _report_drift(
 
     governed = len([e for e in journal if (e.get("to") or e.get("state"))])
     observed = len(timeline_states)
-    print(f"\ndrift check: {governed} governed move(s) journaled · "
-          f"{observed} state-label change(s) on the GitHub timeline")
+    print(
+        f"\ndrift check: {governed} governed move(s) journaled · "
+        f"{observed} state-label change(s) on the GitHub timeline"
+    )
 
     if observed <= governed:
         print("  ✓ no ungoverned state changes detected.")
         return 0
 
     unmatched = observed - governed
-    print(f"  ⚠ {unmatched} state-label change(s) on the timeline have no journal "
-          "entry — either an **ungoverned** change (a manual label edit / raw `gh`),")
-    print("    or a governed move the journal didn't record (until the journal is "
-          "fully reliable — #697). The state-label events on the timeline:")
+    print(
+        f"  ⚠ {unmatched} state-label change(s) on the timeline have no journal "
+        "entry — either an **ungoverned** change (a manual label edit / raw `gh`),"
+    )
+    print(
+        "    or a governed move the journal didn't record (until the journal is "
+        "fully reliable — #697). The state-label events on the timeline:"
+    )
     for ev in timeline_states:
-        print(f"      {ev.get('created_at', '?')}  {ev.get('actor', '?')}  "
-              f"+{ev.get('label', '?')}")
+        print(f"      {ev.get('created_at', '?')}  {ev.get('actor', '?')}  +{ev.get('label', '?')}")
     return 3
 
 
@@ -290,7 +303,10 @@ def _timeline_state_adds(
     substrate it can read.
     """
     events = state_timeline.state_label_events(
-        issue_number, config, substrate_map, run=gh_run,
+        issue_number,
+        config,
+        substrate_map,
+        run=gh_run,
     )
     if events is None:
         return None

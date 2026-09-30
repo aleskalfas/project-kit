@@ -94,9 +94,7 @@ def _strip_overlay_keys_from_target(target_path: Path, overlay_keys: set[str]) -
         return False
     for key in keys_to_strip:
         del data[key]
-    target_path.write_text(
-        json.dumps(data, indent=2, sort_keys=False) + "\n", encoding="utf-8"
-    )
+    target_path.write_text(json.dumps(data, indent=2, sort_keys=False) + "\n", encoding="utf-8")
     return True
 
 
@@ -109,11 +107,14 @@ def main() -> int:
         ),
     )
     parser.add_argument(
-        "--capability-root", type=Path, default=None,
+        "--capability-root",
+        type=Path,
+        default=None,
         help=f"Default: <repo-root>/.pkit/capabilities/{CAPABILITY_NAME}/.",
     )
     parser.add_argument(
-        "--skip-sync", action="store_true",
+        "--skip-sync",
+        action="store_true",
         help="Strip + remove the live overlay but skip pkit sync. Mostly for tests.",
     )
     session_guard.add_override_argument(parser)

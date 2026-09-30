@@ -11,8 +11,13 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 RM_PY = (
-    REPO_ROOT / ".pkit" / "capabilities" / "project-management"
-    / "scripts" / "_lib" / "review_mode.py"
+    REPO_ROOT
+    / ".pkit"
+    / "capabilities"
+    / "project-management"
+    / "scripts"
+    / "_lib"
+    / "review_mode.py"
 )
 
 
@@ -119,9 +124,7 @@ def test_role_based_reviewers_excludes_author(rm) -> None:
         {"github_login": "alice", "role": "Implementer"},
         {"github_login": "bob", "role": "Implementer"},
     ]
-    assert rm.role_based_reviewers(
-        members, "Implementer", exclude_login="alice"
-    ) == ["bob"]
+    assert rm.role_based_reviewers(members, "Implementer", exclude_login="alice") == ["bob"]
 
 
 def test_role_based_reviewers_empty_when_no_match(rm) -> None:

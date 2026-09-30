@@ -18,9 +18,7 @@ from unittest.mock import MagicMock
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SCRIPTS_DIR = (
-    REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
-)
+SCRIPTS_DIR = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
 SCRIPT_PATH = SCRIPTS_DIR / "close-milestone.py"
 
 # The script does `sys.path.insert(0, <scripts dir>)` and `from _lib...`; make
@@ -77,7 +75,8 @@ def test_resolve_close_trigger_marker_wins_over_inference(cm) -> None:
     due = "2026-07-01T00:00:00Z"
     # Marker present → not inferred, even with a due date.
     assert cm._resolve_close_trigger("Close trigger: content-based", due) == (
-        "content-based", False,
+        "content-based",
+        False,
     )
     # No marker → inferred from the due date.
     assert cm._resolve_close_trigger("no marker here", due) == ("date-based", True)
@@ -179,10 +178,14 @@ def _row(number, state, *, title="[EPIC] X", body="", milestone=None):
 
 
 def test_children_resolved_via_native_field(cm, monkeypatch, issue_types) -> None:
-    _patch_issue_list(monkeypatch, cm, [
-        _row(10, "CLOSED", milestone={"number": 6}),
-        _row(11, "OPEN", milestone={"number": 99}),
-    ])
+    _patch_issue_list(
+        monkeypatch,
+        cm,
+        [
+            _row(10, "CLOSED", milestone={"number": 6}),
+            _row(11, "OPEN", milestone={"number": 99}),
+        ],
+    )
     children = cm._gh_list_milestone_children(6, "Milestone 6: Sprint", {}, issue_types)
     assert [c["number"] for c in children] == [10]
     assert children[0]["type"] == "epic"
@@ -191,20 +194,28 @@ def test_children_resolved_via_native_field(cm, monkeypatch, issue_types) -> Non
 
 def test_children_resolved_via_textual_ref(cm, monkeypatch, issue_types) -> None:
     body = "Milestone: [#6](../milestone/6)\n\n## Acceptance criteria\n"
-    _patch_issue_list(monkeypatch, cm, [
-        _row(20, "OPEN", body=body),
-        _row(21, "OPEN", body="Milestone: [#7](../milestone/7)"),
-    ])
+    _patch_issue_list(
+        monkeypatch,
+        cm,
+        [
+            _row(20, "OPEN", body=body),
+            _row(21, "OPEN", body="Milestone: [#7](../milestone/7)"),
+        ],
+    )
     children = cm._gh_list_milestone_children(6, "Milestone 6: Sprint", {}, issue_types)
     assert [c["number"] for c in children] == [20]
 
 
 def test_children_union_dedups_and_sorts(cm, monkeypatch, issue_types) -> None:
     body = "Milestone: [#6](../milestone/6)"
-    _patch_issue_list(monkeypatch, cm, [
-        _row(30, "CLOSED", body=body, milestone={"number": 6}),
-        _row(12, "CLOSED", milestone={"number": 6}),
-    ])
+    _patch_issue_list(
+        monkeypatch,
+        cm,
+        [
+            _row(30, "CLOSED", body=body, milestone={"number": 6}),
+            _row(12, "CLOSED", milestone={"number": 6}),
+        ],
+    )
     children = cm._gh_list_milestone_children(6, "Milestone 6: Sprint", {}, issue_types)
     # Present in both substrates → counted once; sorted by number.
     assert [c["number"] for c in children] == [12, 30]
@@ -273,11 +284,15 @@ def _prime_main(monkeypatch, cm, *, milestone, children):
     # capability root is the kit repo root, which carries no adopter tree to
     # stamp, so neutralise the gate here — as the line above does for the guard.
     monkeypatch.setattr(cm.bootstrap_gate, "enforce", lambda *a, **kw: True)
-    monkeypatch.setattr(cm, "_read_yaml", lambda path, loader: {
-        "types": {"epic": {"title_prefix": "EPIC", "title_case": "upper"}}
-    })
+    monkeypatch.setattr(
+        cm,
+        "_read_yaml",
+        lambda path, loader: {"types": {"epic": {"title_prefix": "EPIC", "title_case": "upper"}}},
+    )
     monkeypatch.setattr(cm, "_gh_get_milestone", lambda n, config: milestone)
-    monkeypatch.setattr(cm, "_gh_list_milestone_children", lambda n, t, config, types, classification=None: children)
+    monkeypatch.setattr(
+        cm, "_gh_list_milestone_children", lambda n, t, config, types, classification=None: children
+    )
     close_mock = MagicMock(return_value=True)
     monkeypatch.setattr(cm, "_gh_close_milestone", close_mock)
     return close_mock

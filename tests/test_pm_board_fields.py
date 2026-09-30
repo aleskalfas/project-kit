@@ -119,17 +119,13 @@ def test_read_project_node_id_refuses_without_a_configured_board(bf) -> None:
 
 def test_read_project_node_id_surfaces_stderr_verbatim(bf) -> None:
     stderr = "error: could not resolve to a ProjectV2 with the number 7"
-    lookup = bf.read_project_node_id(
-        BOARD_CONFIG, gh_call=_runner(returncode=1, stderr=stderr)
-    )
+    lookup = bf.read_project_node_id(BOARD_CONFIG, gh_call=_runner(returncode=1, stderr=stderr))
     assert lookup.ok is False and lookup.error == stderr
 
 
 def test_resolve_project_node_id_is_the_lossy_form(bf) -> None:
     assert (
-        bf.resolve_project_node_id(
-            BOARD_CONFIG, gh_call=_runner(json.dumps({"id": "PVT_board7"}))
-        )
+        bf.resolve_project_node_id(BOARD_CONFIG, gh_call=_runner(json.dumps({"id": "PVT_board7"})))
         == "PVT_board7"
     )
     assert bf.resolve_project_node_id(BOARD_CONFIG, gh_call=_runner(returncode=1)) is None
@@ -195,9 +191,7 @@ def test_option_id_matches_exactly_then_case_insensitively(bf) -> None:
 
 
 def test_option_id_prefers_an_exact_match_over_an_earlier_case_variant(bf) -> None:
-    field = {
-        "options": [{"id": "loose", "name": "high"}, {"id": "exact", "name": "High"}]
-    }
+    field = {"options": [{"id": "loose", "name": "high"}, {"id": "exact", "name": "High"}]}
     assert bf.option_id(field, "High") == "exact"
 
 

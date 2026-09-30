@@ -79,6 +79,7 @@ from _lib import classification_rules  # noqa: E402
 from _lib import lifecycle_inference as infer  # noqa: E402
 from _lib import session_guard  # noqa: E402
 from _lib import state_timeline  # noqa: E402
+
 # The one fetch / scan / post-once wiring every audit writer shares (#902).
 from _lib.comment import post_audit_once  # noqa: E402
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
@@ -126,7 +127,10 @@ def _pkit_version() -> str:
     """Best-effort pkit version for a `full`-projection provenance stamp."""
     try:
         proc = subprocess.run(
-            ["pkit", "--version"], capture_output=True, text=True, check=False,
+            ["pkit", "--version"],
+            capture_output=True,
+            text=True,
+            check=False,
         )
     except OSError:
         return ""
@@ -141,8 +145,7 @@ def _render_provenance_comment(invoker, from_state, to_state) -> str:
     carrying the pkit version — the governed-vs-ungoverned boundary made visible on
     the issue. Absence of such a comment beside a timeline label change flags an
     out-of-band mutation."""
-    actor = (getattr(invoker, "github_login", None)
-             or getattr(invoker, "email", None) or "unknown")
+    actor = getattr(invoker, "github_login", None) or getattr(invoker, "email", None) or "unknown"
     version = _pkit_version()
     stamp = f" — pkit {version}" if version else ""
     move = f"{from_state} → {to_state}" if from_state else str(to_state)
@@ -176,9 +179,7 @@ def main() -> int:
     parser.add_argument(
         "--to",
         required=True,
-        help=(
-            "Target state: one of todo, backlog, in-progress, review, done."
-        ),
+        help=("Target state: one of todo, backlog, in-progress, review, done."),
     )
     parser.add_argument(
         "--bypass",
@@ -254,15 +255,9 @@ def main() -> int:
         return 1
 
     workflow = _read_yaml(capability_root / "schemas" / "workflow.yaml", yaml_loader)
-    issue_types = _read_yaml(
-        capability_root / "schemas" / "issue-types.yaml", yaml_loader
-    )
-    classification = _read_yaml(
-        capability_root / "schemas" / "classification.yaml", yaml_loader
-    )
-    body_format = _read_yaml(
-        capability_root / "schemas" / "body-format.yaml", yaml_loader
-    )
+    issue_types = _read_yaml(capability_root / "schemas" / "issue-types.yaml", yaml_loader)
+    classification = _read_yaml(capability_root / "schemas" / "classification.yaml", yaml_loader)
+    body_format = _read_yaml(capability_root / "schemas" / "body-format.yaml", yaml_loader)
     config = _read_yaml(capability_root / "project" / "config.yaml", yaml_loader)
 
     # Validate the target state.
@@ -371,9 +366,7 @@ def main() -> int:
         return 0
 
     # Look up the transition.
-    transition = _find_transition(
-        workflow, current_state, args.to, structural_type
-    )
+    transition = _find_transition(workflow, current_state, args.to, structural_type)
     if transition is None:
         legal_targets = _legal_targets(workflow, current_state, structural_type)
         print(
@@ -523,15 +516,13 @@ def main() -> int:
         # later has a grown landed-move count and posts its own (#954).
         reason = (args.bypass_reason or "").strip()
         key = _transition_audit_key(
-            current_state, args.to, reason,
+            current_state,
+            args.to,
+            reason,
             _landed_moves(args.issue_number, engine_status, config, substrate_map),
         )
-        audit_comment = (
-            _render_audit_comment(capability_root, invoker, reason) + "\n\n" + key
-        )
-        if not _post_transition_audit_once(
-            args.issue_number, audit_comment, key, config
-        ):
+        audit_comment = _render_audit_comment(capability_root, invoker, reason) + "\n\n" + key
+        if not _post_transition_audit_once(args.issue_number, audit_comment, key, config):
             return 3
 
     # Execute.
@@ -579,10 +570,7 @@ def main() -> int:
                     file=sys.stderr,
                 )
 
-    print(
-        f"\n[ok] transitioned #{args.issue_number}: "
-        f"{current_state} → {args.to}"
-    )
+    print(f"\n[ok] transitioned #{args.issue_number}: {current_state} → {args.to}")
 
     # Fire after_move_issue hooks per DEC-024.
     fire_hooks(
@@ -655,9 +643,7 @@ def _compute_plan(
         if lbl != new_label:
             old_label = lbl
             break
-    return Plan(
-        issue_number=issue_number, add_label=new_label, remove_label=old_label
-    )
+    return Plan(issue_number=issue_number, add_label=new_label, remove_label=old_label)
 
 
 def _print_plan(plan: Plan) -> None:
@@ -714,9 +700,7 @@ def _find_transition(
     return None
 
 
-def _legal_targets(
-    workflow: dict, current_state: str, structural_type: str
-) -> list[str]:
+def _legal_targets(workflow: dict, current_state: str, structural_type: str) -> list[str]:
     """Enumerate legal target states for diagnostic output.
 
     Delegates to `lifecycle_inference.legal_targets`, shared with start-work's
@@ -741,9 +725,7 @@ def _severity_from_token(token: str) -> str:
     return m.group(1)
 
 
-def _transition_audit_key(
-    from_state: str, to_state: str, reason: str, landed_moves: str
-) -> str:
+def _transition_audit_key(from_state: str, to_state: str, reason: str, landed_moves: str) -> str:
     """The idempotency key for one audited transition (#901).
 
     A retry must reproduce it exactly, and a genuinely new audited mutation must
@@ -780,8 +762,6 @@ def _bypass_reason_missing(bypass: bool, bypass_reason: str | None) -> bool:
     `bypass` is False the flag is inert, so there is nothing to enforce.
     """
     return bool(bypass) and not (bypass_reason or "").strip()
-
-
 
 
 def _infer_current_state(
@@ -953,7 +933,10 @@ def _landed_moves(
     if not state_timeline.label_carries_state(config, substrate_map):
         return ""
     events = state_timeline.state_label_events(
-        issue_number, config, substrate_map, run=gh_run,
+        issue_number,
+        config,
+        substrate_map,
+        run=gh_run,
     )
     return "" if events is None else f"state-label-events:{len(events)}"
 
@@ -966,14 +949,11 @@ _JOURNAL_GAP_CLAUSE = (
     "canonical audit trail (DEC-049) and now lacks this move:"
 )
 _TRACKER_TRAIL_CLAUSE = (
-    "If it does not, the tracker is the audit trail and the engine keeps no "
-    "record to miss."
+    "If it does not, the tracker is the audit trail and the engine keeps no record to miss."
 )
 
 
-def _journal_move(
-    issue_number: int, target_state: str, actor: str | None
-) -> None:
+def _journal_move(issue_number: int, target_state: str, actor: str | None) -> None:
     """Hand the completed move to the engine via `pkit process move` (best-effort).
 
     Per the seam-ordering contract: the domain side-effect (the label/board
@@ -1033,7 +1013,8 @@ def _journal_move(
 
 def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
     return gh_get_issue(
-        issue_number, config,
+        issue_number,
+        config,
         fields="title,body,labels,assignees,state,milestone,url",
     )
 
@@ -1052,8 +1033,7 @@ def _gh_apply_state_label(issue_number: int, plan: Plan, config: dict) -> bool:
         return False
     if proc.returncode != 0:
         print(
-            f"error: gh issue edit failed (exit {proc.returncode}).\n"
-            f"stderr: {proc.stderr.strip()}",
+            f"error: gh issue edit failed (exit {proc.returncode}).\nstderr: {proc.stderr.strip()}",
             file=sys.stderr,
         )
         return False
@@ -1079,9 +1059,7 @@ def _gh_comment(issue_number: int, body: str, config: dict) -> bool:
     return True
 
 
-def _post_transition_audit_once(
-    issue_number: int, body: str, key: str, config: dict
-) -> bool:
+def _post_transition_audit_once(issue_number: int, body: str, key: str, config: dict) -> bool:
     """Post the transition audit comment unless that exact comment is already there.
 
     The shared `_lib.comment.post_audit_once` (#902): only a comment with exactly
@@ -1093,7 +1071,11 @@ def _post_transition_audit_once(
     was needed and failed (the caller then aborts before mutating).
     """
     return post_audit_once(
-        "issue", issue_number, key, body, config,
+        "issue",
+        issue_number,
+        key,
+        body,
+        config,
         run=gh_run,
         present_note="transition audit comment already present; idempotent skip",
     )
@@ -1171,10 +1153,7 @@ def _cascade_parent(
         labels=parent_labels,
         substrate_map=substrate_map,
     )
-    print(
-        f"[cascade] bumping parent #{parent_num}: "
-        f"{parent_state} → {cascade_target}"
-    )
+    print(f"[cascade] bumping parent #{parent_num}: {parent_state} → {cascade_target}")
     return _gh_apply_state_label(parent_num, plan, config)
 
 

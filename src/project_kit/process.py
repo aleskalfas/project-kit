@@ -886,9 +886,7 @@ class ProcessEngine:
                 matched = state_id
         if matched is not None:
             return Position(state_id=matched, indeterminate=False, detection_reasons=reasons)
-        return Position(
-            state_id=None, indeterminate=any_indeterminate, detection_reasons=reasons
-        )
+        return Position(state_id=None, indeterminate=any_indeterminate, detection_reasons=reasons)
 
     # --- composition: resolve one inner outcome (COR-036) -----------------
 
@@ -976,7 +974,9 @@ class ProcessEngine:
         # in practice this fires only on the direct self-embed (A subject S runs A
         # subject S). Fail closed, surfaced, like an unrecognised gate kind.
         if inner_key in self._resolution_stack:
-            chain = " -> ".join(f"{addr}#{subj}" for addr, subj in (*self._resolution_stack, inner_key))
+            chain = " -> ".join(
+                f"{addr}#{subj}" for addr, subj in (*self._resolution_stack, inner_key)
+            )
             return SubprocessResolution(
                 address=address,
                 outcome=None,
@@ -1024,8 +1024,7 @@ class ProcessEngine:
                 address=address,
                 outcome=inner_position.state_id,
                 indeterminate=False,
-                reason=f"inner process {address!r} reached outcome "
-                f"{inner_position.state_id!r}",
+                reason=f"inner process {address!r} reached outcome {inner_position.state_id!r}",
             )
         # Determinate but not yet at a terminal outcome: a correct wait, not an
         # error (the parent is awaiting-subprocess-outcome).
@@ -1278,9 +1277,7 @@ class ProcessEngine:
             reason=reason,
         )
 
-    def _cascade_failed(
-        self, address: str, reducer: Any, reason: str
-    ) -> CascadeResolution:
+    def _cascade_failed(self, address: str, reducer: Any, reason: str) -> CascadeResolution:
         """A fail-closed cascade resolution for a malformed declaration (the gate
         reads it as indeterminate, like an unrecognised gate kind)."""
         op = reducer.get("op") if isinstance(reducer, dict) else None
@@ -1340,9 +1337,7 @@ class ProcessEngine:
         )
         return member_runner.evaluate_detection(membership_predicate)
 
-    def _resolve_member_outcome(
-        self, address: str, member_id: str
-    ) -> tuple[str | None, str]:
+    def _resolve_member_outcome(self, address: str, member_id: str) -> tuple[str | None, str]:
         """Resolve ONE member's terminal outcome via COR-036's single-inner
         resolution (the per-subject step the fold reuses). Returns
         `(outcome, reason)`: `outcome` is the member's terminal state id, or None
@@ -1508,9 +1503,7 @@ class ProcessEngine:
 
     # --- blocked (the derived human-pause / wait overlay, COR-034) -------
 
-    def has_no_legal_move(
-        self, position: Position, checks: list[TransitionCheck]
-    ) -> bool:
+    def has_no_legal_move(self, position: Position, checks: list[TransitionCheck]) -> bool:
         """The shipped core 'no legal move' detection (COR-033, named by COR-034).
 
         True when the subject is parked: it has an inferred, non-terminal,
@@ -1525,9 +1518,7 @@ class ProcessEngine:
             return False
         return not any(check.allowed for check in checks)
 
-    def has_pending_human_move(
-        self, position: Position, checks: list[TransitionCheck]
-    ) -> bool:
+    def has_pending_human_move(self, position: Position, checks: list[TransitionCheck]) -> bool:
         """Whether the subject's *sole forward progress* is an untaken human
         move (COR-034 awaiting-human rule).
 
@@ -2173,9 +2164,7 @@ def load_definition(repo_root: Path, address: str) -> ProcessDefinition:
             if isinstance(block, dict) and block.get("id") == process_id:
                 matches.append((candidate, block))
         if len(matches) > 1:
-            offenders = ", ".join(
-                str(path.relative_to(repo_root)) for path, _ in matches
-            )
+            offenders = ", ".join(str(path.relative_to(repo_root)) for path, _ in matches)
             raise ProcessError(
                 f"ambiguous process definition for {address!r}: multiple schema "
                 f"files declare process.id {process_id!r} ({offenders}). Exactly "
@@ -2228,9 +2217,7 @@ def _read_process_block(path: Path, repo_root: Path) -> dict[str, Any]:
     except Exception as exc:
         raise ProcessError(f"could not read process definition {path}: {exc}") from exc
     if not isinstance(raw, dict) or not isinstance(raw.get("process"), dict):
-        raise ProcessError(
-            f"{path.relative_to(repo_root)} has no top-level `process:` block"
-        )
+        raise ProcessError(f"{path.relative_to(repo_root)} has no top-level `process:` block")
     return raw["process"]
 
 
@@ -2276,9 +2263,7 @@ def _validate_journal_entry(entry: dict[str, Any], definition: ProcessDefinition
     errors = sorted(validator.iter_errors(entry), key=lambda e: list(e.path))
     if errors:
         first = errors[0]
-        raise ProcessError(
-            f"journal entry failed shape validation: {first.message}"
-        )
+        raise ProcessError(f"journal entry failed shape validation: {first.message}")
 
 
 # --- rendering ------------------------------------------------------------
@@ -2310,9 +2295,7 @@ def render_status_narrative(engine: ProcessEngine, actor: str) -> str:
     position = engine.resolve_position()
     lines: list[str] = []
     lines.append(
-        cli_render.style(
-            "title", f"Process {definition.capability}:{definition.process_id}"
-        )
+        cli_render.style("title", f"Process {definition.capability}:{definition.process_id}")
         + f"  (subject {engine.subject!r}, definition v{definition.version})"
     )
     lines.append("")
@@ -2341,15 +2324,11 @@ def render_status_narrative(engine: ProcessEngine, actor: str) -> str:
                 indent="    ",
                 first_line_indent=len(visible_prefix),
             )
-            styled_prefix = (
-                "  " + cli_render.style("strong", f"Where: {position.state_id} — ")
-            )
+            styled_prefix = "  " + cli_render.style("strong", f"Where: {position.state_id} — ")
             lines.append(styled_prefix + prose[0])
             lines.extend(prose[1:])
         else:
-            lines.append(
-                "  " + cli_render.style("strong", f"Where: {position.state_id}")
-            )
+            lines.append("  " + cli_render.style("strong", f"Where: {position.state_id}"))
         if state.get("terminal"):
             lines.append("    (terminal state)")
         # COR-036: when parked in a subprocess state, surface the embedded inner
@@ -2425,9 +2404,7 @@ def render_status_narrative(engine: ProcessEngine, actor: str) -> str:
     blocked = engine.evaluate_blocked(position, checks, actor)
     if blocked is not None:
         lines.append("")
-        lines.append(
-            "  " + cli_render.style("strong", f"Blocked: {blocked.blocked_on}")
-        )
+        lines.append("  " + cli_render.style("strong", f"Blocked: {blocked.blocked_on}"))
         # resume_reason is an own-line author-supplied prose field (ADR-024):
         # the "resume when: " label is a fixed-width first-line prefix; hang
         # aligns continuation lines under the reason text.
@@ -2642,9 +2619,7 @@ def render_validate_narrative(engine: ProcessEngine) -> str:
     violations = [inv for inv in outcomes if not inv.holds]
     lines.append("")
     if violations:
-        lines.append(
-            "  " + cli_render.style("strong", f"{len(violations)} invariant(s) violated")
-        )
+        lines.append("  " + cli_render.style("strong", f"{len(violations)} invariant(s) violated"))
     else:
         lines.append("  " + cli_render.style("strong", "all invariants hold"))
     return "\n".join(lines) + "\n"

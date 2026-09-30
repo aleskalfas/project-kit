@@ -160,11 +160,7 @@ def parse_label_contributions(
     if labels is None:
         return (), (malformed(f"{prefix} is missing the `labels:` key"),)
     if not isinstance(labels, list):
-        return (), (
-            malformed(
-                f"{prefix}: `labels` must be a list, got {type(labels).__name__}"
-            ),
-        )
+        return (), (malformed(f"{prefix}: `labels` must be a list, got {type(labels).__name__}"),)
 
     out: list[LabelContribution] = []
     errors: list[ContributionError] = []

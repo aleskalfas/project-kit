@@ -205,9 +205,7 @@ def detect_consolidation_opportunities(target_root: Path) -> ConsolidationPlan |
     # pair per *unique* redundant entry; we then resolve which file(s)
     # the entry lives in.
     raw_plan = plan_consolidation(combined)
-    redundant_to_subsumer: dict[str, str] = {
-        p.redundant: p.subsumed_by for p in raw_plan.pairs
-    }
+    redundant_to_subsumer: dict[str, str] = {p.redundant: p.subsumed_by for p in raw_plan.pairs}
 
     pairs: list[ConsolidationPair] = []
     for entry, source_file in annotated:

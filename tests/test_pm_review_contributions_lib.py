@@ -32,9 +32,7 @@ import pytest
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SCRIPTS_DIR = (
-    REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
-)
+SCRIPTS_DIR = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
 LIB_PATH = SCRIPTS_DIR / "_lib" / "review_contributions.py"
 
 
@@ -67,9 +65,7 @@ def rc():
 
 @pytest.fixture(scope="module")
 def agents_lib():
-    return _load_lib(
-        "pm_agents_lib_under_test", SCRIPTS_DIR / "_lib" / "agents.py"
-    )
+    return _load_lib("pm_agents_lib_under_test", SCRIPTS_DIR / "_lib" / "agents.py")
 
 
 # --- repo-tree builders ----------------------------------------------
@@ -91,9 +87,7 @@ def _write_manifest(repo_root: Path, capability_names: list[str]) -> None:
             f"    manifest: .pkit/capabilities/{name}/manifest.yaml",
         ]
     (repo_root / ".pkit").mkdir(parents=True, exist_ok=True)
-    (repo_root / ".pkit" / "manifest.yaml").write_text(
-        "\n".join(lines) + "\n", encoding="utf-8"
-    )
+    (repo_root / ".pkit" / "manifest.yaml").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def _write_contribution(repo_root: Path, capability: str, body: str) -> None:
@@ -209,9 +203,7 @@ def test_parse_missing_contributions_key(rc) -> None:
 
 
 def test_parse_contributions_not_a_list(rc) -> None:
-    rules, errors = rc.parse_contributions(
-        {"contributions": {"match": {}}}, "cap"
-    )
+    rules, errors = rc.parse_contributions({"contributions": {"match": {}}}, "cap")
     assert rules == ()
     assert any("`contributions` must be a list" in e.message for e in errors)
 
@@ -424,10 +416,7 @@ def test_collect_multi_value_match_end_to_end(rc, tmp_path) -> None:
     assert dict(result.rules[0].predicate) == {"workstream": ("design", "ui")}
     # The rule fires for either listed value.
     assert result.reviewers_for({"workstream": "ui"})[0].reviewer == "design-reviewer"
-    assert (
-        result.reviewers_for({"workstream": "design"})[0].reviewer
-        == "design-reviewer"
-    )
+    assert result.reviewers_for({"workstream": "design"})[0].reviewer == "design-reviewer"
     assert result.reviewers_for({"workstream": "backend"}) == ()
 
 
@@ -453,9 +442,7 @@ def test_collect_ignores_orphan_unregistered_capability(rc, tmp_path) -> None:
     assert "ux-ui-design" not in result.capabilities_walked
 
 
-def test_collect_undeployed_reviewer_stays_visible_and_fails_closed(
-    rc, tmp_path
-) -> None:
+def test_collect_undeployed_reviewer_stays_visible_and_fails_closed(rc, tmp_path) -> None:
     _write_manifest(tmp_path, ["ux-ui-design"])
     _write_contribution(
         tmp_path,
@@ -533,9 +520,7 @@ def test_reviewers_for_returns_rules_with_provenance(rc) -> None:
 
 def test_reviewers_for_no_axis_matches_nothing(rc) -> None:
     collection = rc.ContributionCollection(
-        rules=(
-            rc.ContributionRule("a", {"workstream": ("design",)}, "design-reviewer"),
-        )
+        rules=(rc.ContributionRule("a", {"workstream": ("design",)}, "design-reviewer"),)
     )
     # Closing entity carries no workstream axis → baseline only (DEC-032 D1).
     assert collection.reviewers_for({}) == ()
@@ -555,9 +540,7 @@ def test_reviewers_for_deduplicates_by_reviewer(rc) -> None:
 
 def test_reviewers_for_multi_value_predicate(rc) -> None:
     collection = rc.ContributionCollection(
-        rules=(
-            rc.ContributionRule("a", {"workstream": ("design", "ui")}, "design-reviewer"),
-        )
+        rules=(rc.ContributionRule("a", {"workstream": ("design", "ui")}, "design-reviewer"),)
     )
     assert collection.reviewers_for({"workstream": "ui"})[0].reviewer == "design-reviewer"
     assert collection.reviewers_for({"workstream": "design"})[0].reviewer == "design-reviewer"
@@ -573,31 +556,23 @@ def test_reviewers_for_issues_unions_across_closing_issues(rc) -> None:
             rc.ContributionRule("b", {"workstream": ("backend",)}, "backend-reviewer"),
         )
     )
-    matched = collection.reviewers_for_issues(
-        [{"workstream": "design"}, {"workstream": "backend"}]
-    )
+    matched = collection.reviewers_for_issues([{"workstream": "design"}, {"workstream": "backend"}])
     assert {r.reviewer for r in matched} == {"design-reviewer", "backend-reviewer"}
 
 
 def test_reviewers_for_issues_dedups_across_issues(rc) -> None:
     # Two design issues on one PR require `design-reviewer` once.
     collection = rc.ContributionCollection(
-        rules=(
-            rc.ContributionRule("a", {"workstream": ("design",)}, "design-reviewer"),
-        )
+        rules=(rc.ContributionRule("a", {"workstream": ("design",)}, "design-reviewer"),)
     )
-    matched = collection.reviewers_for_issues(
-        [{"workstream": "design"}, {"workstream": "design"}]
-    )
+    matched = collection.reviewers_for_issues([{"workstream": "design"}, {"workstream": "design"}])
     assert tuple(r.reviewer for r in matched) == ("design-reviewer",)
 
 
 def test_reviewers_for_issues_empty_is_baseline_only(rc) -> None:
     # A PR closing no issues → no contributed reviewers (baseline only).
     collection = rc.ContributionCollection(
-        rules=(
-            rc.ContributionRule("a", {"workstream": ("design",)}, "design-reviewer"),
-        )
+        rules=(rc.ContributionRule("a", {"workstream": ("design",)}, "design-reviewer"),)
     )
     assert collection.reviewers_for_issues([]) == ()
 
@@ -617,9 +592,7 @@ def test_reviewers_for_skips_floor_only_rule(rc) -> None:
     # A floor-only rule (empty predicate) must NOT vacuously match every
     # classification through reviewers_for.
     collection = rc.ContributionCollection(
-        rules=(
-            rc.ContributionRule("se", {}, "code-reviewer", floor=rc.FLOOR_TOUCHES_CODE),
-        )
+        rules=(rc.ContributionRule("se", {}, "code-reviewer", floor=rc.FLOOR_TOUCHES_CODE),)
     )
     assert collection.reviewers_for({"type": "feature"}) == ()
     assert collection.reviewers_for({}) == ()

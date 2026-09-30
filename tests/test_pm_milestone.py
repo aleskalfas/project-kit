@@ -19,14 +19,7 @@ import pytest
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-LIB_DIR = (
-    REPO_ROOT
-    / ".pkit"
-    / "capabilities"
-    / "project-management"
-    / "scripts"
-    / "_lib"
-)
+LIB_DIR = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "_lib"
 MODULE_PATH = LIB_DIR / "milestone.py"
 
 
@@ -117,10 +110,7 @@ def test_resolve_milestone_empty_arg_returns_none(milestone_mod) -> None:
 
 def test_resolve_milestone_handles_concatenated_arrays(milestone_mod) -> None:
     """gh --paginate emits concatenated JSON arrays; the parser handles them."""
-    concatenated = (
-        '[{"number": 6, "title": "M1"}]\n'
-        '[{"number": 7, "title": "M2"}]'
-    )
+    concatenated = '[{"number": 6, "title": "M1"}]\n[{"number": 7, "title": "M2"}]'
     with patch.object(milestone_mod, "gh_run", _stub_gh_run(concatenated)):
         m6 = milestone_mod.resolve_milestone("6", {})
         m7 = milestone_mod.resolve_milestone("7", {})

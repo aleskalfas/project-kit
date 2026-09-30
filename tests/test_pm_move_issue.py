@@ -23,12 +23,7 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = (
-    REPO_ROOT
-    / ".pkit"
-    / "capabilities"
-    / "project-management"
-    / "scripts"
-    / "move-issue.py"
+    REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "move-issue.py"
 )
 CAPABILITY_ROOT = REPO_ROOT / ".pkit" / "capabilities" / "project-management"
 LIB_PATH = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
@@ -340,17 +335,13 @@ def test_infer_state_state_label_wins(mi) -> None:
 
 def test_infer_state_milestone_alone_means_backlog(mi) -> None:
     assert (
-        mi._infer_current_state(
-            state="open", milestone={"title": "M1"}, labels=["type:feature"]
-        )
+        mi._infer_current_state(state="open", milestone={"title": "M1"}, labels=["type:feature"])
         == "backlog"
     )
 
 
 def test_infer_state_no_milestone_no_label_means_todo(mi) -> None:
-    assert (
-        mi._infer_current_state(state="open", milestone={}, labels=[]) == "todo"
-    )
+    assert mi._infer_current_state(state="open", milestone={}, labels=[]) == "todo"
 
 
 # --- plan computation -----------------------------------------------
@@ -414,9 +405,7 @@ def test_infer_structural_type_none_on_unknown(mi, issue_types) -> None:
 # an edited-away container prefix stays unrecoverable (malformed).
 
 
-def test_infer_structural_type_prefix_wins_over_label(
-    mi, issue_types, classification
-) -> None:
+def test_infer_structural_type_prefix_wins_over_label(mi, issue_types, classification) -> None:
     """Acceptance 4 — title prefix takes precedence over the `type:*` label.
 
     A [Feature] container that (oddly) also carries a `type:bug` label still
@@ -444,7 +433,10 @@ def test_infer_structural_type_recovers_task_from_label_when_prefix_absent(
     for kind in ("docs", "test", "refactor", "maintenance"):
         assert (
             mi.infer_structural_type(
-                "edited-away title", issue_types, classification=classification, labels=[f"type:{kind}"]
+                "edited-away title",
+                issue_types,
+                classification=classification,
+                labels=[f"type:{kind}"],
             )
             == "task"
         ), f"kind {kind!r} must recover structural type 'task'"
@@ -462,7 +454,9 @@ def test_infer_structural_type_container_without_label_is_malformed(
     assert (
         mi.infer_structural_type(
             "edited-away epic title",
-            issue_types, classification=classification, labels=["priority:High", "workstream:core"],
+            issue_types,
+            classification=classification,
+            labels=["priority:High", "workstream:core"],
         )
         is None
     )
@@ -482,9 +476,7 @@ def test_infer_structural_type_feature_kind_label_is_ambiguous(
     )
 
 
-def test_structural_type_from_kind_label_reads_mapping(
-    mi, classification
-) -> None:
+def test_structural_type_from_kind_label_reads_mapping(mi, classification) -> None:
     """The helper reads the kind→structural mapping straight from the schema's
     `allowed_structural_types_per_kind` (single-valued ⇒ recoverable)."""
     assert structural_type_from_kind_label(["type:bug"], classification) == "task"
@@ -873,10 +865,12 @@ class _FakeIssueComments:
         if cmd[:3] == ["gh", "issue", "view"]:
             # What GitHub reports for comments the gh-authenticated identity
             # posted and never edited — pkit's own posts.
-            payload = {"comments": [
-                {"body": b, "viewerDidAuthor": True, "includesCreatedEdit": False}
-                for b in self.bodies
-            ]}
+            payload = {
+                "comments": [
+                    {"body": b, "viewerDidAuthor": True, "includesCreatedEdit": False}
+                    for b in self.bodies
+                ]
+            }
             return SimpleNamespace(returncode=0, stdout=_json.dumps(payload), stderr="")
         if cmd[:3] == ["gh", "issue", "comment"]:
             self.bodies.append(cmd[cmd.index("--body") + 1])
@@ -980,7 +974,8 @@ def test_journal_length_and_position_read_one_status(mi) -> None:
 # ---- the landed-move component, in both journal modes (#954) ----------
 
 _LOGGING_OFF = {
-    "position": {"state": "todo"}, "journal": [],
+    "position": {"state": "todo"},
+    "journal": [],
     "journal_logging": {"enabled": False, "committed": False},
 }
 
@@ -998,7 +993,9 @@ class _TimelineGh:
         assert cmd[3].endswith("/issues/42/timeline")
         self.calls += 1
         return SimpleNamespace(
-            returncode=self.returncode, stdout=_json.dumps(self.events), stderr="",
+            returncode=self.returncode,
+            stdout=_json.dumps(self.events),
+            stderr="",
         )
 
 
@@ -1055,7 +1052,7 @@ def test_audit_comment_is_posted_before_the_label_write() -> None:
     """The pre-mutation order DEC-049 requires: the audit post precedes the
     label edit in `main`, so a failed edit leaves the justification behind."""
     src = SCRIPT_PATH.read_text(encoding="utf-8")
-    main_src = src[src.index("def main("):src.index("def _bypass_reason_missing(")]
+    main_src = src[src.index("def main(") : src.index("def _bypass_reason_missing(")]
     assert main_src.index("_post_transition_audit_once(") < main_src.index(
         "_gh_apply_state_label(args.issue_number, plan, config)\n        if not ok"
     )

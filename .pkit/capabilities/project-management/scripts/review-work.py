@@ -77,11 +77,14 @@ def main() -> int:
     )
     parser.add_argument("issue_number", type=int)
     parser.add_argument(
-        "--reviewer", action="append", default=[],
+        "--reviewer",
+        action="append",
+        default=[],
         help="Reviewer to assign (repeatable). May be a @user, user, or team.",
     )
     parser.add_argument(
-        "--require-human", action="store_true",
+        "--require-human",
+        action="store_true",
         help=(
             "Force human-mode review even when project config defaults to "
             "agent mode. (Phase D — DEC-027 — wires the full mode-resolution "
@@ -89,7 +92,8 @@ def main() -> int:
         ),
     )
     parser.add_argument(
-        "--base", default=None,
+        "--base",
+        default=None,
         help=(
             "Base branch for a newly opened PR (default: the issue's DEC-013 "
             "integration branch when its body carries an `Integration:` marker, "
@@ -98,7 +102,9 @@ def main() -> int:
         ),
     )
     parser.add_argument(
-        "--capability-root", type=Path, default=None,
+        "--capability-root",
+        type=Path,
+        default=None,
         help=f"Default: <repo-root>/.pkit/capabilities/{CAPABILITY_NAME}/.",
     )
     parser.add_argument("--dry-run", action="store_true")
@@ -161,9 +167,7 @@ def main() -> int:
         for lbl in (issue.get("labels") or [])
     ]
     substrate_map = axis_labels.load_substrate_map(capability_root)
-    expected_prefix = _derive_branch_prefix(
-        labels, title, classification, substrate_map
-    )
+    expected_prefix = _derive_branch_prefix(labels, title, classification, substrate_map)
     branch_prefix_match = re.match(r"^([a-z]+)/", branch)
     branch_prefix = branch_prefix_match.group(1) if branch_prefix_match else None
     if expected_prefix and branch_prefix and expected_prefix != branch_prefix:
@@ -177,9 +181,7 @@ def main() -> int:
     # Base branch (DEC-013, #903): --base, else the issue's integration marker,
     # else default_branch — the resolution start-work cut the branch by.
     try:
-        base = infer.resolve_base_branch(
-            config, str(issue.get("body") or ""), explicit=args.base
-        )
+        base = infer.resolve_base_branch(config, str(issue.get("body") or ""), explicit=args.base)
     except default_branch.Unanswered as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
@@ -233,7 +235,9 @@ def main() -> int:
 
     # Reviewer assignment per DEC-027 mode resolution.
     mode_resolution = resolve_mode(
-        config, issue_labels=labels, require_human=args.require_human,
+        config,
+        issue_labels=labels,
+        require_human=args.require_human,
     )
     print(f"  mode:   {mode_resolution.mode} ({mode_resolution.source})")
 
@@ -243,11 +247,15 @@ def main() -> int:
         role = reviewer_role_from_config(config)
         if role:
             candidates = role_based_reviewers(
-                members, role, exclude_login=invoker.github_login,
+                members,
+                role,
+                exclude_login=invoker.github_login,
             )
             if candidates:
                 reviewers_to_add = candidates
-                print(f"  human-mode reviewers (role={role}): {', '.join('@' + r for r in candidates)}")
+                print(
+                    f"  human-mode reviewers (role={role}): {', '.join('@' + r for r in candidates)}"
+                )
             else:
                 print(
                     f"  [warn] human mode but no eligible reviewers for role={role!r}.",
@@ -284,7 +292,9 @@ def _find_issue_branch(issue_number: int) -> str | None:
     try:
         proc = subprocess.run(
             ["git", "branch", "--list", "--format=%(refname:short)"],
-            capture_output=True, text=True, check=False,
+            capture_output=True,
+            text=True,
+            check=False,
         )
     except FileNotFoundError:
         return None
@@ -340,9 +350,19 @@ def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
 
 def _find_pr_for_branch(branch: str, config: dict) -> dict | None:
     proc = gh_run(
-        ["gh", "pr", "list", "--head", branch, "--state", "all",
-         "--json", "number,state,isDraft,headRefName"],
-        config, check=False,
+        [
+            "gh",
+            "pr",
+            "list",
+            "--head",
+            branch,
+            "--state",
+            "all",
+            "--json",
+            "number,state,isDraft,headRefName",
+        ],
+        config,
+        check=False,
     )
     if proc.returncode != 0:
         return None
@@ -356,14 +376,11 @@ def _find_pr_for_branch(branch: str, config: dict) -> dict | None:
     return None
 
 
-def _gh_pr_create_ready(
-    branch: str, base: str, title: str, body: str, config: dict
-) -> str | None:
+def _gh_pr_create_ready(branch: str, base: str, title: str, body: str, config: dict) -> str | None:
     proc = gh_run(
-        ["gh", "pr", "create",
-         "--head", branch, "--base", base,
-         "--title", title, "--body", body],
-        config, check=False,
+        ["gh", "pr", "create", "--head", branch, "--base", base, "--title", title, "--body", body],
+        config,
+        check=False,
     )
     if proc.returncode != 0:
         print(f"error: gh pr create failed: {proc.stderr.strip()}", file=sys.stderr)
@@ -371,9 +388,7 @@ def _gh_pr_create_ready(
     return proc.stdout.strip()
 
 
-def _ready_body_ok(
-    body: str, classification: dict, capability_root: Path, force: bool
-) -> bool:
+def _ready_body_ok(body: str, classification: dict, capability_root: Path, force: bool) -> bool:
     """Validate-at-ready (#569): True iff `body` may go ready-for-review.
 
     Runs the shared PR-body validator at the merge-gate phase (empty checkbox →
@@ -416,9 +431,7 @@ def _gh_pr_body(pr_number: int | None, config: dict) -> str:
     if pr_number is None:
         return ""
     try:
-        proc = gh_run(
-            ["gh", "pr", "view", str(pr_number), "--json", "body"], config, check=False
-        )
+        proc = gh_run(["gh", "pr", "view", str(pr_number), "--json", "body"], config, check=False)
     except FileNotFoundError:
         return ""
     if proc.returncode != 0:
@@ -435,7 +448,8 @@ def _gh_pr_ready(pr_number: int | None, config: dict) -> bool:
         return False
     proc = gh_run(
         ["gh", "pr", "ready", str(pr_number)],
-        config, check=False,
+        config,
+        check=False,
     )
     if proc.returncode != 0:
         print(f"error: gh pr ready failed: {proc.stderr.strip()}", file=sys.stderr)
@@ -465,8 +479,12 @@ def _invoke_move_issue(
     allow_foreign_repo: bool,
 ) -> int:
     cmd = [
-        sys.executable, str(_HERE / "move-issue.py"),
-        str(issue_number), "--to", target, "--yes",
+        sys.executable,
+        str(_HERE / "move-issue.py"),
+        str(issue_number),
+        "--to",
+        target,
+        "--yes",
     ]
     if allow_foreign_repo:
         cmd.append("--allow-foreign-repo")

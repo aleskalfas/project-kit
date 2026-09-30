@@ -95,7 +95,7 @@ def _strip_frontmatter(raw: str) -> str:
     end = raw.find("\n---\n", 4)
     if end < 0:
         return raw
-    return raw[end + len("\n---\n"):]
+    return raw[end + len("\n---\n") :]
 
 
 def _strip_html_comments(text: str) -> str:
@@ -206,15 +206,15 @@ def detect_placeholder_residuals(
                 # separately; skip here to avoid double-reporting.
                 continue
             if not has_authored_checkbox_items(body, heading):
-                severity = (
-                    "warning" if phase == PHASE_CREATE else "hard-reject"
+                severity = "warning" if phase == PHASE_CREATE else "hard-reject"
+                results.append(
+                    (
+                        severity,
+                        "body.placeholder.empty-checkbox-section",
+                        f"section {heading!r} has no authored items — "
+                        f"body appears to be an unedited template skeleton.",
+                    )
                 )
-                results.append((
-                    severity,
-                    "body.placeholder.empty-checkbox-section",
-                    f"section {heading!r} has no authored items — "
-                    f"body appears to be an unedited template skeleton.",
-                ))
 
     # --- signal 2: surviving placeholder prose -----------------------
     # Locate the template for this structural type.  The title_prefix
@@ -227,13 +227,15 @@ def detect_placeholder_residuals(
         surviving = [p for p in phrases if p in body]
         if surviving:
             sample = surviving[0]
-            results.append((
-                "warning",
-                "body.placeholder.template-prose",
-                f"body still contains template placeholder text "
-                f"(e.g. {sample!r}). Replace placeholder prose with "
-                f"actual content.",
-            ))
+            results.append(
+                (
+                    "warning",
+                    "body.placeholder.template-prose",
+                    f"body still contains template placeholder text "
+                    f"(e.g. {sample!r}). Replace placeholder prose with "
+                    f"actual content.",
+                )
+            )
 
     return results
 

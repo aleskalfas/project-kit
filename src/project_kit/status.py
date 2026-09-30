@@ -52,7 +52,11 @@ def _report_status() -> None:
     source_pkit = os.environ.get("PKIT_SOURCE_BIN") or str(Path(__file__).resolve())
 
     click.echo()
-    click.echo(cli_render.style("title", "project-kit status — how the methodology is wired in this project"))
+    click.echo(
+        cli_render.style(
+            "title", "project-kit status — how the methodology is wired in this project"
+        )
+    )
     click.echo()
     click.echo(f"  {'Project root:':<22} {target_root}")
     click.echo(f"  {'Source pkit:':<22} {source_pkit}")
@@ -61,7 +65,9 @@ def _report_status() -> None:
     pkit_dir = target_root / ".pkit"
     if not pkit_dir.is_dir():
         click.echo()
-        click.echo("  " + cli_render.style("strong", "project-kit is NOT installed in this project."))
+        click.echo(
+            "  " + cli_render.style("strong", "project-kit is NOT installed in this project.")
+        )
         click.echo("  Run 'pkit init' from this project's root to install.")
         click.echo()
         return
@@ -226,9 +232,7 @@ def _report_capabilities(target_root: Path, source_kit: Path) -> None:
     # from kit source.
     if installed:
         labelled = [
-            f"{name} (incubated)"
-            if origins.get(name) == caps.INCUBATED_IN_REPO
-            else name
+            f"{name} (incubated)" if origins.get(name) == caps.INCUBATED_IN_REPO else name
             for name in installed
         ]
         installed_value = ", ".join(labelled)
@@ -272,7 +276,10 @@ def _report_documentation(target_root: Path) -> None:
     click.echo()
     click.echo("  " + cli_render.style("heading", "Documentation"))
     roots = docs_roots.resolve_roots(target_root)
-    for label, audience in (("user root", docs_roots.USER_KEY), ("internal root", docs_roots.INTERNAL_KEY)):
+    for label, audience in (
+        ("user root", docs_roots.USER_KEY),
+        ("internal root", docs_roots.INTERNAL_KEY),
+    ):
         path, source = roots.for_audience(audience)
         click.echo(f"    {label:<18} {path.as_posix()}/   ({source.value})")
     try:
@@ -569,9 +576,7 @@ def _report_data_points(target_root: Path) -> None:
         resolution = data_points.shared_resolution(target_root)
     except Exception:  # noqa: BLE001 — soft probe; a broken declaration is validate's finding
         return
-    click.echo(
-        f"    {'fillers':<18} {prefix.as_posix()}/   ({resolution.filler_files} file(s))"
-    )
+    click.echo(f"    {'fillers':<18} {prefix.as_posix()}/   ({resolution.filler_files} file(s))")
     if not resolution.points:
         click.echo(f"    {'points':<18} none defined")
         return

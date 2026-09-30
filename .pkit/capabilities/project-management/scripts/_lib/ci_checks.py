@@ -53,12 +53,7 @@ def _check_timestamp(check: dict) -> str:
     sorts first — so a timestamped run always wins over an untimed one, and ties
     (all untimed / equal) fall through to GitHub's roughly-chronological order.
     """
-    return (
-        check.get("completedAt")
-        or check.get("startedAt")
-        or check.get("createdAt")
-        or ""
-    )
+    return check.get("completedAt") or check.get("startedAt") or check.get("createdAt") or ""
 
 
 def dedupe_to_latest_run(rollup: list[dict]) -> list[dict]:

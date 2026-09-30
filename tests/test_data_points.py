@@ -190,7 +190,8 @@ def test_an_address_maps_to_its_filler_path_and_back(address: str, subpath: str)
 
 
 @pytest.mark.parametrize(
-    "address", ["pkit::Documentation:readers", "pkit:documentation:readers", "pkit::docs", "a::b:c.d"]
+    "address",
+    ["pkit::Documentation:readers", "pkit:documentation:readers", "pkit::docs", "a::b:c.d"],
 )
 def test_an_address_outside_the_word_grammar_has_no_filler_path(address: str) -> None:
     assert bs.filler_subpath(address) is None
@@ -198,7 +199,12 @@ def test_an_address_outside_the_word_grammar_has_no_filler_path(address: str) ->
 
 @pytest.mark.parametrize(
     "subpath",
-    ["pkit/documentation.yaml", "a/b/c/d.yaml", "pkit/documentation/readers.yml", "pkit/Doc/readers.yaml"],
+    [
+        "pkit/documentation.yaml",
+        "a/b/c/d.yaml",
+        "pkit/documentation/readers.yml",
+        "pkit/Doc/readers.yaml",
+    ],
 )
 def test_a_path_that_names_no_point_has_no_address(subpath: str) -> None:
     assert bs.filler_address(subpath) is None
@@ -237,8 +243,9 @@ def test_a_malformed_envelope_is_an_error_and_fills_nothing(repo: AdopterRepo) -
         (f"{READERS_FILE}:/schema_versoin", "error"),
     ]
     assert "'schema_version' is a required property" in messages[READERS_FILE]
-    assert "unknown key 'schema_versoin'; did you mean 'schema_version'?" in (
-        messages[f"{READERS_FILE}:/schema_versoin"]
+    assert (
+        "unknown key 'schema_versoin'; did you mean 'schema_version'?"
+        in (messages[f"{READERS_FILE}:/schema_versoin"])
     )
     point = resolution.point(READERS)
     assert point is not None and not point.resolved
@@ -323,7 +330,12 @@ def test_removals_on_a_single_point_are_an_error(repo: AdopterRepo) -> None:
 
 
 def test_single_precedence_project_then_contribution_then_default(repo: AdopterRepo) -> None:
-    _provider(repo, TOOL, combination="single", default={"value": {"name": "d"}, "participation": "always"})
+    _provider(
+        repo,
+        TOOL,
+        combination="single",
+        default={"value": {"name": "d"}, "participation": "always"},
+    )
     point = _point(repo, TOOL)
     assert (point.value, point.origin) == ({"name": "d"}, dp.DEFAULT)
 
@@ -339,7 +351,9 @@ def test_single_precedence_project_then_contribution_then_default(repo: AdopterR
 
 
 def test_an_alone_default_answers_only_when_nothing_is_declared(repo: AdopterRepo) -> None:
-    _provider(repo, TOOL, combination="single", default={"value": {"name": "d"}, "participation": "alone"})
+    _provider(
+        repo, TOOL, combination="single", default={"value": {"name": "d"}, "participation": "alone"}
+    )
     assert _point(repo, TOOL).value == {"name": "d"}
     _contributor(repo, "evidence", {"name": "e"}, address=TOOL)
     point = _point(repo, TOOL)
@@ -360,7 +374,12 @@ def test_single_without_a_declared_policy_is_single(repo: AdopterRepo) -> None:
 
 
 def test_single_with_a_selection_takes_the_selected_contributor(repo: AdopterRepo) -> None:
-    _provider(repo, TOOL, combination="single", default={"value": {"name": "d"}, "participation": "always"})
+    _provider(
+        repo,
+        TOOL,
+        combination="single",
+        default={"value": {"name": "d"}, "participation": "always"},
+    )
     _contributor(repo, "evidence", {"name": "e"}, address=TOOL)
     _contributor(repo, "notes", {"name": "n"}, address=TOOL)
     _config(repo, f"connections:\n  selections:\n    {TOOL}: notes\n")
@@ -376,7 +395,12 @@ def test_single_with_a_selection_takes_the_selected_contributor(repo: AdopterRep
 def test_single_ambiguous_is_unresolved_and_the_default_does_not_stand_in(
     repo: AdopterRepo,
 ) -> None:
-    _provider(repo, TOOL, combination="single", default={"value": {"name": "d"}, "participation": "always"})
+    _provider(
+        repo,
+        TOOL,
+        combination="single",
+        default={"value": {"name": "d"}, "participation": "always"},
+    )
     _contributor(repo, "evidence", {"name": "e"}, address=TOOL)
     _contributor(repo, "notes", {"name": "n"}, address=TOOL)
     point = _point(repo, TOOL)
@@ -400,7 +424,10 @@ def test_single_with_nothing_declared_and_no_default_is_unfilled(repo: AdopterRe
 
 
 def test_union_merges_by_id_the_project_overriding_whole_entries(repo: AdopterRepo) -> None:
-    _provider(repo, default={"value": ["guest", {"id": "operator", "role": "d"}], "participation": "always"})
+    _provider(
+        repo,
+        default={"value": ["guest", {"id": "operator", "role": "d"}], "participation": "always"},
+    )
     _contributor(repo, "evidence", [{"id": "operator", "role": "e"}, "developer"])
     _filler(repo, {"schema_version": 1, "value": [{"id": "developer"}]})
     point = _point(repo)
@@ -436,7 +463,11 @@ def test_union_suppression_with_a_reason_drops_the_entry(repo: AdopterRepo) -> N
     _contributor(repo, "evidence", ["operator", "guest"])
     _filler(
         repo,
-        {"schema_version": 1, "value": [], "remove": [{"id": "guest", "reason": "No anonymous readers."}]},
+        {
+            "schema_version": 1,
+            "value": [],
+            "remove": [{"id": "guest", "reason": "No anonymous readers."}],
+        },
     )
     point = _point(repo)
     assert point.value == ["operator"]
@@ -460,7 +491,13 @@ def test_additive_keeps_every_entry_in_precedence_order(repo: AdopterRepo) -> No
     _filler(repo, {"schema_version": 1, "value": ["p1"]})
     point = _point(repo)
     assert point.value == ["p1", "e1", "e2", "n1", "d1"]
-    assert [e.origin for e in point.entries] == [dp.PROJECT, "evidence", "evidence", "notes", dp.DEFAULT]
+    assert [e.origin for e in point.entries] == [
+        dp.PROJECT,
+        "evidence",
+        "evidence",
+        "notes",
+        dp.DEFAULT,
+    ]
 
 
 def test_additive_collision_with_the_project_is_an_error_until_a_removal_override(
@@ -545,7 +582,13 @@ def test_a_contribution_naming_command_and_value_is_a_package_error(repo: Adopte
     _stage(
         repo,
         "evidence",
-        {"extensions": {"contributes": [{"point": READERS, "schema_version": 1, "command": "noop", "value": []}]}},
+        {
+            "extensions": {
+                "contributes": [
+                    {"point": READERS, "schema_version": 1, "command": "noop", "value": []}
+                ]
+            }
+        },
     )
     report = pv.validate_installed_packages(repo.root)
     errors = {f.path: f.message for r in report.reports for f in r.errors}
@@ -674,7 +717,9 @@ def test_a_command_filler_answers_with_json_alone_offline_marked(repo: AdopterRe
             "answered for version 2; the point is at version 1",
         ),
         (
-            _printing({"schema_version": 1, "value": ["x"], "remove": [{"id": "a", "reason": "r"}]}),
+            _printing(
+                {"schema_version": 1, "value": ["x"], "remove": [{"id": "a", "reason": "r"}]}
+            ),
             "answered with `remove`: removal overrides are the project's alone",
         ),
         (
@@ -682,7 +727,15 @@ def test_a_command_filler_answers_with_json_alone_offline_marked(repo: AdopterRe
             "its value does not fit the point at /1",
         ),
     ],
-    ids=["timeout", "no-document", "abnormal-exit", "no-envelope", "other-version", "removals", "partial"],
+    ids=[
+        "timeout",
+        "no-document",
+        "abnormal-exit",
+        "no-envelope",
+        "other-version",
+        "removals",
+        "partial",
+    ],
 )
 def test_a_command_filler_without_an_answer_is_inert_never_a_partial_value(
     repo: AdopterRepo, monkeypatch: pytest.MonkeyPatch, body: str, reason: str
@@ -879,7 +932,12 @@ def test_resolve_prints_the_point_as_the_status_report_resolves_it(repo: Adopter
         "value": [{"id": "p1", "role": "owner"}, "n1"],
         "origin": "",
         "entries": [
-            {"id": "p1", "origin": dp.PROJECT, "replaces": [], "value": {"id": "p1", "role": "owner"}},
+            {
+                "id": "p1",
+                "origin": dp.PROJECT,
+                "replaces": [],
+                "value": {"id": "p1", "role": "owner"},
+            },
             {"id": "n1", "origin": "notes", "replaces": [], "value": "n1"},
         ],
         "removals": [{"id": "d1", "reason": "Not ours.", "removed_from": [dp.DEFAULT]}],
@@ -927,7 +985,10 @@ def test_resolve_an_unresolved_point_exits_1_with_no_value(repo: AdopterRepo) ->
     assert result.exit_code == 1
     document = json.loads(result.output)
     assert (document["resolved"], document["value"], document["entries"]) == (False, None, [])
-    assert document["why"] == "a filler meant to answer is inert, and the point's inert policy is `fail`"
+    assert (
+        document["why"]
+        == "a filler meant to answer is inert, and the point's inert policy is `fail`"
+    )
     states = {f["name"]: (f["state"], f["reason"]) for f in document["fillers"]}
     assert states["notes"][0] == "inert"
     assert states["evidence"] == ("passed over", "answered, but the point does not resolve")

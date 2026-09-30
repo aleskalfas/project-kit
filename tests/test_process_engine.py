@@ -277,9 +277,7 @@ def test_deterministic_gate_passing_allows_and_moves(fixture_repo: Path) -> None
     assert result.journal_entry["version"]  # non-empty version stamp
 
 
-def test_journal_entry_version_absent_when_unresolvable(
-    fixture_repo: Path, monkeypatch
-) -> None:
+def test_journal_entry_version_absent_when_unresolvable(fixture_repo: Path, monkeypatch) -> None:
     """A version hiccup never blocks a move: no `version` key, entry still valid."""
     from project_kit import process as process_mod
 

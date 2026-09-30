@@ -210,6 +210,7 @@ def _issue(number: int, *label_names: str) -> dict:
 
 def _patch_gate_checks(bf, monkeypatch, *, auth_ok=True, repo_ok=True, map_ok=True):
     """Stub the residual gate's three probes at the pre-check module it reuses."""
+
     class _FakePreCheck:
         @staticmethod
         def _check_gh_auth():
@@ -364,7 +365,11 @@ def test_issue_already_carrying_the_adopters_label_is_not_proposed(bf, tmp_path)
     cap = _cap_root(tmp_path, map_yaml=LABEL_BOUND_MAP)
     intents, smap = _one_intent(bf, cap)
     proposed = bf._build_proposed_changes(
-        intents, [_issue(1, "P1"), _issue(2, "P0")], {}, None, TARGET_REPO,
+        intents,
+        [_issue(1, "P1"), _issue(2, "P0")],
+        {},
+        None,
+        TARGET_REPO,
         substrate_map=smap,
     )
     # #1 carries a DIFFERENT value (a human's choice — not ours to normalise) and
@@ -390,9 +395,7 @@ def test_rerun_over_a_repaired_corpus_plans_nothing(bf, tmp_path) -> None:
     intents, smap = _one_intent(bf, cap)
     corpus = [_issue(1), _issue(2)]
 
-    first = bf._build_proposed_changes(
-        intents, corpus, {}, None, TARGET_REPO, substrate_map=smap
-    )
+    first = bf._build_proposed_changes(intents, corpus, {}, None, TARGET_REPO, substrate_map=smap)
     assert len(first) == 2
 
     repaired = [_issue(1, "P0"), _issue(2, "P0")]
@@ -477,11 +480,11 @@ def test_residual_gate_refuses_a_label_only_back_fill(bf, tmp_path, monkeypatch)
     _patch_gate_checks(bf, monkeypatch, auth_ok=False)
     monkeypatch.setattr(bf, "load_adopter_config", lambda _r: dict(BOARD_CONFIG))
     monkeypatch.setattr(
-        bf, "gh_run",
+        bf,
+        "gh_run",
         lambda *a, **k: pytest.fail("the gate must refuse before any gh read"),
     )
-    args = bf.argparse.Namespace(json=False, apply=False, emit_script=False,
-                                 limit=500, state="all")
+    args = bf.argparse.Namespace(json=False, apply=False, emit_script=False, limit=500, state="all")
     plan, gate_failed, _errs = bf._derive_plan(cap, dict(BOARD_CONFIG), args)
     assert gate_failed is True and plan is None
 
@@ -493,13 +496,13 @@ def test_label_only_back_fill_does_not_gate_on_the_board(bf, tmp_path, monkeypat
     cap = _cap_root(tmp_path, map_yaml=LABEL_BOUND_MAP)
     _patch_gate_checks(bf, monkeypatch)
     monkeypatch.setattr(
-        bf, "_resolve_project_node_id",
+        bf,
+        "_resolve_project_node_id",
         lambda _c: pytest.fail("a label-only back-fill must not resolve the board"),
     )
     monkeypatch.setattr(bf, "_enumerate_corpus", lambda *a, **k: [_issue(1)])
     monkeypatch.setattr(bf, "_resolve_repo_name_with_owner", lambda _c: TARGET_REPO)
-    args = bf.argparse.Namespace(json=True, apply=False, emit_script=False,
-                                 limit=500, state="all")
+    args = bf.argparse.Namespace(json=True, apply=False, emit_script=False, limit=500, state="all")
     plan, gate_failed, _errs = bf._derive_plan(cap, dict(BOARD_CONFIG), args)
     assert gate_failed is False
     assert [c["kind"] for c in plan["proposed"]] == [KIND]
@@ -512,8 +515,12 @@ def test_label_only_back_fill_does_not_gate_on_the_board(bf, tmp_path, monkeypat
 
 def _planned(apply_mod, *, target="P0", observed=None, argv=("gh",), axis="priority"):
     return apply_mod.PlannedChange(
-        issue_number=1, kind=KIND, target=target, observed=observed,
-        argv=list(argv) if argv is not None else None, axis=axis,
+        issue_number=1,
+        kind=KIND,
+        target=target,
+        observed=observed,
+        argv=list(argv) if argv is not None else None,
+        axis=axis,
     )
 
 
@@ -538,21 +545,15 @@ def test_classify_skips_when_another_value_appeared_since_plan_time(apply_mod) -
     guard yields it with no second predicate, because the plan's `observed` is None
     for every proposed label change."""
     fresh = apply_mod.FreshState(current="P1", read_ok=True)
-    assert apply_mod.classify_change(_planned(apply_mod), fresh) is (
-        apply_mod.Disposition.DRIFTED
-    )
+    assert apply_mod.classify_change(_planned(apply_mod), fresh) is (apply_mod.Disposition.DRIFTED)
 
 
 def test_classify_fails_closed_on_an_indeterminate_read(apply_mod) -> None:
     fresh = apply_mod.FreshState(current=None, read_ok=False)
-    assert apply_mod.classify_change(_planned(apply_mod), fresh) is (
-        apply_mod.Disposition.DRIFTED
-    )
+    assert apply_mod.classify_change(_planned(apply_mod), fresh) is (apply_mod.Disposition.DRIFTED)
 
 
-def test_apply_writes_the_resolved_label_through_one_constructor(
-    apply_mod, monkeypatch
-) -> None:
+def test_apply_writes_the_resolved_label_through_one_constructor(apply_mod, monkeypatch) -> None:
     issued: list[list[str]] = []
 
     def fake_gh_run(args, config=None, **kwargs):
@@ -574,7 +575,8 @@ def test_apply_writes_the_resolved_label_through_one_constructor(
 
 def test_apply_does_not_write_when_a_value_appeared(apply_mod, monkeypatch) -> None:
     monkeypatch.setattr(
-        apply_mod, "gh_run",
+        apply_mod,
+        "gh_run",
         lambda *a, **k: pytest.fail("a drifted change must not be written"),
     )
     records = apply_mod.apply_plan(
@@ -587,7 +589,8 @@ def test_apply_does_not_write_when_a_value_appeared(apply_mod, monkeypatch) -> N
 
 def test_a_failed_write_is_audited_and_exits_nonzero(apply_mod, monkeypatch) -> None:
     monkeypatch.setattr(
-        apply_mod, "gh_run",
+        apply_mod,
+        "gh_run",
         lambda *a, **k: subprocess.CompletedProcess(a[0], 1, stdout="", stderr="nope"),
     )
     records = apply_mod.apply_plan(
@@ -605,12 +608,17 @@ def test_a_failed_write_is_audited_and_exits_nonzero(apply_mod, monkeypatch) -> 
 
 def _fresh_read(bf, monkeypatch, smap, *, returncode=0, stdout="{}"):
     monkeypatch.setattr(
-        bf, "gh_run",
+        bf,
+        "gh_run",
         lambda *a, **k: subprocess.CompletedProcess(a[0], returncode, stdout, ""),
     )
     change = bf.back_fill_apply.PlannedChange(
-        issue_number=1, kind=KIND, target="P0", observed=None,
-        argv=["gh"], axis="priority",
+        issue_number=1,
+        kind=KIND,
+        target="P0",
+        observed=None,
+        argv=["gh"],
+        axis="priority",
     )
     return bf._read_current_axis_label(change, {}, smap)
 
@@ -618,7 +626,9 @@ def _fresh_read(bf, monkeypatch, smap, *, returncode=0, stdout="{}"):
 def test_fresh_read_recognises_the_adopters_own_label(bf, tmp_path, monkeypatch) -> None:
     cap = _cap_root(tmp_path, map_yaml=LABEL_BOUND_MAP)
     state = _fresh_read(
-        bf, monkeypatch, _load_map(bf, cap),
+        bf,
+        monkeypatch,
+        _load_map(bf, cap),
         stdout=json.dumps({"labels": [{"name": "bug"}, {"name": "P1"}]}),
     )
     assert state.read_ok is True and state.current == "P1"
@@ -628,8 +638,7 @@ def test_fresh_read_reports_a_confirmed_gap(bf, tmp_path, monkeypatch) -> None:
     """An EMPTY label list is a genuine "no value" and must read as a confirmed gap
     — otherwise the repair could never write anything."""
     cap = _cap_root(tmp_path, map_yaml=LABEL_BOUND_MAP)
-    state = _fresh_read(bf, monkeypatch, _load_map(bf, cap),
-                        stdout=json.dumps({"labels": []}))
+    state = _fresh_read(bf, monkeypatch, _load_map(bf, cap), stdout=json.dumps({"labels": []}))
     assert state.read_ok is True and state.current is None
 
 
@@ -639,9 +648,7 @@ def test_fresh_read_fails_closed_on_gh_failure(bf, tmp_path, monkeypatch) -> Non
     assert state.read_ok is False
 
 
-def test_fresh_read_fails_closed_on_an_absent_labels_block(
-    bf, tmp_path, monkeypatch
-) -> None:
+def test_fresh_read_fails_closed_on_an_absent_labels_block(bf, tmp_path, monkeypatch) -> None:
     """An ABSENT `labels` key is a read that did not answer. Treating it as a gap is
     the fail-open mistake — it would write into an issue we never saw."""
     cap = _cap_root(tmp_path, map_yaml=LABEL_BOUND_MAP)
@@ -662,20 +669,29 @@ def test_fresh_read_fails_closed_on_unparseable_output(bf, tmp_path, monkeypatch
 
 def _label_intent_dict(axis: str, value: str, label: str, carriers: list[str]) -> dict:
     return {
-        "kind": KIND, "citation": f"{axis} cite",
-        "field_id": None, "single_select_option_id": None, "text_value": None,
+        "kind": KIND,
+        "citation": f"{axis} cite",
+        "field_id": None,
+        "single_select_option_id": None,
+        "text_value": None,
         "milestone_title": None,
-        "axis": axis, "axis_value": value, "label_value": label,
+        "axis": axis,
+        "axis_value": value,
+        "label_value": label,
         "carrier_labels": carriers,
     }
 
 
 def _label_entry(number: int, axis: str, label: str) -> dict:
     return {
-        "issue_number": number, "issue_title": f"issue {number}", "kind": KIND,
+        "issue_number": number,
+        "issue_title": f"issue {number}",
+        "kind": KIND,
         "citation": f"{axis} cite",
         "argv": ["gh", "issue", "edit", str(number), "--add-label", label],
-        "observed": None, "prediction": "would-write", "blocked_reason": "",
+        "observed": None,
+        "prediction": "would-write",
+        "blocked_reason": "",
         "axis": axis,
     }
 
@@ -698,7 +714,8 @@ def test_saved_plan_matches_each_axis_to_its_own_intent(apply_mod) -> None:
     }
     changes = apply_mod.planned_changes_from_plan(plan)
     assert [(c.axis, c.target) for c in changes] == [
-        ("priority", "P0"), ("workstream", "team/spyre")
+        ("priority", "P0"),
+        ("workstream", "team/spyre"),
     ]
     assert changes[0].carrier_labels == ("P0", "P1")
 
@@ -710,14 +727,19 @@ def test_a_plan_saved_before_this_kind_still_reconstructs(apply_mod) -> None:
         "schema_version": 1,
         "truncated": False,
         "residual_pre_check": {"passed": True, "checks": []},
-        "intents": [{"kind": "assign-milestone", "citation": "c",
-                     "milestone_title": "M1"}],
-        "proposed": [{
-            "issue_number": 1, "issue_title": "one", "kind": "assign-milestone",
-            "citation": "c",
-            "argv": ["gh", "issue", "edit", "1", "--milestone", "M1"],
-            "observed": None, "prediction": "would-write", "blocked_reason": "",
-        }],
+        "intents": [{"kind": "assign-milestone", "citation": "c", "milestone_title": "M1"}],
+        "proposed": [
+            {
+                "issue_number": 1,
+                "issue_title": "one",
+                "kind": "assign-milestone",
+                "citation": "c",
+                "argv": ["gh", "issue", "edit", "1", "--milestone", "M1"],
+                "observed": None,
+                "prediction": "would-write",
+                "blocked_reason": "",
+            }
+        ],
     }
     [change] = apply_mod.planned_changes_from_plan(plan)
     assert change.target == "M1" and change.axis is None
@@ -730,9 +752,13 @@ def test_a_plan_saved_before_this_kind_still_reconstructs(apply_mod) -> None:
 
 def _emit(apply_mod, **kwargs) -> str:
     change = apply_mod.PlannedChange(
-        issue_number=7, kind=KIND, target="P0", observed=None,
+        issue_number=7,
+        kind=KIND,
+        target="P0",
+        observed=None,
         argv=["gh", "issue", "edit", "7", "--add-label", "P0"],
-        axis="priority", carrier_labels=("P0", "P1"),
+        axis="priority",
+        carrier_labels=("P0", "P1"),
         **kwargs,
     )
     return apply_mod.render_emit_script([change])
@@ -779,7 +805,8 @@ def test_emitted_jq_matches_the_seams_own_vocabulary(apply_mod, bf, tmp_path) ->
 
 def test_emit_script_executes_no_write(apply_mod, monkeypatch) -> None:
     monkeypatch.setattr(
-        apply_mod, "gh_run",
+        apply_mod,
+        "gh_run",
         lambda *a, **k: pytest.fail("emit-script must execute no write"),
     )
     assert "gh issue edit 7 --add-label P0" in _emit(apply_mod)
@@ -833,9 +860,7 @@ def test_emitted_script_is_valid_bash(apply_mod, tmp_path) -> None:
     assert proc.returncode == 0, proc.stderr
 
 
-def test_running_the_emitted_script_writes_only_into_a_confirmed_gap(
-    apply_mod, tmp_path
-) -> None:
+def test_running_the_emitted_script_writes_only_into_a_confirmed_gap(apply_mod, tmp_path) -> None:
     proc = _run_emitted(tmp_path, _emit(apply_mod), "empty")
     assert "WROTE: issue edit 7 --add-label P0" in proc.stdout
     assert proc.returncode == 0
@@ -876,24 +901,27 @@ def test_report_end_to_end_over_the_reported_configuration(
         issued.append(list(args))
         if args[:3] == ["gh", "repo", "view"]:
             return subprocess.CompletedProcess(
-                args, 0, json.dumps({"nameWithOwner": TARGET_REPO}), "")
+                args, 0, json.dumps({"nameWithOwner": TARGET_REPO}), ""
+            )
         if args[:3] == ["gh", "issue", "list"]:
             return subprocess.CompletedProcess(
-                args, 0,
-                json.dumps([
-                    _issue(1),               # gap → proposed
-                    _issue(2, "P0"),         # already the target → skipped
-                    _issue(3, "P1"),         # a human's value → skipped
-                ]),
-                "")
+                args,
+                0,
+                json.dumps(
+                    [
+                        _issue(1),  # gap → proposed
+                        _issue(2, "P0"),  # already the target → skipped
+                        _issue(3, "P1"),  # a human's value → skipped
+                    ]
+                ),
+                "",
+            )
         return subprocess.CompletedProcess(args, 0, "{}", "")
 
     monkeypatch.setattr(bf, "gh_run", fake_gh_run)
     monkeypatch.setattr(bf, "load_adopter_config", lambda _r: dict(BOARD_CONFIG))
     _patch_gate_checks(bf, monkeypatch)
-    monkeypatch.setattr(
-        sys, "argv", ["back-fill.py", "--capability-root", str(cap), "--json"]
-    )
+    monkeypatch.setattr(sys, "argv", ["back-fill.py", "--capability-root", str(cap), "--json"])
 
     assert bf.main() == 0
     plan = json.loads(capsys.readouterr().out)
@@ -913,6 +941,7 @@ def test_report_end_to_end_over_the_reported_configuration(
 # command line was named on purpose — so every arm that would drop it reports
 # instead. Silently ignoring an explicit request is how an operator concludes the
 # repair ran and found nothing to do.
+
 
 def test_set_axis_parses_pairs(bf):
     pairs, errors = bf._parse_set_axis(["priority=High", "workstream=platform"])
@@ -974,7 +1003,7 @@ def test_set_axis_works_with_no_declared_default(bf, axis_labels):
     """The gap the flag exists to close."""
     smap = axis_labels.SubstrateMap(axes={"priority": {"label": {"remap": {"High": "P0"}}}})
     cfg = {"has_projects_v2_board": False}
-    assert bf._resolve_label_intents(smap, cfg)[0] == []          # nothing declared
+    assert bf._resolve_label_intents(smap, cfg)[0] == []  # nothing declared
     intents, errors = bf._resolve_label_intents(smap, cfg, {"priority": "High"})
     assert errors == [] and len(intents) == 1
 
@@ -1044,7 +1073,8 @@ def _run_main_with_set(bf, tmp_path, monkeypatch, *argv: str) -> int:
     def fake_gh_run(args, config=None, **kwargs):
         if args[:3] == ["gh", "repo", "view"]:
             return subprocess.CompletedProcess(
-                args, 0, json.dumps({"nameWithOwner": TARGET_REPO}), "")
+                args, 0, json.dumps({"nameWithOwner": TARGET_REPO}), ""
+            )
         if args[:3] == ["gh", "issue", "list"]:
             return subprocess.CompletedProcess(args, 0, json.dumps([_issue(1)]), "")
         return subprocess.CompletedProcess(args, 0, "{}", "")
@@ -1052,9 +1082,7 @@ def _run_main_with_set(bf, tmp_path, monkeypatch, *argv: str) -> int:
     monkeypatch.setattr(bf, "gh_run", fake_gh_run)
     monkeypatch.setattr(bf, "load_adopter_config", lambda _r: dict(NO_BOARD_CONFIG))
     _patch_gate_checks(bf, monkeypatch)
-    monkeypatch.setattr(
-        sys, "argv", ["back-fill.py", "--capability-root", str(cap), *argv]
-    )
+    monkeypatch.setattr(sys, "argv", ["back-fill.py", "--capability-root", str(cap), *argv])
     return bf.main()
 
 
@@ -1075,13 +1103,17 @@ def test_partial_set_exits_non_zero_and_names_what_was_not_applied(
     assert "type=task" not in summary
 
 
-def test_partial_set_on_json_keeps_stdout_a_plan(
-    bf, tmp_path, monkeypatch, capsys
-) -> None:
+def test_partial_set_on_json_keeps_stdout_a_plan(bf, tmp_path, monkeypatch, capsys) -> None:
     """The machine consumer still parses a plan; the exit code carries the miss."""
     code = _run_main_with_set(
-        bf, tmp_path, monkeypatch,
-        "--json", "--set", "type=task", "--set", "prioirty=High",
+        bf,
+        tmp_path,
+        monkeypatch,
+        "--json",
+        "--set",
+        "type=task",
+        "--set",
+        "prioirty=High",
     )
     out = capsys.readouterr()
     assert code == 2
@@ -1094,8 +1126,14 @@ def test_the_losing_half_of_a_conflicting_repeat_is_named(
     bf, tmp_path, monkeypatch, capsys
 ) -> None:
     code = _run_main_with_set(
-        bf, tmp_path, monkeypatch,
-        "--json", "--set", "priority=High", "--set", "priority=Low",
+        bf,
+        tmp_path,
+        monkeypatch,
+        "--json",
+        "--set",
+        "priority=High",
+        "--set",
+        "priority=Low",
     )
     err = capsys.readouterr().err
     assert code == 2
@@ -1103,9 +1141,7 @@ def test_the_losing_half_of_a_conflicting_repeat_is_named(
     assert "priority=Low" in summary and "priority=High" not in summary
 
 
-def test_a_fully_honoured_set_still_exits_zero(
-    bf, tmp_path, monkeypatch, capsys
-) -> None:
+def test_a_fully_honoured_set_still_exits_zero(bf, tmp_path, monkeypatch, capsys) -> None:
     code = _run_main_with_set(
         bf, tmp_path, monkeypatch, "--set", "type=task", "--set", "priority=High"
     )
@@ -1242,11 +1278,20 @@ def test_the_guard_still_skips_on_a_failed_read_after_quoting(apply_mod, tmp_pat
 # that axis on purpose, so "nothing to do" answers a question nobody asked; it
 # is the same silent-miss shape the whole carriage change-set exists to end.
 
+
 def _args(bf, **over):
     import argparse
+
     kw = dict(
-        json=False, apply=False, emit_script=False, plan=None, set_axis=None,
-        limit=200, state="open", yes=False, capability_root=None,
+        json=False,
+        apply=False,
+        emit_script=False,
+        plan=None,
+        set_axis=None,
+        limit=200,
+        state="open",
+        yes=False,
+        capability_root=None,
     )
     kw.update(over)
     return argparse.Namespace(**kw)
@@ -1263,6 +1308,7 @@ def test_unresolvable_set_is_reported_on_apply(bf, capsys, tmp_path, monkeypatch
 def test_unresolvable_set_is_carried_in_the_json_plan(bf, capsys):
     """A machine consumer sees the same reasons a human would."""
     import json as _json
+
     errs = ["--set priority=Bogus cannot be written: no remap entry"]
     bf._print_no_intents(_args(bf, json=True, set_axis=["priority=Bogus"]), errs)
     doc = _json.loads(capsys.readouterr().out)
@@ -1349,8 +1395,11 @@ def test_plan_parsing_refuses_a_non_numeric_issue_number(apply_mod):
         "schema_version": apply_mod.CONSUMED_PLAN_SCHEMA_VERSION,
         "intents": [{"kind": "assign-milestone", "target": "M1"}],
         "proposed": [
-            {"issue_number": "abc", "kind": "assign-milestone",
-             "argv": ["gh", "issue", "edit", "7"]}
+            {
+                "issue_number": "abc",
+                "kind": "assign-milestone",
+                "argv": ["gh", "issue", "edit", "7"],
+            }
         ],
     }
     assert apply_mod.planned_changes_from_plan(plan) == []
@@ -1364,8 +1413,15 @@ def test_partial_set_refuses_the_whole_apply_before_any_write(
     ran = []
     monkeypatch.setattr(bf, "_run_apply_or_emit", lambda *a, **k: ran.append(a) or 0)
     code = _run_main_with_set(
-        bf, tmp_path, monkeypatch,
-        "--apply", "--yes", "--set", "type=task", "--set", "priority=Bogus",
+        bf,
+        tmp_path,
+        monkeypatch,
+        "--apply",
+        "--yes",
+        "--set",
+        "type=task",
+        "--set",
+        "priority=Bogus",
     )
     err = capsys.readouterr().err
     assert code == 2

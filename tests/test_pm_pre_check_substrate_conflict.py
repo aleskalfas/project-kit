@@ -108,9 +108,7 @@ def _workaround_map(axis_labels):
 
 
 def test_label_bound_axis_under_a_board_warns_and_names_the_axis(pc, axis_labels) -> None:
-    results = pc._check_substrate_board_conflict(
-        BOARD_CONFIG, _mockingbird_map(axis_labels)
-    )
+    results = pc._check_substrate_board_conflict(BOARD_CONFIG, _mockingbird_map(axis_labels))
     warns = [r for r in results if r.status == "warn"]
     assert len(warns) == 1
     assert "priority" in warns[0].label
@@ -122,9 +120,7 @@ def test_the_configuration_is_no_longer_refused(pc, axis_labels) -> None:
     A hard refusal would block the very state DEC-051 point 1 makes legal, and
     would keep the reporting adopter's CI red on a configuration that now works.
     """
-    results = pc._check_substrate_board_conflict(
-        BOARD_CONFIG, _mockingbird_map(axis_labels)
-    )
+    results = pc._check_substrate_board_conflict(BOARD_CONFIG, _mockingbird_map(axis_labels))
     assert not any(r.status == "fail" for r in results)
 
 
@@ -133,20 +129,18 @@ def test_warning_says_the_axis_works_and_what_is_unused(pc, axis_labels) -> None
     one consequence that is easy to miss."""
     warn = next(
         r
-        for r in pc._check_substrate_board_conflict(
-            BOARD_CONFIG, _mockingbird_map(axis_labels)
-        )
+        for r in pc._check_substrate_board_conflict(BOARD_CONFIG, _mockingbird_map(axis_labels))
         if r.status == "warn"
     )
     assert "your OWN labels" in warn.detail
     assert "substrate-map.yaml" in warn.detail
-    assert "#2" in warn.detail                      # names the board it is about
-    assert "UNUSED" in warn.detail                  # the consequence
-    assert "works" in warn.detail                   # and that nothing is broken
+    assert "#2" in warn.detail  # names the board it is about
+    assert "UNUSED" in warn.detail  # the consequence
+    assert "works" in warn.detail  # and that nothing is broken
     # Remediation is advice, not a required fix.
     assert warn.remediation is not None
     assert "Nothing to fix" in warn.remediation
-    assert "board: true" in warn.remediation        # the exit, if they meant it
+    assert "board: true" in warn.remediation  # the exit, if they meant it
     assert "unsupported: true" not in warn.remediation
 
 
@@ -167,9 +161,7 @@ def test_reported_per_axis(pc, axis_labels) -> None:
 
 
 def test_label_bound_state_axis_warns_too(pc, axis_labels) -> None:
-    sm = axis_labels.SubstrateMap(
-        axes={"state": {"label": {"remap": {"open": "Status: Open"}}}}
-    )
+    sm = axis_labels.SubstrateMap(axes={"state": {"label": {"remap": {"open": "Status: Open"}}}})
     results = pc._check_substrate_board_conflict(BOARD_CONFIG, sm)
     assert any(r.status == "warn" and "state" in r.label for r in results)
 
@@ -193,9 +185,7 @@ def test_the_softening_does_not_reach_the_unsatisfiable_pair(pc, axis_labels) ->
 def test_unsupported_workaround_shape_does_not_fail(pc, axis_labels) -> None:
     """The report's workaround (mark the board-backed axis `unsupported: true`)
     agrees with the writer — one claimant, no conflict."""
-    results = pc._check_substrate_board_conflict(
-        BOARD_CONFIG, _workaround_map(axis_labels)
-    )
+    results = pc._check_substrate_board_conflict(BOARD_CONFIG, _workaround_map(axis_labels))
     assert all(r.status != "fail" for r in results)
     assert any(r.status == "ok" for r in results)
 
@@ -227,9 +217,7 @@ def test_labels_only_brownfield_config_does_not_fail(pc, axis_labels) -> None:
     """The labels-only brownfield adopter: label bindings everywhere, but NO board
     flag — the label binding is the sole claimant, which is the whole point of a
     substrate map. Must not be collateral damage of the new check."""
-    results = pc._check_substrate_board_conflict(
-        LABEL_CONFIG, _mockingbird_map(axis_labels)
-    )
+    results = pc._check_substrate_board_conflict(LABEL_CONFIG, _mockingbird_map(axis_labels))
     assert all(r.status != "fail" for r in results)
     assert any(r.status == "skip" for r in results)
 
@@ -248,9 +236,7 @@ def test_title_prefix_bound_type_under_board_does_not_fail(pc, axis_labels) -> N
     """`type` is always-a-label per classification.yaml, so a board never claims
     it; and a title-prefix binding is title-carried, not label-carried. Neither
     is a competing claim."""
-    sm = axis_labels.SubstrateMap(
-        axes={"type": {"label": {"remap": {"bug": "kind/bug"}}}}
-    )
+    sm = axis_labels.SubstrateMap(axes={"type": {"label": {"remap": {"bug": "kind/bug"}}}})
     results = pc._check_substrate_board_conflict(BOARD_CONFIG, sm)
     assert all(r.status != "fail" for r in results)
 

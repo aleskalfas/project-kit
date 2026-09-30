@@ -26,9 +26,7 @@ from types import SimpleNamespace
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SCRIPTS_DIR = (
-    REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
-)
+SCRIPTS_DIR = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
 FETCHERS_PATH = SCRIPTS_DIR / "_lib" / "closing_issue_fetchers.py"
 
 
@@ -75,11 +73,7 @@ def test_closing_numbers_empty_array_is_no_closing(cf) -> None:
 
 
 def test_closing_numbers_returns_numbers(cf) -> None:
-    proc = _proc(
-        stdout=json.dumps(
-            {"closingIssuesReferences": [{"number": 42}, {"number": 43}]}
-        )
-    )
+    proc = _proc(stdout=json.dumps({"closingIssuesReferences": [{"number": 42}, {"number": 43}]}))
     out = cf.pr_closing_issue_numbers(7, CONFIG, gh_run=lambda *a, **k: proc)
     assert out == [42, 43]
 

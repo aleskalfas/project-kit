@@ -65,7 +65,12 @@ def main() -> int:
     session_guard.add_override_argument(parser)
     args = parser.parse_args()
 
-    if args.name is None and args.description is None and args.status is None and args.deprecated_reason is None:
+    if (
+        args.name is None
+        and args.description is None
+        and args.status is None
+        and args.deprecated_reason is None
+    ):
         print(
             "error: nothing to edit. Pass --name / --description / --status / --deprecated-reason.",
             file=sys.stderr,
@@ -148,7 +153,9 @@ def main() -> int:
     if args.description is not None:
         entry["description"] = args.description
     if args.status is not None:
-        if args.status == "deprecated" and not (args.deprecated_reason or entry.get("deprecated_reason")):
+        if args.status == "deprecated" and not (
+            args.deprecated_reason or entry.get("deprecated_reason")
+        ):
             print(
                 "[refused] --status=deprecated requires --deprecated-reason "
                 "(or an existing deprecated_reason).",
@@ -172,10 +179,14 @@ def main() -> int:
         return 0
     if args.status is not None and current.get("status") != entry["status"]:
         if not args.yes and sys.stdin.isatty():
-            reply = input(
-                f"Flip status {current.get('status', '<unset>')!r} → "
-                f"{entry['status']!r}? [y/N] "
-            ).strip().lower()
+            reply = (
+                input(
+                    f"Flip status {current.get('status', '<unset>')!r} → "
+                    f"{entry['status']!r}? [y/N] "
+                )
+                .strip()
+                .lower()
+            )
             if reply not in ("y", "yes"):
                 print("aborted.", file=sys.stderr)
                 return 0

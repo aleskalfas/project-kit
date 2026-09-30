@@ -10,10 +10,7 @@ from typing import Any
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SCRIPT = (
-    REPO_ROOT / ".pkit" / "capabilities" / "project-management"
-    / "scripts" / "start-work.py"
-)
+SCRIPT = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "start-work.py"
 
 
 @pytest.fixture(scope="module")
@@ -41,9 +38,10 @@ def test_slug_strips_punctuation(sw) -> None:
 
 
 def test_slug_caps_at_five_words(sw) -> None:
-    assert sw._slug_from_title(
-        "[Feature] one two three four five six seven"
-    ) == "one-two-three-four-five"
+    assert (
+        sw._slug_from_title("[Feature] one two three four five six seven")
+        == "one-two-three-four-five"
+    )
 
 
 def test_slug_handles_empty_after_prefix(sw) -> None:
@@ -89,9 +87,12 @@ _CLASSIFICATION = {
 
 
 def test_branch_prefix_feature(sw) -> None:
-    assert sw._derive_branch_prefix(
-        ["type:feature", "priority:Medium"], "[Task] add x", _CLASSIFICATION, None
-    ) == "feat"
+    assert (
+        sw._derive_branch_prefix(
+            ["type:feature", "priority:Medium"], "[Task] add x", _CLASSIFICATION, None
+        )
+        == "feat"
+    )
 
 
 def test_branch_prefix_bug(sw) -> None:
@@ -99,14 +100,20 @@ def test_branch_prefix_bug(sw) -> None:
 
 
 def test_branch_prefix_docs(sw) -> None:
-    assert sw._derive_branch_prefix(
-        ["workstream:cli", "type:docs"], "[Docs] doc x", _CLASSIFICATION, None
-    ) == "docs"
+    assert (
+        sw._derive_branch_prefix(
+            ["workstream:cli", "type:docs"], "[Docs] doc x", _CLASSIFICATION, None
+        )
+        == "docs"
+    )
 
 
 def test_branch_prefix_missing_returns_none(sw) -> None:
     # No type:* label AND no recognised [Prefix] title ⇒ underivable.
-    assert sw._derive_branch_prefix(["priority:High"], "no bracket prefix", _CLASSIFICATION, None) is None
+    assert (
+        sw._derive_branch_prefix(["priority:High"], "no bracket prefix", _CLASSIFICATION, None)
+        is None
+    )
     assert sw._derive_branch_prefix([], "", _CLASSIFICATION, None) is None
 
 
@@ -131,9 +138,10 @@ def test_branch_prefix_brownfield_bug_title_no_label(sw) -> None:
 def test_branch_prefix_greenfield_label_still_wins(sw) -> None:
     """Greenfield stays byte-identical: `type:bug` label resolves `fix` even
     when the title carries a different (or no) bracket prefix."""
-    assert sw._derive_branch_prefix(
-        ["type:bug"], "no bracket prefix at all", _CLASSIFICATION, None
-    ) == "fix"
+    assert (
+        sw._derive_branch_prefix(["type:bug"], "no bracket prefix at all", _CLASSIFICATION, None)
+        == "fix"
+    )
 
 
 # ---- adopter label-remap arm (#910) ------------------------------------
@@ -149,18 +157,26 @@ def _type_remap_map(module):
 def test_branch_prefix_reads_a_remapped_type_label(sw) -> None:
     """The adopter's `kind/bug` label is their type substrate: it resolves `fix`
     through the map, where the bare `type:` prefix scan found nothing (#910)."""
-    assert sw._derive_branch_prefix(
-        ["kind/bug"], "no bracket prefix", _CLASSIFICATION, _type_remap_map(sw)
-    ) == "fix"
+    assert (
+        sw._derive_branch_prefix(
+            ["kind/bug"], "no bracket prefix", _CLASSIFICATION, _type_remap_map(sw)
+        )
+        == "fix"
+    )
 
 
 def test_branch_prefix_ignores_kit_type_label_under_a_remap(sw) -> None:
     """Under a `type` label remap the kit's `type:*` labels are not the
     substrate, so a leftover `type:docs` does not decide the prefix."""
-    assert sw._derive_branch_prefix(
-        ["type:docs", "kind/bug"], "no bracket prefix", _CLASSIFICATION,
-        _type_remap_map(sw),
-    ) == "fix"
+    assert (
+        sw._derive_branch_prefix(
+            ["type:docs", "kind/bug"],
+            "no bracket prefix",
+            _CLASSIFICATION,
+            _type_remap_map(sw),
+        )
+        == "fix"
+    )
 
 
 # ---- _branch_matches_shape --------------------------------------------
@@ -222,8 +238,7 @@ def test_every_shipped_type_value_resolves_a_branch_prefix(sw) -> None:
         # with no type:* label present (the brownfield path).
         via_title = sw._derive_branch_prefix([], f"[{title_prefix}] x", classification, None)
         assert via_title == via_label, (
-            f"label vs title-prefix arm disagree for kind {value!r}: "
-            f"{via_label!r} vs {via_title!r}"
+            f"label vs title-prefix arm disagree for kind {value!r}: {via_label!r} vs {via_title!r}"
         )
 
 
@@ -290,9 +305,10 @@ def test_base_ignores_a_malformed_marker(sw: Any, backbone: Any) -> None:
 
 def test_explicit_base_wins_over_marker_and_default(sw: Any, backbone: Any) -> None:
     body = "Integration: integration/508-multi-instance-ownership\nFeature: #510\n"
-    assert sw.infer.resolve_base_branch(
-        {"default_branch": "trunk"}, body, explicit="release/2"
-    ) == "release/2"
+    assert (
+        sw.infer.resolve_base_branch({"default_branch": "trunk"}, body, explicit="release/2")
+        == "release/2"
+    )
 
 
 def test_base_never_reflects_the_checked_out_branch(sw) -> None:
@@ -435,7 +451,9 @@ def test_proceeds_from_backlog(run_main) -> None:
     rc, mutations = run_main(_task(["type:bug", "state:backlog"]))
     assert rc == 0
     assert mutations == [
-        ("branch", "fix/42-do-the-thing"), ("assignee", "me"), ("move", "in-progress"),
+        ("branch", "fix/42-do-the-thing"),
+        ("assignee", "me"),
+        ("move", "in-progress"),
     ]
 
 
@@ -458,7 +476,7 @@ def test_late_move_failure_names_branch_and_assignee(run_main, capsys) -> None:
     assert rc == 3  # move-issue's exit code passes through
     assert [m[0] for m in mutations] == ["branch", "assignee", "move"]
     err = capsys.readouterr().err
-    last_block = err[err.rindex("[failed]"):]
+    last_block = err[err.rindex("[failed]") :]
     assert "the issue did not move" in last_block
     assert "fix/42-do-the-thing" in last_block
     assert "@me" in last_block

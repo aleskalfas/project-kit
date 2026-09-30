@@ -199,9 +199,7 @@ def main() -> int:
     issue_types = _read_yaml(capability_root / "schemas" / "issue-types.yaml", yaml_loader)
     # Kind-driven Task prefixes ([Bug] / [Docs] / ...) live in classification.yaml;
     # without it a kind-prefixed Task reads as an unrecognised type.
-    classification = _read_yaml(
-        capability_root / "schemas" / "classification.yaml", yaml_loader
-    )
+    classification = _read_yaml(capability_root / "schemas" / "classification.yaml", yaml_loader)
     mode = axis_labels.containment_mode(capability_root)
     textual = mode == axis_labels.CONTAINMENT_TEXTUAL
 
@@ -211,8 +209,7 @@ def main() -> int:
     corpus = containment.fetch_issue_corpus(config, fields="number,title,body,state")
     if corpus is None:
         print(
-            "error: the issue list could not be read (gh failed); nothing was "
-            "examined.",
+            "error: the issue list could not be read (gh failed); nothing was examined.",
             file=sys.stderr,
         )
         return 3
@@ -299,9 +296,7 @@ def main() -> int:
         return stop
 
     if textual:
-        failed = _refresh_children_views(
-            refresh_parents, config=config, corpus=corpus, mode=mode
-        )
+        failed = _refresh_children_views(refresh_parents, config=config, corpus=corpus, mode=mode)
     else:
         entries = apply_links(entries, config, reads)
         failed = any(entry.outcome is Outcome.FAILED for entry in entries)
@@ -386,9 +381,7 @@ def classify(
     return Entry(number, Outcome.WOULD_LINK, f"would link under #{parent}", parent=parent)
 
 
-def check_native_links(
-    entries: list[Entry], config: dict, reads: SubIssueReads
-) -> list[Entry]:
+def check_native_links(entries: list[Entry], config: dict, reads: SubIssueReads) -> list[Entry]:
     """Settle, read-only, which planned links already exist or cannot be made.
 
     Each distinct parent's native sub-issues are read once, through the run's
@@ -487,8 +480,7 @@ def _as_textual(entry: Entry) -> Entry:
         entry,
         outcome=Outcome.TEXTUAL,
         detail=(
-            f"under #{entry.parent} — textual mode links nothing (the first line "
-            "is the record)"
+            f"under #{entry.parent} — textual mode links nothing (the first line is the record)"
         ),
     )
 
@@ -753,10 +745,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--yes",
         action="store_true",
-        help=(
-            "Write without the confirmation prompt. Required in a "
-            "non-interactive run."
-        ),
+        help=("Write without the confirmation prompt. Required in a non-interactive run."),
     )
     session_guard.add_override_argument(parser)
     return parser

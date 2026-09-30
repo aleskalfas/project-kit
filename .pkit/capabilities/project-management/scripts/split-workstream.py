@@ -166,8 +166,7 @@ def main() -> int:
     path = workstreams_path(capability_root)
     if not path.is_file():
         print(
-            f"error: {path} does not exist. Run `add-workstream` or the "
-            "v0.5.0 migration first.",
+            f"error: {path} does not exist. Run `add-workstream` or the v0.5.0 migration first.",
             file=sys.stderr,
         )
         return 2
@@ -206,22 +205,20 @@ def main() -> int:
     # their own labels reach both `gh label create` (an unmanaged label) and
     # `gh label delete` (a name the kit never owned).
     substrate_map = axis_labels.load_substrate_map(capability_root)
-    kit_label_note = axis_carriage.kit_label_mutation_note(
-        "workstream", config, substrate_map
-    )
+    kit_label_note = axis_carriage.kit_label_mutation_note("workstream", config, substrate_map)
     kit_labels = kit_label_note is None
 
     print(f"split-workstream: {args.source} → {', '.join(args.into)}")
     if args.default:
-        print(f"  default retag: {axis_labels.label('workstream', args.source)} → {axis_labels.label('workstream', args.default)}")
+        print(
+            f"  default retag: {axis_labels.label('workstream', args.source)} → {axis_labels.label('workstream', args.default)}"
+        )
     else:
         print("  default retag: <none> — issues will be flagged but not retagged")
 
     if kit_labels and not args.skip_labels:
         count = _gh_count_label_uses(axis_labels.label("workstream", args.source), config)
-        print(
-            f"  source label uses: {count if count is not None else '?'} issue(s)"
-        )
+        print(f"  source label uses: {count if count is not None else '?'} issue(s)")
     elif kit_label_note is not None:
         print(f"  source label uses: n/a — {kit_label_note}")
 
@@ -260,17 +257,20 @@ def main() -> int:
             # Delete the source label.
             try:
                 gh_run(
-                    ["gh", "label", "delete", axis_labels.label("workstream", args.source), "--yes"],
+                    [
+                        "gh",
+                        "label",
+                        "delete",
+                        axis_labels.label("workstream", args.source),
+                        "--yes",
+                    ],
                     config,
                     check=False,
                 )
             except FileNotFoundError:
                 pass
 
-    print(
-        f"\n[ok] split workstream {args.source!r} into "
-        f"{', '.join(args.into)}."
-    )
+    print(f"\n[ok] split workstream {args.source!r} into {', '.join(args.into)}.")
     if not args.default and kit_labels:
         print(
             f"[reminder] {args.source!r} label was kept (no --default). "

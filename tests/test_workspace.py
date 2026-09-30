@@ -20,13 +20,13 @@ DECIDE = Path(__file__).resolve().parent.parent / ".pkit" / "permissions" / "dec
 
 
 def _entry_lines(exclude: Path) -> list[str]:
-    return [line for line in exclude.read_text(encoding="utf-8").splitlines() if line.strip("/") == WS]
+    return [
+        line for line in exclude.read_text(encoding="utf-8").splitlines() if line.strip("/") == WS
+    ]
 
 
 def _ignored(root: Path) -> bool:
-    result = subprocess.run(
-        ["git", "-C", str(root), "check-ignore", "-q", f"{WS}/"], check=False
-    )
+    result = subprocess.run(["git", "-C", str(root), "check-ignore", "-q", f"{WS}/"], check=False)
     return result.returncode == 0
 
 
@@ -101,7 +101,9 @@ def test_a_worktree_is_excluded_through_the_common_git_directory(tmp_path: Path)
     assert _entry_lines(main.root / ".git" / "info" / "exclude") == [workspace.EXCLUDE_ENTRY]
     assert _ignored(worktree)
     # The exclude file is shown by its absolute path: it lives outside the worktree.
-    assert any(str(main.root.resolve() / ".git" / "info" / "exclude") in detail for _, detail in lines)
+    assert any(
+        str(main.root.resolve() / ".git" / "info" / "exclude") in detail for _, detail in lines
+    )
     # The main checkout reads the same entry, for its own folder at its own root.
     assert _ignored(main.root)
 
@@ -174,7 +176,9 @@ def decide_core():
     return module
 
 
-def test_the_decision_core_reads_the_common_git_dir_git_reports(decide_core, tmp_path: Path) -> None:
+def test_the_decision_core_reads_the_common_git_dir_git_reports(
+    decide_core, tmp_path: Path
+) -> None:
     # `workspace` asks git (`rev-parse --git-common-dir`); the permission hook
     # cannot run git in-box, so `decide` parses `.git` by hand. Both must name
     # the same directory for the main checkout and for a linked worktree, or
@@ -186,9 +190,19 @@ def test_the_decision_core_reads_the_common_git_dir_git_reports(decide_core, tmp
     checkouts = [repo.root, worktree]
     # A worktree whose pointers are relative (git 2.48+), where supported.
     relative = tmp_path / "wt-relative"
-    if repo.git(
-        "worktree", "add", "-q", "--relative-paths", "-b", "relative", str(relative), check=False
-    ).returncode == 0:
+    if (
+        repo.git(
+            "worktree",
+            "add",
+            "-q",
+            "--relative-paths",
+            "-b",
+            "relative",
+            str(relative),
+            check=False,
+        ).returncode
+        == 0
+    ):
         checkouts.append(relative)
 
     for checkout in checkouts:

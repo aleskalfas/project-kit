@@ -111,9 +111,7 @@ def _stamp_unit(repo: Path) -> pa.NewProcessResult:
     return pa.stamp_new_process(
         repo,
         "delivery:unit",
-        states=[
-            pa.StateSpec("building", "Building a unit for a readied screen.", entry=True)
-        ],
+        states=[pa.StateSpec("building", "Building a unit for a readied screen.", entry=True)],
     )
 
 
@@ -167,8 +165,7 @@ def _register_capabilities(repo: Path, *names: str) -> None:
         for name in names
     )
     (repo / ".pkit" / "manifest.yaml").write_text(
-        "schema_version: 1\nbackbone_version: 0.0.0\ncomponents:\n"
-        + (entries or "  []\n"),
+        "schema_version: 1\nbackbone_version: 0.0.0\ncomponents:\n" + (entries or "  []\n"),
         encoding="utf-8",
     )
 
@@ -204,9 +201,7 @@ def test_new_scaffolds_lint_clean_definition(authoring_repo: Path) -> None:
     for state_id in ("drafting", "ready"):
         name = f"screen-detect-{state_id}"
         assert name in commands
-        script = (
-            authoring_repo / ".pkit" / "capabilities" / "design" / commands[name]["script"]
-        )
+        script = authoring_repo / ".pkit" / "capabilities" / "design" / commands[name]["script"]
         assert script.is_file()
         assert script.stat().st_mode & stat.S_IXUSR
 
@@ -338,9 +333,7 @@ def test_new_stubs_every_declared_evaluable(authoring_repo: Path) -> None:
             pa.StateSpec("shut", "Shut rung.", terminal=True),
         ],
         transitions=[
-            pa.TransitionSpec(
-                "open", "shut", "close", "user", gate_kind="authorisation-artifact"
-            )
+            pa.TransitionSpec("open", "shut", "close", "user", gate_kind="authorisation-artifact")
         ],
         invariants=[pa.InvariantSpec("has-owner", "Every ladder names an owner.")],
         blocked_on="awaiting-condition",
@@ -362,9 +355,7 @@ def test_new_stubs_every_declared_evaluable(authoring_repo: Path) -> None:
     assert states["open"]["entry"] == {"when": {"run": "ladder-entry-open"}}
     (transition,) = definition.transitions
     assert transition["gate"]["predicate"] == {"run": "ladder-gate-open-shut-close"}
-    assert definition.data["subject"]["blocked"]["resume_when"] == {
-        "run": "ladder-resume-when"
-    }
+    assert definition.data["subject"]["blocked"]["resume_when"] == {"run": "ladder-resume-when"}
     (invariant,) = definition.invariants
     assert invariant["check"] == {"run": "ladder-invariant-has-owner"}
 
@@ -373,9 +364,7 @@ def test_new_requires_an_owning_capability(authoring_repo: Path) -> None:
     # No capability half in the address: a clean, routing-free error (COR-044 —
     # the capability walkthrough is the skill's judgment, never the stamp's).
     with pytest.raises(pa.ProcessAuthoringError, match="owning capability"):
-        pa.stamp_new_process(
-            authoring_repo, "orphan", states=[pa.StateSpec("only", "Only state.")]
-        )
+        pa.stamp_new_process(authoring_repo, "orphan", states=[pa.StateSpec("only", "Only state.")])
     with pytest.raises(pa.ProcessAuthoringError, match="not installed"):
         pa.stamp_new_process(
             authoring_repo, "ghost:orphan", states=[pa.StateSpec("only", "Only state.")]
@@ -392,16 +381,12 @@ def test_the_three_refusals_are_distinct(authoring_repo: Path) -> None:
     # capability directory, and a directory the project does not register.
     _register_capabilities(authoring_repo, "design")
     with pytest.raises(pa.ProcessAuthoringError, match="owning capability"):
-        pa.stamp_new_process(
-            authoring_repo, "orphan", states=[pa.StateSpec("only", "Only state.")]
-        )
+        pa.stamp_new_process(authoring_repo, "orphan", states=[pa.StateSpec("only", "Only state.")])
     with pytest.raises(pa.ProcessAuthoringError, match="not installed"):
         pa.stamp_new_process(
             authoring_repo, "ghost:orphan", states=[pa.StateSpec("only", "Only state.")]
         )
-    with pytest.raises(
-        pa.ProcessAuthoringError, match="pkit capabilities register delivery"
-    ):
+    with pytest.raises(pa.ProcessAuthoringError, match="pkit capabilities register delivery"):
         pa.stamp_new_process(
             authoring_repo, "delivery:orphan", states=[pa.StateSpec("only", "Only.")]
         )
@@ -452,9 +437,7 @@ def test_stamps_accept_a_registered_capability(authoring_repo: Path) -> None:
     assert _handoff_unit(authoring_repo).changed
     contracts, skipped = ph.collect_contracts(authoring_repo)
     assert skipped == []
-    assert [(c.upstream, c.downstream) for c in contracts] == [
-        ("design:screen", "delivery:unit")
-    ]
+    assert [(c.upstream, c.downstream) for c in contracts] == [("design:screen", "delivery:unit")]
 
 
 def test_stamps_stay_usable_under_the_no_manifest_fallback(authoring_repo: Path) -> None:
@@ -471,17 +454,12 @@ def test_stamps_stay_usable_under_the_no_manifest_fallback(authoring_repo: Path)
     assert _handoff_unit(authoring_repo).changed
 
 
-def test_new_cli_refuses_an_unregistered_capability(
-    authoring_repo: Path, monkeypatch
-) -> None:
+def test_new_cli_refuses_an_unregistered_capability(authoring_repo: Path, monkeypatch) -> None:
     _register_capabilities(authoring_repo, "design")
-    monkeypatch.setattr(
-        "project_kit.process.resolve_repo_root", lambda: authoring_repo
-    )
+    monkeypatch.setattr("project_kit.process.resolve_repo_root", lambda: authoring_repo)
     result = CliRunner().invoke(
         main,
-        ["process", "new", "delivery:unit", "--state", "only=Only state.",
-         "--entry", "only"],
+        ["process", "new", "delivery:unit", "--state", "only=Only state.", "--entry", "only"],
     )
     assert result.exit_code != 0
     assert "pkit capabilities register delivery" in result.output
@@ -519,9 +497,7 @@ def test_new_refuses_dangling_references(authoring_repo: Path) -> None:
             authoring_repo,
             "design:broken",
             states=[pa.StateSpec("a", "A."), pa.StateSpec("b", "B.")],
-            transitions=[
-                pa.TransitionSpec("a", "b", "go", "user", gate_kind="cascade-outcome")
-            ],
+            transitions=[pa.TransitionSpec("a", "b", "go", "user", gate_kind="cascade-outcome")],
         )
 
 
@@ -579,7 +555,10 @@ def test_two_transitions_between_one_pair_are_each_gateable(
         transitions=[
             pa.TransitionSpec("drafting", "ready", "approve", "user", gate_kind="deterministic"),
             pa.TransitionSpec(
-                "drafting", "ready", "force-approve", "user",
+                "drafting",
+                "ready",
+                "force-approve",
+                "user",
                 gate_kind="authorisation-artifact",
             ),
         ],
@@ -622,11 +601,21 @@ def test_gate_flag_addresses_a_transition_by_its_full_key(
     monkeypatch.setattr("project_kit.process.resolve_repo_root", lambda: authoring_repo)
     runner = CliRunner()
     base = [
-        "process", "new", "design:screen",
-        "--state", "drafting=Drafting.", "--state", "ready=Ready.",
-        "--entry", "drafting", "--terminal", "ready",
-        "--transition", "drafting:ready:approve",
-        "--transition", "drafting:ready:force-approve",
+        "process",
+        "new",
+        "design:screen",
+        "--state",
+        "drafting=Drafting.",
+        "--state",
+        "ready=Ready.",
+        "--entry",
+        "drafting",
+        "--terminal",
+        "ready",
+        "--transition",
+        "drafting:ready:approve",
+        "--transition",
+        "drafting:ready:force-approve",
     ]
 
     # The pair alone is no longer an address.
@@ -639,8 +628,10 @@ def test_gate_flag_addresses_a_transition_by_its_full_key(
         main,
         [
             *base,
-            "--gate", "drafting:ready:approve",
-            "--gate", "drafting:ready:force-approve:authorisation-artifact",
+            "--gate",
+            "drafting:ready:approve",
+            "--gate",
+            "drafting:ready:force-approve:authorisation-artifact",
         ],
     )
     assert result.exit_code == 0, result.output
@@ -649,33 +640,35 @@ def test_gate_flag_addresses_a_transition_by_its_full_key(
     assert kinds == {"approve": "deterministic", "force-approve": "authorisation-artifact"}
 
 
-def test_two_gate_flags_on_one_transition_refuse(
-    authoring_repo: Path, monkeypatch
-) -> None:
+def test_two_gate_flags_on_one_transition_refuse(authoring_repo: Path, monkeypatch) -> None:
     # Silently last-wins is what the pair-keyed address used to do.
     monkeypatch.setattr("project_kit.process.resolve_repo_root", lambda: authoring_repo)
     result = CliRunner().invoke(
         main,
         [
-            "process", "new", "design:screen",
-            "--state", "drafting=Drafting.", "--state", "ready=Ready.",
-            "--transition", "drafting:ready:approve",
-            "--gate", "drafting:ready:approve",
-            "--gate", "drafting:ready:approve:authorisation-artifact",
+            "process",
+            "new",
+            "design:screen",
+            "--state",
+            "drafting=Drafting.",
+            "--state",
+            "ready=Ready.",
+            "--transition",
+            "drafting:ready:approve",
+            "--gate",
+            "drafting:ready:approve",
+            "--gate",
+            "drafting:ready:approve:authorisation-artifact",
         ],
     )
     assert result.exit_code != 0
     assert "already gated" in result.output
 
 
-def test_new_cli_requires_capability_and_matching_marks(
-    authoring_repo: Path, monkeypatch
-) -> None:
+def test_new_cli_requires_capability_and_matching_marks(authoring_repo: Path, monkeypatch) -> None:
     monkeypatch.setattr("project_kit.process.resolve_repo_root", lambda: authoring_repo)
     runner = CliRunner()
-    result = runner.invoke(
-        main, ["process", "new", "orphan", "--state", "only=Only state."]
-    )
+    result = runner.invoke(main, ["process", "new", "orphan", "--state", "only=Only state."])
     assert result.exit_code != 0
     assert "owning capability" in result.output
     result = runner.invoke(
@@ -700,11 +693,19 @@ def test_new_cli_stamps_the_domain_ref_flag(authoring_repo: Path, monkeypatch) -
     result = CliRunner().invoke(
         main,
         [
-            "process", "new", "design:screen",
-            "--cardinality", "keyed", "--key", "screen-id",
-            "--domain-ref", "design/screens/",
-            "--state", "drafting=Drafting the screen design.",
-            "--entry", "drafting",
+            "process",
+            "new",
+            "design:screen",
+            "--cardinality",
+            "keyed",
+            "--key",
+            "screen-id",
+            "--domain-ref",
+            "design/screens/",
+            "--state",
+            "drafting=Drafting the screen design.",
+            "--entry",
+            "drafting",
         ],
     )
     assert result.exit_code == 0, result.output
@@ -760,13 +761,9 @@ def test_couple_vocabulary_is_read_as_data(authoring_repo: Path) -> None:
     # Widen the relation enum in the REPO's shape contract: the new value is
     # accepted with no code change — the vocabulary lives in the contract,
     # never hardcoded (COR-044).
-    contract_path = (
-        authoring_repo / ".pkit" / "schemas" / "_defs" / "process.schema.json"
-    )
+    contract_path = authoring_repo / ".pkit" / "schemas" / "_defs" / "process.schema.json"
     contract = json.loads(contract_path.read_text(encoding="utf-8"))
-    contract["$defs"]["depends_on"]["properties"]["relation"]["enum"].append(
-        "future-relation"
-    )
+    contract["$defs"]["depends_on"]["properties"]["relation"]["enum"].append("future-relation")
     contract_path.write_text(json.dumps(contract), encoding="utf-8")
 
     _stamp_screen(authoring_repo)
@@ -841,8 +838,7 @@ def _offer_screen_by_role(repo: Path, schema_version: int = 2) -> None:
     `ROLE_SCREEN`; both capabilities registered, so the wiring reads them."""
     package = repo / ".pkit" / "capabilities" / "design" / "package.yaml"
     package.write_text(
-        package.read_text(encoding="utf-8")
-        + "connections:\n"
+        package.read_text(encoding="utf-8") + "connections:\n"
         "  roles:\n"
         "    - acme::design\n"
         "  extension-points:\n"
@@ -998,12 +994,19 @@ def test_couple_cli_stamps_the_role_form_mark_and_version_and_names_the_refresh(
     _stamp_unit(authoring_repo)
     _offer_screen_by_role(authoring_repo)
     couple = [
-        "process", "couple", "delivery:unit",
-        "--state", "building",
-        "--upstream", ROLE_SCREEN,
-        "--relation", "gates-on-readiness",
-        "--mode", "pull",
-        "--why", "A unit starts once the screen is ready.",
+        "process",
+        "couple",
+        "delivery:unit",
+        "--state",
+        "building",
+        "--upstream",
+        ROLE_SCREEN,
+        "--relation",
+        "gates-on-readiness",
+        "--mode",
+        "pull",
+        "--why",
+        "A unit starts once the screen is ready.",
     ]
     runner = CliRunner()
 
@@ -1062,9 +1065,7 @@ def test_handoff_adds_contract_scaffolds_seams_version_unbumped(
     commands = _registered_commands(authoring_repo, "delivery")
     for name in ("unit-handoff-candidates", "unit-handoff-resolve"):
         assert name in commands
-        script = (
-            authoring_repo / ".pkit" / "capabilities" / "delivery" / commands[name]["script"]
-        )
+        script = authoring_repo / ".pkit" / "capabilities" / "delivery" / commands[name]["script"]
         completed = subprocess.run(
             [sys.executable, str(script), "any", "--json"],
             cwd=str(authoring_repo),
@@ -1178,14 +1179,10 @@ def test_handoff_reuses_registered_seam_commands(authoring_repo: Path) -> None:
 
 
 def _repo_snapshot(repo: Path) -> dict:
-    return {
-        p: p.read_bytes() for p in sorted(repo.rglob("*")) if p.is_file()
-    }
+    return {p: p.read_bytes() for p in sorted(repo.rglob("*")) if p.is_file()}
 
 
-def test_dry_run_previews_every_mutating_stamp(
-    authoring_repo: Path, monkeypatch
-) -> None:
+def test_dry_run_previews_every_mutating_stamp(authoring_repo: Path, monkeypatch) -> None:
     monkeypatch.setattr("project_kit.process.resolve_repo_root", lambda: authoring_repo)
     runner = CliRunner()
 
@@ -1194,10 +1191,19 @@ def test_dry_run_previews_every_mutating_stamp(
     result = runner.invoke(
         main,
         [
-            "process", "new", "design:screen",
-            "--state", "drafting=Drafting.", "--state", "ready=Ready.",
-            "--entry", "drafting", "--terminal", "ready",
-            "--transition", "drafting:ready:approve",
+            "process",
+            "new",
+            "design:screen",
+            "--state",
+            "drafting=Drafting.",
+            "--state",
+            "ready=Ready.",
+            "--entry",
+            "drafting",
+            "--terminal",
+            "ready",
+            "--transition",
+            "drafting:ready:approve",
             "--dry-run",
         ],
     )
@@ -1207,9 +1213,7 @@ def test_dry_run_previews_every_mutating_stamp(
     assert _repo_snapshot(authoring_repo) == before
 
     # And a dry run refuses exactly what a real run refuses.
-    result = runner.invoke(
-        main, ["process", "new", "orphan", "--state", "only=Only.", "--dry-run"]
-    )
+    result = runner.invoke(main, ["process", "new", "orphan", "--state", "only=Only.", "--dry-run"])
     assert result.exit_code != 0
     assert "owning capability" in result.output
 
@@ -1220,10 +1224,19 @@ def test_dry_run_previews_every_mutating_stamp(
     result = runner.invoke(
         main,
         [
-            "process", "couple", "delivery:unit",
-            "--state", "building", "--upstream", "design:screen",
-            "--relation", "triggered-by", "--mode", "push",
-            "--why", "A unit builds the readied screen.",
+            "process",
+            "couple",
+            "delivery:unit",
+            "--state",
+            "building",
+            "--upstream",
+            "design:screen",
+            "--relation",
+            "triggered-by",
+            "--mode",
+            "push",
+            "--why",
+            "A unit builds the readied screen.",
             "--dry-run",
         ],
     )
@@ -1236,10 +1249,17 @@ def test_dry_run_previews_every_mutating_stamp(
     result = runner.invoke(
         main,
         [
-            "process", "hand-off", "delivery:unit",
-            "--upstream", "design:screen", "--trigger", "ready",
-            "--candidates", "unit-handoff-candidates",
-            "--resolve", "unit-handoff-resolve",
+            "process",
+            "hand-off",
+            "delivery:unit",
+            "--upstream",
+            "design:screen",
+            "--trigger",
+            "ready",
+            "--candidates",
+            "unit-handoff-candidates",
+            "--resolve",
+            "unit-handoff-resolve",
             "--dry-run",
         ],
     )
@@ -1281,13 +1301,9 @@ def _implement_upstream_side(repo: Path) -> None:
     design_scripts = repo / ".pkit" / "capabilities" / "design" / "scripts"
     for state in ("drafting", "ready"):
         script = design_scripts / f"screen_detect_{state}.py"
-        script.write_text(
-            _DETECT_SCREEN.replace("STATE", repr(state)), encoding="utf-8"
-        )
+        script.write_text(_DETECT_SCREEN.replace("STATE", repr(state)), encoding="utf-8")
     delivery_scripts = repo / ".pkit" / "capabilities" / "delivery" / "scripts"
-    (delivery_scripts / "unit_handoff_candidates.py").write_text(
-        _CANDIDATES_OK, encoding="utf-8"
-    )
+    (delivery_scripts / "unit_handoff_candidates.py").write_text(_CANDIDATES_OK, encoding="utf-8")
     for script in (*design_scripts.iterdir(), *delivery_scripts.iterdir()):
         script.chmod(script.stat().st_mode | stat.S_IXUSR)
 
@@ -1297,9 +1313,7 @@ def _implement_seams(repo: Path) -> None:
     detection, a determinate candidate source, and a resolve that answers
     explicit absence — a fully INTERPRETABLE contract with real misses."""
     _implement_upstream_side(repo)
-    resolve = (
-        repo / ".pkit" / "capabilities" / "delivery" / "scripts" / "unit_handoff_resolve.py"
-    )
+    resolve = repo / ".pkit" / "capabilities" / "delivery" / "scripts" / "unit_handoff_resolve.py"
     resolve.write_text(_RESOLVE_NONE, encoding="utf-8")
     resolve.chmod(resolve.stat().st_mode | stat.S_IXUSR)
 
@@ -1339,9 +1353,7 @@ def test_interpretation_only_does_not_count_misses(contract_repo, monkeypatch) -
     assert "interpretable" in interp.output
 
 
-def test_interpretation_only_json_carries_no_miss_surface(
-    contract_repo, monkeypatch
-) -> None:
+def test_interpretation_only_json_carries_no_miss_surface(contract_repo, monkeypatch) -> None:
     result = _invoke_health(contract_repo, monkeypatch, "--interpretation-only", "--json")
     assert result.exit_code == 0, result.output
     payload = json.loads(result.output)
@@ -1373,9 +1385,7 @@ def test_interpretation_only_reports_indeterminates(contract_repo, monkeypatch) 
     assert "contract indeterminate" in result.output
 
 
-def test_interpretation_only_consumes_the_health_walker(
-    contract_repo, monkeypatch
-) -> None:
+def test_interpretation_only_consumes_the_health_walker(contract_repo, monkeypatch) -> None:
     # COR-042 point 5's design-once rule: the variant is a CONSUMER of the
     # existing walker — the same `build_report` walk, re-rendered — never a
     # parallel contract-walker. Pin it by interposing on the walker and
@@ -1436,9 +1446,7 @@ def test_interpretation_only_catches_an_unexercised_stub_seam(
 ) -> None:
     # The done-signal must not read green on a seam that was never written just
     # because no subject happened to exercise it.
-    result = _invoke_health(
-        unexercised_contract_repo, monkeypatch, "--interpretation-only"
-    )
+    result = _invoke_health(unexercised_contract_repo, monkeypatch, "--interpretation-only")
     assert result.exit_code == 1, result.output
     assert "resolve seam" in result.output
     assert "still the scaffolded stub" in result.output
@@ -1461,9 +1469,7 @@ def test_interpretation_only_clean_when_seams_are_implemented_and_idle(
     # The converse: fully implemented seams with an empty candidate set is the
     # authoring done-state, and it reports clean.
     _implement_seams(unexercised_contract_repo)
-    result = _invoke_health(
-        unexercised_contract_repo, monkeypatch, "--interpretation-only"
-    )
+    result = _invoke_health(unexercised_contract_repo, monkeypatch, "--interpretation-only")
     assert result.exit_code == 0, result.output
     assert "0 indeterminate" in result.output
     assert "interpretable" in result.output
@@ -1475,9 +1481,7 @@ def test_interpretation_only_reports_missing_and_unregistered_seams(
     _implement_seams(unexercised_contract_repo)
     scripts = unexercised_contract_repo / ".pkit" / "capabilities" / "delivery" / "scripts"
     (scripts / "unit_handoff_resolve.py").unlink()
-    result = _invoke_health(
-        unexercised_contract_repo, monkeypatch, "--interpretation-only"
-    )
+    result = _invoke_health(unexercised_contract_repo, monkeypatch, "--interpretation-only")
     assert result.exit_code == 1, result.output
     assert "not on disk" in result.output
 
@@ -1490,9 +1494,7 @@ def test_interpretation_only_reports_missing_and_unregistered_seams(
         ),
         encoding="utf-8",
     )
-    result = _invoke_health(
-        unexercised_contract_repo, monkeypatch, "--interpretation-only"
-    )
+    result = _invoke_health(unexercised_contract_repo, monkeypatch, "--interpretation-only")
     assert result.exit_code == 1, result.output
     assert "does not register" in result.output
 
@@ -1522,12 +1524,23 @@ def test_full_stack_via_cli_commands(authoring_repo: Path, monkeypatch) -> None:
     result = runner.invoke(
         main,
         [
-            "process", "new", "design:screen",
-            "--cardinality", "keyed", "--key", "screen-id",
-            "--state", "drafting=Drafting the screen design.",
-            "--state", "ready=Ready to hand off.",
-            "--entry", "drafting", "--terminal", "ready",
-            "--transition", "drafting:ready:approve",
+            "process",
+            "new",
+            "design:screen",
+            "--cardinality",
+            "keyed",
+            "--key",
+            "screen-id",
+            "--state",
+            "drafting=Drafting the screen design.",
+            "--state",
+            "ready=Ready to hand off.",
+            "--entry",
+            "drafting",
+            "--terminal",
+            "ready",
+            "--transition",
+            "drafting:ready:approve",
         ],
     )
     assert result.exit_code == 0, result.output
@@ -1535,9 +1548,13 @@ def test_full_stack_via_cli_commands(authoring_repo: Path, monkeypatch) -> None:
     result = runner.invoke(
         main,
         [
-            "process", "new", "delivery:unit",
-            "--state", "building=Building a unit.",
-            "--entry", "building",
+            "process",
+            "new",
+            "delivery:unit",
+            "--state",
+            "building=Building a unit.",
+            "--entry",
+            "building",
         ],
     )
     assert result.exit_code == 0, result.output
@@ -1545,12 +1562,19 @@ def test_full_stack_via_cli_commands(authoring_repo: Path, monkeypatch) -> None:
     result = runner.invoke(
         main,
         [
-            "process", "couple", "delivery:unit",
-            "--state", "building",
-            "--upstream", "design:screen",
-            "--relation", "triggered-by",
-            "--mode", "push",
-            "--why", "A unit builds the readied screen.",
+            "process",
+            "couple",
+            "delivery:unit",
+            "--state",
+            "building",
+            "--upstream",
+            "design:screen",
+            "--relation",
+            "triggered-by",
+            "--mode",
+            "push",
+            "--why",
+            "A unit builds the readied screen.",
         ],
     )
     assert result.exit_code == 0, result.output
@@ -1559,11 +1583,17 @@ def test_full_stack_via_cli_commands(authoring_repo: Path, monkeypatch) -> None:
     result = runner.invoke(
         main,
         [
-            "process", "hand-off", "delivery:unit",
-            "--upstream", "design:screen",
-            "--trigger", "ready",
-            "--candidates", "unit-handoff-candidates",
-            "--resolve", "unit-handoff-resolve",
+            "process",
+            "hand-off",
+            "delivery:unit",
+            "--upstream",
+            "design:screen",
+            "--trigger",
+            "ready",
+            "--candidates",
+            "unit-handoff-candidates",
+            "--resolve",
+            "unit-handoff-resolve",
         ],
     )
     assert result.exit_code == 0, result.output

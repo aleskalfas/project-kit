@@ -147,8 +147,7 @@ EXEMPT_VERBS: dict[str, str] = {
         "so refusing it would hide the answer the operator needs"
     ),
     "migrate": (
-        "the upgrade path may legitimately precede a re-bootstrap; it also "
-        "refreshes the stamp"
+        "the upgrade path may legitimately precede a re-bootstrap; it also refreshes the stamp"
     ),
     "adopt-existing": (
         "brownfield inventory runs BEFORE the config exists — it is what tells "
@@ -222,9 +221,7 @@ def evaluate(capability_root: Path | None = None) -> GateOutcome:
 
     stamp, stamp_problem = _read_stamp(root)
     if stamp is None:
-        return GateOutcome(
-            ok=False, reason=stamp_problem, installed_version=installed_version
-        )
+        return GateOutcome(ok=False, reason=stamp_problem, installed_version=installed_version)
 
     stale = bool(
         installed_version
@@ -252,9 +249,7 @@ def evaluate(capability_root: Path | None = None) -> GateOutcome:
             stale=stale,
         )
 
-    return GateOutcome(
-        ok=True, stamp=stamp, installed_version=installed_version, stale=stale
-    )
+    return GateOutcome(ok=True, stamp=stamp, installed_version=installed_version, stale=stale)
 
 
 def enforce(
@@ -441,9 +436,7 @@ def _read_stamp(capability_root: Path) -> tuple[Stamp | None, str]:
     """
     path = stamp_path(capability_root)
     if not path.is_file():
-        return None, (
-            f"this project has never completed `bootstrap` — no stamp at {path}"
-        )
+        return None, (f"this project has never completed `bootstrap` — no stamp at {path}")
     if YAML is None:  # pragma: no cover — ruamel is in the kit's pyproject
         return None, f"cannot read {path} (ruamel.yaml unavailable)"
     try:
@@ -607,10 +600,7 @@ def _config_shape_problem(capability_root: Path) -> str | None:
     required = [k for k in schema.get("required", []) if isinstance(k, str)]
     missing = [k for k in required if k not in data]
     if missing:
-        return (
-            f"the adopter config at {path} is missing required key(s): "
-            f"{', '.join(missing)}"
-        )
+        return f"the adopter config at {path} is missing required key(s): {', '.join(missing)}"
 
     if schema.get("additionalProperties") is False:
         known = set(schema.get("properties", {}) or {})

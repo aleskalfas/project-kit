@@ -104,11 +104,13 @@ def test_full_surface_config_validates(validator: Draft202012Validator) -> None:
             "agents": {
                 "remote_registered": [{"github_login": "claude-bot"}],
                 "local_registered": [{"name": "reviewer"}, {"name": "code-review"}],
-                "contributed_opt_out": [{
-                    "capability": "software-engineering",
-                    "reviewer": "docs-reviewer",
-                    "reason": "Docs are reviewed by the tech-writing team.",
-                }],
+                "contributed_opt_out": [
+                    {
+                        "capability": "software-engineering",
+                        "reviewer": "docs-reviewer",
+                        "reason": "Docs are reviewed by the tech-writing team.",
+                    }
+                ],
             },
         },
         "mesh_peers": ["github://owner/repo"],
@@ -217,18 +219,24 @@ def test_review_mode_is_a_closed_set(validator: Draft202012Validator) -> None:
     assert _errors(validator, doc)
 
 
-@pytest.mark.parametrize("entry", [
-    {"capability": "software-engineering", "reviewer": "docs-reviewer"},
-    {"capability": "software-engineering", "reviewer": "docs-reviewer", "reason": ""},
-    {"capability": "software-engineering", "reviewer": "docs-reviewer", "reason": "  "},
-    {"capability": "software-engineering", "reason": "No docs gate."},
-    {
-        "capability": "software-engineering", "reviewer": "docs-reviewer",
-        "reason": "No docs gate.", "workstream": "design",
-    },
-])
+@pytest.mark.parametrize(
+    "entry",
+    [
+        {"capability": "software-engineering", "reviewer": "docs-reviewer"},
+        {"capability": "software-engineering", "reviewer": "docs-reviewer", "reason": ""},
+        {"capability": "software-engineering", "reviewer": "docs-reviewer", "reason": "  "},
+        {"capability": "software-engineering", "reason": "No docs gate."},
+        {
+            "capability": "software-engineering",
+            "reviewer": "docs-reviewer",
+            "reason": "No docs gate.",
+            "workstream": "design",
+        },
+    ],
+)
 def test_contributed_opt_out_entry_shape(
-    validator: Draft202012Validator, entry: dict[str, Any],
+    validator: Draft202012Validator,
+    entry: dict[str, Any],
 ) -> None:
     """An opt-out withdraws a merge gate (#148): it names the capability and
     the reviewer, states a reason, and carries nothing else."""

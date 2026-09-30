@@ -81,7 +81,7 @@ def _axis_prefix_of(text: str) -> str | None:
     for prefix in PREFIXES:
         if not text.startswith(prefix):
             continue
-        value = text[len(prefix):]
+        value = text[len(prefix) :]
         if value and not any(c.isspace() for c in value) and "*" not in value:
             return prefix
     return None
@@ -95,10 +95,7 @@ def _dict_keyed_on_axis_labels(node: ast.Dict) -> str | None:
     what distinguishes a raw-label read-map (``{"type:bug": "fix", ...}``, the
     Task #442 bypass) from an ordinary dict that happens to carry one such string
     among unrelated keys."""
-    string_keys = [
-        k for k in node.keys
-        if isinstance(k, ast.Constant) and isinstance(k.value, str)
-    ]
+    string_keys = [k for k in node.keys if isinstance(k, ast.Constant) and isinstance(k.value, str)]
     if not string_keys:
         return None
     prefixes = {_axis_prefix_of(k.value) for k in string_keys}
@@ -124,17 +121,14 @@ def _violations(path: Path) -> list[str]:
     return out
 
 
-@pytest.mark.parametrize(
-    "path", _scanned_scripts(), ids=lambda p: str(p.relative_to(SCRIPTS))
-)
+@pytest.mark.parametrize("path", _scanned_scripts(), ids=lambda p: str(p.relative_to(SCRIPTS)))
 def test_no_raw_axis_label_read_map(path: Path) -> None:
     """No pm script derives an axis value from a raw ``<axis>:*`` read-map dict —
     the read must go through the seam (ADR-026 read path). This is the guard that
     would have caught review-work's silent copy of start-work's bypass."""
     violations = _violations(path)
-    assert not violations, (
-        "raw-label read-map bypasses the ADR-026 read seam:\n  "
-        + "\n  ".join(violations)
+    assert not violations, "raw-label read-map bypasses the ADR-026 read seam:\n  " + "\n  ".join(
+        violations
     )
 
 
@@ -153,10 +147,7 @@ def test_read_guard_detects_a_reintroduced_read_map(tmp_path: Path) -> None:
     the seam-routed form (no such dict) is not."""
     bad = tmp_path / "bad.py"
     bad.write_text(
-        'TYPE_LABEL_TO_PREFIX = {\n'
-        '    "type:feature": "feat",\n'
-        '    "type:bug": "fix",\n'
-        '}\n',
+        'TYPE_LABEL_TO_PREFIX = {\n    "type:feature": "feat",\n    "type:bug": "fix",\n}\n',
         encoding="utf-8",
     )
     assert _violations(bad), "guard failed to flag a reintroduced raw-label read-map"
@@ -164,7 +155,7 @@ def test_read_guard_detects_a_reintroduced_read_map(tmp_path: Path) -> None:
     good = tmp_path / "good.py"
     good.write_text(
         'kind = axis_labels.read("type", labels)\n'
-        'prefix = classification_rules.conv_type_for_kind(kind, classification)\n',
+        "prefix = classification_rules.conv_type_for_kind(kind, classification)\n",
         encoding="utf-8",
     )
     assert not _violations(good), "guard wrongly flagged the seam-routed read"
@@ -186,10 +177,10 @@ def test_read_guard_exempts_ordinary_and_pr_type_mapping_shapes(tmp_path: Path) 
 
     mapping = tmp_path / "mapping.py"
     mapping.write_text(
-        'PR_TYPE_MAPPING = [\n'
+        "PR_TYPE_MAPPING = [\n"
         '    {"issue_label_value": "bug", "pr_conv_type": "fix"},\n'
         '    {"issue_label_value": "feature", "pr_conv_type": "feat"},\n'
-        ']\n',
+        "]\n",
         encoding="utf-8",
     )
     assert not _violations(mapping), (

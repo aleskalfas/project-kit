@@ -30,6 +30,7 @@ Scope (per the #249 critic pass):
     recognizes a file tool's target, and any session-wide rule would reach
     beyond its folders → `runtime`.
 """
+
 from __future__ import annotations
 
 import re
@@ -77,9 +78,13 @@ def project(model: dict[str, Any], catalog: dict[str, Any]) -> dict[str, Any]:
             spec = privileges.get(pid, {})
             recog = spec.get("recognize", {})
             if scoped:
-                note(unprojectable, subject, pid,
-                     "scoped grant — confinement is sandbox-delegated (ADR-004), "
-                     "not expressible in session-wide settings")
+                note(
+                    unprojectable,
+                    subject,
+                    pid,
+                    "scoped grant — confinement is sandbox-delegated (ADR-004), "
+                    "not expressible in session-wide settings",
+                )
                 continue
             if recog.get("path"):
                 # A path-scoped allow (the agent workspace, #1043) is keyed on
@@ -87,29 +92,45 @@ def project(model: dict[str, Any], catalog: dict[str, Any]) -> dict[str, Any]:
                 # tool allow would reach beyond its folders, so none is
                 # emitted — a harness that needed an explicit rule for the
                 # folder would render it here.
-                note(runtime, subject, pid,
-                     "path-scoped allow — the hook recognizes a file tool's "
-                     "target; a session-wide rule would reach beyond its folders")
+                note(
+                    runtime,
+                    subject,
+                    pid,
+                    "path-scoped allow — the hook recognizes a file tool's "
+                    "target; a session-wide rule would reach beyond its folders",
+                )
             tools = recog.get("tool", []) or []
             bash = recog.get("bash", []) or []
             if tools:
                 if subject in ("all", "operator"):
                     allow.extend(tools)  # session-wide tool allow
                 else:
-                    note(runtime, subject, pid,
-                         "per-agent tool grant — enforced live by the hook "
-                         "(type:tool); native frontmatter projection deferred (#249)")
+                    note(
+                        runtime,
+                        subject,
+                        pid,
+                        "per-agent tool grant — enforced live by the hook "
+                        "(type:tool); native frontmatter projection deferred (#249)",
+                    )
             if bash:
                 if subject != "all":
-                    note(runtime, subject, pid,
-                         "per-agent/operator command rules can't be expressed "
-                         "session-wide; hook-enforced (ADR-004)")
+                    note(
+                        runtime,
+                        subject,
+                        pid,
+                        "per-agent/operator command rules can't be expressed "
+                        "session-wide; hook-enforced (ADR-004)",
+                    )
                 else:
                     for rule in bash:
                         if set(rule) - {"cmd"}:  # subcommand / flag_any / pattern
-                            note(unprojectable, subject, pid,
-                                 "recognizer uses subcommand/flag_any/pattern — not "
-                                 "faithfully renderable as a positional settings prefix")
+                            note(
+                                unprojectable,
+                                subject,
+                                pid,
+                                "recognizer uses subcommand/flag_any/pattern — not "
+                                "faithfully renderable as a positional settings prefix",
+                            )
                         elif "cmd" in rule:
                             allow.append(f"Bash({rule['cmd']}:*)")
 

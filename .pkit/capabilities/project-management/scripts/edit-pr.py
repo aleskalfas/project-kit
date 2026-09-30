@@ -59,9 +59,7 @@ from _lib.membership import (  # noqa: E402
 
 
 SEVERITY_HARD_REJECT = "hard-reject"
-CLOSING_KEYWORD_RE = re.compile(
-    r"\b(?:closes|fixes|resolves)\s+#(\d+)", re.IGNORECASE
-)
+CLOSING_KEYWORD_RE = re.compile(r"\b(?:closes|fixes|resolves)\s+#(\d+)", re.IGNORECASE)
 
 
 @dataclass(frozen=True)
@@ -149,8 +147,7 @@ def main() -> int:
         and not args.closes
     ):
         print(
-            "error: nothing to edit. Pass --body, --body-file, --append, "
-            "--title or --closes.",
+            "error: nothing to edit. Pass --body, --body-file, --append, --title or --closes.",
             file=sys.stderr,
         )
         return 2
@@ -220,10 +217,7 @@ def main() -> int:
         )
 
     closes_only = (
-        args.body is None
-        and args.body_file is None
-        and args.append is None
-        and args.title is None
+        args.body is None and args.body_file is None and args.append is None and args.title is None
     )
     if args.closes and closes_only and not added_closes:
         print(f"\n[noop] PR #{args.pr_number} already closes every named issue.")
@@ -364,8 +358,7 @@ def _gh_get_pr(pr_number: int, config: dict) -> dict | None:
         return None
     if proc.returncode != 0:
         print(
-            f"error: gh pr view {pr_number} failed.\n"
-            f"stderr: {proc.stderr.strip()}",
+            f"error: gh pr view {pr_number} failed.\nstderr: {proc.stderr.strip()}",
             file=sys.stderr,
         )
         return None
@@ -380,14 +373,12 @@ def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
 
 
 def _gh_apply_edit(
-    pr_number: int, *, title: str, body: str, current_title: str
-, config: dict) -> bool:
+    pr_number: int, *, title: str, body: str, current_title: str, config: dict
+) -> bool:
     cmd = ["gh", "pr", "edit", str(pr_number)]
     if title != current_title:
         cmd.extend(["--title", title])
-    with tempfile.NamedTemporaryFile(
-        "w", suffix=".md", encoding="utf-8", delete=False
-    ) as f:
+    with tempfile.NamedTemporaryFile("w", suffix=".md", encoding="utf-8", delete=False) as f:
         f.write(body)
         body_path = f.name
     cmd.extend(["--body-file", body_path])

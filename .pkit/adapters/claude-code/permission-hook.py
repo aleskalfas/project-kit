@@ -32,6 +32,7 @@ hook itself, which never runs when its runtime is dead.
 Set PKIT_PERMISSIONS_DEBUG=1 to surface decision fault reasons on stderr
 (otherwise a broken config degrades to a silent no-op).
 """
+
 from __future__ import annotations
 
 import json

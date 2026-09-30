@@ -220,7 +220,7 @@ def test_an_answered_run_parses_its_document_from_the_working_directory(tmp_path
         # a bad byte inside a JSON string: with a replacing decoder this would
         # parse and answer; the answer must be no answer
         (
-            "import sys\nsys.stdout.buffer.write(b'{\"result\": true, \"note\": \"\\xff\"}')\n",
+            'import sys\nsys.stdout.buffer.write(b\'{"result": true, "note": "\\xff"}\')\n',
             Ending.UNPARSABLE,
             0,
         ),
@@ -231,7 +231,13 @@ def test_an_answered_run_parses_its_document_from_the_working_directory(tmp_path
             3,
         ),
     ],
-    ids=["not-json", "undecodable", "undecodable-inside-a-string", "trailing-text", "non-zero-exit"],
+    ids=[
+        "not-json",
+        "undecodable",
+        "undecodable-inside-a-string",
+        "trailing-text",
+        "non-zero-exit",
+    ],
 )
 def test_every_ending_but_an_answer_is_named(
     tmp_path: Path, body: str, ending: Ending, returncode: int

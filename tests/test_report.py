@@ -39,18 +39,14 @@ def _pinned_report_context(monkeypatch):
     send path depends on the machine's real gh state (#662: gh auth now
     selects the API-primary path; #663: the post ensures the kind label).
     Tests override per-case (or restore the captured real functions)."""
-    monkeypatch.setattr(
-        cli_mod, "_resolve_report_context", lambda *a, **k: (None, None)
-    )
+    monkeypatch.setattr(cli_mod, "_resolve_report_context", lambda *a, **k: (None, None))
     monkeypatch.setattr(_rep_for_pins, "gh_authenticated", lambda: False)
     monkeypatch.setattr(_rep_for_pins, "current_login", lambda: "tester")
     monkeypatch.setattr(_rep_for_pins, "ensure_kind_label", lambda *a, **k: True)
     # Pin the local reported-note cross-tag read (#664) to empty so list
     # rendering never depends on this checkout's own scratchpad state; the
     # cross-tag tests override with a tmp target root.
-    monkeypatch.setattr(
-        _rep_for_pins, "local_reported_notes", lambda *a, **k: {}
-    )
+    monkeypatch.setattr(_rep_for_pins, "local_reported_notes", lambda *a, **k: {})
 
 
 def test_compose_report_body_includes_prose_and_env() -> None:
@@ -71,9 +67,7 @@ def test_compose_report_body_attribution_normalizes_handle() -> None:
 
 
 def test_build_new_issue_url_encodes_params() -> None:
-    url = build_new_issue_url(
-        "owner/repo", title="Bug: sandbox", body="line1\nline2", label="bug"
-    )
+    url = build_new_issue_url("owner/repo", title="Bug: sandbox", body="line1\nline2", label="bug")
     assert url.startswith("https://github.com/owner/repo/issues/new?")
     q = urllib.parse.parse_qs(url.split("?", 1)[1])
     assert q["title"] == ["Bug: sandbox"]
@@ -104,9 +98,7 @@ def test_compose_report_prefixes_every_kind(tmp_path: Path) -> None:
     # the kind there).
     (tmp_path / ".pkit").mkdir()
     for kind, prefix in rep.KIND_TITLE_PREFIXES.items():
-        title, _, url = compose_report(
-            kind, title="T", prose="P", target_root=tmp_path
-        )
+        title, _, url = compose_report(kind, title="T", prose="P", target_root=tmp_path)
         assert title == f"{prefix} T"
         q = urllib.parse.parse_qs(url.split("?", 1)[1])
         assert q["title"] == [f"{prefix} T"]
@@ -146,7 +138,9 @@ def test_compose_change_request_prefixes_title_and_templates_body(
 ) -> None:
     (tmp_path / ".pkit").mkdir()
     title, body, url = compose_report(
-        "change-request", title="add a flag", prose="I keep retyping it.",
+        "change-request",
+        title="add a flag",
+        prose="I keep retyping it.",
         target_root=tmp_path,
     )
     assert title == "[CR] add a flag"
@@ -163,7 +157,9 @@ def test_compose_change_request_keeps_existing_prefix_and_headings(
     prose = "### Motivation\n\nwhy\n\n### Desired behaviour\n\nwhat\n"
     (tmp_path / ".pkit").mkdir()
     title, body, _ = compose_report(
-        "change-request", title="[CR] already prefixed", prose=prose,
+        "change-request",
+        title="[CR] already prefixed",
+        prose=prose,
         target_root=tmp_path,
     )
     assert title == "[CR] already prefixed"  # not doubled
@@ -182,13 +178,13 @@ def test_classify_kind_label_marker_and_title_prefix() -> None:
     # precedence: label (namespaced, then legacy) > marker > prefix (#663)
     assert rep.classify_kind(["report:bug"], "[CR] t", "") == "bug"
     assert rep.classify_kind(["bug"], "[CR] t", "") == "bug"  # legacy name still read
-    assert rep.classify_kind(
-        ["report:feedback", "bug"], "t", ""
-    ) == "feedback"  # namespaced beats legacy
+    assert (
+        rep.classify_kind(["report:feedback", "bug"], "t", "") == "feedback"
+    )  # namespaced beats legacy
     assert rep.classify_kind([], "t", "<!-- pkit-report: kind=feedback -->") == "feedback"
-    assert rep.classify_kind(
-        [], "[Bug] t", "<!-- pkit-report: kind=feedback -->"
-    ) == "feedback"  # marker beats prefix
+    assert (
+        rep.classify_kind([], "[Bug] t", "<!-- pkit-report: kind=feedback -->") == "feedback"
+    )  # marker beats prefix
     assert rep.classify_kind([], "[CR] add a flag", "") == "change-request"
     assert rep.classify_kind([], "[Bug] it crashes", "") == "bug"
     assert rep.classify_kind([], "[Feedback] some thoughts", "") == "feedback"
@@ -284,7 +280,8 @@ def test_ensure_kind_label_present_skips_create(monkeypatch) -> None:
     monkeypatch.setattr(rep, "ensure_kind_label", _REAL_ENSURE_KIND_LABEL)
     monkeypatch.setattr(rep, "_gh_json", lambda args: [{"name": "report:bug"}])
     monkeypatch.setattr(
-        rep.subprocess, "run",
+        rep.subprocess,
+        "run",
         lambda *a, **k: (_ for _ in ()).throw(AssertionError("create must not run")),
     )
     assert rep.ensure_kind_label("o/r", "bug") is True
@@ -315,7 +312,8 @@ def test_ensure_kind_label_tolerates_already_exists(monkeypatch) -> None:
     monkeypatch.setattr(rep, "ensure_kind_label", _REAL_ENSURE_KIND_LABEL)
     monkeypatch.setattr(rep, "_gh_json", lambda args: None)
     monkeypatch.setattr(
-        rep.subprocess, "run",
+        rep.subprocess,
+        "run",
         lambda *a, **k: _FakeProc(1, "", "label already exists on o/r"),
     )
     assert rep.ensure_kind_label("o/r", "bug") is True
@@ -324,9 +322,7 @@ def test_ensure_kind_label_tolerates_already_exists(monkeypatch) -> None:
 def test_ensure_kind_label_create_failure_returns_false(monkeypatch) -> None:
     monkeypatch.setattr(rep, "ensure_kind_label", _REAL_ENSURE_KIND_LABEL)
     monkeypatch.setattr(rep, "_gh_json", lambda args: [])
-    monkeypatch.setattr(
-        rep.subprocess, "run", lambda *a, **k: _FakeProc(1, "", "HTTP 403")
-    )
+    monkeypatch.setattr(rep.subprocess, "run", lambda *a, **k: _FakeProc(1, "", "HTTP 403"))
     assert rep.ensure_kind_label("o/r", "bug") is False
 
 
@@ -344,7 +340,8 @@ def test_cli_file_yes_stages_and_does_not_post(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(cli_mod, "find_target_root", lambda: tmp_path)
     monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
     monkeypatch.setattr(
-        rep, "file_report_via_gh",
+        rep,
+        "file_report_via_gh",
         lambda *a, **k: posted.__setitem__("v", True) or "x",
     )
     res = CliRunner().invoke(
@@ -359,7 +356,8 @@ def test_cli_file_yes_stages_and_does_not_post(tmp_path, monkeypatch) -> None:
 def test_cli_file_confirm_yes_posts(monkeypatch) -> None:
     monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
     monkeypatch.setattr(
-        rep, "file_report_via_gh",
+        rep,
+        "file_report_via_gh",
         lambda target, **k: "https://github.com/aleskalfas/project-kit/issues/700",
     )
     res = CliRunner().invoke(
@@ -373,7 +371,8 @@ def test_cli_file_decline_degrades(monkeypatch) -> None:
     posted = {"v": False}
     monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
     monkeypatch.setattr(
-        rep, "file_report_via_gh",
+        rep,
+        "file_report_via_gh",
         lambda *a, **k: posted.__setitem__("v", True) or "x",
     )
     res = CliRunner().invoke(
@@ -386,9 +385,7 @@ def test_cli_file_decline_degrades(monkeypatch) -> None:
 
 def test_cli_file_no_auth_degrades(monkeypatch) -> None:
     monkeypatch.setattr(rep, "gh_authenticated", lambda: False)
-    res = CliRunner().invoke(
-        main, ["report", "bug", "--title", "t", "--body", "b", "--file"]
-    )
+    res = CliRunner().invoke(main, ["report", "bug", "--title", "t", "--body", "b", "--file"])
     assert res.exit_code == 0
     assert "not authenticated" in res.output and "issues/new?" in res.output
 
@@ -411,14 +408,29 @@ def test_display_state() -> None:
 
 def test_list_my_reports_filters_to_members_and_sorts(monkeypatch) -> None:
     issues = [
-        {"number": 1, "title": "a bug", "state": "OPEN",
-         "labels": [{"name": "report:bug"}], "updatedAt": "2026-08-01"},
-        {"number": 2, "title": "not a report", "state": "OPEN",
-         "labels": [{"name": "docs"}], "updatedAt": "2026-08-05"},
-        {"number": 3, "title": "some feedback", "state": "CLOSED",
-         "labels": [], "updatedAt": "2026-08-03",
-         "body": "p\n<!-- pkit-report: kind=feedback -->\n",
-         "url": "https://github.com/o/r/issues/3"},
+        {
+            "number": 1,
+            "title": "a bug",
+            "state": "OPEN",
+            "labels": [{"name": "report:bug"}],
+            "updatedAt": "2026-08-01",
+        },
+        {
+            "number": 2,
+            "title": "not a report",
+            "state": "OPEN",
+            "labels": [{"name": "docs"}],
+            "updatedAt": "2026-08-05",
+        },
+        {
+            "number": 3,
+            "title": "some feedback",
+            "state": "CLOSED",
+            "labels": [],
+            "updatedAt": "2026-08-03",
+            "body": "p\n<!-- pkit-report: kind=feedback -->\n",
+            "url": "https://github.com/o/r/issues/3",
+        },
     ]
     captured: dict = {}
 
@@ -455,18 +467,38 @@ def test_list_my_reports_excludes_ordinary_prefix_titled_issues(monkeypatch) -> 
     # convention — authored by the invoker, classifiable by prefix, but NOT
     # reports. Only provenance-carrying issues are members.
     issues = [
-        {"number": 30, "title": "[Bug] ordinary pm-filed issue", "state": "OPEN",
-         "labels": [{"name": "type:bug"}], "updatedAt": "2026-08-05",
-         "body": "an ordinary tracker issue"},
-        {"number": 31, "title": "[CR] ordinary change too", "state": "OPEN",
-         "labels": [{"name": "type:feature"}], "updatedAt": "2026-08-04",
-         "body": "also not a report"},
-        {"number": 32, "title": "[Bug] real report", "state": "OPEN",
-         "labels": [], "updatedAt": "2026-08-03",
-         "body": "p\n<!-- pkit-report: kind=bug -->\n"},
-        {"number": 33, "title": "[Feedback] labelled report", "state": "OPEN",
-         "labels": [{"name": "report:feedback"}], "updatedAt": "2026-08-02",
-         "body": "no marker, the label vouches"},
+        {
+            "number": 30,
+            "title": "[Bug] ordinary pm-filed issue",
+            "state": "OPEN",
+            "labels": [{"name": "type:bug"}],
+            "updatedAt": "2026-08-05",
+            "body": "an ordinary tracker issue",
+        },
+        {
+            "number": 31,
+            "title": "[CR] ordinary change too",
+            "state": "OPEN",
+            "labels": [{"name": "type:feature"}],
+            "updatedAt": "2026-08-04",
+            "body": "also not a report",
+        },
+        {
+            "number": 32,
+            "title": "[Bug] real report",
+            "state": "OPEN",
+            "labels": [],
+            "updatedAt": "2026-08-03",
+            "body": "p\n<!-- pkit-report: kind=bug -->\n",
+        },
+        {
+            "number": 33,
+            "title": "[Feedback] labelled report",
+            "state": "OPEN",
+            "labels": [{"name": "report:feedback"}],
+            "updatedAt": "2026-08-02",
+            "body": "no marker, the label vouches",
+        },
     ]
     monkeypatch.setattr(rep, "_gh_json", lambda args: issues)
     reports = rep.list_my_reports("o/r")
@@ -474,27 +506,28 @@ def test_list_my_reports_excludes_ordinary_prefix_titled_issues(monkeypatch) -> 
     assert reports[0].kind == "bug" and reports[1].kind == "feedback"
 
 
-def test_list_my_reports_unions_locally_reported(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_list_my_reports_unions_locally_reported(tmp_path: Path, monkeypatch) -> None:
     # #660's shape: raw-gh-filed (no marker, no report label, repo-own label
     # only) but referenced by a local reported/ note — unioned in by number
     # (#681). Kind resolves via the title prefix, legitimate now that the
     # note establishes membership. A note ref that can't be fetched is
     # skipped, best-effort.
     monkeypatch.setattr(rep, "local_reported_notes", _REAL_LOCAL_REPORTED_NOTES)
-    _reported_note(
-        tmp_path, "2026-08-10-friction.md", ["o/r#660", "o/r#999"]
-    )
+    _reported_note(tmp_path, "2026-08-10-friction.md", ["o/r#660", "o/r#999"])
 
     def fake(args):
         if "list" in args:
             return []  # neither authored nor attributed carries provenance
         if args[:3] == ["gh", "issue", "view"] and args[3] == "660":
-            return {"number": 660, "title": "[Feedback] friction inventory",
-                    "state": "OPEN", "labels": [{"name": "enhancement"}],
-                    "updatedAt": "2026-08-10", "body": "no marker",
-                    "url": "https://github.com/o/r/issues/660"}
+            return {
+                "number": 660,
+                "title": "[Feedback] friction inventory",
+                "state": "OPEN",
+                "labels": [{"name": "enhancement"}],
+                "updatedAt": "2026-08-10",
+                "body": "no marker",
+                "url": "https://github.com/o/r/issues/660",
+            }
         return None  # #999 unfetchable
 
     monkeypatch.setattr(rep, "_gh_json", fake)
@@ -511,13 +544,27 @@ def test_list_my_reports_includes_attributed(monkeypatch) -> None:
         if args[:3] == ["gh", "api", "user"]:
             return {"login": "mike"}
         if "--author" in args:
-            return [{"number": 1, "title": "mine", "state": "OPEN",
-                     "labels": [{"name": "report:bug"}], "updatedAt": "2026-08-01"}]
+            return [
+                {
+                    "number": 1,
+                    "title": "mine",
+                    "state": "OPEN",
+                    "labels": [{"name": "report:bug"}],
+                    "updatedAt": "2026-08-01",
+                }
+            ]
         if "--search" in args:
             # the attribution line IS the membership provenance (#681)
-            return [{"number": 9, "title": "for mike", "state": "OPEN",
-                     "labels": [], "updatedAt": "2026-08-05",
-                     "body": "_Reported for @mike (filed on their behalf)._"}]
+            return [
+                {
+                    "number": 9,
+                    "title": "for mike",
+                    "state": "OPEN",
+                    "labels": [],
+                    "updatedAt": "2026-08-05",
+                    "body": "_Reported for @mike (filed on their behalf)._",
+                }
+            ]
         return None
 
     monkeypatch.setattr(rep, "_gh_json", fake)
@@ -534,8 +581,13 @@ def test_list_my_reports_authored_wins_over_attributed(monkeypatch) -> None:
     def fake(args):
         if args[:3] == ["gh", "api", "user"]:
             return {"login": "mike"}
-        issue = {"number": 5, "title": "dual", "state": "OPEN",
-                 "labels": [{"name": "report:bug"}], "updatedAt": "2026-08-02"}
+        issue = {
+            "number": 5,
+            "title": "dual",
+            "state": "OPEN",
+            "labels": [{"name": "report:bug"}],
+            "updatedAt": "2026-08-02",
+        }
         return [issue]  # both --author and --search return it
 
     monkeypatch.setattr(rep, "_gh_json", fake)
@@ -547,10 +599,11 @@ def test_list_my_reports_authored_wins_over_attributed(monkeypatch) -> None:
 def test_cli_report_list_marks_attributed(monkeypatch) -> None:
     monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
     monkeypatch.setattr(
-        rep, "list_my_reports",
-        lambda t, root=None: [rep.ReportSummary(
-            9, "for mike", "feedback", "open", "2026-08-05", attributed=True
-        )],
+        rep,
+        "list_my_reports",
+        lambda t, root=None: [
+            rep.ReportSummary(9, "for mike", "feedback", "open", "2026-08-05", attributed=True)
+        ],
     )
     res = CliRunner().invoke(main, ["report"])
     assert res.exit_code == 0
@@ -567,14 +620,20 @@ def test_show_report_resolves_tracked_by(monkeypatch) -> None:
         n = args[3]
         if n == "42":
             return {
-                "number": 42, "title": "fb", "state": "OPEN",
+                "number": 42,
+                "title": "fb",
+                "state": "OPEN",
                 "body": "p\n\n## Tracked by\n- [ ] #7\n",
                 "labels": [{"name": "feedback"}],
                 "comments": [{"body": "working on it"}],
             }
         if n == "7":
-            return {"state": "CLOSED", "labels": [], "title": "the fix",
-                    "url": "https://github.com/o/r/issues/7"}
+            return {
+                "state": "CLOSED",
+                "labels": [],
+                "title": "the fix",
+                "url": "https://github.com/o/r/issues/7",
+            }
         return None
 
     monkeypatch.setattr(rep, "_gh_json", fake_gh_json)
@@ -590,11 +649,18 @@ def test_show_report_resolves_tracked_by(monkeypatch) -> None:
 def test_cli_report_list(monkeypatch) -> None:
     monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
     monkeypatch.setattr(
-        rep, "list_my_reports",
-        lambda target, root=None: [rep.ReportSummary(
-            1, "a bug", "bug", "open", "2026-08-01",
-            url="https://github.com/o/r/issues/1",
-        )],
+        rep,
+        "list_my_reports",
+        lambda target, root=None: [
+            rep.ReportSummary(
+                1,
+                "a bug",
+                "bug",
+                "open",
+                "2026-08-01",
+                url="https://github.com/o/r/issues/1",
+            )
+        ],
     )
     res = CliRunner().invoke(main, ["report"])
     assert res.exit_code == 0
@@ -608,10 +674,9 @@ def test_cli_report_list_without_url_degrades_to_bare_row(monkeypatch) -> None:
     # #678 — no empty parenthetical
     monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
     monkeypatch.setattr(
-        rep, "list_my_reports",
-        lambda target, root=None: [
-            rep.ReportSummary(1, "a bug", "bug", "open", "2026-08-01")
-        ],
+        rep,
+        "list_my_reports",
+        lambda target, root=None: [rep.ReportSummary(1, "a bug", "bug", "open", "2026-08-01")],
     )
     res = CliRunner().invoke(main, ["report"])
     assert res.exit_code == 0
@@ -622,14 +687,23 @@ def test_cli_report_list_without_url_degrades_to_bare_row(monkeypatch) -> None:
 def test_list_my_reports_tree_pairs_each_with_tracked(monkeypatch) -> None:
     def fake_gh_json(args):
         if "list" in args:
-            return [{
-                "number": 42, "title": "fb", "state": "OPEN",
-                "labels": [{"name": "report:feedback"}], "updatedAt": "2026-08-03",
-                "body": "p\n\n## Tracked by\n- [ ] #7\n",
-            }]
+            return [
+                {
+                    "number": 42,
+                    "title": "fb",
+                    "state": "OPEN",
+                    "labels": [{"name": "report:feedback"}],
+                    "updatedAt": "2026-08-03",
+                    "body": "p\n\n## Tracked by\n- [ ] #7\n",
+                }
+            ]
         if args[3] == "7":
-            return {"state": "CLOSED", "labels": [], "title": "the fix",
-                    "url": "https://github.com/o/r/issues/7"}
+            return {
+                "state": "CLOSED",
+                "labels": [],
+                "title": "the fix",
+                "url": "https://github.com/o/r/issues/7",
+            }
         return None
 
     monkeypatch.setattr(rep, "_gh_json", fake_gh_json)
@@ -637,14 +711,10 @@ def test_list_my_reports_tree_pairs_each_with_tracked(monkeypatch) -> None:
     assert len(rows) == 1
     summary, tracked = rows[0]
     assert summary.number == 42
-    assert tracked == {
-        7: rep.TrackedFix("closed", "the fix", "https://github.com/o/r/issues/7")
-    }
+    assert tracked == {7: rep.TrackedFix("closed", "the fix", "https://github.com/o/r/issues/7")}
 
 
-def test_list_my_reports_tree_excludes_and_unions_like_flat(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_list_my_reports_tree_excludes_and_unions_like_flat(tmp_path: Path, monkeypatch) -> None:
     # the tree view applies the same membership rule + locally-reported
     # union as the flat list (#681)
     monkeypatch.setattr(rep, "local_reported_notes", _REAL_LOCAL_REPORTED_NOTES)
@@ -652,41 +722,58 @@ def test_list_my_reports_tree_excludes_and_unions_like_flat(
 
     def fake_gh_json(args):
         if "list" in args:
-            return [{
-                "number": 30, "title": "[Bug] ordinary pm-filed issue",
-                "state": "OPEN", "labels": [{"name": "type:bug"}],
-                "updatedAt": "2026-08-11", "body": "not a report",
-            }]
+            return [
+                {
+                    "number": 30,
+                    "title": "[Bug] ordinary pm-filed issue",
+                    "state": "OPEN",
+                    "labels": [{"name": "type:bug"}],
+                    "updatedAt": "2026-08-11",
+                    "body": "not a report",
+                }
+            ]
         if args[3] == "660":
-            return {"number": 660, "title": "[Feedback] friction inventory",
-                    "state": "OPEN", "labels": [], "updatedAt": "2026-08-10",
-                    "body": "p\n\n## Tracked by\n- [ ] #7\n"}
+            return {
+                "number": 660,
+                "title": "[Feedback] friction inventory",
+                "state": "OPEN",
+                "labels": [],
+                "updatedAt": "2026-08-10",
+                "body": "p\n\n## Tracked by\n- [ ] #7\n",
+            }
         if args[3] == "7":
-            return {"state": "CLOSED", "labels": [], "title": "the fix",
-                    "url": "https://github.com/o/r/issues/7"}
+            return {
+                "state": "CLOSED",
+                "labels": [],
+                "title": "the fix",
+                "url": "https://github.com/o/r/issues/7",
+            }
         return None
 
     monkeypatch.setattr(rep, "_gh_json", fake_gh_json)
     rows = rep.list_my_reports_tree("o/r", tmp_path)
     assert [(s.number, s.kind) for s, _ in rows] == [(660, "feedback")]
-    assert rows[0][1] == {
-        7: rep.TrackedFix("closed", "the fix", "https://github.com/o/r/issues/7")
-    }
+    assert rows[0][1] == {7: rep.TrackedFix("closed", "the fix", "https://github.com/o/r/issues/7")}
 
 
 def test_cli_report_tree(monkeypatch) -> None:
     monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
     monkeypatch.setattr(
-        rep, "list_my_reports_tree",
-        lambda target, root=None: [(
-            rep.ReportSummary(
-                42, "fb", "feedback", "open", "2026-08-03",
-                url="https://github.com/o/r/issues/42",
-            ),
-            {7: rep.TrackedFix(
-                "closed", "the fix", "https://github.com/o/r/issues/7"
-            )},
-        )],
+        rep,
+        "list_my_reports_tree",
+        lambda target, root=None: [
+            (
+                rep.ReportSummary(
+                    42,
+                    "fb",
+                    "feedback",
+                    "open",
+                    "2026-08-03",
+                    url="https://github.com/o/r/issues/42",
+                ),
+                {7: rep.TrackedFix("closed", "the fix", "https://github.com/o/r/issues/7")},
+            )
+        ],
     )
     res = CliRunner().invoke(main, ["report", "--tree"])
     assert res.exit_code == 0
@@ -703,11 +790,14 @@ def test_cli_report_tree_offline_degrades_to_number_and_state(monkeypatch) -> No
     # no empty-title artefacts (#664).
     monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
     monkeypatch.setattr(
-        rep, "list_my_reports_tree",
-        lambda target, root=None: [(
-            rep.ReportSummary(42, "fb", "feedback", "open", "2026-08-03"),
-            {7: rep.TrackedFix("unknown")},
-        )],
+        rep,
+        "list_my_reports_tree",
+        lambda target, root=None: [
+            (
+                rep.ReportSummary(42, "fb", "feedback", "open", "2026-08-03"),
+                {7: rep.TrackedFix("unknown")},
+            )
+        ],
     )
     res = CliRunner().invoke(main, ["report", "--tree"])
     assert res.exit_code == 0
@@ -740,9 +830,7 @@ def _reported_note(target_root: Path, name: str, refs: list[str]) -> Path:
 
 
 def test_local_reported_notes_maps_target_refs_to_slugs(tmp_path: Path) -> None:
-    _reported_note(
-        tmp_path, "2026-08-10-channel-ux.md", ["o/r#659", "other/repo#5"]
-    )
+    _reported_note(tmp_path, "2026-08-10-channel-ux.md", ["o/r#659", "other/repo#5"])
     # only refs pointing at the queried target map; slug is the note's slug
     assert _REAL_LOCAL_REPORTED_NOTES(tmp_path, "o/r") == {659: "channel-ux"}
     assert _REAL_LOCAL_REPORTED_NOTES(tmp_path, "other/repo") == {5: "channel-ux"}
@@ -754,20 +842,17 @@ def test_local_reported_notes_empty_without_reported_dir(tmp_path: Path) -> None
     assert _REAL_LOCAL_REPORTED_NOTES(tmp_path, "o/r") == {}
 
 
-def test_cli_report_list_tags_locally_reported_note(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_cli_report_list_tags_locally_reported_note(tmp_path: Path, monkeypatch) -> None:
     # report list stays the upstream (marker/author) view, but a row whose
     # issue a local reported/ note references gains [note: <slug>] — the
     # derive-don't-store reconciliation of the two tracking surfaces (#664).
-    _reported_note(
-        tmp_path, "2026-08-10-channel-ux.md", [f"{REPORT_TARGET}#659"]
-    )
+    _reported_note(tmp_path, "2026-08-10-channel-ux.md", [f"{REPORT_TARGET}#659"])
     monkeypatch.setattr(cli_mod, "find_target_root", lambda: tmp_path)
     monkeypatch.setattr(rep, "local_reported_notes", _REAL_LOCAL_REPORTED_NOTES)
     monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
     monkeypatch.setattr(
-        rep, "list_my_reports",
+        rep,
+        "list_my_reports",
         lambda t, root=None: [
             rep.ReportSummary(659, "channel ux", "feedback", "open", "2026-08-10"),
             rep.ReportSummary(700, "unrelated", "bug", "open", "2026-08-09"),
@@ -781,21 +866,20 @@ def test_cli_report_list_tags_locally_reported_note(
     assert "[note:" not in line_700
 
 
-def test_cli_report_tree_tags_locally_reported_note(
-    tmp_path: Path, monkeypatch
-) -> None:
-    _reported_note(
-        tmp_path, "2026-08-10-channel-ux.md", [f"{REPORT_TARGET}#659"]
-    )
+def test_cli_report_tree_tags_locally_reported_note(tmp_path: Path, monkeypatch) -> None:
+    _reported_note(tmp_path, "2026-08-10-channel-ux.md", [f"{REPORT_TARGET}#659"])
     monkeypatch.setattr(cli_mod, "find_target_root", lambda: tmp_path)
     monkeypatch.setattr(rep, "local_reported_notes", _REAL_LOCAL_REPORTED_NOTES)
     monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
     monkeypatch.setattr(
-        rep, "list_my_reports_tree",
-        lambda t, root=None: [(
-            rep.ReportSummary(659, "channel ux", "feedback", "open", "2026-08-10"),
-            {},
-        )],
+        rep,
+        "list_my_reports_tree",
+        lambda t, root=None: [
+            (
+                rep.ReportSummary(659, "channel ux", "feedback", "open", "2026-08-10"),
+                {},
+            )
+        ],
     )
     res = CliRunner().invoke(main, ["report", "--tree"])
     assert res.exit_code == 0, res.output
@@ -840,11 +924,15 @@ def test_in_report_target_gate(monkeypatch) -> None:
 def test_list_inbox_dedups_across_labels(monkeypatch) -> None:
     def fake_gh_json(args):
         # both label queries return the same #5 (carries both labels)
-        return [{
-            "number": 5, "title": "dual", "state": "OPEN",
-            "labels": [{"name": "report:bug"}, {"name": "report:feedback"}],
-            "updatedAt": "2026-08-04",
-        }]
+        return [
+            {
+                "number": 5,
+                "title": "dual",
+                "state": "OPEN",
+                "labels": [{"name": "report:bug"}, {"name": "report:feedback"}],
+                "updatedAt": "2026-08-04",
+            }
+        ]
 
     monkeypatch.setattr(rep, "_gh_json", fake_gh_json)
     inbox = rep.list_inbox("o/r")
@@ -893,9 +981,7 @@ def test_cli_change_request_prints_prefilled_url() -> None:
     assert urllib.parse.quote_plus("[CR] add a flag") in res.output
 
 
-def test_cli_change_request_file_yes_stages_and_does_not_post(
-    tmp_path, monkeypatch
-) -> None:
+def test_cli_change_request_file_yes_stages_and_does_not_post(tmp_path, monkeypatch) -> None:
     # same ADR-047 asymmetry as bug/feedback: --file --yes NEVER auto-posts —
     # it stages for `report submit` (#662).
     posted = {"v": False}
@@ -903,7 +989,8 @@ def test_cli_change_request_file_yes_stages_and_does_not_post(
     monkeypatch.setattr(cli_mod, "find_target_root", lambda: tmp_path)
     monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
     monkeypatch.setattr(
-        rep, "file_report_via_gh",
+        rep,
+        "file_report_via_gh",
         lambda *a, **k: posted.__setitem__("v", True) or "x",
     )
     res = CliRunner().invoke(
@@ -921,21 +1008,48 @@ def test_cli_change_request_file_yes_stages_and_does_not_post(
 
 
 _INBOX_ISSUES = [
-    {"number": 1, "title": "a bug", "state": "OPEN",
-     "labels": [{"name": "report:bug"}], "updatedAt": "2026-08-01", "body": "b"},
-    {"number": 2, "title": "some feedback", "state": "OPEN",
-     # a pre-#663 legacy report: bare kind label + the marker that admits it
-     "labels": [{"name": "feedback"}], "updatedAt": "2026-08-02",
-     "body": "f\n<!-- pkit-report: kind=feedback -->\n"},
-    {"number": 3, "title": "[CR] unlabelled cr", "state": "OPEN",
-     "labels": [], "updatedAt": "2026-08-03",
-     "body": "p\n<!-- pkit-report: kind=change-request -->\n"},
-    {"number": 4, "title": "mentions CR only", "state": "OPEN",
-     "labels": [], "updatedAt": "2026-08-04", "body": "not a report"},
-    {"number": 5, "title": "[Bug] ordinary pm-filed issue", "state": "OPEN",
-     # prefix-titled + the repo's own vocabulary: sweep noise, not a report
-     "labels": [{"name": "type:bug"}], "updatedAt": "2026-08-05",
-     "body": "an ordinary tracker issue"},
+    {
+        "number": 1,
+        "title": "a bug",
+        "state": "OPEN",
+        "labels": [{"name": "report:bug"}],
+        "updatedAt": "2026-08-01",
+        "body": "b",
+    },
+    {
+        "number": 2,
+        "title": "some feedback",
+        "state": "OPEN",
+        # a pre-#663 legacy report: bare kind label + the marker that admits it
+        "labels": [{"name": "feedback"}],
+        "updatedAt": "2026-08-02",
+        "body": "f\n<!-- pkit-report: kind=feedback -->\n",
+    },
+    {
+        "number": 3,
+        "title": "[CR] unlabelled cr",
+        "state": "OPEN",
+        "labels": [],
+        "updatedAt": "2026-08-03",
+        "body": "p\n<!-- pkit-report: kind=change-request -->\n",
+    },
+    {
+        "number": 4,
+        "title": "mentions CR only",
+        "state": "OPEN",
+        "labels": [],
+        "updatedAt": "2026-08-04",
+        "body": "not a report",
+    },
+    {
+        "number": 5,
+        "title": "[Bug] ordinary pm-filed issue",
+        "state": "OPEN",
+        # prefix-titled + the repo's own vocabulary: sweep noise, not a report
+        "labels": [{"name": "type:bug"}],
+        "updatedAt": "2026-08-05",
+        "body": "an ordinary tracker issue",
+    },
 ]
 
 
@@ -976,11 +1090,16 @@ def test_list_inbox_excludes_prefix_only_issue(monkeypatch) -> None:
     # (#681) — even when a sweep returns it. Acceptable: the channel now
     # API-posts with markers; the reporter side still lists such issues via
     # local reported/ notes.
-    issues = [{
-        "number": 660, "title": "[Feedback] friction inventory", "state": "OPEN",
-        "labels": [{"name": "enhancement"}], "updatedAt": "2026-08-10",
-        "body": "no marker here",
-    }]
+    issues = [
+        {
+            "number": 660,
+            "title": "[Feedback] friction inventory",
+            "state": "OPEN",
+            "labels": [{"name": "enhancement"}],
+            "updatedAt": "2026-08-10",
+            "body": "no marker here",
+        }
+    ]
     monkeypatch.setattr(rep, "_gh_json", lambda args: issues)
     assert rep.list_inbox("o/r", kind="feedback") == []
     assert rep.list_inbox("o/r") == []
@@ -992,10 +1111,16 @@ def test_cli_inbox_kind_flag(monkeypatch) -> None:
 
     def fake_list(target, *, kind=None):
         captured["kind"] = kind
-        return [rep.ReportSummary(
-            3, "[CR] t", "change-request", "open", "2026-08-03",
-            url="https://github.com/o/r/issues/3",
-        )]
+        return [
+            rep.ReportSummary(
+                3,
+                "[CR] t",
+                "change-request",
+                "open",
+                "2026-08-03",
+                url="https://github.com/o/r/issues/3",
+            )
+        ]
 
     monkeypatch.setattr(rep, "list_inbox", fake_list)
     res = CliRunner().invoke(main, ["report", "inbox", "--kind", "change-request"])
@@ -1009,7 +1134,8 @@ def test_cli_inbox_kind_flag(monkeypatch) -> None:
 def test_cli_inbox_group_by_project_degrades_without_marker(monkeypatch) -> None:
     monkeypatch.setattr(rep, "in_report_target", lambda: True)
     monkeypatch.setattr(
-        rep, "list_inbox",
+        rep,
+        "list_inbox",
         lambda target, *, kind=None: [
             rep.ReportSummary(1, "a", "bug", "open", "2026-08-01", project="alpha"),
             rep.ReportSummary(2, "b", "feedback", "open", "2026-08-02"),
@@ -1026,15 +1152,30 @@ def test_cli_inbox_group_by_project_degrades_without_marker(monkeypatch) -> None
 
 def test_list_resolved_requires_all_tracked_closed(monkeypatch) -> None:
     issues = [
-        {"number": 10, "title": "all closed", "state": "OPEN",
-         "labels": [{"name": "report:feedback"}], "updatedAt": "2026-08-01",
-         "body": "p\n\n## Tracked by\n- [x] #7\n"},
-        {"number": 11, "title": "one open", "state": "OPEN",
-         "labels": [{"name": "report:feedback"}], "updatedAt": "2026-08-02",
-         "body": "p\n\n## Tracked by\n- [ ] #8\n"},
-        {"number": 12, "title": "untracked", "state": "OPEN",
-         "labels": [{"name": "report:feedback"}], "updatedAt": "2026-08-03",
-         "body": "p"},
+        {
+            "number": 10,
+            "title": "all closed",
+            "state": "OPEN",
+            "labels": [{"name": "report:feedback"}],
+            "updatedAt": "2026-08-01",
+            "body": "p\n\n## Tracked by\n- [x] #7\n",
+        },
+        {
+            "number": 11,
+            "title": "one open",
+            "state": "OPEN",
+            "labels": [{"name": "report:feedback"}],
+            "updatedAt": "2026-08-02",
+            "body": "p\n\n## Tracked by\n- [ ] #8\n",
+        },
+        {
+            "number": 12,
+            "title": "untracked",
+            "state": "OPEN",
+            "labels": [{"name": "report:feedback"}],
+            "updatedAt": "2026-08-03",
+            "body": "p",
+        },
     ]
 
     def fake(args):
@@ -1053,12 +1194,22 @@ def test_list_resolved_requires_all_tracked_closed(monkeypatch) -> None:
 
 def test_list_resolved_excludes_bugs_and_closed_reports(monkeypatch) -> None:
     issues = [
-        {"number": 20, "title": "a bug", "state": "OPEN",
-         "labels": [{"name": "report:bug"}], "updatedAt": "2026-08-01",
-         "body": "p\n\n## Tracked by\n- [x] #7\n"},
-        {"number": 21, "title": "already closed", "state": "CLOSED",
-         "labels": [{"name": "report:feedback"}], "updatedAt": "2026-08-02",
-         "body": "p\n\n## Tracked by\n- [x] #7\n"},
+        {
+            "number": 20,
+            "title": "a bug",
+            "state": "OPEN",
+            "labels": [{"name": "report:bug"}],
+            "updatedAt": "2026-08-01",
+            "body": "p\n\n## Tracked by\n- [x] #7\n",
+        },
+        {
+            "number": 21,
+            "title": "already closed",
+            "state": "CLOSED",
+            "labels": [{"name": "report:feedback"}],
+            "updatedAt": "2026-08-02",
+            "body": "p\n\n## Tracked by\n- [x] #7\n",
+        },
     ]
 
     def fake(args):
@@ -1095,7 +1246,8 @@ def test_cli_inbox_resolved_yes_lists_but_never_closes(monkeypatch) -> None:
     monkeypatch.setattr(rep, "in_report_target", lambda: True)
     monkeypatch.setattr(rep, "list_resolved", lambda target: [_RESOLVED_ROW])
     monkeypatch.setattr(
-        rep, "close_report_as_resolved",
+        rep,
+        "close_report_as_resolved",
         lambda *a, **k: closed.__setitem__("v", True) or True,
     )
     res = CliRunner().invoke(main, ["report", "inbox", "--resolved", "--yes"])
@@ -1110,7 +1262,8 @@ def test_cli_inbox_resolved_no_input_never_closes(monkeypatch) -> None:
     monkeypatch.setattr(rep, "in_report_target", lambda: True)
     monkeypatch.setattr(rep, "list_resolved", lambda target: [_RESOLVED_ROW])
     monkeypatch.setattr(
-        rep, "close_report_as_resolved",
+        rep,
+        "close_report_as_resolved",
         lambda *a, **k: closed.__setitem__("v", True) or True,
     )
     res = CliRunner().invoke(main, ["report", "inbox", "--resolved"])
@@ -1123,7 +1276,8 @@ def test_cli_inbox_resolved_confirm_closes(monkeypatch) -> None:
     monkeypatch.setattr(rep, "in_report_target", lambda: True)
     monkeypatch.setattr(rep, "list_resolved", lambda target: [_RESOLVED_ROW])
     monkeypatch.setattr(
-        rep, "close_report_as_resolved",
+        rep,
+        "close_report_as_resolved",
         lambda t, n, tracked: calls.append((n, tracked)) or True,
     )
     res = CliRunner().invoke(main, ["report", "inbox", "--resolved"], input="y\n")
@@ -1137,7 +1291,8 @@ def test_cli_inbox_resolved_decline_skips(monkeypatch) -> None:
     monkeypatch.setattr(rep, "in_report_target", lambda: True)
     monkeypatch.setattr(rep, "list_resolved", lambda target: [_RESOLVED_ROW])
     monkeypatch.setattr(
-        rep, "close_report_as_resolved",
+        rep,
+        "close_report_as_resolved",
         lambda *a, **k: closed.__setitem__("v", True) or True,
     )
     res = CliRunner().invoke(main, ["report", "inbox", "--resolved"], input="n\n")
@@ -1148,9 +1303,7 @@ def test_cli_inbox_resolved_decline_skips(monkeypatch) -> None:
 
 def test_cli_inbox_resolved_rejects_kind_combination(monkeypatch) -> None:
     monkeypatch.setattr(rep, "in_report_target", lambda: True)
-    res = CliRunner().invoke(
-        main, ["report", "inbox", "--resolved", "--kind", "bug"]
-    )
+    res = CliRunner().invoke(main, ["report", "inbox", "--resolved", "--kind", "bug"])
     assert res.exit_code != 0
     assert "does not combine" in res.output
 
@@ -1212,9 +1365,7 @@ def test_post_issue_comment_argv_and_failure(monkeypatch) -> None:
     assert captured["cmd"][:3] == ["gh", "issue", "comment"]
     assert "--repo" in captured["cmd"] and "o/r" in captured["cmd"]
 
-    monkeypatch.setattr(
-        rep.subprocess, "run", lambda cmd, **k: _FakeProc(1, "", "boom")
-    )
+    monkeypatch.setattr(rep.subprocess, "run", lambda cmd, **k: _FakeProc(1, "", "boom"))
     ok, err = rep.post_issue_comment("o/r", "9", "full")
     assert ok is False and err == "boom"  # error text verbatim
 
@@ -1229,14 +1380,20 @@ def test_compose_report_renders_context_line_marker_and_title(
 ) -> None:
     (tmp_path / ".pkit").mkdir()
     title, body, _ = compose_report(
-        "bug", title="T", prose="P", target_root=tmp_path,
-        project="alpha", workstream="cli",
+        "bug",
+        title="T",
+        prose="P",
+        target_root=tmp_path,
+        project="alpha",
+        workstream="cli",
     )
     assert title == "[Bug] T (alpha)"  # kind prefix, then title, then parenthetical
     # the context line is the FIRST body line, right under the issue title
     assert body.splitlines()[0] == "Project: alpha · Workstream: cli"
     assert rep.parse_report_marker(body) == {
-        "kind": "bug", "project": "alpha", "workstream": "cli",
+        "kind": "bug",
+        "project": "alpha",
+        "workstream": "cli",
     }
 
 
@@ -1245,7 +1402,10 @@ def test_compose_change_request_title_parenthetical_after_prefix(
 ) -> None:
     (tmp_path / ".pkit").mkdir()
     title, _, _ = compose_report(
-        "change-request", title="add a flag", prose="x", target_root=tmp_path,
+        "change-request",
+        title="add a flag",
+        prose="x",
+        target_root=tmp_path,
         project="alpha",
     )
     assert title == "[CR] add a flag (alpha)"
@@ -1256,7 +1416,10 @@ def test_compose_report_unresolved_project_states_omission(
 ) -> None:
     (tmp_path / ".pkit").mkdir()
     title, body, _ = compose_report(
-        "bug", title="T", prose="P", target_root=tmp_path,
+        "bug",
+        title="T",
+        prose="P",
+        target_root=tmp_path,
     )
     assert title == "[Bug] T"  # no parenthetical without a name
     assert "(project: not declared)" in body  # explicit, never silent
@@ -1290,9 +1453,7 @@ def test_cli_workstream_derived_via_pm_verb(monkeypatch) -> None:
     assert urllib.parse.quote_plus("Project: alpha · Workstream: derived-ws") in res.output
 
 
-def test_cli_a_hung_workstream_verb_does_not_hang_the_report(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_cli_a_hung_workstream_verb_does_not_hang_the_report(tmp_path: Path, monkeypatch) -> None:
     # The verb runs through the bounded command runner (#1053): one that never
     # answers is stopped at the bound, the report says so and goes on without
     # the workstream.
@@ -1319,9 +1480,7 @@ def test_cli_a_hung_workstream_verb_does_not_hang_the_report(
     assert urllib.parse.quote_plus("Workstream:") not in res.output
 
 
-def test_cli_draft_path_uses_remote_fallback_without_prompt(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_cli_draft_path_uses_remote_fallback_without_prompt(tmp_path: Path, monkeypatch) -> None:
     # Non-interactive/draft compose: config -> remote fallback, silently.
     (tmp_path / ".pkit").mkdir()
     monkeypatch.setattr(cli_mod, "find_target_root", lambda: tmp_path)
@@ -1335,9 +1494,7 @@ def test_cli_draft_path_uses_remote_fallback_without_prompt(
     assert urllib.parse.quote_plus("Project: remote-repo") in res.output
 
 
-def test_cli_interactive_compose_prompts_once_and_writes_back(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_cli_interactive_compose_prompts_once_and_writes_back(tmp_path: Path, monkeypatch) -> None:
     (tmp_path / ".pkit").mkdir()
     monkeypatch.setattr(cli_mod, "find_target_root", lambda: tmp_path)
     monkeypatch.setattr(cli_mod, "_resolve_report_context", _REAL_RESOLVE_CONTEXT)
@@ -1345,12 +1502,14 @@ def test_cli_interactive_compose_prompts_once_and_writes_back(
     monkeypatch.setattr(rc_mod, "pm_workstream", lambda root: None)
     monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
     monkeypatch.setattr(
-        rep, "file_report_via_gh",
+        rep,
+        "file_report_via_gh",
         lambda target, **k: "https://github.com/aleskalfas/project-kit/issues/700",
     )
     # name prompt -> save-confirm (default yes) -> post-confirm
     res = CliRunner().invoke(
-        main, ["report", "bug", "--title", "t", "--body", "b", "--file"],
+        main,
+        ["report", "bug", "--title", "t", "--body", "b", "--file"],
         input="myproj\ny\ny\n",
     )
     assert res.exit_code == 0, res.output
@@ -1360,7 +1519,8 @@ def test_cli_interactive_compose_prompts_once_and_writes_back(
     # Second compose: the declared name resolves — no prompt fires (the only
     # input consumed is the post-confirm).
     res2 = CliRunner().invoke(
-        main, ["report", "bug", "--title", "t", "--body", "b", "--file"],
+        main,
+        ["report", "bug", "--title", "t", "--body", "b", "--file"],
         input="y\n",
     )
     assert res2.exit_code == 0, res2.output
@@ -1368,9 +1528,7 @@ def test_cli_interactive_compose_prompts_once_and_writes_back(
     assert "Project: myproj" in res2.output  # echoed body carries the context
 
 
-def test_cli_interactive_prompt_blank_omits_and_writes_nothing(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_cli_interactive_prompt_blank_omits_and_writes_nothing(tmp_path: Path, monkeypatch) -> None:
     (tmp_path / ".pkit").mkdir()
     monkeypatch.setattr(cli_mod, "find_target_root", lambda: tmp_path)
     monkeypatch.setattr(cli_mod, "_resolve_report_context", _REAL_RESOLVE_CONTEXT)
@@ -1380,7 +1538,8 @@ def test_cli_interactive_prompt_blank_omits_and_writes_nothing(
     monkeypatch.setattr(rep, "file_report_via_gh", lambda target, **k: "url")
     # blank name -> no save-confirm -> decline the post
     res = CliRunner().invoke(
-        main, ["report", "bug", "--title", "t", "--body", "b", "--file"],
+        main,
+        ["report", "bug", "--title", "t", "--body", "b", "--file"],
         input="\nn\n",
     )
     assert res.exit_code == 0, res.output
@@ -1398,11 +1557,16 @@ def test_list_my_reports_fetches_bodies_and_reads_project_marker(
         queries.append(args)
         if args[:3] == ["gh", "api", "user"]:
             return None  # no login -> attributed query skipped
-        return [{
-            "number": 1, "title": "a bug", "state": "OPEN",
-            "labels": [{"name": "bug"}], "updatedAt": "2026-08-01",
-            "body": "p\n<!-- pkit-report: kind=bug project=alpha workstream=cli -->\n",
-        }]
+        return [
+            {
+                "number": 1,
+                "title": "a bug",
+                "state": "OPEN",
+                "labels": [{"name": "bug"}],
+                "updatedAt": "2026-08-01",
+                "body": "p\n<!-- pkit-report: kind=bug project=alpha workstream=cli -->\n",
+            }
+        ]
 
     monkeypatch.setattr(rep, "_gh_json", fake)
     reports = rep.list_my_reports("o/r")
@@ -1414,10 +1578,11 @@ def test_list_my_reports_fetches_bodies_and_reads_project_marker(
 def test_cli_report_list_shows_project_per_row(monkeypatch) -> None:
     monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
     monkeypatch.setattr(
-        rep, "list_my_reports",
-        lambda t, root=None: [rep.ReportSummary(
-            1, "a bug", "bug", "open", "2026-08-01", project="alpha"
-        )],
+        rep,
+        "list_my_reports",
+        lambda t, root=None: [
+            rep.ReportSummary(1, "a bug", "bug", "open", "2026-08-01", project="alpha")
+        ],
     )
     res = CliRunner().invoke(main, ["report"])
     assert res.exit_code == 0
@@ -1428,15 +1593,30 @@ def test_cli_inbox_group_by_project_end_to_end_from_markers(monkeypatch) -> None
     # markers -> _gh_json -> list_inbox -> grouped CLI output, no seam mocked
     # between the marker parse and the rendering.
     issues = [
-        {"number": 1, "title": "a bug", "state": "OPEN",
-         "labels": [{"name": "bug"}], "updatedAt": "2026-08-01",
-         "body": "p\n<!-- pkit-report: kind=bug project=alpha workstream=cli -->\n"},
-        {"number": 2, "title": "fb", "state": "OPEN",
-         "labels": [{"name": "feedback"}], "updatedAt": "2026-08-02",
-         "body": "p\n<!-- pkit-report: kind=feedback project=beta -->\n"},
-        {"number": 3, "title": "bare", "state": "OPEN",
-         "labels": [{"name": "report:feedback"}], "updatedAt": "2026-08-03",
-         "body": "no marker"},
+        {
+            "number": 1,
+            "title": "a bug",
+            "state": "OPEN",
+            "labels": [{"name": "bug"}],
+            "updatedAt": "2026-08-01",
+            "body": "p\n<!-- pkit-report: kind=bug project=alpha workstream=cli -->\n",
+        },
+        {
+            "number": 2,
+            "title": "fb",
+            "state": "OPEN",
+            "labels": [{"name": "feedback"}],
+            "updatedAt": "2026-08-02",
+            "body": "p\n<!-- pkit-report: kind=feedback project=beta -->\n",
+        },
+        {
+            "number": 3,
+            "title": "bare",
+            "state": "OPEN",
+            "labels": [{"name": "report:feedback"}],
+            "updatedAt": "2026-08-03",
+            "body": "no marker",
+        },
     ]
     monkeypatch.setattr(rep, "in_report_target", lambda: True)
     monkeypatch.setattr(rep, "_gh_json", lambda args: issues)
@@ -1448,21 +1628,24 @@ def test_cli_inbox_group_by_project_end_to_end_from_markers(monkeypatch) -> None
     assert any(ln.strip() == "(no project)" for ln in lines)
     assert "[cli]" in res.output  # workstream shown on #1's row
     # each report renders under its own project group
-    assert lines.index(next(ln for ln in lines if ln.strip() == "alpha")) < \
-        lines.index(next(ln for ln in lines if "#1" in ln))
+    assert lines.index(next(ln for ln in lines if ln.strip() == "alpha")) < lines.index(
+        next(ln for ln in lines if "#1" in ln)
+    )
 
 
 def test_cli_report_show(monkeypatch) -> None:
     monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
     monkeypatch.setattr(
-        rep, "show_report",
+        rep,
+        "show_report",
         lambda t, n: {
-            "number": 42, "title": "fb", "state": "open", "kind": "feedback",
+            "number": 42,
+            "title": "fb",
+            "state": "open",
+            "kind": "feedback",
             "comments": [{"body": "working on it"}],
             "tracked_by": {
-                7: rep.TrackedFix(
-                    "closed", "the fix", "https://github.com/o/r/issues/7"
-                ),
+                7: rep.TrackedFix("closed", "the fix", "https://github.com/o/r/issues/7"),
                 8: rep.TrackedFix("in progress"),
             },
         },
@@ -1484,10 +1667,15 @@ def test_cli_report_show_unclassifiable_issue_says_so(monkeypatch) -> None:
     # the kind-masquerading 'report' that #660 surfaced pre-#663.
     monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
     monkeypatch.setattr(
-        rep, "show_report",
+        rep,
+        "show_report",
         lambda t, n: {
-            "number": 5, "title": "not a report", "state": "open", "kind": "",
-            "comments": [], "tracked_by": {},
+            "number": 5,
+            "title": "not a report",
+            "state": "open",
+            "kind": "",
+            "comments": [],
+            "tracked_by": {},
         },
     )
     res = CliRunner().invoke(main, ["report", "show", "5"])

@@ -649,7 +649,9 @@ def _connection_findings(
                 if "command" in entry:
                     check_command(f"{path}/command", entry["command"])
                     filler = entry["command"] if group == "contributes" else None
-                    leaf = resolve_command(command_leaves, filler) if isinstance(filler, str) else None
+                    leaf = (
+                        resolve_command(command_leaves, filler) if isinstance(filler, str) else None
+                    )
                     if leaf is not None and leaf.get(QUERY_CONTRACT_KEY) is not True:
                         _error(
                             f"{path}/command",

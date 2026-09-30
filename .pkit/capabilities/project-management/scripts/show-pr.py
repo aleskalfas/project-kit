@@ -61,9 +61,7 @@ from _lib.membership import (  # noqa: E402
 )
 
 
-CLOSING_KEYWORD_RE = re.compile(
-    r"\b(?:closes|fixes|resolves)\s+#(\d+)", re.IGNORECASE
-)
+CLOSING_KEYWORD_RE = re.compile(r"\b(?:closes|fixes|resolves)\s+#(\d+)", re.IGNORECASE)
 
 
 def main() -> int:
@@ -110,8 +108,7 @@ def main() -> int:
 
     if args.field is not None and args.field not in PR_FIELD_NAMES:
         print(
-            f"error: unknown field '{args.field}'.\n"
-            f"valid fields: {', '.join(PR_FIELD_NAMES)}",
+            f"error: unknown field '{args.field}'.\nvalid fields: {', '.join(PR_FIELD_NAMES)}",
             file=sys.stderr,
         )
         return 2
@@ -163,8 +160,7 @@ def _summarise(pr: dict) -> dict:
     is_draft = bool(pr.get("isDraft"))
     url = pr.get("url")
     reviewers = [
-        r.get("login") if isinstance(r, dict) else str(r)
-        for r in (pr.get("reviewRequests") or [])
+        r.get("login") if isinstance(r, dict) else str(r) for r in (pr.get("reviewRequests") or [])
     ]
 
     conv = _parse_conventional_commits(title)
@@ -193,9 +189,7 @@ def _summarise(pr: dict) -> dict:
     }
 
 
-def _summarise_review(
-    comments: list, latest_commit_ts: str = ""
-) -> list[dict]:
+def _summarise_review(comments: list, latest_commit_ts: str = "") -> list[dict]:
     """Latest DEC-028 reviewer verdict per reviewer, token + reasons (#544).
 
     Delegates recognition and latest-per-reviewer selection to the SHARED
@@ -232,9 +226,7 @@ def _summarise_review(
     ]
 
 
-def _summarise_review_history(
-    comments: list, latest_commit_ts: str = ""
-) -> list[dict]:
+def _summarise_review_history(comments: list, latest_commit_ts: str = "") -> list[dict]:
     """Every DEC-028 verdict per reviewer, in posting order (#905).
 
     The full sequence behind `_summarise_review`'s latest-per-reviewer view,
@@ -255,14 +247,16 @@ def _summarise_review_history(
     current = {id(v) for v in reduce_latest_per_reviewer(history)}
     by_reviewer: dict[tuple[str, str], list[dict]] = {}
     for v in history:
-        by_reviewer.setdefault((v.path, v.reviewer), []).append({
-            "verdict": v.token,
-            "timestamp": v.timestamp,
-            "url": v.url,
-            "current": id(v) in current,
-            "stale": bool(latest_commit_ts) and v.timestamp <= latest_commit_ts,
-            "body": v.body,
-        })
+        by_reviewer.setdefault((v.path, v.reviewer), []).append(
+            {
+                "verdict": v.token,
+                "timestamp": v.timestamp,
+                "url": v.url,
+                "current": id(v) in current,
+                "stale": bool(latest_commit_ts) and v.timestamp <= latest_commit_ts,
+                "body": v.body,
+            }
+        )
     return [
         {"reviewer": reviewer, "path": path, "verdicts": verdicts}
         for (path, reviewer), verdicts in sorted(by_reviewer.items())
@@ -447,8 +441,10 @@ def _field_lines_for(s: dict) -> dict[str, list[str]]:
 
 def _print_summary(pr_number: int, s: dict) -> None:
     print(f"PR #{pr_number}: {s.get('title') or ''}")
-    print(f"  state:        {s.get('state') or '<unknown>'}"
-          + ("  (draft)" if s.get("is_draft") else ""))
+    print(
+        f"  state:        {s.get('state') or '<unknown>'}"
+        + ("  (draft)" if s.get("is_draft") else "")
+    )
     print(f"  base:         {s.get('base') or '<unknown>'}")
     print(f"  head:         {s.get('head') or '<unknown>'}")
     conv = s.get("conventional_commits") or {}
@@ -461,26 +457,20 @@ def _print_summary(pr_number: int, s: dict) -> None:
     else:
         print("  cc type:      <does not match Conventional Commits pattern>")
     closes = s.get("closes") or []
-    print(
-        f"  closes:       "
-        f"{', '.join(f'#{n}' for n in closes) if closes else '<none>'}"
-    )
+    print(f"  closes:       {', '.join(f'#{n}' for n in closes) if closes else '<none>'}")
     reviewers = s.get("reviewers") or []
     print(f"  reviewers:    {', '.join(reviewers) or '<none>'}")
     review = s.get("review") or []
     if review:
         summary = ", ".join(
-            f"{e.get('reviewer')}: {e.get('verdict')}"
-            + (" (stale)" if e.get("stale") else "")
+            f"{e.get('reviewer')}: {e.get('verdict')}" + (" (stale)" if e.get("stale") else "")
             for e in review
         )
         print(f"  review:       {summary}")
         print("                (--field review for reasons)")
     else:
         print(f"  review:       <{NO_VERDICT_MESSAGE}>")
-    print(
-        f"  doc impact:   {'present' if s.get('has_doc_impact_section') else 'missing'}"
-    )
+    print(f"  doc impact:   {'present' if s.get('has_doc_impact_section') else 'missing'}")
     if s.get("merged_at"):
         print(f"  merged at:    {s['merged_at']}")
     if s.get("url"):
@@ -535,8 +525,7 @@ def _gh_get_pr(pr_number: int, config: dict) -> dict | None:
         return None
     if proc.returncode != 0:
         print(
-            f"error: gh pr view {pr_number} failed.\n"
-            f"stderr: {proc.stderr.strip()}",
+            f"error: gh pr view {pr_number} failed.\nstderr: {proc.stderr.strip()}",
             file=sys.stderr,
         )
         return None

@@ -62,6 +62,7 @@ def _map(axes, axis_labels):
 
 # --- the truth table --------------------------------------------------------
 
+
 @pytest.mark.parametrize(
     ("case", "axis", "config", "axes", "expected"),
     [
@@ -202,6 +203,7 @@ def test_carriage_returns_a_closed_set(mod):
 
 # --- the scoping predicate --------------------------------------------------
 
+
 def test_is_board_carried_scopes_the_raise(mod):
     """The predicate that scopes "an unreadable board raises".
 
@@ -229,6 +231,7 @@ def test_expects_kit_labels_only_in_greenfield(mod):
 
 
 # --- purity and layering ----------------------------------------------------
+
 
 def test_carriage_module_performs_no_io():
     """Structural, not behavioural: the module may not import an I/O surface.

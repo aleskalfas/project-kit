@@ -79,9 +79,7 @@ def test_position_truth_table_matches_pre_rebind() -> None:
     precedence for every input combination."""
     for gh_state, milestone, labels in _truth_table_inputs():
         expected = _pre_rebind_infer(gh_state, milestone, labels)
-        actual = infer.infer_current_state(
-            state=gh_state, milestone=milestone, labels=labels
-        )
+        actual = infer.infer_current_state(state=gh_state, milestone=milestone, labels=labels)
         assert actual == expected, (
             f"parity break: state={gh_state} milestone={milestone} labels={labels} "
             f"-> pre={expected} post={actual}"
@@ -95,9 +93,7 @@ def test_detectors_are_mutually_exclusive(monkeypatch: pytest.MonkeyPatch) -> No
     for gh_state, milestone, labels in _truth_table_inputs():
         issue = {"state": gh_state, "milestone": milestone or {}, "labels": labels}
         _stub_fetch_issue(monkeypatch, issue)
-        matches = [
-            s for s in ALL_STATES if predicates.detect_state(1, s)["result"]
-        ]
+        matches = [s for s in ALL_STATES if predicates.detect_state(1, s)["result"]]
         expected = _pre_rebind_infer(gh_state, milestone, labels)
         assert matches == [expected], (
             f"detectors not exclusive for state={gh_state} milestone={milestone} "
@@ -129,18 +125,14 @@ def test_detector_state_order_in_workflow_encodes_precedence() -> None:
 
 
 def test_checkbox_gate_refuses_unticked(monkeypatch: pytest.MonkeyPatch) -> None:
-    _stub_fetch_issue(
-        monkeypatch, {"body": "## Acceptance\n- [ ] not done yet\n- [x] done"}
-    )
+    _stub_fetch_issue(monkeypatch, {"body": "## Acceptance\n- [ ] not done yet\n- [x] done"})
     out = predicates.gate_checkboxes_ticked(1)
     assert out["result"] is False
     assert out["detail"]["unticked"]
 
 
 def test_checkbox_gate_passes_ticked(monkeypatch: pytest.MonkeyPatch) -> None:
-    _stub_fetch_issue(
-        monkeypatch, {"body": "## Acceptance\n- [x] done\n- [x] also done"}
-    )
+    _stub_fetch_issue(monkeypatch, {"body": "## Acceptance\n- [x] done\n- [x] also done"})
     out = predicates.gate_checkboxes_ticked(1)
     assert out["result"] is True
     assert out["detail"]["unticked"] == []
@@ -258,14 +250,9 @@ def test_parent_walk_does_not_affect_position(monkeypatch: pytest.MonkeyPatch) -
     parent with no state:* label and an in-progress child still infers per the
     label/milestone precedence (todo/backlog), not in-progress."""
     # Position inference ignores descendants entirely (it is label/milestone-only).
+    assert infer.infer_current_state(state="open", milestone={}, labels=[]) == "todo"
     assert (
-        infer.infer_current_state(state="open", milestone={}, labels=[]) == "todo"
-    )
-    assert (
-        infer.infer_current_state(
-            state="open", milestone={"title": "M1"}, labels=[]
-        )
-        == "backlog"
+        infer.infer_current_state(state="open", milestone={"title": "M1"}, labels=[]) == "backlog"
     )
 
 
@@ -342,9 +329,7 @@ def test_pr_merge_gate_indeterminate_when_pr_list_hits_ceiling(
         {"number": n, "body": "unrelated", "mergedBy": {"login": "someone"}}
         for n in range(predicates._MERGED_PRS_LIMIT)
     ]
-    monkeypatch.setattr(
-        predicates, "gh_run", lambda *a, **k: _completed(json.dumps(full_page))
-    )
+    monkeypatch.setattr(predicates, "gh_run", lambda *a, **k: _completed(json.dumps(full_page)))
     out = predicates.gate_pr_merged(1, actor="x")
     assert out[predicates.INDETERMINATE_KEY] is True
 
@@ -362,12 +347,8 @@ def test_pr_merge_gate_finds_match_even_at_ceiling(
         {"number": n, "body": "unrelated", "mergedBy": {"login": "someone"}}
         for n in range(predicates._MERGED_PRS_LIMIT - 1)
     ]
-    page.append(
-        {"number": 999, "body": "Closes #1", "mergedBy": {"login": "reviewer-bob"}}
-    )
-    monkeypatch.setattr(
-        predicates, "gh_run", lambda *a, **k: _completed(json.dumps(page))
-    )
+    page.append({"number": 999, "body": "Closes #1", "mergedBy": {"login": "reviewer-bob"}})
+    monkeypatch.setattr(predicates, "gh_run", lambda *a, **k: _completed(json.dumps(page)))
     out = predicates.gate_pr_merged(1, actor="author-alice")
     assert predicates.INDETERMINATE_KEY not in out
     assert out["exists"] is True

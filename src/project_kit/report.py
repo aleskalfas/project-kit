@@ -82,14 +82,10 @@ _MARKER_RE = re.compile(r"<!--\s*pkit-report:\s*([^>]*?)\s*-->")
 
 #: Headings of the change-request compose template (structured-ish, per PRJ-008's
 #: structured-vs-freeform split): motivation / desired behaviour / current workaround.
-_CR_HEADING_RE = re.compile(
-    r"(?mi)^#{2,4}\s+(motivation|desired behaviour|current workaround)\b"
-)
+_CR_HEADING_RE = re.compile(r"(?mi)^#{2,4}\s+(motivation|desired behaviour|current workaround)\b")
 
 
-def kind_marker(
-    kind: str, *, project: str | None = None, workstream: str | None = None
-) -> str:
+def kind_marker(kind: str, *, project: str | None = None, workstream: str | None = None) -> str:
     """The body marker line for `kind` plus any resolved context keys
     (see `_MARKER_RE`). Values are tokenised (whitespace → `-`) because the
     marker format is space-separated `key=value` pairs; the human context
@@ -223,9 +219,7 @@ def build_new_issue_url(target: str, *, title: str, body: str, label: str) -> st
     """A GitHub *prefilled* new-issue URL (title + body + label as query params).
     Opening it lands the user on the issue form with everything filled — the
     browser submit is the review gate, and it needs no `gh` auth."""
-    query = urllib.parse.urlencode(
-        {"title": title, "body": body, "labels": label}
-    )
+    query = urllib.parse.urlencode({"title": title, "body": body, "labels": label})
     return f"https://github.com/{target}/issues/new?{query}"
 
 
@@ -281,9 +275,7 @@ def compose_report(
         workstream=workstream,
     )
     body = f"{body}\n{kind_marker(kind, project=project, workstream=workstream)}\n"
-    url = build_new_issue_url(
-        REPORT_TARGET, title=title, body=body, label=KIND_LABELS[kind]
-    )
+    url = build_new_issue_url(REPORT_TARGET, title=title, body=body, label=KIND_LABELS[kind])
     return title, body, url
 
 
@@ -346,10 +338,7 @@ def render_note_details(filename: str, note_text: str, *, truncated: bool = Fals
     summary = f"{filename} (as sent)"
     if truncated:
         summary = f"{filename} (as sent — excerpt; full text in the first comment)"
-    return (
-        f"<details>\n<summary>{summary}</summary>\n\n"
-        f"{note_text.rstrip()}\n\n</details>"
-    )
+    return f"<details>\n<summary>{summary}</summary>\n\n{note_text.rstrip()}\n\n</details>"
 
 
 def attach_note(
@@ -363,9 +352,7 @@ def attach_note(
     full = _insert_before_environment(body, render_note_details(filename, note_text))
     if len(full) <= budget:
         return SendPayload(full)
-    frame = _insert_before_environment(
-        body, render_note_details(filename, "", truncated=True)
-    )
+    frame = _insert_before_environment(body, render_note_details(filename, "", truncated=True))
     marker = "\n\n_(…truncated — the full note text is carried in the first comment below.)_"
     allowed = max(budget - len(frame) - len(marker), 0)
     excerpt = note_text[:allowed].rstrip() + marker
@@ -444,6 +431,7 @@ def drafts_dir(target_root: Path) -> Path:
     so the CLI names this path wherever it stages or looks for a draft (#693).
     """
     return target_root / DRAFTS_RELPATH
+
 
 #: Separates the staged issue body from the staged overflow comment inside a
 #: stage file. A body containing this exact line would confuse the parse —
@@ -537,16 +525,21 @@ def stage_report(
 
     content = "\n".join(header) + "\n" + payload.body.rstrip("\n") + "\n"
     if payload.overflow_comment is not None:
-        content += (
-            f"\n{_DRAFT_OVERFLOW_MARKER}\n\n"
-            + payload.overflow_comment.rstrip("\n")
-            + "\n"
-        )
+        content += f"\n{_DRAFT_OVERFLOW_MARKER}\n\n" + payload.overflow_comment.rstrip("\n") + "\n"
     path = store / f"{draft_id}.md"
     path.write_text(content, encoding="utf-8")
     return StagedDraft(
-        draft_id, path, kind, title, REPORT_TARGET, staged, payload,
-        note=note_rel, project=project, workstream=workstream, warnings=warnings,
+        draft_id,
+        path,
+        kind,
+        title,
+        REPORT_TARGET,
+        staged,
+        payload,
+        note=note_rel,
+        project=project,
+        workstream=workstream,
+        warnings=warnings,
     )
 
 
@@ -636,9 +629,7 @@ def gh_authenticated() -> bool:
     if shutil.which("gh") is None:
         return False
     try:
-        proc = subprocess.run(
-            ["gh", "auth", "status"], capture_output=True, text=True, check=False
-        )
+        proc = subprocess.run(["gh", "auth", "status"], capture_output=True, text=True, check=False)
     except OSError:
         return False
     return proc.returncode == 0
@@ -655,8 +646,7 @@ def ensure_kind_label(target: str, kind: str) -> bool:
     independent foreign write (ADR-047's overflow-comment precedent)."""
     label = KIND_LABELS[kind]
     existing = _gh_json(
-        ["gh", "label", "list", "--repo", target, "--search", label,
-         "--json", "name"]
+        ["gh", "label", "list", "--repo", target, "--search", label, "--json", "name"]
     )
     if isinstance(existing, list) and any(
         isinstance(item, dict) and item.get("name") == label for item in existing
@@ -666,9 +656,16 @@ def ensure_kind_label(target: str, kind: str) -> bool:
     # best recovery: an "already exists" refusal just means the label is
     # there, which is the desired end state.
     cmd = [
-        "gh", "label", "create", label, "--repo", target,
-        "--color", _KIND_LABEL_COLORS[kind],
-        "--description", KIND_LABEL_DESCRIPTION,
+        "gh",
+        "label",
+        "create",
+        label,
+        "--repo",
+        target,
+        "--color",
+        _KIND_LABEL_COLORS[kind],
+        "--description",
+        KIND_LABEL_DESCRIPTION,
     ]
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
@@ -679,9 +676,7 @@ def ensure_kind_label(target: str, kind: str) -> bool:
     return "already exists" in (proc.stderr or proc.stdout).lower()
 
 
-def file_report_via_gh(
-    target: str, *, title: str, body: str, label: str | None
-) -> str | None:
+def file_report_via_gh(target: str, *, title: str, body: str, label: str | None) -> str | None:
     """Create the report issue on `target` via `gh issue create`. Returns the new
     issue's URL on success, or None on any failure (caller degrades to the URL).
     `label=None` posts unlabelled — the `ensure_kind_label`-failure degrade
@@ -696,8 +691,15 @@ def file_report_via_gh(
     the deliberate `--yes` asymmetry: stage, never post).
     """
     cmd = [
-        "gh", "issue", "create", "--repo", target,
-        "--title", title, "--body", body,
+        "gh",
+        "issue",
+        "create",
+        "--repo",
+        target,
+        "--title",
+        title,
+        "--body",
+        body,
     ]
     if label:
         cmd += ["--label", label]
@@ -778,10 +780,18 @@ def _fetch_issue(target: str, number: int) -> dict | None:
     the locally-reported union leg (#681; bounded by the `reported/` note
     count). None on gh failure — the caller skips that row (best-effort,
     like the attributed query)."""
-    data = _gh_json([
-        "gh", "issue", "view", str(number), "--repo", target,
-        "--json", _SUMMARY_FIELDS,
-    ])
+    data = _gh_json(
+        [
+            "gh",
+            "issue",
+            "view",
+            str(number),
+            "--repo",
+            target,
+            "--json",
+            _SUMMARY_FIELDS,
+        ]
+    )
     return data if isinstance(data, dict) else None
 
 
@@ -812,9 +822,7 @@ def current_login() -> str | None:
     return None
 
 
-def list_my_reports(
-    target: str, target_root: Path | None = None
-) -> list[ReportSummary] | None:
+def list_my_reports(target: str, target_root: Path | None = None) -> list[ReportSummary] | None:
     """The invoker's reports on `target`, newest first — both those they
     **authored** and those **attributed** to them (filed on their behalf via
     `--on-behalf-of`, carrying a `Reported for @login` marker). Membership
@@ -825,10 +833,23 @@ def list_my_reports(
     report without a marker, like #660, stays listed), fetched by number.
     None on gh failure of the authored query (caller degrades); the
     attributed query and the per-note fetches are best-effort."""
-    data = _gh_json([
-        "gh", "issue", "list", "--repo", target, "--author", "@me",
-        "--state", "all", "--limit", "100", "--json", _SUMMARY_FIELDS,
-    ])
+    data = _gh_json(
+        [
+            "gh",
+            "issue",
+            "list",
+            "--repo",
+            target,
+            "--author",
+            "@me",
+            "--state",
+            "all",
+            "--limit",
+            "100",
+            "--json",
+            _SUMMARY_FIELDS,
+        ]
+    )
     if not isinstance(data, list):
         return None
     by_number: dict[int, ReportSummary] = {}
@@ -839,11 +860,23 @@ def list_my_reports(
 
     login = current_login()
     if login:
-        attr = _gh_json([
-            "gh", "issue", "list", "--repo", target,
-            "--search", f'in:body "Reported for @{login}"',
-            "--state", "all", "--limit", "100", "--json", _SUMMARY_FIELDS,
-        ])
+        attr = _gh_json(
+            [
+                "gh",
+                "issue",
+                "list",
+                "--repo",
+                target,
+                "--search",
+                f'in:body "Reported for @{login}"',
+                "--state",
+                "all",
+                "--limit",
+                "100",
+                "--json",
+                _SUMMARY_FIELDS,
+            ]
+        )
         if isinstance(attr, list):
             for issue in attr:
                 if not isinstance(issue, dict) or not _is_report_issue(issue):
@@ -873,10 +906,23 @@ def list_my_reports_tree(
     to `TrackedFix` (state + title + url, #664) — for the `--tree` view. One
     extra read per tracked issue; bounded by a personal report list. None on
     the initial gh failure."""
-    data = _gh_json([
-        "gh", "issue", "list", "--repo", target, "--author", "@me",
-        "--state", "all", "--limit", "100", "--json", _SUMMARY_FIELDS,
-    ])
+    data = _gh_json(
+        [
+            "gh",
+            "issue",
+            "list",
+            "--repo",
+            target,
+            "--author",
+            "@me",
+            "--state",
+            "all",
+            "--limit",
+            "100",
+            "--json",
+            _SUMMARY_FIELDS,
+        ]
+    )
     if not isinstance(data, list):
         return None
     rows: list[tuple[ReportSummary, dict[int, TrackedFix]]] = []
@@ -936,15 +982,21 @@ def resolve_tracked(target: str, numbers: list[int]) -> dict[int, TrackedFix]:
     degrades that entry to state 'unknown' with empty title/url."""
     fixes: dict[int, TrackedFix] = {}
     for n in numbers:
-        data = _gh_json([
-            "gh", "issue", "view", str(n), "--repo", target,
-            "--json", "state,labels,title,url",
-        ])
+        data = _gh_json(
+            [
+                "gh",
+                "issue",
+                "view",
+                str(n),
+                "--repo",
+                target,
+                "--json",
+                "state,labels,title,url",
+            ]
+        )
         if isinstance(data, dict):
             fixes[n] = TrackedFix(
-                state=display_state(
-                    str(data.get("state", "")), _label_names(data.get("labels"))
-                ),
+                state=display_state(str(data.get("state", "")), _label_names(data.get("labels"))),
                 title=str(data.get("title", "")),
                 url=str(data.get("url", "")),
             )
@@ -977,9 +1029,7 @@ def local_reported_notes(target_root: Path, target: str) -> dict[int, str]:
     out: dict[int, str] = {}
     for path in sorted(reported_dir.glob("*.md")):
         try:
-            refs = scratchpads.read_reported_refs(
-                path.read_text(encoding="utf-8")
-            )
+            refs = scratchpads.read_reported_refs(path.read_text(encoding="utf-8"))
         except OSError:
             continue
         for ref in refs:
@@ -1065,15 +1115,40 @@ def _inbox_queries(target: str, kinds: tuple[str, ...]) -> list[list[str]]:
     queries: list[list[str]] = []
     for kind in kinds:
         for label in (KIND_LABELS[kind], kind):
-            queries.append([
-                "gh", "issue", "list", "--repo", target, "--label", label,
-                "--state", "all", "--limit", "100", "--json", _SUMMARY_FIELDS,
-            ])
-        queries.append([
-            "gh", "issue", "list", "--repo", target,
-            "--search", f'"pkit-report: kind={kind}" in:body',
-            "--state", "all", "--limit", "100", "--json", _SUMMARY_FIELDS,
-        ])
+            queries.append(
+                [
+                    "gh",
+                    "issue",
+                    "list",
+                    "--repo",
+                    target,
+                    "--label",
+                    label,
+                    "--state",
+                    "all",
+                    "--limit",
+                    "100",
+                    "--json",
+                    _SUMMARY_FIELDS,
+                ]
+            )
+        queries.append(
+            [
+                "gh",
+                "issue",
+                "list",
+                "--repo",
+                target,
+                "--search",
+                f'"pkit-report: kind={kind}" in:body',
+                "--state",
+                "all",
+                "--limit",
+                "100",
+                "--json",
+                _SUMMARY_FIELDS,
+            ]
+        )
     return queries
 
 
@@ -1089,10 +1164,7 @@ def list_inbox(target: str, *, kind: str | None = None) -> list[ReportSummary] |
         data = _gh_json(query)
         if not isinstance(data, list):
             return None
-        reports.extend(
-            _summarize(i) for i in data
-            if isinstance(i, dict) and _is_report_issue(i)
-        )
+        reports.extend(_summarize(i) for i in data if isinstance(i, dict) and _is_report_issue(i))
     # de-dup (an issue can match several queries) and sort newest-first
     seen: dict[int, ReportSummary] = {}
     for r in reports:
@@ -1119,11 +1191,7 @@ def list_resolved(target: str) -> list[tuple[ReportSummary, list[int]]] | None:
                 if not isinstance(issue, dict) or not _is_report_issue(issue):
                     continue
                 summary = _summarize(issue)
-                if (
-                    summary.kind != kind
-                    or summary.state == "closed"
-                    or summary.number in seen
-                ):
+                if summary.kind != kind or summary.state == "closed" or summary.number in seen:
                     continue
                 seen.add(summary.number)
                 tracked = parse_tracked_by(str(issue.get("body", "")))
@@ -1175,9 +1243,18 @@ def _edit_body(target: str, number: int, body: str) -> bool:
 def link_fix(target: str, feedback_n: int, fix_n: int) -> bool:
     """Add `#fix_n` to feedback `#feedback_n`'s `## Tracked by` section. Idempotent
     (a duplicate link is a no-op that still succeeds). True on success."""
-    data = _gh_json([
-        "gh", "issue", "view", str(feedback_n), "--repo", target, "--json", "body",
-    ])
+    data = _gh_json(
+        [
+            "gh",
+            "issue",
+            "view",
+            str(feedback_n),
+            "--repo",
+            target,
+            "--json",
+            "body",
+        ]
+    )
     if not isinstance(data, dict):
         return False
     new_body = add_tracked_ref(str(data.get("body", "")), fix_n)
@@ -1187,9 +1264,18 @@ def link_fix(target: str, feedback_n: int, fix_n: int) -> bool:
 def unlink_fix(target: str, feedback_n: int, fix_n: int) -> bool:
     """Remove `#fix_n` from feedback `#feedback_n`'s `## Tracked by` section.
     Idempotent. True on success."""
-    data = _gh_json([
-        "gh", "issue", "view", str(feedback_n), "--repo", target, "--json", "body",
-    ])
+    data = _gh_json(
+        [
+            "gh",
+            "issue",
+            "view",
+            str(feedback_n),
+            "--repo",
+            target,
+            "--json",
+            "body",
+        ]
+    )
     if not isinstance(data, dict):
         return False
     new_body = remove_tracked_ref(str(data.get("body", "")), fix_n)
@@ -1200,10 +1286,18 @@ def show_report(target: str, number: int) -> dict | None:
     """Fetch one report's detail (state, body, comments) + resolve its
     `## Tracked by` linked issues to `TrackedFix` (state + title + url,
     #664). None on gh failure."""
-    data = _gh_json([
-        "gh", "issue", "view", str(number), "--repo", target,
-        "--json", "number,title,state,body,labels,comments",
-    ])
+    data = _gh_json(
+        [
+            "gh",
+            "issue",
+            "view",
+            str(number),
+            "--repo",
+            target,
+            "--json",
+            "number,title,state,body,labels,comments",
+        ]
+    )
     if not isinstance(data, dict):
         return None
     labels = _label_names(data.get("labels"))

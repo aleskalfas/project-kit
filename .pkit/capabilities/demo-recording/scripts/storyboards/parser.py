@@ -98,9 +98,7 @@ def parse(text: str) -> tuple[dict[str, Any], list[str]]:
     # Build a list of (line_number_1based, step_number, step_title)
     step_starts: list[tuple[int, int, str]] = []
     for i, ln in enumerate(effective_lines):
-        m = re.match(
-            r"^##\s+Step\s+(\d+)(?:\s+(?:—|--|-)?\s*(.+))?\s*$", ln
-        )
+        m = re.match(r"^##\s+Step\s+(\d+)(?:\s+(?:—|--|-)?\s*(.+))?\s*$", ln)
         if m:
             step_num = int(m.group(1))
             step_title = (m.group(2) or "").strip()
@@ -116,9 +114,7 @@ def parse(text: str) -> tuple[dict[str, Any], list[str]]:
     seen_nums: set[int] = set()
     for ln_no, snum, _ in step_starts:
         if snum in seen_nums:
-            errors.append(
-                f"line {ln_no}: duplicate Step {snum} — step numbers must be unique"
-            )
+            errors.append(f"line {ln_no}: duplicate Step {snum} — step numbers must be unique")
         seen_nums.add(snum)
 
     # ---- extract intro prose (before the first Step heading) ---------------
@@ -136,9 +132,7 @@ def parse(text: str) -> tuple[dict[str, Any], list[str]]:
     if title_line is not None:
         idx_in_intro = title_line - body_start - 1
         if 0 <= idx_in_intro < len(intro_lines):
-            intro_lines = (
-                intro_lines[:idx_in_intro] + intro_lines[idx_in_intro + 1 :]
-            )
+            intro_lines = intro_lines[:idx_in_intro] + intro_lines[idx_in_intro + 1 :]
 
     intro_prose = _join_prose(intro_lines)
 

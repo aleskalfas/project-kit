@@ -77,9 +77,7 @@ def test_post_comment_pr_targets_gh_pr_comment(monkeypatch) -> None:
 
 
 def test_post_comment_failure_returns_false(monkeypatch) -> None:
-    monkeypatch.setattr(
-        comment, "gh_run", lambda args, config, **kwargs: _FakeProc(1, "boom")
-    )
+    monkeypatch.setattr(comment, "gh_run", lambda args, config, **kwargs: _FakeProc(1, "boom"))
     assert comment.post_comment("issue", 1, "x", {}) is False
 
 
@@ -103,8 +101,7 @@ def test_structured_reason_flags_dec028_remote_verdict() -> None:
 
 def test_structured_reason_flags_dec028_local_verdict() -> None:
     assert (
-        comment.structured_comment_reason("Reviewer agent (local, reviewer): APPROVED")
-        is not None
+        comment.structured_comment_reason("Reviewer agent (local, reviewer): APPROVED") is not None
     )
 
 
@@ -116,8 +113,7 @@ def test_structured_reason_flags_approved_prefix() -> None:
 
 def test_structured_reason_flags_audit_templates() -> None:
     assert (
-        comment.structured_comment_reason("Bypassed by Ada <ada@x.io>: urgent hotfix")
-        is not None
+        comment.structured_comment_reason("Bypassed by Ada <ada@x.io>: urgent hotfix") is not None
     )
     assert comment.structured_comment_reason("Approved by bypass: ci flake") is not None
 

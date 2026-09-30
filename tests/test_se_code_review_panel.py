@@ -43,19 +43,13 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-PM_SCRIPTS_DIR = (
-    REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
-)
+PM_SCRIPTS_DIR = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
 RR_PATH = PM_SCRIPTS_DIR / "_lib" / "required_reviewers.py"
 RC_PATH = PM_SCRIPTS_DIR / "_lib" / "review_contributions.py"
 CC_PATH = PM_SCRIPTS_DIR / "_lib" / "contribution_collector.py"
 
 DECLARATION_PATH = (
-    REPO_ROOT
-    / ".pkit"
-    / "capabilities"
-    / "software-engineering"
-    / "review-contributions.yaml"
+    REPO_ROOT / ".pkit" / "capabilities" / "software-engineering" / "review-contributions.yaml"
 )
 
 
@@ -152,9 +146,7 @@ def test_floor_reviewers_ride_touches_code(panel_collection, rc):
     the doc-lens escape a mislabeled/unclassified code PR would otherwise use.
     """
     floor_reviewers = {
-        rule.reviewer
-        for rule in panel_collection.rules
-        if rule.floor == rc.FLOOR_TOUCHES_CODE
+        rule.reviewer for rule in panel_collection.rules if rule.floor == rc.FLOOR_TOUCHES_CODE
     }
     assert floor_reviewers == {"code-reviewer", "security-reviewer", "docs-reviewer"}
 
@@ -181,14 +173,18 @@ def test_code_pr_pulls_in_code_and_security_via_floor(rr, panel_collection):
     `type:*` wildcard — a feature PR gets the full panel.
     """
     res = _resolve(
-        rr, panel_collection,
+        rr,
+        panel_collection,
         closing=[42],
         labels={42: ["type:feature", "priority:High"]},
         changed=["src/app.py", "README.md"],
     )
     assert res.ok
     assert set(res.required_local) == {
-        "reviewer", "code-reviewer", "security-reviewer", "docs-reviewer",
+        "reviewer",
+        "code-reviewer",
+        "security-reviewer",
+        "docs-reviewer",
     }
     assert res.contributed_by == {
         "code-reviewer": "software-engineering",
@@ -201,7 +197,8 @@ def test_code_pr_floor_fires_for_docs_typed_issue(rr, panel_collection):
     """The #715 gate-escape backstop: a code diff on a `type:docs` issue still
     pulls in the floor reviewers (code + security), plus docs via the wildcard."""
     res = _resolve(
-        rr, panel_collection,
+        rr,
+        panel_collection,
         closing=[7],
         labels={7: ["type:docs"]},
         changed=["scripts/deploy.sh"],
@@ -219,13 +216,17 @@ def test_code_pr_unclassified_still_gets_all_floor_reviewers(rr, panel_collectio
     (G2), so the doc-lens does not escape on a mislabeled/unclassified code PR —
     the `type:*` wildcard finds no axis here, but the floor still requires it."""
     res = _resolve(
-        rr, panel_collection,
+        rr,
+        panel_collection,
         closing=[],
         changed=["lib/core.py"],
     )
     assert res.ok
     assert set(res.required_local) == {
-        "reviewer", "code-reviewer", "security-reviewer", "docs-reviewer",
+        "reviewer",
+        "code-reviewer",
+        "security-reviewer",
+        "docs-reviewer",
     }
 
 
@@ -236,7 +237,8 @@ def test_docs_only_pr_resolves_docs_reviewer_only(rr, panel_collection):
     """A docs-only PR pulls in docs-reviewer (type:* wildcard) but NOT the floor
     reviewers — a docs-only diff does not touch code."""
     res = _resolve(
-        rr, panel_collection,
+        rr,
+        panel_collection,
         closing=[13],
         labels={13: ["type:docs"]},
         changed=["README.md", "docs/guide.rst", "docs/img/diagram.png"],
@@ -276,9 +278,7 @@ def _write_manifest(repo_root: Path, capability_names: list[str]) -> None:
             f"    manifest: .pkit/capabilities/{name}/manifest.yaml",
         ]
     (repo_root / ".pkit").mkdir(parents=True, exist_ok=True)
-    (repo_root / ".pkit" / "manifest.yaml").write_text(
-        "\n".join(lines) + "\n", encoding="utf-8"
-    )
+    (repo_root / ".pkit" / "manifest.yaml").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def _install_shipped_declaration(repo_root: Path) -> None:
@@ -319,7 +319,10 @@ def test_collect_contributions_end_to_end_reads_shipped_panel(rr, tmp_path):
     )
     assert res.ok, res.error
     assert set(res.required_local) == {
-        "reviewer", "code-reviewer", "security-reviewer", "docs-reviewer",
+        "reviewer",
+        "code-reviewer",
+        "security-reviewer",
+        "docs-reviewer",
     }
     assert res.contributed_by == {
         "code-reviewer": "software-engineering",
@@ -382,14 +385,18 @@ def _pre_existing_clause(agent: str) -> str:
         REPO_ROOT / ".pkit" / "capabilities" / "software-engineering" / "agents" / f"{agent}.md"
     ).read_text(encoding="utf-8")
     lines = [line for line in body.splitlines() if line.startswith(_PRE_EXISTING_LEAD)]
-    assert len(lines) == 1, f"{agent}: expected exactly one pre-existing-defect clause, found {len(lines)}"
+    assert len(lines) == 1, (
+        f"{agent}: expected exactly one pre-existing-defect clause, found {len(lines)}"
+    )
     return lines[0]
 
 
 def test_pre_existing_clause_is_identical_across_the_panel():
     """The block threshold is per-agent but shared (DEC-002 D3): the three copies must not drift."""
     clauses = {agent: _pre_existing_clause(agent) for agent in _PANEL_AGENTS}
-    assert len(set(clauses.values())) == 1, "pre-existing-defect clause differs between panel agents"
+    assert len(set(clauses.values())) == 1, (
+        "pre-existing-defect clause differs between panel agents"
+    )
 
 
 @pytest.mark.parametrize("agent", _PANEL_AGENTS)

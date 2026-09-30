@@ -142,8 +142,7 @@ def main() -> int:
     path = workstreams_path(capability_root)
     if not path.is_file():
         print(
-            f"error: {path} does not exist. Run `add-workstream` or the "
-            "v0.5.0 migration first.",
+            f"error: {path} does not exist. Run `add-workstream` or the v0.5.0 migration first.",
             file=sys.stderr,
         )
         return 2
@@ -181,9 +180,7 @@ def main() -> int:
     # flag-only test would let a board adopter whose map binds `workstream` to
     # their own labels reach `gh label delete` on a name the kit never owned.
     substrate_map = axis_labels.load_substrate_map(capability_root)
-    kit_label_note = axis_carriage.kit_label_mutation_note(
-        "workstream", config, substrate_map
-    )
+    kit_label_note = axis_carriage.kit_label_mutation_note("workstream", config, substrate_map)
     kit_labels = kit_label_note is None
 
     # Per-loser issue counts (best-effort).
@@ -193,7 +190,9 @@ def main() -> int:
         for loser in args.losers:
             n = _gh_count_label_uses(axis_labels.label("workstream", loser), config)
             impact[loser] = n
-            print(f"  loser {loser!r}: {n if n is not None else '?'} issue(s) tagged {axis_labels.label('workstream', loser)}")
+            print(
+                f"  loser {loser!r}: {n if n is not None else '?'} issue(s) tagged {axis_labels.label('workstream', loser)}"
+            )
     else:
         reason = kit_label_note or "--skip-labels"
         for loser in args.losers:
@@ -203,9 +202,11 @@ def main() -> int:
         print("\n[dry-run] nothing written; no gh invocation.")
         return 0
     if not args.yes and sys.stdin.isatty():
-        reply = input(
-            f"Merge {len(args.losers)} loser(s) into {args.survivor!r}? [y/N] "
-        ).strip().lower()
+        reply = (
+            input(f"Merge {len(args.losers)} loser(s) into {args.survivor!r}? [y/N] ")
+            .strip()
+            .lower()
+        )
         if reply not in ("y", "yes"):
             print("aborted.", file=sys.stderr)
             return 0
@@ -235,9 +236,7 @@ def main() -> int:
                     file=sys.stderr,
                 )
 
-    print(
-        f"\n[ok] merged {len(args.losers)} loser(s) into {args.survivor!r}."
-    )
+    print(f"\n[ok] merged {len(args.losers)} loser(s) into {args.survivor!r}.")
     return 0
 
 

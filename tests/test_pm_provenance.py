@@ -74,9 +74,7 @@ def test_footer_shape_obeys_marker_constraints(prov, versions) -> None:
     """An un-stripped footer must not collide with any scanned construct."""
     footer = prov.render_footer(versions)
     body_lines = [
-        ln
-        for ln in footer.splitlines()
-        if ln.strip() and not ln.strip().startswith("<!--")
+        ln for ln in footer.splitlines() if ln.strip() and not ln.strip().startswith("<!--")
     ]
     for ln in body_lines:
         s = ln.strip()

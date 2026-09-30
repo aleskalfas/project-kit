@@ -252,8 +252,7 @@ def _tracked_paths(root: Path) -> frozenset[str] | None:
                 f"git said: {stderr}"
             )
         raise RuntimeError(
-            f"hatch_build: `git ls-files` failed in {root} (exit {proc.returncode}): "
-            f"{stderr}"
+            f"hatch_build: `git ls-files` failed in {root} (exit {proc.returncode}): {stderr}"
         )
     return frozenset(p for p in proc.stdout.decode("utf-8").split("\0") if p)
 
@@ -282,9 +281,7 @@ def _untracked_source_warning(root: Path) -> str | None:
     )
 
 
-def _shippable_files(
-    base: Path, *, root: Path, tracked: frozenset[str] | None
-) -> Iterator[Path]:
+def _shippable_files(base: Path, *, root: Path, tracked: frozenset[str] | None) -> Iterator[Path]:
     """Every file under `base` a build may carry, in sorted order.
 
     Tracked files only when `tracked` is given, else the tree as found; build
@@ -402,9 +399,7 @@ class CapabilityBoundaryHook(BuildHookInterface):
         else:
             self._initialize_wheel(version, tracked, build_data)
 
-    def _initialize_sdist(
-        self, tracked: frozenset[str] | None, build_data: dict[str, Any]
-    ) -> None:
+    def _initialize_sdist(self, tracked: frozenset[str] | None, build_data: dict[str, Any]) -> None:
         """Force-include the sdist from tracked files, minus `.pkit/`'s `withhold`.
 
         The sdist's own walk cannot do this: hatchling takes every file it finds
@@ -433,8 +428,7 @@ class CapabilityBoundaryHook(BuildHookInterface):
         globs = self.config.get(SDIST_WITHHOLD_KEY, [])
         if not isinstance(globs, list) or not all(isinstance(g, str) for g in globs):
             raise TypeError(
-                f"hatch_build: sdist hook option `{SDIST_WITHHOLD_KEY}` must be a "
-                "list of strings"
+                f"hatch_build: sdist hook option `{SDIST_WITHHOLD_KEY}` must be a list of strings"
             )
         withhold = pathspec.GitIgnoreSpec.from_lines(globs)
 

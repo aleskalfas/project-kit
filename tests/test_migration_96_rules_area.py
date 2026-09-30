@@ -179,6 +179,4 @@ class TestWireClaudeMdRulesInclude:
 
         content = (tmp_path / "CLAUDE.md").read_text(encoding="utf-8")
         for line in original.splitlines():
-            assert line in content.splitlines(), (
-                f"adopter line {line!r} was lost after migration"
-            )
+            assert line in content.splitlines(), f"adopter line {line!r} was lost after migration"

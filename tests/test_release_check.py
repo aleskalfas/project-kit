@@ -759,7 +759,6 @@ def test_guard_reads_the_worktree_at_cwd_not_the_interpreter_checkout(
     worktree — the `extra` capability exists only there — and says which tree it
     is operating on."""
 
-
     checkout, worktree = _make_checkout_with_worktree(tmp_path)
     _point_interpreter_at(monkeypatch, checkout)
     monkeypatch.chdir(worktree)
@@ -780,7 +779,6 @@ def test_guard_from_the_checkout_itself_is_silent_and_unchanged(
 ) -> None:
     """Self-host / dev live-edit: cwd is the checkout, both roots coincide — no
     notice, and the worktree-only component is invisible."""
-
 
     checkout, _worktree = _make_checkout_with_worktree(tmp_path)
     _point_interpreter_at(monkeypatch, checkout)

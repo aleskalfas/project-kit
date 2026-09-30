@@ -73,9 +73,7 @@ from _lib.workstreams import (  # noqa: E402
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description=(
-            "Add a workstream to project/workstreams.yaml per DEC-018."
-        ),
+        description=("Add a workstream to project/workstreams.yaml per DEC-018."),
     )
     parser.add_argument(
         "slug",
@@ -105,10 +103,7 @@ def main() -> int:
     parser.add_argument(
         "--skip-label",
         action="store_true",
-        help=(
-            "Skip the `gh label create workstream:<slug>` step "
-            "(label-substrate adopters only)."
-        ),
+        help=("Skip the `gh label create workstream:<slug>` step (label-substrate adopters only)."),
     )
     parser.add_argument(
         "--capability-root",
@@ -194,9 +189,7 @@ def main() -> int:
     # created. Only the greenfield (`kit-label`) arm mutates kit labels; every
     # other carriage suppresses the label half and says so.
     substrate_map = axis_labels.load_substrate_map(capability_root)
-    kit_label_note = axis_carriage.kit_label_mutation_note(
-        "workstream", config, substrate_map
-    )
+    kit_label_note = axis_carriage.kit_label_mutation_note("workstream", config, substrate_map)
     kit_labels = kit_label_note is None
 
     current = _read_workstreams_file_or_legacy(capability_root, yaml_loader)
@@ -228,7 +221,9 @@ def main() -> int:
         print(f"  reason:      {new_entry['deprecated_reason']}")
     print(f"  target file: {workstreams_path(capability_root)}")
     if kit_labels and not args.skip_label:
-        print(f"  label:       create `{axis_labels.label('workstream', args.slug)}` (label-substrate)")
+        print(
+            f"  label:       create `{axis_labels.label('workstream', args.slug)}` (label-substrate)"
+        )
     elif kit_label_note is not None:
         print(f"  label:       none — {kit_label_note}")
 
@@ -291,9 +286,7 @@ def _read_workstreams_file_or_legacy(
     return config.get("workstreams")
 
 
-def _add_to_file(
-    capability_root: Path, slug: str, entry: dict
-) -> bool:
+def _add_to_file(capability_root: Path, slug: str, entry: dict) -> bool:
     """Append the entry to workstreams.yaml (round-trip preserving)."""
     path = workstreams_path(capability_root)
     yaml = YAML(typ="rt")
@@ -373,8 +366,7 @@ def _gh_label_create(slug: str, config: dict) -> bool:
     if "already exists" in proc.stderr or "already exists" in proc.stdout:
         return True
     print(
-        f"error: gh label create failed (exit {proc.returncode}).\n"
-        f"stderr: {proc.stderr.strip()}",
+        f"error: gh label create failed (exit {proc.returncode}).\nstderr: {proc.stderr.strip()}",
         file=sys.stderr,
     )
     return False

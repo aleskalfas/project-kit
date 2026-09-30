@@ -52,8 +52,14 @@ def _milestones(ei, *open_ones: tuple[int, str]):
     return resolve
 
 
-def _issue(*, body: str = TASK_BODY, milestone=(5, "Milestone 5"), labels=("state:backlog",),
-           title: str = "[Task] move me", state: str = "OPEN") -> dict:
+def _issue(
+    *,
+    body: str = TASK_BODY,
+    milestone=(5, "Milestone 5"),
+    labels=("state:backlog",),
+    title: str = "[Task] move me",
+    state: str = "OPEN",
+) -> dict:
     return {
         "title": title,
         "body": body,
@@ -63,8 +69,15 @@ def _issue(*, body: str = TASK_BODY, milestone=(5, "Milestone 5"), labels=("stat
     }
 
 
-def _run(ei, monkeypatch, argv: list[str], issue: dict, *, open_milestones=((5, "Milestone 5"), (6, "Milestone 6")),
-         comments: list | None = None) -> SimpleNamespace:
+def _run(
+    ei,
+    monkeypatch,
+    argv: list[str],
+    issue: dict,
+    *,
+    open_milestones=((5, "Milestone 5"), (6, "Milestone 6")),
+    comments: list | None = None,
+) -> SimpleNamespace:
     """Run main() with every gate passed and every write captured.
 
     A milestone flag without `--reason` gets one, since the change requires it
@@ -78,7 +91,9 @@ def _run(ei, monkeypatch, argv: list[str], issue: dict, *, open_milestones=((5, 
     monkeypatch.setattr(ei.session_guard, "enforce", lambda **k: True)
     monkeypatch.setattr(ei, "load_adopter_config", lambda _root: {})
     monkeypatch.setattr(ei, "_read_members", lambda *a: [])
-    monkeypatch.setattr(ei, "resolve_invoker_identity", lambda **k: SimpleNamespace(github_login="me"))
+    monkeypatch.setattr(
+        ei, "resolve_invoker_identity", lambda **k: SimpleNamespace(github_login="me")
+    )
     monkeypatch.setattr(ei, "check_membership", lambda *a: SimpleNamespace(allowed=True))
     monkeypatch.setattr(ei.axis_labels, "load_substrate_map", lambda *_a, **_k: None)
     monkeypatch.setattr(ei, "_gh_get_issue", lambda _n, _config: issue)
@@ -182,7 +197,9 @@ def test_scheduling_a_label_less_todo_issue_is_refused(ei, monkeypatch, capsys) 
     would move the issue Todo → Backlog without promote-issue's audit."""
     body = TASK_BODY.replace("Milestone: [#5](../milestone/5)", "EPIC: #10")
     rec = _run(
-        ei, monkeypatch, ["42", "--milestone", "6", "--yes"],
+        ei,
+        monkeypatch,
+        ["42", "--milestone", "6", "--yes"],
         _issue(body=body, milestone=None, labels=()),
     )
     assert rec.rc == 1
@@ -193,7 +210,9 @@ def test_scheduling_a_label_less_todo_issue_is_refused(ei, monkeypatch, capsys) 
 def test_a_state_label_keeps_the_position_so_attach_is_allowed(ei, monkeypatch) -> None:
     body = TASK_BODY.replace("Milestone: [#5](../milestone/5)", "EPIC: #10")
     rec = _run(
-        ei, monkeypatch, ["42", "--milestone", "6", "--yes"],
+        ei,
+        monkeypatch,
+        ["42", "--milestone", "6", "--yes"],
         _issue(body=body, milestone=None, labels=("state:in-progress",)),
     )
     assert rec.rc == 0
@@ -229,7 +248,9 @@ def test_clear_refuses_to_orphan_a_required_milestone_parent(ei, monkeypatch, ca
 def test_clear_drops_an_optional_milestone_line_on_an_epic(ei, monkeypatch) -> None:
     body = "Milestone: [#5](../milestone/5)\n\n## Thesis\nwhy\n"
     rec = _run(
-        ei, monkeypatch, ["42", "--clear-milestone", "--yes"],
+        ei,
+        monkeypatch,
+        ["42", "--clear-milestone", "--yes"],
         _issue(body=body, title="[EPIC] Big thing"),
     )
     assert rec.rc == 0
@@ -266,7 +287,8 @@ def test_a_reason_without_a_milestone_flag_is_refused(ei, monkeypatch) -> None:
 
 def test_the_change_posts_an_audit_comment_before_writing(ei, monkeypatch) -> None:
     rec = _run(
-        ei, monkeypatch,
+        ei,
+        monkeypatch,
         ["42", "--milestone", "6", "--reason", "belongs to the second increment", "--yes"],
         _issue(),
     )
@@ -315,7 +337,9 @@ def test_an_epic_may_be_attached(ei, monkeypatch) -> None:
     form offers the milestone line, so its type may carry one."""
     body = "## Outcome\nwhy\n\n## Success criteria\n- [ ] it works\n"
     rec = _run(
-        ei, monkeypatch, ["885", "--milestone", "6", "--yes"],
+        ei,
+        monkeypatch,
+        ["885", "--milestone", "6", "--yes"],
         _issue(body=body, title="[EPIC] Big thing", milestone=None, labels=("state:in-progress",)),
     )
     assert rec.rc == 0
@@ -324,7 +348,9 @@ def test_an_epic_may_be_attached(ei, monkeypatch) -> None:
 
 def test_an_unrecognised_type_may_not_carry_a_milestone(ei, monkeypatch, capsys) -> None:
     rec = _run(
-        ei, monkeypatch, ["42", "--milestone", "6", "--yes"],
+        ei,
+        monkeypatch,
+        ["42", "--milestone", "6", "--yes"],
         _issue(title="Untyped title", labels=("state:backlog",)),
     )
     assert rec.rc == 1
@@ -335,8 +361,14 @@ def test_an_unrecognised_type_may_not_carry_a_milestone(ei, monkeypatch, capsys)
 def test_type_may_carry_milestone_reads_the_schema(ei) -> None:
     types = {
         "types": {
-            "epic": {"parent_issue_types": [], "parent_ref_form": "Milestone: [#<N>](../milestone/<N>)"},
-            "feature": {"parent_issue_types": ["epic", "milestone"], "parent_ref_form": "EPIC: #<N>"},
+            "epic": {
+                "parent_issue_types": [],
+                "parent_ref_form": "Milestone: [#<N>](../milestone/<N>)",
+            },
+            "feature": {
+                "parent_issue_types": ["epic", "milestone"],
+                "parent_ref_form": "EPIC: #<N>",
+            },
             "leaf": {"parent_issue_types": ["feature"], "parent_ref_form": "Feature: #<N>"},
         }
     }

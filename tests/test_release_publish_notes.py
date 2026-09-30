@@ -130,9 +130,14 @@ def test_publish_creates_notes_only_release(
     # the body is supplied via --notes, --verify-tag guards a missing tag, and
     # there is no --generate-notes (we supply our own notes).
     assert create == [
-        "gh", "release", "create", "v1.141.0",
-        "--title", "v1.141.0",
-        "--notes", notes,
+        "gh",
+        "release",
+        "create",
+        "v1.141.0",
+        "--title",
+        "v1.141.0",
+        "--notes",
+        notes,
         "--verify-tag",
     ]
     assert "Ship the notes-only GitHub Release. ([#485])" in notes
@@ -158,9 +163,7 @@ def test_publish_updates_when_release_exists(
     assert "Updated notes-only GitHub Release v1.141.0" in message
 
 
-def test_publish_dry_run_does_not_call_gh(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_publish_dry_run_does_not_call_gh(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     repo_root = _write_changelog(tmp_path)
 
     def boom(*args: object, **kwargs: object) -> None:
@@ -175,13 +178,9 @@ def test_publish_dry_run_does_not_call_gh(
     assert "Ship the notes-only GitHub Release. ([#485])" in message
 
 
-def test_publish_missing_version_errors(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_publish_missing_version_errors(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     repo_root = _write_changelog(tmp_path)
-    monkeypatch.setattr(
-        release.subprocess, "run", lambda *a, **k: pytest.fail("must not call gh")
-    )
+    monkeypatch.setattr(release.subprocess, "run", lambda *a, **k: pytest.fail("must not call gh"))
     with pytest.raises(click.ClickException) as exc:
         release.publish_release_notes(repo_root, "9.9.9")
     assert "no section for version '9.9.9'" in str(exc.value)

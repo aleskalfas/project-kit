@@ -118,12 +118,12 @@ def test_strip_tolerates_empty_body(infer) -> None:
 # --- malformed markers are NOT stripped (the typo'd-marker guard) -----------
 
 MALFORMED = [
-    "Integration: integration/Foo_Bar!!",   # invalid slug characters
-    "Integration:  integration/foo",         # two spaces after the key
-    "Integration: integration/foo-",         # trailing hyphen
-    "Integration: integration/x",            # single-char slug (min 2 per schema)
-    "Integration: integration/a/b/c",        # slashes in slug
-    "Integration:integration/foo",           # no space after the key
+    "Integration: integration/Foo_Bar!!",  # invalid slug characters
+    "Integration:  integration/foo",  # two spaces after the key
+    "Integration: integration/foo-",  # trailing hyphen
+    "Integration: integration/x",  # single-char slug (min 2 per schema)
+    "Integration: integration/a/b/c",  # slashes in slug
+    "Integration:integration/foo",  # no space after the key
 ]
 
 

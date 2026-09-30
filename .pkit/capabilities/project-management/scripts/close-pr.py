@@ -145,10 +145,7 @@ def main() -> int:
             return 0
 
     if args.reason:
-        comment_body = (
-            f"[close-pr] {args.reason}\n\n"
-            "Closed via `pkit project-management close-pr`."
-        )
+        comment_body = f"[close-pr] {args.reason}\n\nClosed via `pkit project-management close-pr`."
         if not _gh_pr_comment(args.pr_number, comment_body, config):
             return 3
 
@@ -178,8 +175,7 @@ def _gh_get_pr(pr_number: int, config: dict) -> dict | None:
         return None
     if proc.returncode != 0:
         print(
-            f"error: gh pr view {pr_number} failed.\n"
-            f"stderr: {proc.stderr.strip()}",
+            f"error: gh pr view {pr_number} failed.\nstderr: {proc.stderr.strip()}",
             file=sys.stderr,
         )
         return None
@@ -211,8 +207,7 @@ def _gh_pr_close(pr_number: int, *, delete_branch: bool, config: dict) -> bool:
         return False
     if proc.returncode != 0:
         print(
-            f"error: gh pr close failed (exit {proc.returncode}).\n"
-            f"stderr: {proc.stderr.strip()}",
+            f"error: gh pr close failed (exit {proc.returncode}).\nstderr: {proc.stderr.strip()}",
             file=sys.stderr,
         )
         return False

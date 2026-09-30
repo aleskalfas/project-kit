@@ -244,15 +244,11 @@ def collect(
     repo_root: Path,
     *,
     filename: str,
-    parse_entries: Callable[
-        [Any, str], tuple[tuple[TItem, ...], tuple[ContributionError, ...]]
-    ],
+    parse_entries: Callable[[Any, str], tuple[tuple[TItem, ...], tuple[ContributionError, ...]]],
     disposition: Disposition,
     expected_schema_version: int | None = None,
     schema_version_prefix: str = "contribution",
-    resolve: Callable[
-        [Path, str, TItem], tuple[TItem, tuple[ContributionError, ...]]
-    ]
+    resolve: Callable[[Path, str, TItem], tuple[TItem, tuple[ContributionError, ...]]]
     | None = None,
     load_yaml: Callable[[Path], Any] = default_load_yaml,
 ) -> ContributionCollection[TItem]:
@@ -298,9 +294,7 @@ def collect(
     errors: list[ContributionError] = []
 
     for capability in capabilities:
-        decl_path = (
-            repo_root / ".pkit" / "capabilities" / capability / filename
-        )
+        decl_path = repo_root / ".pkit" / "capabilities" / capability / filename
         try:
             decl_data = load_yaml(decl_path)
         except RuntimeError as exc:

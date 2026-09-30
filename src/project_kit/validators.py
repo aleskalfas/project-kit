@@ -361,7 +361,8 @@ def capability_validators(target_root: Path) -> tuple[Validator, ...]:
                 Validator(
                     name=f"{owner}:{name}",
                     run=query.run,
-                    order=order if isinstance(order, int) and not isinstance(order, bool)
+                    order=order
+                    if isinstance(order, int) and not isinstance(order, bool)
                     else CAPABILITY_ORDER_DEFAULT,
                     owner=owner,
                     help=command.help,
@@ -476,8 +477,16 @@ def _answer_of(document: Any, *, location: str, command: str) -> Outcome:
 def _finding(entry: Any) -> Finding | None:
     if not isinstance(entry, Mapping):
         return None
-    severity_value, location, message = entry.get("severity"), entry.get("location"), entry.get("message")
-    if not isinstance(severity_value, str) or not isinstance(location, str) or not isinstance(message, str):
+    severity_value, location, message = (
+        entry.get("severity"),
+        entry.get("location"),
+        entry.get("message"),
+    )
+    if (
+        not isinstance(severity_value, str)
+        or not isinstance(location, str)
+        or not isinstance(message, str)
+    ):
         return None
     try:
         severity = Severity(severity_value)
@@ -517,9 +526,7 @@ def select(
             f"unknown validator(s) {', '.join(repr(n) for n in unknown)}; "
             f"registered: {', '.join(v.name for v in registered)}."
         )
-    return tuple(
-        v for v in registered if (not only or v.name in only) and v.name not in skip
-    )
+    return tuple(v for v in registered if (not only or v.name in only) and v.name not in skip)
 
 
 # The values computed so far in the current run of `run_all`; None outside one.
@@ -594,9 +601,7 @@ def render(target_root: Path, results: Sequence[Result]) -> str:
             lines.append(f"    {finding.severity.value:<9}{finding.location}{label}")
             lines.append(f"      → {finding.message}")
         lines.append("")
-    counts = ", ".join(
-        f"{sum(r.outcome.count(s) for r in results)} {s.value}(s)" for s in Severity
-    )
+    counts = ", ".join(f"{sum(r.outcome.count(s) for r in results)} {s.value}(s)" for s in Severity)
     lines.append(f"  {len(results)} validator(s) ran; {counts}.")
     errors = sum(len(r.outcome.errors) for r in results)
     verdict = "All checks passed." if not errors else f"{errors} error(s) found."

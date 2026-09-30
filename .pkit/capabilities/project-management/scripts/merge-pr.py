@@ -79,6 +79,7 @@ sys.path.insert(0, str(_HERE))
 from _lib import bootstrap_gate  # noqa: E402
 from _lib import pr_merge  # noqa: E402
 from _lib.ci_checks import evaluate_ci_gate  # noqa: E402
+
 # DEC-007's checkbox close-gate — the ONE implementation (`_lib.checkbox_gate`),
 # shared with close-issue, done-work and the engine predicate.
 from _lib.checkbox_gate import unticked_boxes as _unticked_boxes  # noqa: E402
@@ -86,6 +87,7 @@ from _lib.audit import bypass_audit_key, render_ci_bypass_audit_body  # noqa: E4
 from _lib.comment import post_audit_once  # noqa: E402
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
 from _lib.hooks import fire_hooks  # noqa: E402
+
 # The one closing-reference reader, shared with done-work, open-pr and
 # validate-pr, so every verb agrees on which issues a PR closes (#1086).
 from _lib.pr_validation import (  # noqa: E402
@@ -218,8 +220,7 @@ def main() -> int:
 
     if pr_state != "open":
         print(
-            f"\n[refused] PR is not open (state: {pr_state}). "
-            "Cannot merge.",
+            f"\n[refused] PR is not open (state: {pr_state}). Cannot merge.",
             file=sys.stderr,
         )
         return 1
@@ -238,9 +239,7 @@ def main() -> int:
 
     # Closing-issue + PR-body checkbox gate.
     closing_issues = _extract_closing_issues(pr_body)
-    print(
-        f"  closes: {', '.join(f'#{n}' for n in closing_issues) or '<none>'}"
-    )
+    print(f"  closes: {', '.join(f'#{n}' for n in closing_issues) or '<none>'}")
     if not closing_issues:
         print(
             "\n[refused] PR body has no `Closes #N` / `Fixes #N` / "
@@ -251,7 +250,9 @@ def main() -> int:
         return 1
 
     if not args.skip_checkbox_gate:
-        unticked_findings = _gather_unticked_findings(args.pr_number, pr_body, closing_issues, config)
+        unticked_findings = _gather_unticked_findings(
+            args.pr_number, pr_body, closing_issues, config
+        )
         if unticked_findings:
             print("\n[refused] DEC-007 checkbox close-gate:")
             for src, lines in unticked_findings.items():
@@ -316,12 +317,15 @@ def main() -> int:
     # first per validation-severity.yaml).
     if not ci_gate.passing and args.bypass_ci:
         if not _post_ci_bypass_audit(
-            args.pr_number, args.bypass_ci.strip(), invoker, ci_gate.failing_checks,
-            config, head=str(pr.get("headRefOid") or ""),
+            args.pr_number,
+            args.bypass_ci.strip(),
+            invoker,
+            ci_gate.failing_checks,
+            config,
+            head=str(pr.get("headRefOid") or ""),
         ):
             print(
-                "[warn] could not post CI-bypass audit comment; aborting "
-                "before merge.",
+                "[warn] could not post CI-bypass audit comment; aborting before merge.",
                 file=sys.stderr,
             )
             return 3
@@ -330,7 +334,10 @@ def main() -> int:
     # No `--delete-branch`: the mechanic is `_lib.pr_merge`'s — the one
     # implementation `done-work` also runs (#882).
     if not pr_merge.squash_merge(
-        args.pr_number, pr_title=pr_title, admin=args.admin, config=config,
+        args.pr_number,
+        pr_title=pr_title,
+        admin=args.admin,
+        config=config,
     ):
         return 3
 
@@ -430,7 +437,12 @@ def _ci_bypass_audit_body(
     """Render the CI-bypass audit comment — the shape shared with `done-work`
     (`_lib.audit.render_ci_bypass_audit_body`) under this script's kind marker."""
     return render_ci_bypass_audit_body(
-        CI_BYPASS_AUDIT_MARKER, invoker, reason, failing_checks, head, key,
+        CI_BYPASS_AUDIT_MARKER,
+        invoker,
+        reason,
+        failing_checks,
+        head,
+        key,
     )
 
 
@@ -451,8 +463,11 @@ def _post_ci_bypass_audit(
     """
     key = _ci_bypass_audit_key(reason, head)
     return post_audit_once(
-        "pr", pr_number, key,
-        _ci_bypass_audit_body(invoker, reason, failing_checks, key, head), config,
+        "pr",
+        pr_number,
+        key,
+        _ci_bypass_audit_body(invoker, reason, failing_checks, key, head),
+        config,
         run=gh_run,
         present_note="ci-bypass audit comment already present; idempotent skip",
         posted_note="ci-bypass audit comment posted",
@@ -481,8 +496,7 @@ def _gh_get_pr(pr_number: int, config: dict) -> dict | None:
         return None
     if proc.returncode != 0:
         print(
-            f"error: gh pr view {pr_number} failed.\n"
-            f"stderr: {proc.stderr.strip()}",
+            f"error: gh pr view {pr_number} failed.\nstderr: {proc.stderr.strip()}",
             file=sys.stderr,
         )
         return None

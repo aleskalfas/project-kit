@@ -224,9 +224,7 @@ class _MultiValueAxisError(Exception):
     def __init__(self, axis: str, values: list[str]):
         self.axis = axis
         self.values = values
-        super().__init__(
-            f"issue carries multiple {axis} labels: " + ", ".join(sorted(values))
-        )
+        super().__init__(f"issue carries multiple {axis} labels: " + ", ".join(sorted(values)))
 
 
 # Type of the injected closing-issue-numbers resolver. Returns the issue
@@ -341,9 +339,7 @@ def resolve_required_local_reviewers(
             )
         )
 
-    contributed_rules = _dedup_rules_by_reviewer(
-        list(classification_rules) + list(floor_rules)
-    )
+    contributed_rules = _dedup_rules_by_reviewer(list(classification_rules) + list(floor_rules))
     required_local = _dedup_preserve_order(
         list(baseline_local) + [rule.reviewer for rule in contributed_rules]
     )
@@ -414,21 +410,78 @@ def _satisfied_floors(changed_paths: list[str]) -> set[str]:
 # under a `docs/` directory (e.g. `docs/conf.py`, `docs/deploy.sh`), so real
 # code checked into a docs tree cannot slip past the floor. Centralised here so
 # the definition is one edit away.
-_CODE_SUFFIXES = frozenset({
-    # source languages
-    ".py", ".pyi", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs",
-    ".go", ".rs", ".rb", ".java", ".kt", ".kts", ".scala", ".groovy",
-    ".c", ".h", ".cc", ".cpp", ".cxx", ".hpp", ".hh", ".cs", ".swift",
-    ".m", ".mm", ".php", ".pl", ".pm", ".lua", ".r", ".jl", ".dart",
-    ".ex", ".exs", ".erl", ".clj", ".cljs", ".hs", ".ml", ".fs",
-    ".vb", ".sql",
-    # shell / batch scripts
-    ".sh", ".bash", ".zsh", ".fish", ".ksh", ".ps1", ".psm1",
-    ".bat", ".cmd",
-    # configuration / data / schema
-    ".yaml", ".yml", ".json", ".jsonc", ".toml", ".ini", ".cfg",
-    ".conf", ".xml", ".env", ".properties", ".gradle",
-})
+_CODE_SUFFIXES = frozenset(
+    {
+        # source languages
+        ".py",
+        ".pyi",
+        ".ts",
+        ".tsx",
+        ".js",
+        ".jsx",
+        ".mjs",
+        ".cjs",
+        ".go",
+        ".rs",
+        ".rb",
+        ".java",
+        ".kt",
+        ".kts",
+        ".scala",
+        ".groovy",
+        ".c",
+        ".h",
+        ".cc",
+        ".cpp",
+        ".cxx",
+        ".hpp",
+        ".hh",
+        ".cs",
+        ".swift",
+        ".m",
+        ".mm",
+        ".php",
+        ".pl",
+        ".pm",
+        ".lua",
+        ".r",
+        ".jl",
+        ".dart",
+        ".ex",
+        ".exs",
+        ".erl",
+        ".clj",
+        ".cljs",
+        ".hs",
+        ".ml",
+        ".fs",
+        ".vb",
+        ".sql",
+        # shell / batch scripts
+        ".sh",
+        ".bash",
+        ".zsh",
+        ".fish",
+        ".ksh",
+        ".ps1",
+        ".psm1",
+        ".bat",
+        ".cmd",
+        # configuration / data / schema
+        ".yaml",
+        ".yml",
+        ".json",
+        ".jsonc",
+        ".toml",
+        ".ini",
+        ".cfg",
+        ".conf",
+        ".xml",
+        ".env",
+        ".properties",
+        ".gradle",
+    }
+)
 
 # Filename suffixes treated as PURE DOCUMENTATION (not code) by the
 # `touches-code` floor — but ONLY for a file whose suffix is not in
@@ -448,11 +501,26 @@ _DOC_SUFFIXES = (".md", ".mdx", ".markdown", ".rst")
 # with an unrecognized suffix under `docs/` (e.g. `docs/tools/helper`) is NOT an
 # asset and stays code, so a script checked into a docs tree cannot slip past the
 # floor by lacking an extension.
-_DOC_ASSET_SUFFIXES = frozenset({
-    ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".ico", ".svg",
-    ".pdf", ".drawio", ".excalidraw",
-    ".woff", ".woff2", ".ttf", ".otf", ".eot",
-})
+_DOC_ASSET_SUFFIXES = frozenset(
+    {
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".gif",
+        ".webp",
+        ".bmp",
+        ".ico",
+        ".svg",
+        ".pdf",
+        ".drawio",
+        ".excalidraw",
+        ".woff",
+        ".woff2",
+        ".ttf",
+        ".otf",
+        ".eot",
+    }
+)
 
 # Path segments (matched case-insensitively) that mark a DOCUMENTATION
 # directory. A file under such a directory is demoted to documentation ONLY when
@@ -524,9 +592,7 @@ def _under_docs_dir(posix: PurePosixPath) -> bool:
     merely NAMED `docs` is not mistaken for one living under `docs/`. Segment
     matching is case-folded so `Docs/` reads the same as `docs/`.
     """
-    return any(
-        segment.lower() in _DOC_DIR_SEGMENTS for segment in posix.parts[:-1]
-    )
+    return any(segment.lower() in _DOC_DIR_SEGMENTS for segment in posix.parts[:-1])
 
 
 def _dedup_rules_by_reviewer(
@@ -582,9 +648,7 @@ def _closing_issue_classifications(
             # Could not read this issue's labels — its classification is
             # UNKNOWN, so a contributed reviewer it might require cannot be
             # dropped. Fail closed rather than treat as "no classification".
-            return _Unresolvable(
-                f"could not read labels for closing issue #{issue_number}"
-            )
+            return _Unresolvable(f"could not read labels for closing issue #{issue_number}")
         try:
             classification = _classification_from_labels(labels)
         except _MultiValueAxisError as exc:
@@ -617,10 +681,7 @@ def _classification_from_labels(labels: list) -> dict[str, str]:
     the operator fixes the labels (or `--bypass`). The guard is per-axis: a
     valid `type` and a broken multi-value `workstream` fail on the workstream.
     """
-    names = [
-        lbl.get("name", "") if isinstance(lbl, dict) else str(lbl)
-        for lbl in labels
-    ]
+    names = [lbl.get("name", "") if isinstance(lbl, dict) else str(lbl) for lbl in labels]
     classification: dict[str, str] = {}
     for axis in CLASSIFICATION_AXES:
         values: list[str] = []

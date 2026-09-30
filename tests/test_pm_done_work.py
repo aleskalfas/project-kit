@@ -16,10 +16,7 @@ import pytest
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SCRIPT = (
-    REPO_ROOT / ".pkit" / "capabilities" / "project-management"
-    / "scripts" / "done-work.py"
-)
+SCRIPT = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "done-work.py"
 
 
 @pytest.fixture(scope="module")
@@ -69,15 +66,20 @@ def _mark_bootstrapped(cap_root: Path) -> None:
 def _stub_pr_view(reviews, comments, author_login="author"):
     def fake_gh_run(args, config, **kwargs):
         import subprocess
+
         return subprocess.CompletedProcess(
-            args=args, returncode=0,
-            stdout=json.dumps({
-                "author": {"login": author_login},
-                "reviews": reviews,
-                "comments": comments,
-            }),
+            args=args,
+            returncode=0,
+            stdout=json.dumps(
+                {
+                    "author": {"login": author_login},
+                    "reviews": reviews,
+                    "comments": comments,
+                }
+            ),
             stderr="",
         )
+
     return fake_gh_run
 
 
@@ -95,9 +97,7 @@ def test_gate_refuses_empty_bypass(dw) -> None:
 
 
 def test_gate_passes_with_approved_review(dw, monkeypatch) -> None:
-    monkeypatch.setattr(dw, "gh_run", _stub_pr_view(
-        reviews=[{"state": "APPROVED"}], comments=[]
-    ))
+    monkeypatch.setattr(dw, "gh_run", _stub_pr_view(reviews=[{"state": "APPROVED"}], comments=[]))
     result = dw._check_approval_gate(99, {}, None, {})
     assert result.passed is True
     assert "APPROVED" in result.passed_via
@@ -105,9 +105,11 @@ def test_gate_passes_with_approved_review(dw, monkeypatch) -> None:
 
 def test_gate_uses_latest_review_state(dw, monkeypatch) -> None:
     """Earlier APPROVED, then CHANGES_REQUESTED → refused."""
-    monkeypatch.setattr(dw, "gh_run", _stub_pr_view(
-        reviews=[{"state": "APPROVED"}, {"state": "CHANGES_REQUESTED"}], comments=[]
-    ))
+    monkeypatch.setattr(
+        dw,
+        "gh_run",
+        _stub_pr_view(reviews=[{"state": "APPROVED"}, {"state": "CHANGES_REQUESTED"}], comments=[]),
+    )
     result = dw._check_approval_gate(99, {}, None, {})
     assert result.passed is False
     assert "CHANGES_REQUESTED" in result.refusal_message
@@ -115,21 +117,23 @@ def test_gate_uses_latest_review_state(dw, monkeypatch) -> None:
 
 def test_gate_ignores_commented_state(dw, monkeypatch) -> None:
     """COMMENTED-only reviews don't count as APPROVED."""
-    monkeypatch.setattr(dw, "gh_run", _stub_pr_view(
-        reviews=[{"state": "COMMENTED"}], comments=[]
-    ))
+    monkeypatch.setattr(dw, "gh_run", _stub_pr_view(reviews=[{"state": "COMMENTED"}], comments=[]))
     result = dw._check_approval_gate(99, {}, None, {})
     assert result.passed is False
 
 
 def test_gate_passes_with_approved_comment_from_non_author(dw, monkeypatch) -> None:
-    monkeypatch.setattr(dw, "gh_run", _stub_pr_view(
-        reviews=[],
-        comments=[
-            {"author": {"login": "reviewer"}, "body": "Approved — looks good"},
-        ],
-        author_login="author",
-    ))
+    monkeypatch.setattr(
+        dw,
+        "gh_run",
+        _stub_pr_view(
+            reviews=[],
+            comments=[
+                {"author": {"login": "reviewer"}, "body": "Approved — looks good"},
+            ],
+            author_login="author",
+        ),
+    )
     result = dw._check_approval_gate(99, {}, None, {})
     assert result.passed is True
     assert "Approved" in result.passed_via
@@ -138,39 +142,51 @@ def test_gate_passes_with_approved_comment_from_non_author(dw, monkeypatch) -> N
 
 def test_gate_refuses_approved_comment_from_author(dw, monkeypatch) -> None:
     """Author can't self-approve via comment."""
-    monkeypatch.setattr(dw, "gh_run", _stub_pr_view(
-        reviews=[],
-        comments=[
-            {"author": {"login": "author"}, "body": "Approved"},
-        ],
-        author_login="author",
-    ))
+    monkeypatch.setattr(
+        dw,
+        "gh_run",
+        _stub_pr_view(
+            reviews=[],
+            comments=[
+                {"author": {"login": "author"}, "body": "Approved"},
+            ],
+            author_login="author",
+        ),
+    )
     result = dw._check_approval_gate(99, {}, None, {})
     assert result.passed is False
 
 
 def test_gate_case_sensitive_approved_prefix(dw, monkeypatch) -> None:
     """`approved` (lowercase) doesn't count — case-sensitive `Approved`."""
-    monkeypatch.setattr(dw, "gh_run", _stub_pr_view(
-        reviews=[],
-        comments=[
-            {"author": {"login": "reviewer"}, "body": "approved lgtm"},
-        ],
-    ))
+    monkeypatch.setattr(
+        dw,
+        "gh_run",
+        _stub_pr_view(
+            reviews=[],
+            comments=[
+                {"author": {"login": "reviewer"}, "body": "approved lgtm"},
+            ],
+        ),
+    )
     result = dw._check_approval_gate(99, {}, None, {})
     assert result.passed is False
 
 
 def test_gate_uses_last_qualifying_comment(dw, monkeypatch) -> None:
     """If a later non-author comment doesn't start with Approved, earlier one stands."""
-    monkeypatch.setattr(dw, "gh_run", _stub_pr_view(
-        reviews=[],
-        comments=[
-            {"author": {"login": "reviewer"}, "body": "Approved"},
-            {"author": {"login": "reviewer"}, "body": "Actually wait..."},
-        ],
-        author_login="author",
-    ))
+    monkeypatch.setattr(
+        dw,
+        "gh_run",
+        _stub_pr_view(
+            reviews=[],
+            comments=[
+                {"author": {"login": "reviewer"}, "body": "Approved"},
+                {"author": {"login": "reviewer"}, "body": "Actually wait..."},
+            ],
+            author_login="author",
+        ),
+    )
     result = dw._check_approval_gate(99, {}, None, {})
     # The "Approved" comment was earlier; the most-recent non-Approved
     # comment from the same reviewer should override — that's the
@@ -184,10 +200,14 @@ def test_gate_uses_last_qualifying_comment(dw, monkeypatch) -> None:
 
 
 def test_gate_refuses_when_nothing_qualifies(dw, monkeypatch) -> None:
-    monkeypatch.setattr(dw, "gh_run", _stub_pr_view(
-        reviews=[{"state": "COMMENTED"}],
-        comments=[{"author": {"login": "reviewer"}, "body": "Looks fine"}],
-    ))
+    monkeypatch.setattr(
+        dw,
+        "gh_run",
+        _stub_pr_view(
+            reviews=[{"state": "COMMENTED"}],
+            comments=[{"author": {"login": "reviewer"}, "body": "Looks fine"}],
+        ),
+    )
     result = dw._check_approval_gate(99, {}, None, {})
     assert result.passed is False
     assert "approval gate not satisfied" in result.refusal_message
@@ -196,9 +216,14 @@ def test_gate_refuses_when_nothing_qualifies(dw, monkeypatch) -> None:
 def test_gate_handles_gh_failure(dw, monkeypatch) -> None:
     def fake_gh_run(args, config, **kwargs):
         import subprocess
+
         return subprocess.CompletedProcess(
-            args=args, returncode=1, stdout="", stderr="not found",
+            args=args,
+            returncode=1,
+            stdout="",
+            stderr="not found",
         )
+
     monkeypatch.setattr(dw, "gh_run", fake_gh_run)
     result = dw._check_approval_gate(99, {}, None, {})
     assert result.passed is False
@@ -219,9 +244,7 @@ def test_gate_handles_gh_failure(dw, monkeypatch) -> None:
 # issue state (closed, with stale state:review label).
 
 
-def test_invoke_move_issue_exits_zero_when_issue_already_done(
-    dw, tmp_path, monkeypatch
-) -> None:
+def test_invoke_move_issue_exits_zero_when_issue_already_done(dw, tmp_path, monkeypatch) -> None:
     """Regression: _invoke_move_issue("done") must exit 0 when the issue is
     already closed (GitHub auto-close via Closes #N), even if the
     state:review label is still present.
@@ -243,9 +266,9 @@ def test_invoke_move_issue_exits_zero_when_issue_already_done(
 
     # Copy the real schema files that move-issue.py reads.
     import shutil
+
     real_cap = (
-        Path(__file__).resolve().parent.parent
-        / ".pkit" / "capabilities" / "project-management"
+        Path(__file__).resolve().parent.parent / ".pkit" / "capabilities" / "project-management"
     )
     for schema_name in ("workflow.yaml", "issue-types.yaml", "classification.yaml"):
         shutil.copy(real_cap / "schemas" / schema_name, schemas_dir / schema_name)
@@ -281,8 +304,16 @@ def test_invoke_move_issue_exits_zero_when_issue_already_done(
 
     move_issue_script = real_cap / "scripts" / "move-issue.py"
     result = subprocess.run(
-        [sys.executable, str(move_issue_script), "42", "--to", "done", "--yes",
-         "--capability-root", str(cap_root)],
+        [
+            sys.executable,
+            str(move_issue_script),
+            "42",
+            "--to",
+            "done",
+            "--yes",
+            "--capability-root",
+            str(cap_root),
+        ],
         capture_output=True,
         text=True,
         env={**__import__("os").environ, "PATH": new_path},
@@ -302,9 +333,7 @@ def test_invoke_move_issue_exits_zero_when_issue_already_done(
 # ---- PR-body placeholder gate (DEC-031) ------------------------------
 
 REPO_ROOT_DW = Path(__file__).resolve().parent.parent
-CAPABILITY_ROOT_DW = (
-    REPO_ROOT_DW / ".pkit" / "capabilities" / "project-management"
-)
+CAPABILITY_ROOT_DW = REPO_ROOT_DW / ".pkit" / "capabilities" / "project-management"
 
 
 def _authored_pr_body_dw() -> str:
@@ -320,35 +349,21 @@ def _authored_pr_body_dw() -> str:
 
 def _skeleton_pr_body_dw() -> str:
     """PR body still carrying the raw ## Test plan skeleton (bare - [ ])."""
-    return (
-        "Closes #42\n\n"
-        "## Summary\n\nfoo\n\n"
-        "## Test plan\n\n"
-        "- [ ]\n\n"
-        "## Doc impact\n\nnone.\n"
-    )
+    return "Closes #42\n\n## Summary\n\nfoo\n\n## Test plan\n\n- [ ]\n\n## Doc impact\n\nnone.\n"
 
 
 def test_check_pr_placeholder_authored_body_clean(dw) -> None:
     """An authored PR body produces no findings from _check_pr_placeholder."""
-    findings = dw._check_pr_placeholder(
-        _authored_pr_body_dw(), 42, CAPABILITY_ROOT_DW
-    )
+    findings = dw._check_pr_placeholder(_authored_pr_body_dw(), 42, CAPABILITY_ROOT_DW)
     hard_rejects = [f for f in findings if f[0] == "hard-reject"]
-    assert hard_rejects == [], (
-        f"unexpected hard-reject on authored PR body: {hard_rejects}"
-    )
+    assert hard_rejects == [], f"unexpected hard-reject on authored PR body: {hard_rejects}"
 
 
 def test_check_pr_placeholder_skeleton_body_hard_rejects(dw) -> None:
     """A skeleton PR body (bare - [ ] in ## Test plan) produces a hard-reject."""
-    findings = dw._check_pr_placeholder(
-        _skeleton_pr_body_dw(), 42, CAPABILITY_ROOT_DW
-    )
+    findings = dw._check_pr_placeholder(_skeleton_pr_body_dw(), 42, CAPABILITY_ROOT_DW)
     hard_rejects = [f for f in findings if f[0] == "hard-reject"]
-    assert hard_rejects, (
-        "expected hard-reject for skeleton PR body at merge gate"
-    )
+    assert hard_rejects, "expected hard-reject for skeleton PR body at merge gate"
     labels = [f[1] for f in hard_rejects]
     assert "body.placeholder.empty-checkbox-section" in labels
 
@@ -365,22 +380,27 @@ def test_check_pr_placeholder_unticked_real_items_no_false_positive(dw) -> None:
     )
     findings = dw._check_pr_placeholder(body, 7, CAPABILITY_ROOT_DW)
     hard_rejects = [
-        f for f in findings
+        f
+        for f in findings
         if f[0] == "hard-reject" and f[1] == "body.placeholder.empty-checkbox-section"
     ]
     assert hard_rejects == [], (
-        "authored-but-unticked PR body falsely flagged as skeleton: "
-        f"{hard_rejects}"
+        f"authored-but-unticked PR body falsely flagged as skeleton: {hard_rejects}"
     )
 
 
 def test_gh_get_pr_body_returns_none_on_failure(dw, monkeypatch) -> None:
     """_gh_get_pr_body returns None when `gh` fails."""
     import subprocess
+
     def fake_gh_run(args, config, **kwargs):
         return subprocess.CompletedProcess(
-            args=args, returncode=1, stdout="", stderr="not found",
+            args=args,
+            returncode=1,
+            stdout="",
+            stderr="not found",
         )
+
     monkeypatch.setattr(dw, "gh_run", fake_gh_run)
     result = dw._gh_get_pr_body(99, {})
     assert result is None
@@ -389,12 +409,15 @@ def test_gh_get_pr_body_returns_none_on_failure(dw, monkeypatch) -> None:
 def test_gh_get_pr_body_extracts_body(dw, monkeypatch) -> None:
     """_gh_get_pr_body returns the body string from the JSON response."""
     import subprocess
+
     def fake_gh_run(args, config, **kwargs):
         return subprocess.CompletedProcess(
-            args=args, returncode=0,
+            args=args,
+            returncode=0,
             stdout=json.dumps({"body": "Closes #1\n## Test plan\n- [x] done.\n"}),
             stderr="",
         )
+
     monkeypatch.setattr(dw, "gh_run", fake_gh_run)
     result = dw._gh_get_pr_body(99, {})
     assert result == "Closes #1\n## Test plan\n- [x] done.\n"
@@ -429,8 +452,10 @@ def test_gh_get_status_rollup_returns_list(dw, monkeypatch) -> None:
 
     def fake_gh_run(args, config, **kwargs):
         return subprocess.CompletedProcess(
-            args=args, returncode=0,
-            stdout=json.dumps({"statusCheckRollup": rollup}), stderr="",
+            args=args,
+            returncode=0,
+            stdout=json.dumps({"statusCheckRollup": rollup}),
+            stderr="",
         )
 
     monkeypatch.setattr(dw, "gh_run", fake_gh_run)
@@ -443,7 +468,10 @@ def test_gh_get_status_rollup_none_on_failure(dw, monkeypatch) -> None:
 
     def fake_gh_run(args, config, **kwargs):
         return subprocess.CompletedProcess(
-            args=args, returncode=1, stdout="", stderr="not found",
+            args=args,
+            returncode=1,
+            stdout="",
+            stderr="not found",
         )
 
     monkeypatch.setattr(dw, "gh_run", fake_gh_run)
@@ -456,13 +484,9 @@ def test_ci_gate_refuses_failing_and_pending(dw) -> None:
         [{"name": "tests", "status": "COMPLETED", "conclusion": "FAILURE"}]
     )
     assert failing.passing is False
-    pending = dw.evaluate_ci_gate(
-        [{"name": "build", "status": "IN_PROGRESS", "conclusion": ""}]
-    )
+    pending = dw.evaluate_ci_gate([{"name": "build", "status": "IN_PROGRESS", "conclusion": ""}])
     assert pending.passing is False
-    green = dw.evaluate_ci_gate(
-        [{"name": "ok", "status": "COMPLETED", "conclusion": "SUCCESS"}]
-    )
+    green = dw.evaluate_ci_gate([{"name": "ok", "status": "COMPLETED", "conclusion": "SUCCESS"}])
     assert green.passing is True
 
 
@@ -471,7 +495,10 @@ def test_done_work_ci_bypass_audit_body_follows_template(dw) -> None:
     identity = dw.Identity(github_login="octocat", email="octo@example.com")
     key = dw._bypass_audit_key(dw.CI_BYPASS_AUDIT_WRITER, "advisory guard", "sha1")
     body = dw._ci_bypass_audit_body(
-        identity, "advisory guard on a decision-only PR", ("guard (FAILURE)",), key,
+        identity,
+        "advisory guard on a decision-only PR",
+        ("guard (FAILURE)",),
+        key,
     )
     assert body.startswith(dw.CI_BYPASS_AUDIT_MARKER)
     assert body.splitlines()[-1] == key
@@ -491,18 +518,33 @@ def test_done_work_post_ci_bypass_audit_idempotent(dw, monkeypatch) -> None:
     def fake_gh_run(args, config, **kwargs):
         captured.append(list(args))
         if "view" in args:
-            existing = json.dumps({"comments": [{
-                "body": prior,
-                "viewerDidAuthor": True, "includesCreatedEdit": False,
-            }]})
+            existing = json.dumps(
+                {
+                    "comments": [
+                        {
+                            "body": prior,
+                            "viewerDidAuthor": True,
+                            "includesCreatedEdit": False,
+                        }
+                    ]
+                }
+            )
             return subprocess.CompletedProcess(
-                args=args, returncode=0, stdout=existing, stderr="",
+                args=args,
+                returncode=0,
+                stdout=existing,
+                stderr="",
             )
         return subprocess.CompletedProcess(args=args, returncode=0, stdout="", stderr="")
 
     monkeypatch.setattr(dw, "gh_run", fake_gh_run)
     ok = dw._post_ci_bypass_audit(
-        496, "override", identity, ("x (FAILURE)",), {}, head="sha1",
+        496,
+        "override",
+        identity,
+        ("x (FAILURE)",),
+        {},
+        head="sha1",
     )
     assert ok is True
     assert not [c for c in captured if "comment" in c]
@@ -523,9 +565,16 @@ _UNSET_ISSUE = object()
 
 
 def _wire_main_seams(
-    dw, monkeypatch, *, rollup, gate_passed=True, issue=_UNSET_ISSUE,
-    mode="human", agent_gate_result=None,
-    pr_body="## Test plan\n- [x] ok\n", issues=None,
+    dw,
+    monkeypatch,
+    *,
+    rollup,
+    gate_passed=True,
+    issue=_UNSET_ISSUE,
+    mode="human",
+    agent_gate_result=None,
+    pr_body="## Test plan\n- [x] ok\n",
+    issues=None,
 ):
     """Monkeypatch done-work's heavy seams so main() reaches the CI gate.
 
@@ -555,21 +604,32 @@ def _wire_main_seams(
     `close-issue` run is stubbed: `calls["closed"]` lists each
     `(issue, pr, skip_checkbox_gate)` it was invoked with.
     """
-    calls = {"merged": False, "ci_audit": False, "approval_audit": False,
-             "moved": False, "override_audits": [], "order": [],
-             "merge_kwargs": {}, "closed": []}
+    calls = {
+        "merged": False,
+        "ci_audit": False,
+        "approval_audit": False,
+        "moved": False,
+        "override_audits": [],
+        "order": [],
+        "merge_kwargs": {},
+        "closed": [],
+    }
 
     monkeypatch.setattr(dw, "resolve_capability_root", lambda arg: Path("/cap"))
     monkeypatch.setattr(dw, "load_adopter_config", lambda root: {})
     monkeypatch.setattr(dw, "_read_members", lambda root, loader: [])
     monkeypatch.setattr(
-        dw, "resolve_invoker_identity",
+        dw,
+        "resolve_invoker_identity",
         lambda config=None: dw.Identity(github_login="octocat", email="o@e.com"),
     )
     monkeypatch.setattr(
-        dw, "check_membership",
+        dw,
+        "check_membership",
         lambda members, invoker: type(
-            "MR", (), {"allowed": True, "refusal_message": None},
+            "MR",
+            (),
+            {"allowed": True, "refusal_message": None},
         )(),
     )
     monkeypatch.setattr(dw.session_guard, "enforce", lambda **kw: True)
@@ -580,50 +640,67 @@ def _wire_main_seams(
     monkeypatch.setattr(dw.bootstrap_gate, "enforce", lambda *a, **kw: True)
     monkeypatch.setattr(dw, "_find_issue_branch", lambda n: "fix/42-slug")
     monkeypatch.setattr(
-        dw, "_find_pr_for_branch",
+        dw,
+        "_find_pr_for_branch",
         lambda branch, config: {
-            "number": 496, "title": "fix: x", "isDraft": False,
+            "number": 496,
+            "title": "fix: x",
+            "isDraft": False,
             "headRefOid": "sha-head",
         },
     )
-    resolved_issue = (
-        {"labels": [], "body": ""} if issue is _UNSET_ISSUE else issue
-    )
+    resolved_issue = {"labels": [], "body": ""} if issue is _UNSET_ISSUE else issue
     if issues is None:
         monkeypatch.setattr(dw, "_gh_get_issue", lambda n, config: resolved_issue)
     else:
         monkeypatch.setattr(dw, "_gh_get_issue", lambda n, config: issues.get(n))
     monkeypatch.setattr(
-        dw, "resolve_mode",
+        dw,
+        "resolve_mode",
         lambda config, issue_labels=None: type(
-            "M", (), {"mode": mode, "source": "default"},
+            "M",
+            (),
+            {"mode": mode, "source": "default"},
         )(),
     )
     monkeypatch.setattr(
-        dw, "_check_approval_gate",
+        dw,
+        "_check_approval_gate",
         lambda pr_number, pr, bypass_reason, config: dw._GateResult(
-            passed=gate_passed, passed_via="stub",
+            passed=gate_passed,
+            passed_via="stub",
             refusal_message="" if gate_passed else "[refused] approval gate",
         ),
     )
     if agent_gate_result is not None:
         monkeypatch.setattr(
-            dw, "_check_agent_gate", lambda *a, **k: agent_gate_result,
+            dw,
+            "_check_agent_gate",
+            lambda *a, **k: agent_gate_result,
         )
 
     def _stub_reviewer_override_audit(
-        pr_number, audit, reason, invoker, config, **kwargs,
+        pr_number,
+        audit,
+        reason,
+        invoker,
+        config,
+        **kwargs,
     ):
         calls["override_audits"].append(audit.reviewer)
         calls["order"].append(("override_audit", audit.reviewer))
         return True
 
     monkeypatch.setattr(
-        dw, "_post_reviewer_override_audit", _stub_reviewer_override_audit,
+        dw,
+        "_post_reviewer_override_audit",
+        _stub_reviewer_override_audit,
     )
     monkeypatch.setattr(dw, "_gh_get_pr_body", lambda pr_number, config: pr_body)
     monkeypatch.setattr(
-        dw, "_check_pr_placeholder", lambda body, pr_number, cap_root: [],
+        dw,
+        "_check_pr_placeholder",
+        lambda body, pr_number, cap_root: [],
     )
     monkeypatch.setattr(dw, "_gh_get_status_rollup", lambda pr_number, config: rollup)
 
@@ -696,7 +773,9 @@ def test_bypass_ci_clears_red_ci_and_posts_audit(dw, monkeypatch, capsys):
     """`--bypass-ci "<reason>"` overrides the CI gate, posts the audit, merges."""
     calls = _wire_main_seams(dw, monkeypatch, rollup=_RED_ROLLUP)
     rc = _run_main(
-        dw, monkeypatch, ["42", "--bypass-ci", "advisory guard", "--yes"],
+        dw,
+        monkeypatch,
+        ["42", "--bypass-ci", "advisory guard", "--yes"],
     )
     assert rc == 0
     assert calls["ci_audit"] is True, "--bypass-ci must post the CI-bypass audit"
@@ -718,7 +797,8 @@ def test_both_gates_blocked_needs_both_flags(dw, monkeypatch, capsys):
     # both flags → both gates cleared, merge proceeds.
     calls = _wire_main_seams(dw, monkeypatch, rollup=_RED_ROLLUP, gate_passed=True)
     rc = _run_main(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         ["42", "--bypass", "appr reason", "--bypass-ci", "ci reason", "--yes"],
     )
     assert rc == 0
@@ -777,7 +857,10 @@ def _issue(body: str) -> dict:
 def test_unticked_checkbox_refuses_before_the_merge(dw, monkeypatch, capsys):
     """An unticked box refuses, names the box, and never reaches the merge."""
     calls = _wire_main_seams(
-        dw, monkeypatch, rollup=_GREEN_ROLLUP, issue=_issue(_UNTICKED_BODY),
+        dw,
+        monkeypatch,
+        rollup=_GREEN_ROLLUP,
+        issue=_issue(_UNTICKED_BODY),
     )
     rc = _run_main(dw, monkeypatch, ["42", "--yes"])
     assert rc == 1
@@ -824,7 +907,10 @@ def test_the_refusal_names_the_verb_that_ticks_each_box(dw, monkeypatch, capsys)
 def test_all_boxes_ticked_merges(dw, monkeypatch):
     """An issue with every box ticked merges exactly as before."""
     calls = _wire_main_seams(
-        dw, monkeypatch, rollup=_GREEN_ROLLUP, issue=_issue(_TICKED_BODY),
+        dw,
+        monkeypatch,
+        rollup=_GREEN_ROLLUP,
+        issue=_issue(_TICKED_BODY),
     )
     rc = _run_main(dw, monkeypatch, ["42", "--yes"])
     assert rc == 0
@@ -835,7 +921,10 @@ def test_all_boxes_ticked_merges(dw, monkeypatch):
 def test_body_with_no_checkboxes_merges(dw, monkeypatch):
     """DEC-007's rule applies only when boxes exist — a box-free body merges."""
     calls = _wire_main_seams(
-        dw, monkeypatch, rollup=_GREEN_ROLLUP, issue=_issue(_NO_BOXES_BODY),
+        dw,
+        monkeypatch,
+        rollup=_GREEN_ROLLUP,
+        issue=_issue(_NO_BOXES_BODY),
     )
     rc = _run_main(dw, monkeypatch, ["42", "--yes"])
     assert rc == 0
@@ -845,7 +934,10 @@ def test_body_with_no_checkboxes_merges(dw, monkeypatch):
 def test_skip_checkbox_gate_overrides_the_refusal(dw, monkeypatch):
     """`--skip-checkbox-gate` merges an issue that would otherwise refuse."""
     calls = _wire_main_seams(
-        dw, monkeypatch, rollup=_GREEN_ROLLUP, issue=_issue(_UNTICKED_BODY),
+        dw,
+        monkeypatch,
+        rollup=_GREEN_ROLLUP,
+        issue=_issue(_UNTICKED_BODY),
     )
     rc = _run_main(dw, monkeypatch, ["42", "--skip-checkbox-gate", "--yes"])
     assert rc == 0
@@ -859,7 +951,10 @@ def test_bypass_alone_does_not_clear_an_unticked_box(dw, monkeypatch, capsys):
     deliberate override.
     """
     calls = _wire_main_seams(
-        dw, monkeypatch, rollup=_GREEN_ROLLUP, issue=_issue(_UNTICKED_BODY),
+        dw,
+        monkeypatch,
+        rollup=_GREEN_ROLLUP,
+        issue=_issue(_UNTICKED_BODY),
     )
     rc = _run_main(dw, monkeypatch, ["42", "--bypass", "reviewer away", "--yes"])
     assert rc == 1
@@ -870,7 +965,10 @@ def test_bypass_alone_does_not_clear_an_unticked_box(dw, monkeypatch, capsys):
 def test_unreadable_issue_body_fails_closed(dw, monkeypatch, capsys):
     """A failed issue fetch refuses: an unverified gate is not a satisfied one."""
     calls = _wire_main_seams(
-        dw, monkeypatch, rollup=_GREEN_ROLLUP, issue=None,
+        dw,
+        monkeypatch,
+        rollup=_GREEN_ROLLUP,
+        issue=None,
     )
     rc = _run_main(dw, monkeypatch, ["42", "--yes"])
     assert rc == 1
@@ -887,13 +985,19 @@ def test_checkbox_gate_outcome_is_reported_when_it_passes(dw, monkeypatch, capsy
     rather than looking like a satisfied one.
     """
     _wire_main_seams(
-        dw, monkeypatch, rollup=_GREEN_ROLLUP, issue=_issue(_TICKED_BODY),
+        dw,
+        monkeypatch,
+        rollup=_GREEN_ROLLUP,
+        issue=_issue(_TICKED_BODY),
     )
     assert _run_main(dw, monkeypatch, ["42", "--yes"]) == 0
     assert "checkbox-gate: all checkboxes ticked" in capsys.readouterr().out
 
     _wire_main_seams(
-        dw, monkeypatch, rollup=_GREEN_ROLLUP, issue=_issue(_UNTICKED_BODY),
+        dw,
+        monkeypatch,
+        rollup=_GREEN_ROLLUP,
+        issue=_issue(_UNTICKED_BODY),
     )
     assert _run_main(dw, monkeypatch, ["42", "--skip-checkbox-gate", "--yes"]) == 0
     assert "checkbox-gate: --skip-checkbox-gate" in capsys.readouterr().out
@@ -937,9 +1041,16 @@ def test_bypass_reviewer_refused_in_human_mode(dw, monkeypatch, capsys):
     reviewer set, which human mode has no equivalent of (DEC-050)."""
     calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
     rc = _run_main(
-        dw, monkeypatch,
-        ["42", "--bypass-reviewer", "design-reviewer",
-         "--bypass-reviewer-reason", "false block", "--yes"],
+        dw,
+        monkeypatch,
+        [
+            "42",
+            "--bypass-reviewer",
+            "design-reviewer",
+            "--bypass-reviewer-reason",
+            "false block",
+            "--yes",
+        ],
     )
     assert rc == 1
     assert calls["merged"] is False
@@ -959,9 +1070,18 @@ def test_bypass_and_bypass_reviewer_together_refused(dw, monkeypatch, capsys):
     """
     calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
     rc = _run_main(
-        dw, monkeypatch,
-        ["42", "--bypass", "whole gate", "--bypass-reviewer", "typo-reviewer",
-         "--bypass-reviewer-reason", "false block", "--yes"],
+        dw,
+        monkeypatch,
+        [
+            "42",
+            "--bypass",
+            "whole gate",
+            "--bypass-reviewer",
+            "typo-reviewer",
+            "--bypass-reviewer-reason",
+            "false block",
+            "--yes",
+        ],
     )
     assert rc == 1
     assert calls["merged"] is False, "the refusal must land before the merge"
@@ -990,10 +1110,18 @@ def test_bypass_reviewer_name_is_stripped(dw, monkeypatch):
     _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP, mode="agent")
     monkeypatch.setattr(dw, "_check_agent_gate", fake_agent_gate)
     rc = _run_main(
-        dw, monkeypatch,
-        ["42", "--bypass-reviewer", " design-reviewer ",
-         "--bypass-reviewer", "   ",
-         "--bypass-reviewer-reason", "false block", "--yes"],
+        dw,
+        monkeypatch,
+        [
+            "42",
+            "--bypass-reviewer",
+            " design-reviewer ",
+            "--bypass-reviewer",
+            "   ",
+            "--bypass-reviewer-reason",
+            "false block",
+            "--yes",
+        ],
     )
     assert rc == 0
     assert seen["override_reviewers"] == ("design-reviewer",)
@@ -1007,26 +1135,36 @@ def test_agent_mode_override_happy_path_merges_after_audit(dw, monkeypatch):
     merge (DEC-050 — the trail survives a partial failure)."""
     gate = dw._GateResult(
         passed=True,
-        passed_via=(
-            "reviewer APPROVED; design-reviewer satisfied-by-override"
-        ),
-        override_audits=[dw._OverrideAudit(
-            reviewer="design-reviewer",
-            capability="ux-ui-design",
-            state="a fresh CHANGES_REQUESTED (an active block)",
-            block_comment_url="https://example.test/c/design-reviewer",
-            head="deadbeef",
-            others_approved=("local agent (reviewer)",),
-        )],
+        passed_via=("reviewer APPROVED; design-reviewer satisfied-by-override"),
+        override_audits=[
+            dw._OverrideAudit(
+                reviewer="design-reviewer",
+                capability="ux-ui-design",
+                state="a fresh CHANGES_REQUESTED (an active block)",
+                block_comment_url="https://example.test/c/design-reviewer",
+                head="deadbeef",
+                others_approved=("local agent (reviewer)",),
+            )
+        ],
     )
     calls = _wire_main_seams(
-        dw, monkeypatch, rollup=_GREEN_ROLLUP,
-        mode="agent", agent_gate_result=gate,
+        dw,
+        monkeypatch,
+        rollup=_GREEN_ROLLUP,
+        mode="agent",
+        agent_gate_result=gate,
     )
     rc = _run_main(
-        dw, monkeypatch,
-        ["42", "--bypass-reviewer", "design-reviewer",
-         "--bypass-reviewer-reason", "flaky false block", "--yes"],
+        dw,
+        monkeypatch,
+        [
+            "42",
+            "--bypass-reviewer",
+            "design-reviewer",
+            "--bypass-reviewer-reason",
+            "flaky false block",
+            "--yes",
+        ],
     )
     assert rc == 0
     assert calls["merged"] is True
@@ -1035,7 +1173,8 @@ def test_agent_mode_override_happy_path_merges_after_audit(dw, monkeypatch):
     # ...and it posted BEFORE the merge (the post-merge transition + cleanup
     # entries follow; only the audit/merge ordering is under test here).
     assert calls["order"][:2] == [
-        ("override_audit", "design-reviewer"), ("merged", None),
+        ("override_audit", "design-reviewer"),
+        ("merged", None),
     ]
 
 
@@ -1056,7 +1195,10 @@ _ALIAS_BODY = "## What\n\nA change.\n"
 def test_deprecated_reason_alias_still_works_and_warns(dw, monkeypatch, capsys):
     """The released spelling keeps working, and says it is deprecated."""
     _wire_main_seams(
-        dw, monkeypatch, rollup=_GREEN_ROLLUP, issue=_issue(_ALIAS_BODY),
+        dw,
+        monkeypatch,
+        rollup=_GREEN_ROLLUP,
+        issue=_issue(_ALIAS_BODY),
     )
     rc = _run_main(dw, monkeypatch, ["42", "--bypass-reason", "still fine", "--yes"])
     err = capsys.readouterr().err
@@ -1069,10 +1211,15 @@ def test_deprecated_reason_alias_still_works_and_warns(dw, monkeypatch, capsys):
 
 def test_canonical_reason_flag_does_not_warn(dw, monkeypatch, capsys):
     _wire_main_seams(
-        dw, monkeypatch, rollup=_GREEN_ROLLUP, issue=_issue(_ALIAS_BODY),
+        dw,
+        monkeypatch,
+        rollup=_GREEN_ROLLUP,
+        issue=_issue(_ALIAS_BODY),
     )
     rc = _run_main(
-        dw, monkeypatch, ["42", "--bypass-reviewer-reason", "fine", "--yes"],
+        dw,
+        monkeypatch,
+        ["42", "--bypass-reviewer-reason", "fine", "--yes"],
     )
     assert "DEPRECATED" not in capsys.readouterr().err
     assert rc == 0
@@ -1082,19 +1229,34 @@ def test_both_reason_spellings_are_refused_as_ambiguous(dw, monkeypatch, capsys)
     """Two spellings of one option is ambiguous — refuse, don't let argparse
     silently resolve it by last-wins."""
     calls = _wire_main_seams(
-        dw, monkeypatch, rollup=_GREEN_ROLLUP, issue=_issue(_ALIAS_BODY),
+        dw,
+        monkeypatch,
+        rollup=_GREEN_ROLLUP,
+        issue=_issue(_ALIAS_BODY),
     )
-    rc = _run_main(dw, monkeypatch, [
-        "42", "--bypass-reviewer", "code-reviewer",
-        "--bypass-reviewer-reason", "a", "--bypass-reason", "b", "--yes",
-    ])
+    rc = _run_main(
+        dw,
+        monkeypatch,
+        [
+            "42",
+            "--bypass-reviewer",
+            "code-reviewer",
+            "--bypass-reviewer-reason",
+            "a",
+            "--bypass-reason",
+            "b",
+            "--yes",
+        ],
+    )
     assert rc == 1
     assert calls["merged"] is False, "an ambiguous invocation must not merge"
     assert "ambiguous" in capsys.readouterr().err
 
 
 def test_abbreviated_canonical_flag_cannot_evade_the_ambiguity_refusal(
-    dw, monkeypatch, capsys,
+    dw,
+    monkeypatch,
+    capsys,
 ):
     """`--bypass-reviewer-reas` must not bind the canonical flag.
 
@@ -1107,13 +1269,26 @@ def test_abbreviated_canonical_flag_cannot_evade_the_ambiguity_refusal(
     so an abbreviation is now rejected outright by argparse.
     """
     _wire_main_seams(
-        dw, monkeypatch, rollup=_GREEN_ROLLUP, issue=_issue(_ALIAS_BODY),
+        dw,
+        monkeypatch,
+        rollup=_GREEN_ROLLUP,
+        issue=_issue(_ALIAS_BODY),
     )
     with pytest.raises(SystemExit) as exc:
-        _run_main(dw, monkeypatch, [
-            "42", "--bypass-reviewer", "code-reviewer",
-            "--bypass-reviewer-reas", "a", "--bypass-reason", "b", "--yes",
-        ])
+        _run_main(
+            dw,
+            monkeypatch,
+            [
+                "42",
+                "--bypass-reviewer",
+                "code-reviewer",
+                "--bypass-reviewer-reas",
+                "a",
+                "--bypass-reason",
+                "b",
+                "--yes",
+            ],
+        )
     assert exc.value.code == 2, "argparse must reject the abbreviation, not bind it"
 
 
@@ -1129,12 +1304,8 @@ def test_abbreviated_canonical_flag_cannot_evade_the_ambiguity_refusal(
 # mechanic itself (`_lib.pr_merge`) is unit-tested in test_pm_pr_merge_lib.py;
 # these tests cover done-work's sequencing of it.
 
-_DETACHED_HEAD_ERR = (
-    "could not determine current branch: failed to run git: not on any branch"
-)
-_MAIN_HELD_ELSEWHERE_ERR = (
-    "fatal: 'main' is already used by worktree at '/repo/wt-main'"
-)
+_DETACHED_HEAD_ERR = "could not determine current branch: failed to run git: not on any branch"
+_MAIN_HELD_ELSEWHERE_ERR = "fatal: 'main' is already used by worktree at '/repo/wt-main'"
 
 
 def test_transition_runs_immediately_after_merge_before_cleanup(dw, monkeypatch):
@@ -1178,7 +1349,9 @@ def _script_error_lines(stderr: str) -> list[str]:
 
 
 def test_detached_head_worktree_completes_merge_and_transition(
-    dw, monkeypatch, capsys,
+    dw,
+    monkeypatch,
+    capsys,
 ):
     """Trigger 1 (#878): the working tree is on a detached HEAD. The local step
     reports it as a warning; the merge and the transition both complete."""
@@ -1203,7 +1376,9 @@ def test_detached_head_worktree_completes_merge_and_transition(
 
 
 def test_main_held_by_other_worktree_completes_merge_and_transition(
-    dw, monkeypatch, capsys,
+    dw,
+    monkeypatch,
+    capsys,
 ):
     """Trigger 2 (#878): `main` is checked out in a different worktree, so the
     local checkout is refused and the head branch (the one checked out here)
@@ -1213,8 +1388,10 @@ def test_main_held_by_other_worktree_completes_merge_and_transition(
     monkeypatch.setattr(dw.pr_merge, "cleanup_local", real_cleanup)
     branch_err = "error: cannot delete branch 'fix/42-slug' used by worktree at '/repo/wt-42'"
     seen = _fake_git(
-        monkeypatch, dw,
-        checkout_stderr=_MAIN_HELD_ELSEWHERE_ERR, branch_d_stderr=branch_err,
+        monkeypatch,
+        dw,
+        checkout_stderr=_MAIN_HELD_ELSEWHERE_ERR,
+        branch_d_stderr=branch_err,
     )
 
     rc = _run_main(dw, monkeypatch, ["42", "--yes"])
@@ -1244,7 +1421,11 @@ def test_cleanup_still_runs_when_move_issue_fails(dw, monkeypatch, capsys):
     assert rc == 1
     assert "[warn] PR merged but move-issue exited 1" in capsys.readouterr().err
     assert [kind for kind, _ in calls["order"]] == [
-        "merged", "moved", "closed", "remote_delete", "local_cleanup",
+        "merged",
+        "moved",
+        "closed",
+        "remote_delete",
+        "local_cleanup",
     ]
 
 
@@ -1272,7 +1453,10 @@ def _open_issue(body: str) -> dict:
 
 def test_a_pr_closing_two_issues_gates_closes_and_cascades_both(dw, monkeypatch, capsys):
     calls = _wire_main_seams(
-        dw, monkeypatch, rollup=_GREEN_ROLLUP, pr_body=_TWO_ISSUE_PR_BODY,
+        dw,
+        monkeypatch,
+        rollup=_GREEN_ROLLUP,
+        pr_body=_TWO_ISSUE_PR_BODY,
         issues={42: _open_issue(_TICKED_BODY), 43: _open_issue(_TICKED_BODY)},
     )
     rc = _run_main(dw, monkeypatch, ["42", "--yes"])
@@ -1291,13 +1475,17 @@ def test_a_pr_closing_two_issues_gates_closes_and_cascades_both(dw, monkeypatch,
 
 
 def test_the_first_closing_issue_with_an_unticked_box_refuses_naming_it(
-    dw, monkeypatch, capsys,
+    dw,
+    monkeypatch,
+    capsys,
 ):
     """A second issue's unticked box refuses before the merge, with the
     existing refusal text naming that issue, its box and the verb that ticks
     it; a later failing issue is not reached."""
     calls = _wire_main_seams(
-        dw, monkeypatch, rollup=_GREEN_ROLLUP,
+        dw,
+        monkeypatch,
+        rollup=_GREEN_ROLLUP,
         pr_body="Closes #42\nCloses #43\nCloses #44\n\n## Test plan\n\n- [x] ok\n",
         issues={
             42: _open_issue(_TICKED_BODY),
@@ -1322,7 +1510,10 @@ def test_a_closing_issue_already_closed_is_skipped_with_a_note(dw, monkeypatch, 
     unticked box does not refuse) nor closed again, and not an error."""
     closed = {"labels": [], "body": _UNTICKED_BODY, "state": "CLOSED"}
     calls = _wire_main_seams(
-        dw, monkeypatch, rollup=_GREEN_ROLLUP, pr_body=_TWO_ISSUE_PR_BODY,
+        dw,
+        monkeypatch,
+        rollup=_GREEN_ROLLUP,
+        pr_body=_TWO_ISSUE_PR_BODY,
         issues={42: _open_issue(_TICKED_BODY), 43: closed},
     )
     rc = _run_main(dw, monkeypatch, ["42", "--yes"])
@@ -1336,7 +1527,10 @@ def test_a_closing_issue_already_closed_is_skipped_with_a_note(dw, monkeypatch, 
 
 def test_an_unreadable_closing_issue_fails_closed(dw, monkeypatch, capsys):
     calls = _wire_main_seams(
-        dw, monkeypatch, rollup=_GREEN_ROLLUP, pr_body=_TWO_ISSUE_PR_BODY,
+        dw,
+        monkeypatch,
+        rollup=_GREEN_ROLLUP,
+        pr_body=_TWO_ISSUE_PR_BODY,
         issues={42: _open_issue(_TICKED_BODY)},
     )
     rc = _run_main(dw, monkeypatch, ["42", "--yes"])
@@ -1348,7 +1542,9 @@ def test_an_unreadable_closing_issue_fails_closed(dw, monkeypatch, capsys):
 
 
 def test_an_unreadable_pr_body_fails_closed_unless_the_gate_is_skipped(
-    dw, monkeypatch, capsys,
+    dw,
+    monkeypatch,
+    capsys,
 ):
     """Without the PR body the issues the merge closes are unknown, so the gate
     refuses; `--skip-checkbox-gate` merges, closing only the primary, and says
@@ -1365,13 +1561,18 @@ def test_an_unreadable_pr_body_fails_closed_unless_the_gate_is_skipped(
 
 
 def test_a_failed_close_warns_with_the_rerun_and_the_rest_still_run(
-    dw, monkeypatch, capsys,
+    dw,
+    monkeypatch,
+    capsys,
 ):
     """The merge is durable: one close failing is reported with its re-run, the
     other closing issues are still closed, cleanup runs, and the exit is the
     failure's."""
     calls = _wire_main_seams(
-        dw, monkeypatch, rollup=_GREEN_ROLLUP, pr_body=_TWO_ISSUE_PR_BODY,
+        dw,
+        monkeypatch,
+        rollup=_GREEN_ROLLUP,
+        pr_body=_TWO_ISSUE_PR_BODY,
         issues={42: _open_issue(_TICKED_BODY), 43: _open_issue(_TICKED_BODY)},
     )
 
@@ -1386,8 +1587,11 @@ def test_a_failed_close_warns_with_the_rerun_and_the_rest_still_run(
     assert "close-issue exited 3 for #42" in err
     assert "`close-issue 42 --mode pr-merge --pr 496`" in err
     assert calls["order"][1:] == [
-        ("moved", None), ("closed", 42), ("closed", 43),
-        ("remote_delete", "fix/42-slug"), ("local_cleanup", "fix/42-slug"),
+        ("moved", None),
+        ("closed", 42),
+        ("closed", 43),
+        ("remote_delete", "fix/42-slug"),
+        ("local_cleanup", "fix/42-slug"),
     ]
 
 
@@ -1403,7 +1607,10 @@ def test_closing_issues_lead_with_the_primary_and_reuse_its_fetch(dw, monkeypatc
     monkeypatch.setattr(dw, "_gh_get_issue", fake_get_issue)
     primary = _open_issue(_TICKED_BODY)
     closing = dw._read_closing_issues(
-        42, primary, "Fixes #43\nCloses #42\nresolves #44\nCloses #43", {},
+        42,
+        primary,
+        "Fixes #43\nCloses #42\nresolves #44\nCloses #43",
+        {},
     )
     assert [c.number for c in closing] == [42, 43, 44]
     assert closing[0].issue is primary
@@ -1428,8 +1635,15 @@ def test_the_close_is_close_issue_pr_merge_through_the_merged_pr(dw, monkeypatch
     assert seen[0][0] == sys.executable
     assert Path(seen[0][1]).name == "close-issue.py"
     assert seen[0][2:] == [
-        "43", "--mode", "pr-merge", "--pr", "496", "--skip-checkbox-gate",
-        "--yes", "--capability-root", "/cap",
+        "43",
+        "--mode",
+        "pr-merge",
+        "--pr",
+        "496",
+        "--skip-checkbox-gate",
+        "--yes",
+        "--capability-root",
+        "/cap",
     ]
     assert seen[1][2:] == ["44", "--mode", "pr-merge", "--pr", "496", "--yes"]
 
@@ -1461,7 +1675,10 @@ sys.exit(0)
 
 
 def test_both_closing_issues_are_closed_and_cascaded_by_the_real_close_issue(
-    dw, tmp_path, monkeypatch, capfd,
+    dw,
+    tmp_path,
+    monkeypatch,
+    capfd,
 ):
     """End to end past the merge: done-work runs the real close-issue on each
     closing issue against a fake `gh`. Both issues are still open after the
@@ -1488,13 +1705,14 @@ def test_both_closing_issues_are_closed_and_cascaded_by_the_real_close_issue(
             "42": task("[Task] land the widget", "state:review"),
             "43": task("[Task] land the gadget", "state:in-progress"),
             "7": {
-                "title": "[Feature] widgets", "state": "OPEN", "labels": [],
+                "title": "[Feature] widgets",
+                "state": "OPEN",
+                "labels": [],
                 "milestone": None,
                 "body": "## What\n\nw\n\n## Acceptance criteria\n\n- [x] shipped\n",
             },
         },
-        "pr": {"number": 496, "state": "MERGED",
-               "mergedAt": "2026-09-29T10:00:00Z", "url": "u"},
+        "pr": {"number": 496, "state": "MERGED", "mergedAt": "2026-09-29T10:00:00Z", "url": "u"},
     }
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
@@ -1511,7 +1729,10 @@ def test_both_closing_issues_are_closed_and_cascaded_by_the_real_close_issue(
 
     real_close = dw._invoke_close_issue
     _wire_main_seams(
-        dw, monkeypatch, rollup=_GREEN_ROLLUP, pr_body=_TWO_ISSUE_PR_BODY,
+        dw,
+        monkeypatch,
+        rollup=_GREEN_ROLLUP,
+        pr_body=_TWO_ISSUE_PR_BODY,
         issues={42: _open_issue(_TICKED_BODY), 43: _open_issue(_TICKED_BODY)},
     )
     monkeypatch.setattr(dw, "_invoke_close_issue", real_close)
@@ -1570,12 +1791,18 @@ _LEAD_IN_CASES: list[tuple[_Issue | None, tuple[str, str] | None]] = [
     ("issue", "expected"),
     _LEAD_IN_CASES,
     ids=[
-        "task-in-progress", "task-in-review", "closed", "unread",
-        "untyped", "container-in-progress",
+        "task-in-progress",
+        "task-in-review",
+        "closed",
+        "unread",
+        "untyped",
+        "container-in-progress",
     ],
 )
 def test_the_lead_in_is_read_from_the_transition_table(
-    dw: ModuleType, issue: _Issue | None, expected: tuple[str, str] | None,
+    dw: ModuleType,
+    issue: _Issue | None,
+    expected: tuple[str, str] | None,
 ) -> None:
     from ruamel.yaml import YAML
 
@@ -1587,8 +1814,11 @@ def test_the_lead_in_is_read_from_the_transition_table(
 
 
 def _wire_lead_in(
-    dw: ModuleType, monkeypatch: pytest.MonkeyPatch, primary: _Issue,
-    *, move_rc: int = 0,
+    dw: ModuleType,
+    monkeypatch: pytest.MonkeyPatch,
+    primary: _Issue,
+    *,
+    move_rc: int = 0,
 ) -> dict[str, Any]:
     """Wire main() with the real schemas and a move stub that records targets."""
     calls = cast(
@@ -1610,7 +1840,9 @@ def _wire_lead_in(
 
 
 def test_an_in_progress_issue_moves_to_review_before_the_merge(
-    dw: ModuleType, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str],
+    dw: ModuleType,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     calls = _wire_lead_in(dw, monkeypatch, _task("state:in-progress"))
     rc: int = _run_main(dw, monkeypatch, ["42", "--yes"])
@@ -1629,7 +1861,9 @@ def test_an_in_progress_issue_moves_to_review_before_the_merge(
 
 
 def test_an_issue_in_review_makes_only_the_move_to_done(
-    dw: ModuleType, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str],
+    dw: ModuleType,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     calls = _wire_lead_in(dw, monkeypatch, _task("state:review"))
     rc: int = _run_main(dw, monkeypatch, ["42", "--yes"])
@@ -1640,7 +1874,9 @@ def test_an_issue_in_review_makes_only_the_move_to_done(
 
 
 def test_a_failed_move_to_review_stops_the_run_before_the_merge(
-    dw: ModuleType, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str],
+    dw: ModuleType,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     calls = _wire_lead_in(dw, monkeypatch, _task("state:in-progress"), move_rc=3)
     rc: int = _run_main(dw, monkeypatch, ["42", "--yes"])
@@ -1654,7 +1890,9 @@ def test_a_failed_move_to_review_stops_the_run_before_the_merge(
 
 
 def test_the_dry_run_names_the_move_to_review_and_makes_none(
-    dw: ModuleType, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str],
+    dw: ModuleType,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     calls = _wire_lead_in(dw, monkeypatch, _task("state:in-progress"))
     rc: int = _run_main(dw, monkeypatch, ["42", "--dry-run"])
@@ -1751,8 +1989,11 @@ class _EndToEnd:
 
 
 def _run_done_work_end_to_end(
-    dw: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
-    capfd: pytest.CaptureFixture[str], primary_label: str,
+    dw: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capfd: pytest.CaptureFixture[str],
+    primary_label: str,
 ) -> _EndToEnd:
     """done-work on #42, carrying `primary_label`, with the REAL move-issue and
     close-issue run against the stateful fake `gh`."""
@@ -1764,14 +2005,15 @@ def _run_done_work_end_to_end(
     shutil.copytree(CAPABILITY_ROOT_DW / "schemas", cap_root / "schemas")
 
     feature = {
-        "title": "[Feature] widgets", "state": "OPEN", "milestone": None,
+        "title": "[Feature] widgets",
+        "state": "OPEN",
+        "milestone": None,
         "labels": [{"name": "state:in-progress"}],
         "body": "## What\n\nw\n\n## Acceptance criteria\n\n- [ ] shipped\n",
     }
     state = {
         "issues": {"42": _task(primary_label), "7": feature},
-        "pr": {"number": 496, "state": "MERGED",
-               "mergedAt": "2026-09-30T10:00:00Z", "url": "u"},
+        "pr": {"number": 496, "state": "MERGED", "mergedAt": "2026-09-30T10:00:00Z", "url": "u"},
     }
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
@@ -1791,8 +2033,12 @@ def _run_done_work_end_to_end(
 
     real_move, real_close = dw._invoke_move_issue, dw._invoke_close_issue
     _wire_main_seams(
-        dw, monkeypatch, rollup=_GREEN_ROLLUP, issues={42: _task(primary_label)},
+        dw,
+        monkeypatch,
+        rollup=_GREEN_ROLLUP,
+        issues={42: _task(primary_label)},
     )
+
     def staged_capability_root(arg: Path | None) -> Path:
         return cap_root
 
@@ -1808,7 +2054,9 @@ def _run_done_work_end_to_end(
     monkeypatch.setattr(dw.pr_merge, "squash_merge", merge)
 
     rc: int = _run_main(
-        dw, monkeypatch, ["42", "--yes", "--capability-root", str(cap_root)],
+        dw,
+        monkeypatch,
+        ["42", "--yes", "--capability-root", str(cap_root)],
     )
 
     captured = capfd.readouterr()
@@ -1823,15 +2071,23 @@ def _run_done_work_end_to_end(
 
 
 def test_an_in_progress_issue_ends_closed_and_done_with_one_comment_and_no_warning(
-    dw: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    dw: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
     capfd: pytest.CaptureFixture[str],
 ) -> None:
     run = _run_done_work_end_to_end(dw, tmp_path, monkeypatch, capfd, "state:in-progress")
     run.assert_closed_done_one_comment_no_warning()
     edits = run.state_label_edits()
     assert [option for edit in edits for option in edit[3:]] == [
-        "--add-label", "state:review", "--remove-label", "state:in-progress",
-        "--add-label", "state:done", "--remove-label", "state:review",
+        "--add-label",
+        "state:review",
+        "--remove-label",
+        "state:in-progress",
+        "--add-label",
+        "state:done",
+        "--remove-label",
+        "state:review",
     ]
     # In Progress → Review before the merge, Review → Done after it.
     assert run.calls.index(edits[0]) < run.calls_at_merge <= run.calls.index(edits[1])
@@ -1840,7 +2096,9 @@ def test_an_in_progress_issue_ends_closed_and_done_with_one_comment_and_no_warni
 
 
 def test_an_issue_in_review_is_closed_as_before(
-    dw: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    dw: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
     capfd: pytest.CaptureFixture[str],
 ) -> None:
     run = _run_done_work_end_to_end(dw, tmp_path, monkeypatch, capfd, "state:review")

@@ -436,7 +436,9 @@ def test_a_source_is_judged_through_the_resolver_its_kind_registers(
     front["rules"]["RS-CMN-001"]["origin"]["source"] = {"kind": "transcript", "value": "t-12"}
     front["rules"]["RS-CMN-005"]["origin"]["source"] = {"kind": "transcript", "value": "t-13"}
     write_set(adopter, f"{PROJECT_SETS}/cmn.md", front)
-    declared = fd.ResolverCommand("transcript", "sources", "resolve transcript", query_contract=True)
+    declared = fd.ResolverCommand(
+        "transcript", "sources", "resolve transcript", query_contract=True
+    )
     reads: list[Path] = []
 
     def register(resolver: fd.ResolverCommand) -> None:
@@ -453,7 +455,9 @@ def test_a_source_is_judged_through_the_resolver_its_kind_registers(
     assert [f.kind for f in result.findings] == [Kind.UNRESOLVED_SOURCE_KIND] * 2
     assert reads == [adopter.root]  # the registry is read once per pass
     message = result.findings[0].message
-    assert "the resolver `resolve transcript` that sources registers for it is not run yet" in message
+    assert (
+        "the resolver `resolve transcript` that sources registers for it is not run yet" in message
+    )
     assert fd.unresolved_kind_reason("transcript", {}) not in message
 
     # Registered without it: refused, as the friction checks refuse it.
@@ -659,7 +663,10 @@ def test_a_fill_whose_rule_does_not_anchor_to_the_rule_it_fills(adopter: Adopter
             "fills": ["RS-CMN-005#writer"],
             "pkit": {
                 "friction": {
-                    "anchors": {"artefact": ["RS-CMN-001", "RS-CMN-005#writer"], "path": ["docs/**"]}
+                    "anchors": {
+                        "artefact": ["RS-CMN-001", "RS-CMN-005#writer"],
+                        "path": ["docs/**"],
+                    }
                 }
             },
         },
@@ -674,7 +681,8 @@ def test_a_fill_whose_rule_does_not_anchor_to_the_rule_it_fills(adopter: Adopter
     ]
     assert kinds(result) == [Kind.UNANCHORED_FILL, Kind.UNANCHORED_FILL]
     assert (
-        "fills RS-CMN-005#reader, but RS-DOC-003 does not anchor to RS-CMN-005" in unanchored[0].message
+        "fills RS-CMN-005#reader, but RS-DOC-003 does not anchor to RS-CMN-005"
+        in unanchored[0].message
     )
     assert "add RS-CMN-005 to `pkit.friction.anchors.artefact`" in unanchored[0].message
 

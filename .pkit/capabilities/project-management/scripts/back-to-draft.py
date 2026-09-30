@@ -64,7 +64,9 @@ def main() -> int:
     )
     parser.add_argument("issue_number", type=int)
     parser.add_argument(
-        "--capability-root", type=Path, default=None,
+        "--capability-root",
+        type=Path,
+        default=None,
         help=f"Default: <repo-root>/.pkit/capabilities/{CAPABILITY_NAME}/.",
     )
     parser.add_argument("--dry-run", action="store_true")
@@ -147,7 +149,9 @@ def _find_issue_branch(issue_number: int) -> str | None:
     try:
         proc = subprocess.run(
             ["git", "branch", "--list", "--format=%(refname:short)"],
-            capture_output=True, text=True, check=False,
+            capture_output=True,
+            text=True,
+            check=False,
         )
     except FileNotFoundError:
         return None
@@ -163,9 +167,19 @@ def _find_issue_branch(issue_number: int) -> str | None:
 
 def _find_pr_for_branch(branch: str, config: dict) -> dict | None:
     proc = gh_run(
-        ["gh", "pr", "list", "--head", branch, "--state", "open",
-         "--json", "number,isDraft,headRefName"],
-        config, check=False,
+        [
+            "gh",
+            "pr",
+            "list",
+            "--head",
+            branch,
+            "--state",
+            "open",
+            "--json",
+            "number,isDraft,headRefName",
+        ],
+        config,
+        check=False,
     )
     if proc.returncode != 0:
         return None
@@ -184,7 +198,8 @@ def _gh_pr_ready_undo(pr_number: int | None, config: dict) -> bool:
         return False
     proc = gh_run(
         ["gh", "pr", "ready", str(pr_number), "--undo"],
-        config, check=False,
+        config,
+        check=False,
     )
     if proc.returncode != 0:
         print(
@@ -202,7 +217,8 @@ def _dismiss_approved_reviews(pr_number: int | None, config: dict) -> int:
     # Fetch reviews via gh pr view.
     proc = gh_run(
         ["gh", "pr", "view", str(pr_number), "--json", "reviews"],
-        config, check=False,
+        config,
+        check=False,
     )
     if proc.returncode != 0:
         return 0
@@ -211,19 +227,23 @@ def _dismiss_approved_reviews(pr_number: int | None, config: dict) -> int:
     except (ValueError, json.JSONDecodeError):
         return 0
     reviews = data.get("reviews") or []
-    approved_count = sum(
-        1 for r in reviews
-        if isinstance(r, dict) and r.get("state") == "APPROVED"
-    )
+    approved_count = sum(1 for r in reviews if isinstance(r, dict) and r.get("state") == "APPROVED")
     if approved_count == 0:
         return 0
     # Dismiss via the PR's review-dismiss API. `gh pr review --dismiss`
     # requires a message; we use a kit-attributable one.
     proc = gh_run(
-        ["gh", "pr", "review", str(pr_number),
-         "--request-changes",
-         "--body", "Dismissed by back-to-draft: PR flipped back for further work."],
-        config, check=False,
+        [
+            "gh",
+            "pr",
+            "review",
+            str(pr_number),
+            "--request-changes",
+            "--body",
+            "Dismissed by back-to-draft: PR flipped back for further work.",
+        ],
+        config,
+        check=False,
     )
     if proc.returncode != 0:
         print(

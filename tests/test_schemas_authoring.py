@@ -142,9 +142,7 @@ def test_add_appends_entry_to_mapping_collection(tmp_path: Path) -> None:
 def test_add_preserves_existing_comments_and_order(tmp_path: Path) -> None:
     """Round-trip YAML write keeps the file's leading comment and existing key order."""
     yaml_path, _ = _setup_namespace(tmp_path)
-    add_entry_to_namespace(
-        tmp_path, "issue-types", "umbrella", {"role": "Bucket."}
-    )
+    add_entry_to_namespace(tmp_path, "issue-types", "umbrella", {"role": "Bucket."})
     content = yaml_path.read_text(encoding="utf-8")
     assert content.startswith("# A taxonomy.")
     # The pre-existing types appear before the new one.
@@ -371,9 +369,7 @@ def test_stamp_new_schema_core_area_namespace(tmp_path: Path) -> None:
 
 def test_stamp_new_schema_core_area_document(tmp_path: Path) -> None:
     _core_schemas_area(tmp_path)
-    result = stamp_new_schema(
-        tmp_path, capability="core", name="perm-config", no_namespace=True
-    )
+    result = stamp_new_schema(tmp_path, capability="core", name="perm-config", no_namespace=True)
     assert result.yaml_path == tmp_path / ".pkit" / "schemas" / "perm-config.yaml"
     companion = json.loads(result.companion_path.read_text(encoding="utf-8"))
     assert "x-pkit-id-collection" not in companion
@@ -401,9 +397,7 @@ def test_stamp_refuses_non_kebab_name(tmp_path: Path) -> None:
 def test_stamp_refuses_non_kebab_collection_name(tmp_path: Path) -> None:
     _stamp_empty_capability(tmp_path)
     with pytest.raises(SchemaAuthoringError, match="must be kebab-case"):
-        stamp_new_schema(
-            tmp_path, capability="demo", name="good", collection_name="BadName"
-        )
+        stamp_new_schema(tmp_path, capability="demo", name="good", collection_name="BadName")
 
 
 def test_stamp_validates_clean_via_pkit_schemas_validate(tmp_path: Path) -> None:
@@ -423,9 +417,7 @@ def test_stamp_validates_clean_via_pkit_schemas_validate(tmp_path: Path) -> None
 def test_stamp_document_shape_yaml_has_no_collection(tmp_path: Path) -> None:
     """`--no-namespace` stamps a document YAML with no top-level collection key."""
     _stamp_empty_capability(tmp_path)
-    result = stamp_new_schema(
-        tmp_path, capability="demo", name="trip", no_namespace=True
-    )
+    result = stamp_new_schema(tmp_path, capability="demo", name="trip", no_namespace=True)
     assert isinstance(result, SchemaStampResult)
     yaml_text = result.yaml_path.read_text(encoding="utf-8")
     # Envelope present.
@@ -433,8 +425,7 @@ def test_stamp_document_shape_yaml_has_no_collection(tmp_path: Path) -> None:
     # No collection wrapper key.
     for forbidden in ("entries:", "types:", "items: []", "entries: []", "entries: {}"):
         assert forbidden not in yaml_text, (
-            f"document YAML must not contain collection wrapper {forbidden!r}; "
-            f"got:\n{yaml_text}"
+            f"document YAML must not contain collection wrapper {forbidden!r}; got:\n{yaml_text}"
         )
 
 
@@ -443,9 +434,7 @@ def test_stamp_document_shape_companion_has_no_collection_annotation(
 ) -> None:
     """`--no-namespace` companion omits `x-pkit-id-collection`."""
     _stamp_empty_capability(tmp_path)
-    result = stamp_new_schema(
-        tmp_path, capability="demo", name="trip", no_namespace=True
-    )
+    result = stamp_new_schema(tmp_path, capability="demo", name="trip", no_namespace=True)
     companion = json.loads(result.companion_path.read_text(encoding="utf-8"))
     assert "x-pkit-id-collection" not in companion
 
@@ -457,9 +446,7 @@ def test_stamp_document_shape_companion_has_flat_properties(tmp_path: Path) -> N
     plus no namespaced collection — author adds document fields here.
     """
     _stamp_empty_capability(tmp_path)
-    result = stamp_new_schema(
-        tmp_path, capability="demo", name="trip", no_namespace=True
-    )
+    result = stamp_new_schema(tmp_path, capability="demo", name="trip", no_namespace=True)
     companion = json.loads(result.companion_path.read_text(encoding="utf-8"))
     assert companion["type"] == "object"
     assert companion["additionalProperties"] is False
@@ -484,9 +471,7 @@ def test_stamp_document_shape_has_no_defs_entry(tmp_path: Path) -> None:
     shape to declare.
     """
     _stamp_empty_capability(tmp_path)
-    result = stamp_new_schema(
-        tmp_path, capability="demo", name="trip", no_namespace=True
-    )
+    result = stamp_new_schema(tmp_path, capability="demo", name="trip", no_namespace=True)
     companion = json.loads(result.companion_path.read_text(encoding="utf-8"))
     defs = companion.get("$defs", {})
     assert "entry" not in defs
@@ -495,9 +480,7 @@ def test_stamp_document_shape_has_no_defs_entry(tmp_path: Path) -> None:
 def test_stamp_document_shape_has_no_narrowed_ref(tmp_path: Path) -> None:
     """`--no-namespace` companion does not stamp a `<name>_ref` $defs entry."""
     _stamp_empty_capability(tmp_path)
-    result = stamp_new_schema(
-        tmp_path, capability="demo", name="trip", no_namespace=True
-    )
+    result = stamp_new_schema(tmp_path, capability="demo", name="trip", no_namespace=True)
     companion = json.loads(result.companion_path.read_text(encoding="utf-8"))
     defs = companion.get("$defs", {})
     assert "trip_ref" not in defs
@@ -525,17 +508,13 @@ def test_stamp_document_shape_refuses_non_kebab_name(tmp_path: Path) -> None:
     """`--no-namespace` still validates kebab-case on the schema name."""
     _stamp_empty_capability(tmp_path)
     with pytest.raises(SchemaAuthoringError, match="must be kebab-case"):
-        stamp_new_schema(
-            tmp_path, capability="demo", name="Bad_Name", no_namespace=True
-        )
+        stamp_new_schema(tmp_path, capability="demo", name="Bad_Name", no_namespace=True)
 
 
 def test_stamp_namespace_owner_path_unchanged(tmp_path: Path) -> None:
     """Regression: the default (namespace-owner) stamp still produces the same shape."""
     _stamp_empty_capability(tmp_path)
-    result = stamp_new_schema(
-        tmp_path, capability="demo", name="kinds", collection_name="types"
-    )
+    result = stamp_new_schema(tmp_path, capability="demo", name="kinds", collection_name="types")
     yaml_text = result.yaml_path.read_text(encoding="utf-8")
     # Namespace-owner YAML still carries the collection.
     assert "types: {}" in yaml_text
@@ -607,9 +586,7 @@ def test_cli_new_schema_no_namespace(tmp_path: Path) -> None:
         import shutil
 
         shutil.copytree(tmp_path / ".pkit", Path.cwd() / ".pkit", dirs_exist_ok=True)
-        result = runner.invoke(
-            main, ["new", "schema", "demo", "trip", "--no-namespace"]
-        )
+        result = runner.invoke(main, ["new", "schema", "demo", "trip", "--no-namespace"])
         assert result.exit_code == 0, result.output
         assert "Stamped:" in result.output
         # Confirm the stamped companion is document-shaped.
@@ -671,8 +648,7 @@ def _setup_namespace_with_consumer(tmp_path: Path) -> dict[str, Path]:
     )
     # Consumer 1: token reference in a value.
     (schemas / "rules.yaml").write_text(
-        "schema_version: 1\n"
-        "applies_to: [\"[kinds:feature]\", \"[kinds:task]\"]\n",
+        'schema_version: 1\napplies_to: ["[kinds:feature]", "[kinds:task]"]\n',
         encoding="utf-8",
     )
     (schemas / "rules.schema.json").write_text(
@@ -698,12 +674,7 @@ def _setup_namespace_with_consumer(tmp_path: Path) -> dict[str, Path]:
     )
     # Consumer 2: annotation-based mapping keys.
     (schemas / "per-kind.yaml").write_text(
-        "schema_version: 1\n"
-        "by_kind:\n"
-        "  task:\n"
-        "    note: t\n"
-        "  feature:\n"
-        "    note: f\n",
+        "schema_version: 1\nby_kind:\n  task:\n    note: t\n  feature:\n    note: f\n",
         encoding="utf-8",
     )
     (schemas / "per-kind.schema.json").write_text(
@@ -849,9 +820,7 @@ def test_rename_rolls_back_on_collision_in_annotation_keys(tmp_path: Path) -> No
     # per-kind, not in owner.
     # Add a "task2" entry only to per-kind, rename feature → task2.
     per_kind_text = paths["per_kind"].read_text(encoding="utf-8")
-    paths["per_kind"].write_text(
-        per_kind_text + "  task2:\n    note: t2\n", encoding="utf-8"
-    )
+    paths["per_kind"].write_text(per_kind_text + "  task2:\n    note: t2\n", encoding="utf-8")
     # Now per-kind has task, feature, task2. owner still has task, feature.
     # Try to rename feature → task2 in kinds: owner has no collision (task2
     # isn't in owner), but per-kind does (task2 is already present).
@@ -872,9 +841,7 @@ def test_cli_schemas_rename(tmp_path: Path) -> None:
         import shutil
 
         shutil.copytree(tmp_path / ".pkit", Path.cwd() / ".pkit", dirs_exist_ok=True)
-        result = runner.invoke(
-            main, ["schemas", "rename", "kinds", "feature", "capability"]
-        )
+        result = runner.invoke(main, ["schemas", "rename", "kinds", "feature", "capability"])
     assert result.exit_code == 0, result.output
     assert "Renamed 'feature'" in result.output
     assert "[owner-key]" in result.output
@@ -979,9 +946,7 @@ def test_cli_schemas_rename_core_namespace(tmp_path: Path) -> None:
         import shutil
 
         shutil.copytree(tmp_path / ".pkit", Path.cwd() / ".pkit", dirs_exist_ok=True)
-        result = runner.invoke(
-            main, ["schemas", "rename", "issue-types", "feature", "capability"]
-        )
+        result = runner.invoke(main, ["schemas", "rename", "issue-types", "feature", "capability"])
     assert result.exit_code == 0, result.output
     assert "Renamed 'feature'" in result.output
     assert "[owner-key] .pkit/schemas/issue-types.yaml" in result.output

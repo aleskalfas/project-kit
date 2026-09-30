@@ -584,8 +584,7 @@ def refuse_propagation_into_source(
     lines = [
         f"refusing to run `{command}` in {target_root}: it is the methodology's source "
         "repository, and the running pkit is not its own code.",
-        "The marker test says it is the source: the package source sits beside its "
-        "`.pkit/` tree.",
+        "The marker test says it is the source: the package source sits beside its `.pkit/` tree.",
         f"Sync's test says it is not: the running code's methodology tree is "
         f"{source_kit}, not {target_root / '.pkit'}.",
         f"`{command}` would {would} (ADR-059). "

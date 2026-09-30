@@ -85,14 +85,10 @@ def test_execute_scripts_runs_each_with_root_env_var(tmp_path: Path) -> None:
     """Every script sees ROOT=<target_root> in its environment."""
     trace = tmp_path / "trace.txt"
     script1 = tmp_path / "001.sh"
-    script1.write_text(
-        f'#!/usr/bin/env bash\necho "$ROOT" >> "{trace}"\n', encoding="utf-8"
-    )
+    script1.write_text(f'#!/usr/bin/env bash\necho "$ROOT" >> "{trace}"\n', encoding="utf-8")
     script1.chmod(0o755)
     script2 = tmp_path / "002.sh"
-    script2.write_text(
-        f'#!/usr/bin/env bash\necho "$ROOT" >> "{trace}"\n', encoding="utf-8"
-    )
+    script2.write_text(f'#!/usr/bin/env bash\necho "$ROOT" >> "{trace}"\n', encoding="utf-8")
     script2.chmod(0o755)
 
     execute_migration_scripts([script1, script2], tmp_path, label="test")
@@ -104,9 +100,7 @@ def test_execute_scripts_halts_on_first_failure(tmp_path: Path) -> None:
     """A non-zero exit raises; subsequent scripts do not run."""
     trace = tmp_path / "trace.txt"
     pass_script = tmp_path / "001.sh"
-    pass_script.write_text(
-        f'#!/usr/bin/env bash\necho "pass" >> "{trace}"\n', encoding="utf-8"
-    )
+    pass_script.write_text(f'#!/usr/bin/env bash\necho "pass" >> "{trace}"\n', encoding="utf-8")
     pass_script.chmod(0o755)
     fail_script = tmp_path / "002.sh"
     fail_script.write_text("#!/usr/bin/env bash\nexit 7\n", encoding="utf-8")
@@ -154,13 +148,16 @@ import subprocess  # noqa: E402
 
 _MIGRATION_154 = (
     Path(__file__).resolve().parents[1]
-    / ".pkit" / "migrations" / "backbone" / "1.54.0"
+    / ".pkit"
+    / "migrations"
+    / "backbone"
+    / "1.54.0"
     / "001-seed-architect-overlay-categories.sh"
 )
 _OLD_OVERLAY = (
     "# adopter overlay\n"
     "workflow-docs:\n  - README.md\n\n"
-    "project-root-docs:\n  - docs/team.md\n"   # a customised value to prove preservation
+    "project-root-docs:\n  - docs/team.md\n"  # a customised value to prove preservation
 )
 
 
@@ -168,12 +165,15 @@ def _run_migration(root: Path) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         ["bash", str(_MIGRATION_154)],
         env={"ROOT": str(root), "PATH": __import__("os").environ["PATH"]},
-        capture_output=True, text=True, check=False,
+        capture_output=True,
+        text=True,
+        check=False,
     )
 
 
 def _load_overlay(root: Path) -> dict:
     from ruamel.yaml import YAML
+
     p = root / ".pkit" / "agents" / "project" / "overlay.yaml"
     return YAML(typ="safe").load(p.read_text())
 
@@ -207,7 +207,7 @@ def test_migration_is_idempotent(tmp_path: Path) -> None:
     second = _run_migration(tmp_path)
     assert second.returncode == 0
     assert "already migrated" in second.stdout
-    assert overlay.read_text() == after_first   # no duplicate appends
+    assert overlay.read_text() == after_first  # no duplicate appends
 
 
 def test_migration_skips_when_no_overlay(tmp_path: Path) -> None:

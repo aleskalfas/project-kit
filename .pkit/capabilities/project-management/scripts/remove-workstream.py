@@ -165,9 +165,7 @@ def main() -> int:
     # labels reach `gh label delete`, and no guard covers a label the kit never
     # owned. Only the greenfield (`kit-label`) arm touches labels.
     substrate_map = axis_labels.load_substrate_map(capability_root)
-    kit_label_note = axis_carriage.kit_label_mutation_note(
-        "workstream", config, substrate_map
-    )
+    kit_label_note = axis_carriage.kit_label_mutation_note("workstream", config, substrate_map)
     kit_labels = kit_label_note is None
 
     # Issue-count precondition.

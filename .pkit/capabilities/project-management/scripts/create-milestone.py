@@ -88,10 +88,7 @@ def main() -> int:
         "--number",
         type=int,
         default=None,
-        help=(
-            "Override the auto-computed number. Default: max declared "
-            "in this category + 1."
-        ),
+        help=("Override the auto-computed number. Default: max declared in this category + 1."),
     )
     parser.add_argument(
         "--close-trigger",

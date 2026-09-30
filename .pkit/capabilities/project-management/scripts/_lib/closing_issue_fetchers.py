@@ -48,7 +48,10 @@ GhGetIssueFn = Callable[..., "dict | None"]
 
 
 def pr_closing_issue_numbers(
-    pr_number: int, config: dict, *, gh_run: GhRunFn,
+    pr_number: int,
+    config: dict,
+    *,
+    gh_run: GhRunFn,
 ) -> "list[int] | _Unresolvable":
     """Issue numbers the PR closes, via `gh pr view`'s closingIssuesReferences.
 
@@ -67,32 +70,24 @@ def pr_closing_issue_numbers(
     carries no substrate of its own; both consumers share this one definition.
     """
     proc = gh_run(
-        ["gh", "pr", "view", str(pr_number),
-         "--json", "closingIssuesReferences"],
-        config, check=False,
+        ["gh", "pr", "view", str(pr_number), "--json", "closingIssuesReferences"],
+        config,
+        check=False,
     )
     if proc.returncode != 0:
-        return _Unresolvable(
-            f"gh pr view closingIssuesReferences failed: {proc.stderr.strip()}"
-        )
+        return _Unresolvable(f"gh pr view closingIssuesReferences failed: {proc.stderr.strip()}")
     try:
         data = json.loads(proc.stdout)
     except (ValueError, json.JSONDecodeError):
-        return _Unresolvable(
-            "gh pr view closingIssuesReferences returned malformed JSON"
-        )
+        return _Unresolvable("gh pr view closingIssuesReferences returned malformed JSON")
     if not isinstance(data, dict) or "closingIssuesReferences" not in data:
-        return _Unresolvable(
-            "gh pr view payload missing closingIssuesReferences"
-        )
+        return _Unresolvable("gh pr view payload missing closingIssuesReferences")
     refs = data["closingIssuesReferences"]
     if not isinstance(refs, list):
         # A present-but-null (or otherwise non-list) field is UNKNOWN ground
         # truth, not "closes nothing" — fail closed rather than collapse a
         # null to the legitimate empty branch and drop a required reviewer.
-        return _Unresolvable(
-            "gh pr view closingIssuesReferences is null or not a list"
-        )
+        return _Unresolvable("gh pr view closingIssuesReferences is null or not a list")
     numbers: list[int] = []
     for ref in refs:
         if isinstance(ref, dict) and isinstance(ref.get("number"), int):
@@ -101,7 +96,10 @@ def pr_closing_issue_numbers(
 
 
 def pr_changed_files(
-    pr_number: int, config: dict, *, gh_run: GhRunFn,
+    pr_number: int,
+    config: dict,
+    *,
+    gh_run: GhRunFn,
 ) -> "list[str] | _Unresolvable":
     """The PR's changed-file paths, via `gh pr diff --name-only` (DEC-032 amendment).
 
@@ -129,22 +127,22 @@ def pr_changed_files(
     """
     proc = gh_run(
         ["gh", "pr", "diff", str(pr_number), "--name-only"],
-        config, check=False,
+        config,
+        check=False,
     )
     if proc.returncode != 0:
-        return _Unresolvable(
-            f"gh pr diff --name-only failed: {proc.stderr.strip()}"
-        )
+        return _Unresolvable(f"gh pr diff --name-only failed: {proc.stderr.strip()}")
     paths = [line.strip() for line in proc.stdout.splitlines() if line.strip()]
     if not paths:
-        return _Unresolvable(
-            "gh pr diff --name-only returned no files — diff undeterminable"
-        )
+        return _Unresolvable("gh pr diff --name-only returned no files — diff undeterminable")
     return paths
 
 
 def issue_labels(
-    issue_number: int, config: dict, *, gh_get_issue: GhGetIssueFn,
+    issue_number: int,
+    config: dict,
+    *,
+    gh_get_issue: GhGetIssueFn,
 ) -> "list | None":
     """Read an issue's labels for classification (None on fetch failure).
 

@@ -100,7 +100,6 @@ def main() -> int:
 
     config = load_adopter_config(capability_root)
 
-
     invoker = resolve_invoker_identity(config=config)
     result = check_membership(members, invoker)
     if not result.allowed:
@@ -179,9 +178,7 @@ def _read_members(file_path: Path, yaml_loader: YAML) -> list[dict]:
     return members
 
 
-def _write_members(
-    file_path: Path, members: list[dict], yaml_loader: YAML
-) -> None:
+def _write_members(file_path: Path, members: list[dict], yaml_loader: YAML) -> None:
     file_path.parent.mkdir(parents=True, exist_ok=True)
     payload = {"schema_version": 1, "members": members}
     with file_path.open("w", encoding="utf-8") as fh:

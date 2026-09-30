@@ -648,9 +648,7 @@ def _template_front_matter(name: str) -> dict[str, Any]:
 #: Every template but the space definition's is a page template, named for its kind:
 #: a kind arrives with its template (RS-LDOC-004; the page schema's `kind`).
 PAGE_TEMPLATES = sorted(
-    path.stem
-    for path in (CAPABILITY / "templates").glob("*.md")
-    if path.stem != "space-definition"
+    path.stem for path in (CAPABILITY / "templates").glob("*.md") if path.stem != "space-definition"
 )
 
 

@@ -66,9 +66,7 @@ def allowed_structural_types_per_kind(classification: dict) -> dict:
     """
     axes = classification.get("axes") if isinstance(classification, dict) else None
     type_axis = axes.get("type") if isinstance(axes, dict) else None
-    restriction = (
-        type_axis.get("structural_restriction") if isinstance(type_axis, dict) else None
-    )
+    restriction = type_axis.get("structural_restriction") if isinstance(type_axis, dict) else None
     allowed = (
         restriction.get("allowed_structural_types_per_kind")
         if isinstance(restriction, dict)
@@ -77,9 +75,7 @@ def allowed_structural_types_per_kind(classification: dict) -> dict:
     return allowed if isinstance(allowed, dict) else {}
 
 
-def kind_allowed_for_structural_type(
-    kind: str, structural_type: str, classification: dict
-) -> bool:
+def kind_allowed_for_structural_type(kind: str, structural_type: str, classification: dict) -> bool:
     """Whether ``kind`` may be carried by ``structural_type`` per the restriction.
 
     Reads :func:`allowed_structural_types_per_kind` (single source of truth).
@@ -112,12 +108,8 @@ def mismatch_severity_token(classification: dict) -> str | None:
     """
     axes = classification.get("axes") if isinstance(classification, dict) else None
     type_axis = axes.get("type") if isinstance(axes, dict) else None
-    restriction = (
-        type_axis.get("structural_restriction") if isinstance(type_axis, dict) else None
-    )
-    token = (
-        restriction.get("mismatch_severity") if isinstance(restriction, dict) else None
-    )
+    restriction = type_axis.get("structural_restriction") if isinstance(type_axis, dict) else None
+    token = restriction.get("mismatch_severity") if isinstance(restriction, dict) else None
     return token if isinstance(token, str) and token else None
 
 
@@ -130,9 +122,7 @@ def title_prefix_by_value(classification: dict) -> dict:
     """
     axes = classification.get("axes") if isinstance(classification, dict) else None
     type_axis = axes.get("type") if isinstance(axes, dict) else None
-    mapping = (
-        type_axis.get("title_prefix_by_value") if isinstance(type_axis, dict) else None
-    )
+    mapping = type_axis.get("title_prefix_by_value") if isinstance(type_axis, dict) else None
     return mapping if isinstance(mapping, dict) else {}
 
 

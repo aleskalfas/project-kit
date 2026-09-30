@@ -79,7 +79,8 @@ def test_repo_name_from_url_strips_owner_and_git(url: str, expected) -> None:
 
 def test_git_remote_repo_name_parses_origin(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(
-        rc.subprocess, "run",
+        rc.subprocess,
+        "run",
         lambda cmd, **k: _FakeProc(0, "git@github.com:private-org/widget.git\n"),
     )
     assert rc.git_remote_repo_name(tmp_path) == "widget"  # no org, ever
@@ -90,19 +91,13 @@ def test_git_remote_repo_name_none_without_remote(tmp_path: Path, monkeypatch) -
     assert rc.git_remote_repo_name(tmp_path) is None
 
 
-def test_resolve_project_name_prefers_config_over_remote(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_resolve_project_name_prefers_config_over_remote(tmp_path: Path, monkeypatch) -> None:
     rc.write_project_name(tmp_path, "declared")
-    monkeypatch.setattr(
-        rc.subprocess, "run", lambda cmd, **k: _FakeProc(0, "o/remote.git\n")
-    )
+    monkeypatch.setattr(rc.subprocess, "run", lambda cmd, **k: _FakeProc(0, "o/remote.git\n"))
     assert rc.resolve_project_name(tmp_path) == "declared"
 
 
-def test_resolve_project_name_never_the_directory_basename(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_resolve_project_name_never_the_directory_basename(tmp_path: Path, monkeypatch) -> None:
     # The never-source-from-paths pin (ADR-050): with no config and no remote,
     # the name is UNRESOLVED — the directory's own name must never leak in.
     project_dir = tmp_path / "secret-client-project"
@@ -122,9 +117,7 @@ def _verb(tmp_path: Path, monkeypatch, body: str) -> Path:
     script = tmp_path / "context-workstream.py"
     script.write_text("#!/usr/bin/env python3\n" + body, encoding="utf-8")
     script.chmod(script.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
-    monkeypatch.setattr(
-        dispatcher, "resolve_capability_script", lambda root, cap, cmd: script
-    )
+    monkeypatch.setattr(dispatcher, "resolve_capability_script", lambda root, cap, cmd: script)
     return script
 
 
@@ -160,14 +153,10 @@ def test_pm_workstream_reads_the_printed_value_as_text(
     assert rc.pm_workstream(tmp_path) == expected
 
 
-def test_pm_workstream_none_when_capability_or_verb_absent(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_pm_workstream_none_when_capability_or_verb_absent(tmp_path: Path, monkeypatch) -> None:
     from project_kit import dispatcher
 
-    monkeypatch.setattr(
-        dispatcher, "resolve_capability_script", lambda root, cap, cmd: None
-    )
+    monkeypatch.setattr(dispatcher, "resolve_capability_script", lambda root, cap, cmd: None)
 
     def explode(*args, **kwargs):  # pragma: no cover - must not be reached
         raise AssertionError("no command should run when the verb is absent")
@@ -192,9 +181,7 @@ def test_pm_workstream_none_on_failure_silently(
     assert capsys.readouterr().err == ""  # an ordinary miss degrades to silence
 
 
-def test_pm_workstream_none_when_the_verb_cannot_start(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_pm_workstream_none_when_the_verb_cannot_start(tmp_path: Path, monkeypatch) -> None:
     script = _verb(tmp_path, monkeypatch, "print('cli')\n")
     script.chmod(stat.S_IRUSR | stat.S_IWUSR)  # no longer executable
     assert rc.pm_workstream(tmp_path) is None
@@ -219,17 +206,16 @@ def test_pm_workstream_stops_a_hung_verb_at_the_bound_and_says_so(
 def test_render_context_line_all_shapes() -> None:
     assert render_context_line("alpha", "cli") == "Project: alpha · Workstream: cli"
     assert render_context_line("alpha", None) == "Project: alpha"
-    assert (
-        render_context_line(None, "cli")
-        == "Workstream: cli · (project: not declared)"
-    )
+    assert render_context_line(None, "cli") == "Workstream: cli · (project: not declared)"
     assert render_context_line(None, None) == "(project: not declared)"
 
 
 def test_kind_marker_context_keys_round_trip() -> None:
     marker = kind_marker("bug", project="alpha", workstream="cli")
     assert parse_report_marker(marker) == {
-        "kind": "bug", "project": "alpha", "workstream": "cli",
+        "kind": "bug",
+        "project": "alpha",
+        "workstream": "cli",
     }
     assert parse_report_marker(kind_marker("bug")) == {"kind": "bug"}
 
@@ -239,5 +225,6 @@ def test_kind_marker_tokenizes_whitespace_in_values() -> None:
     # spaces is tokenised (the human context line keeps it verbatim).
     marker = kind_marker("feedback", project="My Project")
     assert parse_report_marker(marker) == {
-        "kind": "feedback", "project": "My-Project",
+        "kind": "feedback",
+        "project": "My-Project",
     }

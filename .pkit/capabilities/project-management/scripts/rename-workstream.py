@@ -132,8 +132,7 @@ def main() -> int:
     path = workstreams_path(capability_root)
     if not path.is_file():
         print(
-            f"error: {path} does not exist. Run `add-workstream` or the "
-            "v0.5.0 migration first.",
+            f"error: {path} does not exist. Run `add-workstream` or the v0.5.0 migration first.",
             file=sys.stderr,
         )
         return 2
@@ -169,15 +168,15 @@ def main() -> int:
     # their own labels reach `gh label edit --name`, renaming a label the kit
     # never owned.
     substrate_map = axis_labels.load_substrate_map(capability_root)
-    kit_label_note = axis_carriage.kit_label_mutation_note(
-        "workstream", config, substrate_map
-    )
+    kit_label_note = axis_carriage.kit_label_mutation_note("workstream", config, substrate_map)
     kit_labels = kit_label_note is None
 
     print(f"rename-workstream: {args.old} → {args.new}")
     print(f"  file:        {path}")
     if kit_labels and not args.skip_label:
-        print(f"  label:       rename `{axis_labels.label('workstream', args.old)}` → `{axis_labels.label('workstream', args.new)}`")
+        print(
+            f"  label:       rename `{axis_labels.label('workstream', args.old)}` → `{axis_labels.label('workstream', args.new)}`"
+        )
     elif kit_label_note is not None:
         print(f"  label:       none — {kit_label_note}")
 
@@ -205,9 +204,7 @@ def main() -> int:
     return 0
 
 
-def _rename_in_file(
-    yaml: YAML, data: dict, old: str, new: str, path: Path
-) -> bool:
+def _rename_in_file(yaml: YAML, data: dict, old: str, new: str, path: Path) -> bool:
     ws = data.get("workstreams")
     if isinstance(ws, list):
         new_list = [new if item == old else item for item in ws]
@@ -260,8 +257,7 @@ def _gh_label_rename(old: str, new: str, config: dict) -> bool:
         )
         return True
     print(
-        f"error: gh label edit failed (exit {proc.returncode}).\n"
-        f"stderr: {proc.stderr.strip()}",
+        f"error: gh label edit failed (exit {proc.returncode}).\nstderr: {proc.stderr.strip()}",
         file=sys.stderr,
     )
     return False

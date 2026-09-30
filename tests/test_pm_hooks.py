@@ -18,13 +18,7 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 HOOKS_PY = (
-    REPO_ROOT
-    / ".pkit"
-    / "capabilities"
-    / "project-management"
-    / "scripts"
-    / "_lib"
-    / "hooks.py"
+    REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "_lib" / "hooks.py"
 )
 GH_PY = HOOKS_PY.parent / "gh.py"
 
@@ -143,10 +137,7 @@ def test_fire_hooks_unknown_kind_yields_skipped(hooks, capability_root) -> None:
 def test_fire_hooks_malformed_entry_recorded_as_failure(hooks, capability_root) -> None:
     """A non-dict entry → failed result, not exception."""
     (capability_root / "project" / "hooks.yaml").write_text(
-        "schema_version: 1\n"
-        "hooks:\n"
-        "  after_create_issue:\n"
-        "    - 'string-instead-of-mapping'\n",
+        "schema_version: 1\nhooks:\n  after_create_issue:\n    - 'string-instead-of-mapping'\n",
         encoding="utf-8",
     )
     results = hooks.fire_hooks(
@@ -224,9 +215,7 @@ def test_set_board_field_seeds_via_seam_with_create_context(
     """With the create-context shape (board_item_id on the issue + a
     project_node_id), the `set-board-field` hook drives a field-value write
     through the seam — the non-label per-create default actually seeds."""
-    (capability_root / "project" / "hooks.yaml").write_text(
-        _SET_BOARD_FIELD_HOOK, encoding="utf-8"
-    )
+    (capability_root / "project" / "hooks.yaml").write_text(_SET_BOARD_FIELD_HOOK, encoding="utf-8")
 
     captured: dict = {}
 
@@ -261,14 +250,10 @@ def test_set_board_field_seeds_via_seam_with_create_context(
     assert captured["single_select_option_id"] == "OPT_spyre"
 
 
-def test_set_board_field_skips_without_item_id(
-    hooks, capability_root, monkeypatch
-) -> None:
+def test_set_board_field_skips_without_item_id(hooks, capability_root, monkeypatch) -> None:
     """Label-fallback shape (no board → no board_item_id in context): the hook
     skips by design rather than guessing an item. No write is attempted."""
-    (capability_root / "project" / "hooks.yaml").write_text(
-        _SET_BOARD_FIELD_HOOK, encoding="utf-8"
-    )
+    (capability_root / "project" / "hooks.yaml").write_text(_SET_BOARD_FIELD_HOOK, encoding="utf-8")
 
     def boom(*a, **k):  # pragma: no cover — must not be reached
         raise AssertionError("write_field_value must not run without an item id")
@@ -286,14 +271,10 @@ def test_set_board_field_skips_without_item_id(
     assert "board-item id" in results[0].detail
 
 
-def test_set_board_field_skips_without_project_node_id(
-    hooks, capability_root, monkeypatch
-) -> None:
+def test_set_board_field_skips_without_project_node_id(hooks, capability_root, monkeypatch) -> None:
     """Item id present but the project node id did not resolve: skip, no write
     (never guess the project the item belongs to)."""
-    (capability_root / "project" / "hooks.yaml").write_text(
-        _SET_BOARD_FIELD_HOOK, encoding="utf-8"
-    )
+    (capability_root / "project" / "hooks.yaml").write_text(_SET_BOARD_FIELD_HOOK, encoding="utf-8")
 
     def boom(*a, **k):  # pragma: no cover — must not be reached
         raise AssertionError("write_field_value must not run without a project id")
@@ -395,7 +376,7 @@ def test_custom_script_executes_real_script(hooks, capability_root, tmp_path) ->
     scripts_dir.mkdir()
     script = scripts_dir / "trace.sh"
     script.write_text(
-        f'#!/usr/bin/env bash\n'
+        f"#!/usr/bin/env bash\n"
         f'echo "$PKIT_HOOK_EVENT|$PKIT_ISSUE_NUMBER|$PKIT_REPO|$PKIT_DRY_RUN" >> "{trace}"\n',
         encoding="utf-8",
     )

@@ -114,12 +114,8 @@ def main() -> int:
         return 1
 
     titles = _read_yaml(capability_root / "schemas" / "titles.yaml", yaml_loader)
-    classification = _read_yaml(
-        capability_root / "schemas" / "classification.yaml", yaml_loader
-    )
-    git_conv = _read_yaml(
-        capability_root / "schemas" / "git-conventions.yaml", yaml_loader
-    )
+    classification = _read_yaml(capability_root / "schemas" / "classification.yaml", yaml_loader)
+    git_conv = _read_yaml(capability_root / "schemas" / "git-conventions.yaml", yaml_loader)
 
     pr = _gh_get_pr(args.pr_number, config)
     if pr is None:
@@ -130,9 +126,7 @@ def main() -> int:
 
     closing_issues = _extract_closing_issues(pr_body)
     substrate_map = axis_labels.load_substrate_map(capability_root)
-    closing_type_labels = _gather_closing_type_labels(
-        closing_issues, config, substrate_map
-    )
+    closing_type_labels = _gather_closing_type_labels(closing_issues, config, substrate_map)
 
     findings = _validate_pr(
         pr_title=pr_title,
@@ -150,17 +144,14 @@ def main() -> int:
             "pr_number": args.pr_number,
             "pr_title": pr_title,
             "findings": [
-                {"severity": f.severity, "label": f.label, "detail": f.detail}
-                for f in findings
+                {"severity": f.severity, "label": f.label, "detail": f.detail} for f in findings
             ],
         }
         print(json.dumps(out, indent=2))
     else:
         _print_findings(args.pr_number, pr_title, findings)
 
-    blocking = any(
-        f.severity in (SEVERITY_HARD_REJECT, SEVERITY_BYPASSABLE) for f in findings
-    )
+    blocking = any(f.severity in (SEVERITY_HARD_REJECT, SEVERITY_BYPASSABLE) for f in findings)
     return 1 if blocking else 0
 
 

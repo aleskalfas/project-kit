@@ -14,6 +14,7 @@ Pure logic operates on plain dicts (a loaded grant model + privilege catalog);
 the loaders are thin helpers. No third-party deps beyond PyYAML for the loaders
 (the pure `decide()` path needs none).
 """
+
 from __future__ import annotations
 
 import fnmatch
@@ -21,6 +22,13 @@ import os
 import re
 import stat
 from typing import Any
+
+# The formatter leaves the `decide()` verdict path alone: these regexes, and
+# the two runs of functions below that are fenced the same way. ADR-032 and
+# ADR-060 hold that path byte-identical to its prior form, and
+# tests/test_permissions_cli.py pins it against the default branch, so a
+# formatting pass may no more rewrite it than a hand edit may.
+# fmt: off
 
 # A grant's privilege value is the COR-019 token `[privilege-catalog:<id>]`
 # (or a list of them); strip to the bare id for matching against the catalog.
@@ -68,10 +76,14 @@ _UNTRUSTED = re.compile(r"""['"`<>]|\$\(""")
 # restrictive — the moment it carries anything the splitter can't trust, we do
 # not strip.
 _BARE_CD = re.compile(r"""^cd\s+([^\s'"`$<>|&;()]+)$""")
+# fmt: on
 
 
 # ---- command segmentation + recognizer matcher ----------------------------
 
+
+# The verdict path; the formatter leaves it alone (see the note after the imports).
+# fmt: off
 def segments(command: str) -> list[list[str]]:
     """Split a compound command into segments, each tokenized, with env-var
     prefixes (and a leading `export`) stripped. Fixes the `export X=1 && gh …`
@@ -128,6 +140,7 @@ def _matches_bash(rule: dict[str, Any], toks: list[str]) -> bool:
                 return False
         return True
     return False
+# fmt: on
 
 
 def recognized_privileges(catalog: dict[str, Any], request: dict[str, Any]) -> set[str]:
@@ -176,6 +189,7 @@ def recognized_privileges(catalog: dict[str, Any], request: dict[str, Any]) -> s
 # another checkout's. Nor is a file hard-linked from elsewhere, which a write
 # through the folder's name would change at its other name.
 
+
 def _target_path(tool_input: dict[str, Any]) -> Any:
     """The path a file tool names: `file_path` (Read, Write, Edit, MultiEdit)
     or `notebook_path` (NotebookEdit)."""
@@ -204,7 +218,7 @@ def _git_pointer(checkout: str) -> str | None:
         return None
     if not pointer.startswith("gitdir:"):
         return None
-    return os.path.realpath(os.path.join(checkout, pointer[len("gitdir:"):].strip()))
+    return os.path.realpath(os.path.join(checkout, pointer[len("gitdir:") :].strip()))
 
 
 def _common_git_dir(checkout: str) -> str | None:
@@ -234,7 +248,9 @@ def _same_repository(holder: str, common: str) -> bool:
     if os.path.isdir(marker):
         return os.path.realpath(marker) == common
     gitdir = _git_pointer(holder)
-    if gitdir is None or os.path.dirname(gitdir) != os.path.realpath(os.path.join(common, "worktrees")):
+    if gitdir is None or os.path.dirname(gitdir) != os.path.realpath(
+        os.path.join(common, "worktrees")
+    ):
         return False
     try:
         with open(os.path.join(gitdir, "gitdir"), encoding="utf-8") as fh:
@@ -331,6 +347,9 @@ def _path_scoped_privileges(privileges: dict[str, Any], request: dict[str, Any])
 
 # ---- subjects, scope, decision ---------------------------------------------
 
+
+# The verdict path; the formatter leaves it alone (see the note after the imports).
+# fmt: off
 def _privilege_ids(value: Any) -> set[str]:
     """Normalise a grant's `privilege` (token or list of tokens) to bare ids."""
     vals = value if isinstance(value, list) else [value]
@@ -535,6 +554,7 @@ def _read_default_agent(project_root: str) -> str | None:
         return str(agent) if agent and isinstance(agent, str) else None
     except Exception:
         return None
+# fmt: on
 
 
 def hook_decide(
@@ -639,6 +659,7 @@ def targets_path_scoped(
 # IDENTICALLY to ruamel.yaml safe-load. Covered by the conformance fixture
 # tests/test_permission_decide.py::test_stdlib_fallback_parses_identically_to_ruamel.
 
+
 def _stdlib_load_yaml(text: str) -> Any:
     """Minimal YAML-subset parser (stdlib-only, no third-party deps)."""
     import re as _re
@@ -673,7 +694,12 @@ def _stdlib_load_yaml(text: str) -> Any:
         """Strip surrounding double-quotes; handle \\n, \\t, \\\\ escapes."""
         assert s.startswith('"') and s.endswith('"')
         inner = s[1:-1]
-        return inner.replace('\\"', '"').replace("\\n", "\n").replace("\\t", "\t").replace("\\\\", "\\")
+        return (
+            inner.replace('\\"', '"')
+            .replace("\\n", "\n")
+            .replace("\\t", "\t")
+            .replace("\\\\", "\\")
+        )
 
     def _parse_value_token(token: str) -> Any:
         """Parse a single value token (scalar or simple unquoted string)."""
@@ -806,7 +832,7 @@ def _stdlib_load_yaml(text: str) -> Any:
                         result_seq.append(_parse_value_token(value_part))
                         i += 1
                     elif value_part.startswith("["):
-                        body = value_part[1:value_part.rfind("]")]
+                        body = value_part[1 : value_part.rfind("]")]
                         result_seq.append(_split_flow_sequence(body))
                         i += 1
                     elif value_part.startswith("'") or value_part.startswith('"'):
@@ -870,7 +896,7 @@ def _stdlib_load_yaml(text: str) -> Any:
 
             key_raw = content[:colon_pos].strip()
             key = _parse_value_token(key_raw) if key_raw else None
-            val_raw = content[colon_pos + 1:].strip()
+            val_raw = content[colon_pos + 1 :].strip()
 
             if result_seq is not None:
                 break  # type switch
@@ -901,10 +927,7 @@ def _stdlib_load_yaml(text: str) -> Any:
                 # parses to None, silently dropping all adopter grants and
                 # causing the zero-dep hook to fail open (issue #55).
                 _r2_content = r2.lstrip()
-                _same_level_seq = (
-                    c2 == col
-                    and (_r2_content.startswith("- ") or _r2_content == "-")
-                )
+                _same_level_seq = c2 == col and (_r2_content.startswith("- ") or _r2_content == "-")
                 if c2 > col or _same_level_seq:
                     # Child block (deeper indent, OR same-indent block sequence)
                     child_val, i = _parse_block(lines, j, c2)
@@ -967,8 +990,10 @@ def load_yaml(path: str) -> dict[str, Any]:
         text = fh.read()
     try:
         from ruamel.yaml import YAML as _YAML
+
         _yaml = _YAML(typ="safe")
         import io as _io
+
         result = _yaml.load(_io.StringIO(text))
     except ImportError:
         result = _stdlib_load_yaml(text)
@@ -1041,8 +1066,12 @@ def _capability_fragment_catalog(
         if not name:
             continue
         frag_path = os.path.join(
-            target_root, ".pkit", "capabilities", name,
-            "permissions", "privilege-catalog.yaml",
+            target_root,
+            ".pkit",
+            "capabilities",
+            name,
+            "permissions",
+            "privilege-catalog.yaml",
         )
         if not _exists(frag_path):
             continue
@@ -1053,15 +1082,11 @@ def _capability_fragment_catalog(
             scoped_id = f"{name}:{raw_id}"
             if spec.get("guardrail"):
                 rejections.append(
-                    f"{scoped_id}: a capability fragment may not define a "
-                    f"guardrail (rejected)"
+                    f"{scoped_id}: a capability fragment may not define a guardrail (rejected)"
                 )
                 continue
             if scoped_id in backbone_ids or scoped_id in merged:
-                rejections.append(
-                    f"{scoped_id}: id collides with an existing privilege "
-                    f"(rejected)"
-                )
+                rejections.append(f"{scoped_id}: id collides with an existing privilege (rejected)")
                 continue
             entry = dict(spec)
             entry["provenance"] = f"capability:{name}"
@@ -1138,9 +1163,7 @@ def active_profile(target_root: str, config: dict[str, Any]) -> Any:
     `src/project_kit` import — decide.py runs as bare python in-sandbox."""
     import os.path
 
-    sidecar = os.path.join(
-        target_root, ".pkit", "permissions", "project", "active-profile.yaml"
-    )
+    sidecar = os.path.join(target_root, ".pkit", "permissions", "project", "active-profile.yaml")
     if _exists(sidecar):
         name = load_yaml(sidecar).get("active_profile")
         if name:

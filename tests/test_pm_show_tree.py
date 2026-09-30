@@ -17,12 +17,7 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = (
-    REPO_ROOT
-    / ".pkit"
-    / "capabilities"
-    / "project-management"
-    / "scripts"
-    / "show-tree.py"
+    REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "show-tree.py"
 )
 
 
@@ -275,9 +270,7 @@ def test_epic_with_no_parent_is_not_orphan(st, issue_types, monkeypatch) -> None
 
 def test_orphan_pr_without_matching_closing_issue(st, issue_types) -> None:
     issues = st._parse_issues([], issue_types)
-    prs = st._parse_prs(
-        [{"number": 99, "title": "x", "state": "OPEN", "body": "Closes #42"}]
-    )
+    prs = st._parse_prs([{"number": 99, "title": "x", "state": "OPEN", "body": "Closes #42"}])
     orphans = st._detect_orphans(issues, prs)
     assert 99 in orphans["prs_without_closing_issue_in_repo"]
 
@@ -293,9 +286,7 @@ def test_pr_with_matching_closing_issue_not_orphan(st, issue_types) -> None:
         }
     ]
     issues = st._parse_issues(raw_issues, issue_types)
-    prs = st._parse_prs(
-        [{"number": 99, "title": "y", "state": "OPEN", "body": "Closes #42"}]
-    )
+    prs = st._parse_prs([{"number": 99, "title": "y", "state": "OPEN", "body": "Closes #42"}])
     orphans = st._detect_orphans(issues, prs)
     assert 99 not in orphans["prs_without_closing_issue_in_repo"]
 
@@ -329,6 +320,7 @@ def _run_show_tree(
     PRs alike; without that neither list would ever be short and the label could
     never fire.
     """
+
     def fake_gh(args, config, **kwargs):
         if "pr" in args:
             n = int(args[args.index("--limit") + 1])
@@ -340,13 +332,17 @@ def _run_show_tree(
         if "issue" in args and "list" in args:
             n = int(args[args.index("--limit") + 1])
             rows = [
-                {"number": i, "title": f"t{i}", "body": "## What", "state": "OPEN",
-                 "labels": [], "milestone": None}
+                {
+                    "number": i,
+                    "title": f"t{i}",
+                    "body": "## What",
+                    "state": "OPEN",
+                    "labels": [],
+                    "milestone": None,
+                }
                 for i in range(1, total + 1)
             ]
-            return subprocess.CompletedProcess(
-                args, 0, stdout=json.dumps(rows[:n]), stderr=""
-            )
+            return subprocess.CompletedProcess(args, 0, stdout=json.dumps(rows[:n]), stderr="")
         return subprocess.CompletedProcess(args, 0, stdout="[]", stderr="")
 
     monkeypatch.setattr(st, "gh_run", fake_gh)
@@ -397,8 +393,14 @@ def test_refresh_children_views_refuses_on_a_bounded_corpus(st, monkeypatch, cap
         if "issue" in args and "list" in args:
             n = int(args[args.index("--limit") + 1])
             rows = [
-                {"number": i, "title": f"t{i}", "body": "## What", "state": "OPEN",
-                 "labels": [], "milestone": None}
+                {
+                    "number": i,
+                    "title": f"t{i}",
+                    "body": "## What",
+                    "state": "OPEN",
+                    "labels": [],
+                    "milestone": None,
+                }
                 for i in range(1, 41)
             ]
             return subprocess.CompletedProcess(args, 0, stdout=json.dumps(rows[:n]), stderr="")
@@ -409,7 +411,8 @@ def test_refresh_children_views_refuses_on_a_bounded_corpus(st, monkeypatch, cap
     monkeypatch.setattr(st.containment, "_gh_call", fake_gh)
     monkeypatch.setattr(st.session_guard, "enforce", lambda **_kw: True)
     monkeypatch.setattr(
-        sys, "argv",
+        sys,
+        "argv",
         ["show-tree", "--format", "text", "--limit", "10", "--refresh-children-views"],
     )
     rc = st.main()
@@ -429,6 +432,7 @@ def test_an_unreadable_native_panel_labels_the_render(st, monkeypatch, capsys) -
     alone rendered that as a complete tree, which is the same "no other children"
     vs "I could not see them" confusion the label exists to prevent.
     """
+
     def fake_gh(args, config, **kwargs):
         joined = " ".join(args)
         if "pr" in args:
@@ -438,10 +442,22 @@ def test_an_unreadable_native_panel_labels_the_render(st, monkeypatch, capsys) -
             # seam is actually asked about it. Without that nothing resolves and
             # the test would pass for want of a question rather than a verdict.
             rows = [
-                {"number": 1, "title": "t1", "body": "## What", "state": "OPEN",
-                 "labels": [], "milestone": None},
-                {"number": 2, "title": "t2", "body": "EPIC: #1\n\n## What",
-                 "state": "OPEN", "labels": [], "milestone": None},
+                {
+                    "number": 1,
+                    "title": "t1",
+                    "body": "## What",
+                    "state": "OPEN",
+                    "labels": [],
+                    "milestone": None,
+                },
+                {
+                    "number": 2,
+                    "title": "t2",
+                    "body": "EPIC: #1\n\n## What",
+                    "state": "OPEN",
+                    "labels": [],
+                    "milestone": None,
+                },
             ]
             return subprocess.CompletedProcess(args, 0, stdout=json.dumps(rows), stderr="")
         if "sub_issues" in joined:
@@ -494,10 +510,23 @@ def test_refresh_refuses_a_filtered_corpus(st, monkeypatch, capsys) -> None:
         if "pr" in args:
             return subprocess.CompletedProcess(args, 0, stdout="[]", stderr="")
         if "issue" in args and "list" in args:
-            return subprocess.CompletedProcess(args, 0, stdout=json.dumps([
-                {"number": 1, "title": "t1", "body": "## What", "state": "OPEN",
-                 "labels": [], "milestone": None},
-            ]), stderr="")
+            return subprocess.CompletedProcess(
+                args,
+                0,
+                stdout=json.dumps(
+                    [
+                        {
+                            "number": 1,
+                            "title": "t1",
+                            "body": "## What",
+                            "state": "OPEN",
+                            "labels": [],
+                            "milestone": None,
+                        },
+                    ]
+                ),
+                stderr="",
+            )
         wrote.append(args)
         return subprocess.CompletedProcess(args, 0, stdout="[]", stderr="")
 
@@ -524,9 +553,7 @@ def test_a_truncated_pr_list_marks_the_render_partial(st, monkeypatch, capsys, f
     detection and the issue-to-PR links may be missing PRs, so the render must
     not pass as complete — and the reason must name the PR half, since the issue
     note would send the reader looking for missing children."""
-    captured = _run_show_tree(
-        st, monkeypatch, capsys, total=4, limit=10, fmt=fmt, total_prs=40
-    )
+    captured = _run_show_tree(st, monkeypatch, capsys, total=4, limit=10, fmt=fmt, total_prs=40)
     if fmt == "json":
         out = json.loads(captured.out)
         assert out["complete"] is False
@@ -545,9 +572,7 @@ def test_a_truncated_pr_list_marks_the_render_partial(st, monkeypatch, capsys, f
 @pytest.mark.parametrize("fmt", ["text", "markdown", "json"])
 def test_a_complete_pr_list_adds_no_marker(st, monkeypatch, capsys, fmt) -> None:
     """PRs present but under the limit: nothing to hedge."""
-    captured = _run_show_tree(
-        st, monkeypatch, capsys, total=4, limit=10, fmt=fmt, total_prs=3
-    )
+    captured = _run_show_tree(st, monkeypatch, capsys, total=4, limit=10, fmt=fmt, total_prs=3)
     if fmt == "json":
         out = json.loads(captured.out)
         assert out["complete"] is True
@@ -560,18 +585,14 @@ def test_a_complete_pr_list_adds_no_marker(st, monkeypatch, capsys, fmt) -> None
 
 def test_both_halves_truncated_names_both(st, monkeypatch, capsys) -> None:
     """Independent causes are both reported; neither hides the other."""
-    captured = _run_show_tree(
-        st, monkeypatch, capsys, total=40, limit=10, fmt="json", total_prs=40
-    )
+    captured = _run_show_tree(st, monkeypatch, capsys, total=40, limit=10, fmt="json", total_prs=40)
     reason = json.loads(captured.out)["incomplete_reason"]
     assert "first 10 issues" in reason
     assert "first 10 pull requests" in reason
 
 
 def test_partial_note_appends_the_pr_reason_to_either_issue_reason(st) -> None:
-    only_prs = st._partial_note(
-        limit=5, truncated=False, incomplete_parents=[], prs_truncated=True
-    )
+    only_prs = st._partial_note(limit=5, truncated=False, incomplete_parents=[], prs_truncated=True)
     assert "first 5 pull requests" in only_prs
     assert "first 5 issues" not in only_prs
 
@@ -598,8 +619,14 @@ def test_refresh_is_not_blocked_by_a_truncated_pr_list(st, monkeypatch, capsys) 
             return subprocess.CompletedProcess(args, 0, stdout=json.dumps(prs[:n]), stderr="")
         if "issue" in args and "list" in args:
             rows = [
-                {"number": 1, "title": "t1", "body": "## What", "state": "OPEN",
-                 "labels": [], "milestone": None},
+                {
+                    "number": 1,
+                    "title": "t1",
+                    "body": "## What",
+                    "state": "OPEN",
+                    "labels": [],
+                    "milestone": None,
+                },
             ]
             return subprocess.CompletedProcess(args, 0, stdout=json.dumps(rows), stderr="")
         return subprocess.CompletedProcess(args, 0, stdout="[]", stderr="")
@@ -607,11 +634,10 @@ def test_refresh_is_not_blocked_by_a_truncated_pr_list(st, monkeypatch, capsys) 
     monkeypatch.setattr(st, "gh_run", fake_gh)
     monkeypatch.setattr(st.containment, "_gh_call", fake_gh)
     monkeypatch.setattr(st.session_guard, "enforce", lambda **_kw: True)
+    monkeypatch.setattr(st, "_refresh_children_views", lambda *a, **kw: refreshed.append(a))
     monkeypatch.setattr(
-        st, "_refresh_children_views", lambda *a, **kw: refreshed.append(a)
-    )
-    monkeypatch.setattr(
-        sys, "argv",
+        sys,
+        "argv",
         ["show-tree", "--state", "all", "--limit", "10", "--refresh-children-views"],
     )
     rc = st.main()

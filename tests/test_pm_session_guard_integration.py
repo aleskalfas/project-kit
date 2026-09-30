@@ -56,9 +56,7 @@ def _mark_bootstrapped(cap_root: Path) -> None:
 
 def _git_init(path: Path) -> None:
     path.mkdir(parents=True, exist_ok=True)
-    subprocess.run(
-        ["git", "init", "-q"], cwd=path, check=True, capture_output=True, text=True
-    )
+    subprocess.run(["git", "init", "-q"], cwd=path, check=True, capture_output=True, text=True)
 
 
 def _minimal_capability_tree(anchor: Path) -> Path:
@@ -95,11 +93,16 @@ def _run_create_issue(
         [
             sys.executable,
             str(CREATE_ISSUE),
-            "--type", "task",
-            "--title", "x",
-            "--workstream", "ws",
-            "--parent", "1",  # task requires a parent-ref; the guard runs before this.
-            "--capability-root", str(cap_root),
+            "--type",
+            "task",
+            "--title",
+            "x",
+            "--workstream",
+            "ws",
+            "--parent",
+            "1",  # task requires a parent-ref; the guard runs before this.
+            "--capability-root",
+            str(cap_root),
             "--dry-run",
             *extra,
         ],
@@ -178,11 +181,16 @@ def test_unset_anchor_does_not_falsely_block(tmp_path):
         [
             sys.executable,
             str(CREATE_ISSUE),
-            "--type", "task",
-            "--title", "x",
-            "--workstream", "ws",
-            "--parent", "1",
-            "--capability-root", str(cap),
+            "--type",
+            "task",
+            "--title",
+            "x",
+            "--workstream",
+            "ws",
+            "--parent",
+            "1",
+            "--capability-root",
+            str(cap),
             "--dry-run",
         ],
         cwd=str(repo_b),
@@ -226,8 +234,10 @@ def _run_add_member(
         [
             sys.executable,
             str(ADD_MEMBER),
-            "--github-login", "someone",
-            "--capability-root", str(cap_root),
+            "--github-login",
+            "someone",
+            "--capability-root",
+            str(cap_root),
             "--yes",
             *extra,
         ],
@@ -255,9 +265,7 @@ def test_cross_repo_local_file_mutator_refuses_before_writing(tmp_path):
 
     proc = _run_add_member(cwd=repo_b, anchor=repo_a, cap_root=cap, extra=[])
 
-    assert proc.returncode == 1, (
-        f"expected guard refusal (1); got {proc.returncode}\n{proc.stderr}"
-    )
+    assert proc.returncode == 1, f"expected guard refusal (1); got {proc.returncode}\n{proc.stderr}"
     assert "cross-repo mutation interlock" in proc.stderr
     assert not members_file.exists(), "members.yaml was written despite a DIVERGED refusal"
 
@@ -288,9 +296,7 @@ def test_cross_repo_local_file_mutator_override_writes(tmp_path):
     cap = _minimal_member_capability_tree(repo_a)
     members_file = cap / "project" / "members.yaml"
 
-    proc = _run_add_member(
-        cwd=repo_b, anchor=repo_a, cap_root=cap, extra=["--allow-foreign-repo"]
-    )
+    proc = _run_add_member(cwd=repo_b, anchor=repo_a, cap_root=cap, extra=["--allow-foreign-repo"])
 
     assert proc.returncode == 0, proc.stderr
     assert "operator override" in proc.stderr
@@ -335,8 +341,10 @@ def test_wrapper_diverged_refuses_without_threading_override_to_leaf(tmp_path):
             sys.executable,
             str(scripts_copy / "promote-issue.py"),
             "1",
-            "--reason", "test",
-            "--capability-root", str(cap),
+            "--reason",
+            "test",
+            "--capability-root",
+            str(cap),
             "--yes",
         ],
         cwd=str(repo_b),  # cwd is B; anchor is A → DIVERGED.

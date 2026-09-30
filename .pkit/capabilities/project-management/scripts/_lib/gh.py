@@ -170,8 +170,7 @@ def gh_get_issue(
         return None
     if proc.returncode != 0:
         print(
-            f"error: gh issue view {issue_number} failed.\n"
-            f"stderr: {proc.stderr.strip()}",
+            f"error: gh issue view {issue_number} failed.\nstderr: {proc.stderr.strip()}",
             file=sys.stderr,
         )
         return None
@@ -209,8 +208,7 @@ def gh_get_pr(
         return None
     if proc.returncode != 0:
         print(
-            f"error: gh pr view {pr_number} failed.\n"
-            f"stderr: {proc.stderr.strip()}",
+            f"error: gh pr view {pr_number} failed.\nstderr: {proc.stderr.strip()}",
             file=sys.stderr,
         )
         return None

@@ -119,7 +119,8 @@ def test_the_stamp_check_runs_before_the_gh_short_circuit(pc, tmp_path, monkeypa
     "why is every command refusing?"."""
     cap = _tree(tmp_path)
     monkeypatch.setattr(
-        pc, "_check_command_on_path",
+        pc,
+        "_check_command_on_path",
         lambda name: pc.CheckResult(f"`{name}` on PATH", "fail", "absent"),
     )
     results = pc._run_all_checks(cap)

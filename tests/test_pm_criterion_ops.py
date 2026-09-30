@@ -57,9 +57,7 @@ def test_tick_single_by_index(ops) -> None:
 
 
 def test_tick_batch_by_index(ops) -> None:
-    plan = ops.plan_batch(
-        BODY, [ops.Target(1), ops.Target(2)], target_checked=True
-    )
+    plan = ops.plan_batch(BODY, [ops.Target(1), ops.Target(2)], target_checked=True)
     assert plan.accepted and plan.changed
     assert "- [x] alpha" in plan.new_body
     assert "- [x] beta" in plan.new_body
@@ -67,21 +65,13 @@ def test_tick_batch_by_index(ops) -> None:
 
 # --- schema-resolved headings: the EPIC success-criteria path (issue #624) --
 
-EPIC_BODY = (
-    "EPIC: #1\n\n"
-    "## Outcome\nthesis\n\n"
-    "## Success criteria\n"
-    "- [ ] proven\n"
-    "- [ ] shipped\n"
-)
+EPIC_BODY = "EPIC: #1\n\n## Outcome\nthesis\n\n## Success criteria\n- [ ] proven\n- [ ] shipped\n"
 
 SCHEMA_HEADINGS = frozenset({"acceptance criteria", "success criteria"})
 
 
 def test_tick_epic_success_criterion_with_schema_headings(ops) -> None:
-    plan = ops.plan_batch(
-        EPIC_BODY, [ops.Target(1)], target_checked=True, headings=SCHEMA_HEADINGS
-    )
+    plan = ops.plan_batch(EPIC_BODY, [ops.Target(1)], target_checked=True, headings=SCHEMA_HEADINGS)
     assert plan.accepted and plan.changed
     assert "- [x] proven" in plan.new_body
     assert "- [ ] shipped" in plan.new_body  # untouched
@@ -97,9 +87,7 @@ def test_epic_refused_without_schema_headings(ops) -> None:
 
 def test_feature_body_unchanged_under_schema_headings(ops) -> None:
     # Passing the schema set must not disturb the Feature/Task walk.
-    plan = ops.plan_batch(
-        BODY, [ops.Target(1)], target_checked=True, headings=SCHEMA_HEADINGS
-    )
+    plan = ops.plan_batch(BODY, [ops.Target(1)], target_checked=True, headings=SCHEMA_HEADINGS)
     assert plan.accepted and plan.changed
     assert "- [x] alpha" in plan.new_body
 
@@ -108,17 +96,13 @@ def test_feature_body_unchanged_under_schema_headings(ops) -> None:
 
 
 def test_text_guard_match_succeeds(ops) -> None:
-    plan = ops.plan_batch(
-        BODY, [ops.Target(1, "alpha")], target_checked=True
-    )
+    plan = ops.plan_batch(BODY, [ops.Target(1, "alpha")], target_checked=True)
     assert plan.accepted and plan.changed
     assert "- [x] alpha" in plan.new_body
 
 
 def test_text_guard_strips_before_compare(ops) -> None:
-    plan = ops.plan_batch(
-        BODY, [ops.Target(1, "  alpha  ")], target_checked=True
-    )
+    plan = ops.plan_batch(BODY, [ops.Target(1, "  alpha  ")], target_checked=True)
     assert plan.accepted and plan.changed
 
 
@@ -160,14 +144,8 @@ def test_non_checkbox_target_refuses(ops) -> None:
 
 
 def test_ambiguous_guard_refuses_and_lists(ops) -> None:
-    body = (
-        "## Acceptance criteria\n"
-        "- [ ] duplicate text\n"
-        "- [ ] duplicate text\n"
-    )
-    plan = ops.plan_batch(
-        body, [ops.Target(1, "duplicate text")], target_checked=True
-    )
+    body = "## Acceptance criteria\n- [ ] duplicate text\n- [ ] duplicate text\n"
+    plan = ops.plan_batch(body, [ops.Target(1, "duplicate text")], target_checked=True)
     assert plan.accepted is False
     assert plan.new_body is None
     msg = " ".join(_msgs(plan))
@@ -192,9 +170,7 @@ def test_already_ticked_is_noop_success(ops) -> None:
 def test_half_batch_rerun_is_idempotent(ops) -> None:
     # Simulate a half-applied batch: alpha already ticked, beta not.
     half = BODY.replace("- [ ] alpha", "- [x] alpha")
-    plan = ops.plan_batch(
-        half, [ops.Target(1), ops.Target(2)], target_checked=True
-    )
+    plan = ops.plan_batch(half, [ops.Target(1), ops.Target(2)], target_checked=True)
     assert plan.accepted is True and plan.changed is True
     # alpha is a no-op, beta completes.
     msgs = _msgs(plan)

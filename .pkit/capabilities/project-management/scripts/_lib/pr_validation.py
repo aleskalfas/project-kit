@@ -236,7 +236,7 @@ def with_closing_references(pr_body: str, issue_numbers: list[int]) -> str:
     if last is None:
         head = "\n".join(added)
         return f"{head}\n\n{pr_body}" if pr_body.strip() else f"{head}\n"
-    lines[last + 1:last + 1] = added
+    lines[last + 1 : last + 1] = added
     return "\n".join(lines)
 
 

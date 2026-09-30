@@ -101,10 +101,7 @@ def check_membership(
     for entry in members:
         if not isinstance(entry, dict):
             continue
-        if (
-            invoker.github_login
-            and entry.get("github_login") == invoker.github_login
-        ):
+        if invoker.github_login and entry.get("github_login") == invoker.github_login:
             return MembershipResult(allowed=True, mode="closed", invoker=invoker)
         if invoker.email and entry.get("email") == invoker.email:
             return MembershipResult(allowed=True, mode="closed", invoker=invoker)

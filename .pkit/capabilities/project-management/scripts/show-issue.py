@@ -98,8 +98,7 @@ def main() -> int:
 
     if args.field is not None and args.field not in ISSUE_FIELD_NAMES:
         print(
-            f"error: unknown field '{args.field}'.\n"
-            f"valid fields: {', '.join(ISSUE_FIELD_NAMES)}",
+            f"error: unknown field '{args.field}'.\nvalid fields: {', '.join(ISSUE_FIELD_NAMES)}",
             file=sys.stderr,
         )
         return 2
@@ -173,9 +172,7 @@ def _summarise(
     ]
     state = str(issue.get("state", "")).lower()
     milestone = issue.get("milestone") or {}
-    milestone_title = (
-        milestone.get("title") if isinstance(milestone, dict) else None
-    )
+    milestone_title = milestone.get("title") if isinstance(milestone, dict) else None
 
     structural_type = infer_structural_type(title, issue_types, classification=classification)
     # DEC-013 (#763): skip a leading `Integration: integration/<slug>` marker so
@@ -213,6 +210,7 @@ def _summarise(
 
     priority_labels = _axis_display("priority")
     workstream_labels = _axis_display("workstream")
+
     def _is_axis_carried(lbl: str) -> bool:
         """Whether a label is already reported on an axis line — kit-prefixed,
         or the adopter's own label for a bound axis (#742), so a remapped label
@@ -351,7 +349,6 @@ def _print_summary(issue_number: int, s: dict) -> None:
         print(f"  url:          {url}")
 
 
-
 def _first_body_line(body: str) -> str:
     return body.lstrip().split("\n", 1)[0] if body.strip() else ""
 
@@ -434,7 +431,8 @@ def _read_members(capability_root: Path, yaml_loader: YAML) -> list[dict]:
 
 def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
     return gh_get_issue(
-        issue_number, config,
+        issue_number,
+        config,
         fields="title,body,labels,assignees,state,milestone,url",
     )
 

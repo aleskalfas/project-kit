@@ -175,8 +175,7 @@ def main() -> int:
     if closed:
         if args.reason:
             comment_body = (
-                f"[reopen] {args.reason}\n\n"
-                "Reopened via `pkit project-management reopen-issue`."
+                f"[reopen] {args.reason}\n\nReopened via `pkit project-management reopen-issue`."
             )
             if not _gh_comment(args.issue_number, comment_body, config):
                 return 3
@@ -203,10 +202,10 @@ def main() -> int:
 class StateReset:
     """How a reopen puts an issue back into the lifecycle."""
 
-    position: str               # where the detectors read it once open (backlog / todo)
+    position: str  # where the detectors read it once open (backlog / todo)
     remove_labels: tuple[str, ...]  # the state label(s) to strip
-    stuck_at_done: bool         # an open issue whose state label still reads done
-    note: str | None            # why nothing is stripped, where that needs saying
+    stuck_at_done: bool  # an open issue whose state label still reads done
+    note: str | None  # why nothing is stripped, where that needs saying
 
 
 def _plan_state_reset(

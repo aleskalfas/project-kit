@@ -28,9 +28,7 @@ def kit_target(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 def _make_flat_agent(root: Path, namespace: str, name: str) -> Path:
     target = root / ".pkit" / "agents" / namespace / f"{name}.md"
-    target.write_text(
-        f"---\nname: {name}\ndescription: t\n---\n\n# {name}\n", encoding="utf-8"
-    )
+    target.write_text(f"---\nname: {name}\ndescription: t\n---\n\n# {name}\n", encoding="utf-8")
     return target
 
 
@@ -38,9 +36,7 @@ def _make_folder_agent(root: Path, namespace: str, name: str) -> Path:
     folder = root / ".pkit" / "agents" / namespace / name
     folder.mkdir(parents=True, exist_ok=True)
     target = folder / f"{name}.md"
-    target.write_text(
-        f"---\nname: {name}\ndescription: t\n---\n\n# {name}\n", encoding="utf-8"
-    )
+    target.write_text(f"---\nname: {name}\ndescription: t\n---\n\n# {name}\n", encoding="utf-8")
     return target
 
 
@@ -83,7 +79,11 @@ def test_stamp_scenario_flag_produces_named_storyboard(kit_target: Path) -> None
         kit_target, "agent", "coordinator", scenario="security-pr-review"
     )
     expected = (
-        kit_target / ".pkit" / "agents" / "project" / "coordinator"
+        kit_target
+        / ".pkit"
+        / "agents"
+        / "project"
+        / "coordinator"
         / "security-pr-review.storyboard.md"
     )
     assert target == expected
@@ -143,9 +143,7 @@ def test_stamp_refuses_invalid_name(kit_target: Path) -> None:
 def test_stamp_refuses_invalid_scenario_slug(kit_target: Path) -> None:
     _make_folder_agent(kit_target, "project", "agent-a")
     with pytest.raises(click.ClickException, match="kebab-case"):
-        storyboards.stamp_new_storyboard(
-            kit_target, "agent", "agent-a", scenario="Bad_Scenario"
-        )
+        storyboards.stamp_new_storyboard(kit_target, "agent", "agent-a", scenario="Bad_Scenario")
 
 
 def test_stamp_refuses_when_agents_area_missing(tmp_path: Path) -> None:
@@ -156,18 +154,14 @@ def test_stamp_refuses_when_agents_area_missing(tmp_path: Path) -> None:
 
 def test_stamp_dry_run_writes_nothing(kit_target: Path) -> None:
     _make_folder_agent(kit_target, "project", "agent-a")
-    target = storyboards.stamp_new_storyboard(
-        kit_target, "agent", "agent-a", dry_run=True
-    )
+    target = storyboards.stamp_new_storyboard(kit_target, "agent", "agent-a", dry_run=True)
     assert not target.exists(), "dry-run wrote the storyboard"
 
 
 def test_stamp_dry_run_does_not_migrate_flat_agent(kit_target: Path) -> None:
     """Dry-run on a flat agent reports intent without performing the migration."""
     flat = _make_flat_agent(kit_target, "project", "still-flat")
-    storyboards.stamp_new_storyboard(
-        kit_target, "agent", "still-flat", dry_run=True
-    )
+    storyboards.stamp_new_storyboard(kit_target, "agent", "still-flat", dry_run=True)
     assert flat.is_file(), "dry-run migrated the agent to folder form"
 
 
@@ -232,9 +226,7 @@ def test_stamp_namespace_pins_the_capability_agent(kit_target: Path) -> None:
     _make_folder_agent(kit_target, "project", "shared")
     cap_agent = _make_capability_agent(kit_target, "my-cap", "shared")
 
-    target = storyboards.stamp_new_storyboard(
-        kit_target, "agent", "shared", namespace="my-cap"
-    )
+    target = storyboards.stamp_new_storyboard(kit_target, "agent", "shared", namespace="my-cap")
     assert target == cap_agent.parent / "storyboard.md"
     assert "namespace: my-cap" in target.read_text(encoding="utf-8")
 
@@ -243,9 +235,7 @@ def test_stamp_namespace_pins_core_over_project(kit_target: Path) -> None:
     _make_folder_agent(kit_target, "core", "shared")
     _make_folder_agent(kit_target, "project", "shared")
 
-    target = storyboards.stamp_new_storyboard(
-        kit_target, "agent", "shared", namespace="core"
-    )
+    target = storyboards.stamp_new_storyboard(kit_target, "agent", "shared", namespace="core")
     assert ".pkit/agents/core/shared/" in str(target)
 
 
@@ -293,9 +283,7 @@ def test_cli_stamps_storyboard(kit_target: Path) -> None:
 def test_cli_scenario_flag(kit_target: Path) -> None:
     _make_folder_agent(kit_target, "core", "reviewer")
     runner = CliRunner()
-    result = runner.invoke(
-        main, ["new", "storyboard", "agent", "reviewer", "--scenario", "sec-pr"]
-    )
+    result = runner.invoke(main, ["new", "storyboard", "agent", "reviewer", "--scenario", "sec-pr"])
     assert result.exit_code == 0, result.output
     assert "sec-pr.storyboard.md" in result.output
 
@@ -303,9 +291,7 @@ def test_cli_scenario_flag(kit_target: Path) -> None:
 def test_cli_dry_run_reports_intent(kit_target: Path) -> None:
     _make_folder_agent(kit_target, "project", "agent-a")
     runner = CliRunner()
-    result = runner.invoke(
-        main, ["new", "storyboard", "agent", "agent-a", "--dry-run"]
-    )
+    result = runner.invoke(main, ["new", "storyboard", "agent", "agent-a", "--dry-run"])
     assert result.exit_code == 0, result.output
     assert "Would stamp:" in result.output
 

@@ -810,9 +810,7 @@ class _Point:
             behind = [self._contribution(b) for b in eligible if b not in bound]
             if len(bound) > 1:
                 for candidate in [*map(self._contribution, bound), *behind]:
-                    self.fillers.append(
-                        candidate.filler(FillerState.PASSED_OVER, _AMBIGUOUS)
-                    )
+                    self.fillers.append(candidate.filler(FillerState.PASSED_OVER, _AMBIGUOUS))
                 return self._single_ambiguous(project)
             chain.extend(self._contribution(b) for b in bound)
         default = self._default_candidate()
@@ -833,7 +831,9 @@ class _Point:
         if self.inert and self.inert_policy == FAIL:
             return self._unresolved(_FAIL_WHY)
         if answerer is not None:
-            return self._resolved(value=cast(_Answer, answerer.answer).value, origin=answerer.origin)
+            return self._resolved(
+                value=cast(_Answer, answerer.answer).value, origin=answerer.origin
+            )
         if selected is not None and not any(c.name == selected for c in chain):
             return self._unresolved(
                 f"the contributor selection names {selected!r}, which does not contribute to it"
@@ -920,9 +920,7 @@ class _Point:
                     out.append((entry_id, value))
             return out
 
-        capabilities = [
-            (c.origin, kept(c)) for c in taken if c.source is FillerSource.CONTRIBUTION
-        ]
+        capabilities = [(c.origin, kept(c)) for c in taken if c.source is FillerSource.CONTRIBUTION]
         default = next((kept(c) for c in taken if c.source is FillerSource.DEFAULT), [])
         records = tuple(
             Removal(rid, reason, tuple(dropped.get(rid, ()))) for rid, reason, _i in removals
@@ -984,7 +982,9 @@ class _Point:
         """An `alone` default with another filler declared: it does not answer, and
         a declared filler that broke never promotes it (COR-052 point 6)."""
         reason = (
-            "not promoted: a declared filler is inert" if self.inert else "another filler is declared"
+            "not promoted: a declared filler is inert"
+            if self.inert
+            else "another filler is declared"
         )
         self.fillers.append(default.filler(FillerState.PASSED_OVER, reason))
 
@@ -1110,7 +1110,10 @@ def _entry_problems(value: Any) -> list[tuple[str, str]]:
         entry_id = _entry_id(entry)
         if entry_id is None:
             problems.append(
-                (f"/{index}", "an entry is a string — its own id — or a mapping with a string `id`.")
+                (
+                    f"/{index}",
+                    "an entry is a string — its own id — or a mapping with a string `id`.",
+                )
             )
         elif entry_id in seen:
             problems.append((f"/{index}", f"entry id {entry_id!r} appears twice."))

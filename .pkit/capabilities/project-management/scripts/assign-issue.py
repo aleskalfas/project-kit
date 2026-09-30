@@ -239,8 +239,7 @@ def _gh_get_issue_assignees(issue_number: int, config: dict) -> dict | None:
         return None
     if proc.returncode != 0:
         print(
-            f"error: gh issue view {issue_number} failed.\n"
-            f"stderr: {proc.stderr.strip()}",
+            f"error: gh issue view {issue_number} failed.\nstderr: {proc.stderr.strip()}",
             file=sys.stderr,
         )
         return None
@@ -251,8 +250,8 @@ def _gh_get_issue_assignees(issue_number: int, config: dict) -> dict | None:
 
 
 def _gh_edit_assignees(
-    issue_number: int, *, add: list[str], remove: list[str]
-, config: dict) -> bool:
+    issue_number: int, *, add: list[str], remove: list[str], config: dict
+) -> bool:
     """Apply assignee deltas via `gh issue edit`."""
     if not add and not remove:
         return True
@@ -267,8 +266,7 @@ def _gh_edit_assignees(
         return False
     if proc.returncode != 0:
         print(
-            f"error: gh issue edit failed (exit {proc.returncode}).\n"
-            f"stderr: {proc.stderr.strip()}",
+            f"error: gh issue edit failed (exit {proc.returncode}).\nstderr: {proc.stderr.strip()}",
             file=sys.stderr,
         )
         return False

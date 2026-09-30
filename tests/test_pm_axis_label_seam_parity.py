@@ -161,15 +161,13 @@ def test_bootstrap_compute_plan_constructs_byte_identical_labels(
     # workstreams.yaml — canonical source for the workstream axis.
     _write_yaml(
         cap_root / "project" / "workstreams.yaml",
-        "workstreams:\n"
-        + "".join(f"  - {s}\n" for s in GREENFIELD_GRID["workstream"]),
+        "workstreams:\n" + "".join(f"  - {s}\n" for s in GREENFIELD_GRID["workstream"]),
     )
     # workflow.yaml — drives the state axis (label-fallback mode). The resolver
     # reorders to canonical lifecycle order, which matches the grid's order.
     _write_yaml(
         cap_root / "schemas" / "workflow.yaml",
-        "process:\n  states:\n"
-        + "".join(f"    - id: {s}\n" for s in GREENFIELD_GRID["state"]),
+        "process:\n  states:\n" + "".join(f"    - id: {s}\n" for s in GREENFIELD_GRID["state"]),
     )
 
     classification = {

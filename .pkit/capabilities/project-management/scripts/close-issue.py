@@ -78,6 +78,7 @@ from _lib import axis_labels  # noqa: E402
 from _lib import containment  # noqa: E402
 from _lib import lifecycle_inference as infer  # noqa: E402
 from _lib import session_guard  # noqa: E402
+
 # DEC-007's checkbox close-gate — the ONE implementation (`_lib.checkbox_gate`),
 # shared with done-work, merge-pr and the engine's gate-checkboxes-ticked
 # predicate. Aliased to the local names this script has always used.
@@ -151,10 +152,7 @@ def main() -> int:
     parser.add_argument(
         "--reason",
         default=None,
-        help=(
-            "Closing reason recorded in the closing comment. Required in "
-            "wont-do mode."
-        ),
+        help=("Closing reason recorded in the closing comment. Required in wont-do mode."),
     )
     parser.add_argument(
         "--skip-checkbox-gate",
@@ -225,14 +223,10 @@ def main() -> int:
     if not session_guard.enforce(override=args.allow_foreign_repo):
         return 1
 
-    issue_types = _read_yaml(
-        capability_root / "schemas" / "issue-types.yaml", yaml_loader
-    )
+    issue_types = _read_yaml(capability_root / "schemas" / "issue-types.yaml", yaml_loader)
     # Kind-driven title prefixes ([Bug]/[Docs]/[Test]/[Refactor]/[Chore]) live in
     # classification.yaml; without it a kind-prefixed Task reads as unrecognised.
-    classification = _read_yaml(
-        capability_root / "schemas" / "classification.yaml", yaml_loader
-    )
+    classification = _read_yaml(capability_root / "schemas" / "classification.yaml", yaml_loader)
 
     # The adopter's optional substrate-map (ADR-026): None ⇒ greenfield (state
     # is a `state:*` label); a present map may bind `state` to a `derive`
@@ -275,7 +269,8 @@ def main() -> int:
         unticked = [] if args.skip_checkbox_gate else _unticked_boxes(body)
         if unticked:
             print(
-                "\n" + _checkbox_refusal(
+                "\n"
+                + _checkbox_refusal(
                     unticked,
                     remedy=(
                         "tick or remove each unticked checkbox before closing, "
@@ -311,7 +306,10 @@ def main() -> int:
         # Map-aware (RF-1): under a present derive/unsupported `state` map this
         # writes no kit `state:*` label (the open/closed substrate carries it).
         if not reconcile_state_labels_to_done(
-            args.issue_number, labels, config, gh_run=gh_run,
+            args.issue_number,
+            labels,
+            config,
+            gh_run=gh_run,
             substrate_map=substrate_map,
         ):
             return 3
@@ -355,7 +353,10 @@ def main() -> int:
         # terminal label must be correct.
         if not args.dry_run:
             if not reconcile_state_labels_to_done(
-                args.issue_number, labels, config, gh_run=gh_run,
+                args.issue_number,
+                labels,
+                config,
+                gh_run=gh_run,
                 substrate_map=substrate_map,
             ):
                 return 3
@@ -386,7 +387,8 @@ def main() -> int:
         unticked = _unticked_boxes(body)
         if unticked:
             print(
-                "\n" + _checkbox_refusal(
+                "\n"
+                + _checkbox_refusal(
                     unticked,
                     scope="cascade-eligibility",
                     remedy=(
@@ -431,8 +433,10 @@ def main() -> int:
                 "eligibility (held fail-closed):",
                 file=sys.stderr,
             )
-            print(f"  → {reason or 'the process engine could not fold the children.'}",
-                  file=sys.stderr)
+            print(
+                f"  → {reason or 'the process engine could not fold the children.'}",
+                file=sys.stderr,
+            )
             print(
                 "  → re-run once `gh` is reachable and every child's state is "
                 "readable; the container holds until the fold resolves.",
@@ -478,13 +482,14 @@ def main() -> int:
         if not _gh_close_issue(args.issue_number, reason="completed", config=config):
             return 3
         if not reconcile_state_labels_to_done(
-            args.issue_number, labels, config, gh_run=gh_run,
+            args.issue_number,
+            labels,
+            config,
+            gh_run=gh_run,
             substrate_map=substrate_map,
         ):
             return 3
-        print(
-            f"\n[ok] closed #{args.issue_number} (cascade-eligibility, completed)."
-        )
+        print(f"\n[ok] closed #{args.issue_number} (cascade-eligibility, completed).")
 
     # Closure cascade — semi-automatic per DEC-006.
     if not args.no_cascade:
@@ -563,7 +568,8 @@ def _close_leaf_through_pr(
     unticked = [] if args.skip_checkbox_gate else _unticked_boxes(body)
     if unticked:
         print(
-            "\n" + _checkbox_refusal(
+            "\n"
+            + _checkbox_refusal(
                 unticked,
                 remedy=(
                     "tick or remove each unticked checkbox before closing, "
@@ -594,7 +600,11 @@ def _close_leaf_through_pr(
     if not _gh_close_issue(issue_number, reason="completed", config=config):
         return 3
     if not reconcile_state_labels_to_done(
-        issue_number, labels, config, gh_run=gh_run, substrate_map=substrate_map,
+        issue_number,
+        labels,
+        config,
+        gh_run=gh_run,
+        substrate_map=substrate_map,
     ):
         return 3
     print(f"\n[ok] closed #{issue_number} (pr-merge through PR #{args.pr}, completed).")
@@ -644,10 +654,7 @@ def _check_parent_eligibility(parent_num: int, config: dict) -> None:
     body = str(parent.get("body") or "")
     unticked = _unticked_boxes(body)
     if unticked:
-        print(
-            f"  · parent #{parent_num} open; not eligible "
-            f"({len(unticked)} unticked box(es))"
-        )
+        print(f"  · parent #{parent_num} open; not eligible ({len(unticked)} unticked box(es))")
         return
     print(
         f"  · parent #{parent_num} open; checkboxes complete — "
@@ -678,8 +685,13 @@ def _engine_cascade_fold(parent_num: int) -> dict | None:
     determinate fold reports `opened` true/false.
     """
     argv = [
-        "pkit", "process", "cascade", PROCESS_ADDRESS,
-        "--subject", str(parent_num), "--json",
+        "pkit",
+        "process",
+        "cascade",
+        PROCESS_ADDRESS,
+        "--subject",
+        str(parent_num),
+        "--json",
     ]
     try:
         proc = subprocess.run(argv, capture_output=True, text=True, check=False)
@@ -739,9 +751,7 @@ def _find_open_children(parent_num: int, config: dict) -> list[int] | None:
             file=sys.stderr,
         )
         return None
-    open_children = [
-        n for n in resolution.numbers if states.get(n) != "closed"
-    ]
+    open_children = [n for n in resolution.numbers if states.get(n) != "closed"]
     return sorted(open_children)
 
 
@@ -792,7 +802,6 @@ def _gh_close_issue(issue_number: int, *, reason: str = "completed", config: dic
         )
         return False
     return True
-
 
 
 def _walk_parent_chain(body: str) -> list[int]:

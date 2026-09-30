@@ -281,8 +281,7 @@ def test_upgrade_of_the_target_warns_and_proceeds_only_under_force(
     refused = _cli("capabilities", "upgrade", "docs-a")
     assert refused.exit_code != 0
     assert (
-        "Warning: upgrading 'docs-a' to v0.2.0 would leave 1 mandatory process connection(s) "
-        "unmet:"
+        "Warning: upgrading 'docs-a' to v0.2.0 would leave 1 mandatory process connection(s) unmet:"
     ) in refused.output
     assert (
         f"- 'flow' depends on '{REVIEW}': 'docs-a' offers it at interface version 2, and the "

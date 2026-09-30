@@ -19,13 +19,7 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-LIB_PATH = (
-    REPO_ROOT
-    / ".pkit"
-    / "capabilities"
-    / "project-management"
-    / "scripts"
-)
+LIB_PATH = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
 CAPABILITY_ROOT = REPO_ROOT / ".pkit" / "capabilities" / "project-management"
 
 sys.path.insert(0, str(LIB_PATH))
@@ -174,12 +168,7 @@ def test_has_authored_items_false_missing_section() -> None:
 
 def test_has_authored_items_does_not_bleed_across_sections() -> None:
     """Authored items in a later section do not affect an earlier section's result."""
-    body = (
-        "## Acceptance criteria\n"
-        "- [ ]\n"
-        "## Doc impact\n"
-        "- [x] Updated README.\n"
-    )
+    body = "## Acceptance criteria\n- [ ]\n## Doc impact\n- [x] Updated README.\n"
     # Acceptance criteria section has zero authored items (bare empty boxes).
     assert has_authored_checkbox_items(body, "## Acceptance criteria") is False
     # Doc impact section has an authored item.
@@ -345,9 +334,7 @@ def test_lenient_trailing_empty_alongside_filled_passes(body_format_task: dict) 
     assert cb_findings == [], f"unexpected findings: {cb_findings}"
 
 
-def test_missing_template_produces_no_prose_finding(
-    tmp_path: Path, body_format_task: dict
-) -> None:
+def test_missing_template_produces_no_prose_finding(tmp_path: Path, body_format_task: dict) -> None:
     """When the template file does not exist the prose check silently skips."""
     # Use tmp_path as capability_root — templates/ directory won't exist.
     results = detect_placeholder_residuals(
@@ -435,8 +422,7 @@ def test_regression_25_unchecked_real_criteria_no_false_positive(
     )
     cb_findings = [r for r in results if r[1] == "body.placeholder.empty-checkbox-section"]
     assert cb_findings == [], (
-        "unchecked-but-real criteria falsely flagged as empty skeleton: "
-        f"{cb_findings}"
+        f"unchecked-but-real criteria falsely flagged as empty skeleton: {cb_findings}"
     )
 
 

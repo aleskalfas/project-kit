@@ -15,12 +15,7 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = (
-    REPO_ROOT
-    / ".pkit"
-    / "capabilities"
-    / "project-management"
-    / "scripts"
-    / "check-mesh.py"
+    REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "check-mesh.py"
 )
 
 
@@ -168,12 +163,8 @@ def test_compare_detects_version_drift(cm) -> None:
 
 
 def test_compare_detects_type_label_drift(cm) -> None:
-    local = _make_state(
-        cm, "us/local", labels=["type:feature", "type:bug"]
-    )
-    peer = _make_state(
-        cm, "them/peer", labels=["type:feature", "type:bug", "type:incident"]
-    )
+    local = _make_state(cm, "us/local", labels=["type:feature", "type:bug"])
+    peer = _make_state(cm, "them/peer", labels=["type:feature", "type:bug", "type:incident"])
     drift = cm._compare(local, [peer], None)
     type_drift = [d for d in drift if d["kind"] == "type-labels"]
     assert len(type_drift) == 1
@@ -188,9 +179,7 @@ def test_compare_skips_kit_label_axes_under_a_present_map(cm, axis_labels) -> No
     same-named one: the seam's is `substrate_map is None` and cannot see the
     board, so under greenfield WITH a board it would compare kit `priority:*`
     sets that neither peer uses."""
-    sm = axis_labels.SubstrateMap(
-        axes={"priority": {"label": {"remap": {"High": "P0"}}}}
-    )
+    sm = axis_labels.SubstrateMap(axes={"priority": {"label": {"remap": {"High": "P0"}}}})
     local = _make_state(cm, "us/local", labels=["priority:High"])
     peer = _make_state(cm, "them/peer", labels=["priority:High", "priority:Low"])
     drift = cm._compare(local, [peer], sm)
@@ -209,9 +198,7 @@ def test_compare_flags_priority_drift_in_greenfield(cm) -> None:
 
 
 def test_compare_detects_member_drift(cm) -> None:
-    local = _make_state(
-        cm, "us/local", members=[{"github_login": "alice"}]
-    )
+    local = _make_state(cm, "us/local", members=[{"github_login": "alice"}])
     peer = _make_state(
         cm,
         "them/peer",

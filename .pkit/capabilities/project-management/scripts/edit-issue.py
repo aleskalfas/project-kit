@@ -144,10 +144,7 @@ def main() -> int:
     g.add_argument(
         "--body",
         default=None,
-        help=(
-            "Replace the body with the supplied text. Pass `-` to read "
-            "from stdin."
-        ),
+        help=("Replace the body with the supplied text. Pass `-` to read from stdin."),
     )
     g.add_argument(
         "--body-file",
@@ -246,7 +243,7 @@ def main() -> int:
     if milestone_requested and not reason:
         print(
             "error: a milestone change records why it was made: pass --reason "
-            "\"<why>\" (the audit comment carries it).",
+            '"<why>" (the audit comment carries it).',
             file=sys.stderr,
         )
         return 2
@@ -285,16 +282,10 @@ def main() -> int:
     if not session_guard.enforce(override=args.allow_foreign_repo):
         return 1
 
-    issue_types = _read_yaml(
-        capability_root / "schemas" / "issue-types.yaml", yaml_loader
-    )
+    issue_types = _read_yaml(capability_root / "schemas" / "issue-types.yaml", yaml_loader)
     titles = _read_yaml(capability_root / "schemas" / "titles.yaml", yaml_loader)
-    body_format = _read_yaml(
-        capability_root / "schemas" / "body-format.yaml", yaml_loader
-    )
-    classification = _read_yaml(
-        capability_root / "schemas" / "classification.yaml", yaml_loader
-    )
+    body_format = _read_yaml(capability_root / "schemas" / "body-format.yaml", yaml_loader)
+    classification = _read_yaml(capability_root / "schemas" / "classification.yaml", yaml_loader)
 
     issue = _gh_get_issue(args.issue_number, config)
     if issue is None:
@@ -317,9 +308,7 @@ def main() -> int:
     # may predate the current body schema); a body-only edit validates the new
     # body but not the untouched title.
     title_changed = args.title is not None
-    body_changed = (
-        args.body is not None or args.body_file is not None or args.append is not None
-    )
+    body_changed = args.body is not None or args.body_file is not None or args.append is not None
 
     # A milestone move (#1049): resolved and checked before anything is shown
     # as a plan, and the first line follows it. Rewriting that line is not a
@@ -345,9 +334,7 @@ def main() -> int:
             new_body,
             milestone_edit,
             issue_number=args.issue_number,
-            parent_ref_optional=_parent_ref_optional(
-                new_title, issue_types, classification
-            ),
+            parent_ref_optional=_parent_ref_optional(new_title, issue_types, classification),
         )
         if followed is None:
             return 1
@@ -362,9 +349,7 @@ def main() -> int:
     if args.title is not None:
         print(f"  new title:     {new_title}")
     if writes_issue:
-        print(
-            f"  body change:   {len(current_body)} → {len(new_body)} chars"
-        )
+        print(f"  body change:   {len(current_body)} → {len(new_body)} chars")
     if milestone_edit is not None:
         print(f"  milestone:     {milestone_edit.describe()}")
     if first_line_moved:
@@ -448,7 +433,13 @@ def main() -> int:
     if writes_issue:
         # Seam: write exactly one current footer (strip-then-append-one).
         stamped_body = provenance.stamp(new_body, provenance.read_versions(capability_root))
-        if not _gh_apply_edit(args.issue_number, title=new_title, body=stamped_body, current_title=current_title, config=config):
+        if not _gh_apply_edit(
+            args.issue_number,
+            title=new_title,
+            body=stamped_body,
+            current_title=current_title,
+            config=config,
+        ):
             return 3
 
     print(f"\n[ok] edited #{args.issue_number}.")
@@ -506,11 +497,15 @@ def _plan_milestone(
     labels = _label_names(issue)
     state = str(issue.get("state", "")).lower()
     before = infer.infer_current_state(
-        state=state, milestone=_milestone_payload(current), labels=labels,
+        state=state,
+        milestone=_milestone_payload(current),
+        labels=labels,
         substrate_map=substrate_map,
     )
     after = infer.infer_current_state(
-        state=state, milestone=_milestone_payload(target), labels=labels,
+        state=state,
+        milestone=_milestone_payload(target),
+        labels=labels,
         substrate_map=substrate_map,
     )
     if before == after:
@@ -519,7 +514,7 @@ def _plan_milestone(
         remedy = (
             "scheduling a Todo issue into a milestone is the Todo → Backlog "
             f"transition: `promote-issue {args.issue_number} --milestone "
-            f"{args.milestone!r} --reason \"<why>\"`."
+            f'{args.milestone!r} --reason "<why>"`.'
         )
     else:
         remedy = (
@@ -604,7 +599,11 @@ def _post_milestone_audit(
     key = _milestone_audit_key(edit, reason)
     body = _milestone_audit_body(edit, reason, dt.date.today().isoformat(), key)
     return post_audit_once(
-        "issue", issue_number, key, body, config,
+        "issue",
+        issue_number,
+        key,
+        body,
+        config,
         run=gh_run,
         present_note="milestone audit comment already present; idempotent skip",
     )
@@ -775,9 +774,7 @@ def _validate(
         # malformed marker would otherwise trigger by falling through.
         malformed_marker = infer.malformed_integration_marker(body)
         if malformed_marker is not None:
-            marker_pattern = str(
-                (body_format.get("integration_marker") or {}).get("pattern") or ""
-            )
+            marker_pattern = str((body_format.get("integration_marker") or {}).get("pattern") or "")
             findings.append(
                 Finding(
                     SEVERITY_HARD_REJECT,
@@ -805,12 +802,8 @@ def _validate(
                 # DEC-013 (#763): a marked descendant carries the
                 # `Integration: integration/<slug>` marker above the parent-ref;
                 # skip it so the parent-ref on the next line is recognised.
-                first_line = (
-                    infer.strip_integration_marker(body).lstrip().split("\n", 1)[0]
-                )
-                _NEW_MILESTONE_RE = re.compile(
-                    r"^Milestone:\s+\[#(\d+)\]\(\.\./milestone/\1\)\s*$"
-                )
+                first_line = infer.strip_integration_marker(body).lstrip().split("\n", 1)[0]
+                _NEW_MILESTONE_RE = re.compile(r"^Milestone:\s+\[#(\d+)\]\(\.\./milestone/\1\)\s*$")
                 _OLD_MILESTONE_RE = re.compile(r"^Milestone:\s+#\d+\s*$")
                 _ISSUE_PARENT_RE = re.compile(r"^[A-Za-z]+:\s+#\d+\s*$")
 
@@ -866,7 +859,6 @@ def _validate(
     return findings
 
 
-
 def _title_pattern_for(titles: dict, structural_type: str) -> str | None:
     formats = titles.get("formats") or {}
     entry = formats.get(f"issue-{structural_type}")
@@ -915,9 +907,7 @@ def _gh_apply_edit(
     if title != current_title:
         cmd.extend(["--title", title])
     # Always write body via a temp file — avoids shell length limits.
-    with tempfile.NamedTemporaryFile(
-        "w", suffix=".md", encoding="utf-8", delete=False
-    ) as f:
+    with tempfile.NamedTemporaryFile("w", suffix=".md", encoding="utf-8", delete=False) as f:
         f.write(body)
         body_path = f.name
     try:

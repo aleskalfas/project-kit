@@ -32,6 +32,7 @@ The captured signal is a SUPERSET of real prompts: the hook sees only its own
 abstain (defer-to-harness), not whether the harness ultimately prompted. The
 report states this as *coverage*, never as a predicted prompt-count decrement.
 """
+
 from __future__ import annotations
 
 import json
@@ -278,6 +279,7 @@ def capture(root: str, payload: dict, decision: str, reason: str) -> None:
         if os.environ.get("PKIT_PERMISSIONS_DEBUG"):
             import sys
             import traceback
+
             print("pkit-permissions-diagnose: capture failed (inert):", file=sys.stderr)
             traceback.print_exc()
         return

@@ -29,7 +29,11 @@ from click.testing import CliRunner
 
 from project_kit import command_runner, refs, validators
 from project_kit.cli import main
-from project_kit.manifest import ComponentRegistryEntry, read_backbone_manifest, write_backbone_manifest
+from project_kit.manifest import (
+    ComponentRegistryEntry,
+    read_backbone_manifest,
+    write_backbone_manifest,
+)
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 
 BACKBONE_ORDER = [
@@ -56,7 +60,11 @@ def adopter(make_adopter_repo: MakeAdopterRepo) -> AdopterRepo:
 
 
 def _leaf(
-    token: str, *, script: str = "scripts/check.py", help_text: str = "Check things.", contract: bool = True
+    token: str,
+    *,
+    script: str = "scripts/check.py",
+    help_text: str = "Check things.",
+    contract: bool = True,
 ) -> str:
     """One `commands:` leaf as YAML, declaring the query contract unless told not to."""
     declaration = "    query-contract: true\n" if contract else ""
@@ -109,8 +117,11 @@ def _sections(output: str) -> list[str]:
     return [
         line[2:]
         for line in output.splitlines()
-        if line.startswith("  ") and not line.startswith("    ") and line[2:3].isalpha()
-        and not line.startswith("  All checks") and "validator(s) ran" not in line
+        if line.startswith("  ")
+        and not line.startswith("    ")
+        and line[2:3].isalpha()
+        and not line.startswith("  All checks")
+        and "validator(s) ran" not in line
         and "error(s) found" not in line
     ]
 
@@ -136,7 +147,9 @@ def test_capability_validators_sort_after_the_backbone_by_order_then_name(
     _register(
         adopter.root,
         "zeta",
-        commands_yaml="commands:\n" + _leaf("late", help_text="Late.") + _leaf("early", help_text="Early."),
+        commands_yaml="commands:\n"
+        + _leaf("late", help_text="Late.")
+        + _leaf("early", help_text="Early."),
         validators_yaml="validators:\n  late:\n    command: late\n  early:\n    command: early\n    order: 5\n",
     )
     _register(
@@ -170,7 +183,10 @@ def test_capability_block_is_read_defensively(adopter: AdopterRepo) -> None:
         "  undeclared:\n    command: bare\n",
     )
     registered = {v.name: v for v in validators.registered_validators(adopter.root)}
-    assert "half:ok" in registered and registered["half:ok"].order == validators.CAPABILITY_ORDER_DEFAULT
+    assert (
+        "half:ok" in registered
+        and registered["half:ok"].order == validators.CAPABILITY_ORDER_DEFAULT
+    )
     # No command, or a command that names no leaf: the packages member's finding, not a member.
     assert "half:nocommand" not in registered and "half:nowhere" not in registered
     # A leaf without the declaration is a member — refused when run, never skipped silently.
@@ -315,14 +331,25 @@ def test_the_runner_passes_json_and_marks_the_run_offline(adopter: AdopterRepo) 
     [
         (_answering(CLEAN_ANSWER, exit_code=3), "exited 3"),
         ("print('not json')\n", "did not print a JSON document"),
-        ("import sys\nsys.stdout.buffer.write(b'\\xff\\xfe not json')\n", "did not print a JSON document"),
+        (
+            "import sys\nsys.stdout.buffer.write(b'\\xff\\xfe not json')\n",
+            "did not print a JSON document",
+        ),
         (_answering([1, 2]), "printed a list, not a findings document"),
         (_answering({}), "answered without a `summary` list"),
         (_answering({"summary": "x", "findings": []}), "answered without a `summary` list"),
         (_answering({"summary": [], "findings": "oops"}), "answered without a `findings` list"),
-        (_answering({"summary": [], "findings": {"error": "crashed"}}), "answered without a `findings` list"),
         (
-            _answering({"summary": [], "findings": [{"severity": "fatal", "location": "x", "message": "y"}]}),
+            _answering({"summary": [], "findings": {"error": "crashed"}}),
+            "answered without a `findings` list",
+        ),
+        (
+            _answering(
+                {
+                    "summary": [],
+                    "findings": [{"severity": "fatal", "location": "x", "message": "y"}],
+                }
+            ),
             "malformed finding at index 0",
         ),
         (None, "does not exist"),
@@ -446,11 +473,16 @@ def test_a_command_without_the_declaration_is_refused_by_the_runner_and_reported
     refused = CliRunner().invoke(main, ["validate", "--only", "cap:thing"])
     assert refused.exit_code == 1, refused.output
     assert "no answer." in refused.output
-    assert "command 'check' does not declare the query contract (`query-contract: true`" in refused.output
+    assert (
+        "command 'check' does not declare the query contract (`query-contract: true`"
+        in refused.output
+    )
     # The packages member reports the same entry, where the author can fix it.
     packages = CliRunner().invoke(main, ["validate", "--only", "packages"])
     assert packages.exit_code == 1, packages.output
-    assert "error    .pkit/capabilities/cap/package.yaml:/validators/thing/command" in packages.output
+    assert (
+        "error    .pkit/capabilities/cap/package.yaml:/validators/thing/command" in packages.output
+    )
     assert "validator 'thing' names command 'check', which does not declare the query contract" in (
         packages.output
     )
@@ -477,7 +509,9 @@ def test_a_timeout_kills_the_process_group_and_does_not_wait_on_the_grandchild(
     elapsed = time.monotonic() - started
     assert elapsed < 15, elapsed  # not the grandchild's sixty seconds
     assert [f.message for f in outcome.errors] == ["command 'check' did not answer within 1 s."]
-    grandchild = int((adopter.root / ".pkit" / "capabilities" / "cap" / "scripts" / "check.py.pid").read_text())
+    grandchild = int(
+        (adopter.root / ".pkit" / "capabilities" / "cap" / "scripts" / "check.py.pid").read_text()
+    )
     for _ in range(50):
         try:
             os.kill(grandchild, 0)
@@ -502,8 +536,9 @@ def test_the_packages_member_reports_a_validator_naming_no_command(adopter: Adop
     result = CliRunner().invoke(main, ["validate", "--only", "packages"])
     assert result.exit_code == 1, result.output
     assert ".pkit/capabilities/cap/package.yaml:/validators/thing/command" in result.output
-    assert "validator 'thing': command 'nope' is not declared in `commands:` (declared: ['check'])." in (
-        result.output
+    assert (
+        "validator 'thing': command 'nope' is not declared in `commands:` (declared: ['check'])."
+        in (result.output)
     )
 
 
@@ -656,7 +691,9 @@ def test_bracketed_pattern_declarations_are_read_the_way_the_deploy_reads_them(
     diagnoses = [
         i.diagnosis for i in refs.validate_corpus(adopter.root) if "agents/project" in i.location
     ]
-    assert diagnoses == ["frontmatter declares pattern 'code-paths' but it is not referenced anywhere."]
+    assert diagnoses == [
+        "frontmatter declares pattern 'code-paths' but it is not referenced anywhere."
+    ]
 
 
 def test_refs_member_warns_on_drift_and_fails_on_a_hook_nobody_answers(
@@ -681,7 +718,9 @@ def test_refs_member_warns_on_drift_and_fails_on_a_hook_nobody_answers(
 
     (adopter.root / ".pkit" / "agents" / "project" / "needy.md").unlink()
     assert CliRunner().invoke(main, ["validate", "--only", "refs"]).exit_code == 0
-    assert CliRunner().invoke(main, ["refs", "validate"]).exit_code == 1  # drift alone still fails it
+    assert (
+        CliRunner().invoke(main, ["refs", "validate"]).exit_code == 1
+    )  # drift alone still fails it
 
 
 # --- the answer document ------------------------------------------------------
@@ -713,7 +752,15 @@ def test_parse_answer_keeps_labels_and_every_severity() -> None:
         {"summary": [], "findings": {"error": "crashed"}},
         {"summary": None, "findings": []},
     ],
-    ids=["empty", "no-summary", "no-findings", "summary-string", "findings-null", "findings-map", "summary-null"],
+    ids=[
+        "empty",
+        "no-summary",
+        "no-findings",
+        "summary-string",
+        "findings-null",
+        "findings-map",
+        "summary-null",
+    ],
 )
 def test_parse_answer_fails_closed_on_a_half_formed_document(document: object) -> None:
     outcome = validators.parse_answer(json.dumps(document), location="loc", command="c")

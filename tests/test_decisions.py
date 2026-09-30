@@ -150,7 +150,9 @@ def test_stamp_decision_adr_numbering_is_independent(kit_target: Path) -> None:
     (adr_dir / "ADR-001-existing.md").write_text("dummy", encoding="utf-8")
     (adr_dir / "ADR-003-skip.md").write_text("dummy", encoding="utf-8")
     # COR records in .pkit/decisions/core/ must not affect ADR numbering.
-    (kit_target / ".pkit" / "decisions" / "core" / "COR-007-x.md").write_text("dummy", encoding="utf-8")
+    (kit_target / ".pkit" / "decisions" / "core" / "COR-007-x.md").write_text(
+        "dummy", encoding="utf-8"
+    )
 
     target = decisions.stamp_decision(kit_target, namespace="adr", slug="next-adr")
     assert target.name == "ADR-004-next-adr.md"

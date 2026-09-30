@@ -244,13 +244,9 @@ def _run_all_checks(capability_root: Path) -> list[CheckResult]:
         # All read the same already-loaded pair of files; none performs a `gh`
         # call. Ordered hard-gate first, advisories after, matching the file's
         # convention of putting the thing that flips the exit code up front.
-        results.extend(
-            _check_substrate_board_arm_satisfiable(config, substrate_map)
-        )
+        results.extend(_check_substrate_board_arm_satisfiable(config, substrate_map))
         results.extend(_check_board_axis_absent_from_map(config, substrate_map))
-        results.extend(
-            _check_board_arm_default_has_hook(capability_root, substrate_map)
-        )
+        results.extend(_check_board_arm_default_has_hook(capability_root, substrate_map))
 
     # 3b. gh: block validation + host-pinned auth (per DEC-023).
     if config is not None:
@@ -351,9 +347,7 @@ def _check_command_on_path(cmd: str) -> CheckResult:
         )
     # Capture version for diagnostics; not part of the gate.
     try:
-        proc = subprocess.run(
-            [cmd, "--version"], capture_output=True, text=True, check=False
-        )
+        proc = subprocess.run([cmd, "--version"], capture_output=True, text=True, check=False)
         version_line = proc.stdout.strip().split("\n", maxsplit=1)[0] if proc.stdout else ""
     except OSError:
         version_line = ""
@@ -363,9 +357,7 @@ def _check_command_on_path(cmd: str) -> CheckResult:
 
 def _check_gh_auth() -> CheckResult:
     """Verify `gh auth status` reports an authenticated host (ambient)."""
-    proc = subprocess.run(
-        ["gh", "auth", "status"], capture_output=True, text=True, check=False
-    )
+    proc = subprocess.run(["gh", "auth", "status"], capture_output=True, text=True, check=False)
     if proc.returncode != 0:
         return CheckResult(
             "`gh` authenticated",
@@ -431,8 +423,7 @@ def _check_gh_block(config: dict[str, Any]) -> CheckResult:
                 "fail",
                 f"`gh.{field}` must be a non-empty string when set; got {value!r}",
                 remediation=(
-                    f"Either remove `{field}:` from `gh:` or set it to a "
-                    "non-empty string."
+                    f"Either remove `{field}:` from `gh:` or set it to a non-empty string."
                 ),
             )
 
@@ -477,9 +468,7 @@ def _check_gh_host_auth(config: dict[str, Any]) -> CheckResult:
                 "authenticated locally."
             ),
         )
-    return CheckResult(
-        "`gh` authenticated against configured host", "ok", f"host={host}"
-    )
+    return CheckResult("`gh` authenticated against configured host", "ok", f"host={host}")
 
 
 def _check_bootstrap_stamp(capability_root: Path) -> CheckResult:
@@ -785,28 +774,32 @@ def _check_substrate_capability_matrix(
     for axis in axis_labels.AXES:
         disposition = axis_labels.axis_disposition(axis, substrate_map)
         if _axis_declares_board(axis, substrate_map):
-            results.append(CheckResult(
-                f"axis `{axis}` served",
-                "ok",
-                "bound via `board: true` — the map declares the value lives on a "
-                "field of your configured Projects-v2 board. The arm is "
-                "parameterless: the field's identity is declared on the "
-                "`after_create_issue` `set-board-field` hook, not here. SERVED, "
-                "not degraded — rules needing this axis stay in force "
-                "(contrast `unsupported: true`, which declares no encoding at "
-                "all).",
-            ))
+            results.append(
+                CheckResult(
+                    f"axis `{axis}` served",
+                    "ok",
+                    "bound via `board: true` — the map declares the value lives on a "
+                    "field of your configured Projects-v2 board. The arm is "
+                    "parameterless: the field's identity is declared on the "
+                    "`after_create_issue` `set-board-field` hook, not here. SERVED, "
+                    "not degraded — rules needing this axis stay in force "
+                    "(contrast `unsupported: true`, which declares no encoding at "
+                    "all).",
+                )
+            )
         elif disposition == "served":
             binding = substrate_map.axes.get(axis, {})
             kind = next(
                 (k for k in ("label", "title-prefix", "derive") if k in binding),
                 "?",
             )
-            results.append(CheckResult(
-                f"axis `{axis}` served",
-                "ok",
-                f"bound via `{kind}`",
-            ))
+            results.append(
+                CheckResult(
+                    f"axis `{axis}` served",
+                    "ok",
+                    f"bound via `{kind}`",
+                )
+            )
         else:
             # Absent or explicitly unsupported — degrade, don't refuse.
             reason = (
@@ -814,13 +807,15 @@ def _check_substrate_capability_matrix(
                 if axis in substrate_map.axes
                 else "absent from the map (treated as unsupported, NOT greenfield)"
             )
-            results.append(CheckResult(
-                f"axis `{axis}` degraded",
-                "skip",
-                f"{reason}; rules depending on it soften to advisory where a "
-                f"severity knob exists, else stay at their authored severity "
-                f"(ADR-026 no-knob-stays-hard).",
-            ))
+            results.append(
+                CheckResult(
+                    f"axis `{axis}` degraded",
+                    "skip",
+                    f"{reason}; rules depending on it soften to advisory where a "
+                    f"severity knob exists, else stay at their authored severity "
+                    f"(ADR-026 no-knob-stays-hard).",
+                )
+            )
     return results
 
 
@@ -854,9 +849,7 @@ BOARD_CLAIMED_AXES: tuple[str, ...] = axis_carriage.BOARD_CLAIMABLE_AXES
 BOARD_DECLARABLE_AXES: tuple[str, ...] = ("priority", "workstream")
 
 
-def _axis_declares_board(
-    axis: str, substrate_map: "axis_labels.SubstrateMap"
-) -> bool:
+def _axis_declares_board(axis: str, substrate_map: "axis_labels.SubstrateMap") -> bool:
     """Whether the map binds ``axis`` with the `board: true` arm.
 
     Delegates to the seam, which ADR-026 makes the sole reader of binding shape.
@@ -935,30 +928,32 @@ def _check_substrate_board_conflict(
     :func:`_axis_declares_board` wraps for the "did the map declare it?" question.
     """
     if not (config and config.get("has_projects_v2_board")):
-        return [CheckResult(
-            "cross-substrate axis conflict",
-            "skip",
-            "no board configured — `has_projects_v2_board` is not true, so no "
-            "axis can be claimed by both the board and substrate-map.yaml.",
-        )]
+        return [
+            CheckResult(
+                "cross-substrate axis conflict",
+                "skip",
+                "no board configured — `has_projects_v2_board` is not true, so no "
+                "axis can be claimed by both the board and substrate-map.yaml.",
+            )
+        ]
 
     board_id = config.get("projects_v2_board_id")
     board_ref = f" (board #{board_id})" if board_id is not None else ""
 
     conflicting = [
-        axis
-        for axis in BOARD_CLAIMED_AXES
-        if axis_labels.axis_is_label_bound(axis, substrate_map)
+        axis for axis in BOARD_CLAIMED_AXES if axis_labels.axis_is_label_bound(axis, substrate_map)
     ]
     if not conflicting:
-        return [CheckResult(
-            "cross-substrate axis conflict",
-            "ok",
-            "no axis is claimed by both substrates — every board-claimed axis "
-            f"({', '.join(BOARD_CLAIMED_AXES)}) is absent, `unsupported`, "
-            "`board: true`, or bound to a non-label substrate in "
-            "substrate-map.yaml.",
-        )]
+        return [
+            CheckResult(
+                "cross-substrate axis conflict",
+                "ok",
+                "no axis is claimed by both substrates — every board-claimed axis "
+                f"({', '.join(BOARD_CLAIMED_AXES)}) is absent, `unsupported`, "
+                "`board: true`, or bound to a non-label substrate in "
+                "substrate-map.yaml.",
+            )
+        ]
 
     return [
         CheckResult(
@@ -1053,34 +1048,39 @@ def _check_substrate_board_arm_satisfiable(
     absent board satisfy a declaration that the board carries the value.
     """
     declaring = [
-        axis for axis in BOARD_DECLARABLE_AXES
-        if _axis_declares_board(axis, substrate_map)
+        axis for axis in BOARD_DECLARABLE_AXES if _axis_declares_board(axis, substrate_map)
     ]
     if not declaring:
-        return [CheckResult(
-            "`board:` binding satisfiable",
-            "skip",
-            "no axis declares `board: true` in substrate-map.yaml.",
-        )]
+        return [
+            CheckResult(
+                "`board:` binding satisfiable",
+                "skip",
+                "no axis declares `board: true` in substrate-map.yaml.",
+            )
+        ]
 
     if config is None:
         # The config check already reported that it could not be read; without it
         # we cannot tell whether a board is configured. Do not guess a failure.
-        return [CheckResult(
-            "`board:` binding satisfiable",
-            "skip",
-            f"axis/axes {_axis_list(declaring)} declare "
-            "`board: true`, but project/config.yaml could not be read — "
-            "satisfiability is unknown until the config parses.",
-        )]
+        return [
+            CheckResult(
+                "`board:` binding satisfiable",
+                "skip",
+                f"axis/axes {_axis_list(declaring)} declare "
+                "`board: true`, but project/config.yaml could not be read — "
+                "satisfiability is unknown until the config parses.",
+            )
+        ]
 
     if config.get("has_projects_v2_board"):
-        return [CheckResult(
-            "`board:` binding satisfiable",
-            "ok",
-            f"{_axis_list(declaring)} declared `board: true` "
-            "and project/config.yaml configures a Projects-v2 board.",
-        )]
+        return [
+            CheckResult(
+                "`board:` binding satisfiable",
+                "ok",
+                f"{_axis_list(declaring)} declared `board: true` "
+                "and project/config.yaml configures a Projects-v2 board.",
+            )
+        ]
 
     return [
         CheckResult(
@@ -1149,10 +1149,7 @@ def _check_board_axis_absent_from_map(
     if not (config and config.get("has_projects_v2_board")):
         return []
 
-    absent = [
-        axis for axis in BOARD_DECLARABLE_AXES
-        if axis not in substrate_map.axes
-    ]
+    absent = [axis for axis in BOARD_DECLARABLE_AXES if axis not in substrate_map.axes]
     if not absent:
         return []
 
@@ -1208,7 +1205,8 @@ def _check_board_arm_default_has_hook(
     can still be set per-issue. Same posture as the DEC-042 contributed-label warn.
     """
     armed_with_default = [
-        axis for axis in BOARD_DECLARABLE_AXES
+        axis
+        for axis in BOARD_DECLARABLE_AXES
         if _axis_declares_board(axis, substrate_map)
         and isinstance(substrate_map.axes.get(axis, {}).get("default"), str)
     ]
@@ -1217,14 +1215,16 @@ def _check_board_arm_default_has_hook(
 
     hooks = _load_hooks_events(capability_root)
     if hooks is None:
-        return [CheckResult(
-            "`board:` arm `default:` backed by a hook",
-            "skip",
-            f"{_axis_list(armed_with_default)} carry a `default:` on a `board:` "
-            "arm, but project/hooks.yaml could not be read — whether a "
-            "`set-board-field` hook backs them is unknown (the hooks.yaml check "
-            "reports the read failure itself).",
-        )]
+        return [
+            CheckResult(
+                "`board:` arm `default:` backed by a hook",
+                "skip",
+                f"{_axis_list(armed_with_default)} carry a `default:` on a `board:` "
+                "arm, but project/hooks.yaml could not be read — whether a "
+                "`set-board-field` hook backs them is unknown (the hooks.yaml check "
+                "reports the read failure itself).",
+            )
+        ]
 
     on_create = _count_set_board_field_hooks(hooks.get("after_create_issue"))
     elsewhere = sum(
@@ -1234,15 +1234,17 @@ def _check_board_arm_default_has_hook(
     )
 
     if on_create:
-        return [CheckResult(
-            "`board:` arm `default:` backed by a hook",
-            "skip",
-            f"{_axis_list(armed_with_default)} carry a `default:` on a `board:` "
-            f"arm; {on_create} `after_create_issue` `set-board-field` hook(s) are "
-            "declared. UNVERIFIED: a hook names an opaque `field_id`, not an axis, "
-            "so pre-check cannot tell which axis a hook serves — check by hand "
-            "that each `default:` has the hook it claims.",
-        )]
+        return [
+            CheckResult(
+                "`board:` arm `default:` backed by a hook",
+                "skip",
+                f"{_axis_list(armed_with_default)} carry a `default:` on a `board:` "
+                f"arm; {on_create} `after_create_issue` `set-board-field` hook(s) are "
+                "declared. UNVERIFIED: a hook names an opaque `field_id`, not an axis, "
+                "so pre-check cannot tell which axis a hook serves — check by hand "
+                "that each `default:` has the hook it claims.",
+            )
+        ]
 
     if elsewhere:
         detail = (
@@ -1262,20 +1264,22 @@ def _check_board_arm_default_has_hook(
             f"verb ever seeds."
         )
 
-    return [CheckResult(
-        "`board:` arm `default:` backed by a hook",
-        "warn",
-        detail,
-        remediation=(
-            "Either add an `after_create_issue` `set-board-field` hook in "
-            "project/hooks.yaml for the board field carrying the axis (the arm is "
-            "parameterless by design — the field's identity is declared on the "
-            "hook, per DEC-051 decision point 2), or drop the `default:` from the "
-            "`board:` arm so the map stops describing a seed nothing performs. "
-            "`set-field <N> --<axis> <value>` writes the board field per-issue in "
-            "the meantime."
-        ),
-    )]
+    return [
+        CheckResult(
+            "`board:` arm `default:` backed by a hook",
+            "warn",
+            detail,
+            remediation=(
+                "Either add an `after_create_issue` `set-board-field` hook in "
+                "project/hooks.yaml for the board field carrying the axis (the arm is "
+                "parameterless by design — the field's identity is declared on the "
+                "hook, per DEC-051 decision point 2), or drop the `default:` from the "
+                "`board:` arm so the map stops describing a seed nothing performs. "
+                "`set-field <N> --<axis> <value>` writes the board field per-issue in "
+                "the meantime."
+            ),
+        )
+    ]
 
 
 def _axis_list(axes: list[str]) -> str:
@@ -1313,10 +1317,7 @@ def _count_set_board_field_hooks(entries: Any) -> int:
     """How many `set-board-field` hook entries are in one event's list."""
     if not isinstance(entries, list):
         return 0
-    return sum(
-        1 for e in entries
-        if isinstance(e, dict) and e.get("kind") == "set-board-field"
-    )
+    return sum(1 for e in entries if isinstance(e, dict) and e.get("kind") == "set-board-field")
 
 
 def _check_labels(
@@ -1348,7 +1349,9 @@ def _check_labels(
     # Read classification.yaml for the type / priority axes.
     classification_path = capability_root / "schemas" / "classification.yaml"
     try:
-        classification = YAML(typ="safe").load(classification_path.read_text(encoding="utf-8")) or {}
+        classification = (
+            YAML(typ="safe").load(classification_path.read_text(encoding="utf-8")) or {}
+        )
     except (OSError, YAMLError) as exc:
         results.append(
             CheckResult(
@@ -1390,12 +1393,8 @@ def _check_labels(
     if not axis_carriage.expects_kit_labels("type", config, substrate_map):
         results.append(_axis_label_check_skipped("type", config, substrate_map))
     else:
-        type_values = (
-            classification.get("axes", {}).get("type", {}).get("values", [])
-        )
-        missing_type = [
-            v for v in type_values if axis_labels.label("type", v) not in existing
-        ]
+        type_values = classification.get("axes", {}).get("type", {}).get("values", [])
+        missing_type = [v for v in type_values if axis_labels.label("type", v) not in existing]
         if missing_type:
             results.append(
                 CheckResult(
@@ -1422,9 +1421,7 @@ def _check_labels(
     if not axis_carriage.expects_kit_labels("priority", config, substrate_map):
         results.append(_axis_label_check_skipped("priority", config, substrate_map))
     else:
-        priority_values = (
-            classification.get("axes", {}).get("priority", {}).get("values", [])
-        )
+        priority_values = classification.get("axes", {}).get("priority", {}).get("values", [])
         missing_priority = [
             v for v in priority_values if axis_labels.label("priority", v) not in existing
         ]
@@ -1512,16 +1509,18 @@ def _check_contributed_labels(capability_root: Path) -> list[CheckResult]:
             if warning.capability
             else "label-contribution manifest"
         )
-        results.append(CheckResult(
-            f"label contribution ({scope})",
-            "warn",
-            str(warning),
-            remediation=(
-                "Fix the capability's label-contributions declaration (or "
-                "uninstall the capability). The contribution is skipped until "
-                "then; pm is not blocked. See DEC-042."
-            ),
-        ))
+        results.append(
+            CheckResult(
+                f"label contribution ({scope})",
+                "warn",
+                str(warning),
+                remediation=(
+                    "Fix the capability's label-contributions declaration (or "
+                    "uninstall the capability). The contribution is skipped until "
+                    "then; pm is not blocked. See DEC-042."
+                ),
+            )
+        )
 
     if not collection.labels:
         # No contributor declared a label — stay silent unless a warning above
@@ -1536,46 +1535,48 @@ def _check_contributed_labels(capability_root: Path) -> list[CheckResult]:
         check=False,
     )
     if proc.returncode != 0:
-        results.append(CheckResult(
-            "contributed labels accessible",
-            "warn",
-            "`gh label list` failed — cannot verify contributed labels",
-            remediation="Ensure `gh` is authenticated and the repo is accessible.",
-        ))
+        results.append(
+            CheckResult(
+                "contributed labels accessible",
+                "warn",
+                "`gh label list` failed — cannot verify contributed labels",
+                remediation="Ensure `gh` is authenticated and the repo is accessible.",
+            )
+        )
         return results
     try:
         existing = {label["name"] for label in json.loads(proc.stdout)}
     except (json.JSONDecodeError, KeyError, TypeError):
         existing = set()
 
-    missing = [
-        label for label in collection.labels if label.default_name not in existing
-    ]
+    missing = [label for label in collection.labels if label.default_name not in existing]
     if missing:
         for label in missing:
-            results.append(CheckResult(
-                f"contributed label `{label.default_name}` exists",
-                "warn",
-                f"missing (required by capability `{label.capability}`)",
-                remediation=(
-                    "Run `pkit project-management bootstrap` to create the "
-                    "missing contributed label(s). This is a warning, not a "
-                    "hard gate (DEC-042)."
-                ),
-            ))
+            results.append(
+                CheckResult(
+                    f"contributed label `{label.default_name}` exists",
+                    "warn",
+                    f"missing (required by capability `{label.capability}`)",
+                    remediation=(
+                        "Run `pkit project-management bootstrap` to create the "
+                        "missing contributed label(s). This is a warning, not a "
+                        "hard gate (DEC-042)."
+                    ),
+                )
+            )
     else:
-        results.append(CheckResult(
-            "contributed labels exist",
-            "ok",
-            f"all {len(collection.labels)} contributed label(s) present",
-        ))
+        results.append(
+            CheckResult(
+                "contributed labels exist",
+                "ok",
+                f"all {len(collection.labels)} contributed label(s) present",
+            )
+        )
 
     return results
 
 
-def _resolve_workstream_slugs_for_check(
-    capability_root: Path, config: dict[str, Any]
-) -> list[str]:
+def _resolve_workstream_slugs_for_check(capability_root: Path, config: dict[str, Any]) -> list[str]:
     """Read workstream slugs from workstreams.yaml or config legacy fallback."""
     ws_path = capability_root / "project" / "workstreams.yaml"
     if ws_path.is_file():
@@ -1609,9 +1610,7 @@ def _check_mesh_config(config: dict[str, Any] | None) -> CheckResult:
     import re as _re
 
     if config is None:
-        return CheckResult(
-            "mesh config", "skip", "adopter config not loaded"
-        )
+        return CheckResult("mesh config", "skip", "adopter config not loaded")
     mp = config.get("mesh_peers")
     ms = config.get("mesh_source")
     if mp is None and ms is None:
@@ -1873,9 +1872,7 @@ def _check_state_labels(
     block = wf_data.get("process") if isinstance(wf_data.get("process"), dict) else wf_data
     states = block.get("states") or []
     state_ids = [
-        str(s["id"])
-        for s in states
-        if isinstance(s, dict) and isinstance(s.get("id"), str)
+        str(s["id"]) for s in states if isinstance(s, dict) and isinstance(s.get("id"), str)
     ]
     if not state_ids:
         return CheckResult(
@@ -1903,9 +1900,7 @@ def _check_state_labels(
     except (json.JSONDecodeError, KeyError, TypeError):
         existing = set()
 
-    missing = [
-        sid for sid in state_ids if axis_labels.label("state", sid) not in existing
-    ]
+    missing = [sid for sid in state_ids if axis_labels.label("state", sid) not in existing]
     if missing:
         return CheckResult(
             "required `state:*` labels exist (label-fallback)",
@@ -1995,13 +1990,15 @@ def _check_title_prefix_alignment(
         else:
             # `type` bound to label/derive, unsupported, or absent — the kit
             # prefix vocabulary does not apply. Skip, do not refuse.
-            return [CheckResult(
-                "title-prefix alignment",
-                "skip",
-                "`type` axis is not served via kit title-prefixes under "
-                "substrate-map.yaml — kit prefix vocabulary does not apply "
-                "(see the capability matrix for `type`'s disposition).",
-            )]
+            return [
+                CheckResult(
+                    "title-prefix alignment",
+                    "skip",
+                    "`type` axis is not served via kit title-prefixes under "
+                    "substrate-map.yaml — kit prefix vocabulary does not apply "
+                    "(see the capability matrix for `type`'s disposition).",
+                )
+            ]
 
     known_prefixes: set[str] = set()
     try:
@@ -2040,33 +2037,42 @@ def _check_title_prefix_alignment(
         known_prefixes = {p.strip("[]") for p in adopter_prefixes}
 
     if not known_prefixes:
-        return [CheckResult(
-            "title-prefix alignment",
-            "skip",
-            "could not load schemas (issue-types.yaml / classification.yaml)"
-            if not advisory
-            else "substrate-map.yaml binds `type` to title-prefix but declares "
-            "no prefixes — nothing to validate against (degraded, not refused).",
-        )]
+        return [
+            CheckResult(
+                "title-prefix alignment",
+                "skip",
+                "could not load schemas (issue-types.yaml / classification.yaml)"
+                if not advisory
+                else "substrate-map.yaml binds `type` to title-prefix but declares "
+                "no prefixes — nothing to validate against (degraded, not refused).",
+            )
+        ]
 
     # Fetch a sample of open issues.
     proc = subprocess.run(
         [
-            "gh", "issue", "list",
-            "--state", "open",
-            "--limit", str(_TITLE_PREFIX_SAMPLE_LIMIT),
-            "--json", "number,title,labels",
+            "gh",
+            "issue",
+            "list",
+            "--state",
+            "open",
+            "--limit",
+            str(_TITLE_PREFIX_SAMPLE_LIMIT),
+            "--json",
+            "number,title,labels",
         ],
         capture_output=True,
         text=True,
         check=False,
     )
     if proc.returncode != 0:
-        return [CheckResult(
-            "title-prefix alignment",
-            "skip",
-            "`gh issue list` failed; skipping alignment check",
-        )]
+        return [
+            CheckResult(
+                "title-prefix alignment",
+                "skip",
+                "`gh issue list` failed; skipping alignment check",
+            )
+        ]
 
     try:
         issues = json.loads(proc.stdout)
@@ -2074,13 +2080,16 @@ def _check_title_prefix_alignment(
         issues = []
 
     if not issues:
-        return [CheckResult(
-            "title-prefix alignment",
-            "skip",
-            "no open issues to sample",
-        )]
+        return [
+            CheckResult(
+                "title-prefix alignment",
+                "skip",
+                "no open issues to sample",
+            )
+        ]
 
     import re as _re
+
     bracket_re = _re.compile(r"^\[([^\]]+)\] ")
     mismatches: list[str] = []
     no_prefix: list[int] = []
@@ -2109,16 +2118,17 @@ def _check_title_prefix_alignment(
     results: list[CheckResult] = []
     sampled = len(issues) - len(report_channel)
     excluded_note = (
-        f" ({len(report_channel)} report-channel issue(s) excluded)"
-        if report_channel else ""
+        f" ({len(report_channel)} report-channel issue(s) excluded)" if report_channel else ""
     )
 
     if sampled == 0:
-        return [CheckResult(
-            "title-prefix alignment",
-            "skip",
-            f"every sampled open issue is report-channel{excluded_note}; nothing to validate",
-        )]
+        return [
+            CheckResult(
+                "title-prefix alignment",
+                "skip",
+                f"every sampled open issue is report-channel{excluded_note}; nothing to validate",
+            )
+        ]
 
     # This check never `fail`s (see docstring). Under a present map a mismatch
     # or a no-prefix issue degrades to a `skip` finding; greenfield reports a
@@ -2126,31 +2136,35 @@ def _check_title_prefix_alignment(
     # prefixes when advisory, the kit set otherwise.
     if mismatches:
         if advisory:
-            results.append(CheckResult(
-                "title-prefix alignment",
-                "skip",
-                f"{len(mismatches)} issue(s) in sample of {sampled} carry a prefix "
-                f"not in the adopter's declared substrate-map prefixes "
-                f"({', '.join(mismatches)}) — advisory under substrate-map.yaml, "
-                f"not a refusal. Adopter prefixes: "
-                + ", ".join(f"[{p}]" for p in sorted(known_prefixes)) + "."
-                + excluded_note,
-            ))
+            results.append(
+                CheckResult(
+                    "title-prefix alignment",
+                    "skip",
+                    f"{len(mismatches)} issue(s) in sample of {sampled} carry a prefix "
+                    f"not in the adopter's declared substrate-map prefixes "
+                    f"({', '.join(mismatches)}) — advisory under substrate-map.yaml, "
+                    f"not a refusal. Adopter prefixes: "
+                    + ", ".join(f"[{p}]" for p in sorted(known_prefixes))
+                    + "."
+                    + excluded_note,
+                )
+            )
         else:
-            results.append(CheckResult(
-                "title-prefix alignment",
-                "warn",
-                (
-                    f"{len(mismatches)} issue(s) in sample of {sampled} have unrecognised "
-                    f"prefix: {', '.join(mismatches)}{excluded_note}"
-                ),
-                remediation=(
-                    "Advisory — does not block. Update the issue titles or the prefix "
-                    "vocabulary in issue-types.yaml / classification.yaml. Known "
-                    "prefixes: "
-                    + ", ".join(f"[{p}]" for p in sorted(known_prefixes)) + "."
-                ),
-            ))
+            results.append(
+                CheckResult(
+                    "title-prefix alignment",
+                    "warn",
+                    (
+                        f"{len(mismatches)} issue(s) in sample of {sampled} have unrecognised "
+                        f"prefix: {', '.join(mismatches)}{excluded_note}"
+                    ),
+                    remediation=(
+                        "Advisory — does not block. Update the issue titles or the prefix "
+                        "vocabulary in issue-types.yaml / classification.yaml. Known "
+                        "prefixes: " + ", ".join(f"[{p}]" for p in sorted(known_prefixes)) + "."
+                    ),
+                )
+            )
     else:
         # No mismatches, but no-prefix issues are not "recognised" either: claim
         # "all" only when every sampled issue carries a recognised prefix.
@@ -2162,40 +2176,46 @@ def _check_title_prefix_alignment(
             f"prefixes ({len(no_prefix)} without a `[Prefix] ` title, reported "
             f"separately)"
         )
-        results.append(CheckResult(
-            "title-prefix alignment",
-            "ok",
-            recognised_summary
-            + (" (validated against adopter substrate-map prefixes)" if advisory else "")
-            + excluded_note,
-        ))
+        results.append(
+            CheckResult(
+                "title-prefix alignment",
+                "ok",
+                recognised_summary
+                + (" (validated against adopter substrate-map prefixes)" if advisory else "")
+                + excluded_note,
+            )
+        )
 
     if no_prefix:
         if advisory:
-            results.append(CheckResult(
-                "title-prefix: issues without bracket prefix",
-                "skip",
-                f"{len(no_prefix)} issue(s) in sample have no `[Prefix] ` title "
-                f"({', '.join(f'#{n}' for n in no_prefix[:10])}"
-                + (" ..." if len(no_prefix) > 10 else "")
-                + ") — advisory under substrate-map.yaml; a brownfield tracker "
-                "need not bracket-prefix every issue." + excluded_note,
-            ))
-        else:
-            results.append(CheckResult(
-                "title-prefix: issues without bracket prefix",
-                "warn",
-                (
-                    f"{len(no_prefix)} issue(s) in sample have no `[Prefix] ` title: "
-                    f"{', '.join(f'#{n}' for n in no_prefix[:10])}"
+            results.append(
+                CheckResult(
+                    "title-prefix: issues without bracket prefix",
+                    "skip",
+                    f"{len(no_prefix)} issue(s) in sample have no `[Prefix] ` title "
+                    f"({', '.join(f'#{n}' for n in no_prefix[:10])}"
                     + (" ..." if len(no_prefix) > 10 else "")
-                ),
-                remediation=(
-                    "Advisory — does not block. Issue titles should start with a "
-                    "`[Prefix] ` bracket per the methodology's title format rules. "
-                    "Use edit-issue or the project-manager to fix the titles."
-                ),
-            ))
+                    + ") — advisory under substrate-map.yaml; a brownfield tracker "
+                    "need not bracket-prefix every issue." + excluded_note,
+                )
+            )
+        else:
+            results.append(
+                CheckResult(
+                    "title-prefix: issues without bracket prefix",
+                    "warn",
+                    (
+                        f"{len(no_prefix)} issue(s) in sample have no `[Prefix] ` title: "
+                        f"{', '.join(f'#{n}' for n in no_prefix[:10])}"
+                        + (" ..." if len(no_prefix) > 10 else "")
+                    ),
+                    remediation=(
+                        "Advisory — does not block. Issue titles should start with a "
+                        "`[Prefix] ` bracket per the methodology's title format rules. "
+                        "Use edit-issue or the project-manager to fix the titles."
+                    ),
+                )
+            )
 
     return results
 
@@ -2228,68 +2248,84 @@ def _check_hooks_file(capability_root: Path) -> list[CheckResult]:
     """
     path = capability_root / HOOKS_FILE_PATH
     if not path.is_file():
-        return [CheckResult(
-            "hooks.yaml present",
-            "skip",
-            "no hooks.yaml configured (no lifecycle hooks declared)",
-        )]
+        return [
+            CheckResult(
+                "hooks.yaml present",
+                "skip",
+                "no hooks.yaml configured (no lifecycle hooks declared)",
+            )
+        ]
     try:
         text = path.read_text(encoding="utf-8")
         data = YAML(typ="safe").load(text) or {}
     except (OSError, YAMLError) as exc:
-        return [CheckResult(
-            "hooks.yaml parses",
-            "fail",
-            f"failed to read/parse {path}: {exc}",
-            remediation="Fix YAML syntax; re-run.",
-        )]
+        return [
+            CheckResult(
+                "hooks.yaml parses",
+                "fail",
+                f"failed to read/parse {path}: {exc}",
+                remediation="Fix YAML syntax; re-run.",
+            )
+        ]
     if not isinstance(data, dict):
-        return [CheckResult(
-            "hooks.yaml shape",
-            "fail",
-            f"{path} top-level is not a mapping",
-            remediation="The file must be a YAML mapping at the top level.",
-        )]
+        return [
+            CheckResult(
+                "hooks.yaml shape",
+                "fail",
+                f"{path} top-level is not a mapping",
+                remediation="The file must be a YAML mapping at the top level.",
+            )
+        ]
     if data.get("schema_version") != 1:
-        return [CheckResult(
-            "hooks.yaml schema_version",
-            "fail",
-            f"{path} missing or unexpected `schema_version` (need 1)",
-            remediation="Add `schema_version: 1` at the top of the file.",
-        )]
+        return [
+            CheckResult(
+                "hooks.yaml schema_version",
+                "fail",
+                f"{path} missing or unexpected `schema_version` (need 1)",
+                remediation="Add `schema_version: 1` at the top of the file.",
+            )
+        ]
     hooks = data.get("hooks")
     if hooks is None:
-        return [CheckResult(
-            "hooks.yaml present + valid",
-            "ok",
-            f"{path} parses; no hooks declared",
-        )]
+        return [
+            CheckResult(
+                "hooks.yaml present + valid",
+                "ok",
+                f"{path} parses; no hooks declared",
+            )
+        ]
     if not isinstance(hooks, dict):
-        return [CheckResult(
-            "hooks.yaml shape",
-            "fail",
-            f"`hooks:` must be a mapping; got {type(hooks).__name__}",
-            remediation="Use `hooks:` as a mapping of event-name → list of hook entries.",
-        )]
+        return [
+            CheckResult(
+                "hooks.yaml shape",
+                "fail",
+                f"`hooks:` must be a mapping; got {type(hooks).__name__}",
+                remediation="Use `hooks:` as a mapping of event-name → list of hook entries.",
+            )
+        ]
 
     results: list[CheckResult] = []
     total_entries = 0
     for event, entries in hooks.items():
         if event not in HOOK_LIFECYCLE_EVENTS:
-            results.append(CheckResult(
-                f"hooks.{event}",
-                "fail",
-                f"unknown lifecycle event {event!r}",
-                remediation=f"Allowed events: {', '.join(HOOK_LIFECYCLE_EVENTS)}.",
-            ))
+            results.append(
+                CheckResult(
+                    f"hooks.{event}",
+                    "fail",
+                    f"unknown lifecycle event {event!r}",
+                    remediation=f"Allowed events: {', '.join(HOOK_LIFECYCLE_EVENTS)}.",
+                )
+            )
             continue
         if not isinstance(entries, list):
-            results.append(CheckResult(
-                f"hooks.{event}",
-                "fail",
-                f"`{event}` must be a list; got {type(entries).__name__}",
-                remediation="Each event maps to a YAML list of hook entries.",
-            ))
+            results.append(
+                CheckResult(
+                    f"hooks.{event}",
+                    "fail",
+                    f"`{event}` must be a list; got {type(entries).__name__}",
+                    remediation="Each event maps to a YAML list of hook entries.",
+                )
+            )
             continue
         for idx, entry in enumerate(entries):
             entry_result = _validate_hook_entry(event, idx, entry)
@@ -2298,19 +2334,24 @@ def _check_hooks_file(capability_root: Path) -> list[CheckResult]:
                 total_entries += 1
 
     if not results:
-        results.append(CheckResult(
-            "hooks.yaml present + valid",
-            "ok",
-            f"{path} parses; no hook entries declared",
-        ))
+        results.append(
+            CheckResult(
+                "hooks.yaml present + valid",
+                "ok",
+                f"{path} parses; no hook entries declared",
+            )
+        )
     else:
         # If every result is ok, prepend a summary line.
         if all(r.status == "ok" for r in results):
-            results.insert(0, CheckResult(
-                "hooks.yaml present + valid",
-                "ok",
-                f"{total_entries} hook entry(ies) across {len(hooks)} event(s)",
-            ))
+            results.insert(
+                0,
+                CheckResult(
+                    "hooks.yaml present + valid",
+                    "ok",
+                    f"{total_entries} hook entry(ies) across {len(hooks)} event(s)",
+                ),
+            )
     return results
 
 
@@ -2348,14 +2389,14 @@ def _validate_hook_entry(event: str, idx: int, entry: Any) -> CheckResult:
             return CheckResult(label, "fail", "missing `field_id`")
         if not (entry.get("single_select_option_id") or entry.get("text_value")):
             return CheckResult(
-                label, "fail",
-                "set-board-field requires `single_select_option_id` or `text_value`"
+                label, "fail", "set-board-field requires `single_select_option_id` or `text_value`"
             )
     elif kind == "post-comment":
         tp = entry.get("template_path")
         if not isinstance(tp, str) or not tp.startswith("project/"):
             return CheckResult(
-                label, "fail",
+                label,
+                "fail",
                 "post-comment `template_path` must be a path under `project/`",
             )
     elif kind == "assign-milestone":
@@ -2365,7 +2406,8 @@ def _validate_hook_entry(event: str, idx: int, entry: Any) -> CheckResult:
         sp = entry.get("script_path")
         if not isinstance(sp, str) or not sp.startswith("project/"):
             return CheckResult(
-                label, "fail",
+                label,
+                "fail",
                 "custom-script `script_path` must be a path under `project/`",
             )
     return CheckResult(label, "ok", f"kind={kind}")
@@ -2390,9 +2432,7 @@ def _resolve_capability_root(explicit: Path | None) -> Path | None:
 # ----- review: block validation (DEC-027 + DEC-028) ------------------
 
 
-def _check_review_block(
-    config: dict[str, Any], capability_root: Path
-) -> list[CheckResult]:
+def _check_review_block(config: dict[str, Any], capability_root: Path) -> list[CheckResult]:
     """Validate the optional `review:` block.
 
     DEC-027 fields: review.mode (agent|human), review.human_review.reviewer_role.
@@ -2400,66 +2440,82 @@ def _check_review_block(
     """
     review = config.get("review")
     if review is None:
-        return [CheckResult(
-            "review: block",
-            "skip",
-            "no `review:` block configured (defaults: mode=agent, no agents registered)",
-        )]
+        return [
+            CheckResult(
+                "review: block",
+                "skip",
+                "no `review:` block configured (defaults: mode=agent, no agents registered)",
+            )
+        ]
     if not isinstance(review, dict):
-        return [CheckResult(
-            "review: block valid",
-            "fail",
-            "`review:` is present but not a mapping",
-            remediation="Make `review:` a YAML mapping. See DEC-027 / DEC-028.",
-        )]
+        return [
+            CheckResult(
+                "review: block valid",
+                "fail",
+                "`review:` is present but not a mapping",
+                remediation="Make `review:` a YAML mapping. See DEC-027 / DEC-028.",
+            )
+        ]
 
     results: list[CheckResult] = []
 
     # DEC-027: mode + human_review.reviewer_role.
     mode = review.get("mode")
     if mode is not None and mode not in ("agent", "human"):
-        results.append(CheckResult(
-            "review.mode valid",
-            "fail",
-            f"`review.mode` must be 'agent' or 'human'; got {mode!r}",
-        ))
+        results.append(
+            CheckResult(
+                "review.mode valid",
+                "fail",
+                f"`review.mode` must be 'agent' or 'human'; got {mode!r}",
+            )
+        )
     elif mode in ("agent", "human"):
         results.append(CheckResult("review.mode", "ok", f"mode={mode}"))
 
     human_review = review.get("human_review")
     if human_review is not None:
         if not isinstance(human_review, dict):
-            results.append(CheckResult(
-                "review.human_review valid",
-                "fail",
-                "`review.human_review` must be a mapping",
-            ))
+            results.append(
+                CheckResult(
+                    "review.human_review valid",
+                    "fail",
+                    "`review.human_review` must be a mapping",
+                )
+            )
         else:
             role = human_review.get("reviewer_role")
             if role is not None and (not isinstance(role, str) or not role):
-                results.append(CheckResult(
-                    "review.human_review.reviewer_role valid",
-                    "fail",
-                    "`reviewer_role` must be a non-empty string when set",
-                ))
+                results.append(
+                    CheckResult(
+                        "review.human_review.reviewer_role valid",
+                        "fail",
+                        "`reviewer_role` must be a non-empty string when set",
+                    )
+                )
 
     # DEC-028 + DEC-032: agents block.
     agents = review.get("agents")
     if agents is not None:
         if not isinstance(agents, dict):
-            results.append(CheckResult(
-                "review.agents valid",
-                "fail",
-                "`review.agents` must be a mapping",
-            ))
+            results.append(
+                CheckResult(
+                    "review.agents valid",
+                    "fail",
+                    "`review.agents` must be a mapping",
+                )
+            )
         else:
             repo_root = capability_root.parent.parent.parent
             results.extend(_check_review_agents(agents, repo_root))
 
     if not results:
-        results.append(CheckResult(
-            "review: block valid", "ok", "review block parses cleanly (empty)",
-        ))
+        results.append(
+            CheckResult(
+                "review: block valid",
+                "ok",
+                "review block parses cleanly (empty)",
+            )
+        )
     return results
 
 
@@ -2470,9 +2526,7 @@ _OPT_OUT_REMEDIATION = (
 )
 
 
-def _check_review_agents(
-    agents: dict[str, Any], repo_root: Path
-) -> list[CheckResult]:
+def _check_review_agents(agents: dict[str, Any], repo_root: Path) -> list[CheckResult]:
     """Validate `review.agents` shape and the *resolvable* reviewer set.
 
     Two concerns, per DEC-032's D3 (cap lift) + Implications:
@@ -2509,9 +2563,7 @@ def _check_review_agents(
 
     # 1b. local_registered — shape-validate every entry (N≥2 allowed),
     #     collecting the baseline reviewer names for the resolvable set.
-    baseline_names, local_results = _check_local_registered(
-        agents.get("local_registered")
-    )
+    baseline_names, local_results = _check_local_registered(agents.get("local_registered"))
     results.extend(local_results)
 
     # 3. Opt-outs, shape first: a malformed list applies nothing. Checking
@@ -2530,9 +2582,7 @@ def _check_review_agents(
 
     # 2. Resolvable set: baseline ∪ contributed less the opt-outs, each name
     #    → deployed file.
-    results.extend(
-        _check_resolvable_reviewer_set(baseline_names, repo_root, opt_outs)
-    )
+    results.extend(_check_resolvable_reviewer_set(baseline_names, repo_root, opt_outs))
 
     return results
 
@@ -2542,41 +2592,53 @@ def _check_remote_registered(entries: Any) -> list[CheckResult]:
     if entries is None:
         return []
     if not isinstance(entries, list):
-        return [CheckResult(
-            "review.agents.remote_registered valid",
-            "fail",
-            "`review.agents.remote_registered` must be a list",
-        )]
+        return [
+            CheckResult(
+                "review.agents.remote_registered valid",
+                "fail",
+                "`review.agents.remote_registered` must be a list",
+            )
+        ]
     if len(entries) > 1:
-        return [CheckResult(
-            "review.agents.remote_registered singleton",
-            "fail",
-            f"v1 supports at most one remote entry; got {len(entries)}",
-            remediation=(
-                "DEC-032 lifts the local-path cap only — contributed reviewers "
-                "register on the local path. Keep at most one entry in "
-                "`remote_registered` at v1."
-            ),
-        )]
+        return [
+            CheckResult(
+                "review.agents.remote_registered singleton",
+                "fail",
+                f"v1 supports at most one remote entry; got {len(entries)}",
+                remediation=(
+                    "DEC-032 lifts the local-path cap only — contributed reviewers "
+                    "register on the local path. Keep at most one entry in "
+                    "`remote_registered` at v1."
+                ),
+            )
+        ]
     if not entries:
         return []
     entry = entries[0]
     if not isinstance(entry, dict):
-        return [CheckResult(
-            "review.agents.remote_registered[0] shape",
-            "fail",
-            "entry must be a mapping",
-        )]
+        return [
+            CheckResult(
+                "review.agents.remote_registered[0] shape",
+                "fail",
+                "entry must be a mapping",
+            )
+        ]
     login = entry.get("github_login")
     if not isinstance(login, str) or not login:
-        return [CheckResult(
-            "review.agents.remote_registered[0].github_login",
-            "fail",
-            "`github_login` must be a non-empty string",
-        )]
-    return [CheckResult(
-        "review.agents.remote_registered", "ok", f"github_login={login}",
-    )]
+        return [
+            CheckResult(
+                "review.agents.remote_registered[0].github_login",
+                "fail",
+                "`github_login` must be a non-empty string",
+            )
+        ]
+    return [
+        CheckResult(
+            "review.agents.remote_registered",
+            "ok",
+            f"github_login={login}",
+        )
+    ]
 
 
 def _check_local_registered(entries: Any) -> tuple[list[str], list[CheckResult]]:
@@ -2591,38 +2653,46 @@ def _check_local_registered(entries: Any) -> tuple[list[str], list[CheckResult]]
     if entries is None:
         return [], []
     if not isinstance(entries, list):
-        return [], [CheckResult(
-            "review.agents.local_registered valid",
-            "fail",
-            "`review.agents.local_registered` must be a list",
-        )]
+        return [], [
+            CheckResult(
+                "review.agents.local_registered valid",
+                "fail",
+                "`review.agents.local_registered` must be a list",
+            )
+        ]
 
     names: list[str] = []
     results: list[CheckResult] = []
     for idx, entry in enumerate(entries):
         if not isinstance(entry, dict):
-            results.append(CheckResult(
-                f"review.agents.local_registered[{idx}] shape",
-                "fail",
-                "entry must be a mapping",
-            ))
+            results.append(
+                CheckResult(
+                    f"review.agents.local_registered[{idx}] shape",
+                    "fail",
+                    "entry must be a mapping",
+                )
+            )
             continue
         name = entry.get("name")
         if not isinstance(name, str) or not name:
-            results.append(CheckResult(
-                f"review.agents.local_registered[{idx}].name",
-                "fail",
-                "`name` must be a non-empty string",
-            ))
+            results.append(
+                CheckResult(
+                    f"review.agents.local_registered[{idx}].name",
+                    "fail",
+                    "`name` must be a non-empty string",
+                )
+            )
             continue
         names.append(name)
 
     if names:
-        results.append(CheckResult(
-            "review.agents.local_registered shape",
-            "ok",
-            f"{len(names)} baseline local reviewer(s): {', '.join(names)}",
-        ))
+        results.append(
+            CheckResult(
+                "review.agents.local_registered shape",
+                "ok",
+                f"{len(names)} baseline local reviewer(s): {', '.join(names)}",
+            )
+        )
     return names, results
 
 
@@ -2657,21 +2727,19 @@ def _check_resolvable_reviewer_set(
     # collector's contract; report one fail per error so remediation is
     # specific.
     for error in collection.errors:
-        scope = (
-            f"capability `{error.capability}`"
-            if error.capability
-            else "contribution manifest"
+        scope = f"capability `{error.capability}`" if error.capability else "contribution manifest"
+        results.append(
+            CheckResult(
+                f"review contribution ({scope})",
+                "fail",
+                str(error),
+                remediation=(
+                    "Fix the capability's review-contributions declaration, "
+                    "redeploy its reviewer agent, opt out of the contribution in "
+                    f"`{OPT_OUT_PATH}`, or uninstall the capability. See DEC-032."
+                ),
+            )
         )
-        results.append(CheckResult(
-            f"review contribution ({scope})",
-            "fail",
-            str(error),
-            remediation=(
-                "Fix the capability's review-contributions declaration, "
-                "redeploy its reviewer agent, opt out of the contribution in "
-                f"`{OPT_OUT_PATH}`, or uninstall the capability. See DEC-032."
-            ),
-        ))
 
     results.extend(_opt_out_results(opt_outs, installed))
 
@@ -2680,9 +2748,7 @@ def _check_resolvable_reviewer_set(
     # (deployed=False) is reported via the error channel above — exclude it
     # here to avoid a duplicate fail. Its name is still validated if the
     # baseline registers it too, since that's a separate (baseline) concern.
-    contributed_names = [
-        rule.reviewer for rule in collection.rules if rule.deployed
-    ]
+    contributed_names = [rule.reviewer for rule in collection.rules if rule.deployed]
     seen: set[str] = set()
     resolvable: list[str] = []
     for name in [*baseline_names, *contributed_names]:
@@ -2691,11 +2757,13 @@ def _check_resolvable_reviewer_set(
             resolvable.append(name)
 
     if not resolvable:
-        results.append(CheckResult(
-            "resolvable reviewer set",
-            "skip",
-            "no local reviewers registered or contributed",
-        ))
+        results.append(
+            CheckResult(
+                "resolvable reviewer set",
+                "skip",
+                "no local reviewers registered or contributed",
+            )
+        )
         return results
 
     missing: list[str] = []
@@ -2706,32 +2774,34 @@ def _check_resolvable_reviewer_set(
     if missing:
         for name in missing:
             agent_file = agent_deploy_path(repo_root, name)
-            results.append(CheckResult(
-                f"resolvable reviewer `{name}` deployed",
-                "fail",
-                f"agent file not found at {agent_file}",
-                remediation=(
-                    f"Either remove `{name}` from the reviewer set (drop it "
-                    "from `local_registered`, opt out of the contribution in "
-                    f"`{OPT_OUT_PATH}`, or uninstall the capability "
-                    "contributing it) or deploy the agent at "
-                    f"`.claude/agents/{name}.md`."
-                ),
-            ))
+            results.append(
+                CheckResult(
+                    f"resolvable reviewer `{name}` deployed",
+                    "fail",
+                    f"agent file not found at {agent_file}",
+                    remediation=(
+                        f"Either remove `{name}` from the reviewer set (drop it "
+                        "from `local_registered`, opt out of the contribution in "
+                        f"`{OPT_OUT_PATH}`, or uninstall the capability "
+                        "contributing it) or deploy the agent at "
+                        f"`.claude/agents/{name}.md`."
+                    ),
+                )
+            )
     else:
-        results.append(CheckResult(
-            "resolvable reviewer set deployed",
-            "ok",
-            f"all {len(resolvable)} reviewer(s) have deployed agent files: "
-            f"{', '.join(resolvable)}",
-        ))
+        results.append(
+            CheckResult(
+                "resolvable reviewer set deployed",
+                "ok",
+                f"all {len(resolvable)} reviewer(s) have deployed agent files: "
+                f"{', '.join(resolvable)}",
+            )
+        )
 
     return results
 
 
-def _opt_out_results(
-    opt_outs: OptOuts, installed: ContributionCollection
-) -> list[CheckResult]:
+def _opt_out_results(opt_outs: OptOuts, installed: ContributionCollection) -> list[CheckResult]:
     """One line per configured opt-out: a `fail` or its listing (#148).
 
     An entry naming a capability or reviewer that no installed capability
@@ -2744,19 +2814,23 @@ def _opt_out_results(
     results: list[CheckResult] = []
     for entry in opt_outs.entries:
         if entry in problems:
-            results.append(CheckResult(
-                f"{OPT_OUT_PATH} entry names an installed contribution",
-                "fail",
-                problems[entry],
-                remediation=_OPT_OUT_REMEDIATION,
-            ))
+            results.append(
+                CheckResult(
+                    f"{OPT_OUT_PATH} entry names an installed contribution",
+                    "fail",
+                    problems[entry],
+                    remediation=_OPT_OUT_REMEDIATION,
+                )
+            )
             continue
-        results.append(CheckResult(
-            f"contributed reviewer `{entry.reviewer}` (capability "
-            f"`{entry.capability}`) opted out",
-            "skip",
-            f"its merge gate does not apply — reason: {entry.reason}",
-        ))
+        results.append(
+            CheckResult(
+                f"contributed reviewer `{entry.reviewer}` (capability "
+                f"`{entry.capability}`) opted out",
+                "skip",
+                f"its merge gate does not apply — reason: {entry.reason}",
+            )
+        )
     return results
 
 

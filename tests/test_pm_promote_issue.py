@@ -24,12 +24,7 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = (
-    REPO_ROOT
-    / ".pkit"
-    / "capabilities"
-    / "project-management"
-    / "scripts"
-    / "promote-issue.py"
+    REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "promote-issue.py"
 )
 
 
@@ -62,43 +57,59 @@ def pi():
 
 def test_detect_current_state_returns_bare_state(pi, monkeypatch) -> None:
     """Issue with `state:backlog` label → returns `"backlog"`."""
+
     def fake_gh_run(args, config, **kwargs):
         import subprocess
+
         return subprocess.CompletedProcess(
-            args=args, returncode=0,
-            stdout=json.dumps({
-                "labels": [
-                    {"name": "type:bug"},
-                    {"name": "state:backlog"},
-                    {"name": "priority:Medium"},
-                ],
-            }),
+            args=args,
+            returncode=0,
+            stdout=json.dumps(
+                {
+                    "labels": [
+                        {"name": "type:bug"},
+                        {"name": "state:backlog"},
+                        {"name": "priority:Medium"},
+                    ],
+                }
+            ),
             stderr="",
         )
+
     monkeypatch.setattr(pi, "gh_run", fake_gh_run)
     assert pi._detect_current_state(42, {}) == "backlog"
 
 
 def test_detect_current_state_none_when_no_state_label(pi, monkeypatch) -> None:
     """No `state:*` label → returns None (the issue is at the implicit Todo state)."""
+
     def fake_gh_run(args, config, **kwargs):
         import subprocess
+
         return subprocess.CompletedProcess(
-            args=args, returncode=0,
+            args=args,
+            returncode=0,
             stdout=json.dumps({"labels": [{"name": "type:bug"}]}),
             stderr="",
         )
+
     monkeypatch.setattr(pi, "gh_run", fake_gh_run)
     assert pi._detect_current_state(42, {}) is None
 
 
 def test_detect_current_state_gh_failure_returns_none(pi, monkeypatch) -> None:
     """gh view failure → None (caller treats as "unknown state, proceed to transition")."""
+
     def fake_gh_run(args, config, **kwargs):
         import subprocess
+
         return subprocess.CompletedProcess(
-            args=args, returncode=1, stdout="", stderr="boom",
+            args=args,
+            returncode=1,
+            stdout="",
+            stderr="boom",
         )
+
     monkeypatch.setattr(pi, "gh_run", fake_gh_run)
     assert pi._detect_current_state(42, {}) is None
 
@@ -106,28 +117,34 @@ def test_detect_current_state_gh_failure_returns_none(pi, monkeypatch) -> None:
 def test_detect_current_state_recognises_in_progress(pi, monkeypatch) -> None:
     """All four post-Todo states are recognised — promote-issue exits cleanly on any of them."""
     for state in ("backlog", "in-progress", "review", "done"):
+
         def fake_gh_run(args, config, _state=state, **kwargs):
             import subprocess
+
             return subprocess.CompletedProcess(
-                args=args, returncode=0,
+                args=args,
+                returncode=0,
                 stdout=json.dumps({"labels": [{"name": f"state:{_state}"}]}),
                 stderr="",
             )
+
         monkeypatch.setattr(pi, "gh_run", fake_gh_run)
-        assert pi._detect_current_state(42, {}) == state, (
-            f"state:{state} label not recognised"
-        )
+        assert pi._detect_current_state(42, {}) == state, f"state:{state} label not recognised"
 
 
 def _fake_gh_returning(labels: list[str]):
     """A `gh issue view --json labels` stub returning ``labels``."""
+
     def fake_gh_run(args, config, **kwargs):
         import subprocess
+
         return subprocess.CompletedProcess(
-            args=args, returncode=0,
+            args=args,
+            returncode=0,
             stdout=json.dumps({"labels": [{"name": n} for n in labels]}),
             stderr="",
         )
+
     return fake_gh_run
 
 
@@ -143,9 +160,7 @@ def test_detect_current_state_reads_a_label_bound_state(pi, monkeypatch) -> None
     assert pi._detect_current_state(42, {}, smap) == "backlog"
 
 
-def test_detect_current_state_ignores_a_stale_kit_label_under_a_board(
-    pi, monkeypatch
-) -> None:
+def test_detect_current_state_ignores_a_stale_kit_label_under_a_board(pi, monkeypatch) -> None:
     """Under a configured board the kit's `state:*` labels are NOT the substrate,
     so a stale one must not be trusted: a false skip means the promotion silently
     does not happen. The board field itself is deliberately NOT read here."""
@@ -191,6 +206,7 @@ def _substrate_writes_module(pi):
 def test_attach_milestone_success(pi, monkeypatch) -> None:
     def fake_gh_call(args, config):
         import subprocess
+
         assert args[1:5] == ["issue", "edit", "42", "--milestone"]
         assert args[5] == "v1.0"
         return subprocess.CompletedProcess(args=args, returncode=0, stdout="", stderr="")
@@ -202,6 +218,7 @@ def test_attach_milestone_success(pi, monkeypatch) -> None:
 def test_attach_milestone_failure(pi, monkeypatch, capsys) -> None:
     def fake_gh_call(args, config):
         import subprocess
+
         return subprocess.CompletedProcess(
             args=args, returncode=1, stdout="", stderr="cannot attach"
         )
@@ -238,7 +255,7 @@ def _wire_main_mocks(
     monkeypatch,
     *,
     sys_argv: list[str],
-    milestone_obj=None,      # None → resolve_milestone returns None (unresolvable)
+    milestone_obj=None,  # None → resolve_milestone returns None (unresolvable)
     milestone_resolve_called: list | None = None,
     attach_called: list | None = None,
     move_issue_rc: int = 0,
@@ -279,7 +296,8 @@ def _wire_main_mocks(
 def test_main_milestone_omitted_promotes_exit_zero(pi, monkeypatch) -> None:
     """promote-issue <n> --reason '...' (no --milestone) exits 0."""
     _wire_main_mocks(
-        pi, monkeypatch,
+        pi,
+        monkeypatch,
         sys_argv=["promote-issue", "42", "--reason", "PM triage", "--yes"],
     )
     assert pi.main() == 0
@@ -289,7 +307,8 @@ def test_main_milestone_omitted_skips_resolve(pi, monkeypatch) -> None:
     """resolve_milestone must NOT be called when --milestone is omitted."""
     resolve_calls: list = []
     _wire_main_mocks(
-        pi, monkeypatch,
+        pi,
+        monkeypatch,
         sys_argv=["promote-issue", "42", "--reason", "triage", "--yes"],
         milestone_resolve_called=resolve_calls,
     )
@@ -301,7 +320,8 @@ def test_main_milestone_omitted_skips_attach(pi, monkeypatch) -> None:
     """_attach_milestone must NOT be called when --milestone is omitted."""
     attached: list = []
     _wire_main_mocks(
-        pi, monkeypatch,
+        pi,
+        monkeypatch,
         sys_argv=["promote-issue", "42", "--reason", "triage", "--yes"],
         attach_called=attached,
     )
@@ -319,7 +339,8 @@ def test_main_milestone_omitted_calls_move_issue(pi, monkeypatch, capsys) -> Non
         return 0
 
     _wire_main_mocks(
-        pi, monkeypatch,
+        pi,
+        monkeypatch,
         sys_argv=["promote-issue", "42", "--reason", "triage", "--yes"],
     )
     monkeypatch.setattr(pi, "_invoke_move_issue", capturing_invoke)
@@ -335,7 +356,8 @@ def test_main_milestone_omitted_ok_line_says_milestone_unchanged(pi, monkeypatch
     so, rather than "no milestone", which read as if an attached milestone had
     been removed (#1016)."""
     _wire_main_mocks(
-        pi, monkeypatch,
+        pi,
+        monkeypatch,
         sys_argv=["promote-issue", "42", "--reason", "triage", "--yes"],
     )
     pi.main()
@@ -349,7 +371,8 @@ def test_already_promoted_without_milestone_says_unchanged(pi, monkeypatch, caps
     """#1016: a later promote-issue on an issue past Backlog, without
     --milestone, must not suggest its milestone went away."""
     _wire_main_mocks(
-        pi, monkeypatch,
+        pi,
+        monkeypatch,
         sys_argv=["promote-issue", "885", "--reason", "triage", "--yes"],
         current_state="in-progress",
     )
@@ -361,7 +384,8 @@ def test_already_promoted_without_milestone_says_unchanged(pi, monkeypatch, caps
 
 def test_already_promoted_with_milestone_points_at_edit_issue(pi, monkeypatch, capsys) -> None:
     _wire_main_mocks(
-        pi, monkeypatch,
+        pi,
+        monkeypatch,
         sys_argv=["promote-issue", "885", "--milestone", "Sprint 1", "--reason", "r", "--yes"],
         milestone_obj=_FakeMilestone(number=7, title="Sprint 1"),
         current_state="in-progress",
@@ -378,8 +402,17 @@ def test_main_milestone_given_resolves_and_attaches(pi, monkeypatch) -> None:
     resolve_calls: list = []
     attached: list = []
     _wire_main_mocks(
-        pi, monkeypatch,
-        sys_argv=["promote-issue", "42", "--milestone", "Sprint 1", "--reason", "PM approved", "--yes"],
+        pi,
+        monkeypatch,
+        sys_argv=[
+            "promote-issue",
+            "42",
+            "--milestone",
+            "Sprint 1",
+            "--reason",
+            "PM approved",
+            "--yes",
+        ],
         milestone_obj=_FakeMilestone(number=7, title="Sprint 1"),
         milestone_resolve_called=resolve_calls,
         attach_called=attached,
@@ -393,8 +426,17 @@ def test_main_milestone_given_resolves_and_attaches(pi, monkeypatch) -> None:
 def test_main_milestone_given_ok_line_shows_milestone(pi, monkeypatch, capsys) -> None:
     """[ok] line reports the milestone title when one was attached."""
     _wire_main_mocks(
-        pi, monkeypatch,
-        sys_argv=["promote-issue", "42", "--milestone", "Sprint 1", "--reason", "approved", "--yes"],
+        pi,
+        monkeypatch,
+        sys_argv=[
+            "promote-issue",
+            "42",
+            "--milestone",
+            "Sprint 1",
+            "--reason",
+            "approved",
+            "--yes",
+        ],
         milestone_obj=_FakeMilestone(number=7, title="Sprint 1"),
     )
     pi.main()
@@ -408,7 +450,8 @@ def test_main_milestone_given_ok_line_shows_milestone(pi, monkeypatch, capsys) -
 def test_main_bad_milestone_errors_not_silently_downgraded(pi, monkeypatch, capsys) -> None:
     """An unresolvable --milestone is an error; never silently downgraded to milestone-free."""
     _wire_main_mocks(
-        pi, monkeypatch,
+        pi,
+        monkeypatch,
         sys_argv=["promote-issue", "42", "--milestone", "nonexistent", "--reason", "r", "--yes"],
         milestone_obj=None,  # resolve returns None → unresolvable
     )
@@ -423,7 +466,8 @@ def test_main_bad_milestone_does_not_call_attach(pi, monkeypatch) -> None:
     """When milestone resolution fails, _attach_milestone must not be called."""
     attached: list = []
     _wire_main_mocks(
-        pi, monkeypatch,
+        pi,
+        monkeypatch,
         sys_argv=["promote-issue", "42", "--milestone", "bad", "--reason", "r", "--yes"],
         milestone_obj=None,
         attach_called=attached,
@@ -441,7 +485,8 @@ def test_main_bad_milestone_does_not_call_move_issue(pi, monkeypatch) -> None:
         return 0
 
     _wire_main_mocks(
-        pi, monkeypatch,
+        pi,
+        monkeypatch,
         sys_argv=["promote-issue", "42", "--milestone", "bad", "--reason", "r", "--yes"],
         milestone_obj=None,
     )

@@ -42,9 +42,10 @@ def _make_git_dir(root: Path) -> None:
 
 
 def test_classify_backbone_core_record() -> None:
-    assert migrations_mod._classify_path(
-        ".pkit/decisions/core/COR-005-bundle-pattern.md"
-    ) == ("backbone", None)
+    assert migrations_mod._classify_path(".pkit/decisions/core/COR-005-bundle-pattern.md") == (
+        "backbone",
+        None,
+    )
 
 
 def test_classify_backbone_skill() -> None:
@@ -57,21 +58,24 @@ def test_classify_backbone_skill() -> None:
 def test_classify_workflow_legacy_path_is_backbone() -> None:
     """Per COR-027, leftover .pkit/workflow/ paths classify as backbone-tier
     (the area was retired; cleanup is backbone-level)."""
-    assert migrations_mod._classify_path(
-        ".pkit/workflow/bundles/github-issues/skills/foo.md"
-    ) == ("backbone", None)
+    assert migrations_mod._classify_path(".pkit/workflow/bundles/github-issues/skills/foo.md") == (
+        "backbone",
+        None,
+    )
 
 
 def test_classify_adapter() -> None:
-    assert migrations_mod._classify_path(
-        ".pkit/adapters/claude-code/deploy-skills.sh"
-    ) == ("adapter", "claude-code")
+    assert migrations_mod._classify_path(".pkit/adapters/claude-code/deploy-skills.sh") == (
+        "adapter",
+        "claude-code",
+    )
 
 
 def test_classify_capability() -> None:
-    assert migrations_mod._classify_path(
-        ".pkit/capabilities/evidence/skills/evidence-add.md"
-    ) == ("capability", "evidence")
+    assert migrations_mod._classify_path(".pkit/capabilities/evidence/skills/evidence-add.md") == (
+        "capability",
+        "evidence",
+    )
 
 
 def test_classify_project_subtrees_excluded() -> None:
@@ -84,15 +88,9 @@ def test_classify_project_subtrees_excluded() -> None:
 
 def test_classify_component_project_subdirs_excluded() -> None:
     assert (
-        migrations_mod._classify_path(
-            ".pkit/capabilities/evidence/project/manifest.yaml"
-        )
-        is None
+        migrations_mod._classify_path(".pkit/capabilities/evidence/project/manifest.yaml") is None
     )
-    assert (
-        migrations_mod._classify_path(".pkit/adapters/claude-code/project/foo.json")
-        is None
-    )
+    assert migrations_mod._classify_path(".pkit/adapters/claude-code/project/foo.json") is None
 
 
 def test_classify_non_pkit_returns_none() -> None:
@@ -136,9 +134,7 @@ def test_is_migration_path_recognises_scripts() -> None:
 
 
 def test_is_migration_path_rejects_gitkeep() -> None:
-    assert not migrations_mod._is_migration_path(
-        ".pkit/capabilities/evidence/migrations/.gitkeep"
-    )
+    assert not migrations_mod._is_migration_path(".pkit/capabilities/evidence/migrations/.gitkeep")
 
 
 def test_is_migration_path_rejects_non_pkit() -> None:
@@ -149,10 +145,7 @@ def test_is_migration_path_rejects_non_pkit() -> None:
 
 
 def test_migration_path_tier_and_component() -> None:
-    assert (
-        migrations_mod._migration_path_tier(".pkit/migrations/1.0.0/001-foo.sh")
-        == "backbone"
-    )
+    assert migrations_mod._migration_path_tier(".pkit/migrations/1.0.0/001-foo.sh") == "backbone"
     assert (
         migrations_mod._migration_path_component(
             ".pkit/capabilities/evidence/migrations/1.0.0/001-foo.sh"
@@ -273,9 +266,7 @@ def test_coverage_report_multi_tier_partial() -> None:
 # --- check_diff_coverage with monkeypatched git diff -------------------
 
 
-def test_check_diff_coverage_clean(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_check_diff_coverage_clean(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """No triggers + no migrations → covered."""
     monkeypatch.setattr(
         migrations_mod,
@@ -414,9 +405,7 @@ def test_check_diff_coverage_project_subtrees_dont_trigger(
 # --- CLI integration ---------------------------------------------------
 
 
-def test_cli_check_diff_passes_when_clean(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_cli_check_diff_passes_when_clean(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         migrations_mod,
         "_git_diff_name_status",

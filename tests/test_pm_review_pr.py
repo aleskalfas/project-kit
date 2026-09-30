@@ -11,9 +11,7 @@ import pytest
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SCRIPTS_DIR = (
-    REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
-)
+SCRIPTS_DIR = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
 SCRIPT = SCRIPTS_DIR / "review-pr.py"
 RC_PATH = SCRIPTS_DIR / "_lib" / "review_contributions.py"
 
@@ -81,10 +79,16 @@ def _mark_bootstrapped(cap_root: Path) -> None:
 
 
 def test_local_registered_returns_list(rpr) -> None:
-    config = {"review": {"agents": {"local_registered": [
-        {"name": "critic"},
-        {"name": "security-review"},
-    ]}}}
+    config = {
+        "review": {
+            "agents": {
+                "local_registered": [
+                    {"name": "critic"},
+                    {"name": "security-review"},
+                ]
+            }
+        }
+    }
     result = rpr._get_local_registered(config)
     assert len(result) == 2
     assert result[0]["name"] == "critic"
@@ -97,12 +101,18 @@ def test_local_registered_empty_when_absent(rpr) -> None:
 
 
 def test_local_registered_filters_entries_without_name(rpr) -> None:
-    config = {"review": {"agents": {"local_registered": [
-        {"name": "critic"},
-        {"other_field": "x"},  # no name
-        {"name": ""},  # empty name
-        {"name": "code-review"},
-    ]}}}
+    config = {
+        "review": {
+            "agents": {
+                "local_registered": [
+                    {"name": "critic"},
+                    {"other_field": "x"},  # no name
+                    {"name": ""},  # empty name
+                    {"name": "code-review"},
+                ]
+            }
+        }
+    }
     result = rpr._get_local_registered(config)
     assert [e["name"] for e in result] == ["critic", "code-review"]
 
@@ -123,7 +133,9 @@ def test_format_verdict_approved(rpr) -> None:
 
 def test_format_verdict_with_body(rpr) -> None:
     out = rpr._format_verdict_comment(
-        "critic", "CHANGES_REQUESTED", "Three findings:\n1. fix X\n2. fix Y",
+        "critic",
+        "CHANGES_REQUESTED",
+        "Three findings:\n1. fix X\n2. fix Y",
     )
     assert out.startswith("Reviewer agent (local, critic): CHANGES_REQUESTED\n\n")
     assert "Three findings" in out
@@ -153,7 +165,10 @@ def _stub_claude(rpr, monkeypatch, stdout, *, returncode=0, stderr=""):
 
     def fake_run(args, **kwargs):
         return subprocess.CompletedProcess(
-            args=args, returncode=returncode, stdout=stdout, stderr=stderr,
+            args=args,
+            returncode=returncode,
+            stdout=stdout,
+            stderr=stderr,
         )
 
     monkeypatch.setattr(rpr.subprocess, "run", fake_run)
@@ -204,7 +219,9 @@ def test_invoke_first_match_wins(rpr, monkeypatch) -> None:
 
 
 def test_invoke_no_match_fails_closed_and_surfaces_full_output(
-    rpr, monkeypatch, capsys,
+    rpr,
+    monkeypatch,
+    capsys,
 ) -> None:
     """No grammar match anywhere → no verdict (caller posts nothing), and the
     FULL agent output is surfaced to the operator for debugging."""
@@ -293,8 +310,10 @@ def test_invoke_agent_passes_timeout_to_subprocess(rpr, monkeypatch) -> None:
     def fake_run(args, **kwargs):
         captured.update(kwargs)
         return subprocess.CompletedProcess(
-            args=args, returncode=0,
-            stdout="Reviewer agent (local, reviewer): APPROVED\n", stderr="",
+            args=args,
+            returncode=0,
+            stdout="Reviewer agent (local, reviewer): APPROVED\n",
+            stderr="",
         )
 
     monkeypatch.setattr(rpr.subprocess, "run", fake_run)
@@ -312,8 +331,10 @@ def test_invoke_agent_defaults_timeout_to_1200(rpr, monkeypatch) -> None:
     def fake_run(args, **kwargs):
         captured.update(kwargs)
         return subprocess.CompletedProcess(
-            args=args, returncode=0,
-            stdout="Reviewer agent (local, reviewer): APPROVED\n", stderr="",
+            args=args,
+            returncode=0,
+            stdout="Reviewer agent (local, reviewer): APPROVED\n",
+            stderr="",
         )
 
     monkeypatch.setattr(rpr.subprocess, "run", fake_run)
@@ -331,9 +352,14 @@ def test_post_comment_returns_false_on_none_pr(rpr) -> None:
 def test_post_comment_propagates_gh_failure(rpr, monkeypatch, capsys) -> None:
     def fake_gh_run(args, config, **kwargs):
         import subprocess
+
         return subprocess.CompletedProcess(
-            args=args, returncode=1, stdout="", stderr="not authorised",
+            args=args,
+            returncode=1,
+            stdout="",
+            stderr="not authorised",
         )
+
     monkeypatch.setattr(rpr, "gh_run", fake_gh_run)
     assert rpr._post_comment(99, "body", {}) is False
     assert "not authorised" in capsys.readouterr().err
@@ -342,7 +368,9 @@ def test_post_comment_propagates_gh_failure(rpr, monkeypatch, capsys) -> None:
 def test_post_comment_success(rpr, monkeypatch) -> None:
     def fake_gh_run(args, config, **kwargs):
         import subprocess
+
         return subprocess.CompletedProcess(args=args, returncode=0, stdout="", stderr="")
+
     monkeypatch.setattr(rpr, "gh_run", fake_gh_run)
     assert rpr._post_comment(99, "body", {}) is True
 
@@ -352,7 +380,8 @@ def test_post_comment_success(rpr, monkeypatch) -> None:
 
 def test_resolution_error_collection_names_capability(rpr, rc) -> None:
     err = rc.ContributionError(
-        rc.ERROR_UNDEPLOYED_AGENT, "ux-ui-design",
+        rc.ERROR_UNDEPLOYED_AGENT,
+        "ux-ui-design",
         "design-reviewer is not deployed",
     )
     collection = rc.ContributionCollection(rules=(), errors=(err,))
@@ -412,7 +441,12 @@ def test_resolution_error_closing_issues(rpr, rc) -> None:
 
 
 def _wire_main(
-    rpr, monkeypatch, tmp_path, *, resolution, invoked,
+    rpr,
+    monkeypatch,
+    tmp_path,
+    *,
+    resolution,
+    invoked,
 ):
     """Stub main()'s seams; record invoked names into `invoked`.
 
@@ -434,21 +468,23 @@ def _wire_main(
             (agents_dir / f"{name}.md").write_text("agent", encoding="utf-8")
 
     monkeypatch.setattr(rpr, "resolve_capability_root", lambda arg: cap_root)
-    monkeypatch.setattr(rpr, "load_adopter_config", lambda root: {
-        "review": {"agents": {"local_registered": [{"name": "reviewer"}]}}
-    })
+    monkeypatch.setattr(
+        rpr,
+        "load_adopter_config",
+        lambda root: {"review": {"agents": {"local_registered": [{"name": "reviewer"}]}}},
+    )
     monkeypatch.setattr(rpr, "_read_members", lambda root, loader: [])
     monkeypatch.setattr(rpr, "resolve_invoker_identity", lambda config: "dev")
     monkeypatch.setattr(
-        rpr, "check_membership",
+        rpr,
+        "check_membership",
         lambda members, invoker: SimpleNamespace(allowed=True, refusal_message=""),
     )
     monkeypatch.setattr(rpr, "_find_issue_branch", lambda n: f"feat/{n}-x")
+    monkeypatch.setattr(rpr, "_find_pr_for_branch", lambda branch, config: {"number": 99})
     monkeypatch.setattr(
-        rpr, "_find_pr_for_branch", lambda branch, config: {"number": 99}
-    )
-    monkeypatch.setattr(
-        rpr, "_resolve_required_local",
+        rpr,
+        "_resolve_required_local",
         lambda pr_number, config, repo_root, baseline: resolution,
     )
 
@@ -486,15 +522,28 @@ def test_multi_reviewer_invokes_baseline_plus_contributed(rpr, monkeypatch, tmp_
 
 
 def test_opted_out_contribution_is_listed_with_its_reason(
-    rpr, monkeypatch, tmp_path, capsys,
+    rpr,
+    monkeypatch,
+    tmp_path,
+    capsys,
 ) -> None:
     """#148: review-pr names each opt-out in force, with its reason, next to
     the reviewers it invokes — and does not invoke the opted-out reviewer."""
-    (opt_out,) = rpr.read_opt_outs({"review": {"agents": {"contributed_opt_out": [{
-        "capability": "software-engineering",
-        "reviewer": "docs-reviewer",
-        "reason": "Docs are reviewed by the tech-writing team.",
-    }]}}}).entries
+    (opt_out,) = rpr.read_opt_outs(
+        {
+            "review": {
+                "agents": {
+                    "contributed_opt_out": [
+                        {
+                            "capability": "software-engineering",
+                            "reviewer": "docs-reviewer",
+                            "reason": "Docs are reviewed by the tech-writing team.",
+                        }
+                    ]
+                }
+            }
+        }
+    ).entries
     resolution = rpr.Resolution(
         required_local=("reviewer", "code-reviewer"),
         contributed_by={"code-reviewer": "software-engineering"},
@@ -517,7 +566,8 @@ def test_fail_closed_resolution_aborts_without_invoking(rpr, monkeypatch, tmp_pa
     required reviewer is never silently skipped (fail-closed, DEC-032 D5)."""
     resolution = rpr.Resolution(
         error=rpr.RequiredReviewersError(
-            kind=rpr.ERROR_CLOSING_ISSUES, message="boom",
+            kind=rpr.ERROR_CLOSING_ISSUES,
+            message="boom",
         )
     )
     invoked: list[str] = []
@@ -534,7 +584,8 @@ def test_undeployed_contributed_agent_aborts(rpr, rc, monkeypatch, tmp_path) -> 
     gate has for this case (DEC-032 D5). G3: exercising the collection-error
     abort end-to-end, not just `_resolution_error_message` in isolation."""
     err = rc.ContributionError(
-        rc.ERROR_UNDEPLOYED_AGENT, "ux-ui-design",
+        rc.ERROR_UNDEPLOYED_AGENT,
+        "ux-ui-design",
         "design-reviewer is not deployed",
     )
     collection = rc.ContributionCollection(rules=(), errors=(err,))
@@ -706,8 +757,10 @@ def _capture_invocation(rpr, monkeypatch) -> dict:
     def fake_run(args, **kwargs):
         captured["args"] = list(args)
         return subprocess.CompletedProcess(
-            args=args, returncode=0,
-            stdout="Reviewer agent (local, reviewer): APPROVED\n", stderr="",
+            args=args,
+            returncode=0,
+            stdout="Reviewer agent (local, reviewer): APPROVED\n",
+            stderr="",
         )
 
     monkeypatch.setattr(rpr.subprocess, "run", fake_run)

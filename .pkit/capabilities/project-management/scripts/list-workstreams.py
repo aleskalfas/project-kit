@@ -146,10 +146,7 @@ def main() -> int:
             print(f"      reason: {w.deprecated_reason}")
     if dupes:
         print()
-        print(
-            "[warn] duplicate active workstream names: "
-            + ", ".join(repr(n) for n in dupes)
-        )
+        print("[warn] duplicate active workstream names: " + ", ".join(repr(n) for n in dupes))
     return 0
 
 

@@ -152,8 +152,7 @@ def main() -> int:
     for entry in members:
         if isinstance(entry, dict) and entry.get("github_login") == github_login:
             print(
-                f"error: an entry for github_login={github_login!r} "
-                f"already exists in {file_path}.",
+                f"error: an entry for github_login={github_login!r} already exists in {file_path}.",
                 file=sys.stderr,
             )
             return 3
@@ -216,9 +215,7 @@ def _read_members(file_path: Path, yaml_loader: YAML) -> list[dict]:
     return members
 
 
-def _write_members(
-    file_path: Path, members: list[dict], yaml_loader: YAML
-) -> None:
+def _write_members(file_path: Path, members: list[dict], yaml_loader: YAML) -> None:
     file_path.parent.mkdir(parents=True, exist_ok=True)
     payload = {"schema_version": 1, "members": members}
     with file_path.open("w", encoding="utf-8") as fh:

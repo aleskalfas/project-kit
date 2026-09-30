@@ -37,9 +37,7 @@ import pytest
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SCRIPTS_DIR = (
-    REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
-)
+SCRIPTS_DIR = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
 LIB_DIR = SCRIPTS_DIR / "_lib"
 
 
@@ -121,28 +119,19 @@ def test_entry_point_help_exits_zero(script: Path) -> None:
     )
 
     # Collect both streams for a useful failure message.
-    detail = (
-        f"\n--- stdout ---\n{result.stdout}"
-        f"\n--- stderr ---\n{result.stderr}"
-    )
+    detail = f"\n--- stdout ---\n{result.stdout}\n--- stderr ---\n{result.stderr}"
 
     assert result.returncode == 0, (
         f"{script.name}: --help exited {result.returncode} (expected 0){detail}"
     )
 
     # Argparse --help must produce some output.
-    assert result.stdout.strip(), (
-        f"{script.name}: --help produced no stdout output{detail}"
-    )
+    assert result.stdout.strip(), f"{script.name}: --help produced no stdout output{detail}"
 
     # No traceback or NameError should appear in stderr.
     lowered_stderr = result.stderr.lower()
-    assert "traceback" not in lowered_stderr, (
-        f"{script.name}: traceback detected in stderr{detail}"
-    )
-    assert "nameerror" not in lowered_stderr, (
-        f"{script.name}: NameError detected in stderr{detail}"
-    )
+    assert "traceback" not in lowered_stderr, f"{script.name}: traceback detected in stderr{detail}"
+    assert "nameerror" not in lowered_stderr, f"{script.name}: NameError detected in stderr{detail}"
     assert "importerror" not in lowered_stderr, (
         f"{script.name}: ImportError detected in stderr{detail}"
     )

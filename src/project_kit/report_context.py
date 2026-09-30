@@ -74,7 +74,10 @@ def git_remote_repo_name(cwd: Path) -> str | None:
     try:
         proc = subprocess.run(
             ["git", "remote", "get-url", "origin"],
-            cwd=cwd, capture_output=True, text=True, check=False,
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            check=False,
         )
     except OSError:
         return None
@@ -124,9 +127,7 @@ def pm_workstream(target_root: Path) -> str | None:
     waited the bound out, and goes on without the workstream."""
     from project_kit.dispatcher import resolve_capability_script
 
-    script = resolve_capability_script(
-        target_root, _WORKSTREAM_CAPABILITY, _WORKSTREAM_VERB
-    )
+    script = resolve_capability_script(target_root, _WORKSTREAM_CAPABILITY, _WORKSTREAM_VERB)
     if script is None:
         return None
     run = run_command(script, [], cwd=target_root)

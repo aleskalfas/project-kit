@@ -260,9 +260,7 @@ class ContributionCollection:
         `has_blocking_errors`; the affirmative spelling consumers gate on."""
         return not self.has_blocking_errors
 
-    def reviewers_for(
-        self, classification: Mapping[str, str]
-    ) -> tuple[ContributionRule, ...]:
+    def reviewers_for(self, classification: Mapping[str, str]) -> tuple[ContributionRule, ...]:
         """Matched rules whose predicate holds for `classification`.
 
         Returns the matched `ContributionRule`s (not bare names), so a
@@ -308,9 +306,7 @@ class ContributionCollection:
         """
         satisfied = set(satisfied_floors)
         return self._dedup_by_reviewer(
-            rule
-            for rule in self.rules
-            if rule.floor is not None and rule.floor in satisfied
+            rule for rule in self.rules if rule.floor is not None and rule.floor in satisfied
         )
 
     def reviewers_for_issues(
@@ -415,8 +411,7 @@ def parse_contributions(
     if not isinstance(contributions, list):
         return (), (
             malformed(
-                f"{prefix}: `contributions` must be a list, "
-                f"got {type(contributions).__name__}"
+                f"{prefix}: `contributions` must be a list, got {type(contributions).__name__}"
             ),
         )
 
@@ -450,9 +445,7 @@ def _parse_rule(
     match = item.get("match")
     floor = item.get("floor")
     if match is None and floor is None:
-        return None, [
-            malformed(f"{where} must declare a `match` predicate, a `floor`, or both")
-        ]
+        return None, [malformed(f"{where} must declare a `match` predicate, a `floor`, or both")]
 
     predicate: dict[str, tuple[str, ...] | _MatchAny] = {}
     if match is not None:
@@ -527,11 +520,7 @@ def _parse_floor(
     if floor is None:
         return None
     if not isinstance(floor, str) or floor not in SUPPORTED_FLOORS:
-        errors.append(
-            malformed(
-                f"{where}.floor must be one of: {', '.join(SUPPORTED_FLOORS)}"
-            )
-        )
+        errors.append(malformed(f"{where}.floor must be one of: {', '.join(SUPPORTED_FLOORS)}"))
         return None
     return floor
 
@@ -561,9 +550,7 @@ def _parse_match_values(
         raw_values = list(raw)
     else:
         errors.append(
-            malformed(
-                f"{where}.match.{axis} must be a non-empty string or a list of strings"
-            )
+            malformed(f"{where}.match.{axis} must be a non-empty string or a list of strings")
         )
         return ()
 
@@ -571,9 +558,7 @@ def _parse_match_values(
     values: list[str] = []
     for value in raw_values:
         if not isinstance(value, str) or not value:
-            errors.append(
-                malformed(f"{where}.match.{axis} values must be non-empty strings")
-            )
+            errors.append(malformed(f"{where}.match.{axis} values must be non-empty strings"))
             return ()
         if value not in seen:
             seen.add(value)

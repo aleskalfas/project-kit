@@ -17,12 +17,7 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = (
-    REPO_ROOT
-    / ".pkit"
-    / "capabilities"
-    / "project-management"
-    / "scripts"
-    / "bootstrap.py"
+    REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "bootstrap.py"
 )
 
 
@@ -263,8 +258,7 @@ def test_compute_plan_board_adopter_with_a_label_binding_gets_no_kit_palette(
     project_dir = tmp_path / "project"
     project_dir.mkdir()
     (project_dir / "substrate-map.yaml").write_text(
-        "schema_version: 1\naxes:\n"
-        "  priority:\n    label:\n      remap:\n        High: P0\n",
+        "schema_version: 1\naxes:\n  priority:\n    label:\n      remap:\n        High: P0\n",
         encoding="utf-8",
     )
 
@@ -294,9 +288,7 @@ def test_compute_plan_plans_node_id_when_board_uncached(
 ) -> None:
     """Board configured + no cached node id ⇒ the plan resolves + will cache it."""
     monkeypatch.setattr(bs, "_fetch_existing_labels", lambda: set())
-    monkeypatch.setattr(
-        bs, "_resolve_project_node_id", lambda config, board_id: "PVT_resolved"
-    )
+    monkeypatch.setattr(bs, "_resolve_project_node_id", lambda config, board_id: "PVT_resolved")
     config = {"has_projects_v2_board": True, "projects_v2_board_id": 7}
     plan = bs._compute_plan(
         config=config,

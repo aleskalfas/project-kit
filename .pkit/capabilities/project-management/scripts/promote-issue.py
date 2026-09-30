@@ -75,8 +75,6 @@ from _lib.membership import (  # noqa: E402
 )
 
 
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
@@ -239,7 +237,7 @@ def main() -> int:
             # verb for a milestone change on its own records why (#1016).
             print(
                 "  → to change an issue's milestone without a state transition, use "
-                f"`edit-issue {args.issue_number} --milestone <M> --reason \"<why>\"`, "
+                f'`edit-issue {args.issue_number} --milestone <M> --reason "<why>"`, '
                 "which records the change in an audit comment."
             )
         return 0
@@ -324,10 +322,7 @@ def _detect_current_state(
     except (ValueError, KeyError, TypeError):
         return None
     labels = data.get("labels") or []
-    names = [
-        label.get("name", "") if isinstance(label, dict) else ""
-        for label in labels
-    ]
+    names = [label.get("name", "") if isinstance(label, dict) else "" for label in labels]
     # Through the seam: identity in greenfield, the reverse remap under a
     # `label` binding. Both return the kit's own state vocabulary, which is what
     # the caller's already-promoted tuple is written in.
@@ -377,9 +372,11 @@ def _invoke_move_issue(
         sys.executable,
         str(_HERE / "move-issue.py"),
         str(issue_number),
-        "--to", target,
+        "--to",
+        target,
         "--bypass",  # Todo → Backlog is bypassable-with-audit per workflow.yaml
-        "--bypass-reason", reason,
+        "--bypass-reason",
+        reason,
         "--yes",
     ]
     if allow_foreign_repo:

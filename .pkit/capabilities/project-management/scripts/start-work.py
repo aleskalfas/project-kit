@@ -78,7 +78,9 @@ def main() -> int:
     )
     parser.add_argument("issue_number", type=int)
     parser.add_argument(
-        "--capability-root", type=Path, default=None,
+        "--capability-root",
+        type=Path,
+        default=None,
         help=f"Default: <repo-root>/.pkit/capabilities/{CAPABILITY_NAME}/.",
     )
     parser.add_argument("--dry-run", action="store_true")
@@ -122,10 +124,9 @@ def main() -> int:
     # Gate: not assigned to someone else.
     assignees = issue.get("assignees") or []
     other_assignees = [
-        a.get("login") for a in assignees
-        if isinstance(a, dict)
-        and a.get("login")
-        and a.get("login") != invoker.github_login
+        a.get("login")
+        for a in assignees
+        if isinstance(a, dict) and a.get("login") and a.get("login") != invoker.github_login
     ]
     if other_assignees:
         print(
@@ -206,7 +207,9 @@ def main() -> int:
     print(f"  assignee:  {invoker.github_login or '(unknown invoker)'}")
 
     if args.dry_run:
-        print(f"(dry-run: would create branch off {base}, set assignee, and call move-issue --to in-progress.)")
+        print(
+            f"(dry-run: would create branch off {base}, set assignee, and call move-issue --to in-progress.)"
+        )
         return 0
 
     if not args.yes and sys.stdin.isatty():
@@ -228,8 +231,7 @@ def main() -> int:
     # Set assignee. "Written" means this run added it: an invoker who was
     # already assigned is not something this run left behind.
     already_assigned = any(
-        isinstance(a, dict) and a.get("login") == invoker.github_login
-        for a in assignees
+        isinstance(a, dict) and a.get("login") == invoker.github_login for a in assignees
     )
     assignee_written = False
     if invoker.github_login and not already_assigned:
@@ -267,9 +269,7 @@ def main() -> int:
 
 
 def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
-    return gh_get_issue(
-        issue_number, config, fields="title,labels,assignees,state,body,milestone"
-    )
+    return gh_get_issue(issue_number, config, fields="title,labels,assignees,state,body,milestone")
 
 
 def _transition_refusal(
@@ -319,8 +319,7 @@ def _transition_refusal(
         f"{structural_type!r}. Nothing was changed (no branch, no assignee).",
     ]
     stepping_stones = [
-        s for s in targets
-        if TARGET_STATE in infer.legal_targets(workflow, s, structural_type)
+        s for s in targets if TARGET_STATE in infer.legal_targets(workflow, s, structural_type)
     ]
     if stepping_stones:
         lines.append(
@@ -329,8 +328,7 @@ def _transition_refusal(
         )
     else:
         lines.append(
-            f"  legal targets from {current!r}: "
-            f"{', '.join(targets) if targets else '<none>'}"
+            f"  legal targets from {current!r}: {', '.join(targets) if targets else '<none>'}"
         )
     return "\n".join(lines)
 
@@ -369,8 +367,7 @@ def _late_failure_message(
     else:
         lines.append("  This run created no branch and wrote no assignee.")
     lines.append(
-        f"  Fix the cause above and re-run `start-work {issue_number}` "
-        "(it reuses the branch)."
+        f"  Fix the cause above and re-run `start-work {issue_number}` (it reuses the branch)."
     )
     return "\n".join(lines)
 
@@ -424,7 +421,9 @@ def _existing_branch_for_issue(issue_number: int) -> str | None:
     try:
         proc = subprocess.run(
             ["git", "branch", "--list", "--format=%(refname:short)"],
-            capture_output=True, text=True, check=False,
+            capture_output=True,
+            text=True,
+            check=False,
         )
     except FileNotFoundError:
         return None
@@ -465,12 +464,13 @@ def _create_branch(name: str, base: str) -> bool:
         return False
     proc = subprocess.run(
         ["git", "checkout", "-b", name, found.tip],
-        capture_output=True, text=True, check=False,
+        capture_output=True,
+        text=True,
+        check=False,
     )
     if proc.returncode != 0:
         print(
-            f"error: git checkout -b {name!r} off {found.ref!r} failed: "
-            f"{proc.stderr.strip()}",
+            f"error: git checkout -b {name!r} off {found.ref!r} failed: {proc.stderr.strip()}",
             file=sys.stderr,
         )
         return False
@@ -480,16 +480,22 @@ def _create_branch(name: str, base: str) -> bool:
 
 def _fetch(remote: str, branch: str) -> bool:
     """Fetch `branch` from `remote`, best-effort: whether it was fetched."""
-    return subprocess.run(
-        ["git", "fetch", remote, branch],
-        capture_output=True, text=True, check=False,
-    ).returncode == 0
+    return (
+        subprocess.run(
+            ["git", "fetch", remote, branch],
+            capture_output=True,
+            text=True,
+            check=False,
+        ).returncode
+        == 0
+    )
 
 
 def _set_assignee(issue_number: int, login: str, config: dict) -> bool:
     proc = gh_run(
         ["gh", "issue", "edit", str(issue_number), "--add-assignee", login],
-        config, check=False,
+        config,
+        check=False,
     )
     if proc.returncode != 0:
         print(
@@ -510,7 +516,8 @@ def _invoke_move_issue(
         sys.executable,
         str(_HERE / "move-issue.py"),
         str(issue_number),
-        "--to", target,
+        "--to",
+        target,
         "--yes",
     ]
     if allow_foreign_repo:

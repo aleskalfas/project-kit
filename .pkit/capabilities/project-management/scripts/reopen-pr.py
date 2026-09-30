@@ -144,8 +144,7 @@ def main() -> int:
 
     if args.reason:
         comment_body = (
-            f"[reopen-pr] {args.reason}\n\n"
-            "Reopened via `pkit project-management reopen-pr`."
+            f"[reopen-pr] {args.reason}\n\nReopened via `pkit project-management reopen-pr`."
         )
         if not _gh_pr_comment(args.pr_number, comment_body, config):
             return 3
@@ -175,8 +174,7 @@ def _gh_get_pr(pr_number: int, config: dict) -> dict | None:
         return None
     if proc.returncode != 0:
         print(
-            f"error: gh pr view {pr_number} failed.\n"
-            f"stderr: {proc.stderr.strip()}",
+            f"error: gh pr view {pr_number} failed.\nstderr: {proc.stderr.strip()}",
             file=sys.stderr,
         )
         return None
@@ -209,8 +207,7 @@ def _gh_pr_reopen(pr_number: int, config: dict) -> bool:
         return False
     if proc.returncode != 0:
         print(
-            f"error: gh pr reopen failed (exit {proc.returncode}).\n"
-            f"stderr: {proc.stderr.strip()}",
+            f"error: gh pr reopen failed (exit {proc.returncode}).\nstderr: {proc.stderr.strip()}",
             file=sys.stderr,
         )
         return False

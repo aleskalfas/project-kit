@@ -121,9 +121,7 @@ def test_stamp_migration_capability_requires_component(kit_target: Path) -> None
 
 def test_stamp_migration_capability_refuses_unknown_component(kit_target: Path) -> None:
     with pytest.raises(click.ClickException, match="capability"):
-        stamp_migration(
-            kit_target, tier="capability", component="ghost", version="0.2.0", slug="x"
-        )
+        stamp_migration(kit_target, tier="capability", component="ghost", version="0.2.0", slug="x")
 
 
 def test_stamp_migration_refuses_invalid_version(kit_target: Path) -> None:

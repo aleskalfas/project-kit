@@ -351,9 +351,7 @@ See [evidence:DEC-001-citation-discipline] for the rule.
     _write_skill(kit_target, "core", "skill-a", body)
 
     issues = refs.validate_corpus(kit_target)
-    citation_issues = [
-        i for i in issues if "evidence:DEC-001-citation-discipline" in i.diagnosis
-    ]
+    citation_issues = [i for i in issues if "evidence:DEC-001-citation-discipline" in i.diagnosis]
     assert citation_issues == []
 
 
@@ -458,8 +456,7 @@ Per [COR-001](../../decisions/core/COR-001-a-thing.md) this holds.
     _write_skill(kit_target, "core", "skill-a", body)
     issues = refs.validate_corpus(kit_target)
     assert not any(
-        "body cites path" in i.diagnosis and "COR-001-a-thing.md" in i.diagnosis
-        for i in issues
+        "body cites path" in i.diagnosis and "COR-001-a-thing.md" in i.diagnosis for i in issues
     ), [i.diagnosis for i in issues]
 
 
@@ -511,8 +508,7 @@ This reads `/etc/pkit/other-capability/state.yaml` off the host.
     _write_capability_skill(kit_target, "mycap", "s", body)
     issues = refs.validate_corpus(kit_target)
     assert any(
-        "body cites path '/etc/pkit/other-capability/state.yaml'" in i.diagnosis
-        for i in issues
+        "body cites path '/etc/pkit/other-capability/state.yaml'" in i.diagnosis for i in issues
     ), [i.diagnosis for i in issues]
 
 
@@ -623,7 +619,9 @@ def test_resolve_record_rejects_malformed_id(kit_target: Path) -> None:
 def test_resolve_hook_picks_project_over_core(kit_target: Path) -> None:
     providers = [
         refs.Provider(hook="x.y", tier="core", source="core-skill", implementation="/core-skill"),
-        refs.Provider(hook="x.y", tier="project", source="proj-skill", implementation="/proj-skill"),
+        refs.Provider(
+            hook="x.y", tier="project", source="proj-skill", implementation="/proj-skill"
+        ),
     ]
     winner = refs.resolve_hook(providers, "x.y")
     assert winner is not None
@@ -897,8 +895,7 @@ def test_validate_storyboard_consumer_back_reference(kit_target: Path) -> None:
 
     issues = refs.validate_corpus(kit_target)
     assert any(
-        "consumer agent project/a" in i.diagnosis
-        and "does not include this path" in i.diagnosis
+        "consumer agent project/a" in i.diagnosis and "does not include this path" in i.diagnosis
         for i in issues
     )
 
@@ -935,9 +932,7 @@ def test_validate_storyboard_orphan_file_flagged(kit_target: Path) -> None:
     """A storyboard file in an agent folder that no agent declares is flagged as orphan."""
     folder = kit_target / ".pkit" / "agents" / "project" / "a"
     folder.mkdir(parents=True)
-    (folder / "a.md").write_text(
-        "---\nname: a\ndescription: t\n---\n# A\n", encoding="utf-8"
-    )
+    (folder / "a.md").write_text("---\nname: a\ndescription: t\n---\n# A\n", encoding="utf-8")
     # Drop a storyboard alongside that the agent doesn't declare.
     orphan = folder / "orphan.storyboard.md"
     orphan.write_text(
@@ -953,18 +948,18 @@ def test_validate_storyboard_quiet_on_clean_two_sided_pair(kit_target: Path) -> 
     """A properly-declared two-sided pair produces no storyboard-related findings."""
     _make_storyboarded_agent(kit_target, "clean-agent")
     issues = refs.validate_corpus(kit_target)
-    assert all(
-        "storyboard" not in i.diagnosis.lower() for i in issues
-    ), f"unexpected storyboard findings on clean pair: {issues}"
+    assert all("storyboard" not in i.diagnosis.lower() for i in issues), (
+        f"unexpected storyboard findings on clean pair: {issues}"
+    )
 
 
 def test_validate_storyboards_quiet_when_no_storyboards_declared(kit_target: Path) -> None:
     """Agents without `storyboards:` get no storyboard-related findings."""
     _write_agent(kit_target, "project", "judgement-agent", "---\nname: judgement-agent\n---\n# A\n")
     issues = refs.validate_corpus(kit_target)
-    assert all(
-        "storyboard" not in i.diagnosis.lower() for i in issues
-    ), f"unexpected storyboard findings on storyboardless agent: {issues}"
+    assert all("storyboard" not in i.diagnosis.lower() for i in issues), (
+        f"unexpected storyboard findings on storyboardless agent: {issues}"
+    )
 
 
 # --- capability storyboards (#1101) ---------------------------------
@@ -1029,8 +1024,7 @@ def test_capability_storyboard_broken_link_back_is_flagged(kit_target: Path) -> 
 
     findings = _storyboard_findings(kit_target, _CAP_STORYBOARD)
     assert any(
-        "consumer agent cap/cap-agent" in f and "does not include this path" in f
-        for f in findings
+        "consumer agent cap/cap-agent" in f and "does not include this path" in f for f in findings
     ), findings
     assert any("no agent declares it" in f for f in findings), findings
 
@@ -1080,7 +1074,9 @@ Per COR-010 this matters.
 def test_rot_flags_dropped_scratchpad_reference(kit_target: Path) -> None:
     dropped = kit_target / ".pkit" / "scratchpad" / "dropped"
     dropped.mkdir(parents=True)
-    (dropped / "2026-05-01-old-idea.md").write_text("---\nretired: 2026-05-10\n---\n# old\n", encoding="utf-8")
+    (dropped / "2026-05-01-old-idea.md").write_text(
+        "---\nretired: 2026-05-10\n---\n# old\n", encoding="utf-8"
+    )
     body = """---
 name: skill-a
 description: t
@@ -1347,9 +1343,7 @@ def _write_overlay(root: Path, text: str) -> Path:
     return target
 
 
-def _write_owning_agent(
-    root: Path, name: str, owns: list[str], *, namespace: str = "core"
-) -> Path:
+def _write_owning_agent(root: Path, name: str, owns: list[str], *, namespace: str = "core") -> Path:
     entries = "\n".join(f"  - {entry}" for entry in owns)
     body = f"""---
 name: {name}
@@ -1364,9 +1358,7 @@ Write authority is whatever its frontmatter declares.
 
 
 def _ownership_diagnoses(root: Path) -> list[str]:
-    return [
-        i.diagnosis for i in refs.validate_corpus(root) if "ownership conflict" in i.diagnosis
-    ]
+    return [i.diagnosis for i in refs.validate_corpus(root) if "ownership conflict" in i.diagnosis]
 
 
 def test_owns_placeholder_resolves_through_overlay_and_flags_containment(
@@ -1399,8 +1391,7 @@ def test_owns_per_agent_override_replaces_the_default(kit_target: Path) -> None:
     """Two agents on one category do NOT overlap once an override moves one away."""
     _write_overlay(
         kit_target,
-        "code-paths:\n  - src/app/\n"
-        "overrides:\n  beta:\n    code-paths:\n      - tests/\n",
+        "code-paths:\n  - src/app/\noverrides:\n  beta:\n    code-paths:\n      - tests/\n",
     )
     _write_owning_agent(kit_target, "alpha", ["<code-paths>"])
     _write_owning_agent(kit_target, "beta", ["<code-paths>"])
@@ -1412,8 +1403,7 @@ def test_owns_per_agent_override_value_is_what_participates(kit_target: Path) ->
     """The override's own paths — not the default's — enter the overlap check."""
     _write_overlay(
         kit_target,
-        "code-paths:\n  - src/app/\n"
-        "overrides:\n  beta:\n    code-paths:\n      - tests/\n",
+        "code-paths:\n  - src/app/\noverrides:\n  beta:\n    code-paths:\n      - tests/\n",
     )
     _write_owning_agent(kit_target, "alpha", ["<code-paths>"])
     _write_owning_agent(kit_target, "beta", ["<code-paths>"])
@@ -1523,7 +1513,9 @@ Per COR-001.
 
 
 def test_cli_refs_rename_dry_run(kit_target: Path) -> None:
-    body = "---\nname: skill-a\ndescription: t\nreads:\n  records: [COR-001]\n---\n# A\nPer COR-001.\n"
+    body = (
+        "---\nname: skill-a\ndescription: t\nreads:\n  records: [COR-001]\n---\n# A\nPer COR-001.\n"
+    )
     skill = _write_skill(kit_target, "core", "skill-a", body)
     before = skill.read_text()
     runner = CliRunner()

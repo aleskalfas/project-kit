@@ -231,10 +231,9 @@ def test_required_parent_types_carry_a_severity_knob() -> None:
     in-scope schema work — every type that requires a parent
     (`parent_ref_optional: false`) carries `parent_ref_required_severity`, so the
     rule has a field to flip under advisory hierarchy."""
-    types = (_issue_types().get("types") or {})
+    types = _issue_types().get("types") or {}
     requiring = {
-        name: t for name, t in types.items()
-        if not bool(t.get("parent_ref_optional", False))
+        name: t for name, t in types.items() if not bool(t.get("parent_ref_optional", False))
     }
     assert requiring, "expected at least one type with a required parent-ref"
     for name, t in requiring.items():
@@ -248,7 +247,7 @@ def test_severity_knob_is_validation_severity_token() -> None:
     """The knob's value is a typed validation-severity token (COR-019) so the
     schema validator catches a malformed severity at validate time."""
     schema = json.loads(SUBSTRATE_MAP_COMPANION.read_text(encoding="utf-8"))  # noqa: F841
-    types = (_issue_types().get("types") or {})
+    types = _issue_types().get("types") or {}
     for name, t in types.items():
         sev = t.get("parent_ref_required_severity")
         if sev is not None:
@@ -303,8 +302,7 @@ def test_no_knob_stays_hard_rule_illustration() -> None:
     """
     invariants = _containment_invariants()
     feature_in_feature = next(
-        inv for inv in invariants
-        if "Feature does not contain Feature" in (inv.get("rule") or "")
+        inv for inv in invariants if "Feature does not contain Feature" in (inv.get("rule") or "")
     )
 
     # The rule has no severity knob today.
@@ -377,7 +375,8 @@ def test_advisory_must_not_soften_containment_rule_illustration() -> None:
     assert axis_labels.hierarchy_disposition(advisory_map) == "advisory"
 
     feature_in_feature = next(
-        inv for inv in _containment_invariants()
+        inv
+        for inv in _containment_invariants()
         if "Feature does not contain Feature" in (inv.get("rule") or "")
     )
 
@@ -409,7 +408,8 @@ def test_advisory_softening_containment_would_be_wrong_illustration() -> None:
     by `test_containment_invariants_carry_no_severity_knob`.
     """
     feature_in_feature = next(
-        inv for inv in _containment_invariants()
+        inv
+        for inv in _containment_invariants()
         if "Feature does not contain Feature" in (inv.get("rule") or "")
     )
 

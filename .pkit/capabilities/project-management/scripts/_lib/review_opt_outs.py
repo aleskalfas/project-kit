@@ -126,15 +126,14 @@ class OptOuts:
         if len(kept) == len(collection.rules):
             return collection
         dropped_errors = [
-            rule.resolution_error for rule in collection.rules
+            rule.resolution_error
+            for rule in collection.rules
             if self.withdraws(rule) and rule.resolution_error is not None
         ]
         return replace(
             collection,
             rules=tuple(kept),
-            errors=tuple(
-                error for error in collection.errors if error not in dropped_errors
-            ),
+            errors=tuple(error for error in collection.errors if error not in dropped_errors),
         )
 
     def withdraws(self, rule: "ContributionRule") -> bool:
@@ -165,19 +164,18 @@ class OptOuts:
                 state = (
                     "is installed but contributes no reviewer requirement"
                     if entry.capability in installed
-                    else "is not an installed capability contributing reviewer "
-                    "requirements"
+                    else "is not an installed capability contributing reviewer requirements"
                 )
-                problems.append(
-                    (entry, f"{entry.where}: capability `{entry.capability}` {state}")
-                )
+                problems.append((entry, f"{entry.where}: capability `{entry.capability}` {state}"))
             elif entry.reviewer not in reviewers:
-                problems.append((
-                    entry,
-                    f"{entry.where}: capability `{entry.capability}` contributes "
-                    f"no reviewer `{entry.reviewer}` (it contributes: "
-                    f"{', '.join(sorted(reviewers))})",
-                ))
+                problems.append(
+                    (
+                        entry,
+                        f"{entry.where}: capability `{entry.capability}` contributes "
+                        f"no reviewer `{entry.reviewer}` (it contributes: "
+                        f"{', '.join(sorted(reviewers))})",
+                    )
+                )
         return tuple(problems)
 
 
@@ -209,9 +207,7 @@ def parse_opt_outs(raw: Any) -> OptOuts:
     if raw is None:
         return NO_OPT_OUTS
     if not isinstance(raw, list):
-        return OptOuts(errors=(
-            f"`{OPT_OUT_PATH}` must be a list, got {type(raw).__name__}",
-        ))
+        return OptOuts(errors=(f"`{OPT_OUT_PATH}` must be a list, got {type(raw).__name__}",))
 
     entries: list[ContributionOptOut] = []
     errors: list[str] = []
@@ -261,8 +257,7 @@ def _entry_errors(item: Mapping, where: str) -> list[str]:
         value = item.get(key)
         if not isinstance(value, str) or not value.strip():
             detail = (
-                " — an opt-out withdraws a merge gate, so it states why"
-                if key == "reason" else ""
+                " — an opt-out withdraws a merge gate, so it states why" if key == "reason" else ""
             )
             errors.append(f"`{where}.{key}` must be a non-empty string{detail}")
     return errors

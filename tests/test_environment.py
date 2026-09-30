@@ -32,14 +32,15 @@ def _stage(target_root: Path) -> None:
         write_component_manifest(
             target_root / rel,
             ComponentManifest(
-                kind="capability", name=name, version=version,
-                installed_at="2026-08-07", requires_backbone=">=1.0.0",
+                kind="capability",
+                name=name,
+                version=version,
+                installed_at="2026-08-07",
+                requires_backbone=">=1.0.0",
             ),
         )
         entries.append(
-            ComponentRegistryEntry(
-                kind="capability", name=name, manifest=rel, origin=origin
-            )
+            ComponentRegistryEntry(kind="capability", name=name, manifest=rel, origin=origin)
         )
     write_backbone_manifest(
         target_root, BackboneManifest(backbone_version="1.143.1", components=entries)
@@ -146,9 +147,7 @@ def test_render_environment_block_unresolved_reads_as_not_collected() -> None:
     assert "backbone:" not in block and "adapter:" not in block
 
 
-def test_render_environment_block_unresolved_carries_no_path(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_render_environment_block_unresolved_carries_no_path(tmp_path: Path, monkeypatch) -> None:
     # The unresolved marker rides into a PUBLIC issue body: path-free, always.
     monkeypatch.chdir(tmp_path)
     block = render_environment_block(collect_environment(None))
@@ -158,8 +157,6 @@ def test_render_environment_block_unresolved_carries_no_path(
 
 def test_render_environment_block_shows_private_names_when_included(tmp_path: Path) -> None:
     _stage(tmp_path)
-    block = render_environment_block(
-        collect_environment(tmp_path, include_private=True)
-    )
+    block = render_environment_block(collect_environment(tmp_path, include_private=True))
     assert "secret-internal 0.1.0" in block
     assert "names withheld" not in block

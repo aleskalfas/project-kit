@@ -69,9 +69,7 @@ def test_resolve_identity_uses_env_override_when_set(mship, monkeypatch) -> None
     assert ident.email == "ci@example.com"
 
 
-def test_resolve_identity_falls_back_to_gh_login_provider(
-    mship, monkeypatch
-) -> None:
+def test_resolve_identity_falls_back_to_gh_login_provider(mship, monkeypatch) -> None:
     monkeypatch.delenv("PM_INVOKER_LOGIN", raising=False)
     ident = mship.resolve_invoker_identity(
         gh_login_provider=lambda: "octocat",
@@ -81,9 +79,7 @@ def test_resolve_identity_falls_back_to_gh_login_provider(
     assert ident.email is None
 
 
-def test_resolve_identity_returns_none_when_providers_yield_none(
-    mship, monkeypatch
-) -> None:
+def test_resolve_identity_returns_none_when_providers_yield_none(mship, monkeypatch) -> None:
     monkeypatch.delenv("PM_INVOKER_LOGIN", raising=False)
     ident = mship.resolve_invoker_identity(
         gh_login_provider=lambda: None,
@@ -159,9 +155,7 @@ def test_resolve_capability_root_honours_explicit_path(mship, tmp_path) -> None:
     assert mship.resolve_capability_root(nonexistent) is None
 
 
-def test_resolve_capability_root_walks_up_to_find_pkit_tree(
-    mship, tmp_path, monkeypatch
-) -> None:
+def test_resolve_capability_root_walks_up_to_find_pkit_tree(mship, tmp_path, monkeypatch) -> None:
     """CWD-walk fallback locates `.pkit/capabilities/project-management/`."""
     cap_dir = tmp_path / ".pkit" / "capabilities" / "project-management"
     cap_dir.mkdir(parents=True)

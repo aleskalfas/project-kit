@@ -287,16 +287,14 @@ def _extract_frontmatter(text: str) -> str | None:
         return None
     # Split on the fence lines. The frontmatter is the content between the
     # first `---` and the next `---` on its own line.
-    rest = text[len("---"):]
+    rest = text[len("---") :]
     end = rest.find("\n---")
     if end == -1:
         return None
     return rest[:end]
 
 
-def _filename_consistency_issues(
-    record: DecisionRecord, target_root: Path
-) -> list[DecisionIssue]:
+def _filename_consistency_issues(record: DecisionRecord, target_root: Path) -> list[DecisionIssue]:
     """Check a record's frontmatter id against its filename number (cheap sanity)."""
     rel = _rel(record.path, target_root)
     if record.record_id is None:

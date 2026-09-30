@@ -70,9 +70,7 @@ from _lib.membership import (  # noqa: E402
 from _lib.structural_type import infer_structural_type  # noqa: E402
 
 
-CLOSING_KEYWORD_RE = re.compile(
-    r"\b(?:closes|fixes|resolves)\s+#(\d+)", re.IGNORECASE
-)
+CLOSING_KEYWORD_RE = re.compile(r"\b(?:closes|fixes|resolves)\s+#(\d+)", re.IGNORECASE)
 
 
 @dataclass
@@ -176,14 +174,10 @@ def main() -> int:
         print(membership.refusal_message, file=sys.stderr)
         return 1
 
-    issue_types = _read_yaml(
-        capability_root / "schemas" / "issue-types.yaml", yaml_loader
-    )
+    issue_types = _read_yaml(capability_root / "schemas" / "issue-types.yaml", yaml_loader)
     # Kind-driven title prefixes ([Bug]/[Docs]/[Test]/[Refactor]/[Chore]) live in
     # classification.yaml; without it a kind-prefixed Task reads as unrecognised.
-    classification = _read_yaml(
-        capability_root / "schemas" / "classification.yaml", yaml_loader
-    )
+    classification = _read_yaml(capability_root / "schemas" / "classification.yaml", yaml_loader)
 
     # Acquisition belongs to the containment seam (ADR-035 §5); `--limit` and
     # `--state` stay view controls, and the seam's verdict is what lets a bounded
@@ -281,9 +275,7 @@ def main() -> int:
 
     if args.format == "json":
         out = {
-            "issues": {
-                str(num): _issue_to_dict(issues[num]) for num in issues
-            },
+            "issues": {str(num): _issue_to_dict(issues[num]) for num in issues},
             "prs": [
                 {"number": p.number, "title": p.title, "state": p.state, "closes": p.closes}
                 for p in prs.values()
@@ -317,7 +309,9 @@ def main() -> int:
 # ---- parsing --------------------------------------------------------
 
 
-def _parse_issues(raw: list, issue_types: dict, classification: dict | None = None) -> dict[int, Issue]:
+def _parse_issues(
+    raw: list, issue_types: dict, classification: dict | None = None
+) -> dict[int, Issue]:
     out: dict[int, Issue] = {}
     for r in raw:
         if not isinstance(r, dict):
@@ -339,7 +333,9 @@ def _parse_issues(raw: list, issue_types: dict, classification: dict | None = No
             body=str(r.get("body") or ""),
             labels=labels,
             milestone=ms_title,
-            structural_type=infer_structural_type(title, issue_types, classification=classification),
+            structural_type=infer_structural_type(
+                title, issue_types, classification=classification
+            ),
         )
     return out
 
@@ -353,9 +349,7 @@ def _parse_prs(raw: list) -> dict[int, PR]:
         if not isinstance(number, int):
             continue
         body = str(r.get("body") or "")
-        closes = sorted(
-            {int(m.group(1)) for m in CLOSING_KEYWORD_RE.finditer(body)}
-        )
+        closes = sorted({int(m.group(1)) for m in CLOSING_KEYWORD_RE.finditer(body)})
         out[number] = PR(
             number=number,
             title=str(r.get("title", "")),
@@ -365,10 +359,7 @@ def _parse_prs(raw: list) -> dict[int, PR]:
     return out
 
 
-
-def _link_parents(
-    issues: dict[int, Issue], config: dict, *, corpus_complete: bool
-) -> list[int]:
+def _link_parents(issues: dict[int, Issue], config: dict, *, corpus_complete: bool) -> list[int]:
     """Populate parent_number + children + child_substrate via the containment
     read-seam (``_lib.containment.resolve_children``).
 
@@ -405,9 +396,7 @@ def _link_parents(
     }
     container_types = {"epic", "feature", "umbrella", "task"}
     for num, issue in issues.items():
-        is_candidate = (
-            issue.structural_type in container_types or num in textual_parents
-        )
+        is_candidate = issue.structural_type in container_types or num in textual_parents
         if not is_candidate:
             continue
         resolution = containment.resolve_children(
@@ -429,9 +418,7 @@ def _link_parents(
     return incomplete_parents
 
 
-def _refresh_children_views(
-    issues: dict[int, Issue], capability_root: Path, config: dict
-) -> None:
+def _refresh_children_views(issues: dict[int, Issue], capability_root: Path, config: dict) -> None:
     """Refresh every parent's render-on-demand children comment (textual mode).
 
     The explicit refresh path for the textual children view (DEC-039 D4 / ADR-035
@@ -555,8 +542,7 @@ def _issue_to_dict(issue: Issue) -> dict:
         "children": sorted(issue.children),
         # Provenance from the read-seam: child number -> "native" / "textual".
         "child_substrate": {
-            str(n): issue.child_substrate.get(n, "textual")
-            for n in sorted(issue.children)
+            str(n): issue.child_substrate.get(n, "textual") for n in sorted(issue.children)
         },
     }
 
@@ -622,9 +608,7 @@ def _print_branch(
         sub = "  " * (depth + 1) + "↪ "
         print(f"{sub}PR #{p.number} ({p.state}) — {p.title}")
     for child in sorted(issue.children):
-        _print_branch(
-            issues, prs, child, depth + 1, issue.child_substrate.get(child)
-        )
+        _print_branch(issues, prs, child, depth + 1, issue.child_substrate.get(child))
 
 
 # ---- markdown renderer ----------------------------------------------
@@ -664,17 +648,12 @@ def _md_branch(
     indent = "  " * depth
     state = f" *(closed)*" if issue.state == "closed" else ""
     sub_marker = " _(textual)_" if substrate == "textual" else ""
-    print(
-        f"{indent}- **[{issue.structural_type or '?'}] #{num}**{state} "
-        f"{issue.title}{sub_marker}"
-    )
+    print(f"{indent}- **[{issue.structural_type or '?'}] #{num}**{state} {issue.title}{sub_marker}")
     linked = [p for p in prs.values() if num in p.closes]
     for p in linked:
         print(f"{indent}  - PR #{p.number} ({p.state}) {p.title}")
     for child in sorted(issue.children):
-        _md_branch(
-            issues, prs, child, depth + 1, issue.child_substrate.get(child)
-        )
+        _md_branch(issues, prs, child, depth + 1, issue.child_substrate.get(child))
 
 
 # ---- gh wrappers ----------------------------------------------------
@@ -733,9 +712,7 @@ def _partial_note(
         shown = ", ".join(f"#{n}" for n in incomplete_parents[:5])
         if len(incomplete_parents) > 5:
             shown += ", …"
-        reasons.append(
-            _PARTIAL_UNVOUCHED.format(count=len(incomplete_parents), parents=shown)
-        )
+        reasons.append(_PARTIAL_UNVOUCHED.format(count=len(incomplete_parents), parents=shown))
     if prs_truncated:
         reasons.append(_PARTIAL_PRS_TRUNCATED.format(limit=limit))
     if reasons:

@@ -132,8 +132,7 @@ def stamp_new_agent(
         existing = find_agent_file(location, name)
         if existing is not None:
             raise click.ClickException(
-                f"agent {name!r} already exists at "
-                f"{existing.relative_to(target_root)}."
+                f"agent {name!r} already exists at {existing.relative_to(target_root)}."
             )
 
     title = _name_to_title(name)

@@ -31,7 +31,9 @@ from _lib import lifecycle_predicates as predicates  # noqa: E402
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description='Report the merged-PR authorisation artifact for an issue (gate).')
+    parser = argparse.ArgumentParser(
+        description="Report the merged-PR authorisation artifact for an issue (gate)."
+    )
     parser.add_argument("issue_number", help="The keyed subject: a GitHub issue number.")
     parser.add_argument("--json", action="store_true", help="Emit the structured JSON contract.")
     parser.add_argument("--actor", default=None, help="The actor being gated (gates only).")

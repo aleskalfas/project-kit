@@ -23,9 +23,7 @@ import pytest
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SCRIPTS_DIR = (
-    REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
-)
+SCRIPTS_DIR = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
 LIB_PATH = SCRIPTS_DIR / "_lib" / "label_contributions.py"
 
 
@@ -68,9 +66,7 @@ def _write_manifest(repo_root: Path, capability_names: list[str]) -> None:
             f"    manifest: .pkit/capabilities/{name}/manifest.yaml",
         ]
     (repo_root / ".pkit").mkdir(parents=True, exist_ok=True)
-    (repo_root / ".pkit" / "manifest.yaml").write_text(
-        "\n".join(lines) + "\n", encoding="utf-8"
-    )
+    (repo_root / ".pkit" / "manifest.yaml").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 _NEEDS_DESIGN = (

@@ -78,9 +78,7 @@ def test_created_claude_md_include_after_h1(adapter_tree: Path) -> None:
     """The @-include must not be on line 1; it must come after the H1 (rule 13)."""
     _run_script(adapter_tree)
     lines = _claude_md(adapter_tree).read_text(encoding="utf-8").splitlines()
-    include_idx = next(
-        (i for i, l in enumerate(lines) if "@.pkit/rules/core.md" in l), None
-    )
+    include_idx = next((i for i, l in enumerate(lines) if "@.pkit/rules/core.md" in l), None)
     h1_idx = next((i for i, l in enumerate(lines) if l.startswith("# ")), None)
     assert include_idx is not None, "@.pkit/rules/core.md not found in created file"
     assert h1_idx is not None, "no H1 in created file"
@@ -119,9 +117,7 @@ def test_include_positioned_after_h1_in_existing_file(adapter_tree: Path) -> Non
     )
     _run_script(adapter_tree)
     lines = _claude_md(adapter_tree).read_text(encoding="utf-8").splitlines()
-    include_idx = next(
-        (i for i, l in enumerate(lines) if "@.pkit/rules/core.md" in l), None
-    )
+    include_idx = next((i for i, l in enumerate(lines) if "@.pkit/rules/core.md" in l), None)
     h1_idx = next((i for i, l in enumerate(lines) if l.startswith("# ")), None)
     assert include_idx is not None
     assert h1_idx is not None

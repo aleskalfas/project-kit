@@ -91,9 +91,7 @@ def test_the_project_file_binds_to_the_schema(make_adopter_repo: MakeAdopterRepo
     repo = make_adopter_repo(capabilities=("living-docs",))
     path = repo.root / PROJECT_CONFIG
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        "schema_version: 1\nplaces:\n  README.md: user\n", encoding="utf-8"
-    )
+    path.write_text("schema_version: 1\nplaces:\n  README.md: user\n", encoding="utf-8")
     result = dv.resolve_binding(path, repo.root)
     assert isinstance(result, dv.ResolvedBinding), getattr(result, "message", "")
     assert (result.capability, result.schema_name) == ("living-docs", "config")

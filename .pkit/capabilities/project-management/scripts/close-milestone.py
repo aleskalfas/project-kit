@@ -204,14 +204,10 @@ def main() -> int:
         print("\n[noop] milestone already closed.")
         return 0
 
-    issue_types = _read_yaml(
-        capability_root / "schemas" / "issue-types.yaml", yaml_loader
-    )
+    issue_types = _read_yaml(capability_root / "schemas" / "issue-types.yaml", yaml_loader)
     # Kind-driven title prefixes ([Bug]/[Docs]/[Test]/[Refactor]/[Chore]) live in
     # classification.yaml; without it a kind-prefixed Task reads as unrecognised.
-    classification = _read_yaml(
-        capability_root / "schemas" / "classification.yaml", yaml_loader
-    )
+    classification = _read_yaml(capability_root / "schemas" / "classification.yaml", yaml_loader)
 
     children = _gh_list_milestone_children(number, title, config, issue_types, classification)
     if children is None:
@@ -428,7 +424,10 @@ def _gh_get_milestone(number: int, config: dict) -> dict | None:
 
 
 def _gh_list_milestone_children(
-    number: int, title: str, config: dict, issue_types: dict,
+    number: int,
+    title: str,
+    config: dict,
+    issue_types: dict,
     classification: dict | None = None,
 ) -> list[dict] | None:
     """Resolve the milestone's child issues — the union of native + textual.
@@ -445,8 +444,15 @@ def _gh_list_milestone_children(
     try:
         proc = gh_run(
             [
-                "gh", "issue", "list", "--state", "all", "--limit", "500",
-                "--json", "number,title,state,body,milestone",
+                "gh",
+                "issue",
+                "list",
+                "--state",
+                "all",
+                "--limit",
+                "500",
+                "--json",
+                "number,title,state,body,milestone",
             ],
             config,
             check=False,
@@ -456,8 +462,7 @@ def _gh_list_milestone_children(
         return None
     if proc.returncode != 0:
         print(
-            f"error: gh issue list failed (exit {proc.returncode}).\n"
-            f"stderr: {proc.stderr.strip()}",
+            f"error: gh issue list failed (exit {proc.returncode}).\nstderr: {proc.stderr.strip()}",
             file=sys.stderr,
         )
         return None
@@ -477,8 +482,7 @@ def _gh_list_milestone_children(
             continue
         body = str(row.get("body") or "")
         if not (
-            _native_milestone_matches(row.get("milestone"), number, title)
-            or ref_regex.search(body)
+            _native_milestone_matches(row.get("milestone"), number, title) or ref_regex.search(body)
         ):
             continue
         row_title = str(row.get("title", ""))
@@ -487,7 +491,9 @@ def _gh_list_milestone_children(
                 "number": num,
                 "title": row_title,
                 "state": str(row.get("state", "")).lower(),
-                "type": infer_structural_type(row_title, issue_types, classification=classification),
+                "type": infer_structural_type(
+                    row_title, issue_types, classification=classification
+                ),
             }
         )
     children.sort(key=lambda c: c["number"])
@@ -516,11 +522,15 @@ def _gh_close_milestone(number: int, description: str, config: dict) -> bool:
     covers, rather than a raw `gh api` the agent deny discourages.
     """
     args = [
-        "gh", "api",
-        "-X", "PATCH",
+        "gh",
+        "api",
+        "-X",
+        "PATCH",
         f"repos/{{owner}}/{{repo}}/milestones/{number}",
-        "-f", "state=closed",
-        "-f", f"description={description}",
+        "-f",
+        "state=closed",
+        "-f",
+        f"description={description}",
     ]
     try:
         proc = gh_run(args, config, check=False)
@@ -538,7 +548,6 @@ def _gh_close_milestone(number: int, description: str, config: dict) -> bool:
 
 
 # ---- I/O helpers ----------------------------------------------------
-
 
 
 def _read_yaml(path: Path, yaml_loader: YAML) -> dict:

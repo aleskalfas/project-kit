@@ -19,9 +19,7 @@ import pytest
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SCRIPTS_DIR = (
-    REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
-)
+SCRIPTS_DIR = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
 
 # Match `gh_run( [<list>], <kwarg>=...` — i.e. the second positional is a
 # keyword argument instead of `config`. The valid pattern is
@@ -34,11 +32,7 @@ BUGGY_CALL = re.compile(
 
 
 def _python_files_under(root: Path) -> list[Path]:
-    return [
-        p
-        for p in root.rglob("*.py")
-        if "__pycache__" not in p.parts
-    ]
+    return [p for p in root.rglob("*.py") if "__pycache__" not in p.parts]
 
 
 @pytest.mark.parametrize("script_path", _python_files_under(SCRIPTS_DIR), ids=lambda p: p.name)

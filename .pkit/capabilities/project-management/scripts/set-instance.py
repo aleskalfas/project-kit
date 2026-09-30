@@ -60,9 +60,7 @@ def main() -> int:
     parser.add_argument(
         "--show", action="store_true", help="Print the current instance id and exit."
     )
-    parser.add_argument(
-        "--clear", action="store_true", help="Unset this clone's instance id."
-    )
+    parser.add_argument("--clear", action="store_true", help="Unset this clone's instance id.")
     parser.add_argument(
         "--capability-root",
         type=Path,

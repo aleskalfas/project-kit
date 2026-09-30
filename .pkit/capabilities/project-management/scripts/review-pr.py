@@ -161,8 +161,7 @@ def _resolve_agent_timeout(cli_value: str | None, env: dict) -> int:
         value = int(raw)
     except (TypeError, ValueError):
         raise ValueError(
-            f"invalid reviewer timeout from {source}: {raw!r} is not an integer "
-            "number of seconds."
+            f"invalid reviewer timeout from {source}: {raw!r} is not an integer number of seconds."
         ) from None
     if value <= 0:
         raise ValueError(
@@ -173,7 +172,9 @@ def _resolve_agent_timeout(cli_value: str | None, env: dict) -> int:
 
 
 def _resolve_agent_effort(
-    cli_value: str | None, env: dict, config: dict | None,
+    cli_value: str | None,
+    env: dict,
+    config: dict | None,
 ) -> tuple[str | None, str | None]:
     """Resolve the reviewer effort level and the source that set it.
 
@@ -205,7 +206,8 @@ def _resolve_agent_effort(
     if not isinstance(raw, str) or raw not in EFFORT_LEVELS:
         raise ValueError(
             f"invalid reviewer effort from {source}: {raw!r} — must be one of "
-            + ", ".join(EFFORT_LEVELS) + "."
+            + ", ".join(EFFORT_LEVELS)
+            + "."
         )
     return raw, source
 
@@ -219,25 +221,32 @@ def main() -> int:
     )
     parser.add_argument("issue_number", type=int)
     parser.add_argument(
-        "--capability-root", type=Path, default=None,
+        "--capability-root",
+        type=Path,
+        default=None,
         help=f"Default: <repo-root>/.pkit/capabilities/{CAPABILITY_NAME}/.",
     )
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument(
-        "--no-native", action="store_true",
+        "--no-native",
+        action="store_true",
         help="Don't post a native GitHub review (APPROVE / REQUEST_CHANGES) — "
         "only the comment verdict. Per DEC-028 (amended). The native review is "
         "what shows in the PR UI and satisfies branch protection; it is skipped "
         "automatically when you authored the PR (GitHub blocks self-approval).",
     )
     parser.add_argument(
-        "--timeout", default=None, metavar="SECONDS",
+        "--timeout",
+        default=None,
+        metavar="SECONDS",
         help="Per-agent reviewer timeout in seconds (one uniform value applied "
         f"to every reviewer). Precedence: this flag > ${AGENT_TIMEOUT_ENV} env "
         f"var > default {DEFAULT_AGENT_TIMEOUT}. Must be a positive integer.",
     )
     parser.add_argument(
-        "--effort", default=None, metavar="LEVEL",
+        "--effort",
+        default=None,
+        metavar="LEVEL",
         help="Effort level every reviewer reasons at (one uniform value). "
         f"Precedence: this flag > ${AGENT_EFFORT_ENV} env var > "
         "`review.agents.effort` in the project config > unset (the harness "
@@ -266,7 +275,9 @@ def main() -> int:
     config = load_adopter_config(capability_root)
     try:
         agent_effort, effort_source = _resolve_agent_effort(
-            args.effort, os.environ, config,
+            args.effort,
+            os.environ,
+            config,
         )
     except ValueError as exc:
         print(f"error: {exc}", file=sys.stderr)
@@ -305,8 +316,7 @@ def main() -> int:
     pr = _find_pr_for_branch(branch, config)
     if pr is None:
         print(
-            f"error: no OPEN PR found for branch {branch!r}. "
-            "Run `review-work` first.",
+            f"error: no OPEN PR found for branch {branch!r}. Run `review-work` first.",
             file=sys.stderr,
         )
         return 2
@@ -323,9 +333,7 @@ def main() -> int:
     # SAME shared helper `done-work`'s gate checks. Invoking exactly this set
     # is what makes invoke-set == gate-set (no divergence).
     baseline_local = [a["name"] for a in local_agents]
-    resolution = _resolve_required_local(
-        pr_number, config, repo_root, baseline_local
-    )
+    resolution = _resolve_required_local(pr_number, config, repo_root, baseline_local)
     if not resolution.ok:
         # HARD ABORT on a non-ok resolution — and this is a DELIBERATE choice,
         # not a gate-safety requirement. review-pr is advisory: it posts
@@ -367,11 +375,11 @@ def main() -> int:
         if not agent_file.is_file():
             provenance = (
                 f" (required by capability `{contributed_by[name]}`)"
-                if name in contributed_by else ""
+                if name in contributed_by
+                else ""
             )
             print(
-                f"  [{name}] error: agent file not found at {agent_file}"
-                f"{provenance}",
+                f"  [{name}] error: agent file not found at {agent_file}{provenance}",
                 file=sys.stderr,
             )
             failures += 1
@@ -382,7 +390,11 @@ def main() -> int:
             continue
 
         verdict, body = _invoke_agent(
-            name, pr_number, config, agent_timeout, effort=agent_effort,
+            name,
+            pr_number,
+            config,
+            agent_timeout,
+            effort=agent_effort,
         )
         if verdict is None:
             print(f"  [{name}] invocation failed; no verdict to post.", file=sys.stderr)
@@ -415,8 +427,11 @@ def main() -> int:
 
 
 def _invoke_agent(
-    name: str, pr_number: int | None, config: dict,
-    timeout: int = DEFAULT_AGENT_TIMEOUT, effort: str | None = None,
+    name: str,
+    pr_number: int | None,
+    config: dict,
+    timeout: int = DEFAULT_AGENT_TIMEOUT,
+    effort: str | None = None,
 ) -> tuple[str | None, str]:
     """Invoke a Claude Code agent against the PR diff.
 
@@ -467,7 +482,10 @@ def _invoke_agent(
             command += ["--effort", effort]
         proc = subprocess.run(
             command,
-            capture_output=True, text=True, check=False, timeout=timeout,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=timeout,
         )
     except (subprocess.TimeoutExpired, FileNotFoundError) as exc:
         print(f"  [{name}] invocation error: {exc}", file=sys.stderr)
@@ -512,7 +530,7 @@ def _invoke_agent(
         # Body is the commentary following the verdict line; any preamble
         # before it is throat-clearing and dropped (the verdict line itself
         # is regenerated by `_format_verdict_comment`).
-        body = "\n".join(lines[idx + 1:])
+        body = "\n".join(lines[idx + 1 :])
         return verdict, body
 
     # No grammar-matching line anywhere → fail-closed. Surface the agent's
@@ -539,7 +557,10 @@ def _format_verdict_comment(name: str, verdict: str, body: str) -> str:
 
 
 def _deliver_native_review(
-    pr_number: int, verdict: str, body: str, config: dict,
+    pr_number: int,
+    verdict: str,
+    body: str,
+    config: dict,
 ) -> None:
     """Post a native `gh pr review` carrying the verdict state (DEC-028, amended).
 
@@ -565,7 +586,8 @@ def _deliver_native_review(
     event = "--approve" if verdict == "APPROVED" else "--request-changes"
     proc = gh_run(
         ["gh", "pr", "review", str(pr_number), event, "--body", body],
-        config, check=False,
+        config,
+        check=False,
     )
     if proc.returncode != 0:
         print(
@@ -581,7 +603,9 @@ def _deliver_native_review(
 def _gh_pr_author(pr_number: int, config: dict) -> str | None:
     """The PR author's login, or None if it can't be determined."""
     proc = gh_run(
-        ["gh", "pr", "view", str(pr_number), "--json", "author"], config, check=False,
+        ["gh", "pr", "view", str(pr_number), "--json", "author"],
+        config,
+        check=False,
     )
     if proc.returncode != 0:
         return None
@@ -603,7 +627,10 @@ def _gh_current_login(config: dict) -> str | None:
 
 
 def _resolve_required_local(
-    pr_number: int | None, config: dict, repo_root: Path, baseline_local: list[str],
+    pr_number: int | None,
+    config: dict,
+    repo_root: Path,
+    baseline_local: list[str],
 ) -> Resolution:
     """Resolve the PR's required-local set via the shared resolver (DEC-032 D1).
 
@@ -630,15 +657,9 @@ def _resolve_required_local(
         pr_number,
         baseline_local=baseline_local,
         repo_root=repo_root,
-        closing_issue_numbers=lambda n: _pr_closing_issue_numbers_fetch(
-            n, config, gh_run=gh_run
-        ),
-        issue_labels=lambda n: _issue_labels_fetch(
-            n, config, gh_get_issue=gh_get_issue
-        ),
-        changed_files=lambda n: _pr_changed_files_fetch(
-            n, config, gh_run=gh_run
-        ),
+        closing_issue_numbers=lambda n: _pr_closing_issue_numbers_fetch(n, config, gh_run=gh_run),
+        issue_labels=lambda n: _issue_labels_fetch(n, config, gh_get_issue=gh_get_issue),
+        changed_files=lambda n: _pr_changed_files_fetch(n, config, gh_run=gh_run),
         opt_outs=read_opt_outs(config),
         collect_contributions=collect_contributions,
     )
@@ -664,9 +685,7 @@ def _resolution_error_message(resolution: Resolution) -> str:
     ]
     if error.kind == ERROR_COLLECTION and error.collection is not None:
         for err in error.collection.errors:
-            where = (
-                f"capability `{err.capability}`" if err.capability else "manifest"
-            )
+            where = f"capability `{err.capability}`" if err.capability else "manifest"
             lines.append(f"  → [{err.kind}] {where}: {err.message}")
         lines.append(
             "  Remediation: redeploy the contributing capability's agents, "
@@ -705,7 +724,9 @@ def _find_issue_branch(issue_number: int) -> str | None:
     try:
         proc = subprocess.run(
             ["git", "branch", "--list", "--format=%(refname:short)"],
-            capture_output=True, text=True, check=False,
+            capture_output=True,
+            text=True,
+            check=False,
         )
     except FileNotFoundError:
         return None
@@ -721,9 +742,19 @@ def _find_issue_branch(issue_number: int) -> str | None:
 
 def _find_pr_for_branch(branch: str, config: dict) -> dict | None:
     proc = gh_run(
-        ["gh", "pr", "list", "--head", branch, "--state", "open",
-         "--json", "number,isDraft,headRefName"],
-        config, check=False,
+        [
+            "gh",
+            "pr",
+            "list",
+            "--head",
+            branch,
+            "--state",
+            "open",
+            "--json",
+            "number,isDraft,headRefName",
+        ],
+        config,
+        check=False,
     )
     if proc.returncode != 0:
         return None
@@ -742,7 +773,8 @@ def _post_comment(pr_number: int | None, body: str, config: dict) -> bool:
         return False
     proc = gh_run(
         ["gh", "pr", "comment", str(pr_number), "--body", body],
-        config, check=False,
+        config,
+        check=False,
     )
     if proc.returncode != 0:
         print(f"error: gh pr comment failed: {proc.stderr.strip()}", file=sys.stderr)

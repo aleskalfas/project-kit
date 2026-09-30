@@ -100,9 +100,7 @@ def main() -> int:
 
     # Prerequisite gate (#747): refuse on an un-bootstrapped project rather
     # than operating on assumed defaults. See _lib/bootstrap_gate.py.
-    if not bootstrap_gate.enforce(
-        "context-workstream", capability_root=capability_root
-    ):
+    if not bootstrap_gate.enforce("context-workstream", capability_root=capability_root):
         return 2
 
     issue_number = _issue_number_from_branch(_current_branch())

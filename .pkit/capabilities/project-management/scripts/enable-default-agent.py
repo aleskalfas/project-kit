@@ -98,11 +98,14 @@ def main() -> int:
         ),
     )
     parser.add_argument(
-        "--capability-root", type=Path, default=None,
+        "--capability-root",
+        type=Path,
+        default=None,
         help=f"Default: <repo-root>/.pkit/capabilities/{CAPABILITY_NAME}/.",
     )
     parser.add_argument(
-        "--skip-sync", action="store_true",
+        "--skip-sync",
+        action="store_true",
         help="Update the live overlay file but skip the pkit sync step. Mostly for tests.",
     )
     session_guard.add_override_argument(parser)

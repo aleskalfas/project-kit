@@ -152,7 +152,9 @@ def _fake_source(tmp_path: Path, *, version: str, adapter_requires: str | None) 
     if adapter_requires is not None:
         adir = src / "adapters" / "claude-code"
         adir.mkdir(parents=True)
-        (adir / "package.yaml").write_text(_adapter_pkg("9.9.9", adapter_requires), encoding="utf-8")
+        (adir / "package.yaml").write_text(
+            _adapter_pkg("9.9.9", adapter_requires), encoding="utf-8"
+        )
     return src
 
 
@@ -164,7 +166,9 @@ def test_compat_ignores_stale_installed_ceiling(
     which auto-broadens with the backbone. Reproduces the interaction-gateway
     deadlock (installed adapter `<old>`, source compatible)."""
     pkg = installed_target / ".pkit" / "adapters" / "claude-code" / "package.yaml"
-    pkg.write_text(_adapter_pkg("0.1.0", ">=0.1.0,<0.5.0"), encoding="utf-8")  # stale, excludes source
+    pkg.write_text(
+        _adapter_pkg("0.1.0", ">=0.1.0,<0.5.0"), encoding="utf-8"
+    )  # stale, excludes source
 
     # Real source (find_source_kit unpatched) — its adapter ceiling includes the
     # current backbone. No compatibility error; installed==source ⇒ already-at.
@@ -190,10 +194,14 @@ def test_compat_falls_back_to_installed_when_source_lacks_component(
 ) -> None:
     """For a component the source no longer ships, the check falls back to the
     installed range (it won't be refreshed by sync, so its range still governs)."""
-    src = _fake_source(tmp_path, version="2.0.0", adapter_requires=None)  # source dropped the adapter
+    src = _fake_source(
+        tmp_path, version="2.0.0", adapter_requires=None
+    )  # source dropped the adapter
     monkeypatch.setattr(upgrade, "find_source_kit", lambda: src)
     pkg = installed_target / ".pkit" / "adapters" / "claude-code" / "package.yaml"
-    pkg.write_text(_adapter_pkg("0.1.0", ">=0.1.0,<1.5.0"), encoding="utf-8")  # installed excludes 2.0.0
+    pkg.write_text(
+        _adapter_pkg("0.1.0", ">=0.1.0,<1.5.0"), encoding="utf-8"
+    )  # installed excludes 2.0.0
     with pytest.raises(click.ClickException, match="compatibility check failed"):
         upgrade.run_upgrade(installed_target)
 
@@ -391,8 +399,14 @@ def test_self_update_acts_when_stale_and_allowed(monkeypatch: pytest.MonkeyPatch
     _stale(monkeypatch)
     monkeypatch.setattr(upgrade, "_self_update_allowed", lambda: True)
     calls: dict = {"install": None, "reexec": 0}
-    monkeypatch.setattr(upgrade, "_self_update_tool", lambda v: calls.__setitem__("install", v) or True)
-    monkeypatch.setattr(upgrade, "_reexec_after_self_update", lambda: calls.__setitem__("reexec", calls["reexec"] + 1))
+    monkeypatch.setattr(
+        upgrade, "_self_update_tool", lambda v: calls.__setitem__("install", v) or True
+    )
+    monkeypatch.setattr(
+        upgrade,
+        "_reexec_after_self_update",
+        lambda: calls.__setitem__("reexec", calls["reexec"] + 1),
+    )
     upgrade._maybe_self_update_tool(self_update=True, dry_run=False)
     assert calls["install"] == Version("9.9.9")
     assert calls["reexec"] == 1
@@ -404,7 +418,9 @@ def test_self_update_degrades_when_not_allowed(
     _stale(monkeypatch)
     monkeypatch.setattr(upgrade, "_self_update_allowed", lambda: False)
     installed = {"v": False}
-    monkeypatch.setattr(upgrade, "_self_update_tool", lambda v: installed.__setitem__("v", True) or True)
+    monkeypatch.setattr(
+        upgrade, "_self_update_tool", lambda v: installed.__setitem__("v", True) or True
+    )
     upgrade._maybe_self_update_tool(self_update=True, dry_run=False)
     assert installed["v"] is False
     assert "uv tool install --force" in capsys.readouterr().out  # instruct
@@ -416,7 +432,9 @@ def test_self_update_off_instructs(
     _stale(monkeypatch)
     monkeypatch.setattr(upgrade, "_self_update_allowed", lambda: True)
     installed = {"v": False}
-    monkeypatch.setattr(upgrade, "_self_update_tool", lambda v: installed.__setitem__("v", True) or True)
+    monkeypatch.setattr(
+        upgrade, "_self_update_tool", lambda v: installed.__setitem__("v", True) or True
+    )
     upgrade._maybe_self_update_tool(self_update=False, dry_run=False)
     assert installed["v"] is False
     assert "uv tool install --force" in capsys.readouterr().out
@@ -429,7 +447,9 @@ def test_self_update_install_failure_degrades(
     monkeypatch.setattr(upgrade, "_self_update_allowed", lambda: True)
     monkeypatch.setattr(upgrade, "_self_update_tool", lambda v: False)  # install fails
     reexec = {"n": 0}
-    monkeypatch.setattr(upgrade, "_reexec_after_self_update", lambda: reexec.__setitem__("n", reexec["n"] + 1))
+    monkeypatch.setattr(
+        upgrade, "_reexec_after_self_update", lambda: reexec.__setitem__("n", reexec["n"] + 1)
+    )
     upgrade._maybe_self_update_tool(self_update=True, dry_run=False)
     assert reexec["n"] == 0
     assert "uv tool install --force" in capsys.readouterr().out
@@ -441,7 +461,9 @@ def test_self_update_dry_run_reports_no_install(
     _stale(monkeypatch)
     monkeypatch.setattr(upgrade, "_self_update_allowed", lambda: True)
     installed = {"v": False}
-    monkeypatch.setattr(upgrade, "_self_update_tool", lambda v: installed.__setitem__("v", True) or True)
+    monkeypatch.setattr(
+        upgrade, "_self_update_tool", lambda v: installed.__setitem__("v", True) or True
+    )
     upgrade._maybe_self_update_tool(self_update=True, dry_run=True)
     assert installed["v"] is False
     assert "would run" in capsys.readouterr().out
@@ -452,7 +474,9 @@ def test_self_update_current_tool_noops(
 ) -> None:
     _stale(monkeypatch, running="9.9.9", latest="9.9.9")  # equal → current
     installed = {"v": False}
-    monkeypatch.setattr(upgrade, "_self_update_tool", lambda v: installed.__setitem__("v", True) or True)
+    monkeypatch.setattr(
+        upgrade, "_self_update_tool", lambda v: installed.__setitem__("v", True) or True
+    )
     upgrade._maybe_self_update_tool(self_update=True, dry_run=False)
     assert installed["v"] is False
     assert "tool is current" in capsys.readouterr().out
@@ -466,7 +490,8 @@ def test_self_update_allowed_false_when_guarded(monkeypatch: pytest.MonkeyPatch)
 def test_run_tool_update_forwards_no_project(monkeypatch: pytest.MonkeyPatch) -> None:
     seen: dict = {}
     monkeypatch.setattr(
-        upgrade, "_maybe_self_update_tool",
+        upgrade,
+        "_maybe_self_update_tool",
         lambda *, self_update, dry_run: seen.update(su=self_update),
     )
     upgrade.run_tool_update(dry_run=False, self_update=True)
@@ -532,9 +557,7 @@ def test_cli_upgrade_no_self_update_forwards(monkeypatch: pytest.MonkeyPatch) ->
 # --- backbone + component migration execution (per COR-010) ----------
 
 
-def _stage_backbone_migration(
-    source_kit: Path, version: str, script_name: str, body: str
-) -> Path:
+def _stage_backbone_migration(source_kit: Path, version: str, script_name: str, body: str) -> Path:
     """Drop a backbone migration script at <source_kit>/migrations/backbone/<version>/<script>.
 
     Migrations are kit-shipped: they live in the *source* and reach the adopter
@@ -743,7 +766,11 @@ def _stage_installed_capability(
     installed path so _resolve_compatibility can read it.
     """
     from project_kit import capabilities as caps
-    from project_kit.manifest import ComponentRegistryEntry, read_backbone_manifest, write_backbone_manifest
+    from project_kit.manifest import (
+        ComponentRegistryEntry,
+        read_backbone_manifest,
+        write_backbone_manifest,
+    )
 
     cap_dir = target_root / ".pkit" / "capabilities" / name
     cap_dir.mkdir(parents=True, exist_ok=True)
@@ -752,7 +779,7 @@ def _stage_installed_capability(
     if requires_capabilities:
         lines = ["requires_capabilities:"]
         for req in requires_capabilities:
-            lines.append(f'  - name: {req["name"]}')
+            lines.append(f"  - name: {req['name']}")
             lines.append(f'    version: "{req["version"]}"')
         req_caps_block = "\n" + "\n".join(lines)
 
@@ -770,6 +797,7 @@ requires_backbone: "{requires_backbone}"{req_caps_block}
 
     # Stamp a minimal per-component manifest so version reads work.
     import datetime as _dt
+
     (cap_dir / "manifest.yaml").write_text(
         f"""schema_version: 1
 component:
@@ -787,14 +815,15 @@ backend_state: {{}}
     backbone = read_backbone_manifest(target_root)
     assert backbone is not None
     backbone.components = [
-        c for c in backbone.components
-        if not (c.kind == "capability" and c.name == name)
+        c for c in backbone.components if not (c.kind == "capability" and c.name == name)
     ]
-    backbone.components.append(ComponentRegistryEntry(
-        kind="capability",
-        name=name,
-        manifest=f".pkit/capabilities/{name}/manifest.yaml",
-    ))
+    backbone.components.append(
+        ComponentRegistryEntry(
+            kind="capability",
+            name=name,
+            manifest=f".pkit/capabilities/{name}/manifest.yaml",
+        )
+    )
     write_backbone_manifest(target_root, backbone)
 
 
@@ -805,7 +834,8 @@ def test_backbone_upgrade_refuses_when_installed_cap_has_absent_dep(
     is not installed."""
     # Install consumer with a dep on evidence; evidence is NOT installed.
     _stage_installed_capability(
-        installed_target, "consumer",
+        installed_target,
+        "consumer",
         requires_capabilities=[{"name": "evidence", "version": ">=0.1.0,<2.0.0"}],
     )
 
@@ -819,7 +849,8 @@ def test_backbone_upgrade_refuses_when_installed_cap_dep_out_of_range(
     """Backbone upgrade refuses when a declared dependency is installed but out of range."""
     _stage_installed_capability(installed_target, "evidence", version="0.1.0")
     _stage_installed_capability(
-        installed_target, "consumer",
+        installed_target,
+        "consumer",
         requires_capabilities=[{"name": "evidence", "version": ">=0.2.0,<2.0.0"}],
     )
 
@@ -833,7 +864,8 @@ def test_backbone_upgrade_succeeds_when_cap_deps_satisfied(
     """Backbone upgrade proceeds when all capability dependency requirements are satisfied."""
     _stage_installed_capability(installed_target, "evidence", version="0.3.0")
     _stage_installed_capability(
-        installed_target, "consumer",
+        installed_target,
+        "consumer",
         requires_capabilities=[{"name": "evidence", "version": ">=0.2.0,<1.0.0"}],
     )
 

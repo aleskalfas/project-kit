@@ -298,6 +298,7 @@ def test_find_target_root_accepts_legacy_decisions_bearing_pkit(
 
 # ---- flat-content area propagation (#285) ------------------------------------
 
+
 @pytest.mark.usefixtures("stub_adapter_primitives")
 def test_install_propagates_flat_permissions_and_schemas(tmp_target: Path) -> None:
     """Non-COR-011 areas (permissions/, schemas/) keep kit-owned content as
@@ -326,10 +327,10 @@ def test_install_decision_core_loads_after_propagation(tmp_target: Path) -> None
     install.install_kit(tmp_target)
     from project_kit import permissions as perm
 
-    catalog = perm._load_catalog(tmp_target)            # reads .pkit/schemas/privilege-catalog.yaml
+    catalog = perm._load_catalog(tmp_target)  # reads .pkit/schemas/privilege-catalog.yaml
     assert "privileges" in catalog and catalog["privileges"]
-    model = perm._load_model(tmp_target)                # imports .pkit/permissions/decide.py
-    assert "grants" in model                            # guardrail denies synthesized
+    model = perm._load_model(tmp_target)  # imports .pkit/permissions/decide.py
+    assert "grants" in model  # guardrail denies synthesized
 
 
 @pytest.mark.usefixtures("stub_adapter_primitives")
@@ -407,8 +408,7 @@ def test_seeded_overlay_ships_write_carrying_categories_as_empty_lists(
             f"seeded overlay is missing `{category}: []`"
         )
         assert values.defaults[category] == [], (
-            f"seeded `{category}` must resolve to an empty list, not "
-            f"{values.defaults[category]!r}"
+            f"seeded `{category}` must resolve to an empty list, not {values.defaults[category]!r}"
         )
     # Non-vacuous: the registry is populated, so the loop above asserted something.
     assert agents_overlay.write_carrying_categories(tmp_target)

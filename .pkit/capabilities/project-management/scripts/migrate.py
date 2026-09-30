@@ -149,9 +149,7 @@ def main() -> int:
         pre_check_path = capability_root / PRE_CHECK_SCRIPT
         if pre_check_path.is_file():
             print("Running pre-check before migration...")
-            result = subprocess.run(
-                [str(pre_check_path)], check=False
-            )
+            result = subprocess.run([str(pre_check_path)], check=False)
             if result.returncode != 0:
                 print(
                     "\nerror: pre-check failed. migrate refuses to run on a "
@@ -246,9 +244,7 @@ def _refresh_bootstrap_stamp(capability_root: Path, *, dry_run: bool) -> None:
 # ----- migration application -----------------------------------------
 
 
-def _apply_migration(
-    migration: Migration, capability_root: Path, *, dry_run: bool
-) -> int:
+def _apply_migration(migration: Migration, capability_root: Path, *, dry_run: bool) -> int:
     print(f"=== Migration {migration.target_version} ===")
     if migration.description:
         for line in migration.description.strip().split("\n"):

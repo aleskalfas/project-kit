@@ -245,10 +245,13 @@ def add_sub_issue_args(
     takes a child from another parent.
     """
     args = [
-        "gh", "api",
-        "-X", "POST",
+        "gh",
+        "api",
+        "-X",
+        "POST",
         f"repos/{{owner}}/{{repo}}/issues/{parent_number}/sub_issues",
-        "-F", f"sub_issue_id={child_database_id}",
+        "-F",
+        f"sub_issue_id={child_database_id}",
     ]
     if replace_parent:
         args += ["-F", "replace_parent=true"]
@@ -263,7 +266,8 @@ def list_sub_issues_args(*, parent_number: int | str) -> list[str]:
     them. Paginated so a parent with many children is read in full.
     """
     return [
-        "gh", "api",
+        "gh",
+        "api",
         "--paginate",
         f"repos/{{owner}}/{{repo}}/issues/{parent_number}/sub_issues",
     ]
@@ -279,9 +283,7 @@ _ISSUE_URL = re.compile(r"/repos/(?P<repo>[^/]+/[^/]+)/issues/(?P<number>\d+)/?$
 _REPOSITORY_URL = re.compile(r"/repos/(?P<repo>[^/]+/[^/]+)/?$")
 
 
-def read_link_state(
-    config: dict[str, Any], *, issue_number: int | str
-) -> IssueLinkState | None:
+def read_link_state(config: dict[str, Any], *, issue_number: int | str) -> IssueLinkState | None:
     """Read a child's database id and its current native parent in one call.
 
     The sub-issues endpoint keys on the integer DATABASE id, not the number and
@@ -299,9 +301,11 @@ def read_link_state(
     try:
         proc = _gh_call(
             [
-                "gh", "api",
+                "gh",
+                "api",
                 f"repos/{{owner}}/{{repo}}/issues/{issue_number}",
-                "--jq", _LINK_STATE_JQ,
+                "--jq",
+                _LINK_STATE_JQ,
             ],
             config,
         )
@@ -614,8 +618,7 @@ def _is_unsupported(stderr: str) -> bool:
     """
     lowered = stderr.lower()
     return any(
-        f"http {status}" in lowered or f"({status})" in lowered
-        for status in _UNSUPPORTED_STATUSES
+        f"http {status}" in lowered or f"({status})" in lowered for status in _UNSUPPORTED_STATUSES
     )
 
 
@@ -659,9 +662,11 @@ def _classify_native_failure(
     try:
         probe = _gh_call(
             [
-                "gh", "api",
+                "gh",
+                "api",
                 f"repos/{{owner}}/{{repo}}/issues/{parent_number}",
-                "--jq", ".number",
+                "--jq",
+                ".number",
             ],
             config,
         )
@@ -834,9 +839,7 @@ class NativeRead:
         return self.outcome is not NativeReadOutcome.UNSUPPORTED
 
 
-def read_native_children(
-    config: dict[str, Any], *, parent_number: int | str
-) -> NativeRead:
+def read_native_children(config: dict[str, Any], *, parent_number: int | str) -> NativeRead:
     """The native child set, with the outcome that produced it.
 
     Prefer this over :func:`read_native_child_numbers`, which cannot distinguish
@@ -993,10 +996,15 @@ def fetch_issue_corpus(
     still counts.
     """
     args = [
-        "gh", "issue", "list",
-        "--state", state,
-        "--limit", str(limit),
-        "--json", fields,
+        "gh",
+        "issue",
+        "list",
+        "--state",
+        state,
+        "--limit",
+        str(limit),
+        "--json",
+        fields,
     ]
     try:
         proc = _gh_call(args, config)
@@ -1319,7 +1327,8 @@ def list_issue_comments_args(*, parent_number: int | str) -> list[str]:
     :data:`CHILDREN_VIEW_MARKER` in the comment body.
     """
     return [
-        "gh", "api",
+        "gh",
+        "api",
         "--paginate",
         f"repos/{{owner}}/{{repo}}/issues/{parent_number}/comments",
     ]
@@ -1335,10 +1344,13 @@ def create_comment_args(*, parent_number: int | str, body: str) -> list[str]:
     (never a second comment — DEC-039 D4's overwrite-not-append invariant).
     """
     return [
-        "gh", "api",
-        "-X", "POST",
+        "gh",
+        "api",
+        "-X",
+        "POST",
         f"repos/{{owner}}/{{repo}}/issues/{parent_number}/comments",
-        "-f", f"body={body}",
+        "-f",
+        f"body={body}",
     ]
 
 
@@ -1353,10 +1365,13 @@ def update_comment_args(*, comment_id: int | str, body: str) -> list[str]:
     append a naive children view would do.
     """
     return [
-        "gh", "api",
-        "-X", "PATCH",
+        "gh",
+        "api",
+        "-X",
+        "PATCH",
         f"repos/{{owner}}/{{repo}}/issues/comments/{comment_id}",
-        "-f", f"body={body}",
+        "-f",
+        f"body={body}",
     ]
 
 

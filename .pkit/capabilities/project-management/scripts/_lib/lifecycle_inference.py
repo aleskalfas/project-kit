@@ -78,9 +78,7 @@ def workflow_process(workflow: dict | None) -> dict:
     return workflow
 
 
-def legal_targets(
-    workflow: dict | None, current_state: str, structural_type: str
-) -> list[str]:
+def legal_targets(workflow: dict | None, current_state: str, structural_type: str) -> list[str]:
     """The states workflow.yaml lets an issue of `structural_type` move to
     from `current_state`, in declaration order.
 
@@ -273,9 +271,7 @@ def integration_slug(body: str) -> str | None:
     return m.group(1) if m else None
 
 
-def resolve_base_branch(
-    config: dict, body: str, *, explicit: str | None = None
-) -> str:
+def resolve_base_branch(config: dict, body: str, *, explicit: str | None = None) -> str:
     """The base branch for an issue's work (DEC-013 `base-branch`) — the ONE
     resolution shared by start-work (branch start-point) and every PR-opening
     verb (open-pr, create-draft, review-work), so the branch and its PR agree.

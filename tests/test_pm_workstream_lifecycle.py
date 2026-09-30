@@ -14,13 +14,7 @@ import pytest
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SCRIPTS_DIR = (
-    REPO_ROOT
-    / ".pkit"
-    / "capabilities"
-    / "project-management"
-    / "scripts"
-)
+SCRIPTS_DIR = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
 
 
 def _load(name: str):
@@ -137,9 +131,7 @@ def test_split_file_mutation_mapping_form(tmp_path) -> None:
     yaml = YAML(typ="rt")
     path = tmp_path / "workstreams.yaml"
     path.write_text(
-        "schema_version: 1\n"
-        "workstreams:\n"
-        "  cli:\n    name: cli\n    status: active\n",
+        "schema_version: 1\nworkstreams:\n  cli:\n    name: cli\n    status: active\n",
         encoding="utf-8",
     )
     with path.open("r", encoding="utf-8") as f:

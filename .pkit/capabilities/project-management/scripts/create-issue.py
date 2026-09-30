@@ -272,21 +272,11 @@ def main() -> int:
         return 1
 
     # Read schemas + adopter config.
-    issue_types = _read_yaml(
-        capability_root / "schemas" / "issue-types.yaml", yaml_loader
-    )
-    titles = _read_yaml(
-        capability_root / "schemas" / "titles.yaml", yaml_loader
-    )
-    classification = _read_yaml(
-        capability_root / "schemas" / "classification.yaml", yaml_loader
-    )
-    body_format = _read_yaml(
-        capability_root / "schemas" / "body-format.yaml", yaml_loader
-    )
-    config = _read_yaml(
-        capability_root / "project" / "config.yaml", yaml_loader
-    )
+    issue_types = _read_yaml(capability_root / "schemas" / "issue-types.yaml", yaml_loader)
+    titles = _read_yaml(capability_root / "schemas" / "titles.yaml", yaml_loader)
+    classification = _read_yaml(capability_root / "schemas" / "classification.yaml", yaml_loader)
+    body_format = _read_yaml(capability_root / "schemas" / "body-format.yaml", yaml_loader)
+    config = _read_yaml(capability_root / "project" / "config.yaml", yaml_loader)
 
     type_entry = (issue_types.get("types") or {}).get(args.type)
     if not isinstance(type_entry, dict):
@@ -464,11 +454,7 @@ def main() -> int:
         axis_labels.resolve_write("workstream", workstream_default, substrate_map),
         str,
     )
-    if (
-        args.workstream is None
-        and workstream_label_carried
-        and not default_writes_a_label
-    ):
+    if args.workstream is None and workstream_label_carried and not default_writes_a_label:
         print(
             f"error: --workstream is required. workstream is carried "
             f"{axis_carriage.describe('workstream', config, substrate_map)}, so a "
@@ -1111,7 +1097,10 @@ def _resolve_repo_name_with_owner_safe() -> str:
     try:
         proc = subprocess.run(
             ["gh", "repo", "view", "--json", "nameWithOwner", "--jq", ".nameWithOwner"],
-            capture_output=True, text=True, check=False, timeout=5,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=5,
         )
         return proc.stdout.strip() if proc.returncode == 0 else ""
     except (FileNotFoundError, subprocess.TimeoutExpired):
@@ -1200,7 +1189,6 @@ def _title_prefix_for(
     return rendered
 
 
-
 def _parent_ref_label(issue_types: dict, parent_type: str) -> str | None:
     """The parent-ref label for a parent of structural type ``parent_type``.
 
@@ -1217,9 +1205,7 @@ def _parent_ref_label(issue_types: dict, parent_type: str) -> str | None:
     return rendered or None
 
 
-def _detect_parent_structural_type(
-    parent_num: int, config: dict, issue_types: dict
-) -> str | None:
+def _detect_parent_structural_type(parent_num: int, config: dict, issue_types: dict) -> str | None:
     """Best-effort read of a parent issue's structural type from its title (#356).
 
     Reads the parent's title via ``gh issue view`` and infers the structural type
@@ -1315,9 +1301,7 @@ def _parent_ref_line(
     be detected — the label degrades to the first option in the type's
     ``parent_ref_form`` (the prior behaviour).
     """
-    if milestone_num is not None and "milestone" in (
-        type_entry.get("parent_issue_types") or []
-    ):
+    if milestone_num is not None and "milestone" in (type_entry.get("parent_issue_types") or []):
         return f"Milestone: [#{milestone_num}](../milestone/{milestone_num})"
     if parent_num is None:
         return ""
@@ -1359,7 +1343,7 @@ def _strip_issue_template_frontmatter(raw: str) -> str:
     end = raw.find("\n---\n", 4)
     if end < 0:
         return raw
-    return raw[end + len("\n---\n"):]
+    return raw[end + len("\n---\n") :]
 
 
 # ---- gh helpers ------------------------------------------------------

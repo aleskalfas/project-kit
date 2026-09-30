@@ -108,7 +108,9 @@ def _changed_files(fork: str) -> list[str] | None:
     try:
         proc = subprocess.run(
             ["git", "diff", "--name-only", "--diff-filter=ACMRT", fork, "HEAD"],
-            capture_output=True, text=True, check=False,
+            capture_output=True,
+            text=True,
+            check=False,
         )
     except FileNotFoundError:
         print("error: git not found.", file=sys.stderr)
@@ -150,9 +152,7 @@ def _pr_body(args: argparse.Namespace, config: dict) -> str:
             return ""
     # Resolve the PR body from the current branch (CI / local). Best-effort:
     # if there is no PR, overrides simply aren't available.
-    proc = gh_run(
-        ["gh", "pr", "view", "--json", "body", "-q", ".body"], config, check=False
-    )
+    proc = gh_run(["gh", "pr", "view", "--json", "body", "-q", ".body"], config, check=False)
     if proc.returncode != 0:
         return ""
     return proc.stdout or ""
@@ -173,18 +173,22 @@ def main() -> int:
         ),
     )
     parser.add_argument(
-        "--base", default=None,
+        "--base",
+        default=None,
         help=(
             "Base ref to diff HEAD against (default: $PKIT_CHECK_BASE, else the "
             "default branch — `pkit repository base` shows it, COR-054)."
         ),
     )
     parser.add_argument(
-        "--pr-body-file", default=None,
+        "--pr-body-file",
+        default=None,
         help="File containing the PR body (override source). Default: gh pr view.",
     )
     parser.add_argument(
-        "--capability-root", type=Path, default=None,
+        "--capability-root",
+        type=Path,
+        default=None,
         help=f"Default: <repo-root>/.pkit/capabilities/{CAPABILITY_NAME}/.",
     )
     args = parser.parse_args()
@@ -262,16 +266,13 @@ def main() -> int:
         triggered = sorted(f for f in changed if _matches(code_glob, f))
         if not triggered:
             continue  # this rule's code surface wasn't touched
-        doc_touched = any(
-            any(_matches(str(d), f) for f in changed_set) for d in docs
-        )
+        doc_touched = any(any(_matches(str(d), f) for f in changed_set) for d in docs)
         if doc_touched:
             print(f"  ✓ {code_glob} → doc updated")
             continue
         # Override: the Doc-impact section names the glob or a triggering file.
         overridden = bool(section) and (
-            code_glob.lower() in section
-            or any(t.lower() in section for t in triggered)
+            code_glob.lower() in section or any(t.lower() in section for t in triggered)
         )
         if overridden:
             print(f"  ⊘ {code_glob} → overridden via `## Doc impact` (audited)")

@@ -57,6 +57,7 @@ def test_check_board_none_id_fails(pc) -> None:
 def test_check_board_cached_node_id_short_circuits_no_gh_call(pc, monkeypatch) -> None:
     """A cached `projects_v2_node_id` is sufficient evidence — no `gh project
     view` is issued at all (the cache-first arm mirroring the create path)."""
+
     def boom(*a, **k):  # pragma: no cover — must not be reached on a cache hit
         raise AssertionError("no gh call may run when projects_v2_node_id is cached")
 
@@ -76,6 +77,7 @@ def _patch_project_run(pc, monkeypatch, captured: dict):
     constructor would produce: it splices `--owner` from `gh.default_owner` (config)
     or the `fallback_owner` the caller passes, whichever resolves first.
     """
+
     def fake_project_run(args, config, *, fallback_owner=None, **kwargs):
         gh_block = config.get("gh") if isinstance(config, dict) else None
         default_owner = gh_block.get("default_owner") if isinstance(gh_block, dict) else None
@@ -103,6 +105,7 @@ def test_check_board_org_owned_threads_owner_and_passes(pc, monkeypatch) -> None
     """#444 core: on a cache miss the check threads `--owner`, which resolves an
     org-owned board that a bare `gh project view` would false-negative on. The
     owner reaches the constructor as `fallback_owner` (no `gh.default_owner` here)."""
+
     def proc_for(cmd):
         # Model the org-owned board: only the owner-threaded view succeeds.
         if "--owner" in cmd:

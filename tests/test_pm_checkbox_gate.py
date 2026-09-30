@@ -21,9 +21,7 @@ import pytest
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SCRIPTS = (
-    REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
-)
+SCRIPTS = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
 
 sys.path.insert(0, str(SCRIPTS))
 from _lib import checkbox_gate  # noqa: E402
@@ -32,9 +30,7 @@ from _lib import lifecycle_inference  # noqa: E402
 
 def _load_script(name: str):
     module_name = f"pm_{name.replace('-', '_')}_checkbox_gate_under_test"
-    spec = importlib.util.spec_from_file_location(
-        module_name, SCRIPTS / f"{name}.py"
-    )
+    spec = importlib.util.spec_from_file_location(module_name, SCRIPTS / f"{name}.py")
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     sys.modules[module_name] = module
@@ -88,7 +84,8 @@ def test_all_boxes_ticked_false_when_any_unticked() -> None:
 
 def test_refusal_message_lists_each_box_then_the_remedy() -> None:
     message = checkbox_gate.refusal_message(
-        ["- [ ] first", "- [ ] second"], remedy="tick them.",
+        ["- [ ] first", "- [ ] second"],
+        remedy="tick them.",
     )
     lines = message.splitlines()
     assert lines[0] == "[refused] DEC-007 checkbox close-gate:"
@@ -99,11 +96,11 @@ def test_refusal_message_lists_each_box_then_the_remedy() -> None:
 
 def test_refusal_message_scope_qualifies_the_header() -> None:
     message = checkbox_gate.refusal_message(
-        ["- [ ] x"], remedy="tick it.", scope="cascade-eligibility",
+        ["- [ ] x"],
+        remedy="tick it.",
+        scope="cascade-eligibility",
     )
-    assert message.startswith(
-        "[refused] DEC-007 checkbox close-gate (cascade-eligibility):"
-    )
+    assert message.startswith("[refused] DEC-007 checkbox close-gate (cascade-eligibility):")
 
 
 # --- one implementation, every call site (#734) -----------------------
@@ -129,13 +126,10 @@ def test_command_call_sites_read_the_shared_rule(script: str) -> None:
     lives, as done-work's refusal does (#1015).
     """
     module = _load_script(script)
-    resolved = getattr(module, "_unticked_boxes", None) or getattr(
-        module, "unticked_boxes", None
-    )
+    resolved = getattr(module, "_unticked_boxes", None) or getattr(module, "unticked_boxes", None)
     positional = getattr(module, "unticked_box_lines", None)
     assert (
-        resolved is checkbox_gate.unticked_boxes
-        or positional is checkbox_gate.unticked_box_lines
+        resolved is checkbox_gate.unticked_boxes or positional is checkbox_gate.unticked_box_lines
     ), f"{script} does not use `_lib.checkbox_gate`'s unticked-box rule"
 
 
@@ -148,7 +142,9 @@ def test_unticked_box_lines_locates_what_unticked_boxes_reports() -> None:
 
 def test_refusal_message_shows_a_hint_under_each_box() -> None:
     message = checkbox_gate.refusal_message(
-        ["- [ ] a", "- [ ] b"], remedy="tick them.", hints=["tick a", ""],
+        ["- [ ] a", "- [ ] b"],
+        remedy="tick them.",
+        hints=["tick a", ""],
     )
     assert "  - - [ ] a\n      → tick a\n  - - [ ] b\n\n  → tick them." in message
 
@@ -159,16 +155,12 @@ def test_predicate_and_done_work_agree_on_a_body() -> None:
     Same rule, so the same answer — asserted on a body that exercises the
     ticked / unticked / bare-box / plain-bullet cases together.
     """
-    body = (
-        "## Acceptance criteria\n\n"
-        "- [x] shipped\n"
-        "- [ ] tested\n"
-        "- [ ]\n"
-        "- not a box\n"
-    )
+    body = "## Acceptance criteria\n\n- [x] shipped\n- [ ] tested\n- [ ]\n- not a box\n"
     done_work = _load_script("done-work")
     result = done_work._check_checkbox_gate(
-        7, {"labels": [], "body": body}, skip=False,
+        7,
+        {"labels": [], "body": body},
+        skip=False,
     )
     assert result.passed is False
     assert lifecycle_inference.unticked_boxes(body) == ["- [ ] tested"]

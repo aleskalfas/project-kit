@@ -194,9 +194,7 @@ def test_awaiting_cascade_outcome_forbids_resume_when() -> None:
         "blocked_on": "awaiting-cascade-outcome",
         "resume_when": {"run": "nope"},
     }
-    assert _errors(d), (
-        "awaiting-cascade-outcome carries no resume_when (the fold is the check)"
-    )
+    assert _errors(d), "awaiting-cascade-outcome carries no resume_when (the fold is the check)"
 
 
 def test_subprocess_outcome_gate_still_accepted() -> None:

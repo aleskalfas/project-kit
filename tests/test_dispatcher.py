@@ -24,7 +24,11 @@ from project_kit.dispatcher import (
     resolve_aliases,
     static_command_names,
 )
-from project_kit.manifest import ComponentRegistryEntry, read_backbone_manifest, write_backbone_manifest
+from project_kit.manifest import (
+    ComponentRegistryEntry,
+    read_backbone_manifest,
+    write_backbone_manifest,
+)
 from tests.adopter_repo import MakeAdopterRepo
 
 
@@ -105,9 +109,7 @@ sys.exit({exit_code})
 """,
         encoding="utf-8",
     )
-    script_path.chmod(
-        script_path.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
-    )
+    script_path.chmod(script_path.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
     return script_path
 
 
@@ -131,10 +133,7 @@ def test_installed_capability_with_commands_surfaces_in_main_help(
         kit_target,
         "demo",
         commands_yaml=(
-            "commands:\n"
-            "  ping:\n"
-            "    script: scripts/ping.py\n"
-            "    help: Print a ping marker.\n"
+            "commands:\n  ping:\n    script: scripts/ping.py\n    help: Print a ping marker.\n"
         ),
     )
     runner = CliRunner()
@@ -160,10 +159,7 @@ def test_capability_subcommand_lists_via_capability_help(kit_target: Path) -> No
         kit_target,
         "demo",
         commands_yaml=(
-            "commands:\n"
-            "  ping:\n"
-            "    script: scripts/ping.py\n"
-            "    help: Print a ping marker.\n"
+            "commands:\n  ping:\n    script: scripts/ping.py\n    help: Print a ping marker.\n"
         ),
     )
     _stage_proxy_script(cap_dir, "scripts/ping.py")
@@ -259,18 +255,11 @@ def test_proxy_passes_arguments_verbatim_to_script(
     cap_dir = _install_synthetic_capability(
         kit_target,
         "demo",
-        commands_yaml=(
-            "commands:\n"
-            "  echo:\n"
-            "    script: scripts/echo.py\n"
-            "    help: Echo argv.\n"
-        ),
+        commands_yaml=("commands:\n  echo:\n    script: scripts/echo.py\n    help: Echo argv.\n"),
     )
     _stage_proxy_script(cap_dir, "scripts/echo.py")
     runner = CliRunner()
-    result = runner.invoke(
-        main, ["demo", "echo", "--flag", "value", "--", "positional"]
-    )
+    result = runner.invoke(main, ["demo", "echo", "--flag", "value", "--", "positional"])
     assert result.exit_code == 0
     captured = capfd.readouterr()
     assert "--flag" in captured.out
@@ -284,10 +273,7 @@ def test_proxy_returns_script_exit_code(kit_target: Path) -> None:
         kit_target,
         "demo",
         commands_yaml=(
-            "commands:\n"
-            "  fail:\n"
-            "    script: scripts/fail.py\n"
-            "    help: Exit non-zero.\n"
+            "commands:\n  fail:\n    script: scripts/fail.py\n    help: Exit non-zero.\n"
         ),
     )
     _stage_proxy_script(cap_dir, "scripts/fail.py", exit_code=42)
@@ -308,12 +294,7 @@ def test_proxy_passes_help_flag_through_to_script(
     cap_dir = _install_synthetic_capability(
         kit_target,
         "demo",
-        commands_yaml=(
-            "commands:\n"
-            "  echo:\n"
-            "    script: scripts/echo.py\n"
-            "    help: Echo argv.\n"
-        ),
+        commands_yaml=("commands:\n  echo:\n    script: scripts/echo.py\n    help: Echo argv.\n"),
     )
     _stage_proxy_script(cap_dir, "scripts/echo.py")
     runner = CliRunner()
@@ -359,10 +340,7 @@ def test_unknown_subcommand_under_known_capability_errors(kit_target: Path) -> N
         kit_target,
         "demo",
         commands_yaml=(
-            "commands:\n"
-            "  ping:\n"
-            "    script: scripts/ping.py\n"
-            "    help: Print a ping marker.\n"
+            "commands:\n  ping:\n    script: scripts/ping.py\n    help: Print a ping marker.\n"
         ),
     )
     runner = CliRunner()
@@ -386,10 +364,7 @@ def test_kit_internal_command_wins_when_capability_name_matches(
         kit_target,
         "version",  # collides with `pkit version`
         commands_yaml=(
-            "commands:\n"
-            "  ping:\n"
-            "    script: scripts/ping.py\n"
-            "    help: Should be unreachable.\n"
+            "commands:\n  ping:\n    script: scripts/ping.py\n    help: Should be unreachable.\n"
         ),
     )
     runner = CliRunner()
@@ -464,12 +439,7 @@ def test_canonical_capability_name_wins_over_alias_collision(
     cap_a = _install_synthetic_capability(
         kit_target,
         "cap-a",
-        commands_yaml=(
-            "commands:\n"
-            "  ping:\n"
-            "    script: scripts/a-ping.py\n"
-            "    help: A's ping.\n"
-        ),
+        commands_yaml=("commands:\n  ping:\n    script: scripts/a-ping.py\n    help: A's ping.\n"),
     )
     cap_b = _install_synthetic_capability(
         kit_target,
@@ -506,10 +476,7 @@ def test_capability_without_aliases_field_works_unchanged(
         kit_target,
         "demo",
         commands_yaml=(
-            "commands:\n"
-            "  ping:\n"
-            "    script: scripts/ping.py\n"
-            "    help: Print a ping.\n"
+            "commands:\n  ping:\n    script: scripts/ping.py\n    help: Print a ping.\n"
         ),
     )
     _stage_proxy_script(cap_dir, "scripts/ping.py", body='print("pong")')
@@ -656,10 +623,7 @@ def test_uninstalled_capability_does_not_surface(kit_target: Path) -> None:
         kit_target,
         "demo",
         commands_yaml=(
-            "commands:\n"
-            "  ping:\n"
-            "    script: scripts/ping.py\n"
-            "    help: Print a ping marker.\n"
+            "commands:\n  ping:\n    script: scripts/ping.py\n    help: Print a ping marker.\n"
         ),
     )
     runner = CliRunner()
@@ -675,6 +639,7 @@ def test_uninstalled_capability_does_not_surface(kit_target: Path) -> None:
     write_backbone_manifest(kit_target, backbone)
     cap_dir = kit_target / ".pkit" / "capabilities" / "demo"
     import shutil
+
     shutil.rmtree(cap_dir)
 
     after = runner.invoke(main, ["--help"])
@@ -700,10 +665,7 @@ def test_resolve_capability_script_finds_declared_leaf(kit_target: Path) -> None
         ),
     )
     script = _stage_proxy_script(cap_dir, "scripts/context-workstream.py")
-    assert (
-        resolve_capability_script(kit_target, "demo", "context-workstream")
-        == script
-    )
+    assert resolve_capability_script(kit_target, "demo", "context-workstream") == script
 
 
 def test_resolve_capability_script_none_on_every_degrade_axis(

@@ -77,16 +77,11 @@ def test_kind_prefixed_tasks_resolve_when_classification_is_supplied(
     title, issue_types, classification
 ) -> None:
     """The regression: these read as `<unrecognised prefix>` before #793."""
-    assert (
-        infer_structural_type(title, issue_types, classification=classification)
-        == "task"
-    )
+    assert infer_structural_type(title, issue_types, classification=classification) == "task"
 
 
 @pytest.mark.parametrize("title", ["[Bug] x", "[Docs] y", "[Chore] z"])
-def test_kind_prefixes_are_opt_in_so_extraction_preserved_behaviour(
-    title, issue_types
-) -> None:
+def test_kind_prefixes_are_opt_in_so_extraction_preserved_behaviour(title, issue_types) -> None:
     """Omitting `classification` reproduces the prefix-only variants exactly.
 
     This is what made wiring nine call sites through one implementation
@@ -102,17 +97,14 @@ def test_every_kind_prefix_resolves_to_task_never_a_container(
     """Kind prefixes are task-only by construction (structural_restriction)."""
     prefix = classification["axes"]["type"]["title_prefix_by_value"][kind]
     assert (
-        infer_structural_type(f"[{prefix}] x", issue_types, classification=classification)
-        == "task"
+        infer_structural_type(f"[{prefix}] x", issue_types, classification=classification) == "task"
     )
 
 
 # ---- label fallback --------------------------------------------------------
 
 
-def test_label_recovers_task_when_the_prefix_was_edited_away(
-    issue_types, classification
-) -> None:
+def test_label_recovers_task_when_the_prefix_was_edited_away(issue_types, classification) -> None:
     assert (
         infer_structural_type(
             "prefix removed by hand",
@@ -182,18 +174,13 @@ def test_empty_title_prefix_matches_no_title(prefix) -> None:
 
 
 def test_empty_title_prefix_does_not_shadow_later_types() -> None:
-    issue_types = {
-        "types": {"blank": {"title_prefix": ""}, "task": {"title_prefix": "Task"}}
-    }
+    issue_types = {"types": {"blank": {"title_prefix": ""}, "task": {"title_prefix": "Task"}}}
     assert infer_structural_type("[Task] x", issue_types) == "task"
 
 
 def test_empty_kind_prefix_matches_no_title(issue_types) -> None:
     classification = {"axes": {"type": {"title_prefix_by_value": {"bug": ""}}}}
-    assert (
-        infer_structural_type("[] x", issue_types, classification=classification)
-        is None
-    )
+    assert infer_structural_type("[] x", issue_types, classification=classification) is None
 
 
 @pytest.mark.parametrize(
@@ -212,12 +199,6 @@ def test_malformed_classification_lookup_path_yields_no_kind_match(
 ) -> None:
     """A null or non-mapping value anywhere on `axes.type.title_prefix_by_value`
     yields no kind-prefix match rather than an exception."""
-    assert (
-        infer_structural_type("[Bug] x", issue_types, classification=classification)
-        is None
-    )
+    assert infer_structural_type("[Bug] x", issue_types, classification=classification) is None
     # The structural prefixes still resolve past a malformed classification.
-    assert (
-        infer_structural_type("[Task] x", issue_types, classification=classification)
-        == "task"
-    )
+    assert infer_structural_type("[Task] x", issue_types, classification=classification) == "task"

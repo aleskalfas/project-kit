@@ -106,9 +106,7 @@ def test_invariant_unknown_subfield_rejected() -> None:
     ]
     assert _errors(definition) != []
 
-    definition["invariants"] = [
-        {"id": "x", "check": {"run": "c"}, "why": "w", "severity": "hard"}
-    ]
+    definition["invariants"] = [{"id": "x", "check": {"run": "c"}, "why": "w", "severity": "hard"}]
     assert _errors(definition) != []
 
 

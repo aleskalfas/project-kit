@@ -247,12 +247,8 @@ def main() -> int:
     if not session_guard.enforce(override=args.allow_foreign_repo):
         return 1
 
-    git_conventions = _read_yaml(
-        capability_root / "schemas" / "git-conventions.yaml", yaml_loader
-    )
-    classification = _read_yaml(
-        capability_root / "schemas" / "classification.yaml", yaml_loader
-    )
+    git_conventions = _read_yaml(capability_root / "schemas" / "git-conventions.yaml", yaml_loader)
+    classification = _read_yaml(capability_root / "schemas" / "classification.yaml", yaml_loader)
 
     branch = _current_branch()
     if branch is None:
@@ -320,9 +316,7 @@ def main() -> int:
     # Base branch (DEC-013, #903): --base, else the closing issue's integration
     # marker, else default_branch — the resolution start-work cut the branch by.
     try:
-        base = infer.resolve_base_branch(
-            config, str(issue.get("body") or ""), explicit=args.base
-        )
+        base = infer.resolve_base_branch(config, str(issue.get("body") or ""), explicit=args.base)
     except default_branch.Unanswered as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
@@ -358,9 +352,7 @@ def main() -> int:
             capability_root=capability_root,
             phase=PHASE_TRANSITION,
         )
-        blocking = [
-            f for f in findings if f.severity in pr_validation.BLOCKING_SEVERITIES
-        ]
+        blocking = [f for f in findings if f.severity in pr_validation.BLOCKING_SEVERITIES]
         if blocking:
             print(
                 "[refused] PR body is not ready for review (validate-at-ready, #569):",
@@ -417,6 +409,7 @@ def main() -> int:
 
     # Fire after_open_pr hooks per DEC-024.
     import re as _re
+
     pr_number_match = _re.search(r"/pull/(\d+)", url)
     pr_number = int(pr_number_match.group(1)) if pr_number_match else None
     if pr_number is not None:
@@ -453,9 +446,7 @@ def _extract_issue_number(branch: str) -> int | None:
     return int(m.group(1))
 
 
-def _closing_issues(
-    positional: int | None, closes: list[int] | None, branch: str
-) -> list[int]:
+def _closing_issues(positional: int | None, closes: list[int] | None, branch: str) -> list[int]:
     """The issues the PR closes, primary first, without repeats.
 
     The positional `<N>` (as review-work and done-work take it) and
@@ -612,8 +603,7 @@ def _current_branch() -> str | None:
         return None
     if proc.returncode != 0:
         print(
-            f"error: could not determine current branch.\n"
-            f"stderr: {proc.stderr.strip()}",
+            f"error: could not determine current branch.\nstderr: {proc.stderr.strip()}",
             file=sys.stderr,
         )
         return None
@@ -640,12 +630,8 @@ def _post_force_audit(pr_number: int, findings: list, config: dict) -> None:
         pass
 
 
-def _gh_pr_create(
-    *, title: str, body: str, base: str, draft: bool
-, config: dict) -> str | None:
-    with tempfile.NamedTemporaryFile(
-        "w", suffix=".md", encoding="utf-8", delete=False
-    ) as f:
+def _gh_pr_create(*, title: str, body: str, base: str, draft: bool, config: dict) -> str | None:
+    with tempfile.NamedTemporaryFile("w", suffix=".md", encoding="utf-8", delete=False) as f:
         f.write(body)
         body_path = f.name
     cmd = [

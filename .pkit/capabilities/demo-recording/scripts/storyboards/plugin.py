@@ -124,9 +124,7 @@ class PluginRegistry:
         """Return all registered language tags (sorted)."""
         return sorted(self._plugins.keys())
 
-    def validate_fence(
-        self, lang: str, content: str, step_num: int, fence_line: int
-    ) -> list[str]:
+    def validate_fence(self, lang: str, content: str, step_num: int, fence_line: int) -> list[str]:
         """Validate one fence; return list of error strings (with context prefix)."""
         plugin = self.get(lang)
         if plugin is None:

@@ -53,8 +53,7 @@ PARITY_BODIES = [
     "## What\n- not criteria\n",  # no acceptance-criteria section
     "## Acceptance criteria\n- [ ]\n- [ ] real one\n",  # bare skeleton excluded
     # EPIC shape: checkboxes live under `## Success criteria` (body-format.yaml)
-    "EPIC: #1\n\n## Outcome\nthesis\n\n## Success criteria\n"
-    "- [ ] proven\n- [x] shipped\n",
+    "EPIC: #1\n\n## Outcome\nthesis\n\n## Success criteria\n- [ ] proven\n- [x] shipped\n",
 ]
 
 # The schema-resolved heading set both sides must share for index parity.
@@ -106,12 +105,7 @@ def test_checkbox_headings_from_real_schema(crit) -> None:
     from ruamel.yaml import YAML
 
     path = (
-        REPO_ROOT
-        / ".pkit"
-        / "capabilities"
-        / "project-management"
-        / "schemas"
-        / "body-format.yaml"
+        REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "schemas" / "body-format.yaml"
     )
     body_format = YAML(typ="safe").load(path.read_text(encoding="utf-8"))
     headings = crit.checkbox_headings(body_format)
@@ -187,8 +181,7 @@ def test_set_checkbox_state_unticks(crit) -> None:
 
 def test_set_checkbox_state_preserves_indentation_and_text(crit) -> None:
     assert (
-        crit.set_checkbox_state("   - [ ] nested item  ", checked=True)
-        == "   - [x] nested item  "
+        crit.set_checkbox_state("   - [ ] nested item  ", checked=True) == "   - [x] nested item  "
     )
 
 

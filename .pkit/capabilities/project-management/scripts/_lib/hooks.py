@@ -65,30 +65,34 @@ except ImportError:  # pragma: no cover
 
 HOOKS_RELATIVE_PATH = "project/hooks.yaml"
 
-LIFECYCLE_EVENTS: frozenset[str] = frozenset({
-    "after_create_issue",
-    "after_close_issue",
-    "after_open_pr",
-    "after_merge_pr",
-    "after_move_issue",
-})
+LIFECYCLE_EVENTS: frozenset[str] = frozenset(
+    {
+        "after_create_issue",
+        "after_close_issue",
+        "after_open_pr",
+        "after_merge_pr",
+        "after_move_issue",
+    }
+)
 
-KIT_SHIPPED_KINDS: frozenset[str] = frozenset({
-    "set-board-field",
-    "post-comment",
-    "assign-milestone",
-    "custom-script",
-})
+KIT_SHIPPED_KINDS: frozenset[str] = frozenset(
+    {
+        "set-board-field",
+        "post-comment",
+        "assign-milestone",
+        "custom-script",
+    }
+)
 
 
 @dataclass(frozen=True)
 class HookResult:
     """Outcome of one hook execution."""
 
-    index: int           # zero-based index within the event's hook list
-    kind: str            # hook kind that ran
-    status: str          # "ok" | "skipped" | "failed"
-    detail: str          # one-line human-readable summary
+    index: int  # zero-based index within the event's hook list
+    kind: str  # hook kind that ran
+    status: str  # "ok" | "skipped" | "failed"
+    detail: str  # one-line human-readable summary
     error: str | None = None  # populated when status == "failed"
 
 
@@ -129,10 +133,7 @@ def fire_hooks(
     calling from a context where the resolver can't find it.
     """
     if event not in LIFECYCLE_EVENTS:
-        raise ValueError(
-            f"unknown lifecycle event {event!r}. Allowed: "
-            f"{sorted(LIFECYCLE_EVENTS)}"
-        )
+        raise ValueError(f"unknown lifecycle event {event!r}. Allowed: {sorted(LIFECYCLE_EVENTS)}")
 
     if capability_root is None:
         capability_root = _resolve_capability_root()
@@ -149,31 +150,37 @@ def fire_hooks(
     results: list[HookResult] = []
     for index, entry in enumerate(entries):
         if not isinstance(entry, dict):
-            results.append(HookResult(
-                index=index,
-                kind="<unknown>",
-                status="failed",
-                detail=f"hook entry #{index} is not a mapping",
-                error="malformed hook entry",
-            ))
+            results.append(
+                HookResult(
+                    index=index,
+                    kind="<unknown>",
+                    status="failed",
+                    detail=f"hook entry #{index} is not a mapping",
+                    error="malformed hook entry",
+                )
+            )
             continue
         kind = str(entry.get("kind", "")).strip()
         if not kind:
-            results.append(HookResult(
-                index=index,
-                kind="<unknown>",
-                status="failed",
-                detail=f"hook entry #{index} missing required `kind`",
-                error="malformed hook entry",
-            ))
+            results.append(
+                HookResult(
+                    index=index,
+                    kind="<unknown>",
+                    status="failed",
+                    detail=f"hook entry #{index} missing required `kind`",
+                    error="malformed hook entry",
+                )
+            )
             continue
         if kind not in KIT_SHIPPED_KINDS:
-            results.append(HookResult(
-                index=index,
-                kind=kind,
-                status="skipped",
-                detail=f"unknown kind {kind!r}; ignored at fire-time",
-            ))
+            results.append(
+                HookResult(
+                    index=index,
+                    kind=kind,
+                    status="skipped",
+                    detail=f"unknown kind {kind!r}; ignored at fire-time",
+                )
+            )
             continue
 
         try:
@@ -274,9 +281,7 @@ def _hook_set_board_field(
     if not isinstance(field_id, str) or not field_id:
         raise HookFailure("missing or empty `field_id`")
     if not (option_id or text_value):
-        raise HookFailure(
-            "set-board-field requires `single_select_option_id` or `text_value`"
-        )
+        raise HookFailure("set-board-field requires `single_select_option_id` or `text_value`")
 
     item_id = _board_item_id_for_context(context)
     if item_id is None:
@@ -298,9 +303,7 @@ def _hook_set_board_field(
 
     if dry_run:
         which = (
-            f"single_select_option_id={option_id}"
-            if option_id
-            else f"text_value={text_value!r}"
+            f"single_select_option_id={option_id}" if option_id else f"text_value={text_value!r}"
         )
         return HookResult(
             index=index,
@@ -380,13 +383,18 @@ def _hook_post_comment(
     # Idempotency: skip if a comment with this stamp already exists.
     is_pr = "pr" in context
     list_args = [
-        "gh", "pr" if is_pr else "issue", "view", str(issue_number),
-        "--json", "comments",
+        "gh",
+        "pr" if is_pr else "issue",
+        "view",
+        str(issue_number),
+        "--json",
+        "comments",
     ]
     proc = _gh_call(list_args, config)
     if proc.returncode == 0:
         try:
             import json
+
             data = json.loads(proc.stdout)
             for c in data.get("comments", []):
                 if stamp_marker in (c.get("body") or ""):
@@ -400,14 +408,16 @@ def _hook_post_comment(
             pass  # fall through to post
 
     post_args = [
-        "gh", "pr" if is_pr else "issue", "comment", str(issue_number),
-        "--body", body,
+        "gh",
+        "pr" if is_pr else "issue",
+        "comment",
+        str(issue_number),
+        "--body",
+        body,
     ]
     proc = _gh_call(post_args, config)
     if proc.returncode != 0:
-        raise HookFailure(
-            f"gh comment failed: {proc.stderr.strip() or 'no stderr'}"
-        )
+        raise HookFailure(f"gh comment failed: {proc.stderr.strip() or 'no stderr'}")
     return HookResult(
         index=index,
         kind="post-comment",
@@ -426,7 +436,9 @@ def _hook_assign_milestone(
     title = entry.get("title")
     if not isinstance(title, str) or not title:
         raise HookFailure("missing or empty `title`")
-    issue_number = context.get("issue", {}).get("number") if isinstance(context.get("issue"), dict) else None
+    issue_number = (
+        context.get("issue", {}).get("number") if isinstance(context.get("issue"), dict) else None
+    )
     if issue_number is None:
         return HookResult(
             index=index,
@@ -500,7 +512,9 @@ def _hook_custom_script(
         "PKIT_HOOK_REPLAY": "true" if entry.get("_replay") else "false",
         "PKIT_DRY_RUN": "true" if dry_run else "false",
     }
-    issue_number = context.get("issue", {}).get("number") if isinstance(context.get("issue"), dict) else None
+    issue_number = (
+        context.get("issue", {}).get("number") if isinstance(context.get("issue"), dict) else None
+    )
     pr_number = context.get("pr", {}).get("number") if isinstance(context.get("pr"), dict) else None
     if issue_number is not None:
         envelope["PKIT_ISSUE_NUMBER"] = str(issue_number)
@@ -535,9 +549,7 @@ def _hook_custom_script(
     except (FileNotFoundError, PermissionError) as exc:
         raise HookFailure(f"script invocation failed: {exc}")
     if proc.returncode != 0:
-        raise HookFailure(
-            f"script exited {proc.returncode}: {proc.stderr.strip() or 'no stderr'}"
-        )
+        raise HookFailure(f"script exited {proc.returncode}: {proc.stderr.strip() or 'no stderr'}")
     return HookResult(
         index=index,
         kind="custom-script",

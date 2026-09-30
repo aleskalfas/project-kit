@@ -59,7 +59,6 @@ def _indeterminate(reason: str) -> dict[str, Any]:
 _MERGED_PRS_LIMIT = 100
 
 
-
 # --- shared issue access --------------------------------------------------
 
 
@@ -184,8 +183,7 @@ def parent_has_active_descendant(parent_number: int) -> dict[str, Any]:
     return {
         "result": bool(active),
         "reason": (
-            f"#{parent_number} has active descendant(s): "
-            f"{', '.join(f'#{n}' for n in active)}"
+            f"#{parent_number} has active descendant(s): {', '.join(f'#{n}' for n in active)}"
             if active
             else f"#{parent_number} has no in-progress-or-further descendant"
         ),
@@ -238,8 +236,7 @@ def cascade_members(parent_number: int) -> dict[str, Any]:
     resolution = containment.resolve_children(config, parent_number=parent_number)
     if not resolution.complete:
         return _indeterminate(
-            f"the child set for #{parent_number} may be incomplete: "
-            f"{resolution.incomplete_reason}"
+            f"the child set for #{parent_number} may be incomplete: {resolution.incomplete_reason}"
         )
     members = [str(n) for n in resolution.numbers]
     return {
@@ -354,10 +351,7 @@ def gate_pr_merged(issue_number: int, actor: str | None = None) -> dict[str, Any
     return {
         "exists": True,
         "produced_by": merged_by,
-        "reason": (
-            f"PR #{pr.get('number')} closing #{issue_number} merged by "
-            f"{merged_by!r}"
-        ),
+        "reason": (f"PR #{pr.get('number')} closing #{issue_number} merged by {merged_by!r}"),
         "detail": {"pr_number": pr.get("number"), "merged_by": merged_by},
     }
 
@@ -409,9 +403,7 @@ def _find_merged_pr_for_issue(issue_number: int, config: dict[str, Any]) -> Any:
         if issue_number in infer.closing_issue_numbers(body):
             merged_by_raw = pr.get("mergedBy")
             merged_by = (
-                merged_by_raw.get("login")
-                if isinstance(merged_by_raw, dict)
-                else merged_by_raw
+                merged_by_raw.get("login") if isinstance(merged_by_raw, dict) else merged_by_raw
             )
             return {"number": pr.get("number"), "merged_by": merged_by}
     # No match within the fetched page. If we hit the ceiling there may be an
