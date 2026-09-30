@@ -1259,7 +1259,11 @@ def _traced(
                 for index in _changes(judge, anchor, reached, points.own_paths)
                 if index in postponed
             )
-        touched = _touched_by(history, _paths_behind(judge, anchor, points.own_paths), behind)
+        touched = (
+            _touched_by(history, _paths_behind(judge, anchor, points.own_paths), behind)
+            if behind
+            else {}
+        )
         commits = tuple(
             CommitBehind(history.commits[index], tuple(sorted(touched.get(index, ()))))
             for index in sorted(behind, reverse=True)
@@ -1279,9 +1283,10 @@ def _paths_behind(judge: _Judge, anchor: Anchor | None, own: frozenset[str]) -> 
         return own
     if anchor.kind == "path":
         return judge.matching_paths(anchor.value) - own
+    rel: str | None = None
     if anchor.kind == "record":
         rel = judge.head.record_path(anchor.value)
-    else:
+    elif anchor.kind == "artefact":
         target = judge.head.find(anchor.value)
         rel = None if target is None else target.path
     return frozenset() if rel is None else _names(judge.history, rel)
