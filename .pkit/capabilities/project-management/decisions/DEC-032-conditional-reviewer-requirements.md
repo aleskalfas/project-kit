@@ -54,7 +54,7 @@ The gate is satisfied when **every reviewer in the resolved required set is sati
 
 ### D4 — `review-pr` invokes the resolved set
 
-`review-pr <N>` resolves the required set for the PR and invokes **every** required reviewer (baseline + contributed), each posting its own local-path verdict, so the developer-at-keyboard flow produces all the verdicts the gate now needs.
+`review-pr <N>` resolves the required set for the PR and invokes every required reviewer (baseline + contributed) whose latest local-path verdict the gate would not already accept — a reviewer with a verdict fresh for the PR's head is reported and not re-run unless `--force` is passed — each invoked reviewer posting its own verdict, so the developer-at-keyboard flow produces exactly the verdicts the gate needs.
 
 ### D5 — Activation is install-driven; the resolved set is recomputed at gate time
 
@@ -96,7 +96,7 @@ Zero installed contributions, or a PR matching none, leaves the gate exactly as 
 - **`pre-check.py`** drops the singleton-per-path refusal for `local_registered:`; it validates that every name in the *resolvable* set (baseline + every contributed rule) has a corresponding deployed agent file, and validates the shape of each capability's contribution declaration.
 - **The pm capability gains a contribution collector** that walks `.pkit/manifest.yaml`'s `components:` for review-contribution declarations and builds the predicate→reviewer resolution map — analogous to DEC-030's `collect_capability_overlays`.
 - **`done-work`'s gate-checker** resolves the required local set per PR (per D1's resolution domain), then applies the D3 rule (per-reviewer OR-across-paths, AND-across-the-set). All verdict-format / freshness / author-exclusion steps are unchanged.
-- **`review-pr`** resolves the required set and invokes every member.
+- **`review-pr`** resolves the required set and invokes every member without a fresh verdict (D4).
 - **Surface change, but migration-free.** This is a surface change per [PRJ-002] (new contribution mechanism + a validator that now *accepts* what it used to refuse), so the implementing PR bumps the pm capability and the backbone. No migration is required: `pre-check.py` previously *refused* N>1, so no adopter holds invalid N>1 state to bridge, and a project with no contributions or a non-matching PR behaves identically to DEC-028 ([COR-010](../../../decisions/core/COR-010-resource-lifecycle.md)).
 - **Amends DEC-028's gate-checker in place (required, not optional).** Because D3 subsumes DEC-028's step 7 (cross-path OR → cross-reviewer AND), DEC-028's "Gate-checker algorithm" step 7 must be corrected in place when this DEC is accepted — a one-line generalisation plus a forward pointer to DEC-032 — so the accepted record does not state a superseded formulation. This is part of accepting DEC-032, not a deferrable navigational nicety. This DEC stands on DEC-026, DEC-027, DEC-028, COR-030, and DEC-030 — all accepted.
 - **First consumer (illustrative).** The `ux-ui-design` capability ships `agents/design-reviewer.md` and a contribution rule matching `workstream: design` to `design-reviewer`, declaring `requires_capabilities: project-management`. A design-workstream PR then requires both the baseline `pm-reviewer` and the `design-reviewer` to APPROVE before `done-work` merges.
