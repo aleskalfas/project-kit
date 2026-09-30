@@ -77,6 +77,26 @@ def _debt_history(timeline: Timeline) -> dict[str, str]:
     return {"changed": changed, "deferred": deferred}
 
 
+def _excluded_history(timeline: Timeline) -> None:
+    """`docs/generated`, excluded by the second `friction.exclude` entry, holds an artefact
+    gone stale with a dead anchor, a deferred one and an unanchored one; `guide` is outside."""
+    timeline.start(
+        {
+            "docs/guide.md": guide(),
+            "docs/generated/api.md": "---\nid: api\n---\n\nGenerated.\n",
+            "docs/generated/cli.md": document(
+                "gen-cli", anchors={"path": ["src/cli/**", "src/gone/**"]}, at=T1, outcome="updated"
+            ),
+            "docs/generated/notes.md": _notes(
+                deferred=[("path", "src/core/**", "regenerated later")]
+            ),
+        },
+        friction_config(exclude=["vendor", "docs/generated"]),
+    )
+    timeline.commit("change the CLI", {"src/cli/main.py": "print('2')\n"}, author=ALICE)
+    timeline.commit("change the engine", {"src/core/engine.py": "ENGINE = 2\n"}, author=BOB)
+
+
 def _debt_key(kind: str, location: str, anchor: Any, origin: Any) -> tuple[str, str, str, str]:
     return (kind, location, json.dumps(anchor, sort_keys=True), origin["commit"])
 
@@ -230,6 +250,18 @@ def test_debt_when_there_is_none_and_while_dormant(timeline: Timeline) -> None:
     assert dormant.exit_code == 0, dormant.output
     assert "no places declared; dormant." in dormant.output
     assert json.loads(_cli("debt", "--json").output)["dormant"] is True
+
+
+def test_debt_leaves_out_an_artefact_under_an_excluded_path(timeline: Timeline) -> None:
+    """COR-050 point 7: excluded paths are left out of the measures, the debt with them."""
+    _excluded_history(timeline)
+    listing = frep.run_debt(timeline.adopter.root)
+    assert [(e.finding.kind.value, e.finding.location) for e in listing.entries] == [
+        ("stale", "docs/guide.md")
+    ]
+    result = _cli("debt", "--json")
+    assert result.exit_code == 0, result.output
+    assert json.loads(result.output)["counts"] == {"deferred": 0, "stale": 1, "unreachable": 0}
 
 
 def test_debt_names_the_artefacts_a_shallow_clone_cannot_judge(
@@ -494,6 +526,60 @@ def test_explain_an_unanchored_artefact(timeline: Timeline) -> None:
     assert "State: unanchored" in result.output and "FINDINGS" not in result.output
 
 
+def test_explain_an_excluded_artefact_names_the_setting_that_leaves_it_out(
+    timeline: Timeline,
+) -> None:
+    _excluded_history(timeline)
+    root = timeline.adopter.root
+    explanation = frep.run_explain(root, "gen-cli")
+    assert (explanation.state, explanation.report) == ("excluded", None)
+    setting = explanation.artefact.excluded_by
+    assert setting is not None
+    assert (setting.value, setting.file, setting.pointer) == (
+        "docs/generated",
+        CONFIG,
+        "/friction/exclude/1",
+    )
+    # Never judged stale; what it declares is still checked, as `check --all` does.
+    assert [(a.anchor.value, a.state) for a in explanation.anchors] == [
+        ("src/cli/**", "excluded"),
+        ("src/gone/**", "dead-anchor"),
+    ]
+    assert [f.finding.kind.value for f in explanation.findings] == ["dead-anchor"]
+    # Its path anchors' files are listed all the same; with no points, none at the point, and
+    # nothing lies behind a finding on its declarations.
+    assert [a.files for a in explanation.anchors] == [
+        fr.AnchorFiles(None, ("src/cli/main.py",), ()),
+        fr.AnchorFiles(None, (), ()),
+    ]
+    (dead,) = explanation.findings
+    assert (dead.finding.message, dead.commits) == ("matches no file", ())
+
+    human = _cli("explain", "gen-cli")
+    assert human.exit_code == 0, human.output
+    assert "State: excluded" in human.output
+    assert (
+        "Excluded by: friction.exclude 'docs/generated' "
+        "(.pkit/project/config.yaml, /friction/exclude/1)" in human.output
+    )
+    assert "FINDINGS" in human.output and "POINTS" not in human.output
+
+    result = _cli("explain", "gen-cli", "--json")
+    assert result.exit_code == 0, result.output
+    doc = json.loads(result.output)
+    assert (doc["state"], doc["revalidation_point"]) == ("excluded", None)
+    assert doc["excluded_by"] == {
+        "value": "docs/generated",
+        "file": CONFIG,
+        "pointer": "/friction/exclude/1",
+    }
+
+    # Deferred or unanchored, an excluded artefact is excluded, and nothing is judged.
+    for reference in ("notes", "api"):
+        unjudged = frep.run_explain(root, reference)
+        assert (unjudged.state, unjudged.report, unjudged.findings) == ("excluded", None, ())
+
+
 def test_explain_refuses_without_places_and_before_the_first_commit(
     make_adopter_repo: MakeAdopterRepo,
 ) -> None:
@@ -574,6 +660,7 @@ def test_explain_json_document_shape(timeline: Timeline) -> None:
         "artefact",
         "body",
         "deferral_points",
+        "excluded_by",
         "findings",
         "head",
         "history",
@@ -589,6 +676,7 @@ def test_explain_json_document_shape(timeline: Timeline) -> None:
         "stale",
     )
     assert doc["body"] == "Body.\n"
+    assert doc["excluded_by"] is None
     assert doc["revalidation_point"]["commit"] == base and doc["deferral_points"] == []
     assert doc["anchors"] == [
         {

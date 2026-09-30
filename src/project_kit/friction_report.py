@@ -14,7 +14,9 @@ never the working tree, as the check does; neither writes anything.
   a deferral, its reason. The entries are exactly those `pkit friction check
   --all` reports (`run_repository_check`); ties keep the check's order,
   upstream first. Artefacts whose points lie beyond a shallow clone are
-  named apart: their debt cannot be told.
+  named apart: their debt cannot be told. An artefact under an excluded
+  path is never judged stale or deferred (COR-050 point 7), so it is not
+  listed.
 - **`explain`** judges one artefact through `run_artefact_check` — the
   check's own judgment of it, with the commits behind each finding — and
   shows its anchors, its revalidation and deferral points, what changed since
@@ -23,14 +25,16 @@ never the working tree, as the check does; neither writes anything.
   … --anchor … --reason …`), or the edit it needs where no writer answers
   it. The artefact is named as the writers name one (`friction_write.
   find_artefact`): its location — `path`, or `path#id` for a collection
-  entry — or an id; here it is looked up at HEAD. Its document also carries
-  what a capability's reader would otherwise compute again (ADR-057 point 2):
-  each path anchor's files at the revalidation point and at HEAD, matched as
-  the check decides a dead anchor, `friction.exclude` applied, and the files
-  it leaves out; each commit's paths behind its finding, what the check read
-  as the change (`fr.CommitBehind`); where a dead path anchor's files went;
-  and the artefact's body as discovery reads it — for a collection entry, the
-  section headed by its id.
+  entry — or an id; here it is looked up at HEAD. An artefact under an
+  excluded path is `excluded`, with the `friction.exclude` entry that leaves
+  it out, and shows only what the check reports of its declarations. Its
+  document also carries what a capability's reader would otherwise compute
+  again (ADR-057 point 2): each path anchor's files at the revalidation point
+  and at HEAD, matched as the check decides a dead anchor, `friction.exclude`
+  applied, and the files it leaves out; each commit's paths behind its
+  finding, what the check read as the change (`fr.CommitBehind`); where a
+  dead path anchor's files went; and the artefact's body as discovery reads
+  it — for a collection entry, the section headed by its id.
 """
 
 from __future__ import annotations
@@ -59,6 +63,7 @@ from project_kit.friction_discovery import (
     Artefact,
     Discovery,
     ResolverCommand,
+    SettingsPath,
     discover_artefacts,
 )
 from project_kit.friction_write import command_line
@@ -75,6 +80,10 @@ REASON = "<why it can wait>"
 #: An artefact the check passes over — no anchors, no deferrals — has this state here.
 UNANCHORED = "unanchored"
 
+#: An artefact under a `friction.exclude` path, never judged stale or deferred (COR-050
+#: point 7), has this state here, whatever it declares.
+EXCLUDED = "excluded"
+
 
 class FrictionReportError(click.ClickException):
     """A reading command could not answer: the artefact is not named, or not at HEAD."""
@@ -82,6 +91,18 @@ class FrictionReportError(click.ClickException):
 
 def _anchor_json(anchor: Anchor | None) -> dict[str, str] | None:
     return None if anchor is None else {"kind": anchor.kind, "value": anchor.value}
+
+
+def _setting_json(setting: SettingsPath | None) -> dict[str, str] | None:
+    """A setting as written — its value, its file and the JSON Pointer to it — or `None`."""
+    if setting is None:
+        return None
+    return {"value": setting.value, "file": setting.file, "pointer": setting.pointer}
+
+
+def _setting_cell(setting: SettingsPath) -> str:
+    """A `friction.exclude` entry as a person finds it: its value, then where it is written."""
+    return f"friction.exclude {setting.value!r} ({setting.file}, {setting.pointer})"
 
 
 def _label(anchor: Anchor) -> str:
@@ -380,12 +401,14 @@ class Explanation:
     head: HeadState
     shallow: bool
     artefact: Artefact
-    report: fr.ArtefactReport | None  # `None`: no anchors and no deferrals, nothing judged
+    report: fr.ArtefactReport | None  # `None`: nothing judged — no anchors, no deferrals, excluded
     anchors: tuple[ExplainedAnchor, ...]  # in written order
     findings: tuple[ExplainedFinding, ...]  # in the check's order
 
     @property
     def state(self) -> str:
+        if self.artefact.excluded:
+            return EXCLUDED
         return UNANCHORED if self.report is None else self.report.state.value
 
     @property
@@ -417,7 +440,11 @@ def run_explain(
     findings = tuple(
         _explained(traced, location, declared, check.artefact) for traced in check.findings
     )
-    unjudged = check.report is not None and check.report.state is fr.ArtefactState.UNREACHABLE
+    unjudged: str | None = None  # what an anchor with no finding shows, when not judged
+    if check.artefact.excluded:
+        unjudged = EXCLUDED
+    elif check.report is not None and check.report.state is fr.ArtefactState.UNREACHABLE:
+        unjudged = fr.ArtefactState.UNREACHABLE.value
     anchors = tuple(
         _anchor_state(anchor, findings, unjudged, check.files.get(anchor)) for anchor in declared
     )
@@ -542,14 +569,16 @@ _ANCHOR_STATES = (_Kind.DEAD_ANCHOR, _Kind.UNRESOLVED_KIND, _Kind.STALE, _Kind.D
 def _anchor_state(
     anchor: Anchor,
     findings: Sequence[ExplainedFinding],
-    unjudged: bool,
+    unjudged: str | None,
     files: fr.AnchorFiles | None,
 ) -> ExplainedAnchor:
+    """An anchor's state: its first finding's kind, else `unjudged` — why the artefact
+    was not judged — else `current`."""
     about = [f for f in findings if f.finding.anchor == anchor]
     kinds = {f.finding.kind for f in about}
     state = next((k.value for k in _ANCHOR_STATES if k in kinds), None)
     if state is None:
-        state = "unreachable" if unjudged else "current"
+        state = unjudged or "current"
     changes = sum(len(f.commits) for f in about if f.finding.kind is _Kind.STALE)
     return ExplainedAnchor(anchor, state, changes, _Kind.OVER_BROAD in kinds, files)
 
@@ -568,6 +597,7 @@ def render_explain_json(explanation: Explanation) -> str:
         "location": explanation.artefact.location,
         "body": explanation.artefact.body,
         "state": explanation.state,
+        "excluded_by": _setting_json(explanation.artefact.excluded_by),
         "revalidation_point": (
             None
             if report is None or report.revalidation_point is None
@@ -596,6 +626,7 @@ _STATE_GLOSS = {
     "deferred": "friction deliberately postponed; nothing stale",
     "unreachable": "a point lies beyond this shallow clone — git fetch --unshallow",
     UNANCHORED: "no anchors and no deferrals: nothing to judge",
+    EXCLUDED: "under an excluded path: left out of the measures and the debt",
 }
 
 # What the commits under a finding are, by its kind.
@@ -609,6 +640,7 @@ _ANCHOR_GLOSS = {
     "current": "unchanged since the revalidation point",
     "deferred": "deferred; nothing after its deferral point",
     "unreachable": "not judged: a point lies beyond this shallow clone",
+    EXCLUDED: "not judged: the artefact is under an excluded path",
 }
 
 
@@ -625,6 +657,8 @@ def render_explain_human(explanation: Explanation, *, now: datetime | None = Non
         lines.append(f"  Artefact: {artefact.id}")
     state = explanation.state
     lines.append(f"  State: {state}" + cli_render.style("muted", f"   ({_STATE_GLOSS[state]})"))
+    if artefact.excluded_by is not None:
+        lines.append(f"  Excluded by: {_setting_cell(artefact.excluded_by)}")
     lines.extend(_header_lines(explanation.head, explanation.shallow))
 
     report = explanation.report
@@ -632,7 +666,7 @@ def render_explain_human(explanation: Explanation, *, now: datetime | None = Non
         lines.extend(["", *_point_lines(report)])
     if explanation.anchors:
         lines.extend(["", *_anchor_lines(explanation)])
-    if report is not None:
+    if report is not None or explanation.findings:
         lines.extend(["", *_finding_lines(explanation, now)])
 
     commands = [
@@ -743,6 +777,7 @@ def _finding_lines(explanation: Explanation, now: datetime) -> list[str]:
 __all__ = [
     "BECAUSE",
     "DEBT_KINDS",
+    "EXCLUDED",
     "REASON",
     "UNANCHORED",
     "Answer",

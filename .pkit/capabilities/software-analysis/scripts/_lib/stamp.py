@@ -15,6 +15,9 @@ the capability's places put it under the analysis location:
 
 It writes the anchors DEC-001 point 4 asks for: a use case's actor, and a
 journey's use cases from its steps, beside the paths and records it is given.
+An actor or a term nothing embodies is stamped with the reason instead, its
+`unanchored-because` (point 9). A revalidation record is not an artefact and
+is stamped by `_lib/revalidation.py`.
 Before the first artefact is placed it records the analysis location through
 the backbone (COR-049 point 5). Where the analysis is, and what it holds, is
 read through the backbone's discovery — the working tree's and the default
@@ -38,11 +41,13 @@ from _lib import backbone, markdown, schemas
 from _lib.model import (
     ACTOR,
     COLLECTIONS,
+    CONTAINER,
     JOURNEY,
     NOUN,
     NUMBERED,
     PREFIX,
     TERM,
+    UNANCHORED_BECAUSE,
     USE_CASE,
     Analysis,
     Unreadable,
@@ -86,6 +91,7 @@ class Request:
     area: str | None = None
     paths: tuple[str, ...] = ()
     records: tuple[str, ...] = ()
+    unanchored_because: str | None = None  # an actor's or a term's reason for no anchors
 
 
 @dataclass(frozen=True)
@@ -116,6 +122,7 @@ def stamp(
             f"{NOUN[kind]}s; `pkit validate` says why"
         )
     _check_words(request)
+    _check_unanchored(request)
     _check_references(analysis, request)
 
     notes: list[str] = []
@@ -157,6 +164,24 @@ def _check_words(request: Request) -> None:
         )
     if request.area is not None and not slug.match(request.area):
         raise Refused(f"the area {request.area!r} is not a word, as a slug is")
+
+
+def _check_unanchored(request: Request) -> None:
+    """Only an actor or a term is kept unanchored with its reason, and never one
+    given anchors: the reason says why it has none (DEC-001 points 4 and 9)."""
+    if request.unanchored_because is None:
+        return
+    if request.kind not in COLLECTIONS:
+        raise Refused(
+            f"{with_article(request.kind)} anchors to its actor, so it is never unanchored"
+        )
+    if not request.unanchored_because.strip():
+        raise Refused("--unanchored-because gives the reason it has no anchors: write it")
+    if request.paths or request.records:
+        raise Refused(
+            f"{with_article(request.kind)} with anchors is not unanchored: give its anchors "
+            f"(--path, --record) or the reason it has none (--unanchored-because), not both"
+        )
 
 
 def _check_references(analysis: Analysis, request: Request) -> None:
@@ -240,11 +265,11 @@ def _document(kind: str, new_id: str, request: Request) -> str:
         anchored = list(dict.fromkeys(request.steps))
     else:
         anchored = [str(request.actor)]
-    data["pkit"] = _container(request, anchored)
+    data[CONTAINER] = _container(request, anchored)
     body = body.replace(template_id, new_id).replace(TITLE, _title(request))
     if kind == JOURNEY:
         body = _journey_body(body, request.steps)
-    return f"---\n{_dump(data)}---\n\n{body}"
+    return f"---\n{dump(data)}---\n\n{body}"
 
 
 def _journey_body(body: str, steps: Sequence[str]) -> str:
@@ -284,11 +309,15 @@ def _added_entry(target: Path, place: str, kind: str, new_id: str, request: Requ
     front, body = _template(kind)
     ((template_id, example),) = dict(markdown.load(front)).items()
     name = _title(request)
-    entry = {**example, "name": name, "pkit": _container(request, [])}
+    entry = {key: value for key, value in example.items() if key != CONTAINER}
+    entry["name"] = name
+    if request.unanchored_because:
+        entry[UNANCHORED_BECAUSE] = request.unanchored_because
+    entry[CONTAINER] = _container(request, [])
     heading = body.find(f"## {template_id}")
     preamble, section = body[:heading], body[heading:]
     section = section.replace(template_id, new_id).replace(str(example["name"]), name)
-    added = _dump({new_id: entry})
+    added = dump({new_id: entry})
     if not target.exists():
         return f"---\n{added}---\n\n{preamble}{section}"
 
@@ -380,7 +409,8 @@ def _template(kind: str) -> tuple[str, str]:
     return front, body
 
 
-def _dump(data: Mapping[str, Any]) -> str:
+def dump(data: Mapping[str, Any]) -> str:
+    """`data` as block YAML, as every stamp writes a front matter."""
     yaml = YAML()
     yaml.default_flow_style = False
     yaml.indent(mapping=2, sequence=4, offset=2)

@@ -1,0 +1,20 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The friction measures now leave out artefacts under a `friction.exclude`
+  path, as COR-050 point 7 says (#1136). `pkit friction check --all` counted
+  and listed every artefact without anchors as unanchored, excluded ones
+  included, and judged excluded artefacts stale or deferred, so `pkit friction
+  debt` listed them too. An excluded artefact is now neither listed nor
+  counted as unanchored and is never judged stale or deferred; the human view
+  counts the rest and says how many were left out, and the JSON `counts` gain
+  `excluded`. What such an artefact declares is still checked: its dead
+  anchors, unresolved kinds and over-broad anchors are reported, since a dead
+  anchor is never silence. `pkit friction explain` on it shows the state
+  `excluded` and names the `friction.exclude` entry that leaves it out, with
+  its file and JSON Pointer (`excluded_by` in `--json`). Artefact discovery
+  decides the exclusion once, as it walks the places, and the checks read it
+  from the artefact. Documented in the CLI reference ("friction check --all",
+  "friction debt", "friction explain") and the schemas README.

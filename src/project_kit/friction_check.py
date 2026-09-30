@@ -450,14 +450,14 @@ class Side:
         self.root = root
         self.discovery = discovery
         self.files = frozenset(tree.files())
-        self._exclude = tuple(pattern_matcher(p.resolved) for p in self.settings.exclude)
 
     @property
     def settings(self) -> FrictionSettings:
         return self.discovery.settings
 
     def excluded(self, path: str) -> bool:
-        return any(match(path) for match in self._exclude)
+        """Whether `friction.exclude` leaves `path` out: discovery's one decision of it."""
+        return self.settings.excluded(path)
 
     def find(self, reference: str) -> Artefact | None:
         return self.discovery.find(reference)

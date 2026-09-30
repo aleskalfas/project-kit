@@ -81,6 +81,7 @@
       "Read",
       "Skill(adapter-author)",
       "Skill(agent-author)",
+      "Skill(analysis-author)",
       "Skill(area-author)",
       "Skill(bundle-author)",
       "Skill(capability-author)",

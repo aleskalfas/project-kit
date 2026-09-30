@@ -660,6 +660,46 @@ def test_excluded_paths_are_ignored_for_anchoring_and_the_measures(timeline: Tim
     assert (result.surface, result.uncovered) == (2, ("src/core/engine.py",))
 
 
+def test_an_artefact_under_an_excluded_path_is_left_out_of_the_measures(
+    timeline: Timeline,
+) -> None:
+    """COR-050 point 7: an excluded artefact is neither listed nor counted as
+    unanchored, and never judged stale or deferred — while what it declares is
+    still checked, since a dead anchor is never silence."""
+    timeline.start(
+        {
+            "docs/guide.md": guide(),
+            "docs/plain.md": "---\ntitle: Plain\n---\n\nText.\n",
+            "docs/generated/api.md": "---\ntitle: API\n---\n\nGenerated.\n",
+            "docs/generated/cli.md": guide(anchors={"path": ["src/cli/**", "src/gone/**"]}),
+            "docs/generated/engine.md": document(
+                "engine",
+                anchors={"path": ["src/core/**"]},
+                at=T1,
+                outcome="updated",
+                deferred=[("path", "src/core/**", "regenerated later")],
+            ),
+        },
+        friction_config(exclude=["docs/generated"]),
+    )
+    timeline.commit("change the CLI", {"src/cli/main.py": "print('x')\n"})
+    timeline.commit("change the engine", {"src/core/engine.py": "ENGINE = 2\n"})
+
+    result = _run(timeline)
+    assert (result.artefacts, result.excluded) == (5, 3)
+    assert result.unanchored == ("docs/plain.md",)
+    assert [r.location for r in result.artefact_reports] == ["docs/guide.md"]
+    assert [(kind, location, anchor) for kind, location, anchor, _ in _summary(result)] == [
+        ("dead-anchor", "docs/generated/cli.md", "path:src/gone/**"),
+        ("stale", "docs/guide.md", "path:src/cli/**"),
+    ]
+    measure = "Unanchored artefacts: 1 of 2 in the places (excluded paths left out: 3 artefacts)"
+    assert measure in fr.render_human(result, now=NOW)
+    counts = json.loads(fr.render_json(result))["counts"]
+    assert (counts["artefacts"], counts["excluded"], counts["checked"]) == (5, 3, 1)
+    assert (counts["stale"], counts["deferred"]) == (1, 0)
+
+
 # --- modes, dormancy, the working tree, output ----------------------------------------------
 
 
