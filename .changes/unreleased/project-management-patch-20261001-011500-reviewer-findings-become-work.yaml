@@ -7,7 +7,8 @@ body: >
   The pm skill states how reviewer findings become work (#1180).
   `create-issue` scopes a follow-up a reviewer produced: it gets a Milestone
   only when it blocks an acceptance criterion of that Milestone's work or is
-  a correctness defect in a shipped gate, and otherwise is filed without
+  a correctness defect in a check that already enforces something, and
+  otherwise is filed without
   one, or on the rolling maintenance Milestone, and waits. `batch-plan`
   treats two Tasks whose implementation notes name overlapping source files
   as one module: the later names the earlier in its `## Dependencies`
