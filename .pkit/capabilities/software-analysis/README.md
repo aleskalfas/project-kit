@@ -200,6 +200,11 @@ It reads the default branch — its tip, where your branch left it, and its hist
 - it **fails when the base names no commit** here, or shares no history with `HEAD` — fetch it, or name another — rather than passing without comparing. A working tree that numbers nothing has nothing to compare and needs no base;
 - it **reports an outdated base** — one that moved on after your branch left it, which is when it can have taken a number since — and never fails on it, with the same `base` document `pkit friction check --json` gives.
 
+**Where it answers.** It compares your branch with the default branch *before* they are merged, so run it where that is what it sees — locally, or in a pre-push hook, against `origin/main`. That is where the rules of the table run, own work landed told from another line of work's included. In CI:
+
+- a **`pull_request` checkout is GitHub's test merge** of your branch into the default branch, which contains the base: `check-numbers` finds nothing to collide with there, and says so. The real CI gate for a number two branches took is `pkit validate`'s duplicate-id check on that merged tree;
+- a **depth-1 clone** — the default of `actions/checkout` — holds no merge-base, and may hold no `origin/main` at all, so this line fails, as the friction check does, rather than pass without comparing. Fetch the history back to where your branch left the default branch: `fetch-depth: 0` on `actions/checkout`, or `git fetch --unshallow origin` (`git fetch --deepen=<n>` until `git merge-base origin/main HEAD` answers).
+
 `--json` prints `{schema_version, base, summary, findings}`: `base` is `{ref, tip, commit, outdated}` (`commit` is the merge-base), or `null` when nothing was compared. It is a query: read-only, offline, and `pkit sync` provisions its dependencies.
 
 ## Authoring: the `analysis-author` skill
