@@ -11,6 +11,8 @@ calls instead of re-reading the declarations or walking the places itself:
 - every **file** the walk read, with the places matching it, its rule-set
   claim, whether it is excluded, and its front matter's own fields;
 - every **artefact**, with its id, kind, place and own fields;
+- every **held document**, with its owner and the places that left it out —
+  never a file or an artefact of any place (#1130);
 - the exit codes: 0 answered, 1 when the configuration cannot be read, 2 on a
   usage error — and the same bytes for the same state.
 """
@@ -300,6 +302,48 @@ def test_at_a_commit_whose_configuration_cannot_be_read_exits_1(adopter: Adopter
 
 
 # --- the command -----------------------------------------------------------------------
+
+
+# --- held documents (COR-050 point 1) -------------------------------------------------------
+
+
+def test_a_held_file_is_listed_with_its_owner_and_walked_by_no_place(adopter: AdopterRepo) -> None:
+    """A folder of held documents is written as a place is. Its files are never
+    among the files or the artefacts — not even of the capability's own place that
+    matches them — and the document lists each with its owner and the places it
+    was left out of. A key added: the version stays."""
+    _evidence_declares(
+        adopter, "  held:\n    - {location: runs, path: records, description: Run records.}\n"
+    )
+    record = "tech-docs/evidence/records/2026-10-01-run.md"
+    adopter.write({record: "---\ndate: '2026-10-01'\n---\n\n# A run\n"})
+    document = _document()
+
+    assert fd.ARTEFACTS_SCHEMA_VERSION == 1
+    assert document["schema_version"] == 1
+    assert document["held"] == [
+        {
+            "path": record,
+            "source": "capability:evidence",
+            "file": EVIDENCE_PACKAGE,
+            "pointer": "/friction/held/0",
+            "written": "records",
+            "location": {"name": "runs", "path": "tech-docs/evidence", "root": "internal"},
+            "places": [2],
+            "fields": {"date": "2026-10-01"},
+            "unreadable": None,
+        }
+    ]
+    assert document["places"][2]["path"] == "tech-docs/evidence/**/*.md"
+    assert record not in document["places"][2]["files"]
+    assert record not in [f["path"] for f in document["files"]]
+    assert record not in [a["path"] for a in document["artefacts"]]
+    human = _run().output.rstrip()
+    assert human.endswith("1 held document(s), walked by no place: 1 by capability:evidence.")
+
+
+def test_without_a_held_folder_the_list_is_empty(adopter: AdopterRepo) -> None:
+    assert _document()["held"] == []
 
 
 def test_the_same_state_prints_the_same_bytes(adopter: AdopterRepo) -> None:

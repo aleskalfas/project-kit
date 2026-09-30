@@ -1,0 +1,20 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  A capability may declare folders of held documents — files it owns that are
+  not artefacts, such as the record of an act — in its package metadata, as
+  `friction.held: [{location, path, description}]`, written and resolved as a
+  place is (COR-050 point 1); the package schema accepts the list, and the
+  package check holds its paths and locations as a place's. Friction discovery
+  walks a held file under no place — a documentation root, another
+  capability's place or the project's — so it is never an artefact, and
+  neither the unanchored measure nor uncovered surface counts it. `pkit
+  friction artefacts --json` lists each held file under a new `held` key with
+  its owner (`source`, `file`, `pointer`, `written`, `location`), the places
+  that match it, its front matter's own fields and why it is unreadable, if it
+  is; the document's `schema_version` stays 1 (a key added). `pkit validate`
+  refuses a friction block written into a held document
+  (`held-friction-block`) and a held folder it cannot read
+  (`malformed-held`), dormant or not.

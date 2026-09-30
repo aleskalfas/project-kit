@@ -20,6 +20,12 @@ settings that declare them, this pass reports:
   repository-relative paths, or an entry in it that is not a path; reported
   whenever it is declared, for the same reason: a surface nothing is measured
   against must never look like a covered one;
+- **a capability held folder not read** — a `friction.held` entry discovery
+  could not read in the place shape, so it holds nothing and the places
+  matching its documents read them as artefacts; reported whenever declared;
+- **a friction block in a held document** — a document a component holds is
+  not an artefact (COR-050 point 1), so nothing reads its anchors or its
+  revalidation; reported whenever declared, dormant or not (COR-050 point 12);
 - **unparsable front matter** in a declared place — reported whenever places
   are declared, dormant or not, because the check never skips an artefact it
   cannot parse: the broken file may be the one carrying the container;
@@ -59,8 +65,9 @@ reports (never errors) so `pkit validate` can show them.
 Dormant until used (COR-050 point 15): with no places declared, or nothing in
 them to judge — no artefact carrying the container and no file it failed to
 parse — the pass reports nothing but its counts, any capability place the walk
-does not follow, any place matching a synced copy and any capability surface
-entry it does not read.
+does not follow, any place matching a synced copy, any capability surface
+entry or held folder it does not read, and any friction block in a held
+document.
 """
 
 from __future__ import annotations
@@ -95,6 +102,8 @@ class FrictionFindingKind(Enum):
     SYNCED_PLACE = "synced-place"  # a place, project or capability, matching a synced copy
     OWNERSHIP_UNAVAILABLE = "ownership-unavailable"  # no predicate to tell a synced copy
     MALFORMED_SURFACE = "malformed-surface"  # a capability surface entry not in the shape
+    MALFORMED_HELD = "malformed-held"  # a capability held folder not in the place shape
+    HELD_BLOCK = "held-friction-block"  # a friction block in a document a component holds
     MALFORMED_BLOCK = "malformed-block"
     UNPARSABLE_FRONT_MATTER = "unparsable-front-matter"
     DANGLING_DEFERRAL = "dangling-deferral"
@@ -142,11 +151,12 @@ def validate_friction(target_root: Path) -> FrictionValidation:
     """Run the pass over the project at `target_root`.
 
     A capability place the walk does not follow, a place matching a synced
-    copy, and a capability surface entry not read, are reported whenever
-    declared. Unparsable front matter is reported whenever places are declared:
-    a file that fails to parse also keeps the pass awake (`Discovery.is_dormant`),
-    so a YAML typo in the only container-carrying file is an error, not silence.
-    The container, deferral and cycle findings run only when the pass is awake.
+    copy, a capability surface entry or held folder not read, and a friction
+    block in a held document, are reported whenever declared. Unparsable front
+    matter is reported whenever places are declared: a file that fails to parse
+    also keeps the pass awake (`Discovery.is_dormant`), so a YAML typo in the
+    only container-carrying file is an error, not silence. The container,
+    deferral and cycle findings run only when the pass is awake.
     """
     settings = read_friction_settings(target_root)
     discovery = discover_artefacts(target_root, settings)
@@ -154,6 +164,8 @@ def validate_friction(target_root: Path) -> FrictionValidation:
     findings.extend(_capability_place_findings(target_root, settings))
     findings.extend(_synced_place_findings(target_root, discovery))
     findings.extend(_capability_surface_findings(settings))
+    findings.extend(_capability_held_findings(settings))
+    findings.extend(_held_block_findings(discovery))
     findings.extend(_unreadable_findings(discovery))
     if not discovery.is_dormant:
         findings.extend(_artefact_findings(target_root, discovery))
@@ -288,6 +300,54 @@ def _capability_surface_findings(settings: FrictionSettings) -> Iterable[Frictio
                 f"globs (COR-050 points 7 and 8)."
             ),
         )
+
+
+# --- held documents (COR-050 point 1) ------------------------------------
+
+# The findings about a held folder not read, and a friction block in a held document.
+HELD_KINDS = frozenset({FrictionFindingKind.MALFORMED_HELD, FrictionFindingKind.HELD_BLOCK})
+
+
+def _capability_held_findings(settings: FrictionSettings) -> Iterable[FrictionFinding]:
+    """Each capability held folder discovery could not read in the place shape,
+    located in its package metadata, in the order read."""
+    for entry in settings.malformed_held:
+        yield FrictionFinding(
+            location=entry.file,
+            pointer=entry.pointer,
+            severity=Severity.ERROR,
+            kind=FrictionFindingKind.MALFORMED_HELD,
+            message=(
+                f"{entry.reason}, so friction discovery holds nothing under it, and a place "
+                f"matching its documents reads them as artefacts; a held folder is written "
+                f"as a place is, `{{path, location?}}` (COR-050 point 1)."
+            ),
+        )
+
+
+def _held_block_findings(discovery: Discovery) -> Iterable[FrictionFinding]:
+    """Each friction block in a document a component holds (COR-050 points 1 and 12).
+
+    A held document is not an artefact: no place walks it, so no check reads
+    its anchors or its revalidation, and a block there would look like a
+    claim that is never checked. Located at the block, in the order discovery
+    lists the held files.
+    """
+    for held in discovery.held:
+        declaration = held.folder.declaration
+        for location in held.blocks:
+            yield FrictionFinding(
+                location=location,
+                pointer=f"/{bs.CONTAINER_KEY}/{FRICTION_KEY}",
+                severity=Severity.ERROR,
+                kind=FrictionFindingKind.HELD_BLOCK,
+                message=(
+                    f"a friction block in a document held by {held.owner} (its held folder "
+                    f"{declaration.value!r}, {declaration.file}:{declaration.pointer}): a held "
+                    f"document is not an artefact, so no check reads its anchors or its "
+                    f"revalidation — remove the block (COR-050 points 1 and 12)."
+                ),
+            )
 
 
 # --- artefacts ----------------------------------------------------------
@@ -507,20 +567,24 @@ def summary_lines(result: FrictionValidation) -> list[str]:
     Dormant: the counts alone (COR-050 point 15). Awake: the counts, errors and
     reports included; the findings themselves follow as the member's findings.
     A capability place the walk does not follow, a place matching a synced
-    copy, and a capability surface entry not read, are counted in either case,
-    so the line never reads as nothing declared while one was.
+    copy, a capability surface entry not read, and a held-document finding, are
+    counted in either case, so the line never reads as nothing declared while
+    one was.
     """
     d = result.discovery
     places, artefacts, carrying = len(d.places), len(d.artefacts), len(d.with_container)
     unfollowed = sum(1 for f in result.findings if f.kind in PLACE_KINDS)
     synced = sum(1 for f in result.findings if f.kind in SYNCED_KINDS)
     unread = sum(1 for f in result.findings if f.kind in SURFACE_KINDS)
+    held = sum(1 for f in result.findings if f.kind in HELD_KINDS)
     not_walked = f"; {unfollowed} capability place(s) not walked" if unfollowed else ""
     if synced:
         not_walked += f"; {synced} place(s) matching a synced copy"
     if unread:
         not_walked += f"; {unread} capability surface entr{'y' if unread == 1 else 'ies'} not read"
-    if not d.places and not unfollowed and not unread:
+    if held:
+        not_walked += f"; {held} held-document finding(s)"
+    if not d.places and not unfollowed and not unread and not held:
         counts = "no places declared; dormant."
     elif d.is_dormant:
         counts = (

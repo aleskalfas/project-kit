@@ -765,6 +765,38 @@ def test_friction_places_lie_inside_a_declared_location_or_the_project(
     }
 
 
+def test_friction_held_folders_are_written_and_checked_as_places_are(
+    schema: dict[str, Any], component_dir: Path
+) -> None:
+    """The schema accepts the held list in the place shape and refuses another key
+    in an entry; the repository checks hold its paths and locations as a place's."""
+    raw = _package(
+        docs={"locations": {"records": {"path": "records"}}},
+        friction={
+            "held": [
+                {"location": "records", "path": "revalidations", "description": "The records."},
+                {"path": "notes/acts"},
+                {"location": "logs", "path": "runs"},
+                {"location": "records", "path": "../outside"},
+            ]
+        },
+    )
+    errors = _messages(_validate(raw, schema, component_dir), pv.Severity.ERROR)
+    assert errors == {
+        "/friction/held/2/location": (
+            "held folder names location 'logs', which `docs.locations` does not declare "
+            "(declared: ['records'])."
+        ),
+        "/friction/held/3/path": (
+            "'../outside' is not a path relative to its location or the project: it contains "
+            "a `..` segment."
+        ),
+    }
+    raw = _package(friction={"held": [{"path": "revalidations", "kind": "records"}]})
+    errors = _messages(_validate(raw, schema, component_dir), pv.Severity.ERROR)
+    assert list(errors) == ["/friction/held/0/kind"]
+
+
 def test_legacy_messages_are_kept_and_run_without_a_schema(component_dir: Path) -> None:
     """The install-time check's messages are a subset of the validator's, schema or not."""
     raw = _package(

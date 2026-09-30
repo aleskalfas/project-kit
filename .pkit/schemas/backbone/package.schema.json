@@ -566,6 +566,13 @@
         "surface": {
           "description": "Repository-relative path globs this component says ought to be described; paths in it that no artefact anchors to are reported as uncovered (COR-050 point 8).",
           "$ref": "#/$defs/path-list"
+        },
+        "held": {
+          "description": "Folders of held documents: files this component owns that are not artefacts, such as the record of an act (COR-050 point 1). Written and resolved as a place is; discovery lists each file with its owner, and no place reads one as an artefact.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/friction-place"
+          }
         }
       }
     },

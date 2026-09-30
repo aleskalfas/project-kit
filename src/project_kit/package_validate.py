@@ -5,7 +5,8 @@ Every installed component's `package.yaml` validates against one shared
 backbone file schema, `.pkit/schemas/backbone/package.schema.json` (ADR-056):
 the fields the shipped package files use today plus the blocks the newer
 records add — `connections` (COR-053 point 3), `docs.locations` (COR-049 point
-4), `friction.places` / `friction.surface` (COR-050 points 1 and 8). Three
+4), `friction.places` / `friction.held` / `friction.surface` (COR-050 points 1
+and 8). Three
 passes, in order, each producing findings located by JSON Pointer:
 
 1. **Shape** — the JSON Schema pass. Known keys are strictly typed, and the
@@ -29,8 +30,8 @@ passes, in order, each producing findings located by JSON Pointer:
    command and every validator's command declares the query contract
    (`query-contract: true`, ADR-057 point 3 and ADR-058), a contribution
    names `command` or `value` but not both, documentation locations are
-   relative sub-paths, friction places lie inside a declared location or the
-   project, an offered process point names a definition of the component whose
+   relative sub-paths, friction places and held folders lie inside a declared
+   location or the project, an offered process point names a definition of the component whose
    `interface.version`, where it declares one, equals the point's
    `schema_version` (COR-053 point 5), and the generated `depends-on` list says
    what the component's process definitions generate
@@ -520,14 +521,18 @@ def _repository_findings(
 
     friction = raw.get("friction")
     if isinstance(friction, Mapping):
-        places = friction.get("places")
-        if isinstance(places, list):
-            for index, place in enumerate(places):
+        # A held folder is written as a place is (COR-050 point 1), so both lists
+        # are held to the same two checks.
+        for key, noun in (("places", "place"), ("held", "held folder")):
+            entries = friction.get(key)
+            if not isinstance(entries, list):
+                continue
+            for index, place in enumerate(entries):
                 if not isinstance(place, Mapping):
                     continue
                 _check_relative(
                     findings,
-                    f"/friction/places/{index}/path",
+                    f"/friction/{key}/{index}/path",
                     place.get("path"),
                     "a path relative to its location or the project",
                 )
@@ -535,8 +540,8 @@ def _repository_findings(
                 if isinstance(location, str) and location not in location_names:
                     declared = f" (declared: {sorted(location_names)})." if location_names else "."
                     _error(
-                        f"/friction/places/{index}/location",
-                        f"place names location {location!r}, which `docs.locations` does not "
+                        f"/friction/{key}/{index}/location",
+                        f"{noun} names location {location!r}, which `docs.locations` does not "
                         f"declare{declared}",
                     )
         surface = friction.get("surface")
