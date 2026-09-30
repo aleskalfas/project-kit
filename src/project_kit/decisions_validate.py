@@ -36,6 +36,28 @@ misconfigured, ADR records simply aren't scanned (this check is not the
 place to enforce overlay setup — `pkit new decision adr` already does, and
 an adopter may legitimately have no ADRs). Collision detection over the
 spaces that *do* resolve is unaffected.
+
+**Revision narration is a warning, never an error** (`revision_narration`).
+A record states what is true and is refined in place; git history is its
+change log (`.pkit/decisions/README.md`, "Refining an accepted record").
+Every record that is not superseded is read for the shapes that narrate a
+revision instead: an amendment heading, an amendment marker, a revision
+stamped with an issue number or a date, and change-log phrasing about what
+the record once said. Each is a warning naming the file and line. It warns
+for the reason ADR-058 gives reference drift (point 6, "Why drift warns"):
+the shapes are read from prose, and a gate that fails on a heuristic reading
+of prose fails for the wrong reasons. It is not a `report`, which ADR-058
+point 2 keeps for what an owning record says is reported rather than judged —
+narration is judged, since it breaks the README's rule. The two permitted
+markers — a superseded-by line and a forward refinement pointer
+(`(refinement per <record>)`) — match none of the shapes. Fenced code and
+inline code are quoted material and are not read. A superseded record is
+preserved as it stood, so it is not read either. Nor is a record that arrives
+here as a synced copy — a core record, or a kit-shipped capability's, in a
+project that is not the methodology's source (`is_synced_copy` of the tree's
+`.pkit/lifecycle/ownership.py`): it is refined where it is authored, and an
+edit here would be overwritten by the next sync. A tree without that module
+has every record read.
 """
 
 from __future__ import annotations
@@ -46,10 +68,9 @@ from pathlib import Path
 
 import click
 
-from project_kit import cli_render, rule_sets
-from project_kit.validators import Finding, Outcome
+from project_kit import cli_render, lifecycle_ownership, rule_sets
 from project_kit.decisions import resolve_adr_records_dir
-
+from project_kit.validators import Finding, Outcome, Severity
 
 # Frontmatter `id:` line, e.g. `id: COR-001`. Captures prefix + number so the
 # id can be checked against the filename and grouped into an id-space.
@@ -58,6 +79,76 @@ _FRONTMATTER_ID_RE = re.compile(r"^id:\s*([A-Z]+)-(\d+)\s*$", re.MULTILINE)
 # Filename shape `<PREFIX>-NNN-<slug>.md`. Captures prefix + number for the
 # id-matches-filename sanity check.
 _FILENAME_RE = re.compile(r"^([A-Z]+)-(\d+)-.+\.md$")
+
+# Frontmatter `status:` line. A superseded record is not read for narration.
+_FRONTMATTER_STATUS_RE = re.compile(r"^status:\s*(\S+)\s*$", re.MULTILINE)
+
+# --- the shapes of revision narration ----------------------------------------
+#
+# Each is (shape, pattern); a line reports the first shape it matches. The
+# shape names are what a report says it found.
+
+# What stamps a revision: an issue number or an ISO date.
+_STAMP = r"(?:#\d+|\d{4}-\d{2}-\d{2})"
+
+# The words a stamped revision leads with.
+_REVISION_WORD = (
+    r"(?:amend(?:ed|ment)|updated?|correct(?:ion|ed)|clarif(?:ication|ied)|closed|revis(?:ion|ed))"
+)
+
+_NARRATION_SHAPES: tuple[tuple[str, re.Pattern[str]], ...] = (
+    # `## Amendment (2026-08-09)`, `### Amendments`, `## Erratum`.
+    (
+        "amendment heading",
+        re.compile(
+            r"^ {0,3}#{1,6}\s+\(?(?:amendments?|amended|addend(?:um|a)|errat(?:um|a)"
+            r"|change[- ]?log|revision history)\b",
+            re.IGNORECASE,
+        ),
+    ),
+    # `**Amendment 1**`, `> **Amendment (#20) — …**`, `**(Amended 2026-08-20: …)**`,
+    # `**Amended by [X].**`, `**Amended in place, not superseded**`, `(amended in place)`.
+    (
+        "amendment marker",
+        re.compile(
+            r"\*\*\(?\s*(?:amendment|amended|addendum|erratum)\b|\(\s*amend(?:ed|ment)\b",
+            re.IGNORECASE,
+        ),
+    ),
+    # `**Update (#252) — …**`, `**Correction (2026-06-25, issue #304).**`,
+    # `## Closed (#823)`, and an inline `(clarified, #813)`.
+    (
+        "revision stamp",
+        re.compile(
+            rf"(?:(?:\*\*|^ {{0,3}}#{{1,6}}\s+)\(?\s*{_REVISION_WORD}\s*\(|\(\s*{_REVISION_WORD}\b)"
+            rf"[^)\n]{{0,40}}?{_STAMP}",
+            re.IGNORECASE,
+        ),
+    ),
+    # The record talking about what it once said.
+    (
+        "change-log phrasing",
+        re.compile(
+            r"\b(?:this|the) record (?:originally|previously|initially|formerly)\b"
+            r"|\b(?:original|earlier|previous|prior) (?:version|revision|draft|wording)"
+            r" of this (?:record|decision)\b"
+            r"|\bpreviously,? we (?:believed|thought|assumed)\b"
+            r"|\bwe (?:previously|originally|initially|once) (?:believed|thought|assumed)\b"
+            r"|\bas (?:originally|first|initially) (?:written|stated|drafted|worded)\b",
+            re.IGNORECASE,
+        ),
+    ),
+)
+
+# Markdown fence opener/closer (``` or ~~~, indented under a list or inside a
+# block quote too), and an inline code span — blanked to spaces of its own
+# length before matching, so a report's position still points into the line
+# as written.
+_FENCE_RE = re.compile(r"^\s*(?:>\s*)*(`{3,}|~{3,})")
+_INLINE_CODE_RE = re.compile(r"(`+)(?:(?!\1).)+?\1")
+
+# How much of the matched line a report quotes.
+_EXCERPT_LENGTH = 60
 
 
 @dataclass(frozen=True)
@@ -71,9 +162,10 @@ class DecisionRecord:
 
 @dataclass(frozen=True)
 class DecisionIssue:
-    """One finding — a duplicate id or an id/filename mismatch."""
+    """One finding — a duplicate id, an id/filename mismatch, or a line of revision narration."""
 
-    location: str  # path relative to target, or "<id-space> :: <id>" for a duplicate
+    # path relative to target; "<id-space> :: <id>" for a duplicate; "<path>:<line>" for narration
+    location: str
     message: str
 
 
@@ -193,22 +285,113 @@ def discover_decision_records(target_root: Path) -> list[DecisionRecord]:
     return records
 
 
+def revision_narration(target_root: Path) -> tuple[DecisionIssue, ...]:
+    """Every place a record the project refines narrates its own revision.
+
+    One finding per line, at `<path>:<line>`, naming the shape found and quoting
+    it (see the module docstring for the shapes and what is not read — a
+    superseded record, and one that arrives as a synced copy). Warnings, never
+    errors (ADR-058 point 6): the shapes are read from prose, so a finding asks
+    a person to look rather than blocking a change.
+    """
+    ownership = lifecycle_ownership.load_ownership(target_root)
+    found: list[DecisionIssue] = []
+    for record in discover_decision_records(target_root):
+        rel = _rel(record.path, target_root)
+        if ownership is not None and ownership.is_synced_copy(target_root, rel):
+            continue  # refined where it is authored; an edit here is overwritten by sync
+        try:
+            text = record.path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue  # the id pass reports an unreadable record
+        frontmatter = _extract_frontmatter(text)
+        status = _FRONTMATTER_STATUS_RE.search(frontmatter or "")
+        if status is not None and status.group(1) == "superseded":
+            continue
+        found.extend(
+            DecisionIssue(
+                location=f"{rel}:{line}",
+                message=(
+                    f"{shape} {excerpt} — a record states what is true; git history is its "
+                    "change log."
+                ),
+            )
+            for line, shape, excerpt in find_revision_narration(text)
+        )
+    return tuple(found)
+
+
+def find_revision_narration(text: str) -> list[tuple[int, str, str]]:
+    """The narration in one record's text: `(line number, shape, excerpt)` per line.
+
+    Line numbers count from 1 over the whole file, front matter included. The
+    front matter, fenced code and inline code spans are not read; a line
+    reports the first shape it matches.
+    """
+    lines = text.splitlines()
+    start = _body_start(lines)
+    found: list[tuple[int, str, str]] = []
+    fence: str | None = None
+    for number, raw in enumerate(lines[start:], start=start + 1):
+        fence_match = _FENCE_RE.match(raw)
+        if fence_match is not None:
+            marker = fence_match.group(1)
+            if fence is None:
+                fence = marker
+            elif marker[0] == fence[0] and len(marker) >= len(fence):
+                fence = None
+            continue
+        if fence is not None:
+            continue
+        prose = _INLINE_CODE_RE.sub(lambda code: " " * len(code.group(0)), raw)
+        for shape, pattern in _NARRATION_SHAPES:
+            match = pattern.search(prose)
+            if match is not None:
+                found.append((number, shape, _excerpt(raw, match.start())))
+                break
+    return found
+
+
+def _body_start(lines: list[str]) -> int:
+    """The index of the first body line — after the front matter, when there is one."""
+    if not lines or lines[0].strip() != "---":
+        return 0
+    for index in range(1, len(lines)):
+        if lines[index].strip() == "---":
+            return index + 1
+    return 0
+
+
+def _excerpt(line: str, start: int) -> str:
+    """The matched text, from where the shape starts, quoted and trimmed."""
+    tail = line[start:].strip()
+    if len(tail) > _EXCERPT_LENGTH:
+        tail = tail[:_EXCERPT_LENGTH].rstrip() + "…"
+    return f'"{tail}"'
+
+
 def outcome(target_root: Path) -> Outcome:
     """The `decisions` member of `pkit validate`: every record's front matter
-    (`validate.decision_frontmatter_issues`) and the id spaces (`validate_decision_ids`)."""
+    (`validate.decision_frontmatter_issues`) and the id spaces (`validate_decision_ids`),
+    which are errors, then revision narration (`revision_narration`), which is a warning."""
     from project_kit.validate import decision_frontmatter_issues
 
     front_matter = decision_frontmatter_issues(target_root)
     report = validate_decision_ids(target_root)
-    findings = (
+    narration = revision_narration(target_root)
+    errors = (
         *(Finding(issue.location, issue.diagnosis) for issue in front_matter),
         *(Finding(issue.location, issue.message) for issue in report.issues),
     )
+    warnings = tuple(
+        Finding(issue.location, issue.message, severity=Severity.WARNING) for issue in narration
+    )
     rules = f" and {report.rules_checked} rule(s)" if report.rules_checked else ""
     summary = (
-        f"{report.records_checked} decision record(s){rules} checked; {len(findings)} error(s).",
+        f"{report.records_checked} decision record(s){rules} checked; "
+        f"{len(errors)} error(s), {len(warnings)} warning(s).",
     )
-    return Outcome(summary, findings)
+    return Outcome(summary, (*errors, *warnings))
 
 
 def print_report(report: DecisionValidationReport) -> None:
@@ -237,6 +420,23 @@ def print_report(report: DecisionValidationReport) -> None:
         )
     )
     for issue in report.issues:
+        click.echo(f"    {issue.location}")
+        click.echo(f"      → {issue.message}")
+
+
+def print_narration(narration: tuple[DecisionIssue, ...]) -> None:
+    """Render the revision-narration warnings, after the id report; nothing when there are none."""
+    if not narration:
+        return
+    click.echo(
+        "  "
+        + cli_render.style(
+            "strong",
+            f"{len(narration)} warning(s) of revision narration, which do not fail the "
+            'check (.pkit/decisions/README.md, "Refining an accepted record"):',
+        )
+    )
+    for issue in narration:
         click.echo(f"    {issue.location}")
         click.echo(f"      → {issue.message}")
 
@@ -287,16 +487,14 @@ def _extract_frontmatter(text: str) -> str | None:
         return None
     # Split on the fence lines. The frontmatter is the content between the
     # first `---` and the next `---` on its own line.
-    rest = text[len("---"):]
+    rest = text[len("---") :]
     end = rest.find("\n---")
     if end == -1:
         return None
     return rest[:end]
 
 
-def _filename_consistency_issues(
-    record: DecisionRecord, target_root: Path
-) -> list[DecisionIssue]:
+def _filename_consistency_issues(record: DecisionRecord, target_root: Path) -> list[DecisionIssue]:
     """Check a record's frontmatter id against its filename number (cheap sanity)."""
     rel = _rel(record.path, target_root)
     if record.record_id is None:
