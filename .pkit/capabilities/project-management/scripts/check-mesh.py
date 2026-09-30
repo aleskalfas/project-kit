@@ -163,7 +163,7 @@ def main() -> int:
     # Gather local state.
     local = _gather_local_state(capability_root, config)
     # Gather peer states.
-    peer_states = [_gather_peer_state(p) for p in peers]
+    peer_states = [_gather_peer_state(p, config) for p in peers]
 
     # Compare.
     substrate_map = axis_labels.load_substrate_map(capability_root)
@@ -249,7 +249,7 @@ def _gather_local_state(capability_root: Path, config: dict) -> PeerState:
     )
 
 
-def _gather_peer_state(peer: PeerSpec) -> PeerState:
+def _gather_peer_state(peer: PeerSpec, config: dict) -> PeerState:
     """Fetch a peer's state via gh API. Falls back gracefully on error."""
     labels = _gh_label_list(peer, config) or []
     version = _gh_peer_capability_version(peer, config)

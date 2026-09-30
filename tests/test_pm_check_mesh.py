@@ -7,6 +7,7 @@ comparison logic, and the summary builder.
 from __future__ import annotations
 
 import importlib.util
+import subprocess
 import sys
 from pathlib import Path
 
@@ -248,6 +249,42 @@ def test_summary_with_drift_mentions_count_and_severity(cm) -> None:
     s = cm._summary([{"kind": "type-labels"}, {"kind": "capability-version"}])
     assert "2" in s
     assert "warning" in s.lower()
+
+
+# --- peer state -------------------------------------------------------
+
+
+def test_gather_peer_state_reads_the_peer_with_the_adopter_config(cm, monkeypatch) -> None:
+    # Every read of a peer goes through `gh` with the adopter's configuration.
+    # The gatherer once named a `config` it was never given, so with any peer
+    # configured the check failed with a NameError before comparing anything.
+    config = {"repo_owner": "me", "repo_name": "here"}
+    configs_seen: list[object] = []
+
+    def fake_gh_run(cmd, cfg, check=False):
+        configs_seen.append(cfg)
+        endpoint = cmd[2]
+        if endpoint.endswith("package.yaml"):
+            stdout = "component:\n  kind: capability\n  version: 1.2.3\n"
+        elif endpoint.endswith("members.yaml"):
+            stdout = "members:\n  - login: someone\n"
+        else:
+            stdout = '[{"title": "v1"}]'
+        return subprocess.CompletedProcess(cmd, 0, stdout=stdout, stderr="")
+
+    def fake_run(cmd, **kwargs):
+        return subprocess.CompletedProcess(cmd, 0, stdout='[{"name": "type:bug"}]', stderr="")
+
+    monkeypatch.setattr(cm, "gh_run", fake_gh_run)
+    monkeypatch.setattr(cm.subprocess, "run", fake_run)
+
+    state = cm._gather_peer_state(cm.PeerSpec(owner="owner", repo="repo"), config)
+
+    assert state.labels == ["type:bug"]
+    assert state.capability_version == "1.2.3"
+    assert state.members == [{"login": "someone"}]
+    assert state.milestones == ["v1"]
+    assert configs_seen and all(seen is config for seen in configs_seen)
 
 
 # --- _extract_version helper -----------------------------------------
