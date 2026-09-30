@@ -1,0 +1,9 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  A changeset's `pr` given as a bare number now links its changelog entry to
+  that pull request of the repository instead of writing a broken link, and
+  `pkit release lint` refuses a `pr` that is neither a pull-request number nor
+  a URL.

@@ -86,9 +86,25 @@ CHANGELOG_CATEGORIES: tuple[str, ...] = (
 )
 DEFAULT_CATEGORY = "Changed"
 
-# Extracts the trailing number from a `pr` value so a bare number (`465`) or a
-# full URL (`.../pull/465`) both yield the `[#465]` link label.
+# The two shapes a changeset's `pr` takes (`.pkit/release/README.md`): the pull
+# request's number, which links the entry to that pull request of the repository
+# `origin` names, and a full URL, which links it as written. `release lint`
+# refuses any other.
+_PR_BARE_NUMBER_RE = re.compile(r"[1-9]\d*")
+_PR_URL_RE = re.compile(r"https?://\S+")
+# The trailing number of a `pr` URL (`.../pull/465`, `.../pull/465/files`),
+# which labels the entry `[#465]`.
 _PR_NUMBER_RE = re.compile(r"(\d+)\D*$")
+
+# A GitHub `origin` in each form git records one — `https://github.com/o/r.git`,
+# `git@github.com:o/r.git`, `ssh://git@github.com/o/r` — read for the owner and
+# name that locate the repository's pull requests and nothing else: credentials
+# the URL carries are matched past, never written into a link.
+_GITHUB_REMOTE_RE = re.compile(
+    r"^(?:[a-z][a-z0-9+.-]*://)?(?:[^@/]+@)?(?i:github\.com)(?::\d+)?[:/]"
+    r"(?P<owner>[\w.-]+)/(?P<name>[\w.-]+?)(?:\.git)?/?$"
+)
+_GITHUB_URL = "https://github.com"
 
 # What ends a changelog note as a sentence, and a Markdown list item (`- x`,
 # `* x`, `+ x`, `1. x`, `1) x`) — the shapes `_with_sentence` punctuates around.
@@ -835,7 +851,9 @@ def _sync_self_host_manifest_backbone(source_kit: Path, new_version: str) -> Non
     click.echo(f"Self-host manifest backbone_version -> {new_version}")
 
 
-def render_changelog_entry(plan: ReleasePlan, when: date) -> str:
+def render_changelog_entry(
+    plan: ReleasePlan, when: date, *, repository_url: str | None = None
+) -> str:
     """Render the Keep-a-Changelog block for this release.
 
     The section is keyed by the backbone's new version + date when the
@@ -847,7 +865,12 @@ def render_changelog_entry(plan: ReleasePlan, when: date) -> str:
     component, at the end of the entry of the changeset that set it
     (`ComponentRelease.floor_entry`), so an adopter reads what the component now
     needs. `pr` references become reference-style `([#N])` links, resolved in a
-    block at the foot of the section (omitted when absent).
+    block at the foot of the section (omitted when absent): a URL links as
+    written, and a pull request's number links to that pull request of
+    `repository_url` (`https://github.com/<owner>/<name>`, which
+    `origin_repository_url` reads). Without a repository a number still labels
+    its entry but no reference is written for it, so the label links nowhere
+    rather than to a broken target.
     """
     backbone = plan.backbone
     if backbone is not None:
@@ -869,11 +892,12 @@ def render_changelog_entry(plan: ReleasePlan, when: date) -> str:
                 continue
             if not is_backbone:
                 text = f"**{rel.component.name} {rel.new_version}** — {text}"
-            if cs.pr:
-                label = _pr_label(cs.pr)
-                if label is not None:
-                    text = f"{text} ([#{label}])"
-                    refs.setdefault(label, cs.pr)
+            link = _pr_link(cs.pr, repository_url) if cs.pr else None
+            if link is not None:
+                label, target = link
+                text = f"{text} ([#{label}])"
+                if target is not None:
+                    refs.setdefault(label, target)
             grouped.setdefault(cs.category or DEFAULT_CATEGORY, []).append(text)
 
     # Canonical KaC order first; any unrecognised category is preserved after,
@@ -907,15 +931,76 @@ def _with_sentence(note: str, sentence: str) -> str:
     return f"{note} {sentence}"
 
 
-def _pr_label(pr: str) -> str | None:
-    """The `#N` link label for a `pr` value (a bare number or a PR URL)."""
+def _pr_link(pr: str, repository_url: str | None) -> tuple[str, str | None] | None:
+    """The `#N` label and the link target of a `pr` value; None when it has no
+    number to label with. A pull request's number links to that pull request of
+    `repository_url`, and to nothing without one; a URL links as written. A
+    value of any other shape — which `release lint` refuses — is labelled by its
+    trailing number and linked to nothing, so it cannot break a link either."""
+    if _PR_BARE_NUMBER_RE.fullmatch(pr):
+        return pr, (f"{repository_url}/pull/{pr}" if repository_url else None)
     match = _PR_NUMBER_RE.search(pr)
-    return match.group(1) if match else None
+    if match is None:
+        return None
+    return match.group(1), (pr if _PR_URL_RE.fullmatch(pr) else None)
+
+
+def is_pr_reference(pr: str) -> bool:
+    """Whether a `pr` value has one of the two shapes the field takes: the pull
+    request's number, or a full URL ending in it."""
+    if _PR_BARE_NUMBER_RE.fullmatch(pr):
+        return True
+    return _PR_URL_RE.fullmatch(pr) is not None and _PR_NUMBER_RE.search(pr) is not None
+
+
+def github_repository_url(remote: str) -> str | None:
+    """The web address — `https://github.com/<owner>/<name>` — of the GitHub
+    repository a git remote URL names, in any form git records one; None for a
+    remote on any other host, or none. Built from the owner and name alone, so
+    no credentials in the remote reach it."""
+    match = _GITHUB_REMOTE_RE.match(remote.strip())
+    if match is None:
+        return None
+    return f"{_GITHUB_URL}/{match['owner']}/{match['name']}"
+
+
+def origin_repository_url(repo_root: Path) -> str | None:
+    """The web address of the GitHub repository the `origin` remote of the
+    repository at `repo_root` names (`github_repository_url`) — where a
+    bare-number `pr` links; None when there is no `origin`, git cannot answer,
+    or `origin` is not on GitHub."""
+    try:
+        result = subprocess.run(
+            ["git", "remote", "get-url", "origin"],
+            capture_output=True,
+            text=True,
+            cwd=repo_root,
+            check=False,
+        )
+    except OSError:
+        return None
+    if result.returncode != 0:
+        return None
+    return github_repository_url(result.stdout)
 
 
 def _write_changelog(repo_root: Path, plan: ReleasePlan, when: date) -> None:
     changelog = repo_root / CHANGELOG_NAME
-    entry = render_changelog_entry(plan, when)
+    repository_url = origin_repository_url(repo_root)
+    if repository_url is None:
+        unlinked = sum(
+            1
+            for rel in plan.releases
+            for cs in rel.changesets
+            if cs.pr and _PR_BARE_NUMBER_RE.fullmatch(cs.pr)
+        )
+        if unlinked:
+            _warn(
+                f"`origin` names no GitHub repository, so {unlinked} pull-request "
+                "number(s) label their changelog entries without a link; a full URL "
+                "in a changeset's `pr` links wherever the repository lives."
+            )
+    entry = render_changelog_entry(plan, when, repository_url=repository_url)
     title = "# Changelog\n\n"
     prior = ""
     if changelog.is_file():
@@ -1323,14 +1408,14 @@ def _declaration_at(repo_root: Path, rev: str, path: str) -> tuple[str, str | No
 # A *format* lint distinct from the surface guard above: the guard asks
 # "does a surface change carry a changeset?"; this asks "is the changeset /
 # changelog *well-formed*?". It validates only the mechanically-checkable
-# subset — category enum, body shape, the floor field's value and carrier,
-# changelog heading structure — and makes no attempt at the plain-language /
-# no-jargon discipline, which is human
-# judgment left to the guide (`.pkit/release/README.md`) and review. Same
-# honest stance as the guard: a **reminder, not a proof**, with an escape
-# hatch for the cases an objective rule necessarily mis-fires on. The floor
-# field sits outside the hatch: it is the release's own refusal reported early,
-# and an invalid one blocks every later release on `main`.
+# subset — category enum, `pr` shape, body shape, the floor field's value and
+# carrier, changelog heading structure — and makes no attempt at the
+# plain-language / no-jargon discipline, which is human judgment left to the
+# guide (`.pkit/release/README.md`) and review. Same honest stance as the
+# guard: a **reminder, not a proof**, with an escape hatch for the cases an
+# objective rule necessarily mis-fires on. The floor field sits outside the
+# hatch: it is the release's own refusal reported early, and an invalid one
+# blocks every later release on `main`.
 
 # A body that is *only* one of these bare references is the objective proxy for
 # the "no in-body jargon / references" rule — an entry that says nothing to a
@@ -1377,12 +1462,13 @@ class LintResult:
 def lint_changeset(cs: Changeset) -> list[FormatViolation]:
     """Objective format checks for one changeset.
 
-    Category (when present) must be a Keep-a-Changelog group. Body checks only
-    apply to changesets that move a version (`segment != "none"`) — a `none`
-    changeset never produces a changelog line, so its body carries no
-    changelog-format obligation. A body that does become a changelog line must
-    be non-empty, not *solely* a bare reference, capitalized, and end with a
-    period.
+    Category (when present) must be a Keep-a-Changelog group, and `pr` (when
+    present) the pull request's number or a full URL ending in it
+    (`is_pr_reference`). Body checks only apply to changesets that move a
+    version (`segment != "none"`) — a `none` changeset never produces a
+    changelog line, so its body carries no changelog-format obligation. A body
+    that does become a changelog line must be non-empty, not *solely* a bare
+    reference, capitalized, and end with a period.
     """
     where = f"changeset {cs.path.name}"
     violations: list[FormatViolation] = []
@@ -1393,6 +1479,15 @@ def lint_changeset(cs: Changeset) -> list[FormatViolation]:
                 where,
                 f"unknown category {cs.category!r} — expected one of "
                 f"{', '.join(CHANGELOG_CATEGORIES)}.",
+            )
+        )
+
+    if cs.pr is not None and not is_pr_reference(cs.pr):
+        violations.append(
+            FormatViolation(
+                where,
+                f"`pr` is {cs.pr!r} — give the pull request's number (`503`) or its "
+                "full URL (`https://github.com/<owner>/<repo>/pull/503`).",
             )
         )
 
