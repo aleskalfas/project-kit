@@ -270,6 +270,35 @@ def test_two_held_folders_sharing_files_are_refused_at_both(
     assert [a.path for a in discovery.artefacts] == ["docs/evidence/records/old/run.md"]
 
 
+def test_one_component_s_two_held_folders_sharing_files_are_refused_at_both(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """One declaration per held file, even within one component: a folder nested in
+    another of the same component's is refused, and so is the enclosing one."""
+    repo = _repo(make_adopter_repo)
+    _declares(
+        repo,
+        EVIDENCE,
+        "docs:\n"
+        "  locations:\n"
+        "    runs: {path: evidence}\n"
+        "friction:\n"
+        "  held:\n"
+        "    - {location: runs, path: records}\n"
+        "    - {location: runs, path: records/old}\n",
+    )
+    assert {k: _detail(v) for k, v in _unbounded(repo.root).items()} == {
+        (_package(EVIDENCE), "/friction/held/0"): (
+            "held folder 'records' (at 'docs/evidence/records') overlaps its own held folder "
+            "'docs/evidence/records/old'"
+        ),
+        (_package(EVIDENCE), "/friction/held/1"): (
+            "held folder 'records/old' (at 'docs/evidence/records/old') overlaps its own held "
+            "folder 'docs/evidence/records'"
+        ),
+    }
+
+
 def test_a_held_folder_sharing_files_with_a_rule_set_folder_is_refused_and_rules_stay(
     make_adopter_repo: MakeAdopterRepo,
 ) -> None:
