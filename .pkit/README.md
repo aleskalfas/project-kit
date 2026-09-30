@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-09-30T06:58:24Z
+      at: 2026-09-30T09:26:51Z
       outcome: unchanged
-      unchanged-because: the CLI README gains the repository.default-branch key, the default base of the change check and the default_branch and base keys of friction artefacts, and the schemas README lists the repository key; the area map's one-line descriptions of cli/ and schemas/ hold
+      unchanged-because: the CLI README gains pkit repository base and trims the repository key to its operating facts, and main's states every reading document's schema_version; the signpost's line for cli/ names the command surface, not its commands or keys
 ---
 
 # project-kit

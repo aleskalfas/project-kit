@@ -47,6 +47,10 @@ TERM-intent-note:
           - .pkit/capabilities/project-management/scripts/start-work.py
         record:
           - project-management:DEC-044
+      revalidated:
+        at: 2026-09-30T09:26:25Z
+        outcome: unchanged
+        unchanged-because: start-work now cuts the branch from the commit the backbone resolves its base to, and refuses when the backbone cannot say which branch is settled (COR-054); where the first intent note will be written, and what a note is, do not depend on where the branch is cut from
 TERM-new-front:
   name: New front
   status: active
@@ -58,6 +62,10 @@ TERM-new-front:
           - .pkit/capabilities/project-management/scripts/start-work.py
         record:
           - project-management:DEC-004
+      revalidated:
+        at: 2026-09-30T09:26:26Z
+        outcome: unchanged
+        unchanged-because: start-work now cuts the branch from the commit the backbone resolves its base to, and refuses when the backbone cannot say which branch is settled (COR-054); a front is still read from the hierarchy, and the start guard it anchors for is unbuilt
 TERM-release-scope:
   name: Release scope
   status: active
@@ -98,6 +106,10 @@ TERM-stabilisation:
           - project-management:DEC-016
           - project-management:DEC-014
           - ADR-019
+      revalidated:
+        at: 2026-09-30T09:26:27Z
+        outcome: unchanged
+        unchanged-because: start-work now cuts the branch from the commit the backbone resolves its base to, and refuses when the backbone cannot say which branch is settled (COR-054); the stabilisation's freeze, its guards and its required status are untouched
 ---
 
 # Glossary
