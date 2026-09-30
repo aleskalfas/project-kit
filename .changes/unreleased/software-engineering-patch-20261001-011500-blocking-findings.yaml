@@ -2,6 +2,7 @@ component: software-engineering
 kind: patch
 custom:
   category: Changed
+  pr: "1186"
 body: >
   The `software-engineer` agent fixes the review findings their reviewer
   tagged blocking and records each advisory in the PR body with how it was
