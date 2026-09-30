@@ -12,6 +12,9 @@ backbone through its commands:
   record-location`, the backbone's one writer of a capability's recorded
   locations (COR-049 point 5), with `--yes`: the stamp runs it when it places
   an artefact, so invoking the stamp is the consent;
+- **one artefact's friction** — `pkit friction explain <artefact> --json`
+  (COR-050 point 13): its state, anchors and the commits behind each changed
+  one, which the proposal reads;
 - **one data point as it resolves** — `pkit connections resolve <address>
   --json`: the check reads the evidence point the capability defines
   (DEC-001 point 7) through it. The command exits 1 on a point that does not
@@ -19,7 +22,15 @@ backbone through its commands:
   exit code. A filler never asks for a point: the readers filler reads only
   the analysis.
 
-Git answers only which commit a name resolves to, and the merge-base of two.
+Git answers which commit a name resolves to, the merge-base of two, who is
+working here — the default author of a revalidation record — and, for the
+proposal, a file's text at a commit, whether a path anchor's files held a piece
+of code at a commit, which commits touched them, which files anywhere in the
+tree held a piece of code, which of an anchor's files were renamed and where
+to, and a commit's message: each asked of git, with an anchor as a glob
+pathspec. Git's pathspec, not the backbone's matcher, decides which files an
+anchor names here, and it knows nothing of the project's `friction.exclude`,
+which the backbone does not expose to a capability yet.
 
 `default_base` is the branch that numbers are compared with: `$PKIT_CHECK_BASE`,
 the variable the project's diff-scoped checks already read, else `origin/main`.
@@ -63,6 +74,105 @@ def read_analysis(root: Path, at: str | None = None, run: Runner = subprocess.ru
     return analysis_of(_document(root, argv, run))
 
 
+def explain(root: Path, artefact: str, run: Runner = subprocess.run) -> Mapping[str, Any]:
+    """One artefact's friction, explained — `pkit friction explain <artefact> --json`
+    (COR-050 point 13): its state, its anchors, the commits behind each changed one,
+    its revalidation point. Raises Unreadable when it is refused or cannot be read."""
+    if not artefact or artefact.startswith("-"):
+        raise Unreadable(f"{artefact!r} names no artefact")
+    return _document(root, ["pkit", "friction", "explain", artefact, "--json"], run)
+
+
+def show(root: Path, commit: str, path: str) -> str | None:
+    """The text of `path` at `commit`, or `None` when it has none there."""
+    try:
+        proc = subprocess.run(
+            ["git", "show", f"{commit}:{path}"], cwd=root, capture_output=True, check=False
+        )
+    except OSError:
+        return None
+    if proc.returncode != 0:
+        return None
+    return proc.stdout.decode("utf-8", errors="replace")
+
+
+def holds(root: Path, commit: str, anchor: str, text: str) -> bool:
+    """Whether a file a path anchor names held `text` at `commit`, as a whole word —
+    so a quoted `--out` is not held by `--output` — through git's own search, the
+    anchor read as a glob pathspec (`**` across folders, `*` within one, a folder
+    naming everything beneath it), so no file list is computed here. Whole words
+    fail safe: a quote that never matches is never counted as quoted, and one that
+    stops matching reads as gone, which asks rather than proposes `holds`."""
+    try:
+        proc = subprocess.run(
+            ["git", "grep", "-q", "-I", "-F", "-w", "-e", text, commit, "--", f":(glob){anchor}"],
+            cwd=root,
+            capture_output=True,
+            check=False,
+        )
+    except OSError:
+        return False
+    return proc.returncode == 0
+
+
+def files_holding(root: Path, commit: str, text: str, anchor: str | None = None) -> set[str]:
+    """The files that held `text` at `commit`, as a whole word, as `holds` reads it —
+    in the whole tree, or among a path anchor's files."""
+    argv = ["git", "grep", "-l", "-I", "-F", "-w", "-e", text, commit]
+    if anchor is not None:
+        argv += ["--", f":(glob){anchor}"]
+    try:
+        proc = subprocess.run(argv, cwd=root, capture_output=True, text=True, check=False)
+    except OSError:
+        return set()
+    prefix = f"{commit}:"
+    return {
+        line[len(prefix) :]
+        for line in proc.stdout.splitlines()
+        if proc.returncode == 0 and line.startswith(prefix)
+    }
+
+
+def renamed(root: Path, since: str, anchor: str) -> list[str]:
+    """Where the path anchor's files that are gone since `since` were renamed to, by
+    git's rename detection between `since` and HEAD — the whole tree compared, so a
+    file renamed out of the anchor is found."""
+    gone = _git(
+        root,
+        "diff",
+        "--name-only",
+        "--no-renames",
+        "--diff-filter=D",
+        since,
+        "HEAD",
+        "--",
+        f":(glob){anchor}",
+    )
+    if not gone:
+        return []
+    deleted = set(gone.splitlines())
+    renames = _git(root, "diff", "-M", "--name-status", "--diff-filter=R", "-z", since, "HEAD")
+    fields = (renames or "").split("\0")
+    pairs = zip(fields[1::3], fields[2::3], strict=False)
+    return sorted({new for old, new in pairs if old in deleted and new})
+
+
+def message(root: Path, commit: str) -> str | None:
+    """A commit's message, subject and body — `git log --format=%B` — or `None`."""
+    return _git(root, "log", "-1", "--format=%B", commit)
+
+
+def touched(root: Path, since: str, anchor: str) -> list[tuple[str, str]]:
+    """The commits after `since` up to HEAD that touched a file a path anchor names,
+    oldest first, each `(commit, subject)` — the anchor read as `holds` reads it. For
+    an anchor whose files are gone, which the explanation names no commits for."""
+    log = _git(
+        root, "log", "--reverse", "--format=%H%x1f%s", f"{since}..HEAD", "--", f":(glob){anchor}"
+    )
+    pairs = (line.split("\x1f", 1) for line in (log or "").splitlines())
+    return [(pair[0], pair[1]) for pair in pairs if len(pair) == 2]
+
+
 def record_location(root: Path, run: Runner = subprocess.run) -> str | None:
     """Record the analysis location where it now lies (COR-049 point 5), through
     `pkit docs record-location`. Returns the line it printed when it recorded,
@@ -99,6 +209,11 @@ def commit_of(root: Path, name: str) -> str | None:
 def merge_base(root: Path, one: str, other: str) -> str | None:
     """The merge-base of two commits, or `None` when they share no history."""
     return _git(root, "merge-base", one, other)
+
+
+def user_name(root: Path) -> str | None:
+    """Who git says is working here, its `user.name`, or `None`."""
+    return _git(root, "config", "user.name")
 
 
 def _document(root: Path, argv: list[str], run: Runner) -> Mapping[str, Any]:

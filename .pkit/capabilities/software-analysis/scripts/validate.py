@@ -13,7 +13,10 @@ use case's or journey's heading against its id and title, ids two artefacts
 share, an actor or step the stamp would refuse, a use case not anchored to
 its actor, a journey whose use-case anchors do not match its steps, and the
 revalidation records' front matter, the artefacts they cite and the evidence
-they copy. `_lib/check.py` states every check and the record point it applies.
+they copy. It reports an open regression — a record's `code-regressed`
+artefact not revalidated since — and warns about `unanchored-because` beside
+anchors; neither fails. `_lib/check.py` states every check and the record
+point it applies.
 
 The backbone runs it as this capability's validator, the
 `software-analysis:artefacts` member of `pkit validate` (ADR-058): from the
