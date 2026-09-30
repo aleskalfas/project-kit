@@ -23,6 +23,23 @@ with the pipes open. The run never outlives its caller: an interrupt kills the
 group too. `CommandRun` says how the run ended; it never raises for what the
 command did.
 
+**A run inside a run** (ADR-057 point 3). A command the runner starts may start
+`pkit` again — a validator reads a point through `pkit connections resolve`,
+whose filler this runner then starts. Every run tells its command, in the
+environment, the deadline by which anything it starts must have ended
+(`DEADLINE_ENV`): its own end less `ANSWER_MARGIN_SECONDS`, the time the
+command keeps to answer after something it started ran out. A run that
+inherits one is *nested*: it is bounded by the time remaining, never more than
+its own bound, and it does not start a new session, so its command joins the
+group the outermost run kills — its deadline and its interrupt reach the whole
+tree. The innermost command to overrun is the one a no-answer names, since its
+deadline comes first. A nested run cannot kill a group it shares with its own
+caller, so on its timeout it kills its command alone and records, in the file
+the outermost run named (`STRAYS_ENV`), that what that command started may
+still be running; the outermost run kills its whole group when its command
+ends. Without an inherited deadline — `pkit` run from a shell — nothing
+changes.
+
 **Policies stay with their callers** — one mechanism, a policy per kind:
 
 - the *predicate* policy (`process.PredicateRunner`): the subject and `--json`
@@ -49,9 +66,13 @@ from __future__ import annotations
 
 import contextlib
 import json
+import math
 import os
 import signal
 import subprocess
+import tempfile
+import time
+import uuid
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from enum import Enum
@@ -72,6 +93,19 @@ HELP_KEY = "help"
 # constant, not a setting (ADR-057 point 3); exceeding it kills the command's
 # whole process group.
 COMMAND_TIMEOUT_SECONDS = 30
+
+# A run inside a run (the module docstring). The environment every run gives its
+# command: the deadline, in seconds since the epoch, by which anything the
+# command starts must have ended; and the path of the file a nested run writes
+# when what its command started may outlive it, which the run that named the
+# file reads when its own command ends. The margin is what each command keeps
+# of its bound to answer after something it started ran out of time.
+DEADLINE_ENV = "PKIT_COMMAND_DEADLINE"
+STRAYS_ENV = "PKIT_COMMAND_STRAYS"
+ANSWER_MARGIN_SECONDS = 2
+
+# The detail of a nested run that had no time left to start its command.
+NO_TIME_LEFT = "no time was left of the bound of the run that started it"
 
 _yaml = YAML(typ="safe")
 
@@ -167,7 +201,7 @@ class Ending(Enum):
     UNPARSABLE = "unparsable"  # exited 0; standard output is not one JSON document
     ABNORMAL_EXIT = "abnormal-exit"  # exited non-zero (`returncode`, `stderr`)
     TIMED_OUT = "timed-out"  # exceeded the bound; its whole process group was killed
-    NOT_STARTED = "not-started"  # could not be started (`detail`)
+    NOT_STARTED = "not-started"  # could not be started, or no time was left to (`detail`)
 
 
 @dataclass(frozen=True)
@@ -194,27 +228,47 @@ def run_command(
     """Run `script` with `args` from `cwd`, in its own process group, bounded by
     `COMMAND_TIMEOUT_SECONDS`, and read its answer. `extra_env` is laid over
     the caller's environment. Standard output is the answer and nothing else;
-    standard error is diagnostics."""
-    bound = COMMAND_TIMEOUT_SECONDS
+    standard error is diagnostics.
+
+    Inside another run — the environment carries its deadline — the run is
+    nested (the module docstring): bounded by the time remaining, in its
+    caller's process group. With no time remaining its command is not started."""
+    inherited = _inherited_deadline()
+    now = time.time()
+    bound = COMMAND_TIMEOUT_SECONDS if inherited is None else _remaining(inherited, now)
+    if bound <= 0:
+        return CommandRun(Ending.NOT_STARTED, 0, detail=NO_TIME_LEFT)
+    nested = inherited is not None
+    strays = os.environ.get(STRAYS_ENV, "") if nested else _strays_path()
+    env = {
+        **os.environ,
+        **(extra_env or {}),
+        DEADLINE_ENV: f"{now + bound - ANSWER_MARGIN_SECONDS:.3f}",
+    }
+    if strays:
+        env[STRAYS_ENV] = strays
     try:
         process = subprocess.Popen(
             [str(script), *args],
             cwd=str(cwd),
-            env={**os.environ, **extra_env} if extra_env else None,
+            env=env,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            start_new_session=True,
+            start_new_session=not nested,
         )
     except OSError as exc:
         return CommandRun(Ending.NOT_STARTED, bound, detail=str(exc))
     try:
         raw_stdout, raw_stderr = process.communicate(timeout=bound)
     except subprocess.TimeoutExpired:
-        _kill_process_group(process)
+        _stop(process, nested=nested, strays=strays)
         return CommandRun(Ending.TIMED_OUT, bound)
     except BaseException:
-        _kill_process_group(process)
+        _stop(process, nested=nested, strays=strays)
         raise
+    finally:
+        if not nested:
+            _end_strays(process, strays)
     stderr = _decode(raw_stderr)
     try:
         stdout = (raw_stdout or b"").decode("utf-8")
@@ -245,6 +299,40 @@ def parse_document(text: str) -> Any:
     return json.loads(text)
 
 
+def _inherited_deadline() -> float | None:
+    """The deadline of the run this process runs inside, from the environment;
+    None outside one, or when the value is not a number, which no run writes."""
+    raw = os.environ.get(DEADLINE_ENV)
+    if raw is None:
+        return None
+    try:
+        deadline = float(raw)
+    except ValueError:
+        return None
+    return deadline if math.isfinite(deadline) else None
+
+
+def _remaining(deadline: float, now: float) -> float:
+    """A nested run's bound: the time left until the inherited deadline, to a
+    tenth of a second, never more than a run's own bound."""
+    return min(COMMAND_TIMEOUT_SECONDS, round(deadline - now, 1))
+
+
+def _strays_path() -> str:
+    """A path no run has named, for the file a nested run under this one writes
+    when what its command started may outlive it. Nothing is created here."""
+    return os.path.join(tempfile.gettempdir(), f"pkit-strays-{uuid.uuid4().hex}")
+
+
+def _stop(process: subprocess.Popen[bytes], *, nested: bool, strays: str) -> None:
+    """End a command that overran or was interrupted: its whole group when the
+    run started one, else the command alone, recording the strays."""
+    if nested:
+        _kill_command(process, strays)
+    else:
+        _kill_process_group(process)
+
+
 def _kill_process_group(process: subprocess.Popen[bytes]) -> None:
     """End the command and everything it started. `start_new_session` made it
     the leader of its own group, so one signal reaches the grandchild a `uv run
@@ -257,6 +345,39 @@ def _kill_process_group(process: subprocess.Popen[bytes]) -> None:
     else:  # pragma: no cover — no process groups on this platform
         process.kill()
     process.wait()
+    _close_pipes(process)
+
+
+def _kill_command(process: subprocess.Popen[bytes], strays: str) -> None:
+    """End a nested run's command. Its group is its caller's too, so a signal to
+    the group would end the caller: the command alone is killed, its pipes
+    closed unread as for a group. What it started may still run — a `uv run
+    --script` shebang's interpreter, a `pkit` reading command — in the group
+    the outermost run kills; the strays file tells that run to, when its
+    command ends, rather than only on its own timeout."""
+    process.kill()
+    process.wait()
+    _close_pipes(process)
+    if strays:
+        with contextlib.suppress(OSError):  # unrecorded, they end only with the outer kill
+            Path(strays).touch()
+
+
+def _end_strays(process: subprocess.Popen[bytes], strays: str) -> None:
+    """After the outermost run's command ended, however it ended: when a nested
+    run recorded strays, end the whole group the command led, then forget the
+    record. The group outlives its leader while any member runs, so its id
+    still names it."""
+    record = Path(strays)
+    if not record.exists():
+        return
+    if hasattr(os, "killpg"):
+        with contextlib.suppress(ProcessLookupError):  # nothing was left after all
+            os.killpg(process.pid, signal.SIGKILL)
+    record.unlink(missing_ok=True)
+
+
+def _close_pipes(process: subprocess.Popen[bytes]) -> None:
     for stream in (process.stdout, process.stderr):
         if stream is not None:
             stream.close()
