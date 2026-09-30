@@ -1410,12 +1410,12 @@ def _declaration_at(repo_root: Path, rev: str, path: str) -> tuple[str, str | No
 # changelog *well-formed*?". It validates only the mechanically-checkable
 # subset — category enum, `pr` shape, body shape, the floor field's value and
 # carrier, changelog heading structure — and makes no attempt at the
-# plain-language / no-jargon discipline, which is human
-# judgment left to the guide (`.pkit/release/README.md`) and review. Same
-# honest stance as the guard: a **reminder, not a proof**, with an escape
-# hatch for the cases an objective rule necessarily mis-fires on. The floor
-# field sits outside the hatch: it is the release's own refusal reported early,
-# and an invalid one blocks every later release on `main`.
+# plain-language / no-jargon discipline, which is human judgment left to the
+# guide (`.pkit/release/README.md`) and review. Same honest stance as the
+# guard: a **reminder, not a proof**, with an escape hatch for the cases an
+# objective rule necessarily mis-fires on. The floor field sits outside the
+# hatch: it is the release's own refusal reported early, and an invalid one
+# blocks every later release on `main`.
 
 # A body that is *only* one of these bare references is the objective proxy for
 # the "no in-body jargon / references" rule — an entry that says nothing to a
