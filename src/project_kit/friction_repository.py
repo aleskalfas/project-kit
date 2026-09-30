@@ -38,6 +38,14 @@ a change's; *over-broad* anchors. Then the two measures: unanchored artefacts
 within the places and uncovered surface, excluded paths ignored. It never
 fails (point 12): exit 0 in either mode. Dormant while no place is declared.
 
+**An artefact under an excluded path** (point 7) is left out of the measures
+— the unanchored listing and its count — and so of the debt: it is never
+judged stale or deferred and has no state. What it declares is still
+checked, since a dead anchor is an error and never silence: its dead
+anchors, unresolved kinds and over-broad anchors are reported. Whether it is
+excluded is read from the artefact, as discovery decided it
+(`Artefact.excluded_by`), never by matching its path again.
+
 A shallow clone whose history stops before a point is reported for the
 artefacts concerned, never guessed at.
 
@@ -226,7 +234,8 @@ class RepositoryCheck:
     shallow: bool | None  # `None` only while dormant
     artefact_reports: tuple[ArtefactReport, ...]  # in report order
     findings: tuple[RepositoryFinding, ...]  # in report order
-    unanchored: tuple[str, ...]  # locations of artefacts without anchors (point 8)
+    unanchored: tuple[str, ...]  # locations of artefacts without anchors, excluded ones left out
+    excluded: int  # artefacts under an excluded path, left out of the measures (point 7)
     surface: int  # paths of the declared surface at HEAD, excluded ones left out
     uncovered: tuple[str, ...]  # those of them no artefact anchors to (point 8)
 
@@ -830,7 +839,8 @@ def run_repository_check(
             artefact = discovery.artefacts[index]
             if artefact.has_friction_block and (anchors_of(artefact) or artefact.deferrals):
                 report, found = _check_artefact(artefact, judge)
-                reports.append(report)
+                if report is not None:
+                    reports.append(report)
                 findings.extend(found)
     finally:
         blobs.close()
@@ -855,7 +865,10 @@ def run_repository_check(
         shallow=bool(history.shallow),
         artefact_reports=tuple(reports),
         findings=tuple(findings),
-        unanchored=tuple(a.location for a in discovery.artefacts if not anchors_of(a)),
+        unanchored=tuple(
+            a.location for a in discovery.artefacts if not a.excluded and not anchors_of(a)
+        ),
+        excluded=sum(1 for a in discovery.artefacts if a.excluded),
         surface=surface,
         uncovered=uncovered,
     )
@@ -874,6 +887,7 @@ def _dormant(mode: str, mode_as_written: Any, *, places: int) -> RepositoryCheck
         artefact_reports=(),
         findings=(),
         unanchored=(),
+        excluded=0,
         surface=0,
         uncovered=(),
     )
@@ -881,8 +895,14 @@ def _dormant(mode: str, mode_as_written: Any, *, places: int) -> RepositoryCheck
 
 def _check_artefact(
     artefact: Artefact, judge: _Judge
-) -> tuple[ArtefactReport, list[RepositoryFinding]]:
-    """The report and findings about one artefact carrying anchors or deferrals."""
+) -> tuple[ArtefactReport | None, list[RepositoryFinding]]:
+    """The report and findings about one artefact carrying anchors or deferrals.
+
+    An artefact under an excluded path has no report and no stale or deferred
+    finding — it is left out of the debt as of the measures (point 7) — and
+    only what it declares is checked: dead anchors, unresolved kinds and
+    over-broad anchors.
+    """
 
     def finding(
         kind: RepositoryFindingKind,
@@ -893,8 +913,6 @@ def _check_artefact(
         commit = None if origin is None else judge.history.commits[origin]
         return RepositoryFinding(kind, message, artefact.id, artefact.location, anchor, commit)
 
-    points = judge.walker.points(artefact)
-    commits = judge.history.commits
     stale: list[RepositoryFinding] = []
     deferred: list[RepositoryFinding] = []
     problems: list[RepositoryFinding] = []
@@ -909,7 +927,11 @@ def _check_artefact(
         over = judge.over_broad(anchor)
         if over is not None:
             broad.append(finding(over.kind, over.message, anchor))
+    if artefact.excluded:
+        return None, problems + broad
 
+    points = judge.walker.points(artefact)
+    commits = judge.history.commits
     deferral_points = dict(points.deferrals)
     if points.unreachable is not None or points.revalidation is None:
         what = points.unreachable or "its revalidation point"
@@ -1047,8 +1069,10 @@ class ArtefactCheck:
 
     `report` is `None` when there is nothing to judge — no `friction` block, or
     neither anchors nor deferrals, the artefacts the check passes over — and
-    `findings` are then empty. Otherwise both are the check's own for this
-    artefact, the findings in its order.
+    `findings` are then empty. It is `None` too for an artefact under an
+    excluded path, which is never judged stale or deferred; `findings` are then
+    what the check reports of its declarations. Otherwise both are the check's
+    own for this artefact, the findings in its order.
     """
 
     head: HeadState
@@ -1107,6 +1131,8 @@ def _traced(
     artefact: Artefact, judge: _Judge, findings: Sequence[RepositoryFinding]
 ) -> tuple[TracedFinding, ...]:
     """Each finding with the commits behind it (see `TracedFinding`)."""
+    if artefact.excluded:  # only its declarations were checked: nothing lies behind them
+        return tuple(TracedFinding(f, ()) for f in findings)
     history = judge.history
     points = judge.walker.points(artefact)  # the check's walk again: its blobs are cached
     if points.unreachable is not None or points.revalidation is None:
@@ -1202,6 +1228,7 @@ def render_json(result: RepositoryCheck) -> str:
             "artefacts": result.artefacts,
             "carrying": result.carrying,
             "checked": len(result.artefact_reports),
+            "excluded": result.excluded,
             "surface": result.surface,
             **{kind.value: result.count(kind) for kind in RepositoryFindingKind},
         },
@@ -1346,9 +1373,12 @@ def _measure_lines(result: RepositoryCheck) -> list[str]:
         cli_render.style("heading", "MEASURES")
         + cli_render.style("muted", " — reported, never failed (COR-050 point 8)")
     ]
-    lines.append(
-        f"  Unanchored artefacts: {len(result.unanchored)} of {result.artefacts} in the places"
-    )
+    measured = result.artefacts - result.excluded
+    unanchored = f"  Unanchored artefacts: {len(result.unanchored)} of {measured} in the places"
+    if result.excluded:
+        left_out = counted(result.excluded, "artefact", "artefacts")
+        unanchored += f" (excluded paths left out: {left_out})"
+    lines.append(unanchored)
     lines.extend(f"    {location}" for location in result.unanchored)
     if result.surface:
         surface = f"{len(result.uncovered)} of {result.surface} paths in the declared surface"
