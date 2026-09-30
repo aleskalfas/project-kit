@@ -511,6 +511,283 @@ def test_excluded_paths_do_not_change_an_anchor(repo: AdopterRepo) -> None:
     assert _summary(_run(repo)) == []
 
 
+# --- a change to `friction.exclude` (COR-050 point 7) ---------------------------------------
+
+_GENERATED = {"src/cli/generated/table.py": "T = 1\n"}
+
+
+def _guide_and_notes() -> dict[str, str]:
+    """`guide` covers the generated code through `src/cli/**`; `notes`, on the engine, does not."""
+    notes = document("notes", anchors={"path": ["src/core/**"]}, at=T1, outcome="updated")
+    return {"docs/guide.md": guide(), "docs/notes.md": notes, **_GENERATED}
+
+
+def test_a_widening_over_files_the_diff_leaves_alone_is_reported_not_owed(
+    repo: AdopterRepo,
+) -> None:
+    """The anchor loses a file it stood on that nothing in the diff changes: reported, never
+    failed — and an artefact whose anchors it does not cover hears nothing of it."""
+    _start(repo, _guide_and_notes())
+    widened = {CONFIG: friction_config(exclude=["src/cli/generated"])}
+    repo.commit("exclude the generated code", widened)
+    result = _run(repo)
+    assert _summary(result) == [("left-out", "docs/guide.md", "path:src/cli/**", None)]
+    assert result.findings[0].message == (
+        "`friction.exclude` now leaves out 1 file this anchor stood on at the base "
+        "(src/cli/generated/table.py); no change to it in this diff"
+    )
+    assert not result.failing
+
+
+def test_a_widening_over_a_file_the_diff_changes_is_a_question(repo: AdopterRepo) -> None:
+    """A widening never hides a change: a file it leaves out that the diff changes too is
+    the anchor's question, answered like any other."""
+    _start(repo, _guide_and_notes())
+    repo.commit(
+        "regenerate the table, and exclude it",
+        {
+            "src/cli/generated/table.py": "T = 2\n",
+            CONFIG: friction_config(exclude=["src/cli/generated"]),
+        },
+    )
+    result = _run(repo)
+    assert _summary(result) == [("friction", "docs/guide.md", "path:src/cli/**", None)]
+    assert result.findings[0].message == (
+        "`friction.exclude` changed over it in this diff (now leaves out "
+        "src/cli/generated/table.py, which this diff also changes) and carries no answer: "
+        "revalidate the artefact, or defer the anchor"
+    )
+    assert result.failing
+
+    repo.commit(
+        "the guide holds without the generated code",
+        {"docs/guide.md": guide(at=T2, because="the generated table was never described")},
+    )
+    assert _summary(_run(repo)) == [("answered", "docs/guide.md", "path:src/cli/**", "unchanged")]
+
+
+def test_a_widening_and_a_change_to_the_same_anchor_are_both_named(repo: AdopterRepo) -> None:
+    """COR-050 point 7: the exclusion question and the content change are one question, and
+    its message names both; a widening that asks nothing leaves the change's question alone
+    and is reported beside it."""
+    _start(repo, _guide_and_notes())
+    repo.commit(
+        "change the CLI, regenerate the table and exclude it",
+        {
+            "src/cli/main.py": "print('cli v2')\n",
+            "src/cli/generated/table.py": "T = 2\n",
+            CONFIG: friction_config(exclude=["src/cli/generated"]),
+        },
+    )
+    result = _run(repo)
+    assert _summary(result) == [("friction", "docs/guide.md", "path:src/cli/**", None)]
+    assert result.findings[0].message.startswith(
+        "changed in this diff (src/cli/main.py), and `friction.exclude` changed over it (now "
+        "leaves out src/cli/generated/table.py, which this diff also changes) and carries no "
+        "answer"
+    )
+
+    repo.checkout("main")
+    repo.checkout("second", create=True)
+    repo.commit(
+        "change the CLI and exclude the table, left alone",
+        {
+            "src/cli/main.py": "print('cli v3')\n",
+            CONFIG: friction_config(exclude=["src/cli/generated"]),
+        },
+    )
+    result = _run(repo)
+    assert _summary(result) == [
+        ("friction", "docs/guide.md", "path:src/cli/**", None),
+        ("left-out", "docs/guide.md", "path:src/cli/**", None),
+    ]
+    assert result.findings[0].message.startswith("changed in this diff and carries no answer")
+
+
+def test_a_file_removed_under_a_new_exclusion_is_a_change_never_left_out(
+    repo: AdopterRepo,
+) -> None:
+    """A file that is gone is not left out: its removal is the anchor's change, whatever the
+    diff's `friction.exclude` now says of its path."""
+    _start(repo, _guide_and_notes())
+    repo.commit(
+        "drop the table, and exclude where it was",
+        {
+            "src/cli/generated/table.py": None,
+            CONFIG: friction_config(exclude=["src/cli/generated"]),
+        },
+    )
+    result = _run(repo)
+    assert _summary(result) == [("friction", "docs/guide.md", "path:src/cli/**", None)]
+    assert result.findings[0].message.startswith("changed in this diff and carries no answer")
+
+
+def test_a_narrowed_exclusion_is_always_a_question(repo: AdopterRepo) -> None:
+    """The anchor gains a file it was never checked against: the narrowing is the change,
+    and a file the diff changes too is named as such."""
+    _start(repo, _guide_and_notes(), config=friction_config(exclude=["src/cli/generated"]))
+    repo.commit("stop excluding the generated code", {CONFIG: friction_config()})
+    result = _run(repo)
+    assert _summary(result) == [("friction", "docs/guide.md", "path:src/cli/**", None)]
+    assert result.findings[0].message.startswith(
+        "`friction.exclude` changed over it in this diff (now lets in "
+        "src/cli/generated/table.py) and carries no answer"
+    )
+    assert result.failing
+
+    repo.commit("regenerate, now let in", {"src/cli/generated/table.py": "T = 2\n"})
+    (finding,) = _run(repo).findings
+    assert "(now lets in src/cli/generated/table.py, which this diff also changes)" in (
+        finding.message
+    )
+
+
+def test_a_file_added_and_excluded_in_the_same_diff_is_no_change(repo: AdopterRepo) -> None:
+    """The anchor never stood on it: nothing was taken away, and nothing it stands on changed."""
+    _start(repo, {"docs/guide.md": guide()})
+    repo.commit(
+        "generate a table, and exclude it",
+        {**_GENERATED, CONFIG: friction_config(exclude=["src/cli/generated"])},
+    )
+    assert _summary(_run(repo)) == []
+
+
+def test_an_exclusion_that_kills_an_anchor_is_named_as_why(repo: AdopterRepo) -> None:
+    anchors = {"path": ["src/cli/**", "src/cli/generated/**"]}
+    _start(repo, {"docs/guide.md": guide(anchors=anchors), **_GENERATED})
+    repo.commit(
+        "exclude the generated code", {CONFIG: friction_config(exclude=["src/cli/generated"])}
+    )
+    result = _run(repo)
+    assert _summary(result) == [
+        ("dead-anchor", "docs/guide.md", "path:src/cli/generated/**", None),
+        ("left-out", "docs/guide.md", "path:src/cli/**", None),
+    ]
+    assert result.findings[0].message == "matches only excluded files (1), excluded since this diff"
+
+
+def test_record_and_artefact_anchors_are_untouched_by_an_exclusion(repo: AdopterRepo) -> None:
+    """Excluded paths cover paths (COR-050 point 7): excluding the file a record or an
+    artefact anchor names asks nothing of it, and a change to the record still does."""
+    record = ".pkit/decisions/core/COR-050-anchors-and-friction.md"
+    target = document("target", anchors={"path": ["src/core/**"]}, at=T1, outcome="updated")
+    anchored = guide(anchors={"record": ["COR-050"], "artefact": ["target"]})
+    _start(repo, {"docs/guide.md": anchored, "docs/target.md": target})
+    repo.commit(
+        "exclude the record and the target",
+        {CONFIG: friction_config(exclude=[".pkit/decisions", "docs/target.md"])},
+    )
+    assert _summary(_run(repo)) == []
+
+    text = (repo.root / record).read_text(encoding="utf-8")
+    repo.commit(
+        "amend the record, and the target's body",
+        {
+            record: text + "\nAmended.\n",
+            "docs/target.md": document(
+                "target", anchors={"path": ["src/core/**"]}, at=T1, outcome="updated", body="v2"
+            ),
+        },
+    )
+    assert _summary(_run(repo)) == [
+        ("friction", "docs/guide.md", "record:COR-050", None),
+        ("friction", "docs/guide.md", "artefact:target", None),
+    ]
+
+
+def test_an_artefact_under_an_excluded_path_owes_no_answer(repo: AdopterRepo) -> None:
+    """COR-050 point 7, as the whole-repository check reads it (#1152): an anchor of an
+    excluded artefact changing asks it nothing — while what it declares is still checked."""
+    generated = guide(anchors={"path": ["src/cli/**"]})
+    _start(
+        repo,
+        {"docs/guide.md": guide(), "docs/generated/cli.md": generated},
+        config=friction_config(exclude=["docs/generated"]),
+    )
+    repo.commit(
+        "change the CLI; the generated page gains an anchor that resolves to nothing",
+        {
+            "src/cli/main.py": "print('cli v2')\n",
+            "docs/generated/cli.md": guide(anchors={"path": ["src/cli/**", "src/gone/**"]}),
+        },
+    )
+    assert _summary(_run(repo)) == [
+        ("dead-anchor", "docs/generated/cli.md", "path:src/gone/**", None),
+        ("friction", "docs/guide.md", "path:src/cli/**", None),
+    ]
+
+
+@pytest.mark.parametrize(
+    ("head", "expected"),
+    [
+        pytest.param(guide(at=T2), ("bump", None), id="blind-stamp"),
+        pytest.param(
+            guide(at=T2, because="regenerated from the same CLI"),
+            ("revalidated", "unchanged"),
+            id="justified",
+        ),
+    ],
+)
+def test_the_bump_of_an_excluded_artefact_is_judged(
+    repo: AdopterRepo, head: str, expected: tuple[str, str | None]
+) -> None:
+    """It owes no answer, but a new `at` is judged like any other: a stamp made while
+    excluded is the blind bump COR-050 point 3 guards against."""
+    _start(
+        repo, {"docs/generated/cli.md": guide()}, config=friction_config(exclude=["docs/generated"])
+    )
+    repo.commit("restamp the generated page", {"docs/generated/cli.md": head})
+    kind, answer = expected
+    assert _summary(_run(repo)) == [(kind, "docs/generated/cli.md", None, answer)]
+
+
+def test_an_artefact_excluded_in_the_diff_owes_no_answer_and_one_let_in_revalidates(
+    repo: AdopterRepo,
+) -> None:
+    """Exclusion is read at head: the artefact a widening covers owes nothing from then on,
+    and one a narrowing lets back in must revalidate in the same change, as a moved one
+    must — the base never asked it anything (COR-050 point 7)."""
+    files = {"docs/guide.md": guide(), "docs/generated/cli.md": guide()}
+    _start(repo, files, config=friction_config(exclude=["docs/generated"]))
+    repo.commit(
+        "change the CLI, and exclude the guide instead",
+        {
+            "src/cli/main.py": "print('cli v2')\n",
+            CONFIG: friction_config(exclude=["docs/guide.md"]),
+        },
+    )
+    result = _run(repo)
+    assert _summary(result) == [
+        ("friction", "docs/generated/cli.md", "path:src/cli/**", None),
+        ("friction", "docs/generated/cli.md", None, None),
+    ]
+    assert result.findings[1].message == (
+        "this diff's `friction.exclude` lets it back in, which needs a revalidation (a new `at`) "
+        "in the same change"
+    )
+
+    repo.commit(
+        "revalidate the page let back in",
+        {"docs/generated/cli.md": guide(at=T2, because="the page still describes the CLI")},
+    )
+    assert [kind for kind, *_ in _summary(_run(repo))] == ["answered", "answered"]
+
+
+def test_a_base_whose_exclusions_do_not_read_is_read_as_head(repo: AdopterRepo) -> None:
+    """A `friction.exclude` the base cannot read is not a base that leaves nothing out: it
+    is reported, and read as head's, so no widening is made up from it."""
+    _start(repo, _guide_and_notes(), config=friction_config(exclude=5))
+    repo.commit(
+        "write the exclusions as a list", {CONFIG: friction_config(exclude=["src/cli/generated"])}
+    )
+    result = _run(repo)
+    assert _summary(result) == [("unreadable", CONFIG, None, None)]
+    assert "`friction.exclude` does not read at the base (`friction.exclude` is int (5)" in (
+        result.findings[0].message
+    )
+    assert not result.failing
+
+
 def test_an_artefact_is_not_anchored_to_its_own_file(repo: AdopterRepo) -> None:
     _start(repo, {"docs/guide.md": guide(anchors={"path": ["docs/**"]})})
     repo.commit(

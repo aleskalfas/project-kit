@@ -595,7 +595,10 @@ def _explained(
     )
     answers: tuple[Answer, ...] = ()
     kind = finding.kind
-    if kind is _Kind.STALE and anchor is None:
+    if kind is _Kind.STALE and anchor is None and finding.message.startswith(fr.LET_BACK_IN):
+        clears = "revalidate the artefact: letting it back in cannot be deferred"
+        answers = revalidate
+    elif kind is _Kind.STALE and anchor is None:
         clears, answers = "revalidate the artefact: a move cannot be deferred", revalidate
     elif kind is _Kind.STALE and anchor is not None:
         defer = command_line(
@@ -612,6 +615,12 @@ def _explained(
     elif kind is _Kind.DEFERRED and anchor is not None:
         clears = f"a revalidation that does not keep it (`--keep {_label(anchor)}` keeps it)"
         answers = revalidate
+    elif kind is _Kind.LEFT_OUT and anchor is not None:
+        clears = (
+            "nothing is owed; a revalidation reads the anchor under HEAD's `friction.exclude`, "
+            "which ends the report"
+        )
+        answers = revalidate[1:]
     elif kind is _Kind.DEAD_ANCHOR and anchor is not None:
         clears = (
             f"correct {_label(anchor)} or remove it from the block, then revalidate (the "
@@ -714,6 +723,7 @@ _STATE_GLOSS = {
 _COMMITS_LABEL = {
     _Kind.STALE: "changed in, oldest first",
     _Kind.DEFERRED: "postpones, oldest first",
+    _Kind.LEFT_OUT: "left out in, oldest first",
     _Kind.DEAD_ANCHOR: "where its files went, oldest first",
 }
 
@@ -836,7 +846,7 @@ def _finding_lines(explanation: Explanation, now: datetime) -> list[str]:
         if explained.commits:
             label = _COMMITS_LABEL.get(finding.kind, "behind it")
             if finding.kind is _Kind.STALE and finding.anchor is None:
-                label = "moved in"
+                label = "let back in" if finding.message.startswith(fr.LET_BACK_IN) else "moved in"
             author_width = max(len(c.commit.author) for c in explained.commits)
             lines.append(f"    {label}:")
             lines.extend(f"      {_commit_row(c.commit, author_width)}" for c in explained.commits)
