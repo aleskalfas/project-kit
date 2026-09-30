@@ -34,6 +34,7 @@ from tests.analysis_repo import (
     RECORDS,
     USE_CASES,
     VALIDATE,
+    fill,
     front,
     installed,
     run_script,
@@ -85,11 +86,50 @@ def test_the_check_is_reached_under_the_capability_and_its_alias(
     assert "validate " in result.output
 
 
-def test_what_the_stamp_writes_passes_the_check(project: AdopterRepo) -> None:
+def test_what_the_stamp_writes_passes_the_check_once_its_placeholders_are_filled(
+    project: AdopterRepo,
+) -> None:
+    """What only a person can write the stamp leaves as the template's placeholders, and
+    the check fails each until it is written: in an own field, by the placeholder's
+    shape; in a body or a section, by the template's own placeholder texts."""
     seed(project)
     stamped(project, "use-case", "export", "--actor", "ACT-tester", "--area", "reports")
     stamped(project, "term", "sandbox", "--record", "ADR-001")
     stamped(project, "actor", "admin", "--name", "Administrator")
+    rule = "write in its place what it asks for — until then it says nothing of the"
+    left = "write in each one's place what it asks for, or remove it (DEC-001 point 1)"
+    assert errors(check(project)) == [
+        (
+            f"{GLOSSARY}#TERM-sandbox:/definition",
+            f"still holds the placeholder '<what the term means, in one sentence>': {rule} "
+            "term (DEC-001 point 1)",
+        ),
+        (
+            f"{GLOSSARY}#TERM-sandbox",
+            "its section still holds the template's placeholder '<More on the term when one "
+            "sentence is not enough: where it applies, what it is not, an example.>': " + left,
+        ),
+        (
+            f"{ACTORS}#ACT-admin:/needs/0",
+            "still holds the placeholder '<what this actor needs from the system, in one "
+            f"sentence>': {rule} actor (DEC-001 point 1)",
+        ),
+        (
+            f"{ACTORS}#ACT-admin",
+            "its section still holds the template's placeholder '<Who this is, when they come "
+            "to the system, and what they bring with them.>': " + left,
+        ),
+        (
+            f"{USE_CASES}/reports/UC-003-export.md",
+            "its body still holds the template's placeholder '<what the actor wants to achieve, "
+            "in one sentence>' and 5 more: " + left,
+        ),
+    ]
+    # A placeholder quoted as code, not the template's, is no placeholder in a body.
+    rel = f"{USE_CASES}/reports/UC-003-export.md"
+    fill(project)
+    body = (project.root / rel).read_text(encoding="utf-8")
+    project.write({rel: body + '\nRun `pkit analysis new use-case <slug> --gap "<a gap>"`.\n'})
     document = check(project)
     assert document == {
         "summary": [
@@ -159,6 +199,7 @@ def test_the_validator_reads_the_working_tree_alone(
     # Numbered against this branch alone: UC-001, the number main took since.
     ours = run_script(project, NEW, "use-case", "ours", "--actor", "ACT-tester", "--base", "topic")
     assert ours.stdout.splitlines()[-1] == f"stamped UC-001 at {USE_CASES}/UC-001-ours.md"
+    fill(project)
     answers = [check(project)]
     for base in (MAIN, "no-such-branch"):
         monkeypatch.setenv(BASE_ENV, base)
@@ -305,6 +346,7 @@ def test_missing_or_misshapen_parts_are_reported(
     project: AdopterRepo, files: Mapping[str, str], expected: list[tuple[str, str]]
 ) -> None:
     stamped(project, "actor", "tester")
+    fill(project)
     project.write(dict(files))
     assert errors(check(project)) == expected
 
@@ -342,6 +384,7 @@ def test_an_entry_missing_its_parts_or_keyed_by_a_foreign_id_is_reported(
     project: AdopterRepo,
 ) -> None:
     stamped(project, "actor", "tester")
+    fill(project)
     text = (project.root / ACTORS).read_text(encoding="utf-8")
     text = text.replace("ACT-tester:", "tester:").replace("  needs:\n", "  wants:\n")
     project.write({ACTORS: text})
@@ -386,6 +429,7 @@ def test_an_artefact_in_force_names_nothing_withdrawn_as_the_stamp_refuses(
 ) -> None:
     seed(project)
     stamped(project, "actor", "retired")
+    fill(project)
     _set(
         project, ACTORS, "  name: Retired\n  status: active", "  name: Retired\n  status: withdrawn"
     )
@@ -458,6 +502,7 @@ def test_a_journey_whose_use_case_anchors_do_not_match_its_steps_is_reported(
 ) -> None:
     seed(project)
     stamped(project, "use-case", "third", "--actor", "ACT-tester")
+    fill(project)
     rel = f"{JOURNEYS}/JRN-001-first-run.md"
     text = (project.root / rel).read_text(encoding="utf-8")
     project.write({rel: text.replace("steps:\n  - UC-001\n", "steps:\n  - UC-003\n  - UC-001\n")})

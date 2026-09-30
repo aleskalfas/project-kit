@@ -53,9 +53,6 @@ from _lib.resolve import DEAD, Anchor, Commit
 _QUOTE = re.compile(r"`([^`\n]+)`")
 _PLACEHOLDER = re.compile(r"^<[^>]*>$")
 
-#: A collection entry's section heading, and the next section's.
-_SECTION = re.compile(r"^## (?P<id>\S+)")
-
 
 @dataclass(frozen=True)
 class Reading:
@@ -150,7 +147,7 @@ def _quotes(root: Path, location: str) -> tuple[str, ...]:
         return ()
     _front, body = markdown.split(text)
     if entry:
-        body = _section(body, entry)
+        body = markdown.section(body, entry)
     return tuple(
         dict.fromkeys(
             quote.strip()
@@ -158,20 +155,6 @@ def _quotes(root: Path, location: str) -> tuple[str, ...]:
             if quote.strip() and not _PLACEHOLDER.match(quote.strip())
         )
     )
-
-
-def _section(body: str, entry: str) -> str:
-    """The body section headed by `entry`'s id, up to the next section."""
-    lines: list[str] = []
-    inside = False
-    for line in body.splitlines():
-        heading = _SECTION.match(line)
-        if heading is not None:
-            inside = heading["id"] == entry
-            continue
-        if inside:
-            lines.append(line)
-    return "\n".join(lines)
 
 
 def _commits_by_anchor(findings: Any) -> dict[tuple[str, str], tuple[Commit, ...]]:

@@ -29,6 +29,7 @@ from tests.analysis_repo import (
     NUMBERS,
     USE_CASES,
     VALIDATE,
+    fill,
     installed,
     load,
     run_script,
@@ -123,6 +124,7 @@ def test_a_number_the_default_branch_took_first_fails(project: AdopterRepo) -> N
     assert merged.returncode == 0, merged.stderr
     assert document(merged)["base"]["outdated"] is False
     assert document(merged)["summary"][0].startswith("numbers: this branch contains main (")
+    fill(project)
     validated = json.loads(run_script(project, VALIDATE, "--json").stdout)
     assert [f["message"].split(":")[0] for f in validated["findings"]] == [
         f"the id UC-002 is also held by {USE_CASES}/UC-002-mine.md"

@@ -354,6 +354,11 @@ def test_without_the_default_branch_ids_come_from_the_working_tree_and_it_says_s
         (("use-case", "one", "--actor", "ACT-tester", "--area", "Big Area"), "is not a word"),
         (("actor", "tester"), "ACT-tester is held already"),
         (("use-case", "one", "--actor", "ACT-retired"), "actor ACT-retired is withdrawn"),
+        (
+            ("use-case", "two", "--actor", "ACT-tester", "--title", "<the goal as it reads>"),
+            "--title still holds the placeholder '<the goal as it reads>'",
+        ),
+        (("actor", "admin", "--name", "<who this is>"), "--name still holds the placeholder"),
     ],
 )
 def test_a_stamp_refuses_what_it_cannot_ground(

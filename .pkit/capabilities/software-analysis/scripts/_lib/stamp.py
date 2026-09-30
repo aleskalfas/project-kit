@@ -21,6 +21,10 @@ journey's use cases from its steps, beside the paths and records it is given.
 An actor or a term nothing embodies is stamped with the reason instead, its
 `unanchored-because` (point 9). A revalidation record is not an artefact and
 is stamped by `_lib/revalidation.py`.
+What only a person can write the stamp leaves as the template's placeholders —
+an actor's need, a term's definition, a body's goal and steps — which the
+check fails until each is filled (`left_to_fill`); a title, a name or a reason
+given to it still holding a placeholder it refuses.
 Before the first artefact is placed it records the analysis location through
 the backbone (COR-049 point 5). Where the analysis is, and what it holds, is
 read through the backbone's discovery — the working tree's and the default
@@ -34,6 +38,7 @@ never named after its number, and deleted since, is the one it cannot count.
 
 from __future__ import annotations
 
+import functools
 import io
 import re
 from collections.abc import Callable, Mapping, Sequence
@@ -63,6 +68,7 @@ from _lib.model import (
     identity,
     with_article,
 )
+from _lib.placeholder import unfilled
 
 #: Each kind's template, in the capability's own tree.
 TEMPLATES = Path(__file__).resolve().parents[2] / "templates"
@@ -82,6 +88,9 @@ _SEAM_LINE = re.compile(r"^- \*\*UC-\d+ → UC-\d+:\*\* (?P<rest>.*)$")
 
 #: A collection entry's section heading, `## <id> — <name>`.
 _SECTION = re.compile(r"^## (?P<id>\S+)")
+
+#: A text in angle brackets, as a template writes what a person fills.
+_BRACKETED = re.compile(r"<[^<>\n]+>")
 
 
 class Refused(Exception):
@@ -131,6 +140,7 @@ def stamp(
             f"{NOUN[kind]}s; `pkit validate` says why"
         )
     _check_words(request)
+    _check_placeholders(request)
     _check_unanchored(request)
     _check_references(analysis, request)
 
@@ -174,14 +184,34 @@ def _check_words(request: Request) -> None:
         raise Refused(f"the area {request.area!r} is not a word, as a slug is")
 
 
+def _check_placeholders(request: Request) -> None:
+    """The words given are the person's: one still holding a placeholder is refused,
+    as the record stamp and the backbone's writers refuse one — the check fails an
+    artefact's field holding one (`_lib/check.py`)."""
+    flag = "--name" if request.kind in COLLECTIONS else "--title"
+    for option, text in (
+        (flag, request.title),
+        ("--unanchored-because", request.unanchored_because),
+    ):
+        placeholder = unfilled(text or "")
+        if placeholder is not None:
+            raise Refused(
+                f"{option} still holds the placeholder {placeholder!r}: write in its place what "
+                f"it asks for"
+            )
+
+
 def _check_unanchored(request: Request) -> None:
     """Only an actor or a term is kept unanchored with its reason, and never one
-    given anchors: the reason says why it has none (DEC-001 points 4 and 9)."""
+    given anchors: the reason says why it has none (DEC-001 points 4 and 9). A use
+    case always anchors to its actor and a journey to its steps' use cases (point
+    4), so neither is ever unanchored, and point 9's reason never applies to them."""
     if request.unanchored_because is None:
         return
     if request.kind not in COLLECTIONS:
+        rests_on = "its actor" if request.kind == USE_CASE else "the use cases of its steps"
         raise Refused(
-            f"{with_article(request.kind)} anchors to its actor, so it is never unanchored"
+            f"{with_article(request.kind)} anchors to {rests_on}, so it is never unanchored"
         )
     if not request.unanchored_because.strip():
         raise Refused("--unanchored-because gives the reason it has no anchors: write it")
@@ -416,6 +446,23 @@ def _container(request: Request, artefacts: Sequence[str]) -> dict[str, Any]:
 
 def _title(request: Request) -> str:
     return request.title or request.slug.replace("-", " ").capitalize()
+
+
+@functools.cache
+def left_to_fill() -> frozenset[str]:
+    """The placeholders a stamp leaves in an artefact's body for a person to fill: each
+    text in angle brackets of the artefact templates' bodies, but the title and the
+    name the stamp writes in their place. The check fails a body still holding one,
+    matched exactly, so code a body quotes is never taken for one."""
+    written = {TITLE}
+    left: set[str] = set()
+    for kind in TEMPLATE_OF:
+        front, body = _template(kind)
+        if kind in COLLECTIONS:
+            ((_example_id, example),) = dict(markdown.load(front)).items()
+            written.add(str(example["name"]))
+        left |= set(_BRACKETED.findall(body))
+    return frozenset(left - written)
 
 
 def _template(kind: str) -> tuple[str, str]:

@@ -15,6 +15,13 @@ What is checked, each against the record's words:
   actor, its steps, its needs, its definition — and an entry's id against its
   kind's id. Unknown fields are refused, so a misspelt one is never silently
   ignored.
+- **A placeholder left** (point 1). What the stamp leaves a person to write —
+  an actor's need, a term's definition, a use case's goal and steps — is no
+  part of the analysis until written: an own field still holding words in
+  angle brackets (`_lib/placeholder.py`, the shape the backbone's writers
+  refuse), or a body — a collection entry's section — still holding one of
+  the template's placeholders, matched exactly (`stamp.left_to_fill`), so
+  code a body quotes is never taken for one, is an error.
 - **A use case's and a journey's heading** is its id and its front matter's
   title, `# UC-NNN — <title>`: what a reader of the front matter alone sees —
   a data point publishing `{id, title, status}`, say — is what the page shows.
@@ -87,7 +94,7 @@ from typing import Any
 
 from ruamel.yaml.error import YAMLError
 
-from _lib import backbone, evidence, markdown, schemas
+from _lib import backbone, evidence, markdown, schemas, stamp
 from _lib.findings import ERROR, REPORT, WARNING, Finding, Outcome, at
 from _lib.model import (
     ACTOR,
@@ -109,6 +116,7 @@ from _lib.model import (
     identity,
     with_article,
 )
+from _lib.placeholder import unfilled
 
 #: Where in an artefact its artefact anchors sit.
 ARTEFACT_ANCHORS = f"/{CONTAINER}/friction/anchors/artefact"
@@ -148,6 +156,7 @@ def check(root: Path) -> Outcome:
     outcome.findings += [Finding(ERROR, s.path, s.why) for s in analysis.strays]
     outcome.findings += _unreadable(analysis)
     outcome.findings += _own_fields(analysis)
+    outcome.findings += _placeholders(root, analysis)
     outcome.findings += _headings(root, analysis)
     outcome.findings += _duplicates(analysis)
     outcome.findings += _named_alone(analysis)
@@ -211,6 +220,75 @@ def _own_fields(analysis: Analysis) -> list[Finding]:
         for pointer, message in schemas.errors(artefact.kind, artefact.fields):
             found.append(Finding(ERROR, at(artefact.location, pointer), message))
     return found
+
+
+def _placeholders(root: Path, analysis: Analysis) -> list[Finding]:
+    """What a person was left to write and has not: a placeholder in an artefact's own
+    fields — words in angle brackets, as the backbone's writers refuse them — and one
+    of the template's placeholders still in its body, or its section of a collection
+    file (DEC-001 point 1)."""
+    left = stamp.left_to_fill()
+    texts: dict[str, str | None] = {}
+    found: list[Finding] = []
+    for artefact in analysis.artefacts:
+        for pointer, text in _strings(artefact.fields):
+            placeholder = unfilled(text)
+            if placeholder is not None:
+                found.append(
+                    Finding(
+                        ERROR,
+                        at(artefact.location, pointer),
+                        f"still holds the placeholder {placeholder!r}: write in its place what "
+                        f"it asks for — until then it says nothing of the {NOUN[artefact.kind]} "
+                        f"(DEC-001 point 1)",
+                    )
+                )
+        if artefact.path not in texts:
+            texts[artefact.path] = _read(root / artefact.path)
+        text = texts[artefact.path]
+        if text is None:
+            continue  # the core reports a file it cannot read
+        _front, body = markdown.split(text)
+        if artefact.entry and artefact.id is not None:
+            body = markdown.section(body, artefact.id)
+        held = sorted((body.find(p), p) for p in left if p in body)
+        if not held:
+            continue
+        more = f" and {len(held) - 1} more" if len(held) > 1 else ""
+        where = "its section" if artefact.entry else "its body"
+        found.append(
+            Finding(
+                ERROR,
+                artefact.location,
+                f"{where} still holds the template's placeholder {held[0][1]!r}{more}: write in "
+                f"each one's place what it asks for, or remove it (DEC-001 point 1)",
+            )
+        )
+    return found
+
+
+def _strings(value: object, pointer: str = "") -> list[tuple[str, str]]:
+    """Each text in `value`, with the JSON Pointer to it."""
+    if isinstance(value, str):
+        return [(pointer, value)]
+    if isinstance(value, Mapping):
+        items: Iterable[tuple[object, object]] = value.items()
+    elif isinstance(value, list):
+        items = enumerate(value)
+    else:
+        return []
+    return [
+        found
+        for key, item in items
+        for found in _strings(item, f"{pointer}/{str(key).replace('~', '~0').replace('/', '~1')}")
+    ]
+
+
+def _read(path: Path) -> str | None:
+    try:
+        return path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return None
 
 
 def _headings(root: Path, analysis: Analysis) -> list[Finding]:

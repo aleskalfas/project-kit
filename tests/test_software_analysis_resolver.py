@@ -264,7 +264,7 @@ def flagged(
     revalidation point every change below is judged from."""
     repo = installed(make_adopter_repo, monkeypatch)
     repo.commit("feat: the runner", {RUN: "def run_suite(fast=False):\n    print('run')\n"})
-    seed(repo)
+    seed(repo, filled=False)
     text = (repo.root / RUN_SUITE).read_text(encoding="utf-8")
     step = "1. The tester starts `run_suite`, passing `fast` for a quick pass."
     repo.write({RUN_SUITE: text.replace("1. <what the actor or the system does>", step)})
