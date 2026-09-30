@@ -6,7 +6,7 @@ The capability's first artefacts, each held to living-docs DEC-001:
   member of `pkit validate` — over an adopter repository with the capability
   installed: one test per rule it applies (an out-of-root place without an
   assignment, a place enclosing a root, a record declared as a page, another
-  component's place, an entry point outside its space, a page's fields, the
+  component's place or held document, an entry point outside its space, a page's fields, the
   most specific place, a definition that does not inherit LDOC), and the
   readers each page's reader resolves against, named in its summary (reader
   resolution itself is `test_living_docs_points.py`'s);
@@ -322,8 +322,11 @@ def test_a_rule_set_file_declared_as_a_page_is_an_error(project: AdopterRepo) ->
     assert "is a rule-set file, an anchor target (COR-051)" in message
 
 
-def _install_component_with_place(repo: AdopterRepo) -> None:
-    """Another capability, declaring a place under the internal root."""
+def _install_component_with_place(
+    repo: AdopterRepo, friction: Mapping[str, Any] | None = None
+) -> None:
+    """Another capability, declaring a place under the internal root — or, with
+    `friction`, what that block says."""
     cap = repo.root / ".pkit" / "capabilities" / "analysis-test"
     cap.mkdir(parents=True)
     (cap / "package.yaml").write_text(
@@ -334,7 +337,7 @@ def _install_component_with_place(repo: AdopterRepo) -> None:
                 "description": "An analysis capability, for the test.",
                 "requires_backbone": ">=0.0.0",
                 "docs": {"locations": {"analysis": {"path": "analysis"}}},
-                "friction": {"places": [{"location": "analysis", "path": "."}]},
+                "friction": dict(friction or {"places": [{"location": "analysis", "path": "."}]}),
             }
         ),
         encoding="utf-8",
@@ -362,6 +365,27 @@ def test_another_component_s_place_is_never_a_page(project: AdopterRepo) -> None
     location, message = only_error(run(project))
     assert location == "tech-docs/analysis/uc-001.md:/kind"
     assert "is an artefact of analysis-test, which declares the place it is in" in message
+
+
+def test_a_document_another_component_holds_is_never_a_page_nor_unclassified(
+    project: AdopterRepo,
+) -> None:
+    """A folder of held documents (COR-050 point 1) under the internal root: no place
+    walks its files, and each is its owner's — counted "of another component",
+    never an unclassified document, and never a page (DEC-001 point 1)."""
+    _install_component_with_place(project, {"held": [{"location": "analysis", "path": "records"}]})
+    record = "tech-docs/analysis/records/2026-10-01-run.md"
+    project.write({record: "---\ndate: '2026-10-01'\n---\n\n# A run\n"})
+    document = run(project)
+    assert errors(document) == []
+    assert "1 of another component" in document["summary"][3]
+    assert "0 unclassified document(s)" in document["summary"][3]
+    project.write({record: "---\ndate: '2026-10-01'\nreader: user\n---\n"})
+    location, message = only_error(run(project))
+    assert location == f"{record}:/reader"
+    assert "is a document analysis-test holds in a folder it declares (COR-050 point 1)" in (
+        message
+    )
 
 
 # --- entry points (DEC-001 point 1) ------------------------------------------------------

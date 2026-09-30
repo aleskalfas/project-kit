@@ -9,6 +9,10 @@ rules:
     pkit:
       friction:
         anchors: {record: ["living-docs:DEC-001"]}
+        revalidated:
+          at: 2026-09-30T01:37:15Z
+          outcome: unchanged
+          unchanged-because: living-docs DEC-001 point 1 now names a folder of held documents beside a place as how another component claims a document; that changes which documents are pages, not the paths readers take through the user space's pages
 ---
 
 # The user space's definition

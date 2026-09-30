@@ -12,7 +12,7 @@ pkit:
       record: ["living-docs:DEC-001", COR-049, COR-050, COR-051, COR-053]
       artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006]
     revalidated:
-      at: 2026-09-29T20:44:40Z
+      at: 2026-09-30T01:37:09Z
       outcome: updated
 ---
 
@@ -22,7 +22,7 @@ Keep your documentation **true for the people who read it**, even when an agent 
 
 ## How it works
 
-- **Spaces.** A user space and a technical space, kept separate: neither root lies inside the other. You can add others. New pages go under each space's root. A space can also include places the project declares — inside a root, where they inherit that root's space, or outside every root, such as the repo's top-level README, where the capability's project configuration assigns them to a space. Where places nest the most specific one wins. Decision records, rule sets, and anything another capability claims are anchor targets or that capability's artefacts, never pages. Each space's *definition* (its rules) lives in the technical space.
+- **Spaces.** A user space and a technical space, kept separate: neither root lies inside the other. You can add others. New pages go under each space's root. A space can also include places the project declares — inside a root, where they inherit that root's space, or outside every root, such as the repo's top-level README, where the capability's project configuration assigns them to a space. Where places nest the most specific one wins. Decision records, rule sets, and anything another capability claims — through a place, or a folder of documents it holds, such as an analysis capability's revalidation records — are anchor targets or that capability's own, never pages. Each space's *definition* (its rules) lives in the technical space.
 - **Rules.** The shared method rule set, `LDOC`, ships with this capability. Each space's definition inherits it and adds its own rules (core rule sets, COR-051).
 - **Anchors and friction.** Each page's anchors (code, decisions, sources, analysis artefacts) must ground everything it says. The core friction check (COR-050) flags a page when any of those changed and nobody revalidated it.
 - **Proposals, never blind edits.** The agent, `living-docs` ("The agent" below), proposes each fix with its evidence, and a person reviews it.
@@ -97,11 +97,11 @@ A place inside a root belongs to that root's space; list it under `places` only 
 
 `pkit living-docs validate` checks your spaces against the decision; `pkit validate` runs the same check as its `living-docs:spaces` member (`--json` prints the findings document it reads). It is a query: read-only, offline, and `pkit sync` provisions its dependencies.
 
-**What it reads.** Where your documents are, it reads from the core, through `pkit friction artefacts --json` — the same discovery `pkit validate` and the friction checks read: your documentation roots, the places your configuration and every installed capability declare, the files each place matches, and each file's front matter. It never reads the declarations or walks the places itself, so it can never disagree with the core about which files a place holds; a synced copy, a place outside the repository and a malformed declaration are skipped exactly as the core skips them. What it decides over that answer is this capability's: which place wins where places nest, which space a place serves, and what a document is. Besides, it reads its own project configuration, and the readers point — only when some page names a reader — through `pkit connections resolve`. When the core gives no reading of the places, that is its one error, and no space is checked. It fails on:
+**What it reads.** Where your documents are, it reads from the core, through `pkit friction artefacts --json` — the same discovery `pkit validate` and the friction checks read: your documentation roots, the places your configuration and every installed capability declare, the files each place matches, each file's front matter, and the documents a capability holds that are not artefacts, with their owner. A held document — software-analysis's revalidation records, say — is walked by no place, so it is never an unclassified document: it is claimed by its owner and counted in the summary as "of another component" wherever it sits under your roots (DEC-001 point 1). It never reads the declarations or walks the places itself, so it can never disagree with the core about which files a place holds; a synced copy, a place outside the repository and a malformed declaration are skipped exactly as the core skips them. What it decides over that answer is this capability's: which place wins where places nest, which space a place serves, and what a document is. Besides, it reads its own project configuration, and the readers point — only when some page names a reader — through `pkit connections resolve`. When the core gives no reading of the places, that is its one error, and no space is checked. It fails on:
 
 - a place outside every root that holds a document nothing else claims, with no assignment; an assignment naming a place `friction.places` does not declare, or a space nobody declares; a place assigned twice;
 - a project place equal to or enclosing a root; a file two project places claim with equal specificity;
-- a decision record, a rule-set file or another capability's artefact carrying `reader` or `kind` — none is ever a page;
+- a decision record, a rule-set file, or another capability's artefact or held document carrying `reader` or `kind` — none is ever a page;
 - a page whose `reader` or `kind` does not fit `schemas/page.schema.json`;
 - a page whose `reader` the readers point does not hold — the message names the readers it does (Connections, below);
 - an entry point that is not a document of its space — under its root or in a place assigned to it;

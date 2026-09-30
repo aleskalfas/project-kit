@@ -4,7 +4,8 @@ Two sources, each read once:
 
 - **where the documents are** — the documentation roots, the places the
   project and every installed capability declare, which Markdown files each
-  place matches, and each file's front matter — is the backbone's artefact
+  place matches, each file's front matter, and the documents a capability
+  holds that are not artefacts, with their owner — is the backbone's artefact
   discovery, read through its read command (`artefacts`, `pkit friction
   artefacts --json`). A capability script never imports the backbone, and
   never re-reads the declarations or walks the places itself: one home per
@@ -191,7 +192,7 @@ class Declarations:
     project_places: tuple[ProjectPlace, ...]
     root_places: Mapping[int, str]  # this capability's places that are a root -> its audience
     component_places: Mapping[int, str]  # another capability's places -> that capability
-    documents: Mapping[str, Document]  # every Markdown file a place matches, by path
+    documents: Mapping[str, Document]  # every Markdown file a place matches or a component holds
     definitions: str | None  # this capability's definitions location, when it declares one
     ldoc_version: str | None  # the shared method's version, from its own rule-set file
     spaces: Mapping[str, SpaceConfig]

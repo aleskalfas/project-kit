@@ -1,0 +1,14 @@
+component: living-docs
+kind: minor
+custom:
+  category: Changed
+  requires_backbone: release
+body: >
+  A document another capability holds in a folder of held documents — an
+  analysis capability's revalidation records, say — is claimed by that
+  capability (DEC-001 point 1; COR-050 point 1): `pkit living-docs validate`
+  counts it "of another component" in its summary rather than as an
+  unclassified document, and refuses a page's `reader` or `kind` written into
+  it. It reads the held documents from the `held` list of `pkit friction
+  artefacts --json`, which the backbone this release ships adds, so the
+  capability requires that backbone.
