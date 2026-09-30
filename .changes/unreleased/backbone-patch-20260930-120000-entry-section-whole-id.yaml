@@ -1,0 +1,13 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  A collection entry's content now takes the body section headed by its whole id
+  (COR-050 point 1). The section was the first heading that merely started with
+  the id, so entry `uc-login` took the section headed `uc-login-sso …` when that
+  one came first, and the friction checks compared the wrong prose for it. A
+  heading now opens an entry's section only when the id is followed by the end
+  of the heading, whitespace, or punctuation that continues no id — a hyphen or
+  a dot before a letter or digit does. The same section is a rule's in a rule
+  set.
