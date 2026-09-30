@@ -197,16 +197,15 @@ this is the durable foundation, not a throwaway step.
   holds; package-data-vs-checkout only changes where `find_source_kit()` points. The
   `migrations/` propagation omission is fixed in the same change (per `rules/core.md` #7,
   which presumes migrations reach adopters).
-- **COR-007 follow-on: one predicate per question, not one declaration for both.** The wheel's
-  force-include and the propagator's area set do not share a single declaration of the
-  kit-owned tree, because *may this be distributed?* and *does sync propagate this?* are
-  different questions and no single declaration serves both. §3 makes them differ by design
-  (capability source ships but is never propagated), and sync-management additionally turns on
-  a capability's *registration* while reading everything outside `.pkit/` as unmanaged. Each
-  ownership question has exactly one definition instead — `is_adopter_owned_by_tier` (*may this
-  be distributed?*) and `is_sync_managed` (*is this the kit's?*), both in
-  `.pkit/lifecycle/ownership.py` — and the build asks the first rather than carrying its own
-  copy of the rule.
+- **COR-007 follow-on: one definition of the distribution rule, not one declaration for
+  both.** The wheel's force-include and the propagator's area set do not share a single
+  declaration of the kit-owned tree, because *may this be distributed?* and *does sync
+  propagate this?* are different questions and no single declaration serves both. §3 makes
+  them differ by design (capability source ships but is never propagated). The distribution
+  question has exactly one definition — `is_adopter_owned_by_tier` in
+  `.pkit/lifecycle/ownership.py` — and the build asks it rather than carrying its own copy of
+  the rule. Sync answers the propagation question in its own copy path, which consults neither
+  predicate in that module.
 - **The follow-on that remains.** Three hand-maintained enumerations of
   top-level `.pkit/` trees remain — the build hook's filtered set, `pyproject.toml`'s static
   force-include, and the propagator's area set. Merging them is *not* the fix; they are meant
