@@ -159,7 +159,7 @@ The body gives each artefact's outcome with its justification, then the gaps and
 - **a placeholder left unfilled** — what the stamp leaves for you to write is no part of the analysis until you write it: an own field still holding words in angle brackets (an actor's `<what this actor needs …>`, a term's placeholder `definition`), or a body — an actor's or term's section — still holding one of the template's placeholders. A body is matched against the template's own placeholders exactly, so code it quotes in angle brackets is never taken for one;
 - **a use case or journey whose heading is not its id and title** — `# UC-003 — <title>`, the `title` its front matter gives;
 - **duplicate ids** — two artefacts holding one id;
-- **a use case or journey whose name carries a number its front matter doesn't give** — `UC-007-<slug>.md` with no `id`: the stamp counts the number the name carries, so the front matter says it;
+- **a use case or journey whose name carries a number its front matter doesn't give** — `UC-007-<slug>.md` with no `id`, or with `id: UC-008`: the stamp counts the number the name carries, so the front matter says the same — write the id, or name the file after it;
 - **a use case or journey naming what the stamp would refuse** — an actor, or a journey's step, that is not in the analysis, or that is withdrawn while the use case or journey is in force. A withdrawn artefact may name withdrawn ones: it is history;
 - **a use case not anchored to its actor**, so a changed actor would not flag it;
 - **a journey whose use-case anchors do not match its steps** — the message names the anchors to write;

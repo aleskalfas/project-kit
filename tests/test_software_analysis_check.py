@@ -247,6 +247,24 @@ def test_a_number_spelt_with_other_zeros_is_refused_and_shares_the_id(
     ]
 
 
+def test_a_name_carrying_another_number_than_the_id_is_reported(project: AdopterRepo) -> None:
+    """`UC-009-<slug>.md` holding `id: UC-008` holds both numbers for the stamp, which
+    counts the name's too: one artefact, one id, so the two must agree. The same number
+    spelt with other zeros agrees; the id's own check reports the spelling."""
+    seed(project)
+    text = (project.root / USE_CASES / "UC-002-read-report.md").read_text(encoding="utf-8")
+    renamed = f"{USE_CASES}/UC-009-renamed.md"
+    project.write({renamed: text.replace("UC-002", "UC-008")})
+    assert errors(check(project)) == [
+        (
+            renamed,
+            "its name carries UC-009, its front matter UC-008: the stamp counts both as held, "
+            "and an artefact holds one id — name the file after its id, or correct `id` "
+            "(DEC-001 point 3)",
+        )
+    ]
+
+
 def test_a_file_whose_id_cannot_be_read_is_reported(project: AdopterRepo) -> None:
     """Front matter that does not parse, or none, or one naming no id: the stamp counts
     the number the file's name carries, and the check reports the file, never skipping

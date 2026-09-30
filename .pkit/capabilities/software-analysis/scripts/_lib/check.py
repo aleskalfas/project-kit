@@ -28,9 +28,10 @@ What is checked, each against the record's words:
   The heading is read from the file discovery names.
 - **Duplicate ids** (point 3). No two artefacts in the analysis share an id,
   a number spelt with other zeros included — as the stamp counts it held.
-- **An id in a name alone** (point 3). A use case or journey whose file's name
-  carries its number (`UC-007-<slug>.md`) and whose front matter gives no id:
-  the stamp counts the number its name carries, so the front matter says it.
+- **A name the id disagrees with** (point 3). A use case or journey whose
+  file's name carries a number (`UC-007-<slug>.md`) its front matter does not
+  give — no id, or another: the stamp counts the number its name carries, so
+  the front matter says the same.
 - **What a use case or journey names** (points 1 and 3): its actor, and a
   journey's steps, are an actor and use cases of the analysis; and one in
   force names none withdrawn. The stamp refuses the same (`Analysis.unfit`),
@@ -159,7 +160,7 @@ def check(root: Path) -> Outcome:
     outcome.findings += _placeholders(root, analysis)
     outcome.findings += _headings(root, analysis)
     outcome.findings += _duplicates(analysis)
-    outcome.findings += _named_alone(analysis)
+    outcome.findings += _named_otherwise(analysis)
     outcome.findings += _references(analysis)
     outcome.findings += _actor_anchors(analysis)
     outcome.findings += _journey_anchors(analysis)
@@ -359,23 +360,30 @@ def _duplicates(analysis: Analysis) -> list[Finding]:
     return found
 
 
-def _named_alone(analysis: Analysis) -> list[Finding]:
-    """A use case or journey whose file's name carries its number and whose front matter
-    gives no id: the stamp counts the number the name carries, so the front matter
-    says the same (DEC-001 point 3)."""
+def _named_otherwise(analysis: Analysis) -> list[Finding]:
+    """A use case or journey whose file's name carries a number its front matter does
+    not give — no id, or another: the stamp counts the number the name carries, and
+    every number a history gave a file, so the name and the id say the same (DEC-001
+    point 3). An id spelt with other zeros is the same id; the id check reports it."""
     found: list[Finding] = []
     for artefact in analysis.artefacts:
         named = id_in_name(artefact.path)
-        if artefact.entry or artefact.kind not in NUMBERED or artefact.id or named is None:
+        if artefact.entry or artefact.kind not in NUMBERED or named is None:
             continue
-        found.append(
-            Finding(
-                ERROR,
-                artefact.location,
+        if artefact.id is None:
+            message = (
                 f"its name carries {named}, its front matter no id: the stamp counts {named} "
-                f"as held, and an id is never used again — write `id: {named}` (DEC-001 point 3)",
+                f"as held, and an id is never used again — write `id: {named}` (DEC-001 point 3)"
             )
-        )
+        elif identity(artefact.id) != named:
+            message = (
+                f"its name carries {named}, its front matter {artefact.id}: the stamp counts "
+                f"both as held, and an artefact holds one id — name the file after its id, or "
+                f"correct `id` (DEC-001 point 3)"
+            )
+        else:
+            continue
+        found.append(Finding(ERROR, artefact.location, message))
     return found
 
 
