@@ -600,8 +600,9 @@ From the same diff, the guard also fails a PR that declares a
   of the component.
 
 What is left is a floor on a `none` changeset for a component the PR leaves
-alone — which the lint also refuses, since a `none` changeset never carries a
-floor (check 3 below); the guard names the PR that declared it. **No escape
+alone — which the lint also refuses, whatever the diff, since a `none`
+changeset may not carry a floor (check 3 below); what the guard adds is the
+pull request that declared it. **No escape
 hatch waives this check**: the `skip-changeset` label, the `release/*` belt and
 the release-PR exemption below all waive the surface check only, and a release
 diff only deletes changesets, so it declares no floor.
