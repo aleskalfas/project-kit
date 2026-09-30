@@ -14,7 +14,13 @@ backbone through its commands:
   an artefact, so invoking the stamp is the consent;
 - **one artefact's friction** — `pkit friction explain <artefact> --json`
   (COR-050 point 13): its state, anchors and the commits behind each changed
-  one, which the proposal reads rather than recomputing.
+  one, which the proposal reads;
+- **one data point as it resolves** — `pkit connections resolve <address>
+  --json`: the check reads the evidence point the capability defines
+  (DEC-001 point 7) through it. The command exits 1 on a point that does not
+  resolve and still prints its document, so the document decides, never the
+  exit code. A filler never asks for a point: the readers filler reads only
+  the analysis.
 
 Git answers which commit a name resolves to, the merge-base of two, who is
 working here — the default author of a revalidation record — and, for the
@@ -177,6 +183,20 @@ def record_location(root: Path, run: Runner = subprocess.run) -> str | None:
         raise Unreadable(_failed(argv, proc))
     line = (proc.stdout or "").strip()
     return line if line.startswith("recorded ") else None
+
+
+def read_point(root: Path, address: str, run: Runner = subprocess.run) -> Mapping[str, Any]:
+    """The data point `address` as `pkit connections resolve --json` prints it,
+    resolved or not. Raises Unreadable when there is no document to read."""
+    argv = ["pkit", "connections", "resolve", address, "--json"]
+    proc = _run(root, argv, run)
+    try:
+        document = json.loads(proc.stdout or "")
+    except ValueError:
+        document = None
+    if not isinstance(document, Mapping) or "resolved" not in document:
+        raise Unreadable(_failed(argv, proc))
+    return document
 
 
 def commit_of(root: Path, name: str) -> str | None:

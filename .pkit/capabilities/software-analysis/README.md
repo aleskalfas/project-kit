@@ -10,9 +10,9 @@ pkit:
         - .pkit/capabilities/software-analysis/templates/**
         - .pkit/capabilities/software-analysis/skills/**
         - .pkit/capabilities/software-analysis/agents/**
-      record: ["software-analysis:DEC-001", COR-049, COR-050, COR-053]
+      record: ["software-analysis:DEC-001", COR-049, COR-050, COR-052, COR-053]
     revalidated:
-      at: 2026-09-29T23:47:30Z
+      at: 2026-09-29T23:15:15Z
       outcome: updated
 ---
 
@@ -138,13 +138,19 @@ confirmed-by: Sam               # who confirmed an agent's outcomes, or decided 
 outcomes:                       # each artefact covered, withdrawn ones included
   UC-003: holds                 # holds | analysis-stale | code-regressed | gap-found
   JRN-001: analysis-stale
+evidence:                       # optional: the executed results drawn on, each copied whole from the evidence point
+  - id: UC-003@78981922613b2afb6025042ff6bd878ac1994e85   # <artefact>@<commit>: its own two fields
+    artefact: UC-003
+    commit: "78981922613b2afb6025042ff6bd878ac1994e85"
+    result: passed              # supports UC-003's `holds`
+    ran: tests/test_run.py::test_sandbox
 ```
 
-The body gives each artefact's outcome with its justification, then the gaps and what resolved each.
+The body gives each artefact's outcome with its justification, then the gaps and what resolved each. Evidence supports an outcome and never stands in for one: each artefact the record draws evidence for has its outcome. The record **copies** each entry of the evidence point it draws on, whole and in the point's shape (Connections, below), rather than naming it by id: a record is permanent history, while the point holds what its fillers report now, so an id alone would point at nothing once a filler stops reporting that commit. The copy is the evidence the record shows.
 
 ## Checking: `pkit analysis validate`
 
-`pkit validate` runs the check as its `software-analysis:artefacts` member, so it runs wherever your check gate runs `pkit validate`; `pkit analysis validate` runs it alone, and `--json` prints the findings document it reads. It is a query: read-only, offline, and `pkit sync` provisions its dependencies. It reads the working tree alone, so the same tree always gets the same answer. It fails on:
+`pkit validate` runs the check as its `software-analysis:artefacts` member, so it runs wherever your check gate runs `pkit validate`; `pkit analysis validate` runs it alone, and `--json` prints the findings document it reads. It is a query: read-only, offline, and `pkit sync` provisions its dependencies. It reads the working tree — and the evidence point, when a record copies evidence — so the same tree gets the same answer as long as the evidence fillers read the tree alone. It fails on:
 
 - **a file in a place that is not its kind's shape** — a file without front matter, a glossary or actors file that is not a collection, a use-case or journey file holding entries;
 - **missing required parts** — an artefact's own fields against its schema, and a collection entry whose key is not its kind's id;
@@ -153,12 +159,19 @@ The body gives each artefact's outcome with its justification, then the gaps and
 - **a use case or journey naming what the stamp would refuse** — an actor, or a journey's step, that is not in the analysis, or that is withdrawn while the use case or journey is in force. A withdrawn artefact may name withdrawn ones: it is history;
 - **a use case not anchored to its actor**, so a changed actor would not flag it;
 - **a journey whose use-case anchors do not match its steps** — the message names the anchors to write;
-- **a revalidation record** whose front matter does not fit its schema, or whose outcomes cite an id that is no artefact of the analysis (withdrawn ones are fine).
+- **a revalidation record** whose front matter does not fit its schema, or whose outcomes cite an id that is no artefact of the analysis (withdrawn ones are fine);
+- **a revalidation record copying evidence for an artefact it gives no outcome**: evidence supports an outcome and never replaces it, so the record is incomplete whatever the evidence says;
+- **an evidence entry whose `id` is not its own `<artefact>@<commit>`** — the entry's `artefact` and `commit` joined by `@`: the id is the pair the result is for, and which of the two is meant cannot be told, so nothing else is read from that entry.
 
-It says two more things, and never fails on them:
+It warns, and never fails, on:
 
-- **an open regression**, reported: a record's `code-regressed` artefact that has not been revalidated since the record — its `at` falls on no later day (UTC) than the record's date. The defect the record names is still open, or its fix was never revalidated against the artefact. It is worked out from the records and the artefacts each time, never kept in a ledger;
-- **`unanchored-because` beside anchors**, a warning: the reason says why an actor or term has none, so one that has anchors says two things at once. The stamp refuses the pair; the warning catches a hand edit.
+- **a result at odds with its outcome** — a `failed` result copied for an artefact whose outcome is `holds`, or a `passed` one for `code-regressed`: a passing result supports *holds* and a failing one is a regression's proof, so the outcome or the evidence is likely wrong;
+- **a copy that differs from what the evidence point now holds under its id**: the copy strayed from its source, or the result at that commit was reported again otherwise.
+- **`unanchored-because` beside anchors**: the reason says why an actor or term has none, so one that has anchors says two things at once. The stamp refuses the pair; the warning catches a hand edit.
+
+It says nothing of an id the point no longer holds, or of a point that does not resolve: the record's copy is the evidence, and a filler that stops reporting an old commit is ordinary. It reads the point, through `pkit connections resolve`, only when some record copies evidence.
+
+It reports, and never fails on, **an open regression**: a record's `code-regressed` artefact that has not been revalidated since the record — its `at` falls on no later day (UTC) than the record's date. The defect the record names is still open, or its fix was never revalidated against the artefact. It is worked out from the records and the artefacts each time, never kept in a ledger.
 
 Friction itself, dead anchors and the friction block's own shape are the core's checks (`pkit validate`'s `friction` member and `pkit friction check`), and so is front matter that does not parse; an unanchored artefact is the core's measure, never an error.
 
@@ -257,16 +270,50 @@ It never proposes `gap-found`: behaviour nothing describes is found by reading. 
 
 `--json` prints `{schema_version, artefact, location, state, head, revalidation_point, verdict, rule, reason, hint, question, anchors, read, answer}`: each changed anchor with its `shape` (`kept`, `moved`, `gone`, `deliberate`, `unread`), the commits behind it, what it `quoted`, what is `gone` and where it `moved_to`; each quote read with its `source`, `source_kind` (`commit` or `other`) and `verified` (`true`, `false`, or `null` when it cannot be checked); and the `answer`, `{outcome, first, commands}` or `null`. It reads HEAD, as the explanation does; exit `1` when the artefact cannot be explained (not committed, not found, or beyond a shallow clone), `2` on a usage error such as a quote without its source. A query: read-only, offline, and `pkit sync` provisions its dependencies.
 
-## Connections (design-ahead)
+## Connections
 
-Declared in the decision; the package metadata gains them in a later increment. The capability provides the `pkit::analysis` role (COR-053); `pkit::` and `pkit:` are this distribution's literals for the methodology's publisher qualifier and front-matter container ([the lifecycle README, "The methodology's literals"](../../lifecycle/README.md#the-methodologys-literals)).
+Declared in the package metadata's `connections` block (COR-053), as the decision's points 7 and 8 ask. `pkit capabilities show software-analysis` prints them and what they connect to in your project; `pkit connections graph` draws them among the rest. `pkit::` is this distribution's publisher qualifier for the methodology's roles ([the lifecycle README, "The methodology's literals"](../../lifecycle/README.md#the-methodologys-literals)).
 
-- **Accepts** `pkit::analysis:revalidation-evidence`: executed results per artefact and commit, supplied by a capability or a [project file](../../lifecycle/README.md#where-a-project-filler-file-lives-the-address-to-path-mapping). Policy `union`, advisory. Evidence informs a revalidation; it doesn't replace one.
-- **Contributes** to `pkit::documentation:readers` with actors and their needs. Inert when no documentation capability is installed.
+**Provides the `pkit::analysis` role.** Anything that connects to the analysis addresses the role, never this capability, so another provider of the role could take its place.
+
+**Accepts `pkit::analysis:revalidation-evidence`** (version 1): executed results that confirm or refute an artefact at a commit — a test run against a use case, a trace through a journey. This capability runs nothing: a capability that runs such checks fills the point, or you do, in the point's [project file](../../lifecycle/README.md#where-a-project-filler-file-lives-the-address-to-path-mapping) — `docs/pkit/fillers/pkit/analysis/revalidation-evidence.yaml` with the default internal root:
+
+```yaml
+schema_version: 1
+value:
+  - id: UC-003@78981922613b2afb6025042ff6bd878ac1994e85   # <artefact>@<commit>: the pair the entry is for
+    artefact: UC-003
+    commit: "78981922613b2afb6025042ff6bd878ac1994e85"    # the version the result is true of, by its full name; quoted, as digits alone read as a number
+    result: passed                # passed | failed
+    ran: tests/test_run.py::test_sandbox    # what was run, so it can be found and run again
+    steps: ["1", "2", "2a"]       # optional: the steps and variants it went through
+    where: https://ci.example/runs/42       # optional: where the result can be read
+    by: the pipeline              # optional: who or what ran it
+```
+
+The entry's shape is `schemas/revalidation-evidence.schema.json`. It reads alone, since two providers of one point are compared by that file alone (COR-053 point 5), so it carries a copy of the id shapes whose one home is `schemas/analysis.schema.json`; a test holds the copy equal to its source. A commit is written by its **full name** — 40 hexadecimal digits, or 64 under SHA-256 — and a short name such as `7898192` is refused, so a pair has one spelling and a record's copy is compared with the entry it came from exactly. The point is `union`: entries from every filler merge by id, and yours replaces a capability's with the same id, or drops one with `remove` and a reason. The id is the artefact and the commit alone, so two results for the same artefact at the same commit share one id. From two capabilities — one running the tests and another tracing the journeys, say — that is a collision under `union`: the point does not resolve, its reason naming both, until your filler gives the id itself (COR-052 point 4); and a result your filler gives replaces a capability's for the same pair. That stands until the key is refined to tell such results apart. No default takes part, so while nothing fills it the point is unresolved — `pkit connections resolve pkit::analysis:revalidation-evidence --json` says `unfilled`, and nothing fails on it. Its inert policy is `fallback`: evidence advises, so a filler that cannot answer is warned, and the rest still count.
+
+**Evidence informs a revalidation and never replaces it.** A revalidation record copies the entries it drew on under `evidence` (The artefacts, above): a passing result as support for *holds*, a failing one as a regression's proof. The record still gives each artefact its outcome — the check fails a record that copies evidence for an artefact without one — and only a revalidation or a deferral recorded on the artefact clears friction (COR-050).
+
+**Contributes to `pkit::documentation:readers`** (version 1), the documentation role's point for who reads the documentation: one reader per actor in force, through the `fill-readers` command.
+
+| Actor | Reader |
+|---|---|
+| its id, `ACT-tester` | `act-tester` — the id in lower case: a word, as the point asks, under the `act-` prefix, beside whatever readers the documentation provider supplies (living-docs: `user`, `maintainer`). The prefix is kept rather than stripped: `ACT-user` read as `user` would silently replace a provider's default reader in the point's `union`. The mapping is stable, since pages persist a reader's id |
+| its name and needs | the description: `Test author, the analysis' actor ACT-tester. Needs: Run the suite against a clean sandbox; Read a failure's cause.` |
+| withdrawn | no reader: it is history. A page still naming it as its reader fails the documentation provider's check (living-docs' validator), while `pkit analysis validate` passes: withdrawing the actor is sound analysis, and the page is what must change |
+
+A page names an actor as its reader by that id (`reader: act-tester`). `pkit analysis fill-readers` prints the readers for you, `--json` the envelope the backbone reads. The filler reads the analysis through the core's reading command, `pkit friction artefacts`, and never walks the folders.
+
+- **Fail closed, whatever the point's policy** (COR-052 point 6). An actors file that cannot be read as a whole — its front matter does not parse, or it is not a collection — is no answer rather than no readers: the command exits 1, and under living-docs' `fail` policy the readers point is unresolved, its reason naming the file, until you fix it.
+- **An entry is judged alone.** An entry of the actors file whose key is no actor id is not a reader: the filler skips it, and `pkit analysis validate` reports it.
+- **Inert when no capability provides the documentation role**: the contribution is reported as having no active provider, its command never runs, and this capability never requires one.
+
+An install plan predicts the wiring, not the data (COR-053 point 7): it shows this contribution connecting and never runs the filler, so installing software-analysis beside a documentation provider puts the actors file's readability on that provider's validation path — from then on, an actors file that does not parse leaves the readers point unresolved, which `pkit validate` reports as an error.
 
 ## What's shipped now, what's next
 
-Shipped: the decision; the analysis location and its places; a companion schema and a template for each artefact kind and for the revalidation record; the stamp, `pkit analysis new`, revalidation records included; the check, `pkit analysis validate`, a member of `pkit validate`; the number check, `pkit analysis check-numbers`, a check-gate line of its own; the `analysis-author` skill; and the `analysis-resolver` agent with `pkit analysis propose`. Next come: the connections above. Named for later: planned-revalidation and onboarding lifecycles, a supplementary specification (constraints and quality), architecture views, and executable use cases.
+Shipped: the decision; the analysis location and its places; a companion schema and a template for each artefact kind and for the revalidation record; the stamp, `pkit analysis new`, revalidation records included; the check, `pkit analysis validate`, a member of `pkit validate`; the number check, `pkit analysis check-numbers`, a check-gate line of its own; the `analysis-author` skill; the `analysis-resolver` agent with `pkit analysis propose`; and the connections above — the analysis role, the evidence point with its companion schema, and the readers contribution with its filler, `pkit analysis fill-readers`. Named for later: planned-revalidation and onboarding lifecycles, a supplementary specification (constraints and quality), architecture views, and executable use cases.
 
 ## Citing this capability's decisions
 

@@ -2,6 +2,7 @@ component: software-analysis
 kind: minor
 custom:
   category: Added
+  requires_backbone: release
 body: >
   The capability's first usable release: keep actors, use cases, journeys and
   glossary terms as anchored artefacts under the `analysis/` folder of your
@@ -22,4 +23,7 @@ body: >
   fails on a use case or journey number the default branch gave another file
   since your branch left it, and when the base names no commit. The package
   metadata declares the `analysis` location and the glossary, actors, use cases
-  and journeys as places.
+  and journeys as places. The stamp and the checks read the analysis through
+  `pkit friction artefacts`, with `--at` for the default branch, and the stamp
+  records the location through `pkit docs record-location`, which the backbone
+  this release ships adds: upgrade the capability together with the backbone.

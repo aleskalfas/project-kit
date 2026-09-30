@@ -3,8 +3,8 @@
 Held to software-analysis DEC-001 points 1 to 6:
 
 - one **companion schema** per kind — actor, term, use case, journey,
-  revalidation record — each valid Draft 2020-12, sharing one home for the id
-  shapes (`analysis.schema.json`);
+  revalidation record — and the evidence point's (#1001), each valid Draft
+  2020-12, sharing one home for the id shapes (`analysis.schema.json`);
 - each anchored kind's **template** carrying the friction block inside the
   methodology's container — in the front matter of a document, in each entry
   of a collection — valid against the core's container schema and against the
@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from jsonschema import Draft202012Validator
@@ -27,6 +27,10 @@ from project_kit import friction_discovery as fd
 from tests.analysis_repo import CAPABILITY, REPO, load
 
 SCHEMAS = CAPABILITY / "schemas"
+
+#: A commit's full name under SHA-1, and under SHA-256.
+SHA1 = "78981922613b2afb6025042ff6bd878ac1994e85"
+SHA256 = "4f9be057f0ea5d2ba72fd2c810e8d7b9aa98b469f9a6c4d6d0e2a2d3e1c4b5a6"
 
 
 def _stems() -> list[str]:
@@ -67,10 +71,109 @@ def _template(name: str) -> dict[str, Any]:
 
 
 def test_the_schemas_are_one_per_kind_and_valid() -> None:
+    """One per kind, the shared definitions, and the evidence point's companion (#1001)."""
     stems = _stems()
-    assert stems == ["actor", "analysis", "journey", "revalidation-record", "term", "use-case"]
+    assert stems == [
+        "actor",
+        "analysis",
+        "journey",
+        "revalidation-evidence",
+        "revalidation-record",
+        "term",
+        "use-case",
+    ]
     for stem in stems:
         Draft202012Validator.check_schema(_schema(stem))
+
+
+@pytest.mark.parametrize(
+    "artefact",
+    [
+        "ACT-tester",
+        "TERM-sandbox",
+        "UC-007",
+        "UC-1000",
+        "JRN-001",
+        "ACT-Tester",
+        "UC-0007",
+        "JRN-1",
+        "USER-x",
+        f"UC-007@{SHA1}",
+        "",
+    ],
+)
+def test_an_evidence_id_is_an_artefact_id_and_a_commit(artefact: str) -> None:
+    """A pattern cannot refer to another, so the evidence id spells the four id
+    shapes again beside them: held in step, it admits `<artefact>@<commit>` exactly
+    when the artefact id does."""
+    definitions = _schema("analysis")["$defs"]
+    evidence_id = re.compile(definitions["evidence-id"]["pattern"])
+    is_artefact = any(
+        re.match(definitions[f"{kind}-id"]["pattern"], artefact)
+        for kind in ("actor", "term", "use-case", "journey")
+    )
+    assert bool(evidence_id.match(f"{artefact}@{SHA1}")) is is_artefact
+    assert not evidence_id.match(f"{artefact}@HEAD")
+
+
+@pytest.mark.parametrize(
+    ("name", "full"),
+    [
+        (SHA1, True),
+        (SHA256, True),
+        (SHA1[:7], False),
+        (SHA1[:-1], False),
+        (f"{SHA1}0", False),
+        (SHA1.upper(), False),
+        ("HEAD", False),
+        ("", False),
+    ],
+)
+def test_a_commit_is_written_by_its_full_name(name: str, full: bool) -> None:
+    """40 hexadecimal digits, or 64 under SHA-256, in lower case; a short name is
+    refused, so a commit has one spelling and a citation matches an entry exactly —
+    in the commit shape and in the evidence id's copy of it alike."""
+    definitions = _schema("analysis")["$defs"]
+    assert bool(re.match(definitions["commit"]["pattern"], name)) is full
+    assert bool(re.match(definitions["evidence-id"]["pattern"], f"UC-007@{name}")) is full
+
+
+#: The definitions the evidence point's companion carries as copies of the shared ones.
+COPIED = (
+    "text",
+    "actor-id",
+    "term-id",
+    "use-case-id",
+    "journey-id",
+    "artefact-id",
+    "commit",
+    "evidence-id",
+)
+
+
+def _refs(value: Any) -> list[str]:
+    """Every `$ref` in a schema, at any depth."""
+    if isinstance(value, dict):
+        mapping = cast("dict[str, Any]", value)
+        ref = mapping.get("$ref")
+        own = [ref] if isinstance(ref, str) else []
+        return own + [found for item in mapping.values() for found in _refs(item)]
+    if isinstance(value, list):
+        return [found for item in cast("list[Any]", value) for found in _refs(item)]
+    return []
+
+
+def test_the_evidence_point_s_schema_reads_alone() -> None:
+    """Two providers of one point are compared by its companion file alone (COR-053
+    point 5), so the evidence point's refers to nothing outside it: it carries a copy
+    of each shared definition it needs, equal to the one in `analysis.schema.json`,
+    their one home."""
+    point = _schema("revalidation-evidence")
+    assert [ref for ref in _refs(point) if not ref.startswith("#/")] == []
+    shared = _schema("analysis")["$defs"]
+    copies = {name: body for name, body in point["$defs"].items() if name != "evidence"}
+    assert sorted(copies) == sorted(COPIED)
+    assert {name: shared[name] for name in COPIED} == copies
 
 
 @pytest.mark.parametrize(
@@ -95,10 +198,12 @@ def test_a_number_has_one_spelling(
 
 
 def test_every_id_shape_has_one_home() -> None:
-    """The kinds' schemas refer to the shared id shapes; none writes its own."""
+    """The kinds' schemas refer to the shared id shapes; none writes its own. The
+    evidence point's companion carries a copy, held equal to its home
+    (`test_the_evidence_point_s_schema_reads_alone`)."""
     for prefix in ("ACT", "TERM", "UC", "JRN"):
         holders = [s for s in _stems() if f'"^{prefix}-' in json.dumps(_schema(s))]
-        assert holders == ["analysis"], prefix
+        assert holders == ["analysis", "revalidation-evidence"], prefix
 
 
 @pytest.mark.parametrize(("template", "schema"), [("use-case", "use-case"), ("journey", "journey")])
@@ -141,6 +246,22 @@ def test_the_revalidation_record_template_is_no_anchored_artefact() -> None:
     data = _template("revalidation-record")
     assert "pkit" not in data
     assert _schema_errors("revalidation-record", data) == []
+
+
+def test_the_revalidation_record_template_shows_an_evidence_copy() -> None:
+    """The optional `evidence` the template shows, commented out, is an entry of the
+    evidence point copied whole: uncommented, the record still fits its schema."""
+    text = (CAPABILITY / "templates" / "revalidation-record.md").read_text(encoding="utf-8")
+    front_matter, _body = fd.split_front_matter(text)
+    assert front_matter is not None
+    lines = front_matter.splitlines()
+    start = lines.index(next(line for line in lines if line.startswith("# evidence:")))
+    shown = load("\n".join(line.removeprefix("# ") for line in lines[start:]))
+    (entry,) = shown["evidence"]
+    assert entry["id"] == f"{entry['artefact']}@{entry['commit']}"
+    record = {**_template("revalidation-record"), "evidence": shown["evidence"]}
+    assert entry["artefact"] in record["outcomes"]
+    assert _schema_errors("revalidation-record", record) == []
 
 
 @pytest.mark.parametrize(

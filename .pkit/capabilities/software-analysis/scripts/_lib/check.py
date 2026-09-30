@@ -33,6 +33,19 @@ What is checked, each against the record's words:
   analysis, withdrawn ones included. The records are not anchored artefacts
   and lie in no place, so they are read from their folder under the analysis
   location.
+- **Evidence a record copies** (point 7). A record keeps each evidence entry
+  it draws on whole, in the evidence point's entry shape: the record is
+  history, and the point holds only what its fillers report now. From the
+  record alone: an entry whose `id` is not its own `<artefact>@<commit>` is an
+  error, and so is evidence for an artefact the record gives no outcome, since
+  evidence supports an outcome and never replaces one; a `failed` result under
+  `holds`, or a `passed` one under `code-regressed`, is a warning, since point
+  7 pairs a passing result with holds and a failing one with a regression.
+  Against the point as it resolves now (`_lib/evidence.py`), read only when
+  some record copies evidence: a copy that differs from the entry the point
+  holds under its id is a warning. The evidence advises, so an id the point no
+  longer holds, or a point that does not resolve, says nothing: the record's
+  copy is the evidence.
 
 And two findings that never fail:
 
@@ -46,7 +59,9 @@ And two findings that never fail:
   says why an artefact has no anchors, so one with anchors carrying it says
   two things at once. The stamp refuses the pair; this catches a hand edit.
 
-It reads the working tree alone, so the same tree always answers the same.
+It reads the working tree — and, when a record copies evidence, the evidence
+point — so the same tree gets the same answer as long as the evidence fillers
+read the tree alone.
 
 **Not here.** A number two branches took (point 3) is `pkit analysis
 check-numbers`' (`_lib/numbers.py`): it reads the default branch, so it answers
@@ -60,12 +75,13 @@ unanchored artefact is the core's measure, never an error.
 from __future__ import annotations
 
 from collections import defaultdict
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from pathlib import Path
+from typing import Any
 
 from ruamel.yaml.error import YAMLError
 
-from _lib import backbone, markdown, schemas
+from _lib import backbone, evidence, markdown, schemas
 from _lib.findings import ERROR, REPORT, WARNING, Finding, Outcome, at
 from _lib.model import (
     ACTOR,
@@ -90,6 +106,16 @@ ARTEFACT_ANCHORS = f"/{CONTAINER}/friction/anchors/artefact"
 
 #: The outcome whose record stays open until the artefact is revalidated again.
 REGRESSED = "code-regressed"
+
+#: One evidence entry a record copies: where it is written, and the entry.
+Copy = tuple[str, Mapping[str, Any]]
+
+#: One record whose front matter was read: where it is, and its front matter.
+Record = tuple[str, dict[str, object]]
+
+#: The result each outcome is at odds with: DEC-001 point 7 pairs a passing
+#: result with `holds` and a failing one with a regression.
+AT_ODDS = {"holds": "failed", "code-regressed": "passed"}
 
 
 def check(root: Path) -> Outcome:
@@ -118,8 +144,12 @@ def check(root: Path) -> Outcome:
     outcome.findings += _actor_anchors(analysis)
     outcome.findings += _journey_anchors(analysis)
     outcome.findings += _unanchored_beside_anchors(analysis)
-    found, read = _record_findings(root, records, analysis)
-    outcome.findings += found
+    record_findings, copies, read = _record_findings(root, records, analysis)
+    outcome.findings += record_findings
+    if copies:
+        summary, compared = _copies_against_the_point(root, copies)
+        outcome.summary.append(summary)
+        outcome.findings += compared
     outcome.findings += _open_regressions(root, read, analysis)
     return outcome
 
@@ -334,10 +364,12 @@ def _records(root: Path, location: str) -> list[Path]:
 
 def _record_findings(
     root: Path, records: list[Path], analysis: Analysis
-) -> tuple[list[Finding], list[tuple[str, dict[str, object]]]]:
-    """Each record's findings, and the records whose front matter was read."""
+) -> tuple[list[Finding], list[Copy], list[Record]]:
+    """What the records' front matter breaks, the evidence entries they copy that
+    are fit to compare with the point, and the records whose front matter was read."""
     found: list[Finding] = []
-    read: list[tuple[str, dict[str, object]]] = []
+    copies: list[Copy] = []
+    read: list[Record] = []
     for path in records:
         rel = path.relative_to(root).as_posix()
         try:
@@ -364,8 +396,13 @@ def _record_findings(
         for pointer, message in schemas.errors(schemas.RECORD, data):
             found.append(Finding(ERROR, at(rel, pointer), message))
         found += _cited(rel, data.get("outcomes"), analysis)
+        record_found, record_copies = _evidence_in_record(
+            rel, data.get("evidence"), data.get("outcomes")
+        )
+        found += record_found
+        copies += record_copies
         read.append((rel, data))
-    return found, read
+    return found, copies, read
 
 
 def _cited(rel: str, outcomes: object, analysis: Analysis) -> list[Finding]:
@@ -387,9 +424,7 @@ def _cited(rel: str, outcomes: object, analysis: Analysis) -> list[Finding]:
     ]
 
 
-def _open_regressions(
-    root: Path, records: list[tuple[str, dict[str, object]]], analysis: Analysis
-) -> list[Finding]:
+def _open_regressions(root: Path, records: list[Record], analysis: Analysis) -> list[Finding]:
     """Each `code-regressed` outcome whose artefact was not revalidated on a later day
     than its record: reported, never failed (DEC-001 point 5)."""
     found: list[Finding] = []
@@ -432,3 +467,110 @@ def _revalidated_on(root: Path, artefact: Artefact) -> str | None:
     for key in (CONTAINER, *REVALIDATED_AT):
         node = node.get(key) if isinstance(node, dict) else None
     return node[:10] if isinstance(node, str) and len(node) >= 10 else None
+
+
+# --- evidence a record copies (DEC-001 point 7) --------------------------------------------
+
+
+def _evidence_in_record(
+    rel: str, copied: object, outcomes: object
+) -> tuple[list[Finding], list[Copy]]:
+    """What the record alone says of the evidence entries it copies — an entry whose id
+    is not its own `<artefact>@<commit>`, evidence for an artefact without an outcome,
+    a result the outcome is at odds with — and the copies fit to compare with the
+    point: each in the entry's shape, its id its own pair. The schema reports an
+    entry of another shape."""
+    if not isinstance(copied, list):
+        return [], []
+    found: list[Finding] = []
+    copies: list[Copy] = []
+    for index, entry in enumerate(copied):
+        if not schemas.is_evidence(entry):
+            continue  # the schema reports it
+        location = at(rel, f"/evidence/{index}")
+        pair = f"{entry['artefact']}@{entry['commit']}"
+        if entry["id"] != pair:
+            found.append(
+                Finding(
+                    ERROR,
+                    location,
+                    f"the evidence entry {entry['id']} is for {pair} by its own `artefact` "
+                    f"and `commit`: an entry's id is the pair it is for, `<artefact>@<commit>` "
+                    f"— write `id: {pair}`, or correct the fields (DEC-001 point 7)",
+                )
+            )
+            continue  # which of the two is meant is unknown, so nothing more is read from it
+        copies.append((location, entry))
+        if isinstance(outcomes, dict):
+            found += _against_the_outcome(location, entry, outcomes)
+    return found, copies
+
+
+def _against_the_outcome(
+    location: str, entry: Mapping[str, Any], outcomes: Mapping[Any, Any]
+) -> list[Finding]:
+    """Evidence supports an artefact's outcome and never replaces it: the artefact has
+    its outcome in the record — an error otherwise — and a result the outcome is at
+    odds with asks for attention."""
+    artefact, result = entry["artefact"], entry["result"]
+    if artefact not in outcomes:
+        return [
+            Finding(
+                ERROR,
+                location,
+                f"cites evidence {entry['id']} for {artefact}, to which it gives no outcome: "
+                f"evidence supports a revalidation's outcome and never replaces it — give "
+                f"{artefact} its outcome, or drop the evidence (DEC-001 point 7)",
+            )
+        ]
+    outcome = outcomes[artefact]
+    if not isinstance(outcome, str) or AT_ODDS.get(outcome) != result:
+        return []
+    return [
+        Finding(
+            WARNING,
+            location,
+            f"cites a {result} result, {entry['id']}, for {artefact}, whose outcome is "
+            f"{outcome}: a passing result supports holds and a failing one is a "
+            f"regression's proof (DEC-001 point 7) — check {artefact}'s outcome against the "
+            f"evidence",
+        )
+    ]
+
+
+def _copies_against_the_point(root: Path, copies: list[Copy]) -> tuple[str, list[Finding]]:
+    """Each copy against the entry the evidence point now holds under its id: a summary
+    line, and a warning for each that differs. A record's copy is history and the
+    evidence advises (DEC-001 point 7), so an id the point no longer holds, or a
+    point that does not resolve, says nothing."""
+    point = evidence.read_evidence(root)
+    if not point.resolved:
+        return (
+            f"evidence ({evidence.POINT}) unresolved — {point.why.rstrip('.')}; "
+            f"{len(copies)} copied entry(ies) not compared.",
+            [],
+        )
+    found: list[Finding] = []
+    for location, copy in copies:
+        held = point.entries.get(str(copy["id"]))
+        if held is None:
+            continue
+        differs = sorted(key for key in {*copy, *held} if copy.get(key) != held.get(key))
+        if not differs:
+            continue
+        found.append(
+            Finding(
+                WARNING,
+                location,
+                f"its copy of {copy['id']} differs from the entry {evidence.POINT} now holds "
+                f"under that id, in {', '.join(differs)}: the record keeps the evidence it "
+                f"drew on, so either the copy strayed from its source — correct it — or the "
+                f"result at that commit was reported again otherwise — revalidate "
+                f"{copy['artefact']} against it (DEC-001 point 7)",
+            )
+        )
+    return (
+        f"evidence ({evidence.POINT}): {len(point.entries)} held; "
+        f"{len(copies)} copied entry(ies) compared with it.",
+        found,
+    )

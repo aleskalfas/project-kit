@@ -5,8 +5,7 @@ Both the validator (`_lib/check.py`, the `software-analysis:artefacts` member of
 check-numbers`) answer in this shape: a finding is a severity, a location —
 a path, `path:/json/pointer`, or `path#id` for an entry — and a message
 (ADR-058 point 1). An `error` fails; a `warning` asks for attention and a
-`report` states what an owning record says is reported rather than judged —
-both are said and never fail (ADR-058 point 2).
+`report` is said, and neither fails.
 """
 
 from __future__ import annotations
