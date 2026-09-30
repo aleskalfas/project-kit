@@ -135,7 +135,7 @@ dev = [
     { name = "pathspec", specifier = ">=0.12" },
     { name = "pyright", specifier = ">=1.1.380" },
     { name = "pytest", specifier = ">=8.0" },
-    { name = "ruff", specifier = ">=0.6" },
+    { name = "ruff", specifier = ">=0.15" },
 ]
 
 [[package]]
