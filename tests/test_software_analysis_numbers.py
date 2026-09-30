@@ -25,6 +25,7 @@ from project_kit.friction_check import BASE_ENV
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.analysis_repo import (
     CAPABILITY,
+    CONFIG,
     MAIN,
     NUMBERS,
     USE_CASES,
@@ -395,14 +396,23 @@ def test_a_base_sharing_no_history_with_head_fails(project: AdopterRepo) -> None
     assert "HEAD and the base 'main' share no history to compare" in completed.stderr
 
 
-def test_the_base_is_the_variable_else_origin_main(
+def test_the_base_is_the_variable_else_the_default_branch(
     project: AdopterRepo, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Without `--base`, the base the backbone names (COR-054): the default branch — here
+    the local `main`, since no remote holds one — or a declared one that resolves nowhere,
+    which fails as the change check does; `$PKIT_CHECK_BASE` replaces either."""
     seed(project)
     project.commit("seeded")
-    unnamed = numbers(project)
-    assert unnamed.returncode == 1
-    assert "the base 'origin/main' does not resolve" in unnamed.stderr
+    unnamed = numbers(project, "--json")
+    assert unnamed.returncode == 0, unnamed.stderr
+    assert document(unnamed)["base"]["ref"] == MAIN
+    project.write({CONFIG: "docs:\n  internal: tech-docs\nrepository:\n  default-branch: trunk\n"})
+    undeclared = numbers(project)
+    assert undeclared.returncode == 1
+    assert "the default branch 'trunk' resolves neither as 'origin/trunk' nor as 'trunk'" in (
+        undeclared.stderr
+    )
     monkeypatch.setenv(BASE_ENV, MAIN)
     named = numbers(project, "--json")
     assert named.returncode == 0, named.stderr

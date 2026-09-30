@@ -16,6 +16,7 @@ base and nothing else. The readers agree because they read the one answer:
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -29,6 +30,9 @@ from project_kit import friction_check as fc
 from project_kit.cli import main
 from tests.adopter_repo import GitRepo
 from tests.analysis_repo import CONFIG
+
+# The guard's reading of a script's code, shared rather than copied.
+from tests.test_living_docs_spaces import _code  # pyright: ignore[reportPrivateUsage]
 
 REPO = Path(__file__).resolve().parent.parent
 SCHEMA = REPO / ".pkit" / "schemas" / "backbone" / "config.schema.json"
@@ -259,3 +263,45 @@ def test_a_value_read_as_the_default_is_warned_about(
     monkeypatch.chdir(repo.root)
     result = CliRunner().invoke(main, ["friction", "check", "--json"])
     assert "warning: repository.default-branch 'two words' is not a branch name" in (result.stderr)
+
+
+# --- no reader resolves on its own -----------------------------------------------------------
+
+#: What resolving a base by hand takes, in a script's code.
+_BASE_TOKENS = {
+    r"environ\b[^\n]*CHECK_BASE|getenv\(": "reading $PKIT_CHECK_BASE",
+    r"['\"]merge-base['\"]": "computing a merge-base",
+    r"f?['\"]origin/": "naming a remote-tracking reference",
+    r"default-branch": "reading the declaration",
+}
+
+
+def _base_tokens(text: str) -> list[str]:
+    code = _code(text)
+    return [meaning for token, meaning in _BASE_TOKENS.items() if re.search(token, code)]
+
+
+def test_the_guard_recognises_a_base_resolved_by_hand() -> None:
+    ported = (
+        "import os\n"
+        "base = os.environ.get('PKIT_CHECK_BASE') or 'origin/main'\n"
+        "fork = git('merge-base', base, 'HEAD')\n"
+    )
+    assert _base_tokens(ported) == [
+        "reading $PKIT_CHECK_BASE",
+        "computing a merge-base",
+        "naming a remote-tracking reference",
+    ]
+    assert _base_tokens('"""PKIT_CHECK_BASE, merge-base and origin/main, in prose."""\n') == []
+
+
+def test_software_analysis_resolves_no_base_of_its_own() -> None:
+    """Its scripts read the base in `pkit friction artefacts --json` (COR-054 point 5)."""
+    scripts = sorted((SA / "scripts").rglob("*.py"))
+    assert scripts
+    found = {
+        path.relative_to(SA).as_posix(): tokens
+        for path in scripts
+        if (tokens := _base_tokens(path.read_text(encoding="utf-8")))
+    }
+    assert found == {}

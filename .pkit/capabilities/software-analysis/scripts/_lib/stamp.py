@@ -138,13 +138,20 @@ Recorder = Callable[[Path], str | None]
 
 
 def stamp(
-    root: Path, request: Request, base: str, *, record: Recorder = backbone.record_location
+    root: Path,
+    request: Request,
+    base: str | None = None,
+    *,
+    record: Recorder = backbone.record_location,
 ) -> Stamped:
-    """Stamp `request` in the project at `root`, numbering against the default branch `base`."""
+    """Stamp `request` in the project at `root`, numbering against the base `base` —
+    without one, the base the backbone names: `$PKIT_CHECK_BASE`, else the default
+    branch (COR-054)."""
     try:
-        analysis = backbone.read_analysis(root)
+        analysis = backbone.read_analysis(root, base=base)
     except Unreadable as exc:
         raise Refused(f"the analysis could not be read: {exc}") from exc
+    named = analysis.base.ref if analysis.base is not None else base or "the default branch"
     kind = request.kind
     place = analysis.places.get(kind)
     if place is None:
@@ -158,12 +165,12 @@ def stamp(
     _check_references(analysis, request)
 
     notes: list[str] = []
-    held, past = _held(root, analysis, kind, base, notes)
-    new_id = _new_id(kind, request.slug, held, base)
+    held, past = _held(root, analysis, kind, named, notes)
+    new_id = _new_id(kind, request.slug, held, named)
     if past is not None:
         notes.append(
-            f"{new_id} follows {past.id}, the number {base}'s history gave {past.path} (commit "
-            f"{past.commit[: backbone.SHORT]}), which neither {base} nor the working tree holds "
+            f"{new_id} follows {past.id}, the number {named}'s history gave {past.path} (commit "
+            f"{past.commit[: backbone.SHORT]}), which neither {named} nor the working tree holds "
             f"now: a number is never used again (DEC-001 point 3)"
         )
 
@@ -364,9 +371,10 @@ def _held(
     branch's history gave a file gone since, which counts as held too (DEC-001 point
     3; `_lib/history.py`). An actor's or term's id is a slug a person chooses, and a
     withdrawn one stays in its collection file, so no history is read for one.
-    Without the default branch, the working tree's alone, with a note saying why."""
+    Without the default branch, the working tree's alone, with a note saying why. The
+    tip is the one the backbone names beside the working tree's reading (COR-054)."""
     held = analysis.held()
-    tip = backbone.commit_of(root, base)
+    tip = analysis.base.tip if analysis.base is not None else None
     if tip is None:
         notes.append(
             f"{base} names no commit here, so ids were taken from the working tree alone; "

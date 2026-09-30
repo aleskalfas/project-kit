@@ -1,0 +1,14 @@
+component: software-analysis
+kind: patch
+custom:
+  category: Changed
+  requires_backbone: release
+body: >
+  `pkit analysis check-numbers` and `pkit analysis new` compare with the base
+  the backbone names (COR-054, #1128): `--base`, else `$PKIT_CHECK_BASE`, else
+  the project's default branch — `repository.default-branch`, read as
+  `origin/<name>`, else the local branch — where they used to fall back to a
+  fixed `origin/main`. They read it, the tip and where the branch left it, in
+  `pkit friction artefacts --json`'s `base`, and no longer resolve a base or
+  compute a merge-base themselves; a base that cannot be compared is refused
+  in the friction change check's words.

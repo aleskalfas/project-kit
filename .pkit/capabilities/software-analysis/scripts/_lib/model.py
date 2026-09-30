@@ -171,6 +171,22 @@ class Stray:
 
 
 @dataclass(frozen=True)
+class Base:
+    """The base the backbone names beside a reading (COR-054 point 5): what HEAD is
+    compared with — the reference a run names, else `$PKIT_CHECK_BASE`, else the
+    default branch, resolved by the backbone — the commit it names (`tip`), where
+    HEAD left it (`fork`, their merge-base) and whether it moved on since. `problem`
+    is why no comparison can be made, and `None` when one can; `tip` may name a
+    commit even then, when only the fork is missing."""
+
+    ref: str
+    tip: str | None
+    fork: str | None
+    outdated: bool
+    problem: str | None
+
+
+@dataclass(frozen=True)
 class Analysis:
     """The analysis in one state of the repository.
 
@@ -185,7 +201,9 @@ class Analysis:
     listing, so a record git ignores is not one, and every Markdown file
     beneath the folder, nested ones included. `records_unheld` says why that
     folder holds nothing, when it does not: the backbone skipped it (its
-    validation says why), or the reading declares no such folder.
+    validation says why), or the reading declares no such folder. `base` is
+    the base the backbone names beside the reading, whichever state it reads:
+    HEAD's, never the state's; `None` from a backbone that names none.
     """
 
     location: str | None
@@ -197,6 +215,7 @@ class Analysis:
     records: tuple[str, ...]
     records_unheld: str | None = None
     excluded: frozenset[str] = frozenset()
+    base: Base | None = None
 
     def held(self) -> set[str]:
         """Every id this state of the analysis holds, as `identity` spells it: each
@@ -347,6 +366,21 @@ def analysis_of(document: Mapping[str, Any]) -> Analysis:
         records=records,
         records_unheld=unheld,
         excluded=frozenset(excluded),
+        base=_base(document.get("base")),
+    )
+
+
+def _base(value: Any) -> Base | None:
+    """The document's `base`, or `None` when it carries none this reading understands."""
+    if not isinstance(value, Mapping) or not isinstance(value.get("ref"), str):
+        return None
+    problem = value.get("problem")
+    return Base(
+        ref=value["ref"],
+        tip=_text(value.get("tip")),
+        fork=_text(value.get("fork")),
+        outdated=value.get("outdated") is True,
+        problem=problem if isinstance(problem, str) else None,
     )
 
 

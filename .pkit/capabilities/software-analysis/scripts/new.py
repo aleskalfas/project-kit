@@ -107,8 +107,8 @@ def _parser() -> argparse.ArgumentParser:
             "--base",
             metavar="REF",
             default=None,
-            help=f"The default branch whose ids count as taken (default: "
-            f"${backbone.BASE_ENV}, else {backbone.DEFAULT_BASE}).",
+            help="The branch whose ids count as taken (default: $PKIT_CHECK_BASE, else the "
+            "default branch, as the backbone resolves it).",
         )
         return sub
 
@@ -241,7 +241,7 @@ def _stamp_artefact(args: argparse.Namespace) -> stamp.Stamped:
         records=tuple(args.records),
         unanchored_because=getattr(args, "unanchored_because", None),
     )
-    return stamp.stamp(backbone.project_root(), request, args.base or backbone.default_base())
+    return stamp.stamp(backbone.project_root(), request, args.base)
 
 
 def main() -> int:

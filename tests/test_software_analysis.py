@@ -596,13 +596,24 @@ def test_a_number_spelt_with_other_zeros_counts_as_held(project: AdopterRepo) ->
     assert stamped(project, "use-case", "three", "--actor", "ACT-tester") == "UC-1000"
 
 
+@pytest.mark.parametrize(
+    ("declared", "base", "unresolved"),
+    [
+        ("", ("--base", "origin/main"), "origin/main"),
+        ("repository:\n  default-branch: trunk\n", (), "trunk"),
+    ],
+    ids=["named", "declared"],
+)
 def test_without_the_default_branch_ids_come_from_the_working_tree_and_it_says_so(
-    project: AdopterRepo,
+    project: AdopterRepo, declared: str, base: tuple[str, ...], unresolved: str
 ) -> None:
+    """A base named for the run, or a declared default branch (COR-054), that names no
+    commit here: the stamp numbers from the working tree alone and says so."""
+    project.write({CONFIG: f"docs:\n  internal: tech-docs\n{declared}"})
     stamped(project, "actor", "tester")
-    completed = run_script(project, NEW, "use-case", "one", "--actor", "ACT-tester")
+    completed = run_script(project, NEW, "use-case", "one", "--actor", "ACT-tester", *base)
     assert completed.returncode == 0, completed.stderr
-    assert "origin/main names no commit here, so ids were taken from the working tree" in (
+    assert f"{unresolved} names no commit here, so ids were taken from the working tree" in (
         completed.stdout
     )
     assert completed.stdout.splitlines()[-1] == f"stamped UC-001 at {USE_CASES}/UC-001-one.md"

@@ -8,6 +8,12 @@ backbone through its commands:
   discovery (ADR-057 point 2), at the working tree or, with `--at <commit>`, at
   another state: what the default branch holds, and what it held where this
   branch left it. The script never walks a place, in any state, itself;
+- **what is settled** — the same document's `base` (COR-054 point 5): the
+  base HEAD is compared with — `--base <ref>` when a command is given one,
+  else `$PKIT_CHECK_BASE`, else the project's default branch — its commit and
+  where this branch left it. The backbone resolves it; the script never reads
+  the variable, the declaration or the remote's reference, and never computes
+  a merge-base itself;
 - **recording the analysis location** on first use — `pkit docs
   record-location`, the backbone's one writer of a capability's recorded
   locations (COR-049 point 5): with `--dry-run` to ask whether it is recorded
@@ -23,8 +29,8 @@ backbone through its commands:
   exit code. A filler never asks for a point: the readers filler reads only
   the analysis.
 
-Git answers which commit a name resolves to, the merge-base of two, who is
-working here — the default author of a revalidation record — whether the clone
+Git answers which commit a name resolves to, who is working here — the
+default author of a revalidation record — whether the clone
 is shallow; for the stamp and the number comparison, each path a history
 added under the folders of the places the backbone names, with the commit that
 added it (`added`: one `git log`, since the backbone's reading is of one state,
@@ -41,15 +47,11 @@ to, and a commit's message: each asked of git, with an anchor as a glob
 pathspec. Git's pathspec, not the backbone's matcher, decides which files an
 anchor names here, and it knows nothing of the project's `friction.exclude`,
 which the backbone does not expose to a capability yet.
-
-`default_base` is the branch that numbers are compared with: `$PKIT_CHECK_BASE`,
-the variable the project's diff-scoped checks already read, else `origin/main`.
 """
 
 from __future__ import annotations
 
 import json
-import os
 import subprocess
 from collections.abc import Callable, Iterable, Mapping
 from pathlib import Path
@@ -59,19 +61,11 @@ from _lib.model import CAPABILITY, LOCATION, Analysis, Unreadable, analysis_of
 
 Runner = Callable[..., subprocess.CompletedProcess[str]]
 
-#: The base numbers are compared with when none is named, and the variable that names one.
-BASE_ENV = "PKIT_CHECK_BASE"
-DEFAULT_BASE = "origin/main"
-
 #: How many characters of a commit a message shows.
 SHORT = 12
 
 #: What opens a commit's line in `added`'s listing, where no path can start.
 _COMMIT_MARK = "\x01"
-
-
-def default_base() -> str:
-    return os.environ.get(BASE_ENV) or DEFAULT_BASE
 
 
 def project_root() -> Path:
@@ -80,13 +74,18 @@ def project_root() -> Path:
     return Path(top) if top else Path.cwd()
 
 
-def read_analysis(root: Path, at: str | None = None, run: Runner = subprocess.run) -> Analysis:
+def read_analysis(
+    root: Path, at: str | None = None, run: Runner = subprocess.run, *, base: str | None = None
+) -> Analysis:
     """The analysis in the working tree at `root` — or, with `at`, in that commit —
-    through `pkit friction artefacts --json`. Raises Unreadable when there is no
-    document to read."""
+    through `pkit friction artefacts --json`, with the base the backbone names
+    beside it: `base` when given, else its own (`Analysis.base`). Raises Unreadable
+    when there is no document to read."""
     argv = ["pkit", "friction", "artefacts", "--json"]
     if at is not None:
         argv[3:3] = ["--at", at]
+    if base is not None:
+        argv[3:3] = [f"--base={base}"]
     return analysis_of(_document(root, argv, run))
 
 
@@ -232,11 +231,6 @@ def commit_of(root: Path, name: str) -> str | None:
     if not name or name.startswith("-"):
         return None
     return _git(root, "rev-parse", "--verify", "--quiet", f"{name}^{{commit}}")
-
-
-def merge_base(root: Path, one: str, other: str) -> str | None:
-    """The merge-base of two commits, or `None` when they share no history."""
-    return _git(root, "merge-base", one, other)
 
 
 def added(root: Path, revisions: str, folders: Iterable[str]) -> list[tuple[str, str]]:
