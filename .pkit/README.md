@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-09-30T06:54:31Z
+      at: 2026-09-30T07:04:42Z
       outcome: unchanged
-      unchanged-because: the CLI and schemas READMEs now read each state under its own friction.exclude, count a change to the exclusions as a change and ask nothing of an excluded artefact; the area map's one-line descriptions of cli/ and schemas/ hold
+      unchanged-because: the CLI and schemas READMEs now read each state under its own friction.exclude, count a change to the exclusions as a change, name an exclusion commit as a stale origin and ask nothing of an excluded artefact; the area map's one-line descriptions of cli/ and schemas/ hold
 ---
 
 # project-kit
