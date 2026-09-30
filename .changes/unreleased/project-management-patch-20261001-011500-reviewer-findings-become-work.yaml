@@ -10,9 +10,9 @@ body: >
   a correctness defect in a shipped gate, and otherwise is filed without
   one, or on the rolling maintenance Milestone, and waits. `batch-plan`
   treats two Tasks whose implementation notes name overlapping source files
-  as one module: the later carries a `Blocked by: #N` line and the two are
-  dispatched one at a time, while Tasks in different modules run in
-  parallel. `transition-state` runs `review-pr` once every check on the
+  as one module: the later names the earlier in its `## Dependencies`
+  section and is dispatched once the earlier has merged, while Tasks in
+  different modules run in parallel. `transition-state` runs `review-pr` once every check on the
   PR's head commit has passed, and the project-manager agent dispatches a
   request for verdicts to that step. The capability README names the rules
   and where each is stated.
