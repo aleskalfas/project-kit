@@ -9,9 +9,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001"]}
         revalidated:
-          at: 2026-09-30T01:37:19Z
+          at: 2026-09-30T03:25:03Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 1 now counts another component's held documents among what it claims; a page's anchors still ground every statement it makes, and a held document is no page
+          unchanged-because: DEC-001 point 1 now words another component's claim as a place or a folder of held documents it declares, a review log say; a page's anchors still ground every statement it makes, and a held document is no page
   RS-LDOC-002:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
@@ -19,9 +19,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001"]}
         revalidated:
-          at: 2026-09-30T01:37:20Z
+          at: 2026-09-30T03:25:04Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 1 now names held folders beside places as another component's claim; stating each fact once, and linking to it, is untouched by which documents are pages
+          unchanged-because: DEC-001 point 1 now says a folder of held documents another component declares belongs to it; stating each fact once and linking to it is about pages, which such a document never is
   RS-LDOC-003:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
@@ -29,9 +29,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001"]}
         revalidated:
-          at: 2026-09-30T01:37:21Z
+          at: 2026-09-30T03:25:05Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 1 now says a document another component holds is that component's, never a page; a page still names its reader in its reader field
+          unchanged-because: DEC-001 point 1 now names a component's review log among what it claims; a page still names the one reader it is for, and a held document carries no reader
   RS-LDOC-004:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
@@ -39,9 +39,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001"]}
         revalidated:
-          at: 2026-09-30T01:37:22Z
+          at: 2026-09-30T03:25:05Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 1 adds held folders to what another component claims; pages of a kind still follow one format and name their kind, and a held document has none
+          unchanged-because: DEC-001 point 1 now words held folders as another component's; pages of a kind still follow one format and name their kind, and a held document has none
   RS-LDOC-005:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
@@ -49,9 +49,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001"]}
         revalidated:
-          at: 2026-09-30T01:37:24Z
+          at: 2026-09-30T03:25:06Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 1 names another component's held documents as claimed; an index-like file is still a signpost, whatever else a folder holds
+          unchanged-because: DEC-001 point 1 now counts a component's held documents as claimed wherever they sit; an index-like file of a space is still a signpost, whatever a folder beside it holds
   RS-LDOC-006:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
@@ -59,9 +59,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001"]}
         revalidated:
-          at: 2026-09-30T01:37:25Z
+          at: 2026-09-30T03:25:07Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 1 now names held folders as a way another component claims documents; nothing is created ahead of the need for it, held documents included
+          unchanged-because: DEC-001 point 1 now words a held folder as one more way a component claims documents; creating nothing ahead of the need for it holds for pages, and a held folder is another component's
 ---
 
 # LDOC — the shared documentation method

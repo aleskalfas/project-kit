@@ -138,16 +138,20 @@ def reading_of(document: Mapping[str, Any]) -> Reading:
             fields=_fields(entry.get("fields")),
         )
     # A held document is walked by no place, so it is never among the files; it
-    # carries the places matching it and its owner (COR-050 point 1).
-    for entry in _mappings(document.get("held")):
+    # carries the places matching it and the held folder holding it, whose
+    # declaration names its owner (COR-050 point 1).
+    owners = [str(entry.get("source")) for entry in _mappings(document.get("held"))]
+    for entry in _mappings(document.get("held_files")):
         path = str(entry.get("path"))
+        folder = entry.get("held")
+        source = owners[folder] if isinstance(folder, int) and 0 <= folder < len(owners) else ""
         documents[path] = Document(
             path=path,
             places=_indices(entry.get("places")),
             rule_set=False,
             excluded=False,
             fields=_fields(entry.get("fields")),
-            held_by=capability_of(str(entry.get("source"))) or str(entry.get("source")),
+            held_by=capability_of(source) or source,
         )
     return Reading(roots=roots, places=places, documents=documents)
 

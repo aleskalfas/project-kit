@@ -12,9 +12,8 @@ pkit:
       record: ["living-docs:DEC-001", COR-049, COR-050, COR-051, COR-053]
       artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006]
     revalidated:
-      at: 2026-09-30T01:39:12Z
-      outcome: unchanged
-      unchanged-because: the agent now reads each commit behind a changed anchor limited to that commit's own paths, and a dead path anchor's commits as where its files went; the README's table still says what it reads for a stale page, the anchors that changed and the commits behind them, then those commits and the page
+      at: 2026-09-30T03:24:48Z
+      outcome: updated
 ---
 
 # living-docs capability
