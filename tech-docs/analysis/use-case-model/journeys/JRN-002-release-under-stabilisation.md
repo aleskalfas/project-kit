@@ -14,6 +14,10 @@ pkit:
       artefact:
         - UC-010
         - UC-005
+    revalidated:
+      at: 2026-09-30T21:35:06Z
+      outcome: unchanged
+      unchanged-because: on this branch _lib/milestone.py only gains the shared close-trigger and children reads behind close-milestone and the closure cascade's report that a content-based Milestone became closeable; the seam between stabilising and releasing, and the release scope both steps must share, are untouched
 ---
 
 # JRN-002 — Release with unfinished work under a stabilisation

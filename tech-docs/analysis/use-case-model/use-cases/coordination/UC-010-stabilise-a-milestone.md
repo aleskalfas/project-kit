@@ -20,9 +20,9 @@ pkit:
       artefact:
         - ACT-operator
     revalidated:
-      at: 2026-09-30T23:25:49Z
+      at: 2026-09-30T21:35:03Z
       outcome: unchanged
-      unchanged-because: done-work's change reads the not-code list and a shared freshness anchor for the review gate; stabilising a milestone, and gap K3 on changeset-only PRs as release scope, are untouched
+      unchanged-because: on this branch close-milestone reads a Milestone's close-trigger and children through _lib/milestone.py, now through the containment seam past the newest 500 issues, and close-issue's closure cascade reports when a content-based Milestone became closeable without closing it; stabilising a Milestone, release scope, the guards and the required status are untouched, so the use case holds
 ---
 
 # UC-010 — Stabilise a Milestone for a release

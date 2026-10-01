@@ -41,6 +41,9 @@ Membership children are resolved the same way the rest of the capability
 does — the union of (a) issues carrying the native GitHub Milestone field
 for this milestone and (b) issues whose body carries the textual
 `Milestone: [#<n>](../milestone/<n>)` ref (the form create-issue writes).
+The close-trigger and the children are read through `_lib.milestone`, the
+reads close-issue's closure cascade uses to say when a Milestone became
+closeable, so the two cannot disagree about it.
 
 Audit note: a GitHub Milestone has no comment thread (unlike an issue), so
 the audit line is appended to the Milestone's description in the SAME PATCH
@@ -55,10 +58,6 @@ GAP (flagged for follow-up, out of this change's touch-set):
     exists in the capability today; this wrapper only warns + lists the open
     children so they can be reassigned by hand. Wiring the reassignment
     cascade is a separate feature.
-  * Cascade-eligibility surfacing. Surfacing "milestone now closeable"
-    from close-issue's closure cascade when the last child EPIC closes
-    (mirroring parent-close eligibility) would require editing close-issue.py,
-    which is outside this change's touch-set. Left for a follow-up.
 
 Self-contained via PEP 723; runs via
   uv run --script .pkit/capabilities/project-management/scripts/close-milestone.py 6
@@ -77,8 +76,6 @@ from __future__ import annotations
 
 import argparse
 import datetime as _dt
-import json
-import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -96,16 +93,16 @@ from _lib.membership import (  # noqa: E402
     resolve_capability_root,
     resolve_invoker_identity,
 )
-from _lib.milestone import resolve_milestone  # noqa: E402
-from _lib.structural_type import infer_structural_type  # noqa: E402
+from _lib.milestone import (  # noqa: E402
+    fetch_milestone,
+    list_milestone_children,
+    resolve_close_trigger,
+    resolve_milestone,
+)
 
 # The audit marker written into the Milestone description on close. Its
 # presence guards re-append so a re-run is idempotent.
 _AUDIT_MARKER = "Closed via `pkit project-management close-milestone`"
-
-# The textual milestone-ref create-issue writes into an EPIC's body:
-# `Milestone: [#<N>](../milestone/<N>)` (see create-issue._milestone_ref_line).
-_MILESTONE_REF_TEMPLATE = r"^Milestone:\s+\[#{n}\]\(\.\./milestone/{n}\)\s*$"
 
 
 def main() -> int:
@@ -184,7 +181,7 @@ def main() -> int:
     if number is None:
         return 2
 
-    milestone = _gh_get_milestone(number, config)
+    milestone = fetch_milestone(number, config)
     if milestone is None:
         return 2
 
@@ -193,7 +190,7 @@ def main() -> int:
     description = str(milestone.get("description") or "")
     due_on = milestone.get("due_on")
 
-    close_trigger, inferred = _resolve_close_trigger(description, due_on)
+    close_trigger, inferred = resolve_close_trigger(description, due_on)
 
     print(f"close-milestone: #{number}")
     print(f"  title:         {title}")
@@ -213,7 +210,7 @@ def main() -> int:
         capability_root / "schemas" / "classification.yaml", yaml_loader
     )
 
-    children = _gh_list_milestone_children(number, title, config, issue_types, classification)
+    children = list_milestone_children(number, title, config, issue_types, classification)
     if children is None:
         return 3
     open_children = [c for c in children if c["state"] != "closed"]
@@ -275,42 +272,6 @@ def main() -> int:
 
     print(f"\n[ok] closed milestone #{number} ({close_trigger}).")
     return 0
-
-
-# ---- close-trigger resolution ---------------------------------------
-
-
-def _parse_close_trigger(description: str) -> str | None:
-    """Return the declared close-trigger from the description's first line.
-
-    Matches the DEC-016 `Close trigger: <value>` marker on the first
-    non-blank line; returns None when the marker is absent (an inherited
-    Milestone) so the caller can fall back to inference.
-    """
-    for line in description.splitlines():
-        s = line.strip()
-        if not s:
-            continue
-        m = re.match(r"^Close trigger:\s+(date-based|content-based|either)$", s)
-        return m.group(1) if m else None
-    return None
-
-
-def _infer_close_trigger(due_on: object) -> str:
-    """Infer the close-trigger for an inherited Milestone with no marker.
-
-    Per time-containers.yaml fallback_inference: a native due date present
-    ⇒ date-based; none ⇒ content-based.
-    """
-    return "date-based" if due_on else "content-based"
-
-
-def _resolve_close_trigger(description: str, due_on: object) -> tuple[str, bool]:
-    """Resolve (close_trigger, inferred): declared marker wins, else inferred."""
-    declared = _parse_close_trigger(description)
-    if declared is not None:
-        return declared, False
-    return _infer_close_trigger(due_on), True
 
 
 # ---- close decision (pure policy) -----------------------------------
@@ -399,113 +360,6 @@ def _resolve_number(arg: str, config: dict) -> int | None:
         )
         return None
     return resolved.number
-
-
-def _gh_get_milestone(number: int, config: dict) -> dict | None:
-    """GET a single milestone via `gh api` (validated `_lib.gh` seam)."""
-    try:
-        proc = gh_run(
-            ["gh", "api", f"repos/{{owner}}/{{repo}}/milestones/{number}"],
-            config,
-            check=False,
-        )
-    except FileNotFoundError:
-        print("error: `gh` not on PATH.", file=sys.stderr)
-        return None
-    if proc.returncode != 0:
-        print(
-            f"error: could not fetch milestone #{number} "
-            f"(gh exit {proc.returncode}).\nstderr: {proc.stderr.strip()}",
-            file=sys.stderr,
-        )
-        return None
-    try:
-        data = json.loads(proc.stdout)
-    except json.JSONDecodeError:
-        print(f"error: gh returned non-JSON for milestone #{number}.", file=sys.stderr)
-        return None
-    return data if isinstance(data, dict) else None
-
-
-def _gh_list_milestone_children(
-    number: int, title: str, config: dict, issue_types: dict,
-    classification: dict | None = None,
-) -> list[dict] | None:
-    """Resolve the milestone's child issues — the union of native + textual.
-
-    A child is any issue that either (a) carries the native GitHub Milestone
-    field for this milestone (matched on number or title, the same field
-    show-tree reads) or (b) carries the textual `Milestone: [#<n>](../
-    milestone/<n>)` body ref create-issue writes. `gh issue list` returns
-    issues only (PRs excluded), so no PR filtering is needed.
-
-    Returns a list of `{number, title, state, type}` dicts (state lower-cased,
-    type inferred from the title prefix), or None on gh failure.
-    """
-    try:
-        proc = gh_run(
-            [
-                "gh", "issue", "list", "--state", "all", "--limit", "500",
-                "--json", "number,title,state,body,milestone",
-            ],
-            config,
-            check=False,
-        )
-    except FileNotFoundError:
-        print("error: `gh` not on PATH.", file=sys.stderr)
-        return None
-    if proc.returncode != 0:
-        print(
-            f"error: gh issue list failed (exit {proc.returncode}).\n"
-            f"stderr: {proc.stderr.strip()}",
-            file=sys.stderr,
-        )
-        return None
-    try:
-        rows = json.loads(proc.stdout)
-    except (ValueError, json.JSONDecodeError):
-        print("error: gh issue list returned malformed JSON.", file=sys.stderr)
-        return None
-
-    ref_regex = re.compile(_MILESTONE_REF_TEMPLATE.format(n=number), re.MULTILINE)
-    children: list[dict] = []
-    for row in rows:
-        if not isinstance(row, dict):
-            continue
-        num = row.get("number")
-        if not isinstance(num, int):
-            continue
-        body = str(row.get("body") or "")
-        if not (
-            _native_milestone_matches(row.get("milestone"), number, title)
-            or ref_regex.search(body)
-        ):
-            continue
-        row_title = str(row.get("title", ""))
-        children.append(
-            {
-                "number": num,
-                "title": row_title,
-                "state": str(row.get("state", "")).lower(),
-                "type": infer_structural_type(row_title, issue_types, classification=classification),
-            }
-        )
-    children.sort(key=lambda c: c["number"])
-    return children
-
-
-def _native_milestone_matches(milestone: object, number: int, title: str) -> bool:
-    """True when an issue's native milestone field names this milestone.
-
-    Matched on number OR title — gh's `--json milestone` payload may carry
-    either depending on the field set; either identifying this milestone
-    counts.
-    """
-    if not isinstance(milestone, dict):
-        return False
-    if milestone.get("number") == number:
-        return True
-    return bool(title) and milestone.get("title") == title
 
 
 def _gh_close_milestone(number: int, description: str, config: dict) -> bool:

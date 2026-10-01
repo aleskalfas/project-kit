@@ -12,6 +12,10 @@ pkit:
       artefact:
         - ACT-clone-session
         - .pkit/decisions/README.md
+    revalidated:
+      at: 2026-09-30T22:51:12Z
+      outcome: unchanged
+      unchanged-because: decisions validate gains a warning of revision narration inside a record, and the decisions README the steps for refining one in place; minting a number and the check that no two records share an id, which this use case describes, are unchanged
 ---
 
 # UC-006 — Resolve a decision number two clones took
