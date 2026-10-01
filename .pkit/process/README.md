@@ -15,7 +15,7 @@ pkit:
         - .pkit/schemas/_defs/process.schema.json
       record: [COR-033, COR-034, COR-035, COR-036, COR-037, COR-038, COR-040, COR-042, COR-044, COR-053, ADR-020, ADR-036, ADR-048, ADR-051]
     revalidated:
-      at: 2026-10-01T15:15:45Z
+      at: 2026-10-01T19:21:55Z
       outcome: updated
 ---
 
@@ -236,7 +236,7 @@ process:
 
 - **The interface version (refinement per [COR-053](../decisions/core/COR-053-connection-points.md) point 5).** An interface may carry an integer `version`: the version of the public contract, raised only when a change breaks the processes that connect to it — an additive change leaves it alone. It is distinct from the definition's own `version`, which tracks internal change under live subjects. Only validation reads it; the engine resolves outcomes live as before. A capability that offers the process under a role declares the same integer as the offered point's `schema_version` in its package metadata — `pkit validate` reports an offered point whose `schema_version` differs from the definition's `interface.version`, naming both values and both files — and a `depends_on` entry targets it with its own `version` (below).
 
-The `status` view surfaces the embedded inner and its live-resolved outcome (narrative: an `embeds <address>` / `inner outcome: <x>` line; `--json`: a `position.subprocess` object with `{runs, outcome, indeterminate, reason}`).
+The `status` view surfaces the embedded inner and its live-resolved outcome (narrative: an `embeds <address>` / `inner outcome: <x>` line; `--json`: a `position.subprocess` object with `{runs, outcome, indeterminate, reason, stderr_tail}`).
 
 **Deferred** (each its own future decision when a binding needs it, per COR-036): the **overflow / hand-off** (concurrent spawn) timing and the broader **orchestration** altitude. (The **enumerate-and-fold aggregate** + **many-inner aggregate wait** across a keyed inner's subjects shipped as cascade — COR-037, below — *consuming* this single-inner resolution as its per-subject step.)
 
@@ -279,7 +279,7 @@ process:
 - **Read-only, deterministic, single-level.** Resolving the fold runs predicates and resolves member outcomes **live**, writing nothing; the fold is a deterministic reduction over a finite member set (P3/P6 hold — each member outcome is a composed definite answer, the membership set a live re-read of a deterministic predicate). The acyclicity guard is inherited, so a cascade whose child is the parent process is refused like a cyclic embedding.
 - **Known limitation (accepted, ship-narrow).** Predicate evaluation is **not memoised across the breadth of a fold**: the `members` predicate runs through the parent runner's per-invocation cache, but each member's outcome and membership are resolved through a **fresh, uncached** runner, and within one `status` render `resolve_cascade_outcome` is invoked 2–3× (precheck gate + `position.cascade` surface + the blocked wait-reason) × N members — so member predicates re-run per call. Accepted for the narrow ship (the member sets the bindings fold are small); a shared per-render fold cache is **deferred** until a binding's set size makes it pay.
 
-The `status` view surfaces the live fold when the current state has the cascade-gated move (narrative: a `folds <address> (<op>)` / `fold: <reached>/<total> …` line; `--json`: a `position.cascade` object with `{runs, op, outcome, threshold, reached, total, opened, indeterminate, reason}`).
+The `status` view surfaces the live fold when the current state has the cascade-gated move (narrative: a `folds <address> (<op>)` / `fold: <reached>/<total> …` line; `--json`: a `position.cascade` object with `{runs, op, outcome, threshold, reached, total, opened, indeterminate, reason, stderr_tail}`).
 
 **Deferred** (each its own future decision when a binding needs it, per COR-037): **forward / position cascade** (bump a parent up to match its furthest child — a position reduction, not a terminal-outcome fold; pm keeps it capability-local); **richer reducers** (ratios / weighted / custom); **overflow / hand-off** (a terminal state spawning or unblocking a concurrent sibling — altitude-2 orchestration); **peer-cycle deadlock** detection and **cross-subject invariants** (different cross-subject machines, each its own slot).
 
@@ -346,6 +346,8 @@ A predicate's `run:` resolves to a command the owning capability **registers** i
 Predicates **must be read-only** — `status` runs them live, so a mutating predicate would be a side-effect bug.
 
 **Failure is fail-closed.** A predicate that errors, times out, returns unparseable JSON or anything but a JSON object, or doesn't resolve is **indeterminate**: `status` shows it distinctly ("couldn't evaluate: …") and `move` refuses. An unrecognised or schema-future gate (engine/definition version skew) likewise fails closed — never a silent pass. Gates are correctness boundaries (unlike the permission hook's fail-open *availability* posture).
+
+**An indeterminate predicate says why.** The reason names the predicate and how its run ended — `it exited 2`, `it was ended by signal 9`, `it did not answer within 30 s and was stopped`, `it could not start: …`, `it printed no JSON document on its standard output`, `it answered with JSON that is not an object`. What the predicate wrote on **standard error** — its diagnostics channel, never read as an answer — is shown beside that reason, attributed to it: in the narrative views (`status`, `validate`, `cascade`) and in a refusal (`can-move`, `move`) under a `the predicate said:` line, and in the `--json` views as a **`stderr_tail`** field of its own beside `reason` (null when there is nothing to show), never folded into a reason a consumer may match on. `status --json` also lists the detections behind an indeterminate position under `position.unevaluated` (`{state, reason, stderr_tail}`). What is shown is only the stream's **tail**: its last 10 non-blank lines and at most 1500 bytes of them, starting with `…` when cut; decoded with replacement, so a binary stream cannot fail the read; with every terminal escape sequence removed and every other control or format character dropped, so a predicate can neither flood nor rewrite the operator's terminal. So a predicate that refuses for a reason the operator can fix — a capability's prerequisite gate naming the command that fixes it — should say so on standard error: that is the message that reaches them. None of this changes a verdict: an unevaluable predicate is indeterminate, whatever it said.
 
 **Performance.** Resolve position first (run detection predicates), then precheck only the transitions *out of* the current state; evaluate each predicate at most once per `(command, args)` per invocation. No cross-invocation position caching — that is the deferred `stored` detection mode.
 
