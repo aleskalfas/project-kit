@@ -17,10 +17,11 @@ DELEGATED to the process engine via `pkit process …` (subprocess, never
 imported, ADR-020): this script reads the issue's position from the
 engine and, after applying its domain side-effect, journals the move
 through the engine (the seam-ordering contract in .pkit/process/
-README.md). The engine's detectors reproduce this script's inference
-precedence, so position is identical (behaviour parity is the acceptance
-bar). The parity-critical wrapper-side concerns STAY here: membership,
-placeholder, authorisation/bypass/TTY, and the forward cascade.
+README.md). The engine's detection — the lifecycle's classifier,
+`detect-state` — reproduces this script's inference precedence, so
+position is identical (behaviour parity is the acceptance bar). The
+parity-critical wrapper-side concerns STAY here: membership, placeholder,
+authorisation/bypass/TTY, and the forward cascade.
 
 The substrate-specific mechanics differ per adopter config. WHICH substrate
 carries `state` is asked of `_lib/axis_carriage` — the map governs the axis
