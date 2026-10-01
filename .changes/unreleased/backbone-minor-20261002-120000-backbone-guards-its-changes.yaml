@@ -1,0 +1,22 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  Every change the backbone makes on the hosting service now runs the
+  cross-repository guard itself (COR-039, ADR-061 point 6). `pkit pull-request
+  merge`, `enqueue` and `dequeue` compare the session's anchor with the
+  repository of the working directory before the request; `pkit release merge`
+  does so once, at its entry, for its merge and its branch clean-up alike. In
+  the session's own repository nothing changes. In another, the guard asks at a
+  terminal, on standard error, and refuses where there is none, making no
+  request; each of the four commands takes `--allow-foreign-repo` to confirm the
+  change. With no session's anchor — a plain terminal, a pipeline — the guard
+  does not fire and no flag is needed; a git that cannot be asked warns and goes
+  on. A refused `pull-request` request answers `accepted: false` with
+  `refused_by: "foreign-repository"`, and every request document gains
+  `refused_by` and `guard` (the verdict, how it passed, the anchor and the
+  target), as additions: `schema_version` stays 1. `release merge --dry-run`
+  reports the guard's verdict and asks nothing. The guard is an interlock, not a
+  boundary: a set `GH_REPO`, which sends `gh` elsewhere than the working
+  directory's remote, is not compared.
