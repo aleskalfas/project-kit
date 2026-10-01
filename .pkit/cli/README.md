@@ -437,9 +437,11 @@ What is settled, as every reader of it takes it ([COR-054](../decisions/core/COR
 
 ## Pull-request commands
 
-Landing a pull request on the hosting service, implemented once in the backbone (`src/project_kit/pull_request_landing.py`) for every command that lands one: project-management's merge verbs call these commands from their scripts, and `release merge` calls the module directly. The merge convention behind it — one squash commit whose subject is the PR title, through the base's merge queue where it has one — is project-management's DEC-013, "Merge mechanics". Each command runs `gh` from the working directory, which resolves the repository from its remote, in the caller's environment, so a host pinned through `GH_HOST` is the one reached. What to land and when — gates, refusals, what follows the merge — is the caller's.
+Landing a pull request on the hosting service, implemented once in the backbone (`src/project_kit/pull_request_landing.py`) for every command that lands one: project-management's merge verbs call these commands from their scripts, and `release merge` calls the module directly. The merge convention behind it — one squash commit whose subject is the PR title, through the base's merge queue where it has one — is project-management's DEC-013, "Merge mechanics". What to land and when — gates, refusals, what follows the merge — is the caller's.
 
-With `--json` every command writes its document as **one line of JSON**, keys sorted, carrying `schema_version` (`1`; a reader refuses a version it does not know) and, but for `squash-defaults`, `pull_request`. `wait` writes several, one per line, as it goes.
+*GitHub-specific:* this noun is the backbone's realization for a repository hosted on GitHub, through the `gh` client — its merge queue, its GraphQL fields, its squash-commit defaults. Each command runs `gh` from the working directory, which resolves the repository from its remote, in the caller's environment, so a host pinned through `GH_HOST` is the one reached. Another hosting service would need its own realization.
+
+**The JSON document is the contract.** With `--json` every command writes its document as **one line of JSON**, keys sorted, carrying `schema_version` (`1`; a reader refuses a version it does not know) and, but for `squash-defaults`, `pull_request`; `wait` writes several, one per line, as it goes. A caller decides on the document's fields, never on the exit code: the exit codes are the commands' human face, for a person at a terminal, and one code can cover more than one outcome — `wait`'s exit `3` is both "left the queue" and "head moved", which a caller that must take the PR out of the queue on a head move tells apart by the end document's `ended`. A caller that gets no document back has no answer: the request may have been made or not, and it reads the PR (`read`) before it decides.
 
 ### `pull-request read <n> [--json]`
 
@@ -466,7 +468,7 @@ Hand PR `<n>` to its base's merge queue (`gh pr merge --auto`), pinned to `<sha>
 Wait for the merge queue to merge PR `<n>`: as long as the queue estimates plus 2 minutes, never more than 30, or `<s>` seconds (`0` reads once). It reads every 15 seconds and writes each reading whose description changed. The PR is declared out of the queue only on two readings running — closed, or out twice — so a reading taken as GitHub takes the PR in is not mistaken for one that left. With `--head`, a reading at another head ends the wait at once: commits nobody checked must not merge, and the caller takes the PR out (`dequeue`).
 
 - With `--json`: one `{"event": "reading", "reading": …}` line per change, then `{"event": "end", "ended": …, "reading": …, "unreadable": …}` — `ended` is `merged`, `queued` (the time ran out), `left` or `head-moved`, or `null` with `unreadable` when a reading failed.
-- Exit `0` when it merged; `4` when the time ran out with it still queued; `3` when it left the queue unmerged or its head moved; `1` when GitHub could not be read.
+- Exit `0` when it merged; `4` when the time ran out with it still queued; `3` when it left the queue unmerged or its head moved — `ended` says which; `1` when GitHub could not be read.
 
 ### `pull-request dequeue <n> [--json]`
 
