@@ -51,7 +51,7 @@ _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 import contextlib
 
-from _lib import bootstrap_gate, session_guard
+from _lib import bootstrap_gate, session_guard, title_rules
 from _lib.gh import gh_run, load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
@@ -225,6 +225,16 @@ def main() -> int:
             "Only {n} and {name} are supported.",
             file=sys.stderr,
         )
+        return 2
+
+    # titles.yaml's `milestone` checks (#803): shown before the plan; a blocking
+    # one refuses before any gh call.
+    titles = _read_yaml(capability_root / "schemas" / "titles.yaml", yaml_loader)
+    title_findings = title_rules.check_title(titles, "milestone", title)
+    for severity, label, detail in title_findings:
+        print(f"[{severity}] {label}: {detail}", file=sys.stderr)
+    if any(f[0] in title_rules.BLOCKING_SEVERITIES for f in title_findings):
+        print(f"error: milestone title {title!r} refused (see above).", file=sys.stderr)
         return 2
 
     body_lines = [f"Close trigger: {close_trigger}"]

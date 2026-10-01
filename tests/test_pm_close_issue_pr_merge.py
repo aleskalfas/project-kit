@@ -77,6 +77,8 @@ def _run(
     monkeypatch.setattr(ci, "check_membership", lambda *a: SimpleNamespace(allowed=True))
     monkeypatch.setattr(ci.axis_labels, "load_substrate_map", lambda *_a, **_k: None)
     monkeypatch.setattr(ci, "fire_hooks", lambda *a, **k: None)
+    # Recording the close with the engine (#1231) is test_pm_close_issue_journal's.
+    monkeypatch.setattr(ci, "journal_move", lambda *a, **k: None)
 
     issues = {42: issue, **(parents or {})}
     monkeypatch.setattr(ci, "_gh_get_issue", lambda n, _config: issues.get(n))

@@ -115,9 +115,9 @@ TERM-stabilisation:
           - project-management:DEC-014
           - ADR-019
       revalidated:
-        at: 2026-10-01T21:25:29Z
+        at: 2026-10-01T22:17:09Z
         outcome: unchanged
-        unchanged-because: "#1195 only moves done-work's reviewer-resolution wiring into one shared function the gate, review-pr and show-pr call; what the gate decides, and anything about a stabilisation milestone, is unchanged, so the term holds"
+        unchanged-because: every title rule the schema declares now runs, and DEC-011 states them; what this page says of titles and filing still holds
 ---
 
 # Glossary

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "titles.schema.json",
   "title": "Title formats per surface (issue, milestone, PR)",
-  "description": "Formal shape of titles.yaml — one entry per title surface (per-issue-type issue titles, milestone titles, PR titles). Each entry carries a regex `pattern` consumers compile, a prose `description`, examples, and per-rule validations tagged with severities. Issue and milestone titles are read for board browsing; PR titles follow Conventional Commits for `git log` parsing. Consumed by the create-issue and validate-body skills at filing and edit time. Companion per COR-018.",
+  "description": "Formal shape of titles.yaml — one entry per title surface (per-issue-type issue titles, milestone titles, PR titles). Each entry carries a regex `pattern` consumers compile, a prose `description`, examples, and per-rule validations tagged with severities. Issue and milestone titles are read for board browsing; PR titles follow Conventional Commits for `git log` parsing. Read through scripts/_lib/title_rules.py by create-issue, edit-issue, validate-issue, validate-pr and create-milestone. Companion per COR-018.",
   "x-pkit-id-collection": "/formats",
   "type": "object",
   "required": [
@@ -53,7 +53,7 @@
         "pattern": {
           "type": ["string", "null"],
           "minLength": 1,
-          "description": "Regex (PCRE-compatible) the title must match. `null` for free-form surfaces (e.g., milestone). Consumers compile against the language they run in; if the regex must differ across languages, encode the divergence here explicitly."
+          "description": "Regex (PCRE-compatible) the title must match. `null` for free-form surfaces (e.g., milestone). A named group `text` marks the part the wording checks read (the title after its prefix, the PR summary). Consumers compile against the language they run in; if the regex must differ across languages, encode the divergence here explicitly."
         },
         "description": {
           "type": "string",
@@ -85,18 +85,48 @@
           "type": "array",
           "items": {
             "type": "object",
-            "required": ["rule", "severity"],
+            "required": ["rule", "severity", "check", "name"],
             "additionalProperties": false,
             "properties": {
               "rule": { "type": "string", "minLength": 1 },
               "severity": {
                 "$ref": "validation-severity.schema.json#/$defs/severity_ref"
+              },
+              "check": {
+                "type": "string",
+                "enum": ["pattern", "forbid", "require", "min-length", "max-length", "kind-prefix", "type-alignment"],
+                "description": "The check that enforces the rule. `pattern`: the title matches the entry's `pattern`. `forbid` / `require`: the title's text contains no / a match for `regex`. `min-length` / `max-length`: the text is at least / at most `length` characters. `kind-prefix` (issue titles) and `type-alignment` (PR titles) need the issue's or the closing issues' kind and are run by validate-issue and the PR validator. The text is the pattern's named group `text` when it has one, else the whole title. A rule no check enforces cannot be declared."
+              },
+              "name": {
+                "type": "string",
+                "pattern": "^title\\.[a-z][a-z0-9-]*$",
+                "description": "The finding label a violation is reported under (e.g. `title.scope-prefix`)."
+              },
+              "regex": {
+                "type": "string",
+                "minLength": 1,
+                "description": "For `forbid` / `require`: the regex searched for in the title's text."
+              },
+              "length": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "For `min-length` / `max-length`: the bound on the text's length, in characters."
               }
-            }
+            },
+            "allOf": [
+              {
+                "if": { "properties": { "check": { "enum": ["forbid", "require"] } } },
+                "then": { "required": ["regex"] }
+              },
+              {
+                "if": { "properties": { "check": { "enum": ["min-length", "max-length"] } } },
+                "then": { "required": ["length"] }
+              }
+            ]
           },
           "minItems": 1,
           "uniqueItems": true,
-          "description": "Per-rule validations the skill runs against a title on this surface. Each rule is prose paired with a severity token; severity dispatch happens via the validation-severity schema."
+          "description": "Per-rule validations run against a title on this surface. Each rule is prose paired with the check that enforces it, the finding label, and a severity token; severity dispatch happens via the validation-severity schema. Wording checks (`forbid`, `require`, `min-length`, `max-length`) apply at the declared severity where a title is written; at a lifecycle transition a blocking one reports as a warning."
         }
       },
       "description": "Per-surface title format."
