@@ -1,0 +1,10 @@
+component: software-analysis
+kind: patch
+custom:
+  category: Changed
+  pr: "1225"
+body: >
+  `pkit analysis new` asks the backbone what is settled once per stamp: one
+  `pkit repository base --base=<ref>` names both the default branch and the
+  base given on the command line. A stamp given `--base` therefore starts one
+  `pkit` process fewer (#1221). It numbers exactly as before.

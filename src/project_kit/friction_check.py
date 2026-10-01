@@ -335,12 +335,15 @@ def head_commit(root: Path) -> str:
     return head
 
 
-def resolve_base(root: Path, ref: str | None = None) -> BaseState:
+def resolve_base(
+    root: Path, ref: str | None = None, *, resolved: default_branch.Base | None = None
+) -> BaseState:
     """The base's commit, its merge-base with HEAD, and whether it moved on: `ref`, else
     `$PKIT_CHECK_BASE`, else the default branch — computed once for every reader
-    (`default_branch.base`, COR-054 point 5)."""
+    (`default_branch.base`, COR-054 point 5). `resolved` is that base when the run has
+    read it already (`default_branch.settled`), so it is not resolved twice."""
     head_commit(root)
-    found = default_branch.base(root, ref)
+    found = default_branch.base(root, ref) if resolved is None else resolved
     if found.problem is not None or found.tip is None or found.fork is None:
         raise FrictionCheckError(found.problem or f"the base {found.ref!r} cannot be compared.")
     return BaseState(ref=found.ref, tip=found.tip, commit=found.fork, outdated=bool(found.outdated))
@@ -1094,9 +1097,11 @@ def run_change_check(
     base_ref: str | None = None,
     *,
     registry: Mapping[str, ResolverCommand] | None = None,
+    resolved: default_branch.Base | None = None,
 ) -> ChangeCheck:
     """Run the change check of the working tree against the merge-base of `base_ref` —
     without one, `$PKIT_CHECK_BASE`, else the default branch (COR-054 point 3).
+    `resolved` is that base when the caller has read it already (`resolve_base`).
 
     Raises `FrictionCheckError` when it cannot run — outside a git repository,
     before the first commit, or with a base that does not resolve — except
@@ -1112,7 +1117,7 @@ def run_change_check(
         "carrying": len(head_discovery.with_container),
     }
     if head_discovery.is_dormant:
-        dormant_base, dormant_head = _dormant_context(target_root, base_ref)
+        dormant_base, dormant_head = _dormant_context(target_root, base_ref, resolved)
         return ChangeCheck(
             mode=settings.mode_or_default,
             mode_as_written=settings.mode,
@@ -1123,7 +1128,7 @@ def run_change_check(
             **counts,
         )
 
-    base_state = resolve_base(target_root, base_ref)
+    base_state = resolve_base(target_root, base_ref, resolved=resolved)
     diff = read_diff(target_root, base_state.commit)
     base_tree = CommitTree(target_root, base_state.commit)
     head = Side(target_root, head_tree, head_discovery)
@@ -1175,10 +1180,12 @@ def _config_path(root: Path) -> str:
     return project_config_path(root).relative_to(root).as_posix()
 
 
-def _dormant_context(root: Path, base_ref: str | None) -> tuple[BaseState | None, HeadState | None]:
+def _dormant_context(
+    root: Path, base_ref: str | None, resolved: default_branch.Base | None
+) -> tuple[BaseState | None, HeadState | None]:
     """What a dormant run can say about its base and head; it demands neither (point 15)."""
     try:
-        base: BaseState | None = resolve_base(root, base_ref)
+        base: BaseState | None = resolve_base(root, base_ref, resolved=resolved)
     except FrictionCheckError:
         base = None
     try:

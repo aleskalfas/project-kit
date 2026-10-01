@@ -21,7 +21,9 @@ from __future__ import annotations
 
 import importlib
 import json
+import os
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -516,6 +518,78 @@ def test_the_reading_command_names_the_default_branch_and_the_base(
     refused = json.loads(_repository_base("--json", "--base=-x").stdout)
     assert refused["base"]["problem"] == "the base '-x' is not a revision name."
     assert refused["default_branch"] == document["default_branch"]
+
+
+def _counting_git(
+    tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch
+) -> Path:
+    """A `git` first on PATH that writes one line per process started — its arguments —
+    then runs the real one. Returns the file it writes."""
+    real = shutil.which("git")
+    assert real is not None
+    bin_dir = tmp_path_factory.mktemp("counting-git")
+    started = bin_dir / "started"
+    started.touch()
+    fake = bin_dir / "git"
+    fake.write_text(f'#!/bin/sh\necho "$*" >> "{started}"\nexec "{real}" "$@"\n', encoding="utf-8")
+    fake.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}")
+    return started
+
+
+@pytest.mark.parametrize(
+    ("layout", "args", "most"),
+    [
+        # The project root, one listing of the branch's references, where HEAD left it.
+        ("remote", (), 3),
+        # The same, and whether a remote exists, since none holds the branch (point 2).
+        ("local", (), 4),
+        # The default branch listed once; the base asked as a remote-tracking reference
+        # (`refs/remotes/main`), then listed as a branch, and where HEAD left it.
+        ("remote", ("--base=main",), 5),
+    ],
+    ids=["remote", "local", "named-base"],
+)
+def test_one_reading_resolves_the_default_branch_once(
+    tmp_path: Path,
+    tmp_path_factory: pytest.TempPathFactory,
+    monkeypatch: pytest.MonkeyPatch,
+    layout: str,
+    args: tuple[str, ...],
+    most: int,
+) -> None:
+    """`pkit repository base` resolves the default branch once and reuses it for the base
+    and for what it says on standard error: one listing of the branch's references, one
+    merge-base — a handful of git processes, where it took 13 (#1221)."""
+    repo = _repo(tmp_path)
+    if layout == "remote":
+        _with_remote(repo, tmp_path)
+    head = repo.head()  # before the fake: the test's own git is not the reading's
+    monkeypatch.chdir(repo.root)
+    started = _counting_git(tmp_path_factory, monkeypatch)
+    result = _repository_base("--json", *args)
+    assert result.exit_code == 0, result.output
+    assert json.loads(result.stdout)["default_branch"]["commit"] == head
+    ran = started.read_text(encoding="utf-8").splitlines()
+    listings = [line for line in ran if line.startswith("for-each-ref ")]
+    assert len(listings) == 1 + len(args), ran
+    assert len([line for line in ran if line.startswith("merge-base ")]) == 1, ran
+    assert len(ran) <= most, ran
+
+
+def test_the_friction_check_reads_its_base_once(
+    tmp_path: Path, tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The change check says what it read and compares with it from one reading."""
+    repo = _repo(tmp_path)
+    _with_remote(repo, tmp_path)
+    monkeypatch.chdir(repo.root)
+    started = _counting_git(tmp_path_factory, monkeypatch)
+    result = CliRunner().invoke(main, ["friction", "check", "--json"])
+    assert result.exit_code == 0, result.output
+    ran = started.read_text(encoding="utf-8").splitlines()
+    assert len([line for line in ran if line.startswith("for-each-ref ")]) == 1, ran
+    assert len([line for line in ran if line.startswith("merge-base ")]) == 1, ran
 
 
 def test_the_human_view_says_which_branch_and_which_base(
