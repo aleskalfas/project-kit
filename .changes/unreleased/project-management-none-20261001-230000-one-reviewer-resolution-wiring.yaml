@@ -1,3 +1,5 @@
 component: project-management
 kind: none
+custom:
+  pr: "1251"
 body: Internal — `done-work`, `review-pr` and `show-pr` resolve a pull request's required reviewers and build the verdict freshness rule through one shared function (`scripts/_lib/pr_review.py`) instead of three hand-wired copies (#1195); no verb's output changes.
