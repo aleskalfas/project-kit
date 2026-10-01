@@ -187,7 +187,14 @@ def test_review_work_opens_its_pr_against_the_resolved_base(
     verbs, monkeypatch, body, extra_argv, expected
 ) -> None:
     mod = verbs["review-work"]
-    _stub_gates(monkeypatch, mod, _issue(body), ["review-work", "42", "--yes", *extra_argv])
+    # An In Progress bug Task (the `fix/` branch's type): review-work refuses any
+    # position that cannot move to Review before it opens a PR (#947).
+    issue = {
+        **_issue(body),
+        "title": "[Task] do thing",
+        "labels": ["type:bug", "state:in-progress"],
+    }
+    _stub_gates(monkeypatch, mod, issue, ["review-work", "42", "--yes", *extra_argv])
     monkeypatch.setattr(mod, "_find_issue_branch", lambda _n: BRANCH)
     monkeypatch.setattr(mod, "_find_pr_for_branch", lambda *a: None)
     monkeypatch.setattr(mod, "_ready_body_ok", lambda *a: True)
@@ -243,10 +250,12 @@ def test_every_verb_refuses_when_the_backbone_cannot_say_the_default_branch(
 ) -> None:
     """No silent `main` (COR-054 point 4): the verb names the cause and acts on nothing."""
     mod = verbs[verb]
+    # In Progress passes both transition gates: review-work's move to Review is
+    # legal from it (#947), and start-work's re-run on it is a no-op (#942).
     issue: dict[str, Any] = {
         **_issue(UNMARKED_BODY),
         "title": "[Task] do thing",
-        "labels": ["state:backlog"],
+        "labels": ["state:in-progress"],
     }
     _stub_gates(monkeypatch, mod, issue, argv)
     _backbone_answers(monkeypatch, mod.infer.default_branch, unanswered="no pkit here")

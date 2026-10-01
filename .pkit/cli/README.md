@@ -47,8 +47,9 @@ pkit:
         - src/project_kit/pull_request_landing.py
       record: [COR-004, COR-012, COR-043, COR-048, COR-049, COR-050, COR-054, PRJ-001, PRJ-003, PRJ-004, ADR-033, ADR-039, ADR-049, ADR-058, ADR-059, ADR-061]
     revalidated:
-      at: 2026-10-01T19:21:52Z
-      outcome: updated
+      at: 2026-10-01T19:29:52Z
+      outcome: unchanged
+      unchanged-because: release check now counts only the changesets a pull request adds or edits; this entry already says it fails a PR whose surface change ships no changeset, and defers the mechanics to the release-flow spec, which states what a green result means
 ---
 
 # Command-line interface

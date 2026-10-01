@@ -1,0 +1,21 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+  pr: "1235"
+body: >
+  `review-work` now checks that the issue can move to Review before it touches
+  the pull request (#947). Before, it opened a ready PR or flipped a draft to
+  ready and requested reviewers, and only then called `move-issue --to review`.
+  On an issue in Backlog, where that move is not legal, the run left a ready PR
+  with reviewers against an issue that stayed where it was, and the output gave
+  no closing message. It now refuses with exit 2, names the state it found and
+  the moves to make first (from Backlog, `move-issue <N> --to in-progress`;
+  from Todo, Backlog first), and opens, flips and requests nothing. The check
+  reads the same state and the same `workflow.yaml` transitions `move-issue`
+  does, so an issue already in Review still re-runs cleanly, for example to
+  flip the PR ready again after `back-to-draft`. If `move-issue` still fails
+  after the PR was opened or made ready (a network error, for example), the
+  run now ends on a `[failed]` block naming the PR, its ready state and the
+  reviewers it requested, with the commands to undo them, and passes
+  `move-issue`'s exit code through as before.
