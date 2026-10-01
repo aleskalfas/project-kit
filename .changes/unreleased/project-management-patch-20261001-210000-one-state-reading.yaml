@@ -3,25 +3,14 @@ kind: patch
 custom:
   category: Fixed
 body: >
-  `start-work` and `review-work` now resolve the issue's state for their early
-  check through the same resolver `move-issue` moves with: the process engine's
-  position, else the issue's own fields (#1242). Before, the early check read
-  labels and milestone directly while `move-issue` asked the engine first. In
-  every shipped configuration the two came to the same answer, because the
-  engine's detectors read those same fields; they could differ only if the
-  labels changed between the two reads. `move-issue` still reads the state
-  itself when it moves, so a move that stopped being legal after the check is
-  refused there, and the verb's failure names the branch, pull request or
-  reviewers the run left behind. The verbs now ask the engine once more per
-  run (`pkit process status`), and `--dry-run` and every early refusal now cost
-  one engine read where they cost none. One case is newly refused, and only
-  where the project's board carries `state`: when the process engine gives no
-  position, the issue's labels cannot stand in for the board, so both verbs
-  refuse before any branch or pull-request change. The refusal says whether
-  `pkit` was not found, exited non-zero (with the end of what it said), or
-  could not determine a position. Nothing is newly refused where labels or
-  open/closed carry `state`, and an issue with no state label and no milestone
-  still reads as Todo. `review-work`'s documented exit codes now include 3 for
-  a `gh` failure opening the pull request or making it ready, and its closing
+  `start-work` and `review-work` check that their move is legal before they
+  touch a branch or pull request from one shared reading of the issue's state:
+  its labels and milestone, with no state label and no milestone reading as
+  Todo (#1242). The two verbs also share one implementation of that refusal,
+  with its "move it first" hint, and of the failure that names what a run left
+  behind when the composed `move-issue` fails after the verb's own changes,
+  for instance because the state changed since the check and `move-issue`
+  refuses the move. `review-work`'s documented exit codes now include 3 for a
+  `gh` failure opening the pull request or making it ready, and its closing
   line, `[ok] PR ready; #<N> in Review`, no longer claims a move from In
   Progress; `move-issue`'s own output says whether it moved the issue.
