@@ -107,6 +107,7 @@ class _FakeGitHub:
     labels: list[str] = field(default_factory=lambda: ["state:review"])
     draft: bool = False
     state: str = "OPEN"
+    mergeable: str = "MERGEABLE"
     merge_commit: str = ""
     #: The base branch merges through a queue.
     queue: bool = False
@@ -120,6 +121,8 @@ class _FakeGitHub:
     hooks: list[tuple[Callable[[list[str]], bool], Callable[[], None]]] = field(
         default_factory=list
     )
+    #: The first call each of these matches gets no answer: gh exits 1.
+    fails: list[Callable[[list[str]], bool]] = field(default_factory=list)
     _reads: dict[str, int] = field(default_factory=dict)
 
     # -- what the pm scripts ask (`_lib.gh.gh_run`) --
@@ -132,6 +135,10 @@ class _FakeGitHub:
             if when(argv):
                 self.hooks.remove(hook)
                 what()
+        for fail in list(self.fails):
+            if fail(argv):
+                self.fails.remove(fail)
+                return _done(argv, returncode=1, stderr="HTTP 502: Bad Gateway")
         if argv[:2] == ["pr", "list"]:
             wanted = _option(argv, "--state")
             matches = _option(argv, "--head") == BRANCH and (
@@ -194,6 +201,7 @@ class _FakeGitHub:
             "baseRefName": "main",
             "baseRefOid": self.base,
             "state": self.state,
+            "mergeable": self.mergeable,
             "isCrossRepository": False,
             "mergedAt": "2026-10-01T12:00:00Z" if merged else None,
             "author": {"login": "author"},
@@ -507,10 +515,10 @@ def test_a_local_branch_diverged_from_the_pr_is_refused(world, capsys) -> None:
     run.commit("elsewhere.txt", push=False)
     rc, out, _err = run.run("--yes", capsys=capsys)
     assert rc == 1
-    assert (
+    assert out.splitlines()[-1] == (
         f"head: refused — local {BRANCH} and PR #{PR}'s head {_short(pushed)} have "
-        "diverged (1 commit only here, 1 commit only on the PR)"
-    ) in out.splitlines()[-1]
+        "diverged (1 commit only here, 1 commit only on the PR). Nothing was done"
+    )
 
 
 def test_a_local_branch_behind_the_pr_and_another_checkout_are_noted(world, capsys) -> None:
@@ -534,7 +542,7 @@ def test_a_draft_pr_is_refused(world, capsys) -> None:
     run = world()
     run.github.draft = True
     rc, out, _err = run.run("--yes", capsys=capsys)
-    assert rc == 2
+    assert rc == run.land.EXIT_NEEDS_CHANGE == 1
     assert out.splitlines()[-1] == (
         f"head: refused — PR #{PR} is a draft; mark it ready with `review-work {ISSUE}`"
     )
@@ -548,7 +556,7 @@ def test_no_run_yet_is_waited_for_then_green_goes_on(world, capsys) -> None:
     rc, out, err = run.run("--yes", capsys=capsys)
     assert rc == 0, out + err
     head = _short(run.github.head)
-    assert f"  ci: no run has started for {head} yet" in out
+    assert f"  ci: no check has been reported for {head} yet" in out
     assert f"  ci: running on {head}: checks (IN_PROGRESS)" in out
     assert run.sleeps == [20.0, 20.0, 20.0]
     assert _steps(out)[1].startswith(f"ci: passed on {head}")
@@ -564,7 +572,7 @@ def test_a_green_run_on_an_older_head_does_not_count(world, capsys) -> None:
     assert run.github.checks[old] == [_GREEN]
     rc, out, err = run.run("--yes", capsys=capsys)
     assert rc == 0, out + err
-    assert f"  ci: no run has started for {_short(new)} yet" in out
+    assert f"  ci: no check has been reported for {_short(new)} yet" in out
     assert run.sleeps == [20.0]
     assert _steps(out)[1].startswith(f"ci: passed on {_short(new)}")
     assert run.invoked == [(name, new) for name in PANEL]
@@ -589,8 +597,14 @@ def test_the_wait_running_out_on_no_run_is_its_own_exit(world, capsys) -> None:
     assert rc == run.land.EXIT_CI_PENDING == 5
     assert sum(run.sleeps) == 60
     last = out.splitlines()[-1]
-    assert last.startswith(f"ci: no run has started for {_short(run.github.head)} after 1m.")
+    assert last.startswith(
+        f"ci: no check has been reported for {_short(run.github.head)} after 1m: its run "
+        "has not started, or none will — no workflow runs on pull requests here, the "
+        "workflows skip the paths this PR changes, its head commit asks to skip CI "
+        "([skip ci]), or a run from a fork awaits approval."
+    )
     assert f"Run `land-work {ISSUE}` again to keep waiting" in last
+    assert f"review it with `review-pr {ISSUE}` and merge it with `done-work {ISSUE}`" in last
     assert run.invoked == []
 
 
@@ -616,7 +630,8 @@ def test_a_head_that_moves_while_the_checks_are_awaited_stops(world, capsys) -> 
     assert rc == 3
     assert out.splitlines()[-1] == (
         f"ci: stopped — PR #{PR}'s head moved from {_short(pinned)} to ddddddd while its "
-        f"checks were awaited; run `land-work {ISSUE}` again to land the new head"
+        f"checks were awaited. Nothing was reviewed or merged; `land-work {ISSUE}` checks "
+        "and reviews the new head"
     )
 
 
@@ -653,15 +668,23 @@ def test_a_fresh_changes_requested_kept_from_a_run_before_also_stops(world, caps
     assert out.splitlines()[-1].startswith("review: changes requested by code-reviewer")
 
 
-def test_changes_requested_without_a_block_bullet_points_at_the_verdict(world, capsys) -> None:
+def test_changes_requested_without_a_tagged_finding_prints_its_first_lines(world, capsys) -> None:
     run = world()
-    run.answers["reviewer"] = ("CHANGES_REQUESTED", "Please rework it.")
+    run.answers["reviewer"] = (
+        "CHANGES_REQUESTED",
+        "Please rework it.\n\nThe parser is wrong.\nSo is the printer.\nAnd the rest.",
+    )
     rc, out, _err = run.run("--yes", capsys=capsys)
     assert rc == 1
-    assert (
-        f"  [reviewer] CHANGES_REQUESTED with no [block] bullet — read it with "
-        f"`show-pr {PR} --field review`"
-    ) in out
+    lines = out.splitlines()
+    first = lines.index("  [reviewer] Please rework it.")
+    assert lines[first : first + 4] == [
+        "  [reviewer] Please rework it.",
+        "  [reviewer] The parser is wrong.",
+        "  [reviewer] So is the printer.",
+        f"  [reviewer] (no finding tagged blocking — read it all with `show-pr {PR} "
+        "--field review`)",
+    ]
 
 
 def test_a_reviewer_that_could_not_run_stops_and_is_not_approval(world, capsys) -> None:
@@ -688,8 +711,8 @@ def test_a_head_that_moves_between_the_checks_and_the_review_stops(world, capsys
     assert run.invoked == []
     assert out.splitlines()[-1] == (
         f"review: stopped — PR #{PR}'s head is {_short(run.github.head)}, not "
-        f"{_short(pinned)}, the head whose checks passed; run `land-work {ISSUE}` again to "
-        "land the new head"
+        f"{_short(pinned)}, the head whose checks passed. Nothing was merged; "
+        f"`land-work {ISSUE}` checks and reviews the new head"
     )
 
 
@@ -703,7 +726,7 @@ def test_a_head_that_moves_between_the_review_and_the_merge_merges_nothing(world
     assert rc == 3
     assert run.github.merges == []
     assert out.splitlines()[-1] == (
-        f"merge: not merged: error: PR #{PR}'s head is {_short(run.github.head)}, not "
+        f"merge: stopped — error: PR #{PR}'s head is {_short(run.github.head)}, not "
         f"{_short(pinned)}, the head this run was asked to land: its checks and review "
         "were for that head. Nothing was posted or merged, and #42 stays where it is."
     )
@@ -719,7 +742,7 @@ def test_human_review_mode_runs_no_reviewer_and_done_work_gates(world, capsys) -
         "review: human review mode (project default) — no reviewer agent to run; the "
         "approval is done-work's gate"
     )
-    assert steps[3] == f"merge: refused: [refused] approval gate not satisfied for PR #{PR}."
+    assert steps[3] == f"merge: refused — [refused] approval gate not satisfied for PR #{PR}."
 
 
 # ---- the merge ----------------------------------------------------------------
@@ -754,16 +777,18 @@ def test_an_unconfirmed_merge_passes_done_works_4_through(world, capsys) -> None
 
 
 def test_a_declined_prompt_is_not_reported_merged(world, capsys, monkeypatch) -> None:
-    """done-work returns 0 when its prompt is declined; land-work reads the PR and
-    says it did not merge, with a non-zero exit."""
+    """At a terminal done-work's prompt is the authorisation. done-work exits 0
+    when it is declined; land-work decides on how done-work's run ended, so it
+    reports the PR not merged, with the not-authorised exit."""
     run = world()
     monkeypatch.setattr(sys.stdin, "isatty", lambda: True, raising=False)
     monkeypatch.setattr("builtins.input", lambda prompt="": "n")
     rc, out, _err = run.run(capsys=capsys)
-    assert rc == 1
+    assert rc == run.land.EXIT_READY == 8
     assert out.splitlines()[-1] == (
-        f"merge: not merged — done-work returned without merging PR #{PR}"
+        f"merge: declined — PR #{PR} at {_short(run.github.head)} was not merged"
     )
+    assert run.github.merges == []
 
 
 # ---- a re-run resumes ---------------------------------------------------------
@@ -866,3 +891,444 @@ def test_a_dry_run_with_nothing_left_to_wait_for_shows_done_works_plan(world, ca
     assert "(dry-run: would post bypass audit (if any)" in out
     assert out.splitlines()[-1] == "merge: (dry-run) done-work's plan is above"
     assert run.github.merges == []
+
+
+# ---- lookups that get no answer -----------------------------------------------
+# "gh did not answer" is never "no open PR": a run that read it so handed over
+# with no pinned head, and done-work, finding the PR on its own lookup, merged
+# it on its own gates — with no CI wait and no review.
+
+
+def test_an_open_pr_lookup_gh_does_not_answer_stops_with_nothing_done(world, capsys) -> None:
+    run = world()
+    run.github.fails.append(_nth(_pr_list, 1))
+    rc, out, _err = run.run("--yes", capsys=capsys)
+    assert rc == run.land.EXIT_UNREADABLE == 2
+    assert out.splitlines()[-1] == (
+        f"head: whether {BRANCH} has an open PR could not be read: HTTP 502: Bad Gateway. "
+        f"Nothing was done; run `land-work {ISSUE}` again once gh answers"
+    )
+    # done-work never ran: its own lookup would have found the PR.
+    assert sum(1 for call in run.github.calls if _pr_list(call)) == 1
+    assert run.github.merges == []
+    assert run.invoked == []
+    assert run.after_merge == []
+
+
+def test_a_lookup_that_fails_then_answers_never_merges_unpinned(world, capsys) -> None:
+    run = world()
+    run.github.fails.append(_nth(_pr_list, 1))
+    assert run.run("--yes", capsys=capsys)[0] == 2
+    assert run.github.merges == []
+    rc, out, err = run.run("--yes", capsys=capsys)
+    assert rc == 0, out + err
+    head = run.github.head
+    assert run.invoked == [(name, head) for name in PANEL]
+    assert [merge[-1] for merge in run.github.merges] == [head]
+
+
+def test_done_works_own_lookup_without_an_answer_merges_nothing(world, capsys) -> None:
+    """land-work, then review-pr, found the PR; done-work's lookup — the third
+    — gets no answer, and done-work stops rather than look for a merged PR."""
+    run = world()
+    run.github.fails.append(_nth(_pr_list, 3))
+    rc, out, _err = run.run("--yes", capsys=capsys)
+    assert rc == 2
+    assert out.splitlines()[-1] == (
+        f"merge: stopped — error: whether '{BRANCH}' has an open PR could not be read: "
+        "HTTP 502: Bad Gateway. Nothing was changed."
+    )
+    assert run.github.merges == []
+    assert run.after_merge == []
+
+
+def test_with_no_open_pr_done_work_only_completes_and_refuses_a_pr_that_opened(
+    world, capsys
+) -> None:
+    """land-work's lookup answers "none open", so it hands over only to complete
+    a merged PR; by done-work's lookup the PR is open — one nobody checked or
+    reviewed — and nothing is merged. A re-run pins it and lands it."""
+    run = world()
+    run.github.state = "CLOSED"
+    run.github.before(_nth(_pr_list, 2), lambda: setattr(run.github, "state", "OPEN"))
+    rc, out, _err = run.run("--yes", capsys=capsys)
+    assert rc == run.land.EXIT_RETRY == 7
+    assert out.splitlines()[-1] == (
+        f"merge: not completed — error: PR #{PR} for '{BRANCH}' is open, and this run was "
+        "asked only to complete a PR that has merged. Nothing was changed. Run "
+        f"`land-work {ISSUE}` again to check, review and land it"
+    )
+    assert run.github.merges == []
+    assert run.after_merge == []
+    rc, out, err = run.run("--yes", capsys=capsys)
+    assert rc == 0, out + err
+
+
+# ---- how done-work's run ended, not its exit code -----------------------------
+
+
+def test_a_merge_whose_commit_cannot_be_read_is_still_merged(world, capsys) -> None:
+    """done-work's run says merged only once GitHub reports it merged; the
+    merge commit is only what the line names."""
+    run = world()
+    run.github.fails.append(lambda a: a[:2] == ["pr", "view"] and a[-1] == "mergeCommit")
+    rc, out, err = run.run("--yes", capsys=capsys)
+    assert rc == 0, out + err
+    assert out.splitlines()[-1] == "merge: merged"
+
+
+def test_completing_a_merged_pr_declined_is_not_reported_completed(
+    world, capsys, monkeypatch
+) -> None:
+    run = world()
+    run.github.state = "MERGED"
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: True, raising=False)
+    monkeypatch.setattr("builtins.input", lambda prompt="": "n")
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == 8
+    assert out.splitlines()[-1] == f"merge: declined — #{ISSUE}'s merged PR was not completed"
+    assert run.after_merge == []
+
+
+def test_a_step_after_the_merge_failing_is_merged_and_owed(world, capsys, monkeypatch) -> None:
+    """The PR merged and the move to Done failed: not a refusal to hand back,
+    a completion a re-run owes."""
+    run = world()
+    monkeypatch.setattr(run.land.done_work, "_invoke_move_issue", lambda *a: 1)
+    rc, out, _err = run.run("--yes", capsys=capsys)
+    assert rc == run.land.EXIT_RETRY == 7
+    assert out.splitlines()[-1] == (
+        f"merge: merged as {'c' * 7}, but a step after the merge failed: [warn] PR merged "
+        "but move-issue exited 1. The merge is durable; re-run `move-issue --to done` to "
+        f"complete the lifecycle transition. — run `land-work {ISSUE}` again to complete "
+        f"#{ISSUE}"
+    )
+    monkeypatch.setattr(run.land.done_work, "_invoke_move_issue", lambda *a: 0)
+    rc, out, err = run.run("--yes", capsys=capsys)
+    assert rc == 0, out + err
+    assert out.splitlines()[-1] == f"merge: #{ISSUE} completed through its merged PR"
+
+
+def _then(run: _Run, monkeypatch: pytest.MonkeyPatch, after: Callable[[], None]) -> None:
+    """Run `after` once done-work's run has returned."""
+    original = run.land.done_work.run
+
+    def run_then(argv: list[str], **kwargs: Any) -> Any:
+        end = original(argv, **kwargs)
+        after()
+        return end
+
+    monkeypatch.setattr(run.land.done_work, "run", run_then)
+
+
+def test_a_queued_pr_seen_merged_meanwhile_is_owed_its_completion(
+    world, capsys, monkeypatch
+) -> None:
+    run = world()
+    run.github.queue = True
+
+    def merged() -> None:
+        run.github.state, run.github.queued = "MERGED", False
+
+    _then(run, monkeypatch, merged)
+    rc, out, _err = run.run("--yes", "--no-wait", capsys=capsys)
+    assert rc == run.land.EXIT_RETRY
+    assert out.splitlines()[-1] == (
+        f"merge: merged meanwhile — run `land-work {ISSUE}` again to complete #{ISSUE}"
+    )
+
+
+def test_a_queued_pr_seen_neither_merged_nor_queued_is_known_not_merged(
+    world, capsys, monkeypatch
+) -> None:
+    """The reading succeeded and shows the PR neither merged nor queued: that
+    is known — not merged — not "unconfirmed"."""
+    run = world()
+    run.github.queue = True
+    _then(run, monkeypatch, lambda: setattr(run.github, "queued", False))
+    rc, out, _err = run.run("--yes", "--no-wait", capsys=capsys)
+    assert rc == run.land.EXIT_RETRY
+    last = out.splitlines()[-1]
+    assert last.startswith(
+        f"merge: not merged — PR #{PR} is neither merged nor in the merge queue ("
+    )
+    assert last.endswith(f"); run `land-work {ISSUE}` again to merge it")
+
+
+def test_done_work_raising_still_ends_with_a_step_line(world, capsys, monkeypatch) -> None:
+    run = world()
+
+    def boom(argv: list[str], **kwargs: Any) -> Any:
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(run.land.done_work, "run", boom)
+    rc, out, _err = run.run("--yes", capsys=capsys)
+    assert rc == run.land.EXIT_RETRY
+    assert out.splitlines()[-1] == (
+        f"merge: not merged — done-work failed (RuntimeError: boom). Run `land-work {ISSUE}` again"
+    )
+
+
+def test_review_pr_raising_still_ends_with_a_step_line(world, capsys, monkeypatch) -> None:
+    run = world()
+
+    def boom(argv: list[str], **kwargs: Any) -> Any:
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(run.land.review_pr, "review", boom)
+    rc, out, _err = run.run("--yes", capsys=capsys)
+    assert rc == run.land.EXIT_REVIEW_INCOMPLETE
+    assert out.splitlines()[-1] == (
+        "review: stopped — review-pr failed (RuntimeError: boom), so the review is not "
+        f"complete. Run `land-work {ISSUE}` again once it can run"
+    )
+    assert run.github.merges == []
+
+
+# ---- a head that moves --------------------------------------------------------
+
+
+def test_a_head_that_moves_during_a_review_stops_after_that_review(world, capsys) -> None:
+    """The first reviewer's verdict is the pinned head's and is posted; no
+    further reviewer is shown a head that moved, and nothing merges."""
+    run = world()
+    pinned = run.github.head
+
+    def tips(argv: list[str]) -> bool:
+        return argv[:2] == ["pr", "view"] and argv[-1] == "headRefOid,baseRefOid"
+
+    run.github.before(_nth(tips, 2), lambda: run.push_new_head("during.txt"))
+    rc, out, _err = run.run("--yes", capsys=capsys)
+    assert rc == run.land.EXIT_HEAD_MOVED
+    assert run.invoked == [(PANEL[0], pinned)]
+    assert f"sha={pinned}" in run.github.comments[0]["body"]
+    assert run.github.merges == []
+    assert out.splitlines()[-1] == (
+        f"review: stopped — PR #{PR}'s head is {_short(run.github.head)}, not "
+        f"{_short(pinned)}, the head whose checks passed. Nothing was merged; "
+        f"`land-work {ISSUE}` checks and reviews the new head"
+    )
+
+
+def test_verdicts_kept_fresh_at_another_head_are_not_the_pinned_heads(world, capsys) -> None:
+    """Every verdict would be kept, so no reviewer reads the head; the verdicts
+    were read at a head that moved after the checks, so none is kept."""
+    run = world()
+    assert run.run(capsys=capsys)[0] == run.land.EXIT_READY
+    run.invoked.clear()
+
+    def verdict_read(argv: list[str]) -> bool:
+        return argv[:2] == ["pr", "view"] and argv[-1].startswith("comments,")
+
+    run.github.before(verdict_read, lambda: run.push_new_head("late.txt"))
+    rc, out, _err = run.run("--yes", capsys=capsys)
+    assert rc == run.land.EXIT_HEAD_MOVED
+    assert run.invoked == []
+    assert run.github.merges == []
+    assert out.splitlines()[-1].startswith(
+        f"review: stopped — PR #{PR}'s head is {_short(run.github.head)}, not "
+    )
+
+
+def test_a_head_that_moves_before_done_works_gate_reads_it_merges_nothing(world, capsys) -> None:
+    """The gate read another head than the pinned one: its verdict — here a
+    refusal, the verdicts being stale for that head — is not the pinned
+    head's, so the run reports the move, not a refusal."""
+    run = world()
+    pinned = run.github.head
+
+    def gate_read(argv: list[str]) -> bool:
+        return argv[:2] == ["pr", "view"] and argv[-1].startswith("author,comments")
+
+    run.github.before(gate_read, lambda: run.push_new_head("racing.txt"))
+    rc, out, _err = run.run("--yes", capsys=capsys)
+    assert rc == run.land.EXIT_HEAD_MOVED
+    assert run.github.merges == []
+    assert out.splitlines()[-1] == (
+        f"merge: stopped — error: PR #{PR}'s head is {_short(run.github.head)}, not "
+        f"{_short(pinned)}, the head this run was asked to land: its checks and review "
+        f"were for that head. Nothing was posted or merged, and #{ISSUE} stays where it is."
+    )
+
+
+def test_a_head_that_moves_between_the_gate_and_the_merge_request_merges_nothing(
+    world, capsys
+) -> None:
+    """The merge request is pinned to the head: GitHub refuses it, and
+    land-work reads the PR to say why — its head moved."""
+    run = world()
+    pinned = run.github.head
+
+    def rollup_read(argv: list[str]) -> bool:
+        return argv[:2] == ["pr", "view"] and argv[-1] == "statusCheckRollup"
+
+    run.github.before(rollup_read, lambda: run.push_new_head("racing.txt"))
+    rc, out, _err = run.run("--yes", capsys=capsys)
+    assert rc == run.land.EXIT_HEAD_MOVED
+    assert run.github.state == "OPEN"
+    assert [merge[-1] for merge in run.github.merges] == [pinned]
+    assert out.splitlines()[-1] == (
+        f"merge: stopped — PR #{PR}'s head moved from {_short(pinned)} to "
+        f"{_short(run.github.head)} before the merge. Nothing was merged; "
+        f"`land-work {ISSUE}` checks and reviews the new head"
+    )
+
+
+def test_a_head_review_pr_cannot_read_stops_unreadable_not_moved(world, capsys) -> None:
+    run = world()
+    head = run.github.head
+    run.github.fails.append(lambda a: a[:2] == ["pr", "view"] and a[-1] == "headRefOid,baseRefOid")
+    rc, out, _err = run.run("--yes", capsys=capsys)
+    assert rc == run.land.EXIT_UNREADABLE
+    assert run.invoked == []
+    assert out.splitlines()[-1] == (
+        f"review: stopped — PR #{PR}'s head could not be read before reviewer's review, so "
+        f"whether it is {_short(head)}, the head this review was asked to review, cannot "
+        "be told"
+    )
+
+
+# ---- what no run starts on, and checks that cannot be read --------------------
+
+
+def test_a_pr_that_conflicts_with_its_base_stops_at_once(world, capsys) -> None:
+    """GitHub runs no pull_request workflow on a PR that conflicts with its
+    base: there is nothing to wait for."""
+    run = world(checks=[[]])
+    run.github.mergeable = "CONFLICTING"
+    rc, out, _err = run.run("--yes", capsys=capsys)
+    assert rc == run.land.EXIT_NEEDS_CHANGE
+    assert run.sleeps == []
+    assert out.splitlines()[-1] == (
+        f"ci: stopped — PR #{PR} conflicts with main, and GitHub runs no pull_request "
+        f"workflow on a PR that conflicts with its base. Merge main into {BRANCH} "
+        f"(`git merge origin/main`), resolve the conflicts, push, and run "
+        f"`land-work {ISSUE}` again"
+    )
+
+
+def test_checks_that_cannot_be_read_stop_unreadable(world, capsys) -> None:
+    run = world()
+    run.github.fails.append(lambda a: a[:2] == ["pr", "view"] and "statusCheckRollup" in a[-1])
+    rc, out, _err = run.run("--yes", "--no-wait", capsys=capsys)
+    assert rc == run.land.EXIT_UNREADABLE
+    assert out.splitlines()[-1] == (
+        f"ci: PR #{PR}'s checks could not be read: HTTP 502: Bad Gateway. Run "
+        f"`land-work {ISSUE}` again"
+    )
+    assert run.invoked == []
+
+
+def test_checks_unreadable_once_are_read_again_while_waiting(world, capsys) -> None:
+    run = world()
+    run.github.fails.append(lambda a: a[:2] == ["pr", "view"] and "statusCheckRollup" in a[-1])
+    rc, out, err = run.run("--yes", capsys=capsys)
+    assert rc == 0, out + err
+    assert "  ci: the checks could not be read: HTTP 502: Bad Gateway" in out
+    assert run.sleeps == [20.0]
+
+
+# ---- the review's findings ----------------------------------------------------
+
+
+def test_a_block_is_reported_even_when_another_reviewer_could_not_run(world, capsys) -> None:
+    run = world()
+    run.answers["reviewer"] = ("CHANGES_REQUESTED", _BLOCKING)
+    run.answers["code-reviewer"] = None
+    rc, out, _err = run.run("--yes", capsys=capsys)
+    assert rc == run.land.EXIT_NEEDS_CHANGE
+    assert "  [reviewer] [block] `land.py:10` merges a head nobody reviewed." in out
+    assert out.splitlines()[-1] == (
+        "review: changes requested by reviewer — the blocking findings are above; merge not started"
+    )
+
+
+def test_pm_reviewers_severities_are_blocking_findings(world, capsys) -> None:
+    run = world()
+    run.answers["reviewer"] = (
+        "CHANGES_REQUESTED",
+        "Findings:\n\n"
+        "- **hard-reject**: the title is not a conventional commit.\n"
+        "- `bypassable-with-audit` — the changeset has no audit comment.\n"
+        "- warning: the body is long.\n",
+    )
+    rc, out, _err = run.run("--yes", capsys=capsys)
+    assert rc == run.land.EXIT_NEEDS_CHANGE
+    assert "  [reviewer] **hard-reject**: the title is not a conventional commit." in out
+    assert "  [reviewer] `bypassable-with-audit` — the changeset has no audit comment." in out
+    assert "the body is long" not in out
+
+
+def test_the_advisories_of_approvals_are_printed_in_the_review_step(world, capsys) -> None:
+    run = world()
+    run.answers["code-reviewer"] = (
+        "APPROVED",
+        "Fine.\n\n- [advisory] A name could be clearer.\n"
+        "- [advisory] (pre-existing: older code) A loop is slow.\n",
+    )
+    rc, out, err = run.run("--yes", capsys=capsys)
+    assert rc == 0, out + err
+    assert "  [code-reviewer] [advisory] A name could be clearer." in out
+    assert "  [code-reviewer] [advisory] (pre-existing: older code) A loop is slow." in out
+    assert _steps(out)[2] == (
+        "review: 0 kept fresh, 2 re-run — all approved; 2 advisories above (every "
+        f"verdict in full: `show-pr {PR} --field review`)"
+    )
+
+
+# ---- the authorisation --------------------------------------------------------
+
+
+def test_without_yes_it_stops_ready_and_merges_nothing(world, capsys) -> None:
+    """Off a terminal, no `--yes` is no authorisation: the checks, the review and
+    done-work's gates run, and the run stops naming the head and the command
+    that merges it. That authorisation then merges with nothing re-reviewed."""
+    run = world()
+    head = run.github.head
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == run.land.EXIT_READY == 8
+    assert out.splitlines()[-1] == (
+        f"ready: {_short(head)} — CI passed, all required verdicts approved; merge with: "
+        f"pkit pm land-work {ISSUE} --yes --expect-head {head}"
+    )
+    assert run.github.merges == []
+    assert run.after_merge == []
+    assert run.invoked == [(name, head) for name in PANEL]
+    run.invoked.clear()
+    rc, out, err = run.run("--yes", "--expect-head", head, capsys=capsys)
+    assert rc == 0, out + err
+    assert run.invoked == []
+    assert [merge[-1] for merge in run.github.merges] == [head]
+
+
+def test_ready_runs_done_works_gates_and_reports_their_refusal(world, capsys) -> None:
+    """Human review mode, no approval: `ready` is never said of a PR done-work
+    would refuse."""
+    run = world(mode="human")
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == run.land.EXIT_NEEDS_CHANGE
+    assert out.splitlines()[-1] == (
+        f"merge: refused — [refused] approval gate not satisfied for PR #{PR}."
+    )
+    assert run.github.merges == []
+
+
+def test_an_authorisation_for_another_head_stops_before_anything(world, capsys) -> None:
+    run = world()
+    authorised = run.github.head
+    run.push_new_head("after.txt")
+    rc, out, _err = run.run("--yes", "--expect-head", authorised[:12], capsys=capsys)
+    assert rc == run.land.EXIT_HEAD_MOVED
+    assert out.splitlines()[-1] == (
+        f"head: stopped — PR #{PR}'s head is {_short(run.github.head)}, not "
+        f"{authorised[:7]}, the head the merge was authorised for: an authorisation is "
+        f"for one head. Nothing was done; `land-work {ISSUE}` checks and reviews the new one"
+    )
+    assert not any(call[:2] == ["pr", "view"] for call in run.github.calls)
+    assert run.github.merges == []
+    assert run.invoked == []
+
+
+def test_expect_head_takes_a_commit_id_only(land) -> None:
+    with pytest.raises(SystemExit):
+        land._parser().parse_args([str(ISSUE), "--expect-head", "not-a-sha"])
