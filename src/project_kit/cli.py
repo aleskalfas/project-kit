@@ -1656,7 +1656,16 @@ def release_lint(skip: bool | None) -> None:
     help="Where the base merges through a queue: how long to wait for the queue to merge "
     f"the PR. Default: {pull_request_landing.wait_limit(None)}.",
 )
-def release_merge(pr: int, dry_run: bool, no_wait: bool, wait_minutes: float | None) -> None:
+@click.option(
+    "--force",
+    is_flag=True,
+    default=False,
+    help="Where the base merges through a queue: enqueue a head the queue already dropped. "
+    "Without it, such a head is refused until new commits are pushed.",
+)
+def release_merge(
+    pr: int, dry_run: bool, no_wait: bool, wait_minutes: float | None, force: bool
+) -> None:
     """Merge a release PR — the sanctioned path for a `chore(release):` PR.
 
     A release PR closes no issue, so the issue-PR merge gate (`pkit
@@ -1669,7 +1678,8 @@ def release_merge(pr: int, dry_run: bool, no_wait: bool, wait_minutes: float | N
     merged (best-effort; never a fork's head). Exit 4 when the queue still holds
     the PR, or a direct merge could not be confirmed: running it again once the
     PR has merged deletes the head branch. Exit 3 when the queue dropped the PR
-    or its head moved; nothing is deleted then. It does **not** tag —
+    or its head moved; nothing is deleted then. A head the queue already
+    dropped is not enqueued again without `--force`. It does **not** tag —
     `release-tag.yml` cuts the backbone tag on the resulting push to `main`
     (PRJ-004). Human-gated: a human decides to run it; nothing auto-merges.
     """
@@ -1679,7 +1689,9 @@ def release_merge(pr: int, dry_run: bool, no_wait: bool, wait_minutes: float | N
         raise click.BadParameter("not a number of minutes", param_hint="--wait-minutes")
     wait_seconds = 0.0 if no_wait else (wait_minutes * 60 if wait_minutes is not None else None)
     source_kit = _target_kit()
-    report = merge_release_pr(source_kit.parent, pr, dry_run=dry_run, wait_seconds=wait_seconds)
+    report = merge_release_pr(
+        source_kit.parent, pr, dry_run=dry_run, wait_seconds=wait_seconds, force=force
+    )
     click.echo(report.text)
     if report.exit_code:
         raise SystemExit(report.exit_code)

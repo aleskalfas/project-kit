@@ -1821,6 +1821,7 @@ def merge_release_pr(
     *,
     dry_run: bool = False,
     wait_seconds: float | None = None,
+    force: bool = False,
     say: Callable[[str], None] = click.echo,
 ) -> ReleaseMergeReport:
     """Merge a release PR through the sanctioned path.
@@ -1831,12 +1832,17 @@ def merge_release_pr(
     Where the base merges through a merge queue the PR is enqueued, pinned to
     the head whose checks the gate read, and the queue makes the merge; the
     run waits for it — `wait_seconds` None as long as the queue estimates, 0
-    not at all — saying through `say` where the PR stands. Without a queue it
-    squash-merges directly. Either way the head branch is deleted, through the
-    API and then locally — both best-effort, so a detached-HEAD or worktree run
-    still completes (#897) — only once GitHub reports the PR merged.
+    not at all — saying through `say` where the PR stands. A head the queue
+    already dropped is not enqueued again unless `force`: the queue, or a
+    maintainer, took it out for a reason. Without a queue it squash-merges
+    directly, pinned to the same head. Either way the head branch is deleted,
+    through the API and then locally — both best-effort, so a detached-HEAD
+    or worktree run still completes (#897), and the local branch only when
+    nothing on it is missing from the merge — once GitHub reports the PR
+    merged.
 
-    A PR already in the queue is waited for, not gated or enqueued again; a
+    A PR already in the queue is waited for, not gated or enqueued again, with
+    a warning when the queue would not make the release's squash commit; a
     merged one has only its clean-up run, so a run that returned while the PR
     was queued is completed by running it again. Does **not** tag: the flow's
     post-merge tag step cuts the backbone tag on the resulting push to `main`
@@ -1849,7 +1855,11 @@ def merge_release_pr(
         raise click.ClickException(refusal.message)
     if pr.state == "MERGED":
         return _after_the_merge(
-            pr, repo_root, f"PR #{pr.number} is already merged", dry_run=dry_run
+            pr,
+            repo_root,
+            f"PR #{pr.number} is already merged",
+            merged_head=pr.head_oid,
+            dry_run=dry_run,
         )
     if pr.state == "CLOSED":
         return ReleaseMergeReport(f"PR #{pr.number} is closed (not merged) — nothing to merge.")
@@ -1864,9 +1874,22 @@ def merge_release_pr(
         ) from None
     if queue.merged:
         return _after_the_merge(
-            pr, repo_root, f"PR #{pr.number} has merged ({queue.describe()})", dry_run=dry_run
+            pr,
+            repo_root,
+            f"PR #{pr.number} has merged ({queue.describe()})",
+            merged_head=queue.head_oid or pr.head_oid,
+            dry_run=dry_run,
         )
     if queue.queued:
+        problem, remedy = _squash_commit_problem(queue, base, gh)
+        if problem:
+            _warn(
+                f"release PR #{pr.number} is already in the merge queue for {base}, but "
+                f"{problem}; the PR lands as the queue composes it. To land it as a release "
+                f"lands, take it out of the queue (in the PR's merge box), "
+                f"{_lower_first(remedy) + ', ' if remedy else ''}then run "
+                f"`pkit release merge {pr.number}` again."
+            )
         if dry_run:
             return ReleaseMergeReport(
                 f"[dry-run] PR #{pr.number} is in the merge queue for {base} "
@@ -1880,7 +1903,7 @@ def merge_release_pr(
     if decision.action != "merge":
         raise click.ClickException(decision.message)
     if queue.has_queue:
-        problem = _queue_refusal(queue, base, gh)
+        problem = _queue_refusal(queue, base, gh, force=force)
         if problem:
             raise click.ClickException(problem)
         if dry_run:
@@ -1893,7 +1916,7 @@ def merge_release_pr(
             why = f": {queue.removal.reason}" if queue.removal.reason else ""
             say(
                 f"  the merge queue dropped PR #{pr.number} at this head at "
-                f"{queue.removal.at}{why}; enqueuing it again"
+                f"{queue.removal.at}{why}; enqueuing it again (--force)"
             )
         enqueued = pull_request_landing.enqueue(pr.number, head_oid=pr.head_oid, gh=gh)
         if not enqueued.accepted:
@@ -1919,7 +1942,12 @@ def merge_release_pr(
         _warn(f"could not confirm that PR #{pr.number} merged: {exc}. Reading it again.")
         return _await_the_queue(pr, repo_root, gh, wait_seconds, say, merged_directly=True)
     if after.merged:
-        return _after_the_merge(pr, repo_root, f"Merged release PR #{pr.number} ({pr.url}).")
+        return _after_the_merge(
+            pr,
+            repo_root,
+            f"Merged release PR #{pr.number} ({pr.url}).",
+            merged_head=pr.head_oid,
+        )
     say(
         f"  gh pr merge returned, but GitHub does not report PR #{pr.number} merged: {base} "
         "may have begun to merge through a queue, which took the PR in. Waiting for it as "
@@ -1950,39 +1978,78 @@ def release_pr_refusal(pr: ReleasePrState) -> ReleaseMergeDecision | None:
 
 
 def _queue_refusal(
-    queue: pull_request_landing.Reading, base: str, gh: pull_request_landing.GhRunner
+    queue: pull_request_landing.Reading,
+    base: str,
+    gh: pull_request_landing.GhRunner,
+    *,
+    force: bool,
 ) -> str:
     """Why the release PR may not go through `base`'s queue, or "".
+
+    The queue must make the release's squash commit (:func:`_squash_commit_problem`);
+    nothing is enqueued on a commit shape that is not, or cannot be read. A
+    head the queue already dropped is not enqueued again unchanged unless
+    `force`: its checks may have failed on the merge the queue was about to
+    make, or a maintainer may have taken it out on purpose — the rule
+    project-management's merge verbs keep.
+    """
+    problem, remedy = _squash_commit_problem(queue, base, gh)
+    if problem:
+        then = f"{remedy}, then re-run. " if remedy else ""
+        return f"{problem}. {then}Nothing was enqueued."
+    removal = queue.removal
+    if queue.dropped_head and removal is not None and not force:
+        why = f"GitHub says: {removal.reason}" if removal.reason else "GitHub gives no reason"
+        return (
+            f"the merge queue on {base} dropped the PR at its current head "
+            f"{queue.head_oid[:7]} at {removal.at} ({why}); the same head is not enqueued "
+            "again unchanged. Fix what made the queue drop it and push, then re-run; or pass "
+            "--force to enqueue this head again. Nothing was enqueued."
+        )
+    return ""
+
+
+def _squash_commit_problem(
+    queue: pull_request_landing.Reading, base: str, gh: pull_request_landing.GhRunner
+) -> tuple[str, str]:
+    """Why the squash commit `base`'s queue makes would not be the release's,
+    and what fixes it; ("", "") when it would be.
 
     The queue makes the squash commit itself, by its own merge method and
     composed from the repository's squash-commit defaults, ignoring what a
     merge command passes. A release lands as one squash commit whose subject
     is the PR title, so the queue must squash and the defaults must be the PR
-    title and body; nothing is enqueued on a commit shape that cannot be read.
+    title and body; defaults that cannot be read are a problem too, with no
+    fix to name but reading them again.
     """
     if not queue.squashes:
         method = queue.merge_method or "an unreported method"
         return (
             f"the merge queue on {base} merges by {method}, and a release lands as one "
-            "squash commit whose subject is the PR title. Set the queue's merge method to "
-            "squash in the repository's branch rules, then re-run. Nothing was enqueued."
+            "squash commit whose subject is the PR title",
+            "Set the queue's merge method to squash in the repository's branch rules",
         )
     try:
         title, message = pull_request_landing.squash_commit_defaults(gh=gh)
     except pull_request_landing.Unreadable as exc:
         return (
-            f"cannot read the repository's squash-commit defaults, which the merge queue on "
-            f"{base} composes the squash commit from: {exc}. Nothing was enqueued."
+            f"the repository's squash-commit defaults, which the merge queue on {base} "
+            f"composes the squash commit from, cannot be read: {exc}",
+            "",
         )
     if (title, message) != (pull_request_landing.PR_TITLE, pull_request_landing.PR_BODY):
         return (
             f"the merge queue on {base} composes the squash commit from the repository's "
             f"defaults, title {title} and message {message}, and a release lands under its PR "
-            "title over its PR body. Set them — `gh api -X PATCH repos/{owner}/{repo} -f "
-            "squash_merge_commit_title=PR_TITLE -f squash_merge_commit_message=PR_BODY` — "
-            "then re-run. Nothing was enqueued."
+            "title over its PR body",
+            "Set them with `gh api -X PATCH repos/{owner}/{repo} -f "
+            "squash_merge_commit_title=PR_TITLE -f squash_merge_commit_message=PR_BODY`",
         )
-    return ""
+    return "", ""
+
+
+def _lower_first(text: str) -> str:
+    return text[:1].lower() + text[1:]
 
 
 def _await_the_queue(
@@ -2004,8 +2071,9 @@ def _await_the_queue(
     number = pr.number
     rerun = f"`pkit release merge {number}`"
     if wait_seconds != 0:
+        awaited = "GitHub to report it merged" if merged_directly else "the queue to merge it"
         say(
-            f"  waiting for the queue to merge it, "
+            f"  waiting for {awaited}, "
             f"{pull_request_landing.wait_limit(wait_seconds)} (--no-wait returns at once)"
         )
 
@@ -2036,9 +2104,14 @@ def _await_the_queue(
             EXIT_ACCEPTED,
         )
     reading = wait.reading
+    queue_seen = reading.has_queue or reading.ever_queued
     if wait.ended == pull_request_landing.MERGED:
+        through = " through the merge queue" if queue_seen else ""
         return _after_the_merge(
-            pr, repo_root, f"Merged release PR #{number} ({pr.url}) through the merge queue."
+            pr,
+            repo_root,
+            f"Merged release PR #{number} ({pr.url}){through}.",
+            merged_head=reading.head_oid or pr.head_oid,
         )
     if wait.ended == pull_request_landing.STILL_QUEUED:
         return ReleaseMergeReport(
@@ -2064,6 +2137,14 @@ def _await_the_queue(
             f"box, or `gh pr merge {number} --disable-auto` while it waits to enter. Nothing "
             "was deleted."
         )
+    if not queue_seen:
+        # A direct merge gh accepted on a base with no queue, never seen merged:
+        # no queue was involved, and the report does not say one dropped it.
+        state = "closed without merging" if reading.pr_state == "CLOSED" else "still open"
+        raise ReleaseNotMerged(
+            f"gh accepted the merge of release PR #{number} into {base}, but GitHub reports "
+            f"it {state}. Nothing was deleted; look at the PR, then run {rerun} again."
+        )
     removal = reading.removal
     why = f" GitHub says: {removal.reason}." if removal is not None and removal.reason else ""
     raise ReleaseNotMerged(
@@ -2074,13 +2155,28 @@ def _await_the_queue(
 
 
 def _after_the_merge(
-    pr: ReleasePrState, repo_root: Path, headline: str, *, dry_run: bool = False
+    pr: ReleasePrState,
+    repo_root: Path,
+    headline: str,
+    *,
+    merged_head: str,
+    dry_run: bool = False,
 ) -> ReleaseMergeReport:
     """What follows the merge — the head branch deleted through the API, then the
-    local clean-up — once GitHub reports the PR merged."""
+    local clean-up — once GitHub reports the PR merged.
+
+    `merged_head` is the head the PR merged at: the local branch is deleted
+    only when nothing on it is missing from the merge, and a merge at a head
+    other than the one whose checks were read is warned about.
+    """
     if dry_run:
         return ReleaseMergeReport(
             f"[dry-run] {headline}; would delete branch {pr.head_ref!r}; nothing changed."
+        )
+    if merged_head and pr.head_oid and merged_head != pr.head_oid:
+        _warn(
+            f"release PR #{pr.number} merged at head {merged_head[:7]}, not at "
+            f"{pr.head_oid[:7]}, the head whose checks were read."
         )
     notes = [
         _gh_delete_remote_branch(pr.head_ref, repo_root, cross_repository=pr.cross_repository),
@@ -2089,6 +2185,7 @@ def _after_the_merge(
             pr.base_ref or "main",
             repo_root,
             cross_repository=pr.cross_repository,
+            merged_head=merged_head,
         ),
     ]
     return ReleaseMergeReport(
@@ -2138,8 +2235,8 @@ def _gh_pr_view(pr_number: int, repo_root: Path) -> dict:
 # clean-up below still mirrors that capability's `scripts/_lib/pr_merge.py`
 # (delete_remote_branch / cleanup_local): the capability's scripts run as
 # standalone `uv run --script`s that do not import `project_kit`. Keep the two
-# in step: a fix to either (the fork-PR guard, the already-deleted answer)
-# belongs in both.
+# in step: a fix to either (the fork-PR guard, the already-deleted answer, the
+# merged-head guard on the local delete) belongs in both.
 
 _REF_ALREADY_DELETED_MARKER = "Reference does not exist"
 
@@ -2153,7 +2250,7 @@ def _gh_delete_remote_branch(branch: str, repo_root: Path, *, cross_repository: 
 
     Returns a status line for the report ("" after a warning). Mirrors the
     project-management capability's `_lib/pr_merge.delete_remote_branch` (see
-    the note above `_gh_pr_merge`).
+    the note on keeping the two in step, above `_REF_ALREADY_DELETED_MARKER`).
 
     `cross_repository` is required and has no default: the ref is deleted in
     the BASE repository (`{owner}/{repo}` resolves there), so for a PR whose
@@ -2195,15 +2292,21 @@ def _gh_delete_remote_branch(branch: str, repo_root: Path, *, cross_repository: 
 
 
 def _git_cleanup_local(
-    branch: str, base_branch: str, repo_root: Path, *, cross_repository: bool
+    branch: str,
+    base_branch: str,
+    repo_root: Path,
+    *,
+    cross_repository: bool,
+    merged_head: str,
 ) -> list[str]:
     """Switch to the base branch, fast-forward it, delete the local head — best-effort.
 
     Returns status lines for the report; every failing step warns with git's
     reason and continues, so none can fail the run. Mirrors the
     project-management capability's `_lib/pr_merge.cleanup_local` (see the
-    note above `_gh_pr_merge`), except the branch returned to is the PR's own
-    base (`baseRefName`) — the backbone reads no capability config.
+    note on keeping the two in step, above `_REF_ALREADY_DELETED_MARKER`),
+    except the branch returned to is the PR's own base (`baseRefName`) — the
+    backbone reads no capability config.
 
     When the checkout cannot happen (detached HEAD, the base branch checked out
     in another worktree) the pull is skipped — pulling into whatever IS checked
@@ -2211,6 +2314,12 @@ def _git_cleanup_local(
     no local copy (a release PR opened by CI) is skipped silently rather than
     warned about. `-D` (not `-d`) because a squash-merged branch is never an
     ancestor of the base.
+
+    `merged_head` is the head the PR merged at, and is required: the local
+    branch is deleted only when everything on it merged — its tip is that
+    head or behind it. A branch holding commits the merge does not — work
+    since, or a clone that cannot tell, as one without the merged head or
+    told no head — is kept with a warning.
 
     `cross_repository` is required and has no default: for a fork PR the local
     delete is skipped — a local branch sharing the fork branch's name is not
@@ -2238,8 +2347,21 @@ def _git_cleanup_local(
             notes.append(f"updated local {base_branch!r}.")
     if cross_repository:
         return notes
-    if _git("rev-parse", "--verify", "--quiet", f"refs/heads/{branch}").returncode != 0:
+    tip = _git("rev-parse", "--verify", "--quiet", f"refs/heads/{branch}").stdout.strip()
+    if not tip:
         return notes  # no local copy (the usual case: CI opened the release PR)
+    # The commits on the branch the merged head does not hold: none, and
+    # everything on it merged. A head this clone does not have fails the
+    # count, which keeps the branch too.
+    unmerged = _git("rev-list", "--count", f"{merged_head}..{tip}") if merged_head else None
+    if unmerged is None or unmerged.returncode != 0 or unmerged.stdout.strip() != "0":
+        _warn(
+            f"local branch {branch} (at {tip[:7]}) holds commits the merge at "
+            f"{merged_head[:7] or 'an unknown head'} does not, or this clone cannot tell; it "
+            f"is kept. Delete it yourself once nothing on it is needed "
+            f"(`git branch -D {branch}`)."
+        )
+        return notes
     result = _git("branch", "-D", branch)
     if result.returncode != 0:
         _warn(f"git branch -D {branch} failed: {result.stderr.strip()}")

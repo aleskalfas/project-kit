@@ -454,7 +454,11 @@ into it (COR-014). Instead the release flow owns its own merge verb, beside the
   head branch deleted — through the API rather than gh's local checkout,
   then a best-effort local cleanup (switch to the base, fast-forward, delete
   the local head), so a run from a worktree or a detached HEAD completes once
-  the merge lands. A head that lives in a fork is never deleted — its name is
+  the merge lands. The local head is deleted only when everything on it
+  merged — its tip is the head the PR merged at, or behind it; a local head
+  holding commits past it, or one this clone cannot compare, is kept with a
+  warning. A merge at a head other than the one whose checks were read is
+  warned about. A head that lives in a fork is never deleted — its name is
   the fork author's choice and could name an unrelated branch here. No
   `Closes #N` requirement — a release PR has none.
 - **Lands through the merge queue** where the base has one, rather than
@@ -464,7 +468,12 @@ into it (COR-014). Instead the release flow owns its own merge verb, beside the
   queue squashes and the defaults are the PR title and the PR body
   (`PR_TITLE` and `PR_BODY`; set them with `gh api -X PATCH
   repos/{owner}/{repo} -f squash_merge_commit_title=PR_TITLE -f
-  squash_merge_commit_message=PR_BODY`). It enqueues the PR pinned to the
+  squash_merge_commit_message=PR_BODY`). A head the queue already dropped is
+  not enqueued again unchanged: its checks may have failed on the merge the
+  queue was about to make, or a maintainer may have taken it out on purpose.
+  The run refuses, naming when and why the queue dropped it; push a fix and
+  run again, or pass `--force` to enqueue the same head again — the rule
+  project-management's merge verbs keep. It enqueues the PR pinned to the
   checked head, prints where it stands (`position 2 in the queue, awaiting
   checks, about 5 min to merge`), and waits for the merge — as long as the
   queue estimates plus 2 minutes, at most 30, or `--wait-minutes`. Then:
@@ -472,18 +481,22 @@ into it (COR-014). Instead the release flow owns its own merge verb, beside the
   - **still queued** when the wait ends, or with `--no-wait` at once — exit
     4, nothing deleted; the PR is accepted, and the same command run again
     once it has merged deletes the head branch. A run on a PR already in the
-    queue waits for it rather than enqueueing it again, and a run on a merged
-    PR runs only the clean-up;
+    queue waits for it rather than enqueueing it again — warning when the
+    queue would not make the release's squash commit, since the PR lands as
+    the queue composes it unless it is taken out first — and a run on a
+    merged PR runs only the clean-up;
   - **dropped** by the queue — its checks failed on the merge it was about
     to make, or it no longer merged cleanly — exit 3, with what the queue
     reported; nothing is deleted. Fix it and run again;
   - **head moved** after the checks were read — the PR is taken out of the
     queue, so commits nobody checked do not merge; exit 3, nothing deleted.
 
-  Without a queue the merge is direct; if GitHub then reports the
-  PR queued rather than merged (a queue switched on meanwhile), it is waited
-  for as above, and if GitHub cannot be read to confirm the merge the run
-  exits 4 with nothing deleted, for a re-run to complete.
+  Without a queue the merge is direct, pinned to the checked head; if GitHub
+  then reports the PR queued rather than merged (a queue switched on
+  meanwhile), it is waited for as above, and if GitHub cannot be read to
+  confirm the merge the run exits 4 with nothing deleted, for a re-run to
+  complete. A direct merge gh accepted that GitHub never reports merged
+  exits 3, naming the PR's state — nothing is deleted.
 - **Does not tag.** `release-tag.yml` cuts the backbone tag on the resulting
   push to `main` (VERSION-driven, PRJ-004); the merge and the tag stay split.
 - **Is idempotent**: on a closed PR it reports there is nothing to merge, and

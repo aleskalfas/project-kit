@@ -7,14 +7,21 @@ body: >
   `pkit release merge` lands a release PR through the base branch's merge queue
   where it has one, instead of merging around it and then deleting the head
   branch of a PR the queue had only taken in, which closed it unmerged. It
-  refuses unless the queue squashes from the PR title and body, enqueues the PR
-  pinned to the head whose checks it read, reports where it stands and waits for
-  the merge (`--wait-minutes`, `--no-wait`); the head branch is deleted only once
-  GitHub reports the PR merged. A run that returns while the queue holds the PR,
-  or after a direct merge it could not confirm, exits 4 with nothing deleted, and
-  running it again completes it; a PR the queue drops, or whose head moved,
-  exits 3. The merge mechanic behind it is the backbone's, once, and a new
-  command exposes it to capability scripts: `pkit pull-request` reads where a PR
-  stands with its base's queue and the repository's squash-commit defaults,
-  squash-merges, enqueues, waits for the queue's merge and takes a PR out of
-  the queue, each with a `--json` document.
+  refuses unless the queue squashes from the PR title and body, and refuses to
+  enqueue again a head the queue already dropped unless `--force` is passed;
+  it enqueues the PR pinned to the head whose checks it read, reports where it
+  stands and waits for the merge — as long as the queue estimates plus 2
+  minutes, at most 30, or `--wait-minutes`, `--no-wait` not at all. Without a
+  queue the direct merge is now pinned to that head too. When it cannot read
+  how the base merges it refuses, merging nothing. The head branch is deleted
+  only once GitHub reports the PR merged, and the local branch only when
+  nothing on it is missing from the merge; a run on a release PR that has
+  already merged runs that clean-up alone. A run that returns while the queue
+  holds the PR, or after a direct merge it could not confirm, exits 4 with
+  nothing deleted, and running it again completes it; a PR the queue drops, or
+  whose head moved, exits 3. The merge mechanic behind it is the backbone's,
+  once, and a new command exposes it to capability scripts on GitHub, through
+  `gh`: `pkit pull-request` reads where a PR stands with its base's queue and
+  the repository's squash-commit defaults, squash-merges, enqueues, waits for
+  the queue's merge and takes a PR out of the queue, each with a `--json`
+  document.
