@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-01T18:06:39Z
+      at: 2026-10-01T18:45:57Z
       outcome: unchanged
-      unchanged-because: on this branch the whole-repository walk takes as the revalidation point the commit that wrote the at the artefact carries; what main brought in does not change what this page describes
+      unchanged-because: on this branch the merge mechanic moved into the backbone's pull-request landing module, placed there by ADR-061; this page describes the tree's layout and says nothing of how a pull request lands, and what main brought in is already described here
 ---
 
 # project-kit

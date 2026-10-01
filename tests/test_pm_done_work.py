@@ -14,6 +14,8 @@ from typing import Any, cast
 
 import pytest
 
+from tests import pull_request_backbone
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "done-work.py"
 
@@ -775,7 +777,7 @@ def _wire_main_seams(
     # stubbed merge has run: done-work counts a merge only when it does.
     def no_queue(pr_number: int, config: dict[str, Any]) -> Any:
         state = "MERGED" if calls["merged"] else "OPEN"
-        return dw.merge_queue.Reading(has_queue=False, pr_state=state)
+        return pull_request_backbone.reading(dw.merge_queue, has_queue=False, pr_state=state)
 
     monkeypatch.setattr(dw.merge_queue, "read", no_queue)
     return calls
@@ -2373,9 +2375,7 @@ def _wire_queue(
     """done-work's gates stubbed as for every main() test; the queue real, on a
     fake `gh` whose base `main` merges through a queue with `merge_method`,
     squashing with the PR title and body."""
-    import functools
-
-    real_read, real_wait = dw.merge_queue.read, dw.merge_queue.wait_for_merge
+    real_read = dw.merge_queue.read
     calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
     monkeypatch.setattr(dw.merge_queue, "read", real_read)
     monkeypatch.setattr(
@@ -2396,11 +2396,7 @@ def _wire_queue(
         sleeps.append(seconds)
         now[0] += seconds
 
-    monkeypatch.setattr(
-        dw.merge_queue,
-        "wait_for_merge",
-        functools.partial(real_wait, sleep=sleep, clock=lambda: now[0]),
-    )
+    pull_request_backbone.in_process(monkeypatch, dw.merge_queue, sleep=sleep, clock=lambda: now[0])
     pr = {
         "id": "PR_node",
         "state": "OPEN",
@@ -2685,9 +2681,10 @@ def test_a_direct_merge_github_cannot_confirm_is_not_called_queued(
     def unreadable_after_the_merge(pr_number: int, config: dict[str, Any]) -> Any:
         if calls["merged"]:
             raise dw.merge_queue.Unreadable("HTTP 502")
-        return dw.merge_queue.Reading(has_queue=False, pr_state="OPEN")
+        return pull_request_backbone.reading(dw.merge_queue, has_queue=False, pr_state="OPEN")
 
     monkeypatch.setattr(dw.merge_queue, "read", unreadable_after_the_merge)
+    pull_request_backbone.in_process(monkeypatch, dw.merge_queue, read=unreadable_after_the_merge)
     rc = _run_main(dw, monkeypatch, ["42", "--yes"])
     captured = capsys.readouterr()
     assert rc == dw.EXIT_ACCEPTED == 4
@@ -2698,6 +2695,57 @@ def test_a_direct_merge_github_cannot_confirm_is_not_called_queued(
         "could not be read to confirm that it merged: HTTP 502. Nothing after the merge has "
         "run, and #42 stays in Review. Run `done-work 42` again once GitHub answers"
     ) in captured.out
+
+
+def test_a_merge_with_no_answer_back_that_merged_moves_the_issue(
+    dw: ModuleType,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """The backbone's run ended after gh accepted the merge, without saying so:
+    GitHub reports the PR merged, so the run is the merge's and moves the issue
+    to Done — never "the merge failed" over a merged PR."""
+    calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+
+    def no_answer_back(pr_number: int, **kwargs: Any) -> bool | None:
+        calls["merged"] = True
+        calls["order"].append(("merged", None))
+        return None
+
+    monkeypatch.setattr(dw.pr_merge, "squash_merge", no_answer_back)
+    rc = _run_main(dw, monkeypatch, ["42", "--yes"])
+    assert rc == 0, capsys.readouterr()
+    assert calls["moved"] is True
+    assert calls["order"][:2] == [("merged", None), ("moved", None)]
+
+
+def test_a_merge_with_no_answer_back_github_cannot_settle_is_unconfirmed(
+    dw: ModuleType,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+
+    def no_answer_back(pr_number: int, **kwargs: Any) -> bool | None:
+        calls["order"].append(("asked", None))
+        return None
+
+    def read(pr_number: int, config: dict[str, Any]) -> Any:
+        if calls["order"]:
+            raise dw.merge_queue.Unreadable("HTTP 502")
+        return pull_request_backbone.reading(dw.merge_queue, has_queue=False, pr_state="OPEN")
+
+    monkeypatch.setattr(dw.pr_merge, "squash_merge", no_answer_back)
+    monkeypatch.setattr(dw.merge_queue, "read", read)
+    rc = _run_main(dw, monkeypatch, ["42", "--yes"])
+    out = capsys.readouterr().out
+    assert rc == dw.EXIT_ACCEPTED == 4
+    assert calls["moved"] is False
+    assert (
+        "[unconfirmed] the merge of PR #496 into the base branch got no answer back, and "
+        "GitHub could not be read since to tell whether it merged or entered the merge "
+        "queue: HTTP 502. Nothing after the merge has run, and #42 stays in Review."
+    ) in out
 
 
 def _no_queue_merge(dw: ModuleType, monkeypatch: pytest.MonkeyPatch, run: _QueueRun) -> None:

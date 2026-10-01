@@ -1,0 +1,16 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+  pr: "1234"
+body: >
+  `set-field <N> --parent <P>` on an issue whose body opens with an
+  `Integration: integration/<slug>` marker now rewrites the parent-ref on the
+  line below the marker and leaves the marker as the first line, with no blank
+  line between the two. It wrote the new parent-ref above the marker, so the
+  issue's integration branch was no longer read from the first line and the
+  branch and PR verbs fell back to the default branch; a parent-ref already
+  under the marker stayed too, leaving the body naming two parents. A marked
+  body with no parent-ref now gets one directly below the marker. Setting the
+  parent an issue already has writes nothing, and unmarked bodies are
+  rewritten as before.

@@ -169,6 +169,7 @@ from _lib import (
     session_guard,
     substrate_writes,
 )
+from _lib import lifecycle_inference as infer
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
@@ -1155,14 +1156,21 @@ def _plan_parent(body: str, parent_ref_line: str) -> tuple[str, FieldResult]:
     """Rewrite the body's first parent-ref line to `parent_ref_line` (idempotent).
 
     A parent-ref is the first non-blank body line in one of the recognised forms
-    (`<Label>: #<N>` or `Milestone: [#<N>](../milestone/<N>)`). When the first
-    line already matches a parent-ref shape, it is replaced; otherwise the new
-    parent-ref is prepended. Setting the parent to the value already present is a
-    no-op.
+    (`<Label>: #<N>` or `Milestone: [#<N>](../milestone/<N>)`), read past a
+    leading DEC-013 `Integration:` marker, which sits directly above it. When
+    that line already matches a parent-ref shape, it is replaced; otherwise the
+    new parent-ref is added — directly below the marker on a marked body, so the
+    marker stays the first line with no blank line between the two (#765), and
+    at the top of an unmarked one — with a blank line before the content that
+    follows. Setting the parent to the value already present is a no-op.
     """
     lines = body.splitlines()
-    # Find the first non-blank line index.
-    first_idx = next((i for i, ln in enumerate(lines) if ln.strip()), None)
+    content = [i for i, ln in enumerate(lines) if ln.strip()]
+    # The marker is found by the same skip every parent-ref reader applies, so
+    # this write puts the parent-ref exactly where the readers look for it.
+    marker_idx = content[0] if infer.strip_integration_marker(body) != body else None
+    ref_candidates = content[1:] if marker_idx is not None else content
+    first_idx = ref_candidates[0] if ref_candidates else None
 
     if first_idx is not None and _is_parent_ref(lines[first_idx]):
         if lines[first_idx].strip() == parent_ref_line:
@@ -1174,14 +1182,23 @@ def _plan_parent(body: str, parent_ref_line: str) -> tuple[str, FieldResult]:
             )
         old = lines[first_idx].strip()
         lines[first_idx] = parent_ref_line
-        new_body = "\n".join(lines)
-        if body.endswith("\n"):
-            new_body += "\n"
-        return new_body, FieldResult(
+        return _rejoin(lines, body), FieldResult(
             field="parent",
             ok=True,
             changed=True,
             message=f"parent: set {parent_ref_line!r} (was {old!r})",
+        )
+
+    if marker_idx is not None:
+        # No parent-ref under the marker — insert one directly below it.
+        below = marker_idx + 1
+        followed_by_content = below < len(lines) and bool(lines[below].strip())
+        lines[below:below] = [parent_ref_line, *([""] if followed_by_content else [])]
+        return _rejoin(lines, body), FieldResult(
+            field="parent",
+            ok=True,
+            changed=True,
+            message=f"parent: set {parent_ref_line!r} (inserted below the integration marker)",
         )
 
     # No parent-ref present — prepend one with a blank-line separator.
@@ -1192,6 +1209,12 @@ def _plan_parent(body: str, parent_ref_line: str) -> tuple[str, FieldResult]:
         changed=True,
         message=f"parent: set {parent_ref_line!r} (prepended)",
     )
+
+
+def _rejoin(lines: list[str], body: str) -> str:
+    """Join edited body `lines` back into a body, keeping `body`'s final newline."""
+    joined = "\n".join(lines)
+    return joined + "\n" if body.endswith("\n") else joined
 
 
 def _links_natively(parent_ref_line: str, capability_root: Path) -> bool:
