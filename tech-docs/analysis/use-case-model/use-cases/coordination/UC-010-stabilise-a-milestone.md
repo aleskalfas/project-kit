@@ -20,9 +20,9 @@ pkit:
       artefact:
         - ACT-operator
     revalidated:
-      at: 2026-10-01T01:25:12Z
+      at: 2026-10-01T03:24:49Z
       outcome: unchanged
-      unchanged-because: "on this branch the anchored code changed only in layout: ruff format and the lint fixes; behaviour and the documented commands are unchanged"
+      unchanged-because: on this branch done-work.py and review-pr.py read the project's not-code path list for the review floor and skip a reviewer whose verdict is fresh; the stabilisation guards and flows the page describes are untouched
 ---
 
 # UC-010 — Stabilise a Milestone for a release

@@ -13,9 +13,8 @@ pkit:
         - .pkit/capabilities/software-engineering/skills/**
       record: [COR-013, COR-024, COR-026, COR-030, ADR-013, ADR-052, "project-management:DEC-015", "project-management:DEC-028", "project-management:DEC-032"]
     revalidated:
-      at: 2026-10-01T00:33:14Z
-      outcome: unchanged
-      unchanged-because: on this branch the software-engineer agent body gains one line — address findings tagged blocking, record advisories in the PR body; the panel, its reviewers and what the README says of them are untouched
+      at: 2026-10-01T03:56:33Z
+      outcome: updated
 ---
 
 # software-engineering capability
@@ -46,7 +45,7 @@ The panel ([software-engineering:DEC-002-code-review-panel]) closes bug #715: be
 
 **Activation** (declared in `review-contributions.yaml`, resolved by pm per [project-management:DEC-032]):
 
-- `code-reviewer` and `security-reviewer` ride the **`touches-code` diff floor** — required whenever a PR's diff touches any non-documentation file, *independent of the closing issue's classification*. This backstops #715's gate-escape: a code-carrying PR filed against a `type:docs` or unclassified issue still pulls in the correctness and security reviewers.
+- `code-reviewer` and `security-reviewer` ride the **`touches-code` diff floor** — required whenever a PR's diff touches any non-documentation file, *independent of the closing issue's classification*. Paths the project lists as never code (pm's `review.floors.not_code`; by default the changesets under `.changes/`) do not count. This backstops #715's gate-escape: a code-carrying PR filed against a `type:docs` or unclassified issue still pulls in the correctness and security reviewers.
 - `docs-reviewer` rides **both** the `touches-code` floor **and** the `type` wildcard (`type: "*"`). The floor makes doc review fire on any code-carrying diff regardless of classification — so a code PR always gets doc review even when unclassified or filed against a `type:docs` issue; the wildcard keeps it firing for a docs-only classified PR (which the floor, correctly, does not require). The wildcard is forward-safe: a new `type` value added later still activates doc review.
 
 **Accepted gap.** An *unclassified docs-only* PR — one whose diff touches no code (so the floor does not fire) and which closes no classified issue (so the `type:*` wildcard has nothing to match) — pulls in no doc reviewer. This is a named, accepted residual: the two activation paths are the diff (floor) and the classification (match), and such a PR presents neither. A docs PR gets doc review as soon as it is classified with any `type` label, or as soon as its diff also touches code.

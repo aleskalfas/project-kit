@@ -112,6 +112,7 @@ def test_full_surface_config_validates(validator: Draft202012Validator) -> None:
                     }
                 ],
             },
+            "floors": {"not_code": [".changes/**", "docs/examples/**"]},
         },
         "mesh_peers": ["github://owner/repo"],
         "mesh_source": "github://governance-owner/repo/path/to/mesh.yaml",
@@ -242,6 +243,25 @@ def test_contributed_opt_out_entry_shape(
     the reviewer, states a reason, and carries nothing else."""
     doc = _minimal() | {"review": {"agents": {"contributed_opt_out": [entry]}}}
     assert _errors(validator, doc)
+
+
+@pytest.mark.parametrize("floors", [
+    {"not_code": ".changes/**"},
+    {"not_code": [".changes/**", 7]},
+    {"not_code": [""]},
+    {"not_code": ["  "]},
+    {"not-code": [".changes/**"]},
+])
+def test_not_code_shape(validator: Draft202012Validator, floors: dict[str, Any]) -> None:
+    """`review.floors.not_code` is a list of non-empty path patterns (#1178),
+    and the `floors` block is closed like every other."""
+    doc = _minimal() | {"review": {"floors": floors}}
+    assert _errors(validator, doc)
+
+
+def test_an_empty_not_code_is_valid(validator: Draft202012Validator) -> None:
+    doc = _minimal() | {"review": {"floors": {"not_code": []}}}
+    assert _errors(validator, doc) == []
 
 
 def test_doc_mapping_rule_needs_both_halves(validator: Draft202012Validator) -> None:

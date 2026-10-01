@@ -38,17 +38,23 @@ consumers share:
     (`review.agents.contributed_opt_out`, `_lib.review_opt_outs`, #148)
     before any predicate is matched, so an opted-out contribution is neither
     invoked nor gated — by both consumers alike.
+  * applying the adopter's not-code list (`review.floors.not_code`, `NotCode`,
+    #1178) to the diff before any floor reads it, so a changed path the list
+    matches satisfies no floor — by both consumers alike.
 
 Fail-closed posture (DEC-032 D5)
 --------------------------------
 
-Resolution can fail in four structurally distinct ways, and the result type
+Resolution can fail in five structurally distinct ways, and the result type
 makes a consumer handle each before reading the set:
 
   * **opt-out invalid** — the adopter's opt-out list is malformed, or names a
     capability or reviewer no installed capability contributes. The adopter's
     intent is unknown (a typo'd opt-out means a requirement they meant to
     withdraw still stands), so the consumer refuses and names the entry.
+  * **not-code list invalid** — the adopter's `review.floors.not_code` is not
+    a list of non-empty path patterns. What the adopter meant to leave out of
+    the floors is unknown, so the consumer refuses and names the problem.
   * **collection not ok** — a malformed contribution declaration or an
     installed contribution naming an undeployed agent (unless that
     contribution is opted out). The collection's errors are surfaced; the
@@ -80,9 +86,12 @@ own already-imported `gh` helpers.
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
+from typing import Any
+
+import pathspec
 
 from _lib import axis_labels
 
@@ -151,6 +160,9 @@ ERROR_TOO_MANY_CHANGED_FILES = "too-many-changed-files"
 # entry names a capability / reviewer no installed capability contributes
 # (#148). `details` carries one message per problem.
 ERROR_OPT_OUT = "opt-out-invalid"
+# The adopter's `review.floors.not_code` is not a list of non-empty path
+# patterns (#1178). `details` carries one message per problem.
+ERROR_NOT_CODE = "not-code-invalid"
 
 
 @dataclass(frozen=True)
@@ -158,12 +170,13 @@ class RequiredReviewersError:
     """A structured reason the required set could not be resolved (DEC-032 D5).
 
     `kind` is `ERROR_COLLECTION`, `ERROR_CLOSING_ISSUES`,
-    `ERROR_CHANGED_FILES`, `ERROR_TOO_MANY_CHANGED_FILES`, or `ERROR_OPT_OUT`
-    so a consumer can branch on the failure class without string-matching
-    `message`. For a collection error, `collection` is the failing
-    `ContributionCollection` (its `errors` drive the consumer's refusal text);
-    for an opt-out error `details` lists each problem, one per offending entry;
-    otherwise both are empty and `message` carries the human-readable reason.
+    `ERROR_CHANGED_FILES`, `ERROR_TOO_MANY_CHANGED_FILES`, `ERROR_OPT_OUT`,
+    or `ERROR_NOT_CODE` so a consumer can branch on the failure class without
+    string-matching `message`. For a collection error, `collection` is the
+    failing `ContributionCollection` (its `errors` drive the consumer's
+    refusal text); for an opt-out or not-code error `details` lists each
+    problem, one per offending entry; otherwise both are empty and `message`
+    carries the human-readable reason.
     """
 
     kind: str
@@ -249,6 +262,90 @@ class _MultiValueAxisError(Exception):
         super().__init__(f"issue carries multiple {axis} labels: " + ", ".join(sorted(values)))
 
 
+# ---- the adopter's not-code list (#1178) -----------------------------
+
+# Where the list lives in the adopter's pm config (`project/config.yaml`),
+# named by every message so an error points at the line to fix.
+NOT_CODE_PATH = "review.floors.not_code"
+
+# What the list is when the adopter does not set it: changesets. Every pull
+# request that declares a surface change carries one under `.changes/`, and a
+# changeset is a YAML file, which the suffix test would otherwise read as code
+# — so a wording-only pull request would draw the code-review panel.
+DEFAULT_NOT_CODE_PATTERNS = (".changes/**",)
+
+
+@dataclass(frozen=True)
+class NotCode:
+    """Paths that never count as code for a diff-property floor, or the shape
+    errors that void them (`review.floors.not_code`, #1178).
+
+    `patterns` are gitignore-style path patterns — the matching
+    `code_path_to_doc_mapping` uses in the same config — read against each
+    changed path, relative to the repository root. A changed path any pattern
+    matches satisfies no floor; every other path is read exactly as before, so
+    the list narrows the floors and nothing else. A consumer gates on `ok`
+    first: when the list is malformed nothing is excluded and the caller
+    refuses (see the module docstring).
+    """
+
+    patterns: tuple[str, ...] = DEFAULT_NOT_CODE_PATTERNS
+    errors: tuple[str, ...] = ()
+
+    @property
+    def ok(self) -> bool:
+        return not self.errors
+
+    def floor_paths(self, changed_paths: list[str]) -> list[str]:
+        """The changed paths a floor reads: those no pattern matches."""
+        if not self.patterns:
+            return list(changed_paths)
+        spec = pathspec.PathSpec.from_lines("gitignore", self.patterns)
+        return [path for path in changed_paths if not spec.match_file(path)]
+
+
+# The shipped list, in force when the adopter sets none.
+DEFAULT_NOT_CODE = NotCode()
+
+
+def read_not_code(config: Any) -> NotCode:
+    """The not-code list configured in the adopter's pm config, shape-checked.
+
+    `config` is the whole `project/config.yaml` mapping. An absent `review`,
+    `review.floors` or `not_code` — or a `not_code:` left without a value —
+    is the shipped default (`DEFAULT_NOT_CODE_PATTERNS`); an empty list is
+    the adopter's choice that nothing is excluded.
+    """
+    review = config.get("review") if isinstance(config, Mapping) else None
+    floors = review.get("floors") if isinstance(review, Mapping) else None
+    raw = floors.get("not_code") if isinstance(floors, Mapping) else None
+    return parse_not_code(raw)
+
+
+def parse_not_code(raw: Any) -> NotCode:
+    """Shape-check a configured not-code list into `NotCode`.
+
+    `None` is the shipped default. Anything other than a list of non-empty
+    strings is reported, and then no pattern is returned at all: a
+    half-applied list is not what the adopter wrote.
+    """
+    if raw is None:
+        return DEFAULT_NOT_CODE
+    if not isinstance(raw, list):
+        return NotCode(
+            patterns=(),
+            errors=(f"`{NOT_CODE_PATH}` must be a list, got {type(raw).__name__}",),
+        )
+    errors = tuple(
+        f"`{NOT_CODE_PATH}[{index}]` must be a non-empty path pattern, got {item!r}"
+        for index, item in enumerate(raw)
+        if not isinstance(item, str) or not item.strip()
+    )
+    if errors:
+        return NotCode(patterns=(), errors=errors)
+    return NotCode(patterns=tuple(item.strip() for item in raw))
+
+
 # Type of the injected closing-issue-numbers resolver. Returns the issue
 # numbers the PR closes, or an `_Unresolvable` when ground truth is unknown.
 ClosingIssueNumbersFn = Callable[[int], "list[int] | _Unresolvable"]
@@ -270,6 +367,7 @@ def resolve_required_local_reviewers(
     issue_labels: IssueLabelsFn,
     changed_files: ChangedFilesFn,
     opt_outs: OptOuts = NO_OPT_OUTS,
+    not_code: NotCode = DEFAULT_NOT_CODE,
     collect_contributions: Callable[
         [Path], ContributionCollection
     ] = _default_collect_contributions,
@@ -293,6 +391,10 @@ def resolve_required_local_reviewers(
     reviewer is neither in `required_local` nor able to fail the collection
     on an undeployed agent; the baseline term is untouched. Default: none.
 
+    `not_code` is the adopter's not-code list (`read_not_code(config)`,
+    #1178): the changed paths it matches are dropped before any floor reads
+    the diff. Default: the shipped list, as when the config sets none.
+
     The contributed set is the UNION of two match paths (DEC-032 amendment):
 
       * **classification** — rules whose match-predicate holds for the
@@ -307,8 +409,9 @@ def resolve_required_local_reviewers(
     baseline-∪-contributed set; on failure (`ok is False`), `error` carries
     the fail-closed reason (DEC-032 D5) and the set fields are empty.
 
-    Order of the fail-closed checks: the opt-out list's shape first (it needs
-    nothing collected), then the collection with the opt-outs applied (a
+    Order of the fail-closed checks: the opt-out list's shape and the
+    not-code list's shape first (they need nothing collected), then the
+    collection with the opt-outs applied (a
     malformed declaration or undeployed contributed agent is unsatisfiable
     regardless of what the PR closes), then that every opt-out names an
     installed contribution (after the collection, so a broken declaration is
@@ -321,6 +424,14 @@ def resolve_required_local_reviewers(
     """
     if not opt_outs.ok:
         return _opt_out_error(opt_outs.errors)
+    if not not_code.ok:
+        return Resolution(
+            error=RequiredReviewersError(
+                kind=ERROR_NOT_CODE,
+                message="the not-code list is invalid",
+                details=not_code.errors,
+            )
+        )
 
     installed = collect_contributions(repo_root)
     collection = opt_outs.apply(installed)
@@ -352,7 +463,9 @@ def resolve_required_local_reviewers(
 
     classification_rules = collection.reviewers_for_issues(classifications)
 
-    floor_rules = _floor_rules(collection, pr_number, changed_files=changed_files)
+    floor_rules = _floor_rules(
+        collection, pr_number, changed_files=changed_files, not_code=not_code
+    )
     if isinstance(floor_rules, _Unresolvable):
         too_many = isinstance(floor_rules, _TooManyChangedFiles)
         return Resolution(
@@ -391,6 +504,7 @@ def _floor_rules(
     pr_number: int,
     *,
     changed_files: ChangedFilesFn,
+    not_code: NotCode = DEFAULT_NOT_CODE,
 ) -> tuple[ContributionRule, ...] | _Unresolvable:
     """Floor-carrying rules the PR's diff satisfies (DEC-032 amendment).
 
@@ -409,20 +523,23 @@ def _floor_rules(
     files = changed_files(pr_number)
     if isinstance(files, _Unresolvable):
         return files
-    satisfied_floors = _satisfied_floors(files)
+    satisfied_floors = _satisfied_floors(files, not_code)
     return collection.reviewers_for_floors(satisfied_floors)
 
 
-def _satisfied_floors(changed_paths: list[str]) -> set[str]:
+def _satisfied_floors(changed_paths: list[str], not_code: NotCode = DEFAULT_NOT_CODE) -> set[str]:
     """The set of floor kinds the PR's changed files satisfy (DEC-032 amendment).
 
     Maps the raw diff to the abstract floor-kind vocabulary the collection
     matches on, keeping the collection ignorant of *how* a diff property is
-    computed. Currently one floor kind: `touches-code`, satisfied when the diff
-    touches code per `diff_touches_code`.
+    computed. The adopter's not-code list (#1178) is applied first, for every
+    floor kind alike: a changed path it matches satisfies no floor, and every
+    other path is read unchanged. Currently one floor kind: `touches-code`,
+    satisfied when the remaining paths touch code per `diff_touches_code`.
     """
+    floor_paths = not_code.floor_paths(changed_paths)
     satisfied: set[str] = set()
-    if diff_touches_code(changed_paths):
+    if diff_touches_code(floor_paths):
         satisfied.add(FLOOR_TOUCHES_CODE)
     return satisfied
 
@@ -583,6 +700,11 @@ def diff_touches_code(changed_paths: list[str]) -> bool:
     changed files) does not touch code. The suffix sets are a small, central
     allow-list, easy to adjust as the panel's mandate sharpens (DEC-032
     amendment names this the genuine design point).
+
+    This predicate reads the paths it is given. The adopter's not-code list
+    (`NotCode`, #1178) is applied before it, by `_satisfied_floors`, so a path
+    the list matches — by default, a changeset under `.changes/` — never
+    reaches the suffix test.
     """
     return any(not _is_documentation_path(path) for path in changed_paths)
 

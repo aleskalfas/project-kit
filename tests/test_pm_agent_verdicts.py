@@ -359,3 +359,26 @@ def test_reduction_returns_the_input_objects(av) -> None:
     )
     (latest,) = av.reduce_latest_per_reviewer(history)
     assert latest is history[-1]
+
+
+# ---- the freshness anchor (DEC-028 step 4) -----------------------------
+#
+# One definition, read by done-work's gate, review-pr's fresh-verdict skip
+# (#1178) and show-pr's stale marker, so the three agree on what is fresh.
+
+
+def test_latest_commit_timestamp_prefers_committed_then_authored(av) -> None:
+    assert av.latest_commit_timestamp([]) == ""
+    assert av.latest_commit_timestamp(
+        [{"authoredDate": "2026-06-01T00:00:00Z"}]
+    ) == "2026-06-01T00:00:00Z"
+    assert av.latest_commit_timestamp([
+        {"committedDate": "2026-06-01T00:00:00Z"},
+        {"committedDate": "2026-06-05T00:00:00Z",
+         "authoredDate": "2026-06-04T00:00:00Z"},
+    ]) == "2026-06-05T00:00:00Z"
+
+
+def test_latest_commit_timestamp_is_empty_without_a_readable_head(av) -> None:
+    assert av.latest_commit_timestamp([{"oid": "abc123"}]) == ""
+    assert av.latest_commit_timestamp(["not-a-commit"]) == ""

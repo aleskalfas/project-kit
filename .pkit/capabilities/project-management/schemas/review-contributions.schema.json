@@ -53,7 +53,7 @@
             }
           },
           "floor": {
-            "description": "Diff-property floor (DEC-032 amendment): require the reviewer whenever the PR's diff matches the property, independent of classification. `touches-code` fires when the diff touches any non-documentation file — backstopping the classification gate-escape for a code-review reviewer. Optional; a rule must declare a `match`, a `floor`, or both.",
+            "description": "Diff-property floor (DEC-032 amendment): require the reviewer whenever the PR's diff matches the property, independent of classification. `touches-code` fires when the diff touches any non-documentation file — backstopping the classification gate-escape for a code-review reviewer. A changed path the adopting project lists under `review.floors.not_code` in its pm config (`.changes/**` when unset) satisfies no floor. Optional; a rule must declare a `match`, a `floor`, or both.",
             "type": "string",
             "enum": ["touches-code"]
           },

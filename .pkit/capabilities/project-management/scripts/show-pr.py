@@ -47,6 +47,7 @@ sys.path.insert(0, str(_HERE))
 from _lib import bootstrap_gate
 from _lib.agent_verdicts import (
     all_verdicts,
+    latest_commit_timestamp,
     latest_verdicts_per_reviewer,
     reduce_latest_per_reviewer,
 )
@@ -163,7 +164,9 @@ def _summarise(pr: dict) -> dict:
     conv = _parse_conventional_commits(title)
     closing_issues = _extract_closing_issues(body)
     has_doc_impact = "## Doc impact" in body
-    latest_commit_ts = _latest_commit_timestamp(pr.get("commits") or [])
+    # The gate's own freshness anchor, so a verdict shown stale is one the
+    # gate will not count. When none is resolvable, nothing is marked stale.
+    latest_commit_ts = latest_commit_timestamp(pr.get("commits") or [])
     comments = pr.get("comments") or []
     review = _summarise_review(comments, latest_commit_ts)
     review_history = _summarise_review_history(comments, latest_commit_ts)
@@ -258,24 +261,6 @@ def _summarise_review_history(comments: list, latest_commit_ts: str = "") -> lis
         {"reviewer": reviewer, "path": path, "verdicts": verdicts}
         for (path, reviewer), verdicts in sorted(by_reviewer.items())
     ]
-
-
-def _latest_commit_timestamp(commits: list) -> str:
-    """The latest commit's timestamp, the gate's verdict-freshness anchor.
-
-    Mirrors `done-work`'s anchor: `gh pr view --json commits` returns the
-    commits in order, so the last entry's `committedDate` (falling back to
-    `authoredDate`) is the freshness boundary against which a shown verdict is
-    marked stale. Returns "" when no commit timestamp is resolvable — the
-    caller then renders every verdict without a stale marker rather than
-    erroring.
-    """
-    if not commits:
-        return ""
-    last = commits[-1]
-    if not isinstance(last, dict):
-        return ""
-    return str(last.get("committedDate") or last.get("authoredDate") or "")
 
 
 # The addressable field vocabulary for `--field`. Order is the documented
