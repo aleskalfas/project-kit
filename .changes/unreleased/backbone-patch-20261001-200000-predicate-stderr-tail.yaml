@@ -2,6 +2,7 @@ component: backbone
 kind: patch
 custom:
   category: Fixed
+  pr: "1240"
 body: >
   A process predicate that cannot be evaluated now says why, instead of every
   failure reading the same "couldn't evaluate detection predicate 'x'" (#752).
