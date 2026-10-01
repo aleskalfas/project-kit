@@ -45,11 +45,13 @@ When invoked against a PR, you operate single-shot: receive context, read the PR
 
 The invoker (typically `review-pr.py`) provides the PR number in the prompt. Pull:
 
-- `gh pr view <N> --json title,body,headRefName,baseRefName,labels,closingIssuesReferences,commits`
+- `gh pr view <N> --json title,body,headRefName,baseRefName,headRefOid,labels,closingIssuesReferences,commits`
 - `gh pr diff <N>` (the diff itself)
 - For the linked issue (from `closingIssuesReferences` or a `Closes #<N>` line in the PR body): `gh issue view <issue#> --json title,body,labels`
 
-If any of these fail (PR not found, no closing issue link, gh failure), emit `CHANGES_REQUESTED` with the failure as the rationale.
+**When `gh pr diff` refuses the diff** — GitHub refuses it for a PR that changes more than 300 files — read the same diff from the local checkout: `git diff <base>...<head>`, with the base and head your brief names, or `origin/<baseRefName>...<headRefOid>` from `gh pr view` when it names none. The diff is unreadable only when neither source yields it.
+
+If any of the others fails (PR not found, no closing issue link, gh failure), or neither source yields the diff, emit `CHANGES_REQUESTED` with the failure as the rationale.
 
 ### 2. Apply the criteria checklist
 
@@ -90,7 +92,7 @@ End your output with the verdict marker on its own line:
 <!-- pkit-verdict -->
 ```
 
-The marker is what the merge gate counts (per [project-management:DEC-028-agent-as-approver-paths] / #593): `done-work` counts a verdict only when its comment carries `<!-- pkit-verdict -->`, so a bare verdict-grammar line posted by any other path never gates. `review-pr.py` stamps the marker when it posts your stdout (idempotently), so on the canonical path it is added for you; include it yourself whenever you post a verdict comment directly.
+The marker is what the merge gate counts (per [project-management:DEC-028-agent-as-approver-paths] / #593): `done-work` counts a verdict only when its comment carries a verdict marker, so a bare verdict-grammar line posted by any other path never gates. `review-pr.py` stamps the marker when it posts your stdout (idempotently), so on the canonical path it is added for you; include it yourself whenever you post a verdict comment directly. The stamp replaces your marker with one that names the head you reviewed and the base branch's head at the time — `<!-- pkit-verdict sha=<head> base=<base> -->`, each a full commit id — so anything that looks for verdict comments matches the marker's prefix, `<!-- pkit-verdict`, never the bare string, which a stamped comment does not carry (the project-management README, "What the marker carries").
 
 The verdict-line format is load-bearing. `done-work`'s gate-checker parses the first line as a literal string match. Deviating from the exact form (case, punctuation, spacing) breaks the gate.
 
