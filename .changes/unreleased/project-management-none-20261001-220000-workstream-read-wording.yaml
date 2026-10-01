@@ -1,0 +1,5 @@
+component: project-management
+kind: none
+custom:
+  pr: "1240"
+body: Wording only — the workstream context verb's docstring and the README's sentence on `pkit report` say what the backbone now does with a failed read (#752); no project-management behaviour changed.
