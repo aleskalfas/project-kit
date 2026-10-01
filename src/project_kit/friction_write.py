@@ -55,7 +55,7 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import click
 from ruamel.yaml import YAML
@@ -249,7 +249,7 @@ def _friction_block(artefact: Artefact) -> Mapping[str, Any]:
     return artefact.friction
 
 
-def _carrier_keys(artefact: Artefact) -> tuple[str, ...]:
+def carrier_keys(artefact: Artefact) -> tuple[str, ...]:
     """The keys from the front matter's root to the mapping that carries the container."""
     if artefact.kind is ArtefactKind.DOCUMENT:
         return ()
@@ -692,7 +692,7 @@ def _plan(
     notes: tuple[str, ...] = (),
 ) -> Plan:
     """Splice `key: value` into the block, read the result back, and describe the write."""
-    carrier = _carrier_keys(source.artefact)
+    carrier = carrier_keys(source.artefact)
     keys = (*carrier, bs.CONTAINER_KEY, *parent)
     splice = _splice(source, keys, key, value)
     front_matter = (
@@ -746,20 +746,13 @@ def _splice(source: _Source, keys: Sequence[str], key: str, value: Any) -> _Spli
     must exist and be written directly, not through an alias.
     """
     fm = source.front_matter
-    try:
-        root = YAML().compose(io.StringIO(fm))
-    except YAMLError as exc:  # pragma: no cover — discovery has already parsed it
-        raise FrictionWriteError(f"{source.rel}: front matter does not parse: {exc}") from exc
-    parent = root
-    for step in keys:
-        pair = _pair(parent, step) if isinstance(parent, MappingNode) else None
-        if pair is None:
-            raise FrictionWriteError(
-                f"{source.artefact.location}: cannot find `{'.'.join(keys)}` written in the file "
-                f"(is it reached through a YAML alias or merge key?); edit the block by hand. "
-                f"Nothing was written."
-            )
-        parent = pair[1]
+    parent = _node_at(_composed(fm), keys)  # discovery has parsed it: it composes
+    if parent is None:
+        raise FrictionWriteError(
+            f"{source.artefact.location}: cannot find `{'.'.join(keys)}` written in the file "
+            f"(is it reached through a YAML alias or merge key?); edit the block by hand. "
+            f"Nothing was written."
+        )
     if not isinstance(parent, MappingNode):
         raise FrictionWriteError(
             f"{source.artefact.location}: `{'.'.join(keys)}` is not a mapping; fix it first — "
@@ -771,11 +764,46 @@ def _splice(source: _Source, keys: Sequence[str], key: str, value: Any) -> _Spli
     return _block_splice(fm, parent, existing, keys[-1], key, value, source)
 
 
+def _composed(front_matter: str) -> Node | None:
+    """The front matter's node tree, positions included; `None` when it does not parse."""
+    try:
+        root: Node | None = YAML().compose(io.StringIO(front_matter))
+    except YAMLError:
+        return None
+    return root
+
+
+def _node_at(root: Node | None, keys: Sequence[str]) -> Node | None:
+    """The value `keys` lead to from `root`, each step a key written in a mapping; `None`
+    where a step is not written directly — reached through an alias or merge key — or not
+    at all."""
+    node = root
+    for step in keys:
+        pair = _pair(node, step) if isinstance(node, MappingNode) else None
+        if pair is None:
+            return None
+        node = pair[1]
+    return node
+
+
 def _pair(mapping: MappingNode, key: str) -> tuple[Node, Node] | None:
     for key_node, value_node in mapping.value:
         if isinstance(key_node, ScalarNode) and key_node.value == key:
             return key_node, value_node
     return None
+
+
+def key_span(front_matter: str, keys: Sequence[str]) -> tuple[int, int] | None:
+    """Where the last of `keys` is written in `front_matter`, as `(start, end)`: from its
+    key's first character to its value's last — the characters a write in flow style
+    replaces, and in block style the key's lines without their indentation or line break.
+
+    `None` when the front matter does not parse, or the key is not written directly —
+    reached through an alias or merge key — or not at all.
+    """
+    parent = _node_at(_composed(front_matter), keys[:-1])
+    pair = _pair(parent, keys[-1]) if isinstance(parent, MappingNode) and keys else None
+    return None if pair is None else _pair_span(*pair)
 
 
 def _rank(parent_key: str, key: str) -> int:
@@ -822,8 +850,8 @@ def _flow_splice(
 ) -> _Splice:
     written = f"{key}: {_flow(value)}"
     if existing is not None:
-        key_node, value_node = existing
-        return _Splice(key_node.start_mark.index, _pair_end(key_node, value_node), written)
+        start, end = _pair_span(*existing)
+        return _Splice(start, end, written)
     rank = _rank(parent_key, key)
     after = [pair for pair in parent.value if _rank(parent_key, _key_text(pair[0])) > rank]
     if after:
@@ -838,6 +866,11 @@ def _flow_splice(
 
 def _key_text(node: Node) -> str:
     return node.value if isinstance(node, ScalarNode) else ""
+
+
+def _pair_span(key_node: Node, value_node: Node) -> tuple[int, int]:
+    """A key and its value in the text: from the key's first character to the value's last."""
+    return cast(int, key_node.start_mark.index), _pair_end(key_node, value_node)
 
 
 def _pair_end(key_node: Node, value_node: Node) -> int:
@@ -1109,20 +1142,26 @@ def apply(plan: Plan, *, yes: bool, dry_run: bool, can_ask: bool, rerun: Sequenc
 
 def write(plan: Plan) -> None:
     """Write the plan's file atomically, keeping its mode; refuse if it changed since read."""
+    replace_file(plan.path, plan.rel, plan.before, plan.after)
+
+
+def replace_file(path: Path, rel: str, before: str, after: str) -> None:
+    """Replace the file at `path` (`rel` names it) with `after` atomically, keeping its mode;
+    refuse, writing nothing, unless it still holds `before`."""
     try:
-        current = plan.path.read_bytes().decode("utf-8")
+        current = path.read_bytes().decode("utf-8")
     except (OSError, UnicodeDecodeError) as exc:
-        raise FrictionWriteError(f"cannot read {plan.rel}: {exc}. Nothing was written.") from exc
-    if current != plan.before:
+        raise FrictionWriteError(f"cannot read {rel}: {exc}. Nothing was written.") from exc
+    if current != before:
         raise FrictionWriteError(
-            f"{plan.rel} changed since it was read; run the command again. Nothing was written."
+            f"{rel} changed since it was read; run the command again. Nothing was written."
         )
-    mode = stat.S_IMODE(plan.path.stat().st_mode)
-    tmp = plan.path.with_name(plan.path.name + ".pkit-tmp")
+    mode = stat.S_IMODE(path.stat().st_mode)
+    tmp = path.with_name(path.name + ".pkit-tmp")
     try:
-        tmp.write_bytes(plan.after.encode("utf-8"))
+        tmp.write_bytes(after.encode("utf-8"))
         os.chmod(tmp, mode)
-        os.replace(tmp, plan.path)
+        os.replace(tmp, path)
     finally:
         tmp.unlink(missing_ok=True)
 
@@ -1134,13 +1173,16 @@ __all__ = [
     "Plan",
     "apply",
     "ask_keep",
+    "carrier_keys",
     "command_line",
     "find_artefact",
     "interactive",
+    "key_span",
     "plan_defer",
     "plan_record_status",
     "plan_revalidate",
     "render_diff",
     "render_plan",
+    "replace_file",
     "write",
 ]

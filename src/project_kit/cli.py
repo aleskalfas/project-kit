@@ -28,6 +28,7 @@ from project_kit import (
     friction_check,
     friction_report,
     friction_repository,
+    friction_resolve,
     friction_write,
     router,
     scratchpads,
@@ -779,8 +780,10 @@ def connections_resolve(address: str, as_json: bool) -> None:
 def friction() -> None:
     """Anchors and friction (COR-050): the reading commands — the checks, the
     debt listing, one artefact's explanation, the places and artefacts
-    discovery finds — which never write, and the writers — revalidate, defer,
-    record-status — which write one block, only with consent.
+    discovery finds — which never write, the writers — revalidate, defer,
+    record-status — which write one block, only with consent, and resolve,
+    which resolves a merge's conflicting revalidations as text and writes no
+    answer.
 
     Reference: `.pkit/cli/README.md`, "Friction checks"; the block itself is
     in `.pkit/schemas/README.md`, "The friction block".
@@ -929,6 +932,45 @@ def friction_record_status_command(artefact: str, yes: bool, dry_run: bool) -> N
         return friction_write.plan_record_status(target_root, artefact)
 
     _friction_write(plan_of, yes, dry_run, rerun)
+
+
+@friction.command("resolve")
+@click.argument("paths", metavar="[PATH]...", nargs=-1)
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    default=False,
+    help="Show the resolution, with each file's diff, and write nothing.",
+)
+@click.option(
+    "--json", "as_json", is_flag=True, default=False, help="Emit the stable JSON document."
+)
+def friction_resolve_command(paths: tuple[str, ...], dry_run: bool, as_json: bool) -> None:
+    """Resolve a merge's conflicting revalidations as text (COR-050 point 3): each file in
+    conflict — every one, or each PATH — whose conflicts all lie inside `revalidated` blocks.
+
+    Reads the file's three versions from the index, takes the base side's block
+    — MERGE_HEAD's, the branch being merged in — where both sides revalidated,
+    keeps git's merge of everything else, writes the file and stages it. A
+    conflict anywhere else is left as git left it, and said where; a file that
+    is not an artefact's is skipped. It writes no answer: for each artefact both
+    sides revalidated it names the revalidation still owed once the merge is
+    committed, `updated` or `unchanged` as its content bears out against the
+    base side's. PATH is relative to the project root. Outside a merge there is
+    nothing to resolve. Exit 1 while a file it looked at stays in conflict.
+    """
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    resolution = friction_resolve.plan_resolve(target_root, paths)
+    if not dry_run:
+        friction_resolve.apply(target_root, resolution)
+    if as_json:
+        click.echo(friction_resolve.render_json(resolution, dry_run=dry_run), nl=False)
+    else:
+        click.echo(friction_resolve.render_human(resolution, dry_run=dry_run), nl=False)
+    if resolution.exit_code:
+        raise SystemExit(resolution.exit_code)
 
 
 @friction.command("check")
