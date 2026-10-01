@@ -28,12 +28,23 @@ retarget replaced — a stacked PR moved onto another branch after its base
 was abandoned — or a rewrite discarded is not, and the commits the PR now
 carries over its new base were never reviewed.
 
-The computation needs the commits locally and git 2.38 or later (for
-`merge-tree --write-tree`). When it cannot run — the reviewed head is no
-longer in the branch's history after a rebase or force-push, a commit is not
-in this checkout, git is too old or missing — the result is an error rather
-than a set of paths, and the freshness rule holds the verdict stale (fail
-closed).
+Both need the commits locally, and `author_delta` needs git 2.38 or later
+(for `merge-tree --write-tree`). A commit this checkout lacks — the reviewed
+head, the reviewed base, the PR's head, the base branch's head — is fetched
+first (`git fetch origin <oid>`), and the question asked again. When it still
+cannot be answered, the result is an error rather than an answer, and the
+freshness rule holds the verdict stale (fail closed). The error names the
+cause, since each has its own remedy:
+
+  * **unfetched** — the commit could not be fetched from origin (git's own
+    message says why), or the checkout is shallow, so a commit that is in
+    the branch's history may not look it here;
+  * **rebased** — in a full checkout, the reviewed head is no longer in the
+    branch's history: the branch was rebased or force-pushed;
+  * git too old or missing.
+
+What the local repository lacks can therefore only make a verdict stale,
+never fresh: the gate gets stricter, never looser.
 
 This module owns only the `git` wiring. The runner is injectable so the
 consumers' tests can stand it in, and it runs in the current directory —
@@ -42,6 +53,7 @@ every pm script runs from the project root.
 
 from __future__ import annotations
 
+import os
 import subprocess
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -120,6 +132,7 @@ def author_delta(
         git.require_commit(since, "the reviewed head")
         git.require_commit(head, "the pull request's head")
         if not git.is_ancestor(since, head):
+            git.require_full_history(f"{short_sha(since)} is still in the branch's history")
             raise _GitFailed(
                 f"{short_sha(since)} is no longer in the branch's history — "
                 "the branch was rebased or force-pushed"
@@ -155,19 +168,28 @@ def base_kept(
     try:
         git.require_commit(reviewed_base, "the reviewed base")
         git.require_commit(base_tip, "the base branch's head")
-        return BaseCheck(kept=git.is_ancestor(reviewed_base, base_tip))
+        if git.is_ancestor(reviewed_base, base_tip):
+            return BaseCheck(kept=True)
+        git.require_full_history(
+            f"the base branch still contains the reviewed base, {short_sha(reviewed_base)}"
+        )
+        return BaseCheck(kept=False)
     except _GitFailed as exc:
         return BaseCheck(error=str(exc))
 
 
 class _Git:
-    """The git steps `author_delta` takes, each failing as `_GitFailed`."""
+    """The git steps `author_delta` and `base_kept` take, each failing as
+    `_GitFailed`."""
 
     def __init__(self, cwd: str | Path | None, run: RunFn) -> None:
         self._cwd = cwd
         self._run = run
 
-    def __call__(self, *args: str) -> subprocess.CompletedProcess:
+    def __call__(
+        self, *args: str, env: dict[str, str] | None = None
+    ) -> subprocess.CompletedProcess:
+        extra = {} if env is None else {"env": env}
         try:
             return self._run(
                 ["git", *args],
@@ -177,6 +199,7 @@ class _Git:
                 encoding="utf-8",
                 errors="replace",
                 check=False,
+                **extra,
             )
         except OSError as exc:
             raise _GitFailed(f"git could not run: {exc}") from None
@@ -185,10 +208,38 @@ class _Git:
         return self("cat-file", "-e", f"{oid}^{{commit}}").returncode == 0
 
     def require_commit(self, oid: str, what: str) -> None:
-        if not self.has_commit(oid):
+        """Make sure `oid` is in this checkout, fetching it from origin when
+        it is not; fail naming why it still is not."""
+        if self.has_commit(oid):
+            return
+        # Never prompt for credentials: a pm script runs unattended.
+        fetch = self(
+            "fetch",
+            "--quiet",
+            "--no-tags",
+            "origin",
+            oid,
+            env={**os.environ, "GIT_TERMINAL_PROMPT": "0"},
+        )
+        if self.has_commit(oid):
+            return
+        why = _first_line(fetch.stderr) or f"git fetch exited {fetch.returncode}"
+        raise _GitFailed(
+            f"{what}, {short_sha(oid)}, is not in this checkout and could not be "
+            f"fetched from origin: {why}"
+        )
+
+    def require_full_history(self, question: str) -> None:
+        """Fail when this checkout is shallow: an ancestry test that came out
+        false may only mean the history between the two commits is not here,
+        so whether `question` holds cannot be told."""
+        proc = self("rev-parse", "--is-shallow-repository")
+        if proc.returncode != 0:
+            raise _GitFailed(f"git rev-parse failed: {proc.stderr.strip()}")
+        if proc.stdout.strip() == "true":
             raise _GitFailed(
-                f"{what}, {short_sha(oid)}, is not in this checkout — fetch "
-                "the pull request's branch"
+                f"this checkout is shallow, so whether {question} cannot be "
+                "told — fetch the full history (`git fetch --unshallow origin`)"
             )
 
     def is_ancestor(self, ancestor: str, descendant: str) -> bool:
@@ -258,10 +309,14 @@ class _BaseBranch:
                     "the base branch's head is unknown, so a merge of it "
                     "cannot be told from the author's own changes"
                 )
-            if not self._git.has_commit(self._tip):
-                raise _GitFailed(
-                    f"the base branch's head, {short_sha(self._tip)}, is not "
-                    "in this checkout — fetch the base branch"
-                )
+            self._git.require_commit(self._tip, "the base branch's head")
             self._checked = True
         return self._git.is_ancestor(commit, self._tip)
+
+
+def _first_line(text: str) -> str:
+    """The first non-blank line of a git message, stripped."""
+    for line in text.splitlines():
+        if line.strip():
+            return line.strip()
+    return ""

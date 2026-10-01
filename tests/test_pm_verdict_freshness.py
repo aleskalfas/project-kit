@@ -558,6 +558,81 @@ def test_a_merge_of_another_branch_is_the_authors_change(av, ad, vf, repo) -> No
 # ---- when the delta cannot be computed: stale -------------------------------
 
 
+def _clone(repo: _Repo, name: str, *args: str) -> _Repo:
+    """A clone of `repo`, which is its `origin`."""
+    clone = _Repo.__new__(_Repo)
+    clone.root = repo.root.parent / name
+    subprocess.run(
+        ["git", "clone", "-q", *args, f"file://{repo.root}", str(clone.root)],
+        check=True,
+        capture_output=True,
+    )
+    return clone
+
+
+def test_a_head_missing_here_is_fetched_from_origin_first(ad, repo) -> None:
+    """The PR moved on origin since this checkout last fetched: the missing
+    head is fetched by its object name and the changes read from it — never a
+    stale verdict for want of a fetch."""
+    reviewed = repo.commit({"src/app.py": "x = 2\n"}, "feature")
+    clone = _clone(repo, "clone", "--branch", "feat")
+    head = repo.commit({"README.md": "readme, fixed\n"}, "docs finding")
+    assert not ad.author_delta(reviewed, head, base_tip=repo.head("main"), cwd=repo.root).error
+
+    delta = ad.author_delta(reviewed, head, base_tip=clone.head("origin/main"), cwd=clone.root)
+    assert delta == ad.AuthorDelta(paths=("README.md",))
+
+
+def test_a_reviewed_head_origin_cannot_provide_names_the_fetch(ad, repo) -> None:
+    clone = _clone(repo, "clone", "--branch", "feat")
+    delta = ad.author_delta("d" * 40, clone.head(), base_tip=clone.head(), cwd=clone.root)
+    assert delta.error.startswith(
+        "the reviewed head, ddddddd, is not in this checkout and could not be fetched from origin: "
+    )
+
+
+def test_a_shallow_checkout_is_named_rather_than_called_a_rebase(ad, repo) -> None:
+    """In a shallow checkout the reviewed head can be fetched yet still not
+    look like an ancestor of the PR's head — the history between is not here.
+    That is unfetched history, not a rebase, and the reason says so."""
+    reviewed = repo.commit({"src/app.py": "x = 2\n"}, "feature")
+    head = repo.commit({"README.md": "readme, fixed\n"}, "docs finding")
+    shallow = _clone(repo, "shallow", "--depth", "1", "--branch", "feat")
+
+    delta = ad.author_delta(reviewed, head, base_tip=repo.head("main"), cwd=shallow.root)
+    assert delta.error == (
+        f"this checkout is shallow, so whether {reviewed[:7]} is still in the "
+        "branch's history cannot be told — fetch the full history "
+        "(`git fetch --unshallow origin`)"
+    )
+
+
+def test_a_fetch_never_prompts_for_credentials(ad) -> None:
+    fetches: list[dict] = []
+
+    def no_commits(argv, **kwargs):
+        if argv[1] == "fetch":
+            fetches.append(kwargs.get("env") or {})
+            return subprocess.CompletedProcess(argv, 128, "", "fatal: could not read Username\n")
+        return subprocess.CompletedProcess(argv, 1, "", "")
+
+    delta = ad.author_delta("a" * 40, "b" * 40, base_tip="", run=no_commits)
+    assert delta.error == (
+        "the reviewed head, aaaaaaa, is not in this checkout and could not be "
+        "fetched from origin: fatal: could not read Username"
+    )
+    assert [env.get("GIT_TERMINAL_PROMPT") for env in fetches] == ["0"]
+
+
+def test_a_base_missing_here_is_fetched_from_origin_first(ad, repo) -> None:
+    clone = _clone(repo, "clone", "--branch", "feat")
+    reviewed_base = clone.head("origin/main")
+    repo.git("checkout", "-q", "main")
+    moved = repo.commit({"src/lib.py": "y = 1\n"}, "main moves")
+
+    assert ad.base_kept(reviewed_base, moved, cwd=clone.root) == ad.BaseCheck(kept=True)
+
+
 def test_a_reviewed_head_not_in_this_checkout_is_stale(ad, repo) -> None:
     delta = ad.author_delta(
         "d" * 40,
@@ -610,7 +685,10 @@ def test_an_unknown_base_stales_only_when_a_merge_needs_it(ad, repo) -> None:
         base_tip="e" * 40,
         cwd=repo.root,
     )
-    assert "fetch the base branch" in missing.error
+    assert (
+        "the base branch's head, eeeeeee, is not in this checkout and could not be "
+        "fetched from origin: "
+    ) in missing.error
 
 
 def test_a_git_without_merge_tree_write_tree_is_stale(ad, repo) -> None:

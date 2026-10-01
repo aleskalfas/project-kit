@@ -56,14 +56,18 @@ Side-effects:
   - Skips a required reviewer whose verdict is still fresh (#1178): its
     latest verdict is one the freshness rule (`_lib.verdict_freshness`, the
     one `done-work`'s gate applies, #1179) holds fresh, read with the SAME
-    selection the gate counts (`gate_verdicts`), so a skipped reviewer is
-    exactly one the gate would accept as it stands. It prints
+    selection the gate counts (`gate_candidates`, judged as `gate_verdicts`
+    judges them), so a skipped reviewer is exactly one the gate would accept
+    as it stands. It prints
     `[<name>] fresh verdict <APPROVED|CHANGES_REQUESTED> — not re-run`. A
     change the reviewer checks makes its verdict stale, so the next run
-    invokes it; `--force` re-runs a fresh one (per DEC-046, the override of
-    a stop the script makes). Prior verdicts remain in the comment history
-    (the gate-checker selects latest-per-agent). When the PR's verdicts
-    cannot be read, every required reviewer runs.
+    invokes it and says why:
+    `[<name>] stale verdict <APPROVED|CHANGES_REQUESTED> (<reason>) — re-run`,
+    the reason naming what changed, or a commit that could not be fetched,
+    or a shallow checkout. `--force` re-runs a fresh one (per DEC-046, the
+    override of a stop the script makes). Prior verdicts remain in the
+    comment history (the gate-checker selects latest-per-agent). When the
+    PR's verdicts cannot be read, every required reviewer runs.
 
 Agent invocation:
   At v1, the kit invokes Claude Code agents via the `claude` CLI when
@@ -92,6 +96,7 @@ import re
 import shutil
 import subprocess
 import sys
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from ruamel.yaml import YAML
@@ -99,7 +104,7 @@ from ruamel.yaml import YAML
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import bootstrap_gate, session_guard
-from _lib.agent_verdicts import PATH_LOCAL, gate_verdicts, stamp_verdict
+from _lib.agent_verdicts import PATH_LOCAL, gate_candidates, stamp_verdict
 from _lib.audit import short_sha
 from _lib.author_delta import author_delta, base_kept
 from _lib.closing_issue_fetchers import issue_labels as _issue_labels_fetch
@@ -399,14 +404,17 @@ def main() -> int:
         print(f"  effort: {agent_effort} ({effort_source})")
 
     # A reviewer whose verdict is still fresh for this head is not re-run
-    # (#1178) unless --force: re-running it reviews the same diff again.
-    fresh: dict[str, str] = {}
+    # (#1178) unless --force: re-running it reviews the same diff again. A
+    # reviewer whose verdict went stale is re-run with the reason said, so a
+    # re-run is never silent about why (#1179).
+    states = _VerdictStates()
     if not args.force:
-        read = _read_fresh_verdicts(pr_number, resolution, config)
+        read = _read_verdict_states(pr_number, resolution, config)
         if read is None:
             print("  fresh verdicts: could not be read — every required reviewer runs")
         else:
-            fresh = read
+            states = read
+    fresh = states.fresh
 
     # For each required reviewer, invoke and post verdict.
     failures = 0
@@ -414,6 +422,9 @@ def main() -> int:
         if name in fresh:
             print(f"  [{name}] fresh verdict {fresh[name]} — not re-run")
             continue
+        if name in states.stale:
+            token, reason = states.stale[name]
+            print(f"  [{name}] stale verdict {token} ({reason}) — re-run")
 
         agent_file = repo_root / ".claude" / "agents" / f"{name}.md"
         if not agent_file.is_file():
@@ -826,17 +837,28 @@ def _resolve_required_local(
 # ---- fresh-verdict skip (#1178) --------------------------------------
 
 
-def _read_fresh_verdicts(
+@dataclass(frozen=True)
+class _VerdictStates:
+    """Each required local reviewer's current verdict, judged by the gate's
+    freshness rule: `fresh` maps a reviewer to its token; `stale` maps one to
+    its token and the rule's reason. A reviewer in neither has no verdict the
+    gate would read."""
+
+    fresh: dict[str, str] = field(default_factory=dict)
+    stale: dict[str, tuple[str, str]] = field(default_factory=dict)
+
+
+def _read_verdict_states(
     pr_number: int | None,
     resolution: Resolution,
     config: dict,
-) -> dict[str, str] | None:
-    """The required reviewers whose latest verdict on the PR is still fresh.
+) -> _VerdictStates | None:
+    """The required reviewers' current verdicts on the PR, fresh and stale.
 
     Fetches the PR's comments, commits, head and base in one round-trip (the
     fetch `done-work`'s gate makes), builds the freshness rule from them and
     the PR's resolution (`rule_for_pr`, the gate's own), and hands both to
-    `_fresh_local_verdicts`. Returns None when they cannot be read — the
+    `_local_verdict_states`. Returns None when they cannot be read — the
     caller then runs every required reviewer, the direction that can only
     produce more verdicts.
     """
@@ -855,37 +877,46 @@ def _read_fresh_verdicts(
         return None
     if not isinstance(data, dict):
         return None
-    return _fresh_local_verdicts(
+    return _local_verdict_states(
         data.get("comments") or [],
         rule_for_pr(data, resolution, author_delta=author_delta, base_kept=base_kept),
         resolution.required_local,
     )
 
 
-def _fresh_local_verdicts(
+def _local_verdict_states(
     comments: list,
     freshness: FreshnessRule,
     required_local: tuple[str, ...] | list[str],
-) -> dict[str, str]:
-    """Reviewer name → verdict token, for each required reviewer whose latest
-    verdict is still fresh.
+) -> _VerdictStates:
+    """Each required local reviewer's current verdict, fresh or stale.
 
-    The selection is `done-work`'s own: `gate_verdicts` (marker required,
-    latest verdict per reviewer by timestamp, counted only when fresh) with the
-    gate's freshness rule, scoped to the required local set. So a reviewer this skips is one the
-    gate would count as it stands — a fresh APPROVED satisfies it, a fresh
-    CHANGES_REQUESTED blocks it until a change its reviewer checks. Only
-    local-path verdicts are read: `review-pr` invokes local reviewers, and a
-    remote verdict is not one of theirs.
+    The selection is `done-work`'s own: `gate_candidates` (marker required,
+    latest verdict per reviewer by timestamp), scoped to the required local
+    set, each judged by the gate's freshness rule — so the fresh ones are
+    exactly what `gate_verdicts` would count. A reviewer this skips is one the
+    gate counts as it stands: a fresh APPROVED satisfies it, a fresh
+    CHANGES_REQUESTED blocks it until the author changes something. A stale
+    one carries the rule's reason — a change since, a retargeted base, a
+    commit that could not be fetched, a shallow checkout — for the re-run to
+    name. Only local-path verdicts are read: `review-pr` invokes local
+    reviewers, and a remote verdict is not one of theirs.
     """
     required = set(required_local)
-    verdicts = gate_verdicts(
+    states = _VerdictStates()
+    for verdict in gate_candidates(
         comments,
-        is_fresh=freshness.is_fresh,
         local_reviewer_ok=lambda name: name in required,
         remote_reviewer_ok=lambda _login: False,
-    )
-    return {v.reviewer: v.token for v in verdicts if v.path == PATH_LOCAL}
+    ):
+        if verdict.path != PATH_LOCAL:
+            continue
+        assessment = freshness.assess(verdict)
+        if assessment.fresh:
+            states.fresh[verdict.reviewer] = verdict.token
+        else:
+            states.stale[verdict.reviewer] = (verdict.token, assessment.reason)
+    return states
 
 
 def _resolution_error_message(resolution: Resolution) -> str:
