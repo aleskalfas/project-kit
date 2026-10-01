@@ -1,0 +1,12 @@
+component: backbone
+kind: patch
+custom:
+  category: Changed
+body: >
+  `pkit repository base` resolves the default branch once per run and reuses
+  that resolution for the base and for the warnings it prints. It reads a
+  branch's references in one `git for-each-ref` and where HEAD left the base in
+  one `git merge-base`, so a reading starts three git processes where it
+  started thirteen (#1221). The friction change check, `pkit release check` and
+  `pkit migrations check-diff` also resolve their base once per run. The
+  reading's document, its warnings and every refusal are unchanged.
