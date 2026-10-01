@@ -4,16 +4,21 @@ consumers (validators, the friction engine per COR-050) rely on."""
 
 from __future__ import annotations
 
+import os
 from datetime import UTC, datetime
 from pathlib import Path
 
+import pytest
+
 from project_kit import capabilities as caps
+from project_kit import install as install_mod
 from project_kit.manifest import read_backbone_manifest
 from tests.adopter_repo import (
     HISTORY_EPOCH,
     SEED_CONTENT,
     SEED_CONTENT_REVIEWED,
     AdopterRepo,
+    AdopterTemplates,
     Author,
     GitRepo,
     MakeAdopterRepo,
@@ -193,3 +198,103 @@ def test_gitrepo_stands_alone(tmp_path: Path) -> None:
     second = repo.commit("more", {"README.md": "hi again\n"})
     assert repo.shas() == [second, first]
     assert repo.current_branch() == "main"
+
+
+# --- templates (#1204) ------------------------------------------------------------
+
+
+def _tree(root: Path) -> list[str]:
+    """Every path under `root` outside `.git`, relative to it."""
+    return sorted(
+        p.relative_to(root).as_posix()
+        for p in root.rglob("*")
+        if ".git" not in p.relative_to(root).parts
+    )
+
+
+def test_a_copy_has_the_shape_a_fresh_build_has(
+    make_adopter_repo: MakeAdopterRepo, tmp_path: Path
+) -> None:
+    capabilities = ("project-management", "software-engineering")
+    copied = make_adopter_repo(capabilities=capabilities, history=True, root=tmp_path / "copy")
+    fresh = make_adopter_repo(
+        capabilities=capabilities, history=True, root=tmp_path / "fresh", fresh=True
+    )
+    assert _tree(copied.root) == _tree(fresh.root)
+    assert copied.git("status", "--porcelain").stdout == ""
+    built = copied.history
+    assert built is not None
+    assert copied.shas() == [built.squash_merge, built.rename, built.initial]
+    assert copied.current_branch() == fresh.current_branch() == "main"
+
+
+def test_each_copy_is_its_own(make_adopter_repo: MakeAdopterRepo, tmp_path: Path) -> None:
+    """A file written in place in one copy changes in that copy only."""
+    first = make_adopter_repo(history=True, root=tmp_path / "first")
+    second = make_adopter_repo(history=True, root=tmp_path / "second")
+    before = (second.pkit / "manifest.yaml").read_bytes()
+    with (first.pkit / "manifest.yaml").open("ab") as handle:
+        handle.write(b"# changed in the first copy\n")
+    first.commit("changed")
+    assert (second.pkit / "manifest.yaml").read_bytes() == before
+    assert second.git("status", "--porcelain").stdout == ""
+    third = make_adopter_repo(history=True, root=tmp_path / "third")
+    assert (third.pkit / "manifest.yaml").read_bytes() == before
+    assert third.head() == second.head() != first.head()
+
+
+def test_a_root_already_holding_anything_is_built_fresh(
+    make_adopter_repo: MakeAdopterRepo, tmp_path: Path
+) -> None:
+    (tmp_path / "notes.md").write_text("mine\n", encoding="utf-8")
+    adopter = make_adopter_repo()
+    assert (adopter.pkit / "manifest.yaml").is_file()
+    assert (tmp_path / "notes.md").read_text(encoding="utf-8") == "mine\n"
+
+
+def test_fresh_runs_the_install_in_the_test(
+    make_adopter_repo: MakeAdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    ran: list[Path] = []
+
+    def _record(ctx: install_mod.InstallContext) -> None:
+        ran.append(ctx.target_root)
+
+    monkeypatch.setattr(install_mod, "ensure_agent_workspace", _record)
+    adopter = make_adopter_repo(fresh=True)
+    assert ran == [adopter.root]
+
+
+def test_a_template_carries_nothing_the_test_that_asked_first_patched(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The install runs in an interpreter of its own, so a test that patches it in
+    this process changes no template, even when it is the first to ask."""
+
+    def _skip(_ctx: install_mod.InstallContext) -> None:
+        return None
+
+    monkeypatch.setattr(install_mod, "ensure_agent_workspace", _skip)
+    templates = AdopterTemplates(tmp_path / "templates", dict(os.environ))
+    adopter = templates.copy(tmp_path / "repo")
+    assert (adopter.root / ".agent-workspace").is_dir()
+
+
+def _mark(repo: AdopterRepo) -> None:
+    repo.write({"marked.md": f"prepared in {Path.cwd().name}\n"})
+
+
+def test_a_prepare_is_kept_in_the_template_and_runs_from_its_root(
+    make_adopter_repo: MakeAdopterRepo, tmp_path: Path
+) -> None:
+    first = make_adopter_repo(prepare=_mark, root=tmp_path / "first")
+    second = make_adopter_repo(prepare=_mark, root=tmp_path / "second")
+    marked = (first.root / "marked.md").read_text(encoding="utf-8")
+    assert marked.startswith("prepared in template-")
+    assert (second.root / "marked.md").read_text(encoding="utf-8") == marked
+    assert not (make_adopter_repo(root=tmp_path / "bare").root / "marked.md").exists()
+
+
+def test_a_prepare_must_be_a_module_level_function(make_adopter_repo: MakeAdopterRepo) -> None:
+    with pytest.raises(ValueError, match="not a module-level function"):
+        make_adopter_repo(prepare=lambda repo: None)

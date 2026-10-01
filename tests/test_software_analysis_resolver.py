@@ -64,6 +64,7 @@ from tests.analysis_repo import (
     USE_CASES,
     installed,
     load,
+    prepare,
     run_script,
     seed,
 )
@@ -271,20 +272,25 @@ def test_the_answer_emits_the_person_s_commands_word_for_word() -> None:
 # --- the stop, in a repository ---------------------------------------------------------------
 
 
-@pytest.fixture
-def flagged(
-    make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> AdopterRepo:
-    """An analysis whose UC-001 quotes the code it anchors to, all committed: the
-    revalidation point every change below is judged from."""
-    repo = installed(make_adopter_repo, monkeypatch)
+def _flag(repo: AdopterRepo) -> None:
+    """`prepare`, then an analysis whose UC-001 quotes the code it anchors to, all
+    committed."""
+    prepare(repo)
     repo.commit("feat: the runner", {RUN: "def run_suite(fast=False):\n    print('run')\n"})
     seed(repo, filled=False)
     text = (repo.root / RUN_SUITE).read_text(encoding="utf-8")
     step = "1. The tester starts `run_suite`, passing `fast` for a quick pass."
     repo.write({RUN_SUITE: text.replace("1. <what the actor or the system does>", step)})
     repo.commit("docs(analysis): the tester, the suite and the first run")
-    return repo
+
+
+@pytest.fixture
+def flagged(
+    make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> AdopterRepo:
+    """An analysis whose UC-001 quotes the code it anchors to, all committed: the
+    revalidation point every change below is judged from."""
+    return installed(make_adopter_repo, monkeypatch, then=_flag)
 
 
 def _propose(repo: AdopterRepo, artefact: str, *args: str) -> dict[str, Any]:

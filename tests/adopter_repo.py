@@ -7,7 +7,7 @@ history (initial commit, a `git mv` rename, a squash-style merge) that later
 work such as the friction engine (COR-050) can trace front-matter changes
 across.
 
-Two layers:
+Three layers:
 
 - `GitRepo` — git plumbing only: init, commit arbitrary edits with a
   controllable author/date, rename, branch, merge, squash-merge, read SHAs.
@@ -15,16 +15,26 @@ Two layers:
   source kit).
 - `AdopterRepo` — a `GitRepo` whose root carries an installed `.pkit/`, plus
   capability installation and the scripted `history`.
+- `AdopterTemplates` — each shape of adopter built once per test process and
+  copied for every test that asks for it (#1204).
 
 The pytest fixtures (`make_adopter_repo`, `adopter_repo`) live in
-`tests/conftest.py` and wrap `build_adopter_repo` below. See
-`tests/README.md` for when to reach for which.
+`tests/conftest.py` and hand out copies of the templates, or call
+`build_adopter_repo` below for a fresh build. See `tests/README.md` for when to
+reach for which.
 """
 
 from __future__ import annotations
 
+import contextlib
+import ctypes
+import io
+import json
 import os
+import shutil
 import subprocess
+import sys
+import tempfile
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -347,11 +357,7 @@ def build_adopter_repo(
     GitRepo.init(root)
     if chdir:
         monkeypatch.chdir(root)
-
-    def _noop(_script: Path, _ctx: install_mod.InstallContext, *_args: str) -> None:
-        return None
-
-    monkeypatch.setattr(install_mod, "_run_adapter_primitive", _noop)
+    stub_adapter_primitives(monkeypatch)
     install_mod.install_kit(root)
 
     adopter = AdopterRepo(root, source_kit=install_mod.find_source_kit())
@@ -361,6 +367,215 @@ def build_adopter_repo(
     return adopter
 
 
+def stub_adapter_primitives(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Run no adapter shell primitive for the rest of the test, as every adopter
+    repository built here is installed."""
+
+    def _noop(_script: Path, _ctx: install_mod.InstallContext, *_args: str) -> None:
+        return None
+
+    monkeypatch.setattr(install_mod, "_run_adapter_primitive", _noop)
+
+
+# --- templates: each shape built once per test process (#1204) ----------------
+
+Prepare = Callable[[AdopterRepo], object]
+"""A test module's own setting-up of an adopter — files written, scripts run,
+commits made — kept in the adopter's template with the install."""
+
+
+def prepared(adopter: AdopterRepo, prepare: Prepare) -> AdopterRepo:
+    """`adopter` after `prepare`, run from the adopter's root, as a test runs it."""
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.chdir(adopter.root)
+        prepare(adopter)
+    return adopter
+
+
+#: `clonefile(2)`'s flag that clones a symbolic link itself, not what it names.
+_CLONE_NOFOLLOW = 0x0001
+
+
+def _load_clonefile() -> Callable[[bytes, bytes, int], int] | None:
+    """macOS's `clonefile(2)`: a whole tree copied in one call, each file sharing
+    its blocks with the original until either side writes it. None elsewhere."""
+    if sys.platform != "darwin":
+        return None
+    try:
+        clonefile = ctypes.CDLL(None, use_errno=True).clonefile
+    except (OSError, AttributeError):
+        return None
+    clonefile.argtypes = (ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int)
+    clonefile.restype = ctypes.c_int
+    return clonefile
+
+
+_CLONEFILE = _load_clonefile()
+
+
+def copy_tree(source: Path, dest: Path) -> None:
+    """Copy every entry of `source` into `dest`, creating `dest` if need be.
+
+    Every file is the copy's own — a test may write any of them and neither the
+    source nor another copy sees it — so nothing is hard-linked. A clone where
+    the platform has `clonefile(2)`, which costs a few calls whatever the size
+    of the tree; a file-by-file copy where it has not, or where the filesystem
+    refuses a clone."""
+    dest.mkdir(parents=True, exist_ok=True)
+    for entry in sorted(source.iterdir()):
+        target = dest / entry.name
+        if (
+            _CLONEFILE is not None
+            and _CLONEFILE(os.fsencode(entry), os.fsencode(target), _CLONE_NOFOLLOW) == 0
+        ):
+            continue
+        if entry.is_dir() and not entry.is_symlink():
+            shutil.copytree(entry, target, symlinks=True)
+        else:
+            shutil.copy2(entry, target, follow_symlinks=False)
+
+
+#: The checkout the suite runs from, where `python -m tests.adopter_repo` starts.
+_CHECKOUT = Path(__file__).resolve().parent.parent
+
+
+@dataclass(frozen=True)
+class _Template:
+    root: Path
+    history: ScriptedHistory | None
+
+
+_TemplateKey = tuple[tuple[str, ...], bool, str]
+
+
+class AdopterTemplates:
+    """Adopter repositories built once in this test process, each test handed a
+    private copy (#1204).
+
+    A template is built the first time a test asks for its shape — the
+    capabilities installed, the scripted history or none, and the test module's
+    `prepare` — under `directory`, and kept for the rest of the run. Each
+    pytest-xdist worker is a process of its own with a base temporary directory
+    of its own, so each builds its own templates and no two workers write one.
+
+    The install runs in an interpreter of its own, started with `environment` —
+    the one the session began with — so nothing a test has patched in this
+    process or set in its environment reaches a template, whichever test asks
+    first. A `prepare` runs in this process, from the template's root.
+    """
+
+    def __init__(self, directory: Path, environment: Mapping[str, str]) -> None:
+        directory.mkdir(parents=True, exist_ok=True)
+        self._directory = directory
+        self._environment = dict(environment)
+        self._built: dict[_TemplateKey, _Template] = {}
+
+    def copy(
+        self,
+        root: Path,
+        *,
+        capabilities: Sequence[str] = (),
+        history: bool = False,
+        prepare: Prepare | None = None,
+    ) -> AdopterRepo:
+        """An adopter at `root`, a copy of the template of its shape."""
+        return _copied(self._template(tuple(capabilities), history, prepare), root)
+
+    def _template(
+        self, capabilities: tuple[str, ...], history: bool, prepare: Prepare | None
+    ) -> _Template:
+        key = (capabilities, history, _name_of(prepare))
+        template = self._built.get(key)
+        if template is None:
+            if prepare is None:
+                template = self._install(capabilities, history)
+            else:
+                installed = self._template(capabilities, history, None)
+                root = Path(tempfile.mkdtemp(prefix="template-", dir=self._directory))
+                prepared(_copied(installed, root), prepare)
+                template = _Template(root, installed.history)
+            self._built[key] = template
+        return template
+
+    def _install(self, capabilities: tuple[str, ...], history: bool) -> _Template:
+        """Build a template in an interpreter of its own (`_main`)."""
+        root = Path(tempfile.mkdtemp(prefix="template-", dir=self._directory))
+        wanted = {"root": str(root), "capabilities": list(capabilities), "history": history}
+        done = subprocess.run(
+            [sys.executable, "-m", __name__, json.dumps(wanted)],
+            cwd=_CHECKOUT,
+            env=self._environment,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if done.returncode != 0:
+            raise RuntimeError(f"building the adopter template {wanted} failed:\n{done.stderr}")
+        shas = json.loads(done.stdout)
+        if shas is None:
+            return _Template(root, None)
+        side_1, side_2 = shas["side"]
+        built = ScriptedHistory(
+            initial=shas["initial"],
+            rename=shas["rename"],
+            side=(side_1, side_2),
+            squash_merge=shas["squash_merge"],
+        )
+        return _Template(root, built)
+
+
+def _copied(template: _Template, root: Path) -> AdopterRepo:
+    """An adopter at `root` copied from `template`, its scripted history with it."""
+    copy_tree(template.root, root)
+    adopter = AdopterRepo(root, source_kit=install_mod.find_source_kit())
+    adopter.history = template.history
+    return adopter
+
+
+def _name_of(prepare: Prepare | None) -> str:
+    """What a template knows its `prepare` by: the function's full name — so it
+    must be one only one function has."""
+    if prepare is None:
+        return ""
+    name = f"{prepare.__module__}.{prepare.__qualname__}"
+    if "<" in prepare.__qualname__:
+        raise ValueError(
+            f"prepare={name} is not a module-level function: a template is known by "
+            "its prepare's name, which a lambda or a nested function shares with others"
+        )
+    return name
+
+
+def _main(wanted: str) -> None:
+    """`python -m tests.adopter_repo '{"root": ..., "capabilities": [...],
+    "history": ...}'`: build that adopter, and print its scripted history's SHAs as
+    JSON — `null` when it has none. The install's own output is not printed."""
+    shape = json.loads(wanted)
+    with pytest.MonkeyPatch.context() as monkeypatch, contextlib.redirect_stdout(io.StringIO()):
+        adopter = build_adopter_repo(
+            Path(shape["root"]),
+            monkeypatch=monkeypatch,
+            capabilities=shape["capabilities"],
+            history=shape["history"],
+            chdir=False,
+        )
+    built = adopter.history
+    shas = None
+    if built is not None:
+        shas = {
+            "initial": built.initial,
+            "rename": built.rename,
+            "side": list(built.side),
+            "squash_merge": built.squash_merge,
+        }
+    print(json.dumps(shas))
+
+
 MakeAdopterRepo = Callable[..., AdopterRepo]
-"""Type of the `make_adopter_repo` factory fixture: `build_adopter_repo` with
-`root` defaulting to `tmp_path` and `monkeypatch` bound."""
+"""Type of the `make_adopter_repo` factory fixture: a copy of an
+`AdopterTemplates` template at `root` (default `tmp_path`), or a fresh
+`build_adopter_repo` with `monkeypatch` bound."""
+
+
+if __name__ == "__main__":
+    _main(sys.argv[1])

@@ -11,7 +11,18 @@ from pathlib import Path
 import pytest
 
 from project_kit import command_runner, run_cache
-from tests.adopter_repo import AdopterRepo, MakeAdopterRepo, build_adopter_repo
+from tests.adopter_repo import (
+    AdopterRepo,
+    AdopterTemplates,
+    MakeAdopterRepo,
+    Prepare,
+    build_adopter_repo,
+    prepared,
+    stub_adapter_primitives,
+)
+
+#: What a run of the command runner sets in the environment of what it runs.
+RUN_VARIABLES = (command_runner.DEADLINE_ENV, command_runner.STRAYS_ENV, run_cache.CACHE_ENV)
 
 
 @pytest.fixture(autouse=True)
@@ -20,16 +31,36 @@ def outside_any_run(monkeypatch: pytest.MonkeyPatch) -> None:
     the suite — a `pkit validate` whose validator runs it, say: no inherited
     deadline, strays directory or run cache (the lifecycle README, "A run
     inside a run")."""
-    for name in (command_runner.DEADLINE_ENV, command_runner.STRAYS_ENV, run_cache.CACHE_ENV):
+    for name in RUN_VARIABLES:
         monkeypatch.delenv(name, raising=False)
 
 
+@pytest.fixture(scope="session")
+def adopter_templates(tmp_path_factory: pytest.TempPathFactory) -> AdopterTemplates:
+    """The adopter repositories this test process has built, each copied for the
+    tests that ask for its shape. Set up before any function-scoped fixture of the
+    first test that needs it, so the environment it keeps for the install is the
+    one the session began with — outside any run, as every test starts."""
+    environment = {k: v for k, v in os.environ.items() if k not in RUN_VARIABLES}
+    return AdopterTemplates(tmp_path_factory.mktemp("adopter-templates"), environment)
+
+
 @pytest.fixture
-def make_adopter_repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> MakeAdopterRepo:
+def make_adopter_repo(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, adopter_templates: AdopterTemplates
+) -> MakeAdopterRepo:
     """Factory: `make_adopter_repo(capabilities=(...), history=False, chdir=True,
-    root=tmp_path)` → an `AdopterRepo`. Call it with no arguments for the bare
-    "git repo with the backbone installed, no commits" shape most CLI tests
-    want; pass `root` to stand up a second adopter in the same test."""
+    root=tmp_path, prepare=None, fresh=False)` → an `AdopterRepo`. Call it with no
+    arguments for the bare "git repo with the backbone installed, no commits"
+    shape most CLI tests want; pass `root` to stand up a second adopter in the
+    same test.
+
+    The adopter is a copy of a template this process built once for its shape
+    (`AdopterTemplates`); `prepare`, a module-level function, is a module's own
+    setting-up, kept in the template too. `fresh=True` builds it in this test
+    instead, as does a `root` that already holds anything: a test of the install
+    itself — one that patches it, reads what it prints or puts something in the
+    way of it — needs its own run of it (`tests/README.md`)."""
 
     def _make(
         *,
@@ -37,14 +68,26 @@ def make_adopter_repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> MakeAd
         history: bool = False,
         chdir: bool = True,
         root: Path | None = None,
+        prepare: Prepare | None = None,
+        fresh: bool = False,
     ) -> AdopterRepo:
-        return build_adopter_repo(
-            root if root is not None else tmp_path,
-            monkeypatch=monkeypatch,
-            capabilities=capabilities,
-            history=history,
-            chdir=chdir,
+        target = root if root is not None else tmp_path
+        if fresh or (target.exists() and any(target.iterdir())):
+            adopter = build_adopter_repo(
+                target,
+                monkeypatch=monkeypatch,
+                capabilities=capabilities,
+                history=history,
+                chdir=chdir,
+            )
+            return adopter if prepare is None else prepared(adopter, prepare)
+        stub_adapter_primitives(monkeypatch)
+        adopter = adopter_templates.copy(
+            target, capabilities=capabilities, history=history, prepare=prepare
         )
+        if chdir:
+            monkeypatch.chdir(target)
+        return adopter
 
     return _make
 

@@ -33,8 +33,8 @@ from tests.analysis_repo import (
     fill,
     installed,
     load,
+    prepare_seeded,
     run_script,
-    seed,
     stamped,
 )
 
@@ -44,6 +44,14 @@ def project(
     make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> AdopterRepo:
     return installed(make_adopter_repo, monkeypatch)
+
+
+@pytest.fixture
+def seeded(
+    make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> AdopterRepo:
+    """The project with the seed stamped and filled (`prepare_seeded`)."""
+    return installed(make_adopter_repo, monkeypatch, then=prepare_seeded)
 
 
 def numbers(repo: AdopterRepo, *args: str) -> subprocess.CompletedProcess[str]:
@@ -346,10 +354,9 @@ def test_a_stale_base_is_reported_as_the_friction_change_check_reports_it(
     assert json.loads(friction.stdout)["base"] == answer["base"]
 
 
-def test_a_branch_containing_its_base_has_nothing_to_collide_with(project: AdopterRepo) -> None:
-    seed(project)
-    project.commit("seeded")
-    completed = numbers(project, "--base", MAIN, "--json")
+def test_a_branch_containing_its_base_has_nothing_to_collide_with(seeded: AdopterRepo) -> None:
+    seeded.commit("seeded")
+    completed = numbers(seeded, "--base", MAIN, "--json")
     assert completed.returncode == 0, completed.stderr
     assert document(completed)["findings"] == []
 
@@ -380,44 +387,41 @@ def test_a_working_tree_numbering_nothing_needs_no_base(project: AdopterRepo) ->
         ("-x", "the base '-x' is not a revision name."),
     ],
 )
-def test_a_base_that_names_no_commit_fails(project: AdopterRepo, base: str, refusal: str) -> None:
-    seed(project)
+def test_a_base_that_names_no_commit_fails(seeded: AdopterRepo, base: str, refusal: str) -> None:
     for json_flag in ((), ("--json",)):
-        completed = numbers(project, f"--base={base}", *json_flag)
+        completed = numbers(seeded, f"--base={base}", *json_flag)
         assert completed.returncode == 1
         assert completed.stdout == ""
         assert f"error: {refusal}" in completed.stderr
 
 
-def test_a_base_sharing_no_history_with_head_fails(project: AdopterRepo) -> None:
-    seed(project)
-    project.git("checkout", "-q", "--orphan", "unrelated")
-    project.commit("a history of its own")
-    completed = numbers(project, "--base", MAIN)
+def test_a_base_sharing_no_history_with_head_fails(seeded: AdopterRepo) -> None:
+    seeded.git("checkout", "-q", "--orphan", "unrelated")
+    seeded.commit("a history of its own")
+    completed = numbers(seeded, "--base", MAIN)
     assert completed.returncode == 1
     assert "HEAD and the base 'main' share no history to compare" in completed.stderr
 
 
 def test_the_base_is_the_variable_else_the_default_branch(
-    project: AdopterRepo, monkeypatch: pytest.MonkeyPatch
+    seeded: AdopterRepo, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Without `--base`, the base the backbone names (COR-054): the default branch — here
     the local `main`, since there is no remote, which it says — or a declared one that
     resolves nowhere, which fails as the change check does; `$PKIT_CHECK_BASE` replaces
     either."""
-    seed(project)
-    project.commit("seeded")
-    unnamed = numbers(project, "--json")
+    seeded.commit("seeded")
+    unnamed = numbers(seeded, "--json")
     assert unnamed.returncode == 0, unnamed.stderr
     assert document(unnamed)["base"]["ref"] == MAIN
     assert "warning: the default branch 'main' is read from the local branch 'main'" in (
         unnamed.stderr
     )
-    project.write({CONFIG: "docs:\n  internal: tech-docs\nrepository:\n  default-branch: trunk\n"})
-    undeclared = numbers(project)
+    seeded.write({CONFIG: "docs:\n  internal: tech-docs\nrepository:\n  default-branch: trunk\n"})
+    undeclared = numbers(seeded)
     assert undeclared.returncode == 1
     assert "error: the default branch 'trunk' resolves to no commit here" in undeclared.stderr
     monkeypatch.setenv(BASE_ENV, MAIN)
-    named = numbers(project, "--json")
+    named = numbers(seeded, "--json")
     assert named.returncode == 0, named.stderr
     assert document(named)["base"]["ref"] == MAIN
