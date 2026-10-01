@@ -33,6 +33,7 @@ from tests.analysis_repo import (
     fill,
     installed,
     load,
+    prepare,
     prepare_seeded,
     run_script,
     stamped,
@@ -143,25 +144,34 @@ def test_a_number_the_default_branch_took_first_fails(project: AdopterRepo) -> N
 # --- an artefact is known by its id, not its path ---------------------------------------------
 
 
-def _left_main(repo: AdopterRepo) -> None:
-    """An actor and UC-001 on main, and the branch `topic` leaving main there."""
+def _leave_main(repo: AdopterRepo) -> None:
+    """`prepare`, then an actor and UC-001 on main, and the branch `topic` leaving main
+    there."""
+    prepare(repo)
     stamped(repo, "actor", "tester")
     stamped(repo, "use-case", "one", "--actor", "ACT-tester")
     repo.commit("UC-001")
     repo.checkout("topic", create=True)
 
 
-def test_an_id_moved_within_the_branch_is_no_collision(project: AdopterRepo) -> None:
+@pytest.fixture
+def branched(
+    make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> AdopterRepo:
+    """The project with `topic` leaving main after an actor and UC-001 (`_leave_main`)."""
+    return installed(make_adopter_repo, monkeypatch, then=_leave_main)
+
+
+def test_an_id_moved_within_the_branch_is_no_collision(branched: AdopterRepo) -> None:
     """UC-001 moved into an area here, and elsewhere on main, while main numbered on:
     the merge-base held UC-001, so neither side took it."""
-    _left_main(project)
-    project.rename(f"{USE_CASES}/UC-001-one.md", f"{USE_CASES}/core/UC-001-one.md")
-    project.checkout(MAIN)
-    project.rename(f"{USE_CASES}/UC-001-one.md", f"{USE_CASES}/other/UC-001-one.md")
-    stamped(project, "use-case", "two", "--actor", "ACT-tester")
-    project.commit("UC-002 on main")
-    project.checkout("topic")
-    completed = numbers(project, "--base", MAIN, "--json")
+    branched.rename(f"{USE_CASES}/UC-001-one.md", f"{USE_CASES}/core/UC-001-one.md")
+    branched.checkout(MAIN)
+    branched.rename(f"{USE_CASES}/UC-001-one.md", f"{USE_CASES}/other/UC-001-one.md")
+    stamped(branched, "use-case", "two", "--actor", "ACT-tester")
+    branched.commit("UC-002 on main")
+    branched.checkout("topic")
+    completed = numbers(branched, "--base", MAIN, "--json")
     assert completed.returncode == 0, completed.stdout + completed.stderr
     assert [f["severity"] for f in document(completed)["findings"]] == ["report"]
 
@@ -177,21 +187,20 @@ def _possibly_ours(number: str, path: str) -> str:
 
 
 def test_two_branches_stamping_the_same_slug_are_warned_not_failed(
-    project: AdopterRepo,
+    branched: AdopterRepo,
 ) -> None:
     """One path, two versions: each line of work took UC-002 for an export. That is one
     line of work's file landed and edited since as much as two artefacts, and only the
     person can tell which — warned, never failed; merging main brings the two to one
     path, where git asks which to keep."""
-    _left_main(project)
-    stamped(project, "use-case", "export", "--actor", "ACT-tester", "--path", "src/run.py")
-    project.commit("UC-002 on topic")
-    project.checkout(MAIN)
-    stamped(project, "use-case", "export", "--actor", "ACT-tester")
-    project.commit("UC-002 on main")
-    project.checkout("topic")
+    stamped(branched, "use-case", "export", "--actor", "ACT-tester", "--path", "src/run.py")
+    branched.commit("UC-002 on topic")
+    branched.checkout(MAIN)
+    stamped(branched, "use-case", "export", "--actor", "ACT-tester")
+    branched.commit("UC-002 on main")
+    branched.checkout("topic")
     ours = f"{USE_CASES}/UC-002-export.md"
-    completed = numbers(project, "--base", MAIN, "--json")
+    completed = numbers(branched, "--base", MAIN, "--json")
     assert completed.returncode == 0, completed.stderr
     _outdated, warning = document(completed)["findings"]
     assert warning == {
@@ -202,7 +211,7 @@ def test_two_branches_stamping_the_same_slug_are_warned_not_failed(
 
 
 def test_a_stacked_branch_whose_parent_squash_merged_is_no_collision(
-    project: AdopterRepo,
+    branched: AdopterRepo,
 ) -> None:
     """`child` stacked on `parent`, which numbered UC-002; `child` moved it into an area
     and numbered UC-003. `parent` squash-merged: main took UC-002 under a commit of
@@ -210,60 +219,58 @@ def test_a_stacked_branch_whose_parent_squash_merged_is_no_collision(
     branch's own work landed, not another line of work's number. Merging main then
     leaves two files for UC-002 — git pairs no rename where the merge-base holds
     neither — and the duplicate check catches it there."""
-    _left_main(project)
-    project.checkout("parent", create=True)
-    stamped(project, "use-case", "two", "--actor", "ACT-tester")
-    project.commit("UC-002 on parent")
-    project.checkout("child", create=True)
-    project.rename(f"{USE_CASES}/UC-002-two.md", f"{USE_CASES}/area/UC-002-two.md")
-    stamped(project, "use-case", "three", "--actor", "ACT-tester")
-    project.commit("UC-003 on child")
-    project.checkout(MAIN)
-    project.squash_merge("parent")
-    project.checkout("child")
-    completed = numbers(project, "--base", MAIN, "--json")
+    branched.checkout("parent", create=True)
+    stamped(branched, "use-case", "two", "--actor", "ACT-tester")
+    branched.commit("UC-002 on parent")
+    branched.checkout("child", create=True)
+    branched.rename(f"{USE_CASES}/UC-002-two.md", f"{USE_CASES}/area/UC-002-two.md")
+    stamped(branched, "use-case", "three", "--actor", "ACT-tester")
+    branched.commit("UC-003 on child")
+    branched.checkout(MAIN)
+    branched.squash_merge("parent")
+    branched.checkout("child")
+    completed = numbers(branched, "--base", MAIN, "--json")
     assert completed.returncode == 0, completed.stdout + completed.stderr
     ((outdated,),) = [document(completed)["findings"]]
     assert outdated["severity"] == "report"
     # Another line of work taking UC-003 on main meanwhile still collides.
-    project.checkout(MAIN)
-    stamped(project, "use-case", "theirs", "--actor", "ACT-tester")
-    project.commit("UC-003 on main")
-    project.checkout("child")
-    completed = numbers(project, "--base", MAIN, "--json")
+    branched.checkout(MAIN)
+    stamped(branched, "use-case", "theirs", "--actor", "ACT-tester")
+    branched.commit("UC-003 on main")
+    branched.checkout("child")
+    completed = numbers(branched, "--base", MAIN, "--json")
     assert completed.returncode == 1
     assert [f["location"] for f in document(completed)["findings"][1:]] == [
         f"{USE_CASES}/UC-003-three.md"
     ]
-    project.git("merge", "-q", "--no-edit", MAIN)
-    fill(project)
-    validated = json.loads(run_script(project, VALIDATE, "--json").stdout)
+    branched.git("merge", "-q", "--no-edit", MAIN)
+    fill(branched)
+    validated = json.loads(run_script(branched, VALIDATE, "--json").stdout)
     duplicates = [f["message"].split(":")[0] for f in validated["findings"]]
     assert f"the id UC-002 is also held by {USE_CASES}/UC-002-two.md" in duplicates
 
 
 def test_a_parent_edited_after_the_child_forked_is_a_warning_not_a_collision(
-    project: AdopterRepo,
+    branched: AdopterRepo,
 ) -> None:
     """`child` forked from `parent` while UC-002 was its first version; `parent` then took
     a review edit and squash-merged. main holds the edited version, which `child`'s
     history never wrote — yet it is `child`'s own work, landed: a file of the name
     `child` gives UC-002 is warned, never failed, and the advice is to merge main."""
-    _left_main(project)
-    project.checkout("parent", create=True)
-    stamped(project, "use-case", "two", "--actor", "ACT-tester")
-    project.commit("UC-002 on parent")
-    project.checkout("child", create=True)
-    stamped(project, "use-case", "three", "--actor", "ACT-tester")
-    project.commit("UC-003 on child")
-    project.checkout("parent")
+    branched.checkout("parent", create=True)
+    stamped(branched, "use-case", "two", "--actor", "ACT-tester")
+    branched.commit("UC-002 on parent")
+    branched.checkout("child", create=True)
+    stamped(branched, "use-case", "three", "--actor", "ACT-tester")
+    branched.commit("UC-003 on child")
+    branched.checkout("parent")
     two = f"{USE_CASES}/UC-002-two.md"
-    edited = (project.root / two).read_text(encoding="utf-8").replace("Two", "Two, reviewed")
-    project.commit("review: UC-002's title", {two: edited})
-    project.checkout(MAIN)
-    project.squash_merge("parent")
-    project.checkout("child")
-    completed = numbers(project, "--base", MAIN, "--json")
+    edited = (branched.root / two).read_text(encoding="utf-8").replace("Two", "Two, reviewed")
+    branched.commit("review: UC-002's title", {two: edited})
+    branched.checkout(MAIN)
+    branched.squash_merge("parent")
+    branched.checkout("child")
+    completed = numbers(branched, "--base", MAIN, "--json")
     assert completed.returncode == 0, completed.stdout + completed.stderr
     outdated, warning = document(completed)["findings"]
     assert outdated["severity"] == "report"
@@ -275,24 +282,23 @@ def test_a_parent_edited_after_the_child_forked_is_a_warning_not_a_collision(
 
 
 def test_a_number_the_default_branch_took_and_removed_since_is_still_taken(
-    project: AdopterRepo,
+    branched: AdopterRepo,
 ) -> None:
     """main numbered UC-002 after `topic` left it, then removed it: the number is still
     taken — a number is never used again — so `topic`'s UC-002 collides, as the stamp,
     which counts it held on main, agrees."""
-    _left_main(project)
-    stamped(project, "use-case", "mine", "--actor", "ACT-tester")
-    project.commit("UC-002 on topic")
-    project.checkout(MAIN)
-    stamped(project, "use-case", "theirs", "--actor", "ACT-tester")
-    project.commit("UC-002 on main")
+    stamped(branched, "use-case", "mine", "--actor", "ACT-tester")
+    branched.commit("UC-002 on topic")
+    branched.checkout(MAIN)
+    stamped(branched, "use-case", "theirs", "--actor", "ACT-tester")
+    branched.commit("UC-002 on main")
     theirs = f"{USE_CASES}/UC-002-theirs.md"
-    project.commit("UC-002 removed on main", {theirs: None})
+    branched.commit("UC-002 removed on main", {theirs: None})
     # The stamp counts UC-002 held on main, where no file holds it now.
-    assert stamped(project, "use-case", "next", "--actor", "ACT-tester") == "UC-003"
-    project.write({f"{USE_CASES}/UC-003-next.md": None})
-    project.checkout("topic")
-    completed = numbers(project, "--base", MAIN, "--json")
+    assert stamped(branched, "use-case", "next", "--actor", "ACT-tester") == "UC-003"
+    branched.write({f"{USE_CASES}/UC-003-next.md": None})
+    branched.checkout("topic")
+    completed = numbers(branched, "--base", MAIN, "--json")
     assert completed.returncode == 1, completed.stderr
     _outdated, collision = document(completed)["findings"]
     assert collision == {
@@ -307,36 +313,34 @@ def test_a_number_the_default_branch_took_and_removed_since_is_still_taken(
 
 
 def test_this_branch_s_numbers_are_read_by_name_and_id_as_main_s_are(
-    project: AdopterRepo,
+    branched: AdopterRepo,
 ) -> None:
     """A file here whose number is in its name alone — no front matter — holds it, as a
     file on main does: main taking UC-002 since collides with it."""
-    _left_main(project)
     draft = f"{USE_CASES}/UC-002-draft.md"
-    project.commit("a draft on topic", {draft: "# A draft\n"})
-    project.checkout(MAIN)
-    stamped(project, "use-case", "two", "--actor", "ACT-tester")
-    project.commit("UC-002 on main")
-    project.checkout("topic")
-    completed = numbers(project, "--base", MAIN, "--json")
+    branched.commit("a draft on topic", {draft: "# A draft\n"})
+    branched.checkout(MAIN)
+    stamped(branched, "use-case", "two", "--actor", "ACT-tester")
+    branched.commit("UC-002 on main")
+    branched.checkout("topic")
+    completed = numbers(branched, "--base", MAIN, "--json")
     assert completed.returncode == 1, completed.stderr
     _outdated, collision = document(completed)["findings"]
     assert (collision["severity"], collision["location"]) == ("error", draft)
 
 
 def test_a_stale_base_is_reported_as_the_friction_change_check_reports_it(
-    project: AdopterRepo,
+    branched: AdopterRepo,
 ) -> None:
     """main moved on after this branch left it, taking no number: reported, never
     failed, with the same base as `pkit friction check` gives."""
-    _left_main(project)
-    stamped(project, "use-case", "two", "--actor", "ACT-tester")
-    project.commit("UC-002 on topic")
-    project.checkout(MAIN)
-    stamped(project, "term", "sandbox")
-    project.commit("a term on main")
-    project.checkout("topic")
-    completed = numbers(project, "--base", MAIN, "--json")
+    stamped(branched, "use-case", "two", "--actor", "ACT-tester")
+    branched.commit("UC-002 on topic")
+    branched.checkout(MAIN)
+    stamped(branched, "term", "sandbox")
+    branched.commit("a term on main")
+    branched.checkout("topic")
+    completed = numbers(branched, "--base", MAIN, "--json")
     assert completed.returncode == 0, completed.stderr
     answer = document(completed)
     ((finding,),) = [answer["findings"]]
@@ -346,7 +350,7 @@ def test_a_stale_base_is_reported_as_the_friction_change_check_reports_it(
     )
     friction = subprocess.run(
         ["pkit", "friction", "check", "--base", MAIN, "--json"],
-        cwd=project.root,
+        cwd=branched.root,
         capture_output=True,
         text=True,
         check=False,

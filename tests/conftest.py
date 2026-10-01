@@ -37,12 +37,16 @@ def outside_any_run(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.fixture(scope="session")
 def adopter_templates(tmp_path_factory: pytest.TempPathFactory) -> AdopterTemplates:
-    """The adopter repositories this test process has built, each copied for the
-    tests that ask for its shape. Set up before any function-scoped fixture of the
-    first test that needs it, so the environment it keeps for the install is the
-    one the session began with — outside any run, as every test starts."""
+    """The adopter repositories this session has built, each copied for the tests
+    that ask for its shape. Its pytest-xdist workers share them: a worker's base
+    temporary directory lies in the session's, where the templates are. Set up
+    before any function-scoped fixture of the first test that needs it, so the
+    environment it keeps for the install is the one the session began with —
+    outside any run, as every test starts."""
+    base = tmp_path_factory.getbasetemp()
+    session = base.parent if os.environ.get("PYTEST_XDIST_WORKER") else base
     environment = {k: v for k, v in os.environ.items() if k not in RUN_VARIABLES}
-    return AdopterTemplates(tmp_path_factory.mktemp("adopter-templates"), environment)
+    return AdopterTemplates(session / "adopter-templates", environment)
 
 
 @pytest.fixture
@@ -55,7 +59,7 @@ def make_adopter_repo(
     shape most CLI tests want; pass `root` to stand up a second adopter in the
     same test.
 
-    The adopter is a copy of a template this process built once for its shape
+    The adopter is a copy of a template the session built once for its shape
     (`AdopterTemplates`); `prepare`, a module-level function, is a module's own
     setting-up, kept in the template too. `fresh=True` builds it in this test
     instead, as does a `root` that already holds anything: a test of the install

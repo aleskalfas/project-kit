@@ -11,10 +11,10 @@ this interpreter — their `uv run --script` shebang pointed at it — and the
 `installed` builds the adopter each test module's `project` fixture returns, with
 `$PKIT_CHECK_BASE` removed: the backbone names the scripts' base from it when
 set, and a developer's own value must not decide what these repositories answer.
-The adopter is a copy of a template built once per test process, `prepare`d —
+The adopter is a copy of a template built once per test session, `prepare`d —
 or `prepare_seeded`, the shape a module's `seeded` fixture returns: stamping
-the seed runs the scripts a dozen times, the most a test of these modules
-costs (#1204).
+the seed starts some two dozen `pkit` processes, more than most tests of these
+modules cost in all (#1204).
 """
 
 from __future__ import annotations

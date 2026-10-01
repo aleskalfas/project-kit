@@ -280,8 +280,21 @@ def test_a_template_carries_nothing_the_test_that_asked_first_patched(
     assert (adopter.root / ".agent-workspace").is_dir()
 
 
+def test_a_template_is_built_once_for_every_process_sharing_its_directory(
+    tmp_path: Path,
+) -> None:
+    """Two processes of one session — here two instances, as two workers hold — build
+    a shape once: the second finds it built and copies it."""
+    shared = tmp_path / "templates"
+    first = AdopterTemplates(shared, dict(os.environ)).copy(tmp_path / "first", history=True)
+    second = AdopterTemplates(shared, dict(os.environ)).copy(tmp_path / "second", history=True)
+    assert first.history == second.history
+    assert first.head() == second.head()
+    assert len([p for p in shared.iterdir() if p.is_dir()]) == 1
+
+
 def _mark(repo: AdopterRepo) -> None:
-    repo.write({"marked.md": f"prepared in {Path.cwd().name}\n"})
+    repo.write({"marked.md": f"run from the root: {Path.cwd() == repo.root}\n"})
 
 
 def test_a_prepare_is_kept_in_the_template_and_runs_from_its_root(
@@ -289,9 +302,8 @@ def test_a_prepare_is_kept_in_the_template_and_runs_from_its_root(
 ) -> None:
     first = make_adopter_repo(prepare=_mark, root=tmp_path / "first")
     second = make_adopter_repo(prepare=_mark, root=tmp_path / "second")
-    marked = (first.root / "marked.md").read_text(encoding="utf-8")
-    assert marked.startswith("prepared in template-")
-    assert (second.root / "marked.md").read_text(encoding="utf-8") == marked
+    assert (first.root / "marked.md").read_text(encoding="utf-8") == "run from the root: True\n"
+    assert (second.root / "marked.md").read_text(encoding="utf-8") == "run from the root: True\n"
     assert not (make_adopter_repo(root=tmp_path / "bare").root / "marked.md").exists()
 
 

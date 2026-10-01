@@ -15,7 +15,7 @@ Three layers:
   source kit).
 - `AdopterRepo` — a `GitRepo` whose root carries an installed `.pkit/`, plus
   capability installation and the scripted `history`.
-- `AdopterTemplates` — each shape of adopter built once per test process and
+- `AdopterTemplates` — each shape of adopter built once per test session and
   copied for every test that asks for it (#1204).
 
 The pytest fixtures (`make_adopter_repo`, `adopter_repo`) live in
@@ -28,6 +28,8 @@ from __future__ import annotations
 
 import contextlib
 import ctypes
+import fcntl
+import hashlib
 import io
 import json
 import os
@@ -35,10 +37,11 @@ import shutil
 import subprocess
 import sys
 import tempfile
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -377,7 +380,7 @@ def stub_adapter_primitives(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(install_mod, "_run_adapter_primitive", _noop)
 
 
-# --- templates: each shape built once per test process (#1204) ----------------
+# --- templates: each shape built once per test session (#1204) ----------------
 
 Prepare = Callable[[AdopterRepo], object]
 """A test module's own setting-up of an adopter — files written, scripts run,
@@ -449,26 +452,28 @@ _TemplateKey = tuple[tuple[str, ...], bool, str]
 
 
 class AdopterTemplates:
-    """Adopter repositories built once in this test process, each test handed a
+    """Adopter repositories built once in a test session, each test handed a
     private copy (#1204).
 
     A template is built the first time a test asks for its shape — the
     capabilities installed, the scripted history or none, and the test module's
-    `prepare` — under `directory`, and kept for the rest of the run. Each
-    pytest-xdist worker is a process of its own with a base temporary directory
-    of its own, so each builds its own templates and no two workers write one.
+    `prepare` — under `directory`, and kept for the rest of the session. The
+    processes of one session, its pytest-xdist workers, share `directory`: the
+    first to ask for a shape builds it holding the shape's lock, and any other
+    waits on the lock, then copies what was built.
 
     The install runs in an interpreter of its own, started with `environment` —
-    the one the session began with — so nothing a test has patched in this
+    the one the session began with — so nothing a test has patched in its
     process or set in its environment reaches a template, whichever test asks
-    first. A `prepare` runs in this process, from the template's root.
+    first. A `prepare` runs in the process of the test that asks first, from the
+    template's root.
     """
 
     def __init__(self, directory: Path, environment: Mapping[str, str]) -> None:
         directory.mkdir(parents=True, exist_ok=True)
         self._directory = directory
         self._environment = dict(environment)
-        self._built: dict[_TemplateKey, _Template] = {}
+        self._known: dict[_TemplateKey, _Template] = {}
 
     def copy(
         self,
@@ -485,21 +490,45 @@ class AdopterTemplates:
         self, capabilities: tuple[str, ...], history: bool, prepare: Prepare | None
     ) -> _Template:
         key = (capabilities, history, _name_of(prepare))
-        template = self._built.get(key)
-        if template is None:
-            if prepare is None:
-                template = self._install(capabilities, history)
-            else:
-                installed = self._template(capabilities, history, None)
-                root = Path(tempfile.mkdtemp(prefix="template-", dir=self._directory))
+        template = self._known.get(key)
+        if template is not None:
+            return template
+        if prepare is None:
+
+            def build(root: Path) -> ScriptedHistory | None:
+                return self._install(root, capabilities, history)
+
+        else:
+            installed = self._template(capabilities, history, None)
+
+            def build(root: Path) -> ScriptedHistory | None:
                 prepared(_copied(installed, root), prepare)
-                template = _Template(root, installed.history)
-            self._built[key] = template
+                return installed.history
+
+        template = self._known[key] = self._built(key, build)
         return template
 
-    def _install(self, capabilities: tuple[str, ...], history: bool) -> _Template:
-        """Build a template in an interpreter of its own (`_main`)."""
-        root = Path(tempfile.mkdtemp(prefix="template-", dir=self._directory))
+    def _built(
+        self, key: _TemplateKey, build: Callable[[Path], ScriptedHistory | None]
+    ) -> _Template:
+        """The template `key` names, built with `build` unless a process sharing the
+        directory has built it. Built holding the key's lock, into a directory that
+        takes the template's name once it is whole, its scripted history written
+        beside it first."""
+        name = hashlib.sha256(json.dumps(key).encode()).hexdigest()[:16]
+        root = self._directory / name
+        record = self._directory / f"{name}.json"
+        with _locked(self._directory / f"{name}.lock"):
+            if not root.exists():
+                building = Path(tempfile.mkdtemp(prefix=f"{name}-", dir=self._directory))
+                record.write_text(json.dumps(_shas(build(building))), encoding="utf-8")
+                building.rename(root)
+        return _Template(root, _history(json.loads(record.read_text(encoding="utf-8"))))
+
+    def _install(
+        self, root: Path, capabilities: tuple[str, ...], history: bool
+    ) -> ScriptedHistory | None:
+        """Build the adopter at `root` in an interpreter of its own (`_main`)."""
         wanted = {"root": str(root), "capabilities": list(capabilities), "history": history}
         done = subprocess.run(
             [sys.executable, "-m", __name__, json.dumps(wanted)],
@@ -511,17 +540,41 @@ class AdopterTemplates:
         )
         if done.returncode != 0:
             raise RuntimeError(f"building the adopter template {wanted} failed:\n{done.stderr}")
-        shas = json.loads(done.stdout)
-        if shas is None:
-            return _Template(root, None)
-        side_1, side_2 = shas["side"]
-        built = ScriptedHistory(
-            initial=shas["initial"],
-            rename=shas["rename"],
-            side=(side_1, side_2),
-            squash_merge=shas["squash_merge"],
-        )
-        return _Template(root, built)
+        return _history(json.loads(done.stdout))
+
+
+@contextlib.contextmanager
+def _locked(path: Path) -> Iterator[None]:
+    """`path` locked for this process alone through the block (`flock(2)`); the
+    operating system frees it when the process ends, however it ends."""
+    with path.open("a", encoding="utf-8") as handle:
+        fcntl.flock(handle, fcntl.LOCK_EX)
+        yield
+
+
+def _shas(history: ScriptedHistory | None) -> dict[str, Any] | None:
+    """`history`'s SHAs as JSON holds them."""
+    if history is None:
+        return None
+    return {
+        "initial": history.initial,
+        "rename": history.rename,
+        "side": list(history.side),
+        "squash_merge": history.squash_merge,
+    }
+
+
+def _history(shas: Mapping[str, Any] | None) -> ScriptedHistory | None:
+    """The scripted history `_shas` wrote."""
+    if shas is None:
+        return None
+    side_1, side_2 = shas["side"]
+    return ScriptedHistory(
+        initial=shas["initial"],
+        rename=shas["rename"],
+        side=(side_1, side_2),
+        squash_merge=shas["squash_merge"],
+    )
 
 
 def _copied(template: _Template, root: Path) -> AdopterRepo:
@@ -559,16 +612,7 @@ def _main(wanted: str) -> None:
             history=shape["history"],
             chdir=False,
         )
-    built = adopter.history
-    shas = None
-    if built is not None:
-        shas = {
-            "initial": built.initial,
-            "rename": built.rename,
-            "side": list(built.side),
-            "squash_merge": built.squash_merge,
-        }
-    print(json.dumps(shas))
+    print(json.dumps(_shas(adopter.history)))
 
 
 MakeAdopterRepo = Callable[..., AdopterRepo]
