@@ -43,9 +43,9 @@ pkit:
         - src/project_kit/environment.py
       record: [COR-004, COR-012, COR-043, COR-048, COR-049, COR-050, COR-054, PRJ-001, PRJ-003, PRJ-004, ADR-033, ADR-039, ADR-049, ADR-058, ADR-059]
     revalidated:
-      at: 2026-10-01T01:25:07Z
+      at: 2026-10-01T05:23:29Z
       outcome: unchanged
-      unchanged-because: "on this branch the anchored code changed only in layout: ruff format and the lint fixes; behaviour and the documented commands are unchanged"
+      unchanged-because: PRJ-003 is partially superseded by PRJ-010 on its type-checking line only; the language, uv and Python floor this page cites PRJ-003 for stand.
 ---
 
 # Command-line interface
