@@ -20,9 +20,9 @@ pkit:
       artefact:
         - ACT-operator
     revalidated:
-      at: 2026-09-30T21:35:03Z
+      at: 2026-10-01T00:09:48Z
       outcome: unchanged
-      unchanged-because: on this branch close-milestone reads a Milestone's close-trigger and children through _lib/milestone.py, now through the containment seam past the newest 500 issues, and close-issue's closure cascade reports when a content-based Milestone became closeable without closing it; stabilising a Milestone, release scope, the guards and the required status are untouched, so the use case holds
+      unchanged-because: done-work's change is how the merge gate reads a PR's changed files for the diff-floor reviewers and the refusal when it cannot; stabilising a Milestone, and the guards that hold it, did not change
 ---
 
 # UC-010 — Stabilise a Milestone for a release
