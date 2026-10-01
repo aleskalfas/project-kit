@@ -369,14 +369,19 @@ def test_reduction_returns_the_input_objects(av) -> None:
 
 def test_latest_commit_timestamp_prefers_committed_then_authored(av) -> None:
     assert av.latest_commit_timestamp([]) == ""
-    assert av.latest_commit_timestamp(
-        [{"authoredDate": "2026-06-01T00:00:00Z"}]
-    ) == "2026-06-01T00:00:00Z"
-    assert av.latest_commit_timestamp([
-        {"committedDate": "2026-06-01T00:00:00Z"},
-        {"committedDate": "2026-06-05T00:00:00Z",
-         "authoredDate": "2026-06-04T00:00:00Z"},
-    ]) == "2026-06-05T00:00:00Z"
+    assert (
+        av.latest_commit_timestamp([{"authoredDate": "2026-06-01T00:00:00Z"}])
+        == "2026-06-01T00:00:00Z"
+    )
+    assert (
+        av.latest_commit_timestamp(
+            [
+                {"committedDate": "2026-06-01T00:00:00Z"},
+                {"committedDate": "2026-06-05T00:00:00Z", "authoredDate": "2026-06-04T00:00:00Z"},
+            ]
+        )
+        == "2026-06-05T00:00:00Z"
+    )
 
 
 def test_latest_commit_timestamp_is_empty_without_a_readable_head(av) -> None:

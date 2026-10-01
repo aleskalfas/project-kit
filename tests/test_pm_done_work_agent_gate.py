@@ -169,8 +169,10 @@ def _wire(
             )
         if args[:2] == ["gh", "api"] and "/files" in joined:
             return subprocess.CompletedProcess(
-                args=args, returncode=0,
-                stdout=_files_api_pages(list(changed_files)), stderr="",
+                args=args,
+                returncode=0,
+                stdout=_files_api_pages(list(changed_files)),
+                stderr="",
             )
         # gh pr view --json author,comments,commits
         return subprocess.CompletedProcess(
@@ -977,7 +979,8 @@ _CHANGESET = ".changes/unreleased/project-management-none-20261001-wording.yaml"
 
 def test_changeset_only_diff_needs_no_floor_reviewer(dw, rc, monkeypatch) -> None:
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=_floor_collection(rc),
         comments=[_local_verdict_comment("reviewer", "APPROVED")],
         changed_files=("README.md", _CHANGESET),
@@ -989,7 +992,8 @@ def test_changeset_only_diff_needs_no_floor_reviewer(dw, rc, monkeypatch) -> Non
 
 def test_changeset_with_code_needs_the_floor_reviewer(dw, rc, monkeypatch) -> None:
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=_floor_collection(rc),
         comments=[_local_verdict_comment("reviewer", "APPROVED")],
         changed_files=(_CHANGESET, "src/app.py"),
@@ -1000,13 +1004,16 @@ def test_changeset_with_code_needs_the_floor_reviewer(dw, rc, monkeypatch) -> No
 
 
 def test_large_pr_with_only_a_changeset_beside_docs_needs_no_floor_reviewer(
-    dw, rc, monkeypatch,
+    dw,
+    rc,
+    monkeypatch,
 ) -> None:
     """The list is applied to every page the files API returns: a 350-file PR
     of docs whose one non-doc file, on the last page, is its changeset draws
     no floor reviewer."""
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=_floor_collection(rc),
         comments=[_local_verdict_comment("reviewer", "APPROVED")],
         closing_issue_labels={42: ["type:docs"]},
@@ -1020,7 +1027,8 @@ def test_large_pr_with_only_a_changeset_beside_docs_needs_no_floor_reviewer(
 
 def test_malformed_not_code_refuses(dw, rc, monkeypatch) -> None:
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=_floor_collection(rc),
         comments=[_local_verdict_comment("reviewer", "APPROVED")],
         changed_files=(_CHANGESET,),
