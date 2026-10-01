@@ -10,15 +10,22 @@ the test reads back. Covers:
   and per CLI invocation, however many states name it; and once per resolution
   of a cascade member (a fresh memo each time, ADR-062 point 11),
 - each reading of a classifier's answer: its own state, another of its states,
-  `null` with a reason (a determinate "no position", the reason shown),
-  every unreadable answer (indeterminate, the answer quoted — bounded, made
-  safe), a `result` beside `state` (not read), no answer at all (one cause,
-  shown once per classifier in the narrative views and in a refusal, once per
-  state in `--json`),
+  `null` with a reason that is not blank (a determinate "no position", the
+  reason shown in the narrative and as `position.placed_nowhere` in `--json`),
+  every unreadable answer — a blank reason and a falsy `state` among them —
+  (indeterminate, the answer quoted — bounded, made safe), a `result` beside
+  `state` (not read, nor fallen back on beside an unreadable one), no answer at
+  all — a non-zero exit, a timeout, two documents, trailing text, an array —
+  (one cause, shown once per classifier in the narrative views and in a
+  refusal, once per state in `--json`),
+- from an indeterminate position a gated `from: "*"` move is listed refused and
+  its gate is not run,
 - nothing survives an invocation,
-- one mode per definition: a definition that mixes modes runs no detection and
-  says why, and `pkit validate`'s process member reports it; so too `classified`
-  detections that name one command under different `with` mappings,
+- one mode per definition: a definition that mixes modes — a typo'd mode, a
+  detection with no mode — runs no detection and says why, and `pkit
+  validate`'s process member reports it; a state with no detection is no
+  mode; so too `classified` detections that name one command under different
+  `with` mappings, which run as two classifiers,
 - the reading lives in position resolution alone: a `state` in a gate's, an
   invariant's, a `resume_when`'s and a `membership`'s answer is not read,
 - several classifiers (ADR-062 point 6) and a classifier naming another's state,
@@ -91,12 +98,16 @@ _ONE_CLASSIFIER: list[State] = [
 def _answering(name: str) -> str:
     """A predicate that counts its run, then answers what `_answer-<name>`
     holds — or, when `_exit-<name>` exists, writes `_stderr-<name>` on stderr
-    and exits with that code."""
+    and exits with that code; when `_sleep-<name>` exists it first sleeps past
+    any bound a test sets."""
     return (
         "import pathlib, sys\n"
         f"name = {name!r}\n"
         "with open(f'_runs-{name}', 'a') as fh:\n"
         "    fh.write('run\\n')\n"
+        "if pathlib.Path(f'_sleep-{name}').exists():\n"
+        "    import time\n"
+        "    time.sleep(60)\n"
         "code = pathlib.Path(f'_exit-{name}')\n"
         "if code.exists():\n"
         "    said = pathlib.Path(f'_stderr-{name}')\n"
@@ -148,6 +159,11 @@ def _use(repo: Path, definition: str) -> None:
 
 def _answer(repo: Path, name: str, payload: Any) -> None:
     (repo / f"_answer-{name}").write_text(json.dumps(payload), encoding="utf-8")
+
+
+def _answer_raw(repo: Path, name: str, text: str) -> None:
+    """What the predicate prints on standard output, byte for byte."""
+    (repo / f"_answer-{name}").write_text(text, encoding="utf-8")
 
 
 def _refuse(repo: Path, name: str, code: int, said: str) -> None:
@@ -322,6 +338,11 @@ def test_a_multi_line_null_reason_hangs_under_its_line(repo: Path) -> None:
         ({"state": 3, "reason": "a number"}, "`state` is neither a string nor null"),
         ({"state": ["draft"], "reason": "a list"}, "`state` is neither a string nor null"),
         ({"state": True, "reason": "a bool"}, "`state` is neither a string nor null"),
+        # Falsy values are not `null`: none says "none of these".
+        ({"state": 0, "reason": "zero"}, "`state` is neither a string nor null"),
+        ({"state": False, "reason": "false"}, "`state` is neither a string nor null"),
+        ({"state": [], "reason": "an empty list"}, "`state` is neither a string nor null"),
+        ({"state": {}, "reason": "an empty object"}, "`state` is neither a string nor null"),
         ({"state": "", "reason": "empty"}, "`state` is the empty string"),
         (
             {"state": "parked", "reason": "x"},
@@ -365,6 +386,26 @@ def test_an_unreadable_answer_is_quoted_bounded_and_made_safe(repo: Path) -> Non
     assert "\u001b" not in reason
     assert "…" in reason  # cut to its tail
     assert len(reason.encode("utf-8")) < 1700
+
+
+@pytest.mark.parametrize(
+    "answer",
+    [
+        {"result": True, "reason": "x"},
+        {"state": "parked", "result": True, "reason": "x"},
+        {"state": None, "result": True},
+        {"state": None, "result": True, "reason": " "},
+    ],
+)
+def test_a_result_beside_an_unreadable_state_is_not_fallen_back_on(
+    repo: Path, answer: dict[str, Any]
+) -> None:
+    # Read by `result`, each would place the subject in `draft`, the first
+    # declared state.
+    _answer(repo, "classify", answer)
+    position = _engine(repo).resolve_position()
+    assert (position.state_id, position.indeterminate) == (None, True)
+    assert list(position.unevaluated) == ["draft", "ready", "done"]
 
 
 def test_a_result_beside_state_is_not_read(repo: Path) -> None:
@@ -411,6 +452,90 @@ def test_a_classifier_that_gives_no_answer_shows_its_one_cause_once(repo: Path) 
         "        → run `fixture fix`",
     ]
     assert _runs(repo, "classify") == 3
+
+
+@pytest.mark.parametrize(
+    ("output", "cause"),
+    [
+        (
+            '{"state": "draft", "reason": "a"}{"state": "ready", "reason": "b"}',
+            "it printed no JSON document on its standard output",
+        ),
+        (
+            '{"state": "draft", "reason": "a"}\nand then some text\n',
+            "it printed no JSON document on its standard output",
+        ),
+        ('[{"state": "draft", "reason": "a"}]', "it answered with JSON that is not an object"),
+        ('"draft"', "it answered with JSON that is not an object"),
+        ("", "it printed no JSON document on its standard output"),
+    ],
+)
+def test_output_that_is_not_one_json_object_is_no_answer(
+    repo: Path, output: str, cause: str
+) -> None:
+    _answer_raw(repo, "classify", output)
+    position = _engine(repo).resolve_position()
+    assert (position.state_id, position.indeterminate) == (None, True)
+    assert list(position.unevaluated) == ["draft", "ready", "done"]
+    assert {o.reason for o in position.unevaluated.values()} == {
+        f"couldn't evaluate detection predicate 'classify': {cause}"
+    }
+    assert _runs(repo, "classify") == 1
+
+
+def test_a_classifier_that_overruns_is_no_answer(
+    repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from project_kit import command_runner
+
+    monkeypatch.setattr(command_runner, "COMMAND_TIMEOUT_SECONDS", 1)
+    (repo / "_sleep-classify").write_text("", encoding="utf-8")
+    position = _engine(repo).resolve_position()
+    assert (position.state_id, position.indeterminate) == (None, True)
+    assert {o.reason for o in position.unevaluated.values()} == {
+        "couldn't evaluate detection predicate 'classify': "
+        "it did not answer within 1 s and was stopped"
+    }
+    assert _runs(repo, "classify") == 1
+
+
+_WILDCARD_TRANSITIONS = (
+    _TRANSITIONS
+    + """\
+    - from: "*"
+      to: done
+      trigger: abandon
+      authorisation: agent-autonomous
+      gate:
+        kind: deterministic
+        predicate:
+          run: gate-open
+"""
+)
+
+
+def test_a_gated_wildcard_move_from_an_indeterminate_position_runs_no_gate(repo: Path) -> None:
+    _use(repo, _definition(_ONE_CLASSIFIER, _WILDCARD_TRANSITIONS))
+    _refuse(repo, "classify", 2, "cannot read the work")
+
+    payload = _status(repo)
+    assert payload["position"]["indeterminate"] is True
+    (abandon,) = [move for move in payload["legal_moves"] if move["trigger"] == "abandon"]
+    assert (abandon["allowed"], abandon["indeterminate"]) == (False, True)
+    assert abandon["reason"] == (
+        "position is indeterminate — a detection predicate could not be evaluated; "
+        "refusing to move (fail-closed)"
+    )
+    assert _runs(repo, "gate-open") == 0
+
+    narrative = strip_ansi(render_status_narrative(_engine(repo), "agent"))
+    assert "? done  [abandon]" in narrative
+    assert "✓ done" not in narrative
+    assert _runs(repo, "gate-open") == 0
+
+    allowed, _reason, _position = _engine(repo).can_move("done", "agent")
+    assert allowed is False
+    assert _runs(repo, "gate-open") == 0
 
 
 # --- one mode per definition (COR-033 point 5, ADR-062 points 7 and 9) ----
@@ -540,6 +665,35 @@ def test_validation_reports_one_command_under_different_with_mappings(repo: Path
         "that the runner gives the same input, so an answer one of them can read is "
         "unreadable for the other"
     )
+
+
+def test_one_command_under_two_with_mappings_runs_as_two_classifiers(repo: Path) -> None:
+    # Invalid (validation reports it, above); at run time each is a classifier
+    # of its own, with only its own states, given the same input.
+    _use(
+        repo,
+        _definition(
+            [
+                ("draft", "classified", "classify", {"variant": "early"}),
+                ("ready", "classified", "classify", {"variant": "early"}),
+                ("done", "classified", "classify", {"variant": "late"}),
+            ]
+        ),
+    )
+    position = _engine(repo).resolve_position()
+    assert _runs(repo, "classify") == 2
+    # `draft` is the early classifier's; for the late one it names another
+    # classifier's state, so `done` is indeterminate — and `draft` still wins.
+    assert (position.state_id, position.indeterminate) == ("draft", False)
+    assert list(position.unevaluated) == ["done"]
+    assert "`state` names a state another predicate detects" in (
+        position.unevaluated["done"].reason
+    )
+
+    _answer(repo, "classify", {"state": "done", "reason": "finished"})
+    position = _engine(repo).resolve_position()
+    assert (position.state_id, position.indeterminate) == ("done", False)
+    assert list(position.unevaluated) == ["draft", "ready"]
 
 
 def test_a_mode_this_engine_does_not_implement_resolves_no_position(repo: Path) -> None:
