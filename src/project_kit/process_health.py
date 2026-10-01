@@ -938,7 +938,7 @@ def _static_seam_findings(contract: HandoffContract) -> list[Finding]:
                 )
             )
             continue
-        if _is_unimplemented_stub(script):
+        if is_unimplemented_stub(script):
             findings.append(
                 _seam_finding(
                     slot,
@@ -959,11 +959,12 @@ def _seam_finding(slot: str, run_name: str, problem: str) -> Finding:
     )
 
 
-def _is_unimplemented_stub(script: Path) -> bool:
+def is_unimplemented_stub(script: Path) -> bool:
     """True when a predicate script still carries the scaffold's stub marker.
 
     An unreadable script is NOT called a stub — it is a different problem, and
-    the walk reports it fail-closed when it runs the predicate.
+    the walk reports it fail-closed when it runs the predicate. Shared with the
+    authoring stamps, which name a still-stubbed script as safe to remove.
     """
     try:
         return PREDICATE_STUB_MARKER in script.read_text(encoding="utf-8", errors="replace")
