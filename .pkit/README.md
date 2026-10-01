@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-01T18:45:57Z
+      at: 2026-10-01T20:01:26Z
       outcome: unchanged
-      unchanged-because: on this branch the merge mechanic moved into the backbone's pull-request landing module, placed there by ADR-061; this page describes the tree's layout and says nothing of how a pull request lands, and what main brought in is already described here
+      unchanged-because: the CLI reference changed only inside its process-authoring and process health sections (a JSON view key, a failed stamp's take-back, hand-off's same-state refusal); this signpost names the CLI page and the command families it covers, which still holds
 ---
 
 # project-kit
