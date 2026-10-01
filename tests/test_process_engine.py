@@ -607,6 +607,82 @@ def test_cli_move_from_records_the_stated_origin(
     assert (entry["from"], entry["to"]) == ("draft", "ready")
 
 
+# --- why the caller took the move (`reason`) -------------------------------
+#
+# A caller may say why it took a move — a move one subject's move caused in
+# another, say. The engine records it on the entry as given and reads it for
+# nothing.
+
+
+def test_move_records_the_reason_its_caller_gives(fixture_repo: Path) -> None:
+    (fixture_repo / "_checks_ok").write_text("", encoding="utf-8")
+    engine = _engine(fixture_repo)
+
+    result = engine.move("ready", actor="agent", reason="caused by #7's move")
+
+    assert result.ok is True, result.reason
+    assert result.reason == "move to 'ready' permitted: checks pass"
+    assert result.journal_entry is not None
+    assert result.journal_entry["reason"] == "caused by #7's move"
+    [entry] = engine.read_journal()
+    assert entry["reason"] == "caused by #7's move"
+
+
+def test_move_without_a_reason_records_none(fixture_repo: Path) -> None:
+    (fixture_repo / "_checks_ok").write_text("", encoding="utf-8")
+    engine = _engine(fixture_repo)
+
+    engine.move("ready", actor="agent")
+
+    [entry] = engine.read_journal()
+    assert "reason" not in entry
+
+
+def test_a_reason_does_not_change_the_verdict(fixture_repo: Path) -> None:
+    engine = _engine(fixture_repo)  # no `_checks_ok`: the submit gate fails
+    result = engine.move("ready", actor="agent", reason="caused by #7's move")
+    assert result.ok is False
+    assert "checks fail" in result.reason
+    assert not engine.journal_path().is_file()
+
+
+def test_cli_move_reason_is_journaled_and_shown_in_status(
+    fixture_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (fixture_repo / "_checks_ok").write_text("", encoding="utf-8")
+    _set_state(fixture_repo, "ready")
+    monkeypatch.chdir(fixture_repo)
+    subprocess.run(["git", "init", "-q"], cwd=fixture_repo, check=True)
+
+    result = CliRunner().invoke(
+        main,
+        [
+            "process",
+            "move",
+            "fixture:demo",
+            "--to",
+            "ready",
+            "--from",
+            "draft",
+            "--actor",
+            "agent",
+            "--reason",
+            "caused by #7's move",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    engine = _engine(fixture_repo)
+    [entry] = engine.read_journal()
+    assert (entry["from"], entry["to"], entry["reason"]) == (
+        "draft",
+        "ready",
+        "caused by #7's move",
+    )
+    narrative = render_status_narrative(engine, actor="agent")
+    assert "draft -> ready  [submit] by agent — caused by #7's move" in narrative
+
+
 # --- address parsing ------------------------------------------------------
 
 
