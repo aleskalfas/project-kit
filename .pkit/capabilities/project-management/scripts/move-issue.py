@@ -75,6 +75,7 @@ from _lib import audit as _audit
 from _lib import (
     axis_carriage,
     axis_labels,
+    body_parent_ref,
     bootstrap_gate,
     move_journal,
     session_guard,
@@ -487,7 +488,8 @@ def main() -> int:
     # Cascade preview.
     cascade_targets: list[int] = []
     if not args.no_cascade and _is_forward(workflow, current_state, args.to):
-        cascade_targets = _walk_parent_chain(body)
+        parent = body_parent_ref.parent_issue(body, structural_type, issue_types)
+        cascade_targets = [parent] if parent is not None else []
         if cascade_targets:
             print(
                 f"\n[cascade] forward cascade will visit parents: "
@@ -811,30 +813,6 @@ def _infer_current_state(
     return infer.infer_current_state(
         state=state, milestone=milestone, labels=labels, substrate_map=substrate_map
     )
-
-
-def _walk_parent_chain(body: str) -> list[int]:
-    """Extract parent issue numbers from the body's first non-blank lines.
-
-    Recognises forms like `EPIC: #42`, `Feature: #99`, `Umbrella: #5`. A leading
-    DEC-013 `Integration:` marker is skipped first (#763).
-    """
-    if not body:
-        return []
-    body = infer.strip_integration_marker(body)
-    out: list[int] = []
-    for line in body.splitlines():
-        s = line.strip()
-        if not s:
-            if out:
-                break
-            continue
-        m = re.match(r"^([A-Za-z]+):\s+#(\d+)", s)
-        if not m:
-            break
-        out.append(int(m.group(2)))
-        break  # parent-ref is one line by convention
-    return out
 
 
 # ---- process-engine delegation (DEC-033 D5/D7) ----------------------

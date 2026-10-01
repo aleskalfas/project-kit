@@ -232,8 +232,8 @@ def test_members_and_find_open_children_share_one_hierarchy_source() -> None:
     the member set — both walk `infer.names_parent` over the body parent-ref.
     Pin that they read one source (so the rebound fold == pm's pre-rebind set)."""
     body = "EPIC: #42\n\n## What\nx"
-    # cascade_members uses infer.names_parent; _find_open_children uses
-    # _walk_parent_chain — both recognise the same first parent-ref line.
+    # cascade_members uses infer.names_parent; _find_open_children resolves
+    # through containment, whose textual side reads the same first parent-ref line.
     assert infer.names_parent(body, 42) is True
     assert infer.parent_ref(body) == 42
 

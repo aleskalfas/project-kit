@@ -1,8 +1,10 @@
-"""The first-line parent-ref parser shared by create-issue and link-parent (#1033).
+"""The first-line parent-ref parser shared by create-issue, link-parent and the
+cascades (#1033, #1230).
 
 `_lib/body_parent_ref` is the one reading of "which parent does this body's first
-line name": create-issue's first-line check and derived native link, and
-link-parent's repair, all go through it. These pin the reading against the REAL
+line name": create-issue's first-line check and derived native link,
+link-parent's repair, and the step move-issue's forward cascade and close-issue's
+closure cascade take up to a parent, all go through it. These pin the reading against the REAL
 shipped `parent_ref_form`s, so a schema edit that changes what a type may name
 is caught here rather than as a wrong link.
 """
@@ -114,6 +116,82 @@ def test_every_shipped_type_may_name_a_milestone(bpr, forms) -> None:
         "task",
     }
     assert not bpr.form_allows_milestone("Feature: #<N>")
+
+
+# --- the parent issue a cascade walks to (#1230) --------------------------
+
+
+@pytest.fixture(scope="module")
+def issue_types() -> dict:
+    """The shipped `issue-types.yaml`."""
+    return YAML(typ="safe").load(
+        (CAPABILITY / "schemas" / "issue-types.yaml").read_text(encoding="utf-8")
+    )
+
+
+@pytest.mark.parametrize(
+    ("structural_type", "body", "parent"),
+    [
+        ("task", "Feature: #42\n\n## What\nfoo", 42),
+        ("task", "Umbrella: #5\n", 5),
+        ("task", "\n\nEPIC: #99\n\nbody", 99),
+        ("feature", "EPIC: #99\n", 99),
+        ("umbrella", "Umbrella: #7\n", 7),
+        ("task", "Integration: integration/508-multi-instance-ownership\nEPIC: #508\n", 508),
+        ("task", "## What\nno parent ref", None),
+        ("task", "", None),
+        ("task", "Milestone: [#3](../milestone/3)\n", None),
+    ],
+)
+def test_a_typed_issue_names_the_parent_its_forms_allow(
+    bpr, issue_types, structural_type, body, parent
+) -> None:
+    assert bpr.parent_issue(body, structural_type, issue_types) == parent
+
+
+@pytest.mark.parametrize(
+    "body", ["Milestone: [#5](../milestone/5)\n\n## Thesis\n", "Milestone: #5\n\n## Thesis\n"]
+)
+def test_an_epic_under_a_milestone_is_the_top_of_the_walk(bpr, issue_types, body) -> None:
+    """A milestone is not an issue: an EPIC whose first line names one, in either
+    form, has no parent issue, so issue #5 is never taken for its parent."""
+    assert bpr.parent_issue(body, "epic", issue_types) is None
+
+
+@pytest.mark.parametrize("structural_type", ["task", "feature", "umbrella", "epic"])
+@pytest.mark.parametrize("line", ["Related: #45", "Supersedes: #3", "Blocked by: #12"])
+def test_a_typed_issue_does_not_follow_a_line_that_is_no_parent_ref(
+    bpr, issue_types, structural_type, line
+) -> None:
+    assert bpr.parent_issue(f"{line}\n\n## What\n", structural_type, issue_types) is None
+
+
+def test_a_line_naming_a_parent_the_type_may_not_have_is_not_followed(bpr, issue_types) -> None:
+    """An EPIC's only parent is a milestone and a Feature's an EPIC."""
+    assert bpr.parent_issue("Feature: #12\n", "epic", issue_types) is None
+    assert bpr.parent_issue("Feature: #12\n", "feature", issue_types) is None
+
+
+@pytest.mark.parametrize(
+    ("body", "parent"),
+    [
+        ("Feature: #42\n\n## What\n", 42),
+        ("Related: #45\n", 45),  # read as an untyped tree always was
+        ("Integration: integration/big-change\nEPIC: #8\n", 8),
+        ("Milestone: [#5](../milestone/5)\n", None),
+        ("Milestone: #5\n", None),
+        ("## What\nEPIC: #8\n", None),
+        ("", None),
+    ],
+)
+def test_an_issue_whose_type_cannot_be_told_names_any_labelled_issue(
+    bpr, issue_types, body, parent
+) -> None:
+    """A brownfield issue with no `[Type]` prefix and no `type:*` label: any
+    `<Label>: #<N>` first line names its parent, a milestone ref in neither form."""
+    assert bpr.parent_issue(body, None, issue_types) == parent
+    # A type the schema declares no forms for reads the same way.
+    assert bpr.parent_issue(body, "spike", {"types": {"spike": {}}}) == parent
 
 
 # --- a milestone first line follows a milestone move (#1049) -------------

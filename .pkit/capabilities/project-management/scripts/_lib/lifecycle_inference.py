@@ -256,8 +256,8 @@ def strip_integration_marker(body: str) -> str:
     The marker is the first body line, above the parent-ref (DEC-013). Parent-ref
     recognizers call this first so the marker doesn't shadow the parent-ref — the
     single source of truth for the skip (the recognition is otherwise duplicated
-    across `validate-issue`, `create-issue`, `move-issue`/`close-issue`
-    `_walk_parent_chain`, `show-tree`, `containment`). No-op when absent."""
+    across `validate-issue`, `body_parent_ref` — which both cascades read —
+    `show-tree`, `containment`). No-op when absent."""
     if not body:
         return body
     lines = body.splitlines()
@@ -334,10 +334,11 @@ def parent_ref(child_body: str) -> int | None:
     (e.g. `EPIC: #42` -> 42), or None when the body declares no parent-ref.
 
     The methodology's hierarchy source of truth: one parent-ref line by
-    convention, on the first non-blank line (mirrors move-issue /
-    close-issue's `_walk_parent_chain` recognition). A leading DEC-013
-    `Integration:` marker is skipped first (#763). The first non-blank line
-    thereafter must match `<Word>: #<n>`; otherwise the body names no parent."""
+    convention, on the first non-blank line. A leading DEC-013 `Integration:`
+    marker is skipped first (#763). The first non-blank line thereafter must
+    match `<Word>: #<n>`; otherwise the body names no parent. Read without the
+    child's type; the cascades walk up through `body_parent_ref.parent_issue`,
+    which reads the line against the forms the issue's type allows."""
     if not child_body:
         return None
     for line in strip_integration_marker(child_body).splitlines():
@@ -355,8 +356,8 @@ def names_parent(child_body: str, parent_number: int) -> bool:
     """True when a child issue body's first parent-ref line points at
     `parent_number` (e.g. `EPIC: #42`).
 
-    Mirrors move-issue's `_walk_parent_chain` recognition (one parent-ref line
-    by convention, on the first non-blank lines)."""
+    Reads the line as :func:`parent_ref` does (one parent-ref line by
+    convention, on the first non-blank lines)."""
     return parent_ref(child_body) == parent_number
 
 

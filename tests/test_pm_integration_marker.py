@@ -9,8 +9,7 @@ fail parent-ref recognition (the bug this file guards against).
 The recognizers, all backed by `lifecycle_inference.strip_integration_marker`:
   - infer.parent_ref               (lifecycle_inference.py)
   - containment._body_names_parent (containment.py)
-  - move-issue._walk_parent_chain  (exercised in test_pm_move_issue.py)
-  - close-issue._walk_parent_chain (same helper)
+  - body_parent_ref.parent_issue   (both cascades; test_pm_body_parent_ref.py)
   - validate-issue first_line      (exercised in test_pm_validate_issue.py)
   - create-issue first_line        (same helper)
   - show-tree._first_parent_ref    (same helper)

@@ -1426,9 +1426,9 @@ def _body_names_parent(body: str, parent_number: int) -> bool:
     """True when a child body's FIRST non-blank line is a parent-ref naming
     ``parent_number`` (``<Word>: #<n>``).
 
-    The textual-side recognition, identical to the convention every other walker
-    uses (``show-tree._extract_parent_ref``, ``close-issue._walk_parent_chain``,
-    ``lifecycle_inference.parent_ref``). Co-located here so the read seam owns the
+    The textual-side recognition, identical to the convention other walkers use
+    (``show-tree._extract_parent_ref``, ``lifecycle_inference.parent_ref``).
+    Co-located here so the read seam owns the
     textual projection too — a consumer routing through the seam never re-parses
     the body itself.
     """

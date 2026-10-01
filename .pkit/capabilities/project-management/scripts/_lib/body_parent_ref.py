@@ -9,9 +9,12 @@ for a milestone parent.
 `create-issue` acts on that line twice: it checks that a prepared body's first
 line is an allowed form, and, when no `--parent` is given, links the new issue
 natively under the parent the line names. `link-parent` links issues that
-already exist from the same line. All of them read it here, so the line that
-passes the filing check is exactly the line that gets linked, at filing or in a
-later repair — one reading, not several that could drift.
+already exist from the same line, and both cascades — `move-issue`'s forward
+cascade and `close-issue`'s closure cascade — walk up from it
+(:func:`parent_issue`). All of them read it here, so the line that passes the
+filing check is exactly the line that gets linked, at filing or in a later
+repair, and the line a cascade follows — one reading, not several that could
+drift.
 
 The *first line* is the first non-blank line after a leading DEC-013
 `Integration:` marker (which sits above the parent-ref) — the reading
@@ -46,6 +49,10 @@ _OLD_MILESTONE_LINE = re.compile(rf"^{MILESTONE_LABEL}:\s+#(?P<number>\d+)\s*$")
 
 # How a `parent_ref_form` option spells an issue parent: `<Label>: #<N>`.
 _ISSUE_OPTION = re.compile(r"^([A-Za-z]+):\s*#<N>\s*$")
+
+# Any `<Label>: #<N>` first line, whatever the label — the reading for an issue
+# whose type, and so whose allowed forms, cannot be told (:func:`parent_issue`).
+_ANY_ISSUE_LINE = re.compile(r"^(?P<label>[A-Za-z]+):\s+#(?P<number>\d+)")
 
 
 @dataclass(frozen=True)
@@ -122,6 +129,31 @@ def parse_first_line(body: str, parent_ref_form: str) -> ParentRef | None:
                 milestone=is_milestone,
             )
     return None
+
+
+def parent_issue(body: str, structural_type: str | None, issue_types: dict) -> int | None:
+    """The parent issue a body's first line names, or ``None`` — the step both
+    cascades take from an issue to its parent.
+
+    Where the issue's type is known the line is read against the forms that type
+    allows (:func:`parse_first_line`), so ``Related: #45`` or ``Supersedes: #3``
+    names no parent, and neither does a milestone ref: a milestone is not an
+    issue, so an EPIC under one is the top of a walk. Where the type cannot be
+    told — a brownfield issue with no ``[Type]`` prefix and no ``type:*`` label,
+    or a type ``issue_types`` declares no ``parent_ref_form`` for — any
+    ``<Label>: #<N>`` first line names the parent, except a milestone ref in
+    either form, so an untyped tree is walked as it always was.
+    """
+    types = issue_types.get("types") if isinstance(issue_types, dict) else None
+    entry = types.get(structural_type) if isinstance(types, dict) and structural_type else None
+    form = entry.get("parent_ref_form") if isinstance(entry, dict) else None
+    if isinstance(form, str) and form.strip():
+        ref = parse_first_line(body, form)
+        return ref.issue_number if ref is not None else None
+    m = _ANY_ISSUE_LINE.match(first_line(body))
+    if m is None or m.group("label") == MILESTONE_LABEL:
+        return None
+    return int(m.group("number"))
 
 
 def milestone_line(number: int) -> str:

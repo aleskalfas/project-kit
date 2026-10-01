@@ -88,7 +88,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -100,9 +99,8 @@ from ruamel.yaml.error import YAMLError
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import audit as _audit
-from _lib import axis_labels, bootstrap_gate, containment, session_guard
+from _lib import axis_labels, body_parent_ref, bootstrap_gate, containment, session_guard
 from _lib import lifecycle_inference as infer
-from _lib.body_parent_ref import MILESTONE_LABEL
 
 # DEC-007's checkbox close-gate — the ONE implementation (`_lib.checkbox_gate`),
 # shared with done-work, merge-pr and the engine's gate-checkboxes-ticked
@@ -545,14 +543,10 @@ def main() -> int:
     # Closure cascade — semi-automatic per DEC-006: it reports eligibility and
     # closes nothing, over the parent issues and the Milestones alike.
     if not args.no_cascade:
-        parent_nums = _walk_parent_chain(body)
-        if parent_nums:
-            print(
-                f"\n[cascade] parents to check for eligibility: "
-                f"{', '.join(f'#{n}' for n in parent_nums)}"
-            )
-            for pnum in parent_nums:
-                _check_parent_eligibility(pnum, config)
+        parent_num = body_parent_ref.parent_issue(body, structural_type, issue_types)
+        if parent_num is not None:
+            print(f"\n[cascade] parents to check for eligibility: #{parent_num}")
+            _check_parent_eligibility(parent_num, config)
         else:
             print("\n[cascade] no parent ref found in body; parent check skipped.")
         milestone_nums = issue_milestones(issue)
@@ -977,32 +971,6 @@ def _gh_close_issue(issue_number: int, *, reason: str = "completed", config: dic
         )
         return False
     return True
-
-
-def _walk_parent_chain(body: str) -> list[int]:
-    """Extract parent issue numbers from the body's parent-ref first line. A
-    leading DEC-013 `Integration:` marker is skipped first (#763).
-
-    A milestone ref is not an issue parent — its number names a Milestone —
-    so the deprecated plain `Milestone: #<n>` form yields nothing here; the
-    cascade reaches Milestones through `issue_milestones` instead.
-    """
-    if not body:
-        return []
-    body = infer.strip_integration_marker(body)
-    out: list[int] = []
-    for line in body.splitlines():
-        s = line.strip()
-        if not s:
-            if out:
-                break
-            continue
-        m = re.match(r"^([A-Za-z]+):\s+#(\d+)", s)
-        if not m or m.group(1) == MILESTONE_LABEL:
-            break
-        out.append(int(m.group(2)))
-        break
-    return out
 
 
 def _read_yaml(path: Path, yaml_loader: YAML) -> dict:
