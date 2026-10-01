@@ -15,7 +15,7 @@ pkit:
         - .pkit/capabilities/project-management/decisions/**
       record: [COR-017, COR-020, COR-021, COR-023, COR-039, COR-053, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050]
     revalidated:
-      at: 2026-10-01T22:17:31Z
+      at: 2026-10-01T22:17:09Z
       outcome: updated
 ---
 
@@ -400,6 +400,12 @@ Outside `--dry-run`, a run that did not merge never exits 0, and 0 means everyth
 
 Running `land-work` again resumes: green checks on the same head are not waited for, fresh verdicts are not re-run, and a PR that merged meanwhile is completed through `done-work`.
 
+#### Issue titles — every rule `titles.yaml` declares runs
+
+Each title surface in `schemas/titles.yaml` (the four issue types, the Milestone, the PR) carries a `pattern` and a list of `validations`; each validation names the check that runs it (`check`), the finding label it is reported under (`name`) and its severity, and the schema refuses a validation with no check, so a rule cannot sit in the schema unenforced. `scripts/_lib/title_rules.py` is the one reader: `create-issue`, `edit-issue --title`, `validate-issue`, `validate-pr` and `create-milestone` all ask it.
+
+For issue titles: a Conventional Commits prefix after the bracket (`[Task] fix: …`, `[EPIC] feat(x): …`) is refused where a title is written — filing, retitling, `validate-issue --phase create` — and reported as a warning at a lifecycle transition, so an issue filed with one still moves. A lowercase `scope:` token right after the bracket (`[EPIC] sandbox: …`) is a warning: it reads like a commit scope, but inbound reports and component-scoped titles carry it, so filing goes on. A colon or a dash after a territory named in words (`[EPIC] Permission model: …`, `[EPIC] PR review fidelity — …`) is not flagged. A Task title, under any kind-driven prefix, draws a warning below 30 characters after the prefix; an EPIC, Feature or Umbrella names a territory, which is short by nature, and has no length floor. A PR summary draws a warning past 72 characters; aim for about 50. The house style per type is in each entry's `description` and `examples_good`: an EPIC, Feature or Umbrella names a territory; a Task says what is true once the work is done, or the work in the imperative for a decision, a document or an exploration.
+
 #### PR-title conv-types — the standard set, and why decision-record PRs land as `docs`
 
 PR titles are Conventional Commits and are restricted to the **standard type set** — `feat | fix | docs | test | refactor | chore | ci` — for changelog and tooling compatibility (`schemas/titles.yaml`, the `pr` format entry). Merges are squash-merges (one commit, head branch deleted on merge), so the **PR title becomes the landed commit subject** on `main` (`schemas/git-conventions.yaml`, the `merge` entry); keeping PR titles to the standard set keeps `git log` history parseable by standard CC tooling.
@@ -668,7 +674,7 @@ A reviewer's verdict stays valid until you change something that reviewer checks
 - **`review.floors.not_code` does two jobs.** It decides who is required (a path it matches pulls in no floor reviewer) and whose approval survives a change (a change it matches reaches no floor). Adding a path to it has both effects.
 - **When it cannot tell, the verdict is stale.** Your changes and the base's history are read from the local repository, which needs git 2.38 or later. A commit your checkout lacks — the reviewed head or base, the PR's head, the base branch's head — is fetched from origin first. If it still cannot tell, the verdict is stale and the reason says why: a commit that could not be fetched, a shallow checkout (`git fetch --unshallow origin` fixes it), a rebase or force-push that removed the reviewed head from the branch, or an older git. Missing local state only ever costs a re-review, never an unreviewed merge.
 - **The merge is pinned.** `done-work` merges only the head its gate checked (`gh pr merge --match-head-commit`); a push between the gate and the merge fails the merge, and you re-run `done-work`.
-- **Where you see it.** `done-work`'s refusal names each stale verdict with the head it reviewed and what changed since (`(stale APPROVED — reviewed 1a2b3c4; changed since: README.md)`); `show-pr --field review` marks it the same way; `review-pr` re-runs only the stale ones and names the reason for each. All three apply one rule.
+- **Where you see it.** `done-work`'s refusal names each stale verdict with the head it reviewed and what changed since (`(stale APPROVED — reviewed 1a2b3c4; changed since: README.md)`); `show-pr --field review` marks it the same way; `review-pr` re-runs only the stale ones and names the reason for each. All three apply one rule: they resolve the PR's required reviewers and build the rule through one shared function (`scripts/_lib/pr_review.py`).
 - **What it does not catch.** A clean merge of the base keeps every verdict, so a semantic conflict the base introduces — changes that merge cleanly but no longer work together — is not re-reviewed. CI on the merged result is the backstop.
 
 #### Opting out of a contributed reviewer (per [project-management:DEC-032-conditional-reviewer-requirements])
@@ -708,7 +714,7 @@ review:
 
 - **Default.** When the key is absent or has no value, the list is `[".changes/**"]`. If you set the key, your list replaces the default, so keep `.changes/**` in it if you still want changesets excluded. An empty list (`not_code: []`) excludes nothing.
 - **Matching.** Patterns are gitignore-style, the same matching `code_path_to_doc_mapping` uses, and are read against each changed path from the repository root.
-- **Both commands agree.** `review-pr` and `done-work` read the list from the same config through one resolver, so the reviewers `review-pr` invokes are the ones the gate requires.
+- **The commands agree.** `review-pr`, `done-work` and `show-pr` read the list from the same config through one resolver, so the reviewers `review-pr` invokes are the ones the gate requires, and `show-pr` judges a verdict's freshness as the gate does.
 - **Validation.** The value must be a list of non-empty strings; the config schema checks this at `pkit validate`. If the value is malformed, `review-pr` and `done-work` refuse and name the problem rather than guess which paths you meant.
 
 #### Freeform comments — `comment-issue` / `comment-pr` (per [project-management:DEC-047-freeform-comment-verb])

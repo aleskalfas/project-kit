@@ -20,9 +20,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-10-01T21:03:29Z
+      at: 2026-10-01T22:17:11Z
       outcome: unchanged
-      unchanged-because: "#1242 now only puts start-work's early check, read from labels and milestone as before, and its refusal and failure messages in helpers shared with review-work; the stabilisation guard this use case expects on start-work is still unbuilt, so it holds"
+      unchanged-because: DEC-014's example of a warning now names the Task title's length floor, as DEC-011 states it; what this page takes from the severity model — which findings refuse, which need an audited bypass and which warn — is unchanged
 ---
 
 # UC-007 — Resume sessions killed during a stabilisation

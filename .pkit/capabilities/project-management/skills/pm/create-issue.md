@@ -16,12 +16,12 @@ The deterministic enforcement lives in `scripts/create-issue.py`. It reads `issu
 Behaviour summary (the script is the source of truth — read it for the exact contract):
 
 - **Membership gate** (per [project-management:DEC-021-team-membership-gate]) — closed mode refuses non-members with the standard refusal template; the user fixes by getting added via `add-member` before the operation will proceed.
-- **Title composition** — prepends the type's `title_prefix` (EPIC for epic, Feature/Umbrella/Task for the others) and validates against `titles.yaml`'s per-type regex before any `gh` call.
+- **Title composition** — prepends the type's `title_prefix` (EPIC for epic, Feature/Umbrella/Task for the others) and runs every check `titles.yaml` declares for the type before any `gh` call: the pattern and the wording rules. A refusal (a Conventional Commits prefix after the bracket) stops filing; a warning (a lowercase `scope:` token after the bracket; a Task title under 30 characters after its prefix — EPIC, Feature and Umbrella titles have no length floor) is shown and filing goes on. Write the title in the type's house style from `titles.yaml`'s `description` and `examples_good`: an EPIC, Feature or Umbrella names a territory; a Task says what is true once the work is done, or the work in the imperative for a decision, a document or an exploration.
 - **Body composition** — reads `templates/<Prefix>.md`, strips frontmatter, substitutes the parent-ref line when `--parent` is provided.
 - **Classification labels** — resolves each axis's SUBSTRATE first, then labels only the axes a label carries (per [project-management:DEC-051-axis-carriage-activation]): `type:<kind>` always, plus `priority` / `workstream` when greenfield or when `substrate-map.yaml` binds them to your own labels. An axis your map binds to the board (or a configured board on an axis your map is silent about) is written as a board field by the `after_create_issue` hook, not as a label.
 - **Mandatory assignment** (per [project-management:DEC-019-mandatory-issue-state]) — defaults the assignee to the resolved invoker identity; `--assignee=<login>` overrides.
 - **Auto-add to board** (per DEC-019) — for board-substrate adopters, the new issue is added to the configured Projects v2 board as the final filing step.
-- **Validation refusals** — workstream value not in the adopter's declared list, parent type not in the issue type's `parent_issue_types`, title regex mismatch, and a non-`feature` `--kind` on an epic/feature/umbrella (the kind/structural hard-reject per [project-management:DEC-011-title-formats] / `classification.yaml`'s `structural_restriction` — an EPIC/Feature/Umbrella always carries kind `feature`) — all surface as structured error messages before `gh` is invoked.
+- **Validation refusals** — workstream value not in the adopter's declared list, parent type not in the issue type's `parent_issue_types`, a title `titles.yaml` refuses, and a non-`feature` `--kind` on an epic/feature/umbrella (the kind/structural hard-reject per [project-management:DEC-011-title-formats] / `classification.yaml`'s `structural_restriction` — an EPIC/Feature/Umbrella always carries kind `feature`) — all surface as structured error messages before `gh` is invoked.
 
 ## How to invoke
 
@@ -30,7 +30,7 @@ Dispatch to the script via the kit-level capability-command dispatcher (per [pki
 ```
 pkit project-management create-issue \
   --type <epic|feature|umbrella|task> \
-  --title "<plain-English sentence (no [Type] prefix)>" \
+  --title "<title text in the type's house style (no [Type] prefix)>" \
   [--kind <feature|bug|docs|test|refactor|maintenance>] \
   [--priority <High|Medium|Low>] \
   [--workstream <slug>] \

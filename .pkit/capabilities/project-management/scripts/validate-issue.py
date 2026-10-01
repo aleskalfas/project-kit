@@ -8,8 +8,8 @@
 """Project-management capability — validate-issue (verb-subject per DEC-020).
 
 Validates an existing GitHub issue against the methodology's body
-shape: title regex per type, per-type required sections, classification
-axes presence + uniqueness, parent-ref first line. Emits findings
+shape: titles.yaml's title checks per type, per-type required sections,
+classification axes presence + uniqueness, parent-ref first line. Emits findings
 tagged by the severity tokens from validation-severity.yaml (hard-
 reject / bypassable-with-audit / warning).
 
@@ -50,7 +50,7 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import axis_carriage, axis_labels, bootstrap_gate, classification_rules
+from _lib import axis_carriage, axis_labels, bootstrap_gate, classification_rules, title_rules
 from _lib import lifecycle_inference as infer
 from _lib.gh import gh_get_issue, load_adopter_config
 from _lib.membership import (
@@ -292,18 +292,18 @@ def _validate_issue(
                 )
             )
     elif structural_type is not None and substrate_map is None:
-        # Greenfield: also enforce the titles.yaml regex pattern. Under a present
-        # map the kit's regex does not apply (the adopter owns the title format).
-        pattern = _title_pattern_for(titles, structural_type)
-        if pattern and not re.match(pattern, title):
-            findings.append(
-                Finding(
-                    SEVERITY_HARD_REJECT,
-                    "title.pattern",
-                    f"title does not match titles.yaml pattern for "
-                    f"{structural_type!r}: {pattern!r}",
-                )
-            )
+        # Greenfield: also run the type's titles.yaml checks — the pattern and
+        # every declared wording rule (#803). Under a present map they do not
+        # apply (the adopter owns the title format). At a transition a blocking
+        # wording rule reports as a warning: it is refused where a title is
+        # written, and does not wall the move of a title written before it.
+        for severity, label, detail in title_rules.check_title(
+            titles,
+            title_rules.issue_key(structural_type),
+            title,
+            at_transition=phase == PHASE_TRANSITION,
+        ):
+            findings.append(Finding(severity, label, detail))
 
     # Type axis presence (per DEC-012), fully substrate-aware per-binding (#553).
     #
@@ -408,15 +408,16 @@ def _validate_issue(
                         "to 'feature'.",
                     )
                 )
-            # Title prefix vs kind label (titles.yaml `issue-task` validation:
-            # "Title prefix matches the issue's kind label per
-            # classification.yaml's `title_prefix_by_value` map", tagged
-            # hard-reject). Applies only where the kind drives the title
+            # Title prefix vs kind label (titles.yaml's `issue-task` validation
+            # with `check: kind-prefix` — "Title prefix matches the issue's kind
+            # label per classification.yaml's `title_prefix_by_value` map" — the
+            # one title check that needs the label, so it runs here rather than
+            # in title_rules). Applies only where the kind drives the title
             # (`task` today, read from the restriction table) and only in
             # greenfield, where the kit owns the title format.
             #
             # Phase-split exactly like the structural mismatch above (#410):
-            # the schema's hard-reject at `--phase create` refuses the mismatch
+            # the declared severity (hard-reject) at `--phase create` refuses the mismatch
             # where it is manufactured; at `--phase transition` it is a warning,
             # because a pre-existing prefix/kind drift is cosmetic to the move
             # in flight (the closing PR's conv-type reads the label, not the
@@ -436,7 +437,15 @@ def _validate_issue(
                 ):
                     findings.append(
                         Finding(
-                            SEVERITY_WARNING if phase == PHASE_TRANSITION else SEVERITY_HARD_REJECT,
+                            SEVERITY_WARNING
+                            if phase == PHASE_TRANSITION
+                            else title_rules.declared_severity(
+                                title_rules.format_entry(
+                                    titles, title_rules.issue_key(structural_type)
+                                ),
+                                title_rules.CHECK_KIND_PREFIX,
+                                SEVERITY_HARD_REJECT,
+                            ),
                             "title.kind-prefix-mismatch",
                             f"title prefix does not match the issue's kind: "
                             f"kind {kind!r} (its type:* label) takes "
@@ -819,17 +828,6 @@ def _expected_type_prefixes(
         if isinstance(kind_prefix, str) and kind_prefix and bracketed not in prefixes:
             prefixes.append(bracketed)
     return prefixes
-
-
-def _title_pattern_for(titles: dict, structural_type: str) -> str | None:
-    formats = titles.get("formats") or {}
-    key = f"issue-{structural_type}"
-    entry = formats.get(key)
-    if isinstance(entry, dict):
-        pattern = entry.get("pattern")
-        if isinstance(pattern, str):
-            return pattern
-    return None
 
 
 def _severity_from_token(token: Any) -> str:

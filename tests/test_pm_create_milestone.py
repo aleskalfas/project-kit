@@ -190,3 +190,52 @@ def test_existing_with_title_is_case_sensitive(cm, monkeypatch) -> None:
         ],
     )
     assert cm._existing_milestone_with_title("Milestone 1: LOWERCASE") is None
+
+
+# --- titles.yaml's `milestone` check at filing (#803) -----------------
+
+
+def _run_dry(cm, tmp_path, monkeypatch, *, title_format: str, name: str) -> int:
+    """Run main() --dry-run against a staged tree carrying the shipped titles.yaml."""
+    from types import SimpleNamespace
+
+    root = tmp_path / "project-management"
+    (root / "schemas").mkdir(parents=True)
+    (root / "project").mkdir(parents=True)
+    shipped = SCRIPT_PATH.parent.parent / "schemas" / "titles.yaml"
+    (root / "schemas" / "titles.yaml").write_text(shipped.read_text("utf-8"), "utf-8")
+    (root / "project" / "config.yaml").write_text(
+        "milestone_categories:\n"
+        "  release:\n"
+        f"    title_format: '{title_format}'\n"
+        "    close_trigger_default: content-based\n",
+        "utf-8",
+    )
+    monkeypatch.setattr(cm, "resolve_capability_root", lambda _explicit: root)
+    monkeypatch.setattr(cm.bootstrap_gate, "enforce", lambda *a, **k: True)
+    monkeypatch.setattr(cm.session_guard, "enforce", lambda **k: True)
+    monkeypatch.setattr(cm, "load_adopter_config", lambda _root: {})
+    monkeypatch.setattr(cm, "check_membership", lambda *a: SimpleNamespace(allowed=True))
+    monkeypatch.setattr(
+        cm, "resolve_invoker_identity", lambda **k: SimpleNamespace(github_login="me")
+    )
+    monkeypatch.setattr(
+        cm.sys,
+        "argv",
+        ["create-milestone.py", "release", "--name", name, "--number", "3", "--dry-run"],
+    )
+    return cm.main()
+
+
+def test_a_numeric_only_milestone_title_warns(cm, tmp_path, monkeypatch, capsys) -> None:
+    rc = _run_dry(cm, tmp_path, monkeypatch, title_format="M{n} {name}", name="1")
+
+    assert rc == 0
+    assert "[warning] title.numeric-only" in capsys.readouterr().err
+
+
+def test_a_named_milestone_title_draws_no_warning(cm, tmp_path, monkeypatch, capsys) -> None:
+    rc = _run_dry(cm, tmp_path, monkeypatch, title_format="M{n} {name}", name="CLI walkthrough")
+
+    assert rc == 0
+    assert "title." not in capsys.readouterr().err

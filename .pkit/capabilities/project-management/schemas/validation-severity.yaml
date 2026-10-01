@@ -83,7 +83,7 @@ severities:
     bypassable: false
     aborts_operation: false
     examples:
-      - "Issue title shorter than ~30 chars after `[Type]` prefix"
+      - "Task title shorter than ~30 chars after its kind-driven prefix"
       - "Multi-issue PR with mixed `type:*` labels — agent picks dominant and warns"
       - "EPIC's directly attached children exceed a soft threshold (~10) — recommend grouping"
       - "Existing Milestone read without a `Close trigger:` marker — infer and prompt to write one"
