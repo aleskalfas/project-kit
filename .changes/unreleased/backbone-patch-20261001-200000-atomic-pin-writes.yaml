@@ -1,0 +1,13 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  Every write of a project's version pin (`.pkit/version-pin`) is now whole
+  or not at all (#1211): the pin `pkit upgrade` writes by default, the pin it
+  raises, `pkit pin` and `pkit unpin` all go through one writer, which writes
+  the new pin to a temporary file beside it, flushes it to disk and renames
+  it into place. The default pin after an upgrade and `pkit pin` used to
+  write the file in place, so a write cut short could leave a truncated pin,
+  which the router then ran as the version to use. A write that fails now
+  leaves the previous pin as it was.

@@ -1298,6 +1298,38 @@ def test_upgrade_dry_run_pinned_does_not_write_pin(
     assert router.read_version_pin(installed_target) == "0.1.0"  # unchanged
 
 
+# --- the upgrade's pin writes go through the pin's one writer (#1211) -----------
+
+
+def _record_pin_writes(monkeypatch: pytest.MonkeyPatch) -> list[tuple[Path, str | None]]:
+    """Stand in for the pin's one writer and record each write the upgrade asks of it."""
+    writes: list[tuple[Path, str | None]] = []
+    monkeypatch.setattr(upgrade, "write_version_pin", lambda *call: writes.append(call))
+    return writes
+
+
+def test_upgrade_default_pin_writes_through_the_one_pin_writer(
+    installed_target: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    writes = _record_pin_writes(monkeypatch)
+
+    upgrade.run_upgrade(installed_target)  # un-pinned: pins by default
+
+    assert writes == [(installed_target, _recorded_version(installed_target))]
+
+
+def test_upgrade_pin_raise_writes_through_the_one_pin_writer(
+    installed_target: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    router.pin_file_path(installed_target).write_text("0.1.0\n", encoding="utf-8")
+    monkeypatch.delenv(router._LOOP_GUARD_ENV, raising=False)  # not a routed child
+    writes = _record_pin_writes(monkeypatch)
+
+    upgrade.run_upgrade(installed_target)  # pinned behind its content: raises
+
+    assert writes == [(installed_target, _recorded_version(installed_target))]
+
+
 # --- an older pkit never takes a project back (#1212) ---------------------------
 
 # A version no release reaches: the project's content or pin, ahead of this pkit.

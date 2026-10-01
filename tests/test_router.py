@@ -196,6 +196,58 @@ def test_pin_file_path_is_under_pkit(tmp_path: Path) -> None:
     assert router.pin_file_path(tmp_path) == tmp_path / ".pkit" / "version-pin"
 
 
+# --- write_version_pin: the pin's one writer, whole or not at all (#1211) -------
+
+
+def _pkit_entries(root: Path) -> list[str]:
+    """What `.pkit/` holds — the pin, and any temporary file a write left beside it."""
+    return sorted(entry.name for entry in (root / ".pkit").iterdir())
+
+
+def test_write_version_pin_writes_what_the_reader_reads_and_no_temporary(tmp_path: Path) -> None:
+    (tmp_path / ".pkit").mkdir()
+
+    router.write_version_pin(tmp_path, "1.100.0")
+
+    assert router.pin_file_path(tmp_path).read_bytes() == b"1.100.0\n"
+    assert router.read_version_pin(tmp_path) == "1.100.0"
+    assert _pkit_entries(tmp_path) == ["version-pin"]
+
+
+@pytest.mark.parametrize("failing", ["fsync", "replace"])
+def test_write_version_pin_cut_short_leaves_the_previous_pin_intact(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failing: str
+) -> None:
+    """A write that dies before its bytes reach the disk, or at the rename, leaves
+    the previous pin byte-identical and no temporary file: the router never reads
+    a torn pin as the version to run."""
+    (tmp_path / ".pkit").mkdir()
+    pin = router.pin_file_path(tmp_path)
+    pin.write_bytes(b"1.145.0\n")
+
+    def _cut_short(*_args: object) -> None:
+        raise OSError("the write died here")
+
+    monkeypatch.setattr(os, failing, _cut_short)
+
+    with pytest.raises(OSError, match="the write died here"):
+        router.write_version_pin(tmp_path, "1.146.0")
+
+    assert pin.read_bytes() == b"1.145.0\n"
+    assert _pkit_entries(tmp_path) == ["version-pin"]
+
+
+def test_write_version_pin_none_removes_the_pin_and_absent_is_fine(tmp_path: Path) -> None:
+    (tmp_path / ".pkit").mkdir()
+    router.pin_file_path(tmp_path).write_text("1.100.0\n", encoding="utf-8")
+
+    router.write_version_pin(tmp_path, None)
+    assert not router.pin_file_path(tmp_path).exists()
+
+    router.write_version_pin(tmp_path, None)  # nothing to remove: no error
+    assert _pkit_entries(tmp_path) == []
+
+
 def test_is_routed_child_reads_loop_guard(tmp_path: Path) -> None:
     assert router.is_routed_child({router._LOOP_GUARD_ENV: "1"}) is True
     assert router.is_routed_child({}) is False
