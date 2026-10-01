@@ -33,14 +33,14 @@ class _RecordingRun:
     shells out to `uv tool install` (it is print-only).
     """
 
-    def __init__(self, real_run) -> None:  # type: ignore[no-untyped-def]
+    def __init__(self, real_run) -> None:
         self._real_run = real_run
         self.calls: list[list[str]] = []
         self.ls_remote_stdout = ""
         self.ls_remote_returncode = 1  # default: lookup fails → degrade path
         self.raise_exc: Exception | None = None
 
-    def __call__(self, argv, *args, **kwargs):  # type: ignore[no-untyped-def]
+    def __call__(self, argv, *args, **kwargs):
         self.calls.append(list(argv))
         if list(argv[:2]) != ["git", "ls-remote"]:
             return self._real_run(argv, *args, **kwargs)

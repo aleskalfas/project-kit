@@ -358,8 +358,8 @@ def test_connections_graph_of_an_empty_project(make_adopter_repo: MakeAdopterRep
 
 def test_a_node_id_keeps_its_process_address_mapping() -> None:
     """Widening the mermaid id to file paths leaves a process address's id as it was."""
-    assert pg._mermaid_node_id("alpha:ship-it") == "n_alpha__ship_it"  # pyright: ignore[reportPrivateUsage]
-    assert pg._mermaid_node_id("a/b.yaml") != pg._mermaid_node_id("a.b/yaml")  # pyright: ignore[reportPrivateUsage]
+    assert pg._mermaid_node_id("alpha:ship-it") == "n_alpha__ship_it"
+    assert pg._mermaid_node_id("a/b.yaml") != pg._mermaid_node_id("a.b/yaml")
 
 
 def test_wiring_graph_nodes_are_every_endpoint(repo: AdopterRepo) -> None:

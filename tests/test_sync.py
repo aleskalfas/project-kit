@@ -430,14 +430,14 @@ def test_adapter_primitive_failure_raises_clickexception(
     script.write_text("#!/bin/sh\nexit 1\n", encoding="utf-8")
     script.chmod(0o755)
 
-    def _fake_run(cmd, **kwargs):  # type: ignore[no-untyped-def]
+    def _fake_run(cmd, **kwargs):
         return sp.CompletedProcess(args=cmd, returncode=1)
 
     monkeypatch.setattr(install.subprocess, "run", _fake_run)
     ctx = install.InstallContext(target_root=tmp_path, source_kit=tmp_path, dry_run=False)
 
     with pytest.raises(click.ClickException, match="exited with status 1"):
-        install._run_adapter_primitive(script, ctx)  # pyright: ignore[reportPrivateUsage]
+        install._run_adapter_primitive(script, ctx)
 
 
 def _stage_capability_in_source(

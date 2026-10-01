@@ -440,6 +440,7 @@ def test_list_my_reports_filters_to_members_and_sorts(monkeypatch) -> None:
 
     monkeypatch.setattr(rep, "_gh_json", fake)
     reports = rep.list_my_reports("o/r")
+    assert reports is not None
     assert [r.number for r in reports] == [3, 1]  # #2 dropped; newest-first
     assert reports[0].state == "closed" and reports[0].kind == "feedback"
     # the list query fetches url; the summary carries it, "" when absent (#678)
@@ -502,6 +503,7 @@ def test_list_my_reports_excludes_ordinary_prefix_titled_issues(monkeypatch) -> 
     ]
     monkeypatch.setattr(rep, "_gh_json", lambda args: issues)
     reports = rep.list_my_reports("o/r")
+    assert reports is not None
     assert [r.number for r in reports] == [32, 33]  # the pm issues stay OUT
     assert reports[0].kind == "bug" and reports[1].kind == "feedback"
 
@@ -532,6 +534,7 @@ def test_list_my_reports_unions_locally_reported(tmp_path: Path, monkeypatch) ->
 
     monkeypatch.setattr(rep, "_gh_json", fake)
     reports = rep.list_my_reports("o/r", tmp_path)
+    assert reports is not None
     assert [r.number for r in reports] == [660]
     assert reports[0].kind == "feedback"  # prefix classifies the member
     assert reports[0].url == "https://github.com/o/r/issues/660"
@@ -569,6 +572,7 @@ def test_list_my_reports_includes_attributed(monkeypatch) -> None:
 
     monkeypatch.setattr(rep, "_gh_json", fake)
     reports = rep.list_my_reports("o/r")
+    assert reports is not None
     assert [r.number for r in reports] == [9, 1]  # newest first
     assert next(r for r in reports if r.number == 9).attributed is True
     assert next(r for r in reports if r.number == 1).attributed is False
@@ -592,6 +596,7 @@ def test_list_my_reports_authored_wins_over_attributed(monkeypatch) -> None:
 
     monkeypatch.setattr(rep, "_gh_json", fake)
     reports = rep.list_my_reports("o/r")
+    assert reports is not None
     assert [r.number for r in reports] == [5]
     assert reports[0].attributed is False  # authored wins the de-dup
 
@@ -638,6 +643,7 @@ def test_show_report_resolves_tracked_by(monkeypatch) -> None:
 
     monkeypatch.setattr(rep, "_gh_json", fake_gh_json)
     detail = rep.show_report("o/r", 42)
+    assert detail is not None
     assert detail["state"] == "open" and detail["kind"] == "feedback"
     # tracked fixes resolve with title + url beside the state (#664)
     assert detail["tracked_by"] == {
@@ -708,6 +714,7 @@ def test_list_my_reports_tree_pairs_each_with_tracked(monkeypatch) -> None:
 
     monkeypatch.setattr(rep, "_gh_json", fake_gh_json)
     rows = rep.list_my_reports_tree("o/r")
+    assert rows is not None
     assert len(rows) == 1
     summary, tracked = rows[0]
     assert summary.number == 42
@@ -752,6 +759,7 @@ def test_list_my_reports_tree_excludes_and_unions_like_flat(tmp_path: Path, monk
 
     monkeypatch.setattr(rep, "_gh_json", fake_gh_json)
     rows = rep.list_my_reports_tree("o/r", tmp_path)
+    assert rows is not None
     assert [(s.number, s.kind) for s, _ in rows] == [(660, "feedback")]
     assert rows[0][1] == {7: rep.TrackedFix("closed", "the fix", "https://github.com/o/r/issues/7")}
 
@@ -936,6 +944,7 @@ def test_list_inbox_dedups_across_labels(monkeypatch) -> None:
 
     monkeypatch.setattr(rep, "_gh_json", fake_gh_json)
     inbox = rep.list_inbox("o/r")
+    assert inbox is not None
     assert [r.number for r in inbox] == [5]  # de-duped
 
 
@@ -1056,9 +1065,11 @@ _INBOX_ISSUES = [
 def test_list_inbox_kind_filters_and_classifies_unlabelled_cr(monkeypatch) -> None:
     monkeypatch.setattr(rep, "_gh_json", lambda args: _INBOX_ISSUES)
     inbox = rep.list_inbox("o/r", kind="change-request")
+    assert inbox is not None
     # #3 classifies by marker despite no label; #4/#5 (search noise) are dropped.
     assert [r.number for r in inbox] == [3]
     inbox_all = rep.list_inbox("o/r")
+    assert inbox_all is not None
     assert [r.number for r in inbox_all] == [3, 2, 1]  # newest first, #4/#5 dropped
 
 
@@ -1189,6 +1200,7 @@ def test_list_resolved_requires_all_tracked_closed(monkeypatch) -> None:
 
     monkeypatch.setattr(rep, "_gh_json", fake)
     rows = rep.list_resolved("o/r")
+    assert rows is not None
     assert [(r.number, tracked) for r, tracked in rows] == [(10, [7])]
 
 
@@ -1570,6 +1582,7 @@ def test_list_my_reports_fetches_bodies_and_reads_project_marker(
 
     monkeypatch.setattr(rep, "_gh_json", fake)
     reports = rep.list_my_reports("o/r")
+    assert reports is not None
     assert reports[0].project == "alpha" and reports[0].workstream == "cli"
     list_query = next(q for q in queries if "list" in q)
     assert "body" in list_query[list_query.index("--json") + 1]

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import click
 import pytest
@@ -156,13 +157,13 @@ def test_find_capability_returns_none_when_package_yaml_is_not_capability_kind(
 # --- find_capability_in_repo (COR-031) ------------------------------
 
 
-def _stage_capability_in_repo(target_root: Path, name: str, **kwargs: object) -> Path:
+def _stage_capability_in_repo(target_root: Path, name: str, **kwargs: Any) -> Path:
     """Materialise a capability at <target_root>/.pkit/capabilities/<name>/.
 
     Reuses ``_stage_capability_in_source`` by pointing it at the adopter's
     ``.pkit`` dir, which is where an incubated (in-repo) capability lives.
     """
-    return _stage_capability_in_source(target_root / ".pkit", name, **kwargs)  # type: ignore[arg-type]
+    return _stage_capability_in_source(target_root / ".pkit", name, **kwargs)
 
 
 def test_find_in_repo_returns_source_when_present(kit_target: Path) -> None:
@@ -2077,7 +2078,7 @@ def test_uninstall_incubated_keeps_subtree_and_drops_registry(
 # The real adapter-script runner, taken before any fixture replaces it: the
 # adopter-repo fixture stubs every adapter script out, and the undeploy tests
 # below run the real one.
-_RUN_ADAPTER_PRIMITIVE = install_mod._run_adapter_primitive  # pyright: ignore[reportPrivateUsage]
+_RUN_ADAPTER_PRIMITIVE = install_mod._run_adapter_primitive
 
 _UNDEPLOY = install_mod.ADAPTER_UNDEPLOY_PRIMITIVE
 

@@ -130,8 +130,8 @@ def test_scaffold_templates_validate_with_no_findings(
     from ruamel.yaml import YAML
 
     for template, kind in (
-        (scaffolds._CAPABILITY_PACKAGE_YAML_TEMPLATE, "capability"),  # pyright: ignore[reportPrivateUsage]
-        (scaffolds._PACKAGE_YAML_TEMPLATE, "adapter"),  # pyright: ignore[reportPrivateUsage]
+        (scaffolds._CAPABILITY_PACKAGE_YAML_TEMPLATE, "capability"),
+        (scaffolds._PACKAGE_YAML_TEMPLATE, "adapter"),
     ):
         text = template.format(kind=kind, name="demo", requires_backbone=">=1.0.0,<2.0.0")
         raw = YAML(typ="safe").load(text)
@@ -913,7 +913,7 @@ def test_if_condition_resolves_a_ref_against_the_schema_root() -> None:
         "then": {"properties": {"kind": {}, "command": {}}},
         "else": {"properties": {"kind": {}, "process": {}}},
     }
-    walker = pv._UnknownKeyWalker(Draft202012Validator(schema))  # pyright: ignore[reportPrivateUsage]
+    walker = pv._UnknownKeyWalker(Draft202012Validator(schema))
     resource = Resource.from_contents(schema, default_specification=DRAFT202012)
     resolver = Registry().with_resource(schema["$id"], resource).resolver(base_uri=schema["$id"])
     assert walker.walk({"kind": "event", "command": "x"}, schema, resolver, "") == []

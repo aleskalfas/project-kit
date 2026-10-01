@@ -302,13 +302,18 @@ def _declared_markers() -> list[str]:
 
     tree = ast.parse((REPO_ROOT / "hatch_build.py").read_text(encoding="utf-8"))
     for node in tree.body:
-        target_names: list[str] = []
         if isinstance(node, ast.Assign):
             target_names = [getattr(t, "id", "") for t in node.targets]
         elif isinstance(node, ast.AnnAssign):
             target_names = [getattr(node.target, "id", "")]
+        else:
+            continue
         if "ADOPTER_TIER_MARKERS" in target_names and isinstance(node.value, ast.Tuple):
-            return [e.value for e in node.value.elts if isinstance(e, ast.Constant)]
+            return [
+                e.value
+                for e in node.value.elts
+                if isinstance(e, ast.Constant) and isinstance(e.value, str)
+            ]
     return []
 
 
@@ -544,14 +549,14 @@ def _load_hook_module():
     import types
 
     try:
-        import hatchling.builders.hooks.plugin.interface  # noqa: F401
+        importlib.import_module("hatchling.builders.hooks.plugin.interface")
     except ImportError:
         stub = types.ModuleType("hatchling.builders.hooks.plugin.interface")
 
         class BuildHookInterface:  # pragma: no cover - never instantiated here
             pass
 
-        stub.BuildHookInterface = BuildHookInterface  # type: ignore[attr-defined]
+        stub.__dict__["BuildHookInterface"] = BuildHookInterface
         names = [
             "hatchling",
             "hatchling.builders",

@@ -146,7 +146,7 @@ def test_unreadable_or_empty_lists_do_not_count() -> None:
 def test_short_sha() -> None:
     assert audit.short_sha("0123456789abcdef") == "0123456"
     assert audit.short_sha("") == "unknown"
-    assert audit.short_sha(None) == "unknown"
+    assert audit.short_sha(None) == "unknown"  # pyright: ignore[reportArgumentType] a head that could not be read arrives as None at run time
 
 
 # ---- the shared post-once ---------------------------------------------

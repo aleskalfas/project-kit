@@ -103,7 +103,8 @@ def test_derive_location_precedence_explicit_then_root_then_default() -> None:
     # A kind with no conventional sub-path cannot be chosen here.
     assert dr.derive_location("tech-docs", "project-root-docs") is None
     # An explicit value wins even for such a kind.
-    assert dr.derive_location(None, "anything", explicit="x").source is dr.Source.EXPLICIT
+    explicit = dr.derive_location(None, "anything", explicit="x")
+    assert explicit is not None and explicit.source is dr.Source.EXPLICIT
 
 
 def test_conventional_defaults_equal_the_historical_literals_under_the_default_root(
@@ -279,6 +280,7 @@ def test_record_location_writes_once_and_never_overwrites(
     written = dr.record_location(
         repo.root, dr.BACKBONE, "adr-records", "docs/architecture/decisions/"
     )
+    assert written is not None
     assert written == repo.root / OVERLAY
     text = written.read_text(encoding="utf-8")
     assert re.search(r"(?m)^adr-records:\n  - docs/architecture/decisions$", text)
@@ -308,6 +310,7 @@ def test_record_location_for_a_capability_lands_in_its_project_namespace(
     repo = make_adopter_repo(capabilities=("project-management",))
     _declare_locations(repo, "project-management", "    guides: {path: guides}\n")
     written = dr.record_location(repo.root, "project-management", "guides", "docs/guides")
+    assert written is not None
     assert written == dr.capability_locations_path(repo.root, "project-management")
     assert written.parent == repo.pkit / "capabilities" / "project-management" / "project"
     assert dr.recorded_capability_locations(repo.root, "project-management") == {

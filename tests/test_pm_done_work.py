@@ -594,7 +594,7 @@ def _wire_main_seams(
     issue=_UNSET_ISSUE,
     mode="human",
     agent_gate_result=None,
-    pr_body="## Test plan\n- [x] ok\n",
+    pr_body: str | None = "## Test plan\n- [x] ok\n",
     issues=None,
 ):
     """Monkeypatch done-work's heavy seams so main() reaches the CI gate.

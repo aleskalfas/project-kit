@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
+from typing import Any
 
 import pytest
 from click.testing import CliRunner
@@ -282,10 +283,10 @@ def test_pin_newer_in_routed_context_reconciles_content_not_just_flips_pin(
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv(router._LOOP_GUARD_ENV, "1")  # we are the pinned routed child
 
-    captured: dict[str, object] = {}
+    captured: dict[str, Any] = {}
     real_run = subprocess.run
 
-    def _fake_run(cmd, *args, **kwargs):  # type: ignore[no-untyped-def]
+    def _fake_run(cmd, *args, **kwargs):
         # Intercept only the bootstrap `uvx …` spawn; delegate everything else
         # (the CLI's `git rev-parse` root resolution) to the genuine run, since
         # patching the shared `subprocess` module replaces `run` process-wide.

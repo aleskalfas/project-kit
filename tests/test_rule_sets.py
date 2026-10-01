@@ -406,7 +406,8 @@ def test_a_source_is_reported_as_an_unresolved_kind_never_passed(adopter: Adopte
     assert report.where == f"{PROJECT_SETS}/cmn.md#RS-CMN-001 /origin/source"
     assert "'transcript' is unresolved" in report.message
     # The registry's own verdict, word for word the one an anchor of the kind gets.
-    assert fd.unresolved_kind_reason("transcript", {}) in report.message
+    reason = fd.unresolved_kind_reason("transcript", {})
+    assert reason is not None and reason in report.message
     assert rs.fd.registered_anchor_kinds(adopter.root) == {}
 
 
@@ -458,7 +459,8 @@ def test_a_source_is_judged_through_the_resolver_its_kind_registers(
     assert (
         "the resolver `resolve transcript` that sources registers for it is not run yet" in message
     )
-    assert fd.unresolved_kind_reason("transcript", {}) not in message
+    reason = fd.unresolved_kind_reason("transcript", {})
+    assert reason is not None and reason not in message
 
     # Registered without it: refused, as the friction checks refuse it.
     register(fd.ResolverCommand("transcript", "sources", "resolve transcript"))
@@ -516,8 +518,10 @@ def test_a_successor_exists_in_the_set_or_one_inheriting_it(adopter: AdopterRepo
 # --- inheritance --------------------------------------------------------------------
 
 
-def doc(*pins: str, version: str = "1.0.0", **rule_entries: dict[str, Any]) -> dict[str, Any]:
-    entries = {"RS-DOC-001": {"status": "accepted", "origin": dict(QUOTE)}, **rule_entries}
+def doc(
+    *pins: str, version: str = "1.0.0", rules: Mapping[str, dict[str, Any]] | None = None
+) -> dict[str, Any]:
+    entries = {"RS-DOC-001": {"status": "accepted", "origin": dict(QUOTE)}, **(rules or {})}
     return {"rule-set": "DOC", "version": version, "inherits": list(pins), "rules": entries}
 
 
@@ -557,7 +561,7 @@ def test_a_wrong_major_is_a_version_relation_naming_the_new_major(adopter: Adopt
 
 def test_an_inherited_id_is_never_redefined(adopter: AdopterRepo) -> None:
     write_set(adopter, f"{PROJECT_SETS}/cmn.md", cmn())
-    write_set(adopter, f"{PROJECT_SETS}/doc.md", doc("CMN@1", **{"RS-CMN-001": {}}))
+    write_set(adopter, f"{PROJECT_SETS}/doc.md", doc("CMN@1", rules={"RS-CMN-001": {}}))
     result = validate(adopter)
     finding = only(result, Kind.REDEFINED_ID)
     assert finding.location == f"{PROJECT_SETS}/doc.md#RS-CMN-001"
@@ -575,7 +579,7 @@ def test_a_fill_names_a_point_an_inherited_rule_offers(adopter: AdopterRepo) -> 
     fills = {
         "fills": ["RS-CMN-001#cause-location", "RS-CMN-001#nowhere", "RS-OTH-001#p", "RS-CMN-777#x"]
     }
-    write_set(adopter, f"{PROJECT_SETS}/doc.md", doc("CMN@1", **{"RS-DOC-002": fills}))
+    write_set(adopter, f"{PROJECT_SETS}/doc.md", doc("CMN@1", rules={"RS-DOC-002": fills}))
     result = validate(adopter)
 
     undeclared = [(f.pointer, f.message) for f in result.errors if f.kind is Kind.UNDECLARED_FILL]
@@ -589,7 +593,7 @@ def test_each_point_is_filled_at_most_once_along_a_chain(adopter: AdopterRepo) -
     write_set(adopter, f"{PROJECT_SETS}/cmn.md", cmn())
     fill = {"fills": ["RS-CMN-001#cause-location"]}
     # A chain: DOC fills the point, then APP, inheriting DOC, fills it again.
-    write_set(adopter, f"{PROJECT_SETS}/doc.md", doc("CMN@1", **{"RS-DOC-002": fill}))
+    write_set(adopter, f"{PROJECT_SETS}/doc.md", doc("CMN@1", rules={"RS-DOC-002": fill}))
     app = {
         "rule-set": "APP",
         "version": "1.0.0",
@@ -639,7 +643,7 @@ def test_a_fill_of_a_retired_rule_is_orphaned_and_a_retired_fill_counts_for_noth
     write_set(
         adopter,
         f"{PROJECT_SETS}/doc.md",
-        doc("CMN@1", **{"RS-DOC-002": old, "RS-DOC-003": new, "RS-DOC-004": orphan}),
+        doc("CMN@1", rules={"RS-DOC-002": old, "RS-DOC-003": new, "RS-DOC-004": orphan}),
     )
     result = validate(adopter)
 
@@ -671,7 +675,7 @@ def test_a_fill_whose_rule_does_not_anchor_to_the_rule_it_fills(adopter: Adopter
             },
         },
     }
-    write_set(adopter, f"{PROJECT_SETS}/doc.md", doc("CMN@1", **entries))
+    write_set(adopter, f"{PROJECT_SETS}/doc.md", doc("CMN@1", rules=entries))
     result = validate(adopter)
 
     unanchored = [f for f in result.errors if f.kind is Kind.UNANCHORED_FILL]
@@ -702,7 +706,7 @@ def test_a_fill_of_a_method_rule_anchors_to_it_bare_or_as_cited(
         # A component that does not own the set names no rule, so it anchors nothing.
         "RS-DOC-004": {"fills": ["evidence:RS-EV-001#c"], **anchored_to("living-docs:RS-EV-001")},
     }
-    write_set(adopter, f"{PROJECT_SETS}/doc.md", doc("evidence:EV@1", **entries))
+    write_set(adopter, f"{PROJECT_SETS}/doc.md", doc("evidence:EV@1", rules=entries))
     result = validate(adopter)
 
     (finding,) = result.errors

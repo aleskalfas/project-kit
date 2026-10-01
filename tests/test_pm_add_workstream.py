@@ -76,7 +76,7 @@ def test_validate_slug_rejects_empty(aw) -> None:
 
 
 def test_validate_slug_rejects_non_string(aw) -> None:
-    err = aw.validate_slug(None)  # type: ignore[arg-type]
+    err = aw.validate_slug(None)
     assert err is not None
 
 

@@ -926,7 +926,7 @@ def test_report_head_check_when_the_head_cannot_be_read_again(rpr, capsys) -> No
 def test_read_tips(rpr, monkeypatch) -> None:
     calls: list[list[str]] = []
 
-    def fake(argv, config, check=False):  # type: ignore[no-untyped-def]
+    def fake(argv, config, check=False):
         calls.append(list(argv))
         return _Proc(0, _json.dumps({"headRefOid": _REVIEWED, "baseRefOid": _BASE}))
 
@@ -1207,7 +1207,7 @@ def test_read_verdict_states_fetches_comments_head_and_base(rpr, monkeypatch) ->
         "commits": _HEAD,
     }
 
-    def fake(argv, config, check=False):  # type: ignore[no-untyped-def]
+    def fake(argv, config, check=False):
         calls.append(list(argv))
         return _Proc(0, _json.dumps(payload))
 
@@ -1274,7 +1274,7 @@ def _fake_gh(author: str = "alice", me: str = "bob"):
     records the pr-review call. Returns (fake, calls)."""
     calls: list[list[str]] = []
 
-    def fake(argv, config, check=False):  # type: ignore[no-untyped-def]
+    def fake(argv, config, check=False):
         calls.append(list(argv))
         if argv[:3] == ["gh", "pr", "view"]:
             return _Proc(0, _json.dumps({"author": {"login": author}}))
@@ -1313,7 +1313,7 @@ def test_deliver_native_review_self_approval_skips(rpr, monkeypatch) -> None:
 
 
 def test_deliver_native_review_failure_degrades(rpr, monkeypatch, capsys) -> None:
-    def fake(argv, config, check=False):  # type: ignore[no-untyped-def]
+    def fake(argv, config, check=False):
         if argv[:3] == ["gh", "pr", "view"]:
             return _Proc(0, _json.dumps({"author": {"login": "alice"}}))
         if argv[:2] == ["gh", "api"]:
@@ -1378,7 +1378,7 @@ def test_effort_empty_values_are_treated_as_absent(rpr) -> None:
 def test_effort_non_string_config_values_all_error(rpr, bad) -> None:
     """A falsy non-string is as wrong as a truthy one; only absence and '' are absent."""
     with pytest.raises(ValueError) as exc:
-        rpr._resolve_agent_effort(None, {}, _config_with_effort(bad))  # type: ignore[arg-type]
+        rpr._resolve_agent_effort(None, {}, _config_with_effort(bad))
     assert "review.agents.effort" in str(exc.value)
 
 

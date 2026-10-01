@@ -148,10 +148,7 @@ COMPANIONS = {"reading-evidence.schema.json": SCHEMA_A}
 
 
 def _located(repo: AdopterRepo, findings: tuple[cx.Finding, ...]) -> list[tuple[str, str]]:
-    return [
-        (cx._locate(repo.root, f), f.severity.value)  # pyright: ignore[reportPrivateUsage]
-        for f in findings
-    ]
+    return [(cx._locate(repo.root, f), f.severity.value) for f in findings]
 
 
 def _role(wiring: cx.Wiring, role: str) -> cx.RoleBinding:

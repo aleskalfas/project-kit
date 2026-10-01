@@ -1544,7 +1544,7 @@ def test_apply_and_emit_field_reread_share_one_query_constant(bf, apply_mod, mon
 # ============================================================================
 
 
-def _field_change_obj(apply_mod, *, observed="OPT_PLAN"):
+def _field_change_obj(apply_mod, *, observed: str | None = "OPT_PLAN"):
     """A set-board-field PlannedChange wired for the fresh read + classify trace."""
     return apply_mod.PlannedChange(
         issue_number=7,
@@ -1630,7 +1630,7 @@ def test_apply_loop_survives_a_throwing_fresh_read(apply_mod) -> None:
             raise RuntimeError("transient GraphQL transport error")
         return apply_mod.FreshState(current=None, read_ok=True)
 
-    applied: list[int] = []
+    applied: list[int | None] = []
     import types
 
     result_ok = types.SimpleNamespace(ok=True, detail="done", error="")

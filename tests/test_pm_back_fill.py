@@ -40,6 +40,7 @@ import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -522,7 +523,7 @@ def _patch_gate_checks(
 ) -> None:
     """Patch the pre-check module the gate loads so its three residual probes
     return the requested statuses — without touching real gh or a real map."""
-    fake_module = type("FakePreCheck", (), {})()
+    fake_module = SimpleNamespace()
     fake_module._check_gh_auth = lambda: _Check(
         "`gh` authenticated",
         "ok" if auth_ok else "fail",
@@ -578,7 +579,7 @@ def test_gate_skips_map_parse_when_no_map_present(bf, tmp_path, monkeypatch) -> 
     cap = _cap_root_with_hooks(tmp_path, AUJ_HOOKS)  # no map written
     called = {"map_parse": False}
 
-    fake = type("FakePreCheck", (), {})()
+    fake = SimpleNamespace()
     fake._check_gh_auth = lambda: _Check("`gh` authenticated", "ok", "ok")
     fake._check_repo_accessible = lambda: _Check("repo accessible", "ok", "ok")
 

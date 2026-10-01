@@ -265,7 +265,7 @@ def test_stamp_rejects_unknown_artifact_kind() -> None:
     """The handler-dispatch raises for kinds not yet supported."""
     # The CLI Choice already prevents this; the module-level check is the second line of defense.
     with pytest.raises(click.ClickException, match="unknown artifact-kind"):
-        storyboards.stamp_new_storyboard(Path("/tmp"), "cli", "anything")  # type: ignore[arg-type]
+        storyboards.stamp_new_storyboard(Path("/tmp"), "cli", "anything")  # pyright: ignore[reportArgumentType] a kind the type does not admit, for the module's own check
 
 
 # --- CLI wiring -----------------------------------------------------

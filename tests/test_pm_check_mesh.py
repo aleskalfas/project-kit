@@ -58,7 +58,7 @@ def test_parse_peer_uri_rejects_invalid(cm) -> None:
     assert cm.parse_peer_uri("not-a-uri") is None
     assert cm.parse_peer_uri("https://github.com/owner/repo") is None
     assert cm.parse_peer_uri("") is None
-    assert cm.parse_peer_uri(None) is None  # type: ignore[arg-type]
+    assert cm.parse_peer_uri(None) is None
 
 
 def test_parse_peer_uri_strips_whitespace(cm) -> None:
