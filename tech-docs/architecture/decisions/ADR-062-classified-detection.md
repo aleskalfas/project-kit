@@ -1,7 +1,7 @@
 ---
 id: ADR-062
 title: A detection may ask one predicate which state the subject is in
-status: proposed
+status: accepted
 date: 2026-10-01
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
@@ -38,7 +38,7 @@ That alone does not make a position safe. Position is resolved from all the stat
 
 **Under `mode: classified` a state's detection asks its predicate which state the subject is in. States that name the same predicate share its one answer, and an answer the engine cannot read leaves each of them indeterminate. Every state of a definition declares the same mode. project-management's issue lifecycle adopts the mode, with one such predicate for its five states.**
 
-**What is decided here and what is not.** The core record decides three things (COR-033 point 5): that `detection.mode` may be `classified`; that every state of a definition declares the same mode; and that an engine which does not implement a definition's mode cannot tell where the subject is and permits no move. This record realises them and adds no word to the shape that the core record does not name. Points 1–10 are the contract: what a classifier in any project's definition may answer, how an engine reads it, and what validation reports. They reach adopters through the process reference. Points 11–16 are project-kit's own: how its engine runs and reports a classifier, and how its project-management capability adopts the mode.
+**What is decided here and what is not.** The core record decides four things (COR-033 point 5): that `detection.mode` may be `classified`; that every state of a definition declares the same mode; that an engine which does not implement a definition's mode cannot tell where the subject is and permits no move; and that a definition whose states declare different modes does not conform — validation reports it as an error, and an engine that implements more than one mode resolves no position from it. Points 7 and 9 restate the last for this engine and its validator; the rule is the core record's. This record realises them and adds no word to the shape that the core record does not name. Points 1–10 are the contract: what a classifier in any project's definition may answer, how an engine reads it, and what validation reports. They reach adopters through the process reference. Points 11–16 are project-kit's own: how its engine runs and reports a classifier, and how its project-management capability adopts the mode.
 
 ### The contract: what a classifier answers and how an engine reads it
 
@@ -106,7 +106,7 @@ That alone does not make a position safe. Position is resolved from all the stat
 
 - **Read `state` whenever an answer carries it and no `result`, with nothing declared.** Rejected: an older engine reads every subject as determinately positionless; an answer carrying both keys would be true for every state; and an unrecognised state would read as "no position".
 - **A new key beside `mode` in the detection.** Rejected: engines already shipped do not refuse it at run time.
-- **Let a definition mix the modes, resolved by the engine's precedence rule.** Rejected. The contract would need four cases: an `inferred` state and a classifier's state both true; two classifiers that each place the subject; a classifier that names an `inferred` state; an indeterminate state beside a true one. And an engine without the mode would resolve a position from the `inferred` states alone, so a mixed definition would be safe only where its detections are mutually exclusive — the unimplemented mode would fail closed for a state and not for the position.
+- **Let a definition mix the modes, resolved by the engine's precedence rule.** Rejected. The contract would need two cases a one-mode definition never meets: an `inferred` state and a classifier's state both true, and a classifier that names an `inferred` state. And an engine without the mode would resolve a position from the `inferred` states alone, so a mixed definition would be safe only where its detections are mutually exclusive — the unimplemented mode would fail closed for a state and not for the position.
 - **Change the precedence rule, so that an indeterminate detection holds the position back.** Rejected here. It would make a mixed definition safe under an engine that has the new rule and not under the engines already shipped, and it changes how every existing `inferred` definition resolves when one of its detectors fails. That is a decision about position resolution, with its own record.
 - **Declare the mode once, on the definition.** Rejected: engines already shipped read each state's `mode` and refuse on nothing else, so the per-state key has to stay, and a second declaration beside it could disagree with it.
 - **Signal the mode by the answer's shape** — a JSON string in place of an object, which older engines happen to refuse. Rejected: it relies on an accident of error handling, gives up `reason` and `detail`, and tells the operator "not an object" where the truth is "upgrade".
@@ -118,7 +118,7 @@ That alone does not make a position safe. Position is resolved from all the stat
 
 ## Implications
 
-- **This record stands on the core record.** The mode, the rule that a definition has one mode, and the rule for a mode an engine does not implement are the shape's by COR-033 point 5. Without that text this record has nothing to realise, so it is accepted only once the core record carries it.
+- **This record stands on the core record.** The mode, the rule that a definition has one mode, the rule for a mode an engine does not implement and the rule for a definition that mixes modes are the shape's by COR-033 point 5. Without that text this record has nothing to realise.
 - **Where the reading lives.** The `state` reading belongs to position resolution alone. The reading that gates, invariant checks, membership tests and `resume_when` share does not gain it (point 5).
 - **What an adopter reads changes with the engine.** The shape contract and the process reference describe the mode in the same change that ships the engine's support, and the process reference carries points 1–10. Which files that touches, and the tests that pin the behaviour, belong to the building issue (#1249).
 - **No existing definition is affected.** A definition written before `classified` declares `inferred` for every state, since the shape admitted nothing else. It has one mode and is read as before (point 4).
