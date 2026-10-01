@@ -2,6 +2,7 @@ component: backbone
 kind: minor
 custom:
   category: Added
+  pr: "1277"
 body: >
   Every change the backbone makes on the hosting service now runs the
   cross-repository guard itself (COR-039, ADR-061 point 6). `pkit pull-request
