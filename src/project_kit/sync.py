@@ -77,7 +77,7 @@ def run_sync(target_root: Path, dry_run: bool = False, force: bool = False) -> N
         # propagation — but the renderer is a core step, not an adapter
         # primitive, so it must run here too or backbone/capability runtime
         # ignores would never render in self-host (or any adapter-less) sync.
-        install._render_runtime_ignore(ctx)  # pyright: ignore[reportPrivateUsage]
+        install._render_runtime_ignore(ctx)
         install.ensure_agent_workspace(ctx)
         # The query commands' environments (#1092): here it readies the
         # methodology's own checkout — a fresh clone, a CI runner — for an
@@ -116,9 +116,7 @@ def run_sync(target_root: Path, dry_run: bool = False, force: bool = False) -> N
     for area in install.PROPAGATED_AREAS:
         src = source_kit / area
         if src.is_dir():
-            install._install_area(  # pyright: ignore[reportPrivateUsage]
-                src, target_root / ".pkit" / area, ctx, overwrite=True
-            )
+            install._install_area(src, target_root / ".pkit" / area, ctx, overwrite=True)
 
     # Refresh installed capabilities from source (auto-upgrade per
     # COR-017). Walks the adopter's backbone manifest for components of
@@ -143,7 +141,7 @@ def run_sync(target_root: Path, dry_run: bool = False, force: bool = False) -> N
     # declarations. A core step (sibling to propagation), not an adapter
     # primitive, so it covers backbone + capability declarations regardless of
     # whether an adapter is installed.
-    install._render_runtime_ignore(ctx)  # pyright: ignore[reportPrivateUsage]
+    install._render_runtime_ignore(ctx)
 
     # The agent workspace and its local git exclusion (#1043) — a core step,
     # also run on the self-host path above.

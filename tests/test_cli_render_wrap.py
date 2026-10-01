@@ -8,6 +8,7 @@ machine surface that must never call `wrap()`).
 
 from __future__ import annotations
 
+import io
 import textwrap
 
 import pytest
@@ -50,8 +51,9 @@ def _reset_wrap_width():
     cli_render.set_wrap_width(NO_WRAP)
 
 
-class _FakeStream:
+class _FakeStream(io.StringIO):
     def __init__(self, tty: bool):
+        super().__init__()
         self._tty = tty
 
     def isatty(self) -> bool:

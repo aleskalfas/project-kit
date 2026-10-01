@@ -65,7 +65,7 @@ def test_non_positive_id_refused(ident, tmp_path: Path) -> None:
 def test_bool_is_not_a_valid_id(ident, tmp_path: Path) -> None:
     """`True` is an int subclass — guard against it being taken as instance 1."""
     with pytest.raises(ValueError):
-        ident.write_instance_id(tmp_path, True)  # type: ignore[arg-type]
+        ident.write_instance_id(tmp_path, True)
 
 
 def test_corrupt_file_reads_as_unset(ident, tmp_path: Path) -> None:

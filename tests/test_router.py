@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -314,13 +315,13 @@ class _FakeCompleted:
 
 def _patch_subprocess(
     monkeypatch: pytest.MonkeyPatch, results: list[object]
-) -> list[dict[str, object]]:
+) -> list[dict[str, Any]]:
     """Patch `router.subprocess.run` to return/raise `results` in order,
     recording each call. A result that is an Exception is raised."""
-    calls: list[dict[str, object]] = []
+    calls: list[dict[str, Any]] = []
     it = iter(results)
 
-    def fake_run(cmd, **kwargs):  # type: ignore[no-untyped-def]
+    def fake_run(cmd, **kwargs):
         calls.append({"cmd": cmd, "kwargs": kwargs})
         outcome = next(it)
         if isinstance(outcome, Exception):

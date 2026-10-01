@@ -42,6 +42,42 @@ opened (a read-only cache directory, a sandbox that does not allow it), the step
 says so and runs without the limit. `tests/test_check_script.py` pins both the
 passes and the slots.
 
+## Type checking
+
+**The tests are type-checked in pyright's standard mode and gated outright**
+([PRJ-010](../.pkit/decisions/project/PRJ-010-type-checking-mode.md)): the
+check aggregator's `types` step fails on any finding in a test, with no baseline
+to read or update. Standard mode asks for no annotation, fixtures included; it
+reports the defects a run can miss — an optional value used unchecked, an
+attribute read off a union, an argument of the wrong type. Narrow what a test
+reads (`assert value is not None`) and type a helper for what it is handed. Check
+a module while you write it with `uv run pyright tests/test_<module>.py`, which
+reads the same configuration; `uv run python scripts/pyright_ratchet.py` runs
+the whole step.
+
+**A suppression names its rules and gives its reason on the same line.** It is
+for code that is ill-typed on purpose, such as a test handing a function a type
+its signature rules out to reach the check under test:
+
+```python
+assert audit.short_sha(None) == "unknown"  # pyright: ignore[reportArgumentType] a head that could not be read arrives as None
+```
+
+The step refuses a `# pyright: ignore` that names no rule or gives no reason, a
+`# type: ignore` (pyright is told to honour none), and a file comment that sets
+the mode or a rule's severity (`# pyright: basic`). A rule is relaxed for the
+tests only in `pyproject.toml`'s `[tool.pyright]` table, with its reason beside
+it.
+
+**The package is held to strict mode through a ratchet instead**: its findings,
+counted per file and rule, may not exceed the committed baseline,
+`scripts/pyright-baseline.txt`. When the step says the package has fewer than
+the baseline admits, commit the change and run
+`uv run python scripts/pyright_ratchet.py lower`, which writes only lower
+counts; commit the baseline it writes in the same pull request.
+[CONTRIBUTING.md](../CONTRIBUTING.md), "Running checks", has the rest — what to
+do when a change raises a count, and the only causes for raising the baseline.
+
 ## The adopter-repository fixture
 
 Most tests that need "a project with the kit installed" should not `git init`

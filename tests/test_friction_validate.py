@@ -477,9 +477,9 @@ def test_a_synced_copy_declared_as_a_place_is_refused_even_while_dormant(
     adopter by sync: declared as a place it is an error at its declaration, and
     it is not walked — so the pass is dormant, and the error stands."""
     adopter = make_adopter_repo(capabilities=("evidence",))
-    (evidence,) = [
-        c for c in read_backbone_manifest(adopter.root).components if c.name == "evidence"
-    ]
+    manifest = read_backbone_manifest(adopter.root)
+    assert manifest is not None
+    (evidence,) = [c for c in manifest.components if c.name == "evidence"]
     assert evidence.origin == "kit-shipped"
     adopter.write({CONFIG: _config([place]), place: _anchored("copied")})
     result = fv.validate_friction(adopter.root)

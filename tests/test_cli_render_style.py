@@ -8,6 +8,8 @@ never carry information the plain text doesn't.
 
 from __future__ import annotations
 
+import io
+
 import pytest
 
 from project_kit import cli_render
@@ -101,8 +103,9 @@ def test_styled_view_actually_emits_codes():
 # --- precedence resolution (ADR-011 §2) --------------------------------------
 
 
-class _FakeStream:
+class _FakeStream(io.StringIO):
     def __init__(self, tty: bool):
+        super().__init__()
         self._tty = tty
 
     def isatty(self) -> bool:

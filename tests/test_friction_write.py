@@ -924,7 +924,10 @@ def test_written_blocks_read_back_identically_and_validate(repo: AdopterRepo) ->
                     keep=[f"{e['anchor']['kind']}:{e['anchor']['value']}" for e in keep],
                     now=now,
                 )
-                revalidated = {"at": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "outcome": outcome}
+                revalidated: dict[str, Any] = {
+                    "at": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    "outcome": outcome,
+                }
                 if because is not None:
                     revalidated["unchanged-because"] = because.strip()
                 if keep:

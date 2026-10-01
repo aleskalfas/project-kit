@@ -744,7 +744,7 @@ def connections_resolve(address: str, as_json: bool) -> None:
     import json
 
     from project_kit import backbone_schemas, data_points
-    from project_kit.status import _data_point_lines  # pyright: ignore[reportPrivateUsage]
+    from project_kit.status import _data_point_lines
 
     if backbone_schemas.filler_subpath(address) is None:
         raise click.BadParameter(
@@ -6197,7 +6197,7 @@ def new_schema(
             target_root,
             capability=capability,
             name=name,
-            collection_form=collection_form,  # type: ignore[arg-type]
+            collection_form=collection_form,
             collection_name=collection_name,
             no_namespace=no_namespace,
         )

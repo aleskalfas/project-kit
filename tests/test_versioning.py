@@ -430,10 +430,12 @@ def test_unbump_output_reports_narrow_with_full_range(
         ("b", "1.2.0b1"),
     ],
 )
-def test_bump_version_pre_starts_counter_at_one(tmp_kit: Path, kind: str, expected: str) -> None:
+def test_bump_version_pre_starts_counter_at_one(
+    tmp_kit: Path, kind: versioning.PreKind, expected: str
+) -> None:
     """`bump minor --pre <kind>` produces `X.Y.0<kind>1`."""
     (tmp_kit / "VERSION").write_text("1.1.0\n", encoding="utf-8")
-    old, new = versioning.bump_version(tmp_kit, "minor", pre=kind)  # type: ignore[arg-type]
+    old, new = versioning.bump_version(tmp_kit, "minor", pre=kind)
     assert old == "1.1.0"
     assert new == expected
     assert (tmp_kit / "VERSION").read_text(encoding="utf-8").strip() == expected

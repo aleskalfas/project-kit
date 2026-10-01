@@ -120,9 +120,11 @@ def _address_issues(repo: AdopterRepo, skill: Path) -> list[refs.Issue]:
 
 def test_both_shapes_parse_bracketed_or_not() -> None:
     role = refs.parse_address(f"[{DOCS}]")
+    assert role is not None
     assert role == refs.Address("pkit", "documentation") and role.role == DOCS
     assert str(role) == DOCS
     point = refs.parse_address(READERS)
+    assert point is not None
     assert point == refs.Address("pkit", "documentation", "readers") and point.role == DOCS
     assert str(point) == READERS
 

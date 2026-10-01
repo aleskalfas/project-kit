@@ -150,7 +150,7 @@ def test_status_reads_one_wiring_for_connections_and_data_points(
     calls = []
     resolve = cx.resolve_wiring
 
-    def counting(root):  # type: ignore[no-untyped-def]
+    def counting(root):
         calls.append(root)
         return resolve(root)
 

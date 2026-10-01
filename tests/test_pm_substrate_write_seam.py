@@ -238,7 +238,7 @@ def test_result_argv_is_an_immutable_tuple(substrate_writes, monkeypatch) -> Non
     result = substrate_writes.write_milestone({}, issue_number=7, title="M1")
     assert isinstance(result.argv, tuple)
     with pytest.raises((AttributeError, TypeError)):
-        result.argv.append("--mutated")  # type: ignore[attr-defined]
+        result.argv.append("--mutated")  # pyright: ignore[reportAttributeAccessIssue] a tuple has no append: the test checks the argv cannot be changed
 
 
 def test_write_milestone_failure_is_carried_not_raised(substrate_writes, monkeypatch) -> None:

@@ -40,7 +40,7 @@ from tests.adopter_repo import AdopterRepo, GitRepo, MakeAdopterRepo
 from tests.analysis_repo import CONFIG, NUMBERS, installed, run_script, seed
 
 # The guard's reading of a script's code, shared rather than copied.
-from tests.test_living_docs_spaces import _code  # pyright: ignore[reportPrivateUsage]
+from tests.test_living_docs_spaces import _code
 
 REPO = Path(__file__).resolve().parent.parent
 SCHEMA = REPO / ".pkit" / "schemas" / "backbone" / "config.schema.json"

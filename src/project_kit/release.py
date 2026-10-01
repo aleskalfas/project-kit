@@ -355,7 +355,7 @@ def compute_release(source_kit: Path) -> ReleasePlan:
                 component=component,
                 segment=top,
                 old_version=component.version,
-                new_version=versioning.next_version(component.version, top),  # type: ignore[arg-type]
+                new_version=versioning.next_version(component.version, top),
                 changesets=group,
                 floor_raise=_floor_raise(component, group, shipped, backbone_moves),
             )
@@ -375,7 +375,7 @@ def shipped_backbone(components: Mapping[str, Component], changesets: Sequence[C
     top = _top_segment([cs for cs in changesets if cs.component == BACKBONE])
     if top is None or top == "none":
         return current.version
-    return versioning.next_version(current.version, top)  # type: ignore[arg-type]
+    return versioning.next_version(current.version, top)
 
 
 def _top_segment(group: Sequence[Changeset]) -> str | None:

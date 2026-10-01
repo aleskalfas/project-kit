@@ -95,10 +95,12 @@ def _dict_keyed_on_axis_labels(node: ast.Dict) -> str | None:
     what distinguishes a raw-label read-map (``{"type:bug": "fix", ...}``, the
     Task #442 bypass) from an ordinary dict that happens to carry one such string
     among unrelated keys."""
-    string_keys = [k for k in node.keys if isinstance(k, ast.Constant) and isinstance(k.value, str)]
+    string_keys = [
+        k.value for k in node.keys if isinstance(k, ast.Constant) and isinstance(k.value, str)
+    ]
     if not string_keys:
         return None
-    prefixes = {_axis_prefix_of(k.value) for k in string_keys}
+    prefixes = {_axis_prefix_of(key) for key in string_keys}
     if len(prefixes) == 1 and None not in prefixes:
         return next(iter(prefixes))
     return None

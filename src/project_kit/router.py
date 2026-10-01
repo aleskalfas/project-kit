@@ -87,7 +87,7 @@ def main(argv: list[str] | None = None) -> None:
     _run_self()
 
 
-def _route(argv: list[str], environ) -> None:  # type: ignore[no-untyped-def]
+def _route(argv: list[str], environ) -> None:
     """Select and take a route. Returns iff the caller should run self."""
     root = _enclosing_project(Path.cwd())
     if root is None:
@@ -115,12 +115,12 @@ def _route(argv: list[str], environ) -> None:  # type: ignore[no-untyped-def]
 # --- Routing predicates (all stdlib, all cheap) --------------------------------
 
 
-def _routing_suppressed(environ) -> bool:  # type: ignore[no-untyped-def]
+def _routing_suppressed(environ) -> bool:
     """True when routing must be skipped: operator bypass or the loop guard."""
     return _env_true(environ, _BYPASS_ENV) or _env_true(environ, _LOOP_GUARD_ENV)
 
 
-def _env_true(environ, name: str) -> bool:  # type: ignore[no-untyped-def]
+def _env_true(environ, name: str) -> bool:
     """True when an env var is set to a truthy value (`1` / `true` / `yes`)."""
     return environ.get(name, "").strip().lower() in {"1", "true", "yes"}
 
@@ -261,7 +261,7 @@ def read_version_pin(root: Path) -> str | None:
     return text or None
 
 
-def is_routed_child(environ) -> bool:  # type: ignore[no-untyped-def]
+def is_routed_child(environ) -> bool:
     """True when this process was re-exec'd by the router into a pinned version.
 
     The router sets the loop-guard env on the child it re-execs (route 2). A
@@ -271,7 +271,7 @@ def is_routed_child(environ) -> bool:  # type: ignore[no-untyped-def]
     return _env_true(environ, _LOOP_GUARD_ENV)
 
 
-def is_route_bypassed(environ) -> bool:  # type: ignore[no-untyped-def]
+def is_route_bypassed(environ) -> bool:
     """True when routing was explicitly bypassed via PKIT_NO_ROUTE.
 
     Set by `run_bypassed` on the child it bootstraps (ADR-049). A `pkit upgrade`
@@ -308,7 +308,7 @@ def running_version() -> str:
 # --- Route executors -----------------------------------------------------------
 
 
-def _exec_source_dispatcher(root: Path, argv: list[str], environ) -> None:  # type: ignore[no-untyped-def]
+def _exec_source_dispatcher(root: Path, argv: list[str], environ) -> None:
     """Route 1: exec the checkout's `.pkit/cli/pkit`. Returns only on degrade.
 
     Sets no loop guard: the dispatcher runs `python -m project_kit`, which does
@@ -341,7 +341,7 @@ def _exec_source_dispatcher(root: Path, argv: list[str], environ) -> None:  # ty
     )
 
 
-def _stamp_cli_version(root: Path, environ) -> None:  # type: ignore[no-untyped-def]
+def _stamp_cli_version(root: Path, environ) -> None:
     """Inject `PKIT_CLI_VERSION = <checkout .pkit/VERSION>` for the dispatched
     process, so provenance reports `cli == tree` in a source checkout.
 
@@ -358,7 +358,7 @@ def _stamp_cli_version(root: Path, environ) -> None:  # type: ignore[no-untyped-
         environ[_CLI_VERSION_ENV] = version
 
 
-def _run_pinned(pin: str, running: str, argv: list[str], environ) -> None:  # type: ignore[no-untyped-def]
+def _run_pinned(pin: str, running: str, argv: list[str], environ) -> None:
     """Route 2: run the command under the pinned wheel, or degrade loudly to self.
 
     Two phases keep degradation clean (ADR-039 D2). First a resolution *probe*
@@ -391,7 +391,7 @@ def _pinned_base(pin: str) -> list[str]:
     return ["uvx", "--from", f"{DISTRIBUTION_GIT_URL}@v{pin}", "project-kit"]
 
 
-def run_bypassed(pin: str, argv: list[str], environ=None) -> int:  # type: ignore[no-untyped-def]
+def run_bypassed(pin: str, argv: list[str], environ=None) -> int:
     """Run `pkit <argv>` at the wheel for `pin`, with routing bypassed; return the exit code.
 
     Uses the same `uvx --from …@v<pin>` base route 2 pins against, but sets
@@ -418,7 +418,7 @@ def run_bypassed(pin: str, argv: list[str], environ=None) -> int:  # type: ignor
     return completed.returncode
 
 
-def _pin_is_resolvable(pin: str, env) -> bool:  # type: ignore[no-untyped-def]
+def _pin_is_resolvable(pin: str, env) -> bool:
     """True iff the pinned wheel can be resolved and run (a `--version` probe).
 
     Any launch failure (`uvx` absent) or non-zero exit (fetch/build/tag error)

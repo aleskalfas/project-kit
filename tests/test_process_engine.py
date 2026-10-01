@@ -285,6 +285,7 @@ def test_journal_entry_version_absent_when_unresolvable(fixture_repo: Path, monk
     monkeypatch.setattr(process_mod, "_running_pkit_version", lambda: "")
     result = _engine(fixture_repo).move("ready", actor="agent")
     assert result.ok is True
+    assert result.journal_entry is not None
     assert "version" not in result.journal_entry
 
 
