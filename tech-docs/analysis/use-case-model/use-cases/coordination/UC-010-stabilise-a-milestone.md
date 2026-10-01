@@ -20,9 +20,9 @@ pkit:
       artefact:
         - ACT-operator
     revalidated:
-      at: 2026-10-01T16:05:01Z
+      at: 2026-10-01T16:23:44Z
       outcome: unchanged
-      unchanged-because: on this branch the merge mechanic moved into the backbone's pull-request landing module, which the pm verbs and the release step call; what main brought in (the process move origin, the configuration writer, the milestone rollforward) does not change what this page describes
+      unchanged-because: on this branch the merge mechanic moved into the backbone's pull-request landing module; the friction resolve command main brought in does not change what this page says about landing a pull request
 ---
 
 # UC-010 — Stabilise a Milestone for a release
