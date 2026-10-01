@@ -1,0 +1,13 @@
+component: project-management
+kind: patch
+custom:
+  category: Changed
+  requires_backbone: release
+body: >
+  `done-work` and `merge-pr` land a PR through the backbone's merge mechanic,
+  `pkit pull-request`, the one `pkit release merge` uses too: the merge-queue
+  reading, the merge or the enqueue, the wait and the dequeue are the
+  backbone's, run in the environment the `gh:` block pins, and the verbs keep
+  their gates, refusals, output and exit codes. Upgrade it together with the
+  backbone: against one that predates the command the verbs cannot read how the
+  base merges, and merge nothing.

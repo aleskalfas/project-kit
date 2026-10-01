@@ -1,0 +1,19 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit release merge` lands a release PR through the base branch's merge queue
+  where it has one, instead of merging around it and then deleting the head
+  branch of a PR the queue had only taken in, which closed it unmerged. It
+  refuses unless the queue squashes from the PR title and body, enqueues the PR
+  pinned to the head whose checks it read, reports where it stands and waits for
+  the merge (`--wait-minutes`, `--no-wait`); the head branch is deleted only once
+  GitHub reports the PR merged. A run that returns while the queue holds the PR,
+  or after a direct merge it could not confirm, exits 4 with nothing deleted, and
+  running it again completes it; a PR the queue drops, or whose head moved,
+  exits 3. The merge mechanic behind it is the backbone's, once, and a new
+  command exposes it to capability scripts: `pkit pull-request` reads where a PR
+  stands with its base's queue and the repository's squash-commit defaults,
+  squash-merges, enqueues, waits for the queue's merge and takes a PR out of
+  the queue, each with a `--json` document.
