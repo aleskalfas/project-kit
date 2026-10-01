@@ -1,0 +1,27 @@
+component: project-management
+kind: minor
+custom:
+  category: Added
+body: >
+  A new verb, `pkit pm land <N>`, lands an issue's pull request in one command
+  (#1203). It replaces three steps run by hand with a wait between them. It
+  pins the PR's head once and waits for the checks on that head, judged as
+  `done-work`'s CI gate judges them: no check reported yet is a run that has
+  not started, never green, and a green run on an earlier head does not count.
+  It then runs `review-pr` for the reviewers whose verdicts are not fresh, on
+  that head only, and merges it through `done-work`, whose gates, refusals,
+  merge-queue handling and exit codes pass through unchanged. Each step prints
+  one line. The run stops at the first step that cannot go on, and its last
+  line says why: a local branch with commits the PR lacks (the push command is
+  given), a failed check (named with its URL), a `CHANGES_REQUESTED` (the first
+  line of each `[block]` finding is printed with its reviewer), a reviewer that
+  could not run, or a head that moved. A wait that runs out exits 5 and a
+  reviewer that could not run exits 6, distinct from a stop that needs a fix
+  (1). A re-run resumes: green checks on the same head are not waited for,
+  fresh verdicts are not re-run, and a PR the merge queue merged is completed
+  through `done-work`. `--wait-minutes` (default 30) and `--no-wait` bound the
+  waits; `--dry-run` and `--yes` are passed through. No flag skips the checks
+  or the review. Two pieces of the verbs it composes change to support it.
+  `done-work` and `review-pr` can each be handed the head to land or review,
+  and stop rather than act on another. The CI gate also tells the four states
+  of a head's checks apart; the merge gate reads them as before.
