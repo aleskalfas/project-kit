@@ -12,12 +12,18 @@ move-issue's exact inference precedence (closed->done; first state:* label; mile
 todo) and reports result=True iff it equals 'done'. State meaning: Issue closed (merged via PR, or
 won't-do).
 
-READ-ONLY. The process engine (COR-033) invokes this as
+The shipped lifecycle detects with `detect-state`, its classifier, which
+every state names; this per-state detector answers from the same read of the
+issue and stays registered for direct use.
+
+READ-ONLY. Run as
   <script> <issue-number> --json
-and reads the structured-JSON contract on stdout. Self-contained via PEP 723.
+it answers the process engine's detection contract (COR-033) on stdout,
+`{result, reason}`. Self-contained via PEP 723.
 
 Exit codes:
-  0  evaluated (result emitted as JSON); 2  usage error.
+  0  evaluated (result emitted as JSON); 2  usage error, or the issue could not
+  be read (why on stderr).
 """
 
 from __future__ import annotations

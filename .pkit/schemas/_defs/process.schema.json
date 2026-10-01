@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "process.schema.json",
   "title": "Process substrate — shape contract (COR-033)",
-  "description": "Shared shape for a process DEFINITION a capability authors. Capability instance schemas cross-file $ref these $defs (e.g. \"_defs/process.schema.json#/$defs/process\"). Per the .pkit/process/ area spec + COR-033. Ship-narrow: enums admit only the implemented core values (singleton + keyed cardinality, inferred detection); remaining deferred values widen the enum when they ship. additionalProperties is permissive on the extensible objects (process, state, transition) so a capability's own domain-local fields coexist; tight on the core sub-objects.",
+  "description": "Shared shape for a process DEFINITION a capability authors. Capability instance schemas cross-file $ref these $defs (e.g. \"_defs/process.schema.json#/$defs/process\"). Per the .pkit/process/ area spec + COR-033. Ship-narrow: enums admit only the implemented core values (singleton + keyed cardinality; the two live detection modes, inferred and classified, one per definition); remaining deferred values widen the enum when they ship. additionalProperties is permissive on the extensible objects (process, state, transition) so a capability's own domain-local fields coexist; tight on the core sub-objects.",
   "$comment": "Root shape: a document validated against THIS file is a process DEFINITION (the `process:` envelope). Capability instance schemas cross-file $ref the $defs below, which ignores these root keywords, so adding them does not affect those consumers. Without a root, a $defs-only document accepts every instance -- so the yaml-language-server pointer stamped onto a definition validated nothing.",
   "type": "object",
   "required": ["process"],
@@ -12,7 +12,7 @@
   "$defs": {
     "predicate": {
       "type": "object",
-      "description": "A check the engine evaluates by running a capability-provided command (COR-033 P4). The command returns structured JSON the engine reads: deterministic -> {result, reason, detail?}; authorisation-artifact -> {exists, produced_by, reason, detail?}.",
+      "description": "A check the engine evaluates by running a capability-provided command (COR-033 P4). The command returns structured JSON the engine reads: an inferred detection and a deterministic check -> {result, reason, detail?}; a classified detection -> {state, reason, detail?} (ADR-062); authorisation-artifact -> {exists, produced_by, reason, detail?}.",
       "required": ["run"],
       "additionalProperties": false,
       "properties": {
@@ -86,13 +86,13 @@
     },
     "detection": {
       "type": "object",
-      "description": "How the engine resolves whether a subject is in a state.",
+      "description": "How the engine resolves whether a subject is in a state. Every state of a definition declares the same mode (COR-033 point 5; stated on `process` below).",
       "required": ["mode", "predicate"],
       "additionalProperties": false,
       "properties": {
         "mode": {
-          "enum": ["inferred"],
-          "description": "Ship-narrow: position inferred from reality via the predicate. `stored`/`hybrid` widen this enum when they ship."
+          "enum": ["inferred", "classified"],
+          "description": "The question the predicate is asked; both read reality live on every invocation and keep nothing between invocations. inferred: 'is the subject in this state?' -- the predicate answers {result, reason}. classified: 'which state is the subject in?' -- the predicate (a classifier) answers {state, reason}, `state` being the id of one of the states that name it, or null with a reason that is not blank for none of them; the states that name one command under one `with` mapping share its one answer, and any other answer leaves each of them indeterminate (ADR-062). `stored`/`hybrid` (deferred) widen this enum when they ship."
         },
         "predicate": { "$ref": "#/$defs/predicate" }
       }
@@ -419,6 +419,16 @@
       "description": "A process definition. additionalProperties permitted for capability-local blocks (e.g. pm's cascade / closure_triggers / pr_state_effect) and named-deferred slots (hooks, orchestration) until they ship.",
       "required": ["id", "version", "subject", "states", "transitions"],
       "additionalProperties": true,
+      "anyOf": [
+        {
+          "description": "COR-033 point 5: every state of a definition declares the same detection mode -- here, inferred.",
+          "properties": { "states": { "items": { "properties": { "detection": { "properties": { "mode": { "const": "inferred" } } } } } } }
+        },
+        {
+          "description": "COR-033 point 5: every state of a definition declares the same detection mode -- here, classified.",
+          "properties": { "states": { "items": { "properties": { "detection": { "properties": { "mode": { "const": "classified" } } } } } } }
+        }
+      ],
       "properties": {
         "id": {
           "type": "string",

@@ -388,9 +388,14 @@ def _lint_in_memory(repo_root: Path, data: Any, label: str) -> None:
 # --- predicate stubs (the predicate-runner contract, scaffolded) ------------
 
 # Payload examples per stub purpose — the runner-contract shape the implemented
-# predicate must print (COR-033 engine contract; ADR-048 for the seams).
+# predicate must print (COR-033 engine contract; ADR-048 for the seams). The
+# stamps write every detection as `mode: inferred` — a definition has one mode —
+# so a detection stub answers "is the subject in this state?". A `classified`
+# detection (ADR-062) answers `{"state": "<state-id>" | null, "reason": "<why>"}`
+# instead; a definition adopts it by a hand edit to all its states.
 _STUB_PAYLOADS = {
-    "detection": '{"result": <bool>, "reason": "<why>"}',
+    "detection": '{"result": <bool>, "reason": "<why>"} (the `inferred` answer its '
+    "detection declares)",
     "gate": '{"result": <bool>, "reason": "<why>"}',
     "authorisation-artifact gate": '{"exists": <bool>, "produced_by": "<login>", "reason": '
     '"<why>"}',

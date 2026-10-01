@@ -19,9 +19,9 @@ pkit:
         - src/project_kit/working_tree.py
       record: [COR-018, COR-019, COR-020, COR-023, COR-029, COR-048, COR-050, COR-051, COR-052, COR-053, ADR-056, ADR-057]
     revalidated:
-      at: 2026-10-01T23:21:18Z
+      at: 2026-10-01T22:59:01Z
       outcome: unchanged
-      unchanged-because: The package schema gains an optional reads key on a command leaf, what a data point's filler reads beyond the working tree (COR-052 point 6); this page summarises the package schema by its blocks and leaves its keys to the lifecycle README, which documents reads, and its filler-envelope account is untouched, so it holds
+      unchanged-because: The process shape contract's detection mode enum gains classified and the process def states the one-mode rule; the README's account of the shared $defs library, its layout and the pointer form still holds.
 ---
 
 # Schemas

@@ -20,13 +20,17 @@
 # at the shared declaration.
 #
 # Five states (todo → backlog → in-progress → review → done) the
-# methodology drives every issue through. Each state's `detection`
-# predicate reproduces move-issue's exact inference precedence
-# (closed→done; first state:* label; milestone→backlog; else todo) so
-# the detectors are mutually exclusive and behaviour is identical
-# pre/post rebind — behaviour parity is the acceptance bar (DEC-033).
-# State ORDER additionally encodes that precedence (the engine returns
-# the first matching detection), so it is load-bearing.
+# methodology drives every issue through. Every state detects with ONE
+# classifier, `detect-state`, under `mode: classified` (COR-033 point 5;
+# DEC-033 D2): it reads the issue once and answers which state the issue
+# is in, by move-issue's exact inference precedence (closed→done; first
+# state:* label; milestone→backlog; else todo) — behaviour parity is the
+# acceptance bar (DEC-033). The engine runs it once per reading of an
+# issue's position. Its answer makes at most one state true, so the
+# state ORDER below decides nothing among these five; it still orders
+# the engine's reading (the first state whose detection is true is the
+# position). The per-state `detect-<state>` commands stay registered, for
+# direct use; this definition does not name them.
 
 schema_version: 4
 
@@ -38,7 +42,7 @@ source:
 
 process:
   id: issue-lifecycle
-  version: 4
+  version: 5
   subject:
     cardinality: keyed
     key: issue-number
@@ -55,9 +59,9 @@ process:
         - "[issue-types:task]"
       terminal: true
       detection:
-        mode: inferred
+        mode: classified
         predicate:
-          run: detect-done
+          run: detect-state
 
     - id: review
       display_name: Review
@@ -67,9 +71,9 @@ process:
       applies_to:
         - "[issue-types:task]"
       detection:
-        mode: inferred
+        mode: classified
         predicate:
-          run: detect-review
+          run: detect-state
 
     - id: in-progress
       display_name: In Progress
@@ -81,9 +85,9 @@ process:
         - "[issue-types:umbrella]"
         - "[issue-types:task]"
       detection:
-        mode: inferred
+        mode: classified
         predicate:
-          run: detect-in-progress
+          run: detect-state
 
     - id: backlog
       display_name: Backlog
@@ -95,9 +99,9 @@ process:
         - "[issue-types:umbrella]"
         - "[issue-types:task]"
       detection:
-        mode: inferred
+        mode: classified
         predicate:
-          run: detect-backlog
+          run: detect-state
 
     - id: todo
       display_name: Todo
@@ -110,9 +114,9 @@ process:
         - "[issue-types:task]"
       entry: true
       detection:
-        mode: inferred
+        mode: classified
         predicate:
-          run: detect-todo
+          run: detect-state
 
   transitions:
     - from: todo
