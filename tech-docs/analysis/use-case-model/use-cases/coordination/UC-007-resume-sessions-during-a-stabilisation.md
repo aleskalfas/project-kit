@@ -20,9 +20,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-10-01T16:05:00Z
+      at: 2026-10-01T21:03:29Z
       outcome: unchanged
-      unchanged-because: on this branch the merge mechanic moved into the backbone's pull-request landing module, which the pm verbs and the release step call; what main brought in (the process move origin, the configuration writer, the milestone rollforward) does not change what this page describes
+      unchanged-because: "#1242 now only puts start-work's early check, read from labels and milestone as before, and its refusal and failure messages in helpers shared with review-work; the stabilisation guard this use case expects on start-work is still unbuilt, so it holds"
 ---
 
 # UC-007 — Resume sessions killed during a stabilisation

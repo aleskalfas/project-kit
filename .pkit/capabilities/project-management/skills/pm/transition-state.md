@@ -7,7 +7,7 @@ Sub-procedure of the pm composite skill (`pm.md` in this folder). Per [project-m
 - The user wants to **move** an issue forward through the lifecycle (Todo → Backlog → In Progress → Review).
 - The user wants to **close** an issue (PR-merge-driven closure or explicit won't-do gesture per [project-management:DEC-006-state-machine-and-cascade]).
 - The user wants to **reopen** a closed issue (e.g., it regressed).
-- The PR of an issue in Review needs its **reviewer verdicts** (the review step below).
+- The PR of an issue in Review needs its **reviewer verdicts**, or landing — checks, verdicts, merge (the review step below).
 - The agent is running a cascade pass after a child's state changed (the scripts handle the cascade internally; this sub-procedure is the entry point).
 
 This operation **does mutate** issue state. Every mutation is gated by the membership predicate (per [project-management:DEC-021-team-membership-gate]) + the schema's authorisation field + the checkbox close-gate (on closure paths) per [project-management:DEC-007-checkbox-validation].
@@ -21,7 +21,7 @@ Behaviour summary (the scripts are the source of truth — read them for the exa
 - **Membership gate** (DEC-021) — closed mode refuses non-members with the standard refusal template.
 - **Transition lookup** — `move-issue.py` looks up the requested transition in `workflow.yaml`'s `transitions:` list and refuses any move not in the schema, with a diagnostic listing the legal targets.
 - **Authorisation gate** — user-authorised transitions (Todo → Backlog; Review → Done; Backlog/Todo → Done; In-progress → Done parent close) require `--yes` from the caller as the explicit authorisation signal; bypassable-with-audit transitions accept `--bypass --bypass-reason "..."` to record an audit comment.
-- **Forward cascade** (DEC-006) — `move-issue.py` walks the parent chain via the body's parent-ref line and bumps any parent that's behind. Skip with `--no-cascade`.
+- **Forward cascade** (DEC-006) — `move-issue.py` walks the parent chain via the body's parent-ref line and bumps any parent that's behind. Each bump is journaled like the issue's own move, from the state the parent held before, with the child's move as its reason; a bump the engine refuses (a parent in Todo taken straight to In Progress, which the workflow does not declare) warns the same way a direct move's refusal does. Skip with `--no-cascade`.
 - **Closure cascade** (DEC-006) — `close-issue.py` surfaces parent-eligibility findings after the close, never auto-closes parents.
 - **Checkbox close-gate** (DEC-007) — `close-issue.py --mode=wont-do` refuses if any `- [ ]` box remains unticked in the body. Tick the satisfied criteria with `check-criterion <N> <index>...` (per DEC-038) before re-running the close; reach for `--skip-checkbox-gate` only when a criterion is genuinely won't-do (discouraged).
 
@@ -35,12 +35,23 @@ pkit project-management move-issue <N> --to <todo|backlog|in-progress|review|don
   [--bypass --bypass-reason "<text>"] [--no-cascade] [--dry-run] [--yes]
 ```
 
-**Request the reviewer verdicts** on the PR of an issue in Review (agent review mode, per [project-management:DEC-028-agent-as-approver-paths]):
+**Land the PR** of an issue in Review — wait for its checks, request the reviewer verdicts it still needs (agent review mode, per [project-management:DEC-028-agent-as-approver-paths]), merge — with one verb, run twice: once to check and review, once to merge on the user's authorisation.
 ```
-gh pr checks <PR> --watch
-pkit project-management review-pr <N>
+pkit project-management land-work <N> [--wait-minutes <M> | --no-wait]
+pkit project-management land-work <N> --yes --expect-head <sha>
 ```
-`review-pr` runs once every check on the PR's head commit has passed; `gh pr checks --watch` waits for them, and as a read it is open to the project-manager. The reviewers judge that head, and the merge gate counts no verdict older than the PR's latest commit, so reviewing a head whose CI then fails spends a round of verdicts on a commit the fix replaces. When the PR has no checks configured (`gh pr checks` reports none and exits non-zero), run the review. When a check fails, hand the PR back to the builder and do not run the review. (`<N>` is the issue, `<PR>` its pull request.)
+`land-work` pins the PR's head and runs `review-pr` only once every check on that head has passed: the reviewers judge that head, and a later commit that changes what a reviewer checks makes its verdict stale (the freshness rule: the [capability README](../../README.md), "When a verdict stays fresh"), so reviewing a head whose CI then fails would spend a round of verdicts on a commit the fix replaces. Run it first without `--yes`: it merges nothing (a PR that has already merged it completes, as `done-work` does — the issue moves to Done, the closure cascade runs and the branch is cleaned up), and when the checks, the review and `done-work`'s gates all pass it stops on a `ready:` line naming the head and the command that merges it. Review → Done is user-authorised (the authorisation gate above): show the user the verdicts and the advisories the review step printed, and run the `ready:` line's command — `--yes --expect-head <sha>` — only on the user's authorisation. That authorisation is for that head and never extends to a later one; `--expect-head` stops the run if the PR has moved. The last line of a run says why it stopped. The exit codes are listed once, in the [capability README](../../README.md)'s "Landing a pull request in one command"; act on each:
+- **0** — merged, and the issue done.
+- **1** — hand the PR back to the builder with the last line: unpushed or diverged commits, a draft, a conflict with the base, a failed check, a `CHANGES_REQUESTED` (its blocking findings printed above the line, each with its reviewer), or a `done-work` refusal.
+- **2** — nothing was changed: fix the invocation, or run the same command again once GitHub answers.
+- **3** — the head moved, or is not the one authorised: report it to the user and stop. Do not run `land-work` again on your own: the new head needs its checks, its review and its own authorisation.
+- **4** — queued, or the merge is unconfirmed: run the same command again once it merges.
+- **5** — the checks are still running, or none has been reported: run again to keep waiting. Never fall back to `review-pr <N>` and `done-work <N>` because a wait ran out: `done-work`'s own gate does not wait for a check nobody reported, so that would merge a head no check ran on. That path is only for a project known to run no checks on pull requests.
+- **6** — a reviewer could not run: run again once it can.
+- **7** — a step failed that a re-run completes (a request that failed, a PR that merged meanwhile, a step after the merge): run the same command again.
+- **8** — ready, not merged: show the user the verdicts and ask; on the authorisation, run the `ready:` line's command.
+
+To request the verdicts without merging, run `pkit project-management review-pr <N>` once the checks on the PR's head have passed. In a project that runs no checks on pull requests, `land-work` has no run to wait for: land with `review-pr <N>` and then `done-work <N>`. (`<N>` is the issue.)
 
 When the verdicts come back, a fix round carries the findings the reviewer marks blocking; each advisory is answered in the PR body or filed as a follow-up, scoped by [create-issue](create-issue.md)'s intent recognition.
 

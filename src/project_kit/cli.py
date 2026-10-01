@@ -7077,12 +7077,20 @@ def _resolve_actor_identity() -> str:
     "cross-authority). Defaults to the resolved gh login of the "
     "current user.",
 )
+@click.option(
+    "--reason",
+    default=None,
+    metavar="TEXT",
+    help="Why the move was taken, recorded on its journal entry as given. The engine does not "
+    "read it, so it never changes whether the move is allowed.",
+)
 def process_move(
     address: str,
     to_state: str,
     from_state: str | None,
     subject: str | None,
     actor: str | None,
+    reason: str | None,
 ) -> None:
     """Execute a legal move; append the journal entry. Refuses an illegal move."""
     from project_kit import process as process_mod
@@ -7091,7 +7099,7 @@ def process_move(
         actor = _resolve_actor_identity()
     engine = _load_engine(address, subject)
     try:
-        result = engine.move(to_state, actor, from_state=from_state)
+        result = engine.move(to_state, actor, from_state=from_state, reason=reason)
     except process_mod.ProcessError as exc:
         raise click.ClickException(str(exc)) from exc
     if not result.ok:
@@ -7158,6 +7166,9 @@ def process_cascade(address: str, subject: str | None, as_json: bool) -> None:
                         "opened": resolution.opened,
                         "indeterminate": resolution.indeterminate,
                         "reason": resolution.reason,
+                        # What a predicate the fold could not evaluate said
+                        # (null when none failed, or it said nothing).
+                        "stderr_tail": resolution.stderr_tail or None,
                     }
                 },
                 indent=2,
@@ -7165,8 +7176,7 @@ def process_cascade(address: str, subject: str | None, as_json: bool) -> None:
             )
         )
     else:
-        marker = "✓" if resolution.opened else ("?" if resolution.indeterminate else "✗")
-        click.echo(f"  {marker} folds {resolution.address} ({resolution.op}): {resolution.reason}")
+        click.echo(process_mod.render_cascade_narrative(resolution))
     if not resolution.opened:
         raise SystemExit(1)
 
@@ -7721,7 +7731,8 @@ def process_couple(
     "state_id",
     default=None,
     help="Hosting state of the coupling; needed only when ADDRESS couples to "
-    "the same upstream on several states.",
+    "the same upstream on several states. It names a state, so it cannot "
+    "tell apart two entries on one state — the refusal names the hand edit.",
 )
 @click.option(
     "--trigger",

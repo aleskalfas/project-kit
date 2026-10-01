@@ -56,9 +56,9 @@ TERM-intent-note:
         record:
           - project-management:DEC-044
       revalidated:
-        at: 2026-09-30T23:02:15Z
+        at: 2026-10-01T20:49:54Z
         outcome: unchanged
-        unchanged-because: "#840's lint and format pass reshapes the anchored code without changing what it does, so this page still describes it as it is"
+        unchanged-because: "after #1242 was narrowed, start-work reads the issue's state from labels and milestone as before, through a function shared with review-work, and refuses nothing new; the first intent note start-work --next will write is untouched and still unbuilt, so the term holds"
 TERM-new-front:
   name: New front
   status: active
@@ -71,9 +71,9 @@ TERM-new-front:
         record:
           - project-management:DEC-004
       revalidated:
-        at: 2026-09-30T23:02:15Z
+        at: 2026-10-01T20:49:56Z
         outcome: unchanged
-        unchanged-because: "#840's lint and format pass reshapes the anchored code without changing what it does, so this page still describes it as it is"
+        unchanged-because: "#1242 now only shares start-work's early check, read from labels and milestone as before with no engine read and no new refusal, with review-work; it adds no start guard over fronts, which stays intended design, so the term holds"
 TERM-release-scope:
   name: Release scope
   status: active
@@ -115,9 +115,9 @@ TERM-stabilisation:
           - project-management:DEC-014
           - ADR-019
       revalidated:
-        at: 2026-10-01T15:52:46Z
+        at: 2026-10-01T21:05:10Z
         outcome: unchanged
-        unchanged-because: done-work and merge-pr now read a PR again when a merge or an enqueue gets no answer back from the backbone, and exit 4 when GitHub cannot say what it came to; the stabilisation phase, its intended guards and gap K2 are untouched
+        unchanged-because: "#1242 only shares start-work's early check, read from labels and milestone as before, and its refusal and late-failure messages with review-work; the stabilisation guard on start-work is still unbuilt and land-work, which main brought in, starts no work, so the term holds"
 ---
 
 # Glossary

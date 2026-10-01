@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-01T18:45:57Z
+      at: 2026-10-01T21:22:51Z
       outcome: unchanged
-      unchanged-because: on this branch the merge mechanic moved into the backbone's pull-request landing module, placed there by ADR-061; this page describes the tree's layout and says nothing of how a pull request lands, and what main brought in is already described here
+      unchanged-because: The index's one-line description of the process area still holds after the engine's move gains a reason.
 ---
 
 # project-kit

@@ -1,0 +1,17 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `pkit process hand-off` no longer tells you to pass `--state` when that
+  flag cannot help (#711). When one state carries two `depends_on` entries on
+  the same upstream — one upstream depended on in two ways, which
+  `pkit process couple` legally appends — the stamp used to answer "couples to
+  X on several states (s, s); pass --state", a dead end, since `--state` picks
+  a state and both entries sit on it. It now says that no flag tells entries on
+  one state apart, names both entries by place and relation, names the
+  definition file, and prints the exact `handoff:` block to add to the intended
+  entry by hand, then the `health --interpretation-only` run that confirms it.
+  Entries on different states still get the `--state` advice, and where one of
+  those states holds two entries the message says `--state` cannot settle that
+  one.

@@ -164,26 +164,68 @@ def test_pm_workstream_none_when_capability_or_verb_absent(tmp_path: Path, monke
     assert rc.pm_workstream(tmp_path) is None
 
 
+def test_pm_workstream_none_when_the_verb_prints_nothing_silently(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
+    # Absent stays absent: an exit-0 run that printed nothing answered "no
+    # workstream" (a branch that is not issue-shaped, an unlabelled issue).
+    _verb(tmp_path, monkeypatch, "import sys\nsys.stderr.write('no issue on this branch\\n')\n")
+    assert rc.pm_workstream(tmp_path) is None
+    assert capsys.readouterr().err == ""
+
+
 @pytest.mark.parametrize(
-    "body",
+    ("body", "ended"),
     [
-        "import sys\nprint('x')\nsys.exit(1)\n",  # non-zero exit ⇒ omit
-        "import sys\nsys.exit(2)\n",  # the un-bootstrapped refusal ⇒ omit
-        "import sys\nsys.stdout.buffer.write(b'\\xff\\n')\n",  # not UTF-8 ⇒ omit
+        ("import sys\nprint('x')\nsys.exit(1)\n", "exited 1"),  # non-zero exit
+        (
+            "import sys\nsys.stdout.buffer.write(b'\\xff\\n')\n",
+            "standard output is not UTF-8",
+        ),
     ],
 )
-def test_pm_workstream_none_on_failure_silently(
-    tmp_path: Path, monkeypatch, capsys, body: str
+def test_pm_workstream_none_on_failure_says_so(
+    tmp_path: Path, monkeypatch, capsys, body: str, ended: str
 ) -> None:
+    # Broken is not absent (#752): the workstream is omitted all the same —
+    # context never gates a report — but the operator is told why.
     _verb(tmp_path, monkeypatch, body)
     assert rc.pm_workstream(tmp_path) is None
-    assert capsys.readouterr().err == ""  # an ordinary miss degrades to silence
+    err = capsys.readouterr().err
+    assert "warning: workstream omitted — project-management context-workstream" in err
+    assert ended in err
+    assert "pass --workstream to name it" in err
 
 
-def test_pm_workstream_none_when_the_verb_cannot_start(tmp_path: Path, monkeypatch) -> None:
+def test_pm_workstream_refusal_carries_the_verb_s_own_words(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
+    # The un-bootstrapped project's refusal: exit 2, nothing on stdout, the
+    # hint on stderr — which now reaches the operator, attributed to the verb,
+    # bounded, and with its escape sequences removed.
+    refusal = (
+        "[refused] context-workstream: prerequisites are not met\n"
+        "          \x1b[1m→ To fix: run `pkit project-management bootstrap`\x1b[0m\n"
+    )
+    _verb(tmp_path, monkeypatch, f"import sys\nsys.stderr.write({refusal!r})\nsys.exit(2)\n")
+    assert rc.pm_workstream(tmp_path) is None
+    err = capsys.readouterr().err
+    assert err.splitlines() == [
+        "warning: workstream omitted — project-management context-workstream exited 2; "
+        "pass --workstream to name it.",
+        "  context-workstream said:",
+        "    [refused] context-workstream: prerequisites are not met",
+        "              → To fix: run `pkit project-management bootstrap`",
+    ]
+
+
+def test_pm_workstream_none_when_the_verb_cannot_start_says_so(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
     script = _verb(tmp_path, monkeypatch, "print('cli')\n")
     script.chmod(stat.S_IRUSR | stat.S_IWUSR)  # no longer executable
     assert rc.pm_workstream(tmp_path) is None
+    assert "context-workstream could not start:" in capsys.readouterr().err
 
 
 def test_pm_workstream_stops_a_hung_verb_at_the_bound_and_says_so(

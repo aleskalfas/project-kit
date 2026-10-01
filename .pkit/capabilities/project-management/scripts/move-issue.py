@@ -560,10 +560,19 @@ def main() -> int:
             config,
         )
 
-    # Forward cascade.
+    # Forward cascade. Each parent it moves is journaled the way this move was,
+    # by the same actor, with this move named as the reason.
     if cascade_targets and not args.no_cascade:
+        cascade_reason = _cascade_reason(args.issue_number, current_state, args.to)
         for parent_num in cascade_targets:
-            ok = _cascade_parent(parent_num, args.to, config, substrate_map)
+            ok = _cascade_parent(
+                parent_num,
+                args.to,
+                config,
+                substrate_map,
+                actor=invoker.github_login,
+                reason=cascade_reason,
+            )
             if not ok:
                 print(
                     f"[warn] cascade on #{parent_num} did not complete cleanly.",
@@ -953,7 +962,13 @@ _TRACKER_TRAIL_CLAUSE = (
 )
 
 
-def _journal_move(issue_number: int, from_state: str, target_state: str, actor: str | None) -> None:
+def _journal_move(
+    issue_number: int,
+    from_state: str,
+    target_state: str,
+    actor: str | None,
+    reason: str | None = None,
+) -> None:
     """Hand the completed move to the engine via `pkit process move` (best-effort).
 
     Per the seam-ordering contract: the domain side-effect (the label/board
@@ -975,6 +990,10 @@ def _journal_move(issue_number: int, from_state: str, target_state: str, actor: 
     against an authorisation artifact's `produced_by` login for the
     cross-authority gate (COR-033 P4). When it is None (login unresolved), we
     omit `--actor` and let the engine apply its own resolved-identity default.
+
+    `reason`, when given, is recorded on the journal entry (`--reason`): the
+    forward cascade names the child move that caused a parent's. A move the
+    invoker asked for directly passes none, and its argv is unchanged.
     """
     argv = [
         "pkit",
@@ -990,6 +1009,8 @@ def _journal_move(issue_number: int, from_state: str, target_state: str, actor: 
     ]
     if actor:
         argv += ["--actor", actor]
+    if reason:
+        argv += ["--reason", reason]
     try:
         proc = subprocess.run(
             argv,
@@ -1108,11 +1129,20 @@ def _cascade_forward_target(child_target: str) -> str:
     return order[min(child_idx, cap_idx)]
 
 
+def _cascade_reason(child_number: int, child_from: str, child_to: str) -> str:
+    """The reason a forward-cascaded parent move is journaled with: the child's
+    move that caused it (#1214)."""
+    return f"forward cascade from #{child_number}: {child_from} → {child_to}"
+
+
 def _cascade_parent(
     parent_num: int,
     target_state: str,
     config: dict,
     substrate_map: axis_labels.SubstrateMap | None = None,
+    *,
+    actor: str | None,
+    reason: str,
 ) -> bool:
     """Forward cascade — bump parent if it's behind.
 
@@ -1124,6 +1154,14 @@ def _cascade_parent(
     leaf/Task state and a container must never auto-enter it (DEC-006,
     amendment #38). A child moving to review or done bumps its ancestors to
     at most in-progress.
+
+    A parent it moves is a governed move like the child's own, so it is
+    journaled the same way (#1214; DEC-049's one entry per governed move): after
+    the label write, through `_journal_move`, from the state the parent held
+    before it, by `actor`, with `reason` naming the child's move. A move the
+    engine refuses warns exactly as the child's would. A parent already at or
+    beyond the target is left alone and journaled nothing, so a re-run, or a
+    sibling's later move, adds no second entry.
     """
     parent = _gh_get_issue(parent_num, config)
     if parent is None:
@@ -1163,7 +1201,10 @@ def _cascade_parent(
         substrate_map=substrate_map,
     )
     print(f"[cascade] bumping parent #{parent_num}: {parent_state} → {cascade_target}")
-    return _gh_apply_state_label(parent_num, plan, config)
+    if not _gh_apply_state_label(parent_num, plan, config):
+        return False
+    _journal_move(parent_num, parent_state, cascade_target, actor, reason=reason)
+    return True
 
 
 def _state_is_behind(current: str, target: str) -> bool:

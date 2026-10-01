@@ -22,9 +22,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-10-01T19:47:11Z
+      at: 2026-10-01T20:50:03Z
       outcome: unchanged
-      unchanged-because: "create-issue's report of its native sub-issue link changed again (#808): it says itself that it recorded the textual ref, names link-parent when the link fails, and names the containment: textual way out when GitHub refused it; filing, claiming and resuming work are untouched, so the use case still holds"
+      unchanged-because: "after #1242 was narrowed, start-work reads the issue's state from labels and milestone as before, through a function shared with review-work, and refuses nothing new; the claim start-work will make for the clone (EPIC #508) is still unbuilt, so the use case holds"
 ---
 
 # UC-001 — Resume a clone after every session died
