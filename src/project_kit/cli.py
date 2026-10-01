@@ -7077,12 +7077,20 @@ def _resolve_actor_identity() -> str:
     "cross-authority). Defaults to the resolved gh login of the "
     "current user.",
 )
+@click.option(
+    "--reason",
+    default=None,
+    metavar="TEXT",
+    help="Why the move was taken, recorded on its journal entry as given. The engine does not "
+    "read it, so it never changes whether the move is allowed.",
+)
 def process_move(
     address: str,
     to_state: str,
     from_state: str | None,
     subject: str | None,
     actor: str | None,
+    reason: str | None,
 ) -> None:
     """Execute a legal move; append the journal entry. Refuses an illegal move."""
     from project_kit import process as process_mod
@@ -7091,7 +7099,7 @@ def process_move(
         actor = _resolve_actor_identity()
     engine = _load_engine(address, subject)
     try:
-        result = engine.move(to_state, actor, from_state=from_state)
+        result = engine.move(to_state, actor, from_state=from_state, reason=reason)
     except process_mod.ProcessError as exc:
         raise click.ClickException(str(exc)) from exc
     if not result.ok:

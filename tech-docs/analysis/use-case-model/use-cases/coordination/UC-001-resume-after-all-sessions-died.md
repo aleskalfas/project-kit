@@ -22,9 +22,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-10-01T21:30:04Z
+      at: 2026-10-01T21:34:00Z
       outcome: unchanged
-      unchanged-because: "#803 makes create-issue run every title check titles.yaml declares before filing, a refusal or a warning by rule; it reads no instance identity, ownership claim or audit trail, and the start-work state check merged from main is untouched, so the use case holds"
+      unchanged-because: "create-issue's report of its native sub-issue link changed again (#808): it says itself that it recorded the textual ref, names link-parent when the link fails, and names the containment: textual way out when GitHub refused it; filing, claiming and resuming work are untouched, so the use case still holds"
 ---
 
 # UC-001 — Resume a clone after every session died

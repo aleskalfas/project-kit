@@ -55,9 +55,6 @@ from _lib.agent_verdicts import (
     reduce_latest_per_reviewer,
 )
 from _lib.author_delta import author_delta, base_kept
-from _lib.closing_issue_fetchers import issue_labels as _issue_labels_fetch
-from _lib.closing_issue_fetchers import pr_changed_files as _pr_changed_files_fetch
-from _lib.closing_issue_fetchers import pr_closing_issue_numbers as _pr_closing_issue_numbers_fetch
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
@@ -65,12 +62,13 @@ from _lib.membership import (
     resolve_capability_root,
     resolve_invoker_identity,
 )
-from _lib.required_reviewers import Resolution, read_not_code, resolve_required_local_reviewers
-from _lib.review_contributions import collect_contributions
-from _lib.review_opt_outs import read_opt_outs
 
-# The one freshness rule (#1179), shared with done-work's gate and review-pr.
-from _lib.verdict_freshness import PR_VIEW_FIELDS, FreshnessRule, rule_for_pr
+# The one wiring of the required reviewers and the freshness rule (#1195),
+# shared with done-work's gate and review-pr.
+from _lib.pr_review import REVIEW_VIEW_FIELDS, PrReview, resolve_pr_review
+from _lib.required_reviewers import Resolution
+from _lib.review_contributions import collect_contributions
+from _lib.verdict_freshness import FreshnessRule
 
 CLOSING_KEYWORD_RE = re.compile(r"\b(?:closes|fixes|resolves)\s+#(\d+)", re.IGNORECASE)
 
@@ -152,14 +150,12 @@ def main() -> int:
 
     # Only a view that shows verdicts pays for resolving the required set.
     shows_verdicts = args.field in (None, "review", "review-history")
-    resolution = (
-        _review_resolution(args.pr_number, config, capability_root)
+    freshness = (
+        _resolve_review(args.pr_number, config, capability_root).freshness_rule(pr)
         if shows_verdicts
-        else Resolution()
+        else None
     )
-    summary = _summarise(
-        pr, rule_for_pr(pr, resolution, author_delta=author_delta, base_kept=base_kept)
-    )
+    summary = _summarise(pr, freshness)
     if args.field is not None:
         for line in _field_lines_for(summary)[args.field]:
             print(line)
@@ -175,7 +171,9 @@ def _summarise(pr: dict, freshness: FreshnessRule | None = None) -> dict:
     it is the rule for this PR with no floor-only reviewer, under which every
     verdict is held to any change since the head it reviewed."""
     if freshness is None:
-        freshness = rule_for_pr(pr, Resolution(), author_delta=author_delta, base_kept=base_kept)
+        freshness = PrReview(
+            Resolution(), author_delta=author_delta, base_kept=base_kept
+        ).freshness_rule(pr)
     title = str(pr.get("title", ""))
     body = str(pr.get("body") or "")
     state = str(pr.get("state", "")).lower()
@@ -538,8 +536,7 @@ def _gh_get_pr(pr_number: int, config: dict) -> dict | None:
                         "isDraft",
                         "url",
                         "reviewRequests",
-                        "comments",
-                        *PR_VIEW_FIELDS,
+                        *REVIEW_VIEW_FIELDS,
                     )
                 ),
             ],
@@ -561,37 +558,31 @@ def _gh_get_pr(pr_number: int, config: dict) -> dict | None:
         return None
 
 
-def _review_resolution(
+def _resolve_review(
     pr_number: int,
     config: dict,
     capability_root: Path,
-) -> Resolution:
-    """The PR's required reviewers, resolved as `done-work`'s gate resolves
-    them, for the freshness rule's floor-only reviewers (#1179).
+) -> PrReview:
+    """The PR's required reviewers and freshness rule, resolved as
+    `done-work`'s gate resolves them, for the freshness rule's floor-only
+    reviewers (#1179).
 
-    The same shared resolver, fetchers, opt-outs and not-code list the gate
-    and `review-pr` wire in. A resolution that fails yields an empty one: no
-    reviewer is then kept fresh by a floor, so a verdict is shown stale on
-    any change — what the gate, refusing on that failure, would count anyway.
+    Through `_lib.pr_review.resolve_pr_review` — the ONE wiring the gate and
+    `review-pr` call — handing it this script's `gh` helpers,
+    `collect_contributions` and author-change readers. A resolution that
+    fails names no floor-only reviewer, so a verdict is shown stale on any
+    change; the gate, refusing on that failure, counts none.
     """
-    review = config.get("review") if isinstance(config, dict) else None
-    agents = review.get("agents") if isinstance(review, dict) else None
-    local = agents.get("local_registered") if isinstance(agents, dict) else None
-    baseline_local = [
-        entry["name"] for entry in local or [] if isinstance(entry, dict) and entry.get("name")
-    ]
-    resolution = resolve_required_local_reviewers(
+    return resolve_pr_review(
         pr_number,
-        baseline_local=baseline_local,
-        repo_root=capability_root.parent.parent.parent,
-        closing_issue_numbers=lambda n: _pr_closing_issue_numbers_fetch(n, config, gh_run=gh_run),
-        issue_labels=lambda n: _issue_labels_fetch(n, config, gh_get_issue=gh_get_issue),
-        changed_files=lambda n: _pr_changed_files_fetch(n, config, gh_run=gh_run),
-        opt_outs=read_opt_outs(config),
-        not_code=read_not_code(config),
+        config,
+        capability_root.parent.parent.parent,
+        gh_run=gh_run,
+        gh_get_issue=gh_get_issue,
         collect_contributions=collect_contributions,
+        author_delta=author_delta,
+        base_kept=base_kept,
     )
-    return resolution if resolution.ok else Resolution()
 
 
 def _read_yaml(path: Path, yaml_loader: YAML) -> dict:

@@ -20,9 +20,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-10-01T21:40:41Z
+      at: 2026-10-01T21:25:31Z
       outcome: unchanged
-      unchanged-because: DEC-014's example of a warning now names the Task title's length floor, as DEC-011 states it; what this page takes from the severity model — which findings refuse, which need an audited bypass and which warn — is unchanged
+      unchanged-because: "#1195 only moves done-work's reviewer-resolution wiring into one shared function the gate, review-pr and show-pr call; the gate's decision and how a resumed session lands work during a stabilisation are unchanged, so this use case holds"
 ---
 
 # UC-007 — Resume sessions killed during a stabilisation

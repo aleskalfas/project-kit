@@ -115,9 +115,9 @@ TERM-stabilisation:
           - project-management:DEC-014
           - ADR-019
       revalidated:
-        at: 2026-10-01T21:40:39Z
+        at: 2026-10-01T21:25:29Z
         outcome: unchanged
-        unchanged-because: DEC-014's example of a warning now names the Task title's length floor, as DEC-011 states it; what this page takes from the severity model — which findings refuse, which need an audited bypass and which warn — is unchanged
+        unchanged-because: "#1195 only moves done-work's reviewer-resolution wiring into one shared function the gate, review-pr and show-pr call; what the gate decides, and anything about a stabilisation milestone, is unchanged, so the term holds"
 ---
 
 # Glossary

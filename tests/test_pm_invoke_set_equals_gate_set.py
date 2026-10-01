@@ -9,8 +9,8 @@ and still hit a gate refusal (or the inverse — the gate could pass on a set
 regression guard against exactly that divergence.
 
 **This guard exercises each consumer's REAL post-resolution wiring, not just
-the shared helper's output twice.** Both `_resolve_required_local` methods are
-~5-line pass-throughs to the same `resolve_required_local_reviewers`, so
+the shared helper's output twice.** Both `_resolve_review` methods are
+~5-line pass-throughs to the same `_lib.pr_review.resolve_pr_review`, so
 comparing their return values only proves "the same function returns the same
 value when called twice" — a near-tautology that says nothing about what each
 consumer *does* with the resolution. The real, load-bearing property is
@@ -272,7 +272,7 @@ def _invoke_set(rpr, monkeypatch, tmp_path, *, collection, labels, opt_outs=()):
     """Drive `review-pr.main()` against the stubbed world; return invoked names.
 
     Exercises the REAL invoke loop (`main()`'s `for name in required_local:`),
-    not `_resolve_required_local` in isolation. Returns the list of reviewer
+    not `_resolve_review` in isolation. Returns the list of reviewer
     names `review-pr` actually invoked, in order.
     """
     refs_rc = _stub_closing_resolution(

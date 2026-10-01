@@ -582,7 +582,7 @@ def _wire_main(
 ):
     """Stub main()'s seams; record invoked names into `invoked`.
 
-    `resolution` is the Resolution `_resolve_required_local` returns (so we
+    `resolution` is the Resolution `_resolve_review` returns (so we
     exercise main's loop without the gh round-trips). Each `_invoke_agent`
     call appends the name to `invoked` and returns an APPROVED verdict; the
     deployed-agent file existence check is satisfied by creating the files.
@@ -632,8 +632,10 @@ def _wire_main(
     )
     monkeypatch.setattr(
         rpr,
-        "_resolve_required_local",
-        lambda pr_number, config, repo_root, baseline: resolution,
+        "_resolve_review",
+        lambda pr_number, config, repo_root: rpr.PrReview(
+            resolution, author_delta=rpr.author_delta, base_kept=rpr.base_kept
+        ),
     )
 
     def fake_invoke(
@@ -669,8 +671,8 @@ def _wire_main(
 
     reads: list[tuple[int, list[str]]] = []
 
-    def fake_read_states(pr_number, resolution, config):
-        reads.append((pr_number, list(resolution.required_local)))
+    def fake_read_states(pr_number, review, config):
+        reads.append((pr_number, list(review.resolution.required_local)))
         if unreadable:
             return None
         return rpr._VerdictStates(
@@ -748,7 +750,9 @@ def test_opted_out_contribution_is_listed_with_its_reason(
 ) -> None:
     """#148: review-pr names each opt-out in force, with its reason, next to
     the reviewers it invokes — and does not invoke the opted-out reviewer."""
-    (opt_out,) = rpr.read_opt_outs(
+    from _lib.review_opt_outs import read_opt_outs
+
+    (opt_out,) = read_opt_outs(
         {
             "review": {
                 "agents": {
@@ -1333,12 +1337,11 @@ _HEAD = [
 def _rule(rpr, commits=_HEAD):
     """The freshness rule for a PR whose verdicts name no head: they are
     judged by the latest commit's time."""
-    return rpr.rule_for_pr(
-        {"commits": commits},
+    return rpr.PrReview(
         rpr.Resolution(),
         author_delta=lambda *a, **k: pytest.fail("no head is named"),
         base_kept=lambda *a, **k: pytest.fail("no base is named"),
-    )
+    ).freshness_rule({"commits": commits})
 
 
 def _verdict_comment(name, token, ts, *, marked=True, remote=False):
@@ -1412,14 +1415,13 @@ def test_local_verdict_states_keep_a_floor_reviewer_fresh_past_a_markdown_fix(
         required_local=("reviewer", "code-reviewer"),
         floors_by_reviewer={"code-reviewer": frozenset({"touches-code"})},
     )
-    rule = rpr.rule_for_pr(
-        {"headRefOid": _MOVED_TO, "commits": _HEAD},
+    rule = rpr.PrReview(
         resolution,
         author_delta=lambda since, head, *, base_tip: AuthorDelta(
             paths=("README.md",),
         ),
         base_kept=lambda reviewed_base, base_tip: pytest.fail("no base is named"),
-    )
+    ).freshness_rule({"headRefOid": _MOVED_TO, "commits": _HEAD})
     comments = [pinned("reviewer"), pinned("code-reviewer")]
     states = rpr._local_verdict_states(comments, rule, resolution.required_local)
     assert states.fresh == {"code-reviewer": "APPROVED"}
@@ -1442,8 +1444,12 @@ def test_read_verdict_states_fetches_comments_head_and_base(rpr, monkeypatch) ->
         return _Proc(0, _json.dumps(payload))
 
     monkeypatch.setattr(rpr, "gh_run", fake)
-    resolution = rpr.Resolution(required_local=("reviewer",))
-    assert rpr._read_verdict_states(99, resolution, {}) == rpr._VerdictStates(
+    review = rpr.PrReview(
+        rpr.Resolution(required_local=("reviewer",)),
+        author_delta=rpr.author_delta,
+        base_kept=rpr.base_kept,
+    )
+    assert rpr._read_verdict_states(99, review, {}) == rpr._VerdictStates(
         fresh={"reviewer": "APPROVED"},
     )
     assert calls == [
@@ -1468,8 +1474,12 @@ def test_read_verdict_states_fetches_comments_head_and_base(rpr, monkeypatch) ->
 )
 def test_read_verdict_states_unreadable_is_none(rpr, monkeypatch, proc) -> None:
     monkeypatch.setattr(rpr, "gh_run", lambda argv, config, check=False: proc())
-    resolution = rpr.Resolution(required_local=("reviewer",))
-    assert rpr._read_verdict_states(99, resolution, {}) is None
+    review = rpr.PrReview(
+        rpr.Resolution(required_local=("reviewer",)),
+        author_delta=rpr.author_delta,
+        base_kept=rpr.base_kept,
+    )
+    assert rpr._read_verdict_states(99, review, {}) is None
 
 
 def test_resolution_error_not_code_names_the_key(rpr) -> None:
