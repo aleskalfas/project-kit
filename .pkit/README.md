@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-01T15:43:23Z
+      at: 2026-10-01T16:03:34Z
       outcome: unchanged
-      unchanged-because: on this branch move-issue passes the state it read to the process engine so each move is journaled from the state it left; the milestone rollforward main brought in does not change what this page says about that
+      unchanged-because: on this branch sync and upgrade refuse to write when the running pkit is older than the project's content or pin, and the router says so on its offline fallback; what main brought in (the process move origin, the configuration writer, the milestone rollforward) does not change what this page describes
 ---
 
 # project-kit
