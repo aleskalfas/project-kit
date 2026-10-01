@@ -9,9 +9,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001"]}
         revalidated:
-          at: 2026-10-01T23:31:30Z
+          at: 2026-10-01T23:53:23Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 7 keys a reading-evidence entry by page or path, commit and check; executed results are evidence a reader-review may read, not anchors, so a page's anchors still ground every statement it makes
+          unchanged-because: DEC-001 point 7 now calls whoever reports a reading-evidence result its filler, not a provider, and says nothing in the capability reads the entries; the key is unchanged, and a page's anchors still ground every statement it makes
   RS-LDOC-002:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
@@ -19,9 +19,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001"]}
         revalidated:
-          at: 2026-10-01T23:31:32Z
+          at: 2026-10-01T23:53:24Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 7 keys a reading-evidence entry by page or path, commit and check, so two providers' results stand side by side; that shapes the evidence point's entries, not a page, and each fact is still stated once and linked to
+          unchanged-because: DEC-001 point 7 now calls whoever reports a reading-evidence result its filler rather than a provider; the evidence key and the one-check-per-result rule are unchanged, and each fact on a page is still stated once and linked to
   RS-LDOC-003:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
@@ -29,9 +29,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001"]}
         revalidated:
-          at: 2026-10-01T23:31:35Z
+          at: 2026-10-01T23:53:25Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 7 keys a reading-evidence entry by page or path, commit and check; the readers point, which a page's reader field names, is untouched, so a page still names the one reader it is for
+          unchanged-because: DEC-001 point 7 now says filler, not provider, for whoever reports a reading-evidence result; the readers point that a page's reader field names is untouched, so a page still names the one reader it is for and says only what that reader needs
   RS-LDOC-004:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
@@ -39,9 +39,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001"]}
         revalidated:
-          at: 2026-10-01T23:31:37Z
+          at: 2026-10-01T23:53:31Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 7 keys a reading-evidence entry by page or path, commit and check; an evidence entry is no page and has no kind, so pages of a kind still follow one format and name their kind
+          unchanged-because: DEC-001 point 7 now says filler, not provider, for whoever reports a reading-evidence result; an evidence entry is still no page and has no kind, so pages of a kind still follow one format and name their kind
   RS-LDOC-005:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
@@ -49,9 +49,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001"]}
         revalidated:
-          at: 2026-10-01T23:31:40Z
+          at: 2026-10-01T23:53:32Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 7 keys a reading-evidence entry by page or path, commit and check; nothing about what an index-like file is changes with the evidence point's key, so it is still a signpost to what a folder holds
+          unchanged-because: DEC-001 point 7 now says filler, not provider, for whoever reports a reading-evidence result; the key and the rule are unchanged, and nothing about an index-like file turns on that wording, so it is still a signpost to what a folder holds
   RS-LDOC-006:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
@@ -59,9 +59,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001"]}
         revalidated:
-          at: 2026-10-01T23:31:42Z
+          at: 2026-10-01T23:53:32Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 7 keys a reading-evidence entry by page or path, commit and check, while no filler of the point has shipped; the key is settled before the first one needs it, and nothing is created ahead of that need
+          unchanged-because: DEC-001 point 7 now says filler, not provider, for whoever reports a reading-evidence result, and still no filler of the point has shipped; the wording only names who will report, and nothing is created ahead of that need
 ---
 
 # LDOC — the shared documentation method
