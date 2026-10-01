@@ -322,7 +322,7 @@ class _StampRun:
                 f"{cause}\n{self._label} took back everything it had written; "
                 "the tree is as it was before the run."
             ) from exc
-        steps = []
+        steps: list[str] = []
         if unremoved:
             steps.append("remove " + self._listed(unremoved))
         if unrestored:
@@ -1494,7 +1494,10 @@ def handoff_process(
         sid = state.get("id")
         for position, entry in enumerate(state.get("depends_on") or [], start=1):
             if isinstance(entry, dict) and entry.get("upstream") == upstream:
-                hosting.append(_HostingEntry(sid if isinstance(sid, str) else "?", position, entry))
+                mapping = cast("dict[str, Any]", entry)
+                hosting.append(
+                    _HostingEntry(sid if isinstance(sid, str) else "?", position, mapping)
+                )
     if state_id is not None:
         hosting = [h for h in hosting if h.state_id == state_id]
     if not hosting:
