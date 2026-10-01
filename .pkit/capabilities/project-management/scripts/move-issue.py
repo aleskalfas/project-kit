@@ -539,14 +539,14 @@ def main() -> int:
             return 3
 
     # Seam-ordering (DEC-033 / process README): the domain side-effect (the
-    # label/board edit) is applied above; now journal the move via the engine.
-    # Best-effort — a refusal or missing `pkit` never fails the move, since
-    # live detection stays authoritative.
+    # label/board edit) is applied above; now journal the move via the engine,
+    # from the position read before it. Best-effort — a refusal or missing
+    # `pkit` never fails the move, since live detection stays authoritative.
     #
     # `--actor` is the resolved GitHub login of the invoker (not the
     # authorisation token), so the engine's cross-authority gate compares
     # like-with-like against an artifact's `produced_by` login (COR-033 P4).
-    _journal_move(args.issue_number, args.to, invoker.github_login)
+    _journal_move(args.issue_number, current_state, args.to, invoker.github_login)
 
     # DEC-049 `full` projection: post a provenance-stamped comment for a governed
     # move not already covered by the bypass audit above, so the governed-vs-
@@ -953,7 +953,7 @@ _TRACKER_TRAIL_CLAUSE = (
 )
 
 
-def _journal_move(issue_number: int, target_state: str, actor: str | None) -> None:
+def _journal_move(issue_number: int, from_state: str, target_state: str, actor: str | None) -> None:
     """Hand the completed move to the engine via `pkit process move` (best-effort).
 
     Per the seam-ordering contract: the domain side-effect (the label/board
@@ -963,6 +963,13 @@ def _journal_move(issue_number: int, target_state: str, actor: str | None) -> No
     refusal or a missing `pkit` is logged as a warning and never fails the move —
     live detection stays authoritative, so the next `status` reflects the real
     position regardless.
+
+    `from_state` is the position read before the label write, passed as
+    `--from`. Live detection already reads the label just written, so without
+    it the engine would take the target for the origin: it refused a move into
+    a state with no transition to itself (todo → backlog read as backlog →
+    backlog, #1183) and journaled one into a state with such a transition as
+    that self-loop (backlog → in-progress as create-draft).
 
     `actor` is the invoker's resolved GitHub login. The engine compares it
     against an authorisation artifact's `produced_by` login for the
@@ -976,6 +983,8 @@ def _journal_move(issue_number: int, target_state: str, actor: str | None) -> No
         PROCESS_ADDRESS,
         "--to",
         target_state,
+        "--from",
+        from_state,
         "--subject",
         str(issue_number),
     ]
