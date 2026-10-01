@@ -18,9 +18,9 @@ pkit:
         - ACT-clone-session
         - ACT-developer-subagent
     revalidated:
-      at: 2026-09-30T23:14:27Z
+      at: 2026-10-01T00:54:41Z
       outcome: unchanged
-      unchanged-because: The project-manager gains a dispatch line for review-pr after green CI and the software-engineer a line on fixing blocking findings; delegation itself is unchanged — the clone session starts the Task, dispatches the subagent, and moves the Task on from its result.
+      unchanged-because: on this branch only procedure text changed — the pm skill's filing, slicing and review steps, the project-manager and software-engineer agent bodies; no script, schema or decision changed, so the page holds
 ---
 
 # UC-009 — Delegate a task to a developer subagent
