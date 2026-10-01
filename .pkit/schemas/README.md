@@ -19,9 +19,9 @@ pkit:
         - src/project_kit/working_tree.py
       record: [COR-018, COR-019, COR-020, COR-023, COR-029, COR-048, COR-050, COR-051, COR-052, COR-053, ADR-056, ADR-057]
     revalidated:
-      at: 2026-10-01T22:00:59Z
+      at: 2026-10-01T23:21:18Z
       outcome: unchanged
-      unchanged-because: The core records state the command limits as a time bound the backbone enforces and obligations a capability declares and the backbone trusts; the package schema's query-contract description and friction_discovery's docstrings only re-cite them to COR-050 point 2. This page describes neither, so it holds
+      unchanged-because: The package schema gains an optional reads key on a command leaf, what a data point's filler reads beyond the working tree (COR-052 point 6); this page summarises the package schema by its blocks and leaves its keys to the lifecycle README, which documents reads, and its filler-envelope account is untouched, so it holds
 ---
 
 # Schemas

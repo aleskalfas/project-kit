@@ -12,9 +12,9 @@ pkit:
         - .pkit/capabilities/software-analysis/agents/**
       record: ["software-analysis:DEC-001", COR-049, COR-050, COR-052, COR-053]
     revalidated:
-      at: 2026-10-01T22:00:48Z
+      at: 2026-10-01T23:21:18Z
       outcome: unchanged
-      unchanged-because: COR-050 point 2, COR-052 point 6 and COR-053 point 9 state needing no network, changing nothing and determinism as obligations a capability declares and the backbone trusts, with the time bound enforced; this page calls its filler and checks queries that are read-only and offline, which is what they declare, so it holds
+      unchanged-because: COR-052 point 6 gains what a command filler may read beyond the working tree and point 7 the report of it; this page's filler, fill-readers, reads the working tree only, through pkit friction artefacts, declares no reads and fails closed as before, so it holds
 ---
 
 # software-analysis capability

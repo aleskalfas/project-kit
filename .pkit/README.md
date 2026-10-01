@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-01T22:01:01Z
+      at: 2026-10-01T23:21:19Z
       outcome: unchanged
-      unchanged-because: The lifecycle README only re-cites the query contract to COR-050 point 2 beside ADR-057; this index's pointer to it and its summary of it still hold
+      unchanged-because: The lifecycle and CLI references gain what a filler reads beyond the working tree, the base override a query never sees and unborn; this index's pointers to them and its one-line summaries of them still hold
 ---
 
 # project-kit
