@@ -83,9 +83,9 @@ def legal_targets(workflow: dict | None, current_state: str, structural_type: st
     from `current_state`, in declaration order.
 
     The one reading of the transition table's legality: move-issue refuses a
-    move whose target is not in this list, and the composing verbs (start-work)
-    ask the same question before they mutate anything (#942), so a pre-check
-    and the move it guards cannot disagree. A transition counts only when its
+    move whose target is not in this list, and the composing verbs (start-work,
+    review-work) ask the same question before they mutate anything (#942,
+    #947), so a pre-check and the move it guards cannot disagree. A transition counts only when its
     `applies_to` names `[issue-types:<structural_type>]`.
     """
     transitions = workflow_process(workflow).get("transitions") or []
