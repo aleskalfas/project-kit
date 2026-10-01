@@ -23,11 +23,19 @@ Exports:
     load_hooks_file(capability_root) -> dict
         Reads + parses `project/hooks.yaml`; returns `{}` if absent.
         Pre-check uses this independently.
+    hook_stamp(stamp_id, event, subject, number, transition) -> str
+        The first line of a `post-comment` hook's comment, naming the hook
+        and the firing it posted for.
+    hook_comment_posted(comments, stamp) -> bool
+        Whether that firing's comment is already on the issue or PR.
 """
 
 from __future__ import annotations
 
+import hashlib
+import json
 import os
+import re
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -62,8 +70,35 @@ except ImportError:  # pragma: no cover
     except ImportError:  # pragma: no cover
         substrate_writes = None  # type: ignore[assignment]
 
+# The own-comment check the audit writers share (#902): only a comment the
+# account `gh` posts as wrote, and nobody has edited, may stop a `post-comment`
+# hook from posting. Dual-form like `_lib/comment.py`: `_lib/` on sys.path when
+# loaded by file path, `scripts/` when imported as `_lib.hooks`.
+try:
+    from audit import (  # type: ignore[import-not-found]
+        is_own_unedited_comment,
+        normalise_comment_body,
+    )
+except ImportError:  # pragma: no cover
+    from _lib.audit import (  # type: ignore[no-redef]
+        is_own_unedited_comment,
+        normalise_comment_body,
+    )
+
 
 HOOKS_RELATIVE_PATH = "project/hooks.yaml"
+
+#: The two ends of the stamp a `post-comment` hook writes as its comment's first
+#: line (DEC-024). Between them is `<name>:<firing>` — see `hook_stamp`.
+HOOK_STAMP_OPEN = "<!-- pkit-hook: "
+HOOK_STAMP_CLOSE = " -->"
+
+#: The longest hook name a stamp shows. The firing digest after the name keeps
+#: apart two hooks whose shown names coincide once cut or cleaned.
+HOOK_STAMP_NAME_MAX = 64
+
+#: How many hex digits of the firing digest a stamp carries.
+FIRING_DIGEST_LENGTH = 16
 
 LIFECYCLE_EVENTS: frozenset[str] = frozenset(
     {
@@ -234,6 +269,71 @@ def load_hooks_file(capability_root: Path) -> dict[str, Any]:
     return data if isinstance(data, dict) else {}
 
 
+def hook_stamp(
+    stamp_id: str,
+    event: str,
+    subject: str,
+    number: int,
+    transition: Any = None,
+) -> str:
+    """The first line of a `post-comment` hook's comment, which identifies one
+    firing of one hook: `<!-- pkit-hook: <name>:<firing> -->`.
+
+    A firing is the hook (`stamp_id`), the lifecycle `event`, the `subject` it
+    fired on (`"issue"` or `"pr"` and its `number`), and the transition's from
+    and to states when the event carries one (`after_move_issue`). These are
+    all the context the call sites pass that tells their firings apart: the
+    same hook may be declared on several events, and an issue moves through
+    many transitions. A retry of the same firing reproduces the stamp; a firing
+    that differs in any of these renders a different one. Firings that agree on
+    all of them are one firing: a transition the issue makes a second time, a
+    second close after a reopen. Telling those apart needs a fact the call site
+    does not pass today, such as how many moves the issue has made.
+
+    `<firing>` is a digest of those parts, so nothing from them — an adopter's
+    state names, a template file name — is written into the HTML comment where
+    it could close it early. `<name>` is `stamp_id` cut down for a reader:
+    lower-case letters and digits, any other run of characters one hyphen, at
+    most `HOOK_STAMP_NAME_MAX` characters, and `hook` if nothing is left. The
+    digest hashes `stamp_id` as given, so two hooks whose names come out alike
+    still stamp differently.
+    """
+    moved = transition if isinstance(transition, dict) else {}
+    parts = (
+        stamp_id,
+        event,
+        subject,
+        str(number),
+        str(moved.get("from") or ""),
+        str(moved.get("to") or ""),
+    )
+    digest = hashlib.sha256("\x00".join(parts).encode("utf-8")).hexdigest()
+    firing = digest[:FIRING_DIGEST_LENGTH]
+    return f"{HOOK_STAMP_OPEN}{_stamp_name(stamp_id)}:{firing}{HOOK_STAMP_CLOSE}"
+
+
+def hook_comment_posted(comments: Any, stamp: str) -> bool:
+    """True when `comments` already hold the comment for the firing `stamp`
+    names: one whose first line is `stamp`, posted by the account `gh` posts as
+    and never edited (`_lib.audit.is_own_unedited_comment`, #902).
+
+    A comment by anyone else, or an edited one, never counts, whatever it says,
+    so nobody can suppress a hook's comment by posting its stamp. Every doubt
+    resolves toward posting, as for the audit writers: a comment without the
+    authorship fields (the identity could not be read) counts as someone
+    else's, and an unreadable comment list arrives here empty. A stamp in the
+    form earlier versions wrote, `<!-- pkit-hook: <id> -->`, names no firing and
+    never equals one, so a hook may post once more where such a comment is.
+    """
+    for comment in comments or ():
+        if not is_own_unedited_comment(comment):
+            continue
+        first_line = normalise_comment_body(comment.get("body")).split("\n", 1)[0]
+        if first_line == stamp:
+            return True
+    return False
+
+
 # ----- dispatch + per-kind handlers --------------------------------------
 
 
@@ -252,7 +352,7 @@ def _dispatch(
     if kind == "set-board-field":
         return _hook_set_board_field(index, entry, context, config, dry_run)
     if kind == "post-comment":
-        return _hook_post_comment(index, entry, context, config, capability_root, dry_run)
+        return _hook_post_comment(event, index, entry, context, config, capability_root, dry_run)
     if kind == "assign-milestone":
         return _hook_assign_milestone(index, entry, context, config, dry_run)
     if kind == "custom-script":
@@ -342,6 +442,7 @@ def _hook_set_board_field(
 
 
 def _hook_post_comment(
+    event: str,
     index: int,
     entry: dict[str, Any],
     context: dict[str, Any],
@@ -356,8 +457,7 @@ def _hook_post_comment(
     if not template_file.is_file():
         raise HookFailure(f"template not found at {template_file}")
 
-    stamp_id = entry.get("stamp_id") or template_file.stem
-    stamp_marker = f"<!-- pkit-hook: {stamp_id} -->"
+    stamp_id = str(entry.get("stamp_id") or template_file.stem)
 
     issue_number = _issue_or_pr_number(context)
     if issue_number is None:
@@ -368,9 +468,11 @@ def _hook_post_comment(
             detail="no issue/pr number in context",
         )
 
+    subject = "pr" if "pr" in context else "issue"
+    stamp = hook_stamp(stamp_id, event, subject, issue_number, context.get("transition"))
     template_text = template_file.read_text(encoding="utf-8")
     rendered = _render_template(template_text, context)
-    body = f"{stamp_marker}\n\n{rendered}"
+    body = f"{stamp}\n\n{rendered}"
 
     if dry_run:
         return HookResult(
@@ -380,36 +482,19 @@ def _hook_post_comment(
             detail=f"would post comment to #{issue_number} from {template_path}",
         )
 
-    # Idempotency: skip if a comment with this stamp already exists.
-    is_pr = "pr" in context
-    list_args = [
-        "gh",
-        "pr" if is_pr else "issue",
-        "view",
-        str(issue_number),
-        "--json",
-        "comments",
-    ]
-    proc = _gh_call(list_args, config)
-    if proc.returncode == 0:
-        try:
-            import json
-
-            data = json.loads(proc.stdout)
-            for c in data.get("comments", []):
-                if stamp_marker in (c.get("body") or ""):
-                    return HookResult(
-                        index=index,
-                        kind="post-comment",
-                        status="ok",
-                        detail=f"comment with stamp '{stamp_id}' already exists; idempotent skip",
-                    )
-        except (ValueError, KeyError, TypeError):
-            pass  # fall through to post
+    # Post once per firing: skip only when this firing's own comment is there.
+    comments = _read_comments(subject, issue_number, config)
+    if hook_comment_posted(comments, stamp):
+        return HookResult(
+            index=index,
+            kind="post-comment",
+            status="ok",
+            detail=f"comment for this firing ({stamp}) already posted; idempotent skip",
+        )
 
     post_args = [
         "gh",
-        "pr" if is_pr else "issue",
+        subject,
         "comment",
         str(issue_number),
         "--body",
@@ -568,6 +653,28 @@ def _gh_call(args: list[str], config: dict[str, Any]) -> subprocess.CompletedPro
     return subprocess.run(args, capture_output=True, text=True, check=False)
 
 
+def _stamp_name(stamp_id: str) -> str:
+    """`stamp_id` as a stamp shows it — see `hook_stamp`."""
+    name = re.sub(r"[^a-z0-9]+", "-", stamp_id.lower()).strip("-")
+    return name[:HOOK_STAMP_NAME_MAX].rstrip("-") or "hook"
+
+
+def _read_comments(subject: str, number: int, config: dict[str, Any]) -> list[dict[str, Any]]:
+    """The issue's or PR's comments with their authorship fields, or `[]` when
+    they cannot be read — which makes the hook post, the safe direction."""
+    proc = _gh_call(["gh", subject, "view", str(number), "--json", "comments"], config)
+    if proc.returncode != 0:
+        return []
+    try:
+        data = json.loads(proc.stdout)
+    except (TypeError, ValueError):
+        return []
+    comments = data.get("comments") if isinstance(data, dict) else None
+    if not isinstance(comments, list):
+        return []
+    return [c for c in comments if isinstance(c, dict)]
+
+
 def _resolve_capability_root() -> Path | None:
     """Walk up from CWD looking for .pkit/capabilities/project-management/."""
     cur = Path.cwd()
@@ -626,7 +733,6 @@ def _render_template(text: str, context: dict[str, Any]) -> str:
     Unresolved paths render as `<missing: a.b.c>` so the operator sees
     the gap rather than silently posting empty values.
     """
-    import re
 
     def _lookup(path: str) -> str:
         parts = path.strip().split(".")
