@@ -12,7 +12,7 @@ PR title format (per [project-management:DEC-011-title-formats]):
   type:maintenance → chore(<scope>): ...  (or ci(<scope>) for CI-specific)
 
 <scope> is recommended but not required. Omit for cross-cutting changes.
-<summary> is short (~50 chars), imperative mood, lowercase, no trailing period.
+<summary> is short (aim for ~50 chars; the validator warns past 72), imperative mood, lowercase, no trailing period.
 -->
 
 Closes #

@@ -40,10 +40,9 @@ The capability has to pin each surface to its appropriate format and give the pr
   The Task's kind drives the prefix at the title level (visible on the board at a glance) AND drives the closing PR's Conventional Commits `<type>` per the `pr_type_mapping`. The two are kept in sync by the agent at filing time.
 
 - **Sentence** is plain English, imperative or descriptive. Written for a human browsing the board, not for git history.
-- No Conventional Commits prefix right after the bracket (`[Task] fix: …`, `[EPIC] feat(x): …`) — that shape is reserved for PRs.
-- A bare lowercase `scope:` prefix right after the bracket (`[EPIC] project-management: …`) is discouraged: it reads like a commit scope, so name the territory in words. A colon after a territory named in words (`[EPIC] Permission model: …`) is not such a prefix.
+- No Conventional Commits prefix right after the bracket: a recognised commit type, in any letter case, followed by a colon or a parenthesised scope (`[Task] fix: …`, `[EPIC] feat(x): …`). That shape belongs to PR titles and commit subjects; the set of types is the titles schema's.
+- A bare lowercase `scope:` prefix right after the bracket (`[EPIC] project-management: …`) is discouraged: it reads like a commit scope, so name the territory in words. It warns rather than refuses, because titles that arrive from outside the project — an inbound report, a request scoped to a component — carry the shape, and filing is not blocked on it. A colon after a territory named in words (`[EPIC] Permission model: …`) is not such a prefix.
 - The sentence may be followed by a colon or a dash and a short specifier (`[EPIC] PR review fidelity — native review state + pre-post preview`).
-- No Conventional Commits formatting.
 - Soft length guideline for Task titles, under every kind-driven prefix: ~30+ chars after the prefix; the validator warns below that, because a work title that short is usually a vague one. EPIC, Feature and Umbrella titles name a territory, which is short by nature (`[EPIC] Code review discipline`), and have no length floor.
 
 Per-issue-type patterns are encoded in [`schemas/titles.yaml`](../schemas/titles.yaml)'s `formats` mapping (`issue-epic`, `issue-feature`, `issue-umbrella`, `issue-task` entries — the latter accepts any of the six kind-driven prefixes via alternation, with the kind-prefix match enforced by `validate-issue` cross-checking against the issue's `type:*` label).
@@ -77,7 +76,7 @@ No title format — sub-tasks are markdown checkboxes per [project-management:DE
 The project-manager (via the create-issue skill) runs the per-surface validations encoded in each title-format entry's `validations` list:
 
 - Issue titles: hard-reject if title doesn't start with the correct `[Type]` or carries a Conventional Commits prefix after the bracket; warning for a bare lowercase `scope:` prefix after the bracket, and for a Task title under ~30 chars after its prefix.
-- PR titles: hard-reject if title doesn't match the Conventional Commits regex; hard-reject if `<type>` doesn't match the closing Task's `type:*` label (multi-issue PRs with mixed types warn instead); warning for non-lowercase summary or trailing period.
+- PR titles: hard-reject if title doesn't match the Conventional Commits regex; hard-reject if `<type>` doesn't match the closing Task's `type:*` label (multi-issue PRs with mixed types warn instead); warning for non-lowercase summary, a trailing period, or a summary past 72 characters.
 
 ## Rationale
 

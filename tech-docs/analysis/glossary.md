@@ -115,9 +115,9 @@ TERM-stabilisation:
           - project-management:DEC-014
           - ADR-019
       revalidated:
-        at: 2026-10-01T21:05:10Z
+        at: 2026-10-01T21:40:39Z
         outcome: unchanged
-        unchanged-because: "#1242 only shares start-work's early check, read from labels and milestone as before, and its refusal and late-failure messages with review-work; the stabilisation guard on start-work is still unbuilt and land-work, which main brought in, starts no work, so the term holds"
+        unchanged-because: DEC-014's example of a warning now names the Task title's length floor, as DEC-011 states it; what this page takes from the severity model — which findings refuse, which need an audited bypass and which warn — is unchanged
 ---
 
 # Glossary
