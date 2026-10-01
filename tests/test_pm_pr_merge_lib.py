@@ -107,6 +107,23 @@ def test_squash_merge_uses_pr_title_as_subject(lib, monkeypatch) -> None:
     assert landed != commit_subject
 
 
+def test_squash_merge_pins_the_checked_head(lib, monkeypatch) -> None:
+    """A caller that names the head its gate checked has the merge pinned to
+    it, so a push in between fails the merge; without one nothing is pinned."""
+    captured: list[list[str]] = []
+
+    def fake_gh_run(args, config, **kwargs):
+        captured.append(list(args))
+        return _ok(args)
+
+    monkeypatch.setattr(lib, "gh_run", fake_gh_run)
+    lib.squash_merge(42, pr_title="fix: x", admin=False, config={}, head_oid="a" * 40)
+    lib.squash_merge(42, pr_title="fix: x", admin=False, config={})
+    pinned, unpinned = captured
+    assert pinned[pinned.index("--match-head-commit") + 1] == "a" * 40
+    assert "--match-head-commit" not in unpinned
+
+
 def test_squash_merge_passes_admin(lib, monkeypatch) -> None:
     captured: list[list[str]] = []
 

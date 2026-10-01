@@ -441,6 +441,27 @@ def test_main_hands_pr_title_to_the_shared_merge(dw, monkeypatch) -> None:
     assert calls["merge_kwargs"] == {"pr_title": "fix: x", "admin": False}
 
 
+def test_the_merge_is_pinned_to_the_head_the_agent_gate_checked(dw, monkeypatch) -> None:
+    """A push between the gate and the merge must fail the merge, not land
+    commits no verdict was judged against (#1179)."""
+    gate = dw._GateResult(passed=True, passed_via="stub", head_oid="sha-gate")
+    calls = _wire_main_seams(
+        dw,
+        monkeypatch,
+        rollup=_GREEN_ROLLUP,
+        mode="agent",
+        agent_gate_result=gate,
+    )
+    assert _run_main(dw, monkeypatch, ["42", "--yes"]) == 0
+    assert calls["merge_head"] == "sha-gate"
+
+
+def test_without_an_agent_gate_the_merge_is_pinned_to_the_runs_head(dw, monkeypatch) -> None:
+    calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+    assert _run_main(dw, monkeypatch, ["42", "--yes"]) == 0
+    assert calls["merge_head"] == "sha-head"
+
+
 # ---- CI-status gate (#498) -------------------------------------------
 
 
@@ -714,9 +735,10 @@ def _wire_main_seams(
         calls["approval_audit_head"] = head
         return True
 
-    def _stub_merge(pr_number, *, pr_title, admin, config):
+    def _stub_merge(pr_number, *, pr_title, admin, config, head_oid=""):
         calls["merged"] = True
         calls["merge_kwargs"] = {"pr_title": pr_title, "admin": admin}
+        calls["merge_head"] = head_oid
         calls["order"].append(("merged", None))
         return True
 
@@ -2066,7 +2088,14 @@ def _run_done_work_end_to_end(
     monkeypatch.setattr(dw, "_invoke_close_issue", real_close)
     calls_at_merge: list[int] = []
 
-    def merge(pr_number: int, *, pr_title: str, admin: bool, config: dict[str, Any]) -> bool:
+    def merge(
+        pr_number: int,
+        *,
+        pr_title: str,
+        admin: bool,
+        config: dict[str, Any],
+        head_oid: str = "",
+    ) -> bool:
         calls_at_merge.append(len(log.read_text(encoding="utf-8").splitlines()))
         return True
 

@@ -119,6 +119,7 @@ def _wire(
     issue_fetch_none=(),
     commits=None,
     changed_files=("README.md",),
+    pr_view=None,
 ):
     """Stub collect_contributions + the gh layer for one gate check.
 
@@ -137,6 +138,8 @@ def _wire(
 
     `changed_files` is the PR's diff (the paginated files API, one file per
     page entry), read only when a floor-carrying contribution is installed.
+    `pr_view` adds fields to the gate's `gh pr view` payload — the head and
+    base the freshness rule reads (#1179).
     """
     closing_issue_labels = closing_issue_labels or {}
     commits = [{"committedDate": _COMMIT_TS}] if commits is None else commits
@@ -174,7 +177,7 @@ def _wire(
                 stdout=_files_api_pages(list(changed_files)),
                 stderr="",
             )
-        # gh pr view --json author,comments,commits
+        # gh pr view --json author,comments,commits,headRefOid,baseRefOid
         return subprocess.CompletedProcess(
             args=args,
             returncode=0,
@@ -183,6 +186,7 @@ def _wire(
                     "author": {"login": pr_author},
                     "comments": comments,
                     "commits": commits,
+                    **(pr_view or {}),
                 }
             ),
             stderr="",
@@ -1039,3 +1043,243 @@ def test_malformed_not_code_refuses(dw, rc, monkeypatch) -> None:
     assert result.passed is False
     assert "not-code list is invalid" in result.refusal_message
     assert "`review.floors.not_code` must be a list" in result.refusal_message
+
+
+# ---- verdicts naming the head they reviewed (#1179) ---------------------
+#
+# A verdict whose marker names its reviewed head stands until the author's
+# changes since reach what its reviewer is required for. The author's changes
+# come from the repository (`_lib.author_delta`), stood in here.
+
+_REVIEWED = "a" * 40
+_HEAD = "b" * 40
+_BASE = "c" * 40
+# Posted before the latest commit: under the commit-time rule it would be stale.
+_BEFORE_THE_COMMIT = "2026-05-01T00:00:00Z"
+
+
+def _pinned_verdict_comment(name, verdict="APPROVED"):
+    return {
+        "author": {"login": "reviewer"},
+        "body": (
+            f"Reviewer agent (local, {name}): {verdict}\n\nbody.\n\n"
+            f"<!-- pkit-verdict sha={_REVIEWED} -->"
+        ),
+        "createdAt": _BEFORE_THE_COMMIT,
+    }
+
+
+def _author_changed(dw, monkeypatch, *paths):
+    """Stand in the author's changes since the reviewed head; record calls."""
+    from _lib.author_delta import AuthorDelta
+
+    calls: list[tuple] = []
+
+    def fake(since, head, *, base_tip):
+        calls.append((since, head, base_tip))
+        return AuthorDelta(paths=tuple(paths))
+
+    monkeypatch.setattr(dw, "author_delta", fake)
+    return calls
+
+
+def test_a_verdict_on_the_current_head_is_fresh_whatever_its_time(
+    dw,
+    rc,
+    monkeypatch,
+) -> None:
+    _wire(
+        dw,
+        monkeypatch,
+        collection=rc.ContributionCollection(rules=()),
+        comments=[_pinned_verdict_comment("reviewer")],
+        pr_view={"headRefOid": _REVIEWED, "baseRefOid": _BASE},
+    )
+    calls = _author_changed(dw, monkeypatch, "src/app.py")
+    result = dw._check_agent_gate(99, {}, _config(), "resolved", CAP_ROOT)
+    assert result.passed is True, result.refusal_message
+    assert calls == []  # the head itself: nothing to compute
+    # The merge is pinned to the head the gate judged against.
+    assert result.head_oid == _REVIEWED
+
+
+def test_a_markdown_fix_keeps_the_floor_reviewer_and_stales_the_baseline(
+    dw,
+    rc,
+    monkeypatch,
+) -> None:
+    """The refusal names the verdict's reviewed head and what changed since,
+    and the floor-only reviewer's verdict still counts."""
+    _wire(
+        dw,
+        monkeypatch,
+        collection=_floor_collection(rc),
+        comments=[
+            _pinned_verdict_comment("reviewer"),
+            _pinned_verdict_comment("code-reviewer"),
+        ],
+        changed_files=("src/app.py", "README.md"),
+        pr_view={"headRefOid": _HEAD, "baseRefOid": _BASE},
+    )
+    calls = _author_changed(dw, monkeypatch, "README.md")
+    result = dw._check_agent_gate(99, {}, _config(), "resolved", CAP_ROOT)
+    assert result.passed is False
+    message = result.refusal_message
+    assert (
+        "local agent (reviewer): none (stale APPROVED — reviewed aaaaaaa; changed since: README.md)"
+    ) in message
+    assert (
+        "local agent (code-reviewer, required by capability `software-engineering`): APPROVED"
+    ) in message
+    # One reviewed head, one computation, against the PR's head and base.
+    assert calls == [(_REVIEWED, _HEAD, _BASE)]
+
+
+def test_a_code_fix_stales_the_floor_reviewer_too(dw, rc, monkeypatch) -> None:
+    _wire(
+        dw,
+        monkeypatch,
+        collection=_floor_collection(rc),
+        comments=[
+            _pinned_verdict_comment("reviewer"),
+            _pinned_verdict_comment("code-reviewer"),
+        ],
+        changed_files=("src/app.py",),
+        pr_view={"headRefOid": _HEAD, "baseRefOid": _BASE},
+    )
+    _author_changed(dw, monkeypatch, "src/app.py")
+    result = dw._check_agent_gate(99, {}, _config(), "resolved", CAP_ROOT)
+    assert result.passed is False
+    assert (
+        "(stale APPROVED — reviewed aaaaaaa; changed since: src/app.py — "
+        "reaches its touches-code floor)"
+    ) in result.refusal_message
+
+
+def test_any_change_stales_a_floor_reviewers_rejection(dw, rc, monkeypatch) -> None:
+    """Floor scoping protects an approval only: the author is answering a
+    CHANGES_REQUESTED, so a fix outside the reviewer's floors stales it too."""
+    _wire(
+        dw,
+        monkeypatch,
+        collection=_floor_collection(rc),
+        comments=[
+            _pinned_verdict_comment("reviewer"),
+            _pinned_verdict_comment("code-reviewer", "CHANGES_REQUESTED"),
+        ],
+        changed_files=("src/app.py", ".changes/unreleased/pm.yaml"),
+        pr_view={"headRefOid": _HEAD, "baseRefOid": _BASE},
+    )
+    _author_changed(dw, monkeypatch, ".changes/unreleased/pm.yaml")
+    result = dw._check_agent_gate(99, {}, _config(), "resolved", CAP_ROOT)
+    assert result.passed is False
+    assert (
+        "local agent (code-reviewer, required by capability `software-engineering`): "
+        "none (stale CHANGES_REQUESTED — reviewed aaaaaaa; changed since: "
+        ".changes/unreleased/pm.yaml)"
+    ) in result.refusal_message
+    assert "--force" not in result.refusal_message
+
+
+def test_a_fresh_rejection_names_the_forced_re_review(dw, rc, monkeypatch) -> None:
+    """review-pr skips a reviewer whose CHANGES_REQUESTED is fresh, so the
+    refusal names the way to have it re-review the PR as it stands."""
+    _wire(
+        dw,
+        monkeypatch,
+        collection=rc.ContributionCollection(rules=()),
+        comments=[_pinned_verdict_comment("reviewer", "CHANGES_REQUESTED")],
+        pr_view={"headRefOid": _REVIEWED, "baseRefOid": _BASE},
+    )
+    _author_changed(dw, monkeypatch)
+    result = dw._check_agent_gate(99, {}, _config(), "resolved", CAP_ROOT)
+    assert result.passed is False
+    assert "local agent (reviewer): CHANGES_REQUESTED" in result.refusal_message
+    assert (
+        "It skips a fresh CHANGES_REQUESTED (local agent (reviewer)): push the fix "
+        "it asks for, or have it re-review the PR as it stands with "
+        "`review-pr 99 --force`."
+    ) in result.refusal_message
+
+
+def test_a_verdict_over_a_base_the_pr_left_is_stale(dw, rc, monkeypatch) -> None:
+    """A stacked PR retargeted after its base was abandoned has no new commit,
+    yet its diff over the new base carries commits nobody reviewed: a verdict
+    on the current head is stale once its recorded base is not in the base
+    branch's history, and the refusal says so."""
+    from _lib.author_delta import BaseCheck
+
+    abandoned = "d" * 40
+    comment = _pinned_verdict_comment("reviewer")
+    comment["body"] = comment["body"].replace(
+        f"sha={_REVIEWED} -->", f"sha={_REVIEWED} base={abandoned} -->"
+    )
+    _wire(
+        dw,
+        monkeypatch,
+        collection=rc.ContributionCollection(rules=()),
+        comments=[comment],
+        pr_view={"headRefOid": _REVIEWED, "baseRefOid": _BASE},
+    )
+    checked: list[tuple] = []
+
+    def base_kept(reviewed_base, base_tip):
+        checked.append((reviewed_base, base_tip))
+        return BaseCheck(kept=False)
+
+    monkeypatch.setattr(dw, "base_kept", base_kept)
+    result = dw._check_agent_gate(99, {}, _config(), "resolved", CAP_ROOT)
+    assert result.passed is False
+    assert checked == [(abandoned, _BASE)]
+    assert (
+        "(stale APPROVED — reviewed aaaaaaa against base ddddddd, which the base "
+        "branch no longer contains — the pull request was retargeted or its base "
+        "rewritten)"
+    ) in result.refusal_message
+
+
+def test_changes_that_cannot_be_read_stale_the_verdict(dw, rc, monkeypatch) -> None:
+    """A rebase leaves the reviewed head outside the branch: the verdict is
+    stale, and the refusal says why."""
+    from _lib.author_delta import AuthorDelta
+
+    _wire(
+        dw,
+        monkeypatch,
+        collection=rc.ContributionCollection(rules=()),
+        comments=[_pinned_verdict_comment("reviewer")],
+        pr_view={"headRefOid": _HEAD, "baseRefOid": _BASE},
+    )
+    monkeypatch.setattr(
+        dw,
+        "author_delta",
+        lambda since, head, *, base_tip: AuthorDelta(
+            error="aaaaaaa is no longer in the branch's history — the branch "
+            "was rebased or force-pushed",
+        ),
+    )
+    result = dw._check_agent_gate(99, {}, _config(), "resolved", CAP_ROOT)
+    assert result.passed is False
+    assert "rebased or force-pushed" in result.refusal_message
+
+
+def test_a_verdict_naming_no_head_is_judged_by_the_commit_time(
+    dw,
+    rc,
+    monkeypatch,
+) -> None:
+    """The fallback: a verdict without a reviewed head is fresh after the
+    latest commit and stale before it, its staleness named in the refusal."""
+    _wire(
+        dw,
+        monkeypatch,
+        collection=rc.ContributionCollection(rules=()),
+        comments=[_local_verdict_comment("reviewer", "APPROVED", ts=_BEFORE_THE_COMMIT)],
+        pr_view={"headRefOid": _HEAD, "baseRefOid": _BASE},
+    )
+    _author_changed(dw, monkeypatch)
+    result = dw._check_agent_gate(99, {}, _config(), "resolved", CAP_ROOT)
+    assert result.passed is False
+    assert (
+        "(stale APPROVED — no reviewed head recorded; posted before the latest commit)"
+    ) in result.refusal_message

@@ -20,9 +20,9 @@ pkit:
       artefact:
         - ACT-operator
     revalidated:
-      at: 2026-10-01T04:19:49Z
+      at: 2026-10-01T04:51:19Z
       outcome: unchanged
-      unchanged-because: "on this branch the anchored code changed only in layout: ruff format and the lint fixes; behaviour and the documented commands are unchanged"
+      unchanged-because: done-work's change is how the agent gate judges a verdict fresh (the reviewed head and the author's changes since); stabilising a milestone and the guard planned on done-work are untouched
 ---
 
 # UC-010 — Stabilise a Milestone for a release

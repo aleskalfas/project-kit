@@ -13,7 +13,7 @@ pkit:
         - .pkit/capabilities/software-engineering/skills/**
       record: [COR-013, COR-024, COR-026, COR-030, ADR-013, ADR-052, "project-management:DEC-015", "project-management:DEC-028", "project-management:DEC-032"]
     revalidated:
-      at: 2026-10-01T03:56:33Z
+      at: 2026-10-01T04:51:10Z
       outcome: updated
 ---
 
@@ -49,6 +49,8 @@ The panel ([software-engineering:DEC-002-code-review-panel]) closes bug #715: be
 - `docs-reviewer` rides **both** the `touches-code` floor **and** the `type` wildcard (`type: "*"`). The floor makes doc review fire on any code-carrying diff regardless of classification — so a code PR always gets doc review even when unclassified or filed against a `type:docs` issue; the wildcard keeps it firing for a docs-only classified PR (which the floor, correctly, does not require). The wildcard is forward-safe: a new `type` value added later still activates doc review.
 
 **Accepted gap.** An *unclassified docs-only* PR — one whose diff touches no code (so the floor does not fire) and which closes no classified issue (so the `type:*` wildcard has nothing to match) — pulls in no doc reviewer. This is a named, accepted residual: the two activation paths are the diff (floor) and the classification (match), and such a PR presents neither. A docs PR gets doc review as soon as it is classified with any `type` label, or as soon as its diff also touches code.
+
+**A floor approval outlives a change that touches no code.** A reviewer whose every rule is the floor keeps its `APPROVED` while the commits after the head it reviewed touch no code (pm's freshness rule, [project-management:DEC-028] "Stale-verdict handling"), so a wording fix or a changeset after review re-runs neither `code-reviewer` nor `security-reviewer`. `docs-reviewer` also carries the `type: "*"` rule — the documentation is its remit — so any change re-runs it, on a typed and an unclassified PR alike. A `CHANGES_REQUESTED` from any of the three goes stale on any change, since the fix it asks for may sit outside the floor.
 
 So `code-reviewer` alone is *basic* review; the specialists alongside it make *complex* review, composable per install ([project-management:DEC-032]). A project that wants the panel without one of its reviewers opts out of that reviewer alone in pm's `review.agents.contributed_opt_out:`, with a reason — the rest of the panel keeps gating (the project-management README, "Opting out of a contributed reviewer").
 

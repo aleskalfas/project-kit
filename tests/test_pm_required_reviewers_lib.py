@@ -1082,16 +1082,118 @@ def test_satisfied_floors_reads_only_what_the_list_leaves(rr) -> None:
     """A path the list matches satisfies no floor, code suffix or not; a path it
     does not match is read by the suffix test exactly as before."""
     generated = rr.NotCode(patterns=("generated/**",))
-    assert rr._satisfied_floors(["generated/client.py"], generated) == set()
-    assert rr._satisfied_floors(
+    assert rr.satisfied_floors(["generated/client.py"], generated) == set()
+    assert rr.satisfied_floors(
         ["generated/client.py", "src/app.py"],
         generated,
     ) == {rr.FLOOR_TOUCHES_CODE}
-    assert rr._satisfied_floors([_CHANGESET]) == set()  # the shipped default.
-    assert rr._satisfied_floors(
+    assert rr.satisfied_floors([_CHANGESET]) == set()  # the shipped default.
+    assert rr.satisfied_floors(
         [_CHANGESET],
         rr.NotCode(patterns=()),
     ) == {rr.FLOOR_TOUCHES_CODE}
+
+
+# ---- which reviewers only a floor requires (#1179) ----------------------
+#
+# The freshness rule keeps a floor-scoped reviewer's approval standing until
+# the author's changes reach one of its floors; any other reviewer is required
+# for the whole change. A reviewer is floor-scoped only when every rule it has
+# is a floor and nothing else. The resolution names the floor-scoped ones.
+
+_CODE_AND_SECURITY_ON_THEIR_FLOOR = {
+    "code-reviewer": frozenset({"touches-code"}),
+    "security-reviewer": frozenset({"touches-code"}),
+}
+
+
+def test_floor_only_reviewers_on_a_classified_code_pr(rr, rc) -> None:
+    """docs-reviewer is matched by the `type: *` classification rule, so it is
+    required for the whole change; code and security only by their floor."""
+    res = _resolve(
+        rr,
+        baseline=["reviewer"],
+        collection=_se_collection(rc),
+        closing=[42],
+        labels={42: ["type:feature"]},
+        changed=["src/app.py"],
+    )
+    assert res.floors_by_reviewer == _CODE_AND_SECURITY_ON_THEIR_FLOOR
+
+
+def test_a_reviewer_with_a_classification_rule_is_not_floor_scoped(rr, rc) -> None:
+    """With no classification to match, only the floor requires docs-reviewer
+    on this PR — but its `type: *` rule declares a remit wider than the floor
+    (its job is the documentation), so a Markdown fix must still stale it."""
+    res = _resolve(
+        rr,
+        baseline=["reviewer"],
+        collection=_se_collection(rc),
+        closing=[],
+        changed=["src/app.py"],
+    )
+    assert "docs-reviewer" in res.required_local
+    assert res.floors_by_reviewer == _CODE_AND_SECURITY_ON_THEIR_FLOOR
+
+
+def test_a_rule_carrying_a_floor_and_a_match_is_a_wider_remit(rr, rc) -> None:
+    """One rule with both a floor and a classification match is not a floor
+    and nothing else, so its reviewer is not floor-scoped."""
+    rule = rc.ContributionRule(
+        capability=_SE,
+        predicate=MappingProxyType({"type": ("feature",)}),
+        reviewer="code-reviewer",
+        floor=rc.FLOOR_TOUCHES_CODE,
+    )
+    res = _resolve(
+        rr,
+        baseline=["reviewer"],
+        collection=rc.ContributionCollection(
+            rules=(rule,),
+            capabilities_walked=("project-management", _SE),
+        ),
+        closing=[],
+        changed=["src/app.py"],
+    )
+    assert res.required_local == ("reviewer", "code-reviewer")
+    assert res.floors_by_reviewer == {}
+
+
+def test_a_baseline_reviewer_on_a_floor_is_required_for_the_whole_change(
+    rr,
+    rc,
+) -> None:
+    res = _resolve(
+        rr,
+        baseline=["code-reviewer"],
+        collection=_floor_collection(rc),
+        closing=[],
+        changed=["src/app.py"],
+    )
+    assert res.required_local == ("code-reviewer",)
+    assert res.floors_by_reviewer == {}
+
+
+def test_the_resolution_carries_the_not_code_list_it_applied(rr, rc) -> None:
+    res = _resolve(
+        rr,
+        baseline=["reviewer"],
+        collection=_se_collection(rc),
+        closing=[],
+        changed=["src/app.py"],
+        not_code=["generated/**"],
+    )
+    assert res.not_code.patterns == ("generated/**",)
+    assert (
+        _resolve(
+            rr,
+            baseline=["reviewer"],
+            collection=_se_collection(rc),
+            closing=[],
+            changed=["src/app.py"],
+        ).not_code
+        == rr.DEFAULT_NOT_CODE
+    )
 
 
 def test_read_not_code(rr) -> None:

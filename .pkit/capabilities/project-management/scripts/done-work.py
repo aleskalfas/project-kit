@@ -119,11 +119,14 @@ Side-effects, in order (#878; the merge mechanic itself lives once in
     issue reads as done. The PR is open and ready here, which is what Review
     means, so the move holds if the merge fails; if the move itself fails, the
     run stops without merging.
-  - `gh pr merge --squash --subject <PR title>` — WITHOUT `--delete-branch`:
-    that flag makes gh check out the default branch locally and delete the
-    local head, and the whole `gh pr merge` exits non-zero when the working
-    tree cannot do so (detached HEAD; the default branch checked out in
-    another worktree) — after the remote merge has already landed.
+  - `gh pr merge --squash --subject <PR title> --match-head-commit <head>` —
+    pinned to the head the gate checked (the agent gate's own read, else the
+    head this run started from), so a push since fails the merge rather than
+    land unchecked commits; WITHOUT `--delete-branch`: that flag makes gh
+    check out the default branch locally and delete the local head, and the
+    whole `gh pr merge` exits non-zero when the working tree cannot do so
+    (detached HEAD; the default branch checked out in another worktree) —
+    after the remote merge has already landed.
   - Composes over `move-issue.py --to done` IMMEDIATELY after the merge, so
     no best-effort step can stand between the irreversible merge and the
     lifecycle transition.
@@ -174,9 +177,9 @@ from _lib.agent_verdicts import (
     PATH_LOCAL,
     PATH_REMOTE,
     Verdict,
+    gate_candidates,
     gate_verdicts,
     latest_commit_timestamp,
-    latest_verdicts_per_reviewer,
 )
 
 # DEC-049's canonical audit-comment format + projection knob — the ONE
@@ -188,6 +191,7 @@ from _lib.audit import (
     render_ci_bypass_audit_body,
     short_sha,
 )
+from _lib.author_delta import author_delta, base_kept
 
 # DEC-007's checkbox close-gate — the ONE implementation (`_lib.checkbox_gate`),
 # shared with close-issue, merge-pr and the engine's gate-checkboxes-ticked
@@ -234,6 +238,9 @@ from _lib.review_contributions import collect_contributions
 from _lib.review_mode import resolve_mode
 from _lib.review_opt_outs import OPT_OUT_PATH, read_opt_outs
 from _lib.structural_type import infer_structural_type
+
+# The one freshness rule (#1179), shared with review-pr's skip and show-pr.
+from _lib.verdict_freshness import PR_VIEW_FIELDS, FreshnessRule, head_sha, rule_for_pr
 
 
 def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
@@ -818,12 +825,16 @@ def main() -> int:
     # Squash-merge with an explicit subject so the landed commit subject
     # equals the gate-validated PR title regardless of commit count
     # (DEC-013: squash-commit subject = PR title; fixes #33). The mechanic is
-    # `_lib.pr_merge`'s — the one implementation `merge-pr` also runs.
+    # `_lib.pr_merge`'s — the one implementation `merge-pr` also runs. The
+    # merge is pinned to the head the gate checked — the agent gate's own read,
+    # else the head this run started from — so a push since fails the merge
+    # rather than land commits nothing checked.
     if not pr_merge.squash_merge(
         pr_number,
         pr_title=pr_title,
         admin=args.admin,
         config=config,
+        head_oid=gate_result.head_oid or pr_head,
     ):
         return 3
 
@@ -895,6 +906,7 @@ class _GateResult:
         refusal_message: str = "",
         override_audits: list[_OverrideAudit] | None = None,
         warnings: list[str] | None = None,
+        head_oid: str = "",
     ):
         self.passed = passed
         self.passed_via = passed_via
@@ -905,6 +917,9 @@ class _GateResult:
         # Soft, non-refusing notices the caller prints to stderr (e.g. the
         # all-slots override nudge, DEC-050).
         self.warnings = warnings or []
+        # The PR head the gate judged its verdicts against (#1179); the merge
+        # is pinned to it. Empty when the gate read no head of its own.
+        self.head_oid = head_oid
 
 
 @dataclass(frozen=True)
@@ -932,7 +947,7 @@ class _Slot:
     #: Named in `--bypass-reviewer` this invocation (DEC-050).
     overridden: bool
     #: The reviewer's most-blocking GATE-COUNTABLE verdict (marker-carrying, from
-    #: a required identity, PR author excluded, post-dating HEAD), or None when
+    #: a required identity, PR author excluded, fresh), or None when
     #: the gate counted none. The evidence behind `approved` and `status`.
     verdict: Verdict | None
 
@@ -1363,9 +1378,17 @@ def _check_agent_gate(
             warnings=gate_warnings,
         )
 
-    # Fetch comments + author + the latest commit (one round-trip).
+    # Fetch comments + author + the head and base the freshness rule reads
+    # (one round-trip).
     proc = gh_run(
-        ["gh", "pr", "view", str(pr_number), "--json", "author,comments,commits"],
+        [
+            "gh",
+            "pr",
+            "view",
+            str(pr_number),
+            "--json",
+            ",".join(("author", "comments", *PR_VIEW_FIELDS)),
+        ],
         config,
         check=False,
     )
@@ -1379,28 +1402,34 @@ def _check_agent_gate(
     comments = data.get("comments") or []
     commits = data.get("commits") or []
 
-    # Latest commit timestamp (DEC-028 step 4 freshness anchor), read by the
-    # SHARED `latest_commit_timestamp` that `review-pr`'s fresh-verdict skip
-    # also reads. If it cannot be established (no commits returned, or the
-    # last commit carries neither committedDate nor authoredDate) the
-    # freshness boundary is UNKNOWN — so the gate REFUSES rather than accept
-    # every stale verdict as fresh. Fail-closed per DEC-032 D5; an
-    # unestablishable freshness anchor is not "no freshness check".
-    latest_commit_ts = latest_commit_timestamp(commits)
-    if not latest_commit_ts:
+    # Latest commit timestamp — the freshness anchor for a verdict that names
+    # no reviewed head (DEC-028 "Stale-verdict handling"), read by the SHARED
+    # `latest_commit_timestamp`. If it cannot be established (no commits
+    # returned, or the last commit carries neither committedDate nor
+    # authoredDate) the PR's head is UNKNOWN — so the gate REFUSES rather than
+    # judge any verdict against it. Fail-closed per DEC-032 D5; an
+    # unestablishable head is not "no freshness check".
+    if not latest_commit_timestamp(commits):
         return refuse(_freshness_unresolvable_refusal(pr_number))
 
-    # --- Steps 1–5: latest fresh verdict per agent per path, selected by
-    # TIMESTAMP (DEC-028 step 5), via the SHARED verdict selection
-    # (`_lib.agent_verdicts`) that `show-pr --field review` also consumes — so
-    # the two never diverge on which comment is a reviewer's current verdict
-    # (COR-007). The gate goes through the strict `gate_verdicts` wrapper, whose
-    # freshness + membership filters are REQUIRED args — the read-surface
-    # primitive's permissive fail-open default is unreachable from here. The
-    # gate scopes the selection to its concern by injecting:
-    #   * freshness — `min_timestamp` drops comments not strictly after the
-    #     latest commit (a fresh CHANGES_REQUESTED after a fresh APPROVED still
-    #     blocks; the latest-by-timestamp rule handles the ordering);
+    # The one freshness rule (#1179), shared with `review-pr`'s skip and
+    # `show-pr`'s stale marker: a verdict naming its reviewed head stands
+    # until the author's changes since reach what its reviewer is required
+    # for; one naming no head falls back to the commit-time anchor above.
+    freshness = rule_for_pr(data, resolution, author_delta=author_delta, base_kept=base_kept)
+
+    # --- Steps 1–5: latest verdict per agent per path, selected by TIMESTAMP
+    # (DEC-028 step 5) and counted only when fresh, via the SHARED verdict
+    # selection (`_lib.agent_verdicts`) that `show-pr --field review` also
+    # consumes — so the two never diverge on which comment is a reviewer's
+    # current verdict (COR-007). The gate goes through the strict
+    # `gate_verdicts` wrapper, whose freshness + membership filters are
+    # REQUIRED args — the read-surface primitive's permissive fail-open default
+    # is unreachable from here. The gate scopes the selection to its concern by
+    # injecting:
+    #   * freshness — `is_fresh` judges each reviewer's latest verdict, after
+    #     the reduction: a stale latest verdict leaves the reviewer with none
+    #     that counts, and an older verdict it superseded never stands in;
     #   * membership — remote verdicts count only from a baseline login that is
     #     not the PR author (DEC-028 step 2/3); local verdicts only from a name
     #     in the resolved required set (DEC-032 D1).
@@ -1420,7 +1449,7 @@ def _check_agent_gate(
 
     verdicts = gate_verdicts(
         comments,
-        min_timestamp=latest_commit_ts,
+        is_fresh=freshness.is_fresh,
         remote_reviewer_ok=remote_reviewer_ok,
         local_reviewer_ok=local_reviewer_ok,
     )
@@ -1436,15 +1465,25 @@ def _check_agent_gate(
         required_local=required_local_set,
         override_set=override_set,
         verdicts=verdicts,
-        latest_commit_ts=latest_commit_ts,
+        freshness=freshness,
     )
 
     if any(not slot.satisfied for slot in slots):
         return refuse(
             _agent_gate_refusal(
+                pr_number=pr_number,
                 mode_source=mode_source,
                 slots=slots,
                 opted_out=resolution.opted_out,
+                stale=_stale_verdicts(
+                    slots=slots,
+                    comments=comments,
+                    freshness=freshness,
+                    remote_baseline=remote_baseline_set,
+                    required_local=required_local_set,
+                    remote_reviewer_ok=remote_reviewer_ok,
+                    local_reviewer_ok=local_reviewer_ok,
+                ),
             )
         )
 
@@ -1457,13 +1496,14 @@ def _check_agent_gate(
         override_audits=_build_override_audits(
             slots=slots,
             comments=comments,
-            latest_commit_ts=latest_commit_ts,
+            freshness=freshness,
             head=_head_key(commits),
             contributed_by=contributed_by,
             remote_reviewer_ok=remote_reviewer_ok,
             local_reviewer_ok=local_reviewer_ok,
         ),
         warnings=gate_warnings,
+        head_oid=head_sha(data),
     )
 
 
@@ -1583,7 +1623,7 @@ def _build_slots(
     required_local: set[str],
     override_set: set[str],
     verdicts: list[Verdict],
-    latest_commit_ts: str,
+    freshness: FreshnessRule,
 ) -> list[_Slot]:
     """One `_Slot` per required reviewer — the gate's decision, resolved once.
 
@@ -1602,21 +1642,83 @@ def _build_slots(
     by_path = {(verdict.path, verdict.reviewer): verdict for verdict in verdicts}
     slots: list[_Slot] = []
     for name, label in slot_labels:
-        registered = [
-            by_path.get((PATH_LOCAL, name)) if name in required_local else None,
-            by_path.get((PATH_REMOTE, name)) if name in remote_baseline else None,
-        ]
-        candidates = [verdict for verdict in registered if verdict is not None]
+        candidates = _registered_verdicts(
+            by_path,
+            name,
+            remote_baseline=remote_baseline,
+            required_local=required_local,
+        )
         slots.append(
             _Slot(
                 reviewer=name,
                 label=label,
                 approved=any(verdict.token == APPROVED for verdict in candidates),
                 overridden=name in override_set,
-                verdict=_most_blocking(candidates, latest_commit_ts),
+                verdict=_most_blocking(candidates, freshness),
             )
         )
     return slots
+
+
+def _registered_verdicts(
+    by_path: dict[tuple[str, str], Verdict],
+    name: str,
+    *,
+    remote_baseline: set[str],
+    required_local: set[str],
+) -> list[Verdict]:
+    """A reviewer's verdicts on the paths it is registered on, local first."""
+    registered = [
+        by_path.get((PATH_LOCAL, name)) if name in required_local else None,
+        by_path.get((PATH_REMOTE, name)) if name in remote_baseline else None,
+    ]
+    return [verdict for verdict in registered if verdict is not None]
+
+
+def _stale_verdicts(
+    *,
+    slots: list[_Slot],
+    comments: list,
+    freshness: FreshnessRule,
+    remote_baseline: set[str],
+    required_local: set[str],
+    remote_reviewer_ok,
+    local_reviewer_ok,
+) -> dict[str, tuple[Verdict, str]]:
+    """For each unsatisfied slot whose latest verdict went stale, that verdict
+    and why — what a refusal names (#1179): the head it reviewed and what
+    changed since.
+
+    Read on the refusal path only, from the gate's own candidates
+    (`gate_candidates`) with the SAME membership and author-exclusion
+    predicates the gate used — so a refusal names exactly the verdict the gate
+    judged stale.
+    """
+    latest = gate_candidates(
+        comments,
+        remote_reviewer_ok=remote_reviewer_ok,
+        local_reviewer_ok=local_reviewer_ok,
+    )
+    by_path = {(verdict.path, verdict.reviewer): verdict for verdict in latest}
+    stale: dict[str, tuple[Verdict, str]] = {}
+    for slot in slots:
+        if slot.satisfied or slot.verdict is not None:
+            continue
+        verdict = _most_blocking(
+            _registered_verdicts(
+                by_path,
+                slot.reviewer,
+                remote_baseline=remote_baseline,
+                required_local=required_local,
+            ),
+            freshness,
+        )
+        if verdict is None:
+            continue
+        assessment = freshness.assess(verdict)
+        if not assessment.fresh:
+            stale[slot.reviewer] = (verdict, assessment.reason)
+    return stale
 
 
 def _contribution_error_refusal(collection) -> str:
@@ -1695,11 +1797,12 @@ def _not_code_invalid_refusal(details: tuple[str, ...]) -> str:
 
 
 def _freshness_unresolvable_refusal(pr_number: int | None) -> str:
-    """Refusal text when the latest-commit freshness anchor cannot be set.
+    """Refusal text when the PR's latest commit cannot be read.
 
-    DEC-028 anchors verdict freshness to the latest commit's timestamp. If no
-    commit timestamp can be established, every verdict's freshness is unknown
-    — the gate refuses rather than accept a possibly-stale APPROVED as fresh
+    DEC-028 judges a verdict against the PR's head: the changes since the head
+    it reviewed, or — for a verdict naming no head — the latest commit's time.
+    If no commit timestamp can be established, the head is unknown — the gate
+    refuses rather than accept a possibly-stale APPROVED as fresh
     (fail-closed, DEC-032 D5).
     """
     return "\n".join(
@@ -1707,7 +1810,7 @@ def _freshness_unresolvable_refusal(pr_number: int | None) -> str:
             f"[refused] agent-mode approval gate cannot be resolved for PR "
             f"#{pr_number} — the latest-commit freshness anchor is unknown.",
             "            → `gh pr view` returned no commit with a committedDate or authoredDate.",
-            "            Verdict freshness is anchored to the latest commit "
+            "            Verdict freshness is judged against the PR's head "
             "(DEC-028); without it a stale APPROVED cannot be distinguished from "
             "a fresh one, so the gate refuses (fail-closed, DEC-032 D5).",
             "            Remediation:",
@@ -1776,17 +1879,24 @@ def _changed_files_unresolvable_refusal(reason: str, *, too_many: bool) -> str:
 
 def _agent_gate_refusal(
     *,
+    pr_number: int | None = None,
     mode_source: str,
     slots: list[_Slot],
     opted_out: tuple = (),
+    stale: dict[str, tuple[Verdict, str]] | None = None,
 ) -> str:
     """Refusal text naming the full resolved required set + who is unsatisfied.
 
     Names every required reviewer (baseline + contributed, with provenance) and
     its status, so the operator sees exactly which members of the AND-composed
-    set still need to approve (DEC-032 D3). Contributions the project opts out
-    of (#148) are named after the set with their reasons, so a reviewer missing
-    from it reads as withdrawn, not forgotten.
+    set still need to approve (DEC-032 D3). A reviewer whose latest verdict went
+    stale (`stale`, from `_stale_verdicts`) has it named beside its status, with
+    the head it reviewed and what changed since (#1179). A local reviewer whose
+    CHANGES_REQUESTED is still fresh is one `review-pr` skips, so the refusal
+    names `review-pr <N> --force` as the way to have it re-review the PR as it
+    stands. Contributions the project opts out of (#148) are named after the
+    set with their reasons, so a reviewer missing from it reads as withdrawn,
+    not forgotten.
 
     It reads the same `_Slot` records the pass path's `passed_via` reads, which
     is what keeps the two honest with each other: a reviewer with a genuine fresh
@@ -1802,8 +1912,13 @@ def _agent_gate_refusal(
         "            → required reviewers (all must have a fresh APPROVED, or "
         "an operator override):",
     ]
+    stale = stale or {}
     for slot in slots:
-        lines.append(f"                  {slot.label}: {slot.status}")
+        line = f"                  {slot.label}: {slot.status}"
+        if slot.reviewer in stale:
+            verdict, reason = stale[slot.reviewer]
+            line += f" (stale {verdict.token} — {reason})"
+        lines.append(line)
     for opt_out in opted_out:
         lines.append(
             f"            → opted out ({OPT_OUT_PATH}): {opt_out.reviewer} "
@@ -1811,9 +1926,24 @@ def _agent_gate_refusal(
         )
     missing = ", ".join(slot.label for slot in slots if not slot.satisfied)
     lines.append(f"            → still missing a fresh APPROVED: {missing}")
+    number = pr_number if pr_number is not None else "<N>"
     lines.append("            Remediation:")
     lines.append("              a) Wait for / trigger each remote agent to post APPROVED.")
-    lines.append("              b) Run `review-pr <N>` to re-invoke the local agent(s).")
+    lines.append(f"              b) Run `review-pr {number}` to re-invoke the local agent(s).")
+    rejecting = [
+        slot.label
+        for slot in slots
+        if not slot.satisfied
+        and slot.verdict is not None
+        and slot.verdict.token == CHANGES_REQUESTED
+        and slot.verdict.path == PATH_LOCAL
+    ]
+    if rejecting:
+        lines.append(
+            f"                 It skips a fresh CHANGES_REQUESTED ({', '.join(rejecting)}): "
+            "push the fix it asks for, or have it re-review the PR as it stands "
+            f"with `review-pr {number} --force`."
+        )
     lines.append(
         "              c) Override a false block on ONE reviewer with "
         "`done-work --bypass-reviewer <name> "
@@ -1874,7 +2004,7 @@ def _build_override_audits(
     *,
     slots: list[_Slot],
     comments: list,
-    latest_commit_ts: str,
+    freshness: FreshnessRule,
     head: str,
     contributed_by: dict[str, str],
     remote_reviewer_ok,
@@ -1896,23 +2026,22 @@ def _build_override_audits(
     overridden — the three states the DEC names (`none` / a fresh
     `CHANGES_REQUESTED` / a stale `APPROVED`). Telling a *stale* APPROVED apart
     from no verdict at all needs the reviewer's latest verdict irrespective of
-    freshness, which the gate's read drops by design; so this reads the comments
-    again WITHOUT the freshness anchor but with the SAME membership and
-    author-exclusion predicates the gate used (passed in, never re-derived). The
-    freshness difference is the point; a membership difference would not be — an
-    unfiltered read here let the PR author's own self-approval, which the gate
-    correctly refuses to count, describe what the override waived (ADR-042's
-    named anti-pattern). This read never feeds the gate DECISION, which is
-    already settled in `slots`.
+    freshness, which the gate's read drops by design; so this reads the gate's
+    own candidates (`gate_candidates`) — before freshness, with the SAME
+    membership and author-exclusion predicates the gate used (passed in, never
+    re-derived). The freshness difference is the point; a membership difference
+    would not be — an unfiltered read here let the PR author's own
+    self-approval, which the gate correctly refuses to count, describe what the
+    override waived (ADR-042's named anti-pattern). This read never feeds the
+    gate DECISION, which is already settled in `slots`.
     """
     overridden = [slot for slot in slots if slot.overridden]
     if not overridden:
         return []
-    latest = latest_verdicts_per_reviewer(
+    latest = gate_candidates(
         comments,
         remote_reviewer_ok=remote_reviewer_ok,
         local_reviewer_ok=local_reviewer_ok,
-        require_marker=True,
     )
     # `latest` is sorted local-before-remote, so `_most_blocking`'s first-seen
     # tie-break keeps the prior local-first preference on a severity tie.
@@ -1924,8 +2053,8 @@ def _build_override_audits(
     audits: list[_OverrideAudit] = []
     for slot in overridden:
         state, url = _describe_override_state(
-            _most_blocking(by_name.get(slot.reviewer, []), latest_commit_ts),
-            latest_commit_ts,
+            _most_blocking(by_name.get(slot.reviewer, []), freshness),
+            freshness,
         )
         audits.append(
             _OverrideAudit(
@@ -1944,7 +2073,7 @@ def _build_override_audits(
     return audits
 
 
-def _most_blocking(verdicts: list[Verdict], latest_commit_ts: str) -> Verdict | None:
+def _most_blocking(verdicts: list[Verdict], freshness: FreshnessRule) -> Verdict | None:
     """The verdict that best describes a slot: the most blocking one.
 
     Used wherever a reviewer posted on both registered paths and a surface must
@@ -1956,42 +2085,42 @@ def _most_blocking(verdicts: list[Verdict], latest_commit_ts: str) -> Verdict | 
     best: Verdict | None = None
     for verdict in verdicts:
         if best is None or (
-            _verdict_severity(verdict, latest_commit_ts) > _verdict_severity(best, latest_commit_ts)
+            _verdict_severity(verdict, freshness) > _verdict_severity(best, freshness)
         ):
             best = verdict
     return best
 
 
-def _verdict_severity(verdict: Verdict, latest_commit_ts: str) -> int:
+def _verdict_severity(verdict: Verdict, freshness: FreshnessRule) -> int:
     """Rank a verdict by how much it blocks the gate. Higher = more blocking:
 
         0  a fresh APPROVED           — satisfies the gate; override redundant
-        1  a stale APPROVED           — predates HEAD, no longer counts
+        1  a stale APPROVED           — no longer counts
         2  a stale CHANGES_REQUESTED  — a recorded block, now stale
         3  a fresh CHANGES_REQUESTED  — an active block
 
-    Freshness is relative to `latest_commit_ts` (strictly-after = fresh), the
-    same anchor the gate uses. `Verdict.token` is `APPROVED` or
-    `CHANGES_REQUESTED` by construction — `parse_verdict_line` recognises no
-    third token — so there is no other case to rank.
+    Freshness is the gate's own rule (`freshness`, #1179). `Verdict.token` is
+    `APPROVED` or `CHANGES_REQUESTED` by construction — `parse_verdict_line`
+    recognises no third token — so there is no other case to rank.
     """
-    fresh = verdict.timestamp > latest_commit_ts
+    fresh = freshness.is_fresh(verdict)
     if verdict.token == CHANGES_REQUESTED:
         return 3 if fresh else 2
     return 0 if fresh else 1
 
 
 def _describe_override_state(
-    verdict: Verdict | None, latest_commit_ts: str
+    verdict: Verdict | None, freshness: FreshnessRule
 ) -> tuple[str, str | None]:
     """Human description + block-comment URL for a reviewer's state at override.
 
     Returns `(state, block_comment_url)`. `verdict` is the reviewer's
     most-blocking marker-carrying verdict from a gate-countable identity, or
-    `None` when there was none. Freshness is relative to `latest_commit_ts`
-    (strictly-after = fresh), the same anchor the gate uses. `Verdict.token` is
-    `APPROVED` or `CHANGES_REQUESTED` by construction, so those are the only
-    cases to describe.
+    `None` when there was none. Freshness is the gate's own rule (`freshness`,
+    #1179); a stale verdict's state carries the rule's reason — the head it
+    reviewed and what changed since. `Verdict.token` is `APPROVED` or
+    `CHANGES_REQUESTED` by construction, so those are the only cases to
+    describe.
     """
     if verdict is None:
         # "Nothing the gate counts" rather than "nothing posted": this also
@@ -1999,17 +2128,18 @@ def _describe_override_state(
         # self-approval, DEC-028 step 3). Reporting that as the reviewer's state
         # would misdescribe what the override actually waived.
         return "none (no verdict the gate counts)", None
-    fresh = verdict.timestamp > latest_commit_ts
+    assessment = freshness.assess(verdict)
+    fresh = assessment.fresh
     if verdict.token == CHANGES_REQUESTED:
         url = verdict.url or None
         if fresh:
             return "a fresh CHANGES_REQUESTED (an active block)", url
-        return "a stale CHANGES_REQUESTED (predates the latest commit)", url
+        return f"a stale CHANGES_REQUESTED ({assessment.reason})", url
     if fresh:
         # Overriding an already-fresh-APPROVED reviewer is redundant but
         # allowed — record it honestly rather than pretend it was blocked.
         return "a fresh APPROVED (override redundant)", None
-    return "a stale APPROVED (predates the latest commit)", None
+    return f"a stale APPROVED ({assessment.reason})", None
 
 
 # ---- side-effects ----------------------------------------------------

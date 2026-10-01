@@ -166,6 +166,12 @@ def _wire(
 REAL_CAP_ROOT = REPO_ROOT / ".pkit" / "capabilities" / "project-management"
 
 
+def _freshness(dw):
+    """The gate's freshness rule for verdicts naming no reviewed head: fresh
+    when posted after the latest commit (`_COMMIT_TS`)."""
+    return dw.FreshnessRule(head_timestamp=_COMMIT_TS)
+
+
 def _slot(dw, name, *, label=None, approved=False, overridden=False, verdict=None):
     """A `_Slot` for the unit-level audit-builder tests."""
     return dw._Slot(
@@ -884,7 +890,7 @@ def test_override_audit_not_matched_by_gate_verdict_reader(dw, av) -> None:
     }
     verdicts = av.gate_verdicts(
         [comment],
-        min_timestamp=_COMMIT_TS,
+        is_fresh=lambda _v: True,
         local_reviewer_ok=lambda _n: True,
         remote_reviewer_ok=lambda _l: True,
     )
@@ -915,7 +921,7 @@ def test_override_audit_records_state_and_operator(dw) -> None:
 
 
 def test_state_none_when_no_verdict(dw) -> None:
-    state, url = dw._describe_override_state(None, _COMMIT_TS)
+    state, url = dw._describe_override_state(None, _freshness(dw))
     assert "none" in state
     assert url is None
 
@@ -929,7 +935,7 @@ def test_state_fresh_changes_requested(dw, av) -> None:
         timestamp=_FRESH_TS,
         url="u1",
     )
-    state, url = dw._describe_override_state(v, _COMMIT_TS)
+    state, url = dw._describe_override_state(v, _freshness(dw))
     assert "fresh CHANGES_REQUESTED" in state
     assert url == "u1"
 
@@ -943,8 +949,10 @@ def test_state_stale_approved(dw, av) -> None:
         timestamp=_STALE_TS,
         url="u2",
     )
-    state, url = dw._describe_override_state(v, _COMMIT_TS)
+    state, url = dw._describe_override_state(v, _freshness(dw))
     assert "stale APPROVED" in state
+    # The state carries the freshness rule's reason.
+    assert "posted before the latest commit" in state
     # A stale APPROVED is not a block, so no block-comment link.
     assert url is None
 
@@ -967,7 +975,7 @@ def _build_audits(dw, slots, comments, *, contributed_by=None, head="head0", ok=
     return dw._build_override_audits(
         slots=slots,
         comments=comments,
-        latest_commit_ts=_COMMIT_TS,
+        freshness=_freshness(dw),
         head=head,
         contributed_by=contributed_by or {},
         remote_reviewer_ok=ok,

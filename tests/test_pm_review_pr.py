@@ -558,6 +558,11 @@ def test_find_pr_for_branch_reads_the_base_branch(rpr, monkeypatch) -> None:
 # contributed), not just the static baseline.
 
 
+_REVIEWED = "a" * 40
+_MOVED_TO = "b" * 40
+_BASE = "c" * 40
+
+
 def _wire_main(
     rpr,
     monkeypatch,
@@ -567,8 +572,12 @@ def _wire_main(
     invoked,
     briefed=None,
     fresh=None,
+    stale=None,
     unreadable=False,
     argv=(),
+    heads=None,
+    posted=None,
+    native=None,
 ):
     """Stub main()'s seams; record invoked names into `invoked`.
 
@@ -578,9 +587,15 @@ def _wire_main(
     deployed-agent file existence check is satisfied by creating the files.
     `briefed`, when given, collects the `(base, head)` each call was passed.
 
-    `fresh` is what the fresh-verdict read returns (#1178) — reviewer name →
-    token; default none fresh — and `unreadable` makes the read fail instead.
+    `fresh` is what the verdict read reports fresh (#1178) — reviewer name →
+    token; default none fresh — and `stale` what it reports stale — reviewer
+    name → (token, reason) (#1179); `unreadable` makes the read fail instead.
     Each read is recorded in the returned list. `argv` is extra CLI arguments.
+
+    `heads` is the PR head each `_read_tips` call returns, in order, beside
+    the base `_BASE` (#1179); default the same head every time. `posted`, when given, collects
+    each posted comment body. `native`, when given, enables the native review
+    and collects the verdict of each one delivered.
     """
     from types import SimpleNamespace
 
@@ -628,6 +643,7 @@ def _wire_main(
         *,
         base=None,
         head="HEAD",
+        sha="",
     ):
         invoked.append(name)
         if briefed is not None:
@@ -635,17 +651,39 @@ def _wire_main(
         return "APPROVED", "body"
 
     monkeypatch.setattr(rpr, "_invoke_agent", fake_invoke)
-    monkeypatch.setattr(rpr, "_post_comment", lambda pr, body, config: True)
+
+    def fake_post(pr, body, config):
+        if posted is not None:
+            posted.append(body)
+        return True
+
+    monkeypatch.setattr(rpr, "_post_comment", fake_post)
+    head_reads = iter(heads) if heads is not None else None
+    monkeypatch.setattr(
+        rpr,
+        "_read_tips",
+        lambda pr, config: (next(head_reads) if head_reads else _REVIEWED, _BASE),
+    )
 
     reads: list[tuple[int, list[str]]] = []
 
-    def fake_read_fresh(pr_number, required_local, config):
-        reads.append((pr_number, list(required_local)))
-        return None if unreadable else dict(fresh or {})
+    def fake_read_states(pr_number, resolution, config):
+        reads.append((pr_number, list(resolution.required_local)))
+        if unreadable:
+            return None
+        return rpr._VerdictStates(fresh=dict(fresh or {}), stale=dict(stale or {}))
 
-    monkeypatch.setattr(rpr, "_read_fresh_verdicts", fake_read_fresh)
-    # `--no-native` keeps the native-review delivery (a live `gh` call) out.
-    monkeypatch.setattr(sys, "argv", ["review-pr", "147", "--no-native", *argv])
+    monkeypatch.setattr(rpr, "_read_verdict_states", fake_read_states)
+    if native is None:
+        # `--no-native` keeps the native-review delivery (a live `gh` call) out.
+        argv = ("--no-native", *argv)
+    else:
+        monkeypatch.setattr(
+            rpr,
+            "_deliver_native_review",
+            lambda pr, verdict, comment, config: native.append(verdict),
+        )
+    monkeypatch.setattr(sys, "argv", ["review-pr", "147", *argv])
     return reads
 
 
@@ -780,11 +818,136 @@ def test_undeployed_contributed_agent_aborts(rpr, rc, monkeypatch, tmp_path) -> 
     assert invoked == []
 
 
+# ---- the head a reviewer reviewed (#1179) -----------------------------
+#
+# review-pr reads the PR's head before invoking a reviewer, names it in the
+# brief, checks it is unchanged before posting, and stamps it in the verdict
+# marker. A head that moved is reported; the verdict still names the head the
+# reviewer saw, and the freshness rule judges what changed since.
+
+
+def test_review_brief_names_the_head_under_review(rpr) -> None:
+    brief = rpr._review_brief(
+        "reviewer",
+        99,
+        base="main",
+        head="feat/1179-x",
+        sha=_REVIEWED,
+    )
+    assert f"You are reviewing its head commit {_REVIEWED}" in brief
+    assert f"`git diff origin/main...{_REVIEWED}`" in brief
+
+
+def test_each_verdict_names_the_head_its_reviewer_saw(
+    rpr,
+    monkeypatch,
+    tmp_path,
+    capsys,
+) -> None:
+    posted: list[str] = []
+    native: list[str] = []
+    _wire_main(
+        rpr,
+        monkeypatch,
+        tmp_path,
+        resolution=rpr.Resolution(required_local=("reviewer",)),
+        invoked=[],
+        posted=posted,
+        native=native,
+    )
+    assert rpr.main() == 0
+    (comment,) = posted
+    assert comment.endswith(f"<!-- pkit-verdict sha={_REVIEWED} base={_BASE} -->\n")
+    assert native == ["APPROVED"]
+    assert "moved" not in capsys.readouterr().out
+
+
+def test_a_head_that_moves_during_the_review_is_reported(
+    rpr,
+    monkeypatch,
+    tmp_path,
+    capsys,
+) -> None:
+    """A push during the review: the verdict is posted against the head the
+    reviewer saw (so the freshness rule holds it stale once the push is a
+    change it checks), and no native review lands on the head it never saw."""
+    posted: list[str] = []
+    native: list[str] = []
+    _wire_main(
+        rpr,
+        monkeypatch,
+        tmp_path,
+        resolution=rpr.Resolution(required_local=("reviewer",)),
+        invoked=[],
+        posted=posted,
+        native=native,
+        heads=[_REVIEWED, _MOVED_TO],
+    )
+    assert rpr.main() == 0
+    (comment,) = posted
+    assert f"sha={_REVIEWED}" in comment
+    assert native == []
+    out = capsys.readouterr().out
+    assert "[reviewer] the PR's head moved from aaaaaaa to bbbbbbb" in out
+    assert "the verdict is recorded against aaaaaaa" in out
+    assert "[native] skipped" in out
+
+
+def test_an_unreadable_head_posts_a_verdict_naming_none(
+    rpr,
+    monkeypatch,
+    tmp_path,
+    capsys,
+) -> None:
+    """Without the head, the verdict names none and falls back to the latest
+    commit's time — today's rule — rather than not being posted."""
+    posted: list[str] = []
+    _wire_main(
+        rpr,
+        monkeypatch,
+        tmp_path,
+        resolution=rpr.Resolution(required_local=("reviewer",)),
+        invoked=[],
+        posted=posted,
+        heads=["", ""],
+    )
+    assert rpr.main() == 0
+    (comment,) = posted
+    assert comment.endswith("<!-- pkit-verdict -->\n")
+    assert "names no reviewed head" in capsys.readouterr().out
+
+
+def test_report_head_check_when_the_head_cannot_be_read_again(rpr, capsys) -> None:
+    assert rpr._report_head_check("reviewer", _REVIEWED, "") is False
+    assert "could not be read again" in capsys.readouterr().out
+    assert rpr._report_head_check("reviewer", _REVIEWED, _REVIEWED) is True
+
+
+def test_read_tips(rpr, monkeypatch) -> None:
+    calls: list[list[str]] = []
+
+    def fake(argv, config, check=False):  # type: ignore[no-untyped-def]
+        calls.append(list(argv))
+        return _Proc(0, _json.dumps({"headRefOid": _REVIEWED, "baseRefOid": _BASE}))
+
+    monkeypatch.setattr(rpr, "gh_run", fake)
+    assert rpr._read_tips(99, {}) == (_REVIEWED, _BASE)
+    assert calls == [["gh", "pr", "view", "99", "--json", "headRefOid,baseRefOid"]]
+    for proc in (_Proc(1, "", "gh down"), _Proc(0, "not json"), _Proc(0, "[]")):
+        monkeypatch.setattr(
+            rpr,
+            "gh_run",
+            lambda argv, config, check=False, proc=proc: proc,
+        )
+        assert rpr._read_tips(99, {}) == ("", "")
+    assert rpr._read_tips(None, {}) == ("", "")
+
+
 # ---- fresh-verdict skip and --force (#1178) --------------------------
 #
-# A required reviewer whose latest verdict post-dates the head commit is not
-# re-run; `--force` re-runs it. What counts as fresh is done-work's own
-# selection (`gate_verdicts` anchored by `latest_commit_timestamp`).
+# A required reviewer whose latest verdict is still fresh is not re-run;
+# `--force` re-runs it. What counts as fresh is done-work's own selection
+# (`gate_verdicts` with the freshness rule, `_lib.verdict_freshness`).
 
 _PANEL = ("reviewer", "code-reviewer")
 
@@ -832,6 +995,35 @@ def test_fresh_changes_requested_reviewer_is_not_re_run(
     assert invoked == ["reviewer"]
     out = capsys.readouterr().out
     assert "  [code-reviewer] fresh verdict CHANGES_REQUESTED — not re-run" in out
+
+
+def test_a_stale_reviewer_is_re_run_with_the_reason(
+    rpr,
+    monkeypatch,
+    tmp_path,
+    capsys,
+) -> None:
+    """A re-run is never silent about why (#1179): the reviewer whose verdict
+    went stale is named with the freshness rule's reason before it runs."""
+    invoked: list[str] = []
+    reason = (
+        "reviewed aaaaaaa; the changes since cannot be read: the reviewed head, "
+        "aaaaaaa, is not in this checkout and could not be fetched from origin: "
+        "fatal: unable to access origin"
+    )
+    _wire_main(
+        rpr,
+        monkeypatch,
+        tmp_path,
+        resolution=rpr.Resolution(required_local=_PANEL),
+        invoked=invoked,
+        fresh={"reviewer": "APPROVED"},
+        stale={"code-reviewer": ("APPROVED", reason)},
+    )
+    assert rpr.main() == 0
+    assert invoked == ["code-reviewer"]
+    out = capsys.readouterr().out
+    assert f"  [code-reviewer] stale verdict APPROVED ({reason}) — re-run" in out
 
 
 def test_every_reviewer_fresh_invokes_nothing(rpr, monkeypatch, tmp_path) -> None:
@@ -909,6 +1101,17 @@ _HEAD = [
 ]
 
 
+def _rule(rpr, commits=_HEAD):
+    """The freshness rule for a PR whose verdicts name no head: they are
+    judged by the latest commit's time."""
+    return rpr.rule_for_pr(
+        {"commits": commits},
+        rpr.Resolution(),
+        author_delta=lambda *a, **k: pytest.fail("no head is named"),
+        base_kept=lambda *a, **k: pytest.fail("no base is named"),
+    )
+
+
 def _verdict_comment(name, token, ts, *, marked=True, remote=False):
     first = f"Reviewer agent: {token}" if remote else (f"Reviewer agent (local, {name}): {token}")
     body = f"{first}\n\nreasons"
@@ -917,7 +1120,7 @@ def _verdict_comment(name, token, ts, *, marked=True, remote=False):
     return {"author": {"login": name}, "body": body, "createdAt": ts}
 
 
-def test_fresh_local_verdicts_counts_only_what_the_gate_counts(rpr) -> None:
+def test_local_verdict_states_count_only_what_the_gate_counts(rpr) -> None:
     comments = [
         # after the head, marked, required → fresh
         _verdict_comment("reviewer", "APPROVED", "2026-06-03T00:00:00Z"),
@@ -931,28 +1134,71 @@ def test_fresh_local_verdicts_counts_only_what_the_gate_counts(rpr) -> None:
         _verdict_comment("docs-reviewer", "APPROVED", "2026-06-03T00:00:00Z", remote=True),
     ]
     required = ["reviewer", "code-reviewer", "security-reviewer", "docs-reviewer"]
-    assert rpr._fresh_local_verdicts(comments, _HEAD, required) == {
+    assert rpr._local_verdict_states(comments, _rule(rpr), required).fresh == {
         "reviewer": "APPROVED",
     }
 
 
-def test_fresh_local_verdicts_reads_the_latest_verdict(rpr) -> None:
+def test_local_verdict_states_read_the_latest_verdict(rpr) -> None:
     comments = [
         _verdict_comment("reviewer", "APPROVED", "2026-06-03T00:00:00Z"),
         _verdict_comment("reviewer", "CHANGES_REQUESTED", "2026-06-04T00:00:00Z"),
     ]
-    assert rpr._fresh_local_verdicts(comments, _HEAD, ["reviewer"]) == {
+    assert rpr._local_verdict_states(comments, _rule(rpr), ["reviewer"]).fresh == {
         "reviewer": "CHANGES_REQUESTED",
     }
 
 
-def test_fresh_local_verdicts_without_a_head_timestamp_is_unknown(rpr) -> None:
+def test_local_verdict_states_without_a_head_timestamp_are_stale(rpr) -> None:
+    # A verdict naming no head is fresh only after the latest commit; with
+    # that commit's time unknown it is stale, so the reviewer runs again.
     comments = [_verdict_comment("reviewer", "APPROVED", "2026-06-03T00:00:00Z")]
-    assert rpr._fresh_local_verdicts(comments, [], ["reviewer"]) is None
-    assert rpr._fresh_local_verdicts(comments, [{"oid": "x"}], ["reviewer"]) is None
+    assert rpr._local_verdict_states(comments, _rule(rpr, []), ["reviewer"]).fresh == {}
+    states = rpr._local_verdict_states(comments, _rule(rpr, [{"oid": "x"}]), ["reviewer"])
+    assert states.fresh == {}
+    # The re-run says why: the latest commit's time is unknown.
+    assert states.stale == {
+        "reviewer": (
+            "APPROVED",
+            "no reviewed head recorded; the latest commit's time is unknown",
+        ),
+    }
 
 
-def test_read_fresh_verdicts_fetches_comments_and_commits(rpr, monkeypatch) -> None:
+def test_local_verdict_states_keep_a_floor_reviewer_fresh_past_a_markdown_fix(
+    rpr,
+) -> None:
+    """The skip applies the gate's rule (#1179): after a Markdown-only fix a
+    floor-only reviewer's verdict stands and it is not re-run; the baseline
+    reviewer's does not."""
+    from _lib.author_delta import AuthorDelta
+
+    def pinned(name):
+        comment = _verdict_comment(name, "APPROVED", "2026-06-01T00:00:00Z")
+        comment["body"] = rpr.stamp_verdict(comment["body"], _REVIEWED)
+        return comment
+
+    resolution = rpr.Resolution(
+        required_local=("reviewer", "code-reviewer"),
+        floors_by_reviewer={"code-reviewer": frozenset({"touches-code"})},
+    )
+    rule = rpr.rule_for_pr(
+        {"headRefOid": _MOVED_TO, "commits": _HEAD},
+        resolution,
+        author_delta=lambda since, head, *, base_tip: AuthorDelta(
+            paths=("README.md",),
+        ),
+        base_kept=lambda reviewed_base, base_tip: pytest.fail("no base is named"),
+    )
+    comments = [pinned("reviewer"), pinned("code-reviewer")]
+    states = rpr._local_verdict_states(comments, rule, resolution.required_local)
+    assert states.fresh == {"code-reviewer": "APPROVED"}
+    assert states.stale == {
+        "reviewer": ("APPROVED", "reviewed aaaaaaa; changed since: README.md"),
+    }
+
+
+def test_read_verdict_states_fetches_comments_head_and_base(rpr, monkeypatch) -> None:
     calls: list[list[str]] = []
     payload = {
         "comments": [
@@ -966,8 +1212,20 @@ def test_read_fresh_verdicts_fetches_comments_and_commits(rpr, monkeypatch) -> N
         return _Proc(0, _json.dumps(payload))
 
     monkeypatch.setattr(rpr, "gh_run", fake)
-    assert rpr._read_fresh_verdicts(99, ["reviewer"], {}) == {"reviewer": "APPROVED"}
-    assert calls == [["gh", "pr", "view", "99", "--json", "comments,commits"]]
+    resolution = rpr.Resolution(required_local=("reviewer",))
+    assert rpr._read_verdict_states(99, resolution, {}) == rpr._VerdictStates(
+        fresh={"reviewer": "APPROVED"},
+    )
+    assert calls == [
+        [
+            "gh",
+            "pr",
+            "view",
+            "99",
+            "--json",
+            "comments,commits,headRefOid,baseRefOid",
+        ]
+    ]
 
 
 @pytest.mark.parametrize(
@@ -978,9 +1236,10 @@ def test_read_fresh_verdicts_fetches_comments_and_commits(rpr, monkeypatch) -> N
         lambda: _Proc(0, "[]"),
     ],
 )
-def test_read_fresh_verdicts_unreadable_is_none(rpr, monkeypatch, proc) -> None:
+def test_read_verdict_states_unreadable_is_none(rpr, monkeypatch, proc) -> None:
     monkeypatch.setattr(rpr, "gh_run", lambda argv, config, check=False: proc())
-    assert rpr._read_fresh_verdicts(99, ["reviewer"], {}) is None
+    resolution = rpr.Resolution(required_local=("reviewer",))
+    assert rpr._read_verdict_states(99, resolution, {}) is None
 
 
 def test_resolution_error_not_code_names_the_key(rpr) -> None:

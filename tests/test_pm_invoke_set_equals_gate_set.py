@@ -332,6 +332,7 @@ def _invoke_set(rpr, monkeypatch, tmp_path, *, collection, labels, opt_outs=()):
         *,
         base=None,
         head="HEAD",
+        sha="",
     ):
         invoked.append(name)
         return "APPROVED", "body"

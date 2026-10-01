@@ -32,7 +32,7 @@ This DEC builds on DEC-027's mode resolution and on DEC-026's `done-work` gate. 
 
 ## Decision
 
-In `agent` mode (per DEC-027), `done-work`'s approval gate is satisfied when **a registered reviewer agent has posted an `APPROVED` verdict comment on the PR, post-dating the latest commit, via either the remote path (bot identity) or the local path (user attestation of locally-run agent)**.
+In `agent` mode (per DEC-027), `done-work`'s approval gate is satisfied when **a registered reviewer agent's latest verdict comment on the PR is a fresh `APPROVED` — the author has changed nothing its reviewer checks since the head it reviewed — via either the remote path (bot identity) or the local path (user attestation of locally-run agent)**.
 
 This adds a fourth path to `done-work`'s approval-gate OR in `agent` mode (the other three are still available: APPROVED review, `Approved`-prefix comment from non-author human, `--bypass "<reason>"`).
 
@@ -59,7 +59,7 @@ Three findings:
 
 The verdict vocabulary (`APPROVED`, `CHANGES_REQUESTED`) matches GitHub's native PR-review state names — transferable mental model, and future migration from comment-based sentinels to actual `gh pr review` objects is mechanically straightforward (the verdict maps to the Review state).
 
-> **Amended by [project-management:DEC-047-freeform-comment-verb] (#593).** The verdict comment additionally carries a **provenance marker**, `<!-- pkit-verdict -->`, and **the gate counts a verdict only when that marker is present**. The reviewer path stamps it (`review-pr.py` on post; a directly-posting reviewer includes it); `agent_verdicts.gate_verdicts` requires it (`require_marker=True`). This closes the read side of the sentinel-spoof DEC-047 guards on the write side: a bare verdict-grammar first line — hand-typed, or slipped past a write-side guard — no longer satisfies the merge gate unless it was stamped by the reviewer path. The **read surface** (`show-pr --field review`) stays permissive and still displays every verdict-shaped comment, marked or not; only the *gate* requires the marker. The first-line grammar is unchanged (the marker is a separate line), so this is a refinement, not a change to what a verdict *looks* like.
+> **Amended by [project-management:DEC-047-freeform-comment-verb] (#593).** The verdict comment additionally carries a **provenance marker**, `<!-- pkit-verdict -->` — `<!-- pkit-verdict sha=<oid> base=<oid> -->` when it names the head the reviewer reviewed and the base branch's head it was reviewed against (see "Stale-verdict handling") — and **the gate counts a verdict only when that marker is present**. The reviewer path stamps it (`review-pr.py` on post; a directly-posting reviewer includes it); `agent_verdicts.gate_verdicts` requires it (`require_marker=True`). This closes the read side of the sentinel-spoof DEC-047 guards on the write side: a bare verdict-grammar first line — hand-typed, or slipped past a write-side guard — no longer satisfies the merge gate unless it was stamped by the reviewer path. The **read surface** (`show-pr --field review`) stays permissive and still displays every verdict-shaped comment, marked or not; only the *gate* requires the marker. The first-line grammar is unchanged (the marker is a separate line), so this is a refinement, not a change to what a verdict *looks* like.
 
 A comment without the `Reviewer agent:` first-line prefix is implicitly informational commentary — no special verdict needed. Comments from the agent without the prefix do not affect the gate.
 
@@ -110,7 +110,7 @@ When a remote-registered agent reviews, it posts the verdict comment using its o
 - Comment first line exactly `Reviewer agent: APPROVED`.
 - Comment author matches `review.agents.remote_registered[0].github_login`.
 - Comment author is **not** the PR author (author-exclusion enforced).
-- Comment timestamp post-dates the latest commit.
+- The verdict is fresh (see "Stale-verdict handling").
 
 The remote path's invocation is **adopter-managed** — the kit does not ship the bot; adopters wire their own via GitHub Action, webhook, or external service.
 
@@ -121,7 +121,7 @@ When a local-registered agent reviews, it runs on the developer's machine via a 
 - Comment first line exactly `Reviewer agent (local, <name>): APPROVED` — where `<name>` matches an entry in `review.agents.local_registered:`.
 - Comment author is the developer who ran the local command (typically the PR author in a solo workflow).
 - **Author-exclusion is relaxed** for the local path — the developer attests they ran the agent and is taking responsibility for the verdict.
-- Comment timestamp post-dates the latest commit.
+- The verdict is fresh (see "Stale-verdict handling").
 
 The local path's *trust model* is the same as DEC-026's `--bypass "<reason>"`: the developer attests via the kit command that they ran the agent and accepts the verdict; the comment records what was attested; the kit does not verify what actually happened. The *mechanisms* differ (`--bypass` posts a single audit comment at merge time with a freeform reason; `review-pr` posts a structured verdict comment before merge with `APPROVED` or `CHANGES_REQUESTED` + freeform commentary) — but the same honor-system trust posture applies. The honor-system aspect is acknowledged — see Rationale.
 
@@ -131,7 +131,7 @@ The local-registered name `<name>` must (a) appear in `review.agents.local_regis
 
 The local path has a single entry point:
 
-- **`review-pr <N>`** — invokes all locally-registered agents against the PR's diff. Each agent runs in parallel; each posts its verdict comment under the developer's identity. Re-runs are idempotent: post-dating-latest-commit invalidates prior verdicts automatically (see "Stale-verdict handling" below).
+- **`review-pr <N>`** — invokes all locally-registered agents against the PR's diff. Each agent runs in parallel; each posts its verdict comment under the developer's identity, naming the head it reviewed and the base it reviewed it against. Re-runs are idempotent: a newer verdict supersedes an older one, and a verdict goes stale on its own once the author changes what its reviewer checks (see "Stale-verdict handling" below).
 
 `review-pr` is a new verb-subject command added to the pm capability, fitting DEC-020's verb-subject convention (verb=`review`, subject=`pr` — `pr` is an established entity per DEC-020's verb-subject set). It is **not** part of DEC-026's seven-command lifecycle palette — DEC-028 introduces `review-pr` as a sibling addition to DEC-020's verb-subject set. DEC-026's `review-work` is unchanged by this DEC.
 
@@ -156,7 +156,7 @@ The `done-work` refusal template (see below) names `review-pr` as the remediatio
 
 When `review.agents.local_registered:` lists N local agents (v1 caps at 1; future v2 may extend), the gate semantics are **all-must-approve**:
 
-- All N local agents must post `Reviewer agent (local, <name>): APPROVED` post-dating the latest commit.
+- All N local agents must have a fresh `Reviewer agent (local, <name>): APPROVED` (see "Stale-verdict handling").
 - If any local agent's most recent verdict is `CHANGES_REQUESTED`, the gate is not satisfied via the local path.
 - The agents run in parallel during `review-pr`; ordering is implementation-detail.
 
@@ -166,7 +166,7 @@ At v1 (singleton), all-must-approve trivially reduces to the single agent's verd
 
 `CHANGES_REQUESTED` verdicts are observed and surfaced in operational diagnostics (e.g., `done-work`'s refusal message names them) but do not block in a separate way — the gate fires on **absence of fresh APPROVED**, not on presence of `CHANGES_REQUESTED`. An author who pushes a fix doesn't need to mark the prior verdict resolved; the agent's fresh re-review (manual via `review-pr` or automatic via remote path) produces a new verdict line.
 
-The gate-checker uses **latest-by-timestamp per agent** among verdicts post-dating the latest commit. If an agent has multiple fresh verdicts (e.g., the developer re-ran `review-pr` and the agent's second invocation disagreed with its first — possible for non-deterministic LLM calls), the most recent verdict wins. A fresh `CHANGES_REQUESTED` after a fresh `APPROVED` means the agent's current opinion is "needs work"; the gate doesn't satisfy until a newer `APPROVED` exists.
+The gate-checker takes **each agent's latest verdict by timestamp**, then requires it to be fresh. If an agent has posted several verdicts (e.g., the developer re-ran `review-pr` and the agent's second invocation disagreed with its first — possible for non-deterministic LLM calls), the most recent verdict wins, and a verdict it superseded never counts again, however fresh. A `CHANGES_REQUESTED` after an `APPROVED` means the agent's current opinion is "needs work"; the gate doesn't satisfy until a newer fresh `APPROVED` exists — also once that `CHANGES_REQUESTED` has gone stale, since a stale latest verdict leaves the agent with no verdict that counts.
 
 ### Gate-checker algorithm
 
@@ -176,8 +176,8 @@ The pm capability's `done-work` runs the algorithm:
 2. Find all PR comments with first line matching the verdict shape of any configured path — `Reviewer agent: APPROVED` (remote) or `Reviewer agent (local, <name>): APPROVED` (local).
 3. **Remote path filter**: author matches `review.agents.remote_registered[0].github_login` AND author is not the PR author.
    **Local path filter**: `<name>` matches an entry in `review.agents.local_registered:`. No author-exclusion check.
-4. Filter to comments post-dating the latest commit.
-5. **Latest-per-agent**: among comments passing steps 2–4, take the latest by timestamp per agent identity (remote) or per `<name>` (local). If that latest is `APPROVED`, the agent's path-component is satisfied; if it's `CHANGES_REQUESTED`, not satisfied.
+4. **Latest-per-agent**: among comments passing steps 2–3, take the latest by timestamp per agent identity (remote) or per `<name>` (local). An earlier verdict the latest superseded takes no further part.
+5. **Freshness of the latest**: if that latest verdict is an `APPROVED` and fresh (see "Stale-verdict handling"), the agent's path-component is satisfied; if it's `CHANGES_REQUESTED`, or stale, not satisfied.
 6. **Per-path satisfaction**: the remote path is satisfied if the remote agent's component is satisfied (singleton at v1). The local path is satisfied if every local agent in `local_registered:` has a satisfied component (multi-local all-must-approve; trivial at v1 singleton).
 7. The gate is satisfied if **any configured path is satisfied** (OR composition across configured paths).
 
@@ -187,11 +187,38 @@ When only one path is configured, step 7 reduces to "that path's satisfaction". 
 
 ### Stale-verdict handling
 
-A verdict's freshness is tied to the latest commit. New commits invalidate prior verdicts — the gate-checker only accepts `APPROVED` verdicts post-dating the most recent commit on the PR.
+A verdict stays fresh until the author changes something its reviewer checks. The gate-checker judges only each reviewer's latest verdict (step 4) and accepts it only when it is a fresh `APPROVED`. **A superseded verdict never counts**: freshness decides whether a reviewer's current verdict stands, never which verdict is current, so an `APPROVED` its own later `CHANGES_REQUESTED` overrode does not count again when that rejection goes stale.
 
-This handles the common cycle: agent reviews, posts `APPROVED`; author pushes a fix; the prior `APPROVED` is now stale; agent must re-review and post a fresh verdict (remote path: triggered out-of-band; local path: developer runs `review-pr` to re-invoke).
+**The verdict names the head it reviewed and the base it reviewed it against.** `review-pr` reads the PR's head commit and the base branch's head before it invokes a reviewer, names the head in the reviewer's brief, and stamps both into the verdict marker: `<!-- pkit-verdict sha=<oid> base=<oid> -->`. Before posting, it reads the head again. If the head moved while the reviewer ran, the verdict is still posted against the head the reviewer saw, and the rule below judges the commits that arrived meanwhile like any later push; the native review is skipped, since GitHub would attach it to a head the reviewer never saw.
 
-The `back-to-draft` cycle (per DEC-026) explicitly dismisses prior `APPROVED` GitHub reviews; it does **not** dismiss the verdict comments (comments are informational; the timestamp predicate above already invalidates a verdict that predates new commits, which is what `back-to-draft` is reacting to).
+**The author's changes since that head** are the union of the paths changed by each commit after it, walking the branch's own line of commits (first parents) back from the PR's head:
+
+- a merge commit whose second parent is on the base branch contributes the paths where the merge as committed differs from the clean three-way merge of its two parents (`git merge-tree --write-tree`) — nothing for a clean merge, the files of a resolved conflict, any edit made inside the merge;
+- any other commit contributes its own diff against its first parent, a merge of a branch other than the base included, since what it brings in has been reviewed nowhere on this PR.
+
+**Freshness, per verdict.** A verdict on the PR's current head is fresh. Otherwise:
+
+- an `APPROVED` from a reviewer whose whole remit is its diff-property floors — a floor requires it on this PR and every rule it is contributed by is a floor and nothing else ([project-management:DEC-032-conditional-reviewer-requirements]) — stays fresh while the author's changes satisfy none of its floors, read through the not-code list the resolver applies to the PR's diff: a Markdown fix leaves `code-reviewer`'s and `security-reviewer`'s approvals standing;
+- an `APPROVED` from any other reviewer goes stale on any change: the baseline, and a reviewer with any classification rule, matched on this PR or not — `docs-reviewer` rides the `touches-code` floor but also `type: "*"`, and its remit is the documentation, so a Markdown fix stales it even on an unclassified PR;
+- a `CHANGES_REQUESTED` goes stale on any change, whoever posted it. The author is answering it, and the fix it asks for may sit outside the reviewer's floors — a changeset, a README — so floor scoping protects approvals only. While a `CHANGES_REQUESTED` is fresh (nothing changed since, or only clean merges of the base), `review-pr` does not re-run its reviewer, and `done-work`'s refusal names `review-pr <N> --force` as the way to have it re-review the PR as it stands.
+
+**The base it was reviewed against.** A verdict naming its reviewed base is stale, whatever the author changed, once that base is not an ancestor of the base branch's head: the PR was retargeted or its base rewritten. A stacked PR moved onto `main` after its parent branch was abandoned gets no new commit, yet its diff over `main` carries the parent's commits, which no verdict covers. A base that moved forward keeps the verdict. A marker naming no base is not checked.
+
+**A verdict that names no head** — a remote reviewer's, one posted by hand with the bare marker, or one whose head `review-pr` could not read — is fresh when it was posted after the PR's latest commit, and stale otherwise.
+
+**`review.floors.not_code` does two jobs.** The not-code list decides who is required — a changed path it matches satisfies no floor, so it pulls in no floor reviewer (DEC-032) — and whose approval survives a change — a change it matches reaches no floor, so a floor-scoped `APPROVED` stands. Widening it has both effects: a path added to the list neither requires the floor reviewers nor costs their approval when it changes.
+
+**Local repository state can make the gate stricter, never looser.** The author's changes and the base's history are read from the local repository; that is the invariant that makes the dependency on it safe. A commit the checkout lacks — the reviewed head or base, the PR's head, the base branch's head — is first fetched from origin by its object name, and the question asked again. When the fetch does not settle it, the verdict is stale, and the reason names the cause: the commit could not be fetched; the checkout is shallow, so ancestry cannot be told; in a full checkout, the reviewed head is outside the branch's history (a rebase or force-push); it reached the branch only through a merge; or git is older than 2.38 (which `merge-tree --write-tree` needs). A missing fetch costs a re-review, never an unreviewed merge.
+
+**The merge is pinned to the head the gate checked.** `done-work` merges with `--match-head-commit` naming the head its gate judged the verdicts against, so a push between the gate and the merge fails the merge rather than landing commits no verdict covers.
+
+**What it does not cover.** A clean merge of the base branch leaves every verdict fresh, so a semantic conflict the base introduces — changes that merge cleanly but no longer work together — is not re-reviewed. CI on the merged result is the backstop.
+
+`done-work`'s gate, `review-pr`'s skip of a reviewer whose verdict is fresh, and `show-pr --field review` apply this one rule, so they never disagree about which verdict stands. Each names a stale verdict's reason; `review-pr` names it for every reviewer it re-runs.
+
+This handles the common cycle: agent reviews, posts `APPROVED`; author pushes a fix the reviewer checks; the prior `APPROVED` is stale; agent must re-review and post a fresh verdict (remote path: triggered out-of-band; local path: developer runs `review-pr` to re-invoke).
+
+The `back-to-draft` cycle (per DEC-026) explicitly dismisses prior `APPROVED` GitHub reviews; it does **not** dismiss the verdict comments (comments are informational; the freshness rule above already invalidates a verdict once the commits `back-to-draft` is reacting to change what its reviewer checks).
 
 ### Allowlist as attestation, not security
 
@@ -213,18 +240,19 @@ Adopters who need cryptographic guarantees configure GitHub branch protection wi
             → resolved mode: agent (source: <project default | label `review:agent`>)
             → remote registered: <github_login or "(none)">
             → local registered: <name(s) or "(none)">
-            → no fresh APPROVED verdict post-dating commit <sha>
             → most recent verdicts on this PR:
-                - remote (<github_login>): <APPROVED (stale) | CHANGES_REQUESTED | none>
-                - local (<name>): <APPROVED (stale) | CHANGES_REQUESTED | none>
+                - remote (<github_login>): <APPROVED | CHANGES_REQUESTED | none>[ (stale <VERDICT> — <why>)]
+                - local (<name>): <APPROVED | CHANGES_REQUESTED | none>[ (stale <VERDICT> — <why>)]
             → Remediation:
                 a) wait for the remote agent to post APPROVED (or trigger it manually)
                 b) run `review-pr <N>` to re-invoke the local agent(s)
+                   [it skips a fresh CHANGES_REQUESTED (<names>): push the fix it asks for,
+                    or have it re-review the PR as it stands with `review-pr <N> --force`]
                 c) merge with `done-work --bypass "<reason>"`
                 d) if no agent is configured, set `review.mode: human` or merge with --bypass
 ```
 
-When the most recent verdict is `CHANGES_REQUESTED`, the refusal message surfaces that fact — the developer knows there are findings to address before re-review will produce `APPROVED`.
+When the most recent verdict is `CHANGES_REQUESTED`, the refusal message surfaces that fact — the developer knows there are findings to address before re-review will produce `APPROVED`. When that `CHANGES_REQUESTED` is fresh, `review-pr` skips its reviewer, so the refusal names `review-pr <N> --force` as the way to a re-review of the PR as it stands. A stale verdict is named with why: the head it reviewed and what changed since (`reviewed <sha>; changed since: <paths>`), a base outside the base branch's history, why that could not be read, or — for a verdict naming no head — that it was posted before the latest commit. The developer sees which change cost the approval.
 
 ### Sub-decisions index
 
@@ -239,13 +267,13 @@ When the most recent verdict is `CHANGES_REQUESTED`, the refusal message surface
 | Comments without the prefix | Implicitly informational. Do not affect the gate. |
 | Remote-path identity check | Author matches `review.agents.remote_registered[0].github_login` AND author is not the PR author. |
 | Local-path identity check | Author-exclusion **relaxed** — the developer attests they ran the agent. The local agent name must be in `review.agents.local_registered:` AND a file must exist at `.claude/agents/<name>.md`. |
-| Freshness | Verdict must post-date the latest commit on the PR. Both paths. |
+| Freshness | Judged on each reviewer's latest verdict only; a superseded verdict never counts. A verdict naming its reviewed head stays fresh until the author's changes since reach what its reviewer is required for — a change satisfying one of its floors for an `APPROVED` from a reviewer whose every rule is a floor, any change for every other `APPROVED` and for every `CHANGES_REQUESTED`; a clean merge of the base is no change. A verdict naming its reviewed base goes stale once that base is outside the base branch's history. A verdict naming no head must post-date the latest commit. A missing commit is fetched first; what the fetch does not settle makes the verdict stale, never fresh. Both paths. |
 | Multi-local-agent composition | All-must-approve — every locally-registered agent must have a fresh APPROVED verdict for the gate's local path to satisfy. At v1 (singleton), trivially reduces to one agent. |
 | Number of registered agents at v1 | At most one remote, at most one local. Multi-agent pipelines deferred per COR-007. |
 | Invocation command (local path) | `review-pr <N>` is the sole entry point. The developer invokes it after `review-work` (and after any subsequent fix-push cycle). `review-work` is unchanged by this DEC. |
 | Allowlist framing | Attestation, not security. The local path's relaxation of author-exclusion is explicit honor-system; the developer takes responsibility. |
-| Stale verdict from prior commit | Ignored by the gate-checker (timestamp predicate). Re-invoke (remote: out-of-band; local: `review-pr`) to produce a fresh verdict. |
-| `back-to-draft` interaction | Does not dismiss verdict comments; the timestamp predicate handles staleness automatically. |
+| Stale verdict | Ignored by the gate-checker (the freshness rule). Re-invoke (remote: out-of-band; local: `review-pr`) to produce a fresh verdict. |
+| `back-to-draft` interaction | Does not dismiss verdict comments; the freshness rule handles staleness automatically. |
 | Refusal when agent-mode + no fresh APPROVED | `done-work` refuses with remediation pointer (wait for remote, run `review-pr`, bypass, or switch mode). |
 
 ## Rationale
@@ -292,11 +320,12 @@ The "discoverability gap" concern (developer forgets to run `review-pr` after `r
 
 **Why allowlist-as-attestation (not allowlist-as-security).** The allowlist file is project-side and adopter-editable. A malicious actor with repo write can modify it. Calling it "security" overstates what it provides; the real security boundary is GitHub branch protection (server-side, not adopter-modifiable). The attestation framing is honest about what it guarantees: "this identity is the one the project agreed to trust", subject to the project's own access controls.
 
-**Why timestamp-post-dates-latest-commit (not other freshness rules).** Three alternatives considered:
+**Why a verdict goes stale when the author changes what its reviewer checks (not other freshness rules).** Four alternatives considered:
 
 - *No freshness check* — would allow a sentinel posted in PR week 1 to satisfy a merge in week 4 after substantial changes. Defeats the gate.
 - *Post-date a specific marker (e.g., last `review-work` invocation)* — depends on a methodology event that isn't always invoked. Some PRs may bypass `review-work`.
-- *Post-date the latest commit* (chosen) — uses the substrate's most-recent change as the freshness boundary. Any new commit invalidates the prior sentinel, forcing re-review.
+- *Post-date the latest commit* — simple, but every commit stales every verdict: a clean merge of the base branch, a changeset, or a Markdown fix after a documentation finding costs a full round from reviewers whose concern the change never touched (#1179). And a comment that does not record what it reviewed cannot tell a commit made before the review but pushed after it from one the reviewer saw, so such a commit passes the gate unreviewed.
+- *Stale once the author's changes since the reviewed head reach the reviewer's remit* (chosen) — the verdict names the head it vouches for, so what was reviewed is exact, and only a change the reviewer is there to check costs a re-review. A reviewer whose every rule is a floor has its floors as its remit; the baseline's remit, and that of a reviewer with any classification rule, is the whole change, so any change stales theirs — a classification rule declares what the reviewer is for whether or not it matched this PR. Floor scoping spares only approvals: a rejection is what the author is answering, so any change stales it, and a reviewer is never left blocking a fix it was not shown. Judging only the latest verdict keeps a rejection gone stale from handing the gate back the approval it overrode, and pinning the reviewed base keeps a retargeted PR from carrying its old verdicts over commits they never covered. A merge of the base branch is not the author's change: the base reached its branch through its own review, and the clean three-way merge is computable, so only what the author did inside the merge counts. What this gives up is a semantic conflict introduced by the base, which no reviewer re-reads; CI on the merged result catches what tests can, and the gate claims no more than that. The rule needs the commits locally, fetches what is missing, and fails closed when it cannot read them even so, so a missing fetch costs a re-review, never an unreviewed merge.
 
 **Why no separate `--require-agent` flag in DEC-027.** DEC-027's Layer 3 has `--require-human`. There's no symmetric `--require-agent` because the agent path is the default; an operator who wants agent review uses no flag (and the default kicks in). If the project default is `human` and the operator wants agent for this invocation, they can flip the issue label (`review:agent`) per Layer 2 — but per-invocation agent-override is a rare enough case that a flag isn't worth shipping.
 
@@ -306,7 +335,7 @@ The "discoverability gap" concern (developer forgets to run `review-pr` after `r
 
 - **Verdict line includes the agent name in the remote path (`Reviewer agent (<name>): APPROVED`).** Rejected *for the remote path only*. The remote path's identity-check on the comment author already disambiguates the agent (the GitHub author metadata is authoritative); baking the name into the remote-path body would be redundant and create two sources of truth. The **local path includes the name in the body necessarily** — when multiple local agents are registered, all post under the same developer's identity, so the body name is the only disambiguator. The asymmetry is intentional: remote-path uses author metadata, local-path uses comment-body marker; whichever source is authoritative for the path is the disambiguator.
 
-- **Use a GitHub Review object (not a comment) as the sentinel.** Rejected. Reviews require specific GitHub permissions some bot identities don't have; the comment-based mechanism works for any identity with repo-comment permission. Reviews are also coupled to the PR's diff state in ways that make "fresh review after commit" semantics more complex than the simple timestamp check.
+- **Use a GitHub Review object (not a comment) as the sentinel.** Rejected. Reviews require specific GitHub permissions some bot identities don't have; the comment-based mechanism works for any identity with repo-comment permission. Reviews are also coupled to the PR's diff state in ways that make freshness harder to control than a reviewed head the comment records itself.
 
 - **Allow the PR author to post the sentinel if it matches a kit-known agent signature.** Rejected. Defeats the identity check. The author-identity exclusion is what makes the path different from self-approval.
 
@@ -326,7 +355,7 @@ The "discoverability gap" concern (developer forgets to run `review-pr` after `r
 
 - **Auto-invoke local agents on `after_open_pr` hook (per DEC-024).** Considered as a way to keep `review-work` fast while still automatically firing agents on PR creation. Deferred — adopters who want auto-invocation can wire it themselves via DEC-024's `custom-script` hook kind invoking `review-pr`. A kit-shipped default hook is an additive future option once DEC-024's hook surface and the `review-pr` mechanism both stabilise.
 
-- **Freshness via last `review-work` invocation, not last commit.** Rejected — depends on a methodology event that isn't always invoked. Commit timestamp is the substrate-authoritative freshness signal.
+- **Freshness via last `review-work` invocation, not the commits.** Rejected — depends on a methodology event that isn't always invoked. The commits after the reviewed head are the substrate-authoritative freshness signal.
 
 ## Implications
 
@@ -356,4 +385,4 @@ The "discoverability gap" concern (developer forgets to run `review-pr` after `r
 
 **What did NOT change.** The verdict-line **grammar** is untouched: the local form is still `Reviewer agent (local, <name>): <VERDICT>`; only the bound `<name>` moves from `reviewer` to `pm-reviewer`. The gate-checker algorithm, identity/name matching, freshness, and the `<!-- pkit-verdict -->` marker all stand. An adopter who authored their **own** agent literally named `reviewer` is unaffected — the rename is scoped to the capability's shipped default (keyed on provenance by the same-change-set migration, not on the config string).
 
-**In-flight-verdict staleness.** A PR that already carries a `Reviewer agent (local, reviewer): …` verdict comment goes stale after an adopter upgrades and the config flips to `pm-reviewer` — the gate now looks for the `pm-reviewer` name and no longer matches the old line. This self-heals on the next `review-pr` run, which posts a fresh `pm-reviewer` verdict; no manual cleanup of the stale comment is needed. The mechanism is **name-membership, not freshness**: the old `reviewer` line's timestamp may still post-date the latest commit (so the freshness predicate does not drop it), but `reviewer` is no longer in the resolved required set, so `local_reviewer_ok` excludes it and the gate never counts it. (Consequently `show-pr --field review` may still *display* the old-name verdict as non-stale even though it does not gate.)
+**In-flight-verdict staleness.** A PR that already carries a `Reviewer agent (local, reviewer): …` verdict comment goes stale after an adopter upgrades and the config flips to `pm-reviewer` — the gate now looks for the `pm-reviewer` name and no longer matches the old line. This self-heals on the next `review-pr` run, which posts a fresh `pm-reviewer` verdict; no manual cleanup of the stale comment is needed. The mechanism is **name-membership, not freshness**: the old `reviewer` line may still be fresh (so the freshness predicate does not drop it), but `reviewer` is no longer in the resolved required set, so `local_reviewer_ok` excludes it and the gate never counts it. (Consequently `show-pr --field review` may still *display* the old-name verdict as non-stale even though it does not gate.)
