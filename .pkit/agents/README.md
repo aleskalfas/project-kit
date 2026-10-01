@@ -17,9 +17,8 @@ pkit:
         - .pkit/adapters/claude-code/_resolve_agent.py
       record: [COR-005, COR-006, COR-011, COR-013, COR-014, COR-015, COR-016, COR-026, COR-049, ADR-051, ADR-052]
     revalidated:
-      at: 2026-10-01T09:44:11Z
-      outcome: unchanged
-      unchanged-because: "typing-only change in the package for the type-checking gate (PRJ-010): suppression comments removed; behaviour unchanged"
+      at: 2026-10-01T23:29:58Z
+      outcome: updated
 ---
 
 # Agents
