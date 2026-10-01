@@ -1,7 +1,8 @@
 """Landing a pull request on the hosting service: the one merge mechanic.
 
-The placement of hosting-service reads in the backbone is owed an architecture
-record (#1200); until it is written, this paragraph is the placement note.
+Where these acts live, what each caller keeps and the obligations every caller
+holds are decided in ADR-061 ("Landing a pull request on the hosting service
+lives once, in the backbone"); how a pull request lands is COR-009's.
 
 A pull request lands as one squash commit on its base branch
 (project-management's DEC-013, "Merge mechanics"). Where the base merges

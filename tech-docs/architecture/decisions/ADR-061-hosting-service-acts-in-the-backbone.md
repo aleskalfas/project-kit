@@ -1,7 +1,7 @@
 ---
 id: ADR-061
 title: Landing a pull request on the hosting service lives once, in the backbone
-status: proposed
+status: accepted
 date: 2026-10-01
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
