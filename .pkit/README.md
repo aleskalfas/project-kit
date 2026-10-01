@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-01T16:13:27Z
+      at: 2026-10-01T15:59:56Z
       outcome: unchanged
-      unchanged-because: on this branch sync and upgrade refuse to write under a pkit older than the project's content or pin; the test-fixture templates main brought in do not change what this page describes
+      unchanged-because: the cli README's friction resolve section now says it settles only the blocks git conflicted on and stages with consent; this map names each area's purpose and entry point, which are unchanged
 ---
 
 # project-kit

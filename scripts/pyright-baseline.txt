@@ -76,7 +76,7 @@ src/project_kit/friction_validate.py reportUnknownMemberType 1
 src/project_kit/friction_validate.py reportUnknownParameterType 3
 src/project_kit/friction_validate.py reportUnknownVariableType 2
 src/project_kit/friction_write.py reportMissingTypeArgument 1
-src/project_kit/friction_write.py reportUnknownArgumentType 27
+src/project_kit/friction_write.py reportUnknownArgumentType 26
 src/project_kit/friction_write.py reportUnknownMemberType 62
 src/project_kit/friction_write.py reportUnknownParameterType 1
 src/project_kit/friction_write.py reportUnknownVariableType 41
