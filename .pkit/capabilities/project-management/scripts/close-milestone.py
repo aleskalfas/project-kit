@@ -26,7 +26,8 @@ and schemas/time-containers.yaml (READ, not re-decided here):
     the next Milestone. This wrapper WARNS about open children and lists
     them, then closes; it does NOT itself perform the rollforward
     reassignment (no rollforward routine exists in the capability yet —
-    see the GAP note below).
+    see the GAP note below). The only write is the Milestone's own PATCH,
+    so every open child stays assigned to the closed Milestone.
   * either — closes on whichever fires first. With open children present
     this wrapper treats it like content-based (refuse unless --force),
     since the content path closes with no open children; --force closes it
@@ -237,12 +238,11 @@ def main() -> int:
     if decision.rollforward_warning:
         print(
             f"\n[warn] {close_trigger} close with {len(open_children)} open "
-            "child issue(s). Per time-containers.yaml the date is the trigger "
-            "and open children roll forward to the next Milestone — but this "
-            "wrapper does NOT perform the rollforward reassignment. Reassign "
-            "the open children above to the rollforward-target Milestone by "
-            "hand (e.g. `pkit project-management set-field <n> --parent ...` "
-            "or `gh issue edit <n> --milestone ...`).",
+            "child issue(s). They stay assigned to this milestone: this "
+            "command does NOT roll them forward (time-containers.yaml "
+            "rollforward_behaviour is not automated). Move each open child "
+            "above to the next milestone by hand: `pkit project-management "
+            'edit-issue <n> --milestone <next> --reason "<why>"`.',
             file=sys.stderr,
         )
 
@@ -317,9 +317,13 @@ def _decide_close(close_trigger: str, has_open_children: bool, force: bool) -> C
 
 
 def _audit_line(close_trigger: str, closed_count: int, open_count: int) -> str:
-    """Compose the one-line audit note appended to the Milestone description."""
+    """Compose the one-line audit note appended to the Milestone description.
+
+    Open children are counted as still open, not rolled forward: the close
+    moves none of them (see the module GAP note), so the record says so.
+    """
     today = _dt.date.today().isoformat()
-    tail = f"; {open_count} rolled forward" if open_count else ""
+    tail = f"; {open_count} still open, not rolled forward" if open_count else ""
     return (
         f"{_AUDIT_MARKER} on {today} "
         f"(trigger: {close_trigger}; {closed_count} child issue(s) closed{tail})."
