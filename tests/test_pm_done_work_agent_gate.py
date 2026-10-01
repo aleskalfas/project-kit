@@ -1099,6 +1099,8 @@ def test_a_verdict_on_the_current_head_is_fresh_whatever_its_time(
     result = dw._check_agent_gate(99, {}, _config(), "resolved", CAP_ROOT)
     assert result.passed is True, result.refusal_message
     assert calls == []  # the head itself: nothing to compute
+    # The merge is pinned to the head the gate judged against.
+    assert result.head_oid == _REVIEWED
 
 
 def test_a_markdown_fix_keeps_the_floor_reviewer_and_stales_the_baseline(

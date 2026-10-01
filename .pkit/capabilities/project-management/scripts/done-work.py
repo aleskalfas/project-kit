@@ -119,11 +119,14 @@ Side-effects, in order (#878; the merge mechanic itself lives once in
     issue reads as done. The PR is open and ready here, which is what Review
     means, so the move holds if the merge fails; if the move itself fails, the
     run stops without merging.
-  - `gh pr merge --squash --subject <PR title>` — WITHOUT `--delete-branch`:
-    that flag makes gh check out the default branch locally and delete the
-    local head, and the whole `gh pr merge` exits non-zero when the working
-    tree cannot do so (detached HEAD; the default branch checked out in
-    another worktree) — after the remote merge has already landed.
+  - `gh pr merge --squash --subject <PR title> --match-head-commit <head>` —
+    pinned to the head the gate checked (the agent gate's own read, else the
+    head this run started from), so a push since fails the merge rather than
+    land unchecked commits; WITHOUT `--delete-branch`: that flag makes gh
+    check out the default branch locally and delete the local head, and the
+    whole `gh pr merge` exits non-zero when the working tree cannot do so
+    (detached HEAD; the default branch checked out in another worktree) —
+    after the remote merge has already landed.
   - Composes over `move-issue.py --to done` IMMEDIATELY after the merge, so
     no best-effort step can stand between the irreversible merge and the
     lifecycle transition.
@@ -237,7 +240,7 @@ from _lib.review_opt_outs import OPT_OUT_PATH, read_opt_outs
 from _lib.structural_type import infer_structural_type
 
 # The one freshness rule (#1179), shared with review-pr's skip and show-pr.
-from _lib.verdict_freshness import PR_VIEW_FIELDS, FreshnessRule, rule_for_pr
+from _lib.verdict_freshness import PR_VIEW_FIELDS, FreshnessRule, head_sha, rule_for_pr
 
 
 def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
@@ -822,12 +825,16 @@ def main() -> int:
     # Squash-merge with an explicit subject so the landed commit subject
     # equals the gate-validated PR title regardless of commit count
     # (DEC-013: squash-commit subject = PR title; fixes #33). The mechanic is
-    # `_lib.pr_merge`'s — the one implementation `merge-pr` also runs.
+    # `_lib.pr_merge`'s — the one implementation `merge-pr` also runs. The
+    # merge is pinned to the head the gate checked — the agent gate's own read,
+    # else the head this run started from — so a push since fails the merge
+    # rather than land commits nothing checked.
     if not pr_merge.squash_merge(
         pr_number,
         pr_title=pr_title,
         admin=args.admin,
         config=config,
+        head_oid=gate_result.head_oid or pr_head,
     ):
         return 3
 
@@ -899,6 +906,7 @@ class _GateResult:
         refusal_message: str = "",
         override_audits: list[_OverrideAudit] | None = None,
         warnings: list[str] | None = None,
+        head_oid: str = "",
     ):
         self.passed = passed
         self.passed_via = passed_via
@@ -909,6 +917,9 @@ class _GateResult:
         # Soft, non-refusing notices the caller prints to stderr (e.g. the
         # all-slots override nudge, DEC-050).
         self.warnings = warnings or []
+        # The PR head the gate judged its verdicts against (#1179); the merge
+        # is pinned to it. Empty when the gate read no head of its own.
+        self.head_oid = head_oid
 
 
 @dataclass(frozen=True)
@@ -1492,6 +1503,7 @@ def _check_agent_gate(
             local_reviewer_ok=local_reviewer_ok,
         ),
         warnings=gate_warnings,
+        head_oid=head_sha(data),
     )
 
 

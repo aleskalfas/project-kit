@@ -6,7 +6,8 @@ whose subject is the PR title, no merge commits, and the head branch deleted
 on merge. This module realises that outcome in three steps a verb composes:
 
   1. :func:`squash_merge` — `gh pr merge --squash --subject <PR title>`,
-     deliberately WITHOUT `--delete-branch`. That flag makes gh check out the
+     pinned with `--match-head-commit` to the head a caller's gate checked
+     when the caller names one, and deliberately WITHOUT `--delete-branch`. That flag makes gh check out the
      default branch locally and delete the local head, and the whole command
      exits non-zero when the working tree cannot do so (a detached HEAD; the
      default branch checked out in another worktree) — AFTER the remote merge
@@ -43,9 +44,18 @@ _ALREADY_DELETED_MARKER = "Reference does not exist"
 
 
 def squash_merge(
-    pr_number: int | None, *, pr_title: str, admin: bool, config: dict[str, Any]
+    pr_number: int | None,
+    *,
+    pr_title: str,
+    admin: bool,
+    config: dict[str, Any],
+    head_oid: str = "",
 ) -> bool:
     """Squash-merge the PR with the PR title as the landed commit subject.
+
+    `head_oid`, when given, is the head commit the caller's gate checked: the
+    merge is pinned to it (`--match-head-commit`), so a push between the gate
+    and the merge fails the merge instead of landing commits nothing checked.
 
     Returns True when the remote merge landed, False otherwise (an error line
     is printed). No `--delete-branch` — see the module docstring.
@@ -66,6 +76,8 @@ def squash_merge(
         "--subject",
         pr_title,
     ]
+    if head_oid:
+        cmd += ["--match-head-commit", head_oid]
     if admin:
         cmd.append("--admin")
     try:
