@@ -13,9 +13,12 @@ the PR title, no merge commits, head branch deleted on merge. Before the
 merge:
 
   * Membership gate (DEC-021).
-  * Merge-queue refusal (#1011): a PR whose base merges through a queue is
-    refused — the queue is the only path to that base, and `done-work`
-    is the verb that goes through it (`_lib.merge_queue`).
+  * The merge queue (#1011, `_lib.merge_queue`), read before any gate so a
+    run it would refuse stops before it posts anything: where the PR's base
+    merges through a queue, the queue is the only path to it, so `--admin`
+    and `--bypass-ci` are refused, and so are a queue that does not squash, a
+    repository whose squash-commit defaults are not the PR title and body,
+    and a head the queue already dropped (`--force` enqueues it again).
   * Checkbox close-gate (DEC-007) on every issue the PR closes —
     every `- [ ]` in any closing issue body must be ticked, else
     refuse. The PR body's own checkboxes also count.
@@ -40,18 +43,31 @@ shared with `done-work`; #882):
     (`_lib.comment.post_audit_once`, #902) — a retry posts nothing new, a
     different reason or new commits post their own record, and nobody else's
     comment can suppress it. A failed post aborts before the merge (exit 3).
-  - `gh pr merge --squash --subject <PR title>` — WITHOUT `--delete-branch`:
-    that flag makes gh check out the default branch locally and delete the
-    local head, and the whole command exits non-zero when the working tree
-    cannot do so (a detached HEAD; the head branch checked out in a worktree,
-    #587) — after the remote merge has already landed.
-  - `after_merge_pr` hooks (DEC-024) IMMEDIATELY after the merge, so no
-    best-effort step stands between the irreversible merge and them.
+  - `gh pr merge --squash --subject <PR title> --match-head-commit <head>` —
+    pinned to the head the gates read, and WITHOUT `--delete-branch`: that
+    flag makes gh check out the default branch locally and delete the local
+    head, and the whole command exits non-zero when the working tree cannot
+    do so (a detached HEAD; the head branch checked out in a worktree, #587)
+    — after the remote merge has already landed.
+  - Where the base merges through a queue, the queue makes the merge
+    instead: `gh pr merge <N> --auto --match-head-commit <head>` enqueues the
+    PR, and merge-pr prints its place and waits for the merge — as long as
+    the queue estimates plus a margin, at most 30 minutes, or
+    `--wait-minutes`. When the wait ends first, or `--no-wait` returns at
+    once, the run exits 4; `merge-pr <N>` run again once the PR has merged
+    finds it merged through the queue and runs the two steps below. A push
+    after the enqueue takes the PR out of the queue (exit 3). The merge
+    mechanic, queue included, is `_lib.pr_merge.land`, the one `done-work`
+    runs.
+  - `after_merge_pr` hooks (DEC-024) IMMEDIATELY after the merge — once
+    GitHub reports the PR merged, never on an enqueue — so no best-effort
+    step stands between the irreversible merge and them.
   - Best-effort branch cleanup: delete the remote head ref through the API,
     then `git checkout <default_branch>`, `git pull --ff-only`, `git branch
-    -D <head>`. Each step warns with its reason and continues; none can fail
-    the run — a head branch checked out in a worktree simply leaves a
-    warning where the local delete would have been.
+    -D <head>`, the local delete only when everything on the branch merged.
+    Each step warns with its reason and continues; none can fail the run — a
+    head branch checked out in a worktree simply leaves a warning where the
+    local delete would have been.
 
 Self-contained via PEP 723; runs via
   uv run --script .pkit/capabilities/project-management/scripts/merge-pr.py 99
@@ -63,7 +79,11 @@ Exit codes:
   0  merged (or dry-run reported)
   1  membership / merge-queue / checkbox / title / CI-status refusal
   2  usage error (PR not found)
-  3  gh failure
+  3  gh failure: the merge failed or the queue could not be read; the PR left
+     the merge queue without merging, or was taken out of it because its head
+     moved
+  4  accepted, a re-run completes it: the PR is in the merge queue and has
+     not merged yet
 """
 
 from __future__ import annotations
@@ -109,6 +129,10 @@ from _lib.pr_validation import extract_closing_issues as _extract_closing_issues
 CI_BYPASS_AUDIT_MARKER = "<!-- pkit-hook: merge-pr-ci-bypass -->"
 CI_BYPASS_AUDIT_WRITER = "merge-pr-ci-bypass"
 
+# The exit of a run the merge queue accepted and has not merged yet (#1011):
+# a re-run once it has merged completes it.
+EXIT_QUEUED = 4
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(
@@ -137,8 +161,8 @@ def main() -> int:
         action="store_true",
         help=(
             "Pass --admin to gh pr merge (bypasses branch-protection "
-            "checks). Use only when authorised. Never goes around a merge "
-            "queue: a base with one is refused either way."
+            "checks). Use only when authorised. Refused where the base "
+            "merges through a queue: it would merge around it."
         ),
     )
     parser.add_argument(
@@ -150,9 +174,11 @@ def main() -> int:
             "an audit comment to the PR before merging. Use for a "
             "deliberate override — e.g. an advisory check failing on a "
             "decision-only PR. Dedicated to the CI gate; no other bypass "
-            "clears a red or pending CI check."
+            "clears a red or pending CI check. Refused where the base merges "
+            "through a queue, which waits for the required checks itself."
         ),
     )
+    pr_merge.add_queue_arguments(parser)
     parser.add_argument(
         "--capability-root",
         type=Path,
@@ -217,6 +243,11 @@ def main() -> int:
     print(f"  title: {pr_title}")
     print(f"  state: {pr_state}")
 
+    base = str(pr.get("baseRefName") or "") or "the base branch"
+    if pr_state == "merged":
+        # A PR the queue merged after the run that enqueued it returned
+        # (#1011): what follows the merge is all that is left to do.
+        return _complete_queued_merge(args, pr, base, config, capability_root)
     if pr_state != "open":
         print(
             f"\n[refused] PR is not open (state: {pr_state}). Cannot merge.",
@@ -224,29 +255,27 @@ def main() -> int:
         )
         return 1
 
-    # A base that merges through a queue (#1011) takes no direct merge: the
-    # queue is the only path to it, and the verb that goes through it is
-    # done-work, which also completes the issue lifecycle once it merges.
-    base = str(pr.get("baseRefName") or "") or "the base branch"
+    # Whether the base merges through a queue (#1011), read before any gate so
+    # a run the queue would refuse stops before it posts anything. It is read
+    # again just before the merge (`pr_merge.land`).
     try:
         queue = merge_queue.read(args.pr_number, config)
+        queue_refusal = pr_merge.queue_refusal(
+            queue,
+            base=base,
+            admin=args.admin,
+            bypass_ci=bool(args.bypass_ci),
+            force=args.force,
+            config=config,
+        )
     except merge_queue.Unreadable as exc:
-        print(
-            f"error: cannot tell whether {base} merges through a queue: {exc}. Nothing was merged.",
-            file=sys.stderr,
-        )
+        print(f"error: cannot tell how {base} merges: {exc}. Nothing was merged.", file=sys.stderr)
         return 3
-    if queue.has_queue:
-        closes = _extract_closing_issues(pr_body)
-        issue = str(closes[0]) if closes else "<issue>"
-        print(
-            f"\n[refused] {base} merges through a queue, the only path to it, and "
-            "merge-pr merges directly.\n"
-            f"  → land it with `done-work {issue}`, which enqueues the PR, waits for "
-            "the queue to merge it, and then closes the issues it closes.",
-            file=sys.stderr,
-        )
+    if queue_refusal:
+        print(f"\n{queue_refusal}", file=sys.stderr)
         return 1
+    if queue.has_queue:
+        print(f"  queue: {base} merges through a queue; PR #{args.pr_number} {queue.describe()}")
 
     # Title validation.
     title_pattern = _pr_title_pattern(titles)
@@ -319,18 +348,31 @@ def main() -> int:
     else:
         print("  ci-status: green")
 
+    head = str(pr.get("headRefOid") or "")
     if args.dry_run:
         note = ""
         if not ci_gate.passing:
             note = " (would post CI-bypass audit comment first)"
+        if queue.has_queue:
+            merge = (
+                f"gh pr merge {args.pr_number} --auto --match-head-commit {head[:7]} would "
+                f"enqueue it{note}, then {pr_merge.wait_phrase(pr_merge.wait_seconds(args))}"
+                "; once it merges, the after-merge hooks fire,"
+            )
+        else:
+            merge = f"gh pr merge --squash --subject {pr_title!r} would be invoked{note}, then"
         print(
-            f"\n[dry-run] gh pr merge --squash --subject {pr_title!r} would "
-            f"be invoked{note}, then the remote head branch deleted and the "
-            "local checkout tidied; nothing written."
+            f"\n[dry-run] {merge} the remote head branch deleted and the local "
+            "checkout tidied; nothing written."
         )
         return 0
     if not args.yes and sys.stdin.isatty():
-        reply = input("Squash-merge and delete the head branch? [y/N] ").strip().lower()
+        question = (
+            "Enqueue and, once merged, delete the head branch?"
+            if queue.has_queue
+            else "Squash-merge and delete the head branch?"
+        )
+        reply = input(f"{question} [y/N] ").strip().lower()
         if reply not in ("y", "yes"):
             print("aborted.", file=sys.stderr)
             return 0
@@ -345,7 +387,7 @@ def main() -> int:
             invoker,
             ci_gate.failing_checks,
             config,
-            head=str(pr.get("headRefOid") or ""),
+            head=head,
         ):
             print(
                 "[warn] could not post CI-bypass audit comment; aborting before merge.",
@@ -353,19 +395,42 @@ def main() -> int:
             )
             return 3
 
-    # Squash-merge with the PR title as the landed subject (DEC-013; #33).
-    # No `--delete-branch`: the mechanic is `_lib.pr_merge`'s — the one
-    # implementation `done-work` also runs (#882).
-    if not pr_merge.squash_merge(
-        args.pr_number,
-        pr_title=pr_title,
-        admin=args.admin,
-        config=config,
-    ):
-        return 3
-
+    # The merge — or, where the base merges through a queue (#1011), the
+    # enqueue and the wait for the queue's merge: `_lib.pr_merge.land`, the one
+    # landing `done-work` also makes. It squash-merges with the PR title as
+    # the landed subject where there is no queue (DEC-013; #33), pins the merge
+    # to the head the gates read, never passes `--delete-branch` (#882), and
+    # reports the PR merged only once GitHub does.
+    landing = pr_merge.land(
+        pr_merge.MergeRequest(
+            pr_number=args.pr_number,
+            pr_title=pr_title,
+            head_oid=head,
+            base=base,
+            admin=args.admin,
+            bypass_ci=bool(args.bypass_ci),
+            force=args.force,
+            wait_seconds=pr_merge.wait_seconds(args),
+        ),
+        config,
+    )
+    if landing.outcome != pr_merge.MERGED:
+        return _not_merged(args.pr_number, base, landing)
     print(f"\n[ok] merged: {pr_url}")
+    merged_head = landing.reading.head_oid if landing.reading is not None else ""
+    return _after_merge(args, pr, config, capability_root, merged_head=merged_head or head)
 
+
+def _after_merge(
+    args: argparse.Namespace,
+    pr: dict,
+    config: dict,
+    capability_root: Path,
+    *,
+    merged_head: str,
+) -> int:
+    """What follows the merge: the `after_merge_pr` hooks, then the
+    best-effort branch clean-up."""
     # Fire after_merge_pr hooks per DEC-024 — FIRST, before any best-effort
     # branch cleanup, so a cleanup warning can never stand between the
     # irreversible merge and the hooks.
@@ -374,7 +439,7 @@ def main() -> int:
         context={
             "pr": {
                 "number": args.pr_number,
-                "title": str(pr.get("title", "")) if pr else "",
+                "title": str(pr.get("title", "")),
             },
         },
         config=config,
@@ -391,7 +456,12 @@ def main() -> int:
         # a base-repository or local branch of that name.
         cross = bool(pr.get("isCrossRepository"))
         pr_merge.delete_remote_branch(head_branch, config, cross_repository=cross)
-        pr_merge.cleanup_local(head_branch, config, cross_repository=cross)
+        pr_merge.cleanup_local(
+            head_branch,
+            config,
+            cross_repository=cross,
+            merged_head=merged_head,
+        )
     else:
         print(
             "[warn] PR reports no head branch; skipping branch cleanup.",
@@ -399,6 +469,106 @@ def main() -> int:
         )
 
     return 0
+
+
+# ---- merging through a queue (#1011) ---------------------------------
+
+
+def _not_merged(pr_number: int, base: str, landing: pr_merge.Landing) -> int:
+    """Report a landing that did not end merged; the run's exit code.
+
+    Only a PR the queue holds is accepted (exit 4): running `merge-pr` again
+    once it has merged completes it. Everything else merged nothing.
+    """
+    reading = landing.reading
+    where = f" ({reading.describe()})" if reading is not None else ""
+    if landing.outcome == pr_merge.STILL_QUEUED:
+        if landing.message:
+            print(f"[warn] {landing.message}", file=sys.stderr)
+        print(
+            f"\n[queued] PR #{pr_number} is in the merge queue for {base}{where} and has "
+            f"not merged yet. Run `merge-pr {pr_number}` again once it has merged: it "
+            "fires the after-merge hooks and cleans up the branch."
+        )
+        return EXIT_QUEUED
+    if landing.outcome == pr_merge.REFUSED:
+        print(f"\n{landing.message}", file=sys.stderr)
+        return 1
+    if landing.outcome == pr_merge.UNREADABLE:
+        print(f"error: {landing.message}. Nothing was merged.", file=sys.stderr)
+        return 3
+    if landing.outcome == pr_merge.HEAD_MOVED:
+        print(
+            f"error: {landing.message} Once the new commits have been checked, re-run "
+            f"`merge-pr {pr_number}`.",
+            file=sys.stderr,
+        )
+    elif landing.outcome == pr_merge.LEFT:
+        print(
+            f"error: PR #{pr_number} has not merged, as far as GitHub reports{where}: "
+            f"if the merge queue for {base} dropped it, its checks may have failed on "
+            "the merge it was about to make, or it no longer merged cleanly onto what "
+            f"merged ahead of it. Nothing after the merge ran; fix the branch if it "
+            f"needs it, then re-run `merge-pr {pr_number}`.",
+            file=sys.stderr,
+        )
+    return 3
+
+
+def _complete_queued_merge(
+    args: argparse.Namespace,
+    pr: dict,
+    base: str,
+    config: dict,
+    capability_root: Path,
+) -> int:
+    """What follows the merge, for a PR the merge queue has merged (#1011).
+
+    The run that enqueued it returned before the queue merged it (exit 4), so
+    its gates ran then and only the steps after the merge are left. A PR that
+    merged without going through a queue is refused as before: there is no
+    queued merge to complete. The hooks are idempotent (DEC-024), so a second
+    completion repeats nothing they did, and the clean-up finds the branch
+    gone.
+    """
+    try:
+        reading = merge_queue.read(args.pr_number, config)
+    except merge_queue.Unreadable as exc:
+        print(
+            f"error: cannot tell whether PR #{args.pr_number} merged through a queue: "
+            f"{exc}. Nothing was changed.",
+            file=sys.stderr,
+        )
+        return 3
+    if not reading.ever_queued:
+        print(
+            "\n[refused] PR is not open (state: merged), and it did not merge through a "
+            "merge queue. Cannot merge.",
+            file=sys.stderr,
+        )
+        return 1
+    print(
+        f"  PR #{args.pr_number} merged through the merge queue for {base} "
+        f"({reading.describe()}); completing what follows the merge"
+    )
+    if args.dry_run:
+        print(
+            "\n[dry-run] the after-merge hooks would fire, then the remote head branch "
+            "be deleted and the local checkout tidied; nothing written."
+        )
+        return 0
+    if not args.yes and sys.stdin.isatty():
+        reply = input("Fire the after-merge hooks and delete the head branch? [y/N] ")
+        if reply.strip().lower() not in ("y", "yes"):
+            print("aborted.", file=sys.stderr)
+            return 0
+    return _after_merge(
+        args,
+        pr,
+        config,
+        capability_root,
+        merged_head=reading.head_oid or str(pr.get("headRefOid") or ""),
+    )
 
 
 # ---- closing-issue checkbox sweep ----------------------------------

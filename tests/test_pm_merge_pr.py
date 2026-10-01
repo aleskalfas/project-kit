@@ -317,14 +317,15 @@ def test_post_ci_bypass_audit_reports_gh_failure(mp, monkeypatch) -> None:
 
 
 def _wire_merge_seams(
-    mp, monkeypatch, *, rollup, head_branch="fix/42-slug", cross_repository=False, queue=False
+    mp, monkeypatch, *, rollup, head_branch="fix/42-slug", cross_repository=False, state="open"
 ):
     """Stub merge-pr's heavy seams so main() reaches the CI gate on *rollup*.
 
     `calls["order"]` records the post-merge side-effects (merge, hooks, remote
     ref delete, local cleanup) so a test can assert their sequence; the merge
     mechanic is stubbed on `_lib.pr_merge`, the module merge-pr calls through.
-    `queue` says whether the PR's base merges through a merge queue (#1011).
+    The base merges directly — the merge-queue tests (#1011) rewire the
+    reading — and GitHub reports the PR merged once the stubbed merge has run.
     """
     calls = {"merged": False, "ci_audit": False, "order": [], "merge_kwargs": {}}
 
@@ -361,7 +362,7 @@ def _wire_merge_seams(
         lambda pr_number, config: {
             "title": "fix: a thing",
             "body": "Closes #42\n## Test plan\n- [x] ok",
-            "state": "open",
+            "state": state,
             "url": "http://pr/99",
             "headRefName": head_branch,
             "headRefOid": "sha-head",
@@ -380,9 +381,10 @@ def _wire_merge_seams(
         calls["ci_audit_head"] = head
         return True
 
-    def _stub_merge(pr_number, *, pr_title, admin, config):
+    def _stub_merge(pr_number, *, pr_title, admin, config, head_oid=""):
         calls["merged"] = True
         calls["merge_kwargs"] = {"pr_title": pr_title, "admin": admin}
+        calls["merge_head"] = head_oid
         calls["order"].append(("merged", pr_number))
         return True
 
@@ -394,6 +396,7 @@ def _wire_merge_seams(
         calls["order"].append(("remote_delete", branch))
 
     def _stub_cleanup_local(branch, config, **kwargs):
+        calls["merged_head"] = kwargs.get("merged_head")
         calls["order"].append(("local_cleanup", branch))
 
     monkeypatch.setattr(mp, "_post_ci_bypass_audit", _stub_ci_audit)
@@ -401,8 +404,13 @@ def _wire_merge_seams(
     monkeypatch.setattr(mp.pr_merge, "delete_remote_branch", _stub_delete_remote)
     monkeypatch.setattr(mp.pr_merge, "cleanup_local", _stub_cleanup_local)
     monkeypatch.setattr(mp, "fire_hooks", _stub_hooks)
-    reading = mp.merge_queue.Reading(has_queue=queue, merge_method="SQUASH" if queue else "")
-    monkeypatch.setattr(mp.merge_queue, "read", lambda pr_number, config: reading)
+
+    def no_queue(pr_number, config):
+        return mp.merge_queue.Reading(
+            has_queue=False, pr_state="MERGED" if calls["merged"] else "OPEN"
+        )
+
+    monkeypatch.setattr(mp.merge_queue, "read", no_queue)
     return calls
 
 
@@ -494,6 +502,8 @@ def test_merge_sequence_is_merge_hooks_remote_delete_local_cleanup(mp, monkeypat
         ("local_cleanup", "fix/42-slug"),
     ]
     assert calls["merge_kwargs"] == {"pr_title": "fix: a thing", "admin": False}
+    # Pinned to the head the gates read, and the clean-up keyed on it.
+    assert calls["merge_head"] == calls["merged_head"] == "sha-head"
 
 
 def test_merge_passes_admin_through(mp, monkeypatch):
@@ -507,7 +517,7 @@ def test_merge_failure_exits_3_and_skips_hooks_and_cleanup(mp, monkeypatch):
     """A failed remote merge is a gh failure (exit 3); nothing after it runs."""
     calls = _wire_merge_seams(mp, monkeypatch, rollup=_MP_GREEN)
 
-    def failing_merge(pr_number, *, pr_title, admin, config):
+    def failing_merge(pr_number, *, pr_title, admin, config, head_oid=""):
         calls["order"].append(("merged", pr_number))
         return False
 
@@ -535,6 +545,10 @@ def test_head_branch_checked_out_in_worktree_is_a_warning_not_a_failure(
 
     def fake_run(argv, **kwargs):
         seen.append(list(argv))
+        if argv[:2] == ["git", "rev-parse"]:
+            return subprocess.CompletedProcess(argv, 0, stdout="sha-head\n", stderr="")
+        if argv[:2] == ["git", "rev-list"]:
+            return subprocess.CompletedProcess(argv, 0, stdout="0\n", stderr="")
         if argv[:3] == ["git", "branch", "-D"]:
             return subprocess.CompletedProcess(argv, 1, stdout="", stderr=branch_err)
         return subprocess.CompletedProcess(argv, 0, stdout="", stderr="")
@@ -586,24 +600,169 @@ def test_fork_pr_merge_passes_cross_repository_to_cleanup(mp, monkeypatch):
 
 # --- a base that merges through a queue (#1011) -------------------------
 #
-# The queue is the only path to such a base; merge-pr merges directly, so it
-# refuses — with or without --admin, dry run or not — and names done-work, the
-# verb that enqueues.
+# The queue is the only path to such a base. merge-pr hands the PR to it
+# through the same landing done-work makes (`_lib.pr_merge.land`), waits for
+# the merge, and fires its after-merge hooks only once GitHub reports the PR
+# merged; a run that returns while the PR is queued exits 4, and a later run
+# completes it.
+
+
+def _queued(mp, **fields):
+    base = {
+        "has_queue": True,
+        "merge_method": "SQUASH",
+        "pr_id": "PR_node",
+        "pr_state": "OPEN",
+        "head_oid": "sha-head",
+    }
+    return mp.merge_queue.Reading(**{**base, **fields})
+
+
+def _wire_queue(mp, monkeypatch, readings, **seams):
+    """merge-pr's seams, with a base whose queue answers `readings` in turn
+    (the last repeated), an enqueue that records itself, and a clock the
+    wait's sleeps advance."""
+    import functools
+
+    calls = _wire_merge_seams(mp, monkeypatch, rollup=_MP_GREEN, **seams)
+    remaining = list(readings)
+
+    def read(pr_number, config):
+        return remaining.pop(0) if len(remaining) > 1 else remaining[0]
+
+    def enqueue(pr_number, *, config, head_oid=""):
+        calls["order"].append(("enqueued", pr_number))
+        calls["enqueue_head"] = head_oid
+        return True
+
+    now = [0.0]
+
+    def sleep(seconds):
+        now[0] += seconds
+
+    monkeypatch.setattr(mp.merge_queue, "read", read)
+    monkeypatch.setattr(
+        mp.merge_queue, "squash_commit_defaults", lambda config: ("PR_TITLE", "PR_BODY")
+    )
+    monkeypatch.setattr(mp.pr_merge, "enqueue", enqueue)
+    monkeypatch.setattr(
+        mp.merge_queue,
+        "wait_for_merge",
+        functools.partial(mp.merge_queue.wait_for_merge, sleep=sleep, clock=lambda: now[0]),
+    )
+    return calls
+
+
+_AFTER_THE_MERGE = [
+    ("hooks", "after_merge_pr"),
+    ("remote_delete", "fix/42-slug"),
+    ("local_cleanup", "fix/42-slug"),
+]
+
+
+def test_a_queued_base_enqueues_and_fires_the_hooks_once_merged(mp, monkeypatch, capsys):
+    calls = _wire_queue(
+        mp,
+        monkeypatch,
+        [
+            _queued(mp),
+            _queued(mp),
+            _queued(mp, in_queue=True, position=1),
+            _queued(mp, pr_state="MERGED", merged_at="t"),
+        ],
+    )
+    rc = _run_merge_main(mp, monkeypatch, ["99", "--yes"])
+    out = capsys.readouterr().out
+    assert rc == 0, out
+    assert calls["merged"] is False
+    assert calls["order"] == [("enqueued", 99), *_AFTER_THE_MERGE]
+    assert calls["enqueue_head"] == "sha-head"
+    assert "  queue: the base branch merges through a queue; PR #99 not in the queue" in out
+    assert "  merged PR #99 through the queue" in out
+    assert "[ok] merged: http://pr/99" in out
+
+
+def test_no_wait_returns_queued_and_fires_nothing(mp, monkeypatch, capsys):
+    calls = _wire_queue(mp, monkeypatch, [_queued(mp), _queued(mp), _queued(mp, in_queue=True)])
+    rc = _run_merge_main(mp, monkeypatch, ["99", "--yes", "--no-wait"])
+    out = capsys.readouterr().out
+    assert rc == mp.EXIT_QUEUED == 4
+    assert calls["order"] == [("enqueued", 99)]
+    assert "[queued] PR #99 is in the merge queue for the base branch" in out
+    assert "Run `merge-pr 99` again once it has merged" in out
+
+
+def test_a_merge_gh_only_enqueued_fires_no_hook(mp, monkeypatch, capsys):
+    """gh exits 0 having only enqueued: GitHub not reporting the PR merged, the
+    after-merge hooks never fire and the branch is not deleted."""
+    calls = _wire_queue(
+        mp,
+        monkeypatch,
+        [
+            _queued(mp, has_queue=False),
+            _queued(mp, has_queue=False),
+            _queued(mp, in_queue=True),
+        ],
+    )
+    rc = _run_merge_main(mp, monkeypatch, ["99", "--yes", "--no-wait"])
+    assert rc == 4
+    assert calls["order"] == [("merged", 99)]
+    assert "GitHub does not report PR #99 merged" in capsys.readouterr().out
 
 
 @pytest.mark.parametrize(
-    "argv",
-    [["99", "--yes"], ["99", "--yes", "--admin"], ["99", "--dry-run"]],
-    ids=["plain", "admin", "dry-run"],
+    ("argv", "refusal"),
+    [
+        (["--admin"], "--admin would merge around the queue"),
+        (["--bypass-ci", "flaky"], "--bypass-ci cannot bypass a check there"),
+    ],
+    ids=["admin", "bypass-ci"],
 )
-def test_a_base_with_a_merge_queue_is_refused(mp, monkeypatch, capsys, argv):
-    calls = _wire_merge_seams(mp, monkeypatch, rollup=_MP_GREEN, queue=True)
-    rc = _run_merge_main(mp, monkeypatch, argv)
-    err = capsys.readouterr().err
+def test_what_would_go_around_the_queue_is_refused_before_any_gate(
+    mp, monkeypatch, capsys, argv, refusal
+):
+    calls = _wire_queue(mp, monkeypatch, [_queued(mp)])
+    rc = _run_merge_main(mp, monkeypatch, ["99", "--yes", *argv])
     assert rc == 1
     assert calls["order"] == []
-    assert "merges through a queue, the only path to it" in err
-    assert "`done-work 42`" in err
+    assert calls["ci_audit"] is False
+    assert refusal in capsys.readouterr().err
+
+
+def test_the_dry_run_says_it_would_enqueue(mp, monkeypatch, capsys):
+    calls = _wire_queue(mp, monkeypatch, [_queued(mp)])
+    rc = _run_merge_main(mp, monkeypatch, ["99", "--dry-run"])
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert calls["order"] == []
+    assert "[dry-run] gh pr merge 99 --auto --match-head-commit sha-hea would enqueue it" in out
+
+
+def test_a_later_run_completes_a_pr_the_queue_merged(mp, monkeypatch, capsys):
+    calls = _wire_queue(
+        mp,
+        monkeypatch,
+        [_queued(mp, pr_state="MERGED", merged_at="t", ever_queued=True)],
+        state="MERGED",
+    )
+    rc = _run_merge_main(mp, monkeypatch, ["99", "--yes"])
+    out = capsys.readouterr().out
+    assert rc == 0, out
+    assert calls["order"] == _AFTER_THE_MERGE
+    assert "completing what follows the merge" in out
+
+
+def test_a_pr_merged_without_a_queue_is_still_refused(mp, monkeypatch, capsys):
+    calls = _wire_queue(
+        mp,
+        monkeypatch,
+        [_queued(mp, has_queue=False, pr_state="MERGED", merged_at="t")],
+        state="MERGED",
+    )
+    rc = _run_merge_main(mp, monkeypatch, ["99", "--yes"])
+    assert rc == 1
+    assert calls["order"] == []
+    assert "it did not merge through a merge queue" in capsys.readouterr().err
 
 
 def test_an_unreadable_queue_merges_nothing(mp, monkeypatch, capsys):
@@ -616,6 +775,6 @@ def test_an_unreadable_queue_merges_nothing(mp, monkeypatch, capsys):
     rc = _run_merge_main(mp, monkeypatch, ["99", "--yes"])
     assert rc == 3
     assert calls["order"] == []
-    assert "cannot tell whether the base branch merges through a queue: HTTP 502" in (
+    assert "cannot tell how the base branch merges: HTTP 502. Nothing was merged." in (
         capsys.readouterr().err
     )

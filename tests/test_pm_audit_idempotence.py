@@ -43,8 +43,20 @@ CAPABILITY_ROOT = SCRIPTS_DIR.parent
 sys.path.insert(0, str(SCRIPTS_DIR))
 from _lib import audit, merge_queue  # noqa: E402
 
-# The merge verbs' base merges directly (#1011): no merge queue to go through.
-_NO_QUEUE = merge_queue.Reading(has_queue=False)
+
+def _direct_merge(module, monkeypatch) -> None:
+    """The merge verbs' base merges directly (#1011): no merge queue to go
+    through, and GitHub reports the PR merged once the stubbed merge has run —
+    the verbs count a merge only when it does."""
+    merged: list[bool] = []
+
+    def read(n, config):
+        return merge_queue.Reading(has_queue=False, pr_state="MERGED" if merged else "OPEN")
+
+    monkeypatch.setattr(module.merge_queue, "read", read)
+    monkeypatch.setattr(
+        module.pr_merge, "squash_merge", lambda n, **kw: merged.append(True) or True
+    )
 
 
 def _load(script: str, module_name: str):
@@ -543,8 +555,7 @@ def _wire_done_work(dw, monkeypatch) -> None:
     monkeypatch.setattr(dw, "_gh_get_pr_body", lambda n, config: "## Test plan\n- [x] ok\n")
     monkeypatch.setattr(dw, "_check_pr_placeholder", lambda body, n, root: [])
     monkeypatch.setattr(dw, "_gh_get_status_rollup", lambda n, config: _RED)
-    monkeypatch.setattr(dw.merge_queue, "read", lambda n, config: _NO_QUEUE)
-    monkeypatch.setattr(dw.pr_merge, "squash_merge", lambda n, **kw: True)
+    _direct_merge(dw, monkeypatch)
     monkeypatch.setattr(dw.pr_merge, "delete_remote_branch", lambda b, c, **kw: None)
     monkeypatch.setattr(dw.pr_merge, "cleanup_local", lambda b, c, **kw: None)
     monkeypatch.setattr(dw, "_invoke_move_issue", lambda n, target, root: 0)
@@ -591,8 +602,7 @@ def _wire_merge_pr(mp, monkeypatch) -> None:
         "_gather_unticked_findings",
         lambda n, body, closing, config: {},
     )
-    monkeypatch.setattr(mp.merge_queue, "read", lambda n, config: _NO_QUEUE)
-    monkeypatch.setattr(mp.pr_merge, "squash_merge", lambda n, **kw: True)
+    _direct_merge(mp, monkeypatch)
     monkeypatch.setattr(mp.pr_merge, "delete_remote_branch", lambda b, c, **kw: None)
     monkeypatch.setattr(mp.pr_merge, "cleanup_local", lambda b, c, **kw: None)
     monkeypatch.setattr(mp, "fire_hooks", lambda name, **kw: None)

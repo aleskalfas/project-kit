@@ -139,9 +139,11 @@ def test_squash_merge_passes_admin(lib, monkeypatch) -> None:
 # --- enqueue (#1011) -------------------------------------------------------
 
 
-def test_enqueue_is_the_merge_command_with_auto_and_never_admin(lib, monkeypatch) -> None:
-    """The queue gets the PR the way a merge would: squash, the PR title as the
-    subject, pinned to the head the gate checked — plus `--auto`, and never
+def test_enqueue_is_auto_pinned_to_the_checked_head_and_nothing_else(lib, monkeypatch) -> None:
+    """The queue gets the PR pinned to the head the gate checked, with `--auto`.
+    No `--squash` and no `--subject`: GitHub ignores a merge method, subject and
+    body passed with a queued merge, so the queue's method and the repository's
+    squash-commit defaults are checked instead (`queue_refusal`). Never
     `--admin`, which on a queued base merges around the queue."""
     captured: list[list[str]] = []
 
@@ -150,19 +152,8 @@ def test_enqueue_is_the_merge_command_with_auto_and_never_admin(lib, monkeypatch
         return _ok(args)
 
     monkeypatch.setattr(lib, "gh_run", fake_gh_run)
-    assert lib.enqueue(42, pr_title="fix: x", config={}, head_oid="a" * 40) is True
-    assert captured[0] == [
-        "gh",
-        "pr",
-        "merge",
-        "42",
-        "--squash",
-        "--subject",
-        "fix: x",
-        "--match-head-commit",
-        "a" * 40,
-        "--auto",
-    ]
+    assert lib.enqueue(42, config={}, head_oid="a" * 40) is True
+    assert captured[0] == ["gh", "pr", "merge", "42", "--auto", "--match-head-commit", "a" * 40]
 
 
 def test_a_refused_enqueue_reports_gh_and_returns_false(lib, monkeypatch, capsys) -> None:
@@ -170,7 +161,7 @@ def test_a_refused_enqueue_reports_gh_and_returns_false(lib, monkeypatch, capsys
         return subprocess.CompletedProcess(args, 1, stdout="", stderr="Head sha didn't match")
 
     monkeypatch.setattr(lib, "gh_run", refusing)
-    assert lib.enqueue(42, pr_title="fix: x", config={}) is False
+    assert lib.enqueue(42, config={}) is False
     assert "Head sha didn't match" in capsys.readouterr().err
 
 
@@ -456,3 +447,369 @@ def test_cross_repository_is_a_required_keyword(lib):
         p = inspect.signature(fn).parameters["cross_repository"]
         assert p.kind is inspect.Parameter.KEYWORD_ONLY
         assert p.default is inspect.Parameter.empty
+
+
+def _guarded_git(monkeypatch, lib, *, tip: str, unmerged: str):
+    """`subprocess.run` for a clean-up told the merged head: `rev-parse` answers
+    `tip` (empty when the branch is not here), `rev-list --count` the commits on
+    it the merge does not hold (empty: git cannot tell). Returns the argvs seen."""
+    seen: list[list[str]] = []
+
+    def fake_run(argv, **kwargs):
+        seen.append(list(argv))
+        if argv[:2] == ["git", "rev-parse"]:
+            return subprocess.CompletedProcess(argv, 0 if tip else 1, stdout=tip, stderr="")
+        if argv[:2] == ["git", "rev-list"]:
+            code = 0 if unmerged else 128
+            return subprocess.CompletedProcess(argv, code, stdout=f"{unmerged}\n", stderr="")
+        return subprocess.CompletedProcess(argv, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(lib.subprocess, "run", fake_run)
+    return seen
+
+
+def test_with_the_merged_head_a_branch_that_all_merged_is_deleted(lib, monkeypatch, capsys):
+    seen = _guarded_git(monkeypatch, lib, tip="sha-old", unmerged="0")
+    lib.cleanup_local("fix/42-slug", {}, cross_repository=False, merged_head="sha-head")
+    assert ["git", "rev-list", "--count", "sha-head..sha-old"] in seen
+    assert ["git", "branch", "-D", "fix/42-slug"] in seen
+    assert "[warn]" not in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("unmerged", ["2", ""], ids=["work-since", "cannot-tell"])
+def test_with_the_merged_head_a_branch_holding_more_is_kept(lib, monkeypatch, capsys, unmerged):
+    """A branch with commits the merge does not hold — work since, or a clone
+    that cannot tell — is never force-deleted: `-D` would lose that work."""
+    seen = _guarded_git(monkeypatch, lib, tip="sha-newer", unmerged=unmerged)
+    lib.cleanup_local("fix/42-slug", {}, cross_repository=False, merged_head="sha-head")
+    assert ["git", "branch", "-D", "fix/42-slug"] not in seen
+    err = capsys.readouterr().err
+    assert "local branch fix/42-slug (at sha-new) holds commits the merge at sha-hea" in err
+    assert "it is kept" in err
+
+
+def test_with_the_merged_head_a_clone_without_the_branch_deletes_nothing(lib, monkeypatch, capsys):
+    seen = _guarded_git(monkeypatch, lib, tip="", unmerged="")
+    lib.cleanup_local("fix/42-slug", {}, cross_repository=False, merged_head="sha-head")
+    assert seen[:2] == [["git", "checkout", "main"], ["git", "pull", "--ff-only"]]
+    assert not any(argv[:2] in (["git", "branch"], ["git", "rev-list"]) for argv in seen)
+    assert "[warn]" not in capsys.readouterr().err
+
+
+# --- the queue: refusal, landing, dequeue (#1011) ----------------------------
+
+
+def _reading(lib, **fields: Any) -> Any:
+    base = {
+        "has_queue": True,
+        "merge_method": "SQUASH",
+        "pr_id": "PR_node",
+        "pr_state": "OPEN",
+        "head_oid": "sha-head",
+    }
+    return lib.merge_queue.Reading(**{**base, **fields})
+
+
+def _defaults(monkeypatch, lib, title="PR_TITLE", message="PR_BODY") -> list[int]:
+    reads: list[int] = []
+
+    def defaults(config):
+        reads.append(1)
+        return title, message
+
+    monkeypatch.setattr(lib.merge_queue, "squash_commit_defaults", defaults)
+    return reads
+
+
+def _refusal(lib, reading, **flags: Any) -> str:
+    kwargs = {"base": "main", "admin": False, "bypass_ci": False, "force": False, "config": {}}
+    return lib.queue_refusal(reading, **{**kwargs, **flags})
+
+
+def test_a_base_without_a_queue_is_never_refused(lib, monkeypatch) -> None:
+    reads = _defaults(monkeypatch, lib, title="COMMIT_OR_PR_TITLE")
+    assert _refusal(lib, _reading(lib, has_queue=False), admin=True, bypass_ci=True) == ""
+    assert reads == []
+
+
+@pytest.mark.parametrize(
+    ("reading_fields", "flags", "refusal"),
+    [
+        ({}, {"admin": True}, "--admin would merge around the queue"),
+        ({}, {"bypass_ci": True}, "--bypass-ci cannot bypass a check there"),
+        ({"merge_method": "MERGE"}, {}, "the merge queue on main merges by MERGE"),
+    ],
+    ids=["admin", "bypass-ci", "not-squash"],
+)
+def test_what_would_go_around_or_against_the_queue_is_refused(
+    lib, monkeypatch, reading_fields, flags, refusal
+) -> None:
+    _defaults(monkeypatch, lib)
+    assert refusal in _refusal(lib, _reading(lib, **reading_fields), **flags)
+
+
+@pytest.mark.parametrize(
+    ("title", "message"),
+    [("COMMIT_OR_PR_TITLE", "PR_BODY"), ("PR_TITLE", "COMMIT_MESSAGES"), ("PR_TITLE", "BLANK")],
+)
+def test_squash_commit_defaults_other_than_the_pr_title_and_body_are_refused(
+    lib, monkeypatch, title, message
+) -> None:
+    """The queue composes the squash commit from the repository's defaults, so
+    the convention's subject-is-the-title rule (DEC-013) is a checked
+    precondition: anything else is refused, with the command that sets them."""
+    _defaults(monkeypatch, lib, title=title, message=message)
+    refusal = _refusal(lib, _reading(lib))
+    assert f"title {title} and message {message}" in refusal
+    assert (
+        "gh api -X PATCH repos/{owner}/{repo} -f squash_merge_commit_title=PR_TITLE "
+        "-f squash_merge_commit_message=PR_BODY"
+    ) in refusal
+
+
+def test_squash_commit_defaults_that_cannot_be_read_are_raised(lib, monkeypatch) -> None:
+    def unreadable(config):
+        raise lib.merge_queue.Unreadable("not in the answer")
+
+    monkeypatch.setattr(lib.merge_queue, "squash_commit_defaults", unreadable)
+    with pytest.raises(lib.merge_queue.Unreadable, match="not in the answer"):
+        _refusal(lib, _reading(lib))
+
+
+def test_a_head_the_queue_dropped_is_not_enqueued_again_without_force(lib, monkeypatch) -> None:
+    _defaults(monkeypatch, lib)
+    removal = lib.merge_queue.Removal(
+        at="2026-10-01T10:05:00Z", reason="failed checks", head_oid="sha-head"
+    )
+    reading = _reading(lib, removal=removal)
+    refusal = _refusal(lib, reading)
+    assert "dropped the PR at its current head sha-hea at 2026-10-01T10:05:00Z" in refusal
+    assert "(GitHub says: failed checks)" in refusal
+    assert "--force" in refusal
+    assert _refusal(lib, reading, force=True) == ""
+    silent = _reading(lib, removal=lib.merge_queue.Removal(at="t", reason="", head_oid=""))
+    assert "(GitHub gives no reason)" in _refusal(lib, silent)
+
+
+class _Queue:
+    """`merge_queue.read` answering each call with the next reading, the last
+    repeated, and `gh_run` recording every command."""
+
+    def __init__(self, lib, monkeypatch, readings: list[Any], *, gh_fails: bool = False) -> None:
+        self.readings = list(readings)
+        self.commands: list[list[str]] = []
+        self.sleeps: list[float] = []
+        monkeypatch.setattr(lib.merge_queue, "read", self.read)
+        _defaults(monkeypatch, lib)
+
+        def fake_gh_run(args, config, **kwargs):
+            self.commands.append(list(args))
+            code = 1 if gh_fails else 0
+            return subprocess.CompletedProcess(args, code, stdout="", stderr="refused")
+
+        monkeypatch.setattr(lib, "gh_run", fake_gh_run)
+        import functools
+
+        now = [0.0]
+
+        def sleep(seconds: float) -> None:
+            self.sleeps.append(seconds)
+            now[0] += seconds
+
+        monkeypatch.setattr(
+            lib.merge_queue,
+            "wait_for_merge",
+            functools.partial(lib.merge_queue.wait_for_merge, sleep=sleep, clock=lambda: now[0]),
+        )
+
+    def read(self, pr_number, config):
+        reading = self.readings.pop(0) if len(self.readings) > 1 else self.readings[0]
+        if isinstance(reading, Exception):
+            raise reading
+        return reading
+
+    def merges(self) -> list[list[str]]:
+        return [c for c in self.commands if c[:2] == ["pr", "merge"] or c[1:3] == ["pr", "merge"]]
+
+
+def _request(lib, **fields: Any) -> Any:
+    base = {"pr_number": 42, "pr_title": "fix: x", "head_oid": "sha-head", "base": "main"}
+    return lib.MergeRequest(**{**base, **fields})
+
+
+def test_without_a_queue_the_merge_counts_once_github_reports_it(lib, monkeypatch, capsys):
+    queue = _Queue(
+        lib,
+        monkeypatch,
+        [_reading(lib, has_queue=False), _reading(lib, has_queue=False, pr_state="MERGED")],
+    )
+    landing = lib.land(_request(lib), {})
+    assert landing.outcome == lib.MERGED
+    assert queue.merges() == [
+        [
+            "gh",
+            "pr",
+            "merge",
+            "42",
+            "--squash",
+            "--subject",
+            "fix: x",
+            "--match-head-commit",
+            "sha-head",
+        ]
+    ]
+    assert "  merged PR #42" in capsys.readouterr().out
+
+
+def test_a_merge_gh_only_enqueued_is_never_taken_for_a_merge(lib, monkeypatch, capsys):
+    """On a base that requires a queue `gh pr merge` enqueues and exits 0. The
+    PR is read once more; anything but merged is waited for as a queued PR, so
+    nothing that follows a merge runs on an unmerged one."""
+    queue = _Queue(
+        lib,
+        monkeypatch,
+        [
+            _reading(lib, has_queue=False),
+            _reading(lib, has_queue=True, in_queue=True, position=1),
+        ],
+    )
+    landing = lib.land(_request(lib, wait_seconds=0), {})
+    assert landing.outcome == lib.STILL_QUEUED
+    assert len(queue.merges()) == 1
+    assert "GitHub does not report PR #42 merged" in capsys.readouterr().out
+
+
+def test_a_queue_switched_on_while_the_gates_ran_is_seen_before_the_merge(lib, monkeypatch):
+    """`land` reads the queue itself, just before deciding: a run that began on
+    a base without one enqueues once it has one, and never merges directly."""
+    queue = _Queue(
+        lib,
+        monkeypatch,
+        [_reading(lib), _reading(lib, in_queue=True, position=1)],
+    )
+    landing = lib.land(_request(lib, wait_seconds=0), {})
+    assert landing.outcome == lib.STILL_QUEUED
+    assert queue.merges() == [
+        ["gh", "pr", "merge", "42", "--auto", "--match-head-commit", "sha-head"]
+    ]
+
+
+def test_a_queue_switched_on_is_judged_again(lib, monkeypatch):
+    """`--admin`, fine on a base without a queue, is refused by the time the
+    base has one, and nothing is merged or enqueued."""
+    queue = _Queue(lib, monkeypatch, [_reading(lib)])
+    landing = lib.land(_request(lib, admin=True), {})
+    assert landing.outcome == lib.REFUSED
+    assert "--admin would merge around the queue" in landing.message
+    assert queue.commands == []
+
+
+def test_a_pr_already_in_the_queue_is_waited_for_not_enqueued_again(lib, monkeypatch, capsys):
+    queue = _Queue(
+        lib,
+        monkeypatch,
+        [_reading(lib, in_queue=True), _reading(lib, pr_state="MERGED", merged_at="t")],
+    )
+    landing = lib.land(_request(lib), {})
+    assert landing.outcome == lib.MERGED
+    assert queue.merges() == []
+    out = capsys.readouterr().out
+    assert "  PR #42 is already in the merge queue for main" in out
+    assert "  merged PR #42 through the queue" in out
+
+
+def test_an_unreadable_queue_lands_nothing(lib, monkeypatch):
+    queue = _Queue(lib, monkeypatch, [lib.merge_queue.Unreadable("HTTP 502")])
+    landing = lib.land(_request(lib), {})
+    assert landing.outcome == lib.UNREADABLE
+    assert landing.message == "cannot tell how main merges: HTTP 502"
+    assert queue.commands == []
+
+
+def test_a_refused_enqueue_is_a_failure(lib, monkeypatch):
+    queue = _Queue(lib, monkeypatch, [_reading(lib)], gh_fails=True)
+    assert lib.land(_request(lib), {}).outcome == lib.FAILED
+    assert len(queue.merges()) == 1
+
+
+@pytest.mark.parametrize(
+    ("queued", "command"),
+    [
+        ({"in_queue": True}, ["api", "graphql"]),
+        ({"waiting_to_enter": True}, ["pr", "merge", "42", "--disable-auto"]),
+    ],
+    ids=["in-the-queue", "waiting-to-enter"],
+)
+def test_a_push_after_the_enqueue_takes_the_pr_out_of_the_queue(
+    lib, monkeypatch, queued, command
+) -> None:
+    """Commits nobody checked must not merge: a head that moves while the PR
+    waits takes it out of the queue — through GitHub's dequeue mutation once it
+    is in (gh's `--disable-auto` answers "already queued" there and does
+    nothing), else by cancelling the auto-merge that would put it in."""
+    moved = _reading(lib, head_oid="sha-pushed", **queued)
+    out = _reading(lib, head_oid="sha-pushed")
+    queue = _Queue(lib, monkeypatch, [_reading(lib, **queued), moved, out])
+    landing = lib.land(_request(lib), {})
+    assert landing.outcome == lib.HEAD_MOVED
+    assert "head moved from sha-hea to sha-pus after its gates checked it" in landing.message
+    assert "it was taken out of the merge queue" in landing.message
+    dequeue = queue.commands[-1]
+    assert dequeue[1 : 1 + len(command)] == command
+    if command[0] == "api":
+        assert "dequeuePullRequest" in dequeue[4] and dequeue[-1] == "id=PR_node"
+
+
+def test_a_dequeue_that_does_not_take_says_so(lib, monkeypatch) -> None:
+    still = _reading(lib, head_oid="sha-pushed", in_queue=True)
+    _Queue(lib, monkeypatch, [_reading(lib, in_queue=True), still])
+    landing = lib.land(_request(lib), {})
+    assert landing.outcome == lib.HEAD_MOVED
+    assert "taking it out of the merge queue failed" in landing.message
+
+
+def test_a_merge_at_a_head_the_gates_did_not_check_is_warned(lib, monkeypatch, capsys) -> None:
+    _Queue(
+        lib,
+        monkeypatch,
+        [_reading(lib, pr_state="MERGED", merged_at="t", head_oid="sha-other")],
+    )
+    assert lib.land(_request(lib), {}).outcome == lib.MERGED
+    assert "merged at head sha-oth, not at sha-hea" in capsys.readouterr().err
+
+
+# --- the merge verbs' queue flags ------------------------------------------
+
+
+def _flags(lib, argv: list[str]) -> Any:
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    lib.add_queue_arguments(parser)
+    return parser.parse_args(argv)
+
+
+@pytest.mark.parametrize(
+    ("argv", "seconds", "phrase"),
+    [
+        ([], None, "wait for the queue to merge it, as long as the queue estimates plus 2 min"),
+        (["--no-wait"], 0, "return once it is queued (--no-wait)"),
+        (["--wait-minutes", "20"], 1200, "wait for the queue to merge it, up to 20 min"),
+    ],
+    ids=["estimate", "no-wait", "minutes"],
+)
+def test_the_queue_flags_set_the_wait(lib, argv, seconds, phrase) -> None:
+    args = _flags(lib, argv)
+    assert lib.wait_seconds(args) == seconds
+    assert lib.wait_phrase(lib.wait_seconds(args)).startswith(phrase)
+    assert args.force is False
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [["--no-wait", "--wait-minutes", "3"], ["--wait-minutes", "-1"], ["--wait-minutes", "nan"]],
+    ids=["both", "negative", "not-finite"],
+)
+def test_a_wait_the_flags_cannot_mean_is_a_usage_error(lib, argv) -> None:
+    with pytest.raises(SystemExit):
+        _flags(lib, argv)
