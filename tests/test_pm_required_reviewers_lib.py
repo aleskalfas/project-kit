@@ -13,7 +13,9 @@ and the fail-closed distinction (DEC-032 D5) between:
 
 and the adopter's per-contribution opt-out (#148): an opted-out contribution
 leaves the set while the rest of the capability's contribution stays, and an
-opt-out naming no installed contribution fails closed (ERROR_OPT_OUT).
+opt-out naming no installed contribution fails closed (ERROR_OPT_OUT) — and
+the adopter's not-code list (#1178): a changed path it matches satisfies no
+floor, and a malformed list fails closed (ERROR_NOT_CODE).
 
 The `gh`-backed closing-issue/label fetchers and the collector are injected,
 so these are pure-logic unit tests with no live repo / GitHub.
@@ -90,9 +92,13 @@ def _design_collection(rc, *, deployed=True):
     )
 
 
+# `_resolve`'s marker for "the config does not set `review.floors.not_code`".
+_UNSET = object()
+
+
 def _resolve(
     rr, *, baseline, collection, closing, labels=None, refs_unresolvable=None,
-    changed=None, files_unresolvable=None, opt_outs=None,
+    changed=None, files_unresolvable=None, opt_outs=None, not_code=_UNSET,
 ):
     """Drive resolve_required_local_reviewers with injected fetchers.
 
@@ -109,9 +115,15 @@ def _resolve(
 
     `opt_outs` is the configured `review.agents.contributed_opt_out` list
     (raw, as it appears in `project/config.yaml`); `None` is no opt-outs.
+
+    `not_code` is the configured `review.floors.not_code` value (raw); left
+    unset, the config carries no `floors` block, as most adopters' do.
     """
     labels = labels or {}
     changed = changed or []
+    config = {"review": {"agents": {"contributed_opt_out": opt_outs}}}
+    if not_code is not _UNSET:
+        config["review"]["floors"] = {"not_code": not_code}
 
     def closing_fn(pr):
         if refs_unresolvable is not None:
@@ -136,9 +148,8 @@ def _resolve(
         closing_issue_numbers=closing_fn,
         issue_labels=labels_fn,
         changed_files=changed_fn,
-        opt_outs=_OO.read_opt_outs(
-            {"review": {"agents": {"contributed_opt_out": opt_outs}}}
-        ),
+        opt_outs=_OO.read_opt_outs(config),
+        not_code=rr.read_not_code(config),
         collect_contributions=lambda repo_root: collection,
     )
 
@@ -847,3 +858,150 @@ def test_broken_declaration_is_reported_before_the_opt_out(rr, rc) -> None:
     )
     assert not res.ok
     assert res.error.kind == rr.ERROR_COLLECTION
+
+
+# ---- the adopter's not-code list (#1178) -------------------------------
+#
+# `review.floors.not_code` names paths that never count as code; a changed
+# path it matches satisfies no floor. Shipped default, when the key is absent:
+# `.changes/**` — the changeset every surface-changing PR carries, a YAML file
+# the suffix test would otherwise read as code.
+
+_CHANGESET = ".changes/unreleased/project-management-none-20261001-wording.yaml"
+_PANEL = ("reviewer", "docs-reviewer", "code-reviewer", "security-reviewer")
+
+
+@pytest.mark.parametrize("issue_type", ["type:docs", "type:feature"])
+def test_changeset_is_the_only_non_markdown_change_no_panel(
+    rr, rc, issue_type,
+) -> None:
+    """A wording PR carrying its changeset: baseline + the classification-matched
+    docs-reviewer only — the floor reviewers stay out, whatever the type."""
+    res = _resolve(
+        rr, baseline=["reviewer"],
+        collection=_se_collection(rc),
+        closing=[42], labels={42: [issue_type]},
+        changed=["README.md", "docs/guide.md", _CHANGESET],
+    )
+    assert res.ok
+    assert res.required_local == ("reviewer", "docs-reviewer")
+
+
+def test_changeset_only_unclassified_pr_is_baseline_only(rr, rc) -> None:
+    res = _resolve(
+        rr, baseline=["reviewer"],
+        collection=_se_collection(rc),
+        closing=[],
+        changed=[_CHANGESET],
+    )
+    assert res.ok
+    assert res.required_local == ("reviewer",)
+
+
+@pytest.mark.parametrize("code_path", [
+    ".pkit/capabilities/project-management/scripts/_lib/required_reviewers.py",
+    ".pkit/capabilities/project-management/schemas/review-contributions.yaml",
+    ".pkit/capabilities/project-management/schemas/config.schema.json",
+])
+def test_changeset_with_code_still_requires_the_panel(rr, rc, code_path) -> None:
+    """The exclusion is the changeset's alone: a `.py` or a schema alongside it
+    still touches code, so the panel is required."""
+    res = _resolve(
+        rr, baseline=["reviewer"],
+        collection=_se_collection(rc),
+        closing=[42], labels={42: ["type:docs"]},
+        changed=["README.md", _CHANGESET, code_path],
+    )
+    assert res.ok
+    assert res.required_local == _PANEL
+
+
+def test_a_null_not_code_is_the_default(rr, rc) -> None:
+    res = _resolve(
+        rr, baseline=["reviewer"],
+        collection=_se_collection(rc),
+        closing=[], changed=[_CHANGESET],
+        not_code=None,
+    )
+    assert res.ok
+    assert res.required_local == ("reviewer",)
+
+
+def test_an_empty_not_code_excludes_nothing(rr, rc) -> None:
+    """`not_code: []` is the adopter's choice that changesets count as code."""
+    res = _resolve(
+        rr, baseline=["reviewer"],
+        collection=_se_collection(rc),
+        closing=[42], labels={42: ["type:docs"]},
+        changed=["README.md", _CHANGESET],
+        not_code=[],
+    )
+    assert res.ok
+    assert res.required_local == _PANEL
+
+
+def test_a_configured_not_code_replaces_the_default(rr, rc) -> None:
+    """The adopter's list is the whole list: `.changes/` counts again unless it
+    is listed, and what is listed is left out."""
+    generated = "docs/examples/sample-config.yaml"
+    replaced = _resolve(
+        rr, baseline=["reviewer"],
+        collection=_se_collection(rc),
+        closing=[], changed=[generated, _CHANGESET],
+        not_code=["docs/examples/**"],
+    )
+    assert replaced.ok
+    assert "code-reviewer" in replaced.required_local  # the changeset counts.
+
+    extended = _resolve(
+        rr, baseline=["reviewer"],
+        collection=_se_collection(rc),
+        closing=[], changed=[generated, _CHANGESET],
+        not_code=[".changes/**", "docs/examples/**"],
+    )
+    assert extended.ok
+    assert extended.required_local == ("reviewer",)
+
+
+@pytest.mark.parametrize("raw,detail", [
+    (".changes/**", "`review.floors.not_code` must be a list, got str"),
+    ([".changes/**", 7], "`review.floors.not_code[1]` must be a non-empty path"),
+    (["  "], "`review.floors.not_code[0]` must be a non-empty path"),
+])
+def test_malformed_not_code_fails_closed(rr, rc, raw, detail) -> None:
+    """A malformed list applies nothing and the resolver refuses, naming it."""
+    res = _resolve(
+        rr, baseline=["reviewer"],
+        collection=_se_collection(rc),
+        closing=[], changed=[_CHANGESET],
+        not_code=raw,
+    )
+    assert not res.ok
+    assert res.error.kind == rr.ERROR_NOT_CODE
+    assert res.required_local == ()
+    assert any(d.startswith(detail) for d in res.error.details)
+
+
+def test_satisfied_floors_reads_only_what_the_list_leaves(rr) -> None:
+    """A path the list matches satisfies no floor, code suffix or not; a path it
+    does not match is read by the suffix test exactly as before."""
+    generated = rr.NotCode(patterns=("generated/**",))
+    assert rr._satisfied_floors(["generated/client.py"], generated) == set()
+    assert rr._satisfied_floors(
+        ["generated/client.py", "src/app.py"], generated,
+    ) == {rr.FLOOR_TOUCHES_CODE}
+    assert rr._satisfied_floors([_CHANGESET]) == set()  # the shipped default.
+    assert rr._satisfied_floors(
+        [_CHANGESET], rr.NotCode(patterns=()),
+    ) == {rr.FLOOR_TOUCHES_CODE}
+
+
+def test_read_not_code(rr) -> None:
+    default = rr.DEFAULT_NOT_CODE_PATTERNS
+    assert default == (".changes/**",)
+    assert rr.read_not_code({}).patterns == default
+    assert rr.read_not_code({"review": {}}).patterns == default
+    assert rr.read_not_code({"review": {"floors": {}}}).patterns == default
+    assert rr.read_not_code(
+        {"review": {"floors": {"not_code": [" a/** ", "b/*.yaml"]}}}
+    ).patterns == ("a/**", "b/*.yaml")

@@ -16,13 +16,17 @@ line is one of two recognised shapes:
     remote path:  Reviewer agent: APPROVED | CHANGES_REQUESTED
     local path:   Reviewer agent (local, <name>): APPROVED | CHANGES_REQUESTED
 
-Two consumers read these comments and MUST agree on what they say (COR-007 —
-one parser, not two):
+Three consumers read these comments and MUST agree on what they say (COR-007 —
+one parser, not three):
 
   * `done-work`'s agent-mode gate collapses to the latest verdict *token* per
     reviewer (freshness-filtered against the latest commit, restricted to the
     resolved required set) and checks every required reviewer has a fresh
     APPROVED.
+  * `review-pr` makes the same gate selection (`gate_verdicts`, anchored by
+    `latest_commit_timestamp`) to skip a required reviewer whose latest
+    verdict is still fresh (#1178), so what it skips is exactly what the gate
+    would count.
   * `show-pr --field review` surfaces the latest verdict *token and body* per
     reviewer so an operator can read the reasons through the governed pm
     surface (issue #544); `show-pr --field review-history` surfaces the full
@@ -36,8 +40,8 @@ rule (DEC-028 step 5 — a later CHANGES_REQUESTED must override an earlier
 APPROVED regardless of `gh`'s array order) lives here once, so the two
 consumers cannot diverge on which comment is a reviewer's current verdict.
 
-This module owns NO `gh` wiring: both consumers fetch the PR's comments via
-their own governed `gh_run` helper and pass the resulting comment list in.
+This module owns NO `gh` wiring: each consumer fetches the PR's comments via
+its own governed `gh_run` helper and passes the resulting comment list in.
 That keeps this module pure-logic and unit-testable without a live repo.
 """
 
@@ -112,6 +116,23 @@ class Verdict:
     body: str
     timestamp: str
     url: str = ""
+
+
+def latest_commit_timestamp(commits: list) -> str:
+    """The freshness anchor (DEC-028 step 4): the PR head commit's timestamp.
+
+    `commits` is the `gh pr view --json commits` array, oldest first, so the
+    last entry is the head; its `committedDate` (falling back to
+    `authoredDate`) is the instant a verdict must post-date to be fresh.
+    Returns "" when no timestamp is resolvable: the gate then refuses, the read
+    surface marks nothing stale, and `review-pr` re-runs every reviewer.
+    """
+    if not commits:
+        return ""
+    last = commits[-1]
+    if not isinstance(last, dict):
+        return ""
+    return str(last.get("committedDate") or last.get("authoredDate") or "")
 
 
 def parse_verdict_line(first_line: str) -> tuple[str | None, str, str | None]:
