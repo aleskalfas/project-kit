@@ -144,12 +144,13 @@ def _verdict(av, reviewer, sha, *, path=None, timestamp="2026-01-01T00:00:00Z"):
     )
 
 
-def _rule(vf, ad, repo, *, base_tip=None, floors=FLOOR_ONLY):
+def _rule(vf, ad, repo, *, base_tip=None, floors=FLOOR_ONLY, head_timestamp=""):
     """The rule at the repository's current head, reading its real history."""
     head = repo.head()
     tip = repo.head("main") if base_tip is None else base_tip
     return vf.FreshnessRule(
         head_sha=head,
+        head_timestamp=head_timestamp,
         floors_by_reviewer=floors,
         delta_since=lambda since: ad.author_delta(
             since,
@@ -236,6 +237,70 @@ def test_a_rebase_stales_every_verdict(av, ad, vf, repo) -> None:
     rule = _rule(vf, ad, repo)
     assert _stale(av, rule, reviewed) == set(PANEL)
     assert "rebased or force-pushed" in rule.assess(_verdict(av, CODE, reviewed)).reason
+
+
+# ---- the gate judges each reviewer's latest verdict ---------------------
+
+
+def _comment(av, reviewer, token, *, ts, sha=""):
+    """A verdict comment as review-pr posts it, naming `sha` when given."""
+    return {
+        "author": {"login": "dev"},
+        "body": av.stamp_verdict(f"Reviewer agent (local, {reviewer}): {token}", sha),
+        "createdAt": ts,
+    }
+
+
+def _gate(av, rule, comments):
+    return av.gate_verdicts(
+        comments,
+        is_fresh=rule.is_fresh,
+        local_reviewer_ok=lambda _name: True,
+        remote_reviewer_ok=lambda _login: False,
+    )
+
+
+def test_a_force_push_back_to_the_approved_head_does_not_revive_the_approval(
+    av,
+    ad,
+    vf,
+    repo,
+) -> None:
+    """The reviewer approved A, then rejected B; the author force-pushed back
+    to A and added a Markdown change. The APPROVED on A reaches none of the
+    reviewer's floors, but the CHANGES_REQUESTED superseded it, and that one
+    is stale — so nothing counts."""
+    approved_head = repo.commit({"src/app.py": "x = 2\n"}, "feature")
+    rejected_head = repo.commit({"src/app.py": "x = 3\n"}, "rework")
+    repo.git("reset", "-q", "--hard", approved_head)
+    repo.commit({"README.md": "readme, fixed\n"}, "docs")
+
+    rule = _rule(vf, ad, repo)
+    approval = _comment(av, CODE, "APPROVED", ts="2026-06-01T00:00:00Z", sha=approved_head)
+    rejection = _comment(
+        av, CODE, "CHANGES_REQUESTED", ts="2026-06-02T00:00:00Z", sha=rejected_head
+    )
+    assert rule.is_fresh(_verdict(av, CODE, approved_head))
+    assert _gate(av, rule, [approval, rejection]) == []
+
+
+def test_a_stale_rejection_naming_no_head_does_not_revive_the_approval(
+    av,
+    ad,
+    vf,
+    repo,
+) -> None:
+    """The head could not be read when the CHANGES_REQUESTED was posted, so it
+    names none and is judged by commit time; a later Markdown commit makes it
+    stale. The older APPROVED it superseded does not count again."""
+    approved_head = repo.commit({"src/app.py": "x = 2\n"}, "feature")
+    repo.commit({"README.md": "readme, fixed\n"}, "docs")
+
+    rule = _rule(vf, ad, repo, head_timestamp="2026-06-03T00:00:00Z")
+    approval = _comment(av, CODE, "APPROVED", ts="2026-06-01T00:00:00Z", sha=approved_head)
+    rejection = _comment(av, CODE, "CHANGES_REQUESTED", ts="2026-06-02T00:00:00Z")
+    assert rule.is_fresh(_verdict(av, CODE, approved_head))
+    assert _gate(av, rule, [approval, rejection]) == []
 
 
 def test_a_verdict_naming_no_head_follows_the_commit_time(av, vf) -> None:

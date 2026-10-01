@@ -857,8 +857,8 @@ def _fresh_local_verdicts(
     verdict is still fresh.
 
     The selection is `done-work`'s own: `gate_verdicts` (marker required,
-    latest fresh verdict per reviewer by timestamp) with the gate's freshness
-    rule, scoped to the required local set. So a reviewer this skips is one the
+    latest verdict per reviewer by timestamp, counted only when fresh) with the
+    gate's freshness rule, scoped to the required local set. So a reviewer this skips is one the
     gate would count as it stands — a fresh APPROVED satisfies it, a fresh
     CHANGES_REQUESTED blocks it until a change its reviewer checks. Only
     local-path verdicts are read: `review-pr` invokes local reviewers, and a

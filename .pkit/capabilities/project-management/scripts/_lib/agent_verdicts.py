@@ -20,11 +20,12 @@ Three consumers read these comments and MUST agree on what they say (COR-007 —
 one parser, not three):
 
   * `done-work`'s agent-mode gate collapses to the latest verdict *token* per
-    reviewer (freshness-filtered, restricted to the resolved required set)
-    and checks every required reviewer has a fresh APPROVED.
-  * `review-pr` makes the same gate selection (`gate_verdicts`) to skip a
-    required reviewer whose latest verdict is still fresh (#1178), so what it
-    skips is exactly what the gate would count.
+    reviewer (restricted to the resolved required set), keeps it only when it
+    is fresh, and checks every required reviewer has a fresh APPROVED.
+  * `review-pr` makes the same gate selection (`gate_candidates`, judged by
+    the same freshness rule) to skip a required reviewer whose latest verdict
+    is still fresh (#1178), so what it skips is exactly what the gate would
+    count.
   * `show-pr --field review` surfaces the latest verdict *token and body* per
     reviewer so an operator can read the reasons through the governed pm
     surface (issue #544); `show-pr --field review-history` surfaces the full
@@ -32,7 +33,9 @@ one parser, not three):
 
 What counts as fresh is not decided here: each consumer hands in the one
 freshness predicate (`_lib.verdict_freshness`, #1179), and this module only
-applies it.
+applies it — to each reviewer's latest verdict, after the reduction. A
+verdict a later one superseded never counts, fresh or not: freshness decides
+whether a reviewer's current verdict stands, never which verdict is current.
 
 The gate needs only the token; the read surface needs the body too. So the
 shared record (`Verdict`) carries the token, the full comment body, the
@@ -207,14 +210,13 @@ def all_verdicts(
     *,
     remote_reviewer_ok: Callable[[str], bool] = lambda _login: True,
     local_reviewer_ok: Callable[[str], bool] = lambda _name: True,
-    is_fresh: Callable[[Verdict], bool] | None = None,
     require_marker: bool = False,
 ) -> list[Verdict]:
     """Every recognised DEC-028 verdict on a PR, in posting order.
 
     The full sequence behind `latest_verdicts_per_reviewer`'s reduction: the
     same recognition (`parse_verdict_line` on the comment's first line) and the
-    same injected filters (marker, reviewer predicates, freshness — see
+    same injected filters (marker, reviewer predicates — see
     `latest_verdicts_per_reviewer` for their semantics), but nothing is
     collapsed — a verdict a later round superseded is still returned. This is
     what `show-pr --field review-history` reads to show earlier review rounds
@@ -254,20 +256,17 @@ def all_verdicts(
             if not local_reviewer_ok(reviewer):
                 continue
 
-        verdict = Verdict(
-            reviewer=reviewer,
-            token=token,
-            path=path,
-            body=body,
-            timestamp=str(comment.get("createdAt") or ""),
-            url=str(comment.get("url") or ""),
-            sha=sha,
+        verdicts.append(
+            Verdict(
+                reviewer=reviewer,
+                token=token,
+                path=path,
+                body=body,
+                timestamp=str(comment.get("createdAt") or ""),
+                url=str(comment.get("url") or ""),
+                sha=sha,
+            )
         )
-        # Freshness last: it may read the repository (`_lib.verdict_freshness`),
-        # so it runs only for a verdict every other filter kept.
-        if is_fresh is not None and not is_fresh(verdict):
-            continue
-        verdicts.append(verdict)
 
     return sorted(verdicts, key=lambda v: v.timestamp)
 
@@ -298,20 +297,20 @@ def latest_verdicts_per_reviewer(
     *,
     remote_reviewer_ok: Callable[[str], bool] = lambda _login: True,
     local_reviewer_ok: Callable[[str], bool] = lambda _name: True,
-    is_fresh: Callable[[Verdict], bool] | None = None,
     require_marker: bool = False,
 ) -> list[Verdict]:
     """Collapse a PR's comments to the latest verdict per reviewer (DEC-028).
 
     This is the permissive *read-surface* primitive: `show-pr --field review`
     calls it directly to show every posted verdict (latest per reviewer). Its
-    defaults are deliberately permissive — no freshness filter, allow-all
-    membership — because a read surface shows whatever verdicts exist. Those
-    defaults are NOT safe for the merge gate: a caller that wants gate
-    semantics must go through `gate_verdicts` (below), whose freshness and
-    membership filters are required, non-defaulted arguments. Do not call this
-    primitive from a gate path — the permissive default would silently count
-    every verdict from anyone at any age (self-approval included).
+    defaults are deliberately permissive — no marker required, allow-all
+    membership — and it judges no freshness, because a read surface shows
+    whatever verdicts exist. Those defaults are NOT safe for the merge gate: a
+    caller that wants gate semantics must go through `gate_verdicts` (below),
+    whose freshness and membership filters are required, non-defaulted
+    arguments. Do not call this primitive from a gate path — the permissive
+    default would silently count every verdict from anyone at any age
+    (self-approval included).
 
     Recognises the DEC-028 verdict shapes in `comments` (the
     `gh pr view --json comments` array) via `all_verdicts`, then reduces them
@@ -328,12 +327,14 @@ def latest_verdicts_per_reviewer(
         membership-in-the-required-set predicates (and its remote predicate
         also excludes the PR author, per DEC-028 step 3); `show-pr` accepts
         every reviewer (it shows whatever verdicts exist).
-      * `is_fresh` — when set, only verdicts it holds fresh are considered
-        (the freshness predicate, `_lib.verdict_freshness`). It is applied
-        before the latest-per-reviewer reduction, so the gate takes a
-        reviewer's latest *fresh* verdict (DEC-028 step 4, then step 5).
-        `show-pr` leaves it `None` — a stale verdict is still the reviewer's
-        current verdict to *display*, marked stale by the same predicate.
+      * `require_marker` — when set, only a verdict carrying the verdict
+        marker is considered (#593); the gate path sets it.
+
+    Freshness is not a filter here. It applies to the reduction's result —
+    `gate_verdicts` keeps a reviewer's latest verdict only when it is fresh —
+    so a stale latest verdict is never replaced by an older fresh one.
+    `show-pr` marks a stale current verdict by the same predicate and still
+    displays it.
 
     A reviewer is keyed by `(path, reviewer)` so a remote and a local verdict
     from names that happen to collide never overwrite each other. The returned
@@ -344,9 +345,42 @@ def latest_verdicts_per_reviewer(
             comments,
             remote_reviewer_ok=remote_reviewer_ok,
             local_reviewer_ok=local_reviewer_ok,
-            is_fresh=is_fresh,
             require_marker=require_marker,
         )
+    )
+
+
+def gate_candidates(
+    comments: list,
+    *,
+    local_reviewer_ok: Callable[[str], bool],
+    remote_reviewer_ok: Callable[[str], bool],
+) -> list[Verdict]:
+    """Each required reviewer's current verdict as the gate reads it, before
+    freshness is judged (DEC-028 steps 2, 3 and 5).
+
+    The latest marker-carrying verdict per reviewer (`require_marker=True`,
+    #593) from an identity the membership predicates accept. The membership
+    predicates are REQUIRED keyword arguments, so a verdict from an unrequired
+    identity — the PR author's self-approval included — cannot reach the gate
+    through a forgotten filter. `gate_verdicts` keeps the fresh ones; a consumer
+    that has to say why a reviewer's current verdict does not count — a
+    refusal, `review-pr`'s re-run — reads this, so it describes exactly the
+    verdict the gate judged.
+
+    The marker filter closes the read side of the DEC-047 spoof: a bare
+    verdict-grammar line — however it reached the PR — counts only if the
+    reviewer path stamped it with a verdict marker.
+
+      * `local_reviewer_ok` / `remote_reviewer_ok` — membership predicates
+        scoping the count to the resolved required set (and excluding the PR
+        author on the remote path, DEC-028 step 3).
+    """
+    return latest_verdicts_per_reviewer(
+        comments,
+        local_reviewer_ok=local_reviewer_ok,
+        remote_reviewer_ok=remote_reviewer_ok,
+        require_marker=True,
     )
 
 
@@ -359,31 +393,33 @@ def gate_verdicts(
 ) -> list[Verdict]:
     """Strict, gate-facing verdict selection for the merge gate (DEC-028).
 
-    Like `latest_verdicts_per_reviewer`, but the security-relevant filters are
-    REQUIRED (non-defaulted) keyword arguments, and it additionally requires the
-    verdict marker (`require_marker=True`, #593) — there is no way to call this
-    permissively. That makes the fail-open default of the read-surface primitive
-    unreachable from the gate path: the gate's correctness no longer depends on
-    `done-work` *remembering* to inject a freshness predicate and
+    Each reviewer's current verdict (`gate_candidates`), kept only when
+    `is_fresh` holds it fresh. The security-relevant filters are REQUIRED
+    (non-defaulted) keyword arguments — there is no way to call this
+    permissively. That makes the fail-open default of the read-surface
+    primitive unreachable from the gate path: the gate's correctness does not
+    depend on `done-work` *remembering* to inject a freshness predicate and
     membership/author-exclusion predicates; forgetting one is a `TypeError` at
     the call site, not a silently weakened gate.
 
-    The marker filter (#593) closes the read side of the DEC-047 spoof: a bare
-    verdict-grammar line — however it reached the PR — counts only if the
-    reviewer path stamped it with a verdict marker.
+    Freshness is judged after the latest-per-reviewer reduction, never before
+    it: a reviewer's latest verdict is its current opinion, and when that
+    verdict is stale the reviewer has no verdict that counts. An older verdict
+    it superseded never stands in, however fresh — otherwise a stale
+    CHANGES_REQUESTED would hand the gate back the APPROVED it overrode.
 
-      * `is_fresh` — the freshness predicate (`_lib.verdict_freshness`); only
-        verdicts it holds fresh count (DEC-028 step 4). Required so a stale
-        APPROVED can never slip through as fresh.
-      * `local_reviewer_ok` / `remote_reviewer_ok` — membership predicates
-        scoping the count to the resolved required set (and excluding the PR
-        author on the remote path, DEC-028 step 3). Required so a verdict from
-        an unrequired identity (self-approval included) can never count.
+      * `is_fresh` — the freshness predicate (`_lib.verdict_freshness`); a
+        reviewer's current verdict counts only when it holds it fresh
+        (DEC-028 steps 4 and 5). Required so a stale APPROVED can never slip
+        through as fresh.
+      * `local_reviewer_ok` / `remote_reviewer_ok` — as for `gate_candidates`.
     """
-    return latest_verdicts_per_reviewer(
-        comments,
-        is_fresh=is_fresh,
-        local_reviewer_ok=local_reviewer_ok,
-        remote_reviewer_ok=remote_reviewer_ok,
-        require_marker=True,
-    )
+    return [
+        verdict
+        for verdict in gate_candidates(
+            comments,
+            local_reviewer_ok=local_reviewer_ok,
+            remote_reviewer_ok=remote_reviewer_ok,
+        )
+        if is_fresh(verdict)
+    ]

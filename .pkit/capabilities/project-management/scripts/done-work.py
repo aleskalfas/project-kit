@@ -174,9 +174,9 @@ from _lib.agent_verdicts import (
     PATH_LOCAL,
     PATH_REMOTE,
     Verdict,
+    gate_candidates,
     gate_verdicts,
     latest_commit_timestamp,
-    latest_verdicts_per_reviewer,
 )
 
 # DEC-049's canonical audit-comment format + projection knob — the ONE
@@ -1407,17 +1407,18 @@ def _check_agent_gate(
     # for; one naming no head falls back to the commit-time anchor above.
     freshness = rule_for_pr(data, resolution, author_delta=author_delta)
 
-    # --- Steps 1–5: latest fresh verdict per agent per path, selected by
-    # TIMESTAMP (DEC-028 step 5), via the SHARED verdict selection
-    # (`_lib.agent_verdicts`) that `show-pr --field review` also consumes — so
-    # the two never diverge on which comment is a reviewer's current verdict
-    # (COR-007). The gate goes through the strict `gate_verdicts` wrapper, whose
-    # freshness + membership filters are REQUIRED args — the read-surface
-    # primitive's permissive fail-open default is unreachable from here. The
-    # gate scopes the selection to its concern by injecting:
-    #   * freshness — `is_fresh` drops every verdict the rule holds stale (a
-    #     fresh CHANGES_REQUESTED after a fresh APPROVED still blocks; the
-    #     latest-by-timestamp rule handles the ordering);
+    # --- Steps 1–5: latest verdict per agent per path, selected by TIMESTAMP
+    # (DEC-028 step 5) and counted only when fresh, via the SHARED verdict
+    # selection (`_lib.agent_verdicts`) that `show-pr --field review` also
+    # consumes — so the two never diverge on which comment is a reviewer's
+    # current verdict (COR-007). The gate goes through the strict
+    # `gate_verdicts` wrapper, whose freshness + membership filters are
+    # REQUIRED args — the read-surface primitive's permissive fail-open default
+    # is unreachable from here. The gate scopes the selection to its concern by
+    # injecting:
+    #   * freshness — `is_fresh` judges each reviewer's latest verdict, after
+    #     the reduction: a stale latest verdict leaves the reviewer with none
+    #     that counts, and an older verdict it superseded never stands in;
     #   * membership — remote verdicts count only from a baseline login that is
     #     not the PR author (DEC-028 step 2/3); local verdicts only from a name
     #     in the resolved required set (DEC-032 D1).
@@ -1675,16 +1676,15 @@ def _stale_verdicts(
     and why — what a refusal names (#1179): the head it reviewed and what
     changed since.
 
-    Read on the refusal path only, from the comments again WITHOUT the
-    freshness filter but with the SAME membership and author-exclusion
-    predicates the gate used — so a refusal never describes a verdict the gate
-    would not have counted had it been fresh.
+    Read on the refusal path only, from the gate's own candidates
+    (`gate_candidates`) with the SAME membership and author-exclusion
+    predicates the gate used — so a refusal names exactly the verdict the gate
+    judged stale.
     """
-    latest = latest_verdicts_per_reviewer(
+    latest = gate_candidates(
         comments,
         remote_reviewer_ok=remote_reviewer_ok,
         local_reviewer_ok=local_reviewer_ok,
-        require_marker=True,
     )
     by_path = {(verdict.path, verdict.reviewer): verdict for verdict in latest}
     stale: dict[str, tuple[Verdict, str]] = {}
@@ -1994,23 +1994,22 @@ def _build_override_audits(
     overridden — the three states the DEC names (`none` / a fresh
     `CHANGES_REQUESTED` / a stale `APPROVED`). Telling a *stale* APPROVED apart
     from no verdict at all needs the reviewer's latest verdict irrespective of
-    freshness, which the gate's read drops by design; so this reads the comments
-    again WITHOUT the freshness filter but with the SAME membership and
-    author-exclusion predicates the gate used (passed in, never re-derived). The
-    freshness difference is the point; a membership difference would not be — an
-    unfiltered read here let the PR author's own self-approval, which the gate
-    correctly refuses to count, describe what the override waived (ADR-042's
-    named anti-pattern). This read never feeds the gate DECISION, which is
-    already settled in `slots`.
+    freshness, which the gate's read drops by design; so this reads the gate's
+    own candidates (`gate_candidates`) — before freshness, with the SAME
+    membership and author-exclusion predicates the gate used (passed in, never
+    re-derived). The freshness difference is the point; a membership difference
+    would not be — an unfiltered read here let the PR author's own
+    self-approval, which the gate correctly refuses to count, describe what the
+    override waived (ADR-042's named anti-pattern). This read never feeds the
+    gate DECISION, which is already settled in `slots`.
     """
     overridden = [slot for slot in slots if slot.overridden]
     if not overridden:
         return []
-    latest = latest_verdicts_per_reviewer(
+    latest = gate_candidates(
         comments,
         remote_reviewer_ok=remote_reviewer_ok,
         local_reviewer_ok=local_reviewer_ok,
-        require_marker=True,
     )
     # `latest` is sorted local-before-remote, so `_most_blocking`'s first-seen
     # tie-break keeps the prior local-first preference on a severity tie.

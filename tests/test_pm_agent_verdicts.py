@@ -141,48 +141,54 @@ def _after(anchor):
     return lambda verdict: verdict.timestamp > anchor
 
 
+def _gate_any(av, comments, is_fresh):
+    return av.gate_verdicts(
+        comments,
+        is_fresh=is_fresh,
+        local_reviewer_ok=lambda _n: True,
+        remote_reviewer_ok=lambda _l: True,
+    )
+
+
 def test_is_fresh_drops_stale(av) -> None:
     # done-work's freshness predicate: only verdicts it holds fresh count.
-    out = av.latest_verdicts_per_reviewer(
+    out = _gate_any(
+        av,
         [_local("critic", "APPROVED", ts="2026-06-01T00:00:00Z")],
-        is_fresh=_after("2026-06-01T00:00:00Z"),
+        _after("2026-06-01T00:00:00Z"),
     )
     assert out == []
 
 
-def test_is_fresh_runs_before_the_reduction(av) -> None:
-    # The gate takes a reviewer's latest FRESH verdict (DEC-028 step 4, then
-    # step 5): a later stale verdict does not hide an earlier fresh one.
-    fresh, stale = (
+def test_a_stale_latest_verdict_is_not_replaced_by_an_older_fresh_one(av) -> None:
+    # The gate judges a reviewer's LATEST verdict (DEC-028 step 5, then step
+    # 4): when it is stale the reviewer has no verdict that counts — the
+    # APPROVED its CHANGES_REQUESTED superseded never stands in.
+    approved, rejected = (
         _local("critic", "APPROVED", ts="2026-06-02T00:00:00Z", reasons="fresh"),
         _local("critic", "CHANGES_REQUESTED", ts="2026-06-03T00:00:00Z"),
     )
-    out = av.latest_verdicts_per_reviewer(
-        [fresh, stale],
-        is_fresh=lambda v: v.token == av.APPROVED,
-    )
-    assert [(v.token, v.timestamp) for v in out] == [
-        (av.APPROVED, "2026-06-02T00:00:00Z"),
-    ]
+    out = _gate_any(av, [approved, rejected], lambda v: v.token == av.APPROVED)
+    assert out == []
 
 
-def test_is_fresh_only_judges_what_the_other_filters_kept(av) -> None:
-    # Freshness may read the repository, so it is asked last.
-    judged: list[str] = []
-    av.all_verdicts(
+def test_freshness_judges_only_each_reviewers_latest_verdict(av) -> None:
+    # Freshness may read the repository, so it is asked only of the verdict
+    # that decides: each kept reviewer's latest.
+    judged: list[tuple[str, str]] = []
+    _gate_any(
+        av,
         [
-            _local("critic", "APPROVED"),
-            _local("stranger", "APPROVED"),
-            _local("critic", "APPROVED", marked=False),
+            _local("critic", "APPROVED", ts="2026-06-01T00:00:00Z"),
+            _local("critic", "CHANGES_REQUESTED", ts="2026-06-02T00:00:00Z"),
+            _local("critic", "APPROVED", ts="2026-06-03T00:00:00Z", marked=False),
         ],
-        local_reviewer_ok=lambda name: name == "critic",
-        require_marker=True,
-        is_fresh=lambda v: judged.append(v.reviewer) or True,
+        lambda v: judged.append((v.reviewer, v.timestamp)) or True,
     )
-    assert judged == ["critic"]
+    assert judged == [("critic", "2026-06-02T00:00:00Z")]
 
 
-def test_no_is_fresh_keeps_stale(av) -> None:
+def test_the_read_surface_judges_no_freshness(av) -> None:
     # show-pr applies no freshness filter — a "stale" verdict is still shown.
     out = av.latest_verdicts_per_reviewer([_local("critic", "APPROVED", ts="2026-06-01T00:00:00Z")])
     assert len(out) == 1
@@ -249,19 +255,20 @@ def test_gate_verdicts_cannot_be_called_with_all_defaults(av) -> None:
         av.gate_verdicts([_local("critic", "APPROVED")])
 
 
-def test_gate_verdicts_behaviour_identical_when_filters_supplied(av) -> None:
-    # With the same filters the strict wrapper returns exactly what the
-    # permissive primitive returns — behaviour-preserving delegation.
+def test_gate_verdicts_are_the_fresh_gate_candidates(av) -> None:
+    # The strict wrapper is the gate's candidates — the latest marked verdict
+    # per accepted reviewer — kept when fresh.
     comments = [
         _local("critic", "APPROVED", ts="2026-06-05T00:00:00Z"),
         _local("stranger", "CHANGES_REQUESTED", ts="2026-06-05T00:00:00Z"),
         _local("critic", "APPROVED", ts="2026-06-01T00:00:00Z"),
+        _local("architect", "APPROVED", ts="2026-06-01T00:00:00Z"),
         _remote("APPROVED", author="pr-author", ts="2026-06-05T00:00:00Z"),
     ]
     fresh = _after("2026-06-02T00:00:00Z")
 
     def local_ok(name):
-        return name == "critic"
+        return name != "stranger"
 
     def remote_ok(login):
         return login != "pr-author"
@@ -272,17 +279,37 @@ def test_gate_verdicts_behaviour_identical_when_filters_supplied(av) -> None:
         local_reviewer_ok=local_ok,
         remote_reviewer_ok=remote_ok,
     )
-    permissive = av.latest_verdicts_per_reviewer(
+    candidates = av.gate_candidates(
         comments,
-        is_fresh=fresh,
         local_reviewer_ok=local_ok,
         remote_reviewer_ok=remote_ok,
     )
-    assert strict == permissive
+    assert strict == [v for v in candidates if fresh(v)]
     # And the filters actually took effect: stranger dropped (membership), the
-    # remote pr-author dropped (membership), the stale critic verdict dropped
-    # (freshness), leaving the fresh critic APPROVED.
+    # remote pr-author dropped (membership), the older critic verdict
+    # superseded, the stale architect verdict dropped (freshness), leaving the
+    # fresh critic APPROVED.
+    assert [(v.reviewer, v.timestamp) for v in candidates] == [
+        ("architect", "2026-06-01T00:00:00Z"),
+        ("critic", "2026-06-05T00:00:00Z"),
+    ]
     assert [(v.reviewer, v.token) for v in strict] == [("critic", av.APPROVED)]
+
+
+def test_gate_candidates_require_the_membership_filters(av) -> None:
+    with pytest.raises(TypeError):
+        av.gate_candidates([_local("critic", "APPROVED")], local_reviewer_ok=lambda _n: True)
+    with pytest.raises(TypeError):
+        av.gate_candidates([_local("critic", "APPROVED")], remote_reviewer_ok=lambda _l: True)
+
+
+def test_gate_candidates_require_the_marker(av) -> None:
+    out = av.gate_candidates(
+        [_local("critic", "APPROVED", marked=False)],
+        local_reviewer_ok=lambda _n: True,
+        remote_reviewer_ok=lambda _l: True,
+    )
+    assert out == []
 
 
 # --- verdict marker: gate requires it, read surface does not (#593) ---
@@ -394,8 +421,8 @@ def test_all_verdicts_keeps_every_round_in_posting_order(av) -> None:
 
 
 def test_all_verdicts_applies_the_same_filters(av) -> None:
-    # Marker, freshness and reviewer predicates drop exactly what they drop
-    # from the latest-per-reviewer selection.
+    # Marker and reviewer predicates drop exactly what they drop from the
+    # latest-per-reviewer selection.
     comments = [
         _local("a", "APPROVED", ts="2026-06-01T00:00:00Z"),
         _local("a", "APPROVED", ts="2026-06-03T00:00:00Z", marked=False),
@@ -405,11 +432,13 @@ def test_all_verdicts_applies_the_same_filters(av) -> None:
     ]
     got = av.all_verdicts(
         comments,
-        is_fresh=_after("2026-06-02T00:00:00Z"),
         local_reviewer_ok=lambda n: n != "c",
         require_marker=True,
     )
-    assert [v.reviewer for v in got] == ["b"]
+    assert [(v.reviewer, v.timestamp) for v in got] == [
+        ("a", "2026-06-01T00:00:00Z"),
+        ("b", "2026-06-03T00:00:00Z"),
+    ]
 
 
 def test_latest_is_the_reduction_of_all_verdicts(av) -> None:
