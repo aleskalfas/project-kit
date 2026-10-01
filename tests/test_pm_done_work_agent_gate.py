@@ -946,7 +946,7 @@ def test_large_pr_with_only_a_changeset_beside_docs_needs_no_floor_reviewer(
         comments=[_local_verdict_comment("reviewer", "APPROVED")],
         closing_issue_labels={42: ["type:docs"]},
     )
-    paths = _LARGE_PR_PATHS[:-1] + [_CHANGESET]
+    paths = [*_LARGE_PR_PATHS[:-1], _CHANGESET]
     _wire_files_api(dw, monkeypatch, stdout=_files_api_pages(paths))
     result = dw._check_agent_gate(99, {}, _config(), "resolved", CAP_ROOT)
     assert result.passed is True, result.refusal_message
