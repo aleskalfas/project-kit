@@ -62,9 +62,10 @@ jobs:
       # Changeset guard (PRJ-002). PR-scoped: it needs the PR base ref and the
       # PR labels (the `skip-changeset` escape hatch), neither of which a local
       # pre-push hook has — so it lives here, not in scripts/check.sh. Two
-      # checks: a surface change carries a changeset, and a requires_backbone
-      # floor the PR declares rides on a change to its component or a release
-      # of it. Escape hatches for the surface check: a `none` changeset for the
+      # checks: a surface change carries a changeset of its own (one the PR
+      # adds or edits; another PR's pending changeset does not count), and a
+      # requires_backbone floor the PR declares rides on a change to its
+      # component or a release of it. Escape hatches for the surface check: a `none` changeset for the
       # component, or the `skip-changeset` label (surfaced below as
       # PKIT_CHANGESET_SKIP).
       #
