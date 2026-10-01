@@ -10,9 +10,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001"]}
         revalidated:
-          at: 2026-09-30T08:02:16Z
+          at: 2026-10-01T23:31:25Z
           outcome: unchanged
-          unchanged-because: living-docs DEC-001 point 8 now says an accepted reason for a page with no anchors is the core's unanchored-because in its friction block, written on a person's decision, and that the unanchored measure lists such a page apart without counting it; the paths the user space's readers take through its pages do not change
+          unchanged-because: living-docs DEC-001 point 7 keys a reading-evidence entry by page or path, commit and check, so two providers' results for one page at one commit stand side by side; that is the evidence point's key, and the paths the user space's readers take through its pages are untouched by it
 ---
 
 # The user space's definition

@@ -12,9 +12,8 @@ pkit:
         - .pkit/capabilities/software-analysis/agents/**
       record: ["software-analysis:DEC-001", COR-049, COR-050, COR-052, COR-053]
     revalidated:
-      at: 2026-10-01T22:00:48Z
-      outcome: unchanged
-      unchanged-because: COR-050 point 2, COR-052 point 6 and COR-053 point 9 state needing no network, changing nothing and determinism as obligations a capability declares and the backbone trusts, with the time bound enforced; this page calls its filler and checks queries that are read-only and offline, which is what they declare, so it holds
+      at: 2026-10-01T23:31:13Z
+      outcome: updated
 ---
 
 # software-analysis capability

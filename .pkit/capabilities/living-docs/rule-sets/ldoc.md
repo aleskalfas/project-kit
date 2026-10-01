@@ -9,9 +9,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001"]}
         revalidated:
-          at: 2026-09-30T08:02:18Z
+          at: 2026-10-01T23:31:30Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 8 now says an accepted reason for a page with no anchors is the core's unanchored-because, written on a person's decision, and that the measure lists such a page apart without counting it; that onboarding may accept a page with none was already point 8's, and a page's anchors still ground every statement it makes
+          unchanged-because: DEC-001 point 7 keys a reading-evidence entry by page or path, commit and check; executed results are evidence a reader-review may read, not anchors, so a page's anchors still ground every statement it makes
   RS-LDOC-002:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
@@ -19,9 +19,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001"]}
         revalidated:
-          at: 2026-09-30T08:02:23Z
+          at: 2026-10-01T23:31:32Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 8 now says an accepted reason for a page with no anchors is the core's unanchored-because, written on a person's decision, and listed apart by the measure; stating each fact once and linking to it is untouched by where and by whom that reason is written
+          unchanged-because: DEC-001 point 7 keys a reading-evidence entry by page or path, commit and check, so two providers' results stand side by side; that shapes the evidence point's entries, not a page, and each fact is still stated once and linked to
   RS-LDOC-003:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
@@ -29,9 +29,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001"]}
         revalidated:
-          at: 2026-09-30T08:02:25Z
+          at: 2026-10-01T23:31:35Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 8 now says an accepted reason for a page with no anchors is the core's unanchored-because, written on a person's decision, and listed apart by the measure; a page still names the one reader it is for, anchored or accepted without anchors
+          unchanged-because: DEC-001 point 7 keys a reading-evidence entry by page or path, commit and check; the readers point, which a page's reader field names, is untouched, so a page still names the one reader it is for
   RS-LDOC-004:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
@@ -39,9 +39,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001"]}
         revalidated:
-          at: 2026-09-30T08:02:27Z
+          at: 2026-10-01T23:31:37Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 8 now says an accepted reason for a page with no anchors is the core's unanchored-because in the friction block, inside the container, written on a person's decision; pages of a kind still follow one format and name their kind in their own fields
+          unchanged-because: DEC-001 point 7 keys a reading-evidence entry by page or path, commit and check; an evidence entry is no page and has no kind, so pages of a kind still follow one format and name their kind
   RS-LDOC-005:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
@@ -49,9 +49,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001"]}
         revalidated:
-          at: 2026-09-30T08:02:29Z
+          at: 2026-10-01T23:31:40Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 8 now says an accepted reason for a page with no anchors is the core's unanchored-because, written on a person's decision, and listed apart by the measure; an index-like file is still a signpost to what a folder holds, whatever it gives for its anchors
+          unchanged-because: DEC-001 point 7 keys a reading-evidence entry by page or path, commit and check; nothing about what an index-like file is changes with the evidence point's key, so it is still a signpost to what a folder holds
   RS-LDOC-006:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
@@ -59,9 +59,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001"]}
         revalidated:
-          at: 2026-09-30T08:02:31Z
+          at: 2026-10-01T23:31:42Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 8 now says an accepted reason for a page with no anchors is the core's unanchored-because, written on a person's decision when a page has nothing to anchor to, and listed apart by the measure; creating nothing ahead of the need for it holds
+          unchanged-because: DEC-001 point 7 keys a reading-evidence entry by page or path, commit and check, while no filler of the point has shipped; the key is settled before the first one needs it, and nothing is created ahead of that need
 ---
 
 # LDOC — the shared documentation method
