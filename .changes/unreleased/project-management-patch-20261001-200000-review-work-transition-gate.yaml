@@ -2,6 +2,7 @@ component: project-management
 kind: patch
 custom:
   category: Fixed
+  pr: "1235"
 body: >
   `review-work` now checks that the issue can move to Review before it touches
   the pull request (#947). Before, it opened a ready PR or flipped a draft to
