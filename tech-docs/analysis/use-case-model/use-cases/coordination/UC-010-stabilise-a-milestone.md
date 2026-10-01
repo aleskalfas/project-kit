@@ -20,9 +20,9 @@ pkit:
       artefact:
         - ACT-operator
     revalidated:
-      at: 2026-10-01T15:15:12Z
+      at: 2026-10-01T18:45:58Z
       outcome: unchanged
-      unchanged-because: closing the Milestone after the release (5a) now rolls a date-triggered close's open children forward; the stabilisation line, its lift, release scope and the guards are untouched, and the release Milestone closes with its children closed
+      unchanged-because: on this branch the merge mechanic moved into the backbone's pull-request landing module, placed there by ADR-061; the steps by which a milestone is stabilised and its release cut read as before
 ---
 
 # UC-010 — Stabilise a Milestone for a release

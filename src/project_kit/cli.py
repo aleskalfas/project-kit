@@ -9,6 +9,7 @@ the rest of new).
 
 from __future__ import annotations
 
+import math
 import os
 import shlex
 import sys
@@ -32,6 +33,7 @@ from project_kit import (
     friction_repository,
     friction_resolve,
     friction_write,
+    pull_request_landing,
     router,
     scratchpads,
 )
@@ -530,6 +532,197 @@ def _settled_base(target_root: Path, base_ref: str | None) -> default_branch.Bas
         raise click.ClickException(found.problem or f"the base {found.ref!r} cannot be compared.")
     _warn_settled(settled)
     return found
+
+
+@main.group("pull-request")
+def pull_request() -> None:
+    """Landing a pull request on the hosting service — the one merge mechanic.
+
+    Where a pull request's base merges through a merge queue, and where the PR
+    stands in it; the repository's squash-commit defaults; the direct squash
+    merge, the enqueue, the wait for the queue's merge and taking a PR out of
+    the queue. Each runs `gh` from the working directory. `--json` writes each
+    document as one line of JSON, which is how a capability's script calls it.
+    Reference: `.pkit/cli/README.md`, "Pull-request commands".
+    """
+
+
+def _pull_request_json_option(command: Callable[..., None]) -> Callable[..., None]:
+    return click.option(
+        "--json",
+        "as_json",
+        is_flag=True,
+        default=False,
+        help="Write the document as one line of JSON.",
+    )(command)
+
+
+def _say_outcome(
+    number: int,
+    outcome: pull_request_landing.Outcome,
+    as_json: bool,
+    done: str,
+) -> None:
+    """Write a request's outcome — `done` when accepted — and exit 1 when it was not."""
+    if as_json:
+        click.echo(
+            pull_request_landing.render_json(pull_request_landing.outcome_document(number, outcome))
+        )
+    elif outcome.accepted:
+        click.echo(done)
+    else:
+        click.echo(f"error: {outcome.reason or 'gh refused it'}", err=True)
+    if not outcome.accepted:
+        raise SystemExit(1)
+
+
+@pull_request.command("read")
+@click.argument("number", type=int)
+@_pull_request_json_option
+def pull_request_read(number: int, as_json: bool) -> None:
+    """Whether PR NUMBER's base merges through a queue, and where the PR stands.
+
+    Read-only. Exit 0 when read; 1 when GitHub could not be read, with why.
+    """
+    document = pull_request_landing.reading_document(number)
+    reading = document["reading"]
+    if as_json:
+        click.echo(pull_request_landing.render_json(document))
+    elif reading is not None:
+        if reading["has_queue"]:
+            method = str(reading["merge_method"] or "an unreported method").lower()
+            base = f"merges through a queue, by {method}"
+        else:
+            base = "merges directly"
+        click.echo(f"PR #{number}: {reading['description']}\nBase: {base}")
+    else:
+        click.echo(f"error: PR #{number} could not be read: {document['unreadable']}", err=True)
+    if reading is None:
+        raise SystemExit(1)
+
+
+@pull_request.command("squash-defaults")
+@_pull_request_json_option
+def pull_request_squash_defaults(as_json: bool) -> None:
+    """The repository's default squash-commit title and message.
+
+    A merge queue composes its squash commit from these. Read-only. Exit 0
+    when read; 1 when they could not be read, with why.
+    """
+    document = pull_request_landing.squash_defaults_document()
+    if as_json:
+        click.echo(pull_request_landing.render_json(document))
+    elif document["unreadable"] is None:
+        click.echo(f"Squash commit: title {document['title']}, message {document['message']}")
+    else:
+        click.echo(f"error: {document['unreadable']}", err=True)
+    if document["unreadable"] is not None:
+        raise SystemExit(1)
+
+
+@pull_request.command("merge")
+@click.argument("number", type=int)
+@click.option("--subject", required=True, help="The squash commit's subject: the PR title.")
+@click.option("--head", "head_oid", default="", metavar="SHA", help="Merge only at this head.")
+@click.option("--admin", is_flag=True, default=False, help="Merge around branch protection.")
+@_pull_request_json_option
+def pull_request_merge(
+    number: int, subject: str, head_oid: str, admin: bool, as_json: bool
+) -> None:
+    """Squash-merge PR NUMBER directly, with SUBJECT as the commit's subject.
+
+    Accepted is not proof of a merge: on a base that requires a queue, gh
+    enqueues instead — `pull-request read` says which. Never deletes the head
+    branch. Exit 0 when gh accepted it; 1 otherwise, with gh's reason.
+    """
+    outcome = pull_request_landing.squash_merge(
+        number, subject=subject, head_oid=head_oid, admin=admin
+    )
+    _say_outcome(number, outcome, as_json, f"gh accepted the squash merge of PR #{number}")
+
+
+@pull_request.command("enqueue")
+@click.argument("number", type=int)
+@click.option("--head", "head_oid", default="", metavar="SHA", help="Enqueue only this head.")
+@_pull_request_json_option
+def pull_request_enqueue(number: int, head_oid: str, as_json: bool) -> None:
+    """Hand PR NUMBER to its base's merge queue; the queue makes the merge.
+
+    The queue squashes by its own method, with a commit composed from the
+    repository's squash-commit defaults. Exit 0 once GitHub took it in; 1
+    otherwise, with gh's reason.
+    """
+    outcome = pull_request_landing.enqueue(number, head_oid=head_oid)
+    _say_outcome(number, outcome, as_json, f"enqueued PR #{number}")
+
+
+@pull_request.command("dequeue")
+@click.argument("number", type=int)
+@_pull_request_json_option
+def pull_request_dequeue(number: int, as_json: bool) -> None:
+    """Take PR NUMBER out of its base's merge queue, and confirm it is out.
+
+    Exit 0 once a reading shows it neither queued nor merged; 1 otherwise.
+    """
+    outcome = pull_request_landing.dequeue(number)
+    _say_outcome(number, outcome, as_json, f"PR #{number} is out of the merge queue")
+
+
+@pull_request.command("wait")
+@click.argument("number", type=int)
+@click.option(
+    "--head",
+    "head_oid",
+    default="",
+    metavar="SHA",
+    help="The head that was checked: a reading at another ends the wait.",
+)
+@click.option(
+    "--seconds",
+    type=click.FloatRange(min=0),
+    default=None,
+    help="How long to wait; 0 reads once. Default: as long as the queue estimates, "
+    f"plus {pull_request_landing.ETA_MARGIN_SECONDS / 60:g} min, at most "
+    f"{pull_request_landing.MAX_WAIT_SECONDS / 60:g} min.",
+)
+@_pull_request_json_option
+def pull_request_wait(number: int, head_oid: str, seconds: float | None, as_json: bool) -> None:
+    """Wait for the merge queue to merge PR NUMBER.
+
+    Writes each reading that changes, then how the wait ended. The PR is
+    declared out of the queue only on two readings running. Exit 0 when it
+    merged; 4 when the time ran out with it still queued; 3 when it left the
+    queue unmerged or its head moved; 1 when GitHub could not be read.
+    """
+    if seconds is not None and not math.isfinite(seconds):
+        raise click.BadParameter("not a number of seconds", param_hint="--seconds")
+
+    def report(reading: pull_request_landing.Reading) -> None:
+        if as_json:
+            document = pull_request_landing.wait_reading_document(number, reading)
+            click.echo(pull_request_landing.render_json(document))
+        else:
+            click.echo(f"PR #{number} {reading.describe()}")
+
+    try:
+        wait = pull_request_landing.wait_for_merge(
+            number, timeout_seconds=seconds, on_change=report, head_oid=head_oid
+        )
+    except pull_request_landing.Unreadable as exc:
+        if as_json:
+            document = pull_request_landing.wait_end_document(number, None, str(exc))
+            click.echo(pull_request_landing.render_json(document))
+        else:
+            click.echo(f"error: PR #{number} could not be read: {exc}", err=True)
+        raise SystemExit(1) from None
+    if as_json:
+        click.echo(
+            pull_request_landing.render_json(pull_request_landing.wait_end_document(number, wait))
+        )
+    else:
+        click.echo(f"ended: {wait.ended}")
+    if wait.ended != pull_request_landing.MERGED:
+        raise SystemExit(4 if wait.ended == pull_request_landing.STILL_QUEUED else 3)
 
 
 def _graph_format_options(command: Callable[..., None]) -> Callable[..., None]:
@@ -1535,7 +1728,31 @@ def release_lint(skip: bool | None) -> None:
     default=False,
     help="Report what would be merged without merging.",
 )
-def release_merge(pr: int, dry_run: bool) -> None:
+@click.option(
+    "--no-wait",
+    is_flag=True,
+    default=False,
+    help="Where the base merges through a queue: return once the PR is queued (exit 4). "
+    "Run the same command again once it has merged to delete its head branch.",
+)
+@click.option(
+    "--wait-minutes",
+    type=click.FloatRange(min=0),
+    default=None,
+    metavar="MINUTES",
+    help="Where the base merges through a queue: how long to wait for the queue to merge "
+    f"the PR. Default: {pull_request_landing.wait_limit(None)}.",
+)
+@click.option(
+    "--force",
+    is_flag=True,
+    default=False,
+    help="Where the base merges through a queue: enqueue a head the queue already dropped. "
+    "Without it, such a head is refused until new commits are pushed.",
+)
+def release_merge(
+    pr: int, dry_run: bool, no_wait: bool, wait_minutes: float | None, force: bool
+) -> None:
     """Merge a release PR — the sanctioned path for a `chore(release):` PR.
 
     A release PR closes no issue, so the issue-PR merge gate (`pkit
@@ -1543,13 +1760,28 @@ def release_merge(pr: int, dry_run: bool) -> None:
     release flow's own merge: it is guarded to `release/*` heads (a non-release
     PR is refused, pointing at the issue-PR gate), merges only when the PR is
     open, mergeable, and its required checks are green, and lands it as one
-    squash commit whose subject is the PR title, deleting the head branch
-    (best-effort; never a fork's head). It does **not** tag — `release-tag.yml` cuts the
-    backbone tag on the resulting push to `main` (PRJ-004). Human-gated: a human
-    decides to run it; nothing auto-merges.
+    squash commit whose subject is the PR title — through the base's merge queue
+    where it has one — deleting the head branch once GitHub reports the PR
+    merged (best-effort; never a fork's head). Exit 4 when the queue still holds
+    the PR, or a direct merge could not be confirmed: running it again once the
+    PR has merged deletes the head branch. Exit 3 when the queue dropped the PR
+    or its head moved; nothing is deleted then. A head the queue already
+    dropped is not enqueued again without `--force`. It does **not** tag —
+    `release-tag.yml` cuts the backbone tag on the resulting push to `main`
+    (PRJ-004). Human-gated: a human decides to run it; nothing auto-merges.
     """
+    if no_wait and wait_minutes is not None:
+        raise click.UsageError("--no-wait and --wait-minutes are mutually exclusive.")
+    if wait_minutes is not None and not math.isfinite(wait_minutes):
+        raise click.BadParameter("not a number of minutes", param_hint="--wait-minutes")
+    wait_seconds = 0.0 if no_wait else (wait_minutes * 60 if wait_minutes is not None else None)
     source_kit = _target_kit()
-    click.echo(merge_release_pr(source_kit.parent, pr, dry_run=dry_run))
+    report = merge_release_pr(
+        source_kit.parent, pr, dry_run=dry_run, wait_seconds=wait_seconds, force=force
+    )
+    click.echo(report.text)
+    if report.exit_code:
+        raise SystemExit(report.exit_code)
 
 
 @release.command("publish-notes")

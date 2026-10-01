@@ -1,0 +1,18 @@
+component: project-management
+kind: patch
+custom:
+  category: Changed
+  pr: "1207"
+  requires_backbone: release
+body: >
+  `done-work` and `merge-pr` land a PR through the backbone's merge mechanic,
+  `pkit pull-request`, the one `pkit release merge` uses too: the merge-queue
+  reading, the merge or the enqueue, the wait and the dequeue are the
+  backbone's, run in the environment the `gh:` block pins, and the verbs keep
+  their gates, refusals, output and exit codes. Each call to it is bounded and,
+  past its bound, stopped with what it started; a merge or an enqueue it gives
+  no answer to is never taken for a failed one — the PR is read again, and
+  when GitHub cannot say either the run exits 4 with what follows the merge
+  owed. Upgrade it together with the backbone: against one that predates the
+  command the verbs cannot read how the base merges, say which `pkit` ran, and
+  merge nothing.

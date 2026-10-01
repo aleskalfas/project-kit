@@ -55,7 +55,9 @@ shared with `done-work`; #882):
     the queue estimates plus a margin, at most 30 minutes, or
     `--wait-minutes`. When the wait ends first, or `--no-wait` returns at
     once, the run exits 4; so does a direct merge gh accepted when GitHub
-    cannot then be read to confirm it merged. A push after the enqueue takes
+    cannot then be read to confirm it merged, and a merge or an enqueue that
+    got no answer back when GitHub cannot then be read to tell what it came
+    to — never taken for a failed one. A push after the enqueue takes
     the PR out of the queue (exit 3). The merge mechanic, queue included, is
     `_lib.pr_merge.land`, the one `done-work` runs.
   - `after_merge_pr` hooks (DEC-024) IMMEDIATELY after the merge — once
@@ -98,8 +100,9 @@ Exit codes:
      the merge queue without merging, or was taken out of it because its head
      moved
   4  accepted, a re-run from this clone completes it: the PR is in the merge
-     queue and has not been seen merged, or gh accepted the merge and GitHub
-     could not be read to confirm it
+     queue and has not been seen merged, or gh accepted the merge — or a
+     merge or an enqueue got no answer back — and GitHub could not be read to
+     confirm it
 """
 
 from __future__ import annotations
@@ -520,10 +523,11 @@ def _after_merge(
 def _not_merged(pr_number: int, base: str, landing: pr_merge.Landing) -> int:
     """Report a landing that did not end merged; the run's exit code.
 
-    Accepted (exit 4) are a PR the queue was handed and a direct merge gh
-    accepted that GitHub could not then confirm: the run recorded the
-    after-merge steps as owed, so `merge-pr` run again from this clone
-    completes them once the PR has merged. Everything else merged nothing.
+    Accepted (exit 4) are a PR the queue was handed, and a merge GitHub could
+    not then confirm — one gh accepted, or a merge or an enqueue that got no
+    answer back: the run recorded the after-merge steps as owed, so
+    `merge-pr` run again from this clone completes them once the PR has
+    merged. Everything else merged nothing.
     """
     reading = landing.reading
     where = f" ({reading.describe()})" if reading is not None else ""

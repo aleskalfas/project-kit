@@ -21,9 +21,9 @@ pkit:
       artefact:
         - ACT-operator
     revalidated:
-      at: 2026-10-01T18:58:11Z
+      at: 2026-10-01T16:04:59Z
       outcome: unchanged
-      unchanged-because: the changeset guard now counts only the changesets a pull request adds or edits; the release step and the release pull request this use case walks are untouched, and the guard still exempts a release pull request
+      unchanged-because: on this branch the merge mechanic moved into the backbone's pull-request landing module, which the pm verbs and the release step call; what main brought in (the process move origin, the configuration writer, the milestone rollforward) does not change what this page describes
 ---
 
 # UC-005 — Cut a release while unfinished work remains

@@ -13,6 +13,8 @@ from pathlib import Path
 
 import pytest
 
+from tests import pull_request_backbone
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = (
     REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "merge-pr.py"
@@ -414,8 +416,8 @@ def _wire_merge_seams(
     monkeypatch.setattr(mp, "_write_record", write_record)
 
     def no_queue(pr_number, config):
-        return mp.merge_queue.Reading(
-            has_queue=False, pr_state="MERGED" if calls["merged"] else "OPEN"
+        return pull_request_backbone.reading(
+            mp.merge_queue, has_queue=False, pr_state="MERGED" if calls["merged"] else "OPEN"
         )
 
     monkeypatch.setattr(mp.merge_queue, "read", no_queue)
@@ -626,15 +628,14 @@ def _queued(mp, **fields):
         "pr_state": "OPEN",
         "head_oid": "sha-head",
     }
-    return mp.merge_queue.Reading(**{**base, **fields})
+    return pull_request_backbone.reading(mp.merge_queue, **{**base, **fields})
 
 
 def _wire_queue(mp, monkeypatch, readings, **seams):
     """merge-pr's seams, with a base whose queue answers `readings` in turn
-    (the last repeated; an exception is raised), an enqueue that records
-    itself, and a clock the wait's sleeps advance."""
-    import functools
-
+    (the last repeated; an exception is raised) — to merge-pr and to the
+    backbone's wait alike — an enqueue that records itself, and a clock the
+    wait's sleeps advance."""
     calls = _wire_merge_seams(mp, monkeypatch, rollup=_MP_GREEN, **seams)
     remaining = list(readings)
 
@@ -659,10 +660,8 @@ def _wire_queue(mp, monkeypatch, readings, **seams):
         mp.merge_queue, "squash_commit_defaults", lambda config: ("PR_TITLE", "PR_BODY")
     )
     monkeypatch.setattr(mp.pr_merge, "enqueue", enqueue)
-    monkeypatch.setattr(
-        mp.merge_queue,
-        "wait_for_merge",
-        functools.partial(mp.merge_queue.wait_for_merge, sleep=sleep, clock=lambda: now[0]),
+    pull_request_backbone.in_process(
+        monkeypatch, mp.merge_queue, read=read, sleep=sleep, clock=lambda: now[0]
     )
     return calls
 
@@ -875,6 +874,54 @@ def test_a_direct_merge_github_cannot_confirm_is_completed_by_a_rerun(mp, monkey
     assert _run_merge_main(mp, monkeypatch, ["99", "--yes"]) == 0
     assert calls["order"] == [("merged", 99), *_AFTER_THE_MERGE]
     assert "nothing is left to do" in capsys.readouterr().out
+
+
+def test_a_merge_with_no_answer_back_that_merged_fires_the_hooks(mp, monkeypatch, capsys):
+    """The backbone's run ended after gh accepted the merge, without saying so:
+    GitHub reports the PR merged, so it is the merge — the hooks fire now,
+    rather than a re-run refusing it as merged by someone else."""
+    calls = _wire_merge_seams(mp, monkeypatch, rollup=_MP_GREEN)
+
+    def no_answer_back(pr_number, *, pr_title, admin, config, head_oid=""):
+        calls["merged"] = True
+        calls["order"].append(("merged", pr_number))
+        return None
+
+    monkeypatch.setattr(mp.pr_merge, "squash_merge", no_answer_back)
+    rc = _run_merge_main(mp, monkeypatch, ["99", "--yes"])
+    out = capsys.readouterr().out
+    assert rc == 0, out
+    assert calls["order"] == [("merged", 99), *_AFTER_THE_MERGE]
+    assert calls["records"][99].state == mp._RAN
+
+
+def test_a_merge_with_no_answer_back_github_cannot_settle_is_owed(mp, monkeypatch, capsys):
+    """Neither the backbone nor GitHub can say what the merge came to: the run
+    exits 4, unconfirmed, with the after-merge steps recorded as owed — never
+    "nothing merged", which would leave a merge without its hooks."""
+    calls = _wire_merge_seams(mp, monkeypatch, rollup=_MP_GREEN)
+
+    def no_answer_back(pr_number, *, pr_title, admin, config, head_oid=""):
+        calls["order"].append(("asked", pr_number))
+        return None
+
+    def read(pr_number, config):
+        if calls["order"]:
+            raise mp.merge_queue.Unreadable("HTTP 502")
+        return pull_request_backbone.reading(mp.merge_queue, has_queue=False, pr_state="OPEN")
+
+    monkeypatch.setattr(mp.pr_merge, "squash_merge", no_answer_back)
+    monkeypatch.setattr(mp.merge_queue, "read", read)
+    rc = _run_merge_main(mp, monkeypatch, ["99", "--yes"])
+    out = capsys.readouterr().out
+    assert rc == mp.EXIT_ACCEPTED == 4
+    assert calls["order"] == [("asked", 99)]
+    assert (
+        "[unconfirmed] the merge of PR #99 into the base branch got no answer back, and "
+        "GitHub could not be read since to tell whether it merged or entered the merge "
+        "queue: HTTP 502. Nothing after the merge has run."
+    ) in out
+    assert calls["records"][99] == mp._Record(mp._OWED, "sha-head", "2026-10-01T12:00:00+00:00")
 
 
 def test_the_record_is_kept_in_the_clones_git_directory(mp, tmp_path, monkeypatch):
