@@ -40,9 +40,11 @@ consumers share:
     invoked nor gated — by both consumers alike.
   * applying the adopter's not-code list (`review.floors.not_code`, `NotCode`,
     #1178) to the diff before any floor reads it, so a changed path the list
-    matches satisfies no floor — by both consumers alike.
-  * naming which required reviewers only a diff floor requires, and their
-    floors (`Resolution.floors_by_reviewer`, #1179) — what the verdict
+    matches satisfies no floor — by both consumers alike. The freshness rule
+    reads the author's changes through the same list, so the list decides
+    both who is required and whose approval survives a change.
+  * naming which required reviewers' whole remit is their diff floors, and
+    those floors (`Resolution.floors_by_reviewer`, #1179) — what the verdict
     freshness rule (`_lib.verdict_freshness`) keys on.
 
 Fail-closed posture (DEC-032 D5)
@@ -205,13 +207,14 @@ class Resolution:
         withdrawn from this resolution, each with its reason, for the
         consumers to show. Project-wide, not per PR: an entry is listed
         whether or not its contribution would have matched this PR.
-      * `floors_by_reviewer` — for each required reviewer that only a
-        diff-property floor requires on this PR, the floor kinds its rules
-        carry (#1179). A reviewer absent from it — the baseline, or one the
-        closing issues' classification matched — is required for the whole
-        change. The freshness rule (`_lib.verdict_freshness`) reads this:
-        a floor-only reviewer's verdict stands until the author's changes
-        reach one of its floors.
+      * `floors_by_reviewer` — for each required reviewer whose whole remit
+        is its diff-property floors — a floor requires it on this PR and
+        every rule it has is a floor-only rule — the floor kinds its rules
+        carry (#1179). A reviewer absent from it — the baseline, or one with
+        any classification rule, matched on this PR or not — is required for
+        the whole change. The freshness rule (`_lib.verdict_freshness`) reads
+        this: a floor-scoped reviewer's approval stands until the author's
+        changes reach one of its floors.
       * `not_code` — the not-code list this resolution applied to the diff,
         so the freshness rule reads the author's changes through the same
         list.
@@ -516,25 +519,31 @@ def _floor_only_reviewers(
     floor_rules: tuple[ContributionRule, ...],
     required_for_the_whole_change: set[str],
 ) -> dict[str, frozenset[str]]:
-    """Each reviewer only a diff floor requires, mapped to its floor kinds (#1179).
+    """Each reviewer whose whole remit is its diff floors, mapped to those
+    floor kinds (#1179).
 
-    A reviewer the baseline or a classification match also requires is left
-    out: it is required for the whole change, not for what the diff touches.
-    A floor-only reviewer's kinds are every floor its rules in the collection
+    A reviewer is floor-scoped only when a floor requires it on this PR and
+    EVERY rule the collection holds for it is a floor and nothing else. A
+    rule carrying a classification match declares a remit wider than the
+    floors — `docs-reviewer` rides `touches-code` but also `type: "*"`, and
+    its job is the documentation — so such a reviewer is required for the
+    whole change even on a PR whose classification matched nothing. So is
+    one the baseline requires. The kinds are every floor the reviewer's rules
     carry, not just the ones this PR's diff satisfied — a later change that
     reaches any of them is one the reviewer is there to check.
     """
-    floor_only = [
-        rule.reviewer for rule in floor_rules if rule.reviewer not in required_for_the_whole_change
-    ]
-    return {
-        reviewer: frozenset(
-            rule.floor
-            for rule in collection.rules
-            if rule.reviewer == reviewer and rule.floor is not None
-        )
-        for reviewer in dict.fromkeys(floor_only)
-    }
+    rules_by_reviewer: dict[str, list[ContributionRule]] = {}
+    for rule in collection.rules:
+        rules_by_reviewer.setdefault(rule.reviewer, []).append(rule)
+    scoped: dict[str, frozenset[str]] = {}
+    for reviewer in dict.fromkeys(rule.reviewer for rule in floor_rules):
+        rules = rules_by_reviewer.get(reviewer, [])
+        if reviewer in required_for_the_whole_change or not all(
+            rule.floor is not None and not rule.predicate for rule in rules
+        ):
+            continue
+        scoped[reviewer] = frozenset(rule.floor for rule in rules if rule.floor is not None)
+    return scoped
 
 
 def _opt_out_error(details: tuple[str, ...]) -> Resolution:

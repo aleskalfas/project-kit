@@ -3,9 +3,9 @@ reviewed head (`_lib.author_delta`), read from real git history, and the rule
 that judges each verdict by them (`_lib.verdict_freshness`).
 
 The reviewers have the shipped panel's shape: `pm-reviewer` is the baseline,
-`docs-reviewer` is matched by the closing issue's classification, and
-`code-reviewer` / `security-reviewer` are required only by the touches-code
-floor. The traces the issue names:
+`docs-reviewer` rides the touches-code floor and a classification match (so it
+is required for the whole change on any PR), and `code-reviewer` /
+`security-reviewer` only the touches-code floor. The traces the issue names:
 
   * a clean merge of the base branch → every verdict fresh;
   * a Markdown-only fix → code and security fresh, pm and docs stale;
@@ -198,6 +198,62 @@ def test_a_markdown_only_fix_keeps_code_and_security_fresh(av, ad, vf, repo) -> 
         f"reviewed {reviewed[:7]}; changed since: README.md — reaches none of "
         "its floors (touches-code)"
     )
+
+
+PANEL_DECLARATION = (
+    REPO_ROOT / ".pkit" / "capabilities" / "software-engineering" / "review-contributions.yaml"
+)
+
+
+def _shipped_panel_floors(*, closing_types: tuple[str, ...]) -> dict[str, frozenset[str]]:
+    """`floors_by_reviewer` the resolver gives the shipped code-review panel
+    on a code PR whose closing issues carry `closing_types`."""
+    from ruamel.yaml import YAML
+
+    rc = importlib.import_module("_lib.review_contributions")
+    rr = importlib.import_module("_lib.required_reviewers")
+    rules, errors = rc.parse_contributions(
+        YAML(typ="safe").load(PANEL_DECLARATION.read_text(encoding="utf-8")),
+        "software-engineering",
+    )
+    assert errors == ()
+    collection = rc.ContributionCollection(
+        rules=rules,
+        capabilities_walked=("project-management", "software-engineering"),
+    )
+    issues = list(range(1, len(closing_types) + 1))
+    resolution = rr.resolve_required_local_reviewers(
+        99,
+        baseline_local=[PM],
+        repo_root=REPO_ROOT,
+        closing_issue_numbers=lambda _pr: issues,
+        issue_labels=lambda number: [{"name": f"type:{closing_types[number - 1]}"}],
+        changed_files=lambda _pr: ["src/app.py"],
+        collect_contributions=lambda _root: collection,
+    )
+    assert resolution.ok, resolution.error
+    assert set(resolution.required_local) == set(PANEL)
+    return resolution.floors_by_reviewer
+
+
+@pytest.mark.parametrize("closing_types", [("feature",), ()], ids=["classified", "unclassified"])
+def test_a_markdown_fix_stales_the_docs_reviewer_on_any_pr(
+    av,
+    ad,
+    vf,
+    repo,
+    lib,
+    closing_types,
+) -> None:
+    """docs-reviewer rides the touches-code floor and the `type: *` match; its
+    job is the documentation, so a Markdown fix stales it even on an
+    unclassified PR, where only the floor required it."""
+    reviewed = repo.commit({"src/app.py": "x = 2\n"}, "feature")
+    repo.commit({"README.md": "readme, fixed\n"}, "docs finding")
+
+    floors = _shipped_panel_floors(closing_types=closing_types)
+    assert floors == FLOOR_ONLY
+    assert _stale(av, _rule(vf, ad, repo, floors=floors), reviewed) == {PM, DOCS}
 
 
 def test_a_changeset_is_not_code_for_the_floor_reviewers(av, ad, vf, repo) -> None:

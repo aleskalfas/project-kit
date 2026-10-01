@@ -1096,9 +1096,15 @@ def test_satisfied_floors_reads_only_what_the_list_leaves(rr) -> None:
 
 # ---- which reviewers only a floor requires (#1179) ----------------------
 #
-# The freshness rule keeps a floor-only reviewer's verdict standing until the
-# author's changes reach one of its floors; any other reviewer is required for
-# the whole change. The resolution names the floor-only ones.
+# The freshness rule keeps a floor-scoped reviewer's approval standing until
+# the author's changes reach one of its floors; any other reviewer is required
+# for the whole change. A reviewer is floor-scoped only when every rule it has
+# is a floor and nothing else. The resolution names the floor-scoped ones.
+
+_CODE_AND_SECURITY_ON_THEIR_FLOOR = {
+    "code-reviewer": frozenset({"touches-code"}),
+    "security-reviewer": frozenset({"touches-code"}),
+}
 
 
 def test_floor_only_reviewers_on_a_classified_code_pr(rr, rc) -> None:
@@ -1112,14 +1118,13 @@ def test_floor_only_reviewers_on_a_classified_code_pr(rr, rc) -> None:
         labels={42: ["type:feature"]},
         changed=["src/app.py"],
     )
-    assert res.floors_by_reviewer == {
-        "code-reviewer": frozenset({rr.FLOOR_TOUCHES_CODE}),
-        "security-reviewer": frozenset({rr.FLOOR_TOUCHES_CODE}),
-    }
+    assert res.floors_by_reviewer == _CODE_AND_SECURITY_ON_THEIR_FLOOR
 
 
-def test_floor_only_reviewers_on_an_unclassified_code_pr(rr, rc) -> None:
-    """With no classification to match, docs-reviewer too is only on its floor."""
+def test_a_reviewer_with_a_classification_rule_is_not_floor_scoped(rr, rc) -> None:
+    """With no classification to match, only the floor requires docs-reviewer
+    on this PR — but its `type: *` rule declares a remit wider than the floor
+    (its job is the documentation), so a Markdown fix must still stale it."""
     res = _resolve(
         rr,
         baseline=["reviewer"],
@@ -1127,11 +1132,31 @@ def test_floor_only_reviewers_on_an_unclassified_code_pr(rr, rc) -> None:
         closing=[],
         changed=["src/app.py"],
     )
-    assert set(res.floors_by_reviewer) == {
-        "code-reviewer",
-        "security-reviewer",
-        "docs-reviewer",
-    }
+    assert "docs-reviewer" in res.required_local
+    assert res.floors_by_reviewer == _CODE_AND_SECURITY_ON_THEIR_FLOOR
+
+
+def test_a_rule_carrying_a_floor_and_a_match_is_a_wider_remit(rr, rc) -> None:
+    """One rule with both a floor and a classification match is not a floor
+    and nothing else, so its reviewer is not floor-scoped."""
+    rule = rc.ContributionRule(
+        capability=_SE,
+        predicate=MappingProxyType({"type": ("feature",)}),
+        reviewer="code-reviewer",
+        floor=rc.FLOOR_TOUCHES_CODE,
+    )
+    res = _resolve(
+        rr,
+        baseline=["reviewer"],
+        collection=rc.ContributionCollection(
+            rules=(rule,),
+            capabilities_walked=("project-management", _SE),
+        ),
+        closing=[],
+        changed=["src/app.py"],
+    )
+    assert res.required_local == ("reviewer", "code-reviewer")
+    assert res.floors_by_reviewer == {}
 
 
 def test_a_baseline_reviewer_on_a_floor_is_required_for_the_whole_change(

@@ -19,13 +19,15 @@ so a superseded verdict never counts however fresh it would be. Per verdict:
     -->`) stands until the author changes something its reviewer checks. The
     author's changes since that head come from `_lib.author_delta` (a clean
     merge of the base branch contributes nothing). An APPROVED from a
-    reviewer only a diff-property floor requires on this PR
-    (`Resolution.floors_by_reviewer`) stays fresh while those changes satisfy
-    none of its floors, read through the same not-code list the resolver
-    applies. Any other verdict goes stale on any change: one from the
-    baseline or a reviewer the closing issues' classification matched, and
-    every CHANGES_REQUESTED — the author is answering it, so floor scoping
-    protects approvals only. When the changes cannot be computed the verdict
+    reviewer whose whole remit is its diff-property floors
+    (`Resolution.floors_by_reviewer`: a floor requires it on this PR and
+    every rule it has is a floor and nothing else) stays fresh while those
+    changes satisfy none of its floors, read through the same not-code list
+    the resolver applies. Any other verdict goes stale on any change: one
+    from the baseline or from a reviewer with any classification rule —
+    matched on this PR or not, it declares a remit wider than the floors —
+    and every CHANGES_REQUESTED — the author is answering it, so floor
+    scoping protects approvals only. When the changes cannot be computed the verdict
     is stale.
   * **A verdict naming no head** is fresh when it was posted strictly after
     the PR's latest commit, and stale otherwise — or when that commit's time
@@ -97,7 +99,7 @@ class FreshnessRule:
     """The freshness rule for one PR at its current head.
 
     Every argument defaults to its fail-closed value: no head, no commit
-    time, no floor-only reviewer, and no way to read the author's changes —
+    time, no floor-scoped reviewer, and no way to read the author's changes —
     under which no verdict is fresh.
     """
 
@@ -195,8 +197,8 @@ def rule_for_pr(
     """The freshness rule for a PR, from its `gh pr view` payload.
 
     `pr_view` carries at least `PR_VIEW_FIELDS`. `resolution` is the PR's
-    resolved required set: its floor-only reviewers and its not-code list
-    decide what reaches a floor. A failed resolution names no floor-only
+    resolved required set: its floor-scoped reviewers and its not-code list
+    decide what reaches a floor. A failed resolution names no floor-scoped
     reviewer, so every verdict goes stale on any change. `author_delta` is
     `_lib.author_delta.author_delta`, passed by the consumer so its tests can
     stand it in.
