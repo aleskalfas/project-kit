@@ -104,9 +104,9 @@ src/project_kit/process.py reportUnknownArgumentType 16
 src/project_kit/process.py reportUnknownMemberType 23
 src/project_kit/process.py reportUnknownVariableType 24
 src/project_kit/process_authoring.py reportPrivateUsage 1
-src/project_kit/process_authoring.py reportUnknownArgumentType 5
-src/project_kit/process_authoring.py reportUnknownMemberType 32
-src/project_kit/process_authoring.py reportUnknownVariableType 20
+src/project_kit/process_authoring.py reportUnknownArgumentType 4
+src/project_kit/process_authoring.py reportUnknownMemberType 30
+src/project_kit/process_authoring.py reportUnknownVariableType 19
 src/project_kit/process_dependencies.py reportUnknownMemberType 4
 src/project_kit/process_graph.py reportUnknownMemberType 8
 src/project_kit/process_graph.py reportUnknownVariableType 8
