@@ -2,6 +2,7 @@ component: backbone
 kind: patch
 custom:
   category: Fixed
+  pr: "1206"
 body: >
   The CLI reference's `upgrade` and `pin` sections describe the pinning and
   tool update `pkit upgrade` ships: an un-pinned project is pinned at the
