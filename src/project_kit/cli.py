@@ -943,32 +943,61 @@ def friction_record_status_command(artefact: str, yes: bool, dry_run: bool) -> N
     help="Show the resolution, with each file's diff, and write nothing.",
 )
 @click.option(
+    "--yes",
+    is_flag=True,
+    default=False,
+    help="Stage the resolved files without a prompt. Without it a terminal is asked, after "
+    "the diffs; a run that cannot ask leaves them unstaged and prints the `git add` to run.",
+)
+@click.option(
     "--json", "as_json", is_flag=True, default=False, help="Emit the stable JSON document."
 )
-def friction_resolve_command(paths: tuple[str, ...], dry_run: bool, as_json: bool) -> None:
+def friction_resolve_command(
+    paths: tuple[str, ...], dry_run: bool, yes: bool, as_json: bool
+) -> None:
     """Resolve a merge's conflicting revalidations as text (COR-050 point 3): each file in
     conflict — every one, or each PATH — whose conflicts all lie inside `revalidated` blocks.
 
-    Reads the file's three versions from the index, takes the base side's block
-    — MERGE_HEAD's, the branch being merged in — where both sides revalidated,
-    keeps git's merge of everything else, writes the file and stages it. A
-    conflict anywhere else is left as git left it, and said where; a file that
-    is not an artefact's is skipped. It writes no answer: for each artefact both
-    sides revalidated it names the revalidation still owed once the merge is
+    Only git's own conflict, untouched by hand, is resolved: the file's three
+    versions are read from the index and merged again, and the result must be
+    the working file. Only the blocks git conflicted on are decided: the answer
+    from the side that changed it, the deferrals merged by anchor, and where
+    both sides revalidated, the base side's answer — only when MERGE_HEAD, the
+    branch merged in, is the change check's base. Any other conflict leaves the
+    file as git left it, and says where. The file is written; it is staged only
+    with --yes or at the prompt. It writes no answer: for each artefact both
+    sides revalidated it names the revalidation owed once the merge is
     committed, `updated` or `unchanged` as its content bears out against the
     base side's. PATH is relative to the project root. Outside a merge there is
     nothing to resolve. Exit 1 when it leaves an artefact's file in conflict.
     """
+    if yes and dry_run:
+        raise click.UsageError(
+            "--yes and --dry-run exclude each other: one stages, the other writes nothing."
+        )
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
     resolution = friction_resolve.plan_resolve(target_root, paths)
-    if not dry_run:
-        friction_resolve.apply(target_root, resolution)
+    written = () if dry_run else friction_resolve.write(target_root, resolution)
+    staged: tuple[str, ...] = ()
     if as_json:
-        click.echo(friction_resolve.render_json(resolution, dry_run=dry_run), nl=False)
+        if yes and written:
+            staged = friction_resolve.stage(target_root, written)
+        click.echo(
+            friction_resolve.render_json(resolution, dry_run=dry_run, staged=staged), nl=False
+        )
     else:
         click.echo(friction_resolve.render_human(resolution, dry_run=dry_run), nl=False)
+        if written:
+            if not yes and friction_write.interactive():
+                click.echo("")
+                click.echo(friction_resolve.render_diffs(resolution), nl=False)
+                yes = click.confirm("Stage the resolved files (`git add`)?", default=True)
+            if yes:
+                staged = friction_resolve.stage(target_root, written)
+            click.echo("")
+            click.echo(friction_resolve.render_staging(written, staged), nl=False)
     if resolution.exit_code:
         raise SystemExit(resolution.exit_code)
 

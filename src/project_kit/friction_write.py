@@ -55,7 +55,7 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, NamedTuple, cast
 
 import click
 from ruamel.yaml import YAML
@@ -120,6 +120,14 @@ _safe = YAML(typ="safe")
 
 class FrictionWriteError(click.ClickException):
     """A writer refused: nothing was written."""
+
+
+class FileNotReplaced(FrictionWriteError):
+    """`replace_file` refused one file; `reason` says why, for a caller writing several."""
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(f"{reason} Nothing was written.")
+        self.reason = reason
 
 
 class ConsentRefused(click.ClickException):
@@ -759,7 +767,7 @@ def _splice(source: _Source, keys: Sequence[str], key: str, value: Any) -> _Spli
             f"`pkit validate` reports it. Nothing was written."
         )
     existing = _pair(parent, key)
-    if parent.flow_style:
+    if _in_flow(parent):
         return _flow_splice(parent, existing, keys[-1], key, value)
     return _block_splice(fm, parent, existing, keys[-1], key, value, source)
 
@@ -793,17 +801,42 @@ def _pair(mapping: MappingNode, key: str) -> tuple[Node, Node] | None:
     return None
 
 
-def key_span(front_matter: str, keys: Sequence[str]) -> tuple[int, int] | None:
-    """Where the last of `keys` is written in `front_matter`, as `(start, end)`: from its
-    key's first character to its value's last — the characters a write in flow style
-    replaces, and in block style the key's lines without their indentation or line break.
+class KeySpan(NamedTuple):
+    """Where a key is written: `[start, end)` from its first character to its value's last,
+    and whether the mapping holding it is written in flow style (`{…}`)."""
+
+    start: int
+    end: int
+    flow: bool
+
+
+def key_span(front_matter: str, keys: Sequence[str]) -> KeySpan | None:
+    """Where the last of `keys` is written in `front_matter`: from its key's first character
+    to its value's last — the characters a write in flow style replaces, and in block style
+    the key's lines without their indentation or line break.
 
     `None` when the front matter does not parse, or the key is not written directly —
     reached through an alias or merge key — or not at all.
     """
     parent = _node_at(_composed(front_matter), keys[:-1])
     pair = _pair(parent, keys[-1]) if isinstance(parent, MappingNode) and keys else None
-    return None if pair is None else _pair_span(*pair)
+    if pair is None or not isinstance(parent, MappingNode):
+        return None
+    return KeySpan(*_pair_span(*pair), flow=_in_flow(parent))
+
+
+def _in_flow(mapping: MappingNode) -> bool:
+    """Whether a mapping is written in flow style (`{…}`)."""
+    return mapping.flow_style is True
+
+
+def written_key(key: str, value: Any, *, column: int, flow: bool) -> str:
+    """`key: value` as the writers write it, for the span `key_span` gives of a key starting
+    at `column`: in flow style, or in block style with each further line indented from
+    `column` — from the key's first character to the value's last."""
+    if flow:
+        return f"{key}: {_flow(value)}"
+    return _block(key, value, column)[column:].removesuffix("\n")
 
 
 def _rank(parent_key: str, key: str) -> int:
@@ -1151,11 +1184,9 @@ def replace_file(path: Path, rel: str, before: str, after: str) -> None:
     try:
         current = path.read_bytes().decode("utf-8")
     except (OSError, UnicodeDecodeError) as exc:
-        raise FrictionWriteError(f"cannot read {rel}: {exc}. Nothing was written.") from exc
+        raise FileNotReplaced(f"cannot read {rel}: {exc}.") from exc
     if current != before:
-        raise FrictionWriteError(
-            f"{rel} changed since it was read; run the command again. Nothing was written."
-        )
+        raise FileNotReplaced(f"{rel} changed since it was read; run the command again.")
     mode = stat.S_IMODE(path.stat().st_mode)
     tmp = path.with_name(path.name + ".pkit-tmp")
     try:
@@ -1169,7 +1200,9 @@ def replace_file(path: Path, rel: str, before: str, after: str) -> None:
 __all__ = [
     "OUTCOMES",
     "ConsentRefused",
+    "FileNotReplaced",
     "FrictionWriteError",
+    "KeySpan",
     "Plan",
     "apply",
     "ask_keep",
@@ -1185,4 +1218,5 @@ __all__ = [
     "render_plan",
     "replace_file",
     "write",
+    "written_key",
 ]
