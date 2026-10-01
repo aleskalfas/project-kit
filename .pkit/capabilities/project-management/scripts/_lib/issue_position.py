@@ -8,11 +8,11 @@ refused move changes nothing (#942, #947). Both read that state through
 The reading is the inference from the issue's own fields,
 `lifecycle_inference.infer_current_state`: closed reads Done, else the first
 state label, else a milestone reads Backlog, else Todo. The process engine's
-shipped detectors (`lifecycle_predicates.detect_state`) apply that same
-inference to the same fields, so the early check and the engine agree by
-construction today, and the check needs no `pkit process status` run of its
-own. When a reader of a board-carried state exists (#726), it goes here and in
-the detectors.
+shipped detection, the lifecycle's classifier
+(`lifecycle_predicates.classify_state`), applies that same inference to the same
+fields, so the early check and the engine agree by construction today, and the
+check needs no `pkit process status` run of its own. When a reader of a
+board-carried state exists (#726), it goes here and in the classifier.
 
 `move-issue` reads the state itself when it moves: the engine's position, else
 the same inference. So a state that changed after the verb's check is judged

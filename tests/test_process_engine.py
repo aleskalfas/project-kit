@@ -458,6 +458,34 @@ def test_cli_can_move_shows_the_predicates_words(
     assert "→ To fix: run `pkit fixture bootstrap`" in result.output
 
 
+def test_status_offers_no_move_from_an_indeterminate_position(fixture_repo: Path) -> None:
+    # A `from: "*"` move leaves any state, so it is listed even where the
+    # position cannot be read. `can-move` refuses it there (fail-closed), and
+    # `status` used to list it beside "Where: indeterminate" as permitted.
+    schemas = fixture_repo / ".pkit" / "capabilities" / "fixture" / "schemas"
+    (schemas / "demo.yaml").write_text(
+        _PROCESS_DEFINITION + '    - from: "*"\n'
+        "      to: draft\n"
+        "      trigger: reset\n"
+        "      authorisation: agent-autonomous\n"
+        "      why: Start over from anywhere.\n",
+        encoding="utf-8",
+    )
+    _refusing_detection(fixture_repo)
+
+    allowed, reason, _pos = _engine(fixture_repo).can_move("draft", actor="agent")
+    assert allowed is False
+    assert reason.startswith("position is indeterminate")
+
+    [reset] = json.loads(render_status_json(_engine(fixture_repo), "agent"))["legal_moves"]
+    assert (reset["to"], reset["allowed"], reset["indeterminate"]) == ("draft", False, True)
+    assert reset["reason"] == reason.splitlines()[0]
+
+    narrative = strip_ansi(render_status_narrative(_engine(fixture_repo), "agent"))
+    assert "? draft  [reset]" in narrative
+    assert "✓" not in narrative
+
+
 @pytest.mark.parametrize(
     ("body", "cause"),
     [

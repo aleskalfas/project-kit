@@ -17,10 +17,11 @@ DELEGATED to the process engine via `pkit process …` (subprocess, never
 imported, ADR-020): this script reads the issue's position from the
 engine and, after applying its domain side-effect, journals the move
 through the engine (the seam-ordering contract in .pkit/process/
-README.md). The engine's detectors reproduce this script's inference
-precedence, so position is identical (behaviour parity is the acceptance
-bar). The parity-critical wrapper-side concerns STAY here: membership,
-placeholder, authorisation/bypass/TTY, and the forward cascade.
+README.md). The engine's detection — the lifecycle's classifier,
+`detect-state` — reproduces this script's inference precedence, so
+position is identical (behaviour parity is the acceptance bar). The
+parity-critical wrapper-side concerns STAY here: membership, placeholder,
+authorisation/bypass/TTY, and the forward cascade.
 
 The substrate-specific mechanics differ per adopter config. WHICH substrate
 carries `state` is asked of `_lib/axis_carriage` — the map governs the axis
@@ -314,12 +315,14 @@ def main() -> int:
     # fallback below is map-aware (agrees with the engine's map-aware detection).
     substrate_map = axis_labels.load_substrate_map(capability_root)
 
-    # Position: read from the engine (DEC-033 D7 — read, don't re-infer). The
-    # engine's detectors reproduce this script's inference precedence (and are
-    # now map-aware, ADR-026 §5), so the result is identical; fall back to the
-    # local inference only when the engine is unreachable (e.g. `pkit` not on
-    # PATH), so a move is never blocked. The fallback is threaded the same map so
-    # it agrees with the engine under a present derive binding.
+    # Position: read from the engine (DEC-033 D5 — read, don't re-infer). The
+    # engine's detection — the lifecycle's classifier — reproduces this script's
+    # inference precedence (and is map-aware, ADR-026 §5), so the result is
+    # identical; fall back to the local inference when the engine is unreachable
+    # (e.g. `pkit` not on PATH) or cannot tell where the issue is (an
+    # indeterminate position), so a move is never blocked. The fallback is
+    # threaded the same map so it agrees with the engine under a present derive
+    # binding.
     engine_status = _engine_status(args.issue_number)
     current_state = _position_from_status(engine_status)
     if current_state is None:
@@ -837,17 +840,18 @@ def _walk_parent_chain(body: str) -> list[int]:
     return out
 
 
-# ---- process-engine delegation (DEC-033 D5/D7) ----------------------
+# ---- process-engine delegation (DEC-033 D4/D5) ----------------------
 #
 # move-issue delegates POSITION + JOURNAL to the shared process engine
 # (`pkit process …`, COR-033), invoked by subprocess (never imported,
 # ADR-020). It keeps the parity-critical wrapper-side concerns local:
 # bypass/audit, TTY-confirm, placeholder/membership gates, cascade, and
-# the domain side-effect (the label/board edit). The engine's detectors
-# reproduce `_infer_current_state` exactly, so the engine position and
-# the local inference agree; the engine is the single source of position
-# truth (the seam-ordering contract in .pkit/process/README.md). The journal
-# write is `_lib.move_journal`, the one path close-issue records its closes
+# the domain side-effect (the label/board edit). The engine's detection
+# (pm's classifier, `detect-state`) reproduces `_infer_current_state`
+# exactly, so the engine position and the local inference agree; the
+# engine is the single source of position truth (the seam-ordering
+# contract in .pkit/process/README.md). The journal write is
+# `_lib.move_journal`, the one path close-issue records its closes
 # through too (#1231).
 
 
