@@ -20,9 +20,9 @@ pkit:
       artefact:
         - ACT-operator
     revalidated:
-      at: 2026-10-01T00:09:48Z
+      at: 2026-09-30T23:42:48Z
       outcome: unchanged
-      unchanged-because: done-work's change is how the merge gate reads a PR's changed files for the diff-floor reviewers and the refusal when it cannot; stabilising a Milestone, and the guards that hold it, did not change
+      unchanged-because: on this branch close-milestone's audit line counts open children as still open, not rolled forward, and its warning names edit-issue --milestone to move them; the pm README states that a close moves no open child, and tests pin that a close writes only the Milestone; stabilising a Milestone, release scope, the guards, the required status and the close that lifts the stabilisation are untouched, so the use case's flow holds
 ---
 
 # UC-010 — Stabilise a Milestone for a release

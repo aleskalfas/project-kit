@@ -1,0 +1,16 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `close-milestone` no longer records a rollforward it did not perform (#387).
+  Closing a Milestone moves none of its open children — a date-based close, or
+  a `--force`d content-based or `either` one, leaves them assigned to the closed
+  Milestone — but the audit line appended to the description counted them as
+  "rolled forward". It now counts them as "still open, not rolled forward". The
+  close's warning pointed at `set-field --parent` or a raw `gh issue edit
+  --milestone` to reassign them by hand; the raw edit changes only the native
+  field, so the closed Milestone kept counting the child through its first-line
+  ref. The warning now names `edit-issue <n> --milestone <next> --reason`, which
+  moves both. The pm README's Milestone section states what a close does with
+  open children.
