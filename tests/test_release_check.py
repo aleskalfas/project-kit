@@ -129,6 +129,147 @@ def test_touched_components_maps_prefixes_and_subtrees(tmp_path: Path) -> None:
     assert set(touched) == {"backbone", "claude-code"}
 
 
+# --- Only the diff's own changesets declare its change (#782) ----------------
+
+
+def _another_pull_request(source_kit: Path, component: str, kind: str = "minor") -> Path:
+    """Land a changeset for `component` on `main`, as another pull request would,
+    and return to `feature`, which has it only once it merges `main`. Returns the
+    changeset's path."""
+    repo = source_kit.parent
+    _git(repo, "checkout", "-q", "main")
+    directory = changesets.unreleased_dir(repo)
+    directory.mkdir(parents=True, exist_ok=True)
+    path = directory / f"other-{component}-{kind}.yaml"
+    path.write_text(f"component: {component}\nkind: {kind}\nbody: note\n", encoding="utf-8")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", f"another pull request ({component})")
+    _git(repo, "checkout", "-q", "feature")
+    return path
+
+
+@pytest.mark.parametrize("skip", [False, True])
+def test_a_pending_changeset_from_another_pull_request_does_not_declare_this_ones(
+    tmp_path: Path, skip: bool
+) -> None:
+    """The false pass of #782: the diff touches the backbone and declares nothing,
+    while a pending changeset an earlier pull request merged names the backbone.
+    The escape hatch still waives the check."""
+    source_kit = _make_repo(tmp_path)
+    repo = source_kit.parent
+    _another_pull_request(source_kit, "backbone")
+    _git(repo, "merge", "-q", "main")  # the branch starts after it landed
+    _commit_change(source_kit, "src/project_kit/foo.py")
+
+    result = release.check_changesets(source_kit, "main", skip=skip)
+
+    assert [cs.component for cs in changesets.load_changesets(repo)] == ["backbone"]
+    assert result.touched == ["backbone"]
+    assert result.missing == ["backbone"]
+    assert result.skipped is skip
+    assert result.ok is skip
+
+
+def test_a_changeset_merged_in_from_the_base_does_not_declare_this_diffs_change(
+    tmp_path: Path,
+) -> None:
+    """Merging the base brings its pending changesets onto the branch, but the
+    diff runs from where the branch left the base, so none of them is in it — the
+    shape CI checks too, on the pull request merged into its base."""
+    source_kit = _make_repo(tmp_path)
+    repo = source_kit.parent
+    _commit_change(source_kit, "src/project_kit/foo.py")
+    _another_pull_request(source_kit, "backbone")
+    _git(repo, "merge", "-q", "--no-edit", "main")
+
+    result = release.check_changesets(source_kit, "main")
+
+    assert result.missing == ["backbone"]
+    assert not result.ok
+
+
+@pytest.mark.parametrize("kind", ["patch", "none"])
+@pytest.mark.parametrize("merged_base", [False, True])
+def test_the_branchs_own_changeset_counts_after_the_base_moves_on(
+    tmp_path: Path, kind: str, merged_base: bool
+) -> None:
+    """A branch cut from an older `main` adds its changeset; `main` has since
+    gained others, for the same component and another. The branch's own still
+    declares its change, whether or not it has merged `main` since."""
+    source_kit = _make_repo(tmp_path)
+    repo = source_kit.parent
+    _add_changeset(source_kit, "backbone", kind)
+    _commit_change(source_kit, "src/project_kit/foo.py")
+    _another_pull_request(source_kit, "backbone")
+    _another_pull_request(source_kit, "claude-code")
+    if merged_base:
+        _git(repo, "merge", "-q", "--no-edit", "main")
+
+    result = release.check_changesets(source_kit, "main")
+
+    assert result.touched == ["backbone"]
+    assert result.missing == []
+    assert result.ok
+
+
+def test_editing_a_pending_changeset_declares_this_diffs_change(tmp_path: Path) -> None:
+    """A pull request may extend a pending changeset's note to cover its own
+    change instead of adding a file: the edit makes the changeset the diff's."""
+    source_kit = _make_repo(tmp_path)
+    repo = source_kit.parent
+    pending = _another_pull_request(source_kit, "backbone")
+    _git(repo, "merge", "-q", "main")
+    pending.write_text(
+        "component: backbone\nkind: minor\nbody: note, and this change too\n", encoding="utf-8"
+    )
+    _commit_change(source_kit, "src/project_kit/foo.py")
+
+    result = release.check_changesets(source_kit, "main")
+
+    assert result.missing == []
+    assert result.ok
+
+
+@pytest.mark.parametrize("renames", ["true", "false"])
+def test_renaming_a_pending_changeset_counts_as_this_diffs(tmp_path: Path, renames: str) -> None:
+    """A renamed changeset is the diff's, as an edited one is — the floor tie reads
+    it the same way. Git names a rename by its destination, and with rename
+    detection off it lists the destination as added, so the reading holds
+    either way."""
+    source_kit = _make_repo(tmp_path)
+    repo = source_kit.parent
+    _git(repo, "config", "diff.renames", renames)
+    pending = _another_pull_request(source_kit, "backbone")
+    _git(repo, "merge", "-q", "main")
+    _git(repo, "mv", str(pending), str(pending.with_name("backbone-minor-renamed.yaml")))
+    _commit_change(source_kit, "src/project_kit/foo.py")
+
+    result = release.check_changesets(source_kit, "main")
+
+    assert result.missing == []
+    assert result.ok
+
+
+def test_release_check_says_a_pending_changeset_from_elsewhere_does_not_count(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source_kit = _make_repo(tmp_path)
+    _another_pull_request(source_kit, "backbone")
+    _git(source_kit.parent, "merge", "-q", "main")
+    _commit_change(source_kit, "src/project_kit/foo.py")
+    monkeypatch.chdir(source_kit.parent)
+    monkeypatch.delenv("PKIT_CHANGESET_SKIP", raising=False)
+
+    result = CliRunner().invoke(main, ["release", "check", "--base", "main"])
+
+    assert result.exit_code == 1, result.output
+    assert "surface change without a changeset for: backbone." in result.output
+    assert (
+        "a pending changeset the diff leaves alone declares another pull request's change, "
+        "not this one's, even when it names the same component." in result.output
+    )
+
+
 # --- A declared floor rides on a change to its component or a release of it --
 # (PRJ-002 D4)
 
