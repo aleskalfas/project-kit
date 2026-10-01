@@ -612,9 +612,10 @@ def _ran_out(head: _Head, gate: CiGateResult, waited: float, wait_seconds: float
             f"ci: no check has been reported for {sha} {after}: its run has not started, or "
             "none will — no workflow runs on pull requests here, the workflows skip the "
             "paths this PR changes, its head commit asks to skip CI ([skip ci]), or a run "
-            f"from a fork awaits approval. Run `land-work {issue}` again to keep waiting; "
-            f"where no check runs on this PR, review it with `review-pr {issue}` and merge "
-            f"it with `done-work {issue}`"
+            f"from a fork awaits approval. Run `land-work {issue}` again to keep waiting. "
+            "Only in a project that runs no checks on pull requests — never because a "
+            f"wait ran out — review it with `review-pr {issue}` and merge it with "
+            f"`done-work {issue}`: `done-work` does not wait for a check nobody reported"
         )
     return (
         f"ci: still running on {sha} {after}: {', '.join(gate.running)}. "
