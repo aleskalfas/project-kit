@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-01T16:23:25Z
+      at: 2026-10-01T17:00:50Z
       outcome: unchanged
-      unchanged-because: on this branch sync and upgrade refuse to write under a pkit older than the project's content or pin; the friction resolve command main brought in does not change what this page says about upgrading
+      unchanged-because: The index's one-line description of the process area still holds after the engine's move gains a reason.
 ---
 
 # project-kit

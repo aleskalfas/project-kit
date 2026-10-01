@@ -15,7 +15,7 @@ pkit:
         - .pkit/schemas/_defs/process.schema.json
       record: [COR-033, COR-034, COR-035, COR-036, COR-037, COR-038, COR-040, COR-042, COR-044, COR-053, ADR-020, ADR-036, ADR-048, ADR-051]
     revalidated:
-      at: 2026-10-01T15:15:45Z
+      at: 2026-10-01T17:00:43Z
       outcome: updated
 ---
 
