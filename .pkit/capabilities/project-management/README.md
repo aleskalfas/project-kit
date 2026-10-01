@@ -228,7 +228,7 @@ The project-manager walks the methodology end-to-end: picks a title matching the
 
 - whether a follow-up a reviewer produced gets a Milestone — [create-issue](skills/pm/create-issue.md), intent recognition;
 - the order of Tasks that change the same files — [batch-plan](skills/pm/batch-plan.md), the slicing step;
-- when `review-pr` runs — [transition-state](skills/pm/transition-state.md), the review step;
+- when `review-pr` runs, on its own or inside `land` — [transition-state](skills/pm/transition-state.md), the review step;
 - what a fix round carries — the same review step, and for the builder's side the builder agent, where the project deploys one.
 
 #### Issue body — parent-ref first line
@@ -310,9 +310,9 @@ The comprehensive PR-body validator lives in `_lib/pr_validation.py` (one source
 
 Practical consequence: you cannot take an *empty* body to ready-for-review. Use `open-pr --body-file <filled>`, or `create-draft` → `edit-pr` → `review-work`.
 
-#### The seven workflow wrappers (per [project-management:DEC-026-work-ownership-lifecycle])
+#### The workflow wrappers (per [project-management:DEC-026-work-ownership-lifecycle])
 
-For the standard development flow, seven verb-subject commands compose over `move-issue` and own the side-effects (branch, PR, merge, audit comments) at each step. They replace ad-hoc combinations of `move-issue` + `gh` calls that adopters previously had to wire by hand.
+For the standard development flow, seven verb-subject commands compose over `move-issue` and own the side-effects (branch, PR, merge, audit comments) at each step. They replace ad-hoc combinations of `move-issue` + `gh` calls that adopters previously had to wire by hand. An eighth, `land` (the last row), composes `review-pr` and `done-work` instead: it lands the PR of an issue in Review in one command.
 
 | Command | Issue transition | Side-effects |
 |---|---|---|
@@ -323,6 +323,7 @@ For the standard development flow, seven verb-subject commands compose over `mov
 | `back-to-draft <N>` | (none — issue stays in Review) | Flips PR to draft; dismisses prior APPROVED reviews |
 | `done-work <N> [--bypass "<R>"] [--bypass-ci "<R>"] [--skip-checkbox-gate] [--bypass-reviewer <name> … --bypass-reviewer-reason "<R>" \| --bypass-reason "<R>" (deprecated)] [--no-wait \| --wait-minutes <M>] [--force]` | Review → Done (In Progress → Review → Done for an issue that never reached Review) | Squash-merge via three-way approval gate (APPROVED review / `Approved`-prefix comment / `--bypass`), the **DEC-007 checkbox close-gate** on **every issue the PR closes** (`<N>` first, then each `Closes #M` the PR body carries: every `- [ ]` ticked in each, the refusal naming the first issue that fails; an issue already closed is skipped with a note; `--skip-checkbox-gate` overrides, discouraged) **and** the CI-status gate (checks must be green; `--bypass-ci` overrides only that gate — `--bypass` never clears a red CI); `--bypass-reviewer` (agent mode) satisfies ONE named required reviewer's slot, audited, leaving the rest gating. As the last step before the merge, an issue `<N>` still In Progress is moved to Review (`move-issue --to review`; see "A merge moves an issue still In Progress through Review" below). After the merge: transitions issue `<N>` (`move-issue --to done`) **first**, then closes every issue the PR closes as completed and runs its closure cascade (`close-issue <M> --mode=pr-merge --pr <PR>`, `<N>` first), then best-effort branch cleanup — remote head ref deleted via the API, `checkout main` + `pull --ff-only` + delete the local head — each a warning on failure (detached HEAD, `main` held by another worktree), never an abort (#878). Where the base merges through a merge queue, the PR is enqueued instead and everything after the merge waits for the queue to make it — see "Merging through a queue" below |
 | `handoff-issue <N> --to @<u> --reason "<R>"` | (none — no state change) | Audit comment + reassign |
+| `land <N> [--wait-minutes <M> \| --no-wait] [--dry-run] [--yes]` | Review → Done, through `done-work` | Pins the PR's head, waits for its checks, has the reviewers whose verdicts are not fresh review it (`review-pr`), then merges it through `done-work`. One line per step; it stops at the first step that cannot go on, and a re-run resumes — see "Landing a pull request in one command" below |
 
 **A merge moves an issue still In Progress through Review.** `schemas/workflow.yaml` declares no `in-progress → done` for a Task: the move to Done a merge makes is `review → done`. A Task whose PR was opened without `review-work` (by a builder from a worktree, or by an operator who skipped the step) is still In Progress when `done-work` runs. So, once every gate has passed and as the last step before the merge, `done-work` moves it to Review (`move-issue <N> --to review`), and the merge then makes the declared `review → done` as usual. Both are declared moves made through `move-issue`, so each is journaled where the project keeps a journal and fires `after_move_issue`. The move to Review comes before the merge because afterwards GitHub may close the issue at any moment, and a closed issue reads as Done, from which no move to Review is declared. The PR is open and ready by then, which is what Review means: if the merge fails, the issue rightly stays in Review, and if the move itself fails, nothing is merged. Neither move posts a comment of its own at the default `audit.projection`. The pr-merge close that follows records the merged PR as the cause: its `completed by merged PR #<PR>` comment when the merge left the issue open, or GitHub's own "closed in" event when GitHub closed it first. The other issues a PR closes are not moved this way: `close-issue <M> --mode=pr-merge --pr <PR>` closes each, whatever its state, and reconciles its label to done.
 
@@ -337,7 +338,50 @@ The queue is the only path to such a base, and the squash commit it makes must s
 
 The reading, the merge and the enqueue, the wait and the dequeue are the backbone's one merge mechanic — `pkit pull-request`, which the verbs run in the environment the `gh:` block pins — the same one `pkit release merge` lands a release PR with ([project-management:DEC-013-branch-and-pr-conventions], "Merge mechanics"). A backbone that predates it leaves the verbs unable to read how the base merges, so they merge nothing until it is upgraded (`pkit upgrade`); the error names the `pkit` that ran. Each call is bounded — a minute for a reading, two for a merge or an enqueue, a wait's own limit plus five minutes — and one that does not answer in time is stopped with everything it started.
 
-All seven are idempotent at the level of observable state — re-running after a partial failure recovers cleanly, and a re-run does not repeat an audit comment the failed attempt already posted.
+**Landing a pull request in one command — `land`** (#1203). Landing a PR takes three steps, always in this order: wait for the checks on its head, run the reviewers the merge gate still needs, merge through `done-work`. `pkit project-management land <N>` runs them for issue `<N>`. It composes the verbs' own functions, so it adds no gate, review loop or merge mechanic of its own. Each step prints one line, and the verbs it runs print their own detail above it:
+
+```
+head: 1a2b3c4 (PR #496, feat/42-land-it)
+ci: passed on 1a2b3c4 (8m, run https://github.com/<owner>/<repo>/actions/runs/77)
+review: 2 kept fresh, 2 re-run — all approved
+merge: merged as 9f8e7d6
+```
+
+- **head.** `land` finds the issue's branch and its open PR as `done-work` does. It reads the PR's head on GitHub once and *pins* it: every later step checks against that head and is handed it, so nothing is reviewed or merged on any other.
+  - A local branch holding commits that head lacks is refused, and the line gives the `git push`, or the pull and push for a branch that has diverged.
+  - A local branch behind the head is noted, and so is a checkout on another branch. `land` lands the head on GitHub, never your working tree, so it runs from any checkout of the clone that has the branch, any worktree included.
+  - With no open PR it goes straight to `done-work`, which completes a PR that has merged already.
+- **ci.** The PR's checks on the pinned head, read with the head they belong to and judged by the CI gate `done-work` applies.
+  - *No check reported yet* is a run that has not started: `land` keeps waiting and says so. It never reads that as green, and a green run on an earlier head does not count either.
+  - *A failed check* stops the run before the review, naming the check and where to read it.
+  - *Waiting.* The wait is bounded by `--wait-minutes`, 30 by default; `--no-wait` reads the checks once. A wait that runs out exits 5, distinct from a failure, and running `land` again goes on waiting.
+  - *No checks at all.* In a repository that runs no checks on pull requests there is nothing to wait for: review with `review-pr <N>` and merge with `done-work <N>`.
+- **review.** In agent review mode, `review-pr`'s own review runs on the pinned head: a fresh verdict is kept, and a stale or missing one is re-run.
+  - A `CHANGES_REQUESTED`, kept or new, stops the run before the merge. `land` prints the first line of each `[block]` finding with the reviewer that raised it.
+  - A reviewer that could not be run (its agent missing, its run failed or timed out) stops the run with that reason (exit 6), never read as approved.
+  - In human review mode, or with no local reviewer registered, there is nothing to run: the approval is `done-work`'s gate.
+- **merge.** `done-work` with the pinned head. `--yes` and `--dry-run` are passed through, and `--wait-minutes` / `--no-wait` also bound its wait for a merge queue. Its gates, refusals, queue handling and exit codes are its own. `land` adds the one line, which reads the PR on GitHub:
+  - `merged as <commit>`;
+  - `queued` or `unconfirmed` after its exit 4;
+  - `refused: <done-work's reason>`.
+
+  A `done-work` that returned without merging, at a declined prompt for instance, is reported as not merged and exits 1.
+
+The exit code is non-zero whenever the PR did not merge, and the last line says why:
+
+| Exit | Meaning |
+|---|---|
+| 0 | merged, and the issue done |
+| 1 | stopped on something to change: unpushed commits, a failed check, a `CHANGES_REQUESTED`, or `done-work` refused |
+| 2 | usage error, or the PR, its head or its checks could not be read |
+| 3 | the PR's head moved from the pinned one, or `done-work`'s merge failed or the PR left the queue |
+| 4 | accepted, not yet seen merged: queued, or the merge could not be confirmed (`done-work`'s 4) |
+| 5 | the wait for the checks ran out |
+| 6 | a reviewer could not be run |
+
+Running `land` again resumes: green checks on the same head are not waited for again, fresh verdicts are not re-run, and a PR the queue merged meanwhile is completed through `done-work`. No flag skips the checks or the review: the bypasses stay on `done-work`, with their audit.
+
+All eight are idempotent at the level of observable state — re-running after a partial failure recovers cleanly, and a re-run does not repeat an audit comment the failed attempt already posted.
 
 **What makes an audit comment unique.** Each audit comment `move-issue`, `done-work`, `merge-pr` and `handoff-issue` post ends with a hidden idempotency key, `<!-- pkit-audit-key: <writer>:<digest> -->`, built by `scripts/_lib/audit.py`. The digest hashes what identifies the specific audited act, so a retry of that act reproduces the key exactly and a distinct act does not — which is what makes two distinct acts render two distinct comments. Hashing also means no reason or reviewer name can close the HTML comment early. The key is not a kind marker; the comment's kind is still its first-line marker.
 
@@ -602,7 +646,7 @@ Mode is resolved per-PR by three layers (highest wins):
 - **human mode** — three-way OR (APPROVED review / `Approved`-prefix comment from non-author / `--bypass`).
 - **agent mode** — DEC-028's gate-checker: at least one configured path (remote-bot OR local-agent) has a fresh APPROVED verdict (see "When a verdict stays fresh" below), plus `--bypass`. The gate counts a verdict only when its comment carries the `<!-- pkit-verdict -->` marker the reviewer path stamps (#593) — a bare `Reviewer agent … APPROVED` line posted by any other path (hand-typed, or a freeform note) does not gate. The read surface (`show-pr --field review`) still displays every verdict-shaped comment, marked or not. Under a reviewer panel (DEC-032's resolved required set), a reviewer's slot is *also* satisfiable by an audited **per-reviewer override** (`--bypass-reviewer`, see below) — a `satisfied-by-override` state distinct from an APPROVED, leaving every other required reviewer gating.
 
-For the local-agent path, run `pkit project-management review-pr <N>` after `review-work` to invoke every registered local agent against the PR diff. Each agent posts a `Reviewer agent (local, <name>): APPROVED|CHANGES_REQUESTED` comment.
+For the local-agent path, run `pkit project-management review-pr <N>` after `review-work` to invoke every registered local agent against the PR diff. Each agent posts a `Reviewer agent (local, <name>): APPROVED|CHANGES_REQUESTED` comment. `land <N>` runs this review for you once the checks on the PR's head have passed (see "Landing a pull request in one command" above).
 
 `review-pr` skips a required reviewer whose latest verdict is **fresh** (see "When a verdict stays fresh" below). It decides this the same way `done-work`'s gate reads verdicts, so a skipped reviewer is one the gate counts as it stands: a fresh `APPROVED` satisfies it, and a fresh `CHANGES_REQUESTED` blocks it until you push a change. For each skipped reviewer it prints `[<name>] fresh verdict <APPROVED|CHANGES_REQUESTED> — not re-run`. After a push, the next run invokes exactly the reviewers whose verdicts the push made stale, and says why for each: `[<name>] stale verdict <APPROVED|CHANGES_REQUESTED> (<reason>) — re-run`. Pass `--force` to re-run fresh reviewers too — to have a reviewer re-review a PR it rejected without a further push, or after changing a reviewer agent; `done-work`'s refusal names `review-pr <N> --force` when a fresh `CHANGES_REQUESTED` is what blocks. If the PR's verdicts cannot be read, `review-pr` runs every required reviewer and says so.
 

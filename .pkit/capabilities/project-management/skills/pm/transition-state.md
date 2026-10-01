@@ -7,7 +7,7 @@ Sub-procedure of the pm composite skill (`pm.md` in this folder). Per [project-m
 - The user wants to **move** an issue forward through the lifecycle (Todo → Backlog → In Progress → Review).
 - The user wants to **close** an issue (PR-merge-driven closure or explicit won't-do gesture per [project-management:DEC-006-state-machine-and-cascade]).
 - The user wants to **reopen** a closed issue (e.g., it regressed).
-- The PR of an issue in Review needs its **reviewer verdicts** (the review step below).
+- The PR of an issue in Review needs its **reviewer verdicts**, or landing — checks, verdicts, merge (the review step below).
 - The agent is running a cascade pass after a child's state changed (the scripts handle the cascade internally; this sub-procedure is the entry point).
 
 This operation **does mutate** issue state. Every mutation is gated by the membership predicate (per [project-management:DEC-021-team-membership-gate]) + the schema's authorisation field + the checkbox close-gate (on closure paths) per [project-management:DEC-007-checkbox-validation].
@@ -35,12 +35,18 @@ pkit project-management move-issue <N> --to <todo|backlog|in-progress|review|don
   [--bypass --bypass-reason "<text>"] [--no-cascade] [--dry-run] [--yes]
 ```
 
-**Request the reviewer verdicts** on the PR of an issue in Review (agent review mode, per [project-management:DEC-028-agent-as-approver-paths]):
+**Land the PR** of an issue in Review — wait for its checks, request the reviewer verdicts it still needs (agent review mode, per [project-management:DEC-028-agent-as-approver-paths]), merge — with one verb:
 ```
-gh pr checks <PR> --watch
-pkit project-management review-pr <N>
+pkit project-management land <N> [--wait-minutes <M> | --no-wait] [--dry-run] [--yes]
 ```
-`review-pr` runs once every check on the PR's head commit has passed; `gh pr checks --watch` waits for them, and as a read it is open to the project-manager. The reviewers judge that head, and the merge gate counts no verdict older than the PR's latest commit, so reviewing a head whose CI then fails spends a round of verdicts on a commit the fix replaces. When the PR has no checks configured (`gh pr checks` reports none and exits non-zero), run the review. When a check fails, hand the PR back to the builder and do not run the review. (`<N>` is the issue, `<PR>` its pull request.)
+`land` pins the PR's head and runs `review-pr` only once every check on that head has passed. The reviewers judge that head, and the merge gate counts no verdict older than the PR's latest commit, so reviewing a head whose CI then fails would spend a round of verdicts on a commit the fix replaces. It merges through `done-work`, with `done-work`'s gates. Review → Done is user-authorised, so run `land` only on the user's authorisation of the merge (the authorisation gate above). Each step prints one line, and the last line says why the run stopped. Act on the exit code:
+- **1** — hand the PR back to the builder with that line. It is unpushed commits, a failed check, a `CHANGES_REQUESTED` (its `[block]` findings are printed above the line, with the reviewer that raised each), or a `done-work` refusal.
+- **3** — the head moved; run `land` again to land the new one.
+- **4** — the PR is queued, or the merge is unconfirmed; run `land` again once it merges.
+- **5** — the checks are still running, or none has started; run `land` again to keep waiting.
+- **6** — a reviewer could not run; run `land` again once it can.
+
+A re-run resumes where the last one stopped. To request the verdicts without merging, run `pkit project-management review-pr <N>` once the checks on the PR's head have passed. In a repository that runs no checks on pull requests, `land` has no run to wait for, so run `review-pr <N>` and then `done-work <N>` instead. (`<N>` is the issue.)
 
 When the verdicts come back, a fix round carries the findings the reviewer marks blocking; each advisory is answered in the PR body or filed as a follow-up, scoped by [create-issue](create-issue.md)'s intent recognition.
 
