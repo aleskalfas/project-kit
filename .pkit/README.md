@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-01T15:40:47Z
+      at: 2026-10-01T15:43:23Z
       outcome: unchanged
-      unchanged-because: on this branch the process engine's move takes the origin its caller read and move-issue passes it; the configuration writer and line-break helpers main brought in do not change what this page describes
+      unchanged-because: on this branch move-issue passes the state it read to the process engine so each move is journaled from the state it left; the milestone rollforward main brought in does not change what this page says about that
 ---
 
 # project-kit
