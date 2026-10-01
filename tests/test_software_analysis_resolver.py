@@ -272,6 +272,7 @@ def test_the_answer_emits_the_person_s_commands_word_for_word() -> None:
 # --- the stop, in a repository ---------------------------------------------------------------
 
 
+# Slow: the seed stamped, built once per session; the first test to ask pays it in its setup.
 def _flag(repo: AdopterRepo) -> None:
     """`prepare`, then an analysis whose UC-001 quotes the code it anchors to, all
     committed."""
@@ -510,6 +511,7 @@ def test_a_quote_found_only_in_a_file_of_another_kind_did_not_move(flagged: Adop
     assert (document["verdict"], document["anchors"][0]["shape"]) == ("ambiguous", "gone")
 
 
+# Slow by design: the seed stamped over a commit each case makes first, so no template has it.
 @pytest.mark.parametrize("carried", [False, True], ids=["held-at-the-point", "carried-in"])
 def test_a_quote_surviving_only_under_an_excluded_path_is_gone(
     make_adopter_repo: MakeAdopterRepo,

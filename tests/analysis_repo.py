@@ -69,6 +69,7 @@ def prepare(repo: AdopterRepo) -> AdopterRepo:
     return repo
 
 
+# Slow: four stamps, built once per session; the first test to ask pays it in its setup.
 def prepare_seeded(repo: AdopterRepo) -> None:
     """`prepare`, then `seed`: an actor, two use cases and a journey, filled."""
     prepare(repo)

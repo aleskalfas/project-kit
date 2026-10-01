@@ -612,6 +612,7 @@ def test_a_copy_the_point_no_longer_holds_says_nothing(seeded: AdopterRepo) -> N
     )
 
 
+# Slow by design: the seed stamped under a `pkit` of the test's own, so no template has it.
 def test_the_point_is_read_only_when_a_record_copies_evidence(
     project: AdopterRepo,
     pkit_on_path: Path,

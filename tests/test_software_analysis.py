@@ -360,6 +360,7 @@ sys.exit(subprocess.run([sys.executable, "-m", "project_kit", *sys.argv[1:]]).re
 """
 
 
+# Slow by design: four stamps, each a script that starts several `pkit` processes.
 def test_a_recording_that_fails_leaves_nothing_written(
     project: AdopterRepo, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -438,6 +439,7 @@ def test_entries_two_branches_add_merge_cleanly(
     assert re.findall(r"^## (\S+)", text, flags=re.MULTILINE) == ids
 
 
+# Slow by design: five stamps, each a script that starts several `pkit` processes.
 def test_numbers_count_the_default_branch_and_withdrawn_use_cases(project: AdopterRepo) -> None:
     stamped(project, "actor", "tester")
     stamped(project, "use-case", "one", "--actor", "ACT-tester")
@@ -454,6 +456,7 @@ def test_numbers_count_the_default_branch_and_withdrawn_use_cases(project: Adopt
     assert stamped(project, "use-case", "four", "--actor", "ACT-tester") == "UC-004"
 
 
+# Slow by design: six stamps, each a script that starts several `pkit` processes.
 def test_a_number_deleted_from_the_default_branch_is_never_used_again(
     project: AdopterRepo,
 ) -> None:
@@ -494,6 +497,7 @@ def test_a_number_deleted_from_the_default_branch_is_never_used_again(
     assert stamped(project, "journey", "again", "--actor", "ACT-tester", *steps) == "JRN-002"
 
 
+# Slow by design: five stamps and the check, each a script that starts `pkit` processes.
 def test_the_history_counts_the_files_the_tree_reading_counts(project: AdopterRepo) -> None:
     """A number the history gave is counted only when the backbone's reading at the commit
     that added the file held it as a file of the place — a Markdown file there, not left
@@ -551,6 +555,7 @@ def test_a_file_added_before_its_place_was_there_still_counts(project: AdopterRe
     assert stamped(project, "use-case", "two", "--actor", "ACT-tester") == "UC-008"
 
 
+# Slow by design: four stamps, each a script that starts several `pkit` processes.
 def test_a_shallow_clone_s_stamp_says_its_history_stops_early(
     project: AdopterRepo, tmp_path: Path
 ) -> None:
@@ -577,6 +582,7 @@ def test_a_shallow_clone_s_stamp_says_its_history_stops_early(
     assert completed.stdout.splitlines() == [f"stamped ACT-admin at {ACTORS}#ACT-admin"]
 
 
+# Slow by design: four stamps, each a script that starts several `pkit` processes.
 def test_a_number_a_file_s_name_carries_is_held_whatever_the_file_holds(
     project: AdopterRepo,
 ) -> None:
@@ -600,6 +606,7 @@ def test_a_number_a_file_s_name_carries_is_held_whatever_the_file_holds(
     assert stamped(project, "use-case", "two", "--actor", "ACT-tester") == "UC-007"
 
 
+# Slow by design: four stamps, each a script that starts several `pkit` processes.
 def test_a_number_spelt_with_other_zeros_counts_as_held(project: AdopterRepo) -> None:
     """The stamp reads `UC-0007` as the number 7, as the check's duplicate count does, so
     it never gives a number a file already claims, whatever its spelling — and the ids
@@ -645,6 +652,7 @@ def test_without_what_is_settled_the_stamp_refuses_rather_than_guess(
     )
 
 
+# Slow: three stamps, built once per session; the first test to ask pays it in its setup.
 def _ground(repo: AdopterRepo) -> None:
     """`prepare`, then the actor ACT-tester with a use case of its own, and the actor
     ACT-retired, withdrawn."""

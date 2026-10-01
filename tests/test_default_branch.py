@@ -655,6 +655,7 @@ def _settled(repo: GitRepo) -> dict[str, Any]:
     return json.loads(completed.stdout)
 
 
+# Slow: the seed stamped, built once per session; the first test to ask pays it in its setup.
 def _trunk_and_topic(repo: AdopterRepo) -> None:
     """software-analysis seeded on `main`, which then becomes `trunk`, declared the
     default branch; work goes on on `topic`, and `trunk` moves on after it left."""
@@ -678,6 +679,7 @@ def project(
     return installed(make_adopter_repo, monkeypatch, then=_trunk_and_topic)
 
 
+# Slow by design: three repository states, each read by the four readers, every one a process.
 def test_all_three_readers_agree_on_a_default_branch_that_is_not_main(
     project: AdopterRepo, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

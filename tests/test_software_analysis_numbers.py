@@ -100,6 +100,7 @@ def test_it_is_a_query_command_and_not_a_validator(project: AdopterRepo) -> None
 # --- the comparison (DEC-001 point 3) ---------------------------------------------------------
 
 
+# Slow by design: three stamps, three number checks and the check, each starting `pkit` processes.
 def test_a_number_the_default_branch_took_first_fails(project: AdopterRepo) -> None:
     ours = _main_took_ours(project)
     completed = numbers(project, "--base", MAIN, "--json")
@@ -144,6 +145,7 @@ def test_a_number_the_default_branch_took_first_fails(project: AdopterRepo) -> N
 # --- an artefact is known by its id, not its path ---------------------------------------------
 
 
+# Slow: two stamps, built once per session; the first test to ask pays it in its setup.
 def _leave_main(repo: AdopterRepo) -> None:
     """`prepare`, then an actor and UC-001 on main, and the branch `topic` leaving main
     there."""
@@ -210,6 +212,7 @@ def test_two_branches_stamping_the_same_slug_are_warned_not_failed(
     }
 
 
+# Slow by design: three stamps, two number checks and the check, each starting `pkit` processes.
 def test_a_stacked_branch_whose_parent_squash_merged_is_no_collision(
     branched: AdopterRepo,
 ) -> None:

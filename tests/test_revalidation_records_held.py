@@ -40,6 +40,7 @@ LD_VALIDATE = Path(".pkit") / "capabilities" / "living-docs" / "scripts" / "vali
 UNANCHORED_PAGE = "tech-docs/guide.md"
 
 
+# Slow: the seed and a record stamped, once per session; the first test to ask pays it.
 def _record_a_revalidation(repo: AdopterRepo) -> None:
     """The analysis prepared and seeded, one planned revalidation recorded, and one page
     with no anchors beside them — all committed on `main`."""
