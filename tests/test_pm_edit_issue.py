@@ -1,7 +1,7 @@
 """Tests for project-management's edit-issue script's pure logic.
 
 Covers body computation (replace / append / file / stdin), validation
-findings, structural-type inference, title-pattern matching.
+findings, structural-type inference, titles.yaml's title checks at retitling.
 """
 
 from __future__ import annotations
@@ -551,15 +551,95 @@ def test_validate_rejects_bug_prefix_without_classification(
     assert format_findings, "Expected title.format finding for [Bug] without classification"
 
 
-# --- title pattern ---------------------------------------------------
+# --- titles.yaml checks at retitling (#803) --------------------------
+# The shipped titles.yaml: a retitle runs every declared title check at its
+# declared severity, and `main()` refuses a hard-reject before writing.
+
+CAP_ROOT = REPO_ROOT / ".pkit" / "capabilities" / "project-management"
 
 
-def test_title_pattern_for_returns_expected(ei, titles) -> None:
-    assert ei._title_pattern_for(titles, "task") == r"^\[Task\] .+$"
+@pytest.fixture(scope="module")
+def shipped_titles() -> dict:
+    from ruamel.yaml import YAML
+
+    return YAML(typ="safe").load((CAP_ROOT / "schemas" / "titles.yaml").read_text("utf-8"))
 
 
-def test_title_pattern_for_returns_none_for_unknown(ei, titles) -> None:
-    assert ei._title_pattern_for(titles, "bogus") is None
+def _title_findings(ei, title, issue_types, shipped_titles, body_format) -> list[tuple[str, str]]:
+    findings = ei._validate(
+        title=title,
+        body="",
+        issue_types=issue_types,
+        titles=shipped_titles,
+        body_format=body_format,
+        check_body=False,
+    )
+    return [(f.severity, f.label) for f in findings]
+
+
+def test_retitle_refuses_a_conventional_commits_prefix(
+    ei, issue_types, shipped_titles, body_format
+) -> None:
+    found = _title_findings(
+        ei, "[Task] feat(igw): support a prompt file", issue_types, shipped_titles, body_format
+    )
+    assert ("hard-reject", "title.conventional-commits-prefix") in found
+
+
+def test_retitle_warns_on_a_scope_prefix_and_a_short_title(
+    ei, issue_types, shipped_titles, body_format
+) -> None:
+    found = _title_findings(ei, "[Task] cli: polish", issue_types, shipped_titles, body_format)
+    assert ("warning", "title.scope-prefix") in found
+    assert ("warning", "title.short") in found
+    assert not [sev for sev, _label in found if sev == "hard-reject"]
+
+
+def test_retitle_allows_a_colon_after_a_territory_named_in_words(
+    ei, issue_types, shipped_titles, body_format
+) -> None:
+    title = "[EPIC] Permission model: model first-class harness tools in the catalog"
+    assert _title_findings(ei, title, issue_types, shipped_titles, body_format) == []
+
+
+def test_main_refuses_a_retitle_that_breaks_a_hard_reject_rule(ei, monkeypatch, capsys) -> None:
+    """`edit-issue --title` stops before any write when the new title is refused."""
+    from types import SimpleNamespace
+
+    issue = {
+        "title": "[Task] Evidence points are keyed so two providers can report one",
+        "body": (
+            "Feature: #1\n\n## What\nx\n\n## Acceptance criteria\n- [ ] y\n\n"
+            "## Doc impact\n- [ ] z\n"
+        ),
+        "state": "OPEN",
+        "labels": [{"name": "type:feature"}],
+        "milestone": None,
+    }
+    writes: list = []
+    monkeypatch.setattr(
+        sys, "argv", ["edit-issue", "42", "--title", "[Task] fix: key the evidence points", "--yes"]
+    )
+    monkeypatch.setattr(ei, "resolve_capability_root", lambda _explicit: CAP_ROOT)
+    monkeypatch.setattr(ei.bootstrap_gate, "enforce", lambda *a, **k: True)
+    monkeypatch.setattr(ei.session_guard, "enforce", lambda **k: True)
+    monkeypatch.setattr(ei, "load_adopter_config", lambda _root: {})
+    monkeypatch.setattr(ei, "_read_members", lambda *a: [])
+    monkeypatch.setattr(
+        ei, "resolve_invoker_identity", lambda **k: SimpleNamespace(github_login="me")
+    )
+    monkeypatch.setattr(ei, "check_membership", lambda *a: SimpleNamespace(allowed=True))
+    monkeypatch.setattr(ei, "_gh_get_issue", lambda _n, _config: issue)
+    monkeypatch.setattr(ei, "_gh_apply_edit", lambda *a, **k: writes.append(k) or True)
+    monkeypatch.setattr(ei, "_gh_comment", lambda *a, **k: writes.append(a) or True)
+
+    rc = ei.main()
+
+    assert rc == 1
+    assert writes == []
+    out = capsys.readouterr()
+    assert "title.conventional-commits-prefix" in out.out
+    assert "[refused]" in out.err
 
 
 def test_gh_comment_call_sites_thread_config() -> None:

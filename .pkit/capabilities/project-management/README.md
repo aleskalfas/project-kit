@@ -15,7 +15,7 @@ pkit:
         - .pkit/capabilities/project-management/decisions/**
       record: [COR-017, COR-020, COR-021, COR-023, COR-039, COR-053, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050]
     revalidated:
-      at: 2026-10-01T22:50:16Z
+      at: 2026-10-01T22:17:09Z
       outcome: updated
 ---
 
@@ -400,6 +400,12 @@ The exit code says what to do next, and the last line says why:
 Outside `--dry-run`, a run that did not merge never exits 0, and 0 means everything after the merge ran too. With `--dry-run` nothing is reviewed or merged, and 0 means every step would go on.
 
 Running `land-work` again resumes: green checks on the same head are not waited for, fresh verdicts are not re-run, and a PR that merged meanwhile is completed through `done-work`.
+
+#### Issue titles — every rule `titles.yaml` declares runs
+
+Each title surface in `schemas/titles.yaml` (the four issue types, the Milestone, the PR) carries a `pattern` and a list of `validations`; each validation names the check that runs it (`check`), the finding label it is reported under (`name`) and its severity, and the schema refuses a validation with no check, so a rule cannot sit in the schema unenforced. `scripts/_lib/title_rules.py` is the one reader: `create-issue`, `edit-issue --title`, `validate-issue`, `validate-pr` and `create-milestone` all ask it.
+
+For issue titles: a Conventional Commits prefix after the bracket (`[Task] fix: …`, `[EPIC] feat(x): …`) is refused where a title is written — filing, retitling, `validate-issue --phase create` — and reported as a warning at a lifecycle transition, so an issue filed with one still moves. A lowercase `scope:` token right after the bracket (`[EPIC] sandbox: …`) is a warning: it reads like a commit scope, but inbound reports and component-scoped titles carry it, so filing goes on. A colon or a dash after a territory named in words (`[EPIC] Permission model: …`, `[EPIC] PR review fidelity — …`) is not flagged. A Task title, under any kind-driven prefix, draws a warning below 30 characters after the prefix; an EPIC, Feature or Umbrella names a territory, which is short by nature, and has no length floor. A PR summary draws a warning past 72 characters; aim for about 50. The house style per type is in each entry's `description` and `examples_good`: an EPIC, Feature or Umbrella names a territory; a Task says what is true once the work is done, or the work in the imperative for a decision, a document or an exploration.
 
 #### PR-title conv-types — the standard set, and why decision-record PRs land as `docs`
 
