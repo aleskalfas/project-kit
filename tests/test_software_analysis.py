@@ -638,6 +638,31 @@ def test_without_what_is_settled_the_stamp_refuses_rather_than_guess(
     )
 
 
+def test_a_stamp_asks_the_backbone_what_is_settled_once(
+    project: AdopterRepo,
+    tmp_path_factory: pytest.TempPathFactory,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """One reading names the default branch and the base named on the command line alike,
+    so a stamp asks for it once: each `pkit` it starts is a whole backbone start-up
+    (#1221)."""
+    stamped(project, "actor", "tester")
+    bin_dir = tmp_path_factory.mktemp("counting-pkit")
+    started = bin_dir / "started"
+    started.touch()
+    fake = bin_dir / "pkit"
+    fake.write_text(
+        f'#!/bin/sh\necho "$*" >> "{started}"\nexec "{sys.executable}" -m project_kit "$@"\n',
+        encoding="utf-8",
+    )
+    fake.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}")
+    assert stamped(project, "use-case", "one", "--actor", "ACT-tester") == "UC-001"
+    asked = started.read_text(encoding="utf-8").splitlines()
+    readings = [line for line in asked if line.startswith("repository base")]
+    assert readings == ["repository base --json --base=main"], asked
+
+
 @pytest.mark.parametrize(
     ("args", "refusal"),
     [
