@@ -1,0 +1,12 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `pkit release check` now counts only the changesets a pull request itself
+  adds or edits. It counted every pending changeset, so a pull request that
+  changed a component and declared nothing passed whenever another pull
+  request had already left a changeset naming the same component, and the
+  change could reach a release with no line in the changelog. A pending
+  changeset the pull request leaves alone, or one that merging the base branch
+  brought in, no longer counts, and the failure message says so (#782).
