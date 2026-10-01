@@ -266,20 +266,22 @@ allowed-confusables = ["–", "×", "−", "∪", "ℹ"]
 
 # Type checking is gated by `scripts/check.sh` (PRJ-010): the package in pyright's
 # strict mode through a ratchet, everything else pyright checks in standard mode,
-# outright. `scripts/pyright-ratchet.py` runs pyright and judges both, and it
-# refuses this table narrowing what the package is checked for: an `exclude` or
-# `ignore` entry reaching into `src`, a strict list that stops covering it, or
-# `reportMissingModuleSource` (the one rule strict mode does not override) set
-# below a warning. A rule relaxed for the tests is relaxed here, with its reason.
+# outright. `scripts/pyright_ratchet.py` runs pyright and judges both, and it
+# refuses this table narrowing what the package is checked for: an `include`,
+# `exclude` or `ignore` entry that leaves part of `src` out, a strict list that
+# stops covering it, or `reportMissingModuleSource` (the one rule strict mode does
+# not override) set below a warning. A rule relaxed for the tests is relaxed here,
+# with its reason.
 [tool.pyright]
-include = ["src", "tests"]
+# The package, its tests, and the gate's own tooling.
+include = ["src", "tests", "scripts"]
 # The mode is set by directory (PRJ-010 point 1): a module in the package is
 # strict from its first commit without being listed anywhere.
 strict = ["src"]
 typeCheckingMode = "standard"
 pythonVersion = "3.11"
 # pyright honours no `# type: ignore` (PRJ-010 point 5); a suppression names its
-# rules, and only the tests may carry one, with its reason on the line.
+# rules, only outside the package, with its reason on the line.
 enableTypeIgnoreComments = false
 # The import paths (PRJ-010 point 7). `src` is the package's, which pyright adds on
 # its own only while this list is unset. The tests put project-management's
