@@ -18,9 +18,9 @@ pkit:
         - ACT-clone-session
         - ACT-developer-subagent
     revalidated:
-      at: 2026-09-30T09:26:39Z
+      at: 2026-10-01T00:54:41Z
       outcome: unchanged
-      unchanged-because: start-work now cuts the branch from the commit the backbone resolves its base to — the remote's copy, the local branch only without a remote — and refuses when the backbone cannot say which branch is settled (COR-054); the clone session still starts the Task before it dispatches the subagent
+      unchanged-because: on this branch only procedure text changed — the pm skill's filing, slicing and review steps, the project-manager and software-engineer agent bodies; no script, schema or decision changed, so the page holds
 ---
 
 # UC-009 — Delegate a task to a developer subagent

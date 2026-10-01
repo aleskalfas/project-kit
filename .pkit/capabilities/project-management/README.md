@@ -15,7 +15,7 @@ pkit:
         - .pkit/capabilities/project-management/decisions/**
       record: [COR-017, COR-020, COR-021, COR-023, COR-039, COR-053, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050]
     revalidated:
-      at: 2026-10-01T00:55:01Z
+      at: 2026-10-01T03:22:21Z
       outcome: updated
 ---
 
@@ -223,6 +223,13 @@ claude --agent project-manager "File an EPIC for <outcome>"
 ```
 
 The project-manager walks the methodology end-to-end: picks a title matching the EPIC pattern, fills the body against the template, validates against the body-format and validation-severity schemas, creates the GitHub issue, runs the cascade check.
+
+**How review findings become work.** Four rules keep a review from multiplying the work it reviews; each is stated in the procedure where it applies:
+
+- whether a follow-up a reviewer produced gets a Milestone — [create-issue](skills/pm/create-issue.md), intent recognition;
+- the order of Tasks that change the same files — [batch-plan](skills/pm/batch-plan.md), the slicing step;
+- when `review-pr` runs — [transition-state](skills/pm/transition-state.md), the review step;
+- what a fix round carries — the same review step, and for the builder's side the builder agent, where the project deploys one.
 
 #### Issue body — parent-ref first line
 
