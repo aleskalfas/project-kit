@@ -7,7 +7,7 @@ files are copied (overwriting) and kit-owned orphans pruned; adopter-owned
 files are **never** overwritten or pruned. Whether an adopter-owned path is
 *seeded* from the source in the first place is the caller's policy, gated by
 `seed_owned` — the guarantee is unconditional, the delivery is not (see
-`refresh_owned_tree` below, and ADR-012's amendment which separates the two).
+`refresh_owned_tree` below, and ADR-012 points 1-2, which separate the two).
 
 Why this exists: the **never-overwrite / never-prune** contract was previously
 re-derived ad-hoc at each copy site, and one site (`_copy_capability_tree`)
