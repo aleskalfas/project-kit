@@ -1129,7 +1129,9 @@ class GuardResult:
     """Outcome of the changeset guard for one diff."""
 
     touched: list[str]  # components whose surface the diff touched
-    missing: list[str]  # touched components with no changeset (the violations)
+    # Touched components no changeset of the diff's own names (the violations);
+    # a pending changeset the diff leaves alone does not count (`diff_changesets`).
+    missing: list[str]
     skipped: bool  # the escape hatch (label / --skip) was active
     release_exempt: bool = False  # the diff is only what a release writes (below)
     # Changesets whose `requires_backbone` floor this diff declares for a component
@@ -1301,15 +1303,17 @@ def check_changesets(source_kit: Path, base: str, *, skip: bool = False) -> Guar
     """Run the changeset guard against the diff vs `base`: the surface check and
     the floor tie.
 
-    The surface check passes when every surface-touched component has at least
-    one changeset naming it (any kind, including `none`), when the escape hatch
-    is active (`skip=True`, wired from the `skip-changeset` PR label), or when
-    the diff is a **release PR** — only what `pkit release apply` writes
-    (`is_release_diff`), which has legitimately consumed the changesets it would
-    otherwise need. The floor tie (`stray_floors`) is waived by neither: it
-    judges only a floor this diff declares, which a release diff never does, and
-    an escape hatch that could pass one would let any pull request raise any
-    component's floor.
+    The surface check passes when every surface-touched component is named by a
+    changeset the diff itself adds or edits (`diff_changesets`; any kind,
+    including `none`), when the escape hatch is active (`skip=True`, wired from
+    the `skip-changeset` PR label), or when the diff is a **release PR** — only
+    what `pkit release apply` writes (`is_release_diff`), which has legitimately
+    consumed the changesets it would otherwise need. A pending changeset the diff
+    leaves alone declares another pull request's change, so it satisfies nothing
+    here, whatever component it names. The floor tie (`stray_floors`) is waived
+    by neither: it judges only a floor this diff declares, which a release diff
+    never does, and an escape hatch that could pass one would let any pull
+    request raise any component's floor.
     """
     repo_root = source_kit.parent
     components = discover_components(source_kit)
@@ -1317,7 +1321,7 @@ def check_changesets(source_kit: Path, base: str, *, skip: bool = False) -> Guar
     touched = touched_components(components, files)
 
     pending = load_changesets(repo_root)
-    declared = {cs.component for cs in pending}
+    declared = {cs.component for cs in diff_changesets(repo_root, pending, files)}
     missing = [name for name in touched if name not in declared]
     release_exempt = bool(missing) and is_release_diff(source_kit, base)
     return GuardResult(
@@ -1327,6 +1331,24 @@ def check_changesets(source_kit: Path, base: str, *, skip: bool = False) -> Guar
         release_exempt=release_exempt,
         stray_floors=stray_floors(repo_root, base, pending, files, touched),
     )
+
+
+def diff_changesets(
+    repo_root: Path, pending: Sequence[Changeset], files: Sequence[str]
+) -> list[Changeset]:
+    """The pending changesets the diff adds or edits — the ones it declares.
+
+    `files` is the diff's changed paths (`changed_files`). A changeset counts
+    when its file is among them: added on the branch, edited (whatever the edit —
+    the guard reads which files changed, not what changed in them), or renamed
+    into place, which git names by its destination. A pending changeset the diff
+    leaves alone is not the diff's — one an earlier pull request merged, or one
+    merging the base brought onto the branch — and neither is one only on disk,
+    not committed. Reading the diff rather than the directory is what keeps the
+    guard from passing on another pull request's declaration.
+    """
+    changed = set(files)
+    return [cs for cs in pending if _repo_rel(repo_root, cs.path) in changed]
 
 
 def stray_floors(
@@ -1353,14 +1375,10 @@ def stray_floors(
     merged, or one this diff edits elsewhere (its note, say), declares nothing
     here.
     """
-    changed = set(files)
     candidates = [
         cs
-        for cs in pending
-        if cs.requires_backbone is not None
-        and cs.segment == "none"
-        and cs.component not in touched
-        and _repo_rel(repo_root, cs.path) in changed
+        for cs in diff_changesets(repo_root, pending, files)
+        if cs.requires_backbone is not None and cs.segment == "none" and cs.component not in touched
     ]
     if not candidates:
         return []
