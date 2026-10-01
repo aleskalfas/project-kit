@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-01T19:22:04Z
+      at: 2026-10-01T20:17:12Z
       outcome: unchanged
-      unchanged-because: This change adds, inside the process, lifecycle and CLI READMEs, what an unevaluable predicate and a failed workstream read show the operator; the root README only maps each area to its one-line scope, and none of those scopes moved.
+      unchanged-because: the CLI reference changed only inside its process-authoring and process health sections (a JSON view key, a failed stamp's take-back, hand-off's same-state refusal); this signpost names the CLI page and the command families it covers, which still holds
 ---
 
 # project-kit
