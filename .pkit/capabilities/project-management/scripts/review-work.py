@@ -16,6 +16,10 @@ Gates per DEC-026:
   - Membership (open-mode degrades to no-op).
   - Current branch matches `<type>/<N>-<slug>` AND `<type>` matches
     issue's `type:*` label per DEC-013.
+  - Issue's current state can move to Review per workflow.yaml (or is
+    already there, so a re-run works). Checked before any PR is opened or
+    flipped ready and before reviewers are requested, so a refused move
+    leaves the PR as it was (#947). From Backlog, move to In Progress first.
   - PR title is Conventional Commits.
 
 Side-effects:
@@ -23,12 +27,16 @@ Side-effects:
   - Flips an existing draft PR to ready via `gh pr ready` if present.
   - Reviewer assignment (v1 ships with simple --reviewer override path;
     full DEC-027 mode resolution lands in Phase D).
-  - Composes over `move-issue.py --to review`.
+  - Composes over `move-issue.py --to review`. If that move still fails
+    after the PR was opened or flipped ready (e.g. a network error), the run
+    ends on a failure naming what it left behind: the PR, its ready state and
+    the reviewers it requested.
 
 Exit codes:
   0  PR ready + issue in Review
   1  membership refusal
-  2  usage error / gate failure / gh failure
+  2  usage error / gate failure / illegal transition / gh failure
+  *  a failed composed move-issue passes its exit code through
 """
 
 from __future__ import annotations
@@ -66,6 +74,9 @@ from _lib.review_mode import (
     reviewer_role_from_config,
     role_based_reviewers,
 )
+from _lib.structural_type import infer_structural_type
+
+TARGET_STATE = "review"
 
 
 def main() -> int:
@@ -135,6 +146,8 @@ def main() -> int:
     yaml_loader = YAML(typ="safe")
     config = load_adopter_config(capability_root)
     classification = _read_classification(capability_root, yaml_loader)
+    workflow = _read_schema(capability_root, "workflow.yaml", yaml_loader)
+    issue_types = _read_schema(capability_root, "issue-types.yaml", yaml_loader)
     members = _read_members(capability_root, yaml_loader)
     invoker = resolve_invoker_identity(config=config)
     membership = check_membership(members, invoker)
@@ -167,6 +180,24 @@ def main() -> int:
         for lbl in (issue.get("labels") or [])
     ]
     substrate_map = axis_labels.load_substrate_map(capability_root)
+
+    # Gate: the move to Review is legal from where the issue is (#947). Asked
+    # before the PR is opened or flipped ready and before reviewers are
+    # requested, so a refusal changes nothing. Same position read and
+    # transition table move-issue consults, as start-work's gate (#942).
+    refusal = _transition_refusal(
+        args.issue_number,
+        issue,
+        labels,
+        workflow=workflow,
+        issue_types=issue_types,
+        classification=classification,
+        substrate_map=substrate_map,
+    )
+    if refusal is not None:
+        print(refusal, file=sys.stderr)
+        return 2
+
     expected_prefix = _derive_branch_prefix(labels, title, classification, substrate_map)
     branch_prefix_match = re.match(r"^([a-z]+)/", branch)
     branch_prefix = branch_prefix_match.group(1) if branch_prefix_match else None
@@ -207,6 +238,9 @@ def main() -> int:
     # first (create-draft → edit-pr → review-work), or use open-pr --body-file.
     existing_pr = _find_pr_for_branch(branch, config)
     pr_number: int | None = None
+    # What this run changed on the PR, named if the composed move then fails.
+    opened_url: str | None = None
+    flipped = False
     if existing_pr is None:
         # Open a ready PR (non-draft) — validate the composed body first.
         title = _derive_pr_title(issue, branch)
@@ -218,6 +252,7 @@ def main() -> int:
             return 3
         m = re.search(r"/pull/(\d+)", url)
         pr_number = int(m.group(1)) if m else None
+        opened_url = url
         print(f"  opened ready PR: {url}")
     elif existing_pr.get("isDraft"):
         # Flip draft → ready — validate the draft's current body first.
@@ -228,6 +263,7 @@ def main() -> int:
             return 1
         if not _gh_pr_ready(pr_number, config):
             return 3
+        flipped = True
         print(f"  flipped PR #{pr_number} draft → ready")
     else:
         pr_number = existing_pr.get("number")
@@ -268,8 +304,11 @@ def main() -> int:
                 file=sys.stderr,
             )
 
+    reviewers_requested: list[str] = []
     if pr_number is not None and reviewers_to_add:
-        if not _gh_pr_add_reviewers(pr_number, reviewers_to_add, config):
+        if _gh_pr_add_reviewers(pr_number, reviewers_to_add, config):
+            reviewers_requested = [r.lstrip("@") for r in reviewers_to_add]
+        else:
             print(
                 "[warn] PR ready but reviewer assignment failed; assign manually.",
                 file=sys.stderr,
@@ -277,9 +316,20 @@ def main() -> int:
 
     # Compose over move-issue for the state transition.
     rc = _invoke_move_issue(
-        args.issue_number, "review", args.capability_root, args.allow_foreign_repo
+        args.issue_number, TARGET_STATE, args.capability_root, args.allow_foreign_repo
     )
     if rc != 0:
+        print(
+            _late_failure_message(
+                args.issue_number,
+                rc,
+                pr_number=pr_number,
+                opened_url=opened_url,
+                flipped=flipped,
+                reviewers=reviewers_requested,
+            ),
+            file=sys.stderr,
+        )
         return rc
 
     print(f"\n[ok] PR ready + #{args.issue_number} In Progress → Review")
@@ -346,7 +396,140 @@ def _derive_pr_title(issue: dict, branch: str) -> str:
 
 
 def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
-    return gh_get_issue(issue_number, config, fields="title,labels,body")
+    return gh_get_issue(issue_number, config, fields="title,labels,body,state,milestone")
+
+
+def _transition_refusal(
+    issue_number: int,
+    issue: dict,
+    labels: list[str],
+    *,
+    workflow: dict,
+    issue_types: dict,
+    classification: dict,
+    substrate_map: axis_labels.SubstrateMap | None,
+) -> str | None:
+    """Why the composed `move-issue --to review` would refuse, or None.
+
+    Reads the issue's position through `lifecycle_inference.infer_current_state`
+    and its structural type through `infer_structural_type` (the readers
+    move-issue uses), and the legal moves through
+    `lifecycle_inference.legal_targets` (the table move-issue refuses on), as
+    start-work's gate does (#942). An issue already in Review passes: move-issue
+    treats that as an idempotent no-op, so re-running review-work still works
+    (after `back-to-draft`, it flips the PR ready again). When legal moves lead
+    on to Review — In Progress from Backlog; Backlog then In Progress from
+    Todo — the refusal names each of them."""
+    title = str(issue.get("title", ""))
+    structural_type = infer_structural_type(
+        title, issue_types, classification=classification, labels=labels
+    )
+    if structural_type is None:
+        return (
+            f"error: cannot determine structural type for issue #{issue_number}: "
+            f"title {title!r} matches no known [Type] prefix and no `type:*` "
+            "kind label is present. Nothing was changed.\n"
+            "  → Restore the issue's title prefix (e.g. [Task]) and re-run."
+        )
+    current = infer.infer_current_state(
+        state=str(issue.get("state", "")).lower(),
+        milestone=issue.get("milestone") or {},
+        labels=labels,
+        substrate_map=substrate_map,
+    )
+    if current == TARGET_STATE:
+        return None
+    targets = infer.legal_targets(workflow, current, structural_type)
+    if TARGET_STATE in targets:
+        return None
+    lines = [
+        f"[refused] review-work #{issue_number}: the issue is in {current!r}, and "
+        f"workflow.yaml declares no move {current!r} → {TARGET_STATE!r} for "
+        f"{structural_type!r}. Nothing was changed (no PR opened or made ready, "
+        "no reviewers requested).",
+    ]
+    steps = _moves_before_target(workflow, current, structural_type)
+    if steps:
+        moves = ", then ".join(f"`move-issue {issue_number} --to {step}`" for step in steps)
+        lines.append(f"  → move it first: {moves}, then re-run `review-work {issue_number}`.")
+    else:
+        lines.append(
+            f"  legal targets from {current!r}: {', '.join(targets) if targets else '<none>'}"
+        )
+    return "\n".join(lines)
+
+
+def _moves_before_target(workflow: dict, current: str, structural_type: str) -> list[str]:
+    """The states to move through, in order, on the shortest legal path from
+    `current` to Review, or [] when workflow.yaml declares no such path.
+
+    Walks `lifecycle_inference.legal_targets` breadth-first, so it names only
+    moves move-issue would make. Review is two moves away from Todo, so looking
+    a single move ahead would name nothing there."""
+    came_from: dict[str, str] = {current: current}
+    frontier = [current]
+    while frontier and TARGET_STATE not in came_from:
+        next_frontier: list[str] = []
+        for state in frontier:
+            for target in infer.legal_targets(workflow, state, structural_type):
+                if target not in came_from:
+                    came_from[target] = state
+                    next_frontier.append(target)
+        frontier = next_frontier
+    if TARGET_STATE not in came_from:
+        return []
+    steps: list[str] = []
+    state = came_from[TARGET_STATE]
+    while state != current:
+        steps.append(state)
+        state = came_from[state]
+    return steps[::-1]
+
+
+def _late_failure_message(
+    issue_number: int,
+    rc: int,
+    *,
+    pr_number: int | None,
+    opened_url: str | None,
+    flipped: bool,
+    reviewers: list[str],
+) -> str:
+    """The closing failure when the composed move-issue fails after the PR work.
+
+    Names each thing this run left behind — the PR it opened ready or flipped
+    from draft to ready, the reviewers it requested — so the caller can retry or
+    undo. A PR that was already ready is not something this run left behind. The
+    output must not end on the PR lines as if the run had succeeded (#947)."""
+    lines = [
+        f"\n[failed] review-work #{issue_number}: move-issue --to {TARGET_STATE} "
+        f"failed (exit {rc}); the issue did not move.",
+    ]
+    left = []
+    if opened_url is not None:
+        pr = f"PR #{pr_number} ({opened_url})" if pr_number is not None else f"PR {opened_url}"
+        pr_arg = str(pr_number) if pr_number is not None else opened_url
+        left.append(f"  - {pr}, opened ready for review. Undo: `gh pr close {pr_arg}`")
+    elif flipped:
+        left.append(
+            f"  - PR #{pr_number}, flipped from draft to ready for review. Undo: "
+            f"`gh pr ready {pr_number} --undo`"
+        )
+    if reviewers:
+        left.append(
+            f"  - review requested from {', '.join('@' + r for r in reviewers)} on "
+            f"PR #{pr_number}. Undo: "
+            f"`gh pr edit {pr_number} --remove-reviewer {','.join(reviewers)}`"
+        )
+    if left:
+        lines.append("  Left behind by this run:")
+        lines.extend(left)
+    else:
+        lines.append("  This run opened no PR, made none ready and requested no reviewers.")
+    lines.append(
+        f"  Fix the cause above and re-run `review-work {issue_number}` (it reuses the ready PR)."
+    )
+    return "\n".join(lines)
 
 
 def _find_pr_for_branch(branch: str, config: dict) -> dict | None:
@@ -514,7 +697,14 @@ def _read_classification(capability_root: Path, yaml_loader: YAML) -> dict:
     (`pr_type_mapping`) and the title-prefix reverse read. A thin or missing
     schema degrades to {} — the prefix then resolves to None and the DEC-013
     branch cross-check is skipped rather than misfiring."""
-    path = capability_root / "schemas" / "classification.yaml"
+    return _read_schema(capability_root, "classification.yaml", yaml_loader)
+
+
+def _read_schema(capability_root: Path, name: str, yaml_loader: YAML) -> dict:
+    """A parsed capability schema (`schemas/<name>`), or {} when absent or
+    unparseable. A missing workflow.yaml therefore declares no legal moves and
+    the transition gate refuses, as move-issue would."""
+    path = capability_root / "schemas" / name
     if not path.is_file():
         return {}
     try:
