@@ -63,7 +63,7 @@ Allowed when work is tightly coupled. Rules encoded as `multi_issue_pr_rules` in
 
 ### Merge mechanics
 
-**Squash-merge; head branch deleted on merge** — one PR → one commit on the base branch. Squash-commit subject = PR title (Conventional Commits); squash-commit body = PR body (preserves context in `git log`). The head branch is deleted on merge. No merge-commits, no rebase-merge, no cherry-picks.
+**Squash-merge; head branch deleted on merge** — one PR → one commit on the base branch. Squash-commit subject = PR title (Conventional Commits); squash-commit body = PR body (preserves context in `git log`). The head branch is deleted on merge. No merge-commits, no rebase-merge, no cherry-picks. Where the base branch merges through a merge queue, the queue makes this squash commit; [project-management:DEC-026-work-ownership-lifecycle] says how the merge verb goes through it.
 
 ### Force-push policy
 
