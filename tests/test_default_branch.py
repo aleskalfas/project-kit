@@ -739,6 +739,29 @@ def test_all_three_readers_agree_on_a_default_branch_that_is_not_main(
     assert (pm["name"], pm["check_base"]) == (TRUNK, f"refs/heads/{TRUNK}")
 
 
+def test_a_base_named_by_a_bare_commit_is_compared_with_as_named(
+    project: AdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A merge queue's run names its base by commit, not by a ref: the checks
+    workflow sets `$PKIT_CHECK_BASE` to `merge_group.base_sha` (#1011), the
+    commit the queued merge is built on. Every reader compares with that commit
+    as named, and since the work sits on it, the base is not outdated."""
+    fork = project.git("merge-base", TRUNK, "HEAD").stdout.strip()
+    monkeypatch.setenv(db.CHECK_BASE_ENV, fork)
+    expected = {"ref": fork, "tip": fork, "commit": fork, "outdated": False}
+    assert _friction_base(project) == expected
+    assert _numbers_base(project) == expected
+    settled = _settled(project)
+    assert (settled["base"]["ref"], settled["base"]["source"], settled["base"]["tip"]) == (
+        fork,
+        db.ENVIRONMENT,
+        fork,
+    )
+    assert settled["default_branch"]["name"] == TRUNK
+    pm = _pm(project)
+    assert (pm["name"], pm["check_base"], pm["tip"], pm["fork"]) == (TRUNK, fork, fork, fork)
+
+
 def test_in_a_shallow_clone_the_three_readers_refuse_alike(
     project: AdopterRepo, tmp_path: Path
 ) -> None:

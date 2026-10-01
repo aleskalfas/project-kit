@@ -20,9 +20,9 @@ pkit:
       artefact:
         - ACT-operator
     revalidated:
-      at: 2026-10-01T04:51:19Z
+      at: 2026-10-01T10:04:50Z
       outcome: unchanged
-      unchanged-because: done-work's change is how the agent gate judges a verdict fresh (the reviewed head and the author's changes since); stabilising a milestone and the guard planned on done-work are untouched
+      unchanged-because: "both merge verbs now enqueue where the base has a merge queue, merge-pr included (#1011): the merge-time evaluation gap K2 names as one fix has its mechanism, but the queue is not on and the stabilisation check it would run is not built, so the use case and K2 stand"
 ---
 
 # UC-010 — Stabilise a Milestone for a release

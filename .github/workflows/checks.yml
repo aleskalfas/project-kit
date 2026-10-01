@@ -12,6 +12,12 @@ on:
     # `labeled`/`unlabeled` so the changeset guard's `skip-changeset` escape
     # hatch actually re-runs the check when the label is added/removed.
     types: [opened, synchronize, reopened, labeled, unlabeled]
+  # The merge queue (#1011; ADR-055 point 5): when `main` merges through a
+  # queue, `checks` — the status `main` requires — runs on the merge the queue
+  # is about to make, so the friction and migration results that gate it are
+  # computed against the true base, not the one the pull request last saw.
+  merge_group:
+    types: [checks_requested]
   push:
     branches: [main]
 
@@ -45,8 +51,12 @@ jobs:
 
       - name: Run the check aggregator
         env:
-          # PR: diff against the PR base. Push to main: against main (no-op diff).
-          PKIT_CHECK_BASE: origin/${{ github.event.pull_request.base.ref || 'main' }}
+          # PR: diff against the PR base. Merge queue: against the commit the
+          # queued merge is built on (`merge_group.base_sha` — `main`, or the
+          # merge queued ahead of this one), so the diff is this pull request's
+          # alone and the base is never outdated. Push to main: against main
+          # (no-op diff).
+          PKIT_CHECK_BASE: ${{ github.event.merge_group.base_sha || format('origin/{0}', github.event.pull_request.base.ref || 'main') }}
         run: ./scripts/check.sh
 
       # Changeset guard (PRJ-002). PR-scoped: it needs the PR base ref and the
@@ -64,6 +74,10 @@ jobs:
       # consumed — by its content, whatever the branch is called, and passes
       # its surface check. The floor tie runs on every PR; a release diff only
       # deletes changesets, so it declares no floor.
+      #
+      # It does not run on the queue's merge: a merge group carries no pull
+      # request labels to read the escape hatch from, and the guard has already
+      # judged the pull request's diff, which the queued merge does not change.
       - name: Changeset guard (surface change ⇒ changeset; floor ⇒ its component)
         if: github.event_name == 'pull_request'
         env:

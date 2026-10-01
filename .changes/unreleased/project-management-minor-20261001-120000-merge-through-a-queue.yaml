@@ -1,0 +1,34 @@
+component: project-management
+kind: minor
+custom:
+  category: Changed
+body: >
+  Where a pull request's base branch merges through a merge queue, `done-work`
+  and `merge-pr` enqueue instead of merging (#1011): `gh pr merge <N> --auto
+  --match-head-commit <head>`, pinned to the head their gates checked, after
+  every gate has passed. The queue runs the base's required checks on the merge
+  it is about to make and merges once they pass, so those checks answer for the
+  true base. The verbs read the queue before any gate and again just before the
+  merge, print the pull request's place in it and wait for the merge — as long
+  as the queue estimates plus 2 minutes, at most 30, or `--wait-minutes`; what
+  follows the merge (`done-work`'s move to Done, close, cascade and clean-up;
+  `merge-pr`'s after-merge hooks and clean-up) runs once GitHub reports the
+  pull request merged, never on a merge command's success alone. When the wait
+  ends first, or `--no-wait` returns at once, the run exits 4 — accepted, a
+  re-run completes it — and the same verb run again once the pull request has
+  merged completes it; `done-work` finds the merged pull request from the
+  issue as well as the branch, so any clone completes it, and refuses only an
+  issue reopened since the merge. `merge-pr` run again fires its after-merge
+  hooks once: the clone records that they fired, so a further run from it does
+  nothing and says so, and a pull request someone else merged without a queue
+  is still refused. A merge `gh` accepted that GitHub cannot then be read to
+  confirm also exits 4, saying so rather than calling the pull request queued,
+  and a re-run completes it. A pull request that leaves the queue
+  unmerged, or that is pushed to after the enqueue and so taken out of the
+  queue, exits 3. The queue is the only path to such a base: `--admin` and
+  `--bypass-ci` are refused, and so are a queue whose merge method is not
+  squash, a repository whose default squash-commit title and message are not
+  the pull request title and body, and a head the queue already dropped unless
+  `--force` is given. The local branch is deleted after a merge only when
+  everything on it merged, and `merge-pr`'s direct merge is now pinned to the
+  head its gates read. A base without a queue merges directly, as before.

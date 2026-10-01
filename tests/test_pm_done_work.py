@@ -757,6 +757,7 @@ def _wire_main_seams(
         calls["order"].append(("remote_delete", branch))
 
     def _stub_cleanup_local(branch, config, **kwargs):
+        calls.setdefault("merged_heads", []).append(kwargs.get("merged_head"))
         calls["order"].append(("local_cleanup", branch))
 
     monkeypatch.setattr(dw, "_post_ci_bypass_audit", _stub_ci_audit)
@@ -768,6 +769,15 @@ def _wire_main_seams(
     monkeypatch.setattr(dw.pr_merge, "cleanup_local", _stub_cleanup_local)
     monkeypatch.setattr(dw, "_invoke_move_issue", _stub_move)
     monkeypatch.setattr(dw, "_invoke_close_issue", _stub_close)
+
+    # The base merges directly — the merge-queue path (#1011) has its own tests
+    # at the end of this file — and GitHub reports the PR merged once the
+    # stubbed merge has run: done-work counts a merge only when it does.
+    def no_queue(pr_number: int, config: dict[str, Any]) -> Any:
+        state = "MERGED" if calls["merged"] else "OPEN"
+        return dw.merge_queue.Reading(has_queue=False, pr_state=state)
+
+    monkeypatch.setattr(dw.merge_queue, "read", no_queue)
     return calls
 
 
@@ -1348,14 +1358,19 @@ def test_transition_runs_immediately_after_merge_before_cleanup(dw, monkeypatch)
 
 def _fake_git(monkeypatch, dw, *, checkout_stderr="", branch_d_stderr=""):
     """Stub `subprocess.run` for the local git steps: `checkout main` and
-    `branch -D` fail with the given stderr (empty = succeed); `pull` succeeds.
-    Returns the list of git argvs seen."""
+    `branch -D` fail with the given stderr (empty = succeed); `pull` succeeds,
+    and the local head is the head that merged (`rev-parse` answers it, and
+    nothing on it is unmerged). Returns the list of git argvs seen."""
     import subprocess
 
     seen: list[list[str]] = []
 
     def fake_run(argv, **kwargs):
         seen.append(list(argv))
+        if argv[:2] == ["git", "rev-parse"]:
+            return subprocess.CompletedProcess(argv, 0, stdout="sha-head\n", stderr="")
+        if argv[:2] == ["git", "rev-list"]:
+            return subprocess.CompletedProcess(argv, 0, stdout="0\n", stderr="")
         if argv[:3] == ["git", "checkout", "main"] and checkout_stderr:
             return subprocess.CompletedProcess(argv, 128, stdout="", stderr=checkout_stderr)
         if argv[:3] == ["git", "branch", "-D"] and branch_d_stderr:
@@ -1975,8 +1990,19 @@ if args[:1] == ["issue"] and len(args) > 2:
     with open(path, "w", encoding="utf-8") as fh:
         json.dump(state, fh)
     sys.exit(0)
+if args[:2] == ["pr", "list"]:
+    print(json.dumps(state.get("merged_prs", [])))
+    sys.exit(0)
 if args[:2] == ["pr", "view"]:
     print(json.dumps(state["pr"]))
+    sys.exit(0)
+if args[:2] == ["api", "graphql"] and any("closedByPullRequestsReferences" in a for a in args):
+    merged = [dict(pr, state="MERGED") for pr in state.get("merged_prs", [])]
+    issue = {
+        "closedByPullRequestsReferences": {"nodes": merged},
+        "timelineItems": {"nodes": []},
+    }
+    print(json.dumps({"data": {"repository": {"issue": issue}}}))
     sys.exit(0)
 if args[:1] == ["api"]:
     print("octocat")
@@ -2027,11 +2053,14 @@ def _run_done_work_end_to_end(
     primary_label: str,
     *,
     milestone: dict[str, Any] | None = None,
+    merged_by_queue: bool = False,
 ) -> _EndToEnd:
     """done-work on #42, carrying `primary_label`, with the REAL move-issue and
     close-issue run against the stateful fake `gh`. With `milestone` (a
     Milestone as `gh api` returns it), #42 is scheduled into it by its native
-    field — the only issue in it."""
+    field — the only issue in it. With `merged_by_queue`, the run is the one
+    after a merge queue merged PR #496 (#1011): no open PR, the merged one from
+    the branch, and #42 closed by GitHub as it merged."""
     import shutil
 
     cap_root = tmp_path / ".pkit" / "capabilities" / "project-management"
@@ -2051,10 +2080,23 @@ def _run_done_work_end_to_end(
     if milestone is not None:
         task["milestone"] = {"number": milestone["number"], "title": milestone["title"]}
         milestones[str(milestone["number"])] = milestone
+    merged_at = "2026-09-30T10:00:00Z"
+    if merged_by_queue:
+        task = {**task, "state": "CLOSED", "closedAt": "2026-09-30T10:00:04Z"}
     state = {
         "issues": {"42": task, "7": feature},
         "milestones": milestones,
-        "pr": {"number": 496, "state": "MERGED", "mergedAt": "2026-09-30T10:00:00Z", "url": "u"},
+        "pr": {"number": 496, "state": "MERGED", "mergedAt": merged_at, "url": "u"},
+        "merged_prs": [
+            {
+                "number": 496,
+                "headRefName": "fix/42-slug",
+                "headRefOid": "sha-head",
+                "mergedAt": merged_at,
+                "isCrossRepository": False,
+                "body": "Closes #42\n",
+            }
+        ],
     }
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
@@ -2073,7 +2115,8 @@ def _run_done_work_end_to_end(
     monkeypatch.delenv("CLAUDE_PROJECT_DIR", raising=False)
 
     real_move, real_close = dw._invoke_move_issue, dw._invoke_close_issue
-    _wire_main_seams(
+    real_get_issue = dw._gh_get_issue
+    seams = _wire_main_seams(
         dw,
         monkeypatch,
         rollup=_GREEN_ROLLUP,
@@ -2086,6 +2129,9 @@ def _run_done_work_end_to_end(
     monkeypatch.setattr(dw, "resolve_capability_root", staged_capability_root)
     monkeypatch.setattr(dw, "_invoke_move_issue", real_move)
     monkeypatch.setattr(dw, "_invoke_close_issue", real_close)
+    if merged_by_queue:
+        monkeypatch.setattr(dw, "_find_pr_for_branch", lambda branch, config: None)
+        monkeypatch.setattr(dw, "_gh_get_issue", real_get_issue)
     calls_at_merge: list[int] = []
 
     def merge(
@@ -2097,6 +2143,7 @@ def _run_done_work_end_to_end(
         head_oid: str = "",
     ) -> bool:
         calls_at_merge.append(len(log.read_text(encoding="utf-8").splitlines()))
+        seams["merged"] = True
         return True
 
     monkeypatch.setattr(dw.pr_merge, "squash_merge", merge)
@@ -2114,7 +2161,7 @@ def _run_done_work_end_to_end(
         err=captured.err,
         end=json.loads(state_file.read_text(encoding="utf-8"))["issues"]["42"],
         calls=[json.loads(line) for line in log.read_text(encoding="utf-8").splitlines()],
-        calls_at_merge=calls_at_merge[0],
+        calls_at_merge=calls_at_merge[0] if calls_at_merge else 0,
     )
 
 
@@ -2212,3 +2259,777 @@ def test_a_merge_into_a_date_based_milestone_surfaces_no_close(
     run.assert_closed_done_one_comment_no_warning()
     assert "  · milestone #6 open; date-based — it closes on its date" in run.out
     assert "close-milestone" not in run.out
+
+
+# ---- merging through a queue (#1011) ------------------------------------
+#
+# Where the PR's base merges through a queue, done-work enqueues instead of
+# merging: the queue runs the required checks on the merge it is about to make
+# and merges once they pass. done-work prints where the PR stands and waits for
+# the merge; what follows the merge runs then — or, when the wait ends first, in
+# a later run that finds the PR merged. These tests run the real enqueue and the
+# real queue reading against a fake `gh` that keeps a queue, with the steps after
+# the merge stubbed (`calls["order"]`) and a clock the wait's sleeps advance.
+
+# A `gh` keeping one PR and its place in a merge queue. `pr merge` takes the PR
+# in (`--disable-auto` cancels its auto-merge, the dequeue mutation takes it
+# out); each later read of the PR moves it on by the next entry of
+# `state["queue"]`, until none is left. It answers the repository's squash-
+# commit defaults from `state["repository"]` and the issue's closing PRs and
+# reopenings from `state["issue"]`.
+_QUEUE_FAKE_GH = """\
+import json, os, sys
+args = sys.argv[1:]
+with open(os.environ["FAKE_GH_LOG"], "a", encoding="utf-8") as log:
+    log.write(json.dumps(args) + "\\n")
+path = os.environ["FAKE_GH_STATE"]
+with open(path, encoding="utf-8") as fh:
+    state = json.load(fh)
+pr = state["pr"]
+query = next((a for a in args if a.startswith("query=")), "")
+if args[:2] == ["pr", "merge"] and "--disable-auto" in args:
+    pr["autoMergeRequest"] = None
+elif args[:2] == ["pr", "merge"]:
+    pr["isInMergeQueue"] = True
+elif "dequeuePullRequest" in query:
+    pr.update(isInMergeQueue=False, mergeQueueEntry=None)
+    state["queue"] = []
+elif "closedByPullRequestsReferences" in query:
+    print(json.dumps({"data": {"repository": {"issue": state["issue"]}}}))
+elif args[:2] == ["api", "graphql"]:
+    if pr["isInMergeQueue"] and state["queue"]:
+        pr.update(state["queue"].pop(0))
+    print(json.dumps({"data": {"repository": {"pullRequest": pr}}}))
+elif args[:2] == ["api", "repos/{owner}/{repo}"]:
+    print(json.dumps(state["repository"]))
+elif args[:2] == ["pr", "list"]:
+    print(json.dumps(state.get("merged_prs", [])))
+with open(path, "w", encoding="utf-8") as fh:
+    json.dump(state, fh)
+"""
+
+_MERGED_AT = "2026-10-01T10:12:00Z"
+
+
+def _queued_at(position: int, entry_state: str, **fields: Any) -> dict[str, Any]:
+    entry = {"position": position, "state": entry_state, "estimatedTimeToMerge": 300}
+    return {"mergeQueueEntry": entry, **fields}
+
+
+_QUEUE_MERGED = {
+    "isInMergeQueue": False,
+    "mergeQueueEntry": None,
+    "state": "MERGED",
+    "mergedAt": _MERGED_AT,
+}
+_QUEUE_DROPPED = {"isInMergeQueue": False, "mergeQueueEntry": None}
+_PR_TITLE_AND_BODY = {
+    "squash_merge_commit_title": "PR_TITLE",
+    "squash_merge_commit_message": "PR_BODY",
+}
+
+
+@dataclass
+class _QueueRun:
+    """The queue a run met, and what the run did."""
+
+    calls: dict[str, Any]
+    log: Path
+    state_file: Path
+    sleeps: list[float]
+
+    def gh(self) -> list[list[str]]:
+        return [json.loads(line) for line in self.log.read_text(encoding="utf-8").splitlines()]
+
+    def merges(self) -> list[list[str]]:
+        return [c for c in self.gh() if c[:2] == ["pr", "merge"]]
+
+    def reads_after_the_merge(self) -> int:
+        calls = self.gh()
+        start = next(i for i, c in enumerate(calls) if c[:2] == ["pr", "merge"])
+        return sum(1 for c in calls[start:] if c[:2] == ["api", "graphql"])
+
+    def update(self, **fields: Any) -> None:
+        """Change what the fake `gh` keeps before the run."""
+        state = json.loads(self.state_file.read_text(encoding="utf-8"))
+        state.update(fields)
+        self.state_file.write_text(json.dumps(state), encoding="utf-8")
+
+    def update_pr(self, **fields: Any) -> None:
+        state = json.loads(self.state_file.read_text(encoding="utf-8"))
+        state["pr"].update(fields)
+        self.state_file.write_text(json.dumps(state), encoding="utf-8")
+
+
+def _wire_queue(
+    dw: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    queue: list[dict[str, Any]],
+    merge_method: str = "SQUASH",
+    already_queued: bool = False,
+) -> _QueueRun:
+    """done-work's gates stubbed as for every main() test; the queue real, on a
+    fake `gh` whose base `main` merges through a queue with `merge_method`,
+    squashing with the PR title and body."""
+    import functools
+
+    real_read, real_wait = dw.merge_queue.read, dw.merge_queue.wait_for_merge
+    calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+    monkeypatch.setattr(dw.merge_queue, "read", real_read)
+    monkeypatch.setattr(
+        dw,
+        "_find_pr_for_branch",
+        lambda branch, config: {
+            "number": 496,
+            "title": "fix: x",
+            "isDraft": False,
+            "headRefOid": "sha-head",
+            "baseRefName": "main",
+        },
+    )
+    now = [0.0]
+    sleeps: list[float] = []
+
+    def sleep(seconds: float) -> None:
+        sleeps.append(seconds)
+        now[0] += seconds
+
+    monkeypatch.setattr(
+        dw.merge_queue,
+        "wait_for_merge",
+        functools.partial(real_wait, sleep=sleep, clock=lambda: now[0]),
+    )
+    pr = {
+        "id": "PR_node",
+        "state": "OPEN",
+        "mergedAt": None,
+        "headRefOid": "sha-head",
+        "isMergeQueueEnabled": True,
+        "isInMergeQueue": already_queued,
+        "mergeQueue": {"configuration": {"mergeMethod": merge_method}},
+        "mergeQueueEntry": None,
+        "autoMergeRequest": None,
+        "timelineItems": {"nodes": []},
+    }
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    fake = bin_dir / "gh"
+    fake.write_text(f"#!{sys.executable}\n{_QUEUE_FAKE_GH}", encoding="utf-8")
+    fake.chmod(0o755)
+    state_file = tmp_path / "state.json"
+    state = {
+        "pr": pr,
+        "queue": queue,
+        "repository": _PR_TITLE_AND_BODY,
+        "issue": {"closedByPullRequestsReferences": {"nodes": []}, "timelineItems": {"nodes": []}},
+    }
+    state_file.write_text(json.dumps(state), encoding="utf-8")
+    log = tmp_path / "gh.log"
+    log.touch()
+    monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}")
+    monkeypatch.setenv("FAKE_GH_STATE", str(state_file))
+    monkeypatch.setenv("FAKE_GH_LOG", str(log))
+    return _QueueRun(calls=calls, log=log, state_file=state_file, sleeps=sleeps)
+
+
+_AFTER_THE_MERGE = [
+    ("moved", None),
+    ("closed", 42),
+    ("remote_delete", "fix/42-slug"),
+    ("local_cleanup", "fix/42-slug"),
+]
+
+_ENQUEUE = ["pr", "merge", "496", "--auto", "--match-head-commit", "sha-head"]
+
+
+def test_with_a_queue_the_pr_is_enqueued_and_what_follows_runs_once_it_merges(
+    dw: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    run = _wire_queue(
+        dw,
+        tmp_path,
+        monkeypatch,
+        queue=[_queued_at(2, "AWAITING_CHECKS"), _queued_at(1, "MERGEABLE"), _QUEUE_MERGED],
+    )
+    rc = _run_main(dw, monkeypatch, ["42", "--yes"])
+    out = capsys.readouterr().out
+    assert rc == 0, out
+    # Pinned to the checked head, with --auto and nothing else: the queue makes
+    # the merge, by its own method, from the repository's squash defaults.
+    assert run.merges() == [_ENQUEUE]
+    assert run.calls["merged"] is False
+    assert run.calls["order"] == _AFTER_THE_MERGE
+    assert run.calls["merged_heads"] == ["sha-head"]
+    assert "  queue:   main merges through a queue; PR #496 not in the queue" in out
+    assert "  enqueued PR #496 in the merge queue for main" in out
+    assert (
+        "  waiting for the queue to merge it, as long as the queue estimates plus 2 min, "
+        "at most 30 min (--no-wait returns at once)"
+    ) in out
+    assert "  queue:   PR #496 position 2 in the queue, awaiting checks, about 5 min" in out
+    assert "  queue:   PR #496 position 1 in the queue, mergeable" in out
+    assert "  merged PR #496 through the queue" in out
+    assert "[ok] merged + closed #42" in out
+    assert run.sleeps == [15.0, 15.0]
+
+
+def test_no_wait_returns_once_the_pr_is_queued_and_leaves_the_issue_in_review(
+    dw: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    run = _wire_queue(
+        dw, tmp_path, monkeypatch, queue=[_queued_at(2, "AWAITING_CHECKS"), _QUEUE_MERGED]
+    )
+    rc = _run_main(dw, monkeypatch, ["42", "--yes", "--no-wait"])
+    out = capsys.readouterr().out
+    assert rc == dw.EXIT_ACCEPTED == 4
+    assert len(run.merges()) == 1
+    assert run.reads_after_the_merge() == 1
+    assert run.sleeps == []
+    assert run.calls["order"] == []
+    assert "[queued] PR #496 is in the merge queue for main (position 2 in the queue" in out
+    assert "#42 stays in Review until it merges. Run `done-work 42` again" in out
+
+
+def test_a_wait_that_runs_out_leaves_the_pr_queued(
+    dw: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    run = _wire_queue(dw, tmp_path, monkeypatch, queue=[_queued_at(3, "QUEUED")])
+    rc = _run_main(dw, monkeypatch, ["42", "--yes", "--wait-minutes", "1"])
+    out = capsys.readouterr().out
+    assert rc == 4
+    assert sum(run.sleeps) == 60
+    assert run.calls["order"] == []
+    assert "[queued] PR #496 is in the merge queue for main (position 3 in the queue" in out
+
+
+def test_a_pr_the_queue_drops_merges_nothing(
+    dw: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Two readings out of the queue, and the message hedges: it reports what
+    the queue says, not a certainty about why."""
+    run = _wire_queue(
+        dw, tmp_path, monkeypatch, queue=[_queued_at(1, "AWAITING_CHECKS"), _QUEUE_DROPPED]
+    )
+    rc = _run_main(dw, monkeypatch, ["42", "--yes"])
+    err = capsys.readouterr().err
+    assert rc == 3
+    assert run.calls["order"] == []
+    assert (
+        "PR #496 left the merge queue for main without merging, as far as the queue reports"
+    ) in err
+    assert "#42 stays in Review" in err
+
+
+def test_a_push_after_the_enqueue_takes_the_pr_out_of_the_queue(
+    dw: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Commits pushed after the gates checked the head must not merge: the run
+    takes the PR out of the queue and stops, nothing merged."""
+    run = _wire_queue(
+        dw,
+        tmp_path,
+        monkeypatch,
+        queue=[_queued_at(2, "AWAITING_CHECKS"), _queued_at(1, "QUEUED", headRefOid="sha-pushed")],
+    )
+    rc = _run_main(dw, monkeypatch, ["42", "--yes"])
+    err = capsys.readouterr().err
+    assert rc == 3
+    assert run.calls["order"] == []
+    dequeue = [c for c in run.gh() if any("dequeuePullRequest" in a for a in c)]
+    assert dequeue and dequeue[0][-1] == "id=PR_node"
+    assert "head moved from sha-hea to sha-pus after its gates checked it" in err
+    assert "it was taken out of the merge queue" in err
+    assert "#42 stays in Review" in err
+
+
+def test_a_pr_already_in_the_queue_is_waited_for_not_enqueued_again(
+    dw: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    run = _wire_queue(
+        dw,
+        tmp_path,
+        monkeypatch,
+        already_queued=True,
+        queue=[_queued_at(1, "MERGEABLE"), _queued_at(1, "MERGEABLE"), _QUEUE_MERGED],
+    )
+    rc = _run_main(dw, monkeypatch, ["42", "--yes"])
+    out = capsys.readouterr().out
+    assert rc == 0, out
+    assert run.merges() == []
+    assert "  PR #496 is already in the merge queue for main" in out
+    assert run.calls["order"] == _AFTER_THE_MERGE
+
+
+_DROPPED_HERE = {
+    "nodes": [
+        {"__typename": "AddedToMergeQueueEvent"},
+        {
+            "__typename": "RemovedFromMergeQueueEvent",
+            "createdAt": "2026-10-01T10:05:00Z",
+            "reason": "failed checks",
+            "beforeCommit": {"oid": "sha-head"},
+        },
+    ]
+}
+
+
+@pytest.mark.parametrize(
+    ("argv", "state", "refusal"),
+    [
+        (["--admin"], {}, "--admin would merge around the queue"),
+        (["--bypass-ci", "flaky"], {}, "--bypass-ci cannot bypass a check there"),
+        ([], {"merge_method": "MERGE"}, "the merge queue on main merges by MERGE"),
+        (
+            [],
+            {
+                "repository": {
+                    "squash_merge_commit_title": "COMMIT_OR_PR_TITLE",
+                    "squash_merge_commit_message": "COMMIT_MESSAGES",
+                }
+            },
+            "squash_merge_commit_title=PR_TITLE -f squash_merge_commit_message=PR_BODY",
+        ),
+        ([], {"timelineItems": _DROPPED_HERE}, "dropped the PR at its current head sha-hea"),
+    ],
+    ids=["admin", "bypass-ci", "not-squash", "squash-defaults", "dropped-head"],
+)
+def test_a_queue_the_run_may_not_go_around_or_through_refuses_before_any_gate(
+    dw: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    argv: list[str],
+    state: dict[str, Any],
+    refusal: str,
+) -> None:
+    run = _wire_queue(
+        dw, tmp_path, monkeypatch, queue=[], merge_method=state.get("merge_method", "SQUASH")
+    )
+    if "repository" in state:
+        run.update(repository=state["repository"])
+    if "timelineItems" in state:
+        run.update_pr(timelineItems=state["timelineItems"])
+    rc = _run_main(dw, monkeypatch, ["42", "--yes", *argv])
+    err = capsys.readouterr().err
+    assert rc == 1
+    assert refusal in err
+    assert run.merges() == []
+    assert run.calls["merged"] is False
+    assert run.calls["order"] == []
+    assert run.calls["approval_audit"] is False
+    assert run.calls["ci_audit"] is False
+
+
+def test_force_enqueues_a_head_the_queue_dropped(
+    dw: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    run = _wire_queue(dw, tmp_path, monkeypatch, queue=[_queued_at(1, "QUEUED")])
+    run.update_pr(timelineItems=_DROPPED_HERE)
+    rc = _run_main(dw, monkeypatch, ["42", "--yes", "--force", "--no-wait"])
+    assert rc == 4
+    assert run.merges() == [_ENQUEUE]
+
+
+def test_a_queue_that_cannot_be_read_merges_nothing(
+    dw: ModuleType,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+
+    def unreadable(pr_number: int, config: dict[str, Any]) -> Any:
+        raise dw.merge_queue.Unreadable("HTTP 502")
+
+    monkeypatch.setattr(dw.merge_queue, "read", unreadable)
+    rc = _run_main(dw, monkeypatch, ["42", "--yes"])
+    assert rc == 2
+    assert calls["merged"] is False
+    assert calls["order"] == []
+    err = capsys.readouterr().err
+    assert "cannot tell how the base branch merges: HTTP 502. Nothing was merged" in err
+
+
+def test_a_direct_merge_github_cannot_confirm_is_not_called_queued(
+    dw: ModuleType,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """gh accepts the direct merge, then every reading fails: the PR may have
+    merged, so nothing after a merge runs, the issue stays in Review, and the
+    run says it could not confirm the merge rather than that the PR is queued.
+    A later run finds the PR merged, or open, and finishes (exit 4)."""
+    calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+
+    def unreadable_after_the_merge(pr_number: int, config: dict[str, Any]) -> Any:
+        if calls["merged"]:
+            raise dw.merge_queue.Unreadable("HTTP 502")
+        return dw.merge_queue.Reading(has_queue=False, pr_state="OPEN")
+
+    monkeypatch.setattr(dw.merge_queue, "read", unreadable_after_the_merge)
+    rc = _run_main(dw, monkeypatch, ["42", "--yes"])
+    captured = capsys.readouterr()
+    assert rc == dw.EXIT_ACCEPTED == 4
+    assert calls["order"] == [("merged", None)]
+    assert "[queued]" not in captured.out
+    assert (
+        "[unconfirmed] gh accepted the merge of PR #496 into the base branch, but GitHub "
+        "could not be read to confirm that it merged: HTTP 502. Nothing after the merge has "
+        "run, and #42 stays in Review. Run `done-work 42` again once GitHub answers"
+    ) in captured.out
+
+
+def _no_queue_merge(dw: ModuleType, monkeypatch: pytest.MonkeyPatch, run: _QueueRun) -> None:
+    """The fake `gh`'s base has no queue, and a direct merge GitHub reports merged."""
+    run.update_pr(isMergeQueueEnabled=False, mergeQueue=None)
+
+    def merge(pr_number: int, **kwargs: Any) -> bool:
+        run.calls["merged"] = True
+        run.calls["order"].append(("merged", None))
+        run.update_pr(state="MERGED", mergedAt=_MERGED_AT)
+        return True
+
+    monkeypatch.setattr(dw.pr_merge, "squash_merge", merge)
+
+
+def test_without_a_queue_the_merge_is_direct_as_before(
+    dw: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The same fake `gh`, answering that the base has no queue: done-work
+    merges directly, with no `--auto` and no wait, and never reads the
+    repository's squash defaults, which only a queue composes from."""
+    run = _wire_queue(dw, tmp_path, monkeypatch, queue=[])
+    _no_queue_merge(dw, monkeypatch, run)
+    rc = _run_main(dw, monkeypatch, ["42", "--yes"])
+    assert rc == 0
+    assert run.calls["merged"] is True
+    assert run.merges() == []
+    assert run.calls["order"] == [("merged", None), *_AFTER_THE_MERGE]
+    assert run.sleeps == []
+    assert not any(c[:2] == ["api", "repos/{owner}/{repo}"] for c in run.gh())
+
+
+def test_a_merge_gh_only_enqueued_never_runs_what_follows_a_merge(
+    dw: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """On a base that requires a queue, `gh pr merge` without `--admin`
+    enqueues and exits 0. GitHub not reporting the PR merged, nothing that
+    follows a merge runs — no move to Done, no close, no branch deleted, which
+    would close the PR and drop it from the queue."""
+    run = _wire_queue(dw, tmp_path, monkeypatch, queue=[])
+    run.update_pr(isMergeQueueEnabled=False, mergeQueue=None)
+
+    def gh_only_enqueues(pr_number: int, **kwargs: Any) -> bool:
+        run.calls["merged"] = True
+        run.update_pr(
+            isInMergeQueue=True, mergeQueueEntry=_queued_at(1, "QUEUED")["mergeQueueEntry"]
+        )
+        return True
+
+    monkeypatch.setattr(dw.pr_merge, "squash_merge", gh_only_enqueues)
+    rc = _run_main(dw, monkeypatch, ["42", "--yes", "--no-wait"])
+    out = capsys.readouterr().out
+    assert rc == 4
+    assert run.calls["order"] == []
+    assert "GitHub does not report PR #496 merged" in out
+    assert "[queued] PR #496 is in the merge queue for main" in out
+
+
+def test_the_dry_run_says_it_would_enqueue_and_wait(
+    dw: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    run = _wire_queue(dw, tmp_path, monkeypatch, queue=[])
+    rc = _run_main(dw, monkeypatch, ["42", "--dry-run"])
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert run.merges() == []
+    assert (
+        "enqueue (--auto, pinned to sha-hea; the queue squashes with the PR title and "
+        "body) and wait for the queue to merge it, as long as the queue estimates plus "
+        "2 min, at most 30 min, then call move-issue"
+    ) in out
+
+
+# A later run, after the queue merged the PR: no open PR is left for the
+# branch, the merged one is, and only what follows the merge runs. The PR is
+# found from the issue as well as the branch, so any clone completes it.
+
+
+def _merged_pr(**fields: Any) -> dict[str, Any]:
+    pr = {
+        "number": 496,
+        "headRefName": "fix/42-slug",
+        "headRefOid": "sha-head",
+        "mergedAt": _MERGED_AT,
+        "isCrossRepository": False,
+        "body": "Closes #42\nCloses #43\n",
+    }
+    return {**pr, **fields}
+
+
+def _wire_second_run(
+    dw: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    issues: dict[int, dict[str, Any]],
+    branch: str | None = "fix/42-slug",
+    from_the_branch: bool = True,
+    from_the_issue: bool = True,
+    reopened_at: str | None = None,
+) -> _QueueRun:
+    run = _wire_queue(dw, tmp_path, monkeypatch, queue=[])
+    nodes = [{"createdAt": reopened_at}] if reopened_at else []
+    linked = [{**_merged_pr(), "state": "MERGED"}] if from_the_issue else []
+    run.update(
+        merged_prs=[_merged_pr()] if from_the_branch else [],
+        issue={
+            "closedByPullRequestsReferences": {"nodes": linked},
+            "timelineItems": {"nodes": nodes},
+        },
+    )
+    monkeypatch.setattr(dw, "_find_issue_branch", lambda n: branch)
+    monkeypatch.setattr(dw, "_find_pr_for_branch", lambda branch, config: None)
+    monkeypatch.setattr(dw, "_gh_get_issue", lambda n, config: issues.get(n))
+
+    def no_gate(*args: Any, **kwargs: Any) -> Any:
+        raise AssertionError("a merged PR has nothing left to gate")
+
+    monkeypatch.setattr(dw, "_check_approval_gate", no_gate)
+    monkeypatch.setattr(dw, "_gh_get_status_rollup", no_gate)
+    return run
+
+
+_CLOSED_BY_THE_MERGE = {**_open_issue(""), "state": "CLOSED", "closedAt": _MERGED_AT}
+_CLOSED_BEFORE = {**_open_issue(""), "state": "CLOSED", "closedAt": "2026-09-01T00:00:00Z"}
+
+
+def test_a_later_run_finds_the_pr_merged_and_completes_what_follows(
+    dw: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """#42 was closed by GitHub as the queue merged; #43 was closed before the
+    merge, so the merge did not close it and it is left alone."""
+    run = _wire_second_run(
+        dw, tmp_path, monkeypatch, issues={42: _CLOSED_BY_THE_MERGE, 43: _CLOSED_BEFORE}
+    )
+    rc = _run_main(dw, monkeypatch, ["42", "--yes"])
+    out = capsys.readouterr().out
+    assert rc == 0, out
+    assert run.merges() == []
+    assert run.calls["order"] == _AFTER_THE_MERGE
+    assert run.calls["merged_heads"] == ["sha-head"]
+    assert f"  PR:      #496, merged at {_MERGED_AT}; completing what follows the merge" in out
+    assert "  closes:  #42\n" in out
+    assert "[ok] merged + closed #42" in out
+
+
+@pytest.mark.parametrize(
+    ("branch", "from_the_branch"),
+    [(None, False), ("fix/42-slug", False)],
+    ids=["no-local-branch", "a-branch-whose-pr-is-not-found-from-it"],
+)
+def test_a_later_run_from_any_clone_completes_it_from_the_issue(
+    dw: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    branch: str | None,
+    from_the_branch: bool,
+) -> None:
+    """A clone without the branch — deleted, or never there — finds the merged
+    PR through the issue's own closing references, and cleans up the PR's head
+    branch, not a local one."""
+    run = _wire_second_run(
+        dw,
+        tmp_path,
+        monkeypatch,
+        issues={42: _CLOSED_BY_THE_MERGE, 43: _CLOSED_BEFORE},
+        branch=branch,
+        from_the_branch=from_the_branch,
+    )
+    rc = _run_main(dw, monkeypatch, ["42", "--yes"])
+    out = capsys.readouterr().out
+    assert rc == 0, out
+    assert run.calls["order"] == _AFTER_THE_MERGE
+
+
+def test_a_later_run_on_a_stale_local_branch_completes_it_and_keeps_the_branch(
+    dw: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Whatever this clone's branch points at, the completion keys on the PR. A
+    local branch holding commits the merge does not is kept by the real
+    clean-up, never force-deleted: `-D` would lose that work."""
+    import subprocess
+
+    real_cleanup, real_run = dw.pr_merge.cleanup_local, subprocess.run
+    run = _wire_second_run(
+        dw, tmp_path, monkeypatch, issues={42: _CLOSED_BY_THE_MERGE, 43: _CLOSED_BEFORE}
+    )
+    seen: list[list[str]] = []
+
+    def fake_run(argv: list[str], **kwargs: Any) -> Any:
+        if argv[:1] != ["git"]:
+            return real_run(argv, **kwargs)
+        seen.append(list(argv))
+        if argv[:2] == ["git", "rev-parse"]:
+            return subprocess.CompletedProcess(argv, 0, stdout="sha-newer\n", stderr="")
+        if argv[:2] == ["git", "rev-list"]:
+            return subprocess.CompletedProcess(argv, 0, stdout="1\n", stderr="")
+        return subprocess.CompletedProcess(argv, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(dw.pr_merge, "cleanup_local", real_cleanup)
+    monkeypatch.setattr(dw.pr_merge.default_branch, "name", lambda config: "main")
+    monkeypatch.setattr(dw.subprocess, "run", fake_run)
+    rc = _run_main(dw, monkeypatch, ["42", "--yes"])
+    err = capsys.readouterr().err
+    assert rc == 0, err
+    assert ["git", "rev-list", "--count", "sha-head..sha-newer"] in seen
+    assert ["git", "branch", "-D", "fix/42-slug"] not in seen
+    assert "local branch fix/42-slug (at sha-new) holds commits the merge at sha-hea" in err
+    assert ("remote_delete", "fix/42-slug") in run.calls["order"]
+
+
+def test_a_later_run_refuses_an_issue_reopened_since_the_merge(
+    dw: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Work after a reopen needs a PR of its own: closing the issue through the
+    old merge would be wrong."""
+    run = _wire_second_run(
+        dw,
+        tmp_path,
+        monkeypatch,
+        issues={42: _open_issue("")},
+        reopened_at="2026-10-02T09:00:00Z",
+    )
+    rc = _run_main(dw, monkeypatch, ["42", "--yes"])
+    err = capsys.readouterr().err
+    assert rc == 2
+    assert run.calls["order"] == []
+    assert f"PR #496 merged at {_MERGED_AT}, but #42 was reopened at 2026-10-02T09:00:00Z" in err
+    assert "`close-issue 42 --mode pr-merge --pr 496`" in err
+
+
+def test_a_later_run_that_cannot_read_the_issue_changes_nothing(
+    dw: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    run = _wire_second_run(dw, tmp_path, monkeypatch, issues={42: _CLOSED_BY_THE_MERGE})
+    run.update(issue=None)
+    rc = _run_main(dw, monkeypatch, ["42", "--yes"])
+    err = capsys.readouterr().err
+    assert rc == 2
+    assert run.calls["order"] == []
+    assert "whether #42 was reopened since cannot be read" in err
+
+
+def test_a_later_run_moves_an_issue_still_in_progress_through_review(
+    dw: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A PR merged into a base other than the default leaves its issue open,
+    and one enqueued without done-work may still be In Progress: the
+    completion makes the move ahead of the move to Done, as the run before the
+    merge would have (#1162)."""
+    run = _wire_second_run(dw, tmp_path, monkeypatch, issues={42: _open_issue("")})
+    targets: list[str] = []
+
+    def move(issue_number: int, target: str, cap_root_arg: Any) -> int:
+        targets.append(target)
+        run.calls["order"].append(("moved", target))
+        return 0
+
+    monkeypatch.setattr(dw, "_invoke_move_issue", move)
+    monkeypatch.setattr(
+        dw,
+        "_lead_in_to_done",
+        lambda issue, root, loader: dw._LeadIn(from_state="in-progress", to_state="review"),
+    )
+    rc = _run_main(dw, monkeypatch, ["42", "--yes"])
+    out = capsys.readouterr().out
+    assert rc == 0, out
+    assert targets == ["review", "done"]
+    assert "  lead-in: in-progress → review, then review → done" in out
+
+
+def test_a_later_run_finds_nothing_without_a_branch_or_a_merged_pr(
+    dw: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    _wire_second_run(
+        dw,
+        tmp_path,
+        monkeypatch,
+        issues={},
+        branch=None,
+        from_the_branch=False,
+        from_the_issue=False,
+    )
+    rc = _run_main(dw, monkeypatch, ["42", "--yes"])
+    assert rc == 2
+    assert "no local branch matching `*/42-*` found, and no merged PR closes #42" in (
+        capsys.readouterr().err
+    )
+
+
+def test_a_later_run_closes_and_cascades_with_the_real_verbs(
+    dw: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capfd: pytest.CaptureFixture[str],
+) -> None:
+    """End to end: the issue GitHub closed as the queue merged leaves the run
+    done, its parent's eligibility checked, and no comment or warning."""
+    run = _run_done_work_end_to_end(
+        dw, tmp_path, monkeypatch, capfd, "state:review", merged_by_queue=True
+    )
+    assert run.rc == 0, run.out + run.err
+    assert run.end["state"] == "CLOSED"
+    assert [label["name"] for label in run.end["labels"]] == ["state:done"]
+    assert "completing what follows the merge" in run.out
+    assert "[cascade] parents to check for eligibility: #7" in run.out
+    assert "[warn]" not in run.err
+    assert not any(c[:2] == ["pr", "merge"] for c in run.calls)

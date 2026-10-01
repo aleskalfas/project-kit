@@ -19,9 +19,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-10-01T04:51:17Z
+      at: 2026-10-01T10:04:49Z
       outcome: unchanged
-      unchanged-because: done-work's change is how the agent gate judges a verdict fresh (the reviewed head and the author's changes since); landing integration work during a stabilisation and the guard planned on done-work are untouched
+      unchanged-because: both merge verbs enqueue where the base has a merge queue, and DEC-013 states the squash rules its settings carry (#1011); landing on an integration branch and the promotion to the default branch go on as described, the promotion through the queue where one is on
 ---
 
 # UC-008 — Land integration-branch work during a stabilisation
