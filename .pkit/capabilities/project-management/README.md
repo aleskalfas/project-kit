@@ -15,8 +15,9 @@ pkit:
         - .pkit/capabilities/project-management/decisions/**
       record: [COR-017, COR-020, COR-021, COR-023, COR-039, COR-053, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050]
     revalidated:
-      at: 2026-10-01T15:22:33Z
-      outcome: updated
+      at: 2026-10-01T15:43:22Z
+      outcome: unchanged
+      unchanged-because: on this branch move-issue passes the state it read to the process engine so each move is journaled from the state it left; the milestone rollforward main brought in does not change what this page says about that
 ---
 
 # project-management capability
@@ -457,15 +458,15 @@ pkit pm open-pr 1017 --scope pm --summary "take the issue number positionally" -
 | Command | What it does |
 |---|---|
 | `create-milestone <category> --name "<name>" [--close-trigger T] [--due-on YYYY-MM-DD]` | File a new Milestone in a declared `milestone_categories:` category. Computes the next number, composes the title from the category's `title_format`, and writes the `Close trigger:` first body line. |
-| `close-milestone <n> [--force]` | Close an open Milestone (by number or exact title) through the validated path. |
+| `close-milestone <n> [--target <M>] [--force]` | Close an open Milestone (by number or exact title) through the validated path. A date-triggered close rolls its open children forward to the next Milestone. |
 
 Both run the DEC-021 membership gate and the COR-039 foreign-repo guard at startup, route every `gh` call through the shared host/owner seam (DEC-023), and accept `--dry-run` (preview, write nothing) and `--yes` (skip the confirmation prompt).
 
 `close-milestone` respects the Milestone's **close-trigger**, read from the `Close trigger:` first line of the description (inferred for an inherited Milestone with no marker: a native due date ⇒ `date-based`, none ⇒ `content-based`, per `time-containers.yaml`):
 
-- **content-based** — closes only when every child issue is closed. An open child **holds** the close (refused) unless you pass `--force`.
-- **date-based** — the date is the trigger, so the Milestone closes even with open children; the command **warns** and lists them.
-- **either** — treated like content-based when open children remain (refuse unless `--force`).
+- **content-based** — closes only when every child issue is closed. An open child **holds** the close (refused) unless you pass `--force`, which closes it with the open children left on it.
+- **date-based** — the date is the trigger, so the Milestone closes even with open children, and they **roll forward** to the next Milestone (below). Closing before the due date is the manual form of the same close.
+- **either** — closes on whichever fires first. From its due date on, its close is date-triggered and rolls forward like a date-based one; before it, open children hold the close as they hold a content-based one (refused unless `--force`).
 
 A Milestone's children are resolved the same way the rest of the capability resolves membership: the union of issues carrying the **native GitHub Milestone field** for it and issues whose body carries the textual `Milestone: [#<n>](../milestone/<n>)` ref. The issues are read through the containment seam, which says whether it saw all of them; a read that reached its ceiling is refused rather than answered from, since a child past it may be open. Because a Milestone has no comment thread, the audit note is **appended to the description** in the same PATCH that flips `state=closed` (idempotent on re-run), rather than posted as a comment the way `close-issue` does.
 
@@ -478,9 +479,13 @@ A Milestone's children are resolved the same way the rest of the capability reso
 
 A Milestone with an open child is reported as not eligible, with the count of open children, and a date-based Milestone as closing on its date — its children closing makes nothing eligible. The check reads the close-trigger and the children exactly as `close-milestone` does, so a Milestone reported eligible is one `close-milestone` closes without `--force`. The cascade **reports and never closes**: closing the Milestone stays your gesture, as closing a parent issue does.
 
-**Closing a Milestone never moves its open children.** The close writes only the Milestone itself — its state and the audit line — so a child still open when a date-based Milestone closes, or when `--force` closes a content-based or `either` one, stays assigned to the closed Milestone: its native Milestone field and its first-line `Milestone:` ref still name it, and its lifecycle state does not change. The audit line counts such children as still open, not rolled forward. To carry one into the next Milestone, run `edit-issue <N> --milestone <next> --reason "<R>"`: the issue's current milestone may be closed (only the target must be open), and a first-line `Milestone:` ref moves with the native field. A raw `gh issue edit --milestone` changes only the native field, so the closed Milestone would go on counting the child through its first line.
+**A date-triggered close rolls the open children forward** (the schema's `rollforward_behaviour`). Once the Milestone is closed, `close-milestone` moves each open child to the rollforward target with `edit-issue <N> --milestone <target> --reason "<the close>"` — the move you would make by hand, so the child keeps its lifecycle state, its native Milestone field and its first-line `Milestone:` ref move together, and it gets one audit comment naming the old Milestone, the new one and the close. Closed children stay on the closed Milestone as the record of what shipped. A parent (Feature, Umbrella, EPIC) assigned to the closing Milestone is itself an open child while its work goes on, so it moves with its open children, and its closed children stay. An open child whose native field names another Milestone, with only its first line still naming this one, sits in that other Milestone and is left alone. A move closes nothing, so a rolled-forward child never counts as closed for the closure cascade.
 
-> **Not yet automated:** date-based / `either` closes do **not** roll open children forward to the next Milestone (schema `rollforward_behaviour`) — `close-milestone` only warns and lists them, so reassign them with `edit-issue --milestone` as above. Automated rollforward is a follow-up (#1175).
+The **rollforward target** is, first to last: `--target <M>`, an open Milestone by number or exact title; the Milestone's `Rollforward target: <M>` line, which DEC-016 puts under the `Close trigger:` line and which takes a number, `#<N>`, the `[#<N>](../milestone/<N>)` link or an exact title; else the next-numbered open Milestone of its category — the declared category whose `title_format` its title fits, and in it the lowest number above its own. With no candidate, or more than one, the command refuses before it writes anything and asks you to name the target with `--target`. `--dry-run` lists every move the close would make.
+
+The audit line counts the children rolled forward and names the target — `…; 1 child issue(s) closed; 2 rolled forward to #7 Sprint 7: Polish).` The close is written before the moves, so when a move fails the command exits 4 and the closed Milestone still records where its open children go: re-run `close-milestone <n>` and it moves the children still on the Milestone to that target. A child already moved is no longer its child and is not moved again, and `edit-issue` finds the audit comment a failed attempt posted and does not post it again (the comment carries its day, so a re-run on a later day posts a dated one of its own). A closed Milestone without that record — closed by hand, or before rollforward existed — is left as it is.
+
+A content close moves no child. When `--force` closes a content-based Milestone, or an `either` one before its due date, the open children stay on it, and the audit line counts them as still open, not rolled forward. Move one with `edit-issue <N> --milestone <next> --reason "<R>"`: the issue's current milestone may be closed (only the target must be open), and a first-line `Milestone:` ref moves with the native field. A raw `gh issue edit --milestone` changes only the native field, so the closed Milestone would go on counting the child through its first line.
 
 ##### Attaching an issue to a Milestone
 

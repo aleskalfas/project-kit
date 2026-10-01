@@ -21,9 +21,9 @@ pkit:
       artefact:
         - ACT-operator
     revalidated:
-      at: 2026-10-01T15:12:57Z
+      at: 2026-10-01T15:15:10Z
       outcome: unchanged
-      unchanged-because: release merge now lands the release pull request through the merge queue where the base has one, deleting its head only once it merged; step 7 still reads that the release pull request lands, and the gaps stand as written
+      unchanged-because: close-milestone now rolls a date-triggered close's open children forward to the next Milestone; the release Milestone this use case closes at step 7 has every child closed by step 5's gate, so its close moves nothing and the path stands
 ---
 
 # UC-005 — Cut a release while unfinished work remains

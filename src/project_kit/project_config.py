@@ -10,13 +10,19 @@
 - **Writing is consent-gated** (point 5): every writer of the file goes through
   `write_config`, which re-reads the file, applies the caller's mutation,
   validates the result against the backbone-shipped schema (refusing to write
-  an invalid file), asks for consent once, and writes atomically while keeping
-  the file's header (the editor directive stamped on a file the backbone
-  creates, ADR-056). Consent is an interactive confirmation, an explicit
-  `--yes`, or a refusal naming the exact command to run — a non-interactive run
-  without `--yes` never writes silently. `preview_config` computes the same
-  result without writing it, so a command's dry run shows the diff of exactly
-  what the write would make.
+  an invalid file), asks for consent once, and writes atomically. Consent is an
+  interactive confirmation, an explicit `--yes`, or a refusal naming the exact
+  command to run — a non-interactive run without `--yes` never writes silently.
+  A mutation that changes nothing writes nothing and asks nothing.
+  `preview_config` computes the same result without writing it, so a command's
+  dry run shows the diff of exactly what the write would make.
+- **A write changes only the keys it sets.** An existing file is edited in its
+  text (`yaml_splice`): the lines of the keys the mutation changes, and no
+  other byte — its lists, comments, blank lines, indentation, key order and
+  line endings stay as written, so the diff of a one-key write is that key's
+  line. A change the edit cannot make exactly is refused, and nothing is
+  written. A file the backbone creates, or a blank one, is written whole,
+  opening with the editor directive (ADR-056).
 """
 
 from __future__ import annotations
@@ -39,7 +45,7 @@ from ruamel.yaml import YAML
 from ruamel.yaml.comments import CommentedMap
 from ruamel.yaml.error import YAMLError
 
-from project_kit import backbone_schemas
+from project_kit import backbone_schemas, yaml_splice
 
 #: The adopter-owned backbone project config, relative to the target root.
 PROJECT_CONFIG_RELPATH = Path(".pkit") / "project" / "config.yaml"
@@ -170,23 +176,29 @@ class ConfigChange:
 
 def preview_config(target_root: Path, mutate: Callable[[CommentedMap], None]) -> ConfigChange:
     """What `write_config` would write, computed the way it computes it and
-    written nowhere: re-read the file round-trip (comments and key order kept),
-    apply `mutate` to the mapping in place, validate the result against the
-    backbone-shipped config schema (an invalid result is refused; a tree without
-    the schema is not validated — ADR-056 point 1), and render the text — a file
-    the write creates, or an empty one, opening with the editor directive. No
+    written nowhere: re-read the file round-trip, apply `mutate` to the mapping
+    in place, validate the result against the backbone-shipped config schema
+    (an invalid result is refused; a tree without the schema is not validated —
+    ADR-056 point 1), and render the text: an existing file with the keys the
+    mutation changed edited in place and every other byte kept (`yaml_splice`;
+    a change it cannot make exactly is refused), and a file the write creates,
+    or a blank one, written whole and opening with the editor directive. No
     consent is asked: nothing is written. A command's dry run shows its diff."""
     path = project_config_path(target_root)
     before = _read_existing(path)
-    yaml = YAML()  # round-trip: keep an existing file's other keys + comments
-    data, fresh = _load_round_trip(before, yaml)
+    data = _load_round_trip(before)
     mutate(data)
     _refuse_unless_valid(target_root, data)
-    stream = io.StringIO()
-    if fresh:
-        stream.write(EDITOR_DIRECTIVE + "\n")
-    yaml.dump(data, stream)
-    return ConfigChange(path=path, before=before or "", after=stream.getvalue())
+    if before is None or not before.strip():
+        return ConfigChange(path=path, before=before or "", after=_fresh(data))
+    try:
+        after = yaml_splice.splice(before, data)
+    except yaml_splice.SpliceRefused as exc:
+        raise UnwritableConfig(
+            f"cannot write {PROJECT_CONFIG_RELPATH.as_posix()} changing only the keys it sets: "
+            f"{exc}. Nothing was written; edit the file by hand."
+        ) from exc
+    return ConfigChange(path=path, before=before, after=after)
 
 
 def write_config(
@@ -200,16 +212,19 @@ def write_config(
 
     Computes the result as `preview_config` does — re-read, mutate, validate
     (an invalid result is refused, nothing written) — asks `consent`, then
-    writes that text atomically. Returns the file's path.
+    writes that text atomically, byte for byte. A result that changes nothing
+    is neither asked about nor written. Returns the file's path.
     """
     change = preview_config(target_root, mutate)
+    path = change.path
+    if not change.changes:
+        return path
     consent.confirm(description)
 
-    path = change.path
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(path.name + ".tmp")
     try:
-        with tmp.open("w", encoding="utf-8") as stream:
+        with tmp.open("w", encoding="utf-8", newline="") as stream:
             stream.write(change.after)
         os.replace(tmp, path)
     finally:
@@ -218,23 +233,31 @@ def write_config(
 
 
 def _read_existing(path: Path) -> str | None:
-    """The file's text, or None when it does not exist."""
+    """The file's text as written — its line breaks unread — or None when it does not exist."""
     if not path.is_file():
         return None
     try:
-        return path.read_text(encoding="utf-8")
-    except OSError as exc:
+        return path.read_bytes().decode("utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
         raise UnwritableConfig(f"cannot read {PROJECT_CONFIG_RELPATH.as_posix()}: {exc}") from exc
 
 
-def _load_round_trip(text: str | None, yaml: YAML) -> tuple[CommentedMap, bool]:
-    """The file's text as a round-trip mapping, and whether it needs the header
-    stamped (absent or empty). An unparsable or non-mapping file is refused: a
+def _fresh(data: CommentedMap) -> str:
+    """The text of a file the write creates: the editor directive, then the mapping."""
+    stream = io.StringIO()
+    stream.write(EDITOR_DIRECTIVE + "\n")
+    YAML().dump(data, stream)
+    return stream.getvalue()
+
+
+def _load_round_trip(text: str | None) -> CommentedMap:
+    """The file's text as a round-trip mapping; an empty one when the file is
+    absent or holds nothing. An unparsable or non-mapping file is refused: a
     write that cannot keep the project's content is not one to make silently."""
     if text is None:
-        return CommentedMap(), True
+        return CommentedMap()
     try:
-        loaded = yaml.load(text)
+        loaded = YAML().load(text)
     except YAMLError as exc:
         raise UnwritableConfig(
             f"{PROJECT_CONFIG_RELPATH.as_posix()} does not parse as YAML "
@@ -242,13 +265,13 @@ def _load_round_trip(text: str | None, yaml: YAML) -> tuple[CommentedMap, bool]:
             f"(`pkit validate` reports the details)."
         ) from exc
     if loaded is None:
-        return CommentedMap(), True
+        return CommentedMap()
     if not isinstance(loaded, CommentedMap):
         raise UnwritableConfig(
             f"{PROJECT_CONFIG_RELPATH.as_posix()} is not a mapping of keys to values; "
             f"fix it before writing to it."
         )
-    return loaded, False
+    return loaded
 
 
 def _refuse_unless_valid(target_root: Path, data: Mapping[str, Any]) -> None:
@@ -257,7 +280,7 @@ def _refuse_unless_valid(target_root: Path, data: Mapping[str, Any]) -> None:
     except backbone_schemas.BackboneSchemaMissing:
         return  # a tree recorded before the schema landed: nothing to check against
     errors = sorted(
-        schema_validator(schema).iter_errors(_plain(data)),
+        schema_validator(schema).iter_errors(yaml_splice.plain(data)),
         key=lambda e: (list(e.absolute_path), e.message),
     )
     if not errors:
@@ -285,15 +308,6 @@ def schema_validator(schema: Mapping[str, Any]) -> Draft202012Validator:
         resource=Resource.from_contents(schema, default_specification=DRAFT202012),
     )
     return Draft202012Validator(schema, registry=registry)
-
-
-def _plain(obj: Any) -> Any:
-    """Round-trip containers as plain dicts/lists with text keys, as JSON Schema sees them."""
-    if isinstance(obj, Mapping):
-        return {str(k): _plain(v) for k, v in obj.items()}
-    if isinstance(obj, list):
-        return [_plain(x) for x in obj]
-    return obj
 
 
 # --- `pkit config set` -------------------------------------------------------

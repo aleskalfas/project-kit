@@ -20,9 +20,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-10-01T15:52:52Z
+      at: 2026-10-01T15:15:15Z
       outcome: unchanged
-      unchanged-because: done-work and merge-pr now read a PR again when a merge or an enqueue gets no answer back from the backbone, exiting 4 when GitHub cannot say what it came to; resuming sessions during a stabilisation, the guards planned on both verbs and gap K2 are untouched
+      unchanged-because: "_lib/milestone.py gains the rollforward reads (the date trigger, the Rollforward target: line, the next-numbered Milestone) and a native-field key on each child; how a session reads its position and the stabilisation from the Milestone is untouched"
 ---
 
 # UC-007 — Resume sessions killed during a stabilisation

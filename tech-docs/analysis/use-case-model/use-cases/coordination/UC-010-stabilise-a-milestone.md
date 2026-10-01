@@ -20,9 +20,9 @@ pkit:
       artefact:
         - ACT-operator
     revalidated:
-      at: 2026-10-01T15:52:54Z
+      at: 2026-10-01T15:15:12Z
       outcome: unchanged
-      unchanged-because: done-work and merge-pr now read a PR again when a merge or an enqueue gets no answer back from the backbone, exiting 4 when GitHub cannot say what it came to; stabilising a Milestone, the guards intended on both verbs and gap K2 stand as written
+      unchanged-because: closing the Milestone after the release (5a) now rolls a date-triggered close's open children forward; the stabilisation line, its lift, release scope and the guards are untouched, and the release Milestone closes with its children closed
 ---
 
 # UC-010 — Stabilise a Milestone for a release

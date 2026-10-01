@@ -15,9 +15,9 @@ pkit:
         - UC-010
         - UC-005
     revalidated:
-      at: 2026-10-01T01:25:13Z
+      at: 2026-10-01T15:23:08Z
       outcome: unchanged
-      unchanged-because: "on this branch the anchored code changed only in layout: ruff format and the lint fixes; behaviour and the documented commands are unchanged"
+      unchanged-because: on this branch close-milestone rolls a date-based milestone's open children forward through edit-issue; the flows this page describes are unchanged by the reviewer-body wording that main brought in
 ---
 
 # JRN-002 — Release with unfinished work under a stabilisation
