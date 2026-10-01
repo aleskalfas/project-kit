@@ -12,12 +12,19 @@ move-issue's exact inference precedence (closed->done; first state:* label; mile
 todo) and reports result=True iff it equals 'todo'. State meaning: Filed; not yet scheduled to a
 Milestone.
 
+The shipped lifecycle detects with `detect-state`, its classifier, which
+every state names; this per-state detector answers from the same read of the
+issue, for a project's own `inferred` override of the definition (which names a
+detector for each of the five states — a definition has one detection mode) and
+for direct use.
+
 READ-ONLY. The process engine (COR-033) invokes this as
   <script> <issue-number> --json
 and reads the structured-JSON contract on stdout. Self-contained via PEP 723.
 
 Exit codes:
-  0  evaluated (result emitted as JSON); 2  usage error.
+  0  evaluated (result emitted as JSON); 2  usage error, or the issue could not
+  be read (why on stderr).
 """
 
 from __future__ import annotations

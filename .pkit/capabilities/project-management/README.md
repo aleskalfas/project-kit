@@ -15,7 +15,7 @@ pkit:
         - .pkit/capabilities/project-management/decisions/**
       record: [COR-017, COR-020, COR-021, COR-023, COR-039, COR-053, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050]
     revalidated:
-      at: 2026-10-01T22:04:20Z
+      at: 2026-10-01T22:50:16Z
       outcome: updated
 ---
 
@@ -49,6 +49,7 @@ The authority signal for distillation is pm-workflow's `main` branch. Capability
 - `scripts/pre-check.py` — read-only diagnostic verifying every methodology prerequisite is in place (DEC-017). Hard-gate on every pm operation.
 - `scripts/bootstrap.py` — first-time setup. Creates the required initial GitHub state (labels per classification axes; optionally a starter EPIC). Additive idempotent.
 - `scripts/migrate.py` — adopter-state reconciliation after capability upgrades. Reads `migrations/<version>.yaml` manifests; per-change confirmation gates on every destructive step.
+- `scripts/detect-state.py` — the issue lifecycle's classifier, the detection the process engine runs to find where an issue stands. Read-only: it reads the issue once and answers which lifecycle state it is in, by `move-issue`'s inference (closed → `done`; the first `state:*` label; a milestone → `backlog`; else `todo`), or `null` — with the inferred value in its reason — when that value is not a lifecycle state (a derived `open` / `blocked`, a stray state label). Every state of `schemas/workflow.yaml` names it under `mode: classified` ([project-management:DEC-033-rebind-issue-lifecycle-onto-process-substrate] D2), so `pkit process status` and each lifecycle verb read an issue once per reading of its position rather than once per state. When the issue cannot be read it says why on standard error and exits non-zero, and the engine shows every state as indeterminate with that cause. The five per-state detectors (`scripts/detect-<state>.py`) answer from the same read and stay registered, for a project's own override of the lifecycle — which names them for all five states, since a definition has one detection mode — and for direct use. The classified lifecycle needs a backbone that implements the mode: under an older `pkit` the engine cannot tell where any issue is, so the lifecycle verbs move issues on their own local inference and warn that the engine did not record the move — upgrade the backbone with the capability.
 - `migrations/` — versioned manifests of adopter-state changes the capability has shipped. Empty in v0.2.0; populated on subsequent surface changes.
 
 The engine is **methodology-agnostic by design**: when the methodology evolves upstream, schemas change; the engine picks up the new rules automatically without skill-code edits. Adding a state, a new issue type, or a new title regex becomes a schema edit.

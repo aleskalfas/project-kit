@@ -331,6 +331,8 @@ def answer_from_tracker(
     """The engine's predicate run, answered in this process by the capability's
     own predicate code (which reads the tracker through `gh`)."""
     number = int(runner.subject)
+    if run_name == "detect-state":
+        return predicates.classify_state(number)
     if run_name.startswith("detect-"):
         return predicates.detect_state(number, run_name.removeprefix("detect-"))
     if run_name == "gate-checkboxes-ticked":

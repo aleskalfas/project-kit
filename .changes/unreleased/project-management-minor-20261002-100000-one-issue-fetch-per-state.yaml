@@ -1,0 +1,25 @@
+component: project-management
+kind: minor
+custom:
+  category: Changed
+  requires_backbone: release
+body: >
+  Reading where an issue stands fetches the issue once instead of five times.
+  The issue lifecycle's five states now all detect with one classifier, the new
+  `detect-state` command, under the process shape's `classified` mode: it reads
+  the issue once and answers which lifecycle state it is in, by the same
+  inference as before, or `null` with the inferred value in its reason when
+  that value is not a lifecycle state (a derived `open` / `blocked`, a stray
+  state label). So `pkit process status` for an issue starts one detection
+  script instead of five, and every lifecycle verb that reads an issue's
+  position — `start-work`, `review-work`, `move-issue`, `done-work`,
+  `close-issue` — makes four fewer `gh issue view` calls per reading. When the
+  issue cannot be read, the predicates that read it now pass `gh`'s own words
+  on standard error, so `status` and a refused move show why. The definition's
+  `version` rises to 5; `schema_version` stays 4. The five per-state commands
+  (`detect-todo` … `detect-done`) stay registered, for a project's own override
+  of the lifecycle — which names them for all five states, since a definition
+  has one detection mode — and for direct use. Upgrade the capability together
+  with the backbone: under a `pkit` older than the `classified` mode the engine
+  cannot tell where any issue is, and the lifecycle verbs move issues on their
+  own local inference and warn that the engine did not record the move.
