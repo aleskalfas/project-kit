@@ -143,11 +143,10 @@ src/project_kit/report_context.py reportMissingTypeArgument 1
 src/project_kit/report_context.py reportUnknownArgumentType 1
 src/project_kit/report_context.py reportUnknownParameterType 1
 src/project_kit/report_context.py reportUnusedImport 3
-src/project_kit/router.py reportMissingParameterType 10
-src/project_kit/router.py reportUnknownArgumentType 11
+src/project_kit/router.py reportMissingParameterType 9
+src/project_kit/router.py reportUnknownArgumentType 9
 src/project_kit/router.py reportUnknownMemberType 4
-src/project_kit/router.py reportUnknownParameterType 10
-src/project_kit/router.py reportUnknownVariableType 1
+src/project_kit/router.py reportUnknownParameterType 9
 src/project_kit/rule_sets.py reportAttributeAccessIssue 2
 src/project_kit/rule_sets.py reportGeneralTypeIssues 1
 src/project_kit/rule_sets.py reportMissingTypeArgument 1

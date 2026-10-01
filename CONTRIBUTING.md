@@ -15,7 +15,7 @@ pkit:
       record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, PRJ-010, ADR-019, ADR-039, ADR-055, "project-management:DEC-053"]
       artefact: [.pkit/decisions/README.md]
     revalidated:
-      at: 2026-10-01T15:47:07Z
+      at: 2026-10-01T16:13:26Z
       outcome: updated
 ---
 
@@ -78,7 +78,7 @@ Add a check by editing `scripts/check.sh` once; both the hook and CI pick it up.
 1. **Install** — `mise run pkit:pinned-install` (or `uv tool install git+ssh://git@github.com/aleskalfas/project-kit.git` directly). Installs/refreshes the global release and puts `pkit` on PATH via `uv tool dir --bin`.
 2. **Verify** — `command -v pkit` should resolve to that bin dir; `mise run pkit:which` reports the active binary, its version, and what bare `pkit` runs from this checkout (route 1).
 
-Routing happens *before* the CLI loads, so the common path (running self, or execing a checkout) stays cheap. An adopter pin that can't be resolved (offline, missing tag, missing auth, no `uvx`) **degrades loudly to running self** — it never hard-fails a routine command. Escape hatches: `PKIT_NO_ROUTE=1` forces in-process execution; `PKIT_ROUTED=1` is the internal loop guard.
+Routing happens *before* the CLI loads, so the common path (running self, or execing a checkout) stays cheap. An adopter pin that can't be resolved (offline, missing tag, missing auth, no `uvx`) **degrades loudly to running self** — it never hard-fails a routine command. When the binary it runs is older than the pin, the notice says so, and `pkit sync` and `pkit upgrade` refuse rather than take the project back to it (#1212). Escape hatches: `PKIT_NO_ROUTE=1` forces in-process execution; `PKIT_ROUTED=1` is the internal loop guard.
 
 > **Retiring the old `pkit-router` shim.** Earlier setups installed a separate `scripts/pkit-router` shim at `~/.pkit/shim/pkit` and put it ahead of the pinned binary on PATH. That shim is gone — the binary now routes natively. If you have one, remove it (`rm ~/.pkit/shim/pkit`) and drop the `export PATH="$HOME/.pkit/shim:$PATH"` line from your shell profile so bare `pkit` resolves to the global install.
 
