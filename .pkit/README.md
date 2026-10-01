@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-01T18:45:57Z
+      at: 2026-10-01T19:22:04Z
       outcome: unchanged
-      unchanged-because: on this branch the merge mechanic moved into the backbone's pull-request landing module, placed there by ADR-061; this page describes the tree's layout and says nothing of how a pull request lands, and what main brought in is already described here
+      unchanged-because: This change adds, inside the process, lifecycle and CLI READMEs, what an unevaluable predicate and a failed workstream read show the operator; the root README only maps each area to its one-line scope, and none of those scopes moved.
 ---
 
 # project-kit
