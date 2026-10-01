@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-01T15:15:50Z
+      at: 2026-10-01T15:40:47Z
       outcome: unchanged
-      unchanged-because: the cli README now says the configuration writer changes only the keys it sets; this map names the cli area's purpose and entry point, which are unchanged
+      unchanged-because: on this branch the process engine's move takes the origin its caller read and move-issue passes it; the configuration writer and line-break helpers main brought in do not change what this page describes
 ---
 
 # project-kit
