@@ -15,8 +15,9 @@ pkit:
         - .pkit/capabilities/project-management/decisions/**
       record: [COR-017, COR-020, COR-021, COR-023, COR-039, COR-053, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050]
     revalidated:
-      at: 2026-09-30T21:34:54Z
-      outcome: updated
+      at: 2026-09-30T23:42:08Z
+      outcome: unchanged
+      unchanged-because: on this branch ADR-004 only folds its amendment trailer into its body, stating the same confinement ruling without narration; what the pm README says of the autonomy posture is unchanged
 ---
 
 # project-management capability
