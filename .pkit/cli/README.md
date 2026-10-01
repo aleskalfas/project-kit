@@ -46,8 +46,9 @@ pkit:
         - src/project_kit/environment.py
       record: [COR-004, COR-012, COR-043, COR-048, COR-049, COR-050, COR-054, PRJ-001, PRJ-003, PRJ-004, ADR-033, ADR-039, ADR-049, ADR-058, ADR-059]
     revalidated:
-      at: 2026-10-01T16:23:24Z
-      outcome: updated
+      at: 2026-10-01T16:48:10Z
+      outcome: unchanged
+      unchanged-because: on this branch the default-branch reading resolves the branch once per invocation and a stamp reads it once; the reading's document and every refusal are unchanged, and what main brought in does not change what this page describes
 ---
 
 # Command-line interface
