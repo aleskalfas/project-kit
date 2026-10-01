@@ -75,12 +75,12 @@ This record decides what the capability keeps, where, and how it stays true.
 7. **Revalidation is not testing.** Revalidation asks whether *the description* is still true of the software, and usually fixes the description. Testing asks whether *the software* still does what the description says, and fixes the software. The capability owns revalidation. It does not run the software.
 
    The capability provides the **analysis role** and, under it, accepts a data point, `<methodology>::analysis:revalidation-evidence` (refinement per COR-053), for executed results that confirm or refute an artefact at a commit:
-   - its schema is a companion schema the capability ships, named after the point (COR-052). At version 1 it has one entry per artefact and commit, keyed by the pair, holding the result and what was run;
+   - its schema is a companion schema the capability ships, named after the point (COR-052). At version 1 it has one entry per result, keyed by three parts — the artefact, the commit and the **check** — and holding the result and what was run. The check is the name a provider gives one executed check, the same from commit to commit; a provider gives each result it reports for one artefact at one commit a check of its own. A capability's checks open with the capability's own name, and the project's own with `project`. So two providers' results for one artefact at one commit stand side by side, and only two that claim one check collide, which the project settles (COR-052 point 4). The opening name is a convention the capability's validation warns on and never refuses, because the project replaces a capability's entry by writing one under that capability's check;
    - its policy is `union`;
    - no default takes part;
    - its inert policy is `fallback`, because the evidence advises and does not gate.
 
-   The slots record (COR-052) allows three kinds of filler: a project file, a capability, and the provider's default. Here, a capability fills it (a later testing capability, or one that reads the project's own test results), or a project file records results, and no default takes part. Evidence **informs** a revalidation: a passing result is support for "holds", and a failing one is a regression with proof attached. It never replaces the revalidation. Only a revalidation or a deferral recorded on the artefact clears friction (COR-050).
+   The slots record (COR-052) allows three kinds of filler: a project file, a capability, and the provider's default. Here, a capability fills it (a later testing capability, or one that reads the project's own test results), or a project file records results, and no default takes part. Evidence **informs** a revalidation: a passing result is support for "holds", and a failing one is a regression with proof attached. It never replaces the revalidation. Only a revalidation or a deferral recorded on the artefact clears friction (COR-050). A revalidation record keeps a copy of each entry it drew on. A routine revalidation that writes no record (point 6) keeps none: its justification on the artefact says in its own words why the description holds, and naming a result is not a justification. Evidence kept on the artefact itself is outside this record (point 11).
 
 8. **What it contributes to others.** The capability contributes to the documentation role's readers point, `<methodology>::documentation:readers`, by mapping its actors and their needs onto that point's shape (refinement per COR-053). It addresses the role, not a capability, so any provider of the documentation role receives it. The contribution is inert whenever no provider is installed, and the capability never requires one.
 
@@ -88,7 +88,7 @@ This record decides what the capability keeps, where, and how it stays true.
 
 10. **Independent.** The capability works with no work-tracking component and no testing component installed. When a work-tracking component is present, it may cite revalidation records from its work items, as an enrichment.
 
-11. **Scope boundary.** Lifecycles on the process substrate (a planned revalidation; onboarding), further analysis artefacts (constraints and quality requirements, architecture views) and executable use cases are outside this record. Each needs its own decision when a real need arrives.
+11. **Scope boundary.** Lifecycles on the process substrate (a planned revalidation; onboarding), further analysis artefacts (constraints and quality requirements, architecture views), executable use cases and evidence kept on the artefact itself are outside this record. Each needs its own decision when a real need arrives.
 
 ## Rationale
 
