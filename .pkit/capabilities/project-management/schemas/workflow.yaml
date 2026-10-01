@@ -88,7 +88,8 @@ process:
     - id: backlog
       display_name: Backlog
       meaning: |
-        Scheduled (Milestone assigned); not started.
+        Scheduled — committed to (a Milestone or an audited promotion), or
+        brought level with a descendant by the forward cascade; not started.
       applies_to:
         - "[issue-types:epic]"
         - "[issue-types:feature]"
@@ -136,7 +137,9 @@ process:
         `bypassable-with-audit` semantics. Owned by `promote-issue` per
         DEC-026; the wrapper calls `move-issue --to backlog`, which carries
         the reason into the audit trail (DEC-049), and then attaches the
-        milestone when one is given.
+        milestone when one is given. The forward cascade also brings a
+        parent to Backlog when a descendant is scheduled or started; it is
+        not a promotion and needs no milestone.
 
     - from: backlog
       to: in-progress
@@ -377,11 +380,16 @@ cascade:
     direction: upward
     behaviour: |
       Automatic. When a child moves forward (todo → backlog → in-progress),
-      the agent checks each ancestor and bumps any that is behind. The
-      forward cascade is scoped to todo → backlog → in-progress only;
-      containers do not forward-cascade into review or done. When a child
-      enters review or done, its container is bumped to at most in-progress
-      (if it was behind). Containers reach done only via the closure
+      the agent checks each ancestor (to the top) and brings any that is
+      behind up to the child's state, capped at in-progress. An ancestor
+      moves only through transitions declared above: one in todo goes
+      todo → backlog, then backlog → in-progress, each journaled, where a
+      journal is kept, with the child's move as its reason. No
+      todo → in-progress is declared for the cascade. A move to done from
+      todo or backlog cascades nothing. The forward cascade is scoped to
+      todo → backlog → in-progress only; containers do not forward-cascade
+      into review or done. When a child enters review or done, its
+      container is brought to at most in-progress (if it was behind). Containers reach done only via the closure
       cascade once all children are done (cascade-eligibility-close).
       First child to move flips the chain; later siblings re-flipping is
       a no-op.
@@ -436,8 +444,8 @@ closure_triggers:
     mechanism: |
       User authorises won't-do closure with a reason. Agent verifies
       all checkboxes are ticked or removed (per MET-006), records the
-      reason in a close comment, closes the issue. Cascade runs as for
-      a PR-merge closure.
+      reason in a close comment, closes the issue. The closure cascade
+      runs as for a PR-merge closure.
 
   - id: cascade-eligibility-close
     target_state: done

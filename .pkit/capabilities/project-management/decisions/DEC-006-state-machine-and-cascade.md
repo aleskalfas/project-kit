@@ -36,7 +36,7 @@ The schema's `transitions` list fixes who authorises each transition and what th
 | Backlog/Todo → Done (won't-do) | User | hard-reject |
 | In Progress → Done (parent cascade-eligibility close) | User | hard-reject |
 
-User holds both ends of the gate (start and end of work); the agent owns the middle. Authorisations are per-issue and in-session — no standing "go ahead with everything" applies in a later turn. The agent records the bypass with an audit-trail comment per [project-management:DEC-014-validation-severity-model] when a bypassable transition is overridden.
+User holds both ends of the gate (start and end of work); the agent owns the middle. Authorisations govern a move asked for directly, and are per-issue and in-session — no standing "go ahead with everything" applies in a later turn. The agent records the bypass with an audit-trail comment per [project-management:DEC-014-validation-severity-model] when a bypassable transition is overridden.
 
 > **Amendment (#61/#62, under EPIC #59) — the Todo → Backlog authorisation has two substrates; the milestone is one of them, not the gate's meaning.** The table's "User (assigns Milestone)" names the *typical* authorisation gesture, not a hard precondition. The gate's meaning is the **user-held scheduling commitment** ("this is real work we intend to do"); a project that runs no Milestone *instances* (e.g. a feature-driven project that has declared a Milestone category but created no Milestones yet) still needs to make that commitment. The authorisation is therefore satisfied by **either** a Milestone assignment **or** an audited verbal `--reason` — the latter is exactly the bypassable-with-audit verbal-authorisation path [project-management:DEC-014-validation-severity-model] already enumerates. The wrapper that carries this is `promote-issue`, whose `--milestone` is optional per the amendment to [project-management:DEC-026-work-ownership-lifecycle].
 >
@@ -46,7 +46,7 @@ User holds both ends of the gate (start and end of work); the agent owns the mid
 
 Three behaviours, encoded in the schema's `cascade` block:
 
-- **Forward cascade (Todo → Backlog → In Progress).** Direction `upward`. Automatic. When a child moves forward, the agent checks each ancestor and bumps any that's behind to match. Idempotent — repeated firings on already-cascaded ancestors are no-ops.
+- **Forward cascade (Todo → Backlog → In Progress).** Direction `upward`. Automatic. A container's state follows the work under it: when an issue moves forward, the agent checks each ancestor — its parent, that parent's parent, and so on to the top — and brings any that is behind up to the moved issue's state, capped at In Progress. The cascade is not an authorisation and asks for none: the gates on a transition govern a move asked for directly, on that issue; an ancestor that is behind its descendants is brought level because its state is read from theirs. An ancestor moves only through transitions the schema declares — one in Todo goes to Backlog and then to In Progress — and where a journal is kept each step is recorded with the move that caused it as its reason. A move to Done from Todo or Backlog — a won't-do close — moves no ancestor forward. Idempotent — repeated firings on already-cascaded ancestors are no-ops.
 - **Closure cascade (→ Done).** Direction `upward`. Semi-automatic. When the *last open* child of a parent closes, the parent becomes **eligible to close** but never auto-closes. The agent validates the parent's close criteria (Feature acceptance criteria ticked, EPIC success criteria met, Umbrella purpose served) and prompts the user to authorise closure at each level.
 - **Downward cascade.** Direction `none`. Disallowed. Parent state changes do not change children. The wrong direction of causation.
 
@@ -65,9 +65,9 @@ Four paths reach Done, encoded as schema entries:
 
 ## Rationale
 
-Gated state machines work well for agent-mediated workflows because the gates — the places where humans must explicitly authorise — can be enforced as tool refusals encoded in schema severities. The agent literally cannot flip a user-gated transition without an authorisation signal. This converts the methodology's authority discipline into mechanical enforcement.
+Gated state machines work well for agent-mediated workflows because the gates — the places where humans must explicitly authorise — can be enforced as tool refusals encoded in schema severities. Asked directly for a user-gated transition, the agent literally cannot make it without an authorisation signal. This converts the methodology's authority discipline into mechanical enforcement.
 
-Upward-only cascade matches the natural direction of causation in planning: a parent's progress is a function of its children's progress, not the other way around. Allowing downward cascade would force the agent to override individual children's states based on parent moves, the wrong direction.
+Upward-only cascade matches the natural direction of causation in planning: a parent's progress is a function of its children's progress, not the other way around. Allowing downward cascade would force the agent to override individual children's states based on parent moves, the wrong direction. For the same reason a forward-cascaded move is not a move asked for directly and claims no authorisation: a container's state is read from the work under it, so a container behind its descendants is brought level, not moved on anyone's say-so.
 
 The "eligible to close but never auto-close" asymmetry makes the cascade safe. Closing a Feature is a commitment ("this capability shipped"); closing an EPIC is a bigger one. Auto-closing on the last child closing would produce a chain reaction with no human pause point. Stopping at each parent for explicit authorisation preserves the deliberate quality of those commitments.
 
@@ -77,12 +77,14 @@ The "eligible to close but never auto-close" asymmetry makes the cascade safe. C
 - **Auto-close parents when last child closes.** Rejected — removes the deliberate-act quality of closure.
 - **Bidirectional cascade.** Rejected — wrong direction of causation.
 - **No cascade.** Rejected — parents drift out of sync with their children's reality.
+- **Declare Todo → In Progress for containers, so the forward cascade moves one in a single step.** Rejected — the container's history would lose the scheduling step: it would read as started without ever having been scheduled, while the work under it was scheduled first.
+- **Refuse to start a child whose ancestor is unscheduled, or leave the ancestor behind and report it.** Rejected — the forward cascade is automatic, and a container behind a started child states something false.
 
 ## Implications
 
 - The transition-state skill walks the schema's `transitions` list to dispatch every requested state change — refuses the move (per the listed severity) if the requested transition isn't in the schema or if the user-gated transition lacks authorisation.
 - The project-manager runs the cascade check after every state-changing operation: forward cascade walks ancestors and bumps any behind; closure cascade surfaces a parent-close prompt when eligibility is reached.
 - PR-merge of a Task requires the checkbox-completeness check from [project-management:DEC-007-checkbox-validation] to pass before the agent authorises the merge — GitHub's auto-close on PR merge would otherwise bypass the close-gate.
-- Won't-do closures trigger the same cascade as PR-merge closures.
+- Won't-do closures trigger the same closure cascade as PR-merge closures.
 - Date-based Milestone close interacts with this cascade via the rollforward rule in [project-management:DEC-016-time-bound-containers]; open children roll forward rather than closing, and the closure cascade only counts actually-closed children for eligibility.
 - Integration-scope closures run the same cascade — the change is only the PR base branch (integration vs `main`) plus the final integration → main PR closing the owning root. See [project-management:DEC-013-branch-and-pr-conventions].
