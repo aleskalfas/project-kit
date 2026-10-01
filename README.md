@@ -17,9 +17,9 @@ pkit:
         - .pkit/adapters/claude-code/merge-settings.sh
       record: [COR-001, COR-002, COR-017, PRJ-001, PRJ-004, ADR-049]
     revalidated:
-      at: 2026-10-01T01:25:22Z
+      at: 2026-10-01T00:11:42Z
       outcome: unchanged
-      unchanged-because: on this branch the anchored code changed only in layout (ruff format and the lint fixes), pyproject.toml gained the ruff configuration, and pkit refs rename now refuses an empty value with a message rather than a traceback, below this page's level of detail; the documented commands are unchanged
+      unchanged-because: on this branch pyproject.toml gains the pytest-xdist dev dependency and registers the serial test marker; the front page names neither the dev tooling nor the test configuration, so it holds
 ---
 
 # project-kit

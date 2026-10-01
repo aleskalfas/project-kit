@@ -256,6 +256,9 @@ def test_a_script_that_cannot_start_is_not_started(tmp_path: Path) -> None:
     assert "Permission denied" in run.detail
 
 
+# Serial: the script must start its grandchild inside the one-second bound, which
+# a machine busy with other test workers misses.
+@pytest.mark.serial
 def test_exceeding_the_bound_kills_the_whole_process_group(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -436,6 +439,9 @@ def test_variables_left_in_a_shell_never_make_a_run_nested(
     assert shown["document"]["pid"] == shown["document"]["pgid"] == shown["document"]["sid"]
 
 
+# Serial: the caller and the filler must both start inside the three seconds the
+# outer bound leaves them, which a machine busy with other test workers misses.
+@pytest.mark.serial
 def test_the_outer_deadline_ends_a_nested_run_and_everything_its_command_started(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -474,6 +480,9 @@ def test_an_interrupt_of_the_outer_run_ends_a_nested_run_s_command(
         _assert_gone(pid)
 
 
+# Serial: the caller and the filler must both start inside the caller's time,
+# which a machine busy with other test workers misses.
+@pytest.mark.serial
 def test_the_innermost_overrun_is_named_and_what_it_started_ends_with_the_outermost_run(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -624,6 +633,9 @@ def test_the_predicate_policy_reads_anything_but_an_answered_object_as_indetermi
     assert _predicate_capability(tmp_path, body).run_raw({"run": "probe"}) is None
 
 
+# Serial: the predicate must start its grandchild inside the one-second bound,
+# which a machine busy with other test workers misses.
+@pytest.mark.serial
 def test_the_predicate_policy_stops_a_grandchild_at_the_bound(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

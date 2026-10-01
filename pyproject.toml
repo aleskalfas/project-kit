@@ -38,6 +38,7 @@ dev = [
     "ruff>=0.15",
     "pyright>=1.1.380",
     "pathspec>=0.12",  # used by check-doc-mapping.py (PM script); needed to import it under pytest
+    "pytest-xdist>=3.8.0",  # scripts/check.sh runs the suite in parallel workers (#1182)
 ]
 
 [tool.hatch.version]
@@ -269,3 +270,8 @@ reportMissingTypeStubs = false  # click stubs are bundled; no third-party stubs 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra --strict-markers"
+# `scripts/check.sh` runs the suite in parallel workers, then the `serial` tests
+# on their own, in one process (tests/README.md, "Running the suite").
+markers = [
+    "serial: cannot share the machine with other test workers; runs after the parallel pass",
+]

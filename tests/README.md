@@ -3,6 +3,45 @@
 `uv run pytest -q` runs the suite; `./scripts/check.sh` runs it together with the
 other gates (see [CONTRIBUTING.md](../CONTRIBUTING.md) "Running checks").
 
+## Running the suite
+
+**While you build, run the tests of what you changed.** The full suite — some
+9 400 tests — is the pre-push hook's and CI's to run, not a builder's (the
+project's rules, `.pkit/rules/project.md`): run the test modules for the files
+you changed, `uv run pytest -q tests/test_<module>.py ...`, and the fast gates,
+`uv run pkit validate`, `uv run pkit friction check`,
+`uv run pkit migrations check-diff` and `uv run pkit release check`.
+
+**The full suite runs in parallel.** `scripts/check.sh` — the one command the
+pre-push hook and CI run, with no arguments in both — runs it in
+[pytest-xdist](https://pytest-xdist.readthedocs.io/) workers, `-n auto` (one per
+CPU), and then the tests marked `serial` on their own, in one process, in the
+same step. `PKIT_TEST_WORKERS` sets the number of workers; `0` runs the whole
+suite in one process. The two passes by hand:
+`uv run pytest -q -n auto -m "not serial"`, then `uv run pytest -q -m serial`.
+A plain `uv run pytest -q` still runs everything in one process, the `serial`
+tests included.
+
+**A test that cannot share the machine with other workers** is marked
+`@pytest.mark.serial`. Make it worker-safe instead when you can — whatever it
+writes under `tmp_path`, every change to the environment or the working
+directory through `monkeypatch`, no fixed path, port or order of tests it relies
+on. Mark it only when it needs something every worker shares, and say what in
+a comment beside the marker. The serial tests today share the processor: each
+bounds a run by a second or a few seconds of wall-clock time and needs
+interpreters started inside it, which a machine busy with other workers misses.
+A test whose short bound is incidental gets the default bound instead.
+
+**At most two full suites run at once on a machine.** Before its test step,
+`check.sh` takes one of two slots, lock files under
+`${XDG_CACHE_HOME:-~/.cache}/pkit/`, and frees it after. A third run waits,
+printing the two runs it waits for — process, checkout and start time — and goes
+on when one of them ends, however it ends: a slot is an `flock` lock, which the
+operating system releases when the run holding it ends, killed included. When the slots cannot be
+opened (a read-only cache directory, a sandbox that does not allow it), the step
+says so and runs without the limit. `tests/test_check_script.py` pins both the
+passes and the slots.
+
 ## The adopter-repository fixture
 
 Most tests that need "a project with the kit installed" should not `git init`

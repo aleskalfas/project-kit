@@ -490,6 +490,9 @@ def test_a_command_without_the_declaration_is_refused_by_the_runner_and_reported
     )
 
 
+# Serial: the script must start its grandchild inside the one-second bound, which
+# a machine busy with other test workers misses.
+@pytest.mark.serial
 def test_a_timeout_kills_the_process_group_and_does_not_wait_on_the_grandchild(
     adopter: AdopterRepo, monkeypatch: pytest.MonkeyPatch
 ) -> None:

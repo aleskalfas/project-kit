@@ -739,7 +739,10 @@ def test_a_command_filler_answers_with_json_alone_offline_marked(repo: AdopterRe
 def test_a_command_filler_without_an_answer_is_inert_never_a_partial_value(
     repo: AdopterRepo, monkeypatch: pytest.MonkeyPatch, body: str, reason: str
 ) -> None:
-    monkeypatch.setattr(command_runner, "COMMAND_TIMEOUT_SECONDS", 1)
+    # Only the case that never answers needs a short bound; the others keep the
+    # default, which a machine busy with other test workers does not run out of.
+    if "did not answer" in reason:
+        monkeypatch.setattr(command_runner, "COMMAND_TIMEOUT_SECONDS", 1)
     _provider(repo, inert="fallback", default={"value": ["guest"], "participation": "alone"})
     _command_contributor(repo, "evidence", body)
     resolution = _resolve(repo)
@@ -1182,6 +1185,9 @@ def test_outside_a_validate_run_a_reading_command_resolves_the_point_itself(
     assert len(_runs(repo)) == 2
 
 
+# Serial: the validator, its nested reader and the filler must all start inside
+# the filler's six seconds, which a machine busy with other test workers misses.
+@pytest.mark.serial
 def test_a_filler_a_nested_reader_starts_ends_by_the_outer_deadline_and_is_named(
     repo: AdopterRepo, pkit_on_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
