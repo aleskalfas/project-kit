@@ -281,11 +281,14 @@ def hook_stamp(
 
     A firing is the hook (`stamp_id`), the lifecycle `event`, the `subject` it
     fired on (`"issue"` or `"pr"` and its `number`), and the transition's from
-    and to states when the event carries one (`after_move_issue`). That is the
-    least that tells the firings the call sites make apart: each other event
-    fires once per issue or PR, and the same hook may be declared on several
-    events. A retry of the same firing reproduces the stamp; a firing that
-    differs in any of these renders a different one.
+    and to states when the event carries one (`after_move_issue`). These are
+    all the context the call sites pass that tells their firings apart: the
+    same hook may be declared on several events, and an issue moves through
+    many transitions. A retry of the same firing reproduces the stamp; a firing
+    that differs in any of these renders a different one. Firings that agree on
+    all of them are one firing: a transition the issue makes a second time, a
+    second close after a reopen. Telling those apart needs a fact the call site
+    does not pass today, such as how many moves the issue has made.
 
     `<firing>` is a digest of those parts, so nothing from them — an adopter's
     state names, a template file name — is written into the HTML comment where
@@ -465,8 +468,7 @@ def _hook_post_comment(
             detail="no issue/pr number in context",
         )
 
-    is_pr = "pr" in context
-    subject = "pr" if is_pr else "issue"
+    subject = "pr" if "pr" in context else "issue"
     stamp = hook_stamp(stamp_id, event, subject, issue_number, context.get("transition"))
     template_text = template_file.read_text(encoding="utf-8")
     rendered = _render_template(template_text, context)
