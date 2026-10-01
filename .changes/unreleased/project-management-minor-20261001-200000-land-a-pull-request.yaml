@@ -3,7 +3,7 @@ kind: minor
 custom:
   category: Added
 body: >
-  A new verb, `pkit pm land <N>`, lands an issue's pull request in one command
+  A new verb, `pkit pm land-work <N>`, lands an issue's pull request in one command
   (#1203). It replaces three steps run by hand with a wait between them. It
   pins the PR's head once and waits for the checks on that head, judged as
   `done-work`'s CI gate judges them: no check reported yet is a run that has

@@ -37,16 +37,16 @@ pkit project-management move-issue <N> --to <todo|backlog|in-progress|review|don
 
 **Land the PR** of an issue in Review — wait for its checks, request the reviewer verdicts it still needs (agent review mode, per [project-management:DEC-028-agent-as-approver-paths]), merge — with one verb:
 ```
-pkit project-management land <N> [--wait-minutes <M> | --no-wait] [--dry-run] [--yes]
+pkit project-management land-work <N> [--wait-minutes <M> | --no-wait] [--dry-run] [--yes]
 ```
-`land` pins the PR's head and runs `review-pr` only once every check on that head has passed. The reviewers judge that head, and the merge gate counts no verdict older than the PR's latest commit, so reviewing a head whose CI then fails would spend a round of verdicts on a commit the fix replaces. It merges through `done-work`, with `done-work`'s gates. Review → Done is user-authorised, so run `land` only on the user's authorisation of the merge (the authorisation gate above). Each step prints one line, and the last line says why the run stopped. Act on the exit code:
+`land-work` pins the PR's head and runs `review-pr` only once every check on that head has passed. The reviewers judge that head, and the merge gate counts no verdict older than the PR's latest commit, so reviewing a head whose CI then fails would spend a round of verdicts on a commit the fix replaces. It merges through `done-work`, with `done-work`'s gates. Review → Done is user-authorised, so run `land-work` only on the user's authorisation of the merge (the authorisation gate above). Each step prints one line, and the last line says why the run stopped. Act on the exit code:
 - **1** — hand the PR back to the builder with that line. It is unpushed commits, a failed check, a `CHANGES_REQUESTED` (its `[block]` findings are printed above the line, with the reviewer that raised each), or a `done-work` refusal.
-- **3** — the head moved; run `land` again to land the new one.
-- **4** — the PR is queued, or the merge is unconfirmed; run `land` again once it merges.
-- **5** — the checks are still running, or none has started; run `land` again to keep waiting.
-- **6** — a reviewer could not run; run `land` again once it can.
+- **3** — the head moved; run `land-work` again to land the new one.
+- **4** — the PR is queued, or the merge is unconfirmed; run `land-work` again once it merges.
+- **5** — the checks are still running, or none has started; run `land-work` again to keep waiting.
+- **6** — a reviewer could not run; run `land-work` again once it can.
 
-A re-run resumes where the last one stopped. To request the verdicts without merging, run `pkit project-management review-pr <N>` once the checks on the PR's head have passed. In a repository that runs no checks on pull requests, `land` has no run to wait for, so run `review-pr <N>` and then `done-work <N>` instead. (`<N>` is the issue.)
+A re-run resumes where the last one stopped. To request the verdicts without merging, run `pkit project-management review-pr <N>` once the checks on the PR's head have passed. In a repository that runs no checks on pull requests, `land-work` has no run to wait for, so run `review-pr <N>` and then `done-work <N>` instead. (`<N>` is the issue.)
 
 When the verdicts come back, a fix round carries the findings the reviewer marks blocking; each advisory is answered in the PR body or filed as a follow-up, scoped by [create-issue](create-issue.md)'s intent recognition.
 

@@ -183,7 +183,7 @@ Exit codes:
   2  usage error / gh failure
   3  the merge failed; the PR left the merge queue without merging, or was
      taken out of it because its head moved; or, called with a pinned head
-     (`main(argv, pinned_head=…)`, as `land` calls it), the PR's head is not
+     (`main(argv, pinned_head=…)`, as `land-work` calls it), the PR's head is not
      that one
   4  accepted, a re-run completes it: the PR is in the merge queue and has
      not been seen merged, or gh accepted the merge — or a merge or an
@@ -377,7 +377,7 @@ def _head_key(commits: list) -> str:
 def main(argv: list[str] | None = None, *, pinned_head: str = "") -> int:
     """Run done-work on `argv` (default: the command line).
 
-    `pinned_head` is for a verb that composes this one (`land`, #1203): the
+    `pinned_head` is for a verb that composes this one (`land-work`, #1203): the
     PR head it waited for the checks on and had reviewed. The run then lands
     that head or nothing — it stops before any gate when the PR's head is
     another, and before anything is posted or merged when the head the agent

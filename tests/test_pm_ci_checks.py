@@ -217,7 +217,7 @@ def test_gate_passes_on_empty(ci) -> None:
 
 
 # --- the four states a waiting reader tells apart (#1203) --------------
-# The merge gate passes a head with no check reported; `land`, which waits for
+# The merge gate passes a head with no check reported; `land-work`, which waits for
 # the checks, must not read that as green. The gate's verdict says which.
 
 

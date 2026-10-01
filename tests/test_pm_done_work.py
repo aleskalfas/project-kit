@@ -464,7 +464,7 @@ def test_without_an_agent_gate_the_merge_is_pinned_to_the_runs_head(dw, monkeypa
     assert calls["merge_head"] == "sha-head"
 
 
-# ---- a pinned head (`land`, #1203) -----------------------------------
+# ---- a pinned head (`land-work`, #1203) -----------------------------------
 # A verb composing done-work hands it the head it waited for the checks on and
 # had reviewed: done-work lands that head or nothing.
 
@@ -511,7 +511,7 @@ def test_a_pinned_head_the_agent_gate_did_not_judge_stops_before_the_merge(
 def test_main_reads_the_argv_it_is_given(dw, monkeypatch, capsys) -> None:
     """`main(argv)` parses `argv`, not the command line it was started with."""
     _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
-    monkeypatch.setattr(sys, "argv", ["land.py", "42", "--bypass-reason", "x"])
+    monkeypatch.setattr(sys, "argv", ["land-work.py", "42", "--bypass-reason", "x"])
     assert dw.main(["42", "--yes"]) == 0
     assert "DEPRECATED" not in capsys.readouterr().err
 

@@ -85,7 +85,7 @@ Exit codes:
   2  usage error / no agents configured / gh failure / required set
      unresolvable (fail-closed)
   3  one or more agent invocations failed (verdicts not posted); or, called
-     with a pinned head (`review(argv, pinned_head=…)`, as `land` calls it),
+     with a pinned head (`review(argv, pinned_head=…)`, as `land-work` calls it),
      the PR was found at another head and no further reviewer ran
 """
 
@@ -245,7 +245,7 @@ def _resolve_agent_effort(
 
 @dataclass
 class ReviewRun:
-    """What one review-pr run did, for a verb that composes it (`land`, #1203):
+    """What one review-pr run did, for a verb that composes it (`land-work`, #1203):
     the exit code `main` returns, and what became of each required reviewer."""
 
     exit_code: int
@@ -272,7 +272,7 @@ def main() -> int:
 def review(argv: list[str] | None = None, *, pinned_head: str = "") -> ReviewRun:
     """Run review-pr on `argv` (default: the command line).
 
-    `pinned_head` is for a verb that composes this one (`land`, #1203): the
+    `pinned_head` is for a verb that composes this one (`land-work`, #1203): the
     PR head it waited for the checks on. A reviewer is then invoked only on
     that head; when the PR is found at another, before an invocation or
     after one, no further reviewer runs (exit 3, `ReviewRun.moved_to`).

@@ -6,7 +6,7 @@
 #   "pathspec>=0.12",
 # ]
 # ///
-"""Project-management capability — land (#1203).
+"""Project-management capability — land-work (#1203).
 
 Lands an issue's pull request in one command: waits for the checks on the PR's
 head, has the reviewers whose verdicts are not fresh review that head, and
@@ -14,7 +14,7 @@ merges it through `done-work`. It composes the verbs' own functions — the CI
 gate's reading (`_lib.ci_checks`), `review-pr`'s review, `done-work`'s merge —
 and adds no gate, review loop or merge mechanic of its own.
 
-    land <N> [--wait-minutes M | --no-wait] [--dry-run] [--yes]
+    land-work <N> [--wait-minutes M | --no-wait] [--dry-run] [--yes]
 
 Each step prints one line; the verbs it composes print their detail above it.
 It stops at the first step that cannot go on, and its last line says why.
@@ -23,7 +23,7 @@ It stops at the first step that cannot go on, and its last line says why.
           The PR's head on GitHub is read once and pinned: every later step
           checks it and is handed it. Refused when the local branch holds
           commits that head lacks (the line gives the push). A local branch
-          behind the head, or a checkout on another branch, is noted: land
+          behind the head, or a checkout on another branch, is noted: land-work
           lands the head on GitHub, never the working tree, so it runs from
           any checkout of the clone that has the branch. With no open PR it
           goes straight to `done-work`, which completes a PR already merged.
@@ -44,7 +44,7 @@ It stops at the first step that cannot go on, and its last line says why.
           Its gates, refusals, queue handling and exit codes are its own.
 
 There is no flag that skips the checks or the review: the bypasses are
-`done-work`'s, with their audit. Run again, land resumes: green checks on the
+`done-work`'s, with their audit. Run again, land-work resumes: green checks on the
 same head are not waited for, fresh verdicts are not re-run, and a PR that
 merged is completed through `done-work`.
 
@@ -56,9 +56,9 @@ Exit codes:
   3  the PR's head moved from the pinned one; or `done-work`'s merge failed
      or the PR left the merge queue unmerged
   4  accepted, not yet seen merged: the PR is in the merge queue, or the
-     merge could not be confirmed (`done-work`'s 4) — run land again
+     merge could not be confirmed (`done-work`'s 4) — run land-work again
   5  the wait for the checks ran out: no run had started, or one still runs —
-     run land again
+     run land-work again
   6  a reviewer could not be run, so the review is not complete
 """
 
@@ -100,7 +100,7 @@ from _lib.review_mode import resolve_mode
 
 def _load_verb(script: str, module_name: str) -> ModuleType:
     """A sibling verb's script, loaded as a module (its name has a hyphen), so
-    land calls that verb's own functions rather than copies of them."""
+    land-work calls that verb's own functions rather than copies of them."""
     spec = importlib.util.spec_from_file_location(module_name, _HERE / script)
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
@@ -109,8 +109,8 @@ def _load_verb(script: str, module_name: str) -> ModuleType:
     return module
 
 
-done_work = _load_verb("done-work.py", "pm_land_done_work")
-review_pr = _load_verb("review-pr.py", "pm_land_review_pr")
+done_work = _load_verb("done-work.py", "pm_land_work_done_work")
+review_pr = _load_verb("review-pr.py", "pm_land_work_review_pr")
 
 EXIT_MERGED = 0
 EXIT_STOPPED = 1
@@ -148,7 +148,7 @@ class _Stop(Exception):
 
 @dataclass(frozen=True)
 class _Head:
-    """The PR head land pins, and where it was found."""
+    """The PR head land-work pins, and where it was found."""
 
     issue: int
     pr_number: int
@@ -180,9 +180,9 @@ def main(argv: list[str] | None = None) -> int:
     if capability_root is None:
         print(f"error: {CAPABILITY_NAME} capability not found.", file=sys.stderr)
         return EXIT_UNREADABLE
-    # The composed verbs gate each of these again; land gates them first so a
+    # The composed verbs gate each of these again; land-work gates them first so a
     # run they would refuse stops before it waits for any check.
-    if not bootstrap_gate.enforce("land", capability_root=capability_root):
+    if not bootstrap_gate.enforce("land-work", capability_root=capability_root):
         return EXIT_UNREADABLE
     config = load_adopter_config(capability_root)
     members = done_work._read_members(capability_root, YAML(typ="safe"))
@@ -225,7 +225,7 @@ def _parser() -> argparse.ArgumentParser:
         action="store_true",
         help=(
             "Read the checks once, and return once the PR is queued where the base "
-            "merges through a queue (exit 4). Run land again to go on."
+            "merges through a queue (exit 4). Run land-work again to go on."
         ),
     )
     parser.add_argument(
@@ -307,7 +307,7 @@ def _local_notes(head: _Head, *, cross_repository: bool) -> list[str]:
                 EXIT_UNREADABLE,
                 f"head: cannot tell whether local {branch} (at {short_sha(tip)}) holds commits "
                 f"PR #{head.pr_number}'s head {short_sha(oid)} lacks: this clone does not have "
-                f"that head. Fetch it (`git fetch origin {branch}`) and run land again",
+                f"that head. Fetch it (`git fetch origin {branch}`) and run land-work again",
             )
         ahead = _count_commits(f"{oid}..{tip}")
         behind = _count_commits(f"{tip}..{oid}")
@@ -324,7 +324,7 @@ def _local_notes(head: _Head, *, cross_repository: bool) -> list[str]:
                 f"{short_sha(oid)} have diverged ({_commits(ahead)} only here, "
                 f"{_commits(behind)} only on the PR). Reconcile them "
                 f"(`git pull --rebase origin {branch}`), push (`git push origin {branch}`), "
-                "and run land again",
+                "and run land-work again",
             )
         if ahead:
             raise _Stop(
@@ -393,7 +393,7 @@ def _wait_for_checks(
                 raise _Stop(
                     EXIT_UNREADABLE,
                     f"ci: PR #{number}'s checks could not be read: {checks.problem}. "
-                    f"Run `land {issue}` again",
+                    f"Run `land-work {issue}` again",
                 )
         elif checks.state == "MERGED":
             _say(f"ci: PR #{number} has merged meanwhile")
@@ -407,7 +407,7 @@ def _wait_for_checks(
             raise _Stop(
                 EXIT_HEAD_MOVED,
                 f"ci: stopped — PR #{number}'s head moved from {short_sha(head.oid)} to "
-                f"{short_sha(checks.head)} while its checks were awaited; run `land {issue}` "
+                f"{short_sha(checks.head)} while its checks were awaited; run `land-work {issue}` "
                 "again to land the new head",
             )
         else:
@@ -483,13 +483,13 @@ def _ran_out(head: _Head, gate: CiGateResult, waited: float, wait_seconds: float
     after = "(--no-wait)" if wait_seconds == 0 else f"after {_duration(waited)}"
     if gate.state == NO_RUN:
         return (
-            f"ci: no run has started for {sha} {after}. Run `land {issue}` again to keep "
+            f"ci: no run has started for {sha} {after}. Run `land-work {issue}` again to keep "
             "waiting; if this repository runs no checks on pull requests there is none to "
             f"wait for — review with `review-pr {issue}` and merge with `done-work {issue}`"
         )
     return (
         f"ci: still running on {sha} {after}: {', '.join(gate.running)}. "
-        f"Run `land {issue}` again to keep waiting"
+        f"Run `land-work {issue}` again to keep waiting"
     )
 
 
@@ -566,7 +566,7 @@ def _review(args: argparse.Namespace, head: _Head, config: dict[str, Any]) -> bo
         raise _Stop(
             EXIT_HEAD_MOVED,
             f"review: stopped — PR #{head.pr_number}'s head is {short_sha(run.moved_to)}, "
-            f"not {short_sha(head.oid)}, the head whose checks passed; run `land {issue}` "
+            f"not {short_sha(head.oid)}, the head whose checks passed; run `land-work {issue}` "
             "again to land the new head",
         )
     if run.failed:
@@ -574,7 +574,7 @@ def _review(args: argparse.Namespace, head: _Head, config: dict[str, Any]) -> bo
         raise _Stop(
             EXIT_REVIEW_INCOMPLETE,
             f"review: stopped — a reviewer could not be run, so the review is not "
-            f"complete ({could_not}). Run `land {issue}` again once it can run",
+            f"complete ({could_not}). Run `land-work {issue}` again once it can run",
         )
     if run.exit_code != 0:
         reason = _first_reason(said) or f"review-pr exited {run.exit_code}"
@@ -667,13 +667,16 @@ def _merge(args: argparse.Namespace, head: _Head | None, config: dict[str, Any])
 
 def _accepted(head: _Head, config: dict[str, Any]) -> int:
     """done-work's 4, said as GitHub now reports the PR."""
-    again = f"run `land {head.issue}` again once it merges"
+    again = f"run `land-work {head.issue}` again once it merges"
     try:
         reading = merge_queue.read(head.pr_number, config)
     except merge_queue.Unreadable:
         reading = None
     if reading is not None and reading.merged:
-        _say(f"merge: merged meanwhile — run `land {head.issue}` again to complete #{head.issue}")
+        _say(
+            f"merge: merged meanwhile — run `land-work {head.issue}` again to complete "
+            f"#{head.issue}"
+        )
     elif reading is not None and reading.queued:
         _say(f"merge: queued — PR #{head.pr_number} {reading.describe()}; {again}")
     else:

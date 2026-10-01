@@ -1,6 +1,6 @@
-"""Tests for `land` (#1203) — one verb lands a pull request.
+"""Tests for `land-work` (#1203) — one verb lands a pull request.
 
-The real `land`, `review-pr` and `done-work` scripts run against an in-memory
+The real `land-work`, `review-pr` and `done-work` scripts run against an in-memory
 GitHub (`_FakeGitHub`): every `gh` call the pm scripts make, and every one the
 backbone's pull-request mechanic makes (routed in-process by
 `tests.pull_request_backbone`), is answered from one PR's state, which a test
@@ -30,7 +30,7 @@ from tests import pull_request_backbone
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CAPABILITY = REPO_ROOT / ".pkit" / "capabilities" / "project-management"
-SCRIPT = CAPABILITY / "scripts" / "land.py"
+SCRIPT = CAPABILITY / "scripts" / "land-work.py"
 
 ISSUE = 42
 PR = 496
@@ -79,10 +79,10 @@ _BLOCKING = (
 def land() -> Iterator[ModuleType]:
     lib_dir = str(SCRIPT.parent)
     sys.path.insert(0, lib_dir)
-    spec = importlib.util.spec_from_file_location("pm_land_under_test", SCRIPT)
+    spec = importlib.util.spec_from_file_location("pm_land_work_under_test", SCRIPT)
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
-    sys.modules["pm_land_under_test"] = module
+    sys.modules["pm_land_work_under_test"] = module
     spec.loader.exec_module(module)
     yield module
     sys.path.remove(lib_dir)
@@ -366,7 +366,7 @@ class _Clone:
 
 @pytest.fixture(scope="module")
 def clone(tmp_path_factory: pytest.TempPathFactory) -> _Clone:
-    root = tmp_path_factory.mktemp("land-clone")
+    root = tmp_path_factory.mktemp("land-work-clone")
     _git(root, "init", "-q", "--bare", "-b", "main", "origin.git")
     work = root / "work"
     work.mkdir()
@@ -446,7 +446,7 @@ def world(land, clone, tmp_path, monkeypatch) -> Callable[..., _Run]:
 
 
 def _steps(out: str) -> list[str]:
-    """The lines land prints for its steps."""
+    """The lines land-work prints for its steps."""
     return [line for line in out.splitlines() if line.split(":")[0] in _STEP_NAMES]
 
 
@@ -515,7 +515,7 @@ def test_a_local_branch_diverged_from_the_pr_is_refused(world, capsys) -> None:
 
 def test_a_local_branch_behind_the_pr_and_another_checkout_are_noted(world, capsys) -> None:
     """The PR moved on GitHub (a push from elsewhere) and this checkout is on
-    main: land lands the PR's head and says so."""
+    main: land-work lands the PR's head and says so."""
     run = world()
     old = run.github.head
     run.push_new_head("from-elsewhere.txt")
@@ -590,7 +590,7 @@ def test_the_wait_running_out_on_no_run_is_its_own_exit(world, capsys) -> None:
     assert sum(run.sleeps) == 60
     last = out.splitlines()[-1]
     assert last.startswith(f"ci: no run has started for {_short(run.github.head)} after 1m.")
-    assert f"Run `land {ISSUE}` again to keep waiting" in last
+    assert f"Run `land-work {ISSUE}` again to keep waiting" in last
     assert run.invoked == []
 
 
@@ -601,7 +601,7 @@ def test_no_wait_reads_the_checks_once(world, capsys) -> None:
     assert run.sleeps == []
     assert out.splitlines()[-1] == (
         f"ci: still running on {_short(run.github.head)} (--no-wait): checks "
-        f"(IN_PROGRESS). Run `land {ISSUE}` again to keep waiting"
+        f"(IN_PROGRESS). Run `land-work {ISSUE}` again to keep waiting"
     )
 
 
@@ -616,7 +616,7 @@ def test_a_head_that_moves_while_the_checks_are_awaited_stops(world, capsys) -> 
     assert rc == 3
     assert out.splitlines()[-1] == (
         f"ci: stopped — PR #{PR}'s head moved from {_short(pinned)} to ddddddd while its "
-        f"checks were awaited; run `land {ISSUE}` again to land the new head"
+        f"checks were awaited; run `land-work {ISSUE}` again to land the new head"
     )
 
 
@@ -672,7 +672,7 @@ def test_a_reviewer_that_could_not_run_stops_and_is_not_approval(world, capsys) 
     assert out.splitlines()[-1] == (
         "review: stopped — a reviewer could not be run, so the review is not complete "
         "(code-reviewer: the invocation failed, so there is no verdict to post). "
-        f"Run `land {ISSUE}` again once it can run"
+        f"Run `land-work {ISSUE}` again once it can run"
     )
     assert run.github.merges == []
 
@@ -688,7 +688,7 @@ def test_a_head_that_moves_between_the_checks_and_the_review_stops(world, capsys
     assert run.invoked == []
     assert out.splitlines()[-1] == (
         f"review: stopped — PR #{PR}'s head is {_short(run.github.head)}, not "
-        f"{_short(pinned)}, the head whose checks passed; run `land {ISSUE}` again to "
+        f"{_short(pinned)}, the head whose checks passed; run `land-work {ISSUE}` again to "
         "land the new head"
     )
 
@@ -735,7 +735,7 @@ def test_a_queued_pr_passes_done_works_4_through(world, capsys) -> None:
     ]
     assert out.splitlines()[-1] == (
         f"merge: queued — PR #{PR} position 1 in the queue, awaiting checks; run "
-        f"`land {ISSUE}` again once it merges"
+        f"`land-work {ISSUE}` again once it merges"
     )
     assert run.after_merge == []
 
@@ -747,14 +747,14 @@ def test_an_unconfirmed_merge_passes_done_works_4_through(world, capsys) -> None
     assert rc == 4
     assert "[unconfirmed]" in out
     assert out.splitlines()[-1] == (
-        f"merge: unconfirmed — whether PR #{PR} merged is not known; run `land {ISSUE}` "
+        f"merge: unconfirmed — whether PR #{PR} merged is not known; run `land-work {ISSUE}` "
         "again once it merges"
     )
     assert run.after_merge == []
 
 
 def test_a_declined_prompt_is_not_reported_merged(world, capsys, monkeypatch) -> None:
-    """done-work returns 0 when its prompt is declined; land reads the PR and
+    """done-work returns 0 when its prompt is declined; land-work reads the PR and
     says it did not merge, with a non-zero exit."""
     run = world()
     monkeypatch.setattr(sys.stdin, "isatty", lambda: True, raising=False)

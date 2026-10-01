@@ -17,7 +17,7 @@ shared seam to import across that boundary):
     refuse naming the offending checks. The verdict also tells apart the four
     states a head's checks can be in (`CiGateResult.state`) — none reported
     yet, still running, failed, passed — for a reader that waits for them
-    (`land`, #1203): the merge gate passes a head with no check reported, and
+    (`land-work`, #1203): the merge gate passes a head with no check reported, and
     a reader that waits must not take that for green.
 
 The gh round-trip (`gh pr view --json statusCheckRollup`) stays at the call

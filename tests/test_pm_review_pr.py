@@ -1095,7 +1095,7 @@ def test_dry_run_reports_the_skip(rpr, monkeypatch, tmp_path, capsys) -> None:
     assert "  [code-reviewer] (dry-run) would invoke against PR #99" in out
 
 
-# ---- `review()`, for a verb that composes the review (`land`, #1203) ---
+# ---- `review()`, for a verb that composes the review (`land-work`, #1203) ---
 
 
 def test_review_reports_what_became_of_each_reviewer(rpr, monkeypatch, tmp_path) -> None:
