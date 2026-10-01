@@ -56,9 +56,9 @@ TERM-intent-note:
         record:
           - project-management:DEC-044
       revalidated:
-        at: 2026-09-30T23:02:15Z
+        at: 2026-10-01T20:03:29Z
         outcome: unchanged
-        unchanged-because: "#840's lint and format pass reshapes the anchored code without changing what it does, so this page still describes it as it is"
+        unchanged-because: start-work now reads the issue's state through the shared issue_position resolver move-issue uses and refuses a state it cannot read (#1242); the first intent note start-work --next will write is untouched and still unbuilt, so the term holds
 TERM-new-front:
   name: New front
   status: active
@@ -71,9 +71,9 @@ TERM-new-front:
         record:
           - project-management:DEC-004
       revalidated:
-        at: 2026-09-30T23:02:15Z
+        at: 2026-10-01T20:03:33Z
         outcome: unchanged
-        unchanged-because: "#840's lint and format pass reshapes the anchored code without changing what it does, so this page still describes it as it is"
+        unchanged-because: start-work's change (#1242) is to how its early check reads the issue's lifecycle state, shared with move-issue; it adds no start guard over fronts, which stays intended design, so the term holds
 TERM-release-scope:
   name: Release scope
   status: active
@@ -115,9 +115,9 @@ TERM-stabilisation:
           - project-management:DEC-014
           - ADR-019
       revalidated:
-        at: 2026-10-01T15:52:46Z
+        at: 2026-10-01T20:03:33Z
         outcome: unchanged
-        unchanged-because: done-work and merge-pr now read a PR again when a merge or an enqueue gets no answer back from the backbone, and exit 4 when GitHub cannot say what it came to; the stabilisation phase, its intended guards and gap K2 are untouched
+        unchanged-because: start-work's change (#1242) is to how its early check reads the issue's lifecycle state, shared with move-issue; the stabilisation guard on start-work is still unbuilt and nothing in the term depends on how state is read, so it holds
 ---
 
 # Glossary
