@@ -1,0 +1,40 @@
+component: backbone
+kind: minor
+custom:
+  category: Changed
+body: >
+  A data point's command filler may declare what it reads beyond the working
+  tree (COR-052 point 6): `reads:` on its `commands:` leaf, `history` (the
+  current history, read at HEAD) and/or `settled` (the default branch as the
+  backbone resolves it, never a base named for one run). The package schema
+  takes the key as an optional, non-empty list of distinct values, and the
+  `packages` member of `pkit validate` refuses it on a leaf without
+  `query-contract: true`. For each such filler that was asked, the
+  `connections` member of `pkit validate` adds one line naming what it read
+  and at which commit (`<address>: <capability> (command '<ref>') reads
+  history (HEAD <sha12>[, shallow clone])`, `... reads the default branch
+  (<ref> at <sha12>)`), `pkit status` appends the same to the filler's line,
+  and `pkit connections resolve --json` carries it as each filler's `reads`.
+  A filler that declares `settled` is not started while the default branch
+  resolves to no commit for any reason but having none yet: it is inert, with
+  the fetch and the declaration as the fixes, never a base. The query policy
+  removes `PKIT_CHECK_BASE` from the environment of every validator and every
+  command filler it starts. `pkit repository base --json` gains
+  `default_branch.unborn`, true only when the branch has no commit yet (no
+  remote, and HEAD is that branch before its first commit); its
+  `schema_version` stays 1.
+
+  **`pkit validate` and what a clone has fetched.** A command filler may
+  declare that it reads beyond the working tree: `reads:` on its `commands:`
+  entry, `history` and/or `settled`. `pkit validate`, `pkit status` and `pkit
+  connections resolve` name what each such filler read and at which commit.
+  `PKIT_CHECK_BASE` no longer reaches a filler or a validator, so their
+  answers are the same whatever base a pipeline names. Nothing changes in an
+  installed project until a capability ships a filler that declares
+  `settled`. From then on the default branch's remote-tracking copy must be
+  present wherever `pkit validate` runs: a pipeline job that checks out a
+  single ref fetches it first (`git fetch origin <default-branch>`). Where it
+  is missing the filler is inert, with the fetch as the fix — a warning under
+  a `fallback` point, an error under a `fail` point — and naming a base does
+  not fix it. A filler that declares `history` gives no answer where a
+  shallow clone stops short of what it reads (`git fetch --unshallow`).

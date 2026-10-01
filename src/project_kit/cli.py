@@ -494,9 +494,11 @@ def repository_base_command(base_ref: str | None, as_json: bool) -> None:
 
     The default branch: declared (`repository.default-branch`, else `main`)
     and resolved — the remote-tracking reference of its upstream, else
-    origin/<name>, and the local branch only when there is no remote. The
-    base: REF, else $PKIT_CHECK_BASE, else the default branch — its commit,
-    where HEAD left it and whether it moved on since. A reader that used a
+    origin/<name>, and the local branch only when there is no remote; `unborn`
+    when it has no commit yet. The base: REF, else $PKIT_CHECK_BASE, else the
+    default branch — its commit, where HEAD left it and whether it moved on
+    since. A data point's filler reads the default branch and never the base
+    (COR-052 point 6); no base override reaches it. A reader that used a
     local branch, and a declaration read as the default, say so on standard
     error. Read-only; it runs no discovery. It is how a capability's own
     script reads which commit is settled, without resolving a branch or
@@ -936,12 +938,14 @@ def connections_resolve(address: str, as_json: bool) -> None:
     The resolution `pkit validate` reports and `pkit status` shows (COR-052):
     the point's value — a `single` point's answer, or the entries of a `union`
     or `additive` point, each with its origin — how it resolved, or why it did
-    not, and every filler considered. Read-only; only this point resolves, so
-    only its command fillers run, as they do there, offline-marked and
-    bounded. Inside a run of `pkit validate` — a validator reading the point —
-    it reads the point from the run cache when the run has already resolved it
-    (`from: run-cache` in the document); otherwise it resolves the point and
-    caches it, so its fillers run once per validate. It is how a capability's
+    not, and every filler considered — for a command filler that reads beyond
+    the working tree, what it read and at which commit (`reads`). Read-only;
+    only this point resolves, so only its command fillers run, as they do
+    there, offline-marked, bounded and with no base override. Inside a run of
+    `pkit validate` — a validator reading the point — it reads the point from
+    the run cache when the run has already resolved it (`from: run-cache` in
+    the document); otherwise it resolves the point and caches it, so its
+    fillers run once per validate. It is how a capability's
     own script reads a point it defines without importing the backbone. Exit 0
     when the point resolves; 1 when it does not, or when no active provider
     defines it, and the output says why.
