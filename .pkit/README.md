@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-01T15:15:50Z
+      at: 2026-10-01T15:42:39Z
       outcome: unchanged
-      unchanged-because: the cli README now says the configuration writer changes only the keys it sets; this map names the cli area's purpose and entry point, which are unchanged
+      unchanged-because: the area index's one-line descriptions of the CLI and lifecycle READMEs still hold; their pages gained the downgrade refusal, not a new role
 ---
 
 # project-kit
