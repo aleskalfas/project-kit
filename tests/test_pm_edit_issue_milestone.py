@@ -145,10 +145,10 @@ def test_moves_the_milestone_and_the_first_line_follows(ei, monkeypatch) -> None
 
 
 def test_an_issue_left_on_a_closed_milestone_moves_to_an_open_one(ei, monkeypatch) -> None:
-    """The hand rollforward the README names: close-milestone leaves an open
-    child on the closed milestone (#387), and only the TARGET must be open.
-    With no state label the child reads backlog before and after, so its
-    state is preserved."""
+    """A move off a closed milestone: what close-milestone's rollforward re-run
+    makes (#1175), and the hand move a forced content close leaves to do. Only
+    the TARGET must be open. With no state label the child reads backlog before
+    and after, so its state is preserved."""
     rec = _run(
         ei,
         monkeypatch,
