@@ -1,0 +1,26 @@
+component: project-management
+kind: minor
+custom:
+  category: Changed
+body: >
+  A reviewer's verdict stays valid until the author changes something that
+  reviewer checks, instead of going stale on every commit (#1179). `review-pr`
+  records the PR's head before it invokes each reviewer, names it in the
+  reviewer's brief, and stamps it into the verdict marker
+  (`<!-- pkit-verdict sha=<commit> -->`); a head that moved during the review is
+  reported, the verdict is posted against the head the reviewer saw, and the
+  native review is skipped. The author's changes since that head are read from
+  the local repository: a clean merge of the base branch counts for nothing,
+  an edit made inside a merge or a resolved conflict counts, and any other
+  commit counts for its whole diff. A reviewer only a diff floor requires (the
+  code-review panel's `code-reviewer` and `security-reviewer`) keeps its
+  verdict while those changes reach none of its floors, read through
+  `review.floors.not_code`; the baseline and a classification-matched reviewer
+  go stale on any change. When the changes cannot be read — the reviewed head
+  was rebased away, a commit is not fetched, git is older than 2.38 — the
+  verdict is stale. A verdict naming no head keeps the commit-time rule.
+  `done-work`'s gate, `review-pr`'s skip and `show-pr --field review` apply
+  this one rule; a `done-work` refusal and `show-pr` name each stale verdict's
+  reviewed head and what changed since, and `show-pr --json` carries that
+  reason as `freshness`. A semantic conflict introduced by a clean merge of the
+  base is not re-reviewed; CI is the backstop.

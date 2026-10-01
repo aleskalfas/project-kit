@@ -986,14 +986,74 @@ def test_satisfied_floors_reads_only_what_the_list_leaves(rr) -> None:
     """A path the list matches satisfies no floor, code suffix or not; a path it
     does not match is read by the suffix test exactly as before."""
     generated = rr.NotCode(patterns=("generated/**",))
-    assert rr._satisfied_floors(["generated/client.py"], generated) == set()
-    assert rr._satisfied_floors(
+    assert rr.satisfied_floors(["generated/client.py"], generated) == set()
+    assert rr.satisfied_floors(
         ["generated/client.py", "src/app.py"], generated,
     ) == {rr.FLOOR_TOUCHES_CODE}
-    assert rr._satisfied_floors([_CHANGESET]) == set()  # the shipped default.
-    assert rr._satisfied_floors(
+    assert rr.satisfied_floors([_CHANGESET]) == set()  # the shipped default.
+    assert rr.satisfied_floors(
         [_CHANGESET], rr.NotCode(patterns=()),
     ) == {rr.FLOOR_TOUCHES_CODE}
+
+
+# ---- which reviewers only a floor requires (#1179) ----------------------
+#
+# The freshness rule keeps a floor-only reviewer's verdict standing until the
+# author's changes reach one of its floors; any other reviewer is required for
+# the whole change. The resolution names the floor-only ones.
+
+
+def test_floor_only_reviewers_on_a_classified_code_pr(rr, rc) -> None:
+    """docs-reviewer is matched by the `type: *` classification rule, so it is
+    required for the whole change; code and security only by their floor."""
+    res = _resolve(
+        rr, baseline=["reviewer"],
+        collection=_se_collection(rc),
+        closing=[42], labels={42: ["type:feature"]},
+        changed=["src/app.py"],
+    )
+    assert res.floors_by_reviewer == {
+        "code-reviewer": frozenset({rr.FLOOR_TOUCHES_CODE}),
+        "security-reviewer": frozenset({rr.FLOOR_TOUCHES_CODE}),
+    }
+
+
+def test_floor_only_reviewers_on_an_unclassified_code_pr(rr, rc) -> None:
+    """With no classification to match, docs-reviewer too is only on its floor."""
+    res = _resolve(
+        rr, baseline=["reviewer"],
+        collection=_se_collection(rc),
+        closing=[], changed=["src/app.py"],
+    )
+    assert set(res.floors_by_reviewer) == {
+        "code-reviewer", "security-reviewer", "docs-reviewer",
+    }
+
+
+def test_a_baseline_reviewer_on_a_floor_is_required_for_the_whole_change(
+    rr, rc,
+) -> None:
+    res = _resolve(
+        rr, baseline=["code-reviewer"],
+        collection=_floor_collection(rc),
+        closing=[], changed=["src/app.py"],
+    )
+    assert res.required_local == ("code-reviewer",)
+    assert res.floors_by_reviewer == {}
+
+
+def test_the_resolution_carries_the_not_code_list_it_applied(rr, rc) -> None:
+    res = _resolve(
+        rr, baseline=["reviewer"],
+        collection=_se_collection(rc),
+        closing=[], changed=["src/app.py"],
+        not_code=["generated/**"],
+    )
+    assert res.not_code.patterns == ("generated/**",)
+    assert _resolve(
+        rr, baseline=["reviewer"], collection=_se_collection(rc),
+        closing=[], changed=["src/app.py"],
+    ).not_code == rr.DEFAULT_NOT_CODE
 
 
 def test_read_not_code(rr) -> None:

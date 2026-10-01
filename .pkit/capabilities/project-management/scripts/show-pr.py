@@ -3,6 +3,7 @@
 # requires-python = ">=3.10"
 # dependencies = [
 #   "ruamel.yaml>=0.18",
+#   "pathspec>=0.12",
 # ]
 # ///
 """Project-management capability — show-pr (verb-subject per DEC-020).
@@ -16,6 +17,9 @@ rest of the view uses (issue #544; the operator's only allowed path to the
 verdict body, since raw `gh pr view --comments` is denied).
 `--field review-history` renders EVERY verdict each reviewer posted, in
 posting order — earlier rounds a later verdict superseded included (#905).
+A verdict the merge gate would not count is marked stale, with the reason,
+by the gate's own freshness rule (`_lib.verdict_freshness`, #1179); to
+judge it the view resolves the PR's required reviewers as the gate does.
 
 Membership gate per DEC-021 runs at startup.
 
@@ -47,13 +51,30 @@ _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import bootstrap_gate  # noqa: E402
 from _lib.agent_verdicts import (  # noqa: E402
-    PATH_LOCAL,
     all_verdicts,
-    latest_commit_timestamp,
     latest_verdicts_per_reviewer,
     reduce_latest_per_reviewer,
 )
-from _lib.gh import gh_run, load_adopter_config  # noqa: E402
+from _lib.author_delta import author_delta  # noqa: E402
+from _lib.closing_issue_fetchers import (  # noqa: E402
+    issue_labels as _issue_labels_fetch,
+    pr_changed_files as _pr_changed_files_fetch,
+    pr_closing_issue_numbers as _pr_closing_issue_numbers_fetch,
+)
+from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
+from _lib.required_reviewers import (  # noqa: E402
+    Resolution,
+    read_not_code,
+    resolve_required_local_reviewers,
+)
+from _lib.review_contributions import collect_contributions  # noqa: E402
+from _lib.review_opt_outs import read_opt_outs  # noqa: E402
+# The one freshness rule (#1179), shared with done-work's gate and review-pr.
+from _lib.verdict_freshness import (  # noqa: E402
+    PR_VIEW_FIELDS,
+    FreshnessRule,
+    rule_for_pr,
+)
 from _lib.membership import (  # noqa: E402
     CAPABILITY_NAME,
     check_membership,
@@ -143,7 +164,15 @@ def main() -> int:
     if pr is None:
         return 2
 
-    summary = _summarise(pr)
+    # Only a view that shows verdicts pays for resolving the required set.
+    shows_verdicts = args.field in (None, "review", "review-history")
+    resolution = (
+        _review_resolution(args.pr_number, config, capability_root)
+        if shows_verdicts else Resolution()
+    )
+    summary = _summarise(
+        pr, rule_for_pr(pr, resolution, author_delta=author_delta),
+    )
     if args.field is not None:
         for line in _field_lines_for(summary)[args.field]:
             print(line)
@@ -154,7 +183,12 @@ def main() -> int:
     return 0
 
 
-def _summarise(pr: dict) -> dict:
+def _summarise(pr: dict, freshness: FreshnessRule | None = None) -> dict:
+    """The PR's methodology view. `freshness` judges each verdict; by default
+    it is the rule for this PR with no floor-only reviewer, under which every
+    verdict is held to any change since the head it reviewed."""
+    if freshness is None:
+        freshness = rule_for_pr(pr, Resolution(), author_delta=author_delta)
     title = str(pr.get("title", ""))
     body = str(pr.get("body") or "")
     state = str(pr.get("state", "")).lower()
@@ -171,12 +205,9 @@ def _summarise(pr: dict) -> dict:
     conv = _parse_conventional_commits(title)
     closing_issues = _extract_closing_issues(body)
     has_doc_impact = "## Doc impact" in body
-    # The gate's own freshness anchor, so a verdict shown stale is one the
-    # gate will not count. When none is resolvable, nothing is marked stale.
-    latest_commit_ts = latest_commit_timestamp(pr.get("commits") or [])
     comments = pr.get("comments") or []
-    review = _summarise_review(comments, latest_commit_ts)
-    review_history = _summarise_review_history(comments, latest_commit_ts)
+    review = _summarise_review(comments, freshness)
+    review_history = _summarise_review_history(comments, freshness)
 
     return {
         "title": title,
@@ -196,9 +227,7 @@ def _summarise(pr: dict) -> dict:
     }
 
 
-def _summarise_review(
-    comments: list, latest_commit_ts: str = ""
-) -> list[dict]:
+def _summarise_review(comments: list, freshness: FreshnessRule) -> list[dict]:
     """Latest DEC-028 reviewer verdict per reviewer, token + reasons (#544).
 
     Delegates recognition and latest-per-reviewer selection to the SHARED
@@ -211,32 +240,32 @@ def _summarise_review(
     verdict (latest per reviewer); the gate acts on a filtered subset.
 
     Because there is no freshness filter, a verdict can be shown as APPROVED on
-    a live PR even though it predates the latest commit — which `done-work`
-    would refuse. To keep the read honest about gate-agreement (#544's point:
-    the agent reads the verdict to act on it), each entry is annotated `stale`
-    when its timestamp is at/​before `latest_commit_ts` (the freshness anchor
-    the gate uses). When `latest_commit_ts` is empty (no resolvable commit
-    timestamp), nothing is marked stale — we render without the marker rather
-    than guess.
+    a live PR even though the gate would not count it. To keep the read honest
+    about gate-agreement (#544's point: the agent reads the verdict to act on
+    it), each entry is annotated by the gate's own freshness rule
+    (`freshness`, #1179): `stale`, and `freshness` — the one-line reason, the
+    head it reviewed and what changed since.
 
     Each entry carries the reviewer, the verdict token, the path
-    (`local`/`remote`), the full comment body (the reasons), and `stale`.
+    (`local`/`remote`), the full comment body (the reasons), `stale` and
+    `freshness`.
     """
-    verdicts = latest_verdicts_per_reviewer(comments)
-    return [
-        {
+    entries = []
+    for v in latest_verdicts_per_reviewer(comments):
+        assessment = freshness.assess(v)
+        entries.append({
             "reviewer": v.reviewer,
             "verdict": v.token,
             "path": v.path,
             "body": v.body,
-            "stale": bool(latest_commit_ts) and v.timestamp <= latest_commit_ts,
-        }
-        for v in verdicts
-    ]
+            "stale": not assessment.fresh,
+            "freshness": assessment.reason,
+        })
+    return entries
 
 
 def _summarise_review_history(
-    comments: list, latest_commit_ts: str = ""
+    comments: list, freshness: FreshnessRule
 ) -> list[dict]:
     """Every DEC-028 verdict per reviewer, in posting order (#905).
 
@@ -252,18 +281,20 @@ def _summarise_review_history(
     oldest first. Each verdict carries the token, the comment's timestamp and
     url, the full body, `current` (it is the verdict `review` shows for this
     reviewer — every other one was superseded by a later round), and `stale`
-    (same rule as `review`: at/before the latest commit's timestamp).
+    with its `freshness` reason (the same rule as `review`).
     """
     history = all_verdicts(comments)
     current = {id(v) for v in reduce_latest_per_reviewer(history)}
     by_reviewer: dict[tuple[str, str], list[dict]] = {}
     for v in history:
+        assessment = freshness.assess(v)
         by_reviewer.setdefault((v.path, v.reviewer), []).append({
             "verdict": v.token,
             "timestamp": v.timestamp,
             "url": v.url,
             "current": id(v) in current,
-            "stale": bool(latest_commit_ts) and v.timestamp <= latest_commit_ts,
+            "stale": not assessment.fresh,
+            "freshness": assessment.reason,
             "body": v.body,
         })
     return [
@@ -296,11 +327,10 @@ PR_FIELD_NAMES = (
 # comment. A clear message, not an empty result / traceback (issue #544).
 NO_VERDICT_MESSAGE = "no reviewer verdict posted"
 
-# Appended to a shown verdict that predates the latest commit — the merge gate
-# anchors freshness to that commit and will not count such a verdict, so the
-# read surface flags it rather than let an operator mistake it for
-# gate-agreement (issue #544).
-STALE_MARKER = " (stale — predates the latest commit; the merge gate will not count it)"
+# Appended to a shown verdict the freshness rule holds stale (#1179), naming
+# why — the merge gate will not count such a verdict, so the read surface flags
+# it rather than let an operator mistake it for gate-agreement (issue #544).
+STALE_MARKER = " (stale — {reason}; the merge gate will not count it)"
 
 
 def _scalar(value: object) -> list[str]:
@@ -331,10 +361,10 @@ def _review_lines(review: list) -> list[str]:
     `--field review` on an unreviewed PR must not look like a silent empty
     field.
 
-    A stale verdict (one predating the latest commit — which `done-work`'s
-    gate will not count) is marked in its header, so an operator does not read
-    an APPROVED that the merge gate will refuse and mistake it for
-    gate-agreement.
+    A stale verdict (one `done-work`'s gate will not count) is marked in its
+    header with the reason — the head it reviewed and what changed since — so
+    an operator does not read an APPROVED that the merge gate will refuse and
+    mistake it for gate-agreement.
     """
     if not review:
         return [NO_VERDICT_MESSAGE]
@@ -346,7 +376,10 @@ def _review_lines(review: list) -> list[str]:
         verdict = entry.get("verdict") or "<unknown>"
         path = entry.get("path")
         qualifier = f" ({path})" if path else ""
-        stale = STALE_MARKER if entry.get("stale") else ""
+        stale = (
+            STALE_MARKER.format(reason=entry.get("freshness") or "unknown")
+            if entry.get("stale") else ""
+        )
         lines.append(f"{verdict} — {reviewer}{qualifier}{stale}")
         body = str(entry.get("body") or "").strip()
         for body_line in body.splitlines():
@@ -365,7 +398,7 @@ def _review_history_lines(history: list) -> list[str]:
     Each reviewer is a header line (`<reviewer> (<path>) — <n> verdict(s)`)
     followed by its verdicts oldest first: a numbered line
     (`[<i>] <verdict> — <timestamp>`, qualified `(current)` for the one
-    `--field review` shows and `(stale)` for one predating the latest commit),
+    `--field review` shows and `(stale)` for one the gate would not count),
     then the comment body indented beneath it. Reviewers are separated by a
     blank line. No verdicts yields the same clear message as `--field review`.
     """
@@ -509,8 +542,11 @@ def _gh_get_pr(pr_number: int, config: dict) -> dict | None:
                 "view",
                 str(pr_number),
                 "--json",
-                "title,body,state,headRefName,baseRefName,mergedAt,"
-                "isDraft,url,reviewRequests,comments,commits",
+                ",".join((
+                    "title", "body", "state", "headRefName", "baseRefName",
+                    "mergedAt", "isDraft", "url", "reviewRequests", "comments",
+                    *PR_VIEW_FIELDS,
+                )),
             ],
             config,
             check=False,
@@ -529,6 +565,44 @@ def _gh_get_pr(pr_number: int, config: dict) -> dict | None:
         return json.loads(proc.stdout)
     except json.JSONDecodeError:
         return None
+
+
+def _review_resolution(
+    pr_number: int, config: dict, capability_root: Path,
+) -> Resolution:
+    """The PR's required reviewers, resolved as `done-work`'s gate resolves
+    them, for the freshness rule's floor-only reviewers (#1179).
+
+    The same shared resolver, fetchers, opt-outs and not-code list the gate
+    and `review-pr` wire in. A resolution that fails yields an empty one: no
+    reviewer is then kept fresh by a floor, so a verdict is shown stale on
+    any change — what the gate, refusing on that failure, would count anyway.
+    """
+    review = config.get("review") if isinstance(config, dict) else None
+    agents = review.get("agents") if isinstance(review, dict) else None
+    local = agents.get("local_registered") if isinstance(agents, dict) else None
+    baseline_local = [
+        entry["name"] for entry in local or []
+        if isinstance(entry, dict) and entry.get("name")
+    ]
+    resolution = resolve_required_local_reviewers(
+        pr_number,
+        baseline_local=baseline_local,
+        repo_root=capability_root.parent.parent.parent,
+        closing_issue_numbers=lambda n: _pr_closing_issue_numbers_fetch(
+            n, config, gh_run=gh_run
+        ),
+        issue_labels=lambda n: _issue_labels_fetch(
+            n, config, gh_get_issue=gh_get_issue
+        ),
+        changed_files=lambda n: _pr_changed_files_fetch(
+            n, config, gh_run=gh_run
+        ),
+        opt_outs=read_opt_outs(config),
+        not_code=read_not_code(config),
+        collect_contributions=collect_contributions,
+    )
+    return resolution if resolution.ok else Resolution()
 
 
 def _read_yaml(path: Path, yaml_loader: YAML) -> dict:

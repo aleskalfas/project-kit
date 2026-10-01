@@ -317,8 +317,10 @@ def test_review_field_marks_verdict_stale_when_predates_latest_commit(sp) -> Non
     })
     assert s["review"][0]["stale"] is True
     blob = "\n".join(sp._field_lines_for(s)["review"])
-    assert sp.STALE_MARKER.strip() in blob
-    assert "will not count it" in blob
+    assert (
+        "(stale — no reviewed head recorded; posted before the latest commit; "
+        "the merge gate will not count it)"
+    ) in blob
 
 
 def test_review_field_fresh_verdict_unmarked(sp) -> None:
@@ -335,12 +337,12 @@ def test_review_field_fresh_verdict_unmarked(sp) -> None:
     })
     assert s["review"][0]["stale"] is False
     blob = "\n".join(sp._field_lines_for(s)["review"])
-    assert sp.STALE_MARKER.strip() not in blob
+    assert "(stale —" not in blob
 
 
 def test_review_field_verdict_at_exact_commit_ts_is_stale(sp) -> None:
     # Freshness is strict (verdict must be AFTER the commit); an equal
-    # timestamp is stale, matching the gate's `timestamp <= min_timestamp` drop.
+    # timestamp is stale, as the gate's freshness rule holds it.
     s = sp._summarise({
         "title": "feat: x",
         "body": "body",
@@ -354,9 +356,10 @@ def test_review_field_verdict_at_exact_commit_ts_is_stale(sp) -> None:
     assert s["review"][0]["stale"] is True
 
 
-def test_review_field_no_commits_renders_without_marker(sp) -> None:
-    # No resolvable commit timestamp -> nothing is marked stale (render, don't
-    # error). The verdict is still shown.
+def test_review_field_no_commits_marks_a_headless_verdict_stale(sp) -> None:
+    # No resolvable commit timestamp -> a verdict naming no reviewed head
+    # cannot be judged, and the gate (which refuses then) would not count it:
+    # shown stale with the reason, not an error. The verdict is still shown.
     s = sp._summarise({
         "title": "feat: x",
         "body": "body",
@@ -367,15 +370,17 @@ def test_review_field_no_commits_renders_without_marker(sp) -> None:
         ],
         # no "commits" key at all
     })
-    assert s["review"][0]["stale"] is False
+    assert s["review"][0]["stale"] is True
     blob = "\n".join(sp._field_lines_for(s)["review"])
     assert "APPROVED" in blob
-    assert sp.STALE_MARKER.strip() not in blob
+    assert "the latest commit's time is unknown" in blob
 
 
-def test_review_field_commit_without_timestamp_renders_without_marker(sp) -> None:
+def test_review_field_commit_without_timestamp_marks_a_headless_verdict_stale(
+    sp,
+) -> None:
     # A commit entry with neither committedDate nor authoredDate yields no
-    # anchor -> no stale marking rather than an error.
+    # anchor -> stale, with the reason, rather than an error.
     s = sp._summarise({
         "title": "feat: x",
         "body": "body",
@@ -386,7 +391,80 @@ def test_review_field_commit_without_timestamp_renders_without_marker(sp) -> Non
         ],
         "commits": [{"oid": "abc123"}],
     })
-    assert s["review"][0]["stale"] is False
+    assert s["review"][0]["stale"] is True
+    assert s["review"][0]["freshness"] == (
+        "no reviewed head recorded; the latest commit's time is unknown"
+    )
+
+
+# --- the head a verdict reviewed (#1179) --------------------------------
+
+_REVIEWED = "a" * 40
+_HEAD_SHA = "b" * 40
+
+
+def _pinned(sp, name, verdict="APPROVED"):
+    comment = _local_verdict_comment(name, verdict, ts="2026-06-01T00:00:00Z")
+    comment["body"] = f"{comment['body']}\n\n<!-- pkit-verdict sha={_REVIEWED} -->"
+    return comment
+
+
+def test_review_field_judges_a_pinned_verdict_by_the_gates_rule(sp) -> None:
+    """A Markdown-only fix after the review: the floor-only reviewer's verdict
+    is shown fresh, the baseline reviewer's stale — naming the head it
+    reviewed and what changed since — exactly as the gate counts them."""
+    from _lib.author_delta import AuthorDelta
+
+    pr = {
+        "title": "feat: x", "body": "body", "state": "OPEN",
+        "headRefOid": _HEAD_SHA,
+        "commits": [_commit("2026-06-05T00:00:00Z")],
+        "comments": [_pinned(sp, "pm-reviewer"), _pinned(sp, "code-reviewer")],
+    }
+    resolution = sp.Resolution(
+        required_local=("pm-reviewer", "code-reviewer"),
+        floors_by_reviewer={"code-reviewer": frozenset({"touches-code"})},
+    )
+    rule = sp.rule_for_pr(
+        pr, resolution,
+        author_delta=lambda since, head, *, base_tip: AuthorDelta(
+            paths=("README.md",),
+        ),
+    )
+    s = sp._summarise(pr, rule)
+    by_name = {e["reviewer"]: e for e in s["review"]}
+    assert by_name["code-reviewer"]["stale"] is False
+    assert by_name["pm-reviewer"]["stale"] is True
+    blob = "\n".join(sp._field_lines_for(s)["review"])
+    assert (
+        "APPROVED — pm-reviewer (local) (stale — reviewed aaaaaaa; changed "
+        "since: README.md; the merge gate will not count it)"
+    ) in blob
+    history = {e["reviewer"]: e for e in s["review_history"]}
+    assert history["pm-reviewer"]["verdicts"][0]["stale"] is True
+    assert history["code-reviewer"]["verdicts"][0]["stale"] is False
+
+
+def test_review_resolution_failure_holds_every_reviewer_to_any_change(
+    sp, monkeypatch, tmp_path,
+) -> None:
+    """When the required set cannot be resolved, no reviewer is kept fresh by
+    a floor — the view errs toward stale, as the gate refuses outright."""
+    failed = sp.Resolution(error=object())  # any error: not ok
+    seen: dict = {}
+
+    def fake_resolve(pr_number, **kwargs):
+        seen.update(kwargs, pr_number=pr_number)
+        return failed
+
+    monkeypatch.setattr(sp, "resolve_required_local_reviewers", fake_resolve)
+    config = {"review": {"agents": {"local_registered": [{"name": "pm-reviewer"}]}}}
+    cap_root = tmp_path / ".pkit" / "capabilities" / "project-management"
+    resolution = sp._review_resolution(99, config, cap_root)
+    assert resolution.ok and resolution.floors_by_reviewer == {}
+    assert seen["pr_number"] == 99
+    assert seen["baseline_local"] == ["pm-reviewer"]
+    assert seen["repo_root"] == tmp_path
 
 
 def test_review_read_surface_is_superset_of_gate_set(sp) -> None:

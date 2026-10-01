@@ -41,6 +41,9 @@ consumers share:
   * applying the adopter's not-code list (`review.floors.not_code`, `NotCode`,
     #1178) to the diff before any floor reads it, so a changed path the list
     matches satisfies no floor — by both consumers alike.
+  * naming which required reviewers only a diff floor requires, and their
+    floors (`Resolution.floors_by_reviewer`, #1179) — what the verdict
+    freshness rule (`_lib.verdict_freshness`) keys on.
 
 Fail-closed posture (DEC-032 D5)
 --------------------------------
@@ -198,6 +201,16 @@ class Resolution:
         withdrawn from this resolution, each with its reason, for the
         consumers to show. Project-wide, not per PR: an entry is listed
         whether or not its contribution would have matched this PR.
+      * `floors_by_reviewer` — for each required reviewer that only a
+        diff-property floor requires on this PR, the floor kinds its rules
+        carry (#1179). A reviewer absent from it — the baseline, or one the
+        closing issues' classification matched — is required for the whole
+        change. The freshness rule (`_lib.verdict_freshness`) reads this:
+        a floor-only reviewer's verdict stands until the author's changes
+        reach one of its floors.
+      * `not_code` — the not-code list this resolution applied to the diff,
+        so the freshness rule reads the author's changes through the same
+        list.
 
     On failure (`ok is False`): `error` is populated and the set fields are
     empty. Every failure kind is fail-closed per DEC-032 D5.
@@ -207,6 +220,8 @@ class Resolution:
     contributed_rules: tuple[ContributionRule, ...] = ()
     contributed_by: dict[str, str] = field(default_factory=dict)
     opted_out: tuple[ContributionOptOut, ...] = ()
+    floors_by_reviewer: dict[str, frozenset[str]] = field(default_factory=dict)
+    not_code: NotCode = field(default_factory=lambda: DEFAULT_NOT_CODE)
     error: RequiredReviewersError | None = None
 
     @property
@@ -485,7 +500,43 @@ def resolve_required_local_reviewers(
         contributed_rules=contributed_rules,
         contributed_by=contributed_by,
         opted_out=opt_outs.entries,
+        floors_by_reviewer=_floor_only_reviewers(
+            collection,
+            floor_rules=floor_rules,
+            required_for_the_whole_change=set(baseline_local)
+            | {rule.reviewer for rule in classification_rules},
+        ),
+        not_code=not_code,
     )
+
+
+def _floor_only_reviewers(
+    collection: ContributionCollection,
+    *,
+    floor_rules: tuple[ContributionRule, ...],
+    required_for_the_whole_change: set[str],
+) -> dict[str, frozenset[str]]:
+    """Each reviewer only a diff floor requires, mapped to its floor kinds (#1179).
+
+    A reviewer the baseline or a classification match also requires is left
+    out: it is required for the whole change, not for what the diff touches.
+    A floor-only reviewer's kinds are every floor its rules in the collection
+    carry, not just the ones this PR's diff satisfied — a later change that
+    reaches any of them is one the reviewer is there to check.
+    """
+    floor_only = [
+        rule.reviewer
+        for rule in floor_rules
+        if rule.reviewer not in required_for_the_whole_change
+    ]
+    return {
+        reviewer: frozenset(
+            rule.floor
+            for rule in collection.rules
+            if rule.reviewer == reviewer and rule.floor is not None
+        )
+        for reviewer in dict.fromkeys(floor_only)
+    }
 
 
 def _opt_out_error(details: tuple[str, ...]) -> Resolution:
@@ -523,12 +574,14 @@ def _floor_rules(
     files = changed_files(pr_number)
     if isinstance(files, _Unresolvable):
         return files
-    satisfied_floors = _satisfied_floors(files, not_code)
-    return collection.reviewers_for_floors(satisfied_floors)
+    return collection.reviewers_for_floors(satisfied_floors(files, not_code))
 
 
-def _satisfied_floors(changed_paths: list[str], not_code: NotCode = DEFAULT_NOT_CODE) -> set[str]:
-    """The set of floor kinds the PR's changed files satisfy (DEC-032 amendment).
+def satisfied_floors(
+    changed_paths: list[str] | tuple[str, ...],
+    not_code: NotCode = DEFAULT_NOT_CODE,
+) -> set[str]:
+    """The set of floor kinds a set of changed paths satisfies (DEC-032 amendment).
 
     Maps the raw diff to the abstract floor-kind vocabulary the collection
     matches on, keeping the collection ignorant of *how* a diff property is
@@ -536,8 +589,12 @@ def _satisfied_floors(changed_paths: list[str], not_code: NotCode = DEFAULT_NOT_
     floor kind alike: a changed path it matches satisfies no floor, and every
     other path is read unchanged. Currently one floor kind: `touches-code`,
     satisfied when the remaining paths touch code per `diff_touches_code`.
+
+    The resolver reads the PR's whole diff through it; the freshness rule
+    (`_lib.verdict_freshness`, #1179) reads the author's changes since a
+    verdict through it, so both judge a path the same way.
     """
-    floor_paths = not_code.floor_paths(changed_paths)
+    floor_paths = not_code.floor_paths(list(changed_paths))
     satisfied: set[str] = set()
     if diff_touches_code(floor_paths):
         satisfied.add(FLOOR_TOUCHES_CODE)
@@ -630,7 +687,7 @@ def diff_touches_code(changed_paths: list[str]) -> bool:
     amendment names this the genuine design point).
 
     This predicate reads the paths it is given. The adopter's not-code list
-    (`NotCode`, #1178) is applied before it, by `_satisfied_floors`, so a path
+    (`NotCode`, #1178) is applied before it, by `satisfied_floors`, so a path
     the list matches — by default, a changeset under `.changes/` — never
     reaches the suffix test.
     """

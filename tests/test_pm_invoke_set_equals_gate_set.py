@@ -301,7 +301,7 @@ def _invoke_set(rpr, monkeypatch, tmp_path, *, collection, labels, opt_outs=()):
 
     def fake_invoke(
         name, pr_number, config, timeout=None, effort=None, *, base=None,
-        head="HEAD",
+        head="HEAD", sha="",
     ):
         invoked.append(name)
         return "APPROVED", "body"

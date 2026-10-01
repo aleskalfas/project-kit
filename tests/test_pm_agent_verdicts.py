@@ -2,8 +2,9 @@
 
 This module is the single source of truth both `done-work`'s gate and
 `show-pr --field review` consume (COR-007). The tests cover the line grammar,
-the latest-per-reviewer-by-timestamp selection (DEC-028 step 5), and the
-injectable freshness / membership filters the two consumers scope with.
+the latest-per-reviewer-by-timestamp selection (DEC-028 step 5), the
+verdict marker and the reviewed head it names (#1179), and the injectable
+freshness / membership filters the consumers scope with.
 """
 
 from __future__ import annotations
@@ -130,16 +131,52 @@ def test_remote_and_local_do_not_collide(av) -> None:
 # --- injectable filters (the consumers' scoping) ---------------------
 
 
-def test_min_timestamp_drops_stale(av) -> None:
-    # done-work's freshness anchor: only comments strictly after it count.
+def _after(anchor):
+    """A freshness predicate standing in for the rule: posted after `anchor`."""
+    return lambda verdict: verdict.timestamp > anchor
+
+
+def test_is_fresh_drops_stale(av) -> None:
+    # done-work's freshness predicate: only verdicts it holds fresh count.
     out = av.latest_verdicts_per_reviewer(
         [_local("critic", "APPROVED", ts="2026-06-01T00:00:00Z")],
-        min_timestamp="2026-06-01T00:00:00Z",
+        is_fresh=_after("2026-06-01T00:00:00Z"),
     )
     assert out == []
 
 
-def test_no_min_timestamp_keeps_stale(av) -> None:
+def test_is_fresh_runs_before_the_reduction(av) -> None:
+    # The gate takes a reviewer's latest FRESH verdict (DEC-028 step 4, then
+    # step 5): a later stale verdict does not hide an earlier fresh one.
+    fresh, stale = (
+        _local("critic", "APPROVED", ts="2026-06-02T00:00:00Z", reasons="fresh"),
+        _local("critic", "CHANGES_REQUESTED", ts="2026-06-03T00:00:00Z"),
+    )
+    out = av.latest_verdicts_per_reviewer(
+        [fresh, stale], is_fresh=lambda v: v.token == av.APPROVED,
+    )
+    assert [(v.token, v.timestamp) for v in out] == [
+        (av.APPROVED, "2026-06-02T00:00:00Z"),
+    ]
+
+
+def test_is_fresh_only_judges_what_the_other_filters_kept(av) -> None:
+    # Freshness may read the repository, so it is asked last.
+    judged: list[str] = []
+    av.all_verdicts(
+        [
+            _local("critic", "APPROVED"),
+            _local("stranger", "APPROVED"),
+            _local("critic", "APPROVED", marked=False),
+        ],
+        local_reviewer_ok=lambda name: name == "critic",
+        require_marker=True,
+        is_fresh=lambda v: judged.append(v.reviewer) or True,
+    )
+    assert judged == ["critic"]
+
+
+def test_no_is_fresh_keeps_stale(av) -> None:
     # show-pr applies no freshness filter — a "stale" verdict is still shown.
     out = av.latest_verdicts_per_reviewer(
         [_local("critic", "APPROVED", ts="2026-06-01T00:00:00Z")]
@@ -174,9 +211,10 @@ def test_non_dict_comments_ignored(av) -> None:
 # --- strict gate-facing wrapper (Fix 1: fail-open default unreachable) ---
 
 
-def test_gate_verdicts_requires_min_timestamp(av) -> None:
-    # The freshness anchor is a required kwarg — omitting it is a TypeError at
-    # the call site, so the gate cannot be invoked without a freshness filter.
+def test_gate_verdicts_requires_is_fresh(av) -> None:
+    # The freshness predicate is a required kwarg — omitting it is a TypeError
+    # at the call site, so the gate cannot be invoked without a freshness
+    # filter.
     with pytest.raises(TypeError):
         av.gate_verdicts(
             [_local("critic", "APPROVED")],
@@ -189,7 +227,7 @@ def test_gate_verdicts_requires_local_reviewer_ok(av) -> None:
     with pytest.raises(TypeError):
         av.gate_verdicts(
             [_local("critic", "APPROVED")],
-            min_timestamp="2026-06-01T00:00:00Z",
+            is_fresh=_after("2026-06-01T00:00:00Z"),
             remote_reviewer_ok=lambda _l: True,
         )
 
@@ -198,7 +236,7 @@ def test_gate_verdicts_requires_remote_reviewer_ok(av) -> None:
     with pytest.raises(TypeError):
         av.gate_verdicts(
             [_local("critic", "APPROVED")],
-            min_timestamp="2026-06-01T00:00:00Z",
+            is_fresh=_after("2026-06-01T00:00:00Z"),
             local_reviewer_ok=lambda _n: True,
         )
 
@@ -218,18 +256,18 @@ def test_gate_verdicts_behaviour_identical_when_filters_supplied(av) -> None:
         _local("critic", "APPROVED", ts="2026-06-01T00:00:00Z"),
         _remote("APPROVED", author="pr-author", ts="2026-06-05T00:00:00Z"),
     ]
-    anchor = "2026-06-02T00:00:00Z"
+    fresh = _after("2026-06-02T00:00:00Z")
     local_ok = lambda name: name == "critic"
     remote_ok = lambda login: login != "pr-author"
     strict = av.gate_verdicts(
         comments,
-        min_timestamp=anchor,
+        is_fresh=fresh,
         local_reviewer_ok=local_ok,
         remote_reviewer_ok=remote_ok,
     )
     permissive = av.latest_verdicts_per_reviewer(
         comments,
-        min_timestamp=anchor,
+        is_fresh=fresh,
         local_reviewer_ok=local_ok,
         remote_reviewer_ok=remote_ok,
     )
@@ -255,10 +293,56 @@ def test_stamp_verdict_idempotent(av) -> None:
     assert twice.count(av.VERDICT_MARKER) == 1
 
 
+# --- the reviewed head in the marker (#1179) ----------------------------
+
+_SHA = "a" * 40
+
+
+def test_stamp_verdict_names_the_reviewed_head(av) -> None:
+    out = av.stamp_verdict("Reviewer agent: APPROVED\n\nreasons", _SHA)
+    assert out.endswith(f"\n\n<!-- pkit-verdict sha={_SHA} -->\n")
+    assert av.marked_head(out) == (True, _SHA)
+
+
+def test_stamp_verdict_replaces_a_marker_the_reviewer_wrote(av) -> None:
+    # A reviewer agent is asked to end its output with the bare marker; the
+    # posted body carries exactly one, naming the head review-pr showed it.
+    body = f"Reviewer agent: APPROVED\n\nreasons\n\n{av.VERDICT_MARKER}"
+    once = av.stamp_verdict(body, _SHA)
+    assert once.count("pkit-verdict") == 1
+    assert av.stamp_verdict(once, _SHA) == once
+
+
+def test_stamp_verdict_keeps_a_malformed_head_out_of_the_marker(av) -> None:
+    # A marker naming a malformed head would not be recognised, and the
+    # verdict would not gate — the bare marker is stamped instead.
+    out = av.stamp_verdict("Reviewer agent: APPROVED", "abc123")
+    assert av.marked_head(out) == (True, "")
+
+
+def test_marked_head_reads_either_marker_form(av) -> None:
+    assert av.marked_head("no marker") == (False, "")
+    assert av.marked_head(f"x\n{av.VERDICT_MARKER}") == (True, "")
+    assert av.marked_head(f"x\n<!-- pkit-verdict sha={_SHA} -->") == (True, _SHA)
+    sha256 = "b" * 64
+    assert av.marked_head(f"<!-- pkit-verdict sha={sha256} -->") == (True, sha256)
+    # An abbreviated head is no marker at all.
+    assert av.marked_head("<!-- pkit-verdict sha=abc1234 -->") == (False, "")
+
+
+def test_a_verdict_carries_the_head_its_marker_names(av) -> None:
+    comment = _local("critic", "APPROVED", marked=False)
+    comment["body"] = av.stamp_verdict(comment["body"], _SHA)
+    (marked,) = av.all_verdicts([comment], require_marker=True)
+    assert marked.sha == _SHA
+    (bare,) = av.all_verdicts([_local("critic", "APPROVED")])
+    assert bare.sha == ""
+
+
 def _gate(av, comments):
     return av.gate_verdicts(
         comments,
-        min_timestamp="2026-06-01T00:00:00Z",
+        is_fresh=_after("2026-06-01T00:00:00Z"),
         local_reviewer_ok=lambda _n: True,
         remote_reviewer_ok=lambda _l: True,
     )
@@ -317,7 +401,7 @@ def test_all_verdicts_applies_the_same_filters(av) -> None:
     ]
     got = av.all_verdicts(
         comments,
-        min_timestamp="2026-06-02T00:00:00Z",
+        is_fresh=_after("2026-06-02T00:00:00Z"),
         local_reviewer_ok=lambda n: n != "c",
         require_marker=True,
     )
@@ -356,10 +440,11 @@ def test_reduction_returns_the_input_objects(av) -> None:
     assert latest is history[-1]
 
 
-# ---- the freshness anchor (DEC-028 step 4) -----------------------------
+# ---- the commit-time anchor (DEC-028 "Stale-verdict handling") ---------
 #
-# One definition, read by done-work's gate, review-pr's fresh-verdict skip
-# (#1178) and show-pr's stale marker, so the three agree on what is fresh.
+# One definition, read by the freshness rule (`_lib.verdict_freshness`) for a
+# verdict naming no reviewed head, and by done-work's refusal when the PR's
+# head cannot be read.
 
 
 def test_latest_commit_timestamp_prefers_committed_then_authored(av) -> None:
