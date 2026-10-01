@@ -239,8 +239,13 @@ def main(argv: list[str] | None = None) -> int:
     if not membership.allowed:
         print(membership.refusal_message, file=sys.stderr)
         return EXIT_UNREADABLE
-    if not session_guard.enforce(override=args.allow_foreign_repo):
+    guard = session_guard.enforce(override=args.allow_foreign_repo)
+    if not guard:
         return EXIT_UNREADABLE
+    # A confirmation given here — the flag, or a yes at the terminal — is
+    # passed on to the verbs it composes, so their guards pass by it and the
+    # operator is asked once; and only then (`_passed_through`).
+    args.allow_foreign_repo = session_guard.confirmed(guard)
     try:
         return _land(args, config)
     except _Stop as stop:

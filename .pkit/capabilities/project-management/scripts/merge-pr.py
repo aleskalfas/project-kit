@@ -247,8 +247,11 @@ def main() -> int:
         return 1
 
     # Foreign-repo mutation guard (COR-039 / ADR-034) — gate before the PR
-    # merge: target repo (cwd) vs session anchor (CLAUDE_PROJECT_DIR).
-    if not session_guard.enforce(override=args.allow_foreign_repo):
+    # merge: target repo (cwd) vs session anchor (CLAUDE_PROJECT_DIR). How it
+    # passed goes with the merge: the backbone runs its own guard on the
+    # request, and is told the operator confirmed exactly when they did here.
+    guard = session_guard.enforce(override=args.allow_foreign_repo)
+    if not guard:
         return 1
 
     titles = _read_yaml(capability_root / "schemas" / "titles.yaml", yaml_loader)
@@ -435,6 +438,7 @@ def main() -> int:
             bypass_ci=bool(args.bypass_ci),
             force=args.force,
             wait_seconds=pr_merge.wait_seconds(args),
+            guard_passed=session_guard.how_passed(guard),
         ),
         config,
     )

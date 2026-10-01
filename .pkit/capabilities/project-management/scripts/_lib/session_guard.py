@@ -40,6 +40,16 @@ fire** (it never fabricates a "blocked" it cannot back) — see
 
 Compute the check ONCE here ([COR-007]); the mutating scripts call
 :func:`enforce` at the mutation seam rather than re-deriving the comparison.
+
+The backbone holds the same comparison (`project_kit.session_guard`), and its
+commands that change the hosting service — `pkit pull-request merge`,
+`enqueue`, `dequeue` — run it themselves ([ADR-061] point 6). A verb that calls
+them passes `--allow-foreign-repo` on exactly when its own guard passed by
+confirmation (:attr:`Passage.confirmed`), so nobody is asked twice and nothing
+is confirmed that the operator did not confirm; when the two comparisons
+disagree, the backbone refuses. This copy of the comparison stays until the
+capability reads the backbone's by command (#1220); a test holds the two to one
+table of cases (`tests/test_session_guard_parity.py`).
 """
 
 from __future__ import annotations
@@ -69,6 +79,15 @@ UNDETERMINED = "undetermined"  # anchor or target unresolvable → honest no-fir
 # Sub-classification of UNDETERMINED, for the fault-vs-non-coverage split (G-1).
 NONCOVERAGE = "noncoverage"  # honest declared gap (unset anchor / non-git cwd) → silent.
 FAULT = "fault"  # git errored/timed-out when it shouldn't have → warn.
+
+# How :func:`enforce` let a mutation proceed (:attr:`Passage.how`) — the
+# backbone's clearance names them alike.
+PASSED_SAME_REPO = "same-repo"  # the session's own repo.
+PASSED_UNDETERMINED = "undetermined"  # nothing to compare (no anchor, non-git) or a fault.
+PASSED_FLAG = "flag"  # diverged, confirmed by --allow-foreign-repo.
+PASSED_TERMINAL = "terminal"  # diverged, confirmed at the prompt.
+#: The passes that are the operator's confirmation of a cross-repo mutation.
+CONFIRMED = frozenset({PASSED_FLAG, PASSED_TERMINAL})
 
 
 @dataclass(frozen=True)
@@ -109,6 +128,45 @@ class GuardOutcome:
     def blocks(self) -> bool:
         """Whether this outcome should stop the mutation (absent an operator OK)."""
         return self.verdict == DIVERGED
+
+
+@dataclass(frozen=True)
+class Passage:
+    """What :func:`enforce` came to: whether the mutation may proceed — the
+    passage is truthy exactly then, so ``if not enforce(...)`` reads as it
+    always has — and how it passed (:data:`PASSED_SAME_REPO`,
+    :data:`PASSED_UNDETERMINED`, :data:`PASSED_FLAG`, :data:`PASSED_TERMINAL`;
+    None when refused)."""
+
+    proceed: bool
+    how: str | None = None
+    #: The comparison it rests on; None when the guard could not evaluate.
+    outcome: GuardOutcome | None = None
+
+    def __bool__(self) -> bool:
+        return self.proceed
+
+    @property
+    def confirmed(self) -> bool:
+        """The operator confirmed a cross-repo mutation: by the flag, or at
+        the prompt. A verb passes ``--allow-foreign-repo`` on to the backbone
+        exactly then."""
+        return self.how in CONFIRMED
+
+
+def how_passed(result: object) -> str:
+    """How a guard result passed (:attr:`Passage.how`), or "" for one that
+    does not say — a refusal, or a bare ``True`` from a stand-in for
+    :func:`enforce`."""
+    if not isinstance(result, Passage):
+        return ""
+    return result.how or ""
+
+
+def confirmed(result: object) -> bool:
+    """Whether a guard result is the operator's confirmation of a cross-repo
+    mutation (:attr:`Passage.confirmed`); a result that does not say is not."""
+    return isinstance(result, Passage) and result.confirmed
 
 
 class _GitFault(Exception):
@@ -537,8 +595,9 @@ def enforce(
     target_cwd: Path | str | None = None,
     anchor_dir: str | None = None,
     stream=None,
-) -> bool:
-    """Run the foreign-repo guard at a mutation seam; return True iff the mutation may proceed.
+) -> Passage:
+    """Run the foreign-repo guard at a mutation seam; say whether the mutation
+    may proceed, and how it passed.
 
     This is the single call site the mutating scripts use (COR-007): compute
     the comparison ONCE, then gate. The caller invokes it AFTER membership /
@@ -547,21 +606,25 @@ def enforce(
         if not session_guard.enforce(override=args.allow_foreign_repo):
             return 1
 
+    The :class:`Passage` it returns is truthy exactly when the mutation may
+    proceed, so that reads as it always has; a verb that hands a change on to
+    the backbone reads :attr:`Passage.confirmed` too.
+
     Behaviour by outcome:
-      * SAME_REPO → returns True silently (no friction).
-      * UNDETERMINED → returns True (the guard never blocks what it cannot
-        evaluate), but the two flavours print differently (G-1):
+      * SAME_REPO → proceeds silently (no friction); how: same-repo.
+      * UNDETERMINED → proceeds (the guard never blocks what it cannot
+        evaluate); how: undetermined. The two flavours print differently (G-1):
           - NONCOVERAGE (unset anchor / non-git cwd) → silent. This is the
             declared residual gap, an expected state, not worth a warning.
           - FAULT (git errored/timed-out when it shouldn't have) → prints a
             one-line ``[warning]`` first, so a flaky-git failure that loses the
             interlock on a *possible* cross-repo mutation leaves a trace rather
             than silently disabling the guard.
-      * OVERRIDDEN → returns True after printing a one-line advisory that a
-        cross-repo mutation is proceeding under operator override.
-      * DIVERGED → operator-gate. Interactive: prompt; a "yes" returns True
-        (the per-change confirm), anything else returns False. Autonomous
-        (non-tty / agent / CI): refuse-with-explanation, returns False.
+      * OVERRIDDEN → proceeds after printing a one-line advisory that a
+        cross-repo mutation is proceeding under operator override; how: flag.
+      * DIVERGED → operator-gate. Interactive: prompt; a "yes" proceeds (the
+        per-change confirm; how: terminal), anything else is refused.
+        Autonomous (non-tty / agent / CI): refuse-with-explanation.
 
     Never raises for a guard fault — a failure to evaluate degrades to the
     UNDETERMINED no-fire (warned, per above), never a silent block.
@@ -579,10 +642,10 @@ def enforce(
             "proceeding without the interlock (residual gap, not a block).",
             file=stream,
         )
-        return True
+        return Passage(True, PASSED_UNDETERMINED)
 
     if outcome.verdict == SAME_REPO:
-        return True
+        return Passage(True, PASSED_SAME_REPO, outcome)
 
     if outcome.verdict == UNDETERMINED:
         if outcome.undetermined_kind == FAULT:
@@ -591,7 +654,7 @@ def enforce(
                 file=stream,
             )
         # NONCOVERAGE: proceed silently — the declared, expected gap.
-        return True
+        return Passage(True, PASSED_UNDETERMINED, outcome)
 
     if outcome.verdict == OVERRIDDEN:
         print(
@@ -599,18 +662,20 @@ def enforce(
             f"override — {outcome.reason}",
             file=stream,
         )
-        return True
+        return Passage(True, PASSED_FLAG, outcome)
 
     # DIVERGED — operator-gate.
     print(_divergence_message(outcome), file=stream)
     if _is_autonomous(interactive):
         # Under autonomy: refuse-with-explanation (the message above is the
         # explanation). No prompt — there is no operator at the keyboard.
-        return False
+        return Passage(False, None, outcome)
     # Interactive: offer the per-change confirm at the keyboard.
     try:
         reply = input("Proceed with the cross-repo mutation anyway? [y/N] ")
     except (EOFError, KeyboardInterrupt):
         print("aborted.", file=stream)
-        return False
-    return reply.strip().lower() in ("y", "yes")
+        return Passage(False, None, outcome)
+    if reply.strip().lower() in ("y", "yes"):
+        return Passage(True, PASSED_TERMINAL, outcome)
+    return Passage(False, None, outcome)

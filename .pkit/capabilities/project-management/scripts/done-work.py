@@ -603,8 +603,11 @@ def run(
         return _ended(REFUSED, 1, membership.refusal_message)
 
     # Foreign-repo mutation guard (COR-039 / ADR-034) — gate before the PR
-    # merge / state transition: target repo (cwd) vs session anchor.
-    if not session_guard.enforce(override=args.allow_foreign_repo):
+    # merge / state transition: target repo (cwd) vs session anchor. How it
+    # passed goes with the merge: the backbone runs its own guard on the
+    # request, and is told the operator confirmed exactly when they did here.
+    guard = session_guard.enforce(override=args.allow_foreign_repo)
+    if not guard:
         return _ended(REFUSED, 1, reason="the foreign-repository guard refused (see above)")
 
     branch = _find_issue_branch(args.issue_number)
@@ -1085,6 +1088,7 @@ def run(
             bypass_ci=bool(args.bypass_ci),
             force=args.force,
             wait_seconds=pr_merge.wait_seconds(args),
+            guard_passed=session_guard.how_passed(guard),
         ),
         config,
     )

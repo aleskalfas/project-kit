@@ -166,6 +166,11 @@ class Wait:
     reading: Reading
 
 
+#: What a request's document names when the backbone's cross-repository guard
+#: refused it, and made no request (`refused_by`).
+FOREIGN_REPOSITORY = "foreign-repository"
+
+
 @dataclass(frozen=True)
 class Outcome:
     """What a merge request the backbone made came to (`_lib.pr_merge`)."""
@@ -176,6 +181,13 @@ class Outcome:
     exit_code: int | None
     #: Why it was not accepted, in gh's words or the backbone's.
     reason: str
+    #: :data:`FOREIGN_REPOSITORY` when the backbone's cross-repository guard
+    #: refused the request, which was then not made; "" otherwise — and from a
+    #: backbone whose document does not say.
+    refused_by: str = ""
+    #: The backbone's guard as its document states it — `verdict`, `passed`,
+    #: `undetermined_kind`, `anchor`, `target` — or None when it does not.
+    guard: Mapping[str, Any] | None = None
 
 
 def read(pr_number: int, config: dict[str, Any]) -> Reading:
@@ -252,7 +264,11 @@ def request(args: list[str], config: dict[str, Any]) -> Outcome:
     """A merge request the backbone makes (`merge`, `enqueue`, `dequeue`), and
     what it came to. Raises :class:`Unreadable` when the backbone gives no
     answer, or one that does not say whether the request was accepted — the
-    request may then have been made, or not."""
+    request may then have been made, or not.
+
+    The backbone runs the cross-repository guard before the request; a
+    request it refused is not accepted, with `refused_by`
+    :data:`FOREIGN_REPOSITORY` and the guard's verdict."""
     document = _first(args, config)
     accepted = document.get("accepted")
     if not isinstance(accepted, bool):
@@ -261,10 +277,13 @@ def request(args: list[str], config: dict[str, Any]) -> Outcome:
             f"(`accepted`: {accepted!r})"
         )
     exit_code = document.get("exit_code")
+    guard = document.get("guard")
     return Outcome(
         accepted=accepted,
         exit_code=exit_code if isinstance(exit_code, int) else None,
         reason=str(document.get("reason") or ""),
+        refused_by=_text(document.get("refused_by")),
+        guard=guard if isinstance(guard, Mapping) else None,
     )
 
 

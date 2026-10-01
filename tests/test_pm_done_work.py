@@ -444,6 +444,24 @@ def test_main_hands_pr_title_to_the_shared_merge(dw, monkeypatch) -> None:
     assert calls["merge_kwargs"] == {"pr_title": "fix: x", "admin": False}
 
 
+@pytest.mark.parametrize(
+    ("passed", "passed_on"),
+    [("flag", True), ("terminal", True), ("same-repo", False), ("undetermined", False)],
+)
+def test_the_merge_carries_the_confirmation_the_guard_got_and_no_other(
+    dw, monkeypatch, passed, passed_on
+) -> None:
+    """The backbone runs its own cross-repository guard on the merge, with no
+    terminal: done-work tells it the operator confirmed exactly when its own
+    guard passed by the flag or a yes at the prompt (#1254)."""
+    calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+    passage = dw.session_guard.Passage(True, passed)
+    monkeypatch.setattr(dw.session_guard, "enforce", lambda **kw: passage)
+    rc = _run_main(dw, monkeypatch, ["42", "--yes"])
+    assert rc == 0
+    assert calls["merge_allow_foreign_repo"] is passed_on
+
+
 def test_the_merge_is_pinned_to_the_head_the_agent_gate_checked(dw, monkeypatch) -> None:
     """A push between the gate and the merge must fail the merge, not land
     commits no verdict was judged against (#1179)."""
@@ -948,10 +966,11 @@ def _wire_main_seams(
         calls["approval_audit_head"] = head
         return True
 
-    def _stub_merge(pr_number, *, pr_title, admin, config, head_oid=""):
+    def _stub_merge(pr_number, *, pr_title, admin, config, head_oid="", allow_foreign_repo=False):
         calls["merged"] = True
         calls["merge_kwargs"] = {"pr_title": pr_title, "admin": admin}
         calls["merge_head"] = head_oid
+        calls["merge_allow_foreign_repo"] = allow_foreign_repo
         calls["order"].append(("merged", None))
         return True
 
@@ -2354,6 +2373,7 @@ def _run_done_work_end_to_end(
         admin: bool,
         config: dict[str, Any],
         head_oid: str = "",
+        allow_foreign_repo: bool = False,
     ) -> bool:
         calls_at_merge.append(len(log.read_text(encoding="utf-8").splitlines()))
         seams["merged"] = True

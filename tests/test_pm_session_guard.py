@@ -316,7 +316,8 @@ def test_enforce_same_repo_returns_true(guard, tmp_path, capsys):
     """SAME_REPO → proceed (True), silently."""
     repo = tmp_path / "A"
     _git_init(repo)
-    assert guard.enforce(anchor_dir=str(repo), target_cwd=str(repo)) is True
+    passage = guard.enforce(anchor_dir=str(repo), target_cwd=str(repo))
+    assert passage and passage.how == guard.PASSED_SAME_REPO and not passage.confirmed
 
 
 def test_enforce_diverged_autonomous_refuses(guard, tmp_path, capsys):
@@ -327,7 +328,7 @@ def test_enforce_diverged_autonomous_refuses(guard, tmp_path, capsys):
     _git_init(repo_a)
     _git_init(repo_b)
     proceed = guard.enforce(anchor_dir=str(repo_a), target_cwd=str(repo_b), interactive=False)
-    assert proceed is False
+    assert not proceed and proceed.how is None and not proceed.confirmed
     err = capsys.readouterr().err
     assert "cross-repo mutation interlock" in err
     # Honest framing: names it an interlock, not a wall, and offers the two ways out.
@@ -348,7 +349,7 @@ def test_enforce_diverged_with_override_proceeds(guard, tmp_path, capsys):
         override=True,
         interactive=False,
     )
-    assert proceed is True
+    assert proceed and proceed.how == guard.PASSED_FLAG and proceed.confirmed
     assert "operator override" in capsys.readouterr().err
 
 
@@ -359,7 +360,7 @@ def test_enforce_undetermined_proceeds_without_pretending(guard, tmp_path, capsy
     repo_b = tmp_path / "B"
     _git_init(repo_b)
     proceed = guard.enforce(anchor_dir=None, target_cwd=str(repo_b), interactive=False)
-    assert proceed is True
+    assert proceed and proceed.how == guard.PASSED_UNDETERMINED and not proceed.confirmed
     err = capsys.readouterr().err
     assert "interlock" not in err  # no false refusal printed.
 
@@ -418,7 +419,7 @@ def test_enforce_fault_proceeds_and_warns(guard, tmp_path, monkeypatch, capsys):
 
     monkeypatch.setattr(guard, "_run_git", _boom)
     proceed = guard.enforce(anchor_dir=str(repo_a), target_cwd=str(repo_b), interactive=False)
-    assert proceed is True
+    assert proceed and proceed.how == guard.PASSED_UNDETERMINED
     err = capsys.readouterr().err
     assert "[warning]" in err
     # It warned, but did NOT print a refusal — the guard proceeded, not blocked.
@@ -430,7 +431,7 @@ def test_enforce_noncoverage_proceeds_silently(guard, tmp_path, capsys):
     repo_b = tmp_path / "B"
     _git_init(repo_b)
     proceed = guard.enforce(anchor_dir=None, target_cwd=str(repo_b), interactive=False)
-    assert proceed is True
+    assert proceed and proceed.how == guard.PASSED_UNDETERMINED
     assert capsys.readouterr().err == ""
 
 
@@ -442,7 +443,7 @@ def test_enforce_interactive_prompt_yes_proceeds(guard, tmp_path, monkeypatch, c
     _git_init(repo_b)
     monkeypatch.setattr("builtins.input", lambda *a, **k: "y")
     proceed = guard.enforce(anchor_dir=str(repo_a), target_cwd=str(repo_b), interactive=True)
-    assert proceed is True
+    assert proceed and proceed.how == guard.PASSED_TERMINAL and proceed.confirmed
 
 
 def test_enforce_interactive_prompt_no_refuses(guard, tmp_path, monkeypatch):
@@ -453,7 +454,22 @@ def test_enforce_interactive_prompt_no_refuses(guard, tmp_path, monkeypatch):
     _git_init(repo_b)
     monkeypatch.setattr("builtins.input", lambda *a, **k: "")
     proceed = guard.enforce(anchor_dir=str(repo_a), target_cwd=str(repo_b), interactive=True)
-    assert proceed is False
+    assert not proceed and not proceed.confirmed
+
+
+def test_only_a_flag_or_a_yes_is_a_confirmation_to_pass_on(guard):
+    """A verb passes --allow-foreign-repo on to the backbone exactly when its
+    guard passed by the operator's confirmation; a result that does not say
+    how it passed (a bare True from a stand-in) is none."""
+    assert [guard.confirmed(guard.Passage(True, how)) for how in ("flag", "terminal")] == [
+        True,
+        True,
+    ]
+    for how in ("same-repo", "undetermined"):
+        assert not guard.confirmed(guard.Passage(True, how))
+    assert not guard.confirmed(guard.Passage(False))
+    assert not guard.confirmed(True) and guard.how_passed(True) == ""
+    assert guard.how_passed(guard.Passage(True, "terminal")) == "terminal"
 
 
 def test_autonomy_inferred_from_ci_identity(guard, monkeypatch):
