@@ -22,9 +22,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-09-30T23:02:17Z
+      at: 2026-10-01T19:06:24Z
       outcome: unchanged
-      unchanged-because: "#840's lint and format pass reshapes the anchored code without changing what it does, so this page still describes it as it is"
+      unchanged-because: create-issue now names link-parent when its native sub-issue link fails (#808); filing, claiming and resuming work are untouched, so the use case still holds
 ---
 
 # UC-001 — Resume a clone after every session died
