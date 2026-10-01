@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-01T16:34:06Z
+      at: 2026-10-01T18:06:39Z
       outcome: unchanged
-      unchanged-because: on this branch the merge mechanic moved into the backbone's pull-request landing module; the refusal to sync or upgrade under an older pkit that main brought in does not change what this page says about landing a pull request
+      unchanged-because: on this branch the whole-repository walk takes as the revalidation point the commit that wrote the at the artefact carries; what main brought in does not change what this page describes
 ---
 
 # project-kit

@@ -506,18 +506,19 @@ def repository_base_command(base_ref: str | None, as_json: bool) -> None:
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
-    document = default_branch.reading(target_root, base_ref)
-    _warn_settled(target_root, base_ref)
+    settled = default_branch.settled(target_root, base_ref)
+    _warn_settled(settled)
+    document = settled.as_json()
     if as_json:
         click.echo(default_branch.render_json(document), nl=False)
     else:
         click.echo(default_branch.render_human(document), nl=False)
 
 
-def _warn_settled(target_root: Path, base_ref: str | None) -> None:
+def _warn_settled(settled: default_branch.Settled) -> None:
     """What a reader of settled state says about it: a declaration read as the default
     (COR-048 point 4), and a branch read from the local branch (COR-054 point 2)."""
-    for warning in default_branch.warnings(target_root, base_ref):
+    for warning in settled.warnings:
         click.echo(f"warning: {warning}", err=True)
 
 
@@ -525,10 +526,11 @@ def _settled_base(target_root: Path, base_ref: str | None) -> default_branch.Bas
     """The base a diff-scoped command compares with — `base_ref`, else
     `$PKIT_CHECK_BASE`, else the default branch (COR-054 point 3) — with where HEAD
     left it; the problem, with its fix, refuses the run (point 4)."""
-    found = default_branch.base(target_root, base_ref)
+    settled = default_branch.settled(target_root, base_ref)
+    found = settled.base
     if found.problem is not None or found.fork is None:
         raise click.ClickException(found.problem or f"the base {found.ref!r} cannot be compared.")
-    _warn_settled(target_root, base_ref)
+    _warn_settled(settled)
     return found
 
 
@@ -1257,8 +1259,9 @@ def friction_check_command(base_ref: str | None, whole_repository: bool, as_json
         else:
             click.echo(friction_repository.render_human(report), nl=False)
         return
-    _warn_settled(target_root, base_ref)
-    result = friction_check.run_change_check(target_root, base_ref)
+    settled = default_branch.settled(target_root, base_ref)
+    _warn_settled(settled)
+    result = friction_check.run_change_check(target_root, base_ref, resolved=settled.base)
     if as_json:
         click.echo(friction_check.render_json(result), nl=False)
     else:

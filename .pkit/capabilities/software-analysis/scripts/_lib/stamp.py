@@ -374,12 +374,14 @@ def _settled(root: Path, base: str | None) -> list[tuple[str, str]]:
     the default branch, and `base` when one is named on the command line — each as
     `(ref, commit)`, one entry per commit. Never the base a pipeline names for its
     checks, which only a comparison reads. Refused, with the backbone's reason and
-    fix, when either resolves nowhere (point 4)."""
+    fix, when either resolves nowhere (point 4). One reading answers both: the
+    default branch it names is the declared one whatever base it is asked for."""
     try:
-        branch = backbone.settled(root).default_branch
-        named = backbone.settled(root, base).base if base is not None else None
+        reading = backbone.settled(root, base)
     except Unreadable as exc:
         raise Refused(f"what the default branch holds could not be read: {exc}") from exc
+    branch = reading.default_branch
+    named = reading.base if base is not None else None
     if branch.ref is None or branch.commit is None:
         raise Refused(branch.problem or f"the default branch {branch.name!r} resolves nowhere")
     tips = {branch.commit: branch.ref}
