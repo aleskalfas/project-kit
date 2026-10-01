@@ -416,8 +416,8 @@ _ABSENT_422_BODY = json.dumps({"message": _ABSENT_MESSAGE, "status": "422"})
 
 
 def test_a_410_needs_no_probe(containment, monkeypatch) -> None:
-    """A 410 names feature-absence outright: GitHub sends it only to a caller
-    who can read the repository, so the unseeable repository is ruled out.
+    """A 410 is the conclusive status: an invisible repository never produces
+    it, so the unseeable repository is ruled out (ADR-035).
 
     `repo_visible=False` would flip a 404; this must resolve UNSUPPORTED anyway,
     which proves it short-circuits before the probe rather than passing by luck.

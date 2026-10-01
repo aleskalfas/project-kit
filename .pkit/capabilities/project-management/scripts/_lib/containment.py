@@ -286,10 +286,9 @@ class LinkResult:
 
 
 # HTTP statuses that mean "this instance does not support sub-issues" by status
-# alone — degrade to a no-op rather than a failure. Only 410: GitHub documents it
-# for something deleted from a repository the caller can read, and answers 404
-# where the caller cannot, so a 410 has already ruled out the unseeable
-# repository the 404 probe exists for. No other status does the same, and 422 in
+# alone — degrade to a no-op rather than a failure. Only 410: an invisible
+# repository never produces it, so it needs no probe (ADR-035; what a 410
+# establishes on a write is tracked in #1247). No other status does the same, and 422 in
 # particular is never here — GitHub answers it for a request it refused on an
 # instance where sub-issues work (#808), so it says nothing about the substrate,
 # on its status or in its words (ADR-035).
@@ -847,8 +846,8 @@ def _mentions_status(stderr: str, status: int) -> bool:
 def _is_unsupported(stderr: str) -> bool:
     """True when ``gh``'s stderr carries the one status that settles absence alone.
 
-    Only a **410** does: GitHub sends it only to a caller who can read the
-    repository, so the unseeable repository is already ruled out. **404 is
+    Only a **410** does: an invisible repository never produces it, so the
+    unseeable repository is already ruled out (ADR-035). **404 is
     deliberately excluded**: GitHub returns it both for a missing endpoint and
     for a repository the caller may not see, so reading it as "unsupported"
     hands a close gate a determinate answer on no evidence whenever a token

@@ -15,7 +15,8 @@ body: >
   attributed to gh, when GitHub sent none), and a validation error that carries
   only a field and a code is shown as `field: code` instead of being dropped.
   What that changes per command: `link-parent` and `set-field --parent` now
-  fail with exit 3 where a 422 used to pass as "unsupported" — `link-parent`
+  fail with exit 3 where a 422 other than the one-parent rule or a duplicate
+  used to pass as "unsupported" — `link-parent`
   reports the link as failed instead of "not linked (unsupported)", and
   `set-field --parent` stops before the first line moves instead of rewriting
   it alone; `create-issue` still files the issue on its textual ref and names
