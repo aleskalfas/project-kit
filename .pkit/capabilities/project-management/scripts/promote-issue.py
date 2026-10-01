@@ -14,10 +14,12 @@ Per DEC-026 (as amended for issue #61):
 
 Two paths:
   - `--milestone` given → resolves <M> to an OPEN milestone (by number or
-    exact title), attaches it via `gh issue edit --milestone`, then calls
-    `move-issue --to backlog`.
-  - `--milestone` omitted → promotes on `--reason` alone: skips
-    `_attach_milestone`, then calls `move-issue --to backlog`. No milestone
+    exact title), calls `move-issue --to backlog`, then attaches the milestone
+    via `gh issue edit --milestone`. The move comes first because the workflow
+    reads a milestone as Backlog: attached first, it left move-issue nothing
+    to move (#1210).
+  - `--milestone` omitted → promotes on `--reason` alone: calls
+    `move-issue --to backlog` and skips `_attach_milestone`. No milestone
     resolution is attempted.
 
 Gates per DEC-026:
@@ -28,9 +30,9 @@ Gates per DEC-026:
     it is never silently downgraded to milestone-free).
   - Current Status = Todo (delegated to `move-issue`'s state machine).
 
-Composes over `move-issue.py`: this wrapper attaches the milestone (if any),
-then invokes `move-issue --to backlog`, **threading `--reason` to move-issue's
-`--bypass-reason`**. Per DEC-049, **move-issue is the sole audit-comment writer**
+Composes over `move-issue.py`: this wrapper invokes `move-issue --to backlog`,
+**threading `--reason` to move-issue's `--bypass-reason`**, then attaches the
+milestone (if any). Per DEC-049, **move-issue is the sole audit-comment writer**
 — it posts the one canonical audit comment (from the schema template); this
 wrapper no longer posts its own (ending the #672 double-post).
 
@@ -186,8 +188,8 @@ def main() -> int:
     if args.dry_run:
         if milestone_title is not None:
             print(
-                f"(dry-run: would attach milestone {milestone_title!r} and call "
-                "move-issue --to backlog, which posts the single audit comment.)"
+                "(dry-run: would call move-issue --to backlog, which posts the single "
+                f"audit comment, then attach milestone {milestone_title!r}.)"
             )
         else:
             print(
@@ -207,10 +209,15 @@ def main() -> int:
     # the authorisation reason to move-issue via `--bypass-reason`, and move-issue
     # posts the one canonical audit comment (rendered from the schema template).
 
-    # Attach the milestone via gh issue edit — only when one was given.
-    if milestone_title is not None:
-        if not _attach_milestone(args.issue_number, milestone_title, config):
-            return 2
+    # The move first, the milestone second (#1210). The workflow reads an issue
+    # with a milestone and no state label as Backlog (`lifecycle_inference`), so
+    # a milestone attached first moved the issue before move-issue read it:
+    # move-issue found it already in Backlog and did nothing, leaving no state
+    # label, no audit comment and no recorded move. In this order move-issue
+    # reads Todo and makes the whole move. Where a label carries the state, a
+    # failure before the milestone lands leaves an issue labelled Backlog: a
+    # re-run finds it there below, skips the move (so the audit comment is not
+    # posted twice) and attaches the milestone.
 
     # Detect the issue's current state before calling move-issue. If
     # the issue is already at Backlog or further (cascade may have
@@ -221,6 +228,10 @@ def main() -> int:
     # special-case the already-promoted state.
     current_state = _detect_current_state(args.issue_number, config, substrate_map)
     if current_state in ("backlog", "in-progress", "review", "done"):
+        if milestone_title is not None and not _attach_milestone(
+            args.issue_number, milestone_title, config
+        ):
+            return 2
         idempotent_detail = (
             "milestone attached; no state transition needed"
             if milestone_title is not None
@@ -246,14 +257,33 @@ def main() -> int:
         args.issue_number, "backlog", reason, args.capability_root, args.allow_foreign_repo
     )
     if rc != 0:
-        applied = "milestone" if milestone_title is not None else "(nothing)"
+        if milestone_title is not None:
+            print(
+                f"[warn] move-issue exited {rc}: #{args.issue_number} was not moved and "
+                f"milestone {milestone_title!r} was not attached (its audit comment may "
+                "already be posted, and a retry does not post it again). Re-run this "
+                "wrapper to complete.",
+                file=sys.stderr,
+            )
+        else:
+            print(
+                f"[warn] (nothing) applied; move-issue exited {rc} (no transition; its "
+                "audit comment may already be posted, and a retry does not post it "
+                "again). Re-run this wrapper or run `move-issue --to backlog` to complete.",
+                file=sys.stderr,
+            )
+        return rc
+
+    # Attach the milestone via gh issue edit — only when one was given.
+    if milestone_title is not None and not _attach_milestone(
+        args.issue_number, milestone_title, config
+    ):
         print(
-            f"[warn] {applied} applied; move-issue exited {rc} (no transition; its audit "
-            "comment may already be posted, and a retry does not post it again). Re-run "
-            "this wrapper or run `move-issue --to backlog` to complete.",
+            f"[warn] #{args.issue_number} was moved to Backlog but milestone "
+            f"{milestone_title!r} was not attached. Re-run this wrapper to attach it.",
             file=sys.stderr,
         )
-        return rc
+        return 2
 
     if milestone_title is not None:
         print(f"\n[ok] promoted #{args.issue_number} Todo → Backlog (milestone: {milestone_title})")

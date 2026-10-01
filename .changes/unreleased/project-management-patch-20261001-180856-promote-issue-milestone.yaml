@@ -1,0 +1,16 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `promote-issue <N> --milestone <M> --reason "<R>"` on a Todo issue now makes
+  the whole Todo → Backlog move. It attached the milestone first, and the
+  workflow reads an issue with a milestone and no state label as Backlog, so
+  the `move-issue` that followed found nothing to move: the issue ended with
+  the milestone but no state label, no audit comment carrying the reason and
+  no recorded move. `promote-issue` now moves the issue first and attaches the
+  milestone second, so the result is the same as promoting without a
+  milestone and then scheduling. If the milestone write fails after the move,
+  re-running the same command attaches it without moving the issue again or
+  posting a second audit comment. Without `--milestone`, `promote-issue` is
+  unchanged.
