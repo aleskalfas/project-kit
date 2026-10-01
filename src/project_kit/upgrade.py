@@ -673,7 +673,7 @@ def _is_tty(stream: object) -> bool:
     if stream is None:
         return False
     try:
-        return bool(stream.isatty())  # type: ignore[attr-defined]
+        return bool(stream.isatty())
     except (ValueError, OSError):
         return False
 
