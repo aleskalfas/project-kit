@@ -17,9 +17,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-10-01T10:04:46Z
+      at: 2026-10-01T16:28:04Z
       outcome: unchanged
-      unchanged-because: DEC-026 now says how both merge verbs land through a merge queue and how any clone completes a queued merge (#1011); starting work, pausing it and handing it off, which this use case cites DEC-026 for, are unchanged
+      unchanged-because: on this branch DEC-026 changes only its promote-issue row, which states the sequence the command performs — the move first, the milestone second; the work-ownership rules this use case rests on are untouched
 ---
 
 # UC-002 — Resume a task after its session was interrupted
