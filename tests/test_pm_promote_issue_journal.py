@@ -8,6 +8,13 @@ backlog; it refused, and every successful promotion printed "the process engine
 refused this move". `move-issue` now names the origin it read before the label
 write (`pkit process move --from`).
 
+Promoting with `--milestone` made no move at all (#1210). promote-issue attached
+the milestone first, and the workflow reads a milestone as Backlog, so its
+move-issue found nothing to move: no state label, no audit comment, nothing
+journaled. It now moves first and attaches the milestone second, and a re-run
+after a failure between the two completes the promotion without a second audit
+comment.
+
 These tests run the sequence through the real scripts and the real engine. The
 issue is filed with create-issue's own tracker call, then promoted by
 promote-issue, whose move-issue runs in this process. GitHub is an in-memory
@@ -26,6 +33,7 @@ import pytest
 
 from tests.pm_lifecycle_world import (
     AUTHORED_BODY,
+    MILESTONE,
     Tracker,
     World,
     load_script,
@@ -147,3 +155,94 @@ def test_a_move_the_engine_refuses_still_warns(
     )
     assert f"`pkit pm history {number} --check-drift` will show the gap" in moved.err
     assert world.moves(number) == [("todo", "backlog", "promote-issue")]
+
+
+# --- scheduling while promoting (#1210) -------------------------------------
+
+
+def _assert_promoted(world: World, number: int, milestone: str | None) -> None:
+    """The issue is in Backlog on both views with `milestone` set (or none), one
+    audit comment carries the reason, and the journal holds one todo → backlog
+    move that `pm history --check-drift` finds no drift against."""
+    assert world.views(number) == ("backlog", "backlog")
+    assert "state:backlog" in world.labels(number)
+    assert world.milestone(number) == milestone
+    assert len(world.audit_comments(number)) == 1
+    assert world.moves(number) == [("todo", "backlog", "promote-issue")]
+    assert world.history(number) == 0
+
+
+def test_promoting_with_a_milestone_makes_the_whole_move_and_schedules(
+    world: World, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # Attached first, the milestone read as Backlog: move-issue found nothing
+    # to move, and the issue ended with the milestone and nothing else.
+    number = world.file_issue()
+    assert world.views(number) == ("todo", "todo")
+
+    assert world.promote(number, milestone=MILESTONE["title"]) == 0
+    promoted = capsys.readouterr()
+    assert ENGINE_WARNING not in promoted.err
+    assert f"[ok] promoted #{number} Todo → Backlog (milestone: Sprint 1)" in promoted.out
+    _assert_promoted(world, number, milestone="Sprint 1")
+    assert "no ungoverned state changes detected" in capsys.readouterr().out
+
+
+def test_a_rerun_after_the_milestone_write_fails_attaches_it_without_moving_again(
+    world: World, capsys: pytest.CaptureFixture[str]
+) -> None:
+    number = world.file_issue()
+    world.tracker.fail_next = {"--milestone"}
+
+    assert world.promote(number, milestone=MILESTONE["title"]) == 2
+    assert (
+        f"[warn] #{number} was moved to Backlog but milestone 'Sprint 1' was not attached."
+        in capsys.readouterr().err
+    )
+    # The move is whole; only the milestone is missing.
+    assert "state:backlog" in world.labels(number)
+    assert world.milestone(number) is None
+    assert len(world.audit_comments(number)) == 1
+    assert world.moves(number) == [("todo", "backlog", "promote-issue")]
+
+    assert world.promote(number, milestone=MILESTONE["title"]) == 0
+    assert f"[ok] #{number} already at state:backlog (milestone attached" in (
+        capsys.readouterr().out
+    )
+    _assert_promoted(world, number, milestone="Sprint 1")
+
+
+def test_a_rerun_after_the_label_write_fails_posts_the_audit_comment_once(
+    world: World, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # move-issue posts the audit comment before the label write, so the reason
+    # survives the failure; the re-run finds that comment by its key and moves.
+    number = world.file_issue()
+    world.tracker.fail_next = {"--add-label"}
+
+    assert world.promote(number, milestone=MILESTONE["title"]) == 3
+    assert (
+        f"[warn] move-issue exited 3: #{number} was not moved and milestone 'Sprint 1' "
+        "was not attached" in capsys.readouterr().err
+    )
+    assert world.views(number) == ("todo", "todo")
+    assert world.milestone(number) is None
+    assert len(world.audit_comments(number)) == 1
+    assert world.moves(number) == []
+
+    assert world.promote(number, milestone=MILESTONE["title"]) == 0
+    assert "transition audit comment already present" in capsys.readouterr().out
+    _assert_promoted(world, number, milestone="Sprint 1")
+
+
+def test_promoting_without_a_milestone_leaves_the_milestone_alone(
+    world: World, capsys: pytest.CaptureFixture[str]
+) -> None:
+    number = world.file_issue()
+
+    assert world.promote(number) == 0
+    assert f"[ok] promoted #{number} Todo → Backlog (milestone unchanged)" in (
+        capsys.readouterr().out
+    )
+    _assert_promoted(world, number, milestone=None)
+    assert world.milestone_calls() == []

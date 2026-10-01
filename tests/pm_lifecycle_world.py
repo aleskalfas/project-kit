@@ -39,6 +39,9 @@ SCRIPTS_DIR = CAPABILITY_ROOT / "scripts"
 ADDRESS = "project-management:issue-lifecycle"
 
 INVOKER = SimpleNamespace(github_login="octocat", email="octocat@example.com")
+REASON = "the maintainer asked for it in session"
+MILESTONE = {"number": 7, "title": "Sprint 1"}
+AUDIT_MARKER = "<!-- pkit-audit -->"
 
 AUTHORED_BODY = (
     "## What\n\nA task filed to be promoted.\n\n"
@@ -76,12 +79,19 @@ def _options(argv: list[str], flag: str) -> list[str]:
 
 class Tracker:
     """GitHub as the scripts' `gh` calls see it: one repository's issues, their
-    comments and their label timeline, all posted as the invoker."""
+    comments and their label timeline, all posted as the invoker, and its one
+    open milestone.
+
+    `fail_next` holds `gh issue edit` flags whose next edit fails, once, before
+    it changes anything."""
 
     def __init__(self) -> None:
         self.issues: dict[int, dict[str, Any]] = {}
         self.comments: dict[int, list[dict[str, Any]]] = {}
         self.timeline: dict[int, list[dict[str, Any]]] = {}
+        self.milestones: list[dict[str, Any]] = [MILESTONE]
+        self.calls: list[list[str]] = []
+        self.fail_next: set[str] = set()
 
     def state_of(self, number: int) -> str:
         """The issue's state as the tracker carries it, read with move-issue's
@@ -92,6 +102,7 @@ class Tracker:
         )
 
     def gh(self, argv: list[str]) -> subprocess.CompletedProcess[str]:
+        self.calls.append(argv)
         if argv[1:3] == ["issue", "create"]:
             return self._create(argv)
         if argv[1] == "issue" and argv[2] in ("view", "edit", "comment"):
@@ -108,6 +119,8 @@ class Tracker:
         if argv[1] == "api" and argv[-1].endswith("/timeline"):
             number = int(argv[-1].split("/")[-2])
             return _done(argv, stdout=json.dumps(self.timeline[number]))
+        if argv[1] == "api" and argv[-1].endswith("/milestones?state=open"):
+            return _done(argv, stdout=json.dumps(self.milestones))
         raise AssertionError(f"unexpected gh call: {argv}")
 
     def _create(self, argv: list[str]) -> subprocess.CompletedProcess[str]:
@@ -140,6 +153,15 @@ class Tracker:
         return _done(argv, stdout=json.dumps({f: record[f] for f in fields.split(",")}))
 
     def _edit(self, argv: list[str], number: int) -> subprocess.CompletedProcess[str]:
+        failing = self.fail_next.intersection(argv)
+        if failing:
+            self.fail_next -= failing
+            return _done(argv, 1, stderr="HTTP 502: Bad Gateway")
+        title = _option(argv, "--milestone")
+        if title is not None:
+            self.issues[number]["milestone"] = next(
+                m for m in self.milestones if m["title"] == title
+            )
         labels = self.issues[number]["labels"]
         for event, flag in (("unlabeled", "--remove-label"), ("labeled", "--add-label")):
             for name in _options(argv, flag):
@@ -212,13 +234,15 @@ class World:
         assert url is not None
         return int(url.rsplit("/", 1)[1])
 
-    def promote(self, number: int) -> int:
+    def promote(self, number: int, milestone: str | None = None) -> int:
+        scheduling = ["--milestone", milestone] if milestone is not None else []
         return _with_argv(
             [
                 "promote-issue.py",
                 str(number),
+                *scheduling,
                 "--reason",
-                "the maintainer asked for it in session",
+                REASON,
                 "--capability-root",
                 str(CAPABILITY_ROOT),
                 "--yes",
@@ -274,6 +298,31 @@ class World:
 
     def journal_files(self) -> list[Path]:
         return sorted((self.engine_repo / ".pkit").rglob("*.journal.jsonl"))
+
+    # --- what the tracker holds -----------------------------------------------
+
+    def labels(self, number: int) -> list[str]:
+        return self.tracker.issues[number]["labels"]
+
+    def milestone(self, number: int) -> str | None:
+        milestone = self.tracker.issues[number]["milestone"]
+        return milestone["title"] if milestone else None
+
+    def audit_comments(self, number: int) -> list[str]:
+        """The audit comments on the issue that carry the promotion's reason."""
+        return [
+            comment["body"]
+            for comment in self.tracker.comments[number]
+            if AUDIT_MARKER in comment["body"] and REASON in comment["body"]
+        ]
+
+    def milestone_calls(self) -> list[list[str]]:
+        """The `gh` calls that read the open milestones or write one."""
+        return [
+            argv
+            for argv in self.tracker.calls
+            if "--milestone" in argv or argv[-1].endswith("/milestones?state=open")
+        ]
 
 
 def answer_from_tracker(
