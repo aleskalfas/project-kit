@@ -808,9 +808,10 @@ class Position:
     `state_id` is None when no state's detection is true (the subject has no
     position). `indeterminate` is True when no state's detection is true and at
     least one could not be evaluated, so the position cannot be trusted — a
-    fail-closed condition for `move`. `placed_nowhere` carries, for each
-    classifier that answered `state: null`, its command and the reason it gave
-    (ADR-062 point 14): what an operator is shown beside "no position".
+    fail-closed condition for `move`. `placed_nowhere` carries, when no state's
+    detection is true, each classifier that answered `state: null`, its command
+    and the reason it gave (ADR-062 point 14): what an operator is shown beside
+    "no position", and what `status --json` carries as `position.placed_nowhere`.
     """
 
     state_id: str | None
@@ -2787,8 +2788,16 @@ def render_status_narrative(engine: ProcessEngine, actor: str) -> str:
         lines.append("    no state's detection predicate matched current reality")
         # Why each classifier placed the subject in none of its states (ADR-062
         # point 14) — the one way to tell a deliberate "none" from an accident.
+        # The reason is predicate prose (ADR-024): hanging-indent always,
+        # width-wrap on a TTY.
         for command, reason in position.placed_nowhere:
-            lines.append(f"    {command!r} places the subject in none of its states: {reason}")
+            lines.extend(
+                cli_render.wrap(
+                    f"{command!r} places the subject in none of its states: {reason}",
+                    indent="    ",
+                    hang="  ",
+                )
+            )
     else:
         state = definition.state(position.state_id) or {}
         meaning = state.get("meaning")
@@ -2986,6 +2995,14 @@ def render_status_json(engine: ProcessEngine, actor: str) -> str:
             "unevaluated": [
                 {"state": state_id, "reason": o.reason, "stderr_tail": _json_tail(o.stderr_tail)}
                 for state_id, o in position.unevaluated.items()
+            ],
+            # When no state is true: each classifier that answered `state:
+            # null`, with the reason it gave (ADR-062 point 14) — what tells a
+            # deliberate "none" from detections that are all false. Empty when a
+            # state is true, and always under `inferred`.
+            "placed_nowhere": [
+                {"predicate": command, "reason": reason}
+                for command, reason in position.placed_nowhere
             ],
             # COR-036: the embedded inner process's resolved outcome (None when
             # the current state embeds none). `outcome` is the inner's reached

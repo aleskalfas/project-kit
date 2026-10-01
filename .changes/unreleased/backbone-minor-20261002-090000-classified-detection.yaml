@@ -9,10 +9,11 @@ body: >
   predicate answers "which state is the subject in?" with `{state, reason}`,
   and the states that name it — one command under one `with` mapping — share
   its one answer, so the engine runs it once each time it resolves a subject's
-  position rather than once per state. `state: null` with a reason places the
-  subject in none of its states, and `status` shows that reason under "no
-  position"; any other answer the engine cannot read — no `state`, an id that
-  is not one of its states, the wrong type — leaves each of its states
+  position rather than once per state. `state: null` with a reason that is not
+  blank places the subject in none of its states, and `status` shows that
+  reason under "no position" — `status --json` as `position.placed_nowhere`;
+  any other answer the engine cannot read — no `state`, a blank reason, an id
+  that is not one of its states, the wrong type — leaves each of its states
   indeterminate, never "none", with the answer quoted in the reason. Every
   state of a definition declares the same mode: a definition that mixes modes
   resolves no position and says why, and `pkit validate`'s `process` member

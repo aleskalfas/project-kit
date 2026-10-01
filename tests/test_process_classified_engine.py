@@ -277,6 +277,32 @@ def test_null_with_a_reason_is_a_determinate_no_position_that_says_why(repo: Pat
         "the work is 'parked', no state of mine"
     ) in narrative
 
+    # --json carries the reason too, so a consumer can tell a reasoned "none"
+    # from detections that are all false.
+    payload = _status(repo)["position"]
+    assert (payload["state"], payload["indeterminate"]) == (None, False)
+    assert payload["placed_nowhere"] == [
+        {"predicate": "classify", "reason": "the work is 'parked', no state of mine"}
+    ]
+
+
+def test_a_reason_padded_with_whitespace_is_a_reason(repo: Path) -> None:
+    _answer(repo, "classify", {"state": None, "reason": "  parked  "})
+    position = _engine(repo).resolve_position()
+    assert (position.state_id, position.indeterminate) == (None, False)
+    assert position.placed_nowhere == (("classify", "  parked  "),)
+
+
+def test_placed_nowhere_is_empty_when_a_state_is_true(repo: Path) -> None:
+    assert _status(repo)["position"]["placed_nowhere"] == []
+
+
+def test_a_multi_line_null_reason_hangs_under_its_line(repo: Path) -> None:
+    _answer(repo, "classify", {"state": None, "reason": "parked\nuntil the owner returns"})
+    narrative = strip_ansi(render_status_narrative(_engine(repo), "agent")).splitlines()
+    first = narrative.index("    'classify' places the subject in none of its states: parked")
+    assert narrative[first + 1] == "      until the owner returns"
+
 
 @pytest.mark.parametrize(
     ("answer", "why"),
@@ -588,6 +614,7 @@ def test_a_classifiers_command_in_an_inferred_definition_reads_false(repo: Path)
     assert (position.state_id, position.indeterminate) == (None, False)
     assert position.placed_nowhere == ()
     assert _runs(repo, "classify") == 1  # the memo is shared under `inferred` too
+    assert _status(repo)["position"]["placed_nowhere"] == []
 
 
 # --- a cascade member is resolved afresh each time (ADR-062 point 11) -----
