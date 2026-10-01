@@ -47,7 +47,7 @@ pkit:
         - src/project_kit/pull_request_landing.py
       record: [COR-004, COR-012, COR-043, COR-048, COR-049, COR-050, COR-054, PRJ-001, PRJ-003, PRJ-004, ADR-033, ADR-039, ADR-049, ADR-058, ADR-059, ADR-061]
     revalidated:
-      at: 2026-10-01T20:01:21Z
+      at: 2026-10-01T19:51:40Z
       outcome: updated
 ---
 
@@ -1089,8 +1089,11 @@ resolved through the capability dispatcher and run under the backbone's
 thirty-second command bound (the lifecycle README, "How a registered command
 is run"), so the backbone never reads pm's `workstreams.yaml` or labels
 itself; `--workstream <name>` overrides, and pm-absent / underivable simply
-omits the half — a verb that overruns the bound is stopped, and the report
-warns and goes on without it. A successful
+omits the half, silently. A verb that fails — cannot start, exits non-zero
+(an un-bootstrapped project's refusal among them), overruns the bound and is
+stopped, or prints output that is not UTF-8 — omits it too, but the report
+warns, naming how the verb ended and showing the tail of what it wrote on
+stderr (bounded, escape sequences removed), and goes on without it. A successful
 post stamps the same pair into the reported scratchpad note's
 frontmatter. This context block is the designated extension point for
 version provenance (EPIC #411): future provenance fields join the same

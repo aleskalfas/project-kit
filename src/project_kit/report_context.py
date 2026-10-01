@@ -19,7 +19,9 @@ Two sourcing rules with architectural weight, both degrade-to-omission
   hung tracker call cannot hang the report. The backbone never parses
   `workstreams.yaml`, never reads issue labels, and carries no knowledge of
   pm's schema; pm absent / verb absent / empty output all mean "no
-  workstream", silently — an overrun means it too, but says so.
+  workstream", silently — a verb that fails (cannot start, exits non-zero,
+  overruns, prints what is not UTF-8) means it too, but says so, with what the
+  verb said: absent is not the same answer as broken.
 """
 
 from __future__ import annotations
@@ -121,35 +123,53 @@ def pm_workstream(target_root: Path) -> str | None:
     tracker), bounded by
     `command_runner.COMMAND_TIMEOUT_SECONDS`, the value read as text.
 
-    Optional on every axis: capability not installed, verb not declared,
-    script not starting or failing, output empty or not UTF-8 all yield None,
-    silently. An overrun yields None too, but says so on stderr: the report
-    waited the bound out, and goes on without the workstream."""
+    Optional on every axis, and absent stays silent: capability not
+    installed, verb not declared, or a verb that exits 0 printing nothing all
+    yield None, saying nothing. A verb that fails — does not start, exits
+    non-zero (the pm prerequisite gate's refusal among them), overruns the
+    bound, or prints output that is not UTF-8 — yields None too, but says so on
+    stderr, naming how it ended and showing what it said on its own stderr
+    (bounded and made safe to show, `CommandRun.stderr_tail`): the report goes
+    on without the workstream, and the operator learns why."""
     from project_kit.dispatcher import resolve_capability_script
 
     script = resolve_capability_script(target_root, _WORKSTREAM_CAPABILITY, _WORKSTREAM_VERB)
     if script is None:
         return None
     run = run_command(script, [], cwd=target_root)
-    if run.ending is Ending.TIMED_OUT:
-        click.echo(
-            f"warning: workstream omitted — {_WORKSTREAM_CAPABILITY} "
-            f"{_WORKSTREAM_VERB} did not answer within {run.bound_described} "
-            "and was stopped; pass --workstream to name it.",
-            err=True,
-        )
+    if _failed(run):
+        click.echo(_failure_warning(run), err=True)
         return None
     return _printed_value(run)
 
 
-def _printed_value(run: CommandRun) -> str | None:
-    """The value a run of the verb printed, or None. The verb prints its value
-    bare, not as a JSON document, so the runner's parse plays no part: a run
-    that exited 0 carries its standard output whether or not that text parsed
-    as JSON. Output that is not UTF-8 comes back with a `detail` saying so and
-    is no value — never a repaired one."""
+def _failed(run: CommandRun) -> bool:
+    """Whether the verb failed rather than answered: anything but an exit-0 run
+    whose output could be read. Output that is not UTF-8 comes back with a
+    `detail` saying so, and is a failure — never a repaired value. An exit-0
+    run that printed nothing answered "no workstream", and is no failure."""
     if run.ending not in (Ending.ANSWERED, Ending.UNPARSABLE):
-        return None
-    if run.returncode != 0 or run.detail:
-        return None
+        return True
+    return run.returncode != 0 or bool(run.detail)
+
+
+def _failure_warning(run: CommandRun) -> str:
+    """The warning a failed verb gets: how it ended, the way out, and what it
+    said, attributed to it."""
+    lines = [
+        f"warning: workstream omitted — {_WORKSTREAM_CAPABILITY} {_WORKSTREAM_VERB} "
+        f"{run.ending_described}; pass --workstream to name it."
+    ]
+    said = run.stderr_tail
+    if said:
+        lines.append(f"  {_WORKSTREAM_VERB} said:")
+        lines.extend(f"    {line}" for line in said.splitlines())
+    return "\n".join(lines)
+
+
+def _printed_value(run: CommandRun) -> str | None:
+    """The value a run `_failed` has cleared printed, or None when it printed
+    nothing. The verb prints its value bare, not as a JSON document, so the
+    runner's parse plays no part: a run that exited 0 carries its standard
+    output whether or not that text parsed as JSON."""
     return run.stdout.strip() or None

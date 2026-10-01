@@ -100,8 +100,8 @@ src/project_kit/permissions.py reportUnnecessaryIsInstance 1
 src/project_kit/permissions.py reportUnusedFunction 2
 src/project_kit/permissions.py reportUnusedVariable 1
 src/project_kit/process.py reportPrivateUsage 3
-src/project_kit/process.py reportUnknownArgumentType 16
-src/project_kit/process.py reportUnknownMemberType 23
+src/project_kit/process.py reportUnknownArgumentType 15
+src/project_kit/process.py reportUnknownMemberType 22
 src/project_kit/process.py reportUnknownVariableType 24
 src/project_kit/process_authoring.py reportPrivateUsage 1
 src/project_kit/process_authoring.py reportUnknownArgumentType 4

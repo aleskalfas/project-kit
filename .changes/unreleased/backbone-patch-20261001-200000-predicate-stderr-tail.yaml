@@ -1,0 +1,24 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+  pr: "1240"
+body: >
+  A process predicate that cannot be evaluated now says why, instead of every
+  failure reading the same "couldn't evaluate detection predicate 'x'" (#752).
+  The reason names how its run ended — exited 2, ended by a signal, did not
+  answer within the bound, could not start, printed no JSON object — and the
+  tail of what the predicate wrote on stderr is shown beside it, attributed
+  ("the predicate said:"), in `pkit process status`, `validate`, `cascade`,
+  `can-move` and `move`, and in a `stderr_tail` field of its own in the
+  `--json` views (legal moves, invariants, blocked, subprocess, cascade, and a
+  new `position.unevaluated` list naming the detections behind an
+  indeterminate position). So an un-bootstrapped project's refusal reaches the
+  operator with its "run `pkit project-management bootstrap`" hint. The tail
+  is bounded (the last 10 non-blank lines, at most 1500 bytes) and stripped of
+  terminal escape sequences and control characters. Fail-closed is unchanged:
+  an unevaluable predicate is still indeterminate. `pkit report` likewise
+  stops omitting the workstream silently when the project-management
+  workstream verb fails: absent stays silent, but a verb that cannot start,
+  exits non-zero, overruns or prints undecodable output is named in a warning
+  with what it said.
