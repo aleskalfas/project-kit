@@ -841,14 +841,16 @@ def run(
     for warning in gate_result.warnings:
         print(warning, file=sys.stderr)
 
-    if not gate_result.passed:
-        return _ended(REFUSED, 1, gate_result.refusal_message)
+    # A gate that read another head than the pinned one judged that head:
+    # whether it passed or refused, it says nothing of the head to land.
     if pinned_head is not None and gate_result.head_oid and gate_result.head_oid != pinned_head:
         return _ended(
             HEAD_MOVED,
             3,
             _head_not_pinned(args.issue_number, pr_number, gate_result.head_oid, pinned_head),
         )
+    if not gate_result.passed:
+        return _ended(REFUSED, 1, gate_result.refusal_message)
 
     # Residual-placeholder check per DEC-031 — hard-reject at the merge gate.
     # Fetch the PR body (not fetched earlier; _find_pr_for_branch only
@@ -1965,17 +1967,20 @@ def _check_agent_gate(
     if override_set and override_set == required_set_all:
         gate_warnings.append(_all_slots_override_warning(required_set_all))
 
-    def refuse(message: str) -> _GateResult:
+    def refuse(message: str, head_oid: str = "") -> _GateResult:
         """A refusal carrying whatever soft warnings have accrued.
 
         Every refusal from here on goes through this, so a nudge computed BEFORE
         a later failure is still surfaced — a transient `gh` hiccup used to
         swallow the all-slots steer toward `--bypass` on three of the paths.
+        `head_oid` is the head a refusal judged the verdicts against, so a run
+        with a pinned head can tell a refusal of another head (#1203).
         """
         return _GateResult(
             passed=False,
             refusal_message=message,
             warnings=gate_warnings,
+            head_oid=head_oid,
         )
 
     # Fetch comments + author + the head and base the freshness rule reads
@@ -2070,7 +2075,8 @@ def _check_agent_gate(
 
     if any(not slot.satisfied for slot in slots):
         return refuse(
-            _agent_gate_refusal(
+            head_oid=head_sha(data),
+            message=_agent_gate_refusal(
                 pr_number=pr_number,
                 mode_source=mode_source,
                 slots=slots,
@@ -2084,7 +2090,7 @@ def _check_agent_gate(
                     remote_reviewer_ok=remote_reviewer_ok,
                     local_reviewer_ok=local_reviewer_ok,
                 ),
-            )
+            ),
         )
 
     return _GateResult(
