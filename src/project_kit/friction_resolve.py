@@ -155,7 +155,7 @@ class Resolution:
 
     @property
     def exit_code(self) -> int:
-        """1 while an artefact's file it was asked about stays in conflict; else 0."""
+        """1 when an artefact's file is left in conflict; else 0, a skipped file included."""
         return 1 if self.left else 0
 
 

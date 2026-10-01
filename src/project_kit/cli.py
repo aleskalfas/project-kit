@@ -957,7 +957,7 @@ def friction_resolve_command(paths: tuple[str, ...], dry_run: bool, as_json: boo
     sides revalidated it names the revalidation still owed once the merge is
     committed, `updated` or `unchanged` as its content bears out against the
     base side's. PATH is relative to the project root. Outside a merge there is
-    nothing to resolve. Exit 1 while a file it looked at stays in conflict.
+    nothing to resolve. Exit 1 when it leaves an artefact's file in conflict.
     """
     target_root = find_target_root()
     if target_root is None:
