@@ -40,9 +40,9 @@ TERM-integration-branch:
         record:
           - project-management:DEC-013
       revalidated:
-        at: 2026-10-01T10:04:36Z
+        at: 2026-10-01T15:12:48Z
         outcome: unchanged
-        unchanged-because: DEC-013's merge mechanics now state the squash rules a merge queue's repository settings carry (#1011); what an integration branch is, its marker and where its pull requests land are untouched
+        unchanged-because: DEC-013 gains that its merge mechanic is the backbone's, which every command that lands a PR calls; integration branches, which this term defines, are untouched
 TERM-intent-note:
   name: Intent note
   status: active

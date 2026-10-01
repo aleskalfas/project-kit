@@ -21,9 +21,9 @@ pkit:
       artefact:
         - ACT-operator
     revalidated:
-      at: 2026-10-01T09:44:19Z
+      at: 2026-10-01T15:12:57Z
       outcome: unchanged
-      unchanged-because: "typing-only change in the package for the type-checking gate (PRJ-010): suppression comments removed; behaviour unchanged"
+      unchanged-because: release merge now lands the release pull request through the merge queue where the base has one, deleting its head only once it merged; step 7 still reads that the release pull request lands, and the gaps stand as written
 ---
 
 # UC-005 — Cut a release while unfinished work remains

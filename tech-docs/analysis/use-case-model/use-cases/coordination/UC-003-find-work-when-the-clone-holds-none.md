@@ -16,9 +16,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-10-01T10:04:47Z
+      at: 2026-10-01T15:12:51Z
       outcome: unchanged
-      unchanged-because: DEC-026 now says how both merge verbs land through a merge queue (#1011); the handoff this use case cites DEC-026 for is unchanged
+      unchanged-because: DEC-026 now says the merge verbs delegate the merge to the backbone's mechanic in the pinned gh environment; finding work reads nothing that changes
 ---
 
 # UC-003 — Find work when the clone holds none

@@ -19,9 +19,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-10-01T10:04:49Z
+      at: 2026-10-01T15:12:58Z
       outcome: unchanged
-      unchanged-because: both merge verbs enqueue where the base has a merge queue, and DEC-013 states the squash rules its settings carry (#1011); landing on an integration branch and the promotion to the default branch go on as described, the promotion through the queue where one is on
+      unchanged-because: DEC-013 now names the backbone as the one place the merge mechanic lives; both merge verbs still enqueue where the base has a queue, and landing on an integration branch and the promotion go on as described
 ---
 
 # UC-008 — Land integration-branch work during a stabilisation

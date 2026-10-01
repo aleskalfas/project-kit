@@ -15,7 +15,7 @@ pkit:
         - .pkit/capabilities/project-management/decisions/**
       record: [COR-017, COR-020, COR-021, COR-023, COR-039, COR-053, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050]
     revalidated:
-      at: 2026-10-01T10:04:10Z
+      at: 2026-10-01T15:12:34Z
       outcome: updated
 ---
 
@@ -334,6 +334,8 @@ For the standard development flow, seven verb-subject commands compose over `mov
 - **A push after the enqueue** takes the PR out of the queue — GitHub's dequeue once it is in, the auto-merge cancelled while it waits to enter — and the run exits 3: commits nobody checked do not merge.
 
 The queue is the only path to such a base, and the squash commit it makes must still be the convention's. Refused before anything is posted or enqueued: `--admin`, which would merge around the queue; `--bypass-ci` (see the CI-status gate below); a queue whose merge method is not squash; and a repository whose default squash-commit title and message are not the PR title and body — the queue composes its commit from those and ignores what the merge command passes ([project-management:DEC-013-branch-and-pr-conventions], "Merge mechanics"). Set them with `gh api -X PATCH repos/{owner}/{repo} -f squash_merge_commit_title=PR_TITLE -f squash_merge_commit_message=PR_BODY`. Where the base has no queue — or the GitHub host's API knows no merge queues — both verbs merge directly, as they always have.
+
+The reading, the merge and the enqueue, the wait and the dequeue are the backbone's one merge mechanic — `pkit pull-request`, which the verbs run in the environment the `gh:` block pins — the same one `pkit release merge` lands a release PR with ([project-management:DEC-013-branch-and-pr-conventions], "Merge mechanics"). A backbone that predates it leaves the verbs unable to read how the base merges, so they merge nothing until it is upgraded (`pkit upgrade`).
 
 All seven are idempotent at the level of observable state — re-running after a partial failure recovers cleanly, and a re-run does not repeat an audit comment the failed attempt already posted.
 

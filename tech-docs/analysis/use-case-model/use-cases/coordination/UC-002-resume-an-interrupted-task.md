@@ -17,9 +17,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-10-01T10:04:46Z
+      at: 2026-10-01T15:12:49Z
       outcome: unchanged
-      unchanged-because: DEC-026 now says how both merge verbs land through a merge queue and how any clone completes a queued merge (#1011); starting work, pausing it and handing it off, which this use case cites DEC-026 for, are unchanged
+      unchanged-because: DEC-026 now says the merge verbs delegate the merge to the backbone's mechanic in the pinned gh environment; resuming an interrupted task reads and moves nothing that changes
 ---
 
 # UC-002 — Resume a task after its session was interrupted

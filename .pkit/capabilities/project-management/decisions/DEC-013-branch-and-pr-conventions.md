@@ -65,7 +65,9 @@ Allowed when work is tightly coupled. Rules encoded as `multi_issue_pr_rules` in
 
 **Squash-merge; head branch deleted on merge** — one PR → one commit on the base branch. Squash-commit subject = PR title (Conventional Commits); squash-commit body = PR body (preserves context in `git log`). The head branch is deleted on merge. No merge-commits, no rebase-merge, no cherry-picks.
 
-**Through a merge queue, the repository's settings carry the squash rules.** Where the base branch merges through a merge queue, the queue makes this squash commit, by its own merge method and composed from the repository's squash-commit defaults; it ignores the method, subject and body a merge command passes. So two settings carry the rules there, and the merge verbs check both before they hand a PR to the queue, refusing otherwise: the queue's merge method is squash, and the repository's default squash-commit title and message are the PR title and the PR body (`PR_TITLE` and `PR_BODY` in GitHub's terms). [project-management:DEC-026-work-ownership-lifecycle] says how the merge verbs go through the queue.
+**Through a merge queue, the repository's settings carry the squash rules.** Where the base branch merges through a merge queue, the queue makes this squash commit, by its own merge method and composed from the repository's squash-commit defaults; it ignores the method, subject and body a merge command passes. So two settings carry the rules there, and every command that lands a PR checks both before it hands the PR to the queue, refusing otherwise: the queue's merge method is squash, and the repository's default squash-commit title and message are the PR title and the PR body (`PR_TITLE` and `PR_BODY` in GitHub's terms). [project-management:DEC-026-work-ownership-lifecycle] says how the merge verbs go through the queue.
+
+**One merge mechanic, the backbone's.** How a PR lands is implemented once, in the backbone, and exposed as its pull-request command (`pkit pull-request`): reading whether the base merges through a queue and where the PR stands in it, reading the repository's squash-commit defaults, the direct squash merge and the enqueue — each pinned to the head that was checked — the wait for the queue's merge, and taking a PR out of the queue. The merge verbs call it, and so does the backbone's own release merge (`pkit release merge`), so a PR that closes no issue lands through a queue exactly as one that does. What stays with each command is its own: when to land — its gates and refusals — and what follows the merge.
 
 ### Force-push policy
 
@@ -90,6 +92,8 @@ A long-running outcome that needs to assemble multiple Tasks (and sometimes Feat
 
 Squash-merging with the head branch deleted on merge produces a clean linear history where each PR is one commit on the base branch. The squash subject (= PR title, Conventional Commits) feeds straight into changelog tooling. Intermediate commits on the feature branch are working-state that gets compacted away — no archaeology in `main`.
 
+The merge mechanic lives in the backbone because a copy per command drifts, and the cost of drift here is a PR closed unmerged: a copy that takes a successful merge command for a merge deletes the head branch of a PR a queue has only taken in, which closes the PR and drops it from the queue (#1200). The backbone is the one place every command that lands a PR can reach — a capability's scripts through its command, the backbone's own commands directly.
+
 `<conv-type>/<issue-number>-<slug>` as a branch format gives the project-manager everything it needs: type alignment with the `type:*` label, issue linkage by number, human-readable hint by slug.
 
 Force-push allowed before review and forbidden after is the standard reviewer-context-preservation discipline.
@@ -110,6 +114,7 @@ Integration branches are opt-in because most outcomes don't need them — a Feat
 - The project-manager generates branch names from the closing Task's title and `type:*` label per the schema's `branch_slug_derivation`. Branch-name mismatches at PR-open time are hard-reject.
 - The project-manager validates the PR title and body against [`schemas/titles.yaml`](../schemas/titles.yaml)'s `pr` entry and [`schemas/git-conventions.yaml`](../schemas/git-conventions.yaml)'s `pr-body` entry at PR-open time.
 - The merge step is gated by [project-management:DEC-006-state-machine-and-cascade]'s authorisation rule and [project-management:DEC-007-checkbox-validation]'s close-gate before the squash-merge fires.
+- The merge verbs need a backbone that ships the pull-request command; against one that predates it they cannot read how the base merges, and merge nothing until it is upgraded.
 - The integration-branch construct adds project-manager obligations on designation (create branch, stamp descendants), on filing (descendants inherit marker), on PR-open (target the integration branch), and on the final integration → main PR (close the owning root, trigger ancestor cascade).
 - Integration branches inherit `main`'s no-force-push rule (shared branch).
 - The pr-body shape is instantiated in `templates/pr.md`.
