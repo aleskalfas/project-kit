@@ -20,9 +20,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-10-01T15:15:15Z
+      at: 2026-10-01T16:05:00Z
       outcome: unchanged
-      unchanged-because: "_lib/milestone.py gains the rollforward reads (the date trigger, the Rollforward target: line, the next-numbered Milestone) and a native-field key on each child; how a session reads its position and the stabilisation from the Milestone is untouched"
+      unchanged-because: on this branch the merge mechanic moved into the backbone's pull-request landing module, which the pm verbs and the release step call; what main brought in (the process move origin, the configuration writer, the milestone rollforward) does not change what this page describes
 ---
 
 # UC-007 — Resume sessions killed during a stabilisation
