@@ -798,6 +798,34 @@ def test_awaiting_condition_indeterminate_resume_fails_closed(condition_repo: Pa
     assert blocked is not None, "indeterminate resume_when must fail closed (stay blocked)"
 
 
+def test_an_unevaluable_resume_when_says_why(condition_repo: Path) -> None:
+    # #752: the wait names how the `resume_when` run ended and carries what the
+    # predicate said; it still fails closed (stays blocked).
+    scripts = condition_repo / ".pkit" / "capabilities" / "fixture" / "scripts"
+    _write_script(
+        scripts / "window_open.py",
+        "import sys\nsys.stderr.write('calendar unreachable\\n')\nsys.exit(3)\n",
+    )
+    blocked = _condition_live(condition_repo)
+    assert blocked is not None
+    assert blocked.resume_reason == (
+        "couldn't evaluate resume_when predicate 'window-open': it exited 3"
+    )
+    assert blocked.stderr_tail == "calendar unreachable"
+    engine = ProcessEngine(
+        load_definition(condition_repo, "fixture:condition-demo"), condition_repo
+    )
+    assert json.loads(render_status_json(engine, "script"))["blocked"]["stderr_tail"] == (
+        "calendar unreachable"
+    )
+    engine = ProcessEngine(
+        load_definition(condition_repo, "fixture:condition-demo"), condition_repo
+    )
+    assert "the predicate said:\n          calendar unreachable" in render_status_narrative(
+        engine, "script"
+    )
+
+
 # --- R2: a state with BOTH a user move and an autonomous move --------------
 
 # COR-034 awaiting-human rule: the block is live only while the subject's SOLE

@@ -9,6 +9,9 @@ real reality to resolve against. Covers:
 - an authorisation-artifact gate with cross-authority (produced_by == actor
   refuses; != actor allows),
 - fail-closed on a broken predicate (non-zero exit / bad JSON),
+- a predicate that cannot be evaluated says why (#752): the reason names how
+  its run ended and what it said on stderr reaches `status`, `can-move` and
+  `move` — bounded, made safe, and in a JSON field of its own,
 - journal append + entry shape (validated against the shape contract),
 - the status JSON shape,
 - journal logging off (COR-033 point 7): a full lifecycle writes no journal and
@@ -30,6 +33,7 @@ import pytest
 from click.testing import CliRunner
 
 from project_kit.cli import main
+from project_kit.cli_render import strip_ansi
 from project_kit.process import (
     SINGLETON_SUBJECT,
     ProcessEngine,
@@ -337,6 +341,222 @@ def test_unregistered_predicate_raises_clear_error(fixture_repo: Path) -> None:
     with pytest.raises(ProcessError) as exc:
         _engine(fixture_repo).resolve_position()
     assert "not registered" in str(exc.value)
+
+
+# --- a predicate that cannot be evaluated says why (#752) -------------------
+#
+# Fail-closed is unchanged — an unevaluable predicate is indeterminate and every
+# verdict reading it stays shut — but the reason now names how the run ended,
+# and what the predicate said on stderr reaches the operator beside it, bounded
+# and made safe to show.
+
+
+def _scripts(repo: Path) -> Path:
+    return repo / ".pkit" / "capabilities" / "fixture" / "scripts"
+
+
+# The refusal a gated predicate prints on stderr before exiting non-zero: the
+# multi-line, hint-carrying shape of the project-management prerequisite gate.
+_REFUSAL = (
+    "[refused] detect-draft: prerequisites are not met\n"
+    "          → this project has never completed `bootstrap`\n"
+    "          → To fix: run `pkit fixture bootstrap`\n"
+)
+
+
+def _refusing_detection(repo: Path) -> None:
+    """detect-draft refuses (exit 2, nothing on stdout) — so no state matches
+    and the position is indeterminate."""
+    _write_script(
+        _scripts(repo) / "detect_draft.py",
+        f"import sys\nsys.stderr.write({_REFUSAL!r})\nsys.exit(2)\n",
+    )
+
+
+def test_a_failing_gate_says_why_on_every_surface(fixture_repo: Path) -> None:
+    # gate-broken writes `boom` on stderr and exits 3.
+    engine = _engine(fixture_repo)
+    allowed, reason, _pos = engine.can_move("done", actor="script")
+    assert allowed is False  # fail-closed, unchanged
+    assert reason.splitlines() == [
+        "gate refused: couldn't evaluate gate predicate 'gate-broken': it exited 3",
+        "    the predicate said:",
+        "      boom",
+    ]
+
+    narrative = render_status_narrative(_engine(fixture_repo), actor="script")
+    assert "it exited 3" in narrative
+    assert "the predicate said:\n          boom" in narrative
+
+    moves = {
+        m["to"]: m
+        for m in json.loads(render_status_json(_engine(fixture_repo), "script"))["legal_moves"]
+    }
+    assert moves["done"]["allowed"] is False
+    assert moves["done"]["indeterminate"] is True
+    # The predicate's words ride in a field of their own; `reason` stays the
+    # engine's.
+    assert moves["done"]["reason"] == "couldn't evaluate gate predicate 'gate-broken': it exited 3"
+    assert moves["done"]["stderr_tail"] == "boom"
+    assert moves["ready"]["stderr_tail"] is None  # evaluated: nothing to carry
+
+
+def test_an_unevaluable_detection_explains_the_indeterminate_position(
+    fixture_repo: Path,
+) -> None:
+    _refusing_detection(fixture_repo)
+    engine = _engine(fixture_repo)
+    position = engine.resolve_position()
+    assert position.state_id is None
+    assert position.indeterminate is True  # fail-closed, unchanged
+
+    narrative = render_status_narrative(engine, actor="agent")
+    assert "Where: indeterminate" in narrative
+    assert (
+        "couldn't evaluate 'draft': couldn't evaluate detection predicate 'detect-draft': "
+        "it exited 2\n      the predicate said:\n        [refused] detect-draft:"
+    ) in narrative
+    assert "→ To fix: run `pkit fixture bootstrap`" in narrative
+
+    payload = json.loads(render_status_json(_engine(fixture_repo), actor="agent"))
+    assert payload["position"]["unevaluated"] == [
+        {
+            "state": "draft",
+            "reason": "couldn't evaluate detection predicate 'detect-draft': it exited 2",
+            "stderr_tail": _REFUSAL.rstrip("\n"),
+        }
+    ]
+
+
+def test_a_move_refused_on_an_indeterminate_position_carries_the_predicates_words(
+    fixture_repo: Path,
+) -> None:
+    _refusing_detection(fixture_repo)
+    (fixture_repo / "_checks_ok").write_text("", encoding="utf-8")
+    engine = _engine(fixture_repo)
+    result = engine.move("ready", actor="agent")
+    assert result.ok is False  # fail-closed, unchanged
+    assert not engine.journal_path().is_file()
+    assert result.reason.startswith("position is indeterminate")
+    assert "'draft': couldn't evaluate detection predicate 'detect-draft': it exited 2" in (
+        result.reason
+    )
+    assert "the predicate said:" in result.reason
+    assert "pkit fixture bootstrap" in result.reason
+
+
+def test_cli_can_move_shows_the_predicates_words(
+    fixture_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # The CLI resolves the repo root via git; init one so find_target_root works.
+    subprocess.run(["git", "init", "-q"], cwd=fixture_repo, check=True)
+    monkeypatch.chdir(fixture_repo)
+    _refusing_detection(fixture_repo)
+    result = CliRunner().invoke(main, ["process", "can-move", "fixture:demo", "--to", "ready"])
+    assert result.exit_code == 1
+    assert "✗ position is indeterminate" in result.output
+    assert "→ To fix: run `pkit fixture bootstrap`" in result.output
+
+
+@pytest.mark.parametrize(
+    ("body", "cause"),
+    [
+        ("print('not json')\n", "it printed no JSON document on its standard output"),
+        ("print('[1, 2]')\n", "it answered with JSON that is not an object"),
+        ("import os, signal\nos.kill(os.getpid(), signal.SIGKILL)\n", "it was ended by signal 9"),
+    ],
+)
+def test_each_way_a_predicate_gives_no_answer_is_named(
+    fixture_repo: Path, body: str, cause: str
+) -> None:
+    _write_script(_scripts(fixture_repo) / "gate_broken.py", body)
+    outcome = _engine(fixture_repo).precheck_transitions("draft", "script")[-1].outcome
+    assert outcome.indeterminate is True
+    assert outcome.reason == f"couldn't evaluate gate predicate 'gate-broken': {cause}"
+
+
+def test_a_predicate_that_cannot_start_says_so(fixture_repo: Path) -> None:
+    (_scripts(fixture_repo) / "gate_broken.py").chmod(0o644)  # no longer executable
+    outcome = _engine(fixture_repo).precheck_transitions("draft", "script")[-1].outcome
+    assert outcome.indeterminate is True
+    assert "couldn't evaluate gate predicate 'gate-broken': it could not start:" in outcome.reason
+
+
+def test_a_predicate_that_overruns_says_it_was_stopped(
+    fixture_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from project_kit import command_runner
+
+    monkeypatch.setattr(command_runner, "COMMAND_TIMEOUT_SECONDS", 1)
+    _write_script(_scripts(fixture_repo) / "gate_broken.py", "import time\ntime.sleep(60)\n")
+    outcome = _engine(fixture_repo).precheck_transitions("draft", "script")[-1].outcome
+    assert outcome.indeterminate is True
+    assert outcome.reason == (
+        "couldn't evaluate gate predicate 'gate-broken': "
+        "it did not answer within 1 s and was stopped"
+    )
+
+
+def test_an_oversized_stderr_is_cut_to_its_tail(fixture_repo: Path) -> None:
+    from project_kit.command_runner import DIAGNOSTIC_TAIL_BYTES, DIAGNOSTIC_TAIL_LINES
+
+    _write_script(
+        _scripts(fixture_repo) / "gate_broken.py",
+        "import sys\n"
+        "for n in range(20000):\n"
+        "    sys.stderr.write(f'line {n} ' + 'x' * 200 + '\\n')\n"
+        "sys.stderr.write('the last word\\n')\n"
+        "sys.exit(1)\n",
+    )
+    payload = json.loads(render_status_json(_engine(fixture_repo), actor="script"))
+    tail = {m["to"]: m for m in payload["legal_moves"]}["done"]["stderr_tail"]
+    assert tail.startswith("…")
+    assert tail.endswith("the last word")
+    assert len(tail.encode("utf-8")) <= DIAGNOSTIC_TAIL_BYTES
+    assert len(tail.splitlines()) <= DIAGNOSTIC_TAIL_LINES
+
+
+def test_a_binary_escape_laden_stderr_cannot_reach_the_terminal_raw(fixture_repo: Path) -> None:
+    _write_script(
+        _scripts(fixture_repo) / "gate_broken.py",
+        "import sys\n"
+        # Clear the screen, retitle the window, a NUL, a bell, an undecodable
+        # byte, a carriage-return overwrite and a bidi override.
+        "sys.stderr.buffer.write(b'\\x1b[2J\\x1b]0;pwned\\x07ok\\x00\\x07 \\xff\\xfe '\n"
+        "    b'hidden\\rshown \\xe2\\x80\\xae evil\\n')\n"
+        "sys.exit(1)\n",
+    )
+    engine = _engine(fixture_repo)
+    outcome = engine.precheck_transitions("draft", "script")[-1].outcome
+    assert outcome.indeterminate is True
+    assert outcome.stderr_tail == "ok \ufffd\ufffd hidden\nshown  evil"
+    # The view's own colour (when on) is the only escape sequence left.
+    narrative = strip_ansi(render_status_narrative(_engine(fixture_repo), actor="script"))
+    assert "pwned" not in narrative
+    assert not any(ch in narrative for ch in "\x00\x07\x1b\r\u202e")
+
+
+def test_an_unevaluable_invariant_check_says_why(fixture_repo: Path) -> None:
+    definition = fixture_repo / ".pkit" / "capabilities" / "fixture" / "schemas" / "demo.yaml"
+    definition.write_text(
+        _PROCESS_DEFINITION.replace(
+            "  transitions:\n",
+            "  invariants:\n"
+            "    - id: checks-readable\n"
+            "      why: The checks must always be readable.\n"
+            "      check:\n"
+            "        run: gate-broken\n"
+            "  transitions:\n",
+            1,
+        ),
+        encoding="utf-8",
+    )
+    [inv] = _engine(fixture_repo).evaluate_invariants()
+    assert inv.holds is False and inv.indeterminate is True  # fail-closed, unchanged
+    assert inv.reason == "couldn't evaluate invariant check predicate 'gate-broken': it exited 3"
+    assert inv.stderr_tail == "boom"
+    payload = json.loads(render_status_json(_engine(fixture_repo), actor="agent"))
+    assert payload["invariants"][0]["stderr_tail"] == "boom"
 
 
 # --- move refusal does not write the journal ------------------------------

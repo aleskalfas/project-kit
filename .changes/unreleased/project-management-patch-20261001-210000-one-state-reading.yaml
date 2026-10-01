@@ -1,0 +1,16 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `start-work` and `review-work` check that their move is legal before they
+  touch a branch or pull request from one shared reading of the issue's state:
+  its labels and milestone, with no state label and no milestone reading as
+  Todo (#1242). The two verbs also share one implementation of that refusal,
+  with its "move it first" hint, and of the failure that names what a run left
+  behind when the composed `move-issue` fails after the verb's own changes,
+  for instance because the state changed since the check and `move-issue`
+  refuses the move. `review-work`'s documented exit codes now include 3 for a
+  `gh` failure opening the pull request or making it ready, and its closing
+  line, `[ok] PR ready; #<N> in Review`, no longer claims a move from In
+  Progress; `move-issue`'s own output says whether it moved the issue.

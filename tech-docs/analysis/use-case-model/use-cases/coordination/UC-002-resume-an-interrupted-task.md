@@ -17,9 +17,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-10-01T16:48:23Z
+      at: 2026-10-01T20:50:05Z
       outcome: unchanged
-      unchanged-because: on this branch the merge mechanic moved into the backbone's pull-request landing module and DEC-026's helper line follows it; the promote-issue sequence main brought in does not change what this page describes
+      unchanged-because: "start-work still moves the issue into progress as step 1 says; #1242 now only shares its early check, read from labels and milestone as before, with review-work, and start-work --next stays unbuilt, so the use case holds"
 ---
 
 # UC-002 — Resume a task after its session was interrupted

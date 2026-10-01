@@ -20,9 +20,9 @@ pkit:
       artefact:
         - ACT-operator
     revalidated:
-      at: 2026-10-01T18:45:58Z
+      at: 2026-10-01T21:03:30Z
       outcome: unchanged
-      unchanged-because: on this branch the merge mechanic moved into the backbone's pull-request landing module, placed there by ADR-061; the steps by which a milestone is stabilised and its release cut read as before
+      unchanged-because: "#1242 now only shares start-work's early check, read from labels and milestone as before, with review-work; the stabilisation guard on start-work is still unbuilt and nothing here depends on that check, so it holds"
 ---
 
 # UC-010 — Stabilise a Milestone for a release
