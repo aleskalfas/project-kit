@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-01T21:22:51Z
+      at: 2026-10-01T22:01:01Z
       outcome: unchanged
-      unchanged-because: The index's one-line description of the process area still holds after the engine's move gains a reason.
+      unchanged-because: The lifecycle README only re-cites the query contract to COR-050 point 2 beside ADR-057; this index's pointer to it and its summary of it still hold
 ---
 
 # project-kit

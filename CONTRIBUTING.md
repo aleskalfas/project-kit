@@ -15,9 +15,9 @@ pkit:
       record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, PRJ-010, ADR-019, ADR-039, ADR-055, "project-management:DEC-053"]
       artefact: [.pkit/decisions/README.md]
     revalidated:
-      at: 2026-10-01T18:58:07Z
+      at: 2026-10-01T22:00:54Z
       outcome: unchanged
-      unchanged-because: only the comment on checks.yml's changeset-guard step changed, to say the surface check counts the pull request's own changesets; this guide describes nothing of that step
+      unchanged-because: COR-050 changed only point 2's statement of a resolver's limits, now a time bound the backbone enforces and obligations a capability declares; this guide says pkit validate runs query commands offline after a sync, which still holds
 ---
 
 # Contributing to project-kit

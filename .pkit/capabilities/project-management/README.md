@@ -15,8 +15,9 @@ pkit:
         - .pkit/capabilities/project-management/decisions/**
       record: [COR-017, COR-020, COR-021, COR-023, COR-039, COR-053, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050]
     revalidated:
-      at: 2026-10-01T21:33:59Z
-      outcome: updated
+      at: 2026-10-01T22:00:46Z
+      outcome: unchanged
+      unchanged-because: COR-053 point 9 states a subscriber's limits as a time bound the backbone enforces and obligations the subscriber keeps; this page names no subscriber - its Connections section covers the role the capability provides and the doc-check point it accepts - so it holds as written
 ---
 
 # project-management capability
