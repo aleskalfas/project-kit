@@ -941,7 +941,7 @@ def render_staging(written: Sequence[str], staged: Sequence[str]) -> str:
     to bring a file's conflict back."""
     back = "To bring a file's conflict back: git checkout -m -- <path>"
     if staged:
-        return f"Staged {', '.join(staged)} (`git diff --cached` shows it). {back}\n"
+        return f"Staged {', '.join(staged)} (`git diff --cached` shows what is staged). {back}\n"
     return (
         "Not staged. Check each file — `git diff -- <path>` shows it against both sides — "
         f"then stage it:\n  {command_line('git', 'add', '--', *written)}\n{back}\n"
