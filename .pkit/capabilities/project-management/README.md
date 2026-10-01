@@ -15,8 +15,9 @@ pkit:
         - .pkit/capabilities/project-management/decisions/**
       record: [COR-017, COR-020, COR-021, COR-023, COR-039, COR-053, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050]
     revalidated:
-      at: 2026-10-01T15:01:42Z
-      outcome: updated
+      at: 2026-10-01T15:22:47Z
+      outcome: unchanged
+      unchanged-because: on this branch move-issue passes the state it read to the process engine so each move is journaled from the state it left; the flows this page describes are unchanged by the reviewer-body wording that main brought in
 ---
 
 # project-management capability
