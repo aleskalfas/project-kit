@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-01T22:59:01Z
+      at: 2026-10-01T23:49:30Z
       outcome: unchanged
-      unchanged-because: The process area and the CLI reference gained the classified detection mode; the index's one-line description of each still holds.
+      unchanged-because: "#1254 adds the cross-repository guard to the pull-request and release merge commands in the CLI reference; this index only points at that reference and names no command's behaviour, so it holds"
 ---
 
 # project-kit

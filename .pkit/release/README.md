@@ -13,7 +13,7 @@ pkit:
         - .github/workflows/release-tag.yml
       record: [COR-010, COR-041, PRJ-002, PRJ-004, ADR-040]
     revalidated:
-      at: 2026-10-01T19:29:51Z
+      at: 2026-10-01T23:49:24Z
       outcome: updated
 ---
 

@@ -115,9 +115,9 @@ TERM-stabilisation:
           - project-management:DEC-014
           - ADR-019
       revalidated:
-        at: 2026-10-01T22:17:09Z
+        at: 2026-10-01T23:49:33Z
         outcome: unchanged
-        unchanged-because: every title rule the schema declares now runs, and DEC-011 states them; what this page says of titles and filing still holds
+        unchanged-because: "#1254 has done-work and merge-pr pass the cross-repository confirmation on to the backbone's own guard; their landing and stabilisation-relevant gates are unchanged, and the stabilisation guards this term describes are still unbuilt (EPIC #943), so the definition holds"
 ---
 
 # Glossary

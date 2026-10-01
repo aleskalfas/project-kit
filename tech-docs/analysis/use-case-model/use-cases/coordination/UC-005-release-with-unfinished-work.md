@@ -21,9 +21,9 @@ pkit:
       artefact:
         - ACT-operator
     revalidated:
-      at: 2026-10-01T21:40:40Z
+      at: 2026-10-01T23:49:35Z
       outcome: unchanged
-      unchanged-because: DEC-014's example of a warning now names the Task title's length floor, as DEC-011 states it; what this page takes from the severity model — which findings refuse, which need an audited bypass and which warn — is unchanged
+      unchanged-because: "#1254 has pkit release merge run the cross-repository guard at its entry and take --allow-foreign-repo; what a release lands, its scope, its gate and the release pull request's merge path in this use case are unchanged, so it holds"
 ---
 
 # UC-005 — Cut a release while unfinished work remains

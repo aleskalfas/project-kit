@@ -19,9 +19,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-10-01T21:25:33Z
+      at: 2026-10-01T23:49:41Z
       outcome: unchanged
-      unchanged-because: "#1195 only moves done-work's reviewer-resolution wiring into one shared function the gate, review-pr and show-pr call; the gate's decision, the merge path and the integration base are unchanged, so this use case holds"
+      unchanged-because: "#1254 has done-work and merge-pr pass the cross-repository confirmation on to the backbone's own guard; integration branches, the pull-request target and the merge path this use case walks are unchanged, so it holds"
 ---
 
 # UC-008 — Land integration-branch work during a stabilisation
