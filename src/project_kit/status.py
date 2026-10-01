@@ -595,7 +595,8 @@ def _data_point_lines(point: ResolvedPoint) -> list[str]:
 
     A command filler says whether its command declares the query contract —
     needing no network among its limits — which is declared and trusted, never
-    enforced: nothing holds a command to no network (ADR-057 point 4).
+    enforced (COR-050 point 2): nothing holds a command to no network (ADR-057
+    point 4).
     """
     default = f" · default {point.participation}" if point.participation else ""
     outcome = "resolved" if point.resolved else f"unresolved: {point.why}"

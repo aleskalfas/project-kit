@@ -15,7 +15,7 @@ pkit:
         - .pkit/capabilities/project-management/decisions/**
       record: [COR-017, COR-020, COR-021, COR-023, COR-039, COR-053, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050]
     revalidated:
-      at: 2026-10-01T22:51:42Z
+      at: 2026-10-01T22:37:06Z
       outcome: updated
 ---
 
@@ -916,7 +916,7 @@ The capability provides the `pkit::work-tracking` role (COR-053); `pkit::` is th
 
 - **Accepts** `pkit::work-tracking:doc-check`, version 1: the documentation obligations a pull request owes, per [project-management:DEC-053-doc-check-slot]. The point is `additive` — obligations from different sources never replace one another, and one leaves only through the project's removal override with its reason — and its inert policy is `fail`. Its shape is the companion schema `schemas/doc-check.schema.json`: each obligation names its `source`, its `reason` and what it concerns.
 
-**The mapping is the default filler.** The code-to-doc mapping of `project/config.yaml` (DEC-015) stays where it is configured and fills the point on every resolution, one obligation per rule, keyed by the rule (`mapping:<code pattern>`). It is supplied by this capability's own command, `fill-doc-check`, contributed to its own point: a data point's static `default` lives in package metadata and cannot hold the project's configuration. The backbone runs it as a query wherever the point resolves — `pkit validate`, `pkit status`, `pkit connections resolve` — offline, with `--json` alone. It is exempt from the bootstrap gate: it reads only the mapping, and no config is no obligations.
+**The mapping is the default filler.** The code-to-doc mapping of `project/config.yaml` (DEC-015) stays where it is configured and fills the point on every resolution, one obligation per rule, keyed by the rule (`mapping:<code pattern>`). It is supplied by this capability's own command, `fill-doc-check`, contributed to its own point: a data point's static `default` lives in package metadata and cannot hold the project's configuration. The backbone runs it as a query wherever the point resolves — `pkit validate`, `pkit status`, `pkit connections resolve` — offline-marked, with `--json` alone. It is exempt from the bootstrap gate: it reads only the mapping, and no config is no obligations.
 
 **The check reads the resolved point.** `check-doc-mapping` reads the point through the backbone — `pkit connections resolve pkit::work-tracking:doc-check --json` — and applies it to the pull request's diff (a data point takes no parameter; applying it is the consumer's work):
 
