@@ -111,9 +111,9 @@ TERM-stabilisation:
           - project-management:DEC-014
           - ADR-019
       revalidated:
-        at: 2026-10-01T04:19:46Z
+        at: 2026-10-01T04:51:12Z
         outcome: unchanged
-        unchanged-because: "on this branch the anchored code changed only in layout: ruff format and the lint fixes; behaviour and the documented commands are unchanged"
+        unchanged-because: done-work's change is how the agent gate judges a verdict fresh (the reviewed head and the author's changes since); the stabilisation phase and the guards it plans on done-work are untouched
 ---
 
 # Glossary
