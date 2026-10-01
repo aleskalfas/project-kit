@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-01T22:01:01Z
+      at: 2026-10-01T22:59:01Z
       outcome: unchanged
-      unchanged-because: The lifecycle README only re-cites the query contract to COR-050 point 2 beside ADR-057; this index's pointer to it and its summary of it still hold
+      unchanged-because: The process area and the CLI reference gained the classified detection mode; the index's one-line description of each still holds.
 ---
 
 # project-kit
