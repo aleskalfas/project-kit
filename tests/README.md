@@ -62,8 +62,8 @@ A software-analysis test runs the capability's scripts as the backbone does — 
 stamp, the check, the number check — each a process that starts several `pkit`
 processes of its own, from a third of a second to a second each; living-docs'
 tests run its validator the same way. What their tests share is built once
-(the adopter templates, below); what is left is each test's own runs. A test
-that stays slow says why in a comment above it.
+("Built once, copied for each test", below); what is left is each test's own
+runs. A test that stays slow says why in a comment above it.
 
 ## Type checking
 
