@@ -63,7 +63,9 @@ Allowed when work is tightly coupled. Rules encoded as `multi_issue_pr_rules` in
 
 ### Merge mechanics
 
-**Squash-merge; head branch deleted on merge** — one PR → one commit on the base branch. Squash-commit subject = PR title (Conventional Commits); squash-commit body = PR body (preserves context in `git log`). The head branch is deleted on merge. No merge-commits, no rebase-merge, no cherry-picks. Where the base branch merges through a merge queue, the queue makes this squash commit; [project-management:DEC-026-work-ownership-lifecycle] says how the merge verb goes through it.
+**Squash-merge; head branch deleted on merge** — one PR → one commit on the base branch. Squash-commit subject = PR title (Conventional Commits); squash-commit body = PR body (preserves context in `git log`). The head branch is deleted on merge. No merge-commits, no rebase-merge, no cherry-picks.
+
+**Through a merge queue, the repository's settings carry the squash rules.** Where the base branch merges through a merge queue, the queue makes this squash commit, by its own merge method and composed from the repository's squash-commit defaults; it ignores the method, subject and body a merge command passes. So two settings carry the rules there, and the merge verbs check both before they hand a PR to the queue, refusing otherwise: the queue's merge method is squash, and the repository's default squash-commit title and message are the PR title and the PR body (`PR_TITLE` and `PR_BODY` in GitHub's terms). [project-management:DEC-026-work-ownership-lifecycle] says how the merge verbs go through the queue.
 
 ### Force-push policy
 

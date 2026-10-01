@@ -20,9 +20,9 @@ pkit:
       artefact:
         - ACT-operator
     revalidated:
-      at: 2026-10-01T09:12:53Z
+      at: 2026-10-01T10:04:50Z
       outcome: unchanged
-      unchanged-because: "done-work enqueues where the base has a merge queue and merge-pr refuses such a base (#1011): the merge-time evaluation gap K2 names as one fix now has its mechanism, but the queue is not on and the stabilisation check it would run is not built, so the use case and K2 stand"
+      unchanged-because: "both merge verbs now enqueue where the base has a merge queue, merge-pr included (#1011): the merge-time evaluation gap K2 names as one fix has its mechanism, but the queue is not on and the stabilisation check it would run is not built, so the use case and K2 stand"
 ---
 
 # UC-010 — Stabilise a Milestone for a release

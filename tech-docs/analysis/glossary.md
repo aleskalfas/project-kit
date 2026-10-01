@@ -40,9 +40,9 @@ TERM-integration-branch:
         record:
           - project-management:DEC-013
       revalidated:
-        at: 2026-10-01T09:12:37Z
+        at: 2026-10-01T10:04:36Z
         outcome: unchanged
-        unchanged-because: DEC-013's merge mechanics gained a pointer to how the merge verb goes through a merge queue; what an integration branch is, its marker and where its pull requests land are untouched
+        unchanged-because: DEC-013's merge mechanics now state the squash rules a merge queue's repository settings carry (#1011); what an integration branch is, its marker and where its pull requests land are untouched
 TERM-intent-note:
   name: Intent note
   status: active
@@ -115,9 +115,9 @@ TERM-stabilisation:
           - project-management:DEC-014
           - ADR-019
       revalidated:
-        at: 2026-10-01T09:12:38Z
+        at: 2026-10-01T10:04:35Z
         outcome: unchanged
-        unchanged-because: done-work enqueues where the base has a merge queue and merge-pr refuses such a base (#1011); the stabilisation phase and the guards it plans on both verbs are untouched, and gap K2 stands while the queue is not on and the stabilisation check is not built
+        unchanged-because: both merge verbs now enqueue where the base has a merge queue, merge-pr no longer refusing such a base, and count a merge only once GitHub reports it (#1011); the stabilisation phase and the guards it plans on both verbs are untouched, and gap K2 stands while the queue is not on and the stabilisation check is not built
 ---
 
 # Glossary

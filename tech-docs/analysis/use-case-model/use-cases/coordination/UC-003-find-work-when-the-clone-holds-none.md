@@ -16,9 +16,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-10-01T09:12:51Z
+      at: 2026-10-01T10:04:47Z
       outcome: unchanged
-      unchanged-because: DEC-026 now says how done-work merges through a merge queue (#1011); the handoff this use case cites DEC-026 for is unchanged
+      unchanged-because: DEC-026 now says how both merge verbs land through a merge queue (#1011); the handoff this use case cites DEC-026 for is unchanged
 ---
 
 # UC-003 — Find work when the clone holds none

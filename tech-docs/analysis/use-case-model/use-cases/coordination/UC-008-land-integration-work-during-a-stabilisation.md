@@ -19,9 +19,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-10-01T09:12:52Z
+      at: 2026-10-01T10:04:49Z
       outcome: unchanged
-      unchanged-because: done-work enqueues where the base has a merge queue and merge-pr refuses such a base (#1011), and DEC-013 points at that; landing on an integration branch and the promotion to the default branch go on as described, the promotion through the queue where one is on
+      unchanged-because: both merge verbs enqueue where the base has a merge queue, and DEC-013 states the squash rules its settings carry (#1011); landing on an integration branch and the promotion to the default branch go on as described, the promotion through the queue where one is on
 ---
 
 # UC-008 — Land integration-branch work during a stabilisation
