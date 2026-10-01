@@ -7,9 +7,9 @@ about a PR:
   * which issues the PR closes (`gh pr view`'s `closingIssuesReferences`),
   * each closing issue's labels (for the `workstream:*` / `type:*`
     classification), and
-  * the PR's changed files (`gh pr diff --name-only`, the complete path set),
-    consulted only when a floor-carrying contribution is installed (the
-    DEC-032 diff-property floor).
+  * the PR's changed files (every page of GitHub's pull-request files API,
+    the complete path set), consulted only when a floor-carrying contribution
+    is installed (the DEC-032 diff-property floor).
 
 The closing-issue and label fetchers were duplicated byte-for-byte in both
 consumers. The
@@ -35,9 +35,12 @@ from collections.abc import Callable
 from typing import Any
 
 try:
-    from _lib.required_reviewers import _Unresolvable
+    from _lib.required_reviewers import _TooManyChangedFiles, _Unresolvable
 except ImportError:  # pragma: no cover - exercised via spec-loaded fallback
-    from required_reviewers import _Unresolvable  # type: ignore[no-redef]
+    from required_reviewers import (  # type: ignore[no-redef]
+        _TooManyChangedFiles,
+        _Unresolvable,
+    )
 
 
 # Type of the injected `gh_run` (matches `_lib.gh.gh_run`): runs a `gh` argv
@@ -46,6 +49,16 @@ GhRunFn = Callable[..., Any]
 # Type of the injected `gh_get_issue` (matches `_lib.gh.gh_get_issue`): fetches
 # issue JSON for the requested `--json` fields, or None on any failure.
 GhGetIssueFn = Callable[..., "dict | None"]
+
+# GitHub's "list pull request files" endpoint: one page holds at most 100
+# entries, and the whole listing stops at 3000 files however many the PR
+# changes. A listing that reaches the ceiling may have been cut short, so it is
+# refused rather than read as complete.
+_FILES_PAGE_SIZE = 100
+_FILES_CEILING = 3000
+# One JSON array per changed file: its path, then its path before a rename
+# (null when it was not renamed).
+_FILES_JQ = ".[] | [.filename, .previous_filename]"
 
 
 def pr_closing_issue_numbers(
@@ -102,24 +115,35 @@ def pr_changed_files(
     *,
     gh_run: GhRunFn,
 ) -> list[str] | _Unresolvable:
-    """The PR's changed-file paths, via `gh pr diff --name-only` (DEC-032 amendment).
+    """The PR's changed-file paths, via GitHub's paginated files API (DEC-032 amendment).
 
     Feeds the resolver's diff-property floor (`touches-code`), so the SOURCE of
-    the file set must be complete: `gh pr view --json files` returns only a
-    bounded first page (~100 files, no pagination), so a >100-file PR with code
-    after page 1 would read as docs-only and the floor would silently not fire.
-    `gh pr diff <n> --name-only` returns the full path set (one path per line),
-    closing that page-cap gate-escape.
+    the file set must be complete. Two sources were rejected for missing part
+    of it. `gh pr view --json files` returns only a bounded first page (~100
+    files, no pagination), so a large PR with code past page 1 read as
+    docs-only and the floor silently did not fire. `gh pr diff --name-only` is
+    refused outright by GitHub for a PR changing more than 300 files, so the
+    resolver failed closed on a PR that was merely large. `gh api --paginate`
+    reads every page of `repos/{owner}/{repo}/pulls/<n>/files`, which lists up
+    to 3000 files.
+
+    A renamed file contributes its old path as well as its new one: moving a
+    file out of code removes code, exactly as deleting it does, and a deleted
+    file is listed under its old path.
 
     Fail-closed contract (mirrors `pr_closing_issue_numbers`, DEC-032 D5):
 
-    - **The diff is determinable and non-empty** → the list of changed paths.
-    - **Could not determine the diff, OR it came back empty** (gh non-zero exit,
-      or zero paths) → `_Unresolvable`, so the resolver fails closed. A PR
-      always changes at least one file, so an empty result is treated as
-      unknown ground truth rather than "touches nothing"; returning `[]` here
-      would let a floor reviewer be dropped on a transient gh failure — a
-      retry-/induce-able bypass, exactly the hole DEC-032 D5 guards.
+    - **The file list is determinable and non-empty** → the changed paths.
+    - **Could not determine it, OR it came back empty** (gh non-zero exit, a
+      line that is not a file entry, or zero entries) → `_Unresolvable`, so
+      the resolver fails closed. A PR always changes at least one file, so an
+      empty result is treated as unknown ground truth rather than "touches
+      nothing"; returning `[]` here would let a floor reviewer be dropped on a
+      transient gh failure — a retry-/induce-able bypass, exactly the hole
+      DEC-032 D5 guards.
+    - **The listing reached GitHub's 3000-file ceiling** → `_TooManyChangedFiles`
+      (an `_Unresolvable`): files past the ceiling are never listed, so the set
+      may be incomplete, and a retry reads the same cut-short list.
 
     The resolver only calls this when a floor-carrying contribution is
     installed, so a floor-free project never issues this `gh` round-trip.
@@ -127,15 +151,47 @@ def pr_changed_files(
     carries no substrate of its own; both consumers share this one definition.
     """
     proc = gh_run(
-        ["gh", "pr", "diff", str(pr_number), "--name-only"],
+        [
+            "gh",
+            "api",
+            "--paginate",
+            f"repos/{{owner}}/{{repo}}/pulls/{pr_number}/files?per_page={_FILES_PAGE_SIZE}",
+            "--jq",
+            _FILES_JQ,
+        ],
         config,
         check=False,
     )
     if proc.returncode != 0:
-        return _Unresolvable(f"gh pr diff --name-only failed: {proc.stderr.strip()}")
-    paths = [line.strip() for line in proc.stdout.splitlines() if line.strip()]
-    if not paths:
-        return _Unresolvable("gh pr diff --name-only returned no files — diff undeterminable")
+        return _Unresolvable(f"gh api pulls/{pr_number}/files failed: {proc.stderr.strip()}")
+    paths: list[str] = []
+    listed = 0
+    for line in proc.stdout.splitlines():
+        if not line.strip():
+            continue
+        try:
+            entry = json.loads(line)
+        except ValueError:
+            entry = None
+        if not (isinstance(entry, list) and entry and isinstance(entry[0], str) and entry[0]):
+            return _Unresolvable(
+                f"gh api pulls/{pr_number}/files returned a line that is not "
+                f"a file entry: {line.strip()!r}"
+            )
+        listed += 1
+        paths.extend(path for path in entry[:2] if isinstance(path, str) and path)
+    if not listed:
+        return _Unresolvable(
+            f"gh api pulls/{pr_number}/files returned no files — diff undeterminable"
+        )
+    # Counted in files GitHub listed, not in paths: a rename adds two paths
+    # but is one file toward the ceiling.
+    if listed >= _FILES_CEILING:
+        return _TooManyChangedFiles(
+            f"PR #{pr_number} changes at least {_FILES_CEILING} files, the "
+            "most GitHub lists for a pull request — its complete changed-file "
+            "set cannot be read"
+        )
     return paths
 
 

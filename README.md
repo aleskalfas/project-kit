@@ -17,9 +17,9 @@ pkit:
         - .pkit/adapters/claude-code/merge-settings.sh
       record: [COR-001, COR-002, COR-017, PRJ-001, PRJ-004, ADR-049]
     revalidated:
-      at: 2026-09-30T23:02:13Z
+      at: 2026-09-30T23:42:07Z
       outcome: unchanged
-      unchanged-because: "#840's lint and format pass reshapes the anchored code without changing what it does; its one fix, pkit refs rename refusing an empty value with a message rather than a traceback, is below this page's level of detail"
+      unchanged-because: on this branch pyproject.toml changes only a comment that cited an ADR correction note now folded into its record; the front page's description of the project and its tooling holds
 ---
 
 # project-kit

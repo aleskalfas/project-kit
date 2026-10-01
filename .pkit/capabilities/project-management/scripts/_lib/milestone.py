@@ -19,15 +19,46 @@ matches by number or title. If the arg is numeric and matches no
 open milestone, the resolver returns None (the script reports the
 error and exits). Closed milestones are out of scope — pm operations
 attach to open milestones only.
+
+The module also holds the reads that decide whether a Milestone may close,
+so `close-milestone` (which closes it) and `close-issue`'s closure cascade
+(which says when it became closeable, #414) read a Milestone the same way:
+its close-trigger ([project-management:DEC-016-time-bound-containers]) and
+its child issues.
 """
 
 from __future__ import annotations
 
 import json
+import re
+import sys
 from dataclasses import dataclass
 from typing import Any
 
+from _lib import containment
 from _lib.gh import gh_run
+from _lib.structural_type import infer_structural_type
+
+# The close-triggers whose close fires when the last child closes
+# (schemas/time-containers.yaml): `content-based`, and `either`, which closes
+# on whichever of date or content fires first. A `date-based` Milestone closes
+# on its date, however many children are still open.
+CONTENT_TRIGGERS = frozenset({"content-based", "either"})
+
+# The DEC-016 `Close trigger: <value>` marker, on the description's first line.
+_CLOSE_TRIGGER_LINE = re.compile(r"^Close trigger:\s+(date-based|content-based|either)$")
+
+# The textual milestone-ref create-issue writes into an issue body:
+# `Milestone: [#<N>](../milestone/<N>)` (see body_parent_ref.milestone_line).
+# The number is back-referenced, so a link whose text and target disagree is
+# not a ref.
+_MILESTONE_REF = re.compile(
+    r"^Milestone:\s+\[#(?P<number>\d+)\]\(\.\./milestone/(?P=number)\)\s*$",
+    re.MULTILINE,
+)
+
+# The fields a milestone-children read needs from the issue corpus.
+_CHILDREN_FIELDS = "number,title,state,body,milestone"
 
 
 @dataclass(frozen=True)
@@ -101,6 +132,171 @@ def resolve_milestone(arg: str, config: dict[str, Any]) -> Milestone | None:
                 title=str(ms["title"]),
             )
     return None
+
+
+# ---- close-trigger (DEC-016) ----------------------------------------
+
+
+def parse_close_trigger(description: str) -> str | None:
+    """Return the declared close-trigger from the description's first line.
+
+    Matches the DEC-016 `Close trigger: <value>` marker on the first
+    non-blank line; returns None when the marker is absent (an inherited
+    Milestone) so the caller can fall back to inference.
+    """
+    for line in description.splitlines():
+        s = line.strip()
+        if not s:
+            continue
+        m = _CLOSE_TRIGGER_LINE.match(s)
+        return m.group(1) if m else None
+    return None
+
+
+def infer_close_trigger(due_on: object) -> str:
+    """Infer the close-trigger for an inherited Milestone with no marker.
+
+    Per time-containers.yaml fallback_inference: a native due date present
+    ⇒ date-based; none ⇒ content-based.
+    """
+    return "date-based" if due_on else "content-based"
+
+
+def resolve_close_trigger(description: str, due_on: object) -> tuple[str, bool]:
+    """Resolve (close_trigger, inferred): declared marker wins, else inferred."""
+    declared = parse_close_trigger(description)
+    if declared is not None:
+        return declared, False
+    return infer_close_trigger(due_on), True
+
+
+# ---- a Milestone and its children ------------------------------------
+
+
+def fetch_milestone(number: int, config: dict[str, Any]) -> dict | None:
+    """GET a single milestone, open or closed, via `gh api` (the `_lib.gh`
+    seam). Returns the milestone payload, or None — with the reason on
+    stderr — when it cannot be read."""
+    try:
+        proc = gh_run(
+            ["gh", "api", f"repos/{{owner}}/{{repo}}/milestones/{number}"],
+            config,
+            check=False,
+        )
+    except FileNotFoundError:
+        print("error: `gh` not on PATH.", file=sys.stderr)
+        return None
+    if proc.returncode != 0:
+        print(
+            f"error: could not fetch milestone #{number} "
+            f"(gh exit {proc.returncode}).\nstderr: {proc.stderr.strip()}",
+            file=sys.stderr,
+        )
+        return None
+    try:
+        data = json.loads(proc.stdout)
+    except json.JSONDecodeError:
+        print(f"error: gh returned non-JSON for milestone #{number}.", file=sys.stderr)
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def list_milestone_children(
+    number: int,
+    title: str,
+    config: dict[str, Any],
+    issue_types: dict,
+    classification: dict | None = None,
+) -> list[dict] | None:
+    """Resolve the milestone's child issues — the union of native + textual.
+
+    A child is any issue that either (a) carries the native GitHub Milestone
+    field for this milestone (matched on number or title, the same field
+    show-tree reads) or (b) carries the textual `Milestone: [#<n>](../
+    milestone/<n>)` body ref create-issue writes. `gh issue list` returns
+    issues only (PRs excluded), so no PR filtering is needed.
+
+    The issues are read through the containment seam's corpus fetch, which
+    says whether it saw every issue. A fetch that reached the seam's ceiling
+    is refused rather than answered from: a child past the ceiling may be
+    open, and a list short of it would call the Milestone closeable.
+
+    Returns a list of `{number, title, state, type}` dicts (state lower-cased,
+    type inferred from the title prefix, sorted by number), or None — with the
+    reason on stderr — on a gh failure or a truncated corpus.
+    """
+    corpus = containment.fetch_issue_corpus(config, fields=_CHILDREN_FIELDS)
+    if corpus is None:
+        print("error: gh issue list failed.", file=sys.stderr)
+        return None
+    if not corpus.complete:
+        print(
+            f"error: cannot list milestone #{number}'s children — the issue "
+            f"list reached its {containment.CORPUS_CEILING}-issue ceiling, so a "
+            "child may sit past it.",
+            file=sys.stderr,
+        )
+        return None
+
+    children: list[dict] = []
+    for row in corpus.rows:
+        num = row.get("number")
+        if not isinstance(num, int):
+            continue
+        body = str(row.get("body") or "")
+        if not (
+            _native_milestone_matches(row.get("milestone"), number, title)
+            or number in body_milestone_refs(body)
+        ):
+            continue
+        row_title = str(row.get("title", ""))
+        children.append(
+            {
+                "number": num,
+                "title": row_title,
+                "state": str(row.get("state", "")).lower(),
+                "type": infer_structural_type(
+                    row_title, issue_types, classification=classification
+                ),
+            }
+        )
+    children.sort(key=lambda c: c["number"])
+    return children
+
+
+def issue_milestones(issue: dict) -> list[int]:
+    """The milestones an issue counts as a child of, sorted.
+
+    The same two substrates :func:`list_milestone_children` reads: the
+    issue's native Milestone field, and each `Milestone: [#<n>](../
+    milestone/<n>)` ref its body carries. The two normally agree
+    (`edit-issue` keeps them in step); where they do not, both are named.
+    """
+    numbers = set(body_milestone_refs(str(issue.get("body") or "")))
+    native = issue.get("milestone")
+    if isinstance(native, dict) and isinstance(native.get("number"), int):
+        numbers.add(native["number"])
+    return sorted(numbers)
+
+
+def body_milestone_refs(body: str) -> list[int]:
+    """The milestone numbers an issue body links as `Milestone: [#<n>](../
+    milestone/<n>)` lines."""
+    return [int(m.group("number")) for m in _MILESTONE_REF.finditer(body)]
+
+
+def _native_milestone_matches(milestone: object, number: int, title: str) -> bool:
+    """True when an issue's native milestone field names this milestone.
+
+    Matched on number OR title — gh's `--json milestone` payload may carry
+    either depending on the field set; either identifying this milestone
+    counts.
+    """
+    if not isinstance(milestone, dict):
+        return False
+    if milestone.get("number") == number:
+        return True
+    return bool(title) and milestone.get("title") == title
 
 
 def _parse_concatenated_arrays(text: str) -> list:

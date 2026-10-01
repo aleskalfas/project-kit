@@ -14,8 +14,9 @@ pkit:
       record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, ADR-019, ADR-039, ADR-055, "project-management:DEC-053"]
       artefact: [.pkit/decisions/README.md]
     revalidated:
-      at: 2026-09-30T23:02:11Z
-      outcome: updated
+      at: 2026-09-30T22:51:06Z
+      outcome: unchanged
+      unchanged-because: the decisions README's section on refining an accepted record gains the refine-in-place steps, the supersession steps and the narration warning; the guide defers refinements and supersessions to that spec and names no check of its own, so it holds
 ---
 
 # Contributing to project-kit

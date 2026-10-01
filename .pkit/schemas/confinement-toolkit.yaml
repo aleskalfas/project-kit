@@ -6,7 +6,7 @@
 #               (a build-cache allowWrite, a needed unix socket, or a named
 #               allow-host). Safe to detect, commit, and auto-apply via
 #               `setup autonomy`. NOTE: allow-host narrowing is the
-#               "narrowing-but-reported" posture (ADR-008 amendment / ADR-015):
+#               "narrowing-but-reported" posture (ADR-008 rule 7 / ADR-015):
 #               auto-applied like narrowing, but MANDATORY surfaced with the
 #               verbatim "session-wide egress to <host>; not a security
 #               boundary" gloss in sandbox status / permissions overview /

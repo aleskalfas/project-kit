@@ -1,4 +1,5 @@
-"""Tests for the decision-id collision check (`pkit decisions validate`, Feature #162)."""
+"""Tests for `pkit decisions validate`: the decision-id collision check (Feature #162)
+and the revision-narration warning (#862)."""
 
 from __future__ import annotations
 
@@ -9,14 +10,22 @@ from click.testing import CliRunner
 
 from project_kit import decisions_validate
 from project_kit.cli import main
+from project_kit.validators import Severity
+from tests.adopter_repo import MakeAdopterRepo
 
 
-def _write_record(path: Path, record_id: str) -> None:
-    """Stamp a minimal decision record with the given frontmatter id at `path`."""
+def _write_record(
+    path: Path, record_id: str, body: str = "## Context\n", status: str = "proposed"
+) -> None:
+    """Stamp a minimal decision record with the given frontmatter id at `path`.
+
+    The front matter is seven lines and a blank line follows it, so the body's
+    first line is line 9 of the file.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
-        f"---\nid: {record_id}\ntitle: x\nstatus: proposed\n"
-        f"date: 2026-06-21\nauthor: t\n---\n\n## Context\n",
+        f"---\nid: {record_id}\ntitle: x\nstatus: {status}\n"
+        f"date: 2026-06-21\nauthor: t\n---\n\n{body}",
         encoding="utf-8",
     )
 
@@ -196,3 +205,224 @@ def test_cli_duplicate_exits_nonzero(project: Path, monkeypatch: pytest.MonkeyPa
     result = CliRunner().invoke(main, ["decisions", "validate"])
     assert result.exit_code != 0
     assert "COR-001" in result.output
+
+
+# --- revision narration (#862) -----------------------------------------
+#
+# A record states what is true and is refined in place; git history is its
+# change log (`.pkit/decisions/README.md`, "Refining an accepted record").
+# Narration is a warning — never an error (ADR-058 point 6).
+
+_CLEAN_BODY = """\
+## Context
+
+The engine now reads the manifest; rules no longer in the model do not reappear.
+
+## Decision
+
+1. **Update** — re-running the setup primitive reconciles installed state.
+2. **Closed area taxonomy.** Four areas, fixed here.
+
+## Rationale
+
+DEC-028's step 7 must be corrected in place when this record is accepted.
+
+## Implications
+
+The forcing question (issue #255) is answered.
+"""
+
+
+@pytest.mark.parametrize(
+    ("line", "shape"),
+    [
+        ("## Amendment (2026-08-09)", "amendment heading"),
+        ("### Amendments", "amendment heading"),
+        ("## Erratum", "amendment heading"),
+        ("**Amendment 1** — the reader set is re-scoped.", "amendment marker"),
+        ("> **Amendment (#20, under EPIC #18) — the stance splits.**", "amendment marker"),
+        ("**Amended 2026-08-25 (#755):** the flag first shipped bare.", "amendment marker"),
+        ("- A floor. **(Amended 2026-08-20: a floor is exempt.)**", "amendment marker"),
+        ("> **Amended by [DEC-052](DEC-052-x.md).** The footer moves.", "amendment marker"),
+        ("**Amended in place, not superseded — and here is the line.**", "amendment marker"),
+        ("the empty set *(amended — see note below)*.", "amendment marker"),
+        ("**Update (#252) — what the region contains.**", "revision stamp"),
+        ("> **Correction (2026-06-25, issue #304).** The sidecar moves.", "revision stamp"),
+        ("**Closed (#823 / PR #844) — the divergence is gone.**", "revision stamp"),
+        ("**Source means the owned tier** (clarified, #813).", "revision stamp"),
+        ("This record originally claimed a definition could declare it.", "change-log phrasing"),
+        ("Previously we believed the region was narrow.", "change-log phrasing"),
+        ("An earlier draft of this record rejected stamping.", "change-log phrasing"),
+    ],
+)
+def test_each_narration_shape_is_found(line: str, shape: str) -> None:
+    found = decisions_validate.find_revision_narration(f"## Decision\n\n{line}\n")
+    assert [(number, found_shape) for number, found_shape, _ in found] == [(3, shape)]
+
+
+def test_a_clean_record_reports_nothing() -> None:
+    assert decisions_validate.find_revision_narration(_CLEAN_BODY) == []
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "*Superseded by [COR-023]. The field convention stands; only the location changes.*",
+        "> **Superseded by [DEC-036](DEC-036-x.md).**",
+        "> **Partially superseded by [DEC-036](DEC-036-x.md).** One leg is retired.",
+        "### Capabilities as a sibling concept (refinement per COR-017)",
+        "1. **The slot belongs to its consumer** (refinement per [COR-053](COR-053-x.md)).",
+    ],
+)
+def test_the_permitted_markers_are_not_narration(line: str) -> None:
+    """A superseded-by line and a forward refinement pointer name another record."""
+    assert decisions_validate.find_revision_narration(f"{line}\n") == []
+
+
+def test_code_is_quoted_material_not_narration() -> None:
+    text = (
+        "The note reads `> **Amended by [DEC-052]**` once accepted.\n"
+        "\n"
+        "```markdown\n"
+        "## Amendment (2026-08-09)\n"
+        "```\n"
+        "~~~\n"
+        "**Update (#252)**\n"
+        "~~~\n"
+        "- A list item:\n"
+        "    ```\n"
+        "    **Amendment 1**\n"
+        "    ```\n"
+        "> ```\n"
+        "> **Correction (2026-06-25)**\n"
+        "> ```\n"
+    )
+    assert decisions_validate.find_revision_narration(text) == []
+
+
+def test_front_matter_is_not_read_and_lines_count_over_the_file() -> None:
+    text = "---\nid: ADR-001\ntitle: Amendment (#1) policy\n---\n\n## Amendment (2026-08-09)\n"
+    found = decisions_validate.find_revision_narration(text)
+    assert found == [(6, "amendment heading", '"## Amendment (2026-08-09)"')]
+
+
+def test_the_excerpt_quotes_the_line_as_written() -> None:
+    text = "**Update (#252) — what the managed `permissions` region contains.**\n"
+    [(_, _, excerpt)] = decisions_validate.find_revision_narration(text)
+    assert excerpt == '"**Update (#252) — what the managed `permissions` region cont…"'
+
+
+def test_narration_names_the_record_and_line_in_every_id_space(project: Path) -> None:
+    body = "## Decision\n\n## Amendment (2026-08-09)\n"
+    _write_record(project / ".pkit" / "decisions" / "core" / "COR-001-a.md", "COR-001", body)
+    overlay = project / ".pkit" / "agents" / "project" / "overlay.yaml"
+    overlay.parent.mkdir(parents=True)
+    overlay.write_text("adr-records:\n  - docs/architecture/decisions/\n", encoding="utf-8")
+    adr_dir = project / "docs" / "architecture" / "decisions"
+    adr_dir.mkdir(parents=True)
+    _write_record(adr_dir / "ADR-001-a.md", "ADR-001", body)
+    cap = _make_capability(project, "alpha")
+    _write_record(cap / "DEC-001-a.md", "DEC-001", body)
+
+    narration = decisions_validate.revision_narration(project)
+
+    assert sorted(issue.location for issue in narration) == [
+        ".pkit/capabilities/alpha/decisions/DEC-001-a.md:11",
+        ".pkit/decisions/core/COR-001-a.md:11",
+        "docs/architecture/decisions/ADR-001-a.md:11",
+    ]
+    assert all(issue.message.startswith("amendment heading") for issue in narration)
+
+
+def test_a_superseded_record_is_not_read(project: Path) -> None:
+    core = project / ".pkit" / "decisions" / "core"
+    body = "*Superseded by [COR-002].*\n\n## Amendment (2026-08-09)\n"
+    _write_record(core / "COR-001-a.md", "COR-001", body, status="superseded")
+    assert decisions_validate.revision_narration(project) == ()
+
+
+_NARRATING_BODY = "## Decision\n\n## Amendment (2026-08-09)\n"
+
+
+def test_a_synced_copy_is_not_read_and_the_projects_own_record_is(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """In an adopter, a core record and a kit-shipped capability's arrive as synced
+    copies: refined where they are authored, so an edit here would be overwritten."""
+    repo = make_adopter_repo(capabilities=("living-docs",))
+    decisions = repo.root / ".pkit" / "decisions"
+    _write_record(decisions / "core" / "COR-900-a.md", "COR-900", _NARRATING_BODY)
+    capability = repo.root / ".pkit" / "capabilities" / "living-docs" / "decisions"
+    _write_record(capability / "DEC-900-a.md", "DEC-900", _NARRATING_BODY)
+    _write_record(decisions / "project" / "PRJ-900-a.md", "PRJ-900", _NARRATING_BODY)
+
+    narration = decisions_validate.revision_narration(repo.root)
+
+    assert [issue.location for issue in narration] == [".pkit/decisions/project/PRJ-900-a.md:11"]
+
+
+def test_the_methodology_source_reads_its_own_core_records(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """Where the methodology is authored nothing is a copy, so a core record is read."""
+    repo = make_adopter_repo()
+    package = repo.root / "src" / "project_kit" / "__init__.py"
+    package.parent.mkdir(parents=True)
+    package.write_text("", encoding="utf-8")
+    core = repo.root / ".pkit" / "decisions" / "core"
+    _write_record(core / "COR-900-a.md", "COR-900", _NARRATING_BODY)
+
+    narration = decisions_validate.revision_narration(repo.root)
+
+    assert ".pkit/decisions/core/COR-900-a.md:11" in [issue.location for issue in narration]
+
+
+def test_narration_is_not_an_id_issue(project: Path) -> None:
+    core = project / ".pkit" / "decisions" / "core"
+    _write_record(core / "COR-001-a.md", "COR-001", "## Amendment (2026-08-09)\n")
+    assert decisions_validate.validate_decision_ids(project).is_clean
+
+
+def test_the_validate_member_warns_of_narration_without_failing(project: Path) -> None:
+    core = project / ".pkit" / "decisions" / "core"
+    body = "## Decision\n\n> **Amendment (#20) — the stance splits.**\n"
+    _write_record(core / "COR-001-a.md", "COR-001", body, status="accepted")
+
+    outcome = decisions_validate.outcome(project)
+
+    assert outcome.errors == ()
+    assert [(f.location, f.severity) for f in outcome.findings] == [
+        (".pkit/decisions/core/COR-001-a.md:11", Severity.WARNING)
+    ]
+    assert "0 error(s), 1 warning(s)." in outcome.summary[0]
+
+
+def test_cli_warns_of_narration_and_exits_zero(
+    project: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import subprocess
+
+    subprocess.run(["git", "init", "-q"], cwd=project, check=True)
+    body = "## Decision\n\n**Update (#252) — what the region contains.**\n"
+    _write_record(project / ".pkit" / "decisions" / "core" / "COR-001-a.md", "COR-001", body)
+    monkeypatch.chdir(project)
+    result = CliRunner().invoke(main, ["decisions", "validate"])
+    assert result.exit_code == 0, result.output
+    assert "No id collisions found" in result.output
+    assert "1 warning(s) of revision narration" in result.output
+    assert ".pkit/decisions/core/COR-001-a.md:11" in result.output
+    assert "revision stamp" in result.output
+
+
+def test_cli_says_nothing_of_narration_on_a_clean_corpus(
+    project: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import subprocess
+
+    subprocess.run(["git", "init", "-q"], cwd=project, check=True)
+    core = project / ".pkit" / "decisions" / "core"
+    _write_record(core / "COR-001-a.md", "COR-001", _CLEAN_BODY)
+    monkeypatch.chdir(project)
+    result = CliRunner().invoke(main, ["decisions", "validate"])
+    assert result.exit_code == 0, result.output
+    assert "narration" not in result.output

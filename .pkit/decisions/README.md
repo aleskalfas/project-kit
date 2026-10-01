@@ -12,9 +12,8 @@ pkit:
         - src/project_kit/rule_sets.py
       record: [COR-001, COR-019, COR-025, COR-051, COR-053]
     revalidated:
-      at: 2026-09-30T23:02:04Z
-      outcome: unchanged
-      unchanged-because: "#840's lint and format pass reshapes the anchored code without changing what it does; its one fix, pkit refs rename refusing an empty value with a message rather than a traceback, is below this page's level of detail"
+      at: 2026-09-30T21:15:54Z
+      outcome: updated
 ---
 
 # Decision records
@@ -149,7 +148,20 @@ For clarifications, scope tweaks, or refinements that do not invalidate the orig
 
 **Editing in place means editing in place.** A correction is folded into the body so the record simply states what is true; it is not appended as an amendment section, a dated correction marker, or a "previously we believed" passage. Those turn a record into a changelog with a statement buried in it, and each one looks like diligence, so the habit spreads by imitation. If a record was wrong about a fact and the decision has not changed, fix the sentence. If the decision changed, supersede.
 
-Two in-body markers are *not* narration of a revision and are correct to keep: the **superseded-by** line a superseded record carries, and a **forward refinement pointer** naming a later record that extends this one (the `(refinement per <record>)` sub-section form). Both point at another record rather than at a discarded belief.
+To refine a record in place:
+
+1. **Rewrite the section the change belongs to** — the decision point, the rationale paragraph, the implication — so it states the corrected fact as part of the decision. A new point goes where it belongs among the others, not at the end of the record.
+2. **Add no revision marker** — no amendment heading, no block stamped with a date or an issue number, no note that the record was amended in place rather than superseded.
+3. **Leave no residue of the change.** A word that makes sense only against the old text — "now", "no longer", "still", "corrected above" — is restated as plain fact. An issue number in a record cites evidence; it never dates a revision.
+4. **Check the rest of the record agrees** — the summary, the Context, and any other sentence that restates the fact.
+
+The commit message says what changed and why.
+
+**To supersede**, write a new record that sets `supersedes:` to the old record's id. In the old record, set `status: superseded`, put a *Superseded by …* line at the top of its body, and leave the rest of the body as it stood; if it is an ADR, also set `superseded_by:` in its front matter (the ADR schema in COR-025). A record that a later one overturns only in part stays `accepted`, and its top line reads *Partially superseded by …* instead — that line is its superseded-by line.
+
+Two in-body markers are *not* narration of a revision and are correct to keep: the **superseded-by** line, whole or partial, and a **forward refinement pointer** naming a later record that extends this one — `(refinement per <record>)` on the sub-section heading, decision point or sentence it extends. Both point at another record rather than at a discarded belief.
+
+`pkit decisions validate` warns of each line of a record that narrates its own revision — an amendment heading or marker (`## Amendment (…)`, `**Amendment 1**`, `**Amended by …**`), a revision stamped with an issue number or a date (`**Update (#252)**`, `(clarified, #813)`), or change-log phrasing ("this record originally…", "previously we believed…") — naming the file and line. It does not read fenced blocks or inline code spans, a superseded record, or a record that arrives as a synced copy — a core record, or a kit-shipped capability's, in your project — since that record is refined where it is authored and an edit here is overwritten by the next sync. The two markers above match none of these shapes. The warnings do not fail the command, because the shapes are read from prose and a gate that fails on a heuristic reading of prose fails for the wrong reasons (ADR-058).
 
 ## Adding a record
 

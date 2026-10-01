@@ -20,9 +20,9 @@ pkit:
       artefact:
         - ACT-operator
     revalidated:
-      at: 2026-09-30T23:02:23Z
+      at: 2026-10-01T00:55:02Z
       outcome: unchanged
-      unchanged-because: "#840's lint and format pass reshapes the anchored code without changing what it does, so this page still describes it as it is"
+      unchanged-because: on this branch done-work.py and review-pr.py only read a PR's changed files through the paginated files API instead of gh pr diff and brief reviewers with a local-diff fallback; the stabilisation guards and the flows the page describes are untouched
 ---
 
 # UC-010 — Stabilise a Milestone for a release

@@ -266,7 +266,7 @@ def test_hook_allows_granted_privilege_with_ruamel_absent(tmp_path):
     )
 
 
-# ---- ADR-002 amendment: enforcement-runtime self-check ----------------------
+# ---- ADR-002 point 4: enforcement-runtime self-check ------------------------
 
 
 def _tree_with_hook(tmp_path: Path, **kwargs) -> Path:

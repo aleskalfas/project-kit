@@ -144,6 +144,20 @@ def test_moves_the_milestone_and_the_first_line_follows(ei, monkeypatch) -> None
     assert rec.edits[0]["body"].startswith("Milestone: [#6](../milestone/6)\n\n## What")
 
 
+def test_an_issue_left_on_a_closed_milestone_moves_to_an_open_one(ei, monkeypatch) -> None:
+    """The hand rollforward the README names: close-milestone leaves an open
+    child on the closed milestone (#387), and only the TARGET must be open.
+    With no state label the child reads backlog before and after, so its
+    state is preserved."""
+    rec = _run(
+        ei, monkeypatch, ["42", "--milestone", "6", "--yes"], _issue(labels=()),
+        open_milestones=((6, "Milestone 6"),),
+    )
+    assert rec.rc == 0
+    assert rec.milestone_writes == [(42, "Milestone 6")]
+    assert rec.edits[0]["body"].startswith("Milestone: [#6](../milestone/6)\n\n## What")
+
+
 def test_resolves_the_milestone_by_title(ei, monkeypatch) -> None:
     rec = _run(ei, monkeypatch, ["42", "--milestone", "Milestone 6", "--yes"], _issue())
     assert rec.rc == 0

@@ -34,10 +34,10 @@ Gates:
   - PR must exist for the issue's branch.
   - The resolved required-local set must be non-empty.
   - Resolution must succeed: a not-ok contribution collection (malformed
-    declaration / undeployed contributed agent), an invalid opt-out list, or
-    an unresolvable closing-issue lookup surfaces as an error and aborts — a
-    required reviewer is never silently skipped (fail-closed, DEC-032 D5),
-    consistent with the gate's posture.
+    declaration / undeployed contributed agent), an invalid opt-out list, an
+    unresolvable closing-issue lookup, or changed files that cannot be read
+    surfaces as an error and aborts — a required reviewer is never silently
+    skipped (fail-closed, DEC-032 D5), consistent with the gate's posture.
 
 Side-effects:
   - For each locally-registered agent: invoke (via the harness's agent
@@ -93,9 +93,11 @@ from _lib.membership import (
     resolve_invoker_identity,
 )
 from _lib.required_reviewers import (
+    ERROR_CHANGED_FILES,
     ERROR_CLOSING_ISSUES,
     ERROR_COLLECTION,
     ERROR_OPT_OUT,
+    ERROR_TOO_MANY_CHANGED_FILES,
     RequiredReviewersError,
     Resolution,
     resolve_required_local_reviewers,
@@ -391,6 +393,8 @@ def main() -> int:
             config,
             agent_timeout,
             effort=agent_effort,
+            base=pr.get("baseRefName"),
+            head=branch,
         )
         if verdict is None:
             print(f"  [{name}] invocation failed; no verdict to post.", file=sys.stderr)
@@ -428,6 +432,9 @@ def _invoke_agent(
     config: dict,
     timeout: int = DEFAULT_AGENT_TIMEOUT,
     effort: str | None = None,
+    *,
+    base: str | None = None,
+    head: str = "HEAD",
 ) -> tuple[str | None, str]:
     """Invoke a Claude Code agent against the PR diff.
 
@@ -443,6 +450,9 @@ def _invoke_agent(
     passed to the harness as `--effort`; None passes nothing and the harness
     default applies. Resolved once by the caller (`_resolve_agent_effort`),
     the same uniform value for every reviewer.
+
+    `base` and `head` are the PR's base branch and its branch, named in the
+    brief's local-diff fallback (see `_review_brief`).
 
     At v1 this uses the `claude` CLI when available. Adopters with
     custom harnesses or invocation patterns override by editing this
@@ -461,16 +471,7 @@ def _invoke_agent(
         )
         return None, ""
 
-    # Build the prompt — the agent receives the PR diff + a clear
-    # instruction to return one of the two verdicts as the first line.
-    prompt = (
-        f"Review the diff of PR #{pr_number} in this repository. "
-        f"Apply your usual review criteria. Output your verdict on the "
-        f"VERY FIRST LINE in one of these exact forms:\n\n"
-        f"  Reviewer agent (local, {name}): APPROVED\n"
-        f"  Reviewer agent (local, {name}): CHANGES_REQUESTED\n\n"
-        "Then add any commentary, findings, or rationale below."
-    )
+    prompt = _review_brief(name, pr_number, base=base, head=head)
 
     try:
         command = [claude_bin, "-p", prompt, "--agent", name]
@@ -539,6 +540,34 @@ def _invoke_agent(
         file=sys.stderr,
     )
     return None, ""
+
+
+def _review_brief(
+    name: str,
+    pr_number: int | None,
+    *,
+    base: str | None,
+    head: str,
+) -> str:
+    """The prompt each reviewer receives: the PR, a fallback for its diff, the verdict grammar.
+
+    GitHub refuses `gh pr diff` for a PR changing more than 300 files, so the
+    brief also names the same diff in this checkout: the three-dot range from
+    the PR's base branch to its branch, which diffs from their merge base. An
+    unknown base is left as a placeholder the reviewer fills from the PR's
+    `baseRefName`.
+    """
+    return (
+        f"Review the diff of PR #{pr_number} in this repository. "
+        f"If `gh pr diff {pr_number}` refuses it as too large (GitHub stops at "
+        "300 changed files), read it from this checkout instead: "
+        f"`git diff origin/{base or '<base>'}...{head}`. "
+        f"Apply your usual review criteria. Output your verdict on the "
+        f"VERY FIRST LINE in one of these exact forms:\n\n"
+        f"  Reviewer agent (local, {name}): APPROVED\n"
+        f"  Reviewer agent (local, {name}): CHANGES_REQUESTED\n\n"
+        "Then add any commentary, findings, or rationale below."
+    )
 
 
 def _format_verdict_comment(name: str, verdict: str, body: str) -> str:
@@ -665,13 +694,15 @@ def _resolution_error_message(resolution: Resolution) -> str:
     """Human error text for a non-ok `Resolution` that aborts review-pr.
 
     A not-ok contribution collection (malformed declaration / undeployed
-    contributed agent) or an unresolvable closing-issue lookup aborts
-    `review-pr` rather than invoke a partial set. The rationale for choosing a
-    hard abort here — review-pr is advisory and done-work is the real gate, so
-    this is a deliberate consistent-posture / minimum-surface choice, NOT a
-    gate-safety requirement — is documented at the abort call site in `main()`.
-    The text still frames the abort as fail-closed because that is what the
-    operator sees and what keeps both consumers' messaging consistent.
+    contributed agent), an unresolvable closing-issue lookup, or changed files
+    that cannot be read aborts `review-pr` rather than invoke a partial set,
+    and each kind names its own remediation — a retry only where one can help.
+    The rationale for choosing a hard abort here — review-pr is advisory and
+    done-work is the real gate, so this is a deliberate consistent-posture /
+    minimum-surface choice, NOT a gate-safety requirement — is documented at
+    the abort call site in `main()`. The text still frames the abort as
+    fail-closed because that is what the operator sees and what keeps both
+    consumers' messaging consistent.
     """
     error = resolution.error
     assert error is not None  # `not resolution.ok` guarantees this.
@@ -695,6 +726,16 @@ def _resolution_error_message(resolution: Resolution) -> str:
             "(project/config.yaml) — each names an installed capability, a "
             "reviewer it contributes, and a reason."
         )
+    elif error.kind == ERROR_TOO_MANY_CHANGED_FILES:
+        lines.append(f"  → {error.message}")
+        lines.append(
+            "  Remediation: not transient — a retry reads the same cut-short "
+            "list. Split the PR, or merge it with "
+            '`done-work --bypass "<reason>"`.'
+        )
+    elif error.kind == ERROR_CHANGED_FILES:
+        lines.append(f"  → {error.message}")
+        lines.append("  Remediation: transient gh failure reading the PR's changed files — retry.")
     else:
         lines.append(f"  → {error.message}")
         lines.append(
@@ -747,7 +788,7 @@ def _find_pr_for_branch(branch: str, config: dict) -> dict | None:
             "--state",
             "open",
             "--json",
-            "number,isDraft,headRefName",
+            "number,isDraft,headRefName,baseRefName",
         ],
         config,
         check=False,

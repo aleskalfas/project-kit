@@ -111,9 +111,9 @@ TERM-stabilisation:
           - project-management:DEC-014
           - ADR-019
       revalidated:
-        at: 2026-09-30T23:02:16Z
+        at: 2026-10-01T00:09:41Z
         outcome: unchanged
-        unchanged-because: "#840's lint and format pass reshapes the anchored code without changing what it does, so this page still describes it as it is"
+        unchanged-because: done-work's change is how the merge gate reads a PR's changed files for the diff-floor reviewers and the refusal when it cannot; what a stabilisation freezes and how its guards refuse did not change
 ---
 
 # Glossary

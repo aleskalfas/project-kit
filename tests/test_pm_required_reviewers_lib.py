@@ -578,6 +578,23 @@ def test_floor_fails_closed_when_diff_unresolvable(rr, rc) -> None:
     assert "gh files failed" in res.error.message
 
 
+def test_floor_fails_closed_as_too_many_when_listing_is_cut_short(rr, rc) -> None:
+    """A PR past GitHub's file-listing ceiling fails closed under its own kind,
+    so a consumer can say "split the PR" rather than "retry" (#1188)."""
+    res = rr.resolve_required_local_reviewers(
+        99,
+        baseline_local=["reviewer"],
+        repo_root=REPO,
+        closing_issue_numbers=lambda pr: [42],
+        issue_labels=lambda n: [{"name": "type:feature"}],
+        changed_files=lambda pr: rr._TooManyChangedFiles("PR #99 changes 3000+"),
+        collect_contributions=lambda repo_root: _floor_collection(rc),
+    )
+    assert not res.ok
+    assert res.error.kind == rr.ERROR_TOO_MANY_CHANGED_FILES
+    assert "3000+" in res.error.message
+
+
 def test_floor_and_classification_dedup_same_reviewer(rr, rc) -> None:
     """A reviewer required by both a classification rule and a floor is once."""
     class_rule = rc.ContributionRule(

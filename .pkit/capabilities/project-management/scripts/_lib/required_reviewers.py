@@ -62,7 +62,9 @@ makes a consumer handle each before reading the set:
     determining the PR's diff *while a floor-carrying contribution is
     installed*. Ground truth for *what the diff touches* is unknown, so a
     floor reviewer it might require cannot be dropped. A floor-free collection
-    never fetches the diff, so this failure is unreachable there.
+    never fetches the diff, so this failure is unreachable there. A PR with
+    more changed files than GitHub will list is the same unknown, reported as
+    its own kind because retrying cannot resolve it.
 
 All collapse to `Resolution.ok is False` with a structured `error` the
 consumer turns into its own refusal / error message. An *empty* contributed
@@ -140,6 +142,11 @@ ERROR_CLOSING_ISSUES = "closing-issues-unresolvable"
 # Only reached when a floor-carrying rule exists — floor-free collections
 # never fetch the diff (DEC-032 amendment).
 ERROR_CHANGED_FILES = "changed-files-unresolvable"
+# The PR changes more files than GitHub will list, so its changed-file set
+# cannot be read in full. The same unknown as ERROR_CHANGED_FILES, kept apart
+# because it is not transient: a retry reads the same truncated list, so the
+# consumer's remediation is to split the PR or bypass, not to retry.
+ERROR_TOO_MANY_CHANGED_FILES = "too-many-changed-files"
 # The adopter's `review.agents.contributed_opt_out` list is malformed, or an
 # entry names a capability / reviewer no installed capability contributes
 # (#148). `details` carries one message per problem.
@@ -151,12 +158,12 @@ class RequiredReviewersError:
     """A structured reason the required set could not be resolved (DEC-032 D5).
 
     `kind` is `ERROR_COLLECTION`, `ERROR_CLOSING_ISSUES`,
-    `ERROR_CHANGED_FILES`, or `ERROR_OPT_OUT` so a consumer can branch on the
-    failure class without string-matching `message`. For a collection error,
-    `collection` is the failing `ContributionCollection` (its `errors` drive
-    the consumer's refusal text); for an opt-out error `details` lists each
-    problem, one per offending entry; otherwise both are empty and `message`
-    carries the human-readable reason.
+    `ERROR_CHANGED_FILES`, `ERROR_TOO_MANY_CHANGED_FILES`, or `ERROR_OPT_OUT`
+    so a consumer can branch on the failure class without string-matching
+    `message`. For a collection error, `collection` is the failing
+    `ContributionCollection` (its `errors` drive the consumer's refusal text);
+    for an opt-out error `details` lists each problem, one per offending entry;
+    otherwise both are empty and `message` carries the human-readable reason.
     """
 
     kind: str
@@ -212,6 +219,17 @@ class _Unresolvable:
 
     def __init__(self, reason: str):
         self.reason = reason
+
+
+class _TooManyChangedFiles(_Unresolvable):
+    """Sentinel: the PR changes more files than GitHub will list.
+
+    Still an `_Unresolvable` — every check that fails closed on one fails
+    closed on this — so a consumer unaware of the distinction stays safe. The
+    resolver reports it as `ERROR_TOO_MANY_CHANGED_FILES` rather than
+    `ERROR_CHANGED_FILES`, because a retry cannot read past the listing's
+    ceiling and the remediation differs.
+    """
 
 
 class _MultiValueAxisError(Exception):
@@ -336,9 +354,10 @@ def resolve_required_local_reviewers(
 
     floor_rules = _floor_rules(collection, pr_number, changed_files=changed_files)
     if isinstance(floor_rules, _Unresolvable):
+        too_many = isinstance(floor_rules, _TooManyChangedFiles)
         return Resolution(
             error=RequiredReviewersError(
-                kind=ERROR_CHANGED_FILES,
+                kind=ERROR_TOO_MANY_CHANGED_FILES if too_many else ERROR_CHANGED_FILES,
                 message=floor_rules.reason,
             )
         )
