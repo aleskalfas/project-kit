@@ -403,6 +403,45 @@ def test_resolution_error_closing_issues(rpr, rc) -> None:
     assert "boom" in msg
 
 
+def test_resolution_error_changed_files_asks_for_a_retry(rpr) -> None:
+    """A failed changed-files read is a gh failure: retry — and the remedy no
+    longer points at closing-issue links, which have nothing to do with it."""
+    resolution = rpr.Resolution(
+        error=rpr.RequiredReviewersError(
+            kind=rpr.ERROR_CHANGED_FILES,
+            message="gh api pulls/99/files failed: HTTP 502",
+        )
+    )
+    msg = rpr._resolution_error_message(resolution)
+    assert "HTTP 502" in msg
+    remediation = msg.split("Remediation:")[1]
+    assert "retry" in remediation
+    assert "changed files" in remediation
+    assert "closing-issue" not in remediation
+
+
+def test_resolution_error_too_many_changed_files_names_the_cause(rpr) -> None:
+    """A PR past GitHub's file listing is refused naming that cause and a
+    split-or-bypass remedy — not "transient gh failure" (#1188)."""
+    resolution = rpr.Resolution(
+        error=rpr.RequiredReviewersError(
+            kind=rpr.ERROR_TOO_MANY_CHANGED_FILES,
+            message=(
+                "PR #99 changes at least 3000 files, the most GitHub lists for "
+                "a pull request — its complete changed-file set cannot be read"
+            ),
+        )
+    )
+    msg = rpr._resolution_error_message(resolution)
+    assert "fail-closed" in msg
+    assert "at least 3000 files" in msg
+    remediation = msg.split("Remediation:")[1]
+    assert "not transient" in remediation
+    assert "Split the PR" in remediation
+    assert "done-work --bypass" in remediation
+    assert "transient gh failure" not in msg
+
+
 # ---- end-to-end invocation flow (DEC-032 D4) ------------------------
 #
 # These drive `main()` with the membership / branch / PR / invocation seams

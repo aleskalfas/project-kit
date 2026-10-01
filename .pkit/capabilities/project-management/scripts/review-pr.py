@@ -34,10 +34,10 @@ Gates:
   - PR must exist for the issue's branch.
   - The resolved required-local set must be non-empty.
   - Resolution must succeed: a not-ok contribution collection (malformed
-    declaration / undeployed contributed agent), an invalid opt-out list, or
-    an unresolvable closing-issue lookup surfaces as an error and aborts — a
-    required reviewer is never silently skipped (fail-closed, DEC-032 D5),
-    consistent with the gate's posture.
+    declaration / undeployed contributed agent), an invalid opt-out list, an
+    unresolvable closing-issue lookup, or changed files that cannot be read
+    surfaces as an error and aborts — a required reviewer is never silently
+    skipped (fail-closed, DEC-032 D5), consistent with the gate's posture.
 
 Side-effects:
   - For each locally-registered agent: invoke (via the harness's agent
@@ -96,9 +96,11 @@ from _lib.closing_issue_fetchers import (  # noqa: E402
     pr_closing_issue_numbers as _pr_closing_issue_numbers_fetch,
 )
 from _lib.required_reviewers import (  # noqa: E402
+    ERROR_CHANGED_FILES,
     ERROR_CLOSING_ISSUES,
     ERROR_COLLECTION,
     ERROR_OPT_OUT,
+    ERROR_TOO_MANY_CHANGED_FILES,
     RequiredReviewersError,
     Resolution,
     resolve_required_local_reviewers,
@@ -648,13 +650,15 @@ def _resolution_error_message(resolution: Resolution) -> str:
     """Human error text for a non-ok `Resolution` that aborts review-pr.
 
     A not-ok contribution collection (malformed declaration / undeployed
-    contributed agent) or an unresolvable closing-issue lookup aborts
-    `review-pr` rather than invoke a partial set. The rationale for choosing a
-    hard abort here — review-pr is advisory and done-work is the real gate, so
-    this is a deliberate consistent-posture / minimum-surface choice, NOT a
-    gate-safety requirement — is documented at the abort call site in `main()`.
-    The text still frames the abort as fail-closed because that is what the
-    operator sees and what keeps both consumers' messaging consistent.
+    contributed agent), an unresolvable closing-issue lookup, or changed files
+    that cannot be read aborts `review-pr` rather than invoke a partial set,
+    and each kind names its own remediation — a retry only where one can help.
+    The rationale for choosing a hard abort here — review-pr is advisory and
+    done-work is the real gate, so this is a deliberate consistent-posture /
+    minimum-surface choice, NOT a gate-safety requirement — is documented at
+    the abort call site in `main()`. The text still frames the abort as
+    fail-closed because that is what the operator sees and what keeps both
+    consumers' messaging consistent.
     """
     error = resolution.error
     assert error is not None  # `not resolution.ok` guarantees this.
@@ -679,6 +683,19 @@ def _resolution_error_message(resolution: Resolution) -> str:
             f"  Remediation: fix or remove the entry in `{OPT_OUT_PATH}` "
             "(project/config.yaml) — each names an installed capability, a "
             "reviewer it contributes, and a reason."
+        )
+    elif error.kind == ERROR_TOO_MANY_CHANGED_FILES:
+        lines.append(f"  → {error.message}")
+        lines.append(
+            "  Remediation: not transient — a retry reads the same cut-short "
+            "list. Split the PR, or merge it with "
+            "`done-work --bypass \"<reason>\"`."
+        )
+    elif error.kind == ERROR_CHANGED_FILES:
+        lines.append(f"  → {error.message}")
+        lines.append(
+            "  Remediation: transient gh failure reading the PR's changed "
+            "files — retry."
         )
     else:
         lines.append(f"  → {error.message}")
