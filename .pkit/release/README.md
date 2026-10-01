@@ -306,7 +306,7 @@ PR** a human merges — it is *not* auto-run on every merge.
 |---|---|---|
 | `pkit release plan` | no | Preview the computed release (which tiers move, to what, and the notes). |
 | `pkit release apply` | yes | Consume changesets → compute each tier from current `main` → write versions → broaden `requires_backbone` → raise declared floors → update `CHANGELOG.md` → delete consumed changesets. Confirms first (`--yes` for CI). Tagging is a separate step (below); `--tag`/`--push` opt in. |
-| `pkit release merge <pr>` | yes (merges) | Merge a release PR (the sanctioned path — below). Guarded to `release/*` heads; merges only an open, mergeable, green PR as one squash commit whose subject is the PR title — through the base's merge queue where it has one — and deletes the head branch once GitHub reports the PR merged. Does not tag. `--dry-run` reports without merging; `--no-wait` / `--wait-minutes` set how long it waits for a queue. |
+| `pkit release merge <pr>` | yes (merges) | Merge a release PR (the sanctioned path — below). Guarded to `release/*` heads; merges only an open, mergeable, green PR as one squash commit whose subject is the PR title — through the base's merge queue where it has one — and deletes the head branch once GitHub reports the PR merged. Does not tag. `--dry-run` reports without merging; `--no-wait` / `--wait-minutes` set how long it waits for a queue. Runs the cross-repository guard first; `--allow-foreign-repo` confirms a merge in another repository than the session's anchor's. |
 | `pkit release publish-notes <version>` | no (publishes) | Publish a **notes-only** GitHub Release for tag `v<version>`, body = that version's `CHANGELOG.md` section (below). Idempotent (updates if it exists); **no artifact**. `--dry-run` prints the notes without calling `gh`. |
 | `pkit release check` | no | The CI guard (below). |
 | `pkit release check-shareable <component>` | no | Pre-sharing lint: is a capability ready to be consumed externally-sourced (COR-041)? (below). |
@@ -438,6 +438,18 @@ into it (COR-014). Instead the release flow owns its own merge verb, beside the
 
 `pkit release merge <pr>`:
 
+- **Runs the cross-repository guard first** (COR-039; ADR-061 point 6). Once,
+  at its entry, before it reads the PR, it compares the session's anchor with
+  the repository it runs in, and the clearance covers everything the run
+  changes there — the merge or the enqueue, a dequeue, the head branch's
+  deletion and the local clean-up. In another repository than the session's
+  anchor's it asks at a terminal, and refuses where there is none, merging
+  nothing; `--allow-foreign-repo` confirms the merge. With no anchor — a
+  release run from a pipeline — there is no session to compare with, the
+  guard does not fire, and no flag is needed. `--dry-run` asks nothing: it
+  reports how the guard passed, or ends refused, saying a run at a terminal
+  would ask. The guard and its residual gaps are the CLI reference's
+  (`.pkit/cli/README.md`, "Pull-request commands").
 - **Guards to release PRs only.** It refuses unless the PR's head branch is
   `release/*` **and** its title is a `chore(release):` one — a non-release PR is
   refused with a pointer back to `pkit project-management merge-pr`. It is not a
