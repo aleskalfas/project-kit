@@ -38,8 +38,8 @@ from tests.analysis_repo import (
     fill,
     front,
     installed,
+    prepare_seeded,
     run_script,
-    seed,
     stamped,
 )
 
@@ -49,6 +49,14 @@ def project(
     make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> AdopterRepo:
     return installed(make_adopter_repo, monkeypatch)
+
+
+@pytest.fixture
+def seeded(
+    make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> AdopterRepo:
+    """The project with the seed stamped and filled (`prepare_seeded`)."""
+    return installed(make_adopter_repo, monkeypatch, then=prepare_seeded)
 
 
 def check(repo: AdopterRepo) -> dict[str, Any]:
@@ -65,14 +73,13 @@ def errors(document: Mapping[str, Any]) -> list[tuple[str, str]]:
 # --- in the check gate ----------------------------------------------------------------------
 
 
-def test_the_validator_is_a_member_of_pkit_validate(project: AdopterRepo) -> None:
-    seed(project)
+def test_the_validator_is_a_member_of_pkit_validate(seeded: AdopterRepo) -> None:
     only = ["--color", "never", "validate", "--only", "software-analysis:artefacts"]
     result = CliRunner().invoke(main, only)
     assert result.exit_code == 0, result.output
     assert "software-analysis:artefacts" in result.output
     assert "1 actor(s), 0 term(s), 2 use case(s), 1 journey(s)" in result.output
-    project.write({f"{USE_CASES}/UC-003-broken.md": "---\nid: UC-003\nstatus: active\n---\n"})
+    seeded.write({f"{USE_CASES}/UC-003-broken.md": "---\nid: UC-003\nstatus: active\n---\n"})
     result = CliRunner().invoke(main, only)
     assert result.exit_code == 1
     assert "'actor' is a required property" in result.output
@@ -88,18 +95,17 @@ def test_the_check_is_reached_under_the_capability_and_its_alias(
 
 
 def test_what_the_stamp_writes_passes_the_check_once_its_placeholders_are_filled(
-    project: AdopterRepo,
+    seeded: AdopterRepo,
 ) -> None:
     """What only a person can write the stamp leaves as the template's placeholders, and
     the check fails each until it is written — in an own field, a body or a section,
     matched against the placeholders the templates shipped."""
-    seed(project)
-    stamped(project, "use-case", "export", "--actor", "ACT-tester", "--area", "reports")
-    stamped(project, "term", "sandbox", "--record", "ADR-001")
-    stamped(project, "actor", "admin", "--name", "Administrator")
+    stamped(seeded, "use-case", "export", "--actor", "ACT-tester", "--area", "reports")
+    stamped(seeded, "term", "sandbox", "--record", "ADR-001")
+    stamped(seeded, "actor", "admin", "--name", "Administrator")
     rule = "write in its place what it asks for — until then it says nothing of the"
     left = "write in each one's place what it asks for, or remove it (DEC-001 point 1)"
-    assert errors(check(project)) == [
+    assert errors(check(seeded)) == [
         (
             f"{GLOSSARY}#TERM-sandbox:/definition",
             f"still holds the placeholder '<what the term means, in one sentence>': {rule} "
@@ -128,10 +134,10 @@ def test_what_the_stamp_writes_passes_the_check_once_its_placeholders_are_filled
     ]
     # A placeholder quoted as code, not the template's, is no placeholder in a body.
     rel = f"{USE_CASES}/reports/UC-003-export.md"
-    fill(project)
-    body = (project.root / rel).read_text(encoding="utf-8")
-    project.write({rel: body + '\nRun `pkit analysis new use-case <slug> --gap "<a gap>"`.\n'})
-    document = check(project)
+    fill(seeded)
+    body = (seeded.root / rel).read_text(encoding="utf-8")
+    seeded.write({rel: body + '\nRun `pkit analysis new use-case <slug> --gap "<a gap>"`.\n'})
+    document = check(seeded)
     assert document == {
         "summary": [
             "analysis at tech-docs/analysis: 2 actor(s), 1 term(s), 3 use case(s), "
@@ -160,17 +166,16 @@ sys.exit(done.returncode)
 
 
 def test_a_backbone_without_anchors_in_its_document_is_unreadable(
-    project: AdopterRepo, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    seeded: AdopterRepo, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Read as none, missing anchors would report every use case as not anchored to its
     actor and every journey as not anchored to its steps; the check says what is missing."""
-    seed(project)
     older = tmp_path / "older-backbone"
     older.mkdir()
     (older / "pkit").write_text(_OLDER_PKIT.format(python=sys.executable), encoding="utf-8")
     (older / "pkit").chmod(0o755)
     monkeypatch.setenv("PATH", f"{older}{os.pathsep}{os.environ['PATH']}")
-    document = check(project)
+    document = check(seeded)
     assert document["summary"] == ["the analysis could not be read; nothing checked."]
     ((location, message),) = errors(document)
     assert location == "."
@@ -179,32 +184,31 @@ def test_a_backbone_without_anchors_in_its_document_is_unreadable(
         "without the `anchors` key this capability reads each artefact's anchors from: the "
         "installed backbone predates it — upgrade it (`pkit upgrade`)"
     )
-    refused = run_script(project, NEW, "use-case", "more", "--actor", "ACT-tester")
+    refused = run_script(seeded, NEW, "use-case", "more", "--actor", "ACT-tester")
     assert refused.returncode == 1
     assert "without the `anchors` key" in refused.stderr
 
 
 def test_a_placeholder_is_a_text_the_templates_shipped_never_a_shape(
-    project: AdopterRepo,
+    seeded: AdopterRepo,
 ) -> None:
     """The placeholders a shape would take for code — capitalised, with no space — are
     caught, since they are texts the templates shipped; words of the artefact's own in
     angle brackets are not, whatever their shape."""
-    seed(project)
-    stamped(project, "term", "session", "--name", "Session")
-    fill(project)
+    stamped(seeded, "term", "session", "--name", "Session")
+    fill(seeded)
     _set(
-        project,
+        seeded,
         GLOSSARY,
         "  definition: what the term means, in one sentence",
         "  definition: Maps <user id> to a session.",
     )
-    _set(project, ACTORS, "  name: Tester", "  name: <Display name>")
+    _set(seeded, ACTORS, "  name: Tester", "  name: <Display name>")
     run_suite = f"{USE_CASES}/UC-001-run-suite.md"
-    _set(project, run_suite, "title: Run suite", "title: <Title>")
-    _set(project, run_suite, "# UC-001 — Run suite", "# UC-001 — <Title>")
+    _set(seeded, run_suite, "title: Run suite", "title: <Title>")
+    _set(seeded, run_suite, "# UC-001 — Run suite", "# UC-001 — <Title>")
     rule = "write in its place what it asks for — until then it says nothing of the"
-    assert errors(check(project)) == [
+    assert errors(check(seeded)) == [
         (
             f"{ACTORS}#ACT-tester:/name",
             f"still holds the placeholder '<Display name>': {rule} actor (DEC-001 point 1)",
@@ -221,7 +225,7 @@ def test_a_placeholder_is_a_text_the_templates_shipped_never_a_shape(
     ]
     # The stamp reads what it is given the same way.
     reason = ("--unanchored-because", "The <user id> service stands for it; no code of ours.")
-    assert stamped(project, "actor", "gateway", *reason) == "ACT-gateway"
+    assert stamped(seeded, "actor", "gateway", *reason) == "ACT-gateway"
 
 
 def test_the_validator_reads_the_working_tree_alone(
@@ -256,11 +260,10 @@ def test_the_validator_reads_the_working_tree_alone(
 # --- ids (DEC-001 point 3) --------------------------------------------------------------------
 
 
-def test_a_shared_id_is_reported_at_every_later_holder(project: AdopterRepo) -> None:
-    seed(project)
-    text = (project.root / USE_CASES / "UC-002-read-report.md").read_text(encoding="utf-8")
-    project.write({f"{USE_CASES}/area/UC-002-copy.md": text})
-    assert errors(check(project)) == [
+def test_a_shared_id_is_reported_at_every_later_holder(seeded: AdopterRepo) -> None:
+    text = (seeded.root / USE_CASES / "UC-002-read-report.md").read_text(encoding="utf-8")
+    seeded.write({f"{USE_CASES}/area/UC-002-copy.md": text})
+    assert errors(check(seeded)) == [
         (
             f"{USE_CASES}/area/UC-002-copy.md",
             f"the id UC-002 is also held by {USE_CASES}/UC-002-read-report.md: no two artefacts "
@@ -270,15 +273,14 @@ def test_a_shared_id_is_reported_at_every_later_holder(project: AdopterRepo) -> 
 
 
 def test_a_number_spelt_with_other_zeros_is_refused_and_shares_the_id(
-    project: AdopterRepo,
+    seeded: AdopterRepo,
 ) -> None:
     """`UC-0002` is no second id for `UC-002`: the schema admits one spelling per number,
     and the duplicate check counts the two as one id, as the stamp does."""
-    seed(project)
-    text = (project.root / USE_CASES / "UC-002-read-report.md").read_text(encoding="utf-8")
+    text = (seeded.root / USE_CASES / "UC-002-read-report.md").read_text(encoding="utf-8")
     alias = f"{USE_CASES}/UC-0002-alias.md"
-    project.write({alias: text.replace("UC-002", "UC-0002")})
-    assert errors(check(project)) == [
+    seeded.write({alias: text.replace("UC-002", "UC-0002")})
+    assert errors(check(seeded)) == [
         (f"{alias}:/id", "'UC-0002' does not match '^UC-(?:[0-9]{3}|[1-9][0-9]{3,})$'"),
         (
             alias,
@@ -289,15 +291,14 @@ def test_a_number_spelt_with_other_zeros_is_refused_and_shares_the_id(
     ]
 
 
-def test_a_name_carrying_another_number_than_the_id_is_reported(project: AdopterRepo) -> None:
+def test_a_name_carrying_another_number_than_the_id_is_reported(seeded: AdopterRepo) -> None:
     """`UC-009-<slug>.md` holding `id: UC-008` holds both numbers for the stamp, which
     counts the name's too: one artefact, one id, so the two must agree. The same number
     spelt with other zeros agrees; the id's own check reports the spelling."""
-    seed(project)
-    text = (project.root / USE_CASES / "UC-002-read-report.md").read_text(encoding="utf-8")
+    text = (seeded.root / USE_CASES / "UC-002-read-report.md").read_text(encoding="utf-8")
     renamed = f"{USE_CASES}/UC-009-renamed.md"
-    project.write({renamed: text.replace("UC-002", "UC-008")})
-    assert errors(check(project)) == [
+    seeded.write({renamed: text.replace("UC-002", "UC-008")})
+    assert errors(check(seeded)) == [
         (
             renamed,
             "its name carries UC-009, its front matter UC-008: the stamp counts both as held, "
@@ -307,16 +308,15 @@ def test_a_name_carrying_another_number_than_the_id_is_reported(project: Adopter
     ]
 
 
-def test_a_file_whose_id_cannot_be_read_is_reported(project: AdopterRepo) -> None:
+def test_a_file_whose_id_cannot_be_read_is_reported(seeded: AdopterRepo) -> None:
     """Front matter that does not parse, or none, or one naming no id: the stamp counts
     the number the file's name carries, and the check reports the file, never skipping
     it — an id is never used again, so the one it holds must be readable."""
-    seed(project)
     broken = f"{USE_CASES}/UC-005-broken.md"
     bare = f"{USE_CASES}/UC-006-bare.md"
     no_id = f"{USE_CASES}/UC-007-no-id.md"
     glossary = "---\nTERM-x: [unclosed\n---\n"
-    project.write(
+    seeded.write(
         {
             broken: "---\nid: [unclosed\n---\n",
             bare: "# No front matter\n",
@@ -327,7 +327,7 @@ def test_a_file_whose_id_cannot_be_read_is_reported(project: AdopterRepo) -> Non
             GLOSSARY: glossary,
         }
     )
-    found = errors(check(project))
+    found = errors(check(seeded))
     assert found[0] == (bare, "has no front matter: every file here is a use case")
     assert [location for location, _message in found[1:3]] == [GLOSSARY, broken]
     assert ": the terms it holds cannot be read, ids included, " in found[1][1]
@@ -411,20 +411,19 @@ def test_missing_or_misshapen_parts_are_reported(
     assert errors(check(project)) == expected
 
 
-def test_a_heading_other_than_the_id_and_title_is_reported(project: AdopterRepo) -> None:
+def test_a_heading_other_than_the_id_and_title_is_reported(seeded: AdopterRepo) -> None:
     """The front matter's `title` is what a reader of the front matter alone sees — a data
     point publishing `{id, title, status}` — so the page's heading must say the same."""
-    seed(project)
     rel = f"{USE_CASES}/UC-002-read-report.md"
-    text = (project.root / rel).read_text(encoding="utf-8")
+    text = (seeded.root / rel).read_text(encoding="utf-8")
     assert "\n# UC-002 — Read report\n" in text
     renamed = text.replace("title: Read report", "title: Read the report")
-    project.write({rel: renamed})
+    seeded.write({rel: renamed})
     wanted = (
         "a use case opens with `# UC-002 — Read the report`, so what a reader of its front "
         "matter sees is what the page shows — write the heading, or change `title`"
     )
-    assert errors(check(project)) == [
+    assert errors(check(seeded)) == [
         (
             rel,
             "its heading, `# UC-002 — Read report`, is not its id and its front matter's "
@@ -433,11 +432,11 @@ def test_a_heading_other_than_the_id_and_title_is_reported(project: AdopterRepo)
     ]
     # A heading inside fenced code is no heading.
     fenced = renamed.replace("# UC-002 — Read report", "```\n# UC-002 — Read the report\n```")
-    project.write({rel: fenced})
-    assert errors(check(project)) == [(rel, f"has no heading: {wanted}")]
+    seeded.write({rel: fenced})
+    assert errors(check(seeded)) == [(rel, f"has no heading: {wanted}")]
     # Closing hashes are no part of the heading's text.
-    project.write({rel: renamed.replace("# UC-002 — Read report", "# UC-002 — Read the report #")})
-    assert errors(check(project)) == []
+    seeded.write({rel: renamed.replace("# UC-002 — Read report", "# UC-002 — Read the report #")})
+    assert errors(check(seeded)) == []
 
 
 def test_an_entry_missing_its_parts_or_keyed_by_a_foreign_id_is_reported(
@@ -471,11 +470,10 @@ JOURNEY = f"{JOURNEYS}/JRN-001-first-run.md"
 READ_REPORT = f"{USE_CASES}/UC-002-read-report.md"
 
 
-def test_a_journey_s_actor_is_an_actor_of_the_analysis(project: AdopterRepo) -> None:
+def test_a_journey_s_actor_is_an_actor_of_the_analysis(seeded: AdopterRepo) -> None:
     """A journey's actor is no anchor, so nothing else resolves it."""
-    seed(project)
-    _set(project, JOURNEY, "actor: ACT-tester", "actor: ACT-nobody")
-    assert errors(check(project)) == [
+    _set(seeded, JOURNEY, "actor: ACT-tester", "actor: ACT-nobody")
+    assert errors(check(seeded)) == [
         (
             f"{JOURNEY}:/actor",
             "no actor ACT-nobody in the analysis: what a journey names is in the analysis "
@@ -485,21 +483,20 @@ def test_a_journey_s_actor_is_an_actor_of_the_analysis(project: AdopterRepo) -> 
 
 
 def test_an_artefact_in_force_names_nothing_withdrawn_as_the_stamp_refuses(
-    project: AdopterRepo,
+    seeded: AdopterRepo,
 ) -> None:
-    seed(project)
-    stamped(project, "actor", "retired")
-    fill(project)
+    stamped(seeded, "actor", "retired")
+    fill(seeded)
     _set(
-        project, ACTORS, "  name: Retired\n  status: active", "  name: Retired\n  status: withdrawn"
+        seeded, ACTORS, "  name: Retired\n  status: active", "  name: Retired\n  status: withdrawn"
     )
-    _set(project, READ_REPORT, "actor: ACT-tester", "actor: ACT-retired")
-    _set(project, READ_REPORT, "- ACT-tester", "- ACT-retired")
-    _set(project, f"{USE_CASES}/UC-001-run-suite.md", "status: active", "status: withdrawn")
+    _set(seeded, READ_REPORT, "actor: ACT-tester", "actor: ACT-retired")
+    _set(seeded, READ_REPORT, "- ACT-tester", "- ACT-retired")
+    _set(seeded, f"{USE_CASES}/UC-001-run-suite.md", "status: active", "status: withdrawn")
     rule = (
         "rests only on artefacts in force, as the stamp requires — withdraw it too, or name another"
     )
-    assert errors(check(project)) == [
+    assert errors(check(seeded)) == [
         (
             f"{READ_REPORT}:/actor",
             f"actor ACT-retired is withdrawn ({ACTORS}#ACT-retired): a use case in force {rule} "
@@ -512,25 +509,24 @@ def test_an_artefact_in_force_names_nothing_withdrawn_as_the_stamp_refuses(
         ),
     ]
     # The stamp refuses the same, and a withdrawn artefact may name withdrawn ones: it is history.
-    refused = run_script(project, NEW, "use-case", "later", "--actor", "ACT-retired")
+    refused = run_script(seeded, NEW, "use-case", "later", "--actor", "ACT-retired")
     assert "actor ACT-retired is withdrawn" in refused.stderr
-    _set(project, READ_REPORT, "status: active", "status: withdrawn")
-    _set(project, JOURNEY, "status: active", "status: withdrawn")
-    assert errors(check(project)) == []
+    _set(seeded, READ_REPORT, "status: active", "status: withdrawn")
+    _set(seeded, JOURNEY, "status: active", "status: withdrawn")
+    assert errors(check(seeded)) == []
 
 
 def test_a_record_cites_artefacts_of_the_analysis_withdrawn_ones_included(
-    project: AdopterRepo,
+    seeded: AdopterRepo,
 ) -> None:
-    seed(project)
-    _set(project, JOURNEY, "status: active", "status: withdrawn")
+    _set(seeded, JOURNEY, "status: active", "status: withdrawn")
     record = (CAPABILITY / "templates" / "revalidation-record.md").read_text(encoding="utf-8")
     cited = record.replace(
         "  UC-000: holds", "  UC-001: holds\n  JRN-001: analysis-stale\n  UC-009: gap-found"
     )
     rel = f"{RECORDS}/2026-10-01-first-run.md"
-    project.write({rel: cited})
-    assert errors(check(project)) == [
+    seeded.write({rel: cited})
+    assert errors(check(seeded)) == [
         (
             f"{rel}:/outcomes/UC-009",
             "no artefact UC-009 in the analysis: a record's outcomes cite artefacts of the "
@@ -542,13 +538,12 @@ def test_a_record_cites_artefacts_of_the_analysis_withdrawn_ones_included(
 # --- anchors (DEC-001 point 4) ----------------------------------------------------------------
 
 
-def test_a_use_case_not_anchored_to_its_actor_is_reported(project: AdopterRepo) -> None:
-    seed(project)
+def test_a_use_case_not_anchored_to_its_actor_is_reported(seeded: AdopterRepo) -> None:
     rel = f"{USE_CASES}/UC-002-read-report.md"
-    text = (project.root / rel).read_text(encoding="utf-8")
-    project.write({rel: text.replace("artefact:\n        - ACT-tester", "path:\n        - src/**")})
-    assert front(project, rel)["pkit"]["friction"]["anchors"] == {"path": ["src/**"]}
-    assert errors(check(project)) == [
+    text = (seeded.root / rel).read_text(encoding="utf-8")
+    seeded.write({rel: text.replace("artefact:\n        - ACT-tester", "path:\n        - src/**")})
+    assert front(seeded, rel)["pkit"]["friction"]["anchors"] == {"path": ["src/**"]}
+    assert errors(check(seeded)) == [
         (
             f"{rel}:/pkit/friction/anchors/artefact",
             "a use case anchors to its actor, so a changed actor flags it: add ACT-tester to its "
@@ -558,15 +553,14 @@ def test_a_use_case_not_anchored_to_its_actor_is_reported(project: AdopterRepo) 
 
 
 def test_a_journey_whose_use_case_anchors_do_not_match_its_steps_is_reported(
-    project: AdopterRepo,
+    seeded: AdopterRepo,
 ) -> None:
-    seed(project)
-    stamped(project, "use-case", "third", "--actor", "ACT-tester")
-    fill(project)
+    stamped(seeded, "use-case", "third", "--actor", "ACT-tester")
+    fill(seeded)
     rel = f"{JOURNEYS}/JRN-001-first-run.md"
-    text = (project.root / rel).read_text(encoding="utf-8")
-    project.write({rel: text.replace("steps:\n  - UC-001\n", "steps:\n  - UC-003\n  - UC-001\n")})
-    assert errors(check(project)) == [
+    text = (seeded.root / rel).read_text(encoding="utf-8")
+    seeded.write({rel: text.replace("steps:\n  - UC-001\n", "steps:\n  - UC-003\n  - UC-001\n")})
+    assert errors(check(seeded)) == [
         (
             f"{rel}:/pkit/friction/anchors/artefact",
             "its use-case anchors (UC-001, UC-002) do not match its steps (UC-003, UC-001, "
@@ -576,28 +570,27 @@ def test_a_journey_whose_use_case_anchors_do_not_match_its_steps_is_reported(
         )
     ]
     # Order is the steps' business; a repeated step needs one anchor; other anchors are free.
-    project.write(
+    seeded.write(
         {
             rel: text.replace("steps:\n  - UC-001\n", "steps:\n  - UC-002\n  - UC-001\n").replace(
                 "      artefact:\n", "      path:\n          - src/**\n      artefact:\n"
             )
         }
     )
-    assert errors(check(project)) == []
+    assert errors(check(seeded)) == []
 
 
 # --- revalidation records (DEC-001 points 5 and 6) --------------------------------------------
 
 
-def test_revalidation_records_are_held_to_their_schema(project: AdopterRepo) -> None:
-    seed(project)
+def test_revalidation_records_are_held_to_their_schema(seeded: AdopterRepo) -> None:
     record = (CAPABILITY / "templates" / "revalidation-record.md").read_text(encoding="utf-8")
     # From the template; a date written unquoted reads as the text it was written as.
     good = record.replace('"#000"', '"#887"').replace("UC-000", "UC-001")
     good = good.replace('date: "2026-01-01"', "date: 2026-10-01")
     bad = good.replace("trigger: planned", "trigger: whim").replace("UC-001: holds", "UC-1: ok")
     whim = f"{RECORDS}/2026-10-02-whim.md"
-    project.write(
+    seeded.write(
         {
             f"{RECORDS}/2026-10-01-first-run.md": good,
             whim: bad,
@@ -605,7 +598,7 @@ def test_revalidation_records_are_held_to_their_schema(project: AdopterRepo) -> 
             f"{RECORDS}/notes.txt": "not a record\n",
         }
     )
-    document = check(project)
+    document = check(seeded)
     assert "; 3 revalidation record(s)." in document["summary"][0]
     assert errors(document) == [
         (f"{whim}:/outcomes", "'UC-1' is not valid under any of the given schemas"),
@@ -626,85 +619,81 @@ def test_revalidation_records_are_held_to_their_schema(project: AdopterRepo) -> 
 
 
 def test_the_records_are_the_held_files_so_a_draft_git_ignores_is_not_checked(
-    project: AdopterRepo,
+    seeded: AdopterRepo,
 ) -> None:
     """The records are the files the held folder holds in `pkit friction artefacts`
     (COR-050 point 1), read from the working tree's one listing: a draft the project
     keeps git-ignored in the folder is not a record, whatever it holds."""
-    seed(project)
     record = (CAPABILITY / "templates" / "revalidation-record.md").read_text(encoding="utf-8")
     good = record.replace('"#000"', '"#887"').replace("UC-000", "UC-001")
-    project.write(
+    seeded.write(
         {
             ".gitignore": "draft-*.md\n",
             f"{RECORDS}/2026-10-01-first-run.md": good,
             f"{RECORDS}/draft-idea.md": "# Not yet a record\n",
         }
     )
-    document = check(project)
+    document = check(seeded)
     assert "; 1 revalidation record(s)." in document["summary"][0]
     assert errors(document) == []
-    project.write({".gitignore": None})
-    document = check(project)
+    seeded.write({".gitignore": None})
+    document = check(seeded)
     assert "; 2 revalidation record(s)." in document["summary"][0]
     assert [location for location, _message in errors(document)] == [f"{RECORDS}/draft-idea.md"]
 
 
-def test_a_record_nested_under_the_folder_is_a_record(project: AdopterRepo) -> None:
+def test_a_record_nested_under_the_folder_is_a_record(seeded: AdopterRepo) -> None:
     """The held folder holds every Markdown file beneath it, as a place matches: a
     record in a sub-folder is checked like one directly in it (the folder was
     once read by its direct children alone)."""
-    seed(project)
     record = (CAPABILITY / "templates" / "revalidation-record.md").read_text(encoding="utf-8")
     good = record.replace('"#000"', '"#887"').replace("UC-000", "UC-001")
-    project.write(
+    seeded.write(
         {
             f"{RECORDS}/2026-10-01-first-run.md": good,
             f"{RECORDS}/2026/2026-10-02-nested.md": good.replace("UC-001", "UC-404"),
         }
     )
-    document = check(project)
+    document = check(seeded)
     assert "; 2 revalidation record(s)." in document["summary"][0]
     assert [location for location, _message in errors(document)] == [
         f"{RECORDS}/2026/2026-10-02-nested.md:/outcomes/UC-404"
     ]
 
 
-def test_a_record_friction_exclude_leaves_out_is_not_counted(project: AdopterRepo) -> None:
+def test_a_record_friction_exclude_leaves_out_is_not_counted(seeded: AdopterRepo) -> None:
     """A record under an excluded path is still held, but the backbone's listing says it is
     excluded, and the check leaves it out as an excluded artefact is no part of the
     analysis (COR-050 point 7): neither counted nor checked."""
-    seed(project)
     record = (CAPABILITY / "templates" / "revalidation-record.md").read_text(encoding="utf-8")
     good = record.replace('"#000"', '"#887"').replace("UC-000", "UC-001")
-    project.write(
+    seeded.write(
         {
             CONFIG: f"docs:\n  internal: tech-docs\nfriction:\n  exclude: [{RECORDS}/archive]\n",
             f"{RECORDS}/2026-10-01-first-run.md": good,
             f"{RECORDS}/archive/2026-09-01-imported.md": "# No front matter\n",
         }
     )
-    document = check(project)
+    document = check(seeded)
     assert "; 1 revalidation record(s)." in document["summary"][0]
     assert errors(document) == []
 
 
 def test_a_records_folder_the_backbone_skips_is_said_to_hold_nothing(
-    project: AdopterRepo,
+    seeded: AdopterRepo,
 ) -> None:
     """A project place equal to the records' folder oversteps the folder's bounds
     (COR-050 point 1), so the backbone skips it and `pkit validate` reports it at
     the declaration: the check reads no record, and says why rather than showing
     none as if there were none."""
-    seed(project)
     record = (CAPABILITY / "templates" / "revalidation-record.md").read_text(encoding="utf-8")
-    project.write(
+    seeded.write(
         {
             CONFIG: f"docs:\n  internal: tech-docs\nfriction:\n  places: [{RECORDS}]\n",
             f"{RECORDS}/2026-10-01-first-run.md": record.replace("UC-000", "UC-001"),
         }
     )
-    document = check(project)
+    document = check(seeded)
     assert document["summary"][0].endswith(
         "; 0 revalidation record(s). The records' folder holds nothing — the backbone skipped "
         "it (overlap); `pkit validate` says why."

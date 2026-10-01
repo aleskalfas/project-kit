@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-01T16:04:58Z
+      at: 2026-10-01T15:59:56Z
       outcome: unchanged
-      unchanged-because: on this branch the merge mechanic moved into the backbone's pull-request landing module, which the pm verbs and the release step call; what main brought in (the process move origin, the configuration writer, the milestone rollforward) does not change what this page describes
+      unchanged-because: the cli README's friction resolve section now says it settles only the blocks git conflicted on and stages with consent; this map names each area's purpose and entry point, which are unchanged
 ---
 
 # project-kit
