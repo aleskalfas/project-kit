@@ -19,9 +19,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-10-01T15:12:58Z
+      at: 2026-10-01T15:22:34Z
       outcome: unchanged
-      unchanged-because: DEC-013 now names the backbone as the one place the merge mechanic lives; both merge verbs still enqueue where the base has a queue, and landing on an integration branch and the promotion go on as described
+      unchanged-because: on this branch the merge mechanic moved into the backbone's pull-request landing module and the pm scripts call it; what this page describes of merging and stabilisation is unchanged by the reviewer-body wording that main brought in
 ---
 
 # UC-008 — Land integration-branch work during a stabilisation
