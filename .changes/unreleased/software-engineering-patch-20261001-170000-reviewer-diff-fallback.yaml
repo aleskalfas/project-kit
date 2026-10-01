@@ -1,0 +1,13 @@
+component: software-engineering
+kind: patch
+custom:
+  category: Changed
+body: >
+  The code-review panel (`code-reviewer`, `security-reviewer`,
+  `docs-reviewer`) reads a pull request's diff from the local checkout,
+  `git diff <base>...<head>`, when `gh pr diff` refuses it for changing more
+  than 300 files, and requests changes for a diff it cannot read only when
+  neither source yields it — however the reviewer was started (#1190). The
+  bodies also describe the verdict marker as it is posted, naming the reviewed
+  head and base, and tell a reader to match its `<!-- pkit-verdict` prefix
+  rather than the bare string.
