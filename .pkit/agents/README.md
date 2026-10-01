@@ -17,9 +17,9 @@ pkit:
         - .pkit/adapters/claude-code/_resolve_agent.py
       record: [COR-005, COR-006, COR-011, COR-013, COR-014, COR-015, COR-016, COR-026, COR-049, ADR-051, ADR-052]
     revalidated:
-      at: 2026-09-30T23:01:59Z
+      at: 2026-10-01T09:44:11Z
       outcome: unchanged
-      unchanged-because: "#840's lint and format pass reshapes the anchored code without changing what it does; its one fix, pkit refs rename refusing an empty value with a message rather than a traceback, is below this page's level of detail"
+      unchanged-because: "typing-only change in the package for the type-checking gate (PRJ-010): suppression comments removed; behaviour unchanged"
 ---
 
 # Agents
