@@ -1,0 +1,9 @@
+component: backbone
+kind: none
+body: >
+  The lifecycle README's "How a data point resolves" gains guidance for a
+  point's definer on choosing entry ids: an id identifies what one filler alone
+  can say, and where several providers can each report on one subject it
+  carries a part the provider names, opening with the provider's own name, so
+  their entries stand side by side and only a real double claim collides.
+  Wording only; resolution is unchanged.
