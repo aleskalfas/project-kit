@@ -4,16 +4,20 @@ writing, and the configuration command that uses it."""
 
 from __future__ import annotations
 
+import difflib
 from pathlib import Path
 
 import click
 import pytest
 from click.testing import CliRunner
+from ruamel.yaml import YAML
 
 from project_kit import project_config as pc
 from project_kit import report_context
 from project_kit.cli import main
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 def _config_path(repo: AdopterRepo) -> Path:
@@ -317,3 +321,142 @@ def test_config_set_preserves_the_rest_of_the_file(make_adopter_repo: MakeAdopte
     text = _config_path(repo).read_text(encoding="utf-8")
     assert text.startswith("# header\n")
     assert pc.read_config(repo.root) == {"name": "alpha", "friction": {"mode": "enforcing"}}
+
+
+# --- a write changes only the keys it sets (#1198) ---------------------------
+
+# A hand-kept configuration: comments, blank lines, nested lists in two
+# layouts, a flow list and quoted strings.
+KEPT = """\
+# yaml-language-server: $schema=../schemas/backbone/config.schema.json
+name: "alpha"  # the declared name
+
+# Documentation roots.
+docs:
+  user: 'docs/'
+  internal: tech-docs/
+friction:
+  mode: enforcing
+  # The places, by space.
+  places:
+    # technical
+    - CONTRIBUTING.md
+    - "README.md"
+
+  exclude: [.claude/, 'CHANGELOG.md']
+  surface:
+  - src/**
+  - tests/**
+  # Left out of the measures.
+process:
+  journal:
+    enabled: true
+"""
+
+
+def _changed_lines(before: str, after: str) -> list[str]:
+    """The lines a diff of the two texts removes and adds, in order."""
+    return [
+        line
+        for line in difflib.unified_diff(
+            before.splitlines(keepends=True), after.splitlines(keepends=True), n=0
+        )
+        if line.startswith(("-", "+")) and not line.startswith(("---", "+++"))
+    ]
+
+
+def test_config_set_on_project_kits_own_config_changes_the_one_line(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    repo = make_adopter_repo()
+    before = (REPO_ROOT / pc.PROJECT_CONFIG_RELPATH).read_text(encoding="utf-8")
+    current = YAML(typ="safe").load(before)["friction"]["mode"]
+    flipped = "warning" if current == "enforcing" else "enforcing"
+    path = _write_raw(repo, before)
+
+    result = _run("friction.mode", flipped, "--yes")
+
+    assert result.exit_code == 0, result.output
+    after = path.read_text(encoding="utf-8")
+    assert _changed_lines(before, after) == [f"-  mode: {current}\n", f"+  mode: {flipped}\n"]
+
+
+@pytest.mark.parametrize("newline", ["\n", "\r\n"], ids=["lf", "crlf"])
+def test_config_set_keeps_every_byte_outside_the_key(
+    make_adopter_repo: MakeAdopterRepo, newline: str
+) -> None:
+    repo = make_adopter_repo()
+    path = _config_path(repo)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    before = KEPT.replace("\n", newline).encode("utf-8")
+    path.write_bytes(before)
+
+    result = _run("friction.mode", "warning", "--yes")
+
+    assert result.exit_code == 0, result.output
+    assert path.read_bytes() == before.replace(b"  mode: enforcing", b"  mode: warning")
+
+
+def test_config_set_adds_a_nested_key_the_file_lacks_after_its_siblings(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    repo = make_adopter_repo()
+    path = _write_raw(repo, KEPT)
+
+    assert _run("process.journal.committed", "false", "--yes").exit_code == 0
+    assert _run("repository.default-branch", "main", "--yes").exit_code == 0
+
+    assert path.read_text(encoding="utf-8") == (
+        KEPT + "    committed: false\nrepository:\n  default-branch: main\n"
+    )
+
+
+def test_writing_a_list_replaces_only_the_lines_of_its_key(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    repo = make_adopter_repo()
+    path = _write_raw(repo, KEPT)
+
+    pc.write_config(
+        repo.root,
+        lambda data: pc.set_path(data, ("friction", "surface"), ["src/**", "lib/**"]),
+        consent=YES,
+    )
+
+    # The list keeps its own layout, and the comment after it stays.
+    assert path.read_text(encoding="utf-8") == KEPT.replace("  - tests/**\n", "  - lib/**\n")
+
+
+def test_setting_the_value_already_set_neither_asks_nor_writes(
+    make_adopter_repo: MakeAdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo = make_adopter_repo()
+    path = _write_raw(repo, KEPT)
+    written = path.stat().st_mtime_ns
+    monkeypatch.setattr(pc, "stdin_is_tty", lambda: False)  # a write would need --yes
+
+    result = _run("friction.mode", "enforcing")
+
+    assert result.exit_code == 0, result.output
+    assert "friction.mode is already enforcing; nothing to write." in result.output
+    pc.write_config(repo.root, _set("name", "alpha"), consent=NON_INTERACTIVE)
+    assert path.read_text(encoding="utf-8") == KEPT
+    assert path.stat().st_mtime_ns == written
+
+
+def test_a_change_the_edit_cannot_make_is_refused_and_nothing_written(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    repo = make_adopter_repo()
+    mixed = "name: alpha\r\ndocs:\n  user: docs/\n"
+    path = _config_path(repo)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(mixed.encode("utf-8"))
+
+    with pytest.raises(pc.UnwritableConfig) as excinfo:
+        pc.write_config(repo.root, _set("name", "beta"), consent=YES)
+
+    message = excinfo.value.format_message()
+    assert "mixes line endings" in message
+    assert "Nothing was written" in message
+    assert path.read_bytes() == mixed.encode("utf-8")

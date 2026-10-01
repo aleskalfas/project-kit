@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-01T15:22:48Z
+      at: 2026-10-01T15:15:50Z
       outcome: unchanged
-      unchanged-because: on this branch move-issue passes the state it read to the process engine so each move is journaled from the state it left; the flows this page describes are unchanged by the reviewer-body wording that main brought in
+      unchanged-because: the cli README now says the configuration writer changes only the keys it sets; this map names the cli area's purpose and entry point, which are unchanged
 ---
 
 # project-kit

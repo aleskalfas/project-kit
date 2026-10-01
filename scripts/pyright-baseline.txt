@@ -116,9 +116,9 @@ src/project_kit/process_health.py reportUnknownMemberType 12
 src/project_kit/process_health.py reportUnknownVariableType 12
 src/project_kit/process_journal.py reportUnknownMemberType 3
 src/project_kit/process_journal.py reportUnknownVariableType 1
-src/project_kit/project_config.py reportUnknownArgumentType 10
+src/project_kit/project_config.py reportUnknownArgumentType 9
 src/project_kit/project_config.py reportUnknownMemberType 7
-src/project_kit/project_config.py reportUnknownVariableType 19
+src/project_kit/project_config.py reportUnknownVariableType 16
 src/project_kit/refs.py reportArgumentType 2
 src/project_kit/refs.py reportAssignmentType 1
 src/project_kit/refs.py reportRedeclaration 1
