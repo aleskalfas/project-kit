@@ -527,7 +527,7 @@ pkit pm show-pr 320 --field review-history     # -> every verdict per reviewer, 
 
 #### Lifecycle history — `history` (per [project-management:DEC-049-audit-journal-model])
 
-`pkit pm history <N>` renders issue `#N`'s engine journal — each pkit-governed move with its time, actor, transition and pkit version — and `--check-drift` diffs it against the GitHub timeline's state-label events, flagging each state change the journal has no entry for (exit 3): an out-of-band edit, or a governed move that failed to journal. Both read the journal through the backbone's process engine (`pkit process status --json`), so what they can show depends on the project's journal setting — `process.journal` in `.pkit/project/config.yaml`, off by default (the process README, "The journal — optional audit"):
+`pkit pm history <N>` renders issue `#N`'s engine journal — each pkit-governed move with its time, actor, transition and pkit version, and for a move the forward cascade made, the child's move that caused it — and `--check-drift` diffs it against the GitHub timeline's state-label events, flagging each state change the journal has no entry for (exit 3): an out-of-band edit, or a governed move that failed to journal. Both read the journal through the backbone's process engine (`pkit process status --json`), so what they can show depends on the project's journal setting — `process.journal` in `.pkit/project/config.yaml`, off by default (the process README, "The journal — optional audit"):
 
 | Setting | `history` | `--check-drift` | The canonical audit trail |
 |---|---|---|---|
