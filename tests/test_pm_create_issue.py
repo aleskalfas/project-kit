@@ -418,9 +418,11 @@ def _stage_filing_tree(tmp_path: Path) -> Path:
     return root
 
 
-class _Linked:
-    ok = True
-    detail = ""
+def _linked(ci):
+    """A native link that succeeded, as create-issue reads a link result."""
+    from types import SimpleNamespace
+
+    return SimpleNamespace(ok=True, detail="", outcome=ci.LinkOutcome.LINKED, refused=False)
 
 
 def _file_task(ci, tmp_path, monkeypatch, title: str) -> tuple[int, list[list[str]]]:
@@ -442,7 +444,7 @@ def _file_task(ci, tmp_path, monkeypatch, title: str) -> tuple[int, list[list[st
     monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
     monkeypatch.setattr(ci.subprocess, "run", fake_run)
     monkeypatch.setattr(ci.session_guard, "enforce", lambda **k: True)
-    monkeypatch.setattr(ci, "link_sub_issue", lambda *a, **k: _Linked())
+    monkeypatch.setattr(ci, "link_sub_issue", lambda *a, **k: _linked(ci))
     monkeypatch.setattr(
         ci.sys,
         "argv",
