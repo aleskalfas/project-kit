@@ -20,9 +20,9 @@ pkit:
       artefact:
         - ACT-operator
     revalidated:
-      at: 2026-10-01T16:48:24Z
+      at: 2026-10-01T16:51:12Z
       outcome: unchanged
-      unchanged-because: on this branch the merge mechanic moved into the backbone's pull-request landing module and DEC-026's helper line follows it; the promote-issue sequence main brought in does not change what this page describes
+      unchanged-because: on this branch the merge mechanic moved into the backbone's pull-request landing module; the atomic pin writer main brought in does not change what this page describes
 ---
 
 # UC-010 — Stabilise a Milestone for a release
