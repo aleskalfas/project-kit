@@ -12,8 +12,9 @@ pkit:
         - src/project_kit/rule_sets.py
       record: [COR-001, COR-019, COR-025, COR-051, COR-053]
     revalidated:
-      at: 2026-09-30T21:15:54Z
-      outcome: updated
+      at: 2026-10-01T01:25:23Z
+      outcome: unchanged
+      unchanged-because: on this branch the anchored code changed only in layout (ruff format and the lint fixes), except that pkit refs rename now refuses an empty value with a message rather than a traceback, below this page's level of detail; the documented commands are unchanged
 ---
 
 # Decision records

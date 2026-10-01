@@ -14,9 +14,9 @@ pkit:
         - src/project_kit/workspace.py
       record: [COR-028, PRJ-006, ADR-002, ADR-003, ADR-004, ADR-009, ADR-014, ADR-016, ADR-021, ADR-025, ADR-060]
     revalidated:
-      at: 2026-09-30T21:21:43Z
+      at: 2026-10-01T01:25:08Z
       outcome: unchanged
-      unchanged-because: the ADRs state the same decisions without their dated trailers, and references cite their points instead of their amendments (#860)
+      unchanged-because: "on this branch the anchored code changed only in layout: ruff format and the lint fixes; behaviour and the documented commands are unchanged"
 ---
 
 # Permissions — decision core

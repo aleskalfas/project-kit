@@ -21,9 +21,9 @@ pkit:
       artefact:
         - ACT-operator
     revalidated:
-      at: 2026-09-30T23:42:46Z
+      at: 2026-10-01T01:25:09Z
       outcome: unchanged
-      unchanged-because: on this branch close-milestone's audit line counts open children as still open, not rolled forward, and its warning names edit-issue --milestone to move them; the pm README states that a close moves no open child, and tests pin that a close writes only the Milestone; cutting a release with unfinished work — the milestone's scope, the gate, the guards and the close that lifts the stabilisation — is untouched, so the use case's flow holds
+      unchanged-because: "on this branch the anchored code changed only in layout: ruff format and the lint fixes; behaviour and the documented commands are unchanged"
 ---
 
 # UC-005 — Cut a release while unfinished work remains

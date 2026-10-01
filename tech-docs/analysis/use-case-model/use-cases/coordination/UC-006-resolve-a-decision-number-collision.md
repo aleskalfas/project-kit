@@ -13,9 +13,9 @@ pkit:
         - ACT-clone-session
         - .pkit/decisions/README.md
     revalidated:
-      at: 2026-09-30T22:51:12Z
+      at: 2026-10-01T01:25:10Z
       outcome: unchanged
-      unchanged-because: decisions validate gains a warning of revision narration inside a record, and the decisions README the steps for refining one in place; minting a number and the check that no two records share an id, which this use case describes, are unchanged
+      unchanged-because: "on this branch the anchored code changed only in layout: ruff format and the lint fixes; behaviour and the documented commands are unchanged"
 ---
 
 # UC-006 — Resolve a decision number two clones took

@@ -20,9 +20,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-10-01T00:09:44Z
+      at: 2026-10-01T01:25:11Z
       outcome: unchanged
-      unchanged-because: done-work's change is how the merge gate reads a PR's changed files for the diff-floor reviewers and the refusal when it cannot; resuming a session during a stabilisation, and the guards it meets, did not change
+      unchanged-because: "on this branch the anchored code changed only in layout: ruff format and the lint fixes; behaviour and the documented commands are unchanged"
 ---
 
 # UC-007 — Resume sessions killed during a stabilisation

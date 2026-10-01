@@ -43,9 +43,9 @@ pkit:
         - src/project_kit/environment.py
       record: [COR-004, COR-012, COR-043, COR-048, COR-049, COR-050, COR-054, PRJ-001, PRJ-003, PRJ-004, ADR-033, ADR-039, ADR-049, ADR-058, ADR-059]
     revalidated:
-      at: 2026-09-30T23:42:09Z
+      at: 2026-10-01T01:25:07Z
       outcome: unchanged
-      unchanged-because: on this branch src/project_kit/permissions.py changes only comments that cite the records governing the OS-box probe and the sandbox writer, and ADR-033 folds its trailer into its body; every command the CLI README documents behaves as before
+      unchanged-because: "on this branch the anchored code changed only in layout: ruff format and the lint fixes; behaviour and the documented commands are unchanged"
 ---
 
 # Command-line interface
