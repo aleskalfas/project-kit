@@ -18,6 +18,8 @@ from typing import Any
 
 import pytest
 
+from tests import pull_request_backbone
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS_DIR = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
 
@@ -67,6 +69,14 @@ def test_both_verbs_compose_the_shared_mechanic(lib) -> None:
 # --- squash_merge ---------------------------------------------------------
 
 
+def _backbone_gh(monkeypatch, lib, fake_gh_run) -> None:
+    """The merge requests are the backbone's (`pkit pull-request`): run it in this
+    process, its `gh` answered by `fake_gh_run(args, config)`."""
+    pull_request_backbone.in_process(
+        monkeypatch, lib.merge_queue, gh=lambda argv: fake_gh_run(list(argv), {})
+    )
+
+
 def test_squash_merge_has_no_local_delete_branch_half(lib, monkeypatch) -> None:
     """The merge command carries no `--delete-branch`, so gh never needs the
     working tree's current branch and the remote merge cannot be failed by a
@@ -77,7 +87,7 @@ def test_squash_merge_has_no_local_delete_branch_half(lib, monkeypatch) -> None:
         captured.append(list(args))
         return _ok(args)
 
-    monkeypatch.setattr(lib, "gh_run", fake_gh_run)
+    _backbone_gh(monkeypatch, lib, fake_gh_run)
     assert lib.squash_merge(42, pr_title="fix: x", admin=False, config={}) is True
     assert captured[0][:4] == ["gh", "pr", "merge", "42"]
     assert "--squash" in captured[0]
@@ -98,7 +108,7 @@ def test_squash_merge_uses_pr_title_as_subject(lib, monkeypatch) -> None:
         captured.append(list(args))
         return _ok(args)
 
-    monkeypatch.setattr(lib, "gh_run", fake_gh_run)
+    _backbone_gh(monkeypatch, lib, fake_gh_run)
     lib.squash_merge(32, pr_title=pr_title, admin=False, config={})
     argv = captured[0]
     assert "--subject" in argv
@@ -116,7 +126,7 @@ def test_squash_merge_pins_the_checked_head(lib, monkeypatch) -> None:
         captured.append(list(args))
         return _ok(args)
 
-    monkeypatch.setattr(lib, "gh_run", fake_gh_run)
+    _backbone_gh(monkeypatch, lib, fake_gh_run)
     lib.squash_merge(42, pr_title="fix: x", admin=False, config={}, head_oid="a" * 40)
     lib.squash_merge(42, pr_title="fix: x", admin=False, config={})
     pinned, unpinned = captured
@@ -131,7 +141,7 @@ def test_squash_merge_passes_admin(lib, monkeypatch) -> None:
         captured.append(list(args))
         return _ok(args)
 
-    monkeypatch.setattr(lib, "gh_run", fake_gh_run)
+    _backbone_gh(monkeypatch, lib, fake_gh_run)
     lib.squash_merge(42, pr_title="fix: x", admin=True, config={})
     assert captured[0][-1] == "--admin"
 
@@ -151,7 +161,7 @@ def test_enqueue_is_auto_pinned_to_the_checked_head_and_nothing_else(lib, monkey
         captured.append(list(args))
         return _ok(args)
 
-    monkeypatch.setattr(lib, "gh_run", fake_gh_run)
+    _backbone_gh(monkeypatch, lib, fake_gh_run)
     assert lib.enqueue(42, config={}, head_oid="a" * 40) is True
     assert captured[0] == ["gh", "pr", "merge", "42", "--auto", "--match-head-commit", "a" * 40]
 
@@ -160,28 +170,29 @@ def test_a_refused_enqueue_reports_gh_and_returns_false(lib, monkeypatch, capsys
     def refusing(args, config, **kwargs):
         return subprocess.CompletedProcess(args, 1, stdout="", stderr="Head sha didn't match")
 
-    monkeypatch.setattr(lib, "gh_run", refusing)
+    _backbone_gh(monkeypatch, lib, refusing)
     assert lib.enqueue(42, config={}) is False
     assert "Head sha didn't match" in capsys.readouterr().err
 
 
-def test_squash_merge_threads_config_to_gh_run(lib, monkeypatch) -> None:
-    """The adopter config reaches gh_run so DEC-023's host pinning applies."""
+def test_squash_merge_threads_config_to_the_backbone(lib, monkeypatch) -> None:
+    """The adopter config reaches the backbone's request, which runs `pkit
+    pull-request` in the `gh` environment the config pins (DEC-023)."""
     seen: list[dict] = []
 
-    def fake_gh_run(args, config, **kwargs):
+    def request(args, config):
         seen.append(config)
-        return _ok(args)
+        return lib.merge_queue.Outcome(True, 0, "")
 
-    monkeypatch.setattr(lib, "gh_run", fake_gh_run)
+    monkeypatch.setattr(lib.merge_queue, "request", request)
     lib.squash_merge(42, pr_title="fix: x", admin=False, config={"gh": {"host": "ghe.example"}})
     assert seen == [{"gh": {"host": "ghe.example"}}]
 
 
 def test_squash_merge_reports_gh_failure(lib, monkeypatch, capsys) -> None:
-    monkeypatch.setattr(
+    _backbone_gh(
+        monkeypatch,
         lib,
-        "gh_run",
         lambda args, config, **kw: subprocess.CompletedProcess(
             args=args,
             returncode=1,
@@ -195,7 +206,7 @@ def test_squash_merge_reports_gh_failure(lib, monkeypatch, capsys) -> None:
 
 
 def test_squash_merge_without_pr_number_is_a_failure(lib, monkeypatch, capsys) -> None:
-    monkeypatch.setattr(lib, "gh_run", lambda *a, **k: pytest.fail("gh must not run"))
+    _backbone_gh(monkeypatch, lib, lambda *a, **k: pytest.fail("gh must not run"))
     assert lib.squash_merge(None, pr_title="fix: x", admin=False, config={}) is False
     assert "no PR number" in capsys.readouterr().err
 
@@ -204,7 +215,7 @@ def test_squash_merge_reports_gh_missing(lib, monkeypatch, capsys) -> None:
     def missing(*a, **k):
         raise FileNotFoundError("gh")
 
-    monkeypatch.setattr(lib, "gh_run", missing)
+    _backbone_gh(monkeypatch, lib, missing)
     assert lib.squash_merge(42, pr_title="fix: x", admin=False, config={}) is False
     assert "`gh` not on PATH" in capsys.readouterr().err
 
@@ -507,7 +518,7 @@ def _reading(lib, **fields: Any) -> Any:
         "pr_state": "OPEN",
         "head_oid": "sha-head",
     }
-    return lib.merge_queue.Reading(**{**base, **fields})
+    return pull_request_backbone.reading(lib.merge_queue, **{**base, **fields})
 
 
 def _defaults(monkeypatch, lib, title="PR_TITLE", message="PR_BODY") -> list[int]:
@@ -593,7 +604,8 @@ def test_a_head_the_queue_dropped_is_not_enqueued_again_without_force(lib, monke
 
 class _Queue:
     """`merge_queue.read` answering each call with the next reading, the last
-    repeated, and `gh_run` recording every command."""
+    repeated — the backbone's own readings, in the wait and the dequeue, too —
+    and the backbone's `gh` recording every command."""
 
     def __init__(self, lib, monkeypatch, readings: list[Any], *, gh_fails: bool = False) -> None:
         self.readings = list(readings)
@@ -602,13 +614,10 @@ class _Queue:
         monkeypatch.setattr(lib.merge_queue, "read", self.read)
         _defaults(monkeypatch, lib)
 
-        def fake_gh_run(args, config, **kwargs):
+        def fake_gh(args):
             self.commands.append(list(args))
             code = 1 if gh_fails else 0
             return subprocess.CompletedProcess(args, code, stdout="", stderr="refused")
-
-        monkeypatch.setattr(lib, "gh_run", fake_gh_run)
-        import functools
 
         now = [0.0]
 
@@ -616,10 +625,13 @@ class _Queue:
             self.sleeps.append(seconds)
             now[0] += seconds
 
-        monkeypatch.setattr(
+        pull_request_backbone.in_process(
+            monkeypatch,
             lib.merge_queue,
-            "wait_for_merge",
-            functools.partial(lib.merge_queue.wait_for_merge, sleep=sleep, clock=lambda: now[0]),
+            gh=fake_gh,
+            read=self.read,
+            sleep=sleep,
+            clock=lambda: now[0],
         )
 
     def read(self, pr_number, config):
@@ -778,7 +790,8 @@ def test_a_push_after_the_enqueue_takes_the_pr_out_of_the_queue(
     nothing), else by cancelling the auto-merge that would put it in."""
     moved = _reading(lib, head_oid="sha-pushed", **queued)
     out = _reading(lib, head_oid="sha-pushed")
-    queue = _Queue(lib, monkeypatch, [_reading(lib, **queued), moved, out])
+    # The wait sees the head move; the dequeue reads the PR before and after.
+    queue = _Queue(lib, monkeypatch, [_reading(lib, **queued), moved, moved, out])
     landing = lib.land(_request(lib), {})
     assert landing.outcome == lib.HEAD_MOVED
     assert "head moved from sha-hea to sha-pus after its gates checked it" in landing.message

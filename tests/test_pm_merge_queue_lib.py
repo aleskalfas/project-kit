@@ -1,23 +1,27 @@
-"""Tests for `_lib/merge_queue.py` — where a PR stands with its base branch's
-merge queue (#1011).
+"""Tests for `_lib/merge_queue.py` — pm's reader of the backbone's pull-request
+noun (#1011, #1200).
 
-Covers the one GraphQL read (what it asks, how each answer reads, an API that
-knows no merge queues against one that lacks only some other field, a failed
-read), what the queue's last word on a PR says about its head, the
-repository's squash-commit defaults, and the bounded wait for the queue's
-merge (merged, left, closed, head moved, timed out — on a fixed deadline or
-the queue's own estimate), on a fake `gh_run` and a fake clock.
+The reading, the squash-commit defaults and the wait are the backbone's
+(`pkit pull-request`, `src/project_kit/pull_request_landing.py`, tested in
+`test_pull_request_landing.py`); pm asks for them by subprocess and reads the
+JSON documents. These tests run the real subprocess against a fake `pkit` on
+PATH: what pm asks, with the `gh` environment its config pins; how each
+document reads; a wait's stream handed on reading by reading; and every way the
+backbone can fail to answer, each an `Unreadable` with its cause. And pm's
+statement of the backbone's wait limits is held equal to the backbone's.
 """
 
 from __future__ import annotations
 
 import json
-import subprocess
+import os
 import sys
 from pathlib import Path
 from typing import Any
 
 import pytest
+
+from project_kit import pull_request_landing as landing
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS_DIR = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
@@ -31,438 +35,290 @@ def mq():
     return merge_queue
 
 
-def _answer(pr: dict[str, Any] | None) -> str:
-    """The GraphQL answer naming `pr` as the pull request."""
-    return json.dumps({"data": {"repository": {"pullRequest": pr}}})
+# A `pkit` that logs how it was asked and answers what the test put in
+# FAKE_PKIT_ANSWER: its `stdout`, `stderr` and exit `code`.
+_FAKE_PKIT = """\
+import json, os, sys
+with open(os.environ["FAKE_PKIT_LOG"], "a", encoding="utf-8") as log:
+    log.write(json.dumps({"argv": sys.argv[1:], "gh_host": os.environ.get("GH_HOST")}) + "\\n")
+with open(os.environ["FAKE_PKIT_ANSWER"], encoding="utf-8") as fh:
+    answer = json.load(fh)
+sys.stdout.write(answer.get("stdout", ""))
+sys.stderr.write(answer.get("stderr", ""))
+sys.exit(answer.get("code", 0))
+"""
 
 
-def _gh(monkeypatch, mq, answers: list[dict[str, Any]], calls: list[list[str]] | None = None):
-    """`gh_run` answering each read with the next pull request of `answers`,
-    the last one repeated once they run out."""
-    remaining = list(answers)
+class _Pkit:
+    """The fake `pkit` on PATH: what it answers, and how it was asked."""
 
-    def fake_gh_run(args, config, **kwargs):
-        if calls is not None:
-            calls.append(list(args))
-        pr = remaining.pop(0) if len(remaining) > 1 else remaining[0]
-        return subprocess.CompletedProcess(args, 0, stdout=_answer(pr), stderr="")
+    def __init__(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        bin_dir = tmp_path / "bin"
+        bin_dir.mkdir()
+        script = bin_dir / "pkit"
+        script.write_text(f"#!{sys.executable}\n{_FAKE_PKIT}", encoding="utf-8")
+        script.chmod(0o755)
+        self.answer_file = tmp_path / "answer.json"
+        self.log = tmp_path / "pkit.log"
+        self.log.touch()
+        monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}")
+        monkeypatch.setenv("FAKE_PKIT_ANSWER", str(self.answer_file))
+        monkeypatch.setenv("FAKE_PKIT_LOG", str(self.log))
+        monkeypatch.delenv("GH_HOST", raising=False)
+        self.answers(stdout="")
 
-    monkeypatch.setattr(mq, "gh_run", fake_gh_run)
+    def answers(self, *documents: dict[str, Any], stdout: str | None = None, **rest: Any) -> None:
+        text = stdout if stdout is not None else "".join(json.dumps(d) + "\n" for d in documents)
+        self.answer_file.write_text(json.dumps({"stdout": text, **rest}), encoding="utf-8")
 
-
-def _unknown(field: str, on_type: str = "PullRequest") -> subprocess.CompletedProcess[str]:
-    error = f"Field '{field}' doesn't exist on type '{on_type}'"
-    return subprocess.CompletedProcess(
-        [], 1, stdout=json.dumps({"errors": [{"message": error}]}), stderr=f"gh: {error}"
-    )
-
-
-def _query(args: list[str]) -> str:
-    return next(a for a in args if a.startswith("query="))
-
-
-_QUEUED = {
-    "id": "PR_node",
-    "state": "OPEN",
-    "mergedAt": None,
-    "headRefOid": "sha-head",
-    "isMergeQueueEnabled": True,
-    "isInMergeQueue": True,
-    "mergeQueue": {"configuration": {"mergeMethod": "SQUASH"}},
-    "mergeQueueEntry": {"position": 2, "state": "AWAITING_CHECKS", "estimatedTimeToMerge": 250},
-    "autoMergeRequest": {"enabledAt": "2026-10-01T10:00:00Z"},
-    "timelineItems": {"nodes": [{"__typename": "AddedToMergeQueueEvent"}]},
-}
-_OUT = {**_QUEUED, "isInMergeQueue": False, "mergeQueueEntry": None, "autoMergeRequest": None}
-_MERGED = {**_OUT, "state": "MERGED", "mergedAt": "2026-10-01T10:12:00Z"}
-_NO_QUEUE = {**_OUT, "isMergeQueueEnabled": False, "mergeQueue": None, "timelineItems": None}
+    def asked(self) -> list[dict[str, Any]]:
+        return [json.loads(line) for line in self.log.read_text(encoding="utf-8").splitlines()]
 
 
-def _dropped(at_head: str | None, reason: str | None = "failed checks") -> dict[str, Any]:
-    removal: dict[str, Any] = {
-        "__typename": "RemovedFromMergeQueueEvent",
-        "createdAt": "2026-10-01T10:05:00Z",
-        "reason": reason,
-        "beforeCommit": {"oid": at_head} if at_head is not None else None,
-    }
+@pytest.fixture
+def pkit(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> _Pkit:
+    return _Pkit(tmp_path, monkeypatch)
+
+
+_QUEUED = landing.Reading(
+    has_queue=True,
+    merge_method="SQUASH",
+    pr_id="PR_node",
+    pr_state="OPEN",
+    head_oid="sha-head",
+    in_queue=True,
+    position=2,
+    entry_state="AWAITING_CHECKS",
+    eta_seconds=250,
+    waiting_to_enter=True,
+    ever_queued=True,
+)
+_MERGED = landing.Reading(
+    has_queue=True, merge_method="SQUASH", pr_state="MERGED", merged_at="t", head_oid="sha-head"
+)
+
+
+def _read_document(reading: landing.Reading | None, unreadable: str | None = None) -> Any:
     return {
-        **_OUT,
-        "timelineItems": {"nodes": [{"__typename": "AddedToMergeQueueEvent"}, removal]},
+        "schema_version": 1,
+        "pull_request": 496,
+        "reading": reading.as_json() if reading is not None else None,
+        "unreadable": unreadable,
     }
 
 
-# --- read -----------------------------------------------------------------
+# --- the reading -------------------------------------------------------------
 
 
-def test_the_read_asks_about_the_pr_in_the_working_directorys_repository(mq, monkeypatch) -> None:
-    calls: list[list[str]] = []
-    _gh(monkeypatch, mq, [_QUEUED], calls)
-    mq.read(496, {})
-    argv = calls[0]
-    assert argv[:3] == ["gh", "api", "graphql"]
-    assert {"owner={owner}", "repo={repo}", "number=496"} <= set(argv)
-    query = _query(argv)
-    for field in (
-        "headRefOid",
-        "isMergeQueueEnabled",
-        "mergeQueueEntry",
-        "mergeMethod",
-        "autoMergeRequest",
-        "REMOVED_FROM_MERGE_QUEUE_EVENT",
-        "beforeCommit",
-    ):
-        assert field in query
+def test_the_reading_asks_the_backbone_with_the_pinned_gh_host(mq, pkit) -> None:
+    """pm asks `pkit pull-request read` for the PR, with the `gh` environment
+    the adopter's config pins (DEC-023), so the backbone's `gh` reaches the
+    configured host."""
+    pkit.answers(_read_document(_QUEUED))
+    mq.read(496, {"gh": {"host": "ghe.example"}})
+    assert pkit.asked() == [
+        {"argv": ["pull-request", "read", "496", "--json"], "gh_host": "ghe.example"}
+    ]
 
 
-def test_a_queued_pr_reads_its_position_state_time_to_merge_and_head(mq, monkeypatch) -> None:
-    _gh(monkeypatch, mq, [_QUEUED])
+def test_the_reading_is_what_the_backbone_concludes(mq, pkit) -> None:
+    """Every field and every conclusion — merged, queued, the phrase — is read
+    from the backbone's document; pm derives none of it again."""
+    pkit.answers(_read_document(_QUEUED))
     reading = mq.read(496, {})
-    assert reading.has_queue and reading.squashes and reading.queued
+    assert reading.has_queue and reading.squashes and reading.queued and not reading.merged
     assert (reading.position, reading.entry_state, reading.eta_seconds) == (
         2,
         "AWAITING_CHECKS",
         250,
     )
     assert (reading.pr_id, reading.head_oid) == ("PR_node", "sha-head")
-    assert reading.ever_queued and reading.removal is None
-    assert not reading.merged
-    assert reading.describe() == "position 2 in the queue, awaiting checks, about 4 min to merge"
+    assert reading.ever_queued and reading.removal is None and not reading.dropped_head
+    assert reading.describe() == _QUEUED.describe()
 
 
-@pytest.mark.parametrize(
-    ("pr", "described"),
-    [
-        (_MERGED, "merged at 2026-10-01T10:12:00Z"),
-        (_OUT, "not in the queue"),
-        ({**_OUT, "state": "CLOSED"}, "closed without merging"),
-        (
-            {**_OUT, "autoMergeRequest": {"enabledAt": "x"}},
-            "waiting for its required checks before it enters the queue",
-        ),
-        (
-            {**_QUEUED, "mergeQueueEntry": {"position": 1, "state": "MERGEABLE"}},
-            "position 1 in the queue, mergeable",
-        ),
-        (
-            {
-                **_QUEUED,
-                "mergeQueueEntry": {**_QUEUED["mergeQueueEntry"], "estimatedTimeToMerge": 20},
-            },
-            "position 2 in the queue, awaiting checks, under a minute to merge",
-        ),
-    ],
-    ids=["merged", "out", "closed", "waiting-to-enter", "no-eta", "under-a-minute"],
-)
-def test_each_answer_reads_as_one_phrase(mq, monkeypatch, pr, described) -> None:
-    _gh(monkeypatch, mq, [pr])
-    assert mq.read(496, {}).describe() == described
-
-
-def test_a_base_without_a_queue_reads_as_none(mq, monkeypatch) -> None:
-    _gh(monkeypatch, mq, [_NO_QUEUE])
-    reading = mq.read(496, {})
-    assert not reading.has_queue
-    assert reading.merge_method == ""
-    assert not reading.ever_queued
-
-
-def test_a_queue_that_does_not_squash_is_reported(mq, monkeypatch) -> None:
-    _gh(monkeypatch, mq, [{**_QUEUED, "mergeQueue": {"configuration": {"mergeMethod": "MERGE"}}}])
-    reading = mq.read(496, {})
-    assert reading.has_queue and not reading.squashes
-    assert reading.merge_method == "MERGE"
-
-
-def test_an_api_without_merge_queues_answers_that_there_is_none(mq, monkeypatch) -> None:
-    """An older GitHub Enterprise Server knows no `isMergeQueueEnabled`: asked
-    for it alone, it still does not, so its bases have no queue, and the PR is
-    read without the queue's fields — its state and head stay known."""
-    calls: list[list[str]] = []
-
-    def fake_gh_run(args, config, **kwargs):
-        calls.append(list(args))
-        query = _query(args)
-        if "isMergeQueueEnabled" in query:
-            return _unknown("isMergeQueueEnabled")
-        pr = {"id": "PR_node", "state": "MERGED", "mergedAt": "t", "headRefOid": "sha-head"}
-        return subprocess.CompletedProcess(args, 0, stdout=_answer(pr), stderr="")
-
-    monkeypatch.setattr(mq, "gh_run", fake_gh_run)
-    reading = mq.read(496, {})
-    assert not reading.has_queue
-    assert (reading.pr_state, reading.head_oid, reading.merged) == ("MERGED", "sha-head", True)
-    assert len(calls) == 3
-    probe = _query(calls[1])
-    assert "isMergeQueueEnabled" in probe and "mergeQueueEntry" not in probe
-    assert "headRefOid" not in probe
-
-
-def test_a_host_with_queues_that_lacks_another_field_is_unreadable(mq, monkeypatch) -> None:
-    """Only `isMergeQueueEnabled` itself unknown means "no queue": a host that
-    knows it, but not some field the read also asks for, cannot say where the
-    PR stands, so nothing merges on a guess."""
-
-    def fake_gh_run(args, config, **kwargs):
-        query = _query(args)
-        if "estimatedTimeToMerge" in query:
-            return _unknown("estimatedTimeToMerge", "MergeQueueEntry")
-        return subprocess.CompletedProcess(
-            args, 0, stdout=_answer({"isMergeQueueEnabled": True}), stderr=""
-        )
-
-    monkeypatch.setattr(mq, "gh_run", fake_gh_run)
-    with pytest.raises(mq.Unreadable, match="estimatedTimeToMerge"):
-        mq.read(496, {})
-
-
-def test_a_probe_that_fails_another_way_is_unreadable(mq, monkeypatch) -> None:
-    def fake_gh_run(args, config, **kwargs):
-        if "mergeQueueEntry" in _query(args):
-            return _unknown("autoMergeRequest")
-        return subprocess.CompletedProcess(args, 1, stdout="", stderr="HTTP 502")
-
-    monkeypatch.setattr(mq, "gh_run", fake_gh_run)
-    with pytest.raises(mq.Unreadable, match="HTTP 502"):
-        mq.read(496, {})
-
-
-@pytest.mark.parametrize(
-    ("returncode", "stdout", "stderr", "reason"),
-    [
-        (1, "", "HTTP 502: Bad Gateway", "HTTP 502: Bad Gateway"),
-        (0, json.dumps({"errors": [{"message": "rate limited"}]}), "", "rate limited"),
-        (0, _answer(None), "", "no pull request #496"),
-        (0, "not json", "", "no pull request #496"),
-    ],
-    ids=["gh-failed", "graphql-error", "no-pull-request", "not-json"],
-)
-def test_a_failed_read_is_unreadable_with_its_reason(
-    mq, monkeypatch, returncode, stdout, stderr, reason
-) -> None:
-    def fake_gh_run(args, config, **kwargs):
-        return subprocess.CompletedProcess(args, returncode, stdout=stdout, stderr=stderr)
-
-    monkeypatch.setattr(mq, "gh_run", fake_gh_run)
-    with pytest.raises(mq.Unreadable, match=reason):
-        mq.read(496, {})
-
-
-def test_gh_missing_is_unreadable(mq, monkeypatch) -> None:
-    def missing(args, config, **kwargs):
-        raise FileNotFoundError("gh")
-
-    monkeypatch.setattr(mq, "gh_run", missing)
-    with pytest.raises(mq.Unreadable, match="not on PATH"):
-        mq.read(496, {})
-
-
-# --- the queue's last word on the PR ----------------------------------------
-
-
-def test_a_pr_dropped_at_its_current_head_reads_as_a_dropped_head(mq, monkeypatch) -> None:
-    _gh(monkeypatch, mq, [_dropped("sha-head")])
+def test_a_dropped_head_and_its_removal_are_read(mq, pkit) -> None:
+    dropped = landing.Reading(
+        has_queue=True,
+        merge_method="SQUASH",
+        pr_state="OPEN",
+        head_oid="sha-head",
+        ever_queued=True,
+        removal=landing.Removal("2026-10-01T10:05:00Z", "failed checks", "sha-head"),
+    )
+    pkit.answers(_read_document(dropped))
     reading = mq.read(496, {})
     assert reading.dropped_head
-    assert reading.removal == mq.Removal(
-        at="2026-10-01T10:05:00Z", reason="failed checks", head_oid="sha-head"
+    assert reading.removal == mq.Removal("2026-10-01T10:05:00Z", "failed checks", "sha-head")
+
+
+def test_github_unreadable_is_unreadable_with_the_backbones_reason(mq, pkit) -> None:
+    pkit.answers(_read_document(None, "HTTP 502: Bad Gateway"), code=1)
+    with pytest.raises(mq.Unreadable, match="HTTP 502: Bad Gateway"):
+        mq.read(496, {})
+
+
+def test_the_squash_commit_defaults_are_the_backbones(mq, pkit) -> None:
+    pkit.answers(
+        {"schema_version": 1, "title": "PR_TITLE", "message": "PR_BODY", "unreadable": None}
     )
-
-
-@pytest.mark.parametrize(
-    ("pr", "dropped"),
-    [
-        (_dropped("sha-older"), False),
-        (_dropped(None, reason=None), True),
-        ({**_dropped("sha-head"), "autoMergeRequest": {"enabledAt": "x"}}, False),
-        (
-            {
-                **_OUT,
-                "timelineItems": {
-                    "nodes": [
-                        *_dropped("sha-head")["timelineItems"]["nodes"],
-                        {"__typename": "AddedToMergeQueueEvent"},
-                    ]
-                },
-            },
-            False,
-        ),
-    ],
-    ids=["an-older-head", "no-head-named", "queued-again", "added-since"],
-)
-def test_only_the_queues_last_word_at_this_head_is_a_dropped_head(
-    mq, monkeypatch, pr, dropped
-) -> None:
-    """New commits since the drop are a new head; a removal that names no head
-    is taken as this one's; a PR queued, or added, since is not dropped."""
-    _gh(monkeypatch, mq, [pr])
-    assert mq.read(496, {}).dropped_head is dropped
-
-
-# --- the repository's squash-commit defaults ----------------------------------
-
-
-def test_the_squash_commit_defaults_are_read_from_the_repository(mq, monkeypatch) -> None:
-    calls: list[list[str]] = []
-
-    def fake_gh_run(args, config, **kwargs):
-        calls.append(list(args))
-        answer = {"squash_merge_commit_title": "PR_TITLE", "squash_merge_commit_message": "PR_BODY"}
-        return subprocess.CompletedProcess(args, 0, stdout=json.dumps(answer), stderr="")
-
-    monkeypatch.setattr(mq, "gh_run", fake_gh_run)
     assert mq.squash_commit_defaults({}) == ("PR_TITLE", "PR_BODY")
-    assert calls == [["gh", "api", "repos/{owner}/{repo}"]]
+    assert pkit.asked()[0]["argv"] == ["pull-request", "squash-defaults", "--json"]
 
 
-@pytest.mark.parametrize(
-    ("returncode", "stdout", "reason"),
-    [
-        (1, "", "HTTP 404"),
-        (0, json.dumps({"name": "project-kit"}), "squash-commit defaults are not in the answer"),
-        (0, "not json", "names no repository"),
-    ],
-    ids=["gh-failed", "not-in-the-answer", "not-json"],
-)
-def test_squash_commit_defaults_that_cannot_be_read_are_unreadable(
-    mq, monkeypatch, returncode, stdout, reason
-) -> None:
-    def fake_gh_run(args, config, **kwargs):
-        return subprocess.CompletedProcess(args, returncode, stdout=stdout, stderr="HTTP 404")
-
-    monkeypatch.setattr(mq, "gh_run", fake_gh_run)
-    with pytest.raises(mq.Unreadable, match=reason):
+def test_squash_commit_defaults_that_cannot_be_read_are_unreadable(mq, pkit) -> None:
+    pkit.answers(
+        {"schema_version": 1, "title": None, "message": None, "unreadable": "not in the answer"},
+        code=1,
+    )
+    with pytest.raises(mq.Unreadable, match="not in the answer"):
         mq.squash_commit_defaults({})
 
 
-# --- wait_for_merge ---------------------------------------------------------
+# --- when the backbone does not answer ------------------------------------------
 
 
-class _Clock:
-    """A clock the wait's sleeps advance, so no test sleeps."""
+@pytest.mark.parametrize(
+    ("answer", "cause"),
+    [
+        (
+            {"stdout": "", "stderr": "Error: No such command 'pull-request'.\n", "code": 2},
+            "the installed backbone predates it — upgrade it",
+        ),
+        ({"stdout": "not json\n"}, "its answer is not JSON"),
+        (
+            {"stdout": json.dumps({"schema_version": 2}) + "\n"},
+            "answered schema_version 2; pm reads 1",
+        ),
+        (
+            {"stdout": "", "stderr": "boom\nTraceback: it broke\n", "code": 1},
+            "exited 1: Traceback: it broke",
+        ),
+    ],
+    ids=["predates", "not-json", "other-version", "failed"],
+)
+def test_a_backbone_that_does_not_answer_is_unreadable_with_the_cause(
+    mq, pkit, answer, cause
+) -> None:
+    """Nothing merges on a guess: a backbone that cannot answer makes the
+    reading unreadable, naming why."""
+    pkit.answers(**answer)
+    with pytest.raises(mq.Unreadable, match=cause):
+        mq.read(496, {})
 
-    def __init__(self) -> None:
-        self.now = 0.0
-        self.sleeps: list[float] = []
 
-    def __call__(self) -> float:
-        return self.now
-
-    def sleep(self, seconds: float) -> None:
-        self.sleeps.append(seconds)
-        self.now += seconds
+def test_no_pkit_on_path_is_unreadable(mq, monkeypatch, tmp_path) -> None:
+    monkeypatch.setenv("PATH", str(tmp_path))
+    with pytest.raises(mq.Unreadable, match="`pkit` is not on PATH"):
+        mq.read(496, {})
 
 
-def _wait(mq, monkeypatch, answers, *, timeout: float | None = 300.0, head_oid: str = ""):
-    _gh(monkeypatch, mq, answers)
-    clock = _Clock()
+# --- the merge requests -----------------------------------------------------------
+
+
+def test_a_request_reads_what_it_came_to(mq, pkit) -> None:
+    pkit.answers(
+        {
+            "schema_version": 1,
+            "pull_request": 42,
+            "accepted": False,
+            "exit_code": 1,
+            "reason": "Head sha didn't match",
+        },
+        code=1,
+    )
+    outcome = mq.request(["enqueue", "42", "--head", "sha"], {})
+    assert outcome == mq.Outcome(False, 1, "Head sha didn't match")
+    assert pkit.asked()[0]["argv"] == ["pull-request", "enqueue", "42", "--head", "sha", "--json"]
+
+
+# --- the wait -------------------------------------------------------------------------
+
+
+def _event(reading: landing.Reading) -> dict[str, Any]:
+    return {
+        "schema_version": 1,
+        "pull_request": 496,
+        "event": "reading",
+        "reading": reading.as_json(),
+    }
+
+
+def _end(ended: str | None, reading: landing.Reading | None, unreadable: str | None = None) -> Any:
+    return {
+        "schema_version": 1,
+        "pull_request": 496,
+        "event": "end",
+        "ended": ended,
+        "reading": reading.as_json() if reading is not None else None,
+        "unreadable": unreadable,
+    }
+
+
+def test_the_wait_hands_on_each_reading_and_ends_as_the_backbone_says(mq, pkit) -> None:
+    pkit.answers(_event(_QUEUED), _event(_MERGED), _end("merged", _MERGED))
     seen: list[str] = []
     wait = mq.wait_for_merge(
         496,
         {},
-        timeout_seconds=timeout,
+        timeout_seconds=1200,
         on_change=lambda r: seen.append(r.describe()),
-        head_oid=head_oid,
-        interval_seconds=15,
-        sleep=clock.sleep,
-        clock=clock,
+        head_oid="sha-head",
     )
-    return wait, seen, clock
-
-
-def test_the_wait_ends_when_the_queue_merges_and_reports_each_change(mq, monkeypatch) -> None:
-    second = {**_QUEUED, "mergeQueueEntry": {"position": 1, "state": "MERGEABLE"}}
-    wait, seen, clock = _wait(mq, monkeypatch, [_QUEUED, _QUEUED, second, _MERGED])
     assert wait.ended == mq.MERGED and wait.reading.merged
-    assert seen == [
-        "position 2 in the queue, awaiting checks, about 4 min to merge",
-        "position 1 in the queue, mergeable",
-        "merged at 2026-10-01T10:12:00Z",
+    assert seen == [_QUEUED.describe(), "merged at t"]
+    assert pkit.asked()[0]["argv"] == [
+        "pull-request",
+        "wait",
+        "496",
+        "--head",
+        "sha-head",
+        "--seconds",
+        "1200.0",
+        "--json",
     ]
-    assert clock.sleeps == [15, 15, 15]
 
 
-def test_the_wait_ends_with_the_pr_still_queued_when_the_time_runs_out(mq, monkeypatch) -> None:
-    wait, seen, clock = _wait(mq, monkeypatch, [_QUEUED], timeout=40)
-    assert wait.ended == mq.STILL_QUEUED and wait.reading.queued
-    assert clock.sleeps == [15, 15, 10]
-    assert len(seen) == 1
-
-
-def test_a_timeout_of_zero_reads_once(mq, monkeypatch) -> None:
-    wait, seen, clock = _wait(mq, monkeypatch, [_QUEUED, _MERGED], timeout=0)
+def test_a_wait_on_the_queues_estimate_names_no_time(mq, pkit) -> None:
+    pkit.answers(_end("queued", _QUEUED), code=4)
+    wait = mq.wait_for_merge(496, {}, timeout_seconds=None, on_change=lambda r: None)
     assert wait.ended == mq.STILL_QUEUED
-    assert len(seen) == 1
-    assert clock.sleeps == []
+    assert pkit.asked()[0]["argv"] == ["pull-request", "wait", "496", "--json"]
 
 
-def test_a_pr_seen_out_of_the_queue_twice_running_has_left_it(mq, monkeypatch) -> None:
-    """One reading out of the queue may be taken just as GitHub takes the PR
-    in; two running are a PR the queue dropped."""
-    wait, _, clock = _wait(mq, monkeypatch, [_QUEUED, _OUT, _QUEUED, _OUT, _OUT])
-    assert wait.ended == mq.LEFT
-    assert not wait.reading.queued and not wait.reading.merged
-    assert len(clock.sleeps) == 4
-
-
-@pytest.mark.parametrize(
-    ("answers", "ended"),
-    [([_OUT, _QUEUED], "queued"), ([_OUT, _OUT], "left"), ([_OUT, _MERGED], "merged")],
-    ids=["back-in", "out-again", "merged"],
-)
-def test_one_reading_out_at_the_deadline_is_followed_by_one_more(
-    mq, monkeypatch, answers, ended
-) -> None:
-    """The PR is never declared out of the queue on a single reading, not even
-    when the time has run out: one more reading, after the interval, decides."""
-    wait, _, clock = _wait(mq, monkeypatch, answers, timeout=0)
-    assert wait.ended == ended
-    assert clock.sleeps == [15]
-
-
-def test_a_closed_pr_ends_the_wait_at_once(mq, monkeypatch) -> None:
-    wait, _, clock = _wait(mq, monkeypatch, [_QUEUED, {**_OUT, "state": "CLOSED"}])
-    assert wait.ended == mq.LEFT and wait.reading.pr_state == "CLOSED"
-    assert clock.sleeps == [15]
-
-
-def test_a_head_that_moves_ends_the_wait_at_once(mq, monkeypatch) -> None:
-    """Commits pushed after the gates checked the head must not merge: the wait
-    hands the caller the moved head instead of waiting for the merge."""
-    moved = {**_QUEUED, "headRefOid": "sha-pushed"}
-    wait, _, clock = _wait(mq, monkeypatch, [_QUEUED, moved, _MERGED], head_oid="sha-head")
-    assert wait.ended == mq.HEAD_MOVED
-    assert wait.reading.head_oid == "sha-pushed"
-    assert clock.sleeps == [15]
-
-
-def test_without_a_timeout_the_wait_follows_the_queues_estimate(mq, monkeypatch) -> None:
-    """An estimate of 250 s waits that long plus the margin."""
-    wait, _, clock = _wait(mq, monkeypatch, [_QUEUED], timeout=None)
-    assert wait.ended == mq.STILL_QUEUED
-    assert sum(clock.sleeps) == 250 + mq.ETA_MARGIN_SECONDS
-
-
-@pytest.mark.parametrize(
-    "pr",
-    [
-        {**_OUT, "autoMergeRequest": {"enabledAt": "x"}},
-        {
-            **_QUEUED,
-            "mergeQueueEntry": {**_QUEUED["mergeQueueEntry"], "estimatedTimeToMerge": 4000},
-        },
-    ],
-    ids=["no-estimate", "estimate-past-the-cap"],
-)
-def test_the_estimated_wait_never_passes_the_cap(mq, monkeypatch, pr) -> None:
-    wait, _, clock = _wait(mq, monkeypatch, [pr], timeout=None)
-    assert wait.ended == mq.STILL_QUEUED
-    assert sum(clock.sleeps) == mq.MAX_WAIT_SECONDS
-
-
-def test_a_reading_that_fails_mid_wait_is_raised(mq, monkeypatch) -> None:
-    def failing(args, config, **kwargs):
-        return subprocess.CompletedProcess(args, 1, stdout="", stderr="HTTP 502")
-
-    monkeypatch.setattr(mq, "gh_run", failing)
+def test_a_reading_that_fails_mid_wait_is_unreadable(mq, pkit) -> None:
+    pkit.answers(_event(_QUEUED), _end(None, None, "HTTP 502"), code=1)
+    seen: list[str] = []
     with pytest.raises(mq.Unreadable, match="HTTP 502"):
+        mq.wait_for_merge(496, {}, timeout_seconds=60, on_change=lambda r: seen.append("x"))
+    assert seen == ["x"]
+
+
+def test_a_wait_that_ends_without_saying_how_is_unreadable(mq, pkit) -> None:
+    pkit.answers(_event(_QUEUED), code=1)
+    with pytest.raises(mq.Unreadable, match="ended without saying how"):
         mq.wait_for_merge(496, {}, timeout_seconds=60, on_change=lambda r: None)
+
+
+# --- one statement of the backbone's terms -----------------------------------------
+
+
+def test_pm_states_the_backbones_wait_limits_and_endings(mq) -> None:
+    """pm's messages state the backbone's wait limits; held equal here, so a
+    change to the backbone's is a change pm's messages make too."""
+    assert (mq.ETA_MARGIN_SECONDS, mq.MAX_WAIT_SECONDS) == (
+        landing.ETA_MARGIN_SECONDS,
+        landing.MAX_WAIT_SECONDS,
+    )
+    assert (mq.MERGED, mq.STILL_QUEUED, mq.LEFT, mq.HEAD_MOVED) == (
+        landing.MERGED,
+        landing.STILL_QUEUED,
+        landing.LEFT,
+        landing.HEAD_MOVED,
+    )
+    assert (mq.SQUASH, mq.PR_TITLE, mq.PR_BODY, mq.VERSION) == (
+        landing.SQUASH,
+        landing.PR_TITLE,
+        landing.PR_BODY,
+        landing.SCHEMA_VERSION,
+    )

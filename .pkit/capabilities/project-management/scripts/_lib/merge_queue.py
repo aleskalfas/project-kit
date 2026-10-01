@@ -10,24 +10,39 @@ fail there, or that no longer merges cleanly, leaves the queue unmerged.
 Merging directly on such a base goes around the queue, so the merge verbs read
 this first and hand the PR to the queue (`_lib.pr_merge.land`).
 
-One GraphQL read answers what a verb needs: whether the base has a queue and
-its merge method; whether the PR is in it, with its position, state and
-estimated time to merge; whether auto-merge holds it until its own required
-checks pass, before it may enter; the PR's head; whether it has merged; and
-whether the queue's last word on it was to drop it, at which head and why. The
-repository's squash-commit defaults, which the queue composes its squash
-commit from, are a second read (:func:`squash_commit_defaults`).
+**The reading is the backbone's** ([project-management:DEC-013-branch-and-pr-conventions],
+"Merge mechanics"). The backbone's `pkit pull-request` reads GitHub, waits for
+the queue's merge and makes the merge requests — for these verbs and for the
+backbone's own release merge alike, so the mechanic lives once. This module
+asks it by subprocess and reads its JSON documents, as `_lib.default_branch`
+reads `pkit repository base`; it never queries GitHub for a queue itself.
+The command runs with the `gh` environment the adopter's config pins
+([project-management:DEC-023-gh-host-and-owner]; `_lib.gh.gh_env`), so a
+configured host reaches it.
+
+A :class:`Reading` is the backbone's reading as its document states it —
+what GitHub answered, and what the backbone concludes from it (merged, queued,
+whether the queue dropped the PR at its current head, the phrase that
+describes where it stands) — so pm never derives any of it again. When the
+backbone cannot answer — no `pkit`, a backbone that predates the command, an
+answer pm cannot read — the reading is :class:`Unreadable`, with the cause, as
+when GitHub cannot be read: nothing merges on a guess.
 """
 
 from __future__ import annotations
 
 import json
-import time
-from collections.abc import Callable
+import subprocess
+from collections.abc import Callable, Iterator, Mapping
 from dataclasses import dataclass
 from typing import Any
 
-from _lib.gh import gh_run
+from _lib.gh import gh_env
+
+#: The backbone's pull-request command, and the version of its documents pm
+#: reads — another is refused rather than misread.
+ARGV = ("pkit", "pull-request")
+VERSION = 1
 
 # The queue merge method that makes the convention's one squash commit (DEC-013).
 SQUASH = "SQUASH"
@@ -37,11 +52,10 @@ SQUASH = "SQUASH"
 PR_TITLE = "PR_TITLE"
 PR_BODY = "PR_BODY"
 
-# How long the wait sleeps between two readings.
-POLL_SECONDS = 15.0
-
-# A wait that follows the queue's own estimate waits that long plus this
-# margin, and never longer than the cap.
+# The backbone's wait limits, as its reference states them, for this
+# capability's messages: a wait that follows the queue's estimate waits that
+# long plus the margin, never longer than the cap. A test holds them equal to
+# the backbone's.
 ETA_MARGIN_SECONDS = 120.0
 MAX_WAIT_SECONDS = 30 * 60.0
 
@@ -51,45 +65,9 @@ STILL_QUEUED = "queued"
 LEFT = "left"
 HEAD_MOVED = "head-moved"
 
-# What a GraphQL API answers when asked for a field it does not know.
-_UNKNOWN_FIELD = "doesn't exist on type"
-
-# The one field whose absence means the API knows no merge queues (an older
-# GitHub Enterprise Server), so a base on such a host has none.
-_QUEUE_FIELD = "isMergeQueueEnabled"
-
-# What every API answers about a PR, merge queues or not.
-_PR_FIELDS = """\
-      id
-      state
-      mergedAt
-      headRefOid"""
-
-_QUEUE_FIELDS = """\
-      isMergeQueueEnabled
-      isInMergeQueue
-      mergeQueue { configuration { mergeMethod } }
-      mergeQueueEntry { position state estimatedTimeToMerge }
-      autoMergeRequest { enabledAt }
-      timelineItems(
-        itemTypes: [ADDED_TO_MERGE_QUEUE_EVENT, REMOVED_FROM_MERGE_QUEUE_EVENT], last: 20
-      ) {
-        nodes {
-          __typename
-          ... on RemovedFromMergeQueueEvent { createdAt reason beforeCommit { oid } }
-        }
-      }"""
-
-_ADDED_EVENT = "AddedToMergeQueueEvent"
-_REMOVED_EVENT = "RemovedFromMergeQueueEvent"
-
 
 class Unreadable(Exception):
     """The reading could not be taken; the message says why."""
-
-
-class _UnknownField(Unreadable):
-    """The API does not know a field the query asked for."""
 
 
 @dataclass(frozen=True)
@@ -105,7 +83,8 @@ class Removal:
 
 @dataclass(frozen=True)
 class Reading:
-    """Where a PR stands with its base branch's merge queue."""
+    """Where a PR stands with its base branch's merge queue, as the backbone
+    reads it."""
 
     #: The base branch merges through a queue.
     has_queue: bool
@@ -132,49 +111,21 @@ class Reading:
     ever_queued: bool = False
     #: The queue dropping the PR, when that is the queue's last word on it.
     removal: Removal | None = None
-
-    @property
-    def merged(self) -> bool:
-        return bool(self.merged_at) or self.pr_state == "MERGED"
-
-    @property
-    def queued(self) -> bool:
-        """In the queue, or held by auto-merge until it may enter."""
-        return self.in_queue or self.waiting_to_enter
-
-    @property
-    def squashes(self) -> bool:
-        return self.merge_method == SQUASH
-
-    @property
-    def dropped_head(self) -> bool:
-        """The queue dropped the PR at the head it has now, and it has not
-        been queued or merged since. A removal that names no head is taken as
-        this one's: re-enqueueing what the queue refused needs `--force`."""
-        if self.removal is None or self.queued or self.merged:
-            return False
-        return self.removal.head_oid in ("", self.head_oid)
+    #: The PR has merged.
+    merged: bool = False
+    #: In the queue, or held by auto-merge until it may enter.
+    queued: bool = False
+    #: The queue merges by squash.
+    squashes: bool = False
+    #: The queue dropped the PR at the head it has now, and it has not been
+    #: queued or merged since — re-enqueueing it needs `--force`.
+    dropped_head: bool = False
+    #: Where the PR stands, as one phrase.
+    description: str = ""
 
     def describe(self) -> str:
         """Where the PR stands, as one phrase for a verb's output."""
-        if self.merged:
-            return f"merged at {self.merged_at}" if self.merged_at else "merged"
-        if self.in_queue:
-            parts = [
-                f"position {self.position} in the queue"
-                if self.position is not None
-                else "in the queue"
-            ]
-            if self.entry_state:
-                parts.append(self.entry_state.lower().replace("_", " "))
-            if self.eta_seconds is not None:
-                parts.append(f"{_duration(self.eta_seconds)} to merge")
-            return ", ".join(parts)
-        if self.waiting_to_enter:
-            return "waiting for its required checks before it enters the queue"
-        if self.pr_state == "CLOSED":
-            return "closed without merging"
-        return "not in the queue"
+        return self.description
 
 
 @dataclass(frozen=True)
@@ -187,23 +138,28 @@ class Wait:
     reading: Reading
 
 
-def read(pr_number: int, config: dict[str, Any]) -> Reading:
-    """Read where PR `pr_number` stands with its base branch's merge queue.
+@dataclass(frozen=True)
+class Outcome:
+    """What a merge request the backbone made came to (`_lib.pr_merge`)."""
 
-    The repository is the one `gh` resolves for the working directory, as for
-    every other pm `gh` call. Raises :class:`Unreadable` when `gh` cannot
-    answer. Only an API that does not know `isMergeQueueEnabled` itself answers
-    that there is no queue: when the full read fails on some other unknown
-    field, that field alone is asked for, and a host that knows it has queues,
-    so the read is unreadable rather than "no queue".
-    """
-    try:
-        pr = _pull_request(pr_number, f"{_PR_FIELDS}\n{_QUEUE_FIELDS}", config)
-    except _UnknownField as exc:
-        if _knows_merge_queues(pr_number, config):
-            raise Unreadable(str(exc)) from None
-        return _reading(_pull_request(pr_number, _PR_FIELDS, config))
-    return _reading(pr)
+    accepted: bool
+    #: gh's exit code; None when gh could not be run, or the backbone judged
+    #: the request on a reading.
+    exit_code: int | None
+    #: Why it was not accepted, in gh's words or the backbone's.
+    reason: str
+
+
+def read(pr_number: int, config: dict[str, Any]) -> Reading:
+    """Where PR `pr_number` stands with its base branch's merge queue, as the
+    backbone reads it for the working directory's repository. Raises
+    :class:`Unreadable` when GitHub, or the backbone, cannot answer."""
+    document = _first(["read", str(pr_number)], config)
+    _raise_unreadable(document)
+    reading = decode_reading(document.get("reading"))
+    if reading is None:
+        raise Unreadable("the backbone's answer names no reading")
+    return reading
 
 
 def squash_commit_defaults(config: dict[str, Any]) -> tuple[str, str]:
@@ -212,25 +168,11 @@ def squash_commit_defaults(config: dict[str, Any]) -> tuple[str, str]:
     `COMMIT_MESSAGES` or `BLANK`). A merge queue composes its squash commit
     from these and ignores what the merge command asks for. Raises
     :class:`Unreadable` when they cannot be read."""
-    try:
-        proc = gh_run(["gh", "api", "repos/{owner}/{repo}"], config, check=False)
-    except FileNotFoundError as exc:
-        raise Unreadable("`gh` not on PATH") from exc
-    if proc.returncode != 0:
-        raise Unreadable((proc.stderr or "").strip() or "gh answered nothing")
-    try:
-        repository = json.loads(proc.stdout or "null")
-    except json.JSONDecodeError:
-        repository = None
-    if not isinstance(repository, dict):
-        raise Unreadable("the answer names no repository")
-    title = repository.get("squash_merge_commit_title")
-    message = repository.get("squash_merge_commit_message")
+    document = _first(["squash-defaults"], config)
+    _raise_unreadable(document)
+    title, message = document.get("title"), document.get("message")
     if not (isinstance(title, str) and isinstance(message, str)):
-        raise Unreadable(
-            "the repository's squash-commit defaults are not in the answer (an account "
-            "without access to the repository's settings does not see them)"
-        )
+        raise Unreadable("the backbone's answer names no squash-commit defaults")
     return title, message
 
 
@@ -241,179 +183,157 @@ def wait_for_merge(
     timeout_seconds: float | None,
     on_change: Callable[[Reading], None],
     head_oid: str = "",
-    interval_seconds: float = POLL_SECONDS,
-    sleep: Callable[[float], None] = time.sleep,
-    clock: Callable[[], float] = time.monotonic,
 ) -> Wait:
-    """Read the queue until the PR merges, leaves it, or the time runs out.
+    """Wait for the queue to merge the PR, as the backbone waits: until it
+    merges, leaves the queue, or the time runs out.
 
-    `timeout_seconds` None follows the queue's estimate: the first reading
-    that carries one sets the deadline to that estimate plus
-    :data:`ETA_MARGIN_SECONDS`, never past :data:`MAX_WAIT_SECONDS` from the
-    start, which is also the deadline while no estimate has come — a PR still
-    waiting for its own checks before it enters has none. A number is a fixed
-    deadline; 0 reads once.
-
-    A PR is declared out of the queue only on two readings running: closed,
-    or seen out of the queue twice, so a reading taken just as GitHub takes the
-    PR in is not mistaken for one that left. A single reading out of the queue
-    at the deadline is followed by one more after the interval. With
-    `head_oid`, the head the caller's gates checked, a reading whose head
-    differs ends the wait at once (:data:`HEAD_MOVED`): commits nobody checked
-    must not merge. `on_change` is handed each reading whose description
-    differs from the one before. Raises :class:`Unreadable` when a reading
-    cannot be taken.
+    `timeout_seconds` None follows the queue's estimate, plus a margin, within
+    a cap; a number is a fixed deadline, and 0 reads once. The backbone
+    declares the PR out of the queue only on two readings running, and with
+    `head_oid` — the head the caller's gates checked — ends the wait at once
+    on a reading at another head (:data:`HEAD_MOVED`). `on_change` is handed
+    each reading whose description changed, as the backbone takes it. Raises
+    :class:`Unreadable` when a reading cannot be taken.
     """
-    start = clock()
-    deadline = start + (MAX_WAIT_SECONDS if timeout_seconds is None else timeout_seconds)
-    last_description = ""
-    seen_out = False
-    estimated = timeout_seconds is not None
-    while True:
-        reading = read(pr_number, config)
-        if reading.describe() != last_description:
-            last_description = reading.describe()
-            on_change(reading)
-        if reading.merged:
-            return Wait(MERGED, reading)
-        if head_oid and reading.head_oid and reading.head_oid != head_oid:
-            return Wait(HEAD_MOVED, reading)
-        if reading.pr_state == "CLOSED":
-            return Wait(LEFT, reading)
-        if reading.queued:
-            seen_out = False
-        elif seen_out:
-            return Wait(LEFT, reading)
-        else:
-            seen_out = True
-        if not estimated and reading.eta_seconds is not None:
-            estimated = True
-            deadline = min(
-                start + MAX_WAIT_SECONDS,
-                clock() + reading.eta_seconds + ETA_MARGIN_SECONDS,
-            )
-        remaining = deadline - clock()
-        if remaining <= 0:
-            if not seen_out:
-                return Wait(STILL_QUEUED, reading)
-            sleep(interval_seconds)
+    args = ["wait", str(pr_number)]
+    if head_oid:
+        args += ["--head", head_oid]
+    if timeout_seconds is not None:
+        args += ["--seconds", repr(float(timeout_seconds))]
+    for document in _answers(args, config):
+        if document.get("event") == "reading":
+            reading = decode_reading(document.get("reading"))
+            if reading is not None:
+                on_change(reading)
             continue
-        sleep(min(interval_seconds, remaining))
+        _raise_unreadable(document)
+        ended = document.get("ended")
+        reading = decode_reading(document.get("reading"))
+        if ended not in (MERGED, STILL_QUEUED, LEFT, HEAD_MOVED) or reading is None:
+            raise Unreadable("the backbone's answer says no way the wait ended")
+        return Wait(str(ended), reading)
+    raise Unreadable("the backbone's wait ended without saying how")
 
 
-def _pull_request(pr_number: int, fields: str, config: dict[str, Any]) -> dict[str, Any]:
-    """The pull request's `fields`, as the GraphQL API answers them."""
-    query = (
-        "query($owner: String!, $repo: String!, $number: Int!) {\n"
-        "  repository(owner: $owner, name: $repo) {\n"
-        "    pullRequest(number: $number) {\n"
-        f"{fields}\n"
-        "    }\n"
-        "  }\n"
-        "}\n"
+def request(args: list[str], config: dict[str, Any]) -> Outcome:
+    """A merge request the backbone makes (`merge`, `enqueue`, `dequeue`), and
+    what it came to. Raises :class:`Unreadable` when the backbone gives no
+    answer — the request may then not have been made."""
+    document = _first(args, config)
+    exit_code = document.get("exit_code")
+    return Outcome(
+        accepted=document.get("accepted") is True,
+        exit_code=exit_code if isinstance(exit_code, int) else None,
+        reason=str(document.get("reason") or ""),
     )
+
+
+def decode_reading(value: object) -> Reading | None:
+    """The reading a backbone document states, or None when it states none."""
+    if not isinstance(value, Mapping):
+        return None
+    doc: Mapping[str, Any] = value
+    removal = doc.get("removal")
+    return Reading(
+        has_queue=doc.get("has_queue") is True,
+        merge_method=_text(doc.get("merge_method")),
+        pr_id=_text(doc.get("pr_id")),
+        pr_state=_text(doc.get("pr_state")),
+        merged_at=_text(doc.get("merged_at")),
+        head_oid=_text(doc.get("head_oid")),
+        in_queue=doc.get("in_queue") is True,
+        position=_int_or_none(doc.get("position")),
+        entry_state=_text(doc.get("entry_state")),
+        eta_seconds=_int_or_none(doc.get("eta_seconds")),
+        waiting_to_enter=doc.get("waiting_to_enter") is True,
+        ever_queued=doc.get("ever_queued") is True,
+        removal=(
+            Removal(
+                at=_text(removal.get("at")),
+                reason=_text(removal.get("reason")),
+                head_oid=_text(removal.get("head_oid")),
+            )
+            if isinstance(removal, Mapping)
+            else None
+        ),
+        merged=doc.get("merged") is True,
+        queued=doc.get("queued") is True,
+        squashes=doc.get("squashes") is True,
+        dropped_head=doc.get("dropped_head") is True,
+        description=_text(doc.get("description")),
+    )
+
+
+def _first(args: list[str], config: dict[str, Any]) -> dict[str, Any]:
+    """The backbone's one document for `args`."""
+    for document in _answers(args, config):
+        return document
+    raise Unreadable(f"`{' '.join([*ARGV, *args[:1]])}` gave no answer")
+
+
+def _raise_unreadable(document: Mapping[str, Any]) -> None:
+    unreadable = document.get("unreadable")
+    if unreadable:
+        raise Unreadable(str(unreadable))
+
+
+def _answers(args: list[str], config: dict[str, Any]) -> Iterator[dict[str, Any]]:
+    """Run `pkit pull-request <args> --json` and yield each document it writes,
+    as it writes it — a wait writes one per reading that changed.
+
+    Raises :class:`Unreadable`, naming the cause, when the backbone gives no
+    readable answer: no `pkit`, a backbone that predates the command, a
+    document that is not JSON or of another version.
+    """
+    argv = [*ARGV, *args, "--json"]
+    command = f"`{' '.join([*ARGV, *args[:1]])}`"
     try:
-        proc = gh_run(
-            [
-                "gh",
-                "api",
-                "graphql",
-                "-f",
-                f"query={query}",
-                "-F",
-                "owner={owner}",
-                "-F",
-                "repo={repo}",
-                "-F",
-                f"number={pr_number}",
-            ],
-            config,
-            check=False,
+        proc = subprocess.Popen(
+            argv,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            env=gh_env(config),
         )
     except FileNotFoundError as exc:
-        raise Unreadable("`gh` not on PATH") from exc
-    try:
-        payload = json.loads(proc.stdout or "null")
-    except json.JSONDecodeError:
-        payload = None
-    errors = payload.get("errors") if isinstance(payload, dict) else None
-    if proc.returncode != 0 or errors:
-        reason = _error_text(proc.stderr, errors)
-        if _UNKNOWN_FIELD in reason:
-            raise _UnknownField(reason)
-        raise Unreadable(reason)
-    data = payload.get("data") if isinstance(payload, dict) else None
-    repository = data.get("repository") if isinstance(data, dict) else None
-    pr = repository.get("pullRequest") if isinstance(repository, dict) else None
-    if not isinstance(pr, dict):
-        raise Unreadable(f"the answer names no pull request #{pr_number}")
-    return pr
-
-
-def _knows_merge_queues(pr_number: int, config: dict[str, Any]) -> bool:
-    """Whether the API knows `isMergeQueueEnabled`, asked for alone so that no
-    other field it lacks answers for it. Raises :class:`Unreadable` on any
-    other failure."""
-    try:
-        _pull_request(pr_number, f"      {_QUEUE_FIELD}", config)
-    except _UnknownField as exc:
-        if f"'{_QUEUE_FIELD}'" in str(exc):
-            return False
-        raise Unreadable(str(exc)) from None
-    return True
-
-
-def _reading(pr: dict[str, Any]) -> Reading:
-    queue = _mapping(pr.get("mergeQueue"))
-    entry = _mapping(pr.get("mergeQueueEntry"))
-    events = [e for e in _mapping(pr.get("timelineItems")).get("nodes") or [] if _mapping(e)]
-    return Reading(
-        has_queue=bool(pr.get("isMergeQueueEnabled")),
-        merge_method=str(_mapping(queue.get("configuration")).get("mergeMethod") or ""),
-        pr_id=str(pr.get("id") or ""),
-        pr_state=str(pr.get("state") or ""),
-        merged_at=str(pr.get("mergedAt") or ""),
-        head_oid=str(pr.get("headRefOid") or ""),
-        in_queue=bool(pr.get("isInMergeQueue")) or bool(entry),
-        position=_int_or_none(entry.get("position")),
-        entry_state=str(entry.get("state") or ""),
-        eta_seconds=_int_or_none(entry.get("estimatedTimeToMerge")),
-        waiting_to_enter=bool(pr.get("autoMergeRequest")),
-        ever_queued=any(e.get("__typename") == _ADDED_EVENT for e in events),
-        removal=_last_removal(events),
+        raise Unreadable(f"{command}: `pkit` is not on PATH ({exc})") from exc
+    except OSError as exc:
+        raise Unreadable(f"{command} could not be run ({exc})") from exc
+    answered = False
+    with proc:
+        assert proc.stdout is not None and proc.stderr is not None
+        for line in proc.stdout:
+            if not line.strip():
+                continue
+            try:
+                document = json.loads(line)
+            except ValueError:
+                proc.kill()
+                raise Unreadable(f"{command}: its answer is not JSON") from None
+            version = document.get("schema_version") if isinstance(document, dict) else None
+            if version != VERSION:
+                proc.kill()
+                raise Unreadable(
+                    f"{command} answered schema_version {version!r}; pm reads {VERSION}"
+                )
+            answered = True
+            yield document
+        stderr = proc.stderr.read()
+    if answered:
+        return
+    if "No such command" in stderr:
+        raise Unreadable(
+            f"{command}: the installed backbone predates it — upgrade it (`pkit upgrade`)"
+        )
+    said = [line.strip() for line in stderr.splitlines() if line.strip()]
+    raise Unreadable(
+        f"{command} exited {proc.returncode}" + (f": {said[-1]}" if said else " with no answer")
     )
 
 
-def _last_removal(events: list[dict[str, Any]]) -> Removal | None:
-    """The queue dropping the PR, when that is the last thing the queue did with it."""
-    if not events or events[-1].get("__typename") != _REMOVED_EVENT:
-        return None
-    last = events[-1]
-    return Removal(
-        at=str(last.get("createdAt") or ""),
-        reason=str(last.get("reason") or ""),
-        head_oid=str(_mapping(last.get("beforeCommit")).get("oid") or ""),
-    )
-
-
-def _mapping(value: object) -> dict[str, Any]:
-    return value if isinstance(value, dict) else {}
+def _text(value: object) -> str:
+    return value if isinstance(value, str) else ""
 
 
 def _int_or_none(value: object) -> int | None:
     return value if isinstance(value, int) and not isinstance(value, bool) else None
-
-
-def _duration(seconds: int) -> str:
-    if seconds < 60:
-        return "under a minute"
-    return f"about {round(seconds / 60)} min"
-
-
-def _error_text(stderr: str, errors: object) -> str:
-    """The reason a read failed: the GraphQL errors' messages, else gh's stderr."""
-    if isinstance(errors, list):
-        messages = [str(e.get("message")) for e in errors if isinstance(e, dict)]
-        if any(messages):
-            return "; ".join(m for m in messages if m)
-    return (stderr or "").strip() or "gh answered nothing"

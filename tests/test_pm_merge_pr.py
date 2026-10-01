@@ -13,6 +13,8 @@ from pathlib import Path
 
 import pytest
 
+from tests import pull_request_backbone
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = (
     REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "merge-pr.py"
@@ -414,8 +416,8 @@ def _wire_merge_seams(
     monkeypatch.setattr(mp, "_write_record", write_record)
 
     def no_queue(pr_number, config):
-        return mp.merge_queue.Reading(
-            has_queue=False, pr_state="MERGED" if calls["merged"] else "OPEN"
+        return pull_request_backbone.reading(
+            mp.merge_queue, has_queue=False, pr_state="MERGED" if calls["merged"] else "OPEN"
         )
 
     monkeypatch.setattr(mp.merge_queue, "read", no_queue)
@@ -626,15 +628,14 @@ def _queued(mp, **fields):
         "pr_state": "OPEN",
         "head_oid": "sha-head",
     }
-    return mp.merge_queue.Reading(**{**base, **fields})
+    return pull_request_backbone.reading(mp.merge_queue, **{**base, **fields})
 
 
 def _wire_queue(mp, monkeypatch, readings, **seams):
     """merge-pr's seams, with a base whose queue answers `readings` in turn
-    (the last repeated; an exception is raised), an enqueue that records
-    itself, and a clock the wait's sleeps advance."""
-    import functools
-
+    (the last repeated; an exception is raised) — to merge-pr and to the
+    backbone's wait alike — an enqueue that records itself, and a clock the
+    wait's sleeps advance."""
     calls = _wire_merge_seams(mp, monkeypatch, rollup=_MP_GREEN, **seams)
     remaining = list(readings)
 
@@ -659,10 +660,8 @@ def _wire_queue(mp, monkeypatch, readings, **seams):
         mp.merge_queue, "squash_commit_defaults", lambda config: ("PR_TITLE", "PR_BODY")
     )
     monkeypatch.setattr(mp.pr_merge, "enqueue", enqueue)
-    monkeypatch.setattr(
-        mp.merge_queue,
-        "wait_for_merge",
-        functools.partial(mp.merge_queue.wait_for_merge, sleep=sleep, clock=lambda: now[0]),
+    pull_request_backbone.in_process(
+        monkeypatch, mp.merge_queue, read=read, sleep=sleep, clock=lambda: now[0]
     )
     return calls
 

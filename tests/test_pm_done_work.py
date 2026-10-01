@@ -14,6 +14,8 @@ from typing import Any, cast
 
 import pytest
 
+from tests import pull_request_backbone
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "done-work.py"
 
@@ -775,7 +777,7 @@ def _wire_main_seams(
     # stubbed merge has run: done-work counts a merge only when it does.
     def no_queue(pr_number: int, config: dict[str, Any]) -> Any:
         state = "MERGED" if calls["merged"] else "OPEN"
-        return dw.merge_queue.Reading(has_queue=False, pr_state=state)
+        return pull_request_backbone.reading(dw.merge_queue, has_queue=False, pr_state=state)
 
     monkeypatch.setattr(dw.merge_queue, "read", no_queue)
     return calls
@@ -2373,9 +2375,7 @@ def _wire_queue(
     """done-work's gates stubbed as for every main() test; the queue real, on a
     fake `gh` whose base `main` merges through a queue with `merge_method`,
     squashing with the PR title and body."""
-    import functools
-
-    real_read, real_wait = dw.merge_queue.read, dw.merge_queue.wait_for_merge
+    real_read = dw.merge_queue.read
     calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
     monkeypatch.setattr(dw.merge_queue, "read", real_read)
     monkeypatch.setattr(
@@ -2396,11 +2396,7 @@ def _wire_queue(
         sleeps.append(seconds)
         now[0] += seconds
 
-    monkeypatch.setattr(
-        dw.merge_queue,
-        "wait_for_merge",
-        functools.partial(real_wait, sleep=sleep, clock=lambda: now[0]),
-    )
+    pull_request_backbone.in_process(monkeypatch, dw.merge_queue, sleep=sleep, clock=lambda: now[0])
     pr = {
         "id": "PR_node",
         "state": "OPEN",
@@ -2685,9 +2681,10 @@ def test_a_direct_merge_github_cannot_confirm_is_not_called_queued(
     def unreadable_after_the_merge(pr_number: int, config: dict[str, Any]) -> Any:
         if calls["merged"]:
             raise dw.merge_queue.Unreadable("HTTP 502")
-        return dw.merge_queue.Reading(has_queue=False, pr_state="OPEN")
+        return pull_request_backbone.reading(dw.merge_queue, has_queue=False, pr_state="OPEN")
 
     monkeypatch.setattr(dw.merge_queue, "read", unreadable_after_the_merge)
+    pull_request_backbone.in_process(monkeypatch, dw.merge_queue, read=unreadable_after_the_merge)
     rc = _run_main(dw, monkeypatch, ["42", "--yes"])
     captured = capsys.readouterr()
     assert rc == dw.EXIT_ACCEPTED == 4
