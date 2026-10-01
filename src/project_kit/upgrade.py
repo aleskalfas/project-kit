@@ -73,7 +73,7 @@ from project_kit.router import (
     run_bypassed,
     running_version,
 )
-from project_kit.sync import run_sync
+from project_kit.sync import refuse_content_downgrade, run_sync
 
 # Capability-dependency check (COR-030) — imported lazily below to avoid
 # any circular-import issues at module load time. The functions used are:
@@ -168,6 +168,15 @@ def run_upgrade(
     # inside `read_kit_version` (ADR-033; issue #333). The self-host branch
     # above is skipped — its source is the live checkout.
     refuse_if_source_kit_incomplete(source_kit)
+
+    # #1212: a pkit older than the project's content or pin — the installed tool
+    # the router falls back to when it cannot fetch the pin — must not sync its
+    # older content over the project's or move the pin down. Checked before
+    # anything below writes. It follows the pinned-child branch, which runs the
+    # pin's own code and recovers a content-ahead-of-pin state by raising the
+    # pin, and the tool step, which leaves the project untouched and whose
+    # re-exec under a newer tool is a way past this refusal.
+    refuse_content_downgrade(target_root, source_kit, command="upgrade")
 
     target_version = read_kit_version(source_kit)
     current_version = manifest.backbone_version
