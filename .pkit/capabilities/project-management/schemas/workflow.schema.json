@@ -59,7 +59,7 @@
           "items": { "$ref": "#/$defs/entry" },
           "minItems": 1,
           "uniqueItems": true,
-          "description": "States, ordered so the engine's first-matching-detection rule and the forward-cascade ordering both hold. Order is load-bearing."
+          "description": "States. Their order orders the engine's reading — the first state whose detection is true is the position; with pm's one classifier at most one of the five is true, so the order decides nothing among them (DEC-033)."
         },
         "transitions": {
           "type": "array",
