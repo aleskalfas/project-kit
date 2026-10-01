@@ -13,9 +13,9 @@ pkit:
         - .github/workflows/release-tag.yml
       record: [COR-010, COR-041, PRJ-002, PRJ-004, ADR-040]
     revalidated:
-      at: 2026-10-01T09:44:08Z
+      at: 2026-10-01T15:09:06Z
       outcome: unchanged
-      unchanged-because: "typing-only change in the package for the type-checking gate (PRJ-010): suppression comments removed; behaviour unchanged"
+      unchanged-because: PRJ-004 cites ADR-061, the successor of ADR-044, for the uv-only tool update; the channel, the tags and the backbone-only identity this page relies on are unchanged
 ---
 
 # Release flow — changesets + the release step

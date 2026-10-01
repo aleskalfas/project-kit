@@ -15,11 +15,10 @@ pkit:
         - src/project_kit/refs.py
         - .pkit/adapters/claude-code/merge-claude-md.sh
         - .pkit/adapters/claude-code/merge-settings.sh
-      record: [COR-001, COR-002, COR-017, PRJ-001, PRJ-004, ADR-049]
+      record: [COR-001, COR-002, COR-017, PRJ-001, PRJ-004, ADR-062]
     revalidated:
-      at: 2026-10-01T09:44:21Z
-      outcome: unchanged
-      unchanged-because: "typing-only change for the type-checking gate (PRJ-010): suppression comments removed from the package, pyright's configuration and dev dependency set in pyproject.toml; behaviour unchanged"
+      at: 2026-10-01T15:09:28Z
+      outcome: updated
 ---
 
 # project-kit
@@ -91,7 +90,7 @@ Think of pkit as a **package manager for your project's methodology**. Four idea
 1. **The tool vs. the install.** `pkit` (the CLI) manages `.pkit/` (the methodology in your repo) — exactly like a package manager and the packages it installs.
 2. **Capabilities are packages.** A small always-there **backbone**, plus **opt-in capabilities** — disciplines you install only if you want them (issue-tracking, code-review, citations). Add what you need, ignore the rest.
 3. **Two owners, never shared.** Every file belongs to *either* the kit (synced — don't edit) *or* you (yours — never touched, apart from the two merges above). That's *why* updates can't conflict, and why you keep everything you write.
-4. **Versioned, upgrades cleanly.** `pkit upgrade` pulls new versions and runs any migrations automatically — like upgrading a dependency; a project can even pin itself to a fixed version if you want.
+4. **Versioned, upgrades cleanly.** `pkit upgrade` pulls new versions, runs any migrations automatically and pins the project to the version it reached — like upgrading a dependency and its lockfile; pass `--no-pin` to keep a project following your installed tool instead.
 
 The shape of `.pkit/`:
 

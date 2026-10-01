@@ -1,0 +1,11 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+  pr: "1206"
+body: >
+  The CLI reference's `upgrade` and `pin` sections describe the pinning and
+  tool update `pkit upgrade` ships: an un-pinned project is pinned at the
+  version it upgraded to unless `--no-pin` is passed, and the tool update runs
+  wherever `upgrade` runs as the installed tool, not only by printing a
+  command (#1177).

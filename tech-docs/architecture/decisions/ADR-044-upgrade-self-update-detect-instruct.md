@@ -1,10 +1,13 @@
 ---
 id: ADR-044
 title: pkit upgrade detects a stale tool and instructs; it does not self-install
-status: accepted
+status: superseded
 date: 2026-08-03
 author: Aleš Kalfas <kalfas.ales@gmail.com>
+superseded_by: ADR-061
 ---
+
+> **Superseded by [ADR-061](ADR-061-upgrade-updates-the-tool.md).** `pkit upgrade` installs a stale tool and runs again under it, printing the command only where it may not act; the detection, the source-checkout suppression and the distribution-URL boundary below are restated there.
 
 `pkit upgrade` refreshes a project's `.pkit/` **from the installed tool's bundled kit** — it cannot update the *tool* itself, and today it can't even tell you the tool is behind: an adopter on a stale tool sees *"nothing to upgrade"* and has no idea the fix lives in a different command (`uv`). This ADR makes `pkit upgrade` **detect** a newer released tool and **print the exact command** to update it. It deliberately does **not** run `uv tool install` itself in this increment: auto-installing would replace the global binary every project on the machine shares, the confinement sandbox would gate that with its own prompt regardless (so the "seamless" auto-run saves a sandboxed operator nothing), and the genuinely seamless end-state — **option D** (deferred): a per-project pin the router serves via `uvx`, with no global mutation at all — retires the auto-install path rather than building on it. Detect-and-instruct is the smallest change that kills the actual confusion, ships safely, and commits us to nothing the seamless design would undo.
 
@@ -51,15 +54,3 @@ A prior "fold the `uv tool install` into `pkit upgrade`" design was reviewed and
 - **Surface change → a backbone version bump** (a new observable `pkit upgrade` behaviour), declared via a changeset. Migration-free (additive; no state to bridge).
 - **Stands on** ADR-033, ADR-039, COR-007, COR-010, COR-041, PRJ-004 — all accepted (PRJ-004 amended alongside). ADR-039 is not reopened.
 - **Next increments, in order:** option D (per-project pin + ADR-039 refinement) is the seamless end-state; the consented auto-run is only worth building if D proves insufficient.
-
-## Amendment (2026-08-10)
-
-**`pkit upgrade` now ACTS on a stale tool, not just instructs — it self-updates the global binary and re-execs.** This turns the decision's detect-and-**instruct** into detect-and-**act** (the "consented auto-run" the Implications named as a later increment). Status is unchanged (`accepted`); D1 degrade, D3 source-checkout suppression, and the best-effort/never-fail posture all stand — the amendment adds an action ahead of the instruct, with instruct as the fallback.
-
-**What changed.** When the running tool is behind the latest release and self-update is allowed, `pkit upgrade` runs `uv tool install --force <dist>@v<latest>` and then **re-execs the same command under the freshly-installed version** (guarded by `PKIT_SELF_UPDATED` against a re-exec loop) so the content sync + pin run under the new bundle — one seamless command. It **degrades to the original instruct** (print the exact command) when: the session is **non-interactive** (no TTY — so a network install is never forced under automation/CI), `--no-self-update` is passed, or the install **fails or is declined** (the sandbox gates a global-binary mutation; a decline surfaces as a non-zero exit and degrades, never bricks). Run **outside any project**, `pkit upgrade` performs the tool self-update alone (via `run_tool_update`) instead of erroring on a missing project/manifest — the "just update my tool" case.
-
-**Why now — the blast-radius objection dissolved.** The original decision withheld the auto-run because reinstalling the shared global binary moved **every un-pinned project at once** (cross-project blast radius the sandbox gates anyway). **Pin-by-default (ADR-049, amended; shipped v1.145.0)** insulates projects from the global tool — a pinned project runs its own version via the ADR-039 router's `uvx` re-exec and does not follow the global binary. So updating the tool no longer disturbs pinned projects, and the reason to withhold the action is gone. The named precondition ("only worth building if D proves insufficient / once D exists") is met: D shipped, and this completes the seamless end-state D pointed at.
-
-**Invariant preserved.** Self-update fires only on the **un-pinned / non-routed-child** path (the existing staleness-check site, suppressed under the router bypass). A pinned project's `pkit upgrade` still advances its own pin via `uvx` and never touches the global tool — the ADR-039 multi-version-coexistence invariant (a project on an older pin runs that older version) is untouched.
-
-**Rollout / migration.** The behaviour lives in the upgrading code, so existing adopters get it on their next `pkit upgrade` under a version that carries it; `--no-self-update` preserves the old print-only behaviour. Migration-free (additive behaviour; no state to bridge). The permission surface *does* change — `pkit upgrade` may now issue `uv tool install` — but only interactively and with a clean degrade, consistent with the sandbox's gating of global-binary mutations.
