@@ -15,9 +15,8 @@ pkit:
         - .pkit/capabilities/project-management/decisions/**
       record: [COR-017, COR-020, COR-021, COR-023, COR-039, COR-053, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050]
     revalidated:
-      at: 2026-10-01T19:13:24Z
-      outcome: unchanged
-      unchanged-because: set-field --parent now rewrites the parent-ref below a leading DEC-013 Integration marker instead of prepending above it (#765); the README's account of --parent rewriting the body's first parent-ref line and moving the native link still holds
+      at: 2026-10-01T19:21:36Z
+      outcome: updated
 ---
 
 # project-management capability
