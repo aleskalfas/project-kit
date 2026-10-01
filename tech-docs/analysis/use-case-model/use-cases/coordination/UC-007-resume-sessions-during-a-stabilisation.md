@@ -20,9 +20,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-10-01T00:05:36Z
+      at: 2026-10-01T00:09:44Z
       outcome: unchanged
-      unchanged-because: on this branch done-work.py only reads the project's not-code path list and passes it to the shared reviewer resolver, and the head-commit timestamp helper moved to _lib; resuming sessions during a stabilisation is untouched
+      unchanged-because: done-work's change is how the merge gate reads a PR's changed files for the diff-floor reviewers and the refusal when it cannot; resuming a session during a stabilisation, and the guards it meets, did not change
 ---
 
 # UC-007 — Resume sessions killed during a stabilisation

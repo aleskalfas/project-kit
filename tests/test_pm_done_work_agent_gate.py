@@ -137,8 +137,8 @@ def _wire(
       * `commits` — override the commits payload (e.g. `[]` to remove the
         freshness anchor).
 
-    `changed_files` is the PR's diff (`gh pr diff --name-only`), read only
-    when a floor-carrying contribution is installed.
+    `changed_files` is the PR's diff (the paginated files API, one file per
+    page entry), read only when a floor-carrying contribution is installed.
     """
     closing_issue_labels = closing_issue_labels or {}
     commits = [{"committedDate": _COMMIT_TS}] if commits is None else commits
@@ -163,10 +163,10 @@ def _wire(
                 args=args, returncode=0,
                 stdout=json.dumps({"closingIssuesReferences": refs}), stderr="",
             )
-        if args[:3] == ["gh", "pr", "diff"]:
+        if args[:2] == ["gh", "api"] and "/files" in joined:
             return subprocess.CompletedProcess(
                 args=args, returncode=0,
-                stdout="".join(f"{path}\n" for path in changed_files), stderr="",
+                stdout=_files_api_pages(list(changed_files)), stderr="",
             )
         # gh pr view --json author,comments,commits
         return subprocess.CompletedProcess(
@@ -763,16 +763,17 @@ def test_opt_out_naming_no_contribution_refuses(dw, rc, monkeypatch) -> None:
     assert "no reviewer `ui-reviewer`" in result.refusal_message
 
 
-# ---- the not-code list (#1178) ------------------------------------------
+# ---- diff floor on a PR past `gh pr diff`'s 300 files (#1188) -------------
 #
-# The gate reads `review.floors.not_code` from the config exactly as review-pr
-# does, so a changeset-only diff does not require a floor reviewer here either.
+# GitHub refuses `gh pr diff` for a PR changing more than 300 files, which made
+# the changed-file read fail and the gate refuse such a PR as a "transient"
+# failure. The gate now reads every page of the files API, so a 350-file PR
+# resolves its floor reviewer like any other, and the refusal that remains for
+# a PR past GitHub's 3000-file listing says so instead of asking for a retry.
 
-_CHANGESET = ".changes/unreleased/project-management-none-20261001-wording.yaml"
 
-
-def _code_floor_collection(rc):
-    """software-engineering's code-reviewer on the `touches-code` floor."""
+def _floor_collection(rc):
+    """software-engineering's code-reviewer, required whenever code changes."""
     rule = rc.ContributionRule(
         capability="software-engineering",
         predicate={},
@@ -782,10 +783,137 @@ def _code_floor_collection(rc):
     return rc.ContributionCollection(rules=(rule,))
 
 
+def _files_api_pages(paths, size=100):
+    """`gh api --paginate … --jq` output for `paths`, `size` files per page."""
+    pages = [paths[i:i + size] for i in range(0, len(paths), size)]
+    return "".join(
+        json.dumps([path, None]) + "\n" for page in pages for path in page
+    )
+
+
+def _wire_files_api(dw, monkeypatch, *, stdout="", returncode=0, stderr=""):
+    """Answer the PR files API on top of `_wire`'s gh fake; record each call."""
+    inner = dw.gh_run
+    calls: list[list[str]] = []
+
+    def fake_gh_run(args, config, **kwargs):
+        if args[:2] == ["gh", "api"] and "/files" in " ".join(args):
+            calls.append(args)
+            return subprocess.CompletedProcess(
+                args=args, returncode=returncode, stdout=stdout, stderr=stderr,
+            )
+        return inner(args, config, **kwargs)
+
+    monkeypatch.setattr(dw, "gh_run", fake_gh_run)
+    return calls
+
+
+# 350 files over four pages: docs throughout, one code file on the last page,
+# so only a read of every page sees that the PR touches code.
+_LARGE_PR_PATHS = [f"docs/page_{i}.md" for i in range(349)] + ["src/late.py"]
+
+
+def test_large_pr_resolves_floor_reviewer_and_passes(dw, rc, monkeypatch) -> None:
+    """A 350-file PR resolves code-reviewer from the code file on page four,
+    and passes once it approves."""
+    _wire(
+        dw, monkeypatch,
+        collection=_floor_collection(rc),
+        comments=[
+            _local_verdict_comment("reviewer", "APPROVED"),
+            _local_verdict_comment("code-reviewer", "APPROVED"),
+        ],
+        closing_issue_labels={42: ["type:docs"]},
+    )
+    calls = _wire_files_api(
+        dw, monkeypatch, stdout=_files_api_pages(_LARGE_PR_PATHS),
+    )
+    result = dw._check_agent_gate(99, {}, _config(), "resolved", CAP_ROOT)
+    assert len(calls) == 1
+    assert result.passed is True
+    assert "code-reviewer" in result.passed_via
+
+
+def test_large_pr_still_requires_the_floor_reviewer(dw, rc, monkeypatch) -> None:
+    """The same PR with only the baseline approved refuses, naming the floor
+    reviewer the last page brought in — the floor is computed, not skipped."""
+    _wire(
+        dw, monkeypatch,
+        collection=_floor_collection(rc),
+        comments=[_local_verdict_comment("reviewer", "APPROVED")],
+        closing_issue_labels={42: ["type:docs"]},
+    )
+    _wire_files_api(dw, monkeypatch, stdout=_files_api_pages(_LARGE_PR_PATHS))
+    result = dw._check_agent_gate(99, {}, _config(), "resolved", CAP_ROOT)
+    assert result.passed is False
+    assert "code-reviewer" in result.refusal_message
+
+
+def test_files_api_failure_refuses_as_transient(dw, rc, monkeypatch) -> None:
+    """A failed files read refuses (fail closed) and asks for a retry."""
+    _wire(
+        dw, monkeypatch,
+        collection=_floor_collection(rc),
+        comments=[_local_verdict_comment("reviewer", "APPROVED")],
+        closing_issue_labels={42: ["type:docs"]},
+    )
+    _wire_files_api(dw, monkeypatch, returncode=1, stderr="HTTP 502")
+    result = dw._check_agent_gate(99, {}, _config(), "resolved", CAP_ROOT)
+    assert result.passed is False
+    assert "changed files cannot be read" in result.refusal_message
+    assert "HTTP 502" in result.refusal_message
+    assert "retry `done-work`" in result.refusal_message
+
+
+def test_files_api_empty_refuses(dw, rc, monkeypatch) -> None:
+    """An empty files read is unknown ground truth, not a docs-only PR."""
+    _wire(
+        dw, monkeypatch,
+        collection=_floor_collection(rc),
+        comments=[_local_verdict_comment("reviewer", "APPROVED")],
+        closing_issue_labels={42: ["type:docs"]},
+    )
+    _wire_files_api(dw, monkeypatch, stdout="")
+    result = dw._check_agent_gate(99, {}, _config(), "resolved", CAP_ROOT)
+    assert result.passed is False
+    assert "changed files cannot be read" in result.refusal_message
+
+
+def test_pr_past_the_listing_ceiling_refuses_naming_the_cause(
+    dw, rc, monkeypatch,
+) -> None:
+    """A PR reaching GitHub's 3000-file listing refuses with the cause and a
+    split-the-PR remediation, not a "transient gh failure" retry."""
+    _wire(
+        dw, monkeypatch,
+        collection=_floor_collection(rc),
+        comments=[_local_verdict_comment("reviewer", "APPROVED")],
+        closing_issue_labels={42: ["type:docs"]},
+    )
+    paths = [f"docs/page_{i}.md" for i in range(3000)]
+    _wire_files_api(dw, monkeypatch, stdout=_files_api_pages(paths))
+    result = dw._check_agent_gate(99, {}, _config(), "resolved", CAP_ROOT)
+    assert result.passed is False
+    message = result.refusal_message
+    assert "changed files cannot be read" in message
+    assert "at least 3000 files" in message
+    assert "Split the PR" in message
+    assert "not transient" in message
+    assert "Transient gh failure" not in message
+
+
+# ---- the not-code list (#1178) ------------------------------------------
+#
+# The gate reads `review.floors.not_code` from the config exactly as review-pr
+# does, so a changeset-only diff does not require a floor reviewer here either.
+
+_CHANGESET = ".changes/unreleased/project-management-none-20261001-wording.yaml"
+
+
 def test_changeset_only_diff_needs_no_floor_reviewer(dw, rc, monkeypatch) -> None:
     _wire(
         dw, monkeypatch,
-        collection=_code_floor_collection(rc),
+        collection=_floor_collection(rc),
         comments=[_local_verdict_comment("reviewer", "APPROVED")],
         changed_files=("README.md", _CHANGESET),
     )
@@ -797,7 +925,7 @@ def test_changeset_only_diff_needs_no_floor_reviewer(dw, rc, monkeypatch) -> Non
 def test_changeset_with_code_needs_the_floor_reviewer(dw, rc, monkeypatch) -> None:
     _wire(
         dw, monkeypatch,
-        collection=_code_floor_collection(rc),
+        collection=_floor_collection(rc),
         comments=[_local_verdict_comment("reviewer", "APPROVED")],
         changed_files=(_CHANGESET, "src/app.py"),
     )
@@ -806,10 +934,29 @@ def test_changeset_with_code_needs_the_floor_reviewer(dw, rc, monkeypatch) -> No
     assert "code-reviewer" in result.refusal_message
 
 
+def test_large_pr_with_only_a_changeset_beside_docs_needs_no_floor_reviewer(
+    dw, rc, monkeypatch,
+) -> None:
+    """The list is applied to every page the files API returns: a 350-file PR
+    of docs whose one non-doc file, on the last page, is its changeset draws
+    no floor reviewer."""
+    _wire(
+        dw, monkeypatch,
+        collection=_floor_collection(rc),
+        comments=[_local_verdict_comment("reviewer", "APPROVED")],
+        closing_issue_labels={42: ["type:docs"]},
+    )
+    paths = _LARGE_PR_PATHS[:-1] + [_CHANGESET]
+    _wire_files_api(dw, monkeypatch, stdout=_files_api_pages(paths))
+    result = dw._check_agent_gate(99, {}, _config(), "resolved", CAP_ROOT)
+    assert result.passed is True, result.refusal_message
+    assert "code-reviewer" not in result.passed_via
+
+
 def test_malformed_not_code_refuses(dw, rc, monkeypatch) -> None:
     _wire(
         dw, monkeypatch,
-        collection=_code_floor_collection(rc),
+        collection=_floor_collection(rc),
         comments=[_local_verdict_comment("reviewer", "APPROVED")],
         changed_files=(_CHANGESET,),
     )

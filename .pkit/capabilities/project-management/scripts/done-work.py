@@ -224,10 +224,12 @@ from _lib.review_contributions import collect_contributions  # noqa: E402
 from _lib.review_mode import resolve_mode  # noqa: E402
 from _lib.review_opt_outs import OPT_OUT_PATH, read_opt_outs  # noqa: E402
 from _lib.required_reviewers import (  # noqa: E402
+    ERROR_CHANGED_FILES,
     ERROR_CLOSING_ISSUES,
     ERROR_COLLECTION,
     ERROR_NOT_CODE,
     ERROR_OPT_OUT,
+    ERROR_TOO_MANY_CHANGED_FILES,
     NOT_CODE_PATH,
     Resolution,
     read_not_code,
@@ -1491,8 +1493,9 @@ def _resolution_refusal(
     """Shape a fail-closed `_GateResult` from a non-ok `Resolution` (D5).
 
     A collection error names the malformed declaration / undeployed agent; an
-    unresolvable closing-issue lookup names what could not be determined. Both
-    refuse rather than proceed on a partial (fail-open) set.
+    unresolvable closing-issue lookup or unreadable changed files name what
+    could not be determined. All refuse rather than proceed on a partial
+    (fail-open) set.
 
     When `override_requested` (the operator passed `--bypass-reviewer`), append
     a note that a per-reviewer override cannot help an unresolvable set — it
@@ -1505,6 +1508,10 @@ def _resolution_refusal(
         message = _contribution_error_refusal(error.collection)
     elif error.kind == ERROR_CLOSING_ISSUES:
         message = _closing_issue_unresolvable_refusal(error.message)
+    elif error.kind in (ERROR_CHANGED_FILES, ERROR_TOO_MANY_CHANGED_FILES):
+        message = _changed_files_unresolvable_refusal(
+            error.message, too_many=error.kind == ERROR_TOO_MANY_CHANGED_FILES,
+        )
     elif error.kind == ERROR_OPT_OUT:
         message = _opt_out_invalid_refusal(error.details)
     elif error.kind == ERROR_NOT_CODE:
@@ -1717,6 +1724,38 @@ def _closing_issue_unresolvable_refusal(reason: str) -> str:
         "retry `done-work`.",
         "              b) If persistent, merge with "
         "`done-work --bypass \"<reason>\"`.",
+    ])
+
+
+def _changed_files_unresolvable_refusal(reason: str, *, too_many: bool) -> str:
+    """Refusal text when the PR's changed files cannot be read (DEC-032 D5).
+
+    Reached only while a diff-floor contribution is installed: without the
+    complete changed-file set the gate cannot tell whether a floor reviewer is
+    required, so it refuses rather than merge on a possibly-incomplete set.
+    `too_many` is the listing that reached GitHub's ceiling — not transient,
+    so the remediation is to split the PR rather than retry.
+    """
+    if too_many:
+        first_remedy = (
+            "              a) Split the PR — not transient: a retry reads the "
+            "same cut-short list, or"
+        )
+    else:
+        first_remedy = (
+            "              a) Transient gh failure reading the PR's changed "
+            "files — retry `done-work`, or"
+        )
+    return "\n".join([
+        "[refused] agent-mode approval gate cannot be resolved — the PR's "
+        "changed files cannot be read in full.",
+        f"            → {reason}",
+        "            A diff-floor reviewer may be required, so the gate "
+        "refuses rather than merge on a possibly-incomplete set (fail-closed, "
+        "DEC-032 D5).",
+        "            Remediation:",
+        first_remedy,
+        "              b) Merge with `done-work --bypass \"<reason>\"`.",
     ])
 
 

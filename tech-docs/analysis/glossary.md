@@ -107,9 +107,9 @@ TERM-stabilisation:
           - project-management:DEC-014
           - ADR-019
       revalidated:
-        at: 2026-09-30T23:25:40Z
+        at: 2026-10-01T00:09:41Z
         outcome: unchanged
-        unchanged-because: done-work's change reads the not-code list and a shared freshness anchor for the review gate; stabilisation's rules for what lands are untouched
+        unchanged-because: done-work's change is how the merge gate reads a PR's changed files for the diff-floor reviewers and the refusal when it cannot; what a stabilisation freezes and how its guards refuse did not change
 ---
 
 # Glossary

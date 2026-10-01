@@ -403,6 +403,110 @@ def test_resolution_error_closing_issues(rpr, rc) -> None:
     assert "boom" in msg
 
 
+def test_resolution_error_changed_files_asks_for_a_retry(rpr) -> None:
+    """A failed changed-files read is a gh failure: retry — and the remedy no
+    longer points at closing-issue links, which have nothing to do with it."""
+    resolution = rpr.Resolution(
+        error=rpr.RequiredReviewersError(
+            kind=rpr.ERROR_CHANGED_FILES,
+            message="gh api pulls/99/files failed: HTTP 502",
+        )
+    )
+    msg = rpr._resolution_error_message(resolution)
+    assert "HTTP 502" in msg
+    remediation = msg.split("Remediation:")[1]
+    assert "retry" in remediation
+    assert "changed files" in remediation
+    assert "closing-issue" not in remediation
+
+
+def test_resolution_error_too_many_changed_files_names_the_cause(rpr) -> None:
+    """A PR past GitHub's file listing is refused naming that cause and a
+    split-or-bypass remedy — not "transient gh failure" (#1188)."""
+    resolution = rpr.Resolution(
+        error=rpr.RequiredReviewersError(
+            kind=rpr.ERROR_TOO_MANY_CHANGED_FILES,
+            message=(
+                "PR #99 changes at least 3000 files, the most GitHub lists for "
+                "a pull request — its complete changed-file set cannot be read"
+            ),
+        )
+    )
+    msg = rpr._resolution_error_message(resolution)
+    assert "fail-closed" in msg
+    assert "at least 3000 files" in msg
+    remediation = msg.split("Remediation:")[1]
+    assert "not transient" in remediation
+    assert "Split the PR" in remediation
+    assert "done-work --bypass" in remediation
+    assert "transient gh failure" not in msg
+
+
+# ---- the reviewer brief (#1188) ---------------------------------------
+
+
+def test_review_brief_names_the_local_diff_for_a_refused_diff(rpr) -> None:
+    """GitHub refuses `gh pr diff` past 300 files, so the brief tells the
+    reviewer where else to read the diff: this checkout, from the merge base."""
+    brief = rpr._review_brief(
+        "reviewer", 99, base="main", head="fix/1188-large-prs",
+    )
+    assert "Review the diff of PR #99" in brief
+    assert "`gh pr diff 99`" in brief
+    assert "300" in brief
+    assert "`git diff origin/main...fix/1188-large-prs`" in brief
+    assert "Reviewer agent (local, reviewer): APPROVED" in brief
+
+
+def test_review_brief_leaves_an_unknown_base_as_a_placeholder(rpr) -> None:
+    brief = rpr._review_brief("reviewer", 99, base=None, head="HEAD")
+    assert "`git diff origin/<base>...HEAD`" in brief
+
+
+def test_invoke_agent_sends_the_brief(rpr, monkeypatch) -> None:
+    """The brief is what reaches the reviewer session as its prompt."""
+    import subprocess
+
+    captured: dict = {}
+    monkeypatch.setattr(rpr.shutil, "which", lambda _bin: "/usr/bin/claude")
+
+    def fake_run(args, **kwargs):
+        captured["args"] = args
+        return subprocess.CompletedProcess(
+            args=args, returncode=0,
+            stdout="Reviewer agent (local, reviewer): APPROVED\n", stderr="",
+        )
+
+    monkeypatch.setattr(rpr.subprocess, "run", fake_run)
+    rpr._invoke_agent("reviewer", 99, {}, 720, base="main", head="feat/147-x")
+    prompt = captured["args"][captured["args"].index("-p") + 1]
+    assert prompt == rpr._review_brief(
+        "reviewer", 99, base="main", head="feat/147-x",
+    )
+
+
+def test_find_pr_for_branch_reads_the_base_branch(rpr, monkeypatch) -> None:
+    """The PR lookup reads the base branch the brief names."""
+    import subprocess
+
+    seen: dict = {}
+
+    def fake_gh_run(args, config, **kwargs):
+        seen["args"] = args
+        return subprocess.CompletedProcess(
+            args=args, returncode=0, stderr="",
+            stdout=_json.dumps([{
+                "number": 99, "isDraft": False,
+                "headRefName": "feat/147-x", "baseRefName": "main",
+            }]),
+        )
+
+    monkeypatch.setattr(rpr, "gh_run", fake_gh_run)
+    pr = rpr._find_pr_for_branch("feat/147-x", {})
+    assert pr["baseRefName"] == "main"
+    assert "baseRefName" in seen["args"][seen["args"].index("--json") + 1]
+
+
 # ---- end-to-end invocation flow (DEC-032 D4) ------------------------
 #
 # These drive `main()` with the membership / branch / PR / invocation seams
@@ -412,7 +516,7 @@ def test_resolution_error_closing_issues(rpr, rc) -> None:
 
 
 def _wire_main(
-    rpr, monkeypatch, tmp_path, *, resolution, invoked,
+    rpr, monkeypatch, tmp_path, *, resolution, invoked, briefed=None,
     fresh=None, unreadable=False, argv=(),
 ):
     """Stub main()'s seams; record invoked names into `invoked`.
@@ -421,6 +525,7 @@ def _wire_main(
     exercise main's loop without the gh round-trips). Each `_invoke_agent`
     call appends the name to `invoked` and returns an APPROVED verdict; the
     deployed-agent file existence check is satisfied by creating the files.
+    `briefed`, when given, collects the `(base, head)` each call was passed.
 
     `fresh` is what the fresh-verdict read returns (#1178) — reviewer name →
     token; default none fresh — and `unreadable` makes the read fail instead.
@@ -450,15 +555,21 @@ def _wire_main(
     )
     monkeypatch.setattr(rpr, "_find_issue_branch", lambda n: f"feat/{n}-x")
     monkeypatch.setattr(
-        rpr, "_find_pr_for_branch", lambda branch, config: {"number": 99}
+        rpr, "_find_pr_for_branch",
+        lambda branch, config: {"number": 99, "baseRefName": "main"},
     )
     monkeypatch.setattr(
         rpr, "_resolve_required_local",
         lambda pr_number, config, repo_root, baseline: resolution,
     )
 
-    def fake_invoke(name, pr_number, config, timeout=None, effort=None):
+    def fake_invoke(
+        name, pr_number, config, timeout=None, effort=None, *, base=None,
+        head="HEAD",
+    ):
         invoked.append(name)
+        if briefed is not None:
+            briefed.append((base, head))
         return "APPROVED", "body"
 
     monkeypatch.setattr(rpr, "_invoke_agent", fake_invoke)
@@ -484,6 +595,25 @@ def test_no_contribution_single_reviewer_unchanged(rpr, monkeypatch, tmp_path) -
     rc_code = rpr.main()
     assert rc_code == 0
     assert invoked == ["reviewer"]
+
+
+def test_each_reviewer_is_briefed_with_the_prs_base_and_branch(
+    rpr, monkeypatch, tmp_path,
+) -> None:
+    """main hands every reviewer the PR's base and its branch, so the brief's
+    local-diff fallback names the real range (#1188)."""
+    resolution = rpr.Resolution(
+        required_local=("reviewer", "code-reviewer"),
+        contributed_by={"code-reviewer": "software-engineering"},
+    )
+    invoked: list[str] = []
+    briefed: list[tuple] = []
+    _wire_main(
+        rpr, monkeypatch, tmp_path,
+        resolution=resolution, invoked=invoked, briefed=briefed,
+    )
+    assert rpr.main() == 0
+    assert briefed == [("main", "feat/147-x"), ("main", "feat/147-x")]
 
 
 def test_multi_reviewer_invokes_baseline_plus_contributed(rpr, monkeypatch, tmp_path) -> None:

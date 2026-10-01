@@ -1,0 +1,15 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `review-pr` and `done-work` read a pull request's changed files whatever its
+  size. They read them with `gh pr diff`, which GitHub refuses for a PR
+  changing more than 300 files, so with a diff-floor reviewer installed (such
+  as software-engineering's code panel) both refused that PR and called it a
+  transient gh failure. They now read every page of GitHub's pull-request
+  files API, which lists up to 3000 files, and count a renamed file under its
+  old path as well as its new one. A read that reaches the 3000-file ceiling is
+  still refused, now naming that cause and a split-or-bypass remedy instead of
+  a retry. `review-pr`'s brief tells each reviewer where to read a diff
+  `gh pr diff` refuses: the PR's range in the local checkout.
