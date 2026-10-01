@@ -12,9 +12,9 @@ pkit:
       record: ["living-docs:DEC-001", COR-049, COR-050, COR-051, COR-053]
       artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006]
     revalidated:
-      at: 2026-09-30T23:02:02Z
+      at: 2026-10-01T17:00:25Z
       outcome: unchanged
-      unchanged-because: "#840's lint and format pass reshapes the anchored code without changing what it does, so this page still describes it as it is"
+      unchanged-because: on this branch COR-050 says in so many words what its revalidation point already meant — the commit that wrote the at value the artefact carries, not a later one whose value a merge did not keep; the rule this page describes or relies on is unchanged
 ---
 
 # living-docs capability

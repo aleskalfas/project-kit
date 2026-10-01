@@ -15,9 +15,9 @@ pkit:
       record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, PRJ-010, ADR-019, ADR-039, ADR-055, "project-management:DEC-053"]
       artefact: [.pkit/decisions/README.md]
     revalidated:
-      at: 2026-10-01T16:40:21Z
+      at: 2026-10-01T17:00:27Z
       outcome: unchanged
-      unchanged-because: the router's routes, fallback and escape hatches are untouched; the router module only gained the pin's one writer beside its reader
+      unchanged-because: on this branch COR-050 says in so many words what its revalidation point already meant — the commit that wrote the at value the artefact carries, not a later one whose value a merge did not keep; the rule this page describes or relies on is unchanged
 ---
 
 # Contributing to project-kit
