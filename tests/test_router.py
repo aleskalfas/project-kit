@@ -29,6 +29,15 @@ class _ExecCalled(Exception):
         self.argv = argv
 
 
+@pytest.fixture(autouse=True)
+def no_inherited_notice(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Every test starts with no pin-fallback notice said: the router sets the
+    notice guard on this process's environment when it degrades, and
+    monkeypatch restores it only for a variable it has recorded."""
+    monkeypatch.setenv(router._PIN_UNRESOLVED_ENV, "")
+    monkeypatch.delenv(router._PIN_UNRESOLVED_ENV)
+
+
 @pytest.fixture
 def ran_self(monkeypatch: pytest.MonkeyPatch) -> list[bool]:
     """Record whether the route-3 `_run_self` hand-off fired (without importing
@@ -399,6 +408,88 @@ def test_route2_degrades_when_uvx_absent(
 
     assert ran_self == [True]
     assert "could not be resolved" in capsys.readouterr().err
+
+
+def test_route2_fallback_says_when_this_binary_is_older_than_the_pin(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    no_exec: None,
+    ran_self: list[bool],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A binary older than the pin is a normal state, and the one in which sync and
+    upgrade refuse (#1212): the fallback says so, and still runs the command."""
+    _make_adopter(tmp_path, "1.150.0")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(router, "running_version", lambda: "1.149.0")
+    _patch_subprocess(monkeypatch, [_FakeCompleted(1)])
+
+    router.main(["status"])
+
+    assert ran_self == [True]  # a read-only command still runs
+    err = capsys.readouterr().err
+    assert "pkit 1.149.0 instead, an OLDER pkit than the pin names" in err
+    assert "`pkit sync` and `pkit upgrade` refuse" in err
+    assert f"{router.DISTRIBUTION_GIT_URL}@v1.150.0" in err
+    assert err.count("pkit:") == 1
+
+
+def test_route2_fallback_to_a_newer_binary_does_not_call_it_older(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    no_exec: None,
+    ran_self: list[bool],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    _make_adopter(tmp_path, "1.100.0")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(router, "running_version", lambda: "1.139.0")
+    _patch_subprocess(monkeypatch, [_FakeCompleted(1)])
+
+    router.main(["status"])
+
+    err = capsys.readouterr().err
+    assert "OLDER" not in err
+    assert "Running 1.139.0 instead" in err
+
+
+def test_route2_fallback_notice_is_said_once_per_command(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    no_exec: None,
+    ran_self: list[bool],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A `pkit` subprocess of the degraded command inherits its environment and
+    does not repeat the notice; it still probes the pin, as routing is unchanged."""
+    _make_adopter(tmp_path, "1.150.0")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(router, "running_version", lambda: "1.149.0")
+    calls = _patch_subprocess(monkeypatch, [_FakeCompleted(1), _FakeCompleted(1)])
+
+    router.main(["pm", "open-pr"])  # the command the operator ran
+    router.main(["friction", "check"])  # a `pkit` call it makes, same environment
+
+    assert ran_self == [True, True]
+    assert len(calls) == 2  # each probed the pin
+    assert capsys.readouterr().err.count("pkit:") == 1
+    assert os.environ[router._PIN_UNRESOLVED_ENV] == "1.150.0"
+
+
+@pytest.mark.parametrize(
+    ("version", "than", "older"),
+    [
+        ("1.149.0", "1.150.0", True),
+        ("1.150.0", "1.150.0", False),
+        ("1.151.0", "1.150.0", False),
+        ("1.9.0", "1.10.0", True),  # numeric, not lexical
+        ("1.149", "1.150.0", False),  # not MAJOR.MINOR.PATCH: no order claimed
+        ("1.149.0", "main", False),
+        ("1.149.0rc1", "1.150.0", False),
+    ],
+)
+def test_is_older_release_orders_only_bare_releases(version: str, than: str, older: bool) -> None:
+    assert router._is_older_release(version, than) is older
 
 
 # --- run_bypassed: bootstrap the pin raise with routing truly off ---------------

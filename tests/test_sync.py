@@ -8,9 +8,14 @@ from pathlib import Path
 import click
 import pytest
 
-from project_kit import install, sync
-from project_kit.manifest import read_backbone_manifest
+from project_kit import install, router, sync
+from project_kit.manifest import read_backbone_manifest, read_kit_version, write_backbone_manifest
 from tests.adopter_repo import MakeAdopterRepo
+
+# The backbone version an installed fixture records: the real source kit's. A
+# fake source a capability test stages carries it too, since sync refuses a
+# source older than the project's content outright (#1212).
+_INSTALLED_BACKBONE = read_kit_version(install.find_source_kit())
 
 
 @pytest.fixture
@@ -465,7 +470,7 @@ def _stage_capability_in_source(
     # Sync's manifest update needs a VERSION file in the source.
     version_file = source_kit / "VERSION"
     if not version_file.is_file():
-        version_file.write_text("1.0.0\n", encoding="utf-8")
+        version_file.write_text(f"{_INSTALLED_BACKBONE}\n", encoding="utf-8")
     # Sync's _refuse_if_source_kit_missing equivalent wants decisions/.
     (source_kit / "decisions").mkdir(parents=True, exist_ok=True)
     (cap_dir / "package.yaml").write_text(
@@ -566,7 +571,7 @@ def test_sync_warns_when_capability_no_longer_in_source(
     # Required scaffolding so the early _refuse_if_source_kit_missing
     # equivalent doesn't trip and sync's manifest update has a VERSION.
     (fake_source_b / "decisions").mkdir()
-    (fake_source_b / "VERSION").write_text("1.0.0\n", encoding="utf-8")
+    (fake_source_b / "VERSION").write_text(f"{_INSTALLED_BACKBONE}\n", encoding="utf-8")
 
     sync.run_sync(installed_target)
     out = capsys.readouterr().out
@@ -808,7 +813,7 @@ def test_sync_skips_source_reconciliation_for_incubated_capability(
     fake_source = tmp_path / "fake-source" / ".pkit"
     fake_source.mkdir(parents=True)
     (fake_source / "decisions").mkdir()
-    (fake_source / "VERSION").write_text("1.0.0\n", encoding="utf-8")
+    (fake_source / "VERSION").write_text(f"{_INSTALLED_BACKBONE}\n", encoding="utf-8")
     monkeypatch.setattr(install, "find_source_kit", lambda: fake_source)
     monkeypatch.setattr(sync.install, "find_source_kit", lambda: fake_source)
 
@@ -841,7 +846,7 @@ def test_sync_still_registers_incubated_capability_after_run(
     fake_source = tmp_path / "fake-source" / ".pkit"
     fake_source.mkdir(parents=True)
     (fake_source / "decisions").mkdir()
-    (fake_source / "VERSION").write_text("1.0.0\n", encoding="utf-8")
+    (fake_source / "VERSION").write_text(f"{_INSTALLED_BACKBONE}\n", encoding="utf-8")
     monkeypatch.setattr(install, "find_source_kit", lambda: fake_source)
     monkeypatch.setattr(sync.install, "find_source_kit", lambda: fake_source)
 
@@ -913,7 +918,7 @@ def test_sync_dry_run_does_not_refresh_incubated_capability(
     fake_source = tmp_path / "fake-source" / ".pkit"
     fake_source.mkdir(parents=True)
     (fake_source / "decisions").mkdir()
-    (fake_source / "VERSION").write_text("1.0.0\n", encoding="utf-8")
+    (fake_source / "VERSION").write_text(f"{_INSTALLED_BACKBONE}\n", encoding="utf-8")
     monkeypatch.setattr(install, "find_source_kit", lambda: fake_source)
     monkeypatch.setattr(sync.install, "find_source_kit", lambda: fake_source)
 
@@ -988,3 +993,179 @@ def test_sync_refuses_cleanly_when_source_incomplete(
 
     with pytest.raises(click.ClickException, match="methodology source not found"):
         sync.run_sync(installed_target)
+
+
+# --- an older pkit never takes a project back (#1212) ---------------------------
+
+# A version no release reaches: the project's content or pin, ahead of this pkit.
+_NEWER = "999.0.0"
+
+
+def _record_content_version(target: Path, version: str) -> None:
+    """Record *version* as the project's content version, as a newer pkit's sync would."""
+    manifest = read_backbone_manifest(target)
+    assert manifest is not None
+    manifest.backbone_version = version
+    write_backbone_manifest(target, manifest)
+
+
+def _write_pin(target: Path, version: str) -> None:
+    router.pin_file_path(target).write_text(f"{version}\n", encoding="utf-8")
+
+
+def _tree_bytes(root: Path) -> dict[str, bytes | None]:
+    """Every path under *root* outside `.git/`, with a file's bytes (None for a
+    directory): what a refusal must leave exactly as it was."""
+    return {
+        path.relative_to(root).as_posix(): path.read_bytes() if path.is_file() else None
+        for path in sorted(root.rglob("*"))
+        if path.relative_to(root).parts[0] != ".git"
+    }
+
+
+@pytest.mark.parametrize("pinned", [False, True], ids=["no-pin", "pinned"])
+def test_sync_refuses_content_newer_than_this_pkit_and_writes_nothing(
+    installed_target: Path, pinned: bool
+) -> None:
+    """The router's offline fallback runs an older pkit over newer content, pinned
+    or not: sync refuses, naming both versions and the way to the right pkit, and
+    leaves the tree, pin included, byte-identical."""
+    _record_content_version(installed_target, _NEWER)
+    if pinned:
+        _write_pin(installed_target, _NEWER)
+    before = _tree_bytes(installed_target)
+
+    with pytest.raises(click.ClickException) as excinfo:
+        sync.run_sync(installed_target)
+
+    message = excinfo.value.message
+    assert f"this pkit is {_INSTALLED_BACKBONE}, older than this project's content ({_NEWER}" in (
+        message
+    )
+    assert "Nothing was written" in message
+    assert f"{router.DISTRIBUTION_GIT_URL}@v{_NEWER} project-kit sync" in message
+    if pinned:
+        assert f"pin ({_NEWER}, in .pkit/version-pin)" in message
+        assert "reconnect" in message
+        assert "`pkit pin <version>`" in message
+    else:
+        assert f"uv tool install --force {router.DISTRIBUTION_GIT_URL}@v{_NEWER}" in message
+    assert _tree_bytes(installed_target) == before
+
+
+def test_sync_refuses_a_pin_newer_than_this_pkit(installed_target: Path) -> None:
+    """The pin names the version the project runs at, so a pin ahead of this pkit
+    refuses even where the recorded content is this pkit's own version."""
+    _write_pin(installed_target, _NEWER)
+    before = _tree_bytes(installed_target)
+
+    with pytest.raises(click.ClickException) as excinfo:
+        sync.run_sync(installed_target)
+
+    message = excinfo.value.message
+    assert f"older than this project's pin ({_NEWER}, in .pkit/version-pin)" in message
+    assert "content (" not in message
+    assert _tree_bytes(installed_target) == before
+
+
+def test_sync_names_pinning_at_the_content_when_the_content_is_ahead_of_the_pin(
+    installed_target: Path,
+) -> None:
+    """Content ahead of its pin, as an interrupted pin raise leaves it: the remedy is
+    pinning at the content, which needs no fetch."""
+    _record_content_version(installed_target, _NEWER)
+    _write_pin(installed_target, _INSTALLED_BACKBONE)
+
+    with pytest.raises(click.ClickException) as excinfo:
+        sync.run_sync(installed_target)
+
+    assert f"run `pkit pin {_NEWER}`" in excinfo.value.message
+    assert router.read_version_pin(installed_target) == _INSTALLED_BACKBONE
+
+
+@pytest.mark.parametrize("flags", [{"force": True}, {"dry_run": True}], ids=["force", "dry-run"])
+def test_sync_content_downgrade_refusal_has_no_override(
+    installed_target: Path, flags: dict[str, bool]
+) -> None:
+    """`--force` overrides only the capability guard, and a dry run refuses too."""
+    _record_content_version(installed_target, _NEWER)
+    before = _tree_bytes(installed_target)
+
+    with pytest.raises(click.ClickException, match="no flag overrides this refusal"):
+        sync.run_sync(installed_target, **flags)
+
+    assert _tree_bytes(installed_target) == before
+
+
+def test_cli_sync_exits_non_zero_on_the_content_downgrade_refusal(installed_target: Path) -> None:
+    from click.testing import CliRunner
+
+    from project_kit.cli import main
+
+    _record_content_version(installed_target, _NEWER)
+
+    result = CliRunner().invoke(main, ["sync"])
+
+    assert result.exit_code != 0
+    assert "refusing to run `pkit sync`" in result.output
+
+
+def test_sync_at_the_content_version_proceeds(installed_target: Path) -> None:
+    """This pkit at the project's content and pin: sync runs as before."""
+    _write_pin(installed_target, _INSTALLED_BACKBONE)
+
+    sync.run_sync(installed_target)  # must not raise
+
+    manifest = read_backbone_manifest(installed_target)
+    assert manifest is not None
+    assert manifest.backbone_version == _INSTALLED_BACKBONE
+    assert router.read_version_pin(installed_target) == _INSTALLED_BACKBONE
+
+
+def test_sync_newer_than_the_content_moves_it_forward(installed_target: Path) -> None:
+    """This pkit newer than the project's content and pin: sync moves the content
+    forward as before, and leaves the pin to the pin gestures."""
+    _record_content_version(installed_target, "0.1.0")
+    _write_pin(installed_target, "0.1.0")
+
+    sync.run_sync(installed_target)
+
+    manifest = read_backbone_manifest(installed_target)
+    assert manifest is not None
+    assert manifest.backbone_version == _INSTALLED_BACKBONE
+    assert router.read_version_pin(installed_target) == "0.1.0"
+
+
+@pytest.mark.parametrize("unreadable", ["content", "pin"])
+def test_sync_does_not_order_a_version_that_is_not_one(
+    installed_target: Path, unreadable: str
+) -> None:
+    """Only an unambiguous downgrade refuses: a corrupt content version is one sync
+    repairs, and a pin that is not a version has no order to keep."""
+    if unreadable == "content":
+        _record_content_version(installed_target, "not-a-version")
+    else:
+        _write_pin(installed_target, "main")
+
+    sync.run_sync(installed_target)  # must not raise
+
+    manifest = read_backbone_manifest(installed_target)
+    assert manifest is not None
+    assert manifest.backbone_version == _INSTALLED_BACKBONE
+
+
+def test_read_only_commands_run_under_a_pkit_older_than_the_content(
+    installed_target: Path,
+) -> None:
+    """The refusal is sync's and upgrade's alone: a read-only command still runs."""
+    from click.testing import CliRunner
+
+    from project_kit.cli import main
+
+    _record_content_version(installed_target, _NEWER)
+    _write_pin(installed_target, _NEWER)
+
+    result = CliRunner().invoke(main, ["status"])
+
+    assert result.exit_code == 0, result.output
+    assert _NEWER in result.output

@@ -8,6 +8,13 @@ backlog; it refused, and every successful promotion printed "the process engine
 refused this move". `move-issue` now names the origin it read before the label
 write (`pkit process move --from`).
 
+Promoting with `--milestone` made no move at all (#1210). promote-issue attached
+the milestone first, and the workflow reads a milestone as Backlog, so its
+move-issue found nothing to move: no state label, no audit comment, nothing
+journaled. It now moves first and attaches the milestone second, and a re-run
+after a failure between the two completes the promotion without a second audit
+comment.
+
 These tests run the sequence through the real scripts and the real engine. The
 issue is filed with create-issue's own tracker call, then promoted by
 promote-issue, whose move-issue runs in this process. GitHub is an in-memory
@@ -43,6 +50,9 @@ ADDRESS = "project-management:issue-lifecycle"
 
 ENGINE_WARNING = "the process engine refused this move"
 INVOKER = SimpleNamespace(github_login="octocat", email="octocat@example.com")
+REASON = "the maintainer asked for it in session"
+MILESTONE = {"number": 7, "title": "Sprint 1"}
+AUDIT_MARKER = "<!-- pkit-audit -->"
 
 AUTHORED_BODY = (
     "## What\n\nA task filed to be promoted.\n\n"
@@ -100,12 +110,19 @@ def _options(argv: list[str], flag: str) -> list[str]:
 
 class _Tracker:
     """GitHub as this sequence's `gh` calls see it: one repository's issues,
-    their comments and their label timeline, all posted as the invoker."""
+    their comments and their label timeline, all posted as the invoker, and its
+    one open milestone.
+
+    `fail_next` holds `gh issue edit` flags whose next edit fails, once, before
+    it changes anything."""
 
     def __init__(self) -> None:
         self.issues: dict[int, dict[str, Any]] = {}
         self.comments: dict[int, list[dict[str, Any]]] = {}
         self.timeline: dict[int, list[dict[str, Any]]] = {}
+        self.milestones: list[dict[str, Any]] = [MILESTONE]
+        self.calls: list[list[str]] = []
+        self.fail_next: set[str] = set()
 
     def state_of(self, number: int) -> str:
         """The issue's state as the tracker carries it, read with move-issue's
@@ -116,6 +133,7 @@ class _Tracker:
         )
 
     def gh(self, argv: list[str]) -> subprocess.CompletedProcess[str]:
+        self.calls.append(argv)
         if argv[1:3] == ["issue", "create"]:
             return self._create(argv)
         if argv[1] == "issue" and argv[2] in ("view", "edit", "comment"):
@@ -132,6 +150,8 @@ class _Tracker:
         if argv[1] == "api" and argv[-1].endswith("/timeline"):
             number = int(argv[-1].split("/")[-2])
             return _done(argv, stdout=json.dumps(self.timeline[number]))
+        if argv[1] == "api" and argv[-1].endswith("/milestones?state=open"):
+            return _done(argv, stdout=json.dumps(self.milestones))
         raise AssertionError(f"unexpected gh call: {argv}")
 
     def _create(self, argv: list[str]) -> subprocess.CompletedProcess[str]:
@@ -164,6 +184,15 @@ class _Tracker:
         return _done(argv, stdout=json.dumps({f: record[f] for f in fields.split(",")}))
 
     def _edit(self, argv: list[str], number: int) -> subprocess.CompletedProcess[str]:
+        failing = self.fail_next.intersection(argv)
+        if failing:
+            self.fail_next -= failing
+            return _done(argv, 1, stderr="HTTP 502: Bad Gateway")
+        title = _option(argv, "--milestone")
+        if title is not None:
+            self.issues[number]["milestone"] = next(
+                m for m in self.milestones if m["title"] == title
+            )
         labels = self.issues[number]["labels"]
         for event, flag in (("unlabeled", "--remove-label"), ("labeled", "--add-label")):
             for name in _options(argv, flag):
@@ -230,13 +259,15 @@ class _World:
         assert url is not None
         return int(url.rsplit("/", 1)[1])
 
-    def promote(self, number: int) -> int:
+    def promote(self, number: int, milestone: str | None = None) -> int:
+        scheduling = ["--milestone", milestone] if milestone is not None else []
         return _with_argv(
             [
                 "promote-issue.py",
                 str(number),
+                *scheduling,
                 "--reason",
-                "the maintainer asked for it in session",
+                REASON,
                 "--capability-root",
                 str(CAPABILITY_ROOT),
                 "--yes",
@@ -290,6 +321,31 @@ class _World:
 
     def journal_files(self) -> list[Path]:
         return sorted((self.engine_repo / ".pkit").rglob("*.journal.jsonl"))
+
+    # --- what the tracker holds --------------------------------------------
+
+    def labels(self, number: int) -> list[str]:
+        return self.tracker.issues[number]["labels"]
+
+    def milestone(self, number: int) -> str | None:
+        milestone = self.tracker.issues[number]["milestone"]
+        return milestone["title"] if milestone else None
+
+    def audit_comments(self, number: int) -> list[str]:
+        """The audit comments on the issue that carry the promotion's reason."""
+        return [
+            comment["body"]
+            for comment in self.tracker.comments[number]
+            if AUDIT_MARKER in comment["body"] and REASON in comment["body"]
+        ]
+
+    def milestone_calls(self) -> list[list[str]]:
+        """The `gh` calls that read the open milestones or write one."""
+        return [
+            argv
+            for argv in self.tracker.calls
+            if "--milestone" in argv or argv[-1].endswith("/milestones?state=open")
+        ]
 
 
 def _answer_from_tracker(
@@ -414,3 +470,94 @@ def test_a_move_the_engine_refuses_still_warns(
     )
     assert f"`pkit pm history {number} --check-drift` will show the gap" in moved.err
     assert world.moves(number) == [("todo", "backlog", "promote-issue")]
+
+
+# --- scheduling while promoting (#1210) -------------------------------------
+
+
+def _assert_promoted(world: _World, number: int, milestone: str | None) -> None:
+    """The issue is in Backlog on both views with `milestone` set (or none), one
+    audit comment carries the reason, and the journal holds one todo → backlog
+    move that `pm history --check-drift` finds no drift against."""
+    assert world.views(number) == ("backlog", "backlog")
+    assert "state:backlog" in world.labels(number)
+    assert world.milestone(number) == milestone
+    assert len(world.audit_comments(number)) == 1
+    assert world.moves(number) == [("todo", "backlog", "promote-issue")]
+    assert world.history(number) == 0
+
+
+def test_promoting_with_a_milestone_makes_the_whole_move_and_schedules(
+    world: _World, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # Attached first, the milestone read as Backlog: move-issue found nothing
+    # to move, and the issue ended with the milestone and nothing else.
+    number = world.file_issue()
+    assert world.views(number) == ("todo", "todo")
+
+    assert world.promote(number, milestone=MILESTONE["title"]) == 0
+    promoted = capsys.readouterr()
+    assert ENGINE_WARNING not in promoted.err
+    assert f"[ok] promoted #{number} Todo → Backlog (milestone: Sprint 1)" in promoted.out
+    _assert_promoted(world, number, milestone="Sprint 1")
+    assert "no ungoverned state changes detected" in capsys.readouterr().out
+
+
+def test_a_rerun_after_the_milestone_write_fails_attaches_it_without_moving_again(
+    world: _World, capsys: pytest.CaptureFixture[str]
+) -> None:
+    number = world.file_issue()
+    world.tracker.fail_next = {"--milestone"}
+
+    assert world.promote(number, milestone=MILESTONE["title"]) == 2
+    assert (
+        f"[warn] #{number} was moved to Backlog but milestone 'Sprint 1' was not attached."
+        in capsys.readouterr().err
+    )
+    # The move is whole; only the milestone is missing.
+    assert "state:backlog" in world.labels(number)
+    assert world.milestone(number) is None
+    assert len(world.audit_comments(number)) == 1
+    assert world.moves(number) == [("todo", "backlog", "promote-issue")]
+
+    assert world.promote(number, milestone=MILESTONE["title"]) == 0
+    assert f"[ok] #{number} already at state:backlog (milestone attached" in (
+        capsys.readouterr().out
+    )
+    _assert_promoted(world, number, milestone="Sprint 1")
+
+
+def test_a_rerun_after_the_label_write_fails_posts_the_audit_comment_once(
+    world: _World, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # move-issue posts the audit comment before the label write, so the reason
+    # survives the failure; the re-run finds that comment by its key and moves.
+    number = world.file_issue()
+    world.tracker.fail_next = {"--add-label"}
+
+    assert world.promote(number, milestone=MILESTONE["title"]) == 3
+    assert (
+        f"[warn] move-issue exited 3: #{number} was not moved and milestone 'Sprint 1' "
+        "was not attached" in capsys.readouterr().err
+    )
+    assert world.views(number) == ("todo", "todo")
+    assert world.milestone(number) is None
+    assert len(world.audit_comments(number)) == 1
+    assert world.moves(number) == []
+
+    assert world.promote(number, milestone=MILESTONE["title"]) == 0
+    assert "transition audit comment already present" in capsys.readouterr().out
+    _assert_promoted(world, number, milestone="Sprint 1")
+
+
+def test_promoting_without_a_milestone_leaves_the_milestone_alone(
+    world: _World, capsys: pytest.CaptureFixture[str]
+) -> None:
+    number = world.file_issue()
+
+    assert world.promote(number) == 0
+    assert f"[ok] promoted #{number} Todo → Backlog (milestone unchanged)" in (
+        capsys.readouterr().out
+    )
+    _assert_promoted(world, number, milestone=None)
+    assert world.milestone_calls() == []

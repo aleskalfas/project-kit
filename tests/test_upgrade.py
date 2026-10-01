@@ -1298,6 +1298,115 @@ def test_upgrade_dry_run_pinned_does_not_write_pin(
     assert router.read_version_pin(installed_target) == "0.1.0"  # unchanged
 
 
+# --- an older pkit never takes a project back (#1212) ---------------------------
+
+# A version no release reaches: the project's content or pin, ahead of this pkit.
+_NEWER = "999.0.0"
+
+
+def _record_content_version(target: Path, version: str) -> None:
+    """Record *version* as the project's content version, as a newer pkit's sync would."""
+    m = manifest.read_backbone_manifest(target)
+    assert m is not None
+    m.backbone_version = version
+    manifest.write_backbone_manifest(target, m)
+
+
+def _tree_bytes(root: Path) -> dict[str, bytes | None]:
+    """Every path under *root* outside `.git/`, with a file's bytes (None for a
+    directory): what a refusal must leave exactly as it was."""
+    return {
+        path.relative_to(root).as_posix(): path.read_bytes() if path.is_file() else None
+        for path in sorted(root.rglob("*"))
+        if path.relative_to(root).parts[0] != ".git"
+    }
+
+
+def _this_pkit() -> str:
+    return manifest.read_kit_version(install.find_source_kit())
+
+
+@pytest.mark.parametrize("dry_run", [False, True], ids=["run", "dry-run"])
+@pytest.mark.parametrize("pinned", [False, True], ids=["no-pin", "pinned"])
+def test_upgrade_refuses_content_newer_than_this_pkit_and_writes_nothing(
+    installed_target: Path, monkeypatch: pytest.MonkeyPatch, pinned: bool, dry_run: bool
+) -> None:
+    """The router's offline fallback runs an older pkit over newer content: upgrade
+    refuses before it writes, so the content does not move back, the pin does not
+    move down, and an un-pinned project is not pinned at the older version."""
+    monkeypatch.delenv(router._LOOP_GUARD_ENV, raising=False)
+    _record_content_version(installed_target, _NEWER)
+    if pinned:
+        router.pin_file_path(installed_target).write_text(f"{_NEWER}\n", encoding="utf-8")
+    before = _tree_bytes(installed_target)
+
+    with pytest.raises(click.ClickException) as excinfo:
+        upgrade.run_upgrade(installed_target, dry_run=dry_run)
+
+    message = excinfo.value.message
+    assert f"refusing to run `pkit upgrade`: this pkit is {_this_pkit()}" in message
+    assert f"content ({_NEWER}, in .pkit/manifest.yaml)" in message
+    assert f"{router.DISTRIBUTION_GIT_URL}@v{_NEWER} project-kit upgrade" in message
+    assert _tree_bytes(installed_target) == before
+
+
+def test_upgrade_refuses_to_move_a_newer_pin_down(
+    installed_target: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Content at this pkit's version, pin ahead of it: the already-at-version path
+    would otherwise rewrite the pin down to this pkit's version."""
+    monkeypatch.delenv(router._LOOP_GUARD_ENV, raising=False)
+    router.pin_file_path(installed_target).write_text(f"{_NEWER}\n", encoding="utf-8")
+    before = _tree_bytes(installed_target)
+
+    with pytest.raises(click.ClickException) as excinfo:
+        upgrade.run_upgrade(installed_target)
+
+    assert f"pin ({_NEWER}, in .pkit/version-pin)" in excinfo.value.message
+    assert router.read_version_pin(installed_target) == _NEWER
+    assert _tree_bytes(installed_target) == before
+
+
+@pytest.mark.parametrize("content", ["equal", "older"])
+def test_upgrade_at_or_ahead_of_the_content_is_unchanged(
+    installed_target: Path, monkeypatch: pytest.MonkeyPatch, content: str
+) -> None:
+    """This pkit at the project's version, or newer: upgrade runs as before and
+    leaves content and pin at this pkit's version."""
+    monkeypatch.delenv(router._LOOP_GUARD_ENV, raising=False)
+    recorded = _this_pkit() if content == "equal" else "0.1.0"
+    _record_content_version(installed_target, recorded)
+    router.pin_file_path(installed_target).write_text(f"{recorded}\n", encoding="utf-8")
+
+    upgrade.run_upgrade(installed_target)  # must not raise
+
+    assert _recorded_version(installed_target) == _this_pkit()
+    assert router.read_version_pin(installed_target) == _this_pkit()
+
+
+def test_upgrade_as_the_pinned_child_still_raises_a_pin_behind_its_content(
+    installed_target: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The pinned child runs the pin's own code, and its auto-advance is how a
+    content-ahead-of-pin state recovers (ADR-049): the refusal comes after it."""
+    _record_content_version(installed_target, _NEWER)
+    router.pin_file_path(installed_target).write_text(f"{_this_pkit()}\n", encoding="utf-8")
+    monkeypatch.setenv(router._LOOP_GUARD_ENV, "1")
+    monkeypatch.setattr(upgrade, "_latest_released_version", lambda: Version(_NEWER))
+    raised_to: list[str] = []
+
+    def _reconciled(pin: str, _argv: list[str], _environ: object = None) -> int:
+        raised_to.append(pin)
+        return 0
+
+    monkeypatch.setattr(upgrade, "run_bypassed", _reconciled)
+
+    upgrade.run_upgrade(installed_target)  # must not raise
+
+    assert raised_to == [_NEWER]
+    assert router.read_version_pin(installed_target) == _NEWER
+
+
 @pytest.mark.parametrize("stdin", [None, "closed"])
 def test_self_update_not_allowed_without_a_usable_stdin(monkeypatch, stdin) -> None:
     """An absent or closed stdin is non-interactive, not a crash (#913)."""

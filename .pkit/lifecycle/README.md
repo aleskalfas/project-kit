@@ -28,9 +28,8 @@ pkit:
         - hatch_build.py
       record: [COR-010, COR-017, COR-027, COR-030, COR-031, COR-052, COR-053, ADR-056, ADR-057, ADR-059]
     revalidated:
-      at: 2026-10-01T09:44:17Z
-      outcome: unchanged
-      unchanged-because: "typing-only change in the package for the type-checking gate (PRJ-010): suppression comments removed; behaviour unchanged"
+      at: 2026-10-01T15:42:36Z
+      outcome: updated
 ---
 
 # Lifecycle
@@ -647,6 +646,17 @@ The upgrade command transitions an adopter project to a target backbone version 
 
 Idempotent: running upgrade on a current adopter is a no-op.
 
+### No path down: an older pkit refuses (#1212)
+
+The target of a backbone upgrade, and the content a sync writes, is the running pkit's own version: a release's content is tied to its code (ADR-033). That version can be *older* than the project. A pin raise leaves the installed tool where it was, and when the entry-point router cannot fetch a project's pin it runs the installed tool instead (ADR-039). So before either writes anything, `upgrade` and `sync` compare the running version with the project's recorded content version (`backbone_version` in the backbone manifest) and with its pin (`.pkit/version-pin`), if there is one:
+
+- **The content or the pin is newer than the running pkit:** refuse. Exit non-zero, name the versions and how to get the right pkit, and write nothing: no content, no manifest, no pin. Without the refusal, sync would write the older content over the newer and upgrade would also move the pin down. Migrations are forward-only (COR-010) and a pin is never moved down (ADR-049), so there is no path down to take; a project is rolled back with git (`git checkout <ref> -- .pkit/`), which restores kit-owned and project-owned state together. No flag overrides the refusal, `sync --force` included, and a dry run refuses too.
+- **Both are at or behind the running pkit:** proceed as the steps above describe.
+
+Only an unambiguous order refuses, as with the capability guard below: a recorded version that is absent or not valid semver is not compared, so a corrupt `backbone_version` is one sync repairs and a pin that is not a version blocks nothing. Read-only commands are unaffected. In a pinned project's `upgrade`, the check comes after the branch that runs as the pin's own code and auto-advances the pin, because that branch is how content left ahead of its pin by an interrupted raise is recovered.
+
+The CLI README's `sync` entry carries the operator-facing detail: the refusal's remedies and the router's notice when it runs a pkit older than the pin.
+
 ### Per-component upgrade
 
 Upgrading just one component (e.g., the project-management capability) skips backbone-side steps as long as the component's new version remains within `requires_backbone` of the current backbone. The same compatibility check from step 1 gates entry. Steps 4 (component migrations), 5 (component-scoped reconciliation), and 6 (component manifest version bump) run; step 2 pulls only the component's source.
@@ -697,7 +707,7 @@ The `kit-shipped` refresh above copies the source subtree wholesale. On its own 
 - **source version < installed version (a downgrade):** refuse this capability's refresh, print a `refused` line naming both versions, and leave the installed tree untouched. `sync --force` overrides — the downgrade proceeds, but a loud `downgrade` line records the deliberate overwrite. Under `--dry-run` the refusal is *previewed* (not a "would refresh") so the plan is honest.
 - **source version ≥ installed version:** refresh as before.
 
-The guard is defence in depth, orthogonal to *why* the source is stale, and fires only on an unambiguous downgrade — an absent or unparseable version on either side is treated as "not a downgrade" so an unreadable manifest never blocks a routine sync. It is scoped to the `kit-shipped` refresh branch: the incubated skip-branch above is unchanged (no kit source to compare against), and the "no longer ships from source" orphan case is likewise untouched.
+The guard is defence in depth, orthogonal to *why* the source is stale, and fires only on an unambiguous downgrade — an absent or unparseable version on either side is treated as "not a downgrade" so an unreadable manifest never blocks a routine sync. It is scoped to the `kit-shipped` refresh branch: the incubated skip-branch above is unchanged (no kit source to compare against), and the "no longer ships from source" orphan case is likewise untouched. It is the per-capability guard under a whole-project one: before any capability is reached, sync has already refused a running pkit older than the project's content or pin ("No path down" above), a refusal `--force` does not override.
 
 ### The ownership predicates (`ownership.py`)
 

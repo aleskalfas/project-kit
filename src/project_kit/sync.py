@@ -32,6 +32,7 @@ from project_kit.manifest import (
     read_kit_version,
     write_backbone_manifest,
 )
+from project_kit.router import DISTRIBUTION_GIT_URL, read_version_pin
 
 
 def run_sync(target_root: Path, dry_run: bool = False, force: bool = False) -> None:
@@ -41,8 +42,9 @@ def run_sync(target_root: Path, dry_run: bool = False, force: bool = False) -> N
     capability whose source version is *older* than the installed one is
     refreshed anyway (loudly). Without it, such a downgrade is refused so
     a stale source can never silently overwrite a newer installed
-    capability (issue #524). It does not override the refusal to propagate
-    over the methodology's source repository (ADR-059; #1070).
+    capability (issue #524). It overrides neither the refusal to propagate
+    over the methodology's source repository (ADR-059; #1070) nor the refusal
+    to take a project back to this pkit's older version (#1212).
     """
     if not (target_root / ".pkit").is_dir():
         raise click.ClickException(f"{target_root}/.pkit/ does not exist. Run 'pkit init' first.")
@@ -101,6 +103,10 @@ def run_sync(target_root: Path, dry_run: bool = False, force: bool = False) -> N
     # is the live checkout, which always satisfies the guard.
     install.refuse_if_source_kit_incomplete(source_kit)
 
+    # A pkit older than the project would write its older content over the
+    # project's: refuse before anything is written (#1212).
+    refuse_content_downgrade(target_root, source_kit, command="sync")
+
     ctx = install.InstallContext(
         target_root=target_root,
         source_kit=source_kit,
@@ -157,6 +163,108 @@ def run_sync(target_root: Path, dry_run: bool = False, force: bool = False) -> N
 
     if not ctx.dry_run:
         _hint_settings_consolidation(target_root)
+
+
+def refuse_content_downgrade(target_root: Path, source_kit: Path, *, command: str) -> None:
+    """Refuse to sync or upgrade a project that is ahead of this pkit (#1212).
+
+    The content this pkit writes is its own version's (ADR-033 ties a release's
+    content to its code), so a pkit older than the project's recorded content
+    (`.pkit/manifest.yaml`'s `backbone_version`) or than its pin
+    (`.pkit/version-pin`) would take the project back: older content over newer,
+    and, in `upgrade`, the pin moved down to it. pkit does neither: migrations
+    are forward-only (COR-010) and a pin is never moved down (ADR-049). An older
+    pkit is a normal state, not a defect: a pin raise leaves the installed tool
+    where it was, and when the router cannot fetch a project's pin it runs the
+    installed tool instead (ADR-039). So `sync` and `upgrade` check the order
+    here, before anything is written, and refuse with the versions and the way
+    to the right pkit. Nothing overrides the refusal, `--force` included, and a
+    dry run refuses too: as with `pkit pin <older>` (ADR-049), there is no safe
+    path down.
+
+    Only an unambiguous downgrade refuses. A recorded version that is absent or
+    not valid semver (a corrupt manifest, which `pkit sync` repairs; a pin that
+    is not a version) is not ordered, as the capability guard below treats an
+    unreadable version. *command* names the refusing command as the operator
+    would re-run it.
+    """
+    tool = read_kit_version(source_kit)
+    manifest = read_backbone_manifest(target_root)
+    content = manifest.backbone_version if manifest is not None else None
+    pin = read_version_pin(target_root)
+    content_ahead = _is_older(tool, content)
+    pin_ahead = _is_older(tool, pin)
+    if not (content_ahead or pin_ahead):
+        return
+
+    ahead: list[str] = []
+    if content_ahead:
+        ahead.append(f"content ({content}, in .pkit/manifest.yaml)")
+    if pin_ahead:
+        ahead.append(f"pin ({pin}, in .pkit/version-pin)")
+    lines = [
+        f"refusing to run `pkit {command}`: this pkit is {tool}, older than this project's "
+        + " and ".join(ahead)
+        + ".",
+        f"Run by this pkit, `{command}` would take the project back to {tool}, and pkit "
+        "never moves a project to an older version: its migrations are forward-only "
+        "(COR-010), and a pin is never moved down (ADR-049). Nothing was written, and no "
+        "flag overrides this refusal.",
+        *_content_downgrade_remedy(command, content, pin),
+        "To take the project back to an older version, restore `.pkit/` from git: "
+        "`git checkout <ref> -- .pkit/`.",
+    ]
+    raise click.ClickException("\n       ".join(lines))
+
+
+def _content_downgrade_remedy(command: str, content: str | None, pin: str | None) -> list[str]:
+    """The way to the pkit a refused *command* needs, by what the project records.
+
+    Three cases. A pin no older than the content is the version the project
+    runs at, so the remedy is that version, which the router runs whenever it
+    can fetch it. Content ahead of its pin is the state an interrupted pin raise
+    leaves (ADR-049), so the remedy is pinning at the content, which needs no
+    fetch. With no pin, or one that is not a version, the remedy is a pkit at
+    the content's version, run once or installed.
+    """
+    if _parse_version(pin) is not None and not _is_older(pin, content):
+        return [
+            f"Run it with pkit {pin}, the version this project pins: reconnect and re-run "
+            f"`pkit {command}` (the router runs the pin whenever it can fetch it), or run "
+            f"`uvx --from {DISTRIBUTION_GIT_URL}@v{pin} project-kit {command}`.",
+            "To move the pin instead, run `pkit pin <version>`; it takes a version no older "
+            "than the project's content.",
+        ]
+    if _parse_version(pin) is not None:
+        return [
+            f"The content is ahead of the pin ({pin}), as an interrupted pin raise leaves it: "
+            f"run `pkit pin {content}` to pin the project at its content, then re-run "
+            f"`pkit {command}`.",
+        ]
+    return [
+        f"Run it with pkit {content} or newer: `uvx --from {DISTRIBUTION_GIT_URL}@v{content} "
+        f"project-kit {command}`, or install that version as your pkit: `uv tool install "
+        f"--force {DISTRIBUTION_GIT_URL}@v{content}`.",
+    ]
+
+
+def _is_older(version: str | None, than: str | None) -> bool:
+    """True iff *version* is strictly older than *than*; False when either is
+    absent or not valid semver, so the guard fires only on an unambiguous order."""
+    parsed, parsed_than = _parse_version(version), _parse_version(than)
+    if parsed is None or parsed_than is None:
+        return False
+    return parsed < parsed_than
+
+
+def _parse_version(text: str | None) -> Version | None:
+    """*text* as a version, or None when it is absent or not valid semver."""
+    if not text:
+        return None
+    try:
+        return Version(text)
+    except InvalidVersion:
+        return None
 
 
 def _hint_settings_consolidation(target_root: Path) -> None:
@@ -295,13 +403,7 @@ def _is_downgrade(target_root: Path, source: CapabilitySource) -> bool:
     from project_kit import capabilities as caps
 
     installed_str = caps.get_installed_capability_version(target_root, source.name)
-    source_str = source.package.version
-    if not installed_str or not source_str:
-        return False
-    try:
-        return Version(source_str) < Version(installed_str)
-    except InvalidVersion:
-        return False
+    return _is_older(source.package.version, installed_str)
 
 
 def _report_incubated_capability(source_kit: Path, name: str) -> None:
