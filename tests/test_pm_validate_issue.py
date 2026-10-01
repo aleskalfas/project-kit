@@ -309,6 +309,32 @@ def test_a_scope_prefix_and_a_short_title_warn(
     assert found == [("warning", "title.scope-prefix"), ("warning", "title.short")]
 
 
+@pytest.mark.parametrize(
+    "title",
+    [
+        "[EPIC] Code review discipline",
+        "[Feature] Named per-user instances",
+        "[Umbrella] Walkthrough fixes",
+    ],
+)
+def test_a_short_territory_title_draws_no_title_finding(
+    vi, issue_types, shipped_titles, body_format, classification, label_fallback_config, title
+) -> None:
+    """The 30-character floor is the Task family's; a territory is short by nature."""
+    found = _title_findings(
+        vi,
+        title,
+        "feature",
+        "create",
+        issue_types=issue_types,
+        titles=shipped_titles,
+        body_format=body_format,
+        classification=classification,
+        config=label_fallback_config,
+    )
+    assert found == []
+
+
 def test_the_kind_prefix_bad_example_is_refused_at_create(
     vi, issue_types, shipped_titles, body_format, classification, label_fallback_config
 ) -> None:

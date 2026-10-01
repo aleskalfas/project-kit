@@ -9,16 +9,19 @@ body: >
   …`, `[EPIC] feat(x): …`) is now refused by `create-issue`, `edit-issue
   --title` and `validate-issue --phase create`; at a lifecycle transition
   `validate-issue` reports it as a warning, so an issue filed with one still
-  moves. New warnings, which never block: a lowercase `scope:` token right
-  after the bracket (`[EPIC] sandbox: …`; a colon after a territory named in
-  words is fine), fewer than 30 characters after the prefix, a PR summary that
-  starts with a capital, ends with a period or runs past 50 characters
-  (`validate-pr`), and a Milestone title with no word in it (`create-milestone`).
-  The `scope:` rule, declared as a refusal, is a warning because territory
-  titles of that shape are common. Each validation in `titles.yaml` now names
-  the check that runs it (`check`) and its finding label (`name`), which
+  moves. New warnings, which never block: a bare lowercase `scope:` prefix
+  right after the bracket (`[Bug] project-management: …`), which reads like a
+  commit scope but is carried by inbound reports and component-scoped titles,
+  so filing goes on (a colon after a territory named in words is not flagged);
+  a Task title, under any kind-driven prefix, of fewer than 30 characters after
+  the prefix (EPIC, Feature and Umbrella titles name a territory and have no
+  length floor); a PR summary that starts with a capital, ends with a period or
+  runs past 72 characters (`validate-pr`); and a Milestone title with no word
+  in it (`create-milestone`). Each validation in `titles.yaml` now names the
+  check that runs it (`check`) and its finding label (`name`), which
   `titles.schema.json` requires, so a rule nothing enforces cannot be declared.
   The title descriptions and examples now state the house style per type:
-  EPIC, Feature and Umbrella titles name a territory; Task titles say what is
-  true once the work is done, or the work in the imperative for a decision,
-  a document or an exploration.
+  EPIC, Feature and Umbrella titles name a territory, optionally followed by a
+  colon or a dash and a short specifier; Task titles say what is true once the
+  work is done, or the work in the imperative for a decision, a document or an
+  exploration. DEC-011 states the same rules.

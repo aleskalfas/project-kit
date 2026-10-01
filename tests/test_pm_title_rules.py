@@ -246,14 +246,61 @@ _SCOPE = ("warning", "title.scope-prefix")
         ("issue-task", "[Bug] Fix: the crash when a parent issue has no body", _CC),
         ("issue-feature", "[Feature] instances: identity and ownership lifecycle", _SCOPE),
         ("issue-umbrella", "[Umbrella] cli: polish round for the walkthrough", _SCOPE),
-        ("issue-epic", "[EPIC] Code review discipline", ("warning", "title.short")),
+        ("issue-task", "[Bug] Crash on start", ("warning", "title.short")),
         ("milestone", "M1", ("warning", "title.numeric-only")),
         ("pr", "feat(pm): Refuse the title.", ("warning", "title.summary-style")),
-        ("pr", "fix(pm): " + "x" * 51, ("warning", "title.summary-length")),
+        ("pr", "fix(pm): " + "x" * 73, ("warning", "title.summary-length")),
     ],
 )
 def test_shipped_rule_fires(shipped_titles, key, title, finding) -> None:
     assert finding in [f[:2] for f in title_rules.check_title(shipped_titles, key, title)]
+
+
+# --- the length rules ---------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("key", "title"),
+    [
+        ("issue-epic", "[EPIC] Code review discipline"),
+        ("issue-epic", "[EPIC] CLI capability"),
+        ("issue-feature", "[Feature] Named per-user instances"),
+        ("issue-umbrella", "[Umbrella] Walkthrough fixes"),
+    ],
+)
+def test_a_short_territory_title_does_not_warn(shipped_titles, key, title) -> None:
+    """EPIC, Feature and Umbrella name a territory, which is short by nature."""
+    assert title_rules.check_title(shipped_titles, key, title) == []
+
+
+@pytest.mark.parametrize("prefix", ["Task", "Bug", "Docs", "Test", "Refactor", "Chore"])
+def test_a_short_work_title_warns_under_every_kind_prefix(shipped_titles, prefix) -> None:
+    found = title_rules.check_title(shipped_titles, "issue-task", f"[{prefix}] Fix the parser")
+    assert [f[:2] for f in found] == [("warning", "title.short")]
+
+
+def test_only_task_titles_carry_a_length_floor(shipped_titles) -> None:
+    floored = {
+        key
+        for key, entry in shipped_titles["formats"].items()
+        if any(v["check"] == "min-length" for v in entry["validations"])
+    }
+    assert floored == {"issue-task"}
+
+
+def test_a_pr_summary_of_60_characters_does_not_warn(shipped_titles) -> None:
+    title = "fix(pm): " + "x" * 60
+    assert title_rules.check_title(shipped_titles, "pr", title) == []
+
+
+def test_a_pr_summary_of_80_characters_warns(shipped_titles) -> None:
+    found = title_rules.check_title(shipped_titles, "pr", "fix(pm): " + "x" * 80)
+    assert [f[:2] for f in found] == [("warning", "title.summary-length")]
+
+
+def test_a_pr_summary_of_72_characters_is_the_edge(shipped_titles) -> None:
+    assert title_rules.check_title(shipped_titles, "pr", "fix(pm): " + "x" * 72) == []
+    assert title_rules.check_title(shipped_titles, "pr", "fix(pm): " + "x" * 73) != []
 
 
 @pytest.mark.parametrize(
@@ -268,6 +315,19 @@ def test_a_commit_type_prefix_draws_one_finding_not_two(shipped_titles, title) -
     assert _labels(title_rules.check_title(shipped_titles, "issue-task", title)) == [
         "title.conventional-commits-prefix"
     ]
+
+
+@pytest.mark.parametrize(
+    ("key", "title"),
+    [
+        ("issue-task", "[Bug] project-management: the review gate is unsatisfiable (mockingbird)"),
+        ("issue-epic", "[EPIC] project-management: validator correctness and robustness"),
+    ],
+)
+def test_a_component_scoped_title_warns_and_does_not_refuse(shipped_titles, key, title) -> None:
+    """A bare lowercase `scope:` is a warning: reports and component titles carry it."""
+    found = title_rules.check_title(shipped_titles, key, title)
+    assert [f[:2] for f in found] == [_SCOPE]
 
 
 def test_a_scoped_lowercase_token_is_a_scope_prefix(shipped_titles) -> None:
@@ -297,6 +357,18 @@ def test_a_lowercase_token_starting_with_a_commit_type_is_still_a_scope_prefix(
 )
 def test_a_colon_after_a_territory_named_in_words_is_clean(shipped_titles, title) -> None:
     assert title_rules.check_title(shipped_titles, "issue-epic", title) == []
+
+
+@pytest.mark.parametrize(
+    ("key", "title"),
+    [
+        ("issue-epic", "[EPIC] PR review fidelity — native review state + pre-post preview"),
+        ("issue-feature", "[Feature] Process substrate - open-region slot"),
+        ("issue-task", "[Bug] close-issue journals each close it makes — once, not twice"),
+    ],
+)
+def test_a_dash_and_a_short_specifier_are_clean(shipped_titles, key, title) -> None:
+    assert title_rules.check_title(shipped_titles, key, title) == []
 
 
 def _schema_messages(titles: dict, tmp_path: Path) -> list[str]:

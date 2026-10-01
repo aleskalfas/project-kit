@@ -152,12 +152,21 @@ def test_shipped_pr_summary_style_and_length_warn(
 ) -> None:
     found = _title_findings(
         vp,
-        "feat(pm): Refuse a title the schema forbids, at filing and at every retitle.",
+        "feat(pm): Refuse a title the schema forbids, at filing, at every retitle and at create.",
         shipped_titles,
         classification,
         git_conv,
     )
     assert found == [("warning", "title.summary-style"), ("warning", "title.summary-length")]
+
+
+def test_shipped_pr_summary_of_60_characters_does_not_warn(
+    vp, shipped_titles, classification, git_conv
+) -> None:
+    summary = "refuse a title the schema forbids at filing and each retitle"
+    assert len(summary) == 60
+    found = _title_findings(vp, f"feat(pm): {summary}", shipped_titles, classification, git_conv)
+    assert found == []
 
 
 def test_shipped_pr_title_off_the_pattern_is_hard_reject(

@@ -31,12 +31,21 @@
 # so a title written before the rule was enforced does not wall the
 # move in flight.
 #
-# The lowercase `scope:` rule is a warning, not a refusal: a territory
-# that is itself a lowercase name (`project-management: …`) takes the
-# same shape, and refusing it would wall titles a team chose on
-# purpose. The Conventional Commits rule refuses: a commit type after
-# the bracket is never a territory. The two do not overlap — the
-# `scope:` regex skips a commit type, so a title draws one finding.
+# The Conventional Commits rule refuses: a commit type after the bracket
+# is the PR title's shape, never a territory. The lowercase `scope:`
+# rule is a warning: a bare lowercase word before a colon
+# (`project-management: …`) reads like a commit scope, and the title
+# should name its territory in words, but inbound reports and
+# component-scoped titles carry that shape and filing is not blocked on
+# it. The two do not overlap — the `scope:` regex skips a commit type,
+# so a title draws one finding.
+#
+# The 30-character floor applies to Task titles only (every kind-driven
+# prefix), where a short title is usually a vague one. An EPIC, Feature
+# or Umbrella names a territory, which is short by nature
+# (`[EPIC] Code review discipline`). The PR summary warns past 72
+# characters, the conventional hard edge of a commit subject; aim for
+# about 50.
 
 schema_version: 1
 
@@ -54,17 +63,22 @@ formats:
     description: |
       `[EPIC] <territory>`. `EPIC` is all-caps. The text names the
       territory the EPIC covers: a noun phrase, optionally followed by
-      a colon and a short specifier that narrows it. It is read on the
-      board beside its sibling EPICs, so it says which area the work is
-      in, not a task to do (`Migrate the work-tracker …`) or a user
-      story (`Human user can replace …`). Name the territory in words:
-      a Conventional Commits prefix (`feat: …`, `fix(cli): …`) or a
-      lowercase `scope:` token right after the bracket is the PR title's
-      shape. A colon after a territory named in words is the specifier.
+      a colon or a dash and a short specifier that narrows it. It is
+      read on the board beside its sibling EPICs, so it says which area
+      the work is in, not a task to do (`Migrate the work-tracker …`)
+      or a user story (`Human user can replace …`). A territory is
+      short by nature; no length floor applies. Name the territory in
+      words: a Conventional Commits prefix (`feat: …`, `fix(cli): …`)
+      right after the bracket is the PR title's shape and is refused,
+      and a lowercase `scope:` token there reads like a commit scope
+      and draws a warning. A colon or a dash after a territory named
+      in words introduces the specifier.
     examples_good:
       - "[EPIC] Multi-instance ownership & coordination"
       - "[EPIC] Modularity, configuration and extension"
+      - "[EPIC] Code review discipline"
       - "[EPIC] Permission model: model first-class harness tools in the catalog (agent-dispatch first)"
+      - "[EPIC] PR review fidelity — native review state + pre-post preview"
     examples_bad:
       - title: "[Epic] Multi-instance ownership & coordination"
         reason: "`Epic` is title-case; EPIC must be all-caps."
@@ -74,8 +88,6 @@ formats:
         reason: "A lowercase `scope:` token right after the bracket is the PR scope shape; name the territory in words (warning)."
       - title: "feat(epic): human user replaces AI user"
         reason: "Conventional Commits format is reserved for PRs."
-      - title: "[EPIC] Ownership"
-        reason: "Under 30 characters after the prefix (warning); a territory this short rarely tells siblings apart."
     validations:
       - rule: "Title starts with `[EPIC] ` (all-caps EPIC, single space after the bracket)."
         check: pattern
@@ -91,11 +103,6 @@ formats:
         regex: '^(?!(feat|fix|docs|test|refactor|chore|ci|decision|build|perf|style|revert)[(!:])[a-z][a-z0-9_./-]*(\([^)]*\))?!?:\s'
         name: title.scope-prefix
         severity: "[validation-severity:warning]"
-      - rule: "The text after `[EPIC] ` is at least 30 characters."
-        check: min-length
-        length: 30
-        name: title.short
-        severity: "[validation-severity:warning]"
 
   issue-feature:
     surface_kind: issue
@@ -104,12 +111,14 @@ formats:
     description: |
       `[Feature] <territory>`. `Feature` is title-case. Like an EPIC
       title, the text names the territory the Feature delivers: a noun
-      phrase, optionally followed by a colon and a short specifier
-      (`Process substrate: open-region slot`). Name it in words, with
-      no Conventional Commits prefix and no lowercase `scope:` token
-      right after the bracket.
+      phrase, optionally followed by a colon or a dash and a short
+      specifier (`Process substrate: open-region slot`). A territory is
+      short by nature; no length floor applies. Name it in words: no
+      Conventional Commits prefix right after the bracket (refused),
+      and no lowercase `scope:` token there (a warning).
     examples_good:
       - "[Feature] Instance identity + ownership lifecycle"
+      - "[Feature] Named per-user instances"
       - "[Feature] Process substrate: open-region slot"
       - "[Feature] Connection points: role-named data and process connections, one graph, exact plans"
     examples_bad:
@@ -136,11 +145,6 @@ formats:
         regex: '^(?!(feat|fix|docs|test|refactor|chore|ci|decision|build|perf|style|revert)[(!:])[a-z][a-z0-9_./-]*(\([^)]*\))?!?:\s'
         name: title.scope-prefix
         severity: "[validation-severity:warning]"
-      - rule: "The text after `[Feature] ` is at least 30 characters."
-        check: min-length
-        length: 30
-        name: title.short
-        severity: "[validation-severity:warning]"
 
   issue-umbrella:
     surface_kind: issue
@@ -149,9 +153,11 @@ formats:
     description: |
       `[Umbrella] <territory>`. `Umbrella` is title-case. The text
       names what the bucket gathers — a noun phrase, such as the fixes
-      or defects a piece of work surfaced — not a task to do. Name it
-      in words, with no Conventional Commits prefix and no lowercase
-      `scope:` token right after the bracket.
+      or defects a piece of work surfaced — not a task to do,
+      optionally followed by a colon or a dash and a short specifier.
+      No length floor applies. Name it in words: no Conventional
+      Commits prefix right after the bracket (refused), and no
+      lowercase `scope:` token there (a warning).
     examples_good:
       - "[Umbrella] Project-management fixes surfaced by the agent-teams investigation"
       - "[Umbrella] Tooling defects surfaced by the harness-requirement work"
@@ -174,11 +180,6 @@ formats:
         check: forbid
         regex: '^(?!(feat|fix|docs|test|refactor|chore|ci|decision|build|perf|style|revert)[(!:])[a-z][a-z0-9_./-]*(\([^)]*\))?!?:\s'
         name: title.scope-prefix
-        severity: "[validation-severity:warning]"
-      - rule: "The text after `[Umbrella] ` is at least 30 characters."
-        check: min-length
-        length: 30
-        name: title.short
         severity: "[validation-severity:warning]"
 
   issue-task:
@@ -205,8 +206,10 @@ formats:
       false once the fix lands. Work whose deliverable is a decision, a
       document or an exploration takes the imperative instead
       (`Decide whether …`, `Scope the … rule to …`). No Conventional
-      Commits prefix and no lowercase `scope:` token right after the
-      bracket; a colon later in the text is fine.
+      Commits prefix right after the bracket (refused) and no lowercase
+      `scope:` token there (a warning); a colon or a dash later in the
+      text is fine. Under 30 characters after the prefix draws a
+      warning: a work title that short is usually a vague one.
     examples_good:
       - "[Task] Evidence points are keyed so two providers can report one artefact at one commit"
       - "[Task] Decide whether behaviour tied to one hosting service may live in the backbone under a qualifier"
@@ -245,7 +248,7 @@ formats:
         regex: '^(?!(feat|fix|docs|test|refactor|chore|ci|decision|build|perf|style|revert)[(!:])[a-z][a-z0-9_./-]*(\([^)]*\))?!?:\s'
         name: title.scope-prefix
         severity: "[validation-severity:warning]"
-      - rule: "The text after the prefix is at least 30 characters."
+      - rule: "The text after the prefix is at least 30 characters; a work title that short is usually a vague one."
         check: min-length
         length: 30
         name: title.short
@@ -282,9 +285,10 @@ formats:
       matches the closing Task's `type:*` label per the
       classification.yaml mapping. `<scope>` is recommended but not
       mandated; omit when the change is cross-cutting. `<summary>` is
-      short (~50 chars), imperative mood, lowercase, no trailing
-      period. Multi-issue PRs pick the dominant type and surface a
-      warning if the closing issues' types disagree.
+      short — aim for about 50 characters; the validator warns past
+      72 — imperative mood, lowercase, no trailing period. Multi-issue
+      PRs pick the dominant type and surface a warning if the closing
+      issues' types disagree.
 
       PR titles are restricted to the standard Conventional Commits
       type set — `feat|fix|docs|test|refactor|chore|ci` — for
@@ -333,8 +337,8 @@ formats:
         regex: '^[A-Z]|\.$'
         name: title.summary-style
         severity: "[validation-severity:warning]"
-      - rule: "`<summary>` is 50 characters or shorter."
+      - rule: "`<summary>` is 72 characters or shorter, the conventional hard edge of a commit subject; aim for about 50."
         check: max-length
-        length: 50
+        length: 72
         name: title.summary-length
         severity: "[validation-severity:warning]"
