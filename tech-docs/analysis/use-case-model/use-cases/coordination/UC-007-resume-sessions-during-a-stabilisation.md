@@ -20,9 +20,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-09-30T21:35:05Z
+      at: 2026-10-01T00:05:36Z
       outcome: unchanged
-      unchanged-because: on this branch _lib/milestone.py gains the close-trigger and children reads close-milestone and close-issue's closure cascade share, to say when a content-based Milestone became closeable; reading a Milestone for a clone's position, and how sessions resume and land work during a stabilisation, did not change
+      unchanged-because: on this branch done-work.py only reads the project's not-code path list and passes it to the shared reviewer resolver, and the head-commit timestamp helper moved to _lib; resuming sessions during a stabilisation is untouched
 ---
 
 # UC-007 — Resume sessions killed during a stabilisation
