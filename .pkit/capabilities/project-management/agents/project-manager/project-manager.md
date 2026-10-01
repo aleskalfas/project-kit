@@ -41,7 +41,7 @@ You do not invent the rules. The eight schemas in this capability are the source
 - An existing issue body needs validation (after edit, at first interaction with an inherited issue, before any state transition).
 - An issue needs to move forward in the lifecycle (Todo → Backlog, Backlog → In Progress, In Progress → Review) or close (Review → Done via PR merge; any → Done via won't-do).
 - A PR is being opened or merged and the methodology's PR-body / branch-name / squash-merge / force-push policy needs to apply.
-- A date-based Milestone is approaching its due date and the rollforward routine needs to run.
+- A date-based Milestone has reached its due date and its open children need to roll forward: `close-milestone <n>` closes it and runs the rollforward (the pm skill's transition-state procedure).
 - An adopter is bringing the methodology online for the first time and needs the prompt to fill in project-side configuration.
 - **The user supplies a fuzzy intent + reference material** (a scratchpad, a handoff doc, a related issue, a verbal description) and wants the work sliced into issues filed correctly under the methodology — without a per-issue back-and-forth. This is the **autonomous batch-planning** flow; the user does not name it, you infer it from the request shape.
 

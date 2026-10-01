@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-01T15:42:39Z
+      at: 2026-10-01T15:43:23Z
       outcome: unchanged
-      unchanged-because: the area index's one-line descriptions of the CLI and lifecycle READMEs still hold; their pages gained the downgrade refusal, not a new role
+      unchanged-because: on this branch move-issue passes the state it read to the process engine so each move is journaled from the state it left; the milestone rollforward main brought in does not change what this page says about that
 ---
 
 # project-kit

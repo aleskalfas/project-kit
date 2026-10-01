@@ -36,7 +36,7 @@ def cm():
 
 
 def test_regex_matches_canonical_milestone_format(cm) -> None:
-    regex = cm._title_format_to_regex("Milestone {n}: {name}")
+    regex = cm.title_format_regex("Milestone {n}: {name}")
     m = regex.match("Milestone 1: Self-host cleanly")
     assert m is not None
     assert m.group("n") == "1"
@@ -44,7 +44,7 @@ def test_regex_matches_canonical_milestone_format(cm) -> None:
 
 
 def test_regex_matches_phase_format(cm) -> None:
-    regex = cm._title_format_to_regex("Phase {n}: {name}")
+    regex = cm.title_format_regex("Phase {n}: {name}")
     m = regex.match("Phase 5: Sprint Q3")
     assert m is not None
     assert m.group("n") == "5"
@@ -55,14 +55,14 @@ def test_regex_matches_release_format(cm) -> None:
     """Release format has only {n}, no {name} — but the format still requires {name}
     per the script's validation. This test confirms the regex compiles for a
     purely numeric tail format."""
-    regex = cm._title_format_to_regex("v{n} GA: {name}")
+    regex = cm.title_format_regex("v{n} GA: {name}")
     m = regex.match("v3 GA: stable release")
     assert m is not None
     assert m.group("n") == "3"
 
 
 def test_regex_rejects_non_matching_title(cm) -> None:
-    regex = cm._title_format_to_regex("Milestone {n}: {name}")
+    regex = cm.title_format_regex("Milestone {n}: {name}")
     assert regex.match("Phase 1: thing") is None
     assert regex.match("Just a regular title") is None
     assert regex.match("Milestone: missing number") is None
@@ -70,7 +70,7 @@ def test_regex_rejects_non_matching_title(cm) -> None:
 
 def test_regex_escapes_special_format_characters(cm) -> None:
     """A title_format with regex-special characters (e.g., periods) is escaped."""
-    regex = cm._title_format_to_regex("v{n}.0 — {name}")
+    regex = cm.title_format_regex("v{n}.0 — {name}")
     m = regex.match("v2.0 — initial release")
     assert m is not None
     assert m.group("n") == "2"

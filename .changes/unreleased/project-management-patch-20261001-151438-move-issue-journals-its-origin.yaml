@@ -1,0 +1,20 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+  requires_backbone: release
+body: >
+  `promote-issue` on a Todo issue no longer prints "the process engine refused
+  this move: refused: no transition from 'backlog' to 'backlog'" under its
+  successful promotion. `move-issue` asks the engine to record a move after
+  writing the state label, so the engine read the label just written and took
+  the target for the origin. It refused every move into a state with no
+  transition to itself (Todo → Backlog, and Review → Done), and journaled every
+  move into a state that has one as that self-loop (Backlog → In Progress as
+  `create-draft`, In Progress → Review as `back-to-draft`). `move-issue` now
+  passes the position it read before the label write as the origin (`pkit
+  process move --from`), so each move is journaled once, as the transition it
+  is, and the warning appears only when the engine refuses the move itself — a
+  gate that does not pass, say. Entries journaled before this release keep
+  their recorded transitions. Upgrade the capability together with the
+  backbone: it needs the backbone release that adds `--from`.

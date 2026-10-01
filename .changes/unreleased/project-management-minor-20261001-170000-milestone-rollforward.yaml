@@ -1,0 +1,20 @@
+component: project-management
+kind: minor
+custom:
+  category: Added
+body: >
+  Closing a date-based Milestone now rolls its open children forward (#1175).
+  `close-milestone` moves each open child to the rollforward target — the
+  Milestone's `Rollforward target:` line, else the next-numbered open Milestone
+  of its category, or `--target <M>` — through `edit-issue --milestone`, so the
+  child keeps its lifecycle state, its native Milestone field and first-line
+  `Milestone:` ref both move, and it gets one audit comment naming the old
+  Milestone, the new one and the close. Closed children stay on the closed
+  Milestone; a parent assigned to it moves with its open children. An `either`
+  Milestone rolls forward the same way from its due date on; before it, open
+  children still hold its close, and a content-based close is unchanged. With
+  no candidate target, or more than one, nothing is moved or closed until you
+  name it. The audit line counts the children rolled forward and names the
+  target; when a move fails the command exits 4, and a re-run moves the
+  children still on the closed Milestone without moving any twice. `--dry-run`
+  lists every move.
