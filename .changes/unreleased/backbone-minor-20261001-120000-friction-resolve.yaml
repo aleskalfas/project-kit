@@ -3,18 +3,22 @@ kind: minor
 custom:
   category: Added
 body: >
-  `pkit friction resolve [<path>]...` resolves the text of a merge conflict
-  between two revalidations of the same artefact (#1181). When merging a
-  branch conflicts only inside `revalidated` blocks, it reads the file's three
-  versions from the index, takes the base side's block (the branch being
-  merged in) where both sides revalidated, keeps git's merge of everything
-  else, and writes and stages the file; a conflict anywhere else — the body,
-  another field, the anchors — is left as git left it and named. It writes no
-  answer of its own: for each artefact both sides revalidated it prints the
-  `pkit friction revalidate` command still owed once the merge is committed,
+  `pkit friction resolve [<path>]... [--yes|--dry-run] [--json]` resolves the
+  text of a merge conflict between two revalidations of the same artefact
+  (#1181). It reads the file's three versions from the index and works only
+  on git's own conflict, untouched: a file the person already edited is left
+  as it is. Only the `revalidated` blocks git conflicted on are decided — the
+  answer from the side that changed it, deferrals merged three ways by
+  anchor, and where both sides revalidated the base side's answer, taken only
+  when the branch merged in is the change check's base — and a conflict region
+  reaching anywhere else leaves the file as git left it, and says where. The
+  file is written in the working file's own line endings and staged only with
+  `--yes` or at a terminal's prompt; otherwise the `git add` to run is
+  printed, and `git checkout -m -- <path>` brings the conflict back. It writes
+  no answer of its own: for each artefact both sides revalidated it prints
+  the `pkit friction revalidate` command owed once the merge is committed,
   `updated` when the artefact's content differs from the base side's and
-  `unchanged` with a placeholder for the justification otherwise. Line endings
-  and front matter in flow style are kept. `--dry-run` shows each file's diff
-  and writes nothing; `--json` prints a stable document for agents. Outside a
-  merge it has nothing to resolve and exits 0; it exits 1 when it leaves an
-  artefact's file in conflict.
+  `unchanged` with a placeholder for the justification otherwise. `--dry-run`
+  shows each file's diff and writes nothing; `--json` prints a stable
+  document for agents. Outside a merge it has nothing to resolve and exits 0;
+  it exits 1 when it leaves an artefact's file in conflict.
