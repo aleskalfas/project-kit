@@ -3,7 +3,7 @@ engine, against an in-memory GitHub.
 
 The scripts run in this process. `subprocess.run` is routed so that `gh` reaches
 an in-memory tracker, `pkit process` reaches the engine's own CLI, and a script
-that runs `move-issue` runs its `main` here. The engine runs the shipped
+that runs `move-issue` or `close-issue` runs its `main` here. The engine runs the shipped
 issue-lifecycle definition in a scratch repository, and its predicates answer
 from the tracker through the capability's own predicate code. A test compares
 the tracker's view of an issue's state with the engine's and reads the engine's
@@ -39,6 +39,9 @@ SCRIPTS_DIR = CAPABILITY_ROOT / "scripts"
 ADDRESS = "project-management:issue-lifecycle"
 
 INVOKER = SimpleNamespace(github_login="octocat", email="octocat@example.com")
+#: Who merges a pull request: another authority than the invoker, so the engine's
+#: cross-authority gate on Review → Done passes.
+MERGER = "a-reviewer"
 REASON = "the maintainer asked for it in session"
 MILESTONE = {"number": 7, "title": "Sprint 1"}
 AUDIT_MARKER = "<!-- pkit-audit -->"
@@ -79,8 +82,8 @@ def _options(argv: list[str], flag: str) -> list[str]:
 
 class Tracker:
     """GitHub as the scripts' `gh` calls see it: one repository's issues, their
-    comments and their label timeline, all posted as the invoker, and its one
-    open milestone.
+    comments and their label timeline, all posted as the invoker, its one open
+    milestone, and its merged pull requests.
 
     `fail_next` holds `gh issue edit` flags whose next edit fails, once, before
     it changes anything."""
@@ -90,8 +93,25 @@ class Tracker:
         self.comments: dict[int, list[dict[str, Any]]] = {}
         self.timeline: dict[int, list[dict[str, Any]]] = {}
         self.milestones: list[dict[str, Any]] = [MILESTONE]
+        self.merged_prs: dict[int, dict[str, Any]] = {}
         self.calls: list[list[str]] = []
         self.fail_next: set[str] = set()
+
+    def merge(self, pr: int, closes: list[int], merged_by: str = MERGER) -> None:
+        """Merge pull request `pr`, whose body closes `closes`, as `merged_by`,
+        and close each of those issues the way GitHub does: closed, labels
+        untouched."""
+        body = "".join(f"Closes #{n}\n" for n in closes)
+        self.merged_prs[pr] = {
+            "number": pr,
+            "state": "MERGED",
+            "mergedAt": "2026-10-01T00:00:00Z",
+            "mergedBy": {"login": merged_by},
+            "body": body,
+            "url": f"https://github.com/acme/repo/pull/{pr}",
+        }
+        for number in closes:
+            self.issues[number]["state"] = "CLOSED"
 
     def state_of(self, number: int) -> str:
         """The issue's state as the tracker carries it, read with move-issue's
@@ -105,17 +125,30 @@ class Tracker:
         self.calls.append(argv)
         if argv[1:3] == ["issue", "create"]:
             return self._create(argv)
-        if argv[1] == "issue" and argv[2] in ("view", "edit", "comment"):
+        if argv[1] == "issue" and argv[2] in ("view", "edit", "comment", "close"):
             number = int(argv[3])
             if argv[2] == "view":
                 return self._view(argv, number, str(_option(argv, "--json")))
             if argv[2] == "edit":
                 return self._edit(argv, number)
+            if argv[2] == "close":
+                self.issues[number]["state"] = "CLOSED"
+                return _done(argv)
             body = _option(argv, "--body")
             self.comments[number].append(
                 {"body": body, "viewerDidAuthor": True, "includesCreatedEdit": False}
             )
             return _done(argv)
+        if argv[1:3] == ["pr", "view"]:
+            pr = self.merged_prs.get(int(argv[3]))
+            if pr is None:
+                return _done(argv, 1, stderr="no pull requests found")
+            fields = str(_option(argv, "--json")).split(",")
+            return _done(argv, stdout=json.dumps({f: pr[f] for f in fields}))
+        if argv[1:3] == ["pr", "list"] and _option(argv, "--state") == "merged":
+            fields = str(_option(argv, "--json")).split(",")
+            prs = [{f: pr[f] for f in fields} for pr in self.merged_prs.values()]
+            return _done(argv, stdout=json.dumps(prs))
         if argv[1] == "api" and argv[-1].endswith("/timeline"):
             number = int(argv[-1].split("/")[-2])
             return _done(argv, stdout=json.dumps(self.timeline[number]))
@@ -192,24 +225,29 @@ def _with_argv(argv: list[str], main) -> int:
 class World:
     """The tracker, the engine and the scripts, wired as `subprocess.run` sees
     them: `gh` reaches the tracker, `pkit process` the engine's own CLI, and a
-    script's move-issue runs in this process."""
+    script's move-issue — or close-issue, when the world has it (`cl`) — runs
+    in this process. `engine_calls` lists every `pkit process` call made."""
 
-    def __init__(self, tracker: Tracker, engine_repo: Path, ci, pi, mi, hist) -> None:
+    def __init__(self, tracker: Tracker, engine_repo: Path, ci, pi, mi, hist, cl=None) -> None:
         self.tracker = tracker
         self.engine_repo = engine_repo
-        self.ci, self.pi, self.mi, self.hist = ci, pi, mi, hist
+        self.ci, self.pi, self.mi, self.hist, self.cl = ci, pi, mi, hist, cl
+        self.engine_calls: list[list[str]] = []
 
     def run(self, argv, *args: Any, **kwargs: Any) -> subprocess.CompletedProcess[str]:
         argv = [str(arg) for arg in argv]
         if argv[0] == "gh":
             return self.tracker.gh(argv)
         if argv[:2] == ["pkit", "process"]:
+            self.engine_calls.append(argv)
             result = CliRunner().invoke(pkit_main, argv[1:])
             if result.exception is not None and not isinstance(result.exception, SystemExit):
                 raise result.exception
             return _done(argv, result.exit_code, result.stdout, result.stderr)
         if argv[0] == sys.executable and argv[1].endswith("move-issue.py"):
             return _done(argv, _with_argv(["move-issue.py", *argv[2:]], self.mi.main))
+        if argv[0] == sys.executable and argv[1].endswith("close-issue.py") and self.cl:
+            return _done(argv, _with_argv(["close-issue.py", *argv[2:]], self.cl.main))
         raise AssertionError(f"unexpected subprocess: {argv}")
 
     # --- the scripts ----------------------------------------------------------
@@ -262,6 +300,21 @@ class World:
                 "--yes",
             ],
             self.mi.main,
+        )
+
+    def close(self, number: int, *options: str) -> int:
+        """Run close-issue on the issue with `options` (`--mode`, `--reason`, …)."""
+        assert self.cl is not None, "this world was built without close-issue"
+        return _with_argv(
+            [
+                "close-issue.py",
+                str(number),
+                *options,
+                "--capability-root",
+                str(CAPABILITY_ROOT),
+                "--yes",
+            ],
+            self.cl.main,
         )
 
     def history(self, number: int) -> int:
@@ -337,7 +390,11 @@ def answer_from_tracker(
         return predicates.detect_state(number, run_name.removeprefix("detect-"))
     if run_name == "gate-checkboxes-ticked":
         return predicates.gate_checkboxes_ticked(number)
-    return None  # gates a move out of review only; unrunnable reads as indeterminate
+    if run_name == "gate-pr-merged":
+        answer = predicates.gate_pr_merged(number)
+        # The predicate script exits non-zero on an answer it could not reach.
+        return None if answer.get(predicates.INDETERMINATE_KEY) else answer
+    return None  # unrunnable reads as indeterminate
 
 
 def make_engine_repo(tmp_path: Path) -> Path:
@@ -366,6 +423,8 @@ def wire(world: World, monkeypatch: pytest.MonkeyPatch) -> None:
     # Who runs the scripts and where they run are other tests' subjects.
     monkeypatch.setattr(session_guard, "enforce", lambda **kw: True)
     monkeypatch.setattr(bootstrap_gate, "enforce", lambda *a, **kw: True)
-    for script in (world.pi, world.mi):
+    scripts = [world.pi, world.mi, *([world.cl] if world.cl else [])]
+    for script in scripts:
         monkeypatch.setattr(script, "resolve_invoker_identity", lambda config=None: INVOKER)
-    monkeypatch.setattr(world.mi, "fire_hooks", lambda *a, **kw: None)
+    for script in scripts[1:]:
+        monkeypatch.setattr(script, "fire_hooks", lambda *a, **kw: None)

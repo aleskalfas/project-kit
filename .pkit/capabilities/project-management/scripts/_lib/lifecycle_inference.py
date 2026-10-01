@@ -182,6 +182,32 @@ def infer_current_state(
     return "todo"
 
 
+def state_before_close(
+    *,
+    milestone: dict | None,
+    labels: list[str],
+    substrate_map: axis_labels.SubstrateMap | None = None,
+) -> str | None:
+    """The lifecycle state an issue held before it closed: the move to `done` a
+    close makes starts here (#1231).
+
+    A closed issue reads as `done` whatever else it carries, so this is
+    :func:`infer_current_state` read as if the issue were still open — its state
+    label, else its milestone, else `todo` — whether or not it has closed since.
+    On an open issue it is the issue's position; on one GitHub closed when a pull
+    request merged, it is where the issue was when the merge closed it, for as
+    long as nothing has written its label to `done` since.
+
+    None under a `derive`-bound `state`: open/closed is then the only state the
+    issue carries, so nothing records where in the lifecycle it was.
+    """
+    if axis_labels.state_derive_binding(substrate_map) is not None:
+        return None
+    return infer_current_state(
+        state="open", milestone=milestone, labels=labels, substrate_map=substrate_map
+    )
+
+
 # --- gate inference -------------------------------------------------------
 #
 # DEC-007's unticked-checkbox rule is NOT re-implemented here: it lives in
