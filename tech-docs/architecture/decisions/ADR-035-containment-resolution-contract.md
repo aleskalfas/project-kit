@@ -38,10 +38,9 @@ reference for the seam realized by the merged #344 (native write) + #345
 (`resolve_children` read seam) + #865 (seam-owned corpus acquisition and the
 completeness verdict) + #869 (the *unsupported* verdict attributed by probe, one
 definition for both paths) + #863 (both non-gate consumers on seam acquisition, and
-the read-vs-write postures on a partial answer), ahead of the Track-2 textual-view
-build (EPIC #343); it
-pins the contract, not the selector schema or the render-on-demand UX (those land
-with the Feature, citing DEC-039).
+the read-vs-write postures on a partial answer); it
+pins the contract, not the selector schema or the render-on-demand UX (those belong
+to the Track-2 textual-view Feature, EPIC #343, citing DEC-039).
 
 **The contract, in one breath:** containment has **one read seam** — a single
 resolution point (`resolve_children` in `_lib/containment.py`) answering "what are
@@ -137,18 +136,19 @@ sites below name where each one stands against that contract.
 As project-kit's own capability-architecture record, concrete site names
 are in scope (per [PRJ-005](../../../.pkit/decisions/project/PRJ-005-adopt-adrs.md));
 the selector schema (`substrate-map.yaml`'s `containment: native | textual` axis)
-and the render-on-demand textual-view UX are not — they land with the Track-2
+and the render-on-demand textual-view UX are not — they belong to the Track-2
 Feature (EPIC #343), citing DEC-039. The sites:
 
 1. **`resolve_children`** (`_lib/containment.py`) — the one read seam, and the one
    corpus fetcher. Native side: one `GET …/sub_issues` per parent
    (`read_native_children`), three-valued — `READ`, a determinate `UNSUPPORTED`,
    or an indeterminate `UNREADABLE`. A non-zero exit is classified in one place
-   (`_classify_native_failure`): a 410 is `UNSUPPORTED` outright; an ambiguous
-   404 is `UNSUPPORTED` only when a probe of the parent issue itself succeeds,
-   attributing the 404 to the sub-resource rather than to the repository;
-   everything else — a 422 whatever its message says, a probe that fails or
-   cannot run, a missing `gh`, an unparseable payload — is `UNREADABLE`. Textual side: every issue in the corpus whose body
+   (`_classify_native_failure`): a conclusive status (410) is `UNSUPPORTED`
+   outright; an ambiguous 404 is `UNSUPPORTED` only when a probe of the parent
+   issue itself succeeds, attributing the 404 to the sub-resource rather than to
+   the repository; everything else — a 422 whatever its message says, a probe
+   that fails or cannot run, a missing `gh`, an unparseable payload — is
+   `UNREADABLE`. Textual side: every issue in the corpus whose body
    first-line parent-ref names the parent, where the corpus is either fetched by the
    seam (`fetch_issue_corpus`, *truncated* when the **requested** `limit` is struck —
    `CORPUS_CEILING` is that parameter's default and the value a gate takes, while a
@@ -195,9 +195,10 @@ Feature (EPIC #343), citing DEC-039. The sites:
    native containment write construction point; `create-issue` and `link-parent`
    link through it, `set-field --parent` re-parents through its sibling
    `move_sub_issue` (the same add, posted with `replace_parent`), and any further
-   parent-link mutation reuses it. **The sole constructor of
-   the native containment write.** Its `UNSUPPORTED` verdict comes from the read
-   side's classification point, not from a predicate of its own, so the two paths
+   parent-link mutation reuses it. Each of the three reads the `containment`
+   write selector first and attempts no native write in textual mode. **The sole
+   constructor of the native containment write.** Its `UNSUPPORTED` verdict comes
+   from the read side's classification point, not from a predicate of its own, so the two paths
    cannot hold different notions of "unsupported" — a write that fails on a
    credential fault reports `FAILED` to the operator rather than quietly
    degrading to the textual spine, and one GitHub refuses with a 422 is reported
@@ -243,13 +244,11 @@ rejected or this ADR holds against:
    and leaving each consumer to fetch its own corpus under its own ceiling — the
    shape that lets a truncated scan or an unreadable native panel reach a close gate
    as a confident, silently short child set.
-6. **The `UNSUPPORTED` verdict is attributed by asking the API** (a 404 the
-   parent-issue probe pins on the sub-resource; the probe is skipped only for a
-   410, which GitHub answers only to a caller who can already read the
-   repository) vs. inferred from the failed call's status or error text — which
-   cannot separate an absent endpoint from a repository the caller may not see,
-   nor from a request GitHub merely refused, and so grants determinacy on no
-   evidence.
+6. **The `UNSUPPORTED` verdict is attributed by asking the API** (a conclusive
+   status — a 410 — or a 404 the parent-issue probe pins on the sub-resource) vs.
+   inferred from the failed call's status or error text — which cannot separate an
+   absent endpoint from a repository the caller may not see, nor from a request
+   GitHub merely refused, and so grants determinacy on no evidence.
 
 ## Decision
 
@@ -304,9 +303,9 @@ invariant**:
   from the corpus scan is still NATIVE (the native panel is authoritative even for
   a child the textual scan missed); a textual-only child is TEXTUAL.
 - **Native support is a property of the read, not of the repo.** When the native
-  `GET …/sub_issues` establishes the substrate **unsupported** (an older GHES, the
-  feature off) — by a 410, or by a 404 the seam has *attributed to the endpoint*
-  rather than to the repository — the seam degrades
+  `GET …/sub_issues` establishes the substrate **unsupported** — a conclusive status
+  (410 gone: an older GHES, the feature off), or a 404 the seam
+  has *attributed to the endpoint* rather than to the repository — the seam degrades
   to **textual-only**: the read mirror of the write side's UNSUPPORTED no-op, and a
   *determinate* answer, because there is no native substrate for a child to hide in
   and textual is the whole story. A merely **unreadable** panel (auth, a token
@@ -325,18 +324,17 @@ invariant**:
   already makes. **Probe succeeds** ⇒ repository, credentials and parent are all
   visible, so the 404 belongs to the sub-resource ⇒ `UNSUPPORTED`. **Probe fails, or
   cannot run at all** ⇒ a repository, credential or visibility fault ⇒ `UNREADABLE`,
-  the fail-closed default. Only a 410 short-circuits the probe. GitHub documents it
-  for an issue deleted from a repository the caller can read, and answers 404 where
-  the caller cannot — so a 410 has already ruled out the unseeable repository the
-  probe exists to rule out, and it says that what was asked for is gone: whether
-  that is the endpoint or the parent issue itself, no native child set of this
-  parent remains to be missed. No
-  other status does the same. A **422** in particular is GitHub refusing a request
-  it could not process — on the add, a child that already has a parent, or a
-  malformed id, both on an instance where sub-issues work (#808) — and says nothing
-  about whether the substrate exists, so it is `UNREADABLE` on a read and a failure
-  on a write, whatever its message says. One extra call, on the failure
+  the fail-closed default. Only a conclusive status short-circuits the probe: an
+  invisible repository never produces a 410. One extra call, on the failure
   path only, once per parent resolved — paid only when something is already wrong.
+- **A refusal is not an absence.** A **422** is GitHub refusing a request it could
+  not process — on the add, a child that already has a parent, a link already in
+  place, or a malformed id, all on an instance where sub-issues work (#808) — and
+  it says nothing about whether the substrate exists. It is therefore never
+  `UNSUPPORTED`, on its status or on any wording, and it is not probed, because a
+  visible parent changes nothing about a refusal. On a read it is `UNREADABLE`; on
+  a write it is what the refusal itself establishes (point 3) — a link already in
+  place, a conflict, or a failure carrying GitHub's message.
 
 State the invariant precisely: **native-wins is enforced once, at the seam, over
 the union of both substrates — so a mixed-substrate repo resolves deterministically
@@ -354,11 +352,11 @@ to a third (containment) substrate:
   builds the `gh api …/sub_issues` POST argv; `link_sub_issue` composes the
   id-resolve / idempotency-read / add). A mutating script obtains the containment
   write **only by asking this module**; it never string-builds the `gh api
-  …/sub_issues` argv inline. `create-issue` and `link-parent` link through
-  `link_sub_issue`; `set-field --parent` re-parents through `move_sub_issue`, the
-  same add posted with `replace_parent` and built by the same
-  `add_sub_issue_args`; any further parent-link mutation (promote, a batch
-  re-parent) reuses the same construction point.
+  …/sub_issues` argv inline. A link and a re-parent are the same write: the
+  re-parent (`move_sub_issue`) is the add posted with `replace_parent`, built by
+  the same `add_sub_issue_args`. Every script that writes a parent link (Context,
+  site 5) goes through this point, and any further parent-link mutation (promote,
+  a batch re-parent) reuses it.
 - **The render-on-demand textual children view** (`refresh_children_comment`) is
   likewise a single construction point: one writer renders the parent-side children
   comment and the read path refreshes it. There is no second place a
@@ -380,22 +378,29 @@ label-scoped; both untouched.
 The construction point is **failure-posture-neutral** in the same spirit as
 ADR-031 point 6: the construction point records the outcome (`LINKED` / `MOVED` /
 `ALREADY` / `CONFLICT` / `UNSUPPORTED` / `FAILED`) in a neutral `LinkResult`; the
-caller decides what the outcome means. `create-issue` treats every outcome as
-non-fatal — the textual ref is the spine — and reports a one-line note keyed on the
-outcome; `set-field --parent` reads the same outcomes as a gate on its own second
-write, so a `CONFLICT` or a `FAILED` stops it before the first line changes and the
-two records never come to name different parents. An UNSUPPORTED
+caller decides what the outcome means. Two postures read it. The caller that
+creates the child treats every outcome as non-fatal — the textual ref it has just
+written is the spine — and reports a one-line note keyed on the outcome. The caller
+that re-parents reads the same outcomes as a gate on its own second write, so a
+`CONFLICT` or a `FAILED` stops it before the first line changes and the two records
+never come to name different parents. An UNSUPPORTED
 instance degrades the native write to a no-op (the textual ref carries the
 relationship); a native write never fails the create.
 
-**The outcome names only what the seam established.** `CONFLICT` says the child is
-spoken for, and is reported on evidence of exactly that: the child's own record
-naming another parent on a plain link, or GitHub's refusal stating the one-parent
-rule. On a move the child's existing parent is the precondition rather than a
-finding, so a move GitHub refuses for any other reason is `FAILED`, not a conflict
-with a remedy the refusal never asked for. Anything else GitHub refuses is `FAILED`
-and carries GitHub's own message to the operator verbatim — the same bound point 5
-puts on a consumer's account of an incomplete read, applied to a write.
+**The outcome names only what the seam established.** Each outcome is reported on
+evidence of exactly the fact it names, and a write GitHub refuses with a 422 is
+reported as whichever of them the refusal establishes. `ALREADY` says the link is
+in place: the child's own record naming this parent, the parent's native list
+holding the child, or GitHub refusing the add as a duplicate. `CONFLICT` says the
+child is spoken for: the child's own record naming another parent on a plain link,
+or GitHub's refusal stating the one-parent rule. On a move the child's existing
+parent is the precondition rather than a finding, so a refused move is a `CONFLICT`
+only when the refusal states that rule — never a conflict with a remedy the refusal
+did not ask for. `UNSUPPORTED` is the classification point's verdict and no other's
+(defined once for both directions, below), and a 422 never reaches it. A refusal
+that establishes none of these is `FAILED`, and GitHub's message reaches the
+operator as GitHub wrote it — the same bound point 5 puts on a consumer's account
+of an incomplete read, applied to a write.
 
 **"Unsupported" is defined once, for both directions.** The write path does not
 carry its own notion of feature-absence: when the add fails, it asks the *read*
@@ -406,22 +411,29 @@ textual-only, the write degrades to silence — so a second definition would let
 them disagree about the same instance, and the cheap wrong one loses the operator
 signal outright: a broken credential announced as "native sub-issues unsupported
 on this instance" is a no-op the operator has no reason to investigate, where
-`FAILED` names the fault. One definition, two postures.
+`FAILED` names the fault. One definition, two postures. What a 410 establishes on
+the write path — the instance lacking the feature, as the classification takes it,
+or the parent issue itself being gone — is an open question, tracked separately
+together with the seam-owned presence guard (#1247).
 
 **A refusal's words may say which refusal it is; they never grant the verdict.**
-GitHub's message is read to tell one refusal from another — a 422 stating the
-one-parent rule is the `CONFLICT` it names, a 422 rejecting the id is a defect in
-the request — and it reaches the operator as GitHub wrote it. It is never read to
+GitHub's message is read to tell one refusal from another — a 422 refusing a
+duplicate is the link already in place, a 422 stating the one-parent rule is the
+`CONFLICT` it names, a 422 rejecting the id is a defect in the request — and it
+reaches the operator as GitHub wrote it. It is never read to
 conclude that the substrate is absent. A 422 is therefore never `UNSUPPORTED`, on
 its status or on any wording: the add answers 422 for a child that already has a
 parent and for a malformed id on an instance where sub-issues work, so reading the
 status as feature-absence reports a working instance as lacking the feature (#808),
 and a pattern matched against a message that seems to say the feature is off would
-grant the seam's one fail-open verdict on a guess at GitHub's phrasing. An adopter
+grant the seam's one fail-open verdict on a guess at GitHub's phrasing.
+
+**Where the seam cannot establish absence, the adopter declares it.** An adopter
 whose GitHub offers no sub-issues, and whose seam cannot establish that by
 attribution, has the `containment: textual` write selector
 ([DEC-039](../../../.pkit/capabilities/project-management/decisions/DEC-039-containment-substrate-selection.md)
-D2): with it no native write is attempted at all. That selector governs writes
+D2): every caller of the native link reads it first, and in textual mode attempts
+no native write at all. That selector governs writes
 only (point 5), so it is the way out of a refused write and not of an unreadable
 read — a read the seam cannot attribute stays incomplete under either mode.
 
@@ -473,14 +485,14 @@ invisible — and public-repo work keeps succeeding, so nothing surfaces the fau
 (#869). No predicate over the status or the error text can separate the two causes,
 because there is nothing in the response to separate them by. Determinacy here is
 therefore something the seam must **establish**, not something it may infer: a
-410, which only a caller who can read the repository is answered, settles it
+conclusive status (410, which an invisible repository never produces) settles it
 directly, and an ambiguous 404 is settled by the parent-issue probe of point 2 —
 `UNSUPPORTED` only when that probe proves the repository, the credentials and the
 parent are all visible. A failure the seam cannot attribute is `UNREADABLE`, and a
 422 is one of them: GitHub answers it for a request it refused, on an instance where
 sub-issues work (#808), so neither its status nor its wording is evidence about the
-substrate. This is the load-bearing direction of the bias, and the reason the check
-is an API call rather than a string match — against a status or against a message:
+substrate. This is the load-bearing direction of the bias, and the reason the
+ambiguous case is settled by an API call rather than a string match:
 the cheaper text predicate is exactly the one that resolves an unknown into a
 confident answer, and simplifying to it reopens the gate fail-open without changing
 a single visible behaviour on a well-credentialed repo.
@@ -501,9 +513,11 @@ The contract therefore carries a determinacy channel:
 - ***Unsupported* is the only failed native read that still counts as complete —
   so it must be earned, not assumed.** It is the one verdict that converts a call
   that did not answer into a whole answer, which makes it the seam's single
-  fail-open surface. It is reached two ways and no other: a 410, or a 404 the
-  parent-issue probe attributes to the sub-resource. No other status reaches it, and
-  no wording in a response does: a message that seems to say the feature is off is
+  fail-open surface. It is reached two ways and no other: a conclusive status (a
+  410), or a 404 the parent-issue probe attributes to the sub-resource. No other
+  status reaches it, and no wording grants it. `gh`'s code-less "Not Found" is read
+  as the 404 it stands for, which sends the failure to the probe and settles nothing
+  by itself; a message that seems to say the feature is off is
   quoted to the operator, never matched into a verdict. Every failure the seam
   cannot attribute — including one it could not probe, and any 422 — falls to
   *unreadable*. The default direction of the ambiguity is indeterminate.
@@ -590,7 +604,7 @@ textual mechanism that can answer a gate.
 ### Boundaries — what this contract is NOT
 
 - **Not the selector schema.** How `substrate-map.yaml` spells the
-  `containment: native | textual` axis (DEC-039 D2) lands with the Track-2 Feature
+  `containment: native | textual` axis (DEC-039 D2) belongs to the Track-2 Feature
   (DEC-039 Implications), not here. This ADR pins the resolution + construction
   contract, not the schema field.
 - **Not the render-on-demand UX.** How the generated children comment is formatted,
@@ -648,8 +662,8 @@ write in exactly one place" is the same architectural property ADR-031 made
 load-bearing for field/milestone writes and ADR-026 for labels: a single auditable
 point makes the invariant *structural* (there is no other way to build the write)
 rather than *remembered* (do not string-build the wrong `gh api …/sub_issues` argv
-at each parent-link site). With `create-issue`, `link-parent` and `set-field
---parent` each writing a parent link, and promote or a batch re-parent able to join
+at each parent-link site). With a parent link written at creation, after the fact
+and on a re-parent (Context, site 5), and promote or a batch re-parent able to join
 them, the un-converged world would have a
 parent-link write buildable at every mutation site — N places for the guard to fail
 to cover, N for a future author to mis-spell the API call. One constructor and one
@@ -701,9 +715,10 @@ is the expensive one**. A future author optimising the probe away is left with a
 predicate that is right on every well-credentialed repository and wrong in precisely
 the case the gate exists for — a regression with no visible symptom, which is why the
 mechanism is pinned here and not left as an implementation detail. The cheap
-predicate fails the same way one status over: a 422 read as feature-absence is right
-on every instance without sub-issues and wrong on every instance with them, where it
-reports a child that already has a parent as a missing feature (#808).
+predicate fails the same way one status over: a 422 read as feature-absence reports
+a child that already has a parent as a missing feature on every instance where
+sub-issues work (#808), and GitHub documents no 422 that means the feature is absent
+for the predicate to be right about.
 
 ### Alternatives considered
 
@@ -756,22 +771,21 @@ reports a child that already has a parent as a missing feature (#808).
   for a request it refused, and the add does so for a child that already has a parent
   and for a malformed id on an instance where sub-issues work, so the status reports
   a working instance as lacking the feature (#808). On its message: GitHub documents
-  the add's 422 as a failed validation and the list's failures as 404 and 410 only —
-  no 422 that means the feature is absent — so a pattern for one is a guess at
-  wording, and a guess that grants the fail-open verdict is the previous alternative
+  the add's 422 as a failed validation or a spammed endpoint, and the list's failures
+  as 404 and 410 only — no 422 that means the feature is absent — so a pattern for
+  one is a guess at wording, and a guess that grants the fail-open verdict is the
+  previous alternative
   again, with a phrase where the status code was. A refusal's words are quoted to
   the operator and may tell one refusal from another; an adopter whose GitHub offers
   no sub-issues in a way the seam cannot attribute declares it with the
   `containment: textual` write selector rather than having it inferred from a
   message.
 - **Probe unconditionally, on every failed native read** rather than only on the
-  ambiguous status. Rejected as needless — the probe answers one question, whether
-  a "not here" belongs to the sub-resource or to a repository this caller may not
-  see, and only a 404 leaves that open. A 410 has answered it already, since GitHub
-  sends one only to a caller who can read the repository; and for every other
-  failure — a 401, a 5xx, a 422 — a visible parent changes nothing, because none of
-  them says the substrate is absent. Probing them buys nothing and puts a second
-  request on a path that is already answered.
+  ambiguous status. Rejected as needless — an invisible repository never yields a
+  410, so that status already names feature-absence on its own, and every other
+  failure — a 401, a 5xx, a 422 — names no absence at all, so a visible parent
+  changes nothing about it. Probing them buys nothing and puts a second request on
+  a path that is already answered.
 - **Let the write path keep its own unsupported predicate** (the read probes, the
   write reads the status). Rejected — one fact about the instance with two
   definitions drifts, and the write's posture makes the wrong answer quiet: a
@@ -831,8 +845,8 @@ reports a child that already has a parent as a missing feature (#808).
   could not be read at all — rendering that as an empty children list is
   indistinguishable from a parent with none.
 - **The *unsupported* verdict is attributed, never inferred from a failed call** —
-  reached by a 410 (which GitHub answers only to a caller who can read the
-  repository) or by a 404 that a probe of the parent issue pins on the sub-resource
+  reached by a conclusive status (410, which an invisible repository cannot
+  produce) or by a 404 that a probe of the parent issue pins on the sub-resource
   rather than on the repository; every failure the seam cannot attribute, including
   one it could not probe and any 422, is *unreadable*, and no wording in a response
   grants the verdict. This is the seam's one fail-open surface
@@ -850,17 +864,21 @@ reports a child that already has a parent as a missing feature (#808).
   pre-existing corpus contains.
 - **One write construction point per containment substrate** — the native sub-issue
   link via `add_sub_issue_args` / `link_sub_issue` (realized by the merged
-  **#344**), the render-on-demand textual children view via a single writer
+  **#344**) and its re-parenting sibling `move_sub_issue`, the same add posted with
+  `replace_parent`; the render-on-demand textual children view via a single writer
   (`refresh_children_comment`). Each under its own grep/AST sole-constructor guard
   (`tests/test_pm_containment_write_seam.py` covers both), the same
   discipline as ADR-031 — **not a widening of ADR-031's covered set**. The
   containment write is `gh api …/sub_issues`; ADR-026's label invariant and
   ADR-031's field/milestone invariant stay scoped to their own substrates.
 - **The construction point is failure-posture-neutral** (ADR-031 point 6 spirit):
-  `link_sub_issue` records the outcome in a neutral `LinkResult`; the caller decides
-  what it means. `create-issue` treats every outcome as non-fatal (the textual ref
-  is the spine), degrading an UNSUPPORTED instance's native write to a no-op. A
-  native write never fails the create.
+  it records one of six outcomes (`LINKED` / `MOVED` / `ALREADY` / `CONFLICT` /
+  `UNSUPPORTED` / `FAILED`) in a neutral `LinkResult`, each reported only on
+  evidence of the fact it names; the caller decides what it means. Two postures
+  read it: the caller that creates the child treats every outcome as non-fatal (the
+  textual ref is the spine), degrading an UNSUPPORTED instance's native write to a
+  no-op, and the caller that re-parents stops on a `CONFLICT` or a `FAILED` before
+  its own second write. A native write never fails the create.
 - **The textual parent-side view is a single-source full-overwrite, never an
   append** (DEC-039 D4) — render-on-demand of a generated do-not-edit comment the
   read path refreshes, because the seam already derives the children and a stored
