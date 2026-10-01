@@ -187,6 +187,61 @@ The empirical record collected during the A5 phase becomes the *Rationale* and *
 12. **Lane lifecycle scope.** Do lanes need the full eight verb-subject scripts of DEC-018 (add/rename/merge/split/edit/remove/show/list), or a leaner set (`add-lane`, `remove-lane`, `list-lanes`, `show-lane`) reflecting their ephemeral nature? Per COR-007, ship the leaner set and let recurrence force the rest.
 13. **In-flight detection in board mode.** Label-substrate adopters can detect lane occupancy from `lane:*` labels on open issues. Board-substrate adopters might use a board-state field instead. Does the primitive support both, or does it require label substrate? (Most likely: label-substrate-only, since lanes are ephemeral and label substrate is the lighter-weight choice — even when other classification axes live on the board.)
 
+## Resolutions from lived evidence (2026-07-09)
+
+A **second adopter** (`trip-planner-agent`, running four clones of one repo split by layer) is the
+[COR-007] recurrence after IGW. Its run settles open questions above; recorded here as they resolve
+— these become the DEC-025 promotion's *Rationale*. See the sibling process note
+[`2026-07-08-parallelization-process`](2026-07-08-parallelization-process.md) for the staged-process
+layer this evidence also feeds.
+
+- **Q5 / cardinality → multi-lane.** An issue carries a *set* of `lane:*` labels, not one. A real
+  change can touch several layers — e.g. an endpoint↔UI wiring that edits a shared DTO touches both
+  `backend` and `ui`; a single-lane model reports the `ui` lane free and a second instance collides
+  on that shared file. The ready-frontier query becomes a **set-disjointness** check (an issue's
+  lane-set is disjoint from the union of the in-flight issues' lane-sets) — cheap, not the query
+  explosion feared at A2/A4. Cost: the filer must declare *all* lanes an issue touches;
+  under-declaring silently loses the guarantee. Contract-first (the sibling process note) minimises
+  straddlers; multi-lane is the **catch-net** for the ones that remain and for mid-flight contract
+  changes.
+- **Q11 / axis placement → marker outside the classification axes.** A multi-valued lane cannot be a
+  mutually-exclusive classification axis like workstream ([project-management:DEC-018] /
+  [project-management:DEC-012]); `lane` lives as a **label-set lifecycle marker** orthogonal to the
+  three axes, not a fourth axis. Multi-lane forces this cleaner answer (single-lane could have gone
+  either way).
+
+- **Q4 / `Blocked by:` shape → accept both spellings; resolve same-repo now.** The validator accepts
+  `Blocked by: #N` and `Blocked by: owner/repo#N`, one dependency per line — the cross-repo spelling
+  is designed in from the start (no later format migration). The ready-frontier **resolver** computes
+  same-repo blockers now and **displays cross-repo blockers as unresolved (manual)** until the
+  methodology-mesh resolver ([project-management:DEC-022]) is built — *not* a faith-based deferral:
+  the grounding topology is one repo / many clones, so every real blocker is same-repo `#N`.
+  **Containment blocks are not re-typed** — a child of an open parent is implicitly blocked via the
+  native sub-issue graph ([project-management:DEC-005]); `Blocked by:` is only for non-containment
+  sequence deps.
+
+- **Q2 / Q13 / substrate → the lane marker is NOT label-first; it reuses the selectable substrate.**
+  The original note framed `lane:*` **labels** as the substrate. That assumption is **revised**: it
+  fails on the label-locked repos [project-management:DEC-043-ownership-substrate-selection] exists
+  for. The lane marker reuses the instance-ownership substrate pattern ([pkit:ADR-041]):
+  - **comment-event log = source of truth** — a lane assign/change is logged as a comment first (the
+    audit trail), through the shared audit-log facility [project-management:DEC-044-audit-log-facility];
+  - **issue description = derived mirror** — refreshed (full-overwrite) from the last logged state;
+  - **`lane:*` labels = derived reflection where creatable** — reconciled *from* the resolved state
+    on repos that can make labels; simply absent on locked-down repos.
+  Occupancy (in-flight detection) is therefore read from the **resolved marker state** (the same
+  fold-through-one-seam discipline as ADR-041's `resolve_owner`), not from labels directly. Change
+  flow is always comment → description → labels, never label-first.
+
+  **Architectural consequence (COR-007 recurrence).** Lane is the **second** issue-marker wanting
+  "comment-log source of truth + derived description mirror + optional label reflection" (instance
+  ownership was the first). That is the second-instance trigger the DEC-035/DEC-043 work named for
+  extracting a **shared issue-marker substrate** contract, rather than each marker re-implementing
+  the fold/mirror/reflect skeleton privately. Whether to extract that shared contract now (vs. have
+  the lane marker reuse the ADR-041 seam pattern directly) is a **seam-architecture** question that
+  modifies accepted records (DEC-025's substrate assumption; touches ADR-041 / DEC-043 / DEC-044) —
+  route it through the `architect` at crystallisation, do not settle it unilaterally in this note.
+
 ## Notes on this project's A5-phase discipline
 
 While the primitive is being designed, this project runs a manual convention. Internally we speak Direction X vocabulary — *"the workbench lane is occupied"* means a code-area lock; *"the Spyre workstream"* (when relevant) refers to the org-board categorisation. The lived experiment validates the lane vocabulary too.
