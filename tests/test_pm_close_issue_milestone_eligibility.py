@@ -161,6 +161,9 @@ def close_issue(
     # The children-half of a container's own close is the process engine's
     # fold (a `pkit` subprocess); these tests are about what comes after it.
     monkeypatch.setattr(ci, "_engine_cascade_fold", _returns({"opened": True}))
+    # Recording the close is the engine's too (`pkit process move`, #1231) and
+    # is `test_pm_close_issue_journal.py`'s subject.
+    monkeypatch.setattr(ci, "journal_move", _returns(None))
 
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()

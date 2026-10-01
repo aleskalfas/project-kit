@@ -102,10 +102,20 @@ def journal_move(
         return
     if proc.returncode != 0:
         detail = (proc.stdout or proc.stderr or "").strip()
-        print(
-            f"  [warn] the process engine refused this move: {detail}. "
-            f"{JOURNAL_GAP_CLAUSE} `pkit pm history {issue_number} --check-drift` "
-            f"will show the gap. {TRACKER_TRAIL_CLAUSE} The label/position is "
-            "unaffected.",
-            file=sys.stderr,
-        )
+        report_unrecorded(issue_number, f"the process engine refused this move: {detail}")
+
+
+def report_unrecorded(issue_number: int, why: str) -> None:
+    """Warn that a move made on the tracker was not recorded, `why`, and what that
+    leaves: a journal gap `history --check-drift` shows, where a journal is kept.
+
+    The warning an engine refusal prints, and the one a caller prints for a
+    move it does not hand the engine — a close the workflow declares no
+    transition for, say (#1231) — so the two read alike.
+    """
+    print(
+        f"  [warn] {why}. {JOURNAL_GAP_CLAUSE} `pkit pm history {issue_number} "
+        f"--check-drift` will show the gap. {TRACKER_TRAIL_CLAUSE} The "
+        "label/position is unaffected.",
+        file=sys.stderr,
+    )
