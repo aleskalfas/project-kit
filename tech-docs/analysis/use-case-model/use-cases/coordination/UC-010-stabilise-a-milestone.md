@@ -20,9 +20,9 @@ pkit:
       artefact:
         - ACT-operator
     revalidated:
-      at: 2026-10-01T00:05:37Z
+      at: 2026-09-30T23:42:48Z
       outcome: unchanged
-      unchanged-because: on this branch done-work.py only reads the project's not-code path list for the review floor and shares the head-commit timestamp helper; stabilising a Milestone, its guards and required status are untouched
+      unchanged-because: on this branch close-milestone's audit line counts open children as still open, not rolled forward, and its warning names edit-issue --milestone to move them; the pm README states that a close moves no open child, and tests pin that a close writes only the Milestone; stabilising a Milestone, release scope, the guards, the required status and the close that lifts the stabilisation are untouched, so the use case's flow holds
 ---
 
 # UC-010 — Stabilise a Milestone for a release
