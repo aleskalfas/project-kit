@@ -1202,6 +1202,42 @@ def test_a_fresh_rejection_names_the_forced_re_review(dw, rc, monkeypatch) -> No
     ) in result.refusal_message
 
 
+def test_a_verdict_over_a_base_the_pr_left_is_stale(dw, rc, monkeypatch) -> None:
+    """A stacked PR retargeted after its base was abandoned has no new commit,
+    yet its diff over the new base carries commits nobody reviewed: a verdict
+    on the current head is stale once its recorded base is not in the base
+    branch's history, and the refusal says so."""
+    from _lib.author_delta import BaseCheck
+
+    abandoned = "d" * 40
+    comment = _pinned_verdict_comment("reviewer")
+    comment["body"] = comment["body"].replace(
+        f"sha={_REVIEWED} -->", f"sha={_REVIEWED} base={abandoned} -->"
+    )
+    _wire(
+        dw,
+        monkeypatch,
+        collection=rc.ContributionCollection(rules=()),
+        comments=[comment],
+        pr_view={"headRefOid": _REVIEWED, "baseRefOid": _BASE},
+    )
+    checked: list[tuple] = []
+
+    def base_kept(reviewed_base, base_tip):
+        checked.append((reviewed_base, base_tip))
+        return BaseCheck(kept=False)
+
+    monkeypatch.setattr(dw, "base_kept", base_kept)
+    result = dw._check_agent_gate(99, {}, _config(), "resolved", CAP_ROOT)
+    assert result.passed is False
+    assert checked == [(abandoned, _BASE)]
+    assert (
+        "(stale APPROVED — reviewed aaaaaaa against base ddddddd, which the base "
+        "branch no longer contains — the pull request was retargeted or its base "
+        "rewritten)"
+    ) in result.refusal_message
+
+
 def test_changes_that_cannot_be_read_stale_the_verdict(dw, rc, monkeypatch) -> None:
     """A rebase leaves the reviewed head outside the branch: the verdict is
     stale, and the refusal says why."""

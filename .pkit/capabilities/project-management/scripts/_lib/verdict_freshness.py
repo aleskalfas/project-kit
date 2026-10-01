@@ -27,15 +27,22 @@ so a superseded verdict never counts however fresh it would be. Per verdict:
     from the baseline or from a reviewer with any classification rule —
     matched on this PR or not, it declares a remit wider than the floors —
     and every CHANGES_REQUESTED — the author is answering it, so floor
-    scoping protects approvals only. When the changes cannot be computed the verdict
-    is stale.
+    scoping protects approvals only. When the changes cannot be computed
+    the verdict is stale.
+  * **A verdict naming the base it was reviewed against** (`base=<oid>` in
+    the same marker) is stale, whatever the author changed, once that base
+    is not an ancestor of the base branch's head — the PR was retargeted or
+    its base rewritten, so its diff over the base carries commits the
+    reviewer never saw. When that cannot be read the verdict is stale; a
+    marker naming no base skips the check.
   * **A verdict naming no head** is fresh when it was posted strictly after
     the PR's latest commit, and stale otherwise — or when that commit's time
     is unknown.
 
 Every outcome carries a one-line reason a consumer prints as it stands. The
-rule is pure logic: the author's changes are read through an injected
-callable, computed at most once per reviewed head.
+rule is pure logic: the author's changes and the base's history are read
+through injected callables, each computed at most once per reviewed head or
+base.
 """
 
 from __future__ import annotations
@@ -46,7 +53,7 @@ from dataclasses import dataclass
 try:
     from _lib.agent_verdicts import APPROVED, PATH_LOCAL, Verdict, latest_commit_timestamp
     from _lib.audit import short_sha
-    from _lib.author_delta import AuthorDelta
+    from _lib.author_delta import AuthorDelta, BaseCheck
     from _lib.required_reviewers import (
         DEFAULT_NOT_CODE,
         NotCode,
@@ -61,7 +68,7 @@ except ImportError:  # pragma: no cover - exercised via spec-loaded fallback
         latest_commit_timestamp,
     )
     from audit import short_sha  # type: ignore[no-redef]
-    from author_delta import AuthorDelta  # type: ignore[no-redef]
+    from author_delta import AuthorDelta, BaseCheck  # type: ignore[no-redef]
     from required_reviewers import (  # type: ignore[no-redef]
         DEFAULT_NOT_CODE,
         NotCode,
@@ -91,16 +98,25 @@ class Freshness:
 DeltaFn = Callable[[str], AuthorDelta]
 
 
+# `(reviewed_base) -> BaseCheck`: whether a reviewed base is still in the
+# base branch's history.
+BaseFn = Callable[[str], BaseCheck]
+
+
 def _no_delta(_since: str) -> AuthorDelta:
     return AuthorDelta(error="the pull request's head is unknown")
+
+
+def _no_base(_reviewed_base: str) -> BaseCheck:
+    return BaseCheck(error="the base branch's head is unknown")
 
 
 class FreshnessRule:
     """The freshness rule for one PR at its current head.
 
     Every argument defaults to its fail-closed value: no head, no commit
-    time, no floor-scoped reviewer, and no way to read the author's changes —
-    under which no verdict is fresh.
+    time, no base, no floor-scoped reviewer, and no way to read the author's
+    changes or the base's history — under which no verdict is fresh.
     """
 
     def __init__(
@@ -108,16 +124,21 @@ class FreshnessRule:
         *,
         head_sha: str = "",
         head_timestamp: str = "",
+        base_tip: str = "",
         floors_by_reviewer: Mapping[str, frozenset[str]] | None = None,
         not_code: NotCode = DEFAULT_NOT_CODE,
         delta_since: DeltaFn = _no_delta,
+        base_kept: BaseFn = _no_base,
     ) -> None:
         self._head_sha = head_sha
         self._head_timestamp = head_timestamp
+        self._base_tip = base_tip
         self._floors_by_reviewer = dict(floors_by_reviewer or {})
         self._not_code = not_code
         self._delta_since = delta_since
+        self._base_kept = base_kept
         self._deltas: dict[str, AuthorDelta] = {}
+        self._bases: dict[str, BaseCheck] = {}
 
     def is_fresh(self, verdict: Verdict) -> bool:
         """The predicate `gate_verdicts` takes."""
@@ -127,6 +148,9 @@ class FreshnessRule:
         if not verdict.sha:
             return self._by_commit_time(verdict)
         reviewed = short_sha(verdict.sha)
+        base_moved = self._base_moved(verdict)
+        if base_moved is not None:
+            return base_moved
         if verdict.sha == self._head_sha:
             return Freshness(True, f"reviewed the current head {reviewed}")
         delta = self._delta(verdict.sha)
@@ -156,6 +180,36 @@ class FreshnessRule:
         if verdict.timestamp > self._head_timestamp:
             return Freshness(True, "no reviewed head recorded; posted after the latest commit")
         return Freshness(False, "no reviewed head recorded; posted before the latest commit")
+
+    def _base_moved(self, verdict: Verdict) -> Freshness | None:
+        """Why the verdict is stale because of its base, or None when its
+        base stands.
+
+        A verdict names the base branch's head it was reviewed against. When
+        that base is no longer an ancestor of the base branch's head, the
+        PR's diff over its base carries commits the reviewer never saw — a
+        stacked PR retargeted after its base was abandoned does, with no new
+        commit of its own. A verdict naming no base is not checked.
+        """
+        if not verdict.base or verdict.base == self._base_tip:
+            return None
+        against = f"reviewed {short_sha(verdict.sha)} against base {short_sha(verdict.base)}"
+        if verdict.base not in self._bases:
+            self._bases[verdict.base] = self._base_kept(verdict.base)
+        check = self._bases[verdict.base]
+        if not check.ok:
+            return Freshness(
+                False,
+                f"{against}; whether the base branch still contains it cannot be read: "
+                f"{check.error}",
+            )
+        if not check.kept:
+            return Freshness(
+                False,
+                f"{against}, which the base branch no longer contains — the pull "
+                "request was retargeted or its base rewritten",
+            )
+        return None
 
     def _floors_of(self, verdict: Verdict) -> frozenset[str] | None:
         """The floors a change must reach to stale this verdict, or None when
@@ -193,24 +247,27 @@ def rule_for_pr(
     resolution: Resolution,
     *,
     author_delta: Callable[..., AuthorDelta],
+    base_kept: Callable[..., BaseCheck],
 ) -> FreshnessRule:
     """The freshness rule for a PR, from its `gh pr view` payload.
 
     `pr_view` carries at least `PR_VIEW_FIELDS`. `resolution` is the PR's
     resolved required set: its floor-scoped reviewers and its not-code list
     decide what reaches a floor. A failed resolution names no floor-scoped
-    reviewer, so every verdict goes stale on any change. `author_delta` is
-    `_lib.author_delta.author_delta`, passed by the consumer so its tests can
-    stand it in.
+    reviewer, so every verdict goes stale on any change. `author_delta` and
+    `base_kept` are `_lib.author_delta`'s, passed by the consumer so its
+    tests can stand them in.
     """
     head = head_sha(pr_view)
     base_tip = str(pr_view.get("baseRefOid") or "")
     return FreshnessRule(
         head_sha=head,
         head_timestamp=latest_commit_timestamp(pr_view.get("commits") or []),
+        base_tip=base_tip,
         floors_by_reviewer=resolution.floors_by_reviewer,
         not_code=resolution.not_code,
         delta_since=lambda since: author_delta(since, head, base_tip=base_tip),
+        base_kept=lambda reviewed_base: base_kept(reviewed_base, base_tip),
     )
 
 

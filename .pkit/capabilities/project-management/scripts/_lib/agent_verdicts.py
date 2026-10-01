@@ -68,10 +68,13 @@ CHANGES_REQUESTED = "CHANGES_REQUESTED"
 # permissive — it displays every verdict-shaped comment, marked or not. Reuses
 # the HTML-marker convention (`pkit-provenance`, `pkit-hook`, `pkit-freeform`).
 #
-# `review-pr` also names the PR head the reviewer was shown in the marker —
-# `<!-- pkit-verdict sha=<oid> -->` (#1179) — which is what the freshness rule
-# reads (`_lib.verdict_freshness`). The bare form is still a marker: a verdict
+# `review-pr` also names the PR head the reviewer was shown in the marker, and
+# the base branch's head at the time — `<!-- pkit-verdict sha=<oid>
+# base=<oid> -->` (#1179) — which is what the freshness rule reads
+# (`_lib.verdict_freshness`). The bare form is still a marker: a verdict
 # carrying it has no recorded head and is fresh by the latest commit's time.
+# A marker naming a head but no base predates the base pin; its base is not
+# checked.
 VERDICT_MARKER = "<!-- pkit-verdict -->"
 
 # A recorded head is a full object name (40 hex digits, or 64 in a SHA-256
@@ -79,42 +82,56 @@ VERDICT_MARKER = "<!-- pkit-verdict -->"
 _OBJECT_NAME = r"[0-9a-f]{40}|[0-9a-f]{64}"
 _OBJECT_NAME_RE = re.compile(rf"(?:{_OBJECT_NAME})")
 
-# Either marker form; `sha` is the reviewed head when one is named.
-_VERDICT_MARKER_RE = re.compile(rf"<!-- pkit-verdict(?: sha=(?P<sha>{_OBJECT_NAME}))? -->")
+# Every marker form; `sha` is the reviewed head and `base` the reviewed base
+# when they are named.
+_VERDICT_MARKER_RE = re.compile(
+    rf"<!-- pkit-verdict(?: sha=(?P<sha>{_OBJECT_NAME})(?: base=(?P<base>{_OBJECT_NAME}))?)? -->"
+)
 
 
-def verdict_marker(sha: str = "") -> str:
+def _object_name(oid: str) -> bool:
+    return bool(oid) and _OBJECT_NAME_RE.fullmatch(oid) is not None
+
+
+def verdict_marker(sha: str = "", base: str = "") -> str:
     """The verdict marker, naming the reviewed head when `sha` is a full
-    object name. Anything else yields the bare marker — a marker naming a
-    malformed head would not be recognised, and the verdict would not gate."""
-    if sha and _OBJECT_NAME_RE.fullmatch(sha):
-        return f"<!-- pkit-verdict sha={sha} -->"
-    return VERDICT_MARKER
+    object name, and the reviewed base too when `base` is one. A malformed
+    head yields the bare marker, a malformed base a marker naming the head
+    alone — a marker naming a malformed object would not be recognised, and
+    the verdict would not gate."""
+    if not _object_name(sha):
+        return VERDICT_MARKER
+    if _object_name(base):
+        return f"<!-- pkit-verdict sha={sha} base={base} -->"
+    return f"<!-- pkit-verdict sha={sha} -->"
 
 
-def stamp_verdict(body: str, sha: str = "") -> str:
+def stamp_verdict(body: str, sha: str = "", base: str = "") -> str:
     """Stamp a verdict comment body with the verdict marker (idempotent).
 
     Any marker already in the body — a reviewer agent is asked to end its
     output with the bare one — is replaced, so the body carries exactly one,
-    naming `sha`, the head `review-pr` showed the reviewer. Without a `sha`
-    the bare marker is stamped.
+    naming `sha`, the head `review-pr` showed the reviewer, and `base`, the
+    base branch's head at the time. Without a `sha` the bare marker is
+    stamped.
     """
     unmarked = _VERDICT_MARKER_RE.sub("", body).rstrip()
-    return f"{unmarked}\n\n{verdict_marker(sha)}\n"
+    return f"{unmarked}\n\n{verdict_marker(sha, base)}\n"
 
 
-def marked_head(body: str) -> tuple[bool, str]:
-    """Whether `body` carries a verdict marker, and the head it names.
+def read_marker(body: str) -> tuple[bool, str, str]:
+    """Whether `body` carries a verdict marker, and the head and base it names.
 
-    Returns `(marked, sha)`; `sha` is "" for the bare marker or no marker.
-    When a body carries several markers the last one counts — the stamp is
-    appended at the end.
+    Returns `(marked, sha, base)`; `sha` and `base` are "" where the marker
+    names none, and both are "" for the bare marker or no marker. When a body
+    carries several markers the last one counts — the stamp is appended at
+    the end.
     """
     matches = list(_VERDICT_MARKER_RE.finditer(body))
     if not matches:
-        return False, ""
-    return True, matches[-1].group("sha") or ""
+        return False, "", ""
+    last = matches[-1]
+    return True, last.group("sha") or "", last.group("base") or ""
 
 
 # Verdict-comment path (DEC-028): a remote reviewer posts under its GitHub
@@ -156,6 +173,8 @@ class Verdict:
       (project-management:DEC-050).
     * `sha` — the PR head the reviewer was shown, named by the verdict marker
       (#1179); empty when the marker names none.
+    * `base` — the base branch's head when the reviewer was shown `sha`,
+      named by the verdict marker (#1179); empty when the marker names none.
     """
 
     reviewer: str
@@ -165,6 +184,7 @@ class Verdict:
     timestamp: str
     url: str = ""
     sha: str = ""
+    base: str = ""
 
 
 def latest_commit_timestamp(commits: list) -> str:
@@ -243,7 +263,7 @@ def all_verdicts(
 
         # Gate path (#593): only a marker-carrying verdict counts, so a bare
         # verdict-grammar line posted by any non-reviewer path never gates.
-        marked, sha = marked_head(body)
+        marked, sha, base = read_marker(body)
         if require_marker and not marked:
             continue
 
@@ -265,6 +285,7 @@ def all_verdicts(
                 timestamp=str(comment.get("createdAt") or ""),
                 url=str(comment.get("url") or ""),
                 sha=sha,
+                base=base,
             )
         )
 

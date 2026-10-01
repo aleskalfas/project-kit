@@ -136,7 +136,16 @@ TOUCHES_CODE = frozenset({"touches-code"})
 FLOOR_ONLY = {CODE: TOUCHES_CODE, SECURITY: TOUCHES_CODE}
 
 
-def _verdict(av, reviewer, sha, *, path=None, timestamp="2026-01-01T00:00:00Z", token=None):
+def _verdict(
+    av,
+    reviewer,
+    sha,
+    *,
+    path=None,
+    timestamp="2026-01-01T00:00:00Z",
+    token=None,
+    base="",
+):
     return av.Verdict(
         reviewer=reviewer,
         token=token or av.APPROVED,
@@ -144,6 +153,7 @@ def _verdict(av, reviewer, sha, *, path=None, timestamp="2026-01-01T00:00:00Z", 
         body="",
         timestamp=timestamp,
         sha=sha,
+        base=base,
     )
 
 
@@ -154,6 +164,7 @@ def _rule(vf, ad, repo, *, base_tip=None, floors=FLOOR_ONLY, head_timestamp=""):
     return vf.FreshnessRule(
         head_sha=head,
         head_timestamp=head_timestamp,
+        base_tip=tip,
         floors_by_reviewer=floors,
         delta_since=lambda since: ad.author_delta(
             since,
@@ -161,6 +172,7 @@ def _rule(vf, ad, repo, *, base_tip=None, floors=FLOOR_ONLY, head_timestamp=""):
             base_tip=tip,
             cwd=repo.root,
         ),
+        base_kept=lambda reviewed_base: ad.base_kept(reviewed_base, tip, cwd=repo.root),
     )
 
 
@@ -413,6 +425,68 @@ def test_a_verdict_naming_no_head_follows_the_commit_time(av, vf) -> None:
     )
 
 
+# ---- the base a verdict was reviewed against ---------------------------------
+
+
+def test_a_retargeted_stacked_pr_stales_every_verdict(av, ad, vf, repo) -> None:
+    """A stacked PR reviewed over its parent branch, then retargeted onto
+    main once that parent was abandoned: no new commit, yet the PR's diff
+    over main now carries the parent's commits, which nobody reviewed."""
+    repo.git("checkout", "-q", "-b", "parent", "main")
+    parent_tip = repo.commit({"src/parent.py": "p = 1\n"}, "parent work")
+    repo.git("checkout", "-q", "-B", "feat", "parent")
+    reviewed = repo.commit({"src/app.py": "x = 2\n"}, "feature")
+
+    retargeted = _rule(vf, ad, repo, base_tip=repo.head("main"))
+    pinned = _verdict(av, CODE, reviewed, base=parent_tip)
+    assessment = retargeted.assess(pinned)
+    assert not assessment.fresh
+    assert assessment.reason == (
+        f"reviewed {reviewed[:7]} against base {parent_tip[:7]}, which the base "
+        "branch no longer contains — the pull request was retargeted or its base "
+        "rewritten"
+    )
+    # Over the base it was reviewed against, the same verdict stands.
+    assert _rule(vf, ad, repo, base_tip=parent_tip).is_fresh(pinned)
+    # A marker naming no base predates the pin and is not checked.
+    assert retargeted.is_fresh(_verdict(av, CODE, reviewed))
+
+
+def test_a_base_that_moved_forward_keeps_the_verdict(av, ad, vf, repo) -> None:
+    reviewed = repo.commit({"src/app.py": "x = 2\n"}, "feature")
+    reviewed_base = repo.head("main")
+    repo.git("checkout", "-q", "main")
+    repo.commit({"src/lib.py": "y = 1\n"}, "main moves")
+    repo.git("checkout", "-q", "feat")
+
+    rule = _rule(vf, ad, repo)
+    assert rule.assess(_verdict(av, PM, reviewed, base=reviewed_base)) == vf.Freshness(
+        True,
+        f"reviewed the current head {reviewed[:7]}",
+    )
+
+
+def test_a_rewritten_base_stales_the_verdict(av, ad, vf, repo) -> None:
+    reviewed = repo.commit({"src/app.py": "x = 2\n"}, "feature")
+    repo.git("checkout", "-q", "main")
+    discarded = repo.commit({"src/lib.py": "y = 1\n"}, "main moves")
+    repo.git("reset", "-q", "--hard", "HEAD~1")
+    repo.commit({"src/lib.py": "y = 2\n"}, "main rewritten")
+    repo.git("checkout", "-q", "feat")
+
+    assert not _rule(vf, ad, repo).is_fresh(_verdict(av, PM, reviewed, base=discarded))
+
+
+def test_a_base_that_cannot_be_read_stales_the_verdict(av, vf) -> None:
+    rule = vf.FreshnessRule(head_sha="a" * 40, base_tip="c" * 40)
+    assessment = rule.assess(_verdict(av, PM, "a" * 40, base="d" * 40))
+    assert assessment == vf.Freshness(
+        False,
+        "reviewed aaaaaaa against base ddddddd; whether the base branch still "
+        "contains it cannot be read: the base branch's head is unknown",
+    )
+
+
 # ---- what a merge contributes ------------------------------------------------
 
 
@@ -649,6 +723,12 @@ def test_rule_for_pr_reads_the_pr_view_and_the_resolution(av, ad, vf) -> None:
         calls.append((since, head, base_tip))
         return ad.AuthorDelta(paths=(".changes/unreleased/x.yaml",))
 
+    bases: list[tuple] = []
+
+    def base_kept(reviewed_base, base_tip):
+        bases.append((reviewed_base, base_tip))
+        return ad.BaseCheck(kept=False)
+
     resolution_module = importlib.import_module("_lib.required_reviewers")
     resolution = resolution_module.Resolution(
         floors_by_reviewer=FLOOR_ONLY,
@@ -662,11 +742,15 @@ def test_rule_for_pr_reads_the_pr_view_and_the_resolution(av, ad, vf) -> None:
         },
         resolution,
         author_delta=delta,
+        base_kept=base_kept,
     )
     # The resolution's not-code list excludes nothing here, so a changeset is
     # code and reaches the floor.
     assert not rule.is_fresh(_verdict(av, CODE, "a" * 40))
     assert calls == [("a" * 40, "b" * 40, "c" * 40)]
+    # A recorded base is checked against the PR's base.
+    assert not rule.is_fresh(_verdict(av, PM, "b" * 40, base="e" * 40))
+    assert bases == [("e" * 40, "c" * 40)]
     # A verdict naming no head is judged by the PR's latest commit.
     assert rule.is_fresh(_verdict(av, PM, "", timestamp="2026-06-06T00:00:00Z"))
 

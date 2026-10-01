@@ -42,10 +42,11 @@ Gates:
     gate's posture.
 
 Side-effects:
-  - For each required reviewer: read the PR's head commit, invoke the
-    reviewer (via the harness's agent runtime) on that head, read the head
-    again, and post the verdict as a comment whose marker names the head the
-    reviewer was shown (`<!-- pkit-verdict sha=<oid> -->`, #1179). A head
+  - For each required reviewer: read the PR's head commit and its base
+    branch's head, invoke the reviewer (via the harness's agent runtime) on
+    that head, read the head again, and post the verdict as a comment whose
+    marker names the head the reviewer was shown and the base it was reviewed
+    against (`<!-- pkit-verdict sha=<oid> base=<oid> -->`, #1179). A head
     that moved during the review is reported and the verdict is still posted
     against the head it reviewed — the freshness rule then judges the
     changes since, exactly as for any later push; the native review is
@@ -100,7 +101,7 @@ sys.path.insert(0, str(_HERE))
 from _lib import bootstrap_gate, session_guard
 from _lib.agent_verdicts import PATH_LOCAL, gate_verdicts, stamp_verdict
 from _lib.audit import short_sha
-from _lib.author_delta import author_delta
+from _lib.author_delta import author_delta, base_kept
 from _lib.closing_issue_fetchers import issue_labels as _issue_labels_fetch
 from _lib.closing_issue_fetchers import pr_changed_files as _pr_changed_files_fetch
 from _lib.closing_issue_fetchers import pr_closing_issue_numbers as _pr_closing_issue_numbers_fetch
@@ -433,8 +434,9 @@ def main() -> int:
             continue
 
         # The head this reviewer is shown (#1179): read before the invocation,
-        # named in its brief, and recorded in its verdict's marker.
-        reviewed = _read_head_sha(pr_number, config)
+        # named in its brief, and recorded in its verdict's marker together
+        # with the base branch's head it is reviewed against.
+        reviewed, reviewed_base = _read_tips(pr_number, config)
         verdict, body = _invoke_agent(
             name,
             pr_number,
@@ -450,8 +452,9 @@ def main() -> int:
             failures += 1
             continue
 
-        head_unchanged = _report_head_check(name, reviewed, _read_head_sha(pr_number, config))
-        comment = _format_verdict_comment(name, verdict, body, sha=reviewed)
+        head_now, _base_now = _read_tips(pr_number, config)
+        head_unchanged = _report_head_check(name, reviewed, head_now)
+        comment = _format_verdict_comment(name, verdict, body, sha=reviewed, base=reviewed_base)
         if not _post_comment(pr_number, comment, config):
             print(f"  [{name}] could not post verdict comment.", file=sys.stderr)
             failures += 1
@@ -642,31 +645,42 @@ def _review_brief(
     )
 
 
-def _format_verdict_comment(name: str, verdict: str, body: str, *, sha: str = "") -> str:
+def _format_verdict_comment(
+    name: str,
+    verdict: str,
+    body: str,
+    *,
+    sha: str = "",
+    base: str = "",
+) -> str:
     """Compose the verdict comment in DEC-028's local-path format, stamped with
     the verdict marker (#593) so the merge gate counts it — naming `sha`, the
-    head the reviewer was shown, when it is known (#1179)."""
+    head the reviewer was shown, and `base`, the base branch's head it was
+    reviewed against, when they are known (#1179)."""
     first_line = f"Reviewer agent (local, {name}): {verdict}"
     composed = f"{first_line}\n\n{body.strip()}" if body.strip() else first_line
-    return stamp_verdict(composed, sha)
+    return stamp_verdict(composed, sha, base)
 
 
-def _read_head_sha(pr_number: int | None, config: dict) -> str:
-    """The PR's head commit as GitHub reports it, or "" when it cannot be read."""
+def _read_tips(pr_number: int | None, config: dict) -> tuple[str, str]:
+    """The PR's head commit and its base branch's head as GitHub reports them
+    (`headRefOid`, `baseRefOid`), each "" when it cannot be read."""
     if pr_number is None:
-        return ""
+        return "", ""
     proc = gh_run(
-        ["gh", "pr", "view", str(pr_number), "--json", "headRefOid"],
+        ["gh", "pr", "view", str(pr_number), "--json", "headRefOid,baseRefOid"],
         config,
         check=False,
     )
     if proc.returncode != 0:
-        return ""
+        return "", ""
     try:
         data = json.loads(proc.stdout)
     except ValueError:
-        return ""
-    return str(data.get("headRefOid") or "") if isinstance(data, dict) else ""
+        return "", ""
+    if not isinstance(data, dict):
+        return "", ""
+    return str(data.get("headRefOid") or ""), str(data.get("baseRefOid") or "")
 
 
 def _report_head_check(name: str, reviewed: str, now: str) -> bool:
@@ -843,7 +857,7 @@ def _read_fresh_verdicts(
         return None
     return _fresh_local_verdicts(
         data.get("comments") or [],
-        rule_for_pr(data, resolution, author_delta=author_delta),
+        rule_for_pr(data, resolution, author_delta=author_delta, base_kept=base_kept),
         resolution.required_local,
     )
 

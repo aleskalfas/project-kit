@@ -1,9 +1,13 @@
 """The author's changes to a pull request since a reviewed head (#1179).
 
-A reviewer's verdict names the PR head it was shown (`<!-- pkit-verdict
-sha=<oid> -->`). Whether it still stands depends on what the author changed
-after that head (`_lib.verdict_freshness`), and this module computes that
-change from the local repository: the union of the paths each commit after
+A reviewer's verdict names the PR head it was shown and the base branch's
+head at the time (`<!-- pkit-verdict sha=<oid> base=<oid> -->`). Whether it
+still stands depends on what the author changed after that head, and on the
+base it was reviewed against still being in the base branch's history
+(`_lib.verdict_freshness`). This module reads both from the local
+repository.
+
+`author_delta` computes the change: the union of the paths each commit after
 the reviewed head changed, walking the branch's own line of commits (first
 parents) from the PR head back to it.
 
@@ -17,6 +21,12 @@ parents) from the PR head back to it.
   * **Any other commit** contributes its own diff against its first parent —
     a merge of anything other than the base branch included, since what it
     brings in has been reviewed nowhere on this PR.
+
+`base_kept` answers whether the base a verdict was reviewed against is an
+ancestor of the base branch's head now. A base that moved forward is; one a
+retarget replaced — a stacked PR moved onto another branch after its base
+was abandoned — or a rewrite discarded is not, and the commits the PR now
+carries over its new base were never reviewed.
 
 The computation needs the commits locally and git 2.38 or later (for
 `merge-tree --write-tree`). When it cannot run — the reviewed head is no
@@ -53,6 +63,23 @@ class AuthorDelta:
     """
 
     paths: tuple[str, ...] = ()
+    error: str = ""
+
+    @property
+    def ok(self) -> bool:
+        return not self.error
+
+
+@dataclass(frozen=True)
+class BaseCheck:
+    """Whether a reviewed base is still in the base branch's history, or why
+    that cannot be read.
+
+    `ok` is False when `error` is set; `kept` is then False and means
+    nothing — a consumer reads `error` first.
+    """
+
+    kept: bool = False
     error: str = ""
 
     @property
@@ -108,6 +135,29 @@ def author_delta(
     except _GitFailed as exc:
         return AuthorDelta(error=str(exc))
     return AuthorDelta(paths=tuple(sorted(paths)))
+
+
+def base_kept(
+    reviewed_base: str,
+    base_tip: str,
+    *,
+    cwd: str | Path | None = None,
+    run: RunFn = subprocess.run,
+) -> BaseCheck:
+    """Whether `reviewed_base` — the base branch's head a verdict was reviewed
+    against — is an ancestor of `base_tip`, the base branch's head now (the
+    PR's `baseRefOid`). See the module docstring."""
+    if not base_tip:
+        return BaseCheck(error="the base branch's head is unknown")
+    if reviewed_base == base_tip:
+        return BaseCheck(kept=True)
+    git = _Git(cwd, run)
+    try:
+        git.require_commit(reviewed_base, "the reviewed base")
+        git.require_commit(base_tip, "the base branch's head")
+        return BaseCheck(kept=git.is_ancestor(reviewed_base, base_tip))
+    except _GitFailed as exc:
+        return BaseCheck(error=str(exc))
 
 
 class _Git:

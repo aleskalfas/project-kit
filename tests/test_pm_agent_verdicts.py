@@ -327,50 +327,85 @@ def test_stamp_verdict_idempotent(av) -> None:
     assert twice.count(av.VERDICT_MARKER) == 1
 
 
-# --- the reviewed head in the marker (#1179) ----------------------------
+# --- the reviewed head and base in the marker (#1179) --------------------
 
 _SHA = "a" * 40
+_BASE = "c" * 40
 
 
 def test_stamp_verdict_names_the_reviewed_head(av) -> None:
     out = av.stamp_verdict("Reviewer agent: APPROVED\n\nreasons", _SHA)
     assert out.endswith(f"\n\n<!-- pkit-verdict sha={_SHA} -->\n")
-    assert av.marked_head(out) == (True, _SHA)
+    assert av.read_marker(out) == (True, _SHA, "")
+
+
+def test_stamp_verdict_names_the_reviewed_base(av) -> None:
+    out = av.stamp_verdict("Reviewer agent: APPROVED\n\nreasons", _SHA, _BASE)
+    assert out.endswith(f"\n\n<!-- pkit-verdict sha={_SHA} base={_BASE} -->\n")
+    assert av.read_marker(out) == (True, _SHA, _BASE)
 
 
 def test_stamp_verdict_replaces_a_marker_the_reviewer_wrote(av) -> None:
     # A reviewer agent is asked to end its output with the bare marker; the
     # posted body carries exactly one, naming the head review-pr showed it.
     body = f"Reviewer agent: APPROVED\n\nreasons\n\n{av.VERDICT_MARKER}"
-    once = av.stamp_verdict(body, _SHA)
+    once = av.stamp_verdict(body, _SHA, _BASE)
     assert once.count("pkit-verdict") == 1
-    assert av.stamp_verdict(once, _SHA) == once
+    assert av.stamp_verdict(once, _SHA, _BASE) == once
 
 
-def test_stamp_verdict_keeps_a_malformed_head_out_of_the_marker(av) -> None:
-    # A marker naming a malformed head would not be recognised, and the
-    # verdict would not gate — the bare marker is stamped instead.
-    out = av.stamp_verdict("Reviewer agent: APPROVED", "abc123")
-    assert av.marked_head(out) == (True, "")
+def test_stamp_verdict_keeps_a_malformed_object_out_of_the_marker(av) -> None:
+    # A marker naming a malformed object would not be recognised, and the
+    # verdict would not gate: a malformed head yields the bare marker, a
+    # malformed base a marker naming the head alone.
+    assert av.read_marker(av.stamp_verdict("Reviewer agent: APPROVED", "abc123")) == (
+        True,
+        "",
+        "",
+    )
+    assert av.read_marker(av.stamp_verdict("Reviewer agent: APPROVED", _SHA, "abc123")) == (
+        True,
+        _SHA,
+        "",
+    )
+    # A base without a head names nothing.
+    assert av.verdict_marker("", _BASE) == av.VERDICT_MARKER
 
 
-def test_marked_head_reads_either_marker_form(av) -> None:
-    assert av.marked_head("no marker") == (False, "")
-    assert av.marked_head(f"x\n{av.VERDICT_MARKER}") == (True, "")
-    assert av.marked_head(f"x\n<!-- pkit-verdict sha={_SHA} -->") == (True, _SHA)
+def test_read_marker_reads_every_marker_form(av) -> None:
+    assert av.read_marker("no marker") == (False, "", "")
+    assert av.read_marker(f"x\n{av.VERDICT_MARKER}") == (True, "", "")
+    assert av.read_marker(f"x\n<!-- pkit-verdict sha={_SHA} -->") == (True, _SHA, "")
+    assert av.read_marker(f"<!-- pkit-verdict sha={_SHA} base={_BASE} -->") == (
+        True,
+        _SHA,
+        _BASE,
+    )
     sha256 = "b" * 64
-    assert av.marked_head(f"<!-- pkit-verdict sha={sha256} -->") == (True, sha256)
-    # An abbreviated head is no marker at all.
-    assert av.marked_head("<!-- pkit-verdict sha=abc1234 -->") == (False, "")
+    assert av.read_marker(f"<!-- pkit-verdict sha={sha256} base={sha256} -->") == (
+        True,
+        sha256,
+        sha256,
+    )
+    # An abbreviated object is no marker at all.
+    assert av.read_marker("<!-- pkit-verdict sha=abc1234 -->") == (False, "", "")
+    assert av.read_marker(f"<!-- pkit-verdict sha={_SHA} base=abc1234 -->") == (
+        False,
+        "",
+        "",
+    )
 
 
 def test_a_verdict_carries_the_head_its_marker_names(av) -> None:
     comment = _local("critic", "APPROVED", marked=False)
     comment["body"] = av.stamp_verdict(comment["body"], _SHA)
     (marked,) = av.all_verdicts([comment], require_marker=True)
-    assert marked.sha == _SHA
+    assert (marked.sha, marked.base) == (_SHA, "")
+    comment["body"] = av.stamp_verdict(comment["body"], _SHA, _BASE)
+    (pinned,) = av.all_verdicts([comment], require_marker=True)
+    assert (pinned.sha, pinned.base) == (_SHA, _BASE)
     (bare,) = av.all_verdicts([_local("critic", "APPROVED")])
-    assert bare.sha == ""
+    assert (bare.sha, bare.base) == ("", "")
 
 
 def _gate(av, comments):

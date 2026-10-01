@@ -191,7 +191,7 @@ from _lib.audit import (
     render_ci_bypass_audit_body,
     short_sha,
 )
-from _lib.author_delta import author_delta
+from _lib.author_delta import author_delta, base_kept
 
 # DEC-007's checkbox close-gate — the ONE implementation (`_lib.checkbox_gate`),
 # shared with close-issue, merge-pr and the engine's gate-checkboxes-ticked
@@ -1416,7 +1416,7 @@ def _check_agent_gate(
     # `show-pr`'s stale marker: a verdict naming its reviewed head stands
     # until the author's changes since reach what its reviewer is required
     # for; one naming no head falls back to the commit-time anchor above.
-    freshness = rule_for_pr(data, resolution, author_delta=author_delta)
+    freshness = rule_for_pr(data, resolution, author_delta=author_delta, base_kept=base_kept)
 
     # --- Steps 1–5: latest verdict per agent per path, selected by TIMESTAMP
     # (DEC-028 step 5) and counted only when fresh, via the SHARED verdict

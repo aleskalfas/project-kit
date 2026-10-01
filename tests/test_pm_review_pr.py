@@ -560,6 +560,7 @@ def test_find_pr_for_branch_reads_the_base_branch(rpr, monkeypatch) -> None:
 
 _REVIEWED = "a" * 40
 _MOVED_TO = "b" * 40
+_BASE = "c" * 40
 
 
 def _wire_main(
@@ -589,8 +590,8 @@ def _wire_main(
     token; default none fresh — and `unreadable` makes the read fail instead.
     Each read is recorded in the returned list. `argv` is extra CLI arguments.
 
-    `heads` is the PR head each `_read_head_sha` call returns, in order
-    (#1179); default the same head every time. `posted`, when given, collects
+    `heads` is the PR head each `_read_tips` call returns, in order, beside
+    the base `_BASE` (#1179); default the same head every time. `posted`, when given, collects
     each posted comment body. `native`, when given, enables the native review
     and collects the verdict of each one delivered.
     """
@@ -658,8 +659,8 @@ def _wire_main(
     head_reads = iter(heads) if heads is not None else None
     monkeypatch.setattr(
         rpr,
-        "_read_head_sha",
-        lambda pr, config: next(head_reads) if head_reads else _REVIEWED,
+        "_read_tips",
+        lambda pr, config: (next(head_reads) if head_reads else _REVIEWED, _BASE),
     )
 
     reads: list[tuple[int, list[str]]] = []
@@ -852,7 +853,7 @@ def test_each_verdict_names_the_head_its_reviewer_saw(
     )
     assert rpr.main() == 0
     (comment,) = posted
-    assert comment.endswith(f"<!-- pkit-verdict sha={_REVIEWED} -->\n")
+    assert comment.endswith(f"<!-- pkit-verdict sha={_REVIEWED} base={_BASE} -->\n")
     assert native == ["APPROVED"]
     assert "moved" not in capsys.readouterr().out
 
@@ -918,24 +919,24 @@ def test_report_head_check_when_the_head_cannot_be_read_again(rpr, capsys) -> No
     assert rpr._report_head_check("reviewer", _REVIEWED, _REVIEWED) is True
 
 
-def test_read_head_sha(rpr, monkeypatch) -> None:
+def test_read_tips(rpr, monkeypatch) -> None:
     calls: list[list[str]] = []
 
     def fake(argv, config, check=False):  # type: ignore[no-untyped-def]
         calls.append(list(argv))
-        return _Proc(0, _json.dumps({"headRefOid": _REVIEWED}))
+        return _Proc(0, _json.dumps({"headRefOid": _REVIEWED, "baseRefOid": _BASE}))
 
     monkeypatch.setattr(rpr, "gh_run", fake)
-    assert rpr._read_head_sha(99, {}) == _REVIEWED
-    assert calls == [["gh", "pr", "view", "99", "--json", "headRefOid"]]
+    assert rpr._read_tips(99, {}) == (_REVIEWED, _BASE)
+    assert calls == [["gh", "pr", "view", "99", "--json", "headRefOid,baseRefOid"]]
     for proc in (_Proc(1, "", "gh down"), _Proc(0, "not json"), _Proc(0, "[]")):
         monkeypatch.setattr(
             rpr,
             "gh_run",
             lambda argv, config, check=False, proc=proc: proc,
         )
-        assert rpr._read_head_sha(99, {}) == ""
-    assert rpr._read_head_sha(None, {}) == ""
+        assert rpr._read_tips(99, {}) == ("", "")
+    assert rpr._read_tips(None, {}) == ("", "")
 
 
 # ---- fresh-verdict skip and --force (#1178) --------------------------
@@ -1074,6 +1075,7 @@ def _rule(rpr, commits=_HEAD):
         {"commits": commits},
         rpr.Resolution(),
         author_delta=lambda *a, **k: pytest.fail("no head is named"),
+        base_kept=lambda *a, **k: pytest.fail("no base is named"),
     )
 
 
@@ -1152,6 +1154,7 @@ def test_fresh_local_verdicts_keeps_a_floor_reviewer_fresh_past_a_markdown_fix(
         author_delta=lambda since, head, *, base_tip: AuthorDelta(
             paths=("README.md",),
         ),
+        base_kept=lambda reviewed_base, base_tip: pytest.fail("no base is named"),
     )
     comments = [pinned("reviewer"), pinned("code-reviewer")]
     assert rpr._fresh_local_verdicts(

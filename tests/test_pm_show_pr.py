@@ -436,6 +436,7 @@ def test_review_field_judges_a_pinned_verdict_by_the_gates_rule(sp) -> None:
         author_delta=lambda since, head, *, base_tip: AuthorDelta(
             paths=("README.md",),
         ),
+        base_kept=lambda reviewed_base, base_tip: pytest.fail("no base is named"),
     )
     s = sp._summarise(pr, rule)
     by_name = {e["reviewer"]: e for e in s["review"]}

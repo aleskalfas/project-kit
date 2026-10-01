@@ -54,7 +54,7 @@ from _lib.agent_verdicts import (
     latest_verdicts_per_reviewer,
     reduce_latest_per_reviewer,
 )
-from _lib.author_delta import author_delta
+from _lib.author_delta import author_delta, base_kept
 from _lib.closing_issue_fetchers import issue_labels as _issue_labels_fetch
 from _lib.closing_issue_fetchers import pr_changed_files as _pr_changed_files_fetch
 from _lib.closing_issue_fetchers import pr_closing_issue_numbers as _pr_closing_issue_numbers_fetch
@@ -157,7 +157,9 @@ def main() -> int:
         if shows_verdicts
         else Resolution()
     )
-    summary = _summarise(pr, rule_for_pr(pr, resolution, author_delta=author_delta))
+    summary = _summarise(
+        pr, rule_for_pr(pr, resolution, author_delta=author_delta, base_kept=base_kept)
+    )
     if args.field is not None:
         for line in _field_lines_for(summary)[args.field]:
             print(line)
@@ -173,7 +175,7 @@ def _summarise(pr: dict, freshness: FreshnessRule | None = None) -> dict:
     it is the rule for this PR with no floor-only reviewer, under which every
     verdict is held to any change since the head it reviewed."""
     if freshness is None:
-        freshness = rule_for_pr(pr, Resolution(), author_delta=author_delta)
+        freshness = rule_for_pr(pr, Resolution(), author_delta=author_delta, base_kept=base_kept)
     title = str(pr.get("title", ""))
     body = str(pr.get("body") or "")
     state = str(pr.get("state", "")).lower()
