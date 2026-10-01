@@ -17,7 +17,9 @@ hosting service and the clone (`tests.hosting_fake`); project-management's
 only what the callers' own tests stub: the membership and bootstrap gates,
 the capability's configuration, the approval gate (the reviewers), the moves
 `done-work` makes after a merge and merge-pr's after-merge hooks (both
-recorded), and the backbone's naming of the default branch.
+recorded), and the backbone's naming of the default branch — and, in the row
+where the two disagree, project-management's copy of the cross-repository
+guard's comparison. The backbone's guard runs as it is, recorded.
 
 A row's cells (:class:`Row`) are in one order — done-work, merge-pr, release
 merge, land-work. A cell (:class:`Cell`) records what the caller's run came
@@ -41,10 +43,10 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any
 
+import click
 import pytest
-from click.testing import CliRunner
 
-from project_kit import cli
+from project_kit import cli, session_guard
 from tests import hosting_fake as fake
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -76,7 +78,11 @@ _OPTIONS: Mapping[str, Mapping[str, list[str]]] = {
         "short-wait": ["--wait-minutes", "1"],
         "allow-foreign-repo": ["--allow-foreign-repo"],
     },
-    RELEASE: {"force": ["--force"], "short-wait": ["--wait-minutes", "1"]},
+    RELEASE: {
+        "force": ["--force"],
+        "short-wait": ["--wait-minutes", "1"],
+        "allow-foreign-repo": ["--allow-foreign-repo"],
+    },
     LAND_WORK: {
         "short-wait": ["--wait-minutes", "1"],
         "allow-foreign-repo": ["--allow-foreign-repo"],
@@ -107,6 +113,11 @@ class Cell:
     `local` — the local clean-up: `deleted`, `kept`, `absent` (the clone had
     no such branch) or `none` (no clean-up ran).
     `asked` — the questions a terminal was asked.
+    `guard` — the backbone's cross-repository guard (#1254), wherever it did
+    not find the session's own repository: how it passed each change it
+    cleared (`undetermined`, `flag`, `terminal`) or `refused`; empty where it
+    found the session's own repository, and where it did not run, as before
+    #1254.
     """
 
     outcome: str
@@ -115,6 +126,7 @@ class Cell:
     remote: str = "none"
     local: str = "none"
     asked: int = 0
+    guard: str = ""
     note: str = field(default="", compare=False)
 
 
@@ -125,15 +137,18 @@ def merged(
     remote: str = "deleted",
     local: str = "deleted",
     asked: int = 0,
+    guard: str = "",
     note: str = "",
 ) -> Cell:
     """A run after whose merge every step ran."""
-    return Cell(outcome, requests, True, remote, local, asked, note)
+    return Cell(outcome, requests, True, remote, local, asked, guard, note)
 
 
-def stopped(outcome: str, requests: str = "", *, note: str = "") -> Cell:
+def stopped(
+    outcome: str, requests: str = "", *, asked: int = 0, guard: str = "", note: str = ""
+) -> Cell:
     """A run that ended with no step after a merge run, and no branch deleted."""
-    return Cell(outcome, requests, note=note)
+    return Cell(outcome, requests, asked=asked, guard=guard, note=note)
 
 
 @dataclass(frozen=True)
@@ -196,6 +211,9 @@ class World:
     #: predates `pkit pull-request`.
     backbone_has_the_noun: bool = True
     rewrite: fake.Rewrite | None = None
+    #: project-management's copy of the guard's comparison finds the session's
+    #: own repository, whatever the backbone's finds: the two disagree.
+    pm_reads_same_repository: bool = False
 
     def elsewhere(self) -> Path:
         """Another repository on the machine, the anchor of a session rooted there."""
@@ -454,6 +472,20 @@ def _foreign_at_a_terminal(world: World) -> None:
     world.stdin = fake.Terminal("y")
 
 
+def _foreign_declined_at_a_terminal(world: World) -> None:
+    world.anchor = world.elsewhere()
+    world.stdin = fake.Terminal("n")
+
+
+def _comparisons_disagree(world: World) -> None:
+    world.anchor = world.elsewhere()
+    world.pm_reads_same_repository = True
+
+
+def _comparison_faults(world: World) -> None:
+    world.clone.comparison_fault = True
+
+
 def _no_anchor(world: World) -> None:
     world.anchor = None
 
@@ -503,6 +535,30 @@ _NO_REQUESTING = NotToday(
 
 _UNGUARDED = (
     "accident: `pkit release merge` has no cross-repository guard (ADR-061 point 6); #1254 adds it"
+)
+_UNGUARDED_REQUEST = (
+    "accident: the backbone's merge request runs no guard of its own, so the verb's comparison "
+    "alone decides (ADR-061 point 6); #1254 adds the backbone's"
+)
+_REFUSED_AT_ENTRY = (
+    "its guard runs at the entry and refuses, with no yes and no flag: nothing is read or merged"
+)
+_FLAG_PASSED_ON = (
+    "the backbone's guard runs on the merge and passes by the flag the verb passes on, its own "
+    "guard having passed by it"
+)
+_YES_PASSED_ON = (
+    "asked once, by the verb's own guard; the yes is passed on, so the backbone's guard passes "
+    "by the flag"
+)
+_FAILS_CLOSED = (
+    "the backbone's guard refuses the merge the verb's let through: a disagreement fails "
+    "closed, nothing is asked of GitHub, and the verb names both verdicts"
+)
+_FAULT = "both guards warn and go on: a git fault is no refusal; the backbone's passes undetermined"
+_NO_FIRE = (
+    "no anchor, no fire: the backbone's guard passes undetermined, never same-repo, and needs "
+    "no flag"
 )
 _TIP_UNCHECKED = (
     "accident: the branch is deleted without its tip being checked against the merged head "
@@ -1141,6 +1197,9 @@ SCENARIOS: tuple[Scenario, ...] = (
             merged("0", "read merge read delete-ref", note=_UNGUARDED),
             stopped("2", note="its own guard refuses before any step"),
         ),
+        after={
+            RELEASE: stopped("1", guard="refused", note=_REFUSED_AT_ENTRY),
+        },
     ),
     Scenario(
         "foreign-repository-flagged",
@@ -1152,6 +1211,26 @@ SCENARIOS: tuple[Scenario, ...] = (
             _NO_FOREIGN_FLAG,
             merged("0 merge: merged", "read×2 merge read delete-ref"),
         ),
+        after={
+            DONE_WORK: merged(
+                "merged 0", "read×2 merge read delete-ref", guard="flag", note=_FLAG_PASSED_ON
+            ),
+            MERGE_PR: merged(
+                "0 record=ran", "read×2 merge read delete-ref", guard="flag", note=_FLAG_PASSED_ON
+            ),
+            RELEASE: merged(
+                "0",
+                "read merge read delete-ref",
+                guard="flag",
+                note="it takes --allow-foreign-repo now: its guard at the entry passes by it",
+            ),
+            LAND_WORK: merged(
+                "0 merge: merged",
+                "read×2 merge read delete-ref",
+                guard="flag",
+                note="its flag reaches done-work, which passes it on to the backbone's guard",
+            ),
+        },
     ),
     Scenario(
         "foreign-repository-confirmed-at-a-terminal",
@@ -1168,6 +1247,91 @@ SCENARIOS: tuple[Scenario, ...] = (
                 note="asked twice: by land-work's guard, then by done-work's",
             ),
         ),
+        after={
+            DONE_WORK: merged(
+                "merged 0",
+                "read×2 merge read delete-ref",
+                asked=1,
+                guard="flag",
+                note=_YES_PASSED_ON,
+            ),
+            MERGE_PR: merged(
+                "0 record=ran",
+                "read×2 merge read delete-ref",
+                asked=1,
+                guard="flag",
+                note=_YES_PASSED_ON,
+            ),
+            RELEASE: merged(
+                "0",
+                "read merge read delete-ref",
+                asked=1,
+                guard="terminal",
+                note="its guard asks once, at the entry, before it reads the PR",
+            ),
+            LAND_WORK: merged(
+                "0 merge: merged",
+                "read×2 merge read delete-ref",
+                asked=1,
+                guard="flag",
+                note="asked once: land-work's yes is passed on to done-work, whose guard and "
+                "the backbone's pass by it",
+            ),
+        },
+    ),
+    Scenario(
+        "foreign-repository-declined-at-a-terminal",
+        "A session rooted in another repository; the operator declines at a terminal.",
+        _foreign_declined_at_a_terminal,
+        Row(
+            stopped("refused 1", asked=1),
+            stopped("1", asked=1),
+            merged("0", "read merge read delete-ref", note=_UNGUARDED),
+            stopped("2", asked=1, note="its own guard asks, and refuses before any step"),
+        ),
+        after={
+            RELEASE: stopped("1", asked=1, guard="refused", note=_REFUSED_AT_ENTRY),
+        },
+    ),
+    Scenario(
+        "the-two-comparisons-disagree",
+        "A session rooted in another repository, which project-management's copy of the "
+        "comparison takes for the session's own and the backbone's does not.",
+        _comparisons_disagree,
+        Row(
+            merged("merged 0", "read×2 merge read delete-ref", note=_UNGUARDED_REQUEST),
+            merged("0 record=ran", "read×2 merge read delete-ref", note=_UNGUARDED_REQUEST),
+            NotToday("holds one comparison: its guard is the backbone's alone"),
+            merged("0 merge: merged", "read×2 merge read delete-ref", note=_UNGUARDED_REQUEST),
+        ),
+        after={
+            DONE_WORK: stopped("refused 1", "read×2", guard="refused", note=_FAILS_CLOSED),
+            MERGE_PR: stopped("1", "read×2", guard="refused", note=_FAILS_CLOSED),
+            LAND_WORK: stopped("1 merge: refused", "read×2", guard="refused", note=_FAILS_CLOSED),
+        },
+    ),
+    Scenario(
+        "the-comparison-faults",
+        "git does not answer the guards' questions about the session's anchor and the target.",
+        _comparison_faults,
+        Row(
+            merged("merged 0", "read×2 merge read delete-ref"),
+            merged("0 record=ran", "read×2 merge read delete-ref"),
+            merged("0", "read merge read delete-ref", note=_UNGUARDED),
+            merged("0 merge: merged", "read×2 merge read delete-ref"),
+        ),
+        after={
+            DONE_WORK: merged(
+                "merged 0", "read×2 merge read delete-ref", guard="undetermined", note=_FAULT
+            ),
+            MERGE_PR: merged(
+                "0 record=ran", "read×2 merge read delete-ref", guard="undetermined", note=_FAULT
+            ),
+            RELEASE: merged("0", "read merge read delete-ref", guard="undetermined", note=_FAULT),
+            LAND_WORK: merged(
+                "0 merge: merged", "read×2 merge read delete-ref", guard="undetermined", note=_FAULT
+            ),
+        },
     ),
     Scenario(
         "outside-any-session",
@@ -1179,6 +1343,21 @@ SCENARIOS: tuple[Scenario, ...] = (
             merged("0", "read merge read delete-ref"),
             merged("0 merge: merged", "read×2 merge read delete-ref"),
         ),
+        after={
+            DONE_WORK: merged(
+                "merged 0", "read×2 merge read delete-ref", guard="undetermined", note=_NO_FIRE
+            ),
+            MERGE_PR: merged(
+                "0 record=ran", "read×2 merge read delete-ref", guard="undetermined", note=_NO_FIRE
+            ),
+            RELEASE: merged("0", "read merge read delete-ref", guard="undetermined", note=_NO_FIRE),
+            LAND_WORK: merged(
+                "0 merge: merged",
+                "read×2 merge read delete-ref",
+                guard="undetermined",
+                note=_NO_FIRE,
+            ),
+        },
     ),
     # ---- what project-management reads of the backbone ------------------------------------
     Scenario(
@@ -1402,6 +1581,9 @@ def land(
     monkeypatch.setattr(
         scripts.done_work.pr_merge.default_branch, "name", lambda config, **kwargs: "main"
     )
+    guarded = _record_the_backbones_guard(monkeypatch)
+    if world.pm_reads_same_repository:
+        _pm_reads_same_repository(monkeypatch, scripts.done_work.session_guard)
 
     if caller == DONE_WORK:
         dw = scripts.done_work
@@ -1421,13 +1603,7 @@ def land(
         after = "after_merge_pr" in run.hooks
     elif caller == RELEASE:
         monkeypatch.setattr(cli, "_target_kit", lambda: clone.root / ".pkit")
-        result = CliRunner().invoke(cli.main, ["release", "merge", str(PR), *argv])
-        if isinstance(result.exception, fake.NoAnswer):
-            outcome = "hangs"
-        elif result.exception is not None and not isinstance(result.exception, SystemExit):
-            raise result.exception
-        else:
-            outcome = str(result.exit_code)
+        outcome = _release(["release", "merge", str(PR), *argv])
         # Release's one step after the merge is the branch clean-up, which
         # starts by checking out the base.
         after = bool(clone.checkouts)
@@ -1452,7 +1628,52 @@ def land(
         host.remote_deletion(),
         clone.local_deletion(host.head_ref),
         world.stdin.asked,
+        _requests([passed for passed in guarded if passed != session_guard.SAME_REPO]),
     )
+
+
+def _release(args: list[str]) -> str:
+    """`pkit release merge` through the CLI in this process, and its exit —
+    `hangs` when a request the service never answers holds it. It runs with
+    the scenario's own standard input, a terminal where the scenario has one,
+    which a `CliRunner` would replace with its own."""
+    try:
+        cli.main.main(args, prog_name="pkit", standalone_mode=False)
+    except fake.NoAnswer:
+        return "hangs"
+    except click.ClickException as exc:
+        exc.show()
+        return str(exc.exit_code)
+    except SystemExit as exc:
+        return str(exc.code or 0)
+    return "0"
+
+
+def _record_the_backbones_guard(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    """How the backbone's cross-repository guard passed each change it was
+    asked to clear, in order — `refused` for one it refused."""
+    passes: list[str] = []
+    clear = session_guard.clear
+
+    def recording(*args: Any, **kwargs: Any) -> session_guard.Clearance | session_guard.Refusal:
+        passage = clear(*args, **kwargs)
+        passes.append(passage.passed if isinstance(passage, session_guard.Clearance) else "refused")
+        return passage
+
+    monkeypatch.setattr(session_guard, "clear", recording)
+    return passes
+
+
+def _pm_reads_same_repository(monkeypatch: pytest.MonkeyPatch, guard: ModuleType) -> None:
+    """project-management's copy of the comparison finds the session's own
+    repository, whatever the backbone's finds."""
+
+    def same(**kwargs: Any) -> Any:
+        return guard.GuardOutcome(
+            verdict=guard.SAME_REPO, anchor_repo=None, target_repo=None, reason="a stand-in"
+        )
+
+    monkeypatch.setattr(guard, "evaluate", same)
 
 
 _CASES = [
