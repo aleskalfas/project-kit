@@ -115,9 +115,9 @@ TERM-stabilisation:
           - project-management:DEC-014
           - ADR-019
       revalidated:
-        at: 2026-10-01T20:34:35Z
+        at: 2026-10-01T21:05:10Z
         outcome: unchanged
-        unchanged-because: done-work gains run(), which reports how a run ended to a verb that composes it, takes the head to land or a merged-only mode, and checks the pinned head before its gate's verdict, all for land-work; a direct run, the stabilisation phase, its intended guards and gap K2 are untouched
+        unchanged-because: "#1242 only shares start-work's early check, read from labels and milestone as before, and its refusal and late-failure messages with review-work; the stabilisation guard on start-work is still unbuilt and land-work, which main brought in, starts no work, so the term holds"
 ---
 
 # Glossary
