@@ -283,8 +283,15 @@ def test_null_with_a_reason_is_a_determinate_no_position_that_says_why(repo: Pat
     [
         ({"reason": "no state given"}, "no `state` key"),
         ({"state": None}, "`state` is null without a reason"),
-        ({"state": None, "reason": ""}, "`state` is null without a reason"),
+        ({"state": None, "reason": None}, "`state` is null without a reason"),
         ({"state": None, "reason": 7}, "`state` is null without a reason"),
+        ({"state": None, "reason": ["parked"]}, "`state` is null without a reason"),
+        # A blank reason is no reason: it cannot tell a deliberate "none" from
+        # an accident.
+        ({"state": None, "reason": ""}, "`state` is null with a blank reason"),
+        ({"state": None, "reason": " "}, "`state` is null with a blank reason"),
+        ({"state": None, "reason": "\n"}, "`state` is null with a blank reason"),
+        ({"state": None, "reason": " \t\r\n"}, "`state` is null with a blank reason"),
         ({"state": 3, "reason": "a number"}, "`state` is neither a string nor null"),
         ({"state": ["draft"], "reason": "a list"}, "`state` is neither a string nor null"),
         ({"state": True, "reason": "a bool"}, "`state` is neither a string nor null"),

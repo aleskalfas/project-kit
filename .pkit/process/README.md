@@ -134,8 +134,8 @@ Each state's `detection` declares the **mode** in which reality is asked ([COR-0
 
 - `state` is S's id: S's detection is true.
 - `state` is the id of another of the classifier's states: S's detection is false.
-- `state` is `null` and `reason` is a non-empty string: every one of the classifier's states is false — it places the subject in none of them. This is the only way to say so, and the reason is what `status` shows beside "no position".
-- Any other answer is **unreadable**, and every one of the classifier's states is indeterminate: no `state` key; `null` without a reason; a value that is neither a string nor `null`; the empty string; a string that is not the id of one of the classifier's states — a state the definition does not declare, or one that names another classifier. Ids are compared exactly, with no trimming and no case folding.
+- `state` is `null` and `reason` is a string that is not blank — it holds something other than whitespace: every one of the classifier's states is false — it places the subject in none of them. This is the only way to say so, and the reason is what `status` shows beside "no position"; it is all that tells a deliberate "none" from an accident, so a blank one is no reason.
+- Any other answer is **unreadable**, and every one of the classifier's states is indeterminate: no `state` key; `null` without a reason, or with a blank one; a value that is neither a string nor `null`; the empty string; a string that is not the id of one of the classifier's states — a state the definition does not declare, or one that names another classifier. Ids are compared exactly, with no trimming and no case folding.
 - No answer at all — a non-zero exit, a timeout, output that is not one JSON object — leaves every one of the classifier's states indeterminate too, as it leaves any predicate.
 - A `result` beside `state` is not read; the mode has already chosen the reading.
 

@@ -519,7 +519,8 @@ class _ClassifierReading:
 
     `placed` is the state the answer places the subject in, or None. `outcome`
     is what each of its other states reads: false when the answer was readable
-    (it named another of its states, or `null` with a reason), indeterminate
+    (it named another of its states, or `null` with a reason that is not
+    blank), indeterminate
     when the run gave no answer or one the engine cannot read."""
 
     placed: str | None
@@ -527,7 +528,8 @@ class _ClassifierReading:
 
     @property
     def placed_nowhere(self) -> bool:
-        """It answered `state: null` with a reason — none of its states."""
+        """It answered `state: null` with a reason that is not blank — none of
+        its states."""
         return self.placed is None and not self.outcome.indeterminate
 
     def outcome_for(self, state_id: str) -> PredicateOutcome:
@@ -547,13 +549,14 @@ def _read_classifier(
     """Read a classifier's answer `{state, reason}` by ADR-062 point 3.
 
     `state` naming one of `its_states` places the subject there; `null` with a
-    non-empty string `reason` places it in none of them. Anything else is
-    unreadable and leaves every one of its states indeterminate: no `state`
-    key, `null` without a reason, a value neither a string nor `null`, the
-    empty string, or a string that is not the id of one of its states —
-    compared exactly, with no trimming or case folding. A `result` beside
-    `state` is not read. No answer at all is indeterminate as for any
-    predicate."""
+    `reason` that is a string and not blank places it in none of them — the
+    reason is all that tells a deliberate "none" from an accident, so one of
+    whitespace alone is no reason. Anything else is unreadable and leaves every
+    one of its states indeterminate: no `state` key, `null` without a reason or
+    with a blank one, a value neither a string nor `null`, the empty string, or
+    a string that is not the id of one of its states — compared exactly, with
+    no trimming or case folding. A `result` beside `state` is not read. No
+    answer at all is indeterminate as for any predicate."""
     if isinstance(answer, PredicateFailure):
         return _ClassifierReading(None, _unevaluable("detection", predicate, answer))
     if "state" not in answer:
@@ -561,11 +564,13 @@ def _read_classifier(
     value = answer["state"]
     reason = answer.get("reason")
     if value is None:
-        if isinstance(reason, str) and reason:
-            return _ClassifierReading(
-                None, PredicateOutcome(result=False, reason=reason, detail=dict(answer))
-            )
-        return _unreadable(predicate, answer, "`state` is null without a reason")
+        if not isinstance(reason, str):
+            return _unreadable(predicate, answer, "`state` is null without a reason")
+        if not reason.strip():
+            return _unreadable(predicate, answer, "`state` is null with a blank reason")
+        return _ClassifierReading(
+            None, PredicateOutcome(result=False, reason=reason, detail=dict(answer))
+        )
     if not isinstance(value, str):
         return _unreadable(predicate, answer, "`state` is neither a string nor null")
     if not value:

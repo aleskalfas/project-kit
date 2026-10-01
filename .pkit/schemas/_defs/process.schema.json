@@ -92,7 +92,7 @@
       "properties": {
         "mode": {
           "enum": ["inferred", "classified"],
-          "description": "The question the predicate is asked; both read reality live on every invocation and keep nothing between invocations. inferred: 'is the subject in this state?' -- the predicate answers {result, reason}. classified: 'which state is the subject in?' -- the predicate (a classifier) answers {state, reason}, `state` being the id of one of the states that name it, or null with a non-empty reason for none of them; the states that name one command under one `with` mapping share its one answer, and any other answer leaves each of them indeterminate (ADR-062). `stored`/`hybrid` (deferred) widen this enum when they ship."
+          "description": "The question the predicate is asked; both read reality live on every invocation and keep nothing between invocations. inferred: 'is the subject in this state?' -- the predicate answers {result, reason}. classified: 'which state is the subject in?' -- the predicate (a classifier) answers {state, reason}, `state` being the id of one of the states that name it, or null with a reason that is not blank for none of them; the states that name one command under one `with` mapping share its one answer, and any other answer leaves each of them indeterminate (ADR-062). `stored`/`hybrid` (deferred) widen this enum when they ship."
         },
         "predicate": { "$ref": "#/$defs/predicate" }
       }
