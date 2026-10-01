@@ -20,9 +20,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-10-01T20:34:36Z
+      at: 2026-10-01T21:03:29Z
       outcome: unchanged
-      unchanged-because: done-work gains run(), which reports how a run ended and takes a pinned head or a merged-only mode, for the land-work verb that composes it; a direct run behaves as before, so how sessions resume and land work during a stabilisation, and its gaps, read as before
+      unchanged-because: "#1242 now only puts start-work's early check, read from labels and milestone as before, and its refusal and failure messages in helpers shared with review-work; the stabilisation guard this use case expects on start-work is still unbuilt, so it holds"
 ---
 
 # UC-007 — Resume sessions killed during a stabilisation

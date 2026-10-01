@@ -22,9 +22,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-09-30T23:02:17Z
+      at: 2026-10-01T20:50:03Z
       outcome: unchanged
-      unchanged-because: "#840's lint and format pass reshapes the anchored code without changing what it does, so this page still describes it as it is"
+      unchanged-because: "after #1242 was narrowed, start-work reads the issue's state from labels and milestone as before, through a function shared with review-work, and refuses nothing new; the claim start-work will make for the clone (EPIC #508) is still unbuilt, so the use case holds"
 ---
 
 # UC-001 — Resume a clone after every session died
