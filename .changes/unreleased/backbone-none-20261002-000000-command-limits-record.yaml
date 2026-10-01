@@ -1,0 +1,16 @@
+component: backbone
+kind: none
+body: >
+  COR-050 point 2, COR-052 point 6 and COR-053 point 9 now state the limits on
+  the commands a capability supplies for the backbone to run — anchor
+  resolvers, command fillers, event subscribers — as two different things. The
+  time bound is the backbone's to enforce: a command that overruns it is
+  stopped, and its answer counts as none. Needing no network, changing nothing
+  in the project and giving the same output for the same inputs are the
+  command's own obligations (a subscriber writes, so it keeps only the first
+  and the last): its capability declares them on the command, the backbone
+  requires the declaration and reports a missing one at validation, and trusts
+  it at run time. They are a declared and trusted contract, not confinement —
+  if you read "no network access" as the backbone keeping such a command off
+  the network, it does not; a project that needs a boundary confines these
+  commands where it runs them. Record text only; nothing you run changes.
