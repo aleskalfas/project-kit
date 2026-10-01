@@ -55,8 +55,9 @@ from tests.analysis_repo import (
     installed,
     load,
     new,
+    prepare,
+    prepare_seeded,
     run_script,
-    seed,
     stamped,
 )
 
@@ -73,6 +74,14 @@ def project(
     make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> AdopterRepo:
     return installed(make_adopter_repo, monkeypatch)
+
+
+@pytest.fixture
+def seeded(
+    make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> AdopterRepo:
+    """The project with the seed stamped and filled (`prepare_seeded`)."""
+    return installed(make_adopter_repo, monkeypatch, then=prepare_seeded)
 
 
 # --- the package metadata (DEC-001 point 2) -------------------------------------------------
@@ -167,10 +176,9 @@ def test_the_first_stamp_records_the_location_and_a_root_change_moves_nothing(
 
 
 def test_use_cases_and_journeys_are_numbered_in_order_with_their_anchors(
-    project: AdopterRepo,
+    seeded: AdopterRepo,
 ) -> None:
-    seed(project)
-    run_suite = front(project, f"{USE_CASES}/UC-001-run-suite.md")
+    run_suite = front(seeded, f"{USE_CASES}/UC-001-run-suite.md")
     assert run_suite == {
         "id": "UC-001",
         "title": "Run suite",
@@ -178,33 +186,32 @@ def test_use_cases_and_journeys_are_numbered_in_order_with_their_anchors(
         "actor": "ACT-tester",
         "pkit": {"friction": {"anchors": {"path": ["src/run.py"], "artefact": ["ACT-tester"]}}},
     }
-    body = (project.root / USE_CASES / "UC-001-run-suite.md").read_text(encoding="utf-8")
+    body = (seeded.root / USE_CASES / "UC-001-run-suite.md").read_text(encoding="utf-8")
     assert "\n# UC-001 — Run suite\n" in body
-    journey = front(project, f"{JOURNEYS}/JRN-001-first-run.md")
+    journey = front(seeded, f"{JOURNEYS}/JRN-001-first-run.md")
     assert journey["title"] == "First run"
     assert journey["steps"] == ["UC-001", "UC-002"]
     assert journey["pkit"] == {"friction": {"anchors": {"artefact": ["UC-001", "UC-002"]}}}
-    body = (project.root / JOURNEYS / "JRN-001-first-run.md").read_text(encoding="utf-8")
+    body = (seeded.root / JOURNEYS / "JRN-001-first-run.md").read_text(encoding="utf-8")
     assert "# JRN-001 — First run\n" in body
     assert "1. UC-001 — " in body and "2. UC-002 — " in body and "UC-000" not in body
     assert "- **UC-001 → UC-002:** " in body
     title = ("--title", "Export: the report as a file")
     area = stamped(
-        project, "use-case", "export", "--actor", "ACT-tester", "--area", "reports", *title
+        seeded, "use-case", "export", "--actor", "ACT-tester", "--area", "reports", *title
     )
     assert area == "UC-003"
     exported = f"{USE_CASES}/reports/UC-003-export.md"
-    assert front(project, exported)["title"] == "Export: the report as a file"
-    body = (project.root / exported).read_text(encoding="utf-8")
+    assert front(seeded, exported)["title"] == "Export: the report as a file"
+    body = (seeded.root / exported).read_text(encoding="utf-8")
     assert "\n# UC-003 — Export: the report as a file\n" in body
 
 
-def test_every_stamped_artefact_passes_the_core_s_friction_pass(project: AdopterRepo) -> None:
-    seed(project)
-    stamped(project, "term", "sandbox", "--name", "Sandbox", "--record", "ADR-001")
-    result = validate_friction(project.root)
+def test_every_stamped_artefact_passes_the_core_s_friction_pass(seeded: AdopterRepo) -> None:
+    stamped(seeded, "term", "sandbox", "--name", "Sandbox", "--record", "ADR-001")
+    result = validate_friction(seeded.root)
     assert result.errors == ()
-    discovery = fd.discover_artefacts(project.root)
+    discovery = fd.discover_artefacts(seeded.root)
     ids = [a.id for a in discovery.artefacts]
     assert ids == ["TERM-sandbox", "ACT-tester", "UC-001", "UC-002", "JRN-001"]
 
@@ -353,6 +360,7 @@ sys.exit(subprocess.run([sys.executable, "-m", "project_kit", *sys.argv[1:]]).re
 """
 
 
+# Slow by design: four stamps, each a script that starts several `pkit` processes.
 def test_a_recording_that_fails_leaves_nothing_written(
     project: AdopterRepo, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -431,6 +439,7 @@ def test_entries_two_branches_add_merge_cleanly(
     assert re.findall(r"^## (\S+)", text, flags=re.MULTILINE) == ids
 
 
+# Slow by design: five stamps, each a script that starts several `pkit` processes.
 def test_numbers_count_the_default_branch_and_withdrawn_use_cases(project: AdopterRepo) -> None:
     stamped(project, "actor", "tester")
     stamped(project, "use-case", "one", "--actor", "ACT-tester")
@@ -447,6 +456,7 @@ def test_numbers_count_the_default_branch_and_withdrawn_use_cases(project: Adopt
     assert stamped(project, "use-case", "four", "--actor", "ACT-tester") == "UC-004"
 
 
+# Slow by design: six stamps, each a script that starts several `pkit` processes.
 def test_a_number_deleted_from_the_default_branch_is_never_used_again(
     project: AdopterRepo,
 ) -> None:
@@ -487,6 +497,7 @@ def test_a_number_deleted_from_the_default_branch_is_never_used_again(
     assert stamped(project, "journey", "again", "--actor", "ACT-tester", *steps) == "JRN-002"
 
 
+# Slow by design: five stamps and the check, each a script that starts `pkit` processes.
 def test_the_history_counts_the_files_the_tree_reading_counts(project: AdopterRepo) -> None:
     """A number the history gave is counted only when the backbone's reading at the commit
     that added the file held it as a file of the place — a Markdown file there, not left
@@ -544,6 +555,7 @@ def test_a_file_added_before_its_place_was_there_still_counts(project: AdopterRe
     assert stamped(project, "use-case", "two", "--actor", "ACT-tester") == "UC-008"
 
 
+# Slow by design: four stamps, each a script that starts several `pkit` processes.
 def test_a_shallow_clone_s_stamp_says_its_history_stops_early(
     project: AdopterRepo, tmp_path: Path
 ) -> None:
@@ -570,6 +582,7 @@ def test_a_shallow_clone_s_stamp_says_its_history_stops_early(
     assert completed.stdout.splitlines() == [f"stamped ACT-admin at {ACTORS}#ACT-admin"]
 
 
+# Slow by design: four stamps, each a script that starts several `pkit` processes.
 def test_a_number_a_file_s_name_carries_is_held_whatever_the_file_holds(
     project: AdopterRepo,
 ) -> None:
@@ -593,6 +606,7 @@ def test_a_number_a_file_s_name_carries_is_held_whatever_the_file_holds(
     assert stamped(project, "use-case", "two", "--actor", "ACT-tester") == "UC-007"
 
 
+# Slow by design: four stamps, each a script that starts several `pkit` processes.
 def test_a_number_spelt_with_other_zeros_counts_as_held(project: AdopterRepo) -> None:
     """The stamp reads `UC-0007` as the number 7, as the check's duplicate count does, so
     it never gives a number a file already claims, whatever its spelling — and the ids
@@ -638,6 +652,27 @@ def test_without_what_is_settled_the_stamp_refuses_rather_than_guess(
     )
 
 
+# Slow: three stamps, built once per session; the first test to ask pays it in its setup.
+def _ground(repo: AdopterRepo) -> None:
+    """`prepare`, then the actor ACT-tester with a use case of its own, and the actor
+    ACT-retired, withdrawn."""
+    prepare(repo)
+    stamped(repo, "actor", "tester")
+    stamped(repo, "actor", "retired")
+    stamped(repo, "use-case", "one", "--actor", "ACT-tester")
+    text = (repo.root / ACTORS).read_text(encoding="utf-8")
+    marker = "ACT-retired:\n  name: Retired\n  status: active"
+    (repo.root / ACTORS).write_text(text.replace(marker, marker.replace("active", "withdrawn")))
+
+
+@pytest.fixture
+def grounded(
+    make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> AdopterRepo:
+    """What the refusals below are judged against (`_ground`)."""
+    return installed(make_adopter_repo, monkeypatch, then=_ground)
+
+
 @pytest.mark.parametrize(
     ("args", "refusal"),
     [
@@ -667,19 +702,13 @@ def test_without_what_is_settled_the_stamp_refuses_rather_than_guess(
     ],
 )
 def test_a_stamp_refuses_what_it_cannot_ground(
-    project: AdopterRepo, args: tuple[str, ...], refusal: str
+    grounded: AdopterRepo, args: tuple[str, ...], refusal: str
 ) -> None:
-    stamped(project, "actor", "tester")
-    stamped(project, "actor", "retired")
-    stamped(project, "use-case", "one", "--actor", "ACT-tester")
-    text = (project.root / ACTORS).read_text(encoding="utf-8")
-    marker = "ACT-retired:\n  name: Retired\n  status: active"
-    (project.root / ACTORS).write_text(text.replace(marker, marker.replace("active", "withdrawn")))
-    before = sorted(p.relative_to(project.root) for p in (project.root / ANALYSIS).rglob("*"))
-    completed = new(project, *args)
+    before = sorted(p.relative_to(grounded.root) for p in (grounded.root / ANALYSIS).rglob("*"))
+    completed = new(grounded, *args)
     assert completed.returncode == 1
     assert refusal in completed.stderr
-    after = sorted(p.relative_to(project.root) for p in (project.root / ANALYSIS).rglob("*"))
+    after = sorted(p.relative_to(grounded.root) for p in (grounded.root / ANALYSIS).rglob("*"))
     assert after == before
 
 

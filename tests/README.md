@@ -42,6 +42,29 @@ opened (a read-only cache directory, a sandbox that does not allow it), the step
 says so and runs without the limit. `tests/test_check_script.py` pins both the
 passes and the slots.
 
+**The slowest modules**, by the time their tests take together, setup
+included, in one parallel pass (`uv run pytest -q -n 4 -m "not serial"
+--junitxml=...`, 2026-10-01, on a 12-core Mac other runs were sharing; the pass
+summed 1 879 s of test time and took 529 s on the clock):
+
+| Module | Tests | Seconds | Per test | Slowest test |
+|---|---:|---:|---:|---:|
+| `test_software_analysis.py` | 45 | 233 | 5.2 | 20.7 |
+| `test_software_analysis_numbers.py` | 15 | 116 | 7.7 | 21.8 |
+| `test_software_analysis_check.py` | 27 | 98 | 3.6 | 21.1 |
+| `test_living_docs_spaces.py` | 51 | 92 | 1.8 | 6.7 |
+| `test_software_analysis_resolver.py` | 53 | 89 | 1.7 | 18.7 |
+| `test_friction_check.py` | 76 | 63 | 0.8 | 1.8 |
+| `test_process_cascade_engine.py` | 33 | 60 | 1.8 | 5.9 |
+| `test_default_branch.py` | 66 | 53 | 0.8 | 27.9 |
+
+A software-analysis test runs the capability's scripts as the backbone does — a
+stamp, the check, the number check — each a process that starts several `pkit`
+processes of its own, from a third of a second to a second each; living-docs'
+tests run its validator the same way. What their tests share is built once
+("Built once, copied for each test", below); what is left is each test's own
+runs. A test that stays slow says why in a comment above it.
+
 ## Type checking
 
 **The tests are type-checked in pyright's standard mode and gated outright**
@@ -86,11 +109,12 @@ and `tests/conftest.py` exposes it as two fixtures:
 
 | Fixture | Gives you | Reach for it when |
 |---|---|---|
-| `make_adopter_repo` | A factory: `make_adopter_repo(capabilities=(), history=False, chdir=True, root=tmp_path)` returning an `AdopterRepo`. | A test drives the CLI or the Python API against an installed adopter. `make_adopter_repo()` with no arguments is the bare shape — `git init`ed `tmp_path`, backbone installed, adapter shell primitives stubbed, cwd moved there, **no commits** — that the per-file `installed_target` / `kit_target` fixtures wrap. |
+| `make_adopter_repo` | A factory: `make_adopter_repo(capabilities=(), history=False, chdir=True, root=tmp_path, prepare=None, fresh=False)` returning an `AdopterRepo`, a copy of a template built once per session (below). | A test drives the CLI or the Python API against an installed adopter. `make_adopter_repo()` with no arguments is the bare shape — `git init`ed `tmp_path`, backbone installed, adapter shell primitives stubbed, cwd moved there, **no commits** — that the per-file `installed_target` / `kit_target` fixtures wrap. |
 | `adopter_repo` | `make_adopter_repo(history=True)`: the same adopter with the scripted history committed; `adopter_repo.history` holds the SHAs. | A test needs real git state — validators that read history, the friction engine (COR-050), anything tracing a front-matter field across commits. |
 
 Outside a fixture (a plain helper that takes `tmp_path` and `monkeypatch`), call
-`build_adopter_repo(root, monkeypatch=monkeypatch, ...)` directly.
+`build_adopter_repo(root, monkeypatch=monkeypatch, ...)` directly; it builds the
+adopter afresh on every call.
 
 A capability script under test that reads through the backbone — `pkit
 connections resolve`, `pkit friction check`, `pkit friction artefacts` — needs
@@ -106,6 +130,49 @@ fixture, `outside_any_run`, clears `PKIT_COMMAND_DEADLINE`,
 runner runs behaves as one started from a terminal. A test that needs a run
 inside a run starts one for real, through `run_command` (the lifecycle README,
 "A run inside a run").
+
+### Built once, copied for each test
+
+**Each shape of adopter is built once per session and copied for every test
+that asks for it** (#1204). The first test that asks for a shape — the
+capabilities, the scripted history or none, and the module's `prepare` — builds
+it into a template under the session's base temporary directory, and every
+test, that one included, gets a private copy at its `root`. The pytest-xdist
+workers share the templates: the first worker to ask for a shape builds it
+holding a lock on it, and a worker asking meanwhile waits for it rather than
+building it again. The copy is a clone where the platform has one
+(`clonefile(2)` on macOS, a few calls whatever the size of the tree) and a
+file-by-file copy elsewhere; either way every file is the copy's own, so a test
+may change anything in it. The backbone and the capabilities are installed in
+an interpreter of its own, started with the environment the session began
+with, so nothing a test patches or sets reaches a template, whichever test asks
+first.
+
+**A module whose tests start with the same slow setting-up hands it over as
+`prepare`**: a module-level function that takes the `AdopterRepo` and lays down
+what the module's tests start from — a seed stamped, a history committed. It
+runs once per session, from the template's root, and what it leaves is in every
+copy. `tests/analysis_repo.py` is the worked example: stamping the
+software-analysis seed (`prepare_seeded`, the modules' `seeded` fixture) starts
+some two dozen `pkit` processes, ten seconds and more, which no copy pays again.
+A `prepare` depends on nothing but the repository it is handed — nothing of the
+test that happens to ask first, which may be in any module — and its full name
+is the template's key, so a lambda or a nested function is refused. It runs in
+that first test, with that test's fixtures, so every fixture that asks for a
+`prepare` that runs the scripts takes `pkit_on_path`. Setting-up that costs
+little — a few files written — stays in the test or its fixture; what a copy
+saves is the install, the commits and the scripts.
+
+**A test of the install itself passes `fresh=True`** and gets its own run of it,
+in the test: one that patches the install and asserts what it did, reads what
+`pkit init` prints, or counts the times something in it ran. A `root` that
+already holds anything is built fresh too, since the install treats a
+directory with something in the way differently from an empty one.
+
+**What every copy of a template shares**: its commit SHAs, and the times the
+install and the `prepare` wrote — the template's, from earlier in the run, not
+the test's own. A test that compares such a time with its own clock reads the
+template's.
 
 ### What the `AdopterRepo` offers
 

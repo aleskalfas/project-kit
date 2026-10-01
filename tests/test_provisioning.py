@@ -216,7 +216,7 @@ def test_init_runs_the_step(
     monkeypatch.setattr(
         install, "provision_query_commands", lambda ctx: ran.append(ctx.target_root)
     )
-    root = make_adopter_repo().root
+    root = make_adopter_repo(fresh=True).root  # the install itself, run in this test
     assert ran == [root]
 
 

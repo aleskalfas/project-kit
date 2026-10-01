@@ -11,6 +11,10 @@ this interpreter — their `uv run --script` shebang pointed at it — and the
 `installed` builds the adopter each test module's `project` fixture returns, with
 `$PKIT_CHECK_BASE` removed: the backbone names the scripts' base from it when
 set, and a developer's own value must not decide what these repositories answer.
+The adopter is a copy of a template built once per test session, `prepare`d —
+or `prepare_seeded`, the shape a module's `seeded` fixture returns: stamping
+the seed starts some two dozen `pkit` processes, more than most tests of these
+modules cost in all (#1204).
 """
 
 from __future__ import annotations
@@ -26,7 +30,7 @@ from ruamel.yaml import YAML
 
 from project_kit import friction_discovery as fd
 from project_kit.friction_check import BASE_ENV
-from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
+from tests.adopter_repo import AdopterRepo, MakeAdopterRepo, Prepare
 
 REPO = Path(__file__).resolve().parent.parent
 CAPABILITY = REPO / ".pkit" / "capabilities" / "software-analysis"
@@ -65,10 +69,25 @@ def prepare(repo: AdopterRepo) -> AdopterRepo:
     return repo
 
 
-def installed(make_adopter_repo: MakeAdopterRepo, monkeypatch: pytest.MonkeyPatch) -> AdopterRepo:
-    """An adopter with software-analysis installed and prepared, `$PKIT_CHECK_BASE` unset."""
+# Slow: four stamps, built once per session; the first test to ask pays it in its setup.
+def prepare_seeded(repo: AdopterRepo) -> None:
+    """`prepare`, then `seed`: an actor, two use cases and a journey, filled."""
+    prepare(repo)
+    seed(repo)
+
+
+def installed(
+    make_adopter_repo: MakeAdopterRepo,
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    then: Prepare = prepare,
+) -> AdopterRepo:
+    """An adopter with software-analysis installed and `then` laid on it — `prepare`,
+    unless a module-level function that calls it is named — `$PKIT_CHECK_BASE` unset.
+    A copy of the template `then` was built into once; the test needs `pkit_on_path`
+    when `then` stamps."""
     monkeypatch.delenv(BASE_ENV, raising=False)
-    return prepare(make_adopter_repo(capabilities=("software-analysis",)))
+    return make_adopter_repo(capabilities=("software-analysis",), prepare=then)
 
 
 def run_script(repo: AdopterRepo, script: Path, *args: str) -> subprocess.CompletedProcess[str]:
