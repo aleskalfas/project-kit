@@ -20,9 +20,9 @@ pkit:
       artefact:
         - ACT-operator
     revalidated:
-      at: 2026-10-01T20:50:14Z
+      at: 2026-10-01T20:34:38Z
       outcome: unchanged
-      unchanged-because: "#1242 now only shares start-work's early check, read from labels and milestone as before, with review-work; the stabilisation guard on start-work is still unbuilt and nothing here depends on that check, so it holds"
+      unchanged-because: done-work gains run(), which reports how a run ended and takes a pinned head or a merged-only mode, for the land-work verb that composes it; a direct run behaves as before, so the steps by which a milestone is stabilised and its guards read as before
 ---
 
 # UC-010 — Stabilise a Milestone for a release

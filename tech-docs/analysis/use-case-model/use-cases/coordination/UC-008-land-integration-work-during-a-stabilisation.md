@@ -19,9 +19,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-10-01T20:50:10Z
+      at: 2026-10-01T20:34:37Z
       outcome: unchanged
-      unchanged-because: "#1242 now only shares start-work's early check, read from labels and milestone as before, and its messages with review-work; the branch it cuts and the integration base it cuts from are unchanged, so this use case holds"
+      unchanged-because: done-work gains run(), which reports how a run ended and takes a pinned head or a merged-only mode, for the land-work verb that composes it; a direct run behaves as before, so how integration work lands during a stabilisation, and gap I, read as before
 ---
 
 # UC-008 — Land integration-branch work during a stabilisation

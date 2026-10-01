@@ -83,8 +83,12 @@ Exit codes:
   0  every required reviewer invoked + comment posted, or skipped as fresh
   1  membership refusal
   2  usage error / no agents configured / gh failure / required set
-     unresolvable (fail-closed)
-  3  one or more agent invocations failed (verdicts not posted)
+     unresolvable (fail-closed); or, called with a pinned head, the PR's head
+     could not be read before a review, and no further reviewer ran
+  3  one or more agent invocations failed (verdicts not posted); or, called
+     with a pinned head (`review(argv, pinned_head=…)`, as `land-work` calls
+     it), the PR was found at another head — where its verdicts were read, or
+     before or after a review — and no further reviewer ran
 """
 
 from __future__ import annotations
@@ -96,7 +100,7 @@ import re
 import shutil
 import subprocess
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 from ruamel.yaml import YAML
@@ -134,7 +138,7 @@ from _lib.review_contributions import collect_contributions
 from _lib.review_opt_outs import OPT_OUT_PATH, read_opt_outs
 
 # The one freshness rule (#1179), shared with done-work's gate and show-pr.
-from _lib.verdict_freshness import PR_VIEW_FIELDS, FreshnessRule, rule_for_pr
+from _lib.verdict_freshness import PR_VIEW_FIELDS, FreshnessRule, head_sha, rule_for_pr
 
 # ---- per-agent reviewer timeout (issue #766) -------------------------
 #
@@ -241,7 +245,57 @@ def _resolve_agent_effort(
     return raw, source
 
 
+@dataclass
+class ReviewRun:
+    """What one review-pr run did, for a verb that composes it (`land-work`, #1203):
+    the exit code `main` returns, and what became of each required reviewer."""
+
+    exit_code: int
+    pr_number: int | None = None
+    #: Reviewers whose fresh verdict was left standing: name → token.
+    kept: dict[str, str] = field(default_factory=dict)
+    #: The comment body of each kept verdict.
+    kept_bodies: dict[str, str] = field(default_factory=dict)
+    #: Verdicts posted this run: name → (token, the comment as posted).
+    posted: dict[str, tuple[str, str]] = field(default_factory=dict)
+    #: Reviewers that ran into a problem and posted no verdict: name → why.
+    failed: dict[str, str] = field(default_factory=dict)
+    #: Reviewers a dry run would invoke.
+    would_run: list[str] = field(default_factory=list)
+    #: With a pinned head, the head the PR was found at instead; None while it
+    #: held, and when it could not be read (`reason` says so).
+    moved_to: str | None = None
+    #: Why the run stopped short of the reviewers (exit 1 or 2), as the line
+    #: it reported that with; empty otherwise.
+    reason: str = ""
+
+
+def _stopped(
+    exit_code: int, message: str = "", *, reason: str = "", pr_number: int | None = None
+) -> ReviewRun:
+    """A run that stopped short: `message` is printed on standard error and
+    its first line kept as the reason; `reason` is for one reported already."""
+    if message:
+        print(message, file=sys.stderr)
+    first = next((line.strip() for line in message.splitlines() if line.strip()), "")
+    return ReviewRun(exit_code, pr_number=pr_number, reason=first or reason)
+
+
 def main() -> int:
+    return review().exit_code
+
+
+def review(argv: list[str] | None = None, *, pinned_head: str = "") -> ReviewRun:
+    """Run review-pr on `argv` (default: the command line).
+
+    `pinned_head` is for a verb that composes this one (`land-work`, #1203): the
+    PR head it waited for the checks on. A reviewer is then invoked only on
+    that head, and a fresh verdict is kept only when it was judged fresh for
+    that head. When the PR is found at another head — where the verdicts are
+    read, before an invocation or after one — no further reviewer runs (exit
+    3, `ReviewRun.moved_to`); when the head cannot be read before an
+    invocation, none runs either (exit 2, `ReviewRun.reason`).
+    """
     parser = argparse.ArgumentParser(
         description=(
             "Invoke every locally-registered review agent against the PR's "
@@ -288,23 +342,21 @@ def main() -> int:
         "verdict is still fresh (skipped otherwise).",
     )
     session_guard.add_override_argument(parser)
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     try:
         agent_timeout = _resolve_agent_timeout(args.timeout, os.environ)
     except ValueError as exc:
-        print(f"error: {exc}", file=sys.stderr)
-        return 2
+        return _stopped(2, f"error: {exc}")
 
     capability_root = resolve_capability_root(args.capability_root)
     if capability_root is None:
-        print(f"error: {CAPABILITY_NAME} capability not found.", file=sys.stderr)
-        return 2
+        return _stopped(2, f"error: {CAPABILITY_NAME} capability not found.")
 
     # Prerequisite gate (#747): refuse on an un-bootstrapped project rather
     # than operating on assumed defaults. See _lib/bootstrap_gate.py.
     if not bootstrap_gate.enforce("review-pr", capability_root=capability_root):
-        return 2
+        return _stopped(2, reason="the project is not bootstrapped (see above)")
 
     yaml_loader = YAML(typ="safe")
     config = load_adopter_config(capability_root)
@@ -315,46 +367,37 @@ def main() -> int:
             config,
         )
     except ValueError as exc:
-        print(f"error: {exc}", file=sys.stderr)
-        return 2
+        return _stopped(2, f"error: {exc}")
     members = _read_members(capability_root, yaml_loader)
     invoker = resolve_invoker_identity(config=config)
     membership = check_membership(members, invoker)
     if not membership.allowed:
-        print(membership.refusal_message, file=sys.stderr)
-        return 1
+        return _stopped(1, membership.refusal_message)
 
     # Foreign-repo mutation guard (COR-039 / ADR-034) — gate before posting any
     # review comment: target repo (cwd) vs session anchor (CLAUDE_PROJECT_DIR).
     if not session_guard.enforce(override=args.allow_foreign_repo):
-        return 1
+        return _stopped(1, reason="the foreign-repository guard refused (see above)")
 
     # Resolve registered local agents.
     local_agents = _get_local_registered(config)
     if not local_agents:
-        print(
+        return _stopped(
+            2,
             "error: no agents configured in `review.agents.local_registered:`. "
             "Add an entry pointing at a deployed agent in .claude/agents/.",
-            file=sys.stderr,
         )
-        return 2
 
     # Find the issue's branch + PR.
     branch = _find_issue_branch(args.issue_number)
     if branch is None:
-        print(
-            f"error: no local branch matching `*/{args.issue_number}-*` found.",
-            file=sys.stderr,
-        )
-        return 2
+        return _stopped(2, f"error: no local branch matching `*/{args.issue_number}-*` found.")
 
     pr = _find_pr_for_branch(branch, config)
     if pr is None:
-        print(
-            f"error: no OPEN PR found for branch {branch!r}. Run `review-work` first.",
-            file=sys.stderr,
+        return _stopped(
+            2, f"error: no OPEN PR found for branch {branch!r}. Run `review-work` first."
         )
-        return 2
 
     pr_number = pr.get("number")
     print(f"review-pr: #{args.issue_number}")
@@ -387,8 +430,7 @@ def main() -> int:
         # to warn-and-continue (it wouldn't make merges any safer) nor lean on
         # it as if dropping it would open a gate hole (it wouldn't; done-work
         # closes that hole).
-        print(_resolution_error_message(resolution), file=sys.stderr)
-        return 2
+        return _stopped(2, _resolution_error_message(resolution), pr_number=pr_number)
     required_local = list(resolution.required_local)
     contributed_by = dict(resolution.contributed_by)
     print(f"  agents: {', '.join(required_local)}")
@@ -408,6 +450,7 @@ def main() -> int:
     # reviewer whose verdict went stale is re-run with the reason said, so a
     # re-run is never silent about why (#1179).
     states = _VerdictStates()
+    read: _VerdictStates | None = None
     if not args.force:
         read = _read_verdict_states(pr_number, resolution, config)
         if read is None:
@@ -416,11 +459,33 @@ def main() -> int:
             states = read
     fresh = states.fresh
 
+    # With a pinned head, a verdict is kept only as fresh for that head: the
+    # freshness was judged against the head the verdicts were read with.
+    run = ReviewRun(0, pr_number=pr_number)
+    if pinned_head and not args.force and read is not None and states.head != pinned_head:
+        if not states.head:
+            return _stopped(
+                2,
+                f"error: PR #{pr_number}'s head could not be read with its verdicts, so "
+                f"whether they stand for {short_sha(pinned_head)}, the head this review was "
+                "asked to review, cannot be told. No reviewer ran.",
+                pr_number=pr_number,
+            )
+        print(
+            f"  verdicts read at {short_sha(states.head)}, not {short_sha(pinned_head)}, the "
+            "head this review was asked to review — no reviewer run."
+        )
+        run.moved_to = states.head
+        run.exit_code = 3
+        return run
+
     # For each required reviewer, invoke and post verdict.
     failures = 0
     for name in required_local:
         if name in fresh:
             print(f"  [{name}] fresh verdict {fresh[name]} — not re-run")
+            run.kept[name] = fresh[name]
+            run.kept_bodies[name] = states.bodies.get(name, "")
             continue
         if name in states.stale:
             token, reason = states.stale[name]
@@ -438,16 +503,35 @@ def main() -> int:
                 file=sys.stderr,
             )
             failures += 1
+            run.failed[name] = f"agent file not found at {agent_file}{provenance}"
             continue
 
         if args.dry_run:
             print(f"  [{name}] (dry-run) would invoke against PR #{pr_number}")
+            run.would_run.append(name)
             continue
 
         # The head this reviewer is shown (#1179): read before the invocation,
         # named in its brief, and recorded in its verdict's marker together
         # with the base branch's head it is reviewed against.
         reviewed, reviewed_base = _read_tips(pr_number, config)
+        if pinned_head and not reviewed:
+            # Not "moved": nothing is known about the head, so no reviewer is
+            # shown one that may not be the pinned head.
+            run.reason = (
+                f"PR #{pr_number}'s head could not be read before {name}'s review, so "
+                f"whether it is {short_sha(pinned_head)}, the head this review was asked "
+                "to review, cannot be told"
+            )
+            print(f"  [{name}] not run — {run.reason}.", file=sys.stderr)
+            break
+        if pinned_head and reviewed != pinned_head:
+            print(
+                f"  [{name}] not run — the PR's head is {short_sha(reviewed)}, not "
+                f"{short_sha(pinned_head)}, the head this review was asked to review."
+            )
+            run.moved_to = reviewed
+            break
         verdict, body = _invoke_agent(
             name,
             pr_number,
@@ -461,6 +545,7 @@ def main() -> int:
         if verdict is None:
             print(f"  [{name}] invocation failed; no verdict to post.", file=sys.stderr)
             failures += 1
+            run.failed[name] = "the invocation failed, so there is no verdict to post"
             continue
 
         head_now, _base_now = _read_tips(pr_number, config)
@@ -469,9 +554,11 @@ def main() -> int:
         if not _post_comment(pr_number, comment, config):
             print(f"  [{name}] could not post verdict comment.", file=sys.stderr)
             failures += 1
+            run.failed[name] = "its verdict comment could not be posted"
             continue
 
         print(f"  [{name}] posted {verdict}")
+        run.posted[name] = (verdict, comment)
 
         # DEC-028 (amended): also deliver a NATIVE GitHub review carrying the
         # verdict state, so it shows in the PR UI and satisfies branch-protection
@@ -488,12 +575,19 @@ def main() -> int:
                     "  [native] skipped — the PR's head is not the one the "
                     "reviewer saw. The comment verdict stands."
                 )
+        if pinned_head and head_now and head_now != pinned_head:
+            # A head that could not be read again is not a move: the next
+            # reviewer's read, or the merge's own check, tells.
+            run.moved_to = head_now
+            break
 
     if fresh:
         print("  --force re-runs a reviewer whose verdict is fresh.")
-    if failures > 0:
-        return 3
-    return 0
+    if run.reason:
+        run.exit_code = 2
+    elif failures > 0 or run.moved_to is not None:
+        run.exit_code = 3
+    return run
 
 
 # ---- agent invocation ------------------------------------------------
@@ -846,6 +940,10 @@ class _VerdictStates:
 
     fresh: dict[str, str] = field(default_factory=dict)
     stale: dict[str, tuple[str, str]] = field(default_factory=dict)
+    #: The comment body of each fresh verdict, for a caller to quote.
+    bodies: dict[str, str] = field(default_factory=dict, compare=False)
+    #: The PR head the verdicts were judged against; "" when it was not read.
+    head: str = field(default="", compare=False)
 
 
 def _read_verdict_states(
@@ -877,11 +975,12 @@ def _read_verdict_states(
         return None
     if not isinstance(data, dict):
         return None
-    return _local_verdict_states(
+    states = _local_verdict_states(
         data.get("comments") or [],
         rule_for_pr(data, resolution, author_delta=author_delta, base_kept=base_kept),
         resolution.required_local,
     )
+    return replace(states, head=head_sha(data))
 
 
 def _local_verdict_states(
@@ -914,6 +1013,7 @@ def _local_verdict_states(
         assessment = freshness.assess(verdict)
         if assessment.fresh:
             states.fresh[verdict.reviewer] = verdict.token
+            states.bodies[verdict.reviewer] = verdict.body
         else:
             states.stale[verdict.reviewer] = (verdict.token, assessment.reason)
     return states
