@@ -2,6 +2,7 @@ component: backbone
 kind: patch
 custom:
   category: Changed
+  pr: "1225"
 body: >
   `pkit repository base` resolves the default branch once per run and reuses
   that resolution for the base and for the warnings it prints. It reads a

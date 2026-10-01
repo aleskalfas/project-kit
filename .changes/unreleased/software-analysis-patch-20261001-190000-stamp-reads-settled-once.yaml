@@ -2,6 +2,7 @@ component: software-analysis
 kind: patch
 custom:
   category: Changed
+  pr: "1225"
 body: >
   `pkit analysis new` asks the backbone what is settled once per stamp: one
   `pkit repository base --base=<ref>` names both the default branch and the
