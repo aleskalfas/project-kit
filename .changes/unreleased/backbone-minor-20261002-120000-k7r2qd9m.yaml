@@ -28,13 +28,16 @@ body: >
   declare that it reads beyond the working tree: `reads:` on its `commands:`
   entry, `history` and/or `settled`. `pkit validate`, `pkit status` and `pkit
   connections resolve` name what each such filler read and at which commit.
-  `PKIT_CHECK_BASE` no longer reaches a filler or a validator, so their
-  answers are the same whatever base a pipeline names. Nothing changes in an
-  installed project until a capability ships a filler that declares
-  `settled`. From then on the default branch's remote-tracking copy must be
-  present wherever `pkit validate` runs: a pipeline job that checks out a
-  single ref fetches it first (`git fetch origin <default-branch>`). Where it
-  is missing the filler is inert, with the fetch as the fix — a warning under
-  a `fallback` point, an error under a `fail` point — and naming a base does
-  not fix it. A filler that declares `history` gives no answer where a
+  `PKIT_CHECK_BASE` no longer reaches a filler or a validator — a project's
+  own included — so their answers are the same whatever base a pipeline
+  names. Nothing else changes in an installed project until a capability
+  ships a filler that declares `settled`. From then on the default branch's
+  remote-tracking copy must be present wherever the point is resolved —
+  `pkit validate`, `pkit status`, `pkit connections resolve`: a pipeline job
+  that checks out a single ref fetches it first (`git fetch origin
+  <default-branch>`). Where it is missing the filler is inert, with the fetch
+  as the fix — a warning under a `fallback` point, an error under a `fail`
+  point — and naming a base does not fix it. That includes a repository with
+  a remote whose default branch has not been pushed yet: the filler is inert
+  there until the first push. A filler that declares `history` gives no answer where a
   shallow clone stops short of what it reads (`git fetch --unshallow`).

@@ -608,7 +608,7 @@ def test_a_query_answers_the_same_whatever_base_a_pipeline_names(
     command: list[str],
 ) -> None:
     """`pkit validate`, `pkit status` and `pkit connections resolve` answer the same
-    for the same working tree, HEAD and default-branch commit: the base override
+    for the same working tree, HEAD, fetched history and default-branch commit: the base override
     reaches neither a validator nor a filler, so each is shown the default branch."""
     _base_readers(adopter.root)
     adopter.commit("initial")

@@ -178,7 +178,7 @@
           "const": true
         },
         "reads": {
-          "description": "What a data point's command filler reads beyond the working tree (COR-052 point 6): `history` — the current history, read from HEAD — and `settled` — the default branch, as the backbone resolves it, never a base named for one run. Absent: the working tree only. Declared by the capability and trusted; it reads them through the backbone's reading commands and compares nothing. The status report and `pkit validate` name each declared state and the commit it was read at; a filler that declares `settled` is not started while the default branch resolves to no commit, unless it has none yet. Taken only with the query-contract declaration.",
+          "description": "What a data point's command filler reads beyond the working tree (COR-052 point 6): `history` — the current history, read from HEAD — and `settled` — the default branch, as the backbone resolves it, never a base named for one run. Absent: the working tree only. Declared by the capability and trusted; it reads them through the backbone's reading commands and does not compare the branch at hand with settled state. The status report and `pkit validate` name each declared state and the commit it was read at; a filler that declares `settled` is not started while the default branch resolves to no commit, unless it has none yet. Taken only with the query-contract declaration.",
           "type": "array",
           "minItems": 1,
           "uniqueItems": true,

@@ -32,8 +32,9 @@ a *change*, not the tree's state. They stay their own lines of the check
 aggregator (`scripts/check.sh`, the enforcement boundary of ADR-019). No base
 named for one run reaches a member either: the query policy removes the
 override from every validator and every data point's filler it starts, so
-`pkit validate` answers the same for the same working tree, HEAD and
-default-branch commit, whatever base a pipeline named (ADR-058 point 7).
+`pkit validate` answers the same for the same working tree, HEAD, fetched
+history and default-branch commit, whatever base a pipeline named (ADR-058
+point 7).
 
 **A capability's validator is a query command** in the sense of ADR-057 point
 3 (bounded, deterministic, needing no network, read-only). Its entry names a
