@@ -6,15 +6,20 @@ body: >
   `pkit agents adopt` asks before it records an overlay category over a folder
   that already holds documents (COR-049 point 5): recording it puts those
   documents within reach of every agent that references the category. At a
-  terminal it asks once for the run, listing each `category = path`; `--yes`
-  consents without a prompt. **Behaviour change for non-interactive callers:**
-  a run off a terminal without `--yes` that would record over such a folder now
-  refuses — exit 1, nothing written, no folder created, no deploy — and names
-  the command with `--yes`; before, it recorded silently. A folder `adopt`
-  creates, or one that holds nothing, is recorded as before, with no prompt.
-  `pkit agents reconcile --write` is unchanged: its default shows each entry and
-  `--write` is the confirmation. `pkit docs record-location` no longer asks or
-  refuses: recording a capability's own location changes nothing in use, so
-  running the command is the consent; `--yes` is still accepted and has no
-  effect. Each recording now says which root the path was derived from and where
-  to change it. No migration.
+  terminal it asks once for the run, listing each `category = path  (reached by
+  <agents>)`; `--yes` consents without a prompt. **Behaviour change for
+  non-interactive callers:** a run off a terminal without `--yes` that would
+  record over such a folder now refuses — exit 1, nothing written, no folder
+  created, no deploy — and names the command with `--yes`; before, it recorded
+  silently. A folder `adopt` creates, or one that holds nothing, is recorded as
+  before, with no prompt. **Output:** `adopt` prints one `recorded <category> =
+  <path>  (<file>)` notice per category, each followed by the root the path was
+  derived from and where to change it, in place of the `wired N overlay
+  categor(ies):` block; `pkit agents reconcile` shows each entry it would record
+  as `category = path  (reached by <agents>)`, and its consent is as before —
+  the default shows, `--write` is the confirmation. **For a component's own
+  commands:** the rule they inherit changed (COR-049 point 5) — recording a
+  location in the component's own configuration takes no confirmation, and the
+  command says what it recorded, which root it was derived from and where to
+  change it; recording an overlay category over documents already there asks.
+  No migration.
