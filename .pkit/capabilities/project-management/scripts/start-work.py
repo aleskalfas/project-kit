@@ -18,9 +18,9 @@ Gates per DEC-026:
   - Issue's current state can move to In Progress per workflow.yaml (or is
     already there). Checked before any mutation, so a refused move leaves no
     branch or assignee behind (#942). From Todo, move to Backlog first. The
-    state is read as move-issue reads it (`_lib/issue_position`, #1242), and
-    move-issue reads it again when it moves; a state that cannot be read
-    refuses here, saying what failed.
+    state is read from the issue's labels and milestone
+    (`_lib/issue_position`, shared with review-work, #1242); move-issue
+    reads it itself when it moves.
   - If a branch exists, matches `<type>/<N>-<slug>` (idempotent).
 
 Side-effects:
@@ -35,8 +35,7 @@ Side-effects:
 Exit codes:
   0  in-progress
   1  membership refusal
-  2  usage error / gate failure / illegal transition / unreadable state /
-     gh failure
+  2  usage error / gate failure / illegal transition / gh failure
   *  a failed composed move-issue passes its exit code through
 """
 
@@ -151,20 +150,13 @@ def main() -> int:
 
     # Gate: the move to In Progress is legal from where the issue is (#942).
     # Asked before the branch create / assignee write, so a refusal changes
-    # nothing. The state is read as move-issue reads it (#1242).
-    position = issue_position.read(
-        issue,
-        issue_position.ask_engine(args.issue_number),
-        labels=labels,
-        config=config,
-        substrate_map=substrate_map,
-    )
+    # nothing. The state is read as review-work's gate reads it (#1242).
     refusal = composed_move.transition_refusal(
         "start-work",
         args.issue_number,
         issue,
         labels,
-        position,
+        issue_position.current_state(issue, labels, substrate_map),
         target=TARGET_STATE,
         untouched="no branch, no assignee",
         workflow=workflow,

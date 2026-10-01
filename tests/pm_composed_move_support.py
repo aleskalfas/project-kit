@@ -1,12 +1,13 @@
 """The process engine and `move-issue` as start-work and review-work meet them (#1242).
 
-Both verbs ask the process engine where the issue is
-(`_lib/issue_position.ask_engine`, a `pkit process status --json` run), then
-run `move-issue` as a child process (`_lib/composed_move.invoke_move_issue`),
-which asks the engine again when it moves. `FakeEngine` answers those asks in
-turn, so a test can move the issue between the verb's check and the move.
-`MoveIssueInProcess` stands in for the child: it runs move-issue's own
-`main()` here, on the child's arguments.
+Both verbs check, before they change anything, that their move is legal from
+the state the issue's labels and milestone give (`_lib/issue_position`); that
+check starts no `pkit` run. They then run `move-issue` as a child process
+(`_lib/composed_move.invoke_move_issue`), which asks the process engine itself
+when it moves. `FakeEngine` answers every `pkit process status` the code under
+test starts and records every `pkit` run, so a test can tell who asked.
+`MoveIssueInProcess` stands in for the child: it runs move-issue's own `main()`
+here, on the child's arguments.
 """
 
 from __future__ import annotations
@@ -33,27 +34,31 @@ def status_at(state: str) -> dict[str, Any]:
 
 
 class FakeEngine:
-    """`pkit process status --json`, answering each ask with the next answer.
+    """`pkit process status --json`, wherever the code under test starts it.
 
-    An answer is a status payload, printed as JSON with exit 0, or None: the
-    engine gives nothing, exiting 1 with a line on stderr. The last answer
-    repeats. `asks` holds the argv of each ask."""
+    Installed over `subprocess.run`: each `pkit process status` prints `status`
+    as JSON with exit 0, or, when `status` is None, exits 1 with a line on
+    stderr (the engine gives nothing). Any other `pkit` run fails the test, and
+    every other command runs as it would. `asks` holds the argv of each `pkit`
+    run."""
 
-    def __init__(self, *answers: dict[str, Any] | None) -> None:
-        self.answers: list[dict[str, Any] | None] = list(answers) or [None]
+    def __init__(self, status: dict[str, Any] | None = None) -> None:
+        self.status = status
         self.asks: list[list[str]] = []
+        self._run = subprocess.run
 
-    def install(self, monkeypatch: pytest.MonkeyPatch, issue_position: ModuleType) -> None:
-        """Answer every engine ask `issue_position` makes in this test."""
-        monkeypatch.setattr(issue_position, "subprocess", SimpleNamespace(run=self.run))
+    def install(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Answer every `pkit` run the test's code starts."""
+        monkeypatch.setattr(subprocess, "run", self.run)
 
-    def run(self, argv: list[str], **_kw: Any) -> subprocess.CompletedProcess[str]:
-        assert argv[:3] == ["pkit", "process", "status"], argv
-        answer = self.answers[min(len(self.asks), len(self.answers) - 1)]
-        self.asks.append(list(argv))
-        if answer is None:
+    def run(self, argv: Any, *args: Any, **kw: Any) -> Any:
+        if not isinstance(argv, (list, tuple)) or not argv or argv[0] != "pkit":
+            return self._run(argv, *args, **kw)
+        self.asks.append([str(a) for a in argv])
+        assert list(argv[1:3]) == ["process", "status"], argv
+        if self.status is None:
             return subprocess.CompletedProcess(argv, 1, "", "Error: no engine in this test\n")
-        return subprocess.CompletedProcess(argv, 0, json.dumps(answer), "")
+        return subprocess.CompletedProcess(argv, 0, json.dumps(self.status), "")
 
 
 def load_move_issue() -> ModuleType:
@@ -75,9 +80,10 @@ class MoveIssueInProcess:
     `run` takes the child's command and runs move-issue's `main()` here on its
     arguments, against `issue` as its fetch returns it at move time. Its
     membership, session and bootstrap gates pass, no board carries state, and
-    its hooks are silent; the engine answers whatever `issue_position` is
-    given (a `FakeEngine`). It makes no write: a move that gets as far as a
-    `gh` call or a label write fails the test. `runs` holds each command."""
+    its hooks are silent; its engine read meets whatever answers
+    `subprocess.run` (a `FakeEngine`). It makes no write: a move that gets as
+    far as a `gh` call or a label write fails the test. `runs` holds each
+    command."""
 
     def __init__(self, monkeypatch: pytest.MonkeyPatch, issue: dict[str, Any]) -> None:
         mi = load_move_issue()

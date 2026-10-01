@@ -396,31 +396,31 @@ def test_start_work_refuses_a_base_that_resolves_nowhere(
 
 @pytest.fixture
 def run_main(sw: Any, monkeypatch: pytest.MonkeyPatch, backbone: Any) -> Any:
-    """Returns `run(issue, move_rc=0, engine=None, config=None, move=None) ->
-    (rc, mutations)` over stubbed seams. `engine` is the process engine: a
-    `FakeEngine`, or the status payload it answers with (None: it gives none,
-    so the state is read off the issue); `config` adds to the adopter config.
-    `move` runs the composed move-issue in process; without it the move is
-    recorded and answers `move_rc`."""
+    """Returns `run(issue, move_rc=0, engine=None, config=None, move=None,
+    dry_run=False) -> (rc, mutations)` over stubbed seams. `engine` is the
+    process engine, a `FakeEngine` (by default one that gives no answer);
+    `config` adds to the adopter config. `move` runs the composed move-issue in
+    process; without it the move is recorded and answers `move_rc`."""
     from types import SimpleNamespace
 
     def run(
         issue: dict,
         move_rc: int = 0,
-        engine: FakeEngine | dict | None = None,
+        engine: FakeEngine | None = None,
         config: dict | None = None,
         move: MoveIssueInProcess | None = None,
+        dry_run: bool = False,
     ):
         mutations: list[tuple] = []
-        monkeypatch.setattr(sys, "argv", ["start-work", "42", "--yes"])
+        argv = ["start-work", "42", "--yes", *(["--dry-run"] if dry_run else [])]
+        monkeypatch.setattr(sys, "argv", argv)
         monkeypatch.setattr(sw, "resolve_capability_root", lambda _e: CAP_ROOT)
         monkeypatch.setattr(sw.bootstrap_gate, "enforce", lambda *a, **k: True)
         monkeypatch.setattr(sw.session_guard, "enforce", lambda **k: True)
         monkeypatch.setattr(
             sw, "load_adopter_config", lambda _r: {"default_branch": "main", **(config or {})}
         )
-        fake_engine = engine if isinstance(engine, FakeEngine) else FakeEngine(engine)
-        fake_engine.install(monkeypatch, sw.issue_position)
+        (engine or FakeEngine()).install(monkeypatch)
         monkeypatch.setattr(sw, "_read_members", lambda *a: [])
         monkeypatch.setattr(
             sw, "resolve_invoker_identity", lambda **k: SimpleNamespace(github_login="me")
@@ -515,60 +515,48 @@ def test_late_move_failure_omits_an_assignee_it_did_not_write(run_main, capsys) 
     assert "@me" not in err
 
 
-# ---- one reading of state, shared with move-issue (#1242) --------------
+# ---- the early check reads the issue's own fields (#1242) --------------
 #
-# The early check reads state as move-issue reads it: the process engine's
-# position when it gives one, else the issue's own fields. move-issue reads it
-# again when it moves. An engine answer that disagrees with the labels stands
-# for the labels changing between the reads.
+# start-work's early check reads the state from the labels and milestone of
+# the issue it fetched (`_lib/issue_position`, shared with review-work), and
+# starts no `pkit process` run: the engine's detectors read those same fields.
+# move-issue reads the state itself when it moves. Each test's engine would
+# answer otherwise than the labels, so a run that asked it would show.
 
 
-def test_the_check_follows_the_engine_where_the_label_says_otherwise(run_main) -> None:
-    # The label says Todo, from which start-work refuses; the engine says Backlog.
+def test_a_refused_check_asks_no_engine(run_main, capsys) -> None:
     engine = FakeEngine(status_at("backlog"))
     rc, mutations = run_main(_task(["type:bug", "state:todo"]), engine=engine)
-    assert rc == 0
-    assert [m[0] for m in mutations] == ["branch", "assignee", "move"]
-    assert len(engine.asks) == 1  # the verb's own read; move-issue makes its own
-
-
-def test_the_check_refuses_where_the_engine_does_though_the_label_would_pass(
-    run_main, capsys
-) -> None:
-    rc, mutations = run_main(_task(["type:bug", "state:backlog"]), engine=status_at("review"))
     assert rc == 2
     assert mutations == []
-    assert "the issue is in 'review'" in capsys.readouterr().err
+    assert engine.asks == []
+    assert "the issue is in 'todo'" in capsys.readouterr().err
 
 
-def test_an_indeterminate_engine_falls_back_to_the_label(run_main) -> None:
-    engine = {"position": {"state": None, "indeterminate": True}}
+def test_a_dry_run_asks_no_engine(run_main, capsys) -> None:
+    engine = FakeEngine(status_at("todo"))
+    rc, mutations = run_main(_task(["type:bug", "state:backlog"]), engine=engine, dry_run=True)
+    assert rc == 0
+    assert mutations == []
+    assert engine.asks == []
+    assert "(dry-run: would create branch off main" in capsys.readouterr().out
+
+
+def test_a_legal_move_asks_no_engine_before_the_move(run_main) -> None:
+    engine = FakeEngine(status_at("todo"))
     rc, mutations = run_main(_task(["type:bug", "state:backlog"]), engine=engine)
     assert rc == 0
-    assert ("move", "in-progress") in mutations
+    assert [m[0] for m in mutations] == ["branch", "assignee", "move"]
+    assert engine.asks == []
 
 
-def test_a_board_state_the_engine_cannot_place_refuses_saying_what_failed(run_main, capsys) -> None:
-    # The board carries state, so the labels cannot stand in for the engine's
-    # position, and the engine gave none: start-work refuses rather than judge
-    # from the labels, and says how the engine failed.
+def test_a_board_carried_state_is_read_off_the_labels_as_before(run_main) -> None:
+    # Where the board carries state and the engine gives nothing, the check
+    # reads the labels, as it did before #1242; nothing is newly refused.
     board = {"has_projects_v2_board": True}
     rc, mutations = run_main(_task(["type:bug", "state:backlog"]), config=board)
-    assert rc == 2
-    assert mutations == []
-    err = capsys.readouterr().err
-    assert "cannot read the issue's state" in err
-    assert "Projects board carries this project's state" in err
-    assert "the process engine gave no position: `pkit process status` exited 1." in err
-    assert "  `pkit process status` said:\n    Error: no engine in this test" in err
-    assert "Nothing was changed (no branch, no assignee)." in err
-
-
-def test_a_board_state_the_engine_places_is_judged_from_the_engine(run_main) -> None:
-    board = {"has_projects_v2_board": True}
-    rc, mutations = run_main(_task(["type:bug"]), engine=status_at("backlog"), config=board)
     assert rc == 0
-    assert ("move", "in-progress") in mutations
+    assert [m[0] for m in mutations] == ["branch", "assignee", "move"]
 
 
 def test_a_state_changed_after_the_check_is_refused_by_move_issue(
@@ -578,13 +566,13 @@ def test_a_state_changed_after_the_check_is_refused_by_move_issue(
     in Todo. move-issue refuses Todo → In Progress, and start-work ends on what
     it left behind."""
     todo = _task(["type:bug", "state:todo"])
-    engine = FakeEngine(status_at("backlog"), status_at("todo"))
+    engine = FakeEngine(status_at("todo"))
     move = MoveIssueInProcess(monkeypatch, todo)
     rc, mutations = run_main(_task(["type:bug", "state:backlog"]), engine=engine, move=move)
     assert rc == 2
     assert [m[0] for m in mutations] == ["branch", "assignee"]
     assert len(move.runs) == 1
-    assert len(engine.asks) == 2  # start-work's check, then move-issue's own read
+    assert len(engine.asks) == 1  # move-issue's own read, at move time
     err = capsys.readouterr().err
     assert "no transition 'todo' → 'in-progress'" in err
     last_block = err[err.rindex("[failed]") :]
@@ -596,14 +584,12 @@ def test_a_state_changed_after_the_check_is_refused_by_move_issue(
     assert "assignee @me" in last_block
 
 
-def test_a_value_in_the_environment_does_not_stand_in_for_the_engine(
+def test_a_value_in_the_environment_does_not_stand_in_for_the_labels(
     run_main, monkeypatch, capsys
 ) -> None:
-    # A value saying Backlog, from which the check would pass; the engine says Todo.
+    # A value saying Backlog, from which the check would pass; the labels say Todo.
     monkeypatch.setenv(HAND_DOWN_ENV, json.dumps({"issue": 42, "status": status_at("backlog")}))
-    engine = FakeEngine(status_at("todo"))
-    rc, mutations = run_main(_task(["type:bug", "state:todo"]), engine=engine)
+    rc, mutations = run_main(_task(["type:bug", "state:todo"]))
     assert rc == 2
     assert mutations == []
-    assert len(engine.asks) == 1
     assert "the issue is in 'todo'" in capsys.readouterr().err

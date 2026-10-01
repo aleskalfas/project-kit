@@ -20,9 +20,9 @@ Gates per DEC-026:
     already there, so a re-run works). Checked before any PR is opened or
     flipped ready and before reviewers are requested, so a refused move
     leaves the PR as it was (#947). From Backlog, move to In Progress first.
-    The state is read as move-issue reads it (`_lib/issue_position`, #1242),
-    and move-issue reads it again when it moves; a state that cannot be read
-    refuses here, saying what failed.
+    The state is read from the issue's labels and milestone
+    (`_lib/issue_position`, shared with start-work, #1242); move-issue reads
+    it itself when it moves.
   - PR title is Conventional Commits.
 
 Side-effects:
@@ -40,8 +40,7 @@ Exit codes:
   0  PR ready + issue in Review (moved there, or already there)
   1  membership or foreign-repo refusal / PR body not ready for review
      (validate-at-ready; --force overrides)
-  2  usage error / gate failure / illegal transition / unreadable state /
-     issue not found
+  2  usage error / gate failure / illegal transition / issue not found
   3  gh failure: `gh pr create` could not open the PR, or `gh pr ready`
      could not make it ready
   *  a failed composed move-issue passes its exit code through
@@ -192,21 +191,14 @@ def main() -> int:
 
     # Gate: the move to Review is legal from where the issue is (#947). Asked
     # before the PR is opened or flipped ready and before reviewers are
-    # requested, so a refusal changes nothing. The state is read as move-issue
-    # reads it (#1242), as for start-work's gate (#942).
-    position = issue_position.read(
-        issue,
-        issue_position.ask_engine(args.issue_number),
-        labels=labels,
-        config=config,
-        substrate_map=substrate_map,
-    )
+    # requested, so a refusal changes nothing. The state is read as
+    # start-work's gate reads it (#942, #1242).
     refusal = composed_move.transition_refusal(
         "review-work",
         args.issue_number,
         issue,
         labels,
-        position,
+        issue_position.current_state(issue, labels, substrate_map),
         target=TARGET_STATE,
         untouched="no PR opened or made ready, no reviewers requested",
         workflow=workflow,
@@ -463,7 +455,7 @@ def _left_behind(
 def _success_line(issue_number: int, workflow: dict) -> str:
     """The closing line of a run whose move-issue succeeded: the PR is ready
     and the issue in Review. It claims no move. move-issue reads the state
-    again when it moves, so only its own output, just above, says whether it
+    itself when it moves, so only its own output, just above, says whether it
     moved the issue or found it already in Review."""
     review = infer.state_display_name(workflow, TARGET_STATE)
     return f"\n[ok] PR ready; #{issue_number} in {review}"

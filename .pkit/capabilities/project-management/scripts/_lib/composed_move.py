@@ -5,12 +5,11 @@ start-work cuts a branch and writes an assignee, review-work opens or readies a
 pull request and requests reviewers (DEC-026). So each:
 
 * asks, before it changes anything, whether that move is legal from where the
-  issue is — the state read as `move-issue` reads it (`_lib/issue_position`,
-  #1242), the legal moves from the table `move-issue` refuses on
-  (`lifecycle_inference.legal_targets`) — and refuses with the moves to make
-  first (#942, #947), or with why the state cannot be read;
-* runs `move-issue`, which reads the state again when it moves, so a move that
-  stopped being legal after the check is refused there;
+  issue is — the state from `_lib/issue_position` (#1242), the legal moves
+  from the table `move-issue` refuses on (`lifecycle_inference.legal_targets`)
+  — and refuses with the moves to make first (#942, #947);
+* runs `move-issue`, which reads the state itself when it moves, so a move
+  that stopped being legal after the check is refused there;
 * and when that move fails after its own changes, ends on a failure that names
   what the run left behind and how to undo each (#942, #947).
 
@@ -25,7 +24,6 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from _lib import issue_position
 from _lib import lifecycle_inference as infer
 from _lib.structural_type import infer_structural_type
 
@@ -37,7 +35,7 @@ def transition_refusal(
     issue_number: int,
     issue: dict[str, Any],
     labels: list[str],
-    position: issue_position.Position,
+    current: str,
     *,
     target: str,
     untouched: str,
@@ -47,14 +45,13 @@ def transition_refusal(
 ) -> str | None:
     """Why `verb`'s composed `move-issue --to <target>` would refuse, or None.
 
-    The structural type comes from `infer_structural_type` (the reader
-    move-issue uses), the state from `position`, and the legal moves from
-    `lifecycle_inference.legal_targets`. An issue already at `target` passes:
-    move-issue treats that as an idempotent no-op, so a re-run still works. A
-    `position` whose state is only a stand-in refuses, saying how the engine
-    gave no position. When legal moves lead on to `target` the refusal names
-    each of them, else it lists the legal targets. `untouched` says what the
-    verb left unchanged, e.g. "no branch, no assignee"."""
+    `current` is the issue's state (`issue_position.current_state`). The
+    structural type comes from `infer_structural_type` (the reader move-issue
+    uses), and the legal moves from `lifecycle_inference.legal_targets`. An
+    issue already at `target` passes: move-issue treats that as an idempotent
+    no-op, so a re-run still works. When legal moves lead on to `target` the
+    refusal names each of them, else it lists the legal targets. `untouched`
+    says what the verb left unchanged, e.g. "no branch, no assignee"."""
     title = str(issue.get("title", ""))
     structural_type = infer_structural_type(
         title, issue_types, classification=classification, labels=labels
@@ -66,10 +63,6 @@ def transition_refusal(
             "kind label is present. Nothing was changed.\n"
             "  → Restore the issue's title prefix (e.g. [Task]) and re-run."
         )
-    nothing_changed = f"Nothing was changed ({untouched})."
-    if position.unread is not None:
-        return _unread_refusal(verb, issue_number, position.unread, nothing_changed)
-    current = position.state
     if current == target:
         return None
     targets = infer.legal_targets(workflow, current, structural_type)
@@ -78,7 +71,7 @@ def transition_refusal(
     lines = [
         f"[refused] {verb} #{issue_number}: the issue is in {current!r}, and "
         f"workflow.yaml declares no move {current!r} → {target!r} for "
-        f"{structural_type!r}. {nothing_changed}",
+        f"{structural_type!r}. Nothing was changed ({untouched}).",
     ]
     steps = moves_before(workflow, current, target, structural_type)
     if steps:
@@ -88,26 +81,6 @@ def transition_refusal(
         lines.append(
             f"  legal targets from {current!r}: {', '.join(targets) if targets else '<none>'}"
         )
-    return "\n".join(lines)
-
-
-def _unread_refusal(
-    verb: str, issue_number: int, unread: issue_position.Unread, nothing_changed: str
-) -> str:
-    """The refusal for a state that has no reading: what failed, what was said
-    about it, and the command whose answer the verb needs."""
-    lines = [
-        f"[refused] {verb} #{issue_number}: cannot read the issue's state: "
-        f"{issue_position.BOARD_CARRIES_STATE}, and the process engine gave no "
-        f"position: {unread.cause}. {nothing_changed}",
-    ]
-    if unread.said:
-        lines.append(f"  {unread.said_by} said:")
-        lines.extend(f"    {line}" for line in unread.said.splitlines())
-    lines.append(
-        f"  → make `pkit process status {issue_position.PROCESS_ADDRESS} "
-        f"--subject {issue_number}` give a position, then re-run `{verb} {issue_number}`."
-    )
     return "\n".join(lines)
 
 

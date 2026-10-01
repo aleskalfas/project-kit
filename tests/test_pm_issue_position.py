@@ -1,12 +1,12 @@
-"""The reading of an issue's state that start-work, review-work and move-issue share (#1242).
+"""What start-work and review-work share around their composed move-issue (#1242).
 
-`_lib/issue_position` is where the three take the state of the issue being
-moved from: the process engine's position, else the issue's own fields. Each
-reads it at its own moment — the verb for its early check, move-issue again
-when it moves. `_lib/composed_move` is what start-work and review-work share
-around it: the early refusal, the move-issue run and the failure naming what a
-run left behind. The verbs' own tests drive these through their `main()`; this
-file pins the pieces, and that nothing in the environment stands in for
+`_lib/issue_position` is where both read the issue's state for their early
+check: the inference from its labels and milestone, the one the process
+engine's detectors apply to the same fields. `_lib/composed_move` is what they
+share around it: the early refusal, the move-issue run and the failure naming
+what a run left behind. The verbs' own tests drive these through their
+`main()`; this file pins the pieces, that the early check agrees with the
+engine's detectors, and that nothing in the environment stands in for
 move-issue's own read.
 """
 
@@ -30,215 +30,75 @@ from tests.pm_composed_move_support import (
 
 sys.path.insert(0, str(SCRIPTS_DIR))
 from _lib import axis_labels, composed_move, issue_position
+from _lib import lifecycle_predicates as predicates
 
 TASK = {"title": "[Task] a thing", "state": "OPEN", "milestone": None, "body": ""}
-NO_BOARD: dict[str, Any] = {}
-BOARD = {"has_projects_v2_board": True}
-NO_ANSWER = issue_position.EngineAnswer(failure="`pkit` was not found on PATH")
+DERIVE = axis_labels.SubstrateMap(axes={"state": {"derive": {"predicate": "open-closed"}}})
 # The variable an earlier revision of #1242 handed the engine's answer down in.
 # Nothing reads it; the tests below hold that.
 HAND_DOWN_ENV = "PKIT_PM_ISSUE_STATUS"
 
 
-def _answer(status: dict[str, Any] | None) -> issue_position.EngineAnswer:
-    return issue_position.EngineAnswer(status)
-
-
-def _read(engine, labels, config=NO_BOARD, substrate_map=None, issue=TASK):
-    return issue_position.read(
-        issue, engine, labels=labels, config=config, substrate_map=substrate_map
-    )
-
-
-# ---- read: the engine first, else the issue's fields --------------------
-
-
-def test_the_engine_position_wins_over_the_label() -> None:
-    # The shipped engine reads these same labels, so the two disagree only when
-    # the labels changed between the reads; the resolver takes the engine's.
-    engine = _answer(status_at("in-progress"))
-    position = _read(engine, ["state:backlog"])
-    assert position == issue_position.Position("in-progress", engine.status)
+# ---- current_state: the issue's own fields ------------------------------
 
 
 @pytest.mark.parametrize(
-    "engine",
+    "issue, labels, expected",
     [
-        NO_ANSWER,
-        _answer({"position": {"state": None, "indeterminate": True}}),
-        _answer({"position": {"state": None, "indeterminate": False}}),
-        _answer({"subject": "42", "position": "garbled"}),
-        _answer({"subject": "42", "position": {"state": {"id": "done"}}}),
-        _answer({"subject": "42"}),
+        (TASK, ["type:task", "state:backlog"], "backlog"),
+        (TASK, ["type:task"], "todo"),
+        ({**TASK, "milestone": {"title": "M1"}}, [], "backlog"),
+        ({**TASK, "milestone": {"title": "M1"}}, ["state:review"], "review"),
+        ({**TASK, "state": "CLOSED"}, ["state:review"], "done"),
     ],
-    ids=["no-answer", "indeterminate", "no-state", "garbled", "state-not-a-string", "no-position"],
+    ids=["state-label", "nothing-reads-todo", "milestone", "label-over-milestone", "closed"],
 )
-def test_without_an_engine_position_the_label_is_read(engine) -> None:
-    position = _read(engine, ["state:backlog"])
-    assert position.state == "backlog"
-    assert position.unread is None
-    assert position.status is engine.status
-
-
-def test_no_state_label_and_no_milestone_reads_todo_as_before() -> None:
-    assert _read(NO_ANSWER, ["type:task"]) == issue_position.Position("todo")
-
-
-def test_a_milestone_reads_backlog_and_a_closed_issue_done() -> None:
-    assert _read(NO_ANSWER, [], issue={**TASK, "milestone": {"title": "M1"}}).state == "backlog"
-    assert _read(NO_ANSWER, ["state:review"], issue={**TASK, "state": "CLOSED"}).state == "done"
+def test_the_state_is_read_off_the_issue_s_fields(issue, labels, expected) -> None:
+    assert issue_position.current_state(issue, labels, None) == expected
 
 
 def test_a_derive_bound_state_is_read_off_open_or_closed() -> None:
-    derive = axis_labels.SubstrateMap(axes={"state": {"derive": {"predicate": "open-closed"}}})
-    position = _read(NO_ANSWER, ["state:todo"], config=BOARD, substrate_map=derive)
-    assert position.unread is None  # the map binds state, so the board does not carry it
-    assert position.state == axis_labels.derive_state(is_closed=False, labels=["state:todo"])
+    state = issue_position.current_state(TASK, ["state:todo"], DERIVE)
+    assert state == axis_labels.derive_state(is_closed=False, labels=["state:todo"])
 
 
-def test_a_board_state_without_an_engine_position_is_flagged_unread() -> None:
-    position = _read(NO_ANSWER, ["state:backlog"], config=BOARD)
-    assert position.state == "backlog"  # the stand-in move-issue still moves from
-    assert position.unread == issue_position.Unread("`pkit` was not found on PATH")
+def test_the_reading_starts_no_process(monkeypatch) -> None:
+    def refuse(*args: Any, **_kw: Any) -> Any:
+        raise AssertionError(f"the early check started a process: {args}")
 
-
-def test_a_board_state_the_engine_places_is_not_flagged() -> None:
-    # The shipped engine places the issue from these same labels; where it
-    # answers, its position is taken and nothing is flagged.
-    engine = _answer(status_at("review"))
-    assert _read(engine, ["state:review"], config=BOARD) == issue_position.Position(
-        "review", engine.status
-    )
+    monkeypatch.setattr(subprocess, "run", refuse)
+    assert issue_position.current_state(TASK, ["state:in-progress"], None) == "in-progress"
 
 
 @pytest.mark.parametrize(
-    "status",
+    "issue, labels, substrate_map",
     [
-        {"subject": "42", "position": "garbled"},
-        {"subject": "42", "position": {"state": 7}},
-        {"subject": "42", "position": {"indeterminate": True, "unevaluated": 5}},
-        {"subject": "42", "position": {"indeterminate": True, "unevaluated": ["x", 1]}},
-        {"subject": "42", "position": {"indeterminate": True, "unevaluated": "garbled"}},
+        (TASK, ["type:task", "state:in-progress"], None),
+        (TASK, ["type:task"], None),
+        ({**TASK, "milestone": {"title": "M1"}}, [], None),
+        ({**TASK, "state": "CLOSED"}, ["state:review"], None),
+        (TASK, ["state:review"], DERIVE),
+        ({**TASK, "state": "CLOSED"}, [], DERIVE),
     ],
-    ids=["position", "state", "unevaluated-int", "unevaluated-entries", "unevaluated-str"],
+    ids=["label", "todo", "milestone", "closed", "derive-open", "derive-closed"],
 )
-def test_a_malformed_answer_that_names_the_issue_reads_as_no_position(status) -> None:
-    """An answer naming the issue whose position is not in the engine's shape
-    is the engine giving nothing: not trusted, and no crash."""
-    position = _read(_answer(status), ["state:backlog"], config=BOARD)
-    assert position.state == "backlog"
-    assert position.unread is not None
-    assert position.unread.said == ""
+def test_the_early_check_agrees_with_the_engine_s_detectors(
+    monkeypatch, issue, labels, substrate_map
+) -> None:
+    """The engine's detector, on the same issue, infers the state the early
+    check reads, so the check needs no engine run of its own (#1242)."""
+    fetched = {**issue, "labels": [{"name": name} for name in labels]}
+    monkeypatch.setattr(predicates, "_capability_root", lambda: CAPABILITY_ROOT)
+    monkeypatch.setattr(predicates, "_config", lambda _root: {})
+    monkeypatch.setattr(predicates, "_fetch_issue", lambda _n, _c, _f: fetched)
+    monkeypatch.setattr(predicates.axis_labels, "load_substrate_map", lambda _r: substrate_map)
+    read = issue_position.current_state(issue, labels, substrate_map)
+    detected = predicates.detect_state(42, read)
+    assert detected["result"] is True
+    assert detected["detail"]["inferred_state"] == read
 
 
-# ---- why the engine gave no position: three causes told apart ------------
-
-
-def _ask(monkeypatch, outcome) -> issue_position.EngineAnswer:
-    def run(argv, **kw):
-        if isinstance(outcome, BaseException):
-            raise outcome
-        return outcome
-
-    monkeypatch.setattr(issue_position.subprocess, "run", run)
-    return issue_position.ask_engine(42)
-
-
-def test_an_engine_answer_is_its_payload(monkeypatch) -> None:
-    asked: list[list[str]] = []
-
-    def run(argv, **kw):
-        asked.append(argv)
-        return subprocess.CompletedProcess(argv, 0, json.dumps(status_at("backlog")), "")
-
-    monkeypatch.setattr(issue_position.subprocess, "run", run)
-    assert issue_position.ask_engine(42) == issue_position.EngineAnswer(status_at("backlog"))
-    assert asked == [
-        ["pkit", "process", "status", issue_position.PROCESS_ADDRESS, "--subject", "42", "--json"]
-    ]
-
-
-def test_no_pkit_on_path_says_so(monkeypatch) -> None:
-    answer = _ask(monkeypatch, FileNotFoundError("pkit"))
-    assert answer == issue_position.EngineAnswer(failure="`pkit` was not found on PATH")
-    assert issue_position.why_no_position(answer).cause == "`pkit` was not found on PATH"
-
-
-def test_a_pkit_that_cannot_start_says_so(monkeypatch) -> None:
-    answer = _ask(monkeypatch, PermissionError(13, "Permission denied"))
-    assert answer.status is None
-    assert answer.failure == "`pkit` could not start: [Errno 13] Permission denied"
-
-
-def test_a_failed_run_names_its_exit_and_what_it_said(monkeypatch) -> None:
-    outcome = subprocess.CompletedProcess([], 2, "", "Error: unknown process 'x'\n")
-    answer = _ask(monkeypatch, outcome)
-    assert answer == issue_position.EngineAnswer(
-        failure="`pkit process status` exited 2", said="Error: unknown process 'x'"
-    )
-    unread = issue_position.why_no_position(answer)
-    assert (unread.cause, unread.said_by) == (
-        "`pkit process status` exited 2",
-        "`pkit process status`",
-    )
-
-
-@pytest.mark.parametrize("stdout", ["not json", "[]", '"x"', "null"])
-def test_output_that_is_no_json_object_says_so(monkeypatch, stdout) -> None:
-    answer = _ask(monkeypatch, subprocess.CompletedProcess([], 0, stdout, ""))
-    assert answer == issue_position.EngineAnswer(
-        failure="`pkit process status` printed no JSON object"
-    )
-
-
-def test_an_indeterminate_position_names_the_detection_and_what_its_predicate_said() -> None:
-    status = {
-        "position": {
-            "state": None,
-            "indeterminate": True,
-            "unevaluated": [
-                {
-                    "state": "backlog",
-                    "reason": "couldn't evaluate detection predicate 'detect': exited 2",
-                    "stderr_tail": "run `pkit project-management bootstrap`",
-                }
-            ],
-        }
-    }
-    assert issue_position.why_no_position(_answer(status)) == issue_position.Unread(
-        "it could not evaluate the detection of 'backlog': "
-        "couldn't evaluate detection predicate 'detect': exited 2",
-        "run `pkit project-management bootstrap`",
-        "the 'backlog' detection predicate",
-    )
-
-
-def test_a_position_no_detection_matched_says_so() -> None:
-    status = {"position": {"state": None, "indeterminate": False, "unevaluated": []}}
-    assert issue_position.why_no_position(_answer(status)) == issue_position.Unread(
-        "no state's detection matched the issue"
-    )
-
-
-def test_what_was_said_is_bounded_and_cannot_rewrite_the_terminal() -> None:
-    noisy = "\x1b[31mred\x1b[0m\tline\x07\n" + "".join(f"line {n}\n" for n in range(10))
-    said = issue_position.said_tail(noisy)
-    assert said.startswith("…")
-    assert said.splitlines()[1:] == [f"line {n}" for n in range(6, 10)]
-    assert "\x1b" not in said and "\x07" not in said
-    assert issue_position.said_tail("\x1b]0;title\x07red\tline\n\n") == "red line"
-    assert len(issue_position.said_tail("x" * 5000)) == issue_position.SAID_CHARS
-
-
-# ---- nothing in the environment stands in for the engine's answer --------
-
-
-def test_the_engine_is_asked_whatever_the_environment_holds(monkeypatch) -> None:
-    monkeypatch.setenv(HAND_DOWN_ENV, json.dumps({"issue": 42, "status": status_at("done")}))
-    engine = FakeEngine(status_at("todo"))
-    engine.install(monkeypatch, issue_position)
-    assert issue_position.ask_engine(42) == issue_position.EngineAnswer(status_at("todo"))
-    assert len(engine.asks) == 1
+# ---- nothing in the environment stands in for move-issue's own read -----
 
 
 def test_move_issue_reads_its_own_state_whatever_the_environment_holds(monkeypatch, capsys) -> None:
@@ -247,7 +107,7 @@ def test_move_issue_reads_its_own_state_whatever_the_environment_holds(monkeypat
     user-authorised Todo → Done gate instead of the no-op branch."""
     monkeypatch.setenv(HAND_DOWN_ENV, json.dumps({"issue": 42, "status": status_at("done")}))
     engine = FakeEngine(status_at("todo"))
-    engine.install(monkeypatch, issue_position)
+    engine.install(monkeypatch)
     move = MoveIssueInProcess(
         monkeypatch,
         {**TASK, "labels": [{"name": "type:task"}, {"name": "state:todo"}]},
@@ -261,6 +121,36 @@ def test_move_issue_reads_its_own_state_whatever_the_environment_holds(monkeypat
 
 
 # ---- composed_move: the shared refusal, run and failure -----------------
+
+
+def _refusal(current: str, target: str) -> str | None:
+    return composed_move.transition_refusal(
+        "review-work",
+        42,
+        TASK,
+        ["type:task"],
+        current,
+        target=target,
+        untouched="no PR opened or made ready, no reviewers requested",
+        workflow=_shipped_workflow(),
+        issue_types=_shipped_schema("issue-types.yaml"),
+        classification=_shipped_schema("classification.yaml"),
+    )
+
+
+def test_a_legal_move_or_one_already_made_is_not_refused() -> None:
+    assert _refusal("in-progress", "review") is None
+    assert _refusal("review", "review") is None
+
+
+def test_a_refusal_names_each_move_to_make_first() -> None:
+    assert _refusal("todo", "review") == (
+        "[refused] review-work #42: the issue is in 'todo', and workflow.yaml declares "
+        "no move 'todo' → 'review' for 'task'. Nothing was changed (no PR opened or "
+        "made ready, no reviewers requested).\n"
+        "  → move it first: `move-issue 42 --to backlog`, then `move-issue 42 --to "
+        "in-progress`, then re-run `review-work 42`."
+    )
 
 
 def test_the_move_issue_run_carries_its_arguments_and_nothing_else(monkeypatch) -> None:
@@ -287,35 +177,6 @@ def test_the_move_issue_run_carries_its_arguments_and_nothing_else(monkeypatch) 
         "/cap",
     ]
     assert kw == {"check": False}  # the child inherits this environment as it is
-
-
-def test_an_unread_state_refuses_saying_what_failed_and_what_was_said() -> None:
-    unread = issue_position.Unread(
-        "`pkit process status` exited 1", "Error: one\nError: two", "`pkit process status`"
-    )
-    refusal = composed_move.transition_refusal(
-        "start-work",
-        42,
-        TASK,
-        ["type:task"],
-        issue_position.Position("backlog", None, unread),
-        target="in-progress",
-        untouched="no branch, no assignee",
-        workflow=_shipped_workflow(),
-        issue_types=_shipped_schema("issue-types.yaml"),
-        classification=_shipped_schema("classification.yaml"),
-    )
-    assert refusal is not None
-    assert refusal.splitlines() == [
-        "[refused] start-work #42: cannot read the issue's state: "
-        f"{issue_position.BOARD_CARRIES_STATE}, and the process engine gave no position: "
-        "`pkit process status` exited 1. Nothing was changed (no branch, no assignee).",
-        "  `pkit process status` said:",
-        "    Error: one",
-        "    Error: two",
-        f"  → make `pkit process status {issue_position.PROCESS_ADDRESS} --subject 42` "
-        "give a position, then re-run `start-work 42`.",
-    ]
 
 
 def test_the_shortest_legal_path_names_each_move_on_the_way() -> None:

@@ -59,6 +59,7 @@ Exit codes:
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import subprocess
 import sys
@@ -75,7 +76,6 @@ from _lib import (
     axis_carriage,
     axis_labels,
     bootstrap_gate,
-    issue_position,
     session_guard,
     state_timeline,
 )
@@ -281,6 +281,8 @@ def main() -> int:
         lbl.get("name", "") if isinstance(lbl, dict) else str(lbl)
         for lbl in (issue.get("labels") or [])
     ]
+    state = str(issue.get("state", "")).lower()
+    milestone = issue.get("milestone") or {}
 
     structural_type = infer_structural_type(
         title, issue_types, classification=classification, labels=labels
@@ -310,17 +312,18 @@ def main() -> int:
     # fallback below is map-aware (agrees with the engine's map-aware detection).
     substrate_map = axis_labels.load_substrate_map(capability_root)
 
-    # Position: read from the engine (DEC-033 D7 — read, don't re-infer), else
-    # inferred from the issue's fields with the same map, so a move is never
-    # blocked on an unreachable engine. Read here, when the move is made,
-    # through the resolver start-work and review-work judge their early check
-    # with (`_lib/issue_position`, #1242); a stand-in it flags as unread is
-    # still moved from here, as before.
-    engine = _ask_engine(args.issue_number)
-    engine_status = engine.status
-    current_state = issue_position.read(
-        issue, engine, labels=labels, config=config, substrate_map=substrate_map
-    ).state
+    # Position: read from the engine (DEC-033 D7 — read, don't re-infer). The
+    # engine's detectors reproduce this script's inference precedence (and are
+    # now map-aware, ADR-026 §5), so the result is identical; fall back to the
+    # local inference only when the engine is unreachable (e.g. `pkit` not on
+    # PATH), so a move is never blocked. The fallback is threaded the same map so
+    # it agrees with the engine under a present derive binding.
+    engine_status = _engine_status(args.issue_number)
+    current_state = _position_from_status(engine_status)
+    if current_state is None:
+        current_state = _infer_current_state(
+            state=state, milestone=milestone, labels=labels, substrate_map=substrate_map
+        )
 
     # WHICH substrate carries `state` — one question, one answer, asked of the
     # accessor ([project-management:DEC-051-axis-carriage-activation] decision
@@ -823,15 +826,56 @@ def _walk_parent_chain(body: str) -> list[int]:
 # the local inference agree; the engine is the single source of position
 # truth (the seam-ordering contract in .pkit/process/README.md).
 
-# The engine read lives in `_lib/issue_position`, shared with start-work and
-# review-work so their early check reads state as this move does (#1242). Bound
-# here under the names this script's call sites and tests use. One status read
-# serves two consumers: the position, and `_landed_moves` (whether the project
-# keeps a journal and, where it does, how many governed moves it holds — which
-# keys the transition audit's retry detection).
-PROCESS_ADDRESS = issue_position.PROCESS_ADDRESS
-_ask_engine = issue_position.ask_engine
-_position_from_status = issue_position.position_from_status
+PROCESS_ADDRESS = "project-management:issue-lifecycle"
+
+
+def _engine_status(issue_number: int) -> dict | None:
+    """The issue's engine status payload (`pkit process status --json`), or None
+    when the engine cannot be reached or answers with something unparseable.
+
+    One read serves two consumers: `_position_from_status` (where the issue is)
+    and `_landed_moves` (whether the project keeps a journal and, where it does,
+    how many governed moves it holds — which keys the transition audit's retry
+    detection).
+    """
+    try:
+        proc = subprocess.run(
+            [
+                "pkit",
+                "process",
+                "status",
+                PROCESS_ADDRESS,
+                "--subject",
+                str(issue_number),
+                "--json",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except (OSError, FileNotFoundError):
+        return None
+    if proc.returncode != 0:
+        return None
+    try:
+        payload = json.loads(proc.stdout)
+    except (json.JSONDecodeError, ValueError):
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+def _position_from_status(status: dict | None) -> str | None:
+    """The resolved state id from an engine status payload.
+
+    None when there is no payload or the position is missing/indeterminate —
+    callers then fall back to the local inference (which uses the same
+    precedence), so a missing `pkit` on PATH never blocks a move.
+    """
+    position = status.get("position") if isinstance(status, dict) else None
+    if not isinstance(position, dict) or position.get("indeterminate"):
+        return None
+    state = position.get("state")
+    return state if isinstance(state, str) else None
 
 
 def _journal_length_from_status(status: dict | None) -> int | None:
