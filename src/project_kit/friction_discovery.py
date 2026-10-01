@@ -1329,9 +1329,9 @@ class ResolverCommand:
     """A command a capability registers to resolve an anchor kind (COR-050 point 2).
 
     `query_contract` is whether the command's registry entry declares the
-    query contract (ADR-057 point 3): bounded, deterministic, read-only and
-    needing no network. The declaration grants nothing; it is a claim the
-    backbone requires and trusts.
+    query contract (COR-050 point 2; ADR-057 point 3 realises the declaration):
+    bounded, deterministic, read-only and needing no network. The declaration
+    grants nothing; it is a claim the backbone requires and trusts.
     """
 
     kind: str
@@ -1343,11 +1343,12 @@ class ResolverCommand:
 def refuse_resolver_without_query_contract(resolver: ResolverCommand) -> str | None:
     """Why `resolver` may not run, or `None` when it may.
 
-    A resolver is a query: bounded, deterministic and needing no network
-    (COR-050 point 2), and read-only (ADR-057 point 3 adds it). The backbone
-    admits one only when its command declares that contract (ADR-057 point 3).
-    The declaration is trusted, not enforced: nothing here confines the process
-    it would start — the residual gap the CLI reference states.
+    A resolver is a query: bounded in time, needing no network, changing
+    nothing in the project and deterministic (COR-050 point 2). The backbone
+    admits one only when its command declares that contract — COR-050 point 2
+    requires the declaration, ADR-057 point 3 realises it. The declaration is
+    trusted, not enforced: nothing here confines the process it would start —
+    the residual gap the CLI reference states.
     """
     if resolver.query_contract:
         return None
