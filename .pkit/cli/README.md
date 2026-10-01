@@ -459,7 +459,7 @@ The repository's default squash-commit title and message, as GitHub names them (
 
 ### `pull-request merge <n> --subject <s> [--head <sha>] [--admin] [--json]`
 
-Squash-merge PR `<n>` directly, with `<s>` as the commit's subject, pinned to `<sha>` when given (a push in between fails the merge). Never deletes the head branch: gh's own deletion touches the local checkout and fails after the remote merge has landed. Accepted is not proof of a merge — on a base that requires a queue, gh enqueues instead — so a caller reads the PR afterwards. `--json`: `accepted`, `exit_code` (gh's; `null` when it could not run), `reason`. Exit `0` when gh accepted it; `1` otherwise.
+Squash-merge PR `<n>` directly, with `<s>` as the commit's subject, pinned to `<sha>` when given (a push in between fails the merge). Never deletes the head branch: gh's own deletion touches the local checkout and fails after the remote merge has landed. Accepted is not proof of a merge — on a base that requires a queue, gh enqueues instead — so a caller reads the PR afterwards. `--json`: `accepted`, `exit_code` (gh's; `null` when it could not run), `reason`. Exit `0` when gh accepted it; `1` otherwise. A direct merge passes the subject only: the commit's body is whatever the repository's squash-commit default composes, which this command does not yet check on that path (#1220).
 
 ### `pull-request enqueue <n> [--head <sha>] [--json]`
 
