@@ -67,9 +67,16 @@ The step refuses a `# pyright: ignore` that names no rule or gives no reason, a
 `# type: ignore` (pyright is told to honour none), and a file comment that sets
 the mode or a rule's severity (`# pyright: basic`). A rule is relaxed for the
 tests only in `pyproject.toml`'s `[tool.pyright]` table, with its reason beside
-it. The package under test is held to strict mode through a ratchet instead;
-its baseline and how to lower it are in [CONTRIBUTING.md](../CONTRIBUTING.md),
-"Running checks".
+it.
+
+**The package is held to strict mode through a ratchet instead**: its findings,
+counted per file and rule, may not exceed the committed baseline,
+`scripts/pyright-baseline.txt`. When the step says the package has fewer than
+the baseline admits, commit the change and run
+`uv run python scripts/pyright_ratchet.py lower`, which writes only lower
+counts; commit the baseline it writes in the same pull request.
+[CONTRIBUTING.md](../CONTRIBUTING.md), "Running checks", has the rest — what to
+do when a change raises a count, and the only causes for raising the baseline.
 
 ## The adopter-repository fixture
 
