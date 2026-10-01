@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-01T16:23:25Z
+      at: 2026-10-01T16:53:45Z
       outcome: unchanged
-      unchanged-because: on this branch sync and upgrade refuse to write under a pkit older than the project's content or pin; the friction resolve command main brought in does not change what this page says about upgrading
+      unchanged-because: the CLI reference now says the revalidation point is the commit that wrote the at a page carries, never a merged side's newer one; this signpost names the CLI reference and says nothing of how a point is found
 ---
 
 # project-kit
