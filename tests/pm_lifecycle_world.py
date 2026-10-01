@@ -304,6 +304,7 @@ class World:
 
     def close(self, number: int, *options: str) -> int:
         """Run close-issue on the issue with `options` (`--mode`, `--reason`, …)."""
+        assert self.cl is not None, "this world was built without close-issue"
         return _with_argv(
             [
                 "close-issue.py",
