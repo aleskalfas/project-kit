@@ -1394,9 +1394,9 @@ def release_apply(tag: bool, push: bool, no_broaden: bool, yes: bool) -> None:
     "PKIT_CHANGESET_SKIP env var (wired from the `skip-changeset` PR label).",
 )
 def release_check(base: str | None, skip: bool | None) -> None:
-    """CI guard: fail if a surface-touched component ships no changeset, or the
-    PR declares a `requires_backbone` floor for a component it neither touches
-    nor moves.
+    """CI guard: fail if the diff touches a component's surface and adds or edits
+    no changeset naming it, or the PR declares a `requires_backbone` floor for a
+    component it neither touches nor moves.
 
     The diff is taken from where HEAD left the base — REF, else
     $PKIT_CHECK_BASE, else the default branch (COR-054); a base that resolves
@@ -1404,7 +1404,8 @@ def release_check(base: str | None, skip: bool | None) -> None:
     `none` changeset for the component, or the `skip-changeset` label
     (PKIT_CHANGESET_SKIP env). Surface is a human judgment (PRJ-002 D2) — this
     path heuristic can mis-fire; the override exists. No escape hatch waives
-    the floor tie.
+    the floor tie. A pending changeset the diff leaves alone — another pull
+    request's — does not count for this one, whatever component it names.
     """
     source_kit = _target_kit()
     fork = _settled_base(source_kit.parent, base).fork
@@ -1431,7 +1432,7 @@ def release_check(base: str | None, skip: bool | None) -> None:
             )
         else:
             click.echo(
-                "changeset guard: every touched component has a changeset — ok."
+                "changeset guard: every touched component has a changeset in this diff — ok."
                 if result.touched
                 else "changeset guard: no surface-touched components — ok."
             )
@@ -1441,7 +1442,10 @@ def release_check(base: str | None, skip: bool | None) -> None:
         problems.append(
             "surface change without a changeset for: "
             + ", ".join(result.missing)
-            + ".\n  Add one with `changie new` (per .pkit/release/README.md), hand-write a "
+            + ".\n  Only a changeset this diff adds or edits counts, once committed: a pending "
+            "changeset the diff leaves alone declares another pull request's change, not "
+            "this one's, even when it names the same component."
+            "\n  Add one with `changie new` (per .pkit/release/README.md), hand-write a "
             "changeset under .changes/unreleased/, drop a `none` changeset if it moves no "
             "user-facing surface, or apply the `skip-changeset` label."
             "\n  Decision-only PR (COR/PRJ/ADR/DEC)? Declare `none` for a design-ahead "
