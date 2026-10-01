@@ -23,6 +23,14 @@ the child alone would leave running with the pipes open. The run never
 outlives its caller: an interrupt kills the group too. `CommandRun` says how
 the run ended; it never raises for what the command did.
 
+**What a no-answer shows.** A caller that reports a run which gave no answer
+names how it ended (`CommandRun.ending_described`) and may show what the
+command said on standard error (`CommandRun.stderr_tail`): never the stream
+whole, only its last lines, bounded in lines and in bytes
+(`DIAGNOSTIC_TAIL_LINES`, `DIAGNOSTIC_TAIL_BYTES`), with every terminal
+escape sequence and control character removed — a command's words reach the
+operator's terminal, so a command must not be able to flood it or rewrite it.
+
 **A run inside a run** (ADR-057 point 5). A command the runner starts may start
 `pkit` again — a validator reads a point through `pkit connections resolve`,
 whose filler this runner then starts — and the tree keeps one deadline and one
@@ -85,11 +93,13 @@ import contextlib
 import json
 import math
 import os
+import re
 import shutil
 import signal
 import subprocess
 import tempfile
 import time
+import unicodedata
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from enum import Enum
@@ -124,6 +134,23 @@ ANSWER_MARGIN_SECONDS = 2
 
 # The detail of a nested run that had no time left to start its command.
 NO_TIME_LEFT = "no time was left of the bound of the run that started it"
+
+# What a no-answer shows of a command's standard error (the module docstring):
+# at most this many of its last non-blank lines, and at most this many bytes of
+# them, encoded as UTF-8. Enough for a refusal's hint or a traceback's last
+# frames; little enough that several failing commands stay readable together.
+DIAGNOSTIC_TAIL_LINES = 10
+DIAGNOSTIC_TAIL_BYTES = 1500
+
+# Marks a tail that lost its beginning to either bound.
+_TRUNCATED = "…"
+
+# A terminal escape sequence: a control sequence (colours, cursor moves,
+# erasing), a string sequence ended by BEL or ST (window titles, hyperlinks),
+# or any other escape. Removed whole, so its parameters do not show as text.
+_ESCAPE_SEQUENCE = re.compile(
+    r"\x1b(?:\[[0-?]*[ -/]*[@-~]|[\]PX^_][^\x07\x1b]*(?:\x07|\x1b\\)|[ -/]*[0-~])"
+)
 
 _yaml = YAML(typ="safe")
 
@@ -252,6 +279,61 @@ class CommandRun:
         if self.clipped:
             return f"the {self.bound_seconds} s its caller had left"
         return f"{self.bound_seconds} s"
+
+    @property
+    def ending_described(self) -> str:
+        """How the run ended, as a message names it after the command's name:
+        `exited 2`, `did not answer within 30 s`, `could not start: …`. A
+        caller reads an answer through its own policy; this names the ending
+        it saw when there was none."""
+        if self.ending is Ending.NOT_STARTED:
+            return f"could not start: {self.detail}"
+        if self.ending is Ending.TIMED_OUT:
+            return f"did not answer within {self.bound_described} and was stopped"
+        if self.ending is Ending.ABNORMAL_EXIT:
+            if self.returncode is not None and self.returncode < 0:
+                return f"was ended by signal {-self.returncode}"
+            return f"exited {self.returncode}"
+        if self.ending is Ending.UNPARSABLE:
+            return self.detail or "printed no JSON document on its standard output"
+        return "answered"
+
+    @property
+    def stderr_tail(self) -> str:
+        """What the command said on standard error, fit to be shown
+        (`diagnostic_tail`) — "" when it said nothing, or nothing was read (a
+        run stopped at its bound has its pipes closed unread)."""
+        return diagnostic_tail(self.stderr)
+
+
+def diagnostic_tail(text: str) -> str:
+    """The end of a command's diagnostic output, fit to be shown to the operator.
+
+    Terminal escape sequences are removed whole and every other control or
+    format character dropped (a tab becomes a space), so the text cannot move
+    the cursor, recolour, retitle or otherwise rewrite the terminal it is shown
+    on. Then only the last `DIAGNOSTIC_TAIL_LINES` non-blank lines are kept, and
+    of those only the last `DIAGNOSTIC_TAIL_BYTES` bytes; a tail that lost its
+    beginning to either bound starts with `…`. The text is already decoded with
+    replacement (`run_command`), so no byte the command wrote can fail here."""
+    lines: list[str] = []
+    for raw_line in _ESCAPE_SEQUENCE.sub("", text).splitlines():
+        line = "".join(
+            " " if char == "\t" else char
+            for char in raw_line
+            if char == "\t" or unicodedata.category(char) not in ("Cc", "Cf")
+        ).rstrip()
+        if line.strip():
+            lines.append(line)
+    truncated = len(lines) > DIAGNOSTIC_TAIL_LINES
+    tail = "\n".join(lines[-DIAGNOSTIC_TAIL_LINES:])
+    encoded = tail.encode("utf-8")
+    if len(encoded) > DIAGNOSTIC_TAIL_BYTES:
+        room = DIAGNOSTIC_TAIL_BYTES - len(_TRUNCATED.encode("utf-8"))
+        # A cut through a multi-byte character drops what is left of it.
+        tail = encoded[-room:].decode("utf-8", errors="ignore")
+        truncated = True
+    return f"{_TRUNCATED}{tail}" if truncated else tail
 
 
 def run_command(
