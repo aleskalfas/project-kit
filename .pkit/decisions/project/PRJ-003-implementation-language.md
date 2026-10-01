@@ -6,6 +6,8 @@ date: 2026-05-08
 author: Ales Kalfas <kalfas.ales@gmail.com>
 ---
 
+> **Partially superseded by [PRJ-010](PRJ-010-type-checking-mode.md).** The type-checking line in Implications — pyright or mypy, in strict mode — is overturned: the checker is pyright, strict for the package and standard for the tests, gated as PRJ-010 decides. Everything else stands, the language and the commitment to a typed codebase included.
+
 ## Context
 
 The bash dispatcher at `.pkit/cli/pkit` (per PRJ-001) is the bootstrap. It exposes `init`, `status`, `version (bump)`, `new decision`, `deploy-skills`, `merge-settings`. Per the implementation-status note in `.pkit/cli/README.md`, the full CLI surface specified by COR-004 — `sync`, `merge`, `upgrade`, `bundle list/install/remove`, the rest of `new`, `validate` — lands when a proper runtime ships per the build roadmap.
@@ -60,4 +62,4 @@ The runtime's authoring language is a project-kit-internal choice (the kit's bin
 - **Adopter Python version requirements**: `pkit` ships with `requires-python = ">=3.11"`. Adopters whose projects target older Pythons are unaffected — `uv tool install` provisions an isolated Python for `pkit` regardless of the project's interpreter.
 - **Authoring conventions**: per CLAUDE.md's existing references, the Python implementation follows conventional commits (COR-008), the principles-not-inventory rule, and the bump policy in PRJ-002. The Python layer doesn't change those.
 - **Testing**: pytest, with the migration-script idempotency check as a first-class test pattern.
-- **Type checking** (refinement per PRJ-010): pyright or mypy in strict mode. Worth committing to a typed codebase from the first commit since the surface (manifests, version specs) is genuinely typed.
+- **Type checking**: pyright or mypy in strict mode. Worth committing to a typed codebase from the first commit since the surface (manifests, version specs) is genuinely typed.
