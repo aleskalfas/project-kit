@@ -578,6 +578,7 @@ def _wire_main(
     heads=None,
     posted=None,
     native=None,
+    verdicts_head="",
 ):
     """Stub main()'s seams; record invoked names into `invoked`.
 
@@ -595,7 +596,8 @@ def _wire_main(
     `heads` is the PR head each `_read_tips` call returns, in order, beside
     the base `_BASE` (#1179); default the same head every time. `posted`, when given, collects
     each posted comment body. `native`, when given, enables the native review
-    and collects the verdict of each one delivered.
+    and collects the verdict of each one delivered. `verdicts_head` is the PR
+    head the verdict read reports judging the verdicts against.
     """
     from types import SimpleNamespace
 
@@ -671,7 +673,9 @@ def _wire_main(
         reads.append((pr_number, list(resolution.required_local)))
         if unreadable:
             return None
-        return rpr._VerdictStates(fresh=dict(fresh or {}), stale=dict(stale or {}))
+        return rpr._VerdictStates(
+            fresh=dict(fresh or {}), stale=dict(stale or {}), head=verdicts_head
+        )
 
     monkeypatch.setattr(rpr, "_read_verdict_states", fake_read_states)
     if native is None:
@@ -1166,6 +1170,7 @@ def test_review_with_a_pinned_head_reviews_only_that_head(
         invoked=invoked,
         posted=posted,
         heads=[_MOVED_TO],
+        verdicts_head=_REVIEWED,
     )
     run = rpr.review(pinned_head=_REVIEWED)
     assert run.exit_code == 3
@@ -1193,6 +1198,7 @@ def test_review_with_a_pinned_head_stops_when_it_moves_during_a_review(
         invoked=invoked,
         posted=posted,
         heads=[_REVIEWED, _MOVED_TO],
+        verdicts_head=_REVIEWED,
     )
     run = rpr.review(pinned_head=_REVIEWED)
     assert run.exit_code == 3
@@ -1212,11 +1218,110 @@ def test_review_with_a_pinned_head_that_holds_runs_every_reviewer(
         tmp_path,
         resolution=rpr.Resolution(required_local=_PANEL),
         invoked=invoked,
+        verdicts_head=_REVIEWED,
     )
     run = rpr.review(pinned_head=_REVIEWED)
     assert run.exit_code == 0
     assert invoked == list(_PANEL)
     assert run.moved_to is None
+
+
+def test_review_with_a_pinned_head_keeps_no_verdict_judged_at_another_head(
+    rpr, monkeypatch, tmp_path, capsys
+) -> None:
+    """The verdicts were judged fresh for the head the PR has now, which is not
+    the pinned one: none is kept as the pinned head's, and nobody runs."""
+    invoked: list[str] = []
+    _wire_main(
+        rpr,
+        monkeypatch,
+        tmp_path,
+        resolution=rpr.Resolution(required_local=_PANEL),
+        invoked=invoked,
+        fresh={"reviewer": "APPROVED", "code-reviewer": "APPROVED"},
+        verdicts_head=_MOVED_TO,
+    )
+    run = rpr.review(pinned_head=_REVIEWED)
+    assert (run.exit_code, run.moved_to) == (3, _MOVED_TO)
+    assert run.kept == {}
+    assert invoked == []
+    assert "verdicts read at bbbbbbb, not aaaaaaa" in capsys.readouterr().out
+
+
+def test_review_with_a_pinned_head_and_verdicts_read_without_one_stops(
+    rpr, monkeypatch, tmp_path
+) -> None:
+    invoked: list[str] = []
+    _wire_main(
+        rpr,
+        monkeypatch,
+        tmp_path,
+        resolution=rpr.Resolution(required_local=_PANEL),
+        invoked=invoked,
+        fresh={"reviewer": "APPROVED"},
+    )
+    run = rpr.review(pinned_head=_REVIEWED)
+    assert (run.exit_code, run.moved_to) == (2, None)
+    assert "head could not be read with its verdicts" in run.reason
+    assert invoked == []
+
+
+def test_review_with_a_pinned_head_it_cannot_read_runs_no_reviewer(
+    rpr, monkeypatch, tmp_path
+) -> None:
+    """An unreadable head is not a moved one: the run says it could not read
+    it (exit 2), names no head, and shows no reviewer a head it cannot name."""
+    invoked: list[str] = []
+    _wire_main(
+        rpr,
+        monkeypatch,
+        tmp_path,
+        resolution=rpr.Resolution(required_local=_PANEL),
+        invoked=invoked,
+        heads=[""],
+        verdicts_head=_REVIEWED,
+    )
+    run = rpr.review(pinned_head=_REVIEWED)
+    assert (run.exit_code, run.moved_to) == (2, None)
+    assert run.reason == (
+        "PR #99's head could not be read before reviewer's review, so whether it is "
+        "aaaaaaa, the head this review was asked to review, cannot be told"
+    )
+    assert invoked == []
+
+
+def test_review_with_a_pinned_head_unread_after_a_review_goes_on(
+    rpr, monkeypatch, tmp_path
+) -> None:
+    """A head that could not be read again after a review is not a move: the
+    next reviewer's own read decides."""
+    invoked: list[str] = []
+    _wire_main(
+        rpr,
+        monkeypatch,
+        tmp_path,
+        resolution=rpr.Resolution(required_local=_PANEL),
+        invoked=invoked,
+        heads=[_REVIEWED, "", _REVIEWED, _REVIEWED],
+        verdicts_head=_REVIEWED,
+    )
+    run = rpr.review(pinned_head=_REVIEWED)
+    assert (run.exit_code, run.moved_to) == (0, None)
+    assert invoked == list(_PANEL)
+
+
+def test_review_says_why_it_stopped_short(rpr, monkeypatch, tmp_path) -> None:
+    _wire_main(
+        rpr,
+        monkeypatch,
+        tmp_path,
+        resolution=rpr.Resolution(required_local=_PANEL),
+        invoked=[],
+    )
+    monkeypatch.setattr(rpr, "_find_pr_for_branch", lambda branch, config: None)
+    run = rpr.review()
+    assert run.exit_code == 2
+    assert run.reason == "error: no OPEN PR found for branch 'feat/147-x'. Run `review-work` first."
 
 
 _HEAD = [
