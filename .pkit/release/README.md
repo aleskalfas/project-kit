@@ -13,9 +13,8 @@ pkit:
         - .github/workflows/release-tag.yml
       record: [COR-010, COR-041, PRJ-002, PRJ-004, ADR-040]
     revalidated:
-      at: 2026-10-01T09:44:08Z
-      outcome: unchanged
-      unchanged-because: "typing-only change in the package for the type-checking gate (PRJ-010): suppression comments removed; behaviour unchanged"
+      at: 2026-10-01T18:58:01Z
+      outcome: updated
 ---
 
 # Release flow — changesets + the release step
@@ -591,12 +590,24 @@ trusted — is a downstream change.
 ## The surface-without-changeset CI guard
 
 `pkit release check [--base <ref>]` fails a PR that touches a component's
-surface but ships no changeset for it. The diff runs from where the branch left
+surface but adds no changeset for it. The diff runs from where the branch left
 its base: `--base`, else `$PKIT_CHECK_BASE`, else the project's default branch
 (COR-054; `pkit repository base` shows it). Wired as a PR-scoped step in
 `.github/workflows/checks.yml` (it needs the PR base ref and PR labels, which a
 local pre-push hook lacks — so it is not in `scripts/check.sh`). Run it locally
 with `pkit release check`.
+
+**What a green surface check means.** Every component whose surface the diff
+touches is named by a changeset the diff itself carries — a file under
+`.changes/unreleased/` it adds, edits or renames — or an escape hatch or the
+release-PR exemption (below) waived the check. A pending changeset the diff
+leaves alone does not count, even when it names the same component: one an
+earlier PR merged, or one merging the base brought onto the branch, declares
+that PR's change, not this one's. Editing a pending changeset counts whatever
+the edit — the guard reads which files the diff changes, not what changed in
+them — so extending a pending changeset's note to cover this change declares
+it; review judges whether the note does. The diff is committed work only: a
+changeset not yet committed is not in it.
 
 **A declared floor rides on its component or a release of it (PRJ-002 D4).**
 From the same diff, the guard also fails a PR that declares a
@@ -627,8 +638,8 @@ deletes changesets, so it declares no floor.
 **Escape hatches for the surface check** (so trivia / docs PRs aren't forced
 into ceremony):
 
-1. A **`none` changeset** naming the component — an in-repo, reviewable "not a
-   surface change" declaration.
+1. A **`none` changeset** naming the component, carried by the PR like any
+   other — an in-repo, reviewable "not a surface change" declaration.
 2. The **`skip-changeset` label** — surfaced to the guard as
    `PKIT_CHANGESET_SKIP=1`; passes the surface check unconditionally.
 
