@@ -2,6 +2,7 @@ component: backbone
 kind: patch
 custom:
   category: Fixed
+  pr: "1226"
 body: >
   Every write of a project's version pin (`.pkit/version-pin`) is now whole
   or not at all (#1211): the pin `pkit upgrade` writes by default, the pin it
