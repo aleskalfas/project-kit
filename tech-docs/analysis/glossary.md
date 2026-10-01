@@ -39,6 +39,10 @@ TERM-integration-branch:
           - .pkit/capabilities/project-management/schemas/git-conventions.yaml
         record:
           - project-management:DEC-013
+      revalidated:
+        at: 2026-10-01T09:12:37Z
+        outcome: unchanged
+        unchanged-because: DEC-013's merge mechanics gained a pointer to how the merge verb goes through a merge queue; what an integration branch is, its marker and where its pull requests land are untouched
 TERM-intent-note:
   name: Intent note
   status: active
@@ -111,9 +115,9 @@ TERM-stabilisation:
           - project-management:DEC-014
           - ADR-019
       revalidated:
-        at: 2026-10-01T04:51:12Z
+        at: 2026-10-01T09:12:38Z
         outcome: unchanged
-        unchanged-because: done-work's change is how the agent gate judges a verdict fresh (the reviewed head and the author's changes since); the stabilisation phase and the guards it plans on done-work are untouched
+        unchanged-because: done-work enqueues where the base has a merge queue and merge-pr refuses such a base (#1011); the stabilisation phase and the guards it plans on both verbs are untouched, and gap K2 stands while the queue is not on and the stabilisation check is not built
 ---
 
 # Glossary

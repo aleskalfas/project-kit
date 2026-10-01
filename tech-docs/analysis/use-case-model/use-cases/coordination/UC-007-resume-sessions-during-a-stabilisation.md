@@ -20,9 +20,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-10-01T04:51:14Z
+      at: 2026-10-01T09:12:52Z
       outcome: unchanged
-      unchanged-because: done-work's change is how the agent gate judges a verdict fresh (the reviewed head and the author's changes since); resuming sessions during a stabilisation and the guard planned on done-work are untouched
+      unchanged-because: done-work enqueues where the base has a merge queue and merge-pr refuses such a base (#1011); resuming sessions during a stabilisation and the guards planned on both verbs are untouched, and gap K2 stands while the queue is not on and the stabilisation check is not built
 ---
 
 # UC-007 — Resume sessions killed during a stabilisation

@@ -16,9 +16,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-09-30T23:02:18Z
+      at: 2026-10-01T09:12:51Z
       outcome: unchanged
-      unchanged-because: "#840's lint and format pass reshapes the anchored code without changing what it does, so this page still describes it as it is"
+      unchanged-because: DEC-026 now says how done-work merges through a merge queue (#1011); the handoff this use case cites DEC-026 for is unchanged
 ---
 
 # UC-003 — Find work when the clone holds none
