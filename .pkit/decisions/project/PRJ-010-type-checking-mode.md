@@ -4,7 +4,6 @@ title: pyright holds the package to strict mode through a ratchet, and the tests
 status: proposed
 date: 2026-10-01
 author: Aleš Kalfas <kalfas.ales@gmail.com>
-supersedes: PRJ-003
 ---
 
 ## Context
