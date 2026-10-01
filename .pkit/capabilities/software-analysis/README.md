@@ -12,9 +12,9 @@ pkit:
         - .pkit/capabilities/software-analysis/agents/**
       record: ["software-analysis:DEC-001", COR-049, COR-050, COR-052, COR-053]
     revalidated:
-      at: 2026-09-30T23:02:03Z
+      at: 2026-10-01T18:26:06Z
       outcome: unchanged
-      unchanged-because: "#840's lint and format pass reshapes the anchored code without changing what it does, so this page still describes it as it is"
+      unchanged-because: on this branch COR-050 was edited and the edit reverted; the record reads exactly as on main, so nothing this page says of it changed
 ---
 
 # software-analysis capability

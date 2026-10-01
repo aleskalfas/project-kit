@@ -13,9 +13,8 @@ pkit:
         - .github/workflows/release-tag.yml
       record: [COR-010, COR-041, PRJ-002, PRJ-004, ADR-040]
     revalidated:
-      at: 2026-10-01T09:44:08Z
-      outcome: unchanged
-      unchanged-because: "typing-only change in the package for the type-checking gate (PRJ-010): suppression comments removed; behaviour unchanged"
+      at: 2026-10-01T19:29:51Z
+      outcome: updated
 ---
 
 # Release flow — changesets + the release step
@@ -307,7 +306,7 @@ PR** a human merges — it is *not* auto-run on every merge.
 |---|---|---|
 | `pkit release plan` | no | Preview the computed release (which tiers move, to what, and the notes). |
 | `pkit release apply` | yes | Consume changesets → compute each tier from current `main` → write versions → broaden `requires_backbone` → raise declared floors → update `CHANGELOG.md` → delete consumed changesets. Confirms first (`--yes` for CI). Tagging is a separate step (below); `--tag`/`--push` opt in. |
-| `pkit release merge <pr>` | yes (merges) | Merge a release PR (the sanctioned path — below). Guarded to `release/*` heads; merges only an open, mergeable, green PR as one squash commit whose subject is the PR title, head branch deleted on merge. Does not tag. `--dry-run` reports without merging. |
+| `pkit release merge <pr>` | yes (merges) | Merge a release PR (the sanctioned path — below). Guarded to `release/*` heads; merges only an open, mergeable, green PR as one squash commit whose subject is the PR title — through the base's merge queue where it has one — and deletes the head branch once GitHub reports the PR merged. Does not tag. `--dry-run` reports without merging; `--no-wait` / `--wait-minutes` set how long it waits for a queue. |
 | `pkit release publish-notes <version>` | no (publishes) | Publish a **notes-only** GitHub Release for tag `v<version>`, body = that version's `CHANGELOG.md` section (below). Idempotent (updates if it exists); **no artifact**. `--dry-run` prints the notes without calling `gh`. |
 | `pkit release check` | no | The CI guard (below). |
 | `pkit release check-shareable <component>` | no | Pre-sharing lint: is a capability ready to be consumed externally-sourced (COR-041)? (below). |
@@ -417,7 +416,7 @@ release commit, which does not exist yet when `apply` runs. The sequence:
 
     pkit release apply                 # on the release branch: write versions + changelog
     # commit the release; open the release PR to main
-    pkit release merge <pr>            # merge the release PR (checked; one squash commit, head branch deleted)
+    pkit release merge <pr>            # merge the release PR (checked; one squash commit, through the queue if any; head branch deleted)
     # release-tag.yml cuts v<new-backbone> on the push to main — or, fully manual:
     pkit version tag --push            # on main: cut v<new-backbone> (PRJ-004)
 
@@ -447,18 +446,63 @@ into it (COR-014). Instead the release flow owns its own merge verb, beside the
   required checks green; a conflicting, red, or still-running PR is refused with
   a clear reason.
 - **Merges** per the project's merge convention: one squash commit on the
-  base branch whose subject is the PR title, head branch deleted on merge. The
-  head is deleted through the API rather than gh's local checkout, and local
-  cleanup (switch to the base, fast-forward, delete the local head) is
-  best-effort, so a run from a worktree or a detached HEAD completes once the
-  merge lands. A head that lives in a fork is never deleted — its name is the
-  fork author's choice and could name an unrelated branch here. No
+  base branch whose subject is the PR title, pinned to the head whose checks
+  it read, head branch deleted on merge. The merge is the backbone's one merge
+  mechanic (`pkit pull-request`), the one project-management's merge verbs
+  land issue PRs with. A merge command that succeeds is not taken for a
+  merge: the PR is read again, and only once GitHub reports it merged is the
+  head branch deleted — through the API rather than gh's local checkout,
+  then a best-effort local cleanup (switch to the base, fast-forward, delete
+  the local head), so a run from a worktree or a detached HEAD completes once
+  the merge lands. The local head is deleted only when everything on it
+  merged — its tip is the head the PR merged at, or behind it; a local head
+  holding commits past it, or one this clone cannot compare, is kept with a
+  warning. A merge at a head other than the one whose checks were read is
+  warned about. A head that lives in a fork is never deleted — its name is
+  the fork author's choice and could name an unrelated branch here. No
   `Closes #N` requirement — a release PR has none.
+- **Lands through the merge queue** where the base has one, rather than
+  around it. The queue makes the squash commit itself, by its own merge
+  method and from the repository's squash-commit defaults, ignoring what a
+  merge command passes — so the run refuses, enqueuing nothing, unless the
+  queue squashes and the defaults are the PR title and the PR body
+  (`PR_TITLE` and `PR_BODY`; set them with `gh api -X PATCH
+  repos/{owner}/{repo} -f squash_merge_commit_title=PR_TITLE -f
+  squash_merge_commit_message=PR_BODY`). A head the queue already dropped is
+  not enqueued again unchanged: its checks may have failed on the merge the
+  queue was about to make, or a maintainer may have taken it out on purpose.
+  The run refuses, naming when and why the queue dropped it; push a fix and
+  run again, or pass `--force` to enqueue the same head again — the rule
+  project-management's merge verbs keep. It enqueues the PR pinned to the
+  checked head, prints where it stands (`position 2 in the queue, awaiting
+  checks, about 5 min to merge`), and waits for the merge — as long as the
+  queue estimates plus 2 minutes, at most 30, or `--wait-minutes`. Then:
+  - **merged** — the head branch is deleted, exit 0;
+  - **still queued** when the wait ends, or with `--no-wait` at once — exit
+    4, nothing deleted; the PR is accepted, and the same command run again
+    once it has merged deletes the head branch. A run on a PR already in the
+    queue waits for it rather than enqueueing it again — warning when the
+    queue would not make the release's squash commit, since the PR lands as
+    the queue composes it unless it is taken out first — and a run on a
+    merged PR runs only the clean-up;
+  - **dropped** by the queue — its checks failed on the merge it was about
+    to make, or it no longer merged cleanly — exit 3, with what the queue
+    reported; nothing is deleted. Fix it and run again;
+  - **head moved** after the checks were read — the PR is taken out of the
+    queue, so commits nobody checked do not merge; exit 3, nothing deleted.
+
+  Without a queue the merge is direct, pinned to the checked head; if GitHub
+  then reports the PR queued rather than merged (a queue switched on
+  meanwhile), it is waited for as above, and if GitHub cannot be read to
+  confirm the merge the run exits 4 with nothing deleted, for a re-run to
+  complete. A direct merge gh accepted that GitHub never reports merged
+  exits 3, naming the PR's state — nothing is deleted.
 - **Does not tag.** `release-tag.yml` cuts the backbone tag on the resulting
   push to `main` (VERSION-driven, PRJ-004); the merge and the tag stay split.
-- **Reports cleanly** when the PR is already merged or closed (idempotent — not
-  an error), and derives the repo from the ambient `gh` context (no hardcoded
-  owner/repo), so it is project-neutral.
+- **Is idempotent**: on a closed PR it reports there is nothing to merge, and
+  on a merged one it runs only the clean-up — neither is an error. It derives
+  the repo from the ambient `gh` context (no hardcoded owner/repo), so it is
+  project-neutral.
 
 It stays **human-gated**: a human decides to run it; nothing auto-merges.
 
@@ -591,12 +635,24 @@ trusted — is a downstream change.
 ## The surface-without-changeset CI guard
 
 `pkit release check [--base <ref>]` fails a PR that touches a component's
-surface but ships no changeset for it. The diff runs from where the branch left
+surface but adds no changeset for it. The diff runs from where the branch left
 its base: `--base`, else `$PKIT_CHECK_BASE`, else the project's default branch
 (COR-054; `pkit repository base` shows it). Wired as a PR-scoped step in
 `.github/workflows/checks.yml` (it needs the PR base ref and PR labels, which a
 local pre-push hook lacks — so it is not in `scripts/check.sh`). Run it locally
 with `pkit release check`.
+
+**What a green surface check means.** Every component whose surface the diff
+touches is named by a changeset the diff itself carries — a file under
+`.changes/unreleased/` it adds, edits or renames — or an escape hatch or the
+release-PR exemption (below) waived the check. A pending changeset the diff
+leaves alone does not count, even when it names the same component: one an
+earlier PR merged, or one merging the base brought onto the branch, declares
+that PR's change, not this one's. Editing a pending changeset counts whatever
+the edit — the guard reads which files the diff changes, not what changed in
+them — so extending a pending changeset's note to cover this change declares
+it; review judges whether the note does. The diff is committed work only: a
+changeset not yet committed is not in it.
 
 **A declared floor rides on its component or a release of it (PRJ-002 D4).**
 From the same diff, the guard also fails a PR that declares a
@@ -627,8 +683,8 @@ deletes changesets, so it declares no floor.
 **Escape hatches for the surface check** (so trivia / docs PRs aren't forced
 into ceremony):
 
-1. A **`none` changeset** naming the component — an in-repo, reviewable "not a
-   surface change" declaration.
+1. A **`none` changeset** naming the component, carried by the PR like any
+   other — an in-repo, reviewable "not a surface change" declaration.
 2. The **`skip-changeset` label** — surfaced to the guard as
    `PKIT_CHANGESET_SKIP=1`; passes the surface check unconditionally.
 

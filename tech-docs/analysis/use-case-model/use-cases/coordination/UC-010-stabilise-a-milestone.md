@@ -20,9 +20,9 @@ pkit:
       artefact:
         - ACT-operator
     revalidated:
-      at: 2026-10-01T15:15:12Z
+      at: 2026-10-01T21:03:30Z
       outcome: unchanged
-      unchanged-because: closing the Milestone after the release (5a) now rolls a date-triggered close's open children forward; the stabilisation line, its lift, release scope and the guards are untouched, and the release Milestone closes with its children closed
+      unchanged-because: "#1242 now only shares start-work's early check, read from labels and milestone as before, with review-work; the stabilisation guard on start-work is still unbuilt and nothing here depends on that check, so it holds"
 ---
 
 # UC-010 — Stabilise a Milestone for a release

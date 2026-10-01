@@ -460,6 +460,100 @@ def test_a_merge_reads_each_parent_under_the_files_name_there(timeline: Timeline
     assert _summary(result) == [("stale", "docs/guide.md", None, moved)]
 
 
+# --- a merge that keeps the base side's revalidation (#1217) -----------------------------
+
+T4 = "2026-10-04T08:15:00Z"
+
+
+@dataclass(frozen=True)
+class KeptBaseSide:
+    """The commits `_kept_base_side` lays down."""
+
+    revalidated: str  # main: the guide revalidated after main changed the CLI
+    changed: str  # topic: the CLI changed, dated after main's revalidation
+    dropped: str  # topic: the guide revalidated against that change, dated later still
+    merge: str  # topic: main merged in, keeping main's revalidation
+
+
+def _kept_base_side(timeline: Timeline, *, edits_body: bool) -> KeptBaseSide:
+    """`base`; on main the CLI changed and the guide revalidated; on `topic`, off `base` and
+    dated after both, the CLI changed elsewhere and the guide revalidated — its `at` conflicting
+    with main's; then `topic` merges main and keeps main's revalidation, the state `pkit
+    friction resolve` leaves where both sides revalidated. With `edits_body`, topic's
+    revalidation edited the body too, kept by the merge beside main's block, so the merge
+    commit lists the guide; without, the merged guide is main's, and the merge lists nothing.
+    """
+    repo = timeline.adopter
+    timeline.start({"docs/guide.md": guide()})
+    repo.checkout("topic", create=True)
+    repo.checkout("main")
+    timeline.commit("main: change the CLI", {"src/cli/main.py": "print('cli v2')\n"}, author=ALICE)
+    revalidated = timeline.commit(
+        "main: revalidate the guide", {"docs/guide.md": guide(at=T2, because="checked on main")}
+    )
+    repo.checkout("topic")
+    changed = timeline.commit(
+        "topic: add a flag", {"src/cli/flags.py": "FLAGS = ('--all',)\n"}, author=BOB
+    )
+    body = "Edited on topic." if edits_body else "Body."
+    answer: dict[str, Any] = (
+        {"outcome": "updated", "because": None} if edits_body else {"because": "checked on topic"}
+    )
+    dropped = timeline.commit(
+        "topic: revalidate the guide", {"docs/guide.md": guide(at=T3, body=body, **answer)}
+    )
+    merging = repo.git("merge", "-q", "--no-ff", "--no-commit", "main", check=False)
+    assert merging.returncode == 1, merging.stdout + merging.stderr  # the blocks conflict
+    merge = timeline.commit(
+        "merge main", {"docs/guide.md": guide(at=T2, because="checked on main", body=body)}
+    )
+    return KeptBaseSide(revalidated, changed, dropped, merge)
+
+
+@pytest.mark.parametrize("edits_body", [False, True], ids=["main's-file", "main's-block"])
+def test_a_merge_keeping_the_base_sides_revalidation_has_the_base_sides_point(
+    timeline: Timeline, edits_body: bool
+) -> None:
+    history = _kept_base_side(timeline, edits_body=edits_body)
+    result = _run(timeline)
+    # Topic's revalidation is the newest commit that changed `at`, but the guide no longer
+    # carries the `at` it wrote: main's commit wrote the one it carries, so that is the point.
+    # What topic's revalidation covered — topic's change of the CLI — is stale after it.
+    assert _point(result) == history.revalidated
+    assert _summary(result) == [("stale", "docs/guide.md", "path:src/cli/**", history.changed)]
+    assert result.artefact_reports[0].state is fr.ArtefactState.STALE
+
+
+def test_the_change_check_and_the_whole_repository_check_agree_on_the_base_sides_point(
+    timeline: Timeline,
+) -> None:
+    history = _kept_base_side(timeline, edits_body=False)
+    root = timeline.adopter.root
+
+    # The change check compares with main's tip, whose `at` the guide still carries: no
+    # revalidation stands in the diff, so topic's change of the CLI is friction. The
+    # whole-repository check reads its point at that same commit, the same change stale after.
+    change = fc.run_change_check(root, "main")
+    assert change.base is not None and change.base.commit == history.revalidated
+    assert [(f.kind, f.anchor) for f in change.findings] == [(fc.FindingKind.FRICTION, CLI)]
+    result = _run(timeline)
+    assert _point(result) == change.base.commit
+    assert _summary(result) == [("stale", "docs/guide.md", "path:src/cli/**", history.changed)]
+
+    # Revalidating the combined state answers it in both, from the one commit that wrote it.
+    combined = timeline.commit(
+        "revalidate the combined state",
+        {"docs/guide.md": guide(at=T4, because="checked against both sides' CLI")},
+    )
+    change = fc.run_change_check(root, "main")
+    assert [(f.kind, f.answer) for f in change.findings] == [
+        (fc.FindingKind.ANSWERED, fc.Answer.UNCHANGED)
+    ]
+    result = _run(timeline)
+    assert _point(result) == combined
+    assert _summary(result) == []
+
+
 # --- the cascade along artefact anchors, upstream first -------------------------------
 
 

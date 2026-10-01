@@ -21,9 +21,9 @@ pkit:
       artefact:
         - ACT-operator
     revalidated:
-      at: 2026-10-01T15:15:10Z
+      at: 2026-10-01T19:29:52Z
       outcome: unchanged
-      unchanged-because: close-milestone now rolls a date-triggered close's open children forward to the next Milestone; the release Milestone this use case closes at step 7 has every child closed by step 5's gate, so its close moves nothing and the path stands
+      unchanged-because: the changeset guard now counts only the changesets a pull request adds or edits; the release step and the release pull request this use case walks are untouched, and the guard still exempts a release pull request
 ---
 
 # UC-005 — Cut a release while unfinished work remains

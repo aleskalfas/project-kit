@@ -17,9 +17,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-10-01T16:28:04Z
+      at: 2026-10-01T20:50:05Z
       outcome: unchanged
-      unchanged-because: on this branch DEC-026 changes only its promote-issue row, which states the sequence the command performs — the move first, the milestone second; the work-ownership rules this use case rests on are untouched
+      unchanged-because: "start-work still moves the issue into progress as step 1 says; #1242 now only shares its early check, read from labels and milestone as before, with review-work, and start-work --next stays unbuilt, so the use case holds"
 ---
 
 # UC-002 — Resume a task after its session was interrupted

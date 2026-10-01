@@ -20,9 +20,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-10-01T15:15:15Z
+      at: 2026-10-01T21:03:29Z
       outcome: unchanged
-      unchanged-because: "_lib/milestone.py gains the rollforward reads (the date trigger, the Rollforward target: line, the next-numbered Milestone) and a native-field key on each child; how a session reads its position and the stabilisation from the Milestone is untouched"
+      unchanged-because: "#1242 now only puts start-work's early check, read from labels and milestone as before, and its refusal and failure messages in helpers shared with review-work; the stabilisation guard this use case expects on start-work is still unbuilt, so it holds"
 ---
 
 # UC-007 — Resume sessions killed during a stabilisation

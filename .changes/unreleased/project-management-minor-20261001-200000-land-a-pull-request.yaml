@@ -1,0 +1,35 @@
+component: project-management
+kind: minor
+custom:
+  category: Added
+body: >
+  A new verb, `pkit pm land-work <N>`, lands an issue's pull request in one
+  command (#1203), composing `review-pr` and `done-work`. It replaces three
+  steps run by hand with a wait between them. It pins the PR's head once and
+  waits for the checks on that head, judged as `done-work`'s CI gate judges
+  them: no check reported yet is never green, a green run on an earlier head
+  does not count, and a PR that conflicts with its base, on which no
+  `pull_request` workflow runs, stops at once. It then runs `review-pr` for the
+  reviewers whose verdicts are not fresh for that head, and merges it through
+  `done-work`. The merge is authorised in argv: without `--yes`, off a
+  terminal, it merges nothing, runs `done-work`'s gates as a dry run and stops
+  on a `ready:` line giving the command that merges that head (`--yes
+  --expect-head <sha>`); `--expect-head` stops a run whose head is another.
+  Each step prints one line, and the run stops at the first step that cannot
+  go on, its last line saying why — the push to make, the failed check and
+  its URL, the first line of each blocking finding with its reviewer, the
+  advisories of the approvals. It has one exit code per next action, listed
+  in the README: a needed change (1), nothing changed (2), a head moved or not
+  authorised (3), accepted (4), the wait ran out (5), the review incomplete
+  (6), a re-run completes it (7), ready but not authorised (8). A re-run
+  resumes: green checks on the same head are not waited for, fresh verdicts
+  are not re-run, and a PR that merged meanwhile is completed. No flag skips
+  the checks or the review. The verbs it composes change to support it, a
+  direct run of each behaving as before: `done-work` has `run()`, which says
+  how a run ended — merged, merged with a step after the merge owed, queued,
+  unconfirmed, declined, head moved, refused (and whether a re-run can help),
+  unreadable — and takes the head to land or a merged-only mode, telling a PR
+  lookup gh did not answer from one that found none; `review-pr` has
+  `review()`, which reviews only the head it is handed and keeps only verdicts
+  judged fresh for it; and the CI gate tells the four states of a head's
+  checks apart.

@@ -31,8 +31,9 @@ One case is NOT a silent miss: an **un-bootstrapped project** is refused (exit
 2) by the prerequisite gate every non-exempt pm verb calls (#747). A workstream
 read off assumed kit labels would misreport an adopter who remapped them — a
 confidently wrong answer, worse than none. stdout stays empty, so the
-backbone's consumer (which treats any non-zero exit as "no workstream") sees
-the same degrade it always did.
+backbone's consumer omits the workstream as it does for a miss — and, a
+non-zero exit being a failure rather than a miss, warns, showing the tail of
+this refusal's stderr, so its hint reaches the operator.
 
 Deliberately **not** membership-gated (unlike `show-issue`): it is a passive
 read-only context accessor over the invoker's own branch, and a refusal there

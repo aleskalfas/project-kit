@@ -40,9 +40,9 @@ TERM-integration-branch:
         record:
           - project-management:DEC-013
       revalidated:
-        at: 2026-10-01T10:04:36Z
+        at: 2026-10-01T15:12:48Z
         outcome: unchanged
-        unchanged-because: DEC-013's merge mechanics now state the squash rules a merge queue's repository settings carry (#1011); what an integration branch is, its marker and where its pull requests land are untouched
+        unchanged-because: DEC-013 gains that its merge mechanic is the backbone's, which every command that lands a PR calls; integration branches, which this term defines, are untouched
 TERM-intent-note:
   name: Intent note
   status: active
@@ -56,9 +56,9 @@ TERM-intent-note:
         record:
           - project-management:DEC-044
       revalidated:
-        at: 2026-09-30T23:02:15Z
+        at: 2026-10-01T20:49:54Z
         outcome: unchanged
-        unchanged-because: "#840's lint and format pass reshapes the anchored code without changing what it does, so this page still describes it as it is"
+        unchanged-because: "after #1242 was narrowed, start-work reads the issue's state from labels and milestone as before, through a function shared with review-work, and refuses nothing new; the first intent note start-work --next will write is untouched and still unbuilt, so the term holds"
 TERM-new-front:
   name: New front
   status: active
@@ -71,9 +71,9 @@ TERM-new-front:
         record:
           - project-management:DEC-004
       revalidated:
-        at: 2026-09-30T23:02:15Z
+        at: 2026-10-01T20:49:56Z
         outcome: unchanged
-        unchanged-because: "#840's lint and format pass reshapes the anchored code without changing what it does, so this page still describes it as it is"
+        unchanged-because: "#1242 now only shares start-work's early check, read from labels and milestone as before with no engine read and no new refusal, with review-work; it adds no start guard over fronts, which stays intended design, so the term holds"
 TERM-release-scope:
   name: Release scope
   status: active
@@ -115,9 +115,9 @@ TERM-stabilisation:
           - project-management:DEC-014
           - ADR-019
       revalidated:
-        at: 2026-10-01T10:04:35Z
+        at: 2026-10-01T21:05:10Z
         outcome: unchanged
-        unchanged-because: both merge verbs now enqueue where the base has a merge queue, merge-pr no longer refusing such a base, and count a merge only once GitHub reports it (#1011); the stabilisation phase and the guards it plans on both verbs are untouched, and gap K2 stands while the queue is not on and the stabilisation check is not built
+        unchanged-because: "#1242 only shares start-work's early check, read from labels and milestone as before, and its refusal and late-failure messages with review-work; the stabilisation guard on start-work is still unbuilt and land-work, which main brought in, starts no work, so the term holds"
 ---
 
 # Glossary

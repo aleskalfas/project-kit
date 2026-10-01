@@ -36,6 +36,8 @@ from types import SimpleNamespace
 
 import pytest
 
+from tests import pull_request_backbone
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS_DIR = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
 CAPABILITY_ROOT = SCRIPTS_DIR.parent
@@ -51,7 +53,9 @@ def _direct_merge(module, monkeypatch) -> None:
     merged: list[bool] = []
 
     def read(n, config):
-        return merge_queue.Reading(has_queue=False, pr_state="MERGED" if merged else "OPEN")
+        return pull_request_backbone.reading(
+            merge_queue, has_queue=False, pr_state="MERGED" if merged else "OPEN"
+        )
 
     monkeypatch.setattr(module.merge_queue, "read", read)
     monkeypatch.setattr(
