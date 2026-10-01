@@ -76,6 +76,7 @@ from _lib import (
     axis_carriage,
     axis_labels,
     bootstrap_gate,
+    move_journal,
     session_guard,
     state_timeline,
 )
@@ -91,6 +92,7 @@ from _lib.membership import (
     resolve_capability_root,
     resolve_invoker_identity,
 )
+from _lib.move_journal import PROCESS_ADDRESS
 from _lib.placeholder_detection import (
     PHASE_TRANSITION,
     detect_placeholder_residuals,
@@ -833,9 +835,9 @@ def _walk_parent_chain(body: str) -> list[int]:
 # the domain side-effect (the label/board edit). The engine's detectors
 # reproduce `_infer_current_state` exactly, so the engine position and
 # the local inference agree; the engine is the single source of position
-# truth (the seam-ordering contract in .pkit/process/README.md).
-
-PROCESS_ADDRESS = "project-management:issue-lifecycle"
+# truth (the seam-ordering contract in .pkit/process/README.md). The journal
+# write is `_lib.move_journal`, the one path close-issue records its closes
+# through too (#1231).
 
 
 def _engine_status(issue_number: int) -> dict | None:
@@ -950,92 +952,11 @@ def _landed_moves(
     return "" if events is None else f"state-label-events:{len(events)}"
 
 
-# What a move the engine did not record costs, in each of DEC-049's two modes:
-# with journal logging on the journal is the canonical audit trail and now lacks
-# the move; with it off the tracker is, and the engine keeps no record to miss.
-_JOURNAL_GAP_CLAUSE = (
-    "If this project keeps a journal (journal logging on), the journal is the "
-    "canonical audit trail (DEC-049) and now lacks this move:"
-)
-_TRACKER_TRAIL_CLAUSE = (
-    "If it does not, the tracker is the audit trail and the engine keeps no record to miss."
-)
-
-
-def _journal_move(
-    issue_number: int,
-    from_state: str,
-    target_state: str,
-    actor: str | None,
-    reason: str | None = None,
-) -> None:
-    """Hand the completed move to the engine via `pkit process move` (best-effort).
-
-    Per the seam-ordering contract: the domain side-effect (the label/board
-    edit) has ALREADY been applied by the caller; this only records the move,
-    which the engine appends to its journal where the project keeps one
-    (COR-033 point 7) and validates without recording where it does not. A
-    refusal or a missing `pkit` is logged as a warning and never fails the move —
-    live detection stays authoritative, so the next `status` reflects the real
-    position regardless.
-
-    `from_state` is the position read before the label write, passed as
-    `--from`. Live detection already reads the label just written, so without
-    it the engine would take the target for the origin: it refused a move into
-    a state with no transition to itself (todo → backlog read as backlog →
-    backlog, #1183) and journaled one into a state with such a transition as
-    that self-loop (backlog → in-progress as create-draft).
-
-    `actor` is the invoker's resolved GitHub login. The engine compares it
-    against an authorisation artifact's `produced_by` login for the
-    cross-authority gate (COR-033 P4). When it is None (login unresolved), we
-    omit `--actor` and let the engine apply its own resolved-identity default.
-
-    `reason`, when given, is recorded on the journal entry (`--reason`): the
-    forward cascade names the child move that caused a parent's. A move the
-    invoker asked for directly passes none, and its argv is unchanged.
-    """
-    argv = [
-        "pkit",
-        "process",
-        "move",
-        PROCESS_ADDRESS,
-        "--to",
-        target_state,
-        "--from",
-        from_state,
-        "--subject",
-        str(issue_number),
-    ]
-    if actor:
-        argv += ["--actor", actor]
-    if reason:
-        argv += ["--reason", reason]
-    try:
-        proc = subprocess.run(
-            argv,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-    except (OSError, FileNotFoundError):
-        print(
-            "  [warn] `pkit` not on PATH — the process engine did not record this "
-            f"move. {_JOURNAL_GAP_CLAUSE} re-run under `pkit` to journal it. "
-            f"{_TRACKER_TRAIL_CLAUSE} The label/position is unaffected (live "
-            "detection stays authoritative).",
-            file=sys.stderr,
-        )
-        return
-    if proc.returncode != 0:
-        detail = (proc.stdout or proc.stderr or "").strip()
-        print(
-            f"  [warn] the process engine refused this move: {detail}. "
-            f"{_JOURNAL_GAP_CLAUSE} `pkit pm history {issue_number} --check-drift` "
-            f"will show the gap. {_TRACKER_TRAIL_CLAUSE} The label/position is "
-            "unaffected.",
-            file=sys.stderr,
-        )
+# Hand a completed move to the engine (`pkit process move --from`, best-effort):
+# the one journaling path, shared with close-issue in `_lib.move_journal`.
+# Bound under this module-private name, which the call sites below and the tests
+# that stand in for it use.
+_journal_move = move_journal.journal_move
 
 
 # ---- gh wrappers ----------------------------------------------------
