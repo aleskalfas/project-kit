@@ -8,8 +8,8 @@ this table pins, before any of it moves, what each caller does in each
 scenario, so every change in the series shows as an edited cell with its
 reason.
 
-Each row is a scenario of the series' design note
-(`.pkit/scratchpad/active/*-landing-sequence.md`, "The scenario rows"). Each
+Each row is a scenario of the series' design note (the scratchpad note
+`landing-sequence`, "The scenario table"). Each
 caller runs through its real entry point — `done_work.run`, merge-pr's `main`,
 `pkit release merge` through the CLI, land-work's `main` — on one fake of the
 hosting service and the clone (`tests.hosting_fake`); project-management's
@@ -497,8 +497,8 @@ _NO_FOREIGN_FLAG = NotToday("takes no --allow-foreign-repo: the command has no g
 _NO_NOUN = NotToday("is the backbone: it imports the landing module and asks no command")
 _NO_DOCUMENTS = NotToday("imports the landing module: no document passes between processes")
 _NO_REQUESTING = NotToday(
-    "no `requesting` event exists yet (#1256, #1258); the request-unanswered rows are the "
-    "nearest today"
+    "no `requesting` event exists yet (it comes with `land`, #1258); the request-unanswered "
+    "rows are the nearest today"
 )
 
 _UNGUARDED = (
