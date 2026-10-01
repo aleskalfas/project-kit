@@ -378,27 +378,124 @@ def test_adopter_workstreams_skips_non_string_entries(ci) -> None:
     assert ci._adopter_workstreams(config) == {"cli", "schemas"}
 
 
-# --- titles pattern lookup -------------------------------------------
+# --- titles.yaml checks at filing (#803) ----------------------------
+# main() runs against a staged capability tree carrying the SHIPPED titles.yaml,
+# with every gh call faked; a refused title must stop before `gh issue create`.
+
+_SHIPPED_TITLES = (
+    REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "schemas" / "titles.yaml"
+)
 
 
-def test_title_pattern_for_returns_per_type_regex(ci) -> None:
-    titles = {
-        "formats": {
-            "issue-task": {"pattern": r"^\[Task\] .+$"},
-            "issue-feature": {"pattern": r"^\[Feature\] .+$"},
-        },
-    }
-    assert ci._title_pattern_for(titles, "task") == r"^\[Task\] .+$"
-    assert ci._title_pattern_for(titles, "feature") == r"^\[Feature\] .+$"
+def _stage_filing_tree(tmp_path: Path) -> Path:
+    root = tmp_path / ".pkit" / "capabilities" / "project-management"
+    (root / "schemas").mkdir(parents=True)
+    (root / "templates").mkdir(parents=True)
+    (root / "project").mkdir(parents=True)
+    (root / "schemas" / "issue-types.yaml").write_text(
+        "types:\n"
+        "  task:\n"
+        "    title_prefix: Task\n"
+        "    title_case: title\n"
+        "    parent_issue_types: [feature, umbrella, epic, milestone]\n"
+        "    parent_ref_form: 'Feature: #<N>'\n"
+        "    parent_ref_optional: false\n",
+        encoding="utf-8",
+    )
+    (root / "schemas" / "titles.yaml").write_text(
+        _SHIPPED_TITLES.read_text(encoding="utf-8"), encoding="utf-8"
+    )
+    (root / "templates" / "Task.md").write_text("Feature: #\n\n## What\nfoo\n", encoding="utf-8")
+    (root / "project" / "config.yaml").write_text(
+        "schema_version: 1\ndefault_branch: main\nworkstreams: [spyre]\n", encoding="utf-8"
+    )
+    (root / "project" / "members.yaml").write_text("members: []\n", encoding="utf-8")
+    (root / "project" / "bootstrap-stamp.yaml").write_text(
+        "schema_version: 1\nbootstrap:\n  completed_at: '2026-01-01T00:00:00+00:00'\n"
+        "  capability_version: 0.0.0-test\n  by: bootstrap\n  repo:\n",
+        encoding="utf-8",
+    )
+    return root
 
 
-def test_title_pattern_for_returns_none_for_unknown_type(ci) -> None:
-    titles = {"formats": {"issue-task": {"pattern": "x"}}}
-    assert ci._title_pattern_for(titles, "umbrella") is None
+class _Linked:
+    ok = True
+    detail = ""
 
 
-def test_title_pattern_for_returns_none_on_empty_schema(ci) -> None:
-    assert ci._title_pattern_for({}, "task") is None
+def _file_task(ci, tmp_path, monkeypatch, title: str) -> tuple[int, list[list[str]]]:
+    """Run create-issue main() for a Task titled ``title``; return (rc, every argv run)."""
+    root = _stage_filing_tree(tmp_path)
+    calls: list[list[str]] = []
+
+    def fake_run(cmd, *args, **kwargs):
+        class _Proc:
+            returncode = 0
+            stdout = ""
+            stderr = ""
+
+        calls.append(list(cmd))
+        if "issue" in cmd and "create" in cmd:
+            _Proc.stdout = "https://github.com/acme/repo/issues/55\n"
+        return _Proc()
+
+    monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
+    monkeypatch.setattr(ci.subprocess, "run", fake_run)
+    monkeypatch.setattr(ci.session_guard, "enforce", lambda **k: True)
+    monkeypatch.setattr(ci, "link_sub_issue", lambda *a, **k: _Linked())
+    monkeypatch.setattr(
+        ci.sys,
+        "argv",
+        [
+            "create-issue.py",
+            "--type",
+            "task",
+            "--title",
+            title,
+            "--parent",
+            "1",
+            "--workstream",
+            "spyre",
+            "--capability-root",
+            str(root),
+            "--yes",
+        ],
+    )
+    return ci.main(), calls
+
+
+def _issue_created(calls: list[list[str]]) -> bool:
+    return any("issue" in c and "create" in c for c in calls)
+
+
+def test_filing_refuses_a_conventional_commits_title_before_gh(
+    ci, tmp_path, monkeypatch, capsys
+) -> None:
+    rc, calls = _file_task(
+        ci, tmp_path, monkeypatch, "fix(igw): support a prompt file for the gateway"
+    )
+
+    assert rc == 2
+    assert not _issue_created(calls)
+    assert "title.conventional-commits-prefix" in capsys.readouterr().err
+
+
+def test_filing_warns_on_a_scope_prefix_and_files(ci, tmp_path, monkeypatch, capsys) -> None:
+    rc, calls = _file_task(ci, tmp_path, monkeypatch, "interaction-gateway: support a prompt file")
+
+    assert rc == 0
+    assert _issue_created(calls)
+    assert "[warning] title.scope-prefix" in capsys.readouterr().err
+
+
+def test_filing_a_clean_title_raises_no_title_finding(ci, tmp_path, monkeypatch, capsys) -> None:
+    rc, calls = _file_task(
+        ci, tmp_path, monkeypatch, "Evidence points are keyed so two providers can report one"
+    )
+
+    assert rc == 0
+    assert _issue_created(calls)
+    assert "title." not in capsys.readouterr().err
 
 
 # --- parent-requiredness gate under hierarchy mode (DEC-036 D4, #272) -----

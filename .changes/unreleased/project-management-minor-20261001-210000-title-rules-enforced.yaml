@@ -1,0 +1,24 @@
+component: project-management
+kind: minor
+custom:
+  category: Changed
+body: >
+  Every title rule `titles.yaml` declares now runs (#803); before, only each
+  surface's regex did, and three rules declared as refusals were never checked.
+  A title with a Conventional Commits prefix after its bracket (`[Task] fix:
+  …`, `[EPIC] feat(x): …`) is now refused by `create-issue`, `edit-issue
+  --title` and `validate-issue --phase create`; at a lifecycle transition
+  `validate-issue` reports it as a warning, so an issue filed with one still
+  moves. New warnings, which never block: a lowercase `scope:` token right
+  after the bracket (`[EPIC] sandbox: …`; a colon after a territory named in
+  words is fine), fewer than 30 characters after the prefix, a PR summary that
+  starts with a capital, ends with a period or runs past 50 characters
+  (`validate-pr`), and a Milestone title with no word in it (`create-milestone`).
+  The `scope:` rule, declared as a refusal, is a warning because territory
+  titles of that shape are common. Each validation in `titles.yaml` now names
+  the check that runs it (`check`) and its finding label (`name`), which
+  `titles.schema.json` requires, so a rule nothing enforces cannot be declared.
+  The title descriptions and examples now state the house style per type:
+  EPIC, Feature and Umbrella titles name a territory; Task titles say what is
+  true once the work is done, or the work in the imperative for a decision,
+  a document or an exploration.

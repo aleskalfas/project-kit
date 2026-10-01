@@ -7,8 +7,36 @@
 # glance); PR titles are read in `git log` (need Conventional Commits
 # for tooling).
 #
-# Consumed by the create-issue skill (title generation at filing) and
-# the validate-body skill (title check at filing + edit time).
+# Every validation names the check that enforces it (`check`) and the
+# finding label a violation is reported under (`name`). The one reader
+# is `scripts/_lib/title_rules.py`, used by create-issue, edit-issue
+# (`--title`), validate-issue, validate-pr and create-milestone:
+#
+#   pattern         the title matches the entry's `pattern`
+#   forbid          the title's text contains no match for `regex`
+#   require         the title's text contains a match for `regex`
+#   min-length      the title's text is at least `length` characters
+#   max-length      the title's text is at most `length` characters
+#   kind-prefix     an issue's prefix matches its kind label (validate-issue)
+#   type-alignment  a PR's type matches its closing issues' kinds (validate-pr)
+#
+# The text is the pattern's `text` group — the title after its prefix,
+# the PR summary after `type(scope): ` — or the whole title when the
+# pattern has none.
+#
+# Wording rules (forbid / require / min-length / max-length) are
+# enforced where a title is written — filing, retitling, validate-issue
+# --phase create — at the severity declared. Validating an existing
+# issue at a lifecycle transition reports a blocking one as a warning,
+# so a title written before the rule was enforced does not wall the
+# move in flight.
+#
+# The lowercase `scope:` rule is a warning, not a refusal: a territory
+# that is itself a lowercase name (`project-management: …`) takes the
+# same shape, and refusing it would wall titles a team chose on
+# purpose. The Conventional Commits rule refuses: a commit type after
+# the bracket is never a territory. The two do not overlap — the
+# `scope:` regex skips a commit type, so a title draws one finding.
 
 schema_version: 1
 
@@ -22,85 +50,143 @@ formats:
   issue-epic:
     surface_kind: issue
     applies_to_issue_type: "[issue-types:epic]"
-    pattern: '^\[EPIC\] .+$'
+    pattern: '^\[EPIC\] (?P<text>.+)$'
     description: |
-      `[EPIC] <plain English sentence>`. `EPIC` is all-caps. The
-      sentence is plain English, imperative or descriptive — written
-      for a human browsing the board, not for git history. No
-      `scope:` colon prefix; no Conventional Commits formatting.
+      `[EPIC] <territory>`. `EPIC` is all-caps. The text names the
+      territory the EPIC covers: a noun phrase, optionally followed by
+      a colon and a short specifier that narrows it. It is read on the
+      board beside its sibling EPICs, so it says which area the work is
+      in, not a task to do (`Migrate the work-tracker …`) or a user
+      story (`Human user can replace …`). Name the territory in words:
+      a Conventional Commits prefix (`feat: …`, `fix(cli): …`) or a
+      lowercase `scope:` token right after the bracket is the PR title's
+      shape. A colon after a territory named in words is the specifier.
     examples_good:
-      - "[EPIC] Human user can replace AI user in the sandbox"
-      - "[EPIC] Migrate the legacy work-tracker into Projects v2"
+      - "[EPIC] Multi-instance ownership & coordination"
+      - "[EPIC] Modularity, configuration and extension"
+      - "[EPIC] Permission model: model first-class harness tools in the catalog (agent-dispatch first)"
     examples_bad:
-      - title: "[Epic] Human user can replace AI user"
+      - title: "[Epic] Multi-instance ownership & coordination"
         reason: "`Epic` is title-case; EPIC must be all-caps."
-      - title: "[EPIC] sandbox: human replaces AI user"
-        reason: "Contains `scope:` colon prefix; that shape is reserved for PRs."
+      - title: "[EPIC] feat(ownership): multi-instance coordination"
+        reason: "A Conventional Commits prefix after the bracket; that shape is reserved for PRs."
+      - title: "[EPIC] sandbox: human user can replace AI user"
+        reason: "A lowercase `scope:` token right after the bracket is the PR scope shape; name the territory in words (warning)."
       - title: "feat(epic): human user replaces AI user"
         reason: "Conventional Commits format is reserved for PRs."
+      - title: "[EPIC] Ownership"
+        reason: "Under 30 characters after the prefix (warning); a territory this short rarely tells siblings apart."
     validations:
-      - rule: "Title starts with `[EPIC] ` (all-caps EPIC, single space after bracket)."
+      - rule: "Title starts with `[EPIC] ` (all-caps EPIC, single space after the bracket)."
+        check: pattern
+        name: title.pattern
         severity: "[validation-severity:hard-reject]"
-      - rule: "Title contains no `<word>:` scope prefix after the bracket."
+      - rule: "No Conventional Commits prefix right after the bracket: a commit type, optionally with a `(scope)` or `!`, then a colon (`feat: …`, `fix(cli): …`). That shape is reserved for PR titles."
+        check: forbid
+        regex: '(?i)^(feat|fix|docs|test|refactor|chore|ci|decision|build|perf|style|revert)(\([^)]*\))?!?:'
+        name: title.conventional-commits-prefix
         severity: "[validation-severity:hard-reject]"
-      - rule: "Title does not match a Conventional Commits pattern (`type(scope):` or `type:`)."
-        severity: "[validation-severity:hard-reject]"
-      - rule: "Title length is at least ~30 chars after the `[EPIC] ` prefix."
+      - rule: "No lowercase `scope:` token right after the bracket (`sandbox: …`), the PR scope shape; name the territory in words. A colon after a territory named in words (`Permission model: …`) is not this."
+        check: forbid
+        regex: '^(?!(feat|fix|docs|test|refactor|chore|ci|decision|build|perf|style|revert)[(!:])[a-z][a-z0-9_./-]*(\([^)]*\))?!?:\s'
+        name: title.scope-prefix
+        severity: "[validation-severity:warning]"
+      - rule: "The text after `[EPIC] ` is at least 30 characters."
+        check: min-length
+        length: 30
+        name: title.short
         severity: "[validation-severity:warning]"
 
   issue-feature:
     surface_kind: issue
     applies_to_issue_type: "[issue-types:feature]"
-    pattern: '^\[Feature\] .+$'
+    pattern: '^\[Feature\] (?P<text>.+)$'
     description: |
-      `[Feature] <plain English sentence>`. `Feature` is title-case.
-      Same plain-English rules as EPIC titles.
+      `[Feature] <territory>`. `Feature` is title-case. Like an EPIC
+      title, the text names the territory the Feature delivers: a noun
+      phrase, optionally followed by a colon and a short specifier
+      (`Process substrate: open-region slot`). Name it in words, with
+      no Conventional Commits prefix and no lowercase `scope:` token
+      right after the bracket.
     examples_good:
-      - "[Feature] Persona harness with three-channel session model"
-      - "[Feature] Single-command branch open and PR auto-create"
+      - "[Feature] Instance identity + ownership lifecycle"
+      - "[Feature] Process substrate: open-region slot"
+      - "[Feature] Connection points: role-named data and process connections, one graph, exact plans"
     examples_bad:
-      - title: "[feature] persona harness"
+      - title: "[feature] Instance identity + ownership lifecycle"
         reason: "`feature` must be title-case (`Feature`)."
       - title: "feat(harness): persona harness three-channel"
         reason: "Conventional Commits format is reserved for PRs."
+      - title: "[Feature] feat(instances): identity and ownership lifecycle"
+        reason: "A Conventional Commits prefix after the bracket; that shape is reserved for PRs."
+      - title: "[Feature] instances: identity and ownership lifecycle"
+        reason: "A lowercase `scope:` token right after the bracket is the PR scope shape (warning)."
     validations:
-      - rule: "Title starts with `[Feature] ` (title-case, single space after bracket)."
+      - rule: "Title starts with `[Feature] ` (title-case, single space after the bracket)."
+        check: pattern
+        name: title.pattern
         severity: "[validation-severity:hard-reject]"
-      - rule: "Title contains no `<word>:` scope prefix after the bracket."
+      - rule: "No Conventional Commits prefix right after the bracket: a commit type, optionally with a `(scope)` or `!`, then a colon (`feat: …`, `fix(cli): …`). That shape is reserved for PR titles."
+        check: forbid
+        regex: '(?i)^(feat|fix|docs|test|refactor|chore|ci|decision|build|perf|style|revert)(\([^)]*\))?!?:'
+        name: title.conventional-commits-prefix
         severity: "[validation-severity:hard-reject]"
-      - rule: "Title does not match a Conventional Commits pattern."
-        severity: "[validation-severity:hard-reject]"
-      - rule: "Title length is at least ~30 chars after the `[Feature] ` prefix."
+      - rule: "No lowercase `scope:` token right after the bracket (`harness: …`), the PR scope shape; name the territory in words. A colon after a territory named in words (`Process substrate: …`) is not this."
+        check: forbid
+        regex: '^(?!(feat|fix|docs|test|refactor|chore|ci|decision|build|perf|style|revert)[(!:])[a-z][a-z0-9_./-]*(\([^)]*\))?!?:\s'
+        name: title.scope-prefix
+        severity: "[validation-severity:warning]"
+      - rule: "The text after `[Feature] ` is at least 30 characters."
+        check: min-length
+        length: 30
+        name: title.short
         severity: "[validation-severity:warning]"
 
   issue-umbrella:
     surface_kind: issue
     applies_to_issue_type: "[issue-types:umbrella]"
-    pattern: '^\[Umbrella\] .+$'
+    pattern: '^\[Umbrella\] (?P<text>.+)$'
     description: |
-      `[Umbrella] <plain English sentence>`. `Umbrella` is title-case.
+      `[Umbrella] <territory>`. `Umbrella` is title-case. The text
+      names what the bucket gathers — a noun phrase, such as the fixes
+      or defects a piece of work surfaced — not a task to do. Name it
+      in words, with no Conventional Commits prefix and no lowercase
+      `scope:` token right after the bracket.
     examples_good:
-      - "[Umbrella] Consumer walkthrough polish fixes"
-      - "[Umbrella] Migration tooling improvements"
+      - "[Umbrella] Project-management fixes surfaced by the agent-teams investigation"
+      - "[Umbrella] Tooling defects surfaced by the harness-requirement work"
     examples_bad:
-      - title: "[Umbrella] CLI: polish round"
-        reason: "Contains `scope:` colon prefix; reserved for PRs."
+      - title: "[Umbrella] cli: polish round for the walkthrough"
+        reason: "A lowercase `scope:` token right after the bracket is the PR scope shape (warning)."
+      - title: "[Umbrella] fix(cli): polish round for the walkthrough"
+        reason: "A Conventional Commits prefix after the bracket; that shape is reserved for PRs."
     validations:
-      - rule: "Title starts with `[Umbrella] ` (title-case, single space after bracket)."
+      - rule: "Title starts with `[Umbrella] ` (title-case, single space after the bracket)."
+        check: pattern
+        name: title.pattern
         severity: "[validation-severity:hard-reject]"
-      - rule: "Title contains no `<word>:` scope prefix after the bracket."
+      - rule: "No Conventional Commits prefix right after the bracket: a commit type, optionally with a `(scope)` or `!`, then a colon (`feat: …`, `fix(cli): …`). That shape is reserved for PR titles."
+        check: forbid
+        regex: '(?i)^(feat|fix|docs|test|refactor|chore|ci|decision|build|perf|style|revert)(\([^)]*\))?!?:'
+        name: title.conventional-commits-prefix
         severity: "[validation-severity:hard-reject]"
-      - rule: "Title does not match a Conventional Commits pattern."
-        severity: "[validation-severity:hard-reject]"
-      - rule: "Title length is at least ~30 chars after the `[Umbrella] ` prefix."
+      - rule: "No lowercase `scope:` token right after the bracket (`cli: …`), the PR scope shape; name what the bucket gathers in words."
+        check: forbid
+        regex: '^(?!(feat|fix|docs|test|refactor|chore|ci|decision|build|perf|style|revert)[(!:])[a-z][a-z0-9_./-]*(\([^)]*\))?!?:\s'
+        name: title.scope-prefix
+        severity: "[validation-severity:warning]"
+      - rule: "The text after `[Umbrella] ` is at least 30 characters."
+        check: min-length
+        length: 30
+        name: title.short
         severity: "[validation-severity:warning]"
 
   issue-task:
     surface_kind: issue
     applies_to_issue_type: "[issue-types:task]"
-    pattern: '^\[(Task|Bug|Docs|Test|Refactor|Chore)\] .+$'
+    pattern: '^\[(Task|Bug|Docs|Test|Refactor|Chore)\] (?P<text>.+)$'
     description: |
-      `[<Kind-Prefix>] <plain English sentence>`. The prefix matches
+      `[<Kind-Prefix>] <plain English>`. The prefix matches
       the Task's kind label per [classification:axes.type.title_prefix_by_value]:
       `[Task]` for kind=feature, `[Bug]` for kind=bug, `[Docs]` for
       kind=docs, `[Test]` for kind=test, `[Refactor]` for
@@ -111,32 +197,58 @@ formats:
       drift is made; warning at `--phase transition` (the default), where a
       pre-existing drift does not affect the move in flight — the closing
       PR's conv-type reads the kind label, not the prefix.
+
+      The text says what the work achieves. The house form states what
+      is true once the work is done, so the title still reads true when
+      the issue closes (`close-issue journals each close it makes`); a
+      Bug states the corrected behaviour, not the symptom, which reads
+      false once the fix lands. Work whose deliverable is a decision, a
+      document or an exploration takes the imperative instead
+      (`Decide whether …`, `Scope the … rule to …`). No Conventional
+      Commits prefix and no lowercase `scope:` token right after the
+      bracket; a colon later in the text is fine.
     examples_good:
-      - "[Task] Install the Claude Code CLI inside the sandbox image"
-      - "[Bug] Fix pkit install capability self-host destroys source tree"
-      - "[Docs] Expand .pkit/cli/README.md into a CLI authoring manual"
-      - "[Test] Add coverage for the schemas-bindings resolver fallback"
-      - "[Refactor] Replace CapabilityDispatchGroup caching with stateless lookup"
-      - "[Chore] Bump backbone to v1.30.0 ahead of release-management capability"
+      - "[Task] Evidence points are keyed so two providers can report one artefact at one commit"
+      - "[Task] Decide whether behaviour tied to one hosting service may live in the backbone under a qualifier"
+      - "[Bug] The forward cascade reaches every ancestor, as the closure rules say"
+      - "[Docs] Scope the degrade-and-report rule to permission realization"
+      - "[Test] Test repositories are created with git's automatic maintenance off"
+      - "[Refactor] One resolver wiring for done-work, review-pr and show-pr"
+      - "[Chore] Register methodology-reviewer as a baseline local reviewer"
     examples_bad:
       - title: "[Task] interaction-gateway: support IGW_PROMPT_FILE"
-        reason: "Contains `scope:` colon prefix; reserved for PRs."
+        reason: "A lowercase `scope:` token right after the bracket is the PR scope shape (warning)."
+      - title: "[Task] feat(igw): support a prompt file for the gateway"
+        reason: "A Conventional Commits prefix after the bracket; that shape is reserved for PRs."
       - title: "feat(igw): add prompt-file support"
         reason: "Conventional Commits format is reserved for PRs."
-      - title: "[Task] Fix the auth bug"
+      - title: "[Task] Fix the auth bug in the login flow"
         reason: "Title prefix doesn't match kind. A `type:bug` Task uses `[Bug]`, not `[Task]`."
       - title: "[Task] add CLI"
-        reason: "Too terse — passes the regex but fails the soft 30-char rule."
+        reason: "Too terse — passes the pattern but draws the 30-character warning."
     validations:
       - rule: "Title starts with one of the kind-driven prefixes (`[Task]`, `[Bug]`, `[Docs]`, `[Test]`, `[Refactor]`, `[Chore]`) with a single space after the bracket."
+        check: pattern
+        name: title.pattern
         severity: "[validation-severity:hard-reject]"
       - rule: "Title prefix matches the issue's kind label per classification.yaml's `title_prefix_by_value` map. The severity below applies at create; at transition the same finding is a warning (phase-split, see description)."
+        check: kind-prefix
+        name: title.kind-prefix-mismatch
         severity: "[validation-severity:hard-reject]"
-      - rule: "Title contains no `<word>:` scope prefix after the bracket."
+      - rule: "No Conventional Commits prefix right after the bracket: a commit type, optionally with a `(scope)` or `!`, then a colon (`feat: …`, `fix(cli): …`). That shape is reserved for PR titles."
+        check: forbid
+        regex: '(?i)^(feat|fix|docs|test|refactor|chore|ci|decision|build|perf|style|revert)(\([^)]*\))?!?:'
+        name: title.conventional-commits-prefix
         severity: "[validation-severity:hard-reject]"
-      - rule: "Title does not match a Conventional Commits pattern."
-        severity: "[validation-severity:hard-reject]"
-      - rule: "Title length is at least ~30 chars after the prefix."
+      - rule: "No lowercase `scope:` token right after the bracket (`interaction-gateway: …`), the PR scope shape; say what the work achieves in words."
+        check: forbid
+        regex: '^(?!(feat|fix|docs|test|refactor|chore|ci|decision|build|perf|style|revert)[(!:])[a-z][a-z0-9_./-]*(\([^)]*\))?!?:\s'
+        name: title.scope-prefix
+        severity: "[validation-severity:warning]"
+      - rule: "The text after the prefix is at least 30 characters."
+        check: min-length
+        length: 30
+        name: title.short
         severity: "[validation-severity:warning]"
 
   milestone:
@@ -156,12 +268,15 @@ formats:
       - title: "M1"
         reason: "Pure numeric name with no semantic content; reader can't tell what the milestone covers."
     validations:
-      - rule: "Title contains at least one alphabetic word beyond a numeric sort prefix (so `M1 — Foo` passes; `M1` alone is flagged)."
+      - rule: "Title contains a word of at least two letters beyond a numeric sort prefix (so `M1 — Foo` passes; `M1` alone is flagged)."
+        check: require
+        regex: '[^\W\d_]{2,}'
+        name: title.numeric-only
         severity: "[validation-severity:warning]"
 
   pr:
     surface_kind: pr
-    pattern: '^(feat|fix|docs|test|refactor|chore|ci)(\([^)]+\))?: .+$'
+    pattern: '^(feat|fix|docs|test|refactor|chore|ci)(\([^)]+\))?: (?P<text>.+)$'
     description: |
       Conventional Commits: `<type>(<scope>): <summary>`. `<type>`
       matches the closing Task's `type:*` label per the
@@ -206,10 +321,20 @@ formats:
         reason: "`decision` is reserved for commit/branch granularity, not PR titles; under squash-merge the PR title becomes the landed commit, so a decision-record PR uses `docs(<scope>): …` (e.g. `docs(pm): …`)."
     validations:
       - rule: "Title matches the Conventional Commits regex (`<type>(<scope>)?: <summary>`)."
+        check: pattern
+        name: title.pattern
         severity: "[validation-severity:hard-reject]"
       - rule: "`<type>` matches the closing Task's `type:*` label per classification.yaml's `pr_type_mapping`. Multi-issue PRs with mixed types warn instead."
+        check: type-alignment
+        name: title.type-mismatch
         severity: "[validation-severity:hard-reject]"
-      - rule: "`<summary>` is lowercase and has no trailing period."
+      - rule: "`<summary>` does not start with a capital letter and has no trailing period."
+        check: forbid
+        regex: '^[A-Z]|\.$'
+        name: title.summary-style
         severity: "[validation-severity:warning]"
-      - rule: "`<summary>` is ~50 chars or shorter."
+      - rule: "`<summary>` is 50 characters or shorter."
+        check: max-length
+        length: 50
+        name: title.summary-length
         severity: "[validation-severity:warning]"

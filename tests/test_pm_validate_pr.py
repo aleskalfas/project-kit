@@ -115,6 +115,58 @@ def test_with_closing_references_adds_only_the_missing_ones() -> None:
     assert with_closing_references("", [7]) == "Closes #7\n"
 
 
+# --- the shipped titles.yaml's `pr` checks (#803) ----------------------
+
+
+@pytest.fixture(scope="module")
+def shipped_titles() -> dict:
+    from ruamel.yaml import YAML
+
+    path = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "schemas" / "titles.yaml"
+    return YAML(typ="safe").load(path.read_text(encoding="utf-8"))
+
+
+def _title_findings(vp, title, shipped_titles, classification, git_conv) -> list[tuple[str, str]]:
+    findings = vp._validate_pr(
+        pr_title=title,
+        pr_body="Closes #42\n\n## Summary\nfoo\n\n## Doc impact\nnone.",
+        titles=shipped_titles,
+        classification=classification,
+        git_conv=git_conv,
+        closing_type_labels=["type:feature"],
+    )
+    return [(f.severity, f.label) for f in findings]
+
+
+def test_shipped_pr_title_in_house_style_is_clean(
+    vp, shipped_titles, classification, git_conv
+) -> None:
+    found = _title_findings(
+        vp, "feat(pm): refuse a title the schema forbids", shipped_titles, classification, git_conv
+    )
+    assert found == []
+
+
+def test_shipped_pr_summary_style_and_length_warn(
+    vp, shipped_titles, classification, git_conv
+) -> None:
+    found = _title_findings(
+        vp,
+        "feat(pm): Refuse a title the schema forbids, at filing and at every retitle.",
+        shipped_titles,
+        classification,
+        git_conv,
+    )
+    assert found == [("warning", "title.summary-style"), ("warning", "title.summary-length")]
+
+
+def test_shipped_pr_title_off_the_pattern_is_hard_reject(
+    vp, shipped_titles, classification, git_conv
+) -> None:
+    found = _title_findings(vp, "Sandbox: add CLI", shipped_titles, classification, git_conv)
+    assert found == [("hard-reject", "title.pattern")]
+
+
 # --- title pattern ---------------------------------------------------
 
 

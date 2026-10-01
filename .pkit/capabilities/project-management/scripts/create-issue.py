@@ -8,7 +8,7 @@
 """Project-management capability — create-issue (verb-subject per DEC-020).
 
 Files a new issue against the methodology's body shape: validates the
-type, stamps the title against `titles.yaml`'s per-type regex,
+type, checks the title against `titles.yaml`'s per-type rules,
 composes the body from the matching `templates/<Type>.md`, applies the
 classification axes (type:*, priority:*, workstream:* per
 `classification.yaml`), and posts the issue via `gh issue create`.
@@ -76,6 +76,7 @@ from _lib import (
     containment,
     provenance,
     session_guard,
+    title_rules,
 )
 from _lib.containment import link_sub_issue
 from _lib.gh import gh_project_run, gh_run, load_adopter_config
@@ -105,8 +106,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
             "File a new issue against the project-management methodology's "
-            "body shape. Composes title + body from the type's template + "
-            "titles regex, applies classification labels, optionally adds "
+            "body shape. Composes title + body from the type's template, "
+            "checks the title against titles.yaml, applies classification labels, optionally adds "
             "to the configured Projects v2 board (per DEC-019)."
         ),
     )
@@ -320,20 +321,27 @@ def main() -> int:
     title_prefix = _title_prefix_for(type_entry, classification, args.type, args.kind)
     full_title = f"[{title_prefix}] {args.title.strip()}"
 
-    # Validate against titles.yaml's pattern for this surface.
+    # Run titles.yaml's checks for this type — the pattern and every declared
+    # wording rule (#803) — at their declared severity, before any gh call:
+    # filing writes the title. A blocking finding refuses; a warning is shown
+    # and filing goes on.
     #
     # Left NOT substrate-map-aware (deferred to #4), and safe only because create
     # composes `full_title` from the KIT's own title vocabulary and does NOT
     # honour any substrate-map write-side `title-prefix` remap — so the pattern it
     # checks is always the one it just wrote. This flips to a live false-refuse (a
     # (b)-class gate) if/when #4's write-side prefix honouring lands; revisit then.
-    title_pattern = _title_pattern_for(titles, args.type)
-    if title_pattern and not re.match(title_pattern, full_title):
-        print(
-            f"error: composed title {full_title!r} does not match "
-            f"titles.yaml pattern for {args.type!r}: {title_pattern!r}",
-            file=sys.stderr,
-        )
+    title_findings = title_rules.check_title(titles, title_rules.issue_key(args.type), full_title)
+    for severity, label, detail in title_findings:
+        if severity not in title_rules.BLOCKING_SEVERITIES:
+            print(f"[{severity}] {label}: {detail}", file=sys.stderr)
+    refusals = [f for f in title_findings if f[0] in title_rules.BLOCKING_SEVERITIES]
+    if refusals:
+        for severity, label, detail in refusals:
+            print(
+                f"error: composed title {full_title!r} refused [{severity}] {label}: {detail}",
+                file=sys.stderr,
+            )
         return 2
 
     # The adopter's optional substrate-map (ADR-026 / DEC-036). None ⇒
@@ -1249,18 +1257,6 @@ def _parent_ref_form_matchers(parent_ref_form: str) -> list[re.Pattern[str]]:
     line, which the derived native link (#1033) uses too.
     """
     return body_parent_ref.form_matchers(parent_ref_form)
-
-
-def _title_pattern_for(titles: dict, structural_type: str) -> str | None:
-    """Look up the titles.yaml regex for the given structural type."""
-    formats = titles.get("formats") or {}
-    key = f"issue-{structural_type}"
-    entry = formats.get(key)
-    if isinstance(entry, dict):
-        pattern = entry.get("pattern")
-        if isinstance(pattern, str):
-            return pattern
-    return None
 
 
 def _adopter_workstreams(config: dict) -> set[str]:

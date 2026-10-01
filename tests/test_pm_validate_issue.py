@@ -231,6 +231,119 @@ def test_valid_task_passes_title_check(
     assert title_findings == []
 
 
+# --- the shipped titles.yaml's declared checks (#803) ------------------
+# Every declared title rule runs, not only the pattern. Wording rules hold at
+# their declared severity at `--phase create`; at `--phase transition` a
+# blocking one reports as a warning, so it does not wall an existing title.
+
+
+@pytest.fixture(scope="module")
+def shipped_titles() -> dict:
+    from ruamel.yaml import YAML
+
+    path = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "schemas" / "titles.yaml"
+    return YAML(typ="safe").load(path.read_text(encoding="utf-8"))
+
+
+def _title_findings(
+    vi, title, kind, phase, *, issue_types, titles, body_format, classification, config
+):
+    issue = _make_issue(
+        title=title,
+        body=_TASK_BODY,
+        labels=[f"type:{kind}", "priority:Medium", "workstream:cli"],
+    )
+    findings = vi._validate_issue(
+        issue=issue,
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+        classification=classification,
+        config=config,
+        phase=phase,
+    )
+    return [(f.severity, f.label) for f in findings if f.label.startswith("title.")]
+
+
+@pytest.mark.parametrize(
+    ("phase", "severity"), [("create", "hard-reject"), ("transition", "warning")]
+)
+def test_a_conventional_commits_prefix_is_refused_at_create_and_reported_at_transition(
+    vi,
+    issue_types,
+    shipped_titles,
+    body_format,
+    classification,
+    label_fallback_config,
+    phase,
+    severity,
+) -> None:
+    found = _title_findings(
+        vi,
+        "[Task] feat(igw): support a prompt file for the gateway",
+        "feature",
+        phase,
+        issue_types=issue_types,
+        titles=shipped_titles,
+        body_format=body_format,
+        classification=classification,
+        config=label_fallback_config,
+    )
+    assert found == [(severity, "title.conventional-commits-prefix")]
+
+
+def test_a_scope_prefix_and_a_short_title_warn(
+    vi, issue_types, shipped_titles, body_format, classification, label_fallback_config
+) -> None:
+    found = _title_findings(
+        vi,
+        "[Bug] cli: crash on start",
+        "bug",
+        "create",
+        issue_types=issue_types,
+        titles=shipped_titles,
+        body_format=body_format,
+        classification=classification,
+        config=label_fallback_config,
+    )
+    assert found == [("warning", "title.scope-prefix"), ("warning", "title.short")]
+
+
+def test_the_kind_prefix_bad_example_is_refused_at_create(
+    vi, issue_types, shipped_titles, body_format, classification, label_fallback_config
+) -> None:
+    """titles.yaml's kind-prefix examples_bad entry, with the `type:bug` label it implies."""
+    found = _title_findings(
+        vi,
+        "[Task] Fix the auth bug in the login flow",
+        "bug",
+        "create",
+        issue_types=issue_types,
+        titles=shipped_titles,
+        body_format=body_format,
+        classification=classification,
+        config=label_fallback_config,
+    )
+    assert found == [("hard-reject", "title.kind-prefix-mismatch")]
+
+
+def test_a_house_style_title_draws_no_title_finding(
+    vi, issue_types, shipped_titles, body_format, classification, label_fallback_config
+) -> None:
+    found = _title_findings(
+        vi,
+        "[Task] Evidence points are keyed so two providers can report one artefact at one commit",
+        "feature",
+        "create",
+        issue_types=issue_types,
+        titles=shipped_titles,
+        body_format=body_format,
+        classification=classification,
+        config=label_fallback_config,
+    )
+    assert found == []
+
+
 # --- kind-driven Task prefixes (#895) --------------------------------
 #
 # create-issue writes `[Bug]` / `[Docs]` / `[Test]` / `[Refactor]` / `[Chore]`
