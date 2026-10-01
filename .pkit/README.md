@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-01T16:53:45Z
+      at: 2026-10-01T18:06:39Z
       outcome: unchanged
-      unchanged-because: the CLI reference now says the revalidation point is the commit that wrote the at a page carries, never a merged side's newer one; this signpost names the CLI reference and says nothing of how a point is found
+      unchanged-because: on this branch the whole-repository walk takes as the revalidation point the commit that wrote the at the artefact carries; what main brought in does not change what this page describes
 ---
 
 # project-kit
