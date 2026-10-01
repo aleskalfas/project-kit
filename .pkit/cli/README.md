@@ -47,8 +47,9 @@ pkit:
         - src/project_kit/pull_request_landing.py
       record: [COR-004, COR-012, COR-043, COR-048, COR-049, COR-050, COR-054, PRJ-001, PRJ-003, PRJ-004, ADR-033, ADR-039, ADR-049, ADR-058, ADR-059, ADR-061]
     revalidated:
-      at: 2026-10-01T20:17:10Z
-      outcome: updated
+      at: 2026-10-01T21:22:50Z
+      outcome: unchanged
+      unchanged-because: The CLI reference defers the process engine's operations, move included, to the process README, which this change updates; nothing here describes move's options.
 ---
 
 # Command-line interface

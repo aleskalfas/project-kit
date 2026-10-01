@@ -15,9 +15,8 @@ pkit:
         - .pkit/schemas/_defs/process.schema.json
       record: [COR-033, COR-034, COR-035, COR-036, COR-037, COR-038, COR-040, COR-042, COR-044, COR-053, ADR-020, ADR-036, ADR-048, ADR-051]
     revalidated:
-      at: 2026-10-01T20:17:11Z
-      outcome: unchanged
-      unchanged-because: this change adds a view key to the health JSON payloads, makes a failed authoring stamp take back its writes, and rewords hand-off's refusal when one state holds two entries on an upstream; this page lists health as narrative or JSON without enumerating keys and states the stamps' contract (registered owning capability, fail-closed stubs, registration) without their failure handling, all of which still holds — the CLI reference carries the detail
+      at: 2026-10-01T21:22:51Z
+      outcome: updated
 ---
 
 # Process
@@ -329,7 +328,7 @@ The backbone exposes the engine as a `pkit process …` surface. The core operat
 |---|---|
 | `status` | where the subject is · why · how it got here (the journal, or "journal logging is not enabled for this project") · legal moves with live prechecks · next hint — narrative or `--json` (which carries `journal_logging: {enabled, committed}` beside `journal`) |
 | `can-move <to>` | validate a candidate move (gate precheck + authorisation); refuse with a self-explaining reason |
-| `move <to> [--from <state>]` | execute a legal move; record the journal entry where the project keeps a journal (and run hooks, deferred) — the verdict is the same either way. `--from` names the state the subject held before the caller applied the move's domain side-effect; the move is validated and journaled from there (the seam-ordering contract below) |
+| `move <to> [--from <state>] [--reason <text>]` | execute a legal move; record the journal entry where the project keeps a journal (and run hooks, deferred) — the verdict is the same either way. `--from` names the state the subject held before the caller applied the move's domain side-effect; the move is validated and journaled from there (the seam-ordering contract below). `--reason` says why the caller took the move — a move one subject's move caused in another, say — and is recorded on the entry as given; no verdict reads it |
 | `validate` | run the subject's invariants (COR-035) and report which hold / are violated — narrative or `--json`; exits non-zero on any violation |
 | `health` | walk every declared hand-off contract (COR-042) and report missed hand-offs — upstream subjects at their trigger with no downstream counterpart; takes **no subject**; out-of-runtime, report-only, deterministic; narrative or `--json`; exits non-zero on any miss **or indeterminate** |
 

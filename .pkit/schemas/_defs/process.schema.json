@@ -471,6 +471,7 @@
         "gate_result": { "type": "string" },
         "severity": { "type": "string" },
         "bypass_reason": { "type": "string" },
+        "reason": { "type": "string", "description": "Why the caller took this move, as the caller gave it (`pkit process move --reason`) -- e.g. another subject's move that caused this one. Recorded verbatim; no verdict reads it." },
         "event": {
           "enum": ["blocked-enter", "blocked-resume"],
           "description": "COR-034: present on a WAIT entry, marking entry into / resume from a blocked wait. Absent on an ordinary move entry."

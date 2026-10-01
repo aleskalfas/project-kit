@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-01T20:17:12Z
+      at: 2026-10-01T21:22:51Z
       outcome: unchanged
-      unchanged-because: the CLI reference changed only inside its process-authoring and process health sections (a JSON view key, a failed stamp's take-back, hand-off's same-state refusal); this signpost names the CLI page and the command families it covers, which still holds
+      unchanged-because: The index's one-line description of the process area still holds after the engine's move gains a reason.
 ---
 
 # project-kit
