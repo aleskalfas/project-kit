@@ -679,6 +679,35 @@ def test_a_merge_gh_only_enqueued_is_never_taken_for_a_merge(lib, monkeypatch, c
     assert "GitHub does not report PR #42 merged" in capsys.readouterr().out
 
 
+def test_a_direct_merge_github_cannot_confirm_is_unconfirmed_not_queued(lib, monkeypatch, capsys):
+    """gh accepts the direct merge and no reading can be taken since: the PR
+    may have merged or been enqueued, and the landing says it is not known."""
+    queue = _Queue(
+        lib,
+        monkeypatch,
+        [_reading(lib, has_queue=False), lib.merge_queue.Unreadable("HTTP 502")],
+    )
+    landing = lib.land(_request(lib), {})
+    assert landing.outcome == lib.UNCONFIRMED
+    assert landing.reading is None
+    assert landing.message == (
+        "gh accepted the merge of PR #42 into main, but GitHub could not be read to "
+        "confirm that it merged: HTTP 502"
+    )
+    assert len(queue.merges()) == 1
+    assert "could not confirm that PR #42 merged: HTTP 502. Reading it again." in (
+        capsys.readouterr().err
+    )
+
+
+def test_a_queue_lost_sight_of_after_the_enqueue_is_still_queued(lib, monkeypatch):
+    _Queue(lib, monkeypatch, [_reading(lib), lib.merge_queue.Unreadable("HTTP 502")])
+    landing = lib.land(_request(lib), {})
+    assert landing.outcome == lib.STILL_QUEUED
+    assert landing.reading is None
+    assert landing.message == "lost sight of the merge queue: HTTP 502"
+
+
 def test_a_queue_switched_on_while_the_gates_ran_is_seen_before_the_merge(lib, monkeypatch):
     """`land` reads the queue itself, just before deciding: a run that began on
     a base without one enqueues once it has one, and never merges directly."""

@@ -2489,13 +2489,13 @@ def test_no_wait_returns_once_the_pr_is_queued_and_leaves_the_issue_in_review(
     )
     rc = _run_main(dw, monkeypatch, ["42", "--yes", "--no-wait"])
     out = capsys.readouterr().out
-    assert rc == dw.EXIT_QUEUED == 4
+    assert rc == dw.EXIT_ACCEPTED == 4
     assert len(run.merges()) == 1
     assert run.reads_after_the_merge() == 1
     assert run.sleeps == []
     assert run.calls["order"] == []
     assert "[queued] PR #496 is in the merge queue for main (position 2 in the queue" in out
-    assert "#42 stays in Review until it does. Run `done-work 42` again" in out
+    assert "#42 stays in Review until it merges. Run `done-work 42` again" in out
 
 
 def test_a_wait_that_runs_out_leaves_the_pr_queued(
@@ -2669,6 +2669,35 @@ def test_a_queue_that_cannot_be_read_merges_nothing(
     assert calls["order"] == []
     err = capsys.readouterr().err
     assert "cannot tell how the base branch merges: HTTP 502. Nothing was merged" in err
+
+
+def test_a_direct_merge_github_cannot_confirm_is_not_called_queued(
+    dw: ModuleType,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """gh accepts the direct merge, then every reading fails: the PR may have
+    merged, so nothing after a merge runs, the issue stays in Review, and the
+    run says it could not confirm the merge rather than that the PR is queued.
+    A later run finds the PR merged, or open, and finishes (exit 4)."""
+    calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+
+    def unreadable_after_the_merge(pr_number: int, config: dict[str, Any]) -> Any:
+        if calls["merged"]:
+            raise dw.merge_queue.Unreadable("HTTP 502")
+        return dw.merge_queue.Reading(has_queue=False, pr_state="OPEN")
+
+    monkeypatch.setattr(dw.merge_queue, "read", unreadable_after_the_merge)
+    rc = _run_main(dw, monkeypatch, ["42", "--yes"])
+    captured = capsys.readouterr()
+    assert rc == dw.EXIT_ACCEPTED == 4
+    assert calls["order"] == [("merged", None)]
+    assert "[queued]" not in captured.out
+    assert (
+        "[unconfirmed] gh accepted the merge of PR #496 into the base branch, but GitHub "
+        "could not be read to confirm that it merged: HTTP 502. Nothing after the merge has "
+        "run, and #42 stays in Review. Run `done-work 42` again once GitHub answers"
+    ) in captured.out
 
 
 def _no_queue_merge(dw: ModuleType, monkeypatch: pytest.MonkeyPatch, run: _QueueRun) -> None:

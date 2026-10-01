@@ -47,11 +47,13 @@ from _lib import default_branch, merge_queue
 from _lib.gh import gh_run
 
 # How a landing ended (:class:`Landing`): the four ends of a wait for the
-# queue, and three that stop before any merge or enqueue is made.
+# queue; a direct merge gh accepted that no reading since could confirm; and
+# three that stop before any merge or enqueue is made.
 MERGED = merge_queue.MERGED
 STILL_QUEUED = merge_queue.STILL_QUEUED
 LEFT = merge_queue.LEFT
 HEAD_MOVED = merge_queue.HEAD_MOVED
+UNCONFIRMED = "unconfirmed"
 REFUSED = "refused"
 UNREADABLE = "unreadable"
 FAILED = "failed"
@@ -90,11 +92,14 @@ class MergeRequest:
 class Landing:
     """How :func:`land` ended.
 
-    `outcome` is :data:`MERGED`; :data:`STILL_QUEUED`, the queue has the PR
-    and has not merged it yet; :data:`LEFT` or :data:`HEAD_MOVED`, nothing
-    merged; or :data:`REFUSED`, :data:`UNREADABLE` or :data:`FAILED`, no merge
-    made and nothing enqueued. `reading` is the last reading taken; `message`
-    says what happened where the outcome alone does not.
+    `outcome` is :data:`MERGED`; :data:`STILL_QUEUED`, the PR was handed to
+    the queue and has not been seen merged; :data:`UNCONFIRMED`, gh accepted a
+    direct merge and GitHub could not be read since, so whether it merged is
+    not known; :data:`LEFT` or :data:`HEAD_MOVED`, nothing merged; or
+    :data:`REFUSED`, :data:`UNREADABLE` or :data:`FAILED`, no merge made and
+    nothing enqueued. `reading` is the last reading taken, None when the wait
+    lost sight of the PR; `message` says what happened where the outcome alone
+    does not.
     """
 
     outcome: str
@@ -114,7 +119,9 @@ def land(request: MergeRequest, config: dict[str, Any]) -> Landing:
     Merged is what GitHub reports, never what a command's exit implies: on a
     base that requires a queue, `gh pr merge` without `--admin` enqueues and
     exits 0, so after a direct merge the PR is read once more, and anything
-    but merged is waited for as a queued PR.
+    but merged is waited for as a queued PR. When GitHub cannot be read after
+    gh accepted a direct merge, the PR may have merged or been enqueued, and
+    the landing is :data:`UNCONFIRMED`, never taken for a queued PR.
     """
     number = request.pr_number
     try:
@@ -153,18 +160,22 @@ def land(request: MergeRequest, config: dict[str, Any]) -> Landing:
     try:
         after = merge_queue.read(number, config)
     except merge_queue.Unreadable as exc:
-        print(f"[warn] could not confirm that PR #{number} merged: {exc}", file=sys.stderr)
+        print(
+            f"[warn] could not confirm that PR #{number} merged: {exc}. Reading it again.",
+            file=sys.stderr,
+            flush=True,
+        )
     else:
         if after.merged:
             print(f"  merged PR #{number}")
             return _merged(request, after)
-    print(
-        f"  gh pr merge returned, but GitHub does not report PR #{number} merged: "
-        f"{request.base} may have begun to merge through a queue, which took the PR "
-        "in. Waiting for it as for a queued PR.",
-        flush=True,
-    )
-    return _wait(request, config)
+        print(
+            f"  gh pr merge returned, but GitHub does not report PR #{number} merged: "
+            f"{request.base} may have begun to merge through a queue, which took the PR "
+            "in. Waiting for it as for a queued PR.",
+            flush=True,
+        )
+    return _wait(request, config, merged_directly=True)
 
 
 def squash_merge(
@@ -345,8 +356,15 @@ def queue_refusal(
     return ""
 
 
-def _wait(request: MergeRequest, config: dict[str, Any]) -> Landing:
-    """Wait for the queue to merge the PR, as long as the request says."""
+def _wait(
+    request: MergeRequest, config: dict[str, Any], *, merged_directly: bool = False
+) -> Landing:
+    """Wait for the queue to merge the PR, as long as the request says.
+
+    `merged_directly`: gh accepted a direct merge of the PR, so when a reading
+    cannot be taken the PR may have merged rather than be queued, and the
+    landing is :data:`UNCONFIRMED`.
+    """
     number = request.pr_number
     if request.wait_seconds != 0:
         print(
@@ -367,6 +385,14 @@ def _wait(request: MergeRequest, config: dict[str, Any]) -> Landing:
             head_oid=request.head_oid,
         )
     except merge_queue.Unreadable as exc:
+        if merged_directly:
+            return Landing(
+                UNCONFIRMED,
+                message=(
+                    f"gh accepted the merge of PR #{number} into {request.base}, but GitHub "
+                    f"could not be read to confirm that it merged: {exc}"
+                ),
+            )
         return Landing(STILL_QUEUED, message=f"lost sight of the merge queue: {exc}")
     if wait.ended == MERGED:
         print(f"  merged PR #{number} through the queue")

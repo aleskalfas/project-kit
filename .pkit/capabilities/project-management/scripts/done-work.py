@@ -145,7 +145,9 @@ Side-effects, in order (#878; the merge mechanic itself lives once in
     steps. A push after the enqueue takes the PR out of the queue (exit 3).
     A direct merge counts only once GitHub reports the PR merged: on a base
     that requires a queue gh exits 0 having only enqueued, and such a PR is
-    waited for like any queued one.
+    waited for like any queued one. When GitHub cannot be read after gh
+    accepted the merge, the run says so and exits 4 with the issue in Review;
+    a later `done-work <N>` finds the PR merged, or still open, and finishes.
   - Composes over `move-issue.py --to done` IMMEDIATELY after the merge, so
     no best-effort step can stand between the irreversible merge and the
     lifecycle transition.
@@ -180,7 +182,8 @@ Exit codes:
   3  the merge failed; the PR left the merge queue without merging, or was
      taken out of it because its head moved
   4  accepted, a re-run completes it: the PR is in the merge queue and has
-     not merged yet
+     not been seen merged, or gh accepted the merge and GitHub could not be
+     read to confirm it
 """
 
 from __future__ import annotations
@@ -313,9 +316,10 @@ REVIEWER_OVERRIDE_AUDIT_WRITER = "done-work-reviewer-override"
 # spelling, used by every surface that reports a slot's status.
 STATE_SATISFIED_BY_OVERRIDE = "satisfied-by-override"
 
-# The exit of a run the merge queue accepted and has not merged yet (#1011):
-# a re-run once it has merged completes it.
-EXIT_QUEUED = 4
+# The exit of a run whose merge was accepted and not yet seen merged (#1011):
+# the merge queue holds the PR, or GitHub could not be read to confirm a merge
+# gh accepted. A re-run completes it.
+EXIT_ACCEPTED = 4
 
 
 def _reviewer_override_key(reviewer: str, reason: str, head: str) -> str:
@@ -1033,15 +1037,26 @@ def _queue_unreadable(issue_number: int, reason: str) -> str:
 def _not_merged(issue_number: int, pr_number: int, base: str, landing: pr_merge.Landing) -> int:
     """Report a landing that did not end merged; the run's exit code.
 
-    Only a PR the queue holds is accepted (exit 4): a later run completes it.
-    Everything else merged nothing, and the issue stays where it is.
+    Accepted (exit 4) are a PR the queue was handed and a direct merge gh
+    accepted that GitHub could not then confirm: a later run finds the PR
+    merged, or still open, and finishes. Everything else merged nothing, and
+    the issue stays where it is.
     """
     reading = landing.reading
     if landing.outcome == pr_merge.STILL_QUEUED:
         if landing.message:
             print(f"[warn] {landing.message}", file=sys.stderr)
         print(_still_queued_note(issue_number, pr_number, base, reading))
-        return EXIT_QUEUED
+        return EXIT_ACCEPTED
+    if landing.outcome == pr_merge.UNCONFIRMED:
+        print(
+            f"\n[unconfirmed] {landing.message}. Nothing after the merge has run, and "
+            f"#{issue_number} stays in Review. Run `done-work {issue_number}` again once "
+            f"GitHub answers: if the PR merged, it moves #{issue_number} to Done, closes and "
+            "cascades the issues the PR closes, and cleans up the branch; if it did not, it "
+            "merges it."
+        )
+        return EXIT_ACCEPTED
     if landing.outcome == pr_merge.REFUSED:
         print(landing.message, file=sys.stderr)
         return 1
@@ -1088,13 +1103,18 @@ def _still_queued_note(
     base: str,
     reading: merge_queue.Reading | None,
 ) -> str:
-    where = f" ({reading.describe()})" if reading is not None else ""
+    if reading is None:
+        stands = (
+            f"was handed to the merge queue for {base}, and whether it has merged since "
+            "could not be read"
+        )
+    else:
+        stands = f"is in the merge queue for {base} ({reading.describe()}) and has not merged yet"
     return (
-        f"\n[queued] PR #{pr_number} is in the merge queue for {base}{where} and has "
-        f"not merged yet; #{issue_number} stays in Review until it does. Run "
-        f"`done-work {issue_number}` again once it has merged: it moves #{issue_number} "
-        "to Done, closes and cascades the issues the PR closes, and cleans up the "
-        "branch."
+        f"\n[queued] PR #{pr_number} {stands}; #{issue_number} stays in Review until it "
+        f"merges. Run `done-work {issue_number}` again once it has merged: it moves "
+        f"#{issue_number} to Done, closes and cascades the issues the PR closes, and cleans "
+        "up the branch."
     )
 
 

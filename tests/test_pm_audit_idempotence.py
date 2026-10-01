@@ -606,6 +606,10 @@ def _wire_merge_pr(mp, monkeypatch) -> None:
     monkeypatch.setattr(mp.pr_merge, "delete_remote_branch", lambda b, c, **kw: None)
     monkeypatch.setattr(mp.pr_merge, "cleanup_local", lambda b, c, **kw: None)
     monkeypatch.setattr(mp, "fire_hooks", lambda name, **kw: None)
+    # The clone's after-merge record (#1011) is not this file's subject; never
+    # write it into the real clone.
+    monkeypatch.setattr(mp, "_read_record", lambda n: None)
+    monkeypatch.setattr(mp, "_write_record", lambda n, state, head: None)
     monkeypatch.setattr(
         sys,
         "argv",

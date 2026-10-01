@@ -54,20 +54,33 @@ shared with `done-work`; #882):
     PR, and merge-pr prints its place and waits for the merge — as long as
     the queue estimates plus a margin, at most 30 minutes, or
     `--wait-minutes`. When the wait ends first, or `--no-wait` returns at
-    once, the run exits 4; `merge-pr <N>` run again once the PR has merged
-    finds it merged through the queue and runs the two steps below. A push
-    after the enqueue takes the PR out of the queue (exit 3). The merge
-    mechanic, queue included, is `_lib.pr_merge.land`, the one `done-work`
-    runs.
+    once, the run exits 4; so does a direct merge gh accepted when GitHub
+    cannot then be read to confirm it merged. A push after the enqueue takes
+    the PR out of the queue (exit 3). The merge mechanic, queue included, is
+    `_lib.pr_merge.land`, the one `done-work` runs.
   - `after_merge_pr` hooks (DEC-024) IMMEDIATELY after the merge — once
     GitHub reports the PR merged, never on an enqueue — so no best-effort
-    step stands between the irreversible merge and them.
+    step stands between the irreversible merge and them. That they fired is
+    then recorded in the clone (below).
   - Best-effort branch cleanup: delete the remote head ref through the API,
     then `git checkout <default_branch>`, `git pull --ff-only`, `git branch
     -D <head>`, the local delete only when everything on the branch merged.
     Each step warns with its reason and continues; none can fail the run — a
     head branch checked out in a worktree simply leaves a warning where the
     local delete would have been.
+
+A merged PR has nothing left to gate (#1011). `merge-pr <N>` on one runs only
+the hooks and the clean-up above, and only for a merge whose after-merge steps
+are still owed: one the merge queue made — the run that enqueued it returned
+first — or one a run from this clone left unconfirmed (exit 4). The clean-up
+keys on the head the PR merged at, as GitHub reports it. A record in the
+clone's git directory (`pkit/merge-pr/<N>.json`) says which runs owe the steps
+and which ran them: a run that exits 4 records the steps as owed, and the run
+that fires the hooks records that it did, so a further run from this clone does
+nothing and says so. A PR merged without a queue and with nothing owed from
+this clone — someone else merged it — is refused, as before. The record is the
+clone's, not GitHub's: another clone finds none, and completes a PR the queue
+merged by firing the hooks again, which DEC-024's idempotent hooks allow.
 
 Self-contained via PEP 723; runs via
   uv run --script .pkit/capabilities/project-management/scripts/merge-pr.py 99
@@ -76,14 +89,17 @@ Or via the dispatcher (per COR-021):
   pkit project-management merge-pr 99
 
 Exit codes:
-  0  merged (or dry-run reported)
-  1  membership / merge-queue / checkbox / title / CI-status refusal
+  0  merged (or dry-run reported); on a merged PR, what follows the merge ran,
+     now or by an earlier run from this clone
+  1  membership / merge-queue / checkbox / title / CI-status refusal; a PR
+     someone else merged without a queue
   2  usage error (PR not found)
   3  gh failure: the merge failed or the queue could not be read; the PR left
      the merge queue without merging, or was taken out of it because its head
      moved
-  4  accepted, a re-run completes it: the PR is in the merge queue and has
-     not merged yet
+  4  accepted, a re-run from this clone completes it: the PR is in the merge
+     queue and has not been seen merged, or gh accepted the merge and GitHub
+     could not be read to confirm it
 """
 
 from __future__ import annotations
@@ -91,7 +107,10 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import subprocess
 import sys
+from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 
 from ruamel.yaml import YAML
@@ -129,9 +148,10 @@ from _lib.pr_validation import extract_closing_issues as _extract_closing_issues
 CI_BYPASS_AUDIT_MARKER = "<!-- pkit-hook: merge-pr-ci-bypass -->"
 CI_BYPASS_AUDIT_WRITER = "merge-pr-ci-bypass"
 
-# The exit of a run the merge queue accepted and has not merged yet (#1011):
-# a re-run once it has merged completes it.
-EXIT_QUEUED = 4
+# The exit of a run whose merge was accepted and not yet seen merged (#1011):
+# the merge queue holds the PR, or GitHub could not be read to confirm a merge
+# gh accepted. A re-run from this clone completes it.
+EXIT_ACCEPTED = 4
 
 
 def main() -> int:
@@ -245,9 +265,10 @@ def main() -> int:
 
     base = str(pr.get("baseRefName") or "") or "the base branch"
     if pr_state == "merged":
-        # A PR the queue merged after the run that enqueued it returned
-        # (#1011): what follows the merge is all that is left to do.
-        return _complete_queued_merge(args, pr, base, config, capability_root)
+        # A PR the queue merged after the run that enqueued it returned, or one
+        # a run from this clone left unconfirmed (#1011): what follows the merge
+        # is all that may be left to do.
+        return _complete_merge(args, pr, base, config, capability_root)
     if pr_state != "open":
         print(
             f"\n[refused] PR is not open (state: {pr_state}). Cannot merge.",
@@ -414,6 +435,18 @@ def main() -> int:
         ),
         config,
     )
+    if landing.outcome in (pr_merge.STILL_QUEUED, pr_merge.UNCONFIRMED):
+        # The run returns with what follows the merge owed (exit 4): recorded,
+        # so a re-run from this clone completes it however the PR merges.
+        try:
+            _write_record(args.pr_number, _OWED, head)
+        except _Unrecorded as exc:
+            print(
+                f"[warn] could not record in this clone that PR #{args.pr_number}'s "
+                f"after-merge steps are owed: {exc}. A later `merge-pr {args.pr_number}` "
+                "completes them only if the PR merged through a merge queue.",
+                file=sys.stderr,
+            )
     if landing.outcome != pr_merge.MERGED:
         return _not_merged(args.pr_number, base, landing)
     print(f"\n[ok] merged: {pr_url}")
@@ -430,7 +463,8 @@ def _after_merge(
     merged_head: str,
 ) -> int:
     """What follows the merge: the `after_merge_pr` hooks, then the
-    best-effort branch clean-up."""
+    best-effort branch clean-up. That the hooks fired is recorded in the clone
+    as soon as they have, so a later run from it fires none of them again."""
     # Fire after_merge_pr hooks per DEC-024 — FIRST, before any best-effort
     # branch cleanup, so a cleanup warning can never stand between the
     # irreversible merge and the hooks.
@@ -445,6 +479,15 @@ def _after_merge(
         config=config,
         capability_root=capability_root,
     )
+    try:
+        _write_record(args.pr_number, _RAN, merged_head)
+    except _Unrecorded as exc:
+        print(
+            f"[warn] could not record in this clone that PR #{args.pr_number}'s after-merge "
+            f"hooks fired: {exc}. A later `merge-pr {args.pr_number}` from it does not "
+            "know they did.",
+            file=sys.stderr,
+        )
 
     # Branch cleanup — best-effort, never fatal. The remote head ref goes
     # through the API (no local-checkout dependency); the local steps warn
@@ -477,20 +520,36 @@ def _after_merge(
 def _not_merged(pr_number: int, base: str, landing: pr_merge.Landing) -> int:
     """Report a landing that did not end merged; the run's exit code.
 
-    Only a PR the queue holds is accepted (exit 4): running `merge-pr` again
-    once it has merged completes it. Everything else merged nothing.
+    Accepted (exit 4) are a PR the queue was handed and a direct merge gh
+    accepted that GitHub could not then confirm: the run recorded the
+    after-merge steps as owed, so `merge-pr` run again from this clone
+    completes them once the PR has merged. Everything else merged nothing.
     """
     reading = landing.reading
     where = f" ({reading.describe()})" if reading is not None else ""
     if landing.outcome == pr_merge.STILL_QUEUED:
         if landing.message:
             print(f"[warn] {landing.message}", file=sys.stderr)
+        if reading is None:
+            stands = (
+                f"was handed to the merge queue for {base}, and whether it has merged "
+                "since could not be read"
+            )
+        else:
+            stands = f"is in the merge queue for {base}{where} and has not merged yet"
         print(
-            f"\n[queued] PR #{pr_number} is in the merge queue for {base}{where} and has "
-            f"not merged yet. Run `merge-pr {pr_number}` again once it has merged: it "
-            "fires the after-merge hooks and cleans up the branch."
+            f"\n[queued] PR #{pr_number} {stands}. Run `merge-pr {pr_number}` again once "
+            "it has merged: it fires the after-merge hooks and cleans up the branch."
         )
-        return EXIT_QUEUED
+        return EXIT_ACCEPTED
+    if landing.outcome == pr_merge.UNCONFIRMED:
+        print(
+            f"\n[unconfirmed] {landing.message}. Nothing after the merge has run. Run "
+            f"`merge-pr {pr_number}` again from this clone once GitHub answers: if the PR "
+            "merged, it fires the after-merge hooks and cleans up the branch; if it did "
+            "not, it merges it."
+        )
+        return EXIT_ACCEPTED
     if landing.outcome == pr_merge.REFUSED:
         print(f"\n{landing.message}", file=sys.stderr)
         return 1
@@ -515,42 +574,58 @@ def _not_merged(pr_number: int, base: str, landing: pr_merge.Landing) -> int:
     return 3
 
 
-def _complete_queued_merge(
+def _complete_merge(
     args: argparse.Namespace,
     pr: dict,
     base: str,
     config: dict,
     capability_root: Path,
 ) -> int:
-    """What follows the merge, for a PR the merge queue has merged (#1011).
+    """What follows the merge, for a PR that has merged already (#1011).
 
-    The run that enqueued it returned before the queue merged it (exit 4), so
-    its gates ran then and only the steps after the merge are left. A PR that
-    merged without going through a queue is refused as before: there is no
-    queued merge to complete. The hooks are idempotent (DEC-024), so a second
-    completion repeats nothing they did, and the clean-up finds the branch
-    gone.
+    The run that merged or enqueued it returned before it saw the merge
+    (exit 4), so its gates ran then and only the hooks and the clean-up are
+    left — once. They are owed for a PR the merge queue merged, and for one
+    this clone's record says a run left owed; the clean-up keys on the head the
+    PR merged at, as GitHub reports it. Once this clone's record says the hooks
+    fired, the run does nothing and says so. A PR merged without a queue and
+    owed nothing here was merged by someone else, and is refused as before.
     """
+    number = args.pr_number
+    record = _read_record(number)
+    if record is not None and record.state == _RAN:
+        when = f" at {record.at}" if record.at else ""
+        print(
+            f"\n[ok] PR #{number} has merged, and its after-merge hooks already fired "
+            f"from this clone{when}; nothing is left to do."
+        )
+        return 0
     try:
-        reading = merge_queue.read(args.pr_number, config)
+        reading = merge_queue.read(number, config)
     except merge_queue.Unreadable as exc:
         print(
-            f"error: cannot tell whether PR #{args.pr_number} merged through a queue: "
-            f"{exc}. Nothing was changed.",
+            f"error: cannot tell how PR #{number} merged: {exc}. Nothing was changed.",
             file=sys.stderr,
         )
         return 3
-    if not reading.ever_queued:
+    if reading.ever_queued:
         print(
-            "\n[refused] PR is not open (state: merged), and it did not merge through a "
-            "merge queue. Cannot merge.",
+            f"  PR #{number} merged through the merge queue for {base} "
+            f"({reading.describe()}); completing what follows the merge"
+        )
+    elif record is not None and record.state == _OWED:
+        print(
+            f"  PR #{number} merged ({reading.describe()}), and a run from this clone "
+            "returned before it saw the merge; completing what follows the merge"
+        )
+    else:
+        print(
+            f"\n[refused] PR #{number} merged without going through a merge queue, by "
+            "someone else as far as this clone knows: no run from it left anything after "
+            "that merge to complete. Nothing was run.",
             file=sys.stderr,
         )
         return 1
-    print(
-        f"  PR #{args.pr_number} merged through the merge queue for {base} "
-        f"({reading.describe()}); completing what follows the merge"
-    )
     if args.dry_run:
         print(
             "\n[dry-run] the after-merge hooks would fire, then the remote head branch "
@@ -569,6 +644,82 @@ def _complete_queued_merge(
         capability_root,
         merged_head=reading.head_oid or str(pr.get("headRefOid") or ""),
     )
+
+
+# ---- the clone's record of what follows a merge (#1011) ----------------
+#
+# GitHub records whether a PR merged and whether it went through a queue, but
+# not whether merge-pr's after-merge steps ran, nor that a run of it left them
+# owed. The clone keeps that, one small file per PR in its git directory. A
+# comment on the PR would be a governed act's projection, which the default
+# audit level does not post (DEC-049).
+
+# The record's two states: a run returned with the after-merge steps owed
+# (exit 4); a run fired the after-merge hooks.
+_OWED = "owed"
+_RAN = "ran"
+
+
+@dataclass(frozen=True)
+class _Record:
+    state: str
+    #: The PR head the run gated (owed) or the PR merged at (ran).
+    head_oid: str = ""
+    #: When it was recorded, UTC, ISO 8601.
+    at: str = ""
+
+
+class _Unrecorded(Exception):
+    """The record could not be written; the message says why."""
+
+
+def _record_path(pr_number: int) -> Path | None:
+    """Where the clone keeps PR `pr_number`'s record, under its common git
+    directory so every worktree of the clone shares it; None outside a clone."""
+    try:
+        proc = subprocess.run(
+            ["git", "rev-parse", "--git-common-dir"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except OSError:
+        return None
+    common = proc.stdout.strip()
+    if proc.returncode != 0 or not common:
+        return None
+    return Path(common).resolve() / "pkit" / "merge-pr" / f"{pr_number}.json"
+
+
+def _read_record(pr_number: int) -> _Record | None:
+    """The clone's record for PR `pr_number`, or None when it has none it can read."""
+    path = _record_path(pr_number)
+    if path is None:
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if not isinstance(data, dict) or data.get("state") not in (_OWED, _RAN):
+        return None
+    return _Record(str(data["state"]), str(data.get("head") or ""), str(data.get("at") or ""))
+
+
+def _write_record(pr_number: int, state: str, head_oid: str) -> None:
+    """Record `state` for PR `pr_number` in the clone. Raises
+    :class:`_Unrecorded` when it cannot be written."""
+    path = _record_path(pr_number)
+    if path is None:
+        raise _Unrecorded("not inside a git clone")
+    at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            json.dumps({"state": state, "head": head_oid, "at": at}) + "\n",
+            encoding="utf-8",
+        )
+    except OSError as exc:
+        raise _Unrecorded(str(exc)) from exc
 
 
 # ---- closing-issue checkbox sweep ----------------------------------
