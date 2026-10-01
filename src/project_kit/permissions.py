@@ -340,7 +340,7 @@ def overview(target_root: Path) -> str:
 
     # Enforcement banner — the strong "is the hook live?" indication.
     # Also runs the enforcement-runtime self-check when enforcement is ON, so
-    # `overview` surfaces a dead hook loudly (ADR-002 amendment).
+    # `overview` surfaces a dead hook loudly (ADR-002 point 4).
     on = _enforcement_on(target_root)
     posture = model.get("posture", "lenient")
     ownership = model.get("ownership_mode", "additive")
@@ -1101,14 +1101,14 @@ def _enforcement_on(target_root: Path) -> bool:
     return _hook_entry_registered(pre)
 
 
-# ---- enforcement-runtime self-check (ADR-002 amendment) --------------------
+# ---- enforcement-runtime self-check (ADR-002 point 4) ----------------------
 #
 # Distinct from the decision-time fail-open (§32 in ADR-002). An
 # enforcement-runtime fault means the hook CANNOT START — its python3 runtime
 # can't be found, the script has a syntax error, or `decide.py` is missing.
 # When the runtime is dead, the hook never reaches decide() and silently
 # abstains on EVERY call: the operator believes enforcement is live when it
-# is not. This class of fault is fail-LOUD (ADR-002 amendment), not fail-open.
+# is not. This class of fault is fail-LOUD (ADR-002 point 4), not fail-open.
 #
 # Mechanism: run the hook script directly under `sys.executable` (the same
 # python3 that will be found via `#!/usr/bin/env python3` in the hook's
@@ -1135,7 +1135,7 @@ def _hook_runtime_check(target_root: Path) -> tuple[bool, str]:
     ok=True  → hook started and ran (runtime is healthy); may have abstained.
     ok=False → hook could not start (enforcement-runtime fault — fail-loud).
     This is NOT a decision correctness check (that's `probe`); it is purely
-    a startup-reachability check per the ADR-002 amendment.
+    a startup-reachability check per ADR-002 point 4.
     """
     import subprocess
     import sys as _sys
@@ -1165,7 +1165,7 @@ def _hook_runtime_check(target_root: Path) -> tuple[bool, str]:
         return False, f"could not launch hook: {exc!r}"
 
 
-# ---- OS confinement write probe (ADR-002 amendment / ADR-014 §6) -----------
+# ---- OS confinement write probe (ADR-004 / ADR-014 §6) ---------------------
 #
 # `sandbox enable` reports config-ON, but Claude Code silently runs unconfined
 # when the box cannot initialize unless `failIfUnavailable: true` is set
@@ -1215,8 +1215,8 @@ def _confinement_write_probe() -> str:
 def enable(target_root: Path) -> str:
     """Register the PreToolUse enforcement hook, ensure the fail-closed native
     guardrail denies are present (the double-lock), and run the startup
-    self-check to detect dead-hook enforcement-runtime faults loudly (per the
-    ADR-002 amendment). Idempotent."""
+    self-check to detect dead-hook enforcement-runtime faults loudly (per
+    ADR-002 point 4). Idempotent."""
     if not _adapter_installed(target_root, "claude-code"):
         raise PermissionsError(
             "the claude-code adapter is not installed in this project; "
@@ -1247,7 +1247,7 @@ def enable(target_root: Path) -> str:
     _write_settings(target_root, settings)
     result = "live enforcement enabled: " + "; ".join(changes) + "."
 
-    # Enforcement-runtime self-check (ADR-002 amendment): verify the hook can
+    # Enforcement-runtime self-check (ADR-002 point 4): verify the hook can
     # actually start. A dead runtime (can't import decide.py, python3 not found,
     # etc.) would silently make every call fail-open; that is an enforcement-
     # runtime fault and must be surfaced loudly, not hidden.
@@ -1313,7 +1313,7 @@ def disable(target_root: Path) -> str:
 
 # ---- sandbox confinement (ADR-004 / ADR-005, #274) --------------------------
 #
-# The sandbox writer ADR-005 deferred: turn on Claude Code's OS sandbox
+# The sandbox writer (ADR-008 rule 2): turn on Claude Code's OS sandbox
 # (macOS Seatbelt / Linux bubblewrap) with `autoAllowBashIfSandboxed`, so
 # scripting (bash / python3) runs prompt-free INSIDE the box instead of
 # prompting the operator. This closes the autonomous profile's documented gap
@@ -1327,14 +1327,16 @@ def disable(target_root: Path) -> str:
 # per-invocation `--dangerously-allow-unconfined` operator gesture; it is never
 # persisted as a default — re-running `enable` without it restores the floor.
 #
-# Reconciliation of ADR-005's `allowUnsandboxedCommands: false` requirement:
-# NOT required for safety. The unsandboxed *fail-over* path (a command that
-# fails inside the box retried outside via `dangerouslyDisableSandbox`) rides
-# the normal permission flow — allowlist or prompt — and is never auto-allowed;
-# only *sandboxed* commands are auto-approved. Forcing `false` breaks legit
-# fail-over (`git push` / `gh` need network/SSH reach the box blocks), so the
-# key is left at harness default; `--strict` writes it as optional hardening.
-# The reconciliation note lives in ADR-005.
+# The fail-closed invariant does not rest on `allowUnsandboxedCommands: false`
+# (ADR-005 point 6): the unsandboxed *fail-over* path (a command that fails
+# inside the box retried outside via `dangerouslyDisableSandbox`) rides the
+# normal permission flow — allowlist or prompt — and is never auto-allowed;
+# only *sandboxed* commands are auto-approved. Under the autonomy posture the
+# key is asserted `false` by default (`setup autonomy` enables with the strict
+# seal, ADR-028), so the per-command escape is inert there. Outside it, `false`
+# would break legit fail-over (`git push` / `gh` need network/SSH reach the box
+# blocks), so the key stays at the harness default unless the operator passes
+# `--strict`. The reasoning lives in ADR-005's Rationale.
 #
 # Writes are additive over the operator's `sandbox` block: operator keys
 # (`excludedCommands`, `network`, extra `denyRead` entries, …) survive both
@@ -1669,7 +1671,7 @@ def sandbox_enable(target_root: Path, strict: bool = False,
         )
     lines.append(_RESTART_NOTE)
 
-    # Enforcement-runtime self-check (ADR-002 amendment): same check as
+    # Enforcement-runtime self-check (ADR-002 point 4): same check as
     # `enable` — wire into `sandbox enable` because this is the combined
     # "enforcement + confinement" path that operators run for full autonomy.
     hook_ok, hook_detail = _hook_runtime_check(target_root)
@@ -1683,7 +1685,7 @@ def sandbox_enable(target_root: Path, strict: bool = False,
             "  enable` for the detailed warning. State surfaced in `pkit permissions overview`.",
         ]
 
-    # Actual-confinement write probe (ADR-002 amendment / ADR-014 §6): verify
+    # Actual-confinement write probe (ADR-004 / ADR-014 §6): verify
     # the sandbox is ACTUALLY confining — not just that the config reads ON.
     # A write outside the workspace succeeds when the session runs unconfined
     # (box can't init without failIfUnavailable, or this is a plain terminal).
@@ -1759,7 +1761,7 @@ def sandbox_disable(target_root: Path) -> str:
 def sandbox_status(target_root: Path) -> str:
     """Render the sandbox confinement state (read-only), including the actual-
     confinement write probe so `sandbox status` reports config-ON-but-not-
-    confining loudly (ADR-002 amendment / ADR-014 §6)."""
+    confining loudly (ADR-004 / ADR-014 §6)."""
     sb = _sandbox_block(target_root)
     enabled = sb.get("enabled") is True
     lines = [cli_render.style("title", "Sandbox confinement — prompt-free scripting inside the OS box (ADR-004)"), ""]
@@ -1933,8 +1935,8 @@ def apply(target_root: Path) -> str:
     if model.get("ownership_mode") == "managed":
         # Additive-only by guard, not by omission: managed mode wholesale-
         # regenerates the region (the #252 seam), which this realizer does not do.
-        # When #252 is built: per ADR-046 condition 6 / ADR-002's #252
-        # composition edit, the managed committed union EXCLUDES per-machine-
+        # When #252 is built: per ADR-046 condition 6 / ADR-002 point 1's
+        # composition, the managed committed union EXCLUDES per-machine-
         # classified sources — profile-derived allows route to
         # settings.local.json even under managed mode.
         raise PermissionsError(
@@ -2577,7 +2579,7 @@ def _reach_attempt(path: Path) -> str:
 # `_apply_allowances` / `_remove_allowances`, which record what pkit authored in
 # a sidecar (`sandbox-provenance.yaml`). Removal touches ONLY pkit-authored
 # entries no longer claimed by another active toolkit — never an operator's
-# hand-added entry (the ADR-002 §52 silent-deletion footgun, transposed).
+# hand-added entry (ADR-002's silent-deletion footgun, transposed).
 
 _TOOLKIT_BARE = re.compile(r"^\[confinement-toolkit:([a-z][a-z0-9-]*)\]$")
 
@@ -2800,7 +2802,7 @@ def _remove_allowances(target_root: Path, toolkit: str) -> list[str]:
     """Remove the sandbox-block entries a toolkit contributed — but ONLY pkit-
     authored entries (in provenance) no longer claimed by another toolkit still
     in provenance. Operator hand-added entries are never in provenance, so are
-    never removed (ADR-002 §52 footgun avoided). Returns human notes.
+    never removed (ADR-002's silent-deletion footgun avoided). Returns human notes.
 
     ADR-029 routing: removal is the mirror of `_apply_allowances` — each entry is
     dropped from the file its classification routed it to (a widening from the
@@ -3028,7 +3030,7 @@ def _effect_mark(allowances: list[dict]) -> str:
     has_w = any(a.get("effect") == "widening" for a in allowances)
     has_n = any(a.get("effect") == "narrowing" for a in allowances)
     # A toolkit that has narrowing allow-host allowances (named, bounded hosts)
-    # is the narrowing-but-reported posture (ADR-015 / ADR-008 amendment): auto-
+    # is the narrowing-but-reported posture (ADR-015 / ADR-008 rule 7): auto-
     # applied like narrowing but mandatorily surfaced with the egress gloss.
     has_egress = any(
         a.get("kind") == "allow-host" and a.get("effect") == "narrowing"
@@ -3265,7 +3267,7 @@ def sandbox_exclude(target_root: Path, command: str, remove: bool = False,
 # First instance of the ADR-007 setup-command class: goal-oriented, stepwise,
 # resumable orchestrators over the accepted primitives. The contract (ADR-007,
 # seven rules): composition is the command's named purpose (the explicit
-# opt-in — ADR-002 §64 preserved; `profile activate` stays nudge-only); it
+# opt-in — ADR-002 point 2 preserved; `profile activate` stays nudge-only); it
 # owns nothing (every effect below is a primitive's effect); it is resumable
 # and idempotent (the live system is the checkpoint — no state file); it stops
 # honestly at the restart boundary; it declares the goal reached only when the
