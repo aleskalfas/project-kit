@@ -34,7 +34,7 @@ from typing import Any
 
 import click
 
-from project_kit import pull_request_landing, versioning
+from project_kit import pull_request_landing, session_guard, versioning
 from project_kit.changesets import (
     BACKBONE,
     FLOOR_FIELD,
@@ -1837,6 +1837,7 @@ def merge_release_pr(
     repo_root: Path,
     pr_number: int,
     *,
+    clearance: session_guard.Clearance,
     dry_run: bool = False,
     wait_seconds: float | None = None,
     force: bool = False,
@@ -1866,7 +1867,13 @@ def merge_release_pr(
     post-merge tag step cuts the backbone tag on the resulting push to `main`
     (VERSION-driven). Raises `click.ClickException` on a refusal, and
     :class:`ReleaseNotMerged` when the queue dropped the PR or its head moved.
+
+    `clearance` is the cross-repository guard's for `repo_root`, cleared once
+    at the entry (`session_guard.clear`): it covers every change the run makes
+    there — the merge or the enqueue, the dequeue, the head branch's deletion
+    and the local clean-up (ADR-061 point 6).
     """
+    session_guard.require(clearance, repo_root)
     pr = parse_release_pr(_gh_pr_view(pr_number, repo_root))
     refusal = release_pr_refusal(pr)
     if refusal is not None:
@@ -1915,7 +1922,7 @@ def merge_release_pr(
                 f"{pr.head_ref!r}; nothing changed."
             )
         say(f"  PR #{pr.number} is already in the merge queue for {base}")
-        return _await_the_queue(pr, repo_root, gh, wait_seconds, say)
+        return _await_the_queue(pr, repo_root, gh, clearance, wait_seconds, say)
 
     decision = evaluate_release_pr(pr)
     if decision.action != "merge":
@@ -1936,13 +1943,15 @@ def merge_release_pr(
                 f"  the merge queue dropped PR #{pr.number} at this head at "
                 f"{queue.removal.at}{why}; enqueuing it again (--force)"
             )
-        enqueued = pull_request_landing.enqueue(pr.number, head_oid=pr.head_oid, gh=gh)
+        enqueued = pull_request_landing.enqueue(
+            pr.number, cwd=repo_root, clearance=clearance, head_oid=pr.head_oid, gh=gh
+        )
         if not enqueued.accepted:
             raise click.ClickException(
                 f"`gh pr merge {pr.number} --auto` failed: {enqueued.reason}. Nothing was merged."
             )
         say(f"  enqueued PR #{pr.number} in the merge queue for {base}")
-        return _await_the_queue(pr, repo_root, gh, wait_seconds, say)
+        return _await_the_queue(pr, repo_root, gh, clearance, wait_seconds, say)
 
     if dry_run:
         return ReleaseMergeReport(
@@ -1950,7 +1959,12 @@ def merge_release_pr(
             f"branch {pr.head_ref!r}; nothing merged."
         )
     merged = pull_request_landing.squash_merge(
-        pr.number, subject=pr.title, head_oid=pr.head_oid, gh=gh
+        pr.number,
+        subject=pr.title,
+        cwd=repo_root,
+        clearance=clearance,
+        head_oid=pr.head_oid,
+        gh=gh,
     )
     if not merged.accepted:
         raise click.ClickException(f"`gh pr merge {pr.number}` failed: {merged.reason}")
@@ -1958,7 +1972,9 @@ def merge_release_pr(
         after = pull_request_landing.read(pr.number, gh=gh)
     except pull_request_landing.Unreadable as exc:
         _warn(f"could not confirm that PR #{pr.number} merged: {exc}. Reading it again.")
-        return _await_the_queue(pr, repo_root, gh, wait_seconds, say, merged_directly=True)
+        return _await_the_queue(
+            pr, repo_root, gh, clearance, wait_seconds, say, merged_directly=True
+        )
     if after.merged:
         return _after_the_merge(
             pr,
@@ -1971,7 +1987,7 @@ def merge_release_pr(
         "may have begun to merge through a queue, which took the PR in. Waiting for it as "
         "for a queued PR."
     )
-    return _await_the_queue(pr, repo_root, gh, wait_seconds, say, merged_directly=True)
+    return _await_the_queue(pr, repo_root, gh, clearance, wait_seconds, say, merged_directly=True)
 
 
 def release_pr_refusal(pr: ReleasePrState) -> ReleaseMergeDecision | None:
@@ -2074,6 +2090,7 @@ def _await_the_queue(
     pr: ReleasePrState,
     repo_root: Path,
     gh: pull_request_landing.GhRunner,
+    clearance: session_guard.Clearance,
     wait_seconds: float | None,
     say: Callable[[str], None],
     *,
@@ -2143,7 +2160,7 @@ def _await_the_queue(
             f"release PR #{number}'s head moved from {pr.head_oid[:7]} to "
             f"{reading.head_oid[:7]} after its checks were read"
         )
-        out = pull_request_landing.dequeue(number, gh=gh)
+        out = pull_request_landing.dequeue(number, cwd=repo_root, clearance=clearance, gh=gh)
         if out.accepted:
             raise ReleaseNotMerged(
                 f"{moved}; it was taken out of the merge queue, so nothing unchecked merges. "

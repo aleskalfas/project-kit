@@ -1800,8 +1800,14 @@ def release_lint(skip: bool | None) -> None:
     help="Where the base merges through a queue: enqueue a head the queue already dropped. "
     "Without it, such a head is refused until new commits are pushed.",
 )
+@_allow_foreign_repo_option
 def release_merge(
-    pr: int, dry_run: bool, no_wait: bool, wait_minutes: float | None, force: bool
+    pr: int,
+    dry_run: bool,
+    no_wait: bool,
+    wait_minutes: float | None,
+    force: bool,
+    allow_foreign_repo: bool,
 ) -> None:
     """Merge a release PR — the sanctioned path for a `chore(release):` PR.
 
@@ -1819,17 +1825,36 @@ def release_merge(
     dropped is not enqueued again without `--force`. It does **not** tag —
     `release-tag.yml` cuts the backbone tag on the resulting push to `main`
     (PRJ-004). Human-gated: a human decides to run it; nothing auto-merges.
+
+    The cross-repository guard runs first, once, for the merge and the branch
+    clean-up alike: in another repository than the session's anchor's it asks
+    at a terminal and refuses without one, unless `--allow-foreign-repo`
+    confirms it; with no session's anchor, as in a pipeline, it does not fire.
+    A dry run reports the guard's verdict and asks nothing.
     """
     if no_wait and wait_minutes is not None:
         raise click.UsageError("--no-wait and --wait-minutes are mutually exclusive.")
     if wait_minutes is not None and not math.isfinite(wait_minutes):
         raise click.BadParameter("not a number of minutes", param_hint="--wait-minutes")
     wait_seconds = 0.0 if no_wait else (wait_minutes * 60 if wait_minutes is not None else None)
-    source_kit = _target_kit()
+    repo_root = _target_kit().parent
+    passage = session_guard.clear(
+        repo_root, confirmed=allow_foreign_repo, interactive=False if dry_run else None
+    )
+    if isinstance(passage, session_guard.Refusal):
+        would_ask = " A run at a terminal would ask." if dry_run else ""
+        raise click.ClickException(f"{passage.reason}{would_ask} Nothing was merged.")
     report = merge_release_pr(
-        source_kit.parent, pr, dry_run=dry_run, wait_seconds=wait_seconds, force=force
+        repo_root,
+        pr,
+        clearance=passage,
+        dry_run=dry_run,
+        wait_seconds=wait_seconds,
+        force=force,
     )
     click.echo(report.text)
+    if dry_run:
+        click.echo(f"  cross-repository guard: {passage.describe()}")
     if report.exit_code:
         raise SystemExit(report.exit_code)
 
