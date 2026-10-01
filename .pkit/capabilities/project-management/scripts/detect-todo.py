@@ -14,13 +14,12 @@ Milestone.
 
 The shipped lifecycle detects with `detect-state`, its classifier, which
 every state names; this per-state detector answers from the same read of the
-issue, for a project's own `inferred` override of the definition (which names a
-detector for each of the five states — a definition has one detection mode) and
-for direct use.
+issue and stays registered for direct use.
 
-READ-ONLY. The process engine (COR-033) invokes this as
+READ-ONLY. Run as
   <script> <issue-number> --json
-and reads the structured-JSON contract on stdout. Self-contained via PEP 723.
+it answers the process engine's detection contract (COR-033) on stdout,
+`{result, reason}`. Self-contained via PEP 723.
 
 Exit codes:
   0  evaluated (result emitted as JSON); 2  usage error, or the issue could not

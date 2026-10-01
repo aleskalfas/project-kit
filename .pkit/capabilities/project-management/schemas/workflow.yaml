@@ -29,9 +29,8 @@
 # issue's position. Its answer makes at most one state true, so the
 # state ORDER below decides nothing among these five; it still orders
 # the engine's reading (the first state whose detection is true is the
-# position). The per-state `detect-<state>` commands stay registered for
-# a project's own override, which names them for all five states — a
-# definition has one detection mode.
+# position). The per-state `detect-<state>` commands stay registered, for
+# direct use; this definition does not name them.
 
 schema_version: 4
 

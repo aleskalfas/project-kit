@@ -17,9 +17,8 @@ body: >
   issue cannot be read, the predicates that read it now pass `gh`'s own words
   on standard error, so `status` and a refused move show why. The definition's
   `version` rises to 5; `schema_version` stays 4. The five per-state commands
-  (`detect-todo` … `detect-done`) stay registered, for a project's own override
-  of the lifecycle — which names them for all five states, since a definition
-  has one detection mode — and for direct use. Upgrade the capability together
+  (`detect-todo` … `detect-done`) stay registered, for direct use; the shipped
+  lifecycle no longer runs them. Upgrade the capability together
   with the backbone: under a `pkit` older than the `classified` mode the engine
   cannot tell where any issue is, and the lifecycle verbs move issues on their
   own local inference and warn that the engine did not record the move.

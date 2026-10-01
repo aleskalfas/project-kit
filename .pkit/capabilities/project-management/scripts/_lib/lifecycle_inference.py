@@ -34,7 +34,7 @@ still wins; only WHICH reality the predicate reads changes.
 The lifecycle's classifier built on top of this (`detect-state`, which every
 state names) answers the one state this returns, so at most one state's
 detection is true and the order of states in workflow.yaml decides nothing
-among them; the per-state detectors kept for a project's own override are
+among them; the per-state detectors, registered for direct use, are
 mutually exclusive for the same reason (each returns
 `result = (infer_current_state(...) == my_state)`). Because this reader is the
 single home of the position read (the classifier, the detectors and
@@ -155,8 +155,8 @@ def infer_current_state(
     unchanged, only WHICH predicate over reality resolves position.
 
     This reader is the single home of the position read: the engine's
-    detection (`lifecycle_predicates.classify_state`, and `detect_state` for a
-    project's own override), `parent_has_active_descendant`, `cascade_members`
+    detection (`lifecycle_predicates.classify_state`, and `detect_state`
+    behind the per-state commands), `parent_has_active_descendant`, `cascade_members`
     and move-issue's local alias all delegate here, so making
     THIS map-aware makes the whole detection path map-aware in one place — the
     read agrees with how move-issue / close-issue WRITE under a derive map (they

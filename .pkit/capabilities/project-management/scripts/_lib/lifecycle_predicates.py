@@ -17,9 +17,8 @@ fixed), reads structured JSON on stdout, and acts on it:
 
 The shipped lifecycle detects with the classifier (COR-033 point 5): every
 state names it, so the engine reads an issue once per reading of its position.
-The per-state detectors stay for a project's own override of the definition and
-for direct use; both read the issue through the one function below, so they
-cannot disagree.
+The per-state detectors stay registered, for direct use; both read the issue
+through the one function below, so they cannot disagree.
 
 Every function here fetches issue/PR state via the adopter-pinned `gh` helper
 and returns the contract dict. They are strictly read-only (COR-033: `status`
@@ -188,8 +187,8 @@ def classify_state(issue_number: int) -> dict[str, Any]:
 
 
 def detect_state(issue_number: int, target_state: str) -> dict[str, Any]:
-    """Detection predicate for one lifecycle state — the per-state detector a
-    project's own `inferred` override of the definition names.
+    """Detection predicate for one lifecycle state — the per-state detector,
+    registered for direct use (the shipped lifecycle names the classifier).
 
     Answers from the same read as `classify_state` (`_inferred_state`):
     result=True iff the issue's inferred position equals `target_state`. So for
