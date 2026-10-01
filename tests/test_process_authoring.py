@@ -479,6 +479,255 @@ def test_new_is_one_shot(authoring_repo: Path) -> None:
     assert current == original
 
 
+# --- a run that fails part-way leaves nothing behind ------------------------
+
+
+def _tree(root: Path) -> dict[str, bytes | None]:
+    """Every path under `root` with its bytes (None for a directory), so a
+    leftover file, a changed byte, or a leftover empty directory all show."""
+    return {
+        str(path.relative_to(root)): path.read_bytes() if path.is_file() else None
+        for path in sorted(root.rglob("*"))
+    }
+
+
+def _fail_on_write(monkeypatch, number: int, error: BaseException) -> None:
+    """Make the run's `number`-th write (counting creates and rewrites, 1-based)
+    land HALF its text and then raise `error` — a write cut off mid-way, the
+    worst a failure can leave."""
+    writes = {"count": 0}
+
+    def failing(real):
+        def write(self, path, text, *args, **kwargs):
+            writes["count"] += 1
+            if writes["count"] == number:
+                real(self, path, text[: len(text) // 2], *args, **kwargs)
+                raise error
+            return real(self, path, text, *args, **kwargs)
+
+        return write
+
+    monkeypatch.setattr(pa._StampRun, "create", failing(pa._StampRun.create))
+    monkeypatch.setattr(pa._StampRun, "rewrite", failing(pa._StampRun.rewrite))
+
+
+def _fail_the_written_lint(monkeypatch, lints_before_the_write: int) -> None:
+    """Make the lint of the WRITTEN definition fail; the lints before it — the
+    in-memory checks a run makes before writing — pass through."""
+    real = pa.lint_process_block
+    lints = {"count": 0}
+
+    def lint(repo_root, block):
+        lints["count"] += 1
+        if lints["count"] == lints_before_the_write + 1:
+            return ["injected: the written definition does not conform"]
+        return real(repo_root, block)
+
+    monkeypatch.setattr(pa, "lint_process_block", lint)
+
+
+# `_stamp_screen` writes, in order: the definition, the two detection stubs,
+# then package.yaml.
+_NEW_WRITES = ["definition", "first stub", "second stub", "package.yaml"]
+
+
+@pytest.mark.parametrize("number", range(1, len(_NEW_WRITES) + 1), ids=_NEW_WRITES)
+def test_a_failed_new_leaves_the_tree_byte_identical(
+    authoring_repo: Path, monkeypatch, number: int
+) -> None:
+    before = _tree(authoring_repo)
+    _fail_on_write(monkeypatch, number, OSError("injected: disk full"))
+
+    with pytest.raises(pa.ProcessAuthoringError) as failed:
+        _stamp_screen(authoring_repo)
+
+    assert "injected: disk full" in str(failed.value)
+    assert "took back everything it had written" in str(failed.value)
+    assert _tree(authoring_repo) == before
+    # Nothing is left for the one-shot refusal to trip over: re-running works.
+    monkeypatch.undo()
+    assert _stamp_screen(authoring_repo).definition_path.is_file()
+
+
+def test_a_new_whose_written_definition_fails_lint_leaves_nothing(
+    authoring_repo: Path, monkeypatch
+) -> None:
+    before = _tree(authoring_repo)
+    _fail_the_written_lint(monkeypatch, lints_before_the_write=1)
+
+    with pytest.raises(pa.ProcessAuthoringError, match="injected: the written definition"):
+        _stamp_screen(authoring_repo)
+
+    assert _tree(authoring_repo) == before
+    monkeypatch.undo()
+    assert _stamp_screen(authoring_repo).definition_path.is_file()
+
+
+def test_a_new_that_cannot_register_takes_back_its_stubs(authoring_repo: Path) -> None:
+    # A refusal that only shows at the last write — a package.yaml whose
+    # `commands:` is not a mapping — must not strand the definition and its
+    # stubs either.
+    package = authoring_repo / ".pkit" / "capabilities" / "design" / "package.yaml"
+    package.write_text(package.read_text(encoding="utf-8") + "commands: []\n", encoding="utf-8")
+    before = _tree(authoring_repo)
+
+    with pytest.raises(pa.ProcessAuthoringError, match="non-mapping `commands:` block"):
+        _stamp_screen(authoring_repo)
+
+    assert _tree(authoring_repo) == before
+
+
+def test_a_failed_new_never_removes_what_was_there_before(
+    authoring_repo: Path, monkeypatch
+) -> None:
+    # The run removes only what IT created: a `scripts/` directory and a
+    # hand-written script already there stay, byte for byte.
+    scripts = authoring_repo / ".pkit" / "capabilities" / "design" / "scripts"
+    scripts.mkdir()
+    (scripts / "unrelated.py").write_text("# someone's real code\n", encoding="utf-8")
+    before = _tree(authoring_repo)
+    _fail_on_write(monkeypatch, 3, OSError("injected"))
+
+    with pytest.raises(pa.ProcessAuthoringError):
+        _stamp_screen(authoring_repo)
+
+    assert _tree(authoring_repo) == before
+
+
+def test_an_interrupted_new_takes_itself_back_and_still_propagates(
+    authoring_repo: Path, monkeypatch
+) -> None:
+    before = _tree(authoring_repo)
+    _fail_on_write(monkeypatch, 2, KeyboardInterrupt())
+
+    with pytest.raises(KeyboardInterrupt):
+        _stamp_screen(authoring_repo)
+
+    assert _tree(authoring_repo) == before
+
+
+def test_new_names_the_file_it_could_not_take_back(authoring_repo: Path, monkeypatch) -> None:
+    # When the take-back itself fails, the error names exactly what is left.
+    _fail_on_write(monkeypatch, 2, OSError("injected"))
+    real_unlink = Path.unlink
+
+    def stuck_unlink(self, missing_ok=False):
+        if self.name == "screen.yaml":
+            raise PermissionError("injected: cannot remove")
+        return real_unlink(self, missing_ok=missing_ok)
+
+    monkeypatch.setattr(Path, "unlink", stuck_unlink)
+
+    with pytest.raises(pa.ProcessAuthoringError) as failed:
+        _stamp_screen(authoring_repo)
+
+    message = str(failed.value)
+    assert "could not take back all it had written" in message
+    assert "remove .pkit/capabilities/design/schemas/screen.yaml" in message
+    assert "screen_detect_drafting" not in message  # that one WAS taken back
+
+
+# The writes a hand-off with two new seams makes, in order.
+_HANDOFF_WRITES = ["definition", "candidates stub", "resolve stub", "package.yaml"]
+
+
+@pytest.mark.parametrize("number", range(1, len(_HANDOFF_WRITES) + 1), ids=_HANDOFF_WRITES)
+def test_a_failed_handoff_leaves_the_tree_byte_identical(
+    authoring_repo: Path, monkeypatch, number: int
+) -> None:
+    # Left half-done, the contract would name seams nothing registers, and a
+    # re-run would answer "already declared" without registering them.
+    _stamp_screen(authoring_repo)
+    _stamp_unit(authoring_repo)
+    _couple_unit(authoring_repo)
+    before = _tree(authoring_repo)
+    _fail_on_write(monkeypatch, number, OSError("injected: disk full"))
+
+    with pytest.raises(pa.ProcessAuthoringError, match="took back everything"):
+        _handoff_unit(authoring_repo)
+
+    assert _tree(authoring_repo) == before
+    monkeypatch.undo()
+    result = _handoff_unit(authoring_repo)
+    assert result.changed and len(result.stubs) == 2
+
+
+@pytest.mark.parametrize("stamp", ["couple", "hand-off"])
+def test_an_edit_whose_written_definition_fails_lint_is_taken_back(
+    authoring_repo: Path, monkeypatch, stamp: str
+) -> None:
+    _stamp_screen(authoring_repo)
+    _stamp_unit(authoring_repo)
+    if stamp == "hand-off":
+        _couple_unit(authoring_repo)
+    before = _tree(authoring_repo)
+    _fail_the_written_lint(monkeypatch, lints_before_the_write=0)
+
+    with pytest.raises(pa.ProcessAuthoringError, match="injected: the written definition"):
+        _couple_unit(authoring_repo) if stamp == "couple" else _handoff_unit(authoring_repo)
+
+    assert _tree(authoring_repo) == before
+
+
+def _leave_an_interrupted_new(repo: Path) -> None:
+    """What a `process new` killed before its last write leaves: the definition
+    and its stubs, with package.yaml as it was — nothing registered."""
+    package = repo / ".pkit" / "capabilities" / "design" / "package.yaml"
+    prior = package.read_bytes()
+    _stamp_screen(repo)
+    package.write_bytes(prior)
+
+
+def test_new_names_the_recovery_from_an_interrupted_run(authoring_repo: Path) -> None:
+    # A run killed outright cannot take itself back; its re-run must not read
+    # as a hard stop but name exactly what to remove.
+    _leave_an_interrupted_new(authoring_repo)
+
+    with pytest.raises(pa.ProcessAuthoringError, match="already exists") as refused:
+        _stamp_screen(authoring_repo)
+
+    message = str(refused.value)
+    assert "interrupted `process new`" in message
+    leftovers = [
+        ".pkit/capabilities/design/schemas/screen.yaml",
+        ".pkit/capabilities/design/scripts/screen_detect_drafting.py",
+        ".pkit/capabilities/design/scripts/screen_detect_ready.py",
+    ]
+    assert f"rm {' '.join(leftovers)}" in message
+
+    for leftover in leftovers:
+        (authoring_repo / leftover).unlink()
+    assert _stamp_screen(authoring_repo).definition_path.is_file()
+
+
+def test_new_never_names_an_implemented_script_for_removal(authoring_repo: Path) -> None:
+    _leave_an_interrupted_new(authoring_repo)
+    implemented = (
+        authoring_repo / ".pkit" / "capabilities" / "design" / "scripts" / "screen_detect_ready.py"
+    )
+    implemented.write_text("# implemented since\n", encoding="utf-8")
+
+    with pytest.raises(pa.ProcessAuthoringError) as refused:
+        _stamp_screen(authoring_repo)
+
+    assert "screen_detect_drafting.py" in str(refused.value)
+    assert "screen_detect_ready.py" not in str(refused.value)
+
+
+def test_a_finished_new_s_refusal_names_no_recovery(authoring_repo: Path) -> None:
+    # A complete scaffold registers its commands: re-running it is the plain
+    # one-shot refusal, with no removal suggested.
+    _stamp_screen(authoring_repo)
+    with pytest.raises(pa.ProcessAuthoringError) as refused:
+        _stamp_screen(authoring_repo)
+    assert "interrupted" not in str(refused.value)
+    assert "rm " not in str(refused.value)
+
+
+def test_the_scaffold_header_carries_the_signature_recovery_reads() -> None:
+    assert pa._SCAFFOLD_SIGNATURE in pa._DEFINITION_HEADER
+
+
 def test_new_refuses_dangling_references(authoring_repo: Path) -> None:
     with pytest.raises(pa.ProcessAuthoringError, match="undeclared target"):
         pa.stamp_new_process(
@@ -1147,6 +1396,129 @@ def test_handoff_is_idempotent_and_refuses_conflicts(authoring_repo: Path) -> No
         _handoff_unit(authoring_repo, trigger="drafting")
 
 
+def _couple_unit_twice_on_building(repo: Path) -> None:
+    """Two legal `depends_on` entries on ONE state naming one upstream: the
+    same screen depended on in two ways (`couple` appends the second)."""
+    _couple_unit(repo)
+    _couple_unit(
+        repo,
+        relation="informational",
+        mode="pull",
+        why="A unit also reads the screen for context.",
+    )
+
+
+@pytest.mark.parametrize("state_id", [None, "building"])
+def test_handoff_names_the_hand_edit_when_one_state_holds_two_entries(
+    authoring_repo: Path, state_id: str | None
+) -> None:
+    # `--state` picks a state, so it cannot tell two entries on ONE state
+    # apart: the refusal must not send the author to a flag that cannot help,
+    # with or without --state already given. It names the entries, the file,
+    # and the exact block to add by hand.
+    _stamp_screen(authoring_repo)
+    _stamp_unit(authoring_repo)
+    _couple_unit_twice_on_building(authoring_repo)
+    definition_file = (
+        authoring_repo / ".pkit" / "capabilities" / "delivery" / "schemas" / "unit.yaml"
+    )
+    before = definition_file.read_bytes()
+
+    with pytest.raises(pa.ProcessAuthoringError) as refused:
+        _handoff_unit(authoring_repo, state_id=state_id)
+
+    message = str(refused.value)
+    assert "pass --state" not in message
+    assert "entry 1 (triggered-by, push)" in message
+    assert "entry 2 (informational, pull)" in message
+    assert "no flag that tells entries on one state apart" in message
+    assert ".pkit/capabilities/delivery/schemas/unit.yaml" in message
+    assert (
+        "  handoff:\n    trigger: ready\n    candidates:\n      run: unit-handoff-candidates\n"
+        "    resolve:\n      run: unit-handoff-resolve\n"
+    ) in message
+    assert "pkit process health --interpretation-only --process delivery:unit" in message
+    # A refusal writes nothing: no edit, no seam stub.
+    assert definition_file.read_bytes() == before
+    scripts = authoring_repo / ".pkit" / "capabilities" / "delivery" / "scripts"
+    assert not (scripts / "unit_handoff_candidates.py").exists()
+    assert "unit-handoff-candidates" not in _registered_commands(authoring_repo, "delivery")
+
+
+def test_handoff_s_hand_edit_block_is_what_the_stamp_would_write(authoring_repo: Path) -> None:
+    # The block the refusal offers to paste is the contract the stamp writes
+    # for the same arguments: pasted under the intended entry, the definition
+    # carries exactly the contract a stamp-placed hand-off would have.
+    _stamp_screen(authoring_repo)
+    _stamp_unit(authoring_repo)
+    _couple_unit_twice_on_building(authoring_repo)
+    with pytest.raises(pa.ProcessAuthoringError) as refused:
+        _handoff_unit(authoring_repo)
+    lines = str(refused.value).splitlines()
+    start = lines.index("  handoff:")
+    block = "\n".join(line[2:] for line in lines[start : start + 6])
+
+    from ruamel.yaml import YAML
+
+    assert YAML(typ="safe").load(block) == {
+        "handoff": {
+            "trigger": "ready",
+            "candidates": {"run": "unit-handoff-candidates"},
+            "resolve": {"run": "unit-handoff-resolve"},
+        }
+    }
+
+
+def _stamp_two_state_unit(repo: Path) -> None:
+    pa.stamp_new_process(
+        repo,
+        "delivery:unit",
+        states=[
+            pa.StateSpec("building", "Building a unit.", entry=True),
+            pa.StateSpec("shipping", "Shipping a unit.", terminal=True),
+        ],
+    )
+
+
+def test_handoff_still_points_at_state_when_the_entries_sit_on_different_states(
+    authoring_repo: Path,
+) -> None:
+    # Entries on DIFFERENT states are exactly what --state settles: that
+    # message stands, and the flag resolves it.
+    _stamp_screen(authoring_repo)
+    _stamp_two_state_unit(authoring_repo)
+    _couple_unit(authoring_repo, state_id="building")
+    _couple_unit(authoring_repo, state_id="shipping")
+    with pytest.raises(pa.ProcessAuthoringError, match="pass --state") as refused:
+        _handoff_unit(authoring_repo)
+    assert "(building, shipping)" in str(refused.value)
+    assert "no flag tells apart" not in str(refused.value)
+
+    assert _handoff_unit(authoring_repo, state_id="shipping").state_id == "shipping"
+
+
+def test_handoff_says_which_state_flag_cannot_settle(authoring_repo: Path) -> None:
+    # Mixed: one state holds two entries, another one. --state settles the
+    # second state only, and the message says so instead of implying it
+    # settles both.
+    _stamp_screen(authoring_repo)
+    _stamp_two_state_unit(authoring_repo)
+    _couple_unit_twice_on_building(authoring_repo)
+    _couple_unit(authoring_repo, state_id="shipping")
+    with pytest.raises(pa.ProcessAuthoringError) as refused:
+        _handoff_unit(authoring_repo)
+    message = str(refused.value)
+    assert "on several states (building, shipping); pass --state" in message
+    assert "State 'building' carries 2 entries on that upstream, which no flag tells apart" in (
+        message
+    )
+    assert "pass --state building to see how to host the contract there by hand" in message
+
+    with pytest.raises(pa.ProcessAuthoringError, match="entry 2 \\(informational, pull\\)"):
+        _handoff_unit(authoring_repo, state_id="building")
+    assert _handoff_unit(authoring_repo, state_id="shipping").changed
+
+
 def test_handoff_reuses_registered_seam_commands(authoring_repo: Path) -> None:
     # A name the capability already registers is REUSED — no stub scaffolded,
     # no clobber.
@@ -1371,6 +1743,33 @@ def test_interpretation_only_json_carries_no_miss_surface(contract_repo, monkeyp
     # No miss surface anywhere — not even derivably (no at_trigger/satisfied).
     assert contract["counts"] == {"indeterminate": 0}
     assert "misses" not in json.dumps(payload)
+
+
+def test_interpretation_view_cannot_be_mistaken_for_a_clean_default_run(
+    contract_repo, monkeypatch
+) -> None:
+    # The same reality, one real miss: the default run reports it and exits 1;
+    # the interpretation view exits 0 and carries no miss total at all. Told
+    # apart only by an ABSENT key, a consumer reading
+    # `totals.get("missed", 0)` would call the interpretation payload clean. So
+    # each payload names its view, and the one without a miss surface never
+    # claims to be the full one.
+    default = _invoke_health(contract_repo, monkeypatch, "--json")
+    interpretation = _invoke_health(contract_repo, monkeypatch, "--interpretation-only", "--json")
+    assert default.exit_code == 1 and interpretation.exit_code == 0
+    full_payload = json.loads(default.output)
+    interpretation_payload = json.loads(interpretation.output)
+
+    assert full_payload["view"] == "full"
+    assert full_payload["totals"]["missed"] == 1
+    assert interpretation_payload["view"] == "interpretation-only"
+    assert "missed" not in interpretation_payload["totals"]
+
+    def missed_by_a_view_checking_consumer(payload: dict) -> int | None:
+        return payload["totals"]["missed"] if payload["view"] == ph.VIEW_FULL else None
+
+    assert missed_by_a_view_checking_consumer(full_payload) == 1
+    assert missed_by_a_view_checking_consumer(interpretation_payload) is None
 
 
 def test_interpretation_only_reports_indeterminates(contract_repo, monkeypatch) -> None:

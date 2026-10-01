@@ -15,8 +15,9 @@ pkit:
         - .pkit/schemas/_defs/process.schema.json
       record: [COR-033, COR-034, COR-035, COR-036, COR-037, COR-038, COR-040, COR-042, COR-044, COR-053, ADR-020, ADR-036, ADR-048, ADR-051]
     revalidated:
-      at: 2026-10-01T19:21:55Z
-      outcome: updated
+      at: 2026-10-01T20:17:11Z
+      outcome: unchanged
+      unchanged-because: this change adds a view key to the health JSON payloads, makes a failed authoring stamp take back its writes, and rewords hand-off's refusal when one state holds two entries on an upstream; this page lists health as narrative or JSON without enumerating keys and states the stamps' contract (registered owning capability, fail-closed stubs, registration) without their failure handling, all of which still holds — the CLI reference carries the detail
 ---
 
 # Process
