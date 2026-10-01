@@ -464,6 +464,58 @@ def test_without_an_agent_gate_the_merge_is_pinned_to_the_runs_head(dw, monkeypa
     assert calls["merge_head"] == "sha-head"
 
 
+# ---- a pinned head (`land`, #1203) -----------------------------------
+# A verb composing done-work hands it the head it waited for the checks on and
+# had reviewed: done-work lands that head or nothing.
+
+
+def test_a_pinned_head_that_is_the_prs_head_merges_it(dw, monkeypatch) -> None:
+    calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+    assert dw.main(["42", "--yes"], pinned_head="sha-head") == 0
+    assert calls["merge_head"] == "sha-head"
+
+
+def test_a_pinned_head_the_pr_moved_from_stops_before_any_gate(dw, monkeypatch, capsys) -> None:
+    calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+    rc = dw.main(["42", "--yes"], pinned_head="sha-pinned")
+    assert rc == 3
+    assert calls["merged"] is False
+    assert calls["order"] == []
+    err = capsys.readouterr().err
+    assert (
+        "error: PR #496's head is sha-hea, not sha-pin, the head this run was asked to land"
+    ) in err
+    assert "Nothing was posted or merged, and #42 stays where it is." in err
+
+
+def test_a_pinned_head_the_agent_gate_did_not_judge_stops_before_the_merge(
+    dw, monkeypatch, capsys
+) -> None:
+    """The PR moved between done-work's lookup and its gate's read: the
+    verdicts were judged against a head nobody pinned, so nothing lands."""
+    gate = dw._GateResult(passed=True, passed_via="stub", head_oid="sha-newer")
+    calls = _wire_main_seams(
+        dw,
+        monkeypatch,
+        rollup=_GREEN_ROLLUP,
+        mode="agent",
+        agent_gate_result=gate,
+    )
+    rc = dw.main(["42", "--yes"], pinned_head="sha-head")
+    assert rc == 3
+    assert calls["merged"] is False
+    assert calls["moved"] is False
+    assert "PR #496's head is sha-new, not sha-hea" in capsys.readouterr().err
+
+
+def test_main_reads_the_argv_it_is_given(dw, monkeypatch, capsys) -> None:
+    """`main(argv)` parses `argv`, not the command line it was started with."""
+    _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+    monkeypatch.setattr(sys, "argv", ["land.py", "42", "--bypass-reason", "x"])
+    assert dw.main(["42", "--yes"]) == 0
+    assert "DEPRECATED" not in capsys.readouterr().err
+
+
 # ---- CI-status gate (#498) -------------------------------------------
 
 

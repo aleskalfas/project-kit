@@ -182,7 +182,9 @@ Exit codes:
      run may not go around or through
   2  usage error / gh failure
   3  the merge failed; the PR left the merge queue without merging, or was
-     taken out of it because its head moved
+     taken out of it because its head moved; or, called with a pinned head
+     (`main(argv, pinned_head=…)`, as `land` calls it), the PR's head is not
+     that one
   4  accepted, a re-run completes it: the PR is in the merge queue and has
      not been seen merged, or gh accepted the merge — or a merge or an
      enqueue got no answer back — and GitHub could not be read to confirm it
@@ -372,7 +374,15 @@ def _head_key(commits: list) -> str:
     return str(last.get("oid") or last.get("committedDate") or last.get("authoredDate") or "")
 
 
-def main() -> int:
+def main(argv: list[str] | None = None, *, pinned_head: str = "") -> int:
+    """Run done-work on `argv` (default: the command line).
+
+    `pinned_head` is for a verb that composes this one (`land`, #1203): the
+    PR head it waited for the checks on and had reviewed. The run then lands
+    that head or nothing — it stops before any gate when the PR's head is
+    another, and before anything is posted or merged when the head the agent
+    gate judged is another (exit 3).
+    """
     parser = argparse.ArgumentParser(
         # No prefix abbreviation: `--bypass-reason` and `--bypass-reviewer-reason`
         # share one destination, so the deprecation notice and the both-spellings
@@ -488,7 +498,7 @@ def main() -> int:
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--yes", action="store_true")
     session_guard.add_override_argument(parser)
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     capability_root = resolve_capability_root(args.capability_root)
     if capability_root is None:
@@ -555,6 +565,14 @@ def main() -> int:
             file=sys.stderr,
         )
         return 2
+    if pinned_head and str(pr.get("headRefOid") or "") != pinned_head:
+        print(
+            _head_not_pinned(
+                args.issue_number, pr_number, str(pr.get("headRefOid") or ""), pinned_head
+            ),
+            file=sys.stderr,
+        )
+        return 3
 
     # Whether the base merges through a queue (#1011), read before any gate so
     # a run the queue would refuse stops before it posts or moves anything. It
@@ -600,7 +618,7 @@ def main() -> int:
     # pick; one deprecated spelling warns and proceeds.
     _spellings = [
         a
-        for a in sys.argv[1:]
+        for a in (sys.argv[1:] if argv is None else argv)
         if a.split("=", 1)[0] in ("--bypass-reason", "--bypass-reviewer-reason")
     ]
     if len({a.split("=", 1)[0] for a in _spellings}) > 1:
@@ -700,6 +718,12 @@ def main() -> int:
     if not gate_result.passed:
         print(gate_result.refusal_message, file=sys.stderr)
         return 1
+    if pinned_head and gate_result.head_oid and gate_result.head_oid != pinned_head:
+        print(
+            _head_not_pinned(args.issue_number, pr_number, gate_result.head_oid, pinned_head),
+            file=sys.stderr,
+        )
+        return 3
 
     # Residual-placeholder check per DEC-031 — hard-reject at the merge gate.
     # Fetch the PR body (not fetched earlier; _find_pr_for_branch only
@@ -1033,6 +1057,17 @@ def _after_merge(
 def _queue_unreadable(issue_number: int, reason: str) -> str:
     return (
         f"error: {reason}. Nothing was merged; re-run `done-work {issue_number}` once `gh` answers."
+    )
+
+
+def _head_not_pinned(issue_number: int, pr_number: object, head: str, pinned_head: str) -> str:
+    """The refusal when the PR's head is not the one the run was asked to land
+    (`main`'s `pinned_head`)."""
+    return (
+        f"error: PR #{pr_number}'s head is {short_sha(head)}, not "
+        f"{short_sha(pinned_head)}, the head this run was asked to land: its checks "
+        f"and review were for that head. Nothing was posted or merged, and "
+        f"#{issue_number} stays where it is."
     )
 
 
