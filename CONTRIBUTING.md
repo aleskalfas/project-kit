@@ -15,9 +15,8 @@ pkit:
       record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, PRJ-010, ADR-019, ADR-039, ADR-055, "project-management:DEC-053"]
       artefact: [.pkit/decisions/README.md]
     revalidated:
-      at: 2026-10-01T18:58:07Z
-      outcome: unchanged
-      unchanged-because: only the comment on checks.yml's changeset-guard step changed, to say the surface check counts the pull request's own changesets; this guide describes nothing of that step
+      at: 2026-10-01T22:17:30Z
+      outcome: updated
 ---
 
 # Contributing to project-kit
@@ -36,7 +35,7 @@ There is one source of truth for "what must pass before this lands": **`scripts/
 ./scripts/check.sh
 ```
 
-`pkit validate` runs the capabilities' query commands offline, so on a fresh clone run `uv run pkit sync` once first: it provisions their environments into uv's cache (CI does the same on checkout). Without it, validate names the missing step — "environment not provisioned — run `pkit sync`".
+`pkit validate` runs the capabilities' query commands with the offline marker set, and they fetch nothing, so on a fresh clone run `uv run pkit sync` once first: it provisions their environments into uv's cache (CI does the same on checkout). Without it, validate names the missing step — "environment not provisioned — run `pkit sync`".
 
 The same aggregator runs in two places, so the gate can't drift:
 
