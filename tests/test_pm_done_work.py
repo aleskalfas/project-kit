@@ -2697,6 +2697,57 @@ def test_a_direct_merge_github_cannot_confirm_is_not_called_queued(
     ) in captured.out
 
 
+def test_a_merge_with_no_answer_back_that_merged_moves_the_issue(
+    dw: ModuleType,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """The backbone's run ended after gh accepted the merge, without saying so:
+    GitHub reports the PR merged, so the run is the merge's and moves the issue
+    to Done — never "the merge failed" over a merged PR."""
+    calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+
+    def no_answer_back(pr_number: int, **kwargs: Any) -> bool | None:
+        calls["merged"] = True
+        calls["order"].append(("merged", None))
+        return None
+
+    monkeypatch.setattr(dw.pr_merge, "squash_merge", no_answer_back)
+    rc = _run_main(dw, monkeypatch, ["42", "--yes"])
+    assert rc == 0, capsys.readouterr()
+    assert calls["moved"] is True
+    assert calls["order"][:2] == [("merged", None), ("moved", None)]
+
+
+def test_a_merge_with_no_answer_back_github_cannot_settle_is_unconfirmed(
+    dw: ModuleType,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+
+    def no_answer_back(pr_number: int, **kwargs: Any) -> bool | None:
+        calls["order"].append(("asked", None))
+        return None
+
+    def read(pr_number: int, config: dict[str, Any]) -> Any:
+        if calls["order"]:
+            raise dw.merge_queue.Unreadable("HTTP 502")
+        return pull_request_backbone.reading(dw.merge_queue, has_queue=False, pr_state="OPEN")
+
+    monkeypatch.setattr(dw.pr_merge, "squash_merge", no_answer_back)
+    monkeypatch.setattr(dw.merge_queue, "read", read)
+    rc = _run_main(dw, monkeypatch, ["42", "--yes"])
+    out = capsys.readouterr().out
+    assert rc == dw.EXIT_ACCEPTED == 4
+    assert calls["moved"] is False
+    assert (
+        "[unconfirmed] the merge of PR #496 into the base branch got no answer back, and "
+        "GitHub could not be read since to tell whether it merged or entered the merge "
+        "queue: HTTP 502. Nothing after the merge has run, and #42 stays in Review."
+    ) in out
+
+
 def _no_queue_merge(dw: ModuleType, monkeypatch: pytest.MonkeyPatch, run: _QueueRun) -> None:
     """The fake `gh`'s base has no queue, and a direct merge GitHub reports merged."""
     run.update_pr(isMergeQueueEnabled=False, mergeQueue=None)

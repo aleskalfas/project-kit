@@ -51,8 +51,8 @@ from _lib import default_branch, merge_queue
 from _lib.gh import gh_run
 
 # How a landing ended (:class:`Landing`): the four ends of a wait for the
-# queue; a direct merge gh accepted that no reading since could confirm; and
-# three that stop before any merge or enqueue is made.
+# queue; a merge or an enqueue that no reading since could confirm; and three
+# that stop before any merge or enqueue is made.
 MERGED = merge_queue.MERGED
 STILL_QUEUED = merge_queue.STILL_QUEUED
 LEFT = merge_queue.LEFT
@@ -94,12 +94,12 @@ class Landing:
 
     `outcome` is :data:`MERGED`; :data:`STILL_QUEUED`, the PR was handed to
     the queue and has not been seen merged; :data:`UNCONFIRMED`, gh accepted a
-    direct merge and GitHub could not be read since, so whether it merged is
-    not known; :data:`LEFT` or :data:`HEAD_MOVED`, nothing merged; or
-    :data:`REFUSED`, :data:`UNREADABLE` or :data:`FAILED`, no merge made and
-    nothing enqueued. `reading` is the last reading taken, None when the wait
-    lost sight of the PR; `message` says what happened where the outcome alone
-    does not.
+    direct merge, or a merge or an enqueue got no answer back, and GitHub
+    could not be read since, so whether it merged is not known;
+    :data:`LEFT` or :data:`HEAD_MOVED`, nothing merged; or :data:`REFUSED`,
+    :data:`UNREADABLE` or :data:`FAILED`, no merge made and nothing enqueued.
+    `reading` is the last reading taken, None when the wait lost sight of the
+    PR; `message` says what happened where the outcome alone does not.
     """
 
     outcome: str
@@ -121,7 +121,10 @@ def land(request: MergeRequest, config: dict[str, Any]) -> Landing:
     exits 0, so after a direct merge the PR is read once more, and anything
     but merged is waited for as a queued PR. When GitHub cannot be read after
     gh accepted a direct merge, the PR may have merged or been enqueued, and
-    the landing is :data:`UNCONFIRMED`, never taken for a queued PR.
+    the landing is :data:`UNCONFIRMED`, never taken for a queued PR. A merge
+    or an enqueue that gets no answer back may have been made all the same,
+    so it is never taken for one that failed: the PR is read before anything
+    is decided (:func:`_unanswered`).
     """
     number = request.pr_number
     try:
@@ -145,17 +148,23 @@ def land(request: MergeRequest, config: dict[str, Any]) -> Landing:
         if reading.queued:
             print(f"  PR #{number} is already in the merge queue for {request.base}")
         else:
-            if not enqueue(number, config=config, head_oid=request.head_oid):
+            enqueued = enqueue(number, config=config, head_oid=request.head_oid)
+            if enqueued is None:
+                return _unanswered(request, config, merged_directly=False)
+            if not enqueued:
                 return Landing(FAILED, reading)
             print(f"  enqueued PR #{number} in the merge queue for {request.base}")
         return _wait(request, config)
-    if not squash_merge(
+    merged = squash_merge(
         number,
         pr_title=request.pr_title,
         admin=request.admin,
         config=config,
         head_oid=request.head_oid,
-    ):
+    )
+    if merged is None:
+        return _unanswered(request, config, merged_directly=True)
+    if not merged:
         return Landing(FAILED, reading)
     try:
         after = merge_queue.read(number, config)
@@ -178,6 +187,43 @@ def land(request: MergeRequest, config: dict[str, Any]) -> Landing:
     return _wait(request, config, merged_directly=True)
 
 
+def _unanswered(request: MergeRequest, config: dict[str, Any], *, merged_directly: bool) -> Landing:
+    """A merge — `merged_directly` — or an enqueue the backbone gave no answer to.
+
+    The request may have been made — the run may have ended after gh
+    accepted it — so the PR is read before anything is decided: merged, it is
+    the merge; in the queue, it is waited for; neither, the request was not
+    made and nothing merged. When the PR cannot be read the landing is
+    :data:`UNCONFIRMED`: whether it merged, or entered the queue, is not
+    known, and what follows the merge is owed to a re-run.
+    """
+    number = request.pr_number
+    asked = "merge" if merged_directly else "enqueue"
+    try:
+        after = merge_queue.read(number, config)
+    except merge_queue.Unreadable as exc:
+        return Landing(
+            UNCONFIRMED,
+            message=(
+                f"the {asked} of PR #{number} into {request.base} got no answer back, and "
+                f"GitHub could not be read since to tell whether it merged or entered the "
+                f"merge queue: {exc}"
+            ),
+        )
+    if after.merged:
+        print(f"  merged PR #{number}, as GitHub reports it ({after.describe()})")
+        return _merged(request, after)
+    if after.queued:
+        print(f"  PR #{number} is in the merge queue for {request.base} ({after.describe()})")
+        return _wait(request, config, merged_directly=merged_directly)
+    print(
+        f"error: GitHub reports PR #{number} neither merged nor queued ({after.describe()}): "
+        f"the {asked} was not made, and nothing merged.",
+        file=sys.stderr,
+    )
+    return Landing(FAILED, after)
+
+
 def squash_merge(
     pr_number: int | None,
     *,
@@ -185,7 +231,7 @@ def squash_merge(
     admin: bool,
     config: dict[str, Any],
     head_oid: str = "",
-) -> bool:
+) -> bool | None:
     """Squash-merge the PR with the PR title as the landed commit subject —
     the backbone's direct merge (`pkit pull-request merge`).
 
@@ -195,11 +241,13 @@ def squash_merge(
     the PR title: GitHub's default for a single-commit PR is the commit
     message, which would defeat the title gate (DEC-013; fixes #33).
 
-    Returns True when gh accepted the merge, False otherwise (an error line
-    is printed). True is not proof of a merge: on a base that requires a merge
-    queue gh enqueues and exits 0, which is why :func:`land` reads the PR
-    afterwards. The head branch is never deleted here — see the module
-    docstring.
+    Returns True when gh accepted the merge, False when it did not (an error
+    line is printed), and None when the backbone gave no answer back (a
+    warning is printed): the merge may have been made, and :func:`land` reads
+    the PR before it decides. True is not proof of a merge either: on a base
+    that requires a merge queue gh enqueues and exits 0, which is why
+    :func:`land` reads the PR afterwards. The head branch is never deleted
+    here — see the module docstring.
     """
     if pr_number is None:
         print("error: no PR number to merge.", file=sys.stderr)
@@ -217,7 +265,7 @@ def enqueue(
     *,
     config: dict[str, Any],
     head_oid: str = "",
-) -> bool:
+) -> bool | None:
     """Put the PR in its base branch's merge queue (#1011), pinned to the head
     the caller's gates checked — the backbone's enqueue (`pkit pull-request
     enqueue`, `gh pr merge <N> --auto`).
@@ -230,8 +278,10 @@ def enqueue(
     instead. A PR whose own required checks are still running is taken in once
     they pass. Never `--admin`, which merges around the queue.
 
-    Returns True once GitHub has taken the PR in, False otherwise (an error
-    line is printed). The PR has not merged when this returns.
+    Returns True once GitHub has taken the PR in, False when it did not (an
+    error line is printed), and None when the backbone gave no answer back (a
+    warning is printed): the PR may have entered the queue all the same. The
+    PR has not merged when this returns.
     """
     if pr_number is None:
         print("error: no PR number to enqueue.", file=sys.stderr)
@@ -407,14 +457,20 @@ def _merged(request: MergeRequest, reading: merge_queue.Reading) -> Landing:
     return Landing(MERGED, reading)
 
 
-def _request(args: list[str], config: dict[str, Any]) -> bool:
-    """Ask the backbone to make a merge request; False, with gh's reason
-    printed, when it was not accepted."""
+def _request(args: list[str], config: dict[str, Any]) -> bool | None:
+    """Ask the backbone to make a merge request: True when it was accepted;
+    False, with gh's reason printed, when it was not; None, with why printed,
+    when no answer came back — the request may have been made all the same."""
     try:
         outcome = merge_queue.request(args, config)
     except merge_queue.Unreadable as exc:
-        print(f"error: the backbone could not make the merge request: {exc}", file=sys.stderr)
-        return False
+        print(
+            f"[warn] the {args[0]} of PR #{args[1]} got no answer back from the backbone: "
+            f"{exc}. Reading the PR to see what it came to.",
+            file=sys.stderr,
+            flush=True,
+        )
+        return None
     if outcome.accepted:
         return True
     if outcome.exit_code is None:

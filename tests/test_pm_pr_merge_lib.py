@@ -810,6 +810,96 @@ def test_a_dequeue_that_does_not_take_says_so(lib, monkeypatch) -> None:
     assert "taking it out of the merge queue failed" in landing.message
 
 
+def _no_answer_back(lib, monkeypatch) -> list[list[str]]:
+    """The backbone's merge requests get no answer back — its run was stopped
+    past its bound, or ended without a document. Returns the requests asked."""
+    asked: list[list[str]] = []
+
+    def request(args, config):
+        asked.append(list(args))
+        raise lib.merge_queue.Unreadable(
+            f"`pkit pull-request {args[0]}` gave no answer within 120 s, and was stopped"
+        )
+
+    monkeypatch.setattr(lib.merge_queue, "request", request)
+    return asked
+
+
+def test_a_merge_with_no_answer_back_that_github_reports_merged_is_the_merge(
+    lib, monkeypatch, capsys
+) -> None:
+    """The run may have ended after gh accepted the merge: the PR is read
+    before anything is decided, and merged it is the merge — what follows it
+    runs, rather than a re-run finding a merge "by someone else"."""
+    _Queue(
+        lib,
+        monkeypatch,
+        [_reading(lib, has_queue=False), _reading(lib, has_queue=False, pr_state="MERGED")],
+    )
+    asked = _no_answer_back(lib, monkeypatch)
+    landing = lib.land(_request(lib), {})
+    assert landing.outcome == lib.MERGED
+    assert [a[0] for a in asked] == ["merge"]
+    captured = capsys.readouterr()
+    assert "the merge of PR #42 got no answer back from the backbone" in captured.err
+    assert "  merged PR #42, as GitHub reports it (merged)" in captured.out
+
+
+def test_an_enqueue_with_no_answer_back_that_github_reports_queued_is_waited_for(
+    lib, monkeypatch, capsys
+) -> None:
+    _Queue(
+        lib,
+        monkeypatch,
+        [
+            _reading(lib),
+            _reading(lib, in_queue=True, position=1),
+            _reading(lib, pr_state="MERGED", merged_at="t"),
+        ],
+    )
+    asked = _no_answer_back(lib, monkeypatch)
+    landing = lib.land(_request(lib), {})
+    assert landing.outcome == lib.MERGED
+    assert [a[0] for a in asked] == ["enqueue"]
+    out = capsys.readouterr().out
+    assert "  PR #42 is in the merge queue for main (position 1 in the queue)" in out
+    assert "  merged PR #42 through the queue" in out
+
+
+@pytest.mark.parametrize(
+    ("first", "asked"),
+    [({"has_queue": False}, "merge"), ({}, "enqueue")],
+    ids=["merge", "enqueue"],
+)
+def test_a_request_with_no_answer_back_github_cannot_settle_is_unconfirmed(
+    lib, monkeypatch, first, asked
+) -> None:
+    """Neither the backbone nor GitHub can say what the request came to: the
+    landing is unconfirmed, never "nothing merged", so the verb records what
+    follows the merge as owed and a re-run completes it."""
+    _Queue(lib, monkeypatch, [_reading(lib, **first), lib.merge_queue.Unreadable("HTTP 502")])
+    _no_answer_back(lib, monkeypatch)
+    landing = lib.land(_request(lib), {})
+    assert landing.outcome == lib.UNCONFIRMED
+    assert landing.message == (
+        f"the {asked} of PR #42 into main got no answer back, and GitHub could not be read "
+        "since to tell whether it merged or entered the merge queue: HTTP 502"
+    )
+
+
+def test_a_merge_with_no_answer_back_that_github_reports_open_was_not_made(
+    lib, monkeypatch, capsys
+) -> None:
+    _Queue(lib, monkeypatch, [_reading(lib, has_queue=False)])
+    _no_answer_back(lib, monkeypatch)
+    landing = lib.land(_request(lib), {})
+    assert landing.outcome == lib.FAILED
+    assert (
+        "error: GitHub reports PR #42 neither merged nor queued (not in the queue): the merge "
+        "was not made, and nothing merged."
+    ) in capsys.readouterr().err
+
+
 def test_a_merge_at_a_head_the_gates_did_not_check_is_warned(lib, monkeypatch, capsys) -> None:
     _Queue(
         lib,
