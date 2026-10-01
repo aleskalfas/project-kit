@@ -17,9 +17,9 @@ pkit:
         - .pkit/adapters/claude-code/merge-settings.sh
       record: [COR-001, COR-002, COR-017, PRJ-001, PRJ-004, ADR-049]
     revalidated:
-      at: 2026-10-01T09:44:21Z
+      at: 2026-10-01T15:42:38Z
       outcome: unchanged
-      unchanged-because: "typing-only change for the type-checking gate (PRJ-010): suppression comments removed from the package, pyright's configuration and dev dependency set in pyproject.toml; behaviour unchanged"
+      unchanged-because: "the overview's upgrade and pin claims still hold: an older pkit now refuses to take a project back, which keeps upgrades safe rather than changing what the page says"
 ---
 
 # project-kit

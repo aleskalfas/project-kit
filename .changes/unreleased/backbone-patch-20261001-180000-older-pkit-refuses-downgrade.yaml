@@ -1,0 +1,18 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+  pr: "1218"
+body: >
+  `pkit sync` and `pkit upgrade` run by a pkit older than the project's
+  content (`.pkit/manifest.yaml`'s `backbone_version`) or its pin
+  (`.pkit/version-pin`) now refuse before writing anything (#1212). They used
+  to sync the older bundle over the newer content, and `upgrade` also moved
+  the pin down: the state the router's offline fallback, which runs the
+  installed tool when a pin cannot be fetched, now reaches often. The refusal
+  exits non-zero, names the versions and the way to the right pkit (the
+  pinned version through the router or `uvx`, `pkit pin <version>` to move
+  the pin, git to roll back), and no flag overrides it, `--force` and
+  `--dry-run` included. Read-only commands keep working. The router's
+  fallback notice now says, once per command, when the pkit it runs is
+  older than the pin.

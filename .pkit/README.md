@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-01T16:23:43Z
+      at: 2026-10-01T16:23:25Z
       outcome: unchanged
-      unchanged-because: on this branch the merge mechanic moved into the backbone's pull-request landing module; the friction resolve command main brought in does not change what this page says about landing a pull request
+      unchanged-because: on this branch sync and upgrade refuse to write under a pkit older than the project's content or pin; the friction resolve command main brought in does not change what this page says about upgrading
 ---
 
 # project-kit
