@@ -36,6 +36,7 @@ from project_kit import (
     pull_request_landing,
     router,
     scratchpads,
+    session_guard,
 )
 from project_kit import refs as refs_mod
 from project_kit.agents import STORYBOARD_FILE, stamp_new_agent
@@ -541,9 +542,10 @@ def pull_request() -> None:
     Where a pull request's base merges through a merge queue, and where the PR
     stands in it; the repository's squash-commit defaults; the direct squash
     merge, the enqueue, the wait for the queue's merge and taking a PR out of
-    the queue. Each runs `gh` from the working directory. `--json` writes each
-    document as one line of JSON, which is how a capability's script calls it.
-    Reference: `.pkit/cli/README.md`, "Pull-request commands".
+    the queue. Each runs `gh` from the working directory; the three that
+    change the service run the cross-repository guard first. `--json` writes
+    each document as one line of JSON, which is how a capability's script
+    calls it. Reference: `.pkit/cli/README.md`, "Pull-request commands".
     """
 
 
@@ -557,17 +559,45 @@ def _pull_request_json_option(command: Callable[..., None]) -> Callable[..., Non
     )(command)
 
 
+def _allow_foreign_repo_option(command: Callable[..., None]) -> Callable[..., None]:
+    return click.option(
+        session_guard.CONFIRM_OPTION,
+        "allow_foreign_repo",
+        is_flag=True,
+        default=False,
+        help="Confirm a change in another repository than the session's anchor's. Without it "
+        "the cross-repository guard asks at a terminal, and refuses where there is none "
+        "(COR-039).",
+    )(command)
+
+
+def _pull_request_cleared(
+    number: int, allow_foreign_repo: bool, as_json: bool
+) -> session_guard.Clearance:
+    """The cross-repository guard's clearance for a change from the working
+    directory; a refusal is written — no request made — and exits 1."""
+    passage = session_guard.clear(Path.cwd(), confirmed=allow_foreign_repo)
+    if isinstance(passage, session_guard.Refusal):
+        if as_json:
+            document = pull_request_landing.refusal_document(number, passage)
+            click.echo(pull_request_landing.render_json(document))
+        else:
+            click.echo(f"error: {passage.reason} Nothing was asked of GitHub.", err=True)
+        raise SystemExit(1)
+    return passage
+
+
 def _say_outcome(
     number: int,
     outcome: pull_request_landing.Outcome,
+    clearance: session_guard.Clearance,
     as_json: bool,
     done: str,
 ) -> None:
     """Write a request's outcome — `done` when accepted — and exit 1 when it was not."""
     if as_json:
-        click.echo(
-            pull_request_landing.render_json(pull_request_landing.outcome_document(number, outcome))
-        )
+        document = pull_request_landing.outcome_document(number, outcome, clearance)
+        click.echo(pull_request_landing.render_json(document))
     elif outcome.accepted:
         click.echo(done)
     else:
@@ -625,47 +655,67 @@ def pull_request_squash_defaults(as_json: bool) -> None:
 @click.option("--subject", required=True, help="The squash commit's subject: the PR title.")
 @click.option("--head", "head_oid", default="", metavar="SHA", help="Merge only at this head.")
 @click.option("--admin", is_flag=True, default=False, help="Merge around branch protection.")
+@_allow_foreign_repo_option
 @_pull_request_json_option
 def pull_request_merge(
-    number: int, subject: str, head_oid: str, admin: bool, as_json: bool
+    number: int, subject: str, head_oid: str, admin: bool, allow_foreign_repo: bool, as_json: bool
 ) -> None:
     """Squash-merge PR NUMBER directly, with SUBJECT as the commit's subject.
 
     Accepted is not proof of a merge: on a base that requires a queue, gh
     enqueues instead — `pull-request read` says which. Never deletes the head
-    branch. Exit 0 when gh accepted it; 1 otherwise, with gh's reason.
+    branch. The cross-repository guard runs first. Exit 0 when gh accepted it;
+    1 otherwise, with gh's reason or the guard's.
     """
+    clearance = _pull_request_cleared(number, allow_foreign_repo, as_json)
     outcome = pull_request_landing.squash_merge(
-        number, subject=subject, head_oid=head_oid, admin=admin
+        number,
+        subject=subject,
+        cwd=clearance.directory,
+        clearance=clearance,
+        head_oid=head_oid,
+        admin=admin,
     )
-    _say_outcome(number, outcome, as_json, f"gh accepted the squash merge of PR #{number}")
+    _say_outcome(
+        number, outcome, clearance, as_json, f"gh accepted the squash merge of PR #{number}"
+    )
 
 
 @pull_request.command("enqueue")
 @click.argument("number", type=int)
 @click.option("--head", "head_oid", default="", metavar="SHA", help="Enqueue only this head.")
+@_allow_foreign_repo_option
 @_pull_request_json_option
-def pull_request_enqueue(number: int, head_oid: str, as_json: bool) -> None:
+def pull_request_enqueue(
+    number: int, head_oid: str, allow_foreign_repo: bool, as_json: bool
+) -> None:
     """Hand PR NUMBER to its base's merge queue; the queue makes the merge.
 
     The queue squashes by its own method, with a commit composed from the
-    repository's squash-commit defaults. Exit 0 once GitHub took it in; 1
-    otherwise, with gh's reason.
+    repository's squash-commit defaults. The cross-repository guard runs
+    first. Exit 0 once GitHub took it in; 1 otherwise, with gh's reason or the
+    guard's.
     """
-    outcome = pull_request_landing.enqueue(number, head_oid=head_oid)
-    _say_outcome(number, outcome, as_json, f"enqueued PR #{number}")
+    clearance = _pull_request_cleared(number, allow_foreign_repo, as_json)
+    outcome = pull_request_landing.enqueue(
+        number, cwd=clearance.directory, clearance=clearance, head_oid=head_oid
+    )
+    _say_outcome(number, outcome, clearance, as_json, f"enqueued PR #{number}")
 
 
 @pull_request.command("dequeue")
 @click.argument("number", type=int)
+@_allow_foreign_repo_option
 @_pull_request_json_option
-def pull_request_dequeue(number: int, as_json: bool) -> None:
+def pull_request_dequeue(number: int, allow_foreign_repo: bool, as_json: bool) -> None:
     """Take PR NUMBER out of its base's merge queue, and confirm it is out.
 
-    Exit 0 once a reading shows it neither queued nor merged; 1 otherwise.
+    The cross-repository guard runs first. Exit 0 once a reading shows it
+    neither queued nor merged; 1 otherwise.
     """
-    outcome = pull_request_landing.dequeue(number)
-    _say_outcome(number, outcome, as_json, f"PR #{number} is out of the merge queue")
+    clearance = _pull_request_cleared(number, allow_foreign_repo, as_json)
+    outcome = pull_request_landing.dequeue(number, cwd=clearance.directory, clearance=clearance)
+    _say_outcome(number, outcome, clearance, as_json, f"PR #{number} is out of the merge queue")
 
 
 @pull_request.command("wait")

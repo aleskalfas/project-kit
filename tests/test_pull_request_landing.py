@@ -16,12 +16,13 @@ from __future__ import annotations
 import json
 import subprocess
 from collections.abc import Callable, Sequence
+from pathlib import Path
 from typing import Any
 
 import pytest
 from click.testing import CliRunner
 
-from project_kit import cli
+from project_kit import cli, session_guard
 from project_kit import pull_request_landing as landing
 
 Completed = subprocess.CompletedProcess[str]
@@ -80,6 +81,16 @@ _QUEUED: dict[str, Any] = {
 _OUT = {**_QUEUED, "isInMergeQueue": False, "mergeQueueEntry": None, "autoMergeRequest": None}
 _MERGED = {**_OUT, "state": "MERGED", "mergedAt": "2026-10-01T10:12:00Z"}
 _NO_QUEUE = {**_OUT, "isMergeQueueEnabled": False, "mergeQueue": None, "timelineItems": None}
+
+
+@pytest.fixture
+def here(tmp_path: Path) -> dict[str, Any]:
+    """Where a request that changes the service is made, and the
+    cross-repository guard's clearance for it — outside any session, so it
+    passes undetermined — as the request's `cwd` and `clearance`."""
+    cleared = session_guard.clear(tmp_path, confirmed=False, interactive=False)
+    assert isinstance(cleared, session_guard.Clearance)
+    return {"cwd": tmp_path, "clearance": cleared}
 
 
 def _dropped(at_head: str | None, reason: str | None = "failed checks") -> dict[str, Any]:
@@ -324,13 +335,19 @@ def test_squash_commit_defaults_that_cannot_be_read_are_unreadable(
 # --- the merge requests --------------------------------------------------------
 
 
-def test_the_squash_merge_takes_the_subject_and_pins_the_head_without_deleting() -> None:
+def test_the_squash_merge_takes_the_subject_and_pins_the_head_without_deleting(
+    here: dict[str, Any],
+) -> None:
     """The subject is passed always (GitHub's default for a single-commit PR is
     the commit message); the head pins the merge; `--delete-branch` never — it
     makes gh touch the local checkout and fail after the remote merge landed."""
     calls: list[list[str]] = []
     outcome = landing.squash_merge(
-        42, subject="chore(release): v1.2.0", head_oid="a" * 40, gh=_gh([_NO_QUEUE], calls)
+        42,
+        subject="chore(release): v1.2.0",
+        head_oid="a" * 40,
+        gh=_gh([_NO_QUEUE], calls),
+        **here,
     )
     assert outcome == landing.Outcome(True, 0, "")
     assert calls == [
@@ -348,17 +365,21 @@ def test_the_squash_merge_takes_the_subject_and_pins_the_head_without_deleting()
     ]
 
 
-def test_the_squash_merge_passes_admin_and_pins_nothing_without_a_head() -> None:
+def test_the_squash_merge_passes_admin_and_pins_nothing_without_a_head(
+    here: dict[str, Any],
+) -> None:
     calls: list[list[str]] = []
-    landing.squash_merge(42, subject="fix: x", admin=True, gh=_gh([_NO_QUEUE], calls))
+    landing.squash_merge(42, subject="fix: x", admin=True, gh=_gh([_NO_QUEUE], calls), **here)
     assert calls == [["gh", "pr", "merge", "42", "--squash", "--subject", "fix: x", "--admin"]]
 
 
-def test_the_enqueue_is_auto_pinned_to_the_checked_head_and_nothing_else() -> None:
+def test_the_enqueue_is_auto_pinned_to_the_checked_head_and_nothing_else(
+    here: dict[str, Any],
+) -> None:
     """No `--squash`, no `--subject`: GitHub ignores them for a queued merge.
     Never `--admin`, which merges around the queue."""
     calls: list[list[str]] = []
-    assert landing.enqueue(42, head_oid="a" * 40, gh=_gh([_QUEUED], calls)).accepted
+    assert landing.enqueue(42, head_oid="a" * 40, gh=_gh([_QUEUED], calls), **here).accepted
     assert calls == [["gh", "pr", "merge", "42", "--auto", "--match-head-commit", "a" * 40]]
 
 
@@ -367,22 +388,24 @@ def test_the_enqueue_is_auto_pinned_to_the_checked_head_and_nothing_else() -> No
     [(FileNotFoundError("gh"), "`gh` not on PATH"), (PermissionError(13, "denied"), "could not")],
     ids=["missing", "unrunnable"],
 )
-def test_a_request_gh_cannot_run_is_refused_with_why(raised: OSError, reason: str) -> None:
+def test_a_request_gh_cannot_run_is_refused_with_why(
+    raised: OSError, reason: str, here: dict[str, Any]
+) -> None:
     def broken(argv: Sequence[str]) -> Completed:
         raise raised
 
-    outcome = landing.enqueue(42, gh=broken)
+    outcome = landing.enqueue(42, gh=broken, **here)
     assert not outcome.accepted and outcome.exit_code is None
     assert reason in outcome.reason
 
 
-def test_a_refused_request_carries_gh_s_reason() -> None:
+def test_a_refused_request_carries_gh_s_reason(here: dict[str, Any]) -> None:
     def refusing(argv: Sequence[str]) -> Completed:
         return subprocess.CompletedProcess(
             list(argv), 1, stdout="", stderr="Head sha didn't match\n"
         )
 
-    assert landing.squash_merge(42, subject="x", gh=refusing) == landing.Outcome(
+    assert landing.squash_merge(42, subject="x", gh=refusing, **here) == landing.Outcome(
         False, 1, "Head sha didn't match"
     )
 
@@ -396,14 +419,14 @@ def test_a_refused_request_carries_gh_s_reason() -> None:
     ids=["in-the-queue", "waiting-to-enter"],
 )
 def test_the_dequeue_takes_the_pr_out_the_way_its_state_needs(
-    before: dict[str, Any], command: list[str]
+    before: dict[str, Any], command: list[str], here: dict[str, Any]
 ) -> None:
     """A PR in the queue leaves through GitHub's dequeue mutation (gh's
     `--disable-auto` answers "already queued" there and does nothing); one
     auto-merge still holds has the auto-merge cancelled. Out is confirmed by a
     reading."""
     calls: list[list[str]] = []
-    outcome = landing.dequeue(42, gh=_gh([before, _OUT], calls))
+    outcome = landing.dequeue(42, gh=_gh([before, _OUT], calls), **here)
     assert outcome.accepted
     taken = calls[1]
     assert taken[1 : 1 + len(command)] == command
@@ -411,21 +434,64 @@ def test_the_dequeue_takes_the_pr_out_the_way_its_state_needs(
         assert "dequeuePullRequest" in taken[4] and taken[-1] == "id=PR_node"
 
 
-def test_a_dequeue_that_does_not_take_says_so() -> None:
-    outcome = landing.dequeue(42, gh=_gh([_QUEUED, _QUEUED]))
+def test_a_dequeue_that_does_not_take_says_so(here: dict[str, Any]) -> None:
+    outcome = landing.dequeue(42, gh=_gh([_QUEUED, _QUEUED]), **here)
     assert not outcome.accepted
     assert "still position 2 in the queue" in outcome.reason
 
 
-def test_a_pr_out_of_the_queue_needs_no_dequeue() -> None:
+def test_a_pr_out_of_the_queue_needs_no_dequeue(here: dict[str, Any]) -> None:
     calls: list[list[str]] = []
-    assert landing.dequeue(42, gh=_gh([_OUT], calls)).accepted
+    assert landing.dequeue(42, gh=_gh([_OUT], calls), **here).accepted
     assert len(calls) == 1
 
 
-def test_a_merged_pr_cannot_be_dequeued() -> None:
-    outcome = landing.dequeue(42, gh=_gh([_MERGED]))
+def test_a_merged_pr_cannot_be_dequeued(here: dict[str, Any]) -> None:
+    outcome = landing.dequeue(42, gh=_gh([_MERGED]), **here)
     assert not outcome.accepted and "has merged" in outcome.reason
+
+
+# --- the guard on the requests ---------------------------------------------------
+
+
+@pytest.mark.parametrize("request_", ["merge", "enqueue", "dequeue"])
+def test_a_request_is_made_only_where_its_clearance_was_given(
+    request_: str, here: dict[str, Any], tmp_path: Path
+) -> None:
+    """A clearance covers the directory the guard looked at; a request aimed
+    at another is not made."""
+    calls: list[list[str]] = []
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    kwargs: dict[str, Any] = {
+        "cwd": elsewhere,
+        "clearance": here["clearance"],
+        "gh": _gh([_QUEUED], calls),
+    }
+    with pytest.raises(ValueError, match="the clearance is for"):
+        if request_ == "merge":
+            landing.squash_merge(42, subject="fix: x", **kwargs)
+        elif request_ == "enqueue":
+            landing.enqueue(42, **kwargs)
+        else:
+            landing.dequeue(42, **kwargs)
+    assert calls == []
+
+
+def test_a_request_runs_gh_where_the_guard_looked(
+    here: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """With no client of its own, a request runs `gh` from the directory its
+    clearance covers."""
+    places: list[Path] = []
+
+    def runner(cwd: Path) -> landing.GhRunner:
+        places.append(cwd)
+        return _gh([_NO_QUEUE])
+
+    monkeypatch.setattr(landing, "gh_runner", runner)
+    assert landing.squash_merge(42, subject="fix: x", **here).accepted
+    assert places == [Path(here["cwd"]).resolve()]
 
 
 # --- wait_for_merge ---------------------------------------------------------
@@ -576,7 +642,9 @@ def fake_gh(monkeypatch: pytest.MonkeyPatch) -> Callable[..., list[list[str]]]:
 
     def install(answers: list[dict[str, Any]]) -> list[list[str]]:
         calls: list[list[str]] = []
-        monkeypatch.setattr(landing, "run_gh", _gh(answers, calls))
+        runner = _gh(answers, calls)
+        monkeypatch.setattr(landing, "run_gh", runner)
+        monkeypatch.setattr(landing, "gh_runner", lambda cwd: runner)
         clock = _Clock()
         monkeypatch.setattr(landing, "_sleep", clock.sleep)
         monkeypatch.setattr(landing, "_monotonic", clock)
@@ -643,7 +711,21 @@ def test_enqueue_and_merge_write_what_they_came_to(fake_gh: Any) -> None:
     result = _invoke("enqueue", "42", "--head", "sha", "--json")
     assert result.exit_code == 0
     assert _lines(result.stdout) == [
-        {"schema_version": 1, "pull_request": 42, "accepted": True, "exit_code": 0, "reason": ""}
+        {
+            "schema_version": 1,
+            "pull_request": 42,
+            "accepted": True,
+            "exit_code": 0,
+            "reason": "",
+            "refused_by": None,
+            "guard": {
+                "verdict": "undetermined",
+                "passed": "undetermined",
+                "undetermined_kind": "noncoverage",
+                "anchor": None,
+                "target": None,
+            },
+        }
     ]
     result = _invoke("merge", "42", "--subject", "fix: x", "--head", "sha")
     assert result.exit_code == 0
@@ -655,10 +737,11 @@ def test_a_refused_request_exits_1(monkeypatch: pytest.MonkeyPatch) -> None:
     def refusing(argv: Sequence[str]) -> Completed:
         return subprocess.CompletedProcess(list(argv), 1, stdout="", stderr="not mergeable")
 
-    monkeypatch.setattr(landing, "run_gh", refusing)
+    monkeypatch.setattr(landing, "gh_runner", lambda cwd: refusing)
     result = _invoke("merge", "42", "--subject", "fix: x", "--json")
     assert result.exit_code == 1
-    assert _lines(result.stdout)[0]["reason"] == "not mergeable"
+    [document] = _lines(result.stdout)
+    assert document["reason"] == "not mergeable" and document["refused_by"] is None
 
 
 @pytest.mark.parametrize(
@@ -704,3 +787,80 @@ def test_dequeue_writes_whether_the_pr_is_out(fake_gh: Any) -> None:
     result = _invoke("dequeue", "42")
     assert result.exit_code == 0
     assert "PR #42 is out of the merge queue" in result.stdout
+
+
+# --- `pkit pull-request`: the cross-repository guard -------------------------------
+
+
+def _repository(path: Path, origin: str) -> Path:
+    path.mkdir(parents=True)
+    subprocess.run(["git", "init", "-q"], cwd=path, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "remote", "add", "origin", origin], cwd=path, check=True, capture_output=True
+    )
+    return path
+
+
+@pytest.fixture
+def foreign(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """A session rooted in one repository, run from another: the target."""
+    anchor = _repository(tmp_path / "anchor", "https://github.com/octo/project.git")
+    target = _repository(tmp_path / "target", "https://github.com/octo/other.git")
+    monkeypatch.setenv(session_guard.CLAUDE_CODE_ANCHOR, str(anchor))
+    monkeypatch.chdir(target)
+    return target
+
+
+_REQUESTS = [
+    ["merge", "42", "--subject", "fix: x", "--head", "sha"],
+    ["enqueue", "42", "--head", "sha"],
+    ["dequeue", "42"],
+]
+
+
+@pytest.mark.parametrize("args", _REQUESTS, ids=["merge", "enqueue", "dequeue"])
+def test_a_request_in_another_repository_with_no_terminal_is_refused_unmade(
+    args: list[str], fake_gh: Any, foreign: Path
+) -> None:
+    """No terminal to ask (the runner's input is not one) and no flag: the
+    document says the guard refused, and nothing was asked of GitHub."""
+    calls = fake_gh([_QUEUED, _OUT])
+    result = _invoke(*args, "--json")
+    assert result.exit_code == 1
+    [document] = _lines(result.stdout)
+    assert document["accepted"] is False and document["exit_code"] is None
+    assert document["refused_by"] == "foreign-repository"
+    assert document["guard"]["verdict"] == "diverged"
+    assert document["guard"]["target"] == str(foreign.resolve())
+    assert "--allow-foreign-repo" in document["reason"]
+    assert document["schema_version"] == landing.SCHEMA_VERSION
+    assert calls == []
+
+
+def test_a_refusal_says_why_and_names_the_flag(fake_gh: Any, foreign: Path) -> None:
+    calls = fake_gh([_QUEUED])
+    result = _invoke("enqueue", "42")
+    assert result.exit_code == 1
+    assert "the cross-repository guard refused" in result.stderr
+    assert "--allow-foreign-repo" in result.stderr
+    assert "Nothing was asked of GitHub" in result.stderr
+    assert calls == []
+
+
+@pytest.mark.parametrize("args", _REQUESTS, ids=["merge", "enqueue", "dequeue"])
+def test_the_flag_confirms_a_request_in_another_repository(
+    args: list[str], fake_gh: Any, foreign: Path
+) -> None:
+    calls = fake_gh([_QUEUED, _OUT])
+    result = _invoke(*args, "--allow-foreign-repo", "--json")
+    assert result.exit_code == 0
+    [document] = _lines(result.stdout)
+    assert document["accepted"] is True and document["refused_by"] is None
+    assert (document["guard"]["verdict"], document["guard"]["passed"]) == ("overridden", "flag")
+    assert calls
+
+
+def test_the_readings_and_the_wait_run_no_guard(fake_gh: Any, foreign: Path) -> None:
+    fake_gh([_QUEUED, _MERGED])
+    assert _invoke("read", "496", "--json").exit_code == 0
+    assert _invoke("wait", "496", "--json").exit_code == 0
