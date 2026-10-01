@@ -354,31 +354,52 @@ def _stage_project(work: Path, *, mode: str) -> Path:
     return capability
 
 
+@dataclass(frozen=True)
+class _Clone:
+    """An origin and a clone of it on the PR's branch, one commit past main,
+    pushed: built once per module, copied for each test."""
+
+    root: Path
+    base: str
+    head: str
+
+
+@pytest.fixture(scope="module")
+def clone(tmp_path_factory: pytest.TempPathFactory) -> _Clone:
+    root = tmp_path_factory.mktemp("land-clone")
+    _git(root, "init", "-q", "--bare", "-b", "main", "origin.git")
+    work = root / "work"
+    work.mkdir()
+    _git(work, "init", "-q", "-b", "main")
+    _git(work, "config", "user.email", "octocat@example.com")
+    _git(work, "config", "user.name", "Octo Cat")
+    # Relative, so a copy of `root` pushes to its own copy of the origin.
+    _git(work, "remote", "add", "origin", "../origin.git")
+    (work / ".gitignore").write_text(".pkit/\n.claude/\n", encoding="utf-8")
+    _git(work, "add", ".gitignore")
+    _git(work, "commit", "-q", "-m", "start")
+    _git(work, "push", "-q", "-u", "origin", "main")
+    base = _git(work, "rev-parse", "HEAD")
+    _git(work, "switch", "-q", "-c", BRANCH)
+    (work / "change.txt").write_text("change", encoding="utf-8")
+    _git(work, "add", "change.txt")
+    _git(work, "commit", "-q", "-m", "add change.txt")
+    _git(work, "push", "-q", "origin", BRANCH)
+    return _Clone(root, base, _git(work, "rev-parse", "HEAD"))
+
+
 @pytest.fixture
-def world(land, tmp_path, monkeypatch) -> Callable[..., _Run]:
+def world(land, clone, tmp_path, monkeypatch) -> Callable[..., _Run]:
     def build(*, mode: str = "agent", checks: list[list[dict[str, Any]]] | None = None) -> _Run:
-        origin = tmp_path / "origin.git"
-        _git(tmp_path, "init", "-q", "--bare", "-b", "main", str(origin))
-        work = tmp_path / "work"
-        work.mkdir()
-        _git(work, "init", "-q", "-b", "main")
-        _git(work, "config", "user.email", "octocat@example.com")
-        _git(work, "config", "user.name", "Octo Cat")
-        _git(work, "remote", "add", "origin", str(origin))
-        (work / ".gitignore").write_text(".pkit/\n.claude/\n", encoding="utf-8")
-        _git(work, "add", ".gitignore")
-        _git(work, "commit", "-q", "-m", "start")
-        _git(work, "push", "-q", "-u", "origin", "main")
-        base = _git(work, "rev-parse", "HEAD")
-        _git(work, "switch", "-q", "-c", BRANCH)
+        shutil.copytree(clone.root, tmp_path / "clone", symlinks=True)
+        work = tmp_path / "clone" / "work"
         _stage_project(work, mode=mode)
         monkeypatch.chdir(work)
         monkeypatch.setenv("PM_INVOKER_LOGIN", "octocat")
         monkeypatch.delenv("CLAUDE_PROJECT_DIR", raising=False)
 
-        github = _FakeGitHub(mq=land.merge_queue, head="", base=base)
+        github = _FakeGitHub(mq=land.merge_queue, head=clone.head, base=clone.base)
         run = _Run(land=land, work=work, github=github)
-        github.head = run.commit("change.txt", push=True)
         github.checks[github.head] = checks if checks is not None else [_GREEN]
 
         gh_module = sys.modules["_lib.gh"]
