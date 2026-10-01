@@ -18,9 +18,9 @@ pkit:
         - ACT-clone-session
         - ACT-developer-subagent
     revalidated:
-      at: 2026-10-01T04:19:48Z
+      at: 2026-10-01T15:15:17Z
       outcome: unchanged
-      unchanged-because: "on this branch the anchored code changed only in layout: ruff format and the lint fixes; behaviour and the documented commands are unchanged"
+      unchanged-because: the project-manager body's date-based Milestone trigger now names close-milestone; delegating a Task to a developer subagent, and the subagent acting as its clone at the tracker, are untouched
 ---
 
 # UC-009 — Delegate a task to a developer subagent
