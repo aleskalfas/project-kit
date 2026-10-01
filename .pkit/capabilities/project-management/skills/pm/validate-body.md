@@ -13,12 +13,12 @@ This operation **does not mutate** the issue. It reports findings; the caller de
 
 ## What the script enforces
 
-The deterministic enforcement lives in `scripts/validate-issue.py`. It reads `issue-types.yaml` (structural-type inference from title prefix), `titles.yaml` (per-type title regex), `body-format.yaml` (per-type required sections + universal body rules), `classification.yaml` (axes presence + mutual exclusion), and the adopter's `project/config.yaml` (substrate mode).
+The deterministic enforcement lives in `scripts/validate-issue.py`. It reads `issue-types.yaml` (structural-type inference from title prefix), `titles.yaml` (per-type title pattern and wording rules), `body-format.yaml` (per-type required sections + universal body rules), `classification.yaml` (axes presence + mutual exclusion), and the adopter's `project/config.yaml` (substrate mode).
 
 Behaviour summary (the script is the source of truth):
 
 - **Membership gate** (per [project-management:DEC-021-team-membership-gate]) — closed mode refuses non-members.
-- **Title format** — validates the title prefix against the per-type regex. A Task's prefix may be `[Task]` or a kind-driven one (`[Bug]`, `[Docs]`, `[Test]`, `[Refactor]`, `[Chore]`); the title-format finding lists every accepted prefix.
+- **Title format** — validates the title prefix against the per-type regex. A Task's prefix may be `[Task]` or a kind-driven one (`[Bug]`, `[Docs]`, `[Test]`, `[Refactor]`, `[Chore]`); the title-format finding lists every accepted prefix. Then every wording rule `titles.yaml` declares for the type, under its `name` as the finding label: a Conventional Commits prefix after the bracket is a hard-reject at `--phase create` and a warning at `--phase transition`, so a title filed before the rule was enforced does not block a move; a lowercase `scope:` token after the bracket and a title under 30 characters after its prefix are warnings.
 - **Required body sections** — checks every `## Heading` listed in `body-format.yaml`'s `required_sections` for the inferred type.
 - **Parent-ref first line** — checks the first non-empty body line matches the `parent_ref_form` for the type (when `parent_ref_optional: false`).
 - **Classification axes** — `type:*` label required and mutually exclusive; `priority:*` and `workstream:*` demanded according to where each axis is actually carried, asked per axis rather than inferred from whether a board exists ([project-management:DEC-051-axis-carriage-activation] decision point 1). The kit's own label is demanded only where the kit's labels are that axis's substrate; an axis bound to the adopter's own labels is checked against those; an axis carried by a title prefix, a derive predicate, or nothing at all is not demanded. A board-carried axis reports as unverified rather than missing — this gate does not read board fields.
