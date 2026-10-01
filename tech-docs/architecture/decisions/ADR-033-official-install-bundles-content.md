@@ -274,5 +274,5 @@ this is the durable foundation, not a throwaway step.
   argument, applied to the predicates.
 - **Dependents stand on the version-lock, not on D1's mechanism.** The entry-point router's
   soundness argument (ADR-039), the per-project pin's content-locked-to-binary sequencing
-  (ADR-049) and PRJ-004's clarified implication rest on the bundled content being
+  (ADR-062) and PRJ-004's clarified implication rest on the bundled content being
   version-locked to the binary, so how D1 computes its boundary does not move them.

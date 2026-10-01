@@ -29,7 +29,7 @@ Two version records exist already, and neither fits. `.pkit/VERSION` is the sour
 
 3. **Upgrade pins by default.** In an un-pinned project, `pkit upgrade` syncs content from the tool's bundle, runs the migrations, and then writes the pin at the version the content reached — the local version, with no network lookup — and also when the content was already current. `--no-pin` skips the write, so the project keeps following the installed tool. A sync that fails writes no pin; `--dry-run` reports the pin it would write.
 
-4. **A pinned upgrade raises the pin to the latest release.** When the router has re-run `pkit upgrade` at the pinned version, the upgrade asks the release source for the latest tag (the check [ADR-044](ADR-044-upgrade-self-update-detect-instruct.md) defines) and compares it with the pin:
+4. **A pinned upgrade raises the pin to the latest release.** When the router has re-run `pkit upgrade` at the pinned version, the upgrade asks the release source for the latest tag (the check [ADR-061](ADR-061-upgrade-updates-the-tool.md) point 1 defines) and compares it with the pin:
    - **newer** — it runs the target version's own `upgrade` through the router's bypass (`uvx` at the target, `PKIT_NO_ROUTE` set, the loop guard dropped), which syncs content and runs migrations under the target's code, then flips the pin;
    - **equal** — it says the project is at the latest release and changes nothing;
    - **older than the pin** — it says the project is pinned ahead of the newest release and leaves the pin;
@@ -63,7 +63,7 @@ Two version records exist already, and neither fits. `.pkit/VERSION` is the sour
 
 ### Alternatives considered
 
-- **Opt-in pinning: the router does nothing until a project commits the pin, and `pkit upgrade` never writes one** — the ruling of ADR-049, which this record supersedes. Overturned: the drift between a newer tool and older content is the common failure, and an opt-in pin is forgotten when it matters. It remains available as `--no-pin`.
+- **Opt-in pinning: the router does nothing until a project commits the pin, and `pkit upgrade` never writes one** — the ruling of [ADR-049](ADR-049-per-project-version-pin.md), which this record supersedes. Overturned: the drift between a newer tool and older content is the common failure, and an opt-in pin is forgotten when it matters. It remains available as `--no-pin`.
 - **A `--pin` flag on `pkit upgrade`.** Rejected: opt-in in another place, forgotten the same way.
 - **Reuse `backbone_version` as the pin.** Rejected: a record taken for a directive, rewritten by every sync, advancing before migrations.
 - **Ship `.pkit/VERSION` to projects.** Rejected: a second per-project version record beside `backbone_version`.
@@ -78,5 +78,5 @@ Two version records exist already, and neither fits. `.pkit/VERSION` is the sour
 - The pin file belongs to the project: the lifecycle's ownership list names it as project-owned, so no sync writes or overwrites it.
 - A project moves into the pinned model on its first `pkit upgrade` run by a tool that carries the default. No migration: the behaviour lives in the upgrading code, and the file's format is fixed; a change to its name or format would need one (COR-010).
 - The raise runs under the target's code, so the target's sync writes the target's content and runs its migrations (ADR-033). A project pinned below the release that carries a raise behaviour keeps the older code's behaviour until it is moved past it; `pkit pin <newer>` always moves it, with no `uv` step.
-- The latest-release check is the one the tool update uses ([ADR-044](ADR-044-upgrade-self-update-detect-instruct.md)): one source, the compiled distribution URL ([PRJ-004](../../../.pkit/decisions/project/PRJ-004-distribution-channel.md)).
-- Stands on ADR-033, ADR-039, ADR-044, ADR-059, COR-006, COR-010 and PRJ-004, all accepted. ADR-039 is not reopened.
+- The latest-release check is the one the tool update uses ([ADR-061](ADR-061-upgrade-updates-the-tool.md)): one source, the compiled distribution URL ([PRJ-004](../../../.pkit/decisions/project/PRJ-004-distribution-channel.md)).
+- Stands on ADR-033, ADR-039, ADR-059, ADR-061, COR-006, COR-010 and PRJ-004, all accepted. ADR-039 is not reopened.

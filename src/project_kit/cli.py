@@ -3074,15 +3074,14 @@ def merge(targets: tuple[str, ...], dry_run: bool) -> None:
     is_flag=True,
     default=False,
     help="Keep this project un-pinned (opt out of pin-by-default): it keeps "
-    "following the installed global tool. Per ADR-049.",
+    "following the installed global tool. Per ADR-062.",
 )
 @click.option(
     "--no-self-update",
     "no_self_update",
     is_flag=True,
     default=False,
-    help="Don't update the pkit tool itself when it's stale — just print the "
-    "command (the old detect-and-instruct behaviour). Per ADR-044.",
+    help="Don't update the pkit tool itself when it's stale — just print the command. Per ADR-061.",
 )
 def upgrade(dry_run: bool, no_pin: bool, no_self_update: bool) -> None:
     """Transition the project to a newer backbone (per COR-010).
@@ -3090,13 +3089,13 @@ def upgrade(dry_run: bool, no_pin: bool, no_self_update: bool) -> None:
     Bumps the project to the source kit's current backbone version. To
     upgrade a single capability, use `pkit capabilities upgrade <name>`.
 
-    **Updates the pkit tool itself** when it is behind (ADR-044): it runs
+    **Updates the pkit tool itself** when it is behind (ADR-061): it runs
     `uv tool install --force …@<latest>` and re-runs the upgrade under the new
     version — degrading to just printing the command when non-interactive or if the
     install is declined. `--no-self-update` keeps the print-only behaviour. Run
     outside any project, `pkit upgrade` updates the tool only.
 
-    **Pins the project by default** at the version it upgrades to (ADR-049), so it
+    **Pins the project by default** at the version it upgrades to (ADR-062), so it
     stays version-locked with no separate `pkit pin` step. Pass `--no-pin` to keep
     it un-pinned. A project that is already pinned advances its pin either way;
     self-host is never pinned.
