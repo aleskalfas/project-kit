@@ -15,9 +15,9 @@ pkit:
         - .pkit/schemas/_defs/process.schema.json
       record: [COR-033, COR-034, COR-035, COR-036, COR-037, COR-038, COR-040, COR-042, COR-044, COR-053, ADR-020, ADR-036, ADR-048, ADR-051]
     revalidated:
-      at: 2026-10-01T22:00:56Z
+      at: 2026-10-01T23:47:05Z
       outcome: unchanged
-      unchanged-because: COR-053 changed only point 9's statement of a subscriber's limits; this page covers role-addressed upstreams, interface versions and the predicate runner, whose predicates may reach the network and are no subscribers, so it holds
+      unchanged-because: "COR-053 changed in one rationale sentence, on why events take no consent model: it now names the two writes the consent rule covers; this page says nothing of consent for events, and what it takes from the record — connection points, roles and their wiring — is as it was"
 ---
 
 # Process
