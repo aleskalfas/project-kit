@@ -1173,6 +1173,88 @@ def _rt_state_block(data: Any, state_id: str, definition_path: Path) -> Any:
 
 
 @dataclass(frozen=True)
+class _HostingEntry:
+    """One `depends_on` entry that names the hand-off's upstream: its state, its
+    1-based place in that state's `depends_on` list, and the entry itself."""
+
+    state_id: str
+    position: int
+    entry: dict[str, Any]
+
+    def describe(self) -> str:
+        return (
+            f"entry {self.position} ({self.entry.get('relation', '?')}, "
+            f"{self.entry.get('mode', '?')})"
+        )
+
+
+def _handoff_block_lines(trigger: str, candidates: str, resolve: str) -> list[str]:
+    """The `handoff:` sub-block a hand-off would write, as YAML lines — what the
+    author pastes when the stamp cannot place it."""
+    return [
+        "handoff:",
+        f"  trigger: {trigger}",
+        "  candidates:",
+        f"    run: {candidates}",
+        "  resolve:",
+        f"    run: {resolve}",
+    ]
+
+
+def _ambiguous_hosting_message(
+    repo_root: Path,
+    address: str,
+    upstream: str,
+    hosting: list[_HostingEntry],
+    definition_path: Path,
+    *,
+    handoff_lines: list[str],
+) -> str:
+    """Why more than one `depends_on` entry could host the contract, and the
+    way out that actually exists.
+
+    `--state` picks a STATE, so it settles entries on different states only.
+    Two entries on ONE state — the same upstream depended on in two ways, which
+    `couple` legally appends — are told apart by nothing `hand-off` accepts, so
+    suggesting `--state` there would send the author in a circle. That case
+    names the entries and the hand edit instead.
+    """
+    by_state: dict[str, list[_HostingEntry]] = {}
+    for hosted in hosting:
+        by_state.setdefault(hosted.state_id, []).append(hosted)
+    shared = [sid for sid, entries in by_state.items() if len(entries) > 1]
+
+    if len(by_state) > 1:
+        message = (
+            f"{address!r} couples to {upstream!r} on several states "
+            f"({', '.join(by_state)}); pass --state to name the hosting state."
+        )
+        for sid in shared:
+            message += (
+                f" State {sid!r} carries {len(by_state[sid])} entries on that "
+                "upstream, which no flag tells apart — pass --state "
+                f"{sid} to see how to host the contract there by hand."
+            )
+        return message
+
+    ((sid, entries),) = by_state.items()
+    listed = ", ".join(hosted.describe() for hosted in entries)
+    paste = "\n".join("  " + line for line in handoff_lines)
+    return (
+        f"state {sid!r} of {address!r} carries {len(entries)} `depends_on` "
+        f"entries on upstream {upstream!r} — {listed} — and `process hand-off` "
+        "has no flag that tells entries on one state apart (--state names a "
+        "state, not an entry), so the stamp cannot choose which one hosts the "
+        "contract. Add it by hand: in "
+        f"{definition_path.relative_to(repo_root)}, give the entry you mean "
+        f"this key, beside its `upstream:` and `relation:`\n{paste}\n"
+        "then run `pkit process health --interpretation-only --process "
+        f"{address}`, which names anything still missing — a seam command not "
+        "yet registered, or a malformed block."
+    )
+
+
+@dataclass(frozen=True)
 class HandoffResult:
     definition_path: Path
     state_id: str
@@ -1222,14 +1304,14 @@ def handoff_process(
     capability_dir = definition.capability_dir
 
     # Find the coupling: the depends_on entry naming this upstream.
-    hosting: list[tuple[str, dict[str, Any]]] = []
+    hosting: list[_HostingEntry] = []
     for state in definition.states:
         sid = state.get("id")
-        for entry in state.get("depends_on") or []:
+        for position, entry in enumerate(state.get("depends_on") or [], start=1):
             if isinstance(entry, dict) and entry.get("upstream") == upstream:
-                hosting.append((sid if isinstance(sid, str) else "?", entry))
+                hosting.append(_HostingEntry(sid if isinstance(sid, str) else "?", position, entry))
     if state_id is not None:
-        hosting = [(sid, e) for sid, e in hosting if sid == state_id]
+        hosting = [h for h in hosting if h.state_id == state_id]
     if not hosting:
         where = f" on state {state_id!r}" if state_id is not None else ""
         raise ProcessAuthoringError(
@@ -1237,13 +1319,6 @@ def handoff_process(
             "a hand-off contract is a sub-block of an existing `depends_on` "
             "entry — run `pkit process couple` first (COR-042)."
         )
-    if len(hosting) > 1:
-        states_list = ", ".join(sid for sid, _ in hosting)
-        raise ProcessAuthoringError(
-            f"{address!r} couples to {upstream!r} on several states "
-            f"({states_list}); pass --state to name the hosting entry."
-        )
-    hosting_state, _ = hosting[0]
 
     if not trigger.strip():
         raise ProcessAuthoringError("a hand-off contract requires a trigger state.")
@@ -1272,6 +1347,21 @@ def handoff_process(
                 f"{label} command name {name!r} must be kebab-case (it "
                 "registers in the capability's package.yaml)."
             )
+
+    # Refused only now, so the block the message offers to paste carries a
+    # trigger and seam names that have passed the checks above.
+    if len(hosting) > 1:
+        raise ProcessAuthoringError(
+            _ambiguous_hosting_message(
+                repo_root,
+                address,
+                upstream,
+                hosting,
+                definition_path,
+                handoff_lines=_handoff_block_lines(trigger, candidates, resolve),
+            )
+        )
+    hosting_state = hosting[0].state_id
 
     # Scaffold + register the seam stubs for names not yet registered.
     registry = _load_command_registry(capability_dir)

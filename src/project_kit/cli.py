@@ -7721,7 +7721,8 @@ def process_couple(
     "state_id",
     default=None,
     help="Hosting state of the coupling; needed only when ADDRESS couples to "
-    "the same upstream on several states.",
+    "the same upstream on several states. It names a state, so it cannot "
+    "tell apart two entries on one state — the refusal names the hand edit.",
 )
 @click.option(
     "--trigger",

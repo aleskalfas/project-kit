@@ -1147,6 +1147,129 @@ def test_handoff_is_idempotent_and_refuses_conflicts(authoring_repo: Path) -> No
         _handoff_unit(authoring_repo, trigger="drafting")
 
 
+def _couple_unit_twice_on_building(repo: Path) -> None:
+    """Two legal `depends_on` entries on ONE state naming one upstream: the
+    same screen depended on in two ways (`couple` appends the second)."""
+    _couple_unit(repo)
+    _couple_unit(
+        repo,
+        relation="informational",
+        mode="pull",
+        why="A unit also reads the screen for context.",
+    )
+
+
+@pytest.mark.parametrize("state_id", [None, "building"])
+def test_handoff_names_the_hand_edit_when_one_state_holds_two_entries(
+    authoring_repo: Path, state_id: str | None
+) -> None:
+    # `--state` picks a state, so it cannot tell two entries on ONE state
+    # apart: the refusal must not send the author to a flag that cannot help,
+    # with or without --state already given. It names the entries, the file,
+    # and the exact block to add by hand.
+    _stamp_screen(authoring_repo)
+    _stamp_unit(authoring_repo)
+    _couple_unit_twice_on_building(authoring_repo)
+    definition_file = (
+        authoring_repo / ".pkit" / "capabilities" / "delivery" / "schemas" / "unit.yaml"
+    )
+    before = definition_file.read_bytes()
+
+    with pytest.raises(pa.ProcessAuthoringError) as refused:
+        _handoff_unit(authoring_repo, state_id=state_id)
+
+    message = str(refused.value)
+    assert "pass --state" not in message
+    assert "entry 1 (triggered-by, push)" in message
+    assert "entry 2 (informational, pull)" in message
+    assert "no flag that tells entries on one state apart" in message
+    assert ".pkit/capabilities/delivery/schemas/unit.yaml" in message
+    assert (
+        "  handoff:\n    trigger: ready\n    candidates:\n      run: unit-handoff-candidates\n"
+        "    resolve:\n      run: unit-handoff-resolve\n"
+    ) in message
+    assert "pkit process health --interpretation-only --process delivery:unit" in message
+    # A refusal writes nothing: no edit, no seam stub.
+    assert definition_file.read_bytes() == before
+    scripts = authoring_repo / ".pkit" / "capabilities" / "delivery" / "scripts"
+    assert not (scripts / "unit_handoff_candidates.py").exists()
+    assert "unit-handoff-candidates" not in _registered_commands(authoring_repo, "delivery")
+
+
+def test_handoff_s_hand_edit_block_is_what_the_stamp_would_write(authoring_repo: Path) -> None:
+    # The block the refusal offers to paste is the contract the stamp writes
+    # for the same arguments: pasted under the intended entry, the definition
+    # carries exactly the contract a stamp-placed hand-off would have.
+    _stamp_screen(authoring_repo)
+    _stamp_unit(authoring_repo)
+    _couple_unit_twice_on_building(authoring_repo)
+    with pytest.raises(pa.ProcessAuthoringError) as refused:
+        _handoff_unit(authoring_repo)
+    lines = str(refused.value).splitlines()
+    start = lines.index("  handoff:")
+    block = "\n".join(line[2:] for line in lines[start : start + 6])
+
+    from ruamel.yaml import YAML
+
+    assert YAML(typ="safe").load(block) == {
+        "handoff": {
+            "trigger": "ready",
+            "candidates": {"run": "unit-handoff-candidates"},
+            "resolve": {"run": "unit-handoff-resolve"},
+        }
+    }
+
+
+def _stamp_two_state_unit(repo: Path) -> None:
+    pa.stamp_new_process(
+        repo,
+        "delivery:unit",
+        states=[
+            pa.StateSpec("building", "Building a unit.", entry=True),
+            pa.StateSpec("shipping", "Shipping a unit.", terminal=True),
+        ],
+    )
+
+
+def test_handoff_still_points_at_state_when_the_entries_sit_on_different_states(
+    authoring_repo: Path,
+) -> None:
+    # Entries on DIFFERENT states are exactly what --state settles: that
+    # message stands, and the flag resolves it.
+    _stamp_screen(authoring_repo)
+    _stamp_two_state_unit(authoring_repo)
+    _couple_unit(authoring_repo, state_id="building")
+    _couple_unit(authoring_repo, state_id="shipping")
+    with pytest.raises(pa.ProcessAuthoringError, match="pass --state") as refused:
+        _handoff_unit(authoring_repo)
+    assert "(building, shipping)" in str(refused.value)
+    assert "no flag tells apart" not in str(refused.value)
+
+    assert _handoff_unit(authoring_repo, state_id="shipping").state_id == "shipping"
+
+
+def test_handoff_says_which_state_flag_cannot_settle(authoring_repo: Path) -> None:
+    # Mixed: one state holds two entries, another one. --state settles the
+    # second state only, and the message says so instead of implying it
+    # settles both.
+    _stamp_screen(authoring_repo)
+    _stamp_two_state_unit(authoring_repo)
+    _couple_unit_twice_on_building(authoring_repo)
+    _couple_unit(authoring_repo, state_id="shipping")
+    with pytest.raises(pa.ProcessAuthoringError) as refused:
+        _handoff_unit(authoring_repo)
+    message = str(refused.value)
+    assert "on several states (building, shipping); pass --state" in message
+    assert "State 'building' carries 2 entries on that upstream, which no flag tells apart" in (
+        message
+    )
+    assert "pass --state building to see how to host the contract there by hand" in message
+
+    with pytest.raises(pa.ProcessAuthoringError, match="entry 2 \\(informational, pull\\)"):
+        _handoff_unit(authoring_repo, state_id="building")
+    assert _handoff_unit(authoring_repo, state_id="shipping").changed
+
+
 def test_handoff_reuses_registered_seam_commands(authoring_repo: Path) -> None:
     # A name the capability already registers is REUSED — no stub scaffolded,
     # no clobber.
