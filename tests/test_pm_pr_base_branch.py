@@ -84,7 +84,11 @@ def _stub_gates(
     if hasattr(mod, "issue_position"):
         # start-work / review-work read the state as move-issue does (#1242):
         # the engine gives no position here, so it is read off `issue`.
-        monkeypatch.setattr(mod.issue_position, "engine_status", lambda _n: None)
+        monkeypatch.setattr(
+            mod.issue_position,
+            "ask_engine",
+            lambda _n: mod.issue_position.EngineAnswer(failure="no engine in this test"),
+        )
 
 
 def _no_config(_root: Path) -> dict[str, Any]:

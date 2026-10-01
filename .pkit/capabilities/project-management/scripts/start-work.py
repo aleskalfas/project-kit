@@ -18,9 +18,9 @@ Gates per DEC-026:
   - Issue's current state can move to In Progress per workflow.yaml (or is
     already there). Checked before any mutation, so a refused move leaves no
     branch or assignee behind (#942). From Todo, move to Backlog first. The
-    state is the one move-issue moves from, read once and handed to it
-    (`_lib/issue_position`, #1242); a state that cannot be read refuses here
-    too, saying why.
+    state is read as move-issue reads it (`_lib/issue_position`, #1242), and
+    move-issue reads it again when it moves; a state that cannot be read
+    refuses here, saying what failed.
   - If a branch exists, matches `<type>/<N>-<slug>` (idempotent).
 
 Side-effects:
@@ -28,7 +28,8 @@ Side-effects:
     label; slug from the issue title).
   - Sets assignee to the current invoker.
   - Composes over `move-issue.py --to in-progress`. If that move still fails
-    after the branch / assignee were written (e.g. a network error), the run
+    after the branch / assignee were written (a network error, or a state
+    that changed since the check so the move is no longer legal), the run
     ends on a failure naming what it left behind.
 
 Exit codes:
@@ -150,10 +151,10 @@ def main() -> int:
 
     # Gate: the move to In Progress is legal from where the issue is (#942).
     # Asked before the branch create / assignee write, so a refusal changes
-    # nothing. The state is the one reading move-issue moves from (#1242).
+    # nothing. The state is read as move-issue reads it (#1242).
     position = issue_position.read(
         issue,
-        issue_position.engine_status(args.issue_number),
+        issue_position.ask_engine(args.issue_number),
         labels=labels,
         config=config,
         substrate_map=substrate_map,
@@ -263,7 +264,6 @@ def main() -> int:
     rc = composed_move.invoke_move_issue(
         args.issue_number,
         TARGET_STATE,
-        position,
         capability_root_arg=args.capability_root,
         allow_foreign_repo=args.allow_foreign_repo,
     )

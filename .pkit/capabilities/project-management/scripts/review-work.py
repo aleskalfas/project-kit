@@ -20,9 +20,9 @@ Gates per DEC-026:
     already there, so a re-run works). Checked before any PR is opened or
     flipped ready and before reviewers are requested, so a refused move
     leaves the PR as it was (#947). From Backlog, move to In Progress first.
-    The state is the one move-issue moves from, read once and handed to it
-    (`_lib/issue_position`, #1242); a state that cannot be read refuses here
-    too, saying why.
+    The state is read as move-issue reads it (`_lib/issue_position`, #1242),
+    and move-issue reads it again when it moves; a state that cannot be read
+    refuses here, saying what failed.
   - PR title is Conventional Commits.
 
 Side-effects:
@@ -31,7 +31,8 @@ Side-effects:
   - Reviewer assignment (v1 ships with simple --reviewer override path;
     full DEC-027 mode resolution lands in Phase D).
   - Composes over `move-issue.py --to review`. If that move still fails
-    after the PR was opened or flipped ready (e.g. a network error), the run
+    after the PR was opened or flipped ready (a network error, or a state
+    that changed since the check so the move is no longer legal), the run
     ends on a failure naming what it left behind: the PR, its ready state and
     the reviewers it requested.
 
@@ -191,11 +192,11 @@ def main() -> int:
 
     # Gate: the move to Review is legal from where the issue is (#947). Asked
     # before the PR is opened or flipped ready and before reviewers are
-    # requested, so a refusal changes nothing. The state is the one reading
-    # move-issue moves from (#1242), as for start-work's gate (#942).
+    # requested, so a refusal changes nothing. The state is read as move-issue
+    # reads it (#1242), as for start-work's gate (#942).
     position = issue_position.read(
         issue,
-        issue_position.engine_status(args.issue_number),
+        issue_position.ask_engine(args.issue_number),
         labels=labels,
         config=config,
         substrate_map=substrate_map,
@@ -336,7 +337,6 @@ def main() -> int:
     rc = composed_move.invoke_move_issue(
         args.issue_number,
         TARGET_STATE,
-        position,
         capability_root_arg=args.capability_root,
         allow_foreign_repo=args.allow_foreign_repo,
     )

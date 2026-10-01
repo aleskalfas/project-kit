@@ -9,10 +9,10 @@ pull request and requests reviewers (DEC-026). So each:
   #1242), the legal moves from the table `move-issue` refuses on
   (`lifecycle_inference.legal_targets`) — and refuses with the moves to make
   first (#942, #947), or with why the state cannot be read;
-* runs `move-issue`, handing it the status it judged from, so the move is made
-  from the state the check passed;
-* and when that move still fails after its own changes, ends on a failure that
-  names what the run left behind and how to undo each (#942, #947).
+* runs `move-issue`, which reads the state again when it moves, so a move that
+  stopped being legal after the check is refused there;
+* and when that move fails after its own changes, ends on a failure that names
+  what the run left behind and how to undo each (#942, #947).
 
 A verb supplies only what differs: its name, the target state, and what it
 changes.
@@ -20,7 +20,6 @@ changes.
 
 from __future__ import annotations
 
-import os
 import subprocess
 import sys
 from pathlib import Path
@@ -52,10 +51,10 @@ def transition_refusal(
     move-issue uses), the state from `position`, and the legal moves from
     `lifecycle_inference.legal_targets`. An issue already at `target` passes:
     move-issue treats that as an idempotent no-op, so a re-run still works. A
-    `position` whose state is only a stand-in refuses with why. When legal moves
-    lead on to `target` the refusal names each of them, else it lists the legal
-    targets. `untouched` says what the verb left unchanged, e.g. "no branch, no
-    assignee"."""
+    `position` whose state is only a stand-in refuses, saying how the engine
+    gave no position. When legal moves lead on to `target` the refusal names
+    each of them, else it lists the legal targets. `untouched` says what the
+    verb left unchanged, e.g. "no branch, no assignee"."""
     title = str(issue.get("title", ""))
     structural_type = infer_structural_type(
         title, issue_types, classification=classification, labels=labels
@@ -69,12 +68,7 @@ def transition_refusal(
         )
     nothing_changed = f"Nothing was changed ({untouched})."
     if position.unread is not None:
-        return (
-            f"[refused] {verb} #{issue_number}: cannot read the issue's state: "
-            f"{position.unread}. {nothing_changed}\n"
-            f"  → make `pkit process status {issue_position.PROCESS_ADDRESS} "
-            f"--subject {issue_number}` answer, then re-run `{verb} {issue_number}`."
-        )
+        return _unread_refusal(verb, issue_number, position.unread, nothing_changed)
     current = position.state
     if current == target:
         return None
@@ -94,6 +88,26 @@ def transition_refusal(
         lines.append(
             f"  legal targets from {current!r}: {', '.join(targets) if targets else '<none>'}"
         )
+    return "\n".join(lines)
+
+
+def _unread_refusal(
+    verb: str, issue_number: int, unread: issue_position.Unread, nothing_changed: str
+) -> str:
+    """The refusal for a state that has no reading: what failed, what was said
+    about it, and the command whose answer the verb needs."""
+    lines = [
+        f"[refused] {verb} #{issue_number}: cannot read the issue's state: "
+        f"{issue_position.BOARD_CARRIES_STATE}, and the process engine gave no "
+        f"position: {unread.cause}. {nothing_changed}",
+    ]
+    if unread.said:
+        lines.append(f"  {unread.said_by} said:")
+        lines.extend(f"    {line}" for line in unread.said.splitlines())
+    lines.append(
+        f"  → make `pkit process status {issue_position.PROCESS_ADDRESS} "
+        f"--subject {issue_number}` give a position, then re-run `{verb} {issue_number}`."
+    )
     return "\n".join(lines)
 
 
@@ -129,17 +143,15 @@ def moves_before(
 def invoke_move_issue(
     issue_number: int,
     target: str,
-    position: issue_position.Position,
     *,
     capability_root_arg: Path | None,
     allow_foreign_repo: bool,
 ) -> int:
     """Run `move-issue <N> --to <target> --yes` and return its exit code.
 
-    The engine status `position` was read from is handed down, so move-issue
-    moves from the state the early check judged and asks the engine nothing
-    again. A confirmed foreign-repo override is threaded through, so that gate
-    is confirmed once."""
+    move-issue reads the issue's state itself, when it moves, and refuses a
+    move that is not legal from what it reads. A confirmed foreign-repo
+    override is threaded through, so that gate is confirmed once."""
     cmd = [
         sys.executable,
         str(_SCRIPTS / "move-issue.py"),
@@ -152,8 +164,7 @@ def invoke_move_issue(
         cmd.append("--allow-foreign-repo")
     if capability_root_arg is not None:
         cmd += ["--capability-root", str(capability_root_arg)]
-    env = {**os.environ, **issue_position.handed_down(issue_number, position.status)}
-    return subprocess.run(cmd, check=False, env=env).returncode
+    return subprocess.run(cmd, check=False).returncode
 
 
 def late_failure_message(

@@ -312,12 +312,14 @@ def main() -> int:
 
     # Position: read from the engine (DEC-033 D7 — read, don't re-infer), else
     # inferred from the issue's fields with the same map, so a move is never
-    # blocked on an unreachable engine. The one reading start-work and
-    # review-work judge their early check from (`_lib/issue_position`, #1242);
-    # a stand-in it flags as unread is still moved from here, as before.
-    engine_status = _engine_status(args.issue_number)
+    # blocked on an unreachable engine. Read here, when the move is made,
+    # through the resolver start-work and review-work judge their early check
+    # with (`_lib/issue_position`, #1242); a stand-in it flags as unread is
+    # still moved from here, as before.
+    engine = _ask_engine(args.issue_number)
+    engine_status = engine.status
     current_state = issue_position.read(
-        issue, engine_status, labels=labels, config=config, substrate_map=substrate_map
+        issue, engine, labels=labels, config=config, substrate_map=substrate_map
     ).state
 
     # WHICH substrate carries `state` — one question, one answer, asked of the
@@ -828,7 +830,7 @@ def _walk_parent_chain(body: str) -> list[int]:
 # keeps a journal and, where it does, how many governed moves it holds — which
 # keys the transition audit's retry detection).
 PROCESS_ADDRESS = issue_position.PROCESS_ADDRESS
-_engine_status = issue_position.engine_status
+_ask_engine = issue_position.ask_engine
 _position_from_status = issue_position.position_from_status
 
 

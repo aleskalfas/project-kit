@@ -637,8 +637,10 @@ def _wire_move_issue(mi, monkeypatch) -> None:
     )
     monkeypatch.setattr(
         mi,
-        "_engine_status",
-        lambda n: {"position": {"state": "todo"}, "journal": [{}, {}]},
+        "_ask_engine",
+        lambda n: mi.issue_position.EngineAnswer(
+            {"position": {"state": "todo"}, "journal": [{}, {}]}
+        ),
     )
     monkeypatch.setattr(mi.axis_carriage, "is_board_carried", lambda *a, **kw: False)
     monkeypatch.setattr(mi, "detect_placeholder_residuals", lambda **kw: [])
@@ -744,12 +746,14 @@ def _wire_move_issue_logging_off(mi, monkeypatch) -> _FakeGitHub:
     _wire_move_issue(mi, monkeypatch)
     monkeypatch.setattr(
         mi,
-        "_engine_status",
-        lambda n: {
-            "position": {"state": "todo"},
-            "journal": [],
-            "journal_logging": {"enabled": False, "committed": False},
-        },
+        "_ask_engine",
+        lambda n: mi.issue_position.EngineAnswer(
+            {
+                "position": {"state": "todo"},
+                "journal": [],
+                "journal_logging": {"enabled": False, "committed": False},
+            }
+        ),
     )
     monkeypatch.setattr(mi, "_gh_apply_state_label", real_label_write)
     gh = _FakeGitHub()
