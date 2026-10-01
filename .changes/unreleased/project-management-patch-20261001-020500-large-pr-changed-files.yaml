@@ -11,4 +11,5 @@ body: >
   files API, which lists up to 3000 files, and count a renamed file under its
   old path as well as its new one. A read that reaches the 3000-file ceiling is
   still refused, now naming that cause and a split-or-bypass remedy instead of
-  a retry.
+  a retry. `review-pr`'s brief tells each reviewer where to read a diff
+  `gh pr diff` refuses: the PR's range in the local checkout.
