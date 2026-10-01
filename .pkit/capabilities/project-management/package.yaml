@@ -98,7 +98,7 @@ commands:
     help: "Open a GitHub PR per the methodology's branch + title conventions. The closing issue is the positional <N> (as review-work / done-work take it) or --closes <N>, else the branch name's <N>; --closes repeats (one PR can close several issues, each with its own Closes #N line). The title is composed as <type>(<scope>): <summary> — <type> from --type or the primary issue's type:* label, <scope> from --scope, <summary> (the description part) from --summary or the issue title."
   merge-pr:
     script: scripts/merge-pr.py
-    help: Merge a PR per git-conventions.yaml's merge convention — one squash commit titled after the PR, head branch deleted on merge (remote ref via the API; local cleanup best-effort). Enforces the DEC-007 checkbox close-gate on every closing issue + the PR body.
+    help: Merge a PR per git-conventions.yaml's merge convention — one squash commit titled after the PR, head branch deleted on merge (remote ref via the API; local cleanup best-effort). Enforces the DEC-007 checkbox close-gate on every closing issue + the PR body. Refuses a PR whose base merges through a queue, the only path to it — done-work enqueues.
   close-pr:
     script: scripts/close-pr.py
     help: Close a PR without merging; optionally records an audit reason and deletes the source branch.
@@ -177,7 +177,7 @@ commands:
     help: "Workflow wrapper (DEC-026): flips a ready PR back to draft; dismisses prior APPROVED reviews. Issue stays in Review."
   done-work:
     script: scripts/done-work.py
-    help: "Workflow wrapper (DEC-026): Review → Done. Squash-merges PR via three-way approval gate (APPROVED review / Approved-prefix comment / --bypass); composes over move-issue."
+    help: "Workflow wrapper (DEC-026): Review → Done. Squash-merges PR via three-way approval gate (APPROVED review / Approved-prefix comment / --bypass); composes over move-issue. Where the base merges through a queue it enqueues instead, prints the PR's place and waits for the merge (--wait-minutes, default 5; --no-wait returns at once, exit 4); a later run finds the PR merged and completes the close and cascade."
   handoff-issue:
     script: scripts/handoff-issue.py
     help: "Workflow wrapper (DEC-026): reassign an in-flight issue to a new owner. Audit comment records the handoff; no state transition."

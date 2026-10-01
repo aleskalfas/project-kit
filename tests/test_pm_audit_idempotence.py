@@ -41,7 +41,10 @@ SCRIPTS_DIR = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scr
 CAPABILITY_ROOT = SCRIPTS_DIR.parent
 
 sys.path.insert(0, str(SCRIPTS_DIR))
-from _lib import audit  # noqa: E402
+from _lib import audit, merge_queue  # noqa: E402
+
+# The merge verbs' base merges directly (#1011): no merge queue to go through.
+_NO_QUEUE = merge_queue.Reading(has_queue=False)
 
 
 def _load(script: str, module_name: str):
@@ -540,6 +543,7 @@ def _wire_done_work(dw, monkeypatch) -> None:
     monkeypatch.setattr(dw, "_gh_get_pr_body", lambda n, config: "## Test plan\n- [x] ok\n")
     monkeypatch.setattr(dw, "_check_pr_placeholder", lambda body, n, root: [])
     monkeypatch.setattr(dw, "_gh_get_status_rollup", lambda n, config: _RED)
+    monkeypatch.setattr(dw.merge_queue, "read", lambda n, config: _NO_QUEUE)
     monkeypatch.setattr(dw.pr_merge, "squash_merge", lambda n, **kw: True)
     monkeypatch.setattr(dw.pr_merge, "delete_remote_branch", lambda b, c, **kw: None)
     monkeypatch.setattr(dw.pr_merge, "cleanup_local", lambda b, c, **kw: None)
@@ -587,6 +591,7 @@ def _wire_merge_pr(mp, monkeypatch) -> None:
         "_gather_unticked_findings",
         lambda n, body, closing, config: {},
     )
+    monkeypatch.setattr(mp.merge_queue, "read", lambda n, config: _NO_QUEUE)
     monkeypatch.setattr(mp.pr_merge, "squash_merge", lambda n, **kw: True)
     monkeypatch.setattr(mp.pr_merge, "delete_remote_branch", lambda b, c, **kw: None)
     monkeypatch.setattr(mp.pr_merge, "cleanup_local", lambda b, c, **kw: None)

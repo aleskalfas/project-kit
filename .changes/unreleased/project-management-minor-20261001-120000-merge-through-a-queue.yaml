@@ -1,0 +1,21 @@
+component: project-management
+kind: minor
+custom:
+  category: Changed
+body: >
+  Where a pull request's base branch merges through a merge queue, `done-work`
+  enqueues instead of merging (#1011): the same `gh pr merge --squash
+  --subject <title> --match-head-commit <head>` with `--auto`, after every gate
+  has passed. The queue runs the base's required checks on the merge it is
+  about to make and merges once they pass, so those checks answer for the true
+  base. `done-work` prints the pull request's place in the queue and waits for
+  the merge, up to `--wait-minutes` (default 5); the issue moves to Done, the
+  issues the pull request closes are closed and cascaded and the branch is
+  cleaned up once the queue has merged it. When the wait ends first, or
+  `--no-wait` returns at once, the issue stays in Review and the run exits 4;
+  a later `done-work <N>` finds the pull request merged and completes what
+  follows the merge, as long as the branch still points at the head that
+  merged. A pull request that leaves the queue unmerged exits 3. The queue is
+  the only path to such a base: `done-work --admin` is refused, so is a queue
+  whose merge method is not squash, and `merge-pr` refuses the pull request
+  and names `done-work`. A base without a queue merges directly, as before.

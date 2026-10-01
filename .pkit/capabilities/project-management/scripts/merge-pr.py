@@ -13,6 +13,9 @@ the PR title, no merge commits, head branch deleted on merge. Before the
 merge:
 
   * Membership gate (DEC-021).
+  * Merge-queue refusal (#1011): a PR whose base merges through a queue is
+    refused — the queue is the only path to that base, and `done-work`
+    is the verb that goes through it (`_lib.merge_queue`).
   * Checkbox close-gate (DEC-007) on every issue the PR closes —
     every `- [ ]` in any closing issue body must be ticked, else
     refuse. The PR body's own checkboxes also count.
@@ -58,7 +61,7 @@ Or via the dispatcher (per COR-021):
 
 Exit codes:
   0  merged (or dry-run reported)
-  1  membership / checkbox / title / CI-status refusal
+  1  membership / merge-queue / checkbox / title / CI-status refusal
   2  usage error (PR not found)
   3  gh failure
 """
@@ -76,7 +79,7 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate, pr_merge, session_guard
+from _lib import bootstrap_gate, merge_queue, pr_merge, session_guard
 from _lib.audit import bypass_audit_key, render_ci_bypass_audit_body
 
 # DEC-007's checkbox close-gate — the ONE implementation (`_lib.checkbox_gate`),
@@ -134,7 +137,8 @@ def main() -> int:
         action="store_true",
         help=(
             "Pass --admin to gh pr merge (bypasses branch-protection "
-            "checks). Use only when authorised."
+            "checks). Use only when authorised. Never goes around a merge "
+            "queue: a base with one is refused either way."
         ),
     )
     parser.add_argument(
@@ -216,6 +220,30 @@ def main() -> int:
     if pr_state != "open":
         print(
             f"\n[refused] PR is not open (state: {pr_state}). Cannot merge.",
+            file=sys.stderr,
+        )
+        return 1
+
+    # A base that merges through a queue (#1011) takes no direct merge: the
+    # queue is the only path to it, and the verb that goes through it is
+    # done-work, which also completes the issue lifecycle once it merges.
+    base = str(pr.get("baseRefName") or "") or "the base branch"
+    try:
+        queue = merge_queue.read(args.pr_number, config)
+    except merge_queue.Unreadable as exc:
+        print(
+            f"error: cannot tell whether {base} merges through a queue: {exc}. Nothing was merged.",
+            file=sys.stderr,
+        )
+        return 3
+    if queue.has_queue:
+        closes = _extract_closing_issues(pr_body)
+        issue = str(closes[0]) if closes else "<issue>"
+        print(
+            f"\n[refused] {base} merges through a queue, the only path to it, and "
+            "merge-pr merges directly.\n"
+            f"  → land it with `done-work {issue}`, which enqueues the PR, waits for "
+            "the queue to merge it, and then closes the issues it closes.",
             file=sys.stderr,
         )
         return 1

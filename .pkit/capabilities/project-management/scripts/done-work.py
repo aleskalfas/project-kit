@@ -127,6 +127,16 @@ Side-effects, in order (#878; the merge mechanic itself lives once in
     whole `gh pr merge` exits non-zero when the working tree cannot do so
     (detached HEAD; the default branch checked out in another worktree) —
     after the remote merge has already landed.
+  - Where the PR's base merges through a queue (#1011, `_lib.merge_queue`,
+    read before any gate), the same command with `--auto` enqueues instead:
+    the queue runs the base's required checks on the merge it is about to
+    make and merges once they pass. The queue is the only path then —
+    `--admin`, which merges around it, is refused, and so is a queue whose
+    merge method is not squash. done-work prints the PR's place in the queue
+    and waits for the merge, up to `--wait-minutes` (default 5); every step
+    below runs once the queue has merged it. When the wait ends first, or
+    `--no-wait` returns at once, the issue stays in Review (exit 4); a later
+    `done-work <N>` finds the PR merged and runs those steps.
   - Composes over `move-issue.py --to done` IMMEDIATELY after the merge, so
     no best-effort step can stand between the irreversible merge and the
     lifecycle transition.
@@ -145,16 +155,24 @@ Side-effects, in order (#878; the merge mechanic itself lives once in
     fails — merge irreversibility is the architectural constraint per
     DEC-026 failure semantics.
 
+A PR already merged — the queue merged it after a run returned — has nothing
+left to gate: a run that finds no open PR for the branch but a merged one
+whose head is the branch's tip runs only the steps after the merge.
+
 Exit codes:
   0  merged + done
-  1  membership refusal / approval, checkbox or CI gate fails
+  1  membership refusal / approval, checkbox or CI gate fails; a queue the
+     run may not go around or through
   2  usage error / gh failure
+  3  the merge failed, or the PR left the merge queue without merging
+  4  queued: the PR is in the merge queue and has not merged yet
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import math
 import re
 import subprocess
 import sys
@@ -165,7 +183,7 @@ from ruamel.yaml import YAML
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import axis_labels, bootstrap_gate, pr_merge, session_guard
+from _lib import axis_labels, bootstrap_gate, merge_queue, pr_merge, session_guard
 
 # The position and transition-table readers move-issue and start-work use, so
 # the move done-work makes ahead of the merge (#1162) and the move it leads to
@@ -245,13 +263,14 @@ from _lib.verdict_freshness import PR_VIEW_FIELDS, FreshnessRule, head_sha, rule
 
 def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
     """Fetch the issue's labels (review-mode resolution, DEC-027), body (the
-    DEC-007 checkbox pre-flight), state (an issue already closed is not gated,
-    #1086), and title and milestone (with the labels and state, where the issue
-    is in its lifecycle and what it may move to, #1162) in one round-trip."""
+    DEC-007 checkbox pre-flight), state and closing time (an issue already
+    closed is not gated, #1086, nor closed again after a queued merge, #1011),
+    and title and milestone (with the labels and state, where the issue is in
+    its lifecycle and what it may move to, #1162) in one round-trip."""
     return gh_get_issue(
         issue_number,
         config,
-        fields="title,labels,body,state,milestone",
+        fields="title,labels,body,state,closedAt,milestone",
     )
 
 
@@ -279,6 +298,22 @@ REVIEWER_OVERRIDE_AUDIT_WRITER = "done-work-reviewer-override"
 # The first-class satisfaction state DEC-050 adds beside a fresh APPROVED. One
 # spelling, used by every surface that reports a slot's status.
 STATE_SATISFIED_BY_OVERRIDE = "satisfied-by-override"
+
+# Where the base merges through a queue (#1011): how long a run waits for the
+# queue to merge the PR, and the exit of a run that returns while it is queued.
+DEFAULT_WAIT_MINUTES = 5.0
+EXIT_QUEUED = 4
+
+
+def _minutes(value: str) -> float:
+    """`--wait-minutes`: a number of minutes, 0 or more."""
+    try:
+        minutes = float(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"not a number of minutes: {value!r}") from None
+    if not math.isfinite(minutes) or minutes < 0:
+        raise argparse.ArgumentTypeError(f"not a wait of 0 minutes or more: {value!r}")
+    return minutes
 
 
 def _reviewer_override_key(reviewer: str, reason: str, head: str) -> str:
@@ -429,7 +464,29 @@ def main() -> int:
     parser.add_argument(
         "--admin",
         action="store_true",
-        help="Pass --admin to `gh pr merge` (bypass branch protection).",
+        help=(
+            "Pass --admin to `gh pr merge` (bypass branch protection). Refused "
+            "where the base merges through a queue: it would merge around it."
+        ),
+    )
+    parser.add_argument(
+        "--no-wait",
+        action="store_true",
+        help=(
+            "Where the base merges through a queue: return once the PR is "
+            "queued (exit 4). A later done-work run finds it merged and moves "
+            "the issue to Done, closes and cascades, and cleans up."
+        ),
+    )
+    parser.add_argument(
+        "--wait-minutes",
+        type=_minutes,
+        default=DEFAULT_WAIT_MINUTES,
+        metavar="MINUTES",
+        help=(
+            "Where the base merges through a queue: how long to wait for the "
+            f"queue to merge the PR (default {DEFAULT_WAIT_MINUTES:g})."
+        ),
     )
     parser.add_argument(
         "--capability-root",
@@ -476,6 +533,11 @@ def main() -> int:
 
     pr = _find_pr_for_branch(branch, config)
     if pr is None:
+        # A merge queue may have merged the PR after an earlier run returned
+        # (#1011): what follows the merge is all that is left to do.
+        merged_pr = _find_merged_pr_for_branch(branch, config)
+        if merged_pr is not None:
+            return _complete_merged_pr(args, merged_pr, branch, config)
         print(
             f"error: no OPEN PR found for branch {branch!r}. Run `review-work` first.",
             file=sys.stderr,
@@ -491,6 +553,24 @@ def main() -> int:
             file=sys.stderr,
         )
         return 2
+
+    # Whether the base merges through a queue (#1011), read before any gate so
+    # a run the queue would refuse stops before it posts or moves anything.
+    base = str(pr.get("baseRefName") or "") or "the base branch"
+    try:
+        queue = merge_queue.read(pr_number, config)
+    except merge_queue.Unreadable as exc:
+        print(
+            f"error: cannot tell whether {base} merges through a queue: {exc}. "
+            f"Nothing was merged; re-run `done-work {args.issue_number}` once "
+            "`gh` answers.",
+            file=sys.stderr,
+        )
+        return 2
+    queue_refusal = _queue_refusal(queue, base=base, admin=args.admin)
+    if queue_refusal:
+        print(queue_refusal, file=sys.stderr)
+        return 1
 
     # Resolve review mode per DEC-027 (issue labels read from the PR view above).
     issue = _gh_get_issue(args.issue_number, config)
@@ -722,14 +802,22 @@ def main() -> int:
     print(f"  gate:    {gate_result.passed_via}")
     if lead_in is not None:
         print(f"  lead-in: {lead_in.describe()}")
+    if queue.has_queue:
+        print(f"  queue:   {base} merges through a queue; PR #{pr_number} {queue.describe()}")
 
     if args.dry_run:
         lead_in_step = (
             f"move #{args.issue_number} to {lead_in.to_state}, " if lead_in is not None else ""
         )
+        merge_step = (
+            f"enqueue (squash --subject {pr_title!r} --auto) and "
+            f"{_wait_phrase(args)} for the queue to merge it, then "
+            if queue.has_queue
+            else f"squash-merge --subject {pr_title!r}, "
+        )
         print(
-            f"(dry-run: would post bypass audit (if any), {lead_in_step}"
-            f"squash-merge --subject {pr_title!r}, call move-issue, close and cascade "
+            f"(dry-run: would post bypass audit (if any), {lead_in_step}{merge_step}"
+            f"call move-issue, close and cascade "
             f"{_issue_list(to_close) or 'no issue'} through close-issue, then "
             f"best-effort cleanup: delete remote branch {branch!r}, checkout "
             f"main + pull, delete local branch.)"
@@ -737,7 +825,8 @@ def main() -> int:
         return 0
 
     if not args.yes and sys.stdin.isatty():
-        reply = input("Squash-merge + close? [y/N] ").strip().lower()
+        question = "Enqueue + close once merged?" if queue.has_queue else "Squash-merge + close?"
+        reply = input(f"{question} [y/N] ").strip().lower()
         if reply not in ("y", "yes"):
             print("aborted.", file=sys.stderr)
             return 0
@@ -822,6 +911,26 @@ def main() -> int:
             )
             return lead_in_rc
 
+    cross = bool(pr.get("isCrossRepository"))
+
+    # Where the base merges through a queue (#1011), the queue makes the merge:
+    # the PR is enqueued, and what follows the merge runs once the queue has
+    # merged it — in this run when it merges within the wait, else in a later
+    # one that finds it merged.
+    if queue.has_queue:
+        return _land_through_queue(
+            args,
+            queue,
+            pr_number=pr_number,
+            pr_title=pr_title,
+            head_oid=gate_result.head_oid or pr_head,
+            base=base,
+            to_close=to_close,
+            branch=branch,
+            cross=cross,
+            config=config,
+        )
+
     # Squash-merge with an explicit subject so the landed commit subject
     # equals the gate-validated PR title regardless of commit count
     # (DEC-013: squash-commit subject = PR title; fixes #33). The mechanic is
@@ -839,7 +948,32 @@ def main() -> int:
         return 3
 
     print(f"  merged PR #{pr_number}")
+    return _after_merge(
+        args,
+        pr_number=pr_number,
+        to_close=to_close,
+        branch=branch,
+        cross=cross,
+        config=config,
+    )
 
+
+def _after_merge(
+    args: argparse.Namespace,
+    *,
+    pr_number: int,
+    to_close: list[int],
+    branch: str,
+    cross: bool,
+    config: dict,
+) -> int:
+    """Everything that follows the merge: issue N to Done, each issue the
+    merge closed closed and cascaded, then the best-effort branch cleanup.
+
+    The merge is durable by now, so nothing here rolls it back: a failed step
+    warns with the command that finishes it, and the run exits with it after
+    the cleanup.
+    """
     # Compose over move-issue for the state transition + cascade — FIRST,
     # before any branch cleanup. The merge is irreversible and GitHub's
     # `Closes #N` has already closed the issue, so a best-effort step failing
@@ -880,7 +1014,6 @@ def main() -> int:
     # through the API so it has no local-checkout dependency; the local steps
     # warn and continue when the working tree cannot switch to the default
     # branch (detached HEAD, the default branch held by another worktree).
-    cross = bool(pr.get("isCrossRepository")) if pr else False
     pr_merge.delete_remote_branch(branch, config, cross_repository=cross)
     pr_merge.cleanup_local(branch, config, cross_repository=cross)
 
@@ -893,6 +1026,200 @@ def main() -> int:
         f"\n[ok] merged + closed #{args.issue_number}" + (f" (also closed: {also})" if also else "")
     )
     return 0
+
+
+# ---- merging through a queue (#1011) -----------------------------------
+
+
+def _queue_refusal(queue: merge_queue.Reading, *, base: str, admin: bool) -> str:
+    """Why this run may not land the PR through `base`'s queue, or "".
+
+    The queue is the only path to a base that has one: `--admin` merges around
+    it. And it must squash, so the PR lands as the convention's one commit
+    (DEC-013) — a queue that merges or rebases would land something else.
+    """
+    if not queue.has_queue:
+        return ""
+    if admin:
+        return (
+            f"[refused] {base} merges through a queue, the only path to it; --admin "
+            "would merge around the queue.\n"
+            "          → drop --admin: done-work enqueues the PR and waits for the "
+            "queue to merge it."
+        )
+    if not queue.squashes:
+        method = queue.merge_method or "an unreported method"
+        return (
+            f"[refused] the merge queue on {base} merges by {method}, and the merge "
+            "convention is one squash commit per PR (DEC-013).\n"
+            "          → set the queue's merge method to squash in the repository's "
+            "branch rules, then re-run."
+        )
+    return ""
+
+
+def _wait_phrase(args: argparse.Namespace) -> str:
+    """How long this run waits for the queue, as the output says it."""
+    if args.no_wait:
+        return "not wait (--no-wait)"
+    return f"wait up to {args.wait_minutes:g} min"
+
+
+def _land_through_queue(
+    args: argparse.Namespace,
+    queue: merge_queue.Reading,
+    *,
+    pr_number: int,
+    pr_title: str,
+    head_oid: str,
+    base: str,
+    to_close: list[int],
+    branch: str,
+    cross: bool,
+    config: dict,
+) -> int:
+    """Enqueue the PR and wait for the queue to merge it; then what follows.
+
+    A PR already in the queue — an earlier run enqueued it and returned — is
+    not enqueued twice; the run waits for it as for one it enqueued. When the
+    wait ends with the PR still queued the issue stays in Review and the run
+    exits 4: a later run finds the PR merged and does the rest. A PR that left
+    the queue unmerged — the queue's checks failed on the merge it was about to
+    make, or it no longer merged cleanly — exits 3, nothing merged.
+    """
+    if queue.queued:
+        print(f"  PR #{pr_number} is already in the merge queue for {base}")
+    else:
+        if not pr_merge.enqueue(pr_number, pr_title=pr_title, config=config, head_oid=head_oid):
+            return 3
+        print(f"  enqueued PR #{pr_number} in the merge queue for {base}")
+    if not args.no_wait:
+        print(
+            f"  waiting up to {args.wait_minutes:g} min for the queue to merge it "
+            "(--no-wait returns at once)",
+            flush=True,
+        )
+
+    def report(reading: merge_queue.Reading) -> None:
+        print(f"  queue:   PR #{pr_number} {reading.describe()}", flush=True)
+
+    try:
+        reading = merge_queue.wait_for_merge(
+            pr_number,
+            config,
+            timeout_seconds=0 if args.no_wait else args.wait_minutes * 60,
+            on_change=report,
+        )
+    except merge_queue.Unreadable as exc:
+        print(f"[warn] lost sight of the merge queue: {exc}", file=sys.stderr)
+        print(_still_queued_note(args.issue_number, pr_number, base), file=sys.stderr)
+        return EXIT_QUEUED
+    if reading.merged:
+        print(f"  merged PR #{pr_number} through the queue")
+        return _after_merge(
+            args,
+            pr_number=pr_number,
+            to_close=to_close,
+            branch=branch,
+            cross=cross,
+            config=config,
+        )
+    if reading.queued or args.no_wait:
+        print(_still_queued_note(args.issue_number, pr_number, base, reading))
+        return EXIT_QUEUED
+    print(
+        f"error: PR #{pr_number} left the merge queue for {base} without merging "
+        f"({reading.describe()}): the queue's checks failed on the merge it was "
+        "about to make, or the PR no longer merged cleanly onto what merged ahead "
+        f"of it. Nothing was merged and #{args.issue_number} stays in Review; fix "
+        f"the branch, then re-run `done-work {args.issue_number}`.",
+        file=sys.stderr,
+    )
+    return 3
+
+
+def _still_queued_note(
+    issue_number: int,
+    pr_number: int,
+    base: str,
+    reading: merge_queue.Reading | None = None,
+) -> str:
+    where = f" ({reading.describe()})" if reading is not None else ""
+    return (
+        f"\n[queued] PR #{pr_number} is in the merge queue for {base}{where} and has "
+        f"not merged yet; #{issue_number} stays in Review until it does. Re-run "
+        f"`done-work {issue_number}` once it has merged: it moves #{issue_number} "
+        "to Done, closes and cascades the issues the PR closes, and cleans up the "
+        "branch."
+    )
+
+
+def _complete_merged_pr(
+    args: argparse.Namespace,
+    merged_pr: dict,
+    branch: str,
+    config: dict,
+) -> int:
+    """What follows the merge, for a PR already merged (#1011).
+
+    The queue merged it after the run that enqueued it returned, so every
+    gate ran then and only the steps after the merge are left. It is this
+    branch's merge only while the branch still points at the head that merged:
+    a branch that has moved since carries new work, which needs a PR of its
+    own, and closing the issue through the old merge would be wrong.
+
+    The issues to close are those the PR body names that were not closed
+    before the merge — GitHub closes the rest as it merges, and close-issue's
+    pr-merge close reconciles and cascades them either way.
+    """
+    pr_number = int(merged_pr["number"])
+    merged_at = str(merged_pr.get("mergedAt") or "")
+    merged_head = str(merged_pr.get("headRefOid") or "")
+    tip = _branch_tip(branch)
+    if not merged_head or tip != merged_head:
+        print(
+            f"error: no OPEN PR found for branch {branch!r}. PR #{pr_number} merged "
+            f"from it at {merged_at} with head {short_sha(merged_head)}, but the "
+            f"branch is at {short_sha(tip)}: work since that merge needs a PR of its "
+            "own (`review-work`). If the merge is what you are completing, run "
+            f"`close-issue {args.issue_number} --mode pr-merge --pr {pr_number}`.",
+            file=sys.stderr,
+        )
+        return 2
+
+    issue = _gh_get_issue(args.issue_number, config)
+    closing = _read_closing_issues(
+        args.issue_number,
+        issue,
+        str(merged_pr.get("body") or ""),
+        config,
+    )
+    to_close = [c.number for c in closing if not c.closed_before(merged_at)]
+    print(f"done-work: #{args.issue_number}")
+    print(f"  PR:      #{pr_number}, merged at {merged_at}; completing what follows the merge")
+    print(f"  closes:  {_issue_list(to_close) or 'no issue'}")
+
+    if args.dry_run:
+        print(
+            "(dry-run: would call move-issue, close and cascade "
+            f"{_issue_list(to_close) or 'no issue'} through close-issue, then "
+            f"best-effort cleanup: delete remote branch {branch!r}, checkout "
+            "main + pull, delete local branch.)"
+        )
+        return 0
+    if not args.yes and sys.stdin.isatty():
+        reply = input("Close + clean up? [y/N] ").strip().lower()
+        if reply not in ("y", "yes"):
+            print("aborted.", file=sys.stderr)
+            return 0
+    return _after_merge(
+        args,
+        pr_number=pr_number,
+        to_close=to_close,
+        branch=branch,
+        cross=bool(merged_pr.get("isCrossRepository")),
+        config=config,
+    )
 
 
 # ---- approval gate ---------------------------------------------------
@@ -1106,6 +1433,14 @@ class _ClosingIssue:
         neither gated nor closed again. An unreadable issue is not known to be
         closed, so it stays gated (and fails closed there)."""
         return self.issue is not None and str(self.issue.get("state") or "").lower() == "closed"
+
+    def closed_before(self, moment: str) -> bool:
+        """Closed before `moment` (an ISO timestamp, a merge's), so that merge
+        did not close it (#1011). An issue closed with no time read is taken
+        as closed by the merge: close-issue then reconciles it, which costs
+        nothing, where skipping it could leave its label and cascade undone."""
+        closed_at = str((self.issue or {}).get("closedAt") or "")
+        return self.already_closed and bool(closed_at) and bool(moment) and closed_at < moment
 
 
 def _read_closing_issues(
@@ -2544,7 +2879,7 @@ def _find_pr_for_branch(branch: str, config: dict) -> dict | None:
             "--state",
             "open",
             "--json",
-            "number,isDraft,headRefName,headRefOid,title,isCrossRepository",
+            "number,isDraft,headRefName,headRefOid,title,isCrossRepository,baseRefName",
         ],
         config,
         check=False,
@@ -2559,6 +2894,54 @@ def _find_pr_for_branch(branch: str, config: dict) -> dict | None:
     except (ValueError, KeyError):
         pass
     return None
+
+
+def _find_merged_pr_for_branch(branch: str, config: dict) -> dict | None:
+    """The PR from `branch` merged last, or None (#1011): what a run finds when
+    a merge queue merged the PR after the run that enqueued it returned."""
+    proc = gh_run(
+        [
+            "gh",
+            "pr",
+            "list",
+            "--head",
+            branch,
+            "--state",
+            "merged",
+            "--json",
+            "number,headRefName,headRefOid,mergedAt,isCrossRepository,body",
+        ],
+        config,
+        check=False,
+    )
+    if proc.returncode != 0:
+        return None
+    try:
+        prs = json.loads(proc.stdout)
+    except ValueError:
+        return None
+    if not isinstance(prs, list):
+        return None
+    own = [
+        pr
+        for pr in prs
+        if isinstance(pr, dict) and pr.get("headRefName") == branch and pr.get("number")
+    ]
+    return max(own, key=lambda pr: str(pr.get("mergedAt") or ""), default=None)
+
+
+def _branch_tip(branch: str) -> str:
+    """The commit the local `branch` points at, or "" when git cannot say."""
+    try:
+        proc = subprocess.run(
+            ["git", "rev-parse", "--verify", "--quiet", f"refs/heads/{branch}"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except FileNotFoundError:
+        return ""
+    return proc.stdout.strip() if proc.returncode == 0 else ""
 
 
 def _issue_list(numbers) -> str:

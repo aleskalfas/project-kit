@@ -136,6 +136,44 @@ def test_squash_merge_passes_admin(lib, monkeypatch) -> None:
     assert captured[0][-1] == "--admin"
 
 
+# --- enqueue (#1011) -------------------------------------------------------
+
+
+def test_enqueue_is_the_merge_command_with_auto_and_never_admin(lib, monkeypatch) -> None:
+    """The queue gets the PR the way a merge would: squash, the PR title as the
+    subject, pinned to the head the gate checked — plus `--auto`, and never
+    `--admin`, which on a queued base merges around the queue."""
+    captured: list[list[str]] = []
+
+    def fake_gh_run(args, config, **kwargs):
+        captured.append(list(args))
+        return _ok(args)
+
+    monkeypatch.setattr(lib, "gh_run", fake_gh_run)
+    assert lib.enqueue(42, pr_title="fix: x", config={}, head_oid="a" * 40) is True
+    assert captured[0] == [
+        "gh",
+        "pr",
+        "merge",
+        "42",
+        "--squash",
+        "--subject",
+        "fix: x",
+        "--match-head-commit",
+        "a" * 40,
+        "--auto",
+    ]
+
+
+def test_a_refused_enqueue_reports_gh_and_returns_false(lib, monkeypatch, capsys) -> None:
+    def refusing(args, config, **kwargs):
+        return subprocess.CompletedProcess(args, 1, stdout="", stderr="Head sha didn't match")
+
+    monkeypatch.setattr(lib, "gh_run", refusing)
+    assert lib.enqueue(42, pr_title="fix: x", config={}) is False
+    assert "Head sha didn't match" in capsys.readouterr().err
+
+
 def test_squash_merge_threads_config_to_gh_run(lib, monkeypatch) -> None:
     """The adopter config reaches gh_run so DEC-023's host pinning applies."""
     seen: list[dict] = []

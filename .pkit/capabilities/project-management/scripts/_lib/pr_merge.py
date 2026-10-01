@@ -24,6 +24,11 @@ A verb runs its own irreversible-merge follow-up (done-work's issue
 transition, merge-pr's after-merge hooks) between 1 and 2, so no best-effort
 step stands between the merge and the thing that must not be skipped.
 
+Where the base branch merges through a queue (`_lib.merge_queue`), the queue
+makes the merge instead of step 1: :func:`enqueue` hands the PR to it with the
+same command and `--auto`, and the verb's follow-up and steps 2 and 3 wait
+until the queue has merged it.
+
 The backbone's `pkit release merge` (`src/project_kit/release.py`,
 `_gh_pr_merge` / `_gh_delete_remote_branch` / `_git_cleanup_local`) carries a
 deliberate duplicate of this mechanic (#897): the backbone must not depend on
@@ -64,6 +69,38 @@ def squash_merge(
     if pr_number is None:
         print("error: no PR number to merge.", file=sys.stderr)
         return False
+    cmd = _merge_command(pr_number, pr_title, head_oid)
+    if admin:
+        cmd.append("--admin")
+    return _run_merge(cmd, config)
+
+
+def enqueue(
+    pr_number: int | None,
+    *,
+    pr_title: str,
+    config: dict[str, Any],
+    head_oid: str = "",
+) -> bool:
+    """Put the PR in its base branch's merge queue (#1011): the merge command,
+    pinned and subject-forced as :func:`squash_merge` makes it, with `--auto`.
+
+    The queue makes the merge (`_lib.merge_queue`): it runs the base's required
+    checks on the merge it is about to make and squashes once they pass. With
+    `--auto`, a PR whose own required checks are still running is taken in
+    once they pass. Never `--admin`, which merges around the queue.
+
+    Returns True once GitHub has taken the PR in, False otherwise (an error
+    line is printed). The PR has not merged when this returns.
+    """
+    if pr_number is None:
+        print("error: no PR number to enqueue.", file=sys.stderr)
+        return False
+    return _run_merge([*_merge_command(pr_number, pr_title, head_oid), "--auto"], config)
+
+
+def _merge_command(pr_number: int, pr_title: str, head_oid: str) -> list[str]:
+    """`gh pr merge <N> --squash --subject <title> [--match-head-commit <head>]`."""
     # Force --subject to the PR title so the squash-commit subject equals the
     # gate-validated title for both single- and multi-commit PRs.  GitHub's
     # default for a single-commit PR is the commit message, not the title —
@@ -79,8 +116,11 @@ def squash_merge(
     ]
     if head_oid:
         cmd += ["--match-head-commit", head_oid]
-    if admin:
-        cmd.append("--admin")
+    return cmd
+
+
+def _run_merge(cmd: list[str], config: dict[str, Any]) -> bool:
+    """Run a `gh pr merge` command; False, with gh's reason printed, when it fails."""
     try:
         proc = gh_run(cmd, config, check=False)
     except FileNotFoundError:

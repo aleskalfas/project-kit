@@ -317,13 +317,14 @@ def test_post_ci_bypass_audit_reports_gh_failure(mp, monkeypatch) -> None:
 
 
 def _wire_merge_seams(
-    mp, monkeypatch, *, rollup, head_branch="fix/42-slug", cross_repository=False
+    mp, monkeypatch, *, rollup, head_branch="fix/42-slug", cross_repository=False, queue=False
 ):
     """Stub merge-pr's heavy seams so main() reaches the CI gate on *rollup*.
 
     `calls["order"]` records the post-merge side-effects (merge, hooks, remote
     ref delete, local cleanup) so a test can assert their sequence; the merge
     mechanic is stubbed on `_lib.pr_merge`, the module merge-pr calls through.
+    `queue` says whether the PR's base merges through a merge queue (#1011).
     """
     calls = {"merged": False, "ci_audit": False, "order": [], "merge_kwargs": {}}
 
@@ -400,6 +401,8 @@ def _wire_merge_seams(
     monkeypatch.setattr(mp.pr_merge, "delete_remote_branch", _stub_delete_remote)
     monkeypatch.setattr(mp.pr_merge, "cleanup_local", _stub_cleanup_local)
     monkeypatch.setattr(mp, "fire_hooks", _stub_hooks)
+    reading = mp.merge_queue.Reading(has_queue=queue, merge_method="SQUASH" if queue else "")
+    monkeypatch.setattr(mp.merge_queue, "read", lambda pr_number, config: reading)
     return calls
 
 
@@ -579,3 +582,40 @@ def test_fork_pr_merge_passes_cross_repository_to_cleanup(mp, monkeypatch):
     rc = _run_merge_main(mp, monkeypatch, ["99", "--yes"])
     assert rc == 0
     assert calls["cross"] == [True]
+
+
+# --- a base that merges through a queue (#1011) -------------------------
+#
+# The queue is the only path to such a base; merge-pr merges directly, so it
+# refuses — with or without --admin, dry run or not — and names done-work, the
+# verb that enqueues.
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [["99", "--yes"], ["99", "--yes", "--admin"], ["99", "--dry-run"]],
+    ids=["plain", "admin", "dry-run"],
+)
+def test_a_base_with_a_merge_queue_is_refused(mp, monkeypatch, capsys, argv):
+    calls = _wire_merge_seams(mp, monkeypatch, rollup=_MP_GREEN, queue=True)
+    rc = _run_merge_main(mp, monkeypatch, argv)
+    err = capsys.readouterr().err
+    assert rc == 1
+    assert calls["order"] == []
+    assert "merges through a queue, the only path to it" in err
+    assert "`done-work 42`" in err
+
+
+def test_an_unreadable_queue_merges_nothing(mp, monkeypatch, capsys):
+    calls = _wire_merge_seams(mp, monkeypatch, rollup=_MP_GREEN)
+
+    def unreadable(pr_number, config):
+        raise mp.merge_queue.Unreadable("HTTP 502")
+
+    monkeypatch.setattr(mp.merge_queue, "read", unreadable)
+    rc = _run_merge_main(mp, monkeypatch, ["99", "--yes"])
+    assert rc == 3
+    assert calls["order"] == []
+    assert "cannot tell whether the base branch merges through a queue: HTTP 502" in (
+        capsys.readouterr().err
+    )
