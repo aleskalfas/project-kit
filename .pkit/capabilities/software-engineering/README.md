@@ -13,8 +13,9 @@ pkit:
         - .pkit/capabilities/software-engineering/skills/**
       record: [COR-013, COR-024, COR-026, COR-030, ADR-013, ADR-052, "project-management:DEC-015", "project-management:DEC-028", "project-management:DEC-032"]
     revalidated:
-      at: 2026-10-01T00:40:22Z
-      outcome: updated
+      at: 2026-10-01T00:33:14Z
+      outcome: unchanged
+      unchanged-because: on this branch the software-engineer agent body gains one line — address findings tagged blocking, record advisories in the PR body; the panel, its reviewers and what the README says of them are untouched
 ---
 
 # software-engineering capability
