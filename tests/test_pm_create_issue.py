@@ -1263,17 +1263,19 @@ def test_main_parent_native_link_unsupported_does_not_fail_create(
     ci, tmp_path, monkeypatch, capsys
 ) -> None:
     """A native no-op (unsupported instance) never fails the create — main()
-    still returns 0 and the issue is created with its textual ref. Nothing is
-    left to fix, so no way back is suggested."""
+    still returns 0 and the issue is created with its textual ref, which
+    create-issue (not the seam) says it recorded. Nothing is left to fix, so no
+    way back or way out is suggested."""
     link = _FakeLink(
-        "native sub-issues unsupported on this instance; textual ref recorded",
+        "native sub-issues unsupported on this instance",
         ok=False,
         outcome=ci.LinkOutcome.UNSUPPORTED,
     )
     assert _create_with_link(ci, tmp_path, monkeypatch, link) == 0
     err = capsys.readouterr().err
-    assert "[warn] native sub-issues unsupported on this instance" in err
+    assert "[warn] native sub-issues unsupported on this instance; textual ref recorded" in err
     assert "link-parent" not in err
+    assert "containment: textual" not in err
 
 
 def test_main_parent_native_link_failure_warns_and_names_the_way_back(
@@ -1286,24 +1288,51 @@ def test_main_parent_native_link_failure_warns_and_names_the_way_back(
     the cause is fixed."""
     detail = (
         "GitHub refused to link #57 under #1 (HTTP 422) for a reason pm does not "
-        'recognise; textual ref recorded. GitHub said: "Parent issue is locked"'
+        'recognise. GitHub said: "Parent issue is locked"'
     )
-    link = _FakeLink(detail, ok=False, outcome=ci.LinkOutcome.FAILED)
+    link = _FakeLink(detail, ok=False, outcome=ci.LinkOutcome.FAILED, refused=True)
     assert _create_with_link(ci, tmp_path, monkeypatch, link) == 0
     err = capsys.readouterr().err
-    assert f"[warn] {detail}" in err
+    assert f"[warn] {detail}\n" in err
     assert "#57 is filed under #1 by its first line only" in err
     assert "`pkit pm link-parent 57`" in err
+    # GitHub refused it, and pm never reads a refusal as an instance without
+    # sub-issues (ADR-035): the way out follows.
+    assert (
+        "  → If this GitHub does not offer sub-issues, set `containment: textual` in "
+        "project/substrate-map.yaml and pm stops attempting the native link."
+    ) in err
+
+
+def test_main_parent_native_link_failure_github_did_not_refuse_has_no_way_out(
+    ci, tmp_path, monkeypatch, capsys
+) -> None:
+    """A failure GitHub did not refuse (a missing `gh`, a server error) still
+    names the way back, but not the textual-mode way out — nothing suggests the
+    instance lacks sub-issues."""
+    link = _FakeLink(
+        "`gh` not on PATH; native sub-issue link skipped",
+        ok=False,
+        outcome=ci.LinkOutcome.FAILED,
+    )
+    assert _create_with_link(ci, tmp_path, monkeypatch, link) == 0
+    err = capsys.readouterr().err
+    assert "`pkit pm link-parent 57`" in err
+    assert "containment: textual" not in err
 
 
 class _FakeLink:
     """Minimal stand-in for containment.LinkResult — carries `ok`, `detail` and,
-    for a link that is not `ok`, the `outcome` create-issue reports on."""
+    for a link that is not `ok`, the `outcome` create-issue reports on and
+    whether GitHub `refused` it."""
 
-    def __init__(self, detail: str, *, ok: bool, outcome: object = None) -> None:
+    def __init__(
+        self, detail: str, *, ok: bool, outcome: object = None, refused: bool = False
+    ) -> None:
         self.detail = detail
         self.ok = ok
         self.outcome = outcome
+        self.refused = refused
 
 
 # --- #356 end-to-end: classification-faithful create via main() ------------

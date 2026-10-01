@@ -496,8 +496,14 @@ def apply_links(entries: list[Entry], config: dict, reads: SubIssueReads) -> lis
     The linker is handed the run's ``reads``, so its idempotency check reuses
     the parent reads the plan made instead of reading each parent again per
     child.
+
+    Where GitHub refused any link (a failure quoting its words), the run ends
+    with the `containment: textual` way out, once however many it refused: pm
+    never reads a refusal as an instance without sub-issues (ADR-035), so the
+    operator who knows theirs has none is told how to say so.
     """
     applied: list[Entry] = []
+    refused = False
     for entry in entries:
         if entry.outcome is not Outcome.WOULD_LINK or entry.parent is None:
             applied.append(entry)
@@ -508,6 +514,7 @@ def apply_links(entries: list[Entry], config: dict, reads: SubIssueReads) -> lis
             child_number=entry.issue,
             sub_issues=reads,
         )
+        refused = refused or result.refused
         done = _after_link(entry, result)
         marker = {
             Outcome.LINKED: "[ok]",
@@ -517,6 +524,8 @@ def apply_links(entries: list[Entry], config: dict, reads: SubIssueReads) -> lis
         }.get(done.outcome, "[fail]")
         print(f"  {marker} #{done.issue} {done.detail}")
         applied.append(done)
+    if refused:
+        print(f"  → {axis_labels.TEXTUAL_CONTAINMENT_WAY_OUT}")
     return applied
 
 
@@ -536,7 +545,8 @@ def _after_link(entry: Entry, result: LinkResult) -> Entry:
 
     Where GitHub refused the link, its own words follow the line (#808): the
     seam's ``detail`` already carries them, and a line written here quotes them
-    through :meth:`LinkResult.quoting_github`.
+    through :meth:`LinkResult.quoting_refusal`. A refusal is never UNSUPPORTED
+    — a 422 is a FAILED link here whatever it says (ADR-035).
     """
     parent = entry.parent
     if result.outcome is LinkOutcome.LINKED:
@@ -551,14 +561,14 @@ def _after_link(entry: Entry, result: LinkResult) -> Entry:
         return replace(
             entry,
             outcome=Outcome.CONFLICT,
-            detail=result.quoting_github(_conflict_detail(result.current_parent, parent)),
+            detail=result.quoting_refusal(_conflict_detail(result.current_parent, parent)),
         )
     if result.outcome is LinkOutcome.UNSUPPORTED:
         if entry.native is NativeReadOutcome.READ:
             return replace(
                 entry,
                 outcome=Outcome.FAILED,
-                detail=result.quoting_github(
+                detail=(
                     f"not linked under #{parent} — GitHub refused the link as "
                     f"unsupported, although #{parent}'s sub-issues read on this "
                     "instance"

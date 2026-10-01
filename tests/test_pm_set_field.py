@@ -1557,6 +1557,7 @@ def test_main_parent_refused_move_writes_nothing_and_names_the_kept_parent(
     assert "[failed] #42: parent NOT set — #42 could not be moved to #9" in out
     assert "it stays a native sub-issue of #7" in out
     assert 'GitHub said: "Validation Failed; Sub issue may only have one parent"' in out
+    assert "containment: textual" not in out, "a conflict is not a refusal to work around"
 
 
 def test_main_parent_unreadable_native_parent_refuses_before_any_write(
@@ -1615,16 +1616,24 @@ def test_main_parent_on_an_instance_without_sub_issues_rewrites_the_first_line(
 
     assert captured["rc"] == 0
     assert captured["bodies"][0].startswith("Feature: #9\n")
-    assert "[warn] native sub-issues unsupported on this instance" in out
+    assert (
+        "[warn] native sub-issues unsupported on this instance; the first line alone "
+        "records the parent"
+    ) in out
 
 
-def test_main_parent_a_422_that_is_not_absence_stops_before_any_write(
-    sf, tmp_path, monkeypatch, capsys
-) -> None:
+_WAY_OUT = (
+    "  → If this GitHub does not offer sub-issues, set `containment: textual` in "
+    "project/substrate-map.yaml and pm stops attempting the native link."
+)
+
+
+def test_main_parent_a_422_stops_before_any_write(sf, tmp_path, monkeypatch, capsys) -> None:
     """#808: a 422 used to read as "unsupported", so an issue with no native
     parent had its first line rewritten while the link silently failed. A 422
-    that does not say the feature is absent is a failure: the call stops before
-    the first line moves, and GitHub's words are printed."""
+    is a failure: the call stops before the first line moves, GitHub's words
+    are printed, and the refusal does not also claim a textual ref was recorded
+    — nothing was written. The textual-mode way out follows."""
     refusal = json.dumps({"message": "Parent issue is locked", "status": "422"})
     native = _NativeTracker(refuse_add=(refusal, "gh: Parent issue is locked (HTTP 422)"))
     captured = _run_parent(sf, monkeypatch, tmp_path, native=native, body="## What\nx\n")
@@ -1632,9 +1641,36 @@ def test_main_parent_a_422_that_is_not_absence_stops_before_any_write(
 
     assert captured["rc"] == 3
     assert captured["bodies"] == [], "the first line must not move without the link"
-    assert "[failed] #42: parent NOT set" in out
-    assert 'GitHub said: "Parent issue is locked"' in out
+    assert (
+        "[failed] #42: parent NOT set — GitHub refused to link #42 under #9 (HTTP 422) "
+        'for a reason pm does not recognise. GitHub said: "Parent issue is locked". '
+        "Nothing was written: the first line and the native link are as they were."
+    ) in out
+    assert "textual ref recorded" not in out
     assert "unsupported" not in out
+    assert _WAY_OUT in out
+
+
+def test_main_parent_a_move_refused_by_an_unrelated_422_is_no_conflict(
+    sf, tmp_path, monkeypatch, capsys
+) -> None:
+    """#42 is natively under #7 and `--parent 9` moves it. GitHub refuses the
+    move with a 422 unrelated to the one-parent rule: the parent #42 has is the
+    move's precondition, not a finding, so the report is the failure GitHub
+    stated — not a conflict telling the operator to remove a link first."""
+    unrelated = "Validation failed, or the endpoint has been spammed."
+    refusal = json.dumps({"message": unrelated, "status": "422"})
+    native = _NativeTracker({7: {42}}, refuse_add=(refusal, "gh: Validation Failed (HTTP 422)"))
+    captured = _run_parent(sf, monkeypatch, tmp_path, native=native, body="Feature: #7\n")
+    out = capsys.readouterr().out
+
+    assert captured["rc"] == 3
+    assert captured["bodies"] == []
+    assert native.native == {7: {42}}
+    assert "[failed] #42: parent NOT set — GitHub refused to move #42 to #9 (HTTP 422)" in out
+    assert f'GitHub said: "{unrelated}"' in out
+    assert "must be removed first" not in out
+    assert _WAY_OUT in out
 
 
 def test_main_parent_in_textual_containment_writes_no_native_link(

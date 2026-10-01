@@ -4,19 +4,28 @@ custom:
   category: Fixed
 body: >
   A native sub-issue link GitHub refuses with HTTP 422 is no longer reported as
-  "native sub-issues unsupported on this instance" (#808). 422 is GitHub's
-  generic "Unprocessable Entity": the containment seam now reads the refusal's
-  message and counts it as an instance without sub-issues only when GitHub
-  says the feature is off. A child that already has a parent is the conflict
-  it is, naming that parent and saying its existing link must be removed
-  first; a malformed `sub_issue_id` and any 422 pm does not recognise are
-  failures. Each report quotes GitHub's own message after pm's sentence, so a
-  refusal no longer sends you to check your plan or GHES version. What that
-  changes per command: `link-parent` reports such a link as failed (exit 3)
-  instead of "not linked (unsupported)"; `set-field --parent` stops before the
-  first line moves instead of rewriting it alone; `create-issue` still files
-  the issue on its textual ref and now names `pkit pm link-parent <N>` for
-  making the link once the cause is fixed. On the read side a 422 from a
-  parent's sub-issue list is an unreadable list (an incomplete answer) rather
-  than a determinate textual-only one, so a gate holds instead of answering
-  from the first lines alone. 404 and 410 behave as before.
+  "native sub-issues unsupported on this instance" (#808). GitHub answers 422
+  for a request it refused on instances where sub-issues work, so a 422 is now
+  never read as an instance without sub-issues, on its status or on any
+  wording: only a 410, or a 404 pm attributes to the endpoint by probing the
+  parent issue, counts as one. A child that already has a parent is the
+  conflict it is, naming that parent and saying its existing link must be
+  removed first; a malformed `sub_issue_id` and any other 422 are failures.
+  Each report quotes GitHub's own message after pm's sentence (gh's own line,
+  attributed to gh, when GitHub sent none), and a validation error that carries
+  only a field and a code is shown as `field: code` instead of being dropped.
+  What that changes per command: `link-parent` and `set-field --parent` now
+  fail with exit 3 where a 422 used to pass as "unsupported" — `link-parent`
+  reports the link as failed instead of "not linked (unsupported)", and
+  `set-field --parent` stops before the first line moves instead of rewriting
+  it alone; `create-issue` still files the issue on its textual ref and names
+  `pkit pm link-parent <N>` for making the link once the cause is fixed. A move
+  GitHub refuses for a reason other than the one-parent rule is a failure, no
+  longer a conflict with a remedy. On an instance whose GitHub genuinely offers
+  no sub-issues and answers 422, set `containment: textual` in
+  `project/substrate-map.yaml`: pm then stops attempting the native link, and
+  each refused write now says so. On the read side a 422 from a parent's
+  sub-issue list is an unreadable list (an incomplete answer, quoting what
+  GitHub said) rather than a determinate textual-only one, so a gate holds
+  instead of answering from the first lines alone. 404 and 410 behave as
+  before.

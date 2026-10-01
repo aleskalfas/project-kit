@@ -743,17 +743,27 @@ def main() -> int:
             child_number=new_issue_number,
         )
         prefix = "[ok]" if link.ok else "[warn]"
-        print(f"{prefix} {link.detail}", file=sys.stderr)
-        if not link.ok and link.outcome is LinkOutcome.FAILED:
+        # The seam reports only the native link; the textual ref is this verb's,
+        # written above, and on an instance without sub-issues it is the record.
+        note = (
+            f"{link.detail}; textual ref recorded"
+            if link.outcome is LinkOutcome.UNSUPPORTED
+            else link.detail
+        )
+        print(f"{prefix} {note}", file=sys.stderr)
+        if link.outcome is LinkOutcome.FAILED:
             # A failed link is not an instance without sub-issues (#808): the
             # line above says why, in GitHub's words where GitHub refused, and
-            # the issue stays filed under its textual ref. Name the way back.
+            # the issue stays filed under its textual ref. Name the way back,
+            # and — where GitHub refused it — the way out (ADR-035).
             print(
                 f"[warn] #{new_issue_number} is filed under #{parent_number} by its "
                 f"first line only; once the cause above is fixed, `pkit pm link-parent "
                 f"{new_issue_number}` makes the native link.",
                 file=sys.stderr,
             )
+            if link.refused:
+                print(f"  → {axis_labels.TEXTUAL_CONTAINMENT_WAY_OUT}", file=sys.stderr)
     elif parent_number is not None and containment == axis_labels.CONTAINMENT_TEXTUAL:
         print(
             f"[ok] containment: textual mode — native sub-issue link skipped; "

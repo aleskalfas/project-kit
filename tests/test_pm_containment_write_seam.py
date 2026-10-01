@@ -199,8 +199,10 @@ def test_link_sub_issue_unsupported_status_degrades(containment, monkeypatch, st
     result = containment.link_sub_issue({}, parent_number=342, child_number=344)
     assert result.outcome == containment.LinkOutcome.UNSUPPORTED
     assert result.ok is False  # the native link is absent...
-    assert result.detail == "native sub-issues unsupported on this instance; textual ref recorded"
-    assert result.github_message is None
+    # Only what the seam did to the native link; the textual ref is the caller's.
+    assert result.detail == "native sub-issues unsupported on this instance"
+    assert result.said is None
+    assert result.refused is False
 
 
 def test_link_sub_issue_not_found_phrasing_degrades(containment, monkeypatch) -> None:
@@ -511,10 +513,12 @@ def test_link_sub_issue_reuses_the_runs_reads(containment, monkeypatch) -> None:
     assert len(fake.posts) == 3
 
 
-# --- a 422 is read by its message, not its status (#808) --------------------
+# --- a 422 is never an instance without sub-issues (#808, ADR-035) ---------
 #
-# GitHub answers 422 for unrelated reasons. Each cause gets its own outcome and
-# its own operator-visible text, and GitHub's own words reach the operator.
+# GitHub answers 422 for a request it refused, on instances where sub-issues
+# work. Its words may tell one refusal from another — each gets its own outcome
+# and its own operator-visible text — but never grant "unsupported", and they
+# reach the operator as written.
 
 # The refusal #808 was found on, verbatim: a message-only body, no `errors`.
 _OBSERVED_ONE_PARENT = (
@@ -554,10 +558,11 @@ def test_the_observed_one_parent_422_is_a_conflict_quoting_github(containment, m
 
     assert result.outcome == containment.LinkOutcome.CONFLICT
     assert result.current_parent == containment.NativeParent(number=7)
-    assert result.github_message == _OBSERVED_ONE_PARENT
+    assert result.said == containment.Said(_OBSERVED_ONE_PARENT)
     assert f'GitHub said: "{_OBSERVED_ONE_PARENT}"' in result.detail
     assert "its native link to #7 must be removed first" in result.detail
     assert "unsupported" not in result.detail
+    assert result.refused is False, "a conflict is not a refusal to work around"
 
 
 def test_a_malformed_id_422_is_a_failure_naming_the_request(containment, monkeypatch) -> None:
@@ -569,23 +574,29 @@ def test_a_malformed_id_422_is_a_failure_naming_the_request(containment, monkeyp
     assert "malformed" in result.detail and "defect in pm's request" in result.detail
     # GitHub's words, whitespace folded onto the one line, otherwise as sent.
     folded = " ".join(_MALFORMED.split())
-    assert result.github_message == folded
+    assert result.said == containment.Said(folded)
     assert f'GitHub said: "{folded}"' in result.detail
     assert "unsupported" not in result.detail
 
 
-def test_a_422_saying_the_feature_is_absent_is_unsupported(containment, monkeypatch) -> None:
-    """The one 422 that IS about the instance: GitHub's message says so."""
-    result = _refused_422(
-        containment,
-        monkeypatch,
-        stdout=_body(_ABSENT),
-        stderr=f"gh: {_ABSENT} (HTTP 422)",
-    )
+def test_a_422_saying_the_feature_is_off_is_a_failure_quoting_github(
+    containment, monkeypatch
+) -> None:
+    """The invariant (#808, ADR-035): no wording grants the unsupported verdict.
+    A 422 whose message says sub-issues are not enabled is a FAILED link that
+    quotes GitHub — never the quiet no-op — and nothing is probed to make it
+    one."""
+    fake = _ScriptedLink(_record(999), post=(1, _body(_ABSENT), f"gh: {_ABSENT} (HTTP 422)"))
+    monkeypatch.setattr(containment, "_gh_call", fake)
+    result = containment.link_sub_issue({}, parent_number=342, child_number=344)
 
-    assert result.outcome == containment.LinkOutcome.UNSUPPORTED
-    assert result.detail.startswith("native sub-issues unsupported on this instance")
-    assert f'GitHub said: "{_ABSENT}"' in result.detail
+    assert result.outcome == containment.LinkOutcome.FAILED
+    assert result.said == containment.Said(_ABSENT)
+    assert result.detail.endswith(f'GitHub said: "{_ABSENT}"')
+    assert "unsupported" not in result.detail
+    assert result.refused is True
+    probes = [c for c in fake.calls if c[-2:] == ["--jq", ".number"]]
+    assert probes == [], "a 422 is never probed into a verdict"
 
 
 def test_an_unrecognised_422_is_a_failure_carrying_githubs_message(
@@ -602,10 +613,30 @@ def test_an_unrecognised_422_is_a_failure_carrying_githubs_message(
 
     assert result.outcome == containment.LinkOutcome.FAILED
     said = f"{_UNRECOGNISED}; {_UNRECOGNISED_ERROR}; and a bare string"
-    assert result.github_message == said
-    assert f'GitHub said: "{said}"' in result.detail
-    assert "for a reason pm does not recognise" in result.detail
-    assert "unsupported" not in result.detail
+    assert result.said == containment.Said(said)
+    assert result.detail == (
+        "GitHub refused to link #344 under #342 (HTTP 422) for a reason pm does "
+        f'not recognise. GitHub said: "{said}"'
+    )
+    assert result.refused is True
+
+
+def test_an_error_entry_with_only_a_field_and_code_is_shown(containment, monkeypatch) -> None:
+    """GitHub's validation errors may carry only a `code` and the `field` it
+    applies to. Dropping them left the operator with a bare "Validation
+    Failed"; each is rendered `field: code`, or the code alone."""
+    result = _refused_422(
+        containment,
+        monkeypatch,
+        stdout=_body(
+            _UNRECOGNISED,
+            {"resource": "Issue", "field": "sub_issue_id", "code": "invalid"},
+            {"resource": "Issue", "code": "unprocessable"},
+            {"resource": "Issue"},
+        ),
+    )
+
+    assert result.said == containment.Said(f"{_UNRECOGNISED}; sub_issue_id: invalid; unprocessable")
 
 
 def test_each_422_cause_reads_differently_to_the_operator(containment, monkeypatch) -> None:
@@ -621,7 +652,7 @@ def test_each_422_cause_reads_differently_to_the_operator(containment, monkeypat
         }.items()
     }
     assert len(set(details.values())) == len(details), details
-    assert [cause for cause, text in details.items() if "unsupported" in text] == ["absent"]
+    assert [cause for cause, text in details.items() if "unsupported" in text] == []
 
 
 @pytest.mark.parametrize(
@@ -631,20 +662,23 @@ def test_each_422_cause_reads_differently_to_the_operator(containment, monkeypat
 )
 def test_an_unparseable_422_body_falls_back_to_ghs_stderr(containment, monkeypatch, stdout) -> None:
     """No usable body: the refusal is still read, and gh's own line — which
-    carries GitHub's message where gh found one — is what the operator sees."""
+    carries GitHub's message where gh found one — is what the operator sees,
+    attributed to gh, not passed off as GitHub's own words."""
     stderr = "gh: Parent issue is locked (HTTP 422)"
     result = _refused_422(containment, monkeypatch, stdout=stdout, stderr=stderr)
 
     assert result.outcome == containment.LinkOutcome.FAILED
-    assert result.github_message == stderr
-    assert f'GitHub said: "{stderr}"' in result.detail
+    assert result.said == containment.Said(stderr, containment.SPEAKER_GH)
+    assert result.detail.endswith(f'gh said: "{stderr}"')
+    assert "GitHub said" not in result.detail
 
 
 def test_an_unrecognised_422_whose_child_has_since_got_a_parent_is_a_conflict(
     containment, monkeypatch
 ) -> None:
-    """A 422 that names no cause still sends the seam back to the child's
-    record (#1040): the record is the evidence, and GitHub's words ride along."""
+    """On a plain link, a 422 that names no cause still sends the seam back to
+    the child's record (#1040): the record naming another parent is the
+    evidence of the conflict, and GitHub's words ride along."""
     result = _refused_422(containment, monkeypatch, stdout=_body(_UNRECOGNISED), child_parent=7)
 
     assert result.outcome == containment.LinkOutcome.CONFLICT
@@ -676,13 +710,54 @@ def test_a_422_is_never_probed_as_a_404_whatever_its_message(containment, monkey
     assert 'GitHub said: "Sub-issue not found"' in result.detail
 
 
-def test_quoting_github_appends_only_what_github_said(containment) -> None:
-    """The caller-side helper: GitHub's words after the caller's sentence, and
-    the sentence alone when there were none."""
-    said = containment.LinkResult(containment.LinkOutcome.FAILED, github_message="Nope")
+def test_a_move_refused_by_an_unrelated_422_is_a_failure_not_a_conflict(
+    containment, monkeypatch
+) -> None:
+    """On a move the child's existing parent is the precondition, not a
+    finding. A move GitHub refuses for a reason other than the one-parent rule
+    is a FAILED move quoting GitHub — never a conflict with a remedy ("must be
+    removed first") the refusal never asked for."""
+    unrelated = "Validation failed, or the endpoint has been spammed."
+    fake = _ScriptedLink(
+        _record(999, 7), post=(1, _body(unrelated), "gh: Validation Failed (HTTP 422)")
+    )
+    monkeypatch.setattr(containment, "_gh_call", fake)
+    result = containment.move_sub_issue({}, parent_number=342, child_number=344)
+
+    assert result.outcome == containment.LinkOutcome.FAILED
+    assert result.detail == (
+        "GitHub refused to move #344 to #342 (HTTP 422) for a reason pm does not "
+        f'recognise. GitHub said: "{unrelated}"'
+    )
+    assert "must be removed first" not in result.detail
+    assert result.current_parent is None
+    assert result.refused is True
+    assert sum(1 for call in fake.calls if "--jq" in call) == 1, "no re-read on a move"
+
+
+def test_refused_is_only_a_failed_link_github_refused(containment) -> None:
+    """The caller's cue for the textual-mode way out: a FAILED link carrying a
+    refusal's words. A conflict carrying them, or a failure with none (auth,
+    network), is not one."""
+    words = containment.Said("Nope")
+    assert containment.LinkResult(containment.LinkOutcome.FAILED, said=words).refused
+    assert not containment.LinkResult(containment.LinkOutcome.FAILED).refused
+    assert not containment.LinkResult(containment.LinkOutcome.CONFLICT, said=words).refused
+
+
+def test_quoting_refusal_appends_only_what_was_said(containment) -> None:
+    """The caller-side helper: the refusal's words after the caller's sentence,
+    attributed to whoever said them, and the sentence alone when there were
+    none."""
+    github = containment.LinkResult(containment.LinkOutcome.FAILED, said=containment.Said("Nope"))
+    gh = containment.LinkResult(
+        containment.LinkOutcome.FAILED,
+        said=containment.Said("gh: HTTP 422", containment.SPEAKER_GH),
+    )
     silent = containment.LinkResult(containment.LinkOutcome.FAILED)
-    assert said.quoting_github("not linked") == 'not linked. GitHub said: "Nope"'
-    assert silent.quoting_github("not linked") == "not linked"
+    assert github.quoting_refusal("not linked") == 'not linked. GitHub said: "Nope"'
+    assert gh.quoting_refusal("not linked") == 'not linked. gh said: "gh: HTTP 422"'
+    assert silent.quoting_refusal("not linked") == "not linked"
 
 
 # --- create-issue obtains the link FROM the primitive --------------------

@@ -49,11 +49,15 @@ def ci():
 
 
 class _FakeLink:
-    """Minimal stand-in for containment.LinkResult — carries `ok` + `detail`."""
+    """Minimal stand-in for containment.LinkResult — carries `ok` + `detail`,
+    and the `outcome` / `refused` create-issue reads; only linked results are
+    faked here, so neither names anything."""
 
     def __init__(self, detail: str, *, ok: bool) -> None:
         self.detail = detail
         self.ok = ok
+        self.outcome = None
+        self.refused = False
 
 
 def _mark_bootstrapped(cap_root: Path) -> None:

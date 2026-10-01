@@ -485,6 +485,8 @@ def test_a_link_failure_exits_non_zero_and_the_others_still_link(lp, tmp_path, m
     assert fake.posts == [(91, 107), (90, 108)]
     assert "[fail] #101 not linked under #90" in out.out
     assert "1 failed" in out.out
+    # A server error is not GitHub refusing the link: no textual-mode way out.
+    assert "containment: textual" not in out.out
 
 
 def test_a_refusal_where_sub_issues_demonstrably_work_is_a_failure(
@@ -504,17 +506,36 @@ def test_a_refusal_where_sub_issues_demonstrably_work_is_a_failure(
 def test_an_unrecognised_422_on_the_add_fails_with_githubs_message(
     lp, tmp_path, monkeypatch, capsys
 ):
-    """#808: a 422 GitHub's message does not attribute to an absent feature is a
-    failure for this link, carrying GitHub's words — not "unsupported", and not
-    a quiet no-op. The run still exits 3 so the operator sees it."""
+    """#808: a 422 is a failure for this link, carrying what was said — not
+    "unsupported", and not a quiet no-op. The run still exits 3 so the operator
+    sees it. With no error body the words are gh's own line, and are attributed
+    to gh rather than passed off as GitHub's."""
     fake = FakeGitHub(_tracker(), post_error="gh: Parent issue is locked (HTTP 422)")
     rc, out, _ = _run(lp, monkeypatch, capsys, _stage(tmp_path), fake, "101", "--yes")
 
     assert rc == 3
     assert fake.posts == []
     assert "[fail] #101 not linked under #90" in out.out
-    assert 'GitHub said: "gh: Parent issue is locked (HTTP 422)"' in out.out
+    assert 'gh said: "gh: Parent issue is locked (HTTP 422)"' in out.out
+    assert "GitHub said" not in out.out
+    assert "textual ref recorded" not in out.out, "link-parent recorded no textual ref"
     assert "unsupported" not in out.out
+
+
+def test_a_run_github_refused_ends_with_the_textual_way_out_once(lp, tmp_path, monkeypatch, capsys):
+    """pm never reads a refusal as an instance without sub-issues (ADR-035), so
+    an operator whose GitHub has none needs the way out: it follows the run's
+    links once, however many GitHub refused."""
+    fake = FakeGitHub(_tracker(), post_error="gh: Validation Failed (HTTP 422)")
+    rc, out, _ = _run(lp, monkeypatch, capsys, _stage(tmp_path), fake, "101", "107", "--yes")
+
+    assert rc == 3
+    assert out.out.count("[fail]") == 2
+    way_out = (
+        "  → If this GitHub does not offer sub-issues, set `containment: textual` in "
+        "project/substrate-map.yaml and pm stops attempting the native link."
+    )
+    assert out.out.count(way_out) == 1
 
 
 # --- one native parent (#1040) ----------------------------------------------
@@ -576,6 +597,7 @@ def test_the_one_parent_422_is_read_from_its_body_not_taken_as_unsupported(
     # GitHub's own words follow pm's line (#808).
     assert 'GitHub said: "Validation Failed; Sub issue may only have one parent"' in out.out
     assert "unsupported" not in out.out
+    assert "containment: textual" not in out.out, "a conflict is not a refusal to work around"
 
 
 # --- one read per parent -------------------------------------------------------
