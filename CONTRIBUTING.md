@@ -15,9 +15,8 @@ pkit:
       record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, PRJ-010, ADR-019, ADR-039, ADR-055, "project-management:DEC-053"]
       artefact: [.pkit/decisions/README.md]
     revalidated:
-      at: 2026-10-01T22:00:54Z
-      outcome: unchanged
-      unchanged-because: COR-050 changed only point 2's statement of a resolver's limits, now a time bound the backbone enforces and obligations a capability declares; this guide says pkit validate runs query commands offline after a sync, which still holds
+      at: 2026-10-01T22:17:30Z
+      outcome: updated
 ---
 
 # Contributing to project-kit
@@ -36,7 +35,7 @@ There is one source of truth for "what must pass before this lands": **`scripts/
 ./scripts/check.sh
 ```
 
-`pkit validate` runs the capabilities' query commands offline, so on a fresh clone run `uv run pkit sync` once first: it provisions their environments into uv's cache (CI does the same on checkout). Without it, validate names the missing step — "environment not provisioned — run `pkit sync`".
+`pkit validate` runs the capabilities' query commands with the offline marker set, and they fetch nothing, so on a fresh clone run `uv run pkit sync` once first: it provisions their environments into uv's cache (CI does the same on checkout). Without it, validate names the missing step — "environment not provisioned — run `pkit sync`".
 
 The same aggregator runs in two places, so the gate can't drift:
 

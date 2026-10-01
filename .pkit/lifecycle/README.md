@@ -28,7 +28,7 @@ pkit:
         - hatch_build.py
       record: [COR-010, COR-017, COR-027, COR-030, COR-031, COR-052, COR-053, ADR-056, ADR-057, ADR-059]
     revalidated:
-      at: 2026-10-01T22:00:44Z
+      at: 2026-10-01T22:17:30Z
       outcome: updated
 ---
 
@@ -333,7 +333,7 @@ These strings are this distribution's choice, not a principle: another distribut
 | The offline marker, "so a well-behaved command can tell" (ADR-057 point 3) | **`PKIT_OFFLINE=1`**, with **`UV_OFFLINE=1`** beside it | The environment of every query command the backbone starts — validators and command fillers. `PKIT_OFFLINE` is what a command reads; `UV_OFFLINE` is honoured by `uv`, so a script with a `uv run --script` shebang resolves its dependencies from uv's cache and never fetches. |
 | The deadline every run tells its command (ADR-057 point 5) | **`PKIT_COMMAND_DEADLINE`**, seconds since the epoch, to the millisecond | The environment of every command the backbone's runner starts — queries, predicates and the report's context read alike. A command may read it to know by when anything it starts must have ended ("A run inside a run" below). **`PKIT_COMMAND_STRAYS`**, set beside it, and **`PKIT_RUN_CACHE`**, set for the length of a `pkit validate` run, are the runner's own: no command reads or sets them. |
 
-**How dependencies are provisioned before an offline run.** A query never fetches, so a script's dependencies must already be in uv's cache when it runs. **`pkit init` and `pkit sync` put them there**, as one of their steps (self-host included), and `pkit capabilities install`, `register` and `upgrade` run the same step for the one capability they bring in: for every command a registered component — capability or adapter — declares with `query-contract: true`, whose script carries inline script metadata (a `# /// script` block), they resolve the script's environment once, online, with uv's own resolution — `uv sync --script <script>`, which resolves the metadata and installs the environment into uv's cache **without running the script**. The step prints one line per query command:
+**How dependencies are provisioned before an offline run.** A query declares that it needs no network and runs offline-marked, so a script's dependencies must already be in uv's cache when it runs. **`pkit init` and `pkit sync` put them there**, as one of their steps (self-host included), and `pkit capabilities install`, `register` and `upgrade` run the same step for the one capability they bring in: for every command a registered component — capability or adapter — declares with `query-contract: true`, whose script carries inline script metadata (a `# /// script` block), they resolve the script's environment once, online, with uv's own resolution — `uv sync --script <script>`, which resolves the metadata and installs the environment into uv's cache **without running the script**. The step prints one line per query command:
 
 | Line | When |
 |---|---|
@@ -371,7 +371,7 @@ The backbone runs the commands a component registers through one runner, `projec
   - What a killed nested command started runs on until the outermost run's command ends, not only until the nested run's deadline.
   - A marker that cannot be written — the directory cannot be written to — leaves those strays running past the outermost run's answer when it answers in time: only its own kill, at its deadline or on an interrupt, reaches them. When the outermost run cannot make its directory at all, the runs under it are not nested: each runs as a run of its own.
   - The deadline is written on the wall clock, since a monotonic clock gives two processes no reference point they can share portably; each run's own bound is measured on the monotonic clock. A clock step — a time synchronisation, the machine sleeping — between a run and one nested under it shifts the nested bound by the step, never beyond thirty seconds, and the outermost run's kill is never late.
-- **Provisioning, before any run.** A query runs offline, so the environment its script needs is prepared beforehand, not by the run: **provisioning is a step of `pkit init` and `pkit sync`**, which resolve every registered query command's environment once, online — and of the capability verbs that bring a capability in, for that capability's commands ("How dependencies are provisioned before an offline run" above). A query whose environment is not provisioned gives the no-answer "environment not provisioned — run `pkit sync`".
+- **Provisioning, before any run.** A query runs offline-marked and fetches nothing, so the environment its script needs is prepared beforehand, not by the run: **provisioning is a step of `pkit init` and `pkit sync`**, which resolve every registered query command's environment once, online — and of the capability verbs that bring a capability in, for that capability's commands ("How dependencies are provisioned before an offline run" above). A query whose environment is not provisioned gives the no-answer "environment not provisioned — run `pkit sync`".
 - **The policies.**
 
   | Policy | Run by | Arguments and environment | The answer | No answer is |

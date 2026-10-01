@@ -7,10 +7,11 @@ body: >
   time bound is the backbone's to enforce: a command that overruns it is
   stopped, and its answer counts as none. Needing no network, changing nothing
   in the project and giving the same output for the same inputs are the
-  command's own obligations (a subscriber writes, so it keeps only the first
-  and the last): its capability declares them on the command, the backbone
-  requires the declaration and reports a missing one at validation, and trusts
-  it at run time. They are a declared and trusted contract, not confinement —
+  command's own obligations: for a resolver and a filler its capability
+  declares them on the command, the backbone requires the declaration and
+  reports a missing one at validation, and trusts it at run time. A subscriber
+  writes, so it keeps only the first and the last, and how it declares them is
+  decided with the event runner. They are a declared and trusted contract, not confinement —
   if you read "no network access" as the backbone keeping such a command off
   the network, it does not; a project that needs a boundary confines these
   commands where it runs them. Record text only; nothing you run changes.
