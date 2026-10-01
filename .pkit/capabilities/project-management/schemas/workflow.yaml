@@ -134,8 +134,9 @@ process:
         User typically assigns the Milestone; agent may execute on verbal
         authorisation, posting an audit comment per
         `bypassable-with-audit` semantics. Owned by `promote-issue` per
-        DEC-026; the wrapper writes the audit comment with prefix
-        `Promoted` and then calls `move-issue --to backlog`.
+        DEC-026; the wrapper calls `move-issue --to backlog`, which carries
+        the reason into the audit trail (DEC-049), and then attaches the
+        milestone when one is given.
 
     - from: backlog
       to: in-progress
