@@ -25,7 +25,7 @@ non-negotiable guardrail denies are double-locked in the harness's fail-closed
 native `settings.json` denies, so failing open here can never bypass them.
 
 Enforcement-runtime faults (hook can't start at all) are a DISTINCT fault class
-(ADR-002 amendment): they surface loudly via the startup self-check wired into
+(ADR-002 point 4): they surface loudly via the startup self-check wired into
 `pkit permissions enable` and `pkit permissions sandbox enable` — not via this
 hook itself, which never runs when its runtime is dead.
 

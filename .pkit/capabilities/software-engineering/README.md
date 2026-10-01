@@ -13,9 +13,9 @@ pkit:
         - .pkit/capabilities/software-engineering/skills/**
       record: [COR-013, COR-024, COR-026, COR-030, ADR-013, ADR-052, "project-management:DEC-015", "project-management:DEC-028", "project-management:DEC-032"]
     revalidated:
-      at: 2026-09-30T23:14:18Z
+      at: 2026-09-30T22:36:07Z
       outcome: unchanged
-      unchanged-because: The software-engineer gains one line on handling review findings (fix the blocking ones, record advisories in the PR body); the README summarises the agent's conventions seam and deferral to the reviewer stack, not its per-finding handling, and restating the line here would give the rule a second carrier.
+      unchanged-because: ADR-013 states the same seam and names the same second consumer without a dated update marker (#860)
 ---
 
 # software-engineering capability
