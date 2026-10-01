@@ -42,6 +42,29 @@ opened (a read-only cache directory, a sandbox that does not allow it), the step
 says so and runs without the limit. `tests/test_check_script.py` pins both the
 passes and the slots.
 
+**The slowest modules**, by the time their tests take together, setup
+included, in one parallel pass (`uv run pytest -q -n 4 -m "not serial"
+--junitxml=...`, 2026-10-01, on a 12-core Mac other runs were sharing; the pass
+summed 1 879 s of test time and took 529 s on the clock):
+
+| Module | Tests | Seconds | Per test | Slowest test |
+|---|---:|---:|---:|---:|
+| `test_software_analysis.py` | 45 | 233 | 5.2 | 20.7 |
+| `test_software_analysis_numbers.py` | 15 | 116 | 7.7 | 21.8 |
+| `test_software_analysis_check.py` | 27 | 98 | 3.6 | 21.1 |
+| `test_living_docs_spaces.py` | 51 | 92 | 1.8 | 6.7 |
+| `test_software_analysis_resolver.py` | 53 | 89 | 1.7 | 18.7 |
+| `test_friction_check.py` | 76 | 63 | 0.8 | 1.8 |
+| `test_process_cascade_engine.py` | 33 | 60 | 1.8 | 5.9 |
+| `test_default_branch.py` | 66 | 53 | 0.8 | 27.9 |
+
+A software-analysis test runs the capability's scripts as the backbone does — a
+stamp, the check, the number check — each a process that starts several `pkit`
+processes of its own, from a third of a second to a second each; living-docs'
+tests run its validator the same way. What their tests share is built once
+(the adopter templates, below); what is left is each test's own runs. A test
+that stays slow says why in a comment above it.
+
 ## Type checking
 
 **The tests are type-checked in pyright's standard mode and gated outright**
