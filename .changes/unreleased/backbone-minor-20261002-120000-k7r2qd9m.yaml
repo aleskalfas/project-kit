@@ -31,7 +31,7 @@ body: >
   `PKIT_CHECK_BASE` no longer reaches a filler or a validator — a project's
   own included — so their answers are the same whatever base a pipeline
   names. Nothing else changes in an installed project until a capability
-  ships a filler that declares `settled`. From then on the default branch's
+  ships a filler that declares `settled`. From then on, in a repository with a remote, the default branch's
   remote-tracking copy must be present wherever the point is resolved —
   `pkit validate`, `pkit status`, `pkit connections resolve`: a pipeline job
   that checks out a single ref fetches it first (`git fetch origin
