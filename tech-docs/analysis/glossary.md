@@ -56,9 +56,9 @@ TERM-intent-note:
         record:
           - project-management:DEC-044
       revalidated:
-        at: 2026-10-01T20:03:29Z
+        at: 2026-10-01T20:49:54Z
         outcome: unchanged
-        unchanged-because: start-work now reads the issue's state through the shared issue_position resolver move-issue uses and refuses a state it cannot read (#1242); the first intent note start-work --next will write is untouched and still unbuilt, so the term holds
+        unchanged-because: "after #1242 was narrowed, start-work reads the issue's state from labels and milestone as before, through a function shared with review-work, and refuses nothing new; the first intent note start-work --next will write is untouched and still unbuilt, so the term holds"
 TERM-new-front:
   name: New front
   status: active
@@ -71,9 +71,9 @@ TERM-new-front:
         record:
           - project-management:DEC-004
       revalidated:
-        at: 2026-10-01T20:03:33Z
+        at: 2026-10-01T20:49:56Z
         outcome: unchanged
-        unchanged-because: start-work's change (#1242) is to how its early check reads the issue's lifecycle state, shared with move-issue; it adds no start guard over fronts, which stays intended design, so the term holds
+        unchanged-because: "#1242 now only shares start-work's early check, read from labels and milestone as before with no engine read and no new refusal, with review-work; it adds no start guard over fronts, which stays intended design, so the term holds"
 TERM-release-scope:
   name: Release scope
   status: active
@@ -115,9 +115,9 @@ TERM-stabilisation:
           - project-management:DEC-014
           - ADR-019
       revalidated:
-        at: 2026-10-01T20:03:33Z
+        at: 2026-10-01T20:49:58Z
         outcome: unchanged
-        unchanged-because: start-work's change (#1242) is to how its early check reads the issue's lifecycle state, shared with move-issue; the stabilisation guard on start-work is still unbuilt and nothing in the term depends on how state is read, so it holds
+        unchanged-because: "#1242 now only shares start-work's early check, read from labels and milestone as before, and its refusal and late-failure messages with review-work; the stabilisation guard on start-work is still unbuilt, so the term holds"
 ---
 
 # Glossary

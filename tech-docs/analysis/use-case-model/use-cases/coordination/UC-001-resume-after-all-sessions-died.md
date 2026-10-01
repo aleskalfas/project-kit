@@ -22,9 +22,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-10-01T20:03:44Z
+      at: 2026-10-01T20:50:03Z
       outcome: unchanged
-      unchanged-because: "start-work's early check now reads the issue's state as move-issue does and refuses an unreadable one (#1242); the claim start-work will make for the clone (EPIC #508) is still unbuilt and no step of this use case reads the state differently, so it holds"
+      unchanged-because: "after #1242 was narrowed, start-work reads the issue's state from labels and milestone as before, through a function shared with review-work, and refuses nothing new; the claim start-work will make for the clone (EPIC #508) is still unbuilt, so the use case holds"
 ---
 
 # UC-001 — Resume a clone after every session died

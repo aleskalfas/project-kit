@@ -19,9 +19,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-10-01T20:03:46Z
+      at: 2026-10-01T20:50:10Z
       outcome: unchanged
-      unchanged-because: "#1242 changes only how start-work's early check reads the issue's lifecycle state (one resolver shared with move-issue); the branch it cuts and the integration base it cuts from are unchanged, so this use case holds"
+      unchanged-because: "#1242 now only shares start-work's early check, read from labels and milestone as before, and its messages with review-work; the branch it cuts and the integration base it cuts from are unchanged, so this use case holds"
 ---
 
 # UC-008 — Land integration-branch work during a stabilisation

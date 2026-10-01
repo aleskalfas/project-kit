@@ -20,9 +20,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-10-01T20:03:45Z
+      at: 2026-10-01T20:50:07Z
       outcome: unchanged
-      unchanged-because: "#1242 changes only how start-work's early check reads the issue's lifecycle state (one resolver shared with move-issue); the stabilisation guard this use case expects on start-work is still unbuilt, so it holds"
+      unchanged-because: "#1242 now only puts start-work's early check, read from labels and milestone as before, and its refusal and failure messages in helpers shared with review-work; the stabilisation guard this use case expects on start-work is still unbuilt, so it holds"
 ---
 
 # UC-007 — Resume sessions killed during a stabilisation
