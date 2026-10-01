@@ -602,9 +602,13 @@ def _unreadable(predicate: dict[str, Any], answer: dict[str, Any], why: str) -> 
     return _ClassifierReading(None, outcome)
 
 
-def _modes_described(modes: dict[str, list[str]]) -> str:
-    """Each declared detection mode with the states that declare it."""
-    return "; ".join(f"{mode!r} by {_states_listed(ids)}" for mode, ids in modes.items())
+def _modes_described(modes: dict[str | None, list[str]]) -> str:
+    """Each declared detection mode with the states that declare it; a detection
+    that declares none is "no mode"."""
+    return "; ".join(
+        f"{'no mode' if mode is None else repr(mode)} by {_states_listed(ids)}"
+        for mode, ids in modes.items()
+    )
 
 
 def _states_listed(state_ids: list[str]) -> str:
@@ -640,16 +644,18 @@ class ProcessDefinition:
     def states(self) -> list[dict[str, Any]]:
         return [s for s in self.data.get("states", []) if isinstance(s, dict)]
 
-    def detection_modes(self) -> dict[str, list[str]]:
+    def detection_modes(self) -> dict[str | None, list[str]]:
         """Each detection mode the states declare, with the states that declare
-        it, in declaration order. COR-033 point 5: a definition has one."""
-        modes: dict[str, list[str]] = {}
+        it, in declaration order; None for a detection that declares no mode.
+        COR-033 point 5: a definition has one. A state with no detection
+        declares none and is not counted."""
+        modes: dict[str | None, list[str]] = {}
         for state in self.states:
             detection = _mapping(state.get("detection"))
             if detection is None:
                 continue
             mode = detection.get("mode")
-            label = mode if isinstance(mode, str) else repr(mode)
+            label = mode if isinstance(mode, str) or mode is None else repr(mode)
             modes.setdefault(label, []).append(str(state.get("id", "")))
         return modes
 
@@ -2471,7 +2477,9 @@ def _move_origin(position: Position, from_state: str | None) -> str | None:
     return from_state if from_state is not None else position.state_id
 
 
-def _mixed_modes_position(definition: ProcessDefinition, modes: dict[str, list[str]]) -> Position:
+def _mixed_modes_position(
+    definition: ProcessDefinition, modes: dict[str | None, list[str]]
+) -> Position:
     """The position of a definition whose states declare more than one detection
     mode (COR-033 point 5, ADR-062 point 7): no detection is run, and every
     state is indeterminate for the one reason naming each mode and its states."""

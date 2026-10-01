@@ -77,8 +77,9 @@ _TRANSITIONS = """\
       authorisation: agent-autonomous
 """
 
-# (state id, mode, command, `with` mapping or None)
-State = tuple[str, str, str, dict[str, Any] | None]
+# (state id, mode — None for a detection that declares none, command — None
+# for a state with no detection, `with` mapping or None)
+State = tuple[str, str | None, str | None, dict[str, Any] | None]
 
 _ONE_CLASSIFIER: list[State] = [
     ("draft", "classified", "classify", None),
@@ -126,12 +127,12 @@ def _definition(states: list[State], transitions: str = _TRANSITIONS, extra: str
         lines += [f"    - id: {state_id}", f"      meaning: The {state_id} state."]
         if state_id == "done":
             lines.append("      terminal: true")
-        lines += [
-            "      detection:",
-            f"        mode: {mode}",
-            "        predicate:",
-            f"          run: {command}",
-        ]
+        if command is None:
+            continue
+        lines.append("      detection:")
+        if mode is not None:
+            lines.append(f"        mode: {mode}")
+        lines += ["        predicate:", f"          run: {command}"]
         if with_args is not None:
             lines.append(f"          with: {json.dumps(with_args)}")
     return "\n".join(lines) + "\n" + transitions
@@ -446,6 +447,63 @@ def test_a_definition_that_mixes_modes_runs_no_detection(repo: Path) -> None:
     allowed, reason, _position = _engine(repo).can_move("ready", "agent")
     assert allowed is False
     assert reason.count("more than one detection mode") == 1
+
+
+@pytest.mark.parametrize(
+    ("states", "described"),
+    [
+        (
+            [
+                ("draft", "inferred", "classify", None),
+                ("ready", "inferred", "classify", None),
+                ("review", "inferred", "classify", None),
+                ("held", "inferred", "classify", None),
+                ("done", "clasified", "classify", None),
+            ],
+            "'inferred' by 'draft', 'ready', 'review', 'held'; 'clasified' by 'done'",
+        ),
+        (
+            [
+                ("draft", "classified", "classify", None),
+                ("ready", "classified", "classify", None),
+                ("done", None, "classify", None),
+            ],
+            "'classified' by 'draft', 'ready'; no mode by 'done'",
+        ),
+    ],
+)
+def test_a_typod_or_missing_mode_mixes_the_modes(
+    repo: Path, states: list[State], described: str
+) -> None:
+    _use(repo, _definition(states))
+    position = _engine(repo).resolve_position()
+    assert (position.state_id, position.indeterminate) == (None, True)
+    assert _runs(repo, "classify") == 0
+    assert {o.reason for o in position.unevaluated.values()} == {
+        f"the definition's states declare more than one detection mode — {described} — so no "
+        "detection was run; every state of a definition declares the same mode"
+    }
+    (finding,) = definitions_outcome(repo).findings
+    assert described in finding.message
+
+
+def test_a_state_with_no_detection_declares_no_mode(repo: Path) -> None:
+    _use(
+        repo,
+        _definition(
+            [
+                ("draft", "classified", "classify", None),
+                ("ready", "classified", "classify", None),
+                ("done", None, None, None),
+            ]
+        ),
+    )
+    assert definitions_outcome(repo).findings == ()
+    _answer(repo, "classify", {"state": "ready", "reason": "submitted"})
+    position = _engine(repo).resolve_position()
+    assert (position.state_id, position.indeterminate) == ("ready", False)
+    assert set(position.detection_reasons) == {"draft", "ready"}
+    assert _runs(repo, "classify") == 1
 
 
 def test_validation_reports_a_definition_that_mixes_modes(repo: Path) -> None:
