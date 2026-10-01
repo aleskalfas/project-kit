@@ -22,9 +22,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-09-30T23:02:17Z
+      at: 2026-10-01T19:19:30Z
       outcome: unchanged
-      unchanged-because: "#840's lint and format pass reshapes the anchored code without changing what it does, so this page still describes it as it is"
+      unchanged-because: "#803 makes create-issue run every title check titles.yaml declares before filing; it does not touch instance identity, ownership claims or the audit trail this use case describes, so the page still holds"
 ---
 
 # UC-001 — Resume a clone after every session died
