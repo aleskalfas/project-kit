@@ -3245,7 +3245,7 @@ def unpin() -> None:
         raise click.ClickException("not in a project tree.")
     pin_path = router.pin_file_path(target_root)
     if pin_path.exists():
-        pin_path.unlink()
+        router.write_version_pin(target_root, None)
         rel = pin_path.relative_to(target_root)
         click.echo(f"Removed pin ({rel}); project now floats on the installed tool.")
     else:
