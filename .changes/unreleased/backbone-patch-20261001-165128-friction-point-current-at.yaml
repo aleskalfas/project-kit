@@ -2,6 +2,7 @@ component: backbone
 kind: patch
 custom:
   category: Fixed
+  pr: "1227"
 body: >
   `pkit friction check --all` takes as an artefact's revalidation point the
   commit that wrote the `at` the artefact carries (#1217). After a merge that
