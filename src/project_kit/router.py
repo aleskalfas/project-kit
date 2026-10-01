@@ -258,13 +258,43 @@ def read_version_pin(root: Path) -> str | None:
     Cheap and stdlib-only — a plain file read on the pre-click hot path
     (ADR-039), mirroring `_read_pkit_version`. This is the pin *source* the
     router honours (ADR-049); it is the sole reader of the pin directive shared
-    by the router (route 2) and the `pin` / `upgrade` gestures.
+    by the router (route 2) and the `pin` / `upgrade` gestures, as
+    `write_version_pin` is its sole writer.
     """
     try:
         text = pin_file_path(root).read_text(encoding="utf-8").strip()
     except OSError:
         return None
     return text or None
+
+
+def write_version_pin(root: Path, version: str | None) -> None:
+    """Set `root/.pkit/version-pin` to `version`, or remove it when `version` is None.
+
+    The one writer of the pin directive (ADR-049): the default pin after an
+    upgrade, the pinned raise, `pkit pin` and `pkit unpin` all come here, and
+    None means unpinned here as it does from `read_version_pin`. The router runs
+    whatever version this file names, so a write cut short must never leave a
+    torn pin for it to route to (#1211). The new pin is written to a temporary
+    file beside the pin, flushed to disk, and only then renamed over it: the
+    file holds the previous pin, byte for byte, or the new one, never part of
+    it, and a write that fails leaves no temporary file. Removing is a single
+    unlink, already whole or not at all, and removing an absent pin does nothing.
+    """
+    path = pin_file_path(root)
+    if version is None:
+        path.unlink(missing_ok=True)
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(path.name + ".tmp")
+    try:
+        with temporary.open("w", encoding="utf-8") as stream:
+            stream.write(version + "\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 def is_routed_child(environ) -> bool:

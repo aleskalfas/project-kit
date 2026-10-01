@@ -46,8 +46,9 @@ pkit:
         - src/project_kit/environment.py
       record: [COR-004, COR-012, COR-043, COR-048, COR-049, COR-050, COR-054, PRJ-001, PRJ-003, PRJ-004, ADR-033, ADR-039, ADR-049, ADR-058, ADR-059]
     revalidated:
-      at: 2026-10-01T16:34:05Z
-      outcome: updated
+      at: 2026-10-01T16:40:20Z
+      outcome: unchanged
+      unchanged-because: pin, unpin and upgrade still write and remove the same pin at the same points; only how a write lands changed (whole or not at all), which the page does not describe
 ---
 
 # Command-line interface
