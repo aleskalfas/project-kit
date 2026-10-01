@@ -2,6 +2,7 @@ component: backbone
 kind: patch
 custom:
   category: Fixed
+  pr: "1236"
 body: >
   `pkit release check` now counts only the changesets a pull request itself
   adds or edits. It counted every pending changeset, so a pull request that
