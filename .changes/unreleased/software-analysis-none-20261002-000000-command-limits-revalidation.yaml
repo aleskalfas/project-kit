@@ -1,0 +1,3 @@
+component: software-analysis
+kind: none
+body: Internal — the README is revalidated unchanged against the core records' refined command limits (#1036); its filler and checks stay read-only, offline queries, and nothing you run changes.

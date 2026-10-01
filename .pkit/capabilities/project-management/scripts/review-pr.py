@@ -24,8 +24,8 @@ The required set is resolved per PR (DEC-032 D1) as the baseline
 whose match-predicate matches the classification of any issue the PR closes,
 less any contribution the project opts out of
 (`review.agents.contributed_opt_out:`, #148 — listed in the output with its
-reason). Crucially, this resolution is the SAME shared helper `done-work`'s gate
-checks (`_lib.required_reviewers.resolve_required_local_reviewers`), so the
+reason). Crucially, this resolution is the SAME shared wiring `done-work`'s gate
+checks (`_lib.pr_review.resolve_pr_review`), so the
 set `review-pr` invokes equals the set the gate later checks — the
 developer-at-keyboard flow produces exactly the verdicts the gate needs, with
 no divergence (DEC-032 D4).
@@ -111,9 +111,6 @@ from _lib import bootstrap_gate, session_guard
 from _lib.agent_verdicts import PATH_LOCAL, gate_candidates, stamp_verdict
 from _lib.audit import short_sha
 from _lib.author_delta import author_delta, base_kept
-from _lib.closing_issue_fetchers import issue_labels as _issue_labels_fetch
-from _lib.closing_issue_fetchers import pr_changed_files as _pr_changed_files_fetch
-from _lib.closing_issue_fetchers import pr_closing_issue_numbers as _pr_closing_issue_numbers_fetch
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
@@ -121,6 +118,10 @@ from _lib.membership import (
     resolve_capability_root,
     resolve_invoker_identity,
 )
+
+# The one wiring of the required reviewers and the freshness rule (#1195),
+# shared with done-work's gate and show-pr.
+from _lib.pr_review import REVIEW_VIEW_FIELDS, PrReview, resolve_pr_review
 from _lib.required_reviewers import (
     ERROR_CHANGED_FILES,
     ERROR_CLOSING_ISSUES,
@@ -131,14 +132,10 @@ from _lib.required_reviewers import (
     NOT_CODE_PATH,
     RequiredReviewersError,
     Resolution,
-    read_not_code,
-    resolve_required_local_reviewers,
 )
 from _lib.review_contributions import collect_contributions
-from _lib.review_opt_outs import OPT_OUT_PATH, read_opt_outs
-
-# The one freshness rule (#1179), shared with done-work's gate and show-pr.
-from _lib.verdict_freshness import PR_VIEW_FIELDS, FreshnessRule, head_sha, rule_for_pr
+from _lib.review_opt_outs import OPT_OUT_PATH
+from _lib.verdict_freshness import FreshnessRule, head_sha
 
 # ---- per-agent reviewer timeout (issue #766) -------------------------
 #
@@ -408,10 +405,10 @@ def review(argv: list[str] | None = None, *, pinned_head: str = "") -> ReviewRun
 
     # DEC-032 D4: resolve the PR's required-local set — baseline ∪ contributed
     # reviewers matched against the closing issues' classification — via the
-    # SAME shared helper `done-work`'s gate checks. Invoking exactly this set
+    # SAME shared wiring `done-work`'s gate checks. Invoking exactly this set
     # is what makes invoke-set == gate-set (no divergence).
-    baseline_local = [a["name"] for a in local_agents]
-    resolution = _resolve_required_local(pr_number, config, repo_root, baseline_local)
+    review = _resolve_review(pr_number, config, repo_root)
+    resolution = review.resolution
     if not resolution.ok:
         # HARD ABORT on a non-ok resolution — and this is a DELIBERATE choice,
         # not a gate-safety requirement. review-pr is advisory: it posts
@@ -452,7 +449,7 @@ def review(argv: list[str] | None = None, *, pinned_head: str = "") -> ReviewRun
     states = _VerdictStates()
     read: _VerdictStates | None = None
     if not args.force:
-        read = _read_verdict_states(pr_number, resolution, config)
+        read = _read_verdict_states(pr_number, review, config)
         if read is None:
             print("  fresh verdicts: could not be read — every required reviewer runs")
         else:
@@ -888,43 +885,41 @@ def _gh_current_login(config: dict) -> str | None:
 # ---- required-set resolution (DEC-032 D1/D4) -------------------------
 
 
-def _resolve_required_local(
-    pr_number: int | None,
-    config: dict,
-    repo_root: Path,
-    baseline_local: list[str],
-) -> Resolution:
-    """Resolve the PR's required-local set via the shared resolver (DEC-032 D1).
+def _resolve_review(pr_number: int | None, config: dict, repo_root: Path) -> PrReview:
+    """The PR's required-local set and freshness rule (DEC-032 D1, #1179).
 
-    Delegates to `_lib.required_reviewers.resolve_required_local_reviewers` —
-    the SAME resolution `done-work`'s gate-checker calls — wiring in this
-    script's own `gh`-backed closing-issue, label, and changed-files fetchers
-    and the project's contribution opt-outs (#148) and not-code list (#1178),
-    read from `config` the same way the gate reads them. Because both
-    consumers go through one helper, the set this command invokes equals the
-    set the gate later checks (DEC-032 D4, no divergence). Returns a
-    `Resolution`; a non-ok result aborts (fail-closed, DEC-032 D5).
+    Through `_lib.pr_review.resolve_pr_review` — the ONE wiring `done-work`'s
+    gate-checker and `show-pr` call too — handing it this script's `gh`
+    helpers, `collect_contributions` and author-change readers, looked up at
+    call time so the tests' monkeypatches on this module stay effective.
+    Because the consumers go through one wiring, the set this command invokes
+    equals the set the gate later checks (DEC-032 D4, no divergence), and a
+    verdict it skips as fresh is one the gate counts. A non-ok resolution
+    aborts (fail-closed, DEC-032 D5).
 
     A `None` `pr_number` (unresolvable PR) yields a non-ok resolution rather
     than a `gh` call against a missing number.
     """
     if pr_number is None:
-        return Resolution(
-            error=RequiredReviewersError(
-                kind=ERROR_CLOSING_ISSUES,
-                message="cannot resolve PR number",
+        return PrReview(
+            Resolution(
+                error=RequiredReviewersError(
+                    kind=ERROR_CLOSING_ISSUES,
+                    message="cannot resolve PR number",
+                ),
             ),
+            author_delta=author_delta,
+            base_kept=base_kept,
         )
-    return resolve_required_local_reviewers(
+    return resolve_pr_review(
         pr_number,
-        baseline_local=baseline_local,
-        repo_root=repo_root,
-        closing_issue_numbers=lambda n: _pr_closing_issue_numbers_fetch(n, config, gh_run=gh_run),
-        issue_labels=lambda n: _issue_labels_fetch(n, config, gh_get_issue=gh_get_issue),
-        changed_files=lambda n: _pr_changed_files_fetch(n, config, gh_run=gh_run),
-        opt_outs=read_opt_outs(config),
-        not_code=read_not_code(config),
+        config,
+        repo_root,
+        gh_run=gh_run,
+        gh_get_issue=gh_get_issue,
         collect_contributions=collect_contributions,
+        author_delta=author_delta,
+        base_kept=base_kept,
     )
 
 
@@ -948,14 +943,14 @@ class _VerdictStates:
 
 def _read_verdict_states(
     pr_number: int | None,
-    resolution: Resolution,
+    review: PrReview,
     config: dict,
 ) -> _VerdictStates | None:
     """The required reviewers' current verdicts on the PR, fresh and stale.
 
     Fetches the PR's comments, commits, head and base in one round-trip (the
-    fetch `done-work`'s gate makes), builds the freshness rule from them and
-    the PR's resolution (`rule_for_pr`, the gate's own), and hands both to
+    fetch `done-work`'s gate makes), completes the PR's freshness rule from
+    them (`PrReview.freshness_rule`, the gate's own), and hands both to
     `_local_verdict_states`. Returns None when they cannot be read — the
     caller then runs every required reviewer, the direction that can only
     produce more verdicts.
@@ -963,7 +958,7 @@ def _read_verdict_states(
     if pr_number is None:
         return None
     proc = gh_run(
-        ["gh", "pr", "view", str(pr_number), "--json", ",".join(("comments", *PR_VIEW_FIELDS))],
+        ["gh", "pr", "view", str(pr_number), "--json", ",".join(REVIEW_VIEW_FIELDS)],
         config,
         check=False,
     )
@@ -977,8 +972,8 @@ def _read_verdict_states(
         return None
     states = _local_verdict_states(
         data.get("comments") or [],
-        rule_for_pr(data, resolution, author_delta=author_delta, base_kept=base_kept),
-        resolution.required_local,
+        review.freshness_rule(data),
+        review.resolution.required_local,
     )
     return replace(states, head=head_sha(data))
 

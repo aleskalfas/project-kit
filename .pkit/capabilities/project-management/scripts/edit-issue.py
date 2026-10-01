@@ -73,7 +73,14 @@ _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 import contextlib
 
-from _lib import axis_labels, body_parent_ref, bootstrap_gate, provenance, session_guard
+from _lib import (
+    axis_labels,
+    body_parent_ref,
+    bootstrap_gate,
+    provenance,
+    session_guard,
+    title_rules,
+)
 from _lib import lifecycle_inference as infer
 from _lib.audit import audit_key
 from _lib.comment import post_audit_once
@@ -735,16 +742,12 @@ def _validate(
             )
         )
     else:
-        pattern = _title_pattern_for(titles, structural_type)
-        if pattern and not re.match(pattern, title):
-            findings.append(
-                Finding(
-                    SEVERITY_HARD_REJECT,
-                    "title.pattern",
-                    f"title does not match titles.yaml pattern for "
-                    f"{structural_type!r}: {pattern!r}",
-                )
-            )
+        # The type's titles.yaml checks — the pattern and every declared wording
+        # rule (#803) — at their declared severity: an edit writes the title.
+        for severity, label, detail in title_rules.check_title(
+            titles, title_rules.issue_key(structural_type), title
+        ):
+            findings.append(Finding(severity, label, detail))
 
     # Per-type required body sections.
     if structural_type is not None:
@@ -853,16 +856,6 @@ def _validate(
     if not check_body:
         findings = [f for f in findings if not f.label.startswith("body.")]
     return findings
-
-
-def _title_pattern_for(titles: dict, structural_type: str) -> str | None:
-    formats = titles.get("formats") or {}
-    entry = formats.get(f"issue-{structural_type}")
-    if isinstance(entry, dict):
-        pattern = entry.get("pattern")
-        if isinstance(pattern, str):
-            return pattern
-    return None
 
 
 def _severity_from_token(token) -> str:

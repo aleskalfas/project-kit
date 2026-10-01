@@ -77,8 +77,8 @@ except ImportError:  # pragma: no cover - exercised via spec-loaded fallback
     )
 
 
-# The `gh pr view --json` fields `rule_for_pr` reads; a consumer adds them to
-# the fetch it already makes.
+# The `gh pr view --json` fields `rule_for_pr` reads; the consumers fetch them
+# with the comments, as `_lib.pr_review.REVIEW_VIEW_FIELDS`.
 PR_VIEW_FIELDS = ("commits", "headRefOid", "baseRefOid")
 
 # How many changed paths a reason names before counting the rest.

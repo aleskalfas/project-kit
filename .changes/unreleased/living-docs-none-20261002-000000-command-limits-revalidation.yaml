@@ -1,0 +1,3 @@
+component: living-docs
+kind: none
+body: Internal — the README is revalidated unchanged against the core records' refined command limits (#1036); its validator and filler stay read-only, offline queries, and nothing you run changes.

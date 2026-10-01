@@ -20,9 +20,9 @@ pkit:
       artefact:
         - ACT-operator
     revalidated:
-      at: 2026-10-01T21:03:30Z
+      at: 2026-10-01T22:17:12Z
       outcome: unchanged
-      unchanged-because: "#1242 now only shares start-work's early check, read from labels and milestone as before, with review-work; the stabilisation guard on start-work is still unbuilt and nothing here depends on that check, so it holds"
+      unchanged-because: DEC-014's example of a warning now names the Task title's length floor, as DEC-011 states it; what this page takes from the severity model — which findings refuse, which need an audited bypass and which warn — is unchanged
 ---
 
 # UC-010 — Stabilise a Milestone for a release
