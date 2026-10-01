@@ -1154,6 +1154,52 @@ def test_a_code_fix_stales_the_floor_reviewer_too(dw, rc, monkeypatch) -> None:
     ) in result.refusal_message
 
 
+def test_any_change_stales_a_floor_reviewers_rejection(dw, rc, monkeypatch) -> None:
+    """Floor scoping protects an approval only: the author is answering a
+    CHANGES_REQUESTED, so a fix outside the reviewer's floors stales it too."""
+    _wire(
+        dw,
+        monkeypatch,
+        collection=_floor_collection(rc),
+        comments=[
+            _pinned_verdict_comment("reviewer"),
+            _pinned_verdict_comment("code-reviewer", "CHANGES_REQUESTED"),
+        ],
+        changed_files=("src/app.py", ".changes/unreleased/pm.yaml"),
+        pr_view={"headRefOid": _HEAD, "baseRefOid": _BASE},
+    )
+    _author_changed(dw, monkeypatch, ".changes/unreleased/pm.yaml")
+    result = dw._check_agent_gate(99, {}, _config(), "resolved", CAP_ROOT)
+    assert result.passed is False
+    assert (
+        "local agent (code-reviewer, required by capability `software-engineering`): "
+        "none (stale CHANGES_REQUESTED — reviewed aaaaaaa; changed since: "
+        ".changes/unreleased/pm.yaml)"
+    ) in result.refusal_message
+    assert "--force" not in result.refusal_message
+
+
+def test_a_fresh_rejection_names_the_forced_re_review(dw, rc, monkeypatch) -> None:
+    """review-pr skips a reviewer whose CHANGES_REQUESTED is fresh, so the
+    refusal names the way to have it re-review the PR as it stands."""
+    _wire(
+        dw,
+        monkeypatch,
+        collection=rc.ContributionCollection(rules=()),
+        comments=[_pinned_verdict_comment("reviewer", "CHANGES_REQUESTED")],
+        pr_view={"headRefOid": _REVIEWED, "baseRefOid": _BASE},
+    )
+    _author_changed(dw, monkeypatch)
+    result = dw._check_agent_gate(99, {}, _config(), "resolved", CAP_ROOT)
+    assert result.passed is False
+    assert "local agent (reviewer): CHANGES_REQUESTED" in result.refusal_message
+    assert (
+        "It skips a fresh CHANGES_REQUESTED (local agent (reviewer)): push the fix "
+        "it asks for, or have it re-review the PR as it stands with "
+        "`review-pr 99 --force`."
+    ) in result.refusal_message
+
+
 def test_changes_that_cannot_be_read_stale_the_verdict(dw, rc, monkeypatch) -> None:
     """A rebase leaves the reviewed head outside the branch: the verdict is
     stale, and the refusal says why."""

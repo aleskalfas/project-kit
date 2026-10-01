@@ -11,17 +11,22 @@ a stale one, so they cannot disagree:
   * `show-pr --field review` / `review-history` mark a stale verdict, with
     the reason.
 
-The rule, per verdict:
+The rule judges one verdict — the reviewer's latest; which verdict is the
+latest is `_lib.agent_verdicts`' business, decided before this rule is asked,
+so a superseded verdict never counts however fresh it would be. Per verdict:
 
   * **A verdict naming the head it reviewed** (`<!-- pkit-verdict sha=<oid>
     -->`) stands until the author changes something its reviewer checks. The
     author's changes since that head come from `_lib.author_delta` (a clean
-    merge of the base branch contributes nothing). A reviewer only a
-    diff-property floor requires on this PR (`Resolution.floors_by_reviewer`)
-    stays fresh while those changes satisfy none of its floors, read through
-    the same not-code list the resolver applies; any other reviewer — the
-    baseline, or one the closing issues' classification matched — goes stale
-    on any change. When the changes cannot be computed the verdict is stale.
+    merge of the base branch contributes nothing). An APPROVED from a
+    reviewer only a diff-property floor requires on this PR
+    (`Resolution.floors_by_reviewer`) stays fresh while those changes satisfy
+    none of its floors, read through the same not-code list the resolver
+    applies. Any other verdict goes stale on any change: one from the
+    baseline or a reviewer the closing issues' classification matched, and
+    every CHANGES_REQUESTED — the author is answering it, so floor scoping
+    protects approvals only. When the changes cannot be computed the verdict
+    is stale.
   * **A verdict naming no head** is fresh when it was posted strictly after
     the PR's latest commit, and stale otherwise — or when that commit's time
     is unknown.
@@ -37,7 +42,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 
 try:
-    from _lib.agent_verdicts import PATH_LOCAL, Verdict, latest_commit_timestamp
+    from _lib.agent_verdicts import APPROVED, PATH_LOCAL, Verdict, latest_commit_timestamp
     from _lib.audit import short_sha
     from _lib.author_delta import AuthorDelta
     from _lib.required_reviewers import (
@@ -48,6 +53,7 @@ try:
     )
 except ImportError:  # pragma: no cover - exercised via spec-loaded fallback
     from agent_verdicts import (  # type: ignore[no-redef]
+        APPROVED,
         PATH_LOCAL,
         Verdict,
         latest_commit_timestamp,
@@ -150,10 +156,17 @@ class FreshnessRule:
         return Freshness(False, "no reviewed head recorded; posted before the latest commit")
 
     def _floors_of(self, verdict: Verdict) -> frozenset[str] | None:
-        """The floors that keep this reviewer's verdict standing, or None when
-        it is required for the whole change. Contributed reviewers register on
-        the local path only (DEC-032), so a remote verdict is a baseline one."""
-        if verdict.path != PATH_LOCAL:
+        """The floors a change must reach to stale this verdict, or None when
+        any change stales it.
+
+        Floor scoping protects an approval only. A CHANGES_REQUESTED goes
+        stale on any change: the author is answering it, and the fix may well
+        sit outside the reviewer's floors — a changeset, a README — so holding
+        the rejection fresh would leave the reviewer blocking a change it
+        never re-read. Contributed reviewers register on the local path only
+        (DEC-032), so a remote verdict is a baseline one.
+        """
+        if verdict.token != APPROVED or verdict.path != PATH_LOCAL:
             return None
         return self._floors_by_reviewer.get(verdict.reviewer)
 

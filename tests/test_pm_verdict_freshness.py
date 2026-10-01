@@ -9,6 +9,9 @@ floor. The traces the issue names:
 
   * a clean merge of the base branch → every verdict fresh;
   * a Markdown-only fix → code and security fresh, pm and docs stale;
+  * a fix outside a floor reviewer's floors → its approval stands, its
+    rejection goes stale;
+  * a stale latest verdict → no older fresh verdict stands in for it;
   * a code fix → every verdict stale;
   * a push during a review run → stale;
   * a rebase → stale;
@@ -133,10 +136,10 @@ TOUCHES_CODE = frozenset({"touches-code"})
 FLOOR_ONLY = {CODE: TOUCHES_CODE, SECURITY: TOUCHES_CODE}
 
 
-def _verdict(av, reviewer, sha, *, path=None, timestamp="2026-01-01T00:00:00Z"):
+def _verdict(av, reviewer, sha, *, path=None, timestamp="2026-01-01T00:00:00Z", token=None):
     return av.Verdict(
         reviewer=reviewer,
-        token=av.APPROVED,
+        token=token or av.APPROVED,
         path=path or av.PATH_LOCAL,
         body="",
         timestamp=timestamp,
@@ -203,6 +206,35 @@ def test_a_changeset_is_not_code_for_the_floor_reviewers(av, ad, vf, repo) -> No
     repo.commit({".changes/unreleased/pm-minor.yaml": "component: pm\n"}, "changeset")
 
     assert _stale(av, _rule(vf, ad, repo), reviewed) == {PM, DOCS}
+
+
+def test_any_change_stales_a_rejection(av, ad, vf, repo) -> None:
+    """Floor scoping protects an approval only. The author is answering a
+    CHANGES_REQUESTED, and a fix outside the reviewer's floors — a changeset,
+    a README — still stales it, so the reviewer re-reads what it blocked."""
+    reviewed = repo.commit({"src/app.py": "x = 2\n"}, "feature")
+    repo.commit({".changes/unreleased/pm-minor.yaml": "component: pm\n"}, "changeset")
+
+    rule = _rule(vf, ad, repo)
+    rejection = _verdict(av, CODE, reviewed, token=av.CHANGES_REQUESTED)
+    assert rule.assess(rejection) == vf.Freshness(
+        False,
+        f"reviewed {reviewed[:7]}; changed since: .changes/unreleased/pm-minor.yaml",
+    )
+    assert rule.is_fresh(_verdict(av, CODE, reviewed))
+
+
+def test_a_rejection_survives_a_clean_merge_of_the_base(av, ad, vf, repo) -> None:
+    """A clean merge of the base is no change by the author, so a rejection
+    stands as an approval does."""
+    reviewed = repo.commit({"src/app.py": "x = 2\n"}, "feature")
+    repo.git("checkout", "-q", "main")
+    repo.commit({"src/lib.py": "y = 1\n"}, "main moves")
+    repo.git("checkout", "-q", "feat")
+    repo.git("merge", "-q", "--no-edit", "main")
+
+    rejection = _verdict(av, CODE, reviewed, token=av.CHANGES_REQUESTED)
+    assert _rule(vf, ad, repo).is_fresh(rejection)
 
 
 def test_a_code_fix_stales_every_verdict(av, ad, vf, repo) -> None:

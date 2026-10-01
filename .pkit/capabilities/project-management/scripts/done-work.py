@@ -1460,6 +1460,7 @@ def _check_agent_gate(
     if any(not slot.satisfied for slot in slots):
         return refuse(
             _agent_gate_refusal(
+                pr_number=pr_number,
                 mode_source=mode_source,
                 slots=slots,
                 opted_out=resolution.opted_out,
@@ -1866,6 +1867,7 @@ def _changed_files_unresolvable_refusal(reason: str, *, too_many: bool) -> str:
 
 def _agent_gate_refusal(
     *,
+    pr_number: int | None = None,
     mode_source: str,
     slots: list[_Slot],
     opted_out: tuple = (),
@@ -1877,9 +1879,12 @@ def _agent_gate_refusal(
     its status, so the operator sees exactly which members of the AND-composed
     set still need to approve (DEC-032 D3). A reviewer whose latest verdict went
     stale (`stale`, from `_stale_verdicts`) has it named beside its status, with
-    the head it reviewed and what changed since (#1179). Contributions the
-    project opts out of (#148) are named after the set with their reasons, so a
-    reviewer missing from it reads as withdrawn, not forgotten.
+    the head it reviewed and what changed since (#1179). A local reviewer whose
+    CHANGES_REQUESTED is still fresh is one `review-pr` skips, so the refusal
+    names `review-pr <N> --force` as the way to have it re-review the PR as it
+    stands. Contributions the project opts out of (#148) are named after the
+    set with their reasons, so a reviewer missing from it reads as withdrawn,
+    not forgotten.
 
     It reads the same `_Slot` records the pass path's `passed_via` reads, which
     is what keeps the two honest with each other: a reviewer with a genuine fresh
@@ -1909,9 +1914,24 @@ def _agent_gate_refusal(
         )
     missing = ", ".join(slot.label for slot in slots if not slot.satisfied)
     lines.append(f"            → still missing a fresh APPROVED: {missing}")
+    number = pr_number if pr_number is not None else "<N>"
     lines.append("            Remediation:")
     lines.append("              a) Wait for / trigger each remote agent to post APPROVED.")
-    lines.append("              b) Run `review-pr <N>` to re-invoke the local agent(s).")
+    lines.append(f"              b) Run `review-pr {number}` to re-invoke the local agent(s).")
+    rejecting = [
+        slot.label
+        for slot in slots
+        if not slot.satisfied
+        and slot.verdict is not None
+        and slot.verdict.token == CHANGES_REQUESTED
+        and slot.verdict.path == PATH_LOCAL
+    ]
+    if rejecting:
+        lines.append(
+            f"                 It skips a fresh CHANGES_REQUESTED ({', '.join(rejecting)}): "
+            "push the fix it asks for, or have it re-review the PR as it stands "
+            f"with `review-pr {number} --force`."
+        )
     lines.append(
         "              c) Override a false block on ONE reviewer with "
         "`done-work --bypass-reviewer <name> "
