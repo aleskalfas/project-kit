@@ -500,7 +500,7 @@ def add_queue_arguments(parser: argparse.ArgumentParser) -> None:
     )
     wait.add_argument(
         "--wait-minutes",
-        type=_minutes,
+        type=minutes,
         default=None,
         metavar="MINUTES",
         help=(
@@ -546,8 +546,8 @@ def _wait_limit(seconds: float | None) -> str:
     return f"up to {seconds / 60:g} min"
 
 
-def _minutes(value: str) -> float:
-    """`--wait-minutes`: a number of minutes, 0 or more."""
+def minutes(value: str) -> float:
+    """`--wait-minutes`: a number of minutes, 0 or more (an argparse `type`)."""
     try:
         minutes = float(value)
     except ValueError:

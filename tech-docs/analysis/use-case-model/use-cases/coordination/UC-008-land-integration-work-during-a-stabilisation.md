@@ -19,9 +19,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-10-01T15:22:34Z
+      at: 2026-10-01T20:34:37Z
       outcome: unchanged
-      unchanged-because: on this branch the merge mechanic moved into the backbone's pull-request landing module and the pm scripts call it; what this page describes of merging and stabilisation is unchanged by the reviewer-body wording that main brought in
+      unchanged-because: done-work gains run(), which reports how a run ended and takes a pinned head or a merged-only mode, for the land-work verb that composes it; a direct run behaves as before, so how integration work lands during a stabilisation, and gap I, read as before
 ---
 
 # UC-008 — Land integration-branch work during a stabilisation

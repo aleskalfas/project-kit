@@ -214,3 +214,102 @@ def test_gate_refuses_on_pending_check(ci) -> None:
 def test_gate_passes_on_empty(ci) -> None:
     assert ci.evaluate_ci_gate(None).passing is True
     assert ci.evaluate_ci_gate([]).passing is True
+
+
+# --- the four states a waiting reader tells apart (#1203) --------------
+# The merge gate passes a head with no check reported; `land-work`, which waits for
+# the checks, must not read that as green. The gate's verdict says which.
+
+
+@pytest.mark.parametrize("rollup", [None, []])
+def test_no_check_reported_is_no_run_not_passed(ci, rollup) -> None:
+    result = ci.evaluate_ci_gate(rollup)
+    assert result.passing is True  # the merge gate's reading is unchanged
+    assert result.no_checks is True
+    assert result.state == ci.NO_RUN
+
+
+def test_green_checks_are_passed(ci) -> None:
+    result = ci.evaluate_ci_gate(
+        [
+            {"name": "checks", "status": "COMPLETED", "conclusion": "SUCCESS"},
+            {"name": "docs", "status": "COMPLETED", "conclusion": "SKIPPED"},
+        ]
+    )
+    assert result.no_checks is False
+    assert result.state == ci.PASSED
+    assert result.failed == ()
+    assert result.running == ()
+
+
+def test_running_checks_are_running(ci) -> None:
+    result = ci.evaluate_ci_gate(
+        [
+            {"name": "checks", "status": "IN_PROGRESS", "conclusion": ""},
+            {"name": "lint", "status": "COMPLETED", "conclusion": "SUCCESS"},
+            {"context": "legacy", "state": "PENDING"},
+            {"name": "queued", "status": "QUEUED"},
+            {"name": "completed-no-conclusion", "status": "COMPLETED", "conclusion": ""},
+        ]
+    )
+    assert result.state == ci.RUNNING
+    assert result.running == (
+        "checks (IN_PROGRESS)",
+        "legacy (PENDING)",
+        "queued (QUEUED)",
+        "completed-no-conclusion (PENDING)",
+    )
+    assert result.failed == ()
+
+
+def test_a_failed_check_is_failed_with_where_to_read_it(ci) -> None:
+    result = ci.evaluate_ci_gate(
+        [
+            {
+                "name": "tests",
+                "status": "COMPLETED",
+                "conclusion": "FAILURE",
+                "detailsUrl": "https://ci/runs/1/job/2",
+            },
+            {"name": "build", "status": "IN_PROGRESS"},
+            {"context": "external", "state": "ERROR", "targetUrl": "https://ext/9"},
+            {"name": "cancelled", "status": "COMPLETED", "conclusion": "CANCELLED"},
+        ]
+    )
+    # A failure decides even while another check still runs.
+    assert result.state == ci.FAILED
+    assert result.failed == (
+        ci.FailedCheck("tests", "FAILURE", "https://ci/runs/1/job/2"),
+        ci.FailedCheck("external", "ERROR", "https://ext/9"),
+        ci.FailedCheck("cancelled", "CANCELLED", ""),
+    )
+    assert result.running == ("build (IN_PROGRESS)",)
+    # The merge gate still lists every check that did not pass, in order.
+    assert result.failing_checks == (
+        "tests (FAILURE)",
+        "build (IN_PROGRESS)",
+        "external (ERROR)",
+        "cancelled (CANCELLED)",
+    )
+
+
+def test_an_unknown_outcome_waits_rather_than_fails(ci) -> None:
+    result = ci.evaluate_ci_gate([{"name": "new", "status": "SOMETHING_NEW"}])
+    assert result.state == ci.RUNNING
+    assert result.running == ("new (SOMETHING_NEW)",)
+
+
+def test_the_states_read_the_latest_run_per_check(ci) -> None:
+    """A check that failed and was re-run is judged on its re-run."""
+    rollup = [
+        {
+            "name": "checks",
+            "status": "COMPLETED",
+            "conclusion": "FAILURE",
+            "completedAt": "2026-06-01T16:34:00Z",
+        },
+        {"name": "checks", "status": "IN_PROGRESS", "startedAt": "2026-06-01T16:35:00Z"},
+    ]
+    result = ci.evaluate_ci_gate(rollup)
+    assert result.state == ci.RUNNING
+    assert result.failed == ()
