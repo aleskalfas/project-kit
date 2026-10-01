@@ -6,6 +6,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -464,21 +465,41 @@ def test_without_an_agent_gate_the_merge_is_pinned_to_the_runs_head(dw, monkeypa
     assert calls["merge_head"] == "sha-head"
 
 
-# ---- a pinned head (`land-work`, #1203) -----------------------------------
-# A verb composing done-work hands it the head it waited for the checks on and
-# had reviewed: done-work lands that head or nothing.
+# ---- `run`, for a verb that composes done-work (`land-work`, #1203) ------
+# A composing verb hands done-work the head it waited for the checks on and
+# had reviewed — done-work lands that head or nothing — or asks it only to
+# complete a PR that has merged. It decides on the kind of end `run` returns,
+# never on the exit code, which one code covers several ends of.
+
+_OPEN_PR = {"number": 496, "title": "fix: x", "isDraft": False, "headRefOid": "sha-head"}
+
+
+def _lookups(dw, monkeypatch, **answers: Any) -> list[str]:
+    """Stub the composed run's PR lookups: each state ("open", "merged") is
+    answered with a `_PrLookup`; returns the states looked up, in order."""
+    asked: list[str] = []
+
+    def lookup(branch: str, state: str, fields: str, config: dict) -> Any:
+        asked.append(state)
+        return answers.get(state, dw._PrLookup())
+
+    monkeypatch.setattr(dw, "_lookup_prs", lookup)
+    return asked
 
 
 def test_a_pinned_head_that_is_the_prs_head_merges_it(dw, monkeypatch) -> None:
     calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
-    assert dw.main(["42", "--yes"], pinned_head="sha-head") == 0
+    _lookups(dw, monkeypatch, open=dw._PrLookup((_OPEN_PR,)))
+    run = dw.run(["42", "--yes"], pinned_head="sha-head")
+    assert (run.kind, run.exit_code) == (dw.MERGED, 0)
     assert calls["merge_head"] == "sha-head"
 
 
 def test_a_pinned_head_the_pr_moved_from_stops_before_any_gate(dw, monkeypatch, capsys) -> None:
     calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
-    rc = dw.main(["42", "--yes"], pinned_head="sha-pinned")
-    assert rc == 3
+    _lookups(dw, monkeypatch, open=dw._PrLookup((_OPEN_PR,)))
+    run = dw.run(["42", "--yes"], pinned_head="sha-pinned")
+    assert (run.kind, run.exit_code) == (dw.HEAD_MOVED, 3)
     assert calls["merged"] is False
     assert calls["order"] == []
     err = capsys.readouterr().err
@@ -486,6 +507,7 @@ def test_a_pinned_head_the_pr_moved_from_stops_before_any_gate(dw, monkeypatch, 
         "error: PR #496's head is sha-hea, not sha-pin, the head this run was asked to land"
     ) in err
     assert "Nothing was posted or merged, and #42 stays where it is." in err
+    assert run.reason.startswith("error: PR #496's head is sha-hea, not sha-pin")
 
 
 def test_a_pinned_head_the_agent_gate_did_not_judge_stops_before_the_merge(
@@ -501,11 +523,148 @@ def test_a_pinned_head_the_agent_gate_did_not_judge_stops_before_the_merge(
         mode="agent",
         agent_gate_result=gate,
     )
-    rc = dw.main(["42", "--yes"], pinned_head="sha-head")
-    assert rc == 3
+    _lookups(dw, monkeypatch, open=dw._PrLookup((_OPEN_PR,)))
+    run = dw.run(["42", "--yes"], pinned_head="sha-head")
+    assert (run.kind, run.exit_code) == (dw.HEAD_MOVED, 3)
     assert calls["merged"] is False
     assert calls["moved"] is False
     assert "PR #496's head is sha-new, not sha-hea" in capsys.readouterr().err
+
+
+def test_an_open_pr_lookup_gh_did_not_answer_changes_nothing(dw, monkeypatch, capsys) -> None:
+    """No answer is not "no open PR": the composed run stops, and does not go
+    looking for a merged PR to complete (#1203)."""
+    calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+    asked = _lookups(dw, monkeypatch, open=dw._PrLookup(problem="HTTP 502"))
+    run = dw.run(["42", "--yes"], pinned_head="sha-head")
+    assert (run.kind, run.exit_code) == (dw.UNREADABLE, 2)
+    assert asked == ["open"]
+    assert calls["merged"] is False
+    assert "whether 'fix/42-slug' has an open PR could not be read: HTTP 502" in (
+        capsys.readouterr().err
+    )
+
+
+def test_merged_only_refuses_an_open_pr_it_was_not_handed(dw, monkeypatch) -> None:
+    """The composing verb found no open PR; one open now is a PR nobody
+    checked, so nothing is gated, merged or completed — and a re-run, which
+    pins it, can help."""
+    calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+    _lookups(dw, monkeypatch, open=dw._PrLookup((_OPEN_PR,)))
+    run = dw.run(["42", "--yes"], merged_only=True)
+    assert (run.kind, run.retry) == (dw.REFUSED, True)
+    assert "PR #496 for 'fix/42-slug' is open" in run.reason
+    assert calls["merged"] is False
+    assert calls["order"] == []
+
+
+def test_merged_only_with_no_answer_from_gh_changes_nothing(dw, monkeypatch) -> None:
+    calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+    _lookups(dw, monkeypatch, open=dw._PrLookup(problem="HTTP 502"))
+    run = dw.run(["42", "--yes"], merged_only=True)
+    assert run.kind == dw.UNREADABLE
+    assert calls["order"] == []
+
+
+def test_merged_only_with_a_merged_pr_lookup_unanswered_changes_nothing(dw, monkeypatch) -> None:
+    _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+    monkeypatch.setattr(dw, "_read_issue_merges", lambda n, config: dw._IssueMerges([]))
+    _lookups(dw, monkeypatch, merged=dw._PrLookup(problem="HTTP 502"))
+    run = dw.run(["42", "--yes"], merged_only=True)
+    assert run.kind == dw.UNREADABLE
+    assert "whether 'fix/42-slug' has a merged PR could not be read" in run.reason
+
+
+def test_merged_only_with_the_issue_unreadable_and_no_merged_pr_changes_nothing(
+    dw, monkeypatch
+) -> None:
+    _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+    monkeypatch.setattr(
+        dw, "_read_issue_merges", lambda n, config: dw._IssueMerges([], problem="HTTP 502")
+    )
+    _lookups(dw, monkeypatch)
+    run = dw.run(["42", "--yes"], merged_only=True)
+    assert run.kind == dw.UNREADABLE
+    assert "whether a merged PR closes it could not be read: HTTP 502" in run.reason
+
+
+def test_a_direct_run_still_reads_an_unanswered_lookup_as_no_open_pr(dw, monkeypatch) -> None:
+    """A direct run's behaviour is unchanged: `_find_pr_for_branch` answers None
+    when gh fails, as it always has."""
+    monkeypatch.setattr(
+        dw, "gh_run", lambda args, config, **k: subprocess.CompletedProcess(args, 1, "", "HTTP 502")
+    )
+    assert dw._find_pr_for_branch("fix/42-slug", {}) is None
+    assert dw._lookup_prs("fix/42-slug", "open", "number", {}).problem == "HTTP 502"
+
+
+def test_run_refuses_a_pinned_head_that_names_no_head(dw) -> None:
+    with pytest.raises(ValueError):
+        dw.run(["42"], pinned_head="")
+
+
+@pytest.mark.parametrize(
+    ("rollup", "retry"),
+    [
+        ([{"name": "tests", "status": "IN_PROGRESS"}], True),
+        ([{"name": "tests", "status": "COMPLETED", "conclusion": "FAILURE"}], False),
+    ],
+)
+def test_a_ci_refusal_says_whether_a_rerun_can_help(dw, monkeypatch, rollup, retry) -> None:
+    """Checks still running are outlasted by a re-run; a failed check needs a
+    change. Both exit 1, as before."""
+    _wire_main_seams(dw, monkeypatch, rollup=rollup)
+    run = dw.run(["42", "--yes"])
+    assert (run.kind, run.exit_code, run.retry) == (dw.REFUSED, 1, retry)
+    assert run.reason.startswith("[refused] CI-status gate for PR #496")
+
+
+def test_a_gate_refusal_is_refused_with_its_first_line(dw, monkeypatch) -> None:
+    _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP, gate_passed=False)
+    run = dw.run(["42", "--yes"])
+    assert (run.kind, run.exit_code, run.retry) == (dw.REFUSED, 1, False)
+    assert run.reason == "[refused] approval gate"
+
+
+def test_a_dry_run_and_a_declined_prompt_both_exit_0_and_are_told_apart(dw, monkeypatch) -> None:
+    calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+    planned = dw.run(["42", "--dry-run"])
+    assert (planned.kind, planned.exit_code) == (dw.PLANNED, 0)
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: True, raising=False)
+    monkeypatch.setattr("builtins.input", lambda prompt="": "n")
+    declined = dw.run(["42"])
+    assert (declined.kind, declined.exit_code) == (dw.DECLINED, 0)
+    assert calls["merged"] is False
+
+
+def test_a_step_after_the_merge_failing_is_owed_not_refused(dw, monkeypatch) -> None:
+    """The merge stands; what failed after it is owed to a re-run."""
+    calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+    monkeypatch.setattr(dw, "_invoke_move_issue", lambda *a: 1)
+    run = dw.run(["42", "--yes"])
+    assert (run.kind, run.exit_code) == (dw.FOLLOW_UP_OWED, 1)
+    assert run.reason.startswith("[warn] PR merged but move-issue exited 1")
+    assert calls["merged"] is True
+
+
+def test_a_merge_request_gh_refused_can_be_retried(dw, monkeypatch) -> None:
+    """The request failed and nothing merged — a push since, say, which the
+    composing verb reads for itself. Exit 3, as before."""
+    _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+    monkeypatch.setattr(dw.pr_merge, "squash_merge", lambda *a, **k: False)
+    run = dw.run(["42", "--yes"])
+    assert (run.kind, run.exit_code, run.retry) == (dw.REFUSED, 3, True)
+    assert "the merge request for PR #496 did not go through" in run.reason
+
+
+def test_a_queued_pr_is_queued(dw, monkeypatch) -> None:
+    _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+    monkeypatch.setattr(
+        dw.pr_merge, "land", lambda request, config: dw.pr_merge.Landing(dw.pr_merge.STILL_QUEUED)
+    )
+    run = dw.run(["42", "--yes"])
+    assert (run.kind, run.exit_code) == (dw.QUEUED, dw.EXIT_ACCEPTED)
+    assert run.reason.startswith("[queued] PR #496 was handed to the merge queue")
 
 
 def test_main_reads_the_argv_it_is_given(dw, monkeypatch, capsys) -> None:

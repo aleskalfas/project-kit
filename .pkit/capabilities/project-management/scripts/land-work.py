@@ -626,8 +626,14 @@ def _merge(args: argparse.Namespace, head: _Head | None, config: dict[str, Any])
     open PR — and say in one line how it ended."""
     issue = args.issue_number
     argv = [str(issue), *_passed_through(args, review=False)]
-    pinned = head.oid if head is not None else ""
-    rc, said = _teed(lambda: done_work.main(argv, pinned_head=pinned))
+    run, said = _teed(
+        lambda: (
+            done_work.run(argv, merged_only=True)
+            if head is None
+            else done_work.run(argv, pinned_head=head.oid)
+        )
+    )
+    rc = run.exit_code
     reason = _first_reason(said)
     if args.dry_run:
         _say(
