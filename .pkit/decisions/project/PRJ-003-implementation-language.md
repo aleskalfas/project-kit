@@ -60,4 +60,4 @@ The runtime's authoring language is a project-kit-internal choice (the kit's bin
 - **Adopter Python version requirements**: `pkit` ships with `requires-python = ">=3.11"`. Adopters whose projects target older Pythons are unaffected — `uv tool install` provisions an isolated Python for `pkit` regardless of the project's interpreter.
 - **Authoring conventions**: per CLAUDE.md's existing references, the Python implementation follows conventional commits (COR-008), the principles-not-inventory rule, and the bump policy in PRJ-002. The Python layer doesn't change those.
 - **Testing**: pytest, with the migration-script idempotency check as a first-class test pattern.
-- **Type checking**: pyright or mypy in strict mode. Worth committing to a typed codebase from the first commit since the surface (manifests, version specs) is genuinely typed.
+- **Type checking** (refinement per PRJ-010): pyright or mypy in strict mode. Worth committing to a typed codebase from the first commit since the surface (manifests, version specs) is genuinely typed.
