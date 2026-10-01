@@ -281,9 +281,7 @@ FIXTURES: dict[str, Fixture] = {
         mapping=RULES.format(enforce="true"),
         changes={"src/app.py": "a\n", "README.md": "# R\n", "docs/api.md": "# A\n"},
     ),
-    "untouched": Fixture(
-        mapping=RULES.format(enforce="true"), changes={"unmapped/x.txt": "x\n"}
-    ),
+    "untouched": Fixture(mapping=RULES.format(enforce="true"), changes={"unmapped/x.txt": "x\n"}),
     "malformed-rules-are-skipped": Fixture(
         mapping=(
             "code_path_to_doc_mapping:\n"
@@ -373,9 +371,7 @@ def test_the_mapping_check_prints_exactly_what_it_did(tmp_path: Path, name: str)
 
 
 @pytest.mark.parametrize("name", sorted(set(FIXTURES) - {"mapping-not-a-mapping"}))
-def test_the_rules_it_applies_are_the_ones_the_point_resolves_to(
-    tmp_path: Path, name: str
-) -> None:
+def test_the_rules_it_applies_are_the_ones_the_point_resolves_to(tmp_path: Path, name: str) -> None:
     """The same bytes, and they came through the point: the check read it once — and,
     when it compares, read the base through the backbone once, never resolving it
     itself (COR-054 point 5). (A malformed mapping is refused before the point is

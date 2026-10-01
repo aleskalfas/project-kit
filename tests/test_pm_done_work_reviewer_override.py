@@ -44,9 +44,7 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SCRIPTS_DIR = (
-    REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
-)
+SCRIPTS_DIR = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
 SCRIPT = SCRIPTS_DIR / "done-work.py"
 LIB_PATH = SCRIPTS_DIR / "_lib" / "review_contributions.py"
 VERDICTS_PATH = SCRIPTS_DIR / "_lib" / "agent_verdicts.py"
@@ -55,9 +53,7 @@ VERDICTS_PATH = SCRIPTS_DIR / "_lib" / "agent_verdicts.py"
 @pytest.fixture(scope="module")
 def dw():
     sys.path.insert(0, str(SCRIPTS_DIR))
-    spec = importlib.util.spec_from_file_location(
-        "pm_done_work_override_under_test", SCRIPT
-    )
+    spec = importlib.util.spec_from_file_location("pm_done_work_override_under_test", SCRIPT)
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     sys.modules["pm_done_work_override_under_test"] = module
@@ -109,8 +105,7 @@ def _config(local=("reviewer",), remote=()):
     }
 
 
-def _local_verdict_comment(name, verdict, author="reviewer", ts=_FRESH_TS,
-                           marked=True, url=None):
+def _local_verdict_comment(name, verdict, author="reviewer", ts=_FRESH_TS, marked=True, url=None):
     tail = f"\n\n{_VERDICT_MARKER}" if marked else ""
     return {
         "author": {"login": author},
@@ -120,8 +115,16 @@ def _local_verdict_comment(name, verdict, author="reviewer", ts=_FRESH_TS,
     }
 
 
-def _wire(dw, monkeypatch, *, collection, comments, closing_issue_labels=None,
-          pr_author="author", commits=None):
+def _wire(
+    dw,
+    monkeypatch,
+    *,
+    collection,
+    comments,
+    closing_issue_labels=None,
+    pr_author="author",
+    commits=None,
+):
     closing_issue_labels = closing_issue_labels or {}
     commits = [{"committedDate": _COMMIT_TS}] if commits is None else commits
 
@@ -132,16 +135,21 @@ def _wire(dw, monkeypatch, *, collection, comments, closing_issue_labels=None,
         if "closingIssuesReferences" in joined:
             refs = [{"number": n} for n in closing_issue_labels]
             return subprocess.CompletedProcess(
-                args=args, returncode=0,
-                stdout=json.dumps({"closingIssuesReferences": refs}), stderr="",
+                args=args,
+                returncode=0,
+                stdout=json.dumps({"closingIssuesReferences": refs}),
+                stderr="",
             )
         return subprocess.CompletedProcess(
-            args=args, returncode=0,
-            stdout=json.dumps({
-                "author": {"login": pr_author},
-                "comments": comments,
-                "commits": commits,
-            }),
+            args=args,
+            returncode=0,
+            stdout=json.dumps(
+                {
+                    "author": {"login": pr_author},
+                    "comments": comments,
+                    "commits": commits,
+                }
+            ),
             stderr="",
         )
 
@@ -197,7 +205,8 @@ def test_override_satisfies_one_slot_others_gate(dw, rc, monkeypatch) -> None:
     """design PR: baseline APPROVED, design-reviewer BLOCKED but overridden →
     pass. The override satisfies exactly the named slot."""
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=_design_collection(rc),
         comments=[
             _local_verdict_comment("reviewer", "APPROVED"),
@@ -206,7 +215,11 @@ def test_override_satisfies_one_slot_others_gate(dw, rc, monkeypatch) -> None:
         closing_issue_labels={42: ["workstream:design"]},
     )
     result = dw._check_agent_gate(
-        99, {}, _config(), "resolved", CAP_ROOT,
+        99,
+        {},
+        _config(),
+        "resolved",
+        CAP_ROOT,
         override_reviewers=("design-reviewer",),
     )
     assert result.passed is True
@@ -220,7 +233,8 @@ def test_override_one_slot_other_still_required(dw, rc, monkeypatch) -> None:
     """Overriding design-reviewer does NOT satisfy the baseline reviewer — a
     genuine APPROVED on the others is still required (AND-across-set holds)."""
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=_design_collection(rc),
         comments=[
             # baseline has NO fresh verdict; design-reviewer blocked.
@@ -229,7 +243,11 @@ def test_override_one_slot_other_still_required(dw, rc, monkeypatch) -> None:
         closing_issue_labels={42: ["workstream:design"]},
     )
     result = dw._check_agent_gate(
-        99, {}, _config(), "resolved", CAP_ROOT,
+        99,
+        {},
+        _config(),
+        "resolved",
+        CAP_ROOT,
         override_reviewers=("design-reviewer",),
     )
     assert result.passed is False
@@ -243,13 +261,18 @@ def test_override_with_genuine_approval_on_others_passes(dw, rc, monkeypatch) ->
     """A genuine APPROVED on the baseline + an override on design-reviewer →
     pass (the required-others-approve property)."""
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=_design_collection(rc),
         comments=[_local_verdict_comment("reviewer", "APPROVED")],
         closing_issue_labels={42: ["workstream:design"]},
     )
     result = dw._check_agent_gate(
-        99, {}, _config(), "resolved", CAP_ROOT,
+        99,
+        {},
+        _config(),
+        "resolved",
+        CAP_ROOT,
         override_reviewers=("design-reviewer",),
     )
     assert result.passed is True
@@ -261,7 +284,8 @@ def test_redundant_override_on_approved_reviewer_labelled_approved(dw, rc, monke
     satisfied-by-override — the honest label (DEC-050 W3). The gate passes
     either way."""
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=_design_collection(rc),
         comments=[
             _local_verdict_comment("reviewer", "APPROVED"),
@@ -270,7 +294,11 @@ def test_redundant_override_on_approved_reviewer_labelled_approved(dw, rc, monke
         closing_issue_labels={42: ["workstream:design"]},
     )
     result = dw._check_agent_gate(
-        99, {}, _config(), "resolved", CAP_ROOT,
+        99,
+        {},
+        _config(),
+        "resolved",
+        CAP_ROOT,
         override_reviewers=("design-reviewer",),
     )
     assert result.passed is True
@@ -298,7 +326,8 @@ def test_redundant_override_refusal_reports_approved_not_override(dw, rc, monkey
     state, different code) printed `APPROVED`. The gate still refuses here because
     a DIFFERENT required reviewer is unsatisfied."""
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=_design_collection(rc),
         comments=[
             # design-reviewer genuinely approved AND is named in the override;
@@ -308,7 +337,11 @@ def test_redundant_override_refusal_reports_approved_not_override(dw, rc, monkey
         closing_issue_labels={42: ["workstream:design"]},
     )
     result = dw._check_agent_gate(
-        99, {}, _config(), "resolved", CAP_ROOT,
+        99,
+        {},
+        _config(),
+        "resolved",
+        CAP_ROOT,
         override_reviewers=("design-reviewer",),
     )
     assert result.passed is False
@@ -327,7 +360,8 @@ def test_redundant_override_audit_records_redundancy(dw, rc, monkeypatch) -> Non
     line two lines above ("a fresh APPROVED (override redundant)") on a redundant
     override. The comment is permanent; the claim has to be true."""
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=_design_collection(rc),
         comments=[
             _local_verdict_comment("reviewer", "APPROVED"),
@@ -336,7 +370,11 @@ def test_redundant_override_audit_records_redundancy(dw, rc, monkeypatch) -> Non
         closing_issue_labels={42: ["workstream:design"]},
     )
     result = dw._check_agent_gate(
-        99, {}, _config(), "resolved", CAP_ROOT,
+        99,
+        {},
+        _config(),
+        "resolved",
+        CAP_ROOT,
         override_reviewers=("design-reviewer",),
     )
     assert result.passed is True
@@ -358,7 +396,8 @@ def test_all_slots_override_audit_does_not_claim_others_gated(dw, rc, monkeypatc
     PR forever, and it used to assert "every other required reviewer still
     gated" unconditionally."""
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=_design_collection(rc),
         comments=[
             _local_verdict_comment("reviewer", "CHANGES_REQUESTED"),
@@ -367,7 +406,11 @@ def test_all_slots_override_audit_does_not_claim_others_gated(dw, rc, monkeypatc
         closing_issue_labels={42: ["workstream:design"]},
     )
     result = dw._check_agent_gate(
-        99, {}, _config(), "resolved", CAP_ROOT,
+        99,
+        {},
+        _config(),
+        "resolved",
+        CAP_ROOT,
         override_reviewers=("reviewer", "design-reviewer"),
     )
     assert result.passed is True
@@ -385,19 +428,26 @@ def test_sole_reviewer_override_audit_says_whole_gate_waived(dw, rc, monkeypatch
     """A single-reviewer set with that reviewer overridden waived the whole gate
     — say so, rather than claiming other reviewers gated."""
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=rc.ContributionCollection(rules=()),
         comments=[_local_verdict_comment("reviewer", "CHANGES_REQUESTED")],
         closing_issue_labels={42: []},
     )
     result = dw._check_agent_gate(
-        99, {}, _config(), "resolved", CAP_ROOT,
+        99,
+        {},
+        _config(),
+        "resolved",
+        CAP_ROOT,
         override_reviewers=("reviewer",),
     )
     assert result.passed is True
     invoker = dw.Identity(github_login="alice", email="alice@example.test")
     body = dw._reviewer_override_audit_body(
-        result.override_audits[0], "false block", invoker,
+        result.override_audits[0],
+        "false block",
+        invoker,
     )
     assert "ONLY required reviewer" in body
     assert "still gated" not in body
@@ -407,7 +457,8 @@ def test_partial_override_audit_names_the_reviewers_that_gated(dw, rc, monkeypat
     """The genuine case: one slot overridden, another genuinely APPROVED. The
     audit names who still gated, instead of asserting it abstractly."""
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=_design_collection(rc),
         comments=[
             _local_verdict_comment("reviewer", "APPROVED"),
@@ -416,13 +467,19 @@ def test_partial_override_audit_names_the_reviewers_that_gated(dw, rc, monkeypat
         closing_issue_labels={42: ["workstream:design"]},
     )
     result = dw._check_agent_gate(
-        99, {}, _config(), "resolved", CAP_ROOT,
+        99,
+        {},
+        _config(),
+        "resolved",
+        CAP_ROOT,
         override_reviewers=("design-reviewer",),
     )
     assert result.passed is True
     invoker = dw.Identity(github_login="alice", email="alice@example.test")
     body = dw._reviewer_override_audit_body(
-        result.override_audits[0], "false block", invoker,
+        result.override_audits[0],
+        "false block",
+        invoker,
     )
     assert "satisfied-by-override" in body
     assert "still gated it on a genuine APPROVED" in body
@@ -443,7 +500,8 @@ def test_audit_ignores_the_pr_authors_self_approval(dw, rc, monkeypatch) -> None
     that let the merge through. ADR-042 names calling the permissive primitive
     from a gate path as the anti-pattern."""
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=rc.ContributionCollection(rules=()),
         comments=[
             # The PR author self-approves on the remote path.
@@ -453,7 +511,11 @@ def test_audit_ignores_the_pr_authors_self_approval(dw, rc, monkeypatch) -> None
         pr_author="self-approver",
     )
     result = dw._check_agent_gate(
-        99, {}, _config(local=(), remote=("self-approver",)), "resolved", CAP_ROOT,
+        99,
+        {},
+        _config(local=(), remote=("self-approver",)),
+        "resolved",
+        CAP_ROOT,
         override_reviewers=("self-approver",),
     )
     # The override is what let it through — the self-approval never counted.
@@ -478,7 +540,8 @@ def test_duplicate_bypass_reviewer_flag_audits_once(dw, rc, monkeypatch) -> None
     the first comment and posted again. Slots are one per required reviewer, so
     the de-duplication the gate always had now covers the audit path too."""
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=_design_collection(rc),
         comments=[
             _local_verdict_comment("reviewer", "APPROVED"),
@@ -487,7 +550,11 @@ def test_duplicate_bypass_reviewer_flag_audits_once(dw, rc, monkeypatch) -> None
         closing_issue_labels={42: ["workstream:design"]},
     )
     result = dw._check_agent_gate(
-        99, {}, _config(), "resolved", CAP_ROOT,
+        99,
+        {},
+        _config(),
+        "resolved",
+        CAP_ROOT,
         override_reviewers=("design-reviewer", "design-reviewer"),
     )
     assert result.passed is True
@@ -505,7 +572,8 @@ def test_all_slots_nudge_survives_a_gh_failure(dw, rc, monkeypatch) -> None:
     The nudge was computed before the verdict fetch and attached to only 2 of the
     5 returns, so three refusal paths dropped it."""
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=rc.ContributionCollection(rules=()),
         comments=[],
         closing_issue_labels={42: []},
@@ -516,13 +584,20 @@ def test_all_slots_nudge_survives_a_gh_failure(dw, rc, monkeypatch) -> None:
         joined = " ".join(args)
         if "author,comments,commits" in joined:
             return subprocess.CompletedProcess(
-                args=args, returncode=1, stdout="", stderr="boom",
+                args=args,
+                returncode=1,
+                stdout="",
+                stderr="boom",
             )
         return real_gh_run(args, config, **kwargs)
 
     monkeypatch.setattr(dw, "gh_run", failing_gh_run)
     result = dw._check_agent_gate(
-        99, {}, _config(), "resolved", CAP_ROOT,
+        99,
+        {},
+        _config(),
+        "resolved",
+        CAP_ROOT,
         override_reviewers=("reviewer",),
     )
     assert result.passed is False
@@ -533,14 +608,19 @@ def test_all_slots_nudge_survives_a_gh_failure(dw, rc, monkeypatch) -> None:
 def test_all_slots_nudge_survives_an_unresolvable_freshness_anchor(dw, rc, monkeypatch) -> None:
     """Same for the freshness-anchor refusal (no commits ⇒ no anchor)."""
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=rc.ContributionCollection(rules=()),
         comments=[],
         closing_issue_labels={42: []},
         commits=[],
     )
     result = dw._check_agent_gate(
-        99, {}, _config(), "resolved", CAP_ROOT,
+        99,
+        {},
+        _config(),
+        "resolved",
+        CAP_ROOT,
         override_reviewers=("reviewer",),
     )
     assert result.passed is False
@@ -562,22 +642,25 @@ def test_audit_body_renders_the_canonical_dec049_template(dw) -> None:
     from _lib import audit as audit_lib
 
     audit = dw._OverrideAudit(
-        reviewer="design-reviewer", capability="ux-ui-design",
+        reviewer="design-reviewer",
+        capability="ux-ui-design",
         state="a fresh CHANGES_REQUESTED (an active block)",
-        block_comment_url="https://example.test/block", head="sha1",
+        block_comment_url="https://example.test/block",
+        head="sha1",
     )
     invoker = dw.Identity(github_login="alice", email="alice@example.test")
     body = dw._reviewer_override_audit_body(
-        audit, "flaky false block", invoker, REAL_CAP_ROOT,
+        audit,
+        "flaky false block",
+        invoker,
+        REAL_CAP_ROOT,
     )
     lines = body.split("\n")
     # The canonical marker, first, from the schema template.
     assert lines[0] == audit_lib.AUDIT_MARKER
     assert lines[1] == "Bypassed by alice <alice@example.test>: flaky false block"
     # Rendered from the shipped schema, not a hardcoded string.
-    assert audit_lib.load_audit_template(REAL_CAP_ROOT).startswith(
-        audit_lib.AUDIT_MARKER
-    )
+    assert audit_lib.load_audit_template(REAL_CAP_ROOT).startswith(audit_lib.AUDIT_MARKER)
     # The per-reviewer detail DEC-050 requires is still all there.
     assert "design-reviewer" in body
     assert "ux-ui-design" in body
@@ -590,8 +673,10 @@ def test_audit_body_is_one_comment_per_marker(dw) -> None:
     from _lib import audit as audit_lib
 
     audit = dw._OverrideAudit(
-        reviewer="design-reviewer", capability=None,
-        state="none (no verdict the gate counts)", block_comment_url=None,
+        reviewer="design-reviewer",
+        capability=None,
+        state="none (no verdict the gate counts)",
+        block_comment_url=None,
         head="sha1",
     )
     invoker = dw.Identity(github_login="alice", email="alice@example.test")
@@ -614,7 +699,10 @@ def test_threaded_comment_list_costs_no_extra_fetch(dw, monkeypatch) -> None:
         else:
             fetches.append(args)
         return subprocess.CompletedProcess(
-            args=args, returncode=0, stdout=json.dumps({"comments": []}), stderr="",
+            args=args,
+            returncode=0,
+            stdout=json.dumps({"comments": []}),
+            stderr="",
         )
 
     monkeypatch.setattr(dw, "gh_run", fake_gh_run)
@@ -623,12 +711,23 @@ def test_threaded_comment_list_costs_no_extra_fetch(dw, monkeypatch) -> None:
     assert len(fetches) == 1
     for name in ("a-reviewer", "b-reviewer", "c-reviewer"):
         audit = dw._OverrideAudit(
-            reviewer=name, capability=None, state="none (no verdict the gate counts)",
-            block_comment_url=None, head="sha1",
+            reviewer=name,
+            capability=None,
+            state="none (no verdict the gate counts)",
+            block_comment_url=None,
+            head="sha1",
         )
-        assert dw._post_reviewer_override_audit(
-            7, audit, "r", invoker, {}, comments=comments,
-        ) is True
+        assert (
+            dw._post_reviewer_override_audit(
+                7,
+                audit,
+                "r",
+                invoker,
+                {},
+                comments=comments,
+            )
+            is True
+        )
     assert len(posts) == 3
     assert len(fetches) == 1, "three audits, one comment fetch"
 
@@ -640,7 +739,8 @@ def test_unknown_override_name_hard_errors(dw, rc, monkeypatch) -> None:
     """A --bypass-reviewer name not in the resolved set refuses, naming the
     resolved set (DEC-050 Decision 5)."""
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=_design_collection(rc),
         comments=[
             _local_verdict_comment("reviewer", "APPROVED"),
@@ -649,7 +749,11 @@ def test_unknown_override_name_hard_errors(dw, rc, monkeypatch) -> None:
         closing_issue_labels={42: ["workstream:design"]},
     )
     result = dw._check_agent_gate(
-        99, {}, _config(), "resolved", CAP_ROOT,
+        99,
+        {},
+        _config(),
+        "resolved",
+        CAP_ROOT,
         override_reviewers=("typo-reviewer",),
     )
     assert result.passed is False
@@ -667,7 +771,8 @@ def test_all_slots_override_warns_but_proceeds(dw, rc, monkeypatch) -> None:
     """Overriding EVERY required slot warns (steers to --bypass) but still
     passes (DEC-050 Decision 6 — a warning, not a refusal)."""
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=_design_collection(rc),
         comments=[
             _local_verdict_comment("reviewer", "CHANGES_REQUESTED"),
@@ -676,7 +781,11 @@ def test_all_slots_override_warns_but_proceeds(dw, rc, monkeypatch) -> None:
         closing_issue_labels={42: ["workstream:design"]},
     )
     result = dw._check_agent_gate(
-        99, {}, _config(), "resolved", CAP_ROOT,
+        99,
+        {},
+        _config(),
+        "resolved",
+        CAP_ROOT,
         override_reviewers=("reviewer", "design-reviewer"),
     )
     assert result.passed is True
@@ -687,7 +796,8 @@ def test_all_slots_override_warns_but_proceeds(dw, rc, monkeypatch) -> None:
 def test_partial_override_no_all_slots_warning(dw, rc, monkeypatch) -> None:
     """Overriding a strict subset does NOT trigger the all-slots nudge."""
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=_design_collection(rc),
         comments=[
             _local_verdict_comment("reviewer", "APPROVED"),
@@ -696,7 +806,11 @@ def test_partial_override_no_all_slots_warning(dw, rc, monkeypatch) -> None:
         closing_issue_labels={42: ["workstream:design"]},
     )
     result = dw._check_agent_gate(
-        99, {}, _config(), "resolved", CAP_ROOT,
+        99,
+        {},
+        _config(),
+        "resolved",
+        CAP_ROOT,
         override_reviewers=("design-reviewer",),
     )
     assert result.passed is True
@@ -713,7 +827,8 @@ def test_override_on_unresolvable_set_points_at_bypass(dw, rc, monkeypatch) -> N
     from types import MappingProxyType
 
     err = rc.ContributionError(
-        rc.ERROR_UNDEPLOYED_AGENT, "ux-ui-design",
+        rc.ERROR_UNDEPLOYED_AGENT,
+        "ux-ui-design",
         "design-reviewer is not deployed",
     )
     rule = rc.ContributionRule(
@@ -725,13 +840,18 @@ def test_override_on_unresolvable_set_points_at_bypass(dw, rc, monkeypatch) -> N
     )
     collection = rc.ContributionCollection(rules=(rule,), errors=(err,))
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=collection,
         comments=[_local_verdict_comment("reviewer", "APPROVED")],
         closing_issue_labels={42: ["workstream:design"]},
     )
     result = dw._check_agent_gate(
-        99, {}, _config(), "resolved", CAP_ROOT,
+        99,
+        {},
+        _config(),
+        "resolved",
+        CAP_ROOT,
         override_reviewers=("design-reviewer",),
     )
     assert result.passed is False
@@ -808,8 +928,12 @@ def test_state_none_when_no_verdict(dw) -> None:
 
 def test_state_fresh_changes_requested(dw, av) -> None:
     v = av.Verdict(
-        reviewer="design-reviewer", token=av.CHANGES_REQUESTED,
-        path=av.PATH_LOCAL, body="", timestamp=_FRESH_TS, url="u1",
+        reviewer="design-reviewer",
+        token=av.CHANGES_REQUESTED,
+        path=av.PATH_LOCAL,
+        body="",
+        timestamp=_FRESH_TS,
+        url="u1",
     )
     state, url = dw._describe_override_state(v, _freshness(dw))
     assert "fresh CHANGES_REQUESTED" in state
@@ -818,8 +942,12 @@ def test_state_fresh_changes_requested(dw, av) -> None:
 
 def test_state_stale_approved(dw, av) -> None:
     v = av.Verdict(
-        reviewer="design-reviewer", token=av.APPROVED,
-        path=av.PATH_LOCAL, body="", timestamp=_STALE_TS, url="u2",
+        reviewer="design-reviewer",
+        token=av.APPROVED,
+        path=av.PATH_LOCAL,
+        body="",
+        timestamp=_STALE_TS,
+        url="u2",
     )
     state, url = dw._describe_override_state(v, _freshness(dw))
     assert "stale APPROVED" in state
@@ -841,8 +969,7 @@ def _remote_verdict_comment(login, verdict, ts=_FRESH_TS, url=None):
     }
 
 
-def _build_audits(dw, slots, comments, *, contributed_by=None, head="head0",
-                  ok=lambda _n: True):
+def _build_audits(dw, slots, comments, *, contributed_by=None, head="head0", ok=lambda _n: True):
     """`_build_override_audits` with the gate-strength predicates every caller
     must inject (the membership + author-exclusion filters)."""
     return dw._build_override_audits(
@@ -868,7 +995,9 @@ def test_build_override_audits_dual_path_prefers_most_blocking(dw) -> None:
         [
             _local_verdict_comment("dual-reviewer", "APPROVED", ts=_STALE_TS),
             _remote_verdict_comment(
-                "dual-reviewer", "CHANGES_REQUESTED", ts=_FRESH_TS,
+                "dual-reviewer",
+                "CHANGES_REQUESTED",
+                ts=_FRESH_TS,
                 url="https://example.test/block",
             ),
         ],
@@ -958,8 +1087,10 @@ def test_stamp_scan_matches_a_posted_evil_name_stamp(dw, monkeypatch) -> None:
     """End-to-end on the pathological name: the stamp the poster writes is the
     stamp its own idempotency scan finds, so the re-run is a no-op."""
     audit = dw._OverrideAudit(
-        reviewer="design-reviewer --> <!-- injected", capability=None,
-        state="none (no verdict the gate counts)", block_comment_url=None,
+        reviewer="design-reviewer --> <!-- injected",
+        capability=None,
+        state="none (no verdict the gate counts)",
+        block_comment_url=None,
         head="head1",
     )
     posted: list = []
@@ -969,7 +1100,8 @@ def test_stamp_scan_matches_a_posted_evil_name_stamp(dw, monkeypatch) -> None:
             posted.append(args[args.index("--body") + 1])
             return subprocess.CompletedProcess(args=args, returncode=0, stdout="", stderr="")
         return subprocess.CompletedProcess(
-            args=args, returncode=0,
+            args=args,
+            returncode=0,
             stdout=json.dumps({"comments": [_own(b) for b in posted]}),
             stderr="",
         )
@@ -987,8 +1119,10 @@ def test_audit_idempotent_skip_when_own_key_present(dw, monkeypatch) -> None:
     """Re-running the identical override is a no-op: the exact own, unedited
     audit comment is already on the PR, so no new comment is posted."""
     audit = dw._OverrideAudit(
-        reviewer="design-reviewer", capability=None,
-        state="none (no verdict the gate counts)", block_comment_url=None,
+        reviewer="design-reviewer",
+        capability=None,
+        state="none (no verdict the gate counts)",
+        block_comment_url=None,
         head="head1",
     )
     invoker = dw.Identity(github_login="alice", email="alice@example.test")
@@ -1001,7 +1135,8 @@ def test_audit_idempotent_skip_when_own_key_present(dw, monkeypatch) -> None:
             return subprocess.CompletedProcess(args=args, returncode=0, stdout="", stderr="")
         # gh pr view --json comments → the exact own comment is already present.
         return subprocess.CompletedProcess(
-            args=args, returncode=0,
+            args=args,
+            returncode=0,
             stdout=json.dumps({"comments": [_own(prior)]}),
             stderr="",
         )
@@ -1016,8 +1151,10 @@ def test_audit_posts_when_reason_differs(dw, monkeypatch) -> None:
     """A DIFFERENT reason carries a distinct stamp → a fresh audit posts even
     though a prior override audit for the same reviewer exists."""
     audit = dw._OverrideAudit(
-        reviewer="design-reviewer", capability=None,
-        state="none (no verdict the gate counts)", block_comment_url=None,
+        reviewer="design-reviewer",
+        capability=None,
+        state="none (no verdict the gate counts)",
+        block_comment_url=None,
         head="head1",
     )
     old_key = dw._reviewer_override_key("design-reviewer", "old reason", "head1")
@@ -1028,7 +1165,8 @@ def test_audit_posts_when_reason_differs(dw, monkeypatch) -> None:
             posted.append(args)
             return subprocess.CompletedProcess(args=args, returncode=0, stdout="", stderr="")
         return subprocess.CompletedProcess(
-            args=args, returncode=0,
+            args=args,
+            returncode=0,
             stdout=json.dumps({"comments": [_own(f"old audit\n\n{old_key}")]}),
             stderr="",
         )
@@ -1049,14 +1187,18 @@ def test_audit_reposts_after_new_commits(dw, monkeypatch) -> None:
     after the reviewer posted a CHANGES_REQUESTED: the merge landed with an audit
     denying the block it waived, and no link to it."""
     old_audit = dw._OverrideAudit(
-        reviewer="design-reviewer", capability=None,
-        state="none (no verdict the gate counts)", block_comment_url=None,
+        reviewer="design-reviewer",
+        capability=None,
+        state="none (no verdict the gate counts)",
+        block_comment_url=None,
         head="sha-old",
     )
     new_audit = dw._OverrideAudit(
-        reviewer="design-reviewer", capability=None,
+        reviewer="design-reviewer",
+        capability=None,
         state="a fresh CHANGES_REQUESTED (an active block)",
-        block_comment_url="https://example.test/block", head="sha-new",
+        block_comment_url="https://example.test/block",
+        head="sha-new",
     )
     invoker = dw.Identity(github_login="alice", email="alice@example.test")
     prior_body = dw._reviewer_override_audit_body(old_audit, "same reason", invoker)
@@ -1067,8 +1209,10 @@ def test_audit_reposts_after_new_commits(dw, monkeypatch) -> None:
             posted.append(args[args.index("--body") + 1])
             return subprocess.CompletedProcess(args=args, returncode=0, stdout="", stderr="")
         return subprocess.CompletedProcess(
-            args=args, returncode=0,
-            stdout=json.dumps({"comments": [_own(prior_body)]}), stderr="",
+            args=args,
+            returncode=0,
+            stdout=json.dumps({"comments": [_own(prior_body)]}),
+            stderr="",
         )
 
     monkeypatch.setattr(dw, "gh_run", fake_gh_run)
@@ -1102,7 +1246,8 @@ def test_override_ephemeral_not_persisted(dw, rc, monkeypatch) -> None:
         "url": "https://example.test/audit",
     }
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=_design_collection(rc),
         comments=[
             _local_verdict_comment("reviewer", "APPROVED"),
@@ -1116,4 +1261,3 @@ def test_override_ephemeral_not_persisted(dw, rc, monkeypatch) -> None:
     assert result.passed is False
     # The prior audit did not stand in for a fresh APPROVED.
     assert "design-reviewer" in result.refusal_message
-

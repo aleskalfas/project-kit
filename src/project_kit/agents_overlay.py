@@ -36,6 +36,7 @@ agent's model and effort (#1047). :func:`load_overlay_values` sets those keys
 apart, and ``pkit agents`` reports each agent's effective setting, resolved by
 :mod:`project_kit.agent_policy`.
 """
+
 from __future__ import annotations
 
 import io
@@ -89,6 +90,7 @@ def write_carrying_categories(target_root: Path) -> frozenset[str]:
         return frozenset()
     return frozenset(mod.WRITE_CARRYING_CATEGORIES)
 
+
 # The frontmatter keys whose list items may hold `<category>` placeholders,
 # mirrored from the claude-code adapter's `_resolve_agent.py`. A guard test
 # extracts the adapter's like-named tuples and asserts equality, so a backbone
@@ -132,6 +134,7 @@ class AgentOverlayStatus:
 
 
 # --- discovery (mirrors deploy-agents.sh list_kit_names + source_for) --------
+
 
 def _agent_names_in(dir_: Path) -> list[str]:
     if not dir_.is_dir():
@@ -190,6 +193,7 @@ def discover_kit_agents(target_root: Path) -> dict[str, tuple[str, Path]]:
 
 
 # --- reference-detection (mirrors _resolve_agent.py) -------------------------
+
 
 def placeholder_category(item: object) -> str | None:
     """The category name of a `<category>` list item, or None for a literal entry."""
@@ -375,6 +379,7 @@ def expand_placeholders(
 
 # --- status + reconcile ------------------------------------------------------
 
+
 def agent_overlay_statuses(target_root: Path) -> list[AgentOverlayStatus]:
     values = load_overlay_values(target_root)
     defaults = set(values.defaults)
@@ -384,15 +389,19 @@ def agent_overlay_statuses(target_root: Path) -> list[AgentOverlayStatus]:
         _hard, optional = agent_category_roles(src)
         defined = defaults | set(values.overrides.get(name, {}))
         missing = referenced - defined
-        out.append(AgentOverlayStatus(
-            name=name, namespace=ns, source=src,
-            referenced=tuple(sorted(referenced)),
-            missing=tuple(sorted(missing)),
-            optional=tuple(sorted(optional)),
-            policy=agent_policy.effective_policy(
-                agent_front_matter(src), values.policy.get(name, {})
-            ),
-        ))
+        out.append(
+            AgentOverlayStatus(
+                name=name,
+                namespace=ns,
+                source=src,
+                referenced=tuple(sorted(referenced)),
+                missing=tuple(sorted(missing)),
+                optional=tuple(sorted(optional)),
+                policy=agent_policy.effective_policy(
+                    agent_front_matter(src), values.policy.get(name, {})
+                ),
+            )
+        )
     return out
 
 
@@ -449,15 +458,21 @@ def render_status(target_root: Path) -> str:
         for s in statuses
     ]
     gloss = "deploy via `pkit sync`; configure paths in .pkit/agents/project/overlay.yaml"
-    sections = [cli_render.section(
-        rows=rows, columns=["name", "namespace", "status", *agent_policy.POLICY_KEYS, "missing"],
-        header="AGENTS", gloss="kit-shipped; resolved against the project overlay",
-        empty="(no kit-shipped agents found)",
-    )]
+    sections = [
+        cli_render.section(
+            rows=rows,
+            columns=["name", "namespace", "status", *agent_policy.POLICY_KEYS, "missing"],
+            header="AGENTS",
+            gloss="kit-shipped; resolved against the project overlay",
+            empty="(no kit-shipped agents found)",
+        )
+    ]
     # Undefined *optional* categories (ADR-052): patterns-only reads no agent
     # references hard. Their absence never skips an agent — surface them as a
     # non-blocking enrichment, not a gap.
-    optional_undefined = sorted(set(missing_categories(target_root)) & optional_categories(target_root))
+    optional_undefined = sorted(
+        set(missing_categories(target_root)) & optional_categories(target_root)
+    )
     optional_line = None
     if optional_undefined:
         optional_line = (
@@ -487,7 +502,8 @@ def render_status(target_root: Path) -> str:
         if optional_line:
             warn_lines.append(optional_line)
         status_part = cli_render.status(
-            "Skipped", f"{len(skipped)} agent(s)",
+            "Skipped",
+            f"{len(skipped)} agent(s)",
             gloss=f"undefined overlay categor(ies): {cats}",
             placement="footer",
             warn="\n".join(warn_lines),
@@ -495,19 +511,28 @@ def render_status(target_root: Path) -> str:
     elif optional_line:
         # Nothing skipped, but an optional read is undefined — inform, don't warn.
         status_part = cli_render.status(
-            "Optional", f"{len(optional_undefined)} categor(ies) undefined",
+            "Optional",
+            f"{len(optional_undefined)} categor(ies) undefined",
             gloss="agents deploy without them",
             placement="footer",
             warn=optional_line,
         )
     commands = [
-        ("pkit agents adopt <agent>", "create conventional dirs + wire overlay + deploy in one step"),
-        ("pkit agents reconcile [--write]", "auto-fill or stub missing overlay categories; then `pkit sync`"),
+        (
+            "pkit agents adopt <agent>",
+            "create conventional dirs + wire overlay + deploy in one step",
+        ),
+        (
+            "pkit agents reconcile [--write]",
+            "auto-fill or stub missing overlay categories; then `pkit sync`",
+        ),
         ("pkit sync", "re-deploy agents after editing the overlay"),
     ]
     return cli_render.view(
         title=cli_render.title("Agents", f"{len(statuses)} kit-shipped", gloss=gloss),
-        sections=sections, status=status_part, commands=commands,
+        sections=sections,
+        status=status_part,
+        commands=commands,
     )
 
 
@@ -574,7 +599,7 @@ def reconcile_overlay(target_root: Path, *, write: bool) -> tuple[list[str], str
     write_carrying = write_carrying_categories(target_root)
     optional = optional_categories(target_root)
     empty_fill: list[str] = []
-    auto_fill: list[tuple[str, str]] = []   # (category, path)
+    auto_fill: list[tuple[str, str]] = []  # (category, path)
     optional_stub: list[str] = []
     to_stub: list[str] = []
     for cat in truly_missing:
@@ -599,11 +624,13 @@ def reconcile_overlay(target_root: Path, *, write: bool) -> tuple[list[str], str
     if empty_fill:
         to_add += empty_fill
         verb = "would fill" if not write else "filled"
-        lines.append(cli_render.style(
-            "strong",
-            f"{verb} {len(empty_fill)} write-carrying categor(ies) with an empty list "
-            f"— the agent deploys inert until you nominate paths:",
-        ))
+        lines.append(
+            cli_render.style(
+                "strong",
+                f"{verb} {len(empty_fill)} write-carrying categor(ies) with an empty list "
+                f"— the agent deploys inert until you nominate paths:",
+            )
+        )
         for cat in empty_fill:
             lines.append(f"  {cat}: []")
         if write:
@@ -632,10 +659,12 @@ def reconcile_overlay(target_root: Path, *, write: bool) -> tuple[list[str], str
         if lines:
             lines.append("")
         verb = "would auto-fill" if not write else "auto-filled"
-        lines.append(cli_render.style(
-            "strong",
-            f"{verb} {len(auto_fill)} categor(ies) — conventional default directory exists:",
-        ))
+        lines.append(
+            cli_render.style(
+                "strong",
+                f"{verb} {len(auto_fill)} categor(ies) — conventional default directory exists:",
+            )
+        )
         for cat, conv_path in auto_fill:
             lines.append(f"  {cat}: [{conv_path}]")
         if write:
@@ -657,12 +686,19 @@ def reconcile_overlay(target_root: Path, *, write: bool) -> tuple[list[str], str
         if lines:
             lines.append("")
         verb = "would add" if not write else "added"
-        lines.append(cli_render.style("strong", f"{verb} {len(to_stub)} commented categor(ies) to the overlay:"))
+        lines.append(
+            cli_render.style(
+                "strong", f"{verb} {len(to_stub)} commented categor(ies) to the overlay:"
+            )
+        )
         lines += [f"  # {c}" for c in to_stub]
         if write:
             if not path.is_file():
                 raise FileNotFoundError(f"overlay not found at {path}; run `pkit init` first.")
-            block_lines = ["", "# --- added by `pkit agents reconcile` — uncomment and set real paths ---"]
+            block_lines = [
+                "",
+                "# --- added by `pkit agents reconcile` — uncomment and set real paths ---",
+            ]
             for cat in to_stub:
                 block_lines += [f"# {cat}:", "#   - <path/relative/to/project/root>"]
             with path.open("a", encoding="utf-8") as fh:
@@ -670,7 +706,8 @@ def reconcile_overlay(target_root: Path, *, write: bool) -> tuple[list[str], str
             lines.append("")
             lines.append(
                 "Deploy the skipped agent(s):  pkit agents adopt <agent>\n"
-                "Custom doc layout:            uncomment + set real paths in overlay.yaml, then `pkit sync`."
+                "Custom doc layout:            uncomment + set real paths in overlay.yaml, then "
+                "`pkit sync`."
             )
         else:
             lines.append("")
@@ -681,18 +718,21 @@ def reconcile_overlay(target_root: Path, *, write: bool) -> tuple[list[str], str
         if lines:
             lines.append("")
         verb = "would add" if not write else "added"
-        lines.append(cli_render.style(
-            "strong",
-            f"{verb} {len(optional_stub)} optional categor(ies) to the overlay "
-            f"(the agent already deploys without them):",
-        ))
+        lines.append(
+            cli_render.style(
+                "strong",
+                f"{verb} {len(optional_stub)} optional categor(ies) to the overlay "
+                f"(the agent already deploys without them):",
+            )
+        )
         lines += [f"  # {c}" for c in optional_stub]
         if write:
             if not path.is_file():
                 raise FileNotFoundError(f"overlay not found at {path}; run `pkit init` first.")
             block_lines = [
                 "",
-                "# --- added by `pkit agents reconcile` (optional read; the agent already deploys) ---",
+                "# --- added by `pkit agents reconcile` (optional read; the agent already deploys) "
+                "---",
                 "# These categories are OPTIONAL corpus reads: the agent deploys and works",
                 "# without them (as a generalist). Uncomment and set paths to give it your",
                 "# corpus — an enrichment, never a prerequisite.",
@@ -716,21 +756,31 @@ def reconcile_overlay(target_root: Path, *, write: bool) -> tuple[list[str], str
         commented_optional = [c for c in commented_stubs if c in optional]
         commented_hard = [c for c in commented_stubs if c not in optional]
         if commented_hard:
-            lines.append(cli_render.style("strong",
-                f"{len(commented_hard)} categor(ies) already stubbed but still commented — action needed:"))
+            lines.append(
+                cli_render.style(
+                    "strong",
+                    f"{len(commented_hard)} categor(ies) already stubbed but still commented — "
+                    "action needed:",
+                )
+            )
             for cat in commented_hard:
                 lines.append(f"  # {cat}")
             lines.append("")
             lines.append(
                 "Deploy the skipped agent(s):  pkit agents adopt <agent>\n"
-                "Custom doc layout:            uncomment + set real paths in overlay.yaml, then `pkit sync`."
+                "Custom doc layout:            uncomment + set real paths in overlay.yaml, then "
+                "`pkit sync`."
             )
         if commented_optional:
             if commented_hard:
                 lines.append("")
-            lines.append(cli_render.style("strong",
-                f"{len(commented_optional)} optional categor(ies) already stubbed "
-                f"(the agent already deploys without them):"))
+            lines.append(
+                cli_render.style(
+                    "strong",
+                    f"{len(commented_optional)} optional categor(ies) already stubbed "
+                    f"(the agent already deploys without them):",
+                )
+            )
             for cat in commented_optional:
                 lines.append(f"  # {cat}")
             lines.append("")
@@ -741,7 +791,9 @@ def reconcile_overlay(target_root: Path, *, write: bool) -> tuple[list[str], str
 
     if not to_add and not commented_stubs:
         # Every referenced category is fully defined — nothing left to do.
-        return [], cli_render.style("strong", "overlay is complete — every referenced category is defined.")
+        return [], cli_render.style(
+            "strong", "overlay is complete — every referenced category is defined."
+        )
 
     return to_add, "\n".join(lines) + "\n"
 
@@ -785,10 +837,10 @@ class AdoptResult:
     """Outcome of `adopt_agent` for one agent."""
 
     agent: str
-    dirs_created: tuple[str, ...]   # relative paths of directories created
+    dirs_created: tuple[str, ...]  # relative paths of directories created
     categories_wired: tuple[str, ...]  # categories written to overlay (uncommented)
     categories_already_set: tuple[str, ...]  # categories that were already defined
-    deployed: bool   # whether the deploy step ran
+    deployed: bool  # whether the deploy step ran
     # Optional reads (ADR-052) left undefined because they have no conventional
     # default: the agent deploys without them, so adopt neither refuses nor wires.
     categories_optional_unset: tuple[str, ...] = ()
@@ -836,9 +888,7 @@ def adopt_agent(
     if agent_name not in kit_agents:
         known = sorted(kit_agents.keys())
         hint = f"  known: {', '.join(known)}" if known else "  (no kit-shipped agents found)"
-        raise click.ClickException(
-            f"unknown agent {agent_name!r}.\n{hint}"
-        )
+        raise click.ClickException(f"unknown agent {agent_name!r}.\n{hint}")
 
     _ns, src = kit_agents[agent_name]
     referenced = agent_referenced_categories(src)
@@ -850,9 +900,7 @@ def adopt_agent(
     # --- Load overlay ---
     path = _overlay_path(target_root)
     if not path.is_file():
-        raise click.ClickException(
-            f"overlay not found at {path}; run `pkit init` first."
-        )
+        raise click.ClickException(f"overlay not found at {path}; run `pkit init` first.")
     existing = path.read_text(encoding="utf-8")
 
     def _is_defined(cat: str) -> bool:
@@ -863,13 +911,8 @@ def adopt_agent(
     # so it is set aside rather than refused; one *with* a default is wired as usual.
     _hard, optional = agent_category_roles(src)
     conventional = conventional_category_defaults(target_root)
-    optional_unset = [
-        c for c in sorted(optional)
-        if not _is_defined(c) and c not in conventional
-    ]
-    undefined = [
-        c for c in sorted(referenced) if not _is_defined(c) and c not in optional_unset
-    ]
+    optional_unset = [c for c in sorted(optional) if not _is_defined(c) and c not in conventional]
+    undefined = [c for c in sorted(referenced) if not _is_defined(c) and c not in optional_unset]
     already_set = [c for c in sorted(referenced) if _is_defined(c)]
 
     # --- Check the categories still needing action for a conventional default ---

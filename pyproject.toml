@@ -33,7 +33,9 @@ pkit = "project_kit.router:main"
 [dependency-groups]
 dev = [
     "pytest>=8.0",
-    "ruff>=0.6",
+    # The floor the ruff settings below need (`per-file-target-version`); the
+    # lock pins the exact version the gate formats and lints with.
+    "ruff>=0.15",
     "pyright>=1.1.380",
     "pathspec>=0.12",  # used by check-doc-mapping.py (PM script); needed to import it under pytest
     "pytest-xdist>=3.8.0",  # scripts/check.sh runs the suite in parallel workers (#1182)
@@ -199,10 +201,30 @@ path = "hatch_build.py"
 ".pkit/decisions/README.md" = "project_kit/_kit/decisions/README.md"
 ".pkit/scratchpad/README.md" = "project_kit/_kit/scratchpad/README.md"
 
+# Lint and format are gated by `scripts/check.sh` (#840). The settings below
+# are the house style, settled so that a finding the gate reports is a defect
+# to fix, not a disagreement to argue: every rule this project writes against
+# on purpose is switched off here with its reason, and every other finding is
+# fixed rather than silenced.
 [tool.ruff]
+# One length for code and prose alike: the formatter lays code out to it, and
+# the line-length rule holds the strings, docstrings and comments the
+# formatter cannot break to the same limit.
 line-length = 100
 target-version = "py311"
 src = ["src", "tests"]
+
+# Where a tree runs on an older Python than the package's own floor, ruff is
+# told so; otherwise pyupgrade offers rewrites onto an API that runtime lacks
+# (`datetime.UTC` and `enum.StrEnum` are 3.11).
+[tool.ruff.per-file-target-version]
+# Capability scripts run under `uv run --script`, and their PEP 723 headers
+# declare `requires-python = ">=3.10"`.
+".pkit/capabilities/**/*.py" = "py310"
+# The permission hook and the modules it imports run under the bare system
+# `python3` inside the macOS sandbox (ADR-014) — Python 3.9 on a stock macOS.
+".pkit/adapters/claude-code/permission-hook.py" = "py39"
+".pkit/permissions/*.py" = "py39"
 
 [tool.ruff.lint]
 select = [
@@ -214,6 +236,30 @@ select = [
     "SIM",   # flake8-simplify
     "RUF",   # ruff-specific
 ]
+ignore = [
+    # A nested `if` here separates a precondition from the check it guards —
+    # typically a call made for its effect, often with a comment between the
+    # two. Folding them into one `and` hides that call inside a condition.
+    "SIM102",  # collapsible-if
+    # Predicates here are written as guard ladders: `if a: return False`,
+    # `if b: return False`, … then `return True`. Returning the last condition
+    # directly breaks the ladder's parallel shape, which is what makes each
+    # case readable on its own.
+    "SIM103",  # needless-bool
+]
+# The prose in strings, docstrings and comments uses typographic characters on
+# purpose: the en dash in ranges (`1–3`), the multiplication sign (`3×`), the
+# minus sign, set union (`∪`) and the information sign in a status line. They
+# are allowed by name, so the ambiguous-unicode rules (RUF001–RUF003) still
+# catch a confusable nobody chose. The em dash, the arrows and the middle dot
+# the project also writes are not in ruff's confusables table and need no entry.
+allowed-confusables = ["–", "×", "−", "∪", "ℹ"]
+
+[tool.ruff.lint.per-file-ignores]
+# A capability script runs by path and puts its own folder on `sys.path` before
+# it imports its `_lib` package, so code ahead of those imports is the script's
+# shape rather than a stray import (E402, module-import-not-at-top-of-file).
+".pkit/capabilities/**/scripts/**/*.py" = ["E402"]
 
 [tool.pyright]
 include = ["src", "tests"]

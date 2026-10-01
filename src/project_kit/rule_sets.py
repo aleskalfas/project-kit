@@ -62,8 +62,8 @@ from ruamel.yaml.nodes import MappingNode, Node, ScalarNode, SequenceNode
 
 from project_kit import backbone_schemas as bs
 from project_kit import capabilities as caps
-from project_kit import validators
 from project_kit import friction_discovery as fd
+from project_kit import validators
 from project_kit.decisions import resolve_adr_records_dir
 
 Severity = bs.Severity

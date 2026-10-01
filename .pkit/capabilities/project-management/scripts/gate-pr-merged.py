@@ -7,7 +7,9 @@
 # ///
 """Project-management capability — gate-pr-merged (process predicate, DEC-033).
 
-Authorisation-artifact gate (PR-merge, cross-authority): reports {exists, produced_by} for a merged PR closing this issue. The ENGINE computes result = exists && produced_by != actor (COR-033 P4); this predicate returns only the facts (who merged the PR).
+Authorisation-artifact gate (PR-merge, cross-authority): reports {exists, produced_by} for a merged
+PR closing this issue. The ENGINE computes result = exists && produced_by != actor (COR-033 P4);
+this predicate returns only the facts (who merged the PR).
 
 READ-ONLY. The process engine (COR-033) invokes this as
   <script> <issue-number> --json
@@ -26,12 +28,14 @@ from pathlib import Path
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate  # noqa: E402
-from _lib import lifecycle_predicates as predicates  # noqa: E402
+from _lib import bootstrap_gate
+from _lib import lifecycle_predicates as predicates
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description='Report the merged-PR authorisation artifact for an issue (gate).')
+    parser = argparse.ArgumentParser(
+        description="Report the merged-PR authorisation artifact for an issue (gate)."
+    )
     parser.add_argument("issue_number", help="The keyed subject: a GitHub issue number.")
     parser.add_argument("--json", action="store_true", help="Emit the structured JSON contract.")
     parser.add_argument("--actor", default=None, help="The actor being gated (gates only).")

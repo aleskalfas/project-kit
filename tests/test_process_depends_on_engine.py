@@ -216,9 +216,7 @@ def test_can_move_identical_with_and_without_depends_on(
     assert a_allowed == p_allowed is True
 
 
-def test_move_identical_with_and_without_depends_on(
-    plain_repo: Path, annotated_repo: Path
-) -> None:
+def test_move_identical_with_and_without_depends_on(plain_repo: Path, annotated_repo: Path) -> None:
     (plain_repo / "_checks_ok").write_text("", encoding="utf-8")
     (annotated_repo / "_checks_ok").write_text("", encoding="utf-8")
 

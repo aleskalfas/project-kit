@@ -16,17 +16,8 @@ from pathlib import Path
 
 import pytest
 
-
 REPO_ROOT = Path(__file__).resolve().parent.parent
-GH_PY = (
-    REPO_ROOT
-    / ".pkit"
-    / "capabilities"
-    / "project-management"
-    / "scripts"
-    / "_lib"
-    / "gh.py"
-)
+GH_PY = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "_lib" / "gh.py"
 
 
 @pytest.fixture(scope="module")
@@ -60,9 +51,7 @@ def test_gh_env_with_host_sets_gh_host(gh) -> None:
     assert env["GH_HOST"] == "github.com"
 
 
-def test_gh_env_config_wins_over_ambient_gh_host(
-    gh, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_gh_env_config_wins_over_ambient_gh_host(gh, monkeypatch: pytest.MonkeyPatch) -> None:
     """Per DEC-023: when both ambient GH_HOST and gh.host are set, config wins."""
     monkeypatch.setenv("GH_HOST", "ambient.example.com")
     config = {"gh": {"host": "config.example.com"}}
@@ -70,9 +59,7 @@ def test_gh_env_config_wins_over_ambient_gh_host(
     assert env["GH_HOST"] == "config.example.com"
 
 
-def test_gh_env_without_host_preserves_ambient_gh_host(
-    gh, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_gh_env_without_host_preserves_ambient_gh_host(gh, monkeypatch: pytest.MonkeyPatch) -> None:
     """gh.host absent + ambient GH_HOST present → ambient passes through."""
     monkeypatch.setenv("GH_HOST", "ambient.example.com")
     env = gh.gh_env({"gh": {}})
@@ -142,9 +129,7 @@ def test_gh_run_threads_env_dict(gh, monkeypatch: pytest.MonkeyPatch) -> None:
     assert captured["kwargs"]["env"]["GH_HOST"] == "github.com"
 
 
-def test_gh_run_defaults_text_and_capture_output(
-    gh, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_gh_run_defaults_text_and_capture_output(gh, monkeypatch: pytest.MonkeyPatch) -> None:
     """`gh_run` should default `text=True` and `capture_output=True`."""
     captured: dict = {}
 

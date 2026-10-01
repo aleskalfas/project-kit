@@ -32,13 +32,12 @@ Exit codes:
   1  membership refusal / validation refusal
   2  usage error
   3  gh failure
-"""
+"""  # noqa: E501 — a usage line is a command, kept whole
 
 from __future__ import annotations
 
 import argparse
 import json
-import subprocess
 import sys
 from pathlib import Path
 
@@ -47,11 +46,6 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate  # noqa: E402
-from _lib import axis_carriage  # noqa: E402
-from _lib import axis_labels  # noqa: E402
-from _lib.gh import gh_run, load_adopter_config  # noqa: E402
-
 # Constraint-1 gate (RF-2, #265): the workstream-label MUTATORS mutate kit
 # `workstream:*` labels via `gh label`. Under a PRESENT substrate-map whose
 # `workstream` axis is `unsupported` (or absent), this would violate "never write
@@ -59,15 +53,15 @@ from _lib.gh import gh_run, load_adopter_config  # noqa: E402
 # `axis_labels.workstream_mutator_refusal(...)` after the membership check and
 # REFUSES before any `gh label` op when it trips. Greenfield is unchanged; the
 # richer present-map behaviour stays the adopt-existing Feature #264.
-
-from _lib import session_guard  # noqa: E402
-from _lib.membership import (  # noqa: E402
+from _lib import axis_carriage, axis_labels, bootstrap_gate, session_guard
+from _lib.gh import gh_run, load_adopter_config
+from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
     resolve_capability_root,
     resolve_invoker_identity,
 )
-from _lib.workstreams import (  # noqa: E402
+from _lib.workstreams import (
     parse_workstreams,
     workstreams_path,
 )
@@ -142,8 +136,7 @@ def main() -> int:
     path = workstreams_path(capability_root)
     if not path.is_file():
         print(
-            f"error: {path} does not exist. Run `add-workstream` or the "
-            "v0.5.0 migration first.",
+            f"error: {path} does not exist. Run `add-workstream` or the v0.5.0 migration first.",
             file=sys.stderr,
         )
         return 2
@@ -165,7 +158,7 @@ def main() -> int:
             file=sys.stderr,
         )
         return 1
-    missing_losers = [l for l in args.losers if l not in existing]
+    missing_losers = [loser for loser in args.losers if loser not in existing]
     if missing_losers:
         print(
             f"[refused] losers not in workstreams.yaml: {', '.join(missing_losers)}.",
@@ -181,9 +174,7 @@ def main() -> int:
     # flag-only test would let a board adopter whose map binds `workstream` to
     # their own labels reach `gh label delete` on a name the kit never owned.
     substrate_map = axis_labels.load_substrate_map(capability_root)
-    kit_label_note = axis_carriage.kit_label_mutation_note(
-        "workstream", config, substrate_map
-    )
+    kit_label_note = axis_carriage.kit_label_mutation_note("workstream", config, substrate_map)
     kit_labels = kit_label_note is None
 
     # Per-loser issue counts (best-effort).
@@ -193,7 +184,10 @@ def main() -> int:
         for loser in args.losers:
             n = _gh_count_label_uses(axis_labels.label("workstream", loser), config)
             impact[loser] = n
-            print(f"  loser {loser!r}: {n if n is not None else '?'} issue(s) tagged {axis_labels.label('workstream', loser)}")
+            print(
+                f"  loser {loser!r}: {n if n is not None else '?'} issue(s) tagged "
+                f"{axis_labels.label('workstream', loser)}"
+            )
     else:
         reason = kit_label_note or "--skip-labels"
         for loser in args.losers:
@@ -203,9 +197,11 @@ def main() -> int:
         print("\n[dry-run] nothing written; no gh invocation.")
         return 0
     if not args.yes and sys.stdin.isatty():
-        reply = input(
-            f"Merge {len(args.losers)} loser(s) into {args.survivor!r}? [y/N] "
-        ).strip().lower()
+        reply = (
+            input(f"Merge {len(args.losers)} loser(s) into {args.survivor!r}? [y/N] ")
+            .strip()
+            .lower()
+        )
         if reply not in ("y", "yes"):
             print("aborted.", file=sys.stderr)
             return 0
@@ -235,9 +231,7 @@ def main() -> int:
                     file=sys.stderr,
                 )
 
-    print(
-        f"\n[ok] merged {len(args.losers)} loser(s) into {args.survivor!r}."
-    )
+    print(f"\n[ok] merged {len(args.losers)} loser(s) into {args.survivor!r}.")
     return 0
 
 
@@ -337,7 +331,8 @@ def _gh_merge_label(loser: str, survivor: str, config: dict) -> bool:
         return False
     if delete.returncode != 0 and "not found" not in delete.stderr:
         print(
-            f"[warn] failed to delete `{axis_labels.label('workstream', loser)}`: {delete.stderr.strip()}",
+            f"[warn] failed to delete `{axis_labels.label('workstream', loser)}`: "
+            f"{delete.stderr.strip()}",
             file=sys.stderr,
         )
     return True

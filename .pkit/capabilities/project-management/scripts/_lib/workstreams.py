@@ -24,9 +24,8 @@ themselves and pass the parsed dict to `parse_workstreams()`.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-
 
 SLUG_PATTERN = re.compile(r"^[a-z][a-z0-9-]*[a-z0-9]$")
 WORKSTREAMS_RELATIVE = "project/workstreams.yaml"
@@ -115,8 +114,7 @@ def _parse_list_form(lst: list) -> WorkstreamsParse:
             continue
         if not SLUG_PATTERN.match(item):
             errors.append(
-                f"list item #{i}={item!r} does not match slug pattern "
-                "`^[a-z][a-z0-9-]*[a-z0-9]$`"
+                f"list item #{i}={item!r} does not match slug pattern `^[a-z][a-z0-9-]*[a-z0-9]$`"
             )
             continue
         if "--" in item:
@@ -126,9 +124,7 @@ def _parse_list_form(lst: list) -> WorkstreamsParse:
             errors.append(f"slug {item!r} is not 2–40 chars long")
             continue
         entries.append(Workstream(slug=item, name=item))
-    return WorkstreamsParse(
-        entries=tuple(entries), form="list", errors=tuple(errors)
-    )
+    return WorkstreamsParse(entries=tuple(entries), form="list", errors=tuple(errors))
 
 
 def _parse_mapping_form(mapping: dict) -> WorkstreamsParse:
@@ -139,9 +135,7 @@ def _parse_mapping_form(mapping: dict) -> WorkstreamsParse:
             errors.append(f"slug {slug!r} must be a string")
             continue
         if not SLUG_PATTERN.match(slug):
-            errors.append(
-                f"slug {slug!r} does not match `^[a-z][a-z0-9-]*[a-z0-9]$`"
-            )
+            errors.append(f"slug {slug!r} does not match `^[a-z][a-z0-9-]*[a-z0-9]$`")
             continue
         if "--" in slug:
             errors.append(f"slug {slug!r} contains consecutive hyphens")
@@ -153,7 +147,9 @@ def _parse_mapping_form(mapping: dict) -> WorkstreamsParse:
             entries.append(Workstream(slug=slug, name=slug))
             continue
         if not isinstance(attrs, dict):
-            errors.append(f"{slug!r} attributes must be a mapping or null; got {type(attrs).__name__}")
+            errors.append(
+                f"{slug!r} attributes must be a mapping or null; got {type(attrs).__name__}"
+            )
             continue
         name = attrs.get("name") or slug
         if not isinstance(name, str) or len(name) > 64 or "\n" in name or "\r" in name:
@@ -168,7 +164,11 @@ def _parse_mapping_form(mapping: dict) -> WorkstreamsParse:
             errors.append(f"{slug!r}: `status` must be `active` or `deprecated`")
             continue
         deprecated_reason = attrs.get("deprecated_reason") or ""
-        if not isinstance(deprecated_reason, str) or len(deprecated_reason) > 200 or "\n" in deprecated_reason:
+        if (
+            not isinstance(deprecated_reason, str)
+            or len(deprecated_reason) > 200
+            or "\n" in deprecated_reason
+        ):
             errors.append(f"{slug!r}: invalid `deprecated_reason` value")
             continue
         entries.append(
@@ -180,9 +180,7 @@ def _parse_mapping_form(mapping: dict) -> WorkstreamsParse:
                 deprecated_reason=deprecated_reason,
             )
         )
-    return WorkstreamsParse(
-        entries=tuple(entries), form="mapping", errors=tuple(errors)
-    )
+    return WorkstreamsParse(entries=tuple(entries), form="mapping", errors=tuple(errors))
 
 
 def find_active(parse: WorkstreamsParse) -> tuple[Workstream, ...]:

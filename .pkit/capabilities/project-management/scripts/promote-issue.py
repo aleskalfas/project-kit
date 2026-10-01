@@ -46,7 +46,7 @@ Exit codes:
   0  promoted
   1  membership refusal
   2  usage error / gate failure / gh failure
-"""
+"""  # noqa: E501 — a usage line is a command, kept whole
 
 from __future__ import annotations
 
@@ -60,21 +60,16 @@ from ruamel.yaml import YAML
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate  # noqa: E402
-from _lib import axis_carriage  # noqa: E402
-from _lib import axis_labels  # noqa: E402
-from _lib import session_guard  # noqa: E402
-from _lib.gh import gh_run, load_adopter_config  # noqa: E402
-from _lib.milestone import resolve_milestone  # noqa: E402
-from _lib.substrate_writes import write_milestone  # noqa: E402
-from _lib.membership import (  # noqa: E402
+from _lib import axis_carriage, axis_labels, bootstrap_gate, session_guard
+from _lib.gh import gh_run, load_adopter_config
+from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
     resolve_capability_root,
     resolve_invoker_identity,
 )
-
-
+from _lib.milestone import resolve_milestone
+from _lib.substrate_writes import write_milestone
 
 
 def main() -> int:
@@ -110,7 +105,8 @@ def main() -> int:
         "--capability-root",
         type=Path,
         default=None,
-        help=f"Path to the installed capability's directory (default: <repo-root>/.pkit/capabilities/{CAPABILITY_NAME}/).",
+        help="Path to the installed capability's directory (default: "
+        f"<repo-root>/.pkit/capabilities/{CAPABILITY_NAME}/).",
     )
     parser.add_argument(
         "--dry-run",
@@ -239,7 +235,7 @@ def main() -> int:
             # verb for a milestone change on its own records why (#1016).
             print(
                 "  → to change an issue's milestone without a state transition, use "
-                f"`edit-issue {args.issue_number} --milestone <M> --reason \"<why>\"`, "
+                f'`edit-issue {args.issue_number} --milestone <M> --reason "<why>"`, '
                 "which records the change in an audit comment."
             )
         return 0
@@ -324,10 +320,7 @@ def _detect_current_state(
     except (ValueError, KeyError, TypeError):
         return None
     labels = data.get("labels") or []
-    names = [
-        label.get("name", "") if isinstance(label, dict) else ""
-        for label in labels
-    ]
+    names = [label.get("name", "") if isinstance(label, dict) else "" for label in labels]
     # Through the seam: identity in greenfield, the reverse remap under a
     # `label` binding. Both return the kit's own state vocabulary, which is what
     # the caller's already-promoted tuple is written in.
@@ -377,9 +370,11 @@ def _invoke_move_issue(
         sys.executable,
         str(_HERE / "move-issue.py"),
         str(issue_number),
-        "--to", target,
+        "--to",
+        target,
         "--bypass",  # Todo → Backlog is bypassable-with-audit per workflow.yaml
-        "--bypass-reason", reason,
+        "--bypass-reason",
+        reason,
         "--yes",
     ]
     if allow_foreign_repo:

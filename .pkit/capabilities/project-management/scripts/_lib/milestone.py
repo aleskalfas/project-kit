@@ -79,7 +79,8 @@ def list_open_milestones(config: dict[str, Any]) -> list[dict] | None:
     try:
         proc = gh_run(
             [
-                "gh", "api",
+                "gh",
+                "api",
                 "--paginate",
                 "repos/{owner}/{repo}/milestones?state=open",
             ],

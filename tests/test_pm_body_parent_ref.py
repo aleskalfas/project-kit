@@ -92,8 +92,14 @@ def test_anything_else_is_no_parent_ref(bpr, forms, body) -> None:
 def test_form_matchers_accept_exactly_what_parse_reads(bpr, forms) -> None:
     """The filing check (matchers) and the link (parse) agree line for line."""
     matchers = bpr.form_matchers(forms["task"])
-    for line in ("Feature: #1", "Umbrella: #2", "EPIC: #3", "Milestone: [#4](../milestone/4)",
-                 "Feature: 1", "prose"):
+    for line in (
+        "Feature: #1",
+        "Umbrella: #2",
+        "EPIC: #3",
+        "Milestone: [#4](../milestone/4)",
+        "Feature: 1",
+        "prose",
+    ):
         accepted = any(m.match(line) for m in matchers)
         assert accepted == (bpr.parse_first_line(line, forms["task"]) is not None), line
 
@@ -102,7 +108,10 @@ def test_every_shipped_type_may_name_a_milestone(bpr, forms) -> None:
     """#1016: which types may sit under a milestone is read from the shipped
     forms — all four offer the milestone line, an EPIC's being optional."""
     assert {name for name, form in forms.items() if bpr.form_allows_milestone(form)} == {
-        "epic", "feature", "umbrella", "task",
+        "epic",
+        "feature",
+        "umbrella",
+        "task",
     }
     assert not bpr.form_allows_milestone("Feature: #<N>")
 
@@ -126,7 +135,9 @@ def test_first_line_milestone(bpr, body, expected) -> None:
 
 def test_set_first_line_milestone_retargets_in_place(bpr) -> None:
     body = "Milestone: #5\n\n## What\nx\n"
-    assert bpr.set_first_line_milestone(body, 6) == "Milestone: [#6](../milestone/6)\n\n## What\nx\n"
+    assert (
+        bpr.set_first_line_milestone(body, 6) == "Milestone: [#6](../milestone/6)\n\n## What\nx\n"
+    )
 
 
 def test_set_first_line_milestone_keeps_the_integration_marker(bpr) -> None:

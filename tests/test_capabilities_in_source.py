@@ -198,9 +198,7 @@ def test_uninstall_without_a_prompt(
 def test_purge_is_refused_in_the_source(source_repo: Path, origin: str) -> None:
     before = _registered(source_repo, origin=origin)
 
-    result = CliRunner().invoke(
-        main, ["capabilities", "uninstall", _NAME, "--purge", "--yes"]
-    )
+    result = CliRunner().invoke(main, ["capabilities", "uninstall", _NAME, "--purge", "--yes"])
 
     assert result.exit_code == 1, result.output
     said = _output(result)

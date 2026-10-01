@@ -33,9 +33,9 @@ from ruamel.yaml.error import YAMLError
 # script's deps inline; shared helpers live at scripts/_lib/).
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate  # noqa: E402
-from _lib.gh import gh_run, load_adopter_config  # noqa: E402
-from _lib.membership import (  # noqa: E402
+from _lib import bootstrap_gate
+from _lib.gh import load_adopter_config
+from _lib.membership import (
     CAPABILITY_NAME,
     MEMBERS_RELATIVE,
     check_membership,
@@ -48,8 +48,7 @@ from _lib.membership import (  # noqa: E402
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Show the current project-management team membership "
-            "(per DEC-021). Read-only."
+            "Show the current project-management team membership (per DEC-021). Read-only."
         ),
     )
     parser.add_argument(
@@ -101,7 +100,9 @@ def main() -> int:
     else:
         print(f"{len(members)} member(s) registered:")
         for entry in members:
-            github_login = entry.get("github_login", "<missing>") if isinstance(entry, dict) else "<malformed>"
+            github_login = (
+                entry.get("github_login", "<missing>") if isinstance(entry, dict) else "<malformed>"
+            )
             name = entry.get("name", "") if isinstance(entry, dict) else ""
             role = entry.get("role", "") if isinstance(entry, dict) else ""
             email = entry.get("email", "") if isinstance(entry, dict) else ""

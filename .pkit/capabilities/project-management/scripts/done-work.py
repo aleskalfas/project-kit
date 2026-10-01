@@ -162,44 +162,13 @@ from ruamel.yaml import YAML
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import axis_labels  # noqa: E402
-from _lib import bootstrap_gate  # noqa: E402
+from _lib import axis_labels, bootstrap_gate, pr_merge, session_guard
+
 # The position and transition-table readers move-issue and start-work use, so
 # the move done-work makes ahead of the merge (#1162) and the move it leads to
 # cannot disagree about where the issue is or what it may do.
-from _lib import lifecycle_inference as infer  # noqa: E402
-from _lib import pr_merge  # noqa: E402
-from _lib import session_guard  # noqa: E402
-from _lib.ci_checks import evaluate_ci_gate  # noqa: E402
-# DEC-007's checkbox close-gate — the ONE implementation (`_lib.checkbox_gate`),
-# shared with close-issue, merge-pr and the engine's gate-checkboxes-ticked
-# predicate.
-from _lib.checkbox_gate import (  # noqa: E402
-    refusal_message as _checkbox_refusal,
-    unticked_box_lines,
-)
-from _lib.criteria import checkbox_headings, tick_hints  # noqa: E402
-from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
-# The closing-reference reader `open-pr` and `validate-pr` use, so all three
-# agree on which issues a PR closes (#1086).
-from _lib.pr_validation import extract_closing_issues  # noqa: E402
-from _lib.membership import (  # noqa: E402
-    CAPABILITY_NAME,
-    Identity,
-    check_membership,
-    resolve_capability_root,
-    resolve_invoker_identity,
-)
-from _lib.placeholder_detection import (  # noqa: E402
-    PHASE_TRANSITION,
-    detect_placeholder_residuals,
-)
-from _lib.closing_issue_fetchers import (  # noqa: E402
-    issue_labels as _issue_labels_fetch,
-    pr_changed_files as _pr_changed_files_fetch,
-    pr_closing_issue_numbers as _pr_closing_issue_numbers_fetch,
-)
-from _lib.agent_verdicts import (  # noqa: E402
+from _lib import lifecycle_inference as infer
+from _lib.agent_verdicts import (
     APPROVED,
     CHANGES_REQUESTED,
     PATH_LOCAL,
@@ -209,28 +178,48 @@ from _lib.agent_verdicts import (  # noqa: E402
     latest_commit_timestamp,
     latest_verdicts_per_reviewer,
 )
+
 # DEC-049's canonical audit-comment format + projection knob — the ONE
 # definition (`_lib.audit`), shared with `move-issue`'s transition audit.
-from _lib.audit import (  # noqa: E402
+from _lib.audit import (
     audit_key,
     bypass_audit_key,
     render_audit_comment,
     render_ci_bypass_audit_body,
     short_sha,
 )
+from _lib.author_delta import author_delta
+
+# DEC-007's checkbox close-gate — the ONE implementation (`_lib.checkbox_gate`),
+# shared with close-issue, merge-pr and the engine's gate-checkboxes-ticked
+# predicate.
+from _lib.checkbox_gate import refusal_message as _checkbox_refusal
+from _lib.checkbox_gate import unticked_box_lines
+from _lib.ci_checks import evaluate_ci_gate
+from _lib.closing_issue_fetchers import issue_labels as _issue_labels_fetch
+from _lib.closing_issue_fetchers import pr_changed_files as _pr_changed_files_fetch
+from _lib.closing_issue_fetchers import pr_closing_issue_numbers as _pr_closing_issue_numbers_fetch
+
 # The one fetch / scan / post-once wiring every audit writer shares (#902).
-from _lib.comment import fetch_comments, post_audit_once  # noqa: E402
-from _lib.author_delta import author_delta  # noqa: E402
-# The one freshness rule (#1179), shared with review-pr's skip and show-pr.
-from _lib.verdict_freshness import (  # noqa: E402
-    PR_VIEW_FIELDS,
-    FreshnessRule,
-    rule_for_pr,
+from _lib.comment import fetch_comments, post_audit_once
+from _lib.criteria import checkbox_headings, tick_hints
+from _lib.gh import gh_get_issue, gh_run, load_adopter_config
+from _lib.membership import (
+    CAPABILITY_NAME,
+    Identity,
+    check_membership,
+    resolve_capability_root,
+    resolve_invoker_identity,
 )
-from _lib.review_contributions import collect_contributions  # noqa: E402
-from _lib.review_mode import resolve_mode  # noqa: E402
-from _lib.review_opt_outs import OPT_OUT_PATH, read_opt_outs  # noqa: E402
-from _lib.required_reviewers import (  # noqa: E402
+from _lib.placeholder_detection import (
+    PHASE_TRANSITION,
+    detect_placeholder_residuals,
+)
+
+# The closing-reference reader `open-pr` and `validate-pr` use, so all three
+# agree on which issues a PR closes (#1086).
+from _lib.pr_validation import extract_closing_issues
+from _lib.required_reviewers import (
     ERROR_CHANGED_FILES,
     ERROR_CLOSING_ISSUES,
     ERROR_COLLECTION,
@@ -242,7 +231,13 @@ from _lib.required_reviewers import (  # noqa: E402
     read_not_code,
     resolve_required_local_reviewers,
 )
-from _lib.structural_type import infer_structural_type  # noqa: E402
+from _lib.review_contributions import collect_contributions
+from _lib.review_mode import resolve_mode
+from _lib.review_opt_outs import OPT_OUT_PATH, read_opt_outs
+from _lib.structural_type import infer_structural_type
+
+# The one freshness rule (#1179), shared with review-pr's skip and show-pr.
+from _lib.verdict_freshness import PR_VIEW_FIELDS, FreshnessRule, rule_for_pr
 
 
 def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
@@ -251,7 +246,9 @@ def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
     #1086), and title and milestone (with the labels and state, where the issue
     is in its lifecycle and what it may move to, #1162) in one round-trip."""
     return gh_get_issue(
-        issue_number, config, fields="title,labels,body,state,milestone",
+        issue_number,
+        config,
+        fields="title,labels,body,state,milestone",
     )
 
 
@@ -307,9 +304,7 @@ def _reviewer_override_key(reviewer: str, reason: str, head: str) -> str:
     only an own, unedited comment with the exact body counts
     (`_lib.audit.own_audit_posted`, #902).
     """
-    return audit_key(
-        REVIEWER_OVERRIDE_AUDIT_WRITER, reviewer.strip(), reason.strip(), head
-    )
+    return audit_key(REVIEWER_OVERRIDE_AUDIT_WRITER, reviewer.strip(), reason.strip(), head)
 
 
 def _bypass_audit_key(writer: str, reason: str, head: str) -> str:
@@ -328,12 +323,7 @@ def _head_key(commits: list) -> str:
     last = commits[-1] if commits else None
     if not isinstance(last, dict):
         return ""
-    return str(
-        last.get("oid")
-        or last.get("committedDate")
-        or last.get("authoredDate")
-        or ""
-    )
+    return str(last.get("oid") or last.get("committedDate") or last.get("authoredDate") or "")
 
 
 def main() -> int:
@@ -352,7 +342,8 @@ def main() -> int:
     )
     parser.add_argument("issue_number", type=int)
     parser.add_argument(
-        "--bypass", default=None,
+        "--bypass",
+        default=None,
         help=(
             "Bypass the approval gate with a reason. Writes an audit comment "
             "'Approved by bypass: <reason>' on the issue before merging. Does "
@@ -361,7 +352,8 @@ def main() -> int:
         ),
     )
     parser.add_argument(
-        "--bypass-ci", default=None,
+        "--bypass-ci",
+        default=None,
         help=(
             "Override the CI-status gate (#498) with a reason "
             "(bypassable-with-audit per validation-severity.yaml). Records a "
@@ -371,14 +363,18 @@ def main() -> int:
         ),
     )
     parser.add_argument(
-        "--skip-checkbox-gate", action="store_true",
+        "--skip-checkbox-gate",
+        action="store_true",
         help=(
             "Skip the DEC-007 checkbox close-gate. Discouraged; only use "
             "when you have just removed all open boxes by hand."
         ),
     )
     parser.add_argument(
-        "--bypass-reviewer", action="append", default=None, metavar="NAME",
+        "--bypass-reviewer",
+        action="append",
+        default=None,
+        metavar="NAME",
         help=(
             "Satisfy ONE required reviewer's slot on the agent-mode approval "
             "gate by audited override, leaving every other required reviewer "
@@ -401,7 +397,9 @@ def main() -> int:
     # breaking CLI signature change owing a migration (COR-010). Both write
     # `args.bypass_reviewer_reason`; nothing downstream knows which was typed.
     parser.add_argument(
-        "--bypass-reviewer-reason", default=None, metavar="REASON",
+        "--bypass-reviewer-reason",
+        default=None,
+        metavar="REASON",
         help=(
             "The required reason paired with --bypass-reviewer (DEC-050). "
             "Applies to every reviewer named by --bypass-reviewer this "
@@ -412,7 +410,9 @@ def main() -> int:
         ),
     )
     parser.add_argument(
-        "--bypass-reason", dest="bypass_reviewer_reason", default=None,
+        "--bypass-reason",
+        dest="bypass_reviewer_reason",
+        default=None,
         metavar="REASON",
         help=(
             "DEPRECATED alias for --bypass-reviewer-reason, kept because it "
@@ -424,11 +424,14 @@ def main() -> int:
         ),
     )
     parser.add_argument(
-        "--admin", action="store_true",
+        "--admin",
+        action="store_true",
         help="Pass --admin to `gh pr merge` (bypass branch protection).",
     )
     parser.add_argument(
-        "--capability-root", type=Path, default=None,
+        "--capability-root",
+        type=Path,
+        default=None,
         help=f"Default: <repo-root>/.pkit/capabilities/{CAPABILITY_NAME}/.",
     )
     parser.add_argument("--dry-run", action="store_true")
@@ -471,8 +474,7 @@ def main() -> int:
     pr = _find_pr_for_branch(branch, config)
     if pr is None:
         print(
-            f"error: no OPEN PR found for branch {branch!r}. "
-            "Run `review-work` first.",
+            f"error: no OPEN PR found for branch {branch!r}. Run `review-work` first.",
             file=sys.stderr,
         )
         return 2
@@ -498,17 +500,18 @@ def main() -> int:
     # reviewer; blanks drop out entirely. Validate the pairing before any gate
     # work.
     override_reviewers = tuple(
-        name for name in (
-            raw.strip() for raw in (args.bypass_reviewer or ())
-        ) if name
+        name for name in (raw.strip() for raw in (args.bypass_reviewer or ())) if name
     )
     override_reason = (args.bypass_reviewer_reason or "").strip()
     # The deprecated spelling shares `dest` with the canonical one (one code
     # path), so argparse cannot report which was typed — argv can. Both given
     # is ambiguous under argparse's last-wins, so refuse rather than silently
     # pick; one deprecated spelling warns and proceeds.
-    _spellings = [a for a in sys.argv[1:] if a.split("=", 1)[0] in
-                  ("--bypass-reason", "--bypass-reviewer-reason")]
+    _spellings = [
+        a
+        for a in sys.argv[1:]
+        if a.split("=", 1)[0] in ("--bypass-reason", "--bypass-reviewer-reason")
+    ]
     if len({a.split("=", 1)[0] for a in _spellings}) > 1:
         print(
             "[refused] --bypass-reason and --bypass-reviewer-reason are the "
@@ -592,7 +595,11 @@ def main() -> int:
         # agent mode — DEC-028 gate, with DEC-032's per-PR resolved set and
         # DEC-050's satisfied-by-override OR-branch.
         gate_result = _check_agent_gate(
-            pr_number, pr, config, mode_resolution.source, capability_root,
+            pr_number,
+            pr,
+            config,
+            mode_resolution.source,
+            capability_root,
             override_reviewers=override_reviewers,
         )
 
@@ -608,9 +615,7 @@ def main() -> int:
     # retrieves number/isDraft/headRefName).
     pr_body = _gh_get_pr_body(pr_number, config)
     if pr_body is not None:
-        pr_placeholder_findings = _check_pr_placeholder(
-            pr_body, pr_number, capability_root
-        )
+        pr_placeholder_findings = _check_pr_placeholder(pr_body, pr_number, capability_root)
         hard_reject = [f for f in pr_placeholder_findings if f[0] == "hard-reject"]
         if hard_reject:
             print(
@@ -654,8 +659,7 @@ def main() -> int:
     for closing_issue in closing:
         if closing_issue.already_closed:
             print(
-                f"  #{closing_issue.number}: already closed, skipped "
-                "(not gated, not closed again)"
+                f"  #{closing_issue.number}: already closed, skipped (not gated, not closed again)"
             )
             continue
         checkbox_gate = _check_checkbox_gate(
@@ -718,8 +722,7 @@ def main() -> int:
 
     if args.dry_run:
         lead_in_step = (
-            f"move #{args.issue_number} to {lead_in.to_state}, "
-            if lead_in is not None else ""
+            f"move #{args.issue_number} to {lead_in.to_state}, " if lead_in is not None else ""
         )
         print(
             f"(dry-run: would post bypass audit (if any), {lead_in_step}"
@@ -743,9 +746,7 @@ def main() -> int:
 
     # Post bypass audit comment if applicable.
     if args.bypass:
-        if not _post_bypass_audit_idempotent(
-            args.issue_number, args.bypass, config, head=pr_head
-        ):
+        if not _post_bypass_audit_idempotent(args.issue_number, args.bypass, config, head=pr_head):
             print(
                 "[warn] could not post bypass audit comment; aborting before merge.",
                 file=sys.stderr,
@@ -764,12 +765,16 @@ def main() -> int:
         pr_comments = fetch_comments("pr", pr_number, config, run=gh_run)
         for audit in gate_result.override_audits:
             if not _post_reviewer_override_audit(
-                pr_number, audit, override_reason, invoker, config,
-                capability_root=capability_root, comments=pr_comments,
+                pr_number,
+                audit,
+                override_reason,
+                invoker,
+                config,
+                capability_root=capability_root,
+                comments=pr_comments,
             ):
                 print(
-                    "[warn] could not post reviewer-override audit comment; "
-                    "aborting before merge.",
+                    "[warn] could not post reviewer-override audit comment; aborting before merge.",
                     file=sys.stderr,
                 )
                 return 2
@@ -779,12 +784,15 @@ def main() -> int:
     # the trail survives a partial failure).
     if args.bypass_ci and not ci_gate.passing:
         if not _post_ci_bypass_audit(
-            pr_number, args.bypass_ci.strip(), invoker, ci_gate.failing_checks,
-            config, head=pr_head,
+            pr_number,
+            args.bypass_ci.strip(),
+            invoker,
+            ci_gate.failing_checks,
+            config,
+            head=pr_head,
         ):
             print(
-                "[warn] could not post CI-bypass audit comment; aborting "
-                "before merge.",
+                "[warn] could not post CI-bypass audit comment; aborting before merge.",
                 file=sys.stderr,
             )
             return 2
@@ -796,7 +804,9 @@ def main() -> int:
     # A failure stops the run here, while nothing irreversible has happened.
     if lead_in is not None:
         lead_in_rc = _invoke_move_issue(
-            args.issue_number, lead_in.to_state, args.capability_root,
+            args.issue_number,
+            lead_in.to_state,
+            args.capability_root,
         )
         if lead_in_rc != 0:
             print(
@@ -814,7 +824,10 @@ def main() -> int:
     # (DEC-013: squash-commit subject = PR title; fixes #33). The mechanic is
     # `_lib.pr_merge`'s — the one implementation `merge-pr` also runs.
     if not pr_merge.squash_merge(
-        pr_number, pr_title=pr_title, admin=args.admin, config=config,
+        pr_number,
+        pr_title=pr_title,
+        admin=args.admin,
+        config=config,
     ):
         return 3
 
@@ -841,7 +854,9 @@ def main() -> int:
     close_rc = 0
     for number in to_close:
         rc = _invoke_close_issue(
-            number, pr_number, args.capability_root,
+            number,
+            pr_number,
+            args.capability_root,
             skip_checkbox_gate=args.skip_checkbox_gate,
         )
         if rc != 0:
@@ -868,8 +883,7 @@ def main() -> int:
         return close_rc
     also = _issue_list(n for n in to_close if n != args.issue_number)
     print(
-        f"\n[ok] merged + closed #{args.issue_number}"
-        + (f" (also closed: {also})" if also else "")
+        f"\n[ok] merged + closed #{args.issue_number}" + (f" (also closed: {also})" if also else "")
     )
     return 0
 
@@ -883,8 +897,8 @@ class _GateResult:
         passed: bool,
         passed_via: str = "",
         refusal_message: str = "",
-        override_audits: "list[_OverrideAudit] | None" = None,
-        warnings: "list[str] | None" = None,
+        override_audits: list[_OverrideAudit] | None = None,
+        warnings: list[str] | None = None,
     ):
         self.passed = passed
         self.passed_via = passed_via
@@ -998,37 +1012,36 @@ def _check_approval_gate(
 
     if pr_number is None:
         return _GateResult(
-            passed=False, refusal_message="error: cannot resolve PR number.",
+            passed=False,
+            refusal_message="error: cannot resolve PR number.",
         )
 
     # Fetch the PR's reviews + comments + author.
     proc = gh_run(
-        ["gh", "pr", "view", str(pr_number),
-         "--json", "author,reviews,comments"],
-        config, check=False,
+        ["gh", "pr", "view", str(pr_number), "--json", "author,reviews,comments"],
+        config,
+        check=False,
     )
     if proc.returncode != 0:
         return _GateResult(
             passed=False,
-            refusal_message=(
-                f"error: gh pr view failed: {proc.stderr.strip()}"
-            ),
+            refusal_message=(f"error: gh pr view failed: {proc.stderr.strip()}"),
         )
     try:
         data = json.loads(proc.stdout)
     except (ValueError, json.JSONDecodeError):
         return _GateResult(
-            passed=False, refusal_message="error: gh pr view returned malformed JSON.",
+            passed=False,
+            refusal_message="error: gh pr view returned malformed JSON.",
         )
     author_login = (data.get("author") or {}).get("login") or ""
 
     # Path 1: latest APPROVED review (latest non-COMMENTED state).
     reviews = data.get("reviews") or []
     latest_states = [
-        r.get("state") for r in reviews
-        if isinstance(r, dict) and r.get("state") in (
-            "APPROVED", "CHANGES_REQUESTED", "DISMISSED"
-        )
+        r.get("state")
+        for r in reviews
+        if isinstance(r, dict) and r.get("state") in ("APPROVED", "CHANGES_REQUESTED", "DISMISSED")
     ]
     if latest_states and latest_states[-1] == "APPROVED":
         return _GateResult(passed=True, passed_via="APPROVED review")
@@ -1042,7 +1055,8 @@ def _check_approval_gate(
         body = (c.get("body") or "").strip()
         if author and author != author_login and body.startswith("Approved"):
             return _GateResult(
-                passed=True, passed_via=f"`Approved` comment from @{author}",
+                passed=True,
+                passed_via=f"`Approved` comment from @{author}",
             )
 
     # Refused.
@@ -1058,7 +1072,7 @@ def _check_approval_gate(
             "            - Request a review and have it approved.\n"
             "            - Have a non-author commenter post a comment "
             "starting with `Approved`.\n"
-            "            - Re-run with `--bypass \"<reason>\"`."
+            '            - Re-run with `--bypass "<reason>"`.'
         ),
     )
 
@@ -1080,14 +1094,14 @@ class _ClosingIssue:
         """Closed before the merge, so the merge does not close it: it is
         neither gated nor closed again. An unreadable issue is not known to be
         closed, so it stays gated (and fails closed there)."""
-        return (
-            self.issue is not None
-            and str(self.issue.get("state") or "").lower() == "closed"
-        )
+        return self.issue is not None and str(self.issue.get("state") or "").lower() == "closed"
 
 
 def _read_closing_issues(
-    primary: int, primary_issue: dict | None, pr_body: str, config: dict,
+    primary: int,
+    primary_issue: dict | None,
+    pr_body: str,
+    config: dict,
 ) -> list[_ClosingIssue]:
     """Every issue the PR closes, the one done-work runs for first (#1086).
 
@@ -1174,9 +1188,7 @@ def _check_checkbox_gate(
 
     # Name the verb that ticks each box (#1015): `check-criterion` for the
     # criteria and the Doc impact section, a body edit for any other section.
-    hints = tick_hints(
-        issue_number, body, [line_no for line_no, _ in located], criteria_headings
-    )
+    hints = tick_hints(issue_number, body, [line_no for line_no, _ in located], criteria_headings)
     return _GateResult(
         passed=False,
         refusal_message=_checkbox_refusal(
@@ -1276,13 +1288,14 @@ def _check_agent_gate(
                 "`project/config.yaml` under `review.agents.*`.\n"
                 "              b) Set `review.mode: human` if you want "
                 "human review instead.\n"
-                "              c) Merge with `done-work --bypass \"<reason>\"`."
+                '              c) Merge with `done-work --bypass "<reason>"`.'
             ),
         )
 
     if pr_number is None:
         return _GateResult(
-            passed=False, refusal_message="error: cannot resolve PR number.",
+            passed=False,
+            refusal_message="error: cannot resolve PR number.",
         )
 
     # Baseline required reviewer names per path (DEC-028's static lists).
@@ -1306,17 +1319,13 @@ def _check_agent_gate(
     # error (D5): a malformed declaration, an undeployed contributed agent,
     # or an unresolvable closing-issue lookup is never silently dropped.
     repo_root = capability_root.parent.parent.parent
-    resolution = _resolve_required_local(
-        pr_number, config, repo_root, local_baseline
-    )
+    resolution = _resolve_required_local(pr_number, config, repo_root, local_baseline)
     if not resolution.ok:
         # An unresolvable set (broken contribution / undeployed agent) cannot
         # be helped by a per-reviewer override — the override operates WITHIN a
         # resolved set (DEC-050 Decision 5). Name that when overrides were
         # supplied so the operator reaches for the whole-gate --bypass instead.
-        return _resolution_refusal(
-            resolution, override_requested=bool(override_reviewers)
-        )
+        return _resolution_refusal(resolution, override_requested=bool(override_reviewers))
     required_local = list(resolution.required_local)
     # Provenance for the refusal message: reviewer name → contributing
     # capability (baseline reviewers have no contributing capability).
@@ -1327,9 +1336,7 @@ def _check_agent_gate(
     # set (a typo, or a name dropped by reclassification/uninstall) — never a
     # silent no-op. The set spans the remote baseline plus the resolved local
     # set (a baseline reviewer may be remote).
-    slot_labels = _required_slot_labels(
-        remote_baseline, required_local, contributed_by
-    )
+    slot_labels = _required_slot_labels(remote_baseline, required_local, contributed_by)
     override_set = set(override_reviewers)
     required_set_all = {name for name, _label in slot_labels}
     unknown_overrides = [n for n in override_reviewers if n not in required_set_all]
@@ -1355,15 +1362,24 @@ def _check_agent_gate(
         swallow the all-slots steer toward `--bypass` on three of the paths.
         """
         return _GateResult(
-            passed=False, refusal_message=message, warnings=gate_warnings,
+            passed=False,
+            refusal_message=message,
+            warnings=gate_warnings,
         )
 
     # Fetch comments + author + the head and base the freshness rule reads
     # (one round-trip).
     proc = gh_run(
-        ["gh", "pr", "view", str(pr_number),
-         "--json", ",".join(("author", "comments", *PR_VIEW_FIELDS))],
-        config, check=False,
+        [
+            "gh",
+            "pr",
+            "view",
+            str(pr_number),
+            "--json",
+            ",".join(("author", "comments", *PR_VIEW_FIELDS)),
+        ],
+        config,
+        check=False,
     )
     if proc.returncode != 0:
         return refuse(f"error: gh pr view failed: {proc.stderr.strip()}")
@@ -1441,18 +1457,22 @@ def _check_agent_gate(
     )
 
     if any(not slot.satisfied for slot in slots):
-        return refuse(_agent_gate_refusal(
-            mode_source=mode_source, slots=slots, opted_out=resolution.opted_out,
-            stale=_stale_verdicts(
+        return refuse(
+            _agent_gate_refusal(
+                mode_source=mode_source,
                 slots=slots,
-                comments=comments,
-                freshness=freshness,
-                remote_baseline=remote_baseline_set,
-                required_local=required_local_set,
-                remote_reviewer_ok=remote_reviewer_ok,
-                local_reviewer_ok=local_reviewer_ok,
-            ),
-        ))
+                opted_out=resolution.opted_out,
+                stale=_stale_verdicts(
+                    slots=slots,
+                    comments=comments,
+                    freshness=freshness,
+                    remote_baseline=remote_baseline_set,
+                    required_local=required_local_set,
+                    remote_reviewer_ok=remote_reviewer_ok,
+                    local_reviewer_ok=local_reviewer_ok,
+                ),
+            )
+        )
 
     return _GateResult(
         passed=True,
@@ -1474,7 +1494,10 @@ def _check_agent_gate(
 
 
 def _resolve_required_local(
-    pr_number: int, config: dict, repo_root: Path, local_baseline: list[str],
+    pr_number: int,
+    config: dict,
+    repo_root: Path,
+    local_baseline: list[str],
 ) -> Resolution:
     """Resolve the PR's required-local set via the shared resolver (DEC-032 D1).
 
@@ -1494,24 +1517,16 @@ def _resolve_required_local(
         pr_number,
         baseline_local=local_baseline,
         repo_root=repo_root,
-        closing_issue_numbers=lambda n: _pr_closing_issue_numbers_fetch(
-            n, config, gh_run=gh_run
-        ),
-        issue_labels=lambda n: _issue_labels_fetch(
-            n, config, gh_get_issue=gh_get_issue
-        ),
-        changed_files=lambda n: _pr_changed_files_fetch(
-            n, config, gh_run=gh_run
-        ),
+        closing_issue_numbers=lambda n: _pr_closing_issue_numbers_fetch(n, config, gh_run=gh_run),
+        issue_labels=lambda n: _issue_labels_fetch(n, config, gh_get_issue=gh_get_issue),
+        changed_files=lambda n: _pr_changed_files_fetch(n, config, gh_run=gh_run),
         opt_outs=read_opt_outs(config),
         not_code=read_not_code(config),
         collect_contributions=collect_contributions,
     )
 
 
-def _resolution_refusal(
-    resolution: Resolution, *, override_requested: bool = False
-) -> _GateResult:
+def _resolution_refusal(resolution: Resolution, *, override_requested: bool = False) -> _GateResult:
     """Shape a fail-closed `_GateResult` from a non-ok `Resolution` (D5).
 
     A collection error names the malformed declaration / undeployed agent; an
@@ -1532,7 +1547,8 @@ def _resolution_refusal(
         message = _closing_issue_unresolvable_refusal(error.message)
     elif error.kind in (ERROR_CHANGED_FILES, ERROR_TOO_MANY_CHANGED_FILES):
         message = _changed_files_unresolvable_refusal(
-            error.message, too_many=error.kind == ERROR_TOO_MANY_CHANGED_FILES,
+            error.message,
+            too_many=error.kind == ERROR_TOO_MANY_CHANGED_FILES,
         )
     elif error.kind == ERROR_OPT_OUT:
         message = _opt_out_invalid_refusal(error.details)
@@ -1580,13 +1596,9 @@ def _required_slot_labels(
     by reviewer name).
     """
     pairs = [
-        (name, f"remote agent (@{name})")
-        for name in remote_baseline
-        if name not in required_local
+        (name, f"remote agent (@{name})") for name in remote_baseline if name not in required_local
     ]
-    pairs += [
-        (name, _reviewer_label(name, contributed_by)) for name in required_local
-    ]
+    pairs += [(name, _reviewer_label(name, contributed_by)) for name in required_local]
     return pairs
 
 
@@ -1617,16 +1629,20 @@ def _build_slots(
     slots: list[_Slot] = []
     for name, label in slot_labels:
         candidates = _registered_verdicts(
-            by_path, name,
-            remote_baseline=remote_baseline, required_local=required_local,
+            by_path,
+            name,
+            remote_baseline=remote_baseline,
+            required_local=required_local,
         )
-        slots.append(_Slot(
-            reviewer=name,
-            label=label,
-            approved=any(verdict.token == APPROVED for verdict in candidates),
-            overridden=name in override_set,
-            verdict=_most_blocking(candidates, freshness),
-        ))
+        slots.append(
+            _Slot(
+                reviewer=name,
+                label=label,
+                approved=any(verdict.token == APPROVED for verdict in candidates),
+                overridden=name in override_set,
+                verdict=_most_blocking(candidates, freshness),
+            )
+        )
     return slots
 
 
@@ -1677,8 +1693,10 @@ def _stale_verdicts(
             continue
         verdict = _most_blocking(
             _registered_verdicts(
-                by_path, slot.reviewer,
-                remote_baseline=remote_baseline, required_local=required_local,
+                by_path,
+                slot.reviewer,
+                remote_baseline=remote_baseline,
+                required_local=required_local,
             ),
             freshness,
         )
@@ -1715,7 +1733,7 @@ def _contribution_error_refusal(collection) -> str:
         "capability, or"
     )
     lines.append("              c) Fix the malformed contribution declaration, or")
-    lines.append("              d) Merge with `done-work --bypass \"<reason>\"`.")
+    lines.append('              d) Merge with `done-work --bypass "<reason>"`.')
     return "\n".join(lines)
 
 
@@ -1731,13 +1749,15 @@ def _opt_out_invalid_refusal(details: tuple[str, ...]) -> str:
         "reviewer-contribution opt-out list is invalid.",
     ]
     lines.extend(f"            → {detail}" for detail in details)
-    lines.extend([
-        "            Remediation:",
-        f"              a) Fix or remove the entry in `{OPT_OUT_PATH}` "
-        "(project/config.yaml) — each names an installed capability, a "
-        "reviewer it contributes, and a reason, or",
-        "              b) Merge with `done-work --bypass \"<reason>\"`.",
-    ])
+    lines.extend(
+        [
+            "            Remediation:",
+            f"              a) Fix or remove the entry in `{OPT_OUT_PATH}` "
+            "(project/config.yaml) — each names an installed capability, a "
+            "reviewer it contributes, and a reason, or",
+            '              b) Merge with `done-work --bypass "<reason>"`.',
+        ]
+    )
     return "\n".join(lines)
 
 
@@ -1749,16 +1769,17 @@ def _not_code_invalid_refusal(details: tuple[str, ...]) -> str:
     than guess which floor reviewers the PR requires.
     """
     lines = [
-        "[refused] agent-mode approval gate cannot be resolved — the "
-        "not-code list is invalid.",
+        "[refused] agent-mode approval gate cannot be resolved — the not-code list is invalid.",
     ]
     lines.extend(f"            → {detail}" for detail in details)
-    lines.extend([
-        "            Remediation:",
-        f"              a) Fix `{NOT_CODE_PATH}` (project/config.yaml) — a "
-        "list of path patterns, or remove it for the default, or",
-        "              b) Merge with `done-work --bypass \"<reason>\"`.",
-    ])
+    lines.extend(
+        [
+            "            Remediation:",
+            f"              a) Fix `{NOT_CODE_PATH}` (project/config.yaml) — a "
+            "list of path patterns, or remove it for the default, or",
+            '              b) Merge with `done-work --bypass "<reason>"`.',
+        ]
+    )
     return "\n".join(lines)
 
 
@@ -1771,19 +1792,19 @@ def _freshness_unresolvable_refusal(pr_number: int | None) -> str:
     refuses rather than accept a possibly-stale APPROVED as fresh
     (fail-closed, DEC-032 D5).
     """
-    return "\n".join([
-        f"[refused] agent-mode approval gate cannot be resolved for PR "
-        f"#{pr_number} — the latest-commit freshness anchor is unknown.",
-        "            → `gh pr view` returned no commit with a committedDate "
-        "or authoredDate.",
-        "            Verdict freshness is judged against the PR's head "
-        "(DEC-028); without it a stale APPROVED cannot be distinguished from "
-        "a fresh one, so the gate refuses (fail-closed, DEC-032 D5).",
-        "            Remediation:",
-        "              a) Transient gh failure — retry `done-work`.",
-        "              b) If persistent, merge with "
-        "`done-work --bypass \"<reason>\"`.",
-    ])
+    return "\n".join(
+        [
+            f"[refused] agent-mode approval gate cannot be resolved for PR "
+            f"#{pr_number} — the latest-commit freshness anchor is unknown.",
+            "            → `gh pr view` returned no commit with a committedDate or authoredDate.",
+            "            Verdict freshness is judged against the PR's head "
+            "(DEC-028); without it a stale APPROVED cannot be distinguished from "
+            "a fresh one, so the gate refuses (fail-closed, DEC-032 D5).",
+            "            Remediation:",
+            "              a) Transient gh failure — retry `done-work`.",
+            '              b) If persistent, merge with `done-work --bypass "<reason>"`.',
+        ]
+    )
 
 
 def _closing_issue_unresolvable_refusal(reason: str) -> str:
@@ -1794,19 +1815,19 @@ def _closing_issue_unresolvable_refusal(reason: str) -> str:
     refuses rather than proceed on the baseline alone (DEC-032 D5) — the same
     fail-closed posture the verdict-fetch uses on a gh failure.
     """
-    return "\n".join([
-        "[refused] agent-mode approval gate cannot be resolved — the PR's "
-        "closing-issue classification is unknown.",
-        f"            → {reason}",
-        "            The contributed-reviewer set cannot be determined, so "
-        "the gate refuses rather than merge on a possibly-incomplete set "
-        "(fail-closed, DEC-032 D5).",
-        "            Remediation:",
-        "              a) Transient gh failure resolving closing issues — "
-        "retry `done-work`.",
-        "              b) If persistent, merge with "
-        "`done-work --bypass \"<reason>\"`.",
-    ])
+    return "\n".join(
+        [
+            "[refused] agent-mode approval gate cannot be resolved — the PR's "
+            "closing-issue classification is unknown.",
+            f"            → {reason}",
+            "            The contributed-reviewer set cannot be determined, so "
+            "the gate refuses rather than merge on a possibly-incomplete set "
+            "(fail-closed, DEC-032 D5).",
+            "            Remediation:",
+            "              a) Transient gh failure resolving closing issues — retry `done-work`.",
+            '              b) If persistent, merge with `done-work --bypass "<reason>"`.',
+        ]
+    )
 
 
 def _changed_files_unresolvable_refusal(reason: str, *, too_many: bool) -> str:
@@ -1828,17 +1849,19 @@ def _changed_files_unresolvable_refusal(reason: str, *, too_many: bool) -> str:
             "              a) Transient gh failure reading the PR's changed "
             "files — retry `done-work`, or"
         )
-    return "\n".join([
-        "[refused] agent-mode approval gate cannot be resolved — the PR's "
-        "changed files cannot be read in full.",
-        f"            → {reason}",
-        "            A diff-floor reviewer may be required, so the gate "
-        "refuses rather than merge on a possibly-incomplete set (fail-closed, "
-        "DEC-032 D5).",
-        "            Remediation:",
-        first_remedy,
-        "              b) Merge with `done-work --bypass \"<reason>\"`.",
-    ])
+    return "\n".join(
+        [
+            "[refused] agent-mode approval gate cannot be resolved — the PR's "
+            "changed files cannot be read in full.",
+            f"            → {reason}",
+            "            A diff-floor reviewer may be required, so the gate "
+            "refuses rather than merge on a possibly-incomplete set (fail-closed, "
+            "DEC-032 D5).",
+            "            Remediation:",
+            first_remedy,
+            '              b) Merge with `done-work --bypass "<reason>"`.',
+        ]
+    )
 
 
 def _agent_gate_refusal(
@@ -1887,21 +1910,16 @@ def _agent_gate_refusal(
     missing = ", ".join(slot.label for slot in slots if not slot.satisfied)
     lines.append(f"            → still missing a fresh APPROVED: {missing}")
     lines.append("            Remediation:")
-    lines.append(
-        "              a) Wait for / trigger each remote agent to post APPROVED."
-    )
-    lines.append(
-        "              b) Run `review-pr <N>` to re-invoke the local agent(s)."
-    )
+    lines.append("              a) Wait for / trigger each remote agent to post APPROVED.")
+    lines.append("              b) Run `review-pr <N>` to re-invoke the local agent(s).")
     lines.append(
         "              c) Override a false block on ONE reviewer with "
         "`done-work --bypass-reviewer <name> "
         '--bypass-reviewer-reason "<r>"`.'
     )
-    lines.append("              d) Merge with `done-work --bypass \"<reason>\"`.")
+    lines.append('              d) Merge with `done-work --bypass "<reason>"`.')
     lines.append(
-        "              e) If no agent is configured, set `review.mode: human` "
-        "or use --bypass."
+        "              e) If no agent is configured, set `review.mode: human` or use --bypass."
     )
     return "\n".join(lines)
 
@@ -1909,9 +1927,7 @@ def _agent_gate_refusal(
 # ---- per-reviewer override (DEC-050) ---------------------------------
 
 
-def _unknown_override_refusal(
-    unknown: list[str], slot_labels: list[tuple[str, str]]
-) -> str:
+def _unknown_override_refusal(unknown: list[str], slot_labels: list[tuple[str, str]]) -> str:
     """Refusal text for a `--bypass-reviewer <name>` not in the resolved set.
 
     A hard error (DEC-050 Decision 5) — a typo, or a name dropped by
@@ -1920,19 +1936,21 @@ def _unknown_override_refusal(
     exactly what is overridable this invocation.
     """
     resolved = [label for _name, label in slot_labels]
-    return "\n".join([
-        "[refused] --bypass-reviewer named a reviewer not in the freshly-"
-        "resolved required set (DEC-050).",
-        f"            → not required: {', '.join(unknown)}",
-        f"            → resolved required set: {', '.join(resolved) or '(none)'}",
-        "            A per-reviewer override must name a reviewer this PR "
-        "actually requires — check for a typo, or a reviewer dropped by "
-        "reclassification / a capability uninstall / a contribution opt-out.",
-        "            Remediation:",
-        "              a) Re-run naming a reviewer from the resolved set above.",
-        "              b) Merge with `done-work --bypass \"<reason>\"` for a "
-        "whole-gate override.",
-    ])
+    return "\n".join(
+        [
+            "[refused] --bypass-reviewer named a reviewer not in the freshly-"
+            "resolved required set (DEC-050).",
+            f"            → not required: {', '.join(unknown)}",
+            f"            → resolved required set: {', '.join(resolved) or '(none)'}",
+            "            A per-reviewer override must name a reviewer this PR "
+            "actually requires — check for a typo, or a reviewer dropped by "
+            "reclassification / a capability uninstall / a contribution opt-out.",
+            "            Remediation:",
+            "              a) Re-run naming a reviewer from the resolved set above.",
+            '              b) Merge with `done-work --bypass "<reason>"` for a '
+            "whole-gate override.",
+        ]
+    )
 
 
 def _all_slots_override_warning(required_set_all: set[str]) -> str:
@@ -2007,27 +2025,24 @@ def _build_override_audits(
             _most_blocking(by_name.get(slot.reviewer, []), freshness),
             freshness,
         )
-        audits.append(_OverrideAudit(
-            reviewer=slot.reviewer,
-            capability=contributed_by.get(slot.reviewer),
-            state=state,
-            block_comment_url=url,
-            head=head,
-            redundant=slot.approved,
-            others_approved=tuple(
-                label for label in approved_labels if label != slot.label
-            ),
-            others_overridden=tuple(
-                other.label for other in overridden
-                if other.reviewer != slot.reviewer
-            ),
-        ))
+        audits.append(
+            _OverrideAudit(
+                reviewer=slot.reviewer,
+                capability=contributed_by.get(slot.reviewer),
+                state=state,
+                block_comment_url=url,
+                head=head,
+                redundant=slot.approved,
+                others_approved=tuple(label for label in approved_labels if label != slot.label),
+                others_overridden=tuple(
+                    other.label for other in overridden if other.reviewer != slot.reviewer
+                ),
+            )
+        )
     return audits
 
 
-def _most_blocking(
-    verdicts: list[Verdict], freshness: FreshnessRule
-) -> Verdict | None:
+def _most_blocking(verdicts: list[Verdict], freshness: FreshnessRule) -> Verdict | None:
     """The verdict that best describes a slot: the most blocking one.
 
     Used wherever a reviewer posted on both registered paths and a surface must
@@ -2039,8 +2054,7 @@ def _most_blocking(
     best: Verdict | None = None
     for verdict in verdicts:
         if best is None or (
-            _verdict_severity(verdict, freshness)
-            > _verdict_severity(best, freshness)
+            _verdict_severity(verdict, freshness) > _verdict_severity(best, freshness)
         ):
             best = verdict
     return best
@@ -2118,7 +2132,11 @@ def _post_bypass_audit_idempotent(
     """Post the whole-gate bypass audit to the issue, once per (reason, head)."""
     key = _bypass_audit_key(BYPASS_AUDIT_WRITER, reason, head)
     return post_audit_once(
-        "issue", issue_number, key, _bypass_audit_body(reason, head, key), config,
+        "issue",
+        issue_number,
+        key,
+        _bypass_audit_body(reason, head, key),
+        config,
         run=gh_run,
         present_note="bypass audit comment already present; idempotent skip",
     )
@@ -2135,7 +2153,8 @@ def _gh_get_status_rollup(pr_number: int | None, config: dict) -> list[dict] | N
         return None
     proc = gh_run(
         ["gh", "pr", "view", str(pr_number), "--json", "statusCheckRollup"],
-        config, check=False,
+        config,
+        check=False,
     )
     if proc.returncode != 0:
         return None
@@ -2157,7 +2176,12 @@ def _ci_bypass_audit_body(
     """Render the CI-bypass audit comment — the shape shared with `merge-pr`
     (`_lib.audit.render_ci_bypass_audit_body`) under this script's kind marker."""
     return render_ci_bypass_audit_body(
-        CI_BYPASS_AUDIT_MARKER, invoker, reason, failing_checks, head, key,
+        CI_BYPASS_AUDIT_MARKER,
+        invoker,
+        reason,
+        failing_checks,
+        head,
+        key,
     )
 
 
@@ -2173,8 +2197,11 @@ def _post_ci_bypass_audit(
     """Post the CI-bypass audit comment to the PR, once per (reason, head)."""
     key = _bypass_audit_key(CI_BYPASS_AUDIT_WRITER, reason, head)
     return post_audit_once(
-        "pr", pr_number, key,
-        _ci_bypass_audit_body(invoker, reason, failing_checks, key, head), config,
+        "pr",
+        pr_number,
+        key,
+        _ci_bypass_audit_body(invoker, reason, failing_checks, key, head),
+        config,
         run=gh_run,
         present_note="ci-bypass audit comment already present; idempotent skip",
         posted_note="ci-bypass audit comment posted",
@@ -2207,7 +2234,8 @@ def _override_scope_sentence(audit: _OverrideAudit) -> str:
     if audit.others_approved:
         also = (
             f" (also overridden: {', '.join(audit.others_overridden)})"
-            if audit.others_overridden else ""
+            if audit.others_overridden
+            else ""
         )
         return (
             "This reviewer's slot is satisfied-by-override for this merge; "
@@ -2244,8 +2272,7 @@ def _reviewer_override_audit_body(
     so neither the gate's verdict reader nor ADR-042's read surface counts it.
     """
     provenance = (
-        f"required by capability `{audit.capability}`"
-        if audit.capability else "baseline reviewer"
+        f"required by capability `{audit.capability}`" if audit.capability else "baseline reviewer"
     )
     reason = reason.strip()
     lines = [
@@ -2299,8 +2326,7 @@ def _post_reviewer_override_audit(
         run=gh_run,
         comments=comments,
         present_note=(
-            f"reviewer-override audit for `{audit.reviewer}` already present; "
-            "idempotent skip"
+            f"reviewer-override audit for `{audit.reviewer}` already present; idempotent skip"
         ),
         posted_note=f"reviewer-override audit posted for `{audit.reviewer}`",
     )
@@ -2356,7 +2382,7 @@ def _gh_get_pr_body(pr_number: int | None, config: dict) -> str | None:
 def _check_pr_placeholder(
     pr_body: str,
     pr_number: int | None,
-    capability_root: "Path",
+    capability_root: Path,
 ) -> list[tuple[str, str, str]]:
     """Run residual-placeholder detection on *pr_body* at PHASE_TRANSITION.
 
@@ -2393,7 +2419,9 @@ class _LeadIn:
 
 
 def _lead_in_to_done(
-    issue: dict | None, capability_root: Path, yaml_loader: YAML,
+    issue: dict | None,
+    capability_root: Path,
+    yaml_loader: YAML,
 ) -> _LeadIn | None:
     """The move the issue must make before the merge's move to done, or None.
 
@@ -2421,7 +2449,9 @@ def _lead_in_to_done(
         str(issue.get("title") or ""),
         _read_schema(capability_root, "issue-types.yaml", yaml_loader),
         classification=_read_schema(
-            capability_root, "classification.yaml", yaml_loader,
+            capability_root,
+            "classification.yaml",
+            yaml_loader,
         ),
         labels=labels,
     )
@@ -2441,7 +2471,9 @@ def _lead_in_to_done(
         return None
     for target in targets:
         if target != current and DONE_STATE in infer.legal_targets(
-            workflow, target, structural_type,
+            workflow,
+            target,
+            structural_type,
         ):
             return _LeadIn(from_state=current, to_state=target)
     return None
@@ -2454,7 +2486,9 @@ def _find_issue_branch(issue_number: int) -> str | None:
     try:
         proc = subprocess.run(
             ["git", "branch", "--list", "--format=%(refname:short)"],
-            capture_output=True, text=True, check=False,
+            capture_output=True,
+            text=True,
+            check=False,
         )
     except FileNotFoundError:
         return None
@@ -2470,9 +2504,19 @@ def _find_issue_branch(issue_number: int) -> str | None:
 
 def _find_pr_for_branch(branch: str, config: dict) -> dict | None:
     proc = gh_run(
-        ["gh", "pr", "list", "--head", branch, "--state", "open",
-         "--json", "number,isDraft,headRefName,headRefOid,title,isCrossRepository"],
-        config, check=False,
+        [
+            "gh",
+            "pr",
+            "list",
+            "--head",
+            branch,
+            "--state",
+            "open",
+            "--json",
+            "number,isDraft,headRefName,headRefOid,title,isCrossRepository",
+        ],
+        config,
+        check=False,
     )
     if proc.returncode != 0:
         return None
@@ -2491,11 +2535,11 @@ def _issue_list(numbers) -> str:
     return ", ".join(f"#{n}" for n in numbers)
 
 
-def _invoke_move_issue(
-    issue_number: int, target: str, capability_root_arg: Path | None
-) -> int:
+def _invoke_move_issue(issue_number: int, target: str, capability_root_arg: Path | None) -> int:
     return _run_sibling(
-        "move-issue.py", [str(issue_number), "--to", target], capability_root_arg,
+        "move-issue.py",
+        [str(issue_number), "--to", target],
+        capability_root_arg,
     )
 
 
@@ -2523,7 +2567,9 @@ def _invoke_close_issue(
 
 
 def _run_sibling(
-    script: str, argv: list[str], capability_root_arg: Path | None,
+    script: str,
+    argv: list[str],
+    capability_root_arg: Path | None,
 ) -> int:
     """Run a sibling pm verb non-interactively (`--yes`), passing the capability
     root through; its output streams into this run's. Returns its exit code."""

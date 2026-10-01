@@ -2,7 +2,9 @@
 
 These are the READ-ONLY checks the process engine (COR-033) runs to resolve a
 keyed issue's position and to evaluate its gates. The engine invokes each as a
-plain subprocess `[script, <issue-number>, --json]` through the backbone's command runner — its own process group, killed at the 30-second bound; see the process README's predicate-runner section — (no shell, no `with` args
+plain subprocess `[script, <issue-number>, --json]` through the backbone's command runner — its own
+process group, killed at the 30-second bound; see the process README's predicate-runner section —
+(no shell, no `with` args
 threaded — see the per-state detector scripts for how the target state is
 fixed), reads structured JSON on stdout, and acts on it:
 
@@ -31,12 +33,10 @@ _HERE = Path(__file__).parent.parent
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
-from _lib import axis_labels  # noqa: E402
-from _lib import containment  # noqa: E402
-from _lib import lifecycle_inference as infer  # noqa: E402
-from _lib.gh import gh_run, load_adopter_config  # noqa: E402
-from _lib.membership import resolve_capability_root  # noqa: E402
-
+from _lib import axis_labels, containment
+from _lib import lifecycle_inference as infer
+from _lib.gh import gh_run, load_adopter_config
+from _lib.membership import resolve_capability_root
 
 # A predicate that genuinely COULD NOT evaluate (gh failure, capability
 # missing) carries this marker key. The thin predicate script strips it and
@@ -57,7 +57,6 @@ def _indeterminate(reason: str) -> dict[str, Any]:
 # set the query actually fetches: the issue-corpus ceiling now lives behind the
 # containment seam, which owns acquisition (ADR-035 §5).
 _MERGED_PRS_LIMIT = 100
-
 
 
 # --- shared issue access --------------------------------------------------
@@ -184,8 +183,7 @@ def parent_has_active_descendant(parent_number: int) -> dict[str, Any]:
     return {
         "result": bool(active),
         "reason": (
-            f"#{parent_number} has active descendant(s): "
-            f"{', '.join(f'#{n}' for n in active)}"
+            f"#{parent_number} has active descendant(s): {', '.join(f'#{n}' for n in active)}"
             if active
             else f"#{parent_number} has no in-progress-or-further descendant"
         ),
@@ -238,8 +236,7 @@ def cascade_members(parent_number: int) -> dict[str, Any]:
     resolution = containment.resolve_children(config, parent_number=parent_number)
     if not resolution.complete:
         return _indeterminate(
-            f"the child set for #{parent_number} may be incomplete: "
-            f"{resolution.incomplete_reason}"
+            f"the child set for #{parent_number} may be incomplete: {resolution.incomplete_reason}"
         )
     members = [str(n) for n in resolution.numbers]
     return {
@@ -354,10 +351,7 @@ def gate_pr_merged(issue_number: int, actor: str | None = None) -> dict[str, Any
     return {
         "exists": True,
         "produced_by": merged_by,
-        "reason": (
-            f"PR #{pr.get('number')} closing #{issue_number} merged by "
-            f"{merged_by!r}"
-        ),
+        "reason": (f"PR #{pr.get('number')} closing #{issue_number} merged by {merged_by!r}"),
         "detail": {"pr_number": pr.get("number"), "merged_by": merged_by},
     }
 
@@ -409,9 +403,7 @@ def _find_merged_pr_for_issue(issue_number: int, config: dict[str, Any]) -> Any:
         if issue_number in infer.closing_issue_numbers(body):
             merged_by_raw = pr.get("mergedBy")
             merged_by = (
-                merged_by_raw.get("login")
-                if isinstance(merged_by_raw, dict)
-                else merged_by_raw
+                merged_by_raw.get("login") if isinstance(merged_by_raw, dict) else merged_by_raw
             )
             return {"number": pr.get("number"), "merged_by": merged_by}
     # No match within the fetched page. If we hit the ceiling there may be an

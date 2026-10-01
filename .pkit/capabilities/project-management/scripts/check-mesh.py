@@ -57,17 +57,14 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import axis_carriage  # noqa: E402
-from _lib import axis_labels  # noqa: E402
-from _lib import bootstrap_gate  # noqa: E402
-from _lib.gh import gh_run, load_adopter_config  # noqa: E402
-from _lib.membership import (  # noqa: E402
+from _lib import axis_carriage, axis_labels, bootstrap_gate
+from _lib.gh import gh_run, load_adopter_config
+from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
     resolve_capability_root,
     resolve_invoker_identity,
 )
-
 
 PEER_URI_RE = re.compile(r"^github://([^/]+)/([^/]+)(/.*)?$")
 
@@ -150,7 +147,12 @@ def main() -> int:
     peers = peers_or_err
     if not peers:
         if args.json:
-            print(json.dumps({"status": "skipped", "reason": "no mesh_peers / mesh_source configured"}, indent=2))
+            print(
+                json.dumps(
+                    {"status": "skipped", "reason": "no mesh_peers / mesh_source configured"},
+                    indent=2,
+                )
+            )
         else:
             print("[check-mesh] no peers configured; mesh check skipped.")
         return 0
@@ -158,7 +160,7 @@ def main() -> int:
     # Gather local state.
     local = _gather_local_state(capability_root, config)
     # Gather peer states.
-    peer_states = [_gather_peer_state(p) for p in peers]
+    peer_states = [_gather_peer_state(p, config) for p in peers]
 
     # Compare.
     substrate_map = axis_labels.load_substrate_map(capability_root)
@@ -244,7 +246,7 @@ def _gather_local_state(capability_root: Path, config: dict) -> PeerState:
     )
 
 
-def _gather_peer_state(peer: PeerSpec) -> PeerState:
+def _gather_peer_state(peer: PeerSpec, config: dict) -> PeerState:
     """Fetch a peer's state via gh API. Falls back gracefully on error."""
     labels = _gh_label_list(peer, config) or []
     version = _gh_peer_capability_version(peer, config)
@@ -274,13 +276,15 @@ def _compare(
         # Capability version drift.
         if local.capability_version and peer.capability_version:
             if local.capability_version != peer.capability_version:
-                drift.append({
-                    "kind": "capability-version",
-                    "peer": peer.peer.full,
-                    "local": local.capability_version,
-                    "peer_value": peer.capability_version,
-                    "severity": "warning",
-                })
+                drift.append(
+                    {
+                        "kind": "capability-version",
+                        "peer": peer.peer.full,
+                        "local": local.capability_version,
+                        "peer_value": peer.capability_version,
+                        "severity": "warning",
+                    }
+                )
 
         # Label drift — only methodology-mandated classes, and only where the
         # kit's OWN `<axis>:*` labels are the substrate.
@@ -300,47 +304,55 @@ def _compare(
         for axis in ("type", "priority", "workstream"):
             if not axis_carriage.expects_kit_labels(axis, config, substrate_map):
                 continue
-            local_set = {l for l in local.labels if l.startswith(f"{axis}:")}
-            peer_set = {l for l in peer.labels if l.startswith(f"{axis}:")}
+            local_set = {label for label in local.labels if label.startswith(f"{axis}:")}
+            peer_set = {label for label in peer.labels if label.startswith(f"{axis}:")}
             if local_set != peer_set:
-                drift.append({
-                    "kind": f"{axis}-labels",
-                    "peer": peer.peer.full,
-                    "in_local_only": sorted(local_set - peer_set),
-                    "in_peer_only": sorted(peer_set - local_set),
-                    "severity": "warning",
-                })
+                drift.append(
+                    {
+                        "kind": f"{axis}-labels",
+                        "peer": peer.peer.full,
+                        "in_local_only": sorted(local_set - peer_set),
+                        "in_peer_only": sorted(peer_set - local_set),
+                        "severity": "warning",
+                    }
+                )
 
         # Members drift — only when both sides are in closed mode.
         if local.members and peer.members:
             local_logins = sorted(
-                m.get("github_login") for m in local.members
+                m.get("github_login")
+                for m in local.members
                 if isinstance(m, dict) and m.get("github_login")
             )
             peer_logins = sorted(
-                m.get("github_login") for m in peer.members
+                m.get("github_login")
+                for m in peer.members
                 if isinstance(m, dict) and m.get("github_login")
             )
             if local_logins != peer_logins:
-                drift.append({
-                    "kind": "members",
-                    "peer": peer.peer.full,
-                    "in_local_only": sorted(set(local_logins) - set(peer_logins)),
-                    "in_peer_only": sorted(set(peer_logins) - set(local_logins)),
-                    "severity": "warning",
-                })
+                drift.append(
+                    {
+                        "kind": "members",
+                        "peer": peer.peer.full,
+                        "in_local_only": sorted(set(local_logins) - set(peer_logins)),
+                        "in_peer_only": sorted(set(peer_logins) - set(local_logins)),
+                        "severity": "warning",
+                    }
+                )
 
         # Milestone drift — title comparison.
         local_ms = set(local.milestones)
         peer_ms = set(peer.milestones)
         if local_ms != peer_ms:
-            drift.append({
-                "kind": "milestones",
-                "peer": peer.peer.full,
-                "in_local_only": sorted(local_ms - peer_ms),
-                "in_peer_only": sorted(peer_ms - local_ms),
-                "severity": "warning",
-            })
+            drift.append(
+                {
+                    "kind": "milestones",
+                    "peer": peer.peer.full,
+                    "in_local_only": sorted(local_ms - peer_ms),
+                    "in_peer_only": sorted(peer_ms - local_ms),
+                    "severity": "warning",
+                }
+            )
 
     return drift
 

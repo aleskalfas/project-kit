@@ -12,15 +12,9 @@ from pathlib import Path
 
 import pytest
 
-
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = (
-    REPO_ROOT
-    / ".pkit"
-    / "capabilities"
-    / "project-management"
-    / "scripts"
-    / "validate-issue.py"
+    REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "validate-issue.py"
 )
 
 
@@ -62,7 +56,10 @@ def body_format() -> dict:
             "task": {
                 "required_sections": [
                     {"heading": "## What", "severity": "[validation-severity:hard-reject]"},
-                    {"heading": "## Acceptance criteria", "severity": "[validation-severity:hard-reject]"},
+                    {
+                        "heading": "## Acceptance criteria",
+                        "severity": "[validation-severity:hard-reject]",
+                    },
                     {"heading": "## Doc impact", "severity": "[validation-severity:hard-reject]"},
                 ],
             },
@@ -102,7 +99,10 @@ def _make_issue(*, body: str, labels=None, assignees=None, project_items=None) -
     return {
         "title": "[Task] Install the Claude Code CLI inside the sandbox",
         "body": body,
-        "labels": [{"name": l} for l in (labels or ["type:feature", "priority:Medium", "workstream:cli"])],
+        "labels": [
+            {"name": label}
+            for label in (labels or ["type:feature", "priority:Medium", "workstream:cli"])
+        ],
         "assignees": assignees if assignees is not None else [{"login": "alice"}],
         **({"projectItems": project_items} if project_items is not None else {}),
     }
@@ -120,9 +120,7 @@ def test_validate_issue_accepts_mandatory_state_param(
 ) -> None:
     """Signature change: mandatory_state is now a recognised kwarg."""
     issue = _make_issue(
-        body=(
-            "Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."
-        )
+        body=("Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone.")
     )
     findings = vi._validate_issue(
         issue=issue,
@@ -142,9 +140,7 @@ def test_validate_uses_schema_severity_for_missing_assignee(
 ) -> None:
     """drift_severity (warning) applies on an existing-issue check."""
     issue = _make_issue(
-        body=(
-            "Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."
-        ),
+        body=("Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."),
         assignees=[],
     )
     findings = vi._validate_issue(
@@ -168,9 +164,7 @@ def test_board_membership_drift_warning_for_board_adopter(
 ) -> None:
     """Open board-mode issue with empty projectItems → warning drift."""
     issue = _make_issue(
-        body=(
-            "Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."
-        ),
+        body=("Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."),
         labels=["type:feature"],
         project_items=[],
     )
@@ -192,9 +186,7 @@ def test_board_membership_skipped_for_label_substrate(
 ) -> None:
     """Label-fallback adopters never trigger board-membership findings."""
     issue = _make_issue(
-        body=(
-            "Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."
-        ),
+        body=("Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."),
         project_items=[],
     )
     findings = vi._validate_issue(
@@ -213,9 +205,7 @@ def test_board_membership_skipped_when_projectitems_absent(
 ) -> None:
     """Without projectItems in the gh response, we don't fabricate a finding."""
     issue = _make_issue(
-        body=(
-            "Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."
-        ),
+        body=("Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."),
         labels=["type:feature"],
         project_items=None,  # omitted entirely
     )
@@ -235,9 +225,7 @@ def test_board_membership_no_finding_when_present(
 ) -> None:
     """projectItems with at least one entry → no drift."""
     issue = _make_issue(
-        body=(
-            "Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."
-        ),
+        body=("Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."),
         labels=["type:feature"],
         project_items=[{"id": "PVTI_xyz"}],
     )
@@ -260,9 +248,7 @@ def test_missing_mandatory_state_param_still_warns_on_missing_assignee(
 ) -> None:
     """Backward-compat: when mandatory_state isn't passed, defaults apply."""
     issue = _make_issue(
-        body=(
-            "Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."
-        ),
+        body=("Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."),
         assignees=[],
     )
     findings = vi._validate_issue(

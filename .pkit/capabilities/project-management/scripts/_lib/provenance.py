@@ -242,9 +242,7 @@ def render_filing_comment(versions: Versions, today: str | None = None) -> str:
     """Build the immutable filing comment body (with idempotency marker)."""
     if today is None:
         today = _dt.date.today().isoformat()
-    line = (
-        f"🧰 Filed under pkit — tree `{versions.tree}` · pm `{versions.capability}`"
-    )
+    line = f"🧰 Filed under pkit — tree `{versions.tree}` · pm `{versions.capability}`"
     if versions.cli is not None:
         line += f" · cli `{versions.cli}`"
         if versions.drifted:

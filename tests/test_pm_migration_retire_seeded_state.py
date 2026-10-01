@@ -105,9 +105,7 @@ def test_no_hasher_degrades_instead_of_halting(tmp_path: Path) -> None:
 
 
 def test_idempotent_on_a_tree_with_nothing_seeded(tmp_path: Path) -> None:
-    project = (
-        tmp_path / ".pkit" / "capabilities" / "project-management" / "project"
-    )
+    project = tmp_path / ".pkit" / "capabilities" / "project-management" / "project"
     project.mkdir(parents=True)
     (project / ".gitkeep").touch()
 

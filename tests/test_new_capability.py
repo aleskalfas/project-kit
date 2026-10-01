@@ -42,7 +42,9 @@ def test_stamp_capability_creates_expected_layout(kit_target: Path) -> None:
 def test_stamp_capability_creates_migrations_subdir(kit_target: Path) -> None:
     """Per COR-010, capabilities ship a migrations/ directory so version bumps can bridge state."""
     result = stamp_capability(kit_target, name="evidence")
-    assert result.migrations_dir == kit_target / ".pkit" / "capabilities" / "evidence" / "migrations"
+    assert (
+        result.migrations_dir == kit_target / ".pkit" / "capabilities" / "evidence" / "migrations"
+    )
     assert result.migrations_dir.is_dir()
     assert (result.migrations_dir / ".gitkeep").is_file()
 
@@ -108,13 +110,12 @@ def test_stamp_capability_creates_capabilities_dir_if_missing(
 
 
 def test_stamp_capability_does_not_register_in_backbone_manifest(kit_target: Path) -> None:
-    """Capabilities are kit-shipped; adopters register them at install time, not at scaffold time."""
+    """Capabilities are kit-shipped; adopters register them at install time, not at scaffold
+    time."""
     from project_kit import manifest as manifest_mod
 
     stamp_capability(kit_target, name="evidence")
     backbone = manifest_mod.read_backbone_manifest(kit_target)
     assert backbone is not None
-    names_of_capability_kind = [
-        c.name for c in backbone.components if c.kind == "capability"
-    ]
+    names_of_capability_kind = [c.name for c in backbone.components if c.kind == "capability"]
     assert "evidence" not in names_of_capability_kind

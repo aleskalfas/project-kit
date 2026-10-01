@@ -23,11 +23,8 @@ from pathlib import Path
 
 import pytest
 
-
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SCRIPTS_DIR = (
-    REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
-)
+SCRIPTS_DIR = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
 BOOTSTRAP_PATH = SCRIPTS_DIR / "bootstrap.py"
 PRECHECK_PATH = SCRIPTS_DIR / "pre-check.py"
 
@@ -92,9 +89,7 @@ def _make_repo(tmp_path: Path, *, contributor: bool) -> Path:
             f"    manifest: .pkit/capabilities/{name}/manifest.yaml",
         ]
     (tmp_path / ".pkit").mkdir(parents=True, exist_ok=True)
-    (tmp_path / ".pkit" / "manifest.yaml").write_text(
-        "\n".join(lines) + "\n", encoding="utf-8"
-    )
+    (tmp_path / ".pkit" / "manifest.yaml").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
     cap_root = tmp_path / ".pkit" / "capabilities" / "project-management"
     cap_root.mkdir(parents=True, exist_ok=True)
@@ -102,9 +97,7 @@ def _make_repo(tmp_path: Path, *, contributor: bool) -> Path:
     if contributor:
         design_dir = tmp_path / ".pkit" / "capabilities" / "ux-ui-design"
         design_dir.mkdir(parents=True, exist_ok=True)
-        (design_dir / "label-contributions.yaml").write_text(
-            _NEEDS_DESIGN, encoding="utf-8"
-        )
+        (design_dir / "label-contributions.yaml").write_text(_NEEDS_DESIGN, encoding="utf-8")
     return cap_root
 
 
@@ -144,9 +137,7 @@ def test_bootstrap_plans_contributed_label_create(bs, tmp_path, classification) 
     assert plan.has_creates() is True
 
 
-def test_bootstrap_contributed_label_idempotent_when_present(
-    bs, tmp_path, classification
-) -> None:
+def test_bootstrap_contributed_label_idempotent_when_present(bs, tmp_path, classification) -> None:
     cap_root = _make_repo(tmp_path, contributor=True)
     plan = _compute_plan(bs, cap_root, classification, existing={"needs-design"})
 
@@ -154,9 +145,7 @@ def test_bootstrap_contributed_label_idempotent_when_present(
     assert "needs-design" in plan.contributed_label_exists
 
 
-def test_bootstrap_no_contributed_labels_for_pm_only_adopter(
-    bs, tmp_path, classification
-) -> None:
+def test_bootstrap_no_contributed_labels_for_pm_only_adopter(bs, tmp_path, classification) -> None:
     cap_root = _make_repo(tmp_path, contributor=False)
     plan = _compute_plan(bs, cap_root, classification, existing=set())
     assert plan.contributed_label_creates == []
@@ -179,8 +168,8 @@ def test_bootstrap_contributed_create_does_not_route_through_axis_path(
 
 def _run_check(pc, cap_root: Path, existing_labels: set[str], monkeypatch):
     """Invoke _check_contributed_labels with gh label list mocked."""
-    import subprocess as _sp
     import json as _json
+    import subprocess as _sp
 
     class _Proc:
         returncode = 0
@@ -203,9 +192,7 @@ def test_precheck_warns_on_missing_contributed_label(pc, tmp_path, monkeypatch) 
 
 def test_precheck_ok_when_contributed_label_present(pc, tmp_path, monkeypatch) -> None:
     cap_root = _make_repo(tmp_path, contributor=True)
-    results = _run_check(
-        pc, cap_root, existing_labels={"needs-design"}, monkeypatch=monkeypatch
-    )
+    results = _run_check(pc, cap_root, existing_labels={"needs-design"}, monkeypatch=monkeypatch)
     assert any(r.status == "ok" for r in results)
     assert all(r.status != "warn" for r in results)
 

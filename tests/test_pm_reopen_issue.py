@@ -42,15 +42,25 @@ def _issue(*, state="CLOSED", labels=("state:done", "type:bug"), milestone=None)
     }
 
 
-def _run(ri, monkeypatch, argv: list[str], issue: dict, *, config=None, substrate_map=None,
-         fail_label_edit=False) -> SimpleNamespace:
+def _run(
+    ri,
+    monkeypatch,
+    argv: list[str],
+    issue: dict,
+    *,
+    config=None,
+    substrate_map=None,
+    fail_label_edit=False,
+) -> SimpleNamespace:
     monkeypatch.setattr(sys, "argv", ["reopen-issue", *argv])
     monkeypatch.setattr(ri, "resolve_capability_root", lambda _explicit: CAP_ROOT)
     monkeypatch.setattr(ri.bootstrap_gate, "enforce", lambda *a, **k: True)
     monkeypatch.setattr(ri.session_guard, "enforce", lambda **k: True)
     monkeypatch.setattr(ri, "load_adopter_config", lambda _root: config or {})
     monkeypatch.setattr(ri, "_read_members", lambda *a: [])
-    monkeypatch.setattr(ri, "resolve_invoker_identity", lambda **k: SimpleNamespace(github_login="me"))
+    monkeypatch.setattr(
+        ri, "resolve_invoker_identity", lambda **k: SimpleNamespace(github_login="me")
+    )
     monkeypatch.setattr(ri, "check_membership", lambda *a: SimpleNamespace(allowed=True))
     monkeypatch.setattr(ri.axis_labels, "load_substrate_map", lambda *_a, **_k: substrate_map)
     monkeypatch.setattr(ri, "_gh_get_issue", lambda _n, _config: issue)
@@ -88,8 +98,16 @@ def test_every_state_label_is_removed(ri, monkeypatch) -> None:
     """A stale non-terminal label left beside done would otherwise win the
     position read once the issue is open."""
     rec = _run(ri, monkeypatch, ["42", "--yes"], _issue(labels=("state:review", "state:done")))
-    assert ["gh", "issue", "edit", "42", "--remove-label", "state:review",
-            "--remove-label", "state:done"] in rec.calls
+    assert [
+        "gh",
+        "issue",
+        "edit",
+        "42",
+        "--remove-label",
+        "state:review",
+        "--remove-label",
+        "state:done",
+    ] in rec.calls
 
 
 def test_an_open_issue_stuck_at_done_is_repaired(ri, monkeypatch, capsys) -> None:
@@ -101,7 +119,9 @@ def test_an_open_issue_stuck_at_done_is_repaired(ri, monkeypatch, capsys) -> Non
 
 
 def test_an_open_issue_in_work_is_a_noop(ri, monkeypatch, capsys) -> None:
-    rec = _run(ri, monkeypatch, ["42", "--yes"], _issue(state="OPEN", labels=("state:in-progress",)))
+    rec = _run(
+        ri, monkeypatch, ["42", "--yes"], _issue(state="OPEN", labels=("state:in-progress",))
+    )
     assert rec.rc == 0
     assert rec.calls == []
     assert "[noop]" in capsys.readouterr().out

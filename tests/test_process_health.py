@@ -327,9 +327,7 @@ def health_repo(tmp_path: Path):
     file-backed at the repo root (predicates run with cwd = repo root).
     """
 
-    def build(
-        unit_yaml: str | None = None, *, include_pipeline: bool = False
-    ) -> Path:
+    def build(unit_yaml: str | None = None, *, include_pipeline: bool = False) -> Path:
         repo = tmp_path
         caps = repo / ".pkit" / "capabilities"
 
@@ -376,9 +374,7 @@ def health_repo(tmp_path: Path):
             )
         (delivery / "schemas" / "unit.yaml").write_text(unit_yaml, encoding="utf-8")
         if include_pipeline:
-            (delivery / "schemas" / "pipeline.yaml").write_text(
-                _PIPELINE_DEF, encoding="utf-8"
-            )
+            (delivery / "schemas" / "pipeline.yaml").write_text(_PIPELINE_DEF, encoding="utf-8")
         scripts = delivery / "scripts"
         _write_script(scripts / "unit_detect.py", _NOOP)
         _write_script(scripts / "list_candidates.py", _LIST_CANDIDATES)
@@ -540,9 +536,7 @@ def test_malformed_resolve_member_is_indeterminate_not_a_miss(health_repo) -> No
     assert [f.subject for f in cr.indeterminate] == ["s-int"]
 
 
-def test_malformed_candidates_member_is_contract_indeterminate(
-    health_repo, monkeypatch
-) -> None:
+def test_malformed_candidates_member_is_contract_indeterminate(health_repo, monkeypatch) -> None:
     # {'candidates': ['ok', 42]} must NOT filter to just ['ok'] (or to clean):
     # a malformed member is an uninterpretable payload -> contract-level
     # indeterminate, exit non-zero.
@@ -583,9 +577,7 @@ def test_determinate_empty_candidate_set_is_clean(health_repo) -> None:
 
 
 def test_phantom_trigger_is_indeterminate_never_green(health_repo) -> None:
-    repo = health_repo(
-        _UNIT_DEF_TEMPLATE.format(upstream="design:screen", trigger="aproved-typo")
-    )
+    repo = health_repo(_UNIT_DEF_TEMPLATE.format(upstream="design:screen", trigger="aproved-typo"))
     report = ph.build_report(repo)
     cr = _the_contract(report)
     assert cr.misses == ()
@@ -657,9 +649,7 @@ def test_focus_filters_to_contracts_touching_the_address(health_repo) -> None:
     upstream_focus = ph.build_report(repo, focus="design:screen")
     assert [c.contract.upstream for c in upstream_focus.contracts] == ["design:screen"]
     downstream_focus = ph.build_report(repo, focus="delivery:pipeline")
-    assert [c.contract.downstream for c in downstream_focus.contracts] == [
-        "delivery:pipeline"
-    ]
+    assert [c.contract.downstream for c in downstream_focus.contracts] == ["delivery:pipeline"]
     untouched = ph.build_report(repo, focus="no:such")
     assert untouched.contracts == ()
     # ...and an address the walk never reached is not clean — see below.
@@ -679,8 +669,7 @@ def _register_capabilities(repo: Path, *names: str) -> None:
         for name in names
     )
     (repo / ".pkit" / "manifest.yaml").write_text(
-        "schema_version: 1\nbackbone_version: 0.0.0\ncomponents:\n"
-        + (entries or "  []\n"),
+        "schema_version: 1\nbackbone_version: 0.0.0\ncomponents:\n" + (entries or "  []\n"),
         encoding="utf-8",
     )
 
@@ -755,9 +744,7 @@ def test_scoped_run_naming_an_unresolvable_upstream_is_not_double_counted(
     # The address is not walked, but a declared contract NAMES it as upstream —
     # so the run did have something to say, and says it once (the contract's own
     # unresolvable-upstream indeterminate), not twice.
-    repo = health_repo(
-        _UNIT_DEF_TEMPLATE.format(upstream="ghost:process", trigger="ready")
-    )
+    repo = health_repo(_UNIT_DEF_TEMPLATE.format(upstream="ghost:process", trigger="ready"))
     report = ph.build_report(repo, focus="ghost:process")
     assert len(report.contracts) == 1
     assert report.unresolved_scope is None
@@ -868,9 +855,7 @@ process:
   transitions: []
 """
 
-_CHAIN_EMPTY_CANDIDATES = (
-    "import json\nprint(json.dumps({'candidates': [], 'reason': 'none'}))\n"
-)
+_CHAIN_EMPTY_CANDIDATES = "import json\nprint(json.dumps({'candidates': [], 'reason': 'none'}))\n"
 
 
 def _write_chain_repo(root: Path, processes: dict[str, str | None]) -> Path:
@@ -910,9 +895,10 @@ def test_couplings_order_topologically_sources_first(tmp_path: Path) -> None:
     # alpha). Sources first: the gamma-headed coupling precedes the beta one —
     # NOT plain address order (which would put alpha's declaration first).
     report = ph.build_report(repo)
-    assert [
-        (c.contract.upstream, c.contract.downstream) for c in report.contracts
-    ] == [("chain:gamma", "chain:beta"), ("chain:beta", "chain:alpha")]
+    assert [(c.contract.upstream, c.contract.downstream) for c in report.contracts] == [
+        ("chain:gamma", "chain:beta"),
+        ("chain:beta", "chain:alpha"),
+    ]
     assert report.ok
 
 
@@ -923,9 +909,10 @@ def test_declared_cycle_falls_back_to_name_order_deterministically(
     # name-order fallback pins a deterministic report (and terminates).
     repo = _write_chain_repo(tmp_path, {"pong": "chain:ping", "ping": "chain:pong"})
     report = ph.build_report(repo)
-    assert [
-        (c.contract.upstream, c.contract.downstream) for c in report.contracts
-    ] == [("chain:ping", "chain:pong"), ("chain:pong", "chain:ping")]
+    assert [(c.contract.upstream, c.contract.downstream) for c in report.contracts] == [
+        ("chain:ping", "chain:pong"),
+        ("chain:pong", "chain:ping"),
+    ]
     assert ph.render_json(report) == ph.render_json(ph.build_report(repo))
 
 
@@ -962,9 +949,7 @@ def test_cli_exits_zero_when_clean(health_repo, monkeypatch) -> None:
     assert "0 missed, 0 indeterminate" in result.output
 
 
-def test_cli_exits_non_zero_on_misses_with_flow_direction_header(
-    health_repo, monkeypatch
-) -> None:
+def test_cli_exits_non_zero_on_misses_with_flow_direction_header(health_repo, monkeypatch) -> None:
     repo = health_repo()
     for i in range(1, 8):
         _add_screen(repo, f"screen-{i}")
@@ -978,9 +963,7 @@ def test_cli_exits_non_zero_on_misses_with_flow_direction_header(
 
 
 def test_cli_exits_non_zero_on_indeterminate_alone(health_repo, monkeypatch) -> None:
-    repo = health_repo(
-        _UNIT_DEF_TEMPLATE.format(upstream="design:screen", trigger="phantom")
-    )
+    repo = health_repo(_UNIT_DEF_TEMPLATE.format(upstream="design:screen", trigger="phantom"))
     result = _invoke_health(repo, monkeypatch)
     assert result.exit_code == 1
     assert "contract indeterminate" in result.output
@@ -1011,9 +994,7 @@ def test_cli_reports_no_contracts_declared(health_repo, monkeypatch) -> None:
     assert "no hand-off contracts declared" in result.output
 
 
-def test_cli_scoped_run_matching_nothing_exits_non_zero(
-    health_repo, monkeypatch
-) -> None:
+def test_cli_scoped_run_matching_nothing_exits_non_zero(health_repo, monkeypatch) -> None:
     repo = health_repo()
     _register_capabilities(repo, "design")
     result = _invoke_health(repo, monkeypatch, "--process", "delivery:unit")
@@ -1222,9 +1203,7 @@ def test_importing_runtime_surfaces_does_not_load_health_module() -> None:
     assert completed.returncode == 0, completed.stderr
 
 
-def test_health_is_report_only_never_moves_never_writes(
-    health_repo, monkeypatch
-) -> None:
+def test_health_is_report_only_never_moves_never_writes(health_repo, monkeypatch) -> None:
     """Report-only (COR-042 point 3): the walk resolves positions and runs the
     two seam predicates but never validates/executes a move and writes nothing.
     Poison the engine's mutating/gating surfaces; snapshot the repo tree."""

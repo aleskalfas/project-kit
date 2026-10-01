@@ -9,6 +9,7 @@ security review's proofs of concept pin below. These fixtures drive the hook's
 entry point (`hook_decide`) with the REAL catalog, against a real repository so
 target paths resolve the way they do live.
 """
+
 from __future__ import annotations
 
 import copy
@@ -71,7 +72,11 @@ def _model(dm, catalog, *, posture: str = "lenient", extra: tuple[dict, ...] = (
         "posture": posture,
         "grants": [
             *dm.guardrail_denies(catalog),
-            {"subject": "all", "privilege": [_tok("repo-read"), _tok("workspace")], "effect": "allow"},
+            {
+                "subject": "all",
+                "privilege": [_tok("repo-read"), _tok("workspace")],
+                "effect": "allow",
+            },
             *extra,
         ],
     }
@@ -173,7 +178,11 @@ _SHELL_WRITES = [  # (command, lenient verdict, strict verdict)
     (f"echo =(touch PWNED) > {WS}/x", "abstain", "deny"),  # zsh process substitution
     (f"cd src && echo =(touch PWNED) > ../{WS}/x", "abstain", "abstain"),  # behind a leading cd
     (rf"echo ${{(e)C:=\$\(touch PWNED\)}} > {WS}/x", "abstain", "deny"),  # zsh (e) flag
-    (rf"echo ${{C:=\$\(touch PWNED\)}}${{C@P}} > {WS}/x", "abstain", "deny"),  # bash 5 prompt expansion
+    (
+        rf"echo ${{C:=\$\(touch PWNED\)}}${{C@P}} > {WS}/x",
+        "abstain",
+        "deny",
+    ),  # bash 5 prompt expansion
     (f"echo *(e:'touch PWNED':) > {WS}/x", "abstain", "deny"),  # zsh glob qualifier
     # the code review's: the `cd` fails, the remainder runs in the project root
     (f"cd {WS}/nope; rm -f *", "abstain", "deny"),
@@ -205,13 +214,18 @@ def test_a_redirect_behind_a_leading_cd_still_fails_closed(dm, catalog, root) ->
         f"cd {root} && git diff > {WS}/change.patch",
         f"cd {root} && cat > {WS}/body.md <<'EOF'\nIt's done.\nEOF",
     ):
-        verdict, reason = dm.hook_decide(model, catalog, _bash(command, root), project_root=str(root))
+        verdict, reason = dm.hook_decide(
+            model, catalog, _bash(command, root), project_root=str(root)
+        )
         assert verdict == "abstain"
         assert "untrusted construct" in reason
 
 
 def test_the_recursive_deletion_guardrail_still_denies_in_the_workspace(dm, catalog, root) -> None:
-    assert _decide(dm, _autonomous(dm, catalog), catalog, _bash(f"rm -r {WS}/old", root), root) == "deny"
+    assert (
+        _decide(dm, _autonomous(dm, catalog), catalog, _bash(f"rm -r {WS}/old", root), root)
+        == "deny"
+    )
 
 
 @pytest.fixture(scope="module")
@@ -221,7 +235,10 @@ def main_dm(tmp_path_factory):
     for ref in ("origin/main", "main"):
         shown = subprocess.run(
             ["git", "show", f"{ref}:.pkit/permissions/decide.py"],
-            cwd=REPO, capture_output=True, text=True, check=False,
+            cwd=REPO,
+            capture_output=True,
+            text=True,
+            check=False,
         )
         if shown.returncode == 0:
             path = tmp_path_factory.mktemp("main-decide") / "decide.py"
@@ -230,16 +247,19 @@ def main_dm(tmp_path_factory):
     pytest.skip("base ref (origin/main|main) not available")
 
 
-@pytest.mark.parametrize("command", [
-    *(command for command, _, _ in _SHELL_WRITES),
-    f"cd {WS} && echo x > y",
-    f"cd {WS}/nope; rm -f ../../*",
-    "cd src && gh pr list",
-    "cd src && gh pr list > out.txt",
-    "git status",
-    "rm -rf build/",
-    "python3 build.py > out.txt",
-])
+@pytest.mark.parametrize(
+    "command",
+    [
+        *(command for command, _, _ in _SHELL_WRITES),
+        f"cd {WS} && echo x > y",
+        f"cd {WS}/nope; rm -f ../../*",
+        "cd src && gh pr list",
+        "cd src && gh pr list > out.txt",
+        "git status",
+        "rm -rf build/",
+        "python3 build.py > out.txt",
+    ],
+)
 @pytest.mark.parametrize("posture", ["lenient", "strict"])
 def test_the_shell_judgment_is_mains(dm, main_dm, catalog, root, command, posture) -> None:
     model = _autonomous(dm, catalog, posture=posture)
@@ -302,7 +322,6 @@ def test_a_planted_git_pointer_does_not_make_a_worktree(dm, catalog, root, tmp_p
         (planted / ".git").write_text(pointer, encoding="utf-8")
         payload = _write(planted / WS / "x.md", planted)
         assert _decide(dm, model, catalog, payload, root) == "abstain", name
-
 
 
 # --- a repository nested inside the workspace is not the workspace -----------------------
@@ -378,15 +397,18 @@ def test_a_symlinked_workspace_folder_is_never_the_workspace(dm, catalog, tmp_pa
     assert _decide(dm, model, catalog, _write(home / ".bashrc", root), root) == "abstain"
 
 
-@pytest.mark.parametrize("folder,target", [
-    ("/", "src/x.py"),
-    ("/tmp", "/tmp/x"),
-    ("~", "~/x"),
-    ("..", "src/x.py"),
-    ("../elsewhere", "../elsewhere/x"),
-    ("sub/../..", "../x"),
-    (".", "src/x.py"),
-])
+@pytest.mark.parametrize(
+    "folder,target",
+    [
+        ("/", "src/x.py"),
+        ("/tmp", "/tmp/x"),
+        ("~", "~/x"),
+        ("..", "src/x.py"),
+        ("../elsewhere", "../elsewhere/x"),
+        ("sub/../..", "../x"),
+        (".", "src/x.py"),
+    ],
+)
 def test_a_folder_entry_that_is_absolute_or_climbs_out_is_never_recognized(
     dm, catalog, root, folder, target
 ) -> None:
@@ -422,7 +444,9 @@ def test_every_shipped_profile_grants_the_workspace_to_every_agent(dm, profile) 
         token
         for grant in doc["grants"]
         if grant["subject"] == "all" and grant.get("effect", "allow") == "allow"
-        for token in (grant["privilege"] if isinstance(grant["privilege"], list) else [grant["privilege"]])
+        for token in (
+            grant["privilege"] if isinstance(grant["privilege"], list) else [grant["privilege"]]
+        )
     }
     assert _tok("workspace") in granted
 
@@ -459,7 +483,7 @@ def _hook_tree(root: Path) -> None:
         "schema_version: 1\n"
         "grants:\n"
         "  - subject: all\n"
-        "    privilege: \"[privilege-catalog:workspace]\"\n"
+        '    privilege: "[privilege-catalog:workspace]"\n'
         "    effect: allow\n",
         encoding="utf-8",
     )

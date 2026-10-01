@@ -66,12 +66,12 @@ from _lib import axis_labels
 # be correct, and a guard that only forbids reading the flag cannot see it.
 # `False` would also be ambiguous between "the kit's own label" and "nothing".
 Carriage = Literal[
-    "kit-label",       # greenfield: the kit's own `<axis>:<value>` label
-    "adopter-label",   # a `label` binding: the adopter's own label string
-    "title",           # a `title-prefix` binding: carried in the issue title
-    "derived",         # a `derive` binding: computed by the detector engine
-    "board",           # a field on the configured Projects-v2 board
-    "degrade",         # nothing carries it; rules needing it soften
+    "kit-label",  # greenfield: the kit's own `<axis>:<value>` label
+    "adopter-label",  # a `label` binding: the adopter's own label string
+    "title",  # a `title-prefix` binding: carried in the issue title
+    "derived",  # a `derive` binding: computed by the detector engine
+    "board",  # a field on the configured Projects-v2 board
+    "degrade",  # nothing carries it; rules needing it soften
 ]
 
 # The axes the board can claim when the map is silent. `type` is absent
@@ -202,15 +202,9 @@ def expects_kit_labels(
 # they would drift (COR-007). `{axis}` is substituted by :func:`describe`.
 _CARRIAGE_PHRASE: dict[Carriage, str] = {
     "kit-label": "by the kit's own `{axis}:*` labels",
-    "adopter-label": (
-        "by your OWN labels (a `label:` binding in project/substrate-map.yaml)"
-    ),
-    "title": (
-        "in the issue TITLE (a `title-prefix:` binding in project/substrate-map.yaml)"
-    ),
-    "derived": (
-        "by a detection predicate (a `derive:` binding in project/substrate-map.yaml)"
-    ),
+    "adopter-label": ("by your OWN labels (a `label:` binding in project/substrate-map.yaml)"),
+    "title": ("in the issue TITLE (a `title-prefix:` binding in project/substrate-map.yaml)"),
+    "derived": ("by a detection predicate (a `derive:` binding in project/substrate-map.yaml)"),
     "board": "on your Projects-v2 board (a board field, not a label)",
     "degrade": "by nothing — the axis is unsupported under your substrate-map",
 }

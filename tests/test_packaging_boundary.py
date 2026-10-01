@@ -105,8 +105,7 @@ def test_ownership_has_no_third_party_module_level_import() -> None:
         elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
             roots.append(node.module.split(".")[0])
     third_party = sorted(
-        r for r in set(roots)
-        if r not in sys.stdlib_module_names and r != "__future__"
+        r for r in set(roots) if r not in sys.stdlib_module_names and r != "__future__"
     )
     assert not third_party, (
         f"module-level third-party import(s) would break the build hook: {third_party}"
@@ -129,7 +128,10 @@ def built_wheel(tmp_path_factory) -> Path:
     out = tmp_path_factory.mktemp("wheel")
     proc = subprocess.run(
         [uv, "build", "--wheel", "--out-dir", str(out)],
-        cwd=REPO_ROOT, capture_output=True, text=True, timeout=600,
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        timeout=600,
     )
     if proc.returncode != 0:
         pytest.fail(f"wheel build failed:\n{proc.stdout}\n{proc.stderr}")
@@ -158,10 +160,12 @@ def test_no_adopter_owned_content_ships(ownership, built_wheel: Path) -> None:
     archive = zipfile.ZipFile(built_wheel)
     by_rel = {
         n.split("/_kit/", 1)[1]: n
-        for n in archive.namelist() if "/_kit/" in n and not n.endswith("/")
+        for n in archive.namelist()
+        if "/_kit/" in n and not n.endswith("/")
     }
     offenders = sorted(
-        rel for rel, name in by_rel.items()
+        rel
+        for rel, name in by_rel.items()
         if ownership.is_adopter_owned_by_tier(rel)
         and not (Path(rel).name == ".gitkeep" and archive.read(name) == b"")
     )
@@ -174,7 +178,9 @@ def test_no_build_cache_ships(built_wheel: Path) -> None:
     """A per-file force-include bypasses `pyproject.toml`'s `exclude`, so the
     hook applies the patterns itself. Missing this shipped 87 `.pyc` files."""
     names = zipfile.ZipFile(built_wheel).namelist()
-    cached = [n for n in names if BUILD_CACHE_PARTS & set(Path(n).parts) or n.endswith((".pyc", ".pyo"))]
+    cached = [
+        n for n in names if BUILD_CACHE_PARTS & set(Path(n).parts) or n.endswith((".pyc", ".pyo"))
+    ]
     assert not cached, f"build cache in the distribution: {cached[:10]}"
 
 
@@ -273,7 +279,10 @@ def built_sdist(tmp_path_factory) -> Path:
     out = tmp_path_factory.mktemp("sdist")
     proc = subprocess.run(
         [uv, "build", "--sdist", "--out-dir", str(out)],
-        cwd=REPO_ROOT, capture_output=True, text=True, timeout=600,
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        timeout=600,
     )
     if proc.returncode != 0:
         pytest.fail(f"sdist build failed:\n{proc.stdout}\n{proc.stderr}")
@@ -304,12 +313,12 @@ def _declared_markers() -> list[str]:
 
 
 def _sdist_kit_entries(sdist: Path) -> set[str]:
-    archive = tarfile.open(sdist)
-    return {
-        name.split("/.pkit/", 1)[1]
-        for name in archive.getnames()
-        if "/.pkit/" in name and archive.getmember(name).isfile()
-    }
+    with tarfile.open(sdist) as archive:
+        return {
+            name.split("/.pkit/", 1)[1]
+            for name in archive.getnames()
+            if "/.pkit/" in name and archive.getmember(name).isfile()
+        }
 
 
 def test_no_adopter_owned_path_ships_in_the_sdist(ownership, built_sdist: Path) -> None:
@@ -318,8 +327,7 @@ def test_no_adopter_owned_path_ships_in_the_sdist(ownership, built_sdist: Path) 
     the other. Both must reach the same answer, and only the wheel had artifact
     coverage before."""
     offenders = sorted(
-        rel for rel in _sdist_kit_entries(built_sdist)
-        if ownership.is_adopter_owned_by_tier(rel)
+        rel for rel in _sdist_kit_entries(built_sdist) if ownership.is_adopter_owned_by_tier(rel)
     )
     assert not offenders, f"adopter-owned path(s) in the sdist: {offenders[:10]}"
 
@@ -364,12 +372,8 @@ def test_wheel_and_sdist_agree_on_kit_content(built_wheel: Path, built_sdist: Pa
     wheel_markers = {e for e in wheel_only if Path(e).name == ".gitkeep"}
     in_wheel_not_sdist = sorted(set(wheel_only) - sdist_only - wheel_markers)
     in_sdist_not_wheel = sorted(sdist_only - set(wheel_only) - known_sdist_only)
-    assert not in_wheel_not_sdist, (
-        f"in the wheel but not the sdist: {in_wheel_not_sdist[:10]}"
-    )
-    assert not in_sdist_not_wheel, (
-        f"in the sdist but not the wheel: {in_sdist_not_wheel[:10]}"
-    )
+    assert not in_wheel_not_sdist, f"in the wheel but not the sdist: {in_wheel_not_sdist[:10]}"
+    assert not in_sdist_not_wheel, f"in the sdist but not the wheel: {in_sdist_not_wheel[:10]}"
 
 
 def test_adopter_tier_directories_are_represented(ownership, built_wheel: Path) -> None:
@@ -398,10 +402,7 @@ def test_adopter_tier_directories_are_represented(ownership, built_wheel: Path) 
     # test and the completeness test, silently restoring the regression.
     expected = _declared_markers()
     assert expected, "ADOPTER_TIER_MARKERS not found"
-    missing = [
-        d for d in expected
-        if not any(e.startswith(d + "/") for e in entries)
-    ]
+    missing = [d for d in expected if not any(e.startswith(d + "/") for e in entries)]
     assert not missing, (
         "adopter-tier directories absent from the bundle, so install.py will "
         f"not stub them: {missing}"
@@ -442,7 +443,8 @@ def test_marker_set_is_a_function_of_tracked_state(ownership, built_wheel: Path)
     # ship as ordinary content and are not this test's subject.
     declared = _declared_markers()
     markers = [
-        rel for rel in _kit_entries(built_wheel)
+        rel
+        for rel in _kit_entries(built_wheel)
         if Path(rel).name == ".gitkeep" and ownership.is_adopter_owned_by_tier(rel)
     ]
     assert markers, "expected directory markers; the scaffolding gate needs them"
@@ -460,7 +462,9 @@ def test_marker_set_is_a_function_of_tracked_state(ownership, built_wheel: Path)
             continue
         tracked = subprocess.run(
             ["git", "ls-files", "--", f".pkit/{rel_dir}"],
-            cwd=REPO_ROOT, capture_output=True, text=True,
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
         ).stdout.strip()
         if not tracked:
             offenders.append(f"{rel_dir} (no tracked content — marker is state-dependent)")
@@ -548,8 +552,12 @@ def _load_hook_module():
             pass
 
         stub.BuildHookInterface = BuildHookInterface  # type: ignore[attr-defined]
-        names = ["hatchling", "hatchling.builders", "hatchling.builders.hooks",
-                 "hatchling.builders.hooks.plugin"]
+        names = [
+            "hatchling",
+            "hatchling.builders",
+            "hatchling.builders.hooks",
+            "hatchling.builders.hooks.plugin",
+        ]
         for name in names:
             sys.modules.setdefault(name, types.ModuleType(name))
         sys.modules[stub.__name__] = stub
@@ -758,7 +766,10 @@ def stray_builds(tmp_path_factory) -> dict[str, Path]:
         dest = tmp_path_factory.mktemp(label)
         proc = subprocess.run(
             [uv, "build", *args, "--out-dir", str(dest)],
-            cwd=copy, capture_output=True, text=True, timeout=600,
+            cwd=copy,
+            capture_output=True,
+            text=True,
+            timeout=600,
         )
         if proc.returncode != 0:
             pytest.fail(f"{label} build failed:\n{proc.stdout}\n{proc.stderr}")
@@ -800,8 +811,7 @@ def _package_entries(wheel: Path) -> set[str]:
         return {
             name
             for name in archive.namelist()
-            if not name.endswith("/")
-            and not name.split("/", 1)[0].endswith(WHEEL_METADATA_SUFFIX)
+            if not name.endswith("/") and not name.split("/", 1)[0].endswith(WHEEL_METADATA_SUFFIX)
         }
 
 
@@ -811,8 +821,7 @@ def _metadata_entries(wheel: Path) -> set[str]:
         return {
             name
             for name in archive.namelist()
-            if not name.endswith("/")
-            and name.split("/", 1)[0].endswith(WHEEL_METADATA_SUFFIX)
+            if not name.endswith("/") and name.split("/", 1)[0].endswith(WHEEL_METADATA_SUFFIX)
         }
 
 

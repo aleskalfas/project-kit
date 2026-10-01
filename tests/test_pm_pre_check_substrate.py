@@ -46,6 +46,7 @@ def pc():
 def axis_labels():
     sys.path.insert(0, str(SCRIPTS_DIR))
     from _lib import axis_labels as mod
+
     yield mod
 
 
@@ -131,7 +132,7 @@ def test_unparseable_map_fails_closed_to_degrade_all(axis_labels, tmp_path: Path
 
 
 def test_matrix_reports_served_and_degraded(pc, axis_labels) -> None:
-    sm = axis_labels.load_substrate_map  # sanity: callable present
+    assert callable(axis_labels.load_substrate_map)  # sanity: callable present
     parsed = axis_labels.SubstrateMap(
         axes={
             "priority": {"label": {"remap": {"High": "P0"}}},
@@ -203,12 +204,8 @@ def test_skip_line_names_the_board_for_a_board_carried_axis(pc, axis_labels) -> 
     """The wording the map-only version could not produce: an axis the FLAG
     carries (absent from the map entirely) used to read "unsupported/absent —
     degraded", the opposite of the truth."""
-    parsed = axis_labels.SubstrateMap(
-        axes={"type": {"label": {"remap": {"bug": "kind/bug"}}}}
-    )
-    line = pc._axis_label_check_skipped(
-        "priority", {"has_projects_v2_board": True}, parsed
-    )
+    parsed = axis_labels.SubstrateMap(axes={"type": {"label": {"remap": {"bug": "kind/bug"}}}})
+    line = pc._axis_label_check_skipped("priority", {"has_projects_v2_board": True}, parsed)
     assert line.status == "skip"
     assert "board" in line.detail
     assert "unsupported" not in line.detail
@@ -230,9 +227,7 @@ def test_state_label_check_degrades_under_a_board(pc) -> None:
     `state:*` labels are not demanded — and the check now SAYS so instead of
     being skipped silently by its caller (no `gh` call is made either; the path
     above would fail on the nonexistent capability root if it reached it)."""
-    result = pc._check_state_labels(
-        Path("/nonexistent"), {"has_projects_v2_board": True}, None
-    )
+    result = pc._check_state_labels(Path("/nonexistent"), {"has_projects_v2_board": True}, None)
     assert result.status == "skip"
     assert "board" in result.detail
 
@@ -242,9 +237,7 @@ def test_state_label_check_degrades_under_a_board(pc) -> None:
 # A capability_root with the kit schemas — the title-prefix check reads
 # issue-types.yaml + classification.yaml from there. Point at the live install
 # so the kit prefix vocabulary is the real one.
-_LIVE_CAP_ROOT = (
-    REPO_ROOT / ".pkit" / "capabilities" / "project-management"
-)
+_LIVE_CAP_ROOT = REPO_ROOT / ".pkit" / "capabilities" / "project-management"
 
 
 class _FakeProc:
@@ -256,10 +249,12 @@ class _FakeProc:
 
 def _stub_issue_list(pc, monkeypatch, issues: list[dict]) -> None:
     """Make `gh issue list` (the only subprocess this check runs) return `issues`."""
+
     def fake_run(cmd, *args, **kwargs):
         if cmd[:3] == ["gh", "issue", "list"]:
             return _FakeProc(0, json.dumps(issues))
         return _FakeProc(1, "")
+
     monkeypatch.setattr(pc.subprocess, "run", fake_run)
 
 
@@ -294,9 +289,7 @@ def test_title_prefix_present_map_never_fails_on_native_prefix(
     assert all(r.status != "fail" for r in results)
 
 
-def test_title_prefix_present_map_never_fails_on_no_prefix(
-    pc, axis_labels, monkeypatch
-) -> None:
+def test_title_prefix_present_map_never_fails_on_no_prefix(pc, axis_labels, monkeypatch) -> None:
     """RF-1: under a present map, an issue with NO bracket prefix degrades to a
     skip, never a fail — the second hard-refuse arm is closed too."""
     _stub_issue_list(pc, monkeypatch, [_NO_PREFIX_ISSUE])
@@ -316,9 +309,7 @@ def test_title_prefix_present_map_unrecognised_prefix_degrades(
     assert all(r.status != "fail" for r in results)
 
 
-def test_title_prefix_type_unsupported_skips_entirely(
-    pc, axis_labels, monkeypatch
-) -> None:
+def test_title_prefix_type_unsupported_skips_entirely(pc, axis_labels, monkeypatch) -> None:
     """When `type` is not title-prefix-bound under a present map (here absent ⇒
     unsupported), the kit prefix vocabulary does not apply — skip, never fail."""
     _stub_issue_list(pc, monkeypatch, [_NO_PREFIX_ISSUE, _NATIVE_PREFIX_ISSUE])
@@ -329,9 +320,7 @@ def test_title_prefix_type_unsupported_skips_entirely(
     assert "not served via kit title-prefixes" in results[0].detail
 
 
-def test_title_prefix_greenfield_warns_on_unknown_prefix(
-    pc, axis_labels, monkeypatch
-) -> None:
+def test_title_prefix_greenfield_warns_on_unknown_prefix(pc, axis_labels, monkeypatch) -> None:
     """Greenfield: an unrecognised prefix is a non-blocking `warn`, never a
     `fail`. The check is a drift detector, not a prerequisite — an
     already-mis-titled issue cannot make the next mutation fail mid-way — the
@@ -343,9 +332,7 @@ def test_title_prefix_greenfield_warns_on_unknown_prefix(
     assert not any(r.status == "fail" for r in results)
 
 
-def test_title_prefix_greenfield_warns_on_no_prefix(
-    pc, axis_labels, monkeypatch
-) -> None:
+def test_title_prefix_greenfield_warns_on_no_prefix(pc, axis_labels, monkeypatch) -> None:
     """Greenfield: a no-prefix issue is a non-blocking `warn`, never a `fail`
     (same reasoning as the unknown-prefix case)."""
     _stub_issue_list(pc, monkeypatch, [_NO_PREFIX_ISSUE])
@@ -354,21 +341,25 @@ def test_title_prefix_greenfield_warns_on_no_prefix(
     assert not any(r.status == "fail" for r in results)
 
 
-def test_title_prefix_excludes_report_channel_issues(
-    pc, axis_labels, monkeypatch
-) -> None:
+def test_title_prefix_excludes_report_channel_issues(pc, axis_labels, monkeypatch) -> None:
     """Issues filed by the kit's own report command carry a `report:<kind>`
     label and their own prefix vocabulary (`[CR]` / `[Feedback]` / `[Bug]`).
     They are not work items: the check skips them from the sample and says
     so, rather than counting the kit's own output as drift. (`[Bug]` reports
     only ever passed by coincidence of sharing the pm `bug` kind's prefix.)"""
-    _stub_issue_list(pc, monkeypatch, [
-        {"number": 797, "title": "[CR] widen the thing",
-         "labels": [{"name": "report:change-request"}]},
-        {"number": 798, "title": "[Feedback] nice",
-         "labels": [{"name": "report:feedback"}]},
-        {"number": 12, "title": "[Task] real work item", "labels": []},
-    ])
+    _stub_issue_list(
+        pc,
+        monkeypatch,
+        [
+            {
+                "number": 797,
+                "title": "[CR] widen the thing",
+                "labels": [{"name": "report:change-request"}],
+            },
+            {"number": 798, "title": "[Feedback] nice", "labels": [{"name": "report:feedback"}]},
+            {"number": 12, "title": "[Task] real work item", "labels": []},
+        ],
+    )
     results = pc._check_title_prefix_alignment(_LIVE_CAP_ROOT, None)
     assert not any(r.status in ("fail", "warn") for r in results)
     ok = [r for r in results if r.status == "ok"]
@@ -377,17 +368,19 @@ def test_title_prefix_excludes_report_channel_issues(
     assert "2 report-channel issue(s) excluded" in ok[0].detail
 
 
-def test_title_prefix_ok_line_counts_prefixless_issues(
-    pc, axis_labels, monkeypatch
-) -> None:
+def test_title_prefix_ok_line_counts_prefixless_issues(pc, axis_labels, monkeypatch) -> None:
     """A sample with a prefix-less issue must not be summarised as "all N have
     recognised prefixes": the `ok` line states recognised-of-sampled and what
     was set aside, with the no-prefix issue still reported separately (#904)."""
-    _stub_issue_list(pc, monkeypatch, [
-        {"number": 12, "title": "[Task] real work item", "labels": []},
-        _NO_PREFIX_ISSUE,
-        {"number": 797, "title": "[CR] widen", "labels": [{"name": "report:change-request"}]},
-    ])
+    _stub_issue_list(
+        pc,
+        monkeypatch,
+        [
+            {"number": 12, "title": "[Task] real work item", "labels": []},
+            _NO_PREFIX_ISSUE,
+            {"number": 797, "title": "[CR] widen", "labels": [{"name": "report:change-request"}]},
+        ],
+    )
     results = pc._check_title_prefix_alignment(_LIVE_CAP_ROOT, None)
     ok = [r for r in results if r.status == "ok"]
     assert len(ok) == 1
@@ -405,9 +398,13 @@ def test_title_prefix_ok_line_counts_prefixless_issues(
 def test_title_prefix_all_report_channel_skips(pc, axis_labels, monkeypatch) -> None:
     """When every sampled issue is report-channel there is nothing to validate;
     the check says so as a `skip` rather than claiming "all 0 sampled ... ok"."""
-    _stub_issue_list(pc, monkeypatch, [
-        {"number": 1, "title": "[CR] x", "labels": [{"name": "report:change-request"}]},
-    ])
+    _stub_issue_list(
+        pc,
+        monkeypatch,
+        [
+            {"number": 1, "title": "[CR] x", "labels": [{"name": "report:change-request"}]},
+        ],
+    )
     results = pc._check_title_prefix_alignment(_LIVE_CAP_ROOT, None)
     assert len(results) == 1 and results[0].status == "skip"
     assert "1 report-channel issue(s) excluded" in results[0].detail
@@ -417,11 +414,14 @@ def test_title_prefix_present_map_carries_exclusion_note(pc, axis_labels, monkey
     """Under a present map the findings degrade to `skip`; the report-channel
     exclusion count must still be stated there, not only on the greenfield
     `warn` / `ok` paths (PR #858 review)."""
-    _stub_issue_list(pc, monkeypatch, [
-        {"number": 9, "title": "[Wat] mystery", "labels": []},
-        {"number": 797, "title": "[CR] widen", "labels": [{"name": "report:change-request"}]},
-    ])
+    _stub_issue_list(
+        pc,
+        monkeypatch,
+        [
+            {"number": 9, "title": "[Wat] mystery", "labels": []},
+            {"number": 797, "title": "[CR] widen", "labels": [{"name": "report:change-request"}]},
+        ],
+    )
     results = pc._check_title_prefix_alignment(_LIVE_CAP_ROOT, _auj_map(axis_labels))
     assert all(r.status != "fail" for r in results)
     assert any("1 report-channel issue(s) excluded" in r.detail for r in results)
-

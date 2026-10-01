@@ -147,9 +147,7 @@ class _Git:
             return proc.returncode == 0
         raise _GitFailed(f"git merge-base failed: {proc.stderr.strip()}")
 
-    def first_parent_line(
-        self, since: str, head: str
-    ) -> list[tuple[str, list[str]]]:
+    def first_parent_line(self, since: str, head: str) -> list[tuple[str, list[str]]]:
         """The commits from `head` back to `since` along first parents, each
         with its parents, newest first; `since` must be on that line."""
         proc = self("rev-list", "--first-parent", "--parents", f"{since}..{head}")
@@ -159,9 +157,7 @@ class _Git:
         for text in proc.stdout.splitlines():
             oids = text.split()
             if len(oids) < 2:
-                raise _GitFailed(
-                    f"git rev-list listed a commit without parents: {text!r}"
-                )
+                raise _GitFailed(f"git rev-list listed a commit without parents: {text!r}")
             line.append((oids[0], oids[1:]))
         if not line or line[-1][1][0] != since:
             raise _GitFailed(
@@ -183,7 +179,13 @@ class _Git:
 
     def changed_paths(self, before: str, after: str) -> set[str]:
         proc = self(
-            "diff-tree", "-r", "--name-only", "--no-renames", "-z", before, after,
+            "diff-tree",
+            "-r",
+            "--name-only",
+            "--no-renames",
+            "-z",
+            before,
+            after,
         )
         if proc.returncode != 0:
             raise _GitFailed(f"git diff-tree failed: {proc.stderr.strip()}")

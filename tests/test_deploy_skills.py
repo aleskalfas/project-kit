@@ -46,9 +46,7 @@ def _write_flat_skill(root: Path, namespace: str, name: str, content: str) -> No
     (root / ".pkit" / "skills" / namespace / f"{name}.md").write_text(content, encoding="utf-8")
 
 
-def _write_composite_skill(
-    root: Path, namespace: str, name: str, *, dispatcher: bool
-) -> None:
+def _write_composite_skill(root: Path, namespace: str, name: str, *, dispatcher: bool) -> None:
     """Create a composite skill folder. With `dispatcher=False`, sub-procedures
     are present but the canonical `<name>/<name>.md` dispatcher is missing —
     the COR-020 mid-build state that used to brick the whole run (#537)."""

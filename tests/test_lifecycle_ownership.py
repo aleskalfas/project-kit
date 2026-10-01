@@ -13,6 +13,7 @@ name. The module carries a second, narrower predicate —
   resolver (or the backbone) grows its own copy of the rule instead of importing
   this one, which is the failure mode ADR-051 Decision point 3 forbids.
 """
+
 from __future__ import annotations
 
 import importlib.util
@@ -37,6 +38,7 @@ own = _load()
 
 # --- fixtures ----------------------------------------------------------------
 
+
 def _project(tmp_path: Path, *, capabilities: dict[str, str | None] | None = None) -> Path:
     """A project root with a backbone manifest registering *capabilities*.
 
@@ -60,44 +62,54 @@ def _project(tmp_path: Path, *, capabilities: dict[str, str | None] | None = Non
 
 # --- the tier map ------------------------------------------------------------
 
-@pytest.mark.parametrize("path", [
-    "src/myproject/",
-    "docs/architecture/",
-    "CONTRIBUTING.md",
-    "predicates/is-in-review.sh",
-])
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "src/myproject/",
+        "docs/architecture/",
+        "CONTRIBUTING.md",
+        "predicates/is-in-review.sh",
+    ],
+)
 def test_outside_the_kit_tree_is_never_sync_managed(tmp_path: Path, path: str) -> None:
     """Adopter territory outside `.pkit/` is not propagated, so not managed."""
     assert own.is_sync_managed(_project(tmp_path), path) is False
 
 
-@pytest.mark.parametrize("path", [
-    ".pkit/agents/core/",
-    ".pkit/agents/core/architect.md",
-    ".pkit/decisions/core/COR-033-process-substrate.md",
-    ".pkit/schemas/_defs/process.schema.json",
-    ".pkit/process/README.md",
-    ".pkit/rules/core.md",
-    ".pkit/scratchpad/README.md",
-    ".pkit/adapters/claude-code/deploy-agents.sh",
-    ".pkit/lifecycle/ownership.py",
-])
+@pytest.mark.parametrize(
+    "path",
+    [
+        ".pkit/agents/core/",
+        ".pkit/agents/core/architect.md",
+        ".pkit/decisions/core/COR-033-process-substrate.md",
+        ".pkit/schemas/_defs/process.schema.json",
+        ".pkit/process/README.md",
+        ".pkit/rules/core.md",
+        ".pkit/scratchpad/README.md",
+        ".pkit/adapters/claude-code/deploy-agents.sh",
+        ".pkit/lifecycle/ownership.py",
+    ],
+)
 def test_core_areas_are_sync_managed(tmp_path: Path, path: str) -> None:
     """Core areas are refreshed on every sync — excluded like any other."""
     assert own.is_sync_managed(_project(tmp_path), path) is True
 
 
-@pytest.mark.parametrize("path", [
-    ".pkit/agents/project/overlay.yaml",
-    ".pkit/decisions/project/PRJ-001-x.md",
-    ".pkit/skills/project/mine.md",
-    ".pkit/rules/project.md",
-    ".pkit/scratchpad/active/note.md",
-    ".pkit/scratchpad/done/note.md",
-    ".pkit/project/config.yaml",
-    ".pkit/manifest.yaml",
-    ".pkit/version-pin",
-])
+@pytest.mark.parametrize(
+    "path",
+    [
+        ".pkit/agents/project/overlay.yaml",
+        ".pkit/decisions/project/PRJ-001-x.md",
+        ".pkit/skills/project/mine.md",
+        ".pkit/rules/project.md",
+        ".pkit/scratchpad/active/note.md",
+        ".pkit/scratchpad/done/note.md",
+        ".pkit/project/config.yaml",
+        ".pkit/manifest.yaml",
+        ".pkit/version-pin",
+    ],
+)
 def test_project_side_paths_are_not_sync_managed(tmp_path: Path, path: str) -> None:
     """The project half of the no-shared-files split is never overwritten."""
     assert own.is_sync_managed(_project(tmp_path), path) is False
@@ -119,9 +131,12 @@ def test_project_tree_inside_kit_shipped_capability_is_adopter_owned(tmp_path: P
     """ADR-051's first boundary instance: adopter-owned *by tier*, so admissible."""
     root = _project(tmp_path, capabilities={"shipped": "kit-shipped"})
     assert own.is_sync_managed(root, ".pkit/capabilities/shipped/project/") is False
-    assert own.is_sync_managed(
-        root, ".pkit/capabilities/shipped/project/process/predicates/at-review.sh"
-    ) is False
+    assert (
+        own.is_sync_managed(
+            root, ".pkit/capabilities/shipped/project/process/predicates/at-review.sh"
+        )
+        is False
+    )
 
 
 def test_incubated_capability_subtree_is_not_sync_managed(tmp_path: Path) -> None:
@@ -175,13 +190,17 @@ def test_unknown_kit_subtree_reads_as_managed(tmp_path: Path) -> None:
 
 # --- entry normalisation -----------------------------------------------------
 
-@pytest.mark.parametrize("written", [
-    ".pkit/agents/core",
-    ".pkit/agents/core/",
-    "./.pkit/agents/core/",
-    ".pkit/agents/project/../core/",
-    "  .pkit/agents/core/  ",
-])
+
+@pytest.mark.parametrize(
+    "written",
+    [
+        ".pkit/agents/core",
+        ".pkit/agents/core/",
+        "./.pkit/agents/core/",
+        ".pkit/agents/project/../core/",
+        "  .pkit/agents/core/  ",
+    ],
+)
 def test_entry_forms_normalise_to_one_verdict(tmp_path: Path, written: str) -> None:
     assert own.is_sync_managed(_project(tmp_path), written) is True
 
@@ -203,6 +222,7 @@ def test_entries_outside_the_tree_are_not_sync_managed(tmp_path: Path, path: str
 
 # --- the write-carrying registry --------------------------------------------
 
+
 def test_process_authoring_targets_is_write_carrying() -> None:
     """The category ADR-051 introduces is registered, and it is the only one.
 
@@ -210,7 +230,7 @@ def test_process_authoring_targets_is_write_carrying() -> None:
     a review-time event: a core agent citing a write-carrying category some other
     record introduced is the red flag, so the set is pinned rather than sampled.
     """
-    assert own.WRITE_CARRYING_CATEGORIES == frozenset({"process-authoring-targets"})
+    assert frozenset({"process-authoring-targets"}) == own.WRITE_CARRYING_CATEGORIES
 
 
 def test_offences_only_reported_for_write_carrying_categories(tmp_path: Path) -> None:
@@ -275,9 +295,9 @@ def _adapter_executables() -> list[Path]:
 def test_resolver_delegates_to_the_shared_predicate() -> None:
     """The claude-code resolver consumes the module rather than deciding itself."""
     text = _RESOLVER.read_text(encoding="utf-8")
-    assert '"lifecycle"' in text and '"ownership.py"' in text   # loads the shared module
-    assert "sync_managed_offences" in text                     # … for the write check
-    assert "undefined_category_remediation" in text            # … and for the remediation
+    assert '"lifecycle"' in text and '"ownership.py"' in text  # loads the shared module
+    assert "sync_managed_offences" in text  # … for the write check
+    assert "undefined_category_remediation" in text  # … and for the remediation
 
 
 @pytest.mark.parametrize("script", _adapter_executables(), ids=lambda p: p.name)
@@ -299,8 +319,8 @@ def test_no_adapter_executable_forks_the_ownership_rule(script: Path) -> None:
 def test_backbone_reads_the_registry_rather_than_restating_it() -> None:
     """`agents_overlay` asks the module which categories are write-carrying."""
     text = (REPO / "src" / "project_kit" / "agents_overlay.py").read_text(encoding="utf-8")
-    assert "WRITE_CARRYING_CATEGORIES" in text          # read from the module …
-    assert "process-authoring-targets" not in text      # … never hard-coded here
+    assert "WRITE_CARRYING_CATEGORIES" in text  # read from the module …
+    assert "process-authoring-targets" not in text  # … never hard-coded here
     assert "ownership.py" in text
 
 
@@ -336,6 +356,7 @@ def test_the_backbone_loads_the_tree_s_module_without_writing_into_the_tree(
 # `.pkit/adapters/<harness>/settings/project/`, which nests one level deeper.
 # The closing "everything else under `.pkit/` is the kit's" rule then claimed
 # the adopter's own permission allow-list.
+
 
 @pytest.mark.parametrize(
     "path",
@@ -495,6 +516,7 @@ def test_the_two_predicates_agree_on_paths_this_repo_does_not_have() -> None:
 # in a repository a sync copies into. Keyed on origin and on the repository
 # being the methodology's source, never on the path.
 
+
 def _source_repository(root: Path) -> Path:
     """Give *root* the two markers of the methodology's source repository.
 
@@ -511,27 +533,33 @@ def _source_repository(root: Path) -> Path:
     return root
 
 
-@pytest.mark.parametrize("path", [
-    ".pkit/decisions/README.md",
-    ".pkit/cli/README.md",
-    ".pkit/adapters/claude-code/README.md",
-    ".pkit/capabilities/shipped/README.md",
-])
+@pytest.mark.parametrize(
+    "path",
+    [
+        ".pkit/decisions/README.md",
+        ".pkit/cli/README.md",
+        ".pkit/adapters/claude-code/README.md",
+        ".pkit/capabilities/shipped/README.md",
+    ],
+)
 def test_kit_trees_in_an_adopter_are_synced_copies(tmp_path: Path, path: str) -> None:
     root = _project(tmp_path, capabilities={"shipped": "kit-shipped"})
     assert own.is_methodology_source(root) is False
     assert own.is_synced_copy(root, path) is True
 
 
-@pytest.mark.parametrize("path", [
-    "README.md",
-    "CONTRIBUTING.md",
-    "docs/guide.md",
-    ".pkit/capabilities/mine/README.md",        # incubated: the adopter's own source
-    ".pkit/capabilities/fresh/README.md",       # unregistered: nothing copies it
-    ".pkit/capabilities/shipped/project/notes.md",  # the project tier of a shipped one
-    ".pkit/decisions/project/PRJ-001-x.md",
-])
+@pytest.mark.parametrize(
+    "path",
+    [
+        "README.md",
+        "CONTRIBUTING.md",
+        "docs/guide.md",
+        ".pkit/capabilities/mine/README.md",  # incubated: the adopter's own source
+        ".pkit/capabilities/fresh/README.md",  # unregistered: nothing copies it
+        ".pkit/capabilities/shipped/project/notes.md",  # the project tier of a shipped one
+        ".pkit/decisions/project/PRJ-001-x.md",
+    ],
+)
 def test_what_no_sync_copies_is_never_a_synced_copy(tmp_path: Path, path: str) -> None:
     root = _project(tmp_path, capabilities={"shipped": "kit-shipped", "mine": "incubated-in-repo"})
     assert own.is_synced_copy(root, path) is False

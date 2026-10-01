@@ -33,10 +33,10 @@ from ruamel.yaml.error import YAMLError
 # package (scripts/ on sys.path, the wrapper's path) and standalone-by-path
 # (scripts/_lib/ on sys.path) — mirrors `_lib/pr_validation.py`'s idiom.
 try:
+    import session_guard  # type: ignore[import-not-found]
     from agent_verdicts import parse_verdict_line  # type: ignore[import-not-found]
     from audit import own_audit_posted  # type: ignore[import-not-found]
     from gh import gh_run, load_adopter_config  # type: ignore[import-not-found]
-    import session_guard  # type: ignore[import-not-found]
     from membership import (  # type: ignore[import-not-found]
         CAPABILITY_NAME,
         check_membership,
@@ -44,10 +44,10 @@ try:
         resolve_invoker_identity,
     )
 except ImportError:  # pragma: no cover
+    from _lib import session_guard  # type: ignore[no-redef]
     from _lib.agent_verdicts import parse_verdict_line  # type: ignore[no-redef]
     from _lib.audit import own_audit_posted  # type: ignore[no-redef]
     from _lib.gh import gh_run, load_adopter_config  # type: ignore[no-redef]
-    from _lib import session_guard  # type: ignore[no-redef]
     from _lib.membership import (  # type: ignore[no-redef]
         CAPABILITY_NAME,
         check_membership,

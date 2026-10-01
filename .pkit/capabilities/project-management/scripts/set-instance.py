@@ -38,13 +38,13 @@ from pathlib import Path
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate, session_guard  # noqa: E402
-from _lib.instance_identity import (  # noqa: E402
+from _lib import bootstrap_gate, session_guard
+from _lib.instance_identity import (
     clear_instance_id,
     read_instance_id,
     write_instance_id,
 )
-from _lib.membership import CAPABILITY_NAME, resolve_capability_root  # noqa: E402
+from _lib.membership import CAPABILITY_NAME, resolve_capability_root
 
 
 def main() -> int:
@@ -60,9 +60,7 @@ def main() -> int:
     parser.add_argument(
         "--show", action="store_true", help="Print the current instance id and exit."
     )
-    parser.add_argument(
-        "--clear", action="store_true", help="Unset this clone's instance id."
-    )
+    parser.add_argument("--clear", action="store_true", help="Unset this clone's instance id.")
     parser.add_argument(
         "--capability-root",
         type=Path,

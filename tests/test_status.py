@@ -103,7 +103,7 @@ def test_status_detects_kit_skill_in_per_name_dir_symlink_form(installed_target:
     assert "kit-managed" in out
     assert f"{name} ->" in out
     # The name must NOT appear under "user-managed".
-    kit_block, _, rest = out.partition("user-managed")
+    kit_block, _, _rest = out.partition("user-managed")
     assert name in kit_block
 
 
@@ -209,6 +209,7 @@ def test_status_reports_backbone_version_up_to_date(installed_target: Path) -> N
 def test_status_reports_backbone_version_when_behind(installed_target: Path) -> None:
     """A manifest behind the source shows the source version + the upgrade hint."""
     import re
+
     manifest = installed_target / ".pkit" / "manifest.yaml"
     manifest.write_text(
         re.sub(r"backbone_version:.*", "backbone_version: 0.1.0", manifest.read_text()),

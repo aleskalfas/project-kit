@@ -292,9 +292,7 @@ commands:
             encoding="utf-8",
         )
         (cap / "schemas").mkdir(parents=True, exist_ok=True)
-        (cap / "schemas" / "poi-verification.yaml").write_text(
-            _INNER_DEFINITION, encoding="utf-8"
-        )
+        (cap / "schemas" / "poi-verification.yaml").write_text(_INNER_DEFINITION, encoding="utf-8")
         (cap / "schemas" / "area-discovery.yaml").write_text(
             _OUTER_TEMPLATE.format(reducer=reducer), encoding="utf-8"
         )

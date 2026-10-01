@@ -25,9 +25,7 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SCRIPTS_DIR = (
-    REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
-)
+SCRIPTS_DIR = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
 
 
 @pytest.fixture(scope="module")
@@ -75,7 +73,10 @@ class _Repo:
 
     def git(self, *args: str) -> str:
         proc = subprocess.run(
-            ["git", *args], cwd=self.root, capture_output=True, text=True,
+            ["git", *args],
+            cwd=self.root,
+            capture_output=True,
+            text=True,
             check=False,
         )
         assert proc.returncode == 0, proc.stderr
@@ -107,11 +108,14 @@ def repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> _Repo:
         monkeypatch.setenv(f"GIT_{role}_NAME", "Test")
         monkeypatch.setenv(f"GIT_{role}_EMAIL", "test@example.test")
     built = _Repo(tmp_path / "repo")
-    built.commit({
-        "README.md": "readme\n",
-        "src/app.py": "x = 1\n",
-        "docs/guide.md": "guide\n",
-    }, "base")
+    built.commit(
+        {
+            "README.md": "readme\n",
+            "src/app.py": "x = 1\n",
+            "docs/guide.md": "guide\n",
+        },
+        "base",
+    )
     built.git("checkout", "-q", "-b", "feat")
     return built
 
@@ -119,7 +123,10 @@ def repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> _Repo:
 # ---- the panel ------------------------------------------------------------
 
 PM, DOCS, CODE, SECURITY = (
-    "pm-reviewer", "docs-reviewer", "code-reviewer", "security-reviewer",
+    "pm-reviewer",
+    "docs-reviewer",
+    "code-reviewer",
+    "security-reviewer",
 )
 PANEL = (PM, DOCS, CODE, SECURITY)
 TOUCHES_CODE = frozenset({"touches-code"})
@@ -128,8 +135,12 @@ FLOOR_ONLY = {CODE: TOUCHES_CODE, SECURITY: TOUCHES_CODE}
 
 def _verdict(av, reviewer, sha, *, path=None, timestamp="2026-01-01T00:00:00Z"):
     return av.Verdict(
-        reviewer=reviewer, token=av.APPROVED, path=path or av.PATH_LOCAL,
-        body="", timestamp=timestamp, sha=sha,
+        reviewer=reviewer,
+        token=av.APPROVED,
+        path=path or av.PATH_LOCAL,
+        body="",
+        timestamp=timestamp,
+        sha=sha,
     )
 
 
@@ -141,16 +152,16 @@ def _rule(vf, ad, repo, *, base_tip=None, floors=FLOOR_ONLY):
         head_sha=head,
         floors_by_reviewer=floors,
         delta_since=lambda since: ad.author_delta(
-            since, head, base_tip=tip, cwd=repo.root,
+            since,
+            head,
+            base_tip=tip,
+            cwd=repo.root,
         ),
     )
 
 
 def _stale(av, rule, sha, reviewers=PANEL):
-    return {
-        name for name in reviewers
-        if not rule.is_fresh(_verdict(av, name, sha))
-    }
+    return {name for name in reviewers if not rule.is_fresh(_verdict(av, name, sha))}
 
 
 # ---- the traces -------------------------------------------------------------
@@ -200,8 +211,7 @@ def test_a_code_fix_stales_every_verdict(av, ad, vf, repo) -> None:
     rule = _rule(vf, ad, repo)
     assert _stale(av, rule, reviewed) == set(PANEL)
     assert rule.assess(_verdict(av, CODE, reviewed)).reason == (
-        f"reviewed {reviewed[:7]}; changed since: src/app.py — reaches its "
-        "touches-code floor"
+        f"reviewed {reviewed[:7]}; changed since: src/app.py — reaches its touches-code floor"
     )
 
 
@@ -237,13 +247,16 @@ def test_a_verdict_naming_no_head_follows_the_commit_time(av, vf) -> None:
     after = _verdict(av, CODE, "", timestamp="2026-06-06T00:00:00Z")
     at = _verdict(av, CODE, "", timestamp="2026-06-05T00:00:00Z")
     assert rule.assess(after) == vf.Freshness(
-        True, "no reviewed head recorded; posted after the latest commit",
+        True,
+        "no reviewed head recorded; posted after the latest commit",
     )
     assert rule.assess(at) == vf.Freshness(
-        False, "no reviewed head recorded; posted before the latest commit",
+        False,
+        "no reviewed head recorded; posted before the latest commit",
     )
     assert vf.FreshnessRule().assess(after) == vf.Freshness(
-        False, "no reviewed head recorded; the latest commit's time is unknown",
+        False,
+        "no reviewed head recorded; the latest commit's time is unknown",
     )
 
 
@@ -261,7 +274,10 @@ def test_an_edit_made_inside_a_merge_is_the_authors_change(av, ad, vf, repo) -> 
     repo.git("commit", "-q", "--no-edit")
 
     delta = ad.author_delta(
-        reviewed, repo.head(), base_tip=repo.head("main"), cwd=repo.root,
+        reviewed,
+        repo.head(),
+        base_tip=repo.head("main"),
+        cwd=repo.root,
     )
     assert delta.paths == ("src/app.py",)
     assert _stale(av, _rule(vf, ad, repo), reviewed) == set(PANEL)
@@ -273,8 +289,11 @@ def test_a_resolved_conflict_is_the_authors_change(av, ad, vf, repo) -> None:
     repo.commit({"README.md": "readme, the base's way\n"}, "main moves")
     repo.git("checkout", "-q", "feat")
     proc = subprocess.run(
-        ["git", "merge", "-q", "main"], cwd=repo.root, capture_output=True,
-        text=True, check=False,
+        ["git", "merge", "-q", "main"],
+        cwd=repo.root,
+        capture_output=True,
+        text=True,
+        check=False,
     )
     assert proc.returncode != 0  # the conflict
     (repo.root / "README.md").write_text("readme, both ways\n", encoding="utf-8")
@@ -282,7 +301,10 @@ def test_a_resolved_conflict_is_the_authors_change(av, ad, vf, repo) -> None:
     repo.git("commit", "-q", "--no-edit")
 
     delta = ad.author_delta(
-        reviewed, repo.head(), base_tip=repo.head("main"), cwd=repo.root,
+        reviewed,
+        repo.head(),
+        base_tip=repo.head("main"),
+        cwd=repo.root,
     )
     assert delta.paths == ("README.md",)
     assert _stale(av, _rule(vf, ad, repo), reviewed) == {PM, DOCS}
@@ -298,7 +320,10 @@ def test_a_merge_of_another_branch_is_the_authors_change(av, ad, vf, repo) -> No
     repo.git("merge", "-q", "--no-edit", "side")
 
     delta = ad.author_delta(
-        reviewed, repo.head(), base_tip=repo.head("main"), cwd=repo.root,
+        reviewed,
+        repo.head(),
+        base_tip=repo.head("main"),
+        cwd=repo.root,
     )
     assert delta.paths == ("src/side.py",)
 
@@ -308,14 +333,18 @@ def test_a_merge_of_another_branch_is_the_authors_change(av, ad, vf, repo) -> No
 
 def test_a_reviewed_head_not_in_this_checkout_is_stale(ad, repo) -> None:
     delta = ad.author_delta(
-        "d" * 40, repo.head(), base_tip=repo.head("main"), cwd=repo.root,
+        "d" * 40,
+        repo.head(),
+        base_tip=repo.head("main"),
+        cwd=repo.root,
     )
     assert not delta.ok
     assert "is not in this checkout" in delta.error
 
 
 def test_a_reviewed_head_that_reached_the_branch_through_a_merge_is_stale(
-    ad, repo,
+    ad,
+    repo,
 ) -> None:
     repo.git("checkout", "-q", "-b", "side", "main")
     reviewed = repo.commit({"src/side.py": "s = 1\n"}, "reviewed elsewhere")
@@ -324,7 +353,10 @@ def test_a_reviewed_head_that_reached_the_branch_through_a_merge_is_stale(
     repo.git("merge", "-q", "--no-edit", "side")
 
     delta = ad.author_delta(
-        reviewed, repo.head(), base_tip=repo.head("main"), cwd=repo.root,
+        reviewed,
+        repo.head(),
+        base_tip=repo.head("main"),
+        cwd=repo.root,
     )
     assert "not on the branch's own line of commits" in delta.error
 
@@ -333,7 +365,10 @@ def test_an_unknown_base_stales_only_when_a_merge_needs_it(ad, repo) -> None:
     reviewed = repo.commit({"src/app.py": "x = 2\n"}, "feature")
     repo.commit({"README.md": "readme, fixed\n"}, "fix")
     assert ad.author_delta(
-        reviewed, repo.head(), base_tip="", cwd=repo.root,
+        reviewed,
+        repo.head(),
+        base_tip="",
+        cwd=repo.root,
     ).paths == ("README.md",)
 
     repo.git("checkout", "-q", "main")
@@ -343,7 +378,10 @@ def test_an_unknown_base_stales_only_when_a_merge_needs_it(ad, repo) -> None:
     unknown = ad.author_delta(reviewed, repo.head(), base_tip="", cwd=repo.root)
     assert "the base branch's head is unknown" in unknown.error
     missing = ad.author_delta(
-        reviewed, repo.head(), base_tip="e" * 40, cwd=repo.root,
+        reviewed,
+        repo.head(),
+        base_tip="e" * 40,
+        cwd=repo.root,
     )
     assert "fetch the base branch" in missing.error
 
@@ -359,12 +397,18 @@ def test_a_git_without_merge_tree_write_tree_is_stale(ad, repo) -> None:
     def old_git(argv, **kwargs):
         if argv[1:3] == ["merge-tree", "--write-tree"]:
             return subprocess.CompletedProcess(
-                argv, 129, "", "error: unknown option `write-tree'",
+                argv,
+                129,
+                "",
+                "error: unknown option `write-tree'",
             )
         return subprocess.run(argv, **kwargs)
 
     delta = ad.author_delta(
-        reviewed, repo.head(), base_tip=repo.head("main"), cwd=repo.root,
+        reviewed,
+        repo.head(),
+        base_tip=repo.head("main"),
+        cwd=repo.root,
         run=old_git,
     )
     assert "needs git 2.38 or later" in delta.error
@@ -390,10 +434,12 @@ def test_an_unknown_head_is_stale(ad) -> None:
 def test_the_reviewed_head_itself_is_fresh_without_reading_git(av, vf) -> None:
     sha = "a" * 40
     rule = vf.FreshnessRule(
-        head_sha=sha, delta_since=lambda since: pytest.fail("not read"),
+        head_sha=sha,
+        delta_since=lambda since: pytest.fail("not read"),
     )
     assert rule.assess(_verdict(av, PM, sha)) == vf.Freshness(
-        True, "reviewed the current head aaaaaaa",
+        True,
+        "reviewed the current head aaaaaaa",
     )
 
 
@@ -405,7 +451,9 @@ def test_the_delta_is_read_once_per_reviewed_head(av, ad, vf) -> None:
         return ad.AuthorDelta(paths=("README.md",))
 
     rule = vf.FreshnessRule(
-        head_sha="b" * 40, floors_by_reviewer=FLOOR_ONLY, delta_since=delta,
+        head_sha="b" * 40,
+        floors_by_reviewer=FLOOR_ONLY,
+        delta_since=delta,
     )
     for name in PANEL:
         rule.is_fresh(_verdict(av, name, "a" * 40))
@@ -416,7 +464,8 @@ def test_a_remote_verdict_is_held_to_any_change(av, ad, vf) -> None:
     """Contributed reviewers register on the local path only, so a remote
     verdict is a baseline one, whatever its login."""
     rule = vf.FreshnessRule(
-        head_sha="b" * 40, floors_by_reviewer=FLOOR_ONLY,
+        head_sha="b" * 40,
+        floors_by_reviewer=FLOOR_ONLY,
         delta_since=lambda since: ad.AuthorDelta(paths=("README.md",)),
     )
     remote = _verdict(av, CODE, "a" * 40, path=av.PATH_REMOTE)

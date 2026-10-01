@@ -117,8 +117,7 @@ def test_mutator_refuses_before_doing_anything(tmp_path: Path) -> None:
     cap = _project(tmp_path)
     proc = _run(
         "create-issue.py",
-        ["--type", "task", "--title", "x", "--workstream", "ws", "--parent", "1",
-         "--dry-run"],
+        ["--type", "task", "--title", "x", "--workstream", "ws", "--parent", "1", "--dry-run"],
         cap=cap,
     )
     assert proc.returncode == 2, proc.stderr
@@ -199,8 +198,7 @@ def test_bootstrapped_project_is_unaffected(tmp_path: Path) -> None:
     _bootstrap(cap)
     proc = _run(
         "create-issue.py",
-        ["--type", "task", "--title", "x", "--workstream", "ws", "--parent", "1",
-         "--dry-run"],
+        ["--type", "task", "--title", "x", "--workstream", "ws", "--parent", "1", "--dry-run"],
         cap=cap,
     )
     assert REFUSAL_MARKER not in proc.stderr, proc.stderr
@@ -213,9 +211,7 @@ def test_a_stamped_but_shape_invalid_config_is_refused(tmp_path: Path) -> None:
     not enough. Here the misspelling the config schema was built for
     (`has_projects_v2_boards`, trailing `s`) — silently ignored by every reader,
     which used to leave the adopter in label-fallback mode with no signal."""
-    cap = _project(
-        tmp_path, config=VALID_CONFIG + "has_projects_v2_boards: true\n"
-    )
+    cap = _project(tmp_path, config=VALID_CONFIG + "has_projects_v2_boards: true\n")
     _bootstrap(cap)
     proc = _run("show-issue.py", ["1"], cap=cap)
     assert proc.returncode == 2, proc.stdout + proc.stderr

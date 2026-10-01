@@ -58,9 +58,13 @@ def squash_merge(
     # default for a single-commit PR is the commit message, not the title —
     # the --subject flag overrides that (DEC-013; fixes #33).
     cmd = [
-        "gh", "pr", "merge", str(pr_number),
+        "gh",
+        "pr",
+        "merge",
+        str(pr_number),
         "--squash",
-        "--subject", pr_title,
+        "--subject",
+        pr_title,
     ]
     if admin:
         cmd.append("--admin")
@@ -71,8 +75,7 @@ def squash_merge(
         return False
     if proc.returncode != 0:
         print(
-            f"error: gh pr merge failed (exit {proc.returncode}): "
-            f"{proc.stderr.strip()}",
+            f"error: gh pr merge failed (exit {proc.returncode}): {proc.stderr.strip()}",
             file=sys.stderr,
         )
         return False
@@ -80,7 +83,10 @@ def squash_merge(
 
 
 def delete_remote_branch(
-    branch: str, config: dict[str, Any], *, cross_repository: bool,
+    branch: str,
+    config: dict[str, Any],
+    *,
+    cross_repository: bool,
 ) -> None:
     """Delete the PR's remote head ref through the API — best-effort.
 
@@ -105,9 +111,9 @@ def delete_remote_branch(
         return
     try:
         proc = gh_run(
-            ["gh", "api", "-X", "DELETE",
-             f"repos/{{owner}}/{{repo}}/git/refs/heads/{branch}"],
-            config, check=False,
+            ["gh", "api", "-X", "DELETE", f"repos/{{owner}}/{{repo}}/git/refs/heads/{branch}"],
+            config,
+            check=False,
         )
     except FileNotFoundError:
         reason = "`gh` not on PATH"
@@ -129,7 +135,10 @@ def delete_remote_branch(
 
 
 def cleanup_local(
-    branch: str, config: dict[str, Any], *, cross_repository: bool,
+    branch: str,
+    config: dict[str, Any],
+    *,
+    cross_repository: bool,
 ) -> None:
     """Switch to the default branch, fast-forward it, delete the local head — best-effort.
 
@@ -160,7 +169,10 @@ def cleanup_local(
 
     def _git(*argv: str) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
-            ["git", *argv], capture_output=True, text=True, check=False,
+            ["git", *argv],
+            capture_output=True,
+            text=True,
+            check=False,
         )
 
     proc = _git("checkout", settled)

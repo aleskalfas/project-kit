@@ -12,15 +12,9 @@ from pathlib import Path
 
 import pytest
 
-
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = (
-    REPO_ROOT
-    / ".pkit"
-    / "capabilities"
-    / "project-management"
-    / "scripts"
-    / "add-workstream.py"
+    REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "add-workstream.py"
 )
 
 
@@ -126,9 +120,7 @@ def test_add_to_file_upgrades_list_to_mapping(aw, tmp_path) -> None:
         "schema_version: 1\nworkstreams:\n  - cli\n  - schemas\n",
         encoding="utf-8",
     )
-    ok = aw._add_to_file(
-        cap_root, "agent-platform", {"name": "Agent Platform", "status": "active"}
-    )
+    ok = aw._add_to_file(cap_root, "agent-platform", {"name": "Agent Platform", "status": "active"})
     assert ok is True
     content = target.read_text(encoding="utf-8")
     # cli/schemas should be retained.

@@ -27,7 +27,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import subprocess
 import sys
 from pathlib import Path
 
@@ -36,10 +35,9 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate  # noqa: E402
-from _lib.gh import gh_run, load_adopter_config  # noqa: E402
-from _lib import session_guard  # noqa: E402
-from _lib.membership import (  # noqa: E402
+from _lib import bootstrap_gate, session_guard
+from _lib.gh import gh_run, load_adopter_config
+from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
     resolve_capability_root,
@@ -144,8 +142,7 @@ def main() -> int:
 
     if args.reason:
         comment_body = (
-            f"[reopen-pr] {args.reason}\n\n"
-            "Reopened via `pkit project-management reopen-pr`."
+            f"[reopen-pr] {args.reason}\n\nReopened via `pkit project-management reopen-pr`."
         )
         if not _gh_pr_comment(args.pr_number, comment_body, config):
             return 3
@@ -175,8 +172,7 @@ def _gh_get_pr(pr_number: int, config: dict) -> dict | None:
         return None
     if proc.returncode != 0:
         print(
-            f"error: gh pr view {pr_number} failed.\n"
-            f"stderr: {proc.stderr.strip()}",
+            f"error: gh pr view {pr_number} failed.\nstderr: {proc.stderr.strip()}",
             file=sys.stderr,
         )
         return None
@@ -209,8 +205,7 @@ def _gh_pr_reopen(pr_number: int, config: dict) -> bool:
         return False
     if proc.returncode != 0:
         print(
-            f"error: gh pr reopen failed (exit {proc.returncode}).\n"
-            f"stderr: {proc.stderr.strip()}",
+            f"error: gh pr reopen failed (exit {proc.returncode}).\nstderr: {proc.stderr.strip()}",
             file=sys.stderr,
         )
         return False

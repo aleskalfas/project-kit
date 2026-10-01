@@ -231,10 +231,9 @@ def test_required_parent_types_carry_a_severity_knob() -> None:
     in-scope schema work — every type that requires a parent
     (`parent_ref_optional: false`) carries `parent_ref_required_severity`, so the
     rule has a field to flip under advisory hierarchy."""
-    types = (_issue_types().get("types") or {})
+    types = _issue_types().get("types") or {}
     requiring = {
-        name: t for name, t in types.items()
-        if not bool(t.get("parent_ref_optional", False))
+        name: t for name, t in types.items() if not bool(t.get("parent_ref_optional", False))
     }
     assert requiring, "expected at least one type with a required parent-ref"
     for name, t in requiring.items():
@@ -248,7 +247,7 @@ def test_severity_knob_is_validation_severity_token() -> None:
     """The knob's value is a typed validation-severity token (COR-019) so the
     schema validator catches a malformed severity at validate time."""
     schema = json.loads(SUBSTRATE_MAP_COMPANION.read_text(encoding="utf-8"))  # noqa: F841
-    types = (_issue_types().get("types") or {})
+    types = _issue_types().get("types") or {}
     for name, t in types.items():
         sev = t.get("parent_ref_required_severity")
         if sev is not None:
@@ -273,7 +272,7 @@ def test_containment_invariants_carry_no_severity_knob() -> None:
     # The Feature-in-Feature invariant is present.
     assert any("Feature does not contain Feature" in (inv.get("rule") or "") for inv in invariants)
     for inv in invariants:
-        knobs = [k for k in inv.keys() if k.endswith("severity")]
+        knobs = [k for k in inv if k.endswith("severity")]
         assert knobs == [], (
             f"a containment invariant grew a severity knob {knobs} — if a knob is "
             f"added it must be a deliberate DEC-036 schema change, not an "
@@ -303,12 +302,11 @@ def test_no_knob_stays_hard_rule_illustration() -> None:
     """
     invariants = _containment_invariants()
     feature_in_feature = next(
-        inv for inv in invariants
-        if "Feature does not contain Feature" in (inv.get("rule") or "")
+        inv for inv in invariants if "Feature does not contain Feature" in (inv.get("rule") or "")
     )
 
     # The rule has no severity knob today.
-    assert not any(k.endswith("severity") for k in feature_in_feature.keys())
+    assert not any(k.endswith("severity") for k in feature_in_feature)
 
     def effective_severity_WRONG(rule: dict, degraded: bool) -> str:
         """The rejected fail-safe: a degraded rule with no knob defaults to
@@ -371,13 +369,14 @@ def test_advisory_must_not_soften_containment_rule_illustration() -> None:
     scripts = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
     if str(scripts) not in sys.path:
         sys.path.insert(0, str(scripts))
-    from _lib import axis_labels  # noqa: PLC0415
+    from _lib import axis_labels
 
     advisory_map = axis_labels.SubstrateMap(axes={}, hierarchy="advisory")
     assert axis_labels.hierarchy_disposition(advisory_map) == "advisory"
 
     feature_in_feature = next(
-        inv for inv in _containment_invariants()
+        inv
+        for inv in _containment_invariants()
         if "Feature does not contain Feature" in (inv.get("rule") or "")
     )
 
@@ -409,7 +408,8 @@ def test_advisory_softening_containment_would_be_wrong_illustration() -> None:
     by `test_containment_invariants_carry_no_severity_knob`.
     """
     feature_in_feature = next(
-        inv for inv in _containment_invariants()
+        inv
+        for inv in _containment_invariants()
         if "Feature does not contain Feature" in (inv.get("rule") or "")
     )
 

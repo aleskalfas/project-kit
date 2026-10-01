@@ -14,7 +14,7 @@ pkit:
       record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, ADR-019, ADR-039, ADR-055, "project-management:DEC-053"]
       artefact: [.pkit/decisions/README.md]
     revalidated:
-      at: 2026-10-01T00:11:39Z
+      at: 2026-10-01T03:31:35Z
       outcome: updated
 ---
 
@@ -28,7 +28,7 @@ If you have a project that has *adopted* project-kit and you want to record deci
 
 ## Running checks
 
-There is one source of truth for "what must pass before this lands": **`scripts/check.sh`** — the check aggregator. It runs the test suite, `pkit validate` (the one umbrella over every registered check of the tree's state — the CLI reference's "validate" section lists the members), and the diff-scoped checks: `pkit migrations check-diff`, the friction change check (`pkit friction check`), software-analysis' number check (`pkit analysis check-numbers` — a use case or journey number the base took first), the documentation check (`pkit pm check-doc-mapping`) and `pkit release lint`. Run it any time:
+There is one source of truth for "what must pass before this lands": **`scripts/check.sh`** — the check aggregator. It runs ruff's lint and format check (`uv run ruff check .`, `uv run ruff format --check .`), the test suite, `pkit validate` (the one umbrella over every registered check of the tree's state — the CLI reference's "validate" section lists the members), and the diff-scoped checks: `pkit migrations check-diff`, the friction change check (`pkit friction check`), software-analysis' number check (`pkit analysis check-numbers` — a use case or journey number the base took first), the documentation check (`pkit pm check-doc-mapping`) and `pkit release lint`. Run it any time:
 
 ```
 ./scripts/check.sh
@@ -45,7 +45,9 @@ The same aggregator runs in two places, so the gate can't drift:
 
 **Writing tests.** Test-authoring guidance lives in [`tests/README.md`](tests/README.md) — in particular the shared adopter-repository fixture (`make_adopter_repo` / `adopter_repo`) to use instead of hand-rolling `git init` + `install_kit` in each test module.
 
-Add a check by editing `scripts/check.sh` once; both the hook and CI pick it up. (`ruff` and `pyright` are configured in `pyproject.toml` but the tree doesn't yet pass them, so they're **not** gated — adopting them is a separate cleanup.)
+Add a check by editing `scripts/check.sh` once; both the hook and CI pick it up.
+
+**Lint and format.** `pyproject.toml` settles the house style for ruff: every rule the code writes against on purpose is switched off there with its reason, so a finding the gate reports is a defect to fix, not a disagreement to argue. `uv run ruff format .` lays the code out; `uv run ruff check --fix .` takes the fixes ruff can make. A line the formatter cannot break — a string, a docstring, a comment — is held to the same 100 columns: split a string into adjacent literals, rewrap the prose. Where a long line is the output itself (a command in a usage example, a template whose paragraphs are one line each), excuse that string after its closing quotes with `# noqa: E501` and the reason. Type checking is not gated yet: `pyproject.toml` configures pyright's strict mode, which the tree does not pass, and how to gate it is being decided on its own (#840).
 
 **The friction gate, in enforcing mode** ([ADR-055](tech-docs/architecture/decisions/ADR-055-first-adopter-analysis-and-living-docs.md) point 5). The aggregator runs the change check of the anchors-and-friction record ([COR-050](.pkit/decisions/core/COR-050-anchors-and-friction.md)) against the same base as the migration check, and project-kit sets `friction.mode: enforcing` in `.pkit/project/config.yaml`. A pull request then fails on **friction** — an anchored surface changed and the artefact anchored to it carries no answer — on a **dead anchor** or an **anchor of an unresolved kind** it introduced, and on a **marker bump with nothing behind it**; an outdated base is reported, never failed. Answer friction in the same pull request: revalidate the artefact (`outcome: updated` with the content change, or `outcome: unchanged` with a new `unchanged-because`), or defer the anchor with a reason — by hand, or with `uv run pkit friction revalidate` / `uv run pkit friction defer`, which write the block for you. `uv run pkit friction check` shows the same findings locally, uncommitted work included; the CLI reference's "Friction checks" section has the rules. The gate binds a merge only once the aggregator is a required status on `main` — a repository setting the operator applies, not something a script or this guide can do.
 

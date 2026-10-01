@@ -58,7 +58,13 @@ def test_shipped_config_schema_is_draft_2020_12_without_a_version_key() -> None:
     assert "schema_version" not in schema["properties"]
     assert schema["additionalProperties"] is False
     assert set(schema["properties"]) == {
-        "name", "docs", "friction", "connections", "process", "repository", "project",
+        "name",
+        "docs",
+        "friction",
+        "connections",
+        "process",
+        "repository",
+        "project",
     }
 
 
@@ -332,7 +338,8 @@ def test_process_journal_values_must_be_booleans(make_adopter_repo: MakeAdopterR
     _write_config(repo, "process:\n  journal:\n    enabled: 'yes'\n    committed: 1\n")
     report = _run(repo)
     assert _paths(report, cv.Severity.ERROR) == [
-        "/process/journal/committed", "/process/journal/enabled",
+        "/process/journal/committed",
+        "/process/journal/enabled",
     ]
 
 
@@ -355,9 +362,7 @@ def test_config_set_turns_journal_logging_on_and_the_ignore_line_follows(
     runner = CliRunner()
 
     enabled = runner.invoke(main, ["config", "set", "process.journal.enabled", "true", "--yes"])
-    committed = runner.invoke(
-        main, ["config", "set", "process.journal.committed", "true", "--yes"]
-    )
+    committed = runner.invoke(main, ["config", "set", "process.journal.committed", "true", "--yes"])
 
     assert enabled.exit_code == 0, enabled.output
     assert committed.exit_code == 0, committed.output

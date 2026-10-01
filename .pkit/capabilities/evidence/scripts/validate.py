@@ -36,7 +36,6 @@ from typing import Any
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
-
 CITATION_RE = re.compile(r"\[ev:([a-z0-9][a-z0-9-]*)\]")
 SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 FENCED_BLOCK_RE = re.compile(r"^(```|~~~).*?\n.*?^\1", re.MULTILINE | re.DOTALL)

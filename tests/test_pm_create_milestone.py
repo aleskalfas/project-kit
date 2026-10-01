@@ -8,21 +8,14 @@ unit-tested.
 from __future__ import annotations
 
 import importlib.util
-import re
 import sys
 from pathlib import Path
 
 import pytest
 
-
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = (
-    REPO_ROOT
-    / ".pkit"
-    / "capabilities"
-    / "project-management"
-    / "scripts"
-    / "create-milestone.py"
+    REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "create-milestone.py"
 )
 
 
@@ -99,42 +92,58 @@ def test_next_number_returns_one_when_no_milestones_exist(cm, monkeypatch) -> No
 
 
 def test_next_number_returns_max_plus_one(cm, monkeypatch) -> None:
-    _patch_gh_list(monkeypatch, cm, [
-        {"title": "Milestone 1: First"},
-        {"title": "Milestone 2: Second"},
-        {"title": "Milestone 3: Third"},
-    ])
+    _patch_gh_list(
+        monkeypatch,
+        cm,
+        [
+            {"title": "Milestone 1: First"},
+            {"title": "Milestone 2: Second"},
+            {"title": "Milestone 3: Third"},
+        ],
+    )
     assert cm._next_number_for_category("Milestone {n}: {name}") == 4
 
 
 def test_next_number_skips_milestones_in_other_categories(cm, monkeypatch) -> None:
     """A repo with Phase + Milestone milestones — `Milestone {n}:` only counts Milestones."""
-    _patch_gh_list(monkeypatch, cm, [
-        {"title": "Phase 1: Sprint A"},
-        {"title": "Phase 2: Sprint B"},
-        {"title": "Milestone 1: Bundle A"},
-        {"title": "v3 GA: release"},
-    ])
+    _patch_gh_list(
+        monkeypatch,
+        cm,
+        [
+            {"title": "Phase 1: Sprint A"},
+            {"title": "Phase 2: Sprint B"},
+            {"title": "Milestone 1: Bundle A"},
+            {"title": "v3 GA: release"},
+        ],
+    )
     assert cm._next_number_for_category("Milestone {n}: {name}") == 2
 
 
 def test_next_number_handles_gaps(cm, monkeypatch) -> None:
     """Gaps don't matter — script picks max+1, not first-available."""
-    _patch_gh_list(monkeypatch, cm, [
-        {"title": "Milestone 1: First"},
-        {"title": "Milestone 4: Fourth"},  # gap: 2, 3 missing
-    ])
+    _patch_gh_list(
+        monkeypatch,
+        cm,
+        [
+            {"title": "Milestone 1: First"},
+            {"title": "Milestone 4: Fourth"},  # gap: 2, 3 missing
+        ],
+    )
     assert cm._next_number_for_category("Milestone {n}: {name}") == 5
 
 
 def test_next_number_ignores_unparseable_numbers(cm, monkeypatch) -> None:
     """A milestone whose `n` group matches but doesn't parse as int is silently skipped."""
-    _patch_gh_list(monkeypatch, cm, [
-        {"title": "Milestone 1: First"},
-        # The regex requires \d+ for n, so this won't even match — but
-        # the defensive try/except in _next_number_for_category handles
-        # edge cases like format changes.
-    ])
+    _patch_gh_list(
+        monkeypatch,
+        cm,
+        [
+            {"title": "Milestone 1: First"},
+            # The regex requires \d+ for n, so this won't even match — but
+            # the defensive try/except in _next_number_for_category handles
+            # edge cases like format changes.
+        ],
+    )
     assert cm._next_number_for_category("Milestone {n}: {name}") == 2
 
 
@@ -147,25 +156,37 @@ def test_next_number_returns_none_when_gh_fails(cm, monkeypatch) -> None:
 
 
 def test_existing_with_title_finds_exact_match(cm, monkeypatch) -> None:
-    _patch_gh_list(monkeypatch, cm, [
-        {"title": "Milestone 1: A", "number": 1},
-        {"title": "Milestone 2: B", "number": 2},
-    ])
+    _patch_gh_list(
+        monkeypatch,
+        cm,
+        [
+            {"title": "Milestone 1: A", "number": 1},
+            {"title": "Milestone 2: B", "number": 2},
+        ],
+    )
     found = cm._existing_milestone_with_title("Milestone 2: B")
     assert found is not None
     assert found["number"] == 2
 
 
 def test_existing_with_title_returns_none_when_absent(cm, monkeypatch) -> None:
-    _patch_gh_list(monkeypatch, cm, [
-        {"title": "Milestone 1: A"},
-    ])
+    _patch_gh_list(
+        monkeypatch,
+        cm,
+        [
+            {"title": "Milestone 1: A"},
+        ],
+    )
     assert cm._existing_milestone_with_title("Milestone 2: B") is None
 
 
 def test_existing_with_title_is_case_sensitive(cm, monkeypatch) -> None:
     """Title matching is exact — case differences are not collapsed."""
-    _patch_gh_list(monkeypatch, cm, [
-        {"title": "Milestone 1: lowercase"},
-    ])
+    _patch_gh_list(
+        monkeypatch,
+        cm,
+        [
+            {"title": "Milestone 1: lowercase"},
+        ],
+    )
     assert cm._existing_milestone_with_title("Milestone 1: LOWERCASE") is None

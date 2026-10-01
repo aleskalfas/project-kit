@@ -1344,9 +1344,9 @@ def refuse_resolver_without_query_contract(resolver: ResolverCommand) -> str | N
 
     A resolver is a query: bounded, deterministic and needing no network
     (COR-050 point 2), and read-only (ADR-057 point 3 adds it). The backbone
-    admits one only when its command declares that contract (ADR-057 point 3). The declaration is trusted, not enforced:
-    nothing here confines the process it would start — the residual gap the CLI
-    reference states.
+    admits one only when its command declares that contract (ADR-057 point 3).
+    The declaration is trusted, not enforced: nothing here confines the process
+    it would start — the residual gap the CLI reference states.
     """
     if resolver.query_contract:
         return None

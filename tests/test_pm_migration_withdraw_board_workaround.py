@@ -27,9 +27,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CAPABILITY = REPO_ROOT / ".pkit" / "capabilities" / "project-management"
-MIGRATION = (
-    CAPABILITY / "migrations" / "0.55.0" / "003-withdraw-unsupported-board-workaround.sh"
-)
+MIGRATION = CAPABILITY / "migrations" / "0.55.0" / "003-withdraw-unsupported-board-workaround.sh"
 
 BOARD_CONFIG = """\
 schema_version: 1
@@ -121,14 +119,7 @@ def _run(root: Path) -> subprocess.CompletedProcess[str]:
 
 
 def _map_of(root: Path) -> Path:
-    return (
-        root
-        / ".pkit"
-        / "capabilities"
-        / "project-management"
-        / "project"
-        / "substrate-map.yaml"
-    )
+    return root / ".pkit" / "capabilities" / "project-management" / "project" / "substrate-map.yaml"
 
 
 # ----- the signature fires -------------------------------------------------
@@ -259,12 +250,7 @@ def test_a_label_bound_axis_under_a_board_points_at_the_repair(tmp_path: Path) -
     root = _make_adopter(
         tmp_path,
         substrate_map=(
-            "schema_version: 1\n"
-            "axes:\n"
-            "  priority:\n"
-            "    label:\n"
-            "      remap:\n"
-            "        High: P0\n"
+            "schema_version: 1\naxes:\n  priority:\n    label:\n      remap:\n        High: P0\n"
         ),
     )
     result = _run(root)

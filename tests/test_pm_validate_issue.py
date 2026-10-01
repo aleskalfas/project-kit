@@ -14,15 +14,9 @@ from pathlib import Path
 
 import pytest
 
-
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = (
-    REPO_ROOT
-    / ".pkit"
-    / "capabilities"
-    / "project-management"
-    / "scripts"
-    / "validate-issue.py"
+    REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "validate-issue.py"
 )
 
 
@@ -202,7 +196,8 @@ def test_unknown_title_prefix_is_hard_reject(
 ) -> None:
     issue = _make_issue(
         title="Random title with no prefix",
-        body="Feature: #1\n\n## What\nthing.\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone.",
+        body="Feature: #1\n\n## What\nthing.\n## Acceptance criteria\n- [ ] x\n## Doc impact\n"
+        "none.",
         labels=["type:feature", "priority:Medium", "workstream:cli"],
     )
     findings = vi._validate_issue(
@@ -221,10 +216,7 @@ def test_valid_task_passes_title_check(
     issue = _make_issue(
         title="[Task] Install the Claude Code CLI inside the sandbox",
         body=(
-            "Feature: #1\n\n"
-            "## What\nThing.\n"
-            "## Acceptance criteria\n- [ ] x\n"
-            "## Doc impact\nnone."
+            "Feature: #1\n\n## What\nThing.\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."
         ),
         labels=["type:feature", "priority:Medium", "workstream:cli"],
     )
@@ -261,10 +253,7 @@ def titles_kind_prefixed() -> dict:
     }
 
 
-_TASK_BODY = (
-    "Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n"
-    "## Doc impact\nnone."
-)
+_TASK_BODY = "Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."
 
 _KIND_PREFIXES = [
     ("Task", "feature"),
@@ -363,9 +352,7 @@ def test_kind_prefix_resolves_only_to_task_never_a_container(
     vi, issue_types, classification, prefix, _kind
 ) -> None:
     assert (
-        vi.infer_structural_type(
-            f"[{prefix}] x", issue_types, classification=classification
-        )
+        vi.infer_structural_type(f"[{prefix}] x", issue_types, classification=classification)
         == "task"
     )
 
@@ -374,8 +361,13 @@ def test_kind_prefix_resolves_only_to_task_never_a_container(
     "title", ["[EPIC] A big thesis", "[Feature] Deliver the widget", "[Umbrella] Group"]
 )
 def test_container_with_feature_kind_gets_no_kind_prefix_finding(
-    vi, issue_types, titles_kind_prefixed, body_format, classification,
-    label_fallback_config, title,
+    vi,
+    issue_types,
+    titles_kind_prefixed,
+    body_format,
+    classification,
+    label_fallback_config,
+    title,
 ) -> None:
     """Containers are not kind-driven: their structural prefix is correct as-is."""
     issue = _make_issue(
@@ -396,7 +388,11 @@ def test_container_with_feature_kind_gets_no_kind_prefix_finding(
 
 
 def test_title_format_message_names_kind_prefixes_in_greenfield(
-    vi, issue_types, titles_kind_prefixed, body_format, classification,
+    vi,
+    issue_types,
+    titles_kind_prefixed,
+    body_format,
+    classification,
     label_fallback_config,
 ) -> None:
     issue = _make_issue(
@@ -415,24 +411,39 @@ def test_title_format_message_names_kind_prefixes_in_greenfield(
     title_format = [f for f in findings if f.label == "title.format"]
     assert len(title_format) == 1
     detail = title_format[0].detail
-    for prefix in ("[EPIC]", "[Feature]", "[Umbrella]", "[Task]", "[Bug]",
-                   "[Docs]", "[Test]", "[Refactor]", "[Chore]"):
+    for prefix in (
+        "[EPIC]",
+        "[Feature]",
+        "[Umbrella]",
+        "[Task]",
+        "[Bug]",
+        "[Docs]",
+        "[Test]",
+        "[Refactor]",
+        "[Chore]",
+    ):
         assert prefix in detail
     # `[Task]` is both a structural and a kind prefix — named once.
     assert detail.count("[Task]") == 1
 
 
-def test_expected_type_prefixes_without_classification_is_structural_only(
-    vi, issue_types
-) -> None:
+def test_expected_type_prefixes_without_classification_is_structural_only(vi, issue_types) -> None:
     assert vi._expected_type_prefixes(issue_types) == [
-        "[EPIC]", "[Feature]", "[Umbrella]", "[Task]"
+        "[EPIC]",
+        "[Feature]",
+        "[Umbrella]",
+        "[Task]",
     ]
 
 
 def test_brownfield_title_prefix_map_ignores_kind_prefixes(
-    vi, issue_types, titles_kind_prefixed, body_format, classification,
-    board_config, brownfield_type_prefix_map,
+    vi,
+    issue_types,
+    titles_kind_prefixed,
+    body_format,
+    classification,
+    board_config,
+    brownfield_type_prefix_map,
 ) -> None:
     """Passing `classification` must not widen the adopter's vocabulary: a kit
     kind prefix the adopter never declared still resolves to no type and
@@ -467,9 +478,7 @@ def test_missing_type_label_is_hard_reject(
 ) -> None:
     issue = _make_issue(
         title="[Task] Install the Claude Code CLI inside the sandbox",
-        body=(
-            "Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."
-        ),
+        body=("Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."),
         labels=["priority:Medium", "workstream:cli"],  # no type:*
     )
     findings = vi._validate_issue(
@@ -487,9 +496,7 @@ def test_multiple_type_labels_is_hard_reject(
 ) -> None:
     issue = _make_issue(
         title="[Task] Install the Claude Code CLI inside the sandbox",
-        body=(
-            "Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."
-        ),
+        body=("Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."),
         labels=["type:feature", "type:bug", "priority:Medium", "workstream:cli"],
     )
     findings = vi._validate_issue(
@@ -522,9 +529,7 @@ def test_kind_structural_mismatch_at_create_is_hard_reject(
         config=label_fallback_config,
         phase=vi.PHASE_CREATE,
     )
-    mismatch = [
-        f for f in findings if f.label == "classification.type.structural-mismatch"
-    ]
+    mismatch = [f for f in findings if f.label == "classification.type.structural-mismatch"]
     assert len(mismatch) == 1
     assert mismatch[0].severity == "hard-reject"
 
@@ -550,9 +555,7 @@ def test_kind_structural_mismatch_at_transition_is_warning(
         config=label_fallback_config,
         phase=vi.PHASE_TRANSITION,
     )
-    mismatch = [
-        f for f in findings if f.label == "classification.type.structural-mismatch"
-    ]
+    mismatch = [f for f in findings if f.label == "classification.type.structural-mismatch"]
     assert len(mismatch) == 1
     assert mismatch[0].severity == "warning"
     # It must be non-blocking: no hard-reject / bypassable severity on it.
@@ -580,9 +583,7 @@ def test_kind_structural_mismatch_default_phase_is_warning(
         classification=classification,
         config=label_fallback_config,
     )
-    mismatch = [
-        f for f in findings if f.label == "classification.type.structural-mismatch"
-    ]
+    mismatch = [f for f in findings if f.label == "classification.type.structural-mismatch"]
     assert len(mismatch) == 1
     assert mismatch[0].severity == "warning"
 
@@ -618,10 +619,7 @@ def test_bug_kind_on_task_passes(
     # in either phase.
     issue = _make_issue(
         title="[Bug] fix the crash",
-        body=(
-            "Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n"
-            "## Doc impact\nnone."
-        ),
+        body=("Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."),
         labels=["type:bug", "priority:Medium", "workstream:cli"],
     )
     findings = vi._validate_issue(
@@ -662,9 +660,7 @@ def test_board_mode_does_not_require_priority_or_workstream_labels(
     """In board mode, priority and workstream live on board fields, not labels."""
     issue = _make_issue(
         title="[Task] Install the Claude Code CLI inside the sandbox",
-        body=(
-            "Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."
-        ),
+        body=("Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."),
         labels=["type:feature"],
     )
     findings = vi._validate_issue(
@@ -686,9 +682,7 @@ def test_missing_assignee_is_warning(
 ) -> None:
     issue = _make_issue(
         title="[Task] Install the Claude Code CLI inside the sandbox",
-        body=(
-            "Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."
-        ),
+        body=("Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."),
         labels=["type:feature", "priority:Medium", "workstream:cli"],
         assignees=[],
     )
@@ -736,9 +730,7 @@ def test_all_required_sections_present_clears_body_check(
 ) -> None:
     issue = _make_issue(
         title="[Task] Install the Claude Code CLI inside the sandbox",
-        body=(
-            "Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."
-        ),
+        body=("Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."),
         labels=["type:feature", "priority:Medium", "workstream:cli"],
     )
     findings = vi._validate_issue(
@@ -993,7 +985,10 @@ def body_format_task_only() -> dict:
             "task": {
                 "required_sections": [
                     {"heading": "## What", "severity": "[validation-severity:hard-reject]"},
-                    {"heading": "## Acceptance criteria", "severity": "[validation-severity:hard-reject]"},
+                    {
+                        "heading": "## Acceptance criteria",
+                        "severity": "[validation-severity:hard-reject]",
+                    },
                     {"heading": "## Doc impact", "severity": "[validation-severity:hard-reject]"},
                 ],
             },
@@ -1105,12 +1100,7 @@ def test_new_milestone_form_number_must_match_in_text_and_link(
 
 # ---- placeholder detection (DEC-031) --------------------------------
 
-CAPABILITY_ROOT = (
-    REPO_ROOT
-    / ".pkit"
-    / "capabilities"
-    / "project-management"
-)
+CAPABILITY_ROOT = REPO_ROOT / ".pkit" / "capabilities" / "project-management"
 
 
 @pytest.fixture
@@ -1201,9 +1191,7 @@ def test_authored_task_body_no_placeholder_findings(
         capability_root=CAPABILITY_ROOT,
         phase="transition",
     )
-    placeholder_findings = [
-        f for f in findings if f.label.startswith("body.placeholder")
-    ]
+    placeholder_findings = [f for f in findings if f.label.startswith("body.placeholder")]
     assert placeholder_findings == [], f"unexpected: {placeholder_findings}"
 
 
@@ -1312,9 +1300,7 @@ def test_trailing_empty_checkbox_alongside_filled_items_is_ok(
         capability_root=CAPABILITY_ROOT,
         phase="transition",
     )
-    cb_findings = [
-        f for f in findings if f.label == "body.placeholder.empty-checkbox-section"
-    ]
+    cb_findings = [f for f in findings if f.label == "body.placeholder.empty-checkbox-section"]
     assert cb_findings == [], f"unexpected findings: {cb_findings}"
 
 
@@ -1386,9 +1372,7 @@ def test_no_placeholder_check_when_no_capability_root(
         capability_root=None,  # explicitly no root
         phase="transition",
     )
-    placeholder_findings = [
-        f for f in findings if f.label.startswith("body.placeholder")
-    ]
+    placeholder_findings = [f for f in findings if f.label.startswith("body.placeholder")]
     assert placeholder_findings == []
 
 
@@ -1404,12 +1388,7 @@ def test_no_placeholder_check_when_no_capability_root(
 def precheck():
     """Load pre-check.py as a module — for the gate-agreement disposition test."""
     script_path = (
-        REPO_ROOT
-        / ".pkit"
-        / "capabilities"
-        / "project-management"
-        / "scripts"
-        / "pre-check.py"
+        REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "pre-check.py"
     )
     module_name = "pm_pre_check_under_test"
     spec = importlib.util.spec_from_file_location(module_name, script_path)
@@ -1483,10 +1462,7 @@ def test_brownfield_no_type_label_does_not_hard_reject(
     the way — the assertion is scoped to the type axis (the #553 fix)."""
     issue = _make_issue(
         title="[Task] Install the Claude Code CLI inside the sandbox",
-        body=(
-            "Feature: #1\n\n"
-            "## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."
-        ),
+        body=("Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."),
         labels=[],  # no kit labels at all — a real brownfield tracker
     )
     findings = vi._validate_issue(
@@ -1501,9 +1477,7 @@ def test_brownfield_no_type_label_does_not_hard_reject(
     # And it validates clean overall (no blocking findings) — the type axis is
     # satisfied by the [Task] prefix, everything else is in order.
     blocking = [
-        f
-        for f in findings
-        if f.severity in (vi.SEVERITY_HARD_REJECT, vi.SEVERITY_BYPASSABLE)
+        f for f in findings if f.severity in (vi.SEVERITY_HARD_REJECT, vi.SEVERITY_BYPASSABLE)
     ]
     assert blocking == [], f"unexpected blocking findings: {_labels(findings)}"
 
@@ -1515,9 +1489,7 @@ def test_greenfield_missing_type_label_still_hard_rejects(
     labels), a missing `type:*` label is still a hard-reject — unchanged."""
     issue = _make_issue(
         title="[Task] Install the Claude Code CLI inside the sandbox",
-        body=(
-            "Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."
-        ),
+        body=("Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."),
         labels=["priority:Medium", "workstream:cli"],  # no type:*
     )
     findings = vi._validate_issue(
@@ -1624,10 +1596,7 @@ def test_validate_issue_and_pre_check_agree_on_type_disposition(
     board = {"has_projects_v2_board": True}
     # Brownfield: a present map binding type→title-prefix ⇒ kit labels NOT required.
     assert (
-        vi.axis_carriage.expects_kit_labels(
-            "type", no_board, brownfield_type_prefix_map
-        )
-        is False
+        vi.axis_carriage.expects_kit_labels("type", no_board, brownfield_type_prefix_map) is False
     )
     # Greenfield: no map ⇒ kit labels ARE required, both agree.
     assert vi.axis_carriage.expects_kit_labels("type", no_board, None) is True
@@ -1674,9 +1643,7 @@ def test_brownfield_adopter_epic_prefix_validates_clean(
     assert "title.format" not in _labels(findings)
     assert "title.pattern" not in _labels(findings)  # kit regex does not apply
     blocking = [
-        f
-        for f in findings
-        if f.severity in (vi.SEVERITY_HARD_REJECT, vi.SEVERITY_BYPASSABLE)
+        f for f in findings if f.severity in (vi.SEVERITY_HARD_REJECT, vi.SEVERITY_BYPASSABLE)
     ]
     assert blocking == [], f"unexpected blocking findings: {_labels(findings)}"
 
@@ -1687,9 +1654,7 @@ def test_brownfield_adopter_epic_infers_structural_type_via_seam(
     """The `[Epic]` prefix resolves to the `epic` structural type through the seam
     (not the kit `[EPIC]`), and the kit vocabulary would NOT have matched it."""
     assert (
-        vi.infer_structural_type(
-            "[Epic] x", issue_types, substrate_map=brownfield_type_prefix_map
-        )
+        vi.infer_structural_type("[Epic] x", issue_types, substrate_map=brownfield_type_prefix_map)
         == "epic"
     )
     # The kit greenfield vocabulary renders `[EPIC]`, so it does NOT match `[Epic]`.
@@ -1793,12 +1758,8 @@ def test_gate_agreement_across_all_type_bindings(
     inference and pre-check's alignment both read). The flag is held OFF here;
     the board-flag axis of agreement is pinned in
     `test_validate_issue_and_pre_check_agree_on_type_disposition`."""
-    derive_map = vi.axis_labels.SubstrateMap(
-        axes={"type": {"derive": {"from": "open-closed"}}}
-    )
-    unsupported_map = vi.axis_labels.SubstrateMap(
-        axes={"type": {"unsupported": True}}
-    )
+    derive_map = vi.axis_labels.SubstrateMap(axes={"type": {"derive": {"from": "open-closed"}}})
+    unsupported_map = vi.axis_labels.SubstrateMap(axes={"type": {"unsupported": True}})
     all_maps = {
         "greenfield": None,
         "title-prefix": brownfield_type_prefix_map,
@@ -1828,24 +1789,15 @@ def test_gate_agreement_across_all_type_bindings(
     remap = vi.axis_labels.axis_title_prefix_remap("type", brownfield_type_prefix_map)
     assert "[Epic]" in remap.values()
     assert (
-        vi.axis_labels.resolve_title_prefix_read(
-            "type", "[Epic] x", brownfield_type_prefix_map
-        )
+        vi.axis_labels.resolve_title_prefix_read("type", "[Epic] x", brownfield_type_prefix_map)
         == "epic"
     )
 
     # The label-remap binding: both agree it is NOT kit-label-served, and
     # validate-issue reads the axis as label-bound (so it demands the remapped
     # label rather than skipping the axis — the G1 fix).
-    assert (
-        precheck.axis_carriage.expects_kit_labels(
-            "type", {}, brownfield_type_label_map
-        )
-        is False
-    )
-    assert (
-        vi.axis_labels.axis_is_label_bound("type", brownfield_type_label_map) is True
-    )
+    assert precheck.axis_carriage.expects_kit_labels("type", {}, brownfield_type_label_map) is False
+    assert vi.axis_labels.axis_is_label_bound("type", brownfield_type_label_map) is True
 
 
 # --- board membership: unverified is not missing, and not satisfied (#740) ---
@@ -1870,10 +1822,7 @@ def _membership_labels(
     """
     issue = _make_issue(
         title="[Task] Wire the sandbox allowlist",
-        body=(
-            "Feature: #1\n\n"
-            "## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."
-        ),
+        body=("Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."),
         labels=["type:feature"],
     )
     if present:
@@ -1957,10 +1906,7 @@ def test_board_membership_unverified_is_dec019_severity(
     predate adoption; blocking them mid-flight is the wrong trade)."""
     issue = _make_issue(
         title="[Task] Wire the sandbox allowlist",
-        body=(
-            "Feature: #1\n\n"
-            "## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."
-        ),
+        body=("Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."),
         labels=["type:feature"],
     )
     issue["projectItems"] = None
@@ -1984,10 +1930,7 @@ def test_label_only_adopter_gets_no_membership_finding(
     new finding, no new call, no new scope requirement."""
     issue = _make_issue(
         title="[Task] Wire the sandbox allowlist",
-        body=(
-            "Feature: #1\n\n"
-            "## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."
-        ),
+        body=("Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."),
         labels=["type:feature", "priority:Medium", "workstream:cli"],
     )
     issue["projectItems"] = None
@@ -2044,10 +1987,7 @@ def _no_board_labels(
 ):
     issue = _make_issue(
         title="[Task] Wire the sandbox allowlist",
-        body=(
-            "Feature: #1\n\n"
-            "## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."
-        ),
+        body=("Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."),
         labels=labels,
     )
     return _labels(
@@ -2109,10 +2049,7 @@ def test_no_board_label_bound_does_not_demand_the_kit_label(
     substrate that actually carries the axis."""
     issue = _make_issue(
         title="[Task] Wire the sandbox allowlist",
-        body=(
-            "Feature: #1\n\n"
-            "## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."
-        ),
+        body=("Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."),
         labels=["type:feature"],
     )
     findings = vi._validate_issue(
@@ -2123,9 +2060,7 @@ def test_no_board_label_bound_does_not_demand_the_kit_label(
         config=label_fallback_config,
         substrate_map=brownfield_priority_ws_label_map,
     )
-    detail = next(
-        f.detail for f in findings if f.label == "classification.priority.missing"
-    )
+    detail = next(f.detail for f in findings if f.label == "classification.priority.missing")
     assert "substrate-map.yaml" in detail
     assert "priority:*" not in detail
 
@@ -2202,8 +2137,7 @@ def test_greenfield_multiple_kit_labels_still_reported(
 # these pin the half a configured board still hid.
 
 
-def _board_labels(vi, issue_types, titles, body_format, board_config, *, labels,
-                  substrate_map):
+def _board_labels(vi, issue_types, titles, body_format, board_config, *, labels, substrate_map):
     return _labels(
         vi._validate_issue(
             issue=_make_issue(
@@ -2224,14 +2158,22 @@ def _board_labels(vi, issue_types, titles, body_format, board_config, *, labels,
 
 
 def test_board_with_a_label_binding_accepts_the_remapped_label(
-    vi, issue_types, titles, body_format, board_config,
+    vi,
+    issue_types,
+    titles,
+    body_format,
+    board_config,
     brownfield_priority_ws_label_map,
 ) -> None:
     """THE REPORTED CONFIGURATION (#708): board flag on, map binds priority and
     workstream to the adopter's own labels. The writer already writes `P0` /
     `area/cli` through the seam; the reader must look there too."""
     found = _board_labels(
-        vi, issue_types, titles, body_format, board_config,
+        vi,
+        issue_types,
+        titles,
+        body_format,
+        board_config,
         labels=["type:feature", "P1", "area/cli"],
         substrate_map=brownfield_priority_ws_label_map,
     )
@@ -2242,14 +2184,22 @@ def test_board_with_a_label_binding_accepts_the_remapped_label(
 
 
 def test_board_with_a_label_binding_still_refuses_when_absent(
-    vi, issue_types, titles, body_format, board_config,
+    vi,
+    issue_types,
+    titles,
+    body_format,
+    board_config,
     brownfield_priority_ws_label_map,
 ) -> None:
     """The silent miss, made loud: under a board this gate did not run at all, so
     an issue with NO value on either substrate passed clean. It is a genuine
     missing value — hard-reject, exactly as the no-board case gates it."""
     found = _board_labels(
-        vi, issue_types, titles, body_format, board_config,
+        vi,
+        issue_types,
+        titles,
+        body_format,
+        board_config,
         labels=["type:feature"],
         substrate_map=brownfield_priority_ws_label_map,
     )
@@ -2258,7 +2208,11 @@ def test_board_with_a_label_binding_still_refuses_when_absent(
 
 
 def test_board_carried_axis_reports_unverified_not_missing(
-    vi, issue_types, titles, body_format, board_config,
+    vi,
+    issue_types,
+    titles,
+    body_format,
+    board_config,
 ) -> None:
     """Greenfield under a board: the board carries priority/workstream. The gate
     must demand no kit label AND not claim the value is missing — it reports that
@@ -2267,8 +2221,7 @@ def test_board_carried_axis_reports_unverified_not_missing(
         issue=_make_issue(
             title="[Task] Wire the sandbox allowlist",
             body=(
-                "Feature: #1\n\n"
-                "## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."
+                "Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."
             ),
             labels=["type:feature"],
         ),
@@ -2286,7 +2239,11 @@ def test_board_carried_axis_reports_unverified_not_missing(
 
 
 def test_board_carried_unverified_is_a_warning_and_names_the_board(
-    vi, issue_types, titles, body_format, board_config,
+    vi,
+    issue_types,
+    titles,
+    body_format,
+    board_config,
 ) -> None:
     """No new severity: `warning`, the same one DEC-019's board_membership drift
     knob resolves to for its own `.unverified`. And the message must say where the
@@ -2296,8 +2253,7 @@ def test_board_carried_unverified_is_a_warning_and_names_the_board(
         issue=_make_issue(
             title="[Task] Wire the sandbox allowlist",
             body=(
-                "Feature: #1\n\n"
-                "## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."
+                "Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."
             ),
             labels=["type:feature"],
         ),
@@ -2307,9 +2263,7 @@ def test_board_carried_unverified_is_a_warning_and_names_the_board(
         config=board_config,
         substrate_map=None,
     )
-    unverified = next(
-        f for f in findings if f.label == "classification.priority.unverified"
-    )
+    unverified = next(f for f in findings if f.label == "classification.priority.unverified")
     assert unverified.severity == vi.SEVERITY_WARNING
     assert "board" in unverified.detail
     assert "UNVERIFIED" in unverified.detail
@@ -2317,13 +2271,21 @@ def test_board_carried_unverified_is_a_warning_and_names_the_board(
 
 
 def test_board_declared_in_the_map_is_also_unverified(
-    vi, issue_types, titles, body_format, board_config,
+    vi,
+    issue_types,
+    titles,
+    body_format,
+    board_config,
 ) -> None:
     """The `board: true` arm reaches the same place as the flag — one accessor,
     one answer, whether the adopter declared it or the flag supplied it."""
     smap = vi.axis_labels.SubstrateMap(axes={"priority": {"board": True}})
     found = _board_labels(
-        vi, issue_types, titles, body_format, board_config,
+        vi,
+        issue_types,
+        titles,
+        body_format,
+        board_config,
         labels=["type:feature"],
         substrate_map=smap,
     )
@@ -2335,7 +2297,11 @@ def test_board_declared_in_the_map_is_also_unverified(
 
 
 def test_board_with_an_unsupported_axis_demands_nothing(
-    vi, issue_types, titles, body_format, label_fallback_config,
+    vi,
+    issue_types,
+    titles,
+    body_format,
+    label_fallback_config,
 ) -> None:
     """No board and a present map marking the axis `unsupported`: nothing carries
     it, so nothing is demanded and nothing is reported unverified either — a
@@ -2344,7 +2310,11 @@ def test_board_with_an_unsupported_axis_demands_nothing(
         axes={"priority": {"unsupported": True}, "workstream": {"unsupported": True}}
     )
     found = _no_board_labels(
-        vi, issue_types, titles, body_format, label_fallback_config,
+        vi,
+        issue_types,
+        titles,
+        body_format,
+        label_fallback_config,
         labels=["type:feature"],
         substrate_map=smap,
     )

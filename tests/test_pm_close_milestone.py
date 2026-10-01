@@ -25,9 +25,7 @@ from unittest.mock import MagicMock
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SCRIPTS_DIR = (
-    REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
-)
+SCRIPTS_DIR = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
 SCRIPT_PATH = SCRIPTS_DIR / "close-milestone.py"
 
 # The script does `sys.path.insert(0, <scripts dir>)` and `from _lib...`; make
@@ -87,7 +85,8 @@ def test_resolve_close_trigger_marker_wins_over_inference() -> None:
     due = "2026-07-01T00:00:00Z"
     # Marker present → not inferred, even with a due date.
     assert ms.resolve_close_trigger("Close trigger: content-based", due) == (
-        "content-based", False,
+        "content-based",
+        False,
     )
     # No marker → inferred from the due date.
     assert ms.resolve_close_trigger("no marker here", due) == ("date-based", True)
@@ -310,9 +309,11 @@ def _prime_main(monkeypatch, cm, *, milestone, children):
     assert whether (and with what description) the real close was attempted.
     """
     _pass_gates(monkeypatch, cm)
-    monkeypatch.setattr(cm, "_read_yaml", lambda path, loader: {
-        "types": {"epic": {"title_prefix": "EPIC", "title_case": "upper"}}
-    })
+    monkeypatch.setattr(
+        cm,
+        "_read_yaml",
+        lambda path, loader: {"types": {"epic": {"title_prefix": "EPIC", "title_case": "upper"}}},
+    )
     monkeypatch.setattr(cm, "fetch_milestone", lambda n, config: milestone)
     monkeypatch.setattr(
         cm,

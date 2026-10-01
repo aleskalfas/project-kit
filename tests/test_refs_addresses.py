@@ -245,16 +245,18 @@ def test_an_undeclared_point_is_reported_like_an_unresolved_record_token(
 ) -> None:
     repo = make_adopter_repo()
     _docs_provider(repo)
-    skill = _citing_skill(
-        repo, f"See [{DOCS}:nope] and [missing:DEC-001-gone] for the rule."
-    )
+    skill = _citing_skill(repo, f"See [{DOCS}:nope] and [missing:DEC-001-gone] for the rule.")
     issues = _address_issues(repo, skill)
     [point] = [i for i in issues if f"[{DOCS}:nope]" in i.diagnosis]
     [record] = [i for i in issues if "[missing:DEC-001-gone]" in i.diagnosis]
     # One shape: the citing artifact, a `cites …` diagnosis, the citation kind.
-    assert (point.location, point.kind) == (record.location, record.kind) == (
-        str(skill.relative_to(repo.root)),
-        refs.CITATION,
+    assert (
+        (point.location, point.kind)
+        == (record.location, record.kind)
+        == (
+            str(skill.relative_to(repo.root)),
+            refs.CITATION,
+        )
     )
     assert point.diagnosis == (
         f"cites point '[{DOCS}:nope]', which does not resolve: no installed provider of role "

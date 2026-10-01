@@ -57,16 +57,12 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import axis_carriage  # noqa: E402
-from _lib import axis_labels  # noqa: E402
-from _lib import bootstrap_gate  # noqa: E402
-from _lib import session_guard  # noqa: E402
-from _lib.gh import gh_run  # noqa: E402
-from _lib.label_contributions import (  # noqa: E402
+from _lib import axis_carriage, axis_labels, bootstrap_gate, session_guard
+from _lib.gh import gh_run
+from _lib.label_contributions import (
     LabelContribution,
     collect_label_contributions,
 )
-
 
 CAPABILITY_NAME = "project-management"
 ADOPTER_CONFIG_PATH = "project/config.yaml"
@@ -74,17 +70,21 @@ ADOPTER_CONFIG_PATH = "project/config.yaml"
 # Default label colors. Adopters may override post-creation via gh label edit;
 # bootstrap doesn't track or migrate color choices.
 LABEL_COLORS = {
-    "type": "1d76db",       # blue
-    "priority": "d93f0b",   # red-orange
-    "workstream": "0e8a16", # green
-    "state": "fbca04",      # yellow — lifecycle state substrate for label-fallback adopters
+    "type": "1d76db",  # blue
+    "priority": "d93f0b",  # red-orange
+    "workstream": "0e8a16",  # green
+    "state": "fbca04",  # yellow — lifecycle state substrate for label-fallback adopters
 }
 
 LABEL_DESCRIPTIONS = {
-    "type": "Classification axis: structural kind of work (per project-management:DEC-012-classification-axes).",
-    "priority": "Classification axis: triage signal (per project-management:DEC-012-classification-axes).",
-    "workstream": "Classification axis: cross-repo workstream (per project-management:DEC-012-classification-axes).",
-    "state": "Lifecycle state (label-fallback substrate, per project-management workflow.yaml states).",
+    "type": "Classification axis: structural kind of work (per "
+    "project-management:DEC-012-classification-axes).",
+    "priority": "Classification axis: triage signal (per "
+    "project-management:DEC-012-classification-axes).",
+    "workstream": "Classification axis: cross-repo workstream (per "
+    "project-management:DEC-012-classification-axes).",
+    "state": "Lifecycle state (label-fallback substrate, per project-management workflow.yaml "
+    "states).",
 }
 
 
@@ -179,9 +179,7 @@ def main() -> int:
     _print_context_header(repo, capability_root)
 
     # ---- compute the plan (read-only) ----
-    plan = _compute_plan(
-        config, classification, args.with_starter_epic, capability_root
-    )
+    plan = _compute_plan(config, classification, args.with_starter_epic, capability_root)
     _print_plan(plan)
 
     # ---- confirm before mutating ----
@@ -231,9 +229,7 @@ def _stamp_bootstrap_completed(capability_root: Path) -> None:
     which of the two happened.
     """
     try:
-        path = bootstrap_gate.write_stamp(
-            capability_root, by=bootstrap_gate.BY_BOOTSTRAP
-        )
+        path = bootstrap_gate.write_stamp(capability_root, by=bootstrap_gate.BY_BOOTSTRAP)
     except OSError as exc:
         print(
             f"  ! could not write the bootstrap stamp "
@@ -254,18 +250,18 @@ class Plan:
     """The bootstrap plan: what would be created vs already exists."""
 
     label_creates: list[tuple[str, str]]  # (axis, name)
-    label_exists: list[str]                # names already in repo
-    starter_epic: bool                     # whether to file the starter EPIC
-    starter_epic_exists: bool              # whether it's already filed
-    skipped_messages: list[str]            # explanatory skip notes (e.g., board mode)
+    label_exists: list[str]  # names already in repo
+    starter_epic: bool  # whether to file the starter EPIC
+    starter_epic_exists: bool  # whether it's already filed
+    skipped_messages: list[str]  # explanatory skip notes (e.g., board mode)
     # Contributed labels (per DEC-042): a capability-declared label carrying its
     # own color/description, created through a per-label path OUTSIDE the axis
     # sole-constructor. Missing-vs-present is the same idempotency diff.
     contributed_label_creates: list[LabelContribution]  # to create
-    contributed_label_exists: list[str]                 # names already in repo
-    contributed_label_warnings: list[str]               # skip-and-warn notes (DEC-042)
-    board_node_id: str | None = None       # resolved projects_v2_node_id to cache (#310)
-    board_node_id_note: str = ""            # why no id is cached (cached / no board / unresolvable)
+    contributed_label_exists: list[str]  # names already in repo
+    contributed_label_warnings: list[str]  # skip-and-warn notes (DEC-042)
+    board_node_id: str | None = None  # resolved projects_v2_node_id to cache (#310)
+    board_node_id_note: str = ""  # why no id is cached (cached / no board / unresolvable)
 
     def has_creates(self) -> bool:
         return (
@@ -348,9 +344,7 @@ def _compute_plan(
         _skip_palette("type")
 
     if _kit_labels("priority"):
-        priority_values = (
-            classification.get("axes", {}).get("priority", {}).get("values", [])
-        )
+        priority_values = classification.get("axes", {}).get("priority", {}).get("values", [])
         _plan_axis("priority", priority_values)
     else:
         _skip_palette("priority")
@@ -384,8 +378,8 @@ def _compute_plan(
     # per-label create path (their own color/description), reusing the same
     # existing-vs-missing diff. Skip-and-warn: a malformed declaration is warned,
     # not fatal.
-    contributed_creates, contributed_exists, contributed_warnings = (
-        _plan_contributed_labels(capability_root, existing_labels)
+    contributed_creates, contributed_exists, contributed_warnings = _plan_contributed_labels(
+        capability_root, existing_labels
     )
 
     starter_epic_exists = False
@@ -446,9 +440,7 @@ def _plan_contributed_labels(
     return to_create, present, warnings
 
 
-def _plan_project_node_id(
-    config: dict[str, Any], has_board: bool
-) -> tuple[str | None, str]:
+def _plan_project_node_id(config: dict[str, Any], has_board: bool) -> tuple[str | None, str]:
     """Decide whether to resolve + cache `projects_v2_node_id` (#310).
 
     Returns ``(node_id_to_cache, note)``. The id is non-None only when a board is
@@ -515,8 +507,8 @@ def _confirm_apply(repo: str) -> bool:
     """Single confirmation prompt naming the target repo."""
     if not sys.stdin.isatty():
         print(
-            f"  ! Non-interactive shell; refusing to apply without explicit confirmation.\n"
-            f"    Re-run from an interactive shell, or pass --yes after reviewing the plan."
+            "  ! Non-interactive shell; refusing to apply without explicit confirmation.\n"
+            "    Re-run from an interactive shell, or pass --yes after reviewing the plan."
         )
         return False
     while True:
@@ -661,9 +653,7 @@ def _starter_epic_already_filed() -> bool:
 # ----- projects_v2_node_id cache (#310) ------------------------------
 
 
-def _resolve_project_node_id(
-    config: dict[str, Any], board_id: int | str
-) -> str | None:
+def _resolve_project_node_id(config: dict[str, Any], board_id: int | str) -> str | None:
     """Resolve board NUMBER → Projects-v2 project node id via `gh project view` (a READ).
 
     Mirrors ``back-fill.py``'s / ``create-issue.py``'s resolver: scopes to the
@@ -721,9 +711,7 @@ def _persist_project_node_id(capability_root: Path, node_id: str) -> Action:
     except (OSError, YAMLError) as exc:
         return Action("projects_v2_node_id", "failed", f"config read failed: {exc}")
     if not isinstance(data, dict):
-        return Action(
-            "projects_v2_node_id", "failed", "config top-level is not a mapping"
-        )
+        return Action("projects_v2_node_id", "failed", "config top-level is not a mapping")
     data["projects_v2_node_id"] = node_id
     try:
         with path.open("w", encoding="utf-8") as fh:
@@ -836,7 +824,7 @@ project's longer-term EPIC structure has crystallised.
 - [ ] Successor EPICs filed covering this project's actual workstreams (each EPIC scoping a workstream's outcome)
 - [ ] Tasks filed during bootstrap migrated under the appropriate successor EPIC once they exist
 - [ ] This EPIC closes when its successors have absorbed all in-flight work
-"""
+"""  # noqa: E501 — each checkbox of the issue body is one line
 
 
 # ----- helpers -------------------------------------------------------
@@ -915,9 +903,7 @@ def _check_gh_block_and_auth(config: dict[str, Any]) -> str | None:
     return None
 
 
-def _resolve_workstream_slugs(
-    capability_root: Path, config: dict[str, Any]
-) -> list[str]:
+def _resolve_workstream_slugs(capability_root: Path, config: dict[str, Any]) -> list[str]:
     """Read workstream slugs from workstreams.yaml (canonical) or config legacy.
 
     Implements DEC-018's source-of-truth precedence: dedicated file wins
@@ -937,10 +923,7 @@ def _resolve_workstream_slugs(
                 s
                 for s, attrs in ws.items()
                 if isinstance(s, str)
-                and (
-                    not isinstance(attrs, dict)
-                    or attrs.get("status", "active") == "active"
-                )
+                and (not isinstance(attrs, dict) or attrs.get("status", "active") == "active")
             ]
         return []
     # Legacy fallback.
@@ -967,11 +950,7 @@ def _resolve_state_ids(capability_root: Path) -> list[str]:
         return []
     block = data.get("process") if isinstance(data.get("process"), dict) else data
     states = block.get("states") or []
-    ids = [
-        str(s["id"])
-        for s in states
-        if isinstance(s, dict) and isinstance(s.get("id"), str)
-    ]
+    ids = [str(s["id"]) for s in states if isinstance(s, dict) and isinstance(s.get("id"), str)]
     canonical = ["todo", "backlog", "in-progress", "review", "done"]
     known = [s for s in canonical if s in ids]
     extra = [s for s in ids if s not in canonical]

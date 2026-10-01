@@ -86,15 +86,15 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate, session_guard  # noqa: E402
-from _lib.gh import gh_run, load_adopter_config  # noqa: E402
-from _lib.membership import (  # noqa: E402
+from _lib import bootstrap_gate, session_guard
+from _lib.gh import gh_run, load_adopter_config
+from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
     resolve_capability_root,
     resolve_invoker_identity,
 )
-from _lib.milestone import (  # noqa: E402
+from _lib.milestone import (
     fetch_milestone,
     list_milestone_children,
     resolve_close_trigger,
@@ -202,14 +202,10 @@ def main() -> int:
         print("\n[noop] milestone already closed.")
         return 0
 
-    issue_types = _read_yaml(
-        capability_root / "schemas" / "issue-types.yaml", yaml_loader
-    )
+    issue_types = _read_yaml(capability_root / "schemas" / "issue-types.yaml", yaml_loader)
     # Kind-driven title prefixes ([Bug]/[Docs]/[Test]/[Refactor]/[Chore]) live in
     # classification.yaml; without it a kind-prefixed Task reads as unrecognised.
-    classification = _read_yaml(
-        capability_root / "schemas" / "classification.yaml", yaml_loader
-    )
+    classification = _read_yaml(capability_root / "schemas" / "classification.yaml", yaml_loader)
 
     children = list_milestone_children(number, title, config, issue_types, classification)
     if children is None:
@@ -374,11 +370,15 @@ def _gh_close_milestone(number: int, description: str, config: dict) -> bool:
     covers, rather than a raw `gh api` the agent deny discourages.
     """
     args = [
-        "gh", "api",
-        "-X", "PATCH",
+        "gh",
+        "api",
+        "-X",
+        "PATCH",
         f"repos/{{owner}}/{{repo}}/milestones/{number}",
-        "-f", "state=closed",
-        "-f", f"description={description}",
+        "-f",
+        "state=closed",
+        "-f",
+        f"description={description}",
     ]
     try:
         proc = gh_run(args, config, check=False)
@@ -396,7 +396,6 @@ def _gh_close_milestone(number: int, description: str, config: dict) -> bool:
 
 
 # ---- I/O helpers ----------------------------------------------------
-
 
 
 def _read_yaml(path: Path, yaml_loader: YAML) -> dict:

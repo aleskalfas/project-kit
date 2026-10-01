@@ -97,9 +97,7 @@ def _bare_read_lines(source: str) -> list[int]:
     return sorted(lines)
 
 
-@pytest.mark.parametrize(
-    "path", _scanned_scripts(), ids=lambda p: str(p.relative_to(SCRIPTS))
-)
+@pytest.mark.parametrize("path", _scanned_scripts(), ids=lambda p: str(p.relative_to(SCRIPTS)))
 def test_bare_axis_reads_are_allow_listed(path: Path) -> None:
     """No pm script reads an axis by the bare kit prefix without a named reason."""
     rel = str(path.relative_to(SCRIPTS))
@@ -137,8 +135,9 @@ def test_allow_list_names_only_existing_files() -> None:
 def test_guard_detects_a_bare_read() -> None:
     """Mutation proof: the call is seen; prose and the map-aware readers are not."""
     assert _bare_read_lines('v = axis_labels.read("workstream", labels)\n') == [1]
-    assert _bare_read_lines(
-        'v = axis_labels.resolve_read("workstream", labels, substrate_map)\n'
-    ) == []
+    assert (
+        _bare_read_lines('v = axis_labels.resolve_read("workstream", labels, substrate_map)\n')
+        == []
+    )
     assert _bare_read_lines('vs = axis_labels.read_all("type", labels)\n') == []
     assert _bare_read_lines('"""Greenfield uses `axis_labels.read("type", x)`."""\n') == []

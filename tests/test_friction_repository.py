@@ -96,7 +96,7 @@ def test_the_revalidation_point_follows_a_rename_and_a_squash_merge(timeline: Ti
     assert _summary(result) == [("stale", "docs/guide.md", "path:src/cli/**", changed)]
     (finding,) = result.findings
     assert finding.origin is not None and finding.origin.author == "Alice"
-    assert f"first in {changed[:12]} \"change the CLI\"" in finding.message
+    assert f'first in {changed[:12]} "change the CLI"' in finding.message
     assert result.artefact_reports[0].state is fr.ArtefactState.STALE
 
 

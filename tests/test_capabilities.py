@@ -14,13 +14,10 @@ from project_kit.cli import main
 from project_kit.manifest import (
     ORIGIN_INCUBATED_IN_REPO,
     ORIGIN_KIT_SHIPPED,
-    BackboneManifest,
     read_backbone_manifest,
     read_capability_origin,
-    write_backbone_manifest,
 )
 from tests.adopter_repo import MakeAdopterRepo
-
 
 # --- fixtures --------------------------------------------------------
 
@@ -52,7 +49,7 @@ def _stage_capability_in_source(
     if requires_capabilities:
         lines = ["requires_capabilities:"]
         for req in requires_capabilities:
-            lines.append(f'  - name: {req["name"]}')
+            lines.append(f"  - name: {req['name']}")
             lines.append(f'    version: "{req["version"]}"')
         req_caps_block = "\n" + "\n".join(lines) + "\n"
     (cap_dir / "package.yaml").write_text(
@@ -92,7 +89,8 @@ requires_backbone: "{requires_backbone}"{req_caps_block}
         for n, slug in enumerate(with_decisions, 1):
             num = str(n).zfill(3)
             (decisions_dir / f"DEC-{num}-{slug}.md").write_text(
-                f"---\nid: DEC-{num}\ntitle: {slug}\nstatus: accepted\ndate: 2026-05-18\nauthor: t\n---\n# {slug}\n",
+                f"---\nid: DEC-{num}\ntitle: {slug}\nstatus: accepted\ndate: 2026-05-18\n"
+                f"author: t\n---\n# {slug}\n",
                 encoding="utf-8",
             )
 
@@ -196,9 +194,7 @@ def test_find_in_repo_returns_none_when_not_capability_kind(kit_target: Path) ->
     assert caps.find_capability_in_repo(kit_target, "wrong-kind") is None
 
 
-def test_find_in_repo_distinct_from_kit_source(
-    kit_target: Path, kit_source: Path
-) -> None:
+def test_find_in_repo_distinct_from_kit_source(kit_target: Path, kit_source: Path) -> None:
     """A repo capability is invisible to the kit-source resolver and vice versa."""
     _stage_capability_in_repo(kit_target, "homegrown")
     assert caps.find_capability_in_source(kit_source, "homegrown") is None
@@ -208,9 +204,7 @@ def test_find_in_repo_distinct_from_kit_source(
 # --- resolve_capability_source (both-present contract, COR-031) ------
 
 
-def test_resolve_prefers_repo_when_only_in_repo(
-    kit_target: Path, kit_source: Path
-) -> None:
+def test_resolve_prefers_repo_when_only_in_repo(kit_target: Path, kit_source: Path) -> None:
     _stage_capability_in_repo(kit_target, "homegrown")
     resolved = caps.resolve_capability_source(
         "homegrown",
@@ -225,9 +219,7 @@ def test_resolve_prefers_repo_when_only_in_repo(
     assert resolved.source.path == kit_target / ".pkit" / "capabilities" / "homegrown"
 
 
-def test_resolve_prefers_kit_when_only_in_kit(
-    kit_target: Path, kit_source: Path
-) -> None:
+def test_resolve_prefers_kit_when_only_in_kit(kit_target: Path, kit_source: Path) -> None:
     _stage_capability_in_source(kit_source, "evidence")
     resolved = caps.resolve_capability_source(
         "evidence",
@@ -242,9 +234,7 @@ def test_resolve_prefers_kit_when_only_in_kit(
     assert resolved.source.path == kit_source / "capabilities" / "evidence"
 
 
-def test_resolve_returns_none_when_absent_everywhere(
-    kit_target: Path, kit_source: Path
-) -> None:
+def test_resolve_returns_none_when_absent_everywhere(kit_target: Path, kit_source: Path) -> None:
     assert (
         caps.resolve_capability_source(
             "nope",
@@ -311,9 +301,7 @@ def test_resolve_prefer_falls_back_to_other_source_when_preferred_absent(
     assert resolved.in_kit_source is False
 
 
-def test_resolve_rejects_invalid_prefer(
-    kit_target: Path, kit_source: Path
-) -> None:
+def test_resolve_rejects_invalid_prefer(kit_target: Path, kit_source: Path) -> None:
     with pytest.raises(ValueError):
         caps.resolve_capability_source(
             "evidence",
@@ -326,17 +314,13 @@ def test_resolve_rejects_invalid_prefer(
 # --- list_capabilities ----------------------------------------------
 
 
-def test_list_capabilities_empty_when_no_caps_in_source(
-    kit_target: Path, kit_source: Path
-) -> None:
+def test_list_capabilities_empty_when_no_caps_in_source(kit_target: Path, kit_source: Path) -> None:
     available, installed = caps.list_capabilities(kit_target, kit_source)
     assert available == []
     assert installed == []
 
 
-def test_list_capabilities_shows_available_in_source(
-    kit_target: Path, kit_source: Path
-) -> None:
+def test_list_capabilities_shows_available_in_source(kit_target: Path, kit_source: Path) -> None:
     _stage_capability_in_source(kit_source, "evidence")
     _stage_capability_in_source(kit_source, "audit-log")
     available, installed = caps.list_capabilities(kit_target, kit_source)
@@ -372,9 +356,7 @@ def test_install_capability_copies_subtree_and_registers(
     assert caps.is_installed(kit_target, "evidence")
 
 
-def test_install_refuses_when_already_installed(
-    kit_target: Path, kit_source: Path
-) -> None:
+def test_install_refuses_when_already_installed(kit_target: Path, kit_source: Path) -> None:
     _stage_capability_in_source(kit_source, "evidence")
     source = caps.find_capability_in_source(kit_source, "evidence")
     assert source is not None
@@ -444,9 +426,7 @@ def test_install_omits_skipped_artifacts(kit_target: Path, kit_source: Path) -> 
     )
     source = caps.find_capability_in_source(kit_source, "evidence")
     assert source is not None
-    caps.install_capability(
-        kit_target, source, skipped_artifacts=(("skill", "add-evidence"),)
-    )
+    caps.install_capability(kit_target, source, skipped_artifacts=(("skill", "add-evidence"),))
     expected = kit_target / ".pkit" / "capabilities" / "evidence"
     # The skipped skill is NOT in the installed tree.
     assert not (expected / "skills" / "add-evidence.md").exists()
@@ -461,9 +441,7 @@ def test_register_incubated_records_origin_and_does_not_copy(
     kit_target: Path,
 ) -> None:
     """Registering an in-repo capability records origin incubated-in-repo and copies nothing."""
-    _stage_capability_in_repo(
-        kit_target, "homegrown", with_skills=("homegrown-skill",)
-    )
+    _stage_capability_in_repo(kit_target, "homegrown", with_skills=("homegrown-skill",))
     source = caps.find_capability_in_repo(kit_target, "homegrown")
     assert source is not None
 
@@ -498,16 +476,13 @@ def test_register_incubated_origin_lives_in_install_state_not_subtree(
     # In install-state.
     backbone = read_backbone_manifest(kit_target)
     assert backbone is not None
-    entry = next(
-        c for c in backbone.components
-        if c.kind == "capability" and c.name == "homegrown"
-    )
+    entry = next(c for c in backbone.components if c.kind == "capability" and c.name == "homegrown")
     assert entry.origin == ORIGIN_INCUBATED_IN_REPO
 
     # NOT in the capability's own package.yaml.
-    pkg_text = (
-        kit_target / ".pkit" / "capabilities" / "homegrown" / "package.yaml"
-    ).read_text(encoding="utf-8")
+    pkg_text = (kit_target / ".pkit" / "capabilities" / "homegrown" / "package.yaml").read_text(
+        encoding="utf-8"
+    )
     assert "origin" not in pkg_text
 
 
@@ -595,9 +570,7 @@ def test_register_incubated_then_kit_shipped_origin_default_distinct(
 # --- refresh preserves the adopter-owned project/ subtree (COR-001) ----
 
 
-def test_refresh_preserves_adopter_project_files(
-    kit_target: Path, kit_source: Path
-) -> None:
+def test_refresh_preserves_adopter_project_files(kit_target: Path, kit_source: Path) -> None:
     """A `refresh_capability` (the sync path) must not clobber adopter-owned
     `project/` files with the shipped seed — the no-shared-files invariant."""
     _stage_capability_in_source(
@@ -683,9 +656,7 @@ def test_refresh_never_seeds_source_project_file_and_refreshes_core(
     assert not (installed / "skills" / "old-skill.md").exists()
 
 
-def test_uninstall_capability_removes_and_deregisters(
-    kit_target: Path, kit_source: Path
-) -> None:
+def test_uninstall_capability_removes_and_deregisters(kit_target: Path, kit_source: Path) -> None:
     _stage_capability_in_source(kit_source, "evidence")
     source = caps.find_capability_in_source(kit_source, "evidence")
     assert source is not None
@@ -706,9 +677,7 @@ def test_uninstall_refuses_when_not_installed(kit_target: Path) -> None:
 # --- collision detection --------------------------------------------
 
 
-def test_detect_collisions_finds_skill_collision(
-    kit_target: Path, kit_source: Path
-) -> None:
+def test_detect_collisions_finds_skill_collision(kit_target: Path, kit_source: Path) -> None:
     # Install a skill in the adopter's project-side area.
     project_skills = kit_target / ".pkit" / "skills" / "project"
     project_skills.mkdir(parents=True, exist_ok=True)
@@ -727,9 +696,7 @@ def test_detect_collisions_finds_skill_collision(
     assert "no-collision" not in collision_names
 
 
-def test_detect_collisions_finds_agent_collision(
-    kit_target: Path, kit_source: Path
-) -> None:
+def test_detect_collisions_finds_agent_collision(kit_target: Path, kit_source: Path) -> None:
     project_agents = kit_target / ".pkit" / "agents" / "project"
     project_agents.mkdir(parents=True, exist_ok=True)
     (project_agents / "coordinator.md").write_text(
@@ -746,9 +713,7 @@ def test_detect_collisions_finds_agent_collision(
 
 
 def test_detect_no_collisions_when_clean(kit_target: Path, kit_source: Path) -> None:
-    _stage_capability_in_source(
-        kit_source, "evidence", with_skills=("unique-skill",)
-    )
+    _stage_capability_in_source(kit_source, "evidence", with_skills=("unique-skill",))
     source = caps.find_capability_in_source(kit_source, "evidence")
     assert source is not None
     findings = caps.detect_collisions(kit_target, source)
@@ -758,9 +723,7 @@ def test_detect_no_collisions_when_clean(kit_target: Path, kit_source: Path) -> 
 # --- reference detection --------------------------------------------
 
 
-def test_find_references_picks_up_citations(
-    kit_target: Path, kit_source: Path
-) -> None:
+def test_find_references_picks_up_citations(kit_target: Path, kit_source: Path) -> None:
     _stage_capability_in_source(kit_source, "evidence")
     source = caps.find_capability_in_source(kit_source, "evidence")
     assert source is not None
@@ -792,20 +755,15 @@ def test_find_references_picks_up_path_refs(kit_target: Path, kit_source: Path) 
     assert any("run.sh" in p for p in paths)
 
 
-def test_find_references_skips_capability_own_files(
-    kit_target: Path, kit_source: Path
-) -> None:
+def test_find_references_skips_capability_own_files(kit_target: Path, kit_source: Path) -> None:
     """The capability's own files shouldn't count as references to itself."""
-    _stage_capability_in_source(
-        kit_source, "evidence", with_decisions=("self-citing",)
-    )
+    _stage_capability_in_source(kit_source, "evidence", with_decisions=("self-citing",))
     source = caps.find_capability_in_source(kit_source, "evidence")
     assert source is not None
     caps.install_capability(kit_target, source)
     # Add a citation inside the capability's own file — should be ignored.
     cap_decision = (
-        kit_target / ".pkit" / "capabilities" / "evidence" / "decisions"
-        / "DEC-001-self-citing.md"
+        kit_target / ".pkit" / "capabilities" / "evidence" / "decisions" / "DEC-001-self-citing.md"
     )
     body = cap_decision.read_text() + "\nSee [evidence:DEC-001-self-citing].\n"
     cap_decision.write_text(body, encoding="utf-8")
@@ -821,9 +779,7 @@ def test_find_references_sees_another_capability_project_config(
     """A capability's adopter-authored `project/` config is adopter content:
     if it cites another capability, uninstalling that capability must surface
     the reference. The scan must NOT skip capability-level `project/` files."""
-    config = (
-        kit_target / ".pkit" / "capabilities" / "alpha" / "project" / "config.yaml"
-    )
+    config = kit_target / ".pkit" / "capabilities" / "alpha" / "project" / "config.yaml"
     config.parent.mkdir(parents=True)
     config.write_text("note: depends on [evidence:DEC-001].\n", encoding="utf-8")
 
@@ -875,9 +831,7 @@ def test_cli_list_capabilities_shows_available(
 def test_cli_install_capability_no_collisions(
     kit_target: Path, kit_source: Path, monkeypatch
 ) -> None:
-    _stage_capability_in_source(
-        kit_source, "evidence", with_skills=("add-evidence",)
-    )
+    _stage_capability_in_source(kit_source, "evidence", with_skills=("add-evidence",))
     from project_kit import cli as cli_mod
 
     monkeypatch.setattr(cli_mod, "find_source_kit", lambda: kit_source)
@@ -909,9 +863,7 @@ def test_cli_uninstall_refuses_with_references(
     monkeypatch.setattr(cli_mod, "find_source_kit", lambda: kit_source)
     runner = CliRunner()
     runner.invoke(main, ["capabilities", "install", "evidence"])
-    (kit_target / "docs.md").write_text(
-        "See [evidence:DEC-001-x].\n", encoding="utf-8"
-    )
+    (kit_target / "docs.md").write_text("See [evidence:DEC-001-x].\n", encoding="utf-8")
 
     result = runner.invoke(main, ["capabilities", "uninstall", "evidence"])
     assert result.exit_code != 0
@@ -920,30 +872,22 @@ def test_cli_uninstall_refuses_with_references(
     assert caps.is_installed(kit_target, "evidence")
 
 
-def test_cli_uninstall_force_overrides(
-    kit_target: Path, kit_source: Path, monkeypatch
-) -> None:
+def test_cli_uninstall_force_overrides(kit_target: Path, kit_source: Path, monkeypatch) -> None:
     _stage_capability_in_source(kit_source, "evidence")
     from project_kit import cli as cli_mod
 
     monkeypatch.setattr(cli_mod, "find_source_kit", lambda: kit_source)
     runner = CliRunner()
     runner.invoke(main, ["capabilities", "install", "evidence"])
-    (kit_target / "docs.md").write_text(
-        "See [evidence:DEC-001-x].\n", encoding="utf-8"
-    )
+    (kit_target / "docs.md").write_text("See [evidence:DEC-001-x].\n", encoding="utf-8")
 
-    result = runner.invoke(
-        main, ["capabilities", "uninstall", "evidence", "--force"]
-    )
+    result = runner.invoke(main, ["capabilities", "uninstall", "evidence", "--force"])
     assert result.exit_code == 0, result.output
     assert "Removed capability 'evidence'" in result.output
     assert not caps.is_installed(kit_target, "evidence")
 
 
-def test_cli_uninstall_clean_proceeds(
-    kit_target: Path, kit_source: Path, monkeypatch
-) -> None:
+def test_cli_uninstall_clean_proceeds(kit_target: Path, kit_source: Path, monkeypatch) -> None:
     _stage_capability_in_source(kit_source, "evidence")
     from project_kit import cli as cli_mod
 
@@ -969,7 +913,8 @@ def test_cli_uninstall_not_installed_errors(kit_target: Path) -> None:
 def test_detect_upgrade_collisions_excludes_self_collisions(
     kit_target: Path, kit_source: Path
 ) -> None:
-    """The upgrade-only variant filters out collisions against the upgrading capability's own tree."""
+    """The upgrade-only variant filters out collisions against the upgrading capability's own
+    tree."""
     _stage_capability_in_source(kit_source, "evidence", with_skills=("add-evidence",))
     source = caps.find_capability_in_source(kit_source, "evidence")
     assert source is not None
@@ -1070,9 +1015,7 @@ def test_cli_upgrade_capability_refuses_on_new_collisions_without_interactive(
     # Adopter has a project skill "new-skill".
     project_skill = kit_target / ".pkit" / "skills" / "project" / "new-skill.md"
     project_skill.parent.mkdir(parents=True, exist_ok=True)
-    project_skill.write_text(
-        "---\nname: new-skill\n---\n# Adopter's skill\n", encoding="utf-8"
-    )
+    project_skill.write_text("---\nname: new-skill\n---\n# Adopter's skill\n", encoding="utf-8")
 
     # Upgraded source adds "new-skill".
     (kit_source / "capabilities" / "evidence" / "skills" / "new-skill.md").write_text(
@@ -1102,9 +1045,7 @@ def test_cli_upgrade_capability_interactive_with_skip(
 
     project_skill = kit_target / ".pkit" / "skills" / "project" / "conflict.md"
     project_skill.parent.mkdir(parents=True, exist_ok=True)
-    project_skill.write_text(
-        "---\nname: conflict\n---\n# Adopter's\n", encoding="utf-8"
-    )
+    project_skill.write_text("---\nname: conflict\n---\n# Adopter's\n", encoding="utf-8")
     (kit_source / "capabilities" / "evidence" / "skills" / "conflict.md").write_text(
         "---\nname: conflict\n---\n# From evidence\n", encoding="utf-8"
     )
@@ -1120,9 +1061,7 @@ def test_cli_upgrade_capability_interactive_with_skip(
     assert result.exit_code == 0, result.output
     assert "Refreshed capability 'evidence'" in result.output
     # The colliding file was skipped — capability's tree does not contain it.
-    skipped_path = (
-        kit_target / ".pkit" / "capabilities" / "evidence" / "skills" / "conflict.md"
-    )
+    skipped_path = kit_target / ".pkit" / "capabilities" / "evidence" / "skills" / "conflict.md"
     assert not skipped_path.exists()
     # Adopter's project skill is untouched.
     assert project_skill.read_text(encoding="utf-8") == "---\nname: conflict\n---\n# Adopter's\n"
@@ -1250,9 +1189,7 @@ def test_refresh_capability_skips_already_applied_migrations(
     assert lines == ["0.3.0/001"], "only the post-installed-version migration should run"
 
 
-def test_refresh_capability_halts_on_migration_failure(
-    kit_target: Path, kit_source: Path
-) -> None:
+def test_refresh_capability_halts_on_migration_failure(kit_target: Path, kit_source: Path) -> None:
     """A migration script that exits non-zero halts the refresh; files are NOT updated."""
     _stage_capability_in_source(kit_source, "evidence", version="0.1.0")
     source = caps.find_capability_in_source(kit_source, "evidence")
@@ -1283,9 +1220,7 @@ def test_refresh_capability_halts_on_migration_failure(
     assert installed == "0.1.0"
 
 
-def test_refresh_capability_with_no_migrations_is_clean(
-    kit_target: Path, kit_source: Path
-) -> None:
+def test_refresh_capability_with_no_migrations_is_clean(kit_target: Path, kit_source: Path) -> None:
     """A version bump without any migrations succeeds; no migration output emitted."""
     _stage_capability_in_source(kit_source, "evidence", version="0.1.0")
     source = caps.find_capability_in_source(kit_source, "evidence")
@@ -1306,9 +1241,7 @@ def test_refresh_capability_with_no_migrations_is_clean(
     assert installed == "0.2.0"
 
 
-def test_pending_migration_scripts_walks_version_window(
-    kit_target: Path, kit_source: Path
-) -> None:
+def test_pending_migration_scripts_walks_version_window(kit_target: Path, kit_source: Path) -> None:
     """The version walker filters strictly (installed, source]."""
     _stage_capability_in_source(kit_source, "evidence", version="0.5.0")
     cap_dir = kit_source / "capabilities" / "evidence"
@@ -1352,7 +1285,9 @@ def _install_capability_with_manifest(
     installed (with optional requires_capabilities) without the full CLI.
     """
     _stage_capability_in_source(
-        kit_source, name, version=version,
+        kit_source,
+        name,
+        version=version,
         requires_capabilities=requires_capabilities,
     )
     source = caps.find_capability_in_source(kit_source, name)
@@ -1366,7 +1301,8 @@ def _install_capability_with_manifest(
 def test_read_package_yaml_parses_requires_capabilities(kit_source: Path) -> None:
     """requires_capabilities list is parsed from package.yaml into CapabilityDependency tuples."""
     _stage_capability_in_source(
-        kit_source, "consumer",
+        kit_source,
+        "consumer",
         requires_capabilities=[{"name": "evidence", "version": ">=0.2.0,<1.0.0"}],
     )
     source = caps.find_capability_in_source(kit_source, "consumer")
@@ -1394,11 +1330,10 @@ def test_check_deps_empty_when_no_deps(kit_target: Path) -> None:
     assert conflicts == []
 
 
-def test_check_deps_conflict_when_dependency_absent(
-    kit_target: Path, kit_source: Path
-) -> None:
+def test_check_deps_conflict_when_dependency_absent(kit_target: Path, kit_source: Path) -> None:
     """Absent dependency → conflict with reason 'absent'."""
     from project_kit.capabilities import CapabilityDependency
+
     deps = (CapabilityDependency(name="evidence", version=">=0.1.0,<2.0.0"),)
     conflicts = caps.check_capability_dependencies(kit_target, deps)
     assert len(conflicts) == 1
@@ -1412,6 +1347,7 @@ def test_check_deps_conflict_when_dependency_out_of_range(
 ) -> None:
     """Installed dependency outside the declared range → conflict with reason 'out-of-range'."""
     from project_kit.capabilities import CapabilityDependency
+
     # Install evidence at v0.1.0.
     _install_capability_with_manifest(kit_target, kit_source, "evidence", version="0.1.0")
     # Require >=0.2.0 — v0.1.0 is out of range.
@@ -1428,6 +1364,7 @@ def test_check_deps_no_conflict_when_dependency_in_range(
 ) -> None:
     """Installed dependency within the declared range → no conflicts."""
     from project_kit.capabilities import CapabilityDependency
+
     _install_capability_with_manifest(kit_target, kit_source, "evidence", version="0.3.0")
     deps = (CapabilityDependency(name="evidence", version=">=0.2.0,<1.0.0"),)
     conflicts = caps.check_capability_dependencies(kit_target, deps)
@@ -1439,6 +1376,7 @@ def test_check_deps_multiple_dependencies_reports_all_conflicts(
 ) -> None:
     """All failing dependencies are reported, not just the first."""
     from project_kit.capabilities import CapabilityDependency
+
     # Install evidence in range; pm absent.
     _install_capability_with_manifest(kit_target, kit_source, "evidence", version="0.5.0")
     deps = (
@@ -1459,10 +1397,12 @@ def test_cli_install_refuses_when_dependency_absent(
 ) -> None:
     """Install refuses with hint when a declared dependency is not installed."""
     _stage_capability_in_source(
-        kit_source, "consumer",
+        kit_source,
+        "consumer",
         requires_capabilities=[{"name": "evidence", "version": ">=0.1.0,<2.0.0"}],
     )
     from project_kit import cli as cli_mod
+
     monkeypatch.setattr(cli_mod, "find_source_kit", lambda: kit_source)
     runner = CliRunner()
     result = runner.invoke(main, ["capabilities", "install", "consumer"])
@@ -1479,10 +1419,12 @@ def test_cli_install_refuses_when_dependency_out_of_range(
     """Install refuses with hint when a declared dependency is installed but out of range."""
     _install_capability_with_manifest(kit_target, kit_source, "evidence", version="0.1.0")
     _stage_capability_in_source(
-        kit_source, "consumer",
+        kit_source,
+        "consumer",
         requires_capabilities=[{"name": "evidence", "version": ">=0.2.0,<2.0.0"}],
     )
     from project_kit import cli as cli_mod
+
     monkeypatch.setattr(cli_mod, "find_source_kit", lambda: kit_source)
     runner = CliRunner()
     result = runner.invoke(main, ["capabilities", "install", "consumer"])
@@ -1499,10 +1441,12 @@ def test_cli_install_succeeds_when_dependency_in_range(
     """Install succeeds when the declared dependency is installed and in range."""
     _install_capability_with_manifest(kit_target, kit_source, "evidence", version="0.3.0")
     _stage_capability_in_source(
-        kit_source, "consumer",
+        kit_source,
+        "consumer",
         requires_capabilities=[{"name": "evidence", "version": ">=0.2.0,<1.0.0"}],
     )
     from project_kit import cli as cli_mod
+
     monkeypatch.setattr(cli_mod, "find_source_kit", lambda: kit_source)
     runner = CliRunner()
     result = runner.invoke(main, ["capabilities", "install", "consumer"])
@@ -1517,6 +1461,7 @@ def test_cli_install_with_no_deps_unaffected(
     """A capability with no requires_capabilities installs normally (no regression)."""
     _stage_capability_in_source(kit_source, "standalone")
     from project_kit import cli as cli_mod
+
     monkeypatch.setattr(cli_mod, "find_source_kit", lambda: kit_source)
     runner = CliRunner()
     result = runner.invoke(main, ["capabilities", "install", "standalone"])
@@ -1527,31 +1472,27 @@ def test_cli_install_with_no_deps_unaffected(
 # --- find_declared_dependents ---
 
 
-def test_find_declared_dependents_empty_when_none(
-    kit_target: Path, kit_source: Path
-) -> None:
+def test_find_declared_dependents_empty_when_none(kit_target: Path, kit_source: Path) -> None:
     """No installed capability declares the target → empty list."""
     _install_capability_with_manifest(kit_target, kit_source, "evidence")
     result = caps.find_declared_dependents(kit_target, "evidence")
     assert result == []
 
 
-def test_find_declared_dependents_finds_dependent(
-    kit_target: Path, kit_source: Path
-) -> None:
+def test_find_declared_dependents_finds_dependent(kit_target: Path, kit_source: Path) -> None:
     """A capability that declares the target in requires_capabilities is found."""
     _install_capability_with_manifest(kit_target, kit_source, "evidence", version="0.3.0")
     _install_capability_with_manifest(
-        kit_target, kit_source, "consumer",
+        kit_target,
+        kit_source,
+        "consumer",
         requires_capabilities=[{"name": "evidence", "version": ">=0.2.0,<1.0.0"}],
     )
     result = caps.find_declared_dependents(kit_target, "evidence")
     assert result == ["consumer"]
 
 
-def test_find_declared_dependents_excludes_unrelated(
-    kit_target: Path, kit_source: Path
-) -> None:
+def test_find_declared_dependents_excludes_unrelated(kit_target: Path, kit_source: Path) -> None:
     """Capabilities not declaring the target are not included."""
     _install_capability_with_manifest(kit_target, kit_source, "evidence")
     _install_capability_with_manifest(kit_target, kit_source, "other")
@@ -1568,10 +1509,13 @@ def test_cli_uninstall_refuses_when_declared_dependent(
     """Uninstall refuses when another installed capability declares a dependency."""
     _install_capability_with_manifest(kit_target, kit_source, "evidence", version="0.3.0")
     _install_capability_with_manifest(
-        kit_target, kit_source, "consumer",
+        kit_target,
+        kit_source,
+        "consumer",
         requires_capabilities=[{"name": "evidence", "version": ">=0.2.0,<1.0.0"}],
     )
     from project_kit import cli as cli_mod
+
     monkeypatch.setattr(cli_mod, "find_source_kit", lambda: kit_source)
     runner = CliRunner()
     result = runner.invoke(main, ["capabilities", "uninstall", "evidence"])
@@ -1587,10 +1531,13 @@ def test_cli_uninstall_force_overrides_declared_dependent(
     """--force proceeds despite a declared dependent."""
     _install_capability_with_manifest(kit_target, kit_source, "evidence", version="0.3.0")
     _install_capability_with_manifest(
-        kit_target, kit_source, "consumer",
+        kit_target,
+        kit_source,
+        "consumer",
         requires_capabilities=[{"name": "evidence", "version": ">=0.2.0,<1.0.0"}],
     )
     from project_kit import cli as cli_mod
+
     monkeypatch.setattr(cli_mod, "find_source_kit", lambda: kit_source)
     runner = CliRunner()
     result = runner.invoke(main, ["capabilities", "uninstall", "evidence", "--force"])
@@ -1612,10 +1559,13 @@ def test_cli_upgrade_refuses_when_dependent_version_requires_absent_dep(
 
     # Source bumps consumer to v0.2.0 and now requires evidence.
     _stage_capability_in_source(
-        kit_source, "consumer", version="0.2.0",
+        kit_source,
+        "consumer",
+        version="0.2.0",
         requires_capabilities=[{"name": "evidence", "version": ">=0.1.0,<2.0.0"}],
     )
     from project_kit import cli as cli_mod
+
     monkeypatch.setattr(cli_mod, "find_source_kit", lambda: kit_source)
     runner = CliRunner()
     result = runner.invoke(main, ["capabilities", "upgrade", "consumer"])
@@ -1635,10 +1585,13 @@ def test_cli_upgrade_refuses_when_dependent_version_requires_out_of_range_dep(
 
     # Source bumps consumer to v0.2.0 requiring evidence >=0.2.0.
     _stage_capability_in_source(
-        kit_source, "consumer", version="0.2.0",
+        kit_source,
+        "consumer",
+        version="0.2.0",
         requires_capabilities=[{"name": "evidence", "version": ">=0.2.0,<2.0.0"}],
     )
     from project_kit import cli as cli_mod
+
     monkeypatch.setattr(cli_mod, "find_source_kit", lambda: kit_source)
     runner = CliRunner()
     result = runner.invoke(main, ["capabilities", "upgrade", "consumer"])
@@ -1655,18 +1608,25 @@ def test_cli_upgrade_dependency_warns_and_requires_force_when_dependent_would_de
     # evidence v0.3.0 installed; consumer installed and declares evidence >=0.2.0,<0.4.0.
     _install_capability_with_manifest(kit_target, kit_source, "evidence", version="0.3.0")
     _install_capability_with_manifest(
-        kit_target, kit_source, "consumer",
+        kit_target,
+        kit_source,
+        "consumer",
         requires_capabilities=[{"name": "evidence", "version": ">=0.2.0,<0.4.0"}],
     )
     # Source bumps evidence to v0.5.0 — now outside consumer's range.
     _stage_capability_in_source(kit_source, "evidence", version="0.5.0")
     from project_kit import cli as cli_mod
+
     monkeypatch.setattr(cli_mod, "find_source_kit", lambda: kit_source)
     runner = CliRunner()
     # Without --force: refuses.
     result = runner.invoke(main, ["capabilities", "upgrade", "evidence"])
     assert result.exit_code != 0
-    assert "desync" in result.output.lower() or "desynced" in result.output.lower() or "desync" in result.output
+    assert (
+        "desync" in result.output.lower()
+        or "desynced" in result.output.lower()
+        or "desync" in result.output
+    )
     assert "consumer" in result.output
     assert "--force" in result.output
 
@@ -1687,12 +1647,15 @@ def test_cli_upgrade_dependency_no_desync_proceeds_cleanly(
     is clean — no warning, no --force needed."""
     _install_capability_with_manifest(kit_target, kit_source, "evidence", version="0.3.0")
     _install_capability_with_manifest(
-        kit_target, kit_source, "consumer",
+        kit_target,
+        kit_source,
+        "consumer",
         requires_capabilities=[{"name": "evidence", "version": ">=0.2.0,<1.0.0"}],
     )
     # Source bumps evidence to v0.5.0 — still inside consumer's range.
     _stage_capability_in_source(kit_source, "evidence", version="0.5.0")
     from project_kit import cli as cli_mod
+
     monkeypatch.setattr(cli_mod, "find_source_kit", lambda: kit_source)
     runner = CliRunner()
     result = runner.invoke(main, ["capabilities", "upgrade", "evidence"])
@@ -1784,9 +1747,7 @@ def test_cli_register_records_origin_and_does_not_copy(
     _stage_capability_in_repo(
         kit_target, "homegrown", with_skills=("home-skill",), with_agents=("home-agent",)
     )
-    skill_path = (
-        kit_target / ".pkit" / "capabilities" / "homegrown" / "skills" / "home-skill.md"
-    )
+    skill_path = kit_target / ".pkit" / "capabilities" / "homegrown" / "skills" / "home-skill.md"
     original = skill_path.read_text(encoding="utf-8")
 
     from project_kit import cli as cli_mod
@@ -1800,9 +1761,7 @@ def test_cli_register_records_origin_and_does_not_copy(
     assert caps.is_installed(kit_target, "homegrown")
     assert read_capability_origin(kit_target, "homegrown") == ORIGIN_INCUBATED_IN_REPO
     assert skill_path.read_text(encoding="utf-8") == original
-    assert not (
-        kit_target / ".pkit" / "capabilities" / "homegrown" / "manifest.yaml"
-    ).is_file()
+    assert not (kit_target / ".pkit" / "capabilities" / "homegrown" / "manifest.yaml").is_file()
 
 
 def test_cli_register_runs_deploy_primitives(
@@ -1827,9 +1786,7 @@ def test_cli_register_runs_deploy_primitives(
     assert calls["deploy"] == 1
 
 
-def test_cli_register_not_in_repo_errors(
-    kit_target: Path, kit_source: Path, monkeypatch
-) -> None:
+def test_cli_register_not_in_repo_errors(kit_target: Path, kit_source: Path, monkeypatch) -> None:
     """Register refuses a name that isn't authored in the adopter's repo."""
     from project_kit import cli as cli_mod
 
@@ -1861,7 +1818,8 @@ def test_cli_register_refuses_on_unsatisfied_dependency(
 ) -> None:
     """The COR-030 dependency pre-flight still runs for the in-repo register path."""
     _stage_capability_in_repo(
-        kit_target, "homegrown",
+        kit_target,
+        "homegrown",
         requires_capabilities=[{"name": "evidence", "version": ">=0.2.0,<1.0.0"}],
     )
     from project_kit import cli as cli_mod
@@ -1878,9 +1836,7 @@ def test_cli_register_refuses_on_backbone_mismatch(
     kit_target: Path, kit_source: Path, monkeypatch
 ) -> None:
     """Backbone-version satisfaction is enforced for the in-repo register path."""
-    _stage_capability_in_repo(
-        kit_target, "homegrown", requires_backbone=">=99.0.0,<100.0.0"
-    )
+    _stage_capability_in_repo(kit_target, "homegrown", requires_backbone=">=99.0.0,<100.0.0")
     from project_kit import cli as cli_mod
 
     monkeypatch.setattr(cli_mod, "find_source_kit", lambda: kit_source)
@@ -1926,7 +1882,8 @@ def test_cli_register_dry_run_writes_nothing(
 def test_cli_register_surfaces_kit_source_overlap(
     kit_target: Path, kit_source: Path, monkeypatch
 ) -> None:
-    """When a same-named capability also ships from kit source, register surfaces it (COR-031 boundary)."""
+    """When a same-named capability also ships from kit source, register surfaces it (COR-031
+    boundary)."""
     _stage_capability_in_source(kit_source, "homegrown")
     _stage_capability_in_repo(kit_target, "homegrown")
     from project_kit import cli as cli_mod
@@ -1959,9 +1916,7 @@ def test_cli_register_adopts_manually_registered_origin_unset(
     _manually_register_origin_unset(kit_target, "homegrown")
     assert read_capability_origin(kit_target, "homegrown") == ORIGIN_KIT_SHIPPED
 
-    skill_path = (
-        kit_target / ".pkit" / "capabilities" / "homegrown" / "skills" / "home-skill.md"
-    )
+    skill_path = kit_target / ".pkit" / "capabilities" / "homegrown" / "skills" / "home-skill.md"
     skill_before = skill_path.read_text(encoding="utf-8")
 
     from project_kit import cli as cli_mod
@@ -1997,9 +1952,7 @@ def test_cli_register_adopt_dry_run_writes_nothing(
     from project_kit import cli as cli_mod
 
     monkeypatch.setattr(cli_mod, "find_source_kit", lambda: kit_source)
-    result = CliRunner().invoke(
-        main, ["capabilities", "register", "homegrown", "--dry-run"]
-    )
+    result = CliRunner().invoke(main, ["capabilities", "register", "homegrown", "--dry-run"])
     assert result.exit_code == 0, result.output
     assert "Would adopt 'homegrown'" in result.output
     # Nothing written: origin still reads as the kit-shipped default.
@@ -2018,14 +1971,10 @@ def test_cli_register_adopt_then_sync_skips_incubated(
     _manually_register_origin_unset(kit_target, "homegrown")
 
     monkeypatch.setattr(cli_mod, "find_source_kit", lambda: kit_source)
-    assert (
-        CliRunner().invoke(main, ["capabilities", "register", "homegrown"]).exit_code == 0
-    )
+    assert CliRunner().invoke(main, ["capabilities", "register", "homegrown"]).exit_code == 0
     assert read_capability_origin(kit_target, "homegrown") == ORIGIN_INCUBATED_IN_REPO
 
-    skill_path = (
-        kit_target / ".pkit" / "capabilities" / "homegrown" / "skills" / "home-skill.md"
-    )
+    skill_path = kit_target / ".pkit" / "capabilities" / "homegrown" / "skills" / "home-skill.md"
     skill_before = skill_path.read_text(encoding="utf-8")
 
     monkeypatch.setattr(install_mod, "find_source_kit", lambda: kit_source)
@@ -2035,9 +1984,7 @@ def test_cli_register_adopt_then_sync_skips_incubated(
     assert skill_path.read_text(encoding="utf-8") == skill_before
 
 
-def test_cli_list_shows_incubated_origin(
-    kit_target: Path, kit_source: Path, monkeypatch
-) -> None:
+def test_cli_list_shows_incubated_origin(kit_target: Path, kit_source: Path, monkeypatch) -> None:
     """`capabilities list` surfaces a registered incubated capability and its origin."""
     _stage_capability_in_repo(kit_target, "homegrown")
     from project_kit import cli as cli_mod
@@ -2109,7 +2056,10 @@ def test_uninstall_incubated_keeps_subtree_and_drops_registry(
 ) -> None:
     """Uninstalling an incubated capability unregisters in place; the authored subtree stays."""
     cap_dir = _register_incubated_via_cli(
-        kit_target, kit_source, monkeypatch, "homegrown",
+        kit_target,
+        kit_source,
+        monkeypatch,
+        "homegrown",
         with_skills=("home-skill",),
     )
     skill_before = (cap_dir / "skills" / "home-skill.md").read_text(encoding="utf-8")
@@ -2162,8 +2112,12 @@ def test_uninstall_incubated_undeploys_through_the_adapter_primitive(
     capability's deployed skill and agent go though its files stay, and an adopter's
     agent stays."""
     cap_dir = _register_incubated_via_cli(
-        kit_target, kit_source, monkeypatch, "homegrown",
-        with_skills=("home-skill",), with_agents=("home-agent",),
+        kit_target,
+        kit_source,
+        monkeypatch,
+        "homegrown",
+        with_skills=("home-skill",),
+        with_agents=("home-agent",),
     )
     monkeypatch.setattr(install_mod, "_run_adapter_primitive", _RUN_ADAPTER_PRIMITIVE)
 
@@ -2313,7 +2267,10 @@ def test_uninstall_incubated_purge_deletes_subtree(
 ) -> None:
     """--purge opts in to deleting an incubated capability's authored files."""
     cap_dir = _register_incubated_via_cli(
-        kit_target, kit_source, monkeypatch, "homegrown",
+        kit_target,
+        kit_source,
+        monkeypatch,
+        "homegrown",
     )
 
     outcome = caps.uninstall_capability(kit_target, "homegrown", purge=True)
@@ -2323,9 +2280,7 @@ def test_uninstall_incubated_purge_deletes_subtree(
     assert not caps.is_installed(kit_target, "homegrown")
 
 
-def test_uninstall_kit_shipped_still_deletes_subtree(
-    kit_target: Path, kit_source: Path
-) -> None:
+def test_uninstall_kit_shipped_still_deletes_subtree(kit_target: Path, kit_source: Path) -> None:
     """A kit-shipped capability's subtree is a disposable copy and is still deleted."""
     _stage_capability_in_source(kit_source, "evidence")
     source = caps.find_capability_in_source(kit_source, "evidence")
@@ -2345,7 +2300,10 @@ def test_cli_uninstall_incubated_keeps_files_and_reports(
 ) -> None:
     """The CLI uninstall of an incubated capability reports keep-in-place, not removal."""
     cap_dir = _register_incubated_via_cli(
-        kit_target, kit_source, monkeypatch, "homegrown",
+        kit_target,
+        kit_source,
+        monkeypatch,
+        "homegrown",
     )
     result = CliRunner().invoke(main, ["capabilities", "uninstall", "homegrown"])
 
@@ -2362,7 +2320,10 @@ def test_cli_uninstall_incubated_purge_confirms_then_deletes(
 ) -> None:
     """--purge prompts for confirmation; a 'yes' answer deletes the authored subtree."""
     cap_dir = _register_incubated_via_cli(
-        kit_target, kit_source, monkeypatch, "homegrown",
+        kit_target,
+        kit_source,
+        monkeypatch,
+        "homegrown",
     )
     result = CliRunner().invoke(
         main, ["capabilities", "uninstall", "homegrown", "--purge"], input="y\n"
@@ -2380,7 +2341,10 @@ def test_cli_uninstall_incubated_purge_aborts_on_no(
 ) -> None:
     """Declining the --purge confirmation aborts: files and registry both stay."""
     cap_dir = _register_incubated_via_cli(
-        kit_target, kit_source, monkeypatch, "homegrown",
+        kit_target,
+        kit_source,
+        monkeypatch,
+        "homegrown",
     )
     result = CliRunner().invoke(
         main, ["capabilities", "uninstall", "homegrown", "--purge"], input="n\n"
@@ -2396,7 +2360,10 @@ def test_cli_uninstall_incubated_purge_yes_skips_prompt(
 ) -> None:
     """--purge --yes deletes without prompting (non-interactive opt-in)."""
     cap_dir = _register_incubated_via_cli(
-        kit_target, kit_source, monkeypatch, "homegrown",
+        kit_target,
+        kit_source,
+        monkeypatch,
+        "homegrown",
     )
     result = CliRunner().invoke(
         main, ["capabilities", "uninstall", "homegrown", "--purge", "--yes"]
@@ -2435,7 +2402,11 @@ def test_cli_upgrade_incubated_does_not_orphan_and_redeploys(
     from project_kit import install as install_mod
 
     _register_incubated_via_cli(
-        kit_target, kit_source, monkeypatch, "homegrown", with_skills=("home-skill",),
+        kit_target,
+        kit_source,
+        monkeypatch,
+        "homegrown",
+        with_skills=("home-skill",),
     )
 
     calls = {"deploy": 0}
@@ -2464,18 +2435,20 @@ def test_cli_upgrade_incubated_dry_run_does_not_deploy(
     from project_kit import install as install_mod
 
     _register_incubated_via_cli(
-        kit_target, kit_source, monkeypatch, "homegrown",
+        kit_target,
+        kit_source,
+        monkeypatch,
+        "homegrown",
     )
     calls = {"deploy": 0}
     monkeypatch.setattr(
-        install_mod, "run_installed_adapter_primitives",
+        install_mod,
+        "run_installed_adapter_primitives",
         lambda _ctx: calls.__setitem__("deploy", calls["deploy"] + 1),
     )
     monkeypatch.setattr(cli_mod, "find_source_kit", lambda: kit_source)
 
-    result = CliRunner().invoke(
-        main, ["capabilities", "upgrade", "homegrown", "--dry-run"]
-    )
+    result = CliRunner().invoke(main, ["capabilities", "upgrade", "homegrown", "--dry-run"])
     assert result.exit_code == 0, result.output
     assert "Would re-deploy incubated capability 'homegrown'" in result.output
     assert calls["deploy"] == 0
@@ -2519,7 +2492,8 @@ def test_validate_capability_self_consistency_flags_bad_version(
 def test_cli_register_refuses_structurally_invalid_capability(
     kit_target: Path, kit_source: Path, monkeypatch
 ) -> None:
-    """Register refuses an incubated capability that fails its own structural checks (COR-031 D1)."""
+    """Register refuses an incubated capability that fails its own structural checks (COR-031
+    D1)."""
     from project_kit import cli as cli_mod
 
     _stage_capability_in_repo(kit_target, "homegrown")
@@ -2544,9 +2518,7 @@ def test_cli_install_enforces_backbone_satisfaction(
     """`install` now runs the shared backbone-satisfaction gate (parity with `register`)."""
     from project_kit import cli as cli_mod
 
-    _stage_capability_in_source(
-        kit_source, "evidence", requires_backbone=">=99.0.0,<100.0.0"
-    )
+    _stage_capability_in_source(kit_source, "evidence", requires_backbone=">=99.0.0,<100.0.0")
     monkeypatch.setattr(cli_mod, "find_source_kit", lambda: kit_source)
     result = CliRunner().invoke(main, ["capabilities", "install", "evidence"])
 

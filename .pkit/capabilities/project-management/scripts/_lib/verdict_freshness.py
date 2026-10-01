@@ -124,13 +124,11 @@ class FreshnessRule:
         delta = self._delta(verdict.sha)
         if not delta.ok:
             return Freshness(
-                False, f"reviewed {reviewed}; the changes since cannot be read: "
-                f"{delta.error}",
+                False,
+                f"reviewed {reviewed}; the changes since cannot be read: {delta.error}",
             )
         if not delta.paths:
-            return Freshness(
-                True, f"reviewed {reviewed}; only merges of the base branch since"
-            )
+            return Freshness(True, f"reviewed {reviewed}; only merges of the base branch since")
         changed = f"reviewed {reviewed}; changed since: {_name_paths(delta.paths)}"
         floors = self._floors_of(verdict)
         if floors is None:
@@ -148,12 +146,8 @@ class FreshnessRule:
                 False, "no reviewed head recorded; the latest commit's time is unknown"
             )
         if verdict.timestamp > self._head_timestamp:
-            return Freshness(
-                True, "no reviewed head recorded; posted after the latest commit"
-            )
-        return Freshness(
-            False, "no reviewed head recorded; posted before the latest commit"
-        )
+            return Freshness(True, "no reviewed head recorded; posted after the latest commit")
+        return Freshness(False, "no reviewed head recorded; posted before the latest commit")
 
     def _floors_of(self, verdict: Verdict) -> frozenset[str] | None:
         """The floors that keep this reviewer's verdict standing, or None when

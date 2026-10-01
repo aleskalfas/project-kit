@@ -51,8 +51,8 @@ That keeps this module pure-logic and unit-testable without a live repo.
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
 APPROVED = "APPROVED"
 CHANGES_REQUESTED = "CHANGES_REQUESTED"
@@ -77,9 +77,7 @@ _OBJECT_NAME = r"[0-9a-f]{40}|[0-9a-f]{64}"
 _OBJECT_NAME_RE = re.compile(rf"(?:{_OBJECT_NAME})")
 
 # Either marker form; `sha` is the reviewed head when one is named.
-_VERDICT_MARKER_RE = re.compile(
-    rf"<!-- pkit-verdict(?: sha=(?P<sha>{_OBJECT_NAME}))? -->"
-)
+_VERDICT_MARKER_RE = re.compile(rf"<!-- pkit-verdict(?: sha=(?P<sha>{_OBJECT_NAME}))? -->")
 
 
 def verdict_marker(sha: str = "") -> str:

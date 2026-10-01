@@ -115,11 +115,7 @@ ALLOWED_READS: dict[str, tuple[int, str]] = {
 
 def _scanned_scripts() -> list[Path]:
     """Every `.py` under scripts/ (and `_lib/`). Scan-all: no file is exempt."""
-    return [
-        p
-        for p in sorted(SCRIPTS.rglob("*.py"))
-        if "__pycache__" not in p.parts
-    ]
+    return [p for p in sorted(SCRIPTS.rglob("*.py")) if "__pycache__" not in p.parts]
 
 
 def _flag_read_lines(source: str) -> list[int]:
@@ -150,9 +146,7 @@ def _flag_read_lines(source: str) -> list[int]:
     return sorted(lines)
 
 
-@pytest.mark.parametrize(
-    "path", _scanned_scripts(), ids=lambda p: str(p.relative_to(SCRIPTS))
-)
+@pytest.mark.parametrize("path", _scanned_scripts(), ids=lambda p: str(p.relative_to(SCRIPTS)))
 def test_board_flag_reads_are_allow_listed(path: Path) -> None:
     """No pm script reads the board flag without a named, counted justification."""
     rel = str(path.relative_to(SCRIPTS))
@@ -183,9 +177,7 @@ def test_board_flag_reads_are_allow_listed(path: Path) -> None:
 
 def test_exactly_one_site_derives_carriage_from_the_flag() -> None:
     """The countable form of DEC-051 decision point 4, as a single assertion."""
-    carriage_entries = [
-        rel for rel, (_n, reason) in ALLOWED_READS.items() if "CARRIAGE" in reason
-    ]
+    carriage_entries = [rel for rel, (_n, reason) in ALLOWED_READS.items() if "CARRIAGE" in reason]
     assert carriage_entries == [CARRIAGE_ACCESSOR]
     assert ALLOWED_READS[CARRIAGE_ACCESSOR][0] == 1
 
@@ -268,9 +260,7 @@ def label_bound_map(axis_labels):
     )
 
 
-def test_create_issue_writes_the_bound_label_under_a_board(
-    scripts, label_bound_map
-) -> None:
+def test_create_issue_writes_the_bound_label_under_a_board(scripts, label_bound_map) -> None:
     labels, _advisories, resolved = scripts["create_issue"]._build_labels(
         kind="feature",
         priority="High",
@@ -282,9 +272,7 @@ def test_create_issue_writes_the_bound_label_under_a_board(
     assert "P0" in labels
 
 
-def test_set_field_routes_the_bound_axis_to_labels_under_a_board(
-    scripts, label_bound_map
-) -> None:
+def test_set_field_routes_the_bound_axis_to_labels_under_a_board(scripts, label_bound_map) -> None:
     label_axes, board_axes, results = scripts["set_field"]._route_axes(
         priority="High",
         workstream=None,
@@ -295,9 +283,7 @@ def test_set_field_routes_the_bound_axis_to_labels_under_a_board(
     assert board_axes == {} and results == []
 
 
-def test_move_issue_writes_the_bound_state_label_under_a_board(
-    scripts, label_bound_map
-) -> None:
+def test_move_issue_writes_the_bound_state_label_under_a_board(scripts, label_bound_map) -> None:
     """And it strips the adopter's OWN stale label — a prefix-only search would
     leave `Inbox` behind beside the new `Ready`."""
     mi = scripts["move_issue"]
@@ -305,9 +291,7 @@ def test_move_issue_writes_the_bound_state_label_under_a_board(
         issue_number=42,
         current_state="todo",
         target_state="backlog",
-        state_on_board=mi.axis_carriage.is_board_carried(
-            "state", BOARD_CONFIG, label_bound_map
-        ),
+        state_on_board=mi.axis_carriage.is_board_carried("state", BOARD_CONFIG, label_bound_map),
         labels=["Inbox", "type:bug"],
         substrate_map=label_bound_map,
     )

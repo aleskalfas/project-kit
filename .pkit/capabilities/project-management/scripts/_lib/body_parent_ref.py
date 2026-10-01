@@ -80,9 +80,7 @@ def _options(parent_ref_form: str) -> list[tuple[bool, re.Pattern[str]]]:
         m = _ISSUE_OPTION.match(option)
         if m:
             label = re.escape(m.group(1))
-            options.append(
-                (False, re.compile(rf"^(?P<label>{label}):\s+#(?P<number>\d+)\s*$"))
-            )
+            options.append((False, re.compile(rf"^(?P<label>{label}):\s+#(?P<number>\d+)\s*$")))
     return options
 
 

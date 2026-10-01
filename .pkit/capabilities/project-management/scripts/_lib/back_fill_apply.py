@@ -157,7 +157,7 @@ APPLIABLE_AXES: tuple[str, ...] = ("type", "priority", "workstream")
 # ----- classification: the re-validate / idempotency predicates ------------
 
 
-class Disposition(str, Enum):  # noqa: UP042 — StrEnum is 3.11+; this script targets >=3.10 (PEP 723 header)
+class Disposition(str, Enum):  # StrEnum is 3.11+; this script targets >=3.10 (PEP 723 header)
     """What the apply loop should do with one proposed change, re-derived at
     apply time against a FRESH per-issue read (never the plan's stale annotation).
 
@@ -168,9 +168,9 @@ class Disposition(str, Enum):  # noqa: UP042 — StrEnum is 3.11+; this script t
     """
 
     ALREADY_SATISFIED = "already-satisfied"  # fresh current == target → skip (idempotent)
-    DRIFTED = "drifted"                       # fresh current != plan.observed → skip + report
-    WOULD_WRITE = "would-write"               # fresh current differs from target, no drift → write
-    BLOCKED = "blocked"                       # the plan could not construct a write (no argv)
+    DRIFTED = "drifted"  # fresh current != plan.observed → skip + report
+    WOULD_WRITE = "would-write"  # fresh current differs from target, no drift → write
+    BLOCKED = "blocked"  # the plan could not construct a write (no argv)
 
 
 @dataclass(frozen=True)
@@ -203,10 +203,10 @@ class PlannedChange:
     """
 
     issue_number: int
-    kind: str                 # one of APPLIABLE_KINDS
-    target: str | None        # the value the write sets; None only when blocked upstream
-    observed: str | None      # the plan-time enumerated value (drift reference only)
-    argv: list[str] | None    # the exact reviewed write, or None when blocked
+    kind: str  # one of APPLIABLE_KINDS
+    target: str | None  # the value the write sets; None only when blocked upstream
+    observed: str | None  # the plan-time enumerated value (drift reference only)
+    argv: list[str] | None  # the exact reviewed write, or None when blocked
     citation: str = ""
     blocked_reason: str = ""
     # Field-value writes need these to drive the seam executor at apply time;
@@ -278,7 +278,7 @@ def classify_change(change: PlannedChange, fresh: FreshState) -> Disposition:
 # ----- the apply loop ------------------------------------------------------
 
 
-class ApplyOutcome(str, Enum):  # noqa: UP042 — StrEnum is 3.11+; this script targets >=3.10 (PEP 723 header)
+class ApplyOutcome(str, Enum):  # StrEnum is 3.11+; this script targets >=3.10 (PEP 723 header)
     """The recorded outcome of one change after the apply loop handled it."""
 
     APPLIED = "applied"
@@ -331,36 +331,52 @@ def apply_plan(
     for change in changes:
         try:
             fresh = read_fresh(change)
-        except Exception as exc:  # noqa: BLE001 — a single bad read must not abort the corpus
+        except Exception as exc:  # a single bad read must not abort the corpus
             # A fresh read that throws is treated as an indeterminate read for THIS
             # issue: fail closed to an audited skip (never overwrite against an
             # unconfirmed value), and continue the loop — a half-applied corpus that
             # aborts at one bad read is worse than one that skips it and reports.
-            records.append(ApplyRecord(
-                change.issue_number, change.kind, ApplyOutcome.SKIPPED_DRIFT,
-                _drift_detail(change, FreshState(current=None, read_ok=False))
-                + f" (fresh read raised: {exc})",
-            ))
+            records.append(
+                ApplyRecord(
+                    change.issue_number,
+                    change.kind,
+                    ApplyOutcome.SKIPPED_DRIFT,
+                    _drift_detail(change, FreshState(current=None, read_ok=False))
+                    + f" (fresh read raised: {exc})",
+                )
+            )
             continue
         disposition = classify_change(change, fresh)
 
         if disposition is Disposition.BLOCKED:
-            records.append(ApplyRecord(
-                change.issue_number, change.kind, ApplyOutcome.BLOCKED,
-                change.blocked_reason or "no write could be constructed for this change",
-            ))
+            records.append(
+                ApplyRecord(
+                    change.issue_number,
+                    change.kind,
+                    ApplyOutcome.BLOCKED,
+                    change.blocked_reason or "no write could be constructed for this change",
+                )
+            )
             continue
         if disposition is Disposition.ALREADY_SATISFIED:
-            records.append(ApplyRecord(
-                change.issue_number, change.kind, ApplyOutcome.SKIPPED_IDEMPOTENT,
-                f"already equals target {change.target!r}",
-            ))
+            records.append(
+                ApplyRecord(
+                    change.issue_number,
+                    change.kind,
+                    ApplyOutcome.SKIPPED_IDEMPOTENT,
+                    f"already equals target {change.target!r}",
+                )
+            )
             continue
         if disposition is Disposition.DRIFTED:
-            records.append(ApplyRecord(
-                change.issue_number, change.kind, ApplyOutcome.SKIPPED_DRIFT,
-                _drift_detail(change, fresh),
-            ))
+            records.append(
+                ApplyRecord(
+                    change.issue_number,
+                    change.kind,
+                    ApplyOutcome.SKIPPED_DRIFT,
+                    _drift_detail(change, fresh),
+                )
+            )
             continue
 
         # WOULD_WRITE — execute through the sole constructor (ADR-031).
@@ -381,7 +397,9 @@ def _execute_change(change: PlannedChange, config: dict[str, Any]) -> ApplyRecor
     """
     if change.kind == "assign-milestone":
         result = substrate_writes.write_milestone(
-            config, issue_number=change.issue_number, title=change.target or "",
+            config,
+            issue_number=change.issue_number,
+            title=change.target or "",
         )
     elif change.kind == "set-board-field":
         result = substrate_writes.write_field_value(
@@ -394,20 +412,29 @@ def _execute_change(change: PlannedChange, config: dict[str, Any]) -> ApplyRecor
         )
     elif change.kind == SET_AXIS_LABEL_KIND:
         result = write_axis_label(
-            config, issue_number=change.issue_number, label=change.target or "",
+            config,
+            issue_number=change.issue_number,
+            label=change.target or "",
         )
     else:  # pragma: no cover — kinds are constrained upstream to the covered ones
         return ApplyRecord(
-            change.issue_number, change.kind, ApplyOutcome.FAILED,
+            change.issue_number,
+            change.kind,
+            ApplyOutcome.FAILED,
             f"unknown back-fill kind {change.kind!r}",
         )
 
     if result.ok:
         return ApplyRecord(
-            change.issue_number, change.kind, ApplyOutcome.APPLIED, result.detail,
+            change.issue_number,
+            change.kind,
+            ApplyOutcome.APPLIED,
+            result.detail,
         )
     return ApplyRecord(
-        change.issue_number, change.kind, ApplyOutcome.FAILED,
+        change.issue_number,
+        change.kind,
+        ApplyOutcome.FAILED,
         result.error or result.detail or "write failed",
     )
 
@@ -529,6 +556,7 @@ class ApplySummary:
 
 def summarise(records: list[ApplyRecord]) -> ApplySummary:
     """Tally the apply records into per-outcome counts."""
+
     def count(outcome: ApplyOutcome) -> int:
         return sum(1 for r in records if r.outcome is outcome)
 
@@ -742,13 +770,9 @@ def _milestone_guarded_fragment(change: PlannedChange, quoted: str, cite: str) -
     # Bound out of the f-string below: a backslash inside an f-string expression
     # is a SyntaxError before 3.12, and these scripts target >=3.10.
     milestone_jq = shlex.quote('.milestone.title // ""')
-    reread = (
-        f"gh issue view {change.issue_number} --json milestone "
-        f"--jq {milestone_jq} 2>/dev/null"
-    )
+    reread = f"gh issue view {change.issue_number} --json milestone --jq {milestone_jq} 2>/dev/null"
     failed_read = _echo_line(
-        f"skip {tag}: could not re-read the milestone — failing closed, "
-        f"nothing written"
+        f"skip {tag}: could not re-read the milestone — failing closed, nothing written"
     )
     return (
         f"# {tag}{cite}\n"
@@ -759,7 +783,7 @@ def _milestone_guarded_fragment(change: PlannedChange, quoted: str, cite: str) -
         f'elif [ "$current" != {shlex.quote(target)} ]; then\n'
         f"  {quoted}\n"
         f"else\n"
-        f'  {_echo_line(f"skip {tag}: already satisfied")}\n'
+        f"  {_echo_line(f'skip {tag}: already satisfied')}\n"
         f"fi"
     )
 
@@ -811,9 +835,9 @@ def _field_reread_jq(field_id: str) -> str:
     literal = json.dumps(field_id)
     return (
         'if (.errors // [] | length) > 0 then error("board-read-unconfirmed")'
-        ' else (.data.node.fieldValues.nodes'
+        " else (.data.node.fieldValues.nodes"
         ' | if type == "array"'
-        f' then map(select(.field.id? == {literal}))'
+        f" then map(select(.field.id? == {literal}))"
         ' | (.[0].optionId // .[0].text // "")'
         ' else error("board-read-unconfirmed") end) end'
     )
@@ -890,7 +914,7 @@ def _field_guarded_fragment(change: PlannedChange, quoted: str, cite: str) -> st
         f'  echo "skip {tag}: already satisfied" >&2\n'
         f'elif [ -n "$current" ]; then\n'
         f'  echo "skip {tag}: DRIFT — current '
-        f'value is $current, not the planned target; not overwriting a '
+        f"value is $current, not the planned target; not overwriting a "
         f'concurrent edit (use pm back-fill --apply for the drift-safe path)" '
         f">&2\n"
         f"else\n"
@@ -915,9 +939,7 @@ def _axis_label_carrier_jq(axis_prefix: str, carrier_labels: tuple[str, ...]) ->
     """
     tests = [f"startswith({json.dumps(axis_prefix)})"]
     tests += [f". == {json.dumps(name)}" for name in carrier_labels]
-    return (
-        f"[.labels[]?.name] | map(select({' or '.join(tests)})) | (.[0] // \"\")"
-    )
+    return f'[.labels[]?.name] | map(select({" or ".join(tests)})) | (.[0] // "")'
 
 
 def _axis_label_guarded_fragment(change: PlannedChange, quoted: str, cite: str) -> str:
@@ -944,10 +966,7 @@ def _axis_label_guarded_fragment(change: PlannedChange, quoted: str, cite: str) 
     """
     axis = change.axis or ""
     jq = _axis_label_carrier_jq(axis_labels.prefix(axis), change.carrier_labels)
-    reread = (
-        f"gh issue view {change.issue_number} --json labels "
-        f"--jq {shlex.quote(jq)} 2>/dev/null"
-    )
+    reread = f"gh issue view {change.issue_number} --json labels --jq {shlex.quote(jq)} 2>/dev/null"
     tag = f"#{change.issue_number} {change.kind} ({axis})"
     # Both messages are single-quoted through `_echo_line`: `axis` reaches them
     # and, on the `--plan` path, is adopter-supplied. Inside double quotes bash
@@ -1097,16 +1116,18 @@ def planned_changes_from_plan(plan: dict[str, Any]) -> list[PlannedChange]:
                 "report to produce a fresh plan"
             )
         target, seam_inputs = _target_and_inputs(kind, intent or {}, argv)
-        out.append(PlannedChange(
-            issue_number=issue_number,
-            kind=str(kind),
-            target=target,
-            observed=entry.get("observed"),
-            argv=argv,
-            citation=str(entry.get("citation", "")),
-            blocked_reason=blocked_reason,
-            **seam_inputs,
-        ))
+        out.append(
+            PlannedChange(
+                issue_number=issue_number,
+                kind=str(kind),
+                target=target,
+                observed=entry.get("observed"),
+                argv=argv,
+                citation=str(entry.get("citation", "")),
+                blocked_reason=blocked_reason,
+                **seam_inputs,
+            )
+        )
     return out
 
 
@@ -1210,9 +1231,7 @@ def _target_and_inputs(
         carriers = intent.get("carrier_labels")
         return intent.get("label_value"), {
             "axis": intent.get("axis"),
-            "carrier_labels": tuple(
-                name for name in (carriers or []) if isinstance(name, str)
-            ),
+            "carrier_labels": tuple(name for name in (carriers or []) if isinstance(name, str)),
         }
     # set-board-field
     option_id = intent.get("single_select_option_id")

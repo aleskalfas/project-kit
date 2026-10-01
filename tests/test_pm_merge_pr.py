@@ -13,15 +13,9 @@ from pathlib import Path
 
 import pytest
 
-
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = (
-    REPO_ROOT
-    / ".pkit"
-    / "capabilities"
-    / "project-management"
-    / "scripts"
-    / "merge-pr.py"
+    REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "merge-pr.py"
 )
 
 
@@ -163,7 +157,10 @@ def test_gh_get_pr_requests_status_rollup(mp, monkeypatch) -> None:
     def fake_gh_run(args, config, **kwargs):
         captured.append(list(args))
         return subprocess.CompletedProcess(
-            args=args, returncode=0, stdout="{}", stderr="",
+            args=args,
+            returncode=0,
+            stdout="{}",
+            stderr="",
         )
 
     monkeypatch.setattr(mp, "gh_run", fake_gh_run)
@@ -183,8 +180,10 @@ def test_ci_bypass_audit_body_follows_schema_template(mp) -> None:
     """Audit body matches validation-severity.yaml's `Bypassed by <name> <<email>>: <reason>`."""
     key = mp._ci_bypass_audit_key("advisory changeset guard", "sha1")
     body = mp._ci_bypass_audit_body(
-        _identity(mp), "advisory changeset guard on a decision-only PR",
-        ("changeset-guard (FAILURE)",), key,
+        _identity(mp),
+        "advisory changeset guard on a decision-only PR",
+        ("changeset-guard (FAILURE)",),
+        key,
     )
     assert body.startswith(mp.CI_BYPASS_AUDIT_MARKER)
     assert body.splitlines()[-1] == key
@@ -204,14 +203,20 @@ def test_post_ci_bypass_audit_posts_comment(mp, monkeypatch) -> None:
         # `gh pr view --json comments` → no prior audit comment.
         if "view" in args:
             return subprocess.CompletedProcess(
-                args=args, returncode=0,
-                stdout='{"comments": []}', stderr="",
+                args=args,
+                returncode=0,
+                stdout='{"comments": []}',
+                stderr="",
             )
         return subprocess.CompletedProcess(args=args, returncode=0, stdout="", stderr="")
 
     monkeypatch.setattr(mp, "gh_run", fake_gh_run)
     ok = mp._post_ci_bypass_audit(
-        496, "deliberate override", _identity(mp), ("x (FAILURE)",), {},
+        496,
+        "deliberate override",
+        _identity(mp),
+        ("x (FAILURE)",),
+        {},
     )
     assert ok is True
     comment_calls = [c for c in captured if "comment" in c]
@@ -230,24 +235,43 @@ def test_post_ci_bypass_audit_idempotent_skip(mp, monkeypatch) -> None:
     captured: list[list[str]] = []
     key = mp._ci_bypass_audit_key("override", "sha1")
     prior = mp._ci_bypass_audit_body(
-        _identity(mp), "override", ("x (FAILURE)",), key, "sha1",
+        _identity(mp),
+        "override",
+        ("x (FAILURE)",),
+        key,
+        "sha1",
     )
 
     def fake_gh_run(args, config, **kwargs):
         captured.append(list(args))
         if "view" in args:
-            existing = json.dumps({"comments": [{
-                "body": prior,
-                "viewerDidAuthor": True, "includesCreatedEdit": False,
-            }]})
+            existing = json.dumps(
+                {
+                    "comments": [
+                        {
+                            "body": prior,
+                            "viewerDidAuthor": True,
+                            "includesCreatedEdit": False,
+                        }
+                    ]
+                }
+            )
             return subprocess.CompletedProcess(
-                args=args, returncode=0, stdout=existing, stderr="",
+                args=args,
+                returncode=0,
+                stdout=existing,
+                stderr="",
             )
         return subprocess.CompletedProcess(args=args, returncode=0, stdout="", stderr="")
 
     monkeypatch.setattr(mp, "gh_run", fake_gh_run)
     ok = mp._post_ci_bypass_audit(
-        496, "override", _identity(mp), ("x (FAILURE)",), {}, head="sha1",
+        496,
+        "override",
+        _identity(mp),
+        ("x (FAILURE)",),
+        {},
+        head="sha1",
     )
     assert ok is True
     assert not [c for c in captured if "comment" in c], (
@@ -262,15 +286,25 @@ def test_post_ci_bypass_audit_reports_gh_failure(mp, monkeypatch) -> None:
     def fake_gh_run(args, config, **kwargs):
         if "view" in args:
             return subprocess.CompletedProcess(
-                args=args, returncode=0, stdout='{"comments": []}', stderr="",
+                args=args,
+                returncode=0,
+                stdout='{"comments": []}',
+                stderr="",
             )
         return subprocess.CompletedProcess(
-            args=args, returncode=1, stdout="", stderr="boom",
+            args=args,
+            returncode=1,
+            stdout="",
+            stderr="boom",
         )
 
     monkeypatch.setattr(mp, "gh_run", fake_gh_run)
     ok = mp._post_ci_bypass_audit(
-        496, "override", _identity(mp), ("x (FAILURE)",), {},
+        496,
+        "override",
+        _identity(mp),
+        ("x (FAILURE)",),
+        {},
     )
     assert ok is False
 
@@ -282,7 +316,9 @@ def test_post_ci_bypass_audit_reports_gh_failure(mp, monkeypatch) -> None:
 # hard-refuses; --bypass-ci clears it, posts the audit, and merges.
 
 
-def _wire_merge_seams(mp, monkeypatch, *, rollup, head_branch="fix/42-slug", cross_repository=False):
+def _wire_merge_seams(
+    mp, monkeypatch, *, rollup, head_branch="fix/42-slug", cross_repository=False
+):
     """Stub merge-pr's heavy seams so main() reaches the CI gate on *rollup*.
 
     `calls["order"]` records the post-merge side-effects (merge, hooks, remote
@@ -295,13 +331,17 @@ def _wire_merge_seams(mp, monkeypatch, *, rollup, head_branch="fix/42-slug", cro
     monkeypatch.setattr(mp, "load_adopter_config", lambda root: {})
     monkeypatch.setattr(mp, "_read_members", lambda root, loader: [])
     monkeypatch.setattr(
-        mp, "resolve_invoker_identity",
+        mp,
+        "resolve_invoker_identity",
         lambda config=None: mp.Identity(github_login="octocat", email="o@e.com"),
     )
     monkeypatch.setattr(
-        mp, "check_membership",
+        mp,
+        "check_membership",
         lambda members, invoker: type(
-            "MR", (), {"allowed": True, "refusal_message": None},
+            "MR",
+            (),
+            {"allowed": True, "refusal_message": None},
         )(),
     )
     monkeypatch.setattr(mp.session_guard, "enforce", lambda **kw: True)
@@ -310,20 +350,27 @@ def _wire_merge_seams(mp, monkeypatch, *, rollup, head_branch="fix/42-slug", cro
     # to stamp, so neutralise the gate here.
     monkeypatch.setattr(mp.bootstrap_gate, "enforce", lambda *a, **kw: True)
     monkeypatch.setattr(
-        mp, "_read_yaml",
+        mp,
+        "_read_yaml",
         lambda path, loader: {"formats": {"pr": {"pattern": r"^fix: .+$"}}},
     )
     monkeypatch.setattr(
-        mp, "_gh_get_pr",
+        mp,
+        "_gh_get_pr",
         lambda pr_number, config: {
-            "title": "fix: a thing", "body": "Closes #42\n## Test plan\n- [x] ok",
-            "state": "open", "url": "http://pr/99", "headRefName": head_branch,
+            "title": "fix: a thing",
+            "body": "Closes #42\n## Test plan\n- [x] ok",
+            "state": "open",
+            "url": "http://pr/99",
+            "headRefName": head_branch,
             "headRefOid": "sha-head",
-            "statusCheckRollup": rollup, "isCrossRepository": cross_repository,
+            "statusCheckRollup": rollup,
+            "isCrossRepository": cross_repository,
         },
     )
     monkeypatch.setattr(
-        mp, "_gather_unticked_findings",
+        mp,
+        "_gather_unticked_findings",
         lambda pr_number, pr_body, closing, config: {},
     )
 
@@ -362,6 +409,7 @@ _MP_GREEN = [{"name": "tests", "status": "COMPLETED", "conclusion": "SUCCESS"}]
 
 def _run_merge_main(mp, monkeypatch, argv):
     import sys
+
     monkeypatch.setattr(sys, "argv", ["merge-pr.py", *argv])
     return mp.main()
 
@@ -467,7 +515,9 @@ def test_merge_failure_exits_3_and_skips_hooks_and_cleanup(mp, monkeypatch):
 
 
 def test_head_branch_checked_out_in_worktree_is_a_warning_not_a_failure(
-    mp, monkeypatch, capsys,
+    mp,
+    monkeypatch,
+    capsys,
 ):
     """#587's trigger under the shared mechanic: the head branch is checked
     out in a worktree, so the local `branch -D` is refused. The merge and the

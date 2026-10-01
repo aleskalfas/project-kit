@@ -7,7 +7,9 @@
 # ///
 """Project-management capability — parent-active-descendant (process predicate, DEC-033).
 
-Pm-LOCAL descendant walk (DEC-033 breadth; NEVER in the engine): result=True iff a child issue (one naming this issue as parent) is in-progress or further. Separate from the position detectors; does not alter the position truth-table.
+Pm-LOCAL descendant walk (DEC-033 breadth; NEVER in the engine): result=True iff a child issue (one
+naming this issue as parent) is in-progress or further. Separate from the position detectors; does
+not alter the position truth-table.
 
 READ-ONLY. The process engine (COR-033) invokes this as
   <script> <issue-number> --json
@@ -26,12 +28,14 @@ from pathlib import Path
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate  # noqa: E402
-from _lib import lifecycle_predicates as predicates  # noqa: E402
+from _lib import bootstrap_gate
+from _lib import lifecycle_predicates as predicates
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description='Report whether an issue has an in-progress-or-further descendant.')
+    parser = argparse.ArgumentParser(
+        description="Report whether an issue has an in-progress-or-further descendant."
+    )
     parser.add_argument("issue_number", help="The keyed subject: a GitHub issue number.")
     parser.add_argument("--json", action="store_true", help="Emit the structured JSON contract.")
     parser.add_argument("--actor", default=None, help="The actor being gated (gates only).")

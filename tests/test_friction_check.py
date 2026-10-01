@@ -868,9 +868,7 @@ def test_a_capability_place_in_the_package_schema_shape_is_checked(
     )
     _start(repo, {"docs/evidence/guide.md": guide()}, config=friction_config(places=()))
     repo.commit("change the CLI only", {"src/cli/main.py": "print('cli v6')\n"})
-    assert _summary(_run(repo)) == [
-        ("friction", "docs/evidence/guide.md", "path:src/cli/**", None)
-    ]
+    assert _summary(_run(repo)) == [("friction", "docs/evidence/guide.md", "path:src/cli/**", None)]
 
 
 # --- the base -----------------------------------------------------------------------------------
@@ -958,9 +956,7 @@ def test_the_base_comes_from_the_environment(repo: AdopterRepo) -> None:
 
 
 def test_dormant_without_places(repo: AdopterRepo) -> None:
-    _start(
-        repo, {"docs/guide.md": guide()}, config=json.dumps({"friction": {"mode": "enforcing"}})
-    )
+    _start(repo, {"docs/guide.md": guide()}, config=json.dumps({"friction": {"mode": "enforcing"}}))
     repo.commit("change the CLI only", {"src/cli/main.py": "print('d')\n"})
     result = _cli("--base", "main")
     assert result.exit_code == 0, result.output

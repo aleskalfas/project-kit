@@ -106,7 +106,8 @@ def test_board_declarable_axes_match_the_schema(pc) -> None:
     )
     axis_props = schema["properties"]["axes"]["properties"]
     refused = {
-        axis for axis, spec in axis_props.items()
+        axis
+        for axis, spec in axis_props.items()
         if spec.get("not", {}).get("required") == ["board"]
     }
     admitted = set(axis_props) - refused
@@ -151,9 +152,7 @@ def test_board_arm_failure_is_a_fail_not_a_warn(pc, axis_labels) -> None:
 
 
 def test_board_arm_failure_is_per_axis(pc, axis_labels) -> None:
-    sm = _map(
-        axis_labels, {"priority": {"board": True}, "workstream": {"board": True}}
-    )
+    sm = _map(axis_labels, {"priority": {"board": True}, "workstream": {"board": True}})
     fails = [
         r
         for r in pc._check_substrate_board_arm_satisfiable(NO_BOARD_CONFIG, sm)
@@ -161,8 +160,7 @@ def test_board_arm_failure_is_per_axis(pc, axis_labels) -> None:
     ]
     assert len(fails) == 2
     assert {"priority", "workstream"} == {
-        axis for axis in ("priority", "workstream")
-        for r in fails if axis in r.label
+        axis for axis in ("priority", "workstream") for r in fails if axis in r.label
     }
 
 
@@ -280,14 +278,10 @@ def test_absent_axis_nudge_silent_for_a_declared_axis(pc, axis_labels) -> None:
     assert pc._check_board_axis_absent_from_map(BOARD_CONFIG, sm) == []
 
 
-def test_absent_axis_nudge_silent_for_an_already_declared_board_arm(
-    pc, axis_labels
-) -> None:
+def test_absent_axis_nudge_silent_for_an_already_declared_board_arm(pc, axis_labels) -> None:
     """The destination state: both axes declared `board: true`. Nothing left to
     nudge."""
-    sm = _map(
-        axis_labels, {"priority": {"board": True}, "workstream": {"board": True}}
-    )
+    sm = _map(axis_labels, {"priority": {"board": True}, "workstream": {"board": True}})
     assert pc._check_board_axis_absent_from_map(BOARD_CONFIG, sm) == []
 
 
@@ -372,9 +366,7 @@ def test_default_with_no_hooks_file_warns(pc, axis_labels, tmp_path) -> None:
     assert results[0].status == "warn"
 
 
-def test_default_with_hook_on_another_event_warns_narrowly(
-    pc, axis_labels, tmp_path
-) -> None:
+def test_default_with_hook_on_another_event_warns_narrowly(pc, axis_labels, tmp_path) -> None:
     """A `set-board-field` hook exists, but not at filing time — so a NEW issue
     still gets no value. The message narrows the claim rather than repeating the
     stronger one."""
@@ -388,9 +380,7 @@ def test_default_with_hook_on_another_event_warns_narrowly(
     assert "NO `set-board-field` hook at all" not in results[0].detail
 
 
-def test_default_with_a_create_hook_is_unverified_not_asserted(
-    pc, axis_labels, tmp_path
-) -> None:
+def test_default_with_a_create_hook_is_unverified_not_asserted(pc, axis_labels, tmp_path) -> None:
     """A hook declares an opaque `field_id`, never an axis — nothing readable
     offline says WHICH axis a hook serves. So this degrades to "unverified"
     rather than claiming the `default:` is backed (a false all-clear) or claiming
@@ -415,9 +405,7 @@ def test_no_default_on_the_board_arm_is_silent(pc, axis_labels, tmp_path) -> Non
     assert results == []
 
 
-def test_default_on_a_label_arm_is_not_this_checks_business(
-    pc, axis_labels, tmp_path
-) -> None:
+def test_default_on_a_label_arm_is_not_this_checks_business(pc, axis_labels, tmp_path) -> None:
     """A `default:` on a `label:` binding IS written by the label writer — only
     the `board:` arm delegates the write to a hook."""
     cap_root = _write_hooks(tmp_path / "cap", _HOOKS_WITHOUT_BOARD_FIELD)
@@ -428,9 +416,7 @@ def test_default_on_a_label_arm_is_not_this_checks_business(
     assert results == []
 
 
-def test_default_check_stays_quiet_on_an_unreadable_hooks_file(
-    pc, axis_labels, tmp_path
-) -> None:
+def test_default_check_stays_quiet_on_an_unreadable_hooks_file(pc, axis_labels, tmp_path) -> None:
     """`_check_hooks_file` is the check that validates and reports hooks.yaml. A
     second voice reporting the same parse failure would double-count it, so this
     one degrades to a skip that says the correspondence is unknown."""
@@ -469,9 +455,7 @@ def test_conflict_remediation_names_the_board_arm(pc, axis_labels) -> None:
     It now names `board: true`."""
     sm = _map(axis_labels, {"priority": {"label": {"remap": {"High": "P0"}}}})
     found = next(
-        r
-        for r in pc._check_substrate_board_conflict(BOARD_CONFIG, sm)
-        if r.status == "warn"
+        r for r in pc._check_substrate_board_conflict(BOARD_CONFIG, sm) if r.status == "warn"
     )
     assert found.remediation is not None
     assert "board: true" in found.remediation
@@ -485,9 +469,7 @@ def test_conflict_remediation_does_not_recommend_board_for_state(pc, axis_labels
     binding and let the flag govern (decision point 3)."""
     sm = _map(axis_labels, {"state": {"label": {"remap": {"open": "Open"}}}})
     found = next(
-        r
-        for r in pc._check_substrate_board_conflict(BOARD_CONFIG, sm)
-        if r.status == "warn"
+        r for r in pc._check_substrate_board_conflict(BOARD_CONFIG, sm) if r.status == "warn"
     )
     assert found.remediation is not None
     assert "state: { board: true }" not in found.remediation
@@ -509,9 +491,7 @@ def test_conflict_docstring_no_longer_calls_unsupported_the_board_shape(pc) -> N
 def test_board_arm_is_not_a_conflict(pc, axis_labels) -> None:
     """`board: true` NAMES the board as the substrate — the same answer the flag
     gives — so it is agreement, not a competing claim."""
-    sm = _map(
-        axis_labels, {"priority": {"board": True}, "workstream": {"board": True}}
-    )
+    sm = _map(axis_labels, {"priority": {"board": True}, "workstream": {"board": True}})
     results = pc._check_substrate_board_conflict(BOARD_CONFIG, sm)
     assert all(r.status != "fail" for r in results)
 
@@ -535,15 +515,11 @@ def test_matrix_does_not_call_a_board_armed_axis_unsupported(pc, axis_labels) ->
     assert "board: true" in line.detail
 
 
-def test_matrix_names_the_binding_kind_rather_than_a_question_mark(
-    pc, axis_labels
-) -> None:
+def test_matrix_names_the_binding_kind_rather_than_a_question_mark(pc, axis_labels) -> None:
     """The served arm names its kind from a fixed tuple that does not include
     `board`, so without its own branch a board-armed axis renders `bound via ?`."""
     sm = _map(axis_labels, {"priority": {"board": True}})
-    line = next(
-        r for r in pc._check_substrate_capability_matrix(sm) if "priority" in r.label
-    )
+    line = next(r for r in pc._check_substrate_capability_matrix(sm) if "priority" in r.label)
     assert "`?`" not in line.detail
     assert "SERVED" in line.detail
     assert line.status == "ok"
@@ -593,7 +569,4 @@ def test_this_repos_own_config_trips_none_of_the_new_checks(pc, axis_labels) -> 
     empty = _map(axis_labels, {})
     assert pc._check_board_axis_absent_from_map(config, empty) == []
     assert pc._check_board_arm_default_has_hook(cap_root, empty) == []
-    assert all(
-        r.status != "fail"
-        for r in pc._check_substrate_board_arm_satisfiable(config, empty)
-    )
+    assert all(r.status != "fail" for r in pc._check_substrate_board_arm_satisfiable(config, empty))

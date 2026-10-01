@@ -126,9 +126,7 @@ def test_stamp_refuses_when_namespace_dir_missing(tmp_path: Path) -> None:
 
 
 def test_stamp_dry_run_writes_nothing(kit_target: Path) -> None:
-    target = agents.stamp_new_agent(
-        kit_target, name="ghost", namespace="project", dry_run=True
-    )
+    target = agents.stamp_new_agent(kit_target, name="ghost", namespace="project", dry_run=True)
     assert not target.exists(), "dry-run wrote a file"
 
 
@@ -163,15 +161,15 @@ def test_cli_new_agent_rejects_unknown_namespace(kit_target: Path) -> None:
     assert "not one of core/project" in result.output
 
 
-def test_cli_new_agent_refuses_outside_pkit_tree(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_cli_new_agent_refuses_outside_pkit_tree(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """If invoked outside a tree with `.pkit/`, fail with a clear message."""
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
     result = runner.invoke(main, ["new", "agent", "project", "foo"])
     assert result.exit_code != 0
-    output_lower = (
-        result.output + (str(result.exception) if result.exception else "")
-    ).lower()
+    output_lower = (result.output + (str(result.exception) if result.exception else "")).lower()
     assert ".pkit/" in output_lower or "not in a project tree" in output_lower
 
 
@@ -183,9 +181,7 @@ def test_stamp_with_storyboard_creates_folder_form(kit_target: Path) -> None:
     target = agents.stamp_new_agent(
         kit_target, name="coordinator", namespace="project", with_storyboard=True
     )
-    expected_agent = (
-        kit_target / ".pkit" / "agents" / "project" / "coordinator" / "coordinator.md"
-    )
+    expected_agent = kit_target / ".pkit" / "agents" / "project" / "coordinator" / "coordinator.md"
     expected_storyboard = expected_agent.parent / "storyboard.md"
 
     assert target == expected_agent
@@ -195,12 +191,8 @@ def test_stamp_with_storyboard_creates_folder_form(kit_target: Path) -> None:
 
 
 def test_stamp_with_storyboard_seeds_storyboard_template(kit_target: Path) -> None:
-    agents.stamp_new_agent(
-        kit_target, name="reviewer", namespace="core", with_storyboard=True
-    )
-    storyboard = (
-        kit_target / ".pkit" / "agents" / "core" / "reviewer" / "storyboard.md"
-    )
+    agents.stamp_new_agent(kit_target, name="reviewer", namespace="core", with_storyboard=True)
+    storyboard = kit_target / ".pkit" / "agents" / "core" / "reviewer" / "storyboard.md"
     body = storyboard.read_text(encoding="utf-8")
     assert "## Framing" in body
     assert "## Tone" in body
@@ -253,9 +245,7 @@ def test_stamp_with_storyboard_dry_run_writes_nothing(kit_target: Path) -> None:
 
 def test_cli_new_agent_with_storyboard_flag(kit_target: Path) -> None:
     runner = CliRunner()
-    result = runner.invoke(
-        main, ["new", "agent", "project", "my-coord", "--with-storyboard"]
-    )
+    result = runner.invoke(main, ["new", "agent", "project", "my-coord", "--with-storyboard"])
     assert result.exit_code == 0, result.output
     assert "my-coord.md" in result.output
     assert "storyboard.md" in result.output
@@ -357,9 +347,7 @@ def test_stamp_refuses_a_name_a_capability_already_ships(kit_target: Path) -> No
 
 def test_stamp_under_capability_dry_run_creates_nothing(kit_target: Path) -> None:
     cap_dir = _make_capability(kit_target, "my-cap")
-    target = agents.stamp_new_agent(
-        kit_target, name="ghost", namespace="my-cap", dry_run=True
-    )
+    target = agents.stamp_new_agent(kit_target, name="ghost", namespace="my-cap", dry_run=True)
     assert target == cap_dir / "agents" / "ghost.md"
     assert not (cap_dir / "agents").exists()
 

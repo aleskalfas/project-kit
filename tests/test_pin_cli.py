@@ -141,9 +141,7 @@ def test_pin_version_refuses_when_manifest_absent(
     assert "pkit sync" in result.output
 
 
-def test_pin_overwrites_an_existing_pin(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_pin_overwrites_an_existing_pin(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _git_repo(tmp_path)
     _write_manifest(tmp_path, "2.0.0")
     monkeypatch.chdir(tmp_path)
@@ -166,9 +164,7 @@ def test_unpin_removes_the_pin(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) 
     assert not router.pin_file_path(tmp_path).exists()
 
 
-def test_unpin_is_idempotent_when_absent(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_unpin_is_idempotent_when_absent(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _git_repo(tmp_path)
     monkeypatch.chdir(tmp_path)
 

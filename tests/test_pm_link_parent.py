@@ -240,9 +240,7 @@ def _run(lp, monkeypatch, capsys, root, fake, *argv, tty=False, reply=None, guar
     monkeypatch.setattr(lp.sys, "stdin", _Stdin(tty))
     if reply is not None:
         monkeypatch.setattr("builtins.input", lambda prompt="": reply)
-    monkeypatch.setattr(
-        lp.sys, "argv", ["link-parent.py", *argv, "--capability-root", str(root)]
-    )
+    monkeypatch.setattr(lp.sys, "argv", ["link-parent.py", *argv, "--capability-root", str(root)])
     rc = lp.main()
     return rc, capsys.readouterr(), guard_calls
 
@@ -281,9 +279,7 @@ def test_dry_run_reports_every_outcome_and_changes_nothing(lp, tmp_path, monkeyp
 
 def test_yes_links_exactly_the_planned_issues(lp, tmp_path, monkeypatch, capsys):
     fake = FakeGitHub(_tracker(), native={90: {102}})
-    rc, out, guard_calls = _run(
-        lp, monkeypatch, capsys, _stage(tmp_path), fake, *EXPLICIT, "--yes"
-    )
+    rc, out, guard_calls = _run(lp, monkeypatch, capsys, _stage(tmp_path), fake, *EXPLICIT, "--yes")
 
     assert rc == 0
     assert fake.posts == [(90, 101), (91, 107), (90, 108)]
@@ -351,9 +347,7 @@ def test_non_interactive_run_without_yes_refuses_naming_the_rerun(
 
 def test_interactive_prompt_declined_writes_nothing(lp, tmp_path, monkeypatch, capsys):
     fake = FakeGitHub(_tracker())
-    rc, out, _ = _run(
-        lp, monkeypatch, capsys, _stage(tmp_path), fake, "101", tty=True, reply="n"
-    )
+    rc, out, _ = _run(lp, monkeypatch, capsys, _stage(tmp_path), fake, "101", tty=True, reply="n")
     assert rc == 0
     assert fake.writes == []
     assert "aborted." in out.err
@@ -361,18 +355,14 @@ def test_interactive_prompt_declined_writes_nothing(lp, tmp_path, monkeypatch, c
 
 def test_interactive_prompt_accepted_links(lp, tmp_path, monkeypatch, capsys):
     fake = FakeGitHub(_tracker())
-    rc, _out, _ = _run(
-        lp, monkeypatch, capsys, _stage(tmp_path), fake, "101", tty=True, reply="y"
-    )
+    rc, _out, _ = _run(lp, monkeypatch, capsys, _stage(tmp_path), fake, "101", tty=True, reply="y")
     assert rc == 0
     assert fake.posts == [(90, 101)]
 
 
 def test_foreign_repo_refusal_writes_nothing(lp, tmp_path, monkeypatch, capsys):
     fake = FakeGitHub(_tracker())
-    rc, _out, _ = _run(
-        lp, monkeypatch, capsys, _stage(tmp_path), fake, "101", "--yes", guard=False
-    )
+    rc, _out, _ = _run(lp, monkeypatch, capsys, _stage(tmp_path), fake, "101", "--yes", guard=False)
     assert rc == 1
     assert fake.writes == []
 
@@ -380,9 +370,7 @@ def test_foreign_repo_refusal_writes_nothing(lp, tmp_path, monkeypatch, capsys):
 # --- containment mode: textual links nothing, refreshes the children views ----
 
 
-def test_textual_mode_links_nothing_and_refreshes_children_views(
-    lp, tmp_path, monkeypatch, capsys
-):
+def test_textual_mode_links_nothing_and_refreshes_children_views(lp, tmp_path, monkeypatch, capsys):
     fake = FakeGitHub(_tracker(), native={90: {102}})
     rc, out, _ = _run(
         lp,
@@ -421,18 +409,14 @@ def test_textual_mode_dry_run_writes_no_comment(lp, tmp_path, monkeypatch, capsy
     assert "children views to refresh: #90" in out.out
 
 
-def test_textual_mode_refuses_to_refresh_from_a_short_issue_list(
-    lp, tmp_path, monkeypatch, capsys
-):
+def test_textual_mode_refuses_to_refresh_from_a_short_issue_list(lp, tmp_path, monkeypatch, capsys):
     """The children comment is the parent's only parent-side view and carries no
     hedge, so a partial list published there would read as the complete one."""
     fake = FakeGitHub(_tracker())
     monkeypatch.setattr(
         lp.containment,
         "fetch_issue_corpus",
-        lambda config, **kw: lp.containment.IssueCorpus(
-            rows=tuple(_tracker()), complete=False
-        ),
+        lambda config, **kw: lp.containment.IssueCorpus(rows=tuple(_tracker()), complete=False),
     )
     rc, out, _ = _run(
         lp,
@@ -448,9 +432,7 @@ def test_textual_mode_refuses_to_refresh_from_a_short_issue_list(
     assert fake.writes == []
 
 
-def test_textual_mode_withholds_a_view_the_seam_cannot_vouch_for(
-    lp, tmp_path, monkeypatch, capsys
-):
+def test_textual_mode_withholds_a_view_the_seam_cannot_vouch_for(lp, tmp_path, monkeypatch, capsys):
     """A whole issue list is not enough: when a parent's native sub-issues read
     fails, a native child may exist unseen, so that parent's view is not
     overwritten — and the reason given is the one the seam established."""
@@ -481,13 +463,9 @@ def test_an_instance_without_sub_issues_links_nothing(lp, tmp_path, monkeypatch,
     assert "native sub-issues are unsupported on this instance" in out.out
 
 
-def test_a_link_failure_exits_non_zero_and_the_others_still_link(
-    lp, tmp_path, monkeypatch, capsys
-):
+def test_a_link_failure_exits_non_zero_and_the_others_still_link(lp, tmp_path, monkeypatch, capsys):
     fake = FakeGitHub(_tracker(), fail_posts=(101,))
-    rc, out, _ = _run(
-        lp, monkeypatch, capsys, _stage(tmp_path), fake, "101", "107", "108", "--yes"
-    )
+    rc, out, _ = _run(lp, monkeypatch, capsys, _stage(tmp_path), fake, "101", "107", "108", "--yes")
     assert rc == 3
     assert fake.posts == [(91, 107), (90, 108)]
     assert "[fail] #101 not linked under #90" in out.out
@@ -522,9 +500,7 @@ def test_dry_run_reports_a_child_under_another_native_parent_as_a_conflict(
     plan says so by name — child, the parent it has, the parent the line names —
     before anything is posted, and does not call it unsupported."""
     fake = FakeGitHub(_tracker_with_second_feature(), native={95: {101}})
-    rc, out, _ = _run(
-        lp, monkeypatch, capsys, _stage(tmp_path), fake, "101", "108", "--dry-run"
-    )
+    rc, out, _ = _run(lp, monkeypatch, capsys, _stage(tmp_path), fake, "101", "108", "--dry-run")
 
     assert rc == 0
     assert (
@@ -542,9 +518,7 @@ def test_a_conflict_is_reported_not_linked_and_the_others_still_link(
     lp, tmp_path, monkeypatch, capsys
 ):
     fake = FakeGitHub(_tracker_with_second_feature(), native={95: {101}})
-    rc, out, _ = _run(
-        lp, monkeypatch, capsys, _stage(tmp_path), fake, "101", "108", "--yes"
-    )
+    rc, out, _ = _run(lp, monkeypatch, capsys, _stage(tmp_path), fake, "101", "108", "--yes")
 
     assert rc == 0, "a conflict is reported for the operator, not a gh failure"
     assert fake.posts == [(90, 108)]
@@ -559,9 +533,7 @@ def test_the_one_parent_422_is_read_from_its_body_not_taken_as_unsupported(
     no conflict, GitHub refuses the add with a 422, and the rule its error body
     states is what the report says — a conflict, not "unsupported" and not a
     failure — even though the parent cannot be named."""
-    fake = FakeGitHub(
-        _tracker_with_second_feature(), native={95: {101}}, records_parent=False
-    )
+    fake = FakeGitHub(_tracker_with_second_feature(), native={95: {101}}, records_parent=False)
     rc, out, _ = _run(lp, monkeypatch, capsys, _stage(tmp_path), fake, "101", "--yes")
 
     assert rc == 0
@@ -589,7 +561,7 @@ def test_all_open_reads_each_parents_sub_issues_once_over_64_links(
         _issue(200 + i, f"[Task] t{i}", f"Feature: #{features[i % 4]}\n") for i in range(64)
     ]
     fake = FakeGitHub(tracker)
-    rc, out, _ = _run(lp, monkeypatch, capsys, _stage(tmp_path), fake, "--all-open", "--yes")
+    rc, _out, _ = _run(lp, monkeypatch, capsys, _stage(tmp_path), fake, "--all-open", "--yes")
 
     assert rc == 0
     assert len(fake.posts) == 64 + len(features)
@@ -642,8 +614,12 @@ def _classify(lp, schemas, rows, number, *, complete=True):
 
 
 def test_an_unrecognised_title_has_no_parent_line(lp, schemas):
-    entry = _classify(lp, schemas, [_issue(1, "no prefix at all", "Feature: #2\n"),
-                                    _issue(2, "[Feature] f", "EPIC: #3\n")], 1)
+    entry = _classify(
+        lp,
+        schemas,
+        [_issue(1, "no prefix at all", "Feature: #2\n"), _issue(2, "[Feature] f", "EPIC: #3\n")],
+        1,
+    )
     assert entry.outcome is lp.Outcome.NO_PARENT_LINE
     assert "type prefix is not recognised" in entry.detail
 
@@ -651,8 +627,9 @@ def test_an_unrecognised_title_has_no_parent_line(lp, schemas):
 def test_a_parent_the_type_may_not_have_is_no_parent_line(lp, schemas):
     """An EPIC's only parent form is a milestone: `Feature:` on its first line is
     not a parent-ref for it, and must not become an EPIC-under-Feature link."""
-    entry = _classify(lp, schemas, [_issue(1, "[EPIC] e", "Feature: #2\n"),
-                                    _issue(2, "[Feature] f", "")], 1)
+    entry = _classify(
+        lp, schemas, [_issue(1, "[EPIC] e", "Feature: #2\n"), _issue(2, "[Feature] f", "")], 1
+    )
     assert entry.outcome is lp.Outcome.NO_PARENT_LINE
     assert "not a parent-ref form for type 'epic'" in entry.detail
 

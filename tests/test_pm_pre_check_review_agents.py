@@ -32,9 +32,7 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SCRIPTS_DIR = (
-    REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
-)
+SCRIPTS_DIR = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
 SCRIPT = SCRIPTS_DIR / "pre-check.py"
 RC_PATH = SCRIPTS_DIR / "_lib" / "review_contributions.py"
 
@@ -141,19 +139,11 @@ def test_two_local_reviewers_accepted(pc, rc, monkeypatch, tmp_path) -> None:
     )
 
     assert _fails(results) == []
-    assert any(
-        r.status == "ok" and "2 baseline local reviewer" in r.detail
-        for r in results
-    )
-    assert any(
-        r.status == "ok" and "all 2 reviewer(s) have deployed" in r.detail
-        for r in results
-    )
+    assert any(r.status == "ok" and "2 baseline local reviewer" in r.detail for r in results)
+    assert any(r.status == "ok" and "all 2 reviewer(s) have deployed" in r.detail for r in results)
 
 
-def test_two_local_reviewers_one_missing_agent_fails(
-    pc, rc, monkeypatch, tmp_path
-) -> None:
+def test_two_local_reviewers_one_missing_agent_fails(pc, rc, monkeypatch, tmp_path) -> None:
     """N=2 baseline, only one deployed → the missing one is a clear fail."""
     repo_root = _repo_with_agents(tmp_path, "reviewer")  # second-reviewer absent
     _stub_collection(pc, rc, monkeypatch, _empty_collection(rc))
@@ -173,9 +163,7 @@ def test_two_local_reviewers_one_missing_agent_fails(
 # ----- resolvable set: baseline union contributed -------------------
 
 
-def test_contributed_reviewer_in_resolvable_set(
-    pc, rc, monkeypatch, tmp_path
-) -> None:
+def test_contributed_reviewer_in_resolvable_set(pc, rc, monkeypatch, tmp_path) -> None:
     """A deployed contributed reviewer joins the resolvable set and passes."""
     repo_root = _repo_with_agents(tmp_path, "reviewer", "design-reviewer")
     collection = _contributed_collection(
@@ -193,9 +181,7 @@ def test_contributed_reviewer_in_resolvable_set(
     assert ok and "design-reviewer" in ok[0].detail and "reviewer" in ok[0].detail
 
 
-def test_contributed_reviewer_missing_agent_fails(
-    pc, rc, monkeypatch, tmp_path
-) -> None:
+def test_contributed_reviewer_missing_agent_fails(pc, rc, monkeypatch, tmp_path) -> None:
     """A contributed reviewer with no deployed agent surfaces a blocking fail.
 
     The collector flags it via its error channel (deployed=False); pre-check
@@ -222,16 +208,13 @@ def test_contributed_reviewer_missing_agent_fails(
 # ----- malformed contribution declaration ---------------------------
 
 
-def test_malformed_contribution_declaration_rejected(
-    pc, rc, monkeypatch, tmp_path
-) -> None:
+def test_malformed_contribution_declaration_rejected(pc, rc, monkeypatch, tmp_path) -> None:
     """A collector malformed-declaration error surfaces as a pre-check fail."""
     repo_root = _repo_with_agents(tmp_path, "reviewer")
     err = rc.ContributionError(
         rc.ERROR_MALFORMED,
         "ux-ui-design",
-        "capability `ux-ui-design`: contributions[0].match must be a "
-        "non-empty mapping",
+        "capability `ux-ui-design`: contributions[0].match must be a non-empty mapping",
     )
     collection = rc.ContributionCollection(
         rules=(), errors=(err,), capabilities_walked=("ux-ui-design",)
@@ -263,10 +246,7 @@ def test_baseline_only_single_reviewer_ok(pc, rc, monkeypatch, tmp_path) -> None
     )
 
     assert _fails(results) == []
-    assert any(
-        r.status == "ok" and "all 1 reviewer(s) have deployed" in r.detail
-        for r in results
-    )
+    assert any(r.status == "ok" and "all 1 reviewer(s) have deployed" in r.detail for r in results)
 
 
 def test_baseline_missing_agent_still_fails(pc, rc, monkeypatch, tmp_path) -> None:
@@ -286,16 +266,12 @@ def test_baseline_missing_agent_still_fails(pc, rc, monkeypatch, tmp_path) -> No
 
 def test_no_review_block_skips(pc, rc, monkeypatch, tmp_path) -> None:
     """No `review:` block → single skip, collector never consulted (unchanged)."""
-    results = pc._check_review_block(
-        {}, tmp_path / ".pkit" / "capabilities" / "project-management"
-    )
+    results = pc._check_review_block({}, tmp_path / ".pkit" / "capabilities" / "project-management")
     assert len(results) == 1
     assert results[0].status == "skip"
 
 
-def test_empty_agents_block_no_resolvable_set(
-    pc, rc, monkeypatch, tmp_path
-) -> None:
+def test_empty_agents_block_no_resolvable_set(pc, rc, monkeypatch, tmp_path) -> None:
     """`review:` present but no agents and no contributions → no fail."""
     repo_root = _repo_with_agents(tmp_path)
     _stub_collection(pc, rc, monkeypatch, _empty_collection(rc))
@@ -347,7 +323,9 @@ def test_opt_out_is_listed_with_its_reason(pc, rc, monkeypatch, tmp_path) -> Non
     resolvable set."""
     repo_root = _repo_with_agents(tmp_path, "reviewer", "design-reviewer")
     _stub_collection(
-        pc, rc, monkeypatch,
+        pc,
+        rc,
+        monkeypatch,
         _contributed_collection(rc, "ux-ui-design", "design", "design-reviewer"),
     )
 
@@ -368,12 +346,18 @@ def test_opt_out_is_listed_with_its_reason(pc, rc, monkeypatch, tmp_path) -> Non
 
 
 def test_opt_out_status_line_renders_in_the_report(
-    pc, rc, monkeypatch, tmp_path, capsys,
+    pc,
+    rc,
+    monkeypatch,
+    tmp_path,
+    capsys,
 ) -> None:
     """What the adopter sees: the skip marker, the line, and the reason."""
     repo_root = _repo_with_agents(tmp_path, "reviewer", "design-reviewer")
     _stub_collection(
-        pc, rc, monkeypatch,
+        pc,
+        rc,
+        monkeypatch,
         _contributed_collection(rc, "ux-ui-design", "design", "design-reviewer"),
     )
     results = pc._check_review_block(
@@ -383,21 +367,29 @@ def test_opt_out_status_line_renders_in_the_report(
     pc._print_human(results)
     out = capsys.readouterr().out
     assert (
-        "[skip] contributed reviewer `design-reviewer` (capability "
-        "`ux-ui-design`) opted out"
+        "[skip] contributed reviewer `design-reviewer` (capability `ux-ui-design`) opted out"
     ) in out
     assert "its merge gate does not apply — reason: This project has no UI." in out
 
 
 def test_opted_out_undeployed_reviewer_does_not_fail(
-    pc, rc, monkeypatch, tmp_path,
+    pc,
+    rc,
+    monkeypatch,
+    tmp_path,
 ) -> None:
     """A contributed reviewer that is opted out need not be deployed."""
     repo_root = _repo_with_agents(tmp_path, "reviewer")  # design-reviewer absent
     _stub_collection(
-        pc, rc, monkeypatch,
+        pc,
+        rc,
+        monkeypatch,
         _contributed_collection(
-            rc, "ux-ui-design", "design", "design-reviewer", deployed=False,
+            rc,
+            "ux-ui-design",
+            "design",
+            "design-reviewer",
+            deployed=False,
         ),
     )
 
@@ -409,16 +401,27 @@ def test_opted_out_undeployed_reviewer_does_not_fail(
     assert _fails(results) == []
 
 
-@pytest.mark.parametrize("field,value,expected", [
-    ("capability", "no-such-capability", "is not an installed capability"),
-    ("reviewer", "no-such-reviewer", "no reviewer `no-such-reviewer`"),
-])
+@pytest.mark.parametrize(
+    "field,value,expected",
+    [
+        ("capability", "no-such-capability", "is not an installed capability"),
+        ("reviewer", "no-such-reviewer", "no reviewer `no-such-reviewer`"),
+    ],
+)
 def test_opt_out_naming_no_installed_contribution_fails(
-    pc, rc, monkeypatch, tmp_path, field, value, expected,
+    pc,
+    rc,
+    monkeypatch,
+    tmp_path,
+    field,
+    value,
+    expected,
 ) -> None:
     repo_root = _repo_with_agents(tmp_path, "reviewer", "design-reviewer")
     _stub_collection(
-        pc, rc, monkeypatch,
+        pc,
+        rc,
+        monkeypatch,
         _contributed_collection(rc, "ux-ui-design", "design", "design-reviewer"),
     )
 
@@ -437,7 +440,9 @@ def test_opt_out_naming_no_installed_contribution_fails(
 def test_malformed_opt_out_fails(pc, rc, monkeypatch, tmp_path) -> None:
     repo_root = _repo_with_agents(tmp_path, "reviewer", "design-reviewer")
     _stub_collection(
-        pc, rc, monkeypatch,
+        pc,
+        rc,
+        monkeypatch,
         _contributed_collection(rc, "ux-ui-design", "design", "design-reviewer"),
     )
 

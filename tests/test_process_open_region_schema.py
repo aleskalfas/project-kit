@@ -87,9 +87,7 @@ def test_invariant_applies_to_accepted() -> None:
 def test_invariant_without_applies_to_still_accepted() -> None:
     # Additive: an unscoped invariant (COR-035) is unchanged.
     definition = _base_definition()
-    definition["invariants"] = [
-        {"id": "evidence-backed", "check": {"run": "c"}, "why": "w"}
-    ]
+    definition["invariants"] = [{"id": "evidence-backed", "check": {"run": "c"}, "why": "w"}]
     assert _errors(definition) == []
 
 

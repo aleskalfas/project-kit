@@ -153,7 +153,9 @@ def test_agent_loads_as_the_capability_agent():
 
 def test_storyboard_names_the_agent_back(storyboard):
     front, _ = storyboard
-    assert front["consumers"] == [{"kind": "agent", "name": "living-docs", "namespace": "living-docs"}]
+    assert front["consumers"] == [
+        {"kind": "agent", "name": "living-docs", "namespace": "living-docs"}
+    ]
 
 
 def test_storyboard_scripts_the_three_scenarios(storyboard):
@@ -188,7 +190,13 @@ def _deploy_marker() -> str:
 def test_deployed_copy_matches_the_source():
     """What the deploy would write from the source today is what is committed."""
     completed = subprocess.run(
-        [sys.executable, str(ADAPTER / "_resolve_agent.py"), str(AGENT), "living-docs", str(OVERLAY)],
+        [
+            sys.executable,
+            str(ADAPTER / "_resolve_agent.py"),
+            str(AGENT),
+            "living-docs",
+            str(OVERLAY),
+        ],
         capture_output=True,
         text=True,
         check=False,

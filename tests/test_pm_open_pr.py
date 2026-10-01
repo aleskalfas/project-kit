@@ -10,21 +10,13 @@ import importlib.util
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any
 from types import ModuleType, SimpleNamespace
+from typing import Any
 
 import pytest
 
-
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SCRIPT_PATH = (
-    REPO_ROOT
-    / ".pkit"
-    / "capabilities"
-    / "project-management"
-    / "scripts"
-    / "open-pr.py"
-)
+SCRIPT_PATH = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "open-pr.py"
 
 
 @pytest.fixture(scope="module")
@@ -102,10 +94,7 @@ def test_conv_type_from_bug_label(op, classification) -> None:
 
 
 def test_conv_type_from_maintenance_label_picks_chore(op, classification) -> None:
-    assert (
-        op._conv_type_from_issue_labels(["type:maintenance"], classification, None)
-        == "chore"
-    )
+    assert op._conv_type_from_issue_labels(["type:maintenance"], classification, None) == "chore"
 
 
 def test_conv_type_returns_none_when_no_type_label(op, classification) -> None:
@@ -116,8 +105,7 @@ def test_conv_type_uses_first_type_label_when_multiple(op, classification) -> No
     # Multiple type labels is a validation error elsewhere; we don't
     # enforce here, but be deterministic.
     assert (
-        op._conv_type_from_issue_labels(["type:bug", "type:feature"], classification, None)
-        == "fix"
+        op._conv_type_from_issue_labels(["type:bug", "type:feature"], classification, None) == "fix"
     )
 
 
@@ -128,15 +116,9 @@ def test_conv_type_from_a_remapped_type_label(op, classification) -> None:
     substrate_map = op.axis_labels.SubstrateMap(
         axes={"type": {"label": {"remap": {"bug": "kind/bug"}}}}
     )
-    assert (
-        op._conv_type_from_issue_labels(["kind/bug"], classification, substrate_map)
-        == "fix"
-    )
+    assert op._conv_type_from_issue_labels(["kind/bug"], classification, substrate_map) == "fix"
     # A leftover kit label is not the substrate under the remap.
-    assert (
-        op._conv_type_from_issue_labels(["type:docs"], classification, substrate_map)
-        is None
-    )
+    assert op._conv_type_from_issue_labels(["type:docs"], classification, substrate_map) is None
 
 
 # --- summary derivation ----------------------------------------------
@@ -144,9 +126,7 @@ def test_conv_type_from_a_remapped_type_label(op, classification) -> None:
 
 def test_summary_strips_type_prefix_and_lowercases(op) -> None:
     title = "[Task] Install the Claude Code CLI inside the sandbox"
-    assert op._summary_from_issue_title(title) == (
-        "install the claude code cli inside the sandbox"
-    )
+    assert op._summary_from_issue_title(title) == ("install the claude code cli inside the sandbox")
 
 
 def test_summary_strips_trailing_period(op) -> None:
@@ -190,9 +170,7 @@ def test_build_pr_body_fills_closes_placeholder(op, tmp_path) -> None:
     (template_dir / "PR.md").write_text(
         "Closes #\n\n## Summary\n\n## Test plan\n", encoding="utf-8"
     )
-    body = op._build_pr_body(
-        capability_root=tmp_path, issue_numbers=[42], body_file=None
-    )
+    body = op._build_pr_body(capability_root=tmp_path, issue_numbers=[42], body_file=None)
     assert body is not None
     assert "Closes #42" in body
 
@@ -202,18 +180,14 @@ def test_build_pr_body_user_supplied_file(op, tmp_path) -> None:
     gets its `Closes #N` line on top, so the PR still closes it on merge."""
     f = tmp_path / "custom.md"
     f.write_text("user-supplied body\n", encoding="utf-8")
-    body = op._build_pr_body(
-        capability_root=tmp_path, issue_numbers=[42], body_file=f
-    )
+    body = op._build_pr_body(capability_root=tmp_path, issue_numbers=[42], body_file=f)
     assert body == "Closes #42\n\nuser-supplied body\n"
 
 
 def test_build_pr_body_user_file_already_closing_is_verbatim(op, tmp_path) -> None:
     f = tmp_path / "custom.md"
     f.write_text("Fixes #42\n\n## Summary\n", encoding="utf-8")
-    body = op._build_pr_body(
-        capability_root=tmp_path, issue_numbers=[42], body_file=f
-    )
+    body = op._build_pr_body(capability_root=tmp_path, issue_numbers=[42], body_file=f)
     assert body == "Fixes #42\n\n## Summary\n"
 
 
@@ -222,9 +196,7 @@ def test_build_pr_body_user_file_gains_the_missing_references(op, tmp_path) -> N
     right after the first, not somewhere down the body."""
     f = tmp_path / "custom.md"
     f.write_text("Closes #42\n\n## Summary\nwork\n", encoding="utf-8")
-    body = op._build_pr_body(
-        capability_root=tmp_path, issue_numbers=[42, 43, 44], body_file=f
-    )
+    body = op._build_pr_body(capability_root=tmp_path, issue_numbers=[42, 43, 44], body_file=f)
     assert body == "Closes #42\nCloses #43\nCloses #44\n\n## Summary\nwork\n"
 
 
@@ -234,9 +206,7 @@ def test_build_pr_body_template_carries_one_line_per_closing_issue(op, tmp_path)
     (template_dir / "PR.md").write_text(
         "Closes #\n\n## Summary\n\n## Test plan\n", encoding="utf-8"
     )
-    body = op._build_pr_body(
-        capability_root=tmp_path, issue_numbers=[42, 43], body_file=None
-    )
+    body = op._build_pr_body(capability_root=tmp_path, issue_numbers=[42, 43], body_file=None)
     assert body is not None
     assert body.startswith("Closes #42\nCloses #43\n\n## Summary")
 
@@ -256,9 +226,7 @@ def test_closing_issues_positional_first(op) -> None:
 
 
 def test_build_pr_body_fallback_when_no_template(op, tmp_path) -> None:
-    body = op._build_pr_body(
-        capability_root=tmp_path, issue_numbers=[42], body_file=None
-    )
+    body = op._build_pr_body(capability_root=tmp_path, issue_numbers=[42], body_file=None)
     assert body == "Closes #42\n"
 
 
@@ -266,9 +234,7 @@ def test_build_pr_body_template_without_closes_placeholder(op, tmp_path) -> None
     template_dir = tmp_path / "templates"
     template_dir.mkdir()
     (template_dir / "PR.md").write_text("## Summary\n\nfoo\n", encoding="utf-8")
-    body = op._build_pr_body(
-        capability_root=tmp_path, issue_numbers=[99], body_file=None
-    )
+    body = op._build_pr_body(capability_root=tmp_path, issue_numbers=[99], body_file=None)
     assert body is not None
     assert "Closes #99" in body
 
@@ -336,8 +302,15 @@ def test_main_repeated_closes_puts_every_reference_in_the_body(op, monkeypatch) 
         op,
         monkeypatch,
         [
-            "open-pr", "--closes", "42", "--closes", "43",
-            "--summary", "land both", "--draft", "--yes",
+            "open-pr",
+            "--closes",
+            "42",
+            "--closes",
+            "43",
+            "--summary",
+            "land both",
+            "--draft",
+            "--yes",
         ],
         {42: _open_issue(), 43: _open_issue()},
     )
@@ -475,8 +448,17 @@ def test_a_pr_against_another_base_is_checked_against_that_base(
     _stub_main(
         op,
         monkeypatch,
-        ["open-pr", "42", "--summary", "s", "--draft", "--yes", "--doc-impact-from-friction",
-         "--base", "integration/7-x"],
+        [
+            "open-pr",
+            "42",
+            "--summary",
+            "s",
+            "--draft",
+            "--yes",
+            "--doc-impact-from-friction",
+            "--base",
+            "integration/7-x",
+        ],
         {42: _open_issue()},
     )
     assert op.main() == 3
@@ -511,7 +493,15 @@ def test_an_authored_doc_impact_section_is_left_as_written(op, monkeypatch, tmp_
     captured = _stub_main(
         op,
         monkeypatch,
-        ["open-pr", "42", "--body-file", str(body), "--draft", "--yes", "--doc-impact-from-friction"],
+        [
+            "open-pr",
+            "42",
+            "--body-file",
+            str(body),
+            "--draft",
+            "--yes",
+            "--doc-impact-from-friction",
+        ],
         {42: _open_issue()},
     )
     assert op.main() == 3
@@ -524,7 +514,10 @@ def test_without_the_flag_the_change_check_is_not_run(op, monkeypatch) -> None:
 
     monkeypatch.setattr(op, "_friction_check", never)
     captured = _stub_main(
-        op, monkeypatch, ["open-pr", "42", "--summary", "s", "--draft", "--yes"], {42: _open_issue()}
+        op,
+        monkeypatch,
+        ["open-pr", "42", "--summary", "s", "--draft", "--yes"],
+        {42: _open_issue()},
     )
     assert op.main() == 3
     assert _doc_impact(captured["body"]) == ["-"]

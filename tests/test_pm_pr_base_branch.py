@@ -60,9 +60,7 @@ def _load(script: str):
 
 @pytest.fixture(scope="module")
 def verbs():
-    loaded = {
-        s: _load(s) for s in ("start-work", "open-pr", "create-draft", "review-work")
-    }
+    loaded = {s: _load(s) for s in ("start-work", "open-pr", "create-draft", "review-work")}
     yield loaded
     sys.path.remove(str(SCRIPTS))
 
@@ -81,9 +79,7 @@ def _stub_gates(
     monkeypatch.setattr(
         mod, "resolve_invoker_identity", lambda **k: SimpleNamespace(github_login="me")
     )
-    monkeypatch.setattr(
-        mod, "check_membership", lambda *a: SimpleNamespace(allowed=True)
-    )
+    monkeypatch.setattr(mod, "check_membership", lambda *a: SimpleNamespace(allowed=True))
     monkeypatch.setattr(mod, "_gh_get_issue", lambda _n, _config: issue)
 
 
@@ -141,9 +137,7 @@ def test_start_work_cuts_the_branch_off_the_resolved_base(
 
 
 @CASES
-def test_open_pr_targets_the_resolved_base(
-    verbs, monkeypatch, body, extra_argv, expected
-) -> None:
+def test_open_pr_targets_the_resolved_base(verbs, monkeypatch, body, extra_argv, expected) -> None:
     mod = verbs["open-pr"]
     argv = ["open-pr", "--type", "fix", "--summary", "do thing", "--draft", "--yes"]
     _stub_gates(monkeypatch, mod, _issue(body), argv + extra_argv)
@@ -215,9 +209,19 @@ def _git(cwd: Path, *args: str) -> str:
     import subprocess
 
     return subprocess.run(
-        ["git", *args], cwd=cwd, check=True, capture_output=True, text=True,
-        env={"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_NAME": "t",
-             "GIT_COMMITTER_EMAIL": "t@t", "HOME": str(cwd), "PATH": __import__("os").environ["PATH"]},
+        ["git", *args],
+        cwd=cwd,
+        check=True,
+        capture_output=True,
+        text=True,
+        env={
+            "GIT_AUTHOR_NAME": "t",
+            "GIT_AUTHOR_EMAIL": "t@t",
+            "GIT_COMMITTER_NAME": "t",
+            "GIT_COMMITTER_EMAIL": "t@t",
+            "HOME": str(cwd),
+            "PATH": __import__("os").environ["PATH"],
+        },
     ).stdout.strip()
 
 
@@ -277,9 +281,7 @@ def test_every_verb_refuses_when_the_backbone_cannot_say_the_default_branch(
 
 
 @pytest.fixture
-def integration_clone(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, pkit_on_path: Path
-) -> Path:
+def integration_clone(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, pkit_on_path: Path) -> Path:
     """A clone where the integration base exists only as origin/<base>, as
     start-work leaves it: no local integration branch, feature branch cut from
     the remote-tracking ref, one commit ahead."""
@@ -315,9 +317,7 @@ def test_a_tag_of_the_base_s_name_never_stands_in(verbs: Any, integration_clone:
     assert mod._resolve_base_ref("integration/foo") == (tip, None)
 
 
-def test_a_missing_base_is_not_reported_as_no_commits(
-    verbs: Any, integration_clone: Path
-) -> None:
+def test_a_missing_base_is_not_reported_as_no_commits(verbs: Any, integration_clone: Path) -> None:
     mod = verbs["create-draft"]
     commit, why = mod._resolve_base_ref("integration/absent")
     assert commit is None
@@ -332,6 +332,7 @@ def test_create_draft_names_a_missing_base_instead_of_claiming_no_commits(
     _stub_gates(monkeypatch, mod, _issue(body), ["create-draft", "42", "--yes"])
     monkeypatch.setattr(mod, "_find_issue_branch", lambda _n: BRANCH)
     why = f"it does not resolve here: fetch it (e.g. `git fetch origin {INTEGRATION}`)"
+
     def unresolved(_base: str) -> tuple[None, str]:
         return None, why
 

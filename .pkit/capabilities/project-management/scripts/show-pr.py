@@ -40,7 +40,6 @@ from __future__ import annotations
 import argparse
 import json
 import re
-import subprocess
 import sys
 from pathlib import Path
 
@@ -49,43 +48,31 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate  # noqa: E402
-from _lib.agent_verdicts import (  # noqa: E402
+from _lib import bootstrap_gate
+from _lib.agent_verdicts import (
     all_verdicts,
     latest_verdicts_per_reviewer,
     reduce_latest_per_reviewer,
 )
-from _lib.author_delta import author_delta  # noqa: E402
-from _lib.closing_issue_fetchers import (  # noqa: E402
-    issue_labels as _issue_labels_fetch,
-    pr_changed_files as _pr_changed_files_fetch,
-    pr_closing_issue_numbers as _pr_closing_issue_numbers_fetch,
-)
-from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
-from _lib.required_reviewers import (  # noqa: E402
-    Resolution,
-    read_not_code,
-    resolve_required_local_reviewers,
-)
-from _lib.review_contributions import collect_contributions  # noqa: E402
-from _lib.review_opt_outs import read_opt_outs  # noqa: E402
-# The one freshness rule (#1179), shared with done-work's gate and review-pr.
-from _lib.verdict_freshness import (  # noqa: E402
-    PR_VIEW_FIELDS,
-    FreshnessRule,
-    rule_for_pr,
-)
-from _lib.membership import (  # noqa: E402
+from _lib.author_delta import author_delta
+from _lib.closing_issue_fetchers import issue_labels as _issue_labels_fetch
+from _lib.closing_issue_fetchers import pr_changed_files as _pr_changed_files_fetch
+from _lib.closing_issue_fetchers import pr_closing_issue_numbers as _pr_closing_issue_numbers_fetch
+from _lib.gh import gh_get_issue, gh_run, load_adopter_config
+from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
     resolve_capability_root,
     resolve_invoker_identity,
 )
+from _lib.required_reviewers import Resolution, read_not_code, resolve_required_local_reviewers
+from _lib.review_contributions import collect_contributions
+from _lib.review_opt_outs import read_opt_outs
 
+# The one freshness rule (#1179), shared with done-work's gate and review-pr.
+from _lib.verdict_freshness import PR_VIEW_FIELDS, FreshnessRule, rule_for_pr
 
-CLOSING_KEYWORD_RE = re.compile(
-    r"\b(?:closes|fixes|resolves)\s+#(\d+)", re.IGNORECASE
-)
+CLOSING_KEYWORD_RE = re.compile(r"\b(?:closes|fixes|resolves)\s+#(\d+)", re.IGNORECASE)
 
 
 def main() -> int:
@@ -132,8 +119,7 @@ def main() -> int:
 
     if args.field is not None and args.field not in PR_FIELD_NAMES:
         print(
-            f"error: unknown field '{args.field}'.\n"
-            f"valid fields: {', '.join(PR_FIELD_NAMES)}",
+            f"error: unknown field '{args.field}'.\nvalid fields: {', '.join(PR_FIELD_NAMES)}",
             file=sys.stderr,
         )
         return 2
@@ -168,11 +154,10 @@ def main() -> int:
     shows_verdicts = args.field in (None, "review", "review-history")
     resolution = (
         _review_resolution(args.pr_number, config, capability_root)
-        if shows_verdicts else Resolution()
+        if shows_verdicts
+        else Resolution()
     )
-    summary = _summarise(
-        pr, rule_for_pr(pr, resolution, author_delta=author_delta),
-    )
+    summary = _summarise(pr, rule_for_pr(pr, resolution, author_delta=author_delta))
     if args.field is not None:
         for line in _field_lines_for(summary)[args.field]:
             print(line)
@@ -198,8 +183,7 @@ def _summarise(pr: dict, freshness: FreshnessRule | None = None) -> dict:
     is_draft = bool(pr.get("isDraft"))
     url = pr.get("url")
     reviewers = [
-        r.get("login") if isinstance(r, dict) else str(r)
-        for r in (pr.get("reviewRequests") or [])
+        r.get("login") if isinstance(r, dict) else str(r) for r in (pr.get("reviewRequests") or [])
     ]
 
     conv = _parse_conventional_commits(title)
@@ -253,20 +237,20 @@ def _summarise_review(comments: list, freshness: FreshnessRule) -> list[dict]:
     entries = []
     for v in latest_verdicts_per_reviewer(comments):
         assessment = freshness.assess(v)
-        entries.append({
-            "reviewer": v.reviewer,
-            "verdict": v.token,
-            "path": v.path,
-            "body": v.body,
-            "stale": not assessment.fresh,
-            "freshness": assessment.reason,
-        })
+        entries.append(
+            {
+                "reviewer": v.reviewer,
+                "verdict": v.token,
+                "path": v.path,
+                "body": v.body,
+                "stale": not assessment.fresh,
+                "freshness": assessment.reason,
+            }
+        )
     return entries
 
 
-def _summarise_review_history(
-    comments: list, freshness: FreshnessRule
-) -> list[dict]:
+def _summarise_review_history(comments: list, freshness: FreshnessRule) -> list[dict]:
     """Every DEC-028 verdict per reviewer, in posting order (#905).
 
     The full sequence behind `_summarise_review`'s latest-per-reviewer view,
@@ -288,15 +272,17 @@ def _summarise_review_history(
     by_reviewer: dict[tuple[str, str], list[dict]] = {}
     for v in history:
         assessment = freshness.assess(v)
-        by_reviewer.setdefault((v.path, v.reviewer), []).append({
-            "verdict": v.token,
-            "timestamp": v.timestamp,
-            "url": v.url,
-            "current": id(v) in current,
-            "stale": not assessment.fresh,
-            "freshness": assessment.reason,
-            "body": v.body,
-        })
+        by_reviewer.setdefault((v.path, v.reviewer), []).append(
+            {
+                "verdict": v.token,
+                "timestamp": v.timestamp,
+                "url": v.url,
+                "current": id(v) in current,
+                "stale": not assessment.fresh,
+                "freshness": assessment.reason,
+                "body": v.body,
+            }
+        )
     return [
         {"reviewer": reviewer, "path": path, "verdicts": verdicts}
         for (path, reviewer), verdicts in sorted(by_reviewer.items())
@@ -378,7 +364,8 @@ def _review_lines(review: list) -> list[str]:
         qualifier = f" ({path})" if path else ""
         stale = (
             STALE_MARKER.format(reason=entry.get("freshness") or "unknown")
-            if entry.get("stale") else ""
+            if entry.get("stale")
+            else ""
         )
         lines.append(f"{verdict} — {reviewer}{qualifier}{stale}")
         body = str(entry.get("body") or "").strip()
@@ -465,8 +452,10 @@ def _field_lines_for(s: dict) -> dict[str, list[str]]:
 
 def _print_summary(pr_number: int, s: dict) -> None:
     print(f"PR #{pr_number}: {s.get('title') or ''}")
-    print(f"  state:        {s.get('state') or '<unknown>'}"
-          + ("  (draft)" if s.get("is_draft") else ""))
+    print(
+        f"  state:        {s.get('state') or '<unknown>'}"
+        + ("  (draft)" if s.get("is_draft") else "")
+    )
     print(f"  base:         {s.get('base') or '<unknown>'}")
     print(f"  head:         {s.get('head') or '<unknown>'}")
     conv = s.get("conventional_commits") or {}
@@ -479,26 +468,20 @@ def _print_summary(pr_number: int, s: dict) -> None:
     else:
         print("  cc type:      <does not match Conventional Commits pattern>")
     closes = s.get("closes") or []
-    print(
-        f"  closes:       "
-        f"{', '.join(f'#{n}' for n in closes) if closes else '<none>'}"
-    )
+    print(f"  closes:       {', '.join(f'#{n}' for n in closes) if closes else '<none>'}")
     reviewers = s.get("reviewers") or []
     print(f"  reviewers:    {', '.join(reviewers) or '<none>'}")
     review = s.get("review") or []
     if review:
         summary = ", ".join(
-            f"{e.get('reviewer')}: {e.get('verdict')}"
-            + (" (stale)" if e.get("stale") else "")
+            f"{e.get('reviewer')}: {e.get('verdict')}" + (" (stale)" if e.get("stale") else "")
             for e in review
         )
         print(f"  review:       {summary}")
         print("                (--field review for reasons)")
     else:
         print(f"  review:       <{NO_VERDICT_MESSAGE}>")
-    print(
-        f"  doc impact:   {'present' if s.get('has_doc_impact_section') else 'missing'}"
-    )
+    print(f"  doc impact:   {'present' if s.get('has_doc_impact_section') else 'missing'}")
     if s.get("merged_at"):
         print(f"  merged at:    {s['merged_at']}")
     if s.get("url"):
@@ -542,11 +525,21 @@ def _gh_get_pr(pr_number: int, config: dict) -> dict | None:
                 "view",
                 str(pr_number),
                 "--json",
-                ",".join((
-                    "title", "body", "state", "headRefName", "baseRefName",
-                    "mergedAt", "isDraft", "url", "reviewRequests", "comments",
-                    *PR_VIEW_FIELDS,
-                )),
+                ",".join(
+                    (
+                        "title",
+                        "body",
+                        "state",
+                        "headRefName",
+                        "baseRefName",
+                        "mergedAt",
+                        "isDraft",
+                        "url",
+                        "reviewRequests",
+                        "comments",
+                        *PR_VIEW_FIELDS,
+                    )
+                ),
             ],
             config,
             check=False,
@@ -556,8 +549,7 @@ def _gh_get_pr(pr_number: int, config: dict) -> dict | None:
         return None
     if proc.returncode != 0:
         print(
-            f"error: gh pr view {pr_number} failed.\n"
-            f"stderr: {proc.stderr.strip()}",
+            f"error: gh pr view {pr_number} failed.\nstderr: {proc.stderr.strip()}",
             file=sys.stderr,
         )
         return None
@@ -568,7 +560,9 @@ def _gh_get_pr(pr_number: int, config: dict) -> dict | None:
 
 
 def _review_resolution(
-    pr_number: int, config: dict, capability_root: Path,
+    pr_number: int,
+    config: dict,
+    capability_root: Path,
 ) -> Resolution:
     """The PR's required reviewers, resolved as `done-work`'s gate resolves
     them, for the freshness rule's floor-only reviewers (#1179).
@@ -582,22 +576,15 @@ def _review_resolution(
     agents = review.get("agents") if isinstance(review, dict) else None
     local = agents.get("local_registered") if isinstance(agents, dict) else None
     baseline_local = [
-        entry["name"] for entry in local or []
-        if isinstance(entry, dict) and entry.get("name")
+        entry["name"] for entry in local or [] if isinstance(entry, dict) and entry.get("name")
     ]
     resolution = resolve_required_local_reviewers(
         pr_number,
         baseline_local=baseline_local,
         repo_root=capability_root.parent.parent.parent,
-        closing_issue_numbers=lambda n: _pr_closing_issue_numbers_fetch(
-            n, config, gh_run=gh_run
-        ),
-        issue_labels=lambda n: _issue_labels_fetch(
-            n, config, gh_get_issue=gh_get_issue
-        ),
-        changed_files=lambda n: _pr_changed_files_fetch(
-            n, config, gh_run=gh_run
-        ),
+        closing_issue_numbers=lambda n: _pr_closing_issue_numbers_fetch(n, config, gh_run=gh_run),
+        issue_labels=lambda n: _issue_labels_fetch(n, config, gh_get_issue=gh_get_issue),
+        changed_files=lambda n: _pr_changed_files_fetch(n, config, gh_run=gh_run),
         opt_outs=read_opt_outs(config),
         not_code=read_not_code(config),
         collect_contributions=collect_contributions,

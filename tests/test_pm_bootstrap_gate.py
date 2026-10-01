@@ -133,10 +133,7 @@ def test_refusal_names_the_exact_command_to_run(gate, tmp_path):
     message = gate.refusal_message("move-issue", gate.evaluate(cap))
     assert "move-issue" in message
     assert "pkit project-management bootstrap" in message
-    assert (
-        "uv run --script .pkit/capabilities/project-management/scripts/bootstrap.py"
-        in message
-    )
+    assert "uv run --script .pkit/capabilities/project-management/scripts/bootstrap.py" in message
     assert "pkit project-management pre-check" in message
 
 
@@ -176,9 +173,7 @@ def test_written_stamp_matches_its_companion_schema(gate, tmp_path):
     cap = _capability_tree(_repo(tmp_path / "repo", origin="git@github.com:acme/x.git"))
     path = gate.write_stamp(cap, by=gate.BY_BOOTSTRAP)
     schema = json.loads(
-        (CAPABILITY / "schemas" / "bootstrap-stamp.schema.json").read_text(
-            encoding="utf-8"
-        )
+        (CAPABILITY / "schemas" / "bootstrap-stamp.schema.json").read_text(encoding="utf-8")
     )
     document = YAML(typ="safe").load(path.read_text(encoding="utf-8"))
     assert [e.message for e in Draft202012Validator(schema).iter_errors(document)] == []
@@ -292,9 +287,7 @@ def test_a_stamp_from_another_repo_is_refused(gate, tmp_path):
 def test_the_same_repo_over_a_different_transport_still_passes(gate, tmp_path):
     """ssh and https spellings of one remote are the same repo — the binding
     must not false-refuse on a re-clone over the other transport."""
-    cap = _capability_tree(
-        _repo(tmp_path / "repo", origin="https://github.com/acme/x.git")
-    )
+    cap = _capability_tree(_repo(tmp_path / "repo", origin="https://github.com/acme/x.git"))
     _stamp(gate, cap, repo=gate.normalize_repo_identity("git@github.com:acme/x.git"))
     assert gate.evaluate(cap).ok
 
@@ -308,9 +301,7 @@ def test_an_unbound_stamp_passes(gate, tmp_path):
     assert gate.evaluate(cap).ok
 
 
-def test_an_unresolvable_local_identity_does_not_fabricate_a_refusal(
-    gate, tmp_path, monkeypatch
-):
+def test_an_unresolvable_local_identity_does_not_fabricate_a_refusal(gate, tmp_path, monkeypatch):
     """When this side's identity cannot be resolved (no git, no origin), the
     binding stands down rather than blocking — the gate never claims a verdict
     it cannot back."""

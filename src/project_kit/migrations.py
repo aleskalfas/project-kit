@@ -33,7 +33,6 @@ import click
 
 from project_kit import cli_render
 
-
 _VERSION_DIR_RE = re.compile(r"^\d+\.\d+\.0$")
 
 # A path under one of these prefixes is considered kit-owned (changes
@@ -50,9 +49,7 @@ def parse_version_tuple(value: str) -> tuple[int, int, int]:
     try:
         return int(parts[0]), int(parts[1]), int(parts[2])
     except ValueError as exc:
-        raise click.ClickException(
-            f"version {value!r} has non-integer components."
-        ) from exc
+        raise click.ClickException(f"version {value!r} has non-integer components.") from exc
 
 
 def pending_migration_scripts(
@@ -286,9 +283,7 @@ def check_diff_coverage(
                     component=tier_info[1],
                 )
             )
-    return CoverageReport(
-        triggers=tuple(triggers), migrations=tuple(migrations)
-    )
+    return CoverageReport(triggers=tuple(triggers), migrations=tuple(migrations))
 
 
 def _git_diff_name_status(
@@ -313,8 +308,7 @@ def _git_diff_name_status(
         )
     except subprocess.CalledProcessError as exc:
         raise RuntimeError(
-            f"git diff against {base_ref!r} failed: "
-            f"{exc.stderr or exc.stdout}".strip()
+            f"git diff against {base_ref!r} failed: {exc.stderr or exc.stdout}".strip()
         ) from exc
     entries: list[tuple[str, str, str | None]] = []
     for line in result.stdout.splitlines():
@@ -399,7 +393,7 @@ def _classify_path(path: str) -> tuple[Tier, str | None] | None:
         ".pkit/cli/",
         ".pkit/migrations/",
         ".pkit/workflow/",  # legacy: the workflow area was retired in COR-027;
-                            # deletions of leftover content trigger backbone migrations.
+        # deletions of leftover content trigger backbone migrations.
     )
     for prefix in backbone_prefixes:
         if path.startswith(prefix):
@@ -461,7 +455,9 @@ def render_coverage_report(report: CoverageReport) -> None:
         click.echo()
         return
 
-    click.echo("  " + cli_render.style("strong", f"{len(report.triggers)} migration trigger(s) in diff:"))
+    click.echo(
+        "  " + cli_render.style("strong", f"{len(report.triggers)} migration trigger(s) in diff:")
+    )
     for t in report.triggers:
         tier_label = t.tier + (":" + t.component if t.component else "")
         if t.kind == "rename":
@@ -471,22 +467,31 @@ def render_coverage_report(report: CoverageReport) -> None:
     click.echo()
 
     if report.migrations:
-        click.echo("  " + cli_render.style("heading", f"{len(report.migrations)} migration script(s) in diff:"))
+        click.echo(
+            "  "
+            + cli_render.style("heading", f"{len(report.migrations)} migration script(s) in diff:")
+        )
         for m in report.migrations:
             tier_label = m.tier + (":" + m.component if m.component else "")
             click.echo(f"    [{tier_label}] {m.path}")
         click.echo()
 
     if report.is_covered:
-        click.echo("  " + cli_render.style(
-            "strong",
-            "Verdict: COVERED (every tier:component with triggers has a matching migration).",
-        ))
+        click.echo(
+            "  "
+            + cli_render.style(
+                "strong",
+                "Verdict: COVERED (every tier:component with triggers has a matching migration).",
+            )
+        )
     else:
-        click.echo("  " + cli_render.style(
-            "strong",
-            "Verdict: UNCOVERED. Author migrations for the following tiers before merging:",
-        ))
+        click.echo(
+            "  "
+            + cli_render.style(
+                "strong",
+                "Verdict: UNCOVERED. Author migrations for the following tiers before merging:",
+            )
+        )
         for tier, component in report.uncovered_keys:
             tier_label = tier + (":" + component if component else "")
             click.echo(f"    - {tier_label}")

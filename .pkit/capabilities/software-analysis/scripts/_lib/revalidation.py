@@ -61,7 +61,7 @@ _GAP_LINE = re.compile(r"^- <[^>]*> — \*\*resolved:\*\* .*$")
 def utc_today() -> str:
     """Today in UTC, `YYYY-MM-DD`: the day a revalidation's `at` falls on."""
     # `timezone.utc` rather than `datetime.UTC`: the scripts run on Python 3.10 (their header).
-    return datetime.datetime.now(datetime.timezone.utc).date().isoformat()  # noqa: UP017
+    return datetime.datetime.now(datetime.timezone.utc).date().isoformat()
 
 
 @dataclass(frozen=True)

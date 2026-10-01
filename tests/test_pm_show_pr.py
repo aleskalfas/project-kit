@@ -14,14 +14,7 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SCRIPT_PATH = (
-    REPO_ROOT
-    / ".pkit"
-    / "capabilities"
-    / "project-management"
-    / "scripts"
-    / "show-pr.py"
-)
+SCRIPT_PATH = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "show-pr.py"
 
 
 @pytest.fixture(scope="module")
@@ -183,9 +176,7 @@ def test_field_list_is_one_item_per_line(sp, sample_summary) -> None:
 
 
 def test_field_absent_scalar_renders_no_lines(sp) -> None:
-    summary = sp._summarise(
-        {"title": "plain title", "body": "x", "state": "MERGED"}
-    )
+    summary = sp._summarise({"title": "plain title", "body": "x", "state": "MERGED"})
     # Non-Conventional-Commits title -> cc-type yields no output.
     assert sp._field_lines_for(summary)["cc-type"] == []
 
@@ -217,8 +208,7 @@ def test_field_and_json_are_mutually_exclusive() -> None:
 # --- review field (DEC-028 verdict read surface, #544) ---------------
 
 
-def _local_verdict_comment(name, verdict, ts="2026-06-02T00:00:00Z",
-                           reasons="because reasons"):
+def _local_verdict_comment(name, verdict, ts="2026-06-02T00:00:00Z", reasons="because reasons"):
     return {
         "author": {"login": name},
         "body": f"Reviewer agent (local, {name}): {verdict}\n\n{reasons}",
@@ -237,15 +227,18 @@ def test_review_field_in_json_output(sp) -> None:
 
 
 def test_review_field_single_verdict_shows_token_and_reasons(sp) -> None:
-    s = sp._summarise({
-        "title": "feat: x",
-        "body": "body",
-        "state": "OPEN",
-        "comments": [
-            _local_verdict_comment("critic", "CHANGES_REQUESTED",
-                                   reasons="the abstraction is premature")
-        ],
-    })
+    s = sp._summarise(
+        {
+            "title": "feat: x",
+            "body": "body",
+            "state": "OPEN",
+            "comments": [
+                _local_verdict_comment(
+                    "critic", "CHANGES_REQUESTED", reasons="the abstraction is premature"
+                )
+            ],
+        }
+    )
     lines = sp._field_lines_for(s)["review"]
     blob = "\n".join(lines)
     assert "CHANGES_REQUESTED" in blob
@@ -254,19 +247,19 @@ def test_review_field_single_verdict_shows_token_and_reasons(sp) -> None:
 
 
 def test_review_field_multi_reviewer_latest_per_reviewer(sp) -> None:
-    s = sp._summarise({
-        "title": "feat: x",
-        "body": "body",
-        "state": "OPEN",
-        "comments": [
-            # critic flips to APPROVED later; the later verdict must win.
-            _local_verdict_comment("critic", "CHANGES_REQUESTED",
-                                   ts="2026-06-02T00:00:00Z"),
-            _local_verdict_comment("critic", "APPROVED",
-                                   ts="2026-06-03T00:00:00Z"),
-            _local_verdict_comment("architect", "APPROVED"),
-        ],
-    })
+    s = sp._summarise(
+        {
+            "title": "feat: x",
+            "body": "body",
+            "state": "OPEN",
+            "comments": [
+                # critic flips to APPROVED later; the later verdict must win.
+                _local_verdict_comment("critic", "CHANGES_REQUESTED", ts="2026-06-02T00:00:00Z"),
+                _local_verdict_comment("critic", "APPROVED", ts="2026-06-03T00:00:00Z"),
+                _local_verdict_comment("architect", "APPROVED"),
+            ],
+        }
+    )
     review = s["review"]
     by_name = {e["reviewer"]: e["verdict"] for e in review}
     assert by_name == {"critic": "APPROVED", "architect": "APPROVED"}
@@ -277,15 +270,20 @@ def test_review_field_multi_reviewer_latest_per_reviewer(sp) -> None:
 
 
 def test_review_field_absent_shows_clear_message(sp) -> None:
-    s = sp._summarise({
-        "title": "feat: x",
-        "body": "body",
-        "state": "OPEN",
-        "comments": [
-            {"author": {"login": "someone"}, "body": "a normal comment",
-             "createdAt": "2026-06-02T00:00:00Z"}
-        ],
-    })
+    s = sp._summarise(
+        {
+            "title": "feat: x",
+            "body": "body",
+            "state": "OPEN",
+            "comments": [
+                {
+                    "author": {"login": "someone"},
+                    "body": "a normal comment",
+                    "createdAt": "2026-06-02T00:00:00Z",
+                }
+            ],
+        }
+    )
     lines = sp._field_lines_for(s)["review"]
     assert lines == [sp.NO_VERDICT_MESSAGE]
 
@@ -305,16 +303,17 @@ def _commit(ts):
 def test_review_field_marks_verdict_stale_when_predates_latest_commit(sp) -> None:
     # Verdict at 06-02, latest commit at 06-05 -> verdict is stale; the gate
     # would not count it, so the read surface flags it.
-    s = sp._summarise({
-        "title": "feat: x",
-        "body": "body",
-        "state": "OPEN",
-        "comments": [
-            _local_verdict_comment("critic", "APPROVED",
-                                   ts="2026-06-02T00:00:00Z"),
-        ],
-        "commits": [_commit("2026-06-05T00:00:00Z")],
-    })
+    s = sp._summarise(
+        {
+            "title": "feat: x",
+            "body": "body",
+            "state": "OPEN",
+            "comments": [
+                _local_verdict_comment("critic", "APPROVED", ts="2026-06-02T00:00:00Z"),
+            ],
+            "commits": [_commit("2026-06-05T00:00:00Z")],
+        }
+    )
     assert s["review"][0]["stale"] is True
     blob = "\n".join(sp._field_lines_for(s)["review"])
     assert (
@@ -325,16 +324,17 @@ def test_review_field_marks_verdict_stale_when_predates_latest_commit(sp) -> Non
 
 def test_review_field_fresh_verdict_unmarked(sp) -> None:
     # Verdict at 06-06 is strictly after the latest commit at 06-05 -> fresh.
-    s = sp._summarise({
-        "title": "feat: x",
-        "body": "body",
-        "state": "OPEN",
-        "comments": [
-            _local_verdict_comment("critic", "APPROVED",
-                                   ts="2026-06-06T00:00:00Z"),
-        ],
-        "commits": [_commit("2026-06-05T00:00:00Z")],
-    })
+    s = sp._summarise(
+        {
+            "title": "feat: x",
+            "body": "body",
+            "state": "OPEN",
+            "comments": [
+                _local_verdict_comment("critic", "APPROVED", ts="2026-06-06T00:00:00Z"),
+            ],
+            "commits": [_commit("2026-06-05T00:00:00Z")],
+        }
+    )
     assert s["review"][0]["stale"] is False
     blob = "\n".join(sp._field_lines_for(s)["review"])
     assert "(stale —" not in blob
@@ -343,16 +343,17 @@ def test_review_field_fresh_verdict_unmarked(sp) -> None:
 def test_review_field_verdict_at_exact_commit_ts_is_stale(sp) -> None:
     # Freshness is strict (verdict must be AFTER the commit); an equal
     # timestamp is stale, as the gate's freshness rule holds it.
-    s = sp._summarise({
-        "title": "feat: x",
-        "body": "body",
-        "state": "OPEN",
-        "comments": [
-            _local_verdict_comment("critic", "APPROVED",
-                                   ts="2026-06-05T00:00:00Z"),
-        ],
-        "commits": [_commit("2026-06-05T00:00:00Z")],
-    })
+    s = sp._summarise(
+        {
+            "title": "feat: x",
+            "body": "body",
+            "state": "OPEN",
+            "comments": [
+                _local_verdict_comment("critic", "APPROVED", ts="2026-06-05T00:00:00Z"),
+            ],
+            "commits": [_commit("2026-06-05T00:00:00Z")],
+        }
+    )
     assert s["review"][0]["stale"] is True
 
 
@@ -360,16 +361,17 @@ def test_review_field_no_commits_marks_a_headless_verdict_stale(sp) -> None:
     # No resolvable commit timestamp -> a verdict naming no reviewed head
     # cannot be judged, and the gate (which refuses then) would not count it:
     # shown stale with the reason, not an error. The verdict is still shown.
-    s = sp._summarise({
-        "title": "feat: x",
-        "body": "body",
-        "state": "OPEN",
-        "comments": [
-            _local_verdict_comment("critic", "APPROVED",
-                                   ts="2026-06-02T00:00:00Z"),
-        ],
-        # no "commits" key at all
-    })
+    s = sp._summarise(
+        {
+            "title": "feat: x",
+            "body": "body",
+            "state": "OPEN",
+            "comments": [
+                _local_verdict_comment("critic", "APPROVED", ts="2026-06-02T00:00:00Z"),
+            ],
+            # no "commits" key at all
+        }
+    )
     assert s["review"][0]["stale"] is True
     blob = "\n".join(sp._field_lines_for(s)["review"])
     assert "APPROVED" in blob
@@ -381,16 +383,17 @@ def test_review_field_commit_without_timestamp_marks_a_headless_verdict_stale(
 ) -> None:
     # A commit entry with neither committedDate nor authoredDate yields no
     # anchor -> stale, with the reason, rather than an error.
-    s = sp._summarise({
-        "title": "feat: x",
-        "body": "body",
-        "state": "OPEN",
-        "comments": [
-            _local_verdict_comment("critic", "APPROVED",
-                                   ts="2026-06-02T00:00:00Z"),
-        ],
-        "commits": [{"oid": "abc123"}],
-    })
+    s = sp._summarise(
+        {
+            "title": "feat: x",
+            "body": "body",
+            "state": "OPEN",
+            "comments": [
+                _local_verdict_comment("critic", "APPROVED", ts="2026-06-02T00:00:00Z"),
+            ],
+            "commits": [{"oid": "abc123"}],
+        }
+    )
     assert s["review"][0]["stale"] is True
     assert s["review"][0]["freshness"] == (
         "no reviewed head recorded; the latest commit's time is unknown"
@@ -416,7 +419,9 @@ def test_review_field_judges_a_pinned_verdict_by_the_gates_rule(sp) -> None:
     from _lib.author_delta import AuthorDelta
 
     pr = {
-        "title": "feat: x", "body": "body", "state": "OPEN",
+        "title": "feat: x",
+        "body": "body",
+        "state": "OPEN",
         "headRefOid": _HEAD_SHA,
         "commits": [_commit("2026-06-05T00:00:00Z")],
         "comments": [_pinned(sp, "pm-reviewer"), _pinned(sp, "code-reviewer")],
@@ -426,7 +431,8 @@ def test_review_field_judges_a_pinned_verdict_by_the_gates_rule(sp) -> None:
         floors_by_reviewer={"code-reviewer": frozenset({"touches-code"})},
     )
     rule = sp.rule_for_pr(
-        pr, resolution,
+        pr,
+        resolution,
         author_delta=lambda since, head, *, base_tip: AuthorDelta(
             paths=("README.md",),
         ),
@@ -446,7 +452,9 @@ def test_review_field_judges_a_pinned_verdict_by_the_gates_rule(sp) -> None:
 
 
 def test_review_resolution_failure_holds_every_reviewer_to_any_change(
-    sp, monkeypatch, tmp_path,
+    sp,
+    monkeypatch,
+    tmp_path,
 ) -> None:
     """When the required set cannot be resolved, no reviewer is kept fresh by
     a floor — the view errs toward stale, as the gate refuses outright."""
@@ -472,20 +480,20 @@ def test_review_read_surface_is_superset_of_gate_set(sp) -> None:
     # from a reviewer the gate's membership filter would drop. Both appear here
     # (show-pr applies no freshness/membership filter) — the corrected
     # semantics: read surface = superset, gate = filtered subset.
-    s = sp._summarise({
-        "title": "feat: x",
-        "body": "body",
-        "state": "OPEN",
-        "comments": [
-            # stale (predates latest commit) — gate drops, read surface shows
-            _local_verdict_comment("critic", "APPROVED",
-                                   ts="2026-06-02T00:00:00Z"),
-            # a reviewer the gate might not require — read surface still shows
-            _local_verdict_comment("passer-by", "CHANGES_REQUESTED",
-                                   ts="2026-06-06T00:00:00Z"),
-        ],
-        "commits": [_commit("2026-06-05T00:00:00Z")],
-    })
+    s = sp._summarise(
+        {
+            "title": "feat: x",
+            "body": "body",
+            "state": "OPEN",
+            "comments": [
+                # stale (predates latest commit) — gate drops, read surface shows
+                _local_verdict_comment("critic", "APPROVED", ts="2026-06-02T00:00:00Z"),
+                # a reviewer the gate might not require — read surface still shows
+                _local_verdict_comment("passer-by", "CHANGES_REQUESTED", ts="2026-06-06T00:00:00Z"),
+            ],
+            "commits": [_commit("2026-06-05T00:00:00Z")],
+        }
+    )
     by_name = {e["reviewer"]: e for e in s["review"]}
     assert set(by_name) == {"critic", "passer-by"}
     assert by_name["critic"]["stale"] is True
@@ -498,25 +506,35 @@ def test_review_read_surface_is_superset_of_gate_set(sp) -> None:
 def _three_round_pr(sp):
     # docs-reviewer blocks twice, then approves; critic approves once. The
     # array is shuffled so the test pins posting order, not gh's order.
-    return sp._summarise({
-        "title": "feat: x",
-        "body": "body",
-        "state": "MERGED",
-        "comments": [
-            _local_verdict_comment("docs-reviewer", "APPROVED",
-                                   ts="2026-06-06T00:00:00Z",
-                                   reasons="round three: all good"),
-            _local_verdict_comment("docs-reviewer", "CHANGES_REQUESTED",
-                                   ts="2026-06-02T00:00:00Z",
-                                   reasons="round one: README missing"),
-            _local_verdict_comment("critic", "APPROVED",
-                                   ts="2026-06-02T00:00:00Z"),
-            _local_verdict_comment("docs-reviewer", "CHANGES_REQUESTED",
-                                   ts="2026-06-04T00:00:00Z",
-                                   reasons="round two: help text stale"),
-        ],
-        "commits": [_commit("2026-06-05T00:00:00Z")],
-    })
+    return sp._summarise(
+        {
+            "title": "feat: x",
+            "body": "body",
+            "state": "MERGED",
+            "comments": [
+                _local_verdict_comment(
+                    "docs-reviewer",
+                    "APPROVED",
+                    ts="2026-06-06T00:00:00Z",
+                    reasons="round three: all good",
+                ),
+                _local_verdict_comment(
+                    "docs-reviewer",
+                    "CHANGES_REQUESTED",
+                    ts="2026-06-02T00:00:00Z",
+                    reasons="round one: README missing",
+                ),
+                _local_verdict_comment("critic", "APPROVED", ts="2026-06-02T00:00:00Z"),
+                _local_verdict_comment(
+                    "docs-reviewer",
+                    "CHANGES_REQUESTED",
+                    ts="2026-06-04T00:00:00Z",
+                    reasons="round two: help text stale",
+                ),
+            ],
+            "commits": [_commit("2026-06-05T00:00:00Z")],
+        }
+    )
 
 
 def test_review_history_field_in_valid_fields_list(sp) -> None:
@@ -536,10 +554,7 @@ def test_review_history_shows_every_round_in_posting_order(sp) -> None:
     assert set(history) == {"critic", "docs-reviewer"}
     docs = history["docs-reviewer"]
     assert docs["path"] == "local"
-    rounds = [
-        (v["verdict"], v["timestamp"], v["current"], v["stale"])
-        for v in docs["verdicts"]
-    ]
+    rounds = [(v["verdict"], v["timestamp"], v["current"], v["stale"]) for v in docs["verdicts"]]
     assert rounds == [
         ("CHANGES_REQUESTED", "2026-06-02T00:00:00Z", False, True),
         ("CHANGES_REQUESTED", "2026-06-04T00:00:00Z", False, True),
@@ -553,7 +568,9 @@ def test_review_history_current_matches_review(sp) -> None:
     s = _three_round_pr(sp)
     current = {
         (e["reviewer"], v["verdict"], v["body"])
-        for e in s["review_history"] for v in e["verdicts"] if v["current"]
+        for e in s["review_history"]
+        for v in e["verdicts"]
+        if v["current"]
     }
     latest = {(e["reviewer"], e["verdict"], e["body"]) for e in s["review"]}
     assert current == latest
@@ -569,9 +586,7 @@ def test_review_history_text_lists_all_rounds(sp) -> None:
     for reasons in ("round one", "round two", "round three"):
         assert reasons in blob
     # Posting order in the rendered text too.
-    assert blob.index("round one") < blob.index("round two") < blob.index(
-        "round three"
-    )
+    assert blob.index("round one") < blob.index("round two") < blob.index("round three")
 
 
 def test_review_history_absent_shows_clear_message(sp) -> None:

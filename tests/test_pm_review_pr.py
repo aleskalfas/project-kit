@@ -5,15 +5,11 @@ from __future__ import annotations
 import importlib.util
 import sys
 from pathlib import Path
-from types import MappingProxyType
 
 import pytest
 
-
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SCRIPTS_DIR = (
-    REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
-)
+SCRIPTS_DIR = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
 SCRIPT = SCRIPTS_DIR / "review-pr.py"
 RC_PATH = SCRIPTS_DIR / "_lib" / "review_contributions.py"
 
@@ -81,10 +77,16 @@ def _mark_bootstrapped(cap_root: Path) -> None:
 
 
 def test_local_registered_returns_list(rpr) -> None:
-    config = {"review": {"agents": {"local_registered": [
-        {"name": "critic"},
-        {"name": "security-review"},
-    ]}}}
+    config = {
+        "review": {
+            "agents": {
+                "local_registered": [
+                    {"name": "critic"},
+                    {"name": "security-review"},
+                ]
+            }
+        }
+    }
     result = rpr._get_local_registered(config)
     assert len(result) == 2
     assert result[0]["name"] == "critic"
@@ -97,12 +99,18 @@ def test_local_registered_empty_when_absent(rpr) -> None:
 
 
 def test_local_registered_filters_entries_without_name(rpr) -> None:
-    config = {"review": {"agents": {"local_registered": [
-        {"name": "critic"},
-        {"other_field": "x"},  # no name
-        {"name": ""},  # empty name
-        {"name": "code-review"},
-    ]}}}
+    config = {
+        "review": {
+            "agents": {
+                "local_registered": [
+                    {"name": "critic"},
+                    {"other_field": "x"},  # no name
+                    {"name": ""},  # empty name
+                    {"name": "code-review"},
+                ]
+            }
+        }
+    }
     result = rpr._get_local_registered(config)
     assert [e["name"] for e in result] == ["critic", "code-review"]
 
@@ -123,7 +131,9 @@ def test_format_verdict_approved(rpr) -> None:
 
 def test_format_verdict_with_body(rpr) -> None:
     out = rpr._format_verdict_comment(
-        "critic", "CHANGES_REQUESTED", "Three findings:\n1. fix X\n2. fix Y",
+        "critic",
+        "CHANGES_REQUESTED",
+        "Three findings:\n1. fix X\n2. fix Y",
     )
     assert out.startswith("Reviewer agent (local, critic): CHANGES_REQUESTED\n\n")
     assert "Three findings" in out
@@ -153,7 +163,10 @@ def _stub_claude(rpr, monkeypatch, stdout, *, returncode=0, stderr=""):
 
     def fake_run(args, **kwargs):
         return subprocess.CompletedProcess(
-            args=args, returncode=returncode, stdout=stdout, stderr=stderr,
+            args=args,
+            returncode=returncode,
+            stdout=stdout,
+            stderr=stderr,
         )
 
     monkeypatch.setattr(rpr.subprocess, "run", fake_run)
@@ -204,7 +217,9 @@ def test_invoke_first_match_wins(rpr, monkeypatch) -> None:
 
 
 def test_invoke_no_match_fails_closed_and_surfaces_full_output(
-    rpr, monkeypatch, capsys,
+    rpr,
+    monkeypatch,
+    capsys,
 ) -> None:
     """No grammar match anywhere → no verdict (caller posts nothing), and the
     FULL agent output is surfaced to the operator for debugging."""
@@ -293,8 +308,10 @@ def test_invoke_agent_passes_timeout_to_subprocess(rpr, monkeypatch) -> None:
     def fake_run(args, **kwargs):
         captured.update(kwargs)
         return subprocess.CompletedProcess(
-            args=args, returncode=0,
-            stdout="Reviewer agent (local, reviewer): APPROVED\n", stderr="",
+            args=args,
+            returncode=0,
+            stdout="Reviewer agent (local, reviewer): APPROVED\n",
+            stderr="",
         )
 
     monkeypatch.setattr(rpr.subprocess, "run", fake_run)
@@ -312,8 +329,10 @@ def test_invoke_agent_defaults_timeout_to_1200(rpr, monkeypatch) -> None:
     def fake_run(args, **kwargs):
         captured.update(kwargs)
         return subprocess.CompletedProcess(
-            args=args, returncode=0,
-            stdout="Reviewer agent (local, reviewer): APPROVED\n", stderr="",
+            args=args,
+            returncode=0,
+            stdout="Reviewer agent (local, reviewer): APPROVED\n",
+            stderr="",
         )
 
     monkeypatch.setattr(rpr.subprocess, "run", fake_run)
@@ -331,9 +350,14 @@ def test_post_comment_returns_false_on_none_pr(rpr) -> None:
 def test_post_comment_propagates_gh_failure(rpr, monkeypatch, capsys) -> None:
     def fake_gh_run(args, config, **kwargs):
         import subprocess
+
         return subprocess.CompletedProcess(
-            args=args, returncode=1, stdout="", stderr="not authorised",
+            args=args,
+            returncode=1,
+            stdout="",
+            stderr="not authorised",
         )
+
     monkeypatch.setattr(rpr, "gh_run", fake_gh_run)
     assert rpr._post_comment(99, "body", {}) is False
     assert "not authorised" in capsys.readouterr().err
@@ -342,7 +366,9 @@ def test_post_comment_propagates_gh_failure(rpr, monkeypatch, capsys) -> None:
 def test_post_comment_success(rpr, monkeypatch) -> None:
     def fake_gh_run(args, config, **kwargs):
         import subprocess
+
         return subprocess.CompletedProcess(args=args, returncode=0, stdout="", stderr="")
+
     monkeypatch.setattr(rpr, "gh_run", fake_gh_run)
     assert rpr._post_comment(99, "body", {}) is True
 
@@ -352,7 +378,8 @@ def test_post_comment_success(rpr, monkeypatch) -> None:
 
 def test_resolution_error_collection_names_capability(rpr, rc) -> None:
     err = rc.ContributionError(
-        rc.ERROR_UNDEPLOYED_AGENT, "ux-ui-design",
+        rc.ERROR_UNDEPLOYED_AGENT,
+        "ux-ui-design",
         "design-reviewer is not deployed",
     )
     collection = rc.ContributionCollection(rules=(), errors=(err,))
@@ -449,7 +476,10 @@ def test_review_brief_names_the_local_diff_for_a_refused_diff(rpr) -> None:
     """GitHub refuses `gh pr diff` past 300 files, so the brief tells the
     reviewer where else to read the diff: this checkout, from the merge base."""
     brief = rpr._review_brief(
-        "reviewer", 99, base="main", head="fix/1188-large-prs",
+        "reviewer",
+        99,
+        base="main",
+        head="fix/1188-large-prs",
     )
     assert "Review the diff of PR #99" in brief
     assert "`gh pr diff 99`" in brief
@@ -473,15 +503,20 @@ def test_invoke_agent_sends_the_brief(rpr, monkeypatch) -> None:
     def fake_run(args, **kwargs):
         captured["args"] = args
         return subprocess.CompletedProcess(
-            args=args, returncode=0,
-            stdout="Reviewer agent (local, reviewer): APPROVED\n", stderr="",
+            args=args,
+            returncode=0,
+            stdout="Reviewer agent (local, reviewer): APPROVED\n",
+            stderr="",
         )
 
     monkeypatch.setattr(rpr.subprocess, "run", fake_run)
     rpr._invoke_agent("reviewer", 99, {}, 720, base="main", head="feat/147-x")
     prompt = captured["args"][captured["args"].index("-p") + 1]
     assert prompt == rpr._review_brief(
-        "reviewer", 99, base="main", head="feat/147-x",
+        "reviewer",
+        99,
+        base="main",
+        head="feat/147-x",
     )
 
 
@@ -494,11 +529,19 @@ def test_find_pr_for_branch_reads_the_base_branch(rpr, monkeypatch) -> None:
     def fake_gh_run(args, config, **kwargs):
         seen["args"] = args
         return subprocess.CompletedProcess(
-            args=args, returncode=0, stderr="",
-            stdout=_json.dumps([{
-                "number": 99, "isDraft": False,
-                "headRefName": "feat/147-x", "baseRefName": "main",
-            }]),
+            args=args,
+            returncode=0,
+            stderr="",
+            stdout=_json.dumps(
+                [
+                    {
+                        "number": 99,
+                        "isDraft": False,
+                        "headRefName": "feat/147-x",
+                        "baseRefName": "main",
+                    }
+                ]
+            ),
         )
 
     monkeypatch.setattr(rpr, "gh_run", fake_gh_run)
@@ -520,8 +563,18 @@ _MOVED_TO = "b" * 40
 
 
 def _wire_main(
-    rpr, monkeypatch, tmp_path, *, resolution, invoked, briefed=None,
-    fresh=None, unreadable=False, argv=(), heads=None, posted=None,
+    rpr,
+    monkeypatch,
+    tmp_path,
+    *,
+    resolution,
+    invoked,
+    briefed=None,
+    fresh=None,
+    unreadable=False,
+    argv=(),
+    heads=None,
+    posted=None,
     native=None,
 ):
     """Stub main()'s seams; record invoked names into `invoked`.
@@ -554,28 +607,40 @@ def _wire_main(
             (agents_dir / f"{name}.md").write_text("agent", encoding="utf-8")
 
     monkeypatch.setattr(rpr, "resolve_capability_root", lambda arg: cap_root)
-    monkeypatch.setattr(rpr, "load_adopter_config", lambda root: {
-        "review": {"agents": {"local_registered": [{"name": "reviewer"}]}}
-    })
+    monkeypatch.setattr(
+        rpr,
+        "load_adopter_config",
+        lambda root: {"review": {"agents": {"local_registered": [{"name": "reviewer"}]}}},
+    )
     monkeypatch.setattr(rpr, "_read_members", lambda root, loader: [])
     monkeypatch.setattr(rpr, "resolve_invoker_identity", lambda config: "dev")
     monkeypatch.setattr(
-        rpr, "check_membership",
+        rpr,
+        "check_membership",
         lambda members, invoker: SimpleNamespace(allowed=True, refusal_message=""),
     )
     monkeypatch.setattr(rpr, "_find_issue_branch", lambda n: f"feat/{n}-x")
     monkeypatch.setattr(
-        rpr, "_find_pr_for_branch",
+        rpr,
+        "_find_pr_for_branch",
         lambda branch, config: {"number": 99, "baseRefName": "main"},
     )
     monkeypatch.setattr(
-        rpr, "_resolve_required_local",
+        rpr,
+        "_resolve_required_local",
         lambda pr_number, config, repo_root, baseline: resolution,
     )
 
     def fake_invoke(
-        name, pr_number, config, timeout=None, effort=None, *, base=None,
-        head="HEAD", sha="",
+        name,
+        pr_number,
+        config,
+        timeout=None,
+        effort=None,
+        *,
+        base=None,
+        head="HEAD",
+        sha="",
     ):
         invoked.append(name)
         if briefed is not None:
@@ -592,7 +657,8 @@ def _wire_main(
     monkeypatch.setattr(rpr, "_post_comment", fake_post)
     head_reads = iter(heads) if heads is not None else None
     monkeypatch.setattr(
-        rpr, "_read_head_sha",
+        rpr,
+        "_read_head_sha",
         lambda pr, config: next(head_reads) if head_reads else _REVIEWED,
     )
 
@@ -608,7 +674,8 @@ def _wire_main(
         argv = ("--no-native", *argv)
     else:
         monkeypatch.setattr(
-            rpr, "_deliver_native_review",
+            rpr,
+            "_deliver_native_review",
             lambda pr, verdict, comment, config: native.append(verdict),
         )
     monkeypatch.setattr(sys, "argv", ["review-pr", "147", *argv])
@@ -626,7 +693,9 @@ def test_no_contribution_single_reviewer_unchanged(rpr, monkeypatch, tmp_path) -
 
 
 def test_each_reviewer_is_briefed_with_the_prs_base_and_branch(
-    rpr, monkeypatch, tmp_path,
+    rpr,
+    monkeypatch,
+    tmp_path,
 ) -> None:
     """main hands every reviewer the PR's base and its branch, so the brief's
     local-diff fallback names the real range (#1188)."""
@@ -637,8 +706,12 @@ def test_each_reviewer_is_briefed_with_the_prs_base_and_branch(
     invoked: list[str] = []
     briefed: list[tuple] = []
     _wire_main(
-        rpr, monkeypatch, tmp_path,
-        resolution=resolution, invoked=invoked, briefed=briefed,
+        rpr,
+        monkeypatch,
+        tmp_path,
+        resolution=resolution,
+        invoked=invoked,
+        briefed=briefed,
     )
     assert rpr.main() == 0
     assert briefed == [("main", "feat/147-x"), ("main", "feat/147-x")]
@@ -659,15 +732,28 @@ def test_multi_reviewer_invokes_baseline_plus_contributed(rpr, monkeypatch, tmp_
 
 
 def test_opted_out_contribution_is_listed_with_its_reason(
-    rpr, monkeypatch, tmp_path, capsys,
+    rpr,
+    monkeypatch,
+    tmp_path,
+    capsys,
 ) -> None:
     """#148: review-pr names each opt-out in force, with its reason, next to
     the reviewers it invokes — and does not invoke the opted-out reviewer."""
-    (opt_out,) = rpr.read_opt_outs({"review": {"agents": {"contributed_opt_out": [{
-        "capability": "software-engineering",
-        "reviewer": "docs-reviewer",
-        "reason": "Docs are reviewed by the tech-writing team.",
-    }]}}}).entries
+    (opt_out,) = rpr.read_opt_outs(
+        {
+            "review": {
+                "agents": {
+                    "contributed_opt_out": [
+                        {
+                            "capability": "software-engineering",
+                            "reviewer": "docs-reviewer",
+                            "reason": "Docs are reviewed by the tech-writing team.",
+                        }
+                    ]
+                }
+            }
+        }
+    ).entries
     resolution = rpr.Resolution(
         required_local=("reviewer", "code-reviewer"),
         contributed_by={"code-reviewer": "software-engineering"},
@@ -690,7 +776,8 @@ def test_fail_closed_resolution_aborts_without_invoking(rpr, monkeypatch, tmp_pa
     required reviewer is never silently skipped (fail-closed, DEC-032 D5)."""
     resolution = rpr.Resolution(
         error=rpr.RequiredReviewersError(
-            kind=rpr.ERROR_CLOSING_ISSUES, message="boom",
+            kind=rpr.ERROR_CLOSING_ISSUES,
+            message="boom",
         )
     )
     invoked: list[str] = []
@@ -707,7 +794,8 @@ def test_undeployed_contributed_agent_aborts(rpr, rc, monkeypatch, tmp_path) -> 
     gate has for this case (DEC-032 D5). G3: exercising the collection-error
     abort end-to-end, not just `_resolution_error_message` in isolation."""
     err = rc.ContributionError(
-        rc.ERROR_UNDEPLOYED_AGENT, "ux-ui-design",
+        rc.ERROR_UNDEPLOYED_AGENT,
+        "ux-ui-design",
         "design-reviewer is not deployed",
     )
     collection = rc.ContributionCollection(rules=(), errors=(err,))
@@ -735,21 +823,32 @@ def test_undeployed_contributed_agent_aborts(rpr, rc, monkeypatch, tmp_path) -> 
 
 def test_review_brief_names_the_head_under_review(rpr) -> None:
     brief = rpr._review_brief(
-        "reviewer", 99, base="main", head="feat/1179-x", sha=_REVIEWED,
+        "reviewer",
+        99,
+        base="main",
+        head="feat/1179-x",
+        sha=_REVIEWED,
     )
     assert f"You are reviewing its head commit {_REVIEWED}" in brief
     assert f"`git diff origin/main...{_REVIEWED}`" in brief
 
 
 def test_each_verdict_names_the_head_its_reviewer_saw(
-    rpr, monkeypatch, tmp_path, capsys,
+    rpr,
+    monkeypatch,
+    tmp_path,
+    capsys,
 ) -> None:
     posted: list[str] = []
     native: list[str] = []
     _wire_main(
-        rpr, monkeypatch, tmp_path,
+        rpr,
+        monkeypatch,
+        tmp_path,
         resolution=rpr.Resolution(required_local=("reviewer",)),
-        invoked=[], posted=posted, native=native,
+        invoked=[],
+        posted=posted,
+        native=native,
     )
     assert rpr.main() == 0
     (comment,) = posted
@@ -759,7 +858,10 @@ def test_each_verdict_names_the_head_its_reviewer_saw(
 
 
 def test_a_head_that_moves_during_the_review_is_reported(
-    rpr, monkeypatch, tmp_path, capsys,
+    rpr,
+    monkeypatch,
+    tmp_path,
+    capsys,
 ) -> None:
     """A push during the review: the verdict is posted against the head the
     reviewer saw (so the freshness rule holds it stale once the push is a
@@ -767,9 +869,13 @@ def test_a_head_that_moves_during_the_review_is_reported(
     posted: list[str] = []
     native: list[str] = []
     _wire_main(
-        rpr, monkeypatch, tmp_path,
+        rpr,
+        monkeypatch,
+        tmp_path,
         resolution=rpr.Resolution(required_local=("reviewer",)),
-        invoked=[], posted=posted, native=native,
+        invoked=[],
+        posted=posted,
+        native=native,
         heads=[_REVIEWED, _MOVED_TO],
     )
     assert rpr.main() == 0
@@ -783,15 +889,22 @@ def test_a_head_that_moves_during_the_review_is_reported(
 
 
 def test_an_unreadable_head_posts_a_verdict_naming_none(
-    rpr, monkeypatch, tmp_path, capsys,
+    rpr,
+    monkeypatch,
+    tmp_path,
+    capsys,
 ) -> None:
     """Without the head, the verdict names none and falls back to the latest
     commit's time — today's rule — rather than not being posted."""
     posted: list[str] = []
     _wire_main(
-        rpr, monkeypatch, tmp_path,
+        rpr,
+        monkeypatch,
+        tmp_path,
         resolution=rpr.Resolution(required_local=("reviewer",)),
-        invoked=[], posted=posted, heads=["", ""],
+        invoked=[],
+        posted=posted,
+        heads=["", ""],
     )
     assert rpr.main() == 0
     (comment,) = posted
@@ -817,7 +930,9 @@ def test_read_head_sha(rpr, monkeypatch) -> None:
     assert calls == [["gh", "pr", "view", "99", "--json", "headRefOid"]]
     for proc in (_Proc(1, "", "gh down"), _Proc(0, "not json"), _Proc(0, "[]")):
         monkeypatch.setattr(
-            rpr, "gh_run", lambda argv, config, check=False, proc=proc: proc,
+            rpr,
+            "gh_run",
+            lambda argv, config, check=False, proc=proc: proc,
         )
         assert rpr._read_head_sha(99, {}) == ""
     assert rpr._read_head_sha(None, {}) == ""
@@ -833,13 +948,19 @@ _PANEL = ("reviewer", "code-reviewer")
 
 
 def test_fresh_approved_reviewer_is_not_re_run(
-    rpr, monkeypatch, tmp_path, capsys,
+    rpr,
+    monkeypatch,
+    tmp_path,
+    capsys,
 ) -> None:
     invoked: list[str] = []
     _wire_main(
-        rpr, monkeypatch, tmp_path,
+        rpr,
+        monkeypatch,
+        tmp_path,
         resolution=rpr.Resolution(required_local=_PANEL),
-        invoked=invoked, fresh={"reviewer": "APPROVED"},
+        invoked=invoked,
+        fresh={"reviewer": "APPROVED"},
     )
     assert rpr.main() == 0
     assert invoked == ["code-reviewer"]
@@ -849,15 +970,21 @@ def test_fresh_approved_reviewer_is_not_re_run(
 
 
 def test_fresh_changes_requested_reviewer_is_not_re_run(
-    rpr, monkeypatch, tmp_path, capsys,
+    rpr,
+    monkeypatch,
+    tmp_path,
+    capsys,
 ) -> None:
     """A fresh CHANGES_REQUESTED is not re-run either: the same head would be
     reviewed again. A new commit makes it stale."""
     invoked: list[str] = []
     _wire_main(
-        rpr, monkeypatch, tmp_path,
+        rpr,
+        monkeypatch,
+        tmp_path,
         resolution=rpr.Resolution(required_local=_PANEL),
-        invoked=invoked, fresh={"code-reviewer": "CHANGES_REQUESTED"},
+        invoked=invoked,
+        fresh={"code-reviewer": "CHANGES_REQUESTED"},
     )
     assert rpr.main() == 0
     assert invoked == ["reviewer"]
@@ -868,7 +995,9 @@ def test_fresh_changes_requested_reviewer_is_not_re_run(
 def test_every_reviewer_fresh_invokes_nothing(rpr, monkeypatch, tmp_path) -> None:
     invoked: list[str] = []
     _wire_main(
-        rpr, monkeypatch, tmp_path,
+        rpr,
+        monkeypatch,
+        tmp_path,
         resolution=rpr.Resolution(required_local=_PANEL),
         invoked=invoked,
         fresh={"reviewer": "APPROVED", "code-reviewer": "APPROVED"},
@@ -880,9 +1009,13 @@ def test_every_reviewer_fresh_invokes_nothing(rpr, monkeypatch, tmp_path) -> Non
 def test_force_re_runs_a_fresh_reviewer(rpr, monkeypatch, tmp_path, capsys) -> None:
     invoked: list[str] = []
     reads = _wire_main(
-        rpr, monkeypatch, tmp_path,
+        rpr,
+        monkeypatch,
+        tmp_path,
         resolution=rpr.Resolution(required_local=_PANEL),
-        invoked=invoked, fresh={"reviewer": "APPROVED"}, argv=("--force",),
+        invoked=invoked,
+        fresh={"reviewer": "APPROVED"},
+        argv=("--force",),
     )
     assert rpr.main() == 0
     assert invoked == ["reviewer", "code-reviewer"]
@@ -891,13 +1024,19 @@ def test_force_re_runs_a_fresh_reviewer(rpr, monkeypatch, tmp_path, capsys) -> N
 
 
 def test_unreadable_verdicts_run_every_reviewer(
-    rpr, monkeypatch, tmp_path, capsys,
+    rpr,
+    monkeypatch,
+    tmp_path,
+    capsys,
 ) -> None:
     invoked: list[str] = []
     _wire_main(
-        rpr, monkeypatch, tmp_path,
+        rpr,
+        monkeypatch,
+        tmp_path,
         resolution=rpr.Resolution(required_local=_PANEL),
-        invoked=invoked, unreadable=True,
+        invoked=invoked,
+        unreadable=True,
     )
     assert rpr.main() == 0
     assert invoked == ["reviewer", "code-reviewer"]
@@ -907,9 +1046,13 @@ def test_unreadable_verdicts_run_every_reviewer(
 def test_dry_run_reports_the_skip(rpr, monkeypatch, tmp_path, capsys) -> None:
     invoked: list[str] = []
     _wire_main(
-        rpr, monkeypatch, tmp_path,
+        rpr,
+        monkeypatch,
+        tmp_path,
         resolution=rpr.Resolution(required_local=_PANEL),
-        invoked=invoked, fresh={"reviewer": "APPROVED"}, argv=("--dry-run",),
+        invoked=invoked,
+        fresh={"reviewer": "APPROVED"},
+        argv=("--dry-run",),
     )
     assert rpr.main() == 0
     assert invoked == []
@@ -928,15 +1071,14 @@ def _rule(rpr, commits=_HEAD):
     """The freshness rule for a PR whose verdicts name no head: they are
     judged by the latest commit's time."""
     return rpr.rule_for_pr(
-        {"commits": commits}, rpr.Resolution(),
+        {"commits": commits},
+        rpr.Resolution(),
         author_delta=lambda *a, **k: pytest.fail("no head is named"),
     )
 
 
 def _verdict_comment(name, token, ts, *, marked=True, remote=False):
-    first = f"Reviewer agent: {token}" if remote else (
-        f"Reviewer agent (local, {name}): {token}"
-    )
+    first = f"Reviewer agent: {token}" if remote else (f"Reviewer agent (local, {name}): {token}")
     body = f"{first}\n\nreasons"
     if marked:
         body += "\n\n<!-- pkit-verdict -->"
@@ -950,13 +1092,11 @@ def test_fresh_local_verdicts_counts_only_what_the_gate_counts(rpr) -> None:
         # at the head → stale (strictly after is fresh)
         _verdict_comment("code-reviewer", "APPROVED", "2026-06-02T00:00:00Z"),
         # after the head but unmarked → not a gate verdict
-        _verdict_comment("security-reviewer", "APPROVED", "2026-06-03T00:00:00Z",
-                         marked=False),
+        _verdict_comment("security-reviewer", "APPROVED", "2026-06-03T00:00:00Z", marked=False),
         # after the head but not required
         _verdict_comment("design-reviewer", "APPROVED", "2026-06-03T00:00:00Z"),
         # a remote verdict is not a local reviewer's
-        _verdict_comment("docs-reviewer", "APPROVED", "2026-06-03T00:00:00Z",
-                         remote=True),
+        _verdict_comment("docs-reviewer", "APPROVED", "2026-06-03T00:00:00Z", remote=True),
     ]
     required = ["reviewer", "code-reviewer", "security-reviewer", "docs-reviewer"]
     assert rpr._fresh_local_verdicts(comments, _rule(rpr), required) == {
@@ -979,9 +1119,14 @@ def test_fresh_local_verdicts_without_a_head_timestamp_is_stale(rpr) -> None:
     # that commit's time unknown it is stale, so the reviewer runs again.
     comments = [_verdict_comment("reviewer", "APPROVED", "2026-06-03T00:00:00Z")]
     assert rpr._fresh_local_verdicts(comments, _rule(rpr, []), ["reviewer"]) == {}
-    assert rpr._fresh_local_verdicts(
-        comments, _rule(rpr, [{"oid": "x"}]), ["reviewer"],
-    ) == {}
+    assert (
+        rpr._fresh_local_verdicts(
+            comments,
+            _rule(rpr, [{"oid": "x"}]),
+            ["reviewer"],
+        )
+        == {}
+    )
 
 
 def test_fresh_local_verdicts_keeps_a_floor_reviewer_fresh_past_a_markdown_fix(
@@ -1002,14 +1147,17 @@ def test_fresh_local_verdicts_keeps_a_floor_reviewer_fresh_past_a_markdown_fix(
         floors_by_reviewer={"code-reviewer": frozenset({"touches-code"})},
     )
     rule = rpr.rule_for_pr(
-        {"headRefOid": _MOVED_TO, "commits": _HEAD}, resolution,
+        {"headRefOid": _MOVED_TO, "commits": _HEAD},
+        resolution,
         author_delta=lambda since, head, *, base_tip: AuthorDelta(
             paths=("README.md",),
         ),
     )
     comments = [pinned("reviewer"), pinned("code-reviewer")]
     assert rpr._fresh_local_verdicts(
-        comments, rule, resolution.required_local,
+        comments,
+        rule,
+        resolution.required_local,
     ) == {"code-reviewer": "APPROVED"}
 
 
@@ -1029,17 +1177,26 @@ def test_read_fresh_verdicts_fetches_comments_head_and_base(rpr, monkeypatch) ->
     monkeypatch.setattr(rpr, "gh_run", fake)
     resolution = rpr.Resolution(required_local=("reviewer",))
     assert rpr._read_fresh_verdicts(99, resolution, {}) == {"reviewer": "APPROVED"}
-    assert calls == [[
-        "gh", "pr", "view", "99", "--json",
-        "comments,commits,headRefOid,baseRefOid",
-    ]]
+    assert calls == [
+        [
+            "gh",
+            "pr",
+            "view",
+            "99",
+            "--json",
+            "comments,commits,headRefOid,baseRefOid",
+        ]
+    ]
 
 
-@pytest.mark.parametrize("proc", [
-    lambda: _Proc(1, "", "gh down"),
-    lambda: _Proc(0, "not json"),
-    lambda: _Proc(0, "[]"),
-])
+@pytest.mark.parametrize(
+    "proc",
+    [
+        lambda: _Proc(1, "", "gh down"),
+        lambda: _Proc(0, "not json"),
+        lambda: _Proc(0, "[]"),
+    ],
+)
 def test_read_fresh_verdicts_unreadable_is_none(rpr, monkeypatch, proc) -> None:
     monkeypatch.setattr(rpr, "gh_run", lambda argv, config, check=False: proc())
     resolution = rpr.Resolution(required_local=("reviewer",))
@@ -1215,8 +1372,10 @@ def _capture_invocation(rpr, monkeypatch) -> dict:
     def fake_run(args, **kwargs):
         captured["args"] = list(args)
         return subprocess.CompletedProcess(
-            args=args, returncode=0,
-            stdout="Reviewer agent (local, reviewer): APPROVED\n", stderr="",
+            args=args,
+            returncode=0,
+            stdout="Reviewer agent (local, reviewer): APPROVED\n",
+            stderr="",
         )
 
     monkeypatch.setattr(rpr.subprocess, "run", fake_run)

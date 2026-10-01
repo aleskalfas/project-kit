@@ -889,8 +889,7 @@ def _run_backbone_migrations(
         return
 
     click.echo(
-        f"  running {len(scripts)} backbone migration(s) "
-        f"({current_version} -> v{target_version})"
+        f"  running {len(scripts)} backbone migration(s) ({current_version} -> v{target_version})"
     )
     execute_migration_scripts(
         scripts,
@@ -971,9 +970,7 @@ def _run_component_migrations(
             f"  running {len(scripts)} migration(s) for {label} "
             f"({installed_manifest.version} -> v{source_version})"
         )
-        execute_migration_scripts(
-            scripts, target_root, label=label, label_rel_to=source_dir
-        )
+        execute_migration_scripts(scripts, target_root, label=label, label_rel_to=source_dir)
         # Re-stamp installed manifest with new version + timestamp.
         _restamp_component_manifest_version(
             installed_manifest_path, installed_manifest, source_version
@@ -981,9 +978,7 @@ def _run_component_migrations(
         ran += 1
 
     if ran == 0:
-        click.echo(
-            f"  no component migrations to run (0 of {len(eligible)} adapter component(s))"
-        )
+        click.echo(f"  no component migrations to run (0 of {len(eligible)} adapter component(s))")
 
 
 def _resolve_component_dirs(
@@ -1028,7 +1023,7 @@ def _restamp_component_manifest_version(
     import datetime as _dt
 
     manifest.version = new_version
-    manifest.installed_at = _dt.datetime.now(_dt.timezone.utc).isoformat()
+    manifest.installed_at = _dt.datetime.now(_dt.UTC).isoformat()
     write_component_manifest(manifest_path, manifest)
 
 
@@ -1060,17 +1055,13 @@ def _check_capability_dep_conflicts_for_upgrade(
     for entry in components:
         if entry.kind != "capability":
             continue
-        pkg_yaml_path = (
-            target_root / ".pkit" / "capabilities" / entry.name / "package.yaml"
-        )
+        pkg_yaml_path = target_root / ".pkit" / "capabilities" / entry.name / "package.yaml"
         if not pkg_yaml_path.is_file():
             continue
         pkg = caps._read_package_yaml(pkg_yaml_path)
         if pkg is None or not pkg.requires_capabilities:
             continue
-        conflicts = caps.check_capability_dependencies(
-            target_root, pkg.requires_capabilities
-        )
+        conflicts = caps.check_capability_dependencies(target_root, pkg.requires_capabilities)
         for conflict in conflicts:
             if conflict.reason == "absent":
                 dep_conflicts.append(

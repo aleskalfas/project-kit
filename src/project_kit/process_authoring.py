@@ -148,9 +148,7 @@ def relation_vocabulary(repo_root: Path) -> list[str]:
 
 def mode_vocabulary(repo_root: Path) -> list[str]:
     """The `depends_on` mode set (pull | push), read from the shape contract."""
-    return _enum_from_contract(
-        repo_root, ("depends_on", "properties", "mode", "enum"), "mode"
-    )
+    return _enum_from_contract(repo_root, ("depends_on", "properties", "mode", "enum"), "mode")
 
 
 def upstream_address_pattern(repo_root: Path) -> str:
@@ -190,9 +188,7 @@ def blocked_on_vocabulary(repo_root: Path) -> list[str]:
 
 def gate_kind_vocabulary(repo_root: Path) -> list[str]:
     """The gate kind set (COR-033 P4), read from the shape contract."""
-    return _enum_from_contract(
-        repo_root, ("gate", "properties", "kind", "enum"), "gate kind"
-    )
+    return _enum_from_contract(repo_root, ("gate", "properties", "kind", "enum"), "gate kind")
 
 
 # The two gate kinds whose check is a capability predicate the stamp can stub.
@@ -219,9 +215,7 @@ def lint_process_block(repo_root: Path, process: dict[str, Any]) -> list[str]:
     schema = {"$ref": "#/$defs/process", "$defs": contract["$defs"]}
     validator = Draft202012Validator(schema)
     errors = sorted(validator.iter_errors(process), key=lambda e: list(e.path))
-    return [
-        f"{'/'.join(str(p) for p in e.path) or '(root)'}: {e.message}" for e in errors
-    ]
+    return [f"{'/'.join(str(p) for p in e.path) or '(root)'}: {e.message}" for e in errors]
 
 
 def _lint_or_restore(repo_root: Path, path: Path, original: str, label: str) -> None:
@@ -273,7 +267,8 @@ def _lint_in_memory(repo_root: Path, data: Any, label: str) -> None:
 _STUB_PAYLOADS = {
     "detection": '{"result": <bool>, "reason": "<why>"}',
     "gate": '{"result": <bool>, "reason": "<why>"}',
-    "authorisation-artifact gate": '{"exists": <bool>, "produced_by": "<login>", "reason": "<why>"}',
+    "authorisation-artifact gate": '{"exists": <bool>, "produced_by": "<login>", "reason": '
+    '"<why>"}',
     "entry guard": '{"result": <bool>, "reason": "<why>"}',
     "resume_when": '{"result": <bool>, "reason": "<why>"}',
     "invariant check": '{"result": <bool>, "reason": "<why>"}',
@@ -333,9 +328,7 @@ def _stub_body(
     purpose: str, address: str, operation: str, cardinality: str, payload_key: str
 ) -> str:
     subject_note = (
-        "the fixed singleton sentinel"
-        if cardinality == "singleton"
-        else "the subject id"
+        "the fixed singleton sentinel" if cardinality == "singleton" else "the subject id"
     )
     if payload_key == "hand-off candidates":
         subject_note = "the contract's UPSTREAM PROCESS ADDRESS (the scope, ADR-048)"
@@ -401,12 +394,9 @@ def _write_stub_script(capability_dir: Path, stub: PredicateStub, body: str) -> 
             f.write(body)
     except FileExistsError as exc:
         raise ProcessAuthoringError(
-            f"{script_path} already exists; refusing to overwrite it with a "
-            "predicate stub."
+            f"{script_path} already exists; refusing to overwrite it with a predicate stub."
         ) from exc
-    script_path.chmod(
-        script_path.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
-    )
+    script_path.chmod(script_path.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
     return script_path
 
 
@@ -440,7 +430,7 @@ def _command_name(process_id: str, *parts: str) -> str:
     return "-".join([process_id, *parts])
 
 
-def _gate_command_name(process_id: str, transition: "TransitionSpec") -> str:
+def _gate_command_name(process_id: str, transition: TransitionSpec) -> str:
     """A gate stub's command name, derived from the FULL transition key.
 
     A transition is keyed by (from, to, trigger): two edges between the same
@@ -450,9 +440,7 @@ def _gate_command_name(process_id: str, transition: "TransitionSpec") -> str:
     declaration, which keeps the derived name a well-formed command name.
     """
     source = transition.from_state.strip("*") or "any"
-    return _command_name(
-        process_id, "gate", source, transition.to_state, transition.trigger
-    )
+    return _command_name(process_id, "gate", source, transition.to_state, transition.trigger)
 
 
 def _script_relpath(command: str) -> str:
@@ -536,8 +524,7 @@ def _locate_definition_file(repo_root: Path, definition: ProcessDefinition) -> P
             if isinstance(block, dict) and block.get("id") == definition.process_id:
                 return candidate
     raise ProcessAuthoringError(
-        f"definition file for {definition.capability}:{definition.process_id} "
-        "could not be located."
+        f"definition file for {definition.capability}:{definition.process_id} could not be located."
     )
 
 
@@ -679,9 +666,7 @@ def stamp_new_process(
     seen: set[str] = set()
     for spec in states:
         if not _KEBAB_CASE.match(spec.state_id):
-            raise ProcessAuthoringError(
-                f"state id {spec.state_id!r} must be kebab-case."
-            )
+            raise ProcessAuthoringError(f"state id {spec.state_id!r} must be kebab-case.")
         if spec.state_id in seen:
             raise ProcessAuthoringError(f"state {spec.state_id!r} declared twice.")
         seen.add(spec.state_id)
@@ -692,8 +677,7 @@ def stamp_new_process(
             )
         if spec.entry and spec.guarded_entry:
             raise ProcessAuthoringError(
-                f"state {spec.state_id!r} is marked both plain entry and "
-                "guarded entry; pick one."
+                f"state {spec.state_id!r} is marked both plain entry and guarded entry; pick one."
             )
     state_ids = {s.state_id for s in states}
 
@@ -703,13 +687,11 @@ def stamp_new_process(
     for t in transitions:
         if t.from_state != "*" and t.from_state not in state_ids:
             raise ProcessAuthoringError(
-                f"transition {t.from_state!r} -> {t.to_state!r} names an "
-                f"undeclared source state."
+                f"transition {t.from_state!r} -> {t.to_state!r} names an undeclared source state."
             )
         if t.to_state not in state_ids:
             raise ProcessAuthoringError(
-                f"transition {t.from_state!r} -> {t.to_state!r} names an "
-                f"undeclared target state."
+                f"transition {t.from_state!r} -> {t.to_state!r} names an undeclared target state."
             )
         if not _KEBAB_CASE.match(t.trigger):
             raise ProcessAuthoringError(
@@ -751,9 +733,7 @@ def stamp_new_process(
 
     for inv in invariants:
         if not _KEBAB_CASE.match(inv.invariant_id):
-            raise ProcessAuthoringError(
-                f"invariant id {inv.invariant_id!r} must be kebab-case."
-            )
+            raise ProcessAuthoringError(f"invariant id {inv.invariant_id!r} must be kebab-case.")
         if not inv.why.strip():
             raise ProcessAuthoringError(
                 f"invariant {inv.invariant_id!r} needs a why — it is surfaced "
@@ -799,9 +779,7 @@ def stamp_new_process(
     for t in transitions:
         if t.gate_kind is not None:
             payload_key = (
-                "authorisation-artifact gate"
-                if t.gate_kind == "authorisation-artifact"
-                else "gate"
+                "authorisation-artifact gate" if t.gate_kind == "authorisation-artifact" else "gate"
             )
             add_stub(
                 _gate_command_name(process_id, t),
@@ -853,9 +831,7 @@ def stamp_new_process(
     if blocked_on is not None:
         blocked_block: dict[str, Any] = {"blocked_on": blocked_on}
         if blocked_on == "awaiting-condition":
-            blocked_block["resume_when"] = {
-                "run": _command_name(process_id, "resume-when")
-            }
+            blocked_block["resume_when"] = {"run": _command_name(process_id, "resume-when")}
         subject_block["blocked"] = blocked_block
 
     states_block: list[dict[str, Any]] = []
@@ -923,11 +899,7 @@ def stamp_new_process(
         yaml = _round_trip_yaml()
         definition_path.parent.mkdir(parents=True, exist_ok=True)
         with definition_path.open("w", encoding="utf-8") as f:
-            f.write(
-                _DEFINITION_HEADER.format(
-                    schema_rel=schema_rel.as_posix(), address=address
-                )
-            )
+            f.write(_DEFINITION_HEADER.format(schema_rel=schema_rel.as_posix(), address=address))
             f.write("\n")
             yaml.dump({"process": process_block}, f)
         for stub in stubs:
@@ -1331,13 +1303,9 @@ def handoff_process(
                 "candidates and resolve must be two distinct commands (the two "
                 "seams answer different questions, ADR-048)."
             )
-        stub = PredicateStub(
-            command=name, script_relpath=_script_relpath(name), purpose=purpose
-        )
+        stub = PredicateStub(command=name, script_relpath=_script_relpath(name), purpose=purpose)
         new_stubs.append(stub)
-        bodies[name] = _stub_body(
-            purpose, address, "hand-off", definition.cardinality, payload_key
-        )
+        bodies[name] = _stub_body(purpose, address, "hand-off", definition.cardinality, payload_key)
     # Pre-flight before the definition is touched: a seam whose script path is
     # taken must refuse with the definition still unedited.
     _refuse_existing_stub_scripts(repo_root, capability_dir, new_stubs)

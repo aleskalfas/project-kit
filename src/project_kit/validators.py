@@ -361,7 +361,8 @@ def capability_validators(target_root: Path) -> tuple[Validator, ...]:
                 Validator(
                     name=f"{owner}:{name}",
                     run=query.run,
-                    order=order if isinstance(order, int) and not isinstance(order, bool)
+                    order=order
+                    if isinstance(order, int) and not isinstance(order, bool)
                     else CAPABILITY_ORDER_DEFAULT,
                     owner=owner,
                     help=command.help,
@@ -389,7 +390,8 @@ def run_query(target_root: Path, script: Path, *, location: str, reference: str)
     if not script.is_file():
         return _no_answer(
             location,
-            f"command {reference!r} names script {_rel(script, target_root)!r}, which does not exist.",
+            f"command {reference!r} names script {_rel(script, target_root)!r}, which does not "
+            "exist.",
         )
     run = run_command(script, [QUERY_FLAG], cwd=target_root, extra_env=OFFLINE_MARKER)
     if run.ending is Ending.ANSWERED:
@@ -476,8 +478,16 @@ def _answer_of(document: Any, *, location: str, command: str) -> Outcome:
 def _finding(entry: Any) -> Finding | None:
     if not isinstance(entry, Mapping):
         return None
-    severity_value, location, message = entry.get("severity"), entry.get("location"), entry.get("message")
-    if not isinstance(severity_value, str) or not isinstance(location, str) or not isinstance(message, str):
+    severity_value, location, message = (
+        entry.get("severity"),
+        entry.get("location"),
+        entry.get("message"),
+    )
+    if (
+        not isinstance(severity_value, str)
+        or not isinstance(location, str)
+        or not isinstance(message, str)
+    ):
         return None
     try:
         severity = Severity(severity_value)
@@ -517,9 +527,7 @@ def select(
             f"unknown validator(s) {', '.join(repr(n) for n in unknown)}; "
             f"registered: {', '.join(v.name for v in registered)}."
         )
-    return tuple(
-        v for v in registered if (not only or v.name in only) and v.name not in skip
-    )
+    return tuple(v for v in registered if (not only or v.name in only) and v.name not in skip)
 
 
 # The values computed so far in the current run of `run_all`; None outside one.
@@ -594,9 +602,7 @@ def render(target_root: Path, results: Sequence[Result]) -> str:
             lines.append(f"    {finding.severity.value:<9}{finding.location}{label}")
             lines.append(f"      → {finding.message}")
         lines.append("")
-    counts = ", ".join(
-        f"{sum(r.outcome.count(s) for r in results)} {s.value}(s)" for s in Severity
-    )
+    counts = ", ".join(f"{sum(r.outcome.count(s) for r in results)} {s.value}(s)" for s in Severity)
     lines.append(f"  {len(results)} validator(s) ran; {counts}.")
     errors = sum(len(r.outcome.errors) for r in results)
     verdict = "All checks passed." if not errors else f"{errors} error(s) found."
@@ -620,7 +626,8 @@ def _kind(value: Any) -> str:
 
 
 def location_of(path: Path, target_root: Path, pointer: str = "") -> str:
-    """A finding's location: the path relative to the root, then `:` and the pointer when there is one."""
+    """A finding's location: the path relative to the root, then `:` and the pointer when there is
+    one."""
     rel = _rel(path, target_root)
     return f"{rel}:{pointer}" if pointer else rel
 

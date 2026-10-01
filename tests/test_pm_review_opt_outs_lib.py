@@ -20,9 +20,7 @@ from types import MappingProxyType
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SCRIPTS_DIR = (
-    REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
-)
+SCRIPTS_DIR = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
 OO_PATH = SCRIPTS_DIR / "_lib" / "review_opt_outs.py"
 RC_PATH = SCRIPTS_DIR / "_lib" / "review_contributions.py"
 
@@ -62,10 +60,15 @@ def _entry(capability=SE, reviewer="docs-reviewer", reason=REASON):
 
 
 def _rule(rc, capability, reviewer, *, floor=None, match=None, deployed=True):
-    error = None if deployed else rc.ContributionError(
-        rc.ERROR_UNDEPLOYED_AGENT, capability,
-        f"capability `{capability}` contributes reviewer `{reviewer}` but no "
-        "deployed agent file exists",
+    error = (
+        None
+        if deployed
+        else rc.ContributionError(
+            rc.ERROR_UNDEPLOYED_AGENT,
+            capability,
+            f"capability `{capability}` contributes reviewer `{reviewer}` but no "
+            "deployed agent file exists",
+        )
     )
     return rc.ContributionRule(
         capability=capability,
@@ -85,7 +88,10 @@ def _se_collection(rc, *, docs_deployed=True):
         _rule(rc, SE, "security-reviewer", floor="touches-code"),
         _rule(rc, SE, "docs-reviewer", floor="touches-code", deployed=docs_deployed),
         _rule(
-            rc, SE, "docs-reviewer", match={"type": rc.MATCH_ANY},
+            rc,
+            SE,
+            "docs-reviewer",
+            match={"type": rc.MATCH_ANY},
             deployed=docs_deployed,
         ),
     )
@@ -107,10 +113,12 @@ def test_absent_list_is_no_opt_outs(oo) -> None:
 
 
 def test_valid_list_parses_each_entry_with_its_position(oo) -> None:
-    parsed = oo.parse_opt_outs([
-        _entry(),
-        _entry(capability="ux-ui-design", reviewer="design-reviewer", reason="No UI."),
-    ])
+    parsed = oo.parse_opt_outs(
+        [
+            _entry(),
+            _entry(capability="ux-ui-design", reviewer="design-reviewer", reason="No UI."),
+        ]
+    )
     assert parsed.ok
     assert [(e.capability, e.reviewer, e.reason, e.index) for e in parsed.entries] == [
         (SE, "docs-reviewer", REASON, 0),
@@ -119,22 +127,29 @@ def test_valid_list_parses_each_entry_with_its_position(oo) -> None:
 
 
 def test_read_opt_outs_reads_the_review_agents_key(oo) -> None:
-    config = {"review": {"agents": {
-        "local_registered": [{"name": "pm-reviewer"}],
-        "contributed_opt_out": [_entry()],
-    }}}
+    config = {
+        "review": {
+            "agents": {
+                "local_registered": [{"name": "pm-reviewer"}],
+                "contributed_opt_out": [_entry()],
+            }
+        }
+    }
     parsed = oo.read_opt_outs(config)
     assert parsed.ok
     assert [e.reviewer for e in parsed.entries] == ["docs-reviewer"]
 
 
-@pytest.mark.parametrize("config", [
-    {},
-    {"review": None},
-    {"review": {"mode": "agent"}},
-    {"review": {"agents": {"local_registered": []}}},
-    "not a mapping",
-])
+@pytest.mark.parametrize(
+    "config",
+    [
+        {},
+        {"review": None},
+        {"review": {"mode": "agent"}},
+        {"review": {"agents": {"local_registered": []}}},
+        "not a mapping",
+    ],
+)
 def test_read_opt_outs_absent_anywhere_is_none(oo, config) -> None:
     parsed = oo.read_opt_outs(config)
     assert parsed.ok and parsed.entries == ()
@@ -215,10 +230,12 @@ def test_apply_without_entries_is_identity(oo, rc) -> None:
 def test_apply_keeps_the_same_reviewer_from_another_capability(oo, rc) -> None:
     """Withdrawing a pair never withdraws another capability's requirement
     for the same reviewer name."""
-    collection = rc.ContributionCollection(rules=(
-        _rule(rc, SE, "docs-reviewer", floor="touches-code"),
-        _rule(rc, "tech-writing", "docs-reviewer", floor="touches-code"),
-    ))
+    collection = rc.ContributionCollection(
+        rules=(
+            _rule(rc, SE, "docs-reviewer", floor="touches-code"),
+            _rule(rc, "tech-writing", "docs-reviewer", floor="touches-code"),
+        )
+    )
     applied = oo.parse_opt_outs([_entry()]).apply(collection)
     assert [(r.capability, r.reviewer) for r in applied.rules] == [
         ("tech-writing", "docs-reviewer"),
@@ -235,9 +252,7 @@ def test_apply_drops_the_undeployed_error_of_a_withdrawn_rule(oo, rc) -> None:
 
 def test_apply_keeps_errors_of_rules_it_does_not_withdraw(oo, rc) -> None:
     collection = _se_collection(rc, docs_deployed=False)
-    applied = oo.parse_opt_outs(
-        [_entry(reviewer="code-reviewer")]
-    ).apply(collection)
+    applied = oo.parse_opt_outs([_entry(reviewer="code-reviewer")]).apply(collection)
     assert not applied.ok
     assert all("docs-reviewer" in e.message for e in applied.errors)
 
@@ -262,12 +277,12 @@ def test_unknown_capability_is_a_problem(oo, rc) -> None:
 
 def test_installed_capability_without_contributions_is_a_problem(oo, rc) -> None:
     parsed = oo.parse_opt_outs([_entry(capability="project-management")])
-    (_entry_, message), = parsed.problems_against(_se_collection(rc))
+    ((_, message),) = parsed.problems_against(_se_collection(rc))
     assert "installed but contributes no reviewer requirement" in message
 
 
 def test_unknown_reviewer_is_a_problem_naming_what_is_contributed(oo, rc) -> None:
     parsed = oo.parse_opt_outs([_entry(reviewer="docs-reviwer")])
-    (_entry_, message), = parsed.problems_against(_se_collection(rc))
+    ((_, message),) = parsed.problems_against(_se_collection(rc))
     assert "no reviewer `docs-reviwer`" in message
     assert "code-reviewer, docs-reviewer, security-reviewer" in message

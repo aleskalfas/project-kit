@@ -18,7 +18,6 @@ from pathlib import Path
 
 import pytest
 
-
 REPO_ROOT = Path(__file__).resolve().parent.parent
 ADAPTER_SCRIPT = REPO_ROOT / ".pkit" / "adapters" / "claude-code" / "merge-settings.sh"
 
@@ -44,13 +43,7 @@ def adapter_tree(tmp_path: Path) -> Path:
 
 def _write_settings(adapter_tree: Path, layer: str, payload: dict) -> None:
     path = (
-        adapter_tree
-        / ".pkit"
-        / "adapters"
-        / "claude-code"
-        / "settings"
-        / layer
-        / "settings.json"
+        adapter_tree / ".pkit" / "adapters" / "claude-code" / "settings" / layer / "settings.json"
     )
     path.write_text(json.dumps(payload), encoding="utf-8")
 
@@ -71,17 +64,19 @@ def _run_merge(adapter_tree: Path, env: dict | None = None) -> subprocess.Comple
 
 
 def _read_target(adapter_tree: Path) -> dict:
-    return json.loads(
-        (adapter_tree / ".claude" / "settings.json").read_text(encoding="utf-8")
-    )
+    return json.loads((adapter_tree / ".claude" / "settings.json").read_text(encoding="utf-8"))
 
 
 def test_top_level_agent_key_preserved_from_core(adapter_tree: Path) -> None:
     """A source file's top-level `agent` key flows through to `.claude/settings.json`."""
-    _write_settings(adapter_tree, "core", {
-        "permissions": {"allow": ["Bash(ls)"], "deny": []},
-        "agent": "project-manager",
-    })
+    _write_settings(
+        adapter_tree,
+        "core",
+        {
+            "permissions": {"allow": ["Bash(ls)"], "deny": []},
+            "agent": "project-manager",
+        },
+    )
 
     result = _run_merge(adapter_tree)
 
@@ -92,15 +87,23 @@ def test_top_level_agent_key_preserved_from_core(adapter_tree: Path) -> None:
 
 def test_project_layer_overrides_core_for_scalar_top_level_key(adapter_tree: Path) -> None:
     """Last-write-wins: `project/` source overrides `core/` source for top-level scalars."""
-    _write_settings(adapter_tree, "core", {
-        "permissions": {"allow": [], "deny": []},
-        "agent": "core-default",
-        "model": "sonnet",
-    })
-    _write_settings(adapter_tree, "project", {
-        "permissions": {"allow": [], "deny": []},
-        "agent": "project-override",
-    })
+    _write_settings(
+        adapter_tree,
+        "core",
+        {
+            "permissions": {"allow": [], "deny": []},
+            "agent": "core-default",
+            "model": "sonnet",
+        },
+    )
+    _write_settings(
+        adapter_tree,
+        "project",
+        {
+            "permissions": {"allow": [], "deny": []},
+            "agent": "project-override",
+        },
+    )
 
     result = _run_merge(adapter_tree)
 
@@ -114,12 +117,20 @@ def test_project_layer_overrides_core_for_scalar_top_level_key(adapter_tree: Pat
 
 def test_permissions_union_behaviour_unchanged(adapter_tree: Path) -> None:
     """The existing permissions union-deduped semantics still apply."""
-    _write_settings(adapter_tree, "core", {
-        "permissions": {"allow": ["Bash(ls)", "Bash(grep)"], "deny": ["Bash(rm)"]},
-    })
-    _write_settings(adapter_tree, "project", {
-        "permissions": {"allow": ["Bash(pwd)", "Bash(ls)"], "deny": []},
-    })
+    _write_settings(
+        adapter_tree,
+        "core",
+        {
+            "permissions": {"allow": ["Bash(ls)", "Bash(grep)"], "deny": ["Bash(rm)"]},
+        },
+    )
+    _write_settings(
+        adapter_tree,
+        "project",
+        {
+            "permissions": {"allow": ["Bash(pwd)", "Bash(ls)"], "deny": []},
+        },
+    )
 
     result = _run_merge(adapter_tree)
 
@@ -131,10 +142,14 @@ def test_permissions_union_behaviour_unchanged(adapter_tree: Path) -> None:
 
 def test_idempotent_re_run_reports_exists(adapter_tree: Path) -> None:
     """A second run on an unchanged target reports `exists` and does not rewrite."""
-    _write_settings(adapter_tree, "core", {
-        "permissions": {"allow": ["Bash(ls)"], "deny": []},
-        "agent": "project-manager",
-    })
+    _write_settings(
+        adapter_tree,
+        "core",
+        {
+            "permissions": {"allow": ["Bash(ls)"], "deny": []},
+            "agent": "project-manager",
+        },
+    )
 
     first = _run_merge(adapter_tree)
     assert first.returncode == 0, first.stderr
@@ -154,12 +169,20 @@ def test_no_top_level_keys_outside_permissions_yields_permissions_only(adapter_t
     Regression guard: the broadening must not introduce phantom top-level
     keys when no source provides any.
     """
-    _write_settings(adapter_tree, "core", {
-        "permissions": {"allow": ["Bash(ls)"], "deny": ["Bash(rm)"]},
-    })
-    _write_settings(adapter_tree, "project", {
-        "permissions": {"allow": ["Bash(pwd)"], "deny": []},
-    })
+    _write_settings(
+        adapter_tree,
+        "core",
+        {
+            "permissions": {"allow": ["Bash(ls)"], "deny": ["Bash(rm)"]},
+        },
+    )
+    _write_settings(
+        adapter_tree,
+        "project",
+        {
+            "permissions": {"allow": ["Bash(pwd)"], "deny": []},
+        },
+    )
 
     result = _run_merge(adapter_tree)
 
@@ -189,14 +212,14 @@ def _install_capability(
     if overlay is not None:
         overlay_dir = cap_dir / "project" / "adapter-overlays"
         overlay_dir.mkdir(parents=True, exist_ok=True)
-        (overlay_dir / "claude-code.json").write_text(
-            json.dumps(overlay), encoding="utf-8"
-        )
+        (overlay_dir / "claude-code.json").write_text(json.dumps(overlay), encoding="utf-8")
 
     if register_in_manifest:
         manifest_path = adapter_tree / ".pkit" / "manifest.yaml"
-        existing = manifest_path.read_text(encoding="utf-8") if manifest_path.is_file() else (
-            "schema_version: 1\nbackbone_version: 1.0.0\ncomponents:\n"
+        existing = (
+            manifest_path.read_text(encoding="utf-8")
+            if manifest_path.is_file()
+            else ("schema_version: 1\nbackbone_version: 1.0.0\ncomponents:\n")
         )
         addition = f"  - kind: capability\n    name: {name}\n    manifest: ignored\n"
         manifest_path.write_text(existing + addition, encoding="utf-8")
@@ -259,13 +282,21 @@ def test_capability_overlay_permissions_key_is_stripped(adapter_tree: Path) -> N
     The existing two-layer merge's `del(.permissions)` on every source
     enforces this mechanically.
     """
-    _write_settings(adapter_tree, "core", {
-        "permissions": {"allow": ["Bash(ls)"], "deny": []},
-    })
-    _install_capability(adapter_tree, "project-management", overlay={
-        "agent": "project-manager",
-        "permissions": {"allow": ["Bash(rm -rf)"]},  # would be a footgun if honoured
-    })
+    _write_settings(
+        adapter_tree,
+        "core",
+        {
+            "permissions": {"allow": ["Bash(ls)"], "deny": []},
+        },
+    )
+    _install_capability(
+        adapter_tree,
+        "project-management",
+        overlay={
+            "agent": "project-manager",
+            "permissions": {"allow": ["Bash(rm -rf)"]},  # would be a footgun if honoured
+        },
+    )
 
     result = _run_merge(adapter_tree)
 
@@ -282,14 +313,22 @@ def test_capability_overlay_overrides_project_settings(adapter_tree: Path) -> No
 
     Project's value loses to overlay's; this is the documented precedence per DEC-030.
     """
-    _write_settings(adapter_tree, "core", {
-        "permissions": {"allow": [], "deny": []},
-        "agent": "core-default",
-    })
-    _write_settings(adapter_tree, "project", {
-        "permissions": {"allow": [], "deny": []},
-        "agent": "project-default",
-    })
+    _write_settings(
+        adapter_tree,
+        "core",
+        {
+            "permissions": {"allow": [], "deny": []},
+            "agent": "core-default",
+        },
+    )
+    _write_settings(
+        adapter_tree,
+        "project",
+        {
+            "permissions": {"allow": [], "deny": []},
+            "agent": "project-default",
+        },
+    )
     _install_capability(adapter_tree, "project-management", overlay={"agent": "overlay-default"})
 
     result = _run_merge(adapter_tree)
@@ -301,6 +340,7 @@ def test_capability_overlay_overrides_project_settings(adapter_tree: Path) -> No
 
 # --- authoritative-region tier (COR-002 §80-84 / ADR-002 / #251) -----------
 
+
 def _set_target(adapter_tree: Path, payload: dict) -> None:
     """Seed the live .claude/settings.json the merge reads back as a source."""
     target = adapter_tree / ".claude" / "settings.json"
@@ -311,7 +351,9 @@ def _set_target(adapter_tree: Path, payload: dict) -> None:
 def _set_mode(adapter_tree: Path, mode: str) -> None:
     cfg = adapter_tree / ".pkit" / "permissions" / "project" / "config.yaml"
     cfg.parent.mkdir(parents=True, exist_ok=True)
-    cfg.write_text(f"schema_version: 1\nownership_mode: {mode}\nposture: lenient\n", encoding="utf-8")
+    cfg.write_text(
+        f"schema_version: 1\nownership_mode: {mode}\nposture: lenient\n", encoding="utf-8"
+    )
 
 
 def _region_file(adapter_tree: Path, region: dict) -> dict:
@@ -323,7 +365,9 @@ def _region_file(adapter_tree: Path, region: dict) -> dict:
 def test_managed_region_replaces_permissions_wholesale(adapter_tree: Path) -> None:
     """Managed mode regenerates `permissions` from the supplied region, discarding
     the adopter's prior permissions (no union) — drift heals."""
-    _write_settings(adapter_tree, "core", {"permissions": {"allow": ["Bash(git:*)"], "deny": ["Bash(sudo:*)"]}})
+    _write_settings(
+        adapter_tree, "core", {"permissions": {"allow": ["Bash(git:*)"], "deny": ["Bash(sudo:*)"]}}
+    )
     _set_target(adapter_tree, {"permissions": {"allow": ["Bash(rm:*)"], "deny": []}})
     _set_mode(adapter_tree, "managed")
     env = _region_file(adapter_tree, {"allow": ["Bash(gh:*)"], "deny": ["Bash(sudo:*)"]})
@@ -341,11 +385,14 @@ def test_managed_region_replaces_permissions_wholesale(adapter_tree: Path) -> No
 def test_managed_preserves_content_outside_the_region(adapter_tree: Path) -> None:
     """Everything outside `.permissions` is left byte-for-byte (adopter-owned)."""
     _write_settings(adapter_tree, "core", {"permissions": {"allow": [], "deny": []}})
-    _set_target(adapter_tree, {
-        "permissions": {"allow": ["Bash(rm:*)"], "deny": []},
-        "agent": "project-manager",
-        "customBlock": {"nested": [1, 2, 3]},
-    })
+    _set_target(
+        adapter_tree,
+        {
+            "permissions": {"allow": ["Bash(rm:*)"], "deny": []},
+            "agent": "project-manager",
+            "customBlock": {"nested": [1, 2, 3]},
+        },
+    )
     _set_mode(adapter_tree, "managed")
     env = _region_file(adapter_tree, {"allow": [], "deny": ["Bash(sudo:*)"]})
 

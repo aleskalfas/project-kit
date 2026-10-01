@@ -4,6 +4,7 @@
 Run as a subprocess against throwaway scopes — the validator is a standalone
 PEP-723 script (uv resolves its `ruamel.yaml` dep), not a package module.
 """
+
 from __future__ import annotations
 
 import subprocess
@@ -61,13 +62,7 @@ def test_yaml_block_scalar_fence_does_not_swallow_citation(tmp_path: Path) -> No
 
 def test_yaml_citation_after_fence_resolves(tmp_path: Path) -> None:
     """A *valid* citation following a ``` in a YAML block scalar is counted."""
-    yaml_file = (
-        "notes: |\n"
-        "  ```\n"
-        "  example\n"
-        "  ```\n"
-        "  A grounded fact [ev:real-fact].\n"
-    )
+    yaml_file = "notes: |\n  ```\n  example\n  ```\n  A grounded fact [ev:real-fact].\n"
     scope = _scope(tmp_path, records=["real-fact"], files={"data.yaml": yaml_file})
     result = _run(scope)
     assert result.returncode == 0, result.stdout + result.stderr

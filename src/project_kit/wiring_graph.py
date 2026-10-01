@@ -119,9 +119,7 @@ def resolved_edges(wiring: cx.Wiring, repo_root: Path) -> list[pg.Edge]:
     edges = [_definer_edge(wiring, point) for point in wiring.declarations.points]
     edges.extend(_filler_edge(p, repo_root) for p in wiring.points if p.filler is not None)
     edges.extend(
-        _counterpart_edge(b)
-        for b in wiring.bindings
-        if b.counterpart.kind in _COUNTERPART_RELATION
+        _counterpart_edge(b) for b in wiring.bindings if b.counterpart.kind in _COUNTERPART_RELATION
     )
     return edges
 
