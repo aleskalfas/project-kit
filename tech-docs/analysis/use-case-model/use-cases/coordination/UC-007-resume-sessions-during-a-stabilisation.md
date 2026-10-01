@@ -20,9 +20,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-10-01T10:04:48Z
+      at: 2026-10-01T15:52:52Z
       outcome: unchanged
-      unchanged-because: both merge verbs now enqueue where the base has a merge queue, merge-pr no longer refusing such a base (#1011); resuming sessions during a stabilisation and the guards planned on both verbs are untouched, and gap K2 stands while the queue is not on and the stabilisation check is not built
+      unchanged-because: done-work and merge-pr now read a PR again when a merge or an enqueue gets no answer back from the backbone, exiting 4 when GitHub cannot say what it came to; resuming sessions during a stabilisation, the guards planned on both verbs and gap K2 are untouched
 ---
 
 # UC-007 — Resume sessions killed during a stabilisation
