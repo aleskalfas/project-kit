@@ -20,6 +20,9 @@ Gates per DEC-026:
     already there, so a re-run works). Checked before any PR is opened or
     flipped ready and before reviewers are requested, so a refused move
     leaves the PR as it was (#947). From Backlog, move to In Progress first.
+    The state is the one move-issue moves from, read once and handed to it
+    (`_lib/issue_position`, #1242); a state that cannot be read refuses here
+    too, saying why.
   - PR title is Conventional Commits.
 
 Side-effects:
@@ -33,9 +36,13 @@ Side-effects:
     the reviewers it requested.
 
 Exit codes:
-  0  PR ready + issue in Review
-  1  membership refusal
-  2  usage error / gate failure / illegal transition / gh failure
+  0  PR ready + issue in Review (moved there, or already there)
+  1  membership or foreign-repo refusal / PR body not ready for review
+     (validate-at-ready; --force overrides)
+  2  usage error / gate failure / illegal transition / unreadable state /
+     issue not found
+  3  gh failure: `gh pr create` could not open the PR, or `gh pr ready`
+     could not make it ready
   *  a failed composed move-issue passes its exit code through
 """
 
@@ -56,7 +63,9 @@ from _lib import (
     axis_labels,
     bootstrap_gate,
     classification_rules,
+    composed_move,
     default_branch,
+    issue_position,
     pr_validation,
     session_guard,
 )
@@ -74,7 +83,6 @@ from _lib.review_mode import (
     reviewer_role_from_config,
     role_based_reviewers,
 )
-from _lib.structural_type import infer_structural_type
 
 TARGET_STATE = "review"
 
@@ -183,16 +191,26 @@ def main() -> int:
 
     # Gate: the move to Review is legal from where the issue is (#947). Asked
     # before the PR is opened or flipped ready and before reviewers are
-    # requested, so a refusal changes nothing. Same position read and
-    # transition table move-issue consults, as start-work's gate (#942).
-    refusal = _transition_refusal(
+    # requested, so a refusal changes nothing. The state is the one reading
+    # move-issue moves from (#1242), as for start-work's gate (#942).
+    position = issue_position.read(
+        issue,
+        issue_position.engine_status(args.issue_number),
+        labels=labels,
+        config=config,
+        substrate_map=substrate_map,
+    )
+    refusal = composed_move.transition_refusal(
+        "review-work",
         args.issue_number,
         issue,
         labels,
+        position,
+        target=TARGET_STATE,
+        untouched="no PR opened or made ready, no reviewers requested",
         workflow=workflow,
         issue_types=issue_types,
         classification=classification,
-        substrate_map=substrate_map,
     )
     if refusal is not None:
         print(refusal, file=sys.stderr)
@@ -315,24 +333,34 @@ def main() -> int:
             )
 
     # Compose over move-issue for the state transition.
-    rc = _invoke_move_issue(
-        args.issue_number, TARGET_STATE, args.capability_root, args.allow_foreign_repo
+    rc = composed_move.invoke_move_issue(
+        args.issue_number,
+        TARGET_STATE,
+        position,
+        capability_root_arg=args.capability_root,
+        allow_foreign_repo=args.allow_foreign_repo,
     )
     if rc != 0:
         print(
-            _late_failure_message(
+            composed_move.late_failure_message(
+                "review-work",
                 args.issue_number,
+                TARGET_STATE,
                 rc,
-                pr_number=pr_number,
-                opened_url=opened_url,
-                flipped=flipped,
-                reviewers=reviewers_requested,
+                left=_left_behind(
+                    pr_number=pr_number,
+                    opened_url=opened_url,
+                    flipped=flipped,
+                    reviewers=reviewers_requested,
+                ),
+                nothing_left="This run opened no PR, made none ready and requested no reviewers.",
+                reuses="the ready PR",
             ),
             file=sys.stderr,
         )
         return rc
 
-    print(f"\n[ok] PR ready + #{args.issue_number} In Progress → Review")
+    print(_success_line(args.issue_number, position.state, workflow))
     return 0
 
 
@@ -399,137 +427,49 @@ def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
     return gh_get_issue(issue_number, config, fields="title,labels,body,state,milestone")
 
 
-def _transition_refusal(
-    issue_number: int,
-    issue: dict,
-    labels: list[str],
-    *,
-    workflow: dict,
-    issue_types: dict,
-    classification: dict,
-    substrate_map: axis_labels.SubstrateMap | None,
-) -> str | None:
-    """Why the composed `move-issue --to review` would refuse, or None.
-
-    Reads the issue's position through `lifecycle_inference.infer_current_state`
-    and its structural type through `infer_structural_type` (the readers
-    move-issue uses), and the legal moves through
-    `lifecycle_inference.legal_targets` (the table move-issue refuses on), as
-    start-work's gate does (#942). An issue already in Review passes: move-issue
-    treats that as an idempotent no-op, so re-running review-work still works
-    (after `back-to-draft`, it flips the PR ready again). When legal moves lead
-    on to Review — In Progress from Backlog; Backlog then In Progress from
-    Todo — the refusal names each of them."""
-    title = str(issue.get("title", ""))
-    structural_type = infer_structural_type(
-        title, issue_types, classification=classification, labels=labels
-    )
-    if structural_type is None:
-        return (
-            f"error: cannot determine structural type for issue #{issue_number}: "
-            f"title {title!r} matches no known [Type] prefix and no `type:*` "
-            "kind label is present. Nothing was changed.\n"
-            "  → Restore the issue's title prefix (e.g. [Task]) and re-run."
-        )
-    current = infer.infer_current_state(
-        state=str(issue.get("state", "")).lower(),
-        milestone=issue.get("milestone") or {},
-        labels=labels,
-        substrate_map=substrate_map,
-    )
-    if current == TARGET_STATE:
-        return None
-    targets = infer.legal_targets(workflow, current, structural_type)
-    if TARGET_STATE in targets:
-        return None
-    lines = [
-        f"[refused] review-work #{issue_number}: the issue is in {current!r}, and "
-        f"workflow.yaml declares no move {current!r} → {TARGET_STATE!r} for "
-        f"{structural_type!r}. Nothing was changed (no PR opened or made ready, "
-        "no reviewers requested).",
-    ]
-    steps = _moves_before_target(workflow, current, structural_type)
-    if steps:
-        moves = ", then ".join(f"`move-issue {issue_number} --to {step}`" for step in steps)
-        lines.append(f"  → move it first: {moves}, then re-run `review-work {issue_number}`.")
-    else:
-        lines.append(
-            f"  legal targets from {current!r}: {', '.join(targets) if targets else '<none>'}"
-        )
-    return "\n".join(lines)
-
-
-def _moves_before_target(workflow: dict, current: str, structural_type: str) -> list[str]:
-    """The states to move through, in order, on the shortest legal path from
-    `current` to Review, or [] when workflow.yaml declares no such path.
-
-    Walks `lifecycle_inference.legal_targets` breadth-first, so it names only
-    moves move-issue would make. Review is two moves away from Todo, so looking
-    a single move ahead would name nothing there."""
-    came_from: dict[str, str] = {current: current}
-    frontier = [current]
-    while frontier and TARGET_STATE not in came_from:
-        next_frontier: list[str] = []
-        for state in frontier:
-            for target in infer.legal_targets(workflow, state, structural_type):
-                if target not in came_from:
-                    came_from[target] = state
-                    next_frontier.append(target)
-        frontier = next_frontier
-    if TARGET_STATE not in came_from:
-        return []
-    steps: list[str] = []
-    state = came_from[TARGET_STATE]
-    while state != current:
-        steps.append(state)
-        state = came_from[state]
-    return steps[::-1]
-
-
-def _late_failure_message(
-    issue_number: int,
-    rc: int,
+def _left_behind(
     *,
     pr_number: int | None,
     opened_url: str | None,
     flipped: bool,
     reviewers: list[str],
-) -> str:
-    """The closing failure when the composed move-issue fails after the PR work.
-
-    Names each thing this run left behind — the PR it opened ready or flipped
-    from draft to ready, the reviewers it requested — so the caller can retry or
-    undo. A PR that was already ready is not something this run left behind. The
-    output must not end on the PR lines as if the run had succeeded (#947)."""
-    lines = [
-        f"\n[failed] review-work #{issue_number}: move-issue --to {TARGET_STATE} "
-        f"failed (exit {rc}); the issue did not move.",
-    ]
-    left = []
+) -> list[tuple[str, str]]:
+    """What this run changed before the composed move-issue failed, each with
+    its undo: the PR it opened ready or flipped from draft to ready, and the
+    reviewers it requested. A PR that was already ready is not something this
+    run left behind."""
+    left: list[tuple[str, str]] = []
     if opened_url is not None:
         pr = f"PR #{pr_number} ({opened_url})" if pr_number is not None else f"PR {opened_url}"
         pr_arg = str(pr_number) if pr_number is not None else opened_url
-        left.append(f"  - {pr}, opened ready for review. Undo: `gh pr close {pr_arg}`")
+        left.append((f"{pr}, opened ready for review", f"gh pr close {pr_arg}"))
     elif flipped:
         left.append(
-            f"  - PR #{pr_number}, flipped from draft to ready for review. Undo: "
-            f"`gh pr ready {pr_number} --undo`"
+            (
+                f"PR #{pr_number}, flipped from draft to ready for review",
+                f"gh pr ready {pr_number} --undo",
+            )
         )
     if reviewers:
         left.append(
-            f"  - review requested from {', '.join('@' + r for r in reviewers)} on "
-            f"PR #{pr_number}. Undo: "
-            f"`gh pr edit {pr_number} --remove-reviewer {','.join(reviewers)}`"
+            (
+                f"review requested from {', '.join('@' + r for r in reviewers)} on PR #{pr_number}",
+                f"gh pr edit {pr_number} --remove-reviewer {','.join(reviewers)}",
+            )
         )
-    if left:
-        lines.append("  Left behind by this run:")
-        lines.extend(left)
-    else:
-        lines.append("  This run opened no PR, made none ready and requested no reviewers.")
-    lines.append(
-        f"  Fix the cause above and re-run `review-work {issue_number}` (it reuses the ready PR)."
+    return left
+
+
+def _success_line(issue_number: int, moved_from: str, workflow: dict) -> str:
+    """The closing line of a run whose move-issue succeeded. A re-run from
+    Review made no move, so it does not claim one."""
+    name = infer.state_display_name
+    if moved_from == TARGET_STATE:
+        return f"\n[ok] PR ready; #{issue_number} already in {name(workflow, TARGET_STATE)}"
+    return (
+        f"\n[ok] PR ready + #{issue_number} "
+        f"{name(workflow, moved_from)} → {name(workflow, TARGET_STATE)}"
     )
-    return "\n".join(lines)
 
 
 def _find_pr_for_branch(branch: str, config: dict) -> dict | None:
@@ -654,28 +594,6 @@ def _gh_pr_add_reviewers(pr_number: int, reviewers: list[str], config: dict) -> 
         )
         return False
     return True
-
-
-def _invoke_move_issue(
-    issue_number: int,
-    target: str,
-    capability_root_arg: Path | None,
-    allow_foreign_repo: bool,
-) -> int:
-    cmd = [
-        sys.executable,
-        str(_HERE / "move-issue.py"),
-        str(issue_number),
-        "--to",
-        target,
-        "--yes",
-    ]
-    if allow_foreign_repo:
-        cmd.append("--allow-foreign-repo")
-    if capability_root_arg is not None:
-        cmd += ["--capability-root", str(capability_root_arg)]
-    proc = subprocess.run(cmd, check=False)
-    return proc.returncode
 
 
 def _read_members(capability_root: Path, yaml_loader: YAML) -> list[dict]:

@@ -104,6 +104,17 @@ def legal_targets(workflow: dict | None, current_state: str, structural_type: st
     return out
 
 
+def state_display_name(workflow: dict | None, state_id: str) -> str:
+    """The `display_name` workflow.yaml gives `state_id` ("In Progress"), or the
+    id itself when it declares none."""
+    for state in workflow_process(workflow).get("states") or []:
+        if isinstance(state, dict) and state.get("id") == state_id:
+            name = state.get("display_name")
+            if isinstance(name, str) and name:
+                return name
+    return state_id
+
+
 def infer_current_state(
     *,
     state: str,

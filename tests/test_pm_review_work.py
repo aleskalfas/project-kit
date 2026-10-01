@@ -288,10 +288,21 @@ def _last_failure(err: str) -> str:
 
 @pytest.fixture
 def run_main(rw, monkeypatch):
-    """Returns `run(issue, *, pr=None, move_rc=0, reviewer=None)` →
-    `(rc, gh_calls, moves)`. `pr` is the open PR on the branch (None: none yet)."""
+    """Returns `run(issue, *, pr=None, move_rc=0, reviewer=None, engine=None,
+    config=None)` → `(rc, gh_calls, moves)`. `pr` is the open PR on the branch
+    (None: none yet); `engine` the process engine's status payload (None: it
+    gives none, so the state is read off the issue); `config` the adopter
+    config."""
 
-    def run(issue: dict, *, pr: dict | None = None, move_rc: int = 0, reviewer: str | None = None):
+    def run(
+        issue: dict,
+        *,
+        pr: dict | None = None,
+        move_rc: int = 0,
+        reviewer: str | None = None,
+        engine: dict | None = None,
+        config: dict | None = None,
+    ):
         gh_calls: list[list[str]] = []
         moves: list[str] = []
 
@@ -306,7 +317,7 @@ def run_main(rw, monkeypatch):
                 stdout = PR_URL
             return subprocess.CompletedProcess(args=args, returncode=0, stdout=stdout, stderr="")
 
-        def move_issue(n, target, root, allow):
+        def move_issue(n, target, position, **_kw):
             moves.append(target)
             return move_rc
 
@@ -317,7 +328,8 @@ def run_main(rw, monkeypatch):
         monkeypatch.setattr(rw, "resolve_capability_root", lambda _e: CAP_ROOT)
         monkeypatch.setattr(rw.bootstrap_gate, "enforce", lambda *a, **k: True)
         monkeypatch.setattr(rw.session_guard, "enforce", lambda **k: True)
-        monkeypatch.setattr(rw, "load_adopter_config", lambda _r: {})
+        monkeypatch.setattr(rw, "load_adopter_config", lambda _r: dict(config or {}))
+        monkeypatch.setattr(rw.issue_position, "engine_status", lambda _n: engine)
         monkeypatch.setattr(rw, "_read_members", lambda *a: [])
         monkeypatch.setattr(
             rw, "resolve_invoker_identity", lambda **k: SimpleNamespace(github_login="me")
@@ -328,7 +340,7 @@ def run_main(rw, monkeypatch):
         monkeypatch.setattr(rw, "_find_issue_branch", lambda _n: BRANCH)
         monkeypatch.setattr(rw, "_ready_body_ok", lambda *a: True)
         monkeypatch.setattr(rw, "gh_run", fake_gh_run)
-        monkeypatch.setattr(rw, "_invoke_move_issue", move_issue)
+        monkeypatch.setattr(rw.composed_move, "invoke_move_issue", move_issue)
         return rw.main(), gh_calls, moves
 
     return run
@@ -426,3 +438,73 @@ def test_late_move_failure_claims_nothing_this_run_did_not_do(run_main, capsys) 
     assert _pr_writes(gh_calls) == []
     last_block = _last_failure(capsys.readouterr().err)
     assert "This run opened no PR, made none ready and requested no reviewers." in last_block
+
+
+# ---- the closing line names the move made (#1242) ----------------------
+
+
+def test_the_closing_line_names_the_move_from_in_progress(run_main, capsys) -> None:
+    rc, _gh_calls, _moves = run_main(_task(["state:in-progress"]))
+    assert rc == 0
+    assert capsys.readouterr().out.rstrip().endswith("In Progress → Review")
+
+
+def test_a_rerun_from_review_claims_no_move(run_main, capsys) -> None:
+    rc, _gh_calls, _moves = run_main(_task(["state:review"]), pr=_open_pr(draft=True))
+    assert rc == 0
+    out = capsys.readouterr().out.rstrip()
+    assert not out.endswith("In Progress → Review")
+    assert out.endswith("[ok] PR ready; #42 already in Review")
+
+
+# ---- one reading of state, shared with move-issue (#1242) --------------
+#
+# The early check reads the state move-issue moves from: the process engine's
+# position when it gives one, else the issue's own fields. The engine stands in
+# here for any authority that disagrees with the labels, as a board reader would.
+
+
+def _engine_at(state: str) -> dict:
+    return {"position": {"state": state, "indeterminate": False}, "journal": []}
+
+
+def test_the_check_follows_the_engine_where_the_label_says_otherwise(run_main) -> None:
+    # The label says Backlog, from which review-work refuses; the engine says
+    # In Progress.
+    rc, gh_calls, moves = run_main(
+        _task(["state:backlog"]), engine=_engine_at("in-progress"), reviewer="@alice"
+    )
+    assert rc == 0
+    assert [c[2] for c in _pr_writes(gh_calls)] == ["create", "edit"]
+    assert moves == ["review"]
+
+
+@pytest.mark.parametrize("pr", [None, _open_pr(draft=True)], ids=["no-pr-yet", "draft-pr"])
+def test_the_check_refuses_where_the_engine_does_though_the_label_would_pass(
+    run_main, capsys, pr
+) -> None:
+    rc, gh_calls, moves = run_main(
+        _task(["state:in-progress"]), pr=pr, engine=_engine_at("backlog"), reviewer="@alice"
+    )
+    assert rc == 2
+    assert _pr_writes(gh_calls) == []
+    assert moves == []
+    assert "the issue is in 'backlog'" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("pr", [None, _open_pr(draft=True)], ids=["no-pr-yet", "draft-pr"])
+def test_a_board_state_the_engine_cannot_place_refuses_before_any_pr_mutation(
+    run_main, capsys, pr
+) -> None:
+    rc, gh_calls, moves = run_main(
+        _task(["state:in-progress"]),
+        pr=pr,
+        config={"has_projects_v2_board": True},
+        reviewer="@alice",
+    )
+    assert rc == 2
+    assert _pr_writes(gh_calls) == []
+    assert moves == []
+    err = capsys.readouterr().err
+    assert "cannot read the issue's state" in err
+    assert "Nothing was changed (no PR opened or made ready, no reviewers requested)." in err
