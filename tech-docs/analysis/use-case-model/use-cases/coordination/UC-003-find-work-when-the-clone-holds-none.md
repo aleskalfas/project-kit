@@ -16,9 +16,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-10-01T16:28:04Z
+      at: 2026-10-01T16:48:24Z
       outcome: unchanged
-      unchanged-because: on this branch DEC-026 changes only its promote-issue row, which states the sequence the command performs — the move first, the milestone second; the work-ownership rules this use case rests on are untouched
+      unchanged-because: on this branch the merge mechanic moved into the backbone's pull-request landing module and DEC-026's helper line follows it; the promote-issue sequence main brought in does not change what this page describes
 ---
 
 # UC-003 — Find work when the clone holds none

@@ -15,9 +15,8 @@ pkit:
         - .pkit/capabilities/project-management/decisions/**
       record: [COR-017, COR-020, COR-021, COR-023, COR-039, COR-053, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050]
     revalidated:
-      at: 2026-10-01T16:09:40Z
-      outcome: unchanged
-      unchanged-because: The README says promote-issue --milestone makes the Todo to Backlog move and move-issue records its audit comment; the reorder makes that hold, and nothing it says depends on which write comes first
+      at: 2026-10-01T16:48:22Z
+      outcome: updated
 ---
 
 # project-management capability
@@ -335,6 +334,8 @@ For the standard development flow, seven verb-subject commands compose over `mov
 - **A push after the enqueue** takes the PR out of the queue — GitHub's dequeue once it is in, the auto-merge cancelled while it waits to enter — and the run exits 3: commits nobody checked do not merge.
 
 The queue is the only path to such a base, and the squash commit it makes must still be the convention's. Refused before anything is posted or enqueued: `--admin`, which would merge around the queue; `--bypass-ci` (see the CI-status gate below); a queue whose merge method is not squash; and a repository whose default squash-commit title and message are not the PR title and body — the queue composes its commit from those and ignores what the merge command passes ([project-management:DEC-013-branch-and-pr-conventions], "Merge mechanics"). Set them with `gh api -X PATCH repos/{owner}/{repo} -f squash_merge_commit_title=PR_TITLE -f squash_merge_commit_message=PR_BODY`. Where the base has no queue — or the GitHub host's API knows no merge queues — both verbs merge directly, as they always have.
+
+The reading, the merge and the enqueue, the wait and the dequeue are the backbone's one merge mechanic — `pkit pull-request`, which the verbs run in the environment the `gh:` block pins — the same one `pkit release merge` lands a release PR with ([project-management:DEC-013-branch-and-pr-conventions], "Merge mechanics"). A backbone that predates it leaves the verbs unable to read how the base merges, so they merge nothing until it is upgraded (`pkit upgrade`); the error names the `pkit` that ran. Each call is bounded — a minute for a reading, two for a merge or an enqueue, a wait's own limit plus five minutes — and one that does not answer in time is stopped with everything it started.
 
 All seven are idempotent at the level of observable state — re-running after a partial failure recovers cleanly, and a re-run does not repeat an audit comment the failed attempt already posted.
 
@@ -735,7 +736,7 @@ Two override families run across the mutating commands, and which a command expo
 
 #### Exit 4 — accepted, a re-run completes it
 
-A verb exits **4** when the act it exists for was accepted and stands — it is never rolled back — but what follows it has not run yet, and running again what its output names completes it, repeating nothing already done. `done-work` and `merge-pr` exit 4 while a merge queue holds the PR, and when gh accepted a merge that GitHub could not then be read to confirm — the output says which, and never calls an unconfirmed merge queued: the same verb run again once the PR has merged runs what follows the merge (`merge-pr` from the same clone, whose record says the steps are owed), and on a PR that did not merge it merges it. `create-issue --from-report` exits 4 when the issue was created but its link into the report failed: `pkit report link` completes it. Exit 0 always means the whole act is done, so a caller never mistakes an accepted act for a finished one.
+A verb exits **4** when the act it exists for was accepted and stands — it is never rolled back — but what follows it has not run yet, and running again what its output names completes it, repeating nothing already done. `done-work` and `merge-pr` exit 4 while a merge queue holds the PR, and when gh accepted a merge — or a merge or an enqueue got no answer back — that GitHub could not then be read to confirm: the output says which, and never calls an unconfirmed merge queued: the same verb run again once the PR has merged runs what follows the merge (`merge-pr` from the same clone, whose record says the steps are owed), and on a PR that did not merge it merges it. `create-issue --from-report` exits 4 when the issue was created but its link into the report failed: `pkit report link` completes it. Exit 0 always means the whole act is done, so a caller never mistakes an accepted act for a finished one.
 
 #### Corpus back-fill — seeding (and repairing) a value across every issue (per [project-management:DEC-037-adoption-ceremony] §2)
 
