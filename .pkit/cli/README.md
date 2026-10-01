@@ -46,8 +46,9 @@ pkit:
         - src/project_kit/environment.py
       record: [COR-004, COR-012, COR-043, COR-048, COR-049, COR-050, COR-054, PRJ-001, PRJ-003, PRJ-004, ADR-033, ADR-039, ADR-049, ADR-058, ADR-059]
     revalidated:
-      at: 2026-10-01T15:59:54Z
-      outcome: updated
+      at: 2026-10-01T16:31:02Z
+      outcome: unchanged
+      unchanged-because: "#1221 changes how many git processes the reading starts and resolves the default branch once per run; the commands, the document, the warnings and every refusal the reference describes are the same"
 ---
 
 # Command-line interface

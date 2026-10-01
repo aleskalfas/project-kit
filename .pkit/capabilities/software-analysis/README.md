@@ -12,9 +12,9 @@ pkit:
         - .pkit/capabilities/software-analysis/agents/**
       record: ["software-analysis:DEC-001", COR-049, COR-050, COR-052, COR-053]
     revalidated:
-      at: 2026-09-30T23:02:03Z
+      at: 2026-10-01T16:31:04Z
       outcome: unchanged
-      unchanged-because: "#840's lint and format pass reshapes the anchored code without changing what it does, so this page still describes it as it is"
+      unchanged-because: "#1221: the stamp asks pkit repository base once instead of twice; what it numbers past, and the reading it takes it from, are as described"
 ---
 
 # software-analysis capability
