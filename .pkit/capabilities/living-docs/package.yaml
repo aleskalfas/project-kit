@@ -83,11 +83,12 @@ connections:
         description: >-
           Results of executed checks that follow the documentation — a
           simulated reader running a guide against the system, say — one entry
-          per page or path and commit, keyed by the pair. Supplied by a
-          capability that runs such checks, or by the project; this capability
-          runs none. Advisory: evidence informs a reader-review and never
-          replaces one, so a filler that cannot answer is warned and the rest
-          still count.
+          per result, keyed by the page or path, the commit and the check, the
+          name the provider gives one executed check, opening with its own
+          name. Supplied by a capability that runs such checks, or by the
+          project; this capability runs none. Advisory: evidence informs a
+          reader-review and never replaces one, so a filler that cannot answer
+          is warned and the rest still count.
         combination: union
         inert: fallback
   extensions:

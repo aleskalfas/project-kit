@@ -57,16 +57,25 @@ What is checked, each against the record's words:
 - **Evidence a record copies** (point 7). A record keeps each evidence entry
   it draws on whole, in the evidence point's entry shape: the record is
   history, and the point holds only what its fillers report now. From the
-  record alone: an entry whose `id` is not its own `<artefact>@<commit>` is an
-  error, and so is evidence for an artefact the record gives no outcome, since
-  evidence supports an outcome and never replaces one; a `failed` result under
-  `holds`, or a `passed` one under `code-regressed`, is a warning, since point
-  7 pairs a passing result with holds and a failing one with a regression.
-  Against the point as it resolves now (`_lib/evidence.py`), read only when
-  some record copies evidence: a copy that differs from the entry the point
-  holds under its id is a warning. The evidence advises, so an id the point no
-  longer holds, or a point that does not resolve, says nothing: the record's
-  copy is the evidence.
+  record alone: an entry whose `id` is not its own `<artefact>@<commit>#<check>`
+  is an error, and so is evidence for an artefact the record gives no outcome,
+  since evidence supports an outcome and never replaces one; so is a journey's
+  entry naming as a step no use case of the analysis — withdrawn ones count,
+  and the journey's steps as they stand now are never compared, since the
+  record is history; a `failed` result under `holds`, or a `passed` one under
+  `code-regressed`, is a warning, since point 7 pairs a passing result with
+  holds and a failing one with a regression. Against the point as it resolves
+  now (`_lib/evidence.py`), read only when some record copies evidence: a copy
+  that differs from the entry the point holds under its id is a warning. The
+  evidence advises, so an id the point no longer holds, or a point that does
+  not resolve, says nothing: the record's copy is the evidence.
+- **The point's own entries** (point 7), wherever the point is read: a
+  capability's entry whose check opens with another name than the
+  capability's, and any entry whose `id` is not its own three fields, are
+  warnings. The opening name is a convention and never refused: the project
+  replaces a capability's entry by writing one under that capability's check,
+  so the project's entries are exempt from it. A project with no record that
+  copies evidence never reads the point, and sees neither warning.
 
 And a finding that never fails:
 
@@ -529,7 +538,7 @@ def _record_findings(
             found.append(Finding(ERROR, at(rel, pointer), message))
         found += _cited(rel, data.get("outcomes"), analysis)
         record_found, record_copies = _evidence_in_record(
-            rel, data.get("evidence"), data.get("outcomes")
+            rel, data.get("evidence"), data.get("outcomes"), analysis
         )
         found += record_found
         copies += record_copies
@@ -605,13 +614,13 @@ def _revalidated_on(root: Path, artefact: Artefact) -> str | None:
 
 
 def _evidence_in_record(
-    rel: str, copied: object, outcomes: object
+    rel: str, copied: object, outcomes: object, analysis: Analysis
 ) -> tuple[list[Finding], list[Copy]]:
     """What the record alone says of the evidence entries it copies — an entry whose id
-    is not its own `<artefact>@<commit>`, evidence for an artefact without an outcome,
-    a result the outcome is at odds with — and the copies fit to compare with the
-    point: each in the entry's shape, its id its own pair. The schema reports an
-    entry of another shape."""
+    is not its own `<artefact>@<commit>#<check>`, evidence for an artefact without an
+    outcome, a journey's step that is no use case of the analysis, a result the outcome
+    is at odds with — and the copies fit to compare with the point: each in the entry's
+    shape, its id its own three fields. The schema reports an entry of another shape."""
     if not isinstance(copied, list):
         return [], []
     found: list[Finding] = []
@@ -620,22 +629,42 @@ def _evidence_in_record(
         if not schemas.is_evidence(entry):
             continue  # the schema reports it
         location = at(rel, f"/evidence/{index}")
-        pair = f"{entry['artefact']}@{entry['commit']}"
-        if entry["id"] != pair:
+        own = evidence.own_id(entry)
+        if entry["id"] != own:
             found.append(
                 Finding(
                     ERROR,
                     location,
-                    f"the evidence entry {entry['id']} is for {pair} by its own `artefact` "
-                    f"and `commit`: an entry's id is the pair it is for, `<artefact>@<commit>` "
-                    f"— write `id: {pair}`, or correct the fields (DEC-001 point 7)",
+                    f"the evidence entry {entry['id']} is for {own} by its own `artefact`, "
+                    f"`commit` and `check`: an entry's id is the three parts it is for, "
+                    f"`<artefact>@<commit>#<check>` — write `id: {own}`, or correct the "
+                    f"fields (DEC-001 point 7)",
                 )
             )
             continue  # which of the two is meant is unknown, so nothing more is read from it
         copies.append((location, entry))
+        found += _journey_steps(location, entry, analysis)
         if isinstance(outcomes, dict):
             found += _against_the_outcome(location, entry, outcomes)
     return found, copies
+
+
+def _journey_steps(location: str, entry: Mapping[str, Any], analysis: Analysis) -> list[Finding]:
+    """A journey's evidence names the use cases its run passed through: each a use case
+    of the analysis, withdrawn ones included. A record is history, so the steps are
+    never compared with the journey's as they stand now."""
+    if not schemas.id_pattern(JOURNEY).match(entry["artefact"]):
+        return []
+    return [
+        Finding(
+            ERROR,
+            f"{location}/steps/{index}",
+            f"no use case {step} in the analysis: a journey's evidence names the use cases "
+            f"its run passed through, by id, withdrawn ones included (DEC-001 points 3 and 7)",
+        )
+        for index, step in enumerate(entry.get("steps") or [])
+        if analysis.of(step, USE_CASE) is None
+    ]
 
 
 def _against_the_outcome(
@@ -671,10 +700,11 @@ def _against_the_outcome(
 
 
 def _copies_against_the_point(root: Path, copies: list[Copy]) -> tuple[str, list[Finding]]:
-    """Each copy against the entry the evidence point now holds under its id: a summary
-    line, and a warning for each that differs. A record's copy is history and the
-    evidence advises (DEC-001 point 7), so an id the point no longer holds, or a
-    point that does not resolve, says nothing."""
+    """The evidence point, read now: what its own entries break (`_entries_of_the_point`),
+    then each copy against the entry it now holds under its id — a summary line, and a
+    warning for each that differs. A record's copy is history and the evidence advises
+    (DEC-001 point 7), so an id the point no longer holds, or a point that does not
+    resolve, says nothing."""
     point = evidence.read_evidence(root)
     if not point.resolved:
         return (
@@ -682,11 +712,12 @@ def _copies_against_the_point(root: Path, copies: list[Copy]) -> tuple[str, list
             f"{len(copies)} copied entry(ies) not compared.",
             [],
         )
-    found: list[Finding] = []
+    found = _entries_of_the_point(point)
     for location, copy in copies:
-        held = point.entries.get(str(copy["id"]))
-        if held is None:
+        entry = point.entries.get(str(copy["id"]))
+        if entry is None:
             continue
+        held = entry.value
         differs = sorted(key for key in {*copy, *held} if copy.get(key) != held.get(key))
         if not differs:
             continue
@@ -706,3 +737,43 @@ def _copies_against_the_point(root: Path, copies: list[Copy]) -> tuple[str, list
         f"{len(copies)} copied entry(ies) compared with it.",
         found,
     )
+
+
+def _entries_of_the_point(point: evidence.Evidence) -> list[Finding]:
+    """Each entry the point holds, as its fillers report it now: one whose `id` is not
+    its own three fields, and a capability's whose check opens with another name than
+    the capability's own. Both only warn: the evidence advises, and the opening name is
+    a convention, never refused — the project replaces a capability's entry by writing
+    one under that capability's check, so the project's entries are exempt from it
+    (DEC-001 point 7)."""
+    found: list[Finding] = []
+    for entry_id, held in point.entries.items():
+        location = f"{evidence.POINT}#{entry_id}"
+        supplier = repr(held.origin) if held.from_capability else "the project's filler"
+        own = evidence.own_id(held.value)
+        if entry_id != own:
+            found.append(
+                Finding(
+                    WARNING,
+                    location,
+                    f"{supplier} supplies it for {own} by its own `artefact`, `commit` and "
+                    f"`check`: an entry's id is the three parts it is for, "
+                    f"`<artefact>@<commit>#<check>`, and a record that copies it is held to "
+                    f"that — its filler writes `id: {own}`, or corrects the fields (DEC-001 "
+                    f"point 7)",
+                )
+            )
+        check = str(held.value["check"])
+        if held.from_capability and evidence.opening(check) != held.origin:
+            found.append(
+                Finding(
+                    WARNING,
+                    location,
+                    f"{supplier} reports it under the check {check}, which opens with "
+                    f"{evidence.opening(check)!r}: a capability's checks open with its own "
+                    f"name, so two providers' results for one artefact at one commit stand "
+                    f"side by side and only a real double claim collides — {supplier} "
+                    f"names its checks {held.origin}.… (DEC-001 point 7)",
+                )
+            )
+    return found

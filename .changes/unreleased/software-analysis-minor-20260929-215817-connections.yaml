@@ -7,8 +7,10 @@ body: >
   Connections (DEC-001 points 7 and 8): the capability provides the
   `pkit::analysis` role and defines the `pkit::analysis:revalidation-evidence`
   data point under it — executed results that confirm or refute an artefact at
-  a commit, one entry per artefact and commit keyed `<artefact>@<commit>`, the
-  commit by its full name, `union`, no default, inert policy `fallback` — with
+  a commit, one entry per result keyed `<artefact>@<commit>#<check>`, the check
+  being the name its provider gives one executed check, opening with the
+  provider's own name (`project` for the project's own), the commit by its full
+  name, `union`, no default, inert policy `fallback` — with
   its companion schema, `schemas/revalidation-evidence.schema.json`, which
   reads alone, filled by a capability or by the project's filler file. A
   revalidation record may copy the entries it drew on under `evidence`, whole
@@ -16,9 +18,11 @@ body: >
   the fillers report later. `pkit analysis validate` fails a record copying
   evidence for an artefact it gives no outcome, since evidence supports an
   outcome and never replaces one, and an entry whose id is not its own
-  `<artefact>@<commit>`; it warns on a `failed` result under `holds` or a
+  `<artefact>@<commit>#<check>`; it warns on a `failed` result under `holds` or a
   `passed` one under `code-regressed`, and on a copy that differs from what the
-  point now holds under its id. The capability contributes its actors in force to
+  point now holds under its id; and where it reads the point, it warns on a
+  capability's entry whose check opens with another name, and on an entry whose
+  id is not its own. The capability contributes its actors in force to
   `pkit::documentation:readers` through a new query command, `pkit analysis
   fill-readers`: each actor a reader whose id is the actor's id in lower case
   (`ACT-tester` → `act-tester`) and whose description is its name and needs.
