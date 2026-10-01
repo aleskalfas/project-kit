@@ -1,0 +1,10 @@
+component: backbone
+kind: none
+body: >
+  COR-045 accepted: dispatching an agent separates transport (how a result
+  reaches its caller — plural, declared by property, adapter-realized,
+  project-configured) from gate evidence (what may satisfy a gate — a durable,
+  attributable artifact the transport realization writes, never the
+  dispatcher's report). Design-ahead (`none`): the contract fixes the shape and
+  the realization declares its own surface, so nothing an adopter can observe
+  changes on sync (#779, for #771).
