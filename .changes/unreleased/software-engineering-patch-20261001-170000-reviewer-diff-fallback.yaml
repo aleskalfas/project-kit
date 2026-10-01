@@ -2,6 +2,7 @@ component: software-engineering
 kind: patch
 custom:
   category: Changed
+  pr: "1205"
 body: >
   The code-review panel (`code-reviewer`, `security-reviewer`,
   `docs-reviewer`) reads a pull request's diff from the local checkout,

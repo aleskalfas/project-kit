@@ -2,6 +2,7 @@ component: project-management
 kind: patch
 custom:
   category: Changed
+  pr: "1205"
 body: >
   `pm-reviewer` reads a pull request's diff from the local checkout,
   `git diff <base>...<head>`, when `gh pr diff` refuses it for changing more
