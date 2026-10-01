@@ -146,8 +146,10 @@ Side-effects, in order (#878; the merge mechanic itself lives once in
     A direct merge counts only once GitHub reports the PR merged: on a base
     that requires a queue gh exits 0 having only enqueued, and such a PR is
     waited for like any queued one. When GitHub cannot be read after gh
-    accepted the merge, the run says so and exits 4 with the issue in Review;
-    a later `done-work <N>` finds the PR merged, or still open, and finishes.
+    accepted the merge — or after a merge or an enqueue that got no answer
+    back, which is never taken for a failed one — the run says so and exits
+    4 with the issue in Review; a later `done-work <N>` finds the PR merged,
+    or still open, and finishes.
   - Composes over `move-issue.py --to done` IMMEDIATELY after the merge, so
     no best-effort step can stand between the irreversible merge and the
     lifecycle transition.
@@ -182,8 +184,8 @@ Exit codes:
   3  the merge failed; the PR left the merge queue without merging, or was
      taken out of it because its head moved
   4  accepted, a re-run completes it: the PR is in the merge queue and has
-     not been seen merged, or gh accepted the merge and GitHub could not be
-     read to confirm it
+     not been seen merged, or gh accepted the merge — or a merge or an
+     enqueue got no answer back — and GitHub could not be read to confirm it
 """
 
 from __future__ import annotations
@@ -1037,10 +1039,10 @@ def _queue_unreadable(issue_number: int, reason: str) -> str:
 def _not_merged(issue_number: int, pr_number: int, base: str, landing: pr_merge.Landing) -> int:
     """Report a landing that did not end merged; the run's exit code.
 
-    Accepted (exit 4) are a PR the queue was handed and a direct merge gh
-    accepted that GitHub could not then confirm: a later run finds the PR
-    merged, or still open, and finishes. Everything else merged nothing, and
-    the issue stays where it is.
+    Accepted (exit 4) are a PR the queue was handed, and a merge GitHub could
+    not then confirm — one gh accepted, or a merge or an enqueue that got no
+    answer back: a later run finds the PR merged, or still open, and
+    finishes. Everything else merged nothing, and the issue stays where it is.
     """
     reading = landing.reading
     if landing.outcome == pr_merge.STILL_QUEUED:

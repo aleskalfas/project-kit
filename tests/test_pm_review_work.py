@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -246,3 +248,181 @@ def test_pr_ready_returns_true_on_success(rw, monkeypatch) -> None:
 
     monkeypatch.setattr(rw, "gh_run", fake_gh_run)
     assert rw._gh_pr_ready(99, {}) is True
+
+
+# ---- transition gate + late failure (#947) -----------------------------
+#
+# Drive the real `main()` against the shipped workflow.yaml / issue-types.yaml,
+# with its gates stubbed and every gh call answered by a fake that records it,
+# so a test can say which PR writes were made.
+
+CAP_ROOT = SCRIPT.parent.parent
+BRANCH = "fix/42-do-the-thing"
+PR_URL = "https://github.com/o/r/pull/77"
+PR_READS = {"list", "view"}
+
+
+def _task(labels: list[str]) -> dict:
+    """A bug Task (the `fix/` branch's type) carrying `labels` besides its type."""
+    return {
+        "title": "[Task] do the thing",
+        "labels": ["type:bug", *labels],
+        "state": "OPEN",
+        "body": "Feature: #1\n\n## What\nx",
+        "milestone": None,
+    }
+
+
+def _open_pr(*, draft: bool) -> dict:
+    return {"number": 77, "state": "OPEN", "isDraft": draft, "headRefName": BRANCH}
+
+
+def _pr_writes(gh_calls: list[list[str]]) -> list[list[str]]:
+    """The `gh pr` calls that change a PR: every one but a list or a view."""
+    return [c for c in gh_calls if c[:2] == ["gh", "pr"] and c[2] not in PR_READS]
+
+
+def _last_failure(err: str) -> str:
+    return err[err.rindex("[failed]") :]
+
+
+@pytest.fixture
+def run_main(rw, monkeypatch):
+    """Returns `run(issue, *, pr=None, move_rc=0, reviewer=None)` →
+    `(rc, gh_calls, moves)`. `pr` is the open PR on the branch (None: none yet)."""
+
+    def run(issue: dict, *, pr: dict | None = None, move_rc: int = 0, reviewer: str | None = None):
+        gh_calls: list[list[str]] = []
+        moves: list[str] = []
+
+        def fake_gh_run(args, config, **kwargs):
+            gh_calls.append(list(args))
+            stdout = ""
+            if args[:3] == ["gh", "pr", "list"]:
+                stdout = json.dumps([pr] if pr else [])
+            elif args[:3] == ["gh", "pr", "view"]:
+                stdout = json.dumps({"body": "filled"})
+            elif args[:3] == ["gh", "pr", "create"]:
+                stdout = PR_URL
+            return subprocess.CompletedProcess(args=args, returncode=0, stdout=stdout, stderr="")
+
+        def move_issue(n, target, root, allow):
+            moves.append(target)
+            return move_rc
+
+        argv = ["review-work", "42", "--yes", "--base", "main"]
+        if reviewer is not None:
+            argv += ["--reviewer", reviewer]
+        monkeypatch.setattr(sys, "argv", argv)
+        monkeypatch.setattr(rw, "resolve_capability_root", lambda _e: CAP_ROOT)
+        monkeypatch.setattr(rw.bootstrap_gate, "enforce", lambda *a, **k: True)
+        monkeypatch.setattr(rw.session_guard, "enforce", lambda **k: True)
+        monkeypatch.setattr(rw, "load_adopter_config", lambda _r: {})
+        monkeypatch.setattr(rw, "_read_members", lambda *a: [])
+        monkeypatch.setattr(
+            rw, "resolve_invoker_identity", lambda **k: SimpleNamespace(github_login="me")
+        )
+        monkeypatch.setattr(rw, "check_membership", lambda *a: SimpleNamespace(allowed=True))
+        monkeypatch.setattr(rw.axis_labels, "load_substrate_map", lambda _r: None)
+        monkeypatch.setattr(rw, "_gh_get_issue", lambda _n, _c: issue)
+        monkeypatch.setattr(rw, "_find_issue_branch", lambda _n: BRANCH)
+        monkeypatch.setattr(rw, "_ready_body_ok", lambda *a: True)
+        monkeypatch.setattr(rw, "gh_run", fake_gh_run)
+        monkeypatch.setattr(rw, "_invoke_move_issue", move_issue)
+        return rw.main(), gh_calls, moves
+
+    return run
+
+
+@pytest.mark.parametrize("pr", [None, _open_pr(draft=True)], ids=["no-pr-yet", "draft-pr"])
+def test_refuses_from_backlog_before_any_pr_mutation(run_main, capsys, pr) -> None:
+    rc, gh_calls, moves = run_main(_task(["state:backlog"]), pr=pr, reviewer="@alice")
+    assert rc == 2
+    assert _pr_writes(gh_calls) == []  # no PR opened, flipped or given reviewers
+    assert moves == []
+    err = capsys.readouterr().err
+    assert "the issue is in 'backlog'" in err
+    assert "move it first: `move-issue 42 --to in-progress`" in err
+    assert "re-run `review-work 42`" in err
+
+
+def test_refusal_from_todo_names_each_move_on_the_way(run_main, capsys) -> None:
+    # No state:* label and no milestone resolves Todo through the shared reader;
+    # Review is two moves away from it.
+    rc, gh_calls, moves = run_main(_task([]), reviewer="@alice")
+    assert rc == 2
+    assert _pr_writes(gh_calls) == []
+    assert moves == []
+    err = capsys.readouterr().err
+    assert "the issue is in 'todo'" in err
+    assert "`move-issue 42 --to backlog`, then `move-issue 42 --to in-progress`" in err
+
+
+def test_refusal_without_a_path_lists_legal_targets(run_main, capsys) -> None:
+    # Review is Task-only in workflow.yaml: an EPIC has no way there.
+    epic = {**_task([]), "title": "[EPIC] a big thing", "labels": ["state:in-progress"]}
+    rc, gh_calls, moves = run_main(epic)
+    assert rc == 2
+    assert _pr_writes(gh_calls) == []
+    assert moves == []
+    assert "legal targets from 'in-progress': done" in capsys.readouterr().err
+
+
+def test_opens_a_ready_pr_and_moves_from_in_progress(run_main, capsys) -> None:
+    rc, gh_calls, moves = run_main(_task(["state:in-progress"]), reviewer="@alice")
+    assert rc == 0
+    assert [c[2] for c in _pr_writes(gh_calls)] == ["create", "edit"]
+    assert moves == ["review"]
+    out, err = capsys.readouterr()
+    assert "[ok] PR ready" in out
+    assert "[failed]" not in err
+
+
+def test_rerun_in_review_leaves_a_ready_pr_alone(run_main) -> None:
+    # move-issue treats review → review as an idempotent no-op.
+    rc, gh_calls, moves = run_main(_task(["state:review"]), pr=_open_pr(draft=False))
+    assert rc == 0
+    assert _pr_writes(gh_calls) == []
+    assert moves == ["review"]
+
+
+def test_rerun_in_review_flips_a_draft_ready_again(run_main) -> None:
+    # After back-to-draft the issue stays in Review; review-work makes it ready.
+    rc, gh_calls, moves = run_main(_task(["state:review"]), pr=_open_pr(draft=True))
+    assert rc == 0
+    assert [c[2] for c in _pr_writes(gh_calls)] == ["ready"]
+    assert moves == ["review"]
+
+
+def test_late_move_failure_names_the_opened_pr_and_its_reviewers(run_main, capsys) -> None:
+    rc, gh_calls, moves = run_main(_task(["state:in-progress"]), move_rc=3, reviewer="@alice")
+    assert rc == 3  # move-issue's exit code passes through
+    assert [c[2] for c in _pr_writes(gh_calls)] == ["create", "edit"]
+    assert moves == ["review"]
+    out, err = capsys.readouterr()
+    assert "[ok]" not in out
+    last_block = _last_failure(err)
+    assert err.rstrip().endswith("(it reuses the ready PR).")  # the output ends on it
+    assert "the issue did not move" in last_block
+    assert f"PR #77 ({PR_URL}), opened ready for review" in last_block
+    assert "review requested from @alice on PR #77" in last_block
+
+
+def test_late_move_failure_names_a_flipped_draft(run_main, capsys) -> None:
+    rc, _gh_calls, _moves = run_main(
+        _task(["state:in-progress"]), pr=_open_pr(draft=True), move_rc=3
+    )
+    assert rc == 3
+    last_block = _last_failure(capsys.readouterr().err)
+    assert "PR #77, flipped from draft to ready for review" in last_block
+    assert "review requested" not in last_block
+
+
+def test_late_move_failure_claims_nothing_this_run_did_not_do(run_main, capsys) -> None:
+    rc, gh_calls, _moves = run_main(
+        _task(["state:in-progress"]), pr=_open_pr(draft=False), move_rc=3
+    )
+    assert rc == 3
+    assert _pr_writes(gh_calls) == []
+    last_block = _last_failure(capsys.readouterr().err)
+    assert "This run opened no PR, made none ready and requested no reviewers." in last_block

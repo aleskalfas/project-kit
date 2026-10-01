@@ -1,7 +1,8 @@
 """Tests for set-field's pure planning logic (no network) + its exit contract.
 
 Covers label resolution + idempotent diff for priority/workstream, the
-parent-ref body rewrite (replace / prepend / no-op), value-vocabulary reads,
+parent-ref body rewrite (replace / prepend / no-op, and below a DEC-013
+integration marker that stays the first line — #765), value-vocabulary reads,
 the BOARD single-select write (#724 — name → id resolution, and the five
 refusals that each name what the board actually offers), and the honesty posture
 inherited from #709: a requested axis that was not written is `[refused]` with a
@@ -712,6 +713,94 @@ def test_plan_parent_preserves_milestone_link_form_recognised(sf) -> None:
     assert "Milestone:" not in new_body.splitlines()[0]
 
 
+@pytest.mark.parametrize(
+    ("body", "expected"),
+    [
+        ("Feature: #1\n\n## What\nx\n", "Feature: #9\n\n## What\nx\n"),
+        ("\n\nFeature: #1\n\n## What\nx\n", "\n\nFeature: #9\n\n## What\nx\n"),
+        ("## What\nx\n", "Feature: #9\n\n## What\nx\n"),
+        ("", "Feature: #9\n"),
+    ],
+    ids=["replace", "replace-after-leading-blanks", "prepend", "empty-body"],
+)
+def test_plan_parent_unmarked_body_exact_rewrite(sf, body, expected) -> None:
+    new_body, result = sf._plan_parent(body, "Feature: #9")
+    assert new_body == expected
+    assert result.changed is True
+
+
+# --- parent-ref planning under a DEC-013 integration marker (#765) ----------
+#
+# A marked body opens with `Integration: integration/<slug>`, directly above the
+# parent-ref with no blank line between (DEC-013). `--parent` rewrites the
+# parent-ref below the marker; it must never push the marker off the first line,
+# where every reader looks for it — a buried marker also loses the issue its
+# integration branch.
+
+_MARKER = "Integration: integration/foo"
+
+
+def test_plan_parent_under_marker_replaces_the_ref_below_it(sf) -> None:
+    body = f"{_MARKER}\nFeature: #1\n\n## What\nx\n"
+    new_body, result = sf._plan_parent(body, "Feature: #9")
+    assert new_body == f"{_MARKER}\nFeature: #9\n\n## What\nx\n"
+    assert result.changed is True
+    assert "was 'Feature: #1'" in result.message
+
+
+def test_plan_parent_under_marker_idempotent_noop(sf) -> None:
+    body = f"{_MARKER}\nFeature: #9\n\n## What\nx\n"
+    new_body, result = sf._plan_parent(body, "Feature: #9")
+    assert new_body == body
+    assert result.changed is False
+    assert "no-op" in result.message
+
+
+def test_plan_parent_under_marker_crlf_reset_is_a_noop(sf) -> None:
+    body = f"{_MARKER}\r\nFeature: #9\r\n\r\n## What\r\n"
+    new_body, result = sf._plan_parent(body, "Feature: #9")
+    assert new_body == body
+    assert result.changed is False
+
+
+@pytest.mark.parametrize(
+    ("body", "expected"),
+    [
+        (f"{_MARKER}\n\n## What\nx\n", f"{_MARKER}\nFeature: #9\n\n## What\nx\n"),
+        (f"{_MARKER}\n## What\nx\n", f"{_MARKER}\nFeature: #9\n\n## What\nx\n"),
+        (f"{_MARKER}\n", f"{_MARKER}\nFeature: #9\n"),
+    ],
+    ids=["blank-then-content", "content-directly-below", "marker-only"],
+)
+def test_plan_parent_under_marker_without_a_ref_inserts_directly_below(sf, body, expected) -> None:
+    new_body, result = sf._plan_parent(body, "Feature: #9")
+    assert new_body == expected
+    assert result.changed is True
+    assert "inserted below the integration marker" in result.message
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        f"{_MARKER}\nFeature: #1\n\n## What\n",
+        f"{_MARKER}\n\n## What\n",
+        f"\n\n{_MARKER}\nFeature: #1\n\n## What\n",
+        f"{_MARKER}\r\nFeature: #1\r\n\r\n## What\r\n",
+        f"{_MARKER}\r\n\r\n## What\r\n",
+    ],
+    ids=["ref", "no-ref", "leading-blanks", "crlf-ref", "crlf-no-ref"],
+)
+def test_plan_parent_under_marker_reads_back_marker_first(sf, body) -> None:
+    """Whatever the layout, the written body opens with the marker and the new
+    parent-ref directly below it, and the readers find both."""
+    new_body, _result = sf._plan_parent(body, "Feature: #9")
+    lines = [ln.strip() for ln in new_body.splitlines()]
+    first = next(i for i, ln in enumerate(lines) if ln)
+    assert lines[first : first + 2] == [_MARKER, "Feature: #9"]
+    assert sf.infer.parent_ref(new_body) == 9
+    assert sf.infer.integration_slug(new_body) == "foo"
+
+
 # --- structural type + parent-ref form -------------------------------------
 
 
@@ -1419,6 +1508,22 @@ def test_main_parent_moves_the_native_link_with_the_first_line(
     assert captured["bodies"] and captured["bodies"][0].startswith("Feature: #9\n")
     assert "parent: native link moves from #7 to #9" in out
     assert "moved #42 from #7 to #9 as a native sub-issue" in out
+
+
+def test_main_parent_on_a_marked_body_keeps_the_marker_first(
+    sf, tmp_path, monkeypatch, capsys
+) -> None:
+    """#765: a marked descendant re-parented through the verb keeps its DEC-013
+    marker as the first line, the new parent-ref directly below it."""
+    native = _NativeTracker({7: {42}})
+    body = "Integration: integration/foo\nFeature: #7\n\n## What\nx\n"
+    captured = _run_parent(sf, monkeypatch, tmp_path, native=native, body=body)
+
+    assert captured["rc"] == 0
+    assert native.native == {7: set(), 9: {42}}
+    assert captured["bodies"][0].startswith(
+        "Integration: integration/foo\nFeature: #9\n\n## What\nx\n"
+    )
 
 
 def test_main_parent_dry_run_plans_the_move_and_writes_nothing(
