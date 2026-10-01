@@ -19,9 +19,9 @@ pkit:
         - src/project_kit/working_tree.py
       record: [COR-018, COR-019, COR-020, COR-023, COR-029, COR-048, COR-050, COR-051, COR-052, COR-053, ADR-056, ADR-057]
     revalidated:
-      at: 2026-09-30T23:02:09Z
+      at: 2026-10-01T15:15:48Z
       outcome: unchanged
-      unchanged-because: "#840's lint and format pass reshapes the anchored code without changing what it does, so this page still describes it as it is"
+      unchanged-because: "#1198 moves the line-break helpers out of friction discovery into a module of their own, unchanged; discovery reads every file as it did, so what this page says of it holds"
 ---
 
 # Schemas
