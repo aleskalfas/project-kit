@@ -2,6 +2,7 @@ component: project-management
 kind: patch
 custom:
   category: Fixed
+  pr: "1234"
 body: >
   `set-field <N> --parent <P>` on an issue whose body opens with an
   `Integration: integration/<slug>` marker now rewrites the parent-ref on the
