@@ -19,6 +19,8 @@ from typing import TYPE_CHECKING
 import click
 
 if TYPE_CHECKING:
+    from ruamel.yaml.comments import CommentedMap
+
     from project_kit.capabilities import CapabilitySource, MandatoryUpstream
 
 from project_kit import (
@@ -346,10 +348,17 @@ def config_set(key: str, value: str, yes: bool) -> None:
         ) from exc
     resolved = project_config.resolve_key(schema, key)
     typed = project_config.coerce_value(resolved, value)
+
+    def mutate(data: CommentedMap) -> None:
+        project_config.set_value(data, resolved, typed)
+
+    if not project_config.preview_config(target_root, mutate).changes:
+        click.echo(f"{resolved.dotted} is already {typed}; nothing to write.")
+        return
     rerun = f"pkit config set {shlex.quote(key)} {shlex.quote(value)} --yes"
     project_config.write_config(
         target_root,
-        lambda data: project_config.set_value(data, resolved, typed),
+        mutate,
         consent=project_config.Consent(yes=yes, rerun=rerun),
         description=f"Set {resolved.dotted} = {typed!r}",
     )

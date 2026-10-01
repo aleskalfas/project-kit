@@ -1,0 +1,17 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `pkit config set` changes only the lines of the key it sets (#1198). Every
+  write to `.pkit/project/config.yaml` used to lay the whole file out again,
+  re-indenting every list, so a one-key change showed as a rewrite of the file.
+  The writer now edits the file in place: a value on one line keeps its line,
+  quoting and trailing comment; a list or mapping replaces only its own key's
+  lines, in its own layout; a new key goes after its last sibling, in the file's
+  layout. Lists, comments, blank lines, indentation, key order and `\r\n` line
+  endings elsewhere stay byte for byte. A change the edit cannot make exactly —
+  removing a key, a file that mixes line endings, a key shared through a YAML
+  alias — is refused, and nothing is written. Setting a value already set
+  writes nothing and asks nothing; `config set` says so. The same writer serves
+  `pkit connections providers set` and the saved project name.

@@ -20,9 +20,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-10-01T10:04:48Z
+      at: 2026-10-01T15:15:15Z
       outcome: unchanged
-      unchanged-because: both merge verbs now enqueue where the base has a merge queue, merge-pr no longer refusing such a base (#1011); resuming sessions during a stabilisation and the guards planned on both verbs are untouched, and gap K2 stands while the queue is not on and the stabilisation check is not built
+      unchanged-because: "_lib/milestone.py gains the rollforward reads (the date trigger, the Rollforward target: line, the next-numbered Milestone) and a native-field key on each child; how a session reads its position and the stabilisation from the Milestone is untouched"
 ---
 
 # UC-007 — Resume sessions killed during a stabilisation

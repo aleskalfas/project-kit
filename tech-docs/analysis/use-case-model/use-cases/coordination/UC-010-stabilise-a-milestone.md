@@ -20,9 +20,9 @@ pkit:
       artefact:
         - ACT-operator
     revalidated:
-      at: 2026-10-01T10:04:50Z
+      at: 2026-10-01T15:15:12Z
       outcome: unchanged
-      unchanged-because: "both merge verbs now enqueue where the base has a merge queue, merge-pr included (#1011): the merge-time evaluation gap K2 names as one fix has its mechanism, but the queue is not on and the stabilisation check it would run is not built, so the use case and K2 stand"
+      unchanged-because: closing the Milestone after the release (5a) now rolls a date-triggered close's open children forward; the stabilisation line, its lift, release scope and the guards are untouched, and the release Milestone closes with its children closed
 ---
 
 # UC-010 — Stabilise a Milestone for a release
