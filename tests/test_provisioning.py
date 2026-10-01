@@ -365,7 +365,7 @@ def local_index(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[_Lo
     requests: list[str] = []
 
     class Handler(http.server.SimpleHTTPRequestHandler):
-        def __init__(self, *args, **kwargs) -> None:  # type: ignore[no-untyped-def]
+        def __init__(self, *args, **kwargs) -> None:
             super().__init__(*args, directory=str(served), **kwargs)
 
         def log_message(self, format: str, *args: object) -> None:  # the base class's names

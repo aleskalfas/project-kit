@@ -8,7 +8,7 @@ command that resolves it."""
 from __future__ import annotations
 
 import pytest
-from click.testing import CliRunner
+from click.testing import CliRunner, Result
 
 from project_kit import config_validate as cv
 from project_kit import connections as cx
@@ -37,8 +37,8 @@ def repo(make_adopter_repo: MakeAdopterRepo) -> AdopterRepo:
     return repo
 
 
-def _set(*args: str, **kwargs: str) -> object:
-    return CliRunner().invoke(main, ["connections", "providers", "set", *args], **kwargs)
+def _set(*args: str, input: str | None = None) -> Result:
+    return CliRunner().invoke(main, ["connections", "providers", "set", *args], input=input)
 
 
 def _config(repo: AdopterRepo) -> str | None:
@@ -57,7 +57,8 @@ def test_dry_run_shows_the_diff_and_writes_nothing(repo: AdopterRepo) -> None:
 
 
 def test_yes_writes_the_selection_and_resolves_the_conflict(repo: AdopterRepo) -> None:
-    assert cx.resolve_wiring(repo.root).role(DOCS).conflict
+    before = cx.resolve_wiring(repo.root).role(DOCS)
+    assert before is not None and before.conflict
     result = _set(DOCS, "docs-b", "--yes")
     assert result.exit_code == 0, result.output
     assert f"set connections.providers.{DOCS} = docs-b  ({CONFIG})" in result.output

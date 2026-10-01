@@ -1764,7 +1764,7 @@ def test_setup_autonomy_down_reports_accommodation_residual(tmp_path, monkeypatc
 from packaging.version import Version as _V  # noqa: E402
 
 
-def _force_uv(monkeypatch, *, platform="darwin", version="0.9.8"):
+def _force_uv(monkeypatch, *, platform="darwin", version: str | None = "0.9.8"):
     """Make the auto-apply predicate deterministic: pin the platform and the
     installed uv version. version=None simulates uv unreadable / absent."""
     from project_kit import permissions as perm

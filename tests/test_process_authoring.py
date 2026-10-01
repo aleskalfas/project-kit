@@ -48,6 +48,7 @@ import stat
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 import pytest
 from click.testing import CliRunner
@@ -115,8 +116,8 @@ def _stamp_unit(repo: Path) -> pa.NewProcessResult:
     )
 
 
-def _couple_unit(repo: Path, **overrides) -> pa.CoupleResult:
-    kwargs = dict(
+def _couple_unit(repo: Path, **overrides: Any) -> pa.CoupleResult:
+    kwargs: dict[str, Any] = dict(
         state_id="building",
         upstream="design:screen",
         relation="triggered-by",
@@ -127,8 +128,8 @@ def _couple_unit(repo: Path, **overrides) -> pa.CoupleResult:
     return pa.couple_process(repo, "delivery:unit", **kwargs)
 
 
-def _handoff_unit(repo: Path, **overrides) -> pa.HandoffResult:
-    kwargs = dict(
+def _handoff_unit(repo: Path, **overrides: Any) -> pa.HandoffResult:
+    kwargs: dict[str, Any] = dict(
         upstream="design:screen",
         trigger="ready",
         candidates="unit-handoff-candidates",

@@ -174,7 +174,7 @@ def load_artifacts(target_root: Path) -> list[Artifact]:
                 file_path = _resolve_artifact_file(entry)
                 if file_path is None:
                     continue
-                artifacts.append(_load_one(kind, ns, file_path))  # type: ignore[arg-type]
+                artifacts.append(_load_one(kind, ns, file_path))
 
     caps_dir = target_root / ".pkit" / "capabilities"
     if caps_dir.is_dir():
@@ -190,9 +190,7 @@ def load_artifacts(target_root: Path) -> list[Artifact]:
                     file_path = _resolve_artifact_file(entry)
                     if file_path is None:
                         continue
-                    artifacts.append(
-                        _load_one(kind, "core", file_path, capability=cap_name)  # type: ignore[arg-type]
-                    )
+                    artifacts.append(_load_one(kind, "core", file_path, capability=cap_name))
 
     return artifacts
 
@@ -234,7 +232,7 @@ def load_hook_providers(target_root: Path) -> list[Provider]:
             )
             tier: Literal["capability", "adapter"] = (
                 "capability" if kind == "capability" else "adapter"
-            )  # type: ignore[no-redef]
+            )
             for hook, impl in provides.items():
                 if isinstance(hook, str) and isinstance(impl, str):
                     providers.append(

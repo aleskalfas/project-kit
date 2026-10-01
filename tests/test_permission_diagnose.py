@@ -27,6 +27,7 @@ def _load_capture():
     """Import the propagated capture module the way the hook does (by path,
     bare-python3, no package context)."""
     spec = importlib.util.spec_from_file_location("diagnose_capture", CAPTURE_SRC)
+    assert spec is not None and spec.loader is not None
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod

@@ -17,9 +17,9 @@ pkit:
         - .pkit/adapters/claude-code/merge-settings.sh
       record: [COR-001, COR-002, COR-017, PRJ-001, PRJ-004, ADR-049]
     revalidated:
-      at: 2026-10-01T03:31:34Z
+      at: 2026-10-01T09:44:21Z
       outcome: unchanged
-      unchanged-because: on this branch the anchored code changed only in layout (ruff format and the lint fixes), pyproject.toml gained the ruff configuration, and pkit refs rename now refuses an empty value with a message rather than a traceback, below this page's level of detail; the documented commands are unchanged
+      unchanged-because: "typing-only change for the type-checking gate (PRJ-010): suppression comments removed from the package, pyright's configuration and dev dependency set in pyproject.toml; behaviour unchanged"
 ---
 
 # project-kit

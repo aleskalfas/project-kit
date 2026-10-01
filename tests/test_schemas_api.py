@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
@@ -65,7 +66,7 @@ def _write_issue_types_pair(schemas: Path) -> Path:
 
 
 @pytest.fixture(autouse=True)
-def _isolated_cache() -> None:
+def _isolated_cache() -> Iterator[None]:
     """Ensure each test starts with a clean cache (load_schema is LRU-cached)."""
     clear_cache()
     yield

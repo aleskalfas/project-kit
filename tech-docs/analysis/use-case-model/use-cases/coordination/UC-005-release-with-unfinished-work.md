@@ -21,9 +21,9 @@ pkit:
       artefact:
         - ACT-operator
     revalidated:
-      at: 2026-10-01T01:25:09Z
+      at: 2026-10-01T09:44:19Z
       outcome: unchanged
-      unchanged-because: "on this branch the anchored code changed only in layout: ruff format and the lint fixes; behaviour and the documented commands are unchanged"
+      unchanged-because: "typing-only change in the package for the type-checking gate (PRJ-010): suppression comments removed; behaviour unchanged"
 ---
 
 # UC-005 — Cut a release while unfinished work remains

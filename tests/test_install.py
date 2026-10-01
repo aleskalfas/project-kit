@@ -472,5 +472,5 @@ def test_bundled_source_kit_returns_on_disk_path_directly(
 
     monkeypatch.setattr(install, "files", lambda _pkg: _FakeTraversable())
 
-    resolved = install._bundled_source_kit()  # pyright: ignore[reportPrivateUsage]
+    resolved = install._bundled_source_kit()
     assert resolved == kit

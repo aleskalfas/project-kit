@@ -41,8 +41,8 @@ description = "Check formatting without writing (ruff)"
 run = "uv run ruff format --check ."
 
 [tasks.typecheck]
-description = "Type-check the source tree (pyright)"
-run = "uv run pyright"
+description = "Type-check the tree: the tests outright, the package through its baseline (pyright, PRJ-010)"
+run = "uv run python scripts/pyright_ratchet.py"
 
 [tasks.check]
 description = "Run all checks (lint + format:check + typecheck + test)"

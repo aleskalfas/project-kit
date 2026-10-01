@@ -49,12 +49,12 @@ _yaml.indent(mapping=2, sequence=4, offset=2)
 
 def _yaml_load(text: str) -> Any:
     """Typed wrapper around ruamel.yaml's untyped load."""
-    return _yaml.load(text)  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
+    return _yaml.load(text)
 
 
 def _yaml_dump(data: Any, stream: io.IOBase) -> None:
     """Typed wrapper around ruamel.yaml's untyped dump."""
-    _yaml.dump(data, stream)  # pyright: ignore[reportUnknownMemberType]
+    _yaml.dump(data, stream)
 
 
 @dataclass(frozen=True)

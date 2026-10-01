@@ -146,6 +146,7 @@ def test_expand_placeholders_matches_adapter_resolver(tmp_path):
         src = _agent(proj / ".pkit" / "agents" / "core", agent_name, owns=declared)
         code, fm, stderr = _resolve_via_adapter(src, agent_name, overlay)
         assert code == 0, stderr
+        assert fm is not None
         entries, undefined = ao.expand_placeholders(
             declared, agent_name=agent_name, overlay=ao.load_overlay_values(proj)
         )
@@ -183,6 +184,7 @@ def test_effective_policy_matches_adapter_resolver(tmp_path, declared, override)
         src, "a", proj / ".pkit" / "agents" / "project" / "overlay.yaml"
     )
     assert code == 0, stderr
+    assert fm is not None
 
     status = {s.name: s for s in ao.agent_overlay_statuses(proj)}["a"]
     reported = {s.key: s.value for s in status.policy if s.value != ap.INHERIT}
@@ -712,6 +714,7 @@ def test_optional_undefined_deploys_and_drops_item(tmp_path):
 
     code, fm, stderr = _resolve_via_adapter(src, "producer", overlay)
     assert code == 0, stderr
+    assert fm is not None
     reads = fm.get("reads") or {}
     assert reads.get("patterns", []) == []  # the undefined optional item dropped
 
@@ -732,6 +735,7 @@ def test_optional_defined_substitutes_the_path(tmp_path):
 
     code, fm, stderr = _resolve_via_adapter(src, "producer", overlay)
     assert code == 0, stderr
+    assert fm is not None
     assert fm["reads"]["patterns"] == ["docs/conventions/"]
 
     st = {s.name: s for s in ao.agent_overlay_statuses(proj)}["producer"]
@@ -794,6 +798,7 @@ def test_optional_drop_parity_with_adapter_resolver(tmp_path):
     code, fm, _stderr = _resolve_via_adapter(src, "producer", overlay)
     st = {s.name: s for s in ao.agent_overlay_statuses(proj)}["producer"]
     assert (code == 0) is st.deployable is True
+    assert fm is not None
     assert (fm.get("reads") or {}).get("patterns", []) == []
 
 
@@ -809,6 +814,7 @@ def test_optional_bare_key_deploys_but_is_reported(tmp_path):
 
     code, fm, stderr = _resolve_via_adapter(src, "producer", overlay)
     assert code == 0, stderr
+    assert fm is not None
     assert (fm.get("reads") or {}).get("patterns", []) == []
     assert "warning: " in stderr and "<project-conventions>" in stderr
 

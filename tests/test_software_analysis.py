@@ -63,8 +63,8 @@ from tests.analysis_repo import (
 # The living-docs guard's reading of a script's code: one list of what re-deriving
 # discovery would take, shared rather than copied.
 from tests.test_living_docs_spaces import (
-    _code,  # pyright: ignore[reportPrivateUsage]
-    _discovery_tokens,  # pyright: ignore[reportPrivateUsage]
+    _code,
+    _discovery_tokens,
 )
 
 

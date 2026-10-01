@@ -100,7 +100,7 @@ def _registered(root: Path, *, origin: str = ORIGIN_KIT_SHIPPED) -> dict[str, by
     """Register `_NAME` as the source's manifest does (kit-shipped by default), with an
     install receipt recording an older version — so a refresh treating the subtree as a
     copy would have a migration to run — and return the subtree's bytes as they stand."""
-    caps._register_in_backbone_manifest(root, _NAME, origin=origin)  # pyright: ignore[reportPrivateUsage]
+    caps._register_in_backbone_manifest(root, _NAME, origin=origin)
     (_cap_dir(root) / "manifest.yaml").write_text(
         f"schema_version: 1\ncomponent:\n  kind: capability\n  name: {_NAME}\n  version: 0.1.0\n",
         encoding="utf-8",

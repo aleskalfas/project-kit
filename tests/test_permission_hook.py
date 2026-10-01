@@ -70,6 +70,7 @@ def test_hook_denies_guardrail(tmp_path):
         root, {"tool_name": "Bash", "tool_input": {"command": "sudo rm x"}, "cwd": str(root)}
     )
     assert _decision(parsed) == "deny"
+    assert parsed is not None
     assert parsed["hookSpecificOutput"]["hookEventName"] == "PreToolUse"
 
 
@@ -553,6 +554,7 @@ def test_hook_prompts_on_foreign_edit_path(tmp_path):
     )
     assert _decision(parsed) == "ask"
     reason = _ask_reason(parsed)
+    assert reason is not None
     assert "outside this session's repo" in reason
     # Honest framing: a prompt, not a wall.
     assert "not a wall" in reason

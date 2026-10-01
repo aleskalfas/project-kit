@@ -601,7 +601,7 @@ def test_the_filler_contributes_page_friction_and_uncovered_surface(
     artefacts, obligations in project-management's shape beside the mapping's. The
     stale page owes; the deferred one does not."""
     repo = tracked_project
-    page = {"reader": "user", "kind": "signpost"}
+    page: dict[str, Any] = {"reader": "user", "kind": "signpost"}
     repo.write(
         {
             "src/a.py": "A = 1\n",
