@@ -165,7 +165,7 @@ def test_a_cascaded_move_the_engine_refuses_warns_like_a_direct_move(
 
     assert world.move(child, "in-progress") == 0
     moved = capsys.readouterr()
-    assert f"[cascade] bumping parent #{parent}: todo → in-progress" in moved.out
+    assert f"[cascade] #{parent}: todo → in-progress" in moved.out
     assert (
         f"[warn] {ENGINE_WARNING}: refused: no transition from 'todo' to 'in-progress'. "
         in moved.err

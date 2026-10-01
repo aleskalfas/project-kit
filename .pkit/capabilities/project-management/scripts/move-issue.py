@@ -77,6 +77,7 @@ from _lib import (
     axis_labels,
     body_parent_ref,
     bootstrap_gate,
+    containment,
     move_journal,
     session_guard,
     state_timeline,
@@ -336,6 +337,16 @@ def main() -> int:
     # a `derive` binding the label planner already writes nothing.
     state_on_board = axis_carriage.is_board_carried("state", config, substrate_map)
 
+    # What the forward cascade (DEC-006) reads and writes with, for either path.
+    cascade_context = _CascadeContext(
+        workflow=workflow,
+        issue_types=issue_types,
+        classification=classification,
+        config=config,
+        substrate_map=substrate_map,
+        actor=invoker.github_login,
+    )
+
     # Idempotency check: issue is already at the requested state.
     #
     # Must run BEFORE the transition-table lookup so that callers (e.g.
@@ -377,6 +388,17 @@ def main() -> int:
                         substrate_map=substrate_map,
                         actor=invoker.github_login,
                     )
+        # The forward cascade is idempotent, so the issue already being in place
+        # does not end the walk: re-running a move whose cascade left an ancestor
+        # behind brings that ancestor level.
+        if not args.no_cascade:
+            cascade = _preview_forward_cascade(
+                args.issue_number, body, structural_type, None, args.to, cascade_context
+            )
+            if cascade is not None and args.dry_run:
+                print("\n[dry-run] nothing written.")
+            elif cascade is not None:
+                _run_forward_cascade(cascade, cascade_context)
         return 0
 
     # Look up the transition.
@@ -485,16 +507,12 @@ def main() -> int:
     )
     _print_plan(plan)
 
-    # Cascade preview.
-    cascade_targets: list[int] = []
+    # Cascade preview: each ancestor's steps, read before anything is written.
+    cascade = None
     if not args.no_cascade and _is_forward(workflow, current_state, args.to):
-        parent = body_parent_ref.parent_issue(body, structural_type, issue_types)
-        cascade_targets = [parent] if parent is not None else []
-        if cascade_targets:
-            print(
-                f"\n[cascade] forward cascade will visit parents: "
-                f"{', '.join(f'#{n}' for n in cascade_targets)}"
-            )
+        cascade = _preview_forward_cascade(
+            args.issue_number, body, structural_type, current_state, args.to, cascade_context
+        )
 
     if args.dry_run:
         print("\n[dry-run] gh would be invoked; nothing written.")
@@ -575,24 +593,11 @@ def main() -> int:
             config,
         )
 
-    # Forward cascade. Each parent it moves is journaled the way this move was,
-    # by the same actor, with this move named as the reason.
-    if cascade_targets and not args.no_cascade:
-        cascade_reason = _cascade_reason(args.issue_number, current_state, args.to)
-        for parent_num in cascade_targets:
-            ok = _cascade_parent(
-                parent_num,
-                args.to,
-                config,
-                substrate_map,
-                actor=invoker.github_login,
-                reason=cascade_reason,
-            )
-            if not ok:
-                print(
-                    f"[warn] cascade on #{parent_num} did not complete cleanly.",
-                    file=sys.stderr,
-                )
+    # Forward cascade. Each ancestor step it writes is journaled the way this move
+    # was, by the same actor, with this move named as the reason. Neither a hook
+    # nor a comment follows a cascaded step: both below are this issue's.
+    if cascade is not None:
+        _run_forward_cascade(cascade, cascade_context)
 
     print(f"\n[ok] transitioned #{args.issue_number}: {current_state} → {args.to}")
 
@@ -802,7 +807,7 @@ def _infer_current_state(
     todo). The same resolver backs the process detectors, so move-issue's local
     inference and the engine's detection agree by construction — behaviour
     parity (DEC-033). Kept as a thin local alias so the rest of this script (and
-    `_cascade_parent`) reads naturally.
+    the forward cascade's walk) reads naturally.
 
     Map-aware (ADR-026 §5): pass the adopter's `substrate_map` so this local
     fallback agrees with the engine's (now map-aware) detection under a present
@@ -1059,13 +1064,78 @@ def _post_transition_audit_once(issue_number: int, body: str, key: str, config: 
     )
 
 
+# ---- forward cascade (DEC-006) ----------------------------------------
+#
+# A container's state follows the work under it: when an issue moves forward,
+# each ancestor — its parent, that parent's parent, and so on to the top — that
+# is behind is brought up to the issue's state, capped at in-progress. The walk
+# is planned before anything is written, from one read of each ancestor, and
+# printed as the preview. The engine is asked where an ancestor is only when the
+# plan moves it, to revalidate that plan against a sibling's move made since
+# and to fail closed on an ancestor whose position it cannot tell. That narrows
+# the race with a concurrent sibling; it does not close it.
+
+
+@dataclass(frozen=True)
+class _CascadeContext:
+    """What the forward cascade reads and writes with, fixed for one run."""
+
+    workflow: dict
+    issue_types: dict
+    classification: dict
+    config: dict
+    substrate_map: axis_labels.SubstrateMap | None
+    actor: str | None
+
+
+@dataclass(frozen=True)
+class _Ancestor:
+    """One ancestor as the plan read it: where its labels and milestone place it,
+    and the states it moves through to reach the target, in order — empty when
+    it is at or past the target, None when the workflow declares no way there."""
+
+    number: int
+    structural_type: str | None
+    labels: tuple[str, ...]
+    state: str
+    steps: tuple[str, ...] | None
+
+
+@dataclass(frozen=True)
+class _CascadePlan:
+    """The forward cascade one move makes: the ancestors it reached, lowest
+    first, and why the walk ended below the top when it did."""
+
+    issue_number: int
+    issue_target: str
+    target: str
+    reason: str
+    ancestors: tuple[_Ancestor, ...]
+    stop: str | None
+
+
+@dataclass(frozen=True)
+class _AncestorOutcome:
+    """What the cascade did to one ancestor, as the closing block says it.
+
+    ``complete`` is False when the ancestor was not fully moved and journaled;
+    ``behind`` when it was left behind the target in a way running the move again
+    can repair; ``stops_walk`` when nothing above it is moved."""
+
+    number: int
+    said: str
+    complete: bool = True
+    behind: bool = False
+    stops_walk: bool = False
+
+
 def _cascade_forward_target(child_target: str) -> str:
     """Return the container-safe forward-cascade target for a given child state.
 
     The forward cascade is scoped to todo → backlog → in-progress (DEC-006,
     amendment #38). Containers do not enter Review — Review models an open PR
     for a leaf Task; a container has no PR of its own. When a child reaches
-    review or done, ancestors are bumped to at most in-progress.
+    review or done, ancestors are brought to at most in-progress.
     """
     _FORWARD_CASCADE_CAP = "in-progress"
     order = ["todo", "backlog", "in-progress", "review", "done"]
@@ -1077,90 +1147,362 @@ def _cascade_forward_target(child_target: str) -> str:
     return order[min(child_idx, cap_idx)]
 
 
-def _cascade_reason(child_number: int, child_from: str, child_to: str) -> str:
-    """The reason a forward-cascaded parent move is journaled with: the child's
-    move that caused it (#1214)."""
+def _forward_cascade_target(child_from: str | None, child_to: str) -> str | None:
+    """The state the forward cascade brings ancestors up to when an issue moves
+    from ``child_from`` to ``child_to``, or None when it brings up none."""
+    target = _cascade_forward_target(child_to)
+    return target if target in ("backlog", "in-progress") else None
+
+
+def _cascade_reason(child_number: int, child_from: str | None, child_to: str) -> str:
+    """The reason each forward-cascaded step is journaled with: the move of the
+    issue that caused it (#1214), or, where the issue was already in place, the
+    state it holds."""
+    if child_from is None or child_from == child_to:
+        return f"forward cascade from #{child_number}: at {child_to}"
     return f"forward cascade from #{child_number}: {child_from} → {child_to}"
 
 
-def _cascade_parent(
-    parent_num: int,
-    target_state: str,
-    config: dict,
-    substrate_map: axis_labels.SubstrateMap | None = None,
-    *,
-    actor: str | None,
-    reason: str,
-) -> bool:
-    """Forward cascade — bump parent if it's behind.
-
-    Conservative implementation: read parent state; if parent is behind
-    the capped cascade target, label-edit it forward. Bypasses authorisation
-    gates per DEC-006 ("forward cascade is automatic").
-
-    The cascade target is capped at in-progress for containers: Review is a
-    leaf/Task state and a container must never auto-enter it (DEC-006,
-    amendment #38). A child moving to review or done bumps its ancestors to
-    at most in-progress.
-
-    A parent it moves is a governed move like the child's own, so it is
-    journaled the same way (#1214; DEC-049's one entry per governed move): after
-    the label write, through `_journal_move`, from the state the parent held
-    before it, by `actor`, with `reason` naming the child's move. A move the
-    engine refuses warns exactly as the child's would. A parent already at or
-    beyond the target is left alone and journaled nothing, so a re-run, or a
-    sibling's later move, adds no second entry.
-    """
-    parent = _gh_get_issue(parent_num, config)
-    if parent is None:
-        return False
-    parent_labels = [
-        lbl.get("name", "") if isinstance(lbl, dict) else str(lbl)
-        for lbl in (parent.get("labels") or [])
-    ]
-    parent_state = _infer_current_state(
-        state=str(parent.get("state", "")).lower(),
-        milestone=parent.get("milestone") or {},
-        labels=parent_labels,
-        substrate_map=substrate_map,
-    )
-    # Cap the cascade target: containers top out at in-progress.
-    cascade_target = _cascade_forward_target(target_state)
-    # Under a derive binding the forward cascade is an INTENTIONAL no-op: parent_state
-    # is the collapsed `open`/`blocked` (not in STATE_ORDER), so `_state_is_behind`
-    # returns False and we exit here — and even if reached, `_compute_plan` would
-    # DEGRADE the `state:*` write (no kit label written under a derive map). This is
-    # correct (the open-ish collapse means there is no meaningful forward bump, and
-    # you cannot write a kit `state:*` label under derive); do NOT "fix" the
-    # ValueError-tolerant `_state_is_behind` into a crash on these derived ids.
-    if not _state_is_behind(parent_state, cascade_target):
-        return True  # already at or beyond the capped target.
-    plan = _compute_plan(
-        issue_number=parent_num,
-        current_state=parent_state,
-        target_state=cascade_target,
-        # Same carriage question as the child's own move, asked the same way. It
-        # was hardcoded False ("cascade only fires for label substrate"), which
-        # was not true of the code: the cascade runs after the board branch too,
-        # so a board adopter's parents were label-written by a path whose own
-        # comment said it could not be reached.
-        state_on_board=axis_carriage.is_board_carried("state", config, substrate_map),
-        labels=parent_labels,
-        substrate_map=substrate_map,
-    )
-    print(f"[cascade] bumping parent #{parent_num}: {parent_state} → {cascade_target}")
-    if not _gh_apply_state_label(parent_num, plan, config):
-        return False
-    _journal_move(parent_num, parent_state, cascade_target, actor, reason=reason)
-    return True
-
-
 def _state_is_behind(current: str, target: str) -> bool:
+    """Whether ``current`` comes before ``target`` in the lifecycle order.
+
+    False for a state outside it — the collapsed ``open`` / ``blocked`` a
+    `derive` binding reads — so such an ancestor is left alone, never moved."""
     order = ["todo", "backlog", "in-progress", "review", "done"]
     try:
         return order.index(current) < order.index(target)
     except ValueError:
         return False
+
+
+def _cascade_levels(workflow: dict) -> tuple[str, ...]:
+    """The issue types the forward cascade moves: `cascade.forward`'s
+    `applies_to_levels` in workflow.yaml, as type names."""
+    cascade = workflow.get("cascade") if isinstance(workflow, dict) else None
+    forward = cascade.get("forward") if isinstance(cascade, dict) else None
+    tokens = forward.get("applies_to_levels") if isinstance(forward, dict) else None
+    levels = []
+    for token in tokens or []:
+        m = re.fullmatch(r"\[issue-types:([a-z0-9-]+)\]", str(token))
+        if m:
+            levels.append(m.group(1))
+    return tuple(levels)
+
+
+def _cascade_steps(
+    workflow: dict, current: str, target: str, structural_type: str | None, levels: tuple[str, ...]
+) -> tuple[str, ...] | None:
+    """The states an ancestor at ``current`` moves through to reach ``target``:
+    empty when it is at or past the target."""
+    if not _state_is_behind(current, target):
+        return ()
+    return (target,)
+
+
+def _cascade_not_run(context: _CascadeContext, target: str) -> str | None:
+    """Why the forward cascade does not run, or None when it does.
+
+    It writes an ancestor's state as a label, so it runs only where the kit
+    writes the state as one: the kit's own `state:*` labels, or an adopter's
+    `label:` binding that has a value for every state the walk may write. Where
+    a board carries the state, a derivation, the title, or nothing, no label is
+    written and nothing would be recorded for an ancestor.
+    """
+    config, substrate_map = context.config, context.substrate_map
+    if not state_timeline.label_carries_state(config, substrate_map):
+        where = axis_carriage.describe("state", config, substrate_map)
+        return f"state is carried {where}, and the forward cascade writes state only as a label"
+    order = infer.STATE_ORDER
+    for state in order[order.index("backlog") : order.index(target) + 1]:
+        if not isinstance(axis_labels.resolve_write("state", state, substrate_map), str):
+            return f"the state label binding has no value for {state!r}"
+    return None
+
+
+def _label_names(issue: dict) -> list[str]:
+    return [
+        lbl.get("name", "") if isinstance(lbl, dict) else str(lbl)
+        for lbl in (issue.get("labels") or [])
+    ]
+
+
+def _plan_forward_cascade(
+    issue_number: int,
+    body: str,
+    structural_type: str | None,
+    issue_target: str,
+    target: str,
+    reason: str,
+    context: _CascadeContext,
+) -> _CascadePlan:
+    """Walk from the issue to the top of its hierarchy, reading each ancestor once.
+
+    Each step up follows the parent the issue's first line names
+    (`body_parent_ref.parent_issue`). The read of an ancestor also carries its
+    native parent, so where that differs from the parent its first line names
+    the walk stops there without moving either: which one is its parent is for
+    the operator to settle. The walk also stops at an ancestor it cannot read,
+    at one that is recognisably not a container (one whose type cannot be told
+    is moved, as an untyped tree always was), and at one it has already passed.
+    An ancestor at or past the target is left alone and the walk goes on above
+    it, so a chain an earlier move left behind is brought level.
+    """
+    levels = _cascade_levels(context.workflow)
+    ancestors: list[_Ancestor] = []
+    visited = {issue_number}
+    child, number = (
+        issue_number,
+        body_parent_ref.parent_issue(body, structural_type, context.issue_types),
+    )
+    stop = None
+    while number is not None:
+        if number in visited:
+            stop = f"#{child} names #{number} as its parent, which the walk has passed already"
+            break
+        visited.add(number)
+        record = containment.read_issue_record(context.config, issue_number=number)
+        if record is None:
+            stop = f"#{number}, named as #{child}'s parent, could not be read"
+            break
+        issue = record.issue
+        labels = _label_names(issue)
+        kind = infer_structural_type(
+            str(issue.get("title", "")),
+            context.issue_types,
+            classification=context.classification,
+            labels=labels,
+        )
+        if kind is not None and kind not in levels:
+            stop = f"#{number}, named as #{child}'s parent, is a {kind}, not a container"
+            break
+        state = _infer_current_state(
+            state=str(issue.get("state", "")).lower(),
+            milestone=issue.get("milestone") or {},
+            labels=labels,
+            substrate_map=context.substrate_map,
+        )
+        steps = _cascade_steps(context.workflow, state, target, kind, levels)
+        ancestors.append(_Ancestor(number, kind, tuple(labels), state, steps))
+        parent = body_parent_ref.parent_issue(
+            str(issue.get("body") or ""), kind, context.issue_types
+        )
+        native = record.parent
+        if native is not None and (parent is None or not native.is_issue(parent)):
+            named = f"#{parent}" if parent is not None else "no parent issue"
+            stop = (
+                f"#{number}'s first line names {named}, its native parent is {native.ref}; "
+                "nothing is written to either"
+            )
+            break
+        child, number = number, parent
+    return _CascadePlan(
+        issue_number=issue_number,
+        issue_target=issue_target,
+        target=target,
+        reason=reason,
+        ancestors=tuple(ancestors),
+        stop=stop,
+    )
+
+
+def _describe_ancestor(ancestor: _Ancestor) -> str:
+    kind = f" ({ancestor.structural_type})" if ancestor.structural_type else ""
+    return f"#{ancestor.number}{kind}"
+
+
+def _preview_forward_cascade(
+    issue_number: int,
+    body: str,
+    structural_type: str | None,
+    child_from: str | None,
+    child_to: str,
+    context: _CascadeContext,
+) -> _CascadePlan | None:
+    """Plan the forward cascade a move makes and print it: each ancestor with
+    the steps it will take, or why it is left alone, and where the walk stops.
+
+    None when there is nothing to run: the issue names no parent, the move
+    brings no ancestor up, or the kit does not write the state as a label —
+    which one line says.
+    """
+    target = _forward_cascade_target(child_from, child_to)
+    if target is None:
+        return None
+    if body_parent_ref.parent_issue(body, structural_type, context.issue_types) is None:
+        return None
+    not_run = _cascade_not_run(context, target)
+    if not_run is not None:
+        print(f"\n[cascade] the forward cascade does not run: {not_run}.")
+        return None
+    plan = _plan_forward_cascade(
+        issue_number,
+        body,
+        structural_type,
+        child_to,
+        target,
+        _cascade_reason(issue_number, child_from, child_to),
+        context,
+    )
+    print(f"\n[cascade] forward cascade — each ancestor brought up to {target}:")
+    for ancestor in plan.ancestors:
+        if ancestor.steps is None:
+            what = f"{ancestor.state}; workflow.yaml declares no way to {target}"
+        elif ancestor.steps:
+            what = " → ".join((ancestor.state, *ancestor.steps))
+        else:
+            what = f"{ancestor.state}; left alone"
+        print(f"  {_describe_ancestor(ancestor)}: {what}")
+    if plan.stop is not None:
+        print(f"  [warn] {plan.stop}; the walk stops there.", file=sys.stderr)
+    return plan
+
+
+def _engine_position(issue_number: int) -> tuple[bool, str | None]:
+    """(reached, state): whether the engine answered, and the position it gave —
+    None from an engine that answered is a position it cannot tell."""
+    status = _engine_status(issue_number)
+    if status is None:
+        return False, None
+    return True, _position_from_status(status)
+
+
+def _run_forward_cascade(plan: _CascadePlan, context: _CascadeContext) -> None:
+    """Make the planned cascade, ancestor by ancestor, lowest first, and end with
+    one block saying what became of each.
+
+    An ancestor the cascade fails to move does not stop it: one above it may be
+    ahead of it. The block is a warning when anything is left undone; the issue's
+    own move stands either way, and running it again repairs what a re-run can.
+    """
+    outcomes: list[_AncestorOutcome] = []
+    unreached: list[int] = []
+    for ancestor in plan.ancestors:
+        if outcomes and outcomes[-1].stops_walk:
+            unreached.append(ancestor.number)
+            continue
+        outcomes.append(_cascade_ancestor(ancestor, plan, context))
+    _print_cascade_report(plan, outcomes, unreached)
+
+
+def _cascade_ancestor(
+    ancestor: _Ancestor, plan: _CascadePlan, context: _CascadeContext
+) -> _AncestorOutcome:
+    """Bring one ancestor up to the target, as planned unless the engine says
+    the plan is stale."""
+    number = ancestor.number
+    if ancestor.steps is None:
+        return _AncestorOutcome(
+            number,
+            f"not moved: workflow.yaml declares no way from {ancestor.state} to {plan.target}",
+            complete=False,
+        )
+    if not ancestor.steps:
+        return _AncestorOutcome(number, f"left alone at {ancestor.state}")
+    origin, steps, labels = ancestor.state, ancestor.steps, list(ancestor.labels)
+    reached, engine_state = _engine_position(number)
+    if reached and engine_state is None:
+        return _AncestorOutcome(
+            number,
+            "not moved: the engine cannot tell where it is, so the walk stops here",
+            complete=False,
+            behind=True,
+            stops_walk=True,
+        )
+    if engine_state is not None and engine_state != origin:
+        levels = _cascade_levels(context.workflow)
+        steps = _cascade_steps(
+            context.workflow, engine_state, plan.target, ancestor.structural_type, levels
+        )
+        if steps is None:
+            return _AncestorOutcome(
+                number,
+                f"not moved: workflow.yaml declares no way from {engine_state} to {plan.target}",
+                complete=False,
+            )
+        if not steps:
+            return _AncestorOutcome(number, f"left alone at {engine_state} (the engine's reading)")
+        # Moved since the plan read it: write from its labels as they are now.
+        record = containment.read_issue_record(context.config, issue_number=number)
+        if record is None:
+            return _AncestorOutcome(
+                number,
+                f"not moved: the engine places it at {engine_state} and it could not be read again",
+                complete=False,
+                behind=True,
+            )
+        origin, labels = engine_state, _label_names(record.issue)
+    return _step_ancestor(number, origin, steps, labels, plan.reason, context)
+
+
+def _step_ancestor(
+    number: int,
+    origin: str,
+    steps: tuple[str, ...],
+    labels: list[str],
+    reason: str,
+    context: _CascadeContext,
+) -> _AncestorOutcome:
+    """Write each step as its own label edit, computed from the labels as the
+    step before left them, and journal it."""
+    reached = [origin]
+    unjournaled: list[str] = []
+    current = origin
+    for step in steps:
+        edit = _compute_plan(
+            issue_number=number,
+            current_state=current,
+            target_state=step,
+            state_on_board=False,
+            labels=labels,
+            substrate_map=context.substrate_map,
+        )
+        print(f"[cascade] #{number}: {current} → {step}")
+        if not _gh_apply_state_label(number, edit, context.config):
+            moved = " → ".join(reached) + "; " if len(reached) > 1 else "not moved: "
+            return _AncestorOutcome(
+                number,
+                f"{moved}{current} → {step} not written (the label write failed)",
+                complete=False,
+                behind=True,
+            )
+        labels = [lbl for lbl in labels if lbl != edit.remove_label]
+        if edit.add_label and edit.add_label not in labels:
+            labels.append(edit.add_label)
+        if not _journal_move(number, current, step, context.actor, reason=reason):
+            unjournaled.append(f"{current} → {step}")
+        reached.append(step)
+        current = step
+    said = " → ".join(reached)
+    if unjournaled:
+        return _AncestorOutcome(
+            number, f"{said}; not journaled: {', '.join(unjournaled)}", complete=False
+        )
+    return _AncestorOutcome(number, said)
+
+
+def _print_cascade_report(
+    plan: _CascadePlan, outcomes: list[_AncestorOutcome], unreached: list[int]
+) -> None:
+    """The cascade's closing block: every ancestor's outcome, a warning when
+    anything was left undone, and how to repair what a re-run repairs."""
+    complete = plan.stop is None and not unreached and all(o.complete for o in outcomes)
+    stream = sys.stdout if complete else sys.stderr
+    head = "[cascade]" if complete else "[warn]"
+    status = "" if complete else ", not completed"
+    print(f"\n{head} forward cascade from #{plan.issue_number}{status}:", file=stream)
+    for outcome in outcomes:
+        print(f"  #{outcome.number}: {outcome.said}", file=stream)
+    for number in unreached:
+        print(f"  #{number}: not reached", file=stream)
+    if plan.stop is not None:
+        print(f"  the walk stopped: {plan.stop}", file=stream)
+    if unreached or any(o.behind for o in outcomes):
+        print(
+            f"  → run `move-issue {plan.issue_number} --to {plan.issue_target}` again once "
+            "the cause is fixed: the cascade is idempotent, and brings level what is "
+            "still behind.",
+            file=stream,
+        )
 
 
 # ---- I/O helpers ----------------------------------------------------

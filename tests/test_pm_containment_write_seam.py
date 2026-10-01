@@ -368,6 +368,80 @@ def test_read_link_state_tells_a_parent_in_another_repository_apart(
     assert not parent.is_issue(7)
 
 
+def _issue_record(**fields) -> str:
+    """An issue's REST record as `gh api repos/{owner}/{repo}/issues/<n>` prints it."""
+    record = {
+        "id": 999,
+        "number": 344,
+        "title": "[Feature] A feature",
+        "body": "EPIC: #7\n\n## What\n",
+        "state": "open",
+        "labels": [{"name": "state:backlog", "color": "ededed"}],
+        "milestone": None,
+        "repository_url": f"{_API}/repos/o/r",
+        **fields,
+    }
+    return json.dumps(record)
+
+
+def test_read_issue_record_reads_the_issue_and_its_native_parent_in_one_call(
+    containment, monkeypatch
+) -> None:
+    calls: list[list[str]] = []
+
+    def fake_gh(args, config):
+        calls.append(args)
+        record = _issue_record(parent_issue_url=f"{_API}/repos/o/r/issues/7")
+        return subprocess.CompletedProcess(args, 0, stdout=record, stderr="")
+
+    monkeypatch.setattr(containment, "_gh_call", fake_gh)
+    read = containment.read_issue_record({}, issue_number=344)
+    assert calls == [["gh", "api", "repos/{owner}/{repo}/issues/344"]]
+    assert read.issue == {
+        "title": "[Feature] A feature",
+        "body": "EPIC: #7\n\n## What\n",
+        "labels": [{"name": "state:backlog"}],
+        "state": "OPEN",
+        "milestone": None,
+    }
+    assert read.parent == containment.NativeParent(number=7)
+
+
+def test_read_issue_record_without_a_parent_or_a_body(containment, monkeypatch) -> None:
+    monkeypatch.setattr(
+        containment,
+        "_gh_call",
+        lambda args, config: subprocess.CompletedProcess(
+            args, 0, stdout=_issue_record(body=None, state="closed"), stderr=""
+        ),
+    )
+    read = containment.read_issue_record({}, issue_number=344)
+    assert read.parent is None
+    assert read.issue["body"] == ""
+    assert read.issue["state"] == "CLOSED"
+
+
+@pytest.mark.parametrize(
+    ("returncode", "stdout"),
+    [
+        (1, ""),
+        (0, "not json"),
+        (0, "[]"),
+        (0, _issue_record(pull_request={"url": "u"})),
+    ],
+    ids=["gh-fails", "not-json", "not-a-record", "a-pull-request"],
+)
+def test_read_issue_record_none_when_no_issue_was_read(
+    containment, monkeypatch, returncode, stdout
+) -> None:
+    monkeypatch.setattr(
+        containment,
+        "_gh_call",
+        lambda args, config: subprocess.CompletedProcess(args, returncode, stdout=stdout),
+    )
+    assert containment.read_issue_record({}, issue_number=344) is None
+
+
 def test_a_child_under_another_parent_is_a_conflict_and_nothing_is_posted(
     containment, monkeypatch
 ) -> None:

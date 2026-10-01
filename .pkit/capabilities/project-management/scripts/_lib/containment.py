@@ -413,6 +413,61 @@ def read_link_state(config: dict[str, Any], *, issue_number: int | str) -> Issue
     )
 
 
+@dataclass(frozen=True)
+class IssueRecord:
+    """An issue and its native parent, from one read of its record.
+
+    ``issue`` holds the fields the pm scripts read off ``gh issue view --json``,
+    in that shape: ``title``, ``body``, ``labels`` (``{"name": …}`` objects),
+    ``state`` (``OPEN`` / ``CLOSED``) and ``milestone``. ``parent`` is the issue's
+    native parent, ``None`` when it has none (or when the instance's issue record
+    does not carry the field).
+    """
+
+    issue: dict[str, Any]
+    parent: NativeParent | None
+
+
+def read_issue_record(config: dict[str, Any], *, issue_number: int | str) -> IssueRecord | None:
+    """Read an issue and its native parent in one call.
+
+    ``gh api repos/{owner}/{repo}/issues/<n>`` — the record
+    :func:`read_link_state` reads a child's database id from — carries the
+    issue's title, body, labels, state and milestone beside its
+    ``parent_issue_url``. A walk up the hierarchy that compares an issue's
+    textual parent with its native one therefore costs no second call per issue.
+    ``None`` on any failure (missing ``gh``, non-zero exit, output that is not an
+    issue's record) and for a pull request, which the endpoint also answers for.
+    """
+    try:
+        proc = _gh_call(["gh", "api", f"repos/{{owner}}/{{repo}}/issues/{issue_number}"], config)
+    except FileNotFoundError:
+        return None
+    if proc.returncode != 0:
+        return None
+    try:
+        record = json.loads(proc.stdout or "")
+    except (json.JSONDecodeError, ValueError):
+        return None
+    if not isinstance(record, dict) or "pull_request" in record:
+        return None
+    labels = [
+        {"name": str(label.get("name", "")) if isinstance(label, dict) else str(label)}
+        for label in record.get("labels") or []
+    ]
+    issue = {
+        "title": str(record.get("title") or ""),
+        "body": str(record.get("body") or ""),
+        "labels": labels,
+        "state": str(record.get("state") or "").upper(),
+        "milestone": record.get("milestone"),
+    }
+    parent = _parse_native_parent(
+        str(record.get("parent_issue_url") or ""), str(record.get("repository_url") or "")
+    )
+    return IssueRecord(issue=issue, parent=parent)
+
+
 def _parse_native_parent(parent_url: str, repository_url: str) -> NativeParent | None:
     """The parent a ``parent_issue_url`` names, relative to the child's repository.
 
