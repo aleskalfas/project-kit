@@ -451,21 +451,24 @@ def test_late_move_failure_claims_nothing_this_run_did_not_do(run_main, capsys) 
     assert "This run opened no PR, made none ready and requested no reviewers." in last_block
 
 
-# ---- the closing line names the move made (#1242) ----------------------
+# ---- the closing line claims no move (#1242) ---------------------------
+#
+# move-issue reads the state again when it moves, so only its own output says
+# whether it moved the issue or found it in Review already.
 
 
-def test_the_closing_line_names_the_move_from_in_progress(run_main, capsys) -> None:
+def test_the_closing_line_says_where_the_issue_is(run_main, capsys) -> None:
     rc, _gh_calls, _moves = run_main(_task(["state:in-progress"]))
     assert rc == 0
-    assert capsys.readouterr().out.rstrip().endswith("In Progress → Review")
+    assert capsys.readouterr().out.rstrip().endswith("[ok] PR ready; #42 in Review")
 
 
 def test_a_rerun_from_review_claims_no_move(run_main, capsys) -> None:
     rc, _gh_calls, _moves = run_main(_task(["state:review"]), pr=_open_pr(draft=True))
     assert rc == 0
     out = capsys.readouterr().out.rstrip()
-    assert not out.endswith("In Progress → Review")
-    assert out.endswith("[ok] PR ready; #42 already in Review")
+    assert "→ Review" not in out
+    assert out.endswith("[ok] PR ready; #42 in Review")
 
 
 # ---- one reading of state, shared with move-issue (#1242) --------------

@@ -360,7 +360,7 @@ def main() -> int:
         )
         return rc
 
-    print(_success_line(args.issue_number, position.state, workflow))
+    print(_success_line(args.issue_number, workflow))
     return 0
 
 
@@ -460,16 +460,13 @@ def _left_behind(
     return left
 
 
-def _success_line(issue_number: int, moved_from: str, workflow: dict) -> str:
-    """The closing line of a run whose move-issue succeeded. A re-run from
-    Review made no move, so it does not claim one."""
-    name = infer.state_display_name
-    if moved_from == TARGET_STATE:
-        return f"\n[ok] PR ready; #{issue_number} already in {name(workflow, TARGET_STATE)}"
-    return (
-        f"\n[ok] PR ready + #{issue_number} "
-        f"{name(workflow, moved_from)} → {name(workflow, TARGET_STATE)}"
-    )
+def _success_line(issue_number: int, workflow: dict) -> str:
+    """The closing line of a run whose move-issue succeeded: the PR is ready
+    and the issue in Review. It claims no move. move-issue reads the state
+    again when it moves, so only its own output, just above, says whether it
+    moved the issue or found it already in Review."""
+    review = infer.state_display_name(workflow, TARGET_STATE)
+    return f"\n[ok] PR ready; #{issue_number} in {review}"
 
 
 def _find_pr_for_branch(branch: str, config: dict) -> dict | None:
