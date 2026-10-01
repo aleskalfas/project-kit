@@ -126,6 +126,7 @@ def project(
     return installed(make_adopter_repo, monkeypatch)
 
 
+# Slow by design: six stamps and the check, each a script that starts `pkit` processes.
 def test_what_the_walkthroughs_stamp_passes_the_gate_and_carries_the_friction_block(
     project: AdopterRepo,
 ) -> None:

@@ -15,7 +15,7 @@ pkit:
       record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, PRJ-010, ADR-019, ADR-039, ADR-055, "project-management:DEC-053"]
       artefact: [.pkit/decisions/README.md]
     revalidated:
-      at: 2026-10-01T15:15:52Z
+      at: 2026-10-01T15:47:07Z
       outcome: updated
 ---
 
@@ -44,7 +44,7 @@ The same aggregator runs in two places, so the gate can't drift:
 
 **The full suite is the hook's and CI's, not a builder's.** The aggregator's test step runs the suite in parallel workers, then the tests marked `serial` on their own, and lets at most two full suites run on a machine at once — a third waits and says whose runs it waits for. While you build, run the test modules for the files you changed and the fast gates instead (`.pkit/rules/project.md`); [`tests/README.md`](tests/README.md) "Running the suite" has the details.
 
-**Writing tests.** Test-authoring guidance lives in [`tests/README.md`](tests/README.md) — in particular the shared adopter-repository fixture (`make_adopter_repo` / `adopter_repo`) to use instead of hand-rolling `git init` + `install_kit` in each test module.
+**Writing tests.** Test-authoring guidance lives in [`tests/README.md`](tests/README.md) — in particular the shared adopter-repository fixture (`make_adopter_repo` / `adopter_repo`) to use instead of hand-rolling `git init` + `install_kit` in each test module. It hands each test a copy of a repository the session built once; a module whose tests start with the same slow setting-up hands that to it as `prepare`, and a test of the install itself asks for `fresh=True` ("Built once, copied for each test").
 
 Add a check by editing `scripts/check.sh` once; both the hook and CI pick it up.
 

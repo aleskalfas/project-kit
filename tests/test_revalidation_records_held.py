@@ -40,14 +40,11 @@ LD_VALIDATE = Path(".pkit") / "capabilities" / "living-docs" / "scripts" / "vali
 UNANCHORED_PAGE = "tech-docs/guide.md"
 
 
-@pytest.fixture
-def project(
-    make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> AdopterRepo:
-    """Both capabilities, the analysis seeded, one planned revalidation recorded, and
-    one page with no anchors beside them — all committed on `main`."""
-    monkeypatch.delenv(BASE_ENV, raising=False)
-    repo = prepare(make_adopter_repo(capabilities=("software-analysis", "living-docs")))
+# Slow: the seed and a record stamped, once per session; the first test to ask pays it.
+def _record_a_revalidation(repo: AdopterRepo) -> None:
+    """The analysis prepared and seeded, one planned revalidation recorded, and one page
+    with no anchors beside them — all committed on `main`."""
+    prepare(repo)
     seed(repo)
     stamped = run_script(
         repo,
@@ -66,7 +63,17 @@ def project(
     assert stamped.returncode == 0, stamped.stderr
     repo.write({UNANCHORED_PAGE: "---\nreader: maintainer\nkind: signpost\n---\n\n# Guide\n"})
     repo.commit("the analysis, a revalidation record and a page", None)
-    return repo
+
+
+@pytest.fixture
+def project(
+    make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> AdopterRepo:
+    """Both capabilities installed, and what `_record_a_revalidation` lays down."""
+    monkeypatch.delenv(BASE_ENV, raising=False)
+    return make_adopter_repo(
+        capabilities=("software-analysis", "living-docs"), prepare=_record_a_revalidation
+    )
 
 
 def _json(*args: str) -> dict[str, Any]:

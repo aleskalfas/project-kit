@@ -49,8 +49,8 @@ from tests.analysis_repo import (
     front,
     installed,
     new,
+    prepare_seeded,
     run_script,
-    seed,
     stamped,
 )
 from tests.test_software_analysis_check import check, errors
@@ -60,9 +60,7 @@ from tests.test_software_analysis_check import check, errors
 def project(
     make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> AdopterRepo:
-    repo = installed(make_adopter_repo, monkeypatch)
-    seed(repo)
-    return repo
+    return installed(make_adopter_repo, monkeypatch, then=prepare_seeded)
 
 
 def _today() -> str:

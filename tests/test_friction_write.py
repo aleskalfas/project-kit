@@ -887,6 +887,7 @@ def _sorted_deferrals(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return sorted(entries, key=lambda e: (e["anchor"]["kind"], e["anchor"]["value"]))
 
 
+# Slow by design: 40 random documents, each written four times, read back and validated.
 def test_written_blocks_read_back_identically_and_validate(repo: AdopterRepo) -> None:
     for seed in range(40):
         rng = random.Random(seed)
