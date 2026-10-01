@@ -3,17 +3,25 @@ kind: patch
 custom:
   category: Fixed
 body: >
-  `start-work` and `review-work` now judge whether their move is legal from the
-  same reading of the issue's state that the `move-issue` they run moves from:
-  the process engine's position, else the issue's own fields (#1242). Before,
-  their early check read labels and milestone while `move-issue` asked the
-  engine first, so the check could pass a move the engine then refused, leaving
-  a branch or a ready pull request behind, or refuse one it would have allowed.
-  The verb hands the engine's answer to its `move-issue`, so a run still asks
-  the engine once. Where the configured board carries state and the engine
-  gives no position, nothing can read the state: both verbs now refuse before
-  any branch or pull-request change and say why. An issue with no state label
-  and no milestone still reads as Todo. `review-work`'s documented exit codes now
-  include 3 for a `gh` failure opening the pull request or making it ready, and
-  a re-run from Review ends on "already in Review" instead of claiming a move
-  from In Progress.
+  `start-work` and `review-work` now resolve the issue's state for their early
+  check through the same resolver `move-issue` moves with: the process engine's
+  position, else the issue's own fields (#1242). Before, the early check read
+  labels and milestone directly while `move-issue` asked the engine first. In
+  every shipped configuration the two came to the same answer, because the
+  engine's detectors read those same fields; they could differ only if the
+  labels changed between the two reads. `move-issue` still reads the state
+  itself when it moves, so a move that stopped being legal after the check is
+  refused there, and the verb's failure names the branch, pull request or
+  reviewers the run left behind. The verbs now ask the engine once more per
+  run (`pkit process status`), and `--dry-run` and every early refusal now cost
+  one engine read where they cost none. One case is newly refused, and only
+  where the project's board carries `state`: when the process engine gives no
+  position, the issue's labels cannot stand in for the board, so both verbs
+  refuse before any branch or pull-request change. The refusal says whether
+  `pkit` was not found, exited non-zero (with the end of what it said), or
+  could not determine a position. Nothing is newly refused where labels or
+  open/closed carry `state`, and an issue with no state label and no milestone
+  still reads as Todo. `review-work`'s documented exit codes now include 3 for
+  a `gh` failure opening the pull request or making it ready, and its closing
+  line, `[ok] PR ready; #<N> in Review`, no longer claims a move from In
+  Progress; `move-issue`'s own output says whether it moved the issue.
