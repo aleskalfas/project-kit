@@ -150,7 +150,10 @@ def test_an_issue_left_on_a_closed_milestone_moves_to_an_open_one(ei, monkeypatc
     With no state label the child reads backlog before and after, so its
     state is preserved."""
     rec = _run(
-        ei, monkeypatch, ["42", "--milestone", "6", "--yes"], _issue(labels=()),
+        ei,
+        monkeypatch,
+        ["42", "--milestone", "6", "--yes"],
+        _issue(labels=()),
         open_milestones=((6, "Milestone 6"),),
     )
     assert rec.rc == 0

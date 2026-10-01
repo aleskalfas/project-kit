@@ -831,10 +831,8 @@ def _floor_collection(rc):
 
 def _files_api_pages(paths, size=100):
     """`gh api --paginate … --jq` output for `paths`, `size` files per page."""
-    pages = [paths[i:i + size] for i in range(0, len(paths), size)]
-    return "".join(
-        json.dumps([path, None]) + "\n" for page in pages for path in page
-    )
+    pages = [paths[i : i + size] for i in range(0, len(paths), size)]
+    return "".join(json.dumps([path, None]) + "\n" for page in pages for path in page)
 
 
 def _wire_files_api(dw, monkeypatch, *, stdout="", returncode=0, stderr=""):
@@ -846,7 +844,10 @@ def _wire_files_api(dw, monkeypatch, *, stdout="", returncode=0, stderr=""):
         if args[:2] == ["gh", "api"] and "/files" in " ".join(args):
             calls.append(args)
             return subprocess.CompletedProcess(
-                args=args, returncode=returncode, stdout=stdout, stderr=stderr,
+                args=args,
+                returncode=returncode,
+                stdout=stdout,
+                stderr=stderr,
             )
         return inner(args, config, **kwargs)
 
@@ -863,7 +864,8 @@ def test_large_pr_resolves_floor_reviewer_and_passes(dw, rc, monkeypatch) -> Non
     """A 350-file PR resolves code-reviewer from the code file on page four,
     and passes once it approves."""
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=_floor_collection(rc),
         comments=[
             _local_verdict_comment("reviewer", "APPROVED"),
@@ -872,7 +874,9 @@ def test_large_pr_resolves_floor_reviewer_and_passes(dw, rc, monkeypatch) -> Non
         closing_issue_labels={42: ["type:docs"]},
     )
     calls = _wire_files_api(
-        dw, monkeypatch, stdout=_files_api_pages(_LARGE_PR_PATHS),
+        dw,
+        monkeypatch,
+        stdout=_files_api_pages(_LARGE_PR_PATHS),
     )
     result = dw._check_agent_gate(99, {}, _config(), "resolved", CAP_ROOT)
     assert len(calls) == 1
@@ -884,7 +888,8 @@ def test_large_pr_still_requires_the_floor_reviewer(dw, rc, monkeypatch) -> None
     """The same PR with only the baseline approved refuses, naming the floor
     reviewer the last page brought in — the floor is computed, not skipped."""
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=_floor_collection(rc),
         comments=[_local_verdict_comment("reviewer", "APPROVED")],
         closing_issue_labels={42: ["type:docs"]},
@@ -898,7 +903,8 @@ def test_large_pr_still_requires_the_floor_reviewer(dw, rc, monkeypatch) -> None
 def test_files_api_failure_refuses_as_transient(dw, rc, monkeypatch) -> None:
     """A failed files read refuses (fail closed) and asks for a retry."""
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=_floor_collection(rc),
         comments=[_local_verdict_comment("reviewer", "APPROVED")],
         closing_issue_labels={42: ["type:docs"]},
@@ -914,7 +920,8 @@ def test_files_api_failure_refuses_as_transient(dw, rc, monkeypatch) -> None:
 def test_files_api_empty_refuses(dw, rc, monkeypatch) -> None:
     """An empty files read is unknown ground truth, not a docs-only PR."""
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=_floor_collection(rc),
         comments=[_local_verdict_comment("reviewer", "APPROVED")],
         closing_issue_labels={42: ["type:docs"]},
@@ -926,12 +933,15 @@ def test_files_api_empty_refuses(dw, rc, monkeypatch) -> None:
 
 
 def test_pr_past_the_listing_ceiling_refuses_naming_the_cause(
-    dw, rc, monkeypatch,
+    dw,
+    rc,
+    monkeypatch,
 ) -> None:
     """A PR reaching GitHub's 3000-file listing refuses with the cause and a
     split-the-PR remediation, not a "transient gh failure" retry."""
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=_floor_collection(rc),
         comments=[_local_verdict_comment("reviewer", "APPROVED")],
         closing_issue_labels={42: ["type:docs"]},

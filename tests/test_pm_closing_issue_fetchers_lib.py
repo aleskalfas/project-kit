@@ -117,16 +117,14 @@ def _files_api_stdout(*pages) -> str:
     pages arrive as one continuous run of lines.
     """
     return "".join(
-        json.dumps([filename, previous]) + "\n"
-        for page in pages
-        for filename, previous in page
+        json.dumps([filename, previous]) + "\n" for page in pages for filename, previous in page
     )
 
 
 def _pages(paths, size=100):
     """Split `paths` into pages of unrenamed file entries, `size` per page."""
     entries = [(path, None) for path in paths]
-    return [entries[i:i + size] for i in range(0, len(entries), size)]
+    return [entries[i : i + size] for i in range(0, len(entries), size)]
 
 
 def test_changed_files_reads_every_page_of_the_files_api(cf) -> None:
@@ -141,16 +139,17 @@ def test_changed_files_reads_every_page_of_the_files_api(cf) -> None:
 
     cf.pr_changed_files(7, CONFIG, gh_run=gh_run)
     assert seen["argv"] == [
-        "gh", "api", "--paginate",
+        "gh",
+        "api",
+        "--paginate",
         "repos/{owner}/{repo}/pulls/7/files?per_page=100",
-        "--jq", ".[] | [.filename, .previous_filename]",
+        "--jq",
+        ".[] | [.filename, .previous_filename]",
     ]
 
 
 def test_changed_files_returns_all_paths(cf) -> None:
-    stdout = _files_api_stdout(
-        [("src/app.py", None), ("README.md", None), ("docs/conf.py", None)]
-    )
+    stdout = _files_api_stdout([("src/app.py", None), ("README.md", None), ("docs/conf.py", None)])
     out = cf.pr_changed_files(7, CONFIG, gh_run=lambda *a, **k: _proc(stdout=stdout))
     assert out == ["src/app.py", "README.md", "docs/conf.py"]
 
