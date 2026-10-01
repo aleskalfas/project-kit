@@ -1,0 +1,1489 @@
+"""How a pull request lands today, for every caller: one table of scenarios (#1253).
+
+Three copies of the landing sequence exist — project-management's
+(`_lib.pr_merge.land`, run by `done-work` and `merge-pr`), the backbone's
+`pkit release merge` (`release.merge_release_pr`), and `land-work`, which lands
+through `done-work`. The landing series (#1220) moves them into one command;
+this table pins, before any of it moves, what each caller does in each
+scenario, so every change in the series shows as an edited cell with its
+reason.
+
+Each row is a scenario of the series' design note (the scratchpad note
+`landing-sequence`, "The scenario table"). Each
+caller runs through its real entry point — `done_work.run`, merge-pr's `main`,
+`pkit release merge` through the CLI, land-work's `main` — on one fake of the
+hosting service and the clone (`tests.hosting_fake`); project-management's
+`pkit pull-request` calls run the real backbone in this process. Stubbed are
+only what the callers' own tests stub: the membership and bootstrap gates,
+the capability's configuration, the approval gate (the reviewers), the moves
+`done-work` makes after a merge and merge-pr's after-merge hooks (both
+recorded), and the backbone's naming of the default branch.
+
+A row's cells (:class:`Row`) are in one order — done-work, merge-pr, release
+merge, land-work. A cell (:class:`Cell`) records what the caller's run came
+to, the landing's requests the service received, in order, whether the steps
+after the merge ran, and what became of the remote and the local head branch.
+A cell no run can fill today is :class:`NotToday`, with why. A `note` says why
+a cell is as it is where the outcome does not: an accident a later PR of the
+series changes, or a difference by design.
+"""
+
+from __future__ import annotations
+
+import importlib.util
+import json
+import os
+import stat
+import sys
+from collections.abc import Callable, Iterator, Mapping
+from dataclasses import dataclass, field
+from pathlib import Path
+from types import ModuleType
+from typing import Any
+
+import pytest
+from click.testing import CliRunner
+
+from project_kit import cli
+from tests import hosting_fake as fake
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+SCRIPTS = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
+
+ISSUE = 42
+PR = 496
+
+DONE_WORK = "done-work"
+MERGE_PR = "merge-pr"
+RELEASE = "release merge"
+LAND_WORK = "land-work"
+CALLERS = (DONE_WORK, MERGE_PR, RELEASE, LAND_WORK)
+
+# The options a scenario asks of a caller, as each caller spells them; a
+# caller without one cannot run that scenario (its cell is NotToday).
+_OPTIONS: Mapping[str, Mapping[str, list[str]]] = {
+    DONE_WORK: {
+        "admin": ["--admin"],
+        "bypass-ci": ["--bypass-ci", "a flaky check"],
+        "force": ["--force"],
+        "short-wait": ["--wait-minutes", "1"],
+        "allow-foreign-repo": ["--allow-foreign-repo"],
+    },
+    MERGE_PR: {
+        "admin": ["--admin"],
+        "bypass-ci": ["--bypass-ci", "a flaky check"],
+        "force": ["--force"],
+        "short-wait": ["--wait-minutes", "1"],
+        "allow-foreign-repo": ["--allow-foreign-repo"],
+    },
+    RELEASE: {"force": ["--force"], "short-wait": ["--wait-minutes", "1"]},
+    LAND_WORK: {
+        "short-wait": ["--wait-minutes", "1"],
+        "allow-foreign-repo": ["--allow-foreign-repo"],
+    },
+}
+
+
+# ---- the table's cells ---------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class Cell:
+    """What one caller's run came to in one scenario.
+
+    `outcome` — done-work: its `DoneWorkRun` kind and exit, and `retry` when
+    it says running again can help; merge-pr: its exit, and the record it left
+    in the clone (`record=owed` or `record=ran`); release: its exit, or
+    `hangs` when a request that is never answered holds the run; land-work:
+    its exit and the gist of its last step line.
+    `requests` — the landing's requests the service received, in order
+    (`hosting_fake.LANDING`; `read×3` is three running).
+    `after` — the steps after the merge ran: done-work's move to Done and its
+    closes, merge-pr's after-merge hooks, release's branch clean-up (its only
+    step after the merge).
+    `remote` — what became of the PR's head branch on the service: `none` (not
+    asked), or what the deletion did (`deleted`, `gone`, `refused, protected`,
+    `deleted, tip … moved`, `deleted, closed #N`).
+    `local` — the local clean-up: `deleted`, `kept`, `absent` (the clone had
+    no such branch) or `none` (no clean-up ran).
+    `asked` — the questions a terminal was asked.
+    """
+
+    outcome: str
+    requests: str = ""
+    after: bool = False
+    remote: str = "none"
+    local: str = "none"
+    asked: int = 0
+    note: str = field(default="", compare=False)
+
+
+def merged(
+    outcome: str,
+    requests: str,
+    *,
+    remote: str = "deleted",
+    local: str = "deleted",
+    asked: int = 0,
+    note: str = "",
+) -> Cell:
+    """A run after whose merge every step ran."""
+    return Cell(outcome, requests, True, remote, local, asked, note)
+
+
+def stopped(outcome: str, requests: str = "", *, note: str = "") -> Cell:
+    """A run that ended with no step after a merge run, and no branch deleted."""
+    return Cell(outcome, requests, note=note)
+
+
+@dataclass(frozen=True)
+class NotToday:
+    """A cell no run fills today, and why: the caller has no such option, or
+    the scenario needs what does not exist yet."""
+
+    why: str
+
+
+@dataclass(frozen=True)
+class Row:
+    """A scenario's cells, one per caller, in the callers' order."""
+
+    done_work: Cell | NotToday
+    merge_pr: Cell | NotToday
+    release: Cell | NotToday
+    land_work: Cell | NotToday
+
+    def cell(self, caller: str) -> Cell | NotToday:
+        cells = {
+            DONE_WORK: self.done_work,
+            MERGE_PR: self.merge_pr,
+            RELEASE: self.release,
+            LAND_WORK: self.land_work,
+        }
+        return cells[caller]
+
+
+@dataclass(frozen=True)
+class Scenario:
+    """One row: what the scenario is, how it is set up, and each caller's cell."""
+
+    id: str
+    what: str
+    setup: Callable[[World], None]
+    today: Row
+    #: The cell a later PR of the landing series expects, by caller: where one
+    #: is named, the test holds the caller to it, and `today` keeps what the
+    #: caller did before that PR.
+    after: Mapping[str, Cell | NotToday] = field(default_factory=dict)
+
+    def expected(self, caller: str) -> Cell | NotToday:
+        return self.after.get(caller, self.today.cell(caller))
+
+
+@dataclass
+class World:
+    """One run's world, which a scenario's setup shapes before the run."""
+
+    host: fake.HostingService
+    clone: fake.LocalClone
+    tmp: Path
+    #: The session anchor; None runs outside any session.
+    anchor: Path | None
+    stdin: fake.Terminal | fake.NoTerminal = field(default_factory=fake.NoTerminal)
+    #: The options asked of the caller (`_OPTIONS`).
+    options: tuple[str, ...] = ()
+    #: The backbone project-management asks: the current one, or one that
+    #: predates `pkit pull-request`.
+    backbone_has_the_noun: bool = True
+    rewrite: fake.Rewrite | None = None
+
+    def elsewhere(self) -> Path:
+        """Another repository on the machine, the anchor of a session rooted there."""
+        other = self.tmp / "other"
+        other.mkdir(exist_ok=True)
+        self.clone.elsewhere[other] = "https://github.com/octo/other.git"
+        return other
+
+
+# ---- the scenarios' setups -----------------------------------------------------------
+
+
+def _direct(world: World) -> None:
+    """A base without a queue: the fake's default."""
+
+
+def _queue(world: World, *, method: str = "SQUASH") -> None:
+    world.host.set_base(fake.Base(queue=True, method=method))
+
+
+def _queue_merges(world: World) -> None:
+    _queue(world)
+    world.host.progress = [fake.at(2), fake.at(1, "MERGEABLE"), fake.lands()]
+
+
+def _checks_pending(world: World) -> None:
+    _queue(world)
+    world.host.checks_pending = True
+    world.host.progress = [fake.unchanged(), fake.at(2), fake.at(1, "MERGEABLE"), fake.lands()]
+
+
+def _already_queued(world: World, *, method: str = "SQUASH") -> None:
+    _queue(world, method=method)
+    world.host.enter_queue()
+    world.host.entry = (1, "MERGEABLE")
+    world.host.progress = [fake.at(1, "MERGEABLE"), fake.at(1, "MERGEABLE"), fake.lands()]
+
+
+def _wait_runs_out(world: World) -> None:
+    _queue(world)
+    world.options = ("short-wait",)
+    world.host.progress = [fake.at(3, "QUEUED")]
+
+
+def _merge_only_enqueued(world: World) -> None:
+    world.host.merge_enqueues = True
+    world.host.progress = [fake.at(1), fake.lands()]
+
+
+def _auto_merge_held_on_a_direct_base(world: World) -> None:
+    world.host.auto_merge = True
+    world.host.progress = [fake.unchanged(), fake.unchanged(), fake.unchanged(), fake.lands()]
+
+
+def _queue_switched_on(world: World) -> None:
+    world.host.after(fake.READ, lambda host: host.set_base(fake.Base(queue=True)))
+    world.host.progress = [fake.at(1), fake.lands()]
+
+
+def _base_changed(world: World) -> None:
+    _queue(world)
+    world.host.after(
+        fake.READ, lambda host: host.retarget("develop", fake.Base(queue=True, method="MERGE"))
+    )
+    world.host.progress = [fake.at(1), fake.lands()]
+
+
+def _admin_on_a_queue(world: World) -> None:
+    _queue(world)
+    world.options = ("admin",)
+
+
+def _bypass_ci_on_a_queue(world: World) -> None:
+    _queue(world)
+    world.options = ("bypass-ci",)
+
+
+def _not_squash(world: World) -> None:
+    _queue(world, method="MERGE")
+
+
+def _defaults_not_the_convention(world: World) -> None:
+    _queue(world)
+    world.host.squash_defaults = ("COMMIT_OR_PR_TITLE", "COMMIT_MESSAGES")
+
+
+def _defaults_unreadable(world: World) -> None:
+    _queue(world)
+    world.host.squash_defaults = None
+
+
+def _already_queued_not_squash(world: World) -> None:
+    _already_queued(world, method="MERGE")
+
+
+def _dropped_head(world: World) -> None:
+    _queue(world)
+    world.host.dropped_before()
+
+
+def _dropped_head_forced(world: World) -> None:
+    _dropped_head(world)
+    world.options = ("force",)
+    world.host.progress = [fake.at(1), fake.lands()]
+
+
+def _head_moves_while_queued(world: World) -> None:
+    _queue(world)
+    world.host.progress = [fake.at(2), fake.pushes("sha-pushed")]
+
+
+def _head_moves_dequeue_fails(world: World) -> None:
+    _head_moves_while_queued(world)
+    world.host.fail(fake.DEQUEUE, count=None, stderr="GraphQL: Something went wrong")
+
+
+def _queued_at_another_head(world: World) -> None:
+    _already_queued(world)
+    world.host.progress = []
+    world.host.before(fake.READ, lambda host: host.push("sha-pushed"))
+
+
+def _merged_before(world: World) -> None:
+    world.host.merge_now()
+
+
+def _merged_by_the_queue_before(world: World) -> None:
+    _queue(world)
+    world.host.enter_queue()
+    world.host.merge_now()
+
+
+def _merged_meanwhile(world: World) -> None:
+    world.host.before(fake.READ, lambda host: host.merge_now())
+
+
+def _merged_meanwhile_elsewhere(world: World) -> None:
+    world.host.before(fake.READ, lambda host: host.merge_now(head="sha-other"))
+
+
+def _race_on_a_direct_base(world: World) -> None:
+    world.host.before(fake.MERGE, lambda host: host.merge_now())
+
+
+def _race_on_a_queue(world: World) -> None:
+    _queue(world)
+    world.host.before(fake.ENQUEUE, lambda host: host.enter_queue())
+    world.host.progress = [fake.at(1), fake.lands()]
+
+
+def _closed_before(world: World) -> None:
+    world.host.close()
+
+
+def _closed_meanwhile(world: World) -> None:
+    world.host.before(fake.READ, lambda host: host.close())
+
+
+def _unanswered_then_merged(world: World) -> None:
+    world.host.lose_reply(fake.MERGE)
+
+
+def _unanswered_then_queued(world: World) -> None:
+    _queue(world)
+    world.host.lose_reply(fake.ENQUEUE)
+    world.host.progress = [fake.at(1), fake.lands()]
+
+
+def _unanswered_then_neither(world: World) -> None:
+    world.host.never_receive(fake.MERGE)
+
+
+def _made_then_gh_failed(world: World) -> None:
+    world.host.error_after(fake.MERGE)
+
+
+def _fail_every_read(host: fake.HostingService) -> None:
+    host.fail(fake.READ, count=None)
+
+
+def _read_fails_after_a_merge(world: World) -> None:
+    world.host.after(fake.MERGE, _fail_every_read)
+
+
+def _read_fails_after_an_enqueue(world: World) -> None:
+    _queue(world)
+    world.host.after(fake.ENQUEUE, _fail_every_read)
+
+
+def _rate_limit_mid_wait(world: World) -> None:
+    _queue_merges(world)
+
+    def limit(host: fake.HostingService) -> None:
+        host.fail(
+            fake.READ,
+            first=host.seen(fake.READ) + 2,
+            stderr="gh: API rate limit exceeded for user ID 1. (HTTP 403)",
+        )
+
+    world.host.after(fake.ENQUEUE, limit)
+
+
+def _auto_merge_not_allowed(world: World) -> None:
+    _queue(world)
+    world.host.auto_merge_allowed = False
+
+
+def _not_drivable(world: World) -> None:
+    raise AssertionError("a row no caller can run today has no setup to run")
+
+
+def _tip_moved(world: World) -> None:
+    world.host.after(fake.MERGE, lambda host: host.move_branch("sha-later"))
+
+
+def _tip_gone(world: World) -> None:
+    def deleted_on_merge(host: fake.HostingService) -> None:
+        host.refs.pop(host.head_ref, None)
+
+    world.host.after(fake.MERGE, deleted_on_merge)
+
+
+def _fork(world: World) -> None:
+    world.host.cross_repository = True
+
+
+def _protected(world: World) -> None:
+    world.host.protected.add(world.host.head_ref)
+
+
+def _another_open_pr(world: World) -> None:
+    host = world.host
+    host.others.append(fake.OtherPullRequest(501, host.head_ref, host.head_oid))
+
+
+def _reused_name(world: World) -> None:
+    _merged_by_the_queue_before(world)
+    host = world.host
+    host.move_branch("sha-new")
+    host.others.append(fake.OtherPullRequest(502, host.head_ref, "sha-new"))
+    world.clone.branches.pop(host.head_ref)
+    world.clone.current = "main"
+
+
+def _foreign_refused(world: World) -> None:
+    world.anchor = world.elsewhere()
+
+
+def _foreign_flagged(world: World) -> None:
+    world.anchor = world.elsewhere()
+    world.options = ("allow-foreign-repo",)
+
+
+def _foreign_at_a_terminal(world: World) -> None:
+    world.anchor = world.elsewhere()
+    world.stdin = fake.Terminal("y")
+
+
+def _no_anchor(world: World) -> None:
+    world.anchor = None
+
+
+def _backbone_without_the_noun(world: World) -> None:
+    world.backbone_has_the_noun = False
+
+
+def _unknown_end(world: World) -> None:
+    _queue_merges(world)
+
+    def rewrite(args: list[str], document: dict[str, Any]) -> dict[str, Any]:
+        if args[0] == "wait" and document.get("event") == "end":
+            return {**document, "ended": "landed"}
+        return document
+
+    world.rewrite = rewrite
+
+
+def _missing_key(world: World) -> None:
+    def rewrite(args: list[str], document: dict[str, Any]) -> dict[str, Any]:
+        reading = document.get("reading")
+        if args[0] == "read" and isinstance(reading, dict):
+            return {**document, "reading": {k: v for k, v in reading.items() if k != "queued"}}
+        return document
+
+    world.rewrite = rewrite
+
+
+# ---- the table -----------------------------------------------------------------------
+#
+# Each row's cells are in the callers' order: done-work, merge-pr, release
+# merge, land-work. The requests: `read` the queue reading, `defaults` the
+# repository's squash-commit defaults, `merge` and `enqueue` the requests,
+# `dequeue`, and `delete-ref` the head branch's deletion.
+
+_NO_ADMIN = NotToday("takes no --admin")
+_NO_BYPASS_CI = NotToday("takes no --bypass-ci: its CI gate has no override")
+_NO_FORCE = NotToday("takes no --force: a dropped head is done-work's refusal")
+_NO_FOREIGN_FLAG = NotToday("takes no --allow-foreign-repo: the command has no guard")
+_NO_NOUN = NotToday("is the backbone: it imports the landing module and asks no command")
+_NO_DOCUMENTS = NotToday("imports the landing module: no document passes between processes")
+_NO_REQUESTING = NotToday(
+    "no `requesting` event exists yet (it comes with `land`, #1258); the request-unanswered "
+    "rows are the nearest today"
+)
+
+_UNGUARDED = (
+    "accident: `pkit release merge` has no cross-repository guard (ADR-061 point 6); #1254 adds it"
+)
+_TIP_UNCHECKED = (
+    "accident: the branch is deleted without its tip being checked against the merged head "
+    "(ADR-061's fifth obligation); #1255 deletes only at that head"
+)
+_HANGS = (
+    "accident: release bounds no `gh` call and has no path for a request that gets no "
+    "answer: the run waits on it for ever (#1256)"
+)
+_ONE_READING = (
+    "accident: one reading neither merged nor queued is taken for 'the request was not made' "
+    "(#1256 reads twice)"
+)
+_NOT_READ_AGAIN = (
+    "accident: release reads the queue once, before its gates, and not again before the request"
+)
+_MADE_THEN_FAILED = (
+    "accident: a request gh reports failed after the service made it is taken for a failed "
+    "one, so what follows the merge does not run"
+)
+
+SCENARIOS: tuple[Scenario, ...] = (
+    # ---- landing ---------------------------------------------------------------------
+    Scenario(
+        "no-queue",
+        "A base without a queue: one direct squash merge, pinned to the checked head.",
+        _direct,
+        Row(
+            merged("merged 0", "read×2 merge read delete-ref"),
+            merged("0 record=ran", "read×2 merge read delete-ref"),
+            merged("0", "read merge read delete-ref"),
+            merged("0 merge: merged", "read×2 merge read delete-ref"),
+        ),
+    ),
+    Scenario(
+        "queue-merges-within-the-wait",
+        "The PR is enqueued, moves up the queue, and the queue merges it within the wait.",
+        _queue_merges,
+        Row(
+            merged("merged 0", "read defaults read defaults enqueue read×3 delete-ref"),
+            merged("0 record=ran", "read defaults read defaults enqueue read×3 delete-ref"),
+            merged("0", "read defaults enqueue read×3 delete-ref"),
+            merged("0 merge: merged", "read defaults read defaults enqueue read×3 delete-ref"),
+        ),
+    ),
+    Scenario(
+        "queue-checks-pending",
+        "Its required checks still running, the PR is held by auto-merge, then enters the "
+        "queue, which merges it.",
+        _checks_pending,
+        Row(
+            merged("merged 0", "read defaults read defaults enqueue read×4 delete-ref"),
+            merged("0 record=ran", "read defaults read defaults enqueue read×4 delete-ref"),
+            merged("0", "read defaults enqueue read×4 delete-ref"),
+            merged("0 merge: merged", "read defaults read defaults enqueue read×4 delete-ref"),
+        ),
+    ),
+    Scenario(
+        "already-queued",
+        "A re-run while the queue holds the PR: waited for, not enqueued again.",
+        _already_queued,
+        Row(
+            merged("merged 0", "read defaults read defaults read delete-ref"),
+            merged("0 record=ran", "read defaults read defaults read delete-ref"),
+            merged(
+                "0",
+                "read defaults read×2 delete-ref",
+                note="by design: a release PR the queue holds is waited for without its gates",
+            ),
+            merged("0 merge: merged", "read defaults read defaults read delete-ref"),
+        ),
+    ),
+    Scenario(
+        "wait-runs-out",
+        "The queue holds the PR past a one-minute wait.",
+        _wait_runs_out,
+        Row(
+            stopped("queued 4", "read defaults read defaults enqueue read×5"),
+            stopped("4 record=owed", "read defaults read defaults enqueue read×5"),
+            stopped("4", "read defaults enqueue read×5"),
+            stopped("4 merge: queued", "read defaults read defaults enqueue read×6"),
+        ),
+    ),
+    Scenario(
+        "merge-only-enqueued",
+        "The reading names no queue, yet gh's direct merge only enqueues the PR, which the "
+        "queue then merges.",
+        _merge_only_enqueued,
+        Row(
+            merged("merged 0", "read×2 merge read×2 delete-ref"),
+            merged("0 record=ran", "read×2 merge read×2 delete-ref"),
+            merged("0", "read merge read×2 delete-ref"),
+            merged("0 merge: merged", "read×2 merge read×2 delete-ref"),
+        ),
+    ),
+    Scenario(
+        "auto-merge-held-on-a-direct-base",
+        "A base without a queue, where auto-merge holds the PR until GitHub merges it.",
+        _auto_merge_held_on_a_direct_base,
+        Row(
+            merged("merged 0", "read×2 merge read delete-ref"),
+            merged("0 record=ran", "read×2 merge read delete-ref"),
+            merged(
+                "0",
+                "read×4 delete-ref",
+                note="release reads auto-merge's hold as the queue: it skips its gates, warns "
+                "that the queue merges by an unreported method on a base with no queue, and "
+                "waits for GitHub's merge",
+            ),
+            merged("0 merge: merged", "read×2 merge read delete-ref"),
+        ),
+    ),
+    Scenario(
+        "queue-switched-on-after-the-first-read",
+        "The base starts merging through a queue after the caller's first reading.",
+        _queue_switched_on,
+        Row(
+            merged("merged 0", "read×2 defaults enqueue read×2 delete-ref"),
+            merged("0 record=ran", "read×2 defaults enqueue read×2 delete-ref"),
+            merged(
+                "0",
+                "read merge read×2 delete-ref",
+                note=f"{_NOT_READ_AGAIN}: gh's direct merge is enqueued, and the queue composes "
+                "the commit from defaults release never read",
+            ),
+            merged("0 merge: merged", "read×2 defaults enqueue read×2 delete-ref"),
+        ),
+    ),
+    Scenario(
+        "base-changed-after-the-first-read",
+        "After the caller's first reading the PR is retargeted to a base whose queue merges "
+        "by MERGE.",
+        _base_changed,
+        Row(
+            stopped("refused 1", "read defaults read"),
+            stopped("1", "read defaults read"),
+            merged(
+                "0",
+                "read defaults enqueue read×2 delete-ref",
+                note=f"{_NOT_READ_AGAIN}: it enqueues into the new base's queue, which lands "
+                "the PR as a merge commit",
+            ),
+            stopped("1 merge: refused", "read defaults read"),
+        ),
+    ),
+    # ---- refusals --------------------------------------------------------------------
+    Scenario(
+        "admin-on-a-queued-base",
+        "--admin where the base merges through a queue.",
+        _admin_on_a_queue,
+        Row(stopped("refused 1", "read"), stopped("1", "read"), _NO_ADMIN, _NO_ADMIN),
+    ),
+    Scenario(
+        "bypass-ci-on-a-queued-base",
+        "--bypass-ci where the base merges through a queue.",
+        _bypass_ci_on_a_queue,
+        Row(stopped("refused 1", "read"), stopped("1", "read"), _NO_BYPASS_CI, _NO_BYPASS_CI),
+    ),
+    Scenario(
+        "queue-not-squash",
+        "The queue merges by MERGE.",
+        _not_squash,
+        Row(
+            stopped("refused 1", "read"),
+            stopped("1", "read"),
+            stopped("1", "read"),
+            stopped("1 merge: refused", "read"),
+        ),
+    ),
+    Scenario(
+        "squash-defaults-not-the-convention",
+        "The repository's squash defaults are not the PR title over the PR body.",
+        _defaults_not_the_convention,
+        Row(
+            stopped("refused 1", "read defaults"),
+            stopped("1", "read defaults"),
+            stopped("1", "read defaults"),
+            stopped("1 merge: refused", "read defaults"),
+        ),
+    ),
+    Scenario(
+        "squash-defaults-unreadable",
+        "The account cannot read the repository's squash defaults.",
+        _defaults_unreadable,
+        Row(
+            stopped("unreadable 2", "read defaults"),
+            stopped("3", "read defaults"),
+            stopped("1", "read defaults", note="a refusal here; unreadable in project-management"),
+            stopped("2 merge: stopped", "read defaults"),
+        ),
+    ),
+    Scenario(
+        "already-queued-not-squash",
+        "A re-run while the queue holds the PR, and the queue merges by MERGE.",
+        _already_queued_not_squash,
+        Row(
+            stopped(
+                "refused 1",
+                "read",
+                note="refused, and the PR stays in the queue, which may still merge it",
+            ),
+            stopped("1", "read", note="refused, and the PR stays in the queue"),
+            merged(
+                "0",
+                "read×3 delete-ref",
+                note="by design: warns the commit will not be a release's, and lands it",
+            ),
+            stopped("1 merge: refused", "read", note="refused, and the PR stays in the queue"),
+        ),
+    ),
+    Scenario(
+        "dropped-head",
+        "The queue dropped the PR at its current head before the run.",
+        _dropped_head,
+        Row(
+            stopped("refused 1", "read"),
+            stopped("1", "read"),
+            stopped(
+                "1",
+                "read defaults",
+                note="accident: refused after its gates and the squash defaults; "
+                "project-management refuses on the first reading",
+            ),
+            stopped("1 merge: refused", "read"),
+        ),
+    ),
+    Scenario(
+        "dropped-head-forced",
+        "The same head enqueued again with --force, and the queue merges it.",
+        _dropped_head_forced,
+        Row(
+            merged("merged 0", "read defaults read defaults enqueue read×2 delete-ref"),
+            merged("0 record=ran", "read defaults read defaults enqueue read×2 delete-ref"),
+            merged("0", "read defaults enqueue read×2 delete-ref"),
+            _NO_FORCE,
+        ),
+    ),
+    # ---- the head moves ---------------------------------------------------------------
+    Scenario(
+        "head-moves-while-queued",
+        "A push while the queue holds the PR: taken out of the queue.",
+        _head_moves_while_queued,
+        Row(
+            stopped("head-moved 3", "read defaults read defaults enqueue read×3 dequeue read"),
+            stopped("3", "read defaults read defaults enqueue read×3 dequeue read"),
+            stopped("3", "read defaults enqueue read×3 dequeue read"),
+            stopped("3 merge: stopped", "read defaults read defaults enqueue read×3 dequeue read"),
+        ),
+    ),
+    Scenario(
+        "head-moves-dequeue-fails",
+        "A push while the queue holds the PR, and taking it out fails.",
+        _head_moves_dequeue_fails,
+        Row(
+            stopped("head-moved 3", "read defaults read defaults enqueue read×3 dequeue"),
+            stopped("3", "read defaults read defaults enqueue read×3 dequeue"),
+            stopped("3", "read defaults enqueue read×3 dequeue"),
+            stopped("3 merge: stopped", "read defaults read defaults enqueue read×3 dequeue"),
+        ),
+    ),
+    Scenario(
+        "queued-at-another-head-on-a-rerun",
+        "A re-run while the queue holds the PR, whose head moves after the caller read it.",
+        _queued_at_another_head,
+        Row(
+            stopped("head-moved 3", "read defaults read defaults read×2 dequeue read"),
+            stopped("3", "read defaults read defaults read×2 dequeue read"),
+            stopped("3", "read defaults read×2 dequeue read"),
+            stopped("3 merge: stopped", "read defaults read defaults read×2 dequeue read"),
+        ),
+    ),
+    # ---- merged or closed by someone else -----------------------------------------------
+    Scenario(
+        "merged-before-the-run",
+        "Someone else merged the PR directly, before the run.",
+        _merged_before,
+        Row(
+            merged(
+                "merged 0",
+                "delete-ref",
+                note="completes any merged PR that closes the issue",
+            ),
+            stopped(
+                "1",
+                "read",
+                note="by design: a PR merged without a queue and owed nothing from this clone "
+                "is refused",
+            ),
+            merged("0", "delete-ref"),
+            merged("0 merge: #42 completed through its merged PR", "delete-ref"),
+        ),
+    ),
+    Scenario(
+        "merged-by-the-queue-before-the-run",
+        "The queue merged the PR after an earlier run returned: what follows the merge is left.",
+        _merged_by_the_queue_before,
+        Row(
+            merged("merged 0", "delete-ref"),
+            merged("0 record=ran", "read delete-ref"),
+            merged("0", "delete-ref"),
+            merged("0 merge: #42 completed through its merged PR", "delete-ref"),
+        ),
+    ),
+    Scenario(
+        "merged-meanwhile",
+        "Someone else merges the PR at the checked head after the caller found it open.",
+        _merged_meanwhile,
+        Row(
+            merged("merged 0", "read×2 delete-ref"),
+            merged("0 record=ran", "read×2 delete-ref"),
+            merged("0", "read delete-ref"),
+            merged("0 merge: merged", "read×2 delete-ref"),
+        ),
+    ),
+    Scenario(
+        "merged-meanwhile-at-another-head",
+        "Someone else pushes and merges the PR after the caller found it open.",
+        _merged_meanwhile_elsewhere,
+        Row(
+            merged("merged 0", "read×2 delete-ref", local="kept"),
+            merged("0 record=ran", "read×2 delete-ref", local="kept"),
+            merged("0", "read delete-ref", local="kept"),
+            merged("0 merge: merged", "read×2 delete-ref", local="kept"),
+        ),
+    ),
+    Scenario(
+        "two-landings-race-on-a-direct-base",
+        "Another landing merges the PR just before this one's merge request.",
+        _race_on_a_direct_base,
+        Row(
+            merged("merged 0", "read×2 merge read delete-ref"),
+            merged("0 record=ran", "read×2 merge read delete-ref"),
+            merged("0", "read merge read delete-ref"),
+            merged("0 merge: merged", "read×2 merge read delete-ref"),
+        ),
+    ),
+    Scenario(
+        "two-landings-race-on-a-queue",
+        "Another landing enqueues the PR just before this one's enqueue, which gh refuses.",
+        _race_on_a_queue,
+        Row(
+            stopped(
+                "refused 3 retry",
+                "read defaults read defaults enqueue",
+                note="taken for a failed request while the PR sits in the queue",
+            ),
+            stopped("3", "read defaults read defaults enqueue"),
+            stopped("1", "read defaults enqueue"),
+            stopped(
+                "7 merge: not merged",
+                "read defaults read defaults enqueue",
+                note="the PR's state it reads again does not show the queue",
+            ),
+        ),
+    ),
+    Scenario(
+        "closed-before-the-run",
+        "The PR was closed without merging before the run.",
+        _closed_before,
+        Row(
+            stopped("refused 2", note="no open PR for the branch"),
+            stopped("1"),
+            stopped("0", note="by design: nothing to merge"),
+            stopped("1 merge: refused"),
+        ),
+    ),
+    Scenario(
+        "closed-meanwhile",
+        "The PR is closed after the caller found it open.",
+        _closed_meanwhile,
+        Row(
+            stopped("refused 3 retry", "read×2 merge", note="gh's refusal of the merge"),
+            stopped("3", "read×2 merge"),
+            stopped("1", "read merge"),
+            stopped("7 merge: not merged", "read×2 merge"),
+        ),
+    ),
+    # ---- requests and answers -------------------------------------------------------------
+    Scenario(
+        "request-unanswered-then-merged",
+        "The merge is made and its answer never comes back; the PR reads merged.",
+        _unanswered_then_merged,
+        Row(
+            merged("merged 0", "read×2 merge read delete-ref"),
+            merged("0 record=ran", "read×2 merge read delete-ref"),
+            stopped("hangs", "read merge", note=_HANGS),
+            merged("0 merge: merged", "read×2 merge read delete-ref"),
+        ),
+    ),
+    Scenario(
+        "request-unanswered-then-queued",
+        "The enqueue is made and its answer never comes back; the PR reads queued.",
+        _unanswered_then_queued,
+        Row(
+            merged("merged 0", "read defaults read defaults enqueue read×2 delete-ref"),
+            merged("0 record=ran", "read defaults read defaults enqueue read×2 delete-ref"),
+            stopped("hangs", "read defaults enqueue", note=_HANGS),
+            merged("0 merge: merged", "read defaults read defaults enqueue read×2 delete-ref"),
+        ),
+    ),
+    Scenario(
+        "request-unanswered-then-neither",
+        "The merge never reaches the service and nothing comes back.",
+        _unanswered_then_neither,
+        Row(
+            stopped("refused 3 retry", "read×2 merge read", note=_ONE_READING),
+            stopped("3", "read×2 merge read", note=_ONE_READING),
+            stopped("hangs", "read merge", note=_HANGS),
+            stopped("7 merge: not merged", "read×2 merge read", note=_ONE_READING),
+        ),
+    ),
+    Scenario(
+        "request-made-then-gh-failed",
+        "The merge is made, then gh exits with a 502.",
+        _made_then_gh_failed,
+        Row(
+            stopped("refused 3 retry", "read×2 merge", note=_MADE_THEN_FAILED),
+            stopped("3", "read×2 merge", note=_MADE_THEN_FAILED),
+            stopped("1", "read merge", note=_MADE_THEN_FAILED),
+            stopped(
+                "7 merge: merged meanwhile",
+                "read×2 merge",
+                note="it reads the PR merged, and asks for a re-run",
+            ),
+        ),
+    ),
+    Scenario(
+        "read-fails-after-a-direct-merge",
+        "gh accepts the direct merge, and every reading since fails.",
+        _read_fails_after_a_merge,
+        Row(
+            stopped("unconfirmed 4", "read×2 merge read×2"),
+            stopped("4 record=owed", "read×2 merge read×2"),
+            stopped("4", "read merge read×2"),
+            stopped("4 merge: unconfirmed", "read×2 merge read×3"),
+        ),
+    ),
+    Scenario(
+        "read-fails-after-an-enqueue",
+        "gh accepts the enqueue, and every reading since fails.",
+        _read_fails_after_an_enqueue,
+        Row(
+            stopped("queued 4", "read defaults read defaults enqueue read"),
+            stopped("4 record=owed", "read defaults read defaults enqueue read"),
+            stopped("4", "read defaults enqueue read"),
+            stopped("4 merge: queued", "read defaults read defaults enqueue read×2"),
+        ),
+    ),
+    Scenario(
+        "rate-limit-mid-wait",
+        "One reading of the wait is refused for the rate limit.",
+        _rate_limit_mid_wait,
+        Row(
+            stopped(
+                "queued 4",
+                "read defaults read defaults enqueue read×2",
+                note="one refused reading ends the wait, in both copies",
+            ),
+            stopped("4 record=owed", "read defaults read defaults enqueue read×2"),
+            stopped("4", "read defaults enqueue read×2"),
+            stopped("4 merge: queued", "read defaults read defaults enqueue read×3"),
+        ),
+    ),
+    Scenario(
+        "auto-merge-not-allowed",
+        "The repository does not allow auto-merge, so gh refuses the enqueue.",
+        _auto_merge_not_allowed,
+        Row(
+            stopped(
+                "refused 3 retry",
+                "read defaults read defaults enqueue",
+                note="said to be worth a re-run, though a setting must change",
+            ),
+            stopped("3", "read defaults read defaults enqueue"),
+            stopped("1", "read defaults enqueue"),
+            stopped("7 merge: not merged", "read defaults read defaults enqueue"),
+        ),
+    ),
+    Scenario(
+        "killed-after-requesting",
+        "The landing process is killed after it wrote that it sends a request.",
+        _not_drivable,
+        Row(_NO_REQUESTING, _NO_REQUESTING, _NO_REQUESTING, _NO_REQUESTING),
+    ),
+    # ---- the head branch's deletion -------------------------------------------------------
+    Scenario(
+        "remote-tip-equals",
+        "The remote head branch is at the head the PR merged at.",
+        _direct,
+        Row(
+            merged("merged 0", "read×2 merge read delete-ref"),
+            merged("0 record=ran", "read×2 merge read delete-ref"),
+            merged("0", "read merge read delete-ref"),
+            merged("0 merge: merged", "read×2 merge read delete-ref"),
+        ),
+    ),
+    Scenario(
+        "remote-tip-moved",
+        "A push to the head branch after the merge.",
+        _tip_moved,
+        Row(
+            merged(
+                "merged 0",
+                "read×2 merge read delete-ref",
+                remote="deleted, tip sha-later moved",
+                note=_TIP_UNCHECKED,
+            ),
+            merged(
+                "0 record=ran",
+                "read×2 merge read delete-ref",
+                remote="deleted, tip sha-later moved",
+                note=_TIP_UNCHECKED,
+            ),
+            merged(
+                "0",
+                "read merge read delete-ref",
+                remote="deleted, tip sha-later moved",
+                note=_TIP_UNCHECKED,
+            ),
+            merged(
+                "0 merge: merged",
+                "read×2 merge read delete-ref",
+                remote="deleted, tip sha-later moved",
+                note=_TIP_UNCHECKED,
+            ),
+        ),
+    ),
+    Scenario(
+        "remote-tip-gone",
+        "The repository deleted the head branch as the PR merged.",
+        _tip_gone,
+        Row(
+            merged("merged 0", "read×2 merge read delete-ref", remote="gone"),
+            merged("0 record=ran", "read×2 merge read delete-ref", remote="gone"),
+            merged("0", "read merge read delete-ref", remote="gone"),
+            merged("0 merge: merged", "read×2 merge read delete-ref", remote="gone"),
+        ),
+    ),
+    Scenario(
+        "fork",
+        "The PR's head lives in a fork.",
+        _fork,
+        Row(
+            merged("merged 0", "read×2 merge read", remote="none", local="kept"),
+            merged("0 record=ran", "read×2 merge read", remote="none", local="kept"),
+            merged("0", "read merge read", remote="none", local="kept"),
+            merged("0 merge: merged", "read×2 merge read", remote="none", local="kept"),
+        ),
+    ),
+    Scenario(
+        "branch-protected",
+        "The head branch is protected from deletion.",
+        _protected,
+        Row(
+            merged("merged 0", "read×2 merge read delete-ref", remote="refused, protected"),
+            merged("0 record=ran", "read×2 merge read delete-ref", remote="refused, protected"),
+            merged("0", "read merge read delete-ref", remote="refused, protected"),
+            merged("0 merge: merged", "read×2 merge read delete-ref", remote="refused, protected"),
+        ),
+    ),
+    Scenario(
+        "branch-used-by-another-open-pr",
+        "Another open PR, #501, has the same head branch.",
+        _another_open_pr,
+        Row(
+            merged(
+                "merged 0",
+                "read×2 merge read delete-ref",
+                remote="deleted, closed #501",
+                note=_TIP_UNCHECKED,
+            ),
+            merged(
+                "0 record=ran",
+                "read×2 merge read delete-ref",
+                remote="deleted, closed #501",
+                note=_TIP_UNCHECKED,
+            ),
+            merged(
+                "0",
+                "read merge read delete-ref",
+                remote="deleted, closed #501",
+                note=_TIP_UNCHECKED,
+            ),
+            merged(
+                "0 merge: merged",
+                "read×2 merge read delete-ref",
+                remote="deleted, closed #501",
+                note=_TIP_UNCHECKED,
+            ),
+        ),
+    ),
+    Scenario(
+        "reused-branch-name",
+        "Completing a PR the queue merged, from a clone without its branch, whose name a new "
+        "PR, #502, now uses.",
+        _reused_name,
+        Row(
+            merged(
+                "merged 0",
+                "delete-ref",
+                remote="deleted, tip sha-new moved, closed #502",
+                local="absent",
+                note=_TIP_UNCHECKED,
+            ),
+            merged(
+                "0 record=ran",
+                "read delete-ref",
+                remote="deleted, tip sha-new moved, closed #502",
+                local="absent",
+                note=_TIP_UNCHECKED,
+            ),
+            merged(
+                "0",
+                "delete-ref",
+                remote="deleted, tip sha-new moved, closed #502",
+                local="absent",
+                note=_TIP_UNCHECKED,
+            ),
+            merged(
+                "0 merge: #42 completed through its merged PR",
+                "delete-ref",
+                remote="deleted, tip sha-new moved, closed #502",
+                local="absent",
+                note=_TIP_UNCHECKED,
+            ),
+        ),
+    ),
+    # ---- the session ---------------------------------------------------------------------
+    Scenario(
+        "foreign-repository-refused",
+        "A session rooted in another repository, with no terminal and no flag.",
+        _foreign_refused,
+        Row(
+            stopped("refused 1"),
+            stopped("1"),
+            merged("0", "read merge read delete-ref", note=_UNGUARDED),
+            stopped("2", note="its own guard refuses before any step"),
+        ),
+    ),
+    Scenario(
+        "foreign-repository-flagged",
+        "A session rooted in another repository, and --allow-foreign-repo.",
+        _foreign_flagged,
+        Row(
+            merged("merged 0", "read×2 merge read delete-ref"),
+            merged("0 record=ran", "read×2 merge read delete-ref"),
+            _NO_FOREIGN_FLAG,
+            merged("0 merge: merged", "read×2 merge read delete-ref"),
+        ),
+    ),
+    Scenario(
+        "foreign-repository-confirmed-at-a-terminal",
+        "A session rooted in another repository; the operator confirms at a terminal.",
+        _foreign_at_a_terminal,
+        Row(
+            merged("merged 0", "read×2 merge read delete-ref", asked=1),
+            merged("0 record=ran", "read×2 merge read delete-ref", asked=1),
+            merged("0", "read merge read delete-ref", note=_UNGUARDED),
+            merged(
+                "0 merge: merged",
+                "read×2 merge read delete-ref",
+                asked=2,
+                note="asked twice: by land-work's guard, then by done-work's",
+            ),
+        ),
+    ),
+    Scenario(
+        "outside-any-session",
+        "No session anchor, as in a pipeline: the guard has nothing to compare.",
+        _no_anchor,
+        Row(
+            merged("merged 0", "read×2 merge read delete-ref"),
+            merged("0 record=ran", "read×2 merge read delete-ref"),
+            merged("0", "read merge read delete-ref"),
+            merged("0 merge: merged", "read×2 merge read delete-ref"),
+        ),
+    ),
+    # ---- what project-management reads of the backbone ------------------------------------
+    Scenario(
+        "backbone-without-the-noun",
+        "The backbone predates `pkit pull-request` — today's form of a `pkit` without `land`.",
+        _backbone_without_the_noun,
+        Row(
+            stopped("unreadable 2", note="the backbone's 'no such command', named"),
+            stopped("3"),
+            _NO_NOUN,
+            stopped("2 merge: stopped"),
+        ),
+    ),
+    Scenario(
+        "wait-ends-in-an-unknown-way",
+        "The wait's end document names an end project-management does not know.",
+        _unknown_end,
+        Row(
+            stopped(
+                "queued 4",
+                "read defaults read defaults enqueue read×3",
+                note="an unknown end is no answer: reported queued, though the queue merged it",
+            ),
+            stopped("4 record=owed", "read defaults read defaults enqueue read×3"),
+            _NO_DOCUMENTS,
+            stopped(
+                "7 merge: merged meanwhile",
+                "read defaults read defaults enqueue read×4",
+                note="it reads the PR merged, and asks for a re-run",
+            ),
+        ),
+    ),
+    Scenario(
+        "reading-without-a-deciding-key",
+        "The backbone's reading lacks `queued`.",
+        _missing_key,
+        Row(
+            stopped("unreadable 2", "read"),
+            stopped("3", "read"),
+            _NO_DOCUMENTS,
+            stopped("2 merge: stopped", "read"),
+        ),
+    ),
+)
+
+
+# ---- running a caller ---------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class _Scripts:
+    done_work: ModuleType
+    merge_pr: ModuleType
+    land_work: ModuleType
+
+
+def _load(script: str, name: str) -> ModuleType:
+    spec = importlib.util.spec_from_file_location(name, SCRIPTS / script)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+@pytest.fixture(scope="module")
+def scripts() -> Iterator[_Scripts]:
+    sys.path.insert(0, str(SCRIPTS))
+    yield _Scripts(
+        done_work=_load("done-work.py", "pm_landing_scenarios_done_work"),
+        merge_pr=_load("merge-pr.py", "pm_landing_scenarios_merge_pr"),
+        land_work=_load("land-work.py", "pm_landing_scenarios_land_work"),
+    )
+    sys.path.remove(str(SCRIPTS))
+
+
+#: The capability's configuration: human review, so the approval gate is the
+#: one reviewer seam, and it is stubbed.
+_CONFIG: dict[str, Any] = {"review": {"mode": "human"}}
+
+# A backbone older than `pkit pull-request`, in the words click answers with.
+_PKIT_WITHOUT_THE_NOUN = """#!/bin/sh
+echo "Usage: pkit [OPTIONS] COMMAND [ARGS]..." >&2
+echo "Error: No such command 'pull-request'." >&2
+exit 2
+"""
+
+# The lines land-work prints for its steps.
+_STEPS = ("head", "ci", "review", "merge")
+
+
+@dataclass
+class _Run:
+    """What the stubs saw during one caller's run."""
+
+    moves: list[str] = field(default_factory=list)
+    hooks: list[str] = field(default_factory=list)
+
+
+class _Allowed:
+    allowed = True
+    refusal_message = None
+
+
+def _stub_gates(monkeypatch: pytest.MonkeyPatch, module: ModuleType, cap: Path) -> None:
+    """The gates a pm verb runs before its own, stubbed as the verbs' tests stub them."""
+    monkeypatch.setattr(module, "resolve_capability_root", lambda arg: cap)
+    monkeypatch.setattr(module, "load_adopter_config", lambda root: dict(_CONFIG))
+    monkeypatch.setattr(module, "resolve_invoker_identity", lambda config=None: "octocat")
+    monkeypatch.setattr(module, "check_membership", lambda members, invoker: _Allowed())
+
+
+def _stub_done_work(monkeypatch: pytest.MonkeyPatch, dw: ModuleType, run: _Run) -> None:
+    """done-work's reviewer gate, its placeholder check (which reads the
+    capability's templates), and the moves it makes after a merge, recorded."""
+
+    def approved(pr_number: int, pr: dict[str, Any], reason: str | None, config: Any) -> Any:
+        return dw._GateResult(passed=True, passed_via="approved (stubbed reviewer)")
+
+    def move(issue_number: int, target: str, root: Path | None) -> int:
+        run.moves.append(f"move #{issue_number} to {target}")
+        return 0
+
+    def close(issue_number: int, pr_number: int, root: Path | None, **kwargs: Any) -> int:
+        run.moves.append(f"close #{issue_number}")
+        return 0
+
+    monkeypatch.setattr(dw, "_check_approval_gate", approved)
+    monkeypatch.setattr(dw, "_check_pr_placeholder", lambda body, pr_number, root: [])
+    monkeypatch.setattr(dw, "_invoke_move_issue", move)
+    monkeypatch.setattr(dw, "_invoke_close_issue", close)
+
+
+def _world(caller: str, tmp_path: Path) -> World:
+    """A PR whose checks are green and whose issue's boxes are ticked, its head
+    branch checked out in the clone, and a session rooted in the clone."""
+    if caller == RELEASE:
+        host = fake.HostingService(
+            title="chore(release): v1.150.0",
+            head_ref="release/v1.150.0",
+            body="The release.\n",
+        )
+    else:
+        host = fake.HostingService()
+    root = tmp_path / "clone"
+    (root / ".git").mkdir(parents=True)
+    clone = fake.LocalClone(
+        root=root,
+        branches={"main": "sha-base", host.head_ref: host.head_oid},
+        current=host.head_ref,
+        commits={"sha-base": None, host.head_oid: "sha-base"},
+    )
+    return World(host=host, clone=clone, tmp=tmp_path, anchor=root)
+
+
+def _argv(caller: str, options: tuple[str, ...]) -> list[str]:
+    spelled: list[str] = []
+    for option in options:
+        if option not in _OPTIONS[caller]:
+            raise AssertionError(f"{caller} has no {option}: its cell must be NotToday")
+        spelled += _OPTIONS[caller][option]
+    return spelled
+
+
+def _gist(line: str) -> str:
+    """A step line up to its detail: `merge: merged as c0ffee0` → `merge: merged`."""
+    for mark in (" — ", " (", ";", ",", " as "):
+        line = line.split(mark, 1)[0]
+    return line
+
+
+def _record(clone: fake.LocalClone) -> str:
+    """The state of merge-pr's record of the PR in the clone, or ""."""
+    path = clone.root / ".git" / "pkit" / "merge-pr" / f"{PR}.json"
+    if not path.is_file():
+        return ""
+    return str(json.loads(path.read_text(encoding="utf-8"))["state"])
+
+
+def _requests(kinds: list[str]) -> str:
+    """The kinds in order, a run of one kind as `kind×n`."""
+    runs: list[tuple[str, int]] = []
+    for kind in kinds:
+        if runs and runs[-1][0] == kind:
+            runs[-1] = (kind, runs[-1][1] + 1)
+        else:
+            runs.append((kind, 1))
+    return " ".join(kind if n == 1 else f"{kind}×{n}" for kind, n in runs)
+
+
+def land(
+    caller: str,
+    scenario: Scenario,
+    scripts: _Scripts,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> Cell:
+    """Run `caller` on `scenario`, and say what it came to."""
+    world = _world(caller, tmp_path)
+    scenario.setup(world)
+    argv = _argv(caller, world.options)
+    host, clone = world.host, world.clone
+    fake.install(monkeypatch, host, clone, anchor=world.anchor, stdin=world.stdin)
+    monkeypatch.delenv("PM_INVOKER_LOGIN", raising=False)
+    clock = fake.Clock()
+    if world.backbone_has_the_noun:
+        fake.route_backbone(
+            monkeypatch, scripts.done_work.merge_queue, clock, rewrite=world.rewrite
+        )
+    else:
+        bin_dir = tmp_path / "bin"
+        bin_dir.mkdir()
+        pkit = bin_dir / "pkit"
+        pkit.write_text(_PKIT_WITHOUT_THE_NOUN, encoding="utf-8")
+        pkit.chmod(pkit.stat().st_mode | stat.S_IXUSR)
+        monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}")
+    cap = tmp_path / "capability"
+    run = _Run()
+    monkeypatch.setattr(scripts.done_work.bootstrap_gate, "enforce", lambda *a, **k: True)
+    monkeypatch.setattr(
+        scripts.done_work.pr_merge.default_branch, "name", lambda config, **kwargs: "main"
+    )
+
+    if caller == DONE_WORK:
+        dw = scripts.done_work
+        _stub_gates(monkeypatch, dw, cap)
+        _stub_done_work(monkeypatch, dw, run)
+        ended = dw.run([str(ISSUE), "--yes", *argv])
+        outcome = f"{ended.kind} {ended.exit_code}" + (" retry" if ended.retry else "")
+        after = f"move #{ISSUE} to done" in run.moves
+    elif caller == MERGE_PR:
+        mp = scripts.merge_pr
+        _stub_gates(monkeypatch, mp, cap)
+        monkeypatch.setattr(mp, "fire_hooks", lambda event, **kwargs: run.hooks.append(event))
+        monkeypatch.setattr(sys, "argv", ["merge-pr.py", str(PR), "--yes", *argv])
+        code = mp.main()
+        record = _record(clone)
+        outcome = f"{code}" + (f" record={record}" if record else "")
+        after = "after_merge_pr" in run.hooks
+    elif caller == RELEASE:
+        monkeypatch.setattr(cli, "_target_kit", lambda: clone.root / ".pkit")
+        result = CliRunner().invoke(cli.main, ["release", "merge", str(PR), *argv])
+        if isinstance(result.exception, fake.NoAnswer):
+            outcome = "hangs"
+        elif result.exception is not None and not isinstance(result.exception, SystemExit):
+            raise result.exception
+        else:
+            outcome = str(result.exit_code)
+        # Release's one step after the merge is the branch clean-up, which
+        # starts by checking out the base.
+        after = bool(clone.checkouts)
+    else:
+        lw = scripts.land_work
+        _stub_gates(monkeypatch, lw, cap)
+        _stub_gates(monkeypatch, lw.done_work, cap)
+        _stub_done_work(monkeypatch, lw.done_work, run)
+        monkeypatch.setattr(lw, "_sleep", clock.sleep)
+        monkeypatch.setattr(lw, "_monotonic", clock)
+        code = lw.main([str(ISSUE), "--yes", *argv])
+        out = capsys.readouterr().out
+        steps = [line for line in out.splitlines() if line.split(":", 1)[0] in _STEPS]
+        outcome = f"{code} {_gist(steps[-1])}" if steps else f"{code}"
+        after = f"move #{ISSUE} to done" in run.moves
+    unknown = [request.argv for request in host.requests if request.kind == fake.UNKNOWN]
+    assert not unknown, f"the fake answered requests it does not model: {unknown}"
+    return Cell(
+        outcome,
+        _requests(host.landing()),
+        after,
+        host.remote_deletion(),
+        clone.local_deletion(host.head_ref),
+        world.stdin.asked,
+    )
+
+
+_CASES = [
+    pytest.param(scenario, caller, id=f"{scenario.id}-{caller.replace(' ', '-')}")
+    for scenario in SCENARIOS
+    for caller in CALLERS
+    if isinstance(scenario.expected(caller), Cell)
+]
+
+
+@pytest.mark.parametrize(("scenario", "caller"), _CASES)
+def test_the_landing_today(
+    scenario: Scenario,
+    caller: str,
+    scripts: _Scripts,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    cell = land(caller, scenario, scripts, tmp_path, monkeypatch, capsys)
+    assert cell == scenario.expected(caller)
+
+
+def test_every_empty_cell_says_why() -> None:
+    for scenario in SCENARIOS:
+        for caller in CALLERS:
+            cell = scenario.today.cell(caller)
+            if isinstance(cell, NotToday):
+                assert cell.why, (scenario.id, caller)
+
+
+def test_the_rows_are_told_apart() -> None:
+    ids = [scenario.id for scenario in SCENARIOS]
+    assert len(ids) == len(set(ids))
