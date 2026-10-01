@@ -37,6 +37,7 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+from collections.abc import MutableMapping
 from pathlib import Path
 
 # Bypass: set by an operator to force in-process execution and skip all routing.
@@ -47,6 +48,11 @@ _BYPASS_ENV = "PKIT_NO_ROUTE"
 # re-resolving the pin). Only route 2 sets it — route 1's dispatcher runs
 # `python -m project_kit`, which never enters this router.
 _LOOP_GUARD_ENV = "PKIT_ROUTED"
+# Notice guard: set to the pin when route 2 degrades to running self, so a `pkit`
+# subprocess the degraded command spawns (a capability script calling `pkit …`)
+# does not repeat the notice: it is said once per command the operator runs.
+# Routing itself is untouched — the subprocess still probes the pin.
+_PIN_UNRESOLVED_ENV = "PKIT_PIN_UNRESOLVED"
 
 # The PRJ-004 canonical distribution URL. Route 2 pins by git tag `v<version>`
 # appended after `@` (PRJ-004's tag-pinning form); tag⟺`.pkit/VERSION`
@@ -358,7 +364,7 @@ def _stamp_cli_version(root: Path, environ) -> None:
         environ[_CLI_VERSION_ENV] = version
 
 
-def _run_pinned(pin: str, running: str, argv: list[str], environ) -> None:
+def _run_pinned(pin: str, running: str, argv: list[str], environ: MutableMapping[str, str]) -> None:
     """Route 2: run the command under the pinned wheel, or degrade loudly to self.
 
     Two phases keep degradation clean (ADR-039 D2). First a resolution *probe*
@@ -373,17 +379,64 @@ def _run_pinned(pin: str, running: str, argv: list[str], environ) -> None:
     env[_LOOP_GUARD_ENV] = "1"  # the pinned wheel's router must not route again
 
     if not _pin_is_resolvable(pin, env):
-        _warn(
-            f"this project pins project-kit {pin} but the running binary is "
-            f"{running}, and the pinned version could not be resolved (offline, "
-            f"missing tag, auth, or uvx unavailable). Running {running} instead — "
-            f"output may not match the pinned methodology. Align the pin, or re-run "
-            f"where `uvx --from {DISTRIBUTION_GIT_URL}@v{pin} project-kit` resolves."
-        )
+        _notice_pin_unresolved(pin, running, environ)
         return
 
     completed = subprocess.run([*_pinned_base(pin), *argv], env=env)
     sys.exit(completed.returncode)
+
+
+def _notice_pin_unresolved(pin: str, running: str, environ: MutableMapping[str, str]) -> None:
+    """Say, once per command, that route 2 runs this binary instead of the pin.
+
+    A binary older than the pin is a normal state — a pin raise leaves the
+    installed tool where it was — so the notice says when this one is older:
+    read-only commands still run, and `sync` and `upgrade` refuse rather than
+    write its older content over the project's (#1212). The notice guard keeps
+    a `pkit` subprocess of this command from repeating it.
+    """
+    if environ.get(_PIN_UNRESOLVED_ENV) == pin:
+        return
+    environ[_PIN_UNRESOLVED_ENV] = pin
+    unresolved = (
+        f"this project pins project-kit {pin}, which could not be resolved (offline, "
+        "missing tag, auth, or uvx unavailable)"
+    )
+    rerun = f"re-run where `uvx --from {DISTRIBUTION_GIT_URL}@v{pin} project-kit` resolves"
+    if _is_older_release(running, pin):
+        _warn(
+            f"{unresolved}, so this command runs pkit {running} instead, an OLDER pkit than "
+            f"the pin names. Read-only commands run, though their output may not match the "
+            f"pinned methodology; `pkit sync` and `pkit upgrade` refuse rather than write "
+            f"{running}'s older content over the project's. To run {pin}, {rerun}."
+        )
+        return
+    _warn(
+        f"{unresolved}, and the running binary is {running}. Running {running} instead — "
+        f"output may not match the pinned methodology. Align the pin, or {rerun}."
+    )
+
+
+def _is_older_release(version: str, than: str) -> bool:
+    """True iff release *version* is strictly older than release *than*.
+
+    Stdlib-only, for the pre-click hot path: both must be bare
+    `MAJOR.MINOR.PATCH` releases (the only pin `pkit pin` writes, ADR-049);
+    anything else is not ordered, so the caller claims no order it cannot show.
+    """
+    parsed, parsed_than = _release_tuple(version), _release_tuple(than)
+    if parsed is None or parsed_than is None:
+        return False
+    return parsed < parsed_than
+
+
+def _release_tuple(version: str) -> tuple[int, int, int] | None:
+    """*version*'s `MAJOR.MINOR.PATCH` parts, or None when it is not that shape."""
+    parts = version.split(".")
+    if len(parts) != 3 or not all(part.isascii() and part.isdigit() for part in parts):
+        return None
+    major, minor, patch = (int(part) for part in parts)
+    return major, minor, patch
 
 
 def _pinned_base(pin: str) -> list[str]:
