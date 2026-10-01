@@ -40,9 +40,9 @@ TERM-integration-branch:
         record:
           - project-management:DEC-013
       revalidated:
-        at: 2026-10-01T10:04:36Z
+        at: 2026-10-01T15:12:48Z
         outcome: unchanged
-        unchanged-because: DEC-013's merge mechanics now state the squash rules a merge queue's repository settings carry (#1011); what an integration branch is, its marker and where its pull requests land are untouched
+        unchanged-because: DEC-013 gains that its merge mechanic is the backbone's, which every command that lands a PR calls; integration branches, which this term defines, are untouched
 TERM-intent-note:
   name: Intent note
   status: active
@@ -115,9 +115,9 @@ TERM-stabilisation:
           - project-management:DEC-014
           - ADR-019
       revalidated:
-        at: 2026-10-01T10:04:35Z
+        at: 2026-10-01T15:52:46Z
         outcome: unchanged
-        unchanged-because: both merge verbs now enqueue where the base has a merge queue, merge-pr no longer refusing such a base, and count a merge only once GitHub reports it (#1011); the stabilisation phase and the guards it plans on both verbs are untouched, and gap K2 stands while the queue is not on and the stabilisation check is not built
+        unchanged-because: done-work and merge-pr now read a PR again when a merge or an enqueue gets no answer back from the backbone, and exit 4 when GitHub cannot say what it came to; the stabilisation phase, its intended guards and gap K2 are untouched
 ---
 
 # Glossary

@@ -127,12 +127,12 @@ src/project_kit/refs.py reportUnknownMemberType 12
 src/project_kit/refs.py reportUnknownVariableType 32
 src/project_kit/refs.py reportUnnecessaryIsInstance 1
 src/project_kit/release.py reportArgumentType 2
-src/project_kit/release.py reportMissingTypeArgument 9
+src/project_kit/release.py reportMissingTypeArgument 8
 src/project_kit/release.py reportOptionalMemberAccess 1
 src/project_kit/release.py reportPrivateUsage 2
-src/project_kit/release.py reportUnknownArgumentType 16
-src/project_kit/release.py reportUnknownMemberType 22
-src/project_kit/release.py reportUnknownParameterType 8
+src/project_kit/release.py reportUnknownArgumentType 9
+src/project_kit/release.py reportUnknownMemberType 13
+src/project_kit/release.py reportUnknownParameterType 7
 src/project_kit/release.py reportUnknownVariableType 12
 src/project_kit/report.py reportMissingTypeArgument 4
 src/project_kit/report.py reportUnknownArgumentType 25
