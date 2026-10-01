@@ -61,7 +61,7 @@ The project-manager proceeds but emits a one-line warning the user can react to.
 
 Examples:
 
-- Issue title shorter than ~30 chars after `[Type]` prefix (per [project-management:DEC-011-title-formats]).
+- Task title shorter than ~30 chars after its kind-driven prefix (per [project-management:DEC-011-title-formats]).
 - Multi-issue PR with mixed `type:*` labels — agent picks dominant and warns (per [project-management:DEC-013-branch-and-pr-conventions]).
 - Existing Milestone read without a `Close trigger:` marker — infer and prompt to write one (per [project-management:DEC-016-time-bound-containers]).
 - Code-path / doc-path mapping mismatch in a PR (per [project-management:DEC-015-doc-update-obligations]).

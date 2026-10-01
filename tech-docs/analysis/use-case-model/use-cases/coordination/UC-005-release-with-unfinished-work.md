@@ -21,9 +21,9 @@ pkit:
       artefact:
         - ACT-operator
     revalidated:
-      at: 2026-10-01T19:29:52Z
+      at: 2026-10-01T21:40:40Z
       outcome: unchanged
-      unchanged-because: the changeset guard now counts only the changesets a pull request adds or edits; the release step and the release pull request this use case walks are untouched, and the guard still exempts a release pull request
+      unchanged-because: DEC-014's example of a warning now names the Task title's length floor, as DEC-011 states it; what this page takes from the severity model — which findings refuse, which need an audited bypass and which warn — is unchanged
 ---
 
 # UC-005 — Cut a release while unfinished work remains
