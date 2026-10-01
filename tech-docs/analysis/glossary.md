@@ -115,9 +115,9 @@ TERM-stabilisation:
           - project-management:DEC-014
           - ADR-019
       revalidated:
-        at: 2026-10-01T21:05:10Z
+        at: 2026-10-01T21:25:29Z
         outcome: unchanged
-        unchanged-because: "#1242 only shares start-work's early check, read from labels and milestone as before, and its refusal and late-failure messages with review-work; the stabilisation guard on start-work is still unbuilt and land-work, which main brought in, starts no work, so the term holds"
+        unchanged-because: "#1195 only moves done-work's reviewer-resolution wiring into one shared function the gate, review-pr and show-pr call; what the gate decides, and anything about a stabilisation milestone, is unchanged, so the term holds"
 ---
 
 # Glossary

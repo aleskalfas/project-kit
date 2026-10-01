@@ -430,14 +430,13 @@ def test_review_field_judges_a_pinned_verdict_by_the_gates_rule(sp) -> None:
         required_local=("pm-reviewer", "code-reviewer"),
         floors_by_reviewer={"code-reviewer": frozenset({"touches-code"})},
     )
-    rule = sp.rule_for_pr(
-        pr,
+    rule = sp.PrReview(
         resolution,
         author_delta=lambda since, head, *, base_tip: AuthorDelta(
             paths=("README.md",),
         ),
         base_kept=lambda reviewed_base, base_tip: pytest.fail("no base is named"),
-    )
+    ).freshness_rule(pr)
     s = sp._summarise(pr, rule)
     by_name = {e["reviewer"]: e for e in s["review"]}
     assert by_name["code-reviewer"]["stale"] is False
@@ -466,11 +465,14 @@ def test_review_resolution_failure_holds_every_reviewer_to_any_change(
         seen.update(kwargs, pr_number=pr_number)
         return failed
 
-    monkeypatch.setattr(sp, "resolve_required_local_reviewers", fake_resolve)
+    # The resolver is called by the one wiring show-pr shares with the gate.
+    monkeypatch.setattr(
+        sys.modules["_lib.pr_review"], "resolve_required_local_reviewers", fake_resolve
+    )
     config = {"review": {"agents": {"local_registered": [{"name": "pm-reviewer"}]}}}
     cap_root = tmp_path / ".pkit" / "capabilities" / "project-management"
-    resolution = sp._review_resolution(99, config, cap_root)
-    assert resolution.ok and resolution.floors_by_reviewer == {}
+    resolution = sp._resolve_review(99, config, cap_root).resolution
+    assert resolution.floors_by_reviewer == {}
     assert seen["pr_number"] == 99
     assert seen["baseline_local"] == ["pm-reviewer"]
     assert seen["repo_root"] == tmp_path

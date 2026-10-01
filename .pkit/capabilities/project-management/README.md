@@ -15,7 +15,7 @@ pkit:
         - .pkit/capabilities/project-management/decisions/**
       record: [COR-017, COR-020, COR-021, COR-023, COR-039, COR-053, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050]
     revalidated:
-      at: 2026-10-01T21:33:59Z
+      at: 2026-10-01T22:04:20Z
       outcome: updated
 ---
 
@@ -668,7 +668,7 @@ A reviewer's verdict stays valid until you change something that reviewer checks
 - **`review.floors.not_code` does two jobs.** It decides who is required (a path it matches pulls in no floor reviewer) and whose approval survives a change (a change it matches reaches no floor). Adding a path to it has both effects.
 - **When it cannot tell, the verdict is stale.** Your changes and the base's history are read from the local repository, which needs git 2.38 or later. A commit your checkout lacks — the reviewed head or base, the PR's head, the base branch's head — is fetched from origin first. If it still cannot tell, the verdict is stale and the reason says why: a commit that could not be fetched, a shallow checkout (`git fetch --unshallow origin` fixes it), a rebase or force-push that removed the reviewed head from the branch, or an older git. Missing local state only ever costs a re-review, never an unreviewed merge.
 - **The merge is pinned.** `done-work` merges only the head its gate checked (`gh pr merge --match-head-commit`); a push between the gate and the merge fails the merge, and you re-run `done-work`.
-- **Where you see it.** `done-work`'s refusal names each stale verdict with the head it reviewed and what changed since (`(stale APPROVED — reviewed 1a2b3c4; changed since: README.md)`); `show-pr --field review` marks it the same way; `review-pr` re-runs only the stale ones and names the reason for each. All three apply one rule.
+- **Where you see it.** `done-work`'s refusal names each stale verdict with the head it reviewed and what changed since (`(stale APPROVED — reviewed 1a2b3c4; changed since: README.md)`); `show-pr --field review` marks it the same way; `review-pr` re-runs only the stale ones and names the reason for each. All three apply one rule: they resolve the PR's required reviewers and build the rule through one shared function (`scripts/_lib/pr_review.py`).
 - **What it does not catch.** A clean merge of the base keeps every verdict, so a semantic conflict the base introduces — changes that merge cleanly but no longer work together — is not re-reviewed. CI on the merged result is the backstop.
 
 #### Opting out of a contributed reviewer (per [project-management:DEC-032-conditional-reviewer-requirements])
@@ -708,7 +708,7 @@ review:
 
 - **Default.** When the key is absent or has no value, the list is `[".changes/**"]`. If you set the key, your list replaces the default, so keep `.changes/**` in it if you still want changesets excluded. An empty list (`not_code: []`) excludes nothing.
 - **Matching.** Patterns are gitignore-style, the same matching `code_path_to_doc_mapping` uses, and are read against each changed path from the repository root.
-- **Both commands agree.** `review-pr` and `done-work` read the list from the same config through one resolver, so the reviewers `review-pr` invokes are the ones the gate requires.
+- **The commands agree.** `review-pr`, `done-work` and `show-pr` read the list from the same config through one resolver, so the reviewers `review-pr` invokes are the ones the gate requires, and `show-pr` judges a verdict's freshness as the gate does.
 - **Validation.** The value must be a list of non-empty strings; the config schema checks this at `pkit validate`. If the value is malformed, `review-pr` and `done-work` refuse and name the problem rather than guess which paths you meant.
 
 #### Freeform comments — `comment-issue` / `comment-pr` (per [project-management:DEC-047-freeform-comment-verb])
