@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-01T21:22:51Z
+      at: 2026-10-01T22:41:36Z
       outcome: unchanged
-      unchanged-because: The index's one-line description of the process area still holds after the engine's move gains a reason.
+      unchanged-because: The index's one-line descriptions of the process area and the CLI reference still hold after the process engine gains its second detection mode, classified.
 ---
 
 # project-kit

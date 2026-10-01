@@ -1,0 +1,29 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  A process definition's states may detect in a second mode, `classified`
+  (COR-033 point 5, ADR-062). Under `inferred` each state's predicate answers
+  "is the subject in this state?" with `{result, reason}`; under `classified` a
+  predicate answers "which state is the subject in?" with `{state, reason}`,
+  and the states that name it — one command under one `with` mapping — share
+  its one answer, so the engine runs it once each time it resolves a subject's
+  position rather than once per state. `state: null` with a reason places the
+  subject in none of its states, and `status` shows that reason under "no
+  position"; any other answer the engine cannot read — no `state`, an id that
+  is not one of its states, the wrong type — leaves each of its states
+  indeterminate, never "none", with the answer quoted in the reason. Every
+  state of a definition declares the same mode: a definition that mixes modes
+  resolves no position and says why, and `pkit validate`'s `process` member
+  reports it as an error, as it does `classified` detections that name one
+  command under different `with` mappings; the shape contract's schema states
+  the one-mode rule too. Gates, invariants, `resume_when`, cascade membership
+  and the hand-off seams read their answers exactly as before. A detection
+  that cannot be evaluated for several states is now shown once, with the
+  states it leaves indeterminate listed beside it, in the narrative views and
+  in a refusal; `status --json` keeps one `position.unevaluated` entry per
+  state. Fixed alongside: from an indeterminate position `status` listed a
+  `from: "*"` move as permitted although `can-move` and `move` refuse it; it
+  now lists it refused, with `can-move`'s reason. Existing `inferred`
+  definitions are read as before.

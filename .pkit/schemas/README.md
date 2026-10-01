@@ -19,9 +19,9 @@ pkit:
         - src/project_kit/working_tree.py
       record: [COR-018, COR-019, COR-020, COR-023, COR-029, COR-048, COR-050, COR-051, COR-052, COR-053, ADR-056, ADR-057]
     revalidated:
-      at: 2026-10-01T17:00:48Z
+      at: 2026-10-01T22:41:35Z
       outcome: unchanged
-      unchanged-because: The process shape contract's journal entry gains an optional field; the README describes the shared library and its layout, neither of which changes.
+      unchanged-because: The process shape contract's detection mode gains a second value, classified, and the one-mode rule; the README describes the shared $defs library, its layout and the pointer form, none of which changes.
 ---
 
 # Schemas

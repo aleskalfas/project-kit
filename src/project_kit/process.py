@@ -6,15 +6,29 @@ moves through guarded transitions, and renders a self-explaining status view.
 It knows nothing about issues, docs, screens, or trips — only states,
 transitions, gates, a position, and a journal.
 
-Ship-narrow (COR-033 P5 + COR-032): singleton or keyed subject, `inferred`
-detection, static transition targets. A keyed process operates per a supplied
-subject identifier (required — no singleton default) and never enumerates its
-subjects; the engine simply threads that identifier through every predicate it
-runs and through the per-subject journal path. The remaining deferred extension
-points (stored / hybrid detection, hooks, breadth, resolver / open-region
-targets, cross-subject enumeration/cascade, overflow/hand-off orchestration) are
-not implemented here; the shape contract's enums already reject their values, so
-an unrecognised value fails closed.
+Ship-narrow (COR-033 P5 + COR-032): singleton or keyed subject, the two live
+detection modes, static transition targets. A keyed process operates per a
+supplied subject identifier (required — no singleton default) and never
+enumerates its subjects; the engine simply threads that identifier through every
+predicate it runs and through the per-subject journal path. The remaining
+deferred extension points (stored / hybrid detection, hooks, breadth, resolver /
+open-region targets, cross-subject enumeration/cascade, overflow/hand-off
+orchestration) are not implemented here; the shape contract's enums already
+reject their values, so an unrecognised value fails closed.
+
+Detection (COR-033 point 5, ADR-062): every state of a definition declares the
+same mode. Under `inferred` each state's predicate answers "is the subject in
+this state?" (`{result, reason}`); under `classified` a predicate — a
+*classifier* — answers "which state is the subject in?" (`{state, reason}`),
+and the states that name it share its one answer through the runner's answer
+memo. The `state` reading lives in position resolution alone: gates,
+invariants, `resume_when`, entry guards and the cascade's `members` /
+`membership` read `result` exactly as before, whatever their answer carries. A
+definition whose states declare more than one mode resolves no position — no
+detection runs, and every state is indeterminate for the one reason naming the
+modes. An answer a classifier gives that the engine cannot read leaves each of
+its states indeterminate, never "none of these"; a classifier says "none of
+mine" only by answering `state: null` with a reason.
 
 Composition (COR-036): the engine's one genuinely-new capability — it RESOLVES
 another process's terminal outcome and exposes it as an input to a parent's
@@ -192,11 +206,31 @@ from jsonschema import Draft202012Validator
 from ruamel.yaml import YAML
 
 from project_kit import cli_render, process_journal
-from project_kit.command_runner import Ending, registered_commands, run_command
+from project_kit.command_runner import (
+    Ending,
+    diagnostic_tail,
+    registered_commands,
+    run_command,
+)
 from project_kit.install import find_target_root
 from project_kit.validators import Finding, Outcome
 
 _yaml = YAML(typ="safe")
+
+# The detection modes this engine implements (COR-033 point 5). `inferred` asks
+# each state's predicate whether the subject is in that state; `classified` asks
+# a predicate which state the subject is in. A definition declares one of them
+# for every state; any other value is a mode this engine does not implement.
+INFERRED = "inferred"
+CLASSIFIED = "classified"
+DETECTION_MODES = (INFERRED, CLASSIFIED)
+
+# What a refused move says while the position is indeterminate — `can_move`'s
+# refusal, and the reason `status` gives each move it lists from there.
+_INDETERMINATE_REFUSAL = (
+    "position is indeterminate — a detection predicate could not be evaluated; "
+    "refusing to move (fail-closed)"
+)
 
 # Singleton subject key (COR-033 P5: ship-narrow, one journey per process).
 # A singleton process has no subject id, so every singleton journey tracks under
@@ -273,11 +307,15 @@ class PredicateFailure:
 class PredicateRunner:
     """Resolves + runs a capability's predicate commands, caching each result.
 
-    Caching is per-invocation per `(command, args)` (COR-033 performance note):
-    a predicate is evaluated at most once even when several transitions share
-    it. The cache is keyed before the gate-kind interpretation, so the same
-    command reused as a detection predicate and a gate predicate runs once;
-    each caller applies its own interpretation to the raw payload.
+    Caching is per runner per `(command, with)` — the answer memo (COR-033
+    performance note, ADR-062 point 11): a predicate is evaluated at most once
+    even when several transitions share it, and a classifier runs once for all
+    the states that name it. The cache is keyed before any interpretation, so
+    the same command reused as a detection predicate and a gate predicate runs
+    once; each caller applies its own interpretation to the raw payload. An
+    engine owns one runner, so the subject an invocation names has one memo for
+    the whole invocation; an embedded inner process or a cascade member gets a
+    fresh engine, and with it a fresh memo, each time its position is resolved.
     """
 
     capability: str
@@ -295,11 +333,12 @@ class PredicateRunner:
     def evaluate_detection(
         self, predicate: dict[str, Any], *, kind: str = "detection"
     ) -> PredicateOutcome:
-        """Run a detection predicate; the position is the state whose detection
-        returns result=True. Uses the predicate's own `result`. The other
-        predicates read the same way — an invariant's check, a `membership`
-        test, a `resume_when` — name themselves by `kind` when they cannot be
-        evaluated."""
+        """Run a predicate and read its own `result` — the reading of an
+        `inferred` detection, and of every predicate outside position
+        resolution that answers `{result, reason}`: an invariant's check, a
+        `membership` test, a `resume_when`, which name themselves by `kind` when
+        they cannot be evaluated. A `state` in the answer is never read here
+        (ADR-062 point 5); an answer with no `result` is false."""
         payload = self._run(predicate)
         if isinstance(payload, PredicateFailure):
             return _unevaluable(kind, predicate, payload)
@@ -379,6 +418,13 @@ class PredicateRunner:
         payload = self._run(predicate)
         return payload if isinstance(payload, dict) else None
 
+    def answer(self, predicate: dict[str, Any]) -> dict[str, Any] | PredicateFailure:
+        """Resolve + run a predicate and return its parsed JSON object, or the
+        `PredicateFailure` saying why there is none — through the answer memo,
+        with no interpretation. For the engine's own readings that are not a
+        `result`: a classifier's `{state, reason}` and a cascade's `members`."""
+        return self._run(predicate)
+
     def _run(self, predicate: dict[str, Any]) -> dict[str, Any] | PredicateFailure:
         """Resolve + run a predicate command, returning its parsed JSON object,
         or the `PredicateFailure` saying why there is none (unresolved name
@@ -439,11 +485,125 @@ def _unevaluable(
     )
 
 
+def _mapping(value: Any) -> dict[str, Any] | None:
+    """`value` as a definition's mapping, or None when it is not one."""
+    return cast("dict[str, Any]", value) if isinstance(value, dict) else None
+
+
 def _freeze(value: Any) -> tuple[tuple[str, Any], ...]:
     """Make a predicate's optional `with` mapping hashable for the cache key."""
     if not isinstance(value, dict):
         return ()
     return tuple(sorted((str(k), repr(v)) for k, v in value.items()))
+
+
+# --- classified detection (ADR-062) ----------------------------------------
+
+# What makes two detections name one classifier: the same command under the
+# same `with` mapping (ADR-062 point 2) — the answer memo's key.
+ClassifierKey = tuple[str, tuple[tuple[str, Any], ...]]
+
+
+def _classifier_key(predicate: dict[str, Any]) -> ClassifierKey:
+    """The classifier a `classified` detection's predicate names."""
+    run_name = predicate.get("run")
+    return (
+        run_name if isinstance(run_name, str) else repr(run_name),
+        _freeze(predicate.get("with")),
+    )
+
+
+@dataclass(frozen=True)
+class _ClassifierReading:
+    """One classifier's answer, read once for all of its states (ADR-062 point 3).
+
+    `placed` is the state the answer places the subject in, or None. `outcome`
+    is what each of its other states reads: false when the answer was readable
+    (it named another of its states, or `null` with a reason), indeterminate
+    when the run gave no answer or one the engine cannot read."""
+
+    placed: str | None
+    outcome: PredicateOutcome
+
+    @property
+    def placed_nowhere(self) -> bool:
+        """It answered `state: null` with a reason — none of its states."""
+        return self.placed is None and not self.outcome.indeterminate
+
+    def outcome_for(self, state_id: str) -> PredicateOutcome:
+        if state_id == self.placed:
+            return PredicateOutcome(
+                result=True, reason=self.outcome.reason, detail=self.outcome.detail
+            )
+        return self.outcome
+
+
+def _read_classifier(
+    predicate: dict[str, Any],
+    answer: dict[str, Any] | PredicateFailure,
+    its_states: list[str],
+    declared: set[str],
+) -> _ClassifierReading:
+    """Read a classifier's answer `{state, reason}` by ADR-062 point 3.
+
+    `state` naming one of `its_states` places the subject there; `null` with a
+    non-empty string `reason` places it in none of them. Anything else is
+    unreadable and leaves every one of its states indeterminate: no `state`
+    key, `null` without a reason, a value neither a string nor `null`, the
+    empty string, or a string that is not the id of one of its states —
+    compared exactly, with no trimming or case folding. A `result` beside
+    `state` is not read. No answer at all is indeterminate as for any
+    predicate."""
+    if isinstance(answer, PredicateFailure):
+        return _ClassifierReading(None, _unevaluable("detection", predicate, answer))
+    if "state" not in answer:
+        return _unreadable(predicate, answer, "no `state` key")
+    value = answer["state"]
+    reason = answer.get("reason")
+    if value is None:
+        if isinstance(reason, str) and reason:
+            return _ClassifierReading(
+                None, PredicateOutcome(result=False, reason=reason, detail=dict(answer))
+            )
+        return _unreadable(predicate, answer, "`state` is null without a reason")
+    if not isinstance(value, str):
+        return _unreadable(predicate, answer, "`state` is neither a string nor null")
+    if not value:
+        return _unreadable(predicate, answer, "`state` is the empty string")
+    if value not in its_states:
+        why = (
+            "`state` names a state another predicate detects"
+            if value in declared
+            else "`state` names a state the definition does not declare"
+        )
+        return _unreadable(predicate, answer, why)
+    readable = PredicateOutcome(result=False, reason=str(reason or ""), detail=dict(answer))
+    return _ClassifierReading(value, readable)
+
+
+def _unreadable(predicate: dict[str, Any], answer: dict[str, Any], why: str) -> _ClassifierReading:
+    """An answer the engine cannot read: every state of the classifier is
+    indeterminate. The reason names the predicate and quotes what it answered,
+    bounded and with control characters removed as a standard-error tail is."""
+    quoted = diagnostic_tail(json.dumps(answer, sort_keys=True, ensure_ascii=False))
+    outcome = PredicateOutcome(
+        result=False,
+        reason=(
+            f"couldn't read the answer of detection predicate {predicate.get('run')!r}: "
+            f"{why}; it answered {quoted}"
+        ),
+        indeterminate=True,
+    )
+    return _ClassifierReading(None, outcome)
+
+
+def _modes_described(modes: dict[str, list[str]]) -> str:
+    """Each declared detection mode with the states that declare it."""
+    return "; ".join(f"{mode!r} by {_states_listed(ids)}" for mode, ids in modes.items())
+
+
+def _states_listed(state_ids: list[str]) -> str:
+    return ", ".join(repr(state_id) for state_id in state_ids)
 
 
 def _load_command_registry(capability_dir: Path) -> dict[str, Path]:
@@ -468,10 +628,40 @@ class ProcessDefinition:
     process_id: str
     capability_dir: Path
     data: dict[str, Any]
+    # The file the definition was read from, when it was read from one.
+    source: Path | None = None
 
     @property
     def states(self) -> list[dict[str, Any]]:
         return [s for s in self.data.get("states", []) if isinstance(s, dict)]
+
+    def detection_modes(self) -> dict[str, list[str]]:
+        """Each detection mode the states declare, with the states that declare
+        it, in declaration order. COR-033 point 5: a definition has one."""
+        modes: dict[str, list[str]] = {}
+        for state in self.states:
+            detection = _mapping(state.get("detection"))
+            if detection is None:
+                continue
+            mode = detection.get("mode")
+            label = mode if isinstance(mode, str) else repr(mode)
+            modes.setdefault(label, []).append(str(state.get("id", "")))
+        return modes
+
+    def classifiers(self) -> dict[ClassifierKey, list[str]]:
+        """Each classifier the `classified` detections name — one command under
+        one `with` mapping (ADR-062 point 2) — with the states that name it, in
+        declaration order: its states."""
+        classifiers: dict[ClassifierKey, list[str]] = {}
+        for state in self.states:
+            detection = _mapping(state.get("detection"))
+            if detection is None or detection.get("mode") != CLASSIFIED:
+                continue
+            predicate = _mapping(detection.get("predicate"))
+            if predicate is not None:
+                key = _classifier_key(predicate)
+                classifiers.setdefault(key, []).append(str(state.get("id", "")))
+        return classifiers
 
     @property
     def transitions(self) -> list[dict[str, Any]]:
@@ -610,21 +800,39 @@ class TransitionCheck:
 class Position:
     """The resolved position of a subject.
 
-    `state_id` is None when no state's detection predicate matched (the subject
-    has no inferable position). `indeterminate` is True when at least one
-    detection predicate could not be evaluated, so the position cannot be
-    trusted — a fail-closed condition for `move`.
+    `state_id` is None when no state's detection is true (the subject has no
+    position). `indeterminate` is True when no state's detection is true and at
+    least one could not be evaluated, so the position cannot be trusted — a
+    fail-closed condition for `move`. `placed_nowhere` carries, for each
+    classifier that answered `state: null`, its command and the reason it gave
+    (ADR-062 point 14): what an operator is shown beside "no position".
     """
 
     state_id: str | None
     indeterminate: bool
     detection_reasons: dict[str, PredicateOutcome] = field(default_factory=dict)
+    placed_nowhere: tuple[tuple[str, str], ...] = ()
 
     @property
     def unevaluated(self) -> dict[str, PredicateOutcome]:
         """The states whose detection could not be evaluated, each with the
         outcome saying why — what an indeterminate position is made of."""
         return {sid: o for sid, o in self.detection_reasons.items() if o.indeterminate}
+
+    def unevaluated_by_cause(self) -> list[tuple[list[str], PredicateOutcome]]:
+        """The unevaluated states grouped by cause — one reason and one
+        standard-error tail — in declaration order. A classifier that gives no
+        readable answer, or a definition that mixes modes, leaves several
+        states indeterminate for one cause; the narrative views and a refusal
+        show it once, with those states listed beside it (ADR-062 point 13)."""
+        groups: dict[tuple[str, str], tuple[list[str], PredicateOutcome]] = {}
+        for state_id, outcome in self.unevaluated.items():
+            key = (outcome.reason, outcome.stderr_tail)
+            if key in groups:
+                groups[key][0].append(state_id)
+            else:
+                groups[key] = ([state_id], outcome)
+        return list(groups.values())
 
 
 @dataclass(frozen=True)
@@ -910,32 +1118,63 @@ class ProcessEngine:
     # --- position resolution ---------------------------------------------
 
     def resolve_position(self) -> Position:
-        """Run each state's detection predicate; the position is the state whose
-        predicate returns result=True. If any predicate is indeterminate and no
-        state has yet matched, the position is indeterminate (fail-closed)."""
+        """Resolve the subject's position from each state's detection, read by
+        the definition's one detection mode (COR-033 point 5, ADR-062).
+
+        Each detection comes out true, false or indeterminate; the position is
+        the first state in declaration order whose detection is true; failing
+        that, indeterminate if any detection was; failing that, none.
+
+        Before any detection runs, the modes the states declare are collected.
+        More than one, and none runs: every state is indeterminate for the one
+        reason naming each mode and the states that declare it, so no position
+        is ever resolved from some of the states. A mode this engine does not
+        implement leaves every state indeterminate (fail-closed, never silently
+        in no state). Under `inferred` each state's predicate is read by its
+        `result`. Under `classified` each classifier runs once, through the
+        answer memo, and its one answer is read for each of its states.
+        """
+        definition = self.definition
+        modes = definition.detection_modes()
+        if len(modes) > 1:
+            return _mixed_modes_position(definition, modes)
+        classifiers = definition.classifiers()
+        declared = {str(state.get("id", "")) for state in definition.states}
+        readings: dict[ClassifierKey, _ClassifierReading] = {}
+        placed_nowhere: list[tuple[str, str]] = []
         reasons: dict[str, PredicateOutcome] = {}
         matched: str | None = None
         any_indeterminate = False
-        for state in self.definition.states:
+        for state in definition.states:
             state_id = str(state.get("id", ""))
-            detection = state.get("detection")
-            if not isinstance(detection, dict):
+            detection = _mapping(state.get("detection"))
+            if detection is None:
                 continue
-            if detection.get("mode") != "inferred":
-                # Ship-narrow: only `inferred` is implemented. A future mode is
-                # treated as indeterminate (fail-closed), never silently in-state.
+            mode = detection.get("mode")
+            if mode not in DETECTION_MODES:
                 reasons[state_id] = PredicateOutcome(
                     result=False,
-                    reason=f"detection mode {detection.get('mode')!r} not implemented "
-                    "(ship-narrow)",
+                    reason=f"detection mode {mode!r} is not implemented by this engine "
+                    f"(it implements {_states_listed(list(DETECTION_MODES))})",
                     indeterminate=True,
                 )
                 any_indeterminate = True
                 continue
-            predicate = detection.get("predicate")
-            if not isinstance(predicate, dict):
+            predicate = _mapping(detection.get("predicate"))
+            if predicate is None:
                 continue
-            outcome = self.runner.evaluate_detection(predicate)
+            if mode == INFERRED:
+                outcome = self.runner.evaluate_detection(predicate)
+            else:
+                key = _classifier_key(predicate)
+                reading = readings.get(key)
+                if reading is None:
+                    answer = self.runner.answer(predicate)
+                    reading = _read_classifier(predicate, answer, classifiers[key], declared)
+                    readings[key] = reading
+                    if reading.placed_nowhere:
+                        placed_nowhere.append((key[0], reading.outcome.reason))
+                outcome = reading.outcome_for(state_id)
             reasons[state_id] = outcome
             if outcome.indeterminate:
                 any_indeterminate = True
@@ -943,7 +1182,12 @@ class ProcessEngine:
                 matched = state_id
         if matched is not None:
             return Position(state_id=matched, indeterminate=False, detection_reasons=reasons)
-        return Position(state_id=None, indeterminate=any_indeterminate, detection_reasons=reasons)
+        return Position(
+            state_id=None,
+            indeterminate=any_indeterminate,
+            detection_reasons=reasons,
+            placed_nowhere=tuple(placed_nowhere),
+        )
 
     # --- composition: resolve one inner outcome (COR-036) -----------------
 
@@ -1377,7 +1621,7 @@ class ProcessEngine:
         engine folds over. This is the content-free seam the engine reads the set
         through; the engine never enumerates the child's subjects itself.
         """
-        payload = self.runner._run(members_predicate)
+        payload = self.runner.answer(members_predicate)
         if isinstance(payload, PredicateFailure):
             return payload
         raw = payload.get("members")
@@ -1459,6 +1703,23 @@ class ProcessEngine:
             if origin == state_id or origin == "*":
                 out.append(t)
         return out
+
+    def legal_move_checks(self, position: Position, actor: str) -> list[TransitionCheck]:
+        """The moves out of `position` as `can_move` judges them — what `status`
+        lists under its legal moves.
+
+        From a determinate position (a state, or none) these are the live
+        prechecks. From an indeterminate one `can_move` refuses every move, so
+        each `from: "*"` move is listed refused and indeterminate with that
+        refusal, and no gate is run: `status` never offers a move `can_move`
+        would refuse."""
+        if not position.indeterminate:
+            return self.precheck_transitions(position.state_id, actor)
+        refused = PredicateOutcome(result=False, reason=_INDETERMINATE_REFUSAL, indeterminate=True)
+        return [
+            TransitionCheck(transition=t, outcome=refused, has_gate=isinstance(t.get("gate"), dict))
+            for t in self.transitions_from(position.state_id)
+        ]
 
     def precheck_transitions(self, state_id: str | None, actor: str) -> list[TransitionCheck]:
         """Live-precheck every transition out of the current state (COR-033
@@ -1922,13 +2183,15 @@ class ProcessEngine:
         if from_state is not None and self.definition.state(from_state) is None:
             return False, f"unknown origin state {from_state!r}", position
         if position.indeterminate:
-            refusal = [
-                "position is indeterminate — a detection predicate could not be "
-                "evaluated; refusing to move (fail-closed)"
-            ]
-            for state_id, outcome in position.unevaluated.items():
+            refusal = [_INDETERMINATE_REFUSAL]
+            # One line per cause, with the states it leaves indeterminate.
+            for state_ids, outcome in position.unevaluated_by_cause():
                 refusal.append(
-                    _explained(f"    {state_id!r}: {outcome.reason}", outcome.stderr_tail, "      ")
+                    _explained(
+                        f"    {_states_listed(state_ids)}: {outcome.reason}",
+                        outcome.stderr_tail,
+                        "      ",
+                    )
                 )
             return False, "\n".join(refusal), position
         if from_state is not None and position.state_id not in (from_state, to_state):
@@ -2202,6 +2465,55 @@ def _move_origin(position: Position, from_state: str | None) -> str | None:
     return from_state if from_state is not None else position.state_id
 
 
+def _mixed_modes_position(definition: ProcessDefinition, modes: dict[str, list[str]]) -> Position:
+    """The position of a definition whose states declare more than one detection
+    mode (COR-033 point 5, ADR-062 point 7): no detection is run, and every
+    state is indeterminate for the one reason naming each mode and its states."""
+    mixed = PredicateOutcome(
+        result=False,
+        reason=(
+            f"the definition's states declare more than one detection mode — "
+            f"{_modes_described(modes)} — so no detection was run; every state of a "
+            "definition declares the same mode"
+        ),
+        indeterminate=True,
+    )
+    reasons = {
+        str(state.get("id", "")): mixed
+        for state in definition.states
+        if isinstance(state.get("detection"), dict)
+    }
+    return Position(state_id=None, indeterminate=True, detection_reasons=reasons)
+
+
+def detection_faults(definition: ProcessDefinition) -> list[str]:
+    """The two faults validation reports in a definition's detections, each an
+    error (ADR-062 point 9): its states declare more than one mode, and its
+    `classified` detections name one command under different `with` mappings —
+    separate classifiers the runner gives the same input, so an answer one of
+    them can read is unreadable for the other."""
+    faults: list[str] = []
+    modes = definition.detection_modes()
+    if len(modes) > 1:
+        faults.append(
+            f"its states declare more than one detection mode — {_modes_described(modes)}; "
+            "every state of a definition declares the same mode"
+        )
+    by_command: dict[str, list[list[str]]] = {}
+    for (run_name, _with), state_ids in definition.classifiers().items():
+        by_command.setdefault(run_name, []).append(state_ids)
+    for run_name, groups in by_command.items():
+        if len(groups) > 1:
+            named = "; ".join(_states_listed(state_ids) for state_ids in groups)
+            faults.append(
+                f"its `classified` detections name command {run_name!r} under "
+                f"{len(groups)} different `with` mappings ({named}); they are separate "
+                "classifiers that the runner gives the same input, so an answer one of "
+                "them can read is unreadable for the other"
+            )
+    return faults
+
+
 def _running_pkit_version() -> str:
     """The pkit version stamping a journal entry (DEC-049 provenance). Best-effort;
     returns "" if unresolvable so a version hiccup never blocks a move."""
@@ -2265,6 +2577,7 @@ def load_definition(repo_root: Path, address: str) -> ProcessDefinition:
             process_id=process_id,
             capability_dir=capability_dir,
             data=process,
+            source=by_convention,
         )
 
     # Fall back to a scan: find the schema file whose process.id matches.
@@ -2295,6 +2608,7 @@ def load_definition(repo_root: Path, address: str) -> ProcessDefinition:
                 process_id=process_id,
                 capability_dir=capability_dir,
                 data=matches[0][1],
+                source=matches[0][0],
             )
 
     raise ProcessError(
@@ -2307,7 +2621,12 @@ def load_definition(repo_root: Path, address: str) -> ProcessDefinition:
 def definitions_outcome(repo_root: Path) -> Outcome:
     """The `process` member of `pkit validate`: every process definition the
     installed capabilities declare resolves — exactly one file per address,
-    whose `process.id` matches (the loader every `pkit process` command uses).
+    whose `process.id` matches (the loader every `pkit process` command uses) —
+    and its detections are readable (ADR-062 point 9): its states declare one
+    detection mode, and its `classified` detections name no command under
+    different `with` mappings. Both are errors. This is the check that reaches
+    every definition, a capability's companion schema that restates the
+    process block included (ADR-062 point 12).
 
     A subject's invariants are `pkit process validate <address>`'s: a runtime
     check with a subject and its predicates, which the umbrella does not run.
@@ -2317,15 +2636,25 @@ def definitions_outcome(repo_root: Path) -> Outcome:
     addresses = discover_process_addresses(repo_root)
     findings: list[Finding] = []
     for address in addresses:
+        capability = address.partition(":")[0]
         try:
-            load_definition(repo_root, address)
+            definition = load_definition(repo_root, address)
         except ProcessError as exc:
-            capability = address.partition(":")[0]
             findings.append(Finding(f".pkit/capabilities/{capability}/schemas", str(exc)))
+            continue
+        location = (
+            str(definition.source.relative_to(repo_root))
+            if definition.source is not None
+            else f".pkit/capabilities/{capability}/schemas"
+        )
+        findings.extend(
+            Finding(location, f"process {address}: {fault}")
+            for fault in detection_faults(definition)
+        )
     if not addresses:
         summary = "no process definitions declared."
     else:
-        summary = f"{len(addresses)} process definition(s) resolved; {len(findings)} error(s)."
+        summary = f"{len(addresses)} process definition(s) checked; {len(findings)} error(s)."
     return Outcome((summary,), tuple(findings))
 
 
@@ -2443,12 +2772,18 @@ def render_status_narrative(engine: ProcessEngine, actor: str) -> str:
     # Where + why.
     if position.indeterminate and position.state_id is None:
         lines.append("  " + cli_render.style("strong", "Where: indeterminate"))
-        for state_id, outcome in position.unevaluated.items():
-            lines.append(f"    couldn't evaluate {state_id!r}: {outcome.reason}")
+        # One line per cause, with the states it leaves indeterminate (ADR-062
+        # point 13): a classifier's failure is shown once, not once per state.
+        for state_ids, outcome in position.unevaluated_by_cause():
+            lines.append(f"    couldn't evaluate {_states_listed(state_ids)}: {outcome.reason}")
             lines.extend(_said_lines(outcome.stderr_tail, "      "))
     elif position.state_id is None:
         lines.append("  " + cli_render.style("strong", "Where: no position"))
         lines.append("    no state's detection predicate matched current reality")
+        # Why each classifier placed the subject in none of its states (ADR-062
+        # point 14) — the one way to tell a deliberate "none" from an accident.
+        for command, reason in position.placed_nowhere:
+            lines.append(f"    {command!r} places the subject in none of its states: {reason}")
     else:
         state = definition.state(position.state_id) or {}
         meaning = state.get("meaning")
@@ -2545,7 +2880,7 @@ def render_status_narrative(engine: ProcessEngine, actor: str) -> str:
             lines.extend(_said_lines(inv.stderr_tail, "        "))
 
     # Blocked overlay (COR-034) — the derived, live wait, if any.
-    checks = engine.precheck_transitions(position.state_id, actor)
+    checks = engine.legal_move_checks(position, actor)
     blocked = engine.evaluate_blocked(position, checks, actor)
     if blocked is not None:
         lines.append("")
@@ -2617,7 +2952,7 @@ def render_status_json(engine: ProcessEngine, actor: str) -> str:
     """Structured status for an agent / machine consumer."""
     definition = engine.definition
     position = engine.resolve_position()
-    checks = engine.precheck_transitions(position.state_id, actor)
+    checks = engine.legal_move_checks(position, actor)
     state = definition.state(position.state_id) if position.state_id else None
     blocked = engine.evaluate_blocked(position, checks, actor)
     # COR-036: the live cross-process resolution when parked in a subprocess
