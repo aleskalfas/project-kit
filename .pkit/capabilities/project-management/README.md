@@ -550,7 +550,8 @@ stdout, or **nothing** when it cannot be derived (branch not issue-shaped,
 enrichment never becomes a gate. The one refusal is an un-bootstrapped project
 (exit 2, the prerequisite gate every non-exempt pm verb calls): a workstream
 read off assumed kit labels there could be confidently wrong, and the caller
-treats a non-zero exit as "no workstream" too. This is the pm-provided half of the report
+omits the workstream there too — but, a non-zero exit being a failure rather
+than a miss, it warns, showing the refusal's own hint. This is the pm-provided half of the report
 context seam — the backbone's `pkit report` compose invokes it by subprocess
 through the capability dispatcher (COR-021) rather than reading
 `workstreams.yaml` or issue labels itself, keeping workstream vocabulary

@@ -78,7 +78,8 @@ never beyond `COMMAND_TIMEOUT_SECONDS`; the outermost kill is never late.
   arguments, the caller's environment unchanged but for the run's deadline —
   the verb asks the tracker — and the value read as the text an exit-0 run
   prints, not a JSON document; anything else omits the workstream from the
-  report, and an overrun says so;
+  report — silently where the verb is absent or printed nothing, with a
+  warning naming how the run ended and what the verb said where it failed;
 - a *subscriber* policy joins when events run subscribers (COR-053 point 9
   sets its limits; point 11 asks the kinds to share one command runner).
 

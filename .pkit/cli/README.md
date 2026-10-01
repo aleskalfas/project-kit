@@ -1047,8 +1047,11 @@ resolved through the capability dispatcher and run under the backbone's
 thirty-second command bound (the lifecycle README, "How a registered command
 is run"), so the backbone never reads pm's `workstreams.yaml` or labels
 itself; `--workstream <name>` overrides, and pm-absent / underivable simply
-omits the half — a verb that overruns the bound is stopped, and the report
-warns and goes on without it. A successful
+omits the half, silently. A verb that fails — cannot start, exits non-zero
+(an un-bootstrapped project's refusal among them), overruns the bound and is
+stopped, or prints output that is not UTF-8 — omits it too, but the report
+warns, naming how the verb ended and showing the tail of what it wrote on
+stderr (bounded, escape sequences removed), and goes on without it. A successful
 post stamps the same pair into the reported scratchpad note's
 frontmatter. This context block is the designated extension point for
 version provenance (EPIC #411): future provenance fields join the same
