@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-01T16:03:34Z
+      at: 2026-10-01T16:13:27Z
       outcome: unchanged
-      unchanged-because: on this branch sync and upgrade refuse to write when the running pkit is older than the project's content or pin, and the router says so on its offline fallback; what main brought in (the process move origin, the configuration writer, the milestone rollforward) does not change what this page describes
+      unchanged-because: on this branch sync and upgrade refuse to write under a pkit older than the project's content or pin; the test-fixture templates main brought in do not change what this page describes
 ---
 
 # project-kit
