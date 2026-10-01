@@ -59,6 +59,7 @@ from _lib.membership import (
     resolve_capability_root,
     resolve_invoker_identity,
 )
+from _lib.milestone import title_format_regex
 
 VALID_CLOSE_TRIGGERS = ("date-based", "content-based", "either")
 
@@ -273,20 +274,6 @@ def main() -> int:
 # ---- numbering ------------------------------------------------------
 
 
-def _title_format_to_regex(title_format: str) -> re.Pattern:
-    """Convert a Python-style title_format to a regex with named `n` group.
-
-    Input: "Milestone {n}: {name}"
-    Output: regex compiled from "^Milestone (?P<n>\\d+): (?P<name>.+)$"
-    """
-    # re.escape() escapes literal braces too — un-escape them so we can
-    # substitute placeholders.
-    escaped = re.escape(title_format)
-    escaped = escaped.replace(r"\{n\}", r"(?P<n>\d+)")
-    escaped = escaped.replace(r"\{name\}", r"(?P<name>.+)")
-    return re.compile(f"^{escaped}$")
-
-
 def _next_number_for_category(title_format: str, config: dict | None = None) -> int | None:
     """Find max existing `n` for milestones matching the category's title format; return n+1.
 
@@ -295,7 +282,7 @@ def _next_number_for_category(title_format: str, config: dict | None = None) -> 
     number, returns max+1. Returns 1 when no existing milestones match.
     Returns None on `gh` failure (caller surfaces).
     """
-    regex = _title_format_to_regex(title_format)
+    regex = title_format_regex(title_format)
     milestones = _gh_list_milestones(config)
     if milestones is None:
         return None

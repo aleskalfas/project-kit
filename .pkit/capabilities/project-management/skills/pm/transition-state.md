@@ -70,6 +70,11 @@ pkit project-management reopen-issue <N> [--reason "<text>"] [--dry-run] [--yes]
 pkit project-management edit-issue <N> --milestone <number|title> | --clear-milestone --reason "<why>" [--dry-run] [--yes]
 ```
 
+**Close a milestone, rolling its open children forward** (a date-based Milestone, or an `either` one from its due date: each open child moves to the rollforward target through the `edit-issue --milestone` move above, its state kept, with one audit comment naming the close; closed children stay, and a parent on the Milestone moves with its open children. The target is `--target`, else the Milestone's `Rollforward target:` line, else the next-numbered open Milestone of its category — with no candidate or more than one, nothing is moved or closed until the user names it. A content-based close, or an `either` one before its due date, moves nothing: open children hold it unless `--force`. `--dry-run` lists every move. Exit 4 means the Milestone closed but a move failed — re-run the same command to finish):
+```
+pkit project-management close-milestone <n> [--target <number|title>] [--force] [--dry-run] [--yes]
+```
+
 **Tick / untick acceptance criteria** (DEC-038 batch substrate primitives — prefer these over a whole-body `edit-issue` for a checkbox flip; address by 1-based index matching `show-issue --field criteria`, with an optional expected-text guard):
 ```
 pkit project-management check-criterion <N> <index> [expected-text] [<index> [expected-text]] ...

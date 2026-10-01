@@ -24,11 +24,15 @@ The module also holds the reads that decide whether a Milestone may close,
 so `close-milestone` (which closes it) and `close-issue`'s closure cascade
 (which says when it became closeable, #414) read a Milestone the same way:
 its close-trigger ([project-management:DEC-016-time-bound-containers]) and
-its child issues.
+its child issues. And it holds the reads a date-triggered close rolls the open
+children forward by (#1175): whether the date trigger fired, the Milestone's
+`Rollforward target:` line, and the next-numbered open Milestone of its
+category.
 """
 
 from __future__ import annotations
 
+import datetime as dt
 import json
 import re
 import sys
@@ -55,6 +59,16 @@ _CLOSE_TRIGGER_LINE = re.compile(r"^Close trigger:\s+(date-based|content-based|e
 _MILESTONE_REF = re.compile(
     r"^Milestone:\s+\[#(?P<number>\d+)\]\(\.\./milestone/(?P=number)\)\s*$",
     re.MULTILINE,
+)
+
+# The DEC-016 `Rollforward target: <Milestone>` line: where a date-triggered
+# close moves the Milestone's open children.
+_ROLLFORWARD_TARGET_LINE = re.compile(r"^Rollforward target:\s+(?P<value>.+?)\s*$")
+
+# A Milestone named by number: `#7`, `7`, or the `[#7](../milestone/7)` link an
+# issue's first line uses.
+_MILESTONE_NUMBER_REF = re.compile(
+    r"^(?:\[#(?P<link>\d+)\]\(\.\./milestone/(?P=link)\)|#?(?P<plain>\d+))$"
 )
 
 # The fields a milestone-children read needs from the issue corpus.
@@ -221,9 +235,10 @@ def list_milestone_children(
     is refused rather than answered from: a child past the ceiling may be
     open, and a list short of it would call the Milestone closeable.
 
-    Returns a list of `{number, title, state, type}` dicts (state lower-cased,
-    type inferred from the title prefix, sorted by number), or None — with the
-    reason on stderr — on a gh failure or a truncated corpus.
+    Returns a list of `{number, title, state, type, milestone}` dicts (state
+    lower-cased, type inferred from the title prefix, milestone the native
+    Milestone payload or None, sorted by number), or None — with the reason on
+    stderr — on a gh failure or a truncated corpus.
     """
     corpus = containment.fetch_issue_corpus(config, fields=_CHILDREN_FIELDS)
     if corpus is None:
@@ -245,11 +260,12 @@ def list_milestone_children(
             continue
         body = str(row.get("body") or "")
         if not (
-            _native_milestone_matches(row.get("milestone"), number, title)
+            native_milestone_matches(row.get("milestone"), number, title)
             or number in body_milestone_refs(body)
         ):
             continue
         row_title = str(row.get("title", ""))
+        native = row.get("milestone")
         children.append(
             {
                 "number": num,
@@ -258,6 +274,7 @@ def list_milestone_children(
                 "type": infer_structural_type(
                     row_title, issue_types, classification=classification
                 ),
+                "milestone": native if isinstance(native, dict) else None,
             }
         )
     children.sort(key=lambda c: c["number"])
@@ -285,7 +302,7 @@ def body_milestone_refs(body: str) -> list[int]:
     return [int(m.group("number")) for m in _MILESTONE_REF.finditer(body)]
 
 
-def _native_milestone_matches(milestone: object, number: int, title: str) -> bool:
+def native_milestone_matches(milestone: object, number: int, title: str) -> bool:
     """True when an issue's native milestone field names this milestone.
 
     Matched on number OR title — gh's `--json milestone` payload may carry
@@ -297,6 +314,126 @@ def _native_milestone_matches(milestone: object, number: int, title: str) -> boo
     if milestone.get("number") == number:
         return True
     return bool(title) and milestone.get("title") == title
+
+
+# ---- rollforward (DEC-016) -------------------------------------------
+
+
+def date_trigger_fired(close_trigger: str, due_on: object, today: dt.date) -> bool:
+    """Whether closing the Milestone today is a date-triggered close — the close
+    that rolls its open children forward (time-containers.yaml).
+
+    A `date-based` Milestone's close always is: the date is its trigger, and an
+    early close is the manual form of it. An `either` Milestone's is from its due
+    date on; before it, only its content closes it, and one without a due date
+    has no date to fire. A `content-based` Milestone's never is.
+    """
+    if close_trigger == "date-based":
+        return True
+    if close_trigger != "either":
+        return False
+    due = due_date(due_on)
+    return due is not None and today >= due
+
+
+def due_date(due_on: object) -> dt.date | None:
+    """The calendar date of a Milestone's native `due_on` (`2026-07-01T07:00:00Z`),
+    or None when it has none or it does not read as one."""
+    if not isinstance(due_on, str):
+        return None
+    try:
+        return dt.date.fromisoformat(due_on.strip()[:10])
+    except ValueError:
+        return None
+
+
+def parse_rollforward_target(description: str) -> str | None:
+    """The Milestone a `Rollforward target:` line names, as a
+    :func:`resolve_milestone` argument; None when the description has no such
+    line.
+
+    DEC-016 puts the line second, under the `Close trigger:` marker; it is read
+    wherever it stands. A number — `#7`, `7`, or the `[#7](../milestone/7)` link
+    an issue's first line uses — comes back as the number; anything else as the
+    title it is matched on.
+    """
+    for line in description.splitlines():
+        declared = _ROLLFORWARD_TARGET_LINE.match(line.strip())
+        if declared is None:
+            continue
+        value = declared.group("value")
+        ref = _MILESTONE_NUMBER_REF.match(value)
+        if ref is None:
+            return value
+        return ref.group("link") or ref.group("plain")
+    return None
+
+
+def next_numbered_milestones(
+    title: str, open_milestones: list[dict], categories: object
+) -> list[Milestone]:
+    """The open Milestones a date-triggered close of `title` may roll forward to
+    when the Milestone names no target: the next-numbered of its category.
+
+    Numbers count per category (DEC-016), so the category is the one in the
+    project's `milestone_categories:` whose `title_format` the closing title
+    matches, and the candidates are its open Milestones carrying the lowest
+    number above the closing one's. One candidate is the target. None — the
+    title matches no declared category, or no later Milestone of its category is
+    open — or more than one — two open Milestones share the next number, or the
+    title matches two categories that each offer one — leave the choice to the
+    operator.
+    """
+    found: dict[int, Milestone] = {}
+    for title_format in _numbered_title_formats(categories):
+        try:
+            regex = title_format_regex(title_format)
+        except re.error:  # a malformed format, e.g. `{name}` twice
+            continue
+        own = regex.match(title)
+        if own is None:
+            continue
+        own_number = int(own.group("n"))
+        later: list[tuple[int, Milestone]] = []
+        for ms in open_milestones:
+            if not isinstance(ms, dict) or not isinstance(ms.get("number"), int):
+                continue
+            ms_title = str(ms.get("title", ""))
+            match = regex.match(ms_title)
+            if match is not None and int(match.group("n")) > own_number:
+                later.append((int(match.group("n")), Milestone(ms["number"], ms_title)))
+        if later:
+            lowest = min(n for n, _ in later)
+            found.update((ms.number, ms) for n, ms in later if n == lowest)
+    return sorted(found.values(), key=lambda ms: ms.number)
+
+
+def title_format_regex(title_format: str) -> re.Pattern[str]:
+    """A category's `title_format` as a regex with named `n` and `name` groups.
+
+    Input: "Milestone {n}: {name}"
+    Output: regex compiled from "^Milestone (?P<n>\\d+): (?P<name>.+)$"
+    """
+    # re.escape() escapes literal braces too — un-escape them so we can
+    # substitute placeholders.
+    escaped = re.escape(title_format)
+    escaped = escaped.replace(r"\{n\}", r"(?P<n>\d+)")
+    escaped = escaped.replace(r"\{name\}", r"(?P<name>.+)")
+    return re.compile(f"^{escaped}$")
+
+
+def _numbered_title_formats(categories: object) -> list[str]:
+    """The declared categories' title formats that number their Milestones."""
+    if not isinstance(categories, dict):
+        return []
+    formats: list[str] = []
+    for entry in categories.values():
+        if not isinstance(entry, dict):
+            continue
+        title_format = entry.get("title_format")
+        if isinstance(title_format, str) and title_format.count("{n}") == 1:
+            formats.append(title_format)
+    return formats
 
 
 def _parse_concatenated_arrays(text: str) -> list:
