@@ -68,9 +68,9 @@ the places carries the container (point 15).
 looked up in `registered_anchor_kinds`, where a resolver command that does not
 declare the query contract — bounded, deterministic, read-only, needing no
 network — is refused (`refuse_resolver_without_query_contract`). No capability
-registers a kind yet, so every other kind is unresolved. The residual gap: the
-declaration is trusted, not enforced — no layer of this distribution holds a
-single command to "no network" (ADR-057 point 4).
+can register a kind yet, so every other kind is unresolved. Not a boundary:
+the declaration is trusted, not enforced (COR-050 point 2) — no layer of this
+distribution holds a single command to "no network" (ADR-057 point 4).
 
 The check writes nothing (point 13).
 """

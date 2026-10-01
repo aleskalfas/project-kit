@@ -1348,7 +1348,7 @@ def refuse_resolver_without_query_contract(resolver: ResolverCommand) -> str | N
     admits one only when its command declares that contract — COR-050 point 2
     requires the declaration, ADR-057 point 3 realises it. The declaration is
     trusted, not enforced: nothing here confines the process it would start —
-    the residual gap the CLI reference states.
+    not a boundary, as the CLI reference states.
     """
     if resolver.query_contract:
         return None
