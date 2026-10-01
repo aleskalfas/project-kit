@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import dataclasses
 import json
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from typing import Any
 
 import pytest
@@ -83,10 +83,12 @@ def in_process(
     if clock is not None:
         monkeypatch.setattr(landing, "_monotonic", clock)
 
-    def answers(args: list[str], config: dict[str, Any]) -> list[dict[str, Any]]:
+    def answers(
+        args: list[str], config: dict[str, Any], *, timeout_seconds: float | None = None
+    ) -> Iterator[dict[str, Any]]:
         result = CliRunner().invoke(
             cli.main, ["pull-request", *args, "--json"], catch_exceptions=False
         )
-        return [json.loads(line) for line in result.stdout.splitlines() if line.strip()]
+        yield from (json.loads(line) for line in result.stdout.splitlines() if line.strip())
 
     monkeypatch.setattr(mq, "_answers", answers)

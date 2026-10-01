@@ -24,18 +24,28 @@ A :class:`Reading` is the backbone's reading as its document states it —
 what GitHub answered, and what the backbone concludes from it (merged, queued,
 whether the queue dropped the PR at its current head, the phrase that
 describes where it stands) — so pm never derives any of it again. When the
-backbone cannot answer — no `pkit`, a backbone that predates the command, an
-answer pm cannot read — the reading is :class:`Unreadable`, with the cause, as
+backbone cannot answer — no `pkit`, a backbone that predates the command, a
+run past its bound, an answer pm cannot read, a reading without a field a
+decision rests on — the reading is :class:`Unreadable`, with the cause, as
 when GitHub cannot be read: nothing merges on a guess.
 """
 
 from __future__ import annotations
 
+import contextlib
 import json
+import os
+import queue
+import re
+import shutil
+import signal
 import subprocess
+import sys
+import threading
+import time
 from collections.abc import Callable, Iterator, Mapping
 from dataclasses import dataclass
-from typing import Any
+from typing import IO, Any
 
 from _lib.gh import gh_env
 
@@ -43,6 +53,24 @@ from _lib.gh import gh_env
 #: reads — another is refused rather than misread.
 ARGV = ("pkit", "pull-request")
 VERSION = 1
+
+#: How long pm waits for each of the backbone's answers, by subcommand, in
+#: seconds: a reading or the squash-commit defaults is one `gh` read, two
+#: when the host knows no merge queues; a merge or an enqueue is gh's merge
+#: request; a dequeue is a reading, the request and a reading again. A run
+#: that has not answered by then is ended with everything it started.
+TIMEOUT_SECONDS: Mapping[str, float] = {
+    "read": 60.0,
+    "squash-defaults": 60.0,
+    "merge": 120.0,
+    "enqueue": 120.0,
+    "dequeue": 180.0,
+}
+
+#: A wait is bounded by its own limit — the seconds asked for, else the
+#: backbone's cap — plus this margin: the reading the backbone may still take
+#: after the limit, the interval before it, and starting `pkit`.
+WAIT_MARGIN_SECONDS = 5 * 60.0
 
 # The queue merge method that makes the convention's one squash commit (DEC-013).
 SQUASH = "SQUASH"
@@ -156,10 +184,7 @@ def read(pr_number: int, config: dict[str, Any]) -> Reading:
     :class:`Unreadable` when GitHub, or the backbone, cannot answer."""
     document = _first(["read", str(pr_number)], config)
     _raise_unreadable(document)
-    reading = decode_reading(document.get("reading"))
-    if reading is None:
-        raise Unreadable("the backbone's answer names no reading")
-    return reading
+    return decode_reading(document.get("reading"))
 
 
 def squash_commit_defaults(config: dict[str, Any]) -> tuple[str, str]:
@@ -192,55 +217,93 @@ def wait_for_merge(
     declares the PR out of the queue only on two readings running, and with
     `head_oid` — the head the caller's gates checked — ends the wait at once
     on a reading at another head (:data:`HEAD_MOVED`). `on_change` is handed
-    each reading whose description changed, as the backbone takes it. Raises
-    :class:`Unreadable` when a reading cannot be taken.
+    each reading whose description changed, as the backbone takes it. The
+    backbone's run is bounded by the wait's own limit plus
+    :data:`WAIT_MARGIN_SECONDS`. Raises :class:`Unreadable` when a reading
+    cannot be taken, or the wait does not say how it ended.
     """
     args = ["wait", str(pr_number)]
     if head_oid:
         args += ["--head", head_oid]
     if timeout_seconds is not None:
         args += ["--seconds", repr(float(timeout_seconds))]
-    for document in _answers(args, config):
-        if document.get("event") == "reading":
-            reading = decode_reading(document.get("reading"))
-            if reading is not None:
-                on_change(reading)
-            continue
-        _raise_unreadable(document)
-        ended = document.get("ended")
-        reading = decode_reading(document.get("reading"))
-        if ended not in (MERGED, STILL_QUEUED, LEFT, HEAD_MOVED) or reading is None:
-            raise Unreadable("the backbone's answer says no way the wait ended")
-        return Wait(str(ended), reading)
-    raise Unreadable("the backbone's wait ended without saying how")
+    limit = MAX_WAIT_SECONDS if timeout_seconds is None else timeout_seconds
+    ended: Wait | None = None
+    with contextlib.closing(
+        _answers(args, config, timeout_seconds=limit + WAIT_MARGIN_SECONDS)
+    ) as documents:
+        for document in documents:
+            if document.get("event") == "reading":
+                on_change(decode_reading(document.get("reading")))
+                continue
+            _raise_unreadable(document)
+            how = document.get("ended")
+            if how not in (MERGED, STILL_QUEUED, LEFT, HEAD_MOVED):
+                raise Unreadable(
+                    f"the backbone's answer says no way the wait ended (`ended`: {how!r})"
+                )
+            ended = Wait(str(how), decode_reading(document.get("reading")))
+    if ended is None:
+        raise Unreadable("the backbone's wait ended without saying how")
+    return ended
 
 
 def request(args: list[str], config: dict[str, Any]) -> Outcome:
     """A merge request the backbone makes (`merge`, `enqueue`, `dequeue`), and
     what it came to. Raises :class:`Unreadable` when the backbone gives no
-    answer — the request may then not have been made."""
+    answer, or one that does not say whether the request was accepted — the
+    request may then have been made, or not."""
     document = _first(args, config)
+    accepted = document.get("accepted")
+    if not isinstance(accepted, bool):
+        raise Unreadable(
+            f"the backbone's answer does not say whether the request was accepted "
+            f"(`accepted`: {accepted!r})"
+        )
     exit_code = document.get("exit_code")
     return Outcome(
-        accepted=document.get("accepted") is True,
+        accepted=accepted,
         exit_code=exit_code if isinstance(exit_code, int) else None,
         reason=str(document.get("reason") or ""),
     )
 
 
-def decode_reading(value: object) -> Reading | None:
-    """The reading a backbone document states, or None when it states none."""
+# The fields of a reading a decision rests on, and their type. Read as false
+# or empty when missing, each would fail open — a missing `has_queue` merges
+# around the queue, a missing `dropped_head` enqueues a dropped head again —
+# so a reading without one, or with one of another type, is no reading.
+_DECIDING: Mapping[str, type] = {
+    "has_queue": bool,
+    "merged": bool,
+    "queued": bool,
+    "dropped_head": bool,
+    "head_oid": str,
+}
+
+
+def decode_reading(value: object) -> Reading:
+    """The reading a backbone document states. Raises :class:`Unreadable` when
+    it states none, or lacks a field a decision rests on (`has_queue`,
+    `merged`, `queued`, `dropped_head`, `head_oid`) or carries one of another
+    type."""
     if not isinstance(value, Mapping):
-        return None
+        raise Unreadable("the backbone's answer names no reading")
     doc: Mapping[str, Any] = value
+    for key, kind in _DECIDING.items():
+        if key not in doc:
+            raise Unreadable(f"the backbone's reading has no `{key}`")
+        if not isinstance(doc[key], kind):
+            raise Unreadable(
+                f"the backbone's reading has a `{key}` that is not a {kind.__name__}: {doc[key]!r}"
+            )
     removal = doc.get("removal")
     return Reading(
-        has_queue=doc.get("has_queue") is True,
+        has_queue=doc["has_queue"],
         merge_method=_text(doc.get("merge_method")),
         pr_id=_text(doc.get("pr_id")),
         pr_state=_text(doc.get("pr_state")),
         merged_at=_text(doc.get("merged_at")),
-        head_oid=_text(doc.get("head_oid")),
+        head_oid=doc["head_oid"],
         in_queue=doc.get("in_queue") is True,
         position=_int_or_none(doc.get("position")),
         entry_state=_text(doc.get("entry_state")),
@@ -256,19 +319,20 @@ def decode_reading(value: object) -> Reading | None:
             if isinstance(removal, Mapping)
             else None
         ),
-        merged=doc.get("merged") is True,
-        queued=doc.get("queued") is True,
+        merged=doc["merged"],
+        queued=doc["queued"],
         squashes=doc.get("squashes") is True,
-        dropped_head=doc.get("dropped_head") is True,
+        dropped_head=doc["dropped_head"],
         description=_text(doc.get("description")),
     )
 
 
 def _first(args: list[str], config: dict[str, Any]) -> dict[str, Any]:
-    """The backbone's one document for `args`."""
-    for document in _answers(args, config):
-        return document
-    raise Unreadable(f"`{' '.join([*ARGV, *args[:1]])}` gave no answer")
+    """The backbone's one document for `args`, read once its run has ended."""
+    documents = list(_answers(args, config))
+    if not documents:
+        raise Unreadable(f"`{' '.join([*ARGV, *args[:1]])}` gave no answer")
+    return documents[0]
 
 
 def _raise_unreadable(document: Mapping[str, Any]) -> None:
@@ -277,58 +341,160 @@ def _raise_unreadable(document: Mapping[str, Any]) -> None:
         raise Unreadable(str(unreadable))
 
 
-def _answers(args: list[str], config: dict[str, Any]) -> Iterator[dict[str, Any]]:
+# The two streams of a run, as `_answers` tells their lines apart.
+_STDOUT = "stdout"
+_STDERR = "stderr"
+
+# A line on the backbone's standard error that is a warning, passed on even
+# when it answered: the router's notices (`pkit: …` — running the installed
+# tool rather than the project's own, say) and lines marked as warnings.
+_WARNING = re.compile(r"(pkit: |\[warn\] |warn(ing)?: )", re.IGNORECASE)
+
+# The warnings passed on in this run, each once however many answers carry it.
+_passed_on: set[str] = set()
+
+
+def _answers(
+    args: list[str], config: dict[str, Any], *, timeout_seconds: float | None = None
+) -> Iterator[dict[str, Any]]:
     """Run `pkit pull-request <args> --json` and yield each document it writes,
     as it writes it — a wait writes one per reading that changed.
 
+    Standard output and standard error are read as they come, so neither
+    fills while the other is read to its end, and a warning on standard error
+    is passed on whether or not a document came back. The run is bounded —
+    by `timeout_seconds`, else by its subcommand's (:data:`TIMEOUT_SECONDS`) —
+    and runs in a session of its own, so a run past its bound, or left when
+    its reader stops, is ended with everything it started: a `gh` request
+    still running would otherwise go on after pm has read the PR to decide.
+
     Raises :class:`Unreadable`, naming the cause, when the backbone gives no
-    readable answer: no `pkit`, a backbone that predates the command, a
-    document that is not JSON or of another version.
+    readable answer: no `pkit`, a `pkit` without the command, a run past its
+    bound, a document that is not JSON or of another version.
     """
     argv = [*ARGV, *args, "--json"]
     command = f"`{' '.join([*ARGV, *args[:1]])}`"
+    bound = TIMEOUT_SECONDS[args[0]] if timeout_seconds is None else timeout_seconds
+    env = gh_env(config)
     try:
         proc = subprocess.Popen(
             argv,
+            stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
-            env=gh_env(config),
+            encoding="utf-8",
+            errors="replace",
+            env=env,
+            start_new_session=True,
         )
     except FileNotFoundError as exc:
         raise Unreadable(f"{command}: `pkit` is not on PATH ({exc})") from exc
     except OSError as exc:
         raise Unreadable(f"{command} could not be run ({exc})") from exc
+    lines: queue.Queue[tuple[str, str | None]] = queue.Queue()
+    for name, stream in ((_STDOUT, proc.stdout), (_STDERR, proc.stderr)):
+        threading.Thread(target=_pump, args=(name, stream, lines), daemon=True).start()
+    deadline = time.monotonic() + bound
+    said: list[str] = []
     answered = False
-    with proc:
-        assert proc.stdout is not None and proc.stderr is not None
-        for line in proc.stdout:
-            if not line.strip():
-                continue
+    try:
+        open_streams = 2
+        while open_streams:
             try:
-                document = json.loads(line)
-            except ValueError:
-                proc.kill()
-                raise Unreadable(f"{command}: its answer is not JSON") from None
-            version = document.get("schema_version") if isinstance(document, dict) else None
-            if version != VERSION:
-                proc.kill()
+                name, line = lines.get(timeout=max(0.0, deadline - time.monotonic()))
+            except queue.Empty:
                 raise Unreadable(
-                    f"{command} answered schema_version {version!r}; pm reads {VERSION}"
-                )
-            answered = True
-            yield document
-        stderr = proc.stderr.read()
+                    f"{command} gave no answer within {bound:g} s, and was stopped"
+                ) from None
+            if line is None:
+                open_streams -= 1
+            elif name == _STDERR:
+                said.append(line.strip())
+                _pass_on(line)
+            elif line.strip():
+                document = _document(line, command)
+                answered = True
+                yield document
+        returncode = proc.wait(timeout=max(1.0, deadline - time.monotonic()))
+    except subprocess.TimeoutExpired:
+        raise Unreadable(f"{command} did not end within {bound:g} s, and was stopped") from None
+    finally:
+        _end(proc, answered=answered)
     if answered:
         return
-    if "No such command" in stderr:
+    if any("No such command" in line for line in said):
         raise Unreadable(
-            f"{command}: the installed backbone predates it — upgrade it (`pkit upgrade`)"
+            f"{command}: the `pkit` that ran — {_which(env)} — has no such command, so this "
+            "project's backbone is older than project-management needs. Upgrade the backbone "
+            "(`pkit upgrade`), or put a `pkit` that has the command first on PATH"
         )
-    said = [line.strip() for line in stderr.splitlines() if line.strip()]
+    said = [line for line in said if line]
     raise Unreadable(
-        f"{command} exited {proc.returncode}" + (f": {said[-1]}" if said else " with no answer")
+        f"{command} exited {returncode}" + (f": {said[-1]}" if said else " with no answer")
     )
+
+
+def _pump(name: str, stream: IO[str] | None, lines: queue.Queue[tuple[str, str | None]]) -> None:
+    """Put each line of `stream` on `lines` as it comes, then `None` at its end."""
+    if stream is None:
+        lines.put((name, None))
+        return
+    try:
+        for line in stream:
+            lines.put((name, line))
+    except (OSError, ValueError):  # the stream broke under the reader
+        pass
+    finally:
+        lines.put((name, None))
+        stream.close()
+
+
+def _document(line: str, command: str) -> dict[str, Any]:
+    """One line of the backbone's answer, as a document of the version pm reads."""
+    try:
+        document = json.loads(line)
+    except ValueError:
+        raise Unreadable(f"{command}: its answer is not JSON") from None
+    version = document.get("schema_version") if isinstance(document, dict) else None
+    if version != VERSION:
+        raise Unreadable(f"{command} answered schema_version {version!r}; pm reads {VERSION}")
+    return document
+
+
+def _pass_on(line: str) -> None:
+    """Say a warning the backbone wrote on standard error, once per run."""
+    text = line.strip()
+    if _WARNING.match(text) and text not in _passed_on:
+        _passed_on.add(text)
+        print(text, file=sys.stderr, flush=True)
+
+
+def _end(proc: subprocess.Popen[str], *, answered: bool) -> None:
+    """End the run and everything it started, if it has not ended by itself.
+
+    The run leads a session of its own, so one signal to its process group
+    reaches what it started — a `gh` request among them. A run that ended by
+    itself without answering has its group swept too: what it left running
+    could still act on the PR.
+    """
+    running = proc.poll() is None
+    if running or not answered:
+        _kill_group(proc)
+    proc.wait()
+
+
+def _kill_group(proc: subprocess.Popen[str]) -> None:
+    if hasattr(os, "killpg"):
+        with contextlib.suppress(ProcessLookupError, PermissionError):  # the group has ended
+            os.killpg(proc.pid, signal.SIGKILL)
+    elif proc.poll() is None:  # no process groups on this platform
+        proc.kill()
+
+
+def _which(env: Mapping[str, str]) -> str:
+    """The `pkit` a run finds on `env`'s PATH, as a path."""
+    return shutil.which(ARGV[0], path=env.get("PATH")) or "not found on PATH"
 
 
 def _text(value: object) -> str:
