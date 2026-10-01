@@ -15,6 +15,10 @@ reading of its position. Pinned here:
 - a failed read: the script exits non-zero with `gh`'s own words on stderr, and
   through the real engine every state is indeterminate with that cause, shown
   once in the narrative;
+- a value the lifecycle does not declare — a derive binding's `open`, a stray
+  state label — through the real script and the real engine: a determinate
+  "no position" with the classifier's reason shown, in the narrative and as
+  `position.placed_nowhere`;
 - one fetch through the real engine: a `status` reads the issue's state once.
 
 The engine-driven tests run the shipped scripts the way the engine runs every
@@ -306,6 +310,20 @@ def _issue(root: Path, state: str, labels: list[str], body: str = "- [x] done\n"
     (root / "_issue.json").write_text(json.dumps(issue), encoding="utf-8")
 
 
+# A derive binding (ADR-026 point 5): state read from open/closed, so an open
+# issue is `open`, a value the lifecycle does not declare.
+_DERIVE_MAP_YAML = """\
+axes:
+  state:
+    derive:
+      from: open-closed
+      states:
+        open: issue is open and not labelled Blocked
+        blocked: issue is open and labelled Blocked
+        done: issue is closed
+"""
+
+
 def _gh_calls(root: Path) -> list[str]:
     log = root / "_gh-calls"
     return log.read_text().splitlines() if log.exists() else []
@@ -369,3 +387,44 @@ def test_a_failed_read_leaves_every_state_indeterminate_with_its_cause(project: 
     allowed, reason, _position = _engine(project).can_move("review", "agent")
     assert allowed is False
     assert reason.count("HTTP 404") == 1
+
+
+@pytest.mark.parametrize(
+    ("derive", "labels", "inferred"),
+    [
+        pytest.param(True, ["type:task"], "open", id="derive-bound"),
+        pytest.param(False, ["type:task", "state:foo"], "foo", id="stray-label"),
+    ],
+)
+def test_a_value_the_lifecycle_does_not_declare_is_no_position_with_its_reason(
+    project: Path, derive: bool, labels: list[str], inferred: str
+) -> None:
+    if derive:
+        cap = project / ".pkit" / "capabilities" / "project-management"
+        (cap / "project" / "substrate-map.yaml").write_text(_DERIVE_MAP_YAML, encoding="utf-8")
+    _issue(project, "OPEN", labels)
+    reason = f"#42 inferred state is {inferred!r}, which is not a state of the issue lifecycle"
+
+    script = project / ".pkit" / "capabilities" / "project-management" / "scripts"
+    direct = subprocess.run(
+        [str(script / "detect-state.py"), "42", "--json"],
+        cwd=project,
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    assert direct.returncode == 0, direct.stderr
+    assert json.loads(direct.stdout) == {
+        "state": None,
+        "reason": reason,
+        "detail": {"inferred_state": inferred},
+    }
+
+    position = json.loads(render_status_json(_engine(project), "agent"))["position"]
+    assert (position["state"], position["indeterminate"]) == (None, False)
+    assert position["unevaluated"] == []
+    assert position["placed_nowhere"] == [{"predicate": "detect-state", "reason": reason}]
+
+    narrative = strip_ansi(render_status_narrative(_engine(project), "agent"))
+    assert "Where: no position" in narrative
+    assert f"'detect-state' places the subject in none of its states: {reason}" in narrative
