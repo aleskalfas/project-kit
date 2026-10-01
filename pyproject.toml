@@ -121,10 +121,10 @@ withhold = [
 # self-host install-state receipt, functionally inert since a capability install
 # overwrites it with a freshly-stamped one. It is not withheld because
 # `is_adopter_owned_by_tier` is a TIER rule and that file is install *state*
-# sitting in a kit-owned directory, so the predicate cannot see it. Its former
-# removal plan — ADR-033's single-declaration follow-on — was retired by that
-# record's #813 amendment, so it needs a home of its own rather than a pointer
-# to a retired goal.
+# sitting in a kit-owned directory, so the predicate cannot see it. ADR-033 does
+# not pursue a single declaration of the kit-owned tree shared by build and
+# propagator (its COR-007 follow-on implication), so removing this file needs a
+# plan of its own rather than a pointer to that record.
 packages = ["src/project_kit"]
 exclude = ["/src/project_kit"]
 # The editable wheel exposes `src/` through a `.pth` rather than shipping the
