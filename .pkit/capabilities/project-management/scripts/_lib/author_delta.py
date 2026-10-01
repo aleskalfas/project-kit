@@ -243,10 +243,16 @@ class _Git:
             )
 
     def is_ancestor(self, ancestor: str, descendant: str) -> bool:
-        proc = self("merge-base", "--is-ancestor", ancestor, descendant)
-        if proc.returncode in (0, 1):
-            return proc.returncode == 0
-        raise _GitFailed(f"git merge-base failed: {proc.stderr.strip()}")
+        """Whether `ancestor` is `descendant` or in its history: nothing
+        reachable from `ancestor` lies outside `descendant`'s history.
+
+        Asked of the two commits the caller names, with `rev-list`: a pm
+        script never computes a merge-base — where a branch left its base is
+        the backbone's one reading (COR-054 point 5)."""
+        proc = self("rev-list", "--max-count=1", f"{descendant}..{ancestor}")
+        if proc.returncode != 0:
+            raise _GitFailed(f"git rev-list failed: {proc.stderr.strip()}")
+        return not proc.stdout.strip()
 
     def first_parent_line(self, since: str, head: str) -> list[tuple[str, list[str]]]:
         """The commits from `head` back to `since` along first parents, each
