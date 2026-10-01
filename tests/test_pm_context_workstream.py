@@ -7,8 +7,8 @@ The degrade contract is now "exit 0 on every MISS", not "exit 0 always": since
 #747 the verb is gated like every other non-exempt pm verb, so an
 un-bootstrapped project gets a refusal (exit 2) rather than a silently empty
 answer — a workstream derived from assumed defaults would be confidently wrong.
-The backbone's report-compose consumer already treats any non-zero exit as "no
-workstream", so the degrade path it relies on is unchanged. `_run_main`
+The backbone's report-compose consumer omits the workstream on any non-zero
+exit too, and says so, showing the refusal's hint (#752). `_run_main`
 neutralises the gate for the derivation tests; the two tests at the bottom pin
 the gated behaviour itself.
 """

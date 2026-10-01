@@ -7158,6 +7158,9 @@ def process_cascade(address: str, subject: str | None, as_json: bool) -> None:
                         "opened": resolution.opened,
                         "indeterminate": resolution.indeterminate,
                         "reason": resolution.reason,
+                        # What a predicate the fold could not evaluate said
+                        # (null when none failed, or it said nothing).
+                        "stderr_tail": resolution.stderr_tail or None,
                     }
                 },
                 indent=2,
@@ -7165,8 +7168,7 @@ def process_cascade(address: str, subject: str | None, as_json: bool) -> None:
             )
         )
     else:
-        marker = "✓" if resolution.opened else ("?" if resolution.indeterminate else "✗")
-        click.echo(f"  {marker} folds {resolution.address} ({resolution.op}): {resolution.reason}")
+        click.echo(process_mod.render_cascade_narrative(resolution))
     if not resolution.opened:
         raise SystemExit(1)
 
@@ -7721,7 +7723,8 @@ def process_couple(
     "state_id",
     default=None,
     help="Hosting state of the coupling; needed only when ADDRESS couples to "
-    "the same upstream on several states.",
+    "the same upstream on several states. It names a state, so it cannot "
+    "tell apart two entries on one state — the refusal names the hand edit.",
 )
 @click.option(
     "--trigger",

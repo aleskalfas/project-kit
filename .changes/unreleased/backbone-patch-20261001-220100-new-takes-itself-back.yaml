@@ -1,0 +1,20 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  A `pkit process new` that fails part-way no longer leaves a half-made
+  process behind (#711). It writes the definition, the predicate stubs and the
+  `package.yaml` registrations in turn, and a failure after the first write —
+  a `commands:` block that is not a mapping, say, which only the last write
+  finds — used to strand a definition plus unregistered stubs, after which the
+  one-shot refusal blocked every re-run. The run now takes itself back on any
+  failure, interrupts included: every file and directory it created is
+  removed, `package.yaml` is restored byte for byte, nothing that existed
+  before is touched, and the re-run works. The written definition is also
+  re-linted, as `couple` already did. A run killed outright, which cannot take
+  itself back, is recognised on the re-run — the scaffold's definition with
+  none of its commands registered — and the refusal names the exact `rm` that
+  clears it. `pkit process hand-off` gets the same take-back, so a seam stub or
+  registration that fails after its edit no longer leaves a contract naming
+  seams nothing registers.
