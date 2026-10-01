@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-09-30T22:51:10Z
+      at: 2026-10-01T15:15:52Z
       outcome: unchanged
-      unchanged-because: the decisions README gains the refine-in-place and supersession steps and the narration warning, the cli README the warning, and the agents README the rule that an agent owning records cites them; this map names each area's purpose and entry point, which are unchanged
+      unchanged-because: the process README's seam-ordering contract gains the origin a wrapper passes to process move; this map names the process area's purpose and entry point, which are unchanged
 ---
 
 # project-kit

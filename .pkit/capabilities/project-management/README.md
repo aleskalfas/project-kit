@@ -15,8 +15,9 @@ pkit:
         - .pkit/capabilities/project-management/decisions/**
       record: [COR-017, COR-020, COR-021, COR-023, COR-039, COR-053, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050]
     revalidated:
-      at: 2026-10-01T10:04:10Z
-      outcome: updated
+      at: 2026-10-01T15:15:50Z
+      outcome: unchanged
+      unchanged-because: "move-issue now journals each move from the position it read before the label write, so what this page already says holds as written: each move through move-issue is journaled where a journal is kept, after the label write, and its warnings and audit key are unchanged"
 ---
 
 # project-management capability
