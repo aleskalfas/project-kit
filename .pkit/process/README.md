@@ -329,7 +329,7 @@ The backbone exposes the engine as a `pkit process …` surface. The core operat
 |---|---|
 | `status` | where the subject is · why · how it got here (the journal, or "journal logging is not enabled for this project") · legal moves with live prechecks · next hint — narrative or `--json` (which carries `journal_logging: {enabled, committed}` beside `journal`) |
 | `can-move <to>` | validate a candidate move (gate precheck + authorisation); refuse with a self-explaining reason |
-| `move <to>` | execute a legal move; record the journal entry where the project keeps a journal (and run hooks, deferred) — the verdict is the same either way |
+| `move <to> [--from <state>]` | execute a legal move; record the journal entry where the project keeps a journal (and run hooks, deferred) — the verdict is the same either way. `--from` names the state the subject held before the caller applied the move's domain side-effect; the move is validated and journaled from there (the seam-ordering contract below) |
 | `validate` | run the subject's invariants (COR-035) and report which hold / are violated — narrative or `--json`; exits non-zero on any violation |
 | `health` | walk every declared hand-off contract (COR-042) and report missed hand-offs — upstream subjects at their trigger with no downstream counterpart; takes **no subject**; out-of-runtime, report-only, deterministic; narrative or `--json`; exits non-zero on any miss **or indeterminate** |
 
@@ -354,12 +354,15 @@ Predicates **must be read-only** — `status` runs them live, so a mutating pred
 
 This is canonical guidance for **all** bindings — how a capability wrapper sequences its own domain side-effect against the engine's journal write.
 
-The journal is an **intent log, not the source of truth**. Live detection is authoritative (COR-033 P3): a subject's position is always re-derived by running the detection predicates against current reality, never read back from the journal. So the journal entry the engine appends on a legal `move` records *that a move was taken*, but the next `status` reports the *real* inferred position regardless of what the journal says. The ordering below is the same whether or not the project keeps a journal; with logging off, step 2 validates the move and records nothing.
+The journal is an **intent log, not the source of truth**. Live detection is authoritative (COR-033 P3): a subject's position is always re-derived by running the detection predicates against current reality, never read back from the journal. So the journal entry the engine appends on a legal `move` records *that a move was taken*, but the next `status` reports the *real* inferred position regardless of what the journal says. The ordering below is the same whether or not the project keeps a journal; with logging off, step 3 validates the move and records nothing.
 
 The ordering a wrapper follows:
 
-1. The wrapper validates and applies its **domain side-effect** (create the branch, open the PR, edit the label/board) — the change that will make live detection report the new state.
-2. The wrapper calls `pkit process move` (by subprocess) to **journal** the move where a journal is kept.
+1. The wrapper reads the subject's position from the engine (`status --json`): the move's origin.
+2. The wrapper validates and applies its **domain side-effect** (create the branch, open the PR, edit the label/board) — the change that will make live detection report the new state.
+3. The wrapper calls `pkit process move --to <target> --from <origin>` (by subprocess) to **journal** the move where a journal is kept.
+
+**Why `--from`.** After step 2 live detection already reports the target. An engine that took the live position for the origin would be asked for a move from the target to itself: refused where the definition declares no such transition, and journaled as the wrong transition where it declares one (a self-loop). With `--from` the engine validates and journals the transition from the stated origin. Reality keeps the last word: the engine accepts the stated origin only while live detection places the subject at it (the side-effect is not visible yet) or at the target, and refuses otherwise. A wrapper that journals before applying its side-effect omits `--from`, and the move starts at the live position.
 
 Because detection is authoritative, the seam is self-correcting in the failure case: if a wrapper's domain side-effect later fails (or partially fails) *after* a journal entry was written, the next `status` runs detection live and reflects the subject's **real** inferred position — the stale journal entry does not lie about where the subject is, it only records the attempt. A wrapper should still surface side-effect failures to its caller; the point is that a failed side-effect cannot corrupt the engine's notion of position. Wrappers must **read position from the engine** (`status --json`) rather than re-inferring it themselves, so there is one source of position truth.
 

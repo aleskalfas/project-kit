@@ -515,6 +515,98 @@ def test_cli_move_with_logging_off_succeeds_without_a_journal(
     assert _journals(fixture_repo) == []
 
 
+# --- a move whose domain side-effect has already landed (`from_state`) ----
+#
+# The seam-ordering contract has a wrapper apply its side-effect first and
+# journal second, so by the time it asks the engine, live detection may already
+# report the target. The wrapper names the origin it read before the side-effect.
+
+
+def test_move_after_the_side_effect_without_an_origin_is_refused(fixture_repo: Path) -> None:
+    """What `from_state` exists for: with the side-effect landed, the live position
+    is the target, and the definition declares no move from it to itself."""
+    (fixture_repo / "_checks_ok").write_text("", encoding="utf-8")
+    _set_state(fixture_repo, "ready")
+    result = _engine(fixture_repo).move("ready", actor="agent")
+    assert result.ok is False
+    assert result.reason == "no transition from 'ready' to 'ready'"
+
+
+def test_move_after_the_side_effect_journals_the_transition_from_the_stated_origin(
+    fixture_repo: Path,
+) -> None:
+    (fixture_repo / "_checks_ok").write_text("", encoding="utf-8")
+    _set_state(fixture_repo, "ready")
+    engine = _engine(fixture_repo)
+
+    result = engine.move("ready", actor="agent", from_state="draft")
+
+    assert result.ok is True, result.reason
+    assert result.journal_entry is not None
+    assert result.journal_entry["from"] == "draft"
+    assert result.journal_entry["to"] == "ready"
+    assert result.journal_entry["trigger"] == "submit"
+    assert result.journal_entry["gate_result"] == "pass"
+    assert len(engine.read_journal()) == 1
+
+
+def test_stated_origin_is_accepted_while_reality_still_shows_it(fixture_repo: Path) -> None:
+    (fixture_repo / "_checks_ok").write_text("", encoding="utf-8")
+    result = _engine(fixture_repo).move("ready", actor="agent", from_state="draft")
+    assert result.ok is True, result.reason
+    assert result.journal_entry is not None
+    assert result.journal_entry["from"] == "draft"
+
+
+def test_stated_origin_still_answers_to_the_transitions_gate(fixture_repo: Path) -> None:
+    _set_state(fixture_repo, "ready")  # no `_checks_ok`: the submit gate fails
+    engine = _engine(fixture_repo)
+    result = engine.move("ready", actor="agent", from_state="draft")
+    assert result.ok is False
+    assert "checks fail" in result.reason
+    assert not engine.journal_path().is_file()
+
+
+def test_stated_origin_contradicted_by_reality_is_refused(fixture_repo: Path) -> None:
+    (fixture_repo / "_checks_ok").write_text("", encoding="utf-8")
+    _set_state(fixture_repo, "done")
+    engine = _engine(fixture_repo)
+    result = engine.move("ready", actor="agent", from_state="draft")
+    assert result.ok is False
+    assert result.reason == (
+        "the subject is at 'done', which is neither the stated origin 'draft' nor the "
+        "target 'ready'"
+    )
+    assert not engine.journal_path().is_file()
+
+
+def test_unknown_stated_origin_is_refused(fixture_repo: Path) -> None:
+    allowed, reason, _pos = _engine(fixture_repo).can_move(
+        "ready", actor="agent", from_state="nowhere"
+    )
+    assert allowed is False
+    assert reason == "unknown origin state 'nowhere'"
+
+
+def test_cli_move_from_records_the_stated_origin(
+    fixture_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (fixture_repo / "_checks_ok").write_text("", encoding="utf-8")
+    _set_state(fixture_repo, "ready")
+    monkeypatch.chdir(fixture_repo)
+    subprocess.run(["git", "init", "-q"], cwd=fixture_repo, check=True)
+
+    result = CliRunner().invoke(
+        main,
+        ["process", "move", "fixture:demo", "--to", "ready", "--from", "draft", "--actor", "agent"],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "moved to 'ready'" in result.output
+    [entry] = _engine(fixture_repo).read_journal()
+    assert (entry["from"], entry["to"]) == ("draft", "ready")
+
+
 # --- address parsing ------------------------------------------------------
 
 

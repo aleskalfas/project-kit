@@ -1827,13 +1827,25 @@ class ProcessEngine:
             )
         return outcomes
 
-    def can_move(self, to_state: str, actor: str) -> tuple[bool, str, Position]:
+    def can_move(
+        self, to_state: str, actor: str, *, from_state: str | None = None
+    ) -> tuple[bool, str, Position]:
         """Validate a candidate move to `to_state`. Returns (allowed, reason,
         position). Refuses (fail-closed) on an indeterminate position, an
-        unknown target, no matching transition, or a gate that does not pass."""
+        unknown target, no matching transition, or a gate that does not pass.
+
+        The move starts where live detection places the subject, unless the
+        caller names `from_state`: the state the subject held before the caller
+        applied the move's domain side-effect (the seam-ordering contract). By
+        then live detection may already report the target, so the move is
+        validated from the stated origin instead. Reality keeps the last word:
+        the stated origin is accepted only while live detection places the
+        subject at it or at the target."""
         position = self.resolve_position()
         if self.definition.state(to_state) is None:
             return False, f"unknown target state {to_state!r}", position
+        if from_state is not None and self.definition.state(from_state) is None:
+            return False, f"unknown origin state {from_state!r}", position
         if position.indeterminate:
             return (
                 False,
@@ -1841,14 +1853,20 @@ class ProcessEngine:
                 "evaluated; refusing to move (fail-closed)",
                 position,
             )
-        candidates = [
-            c for c in self.precheck_transitions(position.state_id, actor) if c.to == to_state
-        ]
-        if not candidates:
-            origin = position.state_id or "(no position)"
+        if from_state is not None and position.state_id not in (from_state, to_state):
+            live = position.state_id or "(no position)"
             return (
                 False,
-                f"no transition from {origin!r} to {to_state!r}",
+                f"the subject is at {live!r}, which is neither the stated origin "
+                f"{from_state!r} nor the target {to_state!r}",
+                position,
+            )
+        origin = _move_origin(position, from_state)
+        candidates = [c for c in self.precheck_transitions(origin, actor) if c.to == to_state]
+        if not candidates:
+            return (
+                False,
+                f"no transition from {origin or '(no position)'!r} to {to_state!r}",
                 position,
             )
         for check in candidates:
@@ -1858,13 +1876,15 @@ class ProcessEngine:
         first = candidates[0]
         return False, f"gate refused: {first.outcome.reason}", position
 
-    def move(self, to_state: str, actor: str) -> MoveResult:
+    def move(self, to_state: str, actor: str, *, from_state: str | None = None) -> MoveResult:
         """Execute a legal move: validate, then append a journal entry when the
         project keeps a journal. Refuses (no journal write) when `can_move`
         refuses. The verdict — allowed or refused, and why — is the same with
         journal logging on or off (COR-033 point 7): with it off, a legal move
-        succeeds and records nothing."""
-        allowed, reason, position = self.can_move(to_state, actor)
+        succeeds and records nothing. `from_state` is `can_move`'s — the origin a
+        caller that has already applied the domain side-effect names — and the
+        entry records it as where the move came from."""
+        allowed, reason, position = self.can_move(to_state, actor, from_state=from_state)
         if not allowed:
             return MoveResult(ok=False, reason=reason)
         if not self.journal_enabled:
@@ -1875,13 +1895,12 @@ class ProcessEngine:
             # and authoritative either way, so no verdict is lost here.
             return MoveResult(ok=True, reason=reason)
 
+        origin = _move_origin(position, from_state)
         check = next(
-            c
-            for c in self.precheck_transitions(position.state_id, actor)
-            if c.to == to_state and c.allowed
+            c for c in self.precheck_transitions(origin, actor) if c.to == to_state and c.allowed
         )
         entry = self._build_journal_entry(
-            from_state=position.state_id,
+            from_state=origin,
             to_state=to_state,
             check=check,
             actor=actor,
@@ -2082,6 +2101,11 @@ class ProcessEngine:
         path.parent.mkdir(parents=True, exist_ok=True)
         with path.open("a", encoding="utf-8") as fh:
             fh.write(json.dumps(entry, sort_keys=True) + "\n")
+
+
+def _move_origin(position: Position, from_state: str | None) -> str | None:
+    """Where a move starts: the origin its caller stated, else the live position."""
+    return from_state if from_state is not None else position.state_id
 
 
 def _running_pkit_version() -> str:

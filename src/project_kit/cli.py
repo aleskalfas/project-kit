@@ -6737,6 +6737,15 @@ def _resolve_actor_identity() -> str:
 @click.argument("address")
 @click.option("--to", "to_state", required=True, help="Target state id.")
 @click.option(
+    "--from",
+    "from_state",
+    default=None,
+    help="The state the subject held before you applied this move's domain side-effect "
+    "(the seam-ordering contract). The move is validated and journaled from there, and "
+    "refused when live detection places the subject at neither this state nor the target. "
+    "Omit it to move from the live position.",
+)
+@click.option(
     "--subject",
     default=None,
     help="Subject key. Required for a keyed process (COR-032); ignored for a singleton (the fixed "
@@ -6749,7 +6758,13 @@ def _resolve_actor_identity() -> str:
     "cross-authority). Defaults to the resolved gh login of the "
     "current user.",
 )
-def process_move(address: str, to_state: str, subject: str | None, actor: str | None) -> None:
+def process_move(
+    address: str,
+    to_state: str,
+    from_state: str | None,
+    subject: str | None,
+    actor: str | None,
+) -> None:
     """Execute a legal move; append the journal entry. Refuses an illegal move."""
     from project_kit import process as process_mod
 
@@ -6757,7 +6772,7 @@ def process_move(address: str, to_state: str, subject: str | None, actor: str | 
         actor = _resolve_actor_identity()
     engine = _load_engine(address, subject)
     try:
-        result = engine.move(to_state, actor)
+        result = engine.move(to_state, actor, from_state=from_state)
     except process_mod.ProcessError as exc:
         raise click.ClickException(str(exc)) from exc
     if not result.ok:
