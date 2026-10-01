@@ -18,9 +18,9 @@ pkit:
         - ACT-clone-session
         - ACT-developer-subagent
     revalidated:
-      at: 2026-09-30T23:02:22Z
+      at: 2026-10-01T00:54:41Z
       outcome: unchanged
-      unchanged-because: "#840's lint and format pass reshapes the anchored code without changing what it does, so this page still describes it as it is"
+      unchanged-because: on this branch only procedure text changed — the pm skill's filing, slicing and review steps, the project-manager and software-engineer agent bodies; no script, schema or decision changed, so the page holds
 ---
 
 # UC-009 — Delegate a task to a developer subagent

@@ -86,7 +86,7 @@ The three operations don't overlap — they answer different questions. Pick by 
 |---|---|---|
 | **Create a new issue** | A new EPIC, Feature, Umbrella, Task, or Milestone needs to be filed. Stamps the title, the body skeleton per the type's required sections, the classification axes, and the native sub-issue parent link. | create-issue |
 | **Validate an existing issue body** | An existing issue's body is being edited, or the project-manager is checking an inherited issue at first interaction. Walks every body rule the methodology mandates and surfaces issues by severity. Used as a pre-check before any transition. | validate-body |
-| **Transition an issue's state** | Move an issue forward (Todo → Backlog → In Progress → Review) or close it (Review → Done via PR merge; any-state → Done via won't-do; cascade-eligibility close for parents). Runs the cascade after every state change. | transition-state |
+| **Transition an issue's state** | Move an issue forward (Todo → Backlog → In Progress → Review) or close it (Review → Done via PR merge; any-state → Done via won't-do; cascade-eligibility close for parents). Runs the cascade after every state change. Its review step requests the reviewer verdicts on the PR of an issue in Review. | transition-state |
 
 The project-manager typically invokes them in sequence: create-issue (file) → validate-body (after any edit) → transition-state (advance/close). For one-off operator use, pick the single relevant one. After picking, open the matching sub-procedure file in this folder and follow its walkthrough.
 

@@ -15,6 +15,10 @@ ACT-clone-session:
         record:
           - project-management:DEC-029
           - project-management:DEC-035
+      revalidated:
+        at: 2026-09-30T23:14:23Z
+        outcome: unchanged
+        unchanged-because: The project-manager body gains a dispatch line sending a request for reviewer verdicts to transition-state's review step (review-pr once CI is green); who the clone session is and what it needs from the tracker are untouched.
 ACT-developer-subagent:
   name: Developer subagent
   status: active
@@ -25,6 +29,10 @@ ACT-developer-subagent:
       anchors:
         path:
           - .pkit/capabilities/software-engineering/agents/software-engineer.md
+      revalidated:
+        at: 2026-09-30T23:14:25Z
+        outcome: unchanged
+        unchanged-because: The software-engineer gains one line on handling review findings (fix the blocking ones, record advisories in the PR body); the subagent still carries out one delegated Task in its worktree and acts as its clone at the tracker, which is all this actor states.
 ACT-operator:
   name: Operator
   status: active
