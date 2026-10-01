@@ -15,9 +15,8 @@ pkit:
         - .pkit/capabilities/project-management/decisions/**
       record: [COR-017, COR-020, COR-021, COR-023, COR-039, COR-053, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050]
     revalidated:
-      at: 2026-09-30T23:42:08Z
-      outcome: unchanged
-      unchanged-because: on this branch ADR-004 only folds its amendment trailer into its body, stating the same confinement ruling without narration; what the pm README says of the autonomy posture is unchanged
+      at: 2026-10-01T00:18:09Z
+      outcome: updated
 ---
 
 # project-management capability
@@ -461,7 +460,9 @@ A Milestone's children are resolved the same way the rest of the capability reso
 
 A Milestone with an open child is reported as not eligible, with the count of open children, and a date-based Milestone as closing on its date — its children closing makes nothing eligible. The check reads the close-trigger and the children exactly as `close-milestone` does, so a Milestone reported eligible is one `close-milestone` closes without `--force`. The cascade **reports and never closes**: closing the Milestone stays your gesture, as closing a parent issue does.
 
-> **Not yet automated:** date-based / `either` closes do **not** roll open children forward to the next Milestone (schema `rollforward_behaviour`) — `close-milestone` only warns and lists them, so reassign them with `edit-issue --milestone` for now. Automated rollforward is a follow-up.
+**Closing a Milestone never moves its open children.** The close writes only the Milestone itself — its state and the audit line — so a child still open when a date-based Milestone closes, or when `--force` closes a content-based or `either` one, stays assigned to the closed Milestone: its native Milestone field and its first-line `Milestone:` ref still name it, and its lifecycle state does not change. The audit line counts such children as still open, not rolled forward. To carry one into the next Milestone, run `edit-issue <N> --milestone <next> --reason "<R>"`: the issue's current milestone may be closed (only the target must be open), and a first-line `Milestone:` ref moves with the native field. A raw `gh issue edit --milestone` changes only the native field, so the closed Milestone would go on counting the child through its first line.
+
+> **Not yet automated:** date-based / `either` closes do **not** roll open children forward to the next Milestone (schema `rollforward_behaviour`) — `close-milestone` only warns and lists them, so reassign them with `edit-issue --milestone` as above. Automated rollforward is a follow-up (#1175).
 
 ##### Attaching an issue to a Milestone
 
