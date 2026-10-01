@@ -178,6 +178,9 @@ commands:
   done-work:
     script: scripts/done-work.py
     help: "Workflow wrapper (DEC-026): Review → Done. Squash-merges PR via three-way approval gate (APPROVED review / Approved-prefix comment / --bypass); composes over move-issue. Where the base merges through a queue it enqueues instead, prints the PR's place and waits for the merge (as long as the queue estimates, at most 30 min; --wait-minutes; --no-wait returns at once, exit 4); a later run from any clone finds the PR merged and completes the close and cascade."
+  land:
+    script: scripts/land.py
+    help: "Land an issue's PR in one command (#1203): wait for the checks on the PR's head (--wait-minutes, default 30; --no-wait reads once — no check reported yet is a run not started, never green), have the reviewers whose verdicts are not fresh review that head (review-pr), then merge it through done-work, whose gates, refusals, queue handling and exit codes stay its own. One line per step. It stops at the first step that cannot go on — unpushed local commits (it gives the push), a failed check, a CHANGES_REQUESTED (its [block] findings printed), a reviewer that could not run, a head that moved — and a re-run resumes. No flag skips the checks or the review."
   handoff-issue:
     script: scripts/handoff-issue.py
     help: "Workflow wrapper (DEC-026): reassign an in-flight issue to a new owner. Audit comment records the handoff; no state transition."
