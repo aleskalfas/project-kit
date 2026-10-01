@@ -2,6 +2,7 @@ component: project-management
 kind: patch
 custom:
   category: Changed
+  pr: "1207"
   requires_backbone: release
 body: >
   `done-work` and `merge-pr` land a PR through the backbone's merge mechanic,

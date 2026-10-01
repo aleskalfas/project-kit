@@ -2,6 +2,7 @@ component: backbone
 kind: minor
 custom:
   category: Added
+  pr: "1207"
 body: >
   `pkit release merge` lands a release PR through the base branch's merge queue
   where it has one, instead of merging around it and then deleting the head
