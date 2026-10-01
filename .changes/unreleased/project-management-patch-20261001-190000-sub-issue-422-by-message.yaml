@@ -1,0 +1,22 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  A native sub-issue link GitHub refuses with HTTP 422 is no longer reported as
+  "native sub-issues unsupported on this instance" (#808). 422 is GitHub's
+  generic "Unprocessable Entity": the containment seam now reads the refusal's
+  message and counts it as an instance without sub-issues only when GitHub
+  says the feature is off. A child that already has a parent is the conflict
+  it is, naming that parent and saying its existing link must be removed
+  first; a malformed `sub_issue_id` and any 422 pm does not recognise are
+  failures. Each report quotes GitHub's own message after pm's sentence, so a
+  refusal no longer sends you to check your plan or GHES version. What that
+  changes per command: `link-parent` reports such a link as failed (exit 3)
+  instead of "not linked (unsupported)"; `set-field --parent` stops before the
+  first line moves instead of rewriting it alone; `create-issue` still files
+  the issue on its textual ref and now names `pkit pm link-parent <N>` for
+  making the link once the cause is fixed. On the read side a 422 from a
+  parent's sub-issue list is an unreadable list (an incomplete answer) rather
+  than a determinate textual-only one, so a gate holds instead of answering
+  from the first lines alone. 404 and 410 behave as before.

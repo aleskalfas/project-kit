@@ -1227,11 +1227,8 @@ def test_main_no_parent_does_not_invoke_native_link(ci, tmp_path, monkeypatch) -
     assert ci.main() == 0
 
 
-def test_main_parent_native_link_unsupported_does_not_fail_create(
-    ci, tmp_path, monkeypatch
-) -> None:
-    """A native no-op (unsupported instance) never fails the create — main()
-    still returns 0 and the issue is created with its textual ref."""
+def _create_with_link(ci, tmp_path, monkeypatch, link: _FakeLink) -> int:
+    """Run `create-issue --parent 1` for issue #57 with the native link stubbed."""
     root = _stage_capability_tree(tmp_path, has_board=False)
 
     monkeypatch.setattr(
@@ -1240,15 +1237,7 @@ def test_main_parent_native_link_unsupported_does_not_fail_create(
         _gh_command_dispatcher("https://github.com/acme/repo/issues/57"),
     )
     monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
-
-    monkeypatch.setattr(
-        ci,
-        "link_sub_issue",
-        lambda *a, **k: _FakeLink(
-            "native sub-issues unsupported on this instance; textual ref recorded",
-            ok=False,
-        ),
-    )
+    monkeypatch.setattr(ci, "link_sub_issue", lambda *a, **k: link)
     monkeypatch.setattr(
         ci.sys,
         "argv",
@@ -1267,15 +1256,54 @@ def test_main_parent_native_link_unsupported_does_not_fail_create(
             "--yes",
         ],
     )
-    assert ci.main() == 0
+    return ci.main()
+
+
+def test_main_parent_native_link_unsupported_does_not_fail_create(
+    ci, tmp_path, monkeypatch, capsys
+) -> None:
+    """A native no-op (unsupported instance) never fails the create — main()
+    still returns 0 and the issue is created with its textual ref. Nothing is
+    left to fix, so no way back is suggested."""
+    link = _FakeLink(
+        "native sub-issues unsupported on this instance; textual ref recorded",
+        ok=False,
+        outcome=ci.LinkOutcome.UNSUPPORTED,
+    )
+    assert _create_with_link(ci, tmp_path, monkeypatch, link) == 0
+    err = capsys.readouterr().err
+    assert "[warn] native sub-issues unsupported on this instance" in err
+    assert "link-parent" not in err
+
+
+def test_main_parent_native_link_failure_warns_and_names_the_way_back(
+    ci, tmp_path, monkeypatch, capsys
+) -> None:
+    """#808: a failed link — a 422 GitHub refused for a reason other than an
+    absent feature, say — is not an unsupported instance. The create still
+    succeeds on its textual ref (the spine), but the warning carries the seam's
+    sentence with GitHub's words and names the command that makes the link once
+    the cause is fixed."""
+    detail = (
+        "GitHub refused to link #57 under #1 (HTTP 422) for a reason pm does not "
+        'recognise; textual ref recorded. GitHub said: "Parent issue is locked"'
+    )
+    link = _FakeLink(detail, ok=False, outcome=ci.LinkOutcome.FAILED)
+    assert _create_with_link(ci, tmp_path, monkeypatch, link) == 0
+    err = capsys.readouterr().err
+    assert f"[warn] {detail}" in err
+    assert "#57 is filed under #1 by its first line only" in err
+    assert "`pkit pm link-parent 57`" in err
 
 
 class _FakeLink:
-    """Minimal stand-in for containment.LinkResult — carries `ok` + `detail`."""
+    """Minimal stand-in for containment.LinkResult — carries `ok`, `detail` and,
+    for a link that is not `ok`, the `outcome` create-issue reports on."""
 
-    def __init__(self, detail: str, *, ok: bool) -> None:
+    def __init__(self, detail: str, *, ok: bool, outcome: object = None) -> None:
         self.detail = detail
         self.ok = ok
+        self.outcome = outcome
 
 
 # --- #356 end-to-end: classification-faithful create via main() ------------

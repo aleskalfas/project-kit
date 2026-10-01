@@ -533,6 +533,10 @@ def _after_link(entry: Entry, result: LinkResult) -> Entry:
     its record does not carry the parent and GitHub's refusal named the rule —
     is reported like the plan's conflicts, naming the parent where the seam
     could establish it.
+
+    Where GitHub refused the link, its own words follow the line (#808): the
+    seam's ``detail`` already carries them, and a line written here quotes them
+    through :meth:`LinkResult.quoting_github`.
     """
     parent = entry.parent
     if result.outcome is LinkOutcome.LINKED:
@@ -547,14 +551,14 @@ def _after_link(entry: Entry, result: LinkResult) -> Entry:
         return replace(
             entry,
             outcome=Outcome.CONFLICT,
-            detail=_conflict_detail(result.current_parent, parent),
+            detail=result.quoting_github(_conflict_detail(result.current_parent, parent)),
         )
     if result.outcome is LinkOutcome.UNSUPPORTED:
         if entry.native is NativeReadOutcome.READ:
             return replace(
                 entry,
                 outcome=Outcome.FAILED,
-                detail=(
+                detail=result.quoting_github(
                     f"not linked under #{parent} — GitHub refused the link as "
                     f"unsupported, although #{parent}'s sub-issues read on this "
                     "instance"

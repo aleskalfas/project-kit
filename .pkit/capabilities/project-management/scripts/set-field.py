@@ -39,8 +39,10 @@ seam (`_lib.containment.move_sub_issue`; never a raw `gh` call here):
   * The native write comes FIRST, the first-line rewrite straight after it. A
     move GitHub refuses stops the call before any write, naming the parent the
     issue stays under (exit 3) — so the two records never end up naming
-    different parents because of this verb. On an instance without native
-    sub-issues the link is skipped and the first line stays the record.
+    different parents because of this verb. So does a link GitHub refuses for
+    any reason other than an absent feature, with GitHub's own message quoted
+    (#808). On an instance without native sub-issues the link is skipped and
+    the first line stays the record.
   * A parent-ref that names a milestone is not a sub-issue relationship, and
     `textual` containment writes no native links at all; in both cases only
     the first line changes.
@@ -1321,8 +1323,10 @@ def _write_native_parent(issue_number: int, parent: int, config: dict, *, had_pa
     only record, as in `create-issue`. False, with the reason printed, when the
     link could not be put in place: a move GitHub refused (the issue stays
     under the parent it has), an "unsupported" answer for an issue that does
-    have a native parent, or a failed write. Nothing else has been written at
-    that point.
+    have a native parent, or a failed write — including a 422 GitHub refused
+    for a reason other than an absent feature, which the seam reports as a
+    failure quoting GitHub's own words, not as "unsupported" (#808). Nothing
+    else has been written at that point.
     """
     result = containment.move_sub_issue(config, parent_number=parent, child_number=issue_number)
     if result.ok:

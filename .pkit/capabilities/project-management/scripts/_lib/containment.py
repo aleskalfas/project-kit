@@ -75,6 +75,18 @@ and after it, from the body of GitHub's refusal (a 422 whose message states the
 one-parent rule), so an instance whose issue record does not carry the parent
 still gets the conflict by name rather than a misleading "unsupported".
 
+A 422 is read by its message, not its status (#808)
+---------------------------------------------------
+HTTP 422 is GitHub's generic "Unprocessable Entity", and the sub-issues endpoint
+answers it for unrelated reasons: the child already has a parent (above), the
+request carried a malformed ``sub_issue_id``, or — conceivably — the feature is
+off. Only the last says anything about the instance, so a 422 is
+``unsupported`` only when GitHub's message says the feature is absent. A
+malformed id, or a 422 whose message pm does not recognise, is a **failure**
+that carries GitHub's own words (:attr:`LinkResult.github_message`), never an
+``unsupported`` instance: an unrecognised refusal fails towards showing the
+operator what GitHub said rather than towards a guess about their GitHub.
+
 Graceful degradation (the textual ref is the fallback)
 ------------------------------------------------------
 Where the instance does not support sub-issues — an older GHES, the feature
@@ -120,14 +132,17 @@ class LinkOutcome(Enum):
                    has one native parent, so the link was not made; the result
                    names the parent the child has. Not "unsupported": the
                    instance has sub-issues, this child is spoken for.
-    UNSUPPORTED  — the instance does not support sub-issues (a conclusive 410/422,
-                   or a 404 attributed to the endpoint rather than to an unseeable
-                   repository — see `_classify_native_failure`; feature
-                    off); the textual ref is the fallback. NOT a failure.
+    UNSUPPORTED  — the instance does not support sub-issues (a 410, a 422 whose
+                   message says the feature is absent, or a 404 attributed to the
+                   endpoint rather than to an unseeable repository — see
+                   `_classify_native_failure`); the textual ref is the fallback.
+                   NOT a failure.
     FAILED       — the write was attempted and failed for a reason that is NOT
-                    "unsupported" (auth, network, missing `gh`). The caller still
-                    has the textual ref, but this signals a genuine problem to
-                    report rather than silently swallow.
+                    "unsupported" (auth, network, missing `gh`, a malformed
+                    request, or a 422 whose message pm does not recognise). The
+                    caller still has the textual ref, but this signals a genuine
+                    problem to report rather than silently swallow; a refusal's
+                    own words ride in `LinkResult.github_message`.
     """
 
     LINKED = "linked"
@@ -190,11 +205,19 @@ class LinkResult:
                        (``None`` when GitHub refused on the one-parent rule but
                        the child's record could not name the parent); for MOVED,
                        the parent it was moved from. ``None`` otherwise.
+      github_message — GitHub's own words when the outcome came from a refused
+                       422, verbatim (whitespace folded onto one line): the error
+                       body's messages, or ``gh``'s stderr when the body carried
+                       none. ``detail`` already quotes it; a caller that writes
+                       its own report line appends it, so the operator reads what
+                       GitHub said and not only pm's reading of it. ``None``
+                       when there was no such refusal.
     """
 
     outcome: LinkOutcome
     detail: str = ""
     current_parent: NativeParent | None = None
+    github_message: str | None = None
 
     @property
     def ok(self) -> bool:
@@ -205,13 +228,24 @@ class LinkResult:
         CONFLICT is a disagreement for the caller to report)."""
         return self.outcome in (LinkOutcome.LINKED, LinkOutcome.MOVED, LinkOutcome.ALREADY)
 
+    def quoting_github(self, sentence: str) -> str:
+        """``sentence`` followed by GitHub's own words, when there are any — for
+        a caller that reports the outcome in its own sentence instead of
+        ``detail``, so GitHub's message still reaches the operator."""
+        return _quoting(sentence, self.github_message)
 
-# HTTP statuses that mean "this instance does not support sub-issues" — degrade
-# to a no-op rather than a failure. 410 (gone) and 422 (unprocessable — feature
-# off / not enabled for this repo) say the endpoint is gone or unusable — an invisible repository
-# never
-# produces them, so they name feature-absence unambiguously.
-_UNSUPPORTED_STATUSES = (410, 422)
+
+# HTTP statuses that mean "this instance does not support sub-issues" by status
+# alone — degrade to a no-op rather than a failure. 410 (gone) says the endpoint
+# is gone, and an invisible repository never produces it. 422 is deliberately
+# NOT here: it is GitHub's generic "Unprocessable Entity", answered for a child
+# that already has a parent and for a malformed `sub_issue_id` as much as for a
+# feature that is off, so a 422 is read by its message (`_FEATURE_ABSENT`), not
+# by its status (#808).
+_UNSUPPORTED_STATUSES = (410,)
+
+# The 422 refusal status, read off the error body's `status` or gh's stderr.
+_UNPROCESSABLE_STATUS = 422
 
 # 404 is the ambiguous one, and no amount of stderr parsing resolves it: GitHub
 # answers 404 both for "this endpoint does not exist here" and for "you may not
@@ -371,12 +405,14 @@ def link_sub_issue(
          the child's parent before falling back to the status.
 
     Never raises and never returns a fatal posture for an *unsupported* instance:
-    a conclusive 410 / 422, or a 404 attributed to the endpoint, yields
-    :attr:`LinkOutcome.UNSUPPORTED` so the caller carries the textual ref as the
-    fallback — except a 422 that names the one-parent rule, which is the
-    CONFLICT it is. A genuine error (auth / network / missing ``gh``, or an
-    unresolvable child id) yields :attr:`LinkOutcome.FAILED` for the caller to
-    report — still non-fatal to the create, which already wrote the textual ref.
+    a 410, a 422 whose message says the feature is absent, or a 404 attributed
+    to the endpoint, yields :attr:`LinkOutcome.UNSUPPORTED` so the caller
+    carries the textual ref as the fallback. A 422 that names the one-parent
+    rule is the CONFLICT it is. A genuine error (auth / network / missing
+    ``gh``, an unresolvable child id, a malformed request, or a 422 pm does not
+    recognise) yields :attr:`LinkOutcome.FAILED` for the caller to report —
+    still non-fatal to the create, which already wrote the textual ref. A
+    refused 422's own words ride in :attr:`LinkResult.github_message`.
     """
     return _attach(
         config,
@@ -473,20 +509,29 @@ def _attach(
             detail=f"linked #{child_number} as a native sub-issue of #{parent_number}",
         )
 
-    refusal = _read_refusal(
-        config, proc, parent_number=parent_number, child_number=child_number, move=move
+    refusal = _Refusal.read(proc.stdout or "", proc.stderr or "")
+    settled = _read_refusal(
+        config, refusal, parent_number=parent_number, child_number=child_number, move=move
     )
-    if refusal is not None:
-        return refusal
+    if settled is not None:
+        return settled
     stderr = (proc.stderr or "").strip()
     if (
-        _classify_native_failure(config, parent_number=parent_number, stderr=stderr)
+        _classify_native_failure(
+            config, parent_number=parent_number, stderr=stderr, stdout=proc.stdout or ""
+        )
         is NativeReadOutcome.UNSUPPORTED
     ):
+        said = refusal.said if refusal.unprocessable else None
         return LinkResult(
             LinkOutcome.UNSUPPORTED,
-            detail="native sub-issues unsupported on this instance; textual ref recorded",
+            detail=_quoting(
+                "native sub-issues unsupported on this instance; textual ref recorded", said
+            ),
+            github_message=said,
         )
+    if refusal.unprocessable:
+        return _refused(refusal, child_number=child_number, parent_number=parent_number)
     return LinkResult(
         LinkOutcome.FAILED,
         detail=(
@@ -509,37 +554,145 @@ def _conflict(
     holder: NativeParent | None,
     *,
     move: bool,
+    said: str | None = None,
 ) -> LinkResult:
-    """The CONFLICT result, naming the child, the parent it has and the one asked for."""
+    """The CONFLICT result, naming the child, the parent it has and the one asked
+    for, and what has to happen first: the link the child has must go. ``said``
+    is GitHub's refusal, when GitHub refused, quoted after pm's own sentence."""
     held = holder.ref if holder is not None else "another parent (its record does not say which)"
+    link = f"its native link to {holder.ref}" if holder is not None else "its existing native link"
     if move:
         detail = (
             f"#{child_number} could not be moved to #{parent_number}: it stays a "
-            f"native sub-issue of {held}"
+            f"native sub-issue of {held}; {link} must be removed first"
         )
     else:
         detail = (
             f"#{child_number} is already a native sub-issue of {held}, not "
-            f"#{parent_number}; an issue has one native parent, so it was not linked"
+            f"#{parent_number}; an issue has one native parent, so it was not linked "
+            f"— {link} must be removed first"
         )
-    return LinkResult(LinkOutcome.CONFLICT, detail=detail, current_parent=holder)
+    return LinkResult(
+        LinkOutcome.CONFLICT,
+        detail=_quoting(detail, said),
+        current_parent=holder,
+        github_message=said,
+    )
+
+
+def _refused(refusal: _Refusal, *, child_number: int | str, parent_number: int | str) -> LinkResult:
+    """The FAILED result for a 422 that is neither a conflict nor an absent
+    feature: pm's sentence for the cause it recognises, then GitHub's words."""
+    if refusal.says(_MALFORMED_ID):
+        cause = (
+            f"GitHub rejected the sub_issue_id pm sent for #{child_number} as "
+            "malformed: a defect in pm's request, not a missing feature on this "
+            "instance — report it against pm"
+        )
+    else:
+        cause = (
+            f"GitHub refused to link #{child_number} under #{parent_number} "
+            "(HTTP 422) for a reason pm does not recognise — GitHub's message "
+            "says what to fix"
+        )
+    return LinkResult(
+        LinkOutcome.FAILED,
+        detail=_quoting(f"{cause}; textual ref recorded", refusal.said),
+        github_message=refusal.said,
+    )
+
+
+def _quoting(detail: str, said: str | None) -> str:
+    """``detail`` followed by GitHub's own words, when GitHub said any."""
+    return f'{detail}. GitHub said: "{said}"' if said else detail
 
 
 # What GitHub's refusal of an add says, read from the error body `gh api` prints
 # on stdout — its stderr carries only a summary line, which names the first
-# error's message OR the status, not reliably both. An issue has one native
-# parent: adding a child that has another is refused with a 422 whose message
-# states that rule ("Sub issue may only have one parent"); adding one this parent
-# already holds is refused as a duplicate. Both are matched on the rule they
-# state rather than the exact sentence, and both are read BEFORE the
-# 422-means-unsupported fallback they would otherwise fall into (#1040).
+# error's message OR the status, not reliably both. Each pattern is matched on
+# the rule a message states rather than on the exact sentence:
+#
+# * an issue has one native parent: adding a child that has another is refused
+#   with a 422 stating that rule ("Sub issue may only have one parent");
+# * adding a child this parent already holds is refused as a duplicate;
+# * the endpoint types `sub_issue_id` as a JSON integer and refuses anything
+#   else with a 422 saying so ("… is not of type integer") — see
+#   `add_sub_issue_args`;
+# * a 422 counts as an instance WITHOUT sub-issues only when its message says
+#   the feature is off or unavailable. Any other 422 is not evidence about the
+#   instance, and is reported with GitHub's words rather than guessed at (#808).
 _ONE_PARENT = re.compile(r"\bone parent\b", re.IGNORECASE)
 _DUPLICATE = re.compile(r"\bduplicate sub-?issues?\b", re.IGNORECASE)
+_MALFORMED_ID = re.compile(r"\bnot\s+(?:of\s+type\s+[\"']?|an?\s+)integer\b", re.IGNORECASE)
+_FEATURE_ABSENT = re.compile(
+    r"\b(?:sub[- ]?issues?|feature)\b[^.]*?"
+    r"\b(?:not\s+(?:enabled|available|supported)|disabled|unavailable)\b",
+    re.IGNORECASE,
+)
+
+
+@dataclass(frozen=True)
+class _Refusal:
+    """What ``gh api`` printed for a refused sub-issues call, read once.
+
+    ``gh api`` prints GitHub's JSON error body on stdout and a one-line summary
+    of its own on stderr. The body may be absent or not JSON, and its text may
+    sit in ``message``, in ``errors[]`` (an object's ``message`` or a bare
+    string), or in both — so every field is read defensively.
+
+    Fields:
+      messages      — every message the refusal carries: the body's
+                      ``message``, each ``errors`` entry, then gh's stderr
+                      lines. The patterns above are matched against these.
+      said          — GitHub's own words for the operator: the body's messages,
+                      or gh's stderr when the body carried none; whitespace is
+                      folded so the words fit a one-line report, never
+                      reworded. ``None`` when there were no words at all.
+      unprocessable — the refusal was a 422, by the body's ``status`` or gh's
+                      stderr.
+      stderr        — gh's stderr as printed, for the status checks.
+    """
+
+    messages: tuple[str, ...]
+    said: str | None
+    unprocessable: bool
+    stderr: str
+
+    @classmethod
+    def read(cls, stdout: str, stderr: str) -> _Refusal:
+        body = _error_body(stdout)
+        from_body: list[str] = []
+        if body is not None:
+            if isinstance(body.get("message"), str):
+                from_body.append(body["message"])
+            errors = body.get("errors")
+            for error in errors if isinstance(errors, list) else []:
+                if isinstance(error, dict) and isinstance(error.get("message"), str):
+                    from_body.append(error["message"])
+                elif isinstance(error, str):
+                    from_body.append(error)
+        from_body = [message for message in from_body if message.strip()]
+        from_stderr = [line for line in stderr.splitlines() if line.strip()]
+        words = from_body or from_stderr
+        status = str(body.get("status", "")) if body is not None else ""
+        return cls(
+            messages=tuple(from_body + from_stderr),
+            said="; ".join(" ".join(word.split()) for word in words) or None,
+            unprocessable=(
+                status == str(_UNPROCESSABLE_STATUS)
+                or _mentions_status(stderr, _UNPROCESSABLE_STATUS)
+            ),
+            stderr=stderr,
+        )
+
+    def says(self, pattern: re.Pattern[str]) -> bool:
+        """True when any of the refusal's messages states what ``pattern`` matches."""
+        return any(pattern.search(message) for message in self.messages)
 
 
 def _read_refusal(
     config: dict[str, Any],
-    proc: subprocess.CompletedProcess,
+    refusal: _Refusal,
     *,
     parent_number: int | str,
     child_number: int | str,
@@ -548,27 +701,28 @@ def _read_refusal(
     """What a refused add says about the child's parent — ``None`` when nothing.
 
     A duplicate means the child is already here (ALREADY). The one-parent rule,
-    or any other 422, sends the seam back to the child's record, because the
-    record, not the wording, is the evidence: a child now under this parent is
-    ALREADY (someone linked it meanwhile), one under another parent is a
-    CONFLICT naming that parent. A one-parent refusal whose parent the record
-    cannot name is still a CONFLICT. Anything else is left to the status
-    classification, so a 422 from an instance without sub-issues stays
-    UNSUPPORTED.
+    or a 422 whose message names no cause pm recognises, sends the seam back to
+    the child's record, because the record, not the wording, is the evidence: a
+    child now under this parent is ALREADY (someone linked it meanwhile), one
+    under another parent is a CONFLICT naming that parent. A one-parent refusal
+    whose parent the record cannot name is still a CONFLICT. A 422 that names
+    its own cause — a malformed id, an absent feature — says nothing about the
+    parent, so it is left, like anything else, to :func:`_attach`'s
+    classification.
     """
-    body = _error_body(proc.stdout or "")
-    messages = _refusal_messages(body, proc.stderr or "")
-    if any(_DUPLICATE.search(message) for message in messages):
+    if refusal.says(_DUPLICATE):
         return _already_linked(child_number, parent_number)
-    one_parent = any(_ONE_PARENT.search(message) for message in messages)
-    if not (one_parent or _is_422(body, proc.stderr or "")):
+    one_parent = refusal.says(_ONE_PARENT)
+    if not (one_parent or refusal.unprocessable):
+        return None
+    if not one_parent and (refusal.says(_MALFORMED_ID) or refusal.says(_FEATURE_ABSENT)):
         return None
     now = read_link_state(config, issue_number=child_number)
     holder = now.parent if now is not None else None
     if holder is not None and holder.is_issue(parent_number):
         return _already_linked(child_number, parent_number)
     if holder is not None or one_parent:
-        return _conflict(child_number, parent_number, holder, move=move)
+        return _conflict(child_number, parent_number, holder, move=move, said=refusal.said)
     return None
 
 
@@ -581,59 +735,43 @@ def _error_body(stdout: str) -> dict[str, Any] | None:
     return body if isinstance(body, dict) else None
 
 
-def _refusal_messages(body: dict[str, Any] | None, stderr: str) -> list[str]:
-    """Every message a refusal carries: the body's ``message``, each ``errors``
-    entry (an object's ``message`` or a bare string), then gh's stderr lines."""
-    messages: list[str] = []
-    if body is not None:
-        if isinstance(body.get("message"), str):
-            messages.append(body["message"])
-        errors = body.get("errors")
-        for error in errors if isinstance(errors, list) else []:
-            if isinstance(error, dict) and isinstance(error.get("message"), str):
-                messages.append(error["message"])
-            elif isinstance(error, str):
-                messages.append(error)
-    messages.extend(line for line in stderr.splitlines() if line.strip())
-    return messages
-
-
-def _is_422(body: dict[str, Any] | None, stderr: str) -> bool:
-    """True when the refusal was a 422, by the body's ``status`` or gh's stderr."""
-    if body is not None and str(body.get("status", "")) == "422":
-        return True
+def _mentions_status(stderr: str, status: int) -> bool:
+    """True when gh's stderr carries ``status`` in either of its phrasings."""
     lowered = stderr.lower()
-    return "http 422" in lowered or "(422)" in lowered
+    return f"http {status}" in lowered or f"({status})" in lowered
 
 
-def _is_unsupported(stderr: str) -> bool:
-    """True when ``gh``'s stderr *unambiguously* says the endpoint is absent.
+def _is_unsupported(refusal: _Refusal) -> bool:
+    """True when a refusal *unambiguously* says the endpoint is absent.
 
-    ``gh api`` prints an ``HTTP <status>`` line on a non-2xx response. Only
-    410/422 are conclusive here. **404 is deliberately excluded**: GitHub returns
-    it both for a missing endpoint and for a repository the caller may not see,
-    so reading it as "unsupported" hands a close gate a determinate answer on no
-    evidence whenever a token lacks scope (#869). Use
-    :func:`_classify_native_failure`, which probes rather than guesses; this
-    predicate answers only the part text can decide.
+    Two answers are conclusive, and only two. A **410** says the endpoint is
+    gone, by status alone. A **422** says so only when its message does — GitHub
+    answers 422 ("Unprocessable Entity") for a child that already has a parent
+    and for a malformed ``sub_issue_id`` as much as for a feature that is off,
+    so its status alone proves nothing about the instance, and a 422 whose
+    message names no absent feature is not "unsupported" (#808). **404 is
+    deliberately excluded**: GitHub returns it both for a missing endpoint and
+    for a repository the caller may not see, so reading it as "unsupported"
+    hands a close gate a determinate answer on no evidence whenever a token
+    lacks scope (#869). Use :func:`_classify_native_failure`, which probes
+    rather than guesses; this predicate answers only the part the response
+    itself can decide.
     """
-    lowered = stderr.lower()
-    return any(
-        f"http {status}" in lowered or f"({status})" in lowered for status in _UNSUPPORTED_STATUSES
-    )
+    if any(_mentions_status(refusal.stderr, status) for status in _UNSUPPORTED_STATUSES):
+        return True
+    return refusal.unprocessable and refusal.says(_FEATURE_ABSENT)
 
 
 def _mentions_ambiguous_status(stderr: str) -> bool:
     """True when stderr carries a 404, or gh's bare code-less phrasing of one."""
-    lowered = stderr.lower()
-    if f"http {_AMBIGUOUS_STATUS}" in lowered or f"({_AMBIGUOUS_STATUS})" in lowered:
+    if _mentions_status(stderr, _AMBIGUOUS_STATUS):
         return True
     # `gh` sometimes phrases a missing endpoint as "Not Found" without the code.
-    return "not found" in lowered
+    return "not found" in stderr.lower()
 
 
 def _classify_native_failure(
-    config: dict[str, Any], *, parent_number: int | str, stderr: str
+    config: dict[str, Any], *, parent_number: int | str, stderr: str, stdout: str = ""
 ) -> NativeReadOutcome:
     """Why a native sub-issues call failed — asked of the API, not of the text.
 
@@ -641,6 +779,12 @@ def _classify_native_failure(
     drift into different notions of "unsupported" — ADR-026's one-reader
     discipline applied to failure attribution, and ADR-035 §3 on why the two
     directions must not each hold their own definition of the same fact.
+
+    ``stdout`` is the error body ``gh api`` printed, which is where a 422 says
+    why it was refused. A 422 is UNSUPPORTED only when that message says the
+    feature is absent (:func:`_is_unsupported`); any other 422 is UNREADABLE —
+    the API answered, and its answer was not "no sub-issues here". A 422 is
+    never the ambiguous 404, so it is never probed, whatever its message says.
 
     A 404 on `…/sub_issues` is genuinely ambiguous, so it is settled by probing
     the parent issue itself — the same `gh api repos/{owner}/{repo}/issues/<n>`
@@ -656,9 +800,10 @@ def _classify_native_failure(
     negligible against a gate that would otherwise answer confidently on no
     evidence — and the cost is paid only when something is already wrong.
     """
-    if _is_unsupported(stderr):
+    refusal = _Refusal.read(stdout, stderr)
+    if _is_unsupported(refusal):
         return NativeReadOutcome.UNSUPPORTED
-    if not _mentions_ambiguous_status(stderr):
+    if refusal.unprocessable or not _mentions_ambiguous_status(stderr):
         return NativeReadOutcome.UNREADABLE
     try:
         probe = _gh_call(
@@ -765,9 +910,9 @@ class ChildResolution:
       children          — the resolved children, sorted by number, deduped across
                           substrates with native-wins.
       native_supported  — False only when the instance has **no native
-                          substrate** (a conclusive status, or an attributed
-                          404); the result is then
-                          textual-only, and that is a COMPLETE answer. True when
+                          substrate** (a 410, a 422 whose message says the
+                          feature is absent, or an attributed 404); the result
+                          is then textual-only, and that is a COMPLETE answer. True when
                           the endpoint exists — including when the read of it
                           failed, which is reported through ``complete`` rather
                           than by pretending the substrate is absent.
@@ -813,9 +958,11 @@ class NativeReadOutcome(Enum):
     * ``READ`` — the endpoint answered. The set is authoritative, empty included.
     * ``UNSUPPORTED`` — this instance has no native substrate at all, so the
       textual projection genuinely IS the whole answer, and degrading to it is a
-      *determinate* result. Reached two ways and no other: a conclusive 410/422,
-      or a 404 the probe attributes to the endpoint. It is the seam's only
-      fail-open surface, so it has to be earned rather than inferred (#869).
+      *determinate* result. Reached three ways and no other: a 410, a 422 whose
+      message says the feature is absent (#808 — a 422 on its status alone is
+      UNREADABLE), or a 404 the probe attributes to the endpoint. It is the
+      seam's only fail-open surface, so it has to be earned rather than
+      inferred (#869).
     * ``UNREADABLE`` — auth, network, a transient 5xx, an unparseable payload, or
       no ``gh`` on PATH: a native child set may exist and was not seen. Absence
       of the tool is not evidence about the instance. Degrading here would silently
@@ -857,7 +1004,10 @@ def read_native_children(config: dict[str, Any], *, parent_number: int | str) ->
         return NativeRead(numbers=set(), outcome=NativeReadOutcome.UNREADABLE)
     if proc.returncode != 0:
         outcome = _classify_native_failure(
-            config, parent_number=parent_number, stderr=proc.stderr or ""
+            config,
+            parent_number=parent_number,
+            stderr=proc.stderr or "",
+            stdout=proc.stdout or "",
         )
         return NativeRead(numbers=set(), outcome=outcome)
     payload = _parse_concatenated_arrays((proc.stdout or "").strip())

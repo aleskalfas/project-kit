@@ -1317,7 +1317,8 @@ class _NativeTracker:
     ``native`` maps a parent to its sub-issue numbers. ``honour_replace=False``
     refuses a move the way an instance without ``replace_parent`` would;
     ``record_error`` fails the issue-record read; ``unsupported`` answers every
-    sub-issues call the way an instance without the feature does.
+    sub-issues call the way an instance without the feature does;
+    ``refuse_add`` refuses every add with that ``(stdout, stderr)``.
     """
 
     def __init__(
@@ -1327,11 +1328,13 @@ class _NativeTracker:
         honour_replace: bool = True,
         record_error: bool = False,
         unsupported: bool = False,
+        refuse_add: tuple[str, str] | None = None,
     ) -> None:
         self.native = {p: set(c) for p, c in (native or {}).items()}
         self.honour_replace = honour_replace
         self.record_error = record_error
         self.unsupported = unsupported
+        self.refuse_add = refuse_add
         self.calls: list[list[str]] = []
 
     @property
@@ -1366,6 +1369,9 @@ class _NativeTracker:
         raise AssertionError(f"unexpected gh call: {args}")
 
     def _add(self, args: list[str], parent: int) -> subprocess.CompletedProcess:
+        if self.refuse_add is not None:
+            stdout, stderr = self.refuse_add
+            return subprocess.CompletedProcess(args, 1, stdout=stdout, stderr=stderr)
         child = int(args[args.index("-F") + 1].split("=", 1)[1]) - _DB
         holder = self.parent_of(child)
         moving = "replace_parent=true" in args and self.honour_replace
@@ -1445,6 +1451,7 @@ def test_main_parent_refused_move_writes_nothing_and_names_the_kept_parent(
     assert native.native == {7: {42}}
     assert "[failed] #42: parent NOT set — #42 could not be moved to #9" in out
     assert "it stays a native sub-issue of #7" in out
+    assert 'GitHub said: "Validation Failed; Sub issue may only have one parent"' in out
 
 
 def test_main_parent_unreadable_native_parent_refuses_before_any_write(
@@ -1504,6 +1511,25 @@ def test_main_parent_on_an_instance_without_sub_issues_rewrites_the_first_line(
     assert captured["rc"] == 0
     assert captured["bodies"][0].startswith("Feature: #9\n")
     assert "[warn] native sub-issues unsupported on this instance" in out
+
+
+def test_main_parent_a_422_that_is_not_absence_stops_before_any_write(
+    sf, tmp_path, monkeypatch, capsys
+) -> None:
+    """#808: a 422 used to read as "unsupported", so an issue with no native
+    parent had its first line rewritten while the link silently failed. A 422
+    that does not say the feature is absent is a failure: the call stops before
+    the first line moves, and GitHub's words are printed."""
+    refusal = json.dumps({"message": "Parent issue is locked", "status": "422"})
+    native = _NativeTracker(refuse_add=(refusal, "gh: Parent issue is locked (HTTP 422)"))
+    captured = _run_parent(sf, monkeypatch, tmp_path, native=native, body="## What\nx\n")
+    out = capsys.readouterr().out
+
+    assert captured["rc"] == 3
+    assert captured["bodies"] == [], "the first line must not move without the link"
+    assert "[failed] #42: parent NOT set" in out
+    assert 'GitHub said: "Parent issue is locked"' in out
+    assert "unsupported" not in out
 
 
 def test_main_parent_in_textual_containment_writes_no_native_link(

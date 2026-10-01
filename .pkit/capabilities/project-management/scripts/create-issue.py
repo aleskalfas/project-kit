@@ -77,7 +77,7 @@ from _lib import (
     provenance,
     session_guard,
 )
-from _lib.containment import link_sub_issue
+from _lib.containment import LinkOutcome, link_sub_issue
 from _lib.gh import gh_project_run, gh_run, load_adopter_config
 from _lib.hooks import fire_hooks
 from _lib.membership import (
@@ -744,6 +744,16 @@ def main() -> int:
         )
         prefix = "[ok]" if link.ok else "[warn]"
         print(f"{prefix} {link.detail}", file=sys.stderr)
+        if not link.ok and link.outcome is LinkOutcome.FAILED:
+            # A failed link is not an instance without sub-issues (#808): the
+            # line above says why, in GitHub's words where GitHub refused, and
+            # the issue stays filed under its textual ref. Name the way back.
+            print(
+                f"[warn] #{new_issue_number} is filed under #{parent_number} by its "
+                f"first line only; once the cause above is fixed, `pkit pm link-parent "
+                f"{new_issue_number}` makes the native link.",
+                file=sys.stderr,
+            )
     elif parent_number is not None and containment == axis_labels.CONTAINMENT_TEXTUAL:
         print(
             f"[ok] containment: textual mode — native sub-issue link skipped; "

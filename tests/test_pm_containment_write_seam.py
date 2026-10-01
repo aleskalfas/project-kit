@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import ast
 import importlib.util
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -178,11 +179,12 @@ def test_link_sub_issue_already_linked_is_noop(containment, monkeypatch) -> None
 # --- graceful degradation: unsupported instance → no-op, not failure -----
 
 
-@pytest.mark.parametrize("status", [404, 410, 422])
+@pytest.mark.parametrize("status", [404, 410])
 def test_link_sub_issue_unsupported_status_degrades(containment, monkeypatch, status) -> None:
-    """A 404 / 410 / 422 from the endpoint means the instance lacks sub-issue
-    support — degrade to a no-op (UNSUPPORTED), NOT a failure. The textual ref
-    is the fallback."""
+    """A 404 (attributed to the endpoint) or a 410 means the instance lacks
+    sub-issue support — degrade to a no-op (UNSUPPORTED), NOT a failure. The
+    textual ref is the fallback. Unchanged by #808: the report is pm's own
+    sentence, with no GitHub message attached."""
 
     def fake_gh(args, config):
         if "--jq" in args:
@@ -197,7 +199,8 @@ def test_link_sub_issue_unsupported_status_degrades(containment, monkeypatch, st
     result = containment.link_sub_issue({}, parent_number=342, child_number=344)
     assert result.outcome == containment.LinkOutcome.UNSUPPORTED
     assert result.ok is False  # the native link is absent...
-    assert "unsupported" in result.detail.lower()
+    assert result.detail == "native sub-issues unsupported on this instance; textual ref recorded"
+    assert result.github_message is None
 
 
 def test_link_sub_issue_not_found_phrasing_degrades(containment, monkeypatch) -> None:
@@ -506,6 +509,180 @@ def test_link_sub_issue_reuses_the_runs_reads(containment, monkeypatch) -> None:
         containment.link_sub_issue({}, parent_number=342, child_number=child, sub_issues=reads)
     assert len(fake.list_reads) == 1
     assert len(fake.posts) == 3
+
+
+# --- a 422 is read by its message, not its status (#808) --------------------
+#
+# GitHub answers 422 for unrelated reasons. Each cause gets its own outcome and
+# its own operator-visible text, and GitHub's own words reach the operator.
+
+# The refusal #808 was found on, verbatim: a message-only body, no `errors`.
+_OBSERVED_ONE_PARENT = (
+    "An error occurred while adding the sub-issue to the parent issue. "
+    "Sub issue may only have one parent"
+)
+_MALFORMED = 'Invalid request.\n\nFor \'properties/sub_issue_id\', "999" is not of type "integer".'
+_ABSENT = "Sub-issues are not enabled for this repository"
+_UNRECOGNISED = "Validation Failed"
+_UNRECOGNISED_ERROR = "Parent issue is locked"
+
+
+def _body(message: str, *errors: object) -> str:
+    """A 422 error body as `gh api` prints it on stdout."""
+    payload: dict = {"message": message, "status": "422"}
+    if errors:
+        payload["errors"] = list(errors)
+    return json.dumps(payload)
+
+
+def _refused_422(containment, monkeypatch, *, stdout: str, stderr: str = "", child_parent=None):
+    """Link #344 under #342 with the add refused; the child's record shows
+    ``child_parent`` on the re-read (none before the add)."""
+    stderr = stderr or "gh: Validation Failed (HTTP 422)"
+    fake = _ScriptedLink(_record(999), _record(999, child_parent), post=(1, stdout, stderr))
+    monkeypatch.setattr(containment, "_gh_call", fake)
+    return containment.link_sub_issue({}, parent_number=342, child_number=344)
+
+
+def test_the_observed_one_parent_422_is_a_conflict_quoting_github(containment, monkeypatch) -> None:
+    """The response #808 was filed on. Not "unsupported": a conflict that names
+    the parent the child has, says the existing link must go first, and quotes
+    GitHub."""
+    result = _refused_422(
+        containment, monkeypatch, stdout=_body(_OBSERVED_ONE_PARENT), child_parent=7
+    )
+
+    assert result.outcome == containment.LinkOutcome.CONFLICT
+    assert result.current_parent == containment.NativeParent(number=7)
+    assert result.github_message == _OBSERVED_ONE_PARENT
+    assert f'GitHub said: "{_OBSERVED_ONE_PARENT}"' in result.detail
+    assert "its native link to #7 must be removed first" in result.detail
+    assert "unsupported" not in result.detail
+
+
+def test_a_malformed_id_422_is_a_failure_naming_the_request(containment, monkeypatch) -> None:
+    """The endpoint's own type check on `sub_issue_id` — pm's request is wrong,
+    the instance is fine. A failure that says so, with GitHub's words."""
+    result = _refused_422(containment, monkeypatch, stdout=_body(_MALFORMED))
+
+    assert result.outcome == containment.LinkOutcome.FAILED
+    assert "malformed" in result.detail and "defect in pm's request" in result.detail
+    # GitHub's words, whitespace folded onto the one line, otherwise as sent.
+    folded = " ".join(_MALFORMED.split())
+    assert result.github_message == folded
+    assert f'GitHub said: "{folded}"' in result.detail
+    assert "unsupported" not in result.detail
+
+
+def test_a_422_saying_the_feature_is_absent_is_unsupported(containment, monkeypatch) -> None:
+    """The one 422 that IS about the instance: GitHub's message says so."""
+    result = _refused_422(
+        containment,
+        monkeypatch,
+        stdout=_body(_ABSENT),
+        stderr=f"gh: {_ABSENT} (HTTP 422)",
+    )
+
+    assert result.outcome == containment.LinkOutcome.UNSUPPORTED
+    assert result.detail.startswith("native sub-issues unsupported on this instance")
+    assert f'GitHub said: "{_ABSENT}"' in result.detail
+
+
+def test_an_unrecognised_422_is_a_failure_carrying_githubs_message(
+    containment, monkeypatch
+) -> None:
+    """A 422 pm cannot attribute fails towards GitHub's message, never towards
+    "unsupported" — and every message the body carries is shown, `errors[]`
+    included, whether an entry is an object or a bare string."""
+    result = _refused_422(
+        containment,
+        monkeypatch,
+        stdout=_body(_UNRECOGNISED, {"message": _UNRECOGNISED_ERROR}, "and a bare string"),
+    )
+
+    assert result.outcome == containment.LinkOutcome.FAILED
+    said = f"{_UNRECOGNISED}; {_UNRECOGNISED_ERROR}; and a bare string"
+    assert result.github_message == said
+    assert f'GitHub said: "{said}"' in result.detail
+    assert "for a reason pm does not recognise" in result.detail
+    assert "unsupported" not in result.detail
+
+
+def test_each_422_cause_reads_differently_to_the_operator(containment, monkeypatch) -> None:
+    """The regression in one line: the four causes no longer collapse into one
+    "unsupported" sentence."""
+    details = {
+        cause: _refused_422(containment, monkeypatch, **kwargs).detail
+        for cause, kwargs in {
+            "one parent": {"stdout": _body(_OBSERVED_ONE_PARENT), "child_parent": 7},
+            "malformed": {"stdout": _body(_MALFORMED)},
+            "absent": {"stdout": _body(_ABSENT)},
+            "unrecognised": {"stdout": _body(_UNRECOGNISED)},
+        }.items()
+    }
+    assert len(set(details.values())) == len(details), details
+    assert [cause for cause, text in details.items() if "unsupported" in text] == ["absent"]
+
+
+@pytest.mark.parametrize(
+    "stdout",
+    ["", "<html>bad gateway</html>", "[1, 2]", '{"message": 42, "errors": "not a list"}'],
+    ids=["empty", "not-json", "not-an-object", "wrong-types"],
+)
+def test_an_unparseable_422_body_falls_back_to_ghs_stderr(containment, monkeypatch, stdout) -> None:
+    """No usable body: the refusal is still read, and gh's own line — which
+    carries GitHub's message where gh found one — is what the operator sees."""
+    stderr = "gh: Parent issue is locked (HTTP 422)"
+    result = _refused_422(containment, monkeypatch, stdout=stdout, stderr=stderr)
+
+    assert result.outcome == containment.LinkOutcome.FAILED
+    assert result.github_message == stderr
+    assert f'GitHub said: "{stderr}"' in result.detail
+
+
+def test_an_unrecognised_422_whose_child_has_since_got_a_parent_is_a_conflict(
+    containment, monkeypatch
+) -> None:
+    """A 422 that names no cause still sends the seam back to the child's
+    record (#1040): the record is the evidence, and GitHub's words ride along."""
+    result = _refused_422(containment, monkeypatch, stdout=_body(_UNRECOGNISED), child_parent=7)
+
+    assert result.outcome == containment.LinkOutcome.CONFLICT
+    assert result.current_parent == containment.NativeParent(number=7)
+    assert 'GitHub said: "Validation Failed"' in result.detail
+
+
+def test_a_422_that_names_its_cause_does_not_reread_the_child(containment, monkeypatch) -> None:
+    """A malformed id says nothing about the child's parent, so no second read
+    of its record is made to look for one."""
+    fake = _ScriptedLink(_record(999), post=(1, _body(_MALFORMED), "gh: (HTTP 422)"))
+    monkeypatch.setattr(containment, "_gh_call", fake)
+    containment.link_sub_issue({}, parent_number=342, child_number=344)
+
+    assert sum(1 for call in fake.calls if "--jq" in call) == 1
+
+
+def test_a_422_is_never_probed_as_a_404_whatever_its_message(containment, monkeypatch) -> None:
+    """A 422 whose message happens to say "not found" is not gh's code-less 404:
+    it is never settled by the parent probe into "unsupported"."""
+    result = _refused_422(
+        containment,
+        monkeypatch,
+        stdout=_body("Sub-issue not found"),
+        stderr="gh: Sub-issue not found (HTTP 422)",
+    )
+
+    assert result.outcome == containment.LinkOutcome.FAILED
+    assert 'GitHub said: "Sub-issue not found"' in result.detail
+
+
+def test_quoting_github_appends_only_what_github_said(containment) -> None:
+    """The caller-side helper: GitHub's words after the caller's sentence, and
+    the sentence alone when there were none."""
+    said = containment.LinkResult(containment.LinkOutcome.FAILED, github_message="Nope")
+    silent = containment.LinkResult(containment.LinkOutcome.FAILED)
+    assert said.quoting_github("not linked") == 'not linked. GitHub said: "Nope"'
+    assert silent.quoting_github("not linked") == "not linked"
 
 
 # --- create-issue obtains the link FROM the primitive --------------------

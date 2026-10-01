@@ -463,6 +463,21 @@ def test_an_instance_without_sub_issues_links_nothing(lp, tmp_path, monkeypatch,
     assert "native sub-issues are unsupported on this instance" in out.out
 
 
+def test_a_422_reading_sub_issues_does_not_plan_the_instance_as_unsupported(
+    lp, tmp_path, monkeypatch, capsys
+):
+    """#808, on the read side: a 422 on the parent's list says nothing about
+    the instance, so the plan keeps the link (to be checked again at the add)
+    instead of writing the whole parent off as "unsupported"."""
+    fake = FakeGitHub(_tracker(), list_error="gh: HTTP 422: Unprocessable Entity")
+    rc, out, _ = _run(lp, monkeypatch, capsys, _stage(tmp_path), fake, "101", "--yes")
+
+    assert rc == 0
+    assert fake.posts == [(90, 101)]
+    assert "#90's sub-issues could not be read" in out.out
+    assert "unsupported" not in out.out
+
+
 def test_a_link_failure_exits_non_zero_and_the_others_still_link(lp, tmp_path, monkeypatch, capsys):
     fake = FakeGitHub(_tracker(), fail_posts=(101,))
     rc, out, _ = _run(lp, monkeypatch, capsys, _stage(tmp_path), fake, "101", "107", "108", "--yes")
@@ -475,15 +490,31 @@ def test_a_link_failure_exits_non_zero_and_the_others_still_link(lp, tmp_path, m
 def test_a_refusal_where_sub_issues_demonstrably_work_is_a_failure(
     lp, tmp_path, monkeypatch, capsys
 ):
-    """The seam reads a 422 on the add as "unsupported" — a no-op on an instance
+    """The seam reads a 410 on the add as "unsupported" — a no-op on an instance
     without sub-issues. Here the same parent's sub-issues were just read, so the
     instance has them: the refusal is this link's, reported as a failure, and
     without asserting a cause nobody established."""
-    fake = FakeGitHub(_tracker(), post_error="gh: HTTP 422: Validation Failed")
+    fake = FakeGitHub(_tracker(), post_error="gh: HTTP 410: Gone")
     rc, out, _ = _run(lp, monkeypatch, capsys, _stage(tmp_path), fake, "101", "--yes")
     assert rc == 3
     assert fake.posts == []
     assert "GitHub refused the link as unsupported, although #90's sub-issues read" in out.out
+
+
+def test_an_unrecognised_422_on_the_add_fails_with_githubs_message(
+    lp, tmp_path, monkeypatch, capsys
+):
+    """#808: a 422 GitHub's message does not attribute to an absent feature is a
+    failure for this link, carrying GitHub's words — not "unsupported", and not
+    a quiet no-op. The run still exits 3 so the operator sees it."""
+    fake = FakeGitHub(_tracker(), post_error="gh: Parent issue is locked (HTTP 422)")
+    rc, out, _ = _run(lp, monkeypatch, capsys, _stage(tmp_path), fake, "101", "--yes")
+
+    assert rc == 3
+    assert fake.posts == []
+    assert "[fail] #101 not linked under #90" in out.out
+    assert 'GitHub said: "gh: Parent issue is locked (HTTP 422)"' in out.out
+    assert "unsupported" not in out.out
 
 
 # --- one native parent (#1040) ----------------------------------------------
@@ -542,6 +573,8 @@ def test_the_one_parent_422_is_read_from_its_body_not_taken_as_unsupported(
         "[warn] #101 conflict — natively a sub-issue of another parent, but the "
         "first line names #90"
     ) in out.out
+    # GitHub's own words follow pm's line (#808).
+    assert 'GitHub said: "Validation Failed; Sub issue may only have one parent"' in out.out
     assert "unsupported" not in out.out
 
 
