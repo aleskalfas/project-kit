@@ -12,11 +12,18 @@ journal.
 A test module loads the scripts once (`load_script`), builds the scratch
 repository per test (`make_engine_repo`) and wires a `World` over both
 (`wire`).
+
+A predicate answers in this process, but as its script would: where the
+capability's predicate code could not reach an answer, the script exits 2 and
+the engine reads no answer, so the harness hands the engine the same failure,
+with what the code said on standard error.
 """
 
 from __future__ import annotations
 
+import contextlib
 import importlib.util
+import io
 import json
 import re
 import shutil
@@ -31,7 +38,8 @@ from click.testing import CliRunner
 
 from project_kit import process as process_mod
 from project_kit.cli import main as pkit_main
-from project_kit.process import PredicateRunner, ProcessEngine, load_definition
+from project_kit.command_runner import diagnostic_tail
+from project_kit.process import PredicateFailure, PredicateRunner, ProcessEngine, load_definition
 from tests.process_journal_support import enable_journal_logging
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -421,21 +429,36 @@ class World:
         ]
 
 
-def answer_from_tracker(
-    runner: PredicateRunner, run_name: str, with_args: Any
-) -> dict[str, Any] | None:
-    """The engine's predicate run, answered in this process by the capability's
-    own predicate code (which reads the tracker through `gh`)."""
-    number = int(runner.subject)
+def _predicate_answer(run_name: str, number: int) -> dict[str, Any] | None:
+    """What the capability's predicate code answers for `run_name`, or None
+    when no script of the capability runs it."""
+    if run_name == "detect-state":
+        return predicates.classify_state(number)
     if run_name.startswith("detect-"):
         return predicates.detect_state(number, run_name.removeprefix("detect-"))
     if run_name == "gate-checkboxes-ticked":
         return predicates.gate_checkboxes_ticked(number)
     if run_name == "gate-pr-merged":
-        answer = predicates.gate_pr_merged(number)
-        # The predicate script exits non-zero on an answer it could not reach.
-        return None if answer.get(predicates.INDETERMINATE_KEY) else answer
-    return None  # unrunnable reads as indeterminate
+        return predicates.gate_pr_merged(number)
+    return None
+
+
+def answer_from_tracker(
+    runner: PredicateRunner, run_name: str, with_args: Any
+) -> dict[str, Any] | PredicateFailure:
+    """The engine's predicate run, answered in this process by the capability's
+    own predicate code (which reads the tracker through `gh`), under its
+    script's exit-code contract: an answer the predicate could not reach is no
+    answer — the script exits 2, with what the predicate said on standard
+    error — never the payload it carries."""
+    said = io.StringIO()
+    with contextlib.redirect_stderr(said):
+        answer = _predicate_answer(run_name, int(runner.subject))
+    if answer is None:
+        return PredicateFailure("could not start: no script of the capability runs it")
+    if answer.get(predicates.INDETERMINATE_KEY):
+        return PredicateFailure("exited 2", diagnostic_tail(said.getvalue()))
+    return answer
 
 
 def make_engine_repo(tmp_path: Path) -> Path:

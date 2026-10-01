@@ -190,21 +190,24 @@ commands:
   self-test:
     script: scripts/self-test.py
     help: "Smoke-test the capability's core transition cycle on the live repo. Creates a throwaway issue, advances it through the state machine, and closes it. Use --dry-run to preview without mutating."
+  detect-state:
+    script: scripts/detect-state.py
+    help: "Process classifier (DEC-033): read-only; answers which lifecycle state an issue is in, from one read of the issue — the detection every state of the shipped issue lifecycle names. Invoked by the process engine."
   detect-todo:
     script: scripts/detect-todo.py
-    help: "Process detection predicate (DEC-033): read-only; reports whether an issue's inferred lifecycle position is Todo. Invoked by the process engine."
+    help: "Process detection predicate (DEC-033): read-only; reports whether an issue's inferred lifecycle position is Todo. Registered for direct use; the shipped lifecycle detects with `detect-state`."
   detect-backlog:
     script: scripts/detect-backlog.py
-    help: "Process detection predicate (DEC-033): read-only; reports whether an issue's inferred lifecycle position is Backlog. Invoked by the process engine."
+    help: "Process detection predicate (DEC-033): read-only; reports whether an issue's inferred lifecycle position is Backlog. Registered for direct use; the shipped lifecycle detects with `detect-state`."
   detect-in-progress:
     script: scripts/detect-in-progress.py
-    help: "Process detection predicate (DEC-033): read-only; reports whether an issue's inferred lifecycle position is In Progress. Invoked by the process engine."
+    help: "Process detection predicate (DEC-033): read-only; reports whether an issue's inferred lifecycle position is In Progress. Registered for direct use; the shipped lifecycle detects with `detect-state`."
   detect-review:
     script: scripts/detect-review.py
-    help: "Process detection predicate (DEC-033): read-only; reports whether an issue's inferred lifecycle position is Review. Invoked by the process engine."
+    help: "Process detection predicate (DEC-033): read-only; reports whether an issue's inferred lifecycle position is Review. Registered for direct use; the shipped lifecycle detects with `detect-state`."
   detect-done:
     script: scripts/detect-done.py
-    help: "Process detection predicate (DEC-033): read-only; reports whether an issue's inferred lifecycle position is Done. Invoked by the process engine."
+    help: "Process detection predicate (DEC-033): read-only; reports whether an issue's inferred lifecycle position is Done. Registered for direct use; the shipped lifecycle detects with `detect-state`."
   gate-checkboxes-ticked:
     script: scripts/gate-checkboxes-ticked.py
     help: "Process gate predicate (DEC-033 / DEC-007): read-only deterministic close-gate; result=True iff the issue body has no unticked checkbox. Invoked by the process engine."
