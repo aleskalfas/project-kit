@@ -28,10 +28,11 @@ Pointer:
    accepted data point's companion schema exists under `schemas/`, every
    filler / emitter / subscriber command exists in `commands:`, every filler
    command and every validator's command declares the query contract
-   (`query-contract: true`, ADR-057 point 3 and ADR-058), a command that
-   declares what it reads beyond the working tree (`reads`, COR-052 point 6)
-   declares the query contract too — its values are the schema's to check —
-   a contribution names `command` or `value` but not both, documentation locations are
+   (`query-contract: true`; COR-052 point 6, ADR-057 point 3 and ADR-058), a
+   command that declares what it reads beyond the working tree (`reads`, the
+   same point) declares the query contract too — its values are the schema's
+   to check — a contribution names `command` or `value` but not both,
+   documentation locations are
    relative sub-paths, friction places lie inside a declared location or the
    project and held folders inside a declared location, an offered process
    point names a definition of the component whose

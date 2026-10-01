@@ -12,9 +12,9 @@ pkit:
       record: ["living-docs:DEC-001", COR-049, COR-050, COR-051, COR-053]
       artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006]
     revalidated:
-      at: 2026-09-30T23:02:02Z
+      at: 2026-10-01T22:01:03Z
       outcome: unchanged
-      unchanged-because: "#840's lint and format pass reshapes the anchored code without changing what it does, so this page still describes it as it is"
+      unchanged-because: COR-050 point 2 and COR-053 point 9 state the command limits as a time bound the backbone enforces and obligations a capability declares and the backbone trusts; this page calls its validator and filler queries that are read-only and offline, which they declare, so it holds
 ---
 
 # living-docs capability

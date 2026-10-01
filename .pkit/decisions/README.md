@@ -12,9 +12,9 @@ pkit:
         - src/project_kit/rule_sets.py
       record: [COR-001, COR-019, COR-025, COR-051, COR-053]
     revalidated:
-      at: 2026-10-01T09:44:14Z
+      at: 2026-10-01T22:00:52Z
       outcome: unchanged
-      unchanged-because: "typing-only change in the package for the type-checking gate (PRJ-010): suppression comments removed; behaviour unchanged"
+      unchanged-because: COR-053 changed only point 9's statement of a subscriber's limits; this spec covers records, their container and refining them in place, nothing of subscribers, so it holds
 ---
 
 # Decision records

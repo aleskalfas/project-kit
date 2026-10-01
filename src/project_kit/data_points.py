@@ -33,8 +33,9 @@ defines, combines the point's fillers into one value by its declaration:
   `{schema_version, value}`, at the point's version. An
   abnormal exit, a timeout, output that is not that envelope, or a value that
   does not fit is no answer — never an empty one. The declaration is trusted,
-  not enforced: nothing here holds the command to no network (ADR-057 point
-  4), so each command filler carries whether it declares it, for the report.
+  not enforced (COR-050 point 2): nothing here holds the command to no network
+  (ADR-057 point 4), so each command filler carries whether it declares it,
+  for the report.
 - **What a command filler reads** (point 6). Its leaf may declare `reads`:
   `history` — the current history, read at HEAD — and `settled` — the default
   branch, as `default_branch.resolve` answers it, never a base named for one
@@ -188,7 +189,7 @@ class Filler:
     reason: str = ""  # why it is inert or passed over
     # A command filler: whether its command declares the query contract — among
     # its limits, needing no network. Declared and trusted, never enforced
-    # (ADR-057 point 4). None for any other filler.
+    # (COR-050 point 2; ADR-057 point 4). None for any other filler.
     query_contract: bool | None = None
     # A command filler that declares `reads` and was asked: each state it
     # declared, and where it was read (COR-052 point 7). Empty for any other.

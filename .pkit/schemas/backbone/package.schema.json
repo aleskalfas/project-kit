@@ -174,7 +174,7 @@
           "$ref": "#/$defs/non-empty-string"
         },
         "query-contract": {
-          "description": "The one constant declaration that this command honours the query contract (ADR-057 point 3; the literal is ADR-058's): bounded, deterministic, read-only, needing no network. Required on the command a validator names, and on every query command a capability registers. It grants nothing and is trusted, not enforced.",
+          "description": "The one constant declaration that this command honours the query contract (COR-050 point 2 and ADR-057 point 3; the literal is ADR-058's): bounded, deterministic, read-only, needing no network. Required on the command a validator names, and on every query command a capability registers. It grants nothing and is trusted, not enforced.",
           "const": true
         },
         "reads": {
