@@ -38,8 +38,18 @@ silent (per [project-management:DEC-051-axis-carriage-activation]):
     carried by open/closed, and a degraded one by nothing); the wrapper's other
     domain side-effects still fire.
 
-Cascade per DEC-006 fires upward on forward transitions; the script
-walks the parent chain via the issue body's parent-ref line.
+The forward cascade per DEC-006 fires upward on a forward move: the
+script walks from the issue to the top of its hierarchy, one parent at a
+time through the parent each first line names (`_lib/body_parent_ref`),
+and brings each ancestor that is behind up to the issue's state, capped
+at in-progress, through declared transitions only — an ancestor in todo
+goes to backlog, then to in-progress, each step its own label write and
+journal entry, with the issue's move as the reason. A move to done from
+todo or backlog (won't-do) moves no ancestor. The cascade is not an
+authorisation: it posts no comment and fires no hook. It runs on the
+no-op path too, so running a move again finishes a cascade a failure
+left incomplete, and it does not run where the state is not written as
+a label. See the "forward cascade" section near the end of this file.
 
 Membership gate per DEC-021 runs at startup.
 
@@ -50,7 +60,8 @@ Or via the dispatcher (per COR-021):
   pkit project-management move-issue 42 --to in-progress
 
 Exit codes:
-  0  transitioned (or dry-run reported)
+  0  transitioned, already there, or dry-run reported — a forward cascade
+     left incomplete is a warning, not a failure: the issue's move stands
   1  membership refusal / authorisation refusal
   2  usage error (unknown state, illegal transition, issue not found)
   3  gh failure
@@ -206,7 +217,7 @@ def main() -> int:
     parser.add_argument(
         "--no-cascade",
         action="store_true",
-        help="Skip the forward-cascade walk on parent issues.",
+        help="Skip the forward cascade on the issue's ancestors.",
     )
     parser.add_argument(
         "--capability-root",
