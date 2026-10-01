@@ -17,9 +17,9 @@ pkit:
         - .pkit/adapters/claude-code/merge-settings.sh
       record: [COR-001, COR-002, COR-017, PRJ-001, PRJ-004, ADR-049]
     revalidated:
-      at: 2026-09-30T23:42:07Z
+      at: 2026-10-01T00:11:42Z
       outcome: unchanged
-      unchanged-because: on this branch pyproject.toml changes only a comment that cited an ADR correction note now folded into its record; the front page's description of the project and its tooling holds
+      unchanged-because: on this branch pyproject.toml gains the pytest-xdist dev dependency and registers the serial test marker; the front page names neither the dev tooling nor the test configuration, so it holds
 ---
 
 # project-kit
