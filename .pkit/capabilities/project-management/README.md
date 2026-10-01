@@ -15,7 +15,7 @@ pkit:
         - .pkit/capabilities/project-management/decisions/**
       record: [COR-017, COR-020, COR-021, COR-023, COR-039, COR-053, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050]
     revalidated:
-      at: 2026-10-01T19:43:14Z
+      at: 2026-10-01T19:41:01Z
       outcome: updated
 ---
 
@@ -849,7 +849,7 @@ hooks:
 **Hook kinds at v1**:
 
 - **`set-board-field`** — set a Projects v2 single-select or text field on the just-created/moved item.
-- **`post-comment`** — post a comment from a template file under `project/hook-templates/`. The template renders `{{ issue.number }}`, `{{ issue.title }}`, `{{ repo }}` placeholders. Idempotent — the engine writes a `<!-- pkit-hook: <stamp> -->` marker and skips when a marker comment already exists.
+- **`post-comment`** — post a comment from a template file under `project/hook-templates/`. The template renders `{{ issue.number }}`, `{{ issue.title }}`, `{{ repo }}` placeholders. It posts **one comment per firing**. The comment opens with a `<!-- pkit-hook: <stamp>:<firing> -->` line, where `<firing>` is a digest of the hook's stamp, the event, the issue or PR it fired on, and, on `after_move_issue`, the transition's from and to states. A retry of the same firing finds that comment and posts nothing. A different event, issue, PR or transition posts its own. Only a comment written by the account `gh` posts as, and not edited since, holds a post back. The same line in anyone else's comment does not, and neither does an edited comment or one whose author cannot be read. A transition an issue makes a second time (in-review → in-progress → in-review) and a second close after a reopen count as the same firing and post nothing new. Comments from earlier versions open with a bare `<!-- pkit-hook: <stamp> -->`, which names no firing, so a hook can post once more on an issue or PR that already has one.
 - **`assign-milestone`** — set the issue's milestone by title. Idempotent.
 - **`custom-script`** — escape hatch. Runs an adopter-supplied script at the declared path with a fixed env-var envelope: `PKIT_HOOK_EVENT`, `PKIT_ISSUE_NUMBER` (or `PKIT_PR_NUMBER`), `PKIT_REPO`, `PKIT_HOOK_REPLAY`, `PKIT_DRY_RUN`. Idempotency is the script's responsibility — short-circuit when `PKIT_HOOK_REPLAY=true`.
 
