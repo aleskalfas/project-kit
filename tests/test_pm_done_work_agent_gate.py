@@ -31,9 +31,7 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SCRIPTS_DIR = (
-    REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
-)
+SCRIPTS_DIR = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
 SCRIPT = SCRIPTS_DIR / "done-work.py"
 LIB_PATH = SCRIPTS_DIR / "_lib" / "review_contributions.py"
 
@@ -150,32 +148,43 @@ def _wire(
         if "closingIssuesReferences" in joined:
             if closing_refs_returncode != 0:
                 return subprocess.CompletedProcess(
-                    args=args, returncode=closing_refs_returncode,
-                    stdout="", stderr="gh: closingIssuesReferences failed",
+                    args=args,
+                    returncode=closing_refs_returncode,
+                    stdout="",
+                    stderr="gh: closingIssuesReferences failed",
                 )
             if closing_refs_stdout is not None:
                 return subprocess.CompletedProcess(
-                    args=args, returncode=0,
-                    stdout=closing_refs_stdout, stderr="",
+                    args=args,
+                    returncode=0,
+                    stdout=closing_refs_stdout,
+                    stderr="",
                 )
             refs = [{"number": n} for n in closing_issue_labels]
             return subprocess.CompletedProcess(
-                args=args, returncode=0,
-                stdout=json.dumps({"closingIssuesReferences": refs}), stderr="",
+                args=args,
+                returncode=0,
+                stdout=json.dumps({"closingIssuesReferences": refs}),
+                stderr="",
             )
         if args[:2] == ["gh", "api"] and "/files" in joined:
             return subprocess.CompletedProcess(
-                args=args, returncode=0,
-                stdout=_files_api_pages(list(changed_files)), stderr="",
+                args=args,
+                returncode=0,
+                stdout=_files_api_pages(list(changed_files)),
+                stderr="",
             )
         # gh pr view --json author,comments,commits
         return subprocess.CompletedProcess(
-            args=args, returncode=0,
-            stdout=json.dumps({
-                "author": {"login": pr_author},
-                "comments": comments,
-                "commits": commits,
-            }),
+            args=args,
+            returncode=0,
+            stdout=json.dumps(
+                {
+                    "author": {"login": pr_author},
+                    "comments": comments,
+                    "commits": commits,
+                }
+            ),
             stderr="",
         )
 
@@ -193,9 +202,14 @@ def _design_collection(rc, *, deployed=True):
     """A collection with ux-ui-design contributing design-reviewer for design."""
     from types import MappingProxyType
 
-    err = None if deployed else rc.ContributionError(
-        rc.ERROR_UNDEPLOYED_AGENT, "ux-ui-design",
-        "design-reviewer is not deployed",
+    err = (
+        None
+        if deployed
+        else rc.ContributionError(
+            rc.ERROR_UNDEPLOYED_AGENT,
+            "ux-ui-design",
+            "design-reviewer is not deployed",
+        )
     )
     rule = rc.ContributionRule(
         capability="ux-ui-design",
@@ -217,7 +231,8 @@ def _design_collection(rc, *, deployed=True):
 def test_backward_equiv_single_baseline_local_approved(dw, rc, monkeypatch) -> None:
     """No contributions + single baseline local reviewer APPROVED → pass."""
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=rc.ContributionCollection(rules=()),
         comments=[_local_verdict_comment("reviewer", "APPROVED")],
     )
@@ -229,7 +244,8 @@ def test_backward_equiv_single_baseline_local_approved(dw, rc, monkeypatch) -> N
 def test_backward_equiv_single_baseline_no_verdict_refuses(dw, rc, monkeypatch) -> None:
     """No contributions + baseline reviewer with no fresh verdict → refuse."""
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=rc.ContributionCollection(rules=()),
         comments=[],
     )
@@ -241,7 +257,8 @@ def test_backward_equiv_single_baseline_no_verdict_refuses(dw, rc, monkeypatch) 
 def test_backward_equiv_changes_requested_refuses(dw, rc, monkeypatch) -> None:
     """A fresh CHANGES_REQUESTED from the baseline reviewer → refuse."""
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=rc.ContributionCollection(rules=()),
         comments=[_local_verdict_comment("reviewer", "CHANGES_REQUESTED")],
     )
@@ -252,7 +269,8 @@ def test_backward_equiv_changes_requested_refuses(dw, rc, monkeypatch) -> None:
 def test_backward_equiv_stale_verdict_ignored(dw, rc, monkeypatch) -> None:
     """An APPROVED verdict that predates the latest commit is stale → refuse."""
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=rc.ContributionCollection(rules=()),
         comments=[
             _local_verdict_comment("reviewer", "APPROVED", ts="2026-05-01T00:00:00Z"),
@@ -265,13 +283,15 @@ def test_backward_equiv_stale_verdict_ignored(dw, rc, monkeypatch) -> None:
 def test_backward_equiv_remote_baseline_approved(dw, rc, monkeypatch) -> None:
     """A remote-only baseline reviewer with a fresh APPROVED → pass."""
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=rc.ContributionCollection(rules=()),
         comments=[_remote_verdict_comment("APPROVED", author="review-bot")],
         pr_author="author",
     )
-    result = dw._check_agent_gate(99, {}, _config(local=(), remote=("review-bot",)),
-                                  "resolved", CAP_ROOT)
+    result = dw._check_agent_gate(
+        99, {}, _config(local=(), remote=("review-bot",)), "resolved", CAP_ROOT
+    )
     assert result.passed is True
     assert "review-bot" in result.passed_via
 
@@ -290,7 +310,8 @@ def test_backward_equiv_dual_path_reviewer_satisfied_via_remote(dw, rc, monkeypa
     }
     # Only the remote path posted APPROVED; local path silent.
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=rc.ContributionCollection(rules=()),
         comments=[_remote_verdict_comment("APPROVED", author="reviewer")],
         pr_author="author",
@@ -305,7 +326,8 @@ def test_backward_equiv_dual_path_reviewer_satisfied_via_remote(dw, rc, monkeypa
 def test_compose_both_approved_passes(dw, rc, monkeypatch) -> None:
     """design PR: baseline reviewer + design-reviewer both APPROVED → pass."""
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=_design_collection(rc),
         comments=[
             _local_verdict_comment("reviewer", "APPROVED"),
@@ -322,7 +344,8 @@ def test_compose_both_approved_passes(dw, rc, monkeypatch) -> None:
 def test_compose_only_baseline_approved_refuses(dw, rc, monkeypatch) -> None:
     """design PR: baseline APPROVED but design-reviewer missing → refuse."""
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=_design_collection(rc),
         comments=[_local_verdict_comment("reviewer", "APPROVED")],
         closing_issue_labels={42: ["workstream:design"]},
@@ -337,7 +360,8 @@ def test_compose_only_baseline_approved_refuses(dw, rc, monkeypatch) -> None:
 def test_compose_only_contributed_approved_refuses(dw, rc, monkeypatch) -> None:
     """design PR: design-reviewer APPROVED but baseline missing → refuse."""
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=_design_collection(rc),
         comments=[_local_verdict_comment("design-reviewer", "APPROVED")],
         closing_issue_labels={42: ["workstream:design"]},
@@ -368,7 +392,8 @@ def test_multi_issue_union_requires_both(dw, rc, monkeypatch) -> None:
 
     # Only the design-reviewer has approved → still refused (backend missing).
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=collection,
         comments=[
             _local_verdict_comment("reviewer", "APPROVED"),
@@ -385,7 +410,8 @@ def test_multi_issue_union_requires_both(dw, rc, monkeypatch) -> None:
 
     # Now all three approve → pass.
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=collection,
         comments=[
             _local_verdict_comment("reviewer", "APPROVED"),
@@ -408,7 +434,8 @@ def test_no_closing_issue_baseline_only(dw, rc, monkeypatch) -> None:
     """A PR closing no issue resolves to baseline only — contributed rule
     present in the collection but never required."""
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=_design_collection(rc),
         comments=[_local_verdict_comment("reviewer", "APPROVED")],
         closing_issue_labels={},  # PR closes nothing.
@@ -421,7 +448,8 @@ def test_no_closing_issue_baseline_only(dw, rc, monkeypatch) -> None:
 def test_closing_entity_no_workstream_axis_baseline_only(dw, rc, monkeypatch) -> None:
     """A closing issue with no workstream label matches nothing → baseline only."""
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=_design_collection(rc),
         comments=[_local_verdict_comment("reviewer", "APPROVED")],
         closing_issue_labels={42: ["priority:High", "type:feature"]},  # no workstream.
@@ -434,7 +462,8 @@ def test_closing_entity_no_workstream_axis_baseline_only(dw, rc, monkeypatch) ->
 def test_non_matching_workstream_baseline_only(dw, rc, monkeypatch) -> None:
     """A design-reviewer rule does not fire for a backend-workstream PR."""
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=_design_collection(rc),
         comments=[_local_verdict_comment("reviewer", "APPROVED")],
         closing_issue_labels={42: ["workstream:backend"]},
@@ -451,7 +480,8 @@ def test_fail_closed_undeployed_contributed_reviewer(dw, rc, monkeypatch) -> Non
     """An installed contribution naming an undeployed agent → refuse, even
     with the baseline reviewer APPROVED. The gate never proceeds on baseline."""
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=_design_collection(rc, deployed=False),
         comments=[_local_verdict_comment("reviewer", "APPROVED")],
         closing_issue_labels={42: ["workstream:design"]},
@@ -465,12 +495,14 @@ def test_fail_closed_undeployed_contributed_reviewer(dw, rc, monkeypatch) -> Non
 def test_fail_closed_not_ok_collection(dw, rc, monkeypatch) -> None:
     """A collection with a blocking (malformed-declaration) error → refuse."""
     err = rc.ContributionError(
-        rc.ERROR_MALFORMED, "ux-ui-design",
+        rc.ERROR_MALFORMED,
+        "ux-ui-design",
         "contributions[0].reviewer must be a non-empty string",
     )
     collection = rc.ContributionCollection(rules=(), errors=(err,))
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=collection,
         comments=[_local_verdict_comment("reviewer", "APPROVED")],
         closing_issue_labels={42: ["workstream:design"]},
@@ -495,7 +527,8 @@ def test_dedup_reviewer_required_once(dw, rc, monkeypatch) -> None:
     )
     collection = rc.ContributionCollection(rules=(rule,))
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=collection,
         comments=[_local_verdict_comment("reviewer", "APPROVED")],
         closing_issue_labels={42: ["workstream:design"]},
@@ -518,7 +551,8 @@ def test_fail_closed_closing_refs_gh_failure_refuses(dw, rc, monkeypatch) -> Non
     set is UNKNOWN, not empty — the gate fails closed.
     """
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=_design_collection(rc),
         comments=[_local_verdict_comment("reviewer", "APPROVED")],
         closing_refs_returncode=1,
@@ -532,7 +566,8 @@ def test_fail_closed_closing_refs_gh_failure_refuses(dw, rc, monkeypatch) -> Non
 def test_fail_closed_closing_refs_malformed_json_refuses(dw, rc, monkeypatch) -> None:
     """Malformed JSON from the closingIssuesReferences call → REFUSE."""
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=_design_collection(rc),
         comments=[_local_verdict_comment("reviewer", "APPROVED")],
         closing_refs_stdout="{not valid json",
@@ -550,7 +585,8 @@ def test_fail_closed_issue_label_fetch_none_refuses(dw, rc, monkeypatch) -> None
     it might require cannot be dropped (DEC-032 D5).
     """
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=_design_collection(rc),
         comments=[_local_verdict_comment("reviewer", "APPROVED")],
         closing_issue_labels={42: ["workstream:design"], 43: ["workstream:backend"]},
@@ -567,7 +603,8 @@ def test_pr_closes_nothing_still_baseline_only(dw, rc, monkeypatch) -> None:
     closingIssuesReferences array (PR closes nothing) → baseline only, NOT a
     refusal. Distinguishes 'closes nothing' from 'could not determine'."""
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=_design_collection(rc),
         comments=[_local_verdict_comment("reviewer", "APPROVED")],
         closing_issue_labels={},  # array present + empty.
@@ -587,7 +624,8 @@ def test_fail_closed_no_commit_timestamp_refuses(dw, rc, monkeypatch) -> None:
     empty, accepting every (possibly-stale) verdict. An unestablishable
     freshness anchor must fail closed (DEC-032 D5)."""
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=rc.ContributionCollection(rules=()),
         comments=[_local_verdict_comment("reviewer", "APPROVED")],
         commits=[],
@@ -600,7 +638,8 @@ def test_fail_closed_no_commit_timestamp_refuses(dw, rc, monkeypatch) -> None:
 def test_fail_closed_commit_missing_timestamp_fields_refuses(dw, rc, monkeypatch) -> None:
     """A commit with neither committedDate nor authoredDate → REFUSE."""
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=rc.ContributionCollection(rules=()),
         comments=[_local_verdict_comment("reviewer", "APPROVED")],
         commits=[{"oid": "abc123"}],
@@ -617,7 +656,8 @@ def test_latest_by_timestamp_changes_requested_after_approved_blocks(dw, rc, mon
     """APPROVED then a LATER-timestamp CHANGES_REQUESTED → the later verdict
     wins (REFUSE), regardless of array order — array places APPROVED last."""
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=rc.ContributionCollection(rules=()),
         comments=[
             # CHANGES_REQUESTED is later by timestamp but earlier in the array.
@@ -633,7 +673,8 @@ def test_latest_by_timestamp_approved_after_changes_requested_passes(dw, rc, mon
     """CHANGES_REQUESTED then a LATER-timestamp APPROVED → the later APPROVED
     wins (PASS), even though CHANGES_REQUESTED is last in the array."""
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=rc.ContributionCollection(rules=()),
         comments=[
             # APPROVED is later by timestamp but earlier in the array.
@@ -649,7 +690,8 @@ def test_latest_by_timestamp_remote_path(dw, rc, monkeypatch) -> None:
     """Same latest-by-timestamp selection on the remote path: a later
     CHANGES_REQUESTED after an APPROVED blocks regardless of array order."""
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=rc.ContributionCollection(rules=()),
         comments=[
             _remote_verdict_comment("CHANGES_REQUESTED", author="review-bot", ts=_LATER_TS),
@@ -671,7 +713,8 @@ def test_multi_workstream_label_refuses(dw, rc, monkeypatch) -> None:
     mutually-exclusive workstream axis. The gate refuses rather than guess
     which workstream's contributed reviewer to honour (fail-closed)."""
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=_design_collection(rc),
         comments=[_local_verdict_comment("reviewer", "APPROVED")],
         closing_issue_labels={42: ["workstream:design", "workstream:backend"]},
@@ -685,7 +728,8 @@ def test_duplicate_same_workstream_label_is_single(dw, rc, monkeypatch) -> None:
     """The same workstream value repeated is not multi-workstream — it
     resolves normally (defensive: dedup before the multi-value guard)."""
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=_design_collection(rc),
         comments=[
             _local_verdict_comment("reviewer", "APPROVED"),
@@ -716,13 +760,18 @@ def test_opted_out_reviewer_is_not_required(dw, rc, monkeypatch) -> None:
     """A design PR with design-reviewer opted out passes on the baseline
     approval alone — the contributed gate no longer applies."""
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=_design_collection(rc),
         comments=[_local_verdict_comment("reviewer", "APPROVED")],
         closing_issue_labels={42: ["workstream:design"]},
     )
     result = dw._check_agent_gate(
-        99, {}, _config_opting_out(_DESIGN_OPT_OUT), "resolved", CAP_ROOT,
+        99,
+        {},
+        _config_opting_out(_DESIGN_OPT_OUT),
+        "resolved",
+        CAP_ROOT,
     )
     assert result.passed is True, result.refusal_message
     assert "design-reviewer" not in result.passed_via
@@ -732,13 +781,18 @@ def test_opted_out_undeployed_reviewer_does_not_fail_closed(dw, rc, monkeypatch)
     """An undeployed contributed agent refuses the gate (D5) unless its
     contribution is opted out — then it is never required."""
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=_design_collection(rc, deployed=False),
         comments=[_local_verdict_comment("reviewer", "APPROVED")],
         closing_issue_labels={42: ["workstream:design"]},
     )
     result = dw._check_agent_gate(
-        99, {}, _config_opting_out(_DESIGN_OPT_OUT), "resolved", CAP_ROOT,
+        99,
+        {},
+        _config_opting_out(_DESIGN_OPT_OUT),
+        "resolved",
+        CAP_ROOT,
     )
     assert result.passed is True, result.refusal_message
 
@@ -747,15 +801,18 @@ def test_opt_out_naming_no_contribution_refuses(dw, rc, monkeypatch) -> None:
     """An opt-out naming a reviewer no installed capability contributes is a
     validation error: the gate refuses, naming the entry and the key to fix."""
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=_design_collection(rc),
         comments=[_local_verdict_comment("reviewer", "APPROVED")],
         closing_issue_labels={42: ["workstream:design"]},
     )
     result = dw._check_agent_gate(
-        99, {},
+        99,
+        {},
         _config_opting_out({**_DESIGN_OPT_OUT, "reviewer": "ui-reviewer"}),
-        "resolved", CAP_ROOT,
+        "resolved",
+        CAP_ROOT,
     )
     assert result.passed is False
     assert "opt-out list is invalid" in result.refusal_message
@@ -785,10 +842,8 @@ def _floor_collection(rc):
 
 def _files_api_pages(paths, size=100):
     """`gh api --paginate … --jq` output for `paths`, `size` files per page."""
-    pages = [paths[i:i + size] for i in range(0, len(paths), size)]
-    return "".join(
-        json.dumps([path, None]) + "\n" for page in pages for path in page
-    )
+    pages = [paths[i : i + size] for i in range(0, len(paths), size)]
+    return "".join(json.dumps([path, None]) + "\n" for page in pages for path in page)
 
 
 def _wire_files_api(dw, monkeypatch, *, stdout="", returncode=0, stderr=""):
@@ -800,7 +855,10 @@ def _wire_files_api(dw, monkeypatch, *, stdout="", returncode=0, stderr=""):
         if args[:2] == ["gh", "api"] and "/files" in " ".join(args):
             calls.append(args)
             return subprocess.CompletedProcess(
-                args=args, returncode=returncode, stdout=stdout, stderr=stderr,
+                args=args,
+                returncode=returncode,
+                stdout=stdout,
+                stderr=stderr,
             )
         return inner(args, config, **kwargs)
 
@@ -817,7 +875,8 @@ def test_large_pr_resolves_floor_reviewer_and_passes(dw, rc, monkeypatch) -> Non
     """A 350-file PR resolves code-reviewer from the code file on page four,
     and passes once it approves."""
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=_floor_collection(rc),
         comments=[
             _local_verdict_comment("reviewer", "APPROVED"),
@@ -826,7 +885,9 @@ def test_large_pr_resolves_floor_reviewer_and_passes(dw, rc, monkeypatch) -> Non
         closing_issue_labels={42: ["type:docs"]},
     )
     calls = _wire_files_api(
-        dw, monkeypatch, stdout=_files_api_pages(_LARGE_PR_PATHS),
+        dw,
+        monkeypatch,
+        stdout=_files_api_pages(_LARGE_PR_PATHS),
     )
     result = dw._check_agent_gate(99, {}, _config(), "resolved", CAP_ROOT)
     assert len(calls) == 1
@@ -838,7 +899,8 @@ def test_large_pr_still_requires_the_floor_reviewer(dw, rc, monkeypatch) -> None
     """The same PR with only the baseline approved refuses, naming the floor
     reviewer the last page brought in — the floor is computed, not skipped."""
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=_floor_collection(rc),
         comments=[_local_verdict_comment("reviewer", "APPROVED")],
         closing_issue_labels={42: ["type:docs"]},
@@ -852,7 +914,8 @@ def test_large_pr_still_requires_the_floor_reviewer(dw, rc, monkeypatch) -> None
 def test_files_api_failure_refuses_as_transient(dw, rc, monkeypatch) -> None:
     """A failed files read refuses (fail closed) and asks for a retry."""
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=_floor_collection(rc),
         comments=[_local_verdict_comment("reviewer", "APPROVED")],
         closing_issue_labels={42: ["type:docs"]},
@@ -868,7 +931,8 @@ def test_files_api_failure_refuses_as_transient(dw, rc, monkeypatch) -> None:
 def test_files_api_empty_refuses(dw, rc, monkeypatch) -> None:
     """An empty files read is unknown ground truth, not a docs-only PR."""
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=_floor_collection(rc),
         comments=[_local_verdict_comment("reviewer", "APPROVED")],
         closing_issue_labels={42: ["type:docs"]},
@@ -880,12 +944,15 @@ def test_files_api_empty_refuses(dw, rc, monkeypatch) -> None:
 
 
 def test_pr_past_the_listing_ceiling_refuses_naming_the_cause(
-    dw, rc, monkeypatch,
+    dw,
+    rc,
+    monkeypatch,
 ) -> None:
     """A PR reaching GitHub's 3000-file listing refuses with the cause and a
     split-the-PR remediation, not a "transient gh failure" retry."""
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=_floor_collection(rc),
         comments=[_local_verdict_comment("reviewer", "APPROVED")],
         closing_issue_labels={42: ["type:docs"]},
@@ -912,7 +979,8 @@ _CHANGESET = ".changes/unreleased/project-management-none-20261001-wording.yaml"
 
 def test_changeset_only_diff_needs_no_floor_reviewer(dw, rc, monkeypatch) -> None:
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=_floor_collection(rc),
         comments=[_local_verdict_comment("reviewer", "APPROVED")],
         changed_files=("README.md", _CHANGESET),
@@ -924,7 +992,8 @@ def test_changeset_only_diff_needs_no_floor_reviewer(dw, rc, monkeypatch) -> Non
 
 def test_changeset_with_code_needs_the_floor_reviewer(dw, rc, monkeypatch) -> None:
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=_floor_collection(rc),
         comments=[_local_verdict_comment("reviewer", "APPROVED")],
         changed_files=(_CHANGESET, "src/app.py"),
@@ -935,13 +1004,16 @@ def test_changeset_with_code_needs_the_floor_reviewer(dw, rc, monkeypatch) -> No
 
 
 def test_large_pr_with_only_a_changeset_beside_docs_needs_no_floor_reviewer(
-    dw, rc, monkeypatch,
+    dw,
+    rc,
+    monkeypatch,
 ) -> None:
     """The list is applied to every page the files API returns: a 350-file PR
     of docs whose one non-doc file, on the last page, is its changeset draws
     no floor reviewer."""
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=_floor_collection(rc),
         comments=[_local_verdict_comment("reviewer", "APPROVED")],
         closing_issue_labels={42: ["type:docs"]},
@@ -955,7 +1027,8 @@ def test_large_pr_with_only_a_changeset_beside_docs_needs_no_floor_reviewer(
 
 def test_malformed_not_code_refuses(dw, rc, monkeypatch) -> None:
     _wire(
-        dw, monkeypatch,
+        dw,
+        monkeypatch,
         collection=_floor_collection(rc),
         comments=[_local_verdict_comment("reviewer", "APPROVED")],
         changed_files=(_CHANGESET,),

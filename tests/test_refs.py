@@ -10,13 +10,13 @@ from click.testing import CliRunner
 from project_kit import refs
 from project_kit.cli import main
 
-
 # --- fixtures -------------------------------------------------------
 
 
 @pytest.fixture
 def kit_target(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """Minimal tree: `.pkit/agents/{core,project}/`, `.pkit/skills/{core,project}/`, `.pkit/decisions/{core,project}/`."""
+    """Minimal tree: `.pkit/agents/{core,project}/`, `.pkit/skills/{core,project}/`,
+    `.pkit/decisions/{core,project}/`."""
     for area in ("agents", "skills", "decisions"):
         for ns in ("core", "project"):
             (tmp_path / ".pkit" / area / ns).mkdir(parents=True)
@@ -39,7 +39,8 @@ def _write_skill(root: Path, namespace: str, name: str, body: str) -> Path:
 def _write_decision(root: Path, namespace: str, prefix: str, num: str, slug: str) -> Path:
     target = root / ".pkit" / "decisions" / namespace / f"{prefix}-{num}-{slug}.md"
     target.write_text(
-        f"---\nid: {prefix}-{num}\ntitle: Test\nstatus: accepted\ndate: 2026-01-01\nauthor: t\n---\n",
+        f"---\nid: {prefix}-{num}\ntitle: Test\nstatus: accepted\ndate: 2026-01-01\nauthor: t\n"
+        "---\n",
         encoding="utf-8",
     )
     return target
@@ -82,7 +83,10 @@ def test_parser_extracts_hook_names() -> None:
 
 
 def test_parser_skips_fenced_code_blocks() -> None:
-    body = "Outside text references COR-005.\n\n```yaml\nreads:\n  records: [COR-999]\n```\n\nMore text."
+    body = (
+        "Outside text references COR-005.\n\n```yaml\nreads:\n  records: [COR-999]\n```\n\n"
+        "More text."
+    )
     refs_ = refs.extract_body_refs(body)
     assert "COR-005" in refs_.records
     assert "COR-999" not in refs_.records, "fenced code block leaked through"
@@ -351,9 +355,7 @@ See [evidence:DEC-001-citation-discipline] for the rule.
     _write_skill(kit_target, "core", "skill-a", body)
 
     issues = refs.validate_corpus(kit_target)
-    citation_issues = [
-        i for i in issues if "evidence:DEC-001-citation-discipline" in i.diagnosis
-    ]
+    citation_issues = [i for i in issues if "evidence:DEC-001-citation-discipline" in i.diagnosis]
     assert citation_issues == []
 
 
@@ -458,8 +460,7 @@ Per [COR-001](../../decisions/core/COR-001-a-thing.md) this holds.
     _write_skill(kit_target, "core", "skill-a", body)
     issues = refs.validate_corpus(kit_target)
     assert not any(
-        "body cites path" in i.diagnosis and "COR-001-a-thing.md" in i.diagnosis
-        for i in issues
+        "body cites path" in i.diagnosis and "COR-001-a-thing.md" in i.diagnosis for i in issues
     ), [i.diagnosis for i in issues]
 
 
@@ -511,8 +512,7 @@ This reads `/etc/pkit/other-capability/state.yaml` off the host.
     _write_capability_skill(kit_target, "mycap", "s", body)
     issues = refs.validate_corpus(kit_target)
     assert any(
-        "body cites path '/etc/pkit/other-capability/state.yaml'" in i.diagnosis
-        for i in issues
+        "body cites path '/etc/pkit/other-capability/state.yaml'" in i.diagnosis for i in issues
     ), [i.diagnosis for i in issues]
 
 
@@ -623,7 +623,9 @@ def test_resolve_record_rejects_malformed_id(kit_target: Path) -> None:
 def test_resolve_hook_picks_project_over_core(kit_target: Path) -> None:
     providers = [
         refs.Provider(hook="x.y", tier="core", source="core-skill", implementation="/core-skill"),
-        refs.Provider(hook="x.y", tier="project", source="proj-skill", implementation="/proj-skill"),
+        refs.Provider(
+            hook="x.y", tier="project", source="proj-skill", implementation="/proj-skill"
+        ),
     ]
     winner = refs.resolve_hook(providers, "x.y")
     assert winner is not None
@@ -717,7 +719,8 @@ def _agent_with_storyboard(root: Path, name: str, sb_path: str) -> Path:
     agent_path = root / ".pkit" / "agents" / "project" / f"{name}.md"
     agent_path.parent.mkdir(parents=True, exist_ok=True)
     agent_path.write_text(
-        f"---\nname: {name}\ndescription: test\ntools: [Read]\nstoryboards:\n  - {sb_path}\n---\n# A\nLoad `{sb_path}` at session start.\n",
+        f"---\nname: {name}\ndescription: test\ntools: [Read]\nstoryboards:\n  - {sb_path}\n---\n"
+        f"# A\nLoad `{sb_path}` at session start.\n",
         encoding="utf-8",
     )
     return agent_path
@@ -763,7 +766,8 @@ def test_validate_storyboards_passes_when_declared_path_exists_and_body_cites(
     storyboard = kit_target / ".pkit" / "agents" / "project" / "a" / "storyboard.md"
     storyboard.parent.mkdir(parents=True)
     storyboard.write_text(
-        "---\nconsumers:\n  - kind: agent\n    name: a\n    namespace: project\n---\n\n# Storyboard\n",
+        "---\nconsumers:\n  - kind: agent\n    name: a\n    namespace: project\n---\n\n"
+        "# Storyboard\n",
         encoding="utf-8",
     )
 
@@ -866,12 +870,14 @@ def _make_storyboarded_agent(
     agent_file = folder / f"{name}.md"
     sb_path_rel = f".pkit/agents/project/{name}/{sb_filename}"
     agent_file.write_text(
-        f"---\nname: {name}\ndescription: t\ntools: [Read]\nstoryboards:\n  - {sb_path_rel}\n---\n# A\nLoad `{sb_path_rel}` at session start.\n",
+        f"---\nname: {name}\ndescription: t\ntools: [Read]\nstoryboards:\n  - {sb_path_rel}\n---\n"
+        f"# A\nLoad `{sb_path_rel}` at session start.\n",
         encoding="utf-8",
     )
     sb_file = folder / sb_filename
     sb_file.write_text(
-        f"---\nconsumers:\n  - kind: agent\n    name: {name}\n    namespace: project\n---\n\n# Storyboard\n",
+        f"---\nconsumers:\n  - kind: agent\n    name: {name}\n    namespace: project\n---\n\n"
+        "# Storyboard\n",
         encoding="utf-8",
     )
     return agent_file, sb_file
@@ -879,7 +885,7 @@ def _make_storyboarded_agent(
 
 def test_validate_storyboard_missing_consumers_frontmatter(kit_target: Path) -> None:
     """A storyboard file without `consumers:` frontmatter is flagged."""
-    agent_file, sb_file = _make_storyboarded_agent(kit_target, "a")
+    _agent_file, sb_file = _make_storyboarded_agent(kit_target, "a")
     sb_file.write_text("# Storyboard\n\nNo frontmatter.\n", encoding="utf-8")
 
     issues = refs.validate_corpus(kit_target)
@@ -888,7 +894,7 @@ def test_validate_storyboard_missing_consumers_frontmatter(kit_target: Path) -> 
 
 def test_validate_storyboard_consumer_back_reference(kit_target: Path) -> None:
     """If a storyboard declares an agent consumer, that agent must declare this storyboard back."""
-    agent_file, sb_file = _make_storyboarded_agent(kit_target, "a")
+    agent_file, _sb_file = _make_storyboarded_agent(kit_target, "a")
     # Strip the storyboards: declaration from the agent — now back-reference fails.
     agent_file.write_text(
         "---\nname: a\ndescription: t\ntools: [Read]\n---\n# A\n",
@@ -897,8 +903,7 @@ def test_validate_storyboard_consumer_back_reference(kit_target: Path) -> None:
 
     issues = refs.validate_corpus(kit_target)
     assert any(
-        "consumer agent project/a" in i.diagnosis
-        and "does not include this path" in i.diagnosis
+        "consumer agent project/a" in i.diagnosis and "does not include this path" in i.diagnosis
         for i in issues
     )
 
@@ -909,7 +914,8 @@ def test_validate_storyboard_consumer_must_exist(kit_target: Path) -> None:
     folder.mkdir(parents=True)
     sb_file = folder / "storyboard.md"
     sb_file.write_text(
-        "---\nconsumers:\n  - kind: agent\n    name: nonexistent\n    namespace: project\n---\n\n# Orphan\n",
+        "---\nconsumers:\n  - kind: agent\n    name: nonexistent\n    namespace: project\n---\n\n"
+        "# Orphan\n",
         encoding="utf-8",
     )
 
@@ -923,7 +929,8 @@ def test_validate_storyboard_unsupported_kind(kit_target: Path) -> None:
     folder.mkdir(parents=True)
     sb_file = folder / "storyboard.md"
     sb_file.write_text(
-        "---\nconsumers:\n  - kind: cli\n    name: pkit-upgrade\n    namespace: core\n---\n\n# Future\n",
+        "---\nconsumers:\n  - kind: cli\n    name: pkit-upgrade\n    namespace: core\n---\n\n"
+        "# Future\n",
         encoding="utf-8",
     )
 
@@ -935,9 +942,7 @@ def test_validate_storyboard_orphan_file_flagged(kit_target: Path) -> None:
     """A storyboard file in an agent folder that no agent declares is flagged as orphan."""
     folder = kit_target / ".pkit" / "agents" / "project" / "a"
     folder.mkdir(parents=True)
-    (folder / "a.md").write_text(
-        "---\nname: a\ndescription: t\n---\n# A\n", encoding="utf-8"
-    )
+    (folder / "a.md").write_text("---\nname: a\ndescription: t\n---\n# A\n", encoding="utf-8")
     # Drop a storyboard alongside that the agent doesn't declare.
     orphan = folder / "orphan.storyboard.md"
     orphan.write_text(
@@ -953,18 +958,18 @@ def test_validate_storyboard_quiet_on_clean_two_sided_pair(kit_target: Path) -> 
     """A properly-declared two-sided pair produces no storyboard-related findings."""
     _make_storyboarded_agent(kit_target, "clean-agent")
     issues = refs.validate_corpus(kit_target)
-    assert all(
-        "storyboard" not in i.diagnosis.lower() for i in issues
-    ), f"unexpected storyboard findings on clean pair: {issues}"
+    assert all("storyboard" not in i.diagnosis.lower() for i in issues), (
+        f"unexpected storyboard findings on clean pair: {issues}"
+    )
 
 
 def test_validate_storyboards_quiet_when_no_storyboards_declared(kit_target: Path) -> None:
     """Agents without `storyboards:` get no storyboard-related findings."""
     _write_agent(kit_target, "project", "judgement-agent", "---\nname: judgement-agent\n---\n# A\n")
     issues = refs.validate_corpus(kit_target)
-    assert all(
-        "storyboard" not in i.diagnosis.lower() for i in issues
-    ), f"unexpected storyboard findings on storyboardless agent: {issues}"
+    assert all("storyboard" not in i.diagnosis.lower() for i in issues), (
+        f"unexpected storyboard findings on storyboardless agent: {issues}"
+    )
 
 
 # --- capability storyboards (#1101) ---------------------------------
@@ -1029,8 +1034,7 @@ def test_capability_storyboard_broken_link_back_is_flagged(kit_target: Path) -> 
 
     findings = _storyboard_findings(kit_target, _CAP_STORYBOARD)
     assert any(
-        "consumer agent cap/cap-agent" in f and "does not include this path" in f
-        for f in findings
+        "consumer agent cap/cap-agent" in f and "does not include this path" in f for f in findings
     ), findings
     assert any("no agent declares it" in f for f in findings), findings
 
@@ -1080,7 +1084,9 @@ Per COR-010 this matters.
 def test_rot_flags_dropped_scratchpad_reference(kit_target: Path) -> None:
     dropped = kit_target / ".pkit" / "scratchpad" / "dropped"
     dropped.mkdir(parents=True)
-    (dropped / "2026-05-01-old-idea.md").write_text("---\nretired: 2026-05-10\n---\n# old\n", encoding="utf-8")
+    (dropped / "2026-05-01-old-idea.md").write_text(
+        "---\nretired: 2026-05-10\n---\n# old\n", encoding="utf-8"
+    )
     body = """---
 name: skill-a
 description: t
@@ -1347,9 +1353,7 @@ def _write_overlay(root: Path, text: str) -> Path:
     return target
 
 
-def _write_owning_agent(
-    root: Path, name: str, owns: list[str], *, namespace: str = "core"
-) -> Path:
+def _write_owning_agent(root: Path, name: str, owns: list[str], *, namespace: str = "core") -> Path:
     entries = "\n".join(f"  - {entry}" for entry in owns)
     body = f"""---
 name: {name}
@@ -1364,9 +1368,7 @@ Write authority is whatever its frontmatter declares.
 
 
 def _ownership_diagnoses(root: Path) -> list[str]:
-    return [
-        i.diagnosis for i in refs.validate_corpus(root) if "ownership conflict" in i.diagnosis
-    ]
+    return [i.diagnosis for i in refs.validate_corpus(root) if "ownership conflict" in i.diagnosis]
 
 
 def test_owns_placeholder_resolves_through_overlay_and_flags_containment(
@@ -1399,8 +1401,7 @@ def test_owns_per_agent_override_replaces_the_default(kit_target: Path) -> None:
     """Two agents on one category do NOT overlap once an override moves one away."""
     _write_overlay(
         kit_target,
-        "code-paths:\n  - src/app/\n"
-        "overrides:\n  beta:\n    code-paths:\n      - tests/\n",
+        "code-paths:\n  - src/app/\noverrides:\n  beta:\n    code-paths:\n      - tests/\n",
     )
     _write_owning_agent(kit_target, "alpha", ["<code-paths>"])
     _write_owning_agent(kit_target, "beta", ["<code-paths>"])
@@ -1412,8 +1413,7 @@ def test_owns_per_agent_override_value_is_what_participates(kit_target: Path) ->
     """The override's own paths — not the default's — enter the overlap check."""
     _write_overlay(
         kit_target,
-        "code-paths:\n  - src/app/\n"
-        "overrides:\n  beta:\n    code-paths:\n      - tests/\n",
+        "code-paths:\n  - src/app/\noverrides:\n  beta:\n    code-paths:\n      - tests/\n",
     )
     _write_owning_agent(kit_target, "alpha", ["<code-paths>"])
     _write_owning_agent(kit_target, "beta", ["<code-paths>"])
@@ -1523,7 +1523,9 @@ Per COR-001.
 
 
 def test_cli_refs_rename_dry_run(kit_target: Path) -> None:
-    body = "---\nname: skill-a\ndescription: t\nreads:\n  records: [COR-001]\n---\n# A\nPer COR-001.\n"
+    body = (
+        "---\nname: skill-a\ndescription: t\nreads:\n  records: [COR-001]\n---\n# A\nPer COR-001.\n"
+    )
     skill = _write_skill(kit_target, "core", "skill-a", body)
     before = skill.read_text()
     runner = CliRunner()
@@ -1531,6 +1533,16 @@ def test_cli_refs_rename_dry_run(kit_target: Path) -> None:
     assert result.exit_code == 0
     assert "would modify" in result.output
     assert skill.read_text() == before
+
+
+@pytest.mark.parametrize("old, new", [("", "COR-099"), ("COR-001", "")])
+def test_cli_refs_rename_refuses_an_empty_value(kit_target: Path, old: str, new: str) -> None:
+    # The refusal is a message, not a traceback: the module once raised
+    # `click.ClickException` without importing click, so this was a NameError.
+    result = CliRunner().invoke(main, ["refs", "rename", old, new])
+    assert result.exit_code == 1
+    assert "both old and new values must be non-empty" in result.output
+    assert not isinstance(result.exception, NameError)
 
 
 def test_cli_refs_graph_dot_format(kit_target: Path) -> None:

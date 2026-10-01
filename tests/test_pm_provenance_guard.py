@@ -17,9 +17,7 @@ from __future__ import annotations
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SCRIPTS = (
-    REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
-)
+SCRIPTS = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
 
 # The seam module itself constructs the footer; it is the exempt origin.
 _EXEMPT = {"_lib/provenance.py"}
@@ -31,9 +29,7 @@ _SEAM_CALL = "provenance.stamp("
 
 
 def _py_files() -> list[Path]:
-    return sorted(
-        [*SCRIPTS.glob("*.py"), *SCRIPTS.glob("_lib/*.py")]
-    )
+    return sorted([*SCRIPTS.glob("*.py"), *SCRIPTS.glob("_lib/*.py")])
 
 
 def _rel(p: Path) -> str:
@@ -51,7 +47,7 @@ def test_every_body_write_routes_through_the_seam() -> None:
             offenders.append(rel)
     assert not offenders, (
         "these scripts construct an issue/PR body write "
-        f'({_BODY_WRITE_MARKER}) without routing through {_SEAM_CALL} '
+        f"({_BODY_WRITE_MARKER}) without routing through {_SEAM_CALL} "
         "(ADR-037 item 4): " + ", ".join(offenders)
     )
 
@@ -61,7 +57,6 @@ def test_guard_has_body_writers_to_check() -> None:
     writers = [
         _rel(f)
         for f in _py_files()
-        if _BODY_WRITE_MARKER in f.read_text(encoding="utf-8")
-        and _rel(f) not in _EXEMPT
+        if _BODY_WRITE_MARKER in f.read_text(encoding="utf-8") and _rel(f) not in _EXEMPT
     ]
     assert writers, "expected at least one body-writing script to guard"

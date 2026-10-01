@@ -17,7 +17,6 @@ from pathlib import Path
 
 import pytest
 
-
 REPO_ROOT = Path(__file__).resolve().parent.parent
 ADAPTER_SCRIPT = REPO_ROOT / ".pkit" / "adapters" / "claude-code" / "merge-claude-md.sh"
 
@@ -78,10 +77,8 @@ def test_created_claude_md_include_after_h1(adapter_tree: Path) -> None:
     """The @-include must not be on line 1; it must come after the H1 (rule 13)."""
     _run_script(adapter_tree)
     lines = _claude_md(adapter_tree).read_text(encoding="utf-8").splitlines()
-    include_idx = next(
-        (i for i, l in enumerate(lines) if "@.pkit/rules/core.md" in l), None
-    )
-    h1_idx = next((i for i, l in enumerate(lines) if l.startswith("# ")), None)
+    include_idx = next((i for i, line in enumerate(lines) if "@.pkit/rules/core.md" in line), None)
+    h1_idx = next((i for i, line in enumerate(lines) if line.startswith("# ")), None)
     assert include_idx is not None, "@.pkit/rules/core.md not found in created file"
     assert h1_idx is not None, "no H1 in created file"
     assert include_idx > h1_idx, (
@@ -119,10 +116,8 @@ def test_include_positioned_after_h1_in_existing_file(adapter_tree: Path) -> Non
     )
     _run_script(adapter_tree)
     lines = _claude_md(adapter_tree).read_text(encoding="utf-8").splitlines()
-    include_idx = next(
-        (i for i, l in enumerate(lines) if "@.pkit/rules/core.md" in l), None
-    )
-    h1_idx = next((i for i, l in enumerate(lines) if l.startswith("# ")), None)
+    include_idx = next((i for i, line in enumerate(lines) if "@.pkit/rules/core.md" in line), None)
+    h1_idx = next((i for i, line in enumerate(lines) if line.startswith("# ")), None)
     assert include_idx is not None
     assert h1_idx is not None
     assert include_idx > h1_idx, "@-include appears before the H1"
@@ -170,7 +165,7 @@ def test_prepend_produces_h1_for_no_h1_case(adapter_tree: Path) -> None:
     _claude_md(adapter_tree).write_text("No heading here.\n", encoding="utf-8")
     _run_script(adapter_tree)
     lines = _claude_md(adapter_tree).read_text(encoding="utf-8").splitlines()
-    assert any(l.startswith("# ") for l in lines), "prepend case produced no H1"
+    assert any(line.startswith("# ") for line in lines), "prepend case produced no H1"
 
 
 # ── Scenario 4: @-include already present → no-op ─────────────────────────

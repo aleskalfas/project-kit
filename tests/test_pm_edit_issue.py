@@ -16,12 +16,7 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = (
-    REPO_ROOT
-    / ".pkit"
-    / "capabilities"
-    / "project-management"
-    / "scripts"
-    / "edit-issue.py"
+    REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "edit-issue.py"
 )
 
 
@@ -150,17 +145,10 @@ def test_compute_new_body_missing_file_returns_none(ei, tmp_path) -> None:
 # --- validation ------------------------------------------------------
 
 
-def test_validate_passes_for_well_formed_task(
-    ei, issue_types, titles, body_format
-) -> None:
+def test_validate_passes_for_well_formed_task(ei, issue_types, titles, body_format) -> None:
     findings = ei._validate(
         title="[Task] Install the Claude Code CLI inside the sandbox",
-        body=(
-            "Feature: #1\n\n"
-            "## What\nx\n"
-            "## Acceptance criteria\n- [ ] x\n"
-            "## Doc impact\nnone."
-        ),
+        body=("Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."),
         issue_types=issue_types,
         titles=titles,
         body_format=body_format,
@@ -168,9 +156,7 @@ def test_validate_passes_for_well_formed_task(
     assert findings == []
 
 
-def test_validate_flags_unknown_title_prefix(
-    ei, issue_types, titles, body_format
-) -> None:
+def test_validate_flags_unknown_title_prefix(ei, issue_types, titles, body_format) -> None:
     findings = ei._validate(
         title="Random title",
         body="some body",
@@ -182,9 +168,7 @@ def test_validate_flags_unknown_title_prefix(
     assert "title.format" in labels
 
 
-def test_validate_flags_missing_required_section(
-    ei, issue_types, titles, body_format
-) -> None:
+def test_validate_flags_missing_required_section(ei, issue_types, titles, body_format) -> None:
     findings = ei._validate(
         title="[Task] Install the Claude Code CLI inside the sandbox",
         body="Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x",
@@ -196,9 +180,7 @@ def test_validate_flags_missing_required_section(
     assert "body.required-section" in labels
 
 
-def test_validate_flags_missing_parent_ref(
-    ei, issue_types, titles, body_format
-) -> None:
+def test_validate_flags_missing_parent_ref(ei, issue_types, titles, body_format) -> None:
     findings = ei._validate(
         title="[Task] Install the Claude Code CLI inside the sandbox",
         body="## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone.",
@@ -210,9 +192,7 @@ def test_validate_flags_missing_parent_ref(
     assert "body.parent-ref" in labels
 
 
-def test_validate_accepts_a_marked_descendant(
-    ei, issue_types, titles, body_format
-) -> None:
+def test_validate_accepts_a_marked_descendant(ei, issue_types, titles, body_format) -> None:
     """DEC-013 (#763) AC5: `edit-issue` must accept a marked descendant — the
     `Integration: integration/<slug>` marker sits above the parent-ref, and this
     is the originating symptom (edit-issue hard-rejected every marked Task)."""
@@ -232,9 +212,7 @@ def test_validate_accepts_a_marked_descendant(
     assert findings == []
 
 
-def test_validate_flags_a_malformed_marker_precisely(
-    ei, issue_types, titles, body_format
-) -> None:
+def test_validate_flags_a_malformed_marker_precisely(ei, issue_types, titles, body_format) -> None:
     """A malformed marker hard-rejects as `body.integration-marker` — NOT the
     misleading `body.parent-ref` it would trigger by falling through (#763 AC3)."""
     findings = ei._validate(
@@ -255,9 +233,7 @@ def test_validate_flags_a_malformed_marker_precisely(
     assert "body.parent-ref" not in labels
 
 
-def test_validate_flags_h1_in_body(
-    ei, issue_types, titles, body_format
-) -> None:
+def test_validate_flags_h1_in_body(ei, issue_types, titles, body_format) -> None:
     findings = ei._validate(
         title="[Task] Install the Claude Code CLI inside the sandbox",
         body=(
@@ -272,9 +248,7 @@ def test_validate_flags_h1_in_body(
     assert "body.h1" in labels
 
 
-def test_validate_warns_on_file_line_refs(
-    ei, issue_types, titles, body_format
-) -> None:
+def test_validate_warns_on_file_line_refs(ei, issue_types, titles, body_format) -> None:
     findings = ei._validate(
         title="[Task] Install the Claude Code CLI inside the sandbox",
         body=(
@@ -291,9 +265,7 @@ def test_validate_warns_on_file_line_refs(
     assert any(f.label == "body.file-line-refs" for f in warns)
 
 
-def test_validate_epic_passes_without_parent_ref(
-    ei, issue_types, titles, body_format
-) -> None:
+def test_validate_epic_passes_without_parent_ref(ei, issue_types, titles, body_format) -> None:
     findings = ei._validate(
         title="[EPIC] Migrate the legacy work-tracker into Projects v2",
         body="some body",
@@ -330,16 +302,11 @@ def test_validate_accepts_markdown_milestone_link_form(
     )
 
 
-def test_validate_warns_on_old_milestone_form(
-    ei, issue_types, titles, body_format
-) -> None:
+def test_validate_warns_on_old_milestone_form(ei, issue_types, titles, body_format) -> None:
     """Old plain `Milestone: #N` form is accepted with a deprecation warning."""
     findings = ei._validate(
         title="[Task] Install the Claude Code CLI inside the sandbox",
-        body=(
-            "Milestone: #6\n\n"
-            "## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."
-        ),
+        body=("Milestone: #6\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."),
         issue_types=issue_types,
         titles=titles,
         body_format=body_format,
@@ -350,15 +317,10 @@ def test_validate_warns_on_old_milestone_form(
     assert "body.parent-ref.milestone-old-form" in labels
     assert severities["body.parent-ref.milestone-old-form"] == "warning"
     # And no hard-reject parent-ref finding.
-    assert not any(
-        f.severity == "hard-reject" and f.label == "body.parent-ref"
-        for f in findings
-    )
+    assert not any(f.severity == "hard-reject" and f.label == "body.parent-ref" for f in findings)
 
 
-def test_validate_still_rejects_unrelated_first_line(
-    ei, issue_types, titles, body_format
-) -> None:
+def test_validate_still_rejects_unrelated_first_line(ei, issue_types, titles, body_format) -> None:
     """Junk first lines (not any of the three accepted forms) still hard-reject."""
     findings = ei._validate(
         title="[Task] Install the Claude Code CLI inside the sandbox",
@@ -371,30 +333,22 @@ def test_validate_still_rejects_unrelated_first_line(
         body_format=body_format,
     )
     hard_rejects = [
-        f for f in findings
-        if f.severity == "hard-reject" and f.label == "body.parent-ref"
+        f for f in findings if f.severity == "hard-reject" and f.label == "body.parent-ref"
     ]
     assert hard_rejects, "junk first line should have raised a hard-reject parent-ref finding"
 
 
-def test_validate_issue_parent_form_still_accepted(
-    ei, issue_types, titles, body_format
-) -> None:
+def test_validate_issue_parent_form_still_accepted(ei, issue_types, titles, body_format) -> None:
     """Regression guard: the plain `<Label>: #N` issue-parent form still passes."""
     findings = ei._validate(
         title="[Task] Install the Claude Code CLI inside the sandbox",
-        body=(
-            "Feature: #1\n\n"
-            "## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."
-        ),
+        body=("Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."),
         issue_types=issue_types,
         titles=titles,
         body_format=body_format,
     )
     parent_findings = [f for f in findings if f.label.startswith("body.parent-ref")]
-    assert parent_findings == [], (
-        f"issue-parent form rejected — got findings: {parent_findings}"
-    )
+    assert parent_findings == [], f"issue-parent form rejected — got findings: {parent_findings}"
 
 
 # --- validation scope: check_title / check_body (#583) ---------------
@@ -408,9 +362,7 @@ _GOOD_TASK_TITLE = "[Task] Install the Claude Code CLI inside the sandbox"
 _LEGACY_BODY = "A stale legacy body with no required sections and no parent ref."
 
 
-def test_validate_full_scope_flags_legacy_body(
-    ei, issue_types, titles, body_format
-) -> None:
+def test_validate_full_scope_flags_legacy_body(ei, issue_types, titles, body_format) -> None:
     """Control: at full scope, the legacy body DOES produce body findings — so
     the title-only test below is meaningfully dropping them."""
     findings = ei._validate(
@@ -423,9 +375,7 @@ def test_validate_full_scope_flags_legacy_body(
     assert any(f.label.startswith("body.") for f in findings)
 
 
-def test_validate_title_only_passes_over_legacy_body(
-    ei, issue_types, titles, body_format
-) -> None:
+def test_validate_title_only_passes_over_legacy_body(ei, issue_types, titles, body_format) -> None:
     """A2 core (#583): a title-only edit (valid title) passes clean over an
     untouched non-conformant body."""
     findings = ei._validate(
@@ -440,9 +390,7 @@ def test_validate_title_only_passes_over_legacy_body(
     assert findings == [], [f.label for f in findings]
 
 
-def test_validate_title_only_still_flags_bad_title(
-    ei, issue_types, titles, body_format
-) -> None:
+def test_validate_title_only_still_flags_bad_title(ei, issue_types, titles, body_format) -> None:
     """A title-only edit still validates the new title; body findings are dropped."""
     findings = ei._validate(
         title="Random title",
@@ -477,9 +425,7 @@ def test_validate_body_only_validates_body_drops_title(
     assert all(not lbl.startswith("title.") for lbl in labels)
 
 
-def test_validate_body_only_drops_bad_title_finding(
-    ei, issue_types, titles, body_format
-) -> None:
+def test_validate_body_only_drops_bad_title_finding(ei, issue_types, titles, body_format) -> None:
     """A body-only edit does not re-reject a pre-existing malformed title."""
     findings = ei._validate(
         title="Random title",
@@ -525,27 +471,37 @@ def classification() -> dict:
 
 def test_infer_structural_type_honours_bug_prefix(ei, issue_types, classification) -> None:
     """[Bug] prefix maps to structural type 'task' via classification.yaml."""
-    result = ei.infer_structural_type("[Bug] Fix the auth flow", issue_types, classification=classification)
+    result = ei.infer_structural_type(
+        "[Bug] Fix the auth flow", issue_types, classification=classification
+    )
     assert result == "task"
 
 
 def test_infer_structural_type_honours_docs_prefix(ei, issue_types, classification) -> None:
-    result = ei.infer_structural_type("[Docs] Update README", issue_types, classification=classification)
+    result = ei.infer_structural_type(
+        "[Docs] Update README", issue_types, classification=classification
+    )
     assert result == "task"
 
 
 def test_infer_structural_type_honours_chore_prefix(ei, issue_types, classification) -> None:
-    result = ei.infer_structural_type("[Chore] Bump dependency", issue_types, classification=classification)
+    result = ei.infer_structural_type(
+        "[Chore] Bump dependency", issue_types, classification=classification
+    )
     assert result == "task"
 
 
 def test_infer_structural_type_honours_refactor_prefix(ei, issue_types, classification) -> None:
-    result = ei.infer_structural_type("[Refactor] Extract helper", issue_types, classification=classification)
+    result = ei.infer_structural_type(
+        "[Refactor] Extract helper", issue_types, classification=classification
+    )
     assert result == "task"
 
 
 def test_infer_structural_type_honours_test_prefix(ei, issue_types, classification) -> None:
-    result = ei.infer_structural_type("[Test] Add coverage", issue_types, classification=classification)
+    result = ei.infer_structural_type(
+        "[Test] Add coverage", issue_types, classification=classification
+    )
     assert result == "task"
 
 
@@ -568,12 +524,7 @@ def test_validate_accepts_bug_prefix_with_classification(
     }
     findings = ei._validate(
         title="[Bug] Fix the auth flow completely",
-        body=(
-            "Feature: #1\n\n"
-            "## What\nx\n"
-            "## Acceptance criteria\n- [ ] x\n"
-            "## Doc impact\nnone."
-        ),
+        body=("Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."),
         issue_types=issue_types,
         titles=titles_extended,
         body_format=body_format,
@@ -581,8 +532,7 @@ def test_validate_accepts_bug_prefix_with_classification(
     )
     format_findings = [f for f in findings if f.label == "title.format"]
     assert format_findings == [], (
-        "Expected no title.format finding for [Bug] prefix with classification; "
-        f"got: {findings}"
+        f"Expected no title.format finding for [Bug] prefix with classification; got: {findings}"
     )
 
 
@@ -598,9 +548,7 @@ def test_validate_rejects_bug_prefix_without_classification(
         body_format=body_format,
     )
     format_findings = [f for f in findings if f.label == "title.format"]
-    assert format_findings, (
-        "Expected title.format finding for [Bug] without classification"
-    )
+    assert format_findings, "Expected title.format finding for [Bug] without classification"
 
 
 # --- title pattern ---------------------------------------------------
@@ -627,11 +575,7 @@ def test_gh_comment_call_sites_thread_config() -> None:
     """
     tree = ast.parse(SCRIPT_PATH.read_text(encoding="utf-8"))
 
-    defs = [
-        n
-        for n in ast.walk(tree)
-        if isinstance(n, ast.FunctionDef) and n.name == "_gh_comment"
-    ]
+    defs = [n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef) and n.name == "_gh_comment"]
     assert defs, "no `_gh_comment` definition found in edit-issue.py"
     fn = defs[0]
     required = len(fn.args.args) - len(fn.args.defaults)  # positional params without a default
@@ -639,16 +583,12 @@ def test_gh_comment_call_sites_thread_config() -> None:
     calls = [
         n
         for n in ast.walk(tree)
-        if isinstance(n, ast.Call)
-        and isinstance(n.func, ast.Name)
-        and n.func.id == "_gh_comment"
+        if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id == "_gh_comment"
     ]
     assert calls, "no `_gh_comment` call sites found — did the helper get renamed?"
 
     for c in calls:
-        provides_config = len(c.args) >= required or any(
-            kw.arg == "config" for kw in c.keywords
-        )
+        provides_config = len(c.args) >= required or any(kw.arg == "config" for kw in c.keywords)
         assert provides_config, (
             f"_gh_comment call at edit-issue.py:{c.lineno} passes {len(c.args)} "
             f"positional arg(s) and no `config` keyword; the definition requires "

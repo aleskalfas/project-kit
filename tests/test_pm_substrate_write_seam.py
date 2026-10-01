@@ -102,9 +102,7 @@ def substrate_writes():
     """Load the substrate-writes primitive via importlib (sibling _lib import)."""
     if str(LIB) not in sys.path:
         sys.path.insert(0, str(LIB))
-    spec = importlib.util.spec_from_file_location(
-        "pm_substrate_writes_under_test", SEAM_MODULE
-    )
+    spec = importlib.util.spec_from_file_location("pm_substrate_writes_under_test", SEAM_MODULE)
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     sys.modules["pm_substrate_writes_under_test"] = module
@@ -123,11 +121,17 @@ def test_field_value_args_constructs_the_single_select_write(substrate_writes) -
         single_select_option_id="OPT_1",
     )
     assert args == [
-        "gh", "project", "item-edit",
-        "--id", "ITEM_1",
-        "--field-id", "FIELD_1",
-        "--project-id", "PROJ_1",
-        "--single-select-option-id", "OPT_1",
+        "gh",
+        "project",
+        "item-edit",
+        "--id",
+        "ITEM_1",
+        "--field-id",
+        "FIELD_1",
+        "--project-id",
+        "PROJ_1",
+        "--single-select-option-id",
+        "OPT_1",
     ]
 
 
@@ -146,14 +150,17 @@ def test_field_value_args_refuses_a_valueless_write(substrate_writes) -> None:
     """A field-value write with neither value form is incoherent — fail loud
     rather than emit a valueless `item-edit`."""
     with pytest.raises(ValueError):
-        substrate_writes.field_value_args(
-            item_id="ITEM_1", field_id="FIELD_1", project_id="PROJ_1"
-        )
+        substrate_writes.field_value_args(item_id="ITEM_1", field_id="FIELD_1", project_id="PROJ_1")
 
 
 def test_milestone_edit_args_constructs_the_post_hoc_write(substrate_writes) -> None:
     assert substrate_writes.milestone_edit_args(issue_number=42, title="M1") == [
-        "gh", "issue", "edit", "42", "--milestone", "M1",
+        "gh",
+        "issue",
+        "edit",
+        "42",
+        "--milestone",
+        "M1",
     ]
 
 
@@ -161,7 +168,11 @@ def test_milestone_clear_args_constructs_the_removal(substrate_writes) -> None:
     """Detaching an issue from its milestone is the same substrate, so its argv
     is constructed here too (edit-issue --clear-milestone, #1049)."""
     assert substrate_writes.milestone_clear_args(issue_number=42) == [
-        "gh", "issue", "edit", "42", "--remove-milestone",
+        "gh",
+        "issue",
+        "edit",
+        "42",
+        "--remove-milestone",
     ]
 
 
@@ -219,6 +230,7 @@ def test_result_argv_is_an_immutable_tuple(substrate_writes, monkeypatch) -> Non
     `--emit-script` renderer cannot mutate state the result shares with whatever
     ran the write (the result is `frozen=True`, but a `list` field would still be
     mutable in place)."""
+
     def fake_gh(args, config):
         return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
 
@@ -232,6 +244,7 @@ def test_result_argv_is_an_immutable_tuple(substrate_writes, monkeypatch) -> Non
 def test_write_milestone_failure_is_carried_not_raised(substrate_writes, monkeypatch) -> None:
     """A failed write returns ok=False with the stderr in `error` — it does NOT
     raise. Posture-neutrality: the caller decides what the failure means."""
+
     def fake_gh(args, config):
         return subprocess.CompletedProcess(args, 1, stdout="", stderr="boom")
 
@@ -631,7 +644,7 @@ def _has_subsequence(literals: list[str], sub: tuple[str, ...]) -> bool:
         return True
     n = len(sub)
     windows = range(len(literals) - n + 1)
-    return any(tuple(literals[i:i + n]) == sub for i in windows)
+    return any(tuple(literals[i : i + n]) == sub for i in windows)
 
 
 def _is_field_value_write(elements: list[str | None]) -> bool:
@@ -642,10 +655,7 @@ def _is_field_value_write(elements: list[str | None]) -> bool:
     `--field-id`, so it does not match — ADR-031 point 3.
     """
     literals = _literals(elements)
-    return (
-        _has_subsequence(literals, (GH, *FIELD_VALUE_SUBCOMMAND))
-        and FIELD_ID_FLAG in literals
-    )
+    return _has_subsequence(literals, (GH, *FIELD_VALUE_SUBCOMMAND)) and FIELD_ID_FLAG in literals
 
 
 def _is_graphql_field_value_write(elements: list[str | None]) -> bool:
@@ -674,8 +684,7 @@ def _is_milestone_write(elements: list[str | None]) -> bool:
     if not any(flag in literals for flag in MILESTONE_FLAGS):
         return False
     return any(
-        _has_subsequence(literals, (GH, MILESTONE_VERB, sub))
-        for sub in MILESTONE_SUBCOMMANDS
+        _has_subsequence(literals, (GH, MILESTONE_VERB, sub)) for sub in MILESTONE_SUBCOMMANDS
     )
 
 
@@ -739,9 +748,7 @@ def _violations(path: Path) -> list[str]:
     return out
 
 
-@pytest.mark.parametrize(
-    "path", _all_scanned_scripts(), ids=lambda p: str(p.relative_to(SCRIPTS))
-)
+@pytest.mark.parametrize("path", _all_scanned_scripts(), ids=lambda p: str(p.relative_to(SCRIPTS)))
 def test_no_inline_substrate_write_construction(path: Path) -> None:
     """No pm script string-builds a covered substrate write outside the seam
     (ADR-031 part (b)). Scan-all over scripts/ and _lib/ except the seam module."""
@@ -793,14 +800,16 @@ def test_guard_detects_a_clean_list_literal_field_value_write(tmp_path: Path) ->
     """Baseline: an inline `gh project item-edit … --field-id` list is flagged;
     the seam-routed form is not."""
     bad = _violations_for_source(
-        tmp_path, "bad_field.py",
+        tmp_path,
+        "bad_field.py",
         'args = ["gh", "project", "item-edit", "--id", iid, "--field-id", fid]\n',
     )
     assert bad, "guard failed to flag a clean-list inline field-value write"
 
     good = _violations_for_source(
-        tmp_path, "good_field.py",
-        'args = substrate_writes.field_value_args(item_id=iid, field_id=fid, project_id=pid)\n',
+        tmp_path,
+        "good_field.py",
+        "args = substrate_writes.field_value_args(item_id=iid, field_id=fid, project_id=pid)\n",
     )
     assert not good, "guard wrongly flagged the seam-routed field-value form"
 
@@ -809,14 +818,16 @@ def test_guard_detects_a_clean_list_literal_milestone_write(tmp_path: Path) -> N
     """Baseline: an inline `gh issue edit … --milestone` list is flagged; the
     seam-routed form is not."""
     bad = _violations_for_source(
-        tmp_path, "bad_ms.py",
+        tmp_path,
+        "bad_ms.py",
         'args = ["gh", "issue", "edit", str(n), "--milestone", title]\n',
     )
     assert bad, "guard failed to flag a clean-list inline milestone write"
 
     good = _violations_for_source(
-        tmp_path, "good_ms.py",
-        'args = substrate_writes.milestone_edit_args(issue_number=n, title=title)\n',
+        tmp_path,
+        "good_ms.py",
+        "args = substrate_writes.milestone_edit_args(issue_number=n, title=title)\n",
     )
     assert not good, "guard wrongly flagged the seam-routed milestone form"
 
@@ -828,7 +839,8 @@ def test_guard_detects_extend_accumulation_milestone_write(tmp_path: Path) -> No
     on the SAME base argv is NOT flagged (the splice's `--milestone` comes from a
     call, not a literal)."""
     bad = _violations_for_source(
-        tmp_path, "bad_extend.py",
+        tmp_path,
+        "bad_extend.py",
         "cmd = ['gh', 'issue', 'create', '--title', title]\n"
         "for label in labels:\n"
         "    cmd.extend(['--label', label])\n"
@@ -838,7 +850,8 @@ def test_guard_detects_extend_accumulation_milestone_write(tmp_path: Path) -> No
     assert bad, "guard failed to flag a `.extend`-accumulated milestone write"
 
     good = _violations_for_source(
-        tmp_path, "good_extend.py",
+        tmp_path,
+        "good_extend.py",
         "cmd = ['gh', 'issue', 'create', '--title', title]\n"
         "for label in labels:\n"
         "    cmd.extend(['--label', label])\n"
@@ -855,7 +868,8 @@ def test_guard_detects_append_accumulation_field_value_write(tmp_path: Path) -> 
     """EVASION: `.append` argv-accumulation. A field-value write assembled by
     appending the `--field-id` flag literal is caught."""
     bad = _violations_for_source(
-        tmp_path, "bad_append.py",
+        tmp_path,
+        "bad_append.py",
         "cmd = ['gh', 'project', 'item-edit', '--id', iid]\n"
         "cmd.append('--field-id')\n"
         "cmd.append(fid)\n",
@@ -867,16 +881,16 @@ def test_guard_detects_variable_built_flag(tmp_path: Path) -> None:
     """EVASION: a flag string bound to a name then used in the argv. The resolver
     binds `FID = '--field-id'` and resolves it back when it appears in the list."""
     bad = _violations_for_source(
-        tmp_path, "bad_var_flag.py",
-        "FID = '--field-id'\n"
-        "args = ['gh', 'project', 'item-edit', '--id', iid, FID, fid]\n",
+        tmp_path,
+        "bad_var_flag.py",
+        "FID = '--field-id'\nargs = ['gh', 'project', 'item-edit', '--id', iid, FID, fid]\n",
     )
     assert bad, "guard failed to flag a variable-built `--field-id` flag"
 
     bad_ms = _violations_for_source(
-        tmp_path, "bad_var_flag_ms.py",
-        "MS = '--milestone'\n"
-        "args = ['gh', 'issue', 'edit', n, MS, title]\n",
+        tmp_path,
+        "bad_var_flag_ms.py",
+        "MS = '--milestone'\nargs = ['gh', 'issue', 'edit', n, MS, title]\n",
     )
     assert bad_ms, "guard failed to flag a variable-built `--milestone` flag"
 
@@ -885,13 +899,15 @@ def test_guard_detects_list_concatenation(tmp_path: Path) -> None:
     """EVASION: `[...] + ["--field-id", fid]` list concatenation (an `ast.BinOp`).
     The base and the concatenated fragment together spell the operation."""
     bad = _violations_for_source(
-        tmp_path, "bad_concat.py",
+        tmp_path,
+        "bad_concat.py",
         "args = ['gh', 'project', 'item-edit', '--id', iid] + ['--field-id', fid]\n",
     )
     assert bad, "guard failed to flag a `[...] + [...]` field-value concatenation"
 
     bad_ms = _violations_for_source(
-        tmp_path, "bad_concat_ms.py",
+        tmp_path,
+        "bad_concat_ms.py",
         "args = ['gh', 'issue', 'edit'] + [str(n), '--milestone', title]\n",
     )
     assert bad_ms, "guard failed to flag a `[...] + [...]` milestone concatenation"
@@ -906,19 +922,22 @@ def test_guard_detects_fstring_format_and_percent_flag_elements(tmp_path: Path) 
     a value-resolver cannot soundly recover and is out of scope; the realistic
     evasion carries the flag token whole, which this catches.)"""
     bad_fstring = _violations_for_source(
-        tmp_path, "bad_fstring.py",
+        tmp_path,
+        "bad_fstring.py",
         "args = ['gh', 'issue', 'edit', f'{n}', f'--milestone', title]\n",
     )
     assert bad_fstring, "guard failed to flag an f-string `--milestone` element"
 
     bad_format = _violations_for_source(
-        tmp_path, "bad_format.py",
+        tmp_path,
+        "bad_format.py",
         "args = ['gh', 'project', 'item-edit', '--id', iid, '--field-id', '{}'.format(fid)]\n",
     )
     assert bad_format, "guard failed to flag a field-value write with a `.format` value"
 
     bad_percent = _violations_for_source(
-        tmp_path, "bad_percent.py",
+        tmp_path,
+        "bad_percent.py",
         "args = ['gh', 'issue', 'edit', '%s' % n, '--milestone', title]\n",
     )
     assert bad_percent, "guard failed to flag a milestone write with a `%`-formatted element"
@@ -928,16 +947,16 @@ def test_guard_detects_shlex_split_string_command(tmp_path: Path) -> None:
     """EVASION: a string-form command split with `shlex.split`. The literal tokens
     of the command string spell the operation and are caught."""
     bad = _violations_for_source(
-        tmp_path, "bad_shlex.py",
-        "import shlex\n"
-        "args = shlex.split('gh issue edit 42 --milestone M1')\n",
+        tmp_path,
+        "bad_shlex.py",
+        "import shlex\nargs = shlex.split('gh issue edit 42 --milestone M1')\n",
     )
     assert bad, "guard failed to flag a `shlex.split` string-form milestone write"
 
     bad_field = _violations_for_source(
-        tmp_path, "bad_shlex_field.py",
-        "import shlex\n"
-        "args = shlex.split('gh project item-edit --id X --field-id F --text V')\n",
+        tmp_path,
+        "bad_shlex_field.py",
+        "import shlex\nargs = shlex.split('gh project item-edit --id X --field-id F --text V')\n",
     )
     assert bad_field, "guard failed to flag a `shlex.split` string-form field-value write"
 
@@ -947,7 +966,8 @@ def test_guard_detects_graphql_field_value_write(tmp_path: Path) -> None:
     `updateProjectV2ItemFieldValue` mutation. Same substrate as item-edit; the
     sole-constructor invariant must cover it (a future #122 reach)."""
     bad = _violations_for_source(
-        tmp_path, "bad_graphql.py",
+        tmp_path,
+        "bad_graphql.py",
         "args = ['gh', 'api', 'graphql', '-f',\n"
         "        'mutation { updateProjectV2ItemFieldValue"
         "(input: {...}) { clientMutationId } }']\n",
@@ -962,7 +982,8 @@ def test_guard_does_not_overfire_on_coincidental_token_lists(tmp_path: Path) -> 
     over-broad-matcher regression the critic named (a future allowlist)."""
     # An allowlist of issue-type/flag tokens — no `gh issue edit|create` operation.
     allowlist = _violations_for_source(
-        tmp_path, "allowlist.py",
+        tmp_path,
+        "allowlist.py",
         "ALLOWED = ['issue', 'pr', 'discussion', '--milestone', '--label', '--field-id']\n",
     )
     assert not allowlist, (
@@ -972,7 +993,8 @@ def test_guard_does_not_overfire_on_coincidental_token_lists(tmp_path: Path) -> 
 
     # A help/usage string mentioning the flags — prose, not an argv.
     prose = _violations_for_source(
-        tmp_path, "prose.py",
+        tmp_path,
+        "prose.py",
         "HELP = ['pass --milestone to set it', 'item-edit needs --field-id']\n",
     )
     assert not prose, "guard over-fired on a prose list mentioning the flags"
@@ -1013,15 +1035,15 @@ def test_guard_exempts_board_membership_item_add(tmp_path: Path) -> None:
     the stricter operation matcher, including the `.extend` accumulation form
     create-issue actually uses for the board write."""
     membership = _violations_for_source(
-        tmp_path, "membership.py",
+        tmp_path,
+        "membership.py",
         "cmd = ['gh', 'project', 'item-add', str(bid), '--owner', owner, '--url', url]\n",
     )
-    assert not membership, (
-        "guard wrongly flagged the named-out board-membership (item-add) write"
-    )
+    assert not membership, "guard wrongly flagged the named-out board-membership (item-add) write"
 
     membership_accum = _violations_for_source(
-        tmp_path, "membership_accum.py",
+        tmp_path,
+        "membership_accum.py",
         "cmd = ['gh', 'project', 'item-add', str(bid)]\n"
         "cmd.extend(['--owner', owner])\n"
         "cmd.extend(['--url', url])\n",

@@ -25,11 +25,8 @@ from pathlib import Path
 
 import pytest
 
-
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SCRIPTS_DIR = (
-    REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
-)
+SCRIPTS_DIR = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
 CORE_PATH = SCRIPTS_DIR / "_lib" / "contribution_collector.py"
 
 
@@ -72,9 +69,7 @@ def _write_manifest(repo_root: Path, capability_names: list[str]) -> None:
             f"    manifest: .pkit/capabilities/{name}/manifest.yaml",
         ]
     (repo_root / ".pkit").mkdir(parents=True, exist_ok=True)
-    (repo_root / ".pkit" / "manifest.yaml").write_text(
-        "\n".join(lines) + "\n", encoding="utf-8"
-    )
+    (repo_root / ".pkit" / "manifest.yaml").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def _write_decl(repo_root: Path, capability: str, filename: str, body: str) -> None:
@@ -91,15 +86,11 @@ def _make_parse(cc):
         if data is None:
             return (), ()
         if not isinstance(data, dict):
-            return (), (
-                cc.ContributionError(cc.ERROR_MALFORMED, capability, "not a mapping"),
-            )
+            return (), (cc.ContributionError(cc.ERROR_MALFORMED, capability, "not a mapping"),)
         entries = data.get("items")
         if not isinstance(entries, list):
             return (), (
-                cc.ContributionError(
-                    cc.ERROR_MALFORMED, capability, "`items` must be a list"
-                ),
+                cc.ContributionError(cc.ERROR_MALFORMED, capability, "`items` must be a list"),
             )
         items = []
         errors = []
@@ -108,9 +99,7 @@ def _make_parse(cc):
                 items.append((capability, e))
             else:
                 errors.append(
-                    cc.ContributionError(
-                        cc.ERROR_MALFORMED, capability, f"bad item {e!r}"
-                    )
+                    cc.ContributionError(cc.ERROR_MALFORMED, capability, f"bad item {e!r}")
                 )
         return tuple(items), tuple(errors)
 
@@ -233,9 +222,7 @@ def test_collect_missing_manifest_returns_empty(cc, tmp_path) -> None:
 
 def test_collect_schema_version_mismatch_skips_declaration(cc, tmp_path) -> None:
     _write_manifest(tmp_path, ["ux-ui-design"])
-    _write_decl(
-        tmp_path, "ux-ui-design", "x.yaml", "schema_version: 2\nitems:\n  - alpha\n"
-    )
+    _write_decl(tmp_path, "ux-ui-design", "x.yaml", "schema_version: 2\nitems:\n  - alpha\n")
     result = cc.collect(
         tmp_path,
         filename="x.yaml",
@@ -251,9 +238,7 @@ def test_collect_schema_version_mismatch_skips_declaration(cc, tmp_path) -> None
 
 def test_collect_schema_version_match_collects(cc, tmp_path) -> None:
     _write_manifest(tmp_path, ["ux-ui-design"])
-    _write_decl(
-        tmp_path, "ux-ui-design", "x.yaml", "schema_version: 1\nitems:\n  - alpha\n"
-    )
+    _write_decl(tmp_path, "ux-ui-design", "x.yaml", "schema_version: 1\nitems:\n  - alpha\n")
     result = cc.collect(
         tmp_path,
         filename="x.yaml",

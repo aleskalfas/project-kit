@@ -385,9 +385,7 @@ def _contract_sort_key(
 # --- evaluating one contract (live, read-only) -----------------------------
 
 
-def _contract_indeterminate(
-    contract: HandoffContract, reason: str
-) -> ContractReport:
+def _contract_indeterminate(contract: HandoffContract, reason: str) -> ContractReport:
     """The whole contract could not be evaluated: one contract-level
     indeterminate finding (fail-closed — reported distinctly, never green)."""
     return ContractReport(
@@ -455,8 +453,7 @@ def evaluate_contract(
     except ProcessError as exc:
         return _contract_indeterminate(
             contract,
-            f"upstream address {contract.upstream!r} does not resolve to a "
-            f"definition: {exc}",
+            f"upstream address {contract.upstream!r} does not resolve to a definition: {exc}",
         )
     if upstream_def.state(trigger) is None:
         return _contract_indeterminate(
@@ -513,9 +510,7 @@ def evaluate_contract(
             continue
 
         at_trigger += 1
-        downstream_ids = _read_resolution(
-            repo_root, contract, resolve_predicate, candidate_id
-        )
+        downstream_ids = _read_resolution(repo_root, contract, resolve_predicate, candidate_id)
         if downstream_ids is None:
             findings.append(
                 Finding(
@@ -535,8 +530,7 @@ def evaluate_contract(
             Finding(
                 subject=candidate_id,
                 kind=KIND_MISSED,
-                reason="no downstream subject picks this up (resolve answered "
-                "explicit absence)",
+                reason="no downstream subject picks this up (resolve answered explicit absence)",
             )
         )
 
@@ -771,9 +765,7 @@ def render_narrative(report: HealthReport) -> str:
     the summary. TTY-aware styling (never load-bearing); wrapped prose through
     `cli_render.wrap`."""
     lines: list[str] = []
-    lines.append(
-        cli_render.style("title", "Process health") + "  (missed hand-off check)"
-    )
+    lines.append(cli_render.style("title", "Process health") + "  (missed hand-off check)")
     if not report.contracts and not report.skipped and report.unresolved_scope is None:
         lines.append("")
         lines.append("  (no hand-off contracts declared)")
@@ -781,9 +773,7 @@ def render_narrative(report: HealthReport) -> str:
     for cr in report.contracts:
         contract = cr.contract
         lines.append("")
-        header = cli_render.style(
-            "strong", f"{contract.upstream} → {contract.downstream}"
-        )
+        header = cli_render.style("strong", f"{contract.upstream} → {contract.downstream}")
         trigger = contract.trigger or "(no trigger)"
         lines.append(f"  {header}   @{trigger}")
         if not cr.findings:
@@ -791,8 +781,7 @@ def render_narrative(report: HealthReport) -> str:
                 lines.append("    ✓ clean — no subjects at the trigger")
             else:
                 lines.append(
-                    f"    ✓ clean — {cr.at_trigger} subject(s) at the trigger, "
-                    "every one picked up"
+                    f"    ✓ clean — {cr.at_trigger} subject(s) at the trigger, every one picked up"
                 )
             continue
         for finding in cr.findings:
@@ -826,9 +815,7 @@ def render_narrative(report: HealthReport) -> str:
 
     lines.append("")
     summary = f"{report.missed_total} missed, {report.indeterminate_total} indeterminate"
-    lines.append(
-        "  " + cli_render.style("strong" if not report.ok else "success", summary)
-    )
+    lines.append("  " + cli_render.style("strong" if not report.ok else "success", summary))
     return "\n".join(lines) + "\n"
 
 
@@ -1006,9 +993,7 @@ def render_interpretation_narrative(report: InterpretationReport) -> str:
     for cr in report.contracts:
         contract = cr.contract
         lines.append("")
-        header = cli_render.style(
-            "strong", f"{contract.upstream} → {contract.downstream}"
-        )
+        header = cli_render.style("strong", f"{contract.upstream} → {contract.downstream}")
         trigger = contract.trigger or "(no trigger)"
         lines.append(f"  {header}   @{trigger}")
         if not cr.indeterminate:
@@ -1074,16 +1059,13 @@ def render_interpretation_json(report: InterpretationReport) -> str:
                 "trigger": cr.contract.trigger or None,
                 "state": cr.contract.state_id,
                 "indeterminate": [
-                    {"subject": f.subject, "reason": f.reason}
-                    for f in cr.indeterminate
+                    {"subject": f.subject, "reason": f.reason} for f in cr.indeterminate
                 ],
                 "counts": {"indeterminate": len(cr.indeterminate)},
             }
             for cr in report.contracts
         ],
-        "skipped": [
-            {"address": s.address, "reason": s.reason} for s in report.skipped
-        ],
+        "skipped": [{"address": s.address, "reason": s.reason} for s in report.skipped],
         "unresolved_scope": _scope_payload(report.unresolved_scope),
         "totals": {"indeterminate": report.indeterminate_total},
     }
@@ -1101,12 +1083,9 @@ def render_json(report: HealthReport) -> str:
                 "downstream": cr.contract.downstream,
                 "trigger": cr.contract.trigger or None,
                 "state": cr.contract.state_id,
-                "misses": [
-                    {"subject": f.subject, "reason": f.reason} for f in cr.misses
-                ],
+                "misses": [{"subject": f.subject, "reason": f.reason} for f in cr.misses],
                 "indeterminate": [
-                    {"subject": f.subject, "reason": f.reason}
-                    for f in cr.indeterminate
+                    {"subject": f.subject, "reason": f.reason} for f in cr.indeterminate
                 ],
                 "counts": {
                     "at_trigger": cr.at_trigger,
@@ -1117,9 +1096,7 @@ def render_json(report: HealthReport) -> str:
             }
             for cr in report.contracts
         ],
-        "skipped": [
-            {"address": s.address, "reason": s.reason} for s in report.skipped
-        ],
+        "skipped": [{"address": s.address, "reason": s.reason} for s in report.skipped],
         "unresolved_scope": _scope_payload(report.unresolved_scope),
         "totals": {
             "missed": report.missed_total,

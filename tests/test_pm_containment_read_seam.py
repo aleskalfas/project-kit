@@ -42,9 +42,7 @@ def containment():
     """Load the containment module via importlib (sibling _lib import)."""
     if str(LIB) not in sys.path:
         sys.path.insert(0, str(LIB))
-    spec = importlib.util.spec_from_file_location(
-        "pm_containment_read_under_test", SEAM_MODULE
-    )
+    spec = importlib.util.spec_from_file_location("pm_containment_read_under_test", SEAM_MODULE)
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     sys.modules["pm_containment_read_under_test"] = module
@@ -59,7 +57,12 @@ def _native(*numbers: int) -> str:
 
 
 def _stub_native(
-    containment, monkeypatch, *, stdout: str, returncode: int = 0, stderr: str = "",
+    containment,
+    monkeypatch,
+    *,
+    stdout: str,
+    returncode: int = 0,
+    stderr: str = "",
     repo_visible: bool = True,
 ):
     """Stub the native `…/sub_issues` GET at `_gh_call`, and the 404 probe.
@@ -69,6 +72,7 @@ def _stub_native(
     textually identical — so it is settled by probing the parent issue.
     ``repo_visible`` is that probe's answer (#869).
     """
+
     def fake_gh(args, config):
         joined = " ".join(args)
         if "sub_issues" not in joined:  # the parent-issue probe
@@ -151,8 +155,8 @@ def test_mixed_parent_native_wins_no_double_count(containment, monkeypatch) -> N
     #345 is textual-only. The union is {#344 native, #345 textual}, each once."""
     _stub_native(containment, monkeypatch, stdout=_native(344))
     corpus = {
-        344: "EPIC: #342\n\n## What",   # native AND textual → native-wins
-        345: "EPIC: #342\n\n## What",   # textual-only
+        344: "EPIC: #342\n\n## What",  # native AND textual → native-wins
+        345: "EPIC: #342\n\n## What",  # textual-only
         342: "EPIC body",
     }
     res = containment.resolve_children({}, parent_number=342, corpus=corpus)
@@ -187,8 +191,12 @@ def test_unsupported_instance_is_textual_only_and_determinate(containment, monke
     degradation is a COMPLETE answer — the mirror of the write side's UNSUPPORTED
     no-op. There is no native substrate to have missed anything (ADR-035 §5)."""
     _stub_native(
-        containment, monkeypatch, stdout="", returncode=1,
-        stderr="HTTP 404: Not Found", repo_visible=True,
+        containment,
+        monkeypatch,
+        stdout="",
+        returncode=1,
+        stderr="HTTP 404: Not Found",
+        repo_visible=True,
     )
     res = containment.resolve_children(
         {}, parent_number=342, corpus=_MIXED_CORPUS, corpus_complete=True
@@ -208,7 +216,11 @@ def test_unreadable_native_makes_the_resolution_incomplete(containment, monkeypa
     for the set.
     """
     _stub_native(
-        containment, monkeypatch, stdout="", returncode=1, stderr="error connecting: connection reset"
+        containment,
+        monkeypatch,
+        stdout="",
+        returncode=1,
+        stderr="error connecting: connection reset",
     )
     res = containment.resolve_children(
         {}, parent_number=342, corpus=_MIXED_CORPUS, corpus_complete=True
@@ -221,9 +233,9 @@ def test_unreadable_native_makes_the_resolution_incomplete(containment, monkeypa
 def test_parent_excludes_itself_and_foreign_children(containment, monkeypatch) -> None:
     _stub_native(containment, monkeypatch, stdout="[]")
     corpus = {
-        342: "EPIC: #342\n",   # names itself — never its own child
+        342: "EPIC: #342\n",  # names itself — never its own child
         344: "EPIC: #342\n",
-        99: "EPIC: #1\n",      # foreign parent
+        99: "EPIC: #1\n",  # foreign parent
     }
     res = containment.resolve_children({}, parent_number=342, corpus=corpus)
     assert res.numbers == [344]
@@ -299,6 +311,7 @@ def _stub_gh_list(containment, monkeypatch, *, total: int, child_at: int, parent
     Honouring the limit is what gives this test teeth: a caller asking for fewer
     rows than the tracker holds gets a short list, exactly as in production.
     """
+
     def fake_gh(args, config):
         if args[1] == "api":  # the native sub-issues read, not the corpus list
             return subprocess.CompletedProcess(args, 1, stdout="", stderr="HTTP 410: Gone")
@@ -311,9 +324,7 @@ def _stub_gh_list(containment, monkeypatch, *, total: int, child_at: int, parent
             }
             for n in range(1, total + 1)
         ]
-        return subprocess.CompletedProcess(
-            args, 0, stdout=json.dumps(rows[:limit]), stderr=""
-        )
+        return subprocess.CompletedProcess(args, 0, stdout=json.dumps(rows[:limit]), stderr="")
 
     monkeypatch.setattr(containment, "_gh_call", fake_gh)
 
@@ -381,7 +392,10 @@ def test_an_invisible_repository_is_not_an_absent_endpoint(containment, monkeypa
     body carries no parent-ref line.
     """
     _stub_native(
-        containment, monkeypatch, stdout="", returncode=1,
+        containment,
+        monkeypatch,
+        stdout="",
+        returncode=1,
         stderr="HTTP 404: Not Found (https://api.github.com/repos/o/r/issues/342/sub_issues)",
         repo_visible=False,
     )
@@ -401,7 +415,12 @@ def test_conclusive_statuses_need_no_probe(containment, monkeypatch, status: str
     which proves they short-circuit before the probe rather than passing by luck.
     """
     _stub_native(
-        containment, monkeypatch, stdout="", returncode=1, stderr=status, repo_visible=False,
+        containment,
+        monkeypatch,
+        stdout="",
+        returncode=1,
+        stderr=status,
+        repo_visible=False,
     )
     res = containment.resolve_children(
         {}, parent_number=342, corpus=_MIXED_CORPUS, corpus_complete=True
@@ -415,12 +434,11 @@ def test_conclusive_statuses_need_no_probe(containment, monkeypatch, status: str
 
 def _classify(containment, monkeypatch, *, stderr: str, repo_visible: bool):
     """Run the failure classifier with the parent-issue probe stubbed."""
+
     def fake_gh(args, config):
         if "sub_issues" in " ".join(args):
             return subprocess.CompletedProcess(args, 1, stdout="", stderr=stderr)
-        return subprocess.CompletedProcess(
-            args, 0 if repo_visible else 1, stdout="342", stderr=""
-        )
+        return subprocess.CompletedProcess(args, 0 if repo_visible else 1, stdout="342", stderr="")
 
     monkeypatch.setattr(containment, "_gh_call", fake_gh)
     return containment._classify_native_failure({}, parent_number=342, stderr=stderr)
@@ -435,11 +453,15 @@ def _classify(containment, monkeypatch, *, stderr: str, repo_visible: bool):
         # Ambiguous: same status, opposite meanings, settled by the probe.
         (
             "gh: HTTP 404: Not Found (https://api.github.com/repos/o/r/issues/342/sub_issues)",
-            True, "UNSUPPORTED", "404 + parent visible -> the endpoint is absent",
+            True,
+            "UNSUPPORTED",
+            "404 + parent visible -> the endpoint is absent",
         ),
         (
             "gh: HTTP 404: Not Found (https://api.github.com/repos/o/r/issues/342/sub_issues)",
-            False, "UNREADABLE", "404 + parent unreachable -> a visibility fault",
+            False,
+            "UNREADABLE",
+            "404 + parent unreachable -> a visibility fault",
         ),
         # gh's code-less phrasing of the same ambiguity, per the predicate's own note.
         ("gh: Not Found", True, "UNSUPPORTED", "bare not-found + parent visible"),

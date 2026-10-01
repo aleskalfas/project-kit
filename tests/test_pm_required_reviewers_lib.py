@@ -31,9 +31,7 @@ from types import MappingProxyType
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SCRIPTS_DIR = (
-    REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
-)
+SCRIPTS_DIR = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
 LIB_PATH = SCRIPTS_DIR / "_lib" / "required_reviewers.py"
 RC_PATH = SCRIPTS_DIR / "_lib" / "review_contributions.py"
 
@@ -75,8 +73,14 @@ _OO = _load(
 
 
 def _design_collection(rc, *, deployed=True):
-    err = None if deployed else rc.ContributionError(
-        rc.ERROR_UNDEPLOYED_AGENT, "ux-ui-design", "design-reviewer not deployed",
+    err = (
+        None
+        if deployed
+        else rc.ContributionError(
+            rc.ERROR_UNDEPLOYED_AGENT,
+            "ux-ui-design",
+            "design-reviewer not deployed",
+        )
     )
     rule = rc.ContributionRule(
         capability="ux-ui-design",
@@ -97,8 +101,17 @@ _UNSET = object()
 
 
 def _resolve(
-    rr, *, baseline, collection, closing, labels=None, refs_unresolvable=None,
-    changed=None, files_unresolvable=None, opt_outs=None, not_code=_UNSET,
+    rr,
+    *,
+    baseline,
+    collection,
+    closing,
+    labels=None,
+    refs_unresolvable=None,
+    changed=None,
+    files_unresolvable=None,
+    opt_outs=None,
+    not_code=_UNSET,
 ):
     """Drive resolve_required_local_reviewers with injected fetchers.
 
@@ -159,7 +172,8 @@ def _resolve(
 
 def test_no_contributions_single_baseline(rr, rc) -> None:
     res = _resolve(
-        rr, baseline=["reviewer"],
+        rr,
+        baseline=["reviewer"],
         collection=rc.ContributionCollection(rules=()),
         closing=[],
     )
@@ -172,7 +186,8 @@ def test_no_contributions_single_baseline(rr, rc) -> None:
 def test_no_closing_issue_baseline_only(rr, rc) -> None:
     """A design contribution present but PR closes nothing → baseline only."""
     res = _resolve(
-        rr, baseline=["reviewer"],
+        rr,
+        baseline=["reviewer"],
         collection=_design_collection(rc),
         closing=[],
     )
@@ -182,7 +197,8 @@ def test_no_closing_issue_baseline_only(rr, rc) -> None:
 
 def test_no_workstream_axis_baseline_only(rr, rc) -> None:
     res = _resolve(
-        rr, baseline=["reviewer"],
+        rr,
+        baseline=["reviewer"],
         collection=_design_collection(rc),
         closing=[42],
         labels={42: ["priority:High", "type:feature"]},
@@ -193,7 +209,8 @@ def test_no_workstream_axis_baseline_only(rr, rc) -> None:
 
 def test_non_matching_workstream_baseline_only(rr, rc) -> None:
     res = _resolve(
-        rr, baseline=["reviewer"],
+        rr,
+        baseline=["reviewer"],
         collection=_design_collection(rc),
         closing=[42],
         labels={42: ["workstream:backend"]},
@@ -207,7 +224,8 @@ def test_non_matching_workstream_baseline_only(rr, rc) -> None:
 
 def test_design_pr_adds_contributed_reviewer(rr, rc) -> None:
     res = _resolve(
-        rr, baseline=["reviewer"],
+        rr,
+        baseline=["reviewer"],
         collection=_design_collection(rc),
         closing=[42],
         labels={42: ["workstream:design"]},
@@ -231,7 +249,8 @@ def test_multi_issue_union(rr, rc) -> None:
         reviewer="backend-reviewer",
     )
     res = _resolve(
-        rr, baseline=["reviewer"],
+        rr,
+        baseline=["reviewer"],
         collection=rc.ContributionCollection(rules=(design, backend)),
         closing=[42, 43],
         labels={42: ["workstream:design"], 43: ["workstream:backend"]},
@@ -248,7 +267,8 @@ def test_dedup_reviewer_named_by_both(rr, rc) -> None:
         reviewer="reviewer",  # same name as baseline.
     )
     res = _resolve(
-        rr, baseline=["reviewer"],
+        rr,
+        baseline=["reviewer"],
         collection=rc.ContributionCollection(rules=(rule,)),
         closing=[42],
         labels={42: ["workstream:design"]},
@@ -263,7 +283,8 @@ def test_dedup_reviewer_named_by_both(rr, rc) -> None:
 def test_fail_closed_not_ok_collection(rr, rc) -> None:
     err = rc.ContributionError(rc.ERROR_MALFORMED, "ux-ui-design", "bad decl")
     res = _resolve(
-        rr, baseline=["reviewer"],
+        rr,
+        baseline=["reviewer"],
         collection=rc.ContributionCollection(rules=(), errors=(err,)),
         closing=[42],
         labels={42: ["workstream:design"]},
@@ -276,7 +297,8 @@ def test_fail_closed_not_ok_collection(rr, rc) -> None:
 
 def test_fail_closed_undeployed_contributed_reviewer(rr, rc) -> None:
     res = _resolve(
-        rr, baseline=["reviewer"],
+        rr,
+        baseline=["reviewer"],
         collection=_design_collection(rc, deployed=False),
         closing=[42],
         labels={42: ["workstream:design"]},
@@ -287,7 +309,8 @@ def test_fail_closed_undeployed_contributed_reviewer(rr, rc) -> None:
 
 def test_fail_closed_closing_refs_unresolvable(rr, rc) -> None:
     res = _resolve(
-        rr, baseline=["reviewer"],
+        rr,
+        baseline=["reviewer"],
         collection=_design_collection(rc),
         closing=[],
         refs_unresolvable="gh failed",
@@ -299,7 +322,8 @@ def test_fail_closed_closing_refs_unresolvable(rr, rc) -> None:
 
 def test_fail_closed_issue_labels_none(rr, rc) -> None:
     res = _resolve(
-        rr, baseline=["reviewer"],
+        rr,
+        baseline=["reviewer"],
         collection=_design_collection(rc),
         closing=[42, 43],
         labels={42: ["workstream:design"], 43: None},  # 43's labels unreadable.
@@ -311,7 +335,8 @@ def test_fail_closed_issue_labels_none(rr, rc) -> None:
 
 def test_fail_closed_multi_workstream_label(rr, rc) -> None:
     res = _resolve(
-        rr, baseline=["reviewer"],
+        rr,
+        baseline=["reviewer"],
         collection=_design_collection(rc),
         closing=[42],
         labels={42: ["workstream:design", "workstream:backend"]},
@@ -326,7 +351,8 @@ def test_collection_gated_before_closing_issues(rr, rc) -> None:
     fail — collection is gated first, deterministically (ERROR_COLLECTION)."""
     err = rc.ContributionError(rc.ERROR_MALFORMED, "ux-ui-design", "bad decl")
     res = _resolve(
-        rr, baseline=["reviewer"],
+        rr,
+        baseline=["reviewer"],
         collection=rc.ContributionCollection(rules=(), errors=(err,)),
         closing=[],
         refs_unresolvable="gh failed",
@@ -349,7 +375,8 @@ def _type_collection(rc, *, values=("feature",), reviewer="code-reviewer"):
 
 def test_type_axis_match_adds_reviewer(rr, rc) -> None:
     res = _resolve(
-        rr, baseline=["reviewer"],
+        rr,
+        baseline=["reviewer"],
         collection=_type_collection(rc, values=("feature",)),
         closing=[42],
         labels={42: ["type:feature", "priority:High"]},
@@ -361,7 +388,8 @@ def test_type_axis_match_adds_reviewer(rr, rc) -> None:
 
 def test_type_axis_non_matching_baseline_only(rr, rc) -> None:
     res = _resolve(
-        rr, baseline=["reviewer"],
+        rr,
+        baseline=["reviewer"],
         collection=_type_collection(rc, values=("bug",)),
         closing=[42],
         labels={42: ["type:feature"]},
@@ -373,7 +401,8 @@ def test_type_axis_non_matching_baseline_only(rr, rc) -> None:
 def test_type_axis_no_type_label_baseline_only(rr, rc) -> None:
     """An entity carrying no `type` axis matches nothing → baseline only."""
     res = _resolve(
-        rr, baseline=["reviewer"],
+        rr,
+        baseline=["reviewer"],
         collection=_type_collection(rc, values=("feature",)),
         closing=[42],
         labels={42: ["workstream:backend"]},
@@ -385,7 +414,8 @@ def test_type_axis_no_type_label_baseline_only(rr, rc) -> None:
 def test_multi_type_label_fails_closed(rr, rc) -> None:
     """`type` is mutually_exclusive; two values on one issue fail closed."""
     res = _resolve(
-        rr, baseline=["reviewer"],
+        rr,
+        baseline=["reviewer"],
         collection=_type_collection(rc, values=("feature",)),
         closing=[42],
         labels={42: ["type:feature", "type:bug"]},
@@ -399,13 +429,12 @@ def test_type_and_workstream_both_read(rr, rc) -> None:
     """Both axes are read into the classification a rule can AND-compose on."""
     rule = rc.ContributionRule(
         capability="cap",
-        predicate=MappingProxyType(
-            {"type": ("feature",), "workstream": ("design",)}
-        ),
+        predicate=MappingProxyType({"type": ("feature",), "workstream": ("design",)}),
         reviewer="specialist",
     )
     matched = _resolve(
-        rr, baseline=["reviewer"],
+        rr,
+        baseline=["reviewer"],
         collection=rc.ContributionCollection(rules=(rule,)),
         closing=[42],
         labels={42: ["type:feature", "workstream:design"]},
@@ -413,7 +442,8 @@ def test_type_and_workstream_both_read(rr, rc) -> None:
     assert matched.required_local == ("reviewer", "specialist")
     # Missing one axis → the AND-composed predicate no longer holds.
     only_type = _resolve(
-        rr, baseline=["reviewer"],
+        rr,
+        baseline=["reviewer"],
         collection=rc.ContributionCollection(rules=(rule,)),
         closing=[42],
         labels={42: ["type:feature"]},
@@ -436,7 +466,8 @@ def _wildcard_type_collection(rc, *, reviewer="code-reviewer"):
 def test_wildcard_matches_every_type_value(rr, rc) -> None:
     for value in ("feature", "bug", "docs", "refactor"):
         res = _resolve(
-            rr, baseline=["reviewer"],
+            rr,
+            baseline=["reviewer"],
             collection=_wildcard_type_collection(rc),
             closing=[42],
             labels={42: [f"type:{value}"]},
@@ -448,7 +479,8 @@ def test_wildcard_matches_every_type_value(rr, rc) -> None:
 def test_wildcard_requires_axis_present(rr, rc) -> None:
     """A wildcard is axis-present: an entity with no `type` axis matches nothing."""
     res = _resolve(
-        rr, baseline=["reviewer"],
+        rr,
+        baseline=["reviewer"],
         collection=_wildcard_type_collection(rc),
         closing=[42],
         labels={42: ["workstream:design"]},
@@ -473,7 +505,8 @@ def _floor_collection(rc, *, reviewer="code-reviewer"):
 def test_floor_fires_on_code_diff_for_docs_issue(rr, rc) -> None:
     """A code-touching diff pulls in the floor reviewer even for `type:docs`."""
     res = _resolve(
-        rr, baseline=["reviewer"],
+        rr,
+        baseline=["reviewer"],
         collection=_floor_collection(rc),
         closing=[42],
         labels={42: ["type:docs"]},
@@ -490,7 +523,8 @@ def test_floor_fires_on_code_file_under_docs_dir(rr, rc) -> None:
     so a PR touching only code under `docs/` escaped the code-review floor.
     """
     res = _resolve(
-        rr, baseline=["reviewer"],
+        rr,
+        baseline=["reviewer"],
         collection=_floor_collection(rc),
         closing=[42],
         labels={42: ["type:docs"]},
@@ -503,7 +537,8 @@ def test_floor_fires_on_code_file_under_docs_dir(rr, rc) -> None:
 def test_floor_fires_on_code_diff_for_unclassified_pr(rr, rc) -> None:
     """No closing issue at all: the floor still fires on a code diff."""
     res = _resolve(
-        rr, baseline=["reviewer"],
+        rr,
+        baseline=["reviewer"],
         collection=_floor_collection(rc),
         closing=[],
         changed=["scripts/run.sh"],
@@ -514,7 +549,8 @@ def test_floor_fires_on_code_diff_for_unclassified_pr(rr, rc) -> None:
 
 def test_floor_silent_on_docs_only_diff(rr, rc) -> None:
     res = _resolve(
-        rr, baseline=["reviewer"],
+        rr,
+        baseline=["reviewer"],
         collection=_floor_collection(rc),
         closing=[42],
         labels={42: ["type:feature"]},
@@ -531,7 +567,8 @@ def test_floor_only_collection_does_not_fetch_diff_when_no_floor(rr, rc) -> None
     resolver must not call it when no rule carries a floor.
     """
     res = _resolve(
-        rr, baseline=["reviewer"],
+        rr,
+        baseline=["reviewer"],
         collection=_design_collection(rc),  # classification-only rule.
         closing=[42],
         labels={42: ["workstream:design"]},
@@ -543,7 +580,8 @@ def test_floor_only_collection_does_not_fetch_diff_when_no_floor(rr, rc) -> None
 
 def test_floor_fails_closed_when_diff_unresolvable(rr, rc) -> None:
     res = _resolve(
-        rr, baseline=["reviewer"],
+        rr,
+        baseline=["reviewer"],
         collection=_floor_collection(rc),
         closing=[42],
         labels={42: ["type:feature"]},
@@ -585,7 +623,8 @@ def test_floor_and_classification_dedup_same_reviewer(rr, rc) -> None:
         floor=rc.FLOOR_TOUCHES_CODE,
     )
     res = _resolve(
-        rr, baseline=["reviewer"],
+        rr,
+        baseline=["reviewer"],
         collection=rc.ContributionCollection(rules=(class_rule, floor_rule)),
         closing=[42],
         labels={42: ["type:feature"]},
@@ -664,9 +703,16 @@ _DOCS_OPT_OUT = {
 def _se_collection(rc, *, docs_deployed=True):
     """The software-engineering panel as it ships: code, security and docs
     reviewers on the `touches-code` floor, docs also on `type: *`."""
+
     def rule(reviewer, *, floor=None, match=None, deployed=True):
-        error = None if deployed else rc.ContributionError(
-            rc.ERROR_UNDEPLOYED_AGENT, _SE, f"`{reviewer}` is not deployed",
+        error = (
+            None
+            if deployed
+            else rc.ContributionError(
+                rc.ERROR_UNDEPLOYED_AGENT,
+                _SE,
+                f"`{reviewer}` is not deployed",
+            )
         )
         return rc.ContributionRule(
             capability=_SE,
@@ -693,15 +739,20 @@ def _se_collection(rc, *, docs_deployed=True):
 def test_without_opt_out_the_panel_requires_docs_reviewer(rr, rc) -> None:
     """The control: the shipped panel on a code PR requires all three."""
     res = _resolve(
-        rr, baseline=["reviewer"],
+        rr,
+        baseline=["reviewer"],
         collection=_se_collection(rc),
-        closing=[42], labels={42: ["type:feature"]},
+        closing=[42],
+        labels={42: ["type:feature"]},
         changed=["src/app.py"],
     )
     assert res.ok
     # Classification-matched first (docs via `type: *`), then the floor rules.
     assert res.required_local == (
-        "reviewer", "docs-reviewer", "code-reviewer", "security-reviewer",
+        "reviewer",
+        "docs-reviewer",
+        "code-reviewer",
+        "security-reviewer",
     )
     assert res.opted_out == ()
 
@@ -710,9 +761,11 @@ def test_opted_out_reviewer_is_not_required(rr, rc) -> None:
     """docs-reviewer opted out: neither its floor rule nor its `type: *` rule
     applies, and the rest of the contribution still does."""
     res = _resolve(
-        rr, baseline=["reviewer"],
+        rr,
+        baseline=["reviewer"],
         collection=_se_collection(rc),
-        closing=[42], labels={42: ["type:feature"]},
+        closing=[42],
+        labels={42: ["type:feature"]},
         changed=["src/app.py"],
         opt_outs=[_DOCS_OPT_OUT],
     )
@@ -727,9 +780,11 @@ def test_opted_out_reviewer_is_not_required(rr, rc) -> None:
 def test_opt_out_on_a_docs_only_classified_pr_leaves_baseline(rr, rc) -> None:
     """The match rule was the only one that fired; withdrawn, baseline remains."""
     res = _resolve(
-        rr, baseline=["reviewer"],
+        rr,
+        baseline=["reviewer"],
         collection=_se_collection(rc),
-        closing=[42], labels={42: ["type:docs"]},
+        closing=[42],
+        labels={42: ["type:docs"]},
         changed=["README.md"],
         opt_outs=[_DOCS_OPT_OUT],
     )
@@ -741,9 +796,11 @@ def test_opt_out_never_withdraws_the_baseline(rr, rc) -> None:
     """A reviewer the adopter registers in `local_registered` stays required
     even when the same name's contribution is opted out."""
     res = _resolve(
-        rr, baseline=["reviewer", "docs-reviewer"],
+        rr,
+        baseline=["reviewer", "docs-reviewer"],
         collection=_se_collection(rc),
-        closing=[42], labels={42: ["type:docs"]},
+        closing=[42],
+        labels={42: ["type:docs"]},
         changed=["README.md"],
         opt_outs=[_DOCS_OPT_OUT],
     )
@@ -761,13 +818,15 @@ def test_opt_out_keeps_another_capabilitys_contribution_of_the_reviewer(rr, rc) 
         reviewer="docs-reviewer",
     )
     collection = rc.ContributionCollection(
-        rules=collection.rules + (other,),
-        capabilities_walked=collection.capabilities_walked + ("tech-writing",),
+        rules=(*collection.rules, other),
+        capabilities_walked=(*collection.capabilities_walked, "tech-writing"),
     )
     res = _resolve(
-        rr, baseline=["reviewer"],
+        rr,
+        baseline=["reviewer"],
         collection=collection,
-        closing=[42], labels={42: ["type:docs"]},
+        closing=[42],
+        labels={42: ["type:docs"]},
         changed=["README.md"],
         opt_outs=[_DOCS_OPT_OUT],
     )
@@ -780,17 +839,21 @@ def test_opted_out_undeployed_reviewer_does_not_fail_closed(rr, rc) -> None:
     """An undeployed contributed agent fails the gate closed (DEC-032 D5) —
     unless its contribution is opted out, since it is then never required."""
     control = _resolve(
-        rr, baseline=["reviewer"],
+        rr,
+        baseline=["reviewer"],
         collection=_se_collection(rc, docs_deployed=False),
-        closing=[42], labels={42: ["type:feature"]},
+        closing=[42],
+        labels={42: ["type:feature"]},
         changed=["src/app.py"],
     )
     assert not control.ok and control.error.kind == rr.ERROR_COLLECTION
 
     res = _resolve(
-        rr, baseline=["reviewer"],
+        rr,
+        baseline=["reviewer"],
         collection=_se_collection(rc, docs_deployed=False),
-        closing=[42], labels={42: ["type:feature"]},
+        closing=[42],
+        labels={42: ["type:feature"]},
         changed=["src/app.py"],
         opt_outs=[_DOCS_OPT_OUT],
     )
@@ -800,9 +863,11 @@ def test_opted_out_undeployed_reviewer_does_not_fail_closed(rr, rc) -> None:
 
 def test_opt_out_naming_an_unknown_capability_is_a_validation_error(rr, rc) -> None:
     res = _resolve(
-        rr, baseline=["reviewer"],
+        rr,
+        baseline=["reviewer"],
         collection=_se_collection(rc),
-        closing=[42], labels={42: ["type:feature"]},
+        closing=[42],
+        labels={42: ["type:feature"]},
         changed=["src/app.py"],
         opt_outs=[{**_DOCS_OPT_OUT, "capability": "ux-ui-design"}],
     )
@@ -816,9 +881,11 @@ def test_opt_out_naming_an_unknown_capability_is_a_validation_error(rr, rc) -> N
 
 def test_opt_out_naming_an_unknown_reviewer_is_a_validation_error(rr, rc) -> None:
     res = _resolve(
-        rr, baseline=["reviewer"],
+        rr,
+        baseline=["reviewer"],
         collection=_se_collection(rc),
-        closing=[42], labels={42: ["type:feature"]},
+        closing=[42],
+        labels={42: ["type:feature"]},
         changed=["src/app.py"],
         opt_outs=[{**_DOCS_OPT_OUT, "reviewer": "design-reviewer"}],
     )
@@ -832,9 +899,11 @@ def test_malformed_opt_out_is_a_validation_error(rr, rc) -> None:
     """A missing reason voids the list: nothing is withdrawn, the resolver
     refuses rather than guess."""
     res = _resolve(
-        rr, baseline=["reviewer"],
+        rr,
+        baseline=["reviewer"],
         collection=_se_collection(rc),
-        closing=[42], labels={42: ["type:feature"]},
+        closing=[42],
+        labels={42: ["type:feature"]},
         changed=["src/app.py"],
         opt_outs=[{"capability": _SE, "reviewer": "docs-reviewer"}],
     )
@@ -849,11 +918,15 @@ def test_broken_declaration_is_reported_before_the_opt_out(rr, rc) -> None:
     root cause, so it is the one reported."""
     err = rc.ContributionError(rc.ERROR_MALFORMED, _SE, "bad decl")
     res = _resolve(
-        rr, baseline=["reviewer"],
+        rr,
+        baseline=["reviewer"],
         collection=rc.ContributionCollection(
-            rules=(), errors=(err,), capabilities_walked=(_SE,),
+            rules=(),
+            errors=(err,),
+            capabilities_walked=(_SE,),
         ),
-        closing=[42], labels={42: ["type:feature"]},
+        closing=[42],
+        labels={42: ["type:feature"]},
         opt_outs=[_DOCS_OPT_OUT],
     )
     assert not res.ok
@@ -873,14 +946,18 @@ _PANEL = ("reviewer", "docs-reviewer", "code-reviewer", "security-reviewer")
 
 @pytest.mark.parametrize("issue_type", ["type:docs", "type:feature"])
 def test_changeset_is_the_only_non_markdown_change_no_panel(
-    rr, rc, issue_type,
+    rr,
+    rc,
+    issue_type,
 ) -> None:
     """A wording PR carrying its changeset: baseline + the classification-matched
     docs-reviewer only — the floor reviewers stay out, whatever the type."""
     res = _resolve(
-        rr, baseline=["reviewer"],
+        rr,
+        baseline=["reviewer"],
         collection=_se_collection(rc),
-        closing=[42], labels={42: [issue_type]},
+        closing=[42],
+        labels={42: [issue_type]},
         changed=["README.md", "docs/guide.md", _CHANGESET],
     )
     assert res.ok
@@ -889,7 +966,8 @@ def test_changeset_is_the_only_non_markdown_change_no_panel(
 
 def test_changeset_only_unclassified_pr_is_baseline_only(rr, rc) -> None:
     res = _resolve(
-        rr, baseline=["reviewer"],
+        rr,
+        baseline=["reviewer"],
         collection=_se_collection(rc),
         closing=[],
         changed=[_CHANGESET],
@@ -898,18 +976,23 @@ def test_changeset_only_unclassified_pr_is_baseline_only(rr, rc) -> None:
     assert res.required_local == ("reviewer",)
 
 
-@pytest.mark.parametrize("code_path", [
-    ".pkit/capabilities/project-management/scripts/_lib/required_reviewers.py",
-    ".pkit/capabilities/project-management/schemas/review-contributions.yaml",
-    ".pkit/capabilities/project-management/schemas/config.schema.json",
-])
+@pytest.mark.parametrize(
+    "code_path",
+    [
+        ".pkit/capabilities/project-management/scripts/_lib/required_reviewers.py",
+        ".pkit/capabilities/project-management/schemas/review-contributions.yaml",
+        ".pkit/capabilities/project-management/schemas/config.schema.json",
+    ],
+)
 def test_changeset_with_code_still_requires_the_panel(rr, rc, code_path) -> None:
     """The exclusion is the changeset's alone: a `.py` or a schema alongside it
     still touches code, so the panel is required."""
     res = _resolve(
-        rr, baseline=["reviewer"],
+        rr,
+        baseline=["reviewer"],
         collection=_se_collection(rc),
-        closing=[42], labels={42: ["type:docs"]},
+        closing=[42],
+        labels={42: ["type:docs"]},
         changed=["README.md", _CHANGESET, code_path],
     )
     assert res.ok
@@ -918,9 +1001,11 @@ def test_changeset_with_code_still_requires_the_panel(rr, rc, code_path) -> None
 
 def test_a_null_not_code_is_the_default(rr, rc) -> None:
     res = _resolve(
-        rr, baseline=["reviewer"],
+        rr,
+        baseline=["reviewer"],
         collection=_se_collection(rc),
-        closing=[], changed=[_CHANGESET],
+        closing=[],
+        changed=[_CHANGESET],
         not_code=None,
     )
     assert res.ok
@@ -930,9 +1015,11 @@ def test_a_null_not_code_is_the_default(rr, rc) -> None:
 def test_an_empty_not_code_excludes_nothing(rr, rc) -> None:
     """`not_code: []` is the adopter's choice that changesets count as code."""
     res = _resolve(
-        rr, baseline=["reviewer"],
+        rr,
+        baseline=["reviewer"],
         collection=_se_collection(rc),
-        closing=[42], labels={42: ["type:docs"]},
+        closing=[42],
+        labels={42: ["type:docs"]},
         changed=["README.md", _CHANGESET],
         not_code=[],
     )
@@ -945,35 +1032,44 @@ def test_a_configured_not_code_replaces_the_default(rr, rc) -> None:
     is listed, and what is listed is left out."""
     generated = "docs/examples/sample-config.yaml"
     replaced = _resolve(
-        rr, baseline=["reviewer"],
+        rr,
+        baseline=["reviewer"],
         collection=_se_collection(rc),
-        closing=[], changed=[generated, _CHANGESET],
+        closing=[],
+        changed=[generated, _CHANGESET],
         not_code=["docs/examples/**"],
     )
     assert replaced.ok
     assert "code-reviewer" in replaced.required_local  # the changeset counts.
 
     extended = _resolve(
-        rr, baseline=["reviewer"],
+        rr,
+        baseline=["reviewer"],
         collection=_se_collection(rc),
-        closing=[], changed=[generated, _CHANGESET],
+        closing=[],
+        changed=[generated, _CHANGESET],
         not_code=[".changes/**", "docs/examples/**"],
     )
     assert extended.ok
     assert extended.required_local == ("reviewer",)
 
 
-@pytest.mark.parametrize("raw,detail", [
-    (".changes/**", "`review.floors.not_code` must be a list, got str"),
-    ([".changes/**", 7], "`review.floors.not_code[1]` must be a non-empty path"),
-    (["  "], "`review.floors.not_code[0]` must be a non-empty path"),
-])
+@pytest.mark.parametrize(
+    "raw,detail",
+    [
+        (".changes/**", "`review.floors.not_code` must be a list, got str"),
+        ([".changes/**", 7], "`review.floors.not_code[1]` must be a non-empty path"),
+        (["  "], "`review.floors.not_code[0]` must be a non-empty path"),
+    ],
+)
 def test_malformed_not_code_fails_closed(rr, rc, raw, detail) -> None:
     """A malformed list applies nothing and the resolver refuses, naming it."""
     res = _resolve(
-        rr, baseline=["reviewer"],
+        rr,
+        baseline=["reviewer"],
         collection=_se_collection(rc),
-        closing=[], changed=[_CHANGESET],
+        closing=[],
+        changed=[_CHANGESET],
         not_code=raw,
     )
     assert not res.ok
@@ -988,11 +1084,13 @@ def test_satisfied_floors_reads_only_what_the_list_leaves(rr) -> None:
     generated = rr.NotCode(patterns=("generated/**",))
     assert rr._satisfied_floors(["generated/client.py"], generated) == set()
     assert rr._satisfied_floors(
-        ["generated/client.py", "src/app.py"], generated,
+        ["generated/client.py", "src/app.py"],
+        generated,
     ) == {rr.FLOOR_TOUCHES_CODE}
     assert rr._satisfied_floors([_CHANGESET]) == set()  # the shipped default.
     assert rr._satisfied_floors(
-        [_CHANGESET], rr.NotCode(patterns=()),
+        [_CHANGESET],
+        rr.NotCode(patterns=()),
     ) == {rr.FLOOR_TOUCHES_CODE}
 
 

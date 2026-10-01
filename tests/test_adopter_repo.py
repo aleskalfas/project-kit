@@ -78,9 +78,10 @@ def test_history_main_line_is_initial_rename_squash(adopter_repo: AdopterRepo) -
     assert adopter_repo.current_branch() == "main"
     assert adopter_repo.shas() == [h.squash_merge, h.rename, h.initial]
     # The install went into the initial commit.
-    assert ".pkit/manifest.yaml" in adopter_repo.git(
-        "show", "--name-only", "--format=", h.initial
-    ).stdout.split()
+    assert (
+        ".pkit/manifest.yaml"
+        in adopter_repo.git("show", "--name-only", "--format=", h.initial).stdout.split()
+    )
 
 
 def test_history_rename_is_followable(adopter_repo: AdopterRepo) -> None:

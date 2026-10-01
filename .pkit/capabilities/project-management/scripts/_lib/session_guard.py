@@ -61,14 +61,14 @@ from pathlib import Path
 # serves CI / non-interactive use (pass it per call).
 
 # Verdicts from :func:`evaluate`.
-SAME_REPO = "same-repo"          # target == anchor → clean pass, no friction.
-DIVERGED = "diverged"            # target != anchor → operator-gate fires.
-OVERRIDDEN = "overridden"        # diverged, but the operator confirmed the override.
-UNDETERMINED = "undetermined"    # anchor or target unresolvable → honest no-fire.
+SAME_REPO = "same-repo"  # target == anchor → clean pass, no friction.
+DIVERGED = "diverged"  # target != anchor → operator-gate fires.
+OVERRIDDEN = "overridden"  # diverged, but the operator confirmed the override.
+UNDETERMINED = "undetermined"  # anchor or target unresolvable → honest no-fire.
 
 # Sub-classification of UNDETERMINED, for the fault-vs-non-coverage split (G-1).
 NONCOVERAGE = "noncoverage"  # honest declared gap (unset anchor / non-git cwd) → silent.
-FAULT = "fault"              # git errored/timed-out when it shouldn't have → warn.
+FAULT = "fault"  # git errored/timed-out when it shouldn't have → warn.
 
 
 @dataclass(frozen=True)
@@ -100,7 +100,7 @@ class GuardOutcome:
     verdict: str  # one of SAME_REPO / DIVERGED / OVERRIDDEN / UNDETERMINED
     anchor_repo: Path | None  # the session-anchor git work-tree, or None if undetermined
     target_repo: Path | None  # the cwd-derived git work-tree, or None if undetermined
-    reason: str               # human-readable explanation (residual-gap case names itself)
+    reason: str  # human-readable explanation (residual-gap case names itself)
     # Only meaningful when verdict == UNDETERMINED: NONCOVERAGE (declared gap,
     # proceed silently) vs FAULT (git failed unexpectedly, proceed but warn).
     undetermined_kind: str | None = None
@@ -572,9 +572,7 @@ def enforce(
     if stream is None:
         stream = sys.stderr
     try:
-        outcome = evaluate(
-            override=override, target_cwd=target_cwd, anchor_dir=anchor_dir
-        )
+        outcome = evaluate(override=override, target_cwd=target_cwd, anchor_dir=anchor_dir)
     except Exception as exc:  # a guard fault must never silently block a mutation
         print(
             f"[warning] foreign-repo guard could not evaluate ({exc!r}); "
@@ -589,8 +587,7 @@ def enforce(
     if outcome.verdict == UNDETERMINED:
         if outcome.undetermined_kind == FAULT:
             print(
-                f"[warning] foreign-repo guard: {outcome.reason} (residual gap, "
-                "not a block).",
+                f"[warning] foreign-repo guard: {outcome.reason} (residual gap, not a block).",
                 file=stream,
             )
         # NONCOVERAGE: proceed silently — the declared, expected gap.

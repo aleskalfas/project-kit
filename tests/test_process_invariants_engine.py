@@ -271,11 +271,10 @@ def test_validate_narrative_wraps_why_and_reason(fixture_repo: Path) -> None:
         cli_render.set_wrap_width(cli_render.NO_WRAP)
     plain = [re.sub(r"\x1b\[[0-9;]*m", "", ln) for ln in text.splitlines()]
     # the why wraps: reconstruct it across the line-1 tail + 8-space continuations
-    idx = next(i for i, ln in enumerate(plain)
-               if ln.lstrip().startswith("✗ ") and " — " in ln)
+    idx = next(i for i, ln in enumerate(plain) if ln.lstrip().startswith("✗ ") and " — " in ln)
     tail = plain[idx].split(" — ", 1)[1]
     conts = []
-    for ln in plain[idx + 1:]:
+    for ln in plain[idx + 1 :]:
         if ln.startswith("        ") and ln.strip():
             conts.append(ln.strip())
         else:
@@ -284,9 +283,10 @@ def test_validate_narrative_wraps_why_and_reason(fixture_repo: Path) -> None:
     assert "Every factual claim must resolve to an evidence record." in reconstructed
     # and no prose line dumped flush at column 0 below the title (the title is col 0)
     body = plain[2:]  # skip title + blank
-    assert not any(ln and not ln[0].isspace() and "violated" not in ln
-                   and "invariant" not in ln.lower() for ln in body), \
-        "no prose continuation should dump flush at column 0"
+    assert not any(
+        ln and not ln[0].isspace() and "violated" not in ln and "invariant" not in ln.lower()
+        for ln in body
+    ), "no prose continuation should dump flush at column 0"
 
 
 def test_validate_position_independent_when_no_position(fixture_repo: Path) -> None:
@@ -325,8 +325,9 @@ def test_invariant_why_wraps_with_continuation_at_eight_spaces(fixture_repo: Pat
         cli_render.set_wrap_width(cli_render.NO_WRAP)
     plain = [re.sub(r"\x1b\[[0-9;]*m", "", ln) for ln in text.splitlines()]
     # the marker+id+start-of-why is one line ending mid-why (it wrapped)
-    idx = next(i for i, ln in enumerate(plain)
-               if plain[i].lstrip().startswith("✗ ") and " — " in plain[i])
+    idx = next(
+        i for i, ln in enumerate(plain) if plain[i].lstrip().startswith("✗ ") and " — " in plain[i]
+    )
     inv_line = plain[idx]
     assert inv_line.startswith("    ✗ ")  # 4-space invariant line
     # Reconstruct the why across the line-1 tail + the 8-space continuation lines
@@ -336,12 +337,12 @@ def test_invariant_why_wraps_with_continuation_at_eight_spaces(fixture_repo: Pat
     # into the reason and the full why sentence would NOT reconstruct.
     tail = inv_line.split(" — ", 1)[1]
     conts = []
-    for ln in plain[idx + 1:]:
+    for ln in plain[idx + 1 :]:
         if ln.startswith("        ") and ln.strip():
             conts.append(ln.strip())
         else:
             break
-    assert conts and all(ln.startswith("        ") for ln in plain[idx + 1:idx + 1 + len(conts)])
+    assert conts and all(ln.startswith("        ") for ln in plain[idx + 1 : idx + 1 + len(conts)])
     reconstructed = " ".join([tail, *conts])
     assert "Every factual claim must resolve to an evidence record." in reconstructed, (
         "the why must wrap with its continuation hung at 8 spaces, not dump flush"
@@ -425,7 +426,9 @@ def test_process_without_invariants_reports_empty(fixture_repo: Path) -> None:
 # --- CLI wiring -----------------------------------------------------------
 
 
-def test_cli_validate_json_and_exit_code(fixture_repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_cli_validate_json_and_exit_code(
+    fixture_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     _set_evidence(fixture_repo, ok=False)
     monkeypatch.chdir(fixture_repo)
     runner = CliRunner()
@@ -437,7 +440,9 @@ def test_cli_validate_json_and_exit_code(fixture_repo: Path, monkeypatch: pytest
     assert any(inv["id"] == "evidence-backed" and not inv["holds"] for inv in payload["invariants"])
 
 
-def test_cli_validate_passes_when_all_hold(fixture_repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_cli_validate_passes_when_all_hold(
+    fixture_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     # Drop the broken invariant so every check can hold, then satisfy evidence.
     schemas = fixture_repo / ".pkit" / "capabilities" / "fixture" / "schemas"
     only_evidence = _PROCESS_DEFINITION.split("    - id: derive-dont-store")[0]

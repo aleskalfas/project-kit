@@ -55,8 +55,9 @@ naming the entry); `pre-check` reports each as a `fail`.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, replace
-from typing import TYPE_CHECKING, Any, Mapping
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from _lib.review_contributions import ContributionCollection, ContributionRule
@@ -89,7 +90,7 @@ class ContributionOptOut:
     def where(self) -> str:
         return f"{OPT_OUT_PATH}[{self.index}]"
 
-    def covers(self, rule: "ContributionRule") -> bool:
+    def covers(self, rule: ContributionRule) -> bool:
         """True when `rule` is a contribution this opt-out withdraws."""
         return rule.capability == self.capability and rule.reviewer == self.reviewer
 
@@ -111,7 +112,7 @@ class OptOuts:
     def ok(self) -> bool:
         return not self.errors
 
-    def apply(self, collection: "ContributionCollection") -> "ContributionCollection":
+    def apply(self, collection: ContributionCollection) -> ContributionCollection:
         """`collection` without the opted-out rules and their resolution errors.
 
         Filtering happens on the collection's rules, before any predicate is
@@ -126,23 +127,22 @@ class OptOuts:
         if len(kept) == len(collection.rules):
             return collection
         dropped_errors = [
-            rule.resolution_error for rule in collection.rules
+            rule.resolution_error
+            for rule in collection.rules
             if self.withdraws(rule) and rule.resolution_error is not None
         ]
         return replace(
             collection,
             rules=tuple(kept),
-            errors=tuple(
-                error for error in collection.errors if error not in dropped_errors
-            ),
+            errors=tuple(error for error in collection.errors if error not in dropped_errors),
         )
 
-    def withdraws(self, rule: "ContributionRule") -> bool:
+    def withdraws(self, rule: ContributionRule) -> bool:
         """True when any configured opt-out withdraws `rule`."""
         return any(entry.covers(rule) for entry in self.entries)
 
     def problems_against(
-        self, collection: "ContributionCollection"
+        self, collection: ContributionCollection
     ) -> tuple[tuple[ContributionOptOut, str], ...]:
         """Each entry naming a contribution that is not installed, with why.
 
@@ -165,19 +165,18 @@ class OptOuts:
                 state = (
                     "is installed but contributes no reviewer requirement"
                     if entry.capability in installed
-                    else "is not an installed capability contributing reviewer "
-                    "requirements"
+                    else "is not an installed capability contributing reviewer requirements"
                 )
-                problems.append(
-                    (entry, f"{entry.where}: capability `{entry.capability}` {state}")
-                )
+                problems.append((entry, f"{entry.where}: capability `{entry.capability}` {state}"))
             elif entry.reviewer not in reviewers:
-                problems.append((
-                    entry,
-                    f"{entry.where}: capability `{entry.capability}` contributes "
-                    f"no reviewer `{entry.reviewer}` (it contributes: "
-                    f"{', '.join(sorted(reviewers))})",
-                ))
+                problems.append(
+                    (
+                        entry,
+                        f"{entry.where}: capability `{entry.capability}` contributes "
+                        f"no reviewer `{entry.reviewer}` (it contributes: "
+                        f"{', '.join(sorted(reviewers))})",
+                    )
+                )
         return tuple(problems)
 
 
@@ -209,9 +208,7 @@ def parse_opt_outs(raw: Any) -> OptOuts:
     if raw is None:
         return NO_OPT_OUTS
     if not isinstance(raw, list):
-        return OptOuts(errors=(
-            f"`{OPT_OUT_PATH}` must be a list, got {type(raw).__name__}",
-        ))
+        return OptOuts(errors=(f"`{OPT_OUT_PATH}` must be a list, got {type(raw).__name__}",))
 
     entries: list[ContributionOptOut] = []
     errors: list[str] = []
@@ -261,8 +258,7 @@ def _entry_errors(item: Mapping, where: str) -> list[str]:
         value = item.get(key)
         if not isinstance(value, str) or not value.strip():
             detail = (
-                " — an opt-out withdraws a merge gate, so it states why"
-                if key == "reason" else ""
+                " — an opt-out withdraws a merge gate, so it states why" if key == "reason" else ""
             )
             errors.append(f"`{where}.{key}` must be a non-empty string{detail}")
     return errors

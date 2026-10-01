@@ -25,7 +25,6 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
-
 CAPABILITY_NAME = "project-management"
 MEMBERS_RELATIVE = "project/members.yaml"
 
@@ -72,7 +71,10 @@ def resolve_invoker_identity(
     callables returning a string-or-None. Production uses subprocess.
     """
     if gh_login_provider is None:
-        gh_login_provider = lambda: _gh_login_via_subprocess(config or {})
+
+        def gh_login_provider():
+            return _gh_login_via_subprocess(config or {})
+
     if email_provider is None:
         email_provider = _email_via_subprocess
 
@@ -101,10 +103,7 @@ def check_membership(
     for entry in members:
         if not isinstance(entry, dict):
             continue
-        if (
-            invoker.github_login
-            and entry.get("github_login") == invoker.github_login
-        ):
+        if invoker.github_login and entry.get("github_login") == invoker.github_login:
             return MembershipResult(allowed=True, mode="closed", invoker=invoker)
         if invoker.email and entry.get("email") == invoker.email:
             return MembershipResult(allowed=True, mode="closed", invoker=invoker)
@@ -168,7 +167,7 @@ def _gh_login_via_subprocess(config: dict | None = None) -> str | None:
     that the caller has `scripts/` on sys.path, which every pm script
     ensures via `sys.path.insert(0, str(_HERE))` before importing.
     """
-    from _lib.gh import gh_run  # noqa: PLC0415 — deferred to avoid circular import at module load
+    from _lib.gh import gh_run  # deferred to avoid circular import at module load
 
     try:
         proc = gh_run(

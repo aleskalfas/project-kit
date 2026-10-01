@@ -84,10 +84,7 @@ def classification() -> dict:
     ],
 )
 def test_permit_refuse_matrix(cr, classification, kind, structural, expected) -> None:
-    assert (
-        cr.kind_allowed_for_structural_type(kind, structural, classification)
-        is expected
-    )
+    assert cr.kind_allowed_for_structural_type(kind, structural, classification) is expected
 
 
 def test_unknown_kind_absent_from_table_is_permitted(cr, classification) -> None:
@@ -120,10 +117,7 @@ def test_kind_drives_title_false_on_empty_classification(cr) -> None:
 
 
 def test_mismatch_severity_token_returned(cr, classification) -> None:
-    assert (
-        cr.mismatch_severity_token(classification)
-        == "[validation-severity:hard-reject]"
-    )
+    assert cr.mismatch_severity_token(classification) == "[validation-severity:hard-reject]"
 
 
 def test_mismatch_severity_token_none_when_absent(cr) -> None:

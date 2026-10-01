@@ -46,9 +46,9 @@ from typing import Any
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import doc_check, spaces  # noqa: E402
-from _lib.artefacts import Unreadable  # noqa: E402
-from _lib.declarations import project_root  # noqa: E402
+from _lib import doc_check, spaces
+from _lib.artefacts import Unreadable
+from _lib.declarations import project_root
 
 
 def obligations(root: Path) -> list[dict[str, Any]]:

@@ -171,19 +171,22 @@ def field_value_args(
     the contract (ADR-031 point 3) and constructed at its own site.
     """
     args = [
-        "gh", "project", "item-edit",
-        "--id", item_id,
-        "--field-id", field_id,
-        "--project-id", project_id,
+        "gh",
+        "project",
+        "item-edit",
+        "--id",
+        item_id,
+        "--field-id",
+        field_id,
+        "--project-id",
+        project_id,
     ]
     if single_select_option_id:
         args += ["--single-select-option-id", str(single_select_option_id)]
     elif text_value:
         args += ["--text", str(text_value)]
     else:
-        raise ValueError(
-            "field-value write requires single_select_option_id or text_value"
-        )
+        raise ValueError("field-value write requires single_select_option_id or text_value")
     return args
 
 

@@ -33,8 +33,8 @@ from pathlib import Path
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate  # noqa: E402
-from _lib.comment import run_comment_verb  # noqa: E402
+from _lib import bootstrap_gate
+from _lib.comment import run_comment_verb
 
 
 def main() -> int:

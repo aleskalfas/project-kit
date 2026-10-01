@@ -124,9 +124,7 @@ def test_gate_absent_workstream_in_present_map_refuses(tmp_path) -> None:
 def test_gate_served_workstream_label_bound_proceeds(tmp_path) -> None:
     """workstream bound (e.g. to a `label` remap) ⇒ SERVED ⇒ the minimal gate
     proceeds (richer validate-against-the-set behaviour is #264, not this gate)."""
-    _write_substrate_map(
-        tmp_path, {"workstream": {"label": {"remap": {"cli": "area/cli"}}}}
-    )
+    _write_substrate_map(tmp_path, {"workstream": {"label": {"remap": {"cli": "area/cli"}}}})
     assert axis_labels.workstream_mutator_refusal(tmp_path) is None
 
 
@@ -152,18 +150,22 @@ def test_add_workstream_main_refuses_before_gh_label_under_unsupported_map(
     monkeypatch.setattr(aw, "gh_run", fail_on_gh_label)
     # Open membership (no members.yaml) ⇒ the invoker passes the membership gate,
     # so the constraint-1 gate is what stops the mutator.
-    monkeypatch.setattr(sys, "argv", [
-        "add-workstream.py", "cli",
-        "--capability-root", str(tmp_path),
-        "--yes",
-    ])
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "add-workstream.py",
+            "cli",
+            "--capability-root",
+            str(tmp_path),
+            "--yes",
+        ],
+    )
     rc = aw.main()
     assert rc == 1  # refusal exit code
 
 
-def test_add_workstream_main_greenfield_reaches_label_step(
-    aw, tmp_path, monkeypatch
-) -> None:
+def test_add_workstream_main_greenfield_reaches_label_step(aw, tmp_path, monkeypatch) -> None:
     """Greenfield parity: with NO substrate-map the gate is inert, so a
     label-substrate `add-workstream` proceeds to the `gh label create` step
     (here recorded, not actually run) — demonstrating the gate does not change
@@ -183,11 +185,17 @@ def test_add_workstream_main_greenfield_reaches_label_step(
         return _Proc()
 
     monkeypatch.setattr(aw, "gh_run", record_gh)
-    monkeypatch.setattr(sys, "argv", [
-        "add-workstream.py", "cli",
-        "--capability-root", str(tmp_path),
-        "--yes",
-    ])
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "add-workstream.py",
+            "cli",
+            "--capability-root",
+            str(tmp_path),
+            "--yes",
+        ],
+    )
     rc = aw.main()
     assert rc == 0
     # Greenfield label-substrate adopter ⇒ the gh label create step ran.
@@ -222,9 +230,7 @@ def test_kit_label_mutation_note_fires_for_a_label_bound_axis_under_a_board() ->
     """The hazard case: a board configured AND a `label` binding. Carriage says the
     adopter's own labels, so the kit-label half is suppressed — and the note names
     the substrate, because "no label was created" is only actionable with a why."""
-    sm = axis_labels.SubstrateMap(
-        axes={"workstream": {"label": {"remap": {"cli": "area/cli"}}}}
-    )
+    sm = axis_labels.SubstrateMap(axes={"workstream": {"label": {"remap": {"cli": "area/cli"}}}})
     note = axis_carriage.kit_label_mutation_note("workstream", BOARD, sm)
     assert note is not None
     assert "your OWN labels" in note
@@ -249,9 +255,7 @@ def _stage_label_bound_board_adopter(cap_root: Path) -> None:
         "has_projects_v2_board: true\nprojects_v2_board_id: 7\n",
         encoding="utf-8",
     )
-    _write_substrate_map(
-        cap_root, {"workstream": {"label": {"remap": {"cli": "area/cli"}}}}
-    )
+    _write_substrate_map(cap_root, {"workstream": {"label": {"remap": {"cli": "area/cli"}}}})
     _mark_bootstrapped(cap_root)
 
 
@@ -269,15 +273,19 @@ def test_add_workstream_creates_no_kit_label_for_a_label_bound_board_adopter(
         raise AssertionError(f"unexpected gh_run call: {cmd}")
 
     monkeypatch.setattr(aw, "gh_run", fail_on_gh_label)
-    monkeypatch.setattr(sys, "argv", [
-        "add-workstream.py", "docs",
-        "--capability-root", str(tmp_path),
-        "--yes",
-    ])
-    assert aw.main() == 0
-    assert "docs" in (tmp_path / "project" / "workstreams.yaml").read_text(
-        encoding="utf-8"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "add-workstream.py",
+            "docs",
+            "--capability-root",
+            str(tmp_path),
+            "--yes",
+        ],
     )
+    assert aw.main() == 0
+    assert "docs" in (tmp_path / "project" / "workstreams.yaml").read_text(encoding="utf-8")
 
 
 def test_remove_workstream_deletes_no_kit_label_for_a_label_bound_board_adopter(
@@ -298,14 +306,18 @@ def test_remove_workstream_deletes_no_kit_label_for_a_label_bound_board_adopter(
         raise AssertionError(f"unexpected gh_run call: {cmd}")
 
     monkeypatch.setattr(rw, "gh_run", fail_on_gh_label)
-    monkeypatch.setattr(sys, "argv", [
-        "remove-workstream.py", "cli",
-        "--capability-root", str(tmp_path),
-        "--yes",
-    ])
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "remove-workstream.py",
+            "cli",
+            "--capability-root",
+            str(tmp_path),
+            "--yes",
+        ],
+    )
     assert rw.main() == 0
     # The vocabulary edit still happened — the mutator ran, it just did not touch
     # a label substrate it does not own.
-    assert "cli" not in (tmp_path / "project" / "workstreams.yaml").read_text(
-        encoding="utf-8"
-    )
+    assert "cli" not in (tmp_path / "project" / "workstreams.yaml").read_text(encoding="utf-8")

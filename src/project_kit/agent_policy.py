@@ -42,8 +42,15 @@ INHERIT = "inherit"
 # The harness's model aliases (Claude Code's own list), each resolving to the
 # latest model of its family. A full model name is accepted too — below.
 MODEL_ALIASES: tuple[str, ...] = (
-    "sonnet", "opus", "haiku", "fable", "best", "opusplan",
-    "sonnet[1m]", "opus[1m]", "fable[1m]",
+    "sonnet",
+    "opus",
+    "haiku",
+    "fable",
+    "best",
+    "opusplan",
+    "sonnet[1m]",
+    "opus[1m]",
+    "fable[1m]",
 )
 
 # A full model name: `claude-…`, optionally provider-qualified

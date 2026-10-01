@@ -39,9 +39,8 @@ from referencing.exceptions import Unresolvable
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
-from project_kit import backbone_schemas
+from project_kit import backbone_schemas, validators
 from project_kit.manifest import read_backbone_manifest
-from project_kit import validators
 from project_kit.schemas_validate import (
     _ID_COLLECTION_ANNOTATION,
     _TOKEN_PATTERN,
@@ -281,9 +280,7 @@ def _resolve_from_field(
             ),
         )
     capability, schema_name = parts
-    return _build_binding(
-        data_path, target_root, capability, schema_name, source="field"
-    )
+    return _build_binding(data_path, target_root, capability, schema_name, source="field")
 
 
 def _build_binding(
@@ -300,8 +297,7 @@ def _build_binding(
         return BindingError(
             data_path=data_path,
             message=(
-                f"capability {capability!r} is not installed at "
-                f".pkit/capabilities/{capability}/."
+                f"capability {capability!r} is not installed at .pkit/capabilities/{capability}/."
             ),
         )
     schema_yaml = cap_dir / "schemas" / f"{schema_name}.yaml"
@@ -355,9 +351,7 @@ def load_all_capability_bindings(target_root: Path) -> list[CapabilityBindings]:
     return out
 
 
-def _collect_binds_to_for_capability(
-    target_root: Path, capability: str
-) -> list[tuple[str, str]]:
+def _collect_binds_to_for_capability(target_root: Path, capability: str) -> list[tuple[str, str]]:
     """Walk a capability's schemas/*.yaml and aggregate `binds_to:` entries.
 
     Returns a flat list of `(schema-stem, glob)` tuples. Schemas without
@@ -449,9 +443,7 @@ def validate_data_file(
     findings (empty = clean).
     """
     if binding is None:
-        binding = resolve_binding(
-            data_path, target_root, capability_bindings=capability_bindings
-        )
+        binding = resolve_binding(data_path, target_root, capability_bindings=capability_bindings)
     rel = _rel(data_path, target_root)
     if isinstance(binding, BindingError):
         return [DataValidationIssue(location=rel, message=binding.message)]
@@ -472,8 +464,7 @@ def validate_data_file(
             DataValidationIssue(
                 location=_rel(binding.companion, target_root),
                 message=(
-                    f"companion is not valid JSON: {exc.msg} "
-                    f"at line {exc.lineno} col {exc.colno}."
+                    f"companion is not valid JSON: {exc.msg} at line {exc.lineno} col {exc.colno}."
                 ),
             )
         ]
@@ -900,9 +891,7 @@ def _resolve_references_in_scope(
             visited=frozenset(),
         ):
             issues.extend(
-                _check_reference_value(
-                    ns_annot, value, pointer, binding, pools, target_root
-                )
+                _check_reference_value(ns_annot, value, pointer, binding, pools, target_root)
             )
     return issues
 
@@ -1056,9 +1045,7 @@ def print_report(report: DataValidationReport) -> None:
         if report.files_checked == 0:
             click.echo("  No adopter data files found to validate.")
         else:
-            click.echo(
-                f"  Validated {report.files_checked} data file(s). All checks passed."
-            )
+            click.echo(f"  Validated {report.files_checked} data file(s). All checks passed.")
         return
 
     errors = report.errors

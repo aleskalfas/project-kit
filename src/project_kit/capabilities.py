@@ -31,12 +31,11 @@ judge through the wiring resolver, never by reading process definitions.
 from __future__ import annotations
 
 import datetime as _dt
-import io
 import re
 import shutil
 from dataclasses import dataclass, field
 from pathlib import Path, PurePath
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 import click
 from ruamel.yaml import YAML
@@ -45,15 +44,14 @@ from project_kit import treecopy
 from project_kit.manifest import (
     ORIGIN_INCUBATED_IN_REPO,
     ORIGIN_KIT_SHIPPED,
-    BackboneManifest,
     ComponentManifest,
     ComponentRegistryEntry,
     read_backbone_manifest,
     read_capability_origin,
-    set_capability_origin as _manifest_set_capability_origin,
     write_backbone_manifest,
     write_component_manifest,
 )
+from project_kit.manifest import set_capability_origin as _manifest_set_capability_origin
 from project_kit.migrations import (
     execute_migration_scripts,
     pending_migration_scripts,
@@ -94,7 +92,7 @@ _CAPABILITY_PROJECT_SUBTREE = "project"
 class CapabilityDependency:
     """One entry from the ``requires_capabilities`` list in a ``package.yaml``."""
 
-    name: str     # capability name (e.g. "evidence")
+    name: str  # capability name (e.g. "evidence")
     version: str  # semver range string (e.g. ">=0.2.0,<1.0.0")
 
 
@@ -152,8 +150,7 @@ def refuse_reserved_capability_name(name: str) -> None:
     reason = RESERVED_CAPABILITY_NAMES.get(name)
     if reason is not None:
         raise click.ClickException(
-            f"capability name {name!r} is reserved: {reason}. "
-            f"Choose another name."
+            f"capability name {name!r} is reserved: {reason}. Choose another name."
         )
 
 
@@ -179,9 +176,7 @@ def find_capability_in_repo(target_root: Path, name: str) -> CapabilitySource | 
     is a lifecycle-owned property recorded in install-state (COR-031 D2),
     not something this resolver infers.
     """
-    return _resolve_capability_dir(
-        target_root / ".pkit" / "capabilities" / name, name
-    )
+    return _resolve_capability_dir(target_root / ".pkit" / "capabilities" / name, name)
 
 
 def authored_in_source(target_root: Path, source_kit: Path, name: str) -> bool:
@@ -225,10 +220,10 @@ class ResolvedCapability:
     the other.
     """
 
-    source: CapabilitySource     # the selected source (per `prefer`)
-    origin: CapabilityOrigin     # which tree the selected source came from
-    in_kit_source: bool          # the name also resolved in the kit source
-    in_repo: bool                # the name also resolved in the adopter's repo
+    source: CapabilitySource  # the selected source (per `prefer`)
+    origin: CapabilityOrigin  # which tree the selected source came from
+    in_kit_source: bool  # the name also resolved in the kit source
+    in_repo: bool  # the name also resolved in the adopter's repo
 
 
 def resolve_capability_source(
@@ -297,9 +292,7 @@ def list_capabilities(target_root: Path, source_kit: Path) -> tuple[list[str], l
     installed: list[str] = []
     backbone = read_backbone_manifest(target_root)
     if backbone is not None:
-        installed = [
-            c.name for c in backbone.components if c.kind == "capability"
-        ]
+        installed = [c.name for c in backbone.components if c.kind == "capability"]
     installed.sort()
     return available, installed
 
@@ -368,11 +361,7 @@ def installed_capability_origins(target_root: Path) -> dict[str, str]:
     backbone = read_backbone_manifest(target_root)
     if backbone is None:
         return {}
-    return {
-        c.name: c.origin
-        for c in backbone.components
-        if c.kind == "capability"
-    }
+    return {c.name: c.origin for c in backbone.components if c.kind == "capability"}
 
 
 def is_installed(target_root: Path, name: str) -> bool:
@@ -380,9 +369,7 @@ def is_installed(target_root: Path, name: str) -> bool:
     backbone = read_backbone_manifest(target_root)
     if backbone is None:
         return False
-    return any(
-        c.kind == "capability" and c.name == name for c in backbone.components
-    )
+    return any(c.kind == "capability" and c.name == name for c in backbone.components)
 
 
 def get_installed_capability_version(target_root: Path, name: str) -> str | None:
@@ -402,10 +389,10 @@ def get_installed_capability_version(target_root: Path, name: str) -> str | None
 class CapabilityDependencyConflict:
     """One failing dependency found during the pre-flight check (COR-030)."""
 
-    dep_name: str           # the dependency capability's name
+    dep_name: str  # the dependency capability's name
     dep_version_range: str  # the declared range (e.g. ">=0.2.0,<1.0.0")
     installed_version: str | None  # None means not installed at all
-    reason: str             # "absent" or "out-of-range"
+    reason: str  # "absent" or "out-of-range"
 
 
 def check_capability_dependencies(
@@ -444,12 +431,14 @@ def check_capability_dependencies(
     conflicts: list[CapabilityDependencyConflict] = []
     for dep in requires_capabilities:
         if not is_installed(target_root, dep.name):
-            conflicts.append(CapabilityDependencyConflict(
-                dep_name=dep.name,
-                dep_version_range=dep.version,
-                installed_version=None,
-                reason="absent",
-            ))
+            conflicts.append(
+                CapabilityDependencyConflict(
+                    dep_name=dep.name,
+                    dep_version_range=dep.version,
+                    installed_version=None,
+                    reason="absent",
+                )
+            )
             continue
 
         installed_version = get_installed_capability_version(target_root, dep.name)
@@ -461,12 +450,14 @@ def check_capability_dependencies(
 
         # A malformed range or version (None) can't be evaluated — skip.
         if range_admits(dep.version, installed_version) is False:
-            conflicts.append(CapabilityDependencyConflict(
-                dep_name=dep.name,
-                dep_version_range=dep.version,
-                installed_version=installed_version,
-                reason="out-of-range",
-            ))
+            conflicts.append(
+                CapabilityDependencyConflict(
+                    dep_name=dep.name,
+                    dep_version_range=dep.version,
+                    installed_version=installed_version,
+                    reason="out-of-range",
+                )
+            )
 
     return conflicts
 
@@ -493,9 +484,7 @@ def find_declared_dependents(target_root: Path, dep_name: str) -> list[str]:
         if entry.name == dep_name:
             continue  # skip self
         # Read the installed package.yaml to get requires_capabilities.
-        pkg_yaml_path = (
-            target_root / ".pkit" / "capabilities" / entry.name / "package.yaml"
-        )
+        pkg_yaml_path = target_root / ".pkit" / "capabilities" / entry.name / "package.yaml"
         if not pkg_yaml_path.is_file():
             continue
         pkg = _read_package_yaml(pkg_yaml_path)
@@ -855,11 +844,7 @@ def read_prior_skipped_artifacts(
     interactive resolver if needed.
     """
     manifest_path = (
-        target_root
-        / ".pkit"
-        / "capabilities"
-        / capability_name
-        / "component-manifest.yaml"
+        target_root / ".pkit" / "capabilities" / capability_name / "component-manifest.yaml"
     )
     if not manifest_path.is_file():
         return ()
@@ -1077,17 +1062,13 @@ def refresh_capability(
 
     if dry_run:
         # Report what would happen without writing.
-        _report_pending_migrations(
-            capability_source, installed_version, dry_run=True
-        )
+        _report_pending_migrations(capability_source, installed_version, dry_run=True)
         return dest
 
     # Run migrations first so adopter state migrates before the new
     # capability files arrive. If a script fails, halt — the file
     # refresh is skipped to keep state consistent.
-    _run_capability_migrations(
-        target_root, capability_source, installed_version
-    )
+    _run_capability_migrations(target_root, capability_source, installed_version)
 
     _copy_capability_tree(capability_source.path, dest, skipped_artifacts)
     # Re-stamp the per-component manifest with the new version + install
@@ -1115,9 +1096,7 @@ def _read_installed_capability_version(target_root: Path, name: str) -> str | No
     that as "no migrations to run" / "version unreadable" rather than
     failing.
     """
-    manifest_path = (
-        target_root / ".pkit" / "capabilities" / name / "manifest.yaml"
-    )
+    manifest_path = target_root / ".pkit" / "capabilities" / name / "manifest.yaml"
     if manifest_path.is_file():
         try:
             raw = _yaml.load(manifest_path.read_text(encoding="utf-8"))
@@ -1134,9 +1113,7 @@ def _read_installed_capability_version(target_root: Path, name: str) -> str | No
     # version of record for an incubated capability (no kit-written
     # manifest) and a safe last resort for a kit-shipped one whose
     # per-component manifest is missing or malformed.
-    package_path = (
-        target_root / ".pkit" / "capabilities" / name / "package.yaml"
-    )
+    package_path = target_root / ".pkit" / "capabilities" / name / "package.yaml"
     package = _read_package_yaml(package_path) if package_path.is_file() else None
     if package is not None:
         return package.version
@@ -1147,7 +1124,7 @@ def _pending_migration_scripts(
     capability_source: CapabilitySource,
     installed_version: str | None,
 ) -> list[Path]:
-    """Collect scripts under `<source>/migrations/<X.Y.0>/` whose minor falls in (installed, source].
+    """Collect scripts under `<source>/migrations/<X.Y.0>/` whose minor is in (installed, source].
 
     Delegates to `migrations.pending_migration_scripts`. Kept as a
     capability-specific wrapper so tests have a stable API and the
@@ -1221,8 +1198,8 @@ class UninstallOutcome:
     harness still carries the capability (each is also reported as it runs).
     """
 
-    cap_dir: Path        # the capability's subtree path (deleted or kept)
-    origin: str          # kit-shipped | incubated-in-repo
+    cap_dir: Path  # the capability's subtree path (deleted or kept)
+    origin: str  # kit-shipped | incubated-in-repo
     files_deleted: bool  # whether the subtree was (or would be) removed
     in_source: bool = False  # the subtree is the capability's source (`authored_in_source`)
     adapters_without_undeploy: tuple[str, ...] = ()  # adapters that could not undeploy it
@@ -1268,9 +1245,7 @@ def uninstall_capability(
     Returns an ``UninstallOutcome`` describing what was (or would be) done.
     """
     if not is_installed(target_root, name):
-        raise click.ClickException(
-            f"capability {name!r} is not installed."
-        )
+        raise click.ClickException(f"capability {name!r} is not installed.")
 
     if source_kit is None:
         from project_kit.install import find_source_kit
@@ -1593,12 +1568,13 @@ def _copy_capability_tree(
     # primitive (it knows nothing of "skipped artifacts"). Decisions and
     # other artifacts are not skip-eligible (they don't collide by name).
     exclude = frozenset(
-        f"{kind}s/{name}.md"
-        for kind, name in skipped_artifacts
-        if kind in ("skill", "agent")
+        f"{kind}s/{name}.md" for kind, name in skipped_artifacts if kind in ("skill", "agent")
     )
     treecopy.refresh_owned_tree(
-        source, dest, is_owned=_capability_owned, exclude=exclude,
+        source,
+        dest,
+        is_owned=_capability_owned,
+        exclude=exclude,
         seed_owned=False,
     )
     # Stub the adopter-owned tree so the directory exists to be written into,
@@ -1623,17 +1599,14 @@ def _register_in_backbone_manifest(
     """
     backbone = read_backbone_manifest(target_root)
     if backbone is None:
-        raise click.ClickException(
-            ".pkit/manifest.yaml is missing. Run 'pkit init' first."
-        )
+        raise click.ClickException(".pkit/manifest.yaml is missing. Run 'pkit init' first.")
     manifest_rel = f".pkit/capabilities/{name}/manifest.yaml"
     entry = ComponentRegistryEntry(
         kind="capability", name=name, manifest=manifest_rel, origin=origin
     )
     # Don't duplicate (caller should check, but defensive).
     backbone.components = [
-        c for c in backbone.components
-        if not (c.kind == "capability" and c.name == name)
+        c for c in backbone.components if not (c.kind == "capability" and c.name == name)
     ]
     backbone.components.append(entry)
     write_backbone_manifest(target_root, backbone)
@@ -1657,8 +1630,7 @@ def _unregister_from_backbone_manifest(target_root: Path, name: str) -> None:
     if backbone is None:
         return
     backbone.components = [
-        c for c in backbone.components
-        if not (c.kind == "capability" and c.name == name)
+        c for c in backbone.components if not (c.kind == "capability" and c.name == name)
     ]
     write_backbone_manifest(target_root, backbone)
 
@@ -1677,14 +1649,12 @@ def _stamp_component_manifest(
     )
     backend_state: dict[str, Any] = {}
     if skipped_artifacts:
-        backend_state["skipped"] = [
-            {"kind": k, "name": n} for (k, n) in skipped_artifacts
-        ]
+        backend_state["skipped"] = [{"kind": k, "name": n} for (k, n) in skipped_artifacts]
     manifest = ComponentManifest(
         kind="capability",
         name=capability_source.name,
         version=capability_source.package.version,
-        installed_at=_dt.datetime.now(_dt.timezone.utc).isoformat(),
+        installed_at=_dt.datetime.now(_dt.UTC).isoformat(),
         requires_backbone=capability_source.package.requires_backbone,
         backend_state=backend_state,
     )

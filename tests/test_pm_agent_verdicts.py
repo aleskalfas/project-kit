@@ -15,18 +15,14 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SCRIPTS_DIR = (
-    REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
-)
+SCRIPTS_DIR = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
 LIB_PATH = SCRIPTS_DIR / "_lib" / "agent_verdicts.py"
 
 
 @pytest.fixture(scope="module")
 def av():
     sys.path.insert(0, str(SCRIPTS_DIR))
-    spec = importlib.util.spec_from_file_location(
-        "pm_agent_verdicts_under_test", LIB_PATH
-    )
+    spec = importlib.util.spec_from_file_location("pm_agent_verdicts_under_test", LIB_PATH)
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     sys.modules["pm_agent_verdicts_under_test"] = module
@@ -40,8 +36,14 @@ def av():
 _MARKER = "<!-- pkit-verdict -->"
 
 
-def _local(name, verdict, author="reviewer", ts="2026-06-02T00:00:00Z",
-           reasons="because reasons", marked=True):
+def _local(
+    name,
+    verdict,
+    author="reviewer",
+    ts="2026-06-02T00:00:00Z",
+    reasons="because reasons",
+    marked=True,
+):
     tail = f"\n\n{_MARKER}" if marked else ""
     return {
         "author": {"login": author},
@@ -50,8 +52,9 @@ def _local(name, verdict, author="reviewer", ts="2026-06-02T00:00:00Z",
     }
 
 
-def _remote(verdict, author="review-bot", ts="2026-06-02T00:00:00Z",
-            reasons="remote reasons", marked=True):
+def _remote(
+    verdict, author="review-bot", ts="2026-06-02T00:00:00Z", reasons="remote reasons", marked=True
+):
     tail = f"\n\n{_MARKER}" if marked else ""
     return {
         "author": {"login": author},
@@ -64,16 +67,12 @@ def _remote(verdict, author="review-bot", ts="2026-06-02T00:00:00Z",
 
 
 def test_parse_local_line(av) -> None:
-    token, path, name = av.parse_verdict_line(
-        "Reviewer agent (local, critic): APPROVED"
-    )
+    token, path, name = av.parse_verdict_line("Reviewer agent (local, critic): APPROVED")
     assert (token, path, name) == (av.APPROVED, av.PATH_LOCAL, "critic")
 
 
 def test_parse_remote_line(av) -> None:
-    token, path, name = av.parse_verdict_line(
-        "Reviewer agent: CHANGES_REQUESTED"
-    )
+    token, path, name = av.parse_verdict_line("Reviewer agent: CHANGES_REQUESTED")
     assert (token, path, name) == (av.CHANGES_REQUESTED, av.PATH_REMOTE, None)
 
 
@@ -96,10 +95,12 @@ def test_single_local_verdict_body_preserved(av) -> None:
 
 
 def test_multi_reviewer_each_kept(av) -> None:
-    out = av.latest_verdicts_per_reviewer([
-        _local("critic", "APPROVED"),
-        _local("architect", "CHANGES_REQUESTED"),
-    ])
+    out = av.latest_verdicts_per_reviewer(
+        [
+            _local("critic", "APPROVED"),
+            _local("architect", "CHANGES_REQUESTED"),
+        ]
+    )
     by_name = {v.reviewer: v.token for v in out}
     assert by_name == {"critic": av.APPROVED, "architect": av.CHANGES_REQUESTED}
 
@@ -107,10 +108,12 @@ def test_multi_reviewer_each_kept(av) -> None:
 def test_latest_by_timestamp_not_list_order(av) -> None:
     # An earlier APPROVED appears AFTER a later CHANGES_REQUESTED in the list;
     # the later timestamp must win regardless of array order (DEC-028 step 5).
-    out = av.latest_verdicts_per_reviewer([
-        _local("critic", "CHANGES_REQUESTED", ts="2026-06-03T00:00:00Z"),
-        _local("critic", "APPROVED", ts="2026-06-02T00:00:00Z"),
-    ])
+    out = av.latest_verdicts_per_reviewer(
+        [
+            _local("critic", "CHANGES_REQUESTED", ts="2026-06-03T00:00:00Z"),
+            _local("critic", "APPROVED", ts="2026-06-02T00:00:00Z"),
+        ]
+    )
     assert len(out) == 1
     assert out[0].token == av.CHANGES_REQUESTED
 
@@ -118,10 +121,12 @@ def test_latest_by_timestamp_not_list_order(av) -> None:
 def test_remote_and_local_do_not_collide(av) -> None:
     # A remote reviewer and a local reviewer with the same identity string are
     # keyed separately by path.
-    out = av.latest_verdicts_per_reviewer([
-        _remote("APPROVED", author="critic"),
-        _local("critic", "CHANGES_REQUESTED"),
-    ])
+    out = av.latest_verdicts_per_reviewer(
+        [
+            _remote("APPROVED", author="critic"),
+            _local("critic", "CHANGES_REQUESTED"),
+        ]
+    )
     paths = {v.path for v in out}
     assert paths == {av.PATH_REMOTE, av.PATH_LOCAL}
     assert len(out) == 2
@@ -141,9 +146,7 @@ def test_min_timestamp_drops_stale(av) -> None:
 
 def test_no_min_timestamp_keeps_stale(av) -> None:
     # show-pr applies no freshness filter — a "stale" verdict is still shown.
-    out = av.latest_verdicts_per_reviewer(
-        [_local("critic", "APPROVED", ts="2026-06-01T00:00:00Z")]
-    )
+    out = av.latest_verdicts_per_reviewer([_local("critic", "APPROVED", ts="2026-06-01T00:00:00Z")])
     assert len(out) == 1
 
 
@@ -165,9 +168,7 @@ def test_empty_comments_yields_nothing(av) -> None:
 
 
 def test_non_dict_comments_ignored(av) -> None:
-    out = av.latest_verdicts_per_reviewer(
-        ["not a dict", None, _local("critic", "APPROVED")]
-    )
+    out = av.latest_verdicts_per_reviewer(["not a dict", None, _local("critic", "APPROVED")])
     assert [v.reviewer for v in out] == ["critic"]
 
 
@@ -219,8 +220,13 @@ def test_gate_verdicts_behaviour_identical_when_filters_supplied(av) -> None:
         _remote("APPROVED", author="pr-author", ts="2026-06-05T00:00:00Z"),
     ]
     anchor = "2026-06-02T00:00:00Z"
-    local_ok = lambda name: name == "critic"
-    remote_ok = lambda login: login != "pr-author"
+
+    def local_ok(name):
+        return name == "critic"
+
+    def remote_ok(login):
+        return login != "pr-author"
+
     strict = av.gate_verdicts(
         comments,
         min_timestamp=anchor,
@@ -279,9 +285,7 @@ def test_gate_drops_unmarked_verdict(av) -> None:
 def test_read_surface_shows_unmarked_verdict(av) -> None:
     # The read surface (default require_marker=False) still displays an unmarked
     # verdict-shaped comment — only the gate requires the marker.
-    got = av.latest_verdicts_per_reviewer(
-        [_local("reviewer", "APPROVED", marked=False)]
-    )
+    got = av.latest_verdicts_per_reviewer([_local("reviewer", "APPROVED", marked=False)])
     assert [(v.reviewer, v.token) for v in got] == [("reviewer", av.APPROVED)]
 
 
@@ -312,8 +316,7 @@ def test_all_verdicts_applies_the_same_filters(av) -> None:
         _local("a", "APPROVED", ts="2026-06-03T00:00:00Z", marked=False),
         _local("b", "APPROVED", ts="2026-06-03T00:00:00Z"),
         _local("c", "APPROVED", ts="2026-06-04T00:00:00Z"),
-        {"author": {"login": "x"}, "body": "not a verdict",
-         "createdAt": "2026-06-05T00:00:00Z"},
+        {"author": {"login": "x"}, "body": "not a verdict", "createdAt": "2026-06-05T00:00:00Z"},
     ]
     got = av.all_verdicts(
         comments,
@@ -348,10 +351,12 @@ def test_reduction_keeps_first_seen_on_exact_tie(av) -> None:
 
 
 def test_reduction_returns_the_input_objects(av) -> None:
-    history = av.all_verdicts([
-        _local("critic", "CHANGES_REQUESTED", ts="2026-06-02T00:00:00Z"),
-        _local("critic", "APPROVED", ts="2026-06-03T00:00:00Z"),
-    ])
+    history = av.all_verdicts(
+        [
+            _local("critic", "CHANGES_REQUESTED", ts="2026-06-02T00:00:00Z"),
+            _local("critic", "APPROVED", ts="2026-06-03T00:00:00Z"),
+        ]
+    )
     (latest,) = av.reduce_latest_per_reviewer(history)
     assert latest is history[-1]
 
@@ -364,14 +369,19 @@ def test_reduction_returns_the_input_objects(av) -> None:
 
 def test_latest_commit_timestamp_prefers_committed_then_authored(av) -> None:
     assert av.latest_commit_timestamp([]) == ""
-    assert av.latest_commit_timestamp(
-        [{"authoredDate": "2026-06-01T00:00:00Z"}]
-    ) == "2026-06-01T00:00:00Z"
-    assert av.latest_commit_timestamp([
-        {"committedDate": "2026-06-01T00:00:00Z"},
-        {"committedDate": "2026-06-05T00:00:00Z",
-         "authoredDate": "2026-06-04T00:00:00Z"},
-    ]) == "2026-06-05T00:00:00Z"
+    assert (
+        av.latest_commit_timestamp([{"authoredDate": "2026-06-01T00:00:00Z"}])
+        == "2026-06-01T00:00:00Z"
+    )
+    assert (
+        av.latest_commit_timestamp(
+            [
+                {"committedDate": "2026-06-01T00:00:00Z"},
+                {"committedDate": "2026-06-05T00:00:00Z", "authoredDate": "2026-06-04T00:00:00Z"},
+            ]
+        )
+        == "2026-06-05T00:00:00Z"
+    )
 
 
 def test_latest_commit_timestamp_is_empty_without_a_readable_head(av) -> None:

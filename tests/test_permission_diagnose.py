@@ -8,10 +8,10 @@ Two halves under test:
     `project_kit.permissions` — arm/disarm, TTL-expiry, classifier ordering,
     and that the report applies NOTHING (recommend-only).
 """
+
 from __future__ import annotations
 
 import importlib.util
-import json
 import time
 from pathlib import Path
 
@@ -55,6 +55,7 @@ def _bash(command: str, *, agent: str | None = None) -> dict:
 
 # ---- arm / disarm / TTL-expiry (CLI side) ----------------------------------
 
+
 def test_arm_writes_marker_and_status_reports_armed(tmp_path):
     root = _proj(tmp_path)
     _arm(root)
@@ -87,10 +88,16 @@ def test_ttl_expiry_reads_as_not_armed(tmp_path):
     assert perm._diagnose_is_armed(marker, time.time() + 2) is False
     # status reflects EXPIRED when the wall clock is past the window.
     # (force an old armed_at so we don't have to sleep)
-    perm._dump_yaml(perm._diagnose_marker_path(root), {
-        "schema_version": 1, "armed_at": int(time.time()) - 10,
-        "ttl_seconds": 1, "max_entries": 2000, "redact": True,
-    })
+    perm._dump_yaml(
+        perm._diagnose_marker_path(root),
+        {
+            "schema_version": 1,
+            "armed_at": int(time.time()) - 10,
+            "ttl_seconds": 1,
+            "max_entries": 2000,
+            "redact": True,
+        },
+    )
     assert "EXPIRED" in perm.diagnose_status(root)
 
 
@@ -101,6 +108,7 @@ def test_arm_rejects_nonpositive_ttl(tmp_path):
 
 
 # ---- capture on the deferred verdict (hook side) ---------------------------
+
 
 def test_capture_appends_only_on_abstain(tmp_path):
     cap = _load_capture()
@@ -129,10 +137,16 @@ def test_capture_no_op_when_not_armed(tmp_path):
 def test_capture_no_op_when_expired(tmp_path):
     cap = _load_capture()
     root = _proj(tmp_path)
-    perm._dump_yaml(perm._diagnose_marker_path(root), {
-        "schema_version": 1, "armed_at": int(time.time()) - 100,
-        "ttl_seconds": 1, "max_entries": 2000, "redact": True,
-    })
+    perm._dump_yaml(
+        perm._diagnose_marker_path(root),
+        {
+            "schema_version": 1,
+            "armed_at": int(time.time()) - 100,
+            "ttl_seconds": 1,
+            "max_entries": 2000,
+            "redact": True,
+        },
+    )
     cap.capture(str(root), _bash("npm run build"), "abstain", "lenient")
     assert _log(root) == []
 
@@ -146,6 +160,7 @@ def test_capture_records_subagent_subject(tmp_path):
 
 
 # ---- capture-failure-is-inert ----------------------------------------------
+
 
 def test_capture_failure_does_not_raise(tmp_path, monkeypatch):
     """A raised exception inside capture is swallowed — it can NEVER change a
@@ -178,12 +193,14 @@ def test_capture_inert_when_marker_unreadable(tmp_path, monkeypatch):
 
 # ---- redaction --------------------------------------------------------------
 
+
 def test_redaction_on_by_default_drops_command_tail(tmp_path):
     cap = _load_capture()
     root = _proj(tmp_path)
     _arm(root)  # redact defaults on
-    cap.capture(str(root), _bash("curl -H token=SECRET https://api.example.com/x"),
-                "abstain", "lenient")
+    cap.capture(
+        str(root), _bash("curl -H token=SECRET https://api.example.com/x"), "abstain", "lenient"
+    )
     logged = _log(root)[0]["command"]
     assert "SECRET" not in logged
     assert "redacted" in logged
@@ -198,8 +215,9 @@ def test_redaction_preserves_shell_shape_signal(tmp_path):
     cap = _load_capture()
     root = _proj(tmp_path)
     _arm(root)  # redact on
-    cap.capture(str(root), _bash("cd foo && make build --prefix /secret/path"),
-                "abstain", "lenient")
+    cap.capture(
+        str(root), _bash("cd foo && make build --prefix /secret/path"), "abstain", "lenient"
+    )
     logged = _log(root)[0]["command"]
     assert "&&" in logged, "structural operators must survive redaction"
     assert "/secret/path" not in logged
@@ -215,8 +233,9 @@ def test_redaction_is_sticky_after_first_flag(tmp_path):
     cap = _load_capture()
     root = _proj(tmp_path)
     _arm(root)  # redact on
-    cap.capture(str(root), _bash("gh auth login --with-token mytokenvalue123"),
-                "abstain", "lenient")
+    cap.capture(
+        str(root), _bash("gh auth login --with-token mytokenvalue123"), "abstain", "lenient"
+    )
     logged = _log(root)[0]["command"]
     assert "mytokenvalue123" not in logged, "secret bare word after a flag leaked"
     assert logged.startswith("gh auth login")  # leading subcommand run kept
@@ -234,7 +253,8 @@ def test_redaction_drops_env_prefix_and_quoted_credential(tmp_path):
     cap.capture(
         str(root),
         _bash('FOO=secret curl -H "Authorization: Bearer abc123" https://x'),
-        "abstain", "lenient",
+        "abstain",
+        "lenient",
     )
     logged = _log(root)[0]["command"]
     assert "secret" not in logged, "env-prefix value leaked"
@@ -250,8 +270,7 @@ def test_redaction_keeps_operator_redacts_data_either_side(tmp_path):
     cap = _load_capture()
     root = _proj(tmp_path)
     _arm(root)  # redact on
-    cap.capture(str(root), _bash("git push && rm -rf /secret/x"),
-                "abstain", "lenient")
+    cap.capture(str(root), _bash("git push && rm -rf /secret/x"), "abstain", "lenient")
     logged = _log(root)[0]["command"]
     assert "&&" in logged, "structural operator must survive redaction"
     assert "/secret/x" not in logged
@@ -275,14 +294,16 @@ def test_no_redact_keeps_full_command(tmp_path):
     cap = _load_capture()
     root = _proj(tmp_path)
     _arm(root, redact=False)
-    cap.capture(str(root), _bash("curl -H token=SECRET https://api.example.com/x"),
-                "abstain", "lenient")
+    cap.capture(
+        str(root), _bash("curl -H token=SECRET https://api.example.com/x"), "abstain", "lenient"
+    )
     logged = _log(root)[0]["command"]
     assert "SECRET" in logged
     assert "redacted" not in logged
 
 
 # ---- size-cap drop-oldest ---------------------------------------------------
+
 
 def test_size_cap_drops_oldest(tmp_path):
     cap = _load_capture()
@@ -297,6 +318,7 @@ def test_size_cap_drops_oldest(tmp_path):
 
 
 # ---- classifier ordering ----------------------------------------------------
+
 
 def test_classifier_groups_by_command_shape(tmp_path):
     assert perm._diagnose_classify({"command": "python3 gen.py …[redacted]"}) == "interpreter"
@@ -338,6 +360,7 @@ def test_report_empty_when_no_log(tmp_path):
 
 # ---- recommend-only: the report applies NOTHING -----------------------------
 
+
 def test_report_applies_nothing(tmp_path, monkeypatch):
     """The MVP is recommend-only — `report` must not mutate the model, settings,
     grants, the sandbox, or the catalog. We assert every mutation entry point in
@@ -349,9 +372,19 @@ def test_report_applies_nothing(tmp_path, monkeypatch):
     cap.capture(str(root), _bash("python3 gen.py"), "abstain", "lenient")
 
     tripped: list[str] = []
-    for name in ("grant", "revoke", "set_mode", "apply", "enable",
-                 "sandbox_enable", "accommodate", "_apply_allowances",
-                 "_write_settings", "_dump_yaml"):
+    for name in (
+        "grant",
+        "revoke",
+        "set_mode",
+        "apply",
+        "enable",
+        "sandbox_enable",
+        "accommodate",
+        "_apply_allowances",
+        "_write_settings",
+        "_dump_yaml",
+    ):
+
         def _trip(*a, _n=name, **k):
             tripped.append(_n)
 

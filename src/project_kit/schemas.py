@@ -87,9 +87,7 @@ def load_schema(target_root: Path, capability: str, name: str) -> Any:
     return _load_cached(cache_key)
 
 
-def iter_entries(
-    target_root: Path, capability: str, name: str
-) -> Iterator[tuple[str, Any]]:
+def iter_entries(target_root: Path, capability: str, name: str) -> Iterator[tuple[str, Any]]:
     """Iterate `(id, entry_data)` pairs for a namespace's id collection.
 
     Requires the schema's companion to declare `x-pkit-id-collection`
@@ -105,8 +103,7 @@ def iter_entries(
     companion_path = schemas_home(target_root, capability) / f"{name}.schema.json"
     if not companion_path.is_file():
         raise SchemaLookupError(
-            f"{owner_label(capability)} schema {name!r}: companion "
-            f"{companion_path} not found."
+            f"{owner_label(capability)} schema {name!r}: companion {companion_path} not found."
         )
     try:
         schema = json.loads(companion_path.read_text(encoding="utf-8"))
@@ -204,15 +201,13 @@ def _load_cached(cache_key: tuple[str, str, str]) -> Any:
     yaml_path = schemas_home(target_root, capability) / f"{name}.yaml"
     if not yaml_path.is_file():
         raise SchemaLookupError(
-            f"{owner_label(capability)} schema {name!r}: YAML file "
-            f"{yaml_path} not found."
+            f"{owner_label(capability)} schema {name!r}: YAML file {yaml_path} not found."
         )
     try:
         text = yaml_path.read_text(encoding="utf-8")
     except OSError as exc:
         raise SchemaLookupError(
-            f"{owner_label(capability)} schema {name!r}: could not read "
-            f"{yaml_path}: {exc}."
+            f"{owner_label(capability)} schema {name!r}: could not read {yaml_path}: {exc}."
         ) from exc
     try:
         data = _yaml.load(text)

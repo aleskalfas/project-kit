@@ -36,12 +36,14 @@ from pathlib import Path
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate  # noqa: E402
-from _lib import lifecycle_predicates as predicates  # noqa: E402
+from _lib import bootstrap_gate
+from _lib import lifecycle_predicates as predicates
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description='Check that every checkbox in an issue body is ticked (close-gate).')
+    parser = argparse.ArgumentParser(
+        description="Check that every checkbox in an issue body is ticked (close-gate)."
+    )
     parser.add_argument("issue_number", help="The keyed subject: a GitHub issue number.")
     parser.add_argument("--json", action="store_true", help="Emit the structured JSON contract.")
     parser.add_argument("--actor", default=None, help="The actor being gated (gates only).")

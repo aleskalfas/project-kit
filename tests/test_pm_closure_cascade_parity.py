@@ -167,8 +167,7 @@ def _install_defs(pkit: Path) -> None:
     defs_dst = pkit / "schemas" / "_defs"
     defs_dst.mkdir(parents=True, exist_ok=True)
     source = (
-        Path(__file__).resolve().parents[1]
-        / ".pkit" / "schemas" / "_defs" / "process.schema.json"
+        Path(__file__).resolve().parents[1] / ".pkit" / "schemas" / "_defs" / "process.schema.json"
     )
     defs_dst.joinpath("process.schema.json").write_text(
         source.read_text(encoding="utf-8"), encoding="utf-8"

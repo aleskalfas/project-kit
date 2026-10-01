@@ -57,10 +57,20 @@ def test_summarize_checks_latest_success_beats_stale_failure() -> None:
     # A check that failed (16:34) then re-ran green (16:39) — the merge must not
     # be blocked by the retained stale FAILURE. Latest wins.
     rollup = [
-        {"name": "checks", "status": "COMPLETED", "conclusion": "FAILURE",
-         "startedAt": "2026-06-01T16:30:00Z", "completedAt": "2026-06-01T16:34:00Z"},
-        {"name": "checks", "status": "COMPLETED", "conclusion": "SUCCESS",
-         "startedAt": "2026-06-01T16:35:00Z", "completedAt": "2026-06-01T16:39:00Z"},
+        {
+            "name": "checks",
+            "status": "COMPLETED",
+            "conclusion": "FAILURE",
+            "startedAt": "2026-06-01T16:30:00Z",
+            "completedAt": "2026-06-01T16:34:00Z",
+        },
+        {
+            "name": "checks",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "startedAt": "2026-06-01T16:35:00Z",
+            "completedAt": "2026-06-01T16:39:00Z",
+        },
     ]
     assert release.summarize_checks(rollup) == (True, ())
 
@@ -69,18 +79,30 @@ def test_summarize_checks_latest_failure_beats_stale_success() -> None:
     # Reverse ordering: an older SUCCESS, a newer FAILURE — the latest run
     # (FAILURE) must block.
     rollup = [
-        {"name": "checks", "status": "COMPLETED", "conclusion": "SUCCESS",
-         "completedAt": "2026-06-01T16:30:00Z"},
-        {"name": "checks", "status": "COMPLETED", "conclusion": "FAILURE",
-         "completedAt": "2026-06-01T16:39:00Z"},
+        {
+            "name": "checks",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "completedAt": "2026-06-01T16:30:00Z",
+        },
+        {
+            "name": "checks",
+            "status": "COMPLETED",
+            "conclusion": "FAILURE",
+            "completedAt": "2026-06-01T16:39:00Z",
+        },
     ]
     assert release.summarize_checks(rollup) == (False, ("checks (FAILURE)",))
 
 
 def test_summarize_checks_single_genuine_failure_still_blocks() -> None:
     rollup = [
-        {"name": "checks", "status": "COMPLETED", "conclusion": "FAILURE",
-         "completedAt": "2026-06-01T16:39:00Z"},
+        {
+            "name": "checks",
+            "status": "COMPLETED",
+            "conclusion": "FAILURE",
+            "completedAt": "2026-06-01T16:39:00Z",
+        },
     ]
     assert release.summarize_checks(rollup) == (False, ("checks (FAILURE)",))
 
@@ -88,10 +110,18 @@ def test_summarize_checks_single_genuine_failure_still_blocks() -> None:
 def test_summarize_checks_latest_pending_blocks() -> None:
     # An older green run superseded by a fresh in-progress re-run must block.
     rollup = [
-        {"name": "checks", "status": "COMPLETED", "conclusion": "SUCCESS",
-         "completedAt": "2026-06-01T16:30:00Z"},
-        {"name": "checks", "status": "IN_PROGRESS", "conclusion": "",
-         "startedAt": "2026-06-01T16:40:00Z"},
+        {
+            "name": "checks",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "completedAt": "2026-06-01T16:30:00Z",
+        },
+        {
+            "name": "checks",
+            "status": "IN_PROGRESS",
+            "conclusion": "",
+            "startedAt": "2026-06-01T16:40:00Z",
+        },
     ]
     assert release.summarize_checks(rollup) == (False, ("checks (IN_PROGRESS)",))
 
@@ -100,14 +130,30 @@ def test_summarize_checks_distinct_checks_dedupe_independently() -> None:
     # Two distinct checks, each with a stale then latest run; each is reduced on
     # its own latest — `lint` ends green, `tests` ends red.
     rollup = [
-        {"name": "lint", "status": "COMPLETED", "conclusion": "FAILURE",
-         "completedAt": "2026-06-01T16:30:00Z"},
-        {"name": "lint", "status": "COMPLETED", "conclusion": "SUCCESS",
-         "completedAt": "2026-06-01T16:39:00Z"},
-        {"name": "tests", "status": "COMPLETED", "conclusion": "SUCCESS",
-         "completedAt": "2026-06-01T16:31:00Z"},
-        {"name": "tests", "status": "COMPLETED", "conclusion": "FAILURE",
-         "completedAt": "2026-06-01T16:40:00Z"},
+        {
+            "name": "lint",
+            "status": "COMPLETED",
+            "conclusion": "FAILURE",
+            "completedAt": "2026-06-01T16:30:00Z",
+        },
+        {
+            "name": "lint",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "completedAt": "2026-06-01T16:39:00Z",
+        },
+        {
+            "name": "tests",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "completedAt": "2026-06-01T16:31:00Z",
+        },
+        {
+            "name": "tests",
+            "status": "COMPLETED",
+            "conclusion": "FAILURE",
+            "completedAt": "2026-06-01T16:40:00Z",
+        },
     ]
     assert release.summarize_checks(rollup) == (False, ("tests (FAILURE)",))
 
@@ -144,9 +190,7 @@ def _raw(**overrides: object) -> dict:
         "isCrossRepository": False,
         "url": "https://github.com/owner/repo/pull/42",
         "mergeable": "MERGEABLE",
-        "statusCheckRollup": [
-            {"name": "checks", "status": "COMPLETED", "conclusion": "SUCCESS"}
-        ],
+        "statusCheckRollup": [{"name": "checks", "status": "COMPLETED", "conclusion": "SUCCESS"}],
     }
     base.update(overrides)
     return base
@@ -191,50 +235,42 @@ def test_evaluate_refuses_non_release_head_branch() -> None:
 
 
 def test_evaluate_refuses_non_release_title() -> None:
-    decision = release.evaluate_release_pr(
-        release.parse_release_pr(_raw(title="feat: something"))
-    )
+    decision = release.evaluate_release_pr(release.parse_release_pr(_raw(title="feat: something")))
     assert decision.action == "refuse"
     assert "not a release title" in decision.message
 
 
 def test_evaluate_reports_already_merged() -> None:
-    decision = release.evaluate_release_pr(
-        release.parse_release_pr(_raw(state="MERGED"))
-    )
+    decision = release.evaluate_release_pr(release.parse_release_pr(_raw(state="MERGED")))
     assert decision.action == "already-done"
     assert "already merged" in decision.message
 
 
 def test_evaluate_reports_closed() -> None:
-    decision = release.evaluate_release_pr(
-        release.parse_release_pr(_raw(state="CLOSED"))
-    )
+    decision = release.evaluate_release_pr(release.parse_release_pr(_raw(state="CLOSED")))
     assert decision.action == "already-done"
     assert "closed" in decision.message
 
 
 def test_evaluate_refuses_conflicting() -> None:
-    decision = release.evaluate_release_pr(
-        release.parse_release_pr(_raw(mergeable="CONFLICTING"))
-    )
+    decision = release.evaluate_release_pr(release.parse_release_pr(_raw(mergeable="CONFLICTING")))
     assert decision.action == "refuse"
     assert "conflict" in decision.message
 
 
 def test_evaluate_refuses_unknown_mergeability() -> None:
-    decision = release.evaluate_release_pr(
-        release.parse_release_pr(_raw(mergeable="UNKNOWN"))
-    )
+    decision = release.evaluate_release_pr(release.parse_release_pr(_raw(mergeable="UNKNOWN")))
     assert decision.action == "refuse"
 
 
 def test_evaluate_refuses_red_checks() -> None:
     decision = release.evaluate_release_pr(
         release.parse_release_pr(
-            _raw(statusCheckRollup=[
-                {"name": "tests", "status": "COMPLETED", "conclusion": "FAILURE"}
-            ])
+            _raw(
+                statusCheckRollup=[
+                    {"name": "tests", "status": "COMPLETED", "conclusion": "FAILURE"}
+                ]
+            )
         )
     )
     assert decision.action == "refuse"
@@ -319,11 +355,10 @@ def test_merge_release_pr_dry_run_does_not_merge(monkeypatch: pytest.MonkeyPatch
 
 
 def test_merge_release_pr_refuses_non_release(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(release, "_gh_pr_view", lambda n, r: _raw(number=n, headRefName="fix/1-x"))
     monkeypatch.setattr(
-        release, "_gh_pr_view", lambda n, r: _raw(number=n, headRefName="fix/1-x")
-    )
-    monkeypatch.setattr(
-        release, "_gh_pr_merge",
+        release,
+        "_gh_pr_merge",
         lambda *a, **k: pytest.fail("must not merge a non-release PR"),
     )
     with pytest.raises(click.ClickException) as exc:
@@ -332,11 +367,10 @@ def test_merge_release_pr_refuses_non_release(monkeypatch: pytest.MonkeyPatch) -
 
 
 def test_merge_release_pr_already_merged_reports_clean(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(release, "_gh_pr_view", lambda n, r: _raw(number=n, state="MERGED"))
     monkeypatch.setattr(
-        release, "_gh_pr_view", lambda n, r: _raw(number=n, state="MERGED")
-    )
-    monkeypatch.setattr(
-        release, "_gh_pr_merge",
+        release,
+        "_gh_pr_merge",
         lambda *a, **k: pytest.fail("must not re-merge a merged PR"),
     )
     # No exception — an already-merged PR is a clean, idempotent report.
@@ -346,16 +380,16 @@ def test_merge_release_pr_already_merged_reports_clean(monkeypatch: pytest.Monke
 
 def test_merge_release_pr_refuses_red_checks(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        release, "_gh_pr_view",
+        release,
+        "_gh_pr_view",
         lambda n, r: _raw(
             number=n,
-            statusCheckRollup=[
-                {"name": "tests", "status": "COMPLETED", "conclusion": "FAILURE"}
-            ],
+            statusCheckRollup=[{"name": "tests", "status": "COMPLETED", "conclusion": "FAILURE"}],
         ),
     )
     monkeypatch.setattr(
-        release, "_gh_pr_merge",
+        release,
+        "_gh_pr_merge",
         lambda *a, **k: pytest.fail("must not merge a red PR"),
     )
     with pytest.raises(click.ClickException) as exc:
@@ -371,9 +405,17 @@ def test_squash_merge_has_no_delete_branch_half(monkeypatch: pytest.MonkeyPatch)
     worktree / detached-HEAD run AFTER the merge lands — so it is not passed."""
     seen = _fake_run(monkeypatch)
     release._gh_pr_merge(42, "chore(release): v1.141.0", Path("/repo"))
-    assert seen == [[
-        "gh", "pr", "merge", "42", "--squash", "--subject", "chore(release): v1.141.0",
-    ]]
+    assert seen == [
+        [
+            "gh",
+            "pr",
+            "merge",
+            "42",
+            "--squash",
+            "--subject",
+            "chore(release): v1.141.0",
+        ]
+    ]
 
 
 def test_merge_deletes_remote_head_via_api_then_cleans_up_locally(
@@ -382,8 +424,7 @@ def test_merge_deletes_remote_head_via_api_then_cleans_up_locally(
     seen = _fake_run(monkeypatch)
     message = _merge_green(monkeypatch, baseRefName="develop")
     assert seen == [
-        ["gh", "api", "-X", "DELETE",
-         "repos/{owner}/{repo}/git/refs/heads/release/v1.141.0"],
+        ["gh", "api", "-X", "DELETE", "repos/{owner}/{repo}/git/refs/heads/release/v1.141.0"],
         ["git", "checkout", "develop"],  # the PR's own base, not a hardcoded main
         ["git", "pull", "--ff-only"],
         ["git", "rev-parse", "--verify", "--quiet", "refs/heads/release/v1.141.0"],

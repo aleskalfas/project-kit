@@ -31,7 +31,8 @@ contract — lives here once.
 from __future__ import annotations
 
 import json
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 try:
     from _lib.required_reviewers import _TooManyChangedFiles, _Unresolvable
@@ -61,8 +62,11 @@ _FILES_JQ = ".[] | [.filename, .previous_filename]"
 
 
 def pr_closing_issue_numbers(
-    pr_number: int, config: dict, *, gh_run: GhRunFn,
-) -> "list[int] | _Unresolvable":
+    pr_number: int,
+    config: dict,
+    *,
+    gh_run: GhRunFn,
+) -> list[int] | _Unresolvable:
     """Issue numbers the PR closes, via `gh pr view`'s closingIssuesReferences.
 
     Distinguishes two states DEC-032 D1 treats differently:
@@ -80,32 +84,24 @@ def pr_closing_issue_numbers(
     carries no substrate of its own; both consumers share this one definition.
     """
     proc = gh_run(
-        ["gh", "pr", "view", str(pr_number),
-         "--json", "closingIssuesReferences"],
-        config, check=False,
+        ["gh", "pr", "view", str(pr_number), "--json", "closingIssuesReferences"],
+        config,
+        check=False,
     )
     if proc.returncode != 0:
-        return _Unresolvable(
-            f"gh pr view closingIssuesReferences failed: {proc.stderr.strip()}"
-        )
+        return _Unresolvable(f"gh pr view closingIssuesReferences failed: {proc.stderr.strip()}")
     try:
         data = json.loads(proc.stdout)
     except (ValueError, json.JSONDecodeError):
-        return _Unresolvable(
-            "gh pr view closingIssuesReferences returned malformed JSON"
-        )
+        return _Unresolvable("gh pr view closingIssuesReferences returned malformed JSON")
     if not isinstance(data, dict) or "closingIssuesReferences" not in data:
-        return _Unresolvable(
-            "gh pr view payload missing closingIssuesReferences"
-        )
+        return _Unresolvable("gh pr view payload missing closingIssuesReferences")
     refs = data["closingIssuesReferences"]
     if not isinstance(refs, list):
         # A present-but-null (or otherwise non-list) field is UNKNOWN ground
         # truth, not "closes nothing" — fail closed rather than collapse a
         # null to the legitimate empty branch and drop a required reviewer.
-        return _Unresolvable(
-            "gh pr view closingIssuesReferences is null or not a list"
-        )
+        return _Unresolvable("gh pr view closingIssuesReferences is null or not a list")
     numbers: list[int] = []
     for ref in refs:
         if isinstance(ref, dict) and isinstance(ref.get("number"), int):
@@ -114,8 +110,11 @@ def pr_closing_issue_numbers(
 
 
 def pr_changed_files(
-    pr_number: int, config: dict, *, gh_run: GhRunFn,
-) -> "list[str] | _Unresolvable":
+    pr_number: int,
+    config: dict,
+    *,
+    gh_run: GhRunFn,
+) -> list[str] | _Unresolvable:
     """The PR's changed-file paths, via GitHub's paginated files API (DEC-032 amendment).
 
     Feeds the resolver's diff-property floor (`touches-code`), so the SOURCE of
@@ -152,16 +151,19 @@ def pr_changed_files(
     carries no substrate of its own; both consumers share this one definition.
     """
     proc = gh_run(
-        ["gh", "api", "--paginate",
-         f"repos/{{owner}}/{{repo}}/pulls/{pr_number}/files"
-         f"?per_page={_FILES_PAGE_SIZE}",
-         "--jq", _FILES_JQ],
-        config, check=False,
+        [
+            "gh",
+            "api",
+            "--paginate",
+            f"repos/{{owner}}/{{repo}}/pulls/{pr_number}/files?per_page={_FILES_PAGE_SIZE}",
+            "--jq",
+            _FILES_JQ,
+        ],
+        config,
+        check=False,
     )
     if proc.returncode != 0:
-        return _Unresolvable(
-            f"gh api pulls/{pr_number}/files failed: {proc.stderr.strip()}"
-        )
+        return _Unresolvable(f"gh api pulls/{pr_number}/files failed: {proc.stderr.strip()}")
     paths: list[str] = []
     listed = 0
     for line in proc.stdout.splitlines():
@@ -171,8 +173,7 @@ def pr_changed_files(
             entry = json.loads(line)
         except ValueError:
             entry = None
-        if not (isinstance(entry, list) and entry and isinstance(entry[0], str)
-                and entry[0]):
+        if not (isinstance(entry, list) and entry and isinstance(entry[0], str) and entry[0]):
             return _Unresolvable(
                 f"gh api pulls/{pr_number}/files returned a line that is not "
                 f"a file entry: {line.strip()!r}"
@@ -181,8 +182,7 @@ def pr_changed_files(
         paths.extend(path for path in entry[:2] if isinstance(path, str) and path)
     if not listed:
         return _Unresolvable(
-            f"gh api pulls/{pr_number}/files returned no files — diff "
-            "undeterminable"
+            f"gh api pulls/{pr_number}/files returned no files — diff undeterminable"
         )
     # Counted in files GitHub listed, not in paths: a rename adds two paths
     # but is one file toward the ceiling.
@@ -196,8 +196,11 @@ def pr_changed_files(
 
 
 def issue_labels(
-    issue_number: int, config: dict, *, gh_get_issue: GhGetIssueFn,
-) -> "list | None":
+    issue_number: int,
+    config: dict,
+    *,
+    gh_get_issue: GhGetIssueFn,
+) -> list | None:
     """Read an issue's labels for classification (None on fetch failure).
 
     The injected per-issue label fetcher the shared resolver calls. A None

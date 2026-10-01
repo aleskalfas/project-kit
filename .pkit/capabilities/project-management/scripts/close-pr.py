@@ -22,7 +22,7 @@ Exit codes:
   1  membership refusal
   2  usage error (PR not found)
   3  gh failure
-"""
+"""  # noqa: E501 — a usage line is a command, kept whole
 
 from __future__ import annotations
 
@@ -37,10 +37,9 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate  # noqa: E402
-from _lib.gh import gh_run, load_adopter_config  # noqa: E402
-from _lib import session_guard  # noqa: E402
-from _lib.membership import (  # noqa: E402
+from _lib import bootstrap_gate, session_guard
+from _lib.gh import gh_run, load_adopter_config
+from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
     resolve_capability_root,
@@ -145,10 +144,7 @@ def main() -> int:
             return 0
 
     if args.reason:
-        comment_body = (
-            f"[close-pr] {args.reason}\n\n"
-            "Closed via `pkit project-management close-pr`."
-        )
+        comment_body = f"[close-pr] {args.reason}\n\nClosed via `pkit project-management close-pr`."
         if not _gh_pr_comment(args.pr_number, comment_body, config):
             return 3
 
@@ -178,8 +174,7 @@ def _gh_get_pr(pr_number: int, config: dict) -> dict | None:
         return None
     if proc.returncode != 0:
         print(
-            f"error: gh pr view {pr_number} failed.\n"
-            f"stderr: {proc.stderr.strip()}",
+            f"error: gh pr view {pr_number} failed.\nstderr: {proc.stderr.strip()}",
             file=sys.stderr,
         )
         return None
@@ -211,8 +206,7 @@ def _gh_pr_close(pr_number: int, *, delete_branch: bool, config: dict) -> bool:
         return False
     if proc.returncode != 0:
         print(
-            f"error: gh pr close failed (exit {proc.returncode}).\n"
-            f"stderr: {proc.stderr.strip()}",
+            f"error: gh pr close failed (exit {proc.returncode}).\nstderr: {proc.stderr.strip()}",
             file=sys.stderr,
         )
         return False

@@ -315,8 +315,12 @@ def run_command(
         # answer, never a repaired one (a replacement inside a JSON string would
         # still parse and open a gate). Diagnostics on stderr are only shown.
         return CommandRun(
-            Ending.UNPARSABLE, bound, returncode=process.returncode,
-            stdout=_decode(raw_stdout), stderr=stderr, detail=f"standard output is not UTF-8: {exc}",
+            Ending.UNPARSABLE,
+            bound,
+            returncode=process.returncode,
+            stdout=_decode(raw_stdout),
+            stderr=stderr,
+            detail=f"standard output is not UTF-8: {exc}",
         )
     if process.returncode != 0:
         return CommandRun(

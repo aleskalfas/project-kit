@@ -28,9 +28,9 @@ pkit:
         - hatch_build.py
       record: [COR-010, COR-017, COR-027, COR-030, COR-031, COR-052, COR-053, ADR-056, ADR-057, ADR-059]
     revalidated:
-      at: 2026-09-30T21:21:42Z
+      at: 2026-10-01T01:25:07Z
       outcome: unchanged
-      unchanged-because: the ADRs state the same decisions without their dated trailers, and references cite their points instead of their amendments (#860)
+      unchanged-because: "on this branch the anchored code changed only in layout: ruff format and the lint fixes; behaviour and the documented commands are unchanged"
 ---
 
 # Lifecycle

@@ -49,7 +49,7 @@ from pathlib import Path
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import backbone, check  # noqa: E402
+from _lib import backbone, check
 
 
 def main() -> int:

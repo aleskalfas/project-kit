@@ -12,7 +12,6 @@ from project_kit.cli import main
 from project_kit.schemas_validate import (
     NamespaceDetail,
     SchemaPair,
-    SchemaSummary,
     TokenResolution,
     detail_namespace,
     discover_schema_pairs,
@@ -23,7 +22,6 @@ from project_kit.schemas_validate import (
     validate_pair,
     validate_path,
 )
-
 
 # --- discovery ------------------------------------------------------
 
@@ -191,7 +189,9 @@ def test_validate_flags_wrong_schema_version(tmp_path: Path) -> None:
     report = validate_all(tmp_path)
     assert not report.is_clean
     # jsonschema reports `const` violation; either '2' or 'const' is in the message.
-    assert any("const" in i.message.lower() or "expected" in i.message.lower() for i in report.issues)
+    assert any(
+        "const" in i.message.lower() or "expected" in i.message.lower() for i in report.issues
+    )
 
 
 def test_validate_flags_unknown_property(tmp_path: Path) -> None:
@@ -223,7 +223,7 @@ def test_validate_flags_malformed_yaml(tmp_path: Path) -> None:
 
 def test_validate_flags_malformed_companion_json(tmp_path: Path) -> None:
     schemas = _make_capability(tmp_path, "demo")
-    yaml_path, companion = _write_schema_pair(schemas, "alpha", yaml_body=_MINIMAL_YAML)
+    _yaml_path, companion = _write_schema_pair(schemas, "alpha", yaml_body=_MINIMAL_YAML)
     companion.write_text("{ this is not valid json", encoding="utf-8")
     report = validate_all(tmp_path)
     assert not report.is_clean
@@ -233,15 +233,20 @@ def test_validate_flags_malformed_companion_json(tmp_path: Path) -> None:
 def test_validate_flags_invalid_meta_schema(tmp_path: Path) -> None:
     """A companion that's valid JSON but not a valid JSON Schema gets flagged."""
     schemas = _make_capability(tmp_path, "demo")
-    yaml_path, companion = _write_schema_pair(schemas, "alpha", yaml_body=_MINIMAL_YAML)
+    _yaml_path, companion = _write_schema_pair(schemas, "alpha", yaml_body=_MINIMAL_YAML)
     # `type: "fake-type"` is not a valid JSON Schema type keyword
     companion.write_text(
-        json.dumps({"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "fake-type"}),
+        json.dumps(
+            {"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "fake-type"}
+        ),
         encoding="utf-8",
     )
     report = validate_all(tmp_path)
     assert not report.is_clean
-    assert any("draft 2020-12" in i.message.lower() or "not a valid" in i.message.lower() for i in report.issues)
+    assert any(
+        "draft 2020-12" in i.message.lower() or "not a valid" in i.message.lower()
+        for i in report.issues
+    )
 
 
 # --- validate_path -------------------------------------------------
@@ -274,7 +279,8 @@ def test_validate_path_directory_scans_recursively(tmp_path: Path) -> None:
 
 @pytest.fixture
 def cli_target(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """Project tree with `.pkit/` initialised (no full kit install — just enough for find_target_root)."""
+    """Project tree with `.pkit/` initialised (no full kit install — just enough for
+    find_target_root)."""
     import subprocess
 
     subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
@@ -515,7 +521,7 @@ def test_resolver_flags_self_namespace_reference(tmp_path: Path) -> None:
     target_schema = dict(_TARGET_JSON_SCHEMA)
     target_schema["properties"] = dict(target_schema["properties"])
     target_schema["properties"]["self_ref"] = {"type": "string"}
-    target_schema["required"] = list(target_schema["required"]) + ["self_ref"]
+    target_schema["required"] = [*target_schema["required"], "self_ref"]
     _write_schema_pair(
         schemas,
         "target",
@@ -606,12 +612,7 @@ def test_resolver_supports_list_of_objects_with_id(tmp_path: Path) -> None:
     _write_schema_pair(
         schemas,
         "target",
-        yaml_body=(
-            "schema_version: 1\n"
-            "items:\n"
-            "  - id: alpha\n"
-            "  - id: beta\n"
-        ),
+        yaml_body=("schema_version: 1\nitems:\n  - id: alpha\n  - id: beta\n"),
         json_schema=list_target_schema,
     )
     _write_schema_pair(
@@ -648,12 +649,7 @@ def test_resolver_validates_keys_via_x_pkit_keys_from_namespace(tmp_path: Path) 
     _write_schema_pair(
         schemas,
         "consumer",
-        yaml_body=(
-            "schema_version: 1\n"
-            "by_type:\n"
-            "  task: {}\n"
-            "  feature: {}\n"
-        ),
+        yaml_body=("schema_version: 1\nby_type:\n  task: {}\n  feature: {}\n"),
         json_schema=consumer_schema,
     )
     report = validate_all(tmp_path)
@@ -684,12 +680,7 @@ def test_resolver_flags_unknown_key_via_x_pkit_keys_from_namespace(tmp_path: Pat
     _write_schema_pair(
         schemas,
         "consumer",
-        yaml_body=(
-            "schema_version: 1\n"
-            "by_type:\n"
-            "  task: {}\n"
-            "  bogus: {}\n"
-        ),
+        yaml_body=("schema_version: 1\nby_type:\n  task: {}\n  bogus: {}\n"),
         json_schema=consumer_schema,
     )
     report = validate_all(tmp_path)
@@ -723,11 +714,7 @@ def test_resolver_flags_keys_annotation_for_missing_namespace(tmp_path: Path) ->
     _write_schema_pair(
         schemas,
         "consumer",
-        yaml_body=(
-            "schema_version: 1\n"
-            "by_type:\n"
-            "  whatever: {}\n"
-        ),
+        yaml_body=("schema_version: 1\nby_type:\n  whatever: {}\n"),
         json_schema=consumer_schema,
     )
     report = validate_all(tmp_path)
@@ -908,10 +895,7 @@ def test_wrong_namespace_token_reports_once_not_twice(tmp_path: Path) -> None:
     assert not report.is_clean
     # Only ONE issue at the offending data position — the resolver's,
     # not the shape pass's redundant "does not match" message.
-    issues_at_pos = [
-        i for i in report.issues
-        if "applies_to/0" in i.location
-    ]
+    issues_at_pos = [i for i in report.issues if "applies_to/0" in i.location]
     assert len(issues_at_pos) == 1, [i.message for i in issues_at_pos]
     assert "unresolved reference" in issues_at_pos[0].message
 
@@ -1402,11 +1386,7 @@ def test_trip_planner_shaped_capability_self_consistency_clean(tmp_path: Path) -
 # companion exemption is unchanged.
 
 _SHIPPED_PROCESS_CONTRACT = (
-    Path(__file__).resolve().parents[1]
-    / ".pkit"
-    / "schemas"
-    / "_defs"
-    / "process.schema.json"
+    Path(__file__).resolve().parents[1] / ".pkit" / "schemas" / "_defs" / "process.schema.json"
 )
 
 # How `pkit process new` writes the pointer: the definition lands at
@@ -1499,9 +1479,7 @@ def test_definition_missing_version_is_reported_at_its_position(tmp_path: Path) 
     definition = _write_process_definition(tmp_path, {"process": block})
     report = validate_all(tmp_path)
     assert not report.is_clean
-    findings = [
-        i for i in report.issues if "'version'" in i.message and "required" in i.message
-    ]
+    findings = [i for i in report.issues if "'version'" in i.message and "required" in i.message]
     assert findings, [f"{i.location}: {i.message}" for i in report.issues]
     # Reported against the instance's own path + a JSON pointer into the block.
     assert findings[0].location.endswith(f"{definition.name}/process")
@@ -1517,9 +1495,9 @@ def test_definition_with_bad_cardinality_is_reported_at_its_position(
     report = validate_all(tmp_path)
     assert not report.is_clean
     locations = [i.location for i in report.issues]
-    assert any(
-        loc.endswith("/process/subject/cardinality") for loc in locations
-    ), [f"{i.location}: {i.message}" for i in report.issues]
+    assert any(loc.endswith("/process/subject/cardinality") for loc in locations), [
+        f"{i.location}: {i.message}" for i in report.issues
+    ]
 
 
 def test_pointered_instance_needs_no_companion_when_named_explicitly(
@@ -1531,9 +1509,7 @@ def test_pointered_instance_needs_no_companion_when_named_explicitly(
     companion it categorically cannot have must not be required (COR-018's
     requirement scopes to schema definitions).
     """
-    definition = _write_process_definition(
-        tmp_path, {"process": _minimal_process_block()}
-    )
+    definition = _write_process_definition(tmp_path, {"process": _minimal_process_block()})
     report = validate_path(definition, tmp_path)
     assert report.is_clean, [f"{i.location}: {i.message}" for i in report.issues]
     assert report.pairs_checked == 0
@@ -1544,8 +1520,7 @@ def test_pointered_instance_missing_target_is_reported(tmp_path: Path) -> None:
     """A pointer at a nonexistent file is a finding, never a silent skip."""
     schemas = _make_capability(tmp_path, "demo")
     (schemas / "typo.yaml").write_text(
-        "# yaml-language-server: $schema=_defs/porcess.schema.json\n"
-        "schema_version: 1\n",
+        "# yaml-language-server: $schema=_defs/porcess.schema.json\nschema_version: 1\n",
         encoding="utf-8",
     )
     report = validate_all(tmp_path)
@@ -1561,8 +1536,7 @@ def test_pointered_instance_unparseable_target_is_reported(tmp_path: Path) -> No
     defs.mkdir()
     (defs / "process.schema.json").write_text('{ "broken', encoding="utf-8")
     (schemas / "instance.yaml").write_text(
-        "# yaml-language-server: $schema=_defs/process.schema.json\n"
-        "schema_version: 1\n",
+        "# yaml-language-server: $schema=_defs/process.schema.json\nschema_version: 1\n",
         encoding="utf-8",
     )
     report = validate_all(tmp_path)
@@ -1582,8 +1556,7 @@ def test_pointered_instance_target_not_a_schema_is_reported(tmp_path: Path) -> N
         },
     )
     (schemas / "instance.yaml").write_text(
-        "# yaml-language-server: $schema=_defs/process.schema.json\n"
-        "schema_version: 1\n",
+        "# yaml-language-server: $schema=_defs/process.schema.json\nschema_version: 1\n",
         encoding="utf-8",
     )
     report = validate_all(tmp_path)

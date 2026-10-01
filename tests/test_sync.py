@@ -291,9 +291,7 @@ def test_sync_prunes_orphan_nested_dir_in_core_tree(installed_target: Path) -> N
 
 def test_sync_prunes_orphan_adapter_script(installed_target: Path) -> None:
     """`.pkit/adapters/<name>/*.sh` files with no source counterpart are removed by sync."""
-    orphan = (
-        installed_target / ".pkit" / "adapters" / "claude-code" / "deploy-removed.sh"
-    )
+    orphan = installed_target / ".pkit" / "adapters" / "claude-code" / "deploy-removed.sh"
     orphan.write_text("#!/usr/bin/env bash\necho stale\n", encoding="utf-8")
     orphan.chmod(0o755)
     assert orphan.is_file()
@@ -310,9 +308,7 @@ def test_sync_prune_does_not_touch_project_namespace(installed_target: Path) -> 
 
     project_skill = installed_target / ".pkit" / "skills" / "project" / "my-skill.md"
     project_skill.parent.mkdir(parents=True, exist_ok=True)
-    project_skill.write_text(
-        "---\nname: my-skill\n---\nadopter skill body\n", encoding="utf-8"
-    )
+    project_skill.write_text("---\nname: my-skill\n---\nadopter skill body\n", encoding="utf-8")
 
     sync.run_sync(installed_target)
 
@@ -541,7 +537,10 @@ def test_sync_refreshes_installed_capability(
 
 
 def test_sync_warns_when_capability_no_longer_in_source(
-    installed_target: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    installed_target: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Sync surfaces 'orphan' for installed capabilities that vanished from source.
 
@@ -616,9 +615,7 @@ def _install_then_repoint_source(
     monkeypatch.setattr(install, "find_source_kit", lambda: sync_source)
     monkeypatch.setattr(sync.install, "find_source_kit", lambda: sync_source)
 
-    return (
-        installed_target / ".pkit" / "capabilities" / name / "skills" / f"{name}-skill.md"
-    )
+    return installed_target / ".pkit" / "capabilities" / name / "skills" / f"{name}-skill.md"
 
 
 def test_sync_refuses_downgrade_and_leaves_tree_untouched(
@@ -629,8 +626,12 @@ def test_sync_refuses_downgrade_and_leaves_tree_untouched(
 ) -> None:
     """The trip-planner failure (#524): source older than installed → refuse, do not refresh."""
     skill = _install_then_repoint_source(
-        installed_target, monkeypatch, tmp_path, "software-engineering",
-        installed_version="0.3.0", source_version="0.1.0",
+        installed_target,
+        monkeypatch,
+        tmp_path,
+        "software-engineering",
+        installed_version="0.3.0",
+        source_version="0.1.0",
     )
     before = skill.read_text(encoding="utf-8")
 
@@ -653,8 +654,12 @@ def test_sync_force_proceeds_with_downgrade_loudly(
 ) -> None:
     """--force overrides the guard: the downgrade proceeds, but a loud line records it."""
     skill = _install_then_repoint_source(
-        installed_target, monkeypatch, tmp_path, "software-engineering",
-        installed_version="0.3.0", source_version="0.1.0",
+        installed_target,
+        monkeypatch,
+        tmp_path,
+        "software-engineering",
+        installed_version="0.3.0",
+        source_version="0.1.0",
     )
 
     sync.run_sync(installed_target, force=True)
@@ -674,8 +679,12 @@ def test_sync_refreshes_normally_when_source_newer(
 ) -> None:
     """Source newer than installed is a normal upgrade — the guard does not fire."""
     skill = _install_then_repoint_source(
-        installed_target, monkeypatch, tmp_path, "evidence",
-        installed_version="0.1.0", source_version="0.3.0",
+        installed_target,
+        monkeypatch,
+        tmp_path,
+        "evidence",
+        installed_version="0.1.0",
+        source_version="0.3.0",
     )
 
     sync.run_sync(installed_target)
@@ -694,8 +703,12 @@ def test_sync_refreshes_when_source_equal(
 ) -> None:
     """Equal versions are not a downgrade — refresh proceeds unchanged."""
     skill = _install_then_repoint_source(
-        installed_target, monkeypatch, tmp_path, "evidence",
-        installed_version="0.2.0", source_version="0.2.0",
+        installed_target,
+        monkeypatch,
+        tmp_path,
+        "evidence",
+        installed_version="0.2.0",
+        source_version="0.2.0",
     )
 
     sync.run_sync(installed_target)
@@ -714,8 +727,12 @@ def test_sync_dry_run_previews_downgrade_refusal_and_writes_nothing(
 ) -> None:
     """Dry-run over a downgrade previews the refusal (not a 'would refresh') and writes nothing."""
     skill = _install_then_repoint_source(
-        installed_target, monkeypatch, tmp_path, "software-engineering",
-        installed_version="0.3.0", source_version="0.1.0",
+        installed_target,
+        monkeypatch,
+        tmp_path,
+        "software-engineering",
+        installed_version="0.3.0",
+        source_version="0.1.0",
     )
     before = skill.read_text(encoding="utf-8")
 

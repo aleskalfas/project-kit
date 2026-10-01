@@ -340,8 +340,13 @@ def format_event_comment(
 
 
 def ownership_event_comment_args(
-    *, issue_number: int | str, event: str, instance: int, to: int | None = None,
-    name: str | None = None, ts: datetime | None = None,
+    *,
+    issue_number: int | str,
+    event: str,
+    instance: int,
+    to: int | None = None,
+    name: str | None = None,
+    ts: datetime | None = None,
 ) -> list[str]:
     """Construct the ``gh issue comment`` argv for an ownership event.
 

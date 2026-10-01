@@ -41,27 +41,22 @@ Exit codes:
 from __future__ import annotations
 
 import argparse
-import json
 import subprocess
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from ruamel.yaml import YAML
-from ruamel.yaml.error import YAMLError
-
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import axis_carriage  # noqa: E402
-from _lib import axis_labels  # noqa: E402
-from _lib import session_guard  # noqa: E402
-from _lib.gh import gh_run, load_adopter_config  # noqa: E402
-from _lib.substrate_writes import write_milestone  # noqa: E402
-from _lib.membership import (  # noqa: E402
+import contextlib
+
+from _lib import axis_carriage, axis_labels, session_guard
+from _lib.gh import gh_run, load_adopter_config
+from _lib.membership import (
     CAPABILITY_NAME,
     resolve_capability_root,
 )
-
+from _lib.substrate_writes import write_milestone
 
 SELF_TEST_TITLE = "[Task] pkit self-test — DELETE ME"
 SELF_TEST_MILESTONE = "pkit-self-test"
@@ -104,6 +99,8 @@ def _seed_labels(capability_root, config: dict) -> list[str]:
         if isinstance(resolved, str):
             out.append(resolved)
     return out
+
+
 SELF_TEST_BODY = """\
 ## What
 
@@ -245,16 +242,14 @@ def main() -> int:
         _step_delete_milestone(state.milestone_title, config, state)
 
     _print_summary(state)
-    passed, failed = state.summary()
+    _passed, failed = state.summary()
     return 0 if failed == 0 else 1
 
 
 # ---- individual steps -----------------------------------------------
 
 
-def _step_create_issue(
-    capability_root, config: dict, state: SelfTestState
-) -> int | None:
+def _step_create_issue(capability_root, config: dict, state: SelfTestState) -> int | None:
     """Step 1: create the throwaway issue and return its number."""
     label_args: list[str] = []
     for lbl in _seed_labels(capability_root, config):
@@ -263,9 +258,13 @@ def _step_create_issue(
     try:
         proc = gh_run(
             [
-                "gh", "issue", "create",
-                "--title", SELF_TEST_TITLE,
-                "--body", SELF_TEST_BODY,
+                "gh",
+                "issue",
+                "create",
+                "--title",
+                SELF_TEST_TITLE,
+                "--body",
+                SELF_TEST_BODY,
                 *label_args,
             ],
             config,
@@ -287,10 +286,8 @@ def _step_create_issue(
     url = proc.stdout.strip().splitlines()[-1].strip()
     # Extract number from URL (last path component).
     issue_number = None
-    try:
+    with contextlib.suppress(ValueError, AttributeError):
         issue_number = int(url.rstrip("/").split("/")[-1])
-    except (ValueError, AttributeError):
-        pass
 
     if issue_number is None:
         state.record("create throwaway issue", False, f"could not parse issue number from: {url}")
@@ -301,9 +298,7 @@ def _step_create_issue(
     return issue_number
 
 
-def _step_promote(
-    issue_number: int, config: dict, state: SelfTestState
-) -> bool:
+def _step_promote(issue_number: int, config: dict, state: SelfTestState) -> bool:
     """Step 2: promote the issue to backlog by attaching a milestone."""
     # Ensure the self-test milestone exists.
     ms_number, just_created = _ensure_milestone(SELF_TEST_MILESTONE, config)
@@ -339,28 +334,24 @@ def _step_promote(
     return _run_move_issue(issue_number, "backlog", "promote to backlog (state)", config, state)
 
 
-def _step_start_work(
-    issue_number: int, config: dict, state: SelfTestState
-) -> bool:
+def _step_start_work(issue_number: int, config: dict, state: SelfTestState) -> bool:
     """Step 3: transition issue to in-progress via move-issue."""
     return _run_move_issue(issue_number, "in-progress", "start-work (in-progress)", config, state)
 
 
-def _step_move_back(
-    issue_number: int, config: dict, state: SelfTestState
-) -> bool:
+def _step_move_back(issue_number: int, config: dict, state: SelfTestState) -> bool:
     """Step 4: move issue back to backlog via move-issue (regression path)."""
     return _run_move_issue(issue_number, "backlog", "move back (backlog)", config, state)
 
 
-def _step_close(
-    issue_number: int, config: dict, state: SelfTestState
-) -> bool:
+def _step_close(issue_number: int, config: dict, state: SelfTestState) -> bool:
     """Step 5: close the issue with a self-test cleanup reason."""
     try:
         proc = gh_run(
             [
-                "gh", "issue", "close",
+                "gh",
+                "issue",
+                "close",
                 str(issue_number),
                 "--comment",
                 "Closed by `pkit project-management self-test` — automated cleanup; not real work.",
@@ -384,16 +375,15 @@ def _step_close(
     return True
 
 
-def _step_delete_milestone(
-    milestone_title: str, config: dict, state: SelfTestState
-) -> bool:
+def _step_delete_milestone(milestone_title: str, config: dict, state: SelfTestState) -> bool:
     """Step 6: delete the self-test milestone if it was just created."""
     # Fetch milestone number.
     try:
         proc = gh_run(
             [
-                "gh", "api",
-                f"repos/{{owner}}/{{repo}}/milestones",
+                "gh",
+                "api",
+                "repos/{owner}/{repo}/milestones",
                 "--paginate",
                 "--jq",
                 f'.[] | select(.title == "{milestone_title}") | .number',
@@ -424,8 +414,10 @@ def _step_delete_milestone(
     try:
         proc = gh_run(
             [
-                "gh", "api",
-                "--method", "DELETE",
+                "gh",
+                "api",
+                "--method",
+                "DELETE",
                 f"repos/{{owner}}/{{repo}}/milestones/{ms_number}",
             ],
             config,
@@ -495,7 +487,8 @@ def _ensure_milestone(title: str, config: dict) -> tuple[int | None, bool]:
     try:
         proc = gh_run(
             [
-                "gh", "api",
+                "gh",
+                "api",
                 "repos/{owner}/{repo}/milestones",
                 "--paginate",
                 "--jq",
@@ -516,19 +509,24 @@ def _ensure_milestone(title: str, config: dict) -> tuple[int | None, bool]:
 
     # Create it.
     import datetime as _dt
-    due_on = (
-        _dt.date.today().isoformat() + "T00:00:00Z"
-    )
+
+    due_on = _dt.date.today().isoformat() + "T00:00:00Z"
     try:
         create_proc = gh_run(
             [
-                "gh", "api",
-                "--method", "POST",
+                "gh",
+                "api",
+                "--method",
+                "POST",
                 "repos/{owner}/{repo}/milestones",
-                "--field", f"title={title}",
-                "--field", f"description=Ephemeral milestone for pkit project-management self-test.",
-                "--field", f"due_on={due_on}",
-                "--jq", ".number",
+                "--field",
+                f"title={title}",
+                "--field",
+                "description=Ephemeral milestone for pkit project-management self-test.",
+                "--field",
+                f"due_on={due_on}",
+                "--jq",
+                ".number",
             ],
             config,
             check=False,

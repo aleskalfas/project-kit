@@ -37,11 +37,11 @@ _ROOT = os.path.dirname(_HERE)
 if _ROOT not in sys.path:
     sys.path.insert(0, _ROOT)
 
-from storyboards.parser import parse  # noqa: E402
-from storyboards.plugin import PluginRegistry  # noqa: E402
-
 # Load the built-in recording plugin.
-from plugins.recording import directives as _recording_directives  # noqa: E402
+from plugins.recording import directives as _recording_directives
+
+from storyboards.parser import parse
+from storyboards.plugin import PluginRegistry
 
 
 def _build_registry() -> PluginRegistry:
@@ -119,7 +119,8 @@ def main() -> int:
     validate = "--validate" in sys.argv[2:]
 
     try:
-        text = open(path, encoding="utf-8").read()
+        with open(path, encoding="utf-8") as fh:
+            text = fh.read()
     except OSError as exc:
         print(f"runner.py: cannot read {path}: {exc}", file=sys.stderr)
         return 1

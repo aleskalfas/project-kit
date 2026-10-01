@@ -16,12 +16,7 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = (
-    REPO_ROOT
-    / ".pkit"
-    / "capabilities"
-    / "project-management"
-    / "scripts"
-    / "check-doc-mapping.py"
+    REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "check-doc-mapping.py"
 )
 LIB_PATH = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
 sys.path.insert(0, str(LIB_PATH))
@@ -29,9 +24,7 @@ sys.path.insert(0, str(LIB_PATH))
 
 @pytest.fixture(scope="module")
 def cdm():
-    spec = importlib.util.spec_from_file_location(
-        "pm_check_doc_mapping_under_test", SCRIPT_PATH
-    )
+    spec = importlib.util.spec_from_file_location("pm_check_doc_mapping_under_test", SCRIPT_PATH)
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     sys.modules["pm_check_doc_mapping_under_test"] = module

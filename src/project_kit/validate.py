@@ -27,13 +27,13 @@ from pathlib import Path
 
 import click
 
-from project_kit.validators import Finding, Outcome
 from project_kit.manifest import (
     BackboneManifest,
     ComponentManifest,
     read_backbone_manifest,
     read_component_manifest,
 )
+from project_kit.validators import Finding, Outcome
 
 
 @dataclass(frozen=True)
@@ -119,7 +119,8 @@ def _validate_backbone_manifest(
 
 
 def _validate_component_registry(target_root: Path, backbone: BackboneManifest) -> list[Issue]:
-    """Check each registered component's per-component manifest where one exists; skip a missing one."""
+    """Check each registered component's per-component manifest where one exists; skip a missing
+    one."""
     issues: list[Issue] = []
     for entry in backbone.components:
         manifest_path = target_root / entry.manifest

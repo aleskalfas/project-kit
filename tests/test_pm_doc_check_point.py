@@ -131,7 +131,11 @@ def test_the_mapping_becomes_one_obligation_per_rule_keyed_by_the_rule() -> None
         {"code": "src/**", "docs": ["docs/more.md"]},
     ]
     obligations = doc_check.mapping_obligations(rules)
-    assert [o["id"] for o in obligations] == ["mapping:src/**", "mapping:src/**#2", "mapping:src/**#3"]
+    assert [o["id"] for o in obligations] == [
+        "mapping:src/**",
+        "mapping:src/**#2",
+        "mapping:src/**#3",
+    ]
     assert obligations[1] == {
         "id": "mapping:src/**#2",
         "source": "mapping",
@@ -153,7 +157,13 @@ def test_the_companion_schema_separates_mapping_from_contributed_obligations() -
         {**STALE_GUIDE, "extra": 1},
         # A mapping obligation has the mapping's shape, whoever writes it.
         {**STALE_GUIDE, "source": "mapping"},
-        {"id": "x", "source": "mapping", "reason": "mapped-path-changed", "code": "a/**", "documents": []},
+        {
+            "id": "x",
+            "source": "mapping",
+            "reason": "mapped-path-changed",
+            "code": "a/**",
+            "documents": [],
+        },
     ):
         assert not schema.is_valid([broken]), broken
 
@@ -189,7 +199,9 @@ def test_a_page_s_friction_names_its_page_and_undocumented_code_its_path() -> No
         ),
     ],
 )
-def test_per_source_settings(config: dict[str, Any], settings: dict[str, str], problem: str | None) -> None:
+def test_per_source_settings(
+    config: dict[str, Any], settings: dict[str, str], problem: str | None
+) -> None:
     got, why = doc_check.source_settings(config)
     assert got == settings
     assert (why is None) if problem is None else (why is not None and problem in why)
@@ -471,7 +483,9 @@ def test_each_source_is_enforced_on_its_own_setting(project: AdopterRepo, tmp_pa
     )
 
 
-def test_enforcing_the_mapping_enforces_no_other_source(project: AdopterRepo, tmp_path: Path) -> None:
+def test_enforcing_the_mapping_enforces_no_other_source(
+    project: AdopterRepo, tmp_path: Path
+) -> None:
     _configure(project, RULES.format(enforce="true"))
     _contribute(project, [STALE_GUIDE])
     run = _check(project, tmp_path, {"lib/x.py": "x\n", "docs/lib.md": "# Lib 2\n"})

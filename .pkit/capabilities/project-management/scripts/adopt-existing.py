@@ -113,8 +113,8 @@ from typing import Any
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import axis_labels, board_fields  # noqa: E402
-from _lib.gh import gh_run, load_adopter_config  # noqa: E402
+from _lib import axis_labels, board_fields
+from _lib.gh import gh_run, load_adopter_config
 
 CAPABILITY_NAME = "project-management"
 
@@ -132,6 +132,7 @@ LABELS_LIMIT = 1000
 # The kit's own per-axis methodology values the draft remaps FROM (DEC-036). The
 # remap maps these kit values onto the adopter's observed substrate.
 PRIORITY_KIT_VALUES = ("High", "Medium", "Low")
+
 
 # Recognised native priority-label shapes, highest→lowest, each a list of
 # case-insensitive label-name candidates. The first observed candidate in each
@@ -193,7 +194,7 @@ class PrefixObservation:
     """One title-prefix observed across sampled issue titles + its frequency."""
 
     prefix: str  # the bracketed text, e.g. "Task" (no brackets)
-    count: int   # sampled issues whose title carries this prefix
+    count: int  # sampled issues whose title carries this prefix
 
 
 @dataclass
@@ -221,9 +222,7 @@ class Inventory:
     projects_v2_node_id: str | None = None
 
 
-def take_inventory(
-    config: dict[str, Any], *, sample_limit: int
-) -> Inventory:
+def take_inventory(config: dict[str, Any], *, sample_limit: int) -> Inventory:
     """Inventory the live tracker through ``gh`` READS only (DEC-037 §1).
 
     Pulls: the repo's labels (``gh label list``); a sample of issues, open and
@@ -269,8 +268,7 @@ def take_inventory(
                 milestones[title] = milestones.get(title, 0) + 1
 
     label_observations = [
-        LabelObservation(name=name, issue_usage=usage.get(name, 0))
-        for name in labels_raw
+        LabelObservation(name=name, issue_usage=usage.get(name, 0)) for name in labels_raw
     ]
     prefix_observations = sorted(
         (PrefixObservation(prefix=p, count=c) for p, c in prefix_counts.items()),
@@ -330,9 +328,7 @@ def _read_labels(config: dict[str, Any]) -> list[str] | None:
     ]
 
 
-def _read_issue_sample(
-    config: dict[str, Any], *, limit: int
-) -> list[dict[str, Any]] | None:
+def _read_issue_sample(config: dict[str, Any], *, limit: int) -> list[dict[str, Any]] | None:
     """A sample of issues (open + closed) with title/labels/milestone/state.
 
     A READ (``gh issue list --state all``). ``None`` on failure. The sample is
@@ -342,10 +338,15 @@ def _read_issue_sample(
     try:
         proc = gh_run(
             [
-                "gh", "issue", "list",
-                "--state", "all",
-                "--limit", str(limit),
-                "--json", "number,title,labels,milestone,state",
+                "gh",
+                "issue",
+                "list",
+                "--state",
+                "all",
+                "--limit",
+                str(limit),
+                "--json",
+                "number,title,labels,milestone,state",
             ],
             config,
             check=False,
@@ -361,9 +362,7 @@ def _read_issue_sample(
     return data if isinstance(data, list) else None
 
 
-def _read_board_fields(
-    config: dict[str, Any]
-) -> tuple[list[dict[str, Any]], bool]:
+def _read_board_fields(config: dict[str, Any]) -> tuple[list[dict[str, Any]], bool]:
     """The configured Projects-v2 board's fields + their options (a READ).
 
     Returns ``(fields, has_board)``. ``has_board`` is False (and ``fields`` empty)
@@ -381,9 +380,7 @@ def _read_board_fields(
     """
     if board_fields.board_number(config) is None:
         return [], False
-    read = board_fields.read_fields(
-        config, owner=_resolve_owner(config), gh_call=_board_gh_call
-    )
+    read = board_fields.read_fields(config, owner=_resolve_owner(config), gh_call=_board_gh_call)
     return list(read.fields), True
 
 
@@ -606,8 +603,7 @@ def _infer_priority(inventory: Inventory) -> AxisInference:
                 "observed among the repo's labels"
                 + _no_board_field_note(inventory, "priority")
                 + " — priority left UNSUPPORTED (written explicitly as "
-                "`unsupported: true`; classification goes partial/advisory)."
-                + echo
+                "`unsupported: true`; classification goes partial/advisory)." + echo
             ),
             confidence="none",
         )
@@ -619,8 +615,7 @@ def _infer_priority(inventory: Inventory) -> AxisInference:
         "all three tiers observed"
         if len(remap) == len(PRIORITY_KIT_VALUES)
         else (
-            "PARTIAL — not all three tiers observed; the human should confirm "
-            "the missing tier(s)."
+            "PARTIAL — not all three tiers observed; the human should confirm the missing tier(s)."
         )
     )
     return AxisInference(
@@ -654,11 +649,7 @@ def _unmatched_priorityish_labels(inventory: Inventory) -> list[str]:
     `priority:*` shapes are already matched, so anything here is genuinely
     unrecognised. Capped to keep the report readable.
     """
-    matched = {
-        cand.casefold()
-        for _kit, cands in PRIORITY_LABEL_TIERS
-        for cand in cands
-    }
+    matched = {cand.casefold() for _kit, cands in PRIORITY_LABEL_TIERS for cand in cands}
     hints = ("priorit", "prio", "severit", "urgen")
     out: list[str] = []
     for name, obs in _label_index(inventory):
@@ -690,8 +681,7 @@ def _infer_type(inventory: Inventory) -> AxisInference:
             unmapped.append(f"[{obs.prefix}] ({obs.count} title(s))")
     if not matched:
         seen = (
-            "observed prefixes matched no kit type value: "
-            + ", ".join(unmapped)
+            "observed prefixes matched no kit type value: " + ", ".join(unmapped)
             if unmapped
             else "no bracket title-prefixes observed in the sampled titles"
         )
@@ -711,8 +701,7 @@ def _infer_type(inventory: Inventory) -> AxisInference:
     # handful. Mirrors priority's coverage-driven confidence: thin coverage → `low`
     # confidence + an evidence note that the prefix may be coincidental, not a type.
     mapped_issue_count = sum(
-        o.count for o in inventory.title_prefixes
-        if o.prefix.casefold() in matched
+        o.count for o in inventory.title_prefixes if o.prefix.casefold() in matched
     )
     sampled = inventory.sampled_issue_count
     coverage_frac = (mapped_issue_count / sampled) if sampled else 0.0
@@ -753,9 +742,7 @@ def _infer_state(inventory: Inventory) -> AxisInference:
     depends on a ``Blocked``-style label; the evidence states whether one was
     actually observed (so the human knows whether the blocked arm will ever fire).
     """
-    blocked_condition = (
-        f"issue is open and labelled {BLOCKED_LABEL_NAME}"
-    )
+    blocked_condition = f"issue is open and labelled {BLOCKED_LABEL_NAME}"
     binding = {
         "derive": {
             "from": "open-closed",
@@ -785,9 +772,7 @@ def _infer_state(inventory: Inventory) -> AxisInference:
             "at a different label."
         )
         confidence = "low"
-    return AxisInference(
-        axis="state", binding=binding, evidence=evidence, confidence=confidence
-    )
+    return AxisInference(axis="state", binding=binding, evidence=evidence, confidence=confidence)
 
 
 def _infer_workstream(inventory: Inventory) -> AxisInference:
@@ -814,19 +799,12 @@ def _infer_workstream(inventory: Inventory) -> AxisInference:
     hook needs them, and the map deliberately does not carry them.
     """
     ws_labels = [
-        obs for name, obs in _label_index(inventory)
-        if name.casefold().startswith("workstream:")
+        obs for name, obs in _label_index(inventory) if name.casefold().startswith("workstream:")
     ]
     if ws_labels:
-        remap = {
-            obs.name.split(":", 1)[1]: obs.name
-            for obs in ws_labels
-            if ":" in obs.name
-        }
+        remap = {obs.name.split(":", 1)[1]: obs.name for obs in ws_labels if ":" in obs.name}
         if remap:
-            cited = ", ".join(
-                f"{slug}→{label}" for slug, label in remap.items()
-            )
+            cited = ", ".join(f"{slug}→{label}" for slug, label in remap.items())
             return AxisInference(
                 axis="workstream",
                 binding={"label": {"remap": remap}},
@@ -899,9 +877,7 @@ def _unmatched_workstreamish_labels(inventory: Inventory) -> list[str]:
 BOARD_DECLARABLE_AXES: tuple[str, ...] = ("priority", "workstream")
 
 
-def _board_field_candidate(
-    inventory: Inventory, axis: str
-) -> dict[str, Any] | None:
+def _board_field_candidate(inventory: Inventory, axis: str) -> dict[str, Any] | None:
     """The observed Projects-v2 board field that looks like it carries ``axis``.
 
     Substring match on the axis name, case-folded (a `Workstream` field, a
@@ -935,11 +911,7 @@ def _board_field_description(field_obs: dict[str, Any]) -> str:
     name = str(field_obs.get("name", ""))
     options = field_obs.get("options")
     opt_names = (
-        ", ".join(
-            str(o.get("name"))
-            for o in options
-            if isinstance(o, dict) and o.get("name")
-        )
+        ", ".join(str(o.get("name")) for o in options if isinstance(o, dict) and o.get("name"))
         if isinstance(options, list)
         else ""
     )
@@ -986,8 +958,7 @@ def _board_arm_inference(
             f"name (`{axis.capitalize()}`) against the live board, so confirm the "
             f"field is the one you mean and rename it if not. This replaces the "
             f"previous draft for this shape, `unsupported: true`, which declared "
-            f"the axis had no encoding at all (DEC-051 decision point 2)."
-            + trailing
+            f"the axis had no encoding at all (DEC-051 decision point 2)." + trailing
         ),
         confidence="low",
     )
@@ -1032,8 +1003,7 @@ def _no_board_field_note(inventory: Inventory, axis: str) -> str:
     if not inventory.has_board:
         return " and no Projects-v2 board is configured to carry it"
     offered = ", ".join(
-        f"`{f['name']}`" for f in inventory.board_fields
-        if isinstance(f.get("name"), str)
+        f"`{f['name']}`" for f in inventory.board_fields if isinstance(f.get("name"), str)
     )
     return (
         " and no field on your Projects-v2 board is named for it"
@@ -1077,14 +1047,12 @@ def _label_index(inventory: Inventory) -> list[tuple[str, LabelObservation]]:
 class SchemaCheck:
     """Whether the drafted map validates against substrate-map.schema.json."""
 
-    ran: bool          # False if the validator/schema could not be loaded
+    ran: bool  # False if the validator/schema could not be loaded
     valid: bool
     errors: list[str] = field(default_factory=list)
 
 
-def validate_draft(
-    draft_map: dict[str, Any], capability_root: Path
-) -> SchemaCheck:
+def validate_draft(draft_map: dict[str, Any], capability_root: Path) -> SchemaCheck:
     """Validate the drafted map against the companion JSON Schema (a self-check).
 
     Loads ``schemas/substrate-map.schema.json`` and validates the drafted document
@@ -1118,8 +1086,9 @@ def render_draft_yaml(draft_map: dict[str, Any]) -> str:
     A header comment marks it explicitly as a DRAFT the human reviews and moves
     into place (never written to the live map by this script — DEC-037 §1).
     """
-    from ruamel.yaml import YAML
     from io import StringIO
+
+    from ruamel.yaml import YAML
 
     header = (
         "# DRAFT substrate-map.yaml — generated by `adopt-existing` (DEC-037 §1).\n"
@@ -1228,15 +1197,11 @@ def main() -> int:
     draft_yaml = render_draft_yaml(draft_map)
 
     if args.json:
-        print(json.dumps(
-            _json_document(inventory, draft, draft_map, schema_check), indent=2
-        ))
+        print(json.dumps(_json_document(inventory, draft, draft_map, schema_check), indent=2))
         return 0
 
     _emit_draft(draft_yaml, args.out)
-    _print_audit_report(
-        capability_root, config, inventory, draft, schema_check, args
-    )
+    _print_audit_report(capability_root, config, inventory, draft, schema_check, args)
     return 0
 
 
@@ -1252,8 +1217,10 @@ def _emit_draft(draft_yaml: str, out: Path | None) -> None:
         print(draft_yaml)
         return
     out.write_text(draft_yaml, encoding="utf-8")
-    print(f"Draft substrate-map written to {out} (a DRAFT — review, then move it "
-          "into place yourself). NOTHING was written to your repo or live config.")
+    print(
+        f"Draft substrate-map written to {out} (a DRAFT — review, then move it "
+        "into place yourself). NOTHING was written to your repo or live config."
+    )
 
 
 def _is_live_map_path(out: Path, capability_root: Path) -> bool:
@@ -1297,18 +1264,23 @@ def _print_audit_report(
     print("Inventory (observed via gh READS):")
     print(
         f"  labels: {len(inventory.labels)} on the repo"
-        + (f" [TRUNCATED at the {LABELS_LIMIT}-label read cap — some labels were "
-           "not read, so a priority/workstream axis under an unread label could be "
-           "missed]" if inventory.labels_truncated else "")
+        + (
+            f" [TRUNCATED at the {LABELS_LIMIT}-label read cap — some labels were "
+            "not read, so a priority/workstream axis under an unread label could be "
+            "missed]"
+            if inventory.labels_truncated
+            else ""
+        )
         + f"; issues sampled: {inventory.sampled_issue_count} "
         f"({inventory.open_count} open, {inventory.closed_count} closed)"
-        + (" [TRUNCATED at --sample-limit — raise it to widen the sample]"
-           if inventory.sample_truncated else "")
+        + (
+            " [TRUNCATED at --sample-limit — raise it to widen the sample]"
+            if inventory.sample_truncated
+            else ""
+        )
     )
     if inventory.title_prefixes:
-        top = ", ".join(
-            f"[{o.prefix}]×{o.count}" for o in inventory.title_prefixes[:8]
-        )
+        top = ", ".join(f"[{o.prefix}]×{o.count}" for o in inventory.title_prefixes[:8])
         print(f"  title-prefixes seen: {top}")
     else:
         print("  title-prefixes seen: none")
@@ -1344,7 +1316,8 @@ def _print_audit_report(
     print("(DEC-037 §1: judge each inference; do not rubber-stamp):")
     for inf in draft.inferences:
         verdict = (
-            "bound" if inf.binding is not None
+            "bound"
+            if inf.binding is not None
             else "UNSUPPORTED (explicit `unsupported: true` — evaluated, rejected)"
         )
         print(f"  • {inf.axis}: {verdict}  [confidence: {inf.confidence}]")
@@ -1405,13 +1378,9 @@ def _json_document(
     return {
         "posture": "inventory-and-draft-only; mutates nothing (DEC-037 §1)",
         "inventory": {
-            "labels": [
-                {"name": o.name, "issue_usage": o.issue_usage}
-                for o in inventory.labels
-            ],
+            "labels": [{"name": o.name, "issue_usage": o.issue_usage} for o in inventory.labels],
             "title_prefixes": [
-                {"prefix": o.prefix, "count": o.count}
-                for o in inventory.title_prefixes
+                {"prefix": o.prefix, "count": o.count} for o in inventory.title_prefixes
             ],
             "open_count": inventory.open_count,
             "closed_count": inventory.closed_count,
@@ -1421,9 +1390,7 @@ def _json_document(
             "has_blocked_label": inventory.has_blocked_label,
             "milestones_in_use": inventory.milestones_in_use,
             "has_board": inventory.has_board,
-            "board_fields": [
-                str(f.get("name")) for f in inventory.board_fields
-            ],
+            "board_fields": [str(f.get("name")) for f in inventory.board_fields],
             "projects_v2_node_id": inventory.projects_v2_node_id,
         },
         "inferences": [
@@ -1453,9 +1420,7 @@ def _json_document(
 
 def _resolve_repo_name_with_owner(config: dict[str, Any]) -> str:
     try:
-        proc = gh_run(
-            ["gh", "repo", "view", "--json", "nameWithOwner"], config, check=False
-        )
+        proc = gh_run(["gh", "repo", "view", "--json", "nameWithOwner"], config, check=False)
     except FileNotFoundError:
         return "<unresolved>"
     if proc.returncode != 0:

@@ -68,9 +68,7 @@ class Environment:
     project_resolved: bool = True
 
 
-def collect_environment(
-    target_root: Path | None, *, include_private: bool = False
-) -> Environment:
+def collect_environment(target_root: Path | None, *, include_private: bool = False) -> Environment:
     """Gather the redacted environment. Reads the *installed* manifest side
     (what the adopter is actually running), never the kit source.
 

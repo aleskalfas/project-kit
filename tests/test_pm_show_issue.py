@@ -15,12 +15,7 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = (
-    REPO_ROOT
-    / ".pkit"
-    / "capabilities"
-    / "project-management"
-    / "scripts"
-    / "show-issue.py"
+    REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "show-issue.py"
 )
 
 
@@ -288,9 +283,7 @@ def test_field_scalar_is_bare_value(si, sample_summary) -> None:
     fields = si._field_lines_for(sample_summary)
     # A scalar field renders as exactly one bare line: no banner, no label.
     assert fields["state"] == ["open"]
-    assert fields["title"] == [
-        "[Task] Install the Claude Code CLI inside the sandbox"
-    ]
+    assert fields["title"] == ["[Task] Install the Claude Code CLI inside the sandbox"]
     # No chrome: the value line carries no "issue #" banner or "  state:" label.
     for line in fields["state"]:
         assert "issue #" not in line

@@ -40,7 +40,6 @@ sys.path.insert(0, str(CAP_SCRIPTS))
 from _lib import lifecycle_inference as infer  # noqa: E402
 from _lib import lifecycle_predicates as predicates  # noqa: E402
 
-
 # --- the binding shape (workflow.yaml process.cascade) --------------------
 
 
@@ -110,9 +109,9 @@ def test_members_returns_all_children_open_and_closed(monkeypatch) -> None:
     issues = [
         {"number": 10, "state": "open", "body": "Feature: #5\n\n## What"},
         {"number": 11, "state": "closed", "body": "Feature: #5\n\n## What"},
-        {"number": 12, "state": "open", "body": "Feature: #99\n"},   # other parent
-        {"number": 5, "state": "open", "body": "no parent ref"},      # the parent itself
-        {"number": 13, "state": "open", "body": "## What\nno ref"},   # no ref
+        {"number": 12, "state": "open", "body": "Feature: #99\n"},  # other parent
+        {"number": 5, "state": "open", "body": "no parent ref"},  # the parent itself
+        {"number": 13, "state": "open", "body": "## What\nno ref"},  # no ref
     ]
     _stub_list_issues(monkeypatch, issues)
     out = predicates.cascade_members(5)
@@ -151,9 +150,7 @@ def _stub_corpus(monkeypatch, corpus, *, native_outcome=None):
     monkeypatch.setattr(
         containment,
         "read_native_children",
-        lambda _config, *, parent_number: containment.NativeRead(
-            numbers=set(), outcome=outcome
-        ),
+        lambda _config, *, parent_number: containment.NativeRead(numbers=set(), outcome=outcome),
     )
 
 
@@ -247,9 +244,7 @@ def test_members_and_find_open_children_share_one_hierarchy_source() -> None:
 @pytest.fixture(scope="module")
 def ci():
     module_name = "pm_close_issue_cascade_under_test"
-    spec = importlib.util.spec_from_file_location(
-        module_name, CAP_SCRIPTS / "close-issue.py"
-    )
+    spec = importlib.util.spec_from_file_location(module_name, CAP_SCRIPTS / "close-issue.py")
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     sys.modules[module_name] = module
@@ -271,8 +266,17 @@ def _stub_process_cascade(ci, monkeypatch, *, stdout: str, returncode: int = 0) 
 
 
 def test_engine_fold_parses_opened_true(ci, monkeypatch) -> None:
-    payload = json.dumps({"cascade": {"opened": True, "indeterminate": False,
-                                      "reached": 2, "total": 2, "reason": "all 2"}})
+    payload = json.dumps(
+        {
+            "cascade": {
+                "opened": True,
+                "indeterminate": False,
+                "reached": 2,
+                "total": 2,
+                "reason": "all 2",
+            }
+        }
+    )
     _stub_process_cascade(ci, monkeypatch, stdout=payload, returncode=0)
     fold = ci._engine_cascade_fold(5)
     assert fold["opened"] is True
@@ -282,8 +286,17 @@ def test_engine_fold_parses_opened_true(ci, monkeypatch) -> None:
 def test_engine_fold_parses_opened_false_even_on_nonzero_exit(ci, monkeypatch) -> None:
     # The command exits non-zero when the fold is NOT open (by design); the JSON
     # on stdout is authoritative regardless of exit code.
-    payload = json.dumps({"cascade": {"opened": False, "indeterminate": False,
-                                      "reached": 1, "total": 2, "reason": "1/2"}})
+    payload = json.dumps(
+        {
+            "cascade": {
+                "opened": False,
+                "indeterminate": False,
+                "reached": 1,
+                "total": 2,
+                "reason": "1/2",
+            }
+        }
+    )
     _stub_process_cascade(ci, monkeypatch, stdout=payload, returncode=1)
     fold = ci._engine_cascade_fold(5)
     assert fold["opened"] is False
@@ -291,8 +304,9 @@ def test_engine_fold_parses_opened_false_even_on_nonzero_exit(ci, monkeypatch) -
 
 
 def test_engine_fold_parses_indeterminate(ci, monkeypatch) -> None:
-    payload = json.dumps({"cascade": {"opened": False, "indeterminate": True,
-                                      "reason": "membership unresolved"}})
+    payload = json.dumps(
+        {"cascade": {"opened": False, "indeterminate": True, "reason": "membership unresolved"}}
+    )
     _stub_process_cascade(ci, monkeypatch, stdout=payload, returncode=1)
     fold = ci._engine_cascade_fold(5)
     assert fold["indeterminate"] is True
@@ -321,9 +335,7 @@ def _stub_fetch_issue(monkeypatch, issue: dict) -> None:
     monkeypatch.setattr(predicates, "_fetch_issue", lambda _n, _c, _f: issue)
 
 
-def _stub_list_issues(
-    monkeypatch, issues: list[dict], *, native: set[int] | None = None
-) -> None:
+def _stub_list_issues(monkeypatch, issues: list[dict], *, native: set[int] | None = None) -> None:
     monkeypatch.setattr(predicates, "_capability_root", lambda: REPO_ROOT)
     monkeypatch.setattr(predicates, "_config", lambda _root: {})
     # Acquisition now belongs to the seam (ADR-035 §5), so the corpus is stubbed
@@ -333,9 +345,7 @@ def _stub_list_issues(
     monkeypatch.setattr(
         containment,
         "fetch_issue_corpus",
-        lambda _config, **_kw: containment.IssueCorpus(
-            rows=tuple(issues), complete=True
-        ),
+        lambda _config, **_kw: containment.IssueCorpus(rows=tuple(issues), complete=True),
     )
     # The native `…/sub_issues` read is stubbed so these (offline) tests never
     # touch the network: `native=None` means the instance has no native substrate

@@ -5,6 +5,7 @@ The deploy carry-over is exercised against the real adapter in
 `tests/test_deploy_agents.py`; the backbone-to-adapter parity guards live in
 `tests/test_agents_overlay.py`.
 """
+
 from __future__ import annotations
 
 import re
@@ -22,10 +23,19 @@ from project_kit.validators import Severity
 # --- the vocabulary -----------------------------------------------------------
 
 
-@pytest.mark.parametrize("value", [
-    "inherit", "sonnet", "opus", "haiku", "opus[1m]",
-    "claude-opus-4-1", "claude-fable-5", "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
-])
+@pytest.mark.parametrize(
+    "value",
+    [
+        "inherit",
+        "sonnet",
+        "opus",
+        "haiku",
+        "opus[1m]",
+        "claude-opus-4-1",
+        "claude-fable-5",
+        "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+    ],
+)
 def test_model_accepts_inherit_aliases_and_full_names(value):
     assert ap.value_problem(ap.MODEL, value) is None
 
@@ -53,9 +63,13 @@ def test_effort_levels_are_review_prs_levels():
     """The front-matter effort and `review-pr --effort` share one vocabulary."""
     review_pr = (
         Path(__file__).resolve().parents[1]
-        / ".pkit" / "capabilities" / "project-management" / "scripts" / "review-pr.py"
+        / ".pkit"
+        / "capabilities"
+        / "project-management"
+        / "scripts"
+        / "review-pr.py"
     ).read_text(encoding="utf-8")
-    m = re.search(r'(?m)^EFFORT_LEVELS\s*=\s*\(([^)]*)\)', review_pr)
+    m = re.search(r"(?m)^EFFORT_LEVELS\s*=\s*\(([^)]*)\)", review_pr)
     assert m, "could not find EFFORT_LEVELS in review-pr.py"
     assert tuple(re.findall(r'"([^"]+)"', m.group(1))) == ap.EFFORT_LEVELS
 

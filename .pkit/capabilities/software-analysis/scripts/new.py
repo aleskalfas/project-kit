@@ -57,8 +57,8 @@ from pathlib import Path
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import backbone, revalidation, schemas, stamp  # noqa: E402
-from _lib.model import ACTOR, JOURNEY, TERM, USE_CASE  # noqa: E402
+from _lib import backbone, revalidation, schemas, stamp
+from _lib.model import ACTOR, JOURNEY, TERM, USE_CASE
 
 #: The kind a revalidation record is stamped as.
 REVALIDATION = "revalidation"

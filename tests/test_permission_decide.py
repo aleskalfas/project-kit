@@ -5,10 +5,12 @@ and runs the truth table the design (COR-028 Q1-Q4) and ADR-002's same-code
 invariant require. The hook and the `pkit permissions` CLI both import this
 module, so these fixtures are the shared proof they decide identically.
 """
+
 from __future__ import annotations
 
 import importlib.util
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -41,15 +43,27 @@ MODEL = {
         {"subject": "all", "privilege": _tok("privilege-escalation"), "effect": "deny"},
         {"subject": "all", "privilege": _tok("destructive-fs"), "effect": "deny"},
         {"subject": "all", "privilege": _tok("vcs-history-rewrite"), "effect": "deny"},
-        {"subject": "operator",
-         "privilege": [_tok("vcs"), _tok("issue-tracker"), _tok("kit"), _tok("repo-read")],
-         "effect": "allow"},
-        {"subject": "agent:project-manager",
-         "privilege": [_tok("vcs"), _tok("issue-tracker"), _tok("kit")], "effect": "allow"},
-        {"subject": "agent:critic",
-         "privilege": [_tok("repo-read"), _tok("web-fetch")], "effect": "allow"},
-        {"subject": "agent:devops", "privilege": _tok("docker"),
-         "scope": ["services/**", "deploy/**"], "effect": "allow"},
+        {
+            "subject": "operator",
+            "privilege": [_tok("vcs"), _tok("issue-tracker"), _tok("kit"), _tok("repo-read")],
+            "effect": "allow",
+        },
+        {
+            "subject": "agent:project-manager",
+            "privilege": [_tok("vcs"), _tok("issue-tracker"), _tok("kit")],
+            "effect": "allow",
+        },
+        {
+            "subject": "agent:critic",
+            "privilege": [_tok("repo-read"), _tok("web-fetch")],
+            "effect": "allow",
+        },
+        {
+            "subject": "agent:devops",
+            "privilege": _tok("docker"),
+            "scope": ["services/**", "deploy/**"],
+            "effect": "allow",
+        },
     ],
 }
 
@@ -73,17 +87,23 @@ def test_segments_strips_env_prefix_and_matches_gh(decide_mod, catalog):
 
 
 def test_pm_allowed_gh_after_env_prefix(decide_mod, catalog):
-    d, _ = decide_mod.decide(MODEL, catalog, _bash("export GH_HOST=x && gh pr list", "agent:project-manager"))
+    d, _ = decide_mod.decide(
+        MODEL, catalog, _bash("export GH_HOST=x && gh pr list", "agent:project-manager")
+    )
     assert d == "allow"
 
 
 def test_devops_docker_inside_scope_allow(decide_mod, catalog):
-    d, _ = decide_mod.decide(MODEL, catalog, _bash("docker run img", "agent:devops", cwd="services/api"))
+    d, _ = decide_mod.decide(
+        MODEL, catalog, _bash("docker run img", "agent:devops", cwd="services/api")
+    )
     assert d == "allow"
 
 
 def test_devops_docker_outside_scope_deny(decide_mod, catalog):
-    d, why = decide_mod.decide(MODEL, catalog, _bash("docker run img", "agent:devops", cwd="secret/vault"))
+    d, why = decide_mod.decide(
+        MODEL, catalog, _bash("docker run img", "agent:devops", cwd="secret/vault")
+    )
     assert d == "deny"  # deny-outside-scope
     assert "scope" in why.lower() or "only in" in why.lower()
 
@@ -99,8 +119,11 @@ def test_rm_rf_denied(decide_mod, catalog):
 
 
 def test_force_push_denied_deny_wins(decide_mod, catalog):
-    # pm has vcs allow; git push --force also matches vcs-history-rewrite (baseline deny) -> deny wins.
-    d, _ = decide_mod.decide(MODEL, catalog, _bash("git push --force origin main", "agent:project-manager"))
+    # pm has vcs allow; git push --force also matches vcs-history-rewrite (baseline deny) -> deny
+    # wins.
+    d, _ = decide_mod.decide(
+        MODEL, catalog, _bash("git push --force origin main", "agent:project-manager")
+    )
     assert d == "deny"
 
 
@@ -128,15 +151,19 @@ _DOMAIN_MODEL = {
         {"subject": "all", "privilege": _tok("destructive-fs"), "effect": "deny"},
         {"subject": "all", "privilege": _tok("vcs-history-rewrite"), "effect": "deny"},
         # domain-scoped web-fetch: allow-list on a single exact host
-        {"subject": "agent:researcher",
-         "privilege": _tok("web-fetch"),
-         "scope": ["docs.python.org"],
-         "effect": "allow"},
+        {
+            "subject": "agent:researcher",
+            "privilege": _tok("web-fetch"),
+            "scope": ["docs.python.org"],
+            "effect": "allow",
+        },
         # domain-scoped web-fetch: glob — any subdomain of example.com
-        {"subject": "agent:analyst",
-         "privilege": _tok("web-fetch"),
-         "scope": ["*.example.com"],
-         "effect": "allow"},
+        {
+            "subject": "agent:analyst",
+            "privilege": _tok("web-fetch"),
+            "scope": ["*.example.com"],
+            "effect": "allow",
+        },
     ],
 }
 
@@ -144,7 +171,8 @@ _DOMAIN_MODEL = {
 def test_domain_scope_matching_host_allowed(decide_mod, catalog):
     """A WebFetch request whose host exactly matches the scope glob is allowed."""
     d, _ = decide_mod.decide(
-        _DOMAIN_MODEL, catalog,
+        _DOMAIN_MODEL,
+        catalog,
         _tool("WebFetch", "agent:researcher", url="https://docs.python.org/3/library/fnmatch.html"),
     )
     assert d == "allow"
@@ -153,7 +181,8 @@ def test_domain_scope_matching_host_allowed(decide_mod, catalog):
 def test_domain_scope_non_matching_host_denied(decide_mod, catalog):
     """A WebFetch request whose host does NOT match the scope glob is denied."""
     d, why = decide_mod.decide(
-        _DOMAIN_MODEL, catalog,
+        _DOMAIN_MODEL,
+        catalog,
         _tool("WebFetch", "agent:researcher", url="https://evil.example.com/steal"),
     )
     assert d == "deny"
@@ -163,7 +192,8 @@ def test_domain_scope_non_matching_host_denied(decide_mod, catalog):
 def test_domain_scope_wildcard_glob_matching_host_allowed(decide_mod, catalog):
     """A host matched by a wildcard glob (*.example.com) is allowed."""
     d, _ = decide_mod.decide(
-        _DOMAIN_MODEL, catalog,
+        _DOMAIN_MODEL,
+        catalog,
         _tool("WebFetch", "agent:analyst", url="https://api.example.com/data"),
     )
     assert d == "allow"
@@ -172,7 +202,8 @@ def test_domain_scope_wildcard_glob_matching_host_allowed(decide_mod, catalog):
 def test_domain_scope_wildcard_glob_non_matching_host_denied(decide_mod, catalog):
     """A host that doesn't match the wildcard glob is denied."""
     d, why = decide_mod.decide(
-        _DOMAIN_MODEL, catalog,
+        _DOMAIN_MODEL,
+        catalog,
         _tool("WebFetch", "agent:analyst", url="https://api.notexample.com/data"),
     )
     assert d == "deny"
@@ -182,7 +213,8 @@ def test_domain_scope_wildcard_glob_non_matching_host_denied(decide_mod, catalog
 def test_domain_scope_missing_url_denied(decide_mod, catalog):
     """A domain-scoped grant with no URL in the request is denied (can't check host)."""
     d, why = decide_mod.decide(
-        _DOMAIN_MODEL, catalog,
+        _DOMAIN_MODEL,
+        catalog,
         _tool("WebFetch", "agent:researcher"),  # no url kwarg
     )
     assert d == "deny"
@@ -190,18 +222,22 @@ def test_domain_scope_missing_url_denied(decide_mod, catalog):
 
 
 def test_domain_scope_deny_glob_rejected(decide_mod, catalog):
-    """A negation/deny scope glob (starting with '!') is explicitly rejected, not silently applied."""
+    """A negation/deny scope glob (starting with '!') is explicitly rejected, not silently
+    applied."""
     deny_glob_model = {
         "posture": "lenient",
         "grants": [
-            {"subject": "agent:researcher",
-             "privilege": _tok("web-fetch"),
-             "scope": ["!*.ru"],
-             "effect": "allow"},
+            {
+                "subject": "agent:researcher",
+                "privilege": _tok("web-fetch"),
+                "scope": ["!*.ru"],
+                "effect": "allow",
+            },
         ],
     }
     d, why = decide_mod.decide(
-        deny_glob_model, catalog,
+        deny_glob_model,
+        catalog,
         _tool("WebFetch", "agent:researcher", url="https://docs.python.org/"),
     )
     assert d == "deny"
@@ -211,13 +247,17 @@ def test_domain_scope_deny_glob_rejected(decide_mod, catalog):
 
 def test_directory_scope_unchanged_inside(decide_mod, catalog):
     """Directory-scope behaviour is unchanged: a request inside the scope is allowed."""
-    d, _ = decide_mod.decide(MODEL, catalog, _bash("docker run img", "agent:devops", cwd="services/api"))
+    d, _ = decide_mod.decide(
+        MODEL, catalog, _bash("docker run img", "agent:devops", cwd="services/api")
+    )
     assert d == "allow"
 
 
 def test_directory_scope_unchanged_outside(decide_mod, catalog):
     """Directory-scope behaviour is unchanged: a request outside the scope is denied."""
-    d, why = decide_mod.decide(MODEL, catalog, _bash("docker run img", "agent:devops", cwd="secret/vault"))
+    d, why = decide_mod.decide(
+        MODEL, catalog, _bash("docker run img", "agent:devops", cwd="secret/vault")
+    )
     assert d == "deny"
     assert "scope" in why.lower() or "only in" in why.lower() or "does not match" in why.lower()
 
@@ -230,10 +270,12 @@ def test_hook_decide_domain_scoped_webfetch_allowed(decide_mod, catalog):
             {"subject": "all", "privilege": _tok("privilege-escalation"), "effect": "deny"},
             {"subject": "all", "privilege": _tok("destructive-fs"), "effect": "deny"},
             {"subject": "all", "privilege": _tok("vcs-history-rewrite"), "effect": "deny"},
-            {"subject": "agent:researcher",
-             "privilege": _tok("web-fetch"),
-             "scope": ["docs.python.org"],
-             "effect": "allow"},
+            {
+                "subject": "agent:researcher",
+                "privilege": _tok("web-fetch"),
+                "scope": ["docs.python.org"],
+                "effect": "allow",
+            },
         ],
     }
     payload = {
@@ -254,10 +296,12 @@ def test_hook_decide_domain_scoped_webfetch_non_matching_denied(decide_mod, cata
             {"subject": "all", "privilege": _tok("privilege-escalation"), "effect": "deny"},
             {"subject": "all", "privilege": _tok("destructive-fs"), "effect": "deny"},
             {"subject": "all", "privilege": _tok("vcs-history-rewrite"), "effect": "deny"},
-            {"subject": "agent:researcher",
-             "privilege": _tok("web-fetch"),
-             "scope": ["docs.python.org"],
-             "effect": "allow"},
+            {
+                "subject": "agent:researcher",
+                "privilege": _tok("web-fetch"),
+                "scope": ["docs.python.org"],
+                "effect": "allow",
+            },
         ],
     }
     payload = {
@@ -299,13 +343,18 @@ def test_hook_decide_main_thread_is_operator(decide_mod, catalog):
 
 
 def test_hook_decide_subagent_uses_agent_subject(decide_mod, catalog):
-    payload = {"tool_name": "WebFetch", "tool_input": {"url": "https://x"},
-               "cwd": "/r", "agent_type": "critic"}
+    payload = {
+        "tool_name": "WebFetch",
+        "tool_input": {"url": "https://x"},
+        "cwd": "/r",
+        "agent_type": "critic",
+    }
     d, _ = decide_mod.hook_decide(MODEL, catalog, payload)
     assert d == "allow"
 
 
 # ---- load_model: the single loader (same-code invariant) -------------------
+
 
 def test_guardrail_denies_derived_from_catalog(decide_mod, catalog):
     denies = decide_mod.guardrail_denies(catalog)
@@ -334,7 +383,7 @@ def test_load_model_unions_guardrails_with_project_grants(decide_mod, tmp_path):
             "schema_version: 1\n"
             "grants:\n"
             "  - subject: agent:critic\n"
-            "    privilege: \"[privilege-catalog:web-fetch]\"\n"
+            '    privilege: "[privilege-catalog:web-fetch]"\n'
             "    effect: allow\n"
         ),
         config="schema_version: 1\nownership_mode: additive\nposture: strict\n",
@@ -362,21 +411,40 @@ def test_load_model_defaults_when_no_project_state(decide_mod, tmp_path):
 
 # ---- destructive-fs guardrail: recursive rm in any flag form (widened) -----
 
-@pytest.mark.parametrize("cmd", [
-    "rm -rf x", "rm -fr x", "rm -r x", "rm -R x", "rm -fR x", "rm -Rf x",
-    "rm -rfv x", "rm --recursive x", "rm --recursive=true x", "rm -i -R x",
-    "export Y=1 && rm -R x",
-])
+
+@pytest.mark.parametrize(
+    "cmd",
+    [
+        "rm -rf x",
+        "rm -fr x",
+        "rm -r x",
+        "rm -R x",
+        "rm -fR x",
+        "rm -Rf x",
+        "rm -rfv x",
+        "rm --recursive x",
+        "rm --recursive=true x",
+        "rm -i -R x",
+        "export Y=1 && rm -R x",
+    ],
+)
 def test_recursive_rm_denied_any_form(decide_mod, catalog, cmd):
     assert "destructive-fs" in decide_mod.recognized_privileges(catalog, _bash(cmd, "operator"))
     d, _ = decide_mod.decide(MODEL, catalog, _bash(cmd, "operator"))
     assert d == "deny", cmd
 
 
-@pytest.mark.parametrize("cmd", [
-    "rm x", "rm -f x", "rm -i x", "rm --force x", "rm ./-r-named-file",
-    "rm-foo -r x",  # a DIFFERENT binary whose name starts with rm — not our rm
-])
+@pytest.mark.parametrize(
+    "cmd",
+    [
+        "rm x",
+        "rm -f x",
+        "rm -i x",
+        "rm --force x",
+        "rm ./-r-named-file",
+        "rm-foo -r x",  # a DIFFERENT binary whose name starts with rm — not our rm
+    ],
+)
 def test_non_recursive_rm_not_a_guardrail(decide_mod, catalog, cmd):
     # bare / force-single-file / interactive rm is NOT destructive-fs — it must
     # not be over-blocked (that is fs-cleanup territory, not the guardrail).
@@ -384,6 +452,7 @@ def test_non_recursive_rm_not_a_guardrail(decide_mod, catalog, cmd):
 
 
 # ---- active-profile grant layering (ADR-005 / #255) ------------------------
+
 
 def _profile_tree(root: Path, *, profile: str, config: str, grants: str | None = None):
     (root / ".pkit" / "schemas").mkdir(parents=True)
@@ -402,21 +471,31 @@ def _profile_tree(root: Path, *, profile: str, config: str, grants: str | None =
 def test_load_model_layers_active_profile_between_guardrails_and_adopter(decide_mod, tmp_path):
     _profile_tree(
         tmp_path,
-        profile=("schema_version: 1\ndescription: t\nposture: lenient\n"
-                 "grants:\n  - subject: all\n    privilege: \"[privilege-catalog:vcs]\"\n"
-                 "    effect: allow\n"),
-        config=("schema_version: 1\nownership_mode: additive\nposture: lenient\n"
-                "active_profile: team\n"),
-        grants=("schema_version: 1\ngrants:\n  - subject: agent:critic\n"
-                "    privilege: \"[privilege-catalog:repo-read]\"\n    effect: allow\n"),
+        profile=(
+            "schema_version: 1\ndescription: t\nposture: lenient\n"
+            'grants:\n  - subject: all\n    privilege: "[privilege-catalog:vcs]"\n'
+            "    effect: allow\n"
+        ),
+        config=(
+            "schema_version: 1\nownership_mode: additive\nposture: lenient\nactive_profile: team\n"
+        ),
+        grants=(
+            "schema_version: 1\ngrants:\n  - subject: agent:critic\n"
+            '    privilege: "[privilege-catalog:repo-read]"\n    effect: allow\n'
+        ),
     )
     catalog = decide_mod.load_catalog(str(tmp_path))
     model = decide_mod.load_model(str(tmp_path), catalog)
     assert model["active_profile"] == "team"
     ids = [next(iter(decide_mod._privilege_ids(g["privilege"]))) for g in model["grants"]]
     # guardrails (sorted) → profile → adopter, in that order
-    assert ids == ["destructive-fs", "privilege-escalation", "vcs-history-rewrite",
-                   "vcs", "repo-read"]
+    assert ids == [
+        "destructive-fs",
+        "privilege-escalation",
+        "vcs-history-rewrite",
+        "vcs",
+        "repo-read",
+    ]
     # the profile's `all` vcs grant decides live
     d, _ = decide_mod.decide(model, catalog, _bash("git status", "operator"))
     assert d == "allow"
@@ -428,11 +507,14 @@ def test_profile_grants_annotated_with_profile_key(decide_mod, tmp_path):
     # decide() reads only subject/privilege/effect/scope and ignores it.
     _profile_tree(
         tmp_path,
-        profile=("schema_version: 1\ndescription: t\nposture: lenient\n"
-                 "grants:\n  - subject: all\n    privilege: \"[privilege-catalog:vcs]\"\n"
-                 "    effect: allow\n"),
-        config=("schema_version: 1\nownership_mode: additive\nposture: lenient\n"
-                "active_profile: team\n"),
+        profile=(
+            "schema_version: 1\ndescription: t\nposture: lenient\n"
+            'grants:\n  - subject: all\n    privilege: "[privilege-catalog:vcs]"\n'
+            "    effect: allow\n"
+        ),
+        config=(
+            "schema_version: 1\nownership_mode: additive\nposture: lenient\nactive_profile: team\n"
+        ),
     )
     catalog = decide_mod.load_catalog(str(tmp_path))
     model = decide_mod.load_model(str(tmp_path), catalog)
@@ -459,8 +541,8 @@ def test_load_model_no_active_profile_no_layer(decide_mod, tmp_path):
 # with a permanent `config.yaml` fallback; these assert the resolution and the
 # enforcement-unchanged guarantee (the hook still layers the profile's grants).
 
-def _profile_sidecar_tree(root: Path, *, profile_name: str,
-                          sidecar: str | None, config: str):
+
+def _profile_sidecar_tree(root: Path, *, profile_name: str, sidecar: str | None, config: str):
     (root / ".pkit" / "schemas").mkdir(parents=True)
     (root / ".pkit" / "schemas" / "privilege-catalog.yaml").write_text(
         CATALOG_PATH.read_text(encoding="utf-8"), encoding="utf-8"
@@ -469,7 +551,7 @@ def _profile_sidecar_tree(root: Path, *, profile_name: str,
     pdir.mkdir(parents=True)
     (pdir / f"{profile_name}.yaml").write_text(
         "schema_version: 1\ndescription: t\nposture: lenient\n"
-        "grants:\n  - subject: all\n    privilege: \"[privilege-catalog:vcs]\"\n"
+        'grants:\n  - subject: all\n    privilege: "[privilege-catalog:vcs]"\n'
         "    effect: allow\n",
         encoding="utf-8",
     )
@@ -482,45 +564,55 @@ def _profile_sidecar_tree(root: Path, *, profile_name: str,
 def test_active_profile_resolves_from_sidecar(decide_mod, tmp_path):
     # The sidecar is the source of truth; config.yaml carries no active_profile.
     _profile_sidecar_tree(
-        tmp_path, profile_name="team",
+        tmp_path,
+        profile_name="team",
         sidecar="schema_version: 1\nactive_profile: team\n",
         config="schema_version: 1\nownership_mode: additive\nposture: lenient\n",
     )
-    cfg = decide_mod.load_yaml(
-        str(tmp_path / ".pkit" / "permissions" / "project" / "config.yaml"))
+    cfg = decide_mod.load_yaml(str(tmp_path / ".pkit" / "permissions" / "project" / "config.yaml"))
     assert decide_mod.active_profile(str(tmp_path), cfg) == "team"
 
 
 def test_active_profile_falls_back_to_config(decide_mod, tmp_path):
     # An adopter mid-migration: no sidecar yet, active_profile still in config.
     _profile_sidecar_tree(
-        tmp_path, profile_name="team", sidecar=None,
-        config=("schema_version: 1\nownership_mode: additive\nposture: lenient\n"
-                "active_profile: team\n"),
+        tmp_path,
+        profile_name="team",
+        sidecar=None,
+        config=(
+            "schema_version: 1\nownership_mode: additive\nposture: lenient\nactive_profile: team\n"
+        ),
     )
-    cfg = decide_mod.load_yaml(
-        str(tmp_path / ".pkit" / "permissions" / "project" / "config.yaml"))
+    cfg = decide_mod.load_yaml(str(tmp_path / ".pkit" / "permissions" / "project" / "config.yaml"))
     assert decide_mod.active_profile(str(tmp_path), cfg) == "team"
 
 
 def test_active_profile_sidecar_wins_over_config(decide_mod, tmp_path):
     # Sidecar takes precedence over a stale config value (post-relocation safety).
     _profile_sidecar_tree(
-        tmp_path, profile_name="team",
+        tmp_path,
+        profile_name="team",
         sidecar="schema_version: 1\nactive_profile: team\n",
-        config=("schema_version: 1\nownership_mode: additive\nposture: lenient\n"
-                "active_profile: stale\n"),
+        config=(
+            "schema_version: 1\nownership_mode: additive\nposture: lenient\nactive_profile: stale\n"
+        ),
     )
-    cfg = decide_mod.load_yaml(
-        str(tmp_path / ".pkit" / "permissions" / "project" / "config.yaml"))
+    cfg = decide_mod.load_yaml(str(tmp_path / ".pkit" / "permissions" / "project" / "config.yaml"))
     assert decide_mod.active_profile(str(tmp_path), cfg) == "team"
 
 
-@pytest.mark.parametrize("corrupt_sidecar", ["42\n", "- a\n- b\n", "just a string\n"],
-                         ids=["bare-scalar", "top-level-list", "bare-string"])
+@pytest.mark.parametrize(
+    "corrupt_sidecar",
+    ["42\n", "- a\n- b\n", "just a string\n"],
+    ids=["bare-scalar", "top-level-list", "bare-string"],
+)
 @pytest.mark.parametrize("block_ruamel", [False, True], ids=["ruamel", "stdlib"])
 def test_corrupt_sidecar_falls_back_to_config_on_both_parse_paths(
-    decide_mod, tmp_path, monkeypatch, corrupt_sidecar, block_ruamel,
+    decide_mod,
+    tmp_path,
+    monkeypatch,
+    corrupt_sidecar,
+    block_ruamel,
 ):
     # A hand-corrupted active-profile.yaml that parses to a non-dict (bare scalar,
     # top-level list, bare string) must NOT make active_profile()'s `.get()` raise.
@@ -528,12 +620,16 @@ def test_corrupt_sidecar_falls_back_to_config_on_both_parse_paths(
     # the CLI, stdlib via the sandboxed hook), so resolution degrades to the
     # config.yaml fallback identically — the same-code invariant (ADR-002/ADR-003).
     _profile_sidecar_tree(
-        tmp_path, profile_name="team", sidecar=corrupt_sidecar,
-        config=("schema_version: 1\nownership_mode: additive\nposture: lenient\n"
-                "active_profile: team\n"),
+        tmp_path,
+        profile_name="team",
+        sidecar=corrupt_sidecar,
+        config=(
+            "schema_version: 1\nownership_mode: additive\nposture: lenient\nactive_profile: team\n"
+        ),
     )
     if block_ruamel:
         import builtins
+
         real_import = builtins.__import__
 
         def _block(name, *args, **kwargs):
@@ -543,8 +639,7 @@ def test_corrupt_sidecar_falls_back_to_config_on_both_parse_paths(
 
         monkeypatch.setattr(builtins, "__import__", _block)
 
-    cfg = decide_mod.load_yaml(
-        str(tmp_path / ".pkit" / "permissions" / "project" / "config.yaml"))
+    cfg = decide_mod.load_yaml(str(tmp_path / ".pkit" / "permissions" / "project" / "config.yaml"))
     # No raise, and the corrupt sidecar yields no name → config.yaml fallback.
     assert decide_mod.active_profile(str(tmp_path), cfg) == "team"
 
@@ -553,7 +648,8 @@ def test_load_model_layers_profile_from_sidecar(decide_mod, tmp_path):
     # Enforcement unchanged: with active_profile in the sidecar, load_model still
     # layers the profile's grants and the model decides the same.
     _profile_sidecar_tree(
-        tmp_path, profile_name="team",
+        tmp_path,
+        profile_name="team",
         sidecar="schema_version: 1\nactive_profile: team\n",
         config="schema_version: 1\nownership_mode: additive\nposture: lenient\n",
     )
@@ -569,9 +665,12 @@ def test_load_model_layers_profile_from_config_fallback(decide_mod, tmp_path):
     # STILL layers the profile (a frozen old loader would have, too; the point is
     # the new loader keeps doing so via the fallback).
     _profile_sidecar_tree(
-        tmp_path, profile_name="team", sidecar=None,
-        config=("schema_version: 1\nownership_mode: additive\nposture: lenient\n"
-                "active_profile: team\n"),
+        tmp_path,
+        profile_name="team",
+        sidecar=None,
+        config=(
+            "schema_version: 1\nownership_mode: additive\nposture: lenient\nactive_profile: team\n"
+        ),
     )
     catalog = decide_mod.load_catalog(str(tmp_path))
     model = decide_mod.load_model(str(tmp_path), catalog)
@@ -599,7 +698,12 @@ _SHIPPED_FILES = [
     REPO_ROOT_LOCAL / ".pkit" / "permissions" / "project" / "grants.yaml",
     # Capability-contributed fragment (ADR-016): must also be parse-identical
     # through the stdlib fallback so the hook can read it in macOS Seatbelt.
-    REPO_ROOT_LOCAL / ".pkit" / "capabilities" / "project-management" / "permissions" / "grants.yaml",
+    REPO_ROOT_LOCAL
+    / ".pkit"
+    / "capabilities"
+    / "project-management"
+    / "permissions"
+    / "grants.yaml",
 ]
 
 # Representative synthetic files that exercise edge cases the shipped files use.
@@ -610,11 +714,11 @@ _SYNTHETIC_YAML_CASES = [
         (
             "schema_version: 1\n"
             "grants:\n"
-            '  - subject: operator\n'
+            "  - subject: operator\n"
             '    privilege: "[privilege-catalog:vcs]"\n'
             "    effect: allow\n"
-            '  - subject: all\n'
-            '    privilege:\n'
+            "  - subject: all\n"
+            "    privilege:\n"
             '      - "[privilege-catalog:privilege-escalation]"\n'
             '      - "[privilege-catalog:destructive-fs]"\n'
             "    effect: deny\n"
@@ -623,12 +727,7 @@ _SYNTHETIC_YAML_CASES = [
     # config.yaml-like: simple block mapping with booleans and null
     (
         "config-like",
-        (
-            "schema_version: 1\n"
-            "ownership_mode: additive\n"
-            "posture: lenient\n"
-            "active_profile: ~\n"
-        ),
+        ("schema_version: 1\nownership_mode: additive\nposture: lenient\nactive_profile: ~\n"),
     ),
     # profile-like: block mapping + block sequence + single-quoted values
     (
@@ -708,12 +807,7 @@ _SYNTHETIC_YAML_CASES = [
     # the same-indent-seq fix doesn't misfire on sibling mapping keys.
     (
         "config-adopter",
-        (
-            "schema_version: 1\n"
-            "ownership_mode: additive\n"
-            "posture: lenient\n"
-            "active_profile: team\n"
-        ),
+        ("schema_version: 1\nownership_mode: additive\nposture: lenient\nactive_profile: team\n"),
     ),
 ]
 
@@ -721,8 +815,10 @@ _SYNTHETIC_YAML_CASES = [
 def _ruamel_load(text: str) -> Any:
     """Parse with ruamel.yaml safe-load (the reference parser)."""
     try:
-        from ruamel.yaml import YAML
         import io
+
+        from ruamel.yaml import YAML
+
         yaml = YAML(typ="safe")
         return yaml.load(io.StringIO(text)) or {}
     except ImportError:
@@ -743,7 +839,9 @@ def test_stdlib_fallback_parses_identically_to_ruamel_on_shipped_files(decide_mo
     )
 
 
-@pytest.mark.parametrize("name,text", _SYNTHETIC_YAML_CASES, ids=lambda x: x if isinstance(x, str) else "text")
+@pytest.mark.parametrize(
+    "name,text", _SYNTHETIC_YAML_CASES, ids=lambda x: x if isinstance(x, str) else "text"
+)
 def test_stdlib_fallback_parses_synthetic_cases_identically_to_ruamel(decide_mod, name, text):
     """Synthetic edge-case files: fallback == ruamel on all YAML features the
     shipped files use (flow-seq, block-scalar, single/double-quoted, booleans)."""
@@ -760,6 +858,7 @@ def test_stdlib_fallback_used_when_ruamel_absent(decide_mod, tmp_path, monkeypat
     """When ruamel.yaml is not importable, load_yaml falls back to the stdlib
     parser and the result is structurally identical — same-code invariant holds."""
     import builtins
+
     real_import = builtins.__import__
 
     def _block_ruamel(name, *args, **kwargs):
@@ -784,10 +883,13 @@ def test_stdlib_fallback_used_when_ruamel_absent(decide_mod, tmp_path, monkeypat
     assert stdlib_result == expected
 
 
-def test_stdlib_fallback_load_model_decides_correctly_without_ruamel(decide_mod, tmp_path, monkeypatch):
+def test_stdlib_fallback_load_model_decides_correctly_without_ruamel(
+    decide_mod, tmp_path, monkeypatch
+):
     """With ruamel blocked, load_model still builds a correct model and decide()
     still gives the right verdicts — the same-code invariant holds end-to-end."""
     import builtins
+
     real_import = builtins.__import__
 
     def _block_ruamel(name, *args, **kwargs):
@@ -848,34 +950,43 @@ _PM_WITH_DENY_MODEL = {
         {"subject": "all", "privilege": _tok("destructive-fs"), "effect": "deny"},
         {"subject": "all", "privilege": _tok("vcs-history-rewrite"), "effect": "deny"},
         # project-manager's production-representative grants
-        {"subject": "agent:project-manager",
-         "privilege": [_tok("vcs"), _tok("issue-tracker"), _tok("kit")], "effect": "allow"},
+        {
+            "subject": "agent:project-manager",
+            "privilege": [_tok("vcs"), _tok("issue-tracker"), _tok("kit")],
+            "effect": "allow",
+        },
         # the surgical deny that forces mutation through the validating scripts
-        {"subject": "agent:project-manager",
-         "privilege": _tok("issue-tracker-write"), "effect": "deny"},
+        {
+            "subject": "agent:project-manager",
+            "privilege": _tok("issue-tracker-write"),
+            "effect": "deny",
+        },
     ],
 }
 
 
-@pytest.mark.parametrize("cmd", [
-    "gh issue edit 53 --body 'new body'",
-    "gh issue edit 53 --title 'new title'",
-    "gh issue comment 53 --body 'a comment'",
-    "gh pr edit 27 --title 'update'",
-    "gh pr edit 27 --body 'new body'",
-    # broadened mutation set (issue #118): create/close/reopen + pr create/merge/close/reopen
-    "gh issue create --title 'x' --body 'y'",
-    "gh issue close 53",
-    "gh issue close 53 --reason completed",
-    "gh issue reopen 53",
-    "gh pr create --title 'x' --body 'y'",
-    "gh pr merge 27 --squash",
-    "gh pr close 27",
-    "gh pr reopen 27",
-    # env-prefix form — the segments() stripper must handle this
-    "export GH_HOST=github.com && gh issue edit 53",
-    "export GH_HOST=github.com && gh issue close 53",
-])
+@pytest.mark.parametrize(
+    "cmd",
+    [
+        "gh issue edit 53 --body 'new body'",
+        "gh issue edit 53 --title 'new title'",
+        "gh issue comment 53 --body 'a comment'",
+        "gh pr edit 27 --title 'update'",
+        "gh pr edit 27 --body 'new body'",
+        # broadened mutation set (issue #118): create/close/reopen + pr create/merge/close/reopen
+        "gh issue create --title 'x' --body 'y'",
+        "gh issue close 53",
+        "gh issue close 53 --reason completed",
+        "gh issue reopen 53",
+        "gh pr create --title 'x' --body 'y'",
+        "gh pr merge 27 --squash",
+        "gh pr close 27",
+        "gh pr reopen 27",
+        # env-prefix form — the segments() stripper must handle this
+        "export GH_HOST=github.com && gh issue edit 53",
+        "export GH_HOST=github.com && gh issue close 53",
+    ],
+)
 def test_pm_issue_tracker_write_denied(decide_mod, catalog, cmd):
     """gh issue edit / gh issue comment / gh pr edit are blocked for project-manager.
 
@@ -890,19 +1001,22 @@ def test_pm_issue_tracker_write_denied(decide_mod, catalog, cmd):
     assert "issue-tracker-write" in why
 
 
-@pytest.mark.parametrize("cmd", [
-    "gh issue view 53",
-    "gh issue list",
-    "gh issue list --state open",
-    "gh issue status",
-    "gh pr view 27",
-    "gh pr list",
-    "gh pr checks 27",
-    "gh pr diff 27",
-    "gh api repos/owner/repo/issues",
-    "gh api graphql -f query='...'",
-    "gh api -X PATCH repos/o/r/issues/5 -f state=closed",
-])
+@pytest.mark.parametrize(
+    "cmd",
+    [
+        "gh issue view 53",
+        "gh issue list",
+        "gh issue list --state open",
+        "gh issue status",
+        "gh pr view 27",
+        "gh pr list",
+        "gh pr checks 27",
+        "gh pr diff 27",
+        "gh api repos/owner/repo/issues",
+        "gh api graphql -f query='...'",
+        "gh api -X PATCH repos/o/r/issues/5 -f state=closed",
+    ],
+)
 def test_pm_gh_reads_and_api_not_recognized_by_write_privilege(decide_mod, catalog, cmd):
     """gh reads and gh api are NOT recognized by issue-tracker-write.
 
@@ -916,20 +1030,23 @@ def test_pm_gh_reads_and_api_not_recognized_by_write_privilege(decide_mod, catal
     )
 
 
-@pytest.mark.parametrize("cmd,expected", [
-    # gh reads → allow (issue-tracker allow, no issue-tracker-write overlap → no deny)
-    ("gh issue view 53", "allow"),
-    ("gh issue list", "allow"),
-    ("gh pr view 27", "allow"),
-    ("gh api repos/owner/repo/issues", "allow"),
-    # git → allow (vcs privilege, not affected by issue-tracker-write deny)
-    ("git status", "allow"),
-    ("git log --oneline", "allow"),
-    ("git push origin main", "allow"),
-    # pkit → allow (kit privilege)
-    ("pkit status", "allow"),
-    ("pkit permissions overview", "allow"),
-])
+@pytest.mark.parametrize(
+    "cmd,expected",
+    [
+        # gh reads → allow (issue-tracker allow, no issue-tracker-write overlap → no deny)
+        ("gh issue view 53", "allow"),
+        ("gh issue list", "allow"),
+        ("gh pr view 27", "allow"),
+        ("gh api repos/owner/repo/issues", "allow"),
+        # git → allow (vcs privilege, not affected by issue-tracker-write deny)
+        ("git status", "allow"),
+        ("git log --oneline", "allow"),
+        ("git push origin main", "allow"),
+        # pkit → allow (kit privilege)
+        ("pkit status", "allow"),
+        ("pkit permissions overview", "allow"),
+    ],
+)
 def test_pm_unaffected_commands_allowed(decide_mod, catalog, cmd, expected):
     """Commands that do not match issue-tracker-write are unaffected by the deny.
 
@@ -937,9 +1054,7 @@ def test_pm_unaffected_commands_allowed(decide_mod, catalog, cmd, expected):
     the three raw mutations (gh issue edit, gh issue comment, gh pr edit).
     """
     d, why = decide_mod.decide(_PM_WITH_DENY_MODEL, catalog, _bash(cmd, "agent:project-manager"))
-    assert d == expected, (
-        f"expected {expected!r} for {cmd!r}, got {d!r}: {why}"
-    )
+    assert d == expected, f"expected {expected!r} for {cmd!r}, got {d!r}: {why}"
 
 
 def test_deny_precedence_allow_before_deny_in_grant_list(decide_mod, catalog):
@@ -953,18 +1068,27 @@ def test_deny_precedence_allow_before_deny_in_grant_list(decide_mod, catalog):
         "posture": "lenient",
         "grants": [
             # allow issue-tracker first (broad gh)
-            {"subject": "agent:project-manager",
-             "privilege": _tok("issue-tracker"), "effect": "allow"},
+            {
+                "subject": "agent:project-manager",
+                "privilege": _tok("issue-tracker"),
+                "effect": "allow",
+            },
             # deny issue-tracker-write second
-            {"subject": "agent:project-manager",
-             "privilege": _tok("issue-tracker-write"), "effect": "deny"},
+            {
+                "subject": "agent:project-manager",
+                "privilege": _tok("issue-tracker-write"),
+                "effect": "deny",
+            },
         ],
     }
     d, why = decide_mod.decide(
-        allow_first_model, catalog,
+        allow_first_model,
+        catalog,
         _bash("gh issue edit 53", "agent:project-manager"),
     )
-    assert d == "deny", f"deny must win even when allow precedes deny in grant list; got {d!r}: {why}"
+    assert d == "deny", (
+        f"deny must win even when allow precedes deny in grant list; got {d!r}: {why}"
+    )
 
 
 def test_deny_precedence_deny_before_allow_in_grant_list(decide_mod, catalog):
@@ -973,15 +1097,22 @@ def test_deny_precedence_deny_before_allow_in_grant_list(decide_mod, catalog):
         "posture": "lenient",
         "grants": [
             # deny issue-tracker-write first
-            {"subject": "agent:project-manager",
-             "privilege": _tok("issue-tracker-write"), "effect": "deny"},
+            {
+                "subject": "agent:project-manager",
+                "privilege": _tok("issue-tracker-write"),
+                "effect": "deny",
+            },
             # allow issue-tracker second (broad gh)
-            {"subject": "agent:project-manager",
-             "privilege": _tok("issue-tracker"), "effect": "allow"},
+            {
+                "subject": "agent:project-manager",
+                "privilege": _tok("issue-tracker"),
+                "effect": "allow",
+            },
         ],
     }
     d, why = decide_mod.decide(
-        deny_first_model, catalog,
+        deny_first_model,
+        catalog,
         _bash("gh issue edit 53", "agent:project-manager"),
     )
     assert d == "deny", f"deny must win when deny precedes allow in grant list; got {d!r}: {why}"
@@ -997,7 +1128,8 @@ def test_capability_scripts_internal_gh_not_blocked(decide_mod, catalog):
     out-of-scope for the hook — no code change is needed or correct here.
     """
     d, _ = decide_mod.decide(
-        _PM_WITH_DENY_MODEL, catalog,
+        _PM_WITH_DENY_MODEL,
+        catalog,
         _bash("pkit pm transition-state 53 in-progress", "agent:project-manager"),
     )
     assert d == "allow", "pkit invocations must remain allowed for project-manager"
@@ -1023,27 +1155,39 @@ _PM_WITH_READ_REDIRECT_MODEL = {
         {"subject": "all", "privilege": _tok("destructive-fs"), "effect": "deny"},
         {"subject": "all", "privilege": _tok("vcs-history-rewrite"), "effect": "deny"},
         # project-manager's production-representative grants
-        {"subject": "agent:project-manager",
-         "privilege": [_tok("vcs"), _tok("issue-tracker"), _tok("kit")], "effect": "allow"},
+        {
+            "subject": "agent:project-manager",
+            "privilege": [_tok("vcs"), _tok("issue-tracker"), _tok("kit")],
+            "effect": "allow",
+        },
         # both capability denies the project-management fragment ships
-        {"subject": "agent:project-manager",
-         "privilege": _tok("issue-tracker-write"), "effect": "deny"},
-        {"subject": "agent:project-manager",
-         "privilege": _tok("issue-tracker-read-raw"), "effect": "deny"},
+        {
+            "subject": "agent:project-manager",
+            "privilege": _tok("issue-tracker-write"),
+            "effect": "deny",
+        },
+        {
+            "subject": "agent:project-manager",
+            "privilege": _tok("issue-tracker-read-raw"),
+            "effect": "deny",
+        },
     ],
 }
 
 
-@pytest.mark.parametrize("cmd", [
-    "gh issue view 1",
-    "gh issue view 53 --json title,body",
-    "gh pr view 1",
-    "gh pr view 27 --json state",
-    "gh pr diff 1",
-    "gh pr diff 27 --color never",
-    # env-prefix form — the segments() stripper must handle this
-    "export GH_PAGER= && gh pr diff 27",
-])
+@pytest.mark.parametrize(
+    "cmd",
+    [
+        "gh issue view 1",
+        "gh issue view 53 --json title,body",
+        "gh pr view 1",
+        "gh pr view 27 --json state",
+        "gh pr diff 1",
+        "gh pr diff 27 --color never",
+        # env-prefix form — the segments() stripper must handle this
+        "export GH_PAGER= && gh pr diff 27",
+    ],
+)
 def test_pm_raw_read_views_denied(decide_mod, catalog, cmd):
     """gh issue view / gh pr view / gh pr diff are blocked for project-manager.
 
@@ -1060,27 +1204,30 @@ def test_pm_raw_read_views_denied(decide_mod, catalog, cmd):
     assert "issue-tracker-read-raw" in why
 
 
-@pytest.mark.parametrize("cmd", [
-    # adjacent reads that MUST stay open — the alternation must not over-match
-    "gh pr checks 27",
-    "gh run list",
-    "gh run view 12345",
-    "gh api repos/owner/repo/issues",
-    "gh api -X PATCH repos/o/r/issues/5 -f state=closed",
-    "gh issue list",
-    "gh issue list --state open",
-    "gh issue status",
-    "gh pr list",
-    # mutations — covered by issue-tracker-write, NOT this privilege
-    "gh issue edit 53 --body x",
-    "gh issue comment 53 --body x",
-    "gh pr edit 27 --title y",
-    "gh issue create --title x",
-    "gh pr merge 27 --squash",
-    # near-miss prefixes that must not trip the `view`/`diff` alternation
-    "gh issue viewer",
-    "gh pr difftool",
-])
+@pytest.mark.parametrize(
+    "cmd",
+    [
+        # adjacent reads that MUST stay open — the alternation must not over-match
+        "gh pr checks 27",
+        "gh run list",
+        "gh run view 12345",
+        "gh api repos/owner/repo/issues",
+        "gh api -X PATCH repos/o/r/issues/5 -f state=closed",
+        "gh issue list",
+        "gh issue list --state open",
+        "gh issue status",
+        "gh pr list",
+        # mutations — covered by issue-tracker-write, NOT this privilege
+        "gh issue edit 53 --body x",
+        "gh issue comment 53 --body x",
+        "gh pr edit 27 --title y",
+        "gh issue create --title x",
+        "gh pr merge 27 --squash",
+        # near-miss prefixes that must not trip the `view`/`diff` alternation
+        "gh issue viewer",
+        "gh pr difftool",
+    ],
+)
 def test_pm_adjacent_reads_not_recognized_by_read_redirect(decide_mod, catalog, cmd):
     """gh pr checks / gh run / gh api / list / mutations are NOT recognized by
     issue-tracker-read-raw — only the three replaced read views are.
@@ -1094,16 +1241,19 @@ def test_pm_adjacent_reads_not_recognized_by_read_redirect(decide_mod, catalog, 
     )
 
 
-@pytest.mark.parametrize("cmd,expected", [
-    # adjacent reads → allow (issue-tracker allow, no read-raw overlap → no deny)
-    ("gh pr checks 27", "allow"),
-    ("gh run list", "allow"),
-    ("gh issue list", "allow"),
-    ("gh api repos/owner/repo/issues", "allow"),
-    # git / pkit → allow (unaffected by the read-redirect deny)
-    ("git status", "allow"),
-    ("pkit status", "allow"),
-])
+@pytest.mark.parametrize(
+    "cmd,expected",
+    [
+        # adjacent reads → allow (issue-tracker allow, no read-raw overlap → no deny)
+        ("gh pr checks 27", "allow"),
+        ("gh run list", "allow"),
+        ("gh issue list", "allow"),
+        ("gh api repos/owner/repo/issues", "allow"),
+        # git / pkit → allow (unaffected by the read-redirect deny)
+        ("git status", "allow"),
+        ("pkit status", "allow"),
+    ],
+)
 def test_pm_read_redirect_leaves_adjacent_commands_allowed(decide_mod, catalog, cmd, expected):
     """The read-redirect deny does not block adjacent reads, gh api, git, or pkit —
     only the three raw read views (gh issue view / gh pr view / gh pr diff)."""
@@ -1125,8 +1275,11 @@ def test_read_redirect_does_not_affect_other_subjects(decide_mod, catalog, cmd):
         "grants": [
             {"subject": "operator", "privilege": _tok("issue-tracker"), "effect": "allow"},
             # the capability deny is per-agent, so it does NOT apply to operator
-            {"subject": "agent:project-manager",
-             "privilege": _tok("issue-tracker-read-raw"), "effect": "deny"},
+            {
+                "subject": "agent:project-manager",
+                "privilege": _tok("issue-tracker-read-raw"),
+                "effect": "deny",
+            },
         ],
     }
     d, why = decide_mod.decide(operator_model, catalog, _bash(cmd, "operator"))
@@ -1147,6 +1300,7 @@ def test_read_redirect_does_not_affect_other_subjects(decide_mod, catalog, cmd):
 # returns "deny" for a project-manager gh issue edit — enforcement holds
 # through the stdlib fallback path.
 
+
 def test_stdlib_path_enforce_deny_grant_end_to_end(decide_mod, tmp_path, monkeypatch):
     """End-to-end: with ruamel absent, a deny grant in grants.yaml (col-0 block-seq
     shape) causes hook_decide to deny a project-manager gh issue edit.
@@ -1158,6 +1312,7 @@ def test_stdlib_path_enforce_deny_grant_end_to_end(decide_mod, tmp_path, monkeyp
     that parse succeeds in isolation.
     """
     import builtins
+
     real_import = builtins.__import__
 
     def _block_ruamel(name, *args, **kwargs):
@@ -1189,7 +1344,8 @@ def test_stdlib_path_enforce_deny_grant_end_to_end(decide_mod, tmp_path, monkeyp
     model_ref = decide_mod.load_model(str(tmp_path), catalog_ref)
     # Sanity: the deny grant IS in the model under ruamel.
     deny_grants = [
-        g for g in model_ref["grants"]
+        g
+        for g in model_ref["grants"]
         if g.get("effect") == "deny" and g.get("subject") == "agent:project-manager"
     ]
     assert deny_grants, "reference model (ruamel) must contain the deny grant"
@@ -1202,7 +1358,8 @@ def test_stdlib_path_enforce_deny_grant_end_to_end(decide_mod, tmp_path, monkeyp
 
     # The stdlib model must contain the deny grant (was None before the fix).
     deny_grants_stdlib = [
-        g for g in model_stdlib["grants"]
+        g
+        for g in model_stdlib["grants"]
         if g.get("effect") == "deny" and g.get("subject") == "agent:project-manager"
     ]
     assert deny_grants_stdlib, (
@@ -1223,9 +1380,7 @@ def test_stdlib_path_enforce_deny_grant_end_to_end(decide_mod, tmp_path, monkeyp
         f"stdlib path must enforce the deny grant for project-manager gh issue edit; "
         f"got {d!r}: {why} — enforcement failed open (issue #55)"
     )
-    assert "issue-tracker-write" in why, (
-        f"denial reason must name the privilege; got: {why!r}"
-    )
+    assert "issue-tracker-write" in why, f"denial reason must name the privilege; got: {why!r}"
 
 
 # ---- default-agent subject resolution (issue #57) ----------------------------
@@ -1239,14 +1394,14 @@ def test_stdlib_path_enforce_deny_grant_end_to_end(decide_mod, tmp_path, monkeyp
 # agent:project-manager) are inert for the main session because it resolves to
 # "operator", not "agent:project-manager".
 
+
 def _write_settings(root: Path, agent: str) -> None:
     """Write a minimal .claude/settings.json with the given agent value."""
     import json as _json
+
     claude_dir = root / ".claude"
     claude_dir.mkdir(parents=True, exist_ok=True)
-    (claude_dir / "settings.json").write_text(
-        _json.dumps({"agent": agent}), encoding="utf-8"
-    )
+    (claude_dir / "settings.json").write_text(_json.dumps({"agent": agent}), encoding="utf-8")
 
 
 def test_read_default_agent_returns_agent_from_settings(decide_mod, tmp_path):
@@ -1264,6 +1419,7 @@ def test_read_default_agent_returns_none_when_file_missing(decide_mod, tmp_path)
 def test_read_default_agent_returns_none_when_key_absent(decide_mod, tmp_path):
     """_read_default_agent returns None when settings.json has no 'agent' key."""
     import json as _json
+
     (tmp_path / ".claude").mkdir()
     (tmp_path / ".claude" / "settings.json").write_text(
         _json.dumps({"permissions": {}}), encoding="utf-8"
@@ -1303,7 +1459,9 @@ def test_hook_decide_no_agent_type_no_root_falls_back_to_operator(decide_mod, ca
     assert "operator" in why
 
 
-def test_hook_decide_no_agent_type_no_default_agent_falls_back_to_operator(decide_mod, catalog, tmp_path):
+def test_hook_decide_no_agent_type_no_default_agent_falls_back_to_operator(
+    decide_mod, catalog, tmp_path
+):
     """agent_type absent + settings.json has no 'agent' key → subject 'operator'."""
     # No .claude/settings.json in tmp_path.
     payload = {
@@ -1348,7 +1506,9 @@ def test_hook_decide_no_agent_type_deny_applies_via_default_agent(decide_mod, ca
         "cwd": "/r",
         # No agent_type — simulates a main-session call.
     }
-    d, why = decide_mod.hook_decide(_PM_WITH_DENY_MODEL, catalog, payload, project_root=str(tmp_path))
+    d, why = decide_mod.hook_decide(
+        _PM_WITH_DENY_MODEL, catalog, payload, project_root=str(tmp_path)
+    )
     assert d == "deny", (
         f"deny grant on agent:project-manager must apply to main-session payload "
         f"(no agent_type) when settings.json sets agent: project-manager; got {d!r}: {why}"
@@ -1365,6 +1525,7 @@ def test_hook_decide_no_agent_type_deny_applies_via_default_agent(decide_mod, ca
 # resolves the subject to agent:project-manager and returns deny for gh issue edit.
 # This is the end-to-end enforcement guard for issue #57.
 
+
 def test_stdlib_path_default_agent_deny_end_to_end(decide_mod, tmp_path, monkeypatch):
     """End-to-end: stdlib-only path (no ruamel), no agent_type payload, settings.json
     agent: project-manager, deny grant → hook_decide returns deny for gh issue edit.
@@ -1375,6 +1536,7 @@ def test_stdlib_path_default_agent_deny_end_to_end(decide_mod, tmp_path, monkeyp
     path — proving that the main session finally enforces per-agent denies.
     """
     import builtins
+
     real_import = builtins.__import__
 
     def _block_ruamel(name, *args, **kwargs):
@@ -1417,9 +1579,7 @@ def test_stdlib_path_default_agent_deny_end_to_end(decide_mod, tmp_path, monkeyp
         f"deny grant for main-session gh issue edit; got {d!r}: {why} — "
         f"issue #57 fix not working through stdlib fallback"
     )
-    assert "issue-tracker-write" in why, (
-        f"denial reason must name the privilege; got: {why!r}"
-    )
+    assert "issue-tracker-write" in why, f"denial reason must name the privilege; got: {why!r}"
 
 
 # ---- capability-fragment layer (ADR-016) ------------------------------------
@@ -1432,7 +1592,14 @@ def test_stdlib_path_default_agent_deny_end_to_end(decide_mod, tmp_path, monkeyp
 # Capability grants are annotated with _capability for the reporting layer;
 # decide() ignores the extra key (it reads only subject/privilege/effect/scope).
 
-CAP_FRAG_PATH = REPO_ROOT_LOCAL / ".pkit" / "capabilities" / "project-management" / "permissions" / "grants.yaml"
+CAP_FRAG_PATH = (
+    REPO_ROOT_LOCAL
+    / ".pkit"
+    / "capabilities"
+    / "project-management"
+    / "permissions"
+    / "grants.yaml"
+)
 
 
 def _write_cap_tree(
@@ -1494,10 +1661,7 @@ def test_capability_fragment_grants_loaded_when_manifest_registered(decide_mod, 
     )
     catalog = decide_mod.load_catalog(str(tmp_path))
     model = decide_mod.load_model(str(tmp_path), catalog)
-    cap_grants = [
-        g for g in model["grants"]
-        if g.get("_capability") == "project-management"
-    ]
+    cap_grants = [g for g in model["grants"] if g.get("_capability") == "project-management"]
     assert cap_grants, "capability fragment grants must appear in the model"
     assert cap_grants[0]["effect"] == "deny"
     assert cap_grants[0]["subject"] == "agent:project-manager"
@@ -1513,11 +1677,7 @@ def test_orphan_capability_dir_contributes_nothing(decide_mod, tmp_path):
     # Write a capability fragment at the expected path, but NO manifest entry.
     _write_cap_tree(
         tmp_path,
-        manifest=(
-            "schema_version: 1\n"
-            "backbone_version: 1.0.0\n"
-            "components: []\n"
-        ),
+        manifest=("schema_version: 1\nbackbone_version: 1.0.0\ncomponents: []\n"),
         cap_grants=(
             "schema_version: 1\n"
             "grants:\n"
@@ -1591,8 +1751,10 @@ def test_capability_deny_survives_autonomous_profile_allow_deny_wins(decide_mod,
 
     # Prove (a): the profile grants issue-tracker to all.
     profile_grants = [
-        g for g in model["grants"]
-        if g.get("subject") == "all" and g.get("effect") == "allow"
+        g
+        for g in model["grants"]
+        if g.get("subject") == "all"
+        and g.get("effect") == "allow"
         and "issue-tracker" in str(g.get("privilege", ""))
     ]
     assert profile_grants, "autonomous profile must grant issue-tracker to all"
@@ -1607,8 +1769,7 @@ def test_capability_deny_survives_autonomous_profile_allow_deny_wins(decide_mod,
     # Prove (c): deny-wins — the capability deny overrides the profile allow.
     d, why = decide_mod.decide(model, catalog, request)
     assert d == "deny", (
-        f"capability deny must override autonomous profile allow via deny-wins; "
-        f"got {d!r}: {why}"
+        f"capability deny must override autonomous profile allow via deny-wins; got {d!r}: {why}"
     )
     assert "issue-tracker-write" in why
 
@@ -1621,6 +1782,7 @@ def test_capability_deny_under_autonomous_via_stdlib_path(decide_mod, tmp_path, 
     actual runtime (ADR-002 / ADR-003 same-code invariant).
     """
     import builtins
+
     real_import = builtins.__import__
 
     def _block_ruamel(name, *args, **kwargs):
@@ -1719,7 +1881,8 @@ def test_removing_manual_grant_does_not_weaken_enforcement(decide_mod, tmp_path)
 
     # No manual deny in model (project grants empty).
     manual_denies = [
-        g for g in model["grants"]
+        g
+        for g in model["grants"]
         if g.get("subject") == "agent:project-manager"
         and g.get("effect") == "deny"
         and not g.get("_capability")
@@ -1775,7 +1938,8 @@ def test_capability_fragment_grants_annotated_with_capability_key(decide_mod, tm
 
     # decide() must still work with the annotated grant (the extra key is ignored).
     d, why = decide_mod.decide(
-        model, catalog,
+        model,
+        catalog,
         _bash("gh issue edit 53", "agent:project-manager"),
     )
     assert d == "deny", f"decide() must work with _capability-annotated grants; got {d!r}: {why}"
@@ -1815,10 +1979,7 @@ def test_capability_fragment_layered_before_profile_and_adopter(decide_mod, tmp_
             "    effect: allow\n"
         ),
         config=(
-            "schema_version: 1\n"
-            "ownership_mode: additive\n"
-            "posture: lenient\n"
-            "active_profile: team\n"
+            "schema_version: 1\nownership_mode: additive\nposture: lenient\nactive_profile: team\n"
         ),
         project_grants=(
             "schema_version: 1\n"
@@ -1832,25 +1993,15 @@ def test_capability_fragment_layered_before_profile_and_adopter(decide_mod, tmp_
     model = decide_mod.load_model(str(tmp_path), catalog)
     grants = model["grants"]
 
-    cap_idx = next(
-        i for i, g in enumerate(grants)
-        if g.get("_capability") == "project-management"
-    )
+    cap_idx = next(i for i, g in enumerate(grants) if g.get("_capability") == "project-management")
     profile_idx = next(
-        i for i, g in enumerate(grants)
-        if g.get("subject") == "all" and g.get("effect") == "allow"
-        and not g.get("_capability")
+        i
+        for i, g in enumerate(grants)
+        if g.get("subject") == "all" and g.get("effect") == "allow" and not g.get("_capability")
     )
-    adopter_idx = next(
-        i for i, g in enumerate(grants)
-        if g.get("subject") == "agent:critic"
-    )
-    assert cap_idx < profile_idx, (
-        "capability fragment must come before profile grants in the model"
-    )
-    assert profile_idx < adopter_idx, (
-        "profile grants must come before adopter grants in the model"
-    )
+    adopter_idx = next(i for i, g in enumerate(grants) if g.get("subject") == "agent:critic")
+    assert cap_idx < profile_idx, "capability fragment must come before profile grants in the model"
+    assert profile_idx < adopter_idx, "profile grants must come before adopter grants in the model"
 
 
 def test_stdlib_fallback_parses_capability_fragment_identically_to_ruamel(decide_mod):
@@ -1861,8 +2012,10 @@ def test_stdlib_fallback_parses_capability_fragment_identically_to_ruamel(decide
     _stdlib_load_yaml and get byte-identical results.
     """
     try:
-        from ruamel.yaml import YAML
         import io
+
+        from ruamel.yaml import YAML
+
         yaml = YAML(typ="safe")
     except ImportError:
         pytest.skip("ruamel.yaml not available")
@@ -2050,9 +2203,9 @@ def test_fragment_guardrail_rejected(decide_mod, tmp_path):
     )
     # And it never becomes a global deny: guardrail_denies sees only backbone.
     denies = decide_mod.guardrail_denies(catalog)
-    assert not any(
-        "forbidden-floor" in str(g.get("privilege")) for g in denies
-    ), "a rejected fragment guardrail must never synthesize a global deny"
+    assert not any("forbidden-floor" in str(g.get("privilege")) for g in denies), (
+        "a rejected fragment guardrail must never synthesize a global deny"
+    )
 
 
 def test_scoped_token_round_trips_deny_binds_not_fail_open(decide_mod, tmp_path):
@@ -2075,14 +2228,19 @@ def test_scoped_token_round_trips_deny_binds_not_fail_open(decide_mod, tmp_path)
     catalog = decide_mod.load_catalog(str(tmp_path))
     model = decide_mod.load_model(str(tmp_path), catalog)
     # The token must normalise to the scoped catalog key exactly.
-    assert decide_mod._privilege_ids(
-        "[privilege-catalog:trip-planning:ad-hoc-scraping]"
-    ) == {"trip-planning:ad-hoc-scraping"}
+    assert decide_mod._privilege_ids("[privilege-catalog:trip-planning:ad-hoc-scraping]") == {
+        "trip-planning:ad-hoc-scraping"
+    }
     # The deny binds: researcher running `curl …` is DENIED.
     decision, reason = decide_mod.decide(
-        model, catalog,
-        {"type": "bash", "command": "curl https://example.com",
-         "cwd": "/r", "subject": "agent:researcher"},
+        model,
+        catalog,
+        {
+            "type": "bash",
+            "command": "curl https://example.com",
+            "cwd": "/r",
+            "subject": "agent:researcher",
+        },
     )
     assert decision == "deny", f"scoped deny must bind, got {decision} ({reason})"
 
@@ -2111,20 +2269,20 @@ def test_recognizer_overlap_deny_wins_per_subject(decide_mod, tmp_path):
         "    privilege: '[privilege-catalog:vcs]'\n"
         "    effect: allow\n"
     )
-    _write_catalog_fragment_tree(
-        tmp_path, fragment=fragment, project_grants=project_grants
-    )
+    _write_catalog_fragment_tree(tmp_path, fragment=fragment, project_grants=project_grants)
     catalog = decide_mod.load_catalog(str(tmp_path))
     model = decide_mod.load_model(str(tmp_path), catalog)
     # researcher is denied git (the overlapping fragment deny binds).
     d_res, _ = decide_mod.decide(
-        model, catalog,
+        model,
+        catalog,
         {"type": "bash", "command": "git status", "cwd": "/r", "subject": "agent:researcher"},
     )
     assert d_res == "deny", "the capability's deny fences ITS named subject on the overlap"
     # builder is unaffected — it has a vcs allow and no scm-scrape deny.
     d_build, _ = decide_mod.decide(
-        model, catalog,
+        model,
+        catalog,
         {"type": "bash", "command": "git status", "cwd": "/r", "subject": "agent:builder"},
     )
     assert d_build == "allow", "a third party is NOT narrowed by a capability's deny"
@@ -2151,7 +2309,9 @@ def test_stdlib_fallback_parses_catalog_fragment_identically_to_ruamel(decide_mo
         pytest.skip("ruamel.yaml not available")
     stdlib_result = decide_mod._stdlib_load_yaml(_SCRAPER_FRAGMENT)
     import io
+
     from ruamel.yaml import YAML as _Y
+
     ruamel_result = _Y(typ="safe").load(io.StringIO(_SCRAPER_FRAGMENT)) or {}
     assert stdlib_result == ruamel_result
 
@@ -2186,10 +2346,10 @@ def test_strip_leading_cd_does_not_strip_complex_cd(decide_mod):
     assert decide_mod._strip_leading_cd("cd $(pwd) && gh pr list") is None
     assert decide_mod._strip_leading_cd("cd `pwd` && gh pr list") is None
     assert decide_mod._strip_leading_cd("cd -P /x && gh pr list") is None  # flag
-    assert decide_mod._strip_leading_cd("cd a b && gh pr list") is None    # two args
-    assert decide_mod._strip_leading_cd("cd /x | gh pr list") is None      # not && / ;
-    assert decide_mod._strip_leading_cd("cd /x") is None                   # no remainder
-    assert decide_mod._strip_leading_cd("gh pr list") is None              # no leading cd
+    assert decide_mod._strip_leading_cd("cd a b && gh pr list") is None  # two args
+    assert decide_mod._strip_leading_cd("cd /x | gh pr list") is None  # not && / ;
+    assert decide_mod._strip_leading_cd("cd /x") is None  # no remainder
+    assert decide_mod._strip_leading_cd("gh pr list") is None  # no leading cd
 
 
 def test_cd_prefix_then_granted_gh_auto_approves(decide_mod, catalog):
@@ -2221,9 +2381,7 @@ def test_tricky_quoted_cd_is_not_stripped_and_never_silently_allowed(decide_mod,
     NOT stripped. It falls through to the full-command path, where the dumb
     splitter leaks the `rm -rf ~` into a segment and the destructive-fs guardrail
     denies. The one property that MUST hold: never a silent auto-allow."""
-    d, why = decide_mod.decide(
-        MODEL, catalog, _bash('cd "/x; rm -rf ~" && gh pr list', "operator")
-    )
+    d, why = decide_mod.decide(MODEL, catalog, _bash('cd "/x; rm -rf ~" && gh pr list', "operator"))
     assert d != "allow", f"a tricky quoted cd must never silently auto-allow; got {d!r}: {why}"
 
 
@@ -2279,9 +2437,7 @@ def test_cd_prefix_composes_with_env_prefix_strip(decide_mod, catalog):
 def test_chained_cd_strips_to_final_granted_command(decide_mod, catalog):
     """Chained bare cds (`cd /a && cd /b && gh pr list`) strip recursively to the
     final granted command — each cd is only a cwd change, never a grant."""
-    d, why = decide_mod.decide(
-        MODEL, catalog, _bash("cd /a && cd /b && gh pr list", "operator")
-    )
+    d, why = decide_mod.decide(MODEL, catalog, _bash("cd /a && cd /b && gh pr list", "operator"))
     assert d == "allow", why
 
 
@@ -2323,9 +2479,7 @@ def test_cd_prefix_then_pipe_to_shell_matches_bare_form(decide_mod, catalog):
     cd_decision, cd_why = decide_mod.decide(
         MODEL, catalog, _bash("cd /x && gh pr list | sh", "operator")
     )
-    bare_decision, _ = decide_mod.decide(
-        MODEL, catalog, _bash("gh pr list | sh", "operator")
-    )
+    bare_decision, _ = decide_mod.decide(MODEL, catalog, _bash("gh pr list | sh", "operator"))
     assert cd_decision == bare_decision, (
         f"cd-prefixed pipe-to-shell must match the bare form's verdict; "
         f"got cd={cd_decision!r}, bare={bare_decision!r}: {cd_why}"

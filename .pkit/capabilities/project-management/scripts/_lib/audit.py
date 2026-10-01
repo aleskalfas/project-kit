@@ -76,11 +76,7 @@ def load_audit_template(capability_root) -> str:
         path = Path(capability_root) / "schemas" / "validation-severity.yaml"
         data = YAML(typ="safe").load(path.read_text(encoding="utf-8"))
         tmpl = data["severities"][SEVERITY_BYPASSABLE]["audit_comment_template"]
-        return (
-            tmpl.strip()
-            if isinstance(tmpl, str) and tmpl.strip()
-            else AUDIT_TEMPLATE_FALLBACK
-        )
+        return tmpl.strip() if isinstance(tmpl, str) and tmpl.strip() else AUDIT_TEMPLATE_FALLBACK
     except (OSError, YAMLError, KeyError, TypeError):
         # TypeError also covers a None root — a caller with no resolved capability
         # root still gets the canonical form rather than an exception.
@@ -93,11 +89,7 @@ def render_audit_comment(capability_root, invoker, reason: str) -> str:
     by the timeline (the comment carries the *why*, not the state). Renders cleanly
     when the email is unresolved."""
     template = load_audit_template(capability_root)
-    name = (
-        getattr(invoker, "github_login", None)
-        or getattr(invoker, "email", None)
-        or "unknown"
-    )
+    name = getattr(invoker, "github_login", None) or getattr(invoker, "email", None) or "unknown"
     email = getattr(invoker, "email", None) or ""
     body = template.replace("<name>", name).replace("<reason>", reason)
     if email:
@@ -176,9 +168,7 @@ def render_ci_bypass_audit_body(
     idempotency `key`.
     """
     name = (
-        getattr(invoker, "github_login", None)
-        or getattr(invoker, "email", None)
-        or "<unresolved>"
+        getattr(invoker, "github_login", None) or getattr(invoker, "email", None) or "<unresolved>"
     )
     email = getattr(invoker, "email", None) or "<unknown>"
     checks = ", ".join(failing_checks) or "(none named)"

@@ -40,9 +40,7 @@ _REPORTED_FM_KEYS = ("reported_to", "reported_hash", "reported", "project", "wor
 _REPORTED_KEY_RE = re.compile(rf"^(?:{'|'.join(_REPORTED_FM_KEYS)}):")
 
 _ISSUE_REF_RE = re.compile(r"^[A-Za-z0-9][\w.-]*/[A-Za-z0-9][\w.-]*#\d+$")
-_ISSUE_URL_RE = re.compile(
-    r"^https?://github\.com/([^/\s]+)/([^/\s]+)/issues/(\d+)/?(?:[?#].*)?$"
-)
+_ISSUE_URL_RE = re.compile(r"^https?://github\.com/([^/\s]+)/([^/\s]+)/issues/(\d+)/?(?:[?#].*)?$")
 
 
 ACTIVE_TEMPLATE = """\
@@ -104,9 +102,7 @@ def transition_to_done(
     return _transition(target_root, slug, "done", produced=produced, dry_run=dry_run)
 
 
-def transition_to_dropped(
-    target_root: Path, slug: str, dry_run: bool = False
-) -> tuple[Path, Path]:
+def transition_to_dropped(target_root: Path, slug: str, dry_run: bool = False) -> tuple[Path, Path]:
     """Move a note from active/ (or reported/) to dropped/, appending retired frontmatter."""
     return _transition(target_root, slug, "dropped", produced=(), dry_run=dry_run)
 
@@ -432,12 +428,8 @@ def list_notes(target_root: Path) -> list[NoteEntry]:
                 entries.append(NoteEntry(path.name, state))
                 continue
             content = path.read_text(encoding="utf-8")
-            refs = tuple(
-                resolve_ref(ref) for ref in read_reported_refs(content)
-            )
-            entries.append(
-                NoteEntry(path.name, state, refs=refs, drifted=note_is_drifted(content))
-            )
+            refs = tuple(resolve_ref(ref) for ref in read_reported_refs(content))
+            entries.append(NoteEntry(path.name, state, refs=refs, drifted=note_is_drifted(content)))
     return entries
 
 
@@ -449,14 +441,14 @@ def resolve_ref(ref: str) -> ReportedRefState:
     guessing). Cross-repo *read* — unrestricted per COR-039."""
     owner_repo, _, number = ref.partition("#")
     data = _gh_json(
-        ["gh", "issue", "view", number, "--repo", owner_repo,
-         "--json", "state,title,url"]
+        ["gh", "issue", "view", number, "--repo", owner_repo, "--json", "state,title,url"]
     )
     if isinstance(data, dict) and isinstance(data.get("state"), str):
         state = data["state"].lower()
         if state in ("open", "closed"):
             return ReportedRefState(
-                ref, state,
+                ref,
+                state,
                 title=str(data.get("title", "")),
                 url=str(data.get("url", "")),
             )
@@ -516,13 +508,9 @@ def _append_reported_refs(content: str, refs: tuple[str, ...], hash_value: str) 
     lines = content.split("\n")
     close = _frontmatter_close(lines)
     try:
-        head = next(
-            i for i in range(1, close) if lines[i].startswith("reported_to:")
-        )
+        head = next(i for i in range(1, close) if lines[i].startswith("reported_to:"))
     except StopIteration:
-        raise click.ClickException(
-            "reported note has no reported_to frontmatter list."
-        ) from None
+        raise click.ClickException("reported note has no reported_to frontmatter list.") from None
     end = head + 1
     while end < close and (lines[end].startswith(" ") or lines[end].startswith("\t")):
         end += 1

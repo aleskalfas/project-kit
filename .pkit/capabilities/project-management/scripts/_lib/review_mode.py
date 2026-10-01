@@ -22,7 +22,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Literal
 
-
 ReviewMode = Literal["agent", "human"]
 DEFAULT_MODE: ReviewMode = "agent"
 
@@ -32,7 +31,9 @@ class ModeResolution:
     """Resolved review mode + the layer that produced it."""
 
     mode: ReviewMode
-    source: str  # human-readable: "project default" | "label review:<mode>" | "--require-human flag"
+    source: (
+        str  # human-readable: "project default" | "label review:<mode>" | "--require-human flag"
+    )
 
 
 def resolve_mode(

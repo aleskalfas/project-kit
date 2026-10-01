@@ -95,9 +95,7 @@ def test_read_body_format_missing_schema_fails_open(cli, tmp_path) -> None:
 def test_read_body_format_malformed_schema_fails_open(cli, tmp_path) -> None:
     schema_dir = tmp_path / "schemas"
     schema_dir.mkdir()
-    (schema_dir / "body-format.yaml").write_text(
-        "bodies: [unclosed\n", encoding="utf-8"
-    )
+    (schema_dir / "body-format.yaml").write_text("bodies: [unclosed\n", encoding="utf-8")
     assert cli._read_body_format(tmp_path, _yaml_loader()) == {}
 
 

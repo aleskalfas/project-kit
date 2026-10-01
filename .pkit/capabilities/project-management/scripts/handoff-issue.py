@@ -51,19 +51,18 @@ from ruamel.yaml import YAML
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate  # noqa: E402
-from _lib.audit import audit_key  # noqa: E402
+from _lib import bootstrap_gate, session_guard
+from _lib.audit import audit_key
+
 # The one fetch / scan / post-once wiring every audit writer shares (#902).
-from _lib.comment import post_audit_once  # noqa: E402
-from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
-from _lib import session_guard  # noqa: E402
-from _lib.membership import (  # noqa: E402
+from _lib.comment import post_audit_once
+from _lib.gh import gh_get_issue, gh_run, load_adopter_config
+from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
     resolve_capability_root,
     resolve_invoker_identity,
 )
-
 
 # The handoff audit comment's first-line kind marker. It says WHAT the comment
 # is; it is not what makes the post idempotent — the stamp this replaced
@@ -95,15 +94,20 @@ def main() -> int:
     )
     parser.add_argument("issue_number", type=int)
     parser.add_argument(
-        "--to", required=True, dest="new_assignee",
+        "--to",
+        required=True,
+        dest="new_assignee",
         help="New assignee (`@user` or `user`).",
     )
     parser.add_argument(
-        "--reason", required=True,
+        "--reason",
+        required=True,
         help="Reason for the handoff — recorded in the audit comment.",
     )
     parser.add_argument(
-        "--capability-root", type=Path, default=None,
+        "--capability-root",
+        type=Path,
+        default=None,
         help=f"Default: <repo-root>/.pkit/capabilities/{CAPABILITY_NAME}/.",
     )
     parser.add_argument("--dry-run", action="store_true")
@@ -166,16 +170,12 @@ def main() -> int:
     # Determine current assignee (for the audit comment + remove flag).
     assignees = issue.get("assignees") or []
     current_assignees = [
-        a.get("login") for a in assignees
-        if isinstance(a, dict) and a.get("login")
+        a.get("login") for a in assignees if isinstance(a, dict) and a.get("login")
     ]
     from_assignee = current_assignees[0] if current_assignees else "(unassigned)"
 
     if from_assignee == new_assignee:
-        print(
-            f"  #{args.issue_number} is already assigned to @{new_assignee}; "
-            "no-op."
-        )
+        print(f"  #{args.issue_number} is already assigned to @{new_assignee}; no-op.")
         return 0
 
     print(f"handoff-issue: #{args.issue_number}")
@@ -194,9 +194,7 @@ def main() -> int:
             return 0
 
     # Audit comment, BEFORE the reassignment, posted at most once per handoff.
-    if not _post_handoff_audit(
-        args.issue_number, from_assignee, new_assignee, reason, config
-    ):
+    if not _post_handoff_audit(args.issue_number, from_assignee, new_assignee, reason, config):
         return 2
 
     # Reassign.
@@ -212,7 +210,8 @@ def main() -> int:
 
 def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
     return gh_get_issue(
-        issue_number, config,
+        issue_number,
+        config,
         fields="title,state,assignees,labels,milestone",
     )
 
@@ -231,13 +230,20 @@ def _assignment_event_count(issue_number: int, config: dict) -> int | None:
     try:
         proc = gh_run(
             [
-                "gh", "api", "graphql",
-                "-F", "owner={owner}",
-                "-F", "name={repo}",
-                "-F", f"number={issue_number}",
-                "-f", f"query={_ASSIGNMENT_EVENTS_QUERY}",
+                "gh",
+                "api",
+                "graphql",
+                "-F",
+                "owner={owner}",
+                "-F",
+                "name={repo}",
+                "-F",
+                f"number={issue_number}",
+                "-f",
+                f"query={_ASSIGNMENT_EVENTS_QUERY}",
             ],
-            config, check=False,
+            config,
+            check=False,
         )
     except FileNotFoundError:
         return None
@@ -268,14 +274,24 @@ def _post_handoff_audit(
     needed post failed (the caller then aborts before reassigning).
     """
     key = _handoff_audit_key(
-        from_assignee, to_assignee, reason,
+        from_assignee,
+        to_assignee,
+        reason,
         _assignment_event_count(issue_number, config),
     )
     body = _handoff_audit_body(
-        from_assignee, to_assignee, reason, dt.date.today().isoformat(), key,
+        from_assignee,
+        to_assignee,
+        reason,
+        dt.date.today().isoformat(),
+        key,
     )
     return post_audit_once(
-        "issue", issue_number, key, body, config,
+        "issue",
+        issue_number,
+        key,
+        body,
+        config,
         run=gh_run,
         present_note="handoff audit comment already present; idempotent skip",
     )
@@ -308,9 +324,7 @@ def _handoff_audit_body(
     )
 
 
-def _reassign(
-    issue_number: int, from_assignee: str, to_assignee: str, config: dict
-) -> bool:
+def _reassign(issue_number: int, from_assignee: str, to_assignee: str, config: dict) -> bool:
     cmd = ["gh", "issue", "edit", str(issue_number), "--add-assignee", to_assignee]
     if from_assignee and from_assignee != "(unassigned)":
         cmd += ["--remove-assignee", from_assignee]

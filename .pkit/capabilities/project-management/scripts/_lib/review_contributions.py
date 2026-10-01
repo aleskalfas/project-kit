@@ -86,10 +86,11 @@ Exports (the types #145/#146/#147 import):
 
 from __future__ import annotations
 
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from types import MappingProxyType
-from typing import Any, Callable, Iterable, Mapping
+from typing import Any
 
 # The shared contribution-collector core (ADR-038). The manifest walk, the
 # per-declaration read, the `ContributionError` type, and the `ERROR_PARSE` /
@@ -146,9 +147,9 @@ class _MatchAny:
     an entity that lacks the axis).
     """
 
-    _instance: "_MatchAny | None" = None
+    _instance: _MatchAny | None = None
 
-    def __new__(cls) -> "_MatchAny":
+    def __new__(cls) -> _MatchAny:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
@@ -208,7 +209,7 @@ class ContributionRule:
     """
 
     capability: str
-    predicate: Mapping[str, "tuple[str, ...] | _MatchAny"]
+    predicate: Mapping[str, tuple[str, ...] | _MatchAny]
     reviewer: str
     floor: str | None = None
     deployed: bool = True
@@ -260,9 +261,7 @@ class ContributionCollection:
         `has_blocking_errors`; the affirmative spelling consumers gate on."""
         return not self.has_blocking_errors
 
-    def reviewers_for(
-        self, classification: Mapping[str, str]
-    ) -> tuple[ContributionRule, ...]:
+    def reviewers_for(self, classification: Mapping[str, str]) -> tuple[ContributionRule, ...]:
         """Matched rules whose predicate holds for `classification`.
 
         Returns the matched `ContributionRule`s (not bare names), so a
@@ -289,9 +288,7 @@ class ContributionCollection:
             if rule.predicate and _predicate_matches(rule.predicate, classification)
         )
 
-    def reviewers_for_floors(
-        self, satisfied_floors: "Iterable[str]"
-    ) -> tuple[ContributionRule, ...]:
+    def reviewers_for_floors(self, satisfied_floors: Iterable[str]) -> tuple[ContributionRule, ...]:
         """Rules whose diff-property floor is in `satisfied_floors` (DEC-032 amendment).
 
         The diff-keyed counterpart to `reviewers_for`. `satisfied_floors` is the
@@ -308,9 +305,7 @@ class ContributionCollection:
         """
         satisfied = set(satisfied_floors)
         return self._dedup_by_reviewer(
-            rule
-            for rule in self.rules
-            if rule.floor is not None and rule.floor in satisfied
+            rule for rule in self.rules if rule.floor is not None and rule.floor in satisfied
         )
 
     def reviewers_for_issues(
@@ -351,7 +346,7 @@ class ContributionCollection:
 
 
 def _predicate_matches(
-    predicate: Mapping[str, "tuple[str, ...] | _MatchAny"],
+    predicate: Mapping[str, tuple[str, ...] | _MatchAny],
     classification: Mapping[str, str],
 ) -> bool:
     """True when every axis in `predicate` holds in `classification`.
@@ -415,8 +410,7 @@ def parse_contributions(
     if not isinstance(contributions, list):
         return (), (
             malformed(
-                f"{prefix}: `contributions` must be a list, "
-                f"got {type(contributions).__name__}"
+                f"{prefix}: `contributions` must be a list, got {type(contributions).__name__}"
             ),
         )
 
@@ -450,9 +444,7 @@ def _parse_rule(
     match = item.get("match")
     floor = item.get("floor")
     if match is None and floor is None:
-        return None, [
-            malformed(f"{where} must declare a `match` predicate, a `floor`, or both")
-        ]
+        return None, [malformed(f"{where} must declare a `match` predicate, a `floor`, or both")]
 
     predicate: dict[str, tuple[str, ...] | _MatchAny] = {}
     if match is not None:
@@ -527,11 +519,7 @@ def _parse_floor(
     if floor is None:
         return None
     if not isinstance(floor, str) or floor not in SUPPORTED_FLOORS:
-        errors.append(
-            malformed(
-                f"{where}.floor must be one of: {', '.join(SUPPORTED_FLOORS)}"
-            )
-        )
+        errors.append(malformed(f"{where}.floor must be one of: {', '.join(SUPPORTED_FLOORS)}"))
         return None
     return floor
 
@@ -561,9 +549,7 @@ def _parse_match_values(
         raw_values = list(raw)
     else:
         errors.append(
-            malformed(
-                f"{where}.match.{axis} must be a non-empty string or a list of strings"
-            )
+            malformed(f"{where}.match.{axis} must be a non-empty string or a list of strings")
         )
         return ()
 
@@ -571,9 +557,7 @@ def _parse_match_values(
     values: list[str] = []
     for value in raw_values:
         if not isinstance(value, str) or not value:
-            errors.append(
-                malformed(f"{where}.match.{axis} values must be non-empty strings")
-            )
+            errors.append(malformed(f"{where}.match.{axis} values must be non-empty strings"))
             return ()
         if value not in seen:
             seen.add(value)

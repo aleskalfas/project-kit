@@ -23,7 +23,7 @@ Exit codes:
   0  edited (or dry-run reported)
   1  membership refusal / validation refusal
   2  usage error (slug not found)
-"""
+"""  # noqa: E501 — a usage line is a command, kept whole
 
 from __future__ import annotations
 
@@ -36,15 +36,15 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate, session_guard  # noqa: E402
-from _lib.gh import gh_run, load_adopter_config  # noqa: E402
-from _lib.membership import (  # noqa: E402
+from _lib import bootstrap_gate, session_guard
+from _lib.gh import load_adopter_config
+from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
     resolve_capability_root,
     resolve_invoker_identity,
 )
-from _lib.workstreams import (  # noqa: E402
+from _lib.workstreams import (
     parse_workstreams,
     workstreams_path,
 )
@@ -65,7 +65,12 @@ def main() -> int:
     session_guard.add_override_argument(parser)
     args = parser.parse_args()
 
-    if args.name is None and args.description is None and args.status is None and args.deprecated_reason is None:
+    if (
+        args.name is None
+        and args.description is None
+        and args.status is None
+        and args.deprecated_reason is None
+    ):
         print(
             "error: nothing to edit. Pass --name / --description / --status / --deprecated-reason.",
             file=sys.stderr,
@@ -148,7 +153,9 @@ def main() -> int:
     if args.description is not None:
         entry["description"] = args.description
     if args.status is not None:
-        if args.status == "deprecated" and not (args.deprecated_reason or entry.get("deprecated_reason")):
+        if args.status == "deprecated" and not (
+            args.deprecated_reason or entry.get("deprecated_reason")
+        ):
             print(
                 "[refused] --status=deprecated requires --deprecated-reason "
                 "(or an existing deprecated_reason).",
@@ -172,10 +179,14 @@ def main() -> int:
         return 0
     if args.status is not None and current.get("status") != entry["status"]:
         if not args.yes and sys.stdin.isatty():
-            reply = input(
-                f"Flip status {current.get('status', '<unset>')!r} → "
-                f"{entry['status']!r}? [y/N] "
-            ).strip().lower()
+            reply = (
+                input(
+                    f"Flip status {current.get('status', '<unset>')!r} → "
+                    f"{entry['status']!r}? [y/N] "
+                )
+                .strip()
+                .lower()
+            )
             if reply not in ("y", "yes"):
                 print("aborted.", file=sys.stderr)
                 return 0

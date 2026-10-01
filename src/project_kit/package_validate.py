@@ -649,7 +649,9 @@ def _connection_findings(
                 if "command" in entry:
                     check_command(f"{path}/command", entry["command"])
                     filler = entry["command"] if group == "contributes" else None
-                    leaf = resolve_command(command_leaves, filler) if isinstance(filler, str) else None
+                    leaf = (
+                        resolve_command(command_leaves, filler) if isinstance(filler, str) else None
+                    )
                     if leaf is not None and leaf.get(QUERY_CONTRACT_KEY) is not True:
                         _error(
                             f"{path}/command",
@@ -793,7 +795,8 @@ def _check_relative(findings: list[PackageFinding], path: str, value: Any, what:
 
 
 def relative_path_problem(value: str) -> str | None:
-    """Why `value` is not a plain relative path (absolute, or climbing with `..`); None when it is."""
+    """Why `value` is not a plain relative path (absolute, or climbing with `..`); None when it
+    is."""
     if PurePosixPath(value).is_absolute() or PureWindowsPath(value).is_absolute():
         return "is absolute"
     if ".." in PurePosixPath(value).parts:

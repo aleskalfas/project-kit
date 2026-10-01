@@ -74,9 +74,7 @@ def test_footer_shape_obeys_marker_constraints(prov, versions) -> None:
     """An un-stripped footer must not collide with any scanned construct."""
     footer = prov.render_footer(versions)
     body_lines = [
-        ln
-        for ln in footer.splitlines()
-        if ln.strip() and not ln.strip().startswith("<!--")
+        ln for ln in footer.splitlines() if ln.strip() and not ln.strip().startswith("<!--")
     ]
     for ln in body_lines:
         s = ln.strip()
@@ -248,5 +246,5 @@ def test_sentinels_match_body_format_schema(prov) -> None:
         (CAP_ROOT / "schemas" / "body-format.yaml").read_text(encoding="utf-8")
     )
     marker = schema["provenance_marker"]
-    assert prov.MARKER_START == marker["start_marker"]
-    assert prov.MARKER_END == marker["end_marker"]
+    assert marker["start_marker"] == prov.MARKER_START
+    assert marker["end_marker"] == prov.MARKER_END

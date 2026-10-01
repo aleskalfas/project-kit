@@ -96,8 +96,15 @@ OPTIONAL_READS_KEYS = ("patterns",)
 POLICY_KEYS = ("model", "effort")
 INHERIT = "inherit"
 MODEL_ALIASES = (
-    "sonnet", "opus", "haiku", "fable", "best", "opusplan",
-    "sonnet[1m]", "opus[1m]", "fable[1m]",
+    "sonnet",
+    "opus",
+    "haiku",
+    "fable",
+    "best",
+    "opusplan",
+    "sonnet[1m]",
+    "opus[1m]",
+    "fable[1m]",
 )
 FULL_MODEL_NAME_PATTERN = r"^(?:[A-Za-z0-9-]+\.)*claude-\S+$"
 EFFORT_LEVELS = ("low", "medium", "high", "xhigh", "max")
@@ -121,7 +128,7 @@ def load_ownership():
     if not path.is_file():
         raise FileNotFoundError(path)
     sys.path.insert(0, str(path.parent))
-    import ownership  # noqa: PLC0415 — deliberately lazy; see above.
+    import ownership  # deliberately lazy; see above.
 
     return ownership
 
@@ -130,14 +137,11 @@ def policy_hint(key: str, value: object) -> str | None:
     """What to write instead when *value* is not accepted for policy *key*; None if it is."""
     if key == "model":
         if isinstance(value, str) and (
-            value == INHERIT
-            or value in MODEL_ALIASES
-            or re.match(FULL_MODEL_NAME_PATTERN, value)
+            value == INHERIT or value in MODEL_ALIASES or re.match(FULL_MODEL_NAME_PATTERN, value)
         ):
             return None
         return (
-            f"use {INHERIT}, an alias ({', '.join(MODEL_ALIASES)}) "
-            f"or a full model name (claude-…)"
+            f"use {INHERIT}, an alias ({', '.join(MODEL_ALIASES)}) or a full model name (claude-…)"
         )
     if isinstance(value, str) and (value == INHERIT or value in EFFORT_LEVELS):
         return None
@@ -337,11 +341,13 @@ def main(argv: list[str]) -> int:
                     # both unresolvable, both skip the agent. The remediation
                     # depends on whether the category has a conventional default,
                     # which the shared module answers (ADR-051 Implications).
-                    fail([
-                        f"category <{cat}> referenced but not defined in overlay "
-                        f"({overlay_file})",
-                        *(own.undefined_category_remediation(cat) or []),
-                    ])
+                    fail(
+                        [
+                            f"category <{cat}> referenced but not defined in overlay "
+                            f"({overlay_file})",
+                            *(own.undefined_category_remediation(cat) or []),
+                        ]
+                    )
                 values = resolved if isinstance(resolved, list) else [resolved]
                 offences = own.sync_managed_offences(
                     TARGET_ROOT, cat, [str(v) for v in values if v is not None]

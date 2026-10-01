@@ -28,13 +28,11 @@ Exit codes:
   1  membership refusal / validation refusal / duplicate slug
   2  usage error (capability not found; bad slug)
   3  gh failure (label creation)
-"""
+"""  # noqa: E501 — a usage line is a command, kept whole
 
 from __future__ import annotations
 
 import argparse
-import re
-import subprocess
 import sys
 from pathlib import Path
 
@@ -43,10 +41,8 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate  # noqa: E402
-from _lib import axis_carriage  # noqa: E402
-from _lib import axis_labels  # noqa: E402
-from _lib.gh import gh_run, load_adopter_config  # noqa: E402
+from _lib import axis_carriage, axis_labels, bootstrap_gate, session_guard
+from _lib.gh import gh_run, load_adopter_config
 
 # Constraint-1 gate (RF-2, #265): the workstream-label MUTATORS
 # (add/remove/merge/rename/split) create/delete/rename kit `workstream:*` labels
@@ -57,14 +53,13 @@ from _lib.gh import gh_run, load_adopter_config  # noqa: E402
 # REFUSES before any `gh label` op when it trips. Greenfield is unchanged. The
 # richer present-map behaviour (validate-against-the-bound-set, retag) stays the
 # adopt-existing Feature #264; this is just the constraint-1 gate.
-from _lib.membership import (  # noqa: E402
+from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
     resolve_capability_root,
     resolve_invoker_identity,
 )
-from _lib import session_guard  # noqa: E402
-from _lib.workstreams import (  # noqa: E402
+from _lib.workstreams import (
     SLUG_PATTERN,
     parse_workstreams,
     workstreams_path,
@@ -73,9 +68,7 @@ from _lib.workstreams import (  # noqa: E402
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description=(
-            "Add a workstream to project/workstreams.yaml per DEC-018."
-        ),
+        description=("Add a workstream to project/workstreams.yaml per DEC-018."),
     )
     parser.add_argument(
         "slug",
@@ -105,10 +98,7 @@ def main() -> int:
     parser.add_argument(
         "--skip-label",
         action="store_true",
-        help=(
-            "Skip the `gh label create workstream:<slug>` step "
-            "(label-substrate adopters only)."
-        ),
+        help=("Skip the `gh label create workstream:<slug>` step (label-substrate adopters only)."),
     )
     parser.add_argument(
         "--capability-root",
@@ -194,9 +184,7 @@ def main() -> int:
     # created. Only the greenfield (`kit-label`) arm mutates kit labels; every
     # other carriage suppresses the label half and says so.
     substrate_map = axis_labels.load_substrate_map(capability_root)
-    kit_label_note = axis_carriage.kit_label_mutation_note(
-        "workstream", config, substrate_map
-    )
+    kit_label_note = axis_carriage.kit_label_mutation_note("workstream", config, substrate_map)
     kit_labels = kit_label_note is None
 
     current = _read_workstreams_file_or_legacy(capability_root, yaml_loader)
@@ -228,7 +216,10 @@ def main() -> int:
         print(f"  reason:      {new_entry['deprecated_reason']}")
     print(f"  target file: {workstreams_path(capability_root)}")
     if kit_labels and not args.skip_label:
-        print(f"  label:       create `{axis_labels.label('workstream', args.slug)}` (label-substrate)")
+        print(
+            f"  label:       create `{axis_labels.label('workstream', args.slug)}` "
+            "(label-substrate)"
+        )
     elif kit_label_note is not None:
         print(f"  label:       none — {kit_label_note}")
 
@@ -291,9 +282,7 @@ def _read_workstreams_file_or_legacy(
     return config.get("workstreams")
 
 
-def _add_to_file(
-    capability_root: Path, slug: str, entry: dict
-) -> bool:
+def _add_to_file(capability_root: Path, slug: str, entry: dict) -> bool:
     """Append the entry to workstreams.yaml (round-trip preserving)."""
     path = workstreams_path(capability_root)
     yaml = YAML(typ="rt")
@@ -373,8 +362,7 @@ def _gh_label_create(slug: str, config: dict) -> bool:
     if "already exists" in proc.stderr or "already exists" in proc.stdout:
         return True
     print(
-        f"error: gh label create failed (exit {proc.returncode}).\n"
-        f"stderr: {proc.stderr.strip()}",
+        f"error: gh label create failed (exit {proc.returncode}).\nstderr: {proc.stderr.strip()}",
         file=sys.stderr,
     )
     return False

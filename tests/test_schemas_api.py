@@ -16,7 +16,6 @@ from project_kit.schemas import (
     resolve_token,
 )
 
-
 # Fixtures --------------------------------------------------------------
 
 
@@ -112,7 +111,7 @@ def test_iter_entries_walks_mapping_collection(tmp_path: Path) -> None:
     entries = list(iter_entries(tmp_path, "demo", "issue-types"))
     ids = [eid for eid, _ in entries]
     assert ids == ["task", "feature"]
-    for eid, data in entries:
+    for _eid, data in entries:
         assert "role" in data
 
 

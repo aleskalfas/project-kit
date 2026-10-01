@@ -7,20 +7,15 @@ comparison logic, and the summary builder.
 from __future__ import annotations
 
 import importlib.util
+import subprocess
 import sys
 from pathlib import Path
 
 import pytest
 
-
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = (
-    REPO_ROOT
-    / ".pkit"
-    / "capabilities"
-    / "project-management"
-    / "scripts"
-    / "check-mesh.py"
+    REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "check-mesh.py"
 )
 
 
@@ -168,12 +163,8 @@ def test_compare_detects_version_drift(cm) -> None:
 
 
 def test_compare_detects_type_label_drift(cm) -> None:
-    local = _make_state(
-        cm, "us/local", labels=["type:feature", "type:bug"]
-    )
-    peer = _make_state(
-        cm, "them/peer", labels=["type:feature", "type:bug", "type:incident"]
-    )
+    local = _make_state(cm, "us/local", labels=["type:feature", "type:bug"])
+    peer = _make_state(cm, "them/peer", labels=["type:feature", "type:bug", "type:incident"])
     drift = cm._compare(local, [peer], None)
     type_drift = [d for d in drift if d["kind"] == "type-labels"]
     assert len(type_drift) == 1
@@ -188,9 +179,7 @@ def test_compare_skips_kit_label_axes_under_a_present_map(cm, axis_labels) -> No
     same-named one: the seam's is `substrate_map is None` and cannot see the
     board, so under greenfield WITH a board it would compare kit `priority:*`
     sets that neither peer uses."""
-    sm = axis_labels.SubstrateMap(
-        axes={"priority": {"label": {"remap": {"High": "P0"}}}}
-    )
+    sm = axis_labels.SubstrateMap(axes={"priority": {"label": {"remap": {"High": "P0"}}}})
     local = _make_state(cm, "us/local", labels=["priority:High"])
     peer = _make_state(cm, "them/peer", labels=["priority:High", "priority:Low"])
     drift = cm._compare(local, [peer], sm)
@@ -209,9 +198,7 @@ def test_compare_flags_priority_drift_in_greenfield(cm) -> None:
 
 
 def test_compare_detects_member_drift(cm) -> None:
-    local = _make_state(
-        cm, "us/local", members=[{"github_login": "alice"}]
-    )
+    local = _make_state(cm, "us/local", members=[{"github_login": "alice"}])
     peer = _make_state(
         cm,
         "them/peer",
@@ -261,6 +248,42 @@ def test_summary_with_drift_mentions_count_and_severity(cm) -> None:
     s = cm._summary([{"kind": "type-labels"}, {"kind": "capability-version"}])
     assert "2" in s
     assert "warning" in s.lower()
+
+
+# --- peer state -------------------------------------------------------
+
+
+def test_gather_peer_state_reads_the_peer_with_the_adopter_config(cm, monkeypatch) -> None:
+    # Every read of a peer goes through `gh` with the adopter's configuration.
+    # The gatherer once named a `config` it was never given, so with any peer
+    # configured the check failed with a NameError before comparing anything.
+    config = {"repo_owner": "me", "repo_name": "here"}
+    configs_seen: list[object] = []
+
+    def fake_gh_run(cmd, cfg, check=False):
+        configs_seen.append(cfg)
+        endpoint = cmd[2]
+        if endpoint.endswith("package.yaml"):
+            stdout = "component:\n  kind: capability\n  version: 1.2.3\n"
+        elif endpoint.endswith("members.yaml"):
+            stdout = "members:\n  - login: someone\n"
+        else:
+            stdout = '[{"title": "v1"}]'
+        return subprocess.CompletedProcess(cmd, 0, stdout=stdout, stderr="")
+
+    def fake_run(cmd, **kwargs):
+        return subprocess.CompletedProcess(cmd, 0, stdout='[{"name": "type:bug"}]', stderr="")
+
+    monkeypatch.setattr(cm, "gh_run", fake_gh_run)
+    monkeypatch.setattr(cm.subprocess, "run", fake_run)
+
+    state = cm._gather_peer_state(cm.PeerSpec(owner="owner", repo="repo"), config)
+
+    assert state.labels == ["type:bug"]
+    assert state.capability_version == "1.2.3"
+    assert state.members == [{"login": "someone"}]
+    assert state.milestones == ["v1"]
+    assert configs_seen and all(seen is config for seen in configs_seen)
 
 
 # --- _extract_version helper -----------------------------------------

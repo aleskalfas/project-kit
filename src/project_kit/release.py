@@ -1508,9 +1508,7 @@ def lint_changeset(cs: Changeset) -> list[FormatViolation]:
             )
         )
     if body[0].islower():
-        violations.append(
-            FormatViolation(where, f"body should start capitalized: {body!r}.")
-        )
+        violations.append(FormatViolation(where, f"body should start capitalized: {body!r}."))
     if not body.endswith("."):
         violations.append(FormatViolation(where, f"body should end with a period: {body!r}."))
 
@@ -1555,8 +1553,7 @@ def lint_changelog(text: str) -> list[FormatViolation]:
                 )
         elif line.startswith("## "):
             if not (
-                _CHANGELOG_VERSION_HEADING_RE.match(line)
-                or _CHANGELOG_DATE_HEADING_RE.match(line)
+                _CHANGELOG_VERSION_HEADING_RE.match(line) or _CHANGELOG_DATE_HEADING_RE.match(line)
             ):
                 violations.append(
                     FormatViolation(
@@ -1672,12 +1669,7 @@ def _check_timestamp(check: dict) -> str:
     sorts first — so a timestamped run always wins over an untimed one, and ties
     (all untimed / equal) fall through to GitHub's roughly-chronological order.
     """
-    return (
-        check.get("completedAt")
-        or check.get("startedAt")
-        or check.get("createdAt")
-        or ""
-    )
+    return check.get("completedAt") or check.get("startedAt") or check.get("createdAt") or ""
 
 
 def dedupe_to_latest_run(rollup: list[dict]) -> list[dict]:
@@ -1833,20 +1825,22 @@ def merge_release_pr(repo_root: Path, pr_number: int, *, dry_run: bool = False) 
         )
     _gh_pr_merge(pr.number, pr.title, repo_root)
     notes = [
-        _gh_delete_remote_branch(
-            pr.head_ref, repo_root, cross_repository=pr.cross_repository
-        ),
+        _gh_delete_remote_branch(pr.head_ref, repo_root, cross_repository=pr.cross_repository),
         *_git_cleanup_local(
-            pr.head_ref, pr.base_ref or "main", repo_root,
+            pr.head_ref,
+            pr.base_ref or "main",
+            repo_root,
             cross_repository=pr.cross_repository,
         ),
     ]
-    return "\n".join([
-        f"Merged release PR #{pr.number} ({pr.url}).",
-        *(f"  {note}" for note in notes if note),
-        "  Not tagged here: the post-merge tag step cuts the backbone tag on the push "
-        "to main (VERSION-driven).",
-    ])
+    return "\n".join(
+        [
+            f"Merged release PR #{pr.number} ({pr.url}).",
+            *(f"  {note}" for note in notes if note),
+            "  Not tagged here: the post-merge tag step cuts the backbone tag on the push "
+            "to main (VERSION-driven).",
+        ]
+    )
 
 
 def _gh_pr_view(pr_number: int, repo_root: Path) -> dict:
@@ -1868,9 +1862,7 @@ def _gh_pr_view(pr_number: int, repo_root: Path) -> dict:
             "`gh` is not on PATH — install the GitHub CLI to merge a release PR."
         ) from exc
     if result.returncode != 0:
-        raise click.ClickException(
-            f"`gh pr view {pr_number}` failed: {result.stderr.strip()}"
-        )
+        raise click.ClickException(f"`gh pr view {pr_number}` failed: {result.stderr.strip()}")
     return json.loads(result.stdout)
 
 
@@ -1911,18 +1903,14 @@ def _gh_pr_merge(pr_number: int, subject: str, repo_root: Path) -> None:
             "`gh` is not on PATH — install the GitHub CLI to merge a release PR."
         ) from exc
     if result.returncode != 0:
-        raise click.ClickException(
-            f"`gh pr merge {pr_number}` failed: {result.stderr.strip()}"
-        )
+        raise click.ClickException(f"`gh pr merge {pr_number}` failed: {result.stderr.strip()}")
 
 
 def _warn(message: str) -> None:
     click.echo(f"[warn] {message}", err=True)
 
 
-def _gh_delete_remote_branch(
-    branch: str, repo_root: Path, *, cross_repository: bool
-) -> str:
+def _gh_delete_remote_branch(branch: str, repo_root: Path, *, cross_repository: bool) -> str:
     """Delete the PR's remote head ref through the API — best-effort.
 
     Returns a status line for the report ("" after a warning). Mirrors the
@@ -1947,8 +1935,7 @@ def _gh_delete_remote_branch(
         )
     try:
         result = subprocess.run(
-            ["gh", "api", "-X", "DELETE",
-             f"repos/{{owner}}/{{repo}}/git/refs/heads/{branch}"],
+            ["gh", "api", "-X", "DELETE", f"repos/{{owner}}/{{repo}}/git/refs/heads/{branch}"],
             capture_output=True,
             text=True,
             cwd=repo_root,
@@ -1991,9 +1978,14 @@ def _git_cleanup_local(
     delete is skipped — a local branch sharing the fork branch's name is not
     that PR's head, and `-D` would discard its unpushed work.
     """
+
     def _git(*argv: str) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
-            ["git", *argv], capture_output=True, text=True, cwd=repo_root, check=False,
+            ["git", *argv],
+            capture_output=True,
+            text=True,
+            cwd=repo_root,
+            check=False,
         )
 
     notes: list[str] = []
@@ -2032,12 +2024,14 @@ def _git_cleanup_local(
 # requires_backbone must be a bounded range `>=LOW,<HIGH` — an unbounded or
 # open form (`*`, `>=X` with no upper bound) cannot gate a consumer's backbone,
 # so it is flagged. Mirrors the bound shape versioning.py's broaden rewrites.
-_REQUIRES_BACKBONE_RANGE_RE = re.compile(r'^>=\d+\.\d+\.\d+,<\d+\.\d+\.\d+$')
+_REQUIRES_BACKBONE_RANGE_RE = re.compile(r"^>=\d+\.\d+\.\d+,<\d+\.\d+\.\d+$")
 
 # Cheaply-detectable local-only assumptions: an absolute filesystem path or a
 # `file://` URL in the manifest points at something a consumer will not have.
 # A heuristic reminder, not a proof — matched against the raw manifest text.
-_LOCAL_PATH_RE = re.compile(r'(?m)(?:^|\s|["\':=])(/(?:Users|home|tmp|var|opt|private)/\S+|file://\S+)')
+_LOCAL_PATH_RE = re.compile(
+    r'(?m)(?:^|\s|["\':=])(/(?:Users|home|tmp|var|opt|private)/\S+|file://\S+)'
+)
 
 
 @dataclass(frozen=True)
@@ -2262,8 +2256,7 @@ def _gh_release_create_notes(tag: str, notes: str, repo_root: Path) -> None:
     """
     try:
         result = subprocess.run(
-            ["gh", "release", "create", tag, "--title", tag, "--notes", notes,
-             "--verify-tag"],
+            ["gh", "release", "create", tag, "--title", tag, "--notes", notes, "--verify-tag"],
             capture_output=True,
             text=True,
             cwd=repo_root,
@@ -2274,9 +2267,7 @@ def _gh_release_create_notes(tag: str, notes: str, repo_root: Path) -> None:
             "`gh` is not on PATH — install the GitHub CLI to publish release notes."
         ) from exc
     if result.returncode != 0:
-        raise click.ClickException(
-            f"`gh release create {tag}` failed: {result.stderr.strip()}"
-        )
+        raise click.ClickException(f"`gh release create {tag}` failed: {result.stderr.strip()}")
 
 
 def _gh_release_edit_notes(tag: str, notes: str, repo_root: Path) -> None:
@@ -2298,6 +2289,4 @@ def _gh_release_edit_notes(tag: str, notes: str, repo_root: Path) -> None:
             "`gh` is not on PATH — install the GitHub CLI to publish release notes."
         ) from exc
     if result.returncode != 0:
-        raise click.ClickException(
-            f"`gh release edit {tag}` failed: {result.stderr.strip()}"
-        )
+        raise click.ClickException(f"`gh release edit {tag}` failed: {result.stderr.strip()}")

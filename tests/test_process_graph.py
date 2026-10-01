@@ -329,9 +329,7 @@ commands:
 def repo(tmp_path: Path) -> Path:
     root = tmp_path / "project"
     (root / ".pkit" / "schemas" / "_defs").mkdir(parents=True, exist_ok=True)
-    _write_capability(
-        root, "alpha", {"ship": _SHIP, "review": _REVIEW, "roster": _ROSTER}
-    )
+    _write_capability(root, "alpha", {"ship": _SHIP, "review": _REVIEW, "roster": _ROSTER})
     _write_capability(root, "beta", {"issue": _ISSUE})
     return root
 
@@ -552,15 +550,11 @@ def test_filter_and_combine(graph: pg.Graph) -> None:
 def test_filter_direction_and_depth(graph: pg.Graph) -> None:
     # Focus ship, out-edges only, depth 1: ship's own out-edges (embeds review,
     # informational + triggered-by toward issue) -- not roster->ship (an in-edge).
-    out = pg.apply_filters(
-        graph, pg.FilterSpec(process="alpha:ship", direction="out", depth=1)
-    )
+    out = pg.apply_filters(graph, pg.FilterSpec(process="alpha:ship", direction="out", depth=1))
     assert all(e.frm == "alpha:ship" for e in out.edges)
     assert len(out.edges) == 3
     # In-direction depth 1: only roster->ship.
-    incoming = pg.apply_filters(
-        graph, pg.FilterSpec(process="alpha:ship", direction="in", depth=1)
-    )
+    incoming = pg.apply_filters(graph, pg.FilterSpec(process="alpha:ship", direction="in", depth=1))
     assert {(e.frm, e.to) for e in incoming.edges} == {("alpha:roster", "alpha:ship")}
 
 
@@ -568,9 +562,7 @@ def test_focus_keeps_process_node_even_with_no_edges(repo: Path) -> None:
     g = pg.build_graph(repo)
     # beta:issue has only in-edges; an out-focus at depth 1 yields no edges but
     # the node is still present (never silently dropped).
-    out = pg.apply_filters(
-        g, pg.FilterSpec(process="beta:issue", direction="out", depth=1)
-    )
+    out = pg.apply_filters(g, pg.FilterSpec(process="beta:issue", direction="out", depth=1))
     assert out.edges == ()
     assert "beta:issue" in out.nodes
 
@@ -688,12 +680,22 @@ def test_why_breaks_sort_ties_for_byte_stability() -> None:
     # relation, source, mode) but DIFFERENT `why`. Without `why` in the key their
     # order is unpinned; with it the order is total and --json is byte-stable.
     a = pg.Edge(
-        frm="x:a", to="y:b", relation="informational", mode="pull",
-        source="annotated", from_state="s", why="zeta reason",
+        frm="x:a",
+        to="y:b",
+        relation="informational",
+        mode="pull",
+        source="annotated",
+        from_state="s",
+        why="zeta reason",
     )
     b = pg.Edge(
-        frm="x:a", to="y:b", relation="informational", mode="pull",
-        source="annotated", from_state="s", why="alpha reason",
+        frm="x:a",
+        to="y:b",
+        relation="informational",
+        mode="pull",
+        source="annotated",
+        from_state="s",
+        why="alpha reason",
     )
     g1 = pg.Graph(nodes=("x:a", "y:b"), edges=(a, b))
     g2 = pg.Graph(nodes=("x:a", "y:b"), edges=(b, a))  # built in the other order
@@ -743,15 +745,9 @@ def test_closures_and_focus_terminate_on_a_cycle(cyclic_repo: Path) -> None:
     # guards). If any of these did not terminate the test would hang, not fail --
     # so this is a liveness pin as much as a correctness one.
     g = pg.build_graph(cyclic_repo)
-    up = pg.apply_filters(
-        g, pg.expand_presets(pg.FilterSpec(), upstream_of="gamma:cycle-a")
-    )
-    down = pg.apply_filters(
-        g, pg.expand_presets(pg.FilterSpec(), downstream_of="gamma:cycle-a")
-    )
-    focus = pg.apply_filters(
-        g, pg.FilterSpec(process="gamma:cycle-a", direction="out", depth=None)
-    )
+    up = pg.apply_filters(g, pg.expand_presets(pg.FilterSpec(), upstream_of="gamma:cycle-a"))
+    down = pg.apply_filters(g, pg.expand_presets(pg.FilterSpec(), downstream_of="gamma:cycle-a"))
+    focus = pg.apply_filters(g, pg.FilterSpec(process="gamma:cycle-a", direction="out", depth=None))
     # upstream-of cycle-a follows what it depends on: into the 2-cycle (both
     # nodes), but NOT the off-cycle `tail` (tail depends on cycle-a, the other
     # way). The walk terminates despite the cycle.
@@ -770,9 +766,7 @@ def test_upstream_of_leaf_renders_focus_node(repo: Path) -> None:
     # beta:issue depends on nothing, so its upstream-closure has no edges. The
     # focus node must still render (G1) rather than vanishing into a blank graph.
     g = pg.build_graph(repo)
-    out = pg.apply_filters(
-        g, pg.expand_presets(pg.FilterSpec(), upstream_of="beta:issue")
-    )
+    out = pg.apply_filters(g, pg.expand_presets(pg.FilterSpec(), upstream_of="beta:issue"))
     assert out.edges == ()
     assert "beta:issue" in out.nodes
     # And the adjacency render shows it as a standalone node, not "no processes".
@@ -785,9 +779,7 @@ def test_downstream_of_leaf_renders_focus_node(repo: Path) -> None:
     # alpha:roster: nothing depends on it (it only depends OUT on ship/review).
     # Its downstream-closure is empty of edges; the focus node still renders.
     g = pg.build_graph(repo)
-    out = pg.apply_filters(
-        g, pg.expand_presets(pg.FilterSpec(), downstream_of="alpha:roster")
-    )
+    out = pg.apply_filters(g, pg.expand_presets(pg.FilterSpec(), downstream_of="alpha:roster"))
     assert out.edges == ()
     assert "alpha:roster" in out.nodes
 
@@ -804,9 +796,7 @@ def test_enforced_upstream_of_runs_closure_over_narrowed_edges(repo: Path) -> No
     # the enforced set reaches issue via review's gate, but ship's own advisory
     # edges to issue are gone.
     g = pg.build_graph(repo)
-    spec = pg.expand_presets(
-        pg.FilterSpec(), enforced=True, upstream_of="alpha:ship"
-    )
+    spec = pg.expand_presets(pg.FilterSpec(), enforced=True, upstream_of="alpha:ship")
     out = pg.apply_filters(g, spec)
     got = {(e.frm, e.to, e.relation) for e in out.edges}
     assert got == {
@@ -892,9 +882,7 @@ def test_unloadable_definition_is_skipped_not_silent(duplicate_repo: Path) -> No
 def test_skipped_surfaced_in_json_and_renders(duplicate_repo: Path) -> None:
     g = pg.build_graph(duplicate_repo)
     payload = json.loads(pg.render_json(g))
-    assert payload["skipped"] == [
-        {"address": "gamma:dup", "reason": g.skipped[0].reason}
-    ]
+    assert payload["skipped"] == [{"address": "gamma:dup", "reason": g.skipped[0].reason}]
     # The non-json renders carry the ⚠ warning line, styling off.
     cli_render.set_color(False)
     text = pg.render_adjacency(g)

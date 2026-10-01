@@ -16,7 +16,6 @@ from project_kit.settings_consolidate import (
     plan_consolidation,
 )
 
-
 # --- subsumption rules ----------------------------------------------
 
 
@@ -87,17 +86,13 @@ def test_plan_removes_subsumed_entries() -> None:
 
 
 def test_plan_preserves_order_of_kept_entries() -> None:
-    plan = plan_consolidation(
-        ["Bash(a:*)", "Bash(a foo)", "Bash(b:*)", "Bash(b bar)"]
-    )
+    plan = plan_consolidation(["Bash(a:*)", "Bash(a foo)", "Bash(b:*)", "Bash(b bar)"])
     assert plan.consolidated == ("Bash(a:*)", "Bash(b:*)")
 
 
 def test_plan_handles_overlapping_broader_rules() -> None:
     """If two broader rules both subsume an entry, the first one wins (deterministic)."""
-    plan = plan_consolidation(
-        ["Bash(git:*)", "Bash(git push:*)", "Bash(git push --force *)"]
-    )
+    plan = plan_consolidation(["Bash(git:*)", "Bash(git push:*)", "Bash(git push --force *)"])
     # Bash(git push --force *) is subsumed by Bash(git:*) AND Bash(git push:*).
     # Bash(git push:*) is also subsumed by Bash(git:*).
     # Both narrower entries get removed; only Bash(git:*) survives.
@@ -123,9 +118,7 @@ def test_detect_returns_none_when_no_settings_file(tmp_path: Path) -> None:
 
 
 def test_detect_returns_plan_with_redundancies(tmp_path: Path) -> None:
-    _write_settings(
-        tmp_path, ["Bash(pkit:*)", "Bash(pkit new *)", "Bash(git:*)"]
-    )
+    _write_settings(tmp_path, ["Bash(pkit:*)", "Bash(pkit new *)", "Bash(git:*)"])
     plan = detect_consolidation_opportunities(tmp_path)
     assert plan is not None
     assert plan.has_redundancies
@@ -213,9 +206,7 @@ def test_apply_removes_from_each_affected_file(tmp_path: Path) -> None:
     modified = apply_consolidation(tmp_path, plan)
     assert len(modified) == 2
 
-    main_data = json.loads(
-        (tmp_path / ".claude" / "settings.json").read_text(encoding="utf-8")
-    )
+    main_data = json.loads((tmp_path / ".claude" / "settings.json").read_text(encoding="utf-8"))
     local_data = json.loads(
         (tmp_path / ".claude" / "settings.local.json").read_text(encoding="utf-8")
     )
@@ -262,7 +253,9 @@ def test_cli_consolidate_dry_run_does_not_write(adopter_with_redundancies: Path)
     assert "2 redundant entry(ies)" in result.output
     assert "dry-run" in result.output
     # File unchanged.
-    assert (adopter_with_redundancies / ".claude" / "settings.json").read_text(encoding="utf-8") == original
+    assert (adopter_with_redundancies / ".claude" / "settings.json").read_text(
+        encoding="utf-8"
+    ) == original
 
 
 def test_cli_consolidate_with_yes_writes_immediately(adopter_with_redundancies: Path) -> None:
@@ -285,10 +278,14 @@ def test_cli_consolidate_prompt_no_cancels(adopter_with_redundancies: Path) -> N
     assert result.exit_code == 0
     assert "cancelled" in result.output
     # File unchanged.
-    assert (adopter_with_redundancies / ".claude" / "settings.json").read_text(encoding="utf-8") == original
+    assert (adopter_with_redundancies / ".claude" / "settings.json").read_text(
+        encoding="utf-8"
+    ) == original
 
 
-def test_cli_consolidate_no_redundancies_is_noop(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_cli_consolidate_no_redundancies_is_noop(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     (tmp_path / ".pkit").mkdir()
     # Root-walk install marker (#656): find_target_root only accepts a .pkit/
     # ancestor that carries manifest.yaml (or decisions/).
@@ -301,7 +298,9 @@ def test_cli_consolidate_no_redundancies_is_noop(tmp_path: Path, monkeypatch: py
     assert "no redundant entries" in result.output
 
 
-def test_cli_consolidate_no_settings_file_is_noop(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_cli_consolidate_no_settings_file_is_noop(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     (tmp_path / ".pkit").mkdir()
     # Root-walk install marker (#656): find_target_root only accepts a .pkit/
     # ancestor that carries manifest.yaml (or decisions/).

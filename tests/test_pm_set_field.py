@@ -23,12 +23,7 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = (
-    REPO_ROOT
-    / ".pkit"
-    / "capabilities"
-    / "project-management"
-    / "scripts"
-    / "set-field.py"
+    REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "set-field.py"
 )
 SCRIPTS = SCRIPT_PATH.parent
 
@@ -138,9 +133,7 @@ def test_adopter_workstreams_list_form(sf) -> None:
 
 
 def test_adopter_workstreams_mapping_form(sf) -> None:
-    assert sf._adopter_workstreams(
-        {"workstreams": {"cli": {}, "docs": {}}}
-    ) == {"cli", "docs"}
+    assert sf._adopter_workstreams({"workstreams": {"cli": {}, "docs": {}}}) == {"cli", "docs"}
 
 
 # --- label planning (greenfield: substrate_map None) -----------------------
@@ -159,7 +152,7 @@ def test_plan_labels_sets_new_priority(sf) -> None:
 
 
 def test_plan_labels_replaces_stale_priority(sf) -> None:
-    results, add, remove = sf._plan_labels(
+    _results, add, remove = sf._plan_labels(
         priority="High",
         workstream=None,
         current_labels=["priority:Low", "type:feature"],
@@ -181,7 +174,7 @@ def test_plan_labels_idempotent_noop(sf) -> None:
 
 
 def test_plan_labels_batch_priority_and_workstream(sf) -> None:
-    results, add, remove = sf._plan_labels(
+    _results, add, _remove = sf._plan_labels(
         priority="Medium",
         workstream="cli",
         current_labels=[],
@@ -284,15 +277,11 @@ def test_route_axes_degraded_axis_is_a_note_not_a_refusal(sf, axis_labels) -> No
     assert "unsupported under your substrate-map" in note.message
 
 
-def test_route_axes_title_carried_axis_is_refused_never_labelled(
-    sf, axis_labels
-) -> None:
+def test_route_axes_title_carried_axis_is_refused_never_labelled(sf, axis_labels) -> None:
     """A title-prefix binding is SERVED but is not a substrate set-field writes for
     priority — and routing it to the label planner would apply the PREFIX string as
     a `gh --label` the tracker does not have. Refused, non-zero, never written."""
-    sm = axis_labels.SubstrateMap(
-        axes={"priority": {"title-prefix": {"remap": {"High": "[P0]"}}}}
-    )
+    sm = axis_labels.SubstrateMap(axes={"priority": {"title-prefix": {"remap": {"High": "[P0]"}}}})
     label_axes, board_axes, results = sf._route_axes(
         priority="High",
         workstream=None,
@@ -371,9 +360,7 @@ def test_plan_board_fields_matches_field_and_option_case_insensitively(sf) -> No
             },
         ),
     )
-    _, writes = sf._plan_board_fields(
-        board_axes={"priority": "High"}, state=state, issue_number=42
-    )
+    _, writes = sf._plan_board_fields(board_axes={"priority": "High"}, state=state, issue_number=42)
     assert writes[0].option_id == "opt_high"
 
 
@@ -523,11 +510,13 @@ def test_plan_labels_strips_the_adopters_own_stale_label(sf, axis_labels) -> Non
 
 def test_field_list_dedupes_and_preserves_order(sf) -> None:
     fr = sf.FieldResult
-    listed = sf._field_list([
-        fr(field="kind", ok=True, changed=True, message=""),
-        fr(field="title", ok=True, changed=True, message=""),
-        fr(field="kind", ok=True, changed=False, message=""),
-    ])
+    listed = sf._field_list(
+        [
+            fr(field="kind", ok=True, changed=True, message=""),
+            fr(field="title", ok=True, changed=True, message=""),
+            fr(field="kind", ok=True, changed=False, message=""),
+        ]
+    )
     assert listed == "kind, title"
 
 
@@ -545,9 +534,7 @@ def test_axis_values_reads_type_list(sf, classification) -> None:
     }
 
 
-def test_plan_kind_swaps_label_and_realigns_prefix(
-    sf, issue_types, classification
-) -> None:
+def test_plan_kind_swaps_label_and_realigns_prefix(sf, issue_types, classification) -> None:
     results, add, remove, new_title = sf._plan_kind(
         kind="bug",
         title="[Chore] fix the broken verb",
@@ -563,9 +550,7 @@ def test_plan_kind_swaps_label_and_realigns_prefix(
     assert any(r.field == "title" and r.changed for r in results)
 
 
-def test_plan_kind_prefix_already_correct_is_noop(
-    sf, issue_types, classification
-) -> None:
+def test_plan_kind_prefix_already_correct_is_noop(sf, issue_types, classification) -> None:
     # Label changes but the title prefix already matches the target kind.
     results, add, remove, new_title = sf._plan_kind(
         kind="bug",
@@ -581,9 +566,7 @@ def test_plan_kind_prefix_already_correct_is_noop(
     assert not any(r.field == "title" for r in results)
 
 
-def test_plan_kind_idempotent_when_label_and_prefix_match(
-    sf, issue_types, classification
-) -> None:
+def test_plan_kind_idempotent_when_label_and_prefix_match(sf, issue_types, classification) -> None:
     results, add, remove, new_title = sf._plan_kind(
         kind="bug",
         title="[Bug] nothing to do",
@@ -625,9 +608,7 @@ def test_kind_allowed_permissive_on_empty_classification(cr) -> None:
     assert cr.kind_allowed_for_structural_type("bug", "epic", {}) is True
 
 
-def test_plan_kind_feature_on_feature_issue_is_full_noop(
-    sf, issue_types, classification
-) -> None:
+def test_plan_kind_feature_on_feature_issue_is_full_noop(sf, issue_types, classification) -> None:
     # The one --kind path that reaches _plan_kind for a feature-structural issue:
     # kind `feature` on an already-`type:feature` [Feature] issue. Label already
     # correct, structural prefix already correct — nothing mutates.
@@ -672,13 +653,11 @@ def test_unknown_kind_not_in_declared_values(sf, classification) -> None:
     assert "bug" in valid
 
 
-def test_kind_composes_with_priority_workstream_batch(
-    sf, issue_types, classification
-) -> None:
+def test_kind_composes_with_priority_workstream_batch(sf, issue_types, classification) -> None:
     # The aggregate add/remove main builds: kind swap + priority + workstream in
     # one batch, all label writes against a single edit call.
     current = ["type:maintenance", "priority:Low"]
-    k_results, k_add, k_remove, new_title = sf._plan_kind(
+    _k_results, k_add, k_remove, new_title = sf._plan_kind(
         kind="bug",
         title="[Chore] mislabelled defect",
         current_labels=current,
@@ -686,7 +665,7 @@ def test_kind_composes_with_priority_workstream_batch(
         classification=classification,
         substrate_map=None,
     )
-    a_results, a_add, a_remove = sf._plan_labels(
+    _a_results, a_add, a_remove = sf._plan_labels(
         priority="High",
         workstream="cli",
         current_labels=current,
@@ -726,7 +705,7 @@ def test_plan_parent_prepends_when_absent(sf) -> None:
 
 def test_plan_parent_preserves_milestone_link_form_recognised(sf) -> None:
     body = "Milestone: [#6](../milestone/6)\n\n## What\nx\n"
-    new_body, result = sf._plan_parent(body, "EPIC: #3")
+    new_body, _result = sf._plan_parent(body, "EPIC: #3")
     # The existing first line is a recognised parent-ref, so it is REPLACED
     # (not prepended-before).
     assert new_body.startswith("EPIC: #3\n")
@@ -780,20 +759,23 @@ def _stub_board_reads(
     monkeypatch.setattr(
         bf,
         "read_project_node_id",
-        lambda config, owner=None, gh_call=None: project
-        or bf.ProjectLookup(ok=True, node_id="PVT_board7"),
+        lambda config, owner=None, gh_call=None: (
+            project or bf.ProjectLookup(ok=True, node_id="PVT_board7")
+        ),
     )
     monkeypatch.setattr(
         bf,
         "read_fields",
-        lambda config, owner=None, gh_call=None: fields_read
-        or bf.BoardFieldsRead(ok=True, fields=({"id": "F", "name": "Priority"},)),
+        lambda config, owner=None, gh_call=None: (
+            fields_read or bf.BoardFieldsRead(ok=True, fields=({"id": "F", "name": "Priority"},))
+        ),
     )
     monkeypatch.setattr(
         bf,
         "resolve_item_id",
-        lambda config, issue_node_id, project_node_id, gh_call=None: item
-        or bf.ItemLookup(ok=True, item_id="PVTI_card42"),
+        lambda config, issue_node_id, project_node_id, gh_call=None: (
+            item or bf.ItemLookup(ok=True, item_id="PVTI_card42")
+        ),
     )
 
 
@@ -821,8 +803,7 @@ def test_read_board_state_composes_the_exact_item_add_remediation(sf, monkeypatc
     _stub_board_reads(sf, monkeypatch)
     state = sf._read_board_state(_BOARD_CONFIG, issue=_BOARD_ISSUE, issue_number=42)
     assert state.membership_remediation == (
-        "gh project item-add 7 --owner an-org "
-        "--url https://github.com/an-org/r/issues/42"
+        "gh project item-add 7 --owner an-org --url https://github.com/an-org/r/issues/42"
     )
 
 
@@ -837,9 +818,7 @@ def test_read_board_state_surfaces_a_read_failure_verbatim(sf, monkeypatch) -> N
     assert state.error == stderr
 
 
-def test_read_board_state_without_an_issue_node_id_is_an_error_not_a_guess(
-    sf, monkeypatch
-) -> None:
+def test_read_board_state_without_an_issue_node_id_is_an_error_not_a_guess(sf, monkeypatch) -> None:
     _stub_board_reads(sf, monkeypatch)
     state = sf._read_board_state(_BOARD_CONFIG, issue={"url": "u"}, issue_number=42)
     assert state.error is not None
@@ -946,9 +925,7 @@ def _run_main(
 
     monkeypatch.setattr(sf, "gh_get_issue", lambda *a, **k: issue)
     if board_state is not None:
-        monkeypatch.setattr(
-            sf, "_read_board_state", lambda config, **k: board_state
-        )
+        monkeypatch.setattr(sf, "_read_board_state", lambda config, **k: board_state)
 
     def fake_board_write(write, config):
         captured["board"].append(write)
@@ -991,9 +968,7 @@ _TASK_ISSUE = {
 }
 
 
-def test_main_board_axis_writes_the_board_single_select(
-    sf, tmp_path, monkeypatch, capsys
-) -> None:
+def test_main_board_axis_writes_the_board_single_select(sf, tmp_path, monkeypatch, capsys) -> None:
     """#724's headline: `set-field 42 --priority High` under a board WRITES the
     board field — ids resolved from names — and exits 0."""
     root = _stage_capability_root(tmp_path, has_board=True)
@@ -1133,22 +1108,16 @@ def test_main_board_write_failure_exits_three(sf, tmp_path, monkeypatch, capsys)
     assert "was NOT written" in out
 
 
-def test_write_board_field_routes_through_the_substrate_write_seam(
-    sf, monkeypatch
-) -> None:
+def test_write_board_field_routes_through_the_substrate_write_seam(sf, monkeypatch) -> None:
     """ADR-031: the field-value write is obtained from `substrate_writes`, never
     string-built here — the same primitive the `set-board-field` hook uses."""
     seen: dict = {}
 
     def fake_write_field_value(config, **kwargs):
         seen.update(kwargs)
-        return sf.substrate_writes.SubstrateWriteResult(
-            ok=True, executed=True, detail="set"
-        )
+        return sf.substrate_writes.SubstrateWriteResult(ok=True, executed=True, detail="set")
 
-    monkeypatch.setattr(
-        sf.substrate_writes, "write_field_value", fake_write_field_value
-    )
+    monkeypatch.setattr(sf.substrate_writes, "write_field_value", fake_write_field_value)
     write = sf.BoardWrite(
         axis="priority",
         field_name="Priority",
@@ -1167,9 +1136,7 @@ def test_write_board_field_routes_through_the_substrate_write_seam(
     }
 
 
-def test_write_board_field_failure_prints_gh_stderr_verbatim(
-    sf, monkeypatch, capsys
-) -> None:
+def test_write_board_field_failure_prints_gh_stderr_verbatim(sf, monkeypatch, capsys) -> None:
     stderr = "HTTP 403: Resource not accessible by personal access token"
     monkeypatch.setattr(
         sf.substrate_writes,
@@ -1191,9 +1158,7 @@ def test_write_board_field_failure_prints_gh_stderr_verbatim(
     assert stderr in capsys.readouterr().err
 
 
-def test_main_label_substrate_axis_still_succeeds(
-    sf, tmp_path, monkeypatch, capsys
-) -> None:
+def test_main_label_substrate_axis_still_succeeds(sf, tmp_path, monkeypatch, capsys) -> None:
     """Regression guard: with no board, the normal path is untouched — the label
     is written and the exit is 0."""
     root = _stage_capability_root(tmp_path, has_board=False)
@@ -1216,9 +1181,7 @@ def test_main_idempotent_noop_still_reports_all_fields_set(
     swallow the idempotent case (DEC-038: re-running is a no-op success)."""
     root = _stage_capability_root(tmp_path, has_board=False)
     issue = {"title": "[Task] do a thing", "body": "x\n", "labels": ["priority:High"]}
-    captured = _run_main(
-        sf, monkeypatch, root=root, argv=["42", "--priority", "High"], issue=issue
-    )
+    captured = _run_main(sf, monkeypatch, root=root, argv=["42", "--priority", "High"], issue=issue)
     out = capsys.readouterr().out
 
     assert captured["rc"] == 0
@@ -1278,9 +1241,7 @@ def test_main_mixed_axes_both_substrates_applied_is_a_clean_success(
     assert "updated" in out
 
 
-def test_main_map_binding_wins_over_the_board_flag(
-    sf, tmp_path, monkeypatch, capsys
-) -> None:
+def test_main_map_binding_wins_over_the_board_flag(sf, tmp_path, monkeypatch, capsys) -> None:
     """The #708 config end-to-end: board flag on, substrate-map binds `priority` to
     the adopter's own labels. The binding governs — the adopter's label is written,
     the board is not touched, and the call succeeds. Before DEC-051 this was a
@@ -1567,9 +1528,7 @@ def test_main_parent_in_textual_containment_writes_no_native_link(
     assert captured["bodies"][0].startswith("Feature: #9\n")
 
 
-def test_main_parent_naming_the_issue_itself_is_refused(
-    sf, tmp_path, monkeypatch, capsys
-) -> None:
+def test_main_parent_naming_the_issue_itself_is_refused(sf, tmp_path, monkeypatch, capsys) -> None:
     root = _stage_capability_root(tmp_path, has_board=False)
     native = _NativeTracker()
     monkeypatch.setattr(sf.containment, "_gh_call", native)

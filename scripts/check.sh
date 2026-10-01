@@ -5,7 +5,13 @@
 # AND by CI (.github/workflows/checks.yml), so the gate can't drift between the
 # two. Add a check here once and both pick it up.
 #
-# Two kinds of line, deliberately apart (ADR-058):
+# The code's own checks come first: ruff's lint (`ruff check`) and layout
+# (`ruff format --check`) under the house style `pyproject.toml` settles
+# (#840), then the test suite. Type checking is not gated yet: `pyproject.toml`
+# configures pyright's strict mode, which the tree does not pass, and how to
+# gate it is being decided on its own (#840).
+#
+# Then two kinds of line, deliberately apart (ADR-058):
 #
 #   - `pkit validate` — the one umbrella over every check of the tree's STATE:
 #     the backbone's registered members (manifests, schemas, configuration,
@@ -22,10 +28,6 @@
 #
 # Runs every check (does not stop at the first failure) and reports a summary,
 # so one run surfaces all problems. Exits non-zero if any check failed.
-#
-# Scope note: ruff + pyright are configured in pyproject.toml but the tree does
-# not yet pass them (hundreds of findings); adopting them is a separate cleanup
-# and they are deliberately NOT gated here yet.
 
 set -uo pipefail
 cd "$(git rev-parse --show-toplevel)"
@@ -137,6 +139,8 @@ run_tests() {
 # The query commands `pkit validate` runs offline are provisioned by `pkit sync`
 # (the lifecycle README, "How dependencies are provisioned before an offline
 # run") — which CI runs on checkout, and a clone runs once — not by this gate.
+run "lint"               uv run ruff check .
+run "format"             uv run ruff format --check .
 run "tests"              run_tests
 run "validate"           uv run pkit validate
 run "migrations check"   uv run pkit migrations check-diff

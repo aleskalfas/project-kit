@@ -576,9 +576,7 @@ def test_a_glob_matching_a_synced_copy_and_the_project_s_own_file_refuses_only_t
         f"more — the methodology's sync writes them into this repository, so friction "
         f"discovery does not walk them;"
     )
-    assert fv.summary_lines(result)[0].endswith(
-        "0 report(s); 1 place(s) matching a synced copy."
-    )
+    assert fv.summary_lines(result)[0].endswith("0 report(s); 1 place(s) matching a synced copy.")
 
 
 def test_without_the_tree_s_ownership_module_the_synced_check_is_reported_skipped(
@@ -1274,7 +1272,11 @@ def test_point_block_at_another_version_is_inert_and_not_validated(
 ) -> None:
     """The body breaks the point schema, but at version 2 it is never read."""
     documented.write(
-        {"docs/guide.md": _with_roles(documentation="{reading-evidence: {schema_version: 2, x: 5}}")}
+        {
+            "docs/guide.md": _with_roles(
+                documentation="{reading-evidence: {schema_version: 2, x: 5}}"
+            )
+        }
     )
     result = fv.validate_friction(documented.root)
 
@@ -1289,7 +1291,11 @@ def test_compatible_point_block_is_validated_by_the_provider_point_schema(
     documented: AdopterRepo,
 ) -> None:
     documented.write(
-        {"docs/guide.md": _with_roles(documentation="{reading-evidence: {schema_version: 1, last-run: 5}}")}
+        {
+            "docs/guide.md": _with_roles(
+                documentation="{reading-evidence: {schema_version: 1, last-run: 5}}"
+            )
+        }
     )
     result = fv.validate_friction(documented.root)
 
@@ -1402,7 +1408,9 @@ def test_validate_command_prints_the_friction_section_and_fails_on_errors(
     out = result.output
     friction = out.split("\n  friction\n")[1].split("\n  rule-sets\n")[0]
     assert "error    docs/rules.md#RS-CMN-002:/pkit/friction" in friction
-    assert out.index("\n  configuration\n") < out.index("\n  packages\n") < out.index("\n  friction\n")
+    assert (
+        out.index("\n  configuration\n") < out.index("\n  packages\n") < out.index("\n  friction\n")
+    )
 
 
 def test_validate_command_reports_settings_findings_once_under_configuration(
@@ -1533,12 +1541,17 @@ def test_a_glob_with_star_star_inside_a_segment_reads_as_on_python_3_13_and_neve
     repo = make_adopter_repo()
     root = repo.root
     (root / "docs").mkdir(exist_ok=True)
-    (root / "docs" / "page.md").write_text("---\npkit: {friction: {anchors: {path: [src]}}}\n---\n# p\n")
+    (root / "docs" / "page.md").write_text(
+        "---\npkit: {friction: {anchors: {path: [src]}}}\n---\n# p\n"
+    )
     place = friction_discovery.Place(
         pattern="docs/**.md",
         declaration=friction_discovery.SettingsPath(
-            value="docs/**.md", resolved=root / "docs", file=root / ".pkit/project/config.yaml",
-            pointer="/friction/places/0", source="project",
+            value="docs/**.md",
+            resolved=root / "docs",
+            file=root / ".pkit/project/config.yaml",
+            pointer="/friction/places/0",
+            source="project",
         ),
     )
     files = friction_discovery.files_in_place(root, place)

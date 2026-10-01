@@ -71,7 +71,11 @@ def answer_lines(document: Mapping[str, Any]) -> list[str]:
 def unanswered(document: Mapping[str, Any]) -> list[str]:
     """The locations still carrying friction — no answer on the page yet."""
     return sorted(
-        {str(f.get("location") or f.get("artefact")) for f in _findings(document) if f.get("kind") == FRICTION_KIND}
+        {
+            str(f.get("location") or f.get("artefact"))
+            for f in _findings(document)
+            if f.get("kind") == FRICTION_KIND
+        }
     )
 
 

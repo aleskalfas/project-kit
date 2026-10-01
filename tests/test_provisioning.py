@@ -263,8 +263,7 @@ def test_capability_upgrade_provisions_the_refreshed_capability(
 
     assert result.exit_code == 0, result.output
     assert (
-        "  unchanged    query command 'fill-doc-check' (project-management) — already "
-        "provisioned\n"
+        "  unchanged    query command 'fill-doc-check' (project-management) — already provisioned\n"
     ) in result.output
     assert uv.calls == ["offline"]
 

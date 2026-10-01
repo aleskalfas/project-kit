@@ -67,10 +67,7 @@ def run_sync(target_root: Path, dry_run: bool = False, force: bool = False) -> N
             dry_run=dry_run,
         )
         click.echo(f"Syncing project-kit at {target_root} (self-host)")
-        click.echo(
-            "  source == target: skipping propagation; running deploy "
-            "primitives only."
-        )
+        click.echo("  source == target: skipping propagation; running deploy primitives only.")
         if dry_run:
             click.echo("  (dry-run — no changes will be written)")
         click.echo()
@@ -331,8 +328,7 @@ def _report_incubated_capability(source_kit: Path, name: str) -> None:
     kit_source = caps.find_capability_in_source(source_kit, name)
     if kit_source is None:
         click.echo(
-            f"    {'incubated':<12} {name!r} — in-repo capability; "
-            f"skipping source-reconciliation."
+            f"    {'incubated':<12} {name!r} — in-repo capability; skipping source-reconciliation."
         )
         return
     click.echo(

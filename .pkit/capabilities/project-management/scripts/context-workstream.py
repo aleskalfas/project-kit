@@ -61,9 +61,9 @@ from pathlib import Path
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import axis_labels, bootstrap_gate  # noqa: E402
-from _lib.gh import gh_get_issue, load_adopter_config  # noqa: E402
-from _lib.membership import CAPABILITY_NAME, resolve_capability_root  # noqa: E402
+from _lib import axis_labels, bootstrap_gate
+from _lib.gh import gh_get_issue, load_adopter_config
+from _lib.membership import CAPABILITY_NAME, resolve_capability_root
 
 #: The issue number embedded in a `<type>/<N>-<slug>` branch name — the same
 #: derivation `open-pr` uses on its closing-issue path (DEC-013).
@@ -100,9 +100,7 @@ def main() -> int:
 
     # Prerequisite gate (#747): refuse on an un-bootstrapped project rather
     # than operating on assumed defaults. See _lib/bootstrap_gate.py.
-    if not bootstrap_gate.enforce(
-        "context-workstream", capability_root=capability_root
-    ):
+    if not bootstrap_gate.enforce("context-workstream", capability_root=capability_root):
         return 2
 
     issue_number = _issue_number_from_branch(_current_branch())

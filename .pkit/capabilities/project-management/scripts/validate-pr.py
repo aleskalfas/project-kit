@@ -39,24 +39,24 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import axis_carriage, axis_labels, bootstrap_gate  # noqa: E402
-from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
-from _lib.membership import (  # noqa: E402
+from _lib import axis_carriage, axis_labels, bootstrap_gate
+from _lib.gh import gh_get_issue, gh_run, load_adopter_config
+from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
     resolve_capability_root,
     resolve_invoker_identity,
 )
-from _lib.placeholder_detection import PHASE_CREATE, PHASE_TRANSITION  # noqa: E402
-from _lib.pr_validation import (  # noqa: E402
+from _lib.placeholder_detection import PHASE_CREATE, PHASE_TRANSITION
+from _lib.pr_validation import (
     SEVERITY_BYPASSABLE,
     SEVERITY_HARD_REJECT,
     SEVERITY_WARNING,
     Finding,
     _expected_conv_types,  # noqa: F401  (re-exported for tests)
 )
-from _lib.pr_validation import extract_closing_issues as _extract_closing_issues  # noqa: E402
-from _lib.pr_validation import validate_pr as _validate_pr  # noqa: E402
+from _lib.pr_validation import extract_closing_issues as _extract_closing_issues
+from _lib.pr_validation import validate_pr as _validate_pr
 
 
 def main() -> int:
@@ -114,12 +114,8 @@ def main() -> int:
         return 1
 
     titles = _read_yaml(capability_root / "schemas" / "titles.yaml", yaml_loader)
-    classification = _read_yaml(
-        capability_root / "schemas" / "classification.yaml", yaml_loader
-    )
-    git_conv = _read_yaml(
-        capability_root / "schemas" / "git-conventions.yaml", yaml_loader
-    )
+    classification = _read_yaml(capability_root / "schemas" / "classification.yaml", yaml_loader)
+    git_conv = _read_yaml(capability_root / "schemas" / "git-conventions.yaml", yaml_loader)
 
     pr = _gh_get_pr(args.pr_number, config)
     if pr is None:
@@ -130,9 +126,7 @@ def main() -> int:
 
     closing_issues = _extract_closing_issues(pr_body)
     substrate_map = axis_labels.load_substrate_map(capability_root)
-    closing_type_labels = _gather_closing_type_labels(
-        closing_issues, config, substrate_map
-    )
+    closing_type_labels = _gather_closing_type_labels(closing_issues, config, substrate_map)
 
     findings = _validate_pr(
         pr_title=pr_title,
@@ -150,17 +144,14 @@ def main() -> int:
             "pr_number": args.pr_number,
             "pr_title": pr_title,
             "findings": [
-                {"severity": f.severity, "label": f.label, "detail": f.detail}
-                for f in findings
+                {"severity": f.severity, "label": f.label, "detail": f.detail} for f in findings
             ],
         }
         print(json.dumps(out, indent=2))
     else:
         _print_findings(args.pr_number, pr_title, findings)
 
-    blocking = any(
-        f.severity in (SEVERITY_HARD_REJECT, SEVERITY_BYPASSABLE) for f in findings
-    )
+    blocking = any(f.severity in (SEVERITY_HARD_REJECT, SEVERITY_BYPASSABLE) for f in findings)
     return 1 if blocking else 0
 
 

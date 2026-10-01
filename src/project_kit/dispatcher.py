@@ -50,7 +50,6 @@ from project_kit.command_runner import (
 from project_kit.install import find_target_root
 from project_kit.manifest import read_backbone_manifest
 
-
 _yaml = YAML(typ="safe")
 
 # The package key that lists a capability's other top-level names (`pm` for
@@ -246,9 +245,7 @@ def _discover_capability_commands(static: Collection[str]) -> dict[str, click.Gr
     return out
 
 
-def resolve_capability_script(
-    target_root: Path, capability: str, command: str
-) -> Path | None:
+def resolve_capability_script(target_root: Path, capability: str, command: str) -> Path | None:
     """Resolve an installed capability's command leaf to its script path —
     `command` is a reference, a path through the `commands:` tree (tokens
     separated by spaces), resolved by the same lookup the dispatch group
@@ -378,9 +375,7 @@ def _make_sub_group(name: str, help_text: str) -> click.Group:
     return grp
 
 
-def _make_proxy_command(
-    name: str, script_path: Path, help_text: str
-) -> click.Command:
+def _make_proxy_command(name: str, script_path: Path, help_text: str) -> click.Command:
     """Factory for a leaf command that proxies args to a capability script."""
     short_help = _short_help(help_text)
 

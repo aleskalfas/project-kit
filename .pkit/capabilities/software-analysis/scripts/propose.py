@@ -66,8 +66,8 @@ from typing import Any
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import answers, backbone, reading, resolve  # noqa: E402
-from _lib.model import Unreadable  # noqa: E402
+from _lib import answers, backbone, reading, resolve
+from _lib.model import Unreadable
 
 #: The version of the `--json` document.
 SCHEMA_VERSION = 1

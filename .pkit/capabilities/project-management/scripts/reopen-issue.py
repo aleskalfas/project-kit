@@ -39,8 +39,6 @@ Exit codes:
 from __future__ import annotations
 
 import argparse
-import json
-import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -50,13 +48,10 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import axis_carriage  # noqa: E402
-from _lib import axis_labels  # noqa: E402
-from _lib import bootstrap_gate  # noqa: E402
-from _lib import lifecycle_inference as infer  # noqa: E402
-from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
-from _lib import session_guard  # noqa: E402
-from _lib.membership import (  # noqa: E402
+from _lib import axis_carriage, axis_labels, bootstrap_gate, session_guard
+from _lib import lifecycle_inference as infer
+from _lib.gh import gh_get_issue, gh_run, load_adopter_config
+from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
     resolve_capability_root,
@@ -175,8 +170,7 @@ def main() -> int:
     if closed:
         if args.reason:
             comment_body = (
-                f"[reopen] {args.reason}\n\n"
-                "Reopened via `pkit project-management reopen-issue`."
+                f"[reopen] {args.reason}\n\nReopened via `pkit project-management reopen-issue`."
             )
             if not _gh_comment(args.issue_number, comment_body, config):
                 return 3
@@ -203,10 +197,10 @@ def main() -> int:
 class StateReset:
     """How a reopen puts an issue back into the lifecycle."""
 
-    position: str               # where the detectors read it once open (backlog / todo)
+    position: str  # where the detectors read it once open (backlog / todo)
     remove_labels: tuple[str, ...]  # the state label(s) to strip
-    stuck_at_done: bool         # an open issue whose state label still reads done
-    note: str | None            # why nothing is stripped, where that needs saying
+    stuck_at_done: bool  # an open issue whose state label still reads done
+    note: str | None  # why nothing is stripped, where that needs saying
 
 
 def _plan_state_reset(
@@ -214,7 +208,7 @@ def _plan_state_reset(
     *,
     milestone: dict | None,
     config: dict,
-    substrate_map: "axis_labels.SubstrateMap | None",
+    substrate_map: axis_labels.SubstrateMap | None,
 ) -> StateReset:
     """Plan the state reset of a reopen — pure, from the issue's labels.
 
@@ -251,7 +245,7 @@ def _plan_state_reset(
 def _open_position(
     labels: list[str],
     milestone: dict | None,
-    substrate_map: "axis_labels.SubstrateMap | None",
+    substrate_map: axis_labels.SubstrateMap | None,
 ) -> str:
     """Where the detectors read an OPEN issue with these labels — the one home
     of the position read (`lifecycle_inference`), so the reported state is the

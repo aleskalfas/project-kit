@@ -31,13 +31,12 @@ surfacing, and the behaviour-preserving block-less case.
 from __future__ import annotations
 
 import json
+import re
 import stat
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-
-import re
 
 from project_kit import cli_render
 from project_kit.process import (
@@ -270,9 +269,7 @@ def test_awaiting_human_clears_only_when_move_is_taken(paused_repo: Path) -> Non
     result = _engine(paused_repo).move("done", actor="user")
     assert result.ok is True
     # The move's reconcile (against target `done`, terminal) clears the wait.
-    resume = [
-        e for e in _engine(paused_repo).read_journal() if e.get("event") == "blocked-resume"
-    ]
+    resume = [e for e in _engine(paused_repo).read_journal() if e.get("event") == "blocked-resume"]
     assert resume, "taking the move must journal blocked-resume"
     assert resume[-1]["blocked_on"] == "awaiting-human"
 
@@ -418,7 +415,7 @@ def test_multi_line_prompt_indents_every_continuation_line() -> None:
     assert plains[0] == "        ❓ Approve the overflow?"
     # continuation lines are indented (aligned under the text), NOT at column 0
     for cont in plains[1:]:
-        assert cont.startswith("          "), cont          # 8 base + 2 align
+        assert cont.startswith("          "), cont  # 8 base + 2 align
     assert plains[1].strip() == "The hand-off is the spec"
     assert plains[2].strip() == "plus the renderings."
 
@@ -601,8 +598,9 @@ def test_long_why_wraps_with_continuations_at_eight_spaces(paused_repo: Path) ->
     plain = _ANSI.sub("", text)
     lines = plain.splitlines()
     move_idx = next(
-        i for i, ln in enumerate(lines) if ln.lstrip().startswith(("✓", "✗", "?"))
-        and "[approve]" in ln
+        i
+        for i, ln in enumerate(lines)
+        if ln.lstrip().startswith(("✓", "✗", "?")) and "[approve]" in ln
     )
     assert " — " in lines[move_idx]  # the why suffix opened on the move line
     cont = lines[move_idx + 1]
@@ -773,9 +771,9 @@ def test_awaiting_condition_no_legal_move_exit_when_gate_open(condition_repo: Pa
     # parked-with-no-move.)
     assert not (condition_repo / "_window").exists(), "resume_when fact must be false"
     (condition_repo / "_gate").write_text("", encoding="utf-8")  # exit gate open
-    assert (
-        _condition_live(condition_repo) is None
-    ), "gate open => legal move exists => not blocked, regardless of resume_when"
+    assert _condition_live(condition_repo) is None, (
+        "gate open => legal move exists => not blocked, regardless of resume_when"
+    )
 
 
 def test_awaiting_condition_stays_blocked_while_gate_closed_and_window_shut(
@@ -933,9 +931,7 @@ def test_both_moves_gate_open_autonomous_not_awaiting_human(both_moves_repo: Pat
     engine = ProcessEngine(load_definition(both_moves_repo, "fixture:both-demo"), both_moves_repo)
     pos = engine.resolve_position()
     auto = next(
-        c
-        for c in engine.precheck_transitions(pos.state_id, "agent")
-        if c.trigger == "auto-advance"
+        c for c in engine.precheck_transitions(pos.state_id, "agent") if c.trigger == "auto-advance"
     )
     assert auto.allowed, "autonomous move should be gate-open in this case"
     assert _both_live(both_moves_repo) is None, (

@@ -34,7 +34,6 @@ Exit codes:
 from __future__ import annotations
 
 import argparse
-import subprocess
 import sys
 from pathlib import Path
 
@@ -43,11 +42,6 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate  # noqa: E402
-from _lib import axis_carriage  # noqa: E402
-from _lib import axis_labels  # noqa: E402
-from _lib.gh import gh_run, load_adopter_config  # noqa: E402
-
 # Constraint-1 gate (RF-2, #265): the workstream-label MUTATORS mutate kit
 # `workstream:*` labels via `gh label`. Under a PRESENT substrate-map whose
 # `workstream` axis is `unsupported` (or absent), this would violate "never write
@@ -55,15 +49,15 @@ from _lib.gh import gh_run, load_adopter_config  # noqa: E402
 # `axis_labels.workstream_mutator_refusal(...)` after the membership check and
 # REFUSES before any `gh label` op when it trips. Greenfield is unchanged; the
 # richer present-map behaviour stays the adopt-existing Feature #264.
-
-from _lib import session_guard  # noqa: E402
-from _lib.membership import (  # noqa: E402
+from _lib import axis_carriage, axis_labels, bootstrap_gate, session_guard
+from _lib.gh import gh_run, load_adopter_config
+from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
     resolve_capability_root,
     resolve_invoker_identity,
 )
-from _lib.workstreams import (  # noqa: E402
+from _lib.workstreams import (
     SLUG_PATTERN,
     parse_workstreams,
     workstreams_path,
@@ -132,8 +126,7 @@ def main() -> int:
     path = workstreams_path(capability_root)
     if not path.is_file():
         print(
-            f"error: {path} does not exist. Run `add-workstream` or the "
-            "v0.5.0 migration first.",
+            f"error: {path} does not exist. Run `add-workstream` or the v0.5.0 migration first.",
             file=sys.stderr,
         )
         return 2
@@ -169,15 +162,16 @@ def main() -> int:
     # their own labels reach `gh label edit --name`, renaming a label the kit
     # never owned.
     substrate_map = axis_labels.load_substrate_map(capability_root)
-    kit_label_note = axis_carriage.kit_label_mutation_note(
-        "workstream", config, substrate_map
-    )
+    kit_label_note = axis_carriage.kit_label_mutation_note("workstream", config, substrate_map)
     kit_labels = kit_label_note is None
 
     print(f"rename-workstream: {args.old} → {args.new}")
     print(f"  file:        {path}")
     if kit_labels and not args.skip_label:
-        print(f"  label:       rename `{axis_labels.label('workstream', args.old)}` → `{axis_labels.label('workstream', args.new)}`")
+        print(
+            f"  label:       rename `{axis_labels.label('workstream', args.old)}` → "
+            f"`{axis_labels.label('workstream', args.new)}`"
+        )
     elif kit_label_note is not None:
         print(f"  label:       none — {kit_label_note}")
 
@@ -205,9 +199,7 @@ def main() -> int:
     return 0
 
 
-def _rename_in_file(
-    yaml: YAML, data: dict, old: str, new: str, path: Path
-) -> bool:
+def _rename_in_file(yaml: YAML, data: dict, old: str, new: str, path: Path) -> bool:
     ws = data.get("workstreams")
     if isinstance(ws, list):
         new_list = [new if item == old else item for item in ws]
@@ -255,13 +247,13 @@ def _gh_label_rename(old: str, new: str, config: dict) -> bool:
         return True
     if "not found" in proc.stderr:
         print(
-            f"[info] label `{axis_labels.label('workstream', old)}` not present; nothing to rename.",
+            f"[info] label `{axis_labels.label('workstream', old)}` not present; nothing to "
+            "rename.",
             file=sys.stderr,
         )
         return True
     print(
-        f"error: gh label edit failed (exit {proc.returncode}).\n"
-        f"stderr: {proc.stderr.strip()}",
+        f"error: gh label edit failed (exit {proc.returncode}).\nstderr: {proc.stderr.strip()}",
         file=sys.stderr,
     )
     return False

@@ -38,7 +38,7 @@ def _project_with_capability(tmp_path: Path, name: str = "demo") -> Path:
     (proj / ".pkit" / "manifest.yaml").write_text("backbone_version: 0.0.0\n", encoding="utf-8")
     (cap_dir / "package.yaml").write_text(
         "schema_version: 1\ncomponent:\n  kind: capability\n  name: " + name + "\n"
-        "  version: 0.1.0\nrequires_backbone: \">=1.0.0,<2.0.0\"\n",
+        '  version: 0.1.0\nrequires_backbone: ">=1.0.0,<2.0.0"\n',
         encoding="utf-8",
     )
     return proj
@@ -74,9 +74,9 @@ def test_scaffold_grants_uses_the_scoped_token(tmp_path: Path) -> None:
     """The grants fragment references the privilege with the SCOPED token (footgun 2)."""
     proj = _project_with_capability(tmp_path)
     perm.scaffold_fragment(proj, "demo")
-    text = (
-        proj / ".pkit" / "capabilities" / "demo" / "permissions" / "grants.yaml"
-    ).read_text(encoding="utf-8")
+    text = (proj / ".pkit" / "capabilities" / "demo" / "permissions" / "grants.yaml").read_text(
+        encoding="utf-8"
+    )
     assert "[privilege-catalog:demo:ad-hoc-scraping]" in text
     assert "SCOPED" in text
 
@@ -124,9 +124,7 @@ def test_scaffold_cli_stamps_and_reports(tmp_path: Path, monkeypatch) -> None:
     assert result.exit_code == 0, result.output
     assert "privilege-catalog.yaml" in result.output
     assert "grants.yaml" in result.output
-    assert (
-        proj / ".pkit" / "capabilities" / "demo" / "permissions" / "grants.yaml"
-    ).is_file()
+    assert (proj / ".pkit" / "capabilities" / "demo" / "permissions" / "grants.yaml").is_file()
 
 
 def test_scaffold_cli_refuses_unknown_capability(tmp_path: Path, monkeypatch) -> None:
@@ -172,7 +170,7 @@ def _lint_project(
     perms_dir.mkdir(parents=True)
     (proj / ".pkit" / "capabilities" / cap_name / "package.yaml").write_text(
         f"schema_version: 1\ncomponent:\n  kind: capability\n  name: {cap_name}\n"
-        "  version: 0.1.0\nrequires_backbone: \">=1.0.0,<2.0.0\"\n",
+        '  version: 0.1.0\nrequires_backbone: ">=1.0.0,<2.0.0"\n',
         encoding="utf-8",
     )
     if cap_catalog is not None:
@@ -238,9 +236,7 @@ def test_lint_passes_a_backbone_token(tmp_path: Path) -> None:
 
 def test_lint_passes_when_no_fragment_present(tmp_path: Path) -> None:
     """A capability that ships no grants fragment contributes no issues."""
-    proj = _lint_project(
-        tmp_path, cap_name="trip-planning", cap_catalog=None, cap_grants=None
-    )
+    proj = _lint_project(tmp_path, cap_name="trip-planning", cap_catalog=None, cap_grants=None)
     assert perm.lint_capability_fragment_grants(proj) == []
 
 

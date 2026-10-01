@@ -20,8 +20,8 @@ from referencing.jsonschema import DRAFT202012
 
 from project_kit import backbone_schemas as bs
 from project_kit import capabilities as caps
-from project_kit import package_validate as pv
 from project_kit import lifecycle_ownership, process_journal, refs, scaffolds
+from project_kit import package_validate as pv
 from project_kit.cli import main
 from project_kit.manifest import (
     ORIGIN_EXTERNALLY_SOURCED,
@@ -118,7 +118,9 @@ def test_every_shipped_package_file_validates_with_no_findings(
     schema: dict[str, Any], package: Path
 ) -> None:
     report = pv.validate_package_file(package, schema, expected_name=package.parent.name)
-    assert report.findings == (), [f"{f.severity.value} {f.path}: {f.message}" for f in report.findings]
+    assert report.findings == (), [
+        f"{f.severity.value} {f.path}: {f.message}" for f in report.findings
+    ]
 
 
 def test_scaffold_templates_validate_with_no_findings(
@@ -314,9 +316,7 @@ def test_every_component_requires_the_fields_cor_017_lists(
 # word (`backbone_schemas.ADDRESS_WORD_PATTERN`), which the configuration
 # schema's selection keys admit.
 _ROLE_PATTERN = f"^{bs.ADDRESS_WORD_PATTERN}::{bs.ADDRESS_WORD_PATTERN}$"
-_POINT_PATTERN = (
-    f"^{bs.ADDRESS_WORD_PATTERN}::{bs.ADDRESS_WORD_PATTERN}:{bs.ADDRESS_WORD_PATTERN}$"
-)
+_POINT_PATTERN = f"^{bs.ADDRESS_WORD_PATTERN}::{bs.ADDRESS_WORD_PATTERN}:{bs.ADDRESS_WORD_PATTERN}$"
 
 
 def test_the_citation_grammar_re_exports_the_one_address_word() -> None:
@@ -379,12 +379,28 @@ def test_an_address_that_is_not_words_is_refused(
     ("overrides", "path", "fragment"),
     [
         ({"schema_version": 3}, "/schema_version", "is not one of [1, 2]"),
-        ({"component": {"kind": "capability", "name": "demo", "version": 1}}, "/component/version", "not of type 'string'"),
-        ({"component": {"kind": "bundle", "name": "demo", "version": "0.1.0"}}, "/component/kind", "is not one of"),
-        ({"requires_capabilities": "project-management"}, "/requires_capabilities", "not of type 'array'"),
+        (
+            {"component": {"kind": "capability", "name": "demo", "version": 1}},
+            "/component/version",
+            "not of type 'string'",
+        ),
+        (
+            {"component": {"kind": "bundle", "name": "demo", "version": "0.1.0"}},
+            "/component/kind",
+            "is not one of",
+        ),
+        (
+            {"requires_capabilities": "project-management"},
+            "/requires_capabilities",
+            "not of type 'array'",
+        ),
         ({"aliases": ["Bad Name"]}, "/aliases/0", "does not match"),
         ({"footprint": [".claude", ".claude"]}, "/footprint", "non-unique"),
-        ({"commands": {"publish": {"script": "scripts/publish.py"}}}, "/commands/publish", "'help' is a required property"),
+        (
+            {"commands": {"publish": {"script": "scripts/publish.py"}}},
+            "/commands/publish",
+            "'help' is a required property",
+        ),
     ],
 )
 def test_wrong_type_is_an_error(
@@ -432,9 +448,7 @@ def test_point_under_a_role_the_package_does_not_provide_is_an_error(
     }
 
 
-def test_missing_companion_schema_is_an_error(
-    schema: dict[str, Any], component_dir: Path
-) -> None:
+def test_missing_companion_schema_is_an_error(schema: dict[str, Any], component_dir: Path) -> None:
     connections = _connections()
     point = connections["extension-points"]["accepts"]["pkit::documentation:reading-evidence"]
     point["schema"] = "nope.schema.json"
@@ -455,7 +469,11 @@ def test_referenced_command_that_does_not_exist_is_an_error(
     connections = _connections(
         extensions={
             "subscribes": [
-                {"point": "pkit::analysis:use-case-created", "schema_version": 1, "command": "refresh"}
+                {
+                    "point": "pkit::analysis:use-case-created",
+                    "schema_version": 1,
+                    "command": "refresh",
+                }
             ],
             "contributes": [
                 {"point": "pkit::analysis:glossary", "schema_version": 1, "command": "create page"}
@@ -493,7 +511,9 @@ def test_a_validator_names_a_declared_command_that_declares_the_query_contract(
     schema: dict[str, Any], component_dir: Path
 ) -> None:
     undeclared = _messages(
-        _validate(_package(validators={"citations": {"command": "refresh"}}), schema, component_dir),
+        _validate(
+            _package(validators={"citations": {"command": "refresh"}}), schema, component_dir
+        ),
         pv.Severity.ERROR,
     )
     assert undeclared == {
@@ -503,7 +523,9 @@ def test_a_validator_names_a_declared_command_that_declares_the_query_contract(
         )
     }
     no_contract = _messages(
-        _validate(_package(validators={"citations": {"command": "publish"}}), schema, component_dir),
+        _validate(
+            _package(validators={"citations": {"command": "publish"}}), schema, component_dir
+        ),
         pv.Severity.ERROR,
     )
     assert no_contract == {
@@ -582,9 +604,7 @@ def test_an_offered_process_point_carries_its_definition_s_interface_version(
 ) -> None:
     # Another file than `review.yaml` declares the id: the message names that file.
     _write_definition(component_dir, "reviewing.yaml", "  interface:\n    version: 1\n")
-    errors = _messages(
-        _validate(_offering_review(2), schema, component_dir), pv.Severity.ERROR
-    )
+    errors = _messages(_validate(_offering_review(2), schema, component_dir), pv.Severity.ERROR)
     assert errors == {
         f"{_REVIEW_POINTER}/schema_version": (
             f"offered process point {_REVIEW!r} is at schema_version 2 in demo/package.yaml, "
@@ -607,9 +627,7 @@ def test_an_offered_process_point_whose_definition_declares_no_interface_version
 def test_an_offered_process_point_names_an_existing_definition(
     schema: dict[str, Any], component_dir: Path
 ) -> None:
-    errors = _messages(
-        _validate(_offering_review(1), schema, component_dir), pv.Severity.ERROR
-    )
+    errors = _messages(_validate(_offering_review(1), schema, component_dir), pv.Severity.ERROR)
     assert errors == {
         f"{_REVIEW_POINTER}/process": (
             f"offered process point {_REVIEW!r} names process 'review', which no definition "
@@ -633,9 +651,7 @@ def test_depends_on_must_carry_the_generated_mark(
     errors = _messages(
         _validate(_package(connections=connections), schema, component_dir), pv.Severity.ERROR
     )
-    assert errors == {
-        "/connections/extensions/depends-on": "'generated' is a required property"
-    }
+    assert errors == {"/connections/extensions/depends-on": "'generated' is a required property"}
     connections["extensions"]["depends-on"]["generated"] = True
     assert _validate(_package(connections=connections), schema, component_dir) == []
 
@@ -721,7 +737,11 @@ def test_the_journal_warning_names_the_backbone_pattern_and_the_way_out(
 
 @pytest.mark.parametrize(
     ("path_value", "problem"),
-    [("../pages", "contains a `..` segment"), ("/srv/docs", "is absolute"), ("a/../b", "contains a `..` segment")],
+    [
+        ("../pages", "contains a `..` segment"),
+        ("/srv/docs", "is absolute"),
+        ("a/../b", "contains a `..` segment"),
+    ],
 )
 def test_docs_location_must_be_a_relative_sub_path(
     schema: dict[str, Any], component_dir: Path, path_value: str, problem: str
@@ -963,7 +983,8 @@ def test_install_time_check_refuses_the_new_repository_checks_too(
         "schema_version: 1\ncomponent:\n  kind: capability\n  name: homegrown\n  version: 0.1.0\n"
         "requires_backbone: '>=1.0.0'\n"
         "connections:\n  roles: [pkit::documentation]\n  extension-points:\n    accepts:\n"
-        "      pkit::analysis:use-cases: {schema_version: 1, schema: x.schema.json, description: d}\n",
+        "      pkit::analysis:use-cases: {schema_version: 1, schema: x.schema.json, description: "
+        "d}\n",
     )
     problems = caps.validate_capability_self_consistency(source)
     assert any("does not provide" in p for p in problems)

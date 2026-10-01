@@ -47,11 +47,10 @@ from ruamel.yaml import YAML
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate, default_branch  # noqa: E402
-from _lib import lifecycle_inference as infer  # noqa: E402
-from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
-from _lib import session_guard  # noqa: E402
-from _lib.membership import (  # noqa: E402
+from _lib import bootstrap_gate, default_branch, session_guard
+from _lib import lifecycle_inference as infer
+from _lib.gh import gh_get_issue, gh_run, load_adopter_config
+from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
     resolve_capability_root,
@@ -68,15 +67,18 @@ def main() -> int:
     )
     parser.add_argument("issue_number", type=int)
     parser.add_argument(
-        "--title", default=None,
+        "--title",
+        default=None,
         help="PR title (default: derived from issue title with conventional-commit prefix).",
     )
     parser.add_argument(
-        "--body", default=None,
+        "--body",
+        default=None,
         help="PR body (default: `Closes #<N>` + auto-derived content).",
     )
     parser.add_argument(
-        "--base", default=None,
+        "--base",
+        default=None,
         help=(
             "Base branch (default: the issue's DEC-013 integration branch when "
             "its body carries an `Integration:` marker, else the project's "
@@ -84,7 +86,9 @@ def main() -> int:
         ),
     )
     parser.add_argument(
-        "--capability-root", type=Path, default=None,
+        "--capability-root",
+        type=Path,
+        default=None,
         help=f"Default: <repo-root>/.pkit/capabilities/{CAPABILITY_NAME}/.",
     )
     parser.add_argument("--dry-run", action="store_true")
@@ -133,9 +137,7 @@ def main() -> int:
     # Base branch (DEC-013, #903): --base, else the issue's integration marker,
     # else default_branch — the resolution start-work cut the branch by.
     try:
-        base = infer.resolve_base_branch(
-            config, str(issue.get("body") or ""), explicit=args.base
-        )
+        base = infer.resolve_base_branch(config, str(issue.get("body") or ""), explicit=args.base)
     except default_branch.Unanswered as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
@@ -150,8 +152,7 @@ def main() -> int:
     ahead = _commits_beyond(branch, base_commit)
     if ahead is None:
         print(
-            f"error: could not count commits on {branch!r} beyond {base!r} "
-            f"({base_commit[:12]}).",
+            f"error: could not count commits on {branch!r} beyond {base!r} ({base_commit[:12]}).",
             file=sys.stderr,
         )
         return 2
@@ -213,7 +214,9 @@ def _find_issue_branch(issue_number: int) -> str | None:
     try:
         proc = subprocess.run(
             ["git", "branch", "--list", "--format=%(refname:short)"],
-            capture_output=True, text=True, check=False,
+            capture_output=True,
+            text=True,
+            check=False,
         )
     except FileNotFoundError:
         return None
@@ -252,7 +255,9 @@ def _commits_beyond(branch: str, base_commit: str) -> int | None:
     """Commits on `branch` not in `base_commit`, or None when git cannot count."""
     proc = subprocess.run(
         ["git", "rev-list", "--count", f"{base_commit}..{branch}"],
-        capture_output=True, text=True, check=False,
+        capture_output=True,
+        text=True,
+        check=False,
     )
     if proc.returncode != 0:
         return None
@@ -265,9 +270,19 @@ def _commits_beyond(branch: str, base_commit: str) -> int | None:
 def _find_pr_for_branch(branch: str, config: dict) -> dict | None:
     """Return the PR for the head branch, or None."""
     proc = gh_run(
-        ["gh", "pr", "list", "--head", branch, "--state", "all",
-         "--json", "number,state,isDraft,headRefName"],
-        config, check=False,
+        [
+            "gh",
+            "pr",
+            "list",
+            "--head",
+            branch,
+            "--state",
+            "all",
+            "--json",
+            "number,state,isDraft,headRefName",
+        ],
+        config,
+        check=False,
     )
     if proc.returncode != 0:
         return None
@@ -296,17 +311,24 @@ def _derive_pr_title(issue: dict, branch: str) -> str:
 # ---- side-effects ----------------------------------------------------
 
 
-def _gh_pr_create_draft(
-    branch: str, base: str, title: str, body: str, config: dict
-) -> str | None:
+def _gh_pr_create_draft(branch: str, base: str, title: str, body: str, config: dict) -> str | None:
     proc = gh_run(
-        ["gh", "pr", "create",
-         "--draft",
-         "--head", branch,
-         "--base", base,
-         "--title", title,
-         "--body", body],
-        config, check=False,
+        [
+            "gh",
+            "pr",
+            "create",
+            "--draft",
+            "--head",
+            branch,
+            "--base",
+            base,
+            "--title",
+            title,
+            "--body",
+            body,
+        ],
+        config,
+        check=False,
     )
     if proc.returncode != 0:
         print(

@@ -88,7 +88,9 @@ def test_an_out_of_range_doc_impact_index_names_the_section(lib) -> None:
         plural="doc-impact boxes",
     )
     assert not plan.accepted
-    assert plan.results[0].message == "doc-impact box 3: out of range (issue has 2 doc-impact boxes)"
+    assert (
+        plan.results[0].message == "doc-impact box 3: out of range (issue has 2 doc-impact boxes)"
+    )
 
 
 # --- addresses and the tick hints done-work shows -------------------------
@@ -109,8 +111,11 @@ def test_checkbox_addresses_cover_both_sections(lib) -> None:
 def test_tick_hints_name_check_criterion_or_the_body_edit(lib) -> None:
     body = TASK_BODY + "\n## Notes\n\n- [ ] elsewhere\n"
     lines = body.splitlines()
-    wanted = [lines.index("- [ ] a test covers it"), lines.index("- [ ] The skill mentions it"),
-              lines.index("- [ ] elsewhere")]
+    wanted = [
+        lines.index("- [ ] a test covers it"),
+        lines.index("- [ ] The skill mentions it"),
+        lines.index("- [ ] elsewhere"),
+    ]
     hints = lib.criteria.tick_hints(7, body, wanted)
     assert hints[0] == "pkit pm check-criterion 7 2"
     assert hints[1] == "pkit pm check-criterion 7 --section doc-impact 2"
@@ -139,7 +144,9 @@ def _run_verb(monkeypatch, script: str, argv: list[str], body: str = TASK_BODY) 
     )
     written: list[str] = []
     monkeypatch.setattr(
-        criterion_cli, "_gh_write_body", lambda n, new_body, config: written.append(new_body) or True
+        criterion_cli,
+        "_gh_write_body",
+        lambda n, new_body, config: written.append(new_body) or True,
     )
     return SimpleNamespace(rc=module.main(), written=written)
 

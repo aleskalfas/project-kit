@@ -74,9 +74,7 @@ def test_issue_number_from_branch_shapes(cw) -> None:
 # --- the always-exit-0 degrade contract ------------------------------
 
 
-def test_prints_workstream_on_happy_path(
-    cw, monkeypatch, capsys, tmp_path: Path
-) -> None:
+def test_prints_workstream_on_happy_path(cw, monkeypatch, capsys, tmp_path: Path) -> None:
     monkeypatch.setattr(cw, "_current_branch", lambda: "feat/644-context")
     monkeypatch.setattr(cw, "resolve_capability_root", lambda explicit: tmp_path)
     monkeypatch.setattr(cw, "load_adopter_config", lambda root: {})
@@ -114,9 +112,7 @@ _REMAPPED_WORKSTREAM_MAP = (
 
 def _with_map(tmp_path: Path, map_yaml: str) -> Path:
     (tmp_path / "project").mkdir(parents=True, exist_ok=True)
-    (tmp_path / "project" / "substrate-map.yaml").write_text(
-        map_yaml, encoding="utf-8"
-    )
+    (tmp_path / "project" / "substrate-map.yaml").write_text(map_yaml, encoding="utf-8")
     return tmp_path
 
 
@@ -125,7 +121,8 @@ def _drive_with_labels(cw, monkeypatch, capsys, root: Path, labels: list[str]):
     monkeypatch.setattr(cw, "resolve_capability_root", lambda explicit: root)
     monkeypatch.setattr(cw, "load_adopter_config", lambda root: {})
     monkeypatch.setattr(
-        cw, "gh_get_issue",
+        cw,
+        "gh_get_issue",
         lambda *a, **k: {"labels": [{"name": n} for n in labels]},
     )
     return _run_main(cw, monkeypatch, capsys)
@@ -151,9 +148,7 @@ def test_kit_label_is_not_the_substrate_under_a_remapping_map(
     `workstream:*` label is not this project's substrate and must not be
     reported — the map, not the kit prefix, decides where the axis lives."""
     root = _with_map(tmp_path, _REMAPPED_WORKSTREAM_MAP)
-    code, out, _err = _drive_with_labels(
-        cw, monkeypatch, capsys, root, ["workstream:docs"]
-    )
+    code, out, _err = _drive_with_labels(cw, monkeypatch, capsys, root, ["workstream:docs"])
     assert code == 0 and out == ""
 
 
@@ -163,9 +158,7 @@ def test_silent_when_the_map_does_not_carry_workstream_on_a_label(
     """A map that marks workstream unsupported names no label substrate, so
     there is nothing to read from the labels — silence, not a kit-prefix guess."""
     root = _with_map(tmp_path, "axes:\n  workstream:\n    unsupported: true\n")
-    code, out, _err = _drive_with_labels(
-        cw, monkeypatch, capsys, root, ["workstream:cli"]
-    )
+    code, out, _err = _drive_with_labels(cw, monkeypatch, capsys, root, ["workstream:cli"])
     assert code == 0 and out == ""
 
 
@@ -196,14 +189,13 @@ def test_silent_on_gh_failure(cw, monkeypatch, capsys, tmp_path: Path) -> None:
     assert code == 0 and out == ""
 
 
-def test_silent_when_issue_has_no_workstream_label(
-    cw, monkeypatch, capsys, tmp_path: Path
-) -> None:
+def test_silent_when_issue_has_no_workstream_label(cw, monkeypatch, capsys, tmp_path: Path) -> None:
     monkeypatch.setattr(cw, "_current_branch", lambda: "feat/1-x")
     monkeypatch.setattr(cw, "resolve_capability_root", lambda explicit: tmp_path)
     monkeypatch.setattr(cw, "load_adopter_config", lambda root: {})
     monkeypatch.setattr(
-        cw, "gh_get_issue",
+        cw,
+        "gh_get_issue",
         lambda *a, **k: {"labels": [{"name": "type:feature"}]},
     )
     code, out, _err = _run_main(cw, monkeypatch, capsys)
@@ -233,9 +225,7 @@ def test_unbootstrapped_project_refuses_and_prints_nothing(
         raise AssertionError("no gh call before the prerequisite gate passes")
 
     monkeypatch.setattr(cw, "gh_get_issue", explode)
-    monkeypatch.setattr(
-        sys, "argv", ["context-workstream.py", "--capability-root", str(tmp_path)]
-    )
+    monkeypatch.setattr(sys, "argv", ["context-workstream.py", "--capability-root", str(tmp_path)])
     code = cw.main()
     captured = capsys.readouterr()
     assert code == 2
@@ -251,8 +241,6 @@ def test_the_gate_runs_before_the_branch_read(cw, monkeypatch, capsys) -> None:
         raise AssertionError("no branch read before the prerequisite gate passes")
 
     monkeypatch.setattr(cw, "_current_branch", explode)
-    monkeypatch.setattr(
-        cw.bootstrap_gate, "enforce", lambda *a, **kw: False
-    )
+    monkeypatch.setattr(cw.bootstrap_gate, "enforce", lambda *a, **kw: False)
     monkeypatch.setattr(sys, "argv", ["context-workstream.py"])
     assert cw.main() == 2

@@ -10,10 +10,7 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SCRIPT = (
-    REPO_ROOT / ".pkit" / "capabilities" / "project-management"
-    / "scripts" / "review-work.py"
-)
+SCRIPT = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "review-work.py"
 
 
 @pytest.fixture(scope="module")
@@ -77,7 +74,9 @@ def test_derive_branch_prefix_brownfield_bug_title_no_label(rw) -> None:
 
 def test_derive_branch_prefix_greenfield_label_still_wins(rw) -> None:
     """Greenfield stays byte-identical: the `type:bug` label resolves `fix`."""
-    assert rw._derive_branch_prefix(["type:bug"], "no bracket prefix", _CLASSIFICATION, None) == "fix"
+    assert (
+        rw._derive_branch_prefix(["type:bug"], "no bracket prefix", _CLASSIFICATION, None) == "fix"
+    )
 
 
 # ---- adopter label-remap arm (#910) ------------------------------------
@@ -93,27 +92,33 @@ def _type_remap_map(module):
 def test_branch_prefix_reads_a_remapped_type_label(rw) -> None:
     """The adopter's `kind/bug` label is their type substrate: it resolves `fix`
     through the map, where the bare `type:` prefix scan found nothing (#910)."""
-    assert rw._derive_branch_prefix(
-        ["kind/bug"], "no bracket prefix", _CLASSIFICATION, _type_remap_map(rw)
-    ) == "fix"
+    assert (
+        rw._derive_branch_prefix(
+            ["kind/bug"], "no bracket prefix", _CLASSIFICATION, _type_remap_map(rw)
+        )
+        == "fix"
+    )
 
 
 def test_branch_prefix_ignores_kit_type_label_under_a_remap(rw) -> None:
     """Under a `type` label remap the kit's `type:*` labels are not the
     substrate, so a leftover `type:docs` does not decide the prefix."""
-    assert rw._derive_branch_prefix(
-        ["type:docs", "kind/bug"], "no bracket prefix", _CLASSIFICATION,
-        _type_remap_map(rw),
-    ) == "fix"
+    assert (
+        rw._derive_branch_prefix(
+            ["type:docs", "kind/bug"],
+            "no bracket prefix",
+            _CLASSIFICATION,
+            _type_remap_map(rw),
+        )
+        == "fix"
+    )
 
 
 # ---- _derive_pr_title --------------------------------------------------
 
 
 def test_pr_title_strips_issue_prefix(rw) -> None:
-    assert rw._derive_pr_title(
-        {"title": "[Feature] add foo"}, "feat/42-add-foo"
-    ) == "feat: add foo"
+    assert rw._derive_pr_title({"title": "[Feature] add foo"}, "feat/42-add-foo") == "feat: add foo"
 
 
 def test_pr_title_default_prefix_when_branch_malformed(rw) -> None:
@@ -125,18 +130,27 @@ def test_pr_title_default_prefix_when_branch_malformed(rw) -> None:
 
 def test_find_pr_only_returns_open_state(rw, monkeypatch) -> None:
     """Closed/merged PRs for the same branch shouldn't be returned."""
+
     def fake_gh_run(args, config, **kwargs):
         import subprocess
+
         return subprocess.CompletedProcess(
-            args=args, returncode=0,
-            stdout=json.dumps([
-                {"number": 1, "state": "CLOSED", "isDraft": False,
-                 "headRefName": "feat/42-foo"},
-                {"number": 2, "state": "OPEN", "isDraft": True,
-                 "headRefName": "feat/42-foo"},
-            ]),
+            args=args,
+            returncode=0,
+            stdout=json.dumps(
+                [
+                    {
+                        "number": 1,
+                        "state": "CLOSED",
+                        "isDraft": False,
+                        "headRefName": "feat/42-foo",
+                    },
+                    {"number": 2, "state": "OPEN", "isDraft": True, "headRefName": "feat/42-foo"},
+                ]
+            ),
             stderr="",
         )
+
     monkeypatch.setattr(rw, "gh_run", fake_gh_run)
     pr = rw._find_pr_for_branch("feat/42-foo", {})
     assert pr is not None
@@ -146,13 +160,18 @@ def test_find_pr_only_returns_open_state(rw, monkeypatch) -> None:
 def test_find_pr_returns_none_when_no_open(rw, monkeypatch) -> None:
     def fake_gh_run(args, config, **kwargs):
         import subprocess
+
         return subprocess.CompletedProcess(
-            args=args, returncode=0,
-            stdout=json.dumps([
-                {"number": 1, "state": "CLOSED", "headRefName": "feat/42-foo"},
-            ]),
+            args=args,
+            returncode=0,
+            stdout=json.dumps(
+                [
+                    {"number": 1, "state": "CLOSED", "headRefName": "feat/42-foo"},
+                ]
+            ),
             stderr="",
         )
+
     monkeypatch.setattr(rw, "gh_run", fake_gh_run)
     assert rw._find_pr_for_branch("feat/42-foo", {}) is None
 
@@ -165,6 +184,7 @@ def test_pr_add_reviewers_strips_at_prefix(rw, monkeypatch) -> None:
 
     def fake_gh_run(args, config, **kwargs):
         import subprocess
+
         captured["args"] = args
         return subprocess.CompletedProcess(args=args, returncode=0, stdout="", stderr="")
 
@@ -182,9 +202,14 @@ def test_pr_add_reviewers_strips_at_prefix(rw, monkeypatch) -> None:
 def test_pr_add_reviewers_propagates_failure(rw, monkeypatch, capsys) -> None:
     def fake_gh_run(args, config, **kwargs):
         import subprocess
+
         return subprocess.CompletedProcess(
-            args=args, returncode=1, stdout="", stderr="not authorised",
+            args=args,
+            returncode=1,
+            stdout="",
+            stderr="not authorised",
         )
+
     monkeypatch.setattr(rw, "gh_run", fake_gh_run)
     assert rw._gh_pr_add_reviewers(99, ["@alice"], {}) is False
     assert "not authorised" in capsys.readouterr().err
@@ -201,9 +226,14 @@ def test_pr_ready_handles_none_pr_number(rw, capsys) -> None:
 def test_pr_ready_propagates_gh_failure(rw, monkeypatch, capsys) -> None:
     def fake_gh_run(args, config, **kwargs):
         import subprocess
+
         return subprocess.CompletedProcess(
-            args=args, returncode=1, stdout="", stderr="already ready",
+            args=args,
+            returncode=1,
+            stdout="",
+            stderr="already ready",
         )
+
     monkeypatch.setattr(rw, "gh_run", fake_gh_run)
     assert rw._gh_pr_ready(99, {}) is False
 
@@ -211,6 +241,8 @@ def test_pr_ready_propagates_gh_failure(rw, monkeypatch, capsys) -> None:
 def test_pr_ready_returns_true_on_success(rw, monkeypatch) -> None:
     def fake_gh_run(args, config, **kwargs):
         import subprocess
+
         return subprocess.CompletedProcess(args=args, returncode=0, stdout="", stderr="")
+
     monkeypatch.setattr(rw, "gh_run", fake_gh_run)
     assert rw._gh_pr_ready(99, {}) is True
