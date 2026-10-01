@@ -1,7 +1,7 @@
 ---
 id: PRJ-010
 title: pyright holds the package to strict mode through a ratchet, and the tests to standard mode
-status: proposed
+status: accepted
 date: 2026-10-01
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
