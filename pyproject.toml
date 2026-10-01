@@ -36,7 +36,10 @@ dev = [
     # The floor the ruff settings below need (`per-file-target-version`); the
     # lock pins the exact version the gate formats and lints with.
     "ruff>=0.15",
-    "pyright>=1.1.380",
+    # The `nodejs` extra puts the Node runtime pyright runs on into the lock, so
+    # syncing installs it and no run downloads one or needs it on the host's
+    # path (PRJ-010 point 7). The lock pins the version the gate checks with.
+    "pyright[nodejs]>=1.1.380",
     "pathspec>=0.12",  # used by check-doc-mapping.py (PM script); needed to import it under pytest
     "pytest-xdist>=3.8.0",  # scripts/check.sh runs the suite in parallel workers (#1182)
 ]
@@ -261,11 +264,33 @@ allowed-confusables = ["–", "×", "−", "∪", "ℹ"]
 # shape rather than a stray import (E402, module-import-not-at-top-of-file).
 ".pkit/capabilities/**/scripts/**/*.py" = ["E402"]
 
+# Type checking is gated by `scripts/check.sh` (PRJ-010): the package in pyright's
+# strict mode through a ratchet, everything else pyright checks in standard mode,
+# outright. `scripts/pyright-ratchet.py` runs pyright and judges both, and it
+# refuses this table narrowing what the package is checked for: an `exclude` or
+# `ignore` entry reaching into `src`, a strict list that stops covering it, or
+# `reportMissingModuleSource` (the one rule strict mode does not override) set
+# below a warning. A rule relaxed for the tests is relaxed here, with its reason.
 [tool.pyright]
 include = ["src", "tests"]
-typeCheckingMode = "strict"
+# The mode is set by directory (PRJ-010 point 1): a module in the package is
+# strict from its first commit without being listed anywhere.
+strict = ["src"]
+typeCheckingMode = "standard"
 pythonVersion = "3.11"
-reportMissingTypeStubs = false  # click stubs are bundled; no third-party stubs needed today
+# pyright honours no `# type: ignore` (PRJ-010 point 5); a suppression names its
+# rules, and only the tests may carry one, with its reason on the line.
+enableTypeIgnoreComments = false
+# The import paths (PRJ-010 point 7). `src` is the package's, which pyright adds on
+# its own only while this list is unset. The tests put project-management's
+# `scripts` directory on their import path at run time to import its `_lib`
+# package, and a few put `_lib` itself there to patch `gh` as a top-level
+# module; pyright is told the same.
+extraPaths = [
+    "src",
+    ".pkit/capabilities/project-management/scripts",
+    ".pkit/capabilities/project-management/scripts/_lib",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
