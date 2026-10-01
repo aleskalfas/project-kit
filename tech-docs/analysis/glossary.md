@@ -115,9 +115,9 @@ TERM-stabilisation:
           - project-management:DEC-014
           - ADR-019
       revalidated:
-        at: 2026-10-01T19:43:19Z
+        at: 2026-10-01T20:34:35Z
         outcome: unchanged
-        unchanged-because: done-work's main now takes its argv and a head to land, which it refuses to merge past, so that land can hand it the head it waited for and had reviewed; the stabilisation phase, its intended guards and gap K2 are untouched
+        unchanged-because: done-work gains run(), which reports how a run ended to a verb that composes it, takes the head to land or a merged-only mode, and checks the pinned head before its gate's verdict, all for land-work; a direct run, the stabilisation phase, its intended guards and gap K2 are untouched
 ---
 
 # Glossary

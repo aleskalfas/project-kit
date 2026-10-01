@@ -20,9 +20,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-10-01T19:43:21Z
+      at: 2026-10-01T20:34:36Z
       outcome: unchanged
-      unchanged-because: done-work's main now takes its argv and a pinned head it refuses to merge past, for the new land verb that composes it; how sessions resume and land work during a stabilisation, and its gaps, read as before
+      unchanged-because: done-work gains run(), which reports how a run ended and takes a pinned head or a merged-only mode, for the land-work verb that composes it; a direct run behaves as before, so how sessions resume and land work during a stabilisation, and its gaps, read as before
 ---
 
 # UC-007 — Resume sessions killed during a stabilisation
