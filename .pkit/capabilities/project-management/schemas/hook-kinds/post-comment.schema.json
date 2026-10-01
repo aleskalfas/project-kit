@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "hook-kinds/post-comment.schema.json",
   "title": "Hook kind: post-comment",
-  "description": "Posts a comment on the issue or PR using a template file. The template is rendered with the lifecycle event's context (issue.number, issue.title, repo, etc.) and posted via `gh issue comment` or `gh pr comment`. Per DEC-024. Idempotent: the engine writes a stable template-stamp marker comment and skips if a comment with the same stamp already exists.",
+  "description": "Posts a comment on the issue or PR using a template file. The template is rendered with the lifecycle event's context (issue.number, issue.title, repo, etc.) and posted via `gh issue comment` or `gh pr comment`. Per DEC-024. Idempotent per firing: the comment's first line is the stamp `<!-- pkit-hook: <stamp_id>:<firing> -->`, where `<firing>` is a digest of the stamp_id, the lifecycle event, the issue or PR, and on `after_move_issue` the transition's from and to states. The engine skips only when a comment opening with that line was posted, and not edited since, by the account `gh` posts as; a comment by anyone else, or an edited one, never stops a post.",
   "x-pkit-hook-kind": "post-comment",
   "x-pkit-idempotent": true,
   "type": "object",
@@ -23,7 +23,7 @@
     "stamp_id": {
       "type": "string",
       "pattern": "^[a-z][a-z0-9-]*$",
-      "description": "Optional stable identifier for the comment's idempotency stamp. Defaults to the template_path's basename without extension. The engine writes `<!-- pkit-hook: <stamp_id> -->` as the first line of the rendered comment and detects replay by searching existing comments for that marker."
+      "description": "Optional stable identifier for the comment's idempotency stamp. Defaults to the template_path's basename without extension. The engine writes `<!-- pkit-hook: <stamp_id>:<firing> -->` as the first line of the rendered comment, showing the id as lower-case letters, digits and single hyphens (at most 64 characters), and detects a retry of the same firing by that line on a comment the posting account wrote and nobody edited."
     }
   }
 }
