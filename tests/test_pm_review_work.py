@@ -11,6 +11,8 @@ from types import SimpleNamespace
 
 import pytest
 
+from tests.pm_composed_move_support import FakeEngine, MoveIssueInProcess, status_at
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "review-work.py"
 
@@ -260,6 +262,8 @@ CAP_ROOT = SCRIPT.parent.parent
 BRANCH = "fix/42-do-the-thing"
 PR_URL = "https://github.com/o/r/pull/77"
 PR_READS = {"list", "view"}
+# The variable an earlier revision of #1242 handed the engine's answer down in.
+HAND_DOWN_ENV = "PKIT_PM_ISSUE_STATUS"
 
 
 def _task(labels: list[str]) -> dict:
@@ -288,10 +292,24 @@ def _last_failure(err: str) -> str:
 
 @pytest.fixture
 def run_main(rw, monkeypatch):
-    """Returns `run(issue, *, pr=None, move_rc=0, reviewer=None)` →
-    `(rc, gh_calls, moves)`. `pr` is the open PR on the branch (None: none yet)."""
+    """Returns `run(issue, *, pr=None, move_rc=0, reviewer=None, engine=None,
+    config=None, move=None, dry_run=False)` → `(rc, gh_calls, moves)`. `pr` is
+    the open PR on the branch (None: none yet); `engine` the process engine, a
+    `FakeEngine` (by default one that gives no answer); `config` the adopter
+    config. `move` runs the composed move-issue in process; without it the
+    move is recorded and answers `move_rc`."""
 
-    def run(issue: dict, *, pr: dict | None = None, move_rc: int = 0, reviewer: str | None = None):
+    def run(
+        issue: dict,
+        *,
+        pr: dict | None = None,
+        move_rc: int = 0,
+        reviewer: str | None = None,
+        engine: FakeEngine | None = None,
+        config: dict | None = None,
+        move: MoveIssueInProcess | None = None,
+        dry_run: bool = False,
+    ):
         gh_calls: list[list[str]] = []
         moves: list[str] = []
 
@@ -306,18 +324,21 @@ def run_main(rw, monkeypatch):
                 stdout = PR_URL
             return subprocess.CompletedProcess(args=args, returncode=0, stdout=stdout, stderr="")
 
-        def move_issue(n, target, root, allow):
+        def move_issue(n, target, **_kw):
             moves.append(target)
             return move_rc
 
         argv = ["review-work", "42", "--yes", "--base", "main"]
         if reviewer is not None:
             argv += ["--reviewer", reviewer]
+        if dry_run:
+            argv.append("--dry-run")
         monkeypatch.setattr(sys, "argv", argv)
         monkeypatch.setattr(rw, "resolve_capability_root", lambda _e: CAP_ROOT)
         monkeypatch.setattr(rw.bootstrap_gate, "enforce", lambda *a, **k: True)
         monkeypatch.setattr(rw.session_guard, "enforce", lambda **k: True)
-        monkeypatch.setattr(rw, "load_adopter_config", lambda _r: {})
+        monkeypatch.setattr(rw, "load_adopter_config", lambda _r: dict(config or {}))
+        (engine or FakeEngine()).install(monkeypatch)
         monkeypatch.setattr(rw, "_read_members", lambda *a: [])
         monkeypatch.setattr(
             rw, "resolve_invoker_identity", lambda **k: SimpleNamespace(github_login="me")
@@ -328,7 +349,10 @@ def run_main(rw, monkeypatch):
         monkeypatch.setattr(rw, "_find_issue_branch", lambda _n: BRANCH)
         monkeypatch.setattr(rw, "_ready_body_ok", lambda *a: True)
         monkeypatch.setattr(rw, "gh_run", fake_gh_run)
-        monkeypatch.setattr(rw, "_invoke_move_issue", move_issue)
+        if move is None:
+            monkeypatch.setattr(rw.composed_move, "invoke_move_issue", move_issue)
+        else:
+            monkeypatch.setattr(rw.composed_move, "subprocess", SimpleNamespace(run=move.run))
         return rw.main(), gh_calls, moves
 
     return run
@@ -426,3 +450,115 @@ def test_late_move_failure_claims_nothing_this_run_did_not_do(run_main, capsys) 
     assert _pr_writes(gh_calls) == []
     last_block = _last_failure(capsys.readouterr().err)
     assert "This run opened no PR, made none ready and requested no reviewers." in last_block
+
+
+# ---- the closing line claims no move (#1242) ---------------------------
+#
+# move-issue reads the state itself when it moves, so only its own output says
+# whether it moved the issue or found it in Review already.
+
+
+def test_the_closing_line_says_where_the_issue_is(run_main, capsys) -> None:
+    rc, _gh_calls, _moves = run_main(_task(["state:in-progress"]))
+    assert rc == 0
+    assert capsys.readouterr().out.rstrip().endswith("[ok] PR ready; #42 in Review")
+
+
+def test_a_rerun_from_review_claims_no_move(run_main, capsys) -> None:
+    rc, _gh_calls, _moves = run_main(_task(["state:review"]), pr=_open_pr(draft=True))
+    assert rc == 0
+    out = capsys.readouterr().out.rstrip()
+    assert "→ Review" not in out
+    assert out.endswith("[ok] PR ready; #42 in Review")
+
+
+# ---- the early check reads the issue's own fields (#1242) --------------
+#
+# review-work's early check reads the state from the labels and milestone of
+# the issue it fetched (`_lib/issue_position`, shared with start-work), and
+# starts no `pkit process` run: the engine's detectors read those same fields.
+# move-issue reads the state itself when it moves. Each test's engine would
+# answer otherwise than the labels, so a run that asked it would show.
+
+
+@pytest.mark.parametrize("pr", [None, _open_pr(draft=True)], ids=["no-pr-yet", "draft-pr"])
+def test_a_refused_check_asks_no_engine(run_main, capsys, pr) -> None:
+    engine = FakeEngine(status_at("in-progress"))
+    rc, gh_calls, moves = run_main(
+        _task(["state:backlog"]), pr=pr, engine=engine, reviewer="@alice"
+    )
+    assert rc == 2
+    assert _pr_writes(gh_calls) == []
+    assert moves == []
+    assert engine.asks == []
+    assert "the issue is in 'backlog'" in capsys.readouterr().err
+
+
+def test_a_dry_run_asks_no_engine(run_main, capsys) -> None:
+    engine = FakeEngine(status_at("backlog"))
+    rc, gh_calls, moves = run_main(_task(["state:in-progress"]), engine=engine, dry_run=True)
+    assert rc == 0
+    assert gh_calls == []
+    assert moves == []
+    assert engine.asks == []
+    assert "(dry-run: would open/flip-ready PR" in capsys.readouterr().out
+
+
+def test_a_legal_move_asks_no_engine_before_the_move(run_main) -> None:
+    engine = FakeEngine(status_at("backlog"))
+    rc, gh_calls, moves = run_main(_task(["state:in-progress"]), engine=engine, reviewer="@alice")
+    assert rc == 0
+    assert [c[2] for c in _pr_writes(gh_calls)] == ["create", "edit"]
+    assert moves == ["review"]
+    assert engine.asks == []
+
+
+def test_a_board_carried_state_is_read_off_the_labels_as_before(run_main) -> None:
+    # Where the board carries state and the engine gives nothing, the check
+    # reads the labels, as it did before #1242; nothing is newly refused.
+    rc, gh_calls, moves = run_main(
+        _task(["state:in-progress"]), config={"has_projects_v2_board": True}, reviewer="@alice"
+    )
+    assert rc == 0
+    assert [c[2] for c in _pr_writes(gh_calls)] == ["create", "edit"]
+    assert moves == ["review"]
+
+
+def test_a_state_changed_after_the_check_is_refused_by_move_issue(
+    run_main, monkeypatch, capsys
+) -> None:
+    """The check reads In Progress; by the time move-issue reads, the issue is
+    back in Backlog. move-issue refuses Backlog → Review, and review-work ends
+    on the PR and reviewers it left behind."""
+    engine = FakeEngine(status_at("backlog"))
+    move = MoveIssueInProcess(monkeypatch, _task(["state:backlog"]))
+    rc, gh_calls, moves = run_main(
+        _task(["state:in-progress"]), engine=engine, move=move, reviewer="@alice"
+    )
+    assert rc == 2
+    assert [c[2] for c in _pr_writes(gh_calls)] == ["create", "edit"]
+    assert moves == []  # the move ran in process, not through the recording stub
+    assert len(move.runs) == 1
+    assert len(engine.asks) == 1  # move-issue's own read, at move time
+    out, err = capsys.readouterr()
+    assert "[ok] PR ready" not in out
+    assert "no transition 'backlog' → 'review'" in err
+    last_block = _last_failure(err)
+    assert last_block.startswith(
+        "[failed] review-work #42: move-issue --to review failed (exit 2); the issue did not move."
+    )
+    assert f"PR #77 ({PR_URL}), opened ready for review" in last_block
+    assert "review requested from @alice on PR #77" in last_block
+
+
+def test_a_value_in_the_environment_does_not_stand_in_for_the_labels(
+    run_main, monkeypatch, capsys
+) -> None:
+    # A value saying In Progress, from which the check would pass; the labels
+    # say Backlog.
+    monkeypatch.setenv(HAND_DOWN_ENV, json.dumps({"issue": 42, "status": status_at("in-progress")}))
+    rc, gh_calls, moves = run_main(_task(["state:backlog"]), reviewer="@alice")
+    assert rc == 2
+    assert _pr_writes(gh_calls) == []
+    assert moves == []
+    assert "the issue is in 'backlog'" in capsys.readouterr().err
