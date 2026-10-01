@@ -246,9 +246,6 @@ from _lib.author_delta import author_delta, base_kept
 from _lib.checkbox_gate import refusal_message as _checkbox_refusal
 from _lib.checkbox_gate import unticked_box_lines
 from _lib.ci_checks import evaluate_ci_gate
-from _lib.closing_issue_fetchers import issue_labels as _issue_labels_fetch
-from _lib.closing_issue_fetchers import pr_changed_files as _pr_changed_files_fetch
-from _lib.closing_issue_fetchers import pr_closing_issue_numbers as _pr_closing_issue_numbers_fetch
 
 # The one fetch / scan / post-once wiring every audit writer shares (#902).
 from _lib.comment import fetch_comments, post_audit_once
@@ -266,6 +263,10 @@ from _lib.placeholder_detection import (
     detect_placeholder_residuals,
 )
 
+# The one wiring of the required reviewers and the freshness rule (#1195),
+# shared with review-pr's skip and show-pr's stale marking.
+from _lib.pr_review import REVIEW_VIEW_FIELDS, PrReview, resolve_pr_review
+
 # The closing-reference reader `open-pr` and `validate-pr` use, so all three
 # agree on which issues a PR closes (#1086).
 from _lib.pr_validation import extract_closing_issues
@@ -278,16 +279,12 @@ from _lib.required_reviewers import (
     ERROR_TOO_MANY_CHANGED_FILES,
     NOT_CODE_PATH,
     Resolution,
-    read_not_code,
-    resolve_required_local_reviewers,
 )
 from _lib.review_contributions import collect_contributions
 from _lib.review_mode import resolve_mode
-from _lib.review_opt_outs import OPT_OUT_PATH, read_opt_outs
+from _lib.review_opt_outs import OPT_OUT_PATH
 from _lib.structural_type import infer_structural_type
-
-# The one freshness rule (#1179), shared with review-pr's skip and show-pr.
-from _lib.verdict_freshness import PR_VIEW_FIELDS, FreshnessRule, head_sha, rule_for_pr
+from _lib.verdict_freshness import FreshnessRule, head_sha
 
 
 def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
@@ -1911,28 +1908,26 @@ def _check_agent_gate(
             refusal_message="error: cannot resolve PR number.",
         )
 
-    # Baseline required reviewer names per path (DEC-028's static lists).
+    # Baseline required remote reviewer names (DEC-028's static list); the
+    # local baseline is read with the resolution, below.
     remote_baseline = [
         entry.get("github_login")
         for entry in remote_registered
         if isinstance(entry, dict) and entry.get("github_login")
     ]
-    local_baseline = [
-        entry.get("name")
-        for entry in local_registered
-        if isinstance(entry, dict) and entry.get("name")
-    ]
 
     # --- DEC-032 D1: resolve the required-local set for this PR. -----------
-    # Baseline ∪ contributed, de-duped, via the SHARED resolver `review-pr`
-    # also calls — so the set this gate checks == the set `review-pr` invokes
-    # (invoke-set == gate-set, the whole point of owning resolution once).
-    # Recomputed at gate time (D5) from the current manifest + the PR's
-    # current closing-issue classifications. Fail closed on any blocking
-    # error (D5): a malformed declaration, an undeployed contributed agent,
-    # or an unresolvable closing-issue lookup is never silently dropped.
-    repo_root = capability_root.parent.parent.parent
-    resolution = _resolve_required_local(pr_number, config, repo_root, local_baseline)
+    # Baseline ∪ contributed, de-duped, through the ONE wiring `review-pr`
+    # and `show-pr` also call (`_lib.pr_review`) — so the set this gate
+    # checks == the set `review-pr` invokes (invoke-set == gate-set, the
+    # whole point of owning resolution once), and the freshness rule below
+    # is the one `show-pr` marks stale verdicts by. Recomputed at gate time
+    # (D5) from the current manifest + the PR's current closing-issue
+    # classifications. Fail closed on any blocking error (D5): a malformed
+    # declaration, an undeployed contributed agent, or an unresolvable
+    # closing-issue lookup is never silently dropped.
+    review = _resolve_review(pr_number, config, capability_root.parent.parent.parent)
+    resolution = review.resolution
     if not resolution.ok:
         # An unresolvable set (broken contribution / undeployed agent) cannot
         # be helped by a per-reviewer override — the override operates WITHIN a
@@ -1992,7 +1987,7 @@ def _check_agent_gate(
             "view",
             str(pr_number),
             "--json",
-            ",".join(("author", "comments", *PR_VIEW_FIELDS)),
+            ",".join(("author", *REVIEW_VIEW_FIELDS)),
         ],
         config,
         check=False,
@@ -2021,7 +2016,7 @@ def _check_agent_gate(
     # `show-pr`'s stale marker: a verdict naming its reviewed head stands
     # until the author's changes since reach what its reviewer is required
     # for; one naming no head falls back to the commit-time anchor above.
-    freshness = rule_for_pr(data, resolution, author_delta=author_delta, base_kept=base_kept)
+    freshness = review.freshness_rule(data)
 
     # --- Steps 1–5: latest verdict per agent per path, selected by TIMESTAMP
     # (DEC-028 step 5) and counted only when fresh, via the SHARED verdict
@@ -2113,36 +2108,25 @@ def _check_agent_gate(
     )
 
 
-def _resolve_required_local(
-    pr_number: int,
-    config: dict,
-    repo_root: Path,
-    local_baseline: list[str],
-) -> Resolution:
-    """Resolve the PR's required-local set via the shared resolver (DEC-032 D1).
+def _resolve_review(pr_number: int, config: dict, repo_root: Path) -> PrReview:
+    """The PR's required-local set and freshness rule (DEC-032 D1, #1179).
 
-    Delegates to `_lib.required_reviewers.resolve_required_local_reviewers` —
-    the SAME resolution `review-pr` calls — injecting the SHARED closing-issue,
-    label, and changed-files fetchers (`_lib.closing_issue_fetchers`, the one
-    definition both consumers import) wired to this script's `gh` helpers and
-    `collect_contributions`. The fetcher lambdas reference `gh_run` /
-    `gh_get_issue` as module globals, looked up at call time, so the agent-gate
-    tests' monkeypatches of `collect_contributions` / `gh_run` / `gh_get_issue`
-    on this module stay effective. The project's contribution opt-outs (#148)
-    and not-code list (#1178) are read from `config` exactly as `review-pr`
-    reads them. Returns a `Resolution`; the caller maps a non-ok result to a
-    `_GateResult` refusal (fail-closed, DEC-032 D5).
+    Through `_lib.pr_review.resolve_pr_review` — the ONE wiring `review-pr`
+    and `show-pr` call too — handing it this module's `gh` helpers,
+    `collect_contributions` and author-change readers. They are module
+    globals, looked up at call time, so the agent-gate tests' monkeypatches
+    of them on this module stay effective. The caller maps a non-ok
+    resolution to a `_GateResult` refusal (fail-closed, DEC-032 D5).
     """
-    return resolve_required_local_reviewers(
+    return resolve_pr_review(
         pr_number,
-        baseline_local=local_baseline,
-        repo_root=repo_root,
-        closing_issue_numbers=lambda n: _pr_closing_issue_numbers_fetch(n, config, gh_run=gh_run),
-        issue_labels=lambda n: _issue_labels_fetch(n, config, gh_get_issue=gh_get_issue),
-        changed_files=lambda n: _pr_changed_files_fetch(n, config, gh_run=gh_run),
-        opt_outs=read_opt_outs(config),
-        not_code=read_not_code(config),
+        config,
+        repo_root,
+        gh_run=gh_run,
+        gh_get_issue=gh_get_issue,
         collect_contributions=collect_contributions,
+        author_delta=author_delta,
+        base_kept=base_kept,
     )
 
 
