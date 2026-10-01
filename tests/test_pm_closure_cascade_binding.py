@@ -51,7 +51,10 @@ def _load_workflow() -> dict:
 def test_workflow_bumped_to_schema_v4() -> None:
     wf = _load_workflow()
     assert wf["schema_version"] == 4
-    assert wf["process"]["version"] == 4
+    # The definition's own version moves with edits to its states (COR-044
+    # point 3): 5 since the states detect with one classifier (DEC-033 D2),
+    # while the file's shape, and so `schema_version`, stayed.
+    assert wf["process"]["version"] == 5
 
 
 def test_shared_cascade_is_nested_under_process_not_the_local_sibling() -> None:

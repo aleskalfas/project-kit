@@ -6941,8 +6941,11 @@ def process() -> None:
     execute guarded moves, render the self-explaining status view.
 
     Content-free — addresses a capability's process definition as
-    `<capability>:<process-id>` and reads the subject's reality. Homed in the
-    binary (ADR-020); capability wrappers call it by subprocess.
+    `<capability>:<process-id>` and reads the subject's reality live, by the
+    definition's one detection mode: `inferred` asks each state's predicate
+    "is the subject here?", `classified` asks a predicate "which state is it
+    in?" (ADR-062). Homed in the binary (ADR-020); capability wrappers call it
+    by subprocess.
     """
 
 
@@ -7362,9 +7365,10 @@ def _split_pair(raw: str, sep: str, flag: str, shape: str) -> tuple[str, str]:
     multiple=True,
     required=True,
     metavar="<id>=<meaning>",
-    help="Declare a state (repeatable; declaration order is kept — it can be "
-    "load-bearing for detection precedence). Every state gets a detection "
-    "predicate stub.",
+    help="Declare a state (repeatable; declaration order is kept — the first state "
+    "whose detection is true is the position, so order can be load-bearing). Every "
+    "state gets an `inferred` detection predicate stub; a definition has one "
+    "detection mode, so adopting `classified` is a hand edit to every state.",
 )
 @click.option(
     "--entry",

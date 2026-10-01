@@ -31,11 +31,13 @@ exactly the four-step precedence above — the parity bar. The swap is a CHANGE 
 PREDICATE, not of the engine/position contract (DEC-033): first-matching-detection
 still wins; only WHICH reality the predicate reads changes.
 
-The detectors built on top of this are mutually exclusive (each returns
-`result = (infer_current_state(...) == my_state)`), so the engine's
-"first matching state wins" rule is satisfied regardless of state order — the
-order in workflow.yaml is belt-and-suspenders, not the sole guarantee. Because
-this reader is the single home of the position read (the engine detectors and
+The lifecycle's classifier built on top of this (`detect-state`, which every
+state names) answers the one state this returns, so at most one state's
+detection is true and the order of states in workflow.yaml decides nothing
+among them; the per-state detectors, registered for direct use, are
+mutually exclusive for the same reason (each returns
+`result = (infer_current_state(...) == my_state)`). Because this reader is the
+single home of the position read (the classifier, the detectors and
 move-issue's local alias all delegate here), making it map-aware makes the whole
 detection path map-aware at one point — and that read AGREES with how
 move-issue / close-issue WRITE under a derive map (they write/strip no kit
@@ -152,9 +154,10 @@ def infer_current_state(
     predicate SWAP, faithful to DEC-033 — the engine/position contract is
     unchanged, only WHICH predicate over reality resolves position.
 
-    This reader is the single home of the position read: the engine detectors
-    (`lifecycle_predicates.detect_state`, `parent_has_active_descendant`,
-    `cascade_members`) and move-issue's local alias all delegate here, so making
+    This reader is the single home of the position read: the engine's
+    detection (`lifecycle_predicates.classify_state`, and `detect_state`
+    behind the per-state commands), `parent_has_active_descendant`, `cascade_members`
+    and move-issue's local alias all delegate here, so making
     THIS map-aware makes the whole detection path map-aware in one place — the
     read agrees with how move-issue / close-issue WRITE under a derive map (they
     write/strip no kit `state:*` label; the open/closed substrate carries state).

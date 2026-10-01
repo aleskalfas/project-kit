@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-01T23:31:19Z
+      at: 2026-10-01T22:59:01Z
       outcome: unchanged
-      unchanged-because: The lifecycle README gains guidance on choosing a data point's entry ids in How a data point resolves; this index's pointer to it and its one-line summary of the area still hold
+      unchanged-because: The process area and the CLI reference gained the classified detection mode; the index's one-line description of each still holds.
 ---
 
 # project-kit
