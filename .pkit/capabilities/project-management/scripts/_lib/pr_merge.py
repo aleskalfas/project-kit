@@ -7,12 +7,13 @@ on merge. This module realises that outcome in three steps a verb composes:
 
   1. :func:`squash_merge` — `gh pr merge --squash --subject <PR title>`,
      pinned with `--match-head-commit` to the head a caller's gate checked
-     when the caller names one, and deliberately WITHOUT `--delete-branch`. That flag makes gh check out the
-     default branch locally and delete the local head, and the whole command
-     exits non-zero when the working tree cannot do so (a detached HEAD; the
-     default branch checked out in another worktree) — AFTER the remote merge
-     has already landed (#878, #587). Keeping the merge to the remote half
-     means its exit code reports the merge and nothing else.
+     when the caller names one, and deliberately WITHOUT `--delete-branch`.
+     That flag makes gh check out the default branch locally and delete the
+     local head, and the whole command exits non-zero when the working tree
+     cannot do so (a detached HEAD; the default branch checked out in another
+     worktree) — AFTER the remote merge has already landed (#878, #587).
+     Keeping the merge to the remote half means its exit code reports the
+     merge and nothing else.
   2. :func:`delete_remote_branch` — the head ref goes through the API, which
      needs nothing from the working tree. Best-effort.
   3. :func:`cleanup_local` — `checkout <default>`, `pull --ff-only`,
