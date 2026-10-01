@@ -1,0 +1,19 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `start-work` and `review-work` now judge whether their move is legal from the
+  same reading of the issue's state that the `move-issue` they run moves from:
+  the process engine's position, else the issue's own fields (#1242). Before,
+  their early check read labels and milestone while `move-issue` asked the
+  engine first, so the check could pass a move the engine then refused, leaving
+  a branch or a ready pull request behind, or refuse one it would have allowed.
+  The verb hands the engine's answer to its `move-issue`, so a run still asks
+  the engine once. Where the configured board carries state and the engine
+  gives no position, nothing can read the state: both verbs now refuse before
+  any branch or pull-request change and say why. An issue with no state label
+  and no milestone still reads as Todo. `review-work`'s documented exit codes now
+  include 3 for a `gh` failure opening the pull request or making it ready, and
+  a re-run from Review ends on "already in Review" instead of claiming a move
+  from In Progress.
