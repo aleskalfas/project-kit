@@ -72,6 +72,7 @@ from project_kit.router import (
     read_version_pin,
     run_bypassed,
     running_version,
+    write_version_pin,
 )
 from project_kit.sync import refuse_content_downgrade, run_sync
 
@@ -236,7 +237,7 @@ def _raise_pin_to(target_root: Path, target_version: str, dry_run: bool) -> None
     """Flip `.pkit/version-pin` forward to `target_version` (ADR-049 pin raise).
 
     Writes only when the pin actually moves — an idempotent no-op when the pin is
-    already at the target. The write is atomic (temp file + `os.replace`) and, by
+    already at the target. The write is atomic (`write_version_pin`) and, by
     call-site placement, happens LAST in an upgrade: after content sync and
     migrations, so a failed upgrade leaves the project consistently at its old
     pin rather than advancing past content that never landed.
@@ -249,9 +250,7 @@ def _raise_pin_to(target_root: Path, target_version: str, dry_run: bool) -> None
     if dry_run:
         click.echo(f"  would raise pin: {prior} -> {target_version} ({pin_path.name})")
         return
-    tmp = pin_path.with_name(pin_path.name + ".tmp")
-    tmp.write_text(target_version + "\n", encoding="utf-8")
-    os.replace(tmp, pin_path)  # atomic on POSIX; the pin never observes a torn write
+    write_version_pin(target_root, target_version)
     click.echo(f"  pin raised: {prior} -> {target_version} (.pkit/version-pin)")
 
 
@@ -281,10 +280,10 @@ def freeze_pin(target_root: Path, version: str) -> None:
     `freeze_at_content`) and `pkit pin <version>` when the target equals the
     current content version (ADR-049). `version` is always a bare
     `MAJOR.MINOR.PATCH` semver — the callers normalise and validate before this
-    point (`_normalize_pin_version`), so the router can always route it."""
+    point (`_normalize_pin_version`), so the router can always route it. The
+    write is atomic (`write_version_pin`)."""
     pin_path = pin_file_path(target_root)
-    pin_path.parent.mkdir(parents=True, exist_ok=True)
-    pin_path.write_text(version + "\n", encoding="utf-8")
+    write_version_pin(target_root, version)
     click.echo(f"Pinned project-kit to {version} ({pin_path.relative_to(target_root)}).")
 
 

@@ -28,8 +28,9 @@ pkit:
         - hatch_build.py
       record: [COR-010, COR-017, COR-027, COR-030, COR-031, COR-052, COR-053, ADR-056, ADR-057, ADR-059]
     revalidated:
-      at: 2026-10-01T15:42:36Z
-      outcome: updated
+      at: 2026-10-01T16:40:23Z
+      outcome: unchanged
+      unchanged-because: the upgrade procedure, its order and the older-pkit refusal are unchanged; the pin write at its end is now atomic, which the page does not describe
 ---
 
 # Lifecycle
