@@ -7,9 +7,20 @@
 #
 # The code's own checks come first: ruff's lint (`ruff check`) and layout
 # (`ruff format --check`) under the house style `pyproject.toml` settles
-# (#840), then the test suite. Type checking is not gated yet: `pyproject.toml`
-# configures pyright's strict mode, which the tree does not pass, and how to
-# gate it is being decided on its own (#840).
+# (#840), then the type check, then the test suite.
+#
+# The type check (PRJ-010) is `scripts/pyright_ratchet.py`, which runs pyright
+# once as `pyproject.toml`'s `[tool.pyright]` table sets it: the package (`src/`)
+# in strict mode, everything else in standard mode. Outside the package any
+# finding fails. The package is held by a ratchet: its findings, counted per
+# file and rule, may not exceed the committed baseline,
+# `scripts/pyright-baseline.txt`; a count below it passes and the step names the
+# entries to lower (`uv run python scripts/pyright_ratchet.py lower`, from a
+# committed tree). The step also refuses suppressions and file comments that
+# step around the count and a configuration that narrows the package, and fails
+# when the baseline's total for a rule rose against the base unless the change
+# alters the lock or the pyright table — reading the base as the diff-scoped
+# checks below do. CONTRIBUTING.md, "Running checks", has the rules.
 #
 # Then two kinds of line, deliberately apart (ADR-058):
 #
@@ -33,10 +44,11 @@ set -uo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
 # The diff-scoped checks (migration coverage, friction, analysis numbers, doc
-# check) each read their base themselves, one way (COR-054): $PKIT_CHECK_BASE
-# when it is set — CI sets it to the pull request's target — else the project's
-# default branch, as `pkit repository base` shows it. So no line here passes
-# --base: every line exercises the rule a contributor's own run does.
+# check) and the type check's guard on its baseline each read their base
+# themselves, one way (COR-054): $PKIT_CHECK_BASE when it is set — CI sets it to
+# the pull request's target — else the project's default branch, as
+# `pkit repository base` shows it. So no line here passes --base: every line
+# exercises the rule a contributor's own run does.
 
 fail=0
 run() {
@@ -141,6 +153,7 @@ run_tests() {
 # run") — which CI runs on checkout, and a clone runs once — not by this gate.
 run "lint"               uv run ruff check .
 run "format"             uv run ruff format --check .
+run "types"              uv run python scripts/pyright_ratchet.py
 run "tests"              run_tests
 run "validate"           uv run pkit validate
 run "migrations check"   uv run pkit migrations check-diff

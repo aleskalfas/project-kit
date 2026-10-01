@@ -1,4 +1,12 @@
-"""`scripts/check.sh`'s test step (#1182).
+"""`scripts/check.sh`'s type and test steps.
+
+The type step (PRJ-010):
+
+- runs `scripts/pyright_ratchet.py` after the lint and the format check and
+  before the tests;
+- fails the run when the ratchet fails, and the checks after it still run.
+
+The test step (#1182):
 
 - the suite runs in parallel workers, `-n auto` or the count
   `PKIT_TEST_WORKERS` names, and then the tests marked `serial` in one
@@ -10,9 +18,11 @@
 - when the slots cannot be opened, the step says so and runs the suite anyway.
 
 `check.sh` runs here for real, against a stub `uv` first on PATH, so no test
-runs the suite: the stub's `pytest` records its arguments and, on the parallel
-pass, holds until the test lets it go; its `python` is this interpreter, so a
-slot is taken with a real lock; every other command it is handed passes.
+runs the suite or pyright: the stub records every command it is handed; its
+`pytest` records its arguments and, on the parallel pass, holds until the test
+lets it go; its `python` is this interpreter, so a slot is taken with a real
+lock, except for the ratchet, which exits as the test says; every other command
+passes.
 """
 
 from __future__ import annotations
@@ -31,14 +41,21 @@ import pytest
 REPO = Path(__file__).resolve().parents[1]
 CHECK = REPO / "scripts" / "check.sh"
 
-# The stand-in for `uv run [--flag ...] <command> [arg ...]`: `python` is this
-# interpreter; `pytest` logs its arguments and, on the parallel pass, holds
-# until the release file exists; anything else passes.
+# The stand-in for `uv run [--flag ...] <command> [arg ...]`: it logs each
+# command; `python` is this interpreter, but for the ratchet, which exits with
+# $STUB_TYPES_STATUS; `pytest` logs its arguments and, on the parallel pass,
+# holds until the release file exists; anything else passes.
 STUB_UV = """#!/bin/sh
 shift
 while [ "${{1#-}}" != "$1" ]; do shift; done
+echo "$*" >> "$STUB_STEPS"
 case "$1" in
-  python) shift; exec "{python}" "$@" ;;
+  python)
+    shift
+    case "$1" in
+      scripts/pyright_ratchet.py) exit "${{STUB_TYPES_STATUS:-0}}" ;;
+    esac
+    exec "{python}" "$@" ;;
   pytest)
     shift
     echo "$*" >> "$STUB_LOG"
@@ -69,6 +86,7 @@ class Checkout:
         uv.write_text(STUB_UV.format(python=sys.executable), encoding="utf-8")
         uv.chmod(0o755)
         self.log = root / "pytest.log"
+        self.steps = root / "steps.log"
         self.release = root / "release"
         self.cache = root / "cache"
         self.env = {
@@ -76,6 +94,7 @@ class Checkout:
             "PATH": f"{stub_bin}{os.pathsep}{os.environ.get('PATH', '')}",
             "XDG_CACHE_HOME": str(self.cache),
             "STUB_LOG": str(self.log),
+            "STUB_STEPS": str(self.steps),
             "STUB_RELEASE": str(self.release),
         }
         self.outputs = root / "outputs"
@@ -133,6 +152,35 @@ def checkout(tmp_path: Path) -> Iterator[Checkout]:
         if run.poll() is None:
             os.killpg(run.pid, signal.SIGKILL)
             run.wait()
+
+
+def test_the_type_check_runs_after_the_lint_and_format_and_before_the_tests(
+    checkout: Checkout,
+) -> None:
+    done = checkout.check()
+
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert "-- types: ok" in done.stdout
+    steps = checkout.steps.read_text().splitlines()
+    order = [
+        "ruff check .",
+        "ruff format --check .",
+        "python scripts/pyright_ratchet.py",
+        "pytest -q -n auto -m not serial",
+    ]
+    positions = [steps.index(step) for step in order]
+    assert positions == sorted(positions)
+
+
+def test_a_failing_type_check_fails_the_run_and_the_checks_after_it_still_run(
+    checkout: Checkout,
+) -> None:
+    done = checkout.check(STUB_TYPES_STATUS="1")
+
+    assert done.returncode == 1
+    assert "-- types: FAILED" in done.stdout
+    assert "-- tests: ok" in done.stdout
+    assert "-- changelog lint: ok" in done.stdout
 
 
 @pytest.mark.parametrize(("workers", "expected"), [(None, "-n auto"), ("3", "-n 3"), ("0", "-n 0")])
