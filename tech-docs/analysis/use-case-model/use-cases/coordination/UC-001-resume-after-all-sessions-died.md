@@ -22,9 +22,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-10-01T19:06:24Z
+      at: 2026-10-01T19:47:11Z
       outcome: unchanged
-      unchanged-because: create-issue now names link-parent when its native sub-issue link fails (#808); filing, claiming and resuming work are untouched, so the use case still holds
+      unchanged-because: "create-issue's report of its native sub-issue link changed again (#808): it says itself that it recorded the textual ref, names link-parent when the link fails, and names the containment: textual way out when GitHub refused it; filing, claiming and resuming work are untouched, so the use case still holds"
 ---
 
 # UC-001 — Resume a clone after every session died
