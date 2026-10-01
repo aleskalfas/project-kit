@@ -115,9 +115,9 @@ TERM-stabilisation:
           - project-management:DEC-014
           - ADR-019
       revalidated:
-        at: 2026-10-01T15:52:46Z
+        at: 2026-10-01T19:43:19Z
         outcome: unchanged
-        unchanged-because: done-work and merge-pr now read a PR again when a merge or an enqueue gets no answer back from the backbone, and exit 4 when GitHub cannot say what it came to; the stabilisation phase, its intended guards and gap K2 are untouched
+        unchanged-because: done-work's main now takes its argv and a head to land, which it refuses to merge past, so that land can hand it the head it waited for and had reviewed; the stabilisation phase, its intended guards and gap K2 are untouched
 ---
 
 # Glossary

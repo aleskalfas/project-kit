@@ -20,9 +20,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-10-01T16:05:00Z
+      at: 2026-10-01T19:43:21Z
       outcome: unchanged
-      unchanged-because: on this branch the merge mechanic moved into the backbone's pull-request landing module, which the pm verbs and the release step call; what main brought in (the process move origin, the configuration writer, the milestone rollforward) does not change what this page describes
+      unchanged-because: done-work's main now takes its argv and a pinned head it refuses to merge past, for the new land verb that composes it; how sessions resume and land work during a stabilisation, and its gaps, read as before
 ---
 
 # UC-007 — Resume sessions killed during a stabilisation
