@@ -1957,24 +1957,33 @@ class ProcessEngine:
         )
         return False, refusal, position
 
-    def move(self, to_state: str, actor: str, *, from_state: str | None = None) -> MoveResult:
+    def move(
+        self,
+        to_state: str,
+        actor: str,
+        *,
+        from_state: str | None = None,
+        reason: str | None = None,
+    ) -> MoveResult:
         """Execute a legal move: validate, then append a journal entry when the
         project keeps a journal. Refuses (no journal write) when `can_move`
         refuses. The verdict — allowed or refused, and why — is the same with
         journal logging on or off (COR-033 point 7): with it off, a legal move
         succeeds and records nothing. `from_state` is `can_move`'s — the origin a
         caller that has already applied the domain side-effect names — and the
-        entry records it as where the move came from."""
-        allowed, reason, position = self.can_move(to_state, actor, from_state=from_state)
+        entry records it as where the move came from. `reason` is why the caller
+        took the move, recorded on the entry as given: the engine neither reads
+        nor judges it, so it never changes the verdict."""
+        allowed, verdict, position = self.can_move(to_state, actor, from_state=from_state)
         if not allowed:
-            return MoveResult(ok=False, reason=reason)
+            return MoveResult(ok=False, reason=verdict)
         if not self.journal_enabled:
             # Deliberately skips the wait reconcile below too, not only the move
             # entry: `reconcile_blocked` only journals the wait's enter/resume
             # audit, and with no journal there is nothing to record. Blocked-ness
             # is the live overlay (`evaluate_blocked`), recomputed on every read
             # and authoritative either way, so no verdict is lost here.
-            return MoveResult(ok=True, reason=reason)
+            return MoveResult(ok=True, reason=verdict)
 
         origin = _move_origin(position, from_state)
         check = next(
@@ -1985,6 +1994,7 @@ class ProcessEngine:
             to_state=to_state,
             check=check,
             actor=actor,
+            reason=reason,
         )
         _validate_journal_entry(entry, self.definition)
         self._append_journal(entry)
@@ -1998,7 +2008,7 @@ class ProcessEngine:
         # the source state at this instant. The enter/resume EVENTS are journal
         # entries themselves — there is no separate emission channel.
         self.reconcile_blocked(actor, assume_state=to_state)
-        return MoveResult(ok=True, reason=reason, journal_entry=entry)
+        return MoveResult(ok=True, reason=verdict, journal_entry=entry)
 
     def reconcile_blocked(
         self, actor: str, assume_state: str | None = None
@@ -2154,6 +2164,7 @@ class ProcessEngine:
         to_state: str,
         check: TransitionCheck,
         actor: str,
+        reason: str | None = None,
     ) -> dict[str, Any]:
         transition = check.transition
         entry: dict[str, Any] = {
@@ -2175,6 +2186,8 @@ class ProcessEngine:
         severity = transition.get("severity")
         if isinstance(severity, str):
             entry["severity"] = severity
+        if reason:
+            entry["reason"] = reason
         return entry
 
     def _append_journal(self, entry: dict[str, Any]) -> None:
@@ -2491,9 +2504,11 @@ def render_status_narrative(engine: ProcessEngine, actor: str) -> str:
     else:
         for entry in journal:
             frm = entry.get("from", "·")
+            reason = entry.get("reason")
             lines.append(
                 f"    {entry.get('ts', '')}  {frm} -> {entry.get('to')}  "
                 f"[{entry.get('trigger')}] by {entry.get('actor')}"
+                + (f" — {reason}" if reason else "")
             )
 
     # Invariants (COR-035) — surface VIOLATIONS on every status read (the

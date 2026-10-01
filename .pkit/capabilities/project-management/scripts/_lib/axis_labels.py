@@ -174,6 +174,21 @@ CONTAINMENT_TEXTUAL: ContainmentMode = "textual"
 # The map's top-level key that carries the containment mode. Absent ⇒ `native`.
 CONTAINMENT_KEY = "containment"
 
+# The way out for an operator whose GitHub refused the native sub-issue link and
+# may offer no sub-issues at all. The containment seam never reads a refusal as
+# an instance without sub-issues (ADR-035): a 422 is reported as the failure it
+# is, with GitHub's words, so the adopter who knows the feature is missing says
+# so through this selector. A write caller prints it beside a link GitHub
+# refused (`containment.LinkResult.refused`); never on the read path, since the
+# selector governs writes only and is no way out of an unreadable read. Built
+# from the key, value and file the selector is read from, so it cannot drift
+# from them.
+TEXTUAL_CONTAINMENT_WAY_OUT = (
+    f"If this GitHub does not offer sub-issues, set `{CONTAINMENT_KEY}: "
+    f"{CONTAINMENT_TEXTUAL}` in {SUBSTRATE_MAP_RELATIVE_PATH} and pm stops "
+    "attempting the native link."
+)
+
 
 # An axis's capability disposition — the seam's binary read of the ADR-026
 # ternary, the signal a degrading consumer (pre-check's capability matrix)

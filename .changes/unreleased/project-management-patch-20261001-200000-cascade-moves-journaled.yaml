@@ -1,0 +1,22 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+  requires_backbone: release
+body: >
+  A parent the forward cascade moves is now journaled. When an issue moved
+  forward, `move-issue` bumped a parent that was behind and recorded nothing for
+  it, so with journal logging on the parent's move existed on the tracker and
+  nowhere in the journal, and `pkit pm history <parent> --check-drift` reported
+  drift for a move pkit itself made. Each parent the cascade moves now gets one
+  entry, journaled the way the issue's own move is: after its label write, from
+  the state the parent held before it, by the same actor, with the child's move
+  named as the reason (`forward cascade from #12: backlog → in-progress`), which
+  `pkit pm history` shows. A cascaded move the engine refuses warns exactly as a
+  direct move's refusal does. One such refusal is a known defect, not intended
+  behaviour: a parent in Todo is taken straight to In Progress, which the
+  workflow does not declare, so the engine does not record it and
+  `--check-drift` still reports that parent (#1229). A parent already at
+  or beyond the target is left alone, so a re-run or a sibling's move adds no
+  second entry. Upgrade the capability together with the backbone: it needs the
+  backbone release that adds `pkit process move --reason`.

@@ -1406,7 +1406,8 @@ class _NativeTracker:
     ``native`` maps a parent to its sub-issue numbers. ``honour_replace=False``
     refuses a move the way an instance without ``replace_parent`` would;
     ``record_error`` fails the issue-record read; ``unsupported`` answers every
-    sub-issues call the way an instance without the feature does.
+    sub-issues call the way an instance without the feature does;
+    ``refuse_add`` refuses every add with that ``(stdout, stderr)``.
     """
 
     def __init__(
@@ -1416,11 +1417,13 @@ class _NativeTracker:
         honour_replace: bool = True,
         record_error: bool = False,
         unsupported: bool = False,
+        refuse_add: tuple[str, str] | None = None,
     ) -> None:
         self.native = {p: set(c) for p, c in (native or {}).items()}
         self.honour_replace = honour_replace
         self.record_error = record_error
         self.unsupported = unsupported
+        self.refuse_add = refuse_add
         self.calls: list[list[str]] = []
 
     @property
@@ -1455,6 +1458,9 @@ class _NativeTracker:
         raise AssertionError(f"unexpected gh call: {args}")
 
     def _add(self, args: list[str], parent: int) -> subprocess.CompletedProcess:
+        if self.refuse_add is not None:
+            stdout, stderr = self.refuse_add
+            return subprocess.CompletedProcess(args, 1, stdout=stdout, stderr=stderr)
         child = int(args[args.index("-F") + 1].split("=", 1)[1]) - _DB
         holder = self.parent_of(child)
         moving = "replace_parent=true" in args and self.honour_replace
@@ -1550,6 +1556,8 @@ def test_main_parent_refused_move_writes_nothing_and_names_the_kept_parent(
     assert native.native == {7: {42}}
     assert "[failed] #42: parent NOT set — #42 could not be moved to #9" in out
     assert "it stays a native sub-issue of #7" in out
+    assert 'GitHub said: "Validation Failed; Sub issue may only have one parent"' in out
+    assert "containment: textual" not in out, "a conflict is not a refusal to work around"
 
 
 def test_main_parent_unreadable_native_parent_refuses_before_any_write(
@@ -1608,7 +1616,61 @@ def test_main_parent_on_an_instance_without_sub_issues_rewrites_the_first_line(
 
     assert captured["rc"] == 0
     assert captured["bodies"][0].startswith("Feature: #9\n")
-    assert "[warn] native sub-issues unsupported on this instance" in out
+    assert (
+        "[warn] native sub-issues unsupported on this instance; the first line alone "
+        "records the parent"
+    ) in out
+
+
+_WAY_OUT = (
+    "  → If this GitHub does not offer sub-issues, set `containment: textual` in "
+    "project/substrate-map.yaml and pm stops attempting the native link."
+)
+
+
+def test_main_parent_a_422_stops_before_any_write(sf, tmp_path, monkeypatch, capsys) -> None:
+    """#808: a 422 used to read as "unsupported", so an issue with no native
+    parent had its first line rewritten while the link silently failed. A 422
+    is a failure: the call stops before the first line moves, GitHub's words
+    are printed, and the refusal does not also claim a textual ref was recorded
+    — nothing was written. The textual-mode way out follows."""
+    refusal = json.dumps({"message": "Parent issue is locked", "status": "422"})
+    native = _NativeTracker(refuse_add=(refusal, "gh: Parent issue is locked (HTTP 422)"))
+    captured = _run_parent(sf, monkeypatch, tmp_path, native=native, body="## What\nx\n")
+    out = capsys.readouterr().out
+
+    assert captured["rc"] == 3
+    assert captured["bodies"] == [], "the first line must not move without the link"
+    assert (
+        "[failed] #42: parent NOT set — GitHub refused to link #42 under #9 (HTTP 422) "
+        'for a reason pm does not recognise. GitHub said: "Parent issue is locked". '
+        "Nothing was written: the first line and the native link are as they were."
+    ) in out
+    assert "textual ref recorded" not in out
+    assert "unsupported" not in out
+    assert _WAY_OUT in out
+
+
+def test_main_parent_a_move_refused_by_an_unrelated_422_is_no_conflict(
+    sf, tmp_path, monkeypatch, capsys
+) -> None:
+    """#42 is natively under #7 and `--parent 9` moves it. GitHub refuses the
+    move with a 422 unrelated to the one-parent rule: the parent #42 has is the
+    move's precondition, not a finding, so the report is the failure GitHub
+    stated — not a conflict telling the operator to remove a link first."""
+    unrelated = "Validation failed, or the endpoint has been spammed."
+    refusal = json.dumps({"message": unrelated, "status": "422"})
+    native = _NativeTracker({7: {42}}, refuse_add=(refusal, "gh: Validation Failed (HTTP 422)"))
+    captured = _run_parent(sf, monkeypatch, tmp_path, native=native, body="Feature: #7\n")
+    out = capsys.readouterr().out
+
+    assert captured["rc"] == 3
+    assert captured["bodies"] == []
+    assert native.native == {7: {42}}
+    assert "[failed] #42: parent NOT set — GitHub refused to move #42 to #9 (HTTP 422)" in out
+    assert f'GitHub said: "{unrelated}"' in out
+    assert "must be removed first" not in out
+    assert _WAY_OUT in out
 
 
 def test_main_parent_in_textual_containment_writes_no_native_link(
