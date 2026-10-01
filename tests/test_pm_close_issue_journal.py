@@ -16,6 +16,7 @@ These tests run the real scripts and the real engine against an in-memory GitHub
 
 from __future__ import annotations
 
+import argparse
 from collections.abc import Callable
 from pathlib import Path
 from types import ModuleType
@@ -25,6 +26,7 @@ import pytest
 
 from tests.pm_lifecycle_world import (
     AUTHORED_BODY,
+    CAPABILITY_ROOT,
     INVOKER,
     Tracker,
     World,
@@ -64,6 +66,11 @@ def hist() -> ModuleType:
 @pytest.fixture(scope="module")
 def cl() -> ModuleType:
     return load_script("close-issue.py", "pm_close_issue_close_journal")
+
+
+@pytest.fixture(scope="module")
+def dw() -> ModuleType:
+    return load_script("done-work.py", "pm_done_work_close_journal")
 
 
 @pytest.fixture
@@ -332,3 +339,96 @@ def test_with_journal_logging_off_nothing_is_journaled(
     # as move-issue asks for each move, and it records nothing. Nothing else is
     # asked of it.
     assert [call[2] for call in calls] == ["move"]
+
+
+# --- move-issue on an issue GitHub closed -------------------------------------
+#
+# A closed issue reads as done, so `move-issue --to done` on one GitHub closed
+# finds it there and only rewrites its stale label — the move done-work makes on
+# its own issue after a merge. That label write is recorded, once.
+
+
+def test_relabelling_an_issue_github_closed_journals_the_close_once(
+    world: World, capsys: pytest.CaptureFixture[str]
+) -> None:
+    number = _merged_task_in_review(world)
+    capsys.readouterr()
+
+    assert world.move(number, "done") == 0
+    assert ENGINE_WARNING not in capsys.readouterr().err
+    assert "state:done" in world.labels(number)
+    assert world.moves(number)[-1] == ("review", "done", "done-work")
+    assert world.history(number) == 0
+
+    journaled = world.journal(number)
+    rc, calls = _engine_calls_during(world, lambda: world.move(number, "done"))
+    assert rc == 0
+    assert [call[2] for call in calls] == ["status"]
+    assert world.journal(number) == journaled
+
+
+def test_with_journal_logging_off_relabelling_a_closed_issue_asks_the_engine_nothing_more(
+    world: World, capsys: pytest.CaptureFixture[str]
+) -> None:
+    set_journal_logging(world.engine_repo, enabled=False)
+    number = _merged_task_in_review(world)
+
+    rc, calls = _engine_calls_during(world, lambda: world.move(number, "done"))
+
+    assert rc == 0
+    assert ENGINE_WARNING not in capsys.readouterr().err
+    assert "state:done" in world.labels(number)
+    assert world.journal_files() == []
+    # The status read it makes anyway says no journal is kept.
+    assert [call[2] for call in calls] == ["status"]
+
+
+# --- a done-work landing ------------------------------------------------------
+
+
+def test_a_done_work_landing_that_closes_two_issues_journals_each_once(
+    world: World,
+    dw: ModuleType,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """After the merge done-work moves its issue to Done through move-issue,
+    then runs close-issue's pr-merge close on every issue the pull request
+    closed, its own first. GitHub closed both as the pull request merged."""
+    primary = _task_in_review(world)
+    further = _backlog_task(world)
+    world.tracker.merge(PR, [primary, further])
+    monkeypatch.setattr(dw.pr_merge, "delete_remote_branch", lambda *a, **kw: None)
+    monkeypatch.setattr(dw.pr_merge, "cleanup_local", lambda *a, **kw: None)
+    capsys.readouterr()
+
+    def land() -> int:
+        run = dw._after_merge(
+            argparse.Namespace(
+                issue_number=primary,
+                capability_root=CAPABILITY_ROOT,
+                skip_checkbox_gate=False,
+            ),
+            pr_number=PR,
+            to_close=[primary, further],
+            branch=f"fix/{primary}-a-task",
+            cross=False,
+            merged_head="0" * 40,
+            config={},
+        )
+        return int(run.exit_code)
+
+    assert land() == 0
+    assert ENGINE_WARNING not in capsys.readouterr().err
+    assert world.moves(primary)[-1] == ("review", "done", "done-work")
+    assert world.moves(further)[-1] == ("backlog", "done", "close-issue")
+    for number in (primary, further):
+        assert world.views(number) == ("done", "done")
+        assert [to for _from, to, _trigger in world.moves(number)].count("done") == 1
+        assert world.history(number) == 0
+        assert "no ungoverned state changes detected" in capsys.readouterr().out
+
+    # Landing again records nothing more.
+    journals = {number: world.journal(number) for number in (primary, further)}
+    assert land() == 0
+    assert {number: world.journal(number) for number in (primary, further)} == journals

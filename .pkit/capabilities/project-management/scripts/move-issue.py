@@ -365,6 +365,17 @@ def main() -> int:
                 print(f"  reconcile: removing stale label {plan.remove_label!r}")
                 if not _gh_apply_state_label(args.issue_number, plan, config):
                     return 3
+                if state == "closed" and not _journal_logging_off(engine_status):
+                    _journal_closed_issue_relabel(
+                        args.issue_number,
+                        args.to,
+                        workflow=workflow,
+                        structural_type=structural_type,
+                        milestone=milestone,
+                        labels=labels,
+                        substrate_map=substrate_map,
+                        actor=invoker.github_login,
+                    )
         return 0
 
     # Look up the transition.
@@ -957,6 +968,44 @@ def _landed_moves(
 # Bound under this module-private name, which the call sites below and the tests
 # that stand in for it use.
 _journal_move = move_journal.journal_move
+
+
+def _journal_closed_issue_relabel(
+    issue_number: int,
+    target_state: str,
+    *,
+    workflow: dict,
+    structural_type: str,
+    milestone: dict | None,
+    labels: list[str],
+    substrate_map: axis_labels.SubstrateMap | None,
+    actor: str | None,
+) -> None:
+    """Record the move to done that relabelling a closed issue makes (#1231).
+
+    A closed issue reads as done, so moving one to done finds it already there
+    and only reconciles its label — the Review label a merge's `Closes #N` left
+    on the issue `done-work` runs for, say. That label write is the close's
+    move on the tracker, and the only one pkit makes: close-issue, which runs
+    next, finds the label at done and records nothing. So it is recorded here,
+    from where the old label placed the issue (`state_before_close`), as
+    close-issue records a close: not at all when the workflow declares no such
+    move for the issue's type (the engine does not read `applies_to`), which is
+    warned about as a refused move is.
+    """
+    origin = infer.state_before_close(
+        milestone=milestone, labels=labels, substrate_map=substrate_map
+    )
+    if origin is None or origin == target_state:
+        return
+    if _find_transition(workflow, origin, target_state, structural_type) is None:
+        move_journal.report_unrecorded(
+            issue_number,
+            f"this move was not recorded: no transition {origin!r} → {target_state!r} "
+            f"declared in workflow.yaml for {structural_type!r}",
+        )
+        return
+    _journal_move(issue_number, origin, target_state, actor)
 
 
 # ---- gh wrappers ----------------------------------------------------
