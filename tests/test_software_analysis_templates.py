@@ -33,7 +33,7 @@ SCHEMAS = CAPABILITY / "schemas"
 SHA1 = "78981922613b2afb6025042ff6bd878ac1994e85"
 SHA256 = "4f9be057f0ea5d2ba72fd2c810e8d7b9aa98b469f9a6c4d6d0e2a2d3e1c4b5a6"
 
-#: An executed check's name, as a provider gives it.
+#: An executed check's name, as a filler gives it.
 CHECK = "pytest-bridge.test-run.test-sandbox"
 
 

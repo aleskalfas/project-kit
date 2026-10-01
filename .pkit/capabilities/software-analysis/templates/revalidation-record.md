@@ -24,7 +24,7 @@ outcomes:                         # each artefact covered, by id, withdrawn ones
 #   - id: UC-000@0000000000000000000000000000000000000000#project.check   # <artefact>@<commit>#<check>: its own three fields below
 #     artefact: UC-000            # an artefact given its outcome above: evidence never stands in for one
 #     commit: "0000000000000000000000000000000000000000"    # the commit's full name
-#     check: project.check        # the executed check, as its provider names it — opening with its own name
+#     check: project.check        # the executed check, as its filler names it — opening with its own name
 #     result: passed              # passed | failed — passed supports holds, failed a regression
 #     ran: <what was run>         # and optionally `steps`, `where` and `by`, as the point gives them
 ---

@@ -4,12 +4,12 @@
 defines as the provider of the `pkit::analysis` role (COR-052, COR-053):
 executed results that confirm or refute an artefact at a commit, one entry per
 result, keyed by three parts, `<artefact>@<commit>#<check>`. The check is the
-name a provider gives one executed check, the same from commit to commit, and
-opens with the provider's own name — a capability's, or `project` for the
-project's own — so two providers' results for one artefact at one commit stand
-side by side, and only two that claim one check collide. Its value is `union`,
-no default takes part, and its inert policy is `fallback`: the evidence
-advises, so a filler that cannot answer is warned and the rest still count.
+name its filler gives one executed check, kept from commit to commit, and opens
+with the filler's own name — a capability's, or `project` for a project file's —
+so two fillers' results for one artefact at one commit stand side by side, and
+only two that claim one check collide. Its value is `union`, no default takes
+part, and its inert policy is `fallback`: the evidence advises, so a filler that
+cannot answer is warned and the rest still count.
 
 The backbone resolves the point and applies its companion schema,
 `schemas/revalidation-evidence.schema.json`, to every filler — a project
@@ -78,7 +78,7 @@ def own_id(entry: Mapping[str, Any]) -> str:
 
 
 def opening(check: str) -> str:
-    """A check's opening name, its first dotted word: the provider's own name."""
+    """A check's opening name, its first dotted word: the filler's own name."""
     return check.split(".", 1)[0]
 
 

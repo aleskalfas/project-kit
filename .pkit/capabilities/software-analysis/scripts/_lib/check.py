@@ -660,7 +660,8 @@ def _journey_steps(location: str, entry: Mapping[str, Any], analysis: Analysis) 
             ERROR,
             f"{location}/steps/{index}",
             f"no use case {step} in the analysis: a journey's evidence names the use cases "
-            f"its run passed through, by id, withdrawn ones included (DEC-001 points 3 and 7)",
+            f"its run passed through, by id, withdrawn ones included (DEC-001 points 4 and 6; "
+            f"`schemas/revalidation-evidence.schema.json`)",
         )
         for index, step in enumerate(entry.get("steps") or [])
         if analysis.of(step, USE_CASE) is None
@@ -771,7 +772,7 @@ def _entries_of_the_point(point: evidence.Evidence) -> list[Finding]:
                     location,
                     f"{supplier} reports it under the check {check}, which opens with "
                     f"{evidence.opening(check)!r}: a capability's checks open with its own "
-                    f"name, so two providers' results for one artefact at one commit stand "
+                    f"name, so two fillers' results for one artefact at one commit stand "
                     f"side by side and only a real double claim collides — {supplier} "
                     f"names its checks {held.origin}.… (DEC-001 point 7)",
                 )

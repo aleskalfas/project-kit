@@ -13,7 +13,7 @@ contributes the analysis' actors to the documentation role's readers point,
   point unresolved rather than answer without them;
 - the evidence point through the real backbone — a project filler's entries
   resolve against the companion schema, a malformed one is the project's error;
-  an entry is keyed by artefact, commit and check (#1143), so two providers'
+  an entry is keyed by artefact, commit and check (#1143), so two fillers'
   results for one artefact at one commit stand side by side, and only two that
   claim one check collide, which the project settles — and in the check: a
   record copies the evidence it draws on, whole, as support for an outcome and
@@ -204,7 +204,7 @@ def test_the_filler_answers_the_point_and_version_the_package_declares() -> None
     assert _constant(readers, "POINT_VERSION") == contribution["schema_version"]
 
 
-#: An executed check's name, as a provider gives it: a test's name, slugged.
+#: An executed check's name, as a filler gives it: a test's name, slugged.
 SANDBOX = "pytest-bridge.test-run.test-sandbox"
 
 EVIDENCE_ENTRY = {
@@ -236,7 +236,7 @@ def test_the_evidence_schema_keys_an_entry_by_artefact_commit_and_check() -> Non
     # `by` stays: who ran it — or, on an entry the project writes in a capability's stead,
     # who wrote it.
     assert schema.is_valid([{**EVIDENCE_ENTRY, "by": "Alex, rerun by hand"}])
-    # A later word may begin with a digit; the check's other words are the provider's own.
+    # A later word may begin with a digit; the check's other words are the filler's own.
     assert schema.is_valid([_keyed(EVIDENCE_ENTRY, check="trace-runner.2026-walk")])
     for broken in (
         {**EVIDENCE_ENTRY, "id": "UC-003"},
@@ -486,7 +486,7 @@ def _entry(
 
 def _reporter(repo: AdopterRepo, name: str, *entries: Mapping[str, Any]) -> None:
     """A capability of the test's own, registered in place, reporting `entries` to the
-    evidence point as its value: a provider of executed results, which software-analysis
+    evidence point as its value: a filler of executed results, which software-analysis
     never is (DEC-001 point 7). Staged again, it reports the new entries instead."""
     root = repo.pkit / "capabilities" / name
     (root / "scripts").mkdir(parents=True, exist_ok=True)
@@ -548,7 +548,7 @@ def test_the_evidence_point_resolves_from_the_project_filler(project: AdopterRep
     assert not _resolve(EVIDENCE)["resolved"]
 
 
-# Each check a provider of the test's own runs, by the provider's name, as it names them.
+# Each check a filler of the test's own runs, by the filler's name, as it names them.
 BRIDGE = "pytest-bridge.test-run.test-sandbox"
 TIMEOUT = "pytest-bridge.test-run.test-timeout"
 TRACE = "trace-runner.walk"
@@ -558,11 +558,11 @@ def _held(resolved: Mapping[str, Any]) -> list[tuple[str, str]]:
     return [(e["id"], e["origin"]) for e in resolved["entries"]]
 
 
-def test_two_providers_report_one_artefact_at_one_commit_side_by_side(
+def test_two_fillers_report_one_artefact_at_one_commit_side_by_side(
     project: AdopterRepo,
 ) -> None:
     """A test runner and a trace runner covering one use case at one commit: each
-    result under the provider's own check, so both stand and nothing collides."""
+    result under the filler's own check, so both stand and nothing collides."""
     _reporter(project, "pytest-bridge", _entry("UC-001", check=BRIDGE))
     _reporter(project, "trace-runner", _entry("UC-001", check=TRACE, result="failed"))
     resolved = _resolve(EVIDENCE)
@@ -576,7 +576,7 @@ def test_two_providers_report_one_artefact_at_one_commit_side_by_side(
     assert "0 error(s), 0 warning(s)." in result.output
 
 
-def test_two_providers_claiming_one_check_collide_until_the_project_settles_it(
+def test_two_fillers_claiming_one_check_collide_until_the_project_settles_it(
     project: AdopterRepo,
 ) -> None:
     """Only a real double claim collides: the point is unresolved and `pkit validate`
@@ -613,8 +613,8 @@ def test_two_providers_claiming_one_check_collide_until_the_project_settles_it(
     assert _validate_connections().exit_code == 0
 
 
-def test_one_provider_gives_each_result_its_own_check(project: AdopterRepo) -> None:
-    """Two results of one provider for one artefact at one commit stand under two
+def test_one_filler_gives_each_result_its_own_check(project: AdopterRepo) -> None:
+    """Two results of one filler for one artefact at one commit stand under two
     checks. Under one check the filler supplies an id twice: the whole filler is inert
     — all its evidence gone — and warned, and the other fillers still count."""
     sandbox, timeout = _entry("UC-001", check=BRIDGE), _entry("UC-001", check=TIMEOUT)
@@ -720,7 +720,7 @@ def test_an_evidence_entry_s_id_is_its_own_three_fields(
 ) -> None:
     """The id is the artefact, commit and check the result is for: an entry whose id
     names another commit or another check is an error naming the entry, and nothing
-    more is read from it — which of the two is meant cannot be told."""
+    more is read from it — whether the id or the fields are meant cannot be told."""
     miskeyed = {**_entry("UC-001"), "id": _id("UC-001", commit, check)}
     seeded.write(
         {
@@ -760,7 +760,8 @@ def test_a_journey_s_evidence_names_use_cases_of_the_analysis(seeded: AdopterRep
         (
             f"{RECORD}:/evidence/0/steps/1",
             "no use case UC-009 in the analysis: a journey's evidence names the use cases its "
-            "run passed through, by id, withdrawn ones included (DEC-001 points 3 and 7)",
+            "run passed through, by id, withdrawn ones included (DEC-001 points 4 and 6; "
+            "`schemas/revalidation-evidence.schema.json`)",
         )
     ]
     # Withdrawn since the run, the journey and its second use case with it: the record
@@ -857,7 +858,7 @@ def test_the_point_s_own_entries_warn_on_a_check_or_id_not_their_own(
         (
             f"{EVIDENCE}#{_id('UC-001', check=TRACE)}",
             f"'pytest-bridge' reports it under the check {TRACE}, which opens with "
-            "'trace-runner': a capability's checks open with its own name, so two providers' "
+            "'trace-runner': a capability's checks open with its own name, so two fillers' "
             "results for one artefact at one commit stand side by side and only a real double "
             "claim collides — 'pytest-bridge' names its checks pytest-bridge.… (DEC-001 point 7)",
         ),

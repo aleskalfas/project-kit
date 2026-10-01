@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "reading-evidence.schema.json",
   "title": "Reading evidence — the value of pkit::documentation:reading-evidence, version 1",
-  "description": "The data point's companion schema (COR-052 point 5; living-docs DEC-001 point 7): the results of executed checks that follow the documentation — a simulated reader running a guide against the system, say. This capability runs no such check; the results arrive from a capability that does, or from the project's own filler file. One entry per result, keyed by three parts — the page or path, the commit and the check: its `id` is `<path>@<commit>#<check>`. So two providers' results for one page at one commit stand side by side, and only two that claim one check collide. The point is `union`, no default takes part, and its inert policy is `fallback`, because the evidence advises: it informs a reader-review and never replaces one (DEC-001 point 6). The version rises only on a change that breaks existing fillers.",
+  "description": "The data point's companion schema (COR-052 point 5; living-docs DEC-001 point 7): the results of executed checks that follow the documentation — a simulated reader running a guide against the system, say. This capability runs no such check; the results arrive from a capability that does, or from the project's own filler file. One entry per result, keyed by three parts — the page or path, the commit and the check: its `id` is `<path>@<commit>#<check>`. So two fillers' results for one page or path at one commit stand side by side, and only two that claim one check collide. The point is `union`, no default takes part, and its inert policy is `fallback`, because the evidence advises: it informs a reader-review and never replaces one (DEC-001 point 6). The version rises only on a change that breaks existing fillers.",
   "type": "array",
   "items": { "$ref": "#/$defs/evidence" },
   "$defs": {
@@ -37,7 +37,7 @@
           "$ref": "#/$defs/commit"
         },
         "check": {
-          "description": "The executed check that gave the result: the name its provider gives it, the same from commit to commit, one per result it reports for a page at a commit — one filler never supplies an id twice, and the whole filler is inert if it does. It opens with the provider's own name: a capability's, or `project` for the project's own (DEC-001 point 7).",
+          "description": "The executed check that gave the result: the name its filler gives it, kept from commit to commit, one per result it reports for a page or path at one commit — one filler never supplies an id twice, and the whole filler is inert if it does. By convention it opens with the filler's own name: a capability's, or `project` for a project file's (DEC-001 point 7).",
           "$ref": "#/$defs/check-name"
         },
         "outcome": {

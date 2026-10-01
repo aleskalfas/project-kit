@@ -170,7 +170,7 @@ EVIDENCE_ENTRY = {
 
 
 def test_the_reading_evidence_schema_keys_an_entry_by_page_commit_and_check() -> None:
-    """Three parts (DEC-001 point 7): two providers' results for one page at one
+    """Three parts (DEC-001 point 7): two fillers' results for one page at one
     commit stand side by side under their own checks; the commit by its full name."""
     schema = _schema(CAPABILITY, "reading-evidence.schema.json")
     assert schema.is_valid([EVIDENCE_ENTRY])

@@ -80,8 +80,8 @@ connections:
           Executed results that confirm or refute an analysis artefact at a
           commit — a test run against a use case, a trace through a journey —
           one entry per result, keyed by the artefact, the commit and the
-          check, the name the provider gives one executed check, opening with
-          its own name. Supplied by a capability that runs such checks, or by
+          check, the name its filler gives one executed check, opening with
+          the filler's own name. Supplied by a capability that runs such checks, or by
           the project; this capability runs none. Advisory: a revalidation
           record copies the entries it draws on as support for an artefact's
           outcome and never in place of one, so a filler that cannot answer is
