@@ -1745,6 +1745,33 @@ def test_interpretation_only_json_carries_no_miss_surface(contract_repo, monkeyp
     assert "misses" not in json.dumps(payload)
 
 
+def test_interpretation_view_cannot_be_mistaken_for_a_clean_default_run(
+    contract_repo, monkeypatch
+) -> None:
+    # The same reality, one real miss: the default run reports it and exits 1;
+    # the interpretation view exits 0 and carries no miss total at all. Told
+    # apart only by an ABSENT key, a consumer reading
+    # `totals.get("missed", 0)` would call the interpretation payload clean. So
+    # each payload names its view, and the one without a miss surface never
+    # claims to be the full one.
+    default = _invoke_health(contract_repo, monkeypatch, "--json")
+    interpretation = _invoke_health(contract_repo, monkeypatch, "--interpretation-only", "--json")
+    assert default.exit_code == 1 and interpretation.exit_code == 0
+    full_payload = json.loads(default.output)
+    interpretation_payload = json.loads(interpretation.output)
+
+    assert full_payload["view"] == "full"
+    assert full_payload["totals"]["missed"] == 1
+    assert interpretation_payload["view"] == "interpretation-only"
+    assert "missed" not in interpretation_payload["totals"]
+
+    def missed_by_a_view_checking_consumer(payload: dict) -> int | None:
+        return payload["totals"]["missed"] if payload["view"] == ph.VIEW_FULL else None
+
+    assert missed_by_a_view_checking_consumer(full_payload) == 1
+    assert missed_by_a_view_checking_consumer(interpretation_payload) is None
+
+
 def test_interpretation_only_reports_indeterminates(contract_repo, monkeypatch) -> None:
     # Break the candidate source: the contract stops being interpretable and
     # the variant exits non-zero, naming the indeterminacy.

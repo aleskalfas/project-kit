@@ -761,7 +761,8 @@ def test_json_shape_and_totals(health_repo) -> None:
     _add_screen(repo, "s-2")
     _set_pickups(repo, {"s-2": ["unit-2"]})
     payload = json.loads(ph.render_json(ph.build_report(repo)))
-    assert set(payload) == {"contracts", "skipped", "unresolved_scope", "totals"}
+    assert set(payload) == {"view", "contracts", "skipped", "unresolved_scope", "totals"}
+    assert payload["view"] == "full"
     assert payload["totals"] == {"missed": 1, "indeterminate": 0}
     assert payload["skipped"] == []
     # A bare run makes no scope claim, so the key is present and null.

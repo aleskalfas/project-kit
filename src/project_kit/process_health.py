@@ -125,6 +125,14 @@ if TYPE_CHECKING:
 KIND_MISSED = "missed"
 KIND_INDETERMINATE = "indeterminate"
 
+# The `view` each `--json` payload names. The two payloads otherwise differ only
+# by keys the interpretation view leaves OUT, so a consumer reading
+# `totals.get("missed", 0)` would take that view's silence on misses for "none
+# missed" — a false green on the machine surface. A key is added, never
+# removed, so neither payload's existing shape moves.
+VIEW_FULL = "full"
+VIEW_INTERPRETATION_ONLY = "interpretation-only"
+
 
 @dataclass(frozen=True)
 class HandoffContract:
@@ -1051,8 +1059,10 @@ def render_interpretation_json(report: InterpretationReport) -> str:
     """The interpretation-only machine form: the health `--json` shape minus
     every miss surface (no `misses` arrays, no missed/at_trigger/satisfied
     counts — those would let a consumer derive the miss count this view
-    deliberately does not report). Byte-stable like the full form."""
+    deliberately does not report). Byte-stable like the full form. `view`
+    names it, so no consumer can read its missing miss total as zero."""
     payload = {
+        "view": VIEW_INTERPRETATION_ONLY,
         "contracts": [
             {
                 "upstream": cr.contract.upstream,
@@ -1076,8 +1086,10 @@ def render_interpretation_json(report: InterpretationReport) -> str:
 def render_json(report: HealthReport) -> str:
     """The byte-stable machine form (ADR-024's invariant: deterministic order,
     no TTY styling, identical bytes across runs). Contracts carry the report's
-    topological order; keys sort; subject arrays are pre-sorted."""
+    topological order; keys sort; subject arrays are pre-sorted. `view` tells
+    it from the interpretation-only form, which omits the miss surface."""
     payload = {
+        "view": VIEW_FULL,
         "contracts": [
             {
                 "upstream": cr.contract.upstream,
