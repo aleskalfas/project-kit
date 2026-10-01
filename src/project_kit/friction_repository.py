@@ -6,9 +6,12 @@ reachable from HEAD and not from the artefact's **revalidation point** touched
 it. The points come from git, never from a ledger (point 9):
 
 - the *revalidation point* is the last commit, following renames, in which
-  the parsed value of `at` changed; for an artefact without `at`, the commit
-  that introduced its block (point 3). A move after that point with no
-  revalidation is reported, since rename detection may hide earlier changes.
+  the parsed value of `at` changed to the one the artefact carries; for an
+  artefact without `at`, the commit that introduced its block (point 3). A
+  commit that wrote an `at` the artefact no longer carries — one side's
+  revalidation, where a merge kept the other side's — is never the point,
+  however recent its date. A move after that point with no revalidation is
+  reported, since rename detection may hide earlier changes.
 - a *deferral point* is the commit that first introduced the deferral entry,
   by anchor kind and value; rewording its reason does not move it (point 4).
   A deferral covers its anchor up to its point only.
@@ -704,10 +707,13 @@ class _Walker:
         So a version on a merged branch is compared with its own ancestor,
         never with whatever the log lists next; a merge commit that wrote a
         new marker while merging is that marker's point, and one that kept a
-        side's marker is not — the side's own commit is. When no listed
-        commit shows the change, the point is the commit that added the file.
-        Once every point is found the walk goes on without reading a blob,
-        for the file's names and its renames.
+        side's marker is not — the side's own commit is. The revalidation
+        point is, besides, a commit that wrote the marker the artefact
+        carries: where a merge kept one side's revalidation, the other side's
+        is not in the file, and its commit is passed over however the log
+        orders it by date. When no listed commit shows the change, the point
+        is the commit that added the file. Once every point is found the walk
+        goes on without reading a blob, for the file's names and its renames.
         """
         at = parsed_at(artefact)
 
@@ -717,6 +723,7 @@ class _Walker:
                 return None if version is None else parsed_at(version)
             return version is not None and version.has_friction_block
 
+        carried = marker(artefact)
         wanted = [d.anchor for d in artefact.deferrals]
         pending = set(wanted)
         deferral_points: dict[Anchor, int | None] = {}
@@ -745,7 +752,7 @@ class _Walker:
                 break
             here = self.same_at(version, artefact)
             before = self.same_in_parents(version, artefact)
-            if revalidation is None and _changed(marker, here, before):
+            if revalidation is None and marker(here) == carried and _changed(marker, here, before):
                 revalidation = version.index
             for anchor in list(pending):
                 if _defers(here, anchor) and not any(_defers(p, anchor) for p in before):
