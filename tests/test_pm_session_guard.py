@@ -510,6 +510,7 @@ _READ_ONLY_EXEMPT = frozenset(
         "detect-done.py",
         "detect-in-progress.py",
         "detect-review.py",
+        "detect-state.py",
         "detect-todo.py",
         # Transition gates / invariant checks (read-only predicates).
         "gate-checkboxes-ticked.py",
