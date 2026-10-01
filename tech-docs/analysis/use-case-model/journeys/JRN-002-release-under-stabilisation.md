@@ -15,9 +15,9 @@ pkit:
         - UC-010
         - UC-005
     revalidated:
-      at: 2026-10-01T01:25:13Z
+      at: 2026-10-01T15:15:20Z
       outcome: unchanged
-      unchanged-because: "on this branch the anchored code changed only in layout: ruff format and the lint fixes; behaviour and the documented commands are unchanged"
+      unchanged-because: "_lib/milestone.py gains the rollforward reads; the journey's steps are UC-010 and UC-005, which hold: the release Milestone closes with every child closed, so its close rolls nothing forward"
 ---
 
 # JRN-002 — Release with unfinished work under a stabilisation

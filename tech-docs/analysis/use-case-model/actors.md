@@ -16,9 +16,9 @@ ACT-clone-session:
           - project-management:DEC-029
           - project-management:DEC-035
       revalidated:
-        at: 2026-09-30T23:14:23Z
+        at: 2026-10-01T15:15:07Z
         outcome: unchanged
-        unchanged-because: The project-manager body gains a dispatch line sending a request for reviewer verdicts to transition-state's review step (review-pr once CI is green); who the clone session is and what it needs from the tracker are untouched.
+        unchanged-because: The project-manager body's date-based Milestone trigger now names close-milestone, which rolls the open children forward; who the clone session is and what it needs from the tracker are untouched.
 ACT-developer-subagent:
   name: Developer subagent
   status: active
