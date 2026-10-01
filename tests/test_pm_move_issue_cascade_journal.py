@@ -150,34 +150,47 @@ def test_check_drift_finds_no_drift_on_a_cascaded_parent(
     assert "no ungoverned state changes detected" in history
 
 
-# --- a refusal, a re-run, logging off -------------------------------------
+# --- a parent in Todo, a re-run, logging off ------------------------------
 
 
-def test_a_cascaded_move_the_engine_refuses_warns_like_a_direct_move(
+def test_a_parent_in_todo_is_taken_through_backlog_one_recorded_move_at_a_time(
     world: World, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    # The child starts from Backlog while its parent is still in Todo. The
-    # cascade writes the parent's label straight to In Progress, a move the
-    # workflow does not declare, and the engine refuses to record it.
-    parent = world.file_issue(title="[Feature] A feature", labels=())
+    """#1229: a child starts from Backlog while its Feature and the Feature's
+    EPIC are still in Todo. The workflow declares no Todo → In Progress, so
+    each goes to Backlog and then to In Progress, two label writes and two
+    recorded moves, each naming the child's start as its reason."""
+    epic = world.file_issue(title="[EPIC] An epic", labels=())
+    parent = world.file_issue(
+        body=f"EPIC: #{epic}\n\n## What\n", title="[Feature] A feature", labels=()
+    )
     child = _file_child(world, parent, "Feature", labels=("type:task", "state:backlog"))
     capsys.readouterr()
 
     assert world.move(child, "in-progress") == 0
+
     moved = capsys.readouterr()
-    assert f"[cascade] #{parent}: todo → in-progress" in moved.out
-    assert (
-        f"[warn] {ENGINE_WARNING}: refused: no transition from 'todo' to 'in-progress'. "
-        in moved.err
-    )
-    assert f"`pkit pm history {parent} --check-drift` will show the gap" in moved.err
-    assert world.views(parent) == ("in-progress", "in-progress")
-    assert world.moves(parent) == []
+    assert "[warn]" not in moved.err
+    for number in (parent, epic):
+        steps = f"[cascade] #{number}: todo → backlog\n[cascade] #{number}: backlog → in-progress\n"
+        assert steps in moved.out
+        assert world.moves(number) == [
+            ("todo", "backlog", "promote-issue"),
+            ("backlog", "in-progress", "start-work"),
+        ]
+        assert [entry["reason"] for entry in world.journal(number)] == [
+            _reason(child, "backlog → in-progress")
+        ] * 2
+        assert world.labels(number) == ["state:in-progress"]
+        assert world.views(number) == ("in-progress", "in-progress")
     # The child's own move is unaffected.
     assert world.moves(child) == [("backlog", "in-progress", "start-work")]
 
-    # And the drift check shows the gap the warning named.
-    assert world.history(parent) == 3
+    # And the drift check finds every state change journaled.
+    for number in (parent, epic):
+        capsys.readouterr()
+        assert world.history(number) == 0
+        assert "2 governed move(s) journaled · 2 state-label change(s)" in capsys.readouterr().out
 
 
 def test_a_rerun_or_a_siblings_move_adds_no_second_entry(
