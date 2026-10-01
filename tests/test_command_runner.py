@@ -19,7 +19,10 @@
   --script` interpreter stays in the group;
 - the predicate policy passes the subject and `--json` and leaves the
   environment as it is but for the run's deadline: no offline marker, a
-  predicate may reach the network.
+  predicate may reach the network;
+- what a no-answer shows (#752): every ending is described as a message names
+  it, and standard error is shown only as its tail — bounded in lines and in
+  bytes, its escape sequences and control characters removed.
 """
 
 from __future__ import annotations
@@ -645,6 +648,77 @@ def test_the_predicate_policy_stops_a_grandchild_at_the_bound(
     assert runner.run_raw({"run": "probe"}) is None
     assert time.monotonic() - started < 15
     _assert_gone(int((runner.capability_dir / "scripts" / "probe.py.pid").read_text()))
+
+
+# --- what a no-answer shows (#752) ------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("run", "described"),
+    [
+        (
+            CommandRun(Ending.NOT_STARTED, 30, detail="[Errno 13] no"),
+            "could not start: [Errno 13] no",
+        ),
+        (CommandRun(Ending.TIMED_OUT, 30), "did not answer within 30 s and was stopped"),
+        (CommandRun(Ending.ABNORMAL_EXIT, 30, returncode=2), "exited 2"),
+        (CommandRun(Ending.ABNORMAL_EXIT, 30, returncode=-9), "was ended by signal 9"),
+        (
+            CommandRun(Ending.UNPARSABLE, 30, returncode=0),
+            "printed no JSON document on its standard output",
+        ),
+        (
+            CommandRun(Ending.UNPARSABLE, 30, returncode=0, detail="standard output is not UTF-8"),
+            "standard output is not UTF-8",
+        ),
+    ],
+    ids=["not-started", "timed-out", "exit", "signal", "unparsable", "not-utf-8"],
+)
+def test_every_ending_is_described_as_a_message_names_it(run: CommandRun, described: str) -> None:
+    assert run.ending_described == described
+
+
+def test_a_short_diagnostic_is_shown_whole_without_blank_lines() -> None:
+    assert command_runner.diagnostic_tail("\nfirst\n\n   \nsecond  \n") == "first\nsecond"
+    assert command_runner.diagnostic_tail("") == ""
+
+
+def test_a_long_diagnostic_keeps_only_its_last_lines() -> None:
+    lines = [f"line {n}" for n in range(50)]
+    tail = command_runner.diagnostic_tail("\n".join(lines))
+    kept = lines[-command_runner.DIAGNOSTIC_TAIL_LINES :]
+    assert tail == "…" + "\n".join(kept)
+
+
+def test_an_oversized_diagnostic_is_cut_to_its_last_bytes() -> None:
+    tail = command_runner.diagnostic_tail("x" * 100_000 + "END")
+    assert tail.startswith("…") and tail.endswith("END")
+    assert len(tail.encode("utf-8")) == command_runner.DIAGNOSTIC_TAIL_BYTES
+
+
+def test_a_cut_through_a_multibyte_character_drops_what_is_left_of_it() -> None:
+    tail = command_runner.diagnostic_tail("é" * 5_000)
+    assert len(tail.encode("utf-8")) <= command_runner.DIAGNOSTIC_TAIL_BYTES
+    assert set(tail) == {"…", "é"}  # no replacement character from a split byte pair
+
+
+def test_a_diagnostic_cannot_rewrite_the_terminal() -> None:
+    text = (
+        "\x1b[31mred\x1b[0m \x1b[2J\x1b[H"  # colour, clear screen, cursor home
+        "\x1b]0;window title\x07\x1b]8;;https://x\x1b\\link\x1b]8;;\x1b\\"  # title, hyperlink
+        "\x1bc\x00\x07\x08\x7f\x9b6n\tend‮gnp.exe\n"  # reset, NUL, bell, C1 CSI, bidi
+    )
+    assert command_runner.diagnostic_tail(text) == "red link6n endgnp.exe"
+
+
+def test_a_run_s_undecodable_diagnostics_are_shown_safely(tmp_path: Path) -> None:
+    script = _script(
+        tmp_path / "cmd.py",
+        "import sys\nsys.stderr.buffer.write(b'\\xff\\x1b[2Jbad\\x00 byte\\n')\nsys.exit(1)\n",
+    )
+    run = run_command(script, [], cwd=tmp_path)
+    assert run.ending is Ending.ABNORMAL_EXIT
+    assert run.stderr_tail == "�bad byte"
 
 
 def test_a_run_reports_rather_than_raises(tmp_path: Path) -> None:
