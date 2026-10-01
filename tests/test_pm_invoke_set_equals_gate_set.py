@@ -299,7 +299,10 @@ def _invoke_set(rpr, monkeypatch, tmp_path, *, collection, labels, opt_outs=()):
 
     invoked: list[str] = []
 
-    def fake_invoke(name, pr_number, config, timeout=None, effort=None):
+    def fake_invoke(
+        name, pr_number, config, timeout=None, effort=None, *, base=None,
+        head="HEAD",
+    ):
         invoked.append(name)
         return "APPROVED", "body"
 
@@ -513,10 +516,12 @@ def test_invoke_set_equals_gate_set_on_fail_closed(dw, rpr, rc, monkeypatch, tmp
     monkeypatch.setattr(rpr, "_find_issue_branch", lambda n: f"feat/{n}-x")
     monkeypatch.setattr(rpr, "_find_pr_for_branch", lambda branch, config: {"number": 99})
     invoked: list[str] = []
-    monkeypatch.setattr(
-        rpr, "_invoke_agent",
-        lambda name, pr, config, timeout=None, effort=None: (invoked.append(name), ("APPROVED", "body"))[1],
-    )
+
+    def fake_invoke(name, pr, config, timeout=None, effort=None, **_brief):
+        invoked.append(name)
+        return "APPROVED", "body"
+
+    monkeypatch.setattr(rpr, "_invoke_agent", fake_invoke)
     monkeypatch.setattr(rpr, "_post_comment", lambda pr, body, config: True)
     monkeypatch.setattr(sys, "argv", ["review-pr", "99"])
     assert rpr.main() == 2
