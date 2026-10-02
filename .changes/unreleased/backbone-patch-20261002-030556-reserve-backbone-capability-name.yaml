@@ -1,0 +1,22 @@
+component: backbone
+kind: patch
+custom:
+  category: Changed
+body: >
+  `backbone` is a reserved capability name, as `core`, `project` and `adr`
+  are: `pkit new capability`, `pkit capabilities install` and `pkit
+  capabilities register` refuse it, giving the reason (#1292). `backbone` is
+  the name the backbone carries where a component's carry the component's
+  name: the component of the backbone's changesets, the owner of its
+  validators, the component its rule sets are cited with, and the component
+  its documentation locations are recorded under, so a capability named
+  `backbone` would have its changesets, validators, rule sets and
+  documentation locations read as the backbone's. A project that already has
+  a capability named `backbone` keeps it registered, but sees `pkit validate`
+  fail with an error at that capability's `component.name` that names the
+  rename: `pkit capabilities uninstall backbone` (which keeps an authored
+  capability's files), rename the directory and its `component.name`, and
+  `pkit capabilities register <new-name>`; one a sync restores is its
+  author's to rename, and is uninstalled until it ships under another name.
+  Until it is renamed, `pkit capabilities register backbone` and `pkit
+  capabilities refresh backbone` refuse it as well.
