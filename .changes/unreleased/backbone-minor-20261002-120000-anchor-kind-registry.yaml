@@ -1,0 +1,30 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  A capability registers an anchor kind with its resolver under
+  `friction.kinds` in its package metadata: a mapping from the kind to an
+  entry whose `command` names the `commands:` leaf that resolves it. The
+  `packages` member of `pkit validate` reports a resolver whose leaf does not
+  declare `query-contract: true`, as it reports a validator and a command
+  filler, and refuses a kind the backbone resolves itself (`path`, `record`,
+  `artefact`) and a kind two installed capabilities register, at each
+  registration. The anchor-kind registry reads the key, so the friction
+  checks and rule-set validation refuse such a resolver before any run. A
+  resolver that may run is run under the query policy — the anchor value and
+  `--json` as its arguments, from the project root, the offline marker set,
+  the base override removed, bounded by thirty seconds — once per anchor
+  value for a run, and answers `{"paths": [...]}`: the files of the working
+  tree the anchor stands on. The change check asks an artefact when the diff
+  changed the content of one of them, and the whole-repository check finds
+  it stale when a commit after its revalidation point did; the files count
+  as anchored surface. An answer naming no file makes the anchor dead. An
+  abnormal exit, a timeout, an environment not provisioned or an answer in
+  any other shape is no answer: the anchor is reported unresolved, and the
+  change check reports it whether or not the diff added it, since what it
+  stood on at the base cannot be read. Rule-set validation resolves a cited
+  source through its kind's resolver: a source whose resolver names no file
+  fails (`missing-source`), and one whose resolver gives no answer is
+  reported. `pkit init` and `pkit sync` provision a resolver's script as they
+  provision a validator's.

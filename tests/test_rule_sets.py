@@ -429,10 +429,11 @@ def test_a_source_of_a_core_anchor_kind_is_no_source_kind(adopter: AdopterRepo) 
 def test_a_source_is_judged_through_the_resolver_its_kind_registers(
     adopter: AdopterRepo, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The pass reads the one anchor-kind registry the friction checks read and takes
-    its verdict on the kind (COR-051 point 5; ADR-057 point 2). No package metadata
-    declares an anchor kind yet, so the synthetic resolver is registered at the
-    registry itself — the function every engine calls."""
+    """The pass reads the one anchor-kind registry the friction checks read, takes its
+    verdict on the kind, and resolves the source through the resolver the kind
+    registers (COR-051 point 5; ADR-057 point 2). The synthetic resolver is
+    registered at the registry itself — the function every engine calls — and its
+    run stood in for (`run_resolver`); `test_friction_anchor_kinds` runs real ones."""
     front = cmn()
     front["rules"]["RS-CMN-001"]["origin"]["source"] = {"kind": "transcript", "value": "t-12"}
     front["rules"]["RS-CMN-005"]["origin"]["source"] = {"kind": "transcript", "value": "t-13"}
@@ -449,16 +450,15 @@ def test_a_source_is_judged_through_the_resolver_its_kind_registers(
 
         monkeypatch.setattr(fd, "registered_anchor_kinds", registry)
 
-    # Registered with the query contract: judged by that resolver, which fails closed
-    # while registered resolvers are not run — never as a kind nothing registers.
+    # Registered with the query contract but naming no command: its resolver gives no
+    # answer, so the source is reported — never as a kind nothing registers.
     register(declared)
     result = validate(adopter)
     assert [f.kind for f in result.findings] == [Kind.UNRESOLVED_SOURCE_KIND] * 2
     assert reads == [adopter.root]  # the registry is read once per pass
     message = result.findings[0].message
-    assert (
-        "the resolver `resolve transcript` that sources registers for it is not run yet" in message
-    )
+    assert "source transcript:t-12 is unresolved: its resolver gave no answer" in message
+    assert "command 'resolve transcript' is not declared in the `commands:` of sources" in message
     reason = fd.unresolved_kind_reason("transcript", {})
     assert reason is not None and reason not in message
 
@@ -467,17 +467,31 @@ def test_a_source_is_judged_through_the_resolver_its_kind_registers(
     refused = validate(adopter).findings[0].message
     assert "does not declare the query contract" in refused
 
-    # Once the registry resolves the kind, a source of it resolves through it: no report.
+    # The kind resolves: each source is what its resolver answers for its value.
     register(declared)
-    verdicts: list[tuple[str, fd.ResolverCommand]] = []
+    asked: list[str] = []
+    answers = {"t-12": ("transcripts/t-12.md",), "t-13": ()}
 
-    def resolving(kind: str, registry: Mapping[str, fd.ResolverCommand]) -> str | None:
-        verdicts.append((kind, registry[kind]))
-        return None
+    def resolving(
+        root: Path, resolver: fd.ResolverCommand, value: str, files: object
+    ) -> fd.AnchorResolution:
+        assert resolver == declared
+        asked.append(value)
+        return fd.AnchorResolution(paths=answers[value])
 
-    monkeypatch.setattr(fd, "unresolved_kind_reason", resolving)
-    assert validate(adopter).findings == ()
-    assert verdicts == [("transcript", declared)] * 2
+    monkeypatch.setattr(fd, "run_resolver", resolving)
+    result = validate(adopter)
+    assert sorted(asked) == ["t-12", "t-13"]
+    # A source naming a file resolves; one its resolver names no file for fails validation.
+    assert [f.kind for f in result.findings] == [Kind.MISSING_SOURCE]
+    missing = only(result, Kind.MISSING_SOURCE)
+    assert missing.severity is rs.Severity.ERROR
+    assert missing.where == f"{PROJECT_SETS}/cmn.md#RS-CMN-005 /origin/source"
+    assert missing.message == (
+        "cites source transcript:t-13, which does not resolve: the resolver `resolve "
+        "transcript` that sources registers for `transcript` names no file for it (COR-051 "
+        "point 5)."
+    )
 
 
 # --- successors ---------------------------------------------------------------------

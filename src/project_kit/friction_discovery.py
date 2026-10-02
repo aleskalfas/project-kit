@@ -102,7 +102,7 @@ import io
 import json
 import os
 import re
-from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
+from collections.abc import Callable, Collection, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from enum import Enum
 from pathlib import Path, PurePosixPath
@@ -1330,6 +1330,10 @@ CORE_ANCHOR_KINDS: tuple[str, ...] = ("path", "record", "artefact")
 KINDS_KEY = "kinds"
 KIND_COMMAND_KEY = "command"
 
+#: The one key of a resolver's answer: the files of the working tree the
+#: anchor stands on (`resolver_answer`; the lifecycle README).
+RESOLVER_PATHS_KEY = "paths"
+
 
 @dataclass(frozen=True)
 class ResolverCommand:
@@ -1430,12 +1434,15 @@ def registered_anchor_kinds(target_root: Path) -> dict[str, ResolverCommand]:
 
 
 def unresolved_kind_reason(kind: str, registry: Mapping[str, ResolverCommand]) -> str | None:
-    """`None` when the backbone resolves `kind`; otherwise why nothing does.
+    """`None` when an anchor of `kind` can be resolved; otherwise why nothing resolves it.
 
-    A kind two capabilities register is refused, for both. A registered kind
-    passes `refuse_resolver_without_query_contract` before its resolver could
-    run; one that passes is still unresolved, since registered resolvers are
-    not run yet — failing closed (COR-050 point 2).
+    The backbone resolves its own kinds. A registered kind can be resolved when
+    one installed capability registers it and its command declares the query
+    contract (`refuse_resolver_without_query_contract`): a kind two
+    capabilities register is refused for both, and a resolver without the
+    declaration is refused before it could run. Whether one anchor of a kind
+    that can be resolved does resolve is its resolver's answer
+    (`AnchorKinds.resolve`), which fails closed (COR-050 point 2).
     """
     if kind in CORE_ANCHOR_KINDS:
         return None
@@ -1447,13 +1454,158 @@ def unresolved_kind_reason(kind: str, registry: Mapping[str, ResolverCommand]) -
             f"the capabilities {', '.join(resolver.registrants)} each register it, and a kind "
             f"registered more than once is refused: none of their resolvers runs"
         )
+    return refuse_resolver_without_query_contract(resolver)
+
+
+@dataclass(frozen=True)
+class AnchorResolution:
+    """What a resolver answered for one anchor value (COR-050 point 2).
+
+    `paths` are the files of the working tree the anchor stands on, sorted —
+    none when it denotes nothing, which makes the anchor dead. `no_answer`
+    says why the resolver gave no answer, when it gave none: the anchor is
+    then unresolved, never resolved — whether what it denotes changed cannot
+    be told.
+    """
+
+    paths: tuple[str, ...] = ()
+    no_answer: str | None = None
+
+
+def resolver_answer(document: Any, reference: str, files: Collection[str]) -> AnchorResolution:
+    """A resolver's answer, read failing closed (COR-050 point 2; ADR-057 point 3).
+
+    The answer is exactly `{"paths": [...]}`: every entry a repository-relative
+    POSIX path naming a file of the working tree's one listing (`files`), a
+    path named twice counted once. Anything else — another document, another
+    key, an entry that is not text or names no file the working tree holds
+    (an absolute path, one climbing with `..`, a folder) — is no answer, never
+    a partial one.
+    """
+    expected = f'expected exactly `{{"{RESOLVER_PATHS_KEY}": [...]}}`'
+    if not isinstance(document, Mapping) or set(cast(Mapping[Any, Any], document)) != {
+        RESOLVER_PATHS_KEY
+    }:
+        return AnchorResolution(
+            no_answer=f"command {reference!r} printed no resolver answer: {expected}"
+        )
+    listed = cast(Mapping[str, Any], document)[RESOLVER_PATHS_KEY]
+    if not isinstance(listed, list):
+        return AnchorResolution(
+            no_answer=(
+                f"command {reference!r} answered `{RESOLVER_PATHS_KEY}` that is not a list: "
+                f"{expected}"
+            )
+        )
+    paths: set[str] = set()
+    for item in cast(list[Any], listed):
+        if not isinstance(item, str) or item not in files:
+            return AnchorResolution(
+                no_answer=(
+                    f"command {reference!r} answered {item!r}, which is not a file of the "
+                    f"working tree: every path a resolver answers is repository-relative and "
+                    f"names a file the repository holds"
+                )
+            )
+        paths.add(item)
+    return AnchorResolution(paths=tuple(sorted(paths)))
+
+
+def run_resolver(
+    target_root: Path, resolver: ResolverCommand, value: str, files: Collection[str]
+) -> AnchorResolution:
+    """Run `resolver` for one anchor value under the query policy, and read its answer
+    against `files`, the working tree's one listing (`resolver_answer`).
+
+    The policy every query command the backbone runs is under (ADR-057 point
+    3; the lifecycle README, "How a registered command is run"): the leaf must
+    declare the query contract, or it is not started; the script runs from the
+    project root with the anchor value — its one subject (COR-052 point 6) —
+    and `--json`, the offline marker set and the base override removed, in its
+    own process group, bounded by the backbone's one command bound and killed
+    as a group when it overruns (inside another run, by the time that run has
+    left, in the outermost run's group). An abnormal exit, a timeout, an
+    environment not provisioned or an answer `resolver_answer` cannot read is
+    no answer (`AnchorResolution.no_answer`).
+    """
     refusal = refuse_resolver_without_query_contract(resolver)
     if refusal is not None:
-        return refusal
-    return (
-        f"the resolver `{resolver.command}` that {resolver.capability} registers for it "
-        f"is not run yet"
+        return AnchorResolution(no_answer=refusal)
+    if resolver.script is None:
+        return AnchorResolution(
+            no_answer=(
+                f"command {resolver.command!r} is not declared in the `commands:` of "
+                f"{resolver.capability}"
+            )
+        )
+    if not resolver.script.is_file():
+        return AnchorResolution(
+            no_answer=f"command {resolver.command!r} names a script that does not exist"
+        )
+    run = command_runner.run_command(
+        resolver.script,
+        [value, validators.QUERY_FLAG],
+        cwd=target_root,
+        extra_env=validators.OFFLINE_MARKER,
+        drop_env=validators.QUERY_DROPPED_ENV,
     )
+    if run.ending is not command_runner.Ending.ANSWERED:
+        return AnchorResolution(
+            no_answer=validators.why_no_answer(run, resolver.command).rstrip(".")
+        )
+    return resolver_answer(run.document, resolver.command, files)
+
+
+class AnchorKinds:
+    """The anchor kinds one run resolves, and what each anchor of a registered kind
+    resolved to: each resolver run at most once per anchor value for the length of
+    the run (COR-050 point 2).
+
+    One per check or validation pass, over the one registry
+    (`registered_anchor_kinds`), or a registry a caller hands in.
+    """
+
+    def __init__(self, target_root: Path, registry: Mapping[str, ResolverCommand]) -> None:
+        self.target_root = target_root
+        self.registry = registry
+        self._resolved: dict[tuple[str, str], AnchorResolution] = {}
+
+    @functools.cached_property
+    def _files(self) -> frozenset[str]:
+        """The working tree's one listing, which every answer is read against: taken
+        once, when the first resolver runs."""
+        return frozenset(working_tree(self.target_root).files())
+
+    def unresolved(self, kind: str) -> str | None:
+        """Why nothing resolves an anchor of `kind` (`unresolved_kind_reason`), or `None`."""
+        return unresolved_kind_reason(kind, self.registry)
+
+    def resolve(self, anchor: Anchor) -> AnchorResolution:
+        """What the resolver `anchor`'s kind registers answered for its value.
+
+        Meaningful for a registered kind that can be resolved (`unresolved` is
+        `None`); any other kind gives no answer, saying why.
+        """
+        key = (anchor.kind, anchor.value)
+        if key not in self._resolved:
+            reason = self.unresolved(anchor.kind)
+            resolver = self.registry.get(anchor.kind)
+            if anchor.kind in CORE_ANCHOR_KINDS:
+                resolution = AnchorResolution(no_answer="the backbone resolves it itself")
+            elif reason is not None or resolver is None:
+                resolution = AnchorResolution(no_answer=reason)
+            else:
+                resolution = run_resolver(self.target_root, resolver, anchor.value, self._files)
+            self._resolved[key] = resolution
+        return self._resolved[key]
+
+    def files(self, anchor: Anchor) -> tuple[str, ...]:
+        """The files an anchor of a registered kind stands on — its resolver's answer —
+        or none: for a core kind, a kind nothing resolves, or a resolver that gave no
+        answer."""
+        if anchor.kind in CORE_ANCHOR_KINDS or self.unresolved(anchor.kind) is not None:
+            return ()
+        return self.resolve(anchor).paths
 
 
 # --- artefacts ----------------------------------------------------------

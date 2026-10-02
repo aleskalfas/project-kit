@@ -48,7 +48,7 @@ from dataclasses import dataclass, replace
 from enum import Enum
 from functools import cached_property
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import click
 from jsonschema import Draft202012Validator
@@ -565,6 +565,7 @@ class RuleSetFindingKind(Enum):
     MISSING_DECISION = "missing-decision"  # the cited record does not exist
     DECISION_NOT_ACCEPTED = "decision-not-accepted"  # an accepted rule citing an unaccepted record
     UNRESOLVED_SOURCE_KIND = "unresolved-kind"  # a source of a kind nothing resolves
+    MISSING_SOURCE = "missing-source"  # the cited source's resolver names no file for it
     SUCCESSOR_NOT_FOUND = "successor-not-found"
     SUCCESSOR_OUT_OF_LINE = "successor-out-of-line"  # not in the set or one inheriting it
     INHERITED_SET_MISSING = "inherited-set-missing"
@@ -970,7 +971,14 @@ def _source_findings(
     rule: Rule, origin: Mapping[str, Any], catalogue: _Catalogue
 ) -> Iterable[RuleSetFinding]:
     """A cited source resolves through the anchor kind a capability registers for it
-    (COR-051 point 5), judged by the one anchor-kind registry (ADR-057 point 2)."""
+    (COR-051 point 5), judged by the one anchor-kind registry (ADR-057 point 2) and
+    resolved by the resolver the kind registers, as the friction checks resolve an
+    anchor of it (`AnchorKinds`).
+
+    A kind nothing resolves, and a resolver that gives no answer, are reported:
+    the source is not checked, and the project cannot mend either. A source
+    whose resolver names no file for it does not resolve, which fails
+    validation (COR-051 point 5): its citation is the project's to correct."""
     source = origin.get("source")
     kind = source.get("kind") if isinstance(source, Mapping) else None
     if not isinstance(kind, str) or not kind:
@@ -984,6 +992,30 @@ def _source_findings(
             f"source kind {kind!r} is unresolved: {reason}, so the source is not checked "
             f"(COR-051 point 5; COR-050 point 2).",
         )
+        return
+    value: Any = cast("Mapping[str, Any]", source).get("value")
+    if not isinstance(value, str) or not value:
+        return  # malformed: the shape pass reports it
+    resolution = catalogue.resolutions.resolve(fd.Anchor(kind, value))
+    if resolution.no_answer is not None:
+        yield _report(
+            rule.location,
+            "/origin/source",
+            RuleSetFindingKind.UNRESOLVED_SOURCE_KIND,
+            f"source {kind}:{value} is unresolved: its resolver gave no answer — "
+            f"{resolution.no_answer} — so the source is not checked (COR-051 point 5; COR-050 "
+            f"point 2).",
+        )
+    elif not resolution.paths:
+        resolver = catalogue.anchor_kinds[kind]
+        yield _error(
+            rule.location,
+            "/origin/source",
+            RuleSetFindingKind.MISSING_SOURCE,
+            f"cites source {kind}:{value}, which does not resolve: the resolver "
+            f"`{resolver.command}` that {resolver.capability} registers for `{kind}` names no "
+            f"file for it (COR-051 point 5).",
+        )
 
 
 def _source_kind_problem(kind: str, registry: Mapping[str, fd.ResolverCommand]) -> str | None:
@@ -992,11 +1024,11 @@ def _source_kind_problem(kind: str, registry: Mapping[str, fd.ResolverCommand]) 
     A source is of a kind some capability resolves as an anchor kind (COR-051
     point 5), so the kinds the backbone resolves itself are not source kinds.
     Every other kind takes the verdict the friction checks give an anchor of
-    that kind (`unresolved_kind_reason`): unregistered, refused without the
-    query contract, or failing closed until registered resolvers run
-    (COR-050 point 2). This validator runs no resolver of its own, so a source
-    resolves exactly when the registry resolves its kind, and is never
-    silently passed.
+    that kind (`unresolved_kind_reason`): unregistered, registered by two
+    capabilities, or refused without the query contract (COR-050 point 2).
+    This validator runs no resolver of its own: a kind that passes is resolved
+    by the registry's resolver (`AnchorKinds`), so a source is never silently
+    passed.
     """
     if kind in fd.CORE_ANCHOR_KINDS:
         return (
@@ -1347,6 +1379,12 @@ class _Catalogue:
         """The anchor kinds installed capabilities register, from the one registry
         the friction checks read (`registered_anchor_kinds`; ADR-057 point 2)."""
         return fd.registered_anchor_kinds(self.target_root)
+
+    @cached_property
+    def resolutions(self) -> fd.AnchorKinds:
+        """The cited sources as their kinds' resolvers answer them — each resolver run
+        once per value for the pass, as the friction checks run them."""
+        return fd.AnchorKinds(self.target_root, self.anchor_kinds)
 
     def decision(self, record: str) -> tuple[Path | None, str | None]:
         """(the record's file, its status) for a cited decision id, or (None, None)."""

@@ -628,8 +628,9 @@ def _explained(
         )
     elif kind is _Kind.UNRESOLVED_KIND and anchor is not None:
         clears = (
-            f"install the component that resolves `{anchor.kind}` anchors, or remove "
-            f"{_label(anchor)} from the block and revalidate"
+            f"install the component that resolves `{anchor.kind}` anchors, or mend its resolver "
+            f"where the finding says it gave no answer, or remove {_label(anchor)} from the "
+            f"block and revalidate"
         )
     elif kind is _Kind.OVER_BROAD and anchor is not None:
         clears = (

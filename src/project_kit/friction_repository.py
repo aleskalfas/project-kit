@@ -119,7 +119,9 @@ from project_kit.friction_check import (
     uncommitted_paths,
 )
 from project_kit.friction_discovery import (
+    CORE_ANCHOR_KINDS,
     Anchor,
+    AnchorKinds,
     Artefact,
     ArtefactKind,
     Discovery,
@@ -130,7 +132,6 @@ from project_kit.friction_discovery import (
     pattern_matcher,
     read_friction_settings,
     registered_anchor_kinds,
-    unresolved_kind_reason,
 )
 from project_kit.project_config import PROJECT_CONFIG_RELPATH
 
@@ -872,7 +873,9 @@ class _Judge:
         self.history = history
         self.walker = walker
         self.blobs = blobs
-        self.registry = registry
+        self.kinds = AnchorKinds(head.root, registry)
+        """The anchor kinds, and each registered kind's anchors as their resolvers
+        answered — once per anchor value for the run (COR-050 point 2)."""
         self.unreadable: dict[str, str] = {}
         """The revalidation points whose `friction.exclude` does not read, and why:
         each read under HEAD's instead, and reported (`unreadable_findings`)."""
@@ -1131,11 +1134,33 @@ class _Judge:
     # --- the rule of point 5 ---------------------------------------------------------
 
     def problem(self, anchor: Anchor) -> RepositoryFinding | None:
-        """A dead anchor or an unresolved kind at HEAD (point 7), else `None`."""
-        reason = unresolved_kind_reason(anchor.kind, self.registry)
+        """A dead anchor or an unresolved kind at HEAD (point 7), else `None`.
+
+        An anchor of a registered kind is judged by its resolver's answer: no
+        answer leaves it unresolved — whether it changed cannot be told, so it
+        is never judged current (point 2) — and an answer naming no file
+        leaves it dead.
+        """
+        reason = self.kinds.unresolved(anchor.kind)
         if reason is not None:
             message = f"nothing installed resolves this kind: {reason}"
             return RepositoryFinding(RepositoryFindingKind.UNRESOLVED_KIND, message, anchor=anchor)
+        if anchor.kind not in CORE_ANCHOR_KINDS:
+            resolution = self.kinds.resolve(anchor)
+            if resolution.no_answer is not None:
+                return RepositoryFinding(
+                    RepositoryFindingKind.UNRESOLVED_KIND,
+                    f"its resolver gave no answer, so whether it changed cannot be told: "
+                    f"{resolution.no_answer}",
+                    anchor=anchor,
+                )
+            if not resolution.paths:
+                return RepositoryFinding(
+                    RepositoryFindingKind.DEAD_ANCHOR,
+                    "its resolver names no file for it",
+                    anchor=anchor,
+                )
+            return None
         if self.head.resolves(anchor):
             return None
         return RepositoryFinding(
@@ -1175,7 +1200,8 @@ class _Judge:
     def changes(
         self, anchor: Anchor, covered: frozenset[int], own: frozenset[str], point: int
     ) -> set[int]:
-        """Every commit outside `covered` that changed a live path or record anchor (point 5).
+        """Every commit outside `covered` that changed a live path, record or registered
+        anchor (point 5).
 
         A path anchor: each commit that touched a path it stands on at the
         revalidation point and at HEAD, the artefact's own names (`own`) left
@@ -1183,8 +1209,11 @@ class _Judge:
         each commit that changed a file it leaves out, lets in or that is gone
         while the anchor stood on the file (`counts`), and each that let one of
         its files in. A record anchor: each commit that changed the content of
-        the record's file. One pass over the history's listing, however many
-        there are.
+        the record's file. An anchor of a registered kind: each commit that
+        changed the content of a file its resolver says it stands on, followed
+        through renames as a record's file is, its artefact's own names left
+        out as a path anchor's are. One pass over the history's listing,
+        however many there are.
         """
         if anchor.kind == "path":
             touched = {
@@ -1201,23 +1230,31 @@ class _Judge:
                     if index not in covered and self.counts(index, rel)
                 )
             return touched | self.flips(moved.let_in, covered, excluded=False)
-        rel = self.head.record_path(anchor.value) if anchor.kind == "record" else None
-        if rel is None:
-            return set()
         return {
             v.index
+            for rel in self.files_of(anchor, own)
             for v in self.history.versions(rel)
             if v.index not in covered and v.entry.changes_content
         }
 
+    def files_of(self, anchor: Anchor, own: frozenset[str]) -> tuple[str, ...]:
+        """The files at HEAD a record anchor or an anchor of a registered kind stands
+        on: the record's file, or what its resolver answers, `own` left out; none for
+        another kind, or for one that resolves to nothing."""
+        if anchor.kind == "record":
+            rel = self.head.record_path(anchor.value)
+            return () if rel is None else (rel,)
+        return tuple(rel for rel in self.kinds.files(anchor) if rel not in own)
+
     def change(
         self, anchor: Anchor, covered: frozenset[int], own: frozenset[str], point: int
     ) -> Change | None:
-        """Whether a live anchor of a core kind changed outside `covered`, and where (point 5).
+        """Whether a live anchor changed outside `covered`, and where (point 5).
 
-        The first such commit: for a path or a record, the oldest of `changes`.
+        The first such commit: for a path, a record or a registered kind, the
+        oldest of `changes`; for an artefact, the first that changed its content.
         """
-        if anchor.kind in ("path", "record"):
+        if anchor.kind != "artefact":
             after = self.changes(anchor, covered, own, point)
             return Change(max(after)) if after else None
         target = self.head.find(anchor.value)
@@ -1300,7 +1337,7 @@ def run_repository_check(
                 location=unreadable.path,
             )
         )
-    surface, uncovered = _uncovered_surface(head, discovery)
+    surface, uncovered = _uncovered_surface(head, discovery, judge.kinds)
     unanchored, accepted = _unanchored(discovery)
     return RepositoryCheck(
         mode=settings.mode_or_default,
@@ -1533,13 +1570,16 @@ def _named_exclusion(
     )
 
 
-def _uncovered_surface(head: Side, discovery: Discovery) -> tuple[int, tuple[str, ...]]:
+def _uncovered_surface(
+    head: Side, discovery: Discovery, kinds: AnchorKinds
+) -> tuple[int, tuple[str, ...]]:
     """How many paths the declared surface holds at HEAD, and those no artefact anchors to.
 
     The surface is what the project and its capabilities say ought to be
     described (COR-050 point 8), excluded paths left out. A path is anchored
     when any artefact's path anchor stands on it (`Side.stands_on`), a record
-    anchor names it, or an artefact anchor names the artefact it holds.
+    anchor names it, an artefact anchor names the artefact it holds, or the
+    resolver of a registered kind answers it for an anchor (`AnchorKinds.files`).
     """
     surface: set[str] = set()
     for declared in head.settings.surface:
@@ -1559,6 +1599,8 @@ def _uncovered_surface(head: Side, discovery: Discovery) -> tuple[int, tuple[str
                 target = head.find(anchor.value)
                 if target is not None:
                     anchored.add(target.path)
+            else:
+                anchored.update(kinds.files(anchor))
     return len(surface), tuple(sorted(surface - anchored))
 
 
@@ -1828,7 +1870,8 @@ def _paths_behind(
     A path anchor's paths are the check's own (`_Judge.matching_paths`, and
     the files an exclusion change since the point left out, let in or found
     gone, less `own`); a record or artefact anchor's the names of the file it
-    names; a move's (no anchor) the artefact's own names.
+    names; a registered kind's the names of each file its resolver answers,
+    less `own`; a move's (no anchor) the artefact's own names.
     """
     if anchor is None:
         return own
@@ -1838,13 +1881,13 @@ def _paths_behind(
             judge.matching_paths(anchor.value, point)
             | frozenset(moved.left_out + moved.let_in + moved.gone)
         ) - own
-    rel: str | None = None
-    if anchor.kind == "record":
-        rel = judge.head.record_path(anchor.value)
-    elif anchor.kind == "artefact":
+    if anchor.kind == "artefact":
         target = judge.head.find(anchor.value)
-        rel = None if target is None else target.path
-    return frozenset() if rel is None else _names(judge.history, rel)
+        return frozenset() if target is None else _names(judge.history, target.path)
+    names = frozenset[str]().union(
+        *(_names(judge.history, rel) for rel in judge.files_of(anchor, own))
+    )
+    return names if anchor.kind == "record" else names - own
 
 
 def _names(history: History, path: str) -> frozenset[str]:
@@ -1966,7 +2009,9 @@ _LEGEND: dict[RepositoryFindingKind, str] = {
         "`friction.exclude` took files from an anchor, none changed since the point: owes nothing"
     ),
     RepositoryFindingKind.DEAD_ANCHOR: "an anchor resolving to nothing",
-    RepositoryFindingKind.UNRESOLVED_KIND: "an anchor kind no installed component resolves",
+    RepositoryFindingKind.UNRESOLVED_KIND: (
+        "an anchor of a kind nothing installed resolves, or whose resolver gave no answer"
+    ),
     RepositoryFindingKind.OVER_BROAD: (
         f"a path anchor matching more than {round(100 * OVER_BROAD_SHARE)}% of the tracked files"
     ),
