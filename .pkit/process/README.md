@@ -15,8 +15,9 @@ pkit:
         - .pkit/schemas/_defs/process.schema.json
       record: [COR-033, COR-034, COR-035, COR-036, COR-037, COR-038, COR-040, COR-042, COR-044, COR-053, ADR-020, ADR-036, ADR-048, ADR-051, ADR-062]
     revalidated:
-      at: 2026-10-02T01:38:13Z
-      outcome: updated
+      at: 2026-10-02T01:35:09Z
+      outcome: unchanged
+      unchanged-because: The scaffolded detection stub moved its note on the inferred answer to the line below the JSON it shows; this page describes stubs only as fail-closed seams under the predicate-runner contract, where an inferred detection answers {result, reason}, and quotes no stub text, so what it says of stubs and of what a predicate prints holds as written
 ---
 
 # Process
