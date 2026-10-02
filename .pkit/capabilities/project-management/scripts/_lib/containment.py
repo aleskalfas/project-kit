@@ -440,11 +440,16 @@ class UnreadIssue:
 
     ``why`` is pm's reading of the failure; ``said`` is what ``gh`` printed for
     it (:class:`Said` — GitHub's error body, else gh's own stderr), quoted as
-    written, ``None`` when it printed nothing.
+    written, ``None`` when it printed nothing. ``not_an_issue`` tells the read
+    that succeeded but found no issue numbered so in this repository — a pull
+    request, or an issue transferred elsewhere whose read was redirected — from
+    a read that failed: the first is an answer about the number, the second
+    says nothing about it.
     """
 
     why: str
     said: Said | None = None
+    not_an_issue: bool = False
 
     @property
     def detail(self) -> str:
@@ -468,7 +473,8 @@ def read_issue_record(
     which the endpoint also answers for, and for a record numbered other than
     ``issue_number``: GitHub redirects the read of an issue transferred to
     another repository, and gh follows the redirect to an issue that is not the
-    one asked for.
+    one asked for. Those two say ``not_an_issue``: the number was read, and
+    names no issue here.
     """
     try:
         proc = _gh_call(["gh", "api", f"repos/{{owner}}/{{repo}}/issues/{issue_number}"], config)
@@ -484,14 +490,15 @@ def read_issue_record(
     if not isinstance(record, dict):
         return UnreadIssue("gh's answer was not an issue's record")
     if "pull_request" in record:
-        return UnreadIssue(f"#{issue_number} is a pull request")
+        return UnreadIssue(f"#{issue_number} is a pull request", not_an_issue=True)
     number = record.get("number")
     if not isinstance(number, int) or isinstance(number, bool):
         return UnreadIssue("gh's answer was not an issue's record")
     if number != int(issue_number):
         return UnreadIssue(
             f"the record gh returned is #{number}'s, not #{issue_number}'s "
-            "(an issue transferred elsewhere, whose read was redirected)"
+            "(an issue transferred elsewhere, whose read was redirected)",
+            not_an_issue=True,
         )
     labels = [
         {"name": str(label.get("name", "")) if isinstance(label, dict) else str(label)}
