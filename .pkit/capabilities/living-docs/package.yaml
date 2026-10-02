@@ -15,6 +15,7 @@ commands:
     script: scripts/fill-doc-check.py
     help: "This capability's filler of the pkit::work-tracking:doc-check point (DEC-001 point 7): one page-stale obligation per page the whole-repository friction check reports stale (a deferred page carries its answer and gives none), one code-undocumented obligation per uncovered surface path; --json prints the filler envelope the backbone reads. A query: read-only, offline, no parameter; `pkit sync` provisions its dependencies."
     query-contract: true
+    reads: [history]
 
 # The `living-docs:spaces` member of `pkit validate` (ADR-058).
 validators:

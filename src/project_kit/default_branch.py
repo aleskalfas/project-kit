@@ -10,8 +10,15 @@ backbone configuration — `repository.default-branch`, `main` when absent
   shared work is pushed to: the local branch's upstream, else `origin/<name>`;
   else, only when there is no such remote, the local branch, which a reader
   says it used (`warnings`). When none names a commit the answer carries none
-  and says why, with the fixes; nothing is guessed (point 4). A remote not
-  named `origin` is found only as the branch's upstream.
+  and says why, with the fixes; nothing is guessed (point 4). The one case
+  that is not a failure to read is a branch with no commit yet — no remote,
+  and HEAD is that branch before its first commit — which the answer marks
+  `unborn`: it holds nothing yet, so a reader of what it holds reads nothing
+  (COR-052 point 6). A remote not named `origin` is found only as the
+  branch's upstream. Asked for a standing value rather than a comparison —
+  a data point's filler reads the default branch and never a base (COR-054
+  point 3) — the problem names the fetch and the declaration as its fixes,
+  never a base (`resolve`'s `standing`).
 - **Any branch named as a base** resolves the same way (`resolve_branch`); a
   remote-tracking reference (`origin/main`) or any other revision (a commit, a
   tag, `refs/heads/<name>`) is read as named.
@@ -33,6 +40,13 @@ per reference it considers.
 The override is a base, never a declaration: `$PKIT_CHECK_BASE` changes what a
 comparison compares with, and never what `resolve` answers — nor what a command
 that allocates from settled state reads, since such a command reads `resolve`.
+A query the backbone runs — a validator, a data point's filler — never sees
+the override at all (`validators.QUERY_DROPPED_ENV`).
+
+**The history at hand** (`is_shallow`): whether this clone's history is cut
+short. Only a reader knows how much history it needs, so the backbone says
+the clone is shallow and the reader judges whether that stops it (COR-052
+point 6).
 
 Reading is forgiving (COR-048 point 4): a configuration that does not parse, or
 a value that is not a branch name, reads as the default; the value is kept in
@@ -106,13 +120,15 @@ class Resolved:
 
     `ref` is the reference read — `<remote>/<name>`, or `<name>` for the local
     branch — and `resolved` which of the two it is; both `None`, with the
-    `problem`, when neither names a commit."""
+    `problem`, when neither names a commit. `unborn` when the branch has no
+    commit yet: no remote, and HEAD is that branch before its first commit."""
 
     name: str
     ref: str | None
     commit: str | None
     resolved: str | None
     problem: str | None
+    unborn: bool = False
 
 
 @dataclass(frozen=True)
@@ -126,6 +142,7 @@ class DefaultBranch:
     resolved: str | None  # RESOLVED_REMOTE or RESOLVED_LOCAL; `None` when nothing resolves
     problem: str | None  # why it names no commit here, with the fixes
     warning: str | None = None  # a declared value read as the default, and why
+    unborn: bool = False  # no commit yet: no remote, HEAD on it before its first commit
 
     def as_json(self) -> dict[str, Any]:
         return {
@@ -135,6 +152,7 @@ class DefaultBranch:
             "commit": self.commit,
             "resolved": self.resolved,
             "problem": self.problem,
+            "unborn": self.unborn,
         }
 
 
@@ -229,12 +247,28 @@ def declared(target_root: Path) -> tuple[str, str, str | None]:
 # --- the resolution (points 2 and 4) --------------------------------------------------------
 
 
-def resolve(target_root: Path) -> DefaultBranch:
-    """The default branch: declared, then resolved as point 2 orders it."""
+def resolve(target_root: Path, *, standing: bool = False) -> DefaultBranch:
+    """The default branch: declared, then resolved as point 2 orders it.
+
+    `standing` asks for it as a standing value reads it — a data point's filler,
+    which no base reaches (COR-054 point 3) — so a problem names the fetch and
+    the declaration as its fixes, and never a base."""
     name, source, warning = declared(target_root)
-    found = resolve_branch(target_root, name, subject=f"the default branch {name!r}")
+    found = _resolve_listed(
+        target_root,
+        _branch_refs(target_root, name),
+        f"the default branch {name!r}",
+        comparison=not standing,
+    )
     return DefaultBranch(
-        name, source, found.ref, found.commit, found.resolved, found.problem, warning
+        name,
+        source,
+        found.ref,
+        found.commit,
+        found.resolved,
+        found.problem,
+        warning,
+        found.unborn,
     )
 
 
@@ -246,8 +280,11 @@ def resolve_branch(target_root: Path, name: str, *, subject: str | None = None) 
     return _resolve_listed(target_root, _branch_refs(target_root, name), subject)
 
 
-def _resolve_listed(target_root: Path, refs: _BranchRefs, subject: str | None) -> Resolved:
-    """`resolve_branch` from what one listing of the branch's references said."""
+def _resolve_listed(
+    target_root: Path, refs: _BranchRefs, subject: str | None, *, comparison: bool = True
+) -> Resolved:
+    """`resolve_branch` from what one listing of the branch's references said. A
+    problem names a base as a fix only for a `comparison`."""
     name = refs.name
     what = subject or f"the branch {name!r}"
     upstream = refs.upstream
@@ -260,13 +297,20 @@ def _resolve_listed(target_root: Path, refs: _BranchRefs, subject: str | None) -
         if commit is not None:
             return Resolved(name, short, commit, RESOLVED_REMOTE, None)
     remote = upstream[1] if upstream else (REMOTE if _has_remote(target_root, REMOTE) else None)
-    fixes = _fixes(declarable=subject is None or subject.startswith("the default branch"))
+    fixes = _fixes(
+        declarable=subject is None or subject.startswith("the default branch"),
+        comparison=comparison,
+    )
     local = refs.commits.get(refs.local)
     if remote is not None:
+        anyway = (
+            f"; to compare with it anyway, name `refs/heads/{name}` as the base"
+            if comparison
+            else ""
+        )
         unread = (
             f" The local branch {name!r} is not read while a remote holds the shared one — "
-            f"it can lag it or carry work nobody pushed; to compare with it anyway, name "
-            f"`refs/heads/{name}` as the base."
+            f"it can lag it or carry work nobody pushed{anyway}."
             if local is not None
             else ""
         )
@@ -281,7 +325,9 @@ def _resolve_listed(target_root: Path, refs: _BranchRefs, subject: str | None) -
     if local is not None:
         return Resolved(name, name, local, RESOLVED_LOCAL, None)
     if _unborn(target_root, name):
-        return Resolved(name, None, None, None, f"{what} has no commit yet: commit first.")
+        return Resolved(
+            name, None, None, None, f"{what} has no commit yet: commit first.", unborn=True
+        )
     return Resolved(
         name,
         None,
@@ -301,12 +347,13 @@ def _any_of(fixes: list[str]) -> str:
     return fixes[0] if len(fixes) == 1 else f"{', '.join(fixes[:-1])}, or {fixes[-1]}"
 
 
-def _fixes(*, declarable: bool) -> list[str]:
+def _fixes(*, declarable: bool, comparison: bool = True) -> list[str]:
     """What else fixes a branch that resolves nowhere: the default branch can be
-    declared, and a comparison can name another base."""
+    declared, and a comparison — never a standing value — can name another base."""
     declare = f"declare the right one (`{DOTTED_KEY}` in {PROJECT_CONFIG_RELPATH.as_posix()})"
     name = f"name {'a' if declarable else 'another'} base with --base or {CHECK_BASE_ENV}"
-    return [declare, name] if declarable else [name]
+    fixes = [declare] if declarable else []
+    return [*fixes, name] if comparison else fixes
 
 
 # --- the base of a comparison (point 3) ------------------------------------------------------
@@ -530,6 +577,15 @@ def _branch_refs(target_root: Path, name: str) -> _BranchRefs:
         if commit is not None:
             commits[upstream[0]] = commit
     return _BranchRefs(name, commits, upstream)
+
+
+def is_shallow(target_root: Path) -> bool:
+    """Whether this clone's history is cut short — a shallow clone. A git that
+    cannot answer reads as not shallow: nothing is said that git did not say."""
+    completed = _git(target_root, "rev-parse", "--is-shallow-repository")
+    if completed is None or completed.returncode != 0:
+        return False
+    return completed.stdout.strip() == "true"
 
 
 def _has_remote(target_root: Path, remote: str) -> bool:

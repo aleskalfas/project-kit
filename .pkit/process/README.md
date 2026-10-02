@@ -15,8 +15,9 @@ pkit:
         - .pkit/schemas/_defs/process.schema.json
       record: [COR-033, COR-034, COR-035, COR-036, COR-037, COR-038, COR-040, COR-042, COR-044, COR-053, ADR-020, ADR-036, ADR-048, ADR-051, ADR-062]
     revalidated:
-      at: 2026-10-01T22:58:58Z
-      outcome: updated
+      at: 2026-10-02T00:02:21Z
+      outcome: unchanged
+      unchanged-because: "COR-053 changed in one rationale sentence, on why events take no consent model: it now names the two writes the consent rule covers; this page says nothing of consent for events, and what it takes from the record — connection points, roles and their wiring — is as it was"
 ---
 
 # Process

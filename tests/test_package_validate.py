@@ -546,6 +546,60 @@ def test_a_validator_names_a_declared_command_that_declares_the_query_contract(
     }
 
 
+def _reading(reads: Any, *, contract: bool = True) -> dict[str, Any]:
+    """The package with `publish` declaring `reads` (COR-052 point 6)."""
+    raw = _package()
+    raw["commands"]["publish"]["reads"] = reads
+    if contract:
+        raw["commands"]["publish"]["query-contract"] = True
+    return raw
+
+
+@pytest.mark.parametrize("reads", [["history"], ["settled"], ["history", "settled"]])
+def test_a_query_command_may_declare_what_it_reads_beyond_the_working_tree(
+    schema: dict[str, Any], component_dir: Path, reads: list[str]
+) -> None:
+    assert _validate(_reading(reads), schema, component_dir) == []
+
+
+@pytest.mark.parametrize(
+    ("reads", "path", "fragment"),
+    [
+        (
+            ["history", "remote"],
+            "/commands/publish/reads/1",
+            "is not one of ['history', 'settled']",
+        ),
+        ([], "/commands/publish/reads", "should be non-empty"),
+        (["history", "history"], "/commands/publish/reads", "has non-unique elements"),
+        ("history", "/commands/publish/reads", "is not of type 'array'"),
+    ],
+    ids=["unknown-value", "empty", "duplicate", "not-a-list"],
+)
+def test_a_reads_the_schema_refuses_is_an_error(
+    schema: dict[str, Any], component_dir: Path, reads: Any, path: str, fragment: str
+) -> None:
+    errors = _messages(_validate(_reading(reads), schema, component_dir), pv.Severity.ERROR)
+    assert set(errors) == {path}, errors
+    assert fragment in errors[path]
+
+
+def test_reads_without_the_query_contract_is_an_error(
+    schema: dict[str, Any], component_dir: Path
+) -> None:
+    errors = _messages(
+        _validate(_reading(["settled"], contract=False), schema, component_dir),
+        pv.Severity.ERROR,
+    )
+    assert errors == {
+        "/commands/publish/reads": (
+            "command 'publish' declares `reads` without the query contract "
+            "(`query-contract: true`): `reads` says what a data point's command filler reads "
+            "beyond the working tree, and a filler is a query (COR-052 point 6)."
+        )
+    }
+
+
 def test_command_script_that_does_not_exist_is_an_error(
     schema: dict[str, Any], component_dir: Path
 ) -> None:

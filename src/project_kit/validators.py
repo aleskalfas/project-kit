@@ -29,7 +29,12 @@ functionality, through one renderer, and applies the one exit rule.
 **Not registered.** The diff-scoped checks — `pkit friction check`, `pkit
 migrations check-diff`, `pkit release lint` — read a base ref and answer about
 a *change*, not the tree's state. They stay their own lines of the check
-aggregator (`scripts/check.sh`, the enforcement boundary of ADR-019).
+aggregator (`scripts/check.sh`, the enforcement boundary of ADR-019). No base
+named for one run reaches a member either: the query policy removes the
+override from every validator and every data point's filler it starts, so
+`pkit validate` answers the same for the same working tree, HEAD, fetched
+history and default-branch commit, whatever base a pipeline named (ADR-058
+point 7).
 
 **A capability's validator is a query command** in the sense of ADR-057 point
 3 (bounded, deterministic, needing no network, read-only). Its entry names a
@@ -39,10 +44,11 @@ leaf carries the declaration of the query contract, `query-contract: true`.
 The registry runs the leaf's script under the *query policy* over the one
 runner the backbone uses for every command it runs on a component's behalf
 (`command_runner`, ADR-057 point 5): from the project root with the one
-argument `--json`, the offline marker set in its environment, in its own
-process group, bounded by the backbone's one command bound and killed as a
-group when it overruns — inside another run, by the time that run has left and
-in the outermost run's group — reading one JSON document — and nothing else — from
+argument `--json`, the offline marker set in its environment and the base
+override (`PKIT_CHECK_BASE`) removed from it, in its own process group,
+bounded by the backbone's one command bound and killed as a group when it
+overruns — inside another run, by the time that run has left and in the
+outermost run's group — reading one JSON document — and nothing else — from
 its standard output:
 `{"summary": [...], "findings": [{"severity", "location", "message"}, ...]}`;
 diagnostics go to standard error. No answer — a leaf without the declaration,
@@ -67,7 +73,7 @@ from typing import Any, TypeVar
 
 from ruamel.yaml import YAML
 
-from project_kit import cli_render, run_cache
+from project_kit import cli_render, default_branch, run_cache
 from project_kit.command_runner import (
     COMMANDS_KEY,
     CommandRun,
@@ -94,6 +100,17 @@ COMMAND_KEY = "command"
 # it, and the runner here refuses it.
 QUERY_CONTRACT_KEY = "query-contract"
 
+# What a data point's command filler declares it reads beyond the working tree
+# (COR-052 point 6), on its `commands:` leaf beside the query contract: the
+# current history, and settled state — the default branch, as the backbone
+# resolves it. Absent, the working tree only. `data_points` reads it; the
+# package schema refuses any other value, and the packages member a leaf that
+# declares it without the query contract.
+READS_KEY = "reads"
+READS_HISTORY = "history"
+READS_SETTLED = "settled"
+READS_STATES = (READS_HISTORY, READS_SETTLED)
+
 # The one argument the umbrella passes a validator command. The leaf is also a
 # focused surface that prints for people; with this flag it prints the
 # findings document alone.
@@ -106,6 +123,14 @@ QUERY_FLAG = "--json"
 # `pkit init` and `pkit sync` provision them beforehand (`provisioning`). The
 # lifecycle README's literals section documents both.
 OFFLINE_MARKER: Mapping[str, str] = {"PKIT_OFFLINE": "1", "UV_OFFLINE": "1"}
+
+# What a query command never inherits from its caller's environment: the base
+# override a pipeline sets for its comparisons (COR-054 point 3). A query
+# answers about the project's state, and a validator and a data point's filler
+# take no base named for one run (COR-052 point 6, ADR-058 point 7) — so every
+# validator and every filler, whichever command starts it, answers the same
+# whatever base a pipeline named. The lifecycle README's query row says so.
+QUERY_DROPPED_ENV: tuple[str, ...] = (default_branch.CHECK_BASE_ENV,)
 
 # What `uv`, honouring the offline marker, prints on standard error when a
 # script's dependency is not in its cache: the resolver's hint for a registry
@@ -381,10 +406,11 @@ def _load_mapping(package: Path) -> Mapping[Any, Any]:
 
 def run_query(target_root: Path, script: Path, *, location: str, reference: str) -> Outcome:
     """Run one validator command under the query policy and read its answer (the
-    contract in the module docstring): with `--json` and the offline marker set,
-    through the shared runner — from the project root, in its own process group,
-    bounded by `command_runner.COMMAND_TIMEOUT_SECONDS` (inside another run, by
-    the time it has left, in the outermost run's group). No answer is an error
+    contract in the module docstring): with `--json`, the offline marker set and
+    the base override removed (`QUERY_DROPPED_ENV`), through the shared runner —
+    from the project root, in its own process group, bounded by
+    `command_runner.COMMAND_TIMEOUT_SECONDS` (inside another run, by the time
+    it has left, in the outermost run's group). No answer is an error
     finding at `location` — the validator's own entry in the package file — so
     the umbrella fails closed."""
     if not script.is_file():
@@ -393,7 +419,13 @@ def run_query(target_root: Path, script: Path, *, location: str, reference: str)
             f"command {reference!r} names script {_rel(script, target_root)!r}, which does not "
             "exist.",
         )
-    run = run_command(script, [QUERY_FLAG], cwd=target_root, extra_env=OFFLINE_MARKER)
+    run = run_command(
+        script,
+        [QUERY_FLAG],
+        cwd=target_root,
+        extra_env=OFFLINE_MARKER,
+        drop_env=QUERY_DROPPED_ENV,
+    )
     if run.ending is Ending.ANSWERED:
         return _answer_of(run.document, location=location, command=reference)
     return _no_answer(location, why_no_answer(run, reference))

@@ -17,6 +17,7 @@
   ends with the outermost run — killed by its own deadline or by anyone else —
   and nothing is swept when every nested run ended by itself; a `uv run
   --script` interpreter stays in the group;
+- a variable a policy drops never reaches the command, whoever set it (#1145);
 - the predicate policy passes the subject and `--json` and leaves the
   environment as it is but for the run's deadline: no offline marker, a
   predicate may reach the network;
@@ -213,6 +214,28 @@ def test_an_answered_run_parses_its_document_from_the_working_directory(tmp_path
         "marker": "set",
     }
     assert (run.returncode, run.stderr, run.bound_seconds) == (0, "diagnostics\n", 30)
+
+
+def test_a_variable_a_policy_drops_never_reaches_the_command(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`drop_env` removes a variable whether the caller's environment or `extra_env`
+    carries it; the run's own deadline is laid over what remains. Without it the
+    caller's variable passes, as the predicate and context-read policies leave it."""
+    script = _script(
+        tmp_path / "env.py",
+        "import json, os\n"
+        "print(json.dumps([os.environ.get(k) for k in ('PKIT_CHECK_BASE', 'MARK', "
+        f"{command_runner.DEADLINE_ENV!r})]))\n",
+    )
+    monkeypatch.setenv("PKIT_CHECK_BASE", "integration")
+    passed = run_command(script, [], cwd=tmp_path, extra_env={"MARK": "set"})
+    assert passed.document[:2] == ["integration", "set"]
+    dropped = run_command(
+        script, [], cwd=tmp_path, extra_env={"MARK": "set"}, drop_env=("PKIT_CHECK_BASE", "MARK")
+    )
+    assert dropped.document[:2] == [None, None]
+    assert dropped.document[2] is not None  # the deadline is the run's, never a policy's
 
 
 @pytest.mark.parametrize(

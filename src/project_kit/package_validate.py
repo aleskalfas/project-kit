@@ -28,8 +28,11 @@ Pointer:
    accepted data point's companion schema exists under `schemas/`, every
    filler / emitter / subscriber command exists in `commands:`, every filler
    command and every validator's command declares the query contract
-   (`query-contract: true`; COR-052 point 6, ADR-057 point 3 and ADR-058), a contribution
-   names `command` or `value` but not both, documentation locations are
+   (`query-contract: true`; COR-052 point 6, ADR-057 point 3 and ADR-058), a
+   command that declares what it reads beyond the working tree (`reads`, the
+   same point) declares the query contract too — its values are the schema's
+   to check — a contribution names `command` or `value` but not both,
+   documentation locations are
    relative sub-paths, friction places lie inside a declared location or the
    project and held folders inside a declared location, an offered process
    point names a definition of the component whose
@@ -112,7 +115,7 @@ from project_kit.manifest import (
     ComponentRegistryEntry,
     read_backbone_manifest,
 )
-from project_kit.validators import COMMAND_KEY, QUERY_CONTRACT_KEY, VALIDATORS_KEY
+from project_kit.validators import COMMAND_KEY, QUERY_CONTRACT_KEY, READS_KEY, VALIDATORS_KEY
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -482,6 +485,14 @@ def _repository_findings(
                 path,
                 f"command {' '.join(tokens)!r} names script {script!r}, which does not "
                 f"exist under {component_dir.name}/.",
+            )
+        if READS_KEY in leaf and leaf.get(QUERY_CONTRACT_KEY) is not True:
+            _error(
+                path.removesuffix("/script") + f"/{READS_KEY}",
+                f"command {' '.join(tokens)!r} declares `{READS_KEY}` without the query "
+                f"contract (`{QUERY_CONTRACT_KEY}: true`): `{READS_KEY}` says what a data "
+                f"point's command filler reads beyond the working tree, and a filler is a "
+                f"query (COR-052 point 6).",
             )
 
     registered = raw.get(VALIDATORS_KEY)

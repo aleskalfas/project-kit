@@ -132,6 +132,9 @@ def test_the_package_provides_the_role_and_declares_both_points_and_the_contribu
     }
     command = package["commands"]["fill-doc-check"]
     assert command["query-contract"] is True
+    # It reads history at HEAD beyond the working tree, and never settled state or a
+    # base: the base a pull request is compared with bounds the consumer's diff.
+    assert command["reads"] == ["history"]
     assert (CAPABILITY / command["script"]).is_file()
 
 
@@ -609,6 +612,48 @@ def test_nothing_committed_owes_nothing(tracked_project: AdopterRepo) -> None:
     assert ours == []
     filler = next(f for f in document["fillers"] if f["name"] == "living-docs")
     assert (filler["state"], filler["query_contract"]) == ("taken", True)
+    assert filler["reads"] == [
+        {"state": "history", "ref": "HEAD", "commit": None, "shallow": False}
+    ]
+
+
+def _fill_doc_check(root: Path) -> subprocess.CompletedProcess[str]:
+    """The filler run as the backbone runs it, from `root`."""
+    return subprocess.run(
+        [sys.executable, str(root / LD / "scripts" / "fill-doc-check.py"), "--json"],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
+def test_history_not_yet_made_is_empty_and_history_cut_short_is_no_answer(
+    docs_project: AdopterRepo, tmp_path: Path
+) -> None:
+    """The two cases a filler that reads history tells apart (COR-052 point 6): with
+    no commit there is nothing owed and it answers `[]`; in a shallow clone that
+    stops short of where a page was last judged it gives no answer, never `[]`."""
+    unmade = _fill_doc_check(docs_project.root)
+    assert unmade.returncode == 0, unmade.stderr
+    assert json.loads(unmade.stdout) == {"schema_version": 1, "value": []}
+
+    repo = docs_project
+    page: dict[str, Any] = {"reader": "user", "kind": "signpost"}
+    repo.write(
+        {
+            "src/a.py": "A = 1\n",
+            "docs/guide.md": friction_document(None, anchors={"path": ["src/a.py"]}, **page),
+        }
+    )
+    repo.commit("base")
+    for version in (2, 3, 4):
+        repo.commit(f"a {version}", {"src/a.py": f"A = {version}\n"})
+    shallow = tmp_path / "shallow"
+    repo.git("clone", "-q", "--depth", "2", f"file://{repo.root}", str(shallow))
+    cut = _fill_doc_check(shallow)
+    assert (cut.returncode, cut.stdout) == (1, ""), cut.stderr
+    assert "git fetch --unshallow" in cut.stderr
 
 
 def test_the_filler_contributes_page_friction_and_uncovered_surface(

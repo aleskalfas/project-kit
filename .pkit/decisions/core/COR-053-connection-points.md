@@ -89,7 +89,7 @@ Vocabulary used below. The **publisher** of a role coins its name and is a names
 
 **Why generate `depends-on`.** The list belongs in the package so a reader — and a plan for an uninstalled capability — sees it without opening process definitions; a hand-written copy would drift silently (COR-006, COR-038). Generating it with fail-closed validation keeps one source and one visible copy.
 
-**Why no consent model for events.** The methodology asks consent where a command writes a file the project owns — the backbone configuration is the recorded instance (COR-048) — and has no consent model for a capability acting once installed and invoked; inventing one here would gate the common case to guard a rare one. Visibility — plans, per-run reports, the diff — is what makes behaviour predictable. Emitting only from writing commands keeps reading commands side-effect-free.
+**Why no consent model for events.** The methodology's consent rule is for a command that writes the project's own choices — the backbone configuration (COR-048), and a documentation location recorded over documents already there (COR-049 point 5) — and it has no consent model for a capability acting once installed and invoked; inventing one here would gate the common case to guard a rare one. Visibility — plans, per-run reports, the diff — is what makes behaviour predictable. Emitting only from writing commands keeps reading commands side-effect-free.
 
 **Why core.** Three capabilities that must not depend on each other need it, the process substrate already carries half of it, and nothing here names a discipline (COR-007, COR-014).
 
