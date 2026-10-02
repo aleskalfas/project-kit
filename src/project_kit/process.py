@@ -2501,11 +2501,13 @@ def _mixed_modes_position(
 
 
 def detection_faults(definition: ProcessDefinition) -> list[str]:
-    """The two faults validation reports in a definition's detections, each an
-    error (ADR-062 point 9): its states declare more than one mode, and its
-    `classified` detections name one command under different `with` mappings —
-    separate classifiers the runner gives the same input, so an answer one of
-    them can read is unreadable for the other."""
+    """The three faults validation reports in a definition's detections, each
+    an error: its states declare more than one mode; its `classified`
+    detections name one command under different `with` mappings — separate
+    classifiers the runner gives the same input, so an answer one of them can
+    read is unreadable for the other; and, in an `inferred` definition, two
+    or more states name one predicate, so each of them reads the same answer
+    and none but the first can be the position (all three ADR-062 point 9)."""
     faults: list[str] = []
     modes = definition.detection_modes()
     if len(modes) > 1:
@@ -2525,7 +2527,38 @@ def detection_faults(definition: ProcessDefinition) -> list[str]:
                 "classifiers that the runner gives the same input, so an answer one of "
                 "them can read is unreadable for the other"
             )
+    if list(modes) == [INFERRED]:
+        for (run_name, _with), state_ids in _shared_inferred_predicates(definition).items():
+            faults.append(
+                f"its `inferred` detections of {_states_listed(state_ids)} name one predicate "
+                f"— command {run_name!r} under one `with` mapping — so each of those states "
+                f"reads the same answer and none but {state_ids[0]!r} can be the position; a "
+                "predicate that answers which state the subject is in is a classifier, which "
+                "states name under `classified`"
+            )
     return faults
+
+
+def _shared_inferred_predicates(definition: ProcessDefinition) -> dict[ClassifierKey, list[str]]:
+    """Each predicate that two or more `inferred` detections name, with the
+    states that name it, in declaration order. Two detections name one
+    predicate when the runner's answer memo gives them one key — the same
+    command under the same `with` mapping — so it runs once and its one answer
+    is read for each of them. A detection that names no command is not
+    counted: the runner answers it without the memo."""
+    named: dict[ClassifierKey, list[str]] = {}
+    for state in definition.states:
+        detection = _mapping(state.get("detection"))
+        if detection is None or detection.get("mode") != INFERRED:
+            continue
+        predicate = _mapping(detection.get("predicate"))
+        if predicate is None:
+            continue
+        run_name = predicate.get("run")
+        if isinstance(run_name, str) and run_name:
+            key = (run_name, _freeze(predicate.get("with")))
+            named.setdefault(key, []).append(str(state.get("id", "")))
+    return {key: state_ids for key, state_ids in named.items() if len(state_ids) > 1}
 
 
 def _running_pkit_version() -> str:
@@ -2636,11 +2669,12 @@ def definitions_outcome(repo_root: Path) -> Outcome:
     """The `process` member of `pkit validate`: every process definition the
     installed capabilities declare resolves — exactly one file per address,
     whose `process.id` matches (the loader every `pkit process` command uses) —
-    and its detections are readable (ADR-062 point 9): its states declare one
-    detection mode, and its `classified` detections name no command under
-    different `with` mappings. Both are errors. This is the check that reaches
-    every definition, a capability's companion schema that restates the
-    process block included (ADR-062 point 12).
+    and its detections are readable: its states declare one detection mode,
+    its `classified` detections name no command under different `with`
+    mappings, and no two states of an `inferred` definition name one
+    predicate. All three are errors (ADR-062 point 9). This is the check
+    that reaches every definition, a capability's companion schema that
+    restates the process block included (ADR-062 point 12).
 
     A subject's invariants are `pkit process validate <address>`'s: a runtime
     check with a subject and its predicates, which the umbrella does not run.
