@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-02T02:53:18Z
+      at: 2026-10-02T03:07:21Z
       outcome: unchanged
-      unchanged-because: the CLI reference gained new decision's --yes and the adr derivation; this page only points at that reference and lists the command families, which are the same
+      unchanged-because: The page maps the lifecycle area to packaging and register mechanics and the cli area to the command surface; both READMEs still cover those subjects and only gained backbone among the names the capability commands refuse and packages validation reports.
 ---
 
 # project-kit
