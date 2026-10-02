@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-02T02:09:34Z
+      at: 2026-10-02T02:31:42Z
       outcome: unchanged
-      unchanged-because: a history filler reads whether HEAD has a commit from the backbone, and the base reading gains head; what this page says of the areas and commands it indexes still holds
+      unchanged-because: The page maps the lifecycle area to packaging and register mechanics and the cli area to the command surface; both READMEs still cover those subjects and only gained adr among the names the capability commands refuse and packages validation reports.
 ---
 
 # project-kit
