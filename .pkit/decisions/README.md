@@ -12,9 +12,9 @@ pkit:
         - src/project_kit/rule_sets.py
       record: [COR-001, COR-019, COR-025, COR-051, COR-053]
     revalidated:
-      at: 2026-10-01T23:47:03Z
+      at: 2026-10-02T02:38:09Z
       outcome: unchanged
-      unchanged-because: "COR-053 changed in one rationale sentence, on why events take no consent model: it now names the two writes the consent rule covers; this page says nothing of consent for events, and what it takes from the record — connection points, roles and their wiring — is as it was"
+      unchanged-because: "the page says ADRs stamp at the overlay-resolved path, which still holds: with adr-records unset the command now records the derived path in the overlay before stamping there; the stub shape, numbering and namespaces this page describes are unchanged, and the CLI reference carries the derivation"
 ---
 
 # Decision records

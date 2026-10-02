@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-02T02:09:34Z
+      at: 2026-10-02T02:38:14Z
       outcome: unchanged
-      unchanged-because: a history filler reads whether HEAD has a commit from the backbone, and the base reading gains head; what this page says of the areas and commands it indexes still holds
+      unchanged-because: the CLI reference gained new decision's --yes and the adr derivation; this page only points at that reference and lists the command families, which are the same
 ---
 
 # project-kit
