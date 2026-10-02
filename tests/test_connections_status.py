@@ -10,6 +10,7 @@ import json
 
 import pytest
 from click.testing import CliRunner
+from ruamel.yaml import YAML
 
 from project_kit import connections as cx
 from project_kit.cli import main
@@ -139,6 +140,48 @@ def test_status_on_a_fresh_install_names_no_role(repo: AdopterRepo) -> None:
     assert _connections_section(_status(repo)) == [
         "    roles              none named",
         "    points             none defined",
+    ]
+
+
+def test_a_filler_s_reads_show_in_status_and_in_the_resolve_document(repo: AdopterRepo) -> None:
+    """What a filler reads beyond the working tree is the Data points section's — on
+    the filler's line — and a key of each filler in `pkit connections resolve --json`,
+    never a line of the Connections section (COR-052 point 7)."""
+    stage(repo, "docs-a", provider(accepts={READERS: data_point()}))
+    package = stage(
+        repo,
+        "evidence",
+        {
+            "extensions": {
+                "contributes": [{"point": READERS, "schema_version": 1, "command": "publish"}]
+            }
+        },
+    )
+    raw = YAML(typ="safe").load(package.read_text(encoding="utf-8"))
+    raw["commands"]["publish"]["reads"] = ["history"]
+    with package.open("w", encoding="utf-8") as handle:
+        YAML().dump(raw, handle)
+    script = package.parent / "scripts" / "publish.py"
+    script.write_text(
+        '#!/usr/bin/env python3\nprint(\'{"schema_version": 1, "value": ["operator"]}\')\n',
+        encoding="utf-8",
+    )
+    script.chmod(0o755)
+    head = repo.commit("initial")
+
+    output = _status(repo)
+    data_points = output.split("\n  Data points\n")[1].split("\n\n")[0]
+    assert (
+        f"{INDENT}filler   evidence (command 'publish'; query contract declared: no network, "
+        f"trusted, not enforced; reads history (HEAD {head[:12]})): taken"
+    ) in data_points.splitlines()
+    assert "reads" not in "\n".join(_connections_section(output))
+
+    resolved = CliRunner().invoke(main, ["connections", "resolve", READERS, "--json"])
+    assert resolved.exit_code == 0, resolved.output
+    (filler,) = json.loads(resolved.output)["fillers"]
+    assert filler["reads"] == [
+        {"state": "history", "ref": "HEAD", "commit": head, "shallow": False}
     ]
 
 

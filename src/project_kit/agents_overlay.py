@@ -41,6 +41,7 @@ from __future__ import annotations
 
 import io
 import re
+import shlex
 import subprocess
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
@@ -50,7 +51,7 @@ from typing import Any
 import click
 from ruamel.yaml import YAML
 
-from project_kit import agent_policy, cli_render, docs_roots, lifecycle_ownership
+from project_kit import agent_policy, cli_render, docs_roots, lifecycle_ownership, project_config
 
 # Conventional default paths for well-known overlay categories, relative to
 # the project root, **under the default documentation root** — the fallback
@@ -424,6 +425,24 @@ def missing_categories(target_root: Path) -> list[str]:
     return sorted(missing)
 
 
+def agents_reaching(target_root: Path) -> dict[str, list[str]]:
+    """Each undefined category → the agents that reach it once it is recorded: every
+    agent referencing it with no override of its own. Sorted by agent name."""
+    reaching: dict[str, list[str]] = {}
+    for st in agent_overlay_statuses(target_root):
+        for cat in st.missing:
+            reaching.setdefault(cat, []).append(st.name)
+    return reaching
+
+
+def category_location_line(category: str, path: str, agents: Iterable[str]) -> str:
+    """One overlay category a command would record, as `reconcile`'s preview and
+    `adopt`'s question both show it: ``  category = path  (reached by a, b)``."""
+    names = ", ".join(agents)
+    reach = f"  (reached by {names})" if names else ""
+    return f"  {category} = {path}{reach}"
+
+
 def optional_categories(target_root: Path) -> set[str]:
     """Categories every referencing agent reads *optionally* — none reads hard.
 
@@ -564,7 +583,10 @@ def reconcile_overlay(target_root: Path, *, write: bool) -> tuple[list[str], str
     - **defined**: an uncommented ``cat:`` entry with paths → nothing to do;
       an adopter-set value is never overwritten.
 
-    Dry-run unless ``write``. Returns (categories_added, report).
+    Dry-run unless ``write``. An auto-fill over a folder that already holds
+    documents is recorded with no prompt: ``write``, given to a command that
+    otherwise only shows what it would record, is the explicit confirmation
+    (COR-049 point 5). Returns (categories_added, report).
     ``categories_added`` covers **both** auto-filled (uncommented) and stubbed
     (commented) categories written to the file in this run.
     """
@@ -665,16 +687,24 @@ def reconcile_overlay(target_root: Path, *, write: bool) -> tuple[list[str], str
                 f"{verb} {len(auto_fill)} categor(ies) — conventional default directory exists:",
             )
         )
+        reaching = agents_reaching(target_root)
         for cat, conv_path in auto_fill:
-            lines.append(f"  {cat}: [{conv_path}]")
+            lines.append(category_location_line(cat, conv_path, reaching.get(cat, ())))
         if write:
             if not path.is_file():
                 raise FileNotFoundError(f"overlay not found at {path}; run `pkit init` first.")
-            # Choosing the location is what records it (COR-049 point 5).
+            # Choosing the location is what records it (COR-049 point 5); `--write`,
+            # given after the dry run showed these entries, is the confirmation.
+            lines.append("")
             for cat, conv_path in auto_fill:
-                docs_roots.record_location(
+                if docs_roots.record_location(
                     target_root, docs_roots.BACKBONE, cat, conv_path, by="pkit agents reconcile"
-                )
+                ):
+                    lines.append(
+                        docs_roots.recording_notice(
+                            target_root, docs_roots.BACKBONE, cat, conv_path
+                        )
+                    )
             lines.append("")
             lines.append("conventional paths written — run `pkit sync` to deploy the agent(s).")
         else:
@@ -844,12 +874,61 @@ class AdoptResult:
     # Optional reads (ADR-052) left undefined because they have no conventional
     # default: the agent deploys without them, so adopt neither refuses nor wires.
     categories_optional_unset: tuple[str, ...] = ()
+    # Conventional dirs that existed but held nothing: given the seed README, as a
+    # created dir is (COR-049 point 5).
+    dirs_seeded: tuple[str, ...] = ()
+    # What the command says of each category it recorded (`docs_roots.recording_notice`).
+    notices: tuple[str, ...] = ()
+
+
+def _holds_entries(folder: Path) -> bool:
+    """Whether `folder` is a directory holding any entry at all — a document, a
+    sub-folder, a hidden file. One that is absent or empty holds nothing."""
+    return folder.is_dir() and any(folder.iterdir())
+
+
+def _adopt_consent(
+    target_root: Path,
+    agent_name: str,
+    held: list[tuple[str, str]],
+    rest: list[tuple[str, str]],
+    *,
+    yes: bool,
+) -> project_config.Consent:
+    """The consent `adopt` asks for one run that records over folders holding documents
+    (COR-049 point 5): what each recording puts within an agent's reach, and the rest of
+    the run, which waits on the same answer."""
+    reaching = agents_reaching(target_root)
+
+    def listing(pairs: list[tuple[str, str]]) -> str:
+        return "".join(
+            category_location_line(cat, path, reaching.get(cat, ())) + "\n" for cat, path in pairs
+        )
+
+    detail = (
+        "These folders already hold documents; recording each category puts them within "
+        "reach of the agents named:\n" + listing(held)
+    )
+    if rest:
+        detail += (
+            "The run also records these, over folders it creates or that hold nothing:\n"
+            + listing(rest)
+        )
+    return project_config.Consent(
+        yes=yes,
+        rerun=f"pkit agents adopt {shlex.quote(agent_name)} --yes",
+        target=OVERLAY_PATH.as_posix(),
+        rule="COR-049 point 5",
+        preview="pkit agents reconcile",
+        detail=detail,
+    )
 
 
 def adopt_agent(
     target_root: Path,
     agent_name: str,
     *,
+    yes: bool = False,
     deploy_fn: Callable[[Path, str], bool] | None = None,
 ) -> AdoptResult:
     """Stand up an agent's overlay prerequisites in one step.
@@ -858,14 +937,25 @@ def adopt_agent(
     defined in ``.pkit/agents/project/overlay.yaml``:
 
     1. Ensure the conventional default dir exists — create it (with a seed README)
-       if absent.  The path is the conventional default derived from the project's
-       internal documentation root (:func:`conventional_category_defaults`).
-       Categories without a conventional default raise :class:`click.ClickException`
-       because there is no canonical path to create — unless the agent reads the
-       category only optionally (ADR-052): then it is left undefined, reported in
+       if absent, and give the seed README to one that exists but holds nothing.
+       The path is the conventional default derived from the project's internal
+       documentation root (:func:`conventional_category_defaults`). Categories
+       without a conventional default raise :class:`click.ClickException` because
+       there is no canonical path to create — unless the agent reads the category
+       only optionally (ADR-052): then it is left undefined, reported in
        *categories_optional_unset*, and the agent deploys without it.
     2. Write the category into the overlay **uncommented** with the conventional
        path.  An adopter-set value (already uncommented) is never overwritten.
+
+    Recording a category over a dir that already holds documents puts them within
+    reach of every agent referencing it, so it takes consent (COR-049 point 5):
+    ``yes``, else one question for the run at a terminal, else a refusal
+    (:class:`project_config.ConsentRefused`). Which dirs hold documents is read for
+    every category before anything is written — ``adr-records`` lies inside
+    ``architecture-docs``, so a dir this run creates must not make its parent look
+    occupied — and a "no" or a refusal leaves everything as it was: no dir, no
+    overlay line, no deploy. A dir the run creates, or one holding nothing, is
+    recorded without asking.
 
     After wiring the overlay, invokes *deploy_fn* (a callable taking
     ``(target_root, agent_name)`` and returning ``True`` on success) to deploy the
@@ -873,8 +963,9 @@ def adopt_agent(
     ``deploy-agents.sh`` directly (the claude-code adapter).
 
     Idempotent: re-running on an already-adopted agent makes no changes to the
-    overlay or filesystem, deploys again (the deploy step itself is idempotent),
-    and returns a result with empty *dirs_created* and *categories_wired*.
+    overlay or filesystem, asks nothing, deploys again (the deploy step itself is
+    idempotent), and returns a result with empty *dirs_created* and
+    *categories_wired*.
 
     Raises :class:`click.ClickException` when the agent is unknown, or when a
     category it still needs has no conventional default (so no canonical dir can
@@ -941,45 +1032,57 @@ def adopt_agent(
             f"paths manually before running `pkit sync`."
         )
 
+    # --- Consent, decided before anything is written (COR-049 point 5) ---
+    # Each dir's state is read for every category first: `adr-records` lies inside
+    # `architecture-docs`, so once this run created the one, the other would look
+    # occupied. A dir that exists but holds nothing is treated as absent.
+    overlay_additions = [(cat, conventional[cat]) for cat in undefined]  # guarded above
+    absent = {cat for cat, conv_path in overlay_additions if not (target_root / conv_path).is_dir()}
+    held = [(c, p) for c, p in overlay_additions if _holds_entries(target_root / p)]
+    if held:
+        rest = [pair for pair in overlay_additions if pair not in held]
+        _adopt_consent(target_root, agent_name, held, rest, yes=yes).confirm("Record them")
+
     dirs_created: list[str] = []
-    categories_wired: list[str] = []
-    overlay_additions: list[tuple[str, str]] = []  # (category, path)
-
-    for cat in undefined:
-        conv_path = conventional[cat]  # guarded above
+    dirs_seeded: list[str] = []
+    for cat, conv_path in overlay_additions:
+        if (cat, conv_path) in held:
+            continue
+        # 1. Ensure the conventional dir exists, with a seed README explaining its purpose.
         abs_dir = target_root / conv_path
-
-        # 1. Ensure the conventional dir exists.
-        if not abs_dir.is_dir():
-            abs_dir.mkdir(parents=True, exist_ok=True)
-            # Write a seed README explaining the directory's purpose.
+        abs_dir.mkdir(parents=True, exist_ok=True)
+        readme = abs_dir / "README.md"
+        if not readme.exists():
             readme_content = _SEED_README_CONTENT.get(
                 cat, _SEED_README_DEFAULT.format(category=cat)
             )
-            (abs_dir / "README.md").write_text(readme_content, encoding="utf-8")
-            dirs_created.append(conv_path)
+            readme.write_text(readme_content, encoding="utf-8")
+        (dirs_created if cat in absent else dirs_seeded).append(conv_path)
 
-        # 2. Record for overlay write.
-        overlay_additions.append((cat, conv_path))
-        categories_wired.append(cat)
-
-    # 3. Record each chosen location in the overlay (COR-049 point 5): the
-    #    adopt command's invocation is the consent to write it.
+    # 2. Record each chosen location in the overlay (COR-049 point 5), with consent
+    #    given above where a dir already held documents; the rest takes none beyond
+    #    running the command.
+    notices: list[str] = []
     for cat, conv_path in overlay_additions:
-        docs_roots.record_location(
+        if docs_roots.record_location(
             target_root, docs_roots.BACKBONE, cat, conv_path, by="pkit agents adopt"
-        )
+        ):
+            notices.append(
+                docs_roots.recording_notice(target_root, docs_roots.BACKBONE, cat, conv_path)
+            )
 
-    # 4. Deploy the agent.
+    # 3. Deploy the agent.
     deployed = _deploy_agent(target_root, agent_name, deploy_fn=deploy_fn)
 
     return AdoptResult(
         agent=agent_name,
         dirs_created=tuple(dirs_created),
-        categories_wired=tuple(categories_wired),
+        categories_wired=tuple(cat for cat, _path in overlay_additions),
         categories_already_set=tuple(already_set),
         deployed=deployed,
         categories_optional_unset=tuple(optional_unset),
+        dirs_seeded=tuple(dirs_seeded),
+        notices=tuple(notices),
     )
 
 

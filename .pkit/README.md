@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-01T22:59:01Z
+      at: 2026-10-02T00:02:23Z
       outcome: unchanged
-      unchanged-because: The process area and the CLI reference gained the classified detection mode; the index's one-line description of each still holds.
+      unchanged-because: The CLI and agents READMEs gained what consent recording a documentation location takes (COR-049 point 5) — adopt's question and --yes, reconcile's --write as the confirmation, record-location asking nothing; this index still names the command surface and the agent definitions they document, and no command or area it lists was added, renamed or removed.
 ---
 
 # project-kit
