@@ -88,6 +88,18 @@ never beyond `COMMAND_TIMEOUT_SECONDS`; the outermost kill is never late.
 The dispatcher's proxy — `pkit <capability> <command>` run by a person — uses
 the lookup and not the run: it inherits the terminal's streams and is not
 bounded.
+
+**A tool the backbone runs itself** (`run_bounded`) — `gh`, which the landing
+module asks of the hosting service — is not a registered command and has no
+answer policy: its caller reads what it printed. It is started in the caller's
+process group, never a session of its own, so whoever ends the caller's group
+ends the tool in flight too: project-management runs `pkit pull-request` in a
+session of its own and ends that group at its bound, and a `gh` request
+started in a new session would go on after project-management had read the
+pull request to decide. The run is bounded by the caller's own bound for that
+call; on overrun, or an interrupt, the tool alone is ended — asked to stop,
+then killed after `END_GRACE_SECONDS` — its pipes closed unread, and never the
+group, which is the caller's.
 """
 
 from __future__ import annotations
@@ -137,6 +149,10 @@ ANSWER_MARGIN_SECONDS = 2
 
 # The detail of a nested run that had no time left to start its command.
 NO_TIME_LEFT = "no time was left of the bound of the run that started it"
+
+# How long a tool past its bound has, once asked to stop, before it is killed
+# (`run_bounded`): enough to close a connection, not to finish a request.
+END_GRACE_SECONDS = 2.0
 
 # What a no-answer shows of a command's standard error (the module docstring):
 # at most this many of its last non-blank lines, and at most this many bytes of
@@ -428,6 +444,46 @@ def parse_document(text: str) -> Any:
     return json.loads(text)
 
 
+def run_bounded(
+    argv: Sequence[str],
+    *,
+    cwd: Path | None,
+    seconds: float,
+    grace_seconds: float | None = None,
+) -> subprocess.CompletedProcess[str]:
+    """Run a tool the backbone runs itself — `gh` — with `argv` from `cwd`
+    (None: the working directory), in this process's environment and its
+    process group, bounded by `seconds` (the module docstring).
+
+    Standard output and standard error are captured as text, decoded as UTF-8
+    with replacement; standard input is empty, so the tool never waits on a
+    question. Answers how it ended, whatever its exit. On overrun the tool
+    alone is ended — asked to stop, then killed after `grace_seconds`
+    (`END_GRACE_SECONDS`) — and `subprocess.TimeoutExpired` is raised; an
+    interrupt ends it the same way before it propagates. Raises `OSError`
+    (`FileNotFoundError` among them) when the tool cannot be started."""
+    grace = END_GRACE_SECONDS if grace_seconds is None else grace_seconds
+    process = subprocess.Popen(
+        list(argv),
+        cwd=None if cwd is None else str(cwd),
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+    try:
+        stdout, stderr = process.communicate(timeout=seconds)
+    except subprocess.TimeoutExpired:
+        _end_tool(process, grace)
+        raise subprocess.TimeoutExpired(list(argv), seconds) from None
+    except BaseException:
+        _end_tool(process, grace)
+        raise
+    return subprocess.CompletedProcess(list(argv), process.returncode, stdout, stderr)
+
+
 def inherited_deadline() -> float | None:
     """The deadline of the live run this process runs inside, or None outside one.
 
@@ -590,7 +646,23 @@ def _sweep(process: subprocess.Popen[bytes]) -> None:
             os.killpg(process.pid, signal.SIGKILL)
 
 
-def _close_pipes(process: subprocess.Popen[bytes]) -> None:
+def _end_tool(process: subprocess.Popen[str], grace_seconds: float) -> None:
+    """End a tool past its bound, or interrupted (`run_bounded`): asked to
+    stop, then killed once `grace_seconds` have passed — the tool alone, since
+    its group is its caller's. Its pipes are closed unread: nothing it printed
+    after the bound is an answer."""
+    with contextlib.suppress(ProcessLookupError):  # it ended meanwhile
+        process.terminate()
+    try:
+        process.wait(timeout=grace_seconds)
+    except subprocess.TimeoutExpired:
+        with contextlib.suppress(ProcessLookupError):
+            process.kill()
+        process.wait()
+    _close_pipes(process)
+
+
+def _close_pipes(process: subprocess.Popen[Any]) -> None:
     for stream in (process.stdout, process.stderr):
         if stream is not None:
             stream.close()
