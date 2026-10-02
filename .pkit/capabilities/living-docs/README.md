@@ -9,10 +9,12 @@ pkit:
         - .pkit/capabilities/living-docs/schemas/**
         - .pkit/capabilities/living-docs/agents/**
         - .pkit/capabilities/living-docs/templates/**
+        - .github/workflows/friction-report.yml
+        - scripts/friction_tracking_issue.py
       record: ["living-docs:DEC-001", COR-049, COR-050, COR-051, COR-053]
       artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006]
     revalidated:
-      at: 2026-10-02T02:09:35Z
+      at: 2026-10-02T14:44:35Z
       outcome: updated
 ---
 
@@ -133,6 +135,19 @@ An analysis capability, such as software-analysis, can supply readers too, under
 
 The work-tracking capability decides whether `friction` obligations block. With project-management they are advisory until you set `doc_check.sources.friction: enforcing`. A repository with no commit yet owes nothing. The command asks git nothing itself: whether HEAD has a commit it reads from the core (`head` in `pkit repository base --json`). If git cannot read a commit that is there — a repository git refuses as unsafe, or a missing object — the command gives no answer, never "nothing owed". If a page's friction lies beyond a shallow clone's history, the command gives no answer either: the check then reports itself unresolved rather than pass on fewer obligations, so fetch the full history. It gives none either when the friction check answers a `schema_version` other than 1, which it does not read; a document without the key, from a backbone before it, reads as 1 (the CLI README, "Friction checks"). `pkit living-docs fill-doc-check` lists the obligations, and `--json` prints what the backbone reads. The contribution is inert when no work-tracking capability is installed.
 
+## Kept true after merging: the whole-repository report
+
+The change check guards a pull request. Friction no pull request touches — an anchor changed outside its page's own change, debt older than the gate — is found only by the core's whole-repository check (COR-050 point 6), which reports and never fails (point 12). `pkit living-docs friction-report` renders that check's findings as one Markdown body, for wherever a person reads them:
+
+- **stale debt**, each with the anchor that changed, the change it first changed in, and since when;
+- **deferrals**, each with its reason and since when;
+- **the other findings** — dead, unresolved and over-broad anchors, unreadable front matter, artefacts a shallow clone could not judge — and apart from them `left-out`, which the check reports and never owes;
+- **the two measures**: the unanchored artefacts, with those accepted with a reason listed apart, and the uncovered surface.
+
+It renders every artefact the check judges, page or not. `--json` prints `{schema_version, outstanding, body}`. `outstanding` counts every finding but `left-out` — a deferral postpones friction and is still debt (COR-050 point 9) — and never the measures, which say what remains to anchor rather than friction to answer. The same findings always give the same body: it holds no age, run time or commit, and a finding says since when by its date. So whoever publishes it can compare bodies and change nothing when nothing changed. What the findings carry — paths, messages, reasons, commit subjects — is set as code, so a reason that names `@someone` or `#12` notifies and links nobody, and every list is shortened alike to keep the body within 60 000 characters, under the size GitHub allows an issue body. It reads the check through `pkit friction check --all --json`, or, with `--report <file>`, from a file that command wrote, so a job that has just run the check does not run it twice. It refuses a document of a version it does not read, as the agent does, and otherwise exits 0, whatever the check found. It is a query — read-only, offline — and publishes nothing itself.
+
+**Where the findings appear is the project's to wire**, as wiring the check into its continuous integration is (DEC-001, Implications). The job runs the check with the full history, since a revalidation point can lie anywhere in it, on a schedule and after merges to the default branch, renders the findings and publishes the body. project-kit's own job, `.github/workflows/friction-report.yml`, runs daily and after every push to `main` and keeps **one GitHub issue**. It finds that issue by a hidden marker, among the issues the workflow's own token opened (`github-actions`) that carry the `friction-report` label, so an issue that quotes the marker is never taken for it. It rewrites the body in place when the findings change, closes the issue while nothing is outstanding and reopens it when findings return. It never comments per run and never opens a second issue. The run's step summary carries the same body. It fails only when the check could not run, the history is shallow, or the findings could not be published, never on what it found, and it is no required status: it gates nothing.
+
 ## The agent: `living-docs`
 
 The checks above tell you *that* a page drifted and *which* documents are not pages yet. Deciding what that means for a page is judgment, and the capability's agent, `living-docs`, does it — always as a proposal you review, never as an edit (DEC-001 points 5, 6 and 8). `pkit sync` deploys it with the other agents; in Claude Code it is `.claude/agents/living-docs.md`. Ask it in plain words; it picks one of three intents from what you ask:
@@ -172,7 +187,9 @@ From then on, the friction check flags pages as their anchors change, and the ag
 
 ## What's shipped now, what's next
 
-Shipped: the decision, the project configuration's schema, the declaration of the roots as places and of the definitions location, the validator, the `LDOC` rule set, the space-definition template and the signpost and reference page templates with the page's schema, the connections (the readers and reading-evidence points, and the contribution to the documentation check), and the `living-docs` agent that proposes fixes, performs reader-review and onboards existing documentation.
+Shipped: the decision, the project configuration's schema, the declaration of the roots as places and of the definitions location, the validator, the `LDOC` rule set, the space-definition template and the signpost and reference page templates with the page's schema, the connections (the readers and reading-evidence points, and the contribution to the documentation check), the `living-docs` agent that proposes fixes, performs reader-review and onboards existing documentation, and `friction-report`, which renders the whole-repository findings to publish.
+
+Next: a workflow template an adopter copies to publish those findings on a schedule, as project-kit's own job does.
 
 ## Citing this capability's decisions
 
