@@ -1,0 +1,21 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+  requires_backbone: release
+body: >
+  A move's why now reaches its journal entry, and a move the forward cascade
+  makes is projected at `audit.projection: full` like any other governed move
+  (#1232). A bypass's justification — `promote-issue --reason`, `move-issue
+  --bypass --bypass-reason` — was written into the audit comment only, so with
+  journal logging on the journal lacked the why of exactly the moves that
+  needed one. It is now the reason on the move's journal entry too (`bypass:
+  <reason>`), at every projection, and `pkit pm history` shows it; a move no
+  gate was bypassed for carries none. At `full`, each ancestor the forward
+  cascade moves now gets the provenance comment a governed move gets, naming
+  the move that caused it on a line of its own: one comment on each ancestor
+  per run, covering the steps that landed in it (`todo → backlog →
+  in-progress`), so a re-run never repeats one. At `audit` and `off` a cascaded
+  move still posts nothing. A comment that fails to post is one `[warn]` line,
+  and the move stands. Upgrade the capability together with the backbone: it
+  needs the release that adds `pkit process move --reason`.

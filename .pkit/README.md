@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-02T02:53:18Z
+      at: 2026-10-02T03:17:06Z
       outcome: unchanged
-      unchanged-because: the CLI reference gained new decision's --yes and the adr derivation; this page only points at that reference and lists the command families, which are the same
+      unchanged-because: the lifecycle, CLI and process pages now say what a health finding, a validator's no-answer and a filler's reason show of an unevaluable predicate; this page's map of those areas and of the commands it indexes is unchanged
 ---
 
 # project-kit

@@ -302,6 +302,11 @@ class PredicateFailure:
     cause: str
     stderr_tail: str = ""
 
+    def reason_for(self, kind: str, predicate: dict[str, Any]) -> str:
+        """The reason a `kind` predicate gave no answer, as every surface that
+        reports it gives it: the predicate's command and how its run ended."""
+        return f"couldn't evaluate {kind} predicate {predicate.get('run')!r}: it {self.cause}"
+
 
 @dataclass
 class PredicateRunner:
@@ -400,11 +405,14 @@ class PredicateRunner:
             indeterminate=True,
         )
 
-    def run_raw(self, predicate: dict[str, Any]) -> dict[str, Any] | None:
+    def run_raw(self, predicate: dict[str, Any]) -> dict[str, Any] | PredicateFailure:
         """Resolve + run a predicate command and return its RAW parsed payload,
-        or None when it could not be evaluated (unresolved name shape, non-zero
-        exit, timeout, unparseable JSON) — the caller maps None to its own
-        fail-closed outcome and interprets the payload itself.
+        or the `PredicateFailure` saying why it could not be evaluated
+        (unresolved name shape, no start, non-zero exit, timeout, unparseable
+        JSON) — how the run ended and what the predicate said on stderr. The
+        caller maps the failure to its own fail-closed outcome, reports it as
+        the engine does (`PredicateFailure.reason_for`, `said_lines`,
+        `json_tail`), and interprets the payload itself.
 
         This is the public form of the runner contract for out-of-engine
         consumers whose payloads carry no engine-interpreted `result` — the
@@ -415,8 +423,7 @@ class PredicateRunner:
         `ProcessError` (a definition bug, per `_invoke`); callers that must not
         hard-fail on it catch and fold it into their indeterminacy.
         """
-        payload = self._run(predicate)
-        return payload if isinstance(payload, dict) else None
+        return self._run(predicate)
 
     def answer(self, predicate: dict[str, Any]) -> dict[str, Any] | PredicateFailure:
         """Resolve + run a predicate and return its parsed JSON object, or the
@@ -479,7 +486,7 @@ def _unevaluable(
     beside, in `stderr_tail`."""
     return PredicateOutcome(
         result=False,
-        reason=f"couldn't evaluate {kind} predicate {predicate.get('run')!r}: it {failure.cause}",
+        reason=failure.reason_for(kind, predicate),
         indeterminate=True,
         stderr_tail=failure.stderr_tail,
     )
@@ -830,6 +837,17 @@ class Position:
         """The states whose detection could not be evaluated, each with the
         outcome saying why — what an indeterminate position is made of."""
         return {sid: o for sid, o in self.detection_reasons.items() if o.indeterminate}
+
+    def why_indeterminate(self) -> tuple[str, str]:
+        """The first state whose detection could not be evaluated, as `(why,
+        stderr_tail)`: `why` names the state and the reason (`'draft':
+        couldn't evaluate …`), `stderr_tail` is what its predicate said —
+        `("", "")` when every detection was evaluated. How a reader naming an
+        indeterminate position in one line says why."""
+        state_id, failed = next(iter(self.unevaluated.items()), ("", None))
+        if failed is None:
+            return "", ""
+        return f"{state_id!r}: {failed.reason}", failed.stderr_tail
 
     def unevaluated_by_cause(self) -> list[tuple[list[str], PredicateOutcome]]:
         """The unevaluated states grouped by cause — one reason and one
@@ -1327,14 +1345,14 @@ class ProcessEngine:
         if inner_position.indeterminate:
             # Name the first detection that could not be evaluated, with what
             # its predicate said, so the parent's view says why.
-            state_id, failed = next(iter(inner_position.unevaluated.items()), ("", None))
-            why = f" ({state_id!r}: {failed.reason})" if failed else ""
+            why, said = inner_position.why_indeterminate()
             return SubprocessResolution(
                 address=address,
                 outcome=None,
                 indeterminate=True,
-                reason=f"inner process {address!r} position is indeterminate{why}",
-                stderr_tail=failed.stderr_tail if failed else "",
+                reason=f"inner process {address!r} position is indeterminate"
+                + (f" ({why})" if why else ""),
+                stderr_tail=said,
             )
         inner_state = inner_def.state(inner_position.state_id) if inner_position.state_id else None
         if inner_state is not None and inner_state.get("terminal"):
@@ -2765,10 +2783,11 @@ def _validate_journal_entry(entry: dict[str, Any], definition: ProcessDefinition
 # --- rendering ------------------------------------------------------------
 
 
-def _said_lines(stderr_tail: str, indent: str) -> list[str]:
+def said_lines(stderr_tail: str, indent: str) -> list[str]:
     """A predicate's own words under the line naming its failure, attributed to
     it and kept as it laid them out (never re-wrapped). Nothing when it said
-    nothing."""
+    nothing. The one narrative form of what an unevaluable predicate said —
+    the engine's views and refusals, and the health report, show it so."""
     if not stderr_tail:
         return []
     return [f"{indent}the predicate said:", *(f"{indent}  {ln}" for ln in stderr_tail.splitlines())]
@@ -2777,12 +2796,13 @@ def _said_lines(stderr_tail: str, indent: str) -> list[str]:
 def _explained(reason: str, stderr_tail: str, indent: str) -> str:
     """`reason` followed by what the predicate said — the form of a refusal
     message, which reaches the operator as one string."""
-    return "\n".join([reason, *_said_lines(stderr_tail, indent)])
+    return "\n".join([reason, *said_lines(stderr_tail, indent)])
 
 
-def _json_tail(stderr_tail: str) -> str | None:
-    """`stderr_tail` as the JSON views carry it, beside `reason` and never
-    inside it: null when the predicate said nothing."""
+def json_tail(stderr_tail: str) -> str | None:
+    """`stderr_tail` as the JSON views carry it — the engine's and the health
+    report's — beside `reason` and never inside it: null when the predicate
+    said nothing."""
     return stderr_tail or None
 
 
@@ -2824,7 +2844,7 @@ def render_status_narrative(engine: ProcessEngine, actor: str) -> str:
         # point 13): a classifier's failure is shown once, not once per state.
         for state_ids, outcome in position.unevaluated_by_cause():
             lines.append(f"    couldn't evaluate {_states_listed(state_ids)}: {outcome.reason}")
-            lines.extend(_said_lines(outcome.stderr_tail, "      "))
+            lines.extend(said_lines(outcome.stderr_tail, "      "))
     elif position.state_id is None:
         lines.append("  " + cli_render.style("strong", "Where: no position"))
         lines.append("    no state's detection predicate matched current reality")
@@ -2870,7 +2890,7 @@ def render_status_narrative(engine: ProcessEngine, actor: str) -> str:
             lines.append(f"    embeds {resolution.address}")
             if resolution.indeterminate:
                 lines.append(f"    inner indeterminate: {resolution.reason}")
-                lines.extend(_said_lines(resolution.stderr_tail, "      "))
+                lines.extend(said_lines(resolution.stderr_tail, "      "))
             elif resolution.outcome is not None:
                 lines.append(f"    inner outcome: {resolution.outcome}")
             else:
@@ -2881,7 +2901,7 @@ def render_status_narrative(engine: ProcessEngine, actor: str) -> str:
         if cascade is not None and engine._has_cascade_gated_move(position.state_id):
             lines.append(f"    folds {cascade.address} ({cascade.op})")
             lines.append(f"    fold: {cascade.reason}")
-            lines.extend(_said_lines(cascade.stderr_tail, "      "))
+            lines.extend(said_lines(cascade.stderr_tail, "      "))
 
     # How it got here (journal — kept only when the project enables it, COR-033
     # point 7; with it off, say so rather than showing an empty history).
@@ -2933,7 +2953,7 @@ def render_status_narrative(engine: ProcessEngine, actor: str) -> str:
             # invariant reason is an own-line author/predicate prose field
             # (ADR-024): hanging-indent always, width-wrap on a TTY.
             lines.extend(cli_render.wrap(inv.reason, indent="        "))
-            lines.extend(_said_lines(inv.stderr_tail, "        "))
+            lines.extend(said_lines(inv.stderr_tail, "        "))
 
     # Blocked overlay (COR-034) — the derived, live wait, if any.
     checks = engine.legal_move_checks(position, actor)
@@ -2951,7 +2971,7 @@ def render_status_narrative(engine: ProcessEngine, actor: str) -> str:
                 hang="             ",  # len("resume when: ") = 13
             )
         )
-        lines.extend(_said_lines(blocked.stderr_tail, "        "))
+        lines.extend(said_lines(blocked.stderr_tail, "        "))
         if blocked.since:
             lines.append(f"        since: {blocked.since}")
         if blocked.assignee:
@@ -2993,7 +3013,7 @@ def render_status_narrative(engine: ProcessEngine, actor: str) -> str:
             # check.outcome.reason is an own-line prose field (ADR-024):
             # hanging-indent always, width-wrap on a TTY.
             lines.extend(cli_render.wrap(check.outcome.reason, indent="        "))
-            lines.extend(_said_lines(check.outcome.stderr_tail, "        "))
+            lines.extend(said_lines(check.outcome.stderr_tail, "        "))
             # The question posed on this move (COR-034), if it carries one.
             if check.prompt:
                 lines.extend(_prompt_lines(check.prompt, "        "))
@@ -3035,7 +3055,7 @@ def render_status_json(engine: ProcessEngine, actor: str) -> str:
             # position is indeterminate — each with the engine's reason and
             # what its predicate said (null when it said nothing).
             "unevaluated": [
-                {"state": state_id, "reason": o.reason, "stderr_tail": _json_tail(o.stderr_tail)}
+                {"state": state_id, "reason": o.reason, "stderr_tail": json_tail(o.stderr_tail)}
                 for state_id, o in position.unevaluated.items()
             ],
             # When no state is true: each classifier that answered `state:
@@ -3057,7 +3077,7 @@ def render_status_json(engine: ProcessEngine, actor: str) -> str:
                     "outcome": resolution.outcome,
                     "indeterminate": resolution.indeterminate,
                     "reason": resolution.reason,
-                    "stderr_tail": _json_tail(resolution.stderr_tail),
+                    "stderr_tail": json_tail(resolution.stderr_tail),
                 }
             ),
             # COR-037: the live fold over the declared child's members (None when
@@ -3075,7 +3095,7 @@ def render_status_json(engine: ProcessEngine, actor: str) -> str:
                     "opened": cascade.opened,
                     "indeterminate": cascade.indeterminate,
                     "reason": cascade.reason,
-                    "stderr_tail": _json_tail(cascade.stderr_tail),
+                    "stderr_tail": json_tail(cascade.stderr_tail),
                 }
             ),
         },
@@ -3091,7 +3111,7 @@ def render_status_json(engine: ProcessEngine, actor: str) -> str:
                 "since": blocked.since,
                 "assignee": blocked.assignee,
                 "prompt": blocked.prompt,
-                "stderr_tail": _json_tail(blocked.stderr_tail),
+                "stderr_tail": json_tail(blocked.stderr_tail),
             }
         ),
         # COR-035: the position-independent always-checks, evaluated live.
@@ -3111,7 +3131,7 @@ def render_status_json(engine: ProcessEngine, actor: str) -> str:
                 "allowed": c.allowed,
                 "indeterminate": c.indeterminate,
                 "reason": c.outcome.reason,
-                "stderr_tail": _json_tail(c.outcome.stderr_tail),
+                "stderr_tail": json_tail(c.outcome.stderr_tail),
                 "why": c.transition.get("why"),
                 "hint": c.transition.get("hint"),
                 # COR-034: the question on this move (None unless authored).
@@ -3173,7 +3193,7 @@ def render_validate_narrative(engine: ProcessEngine) -> str:
         # reason is an own-line author/predicate prose field (ADR-024):
         # hanging-indent always, width-wrap on a TTY.
         lines.extend(cli_render.wrap(inv.reason, indent="        "))
-        lines.extend(_said_lines(inv.stderr_tail, "        "))
+        lines.extend(said_lines(inv.stderr_tail, "        "))
     violations = [inv for inv in outcomes if not inv.holds]
     lines.append("")
     if violations:
@@ -3209,5 +3229,5 @@ def _invariant_json(inv: InvariantOutcome) -> dict[str, Any]:
         "indeterminate": inv.indeterminate,
         "why": inv.why,
         "reason": inv.reason,
-        "stderr_tail": _json_tail(inv.stderr_tail),
+        "stderr_tail": json_tail(inv.stderr_tail),
     }
