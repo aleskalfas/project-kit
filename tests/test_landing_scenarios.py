@@ -281,6 +281,13 @@ def _already_queued(world: World, *, method: str = "SQUASH") -> None:
     world.host.progress = [fake.at(1, "MERGEABLE"), fake.at(1, "MERGEABLE"), fake.lands()]
 
 
+def _out_of_the_queue_after_the_first_read(world: World) -> None:
+    """Queued at the checked head at the caller's first reading — release's
+    plan — and dropped by the queue just after it."""
+    _already_queued(world)
+    world.host.after(fake.READ, lambda host: host.drop())
+
+
 def _wait_runs_out(world: World) -> None:
     _queue(world)
     world.options = ("short-wait",)
@@ -792,6 +799,19 @@ _DROPPED_HEAD_FIRST = (
     "the one refusal order reads the squash-commit defaults last, after the dropped head: the "
     "plan refuses on its first reading, as project-management does (#1258)"
 )
+_PM_READS_AGAIN = (
+    "it reads the PR again after the squash-commit defaults, finds it dropped at the checked "
+    "head, and refuses the dropped head, nothing sent"
+)
+_NO_PLAN = NotToday(
+    "planned nothing before #1258: release read the queue once, so no reading came between a "
+    "plan and the landing for the PR to leave the queue in"
+)
+_LEFT_AFTER_THE_PLAN = (
+    "the plan finds the PR queued at the checked head and skips the gates, so the landing "
+    "allows no request (#1258): it finds the PR out of the queue and refuses, nothing sent, and "
+    "a re-run plans afresh and gates"
+)
 _REQUESTING_ON_LAND = NotToday(
     "imports the landing (#1258): `requesting` is written by `pkit pull-request land`, where "
     "the kill between it and the request is tested; a kill ends release's own run, with nothing "
@@ -906,6 +926,19 @@ SCENARIOS: tuple[Scenario, ...] = (
                 "0 merge: merged", "read defaults read defaults read branch based-on delete-ref"
             ),
         },
+    ),
+    Scenario(
+        "out-of-the-queue-after-the-first-read",
+        "Queued at the checked head at the caller's first reading, then dropped by the queue "
+        "before the landing's.",
+        _out_of_the_queue_after_the_first_read,
+        Row(
+            stopped("refused 1", "read defaults read", note=_PM_READS_AGAIN),
+            stopped("1", "read defaults read", note=_PM_READS_AGAIN),
+            _NO_PLAN,
+            stopped("1 merge: refused", "read defaults read", note=_PM_READS_AGAIN),
+        ),
+        after={RELEASE: stopped("1", "read defaults read", note=_LEFT_AFTER_THE_PLAN)},
     ),
     Scenario(
         "wait-runs-out",

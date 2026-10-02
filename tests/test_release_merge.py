@@ -21,7 +21,7 @@ import ast
 import inspect
 import json
 import subprocess
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -1603,3 +1603,100 @@ def test_a_dequeue_that_could_not_read_the_pr_says_whether_it_left_is_not_known(
     assert "whether taking it out of the merge queue worked is not known" in message
     assert "failed" not in message
     assert fake.DEQUEUE not in host.kinds()
+
+
+# --- no request no gate saw, after a plan that skipped the gates (#1258) ----------
+
+
+def _release_pr(*, queued: bool = True, held: bool = False) -> fake.HostingService:
+    """The release PR on the shared fake, on a base that merges through a
+    queue: in the queue at the checked head, or — `held` — held by auto-merge
+    until it may enter."""
+    host = fake.HostingService(
+        number=42,
+        title="chore(release): v1.141.0",
+        head_ref="release/v1.141.0",
+    )
+    host.set_base(fake.Base(queue=True))
+    if held:
+        host.auto_merge = True
+    elif queued:
+        host.enter_queue()
+        host.entry = (1, "MERGEABLE")
+    return host
+
+
+def _switch_the_queue_off(host: fake.HostingService) -> None:
+    host.set_base(fake.Base())
+    host.in_queue, host.entry = False, None
+
+
+@pytest.mark.parametrize(
+    ("held", "leaves", "force"),
+    [
+        (False, lambda host: host.drop(), True),
+        (True, lambda host: setattr(host, "auto_merge", False), False),
+        (False, _switch_the_queue_off, False),
+    ],
+    ids=["dropped-with-force", "auto-merge-switched-off", "queue-switched-off"],
+)
+def test_a_pr_that_left_the_queue_after_a_gateless_plan_gets_no_request(
+    monkeypatch: pytest.MonkeyPatch,
+    held: bool,
+    leaves: Callable[[fake.HostingService], None],
+    force: bool,
+) -> None:
+    """The plan finds the PR queued at the checked head and skips the gates;
+    it leaves the queue before the landing reads it. The landing allows no
+    request, so nothing is merged or enqueued that no gate of this run saw:
+    exit 1, saying so, and that a re-run plans afresh and gates."""
+    host = _release_pr(held=held)
+    host.after(fake.READ, leaves)
+    seen = _fake_run(monkeypatch)
+    with pytest.raises(click.ClickException) as exc:
+        _land(monkeypatch, host, force=force, headRefOid=fake.HEAD)
+    assert exc.value.exit_code == 1
+    assert not isinstance(exc.value, release.ReleaseNotMerged)
+    message = exc.value.message
+    assert message.startswith(
+        "release PR #42 left the merge queue for main between this run's plan and its landing"
+    )
+    assert "the landing sent nothing" in message
+    assert "Run `pkit release merge 42` again: it plans afresh, and runs its gates" in message
+    assert not {fake.MERGE, fake.MERGE_ADMIN, fake.ENQUEUE} & set(host.kinds())
+    assert seen == []
+
+
+def test_a_pr_still_queued_at_the_landing_is_waited_for_as_before(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    host = _release_pr()
+    host.progress = [fake.at(1, "MERGEABLE"), fake.lands()]
+    _fake_run(monkeypatch)
+    report = _land(monkeypatch, host, headRefOid=fake.HEAD)
+    assert report.exit_code == 0
+    assert not {fake.MERGE, fake.MERGE_ADMIN, fake.ENQUEUE} & set(host.kinds())
+    assert host.remote_deletion() == "deleted"
+
+
+def test_a_landing_after_a_gateless_plan_allows_no_request(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The landing that follows a plan of a wait asks `land` for no request;
+    one that follows a gated plan allows them."""
+    asked: list[tuple[bool, bool]] = []
+    land = release.pull_request_landing.land
+
+    def recording(*args: Any, **kwargs: Any) -> Any:
+        asked.append((kwargs["dry_run"], kwargs["options"].no_request))
+        return land(*args, **kwargs)
+
+    monkeypatch.setattr(release.pull_request_landing, "land", recording)
+    _fake_run(monkeypatch)
+    queued = _release_pr()
+    queued.progress = [fake.at(1, "MERGEABLE"), fake.lands()]
+    _land(monkeypatch, queued, headRefOid=fake.HEAD)
+    assert asked == [(True, False), (False, True)]
+    asked.clear()
+    _land(monkeypatch, _Host(queue=False))
+    assert asked == [(True, False), (False, False)]

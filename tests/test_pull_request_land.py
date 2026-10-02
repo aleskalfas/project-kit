@@ -225,6 +225,10 @@ def _allow_dropped_head(service: fake.HostingService) -> dict[str, Any]:
     return {"allow_dropped_head": True}
 
 
+def _no_request(service: fake.HostingService) -> dict[str, Any]:
+    return {"no_request": True}
+
+
 _COLUMNS: dict[str, Callable[[fake.HostingService], dict[str, Any]]] = {
     "no-option": _no_option,
     "admin": _admin,
@@ -232,7 +236,12 @@ _COLUMNS: dict[str, Callable[[fake.HostingService], dict[str, Any]]] = {
     "shape-bad-refuse": _bad_shape_refused,
     "shape-bad-warn": _bad_shape_warned,
     "allow-dropped-head": _allow_dropped_head,
+    "no-request": _no_request,
 }
+
+#: A row that would send a merge or an enqueue, with `no_request`: refused
+#: first, nothing sent — the dry run alike.
+_NOT_ALLOWED = Cell("refused(request-not-allowed): read", "refused(request-not-allowed): read")
 
 _DEQUEUED = "head-moved: read read dequeue read read"
 _WAITED = "merged: read defaults read"
@@ -269,6 +278,7 @@ TABLE: dict[str, tuple[Callable[[fake.HostingService], None], dict[str, Cell]]] 
             ),
             "shape-bad-warn": Cell("merged: read read", "planned→wait: read"),
             "allow-dropped-head": Cell(_WAITED, "planned→wait: read defaults"),
+            "no-request": Cell(_WAITED, "planned→wait: read defaults"),
         },
     ),
     "dropped-at-the-head": (
@@ -286,6 +296,7 @@ TABLE: dict[str, tuple[Callable[[fake.HostingService], None], dict[str, Cell]]] 
                 "refused(queue-not-squash): read", "refused(queue-not-squash): read"
             ),
             "allow-dropped-head": Cell(_ENQUEUED, "planned→enqueue: read defaults"),
+            "no-request": _NOT_ALLOWED,
         },
     ),
     "open-on-a-queue": (
@@ -303,6 +314,7 @@ TABLE: dict[str, tuple[Callable[[fake.HostingService], None], dict[str, Cell]]] 
                 "refused(queue-not-squash): read", "refused(queue-not-squash): read"
             ),
             "allow-dropped-head": Cell(_ENQUEUED, "planned→enqueue: read defaults"),
+            "no-request": _NOT_ALLOWED,
         },
     ),
     "open-without-a-queue": (
@@ -310,6 +322,7 @@ TABLE: dict[str, tuple[Callable[[fake.HostingService], None], dict[str, Cell]]] 
         {
             **_same(_MERGED, "planned→merge: read"),
             "admin": Cell(_ADMIN_MERGED, "planned→merge: read"),
+            "no-request": _NOT_ALLOWED,
         },
     ),
     "held-at-the-head-without-a-queue": (
@@ -317,6 +330,7 @@ TABLE: dict[str, tuple[Callable[[fake.HostingService], None], dict[str, Cell]]] 
         {
             **_same(_MERGED, "planned→merge: read"),
             "admin": Cell(_ADMIN_MERGED, "planned→merge: read"),
+            "no-request": _NOT_ALLOWED,
         },
     ),
 }
@@ -394,12 +408,17 @@ def test_the_refusals_come_in_one_order_the_squash_defaults_read_last(
     here: dict[str, Any], host: fake.HostingService
 ) -> None:
     """Every refusal applies at once; lifting each in turn shows the next:
-    admin-on-queue, queue-not-allowed, queue-not-squash, dropped-head,
-    squash-defaults — the defaults read only for the last."""
+    request-not-allowed, admin-on-queue, queue-not-allowed, queue-not-squash,
+    dropped-head, squash-defaults — the defaults read only for the last."""
     _queue(host, method="MERGE")
     host.dropped_before()
     host.squash_defaults = ("COMMIT_OR_PR_TITLE", "COMMIT_MESSAGES")
     steps: list[tuple[dict[str, Any], str, str]] = [
+        (
+            {"no_request": True, "admin": True, "direct_only": True},
+            landing.REQUEST_NOT_ALLOWED,
+            "read",
+        ),
         ({"admin": True, "direct_only": True}, landing.ADMIN_ON_QUEUE, "read"),
         ({"direct_only": True}, landing.QUEUE_NOT_ALLOWED, "read"),
         ({}, landing.QUEUE_NOT_SQUASH, "read"),
@@ -959,6 +978,7 @@ def test_the_closed_sets_of_ends_and_their_reason_kinds() -> None:
         "failed": {None, "not-made"},
         "refused": {
             "foreign-repository",
+            "request-not-allowed",
             "admin-on-queue",
             "queue-not-allowed",
             "queue-not-squash",
@@ -1126,6 +1146,43 @@ def test_land_takes_a_commit_id_in_any_case_and_pins_it_lower_cased(
     result = _invoke("--head", HEAD.upper(), "--subject", "fix: land it", "--json")
     assert result.exit_code == 0
     assert _lines(result.stdout)[1]["head"] == HEAD
+
+
+@pytest.mark.parametrize("dry_run", [False, True], ids=["run", "dry-run"])
+def test_land_with_no_request_refuses_a_merge_and_sends_nothing(
+    served: fake.HostingService, dry_run: bool
+) -> None:
+    """`--no-request`: the open PR a merge would land is refused, first in
+    the one order — `refused`, not `planned`, in the dry run too."""
+    result = _invoke(*_ARGS, "--no-request", "--json", *(["--dry-run"] if dry_run else []))
+    assert result.exit_code == 1
+    end = _lines(result.stdout)[-1]
+    assert (end["ended"], end["reason_kind"], end["sent"]) == (
+        "refused",
+        "request-not-allowed",
+        None,
+    )
+    assert "allows no merge and no enqueue" in end["reason"]
+    assert _requests(served) == "read"
+
+
+def test_land_with_no_request_waits_for_a_pr_queued_at_the_head(
+    served: fake.HostingService,
+) -> None:
+    _queued_at_the_head(served)
+    result = _invoke(*_ARGS, "--no-request", "--json")
+    assert result.exit_code == 0
+    assert _lines(result.stdout)[-1]["ended"] == "merged"
+    assert fake.ENQUEUE not in served.kinds() and fake.MERGE not in served.kinds()
+
+
+def test_land_with_no_request_still_takes_a_moved_head_out(served: fake.HostingService) -> None:
+    """The dequeue is protective, and stays allowed."""
+    _queued_at_another_head(served)
+    result = _invoke(*_ARGS, "--no-request", "--json")
+    assert result.exit_code == 3
+    assert _lines(result.stdout)[-1]["dequeue"]["accepted"] is True
+    assert fake.DEQUEUE in served.kinds()
 
 
 def test_land_says_its_events_and_end_to_a_person(served: fake.HostingService) -> None:

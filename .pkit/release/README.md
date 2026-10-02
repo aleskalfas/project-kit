@@ -465,6 +465,10 @@ into it (COR-014). Instead the release flow owns its own merge verb, beside the
   - a plan that finds the PR merged, or closed, or cannot read it, or finds
     it already queued — at the checked head, waited for, or at another
     head, taken out of the queue — skips the gates;
+  - the landing after a plan that skipped the gates allows no merge and no
+    enqueue (`--no-request`): a PR that left the queue between the plan and
+    the landing is refused, nothing sent, exit 1, and a re-run plans afresh
+    and gates;
   - every other plan runs the gates first, then the plan's own refusal,
     then the landing, which reads the PR again just before its request;
   - `--dry-run` reports from the plan and lands nothing;

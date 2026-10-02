@@ -961,6 +961,13 @@ _LAND_EXITS: Mapping[str, int] = {
     help="A PR already in a queue that would not make its squash commit: refuse, leaving it "
     "queued, or wait for it with a warning.",
 )
+@click.option(
+    "--no-request",
+    is_flag=True,
+    default=False,
+    help="Send no merge and no enqueue: a PR queued at SHA is waited for, one queued at another "
+    "head is still taken out, and one a merge or an enqueue would land is refused.",
+)
 @_allow_foreign_repo_option
 @click.option(
     "--dry-run",
@@ -978,6 +985,7 @@ def pull_request_land(
     admin: bool,
     direct_only: bool,
     queued_bad_shape: str,
+    no_request: bool,
     allow_foreign_repo: bool,
     dry_run: bool,
     as_json: bool,
@@ -1009,6 +1017,7 @@ def pull_request_land(
         admin=admin,
         direct_only=direct_only,
         queued_bad_shape=queued_bad_shape,
+        no_request=no_request,
     )
 
     def written(document: dict[str, Any]) -> None:

@@ -561,7 +561,7 @@ Exit `0` means the command reached an end it can state; the document says which.
 
 ### `pull-request land <n> --head <sha> --subject <s> [options] [--json]`
 
-The options: `[--seconds <s>] [--allow-dropped-head] [--admin] [--direct-only] [--queued-bad-shape refuse|warn] [--allow-foreign-repo] [--dry-run]`.
+The options: `[--seconds <s>] [--allow-dropped-head] [--admin] [--direct-only] [--queued-bad-shape refuse|warn] [--no-request] [--allow-foreign-repo] [--dry-run]`.
 
 The landing sequence, in one command (ADR-061 point 5). It composes the steps above but the deletion, once, so no caller holds a copy of them. `release merge` lands through it, by import.
 
@@ -592,6 +592,7 @@ The landing sequence, in one command (ADR-061 point 5). It composes the steps ab
 - "Queued" is in the queue, or held by auto-merge until it may enter. A PR auto-merge holds at `H` on a base without a queue takes the last row: it is merged directly, not waited for.
 - After a direct merge, one reading: merged, it ends; not merged, the wait; not read, one warning, then the wait.
 - `--admin` passes the direct merge through as an administrator merge.
+- `--no-request`: the caller allows no merge and no enqueue in this landing. A PR queued at `H` is waited for, and one queued at another head is still taken out: the dequeue protects. A row that would send a merge or an enqueue, on any base, ends `refused`, `request-not-allowed`, nothing sent; the dry run ends the same, not `planned`.
 
 The options, on the rows of a base with a queue:
 
@@ -603,16 +604,18 @@ The options, on the rows of a base with a queue:
 | a bad shape, `--queued-bad-shape refuse` | `refused`, by the shape; the PR stays queued | `refused`, by the shape | `refused`, by the shape |
 | a bad shape, `--queued-bad-shape warn` | wait, with a warning | `refused`, by the shape | `refused`, by the shape |
 | `--allow-dropped-head` | as none | `enqueue`, wait | as none |
+| `--no-request` | as none | `refused`, `request-not-allowed` | `refused`, `request-not-allowed` |
 
-On a base without a queue, `--direct-only`, `--allow-dropped-head` and `--queued-bad-shape` change nothing, and no shape is read.
+On a base without a queue, `--direct-only`, `--allow-dropped-head` and `--queued-bad-shape` change nothing, and no shape is read; `--no-request` refuses the merge there, `request-not-allowed`.
 
-**One refusal order**, on a base with a queue; the first that applies refuses, and nothing is sent:
+**One refusal order**; the first that applies refuses, and nothing is sent:
 
-1. `admin-on-queue` — `--admin`.
-2. `queue-not-allowed` — `--direct-only`.
-3. `queue-not-squash` — the queue's merge method is not squash.
-4. `dropped-head` — the queue dropped the PR at `H`, without `--allow-dropped-head`.
-5. `squash-defaults` — the repository's squash-commit defaults, read last, are not `PR_TITLE` and `PR_BODY`. Defaults that cannot be read end `unreadable`, `reason_kind: squash-defaults`.
+1. `request-not-allowed` — `--no-request`, where a merge or an enqueue would follow, on any base.
+2. `admin-on-queue` — `--admin`, on a base with a queue; this one and those below apply only there.
+3. `queue-not-allowed` — `--direct-only`.
+4. `queue-not-squash` — the queue's merge method is not squash.
+5. `dropped-head` — the queue dropped the PR at `H`, without `--allow-dropped-head`.
+6. `squash-defaults` — the repository's squash-commit defaults, read last, are not `PR_TITLE` and `PR_BODY`. Defaults that cannot be read end `unreadable`, `reason_kind: squash-defaults`.
 
 **Two stops no option lifts** (ADR-061 points 5 and 8):
 
@@ -696,7 +699,7 @@ On a base without a queue, `--direct-only`, `--allow-dropped-head` and `--queued
 | `dropped` | out of the queue on two readings, a queue seen | `null` | `null`, or what was sent |
 | `not-merged` | out on two readings, or closed, no queue seen | `null` | `merge` |
 | `failed` | its merge or enqueue did not land it | `null`, `not-made` | `null` when refused; set for `not-made` |
-| `refused` | stopped before any request | the guard's `foreign-repository`, or the refusal order's | `null` |
+| `refused` | stopped before any request | `foreign-repository` (the guard's); `request-not-allowed`, `admin-on-queue`, `queue-not-allowed`, `queue-not-squash`, `dropped-head`, `squash-defaults` (the refusal order's) | `null` |
 | `unreadable` | a reading needed before a request could not be taken; nothing sent | `null`, `squash-defaults` | `null` |
 
 - A head move whose dequeue finds the PR merged stays `head-moved`, with `dequeue.reason_kind: merged`.
@@ -715,6 +718,7 @@ On a base without a queue, `--direct-only`, `--allow-dropped-head` and `--queued
 - The guard runs with a dry run's clearance, and never asks. In another repository without `--allow-foreign-repo` it ends `refused`, `foreign-repository`, `cleared: null`, nothing read, the reason saying a run at a terminal would ask. Otherwise `cleared` is `same-repo`, `undetermined` or `flag`.
 - It takes the first reading, and the squash-commit defaults where the table reaches them. It sends nothing.
 - A row that sends a request or waits ends `planned`, `would` saying which. Every other row ends as the landing would.
+- With `--no-request`, a row that would send a merge or an enqueue ends `refused`, `request-not-allowed`, as the landing would.
 - Under `warn`, a queued PR with a bad shape is `planned`, `would: wait`, with `warnings` filled.
 - It writes `reading`, then `end`. A guard refusal writes `end` alone.
 

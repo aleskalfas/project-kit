@@ -27,7 +27,7 @@ import json
 import re
 import subprocess
 from collections.abc import Callable, Collection, Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import date
 from pathlib import Path
 from typing import Any, cast
@@ -1871,8 +1871,11 @@ def merge_release_pr(
     its clean-up run, and one closed has nothing to merge; one it cannot read,
     one already queued at the checked head — waited for, not gated or
     enqueued again — and one queued at another head — taken out of the queue
-    — skip the gates. Every other plan runs the gates first, then the plan's
-    own refusal, then the landing, which reads again: where the base merges
+    — skip the gates. The landing after such a plan allows no merge and no
+    enqueue (`no_request`), so a PR that left the queue in between is refused
+    with nothing sent, never sent a request no gate of this run saw. Every
+    other plan runs the gates first, then the plan's own refusal, then the
+    landing, which reads again: where the base merges
     through a queue the PR is enqueued, pinned to the checked head, and the
     run waits for the queue's merge — `wait_seconds` None as long as the
     queue estimates, 0 not at all — saying through `say` where the PR stands;
@@ -1938,7 +1941,7 @@ def merge_release_pr(
             )
         say(f"  PR #{number} is already in the merge queue for {base}")
         landing.waiting("the queue to merge it")
-        return landing.lands()
+        return landing.lands(gated=False)
     if plan.would == pull_request_landing.DEQUEUE_REQUEST:
         if dry_run:
             reading = cast(pull_request_landing.Reading, plan.reading)
@@ -1947,7 +1950,7 @@ def merge_release_pr(
                 f"{reading.head_oid[:7]}, not at {pr.head_oid[:7]}, the head whose checks were "
                 "read; would take it out of the queue; nothing changed."
             )
-        return landing.lands()
+        return landing.lands(gated=False)
 
     decision = evaluate_release_pr(pr)
     if decision.action != "merge":
@@ -2015,9 +2018,12 @@ class _ReleaseLanding:
         """The landing as a dry run: read and judged, nothing sent."""
         return self._land(dry_run=True)
 
-    def lands(self) -> ReleaseMergeReport:
-        """The landing, and release's report of how it ended."""
-        landed = self._land(dry_run=False)
+    def lands(self, *, gated: bool = True) -> ReleaseMergeReport:
+        """The landing, and release's report of how it ended. A landing that
+        follows a plan that skipped the gates (`gated` false) allows no merge
+        and no enqueue (`no_request`): a PR that left the queue between the
+        plan and the landing gets no request no gate of this run saw."""
+        landed = self._land(dry_run=False, no_request=not gated)
         for notice in landed.warnings:
             if notice.reason_kind == pull_request_landing.NOT_READ:
                 _warn(
@@ -2026,14 +2032,14 @@ class _ReleaseLanding:
                 )
         return self.reported(landed)
 
-    def _land(self, *, dry_run: bool) -> pull_request_landing.Landing:
+    def _land(self, *, dry_run: bool, no_request: bool = False) -> pull_request_landing.Landing:
         return pull_request_landing.land(
             self.pr.number,
             head=self.pr.head_oid,
             subject=self.pr.title,
             cwd=self.repo_root,
             clearance=self.clearance,
-            options=self.options,
+            options=replace(self.options, no_request=no_request),
             dry_run=dry_run,
             on_event=None if dry_run else self.heard,
         )
@@ -2290,6 +2296,15 @@ def _landing_refusal(pr: ReleasePrState, landed: pull_request_landing.Landing) -
     kind = landed.reason_kind
     if landed.ended == pull_request_landing.END_UNREADABLE and kind is None:
         return f"cannot tell how {base} merges: {landed.reason}. This run asked nothing."
+    if kind == pull_request_landing.REQUEST_NOT_ALLOWED:
+        described = landed.reading.describe() if landed.reading is not None else "not read"
+        return (
+            f"release PR #{pr.number} left the merge queue for {base} between this run's plan "
+            f"and its landing (it now reads {described}). The plan found it queued and skipped "
+            "the gates, so the landing sent nothing: no merge and no enqueue goes out that no "
+            f"gate of this run saw. Run `pkit release merge {pr.number}` again: it plans afresh, "
+            "and runs its gates before it merges or enqueues anything."
+        )
     if kind in (pull_request_landing.QUEUE_NOT_SQUASH, pull_request_landing.SQUASH_DEFAULTS):
         problem, remedy = _squash_commit_problem(landed, base)
         then = f"{remedy}, then re-run. " if remedy else ""

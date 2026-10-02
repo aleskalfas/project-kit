@@ -1599,15 +1599,17 @@ END_REFUSED = "refused"
 END_UNREADABLE = "unreadable"
 
 #: Why a landing was refused before any request, besides the guard's
-#: (`session_guard.FOREIGN_REPOSITORY`), in the one order it judges them on a
-#: base that merges through a queue, the squash-commit defaults read last: an
-#: administrator merge asked for there; a direct merge asked for there
-#: (`--direct-only`); a queue that does not squash; a head the queue dropped,
-#: not enqueued again unchanged unless the caller allows it; and squash-commit
-#: defaults that are not the PR's title and body. No option lifts the first,
-#: nor the two that say the queue would not make COR-009's commit (ADR-061
-#: points 5 and 8). :data:`SQUASH_DEFAULTS` is also why a landing is
-#: unreadable when the defaults cannot be read.
+#: (`session_guard.FOREIGN_REPOSITORY`), in the one order it judges them, the
+#: squash-commit defaults read last: a merge or an enqueue the caller allowed
+#: no request for (`no_request`), on any base; then, on a base that merges
+#: through a queue, an administrator merge asked for there; a direct merge
+#: asked for there (`--direct-only`); a queue that does not squash; a head the
+#: queue dropped, not enqueued again unchanged unless the caller allows it;
+#: and squash-commit defaults that are not the PR's title and body. No option
+#: lifts the administrator merge, nor the two that say the queue would not
+#: make COR-009's commit (ADR-061 points 5 and 8). :data:`SQUASH_DEFAULTS` is
+#: also why a landing is unreadable when the defaults cannot be read.
+REQUEST_NOT_ALLOWED = "request-not-allowed"
 ADMIN_ON_QUEUE = "admin-on-queue"
 QUEUE_NOT_ALLOWED = "queue-not-allowed"
 QUEUE_NOT_SQUASH = "queue-not-squash"
@@ -1632,6 +1634,7 @@ LANDING_ENDS: Mapping[str, frozenset[str | None]] = {
     END_REFUSED: frozenset(
         {
             session_guard.FOREIGN_REPOSITORY,
+            REQUEST_NOT_ALLOWED,
             ADMIN_ON_QUEUE,
             QUEUE_NOT_ALLOWED,
             QUEUE_NOT_SQUASH,
@@ -1693,15 +1696,20 @@ class LandOptions:
     estimates, at most :data:`MAX_WAIT_SECONDS`; 0 reads once); whether a head
     the queue already dropped is enqueued again; an administrator merge
     (refused on a base that merges through a queue); a direct merge only
-    (refused on such a base); and what to do with a PR already queued in a
-    queue that would not make the squash commit (:data:`SHAPE_REFUSE`,
-    :data:`SHAPE_WARN`)."""
+    (refused on such a base); what to do with a PR already queued in a queue
+    that would not make the squash commit (:data:`SHAPE_REFUSE`,
+    :data:`SHAPE_WARN`); and no request (`no_request`): the caller allows no
+    merge and no enqueue in this landing — a PR found queued at the checked
+    head is waited for, one queued at another head is still taken out, and a
+    row that would send a merge or an enqueue is refused
+    (:data:`REQUEST_NOT_ALLOWED`), nothing sent."""
 
     seconds: float | None = None
     allow_dropped_head: bool = False
     admin: bool = False
     direct_only: bool = False
     queued_bad_shape: str = SHAPE_REFUSE
+    no_request: bool = False
 
 
 @dataclass(frozen=True)
@@ -1855,6 +1863,9 @@ def land(
     - queued, on any base, at another head: taken out of the queue
       (:func:`dequeue`), then :data:`END_HEAD_MOVED`; open and not queued at
       another head: :data:`END_HEAD_MOVED`, nothing sent;
+    - a row that would send a merge or an enqueue, with `options.no_request`:
+      refused, :data:`REQUEST_NOT_ALLOWED`, nothing sent — the first refusal
+      in the one order;
     - on a base that merges through a queue, the refusals in their one order
       (:data:`ADMIN_ON_QUEUE` … :data:`SQUASH_DEFAULTS`): refused, nothing
       sent, the PR left as it is; else queued already, the wait — a shape the
@@ -1878,7 +1889,8 @@ def land(
     A `dry_run` takes the reading, and the squash-commit defaults where the
     table reaches them, and sends nothing: a row that sends a request or
     waits ends :data:`END_PLANNED`, saying what it would do; every other row
-    ends as the landing would.
+    ends as the landing would — refused, with `options.no_request`, where a
+    merge or an enqueue would follow.
 
     `on_event` is told each event as it happens, as its document: the
     readings — the first, the one after a direct merge, each of the wait's
@@ -2072,9 +2084,13 @@ class _Lander:
                 return self.end(END_PLANNED, would=DEQUEUE_REQUEST)
             return self.take_out()
         if not first.has_queue:
+            if self.options.no_request:
+                return self.not_allowed(first, MERGE_REQUEST)
             if self.dry_run:
                 return self.end(END_PLANNED, would=MERGE_REQUEST)
             return self.merge()
+        if not first.queued and self.options.no_request:
+            return self.not_allowed(first, ENQUEUE_REQUEST)
         refused = self.judged(first)
         if refused is not None:
             return refused
@@ -2241,6 +2257,15 @@ class _Lander:
 
     def refused(self, reason_kind: str, reason: str) -> Landing:
         return self.end(END_REFUSED, reason_kind=reason_kind, reason=reason)
+
+    def not_allowed(self, reading: Reading, name: str) -> Landing:
+        """Refused before request `name`, which the caller allowed none of —
+        the first refusal in the one order."""
+        return self.refused(
+            REQUEST_NOT_ALLOWED,
+            f"PR #{self.pr_number} reads {reading.describe()}, so landing it takes a {name}, "
+            "and the landing allows no merge and no enqueue: nothing was sent",
+        )
 
     def bad_shape(self, reason_kind: str, reason: str, lenient: bool) -> Landing | None:
         """A queue that would not make the squash commit: refused, or — for a
