@@ -395,17 +395,22 @@ def _wire_merge_seams(
     def _stub_hooks(name, **kwargs):
         calls["order"].append(("hooks", name))
 
-    def _stub_delete_remote(branch, config, **kwargs):
-        calls.setdefault("cross", []).append(kwargs.get("cross_repository"))
-        calls["order"].append(("remote_delete", branch))
+    def _stub_delete_branch(pr_number, merged_head, config, *, allow_foreign_repo, **kwargs):
+        calls.setdefault("deletions", []).append((pr_number, merged_head, allow_foreign_repo))
+        calls.setdefault("rerun_notes", []).append(kwargs.get("rerun_note", ""))
+        calls["order"].append(("remote_delete", merged_head))
+        # What became of the branch on GitHub: deleted, unless a test says.
+        return calls.get("remote_outcome", "deleted")
 
     def _stub_cleanup_local(branch, config, **kwargs):
+        calls.setdefault("cross", []).append(kwargs.get("cross_repository"))
         calls["merged_head"] = kwargs.get("merged_head")
+        calls["remote"] = kwargs.get("remote")
         calls["order"].append(("local_cleanup", branch))
 
     monkeypatch.setattr(mp, "_post_ci_bypass_audit", _stub_ci_audit)
     monkeypatch.setattr(mp.pr_merge, "squash_merge", _stub_merge)
-    monkeypatch.setattr(mp.pr_merge, "delete_remote_branch", _stub_delete_remote)
+    monkeypatch.setattr(mp.pr_merge, "delete_branch", _stub_delete_branch)
     monkeypatch.setattr(mp.pr_merge, "cleanup_local", _stub_cleanup_local)
     monkeypatch.setattr(mp, "fire_hooks", _stub_hooks)
 
@@ -491,9 +496,10 @@ def test_merge_green_ci_no_bypass_needed(mp, monkeypatch):
 # --- post-merge sequence: hooks, then best-effort cleanup (#882) --------
 #
 # merge-pr shares done-work's merge mechanic (`_lib.pr_merge`): squash-merge
-# without `--delete-branch`, fire the after-merge hooks, then delete the remote
-# head ref through the API and tidy the local checkout as warnings that never
-# fail the verb. That structurally retires the #587 special case (a head
+# without `--delete-branch`, fire the after-merge hooks, then have the backbone
+# delete the head branch on GitHub at the head that merged (#1255) and tidy the
+# local checkout, as warnings that never fail the verb. That structurally
+# retires the #587 special case (a head
 # branch checked out in a worktree used to make `gh pr merge --delete-branch`
 # exit non-zero after the remote merge had landed): the local delete now just
 # warns.
@@ -508,7 +514,7 @@ def test_merge_sequence_is_merge_hooks_remote_delete_local_cleanup(mp, monkeypat
     assert calls["order"] == [
         ("merged", 99),
         ("hooks", "after_merge_pr"),
-        ("remote_delete", "fix/42-slug"),
+        ("remote_delete", "sha-head"),
         ("local_cleanup", "fix/42-slug"),
     ]
     assert calls["merge_kwargs"] == {"pr_title": "fix: a thing", "admin": False}
@@ -517,6 +523,23 @@ def test_merge_sequence_is_merge_hooks_remote_delete_local_cleanup(mp, monkeypat
     # The clone records that the hooks fired, so no later run fires them again.
     assert calls["records"][99].state == mp._RAN
     assert calls["records"][99].head_oid == "sha-head"
+
+
+@pytest.mark.parametrize("remote", ["deleted", "kept", "unconfirmed"])
+def test_the_deletion_says_a_rerun_does_not_retry_it_and_hands_on_its_outcome(
+    mp, monkeypatch, remote
+):
+    """The record that the hooks fired is written before the deletion, so a
+    re-run returns before it: the line the deletion prints says the command it
+    names is the only way to retry (#1255). What became of the branch on
+    GitHub is handed to the local clean-up."""
+    calls = _wire_merge_seams(mp, monkeypatch, rollup=_MP_GREEN)
+    calls["remote_outcome"] = remote
+    assert _run_merge_main(mp, monkeypatch, ["99", "--yes"]) == 0
+    assert calls["rerun_notes"] == [
+        "A re-run of `merge-pr 99` does not retry it: that command is the only way to."
+    ]
+    assert calls["remote"] == remote
 
 
 def test_merge_passes_admin_through(mp, monkeypatch):
@@ -573,19 +596,21 @@ def test_head_branch_checked_out_in_worktree_is_a_warning_not_a_failure(
     assert rc == 0
     assert calls["merged"] is True
     assert ("hooks", "after_merge_pr") in calls["order"]
-    assert ("remote_delete", "fix/42-slug") in calls["order"]
+    assert ("remote_delete", "sha-head") in calls["order"]
     assert ["git", "branch", "-D", "fix/42-slug"] in seen
     assert f"[warn] git branch -D fix/42-slug failed: {branch_err}" in err
     assert not [ln for ln in err.splitlines() if ln.lower().startswith("error:")]
 
 
-def test_missing_head_branch_skips_cleanup_with_a_warning(mp, monkeypatch, capsys):
-    """No `headRefName` on the PR ⇒ the merge and hooks still run; cleanup is
-    skipped with a warning rather than deleting an empty ref."""
+def test_missing_head_branch_skips_the_local_cleanup_with_a_warning(mp, monkeypatch, capsys):
+    """No `headRefName` on the PR ⇒ the merge and hooks still run, and the
+    backbone, which reads the head branch itself, is still asked to delete
+    it; the local clean-up is skipped with a warning rather than deleting an
+    empty ref."""
     calls = _wire_merge_seams(mp, monkeypatch, rollup=_MP_GREEN, head_branch="")
     rc = _run_merge_main(mp, monkeypatch, ["99", "--yes"])
     assert rc == 0
-    assert [kind for kind, _ in calls["order"]] == ["merged", "hooks"]
+    assert [kind for kind, _ in calls["order"]] == ["merged", "hooks", "remote_delete"]
     assert "no head branch" in capsys.readouterr().err
 
 
@@ -603,12 +628,40 @@ def test_dry_run_describes_the_outcome_not_the_flag(mp, monkeypatch, capsys):
 
 
 def test_fork_pr_merge_passes_cross_repository_to_cleanup(mp, monkeypatch):
-    """merge-pr reads isCrossRepository from the PR and hands it to the shared
-    helper, so a fork PR's head name never drives a base-repository delete."""
+    """merge-pr reads isCrossRepository from the PR and hands it to the local
+    clean-up, so a fork PR's head name never drives a local delete; whether
+    the head branch on GitHub may be deleted is the backbone's to decide, from
+    its own reading (it refuses a fork's)."""
     calls = _wire_merge_seams(mp, monkeypatch, rollup=_MP_GREEN, cross_repository=True)
     rc = _run_merge_main(mp, monkeypatch, ["99", "--yes"])
     assert rc == 0
     assert calls["cross"] == [True]
+    assert calls["deletions"] == [(99, "sha-head", False)]
+
+
+@pytest.mark.parametrize(
+    ("how", "flag", "passed_on"),
+    [
+        ("flag", True, True),
+        ("terminal", False, True),
+        ("same-repo", False, False),
+        ("undetermined", False, False),
+    ],
+    ids=["flag", "yes-at-the-prompt", "same-repo", "undetermined"],
+)
+def test_the_head_branch_is_deleted_by_the_backbone_at_the_head_that_merged(
+    mp, monkeypatch, how, flag, passed_on
+):
+    """After the hooks, the head branch on GitHub is the backbone's to delete,
+    at the head the PR merged at; the operator's confirmation at the verb —
+    the flag, or a yes at its prompt — is passed on to the backbone's guard,
+    as the merge's is, and nothing else is (#1254, #1255)."""
+    calls = _wire_merge_seams(mp, monkeypatch, rollup=_MP_GREEN)
+    passage = mp.session_guard.Passage(True, how, flag=flag)
+    monkeypatch.setattr(mp.session_guard, "enforce", lambda **kw: passage)
+    rc = _run_merge_main(mp, monkeypatch, ["99", "--yes"])
+    assert rc == 0
+    assert calls["deletions"] == [(99, "sha-head", passed_on)]
 
 
 # --- a base that merges through a queue (#1011) -------------------------
@@ -668,7 +721,7 @@ def _wire_queue(mp, monkeypatch, readings, **seams):
 
 _AFTER_THE_MERGE = [
     ("hooks", "after_merge_pr"),
-    ("remote_delete", "fix/42-slug"),
+    ("remote_delete", "sha-head"),
     ("local_cleanup", "fix/42-slug"),
 ]
 
@@ -791,10 +844,14 @@ def test_a_later_run_completes_a_pr_the_queue_merged(mp, monkeypatch, capsys):
     rc = _run_merge_main(mp, monkeypatch, ["99", "--yes"])
     out = capsys.readouterr().out
     assert rc == 0, out
-    assert calls["order"] == _AFTER_THE_MERGE
+    assert calls["order"] == [
+        ("hooks", "after_merge_pr"),
+        ("remote_delete", "sha-merged"),
+        ("local_cleanup", "fix/42-slug"),
+    ]
     assert "  PR #99 merged through the merge queue for the base branch (merged at t)" in out
     assert "completing what follows the merge" in out
-    # The local delete is guarded by the head the PR merged at, as GitHub says.
+    # Both deletions are guarded by the head the PR merged at, as GitHub says.
     assert calls["merged_head"] == "sha-merged"
     assert calls["records"][99].state == mp._RAN
 
