@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-02T02:41:12Z
+      at: 2026-10-02T02:53:57Z
       outcome: unchanged
-      unchanged-because: The page maps the lifecycle area to packaging and register mechanics and the cli area to the command surface; both READMEs still cover those subjects and only gained adr among the names the capability commands refuse and packages validation reports.
+      unchanged-because: the lifecycle, CLI and process pages now say what a health finding, a validator's no-answer and a filler's reason show of an unevaluable predicate; this page's map of those areas and of the commands it indexes is unchanged
 ---
 
 # project-kit
