@@ -1745,12 +1745,21 @@ class Shape:
         }
 
 
+#: Why a landing warns (:class:`Notice`), besides :data:`QUEUE_NOT_SQUASH`,
+#: :data:`SQUASH_DEFAULTS` and :data:`NOT_READ`: a direct merge refused on a
+#: PR auto-merge still holds, which it merges on its own, unpinned, once the
+#: base's requirements are met.
+AUTO_MERGE_ARMED = "auto-merge-armed"
+
+
 @dataclass(frozen=True)
 class Notice:
     """A warning a landing gives as it goes on: why, by kind —
     :data:`QUEUE_NOT_SQUASH` or :data:`SQUASH_DEFAULTS` for a PR it waits for
     in a queue that would not make the squash commit, :data:`NOT_READ` for a
-    reading after a direct merge that could not be taken — and in words."""
+    reading after a direct merge that could not be taken,
+    :data:`AUTO_MERGE_ARMED` for a refused direct merge of a PR auto-merge
+    holds — and in words."""
 
     reason_kind: str
     reason: str
@@ -2183,7 +2192,10 @@ class _Lander:
 
     def merge(self) -> Landing:
         """The direct squash merge, then one reading: merged, it ends; not —
-        or not read, with a warning — the wait."""
+        or not read, with a warning — the wait. A merge refused on a PR
+        auto-merge holds — `gh` refuses one whose base's requirements, which
+        auto-merge waits for, are unmet — leaves auto-merge armed: warned."""
+        held = cast(Reading, self.reading).waiting_to_enter
         outcome = squash_merge(
             self.pr_number,
             subject=self.subject,
@@ -2192,6 +2204,15 @@ class _Lander:
             head_oid=self.head,
             admin=self.options.admin,
         )
+        if held and outcome.accepted is False and outcome.reason_kind != NOT_MADE:
+            self.warnings.append(
+                Notice(
+                    AUTO_MERGE_ARMED,
+                    f"auto-merge is still enabled on PR #{self.pr_number}: GitHub merges it on "
+                    "its own once the base's requirements are met, at whatever head it has "
+                    f"then — not pinned to {self.head[:7]}, the head that was checked",
+                )
+            )
         stopped = self.unless_made(MERGE_REQUEST, outcome)
         if stopped is not None:
             return stopped

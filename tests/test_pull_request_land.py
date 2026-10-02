@@ -187,9 +187,17 @@ def _open_without_a_queue(service: fake.HostingService) -> None:
 
 def _held_at_the_head_without_a_queue(service: fake.HostingService) -> None:
     """Auto-merge holds the PR at the checked head on a base with no queue:
-    the direct row (#1258's definition), not the wait."""
+    the direct row (#1258's definition), not the wait. The base's
+    requirements are met, so the direct merge goes through."""
     service.auto_merge = True
     service.progress = [fake.unchanged(), fake.unchanged()]
+
+
+def _held_for_unmet_requirements_without_a_queue(service: fake.HostingService) -> None:
+    """The same, the base's requirements unmet — what auto-merge holds it
+    for: gh refuses the plain merge, and auto-merge stays armed."""
+    _held_at_the_head_without_a_queue(service)
+    service.requirements_met = False
 
 
 def _no_option(service: fake.HostingService) -> dict[str, Any]:
@@ -335,6 +343,14 @@ TABLE: dict[str, tuple[Callable[[fake.HostingService], None], dict[str, Cell]]] 
             "no-request": _NOT_ALLOWED,
         },
     ),
+    "held-for-unmet-requirements-without-a-queue": (
+        _held_for_unmet_requirements_without_a_queue,
+        {
+            **_same("failed: read merge", "planned→merge: read"),
+            "admin": Cell(_ADMIN_MERGED, "planned→merge: read"),
+            "no-request": _NOT_ALLOWED,
+        },
+    ),
 }
 
 _CELLS = [
@@ -401,6 +417,46 @@ def test_under_warn_a_queued_pr_with_a_bad_shape_is_planned_as_a_wait_with_its_w
     assert warning.reason_kind == landing.SQUASH_DEFAULTS
     assert "title COMMIT_OR_PR_TITLE and message PR_BODY" in warning.reason
     assert plan.shape == landing.Shape(True, "COMMIT_OR_PR_TITLE", "PR_BODY", False)
+
+
+@pytest.mark.parametrize("met", [True, False], ids=["requirements-met", "requirements-unmet"])
+def test_a_pr_auto_merge_holds_on_a_direct_base_is_merged_directly_or_warned_of(
+    met: bool, here: dict[str, Any], host: fake.HostingService
+) -> None:
+    """The direct row. Its requirements met, the merge goes through. Unmet —
+    what auto-merge holds it for — gh refuses the plain merge, in words the
+    module knows for a refusal: `failed`, nothing sent, and a warning that
+    auto-merge is still armed and merges the PR, unpinned, once they are met.
+    What the service does here is the fake's model, not a real call's."""
+    _held_at_the_head_without_a_queue(host)
+    host.requirements_met = met
+    end = _land(here)
+    if met:
+        assert (end.ended, end.sent, end.warnings) == (
+            landing.END_MERGED,
+            landing.MERGE_REQUEST,
+            (),
+        )
+        return
+    assert (end.ended, end.reason_kind, end.sent) == (landing.END_FAILED, None, None)
+    assert end.reason is not None
+    assert end.reason.startswith("X Pull request #496 is not mergeable")
+    [warning] = end.warnings
+    assert warning.reason_kind == landing.AUTO_MERGE_ARMED
+    assert warning.reason == (
+        f"auto-merge is still enabled on PR #496: GitHub merges it on its own once the base's "
+        f"requirements are met, at whatever head it has then — not pinned to {HEAD[:7]}, the "
+        "head that was checked"
+    )
+    assert host.auto_merge is True
+
+
+def test_a_refused_merge_of_a_pr_nothing_holds_gives_no_warning(
+    here: dict[str, Any], host: fake.HostingService
+) -> None:
+    host.requirements_met = False
+    end = _land(here)
+    assert (end.ended, end.warnings) == (landing.END_FAILED, ())
 
 
 # ---- the refusal order and the stops no option lifts -------------------------------

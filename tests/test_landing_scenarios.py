@@ -300,8 +300,17 @@ def _merge_only_enqueued(world: World) -> None:
 
 
 def _auto_merge_held_on_a_direct_base(world: World) -> None:
+    """Auto-merge holds the PR, and the base's requirements are met by the
+    time the caller merges: the fake's direct merge goes through."""
     world.host.auto_merge = True
     world.host.progress = [fake.unchanged(), fake.unchanged(), fake.unchanged(), fake.lands()]
+
+
+def _auto_merge_held_for_unmet_requirements(world: World) -> None:
+    """The same, the base's requirements unmet — what auto-merge holds the PR
+    for: gh refuses the plain merge, and auto-merge stays armed."""
+    _auto_merge_held_on_a_direct_base(world)
+    world.host.requirements_met = False
 
 
 def _queue_switched_on(world: World) -> None:
@@ -777,6 +786,21 @@ _HELD_ON_A_DIRECT_BASE = (
     "merges directly, as project-management does, where it used to take the hold for a queue, "
     "warn of a queue that does not squash, and wait without its gates"
 )
+_PM_HELD_UNMET = (
+    "gh refuses the plain merge; project-management's copy reports the refusal and says "
+    "nothing of the auto-merge left armed, which merges the PR, unpinned, once the "
+    "requirements are met (#1220)"
+)
+_HELD_TODAY = NotToday(
+    "took auto-merge's hold for a queue before #1258 and waited without its gates, sending no "
+    "merge; the row with the requirements met records that"
+)
+_HELD_UNMET = (
+    "the direct row (#1258): release gates and sends the direct merge, which gh refuses, so the "
+    "landing fails, nothing sent, with a warning that auto-merge is still armed and merges the "
+    "PR, unpinned, once the requirements are met — the fake's model of the service, not a real "
+    "call's"
+)
 _BASE_CHANGED = (
     "the landing reads the PR just before its request, finds the new base's queue merging by "
     "MERGE, and refuses, as project-management does: the accident is gone (#1258)"
@@ -974,7 +998,8 @@ SCENARIOS: tuple[Scenario, ...] = (
     ),
     Scenario(
         "auto-merge-held-on-a-direct-base",
-        "A base without a queue, where auto-merge holds the PR until GitHub merges it.",
+        "A base without a queue, where auto-merge holds the PR until GitHub merges it; the "
+        "base's requirements are met by the time the caller merges.",
         _auto_merge_held_on_a_direct_base,
         Row(
             merged("merged 0", "read×2 merge read delete-ref"),
@@ -996,6 +1021,19 @@ SCENARIOS: tuple[Scenario, ...] = (
             ),
             LAND_WORK: _deleted("0 merge: merged", "read×2 merge read branch based-on delete-ref"),
         },
+    ),
+    Scenario(
+        "auto-merge-held-for-unmet-requirements",
+        "A base without a queue, where auto-merge holds the PR because the base's "
+        "requirements are not met, so gh refuses a plain merge.",
+        _auto_merge_held_for_unmet_requirements,
+        Row(
+            stopped("refused 3 retry", "read×2 merge", note=_PM_HELD_UNMET),
+            stopped("3", "read×2 merge", note=_PM_HELD_UNMET),
+            _HELD_TODAY,
+            stopped("7 merge: not merged", "read×2 merge", note=_PM_HELD_UNMET),
+        ),
+        after={RELEASE: stopped("1", "read×2 merge", note=_HELD_UNMET)},
     ),
     Scenario(
         "queue-switched-on-after-the-first-read",

@@ -589,7 +589,8 @@ The landing sequence, in one command (ADR-061 point 5). It composes the steps ab
 | open, not queued, on a base with a queue | the refusals, else `enqueue`, then the wait |
 | open on a base without a queue | `merge`, then one reading |
 
-- "Queued" is in the queue, or held by auto-merge until it may enter. A PR auto-merge holds at `H` on a base without a queue takes the last row: it is merged directly, not waited for.
+- "Queued" is in the queue, or held by auto-merge until it may enter. A PR auto-merge holds at `H` on a base without a queue takes the last row: the direct merge is sent, not a wait.
+- Auto-merge holds a PR because its base's requirements are not met. Where they are met by the merge, it goes through. Where they are not, `gh` refuses a plain merge in words the module knows for a refusal: the landing ends `failed`, `sent: null`, with an `auto-merge-armed` warning that auto-merge is still enabled on the PR and will merge it, unpinned, once the requirements are met. What the service does here was not established by a real call; it is the test fake's model.
 - After a direct merge, one reading: merged, it ends; not merged, the wait; not read, one warning, then the wait.
 - `--admin` passes the direct merge through as an administrator merge.
 - `--no-request`: the caller allows no merge and no enqueue in this landing. A PR queued at `H` is waited for, and one queued at another head is still taken out: the dequeue protects. A row that would send a merge or an enqueue, on any base, ends `refused`, `request-not-allowed`, nothing sent; the dry run ends the same, not `planned`.

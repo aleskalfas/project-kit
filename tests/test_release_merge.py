@@ -1630,6 +1630,30 @@ def test_a_head_the_landing_refuses_ends_the_run_having_asked_nothing(
     assert host.commands == []
 
 
+def test_a_refused_merge_of_a_pr_auto_merge_holds_warns_that_it_is_still_armed(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """On a base without a queue, auto-merge holds the release PR for
+    requirements that are not met, so gh refuses the plain merge: exit 1,
+    with the landing's warning that auto-merge will merge it, unpinned, and
+    how to turn it off."""
+    host = fake.HostingService(
+        number=42, title="chore(release): v1.141.0", head_ref="release/v1.141.0"
+    )
+    host.auto_merge, host.requirements_met = True, False
+    _fake_run(monkeypatch)
+    with pytest.raises(click.ClickException) as exc:
+        _land(monkeypatch, host)
+    assert exc.value.exit_code == 1
+    assert exc.value.message.startswith("`gh pr merge 42` failed: X Pull request #42 is not")
+    assert (
+        "[warn] auto-merge is still enabled on PR #42: GitHub merges it on its own once the "
+        "base's requirements are met, at whatever head it has then — not pinned to "
+        f"{HEAD[:7]}, the head that was checked. To keep release PR #42 from merging so, turn "
+        "auto-merge off in its merge box, or run `gh pr merge 42 --disable-auto`."
+    ) in capsys.readouterr().err
+
+
 # --- no request no gate saw, after a plan that skipped the gates (#1258) ----------
 
 

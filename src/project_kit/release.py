@@ -2033,11 +2033,18 @@ class _ReleaseLanding:
         and no enqueue (`no_request`): a PR that left the queue between the
         plan and the landing gets no request no gate of this run saw."""
         landed = self._land(dry_run=False, no_request=not gated)
+        number = self.pr.number
         for notice in landed.warnings:
             if notice.reason_kind == pull_request_landing.NOT_READ:
                 _warn(
-                    f"could not confirm that PR #{self.pr.number} merged: {notice.reason}. "
-                    "Reading it again."
+                    f"could not confirm that PR #{number} merged: {notice.reason}. Reading it "
+                    "again."
+                )
+            elif notice.reason_kind == pull_request_landing.AUTO_MERGE_ARMED:
+                _warn(
+                    f"{notice.reason}. To keep release PR #{number} from merging so, turn "
+                    f"auto-merge off in its merge box, or run `gh pr merge {number} "
+                    "--disable-auto`."
                 )
         return self.reported(landed)
 
