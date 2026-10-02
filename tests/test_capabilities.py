@@ -366,19 +366,24 @@ def test_install_refuses_when_already_installed(kit_target: Path, kit_source: Pa
         caps.install_capability(kit_target, source)
 
 
-# --- reserved names (#919, #1269) ----------------------------------
+# --- reserved names (#919, #1269, #1289) ---------------------------
 #
-# `core` routes schemas to the core schemas area, so a capability named
-# `core` would have its schemas silently unreachable. `project` is the name
-# the project's own entries carry where a capability's carry the capability's
-# (its decision records' and agents' namespace, the opening name of its checks
-# in an evidence point), so a capability named `project` would be
-# indistinguishable from the project. Every path that brings a capability into
-# a project refuses both, naming the reservation and its reason.
+# `core` is the namespace of the core decision records and agents and routes
+# schemas to the core schemas area, so a capability named `core` could have no
+# decision records or agents stamped and would have its schemas silently
+# unreachable. `project` is the name the project's own entries carry where a
+# capability's carry the capability's (its decision records' and agents'
+# namespace, the opening name of its checks in an evidence point), so a
+# capability named `project` would be indistinguishable from the project.
+# `adr` is the namespace of the project's architecture decision records, so a
+# capability named `adr` could have no decision records stamped. Every path
+# that brings a capability into a project refuses each, naming the reservation
+# and its reason.
 
 RESERVED = [
-    ("core", "core schemas area"),
+    ("core", "the namespace of the core decision records and agents, and the core schemas area"),
     ("project", "indistinguishable from the project itself"),
+    ("adr", "the namespace of the project's architecture decision records"),
 ]
 
 

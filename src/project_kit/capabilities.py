@@ -70,19 +70,29 @@ _yaml = YAML(typ="safe")
 
 # Names a capability may not take because another subsystem already gives
 # them a meaning, each mapped to the reason shown in the refusal. `core` is
-# the schemas-home owner name for the core schemas area
-# (`schemas_validate.schemas_home`), so a capability named `core` would have
-# its `schemas/` silently unreachable (#919). `project` is the name the
+# the name core's own entries carry where a capability's carry the
+# capability's: the namespace `pkit new decision`, `pkit new agent` and
+# `pkit new storyboard` read as core's before any capability name
+# (`decisions`, `agents`), and the schemas-home owner name for the core
+# schemas area (`schemas_validate.schemas_home`), so a capability named `core`
+# could have no decision records or agents stamped and would have its
+# `schemas/` silently unreachable (#919, #1289). `project` is the name the
 # project's own entries carry where a capability's carry the capability's:
 # the namespace `pkit new decision`, `pkit new agent` and `pkit new storyboard`
 # read as the project's before any capability name (`decisions`, `agents`),
 # and the opening name of the project's checks in the evidence points
 # (software-analysis and living-docs DEC-001 point 7), so a capability named
-# `project` would be indistinguishable from the project itself (#1269).
+# `project` would be indistinguishable from the project itself (#1269). `adr`
+# is the namespace of the project's architecture decision records, which
+# `pkit new decision` reads before any capability name (`decisions`), so a
+# capability named `adr` could have no decision records stamped (#1289).
 RESERVED_CAPABILITY_NAMES: dict[str, str] = {
     CORE_SCHEMAS_OWNER: (
-        "it names the core schemas area, so a capability's schemas under "
-        "that name would be unreachable"
+        "it is the name core's own entries carry where a capability's carry the "
+        "capability's name: the namespace of the core decision records and agents, "
+        "and the core schemas area wherever a schemas verb takes an owner, so a "
+        "capability named `core` could have no decision records or agents of its own "
+        "stamped, and its schemas would be unreachable"
     ),
     "project": (
         "it is the name the project's own entries carry where a capability's carry "
@@ -90,6 +100,11 @@ RESERVED_CAPABILITY_NAMES: dict[str, str] = {
         "agents, and the opening name of the project's checks in an evidence point, "
         "so a capability named `project` would be indistinguishable from the project "
         "itself"
+    ),
+    "adr": (
+        "it is the namespace of the project's architecture decision records, which "
+        "`pkit new decision` reads before any capability name, so a capability named "
+        "`adr` could have no decision records of its own stamped"
     ),
 }
 

@@ -1264,49 +1264,57 @@ def _registered_under(adopter_root: Path, name: str, origin: str) -> None:
     write_backbone_manifest(adopter_root, backbone)
 
 
+@pytest.mark.parametrize("name", sorted(caps.RESERVED_CAPABILITY_NAMES))
 @pytest.mark.parametrize(
     ("origin", "fix"),
     [
         # The project's own capability: it renames it.
         (
             ORIGIN_INCUBATED_IN_REPO,
-            "Rename it: unregister it with `pkit capabilities uninstall project`",
+            "Rename it: unregister it with `pkit capabilities uninstall {name}`",
         ),
         # Restored to its pin on every sync (COR-041): the rename is its author's.
         (ORIGIN_EXTERNALLY_SOURCED, "A sync restores this package, so the rename is its author's"),
     ],
 )
 def test_a_capability_registered_under_a_reserved_name_is_an_error_naming_the_fix(
-    make_adopter_repo: MakeAdopterRepo, origin: str, fix: str
+    make_adopter_repo: MakeAdopterRepo, origin: str, fix: str, name: str
 ) -> None:
     adopter = make_adopter_repo()
-    _registered_under(adopter.root, "project", origin)
+    _registered_under(adopter.root, name, origin)
 
     result = pv.validate_installed_packages(adopter.root)
     findings = {
         (report.file.parent.name, f.path): f for report in result.reports for f in report.findings
     }
     assert result.errors == 1 and result.warnings == 0, list(findings)
-    finding = findings[("project", "/component/name")]
+    finding = findings[(name, "/component/name")]
     assert finding.severity is pv.Severity.ERROR
     assert finding.message.startswith(
-        f"capability name 'project' is reserved: {caps.RESERVED_CAPABILITY_NAMES['project']}."
+        f"capability name {name!r} is reserved: {caps.RESERVED_CAPABILITY_NAMES[name]}."
     )
-    assert fix in finding.message
+    assert fix.format(name=name) in finding.message
 
 
+@pytest.mark.parametrize(
+    ("name", "reason"),
+    [
+        ("project", "indistinguishable from the project itself"),
+        ("adr", "the namespace of the project's architecture decision records"),
+    ],
+)
 def test_pkit_validate_fails_on_a_capability_registered_under_a_reserved_name(
-    make_adopter_repo: MakeAdopterRepo,
+    make_adopter_repo: MakeAdopterRepo, name: str, reason: str
 ) -> None:
     adopter = make_adopter_repo()
-    _registered_under(adopter.root, "project", ORIGIN_INCUBATED_IN_REPO)
+    _registered_under(adopter.root, name, ORIGIN_INCUBATED_IN_REPO)
 
     result = CliRunner().invoke(main, ["validate", "--no-refs"])
     assert result.exit_code == 1, result.output
-    assert "error    .pkit/capabilities/project/package.yaml:/component/name" in result.output
+    assert f"error    .pkit/capabilities/{name}/package.yaml:/component/name" in result.output
     output = " ".join(result.output.split())
-    assert "→ capability name 'project' is reserved:" in output
-    assert "indistinguishable from the project itself" in output
+    assert f"→ capability name {name!r} is reserved:" in output
+    assert reason in output
     assert "`pkit capabilities register <new-name>`" in output
 
 
