@@ -1303,6 +1303,13 @@ def read_native_children(config: dict[str, Any], *, parent_number: int | str) ->
     record that cannot be read leaves the read unreadable, since no entry can
     then be placed.
 
+    What this read cannot see. The set is what the hosting service lists to
+    this reader, and it may leave out a sub-issue in a repository the reader
+    cannot see; nothing in the answer marks the omission. So a child this list
+    names holds a gate whether or not its own record can then be read — one
+    that cannot leaves the fold indeterminate — but a child the list leaves out
+    is not in the set at all, and a gate over it opens.
+
     Prefer this over :func:`read_native_child_numbers`, which cannot distinguish
     "no native substrate here" from "I could not reach it".
     """
