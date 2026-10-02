@@ -582,10 +582,12 @@ def test_the_contribution_is_inert_without_a_work_tracking_provider(
     assert "0 error(s), 0 warning(s)." in result.output
     resolved = CliRunner().invoke(main, ["connections", "resolve", DOC_CHECK, "--json"])
     assert json.loads(resolved.output) == {
+        "schema_version": 1,
         "address": DOC_CHECK,
         "defined": False,
         "from": "resolution",
         "resolved": False,
+        "outcome": "undefined",
         "value": None,
         "why": "role 'pkit::work-tracking' has no active provider",
     }
