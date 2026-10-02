@@ -1,0 +1,19 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+  requires_backbone: release
+body: >
+  The verbs that pass on the process engine's answer say why it could not
+  evaluate a predicate, with the predicate's own words (#1244). `close-issue
+  --mode=cascade-eligibility-close`, holding a container whose fold the engine
+  could not resolve, prints what the predicate behind it said on standard error
+  under the fold's reason. `move-issue`'s forward cascade, stopping at an
+  ancestor the engine cannot place, prints why under that ancestor: each cause
+  the engine gives and what its predicate said, or the reason a classifier
+  placed it in none of its states. A move the engine refused to record warns
+  as before, and where the refusal names a predicate it could not evaluate, the
+  causes and the predicate's words now follow on the lines after the warning
+  instead of running on into it. No verdict or exit code changes. Upgrade the
+  capability together with the backbone: the words come from the engine's
+  `stderr_tail` and `position.unevaluated`, which the release writes.

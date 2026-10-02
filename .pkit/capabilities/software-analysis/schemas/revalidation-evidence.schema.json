@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "revalidation-evidence.schema.json",
   "title": "Revalidation evidence — the value of pkit::analysis:revalidation-evidence, version 1",
-  "description": "The data point's companion schema (COR-052 point 5; software-analysis DEC-001 point 7): executed results that confirm or refute an analysis artefact at a commit — a test run against a use case, a trace through a journey. This capability runs nothing: the results arrive from a capability that runs them, or from the project's own filler file. One entry per artefact and commit, keyed by the pair: its `id` is `<artefact>@<commit>`. The point is `union`, no default takes part, and its inert policy is `fallback`, because the evidence advises: a revalidation record copies the entries it draws on as support for an artefact's outcome and never in place of one, and only a revalidation or a deferral recorded on the artefact clears friction (COR-050). It reads alone, since two providers of the point are compared by this file alone (COR-053 point 5): its `$defs` carry copies of `analysis.schema.json`'s id, commit and text definitions, their one home, and a test holds each copy equal to its source. The version rises only on a change that breaks existing fillers.",
+  "description": "The data point's companion schema (COR-052 point 5; software-analysis DEC-001 point 7): executed results that confirm or refute an analysis artefact at a commit — a test run against a use case, a trace through a journey. This capability runs nothing: the results arrive from a capability that runs them, or from the project's own filler file. One entry per result, keyed by three parts — the artefact, the commit and the check: its `id` is `<artefact>@<commit>#<check>`. So two fillers' results for one artefact at one commit stand side by side, and only two that claim one check collide. The point is `union`, no default takes part, and its inert policy is `fallback`, because the evidence advises: a revalidation record copies the entries it draws on as support for an artefact's outcome and never in place of one, and only a revalidation or a deferral recorded on the artefact clears friction (COR-050). It reads alone, since two providers of the point are compared by this file alone (COR-053 point 5): its `$defs` carry copies of `analysis.schema.json`'s id, commit, check name and text definitions, their one home, and a test holds each copy equal to its source. The version rises only on a change that breaks existing fillers.",
   "type": "array",
   "items": { "$ref": "#/$defs/evidence" },
   "$defs": {
@@ -10,10 +10,10 @@
       "description": "The result of one executed check, for one artefact at one commit.",
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "artefact", "commit", "result", "ran"],
+      "required": ["id", "artefact", "commit", "check", "result", "ran"],
       "properties": {
         "id": {
-          "description": "The entry's key, the pair it is for: `<artefact>@<commit>`, exactly the entry's own `artefact` and `commit` joined by `@`. A schema cannot compare two fields, so software-analysis' check holds a revalidation record's copy of an entry to it. A record finds the entry by it.",
+          "description": "The entry's key, the three parts it is for: `<artefact>@<commit>#<check>`, exactly the entry's own `artefact`, `commit` and `check`. A schema cannot compare fields, so software-analysis' check holds a revalidation record's copy of an entry to it, and warns on an entry of the point that is not. A record finds the entry by it.",
           "$ref": "#/$defs/evidence-id"
         },
         "artefact": {
@@ -24,6 +24,10 @@
           "description": "The commit the run was made against: the version of the system the result is true of, by its full name.",
           "$ref": "#/$defs/commit"
         },
+        "check": {
+          "description": "The executed check that gave the result: the name its filler gives it, kept from commit to commit (DEC-001 point 7). A filler gives each result it reports for one artefact at one commit a check of its own — one filler never supplies an id twice, and the whole filler is inert if it does. A capability's checks open with the capability's own name, and a project file's with `project`: software-analysis warns on a capability's entry whose check opens with another name and never refuses one, because the project replaces a capability's entry by writing one under that capability's check. A test's name is slugged — `tests/test_run.py::test_sandbox` becomes `pytest-bridge.test-run.test-sandbox` — and kept exactly in `ran`.",
+          "$ref": "#/$defs/check-name"
+        },
         "result": {
           "description": "`passed`: the run did what the artefact describes — support for `holds`. `failed`: it did not — a regression with proof attached, or a sign the analysis is stale; the revalidation decides which (DEC-001 points 5 and 7).",
           "enum": ["passed", "failed"]
@@ -33,21 +37,35 @@
           "$ref": "#/$defs/text"
         },
         "steps": {
-          "description": "The steps and variants the run went through, by their numbers and letters (`2`, `2a`). They are cited, which is why they are never renumbered (DEC-001 point 3).",
+          "description": "A set: for a use case, the steps and variants the run went through, by number and letter; for a journey, the use cases it passed through, by id, each once; an actor or a term has none.",
           "type": "array",
           "minItems": 1,
           "uniqueItems": true,
-          "items": { "type": "string", "pattern": "^[1-9][0-9]*[a-z]*$" }
+          "items": { "type": "string" }
         },
         "where": {
           "description": "Where the result can be read: a pipeline run, a report file.",
           "$ref": "#/$defs/text"
         },
         "by": {
-          "description": "Who or what ran it: a capability, a pipeline, a person.",
+          "description": "Who or what ran it — a pipeline, a person; on an entry the project writes in place of a capability's, who wrote it.",
           "$ref": "#/$defs/text"
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "artefact": { "pattern": "^UC-" } }, "required": ["artefact"] },
+          "then": { "properties": { "steps": { "items": { "pattern": "^[1-9][0-9]*[a-z]*$" } } } }
+        },
+        {
+          "if": { "properties": { "artefact": { "pattern": "^JRN-" } }, "required": ["artefact"] },
+          "then": { "properties": { "steps": { "items": { "$ref": "#/$defs/use-case-id" } } } }
+        },
+        {
+          "if": { "properties": { "artefact": { "pattern": "^(?:ACT|TERM)-" } }, "required": ["artefact"] },
+          "then": { "properties": { "steps": false } }
+        }
+      ]
     },
     "text": {
       "description": "A non-empty line of text.",
@@ -88,10 +106,15 @@
       "type": "string",
       "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$"
     },
-    "evidence-id": {
-      "description": "The id of an entry of the evidence point, `pkit::analysis:revalidation-evidence` (DEC-001 point 7): the artefact and the commit the result is for, `<artefact>@<commit>` — an artefact id as above, then a commit's full name. A pattern cannot refer to another, so this one spells the four id shapes and the commit again, here beside them; a test holds them in step.",
+    "check-name": {
+      "description": "The name of an executed check: lower-case words of letters, digits and hyphens, joined by dots, the first beginning with a letter (`pytest-bridge.test-run.test-sandbox`). Underscores, slashes, colons and capitals are refused, so a test's name is slugged to fit; the name stands after the `#` of an evidence id.",
       "type": "string",
-      "pattern": "^(?:ACT-[a-z][a-z0-9-]*|TERM-[a-z][a-z0-9-]*|UC-(?:[0-9]{3}|[1-9][0-9]{3,})|JRN-(?:[0-9]{3}|[1-9][0-9]{3,}))@(?:[0-9a-f]{40}|[0-9a-f]{64})$"
+      "pattern": "^[a-z][a-z0-9-]*(?:\\.[a-z0-9][a-z0-9-]*)*$"
+    },
+    "evidence-id": {
+      "description": "The id of an entry of the evidence point, `pkit::analysis:revalidation-evidence` (DEC-001 point 7): the artefact, the commit and the check the result is for, `<artefact>@<commit>#<check>` — an artefact id as above, then a commit's full name, then a check's name. A pattern cannot refer to another, so this one spells the four id shapes, the commit and the check name again, here beside them; a test holds them in step.",
+      "type": "string",
+      "pattern": "^(?:ACT-[a-z][a-z0-9-]*|TERM-[a-z][a-z0-9-]*|UC-(?:[0-9]{3}|[1-9][0-9]{3,})|JRN-(?:[0-9]{3}|[1-9][0-9]{3,}))@(?:[0-9a-f]{40}|[0-9a-f]{64})#[a-z][a-z0-9-]*(?:\\.[a-z0-9][a-z0-9-]*)*$"
     }
   }
 }

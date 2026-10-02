@@ -192,7 +192,7 @@ commands:
     help: "Smoke-test the capability's core transition cycle on the live repo. Creates a throwaway issue, advances it through the state machine, and closes it. Use --dry-run to preview without mutating."
   detect-state:
     script: scripts/detect-state.py
-    help: "Process classifier (DEC-033): read-only; answers which lifecycle state an issue is in, from one read of the issue — the detection every state of the shipped issue lifecycle names. Invoked by the process engine."
+    help: "Process classifier (DEC-033): read-only; answers which lifecycle state an issue is in, from one read of the issue — the detection every state of the shipped issue lifecycle names. The subject is an issue number, or owner/repo#<n> for a native sub-issue in another repository, read there by open/closed alone (closed is done). Invoked by the process engine."
   detect-todo:
     script: scripts/detect-todo.py
     help: "Process detection predicate (DEC-033): read-only; reports whether an issue's inferred lifecycle position is Todo. Registered for direct use; the shipped lifecycle detects with `detect-state`."
@@ -222,7 +222,7 @@ commands:
     help: "Cascade members source (DEC-034 / COR-037): read-only; returns {members: [...]} — every child of the parent issue (the closure-fold candidate set). Invoked by the process engine."
   cascade-membership:
     script: scripts/cascade-membership.py
-    help: "Cascade membership test (DEC-034 / COR-037): read-only; result=True iff the candidate issue declares a parent-ref (a hierarchy member). Invoked by the process engine, one subject at a time."
+    help: "Cascade membership test (DEC-034 / COR-037): read-only; result=True for every candidate issue it can read, whatever its first line names — never a determinate non-member; indeterminate when the issue cannot be read. The subject is an issue number, or owner/repo#<n> for a native sub-issue in another repository, a member on the members list's word without a read. Invoked by the process engine, one subject at a time."
   enable-default-agent:
     script: scripts/enable-default-agent.py
     help: "Activate the project-manager default-agent overlay for the claude-code harness (per DEC-030). Copies the capability-shipped overlay template to adopter-owned state and re-runs pkit sync."

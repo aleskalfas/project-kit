@@ -12,9 +12,12 @@ state of the shipped lifecycle names it under `mode: classified` (COR-033 point
 5), so the engine runs it once per reading of an issue's position. It reads the
 issue once and resolves its live position by move-issue's exact inference
 precedence (closed->done; first state:* label; milestone->backlog; else todo).
+An issue in another repository — a native sub-issue that lives there, the
+closure fold's member `owner/repo#<n>` — is read there by its open/closed alone:
+closed is done, open is none of the lifecycle's states.
 
 READ-ONLY. The process engine (COR-033) invokes this as
-  <script> <issue-number> --json
+  <script> <issue-number | owner/repo#<n>> --json
 and reads one JSON object on stdout:
   {"state": "<state-id>", "reason": "..."}   the issue is in that state
   {"state": null, "reason": "..."}           the inference yields a value the
@@ -48,7 +51,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description="Classify which issue-lifecycle state an issue is in."
     )
-    parser.add_argument("issue_number", help="The keyed subject: a GitHub issue number.")
+    parser.add_argument(
+        "issue_number",
+        help="The keyed subject: a GitHub issue number, or owner/repo#<n> for an issue in "
+        "another repository.",
+    )
     parser.add_argument("--json", action="store_true", help="Emit the structured JSON contract.")
     args = parser.parse_args()
 
@@ -57,13 +64,16 @@ def main() -> int:
     if not bootstrap_gate.enforce("detect-state"):
         return 2
 
-    try:
-        issue_number = int(args.issue_number)
-    except (TypeError, ValueError):
-        print(f"error: issue number must be an integer, got {args.issue_number!r}", file=sys.stderr)
+    subject = predicates.read_subject(args.issue_number)
+    if subject is None:
+        print(
+            "error: the subject must be an issue number, or owner/repo#<n> for an issue in "
+            f"another repository, got {args.issue_number!r}",
+            file=sys.stderr,
+        )
         return 2
 
-    payload = predicates.classify_state(issue_number)
+    payload = predicates.classify_state(subject)
     if payload.pop(predicates.INDETERMINATE_KEY, False):
         # No answer: the engine reads a non-zero exit as indeterminate for every
         # state, and shows what was said here beside it.

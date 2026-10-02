@@ -30,7 +30,9 @@ backbone configuration — `repository.default-branch`, `main` when absent
   module resolves a base or computes where HEAD left it.
 - **The reading** (`settled`): both at once, and what a reader says of them —
   the default branch resolved once, its resolution reused as the base when no
-  base is named. One run of a command reads it once and passes it on.
+  base is named — and HEAD (`head`). The default branch is read there as a
+  standing value reads it, so its problem never names a base, which only the
+  base's does. One run of a command reads it once and passes it on.
 
 Each branch name is read in one `git for-each-ref` — the local branch,
 `origin/<name>` and the local branch's upstream — and where HEAD left a base in
@@ -43,16 +45,19 @@ that allocates from settled state reads, since such a command reads `resolve`.
 A query the backbone runs — a validator, a data point's filler — never sees
 the override at all (`validators.QUERY_DROPPED_ENV`).
 
-**The history at hand** (`is_shallow`): whether this clone's history is cut
-short. Only a reader knows how much history it needs, so the backbone says
-the clone is shallow and the reader judges whether that stops it (COR-052
-point 6).
+**The history at hand** (`head`, `is_shallow`): HEAD's commit, or why it names
+none — none yet, HEAD being a branch before its first commit (`Head.unborn`),
+or git cannot read it here (`Head.problem`): history that exists and was not
+read is never history that does not exist (COR-052 point 6) — and whether this
+clone's history is cut short. Only a reader knows how much history it needs,
+so the backbone says the clone is shallow and the reader judges whether that
+stops it.
 
 Reading is forgiving (COR-048 point 4): a configuration that does not parse, or
 a value that is not a branch name, reads as the default; the value is kept in
 `DefaultBranch.warning` for a reading command to print, and `pkit validate`
 reports the file. Git is asked, never written to, and a git that cannot run is
-an answer without commits, never an exception.
+an answer without commits — for HEAD, one that says so — never an exception.
 """
 
 from __future__ import annotations
@@ -191,13 +196,30 @@ class Base:
 
 
 @dataclass(frozen=True)
+class Head:
+    """HEAD at hand (`head`): its commit, or why it names none — `unborn` when HEAD
+    is a branch before its first commit, so there is no history yet; else `problem`,
+    why git cannot read it here, so there is history this clone did not read
+    (COR-052 point 6)."""
+
+    commit: str | None
+    unborn: bool
+    problem: str | None
+
+    def as_json(self) -> dict[str, Any]:
+        return {"commit": self.commit, "unborn": self.unborn, "problem": self.problem}
+
+
+@dataclass(frozen=True)
 class Settled:
     """One reading of settled state (point 5): the default branch, and the base a
     comparison reads — read together (`settled`), so the default branch is resolved
-    once for both, and for what a reader says of them."""
+    once for both, and for what a reader says of them — and HEAD, whose history a
+    reader of the reading may need to know exists."""
 
     default_branch: DefaultBranch
     base: Base
+    head: Head
 
     @property
     def warnings(self) -> list[str]:
@@ -215,12 +237,14 @@ class Settled:
         return said
 
     def as_json(self) -> dict[str, Any]:
-        """`pkit repository base`'s document: `default_branch` as `resolve` answers it,
-        and `base` as `base` answers it for HEAD."""
+        """`pkit repository base`'s document: `default_branch` as `resolve` answers it
+        for a standing value, `base` as `base` answers it for HEAD, and `head` as
+        `head` answers it."""
         return {
             "schema_version": SCHEMA_VERSION,
             "default_branch": self.default_branch.as_json(),
             "base": self.base.as_json(),
+            "head": self.head.as_json(),
         }
 
 
@@ -253,12 +277,22 @@ def resolve(target_root: Path, *, standing: bool = False) -> DefaultBranch:
     `standing` asks for it as a standing value reads it — a data point's filler,
     which no base reaches (COR-054 point 3) — so a problem names the fetch and
     the declaration as its fixes, and never a base."""
-    name, source, warning = declared(target_root)
+    declaration = declared(target_root)
+    refs = _branch_refs(target_root, declaration[0])
+    return _default_branch(target_root, declaration, refs, standing=standing)
+
+
+def _default_branch(
+    target_root: Path,
+    declaration: tuple[str, str, str | None],
+    refs: _BranchRefs,
+    *,
+    standing: bool,
+) -> DefaultBranch:
+    """`resolve` from the declaration and one listing of the branch's references."""
+    name, source, warning = declaration
     found = _resolve_listed(
-        target_root,
-        _branch_refs(target_root, name),
-        f"the default branch {name!r}",
-        comparison=not standing,
+        target_root, refs, f"the default branch {name!r}", comparison=not standing
     )
     return DefaultBranch(
         name,
@@ -467,9 +501,21 @@ SCHEMA_VERSION = 1
 def settled(target_root: Path, explicit: str | None = None) -> Settled:
     """The reading (point 5): the default branch, resolved once, and the base a
     comparison reads — `explicit`, else `$PKIT_CHECK_BASE`, else that same
-    resolution of the default branch."""
-    branch = resolve(target_root)
-    return Settled(branch, _base(target_root, explicit, branch))
+    resolution of the default branch — and HEAD.
+
+    The default branch is read as a standing value reads it: a data point's filler
+    reads it here, and no base reaches a filler (COR-054 point 3), so its problem
+    names the fetch and the declaration. As the base it keeps a comparison's fixes,
+    which name a base too."""
+    declaration = declared(target_root)
+    refs = _branch_refs(target_root, declaration[0])
+    branch = _default_branch(target_root, declaration, refs, standing=True)
+    compared = (
+        branch
+        if branch.commit is not None
+        else _default_branch(target_root, declaration, refs, standing=False)
+    )
+    return Settled(branch, _base(target_root, explicit, compared), head(target_root))
 
 
 def render_json(document: Mapping[str, Any]) -> str:
@@ -579,6 +625,31 @@ def _branch_refs(target_root: Path, name: str) -> _BranchRefs:
     return _BranchRefs(name, commits, upstream)
 
 
+def head(target_root: Path) -> Head:
+    """HEAD at hand: its commit; else none yet, when HEAD names no object — a branch
+    before its first commit; else why git cannot read it — HEAD names an object git
+    cannot read as a commit, or git cannot answer at all (a repository it refuses or
+    cannot open, none, no git)."""
+    commit = commit_of(target_root, "HEAD")
+    if commit is not None:
+        return Head(commit, False, None)
+    named = _git(target_root, "rev-parse", "--verify", "--quiet", "HEAD")
+    if named is None:
+        return Head(None, False, "git cannot read HEAD here: git could not be run")
+    object_name = named.stdout.strip()
+    if named.returncode == 1 and not object_name:
+        return Head(None, True, None)
+    if named.returncode == 0 and object_name:
+        return Head(
+            None,
+            False,
+            f"HEAD names {object_name[:_SHORT]}, which git cannot read as a commit here",
+        )
+    said = [line.strip() for line in named.stderr.splitlines() if line.strip()]
+    detail = said[0] if said else f"exit status {named.returncode}"
+    return Head(None, False, f"git cannot read HEAD here: {detail}")
+
+
 def is_shallow(target_root: Path) -> bool:
     """Whether this clone's history is cut short — a shallow clone. A git that
     cannot answer reads as not shallow: nothing is said that git did not say."""
@@ -594,10 +665,11 @@ def _has_remote(target_root: Path, remote: str) -> bool:
 
 
 def _unborn(target_root: Path, name: str) -> bool:
-    """Whether HEAD is the branch `name`, before its first commit."""
+    """Whether HEAD is the branch `name`, before its first commit — never a branch
+    whose commit git cannot read (`head`)."""
     completed = _git(target_root, "symbolic-ref", "--quiet", "HEAD")
     on_it = completed is not None and completed.stdout.strip() == f"refs/heads/{name}"
-    return on_it and commit_of(target_root, "HEAD") is None
+    return on_it and head(target_root).unborn
 
 
 def _fetch_hint(target_root: Path, ref: str) -> str:

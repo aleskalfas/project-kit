@@ -67,7 +67,18 @@ Use a kebab-case noun that names the *discipline*, not the implementation. Examp
 
 The name becomes the directory name, the value of `component.name` in `package.yaml`, and the prefix in citations: `[<capability-name>:DEC-NNN-<slug>]`.
 
-**Reserved name: `core`.** `core` names the core schemas area (`.pkit/schemas/`) wherever a schemas verb takes an owner, so a capability named `core` would have its `schemas/` silently unreachable. `pkit new capability`, `pkit capabilities install`, and `pkit capabilities register` all refuse it.
+**Reserved names: `core`, `project`, `adr` and `backbone`.** `pkit new capability`, `pkit capabilities install`, and `pkit capabilities register` all refuse each, giving the reason:
+
+- `core` is the name core's own entries carry where a capability's carry the capability's name — the namespace of the core decision records and agents (`pkit new decision core …`, `pkit new agent core …`), and the core schemas area (`.pkit/schemas/`) wherever a schemas verb takes an owner — so a capability named `core` could have no decision records or agents stamped, and its `schemas/` would be silently unreachable.
+- `project` is the name the project's own entries carry where a capability's carry the capability's name — the namespace of the project's decision records and agents (`pkit new decision project …`, `pkit new agent project …`), and the opening name of the project's checks in an evidence point (the software-analysis and living-docs capabilities' DEC-001, point 7) — so a capability named `project` would be indistinguishable from the project itself.
+- `adr` is the namespace of the project's architecture decision records, which `pkit new decision adr …` stamps before any capability name is tried, so a capability named `adr` could have no decision records stamped.
+- `backbone` is the name the backbone carries where a component's carry the component's name — the component of the backbone's changesets (`component: backbone` under `.changes/unreleased/`), the owner of its validators (beside a capability's `<capability>:<name>`), the component its rule sets are cited with (`backbone:<SET>`), and the component its documentation locations are recorded under — so a capability named `backbone` would have its changesets, validators, rule sets and documentation locations read as the backbone's.
+
+A capability registered under any of these names before it was reserved stays registered; `pkit validate` reports it as an error naming the rename.
+
+**Not a backbone command's name either.** The dispatcher reads an installed capability's name as a top-level command, and a backbone command (`validate`, `status`, `sync`, `capabilities`, … — `pkit --help` lists them) holds its name first, so a capability named after one could never surface its commands as `pkit <name> …`. `pkit new capability` refuses such a name, reading the commands from the dispatcher when it runs. `pkit capabilities install` and `register` do not: the backbone gains commands with its releases, so an upgrade can take a name that was free when a capability shipped, and refusing it then would break the installation of something that worked. Instead `pkit validate` reports an installed capability that ships a `commands:` block under a backbone command's name as an error naming the rename; one with no `commands:` block surfaces no namespace and is not reported.
+
+**Not an adapter's name either.** An adapter and a capability cannot share a name: the backbone reads a component by its name alone where it reads both kinds — a changeset names its component and the release keys every `package.yaml` under `.pkit/` by name, so a release would move only one of the two; every registered component's validators are owned by its name, so the two would share one owner; and the wiring resolver reads the component registry by name, so one of the two would be read under the other's kind. `pkit new capability`, `pkit capabilities install` and `register` refuse a name an adapter holds in the project — registered in the backbone manifest, or present at `.pkit/adapters/<name>/` — giving the reason, as `pkit new adapter` refuses a name a capability holds. A pair registered before the refusal stays registered; `pkit validate` reports it as an error at each of the two, naming its rename.
 
 ### 2. Read the contract
 
@@ -94,7 +105,7 @@ The command:
 
 Unlike bundles and adapters, the capability is **not** registered in the backbone manifest by the scaffolding step. Capabilities are kit-shipped from the source-of-edit's perspective; adopters register them per-project via `pkit capabilities install <name>`.
 
-The command refuses if a capability with that name already exists, if the slug isn't kebab-case, or if the name is reserved (`core`, see step 1).
+The command refuses if a capability with that name already exists, if the slug isn't kebab-case, if the name is reserved (`core`, `project`, `adr` or `backbone`), if it is a backbone command's, or if an adapter holds it (see step 1).
 
 ### 4. Fill in the README
 

@@ -50,19 +50,40 @@ Pointer:
    a synced copy's component together with the backbone, and moves an
    externally sourced one's pin.
 
-Two checks across packages are this pass's, over the installed components
+Three checks across packages are this pass's, over the installed components
 only. An `aliases` entry another name shadows — a backbone command, another
 capability's name, or the same alias a capability earlier in the manifest
 declares — is a WARNING at the entry, read from the table the dispatcher binds
 (`dispatcher.installed_alias_table`), so the finding and `pkit <alias>` never
 disagree. The alias is a shorthand; the capability's own name still reaches it.
-And a folder of held documents that oversteps its bounds (COR-050 point 1) —
-equal to or enclosing a documentation root or another declaration's place, or
-sharing files with its own component's place, another held folder or a
-rule-set folder — is an ERROR at its `friction.held` entry, read from friction
-discovery's one judgment of it (`friction_discovery.held_folders`), which also
-leaves it holding nothing: every held file has one holder, and no declaration
-empties another's.
+A capability that surfaces a namespace under a name a backbone command holds
+is an ERROR at its `component.name`, read from the capabilities the dispatcher
+builds groups for (`dispatcher.shadowed_capability_names`) against its own
+commands, read when asked: `pkit <capability> …` never reaches it, and the
+backbone's commands grow with its releases, so an upgrade can take a name that
+was free — which is why `pkit new capability` refuses such a name and install
+and register do not. One that declares no `commands:` block surfaces no
+namespace and is not reported. And a folder of held documents that oversteps
+its bounds (COR-050 point 1) — equal to or enclosing a documentation root or
+another declaration's place, or sharing files with its own component's place,
+another held folder or a rule-set folder — is an ERROR at its `friction.held`
+entry, read from friction discovery's one judgment of it
+(`friction_discovery.held_folders`), which also leaves it holding nothing:
+every held file has one holder, and no declaration empties another's.
+
+Two checks of the registry are this pass's too. A component registered under a
+name the lifecycle reserves for its kind is an ERROR at its `component.name`,
+giving the refusal's reason and the rename that lasts — one registered before
+its name was reserved stays registered until it is renamed. A capability's
+reserved names (`capabilities.RESERVED_CAPABILITY_NAMES`) are the ones
+`pkit new capability`, `capabilities install` and `capabilities register`
+refuse, and the rename follows where the package comes from; an adapter's
+(`scaffolds.RESERVED_ADAPTER_NAMES`) are the ones `pkit new adapter` and
+`pkit init` refuse. And an adapter and a capability registered under one name
+are an ERROR at each one's `component.name`, giving the reason those verbs
+refuse the second of the two with (`capabilities.SHARED_NAME_REASON`) and the
+rename of the one it is at — renaming either clears both; a pair registered
+before the refusal stays registered until one is renamed.
 
 The other checks across packages — roles and their providers, counterparts
 against point versions, mandatory marks and cycles, fingerprints, the version
@@ -81,7 +102,7 @@ on the one capability it is about to activate. Same code, same messages.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Callable, Collection, Iterable, Mapping
 from dataclasses import dataclass, replace
 from enum import Enum
 from pathlib import Path, PurePosixPath, PureWindowsPath
@@ -101,12 +122,14 @@ from project_kit.backbone_schemas import (
     load_backbone_schema,
     render_unknown_key,
 )
+from project_kit.capabilities import RESERVED_CAPABILITY_NAMES, SHARED_NAME_REASON
 from project_kit.command_runner import command_leaves, resolve_command
 from project_kit.dispatcher import (
     ALIASES_KEY,
     ShadowedAlias,
     ShadowKind,
     installed_alias_table,
+    shadowed_capability_names,
     static_command_names,
 )
 from project_kit.manifest import (
@@ -115,6 +138,7 @@ from project_kit.manifest import (
     ComponentRegistryEntry,
     read_backbone_manifest,
 )
+from project_kit.scaffolds import RESERVED_ADAPTER_NAMES
 from project_kit.validators import COMMAND_KEY, QUERY_CONTRACT_KEY, READS_KEY, VALIDATORS_KEY
 
 if TYPE_CHECKING:
@@ -903,30 +927,53 @@ def validate_installed_packages(target_root: Path) -> PackagesPass:
     each with its provenance (`package_provenance`), so a finding names the fix
     that lasts, and under the project's journal settings, so an entry is warned
     on exactly when the `.pkit/.gitignore` render drops it; then add, to each
-    capability's report, the aliases of it another name shadows
+    capability's report, a name the lifecycle reserves
+    (`_reserved_name_findings`), a namespace a backbone command shadows
+    (`_shadowed_name_findings`), the aliases of it another name shadows
     (`_shadowed_alias_findings`) and the held folders of it that overstep their
-    bounds (`_held_folder_findings`)."""
+    bounds (`_held_folder_findings`), and to each adapter's, a name the
+    lifecycle reserves for adapters (`_reserved_adapter_name_findings`); and to
+    both reports of an adapter and a capability registered under one name, that
+    name (`_shared_name_findings`)."""
     schema, note = load_package_schema(target_root)
     ownership = lifecycle_ownership.load_ownership(target_root)
     journal = process_journal.read_settings(target_root)
-    shadowed = _shadowed_alias_findings(target_root)
+    static = static_command_names()
+    shadowed = _shadowed_alias_findings(target_root, static)
+    unreachable = set(shadowed_capability_names(target_root, static))
     unbounded = _held_folder_findings(target_root)
-    reports = [
-        _with_pass(
-            validate_package_file(
-                package,
-                schema,
-                component_dir=component_dir,
-                expected_name=entry.name,
-                provenance=package_provenance(target_root, package, entry.origin, ownership),
-                journal=journal,
-            ),
-            [*shadowed.get(entry.name, []), *unbounded.get(entry.name, [])]
-            if entry.kind == "capability"
-            else [],
+    shared = _shared_component_names(target_root)
+    reports: list[PackageReport] = []
+    for entry, component_dir, package in _registered_packages(target_root):
+        provenance = package_provenance(target_root, package, entry.origin, ownership)
+        report = validate_package_file(
+            package,
+            schema,
+            component_dir=component_dir,
+            expected_name=entry.name,
+            provenance=provenance,
+            journal=journal,
         )
-        for entry, component_dir, package in _registered_packages(target_root)
-    ]
+        if entry.kind == "capability":
+            report = _with_pass(
+                report,
+                [
+                    *_reserved_name_findings(entry.name, provenance),
+                    *_shared_name_findings(entry, provenance, shared),
+                    *_shadowed_name_findings(entry.name, provenance, unreachable),
+                    *shadowed.get(entry.name, []),
+                    *unbounded.get(entry.name, []),
+                ],
+            )
+        elif entry.kind == "adapter":
+            report = _with_pass(
+                report,
+                [
+                    *_reserved_adapter_name_findings(entry.name),
+                    *_shared_name_findings(entry, provenance, shared),
+                ],
+            )
+        reports.append(report)
     return PackagesPass(reports=tuple(reports), schema_note=note)
 
 
@@ -939,12 +986,139 @@ def _with_pass(report: PackageReport, new: list[PackageFinding]) -> PackageRepor
     return replace(report, findings=tuple(findings))
 
 
-def _shadowed_alias_findings(target_root: Path) -> dict[str, list[PackageFinding]]:
+def _reserved_name_findings(name: str, provenance: Provenance) -> list[PackageFinding]:
+    """A capability registered under a name the lifecycle reserves, as an error at
+    its `component.name`: the reason `pkit new capability`, `capabilities install`
+    and `capabilities register` refuse the name with, and the rename that lasts —
+    the project renames its own capability; a package a sync restores is its
+    author's to rename."""
+    reason = RESERVED_CAPABILITY_NAMES.get(name)
+    if reason is None:
+        return []
+    return [
+        PackageFinding(
+            "/component/name",
+            Severity.ERROR,
+            f"capability name {name!r} is reserved: {reason}. {_rename_fix(name, provenance)}",
+        )
+    ]
+
+
+def _shadowed_name_findings(
+    name: str, provenance: Provenance, unreachable: Collection[str]
+) -> list[PackageFinding]:
+    """A capability that surfaces a namespace under a name a backbone command holds
+    (one of `unreachable`, `dispatcher.shadowed_capability_names`), as an error at
+    its `component.name`: what `pkit <name>` runs instead, and the rename that
+    lasts, as for a reserved name."""
+    if name not in unreachable:
+        return []
+    return [
+        PackageFinding(
+            "/component/name",
+            Severity.ERROR,
+            f"capability {name!r} is shadowed by the backbone command `pkit {name}`, which every "
+            f"capability name and alias yields to: `pkit {name}` runs that command, never {name}, "
+            f"so the commands its `commands:` block declares have no `pkit {name} …` namespace. "
+            f"The backbone's commands grow with its releases, so an upgrade can take a name that "
+            f"was free. {_rename_fix(name, provenance)}",
+        )
+    ]
+
+
+def _rename_fix(name: str, provenance: Provenance) -> str:
+    """The rename of a capability that lasts for where its package comes from: the
+    project renames its own capability; a package a sync restores is its author's
+    to rename."""
+    if provenance is Provenance.OWN:
+        return (
+            f"Rename it: unregister it with `pkit capabilities uninstall {name}`, which keeps "
+            f"the files of a capability the project authors, rename `.pkit/capabilities/{name}/` "
+            f"and its `component.name`, and register it under the new name with "
+            f"`pkit capabilities register <new-name>`."
+        )
+    return (
+        f"A sync restores this package, so the rename is its author's: uninstall it with "
+        f"`pkit capabilities uninstall {name}` until it ships under another name."
+    )
+
+
+def _reserved_adapter_name_findings(name: str) -> list[PackageFinding]:
+    """An adapter registered under a name the lifecycle reserves for adapters, as an
+    error at its `component.name`: the reason `pkit new adapter` and `pkit init`
+    refuse the name with, and the rename. No verb registers an adapter but those
+    two, so the rename is by hand where the adapter is authored; one a sync
+    restores is the methodology source's to rename."""
+    reason = RESERVED_ADAPTER_NAMES.get(name)
+    if reason is None:
+        return []
+    return [
+        PackageFinding(
+            "/component/name",
+            Severity.ERROR,
+            f"adapter name {name!r} is reserved: {reason}. {_adapter_rename_fix(name)}",
+        )
+    ]
+
+
+def _adapter_rename_fix(name: str) -> str:
+    """The rename of an adapter: no verb unregisters one, so it is renamed by hand
+    where it is authored; one a sync restores is the methodology source's to
+    rename."""
+    return (
+        f"Rename it where it is authored: its directory `.pkit/adapters/{name}/`, its "
+        f"`component.name`, and its entry in the `components` of `.pkit/manifest.yaml`; an "
+        f"adapter a sync restores is renamed by the methodology source that ships it."
+    )
+
+
+def _shared_component_names(target_root: Path) -> frozenset[str]:
+    """The names the backbone manifest registers both an adapter and a capability
+    under."""
+    backbone = read_backbone_manifest(target_root)
+    if backbone is None:
+        return frozenset()
+    adapters = {c.name for c in backbone.components if c.kind == "adapter"}
+    capabilities = {c.name for c in backbone.components if c.kind == "capability"}
+    return frozenset(adapters & capabilities)
+
+
+def _shared_name_findings(
+    entry: ComponentRegistryEntry, provenance: Provenance, shared: Collection[str]
+) -> list[PackageFinding]:
+    """A component registered under a name a component of the other kind is
+    registered under too (one of `shared`), as an error at its `component.name`:
+    the reason `pkit new adapter`, `pkit new capability`, `capabilities install`
+    and `capabilities register` refuse the second of the two with
+    (`capabilities.SHARED_NAME_REASON`), and the rename of this one — a capability's
+    as for a reserved name (`_rename_fix`), an adapter's by hand
+    (`_adapter_rename_fix`). Both of the two carry it, and renaming either clears
+    both."""
+    if entry.name not in shared:
+        return []
+    if entry.kind == "capability":
+        other, fix = "adapter", _rename_fix(entry.name, provenance)
+    else:
+        other, fix = "capability", _adapter_rename_fix(entry.name)
+    return [
+        PackageFinding(
+            "/component/name",
+            Severity.ERROR,
+            f"{entry.kind} {entry.name!r} shares its name with the {other} {entry.name!r}: "
+            f"{SHARED_NAME_REASON}. The {other} carries this error too, and renaming either "
+            f"clears both. {fix}",
+        )
+    ]
+
+
+def _shadowed_alias_findings(
+    target_root: Path, static: frozenset[str]
+) -> dict[str, list[PackageFinding]]:
     """Each installed capability's aliases another name shadows, as warnings
     located at the entry, keyed by the capability. Read from the table the
     dispatcher binds (`dispatcher.installed_alias_table`, one precedence walk),
     so what is reported is exactly what `pkit <alias>` does not reach."""
-    table = installed_alias_table(target_root, static_command_names())
+    table = installed_alias_table(target_root, static)
     out: dict[str, list[PackageFinding]] = {}
     for shadow in table.shadowed:
         out.setdefault(shadow.alias.capability, []).append(

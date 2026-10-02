@@ -161,10 +161,15 @@ def test_the_stamp_is_reached_under_the_capability_and_its_alias(
 def test_the_first_stamp_records_the_location_and_a_root_change_moves_nothing(
     project: AdopterRepo,
 ) -> None:
+    """Off a terminal, with no prompt: recording the capability's own location changes
+    nothing in use, so the stamp is the consent (COR-049 point 5), and it passes on both
+    lines of the notice — what was recorded, and which root it came from."""
     completed = new(project, "actor", "tester")
     assert completed.returncode == 0, completed.stderr
     assert completed.stdout.splitlines() == [
         f"recorded software-analysis analysis = {ANALYSIS}  ({RECORDED})",
+        "  derived from the internal root, tech-docs (explicit); it stays here if the root "
+        "changes. To move it: edit that line and move the documents.",
         f"stamped ACT-tester at {ACTORS}#ACT-tester",
     ]
     assert dr.recorded_capability_locations(project.root, "software-analysis") == {

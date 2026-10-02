@@ -444,6 +444,79 @@ def test_main_hands_pr_title_to_the_shared_merge(dw, monkeypatch) -> None:
     assert calls["merge_kwargs"] == {"pr_title": "fix: x", "admin": False}
 
 
+@pytest.mark.parametrize(
+    ("passed", "flag", "passed_on"),
+    [
+        ("flag", True, True),
+        ("terminal", False, True),
+        ("same-repo", True, True),
+        ("same-repo", False, False),
+        ("undetermined", False, False),
+    ],
+)
+def test_the_merge_carries_the_confirmation_the_guard_got_and_no_other(
+    dw, monkeypatch, passed, flag, passed_on
+) -> None:
+    """The backbone runs its own cross-repository guard on the merge and on
+    the head branch's deletion, with no terminal: done-work tells it the
+    operator confirmed exactly when they did at done-work — the flag on its
+    command line, whatever its own comparison found, or a yes at its prompt
+    (#1254, #1255)."""
+    calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+    passage = dw.session_guard.Passage(True, passed, flag=flag)
+    monkeypatch.setattr(dw.session_guard, "enforce", lambda **kw: passage)
+    rc = _run_main(dw, monkeypatch, ["42", "--yes"])
+    assert rc == 0
+    assert calls["merge_allow_foreign_repo"] is passed_on
+    assert [confirmed for *_, confirmed in calls["deletions"]] == [passed_on]
+
+
+@pytest.mark.parametrize(
+    ("how", "flag", "confirmed"),
+    [
+        ("flag", True, True),
+        ("terminal", False, True),
+        ("same-repo", True, True),
+        ("same-repo", False, False),
+        ("undetermined", False, False),
+    ],
+    ids=["flag", "yes-at-the-prompt", "flag-same-repo", "same-repo", "undetermined"],
+)
+def test_the_verbs_it_starts_carry_the_confirmation_and_no_other(
+    dw, monkeypatch, how, flag, confirmed
+) -> None:
+    """A confirmed landing is whole: the move-issue and close-issue runs that
+    follow the merge are handed --allow-foreign-repo when the operator
+    confirmed at done-work — the flag, or a yes at its prompt — so their own
+    guards neither refuse nor ask again; and never otherwise (#1254)."""
+    real_move, real_close = dw._invoke_move_issue, dw._invoke_close_issue
+    _wire_main_seams(
+        dw,
+        monkeypatch,
+        rollup=_GREEN_ROLLUP,
+        pr_body=_TWO_ISSUE_PR_BODY,
+        issues={42: _open_issue(_TICKED_BODY), 43: _open_issue(_TICKED_BODY)},
+    )
+    monkeypatch.setattr(dw, "_invoke_move_issue", real_move)
+    monkeypatch.setattr(dw, "_invoke_close_issue", real_close)
+    passage = dw.session_guard.Passage(True, how, flag=flag)
+    monkeypatch.setattr(dw.session_guard, "enforce", lambda **kw: passage)
+    started: list[list[str]] = []
+
+    def run_sibling(cmd: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+        started.append(list(cmd))
+        return subprocess.CompletedProcess(cmd, 0)
+
+    monkeypatch.setattr(dw.subprocess, "run", run_sibling)
+    assert _run_main(dw, monkeypatch, ["42", "--yes"]) == 0
+    assert sorted(Path(argv[1]).name for argv in started) == [
+        "close-issue.py",
+        "close-issue.py",
+        "move-issue.py",
+    ]
+    assert [("--allow-foreign-repo" in argv) for argv in started] == [confirmed] * len(started)
+
+
 def test_the_merge_is_pinned_to_the_head_the_agent_gate_checked(dw, monkeypatch) -> None:
     """A push between the gate and the merge must fail the merge, not land
     commits no verdict was judged against (#1179)."""
@@ -640,7 +713,7 @@ def test_a_dry_run_and_a_declined_prompt_both_exit_0_and_are_told_apart(dw, monk
 def test_a_step_after_the_merge_failing_is_owed_not_refused(dw, monkeypatch) -> None:
     """The merge stands; what failed after it is owed to a re-run."""
     calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
-    monkeypatch.setattr(dw, "_invoke_move_issue", lambda *a: 1)
+    monkeypatch.setattr(dw, "_invoke_move_issue", lambda *a, **k: 1)
     run = dw.run(["42", "--yes"])
     assert (run.kind, run.exit_code) == (dw.FOLLOW_UP_OWED, 1)
     assert run.reason.startswith("[warn] PR merged but move-issue exited 1")
@@ -948,29 +1021,34 @@ def _wire_main_seams(
         calls["approval_audit_head"] = head
         return True
 
-    def _stub_merge(pr_number, *, pr_title, admin, config, head_oid=""):
+    def _stub_merge(pr_number, *, pr_title, admin, config, head_oid="", allow_foreign_repo=False):
         calls["merged"] = True
         calls["merge_kwargs"] = {"pr_title": pr_title, "admin": admin}
         calls["merge_head"] = head_oid
+        calls["merge_allow_foreign_repo"] = allow_foreign_repo
         calls["order"].append(("merged", None))
         return True
 
-    def _stub_move(issue_number, target, cap_root_arg):
+    def _stub_move(issue_number, target, cap_root_arg, *, confirmed, merged_pr=None):
         calls["moved"] = True
         calls["order"].append(("moved", None))
         return 0
 
-    def _stub_close(issue_number, pr_number, cap_root_arg, *, skip_checkbox_gate):
+    def _stub_close(issue_number, pr_number, cap_root_arg, *, skip_checkbox_gate, confirmed):
         calls["closed"].append((issue_number, pr_number, skip_checkbox_gate))
         calls["order"].append(("closed", issue_number))
         return 0
 
-    def _stub_delete_remote(branch, config, **kwargs):
-        calls.setdefault("cross", []).append(kwargs.get("cross_repository"))
-        calls["order"].append(("remote_delete", branch))
+    def _stub_delete_branch(pr_number, merged_head, config, *, allow_foreign_repo, **kwargs):
+        calls.setdefault("deletions", []).append((pr_number, merged_head, allow_foreign_repo))
+        calls["order"].append(("remote_delete", merged_head))
+        # What became of the branch on GitHub: deleted, unless a test says.
+        return calls.get("remote_outcome", "deleted")
 
     def _stub_cleanup_local(branch, config, **kwargs):
+        calls.setdefault("cross", []).append(kwargs.get("cross_repository"))
         calls.setdefault("merged_heads", []).append(kwargs.get("merged_head"))
+        calls.setdefault("remotes", []).append(kwargs.get("remote"))
         calls["order"].append(("local_cleanup", branch))
 
     monkeypatch.setattr(dw, "_post_ci_bypass_audit", _stub_ci_audit)
@@ -978,7 +1056,7 @@ def _wire_main_seams(
     # The merge mechanic is `_lib.pr_merge`'s (shared with merge-pr); stub it
     # on the module done-work calls through.
     monkeypatch.setattr(dw.pr_merge, "squash_merge", _stub_merge)
-    monkeypatch.setattr(dw.pr_merge, "delete_remote_branch", _stub_delete_remote)
+    monkeypatch.setattr(dw.pr_merge, "delete_branch", _stub_delete_branch)
     monkeypatch.setattr(dw.pr_merge, "cleanup_local", _stub_cleanup_local)
     monkeypatch.setattr(dw, "_invoke_move_issue", _stub_move)
     monkeypatch.setattr(dw, "_invoke_close_issue", _stub_close)
@@ -1545,7 +1623,8 @@ def test_abbreviated_canonical_flag_cannot_evade_the_ambiguity_refusal(
 # merge has landed — and the script used to abort there, never calling
 # move-issue, so GitHub showed the issue closed while pm state said Review.
 # The fix: merge without `--delete-branch`, transition immediately, then clean
-# up (remote ref via the API, local steps) as warnings that never abort. The
+# up (the remote branch by the backbone at the head that merged, #1255; the
+# local steps) as warnings that never abort. The
 # mechanic itself (`_lib.pr_merge`) is unit-tested in test_pm_pr_merge_lib.py;
 # these tests cover done-work's sequencing of it.
 
@@ -1564,7 +1643,7 @@ def test_transition_runs_immediately_after_merge_before_cleanup(dw, monkeypatch)
         ("merged", None),
         ("moved", None),
         ("closed", 42),
-        ("remote_delete", "fix/42-slug"),
+        ("remote_delete", "sha-head"),
         ("local_cleanup", "fix/42-slug"),
     ]
 
@@ -1616,7 +1695,7 @@ def test_detached_head_worktree_completes_merge_and_transition(
     assert rc == 0
     assert calls["merged"] is True
     assert calls["moved"] is True
-    assert ("remote_delete", "fix/42-slug") in calls["order"]
+    assert ("remote_delete", "sha-head") in calls["order"]
     assert f"[warn] git checkout main failed: {_DETACHED_HEAD_ERR}" in err
     assert _script_error_lines(err) == []
     # The pull is skipped when main could not be checked out; the local head
@@ -1650,11 +1729,37 @@ def test_main_held_by_other_worktree_completes_merge_and_transition(
     assert rc == 0
     assert calls["merged"] is True
     assert calls["moved"] is True
-    assert ("remote_delete", "fix/42-slug") in calls["order"]
+    assert ("remote_delete", "sha-head") in calls["order"]
     assert f"[warn] git checkout main failed: {_MAIN_HELD_ELSEWHERE_ERR}" in err
     assert f"[warn] git branch -D fix/42-slug failed: {branch_err}" in err
     assert _script_error_lines(err) == []
     assert ["git", "pull", "--ff-only"] not in seen
+
+
+@pytest.mark.parametrize("remote", ["deleted", "gone", "kept", "refused", "unconfirmed"])
+def test_the_local_clean_up_is_told_what_became_of_the_branch_on_github(dw, monkeypatch, remote):
+    """The deletion's outcome is handed to the local clean-up, which deletes
+    the local branch only after one deleted or gone (#1255)."""
+    calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+    calls["remote_outcome"] = remote
+    assert _run_main(dw, monkeypatch, ["42", "--yes"]) == 0
+    assert calls["remotes"] == [remote]
+
+
+@pytest.mark.parametrize("remote", ["kept", "refused", "unconfirmed"])
+def test_a_branch_kept_on_github_keeps_the_local_one_and_says_so(dw, monkeypatch, capsys, remote):
+    """With the real local clean-up: the branch on GitHub not deleted, the
+    local branch stays too, in one line, and the landing still succeeds."""
+    real_cleanup = dw.pr_merge.cleanup_local
+    calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+    calls["remote_outcome"] = remote
+    monkeypatch.setattr(dw.pr_merge, "cleanup_local", real_cleanup)
+    seen = _fake_git(monkeypatch, dw)
+    assert _run_main(dw, monkeypatch, ["42", "--yes"]) == 0
+    assert ["git", "branch", "-D", "fix/42-slug"] not in seen
+    assert (
+        f"  kept local branch fix/42-slug: its branch on GitHub was not deleted ({remote})"
+    ) in capsys.readouterr().out
 
 
 def test_cleanup_still_runs_when_move_issue_fails(dw, monkeypatch, capsys):
@@ -1662,7 +1767,7 @@ def test_cleanup_still_runs_when_move_issue_fails(dw, monkeypatch, capsys):
     branch cleanup — the two are independent after the merge."""
     calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
 
-    def failing_move(issue_number, target, cap_root_arg):
+    def failing_move(issue_number, target, cap_root_arg, *, confirmed, merged_pr=None):
         calls["order"].append(("moved", None))
         return 1
 
@@ -1826,7 +1931,7 @@ def test_a_failed_close_warns_with_the_rerun_and_the_rest_still_run(
         issues={42: _open_issue(_TICKED_BODY), 43: _open_issue(_TICKED_BODY)},
     )
 
-    def flaky_close(issue_number, pr_number, cap_root_arg, *, skip_checkbox_gate):
+    def flaky_close(issue_number, pr_number, cap_root_arg, *, skip_checkbox_gate, confirmed):
         calls["order"].append(("closed", issue_number))
         return 3 if issue_number == 42 else 0
 
@@ -1840,7 +1945,7 @@ def test_a_failed_close_warns_with_the_rerun_and_the_rest_still_run(
         ("moved", None),
         ("closed", 42),
         ("closed", 43),
-        ("remote_delete", "fix/42-slug"),
+        ("remote_delete", "sha-head"),
         ("local_cleanup", "fix/42-slug"),
     ]
 
@@ -1880,8 +1985,10 @@ def test_the_close_is_close_issue_pr_merge_through_the_merged_pr(dw, monkeypatch
         return subprocess.CompletedProcess(cmd, 0)
 
     monkeypatch.setattr(dw.subprocess, "run", fake_run)
-    assert dw._invoke_close_issue(43, 496, Path("/cap"), skip_checkbox_gate=True) == 0
-    assert dw._invoke_close_issue(44, 496, None, skip_checkbox_gate=False) == 0
+    assert (
+        dw._invoke_close_issue(43, 496, Path("/cap"), skip_checkbox_gate=True, confirmed=False) == 0
+    )
+    assert dw._invoke_close_issue(44, 496, None, skip_checkbox_gate=False, confirmed=False) == 0
     assert seen[0][0] == sys.executable
     assert Path(seen[0][1]).name == "close-issue.py"
     assert seen[0][2:] == [
@@ -2081,7 +2188,14 @@ def _wire_lead_in(
 
     monkeypatch.setattr(dw, "resolve_capability_root", real_capability_root)
 
-    def recording_move(issue_number: int, target: str, cap_root_arg: Path | None) -> int:
+    def recording_move(
+        issue_number: int,
+        target: str,
+        cap_root_arg: Path | None,
+        *,
+        confirmed: bool,
+        merged_pr: int | None = None,
+    ) -> int:
         calls["order"].append(("moved", target))
         return move_rc if target == "review" else 0
 
@@ -2103,7 +2217,7 @@ def test_an_in_progress_issue_moves_to_review_before_the_merge(
         ("merged", None),
         ("moved", "done"),
         ("closed", 42),
-        ("remote_delete", "fix/42-slug"),
+        ("remote_delete", "sha-head"),
         ("local_cleanup", "fix/42-slug"),
     ]
     assert "lead-in: in-progress → review before the merge" in captured.out
@@ -2217,6 +2331,14 @@ if args[:2] == ["api", "graphql"] and any("closedByPullRequestsReferences" in a 
     }
     print(json.dumps({"data": {"repository": {"issue": issue}}}))
     sys.exit(0)
+if args[:1] == ["api"] and args[1].startswith("repos/{owner}/{repo}/issues/"):
+    number = args[1].rsplit("/", 1)[1]
+    if number.isdigit():
+        issue = state["issues"].get(number)
+        if issue is None:
+            sys.exit(1)
+        print(json.dumps(dict(issue, number=int(number), state=issue["state"].lower())))
+        sys.exit(0)
 if args[:1] == ["api"]:
     print("octocat")
 sys.exit(0)
@@ -2354,6 +2476,7 @@ def _run_done_work_end_to_end(
         admin: bool,
         config: dict[str, Any],
         head_oid: str = "",
+        allow_foreign_repo: bool = False,
     ) -> bool:
         calls_at_merge.append(len(log.read_text(encoding="utf-8").splitlines()))
         seams["merged"] = True
@@ -2644,7 +2767,7 @@ def _wire_queue(
 _AFTER_THE_MERGE = [
     ("moved", None),
     ("closed", 42),
-    ("remote_delete", "fix/42-slug"),
+    ("remote_delete", "sha-head"),
     ("local_cleanup", "fix/42-slug"),
 ]
 
@@ -2955,7 +3078,8 @@ def test_a_merge_with_no_answer_back_github_cannot_settle_is_unconfirmed(
     assert (
         "[unconfirmed] the merge of PR #496 into the base branch got no answer back, and "
         "GitHub could not be read since to tell whether it merged or entered the merge "
-        "queue: HTTP 502. Nothing after the merge has run, and #42 stays in Review."
+        "queue: HTTP 502. Read where PR #496 stands with `pkit pull-request read 496`. "
+        "Nothing after the merge has run, and #42 stays in Review."
     ) in out
 
 
@@ -3180,7 +3304,7 @@ def test_a_later_run_on_a_stale_local_branch_completes_it_and_keeps_the_branch(
     assert ["git", "rev-list", "--count", "sha-head..sha-newer"] in seen
     assert ["git", "branch", "-D", "fix/42-slug"] not in seen
     assert "local branch fix/42-slug (at sha-new) holds commits the merge at sha-hea" in err
-    assert ("remote_delete", "fix/42-slug") in run.calls["order"]
+    assert ("remote_delete", "sha-head") in run.calls["order"]
 
 
 def test_a_later_run_refuses_an_issue_reopened_since_the_merge(
@@ -3234,7 +3358,14 @@ def test_a_later_run_moves_an_issue_still_in_progress_through_review(
     run = _wire_second_run(dw, tmp_path, monkeypatch, issues={42: _open_issue("")})
     targets: list[str] = []
 
-    def move(issue_number: int, target: str, cap_root_arg: Any) -> int:
+    def move(
+        issue_number: int,
+        target: str,
+        cap_root_arg: Any,
+        *,
+        confirmed: bool,
+        merged_pr: int | None = None,
+    ) -> int:
         targets.append(target)
         run.calls["order"].append(("moved", target))
         return 0

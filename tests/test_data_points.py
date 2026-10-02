@@ -934,6 +934,26 @@ def test_an_unborn_default_branch_starts_the_filler_and_empty_is_its_answer(
     assert len(_runs(repo)) == 1  # not started a second time
 
 
+def test_history_git_cannot_read_is_named_so_never_as_no_commit_yet(repo: AdopterRepo) -> None:
+    """A commit whose object git cannot read is history that exists and was not read
+    (COR-052 point 6): the report says git cannot read HEAD, never that there is no
+    commit yet — which a repository whose commit is there does not have."""
+    _provider(repo)
+    _command_contributor(repo, "evidence", _printing(EMPTY), reads=["history"])
+    repo.lose_object(repo.commit("initial"))
+    resolution = _resolve(repo)
+    point = resolution.point(READERS)
+    assert point is not None
+    assert point.fillers[0].reads == (dp.FillerRead("history", None, None, False),)
+    assert _reads_line(resolution) == [
+        f"{READERS}: evidence (command 'export') reads history (git cannot read HEAD here)"
+    ]
+    document = dp.point_document(point)
+    assert document["fillers"][0]["reads"] == [
+        {"state": "history", "ref": None, "commit": None, "shallow": False}
+    ]
+
+
 def test_a_reads_the_backbone_does_not_understand_is_never_run(repo: AdopterRepo) -> None:
     _provider(repo)
     _command_contributor(repo, "evidence", _printing(ANSWER), reads=["future"])
@@ -1090,6 +1110,7 @@ def test_resolve_prints_the_point_as_the_status_report_resolves_it(repo: Adopter
     result = _resolve_cli(READERS, "--json")
     assert result.exit_code == 0, result.output
     assert json.loads(result.output) == {
+        "schema_version": 1,
         "address": READERS,
         "defined": True,
         "from": "resolution",
@@ -1098,6 +1119,7 @@ def test_resolve_prints_the_point_as_the_status_report_resolves_it(repo: Adopter
         "inert_policy": "fallback",
         "participation": "always",
         "resolved": True,
+        "outcome": "resolved",
         "why": "",
         "value": [{"id": "p1", "role": "owner"}, "n1"],
         "origin": "",
@@ -1171,10 +1193,12 @@ def test_resolve_an_address_nothing_defines_exits_1_and_says_why(repo: AdopterRe
     result = _resolve_cli(READERS, "--json")
     assert result.exit_code == 1
     assert json.loads(result.output) == {
+        "schema_version": 1,
         "address": READERS,
         "defined": False,
         "from": "resolution",
         "resolved": False,
+        "outcome": "undefined",
         "value": None,
         "why": "role 'pkit::documentation' has no active provider",
     }
@@ -1191,6 +1215,209 @@ def test_resolve_refuses_what_is_not_a_point_address(repo: AdopterRepo) -> None:
     result = _resolve_cli("pkit::documentation")
     assert result.exit_code == 2
     assert "is not a point address" in result.output
+
+
+# --- how a resolution ended: `outcome` (#1283) ------------------------------------------
+
+CLI_README = Path(__file__).resolve().parent.parent / ".pkit" / "cli" / "README.md"
+
+
+def _document(address: str) -> dict[str, Any]:
+    """The point's document as `pkit connections resolve --json` prints it."""
+    return json.loads(_resolve_cli(address, "--json").output)
+
+
+def _resolved_empty(repo: AdopterRepo) -> None:
+    _provider(repo)
+    _filler(repo, {"schema_version": 1, "value": []})
+
+
+def _one_inert_among_several(repo: AdopterRepo) -> None:
+    _provider(repo, inert="fallback")
+    _contributor(repo, "evidence", ["operator"])
+    _contributor(repo, "notes", [{"id": 7}])
+
+
+def _nothing_defines(repo: AdopterRepo) -> None:
+    """No capability provides the role."""
+
+
+def _single_unfilled(repo: AdopterRepo) -> None:
+    _provider(repo, TOOL, combination="single")
+
+
+def _union_unfilled(repo: AdopterRepo) -> None:
+    _provider(repo)
+
+
+def _not_delivered(repo: AdopterRepo) -> None:
+    """`docs-b` provides the role too and contributes to the point `docs-a` defines,
+    but `docs-a` is the selected provider, so its contribution is not delivered."""
+    _provider(repo)
+    entry = {"point": READERS, "schema_version": 1, "value": ["operator"]}
+    _stage(repo, "docs-b", {"roles": [DOCS], "extensions": {"contributes": [entry]}})
+    _config(repo, f"connections:\n  providers:\n    {DOCS}: docs-a\n")
+
+
+def _single_every_filler_inert(repo: AdopterRepo) -> None:
+    _provider(repo, TOOL, combination="single")
+    _contributor(repo, "evidence", {"name": 5}, address=TOOL)
+
+
+def _union_every_filler_inert(repo: AdopterRepo) -> None:
+    _provider(repo, inert="fallback")
+    _contributor(repo, "notes", [{"id": 7}])
+
+
+def _single_inert_under_fail(repo: AdopterRepo) -> None:
+    _provider(
+        repo,
+        TOOL,
+        combination="single",
+        inert="fail",
+        default={"value": {"name": "d"}, "participation": "always"},
+    )
+    _contributor(repo, "evidence", {"name": 5}, address=TOOL)
+
+
+def _union_inert_under_fail(repo: AdopterRepo) -> None:
+    _provider(repo, inert="fail")
+    _contributor(repo, "evidence", ["operator"])
+    _contributor(repo, "notes", [{"id": 7}])
+
+
+def _union_collision(repo: AdopterRepo) -> None:
+    _provider(repo)
+    _contributor(repo, "evidence", [{"id": "operator", "role": "e"}])
+    _contributor(repo, "notes", [{"id": "operator", "role": "n"}])
+
+
+def _additive_collision(repo: AdopterRepo) -> None:
+    _provider(repo, combination="additive")
+    _contributor(repo, "evidence", ["x"])
+    _contributor(repo, "notes", ["x"])
+
+
+def _two_contributors(repo: AdopterRepo) -> None:
+    _provider(repo, TOOL, combination="single")
+    _contributor(repo, "evidence", {"name": "e"}, address=TOOL)
+    _contributor(repo, "notes", {"name": "n"}, address=TOOL)
+
+
+def _selection_of_a_non_contributor(repo: AdopterRepo) -> None:
+    _two_contributors(repo)
+    _config(repo, f"connections:\n  selections:\n    {TOOL}: ghost\n")
+
+
+def _unknown_combination(repo: AdopterRepo) -> None:
+    _provider(repo, TOOL, combination="ranked")
+
+
+def _schema_that_does_not_load(repo: AdopterRepo) -> None:
+    _provider(repo, TOOL, combination="single")
+    schema = repo.pkit / "capabilities" / "docs-a" / "schemas" / "tool.schema.json"
+    schema.write_text("{not json", encoding="utf-8")
+
+
+#: Every way a resolution ends, each staged and resolved for real.
+ENDINGS = [
+    pytest.param(_resolved_empty, READERS, dp.Outcome.RESOLVED, id="resolved-empty"),
+    pytest.param(_one_inert_among_several, READERS, dp.Outcome.RESOLVED, id="resolved-one-inert"),
+    pytest.param(_nothing_defines, READERS, dp.Outcome.UNDEFINED, id="undefined"),
+    pytest.param(_single_unfilled, TOOL, dp.Outcome.UNFILLED, id="unfilled-single"),
+    pytest.param(_union_unfilled, READERS, dp.Outcome.UNFILLED, id="unfilled-union"),
+    pytest.param(_not_delivered, READERS, dp.Outcome.UNFILLED, id="unfilled-not-delivered"),
+    pytest.param(_single_every_filler_inert, TOOL, dp.Outcome.NO_ANSWER, id="no-answer-single"),
+    pytest.param(_union_every_filler_inert, READERS, dp.Outcome.NO_ANSWER, id="no-answer-union"),
+    pytest.param(_single_inert_under_fail, TOOL, dp.Outcome.INERT_FAIL, id="inert-fail-single"),
+    pytest.param(_union_inert_under_fail, READERS, dp.Outcome.INERT_FAIL, id="inert-fail-union"),
+    pytest.param(_union_collision, READERS, dp.Outcome.COLLISION, id="collision-union"),
+    pytest.param(_additive_collision, READERS, dp.Outcome.COLLISION, id="collision-additive"),
+    pytest.param(_two_contributors, TOOL, dp.Outcome.SELECTION_NEEDED, id="selection-needed"),
+    pytest.param(
+        _selection_of_a_non_contributor,
+        TOOL,
+        dp.Outcome.SELECTION_UNMATCHED,
+        id="selection-unmatched",
+    ),
+    pytest.param(_unknown_combination, TOOL, dp.Outcome.DEFINER_DEFECT, id="definer-policy"),
+    pytest.param(_schema_that_does_not_load, TOOL, dp.Outcome.DEFINER_DEFECT, id="definer-schema"),
+]
+
+
+@pytest.mark.parametrize(("stage", "address", "outcome"), ENDINGS)
+def test_each_ending_carries_its_outcome_beside_its_sentence(
+    repo: AdopterRepo, stage: Any, address: str, outcome: dp.Outcome
+) -> None:
+    stage(repo)
+    document = _document(address)
+    assert document["outcome"] == outcome.value
+    assert document["resolved"] is (outcome is dp.Outcome.RESOLVED)
+    assert bool(document["why"]) is not document["resolved"]
+    assert document["schema_version"] == dp.DOCUMENT_SCHEMA_VERSION == 1
+
+
+def test_every_outcome_is_an_ending_the_resolution_reaches() -> None:
+    assert {param.values[2] for param in ENDINGS} == set(dp.Outcome)
+
+
+def test_a_union_collision_is_told_from_a_point_nothing_fills(repo: AdopterRepo) -> None:
+    """The look-alike: every filler that answered is listed `passed over`, as if
+    nothing filled the point; only `outcome` tells the two apart."""
+    _union_collision(repo)
+    document = _document(READERS)
+    assert {f["state"] for f in document["fillers"]} == {"passed over"}
+    assert document["outcome"] == "collision" != dp.Outcome.UNFILLED.value
+    assert document["why"] == "entries collide: 'operator' (evidence, notes)"
+
+
+def test_a_contribution_not_delivered_leaves_the_point_unfilled(repo: AdopterRepo) -> None:
+    """A contribution passed over because another provider of its role is selected
+    declares nothing: the point it alone would fill is `unfilled`, not a collision."""
+    _not_delivered(repo)
+    document = _document(READERS)
+    assert document["outcome"] == "unfilled"
+    assert document["why"] == "unfilled: no filler is declared and the point has no default"
+    (filler,) = document["fillers"]
+    assert (filler["name"], filler["state"]) == ("docs-b", "passed over")
+    assert filler["reason"].startswith("not delivered: 'docs-b' provides a role")
+
+
+def test_every_filler_inert_is_no_answer(repo: AdopterRepo) -> None:
+    _union_every_filler_inert(repo)
+    document = _document(READERS)
+    assert (document["outcome"], document["why"]) == ("no-answer", "no filler answered")
+    assert {f["state"] for f in document["fillers"]} == {"inert"}
+
+
+def test_one_inert_filler_among_several_leaves_the_point_resolved(repo: AdopterRepo) -> None:
+    _one_inert_among_several(repo)
+    document = _document(READERS)
+    assert (document["outcome"], document["value"]) == ("resolved", ["operator"])
+    assert {f["name"]: f["state"] for f in document["fillers"]} == {
+        "evidence": "taken",
+        "notes": "inert",
+    }
+
+
+def test_the_human_output_carries_no_outcome(repo: AdopterRepo) -> None:
+    """Only the document gains `outcome`: the lines stay the status report's."""
+    _union_collision(repo)
+    human = _resolve_cli(READERS)
+    assert "unresolved: entries collide: 'operator' (evidence, notes)" in human.output
+    assert "collision" not in human.output
+
+
+def _listed_outcomes() -> set[str]:
+    """The values of `outcome` the CLI reference's `connections resolve` entry lists."""
+    text = CLI_README.read_text(encoding="utf-8")
+    entry = text.split("### `connections resolve <address> [--json]`", 1)[1].split("\n## ", 1)[0]
+    listing = entry.split("- **`outcome`, how the resolution ended.**", 1)[1]
+    return set(re.findall(r"^  - `([a-z-]+)` — ", listing, flags=re.MULTILINE))
+
+
+def test_the_cli_reference_lists_exactly_the_outcomes_the_resolution_gives() -> None:
+    assert _listed_outcomes() == {outcome.value for outcome in dp.Outcome}
 
 
 # --- resolving one point asks only its fillers (#1103) ----------------------------------

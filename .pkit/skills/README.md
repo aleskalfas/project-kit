@@ -10,9 +10,9 @@ pkit:
         - .pkit/adapters/claude-code/deploy-skills.sh
       record: [COR-003, COR-005, COR-006, COR-013, COR-015, COR-020]
     revalidated:
-      at: 2026-09-30T22:51:08Z
+      at: 2026-10-02T07:46:42Z
       outcome: unchanged
-      unchanged-because: decision-author's refinement and supersession variations point at the decisions README for editing an existing record; the index describes the skill as the walkthrough for a new record, which it still is
+      unchanged-because: The page describes adapter-author and capability-author only as the skills paired with pkit new adapter and pkit new capability; it lists no refused names, so the skills' new rule that an adapter and a capability cannot share a name leaves both entries true as written
 ---
 
 # Skills

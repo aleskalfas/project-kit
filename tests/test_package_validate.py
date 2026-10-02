@@ -27,7 +27,10 @@ from project_kit.manifest import (
     ORIGIN_EXTERNALLY_SOURCED,
     ORIGIN_INCUBATED_IN_REPO,
     ORIGIN_KIT_SHIPPED,
+    ComponentRegistryEntry,
+    read_backbone_manifest,
     set_capability_origin,
+    write_backbone_manifest,
 )
 from tests.adopter_repo import MakeAdopterRepo
 from tests.process_journal_support import set_journal_logging
@@ -1237,6 +1240,321 @@ def test_pkit_validate_warns_on_an_alias_another_name_shadows_and_passes(
         "→ alias 'analysis' of capability 'evidence' is shadowed by the same alias of "
         "capability 'software-analysis'"
     ) in output
+
+
+def _registered_under(adopter_root: Path, name: str, origin: str) -> None:
+    """A capability registered by hand under `name`, as one registered before the
+    name was reserved is: install and register refuse it now."""
+    _stage_incubated(
+        adopter_root,
+        name,
+        f"schema_version: 1\ncomponent:\n  kind: capability\n  name: {name}\n  version: 0.1.0\n"
+        "description: Grown at home.\nrequires_backbone: '>=1.0.0'\n",
+    )
+    backbone = read_backbone_manifest(adopter_root)
+    assert backbone is not None
+    backbone.components.append(
+        ComponentRegistryEntry(
+            kind="capability",
+            name=name,
+            manifest=f".pkit/capabilities/{name}/manifest.yaml",
+            origin=origin,
+        )
+    )
+    write_backbone_manifest(adopter_root, backbone)
+
+
+@pytest.mark.parametrize("name", sorted(caps.RESERVED_CAPABILITY_NAMES))
+@pytest.mark.parametrize(
+    ("origin", "fix"),
+    [
+        # The project's own capability: it renames it.
+        (
+            ORIGIN_INCUBATED_IN_REPO,
+            "Rename it: unregister it with `pkit capabilities uninstall {name}`",
+        ),
+        # Restored to its pin on every sync (COR-041): the rename is its author's.
+        (ORIGIN_EXTERNALLY_SOURCED, "A sync restores this package, so the rename is its author's"),
+    ],
+)
+def test_a_capability_registered_under_a_reserved_name_is_an_error_naming_the_fix(
+    make_adopter_repo: MakeAdopterRepo, origin: str, fix: str, name: str
+) -> None:
+    adopter = make_adopter_repo()
+    _registered_under(adopter.root, name, origin)
+
+    result = pv.validate_installed_packages(adopter.root)
+    findings = {
+        (report.file.parent.name, f.path): f for report in result.reports for f in report.findings
+    }
+    assert result.errors == 1 and result.warnings == 0, list(findings)
+    finding = findings[(name, "/component/name")]
+    assert finding.severity is pv.Severity.ERROR
+    assert finding.message.startswith(
+        f"capability name {name!r} is reserved: {caps.RESERVED_CAPABILITY_NAMES[name]}."
+    )
+    assert fix.format(name=name) in finding.message
+
+
+@pytest.mark.parametrize(
+    ("name", "reason"),
+    [
+        ("project", "indistinguishable from the project itself"),
+        ("adr", "the namespace of the project's architecture decision records"),
+        (
+            "backbone",
+            "the component of the backbone's changesets, the owner of its validators, the "
+            "component its rule sets are cited with, and the component its documentation "
+            "locations are recorded under",
+        ),
+    ],
+)
+def test_pkit_validate_fails_on_a_capability_registered_under_a_reserved_name(
+    make_adopter_repo: MakeAdopterRepo, name: str, reason: str
+) -> None:
+    adopter = make_adopter_repo()
+    _registered_under(adopter.root, name, ORIGIN_INCUBATED_IN_REPO)
+
+    result = CliRunner().invoke(main, ["validate", "--no-refs"])
+    assert result.exit_code == 1, result.output
+    assert f"error    .pkit/capabilities/{name}/package.yaml:/component/name" in result.output
+    output = " ".join(result.output.split())
+    assert f"→ capability name {name!r} is reserved:" in output
+    assert reason in output
+    assert "`pkit capabilities register <new-name>`" in output
+
+
+def _adapter_registered_under(adopter_root: Path, name: str) -> None:
+    """An adapter registered by hand under `name`, as one registered before the
+    name was reserved is: `pkit new adapter` and `pkit init` refuse it now."""
+    adapter_dir = adopter_root / ".pkit" / "adapters" / name
+    adapter_dir.mkdir(parents=True)
+    (adapter_dir / "package.yaml").write_text(
+        f"schema_version: 1\ncomponent:\n  kind: adapter\n  name: {name}\n  version: 0.1.0\n"
+        "description: A harness.\nrequires_backbone: '>=1.0.0'\n",
+        encoding="utf-8",
+    )
+    (adapter_dir / "README.md").write_text(f"# {name}\n", encoding="utf-8")
+    backbone = read_backbone_manifest(adopter_root)
+    assert backbone is not None
+    backbone.components.append(
+        ComponentRegistryEntry(
+            kind="adapter", name=name, manifest=f".pkit/adapters/{name}/project/manifest.yaml"
+        )
+    )
+    write_backbone_manifest(adopter_root, backbone)
+
+
+@pytest.mark.parametrize("name", sorted(scaffolds.RESERVED_ADAPTER_NAMES))
+def test_an_adapter_registered_under_a_reserved_name_is_an_error_naming_the_rename(
+    make_adopter_repo: MakeAdopterRepo, name: str
+) -> None:
+    adopter = make_adopter_repo()
+    _adapter_registered_under(adopter.root, name)
+
+    result = pv.validate_installed_packages(adopter.root)
+    findings = {
+        (report.file.parent.name, f.path): f for report in result.reports for f in report.findings
+    }
+    assert result.errors == 1 and result.warnings == 0, list(findings)
+    finding = findings[(name, "/component/name")]
+    assert finding.severity is pv.Severity.ERROR
+    assert finding.message.startswith(
+        f"adapter name {name!r} is reserved: {scaffolds.RESERVED_ADAPTER_NAMES[name]}."
+    )
+    assert f"its directory `.pkit/adapters/{name}/`, its `component.name`" in finding.message
+
+
+@pytest.mark.parametrize("name", ["core", "project", "adr"])
+def test_an_adapter_under_a_name_reserved_for_capabilities_alone_is_not_reported(
+    make_adopter_repo: MakeAdopterRepo, name: str
+) -> None:
+    adopter = make_adopter_repo()
+    _adapter_registered_under(adopter.root, name)
+
+    result = pv.validate_installed_packages(adopter.root)
+    assert result.errors == 0 and result.warnings == 0, [
+        (str(r.file), f.path, f.message) for r in result.reports for f in r.findings
+    ]
+
+
+def test_pkit_validate_fails_on_an_adapter_registered_under_a_reserved_name(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    adopter = make_adopter_repo()
+    _adapter_registered_under(adopter.root, "backbone")
+
+    result = CliRunner().invoke(main, ["validate", "--no-refs"])
+    assert result.exit_code == 1, result.output
+    assert "error    .pkit/adapters/backbone/package.yaml:/component/name" in result.output
+    output = " ".join(result.output.split())
+    assert "→ adapter name 'backbone' is reserved:" in output
+    assert "the component of the backbone's changesets and the owner of its validators" in output
+
+
+# --- an adapter and a capability of one name (#1306) ---------------------------
+#
+# The adopter is initialised with the `claude-code` adapter registered; a capability
+# registered by hand under that name is a pair installed before the refusal. Each of
+# the two carries an error at its `component.name`, naming its own rename; nothing
+# is unregistered.
+
+
+@pytest.mark.parametrize(
+    ("origin", "fix"),
+    [
+        # The project's own capability: it renames it.
+        (
+            ORIGIN_INCUBATED_IN_REPO,
+            "Rename it: unregister it with `pkit capabilities uninstall claude-code`",
+        ),
+        # Restored to its pin on every sync (COR-041): the rename is its author's.
+        (ORIGIN_EXTERNALLY_SOURCED, "A sync restores this package, so the rename is its author's"),
+    ],
+)
+def test_an_adapter_and_a_capability_of_one_name_are_an_error_at_each_naming_the_rename(
+    make_adopter_repo: MakeAdopterRepo, origin: str, fix: str
+) -> None:
+    adopter = make_adopter_repo()
+    _registered_under(adopter.root, "claude-code", origin)
+
+    result = pv.validate_installed_packages(adopter.root)
+    findings = {
+        (report.file.parent.parent.name, f.path): f
+        for report in result.reports
+        for f in report.findings
+    }
+    assert result.errors == 2 and result.warnings == 0, list(findings)
+
+    at_capability = findings[("capabilities", "/component/name")]
+    assert at_capability.severity is pv.Severity.ERROR
+    message = " ".join(at_capability.message.split())
+    assert message.startswith(
+        "capability 'claude-code' shares its name with the adapter 'claude-code': "
+        "an adapter and a capability cannot share a name"
+    )
+    assert "The adapter carries this error too, and renaming either clears both." in message
+    assert fix in message
+
+    at_adapter = findings[("adapters", "/component/name")]
+    assert at_adapter.severity is pv.Severity.ERROR
+    message = " ".join(at_adapter.message.split())
+    assert message.startswith(
+        "adapter 'claude-code' shares its name with the capability 'claude-code': "
+        f"{caps.SHARED_NAME_REASON}."
+    )
+    assert "its directory `.pkit/adapters/claude-code/`, its `component.name`" in message
+
+    backbone = read_backbone_manifest(adopter.root)
+    assert backbone is not None
+    assert {c.kind for c in backbone.components if c.name == "claude-code"} == {
+        "adapter",
+        "capability",
+    }
+
+
+def test_pkit_validate_fails_on_an_adapter_and_a_capability_of_one_name(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    adopter = make_adopter_repo()
+    _registered_under(adopter.root, "claude-code", ORIGIN_INCUBATED_IN_REPO)
+
+    result = CliRunner().invoke(main, ["validate", "--no-refs"])
+    assert result.exit_code == 1, result.output
+    assert "error    .pkit/adapters/claude-code/package.yaml:/component/name" in result.output
+    assert "error    .pkit/capabilities/claude-code/package.yaml:/component/name" in result.output
+    output = " ".join(result.output.split())
+    assert "→ adapter 'claude-code' shares its name with the capability 'claude-code':" in output
+    assert "→ capability 'claude-code' shares its name with the adapter 'claude-code':" in output
+    assert "`pkit capabilities register <new-name>`" in output
+
+
+# --- a capability a backbone command shadows (#1300) ---------------------------
+
+_WITH_COMMANDS = "commands:\n  publish:\n    script: scripts/publish.py\n    help: Publish.\n"
+
+
+def _registered_with_commands(adopter_root: Path, name: str, origin: str) -> None:
+    """A capability under `name` that surfaces a namespace, registered by hand."""
+    _registered_under(adopter_root, name, origin)
+    package = _installed_package(adopter_root, name)
+    package.write_text(package.read_text(encoding="utf-8") + _WITH_COMMANDS, encoding="utf-8")
+
+
+@pytest.mark.parametrize(
+    ("origin", "fix"),
+    [
+        # The project's own capability: it renames it.
+        (
+            ORIGIN_INCUBATED_IN_REPO,
+            "Rename it: unregister it with `pkit capabilities uninstall status`",
+        ),
+        # Restored to its pin on every sync (COR-041): the rename is its author's.
+        (ORIGIN_EXTERNALLY_SOURCED, "A sync restores this package, so the rename is its author's"),
+    ],
+)
+def test_a_capability_a_backbone_command_shadows_is_an_error_naming_the_rename(
+    make_adopter_repo: MakeAdopterRepo, origin: str, fix: str
+) -> None:
+    adopter = make_adopter_repo()
+    _registered_with_commands(adopter.root, "status", origin)
+
+    result = pv.validate_installed_packages(adopter.root)
+    findings = {
+        (report.file.parent.name, f.path): f for report in result.reports for f in report.findings
+    }
+    assert result.errors == 1 and result.warnings == 0, list(findings)
+    finding = findings[("status", "/component/name")]
+    assert finding.severity is pv.Severity.ERROR
+    message = " ".join(finding.message.split())
+    assert message.startswith(
+        "capability 'status' is shadowed by the backbone command `pkit status`, which every "
+        "capability name and alias yields to: `pkit status` runs that command, never status"
+    )
+    assert "have no `pkit status …` namespace" in message
+    assert fix in message
+
+
+def test_a_capability_named_after_a_backbone_command_without_commands_is_not_reported(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """No `commands:` block, no namespace to shadow."""
+    adopter = make_adopter_repo()
+    _registered_under(adopter.root, "status", ORIGIN_INCUBATED_IN_REPO)
+
+    result = pv.validate_installed_packages(adopter.root)
+    assert result.errors == 0 and result.warnings == 0, [
+        (str(r.file), f.path, f.message) for r in result.reports for f in r.findings
+    ]
+
+
+def test_the_backbone_commands_are_read_when_the_check_runs(
+    make_adopter_repo: MakeAdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An upgrade that gives the backbone a command named after an installed
+    capability shadows it from then on: the commands are the dispatcher's own."""
+    adopter = make_adopter_repo(capabilities=("evidence",))
+    assert pv.validate_installed_packages(adopter.root).errors == 0
+    monkeypatch.setitem(main.commands, "evidence", main.commands["status"])
+
+    result = pv.validate_installed_packages(adopter.root)
+    messages = [f.message for r in result.reports for f in r.findings]
+    assert result.errors == 1, messages
+    assert messages[0].startswith("capability 'evidence' is shadowed by the backbone command")
+
+
+def test_pkit_validate_fails_on_a_capability_a_backbone_command_shadows(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    adopter = make_adopter_repo()
+    _registered_with_commands(adopter.root, "sync", ORIGIN_INCUBATED_IN_REPO)
+
+    result = CliRunner().invoke(main, ["validate", "--no-refs"])
+    assert result.exit_code == 1, result.output
+    assert "error    .pkit/capabilities/sync/package.yaml:/component/name" in result.output
+    output = " ".join(result.output.split())
+    assert "→ capability 'sync' is shadowed by the backbone command `pkit sync`" in output
+    assert "`pkit capabilities register <new-name>`" in output
 
 
 def test_in_the_methodology_source_a_kit_shipped_package_is_its_own() -> None:

@@ -40,9 +40,9 @@ TERM-integration-branch:
         record:
           - project-management:DEC-013
       revalidated:
-        at: 2026-10-01T15:12:48Z
+        at: 2026-10-02T03:07:25Z
         outcome: unchanged
-        unchanged-because: DEC-013 gains that its merge mechanic is the backbone's, which every command that lands a PR calls; integration branches, which this term defines, are untouched
+        unchanged-because: "DEC-013 gains how set-field --parent treats the marker on the write path: a valid one stays the first line with the parent-ref below it, a malformed one is refused with nothing written; what an integration branch is, which this term defines, is untouched"
 TERM-intent-note:
   name: Intent note
   status: active
@@ -115,9 +115,9 @@ TERM-stabilisation:
           - project-management:DEC-014
           - ADR-019
       revalidated:
-        at: 2026-10-01T22:17:09Z
+        at: 2026-10-02T04:21:08Z
         outcome: unchanged
-        unchanged-because: every title rule the schema declares now runs, and DEC-011 states them; what this page says of titles and filing still holds
+        unchanged-because: done-work and merge-pr now say a merge the backbone did not see made may still show, and merge-pr owes its after-merge steps after any request it sent and did not see merged; the term defines the phase of a release Milestone in which work in flight continues, nothing new starts outside release scope and the default branch receives only release scope, which those words do not touch, so it holds
 ---
 
 # Glossary

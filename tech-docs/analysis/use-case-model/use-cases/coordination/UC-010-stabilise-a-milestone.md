@@ -20,9 +20,9 @@ pkit:
       artefact:
         - ACT-operator
     revalidated:
-      at: 2026-10-01T22:17:12Z
+      at: 2026-10-02T04:21:18Z
       outcome: unchanged
-      unchanged-because: DEC-014's example of a warning now names the Task title's length floor, as DEC-011 states it; what this page takes from the severity model — which findings refuse, which need an audited bypass and which warn — is unchanged
+      unchanged-because: "done-work and merge-pr now say a merge the backbone did not see made may still show, and merge-pr owes its after-merge steps after any request it sent and did not see merged; the Milestone's stabilisation, release scope and the guards on start-work, done-work and merge-pr (still unbuilt, EPIC #943) are unchanged, so it holds"
 ---
 
 # UC-010 — Stabilise a Milestone for a release

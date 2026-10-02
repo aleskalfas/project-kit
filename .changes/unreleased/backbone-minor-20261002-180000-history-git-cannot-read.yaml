@@ -1,0 +1,20 @@
+component: backbone
+kind: minor
+custom:
+  category: Fixed
+body: >
+  The backbone tells a repository with no commit yet from one whose commit git
+  cannot read, such as a missing object or a checkout git refuses as unsafe.
+  `pkit repository base --json` gains `head`: HEAD's `commit`, `unborn` (true
+  only when HEAD is a branch before its first commit) and `problem` (why git
+  cannot read HEAD here). Its `schema_version` stays 1. A data point's filler
+  reads `head` to learn whether there is history (COR-052 point 6). For a
+  filler that declares `reads: [history]`, the `connections` member of `pkit
+  validate` and `pkit status` used to say `reads history (HEAD, no commit yet)`
+  whenever git could not answer. They now say `reads history (git cannot read
+  HEAD here)` in that case, and `pkit connections resolve --json` carries that
+  filler's history read with `ref` and `commit` both null. A default branch
+  whose commit git cannot read no longer counts as having no commit yet, so a
+  filler that declares `settled` is not started there. The `default_branch`
+  problem in `pkit repository base` names only the fixes a filler has, the
+  fetch and the declaration. The `base` problem still offers naming a base.

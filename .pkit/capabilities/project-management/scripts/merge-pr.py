@@ -64,25 +64,35 @@ shared with `done-work`; #882):
     GitHub reports the PR merged, never on an enqueue — so no best-effort
     step stands between the irreversible merge and them. That they fired is
     then recorded in the clone (below).
-  - Best-effort branch cleanup: delete the remote head ref through the API,
-    then `git checkout <default_branch>`, `git pull --ff-only`, `git branch
-    -D <head>`, the local delete only when everything on the branch merged.
-    Each step warns with its reason and continues; none can fail the run — a
-    head branch checked out in a worktree simply leaves a warning where the
-    local delete would have been.
+  - Best-effort branch cleanup: the head branch deleted on GitHub by the
+    backbone (`pkit pull-request delete-branch <N> --expect <the head that
+    merged>`), only while its tip is the head that merged — a branch kept,
+    with why, gone, or not known to be deleted is said in one line, naming
+    the command that deletes it later where it was not deleted, since a
+    re-run of this verb does not retry it — then `git checkout
+    <default_branch>`, `git pull --ff-only`, `git branch -D <head>`, the local
+    delete only when the branch on GitHub was deleted or is gone and
+    everything on the local one merged. Each step warns with its reason and
+    continues; none can fail the run — a head branch checked out in a
+    worktree simply leaves a warning where the local delete would have been.
 
 A merged PR has nothing left to gate (#1011). `merge-pr <N>` on one runs only
 the hooks and the clean-up above, and only for a merge whose after-merge steps
 are still owed: one the merge queue made — the run that enqueued it returned
-first — or one a run from this clone left unconfirmed (exit 4). The clean-up
+first — or one a run from this clone sent and did not see merged. The clean-up
 keys on the head the PR merged at, as GitHub reports it. A record in the
 clone's git directory (`pkit/merge-pr/<N>.json`) says which runs owe the steps
-and which ran them: a run that exits 4 records the steps as owed, and the run
-that fires the hooks records that it did, so a further run from this clone does
-nothing and says so. A PR merged without a queue and with nothing owed from
-this clone — someone else merged it — is refused, as before. The record is the
-clone's, not GitHub's: another clone finds none, and completes a PR the queue
-merged by firing the hooks again, which DEC-024's idempotent hooks allow.
+and which ran them: a run records the steps as owed whenever it returns with
+the PR queued, or having sent a merge or an enqueue GitHub did not refuse and
+did not see merged — accepted and unconfirmed (exit 4), or not seen made on
+the backbone's two readings (exit 3), which the service may still apply. The
+run that fires the hooks records that it did, replacing an owed record, so a
+retry that merges the PR as a first run would clears what an earlier run
+left owed, and a further run from this clone does nothing and says so. A PR
+merged without a queue and with nothing owed from this clone — someone else
+merged it — is refused, as before. The record is the clone's, not GitHub's:
+another clone finds none, and completes a PR the queue merged by firing the
+hooks again, which DEC-024's idempotent hooks allow.
 
 Self-contained via PEP 723; runs via
   uv run --script .pkit/capabilities/project-management/scripts/merge-pr.py 99
@@ -98,7 +108,9 @@ Exit codes:
   2  usage error (PR not found)
   3  gh failure: the merge failed or the queue could not be read; the PR left
      the merge queue without merging, or was taken out of it because its head
-     moved
+     moved; or a merge or an enqueue got no answer and was not seen made on
+     two readings — owed to a re-run from this clone, which completes it if
+     the PR has merged since
   4  accepted, a re-run from this clone completes it: the PR is in the merge
      queue and has not been seen merged, or gh accepted the merge — or a
      merge or an enqueue got no answer back — and GitHub could not be read to
@@ -247,8 +259,11 @@ def main() -> int:
         return 1
 
     # Foreign-repo mutation guard (COR-039 / ADR-034) — gate before the PR
-    # merge: target repo (cwd) vs session anchor (CLAUDE_PROJECT_DIR).
-    if not session_guard.enforce(override=args.allow_foreign_repo):
+    # merge: target repo (cwd) vs session anchor (CLAUDE_PROJECT_DIR). The
+    # backbone runs its own guard on the request, and is told the operator
+    # confirmed exactly when they did here: the flag, or a yes at the prompt.
+    guard = session_guard.enforce(override=args.allow_foreign_repo)
+    if not guard:
         return 1
 
     titles = _read_yaml(capability_root / "schemas" / "titles.yaml", yaml_loader)
@@ -271,7 +286,14 @@ def main() -> int:
         # A PR the queue merged after the run that enqueued it returned, or one
         # a run from this clone left unconfirmed (#1011): what follows the merge
         # is all that may be left to do.
-        return _complete_merge(args, pr, base, config, capability_root)
+        return _complete_merge(
+            args,
+            pr,
+            base,
+            config,
+            capability_root,
+            allow_foreign_repo=session_guard.confirmed(guard),
+        )
     if pr_state != "open":
         print(
             f"\n[refused] PR is not open (state: {pr_state}). Cannot merge.",
@@ -386,8 +408,8 @@ def main() -> int:
         else:
             merge = f"gh pr merge --squash --subject {pr_title!r} would be invoked{note}, then"
         print(
-            f"\n[dry-run] {merge} the remote head branch deleted and the local "
-            "checkout tidied; nothing written."
+            f"\n[dry-run] {merge} the remote head branch deleted while its tip is the head "
+            "that merged, and the local checkout tidied; nothing written."
         )
         return 0
     if not args.yes and sys.stdin.isatty():
@@ -435,12 +457,19 @@ def main() -> int:
             bypass_ci=bool(args.bypass_ci),
             force=args.force,
             wait_seconds=pr_merge.wait_seconds(args),
+            guard_passed=session_guard.how_passed(guard),
+            allow_foreign_repo=session_guard.confirmed(guard),
         ),
         config,
     )
-    if landing.outcome in (pr_merge.STILL_QUEUED, pr_merge.UNCONFIRMED):
-        # The run returns with what follows the merge owed (exit 4): recorded,
-        # so a re-run from this clone completes it however the PR merges.
+    if landing.outcome != pr_merge.MERGED and (
+        landing.requested or landing.outcome in (pr_merge.STILL_QUEUED, pr_merge.UNCONFIRMED)
+    ):
+        # The run returns with what follows the merge owed: the PR is queued,
+        # or this run sent a merge or an enqueue GitHub did not refuse and did
+        # not see merged — not seen made, unconfirmed, or anything else — which
+        # may yet merge it. Recorded, so a re-run from this clone completes it
+        # however the PR merges, rather than refusing a merge it made.
         try:
             _write_record(args.pr_number, _OWED, head)
         except _Unrecorded as exc:
@@ -454,7 +483,14 @@ def main() -> int:
         return _not_merged(args.pr_number, base, landing)
     print(f"\n[ok] merged: {pr_url}")
     merged_head = landing.reading.head_oid if landing.reading is not None else ""
-    return _after_merge(args, pr, config, capability_root, merged_head=merged_head or head)
+    return _after_merge(
+        args,
+        pr,
+        config,
+        capability_root,
+        merged_head=merged_head or head,
+        allow_foreign_repo=session_guard.confirmed(guard),
+    )
 
 
 def _after_merge(
@@ -464,10 +500,14 @@ def _after_merge(
     capability_root: Path,
     *,
     merged_head: str,
+    allow_foreign_repo: bool,
 ) -> int:
     """What follows the merge: the `after_merge_pr` hooks, then the
     best-effort branch clean-up. That the hooks fired is recorded in the clone
-    as soon as they have, so a later run from it fires none of them again."""
+    as soon as they have, so a later run from it fires none of them again.
+    The head branch on GitHub is deleted by the backbone only while its tip
+    is `merged_head`, the head the PR merged at; `allow_foreign_repo`, the
+    operator's confirmation at this verb, is passed on to the backbone's guard."""
     # Fire after_merge_pr hooks per DEC-024 — FIRST, before any best-effort
     # branch cleanup, so a cleanup warning can never stand between the
     # irreversible merge and the hooks.
@@ -492,25 +532,37 @@ def _after_merge(
             file=sys.stderr,
         )
 
-    # Branch cleanup — best-effort, never fatal. The remote head ref goes
-    # through the API (no local-checkout dependency); the local steps warn
-    # and continue, so a head branch checked out in a worktree (#587) is a
-    # warning on the local delete, not a failed merge.
+    # Branch cleanup — never fatal, after the hooks. The head branch on GitHub
+    # is the backbone's to delete, only at the head that merged; the local
+    # steps warn and continue, so a head branch checked out in a worktree
+    # (#587) is a warning on the local delete, not a failed merge. The record
+    # above says the hooks ran, so a re-run of this verb returns before the
+    # deletion: the command the line names is the only way to retry it.
+    remote = pr_merge.delete_branch(
+        args.pr_number,
+        merged_head,
+        config,
+        allow_foreign_repo=allow_foreign_repo,
+        rerun_note=(
+            f"A re-run of `merge-pr {args.pr_number}` does not retry it: that command is "
+            "the only way to."
+        ),
+    )
     head_branch = str(pr.get("headRefName") or "")
     if head_branch:
         # A fork PR's head name is chosen by the fork's author; never act on
-        # a base-repository or local branch of that name.
+        # a local branch of that name.
         cross = bool(pr.get("isCrossRepository"))
-        pr_merge.delete_remote_branch(head_branch, config, cross_repository=cross)
         pr_merge.cleanup_local(
             head_branch,
             config,
             cross_repository=cross,
             merged_head=merged_head,
+            remote=remote,
         )
     else:
         print(
-            "[warn] PR reports no head branch; skipping branch cleanup.",
+            "[warn] PR reports no head branch; skipping the local clean-up.",
             file=sys.stderr,
         )
 
@@ -527,7 +579,8 @@ def _not_merged(pr_number: int, base: str, landing: pr_merge.Landing) -> int:
     not then confirm — one gh accepted, or a merge or an enqueue that got no
     answer back: the run recorded the after-merge steps as owed, so
     `merge-pr` run again from this clone completes them once the PR has
-    merged. Everything else merged nothing.
+    merged. A request not seen made (exit 3) is owed too, said so: the
+    service may still apply it. Everything else merged nothing.
     """
     reading = landing.reading
     where = f" ({reading.describe()})" if reading is not None else ""
@@ -560,6 +613,15 @@ def _not_merged(pr_number: int, base: str, landing: pr_merge.Landing) -> int:
     if landing.outcome == pr_merge.UNREADABLE:
         print(f"error: {landing.message}. Nothing was merged.", file=sys.stderr)
         return 3
+    if landing.outcome == pr_merge.FAILED and landing.requested:
+        print(
+            f"error: the merge of PR #{pr_number} was not seen made (the backbone's reason is "
+            "above), and may still show. Nothing after the merge has run. Run "
+            f"`merge-pr {pr_number}` again from this clone: if the PR has merged by then, it "
+            "fires the after-merge hooks and cleans up the branch; if not, it merges it.",
+            file=sys.stderr,
+        )
+        return 3
     if landing.outcome == pr_merge.HEAD_MOVED:
         print(
             f"error: {landing.message} Once the new commits have been checked, re-run "
@@ -584,6 +646,8 @@ def _complete_merge(
     base: str,
     config: dict,
     capability_root: Path,
+    *,
+    allow_foreign_repo: bool,
 ) -> int:
     """What follows the merge, for a PR that has merged already (#1011).
 
@@ -633,7 +697,8 @@ def _complete_merge(
     if args.dry_run:
         print(
             "\n[dry-run] the after-merge hooks would fire, then the remote head branch "
-            "be deleted and the local checkout tidied; nothing written."
+            "be deleted while its tip is the head that merged, and the local checkout "
+            "tidied; nothing written."
         )
         return 0
     if not args.yes and sys.stdin.isatty():
@@ -647,6 +712,7 @@ def _complete_merge(
         config,
         capability_root,
         merged_head=reading.head_oid or str(pr.get("headRefOid") or ""),
+        allow_foreign_repo=allow_foreign_repo,
     )
 
 

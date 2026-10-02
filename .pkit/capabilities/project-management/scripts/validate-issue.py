@@ -53,7 +53,14 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import axis_carriage, axis_labels, bootstrap_gate, classification_rules, title_rules
+from _lib import (
+    axis_carriage,
+    axis_labels,
+    body_parent_ref,
+    bootstrap_gate,
+    classification_rules,
+    title_rules,
+)
 from _lib import lifecycle_inference as infer
 from _lib.gh import gh_get_issue, load_adopter_config
 from _lib.membership import (
@@ -711,9 +718,11 @@ def _validate_issue(
             # Skip when the marker is malformed — the marker finding above already
             # names the real problem; a parent-ref finding here would be misleading.
             if parent_ref_form and not parent_ref_optional and malformed_marker is None:
-                # A leading DEC-013 `Integration:` marker sits ABOVE the parent-ref
-                # (#763); skip it so the parent-ref line is what we validate.
-                first_line = infer.strip_integration_marker(body).lstrip().split("\n", 1)[0]
+                # The first line as every reader of an issue's parent takes it
+                # (`body_parent_ref.first_line`): past a leading DEC-013
+                # `Integration:` marker, which sits ABOVE the parent-ref (#763).
+                # The form check below is this script's own.
+                first_line = body_parent_ref.first_line(body)
                 # New canonical form: `Milestone: [#<N>](../milestone/<N>)`
                 _NEW_MILESTONE_RE = re.compile(r"^Milestone:\s+\[#(\d+)\]\(\.\./milestone/\1\)\s*$")
                 # Old (deprecated) form: `Milestone: #<N>` — accepted with

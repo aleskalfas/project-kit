@@ -19,9 +19,9 @@ pkit:
         - src/project_kit/working_tree.py
       record: [COR-018, COR-019, COR-020, COR-023, COR-029, COR-048, COR-050, COR-051, COR-052, COR-053, ADR-056, ADR-057]
     revalidated:
-      at: 2026-10-01T23:49:17Z
+      at: 2026-10-02T02:40:02Z
       outcome: unchanged
-      unchanged-because: The package schema gains an optional reads key on a command leaf, what a data point's filler reads beyond the working tree (COR-052 point 6); this page summarises the package schema by its blocks and leaves its keys to the lifecycle README, which documents reads, and its filler-envelope account is untouched, so it holds
+      unchanged-because: the process shape contract's journal entry drops the bypass_reason field nothing wrote and rewords reason's description; this page names _defs/process.schema.json as the process shape contract and pointer target and lists no journal-entry field, so what it says of the shared library still holds
 ---
 
 # Schemas

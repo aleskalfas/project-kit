@@ -1,0 +1,3 @@
+component: living-docs
+kind: none
+body: Internal — the README says that `pkit docs record-location living-docs definitions` records the definitions location where it lies now and says so, asking nothing (COR-049 point 5, #1141); nothing in the capability changes.

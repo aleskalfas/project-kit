@@ -150,20 +150,25 @@ Side-effects, in order (#878; the merge mechanic itself lives once in
     back, which is never taken for a failed one — the run says so and exits
     4 with the issue in Review; a later `done-work <N>` finds the PR merged,
     or still open, and finishes.
-  - Composes over `move-issue.py --to done` IMMEDIATELY after the merge, so
-    no best-effort step can stand between the irreversible merge and the
-    lifecycle transition.
+  - Composes over `move-issue.py --to done --merged-pr <PR>` IMMEDIATELY
+    after the merge, so no best-effort step can stand between the
+    irreversible merge and the lifecycle transition. Naming the PR journals
+    the move with the reason close-issue gives the other issues it closed.
   - Then composes over `close-issue.py <M> --mode pr-merge --pr <PR>` for
     every issue the merge closed, the primary first (#1086): each is closed
     as completed if the merge left it open (a base branch other than the
     default one, where GitHub does not auto-close), its state label is
     reconciled to done, and its closure cascade runs (DEC-006). A failure is
     a warning naming the re-run, and the run exits with it after cleanup.
-  - Best-effort branch cleanup, after the transition: delete the remote head
-    ref through the API (`gh api -X DELETE .../git/refs/heads/<branch>`, no
-    local-checkout dependency), then `git checkout <default_branch>`, `git
-    pull --ff-only`, `git branch -D <branch>`. Each step warns with its reason
-    and continues; none can fail the run.
+  - Best-effort branch cleanup, after the transition and the closes: the
+    head branch deleted on GitHub by the backbone (`pkit pull-request
+    delete-branch <PR> --expect <the head that merged>`), only while its tip
+    is the head that merged — a branch kept, with why, gone, or not known to
+    be deleted is said in one line, naming the command that deletes it later
+    where it was not deleted — then `git checkout <default_branch>`, `git
+    pull --ff-only`, `git branch -D <branch>`, the last only when the branch
+    on GitHub was deleted or is gone and everything on the local one merged.
+    Each step warns with its reason and continues; none can fail the run.
   - `done-work` does NOT roll back the merge if a downstream step
     fails — merge irreversibility is the architectural constraint per
     DEC-026 failure semantics.
@@ -603,9 +608,16 @@ def run(
         return _ended(REFUSED, 1, membership.refusal_message)
 
     # Foreign-repo mutation guard (COR-039 / ADR-034) — gate before the PR
-    # merge / state transition: target repo (cwd) vs session anchor.
-    if not session_guard.enforce(override=args.allow_foreign_repo):
+    # merge / state transition: target repo (cwd) vs session anchor. The
+    # operator's confirmation here — the flag, or a yes at the prompt — goes
+    # with every change this run hands on: the merge, to the backbone's own
+    # guard, and the moves and closes it starts, to theirs; so a confirmed
+    # landing is not refused, or asked about again, halfway. Nothing else is
+    # confirmed for them.
+    guard = session_guard.enforce(override=args.allow_foreign_repo)
+    if not guard:
         return _ended(REFUSED, 1, reason="the foreign-repository guard refused (see above)")
+    confirmed = session_guard.confirmed(guard)
 
     branch = _find_issue_branch(args.issue_number)
     if composed and branch is not None:
@@ -659,6 +671,7 @@ def run(
                 capability_root=capability_root,
                 yaml_loader=yaml_loader,
                 config=config,
+                confirmed=confirmed,
             )
         if composed and issue_merges.problem:
             return _ended(
@@ -978,8 +991,9 @@ def run(
             f"(dry-run: would post bypass audit (if any), {lead_in_step}{merge_step}"
             f"call move-issue, close and cascade "
             f"{_issue_list(to_close) or 'no issue'} through close-issue, then "
-            f"best-effort cleanup: delete remote branch {branch!r}, checkout "
-            "main + pull, delete the local branch if everything on it merged.)"
+            f"best-effort cleanup: delete remote branch {branch!r} while its tip is the "
+            "head that merged, checkout main + pull, delete the local branch if everything "
+            "on it merged.)"
         )
         return _ended(PLANNED, 0)
 
@@ -1055,6 +1069,7 @@ def run(
             args.issue_number,
             lead_in.to_state,
             args.capability_root,
+            confirmed=confirmed,
         )
         if lead_in_rc != 0:
             return _ended(
@@ -1085,6 +1100,8 @@ def run(
             bypass_ci=bool(args.bypass_ci),
             force=args.force,
             wait_seconds=pr_merge.wait_seconds(args),
+            guard_passed=session_guard.how_passed(guard),
+            allow_foreign_repo=confirmed,
         ),
         config,
     )
@@ -1098,6 +1115,7 @@ def run(
         cross=bool(pr.get("isCrossRepository")),
         merged_head=_merged_head(landing, gate_result.head_oid or pr_head),
         config=config,
+        confirmed=confirmed,
     )
 
 
@@ -1110,6 +1128,7 @@ def _after_merge(
     cross: bool,
     merged_head: str,
     config: dict,
+    confirmed: bool,
 ) -> DoneWorkRun:
     """Everything that follows the merge: issue N to Done, each issue the
     merge closed closed and cascaded, then the best-effort branch cleanup.
@@ -1117,21 +1136,29 @@ def _after_merge(
     The merge is durable by now, so nothing here rolls it back: a failed step
     warns with the command that finishes it, and the run exits with it after
     the cleanup (:data:`FOLLOW_UP_OWED`). `branch` is the PR's head branch and
-    `merged_head` the head it merged at: the local branch is deleted only when
-    nothing on it is missing from the merge.
+    `merged_head` the head it merged at: the branch on GitHub is deleted only
+    while its tip is that head, the local branch only when the one on GitHub
+    was deleted or is gone and nothing on it is missing from the merge.
+    `confirmed` is the operator's confirmation of a change in another
+    repository, which the moves and closes are handed (:func:`_run_sibling`),
+    and the backbone's deletion of the branch.
     """
     # The first step that failed, as its warning says it.
     owed = ""
     # Compose over move-issue for the state transition + cascade — FIRST,
     # before any branch cleanup. The merge is irreversible and GitHub's
     # `Closes #N` has already closed the issue, so a best-effort step failing
-    # ahead of this call would strand the pm state at Review (#878).
-    move_rc = _invoke_move_issue(args.issue_number, "done", args.capability_root)
+    # ahead of this call would strand the pm state at Review (#878). The merged
+    # PR is named, so the move is journaled with the reason close-issue gives the
+    # other issues it closed (#1296).
+    move_rc = _invoke_move_issue(
+        args.issue_number, "done", args.capability_root, confirmed=confirmed, merged_pr=pr_number
+    )
     if move_rc != 0:
         owed = (
             f"[warn] PR merged but move-issue exited {move_rc}. The merge is "
-            "durable; re-run `move-issue --to done` to complete the "
-            "lifecycle transition."
+            f"durable; re-run `move-issue {args.issue_number} --to done` to complete "
+            "the lifecycle transition."
         )
         print(owed, file=sys.stderr)
 
@@ -1147,6 +1174,7 @@ def _after_merge(
             pr_number,
             args.capability_root,
             skip_checkbox_gate=args.skip_checkbox_gate,
+            confirmed=confirmed,
         )
         if rc != 0:
             warning = (
@@ -1159,12 +1187,15 @@ def _after_merge(
             owed = owed or warning
             close_rc = close_rc or rc
 
-    # Branch cleanup — best-effort, never fatal. The remote head ref goes
-    # through the API so it has no local-checkout dependency; the local steps
-    # warn and continue when the working tree cannot switch to the default
-    # branch (detached HEAD, the default branch held by another worktree).
-    pr_merge.delete_remote_branch(branch, config, cross_repository=cross)
-    pr_merge.cleanup_local(branch, config, cross_repository=cross, merged_head=merged_head)
+    # Branch cleanup — never fatal, after the steps above. The head branch on
+    # GitHub is the backbone's to delete, only while its tip is the head that
+    # merged; the local steps warn and continue when the working tree cannot
+    # switch to the default branch (detached HEAD, the default branch held by
+    # another worktree).
+    remote = pr_merge.delete_branch(pr_number, merged_head, config, allow_foreign_repo=confirmed)
+    pr_merge.cleanup_local(
+        branch, config, cross_repository=cross, merged_head=merged_head, remote=remote
+    )
 
     if move_rc != 0:
         return _ended(FOLLOW_UP_OWED, move_rc, reason=owed)
@@ -1233,6 +1264,17 @@ def _not_merged(
             3,
             f"error: {landing.message} #{issue_number} stays in Review; once the new "
             f"commits have been reviewed, re-run `done-work {issue_number}`.",
+        )
+    if landing.outcome == pr_merge.FAILED and landing.requested:
+        # The backbone's two readings did not see the request made, and said
+        # so (`pr_merge`); the service may still apply it.
+        return _ended(
+            REFUSED,
+            3,
+            reason=f"the merge request for PR #{pr_number} was not seen made (the backbone's "
+            f"reason is above), and may still show; run `done-work {issue_number}` again: it "
+            "reads the PR first, and completes it if it has merged",
+            retry=True,
         )
     if landing.outcome == pr_merge.FAILED:
         # gh's reason is printed already (`pr_merge`); whether a push since is
@@ -1391,6 +1433,7 @@ def _complete_merged_pr(
     capability_root: Path,
     yaml_loader: YAML,
     config: dict,
+    confirmed: bool,
 ) -> DoneWorkRun:
     """What follows the merge, for a PR already merged (#1011).
 
@@ -1408,7 +1451,8 @@ def _complete_merged_pr(
 
     The issues to close are those the PR body names that were not closed
     before the merge — GitHub closes the rest as it merges, and close-issue's
-    pr-merge close reconciles and cascades them either way.
+    pr-merge close reconciles and cascades them either way. `confirmed` as for
+    :func:`_after_merge`.
     """
     pr_number = int(merged_pr["number"])
     merged_at = str(merged_pr.get("mergedAt") or "")
@@ -1457,8 +1501,9 @@ def _complete_merged_pr(
         print(
             f"(dry-run: would {lead_in_step}call move-issue, close and cascade "
             f"{_issue_list(to_close) or 'no issue'} through close-issue, then "
-            f"best-effort cleanup: delete remote branch {head_branch!r}, checkout "
-            "main + pull, delete the local branch if everything on it merged.)"
+            f"best-effort cleanup: delete remote branch {head_branch!r} while its tip is the "
+            "head that merged, checkout main + pull, delete the local branch if everything "
+            "on it merged.)"
         )
         return _ended(PLANNED, 0)
     if not args.yes and sys.stdin.isatty():
@@ -1466,7 +1511,9 @@ def _complete_merged_pr(
         if reply not in ("y", "yes"):
             return _ended(DECLINED, 0, "aborted.")
     if lead_in is not None:
-        lead_in_rc = _invoke_move_issue(issue_number, lead_in.to_state, args.capability_root)
+        lead_in_rc = _invoke_move_issue(
+            issue_number, lead_in.to_state, args.capability_root, confirmed=confirmed
+        )
         if lead_in_rc != 0:
             return _ended(
                 FOLLOW_UP_OWED,
@@ -1483,6 +1530,7 @@ def _complete_merged_pr(
         cross=bool(merged_pr.get("isCrossRepository")),
         merged_head=str(merged_pr.get("headRefOid") or ""),
         config=config,
+        confirmed=confirmed,
     )
 
 
@@ -3188,12 +3236,21 @@ def _issue_list(numbers) -> str:
     return ", ".join(f"#{n}" for n in numbers)
 
 
-def _invoke_move_issue(issue_number: int, target: str, capability_root_arg: Path | None) -> int:
-    return _run_sibling(
-        "move-issue.py",
-        [str(issue_number), "--to", target],
-        capability_root_arg,
-    )
+def _invoke_move_issue(
+    issue_number: int,
+    target: str,
+    capability_root_arg: Path | None,
+    *,
+    confirmed: bool,
+    merged_pr: int | None = None,
+) -> int:
+    """Move the issue to `target` through move-issue. `merged_pr` names the
+    merged PR a move to done follows, so its journal entry carries the reason
+    close-issue gives every other issue that PR closed."""
+    argv = [str(issue_number), "--to", target]
+    if merged_pr is not None:
+        argv += ["--merged-pr", str(merged_pr)]
+    return _run_sibling("move-issue.py", argv, capability_root_arg, confirmed=confirmed)
 
 
 def _invoke_close_issue(
@@ -3202,6 +3259,7 @@ def _invoke_close_issue(
     capability_root_arg: Path | None,
     *,
     skip_checkbox_gate: bool,
+    confirmed: bool,
 ) -> int:
     """Close one issue the merge closed, through the merged PR (#1086).
 
@@ -3216,19 +3274,29 @@ def _invoke_close_issue(
     argv = [str(issue_number), "--mode", "pr-merge", "--pr", str(pr_number)]
     if skip_checkbox_gate:
         argv.append("--skip-checkbox-gate")
-    return _run_sibling("close-issue.py", argv, capability_root_arg)
+    return _run_sibling("close-issue.py", argv, capability_root_arg, confirmed=confirmed)
 
 
 def _run_sibling(
     script: str,
     argv: list[str],
     capability_root_arg: Path | None,
+    *,
+    confirmed: bool,
 ) -> int:
     """Run a sibling pm verb non-interactively (`--yes`), passing the capability
-    root through; its output streams into this run's. Returns its exit code."""
+    root through; its output streams into this run's. Returns its exit code.
+
+    `confirmed` is this run's confirmation of a change in another repository
+    — the operator's flag, or a yes at its prompt — which the sibling is
+    handed as `--allow-foreign-repo`, so its own guard neither refuses nor
+    asks again what the operator confirmed here; and it is handed nothing
+    else."""
     cmd = [sys.executable, str(_HERE / script), *argv, "--yes"]
     if capability_root_arg is not None:
         cmd += ["--capability-root", str(capability_root_arg)]
+    if confirmed:
+        cmd.append("--allow-foreign-repo")
     proc = subprocess.run(cmd, check=False)
     return proc.returncode
 

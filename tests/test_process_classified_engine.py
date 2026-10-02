@@ -30,6 +30,11 @@ the test reads back. Covers:
   invariant's, a `resume_when`'s and a `membership`'s answer is not read,
 - several classifiers (ADR-062 point 6) and a classifier naming another's state,
 - a classifier's command in an `inferred` definition reads false (point 4),
+  and `pkit validate`'s process member reports two or more states of an
+  `inferred` definition that name one predicate — the answer memo's one key —
+  but not one command under different `with` mappings, not the states of a
+  classifier, not a predicate one state names; the shipped definitions are
+  clean,
 - a detection mode this engine does not implement.
 """
 
@@ -827,6 +832,110 @@ def test_a_classifiers_command_in_an_inferred_definition_reads_false(repo: Path)
     assert position.placed_nowhere == ()
     assert _runs(repo, "classify") == 1  # the memo is shared under `inferred` too
     assert _status(repo)["position"]["placed_nowhere"] == []
+
+
+# --- states of an `inferred` definition that name one predicate -----------
+
+
+def _named_one_predicate(listed: str, command: str, first: str) -> str:
+    return (
+        f"process fixture:demo: its `inferred` detections of {listed} name one predicate — "
+        f"command {command!r} under one `with` mapping — so each of those states reads the "
+        f"same answer and none but {first!r} can be the position; a predicate that answers "
+        "which state the subject is in is a classifier, which states name under `classified`"
+    )
+
+
+@pytest.mark.parametrize(
+    ("states", "reported"),
+    [
+        pytest.param(
+            [(sid, "inferred", "classify", None) for sid in ("draft", "ready", "done")],
+            [("'draft', 'ready', 'done'", "classify", "draft")],
+            id="a-classifiers-command-under-inferred",
+        ),
+        pytest.param(
+            [
+                ("draft", "inferred", "detect-done", {"step": "a", "n": 1}),
+                ("ready", "inferred", "gate-open", None),
+                ("done", "inferred", "detect-done", {"n": 1, "step": "a"}),
+            ],
+            [("'draft', 'done'", "detect-done", "draft")],
+            id="one-with-mapping-in-any-key-order",
+        ),
+        pytest.param(
+            [
+                ("draft", "inferred", "classify", None),
+                ("ready", "inferred", "detect-done", None),
+                ("review", "inferred", "classify", None),
+                ("held", "inferred", "detect-done", None),
+                ("done", "inferred", "gate-open", None),
+            ],
+            [
+                ("'draft', 'review'", "classify", "draft"),
+                ("'ready', 'held'", "detect-done", "ready"),
+            ],
+            id="each-shared-predicate-on-its-own",
+        ),
+    ],
+)
+def test_validation_reports_inferred_states_that_name_one_predicate(
+    repo: Path, states: list[State], reported: list[tuple[str, str, str]]
+) -> None:
+    _use(repo, _definition(states))
+    findings = definitions_outcome(repo).findings
+    assert {(f.location, f.severity.value) for f in findings} == {
+        (".pkit/capabilities/fixture/schemas/demo.yaml", "error")
+    }
+    assert [f.message for f in findings] == [
+        _named_one_predicate(listed, command, first) for listed, command, first in reported
+    ]
+
+
+@pytest.mark.parametrize(
+    "states",
+    [
+        pytest.param(
+            [
+                ("draft", "inferred", "classify", {"variant": "early"}),
+                ("ready", "inferred", "classify", {"variant": "late"}),
+                ("done", "inferred", "classify", None),
+            ],
+            # Three keys to the answer memo, so three predicates.
+            id="one-command-under-different-with-mappings",
+        ),
+        pytest.param(
+            [
+                ("draft", "inferred", "classify", None),
+                ("ready", "inferred", "detect-done", None),
+                ("done", None, None, None),
+            ],
+            id="each-predicate-named-by-one-state",
+        ),
+        pytest.param(
+            [
+                ("draft", "inferred", "", None),
+                ("ready", "inferred", "", None),
+                ("done", "inferred", "detect-done", None),
+            ],
+            # The runner answers a detection that names no command without the memo.
+            id="detections-that-name-no-command",
+        ),
+        pytest.param(_ONE_CLASSIFIER, id="the-states-of-a-classifier"),
+    ],
+)
+def test_validation_does_not_report_what_no_two_inferred_states_share(
+    repo: Path, states: list[State]
+) -> None:
+    _use(repo, _definition(states))
+    assert definitions_outcome(repo).findings == ()
+
+
+def test_the_shipped_definitions_are_clean() -> None:
+    shipped = Path(__file__).resolve().parents[1]
+    outcome = definitions_outcome(shipped)
+    assert outcome.findings == ()
+    assert outcome.summary[0].endswith("checked; 0 error(s).")  # one or more were checked
 
 
 # --- a cascade member is resolved afresh each time (ADR-062 point 11) -----

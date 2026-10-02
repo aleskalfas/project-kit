@@ -1,0 +1,26 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+  pr: "1277"
+  requires_backbone: release
+body: >
+  `done-work`, `merge-pr` and `land-work` pass the operator's cross-repository
+  confirmation on to the backbone, which now runs its own guard on every merge,
+  enqueue and dequeue it makes for them. When the operator gave
+  `--allow-foreign-repo` on the verb's command line — whatever the verb's own
+  comparison found — or answered yes at its prompt, the verb passes
+  `--allow-foreign-repo` on, and never otherwise, so a confirmed landing in
+  another repository is not refused by the backbone, and nothing is confirmed
+  that the operator did not confirm. `done-work` hands the same confirmation to
+  the `move-issue` and `close-issue` runs it starts, so a confirmed landing is
+  not refused, or asked about again, after its merge. `land-work` at a terminal
+  now asks once where it asked twice — its own guard and `done-work`'s — since
+  its confirmation is passed on to `done-work`. Should the backbone's guard
+  refuse all the same, because its comparison and the capability's disagree
+  and the operator confirmed nothing, the landing ends refused, naming both
+  verdicts, with nothing asked of GitHub; giving the flag settles it. A dequeue
+  the backbone's guard refused names the command that takes the PR out. The
+  capability's guard now reports how it passed; its other verbs behave as
+  before. Upgrade the capability together with the backbone: it needs the
+  release whose `pkit pull-request` takes `--allow-foreign-repo`.

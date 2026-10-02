@@ -1,0 +1,20 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `pkit process health` says why a predicate could not be evaluated (#1244). A
+  finding for a `candidates` or `resolve` seam that gave no answer named only a
+  list of possible causes; it now names the predicate and how its run ended —
+  `couldn't evaluate resolve predicate 'x': it exited 2` — or, for an answer
+  without its list, what the answer lacked, and an upstream position no
+  detection could place names its first unevaluated state and why. What the
+  predicate wrote on standard error follows under `the predicate said:`,
+  bounded and stripped of escape sequences, and each entry of an
+  `indeterminate` list in `--json` (both views) gains a `stderr_tail` key beside
+  `reason`, null when there is nothing to show. A validator's no-answer finding
+  and an inert command filler's reason, for a command that exited, show the
+  runner's shared tail of what it said on standard error — its last lines,
+  bounded, escape sequences and control characters removed, joined on the one
+  line with ` | ` — where they showed its last line raw. No verdict, total or
+  exit code changes.

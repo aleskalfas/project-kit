@@ -1,0 +1,22 @@
+component: backbone
+kind: patch
+custom:
+  category: Changed
+  pr: "1291"
+body: >
+  `adr` is a reserved capability name, as `core` and `project` are: `pkit new
+  capability`, `pkit capabilities install` and `pkit capabilities register`
+  refuse it, giving the reason (#1289). `adr` is the namespace of the
+  project's architecture decision records, which `pkit new decision` reads
+  before any capability name, so a capability named `adr` could have no
+  decision records stamped. The refusal of `core` gives every place the name
+  collides: the namespace of the core decision records and agents, beside the
+  core schemas area. A project that already has a capability named `adr`
+  keeps it registered, but sees `pkit validate` fail with an error at that
+  capability's `component.name` that names the rename: `pkit capabilities
+  uninstall adr` (which keeps an authored capability's files), rename the
+  directory and its `component.name`, and `pkit capabilities register
+  <new-name>`; one a sync restores is its author's to rename, and is
+  uninstalled until it ships under another name. Until it is renamed, `pkit
+  capabilities register adr` and `pkit capabilities refresh adr` refuse it
+  as well.

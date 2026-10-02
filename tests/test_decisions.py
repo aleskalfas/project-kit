@@ -6,8 +6,12 @@ from pathlib import Path
 
 import click
 import pytest
+from click.testing import CliRunner
 
 from project_kit import decisions
+from project_kit import project_config as pc
+from project_kit.cli import main
+from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 
 
 @pytest.fixture
@@ -164,10 +168,19 @@ def test_stamp_decision_adr_refuses_when_overlay_missing(kit_target: Path) -> No
         decisions.stamp_decision(kit_target, namespace="adr", slug="orphan")
 
 
-def test_stamp_decision_adr_refuses_when_overlay_lacks_adr_records(kit_target: Path) -> None:
-    _write_overlay(kit_target, "workflow-docs:\n  - README.md\n")
-    with pytest.raises(click.ClickException, match="adr-records"):
-        decisions.stamp_decision(kit_target, namespace="adr", slug="no-key")
+def test_stamp_decision_adr_derives_and_records_when_overlay_lacks_adr_records(
+    kit_target: Path,
+) -> None:
+    """With the category unset the location is derived from the internal root and
+    recorded before the record is stamped there (COR-049 points 3 to 5)."""
+    overlay = _write_overlay(kit_target, "workflow-docs:\n  - README.md\n")
+    said: list[str] = []
+    target = decisions.stamp_decision(kit_target, namespace="adr", slug="no-key", say=said.append)
+    assert target == (kit_target / "docs" / "architecture" / "decisions").resolve() / (
+        "ADR-001-no-key.md"
+    )
+    assert "adr-records:\n  - docs/architecture/decisions\n" in overlay.read_text(encoding="utf-8")
+    assert said[0].startswith("recorded adr-records = docs/architecture/decisions  (")
 
 
 def test_stamp_decision_adr_refuses_when_adr_records_empty_list(kit_target: Path) -> None:
@@ -292,3 +305,240 @@ def test_stamp_decision_dec_refuses_duplicate_slug(kit_target: Path) -> None:
     decisions.stamp_decision(kit_target, namespace="cap", slug="dupe")
     with pytest.raises(click.ClickException, match="already exists"):
         decisions.stamp_decision(kit_target, namespace="cap", slug="dupe")
+
+
+# ------------------------------------- `pkit new decision adr`: the documentation roots (COR-049)
+
+
+OVERLAY = Path(".pkit") / "agents" / "project" / "overlay.yaml"
+DERIVED = "docs/architecture/decisions"
+
+#: What the command says when it records the location derived from the default root.
+DERIVED_NOTICE = (
+    "recorded adr-records = docs/architecture/decisions  (.pkit/agents/project/overlay.yaml)\n"
+    "  derived from the internal root, docs (default). Agents that reference adr-records "
+    "now reach this folder. To change it: edit that entry, then pkit sync.\n"
+    "run `pkit sync` to deploy the agent(s) that reference adr-records.\n"
+)
+
+#: What a run off a terminal without `--yes` says over a folder holding documents.
+REFUSAL = (
+    "refusing to write .pkit/agents/project/overlay.yaml without consent: stdin is not a "
+    "terminal and --yes was not given (COR-049 point 5).\n"
+    "These folders already hold documents; recording each category puts them within "
+    "reach of the agents named:\n"
+    "  adr-records = docs/architecture/decisions  (reached by architect)\n"
+    "Nothing was written. To consent non-interactively, run:\n"
+    "  pkit new decision adr second --yes\n"
+)
+
+
+def _unset(make_adopter_repo: MakeAdopterRepo) -> AdopterRepo:
+    """An adopter whose overlay leaves `adr-records` unset."""
+    repo = make_adopter_repo()
+    (repo.root / OVERLAY).write_text("workflow-docs:\n  - README.md\n", encoding="utf-8")
+    return repo
+
+
+def _holding_documents(make_adopter_repo: MakeAdopterRepo) -> AdopterRepo:
+    """`adr-records` unset, and the derived folder already holding a record."""
+    repo = _unset(make_adopter_repo)
+    (repo.root / DERIVED).mkdir(parents=True)
+    (repo.root / DERIVED / "ADR-001-existing.md").write_text("# kept\n", encoding="utf-8")
+    return repo
+
+
+def _set_internal_root(repo: AdopterRepo, root: str) -> None:
+    path = pc.project_config_path(repo.root)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(f"docs:\n  internal: {root}\n", encoding="utf-8")
+
+
+def _new_adr(
+    monkeypatch: pytest.MonkeyPatch, *args: str, terminal: bool, answer: str | None = None
+) -> tuple[int, str]:
+    """Run `pkit new decision adr` at a terminal or off one; return (exit code, output)."""
+    monkeypatch.setattr(pc, "stdin_is_tty", lambda: terminal)
+    result = CliRunner().invoke(
+        main, ["--color", "never", "new", "decision", "adr", *args], input=answer
+    )
+    return result.exit_code, result.output
+
+
+def _tree(root: Path) -> dict[str, bytes | None]:
+    """Every path under `root` outside `.git`, a file's bytes or None for a dir — what
+    "nothing was written" is held to."""
+    return {
+        p.relative_to(root).as_posix(): (p.read_bytes() if p.is_file() else None)
+        for p in sorted(root.rglob("*"))
+        if ".git" not in p.relative_to(root).parts
+    }
+
+
+@pytest.mark.parametrize("terminal", [False, True])
+def test_new_adr_with_the_category_unset_creates_the_derived_folder_records_and_stamps(
+    make_adopter_repo: MakeAdopterRepo, monkeypatch: pytest.MonkeyPatch, terminal: bool
+) -> None:
+    """A folder the command creates hands no document over: recorded without asking, at
+    a terminal or off one, and the command says what it recorded (COR-049 point 5)."""
+    repo = _unset(make_adopter_repo)
+
+    code, output = _new_adr(monkeypatch, "first", terminal=terminal)
+
+    assert code == 0, output
+    assert output == DERIVED_NOTICE + f"Stamped: {DERIVED}/ADR-001-first.md\n"
+    assert (repo.root / DERIVED / "ADR-001-first.md").is_file()
+    assert (
+        "# --- adr-records: recorded by `pkit new decision adr` from the documentation roots "
+        "(COR-049 point 5) ---\n"
+        "adr-records:\n"
+        "  - docs/architecture/decisions\n"
+    ) in (repo.root / OVERLAY).read_text(encoding="utf-8")
+
+
+def test_new_adr_over_an_empty_derived_folder_records_without_asking(
+    make_adopter_repo: MakeAdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo = _unset(make_adopter_repo)
+    (repo.root / DERIVED).mkdir(parents=True)
+
+    code, output = _new_adr(monkeypatch, "first", terminal=False)
+
+    assert code == 0, output
+    assert output == DERIVED_NOTICE + f"Stamped: {DERIVED}/ADR-001-first.md\n"
+    assert (repo.root / DERIVED / "ADR-001-first.md").is_file()
+
+
+def test_new_adr_derives_from_the_declared_internal_root(
+    make_adopter_repo: MakeAdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo = _unset(make_adopter_repo)
+    _set_internal_root(repo, "tech-docs")
+
+    code, output = _new_adr(monkeypatch, "first", terminal=False)
+
+    assert code == 0, output
+    assert output.startswith(
+        "recorded adr-records = tech-docs/architecture/decisions  "
+        "(.pkit/agents/project/overlay.yaml)\n"
+        "  derived from the internal root, tech-docs (explicit). "
+    )
+    assert output.endswith("Stamped: tech-docs/architecture/decisions/ADR-001-first.md\n")
+    assert not (repo.root / "docs" / "architecture").exists()
+
+
+def test_new_adr_over_a_folder_holding_documents_off_a_terminal_refuses_without_yes(
+    make_adopter_repo: MakeAdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Recording over existing documents hands them to every agent that references the
+    category: off a terminal without `--yes` the run records nothing and stamps nothing,
+    exit 1, naming the command with `--yes`."""
+    repo = _holding_documents(make_adopter_repo)
+    before = _tree(repo.root)
+
+    code, output = _new_adr(monkeypatch, "second", terminal=False)
+
+    assert code == 1
+    assert REFUSAL in output
+    assert _tree(repo.root) == before
+
+
+def test_new_adr_over_a_folder_holding_documents_with_yes_records_and_stamps(
+    make_adopter_repo: MakeAdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo = _holding_documents(make_adopter_repo)
+
+    code, output = _new_adr(monkeypatch, "second", "--yes", terminal=False)
+
+    assert code == 0, output
+    assert output == DERIVED_NOTICE + f"Stamped: {DERIVED}/ADR-002-second.md\n"
+    assert (repo.root / DERIVED / "ADR-001-existing.md").read_text(encoding="utf-8") == "# kept\n"
+    assert "adr-records:\n  - docs/architecture/decisions\n" in (repo.root / OVERLAY).read_text(
+        encoding="utf-8"
+    )
+
+
+def test_new_adr_at_a_terminal_asks_once_and_a_no_records_and_stamps_nothing(
+    make_adopter_repo: MakeAdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo = _holding_documents(make_adopter_repo)
+    before = _tree(repo.root)
+
+    code, output = _new_adr(monkeypatch, "second", terminal=True, answer="n\n")
+
+    assert code == 1
+    assert output.count("[Y/n]") == 1
+    assert _tree(repo.root) == before
+
+
+def test_new_adr_at_a_terminal_a_yes_records_and_stamps(
+    make_adopter_repo: MakeAdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The one question says what the recording puts within reach, and of which agents."""
+    repo = _holding_documents(make_adopter_repo)
+
+    code, output = _new_adr(monkeypatch, "second", terminal=True, answer="y\n")
+
+    assert code == 0, output
+    assert output == (
+        "These folders already hold documents; recording each category puts them within "
+        "reach of the agents named:\n"
+        "  adr-records = docs/architecture/decisions  (reached by architect)\n"
+        "Record it in .pkit/agents/project/overlay.yaml? [Y/n]: y\n"
+        + DERIVED_NOTICE
+        + f"Stamped: {DERIVED}/ADR-002-second.md\n"
+    )
+    assert (repo.root / DERIVED / "ADR-002-second.md").is_file()
+
+
+def test_new_adr_a_root_change_after_recording_moves_nothing(
+    make_adopter_repo: MakeAdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Once recorded the location is explicit: a later root change, and a folder now
+    holding documents, change nothing — no recording, no question (COR-049 point 6)."""
+    repo = _unset(make_adopter_repo)
+    assert _new_adr(monkeypatch, "first", terminal=False)[0] == 0
+    _set_internal_root(repo, "handbook")
+    overlay = (repo.root / OVERLAY).read_text(encoding="utf-8")
+
+    code, output = _new_adr(monkeypatch, "second", terminal=False)
+
+    assert code == 0, output
+    assert output == f"Stamped: {DERIVED}/ADR-002-second.md\n"
+    assert (repo.root / OVERLAY).read_text(encoding="utf-8") == overlay
+    assert not (repo.root / "handbook").exists()
+
+
+def test_new_adr_an_explicit_value_wins_over_the_root(
+    make_adopter_repo: MakeAdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo = make_adopter_repo()
+    _set_internal_root(repo, "tech-docs")
+    (repo.root / OVERLAY).write_text("adr-records:\n  - decisions/adr/\n", encoding="utf-8")
+    (repo.root / "decisions" / "adr").mkdir(parents=True)
+    (repo.root / "decisions" / "adr" / "ADR-001-existing.md").write_text("x", encoding="utf-8")
+
+    code, output = _new_adr(monkeypatch, "second", terminal=False)
+
+    assert code == 0, output
+    assert output == "Stamped: decisions/adr/ADR-002-second.md\n"
+    assert (repo.root / OVERLAY).read_text(encoding="utf-8") == "adr-records:\n  - decisions/adr/\n"
+    assert not (repo.root / "tech-docs").exists()
+
+
+def test_new_adr_refuses_a_location_derived_inside_pkit(
+    make_adopter_repo: MakeAdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A path inside the methodology's own tree is refused, derived as explicit."""
+    repo = _unset(make_adopter_repo)
+    _set_internal_root(repo, ".pkit/docs")
+    before = _tree(repo.root)
+
+    code, output = _new_adr(monkeypatch, "first", "--yes", terminal=False)
+
+    assert code == 1
+    assert (
+        "adr-records path '.pkit/docs/architecture/decisions' (derived from the internal "
+        "documentation root, .pkit/docs) is inside .pkit/."
+    ) in output
+    assert _tree(repo.root) == before

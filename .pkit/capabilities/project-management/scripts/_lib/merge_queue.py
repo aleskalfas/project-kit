@@ -12,8 +12,9 @@ this first and hand the PR to the queue (`_lib.pr_merge.land`).
 
 **The reading is the backbone's** ([project-management:DEC-013-branch-and-pr-conventions],
 "Merge mechanics"). The backbone's `pkit pull-request` reads GitHub, waits for
-the queue's merge and makes the merge requests — for these verbs and for the
-backbone's own release merge alike, so the mechanic lives once. This module
+the queue's merge, makes the merge requests and deletes a merged PR's head
+branch — for these verbs and for the backbone's own release merge alike, so
+the mechanic lives once. This module
 asks it by subprocess and reads its JSON documents, as `_lib.default_branch`
 reads `pkit repository base`; it never queries GitHub for a queue itself.
 The command runs with the `gh` environment the adopter's config pins
@@ -55,16 +56,26 @@ ARGV = ("pkit", "pull-request")
 VERSION = 1
 
 #: How long pm waits for each of the backbone's answers, by subcommand, in
-#: seconds: a reading or the squash-commit defaults is one `gh` read, two
-#: when the host knows no merge queues; a merge or an enqueue is gh's merge
-#: request; a dequeue is a reading, the request and a reading again. A run
-#: that has not answered by then is ended with everything it started.
+#: seconds. The backbone bounds each of its own `gh` calls (a reading, a
+#: request) and states the longest each subcommand can run, every call at its
+#: bound (`pull_request_landing.longest_seconds`): a reading is up to three
+#: `gh` reads, when the host knows no merge queues; the squash-commit defaults
+#: one; a merge or an enqueue the cross-repository guard, gh's merge request
+#: and, when it gets no answer, the readings that settle it — the second no
+#: sooner than its window after the request; a dequeue the guard, a reading
+#: or two, and up to two requests, each with the readings that settle it; a
+#: branch deletion the guard, two readings, the request and a reading again.
+#: A test holds each bound here above the backbone's figure with room to
+#: start `pkit`, so the backbone's document comes back before pm stops
+#: waiting. A run that has not answered by then is ended with everything it
+#: started, the `gh` it runs among it.
 TIMEOUT_SECONDS: Mapping[str, float] = {
-    "read": 60.0,
+    "read": 90.0,
     "squash-defaults": 60.0,
-    "merge": 120.0,
-    "enqueue": 120.0,
-    "dequeue": 180.0,
+    "merge": 210.0,
+    "enqueue": 210.0,
+    "dequeue": 600.0,
+    "delete-branch": 180.0,
 }
 
 #: A wait is bounded by its own limit — the seconds asked for, else the
@@ -166,16 +177,94 @@ class Wait:
     reading: Reading
 
 
+#: A request's document's `reason_kind` when the backbone's cross-repository
+#: guard refused it, and made no request.
+FOREIGN_REPOSITORY = "foreign-repository"
+
+#: A request's document's `reason_kind` when the request got no answer and
+#: the backbone settled it by reading: :data:`NOT_MADE`, two readings did not
+#: see it made (`accepted` false) — what they saw, not that it was not made,
+#: since the service may still apply it; :data:`UNANSWERED`, the PR could not
+#: be read since, so whether it was made is not known (`accepted` null) —
+#: unconfirmed. A dequeue the service answered whose PR could not be read
+#: since is unconfirmed too, :data:`NOT_READ`; one that found the PR merged
+#: is not accepted, :data:`HAS_MERGED`.
+NOT_MADE = "not-made"
+UNANSWERED = "unanswered"
+NOT_READ = "unreadable"
+HAS_MERGED = "merged"
+
+# The `reason_kind`s that come with a null `accepted`: whether the request
+# was made is not known.
+_UNCONFIRMED_KINDS = (UNANSWERED, NOT_READ)
+
+
 @dataclass(frozen=True)
 class Outcome:
     """What a merge request the backbone made came to (`_lib.pr_merge`)."""
 
-    accepted: bool
+    #: True once made; False when not; None when the backbone could not tell
+    #: whether it was made (`reason_kind` :data:`UNANSWERED`, or
+    #: :data:`NOT_READ` for a dequeue): unconfirmed.
+    accepted: bool | None
     #: gh's exit code; None when gh could not be run, or the backbone judged
     #: the request on a reading.
     exit_code: int | None
-    #: Why it was not accepted, in gh's words or the backbone's.
+    #: Why it was not accepted, or why whether it was is not known, in gh's
+    #: words or the backbone's.
     reason: str
+    #: :data:`FOREIGN_REPOSITORY` when the backbone's cross-repository guard
+    #: refused the request, which was then not made; :data:`NOT_MADE` or
+    #: :data:`UNANSWERED` when the request got no answer and the backbone
+    #: settled it by reading; :data:`NOT_READ` or :data:`HAS_MERGED` for a
+    #: dequeue (above); "" otherwise — and from a backbone whose document does
+    #: not say.
+    reason_kind: str = ""
+    #: The backbone's guard as its document states it — `verdict` (the
+    #: comparison alone), `undetermined_kind`, `anchor`, `target`, `cleared`
+    #: (how it let the request through; null when it refused) — or None when
+    #: it does not.
+    guard: Mapping[str, Any] | None = None
+
+
+#: How the backbone's deletion of a merged PR's head branch ended
+#: (:class:`BranchDeletion`): deleted at the head that merged; kept, with why;
+#: gone — not there, whoever removed it; refused, the deletion not asked for;
+#: or unconfirmed, asked for with no usable answer and no reading since, so
+#: whether it was deleted is not known.
+DELETED = "deleted"
+KEPT = "kept"
+GONE = "gone"
+REFUSED = "refused"
+UNCONFIRMED = "unconfirmed"
+_DELETION_ENDS = (DELETED, KEPT, GONE, REFUSED, UNCONFIRMED)
+
+#: The `reason_kind` of a deletion refused because the PR's head is in a fork.
+CROSS_REPOSITORY = "cross-repository"
+
+
+@dataclass(frozen=True)
+class BranchDeletion:
+    """What the backbone's deletion of a merged PR's head branch came to, as
+    its document states it (`_lib.pr_merge.delete_branch`)."""
+
+    #: :data:`DELETED`, :data:`KEPT`, :data:`GONE`, :data:`REFUSED` or
+    #: :data:`UNCONFIRMED`.
+    outcome: str
+    #: The head branch, by name; "" when the backbone did not read it.
+    branch: str
+    #: The branch's tip, when it was kept; "" otherwise.
+    tip: str
+    #: Why it was kept, refused or unconfirmed, in the backbone's terms
+    #: (`tip-moved`, `open-pull-request`, `deletion-refused`, `unanswered`;
+    #: :data:`CROSS_REPOSITORY`, `expect-mismatch`, :data:`FOREIGN_REPOSITORY`,
+    #: …); "" otherwise.
+    reason_kind: str
+    #: The same, in words.
+    reason: str
+    #: The PR's head as the backbone read it — the head it merged at; "" when
+    #: it did not read the PR.
+    merged_head: str
 
 
 def read(pr_number: int, config: dict[str, Any]) -> Reading:
@@ -252,19 +341,72 @@ def request(args: list[str], config: dict[str, Any]) -> Outcome:
     """A merge request the backbone makes (`merge`, `enqueue`, `dequeue`), and
     what it came to. Raises :class:`Unreadable` when the backbone gives no
     answer, or one that does not say whether the request was accepted — the
-    request may then have been made, or not."""
+    request may then have been made, or not.
+
+    The backbone runs the cross-repository guard before the request; a
+    request it refused is not accepted, with `reason_kind`
+    :data:`FOREIGN_REPOSITORY` and what the guard compared. A request that
+    got no answer the backbone settles by reading: made, accepted; not seen
+    made on two readings, not accepted with `reason_kind` :data:`NOT_MADE`;
+    the PR not readable since, `accepted` None with `reason_kind`
+    :data:`UNANSWERED` — or, for a dequeue the service answered,
+    :data:`NOT_READ`: the only answers whose `accepted` is null, which say
+    whether it was made is not known."""
     document = _first(args, config)
     accepted = document.get("accepted")
-    if not isinstance(accepted, bool):
+    reason_kind = _text(document.get("reason_kind"))
+    unconfirmed = "accepted" in document and accepted is None and reason_kind in _UNCONFIRMED_KINDS
+    if not (isinstance(accepted, bool) or unconfirmed):
         raise Unreadable(
             f"the backbone's answer does not say whether the request was accepted "
             f"(`accepted`: {accepted!r})"
         )
     exit_code = document.get("exit_code")
+    guard = document.get("guard")
     return Outcome(
-        accepted=accepted,
+        accepted=accepted if isinstance(accepted, bool) else None,
         exit_code=exit_code if isinstance(exit_code, int) else None,
         reason=str(document.get("reason") or ""),
+        reason_kind=reason_kind,
+        guard=guard if isinstance(guard, Mapping) else None,
+    )
+
+
+# The fields of a deletion's document, each a string or null.
+_DELETION_FIELDS = ("branch", "tip", "reason_kind", "reason", "merged_head")
+
+
+def deletion(args: list[str], config: dict[str, Any]) -> BranchDeletion:
+    """The backbone's deletion of a merged PR's head branch (`delete-branch`,
+    with `args` after the subcommand's name), and what it came to. Raises
+    :class:`Unreadable` when the backbone gives no answer, or one that names
+    no way the deletion ended or lacks one of its fields — the branch may then
+    have been deleted, or not.
+
+    The backbone runs the cross-repository guard before it reads the PR; a
+    deletion it refused there is :data:`REFUSED`, its `reason_kind`
+    :data:`FOREIGN_REPOSITORY`."""
+    document = _first(["delete-branch", *args], config)
+    ended = document.get("outcome")
+    if ended not in _DELETION_ENDS:
+        raise Unreadable(
+            f"the backbone's answer says no way the deletion ended (`outcome`: {ended!r})"
+        )
+    for key in _DELETION_FIELDS:
+        if key not in document:
+            raise Unreadable(f"the backbone's answer about the deletion has no `{key}`")
+        if document[key] is not None and not isinstance(document[key], str):
+            raise Unreadable(
+                f"the backbone's answer about the deletion has a `{key}` that is not text: "
+                f"{document[key]!r}"
+            )
+    return BranchDeletion(
+        outcome=str(ended),
+        branch=_text(document.get("branch")),
+        tip=_text(document.get("tip")),
+        reason_kind=_text(document.get("reason_kind")),
+        reason=_text(document.get("reason")),
+        merged_head=_text(document.get("merged_head")),
     )
 
 

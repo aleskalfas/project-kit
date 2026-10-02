@@ -1,0 +1,16 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit validate`'s `process` member reports, as an error, an `inferred`
+  definition in which two or more states name one detection predicate — the
+  same command under the same `with` mapping, the key the engine's answer memo
+  runs a predicate under. Such a predicate runs once and each of those states
+  reads the same answer, so none of them but the one declared first can be the
+  position; the finding names the states and the command. The usual way there
+  is a classifier's command named under `inferred`, where every subject
+  resolves to "no position" and nothing said why. One command under different
+  `with` mappings is not reported, nor are the states of a `classified`
+  definition, which share a classifier by design; a definition that mixes
+  modes is reported for the mix alone.

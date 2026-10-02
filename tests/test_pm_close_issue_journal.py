@@ -398,7 +398,7 @@ def test_a_done_work_landing_that_closes_two_issues_journals_each_once(
     primary = _task_in_review(world)
     further = _backlog_task(world)
     world.tracker.merge(PR, [primary, further])
-    monkeypatch.setattr(dw.pr_merge, "delete_remote_branch", lambda *a, **kw: None)
+    monkeypatch.setattr(dw.pr_merge, "delete_branch", lambda *a, **kw: None)
     monkeypatch.setattr(dw.pr_merge, "cleanup_local", lambda *a, **kw: None)
     capsys.readouterr()
 
@@ -415,6 +415,7 @@ def test_a_done_work_landing_that_closes_two_issues_journals_each_once(
             cross=False,
             merged_head="0" * 40,
             config={},
+            confirmed=False,
         )
         return int(run.exit_code)
 
@@ -432,3 +433,87 @@ def test_a_done_work_landing_that_closes_two_issues_journals_each_once(
     journals = {number: world.journal(number) for number in (primary, further)}
     assert land() == 0
     assert {number: world.journal(number) for number in (primary, further)} == journals
+
+
+# --- the journal and the forward cascade read one origin (#1281) --------------
+#
+# Where an issue was before it closed is read one way — its state label, else
+# its milestone (Backlog, inferred), else Todo for an issue still open, and
+# nothing for one already closed with neither — by close-issue's entry, by
+# move-issue's entry for relabelling a closed issue, and by the forward cascade,
+# which tells a finished issue from a won't-do one by it. So a landing never
+# journals a won't-do close while the cascade brings ancestors level as for a
+# finished one.
+
+_LEVEL = [("todo", "backlog", "promote-issue"), ("backlog", "in-progress", "start-work")]
+
+
+def _unlabelled_task_under_a_feature(world: World) -> tuple[int, int, int]:
+    """An EPIC, a Feature under it, and under that a Task as filed: no state
+    label, no milestone. All three at Todo."""
+    epic = world.file_issue(body="## What\n\nA container.\n", title="[EPIC] An epic", labels=())
+    feature = world.file_issue(
+        body=f"EPIC: #{epic}\n\n## What\n\nA container.\n", title="[Feature] A feature", labels=()
+    )
+    task = world.file_issue(body=f"Feature: #{feature}\n\n{AUTHORED_BODY}")
+    return epic, feature, task
+
+
+def _land(world: World, task: int, *close_options: str) -> None:
+    """What done-work does with its issue after the merge: move it to Done, then
+    close it through the pull request."""
+    assert world.move(task, "done", "--merged-pr", str(PR)) == 0
+    assert world.close(task, "--mode", "pr-merge", "--pr", str(PR), *close_options) == 0
+
+
+def test_a_merge_closing_a_task_nothing_placed_journals_no_wont_do_while_the_cascade_runs(
+    world: World, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Closed as completed with nothing recording where it was: the cascade
+    reads the close reason and brings the ancestors level, and no entry says the
+    Task went to Done from Todo — the won't-do shape — since nothing says so."""
+    epic, feature, task = _unlabelled_task_under_a_feature(world)
+    world.tracker.merge(PR, [task])
+    capsys.readouterr()
+
+    _land(world, task)
+
+    assert ENGINE_WARNING not in capsys.readouterr().err
+    for number in (feature, epic):
+        assert world.moves(number) == _LEVEL, number
+    assert world.moves(task) == [], "no move to Done is recorded from a guessed Todo"
+
+
+def test_a_merge_closing_a_task_with_only_a_milestone_reads_backlog_for_both(
+    world: World, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Only a milestone: Backlog, inferred — the journal records the close from
+    Backlog, and the cascade, reading the same Backlog, takes it as a won't-do
+    and moves no ancestor. The two agree, on an inference both name."""
+    epic, feature, task = _unlabelled_task_under_a_feature(world)
+    world.tracker.issues[task]["milestone"] = {"number": 7, "title": "Sprint 1"}
+    world.tracker.merge(PR, [task])
+    capsys.readouterr()
+
+    # The milestone's own eligibility check is not this test's.
+    _land(world, task, "--no-cascade")
+
+    assert world.moves(task) == [("backlog", "done", "close-issue")]
+    assert world.moves(feature) == world.moves(epic) == []
+    assert "a move to done from backlog is a won't-do close" in capsys.readouterr().out
+
+
+def test_a_wont_do_close_of_an_open_task_nothing_placed_is_journaled_from_todo(
+    world: World, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Still open, an issue with no state label and no milestone is at Todo — the
+    position the engine detects for it — so its won't-do close is recorded from
+    there."""
+    _epic, _feature, task = _unlabelled_task_under_a_feature(world)
+    capsys.readouterr()
+
+    assert world.close(task, "--reason", WONT_DO_REASON) == 0
+
+    assert ENGINE_WARNING not in capsys.readouterr().err
+    assert world.moves(task) == [("todo", "done", "close-issue")]
+    assert world.history(task) == 0

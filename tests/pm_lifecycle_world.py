@@ -25,6 +25,7 @@ import contextlib
 import importlib.util
 import io
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -53,6 +54,9 @@ MERGER = "a-reviewer"
 REASON = "the maintainer asked for it in session"
 MILESTONE = {"number": 7, "title": "Sprint 1"}
 AUDIT_MARKER = "<!-- pkit-audit -->"
+REPOSITORY_URL = "https://api.github.com/repos/acme/repo"
+#: When everything on the tracker happens: no test here orders its events by time.
+MOMENT = "2026-10-01T00:00:00Z"
 
 AUTHORED_BODY = (
     "## What\n\nA task filed to be promoted.\n\n"
@@ -93,8 +97,23 @@ class Tracker:
     comments and their label timeline, all posted as the invoker, its one open
     milestone, and its merged pull requests.
 
-    `fail_next` holds `gh issue edit` flags whose next edit fails, once, before
-    it changes anything."""
+    An issue is read through `gh issue view` and through its REST record
+    (`gh api repos/{owner}/{repo}/issues/<n>`), which also carries its native
+    parent: `native_parents` maps an issue to the issue it is natively a
+    sub-issue of, in this repository or — given as `owner/repo#<n>` — in
+    another. The issues are listed through `gh issue list`, and a parent's
+    native sub-issues in this repository through `gh api …/sub_issues`, in the
+    entry shape GitHub answers with. A closed issue's `state_reason` is
+    GitHub's close reason enum
+    (`COMPLETED`, `NOT_PLANNED`), set as GitHub sets it: completed for a merged
+    pull request's `Closes #N`, and as `gh issue close --reason` says. Each
+    close stamps the issue's `closedAt` with a time no other close has; a reopen
+    clears it. `fail_next` holds `gh issue edit` flags whose next edit fails,
+    once, before it changes anything; `views_fail` holds issues whose `gh issue
+    view` fails, as a predicate's read of an unreachable issue does;
+    `comments_fail` holds issues whose `gh issue comment` fails, posting
+    nothing; `comment_reads_fail` holds issues whose comments cannot be read,
+    while every other field of theirs can."""
 
     def __init__(self) -> None:
         self.issues: dict[int, dict[str, Any]] = {}
@@ -102,8 +121,13 @@ class Tracker:
         self.timeline: dict[int, list[dict[str, Any]]] = {}
         self.milestones: list[dict[str, Any]] = [MILESTONE]
         self.merged_prs: dict[int, dict[str, Any]] = {}
+        self.native_parents: dict[int, int | str] = {}
         self.calls: list[list[str]] = []
         self.fail_next: set[str] = set()
+        self.views_fail: set[int] = set()
+        self.comments_fail: set[int] = set()
+        self.comment_reads_fail: set[int] = set()
+        self.closes = 0
 
     def merge(self, pr: int, closes: list[int], merged_by: str = MERGER) -> None:
         """Merge pull request `pr`, whose body closes `closes`, as `merged_by`,
@@ -113,13 +137,27 @@ class Tracker:
         self.merged_prs[pr] = {
             "number": pr,
             "state": "MERGED",
-            "mergedAt": "2026-10-01T00:00:00Z",
+            "mergedAt": MOMENT,
             "mergedBy": {"login": merged_by},
             "body": body,
             "url": f"https://github.com/acme/repo/pull/{pr}",
         }
         for number in closes:
-            self.issues[number]["state"] = "CLOSED"
+            self.close(number, "COMPLETED")
+
+    def close(self, number: int, reason: str | None) -> None:
+        """Close the issue with close reason `reason` (None: none reported)."""
+        self.closes += 1
+        self.issues[number]["state"] = "CLOSED"
+        self.issues[number]["state_reason"] = reason
+        self.issues[number]["closed_at"] = f"2026-10-01T12:00:{self.closes:02d}Z"
+
+    def reopen(self, number: int) -> None:
+        """Reopen the issue the way GitHub does when someone reopens it: open,
+        with no close reason or time, labels untouched."""
+        self.issues[number]["state"] = "OPEN"
+        self.issues[number]["state_reason"] = None
+        self.issues[number]["closed_at"] = None
 
     def state_of(self, number: int) -> str:
         """The issue's state as the tracker carries it, read with move-issue's
@@ -133,15 +171,21 @@ class Tracker:
         self.calls.append(argv)
         if argv[1:3] == ["issue", "create"]:
             return self._create(argv)
-        if argv[1] == "issue" and argv[2] in ("view", "edit", "comment", "close"):
+        if argv[1] == "issue" and argv[2] in ("view", "edit", "comment", "close", "reopen"):
             number = int(argv[3])
             if argv[2] == "view":
                 return self._view(argv, number, str(_option(argv, "--json")))
             if argv[2] == "edit":
                 return self._edit(argv, number)
             if argv[2] == "close":
-                self.issues[number]["state"] = "CLOSED"
+                reason = _option(argv, "--reason") or "completed"
+                self.close(number, reason.upper().replace(" ", "_"))
                 return _done(argv)
+            if argv[2] == "reopen":
+                self.reopen(number)
+                return _done(argv)
+            if number in self.comments_fail:
+                return _done(argv, 1, stderr="HTTP 502: Bad Gateway")
             body = _option(argv, "--body")
             self.comments[number].append(
                 {"body": body, "viewerDidAuthor": True, "includesCreatedEdit": False}
@@ -162,7 +206,50 @@ class Tracker:
             return _done(argv, stdout=json.dumps(self.timeline[number]))
         if argv[1] == "api" and argv[-1].endswith("/milestones?state=open"):
             return _done(argv, stdout=json.dumps(self.milestones))
+        if argv[1:3] == ["issue", "list"]:
+            fields = str(_option(argv, "--json")).split(",")
+            return _done(argv, stdout=json.dumps([self._row(n, fields) for n in self.issues]))
+        listed = re.fullmatch(r"repos/\{owner\}/\{repo\}/issues/(\d+)/sub_issues", argv[-1])
+        if argv[1] == "api" and listed:
+            return self._sub_issues(argv, int(listed.group(1)))
+        record = re.fullmatch(r"repos/\{owner\}/\{repo\}/issues/(\d+)", argv[-1])
+        if argv[1] == "api" and record:
+            return self._record(argv, int(record.group(1)))
         raise AssertionError(f"unexpected gh call: {argv}")
+
+    def _record(self, argv: list[str], number: int) -> subprocess.CompletedProcess[str]:
+        """The issue's REST record, as `gh api` prints it."""
+        issue = self.issues.get(number)
+        if issue is None:
+            return _done(argv, 1, stderr="gh: Not Found (HTTP 404)")
+        record = {
+            "id": 1000 + number,
+            "number": number,
+            "title": issue["title"],
+            "body": issue["body"],
+            "state": issue["state"].lower(),
+            "labels": [{"name": name} for name in issue["labels"]],
+            "milestone": issue["milestone"],
+            "repository_url": REPOSITORY_URL,
+        }
+        parent = self.native_parents.get(number)
+        if isinstance(parent, str):
+            repository, parent_number = parent.split("#")
+            record["parent_issue_url"] = (
+                f"https://api.github.com/repos/{repository}/issues/{parent_number}"
+            )
+        elif parent is not None:
+            record["parent_issue_url"] = f"{REPOSITORY_URL}/issues/{parent}"
+        return _done(argv, stdout=json.dumps(record))
+
+    def reads(self, number: int) -> int:
+        """How many times the issue was read, through either read."""
+        return sum(
+            1
+            for argv in self.calls
+            if argv[1:4] == ["issue", "view", str(number)]
+            or (argv[1] == "api" and argv[-1] == f"repos/{{owner}}/{{repo}}/issues/{number}")
+        )
 
     def _create(self, argv: list[str]) -> subprocess.CompletedProcess[str]:
         number = len(self.issues) + 1
@@ -179,12 +266,47 @@ class Tracker:
         self.timeline[number] = []
         return _done(argv, stdout=f"https://github.com/acme/repo/issues/{number}\n")
 
+    def _row(self, number: int, fields: list[str]) -> dict[str, Any]:
+        """The issue as `gh issue list --json` prints it, in the fields asked for."""
+        issue = self.issues[number]
+        row = {
+            "number": number,
+            "title": issue["title"],
+            "body": issue["body"],
+            "state": issue["state"],
+            "labels": [{"name": name} for name in issue["labels"]],
+            "milestone": issue["milestone"],
+        }
+        return {field: row[field] for field in fields}
+
+    def _sub_issues(self, argv: list[str], parent: int) -> subprocess.CompletedProcess[str]:
+        """The parent's native sub-issues in this repository, as `gh api
+        …/sub_issues` lists them (the real entry's shape: id, number, repository
+        and parent)."""
+        entries = [
+            {
+                "id": 1000 + child,
+                "number": child,
+                "repository_url": REPOSITORY_URL,
+                "parent_issue_url": f"{REPOSITORY_URL}/issues/{parent}",
+            }
+            for child, native in self.native_parents.items()
+            if native == parent
+        ]
+        return _done(argv, stdout=json.dumps(entries))
+
     def _view(self, argv: list[str], number: int, fields: str):
+        if number in self.views_fail:
+            return _done(argv, 1, stderr="HTTP 502: Bad Gateway")
+        if number in self.comment_reads_fail and "comments" in fields.split(","):
+            return _done(argv, 1, stderr="HTTP 502: Bad Gateway")
         issue = self.issues[number]
         record = {
             "title": issue["title"],
             "body": issue["body"],
             "state": issue["state"],
+            "stateReason": issue.get("state_reason") or "",
+            "closedAt": issue.get("closed_at") or (MOMENT if issue["state"] == "CLOSED" else None),
             "milestone": issue["milestone"],
             "labels": [{"name": name} for name in issue["labels"]],
             "assignees": [{"login": login} for login in issue["assignees"]],
@@ -215,7 +337,7 @@ class Tracker:
                         "event": event,
                         "label": {"name": name},
                         "actor": {"login": INVOKER.github_login},
-                        "created_at": "2026-10-01T00:00:00Z",
+                        "created_at": MOMENT,
                     }
                 )
         return _done(argv)
@@ -296,13 +418,15 @@ class World:
             self.pi.main,
         )
 
-    def move(self, number: int, target: str) -> int:
+    def move(self, number: int, target: str, *options: str) -> int:
+        """Run move-issue on the issue with `options` (`--dry-run`, …)."""
         return _with_argv(
             [
                 "move-issue.py",
                 str(number),
                 "--to",
                 target,
+                *options,
                 "--capability-root",
                 str(CAPABILITY_ROOT),
                 "--yes",
@@ -407,10 +531,23 @@ def answer_from_tracker(
     own predicate code (which reads the tracker through `gh`), under its
     script's exit-code contract: an answer the predicate could not reach is no
     answer — the script exits 2, with what the predicate said on standard
-    error — never the payload it carries."""
+    error — never the payload it carries.
+
+    The tracker holds this repository's issues only. A subject that is not one
+    of them — a closure-fold member in another repository, `owner/repo#<n>`, or
+    an id naming no issue — gets no answer, and says why, as a script refusing
+    a subject it cannot read would."""
+    subject = predicates.read_subject(str(runner.subject))
+    if not isinstance(subject, int):
+        where = "is an issue in another repository" if subject else "names no issue"
+        return PredicateFailure(
+            "exited 2",
+            f"the in-memory tracker holds this repository's issues only: "
+            f"{runner.subject!r} {where}",
+        )
     said = io.StringIO()
     with contextlib.redirect_stderr(said):
-        answer = _predicate_answer(run_name, int(runner.subject))
+        answer = _predicate_answer(run_name, subject)
     if answer is None:
         return PredicateFailure("could not start: no script of the capability runs it")
     if answer.get(predicates.INDETERMINATE_KEY):

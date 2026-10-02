@@ -27,7 +27,6 @@ from __future__ import annotations
 
 import os
 import stat
-import subprocess
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -118,15 +117,15 @@ def pointer_token(segment: Any) -> str:
 
 
 def project_root() -> Path:
-    """The repository a command runs in: git's top level, else the working directory."""
-    try:
-        completed = subprocess.run(
-            ["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True, check=False
-        )
-    except OSError:
-        return Path.cwd()
-    top = completed.stdout.strip()
-    return Path(top) if completed.returncode == 0 and top else Path.cwd()
+    """The project a command runs in: the nearest folder, from the working directory
+    up, where this capability is installed (`.pkit/capabilities/living-docs/`), else
+    the working directory. Git is not asked: what the repository holds is read
+    through the backbone, and a script asks git nothing of its own."""
+    start = Path.cwd()
+    for folder in (start, *start.parents):
+        if (folder / CAPABILITIES_DIR / CAPABILITY).is_dir():
+            return folder
+    return start
 
 
 def load_yaml(path: Path) -> Any:

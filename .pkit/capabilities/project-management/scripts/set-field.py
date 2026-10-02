@@ -128,8 +128,9 @@ Or via the dispatcher (per COR-021):
 Exit codes:
   0  applied (or no-op idempotent success; or dry-run reported)
   1  refusal — membership; up-front validation (nothing mutated), including a
-     `--parent` whose issue's native parent could not be read; or a requested
-     axis could not be set on its substrate: the board case cannot be resolved
+     `--parent` whose issue's native parent could not be read, or whose body's
+     first line attempts a DEC-013 integration marker but is malformed; or a
+     requested axis could not be set on its substrate: the board case cannot be resolved
      (no card, no such field, no such option, unsupported field type, or the board
      read failed), or the board and substrate-map disagree about who owns the axis
      (#709 / #724). Every such refusal happens BEFORE any write for that axis, so
@@ -343,6 +344,7 @@ def main() -> int:
         )
 
     parent_ref_line: str | None = None
+    parent_ref_warning: str | None = None
     if args.parent is not None:
         if args.parent < 1:
             errors.append(f"parent must be a positive issue number; got {args.parent}")
@@ -359,12 +361,30 @@ def main() -> int:
                 )
             else:
                 type_entry = (issue_types.get("types") or {}).get(structural_type) or {}
-                parent_ref_line = _parent_ref_line(type_entry, args.parent)
+                parent_line = _parent_line(
+                    type_entry,
+                    args.parent,
+                    _parent_label(args.parent, type_entry, config, issue_types),
+                )
+                parent_ref_line = parent_line.line
+                parent_ref_warning = parent_line.warning
                 if not parent_ref_line:
                     errors.append(
                         f"issue type {structural_type!r} declares no parent_ref_form; "
                         "cannot set a parent-ref"
                     )
+        # A first line that attempts a DEC-013 integration marker but is malformed
+        # is not skipped as a marker, so a parent-ref written now would land above
+        # it and move it off the first line — where validate-issue hard-rejects it
+        # (`body.integration-marker`). Refuse as that check does, before any write.
+        malformed_marker = infer.malformed_integration_marker(body)
+        if malformed_marker is not None:
+            errors.append(
+                f"cannot set --parent: the first body line {malformed_marker!r} looks "
+                "like a DEC-013 integration marker but does not match the required "
+                "form `Integration: integration/<slug>`; correct it, or move it off "
+                "the first line, then re-run"
+            )
 
     # The native link follows the first line (DEC-005, #1040). Where the issue
     # sits natively now is read here, as part of validation: a read that fails
@@ -459,6 +479,8 @@ def main() -> int:
     for r in results:
         marker = "ok" if r.ok else "refused"
         print(f"  [{marker}] {r.message}")
+    if parent_ref_warning is not None:
+        print(f"  [warn] parent: {parent_ref_warning}.")
 
     body_changed = new_body is not None and new_body != body
     title_changed = new_title is not None and new_title != title
@@ -1157,16 +1179,22 @@ def _retitle_prefix(title: str, target_prefix: str) -> str | None:
 
 
 def _plan_parent(body: str, parent_ref_line: str) -> tuple[str, FieldResult]:
-    """Rewrite the body's first parent-ref line to `parent_ref_line` (idempotent).
+    """Write `parent_ref_line` as the body's first line, losing nothing (idempotent).
 
-    A parent-ref is the first non-blank body line in one of the recognised forms
-    (`<Label>: #<N>` or `Milestone: [#<N>](../milestone/<N>)`), read past a
-    leading DEC-013 `Integration:` marker, which sits directly above it. When
-    that line already matches a parent-ref shape, it is replaced; otherwise the
-    new parent-ref is added — directly below the marker on a marked body, so the
-    marker stays the first line with no blank line between the two (#765), and
-    at the top of an unmarked one — with a blank line before the content that
-    follows. Setting the parent to the value already present is a no-op.
+    The first line is the first non-blank body line, read past a leading DEC-013
+    `Integration:` marker, which sits directly above it. Where that line is a
+    parent-ref and nothing else (`_is_parent_ref`: `<Label>: #<N>`, or a
+    milestone ref in either form), it is replaced. Anywhere else the new
+    parent-ref is added above it — directly below the marker on a marked body,
+    so the marker stays the first line with no blank line between the two
+    (#765), and at the top of an unmarked one, in place of any blank lines
+    leading it — with one blank line before the content that follows. That
+    includes a line naming a parent and saying more (`Feature: #12 — auth`):
+    every reader reads only the first line, so the new parent-ref above it is
+    the one they read, and the words an author wrote stay where they were. The
+    plan line says which was done. Setting the parent to the value already
+    present is a no-op. A malformed marker is refused before this is reached
+    (`main`), so it is never mistaken for content to write above.
     """
     lines = body.splitlines()
     content = [i for i, ln in enumerate(lines) if ln.strip()]
@@ -1175,6 +1203,7 @@ def _plan_parent(body: str, parent_ref_line: str) -> tuple[str, FieldResult]:
     marker_idx = content[0] if infer.strip_integration_marker(body) != body else None
     ref_candidates = content[1:] if marker_idx is not None else content
     first_idx = ref_candidates[0] if ref_candidates else None
+    kept = _kept_line(lines[first_idx]) if first_idx is not None else ""
 
     if first_idx is not None and _is_parent_ref(lines[first_idx]):
         if lines[first_idx].strip() == parent_ref_line:
@@ -1194,7 +1223,7 @@ def _plan_parent(body: str, parent_ref_line: str) -> tuple[str, FieldResult]:
         )
 
     if marker_idx is not None:
-        # No parent-ref under the marker — insert one directly below it.
+        # No bare parent-ref under the marker — insert one directly below it.
         below = marker_idx + 1
         followed_by_content = below < len(lines) and bool(lines[below].strip())
         lines[below:below] = [parent_ref_line, *([""] if followed_by_content else [])]
@@ -1202,17 +1231,30 @@ def _plan_parent(body: str, parent_ref_line: str) -> tuple[str, FieldResult]:
             field="parent",
             ok=True,
             changed=True,
-            message=f"parent: set {parent_ref_line!r} (inserted below the integration marker)",
+            message=(
+                f"parent: set {parent_ref_line!r} (inserted below the integration marker{kept})"
+            ),
         )
 
-    # No parent-ref present — prepend one with a blank-line separator.
-    new_body = parent_ref_line + ("\n\n" + body if body.strip() else "\n")
+    # No bare parent-ref present — prepend one with a blank-line separator. The
+    # body's own leading blank lines are dropped, so the separator is the only one.
+    rest = "".join(body.splitlines(keepends=True)[content[0] :]) if content else ""
+    new_body = parent_ref_line + ("\n\n" + rest if rest else "\n")
     return new_body, FieldResult(
         field="parent",
         ok=True,
         changed=True,
-        message=f"parent: set {parent_ref_line!r} (prepended)",
+        message=f"parent: set {parent_ref_line!r} (prepended{kept})",
     )
+
+
+def _kept_line(line: str) -> str:
+    """What the plan line adds when the new parent-ref goes above a first line
+    that names an issue and says more, which is kept: empty for any other line."""
+    named = body_parent_ref.named_issue(line)
+    if named is None or _is_parent_ref(line):
+        return ""
+    return f", above {line.strip()!r}, which names #{named} and says more, so it is kept"
 
 
 def _rejoin(lines: list[str], body: str) -> str:
@@ -1259,17 +1301,11 @@ def _plan_native_parent(holder: containment.NativeParent | None, parent: int) ->
     )
 
 
-_PARENT_REF_RES = (
-    re.compile(r"^Milestone:\s+\[#(\d+)\]\(\.\./milestone/\1\)\s*$"),
-    re.compile(r"^Milestone:\s+#\d+\s*$"),
-    re.compile(r"^[A-Za-z]+:\s+#\d+\s*$"),
-)
-
-
 def _is_parent_ref(line: str) -> bool:
-    """True when `line` is one of the recognised parent-ref forms (parity with edit-issue)."""
-    s = line.strip()
-    return any(rx.match(s) for rx in _PARENT_REF_RES)
+    """True when `line` is a parent-ref and nothing else — the only first line
+    `--parent` replaces (`body_parent_ref.is_only_a_parent_ref`). A line naming a
+    parent and saying more (`Feature: #12 — auth`) is kept below the new one."""
+    return body_parent_ref.is_only_a_parent_ref(line)
 
 
 # ---- schema / config readers (mirroring create-issue + edit-issue) --------
@@ -1304,15 +1340,41 @@ def _adopter_workstreams(config: dict) -> set[str]:
     return set()
 
 
-def _parent_ref_line(type_entry: dict, parent_num: int) -> str:
-    """Build the `<Label>: #<N>` parent-ref line (parity with create-issue)."""
+def _parent_ref_line(type_entry: dict, parent_num: int, parent_label: str | None = None) -> str:
+    """Build the `<Label>: #<N>` parent-ref line (:func:`_parent_line`'s line)."""
+    return _parent_line(type_entry, parent_num, parent_label).line
+
+
+def _parent_line(
+    type_entry: dict, parent_num: int, parent_label: str | None = None
+) -> body_parent_ref.ParentLine:
+    """The `<Label>: #<N>` parent-ref line, through the writer create-issue shares
+    (`body_parent_ref.issue_parent_line`): labelled with ``parent_label`` — the
+    parent's own label — where the type's form offers it, else with the form's
+    first option, a warning saying so where the parent's label was known. Empty
+    when the type declares no form."""
     form = type_entry.get("parent_ref_form")
     if not form:
-        return ""
-    head = str(form).split(":", 1)[0].strip()
-    if " or " in head:
-        head = head.split(" or ", 1)[0].strip()
-    return f"{head}: #{parent_num}"
+        return body_parent_ref.ParentLine("")
+    return body_parent_ref.issue_parent_line(str(form), parent_num, parent_label)
+
+
+def _parent_label(parent_num: int, type_entry: dict, config: dict, issue_types: dict) -> str | None:
+    """The label a first line names issue ``parent_num`` with: its type's own
+    (`body_parent_ref.type_label`), read from its title prefix as create-issue
+    reads it, prefix only (#793). ``None`` — the form's first option is written —
+    when the type declares no form to write, or the parent's title cannot be
+    read or carries no type; ``gh_get_issue`` says why it could not be read. No
+    title is read for a type whose forms name no issue (an EPIC): its number is
+    a milestone's, so issue ``parent_num`` is not its parent."""
+    form = type_entry.get("parent_ref_form")
+    if not form or not body_parent_ref.form_names_an_issue(str(form)):
+        return None
+    parent = gh_get_issue(parent_num, config, fields="title")
+    if parent is None:
+        return None
+    parent_type = infer_structural_type(str(parent.get("title", "")), issue_types)
+    return body_parent_ref.type_label(issue_types, parent_type) if parent_type else None
 
 
 # ---- gh write-back --------------------------------------------------------

@@ -9,13 +9,14 @@ the rest of new).
 
 from __future__ import annotations
 
+import contextlib
 import math
 import os
 import shlex
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import click
 
@@ -36,6 +37,7 @@ from project_kit import (
     pull_request_landing,
     router,
     scratchpads,
+    session_guard,
 )
 from project_kit import refs as refs_mod
 from project_kit.agents import STORYBOARD_FILE, stamp_new_agent
@@ -179,11 +181,20 @@ def agents(ctx: click.Context) -> None:
     "--write",
     is_flag=True,
     default=False,
-    help="Append the missing categories to the overlay (default: dry-run, show only).",
+    help="Write what the dry run shows, with no prompt: this flag is the confirmation "
+    "(COR-049 point 5). Default: dry-run, show only.",
 )
 def agents_reconcile(write: bool) -> None:
     """Surface referenced-but-undefined overlay categories into overlay.yaml as
-    commented stubs (per COR-013). Explicit + idempotent; dry-run by default."""
+    commented stubs (per COR-013). Explicit + idempotent; dry-run by default.
+
+    A category whose conventional directory exists is shown as `category = path`
+    with the agents that reach it once recorded. Recording it over a directory
+    that already holds documents puts them within those agents' reach, so it takes
+    consent (COR-049 point 5): `--write`, given after the dry run, is that
+    consent, and nothing is asked. Each recording says which root its path was
+    derived from and where to change it.
+    """
     from project_kit import agents_overlay as ao
 
     target_root = find_target_root()
@@ -198,7 +209,14 @@ def agents_reconcile(write: bool) -> None:
 
 @agents.command("adopt")
 @click.argument("agent_name", metavar="AGENT")
-def agents_adopt(agent_name: str) -> None:
+@click.option(
+    "--yes",
+    is_flag=True,
+    default=False,
+    help="Consent without a prompt to recording a category over a directory that already "
+    "holds documents. Without it a terminal is asked once; a non-interactive run refuses.",
+)
+def agents_adopt(agent_name: str, yes: bool) -> None:
     """Create the conventional doc dirs, wire the overlay, and deploy AGENT.
 
     For each overlay category the agent references that is not yet defined in
@@ -206,17 +224,28 @@ def agents_adopt(agent_name: str) -> None:
 
     \b
     1. Creates the conventional default directory if absent (with a seed README
-       explaining the directory's purpose).
+       explaining the directory's purpose); one that exists but holds nothing
+       gets the seed README too.
     2. Writes the category into the overlay uncommented with the conventional path.
        An adopter-set value is never overwritten.
+
+    Recording a category over a directory that already holds documents puts them
+    within reach of every agent that references it, so it takes consent (COR-049
+    point 5): a terminal is asked once for the run, listing each `category = path`
+    and the agents that reach it; `--yes` consents without a prompt; a
+    non-interactive run without `--yes` refuses, exit 1. Declined or refused, the
+    run writes nothing — no directory, no overlay line, no deploy. `pkit agents
+    reconcile` shows the change first. A directory the command creates, or one that
+    holds nothing, is recorded without asking. Each recording says which root its
+    path was derived from and where to change it.
 
     An optional category (read only through `reads.patterns`) with no conventional
     default is left undefined and reported; the agent deploys without it.
 
     Then runs the adapter's deploy step so the agent ends up in `.claude/agents/`.
 
-    Idempotent: re-running on an already-adopted agent reports no changes and
-    re-deploys (the deploy step is itself idempotent).
+    Idempotent: re-running on an already-adopted agent reports no changes, asks
+    nothing, and re-deploys (the deploy step is itself idempotent).
     """
     from project_kit import agents_overlay as ao
 
@@ -224,7 +253,7 @@ def agents_adopt(agent_name: str) -> None:
     if target_root is None:
         raise click.ClickException("not in a project tree.")
     try:
-        result = ao.adopt_agent(target_root, agent_name)
+        result = ao.adopt_agent(target_root, agent_name, yes=yes)
     except click.ClickException:
         raise
     except FileNotFoundError as exc:
@@ -238,14 +267,14 @@ def agents_adopt(agent_name: str) -> None:
         for d in result.dirs_created:
             lines.append(f"  {d}/")
             lines.append("    (seed README.md written explaining the directory's purpose)")
-    if result.categories_wired:
+    if result.dirs_seeded:
         lines.append(
-            cli_render.style(
-                "strong", f"wired {len(result.categories_wired)} overlay categor(ies):"
-            )
+            cli_render.style("strong", f"seeded {len(result.dirs_seeded)} empty director(ies):")
         )
-        for cat in result.categories_wired:
-            lines.append(f"  {cat}")
+        for d in result.dirs_seeded:
+            lines.append(f"  {d}/")
+            lines.append("    (seed README.md written explaining the directory's purpose)")
+    lines.extend(result.notices)
     if result.categories_already_set:
         lines.append(
             cli_render.style(
@@ -395,8 +424,8 @@ def docs() -> None:
     "--yes",
     is_flag=True,
     default=False,
-    help="Consent to the write without a prompt (CI). Without it a terminal is asked; "
-    "a non-interactive run refuses.",
+    help="Accepted, with no effect: the command asks nothing, since running it is the "
+    "consent (COR-049 point 5).",
 )
 @click.option(
     "--dry-run",
@@ -412,21 +441,19 @@ def docs_record_location(capability: str, name: str, yes: bool, dry_run: bool) -
     documentation root; the command writes where it lies now to the
     capability's `project/docs-locations.yaml`, so a later change of root
     moves nothing already written. A location already recorded is never
-    overwritten: the command says where it lies and writes nothing. Writing
-    needs consent (COR-048 point 5): a terminal is asked once, `--yes`
-    consents non-interactively, and a non-interactive run without `--yes`
-    refuses and names the command to run; `--dry-run` says what would be
-    recorded and writes nothing. A capability's stamping command runs it with
-    `--yes` when it places the first document there. Exit 1 when CAPABILITY
-    is not installed or declares no location NAME.
+    overwritten: the command says where it lies and writes nothing. The value
+    recorded is the one already in use, so the recording changes nothing that
+    reads it: running the command is the consent, and it asks nothing, at a
+    terminal or off one. It says what it recorded, which root the value was
+    derived from, and where to change it. `--yes` is accepted and has no
+    effect; `--dry-run` says what would be recorded and writes nothing. A
+    capability's stamping command runs it when it places the first document
+    there. Exit 1 when CAPABILITY is not installed or declares no location NAME.
     """
-    from project_kit import docs_roots, project_config
+    from project_kit import docs_roots
     from project_kit.friction_discovery import installed_capability_names
 
-    if yes and dry_run:
-        raise click.UsageError(
-            "--yes and --dry-run exclude each other: one writes, the other never does."
-        )
+    del yes  # accepted for callers that pass it; running the command is the consent
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
@@ -449,22 +476,10 @@ def docs_record_location(capability: str, name: str, yes: bool, dry_run: bool) -
         click.echo(f"would record {recording}")
         click.echo(cli_render.style("strong", "Dry run: nothing written."))
         return
-    if not yes:
-        if not project_config.stdin_is_tty():
-            rerun = f"pkit docs record-location {shlex.quote(capability)} {shlex.quote(name)}"
-            raise project_config.ConsentRefused(
-                f"refusing to write {recorded_in} without consent: stdin is not a terminal "
-                f"and --yes was not given (COR-048 point 5). Nothing was written.\n"
-                f"To see the change first, run:\n  {rerun} --dry-run\n"
-                f"To consent non-interactively, run:\n  {rerun} --yes"
-            )
-        click.confirm(
-            f"Record {capability} {name} = {where} in {recorded_in}?", default=True, abort=True
-        )
-    docs_roots.record_location(
+    if docs_roots.record_location(
         target_root, capability, name, found.path, by="pkit docs record-location"
-    )
-    click.echo(f"recorded {recording}")
+    ):
+        click.echo(docs_roots.recording_notice(target_root, capability, name, found.path))
 
 
 @main.group("repository")
@@ -497,8 +512,10 @@ def repository_base_command(base_ref: str | None, as_json: bool) -> None:
     origin/<name>, and the local branch only when there is no remote; `unborn`
     when it has no commit yet. The base: REF, else $PKIT_CHECK_BASE, else the
     default branch — its commit, where HEAD left it and whether it moved on
-    since. A data point's filler reads the default branch and never the base
-    (COR-052 point 6); no base override reaches it. A reader that used a
+    since. With --json, HEAD too: its commit, none yet (`unborn`), or why git
+    cannot read it. A data point's filler reads the default branch and HEAD,
+    never the base (COR-052 point 6); no base override reaches it, and the
+    default branch's problem names no base as a fix. A reader that used a
     local branch, and a declaration read as the default, say so on standard
     error. Read-only; it runs no discovery. It is how a capability's own
     script reads which commit is settled, without resolving a branch or
@@ -542,10 +559,13 @@ def pull_request() -> None:
 
     Where a pull request's base merges through a merge queue, and where the PR
     stands in it; the repository's squash-commit defaults; the direct squash
-    merge, the enqueue, the wait for the queue's merge and taking a PR out of
-    the queue. Each runs `gh` from the working directory. `--json` writes each
-    document as one line of JSON, which is how a capability's script calls it.
-    Reference: `.pkit/cli/README.md`, "Pull-request commands".
+    merge, the enqueue, the wait for the queue's merge, taking a PR out of
+    the queue, and deleting a merged PR's head branch; and the landing
+    sequence, `land`, which composes them but the deletion. Each runs `gh`
+    from the working directory; the five that change the service run the
+    cross-repository guard first. `--json` writes each document as one line of
+    JSON, which is how a capability's script calls it. Reference:
+    `.pkit/cli/README.md`, "Pull-request commands".
     """
 
 
@@ -559,19 +579,77 @@ def _pull_request_json_option(command: Callable[..., None]) -> Callable[..., Non
     )(command)
 
 
+def _allow_foreign_repo_option(command: Callable[..., None]) -> Callable[..., None]:
+    return click.option(
+        session_guard.CONFIRM_OPTION,
+        "allow_foreign_repo",
+        is_flag=True,
+        default=False,
+        help="Confirm a change in another repository than the session's anchor's. Without it "
+        "the cross-repository guard asks at a terminal, and refuses where there is none "
+        "(COR-039).",
+    )(command)
+
+
+def _pull_request_cleared(
+    number: int,
+    allow_foreign_repo: bool,
+    as_json: bool,
+    refused: Callable[[session_guard.Refusal], dict[str, Any]] | None = None,
+) -> session_guard.Clearance:
+    """The cross-repository guard's clearance for a change from the working
+    directory; a refusal is written — no request made — and exits 1.
+    `refused` is the subcommand's document of a refusal; a request's
+    (`pull_request_landing.refusal_document`) by default."""
+    passage = session_guard.clear(Path.cwd(), confirmed=allow_foreign_repo)
+    if isinstance(passage, session_guard.Refusal):
+        if as_json:
+            document = (
+                refused(passage)
+                if refused is not None
+                else pull_request_landing.refusal_document(number, passage)
+            )
+            click.echo(pull_request_landing.render_json(document))
+        else:
+            click.echo(f"error: {passage.reason} Nothing was asked of GitHub.", err=True)
+        raise SystemExit(1)
+    return passage
+
+
+def _cleared_at_entry(
+    directory: Path, allow_foreign_repo: bool, *, unchanged: str, dry_run: bool = False
+) -> session_guard.Clearance:
+    """The cross-repository guard's clearance for a command that changes the
+    hosting service from `directory`, run once at its entry, before anything
+    is read from the service or sent to it (ADR-061 point 6). A refusal exits
+    1 with the guard's reason and `unchanged`, which says what was not done."""
+    passage = session_guard.clear(directory, confirmed=allow_foreign_repo, dry_run=dry_run)
+    if isinstance(passage, session_guard.Refusal):
+        raise click.ClickException(f"{passage.reason} {unchanged}")
+    return passage
+
+
 def _say_outcome(
     number: int,
     outcome: pull_request_landing.Outcome,
+    clearance: session_guard.Clearance,
     as_json: bool,
     done: str,
 ) -> None:
-    """Write a request's outcome — `done` when accepted — and exit 1 when it was not."""
+    """Write a request's outcome — `done` when accepted — and exit 1 when it
+    was not, or whether it was is not known (unconfirmed): that one names the
+    reading that tells."""
     if as_json:
-        click.echo(
-            pull_request_landing.render_json(pull_request_landing.outcome_document(number, outcome))
-        )
+        document = pull_request_landing.outcome_document(number, outcome, clearance)
+        click.echo(pull_request_landing.render_json(document))
     elif outcome.accepted:
         click.echo(done)
+    elif outcome.accepted is None:
+        click.echo(
+            f"error: {outcome.reason}. Read where PR #{number} stands: "
+            f"`pkit pull-request read {number}`.",
+            err=True,
+        )
     else:
         click.echo(f"error: {outcome.reason or 'gh refused it'}", err=True)
     if not outcome.accepted:
@@ -627,47 +705,145 @@ def pull_request_squash_defaults(as_json: bool) -> None:
 @click.option("--subject", required=True, help="The squash commit's subject: the PR title.")
 @click.option("--head", "head_oid", default="", metavar="SHA", help="Merge only at this head.")
 @click.option("--admin", is_flag=True, default=False, help="Merge around branch protection.")
+@_allow_foreign_repo_option
 @_pull_request_json_option
 def pull_request_merge(
-    number: int, subject: str, head_oid: str, admin: bool, as_json: bool
+    number: int, subject: str, head_oid: str, admin: bool, allow_foreign_repo: bool, as_json: bool
 ) -> None:
     """Squash-merge PR NUMBER directly, with SUBJECT as the commit's subject.
 
     Accepted is not proof of a merge: on a base that requires a queue, gh
     enqueues instead — `pull-request read` says which. Never deletes the head
-    branch. Exit 0 when gh accepted it; 1 otherwise, with gh's reason.
+    branch. The cross-repository guard runs first. A merge that gets no
+    usable answer is settled by reading: made once the PR reads merged or
+    queued; not seen made once two readings, the second 40 s or more after
+    it was sent, find neither; unconfirmed when the PR cannot be read. Exit
+    0 when made; 1 otherwise — refused, with gh's reason or the guard's, not
+    seen made, or unconfirmed.
     """
+    clearance = _pull_request_cleared(number, allow_foreign_repo, as_json)
     outcome = pull_request_landing.squash_merge(
-        number, subject=subject, head_oid=head_oid, admin=admin
+        number,
+        subject=subject,
+        cwd=clearance.directory,
+        clearance=clearance,
+        head_oid=head_oid,
+        admin=admin,
     )
-    _say_outcome(number, outcome, as_json, f"gh accepted the squash merge of PR #{number}")
+    _say_outcome(
+        number, outcome, clearance, as_json, _made(outcome, f"the squash merge of PR #{number}")
+    )
+
+
+def _made(outcome: pull_request_landing.Outcome, request: str) -> str:
+    """What a person is told of an accepted merge or enqueue: gh accepted it,
+    or it got no answer and a reading since shows it made."""
+    if outcome.exit_code is None:
+        return f"{request} got no answer, and a reading since shows it made"
+    return f"gh accepted {request}"
 
 
 @pull_request.command("enqueue")
 @click.argument("number", type=int)
 @click.option("--head", "head_oid", default="", metavar="SHA", help="Enqueue only this head.")
+@_allow_foreign_repo_option
 @_pull_request_json_option
-def pull_request_enqueue(number: int, head_oid: str, as_json: bool) -> None:
+def pull_request_enqueue(
+    number: int, head_oid: str, allow_foreign_repo: bool, as_json: bool
+) -> None:
     """Hand PR NUMBER to its base's merge queue; the queue makes the merge.
 
     The queue squashes by its own method, with a commit composed from the
-    repository's squash-commit defaults. Exit 0 once GitHub took it in; 1
-    otherwise, with gh's reason.
+    repository's squash-commit defaults. The cross-repository guard runs
+    first. An enqueue that gets no usable answer is settled by reading, as a
+    merge is. Exit 0 once GitHub took it in; 1 otherwise — refused, with gh's
+    reason or the guard's, not seen made, or unconfirmed.
     """
-    outcome = pull_request_landing.enqueue(number, head_oid=head_oid)
-    _say_outcome(number, outcome, as_json, f"enqueued PR #{number}")
+    clearance = _pull_request_cleared(number, allow_foreign_repo, as_json)
+    outcome = pull_request_landing.enqueue(
+        number, cwd=clearance.directory, clearance=clearance, head_oid=head_oid
+    )
+    done = (
+        f"enqueued PR #{number}"
+        if outcome.exit_code is not None
+        else _made(outcome, f"the enqueue of PR #{number}")
+    )
+    _say_outcome(number, outcome, clearance, as_json, done)
 
 
 @pull_request.command("dequeue")
 @click.argument("number", type=int)
+@_allow_foreign_repo_option
 @_pull_request_json_option
-def pull_request_dequeue(number: int, as_json: bool) -> None:
+def pull_request_dequeue(number: int, allow_foreign_repo: bool, as_json: bool) -> None:
     """Take PR NUMBER out of its base's merge queue, and confirm it is out.
 
-    Exit 0 once a reading shows it neither queued nor merged; 1 otherwise.
+    The cross-repository guard runs first. Out of the queue rests on two
+    readings running, answered or not. A dequeue that gets no usable answer
+    and is not seen made is sent once more. Exit 0 once two readings running
+    show it neither queued nor merged; 1 otherwise — refused, merged, still
+    queued after the service accepted it, not seen made, or unconfirmed.
     """
-    outcome = pull_request_landing.dequeue(number)
-    _say_outcome(number, outcome, as_json, f"PR #{number} is out of the merge queue")
+    clearance = _pull_request_cleared(number, allow_foreign_repo, as_json)
+    outcome = pull_request_landing.dequeue(number, cwd=clearance.directory, clearance=clearance)
+    _say_outcome(number, outcome, clearance, as_json, f"PR #{number} is out of the merge queue")
+
+
+@pull_request.command("delete-branch")
+@click.argument("number", type=int)
+@click.option(
+    "--expect",
+    required=True,
+    metavar="SHA",
+    help="The head the PR merged at, in full (40 or 64 hexadecimal characters): the branch is "
+    "deleted only while its tip is it.",
+)
+@_allow_foreign_repo_option
+@_pull_request_json_option
+def pull_request_delete_branch(
+    number: int, expect: str, allow_foreign_repo: bool, as_json: bool
+) -> None:
+    """Delete merged PR NUMBER's head branch on the service, only at SHA.
+
+    Refused unless the PR has merged, its head is in this repository, not a
+    fork, and SHA is the head it merged at. The branch is deleted only while
+    its tip is SHA and no other open PR uses it as its head or its base, in
+    one compare-and-delete request; otherwise it is kept, and said why, or
+    found gone. The cross-repository guard runs first. Exit 0 when deleted,
+    kept or gone; 1 when refused, or when whether it was deleted is not
+    known (unconfirmed); 2 when SHA is not a full commit id.
+    """
+    expected = pull_request_landing.full_object_id(expect)
+    if not expected:
+        raise click.BadParameter(
+            f"{expect!r} is not a full commit id (40 or 64 hexadecimal characters)",
+            param_hint="--expect",
+        )
+    clearance = _pull_request_cleared(
+        number,
+        allow_foreign_repo,
+        as_json,
+        refused=lambda refusal: pull_request_landing.deletion_refusal_document(
+            number, expected, refusal
+        ),
+    )
+    deletion = pull_request_landing.delete_branch(
+        number, expect=expected, cwd=clearance.directory, clearance=clearance
+    )
+    if as_json:
+        document = pull_request_landing.deletion_document(number, expected, deletion, clearance)
+        click.echo(pull_request_landing.render_json(document))
+    elif deletion.outcome == pull_request_landing.REFUSED:
+        click.echo(f"error: {deletion.describe()}. Nothing was deleted.", err=True)
+    elif deletion.outcome == pull_request_landing.UNCONFIRMED:
+        click.echo(
+            f"error: {deletion.describe()}. Run the command again: it reads the branch first.",
+            err=True,
+        )
+    else:
+        click.echo(f"PR #{number}: {deletion.describe()}")
+    if deletion.outcome in (pull_request_landing.REFUSED, pull_request_landing.UNCONFIRMED):
+        raise SystemExit(1)
 
 
 @pull_request.command("wait")
@@ -725,6 +901,228 @@ def pull_request_wait(number: int, head_oid: str, seconds: float | None, as_json
         click.echo(f"ended: {wait.ended}")
     if wait.ended != pull_request_landing.MERGED:
         raise SystemExit(4 if wait.ended == pull_request_landing.STILL_QUEUED else 3)
+
+
+#: `pull-request land`'s exit by how the landing ended: for a person at a
+#: terminal only — no caller decides on it; callers read the end document.
+_LAND_EXITS: Mapping[str, int] = {
+    pull_request_landing.END_MERGED: 0,
+    pull_request_landing.END_MERGED_ELSEWHERE: 0,
+    pull_request_landing.END_PLANNED: 0,
+    pull_request_landing.END_QUEUED: 4,
+    pull_request_landing.END_UNCONFIRMED: 4,
+    pull_request_landing.END_HEAD_MOVED: 3,
+    pull_request_landing.END_DROPPED: 3,
+    pull_request_landing.END_NOT_MERGED: 3,
+}
+
+
+@pull_request.command("land")
+@click.argument("number", type=int)
+@click.option(
+    "--head",
+    "head_oid",
+    required=True,
+    metavar="SHA",
+    help="The head the caller's gates checked, in full (40 or 64 hexadecimal characters): every "
+    "request is pinned to it, and a reading at another head ends the landing.",
+)
+@click.option("--subject", required=True, help="The squash commit's subject: the PR title.")
+@click.option(
+    "--seconds",
+    type=click.FloatRange(min=0),
+    default=None,
+    help="How long to wait for the queue's merge; 0 reads once. Default: "
+    f"{pull_request_landing.wait_limit(None)}.",
+)
+@click.option(
+    "--allow-dropped-head",
+    is_flag=True,
+    default=False,
+    help="Enqueue a head the merge queue already dropped. Without it, such a head is refused.",
+)
+@click.option(
+    "--admin",
+    is_flag=True,
+    default=False,
+    help="Merge around branch protection, on a base without a merge queue; refused on a base "
+    "with one.",
+)
+@click.option(
+    "--direct-only",
+    is_flag=True,
+    default=False,
+    help="Refuse a base that merges through a merge queue.",
+)
+@click.option(
+    "--queued-bad-shape",
+    type=click.Choice([pull_request_landing.SHAPE_REFUSE, pull_request_landing.SHAPE_WARN]),
+    default=pull_request_landing.SHAPE_REFUSE,
+    show_default=True,
+    help="A PR already in a queue that would not make its squash commit: refuse, leaving it "
+    "queued, or wait for it with a warning.",
+)
+@click.option(
+    "--no-request",
+    is_flag=True,
+    default=False,
+    help="Send no merge and no enqueue: a PR queued at SHA is waited for, one queued at another "
+    "head is still taken out, and one a merge or an enqueue would land is refused.",
+)
+@_allow_foreign_repo_option
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    default=False,
+    help="Read and judge, request nothing and never ask: end planned, saying what it would do.",
+)
+@_pull_request_json_option
+def pull_request_land(
+    number: int,
+    head_oid: str,
+    subject: str,
+    seconds: float | None,
+    allow_dropped_head: bool,
+    admin: bool,
+    direct_only: bool,
+    queued_bad_shape: str,
+    no_request: bool,
+    allow_foreign_repo: bool,
+    dry_run: bool,
+    as_json: bool,
+) -> None:
+    """Land PR NUMBER at SHA: the landing sequence, in one command.
+
+    The cross-repository guard runs once, at the entry. Then one reading;
+    the options applied to it; the direct squash merge, with SUBJECT, or the
+    enqueue, each pinned to SHA; the wait for the merge; and, where a reading
+    finds another head, the PR taken out of the queue. Never deletes a
+    branch. Writes each event while the output takes them — a reading,
+    `requesting` before each request is sent, `requested` once it is
+    settled — and one end document saying how the landing ended. A write
+    that fails before any request stops the landing, nothing sent; after a
+    `requesting` is out, it stops the writing and not the landing, which may
+    then send a dequeue no line names: a reader left with no end reads the
+    PR. Exit 0 when merged or planned; 4 when queued or unconfirmed; 3 when
+    the head moved, or the PR left the queue or was not merged; 1 otherwise;
+    2 when SHA is not a full commit id. A caller reads the end document,
+    never the exit.
+    """
+    expected = pull_request_landing.full_object_id(head_oid)
+    if not expected:
+        raise click.BadParameter(
+            f"{head_oid!r} is not a full commit id (40 or 64 hexadecimal characters)",
+            param_hint="--head",
+        )
+    if seconds is not None and not math.isfinite(seconds):
+        raise click.BadParameter("not a number of seconds", param_hint="--seconds")
+    options = pull_request_landing.LandOptions(
+        seconds=seconds,
+        allow_dropped_head=allow_dropped_head,
+        admin=admin,
+        direct_only=direct_only,
+        queued_bad_shape=queued_bad_shape,
+        no_request=no_request,
+    )
+
+    closed = False
+
+    def written(document: dict[str, Any]) -> None:
+        """Write one document. A write that fails closes the output — nothing
+        more is written — and is raised for the landing to judge: before any
+        request it ends the landing, nothing sent; after one, the landing
+        goes on unwritten (`pull_request_landing.land`)."""
+        nonlocal closed
+        if closed:
+            return
+        try:
+            if as_json:
+                click.echo(pull_request_landing.render_json(document))
+            else:
+                _say_landing_event(document)
+        except (OSError, ValueError):
+            closed = True
+            _quiet_standard_output()
+            raise
+
+    passage = session_guard.clear(Path.cwd(), confirmed=allow_foreign_repo, dry_run=dry_run)
+    if isinstance(passage, session_guard.Refusal):
+        landing = pull_request_landing.refused_by_the_guard(
+            number, head=expected, refusal=passage, options=options, dry_run=dry_run
+        )
+    else:
+        landing = pull_request_landing.land(
+            number,
+            head=expected,
+            subject=subject,
+            cwd=passage.directory,
+            clearance=passage,
+            options=options,
+            dry_run=dry_run,
+            on_event=written,
+        )
+    # Its output closed, the end goes unwritten; the exit still says how it ended.
+    with contextlib.suppress(OSError, ValueError):
+        written(landing.as_json())
+    code = _LAND_EXITS.get(landing.ended, 1)
+    if code:
+        raise SystemExit(code)
+
+
+def _quiet_standard_output() -> None:
+    """Point the process's standard output at the null device once a write
+    to it failed, so the interpreter's last flush does not fail again and
+    turn the exit into its own. A stream put in its place — a test runner's
+    — is left as it is."""
+    if sys.stdout is not sys.__stdout__:
+        return
+    with contextlib.suppress(OSError, ValueError):
+        null = os.open(os.devnull, os.O_WRONLY)
+        os.dup2(null, sys.stdout.fileno())
+        os.close(null)
+
+
+def _say_landing_event(document: Mapping[str, Any]) -> None:
+    """One event of a landing, as a person reads it: a reading, a request sent
+    and what it came to, and how the landing ended — its warnings on standard
+    error."""
+    number = document["pull_request"]
+    event = document["event"]
+    if event == "reading":
+        click.echo(f"PR #{number} {document['reading']['description']}")
+    elif event == "requesting":
+        pinned = f" at {document['head'][:7]}" if document["head"] else ""
+        again = " once more" if document["attempt"] > 1 else ""
+        click.echo(f"sending the {document['request']} of PR #{number}{pinned}{again}")
+    elif event == "requested":
+        click.echo(f"the {document['request']} of PR #{number}: {_came_to(document)}")
+    else:
+        _say_landing_end(document)
+
+
+def _came_to(outcome: Mapping[str, Any]) -> str:
+    """What a request came to, as a phrase."""
+    if outcome["accepted"]:
+        return "made"
+    if outcome["accepted"] is None:
+        return f"whether it was made is not known: {outcome['reason']}"
+    return f"not accepted: {outcome['reason'] or 'refused'}"
+
+
+def _say_landing_end(document: Mapping[str, Any]) -> None:
+    """How a landing ended, as a person reads it."""
+    line = f"PR #{document['pull_request']}: {document['ended']}"
+    if document["reason_kind"]:
+        line += f" ({document['reason_kind']})"
+    if document["would"]:
+        line += f" — would {document['would']}"
+    if document["reason"]:
+        line += f": {document['reason']}"
+    click.echo(line)
+    if document["dequeue"] is not None:
+        click.echo(f"  taking it out of the merge queue: {_came_to(document['dequeue'])}")
+    for warning in document["warnings"]:
+        click.echo(f"[warn] {warning['reason']}", err=True)
 
 
 def _graph_format_options(command: Callable[..., None]) -> Callable[..., None]:
@@ -1437,10 +1835,24 @@ def version_promote() -> None:
     default=False,
     help="After tagging, push the new tag to the `origin` remote.",
 )
-def version_tag(push: bool) -> None:
-    """Tag HEAD as `v<version>` from .pkit/VERSION (per PRJ-002 + PRJ-004)."""
+@_allow_foreign_repo_option
+def version_tag(push: bool, allow_foreign_repo: bool) -> None:
+    """Tag HEAD as `v<version>` from .pkit/VERSION (per PRJ-002 + PRJ-004).
+
+    With `--push` the cross-repository guard runs first, before the tag is
+    made: in another repository than the session's anchor's it asks at a
+    terminal and refuses without one, unless `--allow-foreign-repo` confirms
+    it. A tag made only locally needs no guard.
+    """
     source_kit = _target_kit()
-    tag_version(source_kit, push=push)
+    clearance = (
+        _cleared_at_entry(
+            source_kit.parent, allow_foreign_repo, unchanged="Nothing was tagged or pushed."
+        )
+        if push
+        else None
+    )
+    tag_version(source_kit, push=push, clearance=clearance)
 
 
 @version.command("untag")
@@ -1450,10 +1862,20 @@ def version_tag(push: bool) -> None:
     default=False,
     help="Also delete the tag on the `origin` remote.",
 )
-def version_untag(push: bool) -> None:
-    """Remove the `v<version>` tag matching .pkit/VERSION (local; --push for remote)."""
+@_allow_foreign_repo_option
+def version_untag(push: bool, allow_foreign_repo: bool) -> None:
+    """Remove the `v<version>` tag matching .pkit/VERSION (local; --push for remote).
+
+    With `--push` the cross-repository guard runs first, before either tag is
+    deleted, as for `version tag --push`.
+    """
     source_kit = _target_kit()
-    untag_version(source_kit, push=push)
+    clearance = (
+        _cleared_at_entry(source_kit.parent, allow_foreign_repo, unchanged="No tag was deleted.")
+        if push
+        else None
+    )
+    untag_version(source_kit, push=push, clearance=clearance)
 
 
 @version.command("unbump")
@@ -1539,7 +1961,10 @@ def release_plan(as_json: bool) -> None:
     "authored. A floor a changeset declares is still raised.",
 )
 @click.option("--yes", is_flag=True, default=False, help="Skip the confirmation prompt (CI).")
-def release_apply(tag: bool, push: bool, no_broaden: bool, yes: bool) -> None:
+@_allow_foreign_repo_option
+def release_apply(
+    tag: bool, push: bool, no_broaden: bool, yes: bool, allow_foreign_repo: bool
+) -> None:
     """Consume changesets and write versions + changelog (the release write).
 
     The sole main-only writer of version state (PRJ-002 D3). Run from a
@@ -1557,8 +1982,19 @@ def release_apply(tag: bool, push: bool, no_broaden: bool, yes: bool) -> None:
     before anything is written, and one whose range would exclude the backbone
     the release ships (an upper bound `--no-broaden` keeps) is warned of before
     the confirmation. See `.pkit/release/README.md`.
+
+    With `--tag --push` the tag's push changes the hosting service, so the
+    cross-repository guard runs first, before anything is written, as for
+    `version tag --push`.
     """
     source_kit = _target_kit()
+    clearance = (
+        _cleared_at_entry(
+            source_kit.parent, allow_foreign_repo, unchanged="Nothing was written or pushed."
+        )
+        if tag and push
+        else None
+    )
     plan = compute_release(source_kit)
     _print_release_plan(plan)
     _warn_migration_mismatches(source_kit, plan)
@@ -1568,11 +2004,11 @@ def release_apply(tag: bool, push: bool, no_broaden: bool, yes: bool) -> None:
     for warning in check_raised_ranges(plan, broaden=broaden):
         click.echo(f"warning: {warning}", err=True)
     if plan.is_empty:
-        apply_release(source_kit, plan, tag=tag, push=push, broaden=broaden)
+        apply_release(source_kit, plan, tag=tag, push=push, clearance=clearance, broaden=broaden)
         return
     if not yes:
         click.confirm("Write these versions and consume the changesets?", abort=True)
-    apply_release(source_kit, plan, tag=tag, push=push, broaden=broaden)
+    apply_release(source_kit, plan, tag=tag, push=push, clearance=clearance, broaden=broaden)
 
 
 @release.command("check")
@@ -1754,8 +2190,14 @@ def release_lint(skip: bool | None) -> None:
     help="Where the base merges through a queue: enqueue a head the queue already dropped. "
     "Without it, such a head is refused until new commits are pushed.",
 )
+@_allow_foreign_repo_option
 def release_merge(
-    pr: int, dry_run: bool, no_wait: bool, wait_minutes: float | None, force: bool
+    pr: int,
+    dry_run: bool,
+    no_wait: bool,
+    wait_minutes: float | None,
+    force: bool,
+    allow_foreign_repo: bool,
 ) -> None:
     """Merge a release PR — the sanctioned path for a `chore(release):` PR.
 
@@ -1767,23 +2209,45 @@ def release_merge(
     squash commit whose subject is the PR title — through the base's merge queue
     where it has one — deleting the head branch once GitHub reports the PR
     merged (best-effort; never a fork's head). Exit 4 when the queue still holds
-    the PR, or a direct merge could not be confirmed: running it again once the
-    PR has merged deletes the head branch. Exit 3 when the queue dropped the PR
+    the PR, or a direct merge could not be confirmed, or a merge or an enqueue
+    got no answer and GitHub could not be read since — whether it was made is
+    not known: running it again once GitHub answers lands the PR if it has not,
+    and deletes the head branch once it has merged. A merge or an enqueue
+    with no answer that two readings do not see made exits 1, saying this run
+    saw nothing merged, with the reading and the re-run that tell. Every `gh`
+    call is bounded, so no stuck call holds the run. Exit 3 when the queue dropped the PR
     or its head moved; nothing is deleted then. A head the queue already
     dropped is not enqueued again without `--force`. It does **not** tag —
     `release-tag.yml` cuts the backbone tag on the resulting push to `main`
     (PRJ-004). Human-gated: a human decides to run it; nothing auto-merges.
+
+    The cross-repository guard runs first, once, for the merge and the branch
+    clean-up alike: in another repository than the session's anchor's it asks
+    at a terminal and refuses without one, unless `--allow-foreign-repo`
+    confirms it; with no session's anchor, as in a pipeline, it does not fire.
+    A dry run never asks: it ends as a run with nobody to ask would, and
+    reports how the guard passed.
     """
     if no_wait and wait_minutes is not None:
         raise click.UsageError("--no-wait and --wait-minutes are mutually exclusive.")
     if wait_minutes is not None and not math.isfinite(wait_minutes):
         raise click.BadParameter("not a number of minutes", param_hint="--wait-minutes")
     wait_seconds = 0.0 if no_wait else (wait_minutes * 60 if wait_minutes is not None else None)
-    source_kit = _target_kit()
+    repo_root = _target_kit().parent
+    passage = _cleared_at_entry(
+        repo_root, allow_foreign_repo, unchanged="Nothing was merged.", dry_run=dry_run
+    )
     report = merge_release_pr(
-        source_kit.parent, pr, dry_run=dry_run, wait_seconds=wait_seconds, force=force
+        repo_root,
+        pr,
+        clearance=passage,
+        dry_run=dry_run,
+        wait_seconds=wait_seconds,
+        force=force,
     )
     click.echo(report.text)
+    if dry_run:
+        click.echo(f"  cross-repository guard: {passage.describe()}")
     if report.exit_code:
         raise SystemExit(report.exit_code)
 
@@ -1796,7 +2260,8 @@ def release_merge(
     default=False,
     help="Print the notes that would be published without calling `gh`.",
 )
-def release_publish_notes(version: str, dry_run: bool) -> None:
+@_allow_foreign_repo_option
+def release_publish_notes(version: str, dry_run: bool, allow_foreign_repo: bool) -> None:
     """Publish a notes-only GitHub Release for `v<version>` from CHANGELOG.md.
 
     Extracts that version's `CHANGELOG.md` section and creates the GitHub
@@ -1806,9 +2271,17 @@ def release_publish_notes(version: str, dry_run: bool) -> None:
     never a file / tarball / wheel channel. Repo is derived from the ambient
     `gh` context (no hardcoded owner/repo). A missing tag is a clear error;
     `--dry-run` prints the notes without calling `gh`.
+
+    The cross-repository guard runs first, as for `release merge`: in another
+    repository than the session's anchor's it asks at a terminal and refuses
+    without one, unless `--allow-foreign-repo` confirms it; with no session's
+    anchor, as in a pipeline, it does not fire. A dry run never asks.
     """
-    source_kit = _target_kit()
-    click.echo(publish_release_notes(source_kit.parent, version, dry_run=dry_run))
+    repo_root = _target_kit().parent
+    passage = _cleared_at_entry(
+        repo_root, allow_foreign_repo, unchanged="Nothing was published.", dry_run=dry_run
+    )
+    click.echo(publish_release_notes(repo_root, version, clearance=passage, dry_run=dry_run))
 
 
 @release.command("check-shareable")
@@ -5290,8 +5763,10 @@ def install_capability_cmd(name: str, dry_run: bool, plan: bool, as_json: bool) 
     )
 
     # A reserved name is refused before lookup, so the refusal names the
-    # reservation rather than reporting the capability as missing.
+    # reservation rather than reporting the capability as missing; so is a name
+    # an adapter holds, which no capability may share.
     caps.refuse_reserved_capability_name(name)
+    caps.refuse_name_held_by_other_kind(target_root, "capability", name)
 
     capability_source = caps.find_capability_in_source(source_kit, name)
     if capability_source is None:
@@ -5534,8 +6009,10 @@ def register_capability_cmd(name: str, dry_run: bool) -> None:
         own_code_does=None,
     )
 
-    # A reserved name is refused before resolution, as in `install`.
+    # A reserved name is refused before resolution, as in `install`, and so is a
+    # name an adapter holds.
     caps.refuse_reserved_capability_name(name)
+    caps.refuse_name_held_by_other_kind(target_root, "capability", name)
 
     # Resolve the capability, preferring the in-repo (incubated) source.
     # Consulting both trees lets us surface the COR-031 boundary case where
@@ -6392,7 +6869,15 @@ def new() -> None:
 @new.command("decision")
 @click.argument("namespace")
 @click.argument("slug")
-def new_decision(namespace: str, slug: str) -> None:
+@click.option(
+    "--yes",
+    is_flag=True,
+    default=False,
+    help="adr only: consent without a prompt to recording the derived adr-records location "
+    "over a folder that already holds documents. Without it a terminal is asked once; a "
+    "non-interactive run refuses.",
+)
+def new_decision(namespace: str, slug: str, yes: bool) -> None:
     """Stamp a new decision-record stub.
 
     Namespaces:
@@ -6403,6 +6888,13 @@ def new_decision(namespace: str, slug: str) -> None:
 
     Any NAMESPACE that is not core/project/adr is interpreted as a
     capability name; the command refuses if no such capability exists.
+
+    For adr with <adr-records> unset, the location is derived from the internal
+    documentation root and recorded in the overlay before the record is stamped
+    (COR-049 point 5); the command says what it recorded. Over a folder that
+    already holds documents the recording takes consent: a terminal is asked
+    once, `--yes` consents without a prompt, and a non-interactive run without
+    `--yes` refuses, exit 1, recording and stamping nothing.
     """
     target_root = find_target_root()
     if target_root is None:
@@ -6411,7 +6903,7 @@ def new_decision(namespace: str, slug: str) -> None:
         raise click.ClickException(
             f"{target_root}/.pkit/ does not exist. Run 'pkit init' from this project's root first."
         )
-    target = stamp_decision(target_root, namespace=namespace, slug=slug)
+    target = stamp_decision(target_root, namespace=namespace, slug=slug, yes=yes)
     try:
         rel = target.relative_to(target_root)
     except ValueError:
@@ -7175,7 +7667,7 @@ def process_cascade(address: str, subject: str | None, as_json: bool) -> None:
                         "reason": resolution.reason,
                         # What a predicate the fold could not evaluate said
                         # (null when none failed, or it said nothing).
-                        "stderr_tail": resolution.stderr_tail or None,
+                        "stderr_tail": process_mod.json_tail(resolution.stderr_tail),
                     }
                 },
                 indent=2,

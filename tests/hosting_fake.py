@@ -9,21 +9,27 @@ its own code. This module answers all of it in this process, from one model:
   without a merge queue, the queue's merge method and the repository's
   squash-commit defaults; the PR queued, waiting to enter, or dropped at a
   head; a merge the service turns into an enqueue; auto-merge allowed or not;
-  the remote branches, a protected one, and other open PRs on a branch. A
+  the base's requirements for a direct merge met or not;
+  the remote branches, a protected one, and other open PRs on a branch or
+  based on one. A
   queued PR moves on by one :data:`Step` per reading. A request can be
-  refused, fail after it was made, or get no answer — made and the reply lost,
-  or never received (:class:`NoAnswer`) — and a second actor can act before or
-  after any request (:meth:`HostingService.before`, :meth:`~HostingService.after`).
+  refused, fail after it was made, get no answer — made and the reply lost,
+  or never received (:class:`NoAnswer`): `gh` hangs on it until its bound
+  ends it — or be killed mid-request, made or not, with the whole run that
+  sent it (:class:`Killed`); and a second actor can act before or after any
+  request (:meth:`HostingService.before`, :meth:`~HostingService.after`).
   Every request is recorded, in order (:attr:`HostingService.requests`).
 - :class:`LocalClone` is the clone the run is in: its branches and commits,
-  and other repositories on the machine, which the cross-repository guard
-  compares by their `git -C` answers.
-- :func:`install` routes every `subprocess.run` of `gh` and `git` to them, runs
-  from the clone and sets the session anchor explicitly — the suite itself
-  often runs inside a session that sets it. :func:`route_backbone` runs
-  project-management's backbone seam in this process (`tests.pull_request_backbone`),
-  ending a request the service never answers as the capability's bound ends
-  it.
+  and other repositories on the machine, which the cross-repository guards —
+  project-management's and the backbone's — compare by their `git -C`
+  answers, or find git not answering.
+- :func:`install` routes every `subprocess.run` of `gh` and `git` to them, and
+  the backbone's bounded start of `gh` (`command_runner.run_bounded`), which
+  ends a `gh` that never gets an answer at its bound; it runs from the clone
+  and sets the session anchor explicitly — the suite itself often runs inside
+  a session that sets it. :func:`route_backbone` runs project-management's
+  backbone seam in this process (`tests.pull_request_backbone`), ending a run
+  killed mid-request as the capability's bound ends it: with no document.
 
 It merges what `test_pm_done_work.py`'s `_QUEUE_FAKE_GH` (a `gh` on PATH keeping
 one PR and its queue) and `test_release_merge.py`'s `_Host` (the backbone's
@@ -32,8 +38,10 @@ one PR and its queue) and `test_release_merge.py`'s `_Host` (the backbone's
 
 from __future__ import annotations
 
+import hashlib
 import io
 import json
+import re
 import subprocess
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
@@ -42,14 +50,15 @@ from typing import Any
 
 import pytest
 
+from project_kit import command_runner, session_guard
 from tests import pull_request_backbone
 
 Completed = subprocess.CompletedProcess[str]
 
 #: The session anchor: Claude Code's project directory, which
-#: project-management's cross-repository guard compares with the repository a
-#: mutation targets.
-ANCHOR = "CLAUDE_PROJECT_DIR"
+#: project-management's cross-repository guard and the backbone's compare with
+#: the repository a mutation targets.
+ANCHOR = session_guard.CLAUDE_CODE_ANCHOR
 
 # ---- the requests, one kind each ----------------------------------------------
 
@@ -60,7 +69,9 @@ MERGE_ADMIN = "merge-admin"  # `gh pr merge --squash --admin`
 ENQUEUE = "enqueue"  # `gh pr merge --auto`
 DISABLE_AUTO = "disable-auto"  # `gh pr merge --disable-auto`
 DEQUEUE = "dequeue"  # GitHub's `dequeuePullRequest` mutation
-DELETE_REF = "delete-ref"  # `gh api -X DELETE …/git/refs/heads/<branch>`
+BRANCH = "branch"  # the GraphQL reading of a merged PR's head branch, before its deletion
+BASED_ON = "based-on"  # the GraphQL reading of the open PRs based on that branch
+DELETE_REF = "delete-ref"  # GitHub's `updateRefs` mutation: delete the branch at its tip
 VIEW = "view"  # `gh pr view`
 LIST = "list"  # `gh pr list`
 CHECKS = "checks"  # `gh pr checks`
@@ -72,7 +83,18 @@ UNKNOWN = "unknown"  # a request the fake does not model: answered with exit 1
 #: defaults, the merge requests, the dequeue and the branch deletion — as
 #: against the caller's own reads for its gates.
 LANDING = frozenset(
-    {READ, DEFAULTS, MERGE, MERGE_ADMIN, ENQUEUE, DISABLE_AUTO, DEQUEUE, DELETE_REF}
+    {
+        READ,
+        DEFAULTS,
+        MERGE,
+        MERGE_ADMIN,
+        ENQUEUE,
+        DISABLE_AUTO,
+        DEQUEUE,
+        BRANCH,
+        BASED_ON,
+        DELETE_REF,
+    }
 )
 
 # ---- what became of a request ---------------------------------------------------
@@ -86,14 +108,59 @@ ERROR_AFTER = "made, then gh failed"
 LOST_REPLY = "made, no answer"
 #: The request never reached the service, and nothing came back (:class:`NoAnswer`).
 NEVER_RECEIVED = "not made, no answer"
+#: The request was made, and the run that sent it was killed before the
+#: answer came back (:class:`Killed`).
+KILLED_MADE = "made, then killed"
+#: The run that sent the request was killed before it reached the service
+#: (:class:`Killed`).
+KILLED_UNMADE = "not made, killed"
 
 _MERGED_AT = "2026-10-01T10:12:00Z"
 _MERGE_COMMIT = "c0ffee" + "0" * 34
+_REPOSITORY_ID = "R_project"
+
+#: What GitHub answers an `updateRefs` it refuses — a branch not at the commit
+#: named, already gone, or protected from deletion: no reason, only that
+#: something went wrong. gh prints the answer, its `errors` naming this, and
+#: exits 1.
+NO_REASON = (
+    "Something went wrong while executing your query. Please include `ED1C:3173D4` when "
+    "reporting this issue."
+)
+
+
+#: What gh says, exiting 1, to a plain merge of a PR whose base's requirements
+#: are not met — the requirements auto-merge holds a PR for — having asked
+#: nothing of the service.
+_POLICY_PROHIBITS = (
+    "X Pull request #{number} is not mergeable: the base branch policy prohibits the merge.\n"
+    "To have the pull request merged after all the requirements have been met, add the "
+    "`--auto` flag.\n"
+    "To use administrator privileges to immediately merge the pull request, add the "
+    "`--admin` flag."
+)
+
+
+def oid(name: str) -> str:
+    """A full commit id standing for the commit `name` — the same for the same
+    name — as `pkit pull-request delete-branch --expect` takes no other."""
+    return hashlib.sha1(name.encode()).hexdigest()
+
+
+#: The PR's head commit, unless a test moves it.
+HEAD = oid("head")
 
 
 class NoAnswer(Exception):
     """`gh` sent the request, or tried to, and no answer came back: the run
-    waits on it until something ends it."""
+    waits on it until something ends it — the backbone's bound on the call
+    (:func:`install`)."""
+
+
+class Killed(Exception):
+    """The run that sent a request was killed mid-request — `gh` with it, as
+    project-management's kill of the `pkit` process group ends it: nothing in
+    the run answers any more (:func:`route_backbone`)."""
 
 
 Step = Callable[["HostingService"], None]
@@ -110,12 +177,14 @@ class Base:
 
 @dataclass
 class OtherPullRequest:
-    """Another PR whose head is one of this repository's branches."""
+    """Another PR whose head is one of this repository's branches, and which
+    merges into `base_ref` — the PR's head branch, for one stacked on it."""
 
     number: int
     head_ref: str
     head_oid: str
     state: str = "OPEN"
+    base_ref: str = "main"
 
 
 @dataclass
@@ -165,7 +234,7 @@ class HostingService:
     title: str = "fix: land it"
     body: str = "Closes #42\n\n## Test plan\n\n- [x] It lands.\n"
     head_ref: str = "fix/42-land-it"
-    head_oid: str = "sha-head"
+    head_oid: str = HEAD
     base: str = "main"
     state: str = "OPEN"
     merged_at: str = ""
@@ -195,6 +264,12 @@ class HostingService:
     checks_pending: bool = False
     #: A direct merge enqueues, though the reading names no queue.
     merge_enqueues: bool = False
+    #: The base's requirements for a merge — its required checks and reviews
+    #: — are met, so a plain direct merge goes through. Unmet, gh refuses it
+    #: before it asks anything, as for a PR auto-merge holds until they are
+    #: met: auto-merge stays armed, and an administrator merge goes around
+    #: them.
+    requirements_met: bool = True
 
     in_queue: bool = False
     #: The PR's place and state in the queue; None before the queue reports one.
@@ -330,6 +405,11 @@ class HostingService:
         comes back."""
         self._add_fault(kind, None, 1, NEVER_RECEIVED, "")
 
+    def kill_mid_request(self, kind: str, *, made: bool) -> None:
+        """The run that sends the next request of `kind` is killed while gh
+        waits on it — after the service made it, or before it reached it."""
+        self._add_fault(kind, None, 1, KILLED_MADE if made else KILLED_UNMADE, "")
+
     def before(self, kind: str, action: Step, *, nth: int = 1) -> None:
         """Run `action` — a second actor, say — just before the `nth` request
         of `kind` is answered."""
@@ -365,7 +445,8 @@ class HostingService:
         asked = [
             request
             for request in self.requests
-            if request.kind == DELETE_REF and request.argv[-1].endswith(f"/heads/{self.head_ref}")
+            if request.kind == DELETE_REF
+            and _field(request.argv, "name") == f"refs/heads/{self.head_ref}"
         ]
         return asked[-1].result if asked else "none"
 
@@ -381,10 +462,12 @@ class HostingService:
         self.requests.append(request)
         self._fire(kind, nth, before=True)
         fault = next((f for f in self._faults if f.matches(kind, nth)), None)
-        if fault is not None and fault.effect in (REFUSED, NEVER_RECEIVED):
+        if fault is not None and fault.effect in (REFUSED, NEVER_RECEIVED, KILLED_UNMADE):
             request.result = fault.effect
             if fault.effect == NEVER_RECEIVED:
                 raise NoAnswer(f"`gh {' '.join(args[:3])}` got no answer")
+            if fault.effect == KILLED_UNMADE:
+                raise Killed(f"killed while `gh {' '.join(args[:3])}` waited")
             return _done(args, 1, stderr=fault.stderr)
         answered = self._answer(kind, args, request)
         self._fire(kind, nth, before=False)
@@ -393,6 +476,8 @@ class HostingService:
         request.result = fault.effect
         if fault.effect == LOST_REPLY:
             raise NoAnswer(f"`gh {' '.join(args[:3])}` got no answer")
+        if fault.effect == KILLED_MADE:
+            raise Killed(f"killed while `gh {' '.join(args[:3])}` waited")
         return _done(args, 1, stderr=fault.stderr)
 
     def _fire(self, kind: str, nth: int, *, before: bool) -> None:
@@ -423,6 +508,13 @@ class HostingService:
                 return _done(args, 1, stderr="GraphQL: the pull request is not in a merge queue")
             self._leave_queue()
             return _done(args)
+        if kind == BRANCH:
+            ref = self._ref(_first(args))
+            node = {**self._node(), "repository": {"id": _REPOSITORY_ID}, "headRef": ref}
+            return _done(args, stdout=json.dumps({"data": {"repository": {"pullRequest": node}}}))
+        if kind == BASED_ON:
+            based = self._based_on(_field(args, "branch") or "", _first(args))
+            return _done(args, stdout=json.dumps({"data": {"repository": {"pullRequests": based}}}))
         if kind == DELETE_REF:
             return self._delete_ref(args, request)
         if kind == VIEW:
@@ -483,18 +575,29 @@ class HostingService:
             # A base that requires a queue takes a plain merge as an enqueue.
             self.enter_queue()
             return _done(args)
+        if kind == MERGE and not self.requirements_met:
+            return _done(args, 1, stderr=_POLICY_PROHIBITS.format(number=self.number))
         self.merge_now()
         return _done(args)
 
     def _delete_ref(self, args: list[str], request: Request) -> Completed:
-        branch = args[-1].split("/git/refs/heads/", 1)[-1]
+        """`updateRefs`, moving one branch to the all-zero commit: deleted only
+        while it is at the commit named, all-or-nothing, as GitHub does it."""
+        branch = (_field(args, "name") or "").removeprefix("refs/heads/")
+        if _field(args, "repository") != _REPOSITORY_ID or _field(args, "after") != "0" * 40:
+            request.result = "refused, not a deletion here"
+            return _no_reason(args)
         if branch in self.protected:
             request.result = "refused, protected"
-            return _done(args, 1, stderr="gh: Cannot delete this protected branch (HTTP 422)")
+            return _no_reason(args)
         if branch not in self.refs:
-            request.result = "gone"
-            return _done(args, 1, stderr="gh: Reference does not exist (HTTP 422)")
-        tip = self.refs.pop(branch)
+            request.result = "refused, gone"
+            return _no_reason(args)
+        tip = self.refs[branch]
+        if tip != _field(args, "before"):
+            request.result = f"refused, tip {tip}"
+            return _no_reason(args)
+        del self.refs[branch]
         result = "deleted"
         if branch == self.head_ref and tip != (self.merged_head or self.head_oid):
             result += f", tip {tip} moved"
@@ -503,7 +606,37 @@ class HostingService:
                 other.state = "CLOSED"
                 result += f", closed #{other.number}"
         request.result = result
-        return _done(args)
+        return _done(args, stdout=json.dumps({"data": {"updateRefs": {"clientMutationId": None}}}))
+
+    def _ref(self, first: int | None) -> dict[str, Any] | None:
+        """The PR's head branch as GraphQL's `headRef` answers it: by name, as
+        it stands now — its tip and the open PRs whose head it is, the `first`
+        of them named — or null once it is gone."""
+        if self.cross_repository or self.head_ref not in self.refs:
+            return None
+        numbers = [
+            other.number
+            for other in self.others
+            if other.head_ref == self.head_ref and other.state == "OPEN"
+        ]
+        if self.state == "OPEN":
+            numbers.insert(0, self.number)
+        return {
+            "target": {"oid": self.refs[self.head_ref]},
+            "associatedPullRequests": _connection(numbers, first),
+        }
+
+    def _based_on(self, branch: str, first: int | None) -> dict[str, Any]:
+        """The open PRs whose base is `branch`, as GraphQL's
+        `pullRequests(baseRefName:)` answers them, the `first` of them named."""
+        numbers = [
+            other.number
+            for other in self.others
+            if other.base_ref == branch and other.state == "OPEN"
+        ]
+        if self.state == "OPEN" and self.base == branch:
+            numbers.insert(0, self.number)
+        return _connection(numbers, first)
 
     def _node(self) -> dict[str, Any]:
         """The PR as the GraphQL reading answers it."""
@@ -516,7 +649,10 @@ class HostingService:
             "id": self.node_id,
             "state": self.state,
             "mergedAt": self.merged_at or None,
+            "mergeCommit": {"oid": self.merge_commit} if self.merge_commit else None,
             "headRefOid": self.head_oid,
+            "headRefName": self.head_ref,
+            "isCrossRepository": self.cross_repository,
             "isMergeQueueEnabled": rules.queue,
             "isInMergeQueue": self.in_queue,
             "mergeQueue": {"configuration": {"mergeMethod": rules.method}} if rules.queue else None,
@@ -658,6 +794,9 @@ class LocalClone:
     elsewhere: dict[Path, str | None] = field(default_factory=dict)
     #: Branches checked out in another worktree: a checkout of one fails.
     held_elsewhere: set[str] = field(default_factory=set)
+    #: git does not answer the cross-repository guards' questions — those it is
+    #: asked about another directory (`git -C`) — in time.
+    comparison_fault: bool = False
     calls: list[list[str]] = field(default_factory=list)
     deleted: list[str] = field(default_factory=list)
     checkouts: list[str] = field(default_factory=list)
@@ -675,6 +814,8 @@ class LocalClone:
         args = [str(arg) for arg in argv][1:]
         where = Path(cwd) if cwd is not None else Path.cwd()
         if args[:1] == ["-C"]:
+            if self.comparison_fault:
+                raise subprocess.TimeoutExpired(["git", *args], 5)
             where, args = Path(args[1]), args[2:]
         self.calls.append(args)
         root, origin = self._repository(where)
@@ -774,6 +915,14 @@ class Terminal(io.StringIO):
         return f"{self.answer}\n"
 
 
+class Screen(io.StringIO):
+    """Standard error on the terminal a :class:`Terminal`'s operator reads: a
+    question is asked only where both ends are a terminal."""
+
+    def isatty(self) -> bool:
+        return True
+
+
 class NoTerminal(io.StringIO):
     """Standard input that is not a terminal and holds nothing: a pipeline's,
     an agent's."""
@@ -793,9 +942,17 @@ def install(
     stdin: io.StringIO,
 ) -> None:
     """Answer every `gh` and `git` this process runs from `host` and `clone`;
-    run from the clone, with standard input `stdin`, and the session anchor at
-    `anchor` — None unsets it, as outside any session. Any other program a run
-    starts fails the test: the scenario must not reach past the fakes."""
+    run from the clone, with standard input `stdin` — and, where that is a
+    terminal, standard error on the same terminal (:class:`Screen`) — and the
+    session anchor at `anchor` — None unsets it, as outside any session. Any
+    other program a run starts fails the test: the scenario must not reach
+    past the fakes.
+
+    The backbone starts `gh` through its one bounded start
+    (`command_runner.run_bounded`): a request the service never answers
+    (:class:`NoAnswer`) hangs there until its bound ends it, which raises
+    `subprocess.TimeoutExpired` as the real start does — at once, since no
+    test waits out a real bound."""
 
     def run(args: Sequence[str], *_: Any, **kwargs: Any) -> Completed:
         argv = [str(arg) for arg in args]
@@ -809,9 +966,21 @@ def install(
             raise subprocess.CalledProcessError(done.returncode, argv, done.stdout, done.stderr)
         return done
 
+    def bounded(argv: Sequence[str], *, seconds: float, **_: Any) -> Completed:
+        args = [str(arg) for arg in argv]
+        if args[:1] != ["gh"]:
+            raise AssertionError(f"the backbone's bounded start ran {args}, which no fake answers")
+        try:
+            return host(args)
+        except NoAnswer:
+            raise subprocess.TimeoutExpired(args, seconds) from None
+
     monkeypatch.setattr(subprocess, "run", run)
+    monkeypatch.setattr(command_runner, "run_bounded", bounded)
     monkeypatch.chdir(clone.root)
     monkeypatch.setattr("sys.stdin", stdin)
+    if stdin.isatty():
+        monkeypatch.setattr("sys.stderr", Screen())
     if anchor is None:
         monkeypatch.delenv(ANCHOR, raising=False)
     else:
@@ -846,10 +1015,11 @@ def route_backbone(
     """Run project-management's `pkit pull-request` seam (`mq._answers`) in this
     process, on the `gh` :func:`install` answers and `clock`.
 
-    A request the service never answers (:class:`NoAnswer`) ends the run as
-    project-management's bound ends it: no document, the reading pm takes as
-    no answer. `rewrite`, handed the subcommand's arguments and each document,
-    stands in for a backbone that answers otherwise.
+    A run killed mid-request (:class:`Killed`) ends as project-management's
+    bound ends it, the `pkit` process group killed with the `gh` in it: no
+    document, the reading pm takes as no answer. `rewrite`, handed the
+    subcommand's arguments and each document, stands in for a backbone that
+    answers otherwise.
     """
     pull_request_backbone.in_process(monkeypatch, mq, sleep=clock.sleep, clock=clock)
     inner = mq._answers
@@ -861,7 +1031,7 @@ def route_backbone(
         try:
             for document in inner(args, config, timeout_seconds=timeout_seconds):
                 yield rewrite(args, document) if rewrite is not None else document
-        except NoAnswer:
+        except Killed:
             raise mq.Unreadable(
                 f"`pkit pull-request {args[0]}` gave no answer within {bound:g} s, and was stopped"
             ) from None
@@ -883,13 +1053,15 @@ def _kind(args: list[str]) -> str:
         query = next((arg for arg in args if arg.startswith("query=")), "")
         if "dequeuePullRequest" in query:
             return DEQUEUE
+        if "updateRefs" in query:
+            return DELETE_REF
         if "closedByPullRequestsReferences" in query:
             return ISSUE_MERGES
+        if "baseRefName:" in query:
+            return BASED_ON
         if "pullRequest(number:" in query:
-            return READ
+            return BRANCH if "headRef {" in query else READ
         return UNKNOWN
-    if args[:3] == ["api", "-X", "DELETE"] and "/git/refs/heads/" in args[-1]:
-        return DELETE_REF
     if args[:2] == ["api", "repos/{owner}/{repo}"]:
         return DEFAULTS
     kinds: Mapping[tuple[str, str], str] = {
@@ -905,5 +1077,33 @@ def _option(args: list[str], name: str) -> str | None:
     return args[args.index(name) + 1] if name in args[:-1] else None
 
 
+def _field(args: list[str], name: str) -> str | None:
+    """A GraphQL variable `gh api graphql` was given (`-f name=value`)."""
+    prefix = f"{name}="
+    return next((arg[len(prefix) :] for arg in args if arg.startswith(prefix)), None)
+
+
 def _done(args: list[str], returncode: int = 0, *, stdout: str = "", stderr: str = "") -> Completed:
     return subprocess.CompletedProcess(args, returncode, stdout=stdout, stderr=stderr)
+
+
+def _no_reason(args: list[str]) -> Completed:
+    """gh's answer to an `updateRefs` GitHub refuses: the answer on standard
+    output, its `errors` saying only that something went wrong (:data:`NO_REASON`),
+    gh's own line on standard error, and exit 1."""
+    answer = {"data": {"updateRefs": None}, "errors": [{"message": NO_REASON}]}
+    return _done(args, 1, stdout=json.dumps(answer), stderr=f"gh: {NO_REASON}")
+
+
+def _connection(numbers: list[int], first: int | None) -> dict[str, Any]:
+    """A GraphQL connection of PRs, as it counts them all and names the
+    `first` of them (None: every one)."""
+    named = numbers if first is None else numbers[:first]
+    return {"totalCount": len(numbers), "nodes": [{"number": number} for number in named]}
+
+
+def _first(args: list[str]) -> int | None:
+    """How many of a connection's nodes a GraphQL query asks for (`first: N`)."""
+    query = next((arg for arg in args if arg.startswith("query=")), "")
+    found = re.search(r"first: (\d+)", query)
+    return int(found.group(1)) if found else None

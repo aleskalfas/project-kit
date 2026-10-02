@@ -134,7 +134,8 @@ def _container_detect(state_name: str) -> str:
 
 
 # Members source: read ONLY the named container's child-list file (parent-scoped,
-# mirroring pm's cascade-members walking the body parent-ref for one parent).
+# mirroring pm's cascade-members resolving one parent's children — native
+# sub-issues and first-line parent-refs — through the containment seam).
 _CONTAINER_CHILDREN = (
     "import json, sys, pathlib\n"
     "subj = sys.argv[1]\n"
@@ -144,15 +145,16 @@ _CONTAINER_CHILDREN = (
 )
 
 # Membership: answers from the CHILD's own reality (the engine threads only the
-# candidate subject — pm's contract). `_child-parent-<n>` declares the child's
-# parent; result True iff it names ANY parent (a hierarchy member). The
-# parent-scoping is enforced upstream by the members source (pm's design).
+# candidate subject, never the parent — pm's contract). Like pm's
+# cascade-membership it confirms the candidate can be read and rejects none:
+# result True for every candidate, with the parent `_child-parent-<n>` declares
+# given as an account. The parent-scoping is the members source's alone.
 _CHILD_MEMBERSHIP = (
     "import json, sys, pathlib\n"
     "subj = sys.argv[1]\n"
     "p = pathlib.Path(f'_child-parent-{subj}')\n"
     "parent = p.read_text().strip() if p.exists() else ''\n"
-    "print(json.dumps({'result': parent != '', "
+    "print(json.dumps({'result': True, "
     "'reason': f'child {subj} parent={parent!r}'}))\n"
 )
 
