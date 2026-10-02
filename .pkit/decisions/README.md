@@ -10,11 +10,10 @@ pkit:
         - src/project_kit/decisions_validate.py
         - src/project_kit/refs.py
         - src/project_kit/rule_sets.py
-      record: [COR-001, COR-019, COR-025, COR-051, COR-053]
+      record: [COR-001, COR-019, COR-025, COR-051, COR-053, COR-055]
     revalidated:
-      at: 2026-10-02T02:38:09Z
-      outcome: unchanged
-      unchanged-because: "the page says ADRs stamp at the overlay-resolved path, which still holds: with adr-records unset the command now records the derived path in the overlay before stamping there; the stub shape, numbering and namespaces this page describes are unchanged, and the CLI reference carries the derivation"
+      at: 2026-10-02T14:52:50Z
+      outcome: updated
 ---
 
 # Decision records
@@ -162,7 +161,7 @@ The commit message says what changed and why.
 
 Two in-body markers are *not* narration of a revision and are correct to keep: the **superseded-by** line, whole or partial, and a **forward refinement pointer** naming a later record that extends this one — `(refinement per <record>)` on the sub-section heading, decision point or sentence it extends. Both point at another record rather than at a discarded belief.
 
-`pkit decisions validate` warns of each line of a record that narrates its own revision — an amendment heading or marker (`## Amendment (…)`, `**Amendment 1**`, `**Amended by …**`), a revision stamped with an issue number or a date (`**Update (#252)**`, `(clarified, #813)`), or change-log phrasing ("this record originally…", "previously we believed…") — naming the file and line. It does not read fenced blocks or inline code spans, a superseded record, or a record that arrives as a synced copy — a core record, or a kit-shipped capability's, in your project — since that record is refined where it is authored and an edit here is overwritten by the next sync. The two markers above match none of these shapes. The warnings do not fail the command, because the shapes are read from prose and a gate that fails on a heuristic reading of prose fails for the wrong reasons (ADR-058).
+`pkit decisions validate` warns of each line of a record that narrates its own revision — an amendment heading or marker (`## Amendment (…)`, `**Amendment 1**`, `**Amended by …**`), a revision stamped with an issue number or a date (`**Update (#252)**`, `(clarified, #813)`), or change-log phrasing ("this record originally…", "previously we believed…") — naming the file and line. It does not read fenced blocks or inline code spans, a superseded record, or a record that arrives as a synced copy — a core record, or a kit-shipped capability's, in your project — since that record is refined where it is authored and an edit here is overwritten by the next sync. The two markers above match none of these shapes. The warnings do not fail the command, because the shapes are read from prose and a gate that fails on a heuristic reading of prose fails for the wrong reasons — the reason [COR-055](core/COR-055-validation.md) gives for letting one severity alone fail validation ("Why exactly one fails").
 
 ## Adding a record
 

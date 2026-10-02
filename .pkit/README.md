@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-02T14:44:38Z
+      at: 2026-10-02T14:53:03Z
       outcome: unchanged
-      unchanged-because: the CLI README's change says where project-kit runs its whole-repository friction check and where the findings go, and links the living-docs README; this page maps the cli area as the pkit command-line surface in one line, which still holds
+      unchanged-because: the decisions, lifecycle, CLI and schemas READMEs now cite COR-055 for what validation owns and the lifecycle README restates COR-052's rule for which inert policy a point declares; this page maps each of those areas in one line, the record system, packaging and lifecycle, the command surface and the schemas, which still hold
 ---
 
 # project-kit
