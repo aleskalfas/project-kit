@@ -221,6 +221,16 @@ def test_a_native_child_elsewhere_is_not_listed_as_the_issue_of_its_number(
     """A native sub-issue in another repository is outside the fetched issues:
     this repository's issue of the same number is not listed under the parent
     for it, nor given that parent natively (#1308)."""
+    issues = _tree_with_a_child_elsewhere(st, issue_types, monkeypatch)
+    assert issues[2].children == []
+    assert [child.ref for child in issues[2].children_elsewhere] == ["acme/other#7"]
+    assert issues[7].parent_number is None
+    assert issues[7].parent_resolution.native is None
+
+
+def _tree_with_a_child_elsewhere(st, issue_types, monkeypatch) -> dict:
+    """#2, a Feature whose only child is `acme/other#7`, natively; and this
+    repository's #7, a Task under nothing."""
     raw = [
         {"number": 2, "title": "[Feature] f", "body": "## What\n", "state": "OPEN", "labels": []},
         {"number": 7, "title": "[Task] t", "body": "## What\n", "state": "OPEN", "labels": []},
@@ -233,15 +243,59 @@ def test_a_native_child_elsewhere_is_not_listed_as_the_issue_of_its_number(
         lambda _config, *, parent_number: containment.NativeRead(
             numbers=set(),
             outcome=containment.NativeReadOutcome.READ,
-            foreign=frozenset({containment.ForeignIssue("acme/other", 7)})
+            foreign=frozenset({containment.ForeignIssue("acme/other", 7, 4207)})
             if parent_number == 2
             else frozenset(),
         ),
     )
     st._link_parents(issues, {}, corpus_complete=True, issue_types={})
-    assert issues[2].children == []
-    assert issues[7].parent_number is None
-    assert issues[7].parent_resolution.native is None
+    return issues
+
+
+def test_a_child_elsewhere_is_a_labelled_leaf_in_every_format(
+    st, issue_types, monkeypatch, capsys
+) -> None:
+    """What holds a container is shown where the operator looks for it: the
+    child elsewhere is a leaf under its parent, named with its repository and
+    claiming no state, in text, markdown and JSON (#1308)."""
+    issues = _tree_with_a_child_elsewhere(st, issue_types, monkeypatch)
+
+    st._print_text(issues, {}, {}, issues)
+    text = capsys.readouterr().out
+    st._print_markdown(issues, {}, {}, issues)
+    markdown = capsys.readouterr().out
+    as_json = st._issue_to_dict(issues[2])
+
+    assert "[feature] #2 (open) [Feature] f\n  - acme/other#7  [in another repository]\n" in text
+    assert "- **[feature] #2** [Feature] f\n  - `acme/other#7` _(in another repository)_\n" in (
+        markdown
+    )
+    assert as_json["children"] == []
+    assert as_json["children_in_other_repositories"] == [
+        {"ref": "acme/other#7", "repository": "acme/other", "number": 7}
+    ]
+    # This repository's #7 is its own root, not the child elsewhere.
+    assert "[task] #7 (open) [Task] t\n" in text
+    assert st._issue_to_dict(issues[7])["children_in_other_repositories"] == []
+
+
+def test_a_parent_whose_only_child_is_elsewhere_gets_its_view_refreshed(
+    st, issue_types, monkeypatch
+) -> None:
+    """`--refresh-children-views` refreshes the parent `create-issue` and
+    `link-parent` refresh: its only child is in another repository (#1308)."""
+    issues = _tree_with_a_child_elsewhere(st, issue_types, monkeypatch)
+    refreshed: list[int] = []
+
+    def refresh(_config, *, parent_number, **_kw):
+        refreshed.append(parent_number)
+        return st.containment.RefreshResult(st.containment.RefreshOutcome.UNCHANGED, detail="")
+
+    monkeypatch.setattr(st.axis_labels, "containment_mode", lambda _root: "textual")
+    monkeypatch.setattr(st.containment, "refresh_children_comment", refresh)
+    st._refresh_children_views(issues, Path("."), {})
+
+    assert refreshed == [2]
 
 
 def test_a_native_child_naming_this_repository_without_an_anchor_is_in_the_tree(
