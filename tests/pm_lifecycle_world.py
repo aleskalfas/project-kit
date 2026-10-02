@@ -55,6 +55,8 @@ REASON = "the maintainer asked for it in session"
 MILESTONE = {"number": 7, "title": "Sprint 1"}
 AUDIT_MARKER = "<!-- pkit-audit -->"
 REPOSITORY_URL = "https://api.github.com/repos/acme/repo"
+#: When everything on the tracker happens: no test here orders its events by time.
+MOMENT = "2026-10-01T00:00:00Z"
 
 AUTHORED_BODY = (
     "## What\n\nA task filed to be promoted.\n\n"
@@ -101,11 +103,14 @@ class Tracker:
     sub-issue of, in this repository or — given as `owner/repo#<n>` — in
     another. A closed issue's `state_reason` is GitHub's close reason enum
     (`COMPLETED`, `NOT_PLANNED`), set as GitHub sets it: completed for a merged
-    pull request's `Closes #N`, and as `gh issue close --reason` says.
-    `fail_next` holds `gh issue edit` flags whose next edit fails, once, before
-    it changes anything; `views_fail` holds issues whose `gh issue view` fails,
-    as a predicate's read of an unreachable issue does; `comments_fail` holds
-    issues whose `gh issue comment` fails, posting nothing."""
+    pull request's `Closes #N`, and as `gh issue close --reason` says. Each
+    close stamps the issue's `closedAt` with a time no other close has; a reopen
+    clears it. `fail_next` holds `gh issue edit` flags whose next edit fails,
+    once, before it changes anything; `views_fail` holds issues whose `gh issue
+    view` fails, as a predicate's read of an unreachable issue does;
+    `comments_fail` holds issues whose `gh issue comment` fails, posting
+    nothing; `comment_reads_fail` holds issues whose comments cannot be read,
+    while every other field of theirs can."""
 
     def __init__(self) -> None:
         self.issues: dict[int, dict[str, Any]] = {}
@@ -118,6 +123,8 @@ class Tracker:
         self.fail_next: set[str] = set()
         self.views_fail: set[int] = set()
         self.comments_fail: set[int] = set()
+        self.comment_reads_fail: set[int] = set()
+        self.closes = 0
 
     def merge(self, pr: int, closes: list[int], merged_by: str = MERGER) -> None:
         """Merge pull request `pr`, whose body closes `closes`, as `merged_by`,
@@ -127,7 +134,7 @@ class Tracker:
         self.merged_prs[pr] = {
             "number": pr,
             "state": "MERGED",
-            "mergedAt": "2026-10-01T00:00:00Z",
+            "mergedAt": MOMENT,
             "mergedBy": {"login": merged_by},
             "body": body,
             "url": f"https://github.com/acme/repo/pull/{pr}",
@@ -137,8 +144,17 @@ class Tracker:
 
     def close(self, number: int, reason: str | None) -> None:
         """Close the issue with close reason `reason` (None: none reported)."""
+        self.closes += 1
         self.issues[number]["state"] = "CLOSED"
         self.issues[number]["state_reason"] = reason
+        self.issues[number]["closed_at"] = f"2026-10-01T12:00:{self.closes:02d}Z"
+
+    def reopen(self, number: int) -> None:
+        """Reopen the issue the way GitHub does when someone reopens it: open,
+        with no close reason or time, labels untouched."""
+        self.issues[number]["state"] = "OPEN"
+        self.issues[number]["state_reason"] = None
+        self.issues[number]["closed_at"] = None
 
     def state_of(self, number: int) -> str:
         """The issue's state as the tracker carries it, read with move-issue's
@@ -152,7 +168,7 @@ class Tracker:
         self.calls.append(argv)
         if argv[1:3] == ["issue", "create"]:
             return self._create(argv)
-        if argv[1] == "issue" and argv[2] in ("view", "edit", "comment", "close"):
+        if argv[1] == "issue" and argv[2] in ("view", "edit", "comment", "close", "reopen"):
             number = int(argv[3])
             if argv[2] == "view":
                 return self._view(argv, number, str(_option(argv, "--json")))
@@ -161,6 +177,9 @@ class Tracker:
             if argv[2] == "close":
                 reason = _option(argv, "--reason") or "completed"
                 self.close(number, reason.upper().replace(" ", "_"))
+                return _done(argv)
+            if argv[2] == "reopen":
+                self.reopen(number)
                 return _done(argv)
             if number in self.comments_fail:
                 return _done(argv, 1, stderr="HTTP 502: Bad Gateway")
@@ -241,12 +260,15 @@ class Tracker:
     def _view(self, argv: list[str], number: int, fields: str):
         if number in self.views_fail:
             return _done(argv, 1, stderr="HTTP 502: Bad Gateway")
+        if number in self.comment_reads_fail and "comments" in fields.split(","):
+            return _done(argv, 1, stderr="HTTP 502: Bad Gateway")
         issue = self.issues[number]
         record = {
             "title": issue["title"],
             "body": issue["body"],
             "state": issue["state"],
             "stateReason": issue.get("state_reason") or "",
+            "closedAt": issue.get("closed_at") or (MOMENT if issue["state"] == "CLOSED" else None),
             "milestone": issue["milestone"],
             "labels": [{"name": name} for name in issue["labels"]],
             "assignees": [{"login": login} for login in issue["assignees"]],
@@ -277,7 +299,7 @@ class Tracker:
                         "event": event,
                         "label": {"name": name},
                         "actor": {"login": INVOKER.github_login},
-                        "created_at": "2026-10-01T00:00:00Z",
+                        "created_at": MOMENT,
                     }
                 )
         return _done(argv)

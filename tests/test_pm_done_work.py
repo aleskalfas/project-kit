@@ -1029,7 +1029,7 @@ def _wire_main_seams(
         calls["order"].append(("merged", None))
         return True
 
-    def _stub_move(issue_number, target, cap_root_arg, *, confirmed):
+    def _stub_move(issue_number, target, cap_root_arg, *, confirmed, merged_pr=None):
         calls["moved"] = True
         calls["order"].append(("moved", None))
         return 0
@@ -1767,7 +1767,7 @@ def test_cleanup_still_runs_when_move_issue_fails(dw, monkeypatch, capsys):
     branch cleanup — the two are independent after the merge."""
     calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
 
-    def failing_move(issue_number, target, cap_root_arg, *, confirmed):
+    def failing_move(issue_number, target, cap_root_arg, *, confirmed, merged_pr=None):
         calls["order"].append(("moved", None))
         return 1
 
@@ -2189,7 +2189,12 @@ def _wire_lead_in(
     monkeypatch.setattr(dw, "resolve_capability_root", real_capability_root)
 
     def recording_move(
-        issue_number: int, target: str, cap_root_arg: Path | None, *, confirmed: bool
+        issue_number: int,
+        target: str,
+        cap_root_arg: Path | None,
+        *,
+        confirmed: bool,
+        merged_pr: int | None = None,
     ) -> int:
         calls["order"].append(("moved", target))
         return move_rc if target == "review" else 0
@@ -3353,7 +3358,14 @@ def test_a_later_run_moves_an_issue_still_in_progress_through_review(
     run = _wire_second_run(dw, tmp_path, monkeypatch, issues={42: _open_issue("")})
     targets: list[str] = []
 
-    def move(issue_number: int, target: str, cap_root_arg: Any, *, confirmed: bool) -> int:
+    def move(
+        issue_number: int,
+        target: str,
+        cap_root_arg: Any,
+        *,
+        confirmed: bool,
+        merged_pr: int | None = None,
+    ) -> int:
         targets.append(target)
         run.calls["order"].append(("moved", target))
         return 0

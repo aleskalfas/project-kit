@@ -33,6 +33,24 @@ TRACKER_TRAIL_CLAUSE = (
     "If it does not, the tracker is the audit trail and the engine keeps no record to miss."
 )
 
+#: What the reason of a move to done a merged pull request made starts with.
+PR_MERGE_CLOSE = "pr-merge close"
+
+
+def pr_merge_close_reason(pr_number: int, *, closed_by_merge: bool) -> str:
+    """The reason a move to done that merged pull request ``pr_number`` made is
+    journaled with — by close-issue for each issue the pull request closed, and
+    by move-issue for the one done-work lands — worded once, so `history` reads
+    the same for each.
+
+    ``closed_by_merge`` is whether GitHub had closed the issue as the pull
+    request merged (``closed by``), through its `Closes #N`. An issue it left
+    open — on a base GitHub does not close issues on, say — was completed by the
+    pull request and is closed by pkit through it (``completed by``).
+    """
+    how = "closed" if closed_by_merge else "completed"
+    return f"{PR_MERGE_CLOSE}: {how} by merged PR #{pr_number}"
+
 
 def journal_move(
     issue_number: int,
@@ -64,9 +82,10 @@ def journal_move(
     omit `--actor` and let the engine apply its own resolved-identity default.
 
     `reason`, when given, is recorded on the journal entry (`--reason`): the
-    forward cascade names the child move that caused a parent's, and a close
-    names the mode it closed through. A move the invoker asked for directly
-    passes none, and its argv is unchanged.
+    forward cascade names the child move that caused a parent's, a close names
+    the mode it closed through, and a move to done a merged pull request made
+    names that pull request (`pr_merge_close_reason`). A move the invoker asked
+    for directly passes none, and its argv is unchanged.
 
     True when the engine took the move — recorded it, or validated it where no
     journal is kept — and False when it refused or could not be reached, after
