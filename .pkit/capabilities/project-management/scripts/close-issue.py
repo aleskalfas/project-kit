@@ -482,10 +482,11 @@ def main() -> int:
         #                       indeterminate for an open child as well as for a
         #                       read it could not make (COR-037: an unresolved
         #                       member holds the fold unresolved), so the refusal
-        #                       says which of the two held it (`_refuse_held`):
-        #                       an open child, named with what releases the
-        #                       container; or a failed read, named with the re-run
-        #                       advice.
+        #                       reads the children itself and says what it found
+        #                       (`_refuse_held`): open children, named with what
+        #                       releases the container; children that could not
+        #                       be read, named with their remedy; both, each with
+        #                       its own.
         #   fold is None     -> `pkit` itself was unreachable (could not even invoke
         #                       the engine); HOLD fail-closed -> refuse.
         # The two differ in exit code (1 = engine reachable but held; 3 = engine
@@ -494,7 +495,7 @@ def main() -> int:
         # contract, not noise.
         fold = _engine_cascade_fold(args.issue_number)
         if fold is None:
-            _say_unresolved(args.issue_number, None, None)
+            _say_read_failed(args.issue_number, None, _OpenChildren())
             return 3
         if not fold.get("opened"):
             return _refuse_held(args.issue_number, fold, config)
@@ -964,30 +965,27 @@ class _OpenChildren:
 def _refuse_held(parent_num: int, fold: dict, config: dict) -> int:
     """Say what holds a container the engine's fold did not open; exit code 1.
 
-    The fold is the decision; this says what it was held by. The engine's own
-    count tells the two causes apart: a fold that counted a member that has not
-    reached done (``reached`` below ``total``) was held by a child, and the
-    containment seam's reading of the children names it — an open child, said
-    with what releases the container (:func:`_say_held_open`), or one whose state
-    could not be read, said as the read that failed. A fold held before it
-    counted such a member — its members list, or a candidate's membership, could
-    not be read — was held by a read, and the engine's reason says which
-    (:func:`_say_unresolved`). Only a failed read carries the re-run advice.
+    The fold is the decision; this says what held it, from what the containment
+    seam's reading of the children finds (:func:`_find_open_children`) — not
+    from the engine's reason, which names whichever member the fold stopped at,
+    so it cannot tell an open child from a read that failed when both are there.
+    Open children are the "held by open children" block, each with what
+    releases the container (:func:`_say_held_open`). Children that could not be
+    read, or a child set that could not be read in full, are the "a read failed"
+    block, each with its remedy (:func:`_say_read_failed`). Both found, both
+    blocks are said, and the engine's reason — which may name either — is left
+    out of the second. Neither found, the engine's reason is said under a
+    header that claims no cause (:func:`_say_held_unexplained`).
     """
-    children = _find_open_children(parent_num, config) if _held_by_a_member(fold) else None
-    if children is not None and children.open:
+    children = _find_open_children(parent_num, config)
+    failed = bool(children.unread or children.incomplete)
+    if children.open:
         _say_held_open(parent_num, children)
-    if children is None or not children.open or children.unread or children.incomplete:
-        _say_unresolved(parent_num, fold, children)
+    if failed:
+        _say_read_failed(parent_num, fold, children, engine_reason=not children.open)
+    if not children.open and not failed:
+        _say_held_unexplained(parent_num, fold)
     return 1
-
-
-def _held_by_a_member(fold: dict) -> bool:
-    """Whether the fold counted a member that has not reached done — the
-    engine's own ``reached`` of ``total`` — as against stopping before it
-    counted one, at a members list or a membership it could not read."""
-    reached, total = fold.get("reached"), fold.get("total")
-    return isinstance(reached, int) and isinstance(total, int) and reached < total
 
 
 def _say_held_open(parent_num: int, children: _OpenChildren) -> None:
@@ -1011,48 +1009,71 @@ def _say_held_open(parent_num: int, children: _OpenChildren) -> None:
                 print(f"    {line}", file=sys.stderr)
 
 
-def _say_unresolved(parent_num: int, fold: dict | None, children: _OpenChildren | None) -> None:
+def _say_read_failed(
+    parent_num: int, fold: dict | None, children: _OpenChildren, *, engine_reason: bool = True
+) -> None:
     """The refusal for a container held because a read failed: the engine's
-    reason with what the predicate it could not evaluate said, and each read of
-    the children that failed. A child in another repository that could not be
-    read is given its two ways out — made readable, or its link removed from
-    here — since a run repeated under the same access fails the same way; the
-    re-run advice goes with every other failed read."""
+    reason (unless ``engine_reason`` is false, where open children were found
+    and the reason may name one of them), what the predicate the fold could not
+    evaluate said, and each read of the children that failed. A child in
+    another repository that could not be read is given its two ways out — made
+    readable, or its link removed from here — since a run repeated under the
+    same access fails the same way; the re-run advice goes with every other
+    failed read. ``fold`` is ``None`` where the engine could not be run at all."""
     print(
         "\n[refused] could not resolve the children-half of cascade "
         "eligibility (held fail-closed):",
         file=sys.stderr,
     )
-    reason = fold.get("reason") if fold is not None else None
-    print(
-        f"  → {reason or 'the process engine could not fold the children.'}",
-        file=sys.stderr,
-    )
+    if fold is None:
+        print("  → the process engine could not fold the children.", file=sys.stderr)
+    elif engine_reason:
+        print(f"  → {fold.get('reason') or 'the fold did not open.'}", file=sys.stderr)
     # What a predicate the fold could not evaluate said, as the engine
-    # reports it (`stderr_tail`), under the reason.
+    # reports it (`stderr_tail`).
     said = fold.get("stderr_tail") if fold is not None else None
     for line in engine_said.said_lines(said, "    "):
         print(line, file=sys.stderr)
-    if children is not None and children.incomplete:
+    if children.incomplete:
         print(
             f"  → #{parent_num}'s children could not be read in full: {children.incomplete}",
             file=sys.stderr,
         )
-    unread = children.unread if children is not None else ()
-    for child, why in unread:
+    for child, why in children.unread:
         if child.repository is None:
             print(f"  → {child.ref} could not be read: {why}", file=sys.stderr)
             continue
         print(f"  → {_child_named(child)}, could not be read: {why}", file=sys.stderr)
         for line in _unread_abroad(parent_num, child):
             print(f"    {line}", file=sys.stderr)
-    abroad_only = bool(unread) and all(child.repository is not None for child, _ in unread)
-    if not abroad_only or (children is not None and children.incomplete):
+    abroad_only = bool(children.unread) and all(
+        child.repository is not None for child, _ in children.unread
+    )
+    if fold is None or children.incomplete or not abroad_only:
         print(
             "  → re-run once `gh` is reachable and every child's state is "
             "readable; the container holds until the fold resolves.",
             file=sys.stderr,
         )
+
+
+def _say_held_unexplained(parent_num: int, fold: dict) -> None:
+    """The refusal where the engine's fold did not open and the children read
+    here show neither an open child nor a read that failed: the engine's reason
+    and what a predicate said, under a header that claims no cause."""
+    print(
+        f"\n[refused] not cascade-eligible — the process engine's fold over #{parent_num}'s "
+        "children did not open:",
+        file=sys.stderr,
+    )
+    print(f"  → {fold.get('reason') or 'the engine gave no reason.'}", file=sys.stderr)
+    for line in engine_said.said_lines(fold.get("stderr_tail"), "    "):
+        print(line, file=sys.stderr)
+    print(
+        f"  → the children read here are closed and readable; #{parent_num} holds until "
+        "the fold opens.",
+        file=sys.stderr,
+    )
 
 
 def _child_named(child: containment.ResolvedChild) -> str:

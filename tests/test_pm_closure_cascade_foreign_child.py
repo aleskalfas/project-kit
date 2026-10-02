@@ -689,17 +689,86 @@ def test_a_child_elsewhere_that_cannot_be_read_is_named_with_its_two_ways_out(
 def test_a_child_whose_issue_cannot_be_read_gets_the_re_run_advice(
     project: Path, pkit_on_path: Path
 ) -> None:
-    # #13 is natively under #5, but its issue cannot be read: the fold stops at
-    # its membership, a read that failed.
+    # #14 is natively under #5, but no read finds it: not in the issue list, and
+    # its record cannot be read — the fold stops at its membership.
+    issues = {CONTAINER: _container()}
+    _tracker(project, issues, native={CONTAINER: [14]})
+
+    done = _close(project)
+
+    assert done.returncode == 1, done.stderr
+    assert "held fail-closed" in done.stderr
+    assert "membership of candidate '14'" in done.stderr
+    assert "→ #14 could not be read: it is not among the issues the issue list returned" in (
+        done.stderr
+    )
+    assert _RERUN in done.stderr
+    assert "is held by its open child" not in done.stderr
+
+
+def test_an_open_child_whose_record_cannot_be_read_is_said_as_open(
+    project: Path, pkit_on_path: Path
+) -> None:
+    # #13 is open in the issue list, and its record cannot be read: the fold
+    # stops at its membership, but what holds #5 is an open child — said as one.
     issues = {CONTAINER: _container(), 13: _issue("OPEN")}
     _tracker(project, issues, native={CONTAINER: [13]}, unreadable=(13,))
 
     done = _close(project)
 
     assert done.returncode == 1, done.stderr
-    assert "held fail-closed" in done.stderr
+    assert "#5 is held by its open child(ren):\n  - #13\n" in done.stderr
+    assert "held fail-closed" not in done.stderr
+    assert _RERUN not in done.stderr
+
+
+def test_an_open_child_and_a_failed_read_are_both_said_each_with_its_remedy(
+    project: Path, pkit_on_path: Path
+) -> None:
+    # #11 here is open; acme/other#42 cannot be read. Each cause gets its block,
+    # and the open child's account never sits under the failed-read header.
+    issues = {CONTAINER: _container(), 11: _issue("OPEN", "Feature: #5\n")}
+    foreign = {FOREIGN: _issue("OPEN")}
+    _tracker(
+        project,
+        issues,
+        native={CONTAINER: [11, FOREIGN]},
+        foreign=foreign,
+        unreadable=(FOREIGN,),
+    )
+
+    done = _close(project)
+
+    assert done.returncode == 1, done.stderr
+    held_open, _, failed = done.stderr.partition("held fail-closed")
+    assert failed, "the failed-read block is said"
+    assert "#5 is held by its open child(ren):\n  - #11\n" in held_open
+    assert "→ close each open child; #5 becomes eligible when the last one closes." in held_open
+    assert FOREIGN not in held_open
+    assert "#11" not in failed and "'11'" not in failed
+    assert f"→ {FOREIGN}, a sub-issue in another repository, could not be read" in failed
+    assert f"two ways out: make {FOREIGN} readable" in failed
+    assert _UNLINK in failed
+    assert _writes(project) == []
+
+
+def test_a_hold_the_children_do_not_explain_claims_no_cause(
+    project: Path, pkit_on_path: Path
+) -> None:
+    # #13 is closed in the issue list, and its record cannot be read: the fold
+    # holds at its membership, while every child read here is closed.
+    issues = {CONTAINER: _container(), 13: _issue("CLOSED", labels=["type:task"])}
+    _tracker(project, issues, native={CONTAINER: [13]}, unreadable=(13,))
+
+    done = _close(project)
+
+    assert done.returncode == 1, done.stderr
+    assert (
+        "[refused] not cascade-eligible — the process engine's fold over #5's children "
+        "did not open:"
+    ) in done.stderr
     assert "membership of candidate '13'" in done.stderr
-    assert _RERUN in done.stderr
+    assert "held fail-closed" not in done.stderr
     assert "is held by its open child" not in done.stderr
 
 
