@@ -10,9 +10,9 @@ pkit:
         - .pkit/adapters/claude-code/deploy-skills.sh
       record: [COR-003, COR-005, COR-006, COR-013, COR-015, COR-020]
     revalidated:
-      at: 2026-10-02T03:07:19Z
+      at: 2026-10-02T04:06:14Z
       outcome: unchanged
-      unchanged-because: The page describes capability-author only as the skill paired with pkit new capability for layout, package metadata and the COR-017 contract; it lists no reserved capability names, so adding backbone to the skill's list leaves its entry true as written.
+      unchanged-because: The page describes adapter-author and capability-author only as the skills paired with pkit new adapter and pkit new capability; it lists no reserved or refused names, so the skills' new reserved adapter name and backbone-command refusal leave both entries true as written
 ---
 
 # Skills

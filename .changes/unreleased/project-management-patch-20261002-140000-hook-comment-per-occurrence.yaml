@@ -1,0 +1,24 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  A `post-comment` hook now posts again when an issue makes the same transition
+  a second time, or is closed again after a reopen. Its stamp identified a
+  firing by the hook, the event, the issue or PR and, on a move, the from and
+  to states, so a repeat of a transition (in-progress → review, closed,
+  reopened, then in-progress → review again) and a second close read as
+  retries of the first and posted nothing. The firing now includes which
+  occurrence it is: on `after_move_issue` the issue's count of landed moves —
+  the journal's length where the project keeps one, its state-label events on
+  the GitHub timeline where it does not — and on `after_close_issue` the time
+  GitHub reports the issue closed. A retry of the same firing, such as
+  `close-issue --mode=pr-merge` run again on the same close, still posts once.
+  Where the occurrence cannot be read, the firing is told without it, as
+  before. A run reads the issue's or PR's comments once, and only when a
+  `post-comment` hook is about to post, however many fire; the occurrence
+  costs no read where a journal is kept or the issue was already closed, and
+  one otherwise. Comments that cannot be read still let the hook post, and it
+  now prints a `[warn]` line saying it could not check. The hook engine's `gh`
+  calls, imported by a script, fell back to a plain `gh` and ignored the
+  configured `gh.host`; they now go through the helper that sets it.

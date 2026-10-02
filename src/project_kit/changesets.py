@@ -65,7 +65,8 @@ _SEGMENT_RANK = {seg: rank for rank, seg in enumerate(SEGMENTS)}
 
 # The synthetic component name for the backbone tier (`.pkit/VERSION`), which
 # has no `package.yaml`. Reserved — a real component may not take this name;
-# a capability is refused it (`capabilities.RESERVED_CAPABILITY_NAMES`).
+# a capability is refused it (`capabilities.RESERVED_CAPABILITY_NAMES`), and an
+# adapter (`scaffolds.RESERVED_ADAPTER_NAMES`).
 BACKBONE = "backbone"
 
 # The changeset field that raises a component's `requires_backbone` floor, named
