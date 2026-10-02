@@ -551,7 +551,7 @@ Unknown keys are refused at every level, each with the nearest known key. The sh
 
 A tree without the rule-set schema — one recorded before it landed — skips the kind and says so (ADR-056 point 1).
 
-**Not here.** Whether a quoted reason supports its rule, and whether an inheriting set contradicts or relaxes what it inherits beyond the mechanical checks, are judgment for agents and reviewers (COR-051 points 5 and 7). Whether the anchor of a filling rule resolves, and whether it carries friction, are the friction checks' — this pass asks only that it names the rule filled. Running a registered resolver, and the answer it gives, arrive with the kind registry, for anchors and sources at once: sources already go through the same registry and verdict as anchors (`registered_anchor_kinds`, `unresolved_kind_reason` in `project_kit.friction_discovery`; ADR-057).
+**Not here.** Whether a quoted reason supports its rule, and whether an inheriting set contradicts or relaxes what it inherits beyond the mechanical checks, are judgment for agents and reviewers (COR-051 points 5 and 7). Whether the anchor of a filling rule resolves, and whether it carries friction, are the friction checks' — this pass asks only that it names the rule filled. How a registered resolver is run, and the answer it gives, are the anchor-kind registry's, for anchors and sources alike: a source goes through the same registry, verdict and run as an anchor (`registered_anchor_kinds`, `unresolved_kind_reason`, `AnchorKinds` in `project_kit.friction_discovery`; ADR-057).
 
 ## Tooling expectations
 
