@@ -13,8 +13,6 @@ refusals are pinned in their own tests.
 
 from __future__ import annotations
 
-import json
-import subprocess
 import sys
 from pathlib import Path
 
@@ -530,61 +528,3 @@ def test_a_writer_and_the_validator_give_the_same_verdict(
     assert writer == verdict
     assert validator == (_REFUSED if verdict == _REFUSED else None)
     assert [f for f in findings if f[1] != graph.LABEL_VIOLATION] == [], "nothing else said"
-
-
-# --- the title reader and first-line findings, until their callers move ---------------------
-
-
-def _answering(monkeypatch, proc=None, *, raises: BaseException | None = None) -> list:
-    """Make the title reader's one gh call answer `proc` (or raise); return the argv seen."""
-    seen: list = []
-
-    def fake(args, config, **kwargs):
-        seen.append((list(args), kwargs))
-        if raises is not None:
-            raise raises
-        return proc
-
-    monkeypatch.setattr(graph, "gh_run", fake)
-    return seen
-
-
-def _ok(title: str) -> subprocess.CompletedProcess:
-    return subprocess.CompletedProcess([], 0, stdout=json.dumps({"title": title}), stderr="")
-
-
-def test_read_parent_title_reads_the_title_once_bounded_and_types_it(monkeypatch) -> None:
-    seen = _answering(monkeypatch, _ok("[Umbrella] a bucket"))
-    read = graph.read_parent_title(12, {}, ISSUE_TYPES)
-
-    assert read == graph.ParentRead(12, "umbrella")
-    assert [args for args, _ in seen] == [["gh", "issue", "view", "12", "--json", "title"]]
-    assert seen[0][1]["timeout"] == graph.READ_TIMEOUT_SECONDS
-
-
-@pytest.mark.parametrize(
-    ("proc", "raises", "why"),
-    [
-        (
-            subprocess.CompletedProcess([], 1, "", "gh: Not Found\nmore"),
-            None,
-            "gh exited 1: gh: Not Found",
-        ),
-        (subprocess.CompletedProcess([], 0, "not json", ""), None, "gh's answer was not JSON"),
-        (subprocess.CompletedProcess([], 0, "[]", ""), None, "gh's answer carried no title"),
-        (None, subprocess.TimeoutExpired(["gh"], 30), "gh did not answer within 30s"),
-        (None, FileNotFoundError("gh"), "`gh` is not on PATH"),
-    ],
-    ids=["non-zero", "non-json", "no-title", "timeout", "no-gh"],
-)
-def test_read_parent_title_that_fails_is_unread_with_why(monkeypatch, proc, raises, why) -> None:
-    _answering(monkeypatch, proc, raises=raises)
-    assert graph.read_parent_title(12, {}, ISSUE_TYPES) == graph.ParentRead(12, unread=why)
-
-
-def test_first_line_findings_hold_the_line_parent_to_the_graph() -> None:
-    reads = _Reads({7: graph.ParentRead(7, "task")})
-    findings = graph.first_line_findings(
-        "Feature: #7\n\n## What\n", "task", ISSUE_TYPES, issue_number=42, read=reads
-    )
-    assert [f[:2] for f in findings] == [("hard-reject", "body.parent-ref.containment")]

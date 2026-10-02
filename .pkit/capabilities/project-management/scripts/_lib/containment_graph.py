@@ -35,30 +35,29 @@ prefixes, the kind-driven Task prefixes (``[Bug]``, ``[Docs]``, …) and, for a
 title carrying none, the ``type:*`` label tell it.
 
 **Outside the graph.** An issue whose type cannot be told — child or parent —
-is not refused: a writer warns that nothing was checked, the validator reports
-nothing, and a legacy tree stays linkable. Two other parents cannot be checked,
-and are told apart from it:
+is not refused: a writer warns once that nothing was checked, the validator
+reports nothing, and a legacy tree stays linkable. Two other parents cannot be
+checked, and are told apart from it:
 
 - a parent that **cannot be read** — nothing can be checked, so a writer
   refuses, and ``validate-issue`` reports that it could not check;
 - a number that **names no issue here** — a pull request, or an issue
-  transferred elsewhere — is no parent, so a writer refuses it.
+  transferred elsewhere — is no parent, so a writer refuses it, and
+  ``validate-issue`` reports that it could not check.
 
 A type whose first-line forms name no issue — an EPIC, whose container is a
-milestone — takes no issue parent (:func:`takes_an_issue_parent`).
+milestone — takes no issue parent (:func:`takes_an_issue_parent`), so
+``create-issue`` refuses its ``--parent``.
 """
 
 from __future__ import annotations
 
-import json
-import subprocess
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any
 
 from _lib import body_parent_ref, containment
-from _lib.gh import gh_run
 from _lib.placeholder_detection import PHASE_TRANSITION
 from _lib.structural_type import infer_structural_type
 
@@ -69,10 +68,6 @@ SEVERITY_WARNING = "warning"
 # validate-issue reports the first line's form under.
 LABEL_VIOLATION = "body.parent-ref.containment"
 LABEL_UNCHECKED = "body.parent-ref.containment-unchecked"
-
-# How long one read of a parent may take in the title reader
-# (:func:`read_parent_title`), which the seam-backed :func:`read_parent` replaces.
-READ_TIMEOUT_SECONDS = 30
 
 # How a refusal names the record that fixes the graph.
 _GRAPH = "the containment graph in issue-types.yaml (DEC-005)"
@@ -220,47 +215,6 @@ def read_parent(
     )
 
 
-def read_parent_title(
-    number: int,
-    config: dict[str, Any],
-    issue_types: dict,
-    *,
-    classification: dict | None = None,
-    substrate_map: Any | None = None,
-    timeout: float = READ_TIMEOUT_SECONDS,
-) -> ParentRead:
-    """Read parent ``number``'s title — one ``gh issue view``, bounded by
-    ``timeout`` — and type it from the title alone. Replaced by
-    :func:`read_parent`, which reads through the containment seam; kept only
-    until its callers move."""
-    try:
-        proc = gh_run(
-            ["gh", "issue", "view", str(number), "--json", "title"],
-            config,
-            check=False,
-            timeout=timeout,
-        )
-    except subprocess.TimeoutExpired:
-        return ParentRead(number, unread=f"gh did not answer within {timeout:g}s")
-    except OSError:
-        return ParentRead(number, unread="`gh` is not on PATH")
-    if proc.returncode != 0:
-        said = (proc.stderr or "").strip().splitlines()
-        tail = f": {said[0]}" if said else ""
-        return ParentRead(number, unread=f"gh exited {proc.returncode}{tail}")
-    try:
-        payload = json.loads(proc.stdout or "")
-    except (json.JSONDecodeError, ValueError):
-        return ParentRead(number, unread="gh's answer was not JSON")
-    title = payload.get("title") if isinstance(payload, dict) else None
-    if not isinstance(title, str):
-        return ParentRead(number, unread="gh's answer carried no title")
-    parent_type = infer_structural_type(
-        title, issue_types, classification=classification, substrate_map=substrate_map
-    )
-    return ParentRead(number, parent_type)
-
-
 def check_parent(issue_types: dict, child_type: str | None, parent: ParentRead) -> ParentCheck:
     """Hold ``parent`` to the graph for a child of ``child_type`` (``None``: a
     child whose type cannot be told).
@@ -398,30 +352,6 @@ def parent_findings(
         severity = existing_violation_severity(phase)
         return [(severity, LABEL_VIOLATION, f"{said}, and {check.message}.")]
     if check.verdict in (Verdict.UNREAD, Verdict.NOT_AN_ISSUE):
-        return [(SEVERITY_WARNING, LABEL_UNCHECKED, f"{said}, but {check.message}.")]
-    return []
-
-
-def first_line_findings(
-    body: str,
-    child_type: str,
-    issue_types: dict,
-    *,
-    issue_number: int | None,
-    read: Callable[[int], ParentRead],
-) -> list[tuple[str, str, str]]:
-    """``(severity, label, detail)`` findings for the parent a body's first line
-    names, in any form, held to the graph. Replaced by :func:`parent_findings`,
-    which judges the parent the containment seam resolves; kept only until its
-    callers move."""
-    named = body_parent_ref.read_first_line(body, child_type, issue_types).issue
-    if named is None or named == issue_number:
-        return []
-    check = check_parent(issue_types, child_type, read(named))
-    said = f"the first line names #{named} as the parent"
-    if check.verdict is Verdict.REFUSED:
-        return [(SEVERITY_HARD_REJECT, LABEL_VIOLATION, f"{said}, and {check.message}.")]
-    if check.verdict is Verdict.UNREAD:
         return [(SEVERITY_WARNING, LABEL_UNCHECKED, f"{said}, but {check.message}.")]
     return []
 
