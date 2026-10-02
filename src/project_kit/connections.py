@@ -1578,8 +1578,9 @@ def connections_outcome(target_root: Path) -> validators.Outcome:
     """The `connections` member of `pkit validate`: the wiring as resolved — roles,
     points, counterparts — then the connection findings (roles, points, marks,
     cycles, fingerprints), each at its own severity; then how each data point
-    resolved and the findings of its fillers (`data_points`, the second layer
-    over the same wiring)."""
+    resolved, what each command filler that reads beyond the working tree read
+    and at which commit (COR-052 point 7), and the findings of its fillers
+    (`data_points`, the second layer over the same wiring)."""
     from project_kit import data_points  # the second layer imports this module
 
     wiring = shared_wiring(target_root)

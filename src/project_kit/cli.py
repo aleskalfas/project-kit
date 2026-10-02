@@ -180,11 +180,20 @@ def agents(ctx: click.Context) -> None:
     "--write",
     is_flag=True,
     default=False,
-    help="Append the missing categories to the overlay (default: dry-run, show only).",
+    help="Write what the dry run shows, with no prompt: this flag is the confirmation "
+    "(COR-049 point 5). Default: dry-run, show only.",
 )
 def agents_reconcile(write: bool) -> None:
     """Surface referenced-but-undefined overlay categories into overlay.yaml as
-    commented stubs (per COR-013). Explicit + idempotent; dry-run by default."""
+    commented stubs (per COR-013). Explicit + idempotent; dry-run by default.
+
+    A category whose conventional directory exists is shown as `category = path`
+    with the agents that reach it once recorded. Recording it over a directory
+    that already holds documents puts them within those agents' reach, so it takes
+    consent (COR-049 point 5): `--write`, given after the dry run, is that
+    consent, and nothing is asked. Each recording says which root its path was
+    derived from and where to change it.
+    """
     from project_kit import agents_overlay as ao
 
     target_root = find_target_root()
@@ -199,7 +208,14 @@ def agents_reconcile(write: bool) -> None:
 
 @agents.command("adopt")
 @click.argument("agent_name", metavar="AGENT")
-def agents_adopt(agent_name: str) -> None:
+@click.option(
+    "--yes",
+    is_flag=True,
+    default=False,
+    help="Consent without a prompt to recording a category over a directory that already "
+    "holds documents. Without it a terminal is asked once; a non-interactive run refuses.",
+)
+def agents_adopt(agent_name: str, yes: bool) -> None:
     """Create the conventional doc dirs, wire the overlay, and deploy AGENT.
 
     For each overlay category the agent references that is not yet defined in
@@ -207,17 +223,28 @@ def agents_adopt(agent_name: str) -> None:
 
     \b
     1. Creates the conventional default directory if absent (with a seed README
-       explaining the directory's purpose).
+       explaining the directory's purpose); one that exists but holds nothing
+       gets the seed README too.
     2. Writes the category into the overlay uncommented with the conventional path.
        An adopter-set value is never overwritten.
+
+    Recording a category over a directory that already holds documents puts them
+    within reach of every agent that references it, so it takes consent (COR-049
+    point 5): a terminal is asked once for the run, listing each `category = path`
+    and the agents that reach it; `--yes` consents without a prompt; a
+    non-interactive run without `--yes` refuses, exit 1. Declined or refused, the
+    run writes nothing — no directory, no overlay line, no deploy. `pkit agents
+    reconcile` shows the change first. A directory the command creates, or one that
+    holds nothing, is recorded without asking. Each recording says which root its
+    path was derived from and where to change it.
 
     An optional category (read only through `reads.patterns`) with no conventional
     default is left undefined and reported; the agent deploys without it.
 
     Then runs the adapter's deploy step so the agent ends up in `.claude/agents/`.
 
-    Idempotent: re-running on an already-adopted agent reports no changes and
-    re-deploys (the deploy step is itself idempotent).
+    Idempotent: re-running on an already-adopted agent reports no changes, asks
+    nothing, and re-deploys (the deploy step is itself idempotent).
     """
     from project_kit import agents_overlay as ao
 
@@ -225,7 +252,7 @@ def agents_adopt(agent_name: str) -> None:
     if target_root is None:
         raise click.ClickException("not in a project tree.")
     try:
-        result = ao.adopt_agent(target_root, agent_name)
+        result = ao.adopt_agent(target_root, agent_name, yes=yes)
     except click.ClickException:
         raise
     except FileNotFoundError as exc:
@@ -239,14 +266,14 @@ def agents_adopt(agent_name: str) -> None:
         for d in result.dirs_created:
             lines.append(f"  {d}/")
             lines.append("    (seed README.md written explaining the directory's purpose)")
-    if result.categories_wired:
+    if result.dirs_seeded:
         lines.append(
-            cli_render.style(
-                "strong", f"wired {len(result.categories_wired)} overlay categor(ies):"
-            )
+            cli_render.style("strong", f"seeded {len(result.dirs_seeded)} empty director(ies):")
         )
-        for cat in result.categories_wired:
-            lines.append(f"  {cat}")
+        for d in result.dirs_seeded:
+            lines.append(f"  {d}/")
+            lines.append("    (seed README.md written explaining the directory's purpose)")
+    lines.extend(result.notices)
     if result.categories_already_set:
         lines.append(
             cli_render.style(
@@ -396,8 +423,8 @@ def docs() -> None:
     "--yes",
     is_flag=True,
     default=False,
-    help="Consent to the write without a prompt (CI). Without it a terminal is asked; "
-    "a non-interactive run refuses.",
+    help="Accepted, with no effect: the command asks nothing, since running it is the "
+    "consent (COR-049 point 5).",
 )
 @click.option(
     "--dry-run",
@@ -413,21 +440,19 @@ def docs_record_location(capability: str, name: str, yes: bool, dry_run: bool) -
     documentation root; the command writes where it lies now to the
     capability's `project/docs-locations.yaml`, so a later change of root
     moves nothing already written. A location already recorded is never
-    overwritten: the command says where it lies and writes nothing. Writing
-    needs consent (COR-048 point 5): a terminal is asked once, `--yes`
-    consents non-interactively, and a non-interactive run without `--yes`
-    refuses and names the command to run; `--dry-run` says what would be
-    recorded and writes nothing. A capability's stamping command runs it with
-    `--yes` when it places the first document there. Exit 1 when CAPABILITY
-    is not installed or declares no location NAME.
+    overwritten: the command says where it lies and writes nothing. The value
+    recorded is the one already in use, so the recording changes nothing that
+    reads it: running the command is the consent, and it asks nothing, at a
+    terminal or off one. It says what it recorded, which root the value was
+    derived from, and where to change it. `--yes` is accepted and has no
+    effect; `--dry-run` says what would be recorded and writes nothing. A
+    capability's stamping command runs it when it places the first document
+    there. Exit 1 when CAPABILITY is not installed or declares no location NAME.
     """
-    from project_kit import docs_roots, project_config
+    from project_kit import docs_roots
     from project_kit.friction_discovery import installed_capability_names
 
-    if yes and dry_run:
-        raise click.UsageError(
-            "--yes and --dry-run exclude each other: one writes, the other never does."
-        )
+    del yes  # accepted for callers that pass it; running the command is the consent
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
@@ -450,22 +475,10 @@ def docs_record_location(capability: str, name: str, yes: bool, dry_run: bool) -
         click.echo(f"would record {recording}")
         click.echo(cli_render.style("strong", "Dry run: nothing written."))
         return
-    if not yes:
-        if not project_config.stdin_is_tty():
-            rerun = f"pkit docs record-location {shlex.quote(capability)} {shlex.quote(name)}"
-            raise project_config.ConsentRefused(
-                f"refusing to write {recorded_in} without consent: stdin is not a terminal "
-                f"and --yes was not given (COR-048 point 5). Nothing was written.\n"
-                f"To see the change first, run:\n  {rerun} --dry-run\n"
-                f"To consent non-interactively, run:\n  {rerun} --yes"
-            )
-        click.confirm(
-            f"Record {capability} {name} = {where} in {recorded_in}?", default=True, abort=True
-        )
-    docs_roots.record_location(
+    if docs_roots.record_location(
         target_root, capability, name, found.path, by="pkit docs record-location"
-    )
-    click.echo(f"recorded {recording}")
+    ):
+        click.echo(docs_roots.recording_notice(target_root, capability, name, found.path))
 
 
 @main.group("repository")
@@ -495,9 +508,11 @@ def repository_base_command(base_ref: str | None, as_json: bool) -> None:
 
     The default branch: declared (`repository.default-branch`, else `main`)
     and resolved — the remote-tracking reference of its upstream, else
-    origin/<name>, and the local branch only when there is no remote. The
-    base: REF, else $PKIT_CHECK_BASE, else the default branch — its commit,
-    where HEAD left it and whether it moved on since. A reader that used a
+    origin/<name>, and the local branch only when there is no remote; `unborn`
+    when it has no commit yet. The base: REF, else $PKIT_CHECK_BASE, else the
+    default branch — its commit, where HEAD left it and whether it moved on
+    since. A data point's filler reads the default branch and never the base
+    (COR-052 point 6); no base override reaches it. A reader that used a
     local branch, and a declaration read as the default, say so on standard
     error. Read-only; it runs no discovery. It is how a capability's own
     script reads which commit is settled, without resolving a branch or
@@ -999,12 +1014,14 @@ def connections_resolve(address: str, as_json: bool) -> None:
     The resolution `pkit validate` reports and `pkit status` shows (COR-052):
     the point's value — a `single` point's answer, or the entries of a `union`
     or `additive` point, each with its origin — how it resolved, or why it did
-    not, and every filler considered. Read-only; only this point resolves, so
-    only its command fillers run, as they do there, offline-marked and
-    bounded. Inside a run of `pkit validate` — a validator reading the point —
-    it reads the point from the run cache when the run has already resolved it
-    (`from: run-cache` in the document); otherwise it resolves the point and
-    caches it, so its fillers run once per validate. It is how a capability's
+    not, and every filler considered — for a command filler that reads beyond
+    the working tree, what it read and at which commit (`reads`). Read-only;
+    only this point resolves, so only its command fillers run, as they do
+    there, offline-marked, bounded and with no base override. Inside a run of
+    `pkit validate` — a validator reading the point — it reads the point from
+    the run cache when the run has already resolved it (`from: run-cache` in
+    the document); otherwise it resolves the point and caches it, so its
+    fillers run once per validate. It is how a capability's
     own script reads a point it defines without importing the backbone. Exit 0
     when the point resolves; 1 when it does not, or when no active provider
     defines it, and the output says why.

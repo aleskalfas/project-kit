@@ -12,9 +12,9 @@ pkit:
         - src/project_kit/rule_sets.py
       record: [COR-001, COR-019, COR-025, COR-051, COR-053]
     revalidated:
-      at: 2026-10-01T22:00:52Z
+      at: 2026-10-01T23:47:03Z
       outcome: unchanged
-      unchanged-because: COR-053 changed only point 9's statement of a subscriber's limits; this spec covers records, their container and refining them in place, nothing of subscribers, so it holds
+      unchanged-because: "COR-053 changed in one rationale sentence, on why events take no consent model: it now names the two writes the consent rule covers; this page says nothing of consent for events, and what it takes from the record — connection points, roles and their wiring — is as it was"
 ---
 
 # Decision records

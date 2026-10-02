@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-01T23:49:30Z
+      at: 2026-10-02T00:02:23Z
       outcome: unchanged
-      unchanged-because: "#1254 adds the cross-repository guard to the pull-request and release merge commands in the CLI reference; this index only points at that reference and names no command's behaviour, so it holds"
+      unchanged-because: The CLI and agents READMEs gained what consent recording a documentation location takes (COR-049 point 5) — adopt's question and --yes, reconcile's --write as the confirmation, record-location asking nothing; this index still names the command surface and the agent definitions they document, and no command or area it lists was added, renamed or removed.
 ---
 
 # project-kit

@@ -252,8 +252,13 @@ def record_location(
     written, or None when nothing was written.
 
     Call this only where a location is *chosen* — a first stamp or placement —
-    and only from a command whose invocation is the consent to write (COR-048
-    point 5); a read never records. `by` names that command in the file.
+    never on a read. The consent the recording takes is the caller's to obtain
+    first, by what the recording changes (COR-049 point 5): running the command
+    is the consent for a capability's own location, and for an overlay category
+    over a folder that is absent or holds nothing; an overlay category over a
+    folder that already holds documents takes the backbone configuration's
+    consent forms. `by` names that command in the file; `recording_notice` is
+    what the command says once it has recorded.
     """
     rel = normalise(path).as_posix()
     if component == BACKBONE:
@@ -279,6 +284,38 @@ def _record_overlay_category(target_root: Path, category: str, rel: str, *, by: 
             fh.write("\n")
         fh.write("\n".join(block) + "\n")
     return overlay
+
+
+def recording_notice(target_root: Path, component: str, name: str, path: str | Path) -> str:
+    """What a command says when it has recorded a location (COR-049 point 5): what
+    it recorded and in which file, then which root the value was derived from and
+    where to change it — two lines, no trailing newline.
+
+    The first line is `recorded <what> = <path>  (<file>)`, `<what>` being the
+    overlay category, or the capability and its location's name. A capability's
+    stamp passes the notice on when it starts `recorded `, so that line keeps its
+    shape and the rest goes on the second."""
+    rel = normalise(path).as_posix()
+    roots = resolve_roots(target_root)
+    if component == BACKBONE:
+        root, source = roots.internal, roots.internal_source
+        return (
+            f"recorded {name} = {rel}  ({_OVERLAY_RELPATH.as_posix()})\n"
+            f"  derived from the {INTERNAL_KEY} root, {root.as_posix()} ({source.value}). "
+            f"Agents that reference {name} now reach this folder. "
+            f"To change it: edit that entry, then pkit sync."
+        )
+    audience = declared_location_roots(_load_package(target_root, component)).get(
+        name, INTERNAL_KEY
+    )
+    root, source = roots.for_audience(audience)
+    return (
+        f"recorded {component} {name} = {rel}  "
+        f"({capability_locations_relpath(component).as_posix()})\n"
+        f"  derived from the {audience} root, {root.as_posix()} ({source.value}); "
+        f"it stays here if the root changes. "
+        f"To move it: edit that line and move the documents."
+    )
 
 
 def capability_locations_relpath(capability: str) -> PurePosixPath:

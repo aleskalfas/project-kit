@@ -9,7 +9,9 @@ import click
 import pytest
 from click.testing import CliRunner
 
+from project_kit import data_points as dp
 from project_kit.cli import main, status
+from project_kit.status import _data_point_lines
 from tests.adopter_repo import MakeAdopterRepo
 
 
@@ -277,3 +279,44 @@ def test_status_shows_each_pin_behind_the_inherited_major_with_the_fix(
     assert _section(repinned.output, "Rule sets").splitlines()[1] == (
         f"    {'pins':<18} 2 checked, all current"
     )
+
+
+# --- a data point's filler line (COR-052 point 7) ---------------------------------
+
+
+def test_a_filler_that_reads_beyond_the_working_tree_names_what_and_at_which_commit() -> None:
+    head, tip = "a" * 40, "b" * 40
+
+    def filler(name: str, *reads: dp.FillerRead) -> dp.Filler:
+        return dp.Filler(
+            dp.FillerSource.CONTRIBUTION,
+            name,
+            "command 'export'",
+            dp.FillerState.TAKEN,
+            query_contract=True,
+            reads=reads,
+        )
+
+    point = dp.ResolvedPoint(
+        address="pkit::documentation:readers",
+        provider="docs-a",
+        policy="union",
+        inert_policy="fail",
+        participation=None,
+        fillers=(
+            filler(
+                "evidence",
+                dp.FillerRead("history", "HEAD", head, True),
+                dp.FillerRead("settled", "origin/main", tip),
+            ),
+            filler("notes"),
+        ),
+        resolved=True,
+        value=[],
+    )
+    contract = "query contract declared: no network, trusted, not enforced"
+    assert [line.strip() for line in _data_point_lines(point)[-2:]] == [
+        f"filler   evidence (command 'export'; {contract}; reads history (HEAD {head[:12]}, "
+        f"shallow clone) and the default branch (origin/main at {tip[:12]})): taken",
+        f"filler   notes (command 'export'; {contract}): taken",
+    ]

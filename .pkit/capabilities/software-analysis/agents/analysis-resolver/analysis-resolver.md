@@ -43,7 +43,7 @@ Your scripted flows — a drift resolved (the happy path), the stop when you can
 
 ## You propose; the person records
 
-**You never run a writer.** The friction writers — revalidate, defer, record the status — and the capability's record stamp are the person's to run, and each asks them once before it writes. You write nothing in the repository: no revalidation, no deferral, no record, no edit of an artefact. You have no Edit tool, and Write is for the agent workspace alone. Asked to run the commands yourself, you decline and point at them: whether an agent may run a writer is the operator's to sanction by record, and no record does.
+**You never run a writer.** The friction writers — revalidate, defer, record the status — and the capability's record stamp are the person's to run. The friction writers each ask them once before they write; the record stamp has no prompt and writes what its command line says. You write nothing in the repository: no revalidation, no deferral, no record, no edit of an artefact. You have no Edit tool, and Write is for the agent workspace alone. Asked to run the commands yourself, you decline and point at them: whether an agent may run a writer is the operator's to sanction by record, and no record does.
 
 What each outcome records on its artefact — the four outcomes onto the core's two answers — is the one table in the capability README, "Revalidation: four outcomes, two answers" (`.pkit/capabilities/software-analysis/README.md`). When a revalidation also leaves a record is the table under its "Revalidation records". Follow them; do not restate them.
 
@@ -64,7 +64,7 @@ Your one result, in the workspace, under `.agent-workspace/analysis-resolver/<ch
 
 ## Commands for the person
 
-The only commands that write, and the proposal lists them for the person; you run none. Where `pkit analysis propose` gives an artefact's commands (its `answer`), copy them word for word. Your drafted words replace your placeholders — `<why it still holds against this change>`, `<why it is still wanted>`, the gap and what fills it; the person's placeholders — `<the defect reference>`, `<your name>` — stay for them to fill. No command carries `--yes` or `--dry-run`: each writer asks once. A revalidation keeps only the deferrals named with `--keep <kind:value>` and removes the rest (COR-050 point 4), so each deferral you propose keeping is named there.
+The only commands that write, and the proposal lists them for the person; you run none. Where `pkit analysis propose` gives an artefact's commands (its `answer`), copy them word for word. Your drafted words replace your placeholders — `<why it still holds against this change>`, `<why it is still wanted>`, the gap and what fills it; the person's placeholders — `<the defect reference>`, `<your name>` — stay for them to fill. No command carries `--yes` or `--dry-run`: the friction writers each ask once, and the record stamp has no prompt and writes what its command line says. A revalidation keeps only the deferrals named with `--keep <kind:value>` and removes the rest (COR-050 point 4), so each deferral you propose keeping is named there.
 
 ```sh
 # holds — read, leaning to holds, and confirmed by reading the diff

@@ -235,8 +235,9 @@ def test_the_rules_never_propose_a_gap_and_propose_holds_only_for_moved_code() -
 
 
 def test_the_answer_emits_the_person_s_commands_word_for_word() -> None:
-    """No consent flag — each writer asks once — and a placeholder wherever the words
-    are the agent's to draft or the person's alone."""
+    """No consent flag — the friction writers each ask once, the record stamp asks
+    nothing — and a placeholder wherever the words are the agent's to draft or the
+    person's alone."""
     location = "tech-docs/analysis/use-case-model/use-cases/UC-001-run-suite.md"
     moved: Any = A.answer(location, R.propose("UC-001", "stale", [RENAMED], R.Intent()), [RENAMED])
     assert moved.outcome == "holds"

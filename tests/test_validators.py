@@ -7,6 +7,10 @@
   leaf without the declaration, a timeout, a half-formed document — is an
   error, never a clean pass; an environment not provisioned — uv's report on
   standard error, pinned as uv prints it — is named as such, with `pkit sync`;
+- no base named for one run reaches a validator or a data point's filler:
+  `pkit validate`, `pkit status` and `pkit connections resolve` answer byte for
+  byte the same whatever `PKIT_CHECK_BASE` names, and each is shown the
+  default branch (#1145);
 - `--only` / `--skip` address members, `--no-refs` is `--skip refs`;
 - warnings, information and reports print and never fail; errors do;
 - every focused surface still works alone with the exit it always had;
@@ -20,6 +24,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import stat
 import time
 from pathlib import Path
@@ -27,7 +32,7 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
-from project_kit import command_runner, refs, validators
+from project_kit import command_runner, default_branch, refs, validators
 from project_kit.cli import main
 from project_kit.manifest import (
     ComponentRegistryEntry,
@@ -526,6 +531,109 @@ def test_a_timeout_kills_the_process_group_and_does_not_wait_on_the_grandchild(
     else:
         os.kill(grandchild, 9)
         pytest.fail("the grandchild survived the process-group kill")
+
+
+# --- no base named for one run reaches a query (ADR-058 point 7; COR-052 point 6) ----
+
+READERS = "pkit::documentation:readers"
+
+# A script that reads settled state through the backbone's reading command, as a
+# capability's own script does, and prints where the base it was shown came from:
+# as a filler envelope, or as a validator's findings document that also names the
+# value of the point the filler answered — read as a capability's script reads it.
+_READS_THE_BASE = (
+    "import json, subprocess, sys\n"
+    "def read(*argv):\n"
+    "    return json.loads(subprocess.run(['pkit', *argv, '--json'], capture_output=True,"
+    " text=True).stdout)\n"
+    "source = read('repository', 'base')['base']['source']\n"
+    "if sys.argv[0].endswith('fill.py'):\n"
+    "    print(json.dumps({'schema_version': 1, 'value': ['base-' + source]}))\n"
+    "else:\n"
+    f"    point = read('connections', 'resolve', {READERS!r})['value']\n"
+    "    summary = ['base ' + source, 'point ' + ','.join(point)]\n"
+    "    print(json.dumps({'summary': summary, 'findings': []}))\n"
+)
+
+
+def _base_readers(root: Path) -> None:
+    """A provider of the data point `READERS`, and a capability whose filler declares
+    it reads settled state and whose validator reads it too — both echoing the base
+    `pkit repository base` shows them."""
+    docs = _register(
+        root,
+        "docs-a",
+        commands_yaml="commands:\n" + _leaf("noop", script="scripts/noop.py"),
+        validators_yaml=(
+            "connections:\n  roles: [pkit::documentation]\n  extension-points:\n"
+            f"    accepts:\n      {READERS}:\n        schema_version: 1\n"
+            "        schema: readers.schema.json\n        description: Who reads.\n"
+            "        combination: union\n"
+        ),
+        script_body="",
+        script_path="scripts/noop.py",
+    )
+    (docs / "schemas").mkdir()
+    (docs / "schemas" / "readers.schema.json").write_text(
+        json.dumps({"type": "array", "items": {"type": "string"}}), encoding="utf-8"
+    )
+    echo = _register(
+        root,
+        "echo",
+        commands_yaml=(
+            "commands:\n"
+            + _leaf("fill", script="scripts/fill.py")
+            + "    reads: [settled]\n"
+            + _leaf("check")
+        ),
+        validators_yaml=(
+            "validators:\n  base:\n    command: check\n"
+            "connections:\n  extensions:\n    contributes:\n"
+            f"      - point: {READERS}\n        schema_version: 1\n        command: fill\n"
+        ),
+        script_body=_READS_THE_BASE,
+    )
+    shutil.copy2(echo / "scripts" / "check.py", echo / "scripts" / "fill.py")
+
+
+@pytest.mark.parametrize(
+    "command",
+    [["validate"], ["status"], ["connections", "resolve", READERS, "--json"]],
+    ids=["validate", "status", "connections-resolve"],
+)
+def test_a_query_answers_the_same_whatever_base_a_pipeline_names(
+    adopter: AdopterRepo,
+    pkit_on_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    command: list[str],
+) -> None:
+    """`pkit validate`, `pkit status` and `pkit connections resolve` answer the same
+    for the same working tree, HEAD, fetched history and default-branch commit: the base override
+    reaches neither a validator nor a filler, so each is shown the default branch."""
+    _base_readers(adopter.root)
+    adopter.commit("initial")
+    adopter.git("branch", "integration")
+
+    def answer() -> tuple[int, str]:
+        result = CliRunner().invoke(main, command)
+        return result.exit_code, result.output
+
+    monkeypatch.delenv(default_branch.CHECK_BASE_ENV, raising=False)
+    unset = answer()
+    monkeypatch.setenv(default_branch.CHECK_BASE_ENV, "integration")
+    another_branch = answer()
+    monkeypatch.setenv(default_branch.CHECK_BASE_ENV, "no-such-branch")
+    unresolvable = answer()
+    assert unset == another_branch == unresolvable
+    assert "base-default-branch" in unset[1], unset[1]
+    assert "base-environment" not in unset[1]
+    if command == ["validate"]:
+        assert "\n  echo:base\n    base default-branch\n    point base-default-branch\n" in unset[1]
+        head = adopter.head()[:12]
+        assert (
+            f"{READERS}: echo (command 'fill') reads the default branch (main at {head})"
+            in unset[1]
+        )
 
 
 def test_a_clean_capability_validator_passes_and_its_summary_prints(adopter: AdopterRepo) -> None:

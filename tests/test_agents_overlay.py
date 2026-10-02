@@ -20,6 +20,7 @@ from ruamel.yaml import YAML
 
 from project_kit import agent_policy as ap
 from project_kit import agents_overlay as ao
+from project_kit import project_config as pc
 from project_kit.cli import main
 
 REPO = Path(__file__).resolve().parent.parent
@@ -109,6 +110,15 @@ def _project(tmp_path: Path, *, overlay: str | None = None) -> Path:
             overlay, encoding="utf-8"
         )
     return proj
+
+
+def _tree(root: Path) -> dict[str, bytes | None]:
+    """Every path under `root`, a file's bytes or None for a dir — what "nothing was
+    written" is held to."""
+    return {
+        p.relative_to(root).as_posix(): (p.read_bytes() if p.is_file() else None)
+        for p in sorted(root.rglob("*"))
+    }
 
 
 # --- resolution parity with the adapter resolver (#699) ---------------------
@@ -555,6 +565,61 @@ def test_reconcile_auto_fill_idempotent(tmp_path):
     assert "overlay is complete" in report2
 
 
+def _reconcile_cli(monkeypatch, proj: Path, *args: str) -> tuple[int, str]:
+    """`pkit agents reconcile` at a terminal that answers nothing: a prompt would abort."""
+    monkeypatch.chdir(proj)
+    monkeypatch.setattr(pc, "stdin_is_tty", lambda: True)
+    result = CliRunner().invoke(main, ["--color", "never", "agents", "reconcile", *args], input="")
+    return result.exit_code, result.output
+
+
+def test_reconcile_shows_each_category_over_documents_and_writes_nothing(tmp_path, monkeypatch):
+    """Without `--write` reconcile is the preview: each `category = path` with the agents
+    that reach it, and the tree byte-identical."""
+    proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
+    _agent(proj / ".pkit" / "agents" / "core", "a", owns=["<architecture-docs>"])
+    _agent(proj / ".pkit" / "agents" / "core", "b", reads_paths=["<architecture-docs>"])
+    arch = proj / "docs" / "architecture"
+    arch.mkdir(parents=True)
+    (arch / "overview.md").write_text("# kept\n", encoding="utf-8")
+    before = _tree(proj)
+
+    code, output = _reconcile_cli(monkeypatch, proj)
+
+    assert code == 0, output
+    assert "  architecture-docs = docs/architecture  (reached by a, b)\n" in output
+    assert _tree(proj) == before
+
+
+@pytest.mark.parametrize("terminal", [True, False])
+def test_reconcile_write_records_over_documents_with_no_prompt(tmp_path, monkeypatch, terminal):
+    """`--write` is the confirmation flag of a command that otherwise only shows what it
+    would record (COR-049 point 5): nothing is asked, at a terminal or off one, and each
+    recording prints its notice."""
+    proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
+    _agent(proj / ".pkit" / "agents" / "core", "a", owns=["<architecture-docs>"])
+    arch = proj / "docs" / "architecture"
+    arch.mkdir(parents=True)
+    (arch / "overview.md").write_text("# kept\n", encoding="utf-8")
+    monkeypatch.chdir(proj)
+    monkeypatch.setattr(pc, "stdin_is_tty", lambda: terminal)
+
+    result = CliRunner().invoke(
+        main, ["--color", "never", "agents", "reconcile", "--write"], input=""
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "[Y/n]" not in result.output
+    assert (
+        "recorded architecture-docs = docs/architecture  (.pkit/agents/project/overlay.yaml)\n"
+        "  derived from the internal root, docs (default). Agents that reference "
+        "architecture-docs now reach this folder. To change it: edit that entry, then "
+        "pkit sync.\n"
+    ) in result.output
+    assert ao.missing_categories(proj) == []
+    assert not (arch / "README.md").exists()
+
+
 def test_reconcile_conventional_defaults_map_covers_architect_categories():
     """The CONVENTIONAL_CATEGORY_DEFAULTS map must declare defaults for every
     category referenced by the core architect agent, matching the paths
@@ -925,8 +990,12 @@ def test_adopt_cli_reports_optional_category_left_undefined(tmp_path, monkeypatc
     assert "deployed" in result.output
 
 
-def test_adopt_fresh_creates_dirs_and_wires_overlay(tmp_path):
-    """Fresh adopt: conventional dirs created + overlay wired uncommented + deployed."""
+def test_adopt_fresh_creates_dirs_and_wires_overlay(tmp_path, monkeypatch):
+    """Fresh adopt: conventional dirs created + overlay wired uncommented + deployed —
+    off a terminal, with no prompt: `adr-records` lies inside `architecture-docs` and is
+    created first, yet the parent was absent when the run began, so nothing is asked
+    (COR-049 point 5) and both get their seed README."""
+    monkeypatch.setattr(pc, "stdin_is_tty", lambda: False)
     proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
     _agent(proj / ".pkit" / "agents" / "core", "a", owns=["<architecture-docs>", "<adr-records>"])
     overlay = proj / ".pkit" / "agents" / "project" / "overlay.yaml"
@@ -935,9 +1004,7 @@ def test_adopt_fresh_creates_dirs_and_wires_overlay(tmp_path):
 
     # Both categories should be wired.
     assert set(result.categories_wired) == {"architecture-docs", "adr-records"}
-    # Both conventional dirs were absent; adr-records is processed first (alphabetical),
-    # its mkdir(parents=True) also creates docs/architecture, so architecture-docs' dir
-    # may not be separately tracked as created. What matters: both dirs exist.
+    assert result.dirs_created == ("docs/architecture/decisions", "docs/architecture")
     assert result.deployed is True
     assert result.categories_already_set == ()
 
@@ -945,6 +1012,7 @@ def test_adopt_fresh_creates_dirs_and_wires_overlay(tmp_path):
     assert (proj / "docs" / "architecture").is_dir()
     assert (proj / "docs" / "architecture" / "decisions").is_dir()
     assert (proj / "docs" / "architecture" / "decisions" / "README.md").is_file()
+    assert (proj / "docs" / "architecture" / "README.md").is_file()
 
     # Overlay updated with both categories uncommented.
     text = overlay.read_text()
@@ -1012,26 +1080,194 @@ def test_adopt_agent_no_categories_raises(tmp_path):
         ao.adopt_agent(proj, "plain", deploy_fn=_deploy_ok)
 
 
-def test_adopt_dir_exists_no_duplicate_creation(tmp_path):
-    """If the conventional dir already exists, adopt wires the overlay without
-    re-creating the dir or writing a second seed README."""
+# --- adopt: consent to record over documents (COR-049 point 5) ---------------
+
+
+def _adopt_cli(
+    monkeypatch, proj: Path, *args: str, terminal: bool, answer: str | None = None
+) -> tuple[int, str, list[str]]:
+    """Run `pkit agents adopt` at a terminal or off one; return (exit code, output,
+    agents deployed)."""
+    monkeypatch.chdir(proj)
+    monkeypatch.setattr(pc, "stdin_is_tty", lambda: terminal)
+    deployed: list[str] = []
+
+    def deploy(_root: Path, name: str, **_kwargs: object) -> bool:
+        deployed.append(name)
+        return True
+
+    monkeypatch.setattr(ao, "_deploy_agent", deploy)
+    result = CliRunner().invoke(main, ["--color", "never", "agents", "adopt", *args], input=answer)
+    return result.exit_code, result.output, deployed
+
+
+def _architect_like(tmp_path: Path) -> Path:
+    proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
+    _agent(proj / ".pkit" / "agents" / "core", "a", owns=["<architecture-docs>", "<adr-records>"])
+    return proj
+
+
+@pytest.mark.parametrize("terminal", [True, False])
+def test_adopt_records_an_absent_folder_without_asking(tmp_path, monkeypatch, terminal):
+    """A folder the command creates hands nothing over: recorded with no prompt, at a
+    terminal and off one, and the notice says which root the path came from."""
     proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
     _agent(proj / ".pkit" / "agents" / "core", "a", owns=["<architecture-docs>"])
-    # Pre-create the dir.
-    arch_dir = proj / "docs" / "architecture"
-    arch_dir.mkdir(parents=True)
-    (arch_dir / "existing.md").write_text("# pre-existing file", encoding="utf-8")
+
+    code, output, deployed = _adopt_cli(monkeypatch, proj, "a", terminal=terminal)
+
+    assert code == 0, output
+    assert "[Y/n]" not in output
+    assert (
+        "recorded architecture-docs = docs/architecture  (.pkit/agents/project/overlay.yaml)\n"
+        "  derived from the internal root, docs (default). Agents that reference "
+        "architecture-docs now reach this folder. To change it: edit that entry, then "
+        "pkit sync.\n"
+    ) in output
+    assert (proj / "docs" / "architecture" / "README.md").is_file()
+    assert deployed == ["a"]
+
+
+def test_adopt_seeds_and_records_an_empty_folder_without_asking(tmp_path, monkeypatch):
+    """A folder that exists but holds nothing is treated as absent: seed README, recorded,
+    no prompt — and said to be seeded, not created."""
+    monkeypatch.setattr(pc, "stdin_is_tty", lambda: False)
+    proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
+    _agent(proj / ".pkit" / "agents" / "core", "a", owns=["<architecture-docs>"])
+    (proj / "docs" / "architecture").mkdir(parents=True)
 
     result = ao.adopt_agent(proj, "a", deploy_fn=_deploy_ok)
 
-    # Dir was already present — not listed as created.
     assert result.dirs_created == ()
-    # Category still wired (overlay updated).
-    assert "architecture-docs" in result.categories_wired
-    # Pre-existing file untouched; no spurious README.md created.
-    assert (arch_dir / "existing.md").read_text("utf-8") == "# pre-existing file"
-    # deploy ran.
-    assert result.deployed is True
+    assert result.dirs_seeded == ("docs/architecture",)
+    assert result.categories_wired == ("architecture-docs",)
+    assert (proj / "docs" / "architecture" / "README.md").is_file()
+    assert ao.missing_categories(proj) == []
+
+
+def test_adopt_over_a_folder_holding_documents_off_a_terminal_refuses_without_yes(
+    tmp_path, monkeypatch
+):
+    """Recording over existing documents hands them to every agent referencing the
+    category: off a terminal without `--yes` the run refuses whole — exit 1, the overlay
+    and the tree byte-identical, no deploy — naming `--yes` and the preview."""
+    proj = _architect_like(tmp_path)
+    decisions = proj / "docs" / "architecture" / "decisions"
+    decisions.mkdir(parents=True)
+    (decisions / "ADR-001-existing.md").write_text("# kept\n", encoding="utf-8")
+    before = _tree(proj)
+
+    code, output, deployed = _adopt_cli(monkeypatch, proj, "a", terminal=False)
+
+    assert code == 1
+    assert _tree(proj) == before
+    assert deployed == []
+    assert (
+        "refusing to write .pkit/agents/project/overlay.yaml without consent: stdin is not a "
+        "terminal and --yes was not given (COR-049 point 5).\n"
+        "These folders already hold documents; recording each category puts them within "
+        "reach of the agents named:\n"
+        "  adr-records = docs/architecture/decisions  (reached by a)\n"
+        "  architecture-docs = docs/architecture  (reached by a)\n"
+        "Nothing was written. To see the change first, run:\n"
+        "  pkit agents reconcile\n"
+        "To consent non-interactively, run:\n"
+        "  pkit agents adopt a --yes\n"
+    ) in output
+
+
+def test_adopt_over_a_folder_holding_documents_with_yes_records_and_deploys(tmp_path, monkeypatch):
+    proj = _architect_like(tmp_path)
+    arch = proj / "docs" / "architecture"
+    arch.mkdir(parents=True)
+    (arch / "overview.md").write_text("# kept\n", encoding="utf-8")
+
+    code, output, deployed = _adopt_cli(monkeypatch, proj, "a", "--yes", terminal=False)
+
+    assert code == 0, output
+    assert deployed == ["a"]
+    assert "[Y/n]" not in output
+    assert "recorded architecture-docs = docs/architecture  (" in output
+    assert "recorded adr-records = docs/architecture/decisions  (" in output
+    assert ao.missing_categories(proj) == []
+    # The folder holding documents gets no seed README; the one created inside it does.
+    assert not (arch / "README.md").exists()
+    assert (arch / "overview.md").read_text(encoding="utf-8") == "# kept\n"
+    assert (arch / "decisions" / "README.md").is_file()
+
+
+def test_adopt_at_a_terminal_asks_once_and_a_no_writes_nothing(tmp_path, monkeypatch):
+    proj = _architect_like(tmp_path)
+    arch = proj / "docs" / "architecture"
+    arch.mkdir(parents=True)
+    (arch / "overview.md").write_text("# kept\n", encoding="utf-8")
+    before = _tree(proj)
+
+    code, output, deployed = _adopt_cli(monkeypatch, proj, "a", terminal=True, answer="n\n")
+
+    assert code == 1
+    assert output.count("[Y/n]") == 1
+    assert _tree(proj) == before
+    assert deployed == []
+
+
+def test_adopt_at_a_terminal_a_yes_records(tmp_path, monkeypatch):
+    """The one question lists each category over documents with the agents that reach it,
+    then the rest of the run, which waits on the same answer."""
+    proj = _architect_like(tmp_path)
+    arch = proj / "docs" / "architecture"
+    arch.mkdir(parents=True)
+    (arch / "overview.md").write_text("# kept\n", encoding="utf-8")
+
+    code, output, deployed = _adopt_cli(monkeypatch, proj, "a", terminal=True, answer="y\n")
+
+    assert code == 0, output
+    assert output.startswith(
+        "These folders already hold documents; recording each category puts them within "
+        "reach of the agents named:\n"
+        "  architecture-docs = docs/architecture  (reached by a)\n"
+        "The run also records these, over folders it creates or that hold nothing:\n"
+        "  adr-records = docs/architecture/decisions  (reached by a)\n"
+        "Record them in .pkit/agents/project/overlay.yaml? [Y/n]: y\n"
+    )
+    assert deployed == ["a"]
+    assert ao.missing_categories(proj) == []
+
+
+def test_adopt_mixed_run_off_a_terminal_refuses_whole(tmp_path, monkeypatch):
+    """One folder absent, one holding documents: one consent for the run, so a refusal
+    leaves the absent folder uncreated too."""
+    proj = _architect_like(tmp_path)
+    arch = proj / "docs" / "architecture"
+    arch.mkdir(parents=True)
+    (arch / "overview.md").write_text("# kept\n", encoding="utf-8")
+    before = _tree(proj)
+
+    code, output, deployed = _adopt_cli(monkeypatch, proj, "a", terminal=False)
+
+    assert code == 1
+    assert "pkit agents adopt a --yes" in output
+    assert not (arch / "decisions").exists()
+    assert _tree(proj) == before
+    assert deployed == []
+
+
+def test_adopt_rerun_over_documents_asks_nothing(tmp_path, monkeypatch):
+    """Once recorded, the categories are explicit: a re-run off a terminal without `--yes`
+    asks nothing, changes nothing, and deploys again."""
+    proj = _architect_like(tmp_path)
+    arch = proj / "docs" / "architecture"
+    arch.mkdir(parents=True)
+    (arch / "overview.md").write_text("# kept\n", encoding="utf-8")
+    assert _adopt_cli(monkeypatch, proj, "a", "--yes", terminal=False)[0] == 0
+    before = _tree(proj)
+
+    code, output, deployed = _adopt_cli(monkeypatch, proj, "a", terminal=False)
+
+    assert code == 0, output
+    assert "overlay already complete" in output
+    assert _tree(proj) == before
+    assert deployed == ["a"]
 
 
 def test_adopt_cli_fresh(tmp_path, monkeypatch):
@@ -1053,6 +1289,7 @@ def test_adopt_cli_fresh(tmp_path, monkeypatch):
             categories_wired=("architecture-docs",),
             categories_already_set=(),
             deployed=True,
+            notices=("recorded architecture-docs = docs/architecture  (overlay.yaml)",),
         )
 
     monkeypatch.setattr(ao_mod, "adopt_agent", fake_adopt)
