@@ -361,6 +361,68 @@ def test_new_stubs_every_declared_evaluable(authoring_repo: Path) -> None:
     assert invariant["check"] == {"run": "ladder-invariant-has-owner"}
 
 
+_PAYLOAD_LABEL = "- print ONE JSON object to stdout: "
+
+
+def _fill_placeholders(payload: str) -> str:
+    """A stub's JSON example with its two non-JSON placeholders filled in: the
+    bare `<bool>` and the `...` that stands for the rest of a list."""
+    return payload.replace("<bool>", "true").replace(", ...", "")
+
+
+def test_every_stub_shows_the_json_to_print_alone(authoring_repo: Path) -> None:
+    # The line that says what to print carries the JSON and nothing after it;
+    # a note about the payload sits on the line below. Every stub kind, each
+    # scaffolded by the stamp that writes it.
+    pa.stamp_new_process(
+        authoring_repo,
+        "design:screen",
+        cardinality="keyed",
+        subject_key="screen-id",
+        states=[
+            pa.StateSpec("drafting", "Drafting the screen design.", guarded_entry=True),
+            pa.StateSpec("ready", "Ready to hand off.", terminal=True),
+        ],
+        transitions=[
+            pa.TransitionSpec("drafting", "ready", "approve", "user", gate_kind="deterministic"),
+            pa.TransitionSpec(
+                "drafting",
+                "ready",
+                "force-approve",
+                "user",
+                gate_kind="authorisation-artifact",
+            ),
+        ],
+        invariants=[pa.InvariantSpec("has-owner", "Every screen names an owner.")],
+        blocked_on="awaiting-condition",
+    )
+    _stamp_unit(authoring_repo)
+    _couple_unit(authoring_repo)
+    _handoff_unit(authoring_repo)
+
+    capabilities = authoring_repo / ".pkit" / "capabilities"
+    stubs = {
+        "detection": capabilities / "design/scripts/screen_detect_drafting.py",
+        "entry guard": capabilities / "design/scripts/screen_entry_drafting.py",
+        "gate": capabilities / "design/scripts/screen_gate_drafting_ready_approve.py",
+        "authorisation-artifact gate": (
+            capabilities / "design/scripts/screen_gate_drafting_ready_force_approve.py"
+        ),
+        "resume_when": capabilities / "design/scripts/screen_resume_when.py",
+        "invariant check": capabilities / "design/scripts/screen_invariant_has_owner.py",
+        "hand-off candidates": capabilities / "delivery/scripts/unit_handoff_candidates.py",
+        "hand-off resolve": capabilities / "delivery/scripts/unit_handoff_resolve.py",
+    }
+    assert set(stubs) == set(pa._STUB_PAYLOADS)  # every kind the stamps scaffold
+    for kind, script in stubs.items():
+        lines = script.read_text(encoding="utf-8").splitlines()
+        (index,) = [i for i, line in enumerate(lines) if line.startswith(_PAYLOAD_LABEL)]
+        payload = lines[index][len(_PAYLOAD_LABEL) :]
+        assert isinstance(json.loads(_fill_placeholders(payload)), dict), (kind, payload)
+        if kind == "detection":
+            assert lines[index + 1] == "  (the `inferred` answer its detection declares)"
+
+
 def test_new_requires_an_owning_capability(authoring_repo: Path) -> None:
     # No capability half in the address: a clean, routing-free error (COR-044 —
     # the capability walkthrough is the skill's judgment, never the stamp's).

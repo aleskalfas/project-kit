@@ -1,0 +1,11 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  A detection stub scaffolded by `pkit process new` shows the JSON to print
+  alone on its line (#1276). The note "(the `inferred` answer its detection
+  declares)" used to follow the JSON on that line and read as part of it; it is
+  now on the line below. Only stubs scaffolded from this release on change;
+  stubs already on disk are left as they are, and what a predicate must print
+  is unchanged.
