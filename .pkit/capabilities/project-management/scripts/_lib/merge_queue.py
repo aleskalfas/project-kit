@@ -58,9 +58,10 @@ VERSION = 1
 #: How long pm waits for each of the backbone's answers, by subcommand, in
 #: seconds: a reading or the squash-commit defaults is one `gh` read, two
 #: when the host knows no merge queues; a merge or an enqueue is gh's merge
-#: request; a dequeue is a reading, the request and a reading again, and so is
-#: a branch deletion the service refuses. A run that has not answered by then
-#: is ended with everything it started.
+#: request; a dequeue is a reading, the request and a reading again; a branch
+#: deletion two readings, the request and, when it is not seen applied, a
+#: reading again. A run that has not answered by then is ended with
+#: everything it started.
 TIMEOUT_SECONDS: Mapping[str, float] = {
     "read": 60.0,
     "squash-defaults": 60.0,
@@ -197,12 +198,15 @@ class Outcome:
 
 #: How the backbone's deletion of a merged PR's head branch ended
 #: (:class:`BranchDeletion`): deleted at the head that merged; kept, with why;
-#: gone before it was asked for; or refused, the deletion not asked for.
+#: gone — not there, whoever removed it; refused, the deletion not asked for;
+#: or unconfirmed, asked for with no usable answer and no reading since, so
+#: whether it was deleted is not known.
 DELETED = "deleted"
 KEPT = "kept"
 GONE = "gone"
 REFUSED = "refused"
-_DELETION_ENDS = (DELETED, KEPT, GONE, REFUSED)
+UNCONFIRMED = "unconfirmed"
+_DELETION_ENDS = (DELETED, KEPT, GONE, REFUSED, UNCONFIRMED)
 
 #: The `reason_kind` of a deletion refused because the PR's head is in a fork.
 CROSS_REPOSITORY = "cross-repository"
@@ -213,18 +217,23 @@ class BranchDeletion:
     """What the backbone's deletion of a merged PR's head branch came to, as
     its document states it (`_lib.pr_merge.delete_branch`)."""
 
-    #: :data:`DELETED`, :data:`KEPT`, :data:`GONE` or :data:`REFUSED`.
+    #: :data:`DELETED`, :data:`KEPT`, :data:`GONE`, :data:`REFUSED` or
+    #: :data:`UNCONFIRMED`.
     outcome: str
     #: The head branch, by name; "" when the backbone did not read it.
     branch: str
     #: The branch's tip, when it was kept; "" otherwise.
     tip: str
-    #: Why it was kept or refused, in the backbone's terms (`tip-moved`,
-    #: `open-pull-request`, `deletion-refused`; :data:`CROSS_REPOSITORY`,
-    #: :data:`FOREIGN_REPOSITORY`, …); "" otherwise.
+    #: Why it was kept, refused or unconfirmed, in the backbone's terms
+    #: (`tip-moved`, `open-pull-request`, `deletion-refused`, `unanswered`;
+    #: :data:`CROSS_REPOSITORY`, `expect-mismatch`, :data:`FOREIGN_REPOSITORY`,
+    #: …); "" otherwise.
     reason_kind: str
     #: The same, in words.
     reason: str
+    #: The PR's head as the backbone read it — the head it merged at; "" when
+    #: it did not read the PR.
+    merged_head: str
 
 
 def read(pr_number: int, config: dict[str, Any]) -> Reading:
@@ -325,7 +334,7 @@ def request(args: list[str], config: dict[str, Any]) -> Outcome:
 
 
 # The fields of a deletion's document, each a string or null.
-_DELETION_FIELDS = ("branch", "tip", "reason_kind", "reason")
+_DELETION_FIELDS = ("branch", "tip", "reason_kind", "reason", "merged_head")
 
 
 def deletion(args: list[str], config: dict[str, Any]) -> BranchDeletion:
@@ -358,6 +367,7 @@ def deletion(args: list[str], config: dict[str, Any]) -> BranchDeletion:
         tip=_text(document.get("tip")),
         reason_kind=_text(document.get("reason_kind")),
         reason=_text(document.get("reason")),
+        merged_head=_text(document.get("merged_head")),
     )
 
 

@@ -395,13 +395,17 @@ def _wire_merge_seams(
     def _stub_hooks(name, **kwargs):
         calls["order"].append(("hooks", name))
 
-    def _stub_delete_branch(pr_number, merged_head, config, *, allow_foreign_repo):
+    def _stub_delete_branch(pr_number, merged_head, config, *, allow_foreign_repo, **kwargs):
         calls.setdefault("deletions", []).append((pr_number, merged_head, allow_foreign_repo))
+        calls.setdefault("rerun_notes", []).append(kwargs.get("rerun_note", ""))
         calls["order"].append(("remote_delete", merged_head))
+        # What became of the branch on GitHub: deleted, unless a test says.
+        return calls.get("remote_outcome", "deleted")
 
     def _stub_cleanup_local(branch, config, **kwargs):
         calls.setdefault("cross", []).append(kwargs.get("cross_repository"))
         calls["merged_head"] = kwargs.get("merged_head")
+        calls["remote"] = kwargs.get("remote")
         calls["order"].append(("local_cleanup", branch))
 
     monkeypatch.setattr(mp, "_post_ci_bypass_audit", _stub_ci_audit)
@@ -519,6 +523,23 @@ def test_merge_sequence_is_merge_hooks_remote_delete_local_cleanup(mp, monkeypat
     # The clone records that the hooks fired, so no later run fires them again.
     assert calls["records"][99].state == mp._RAN
     assert calls["records"][99].head_oid == "sha-head"
+
+
+@pytest.mark.parametrize("remote", ["deleted", "kept", "unconfirmed"])
+def test_the_deletion_says_a_rerun_does_not_retry_it_and_hands_on_its_outcome(
+    mp, monkeypatch, remote
+):
+    """The record that the hooks fired is written before the deletion, so a
+    re-run returns before it: the line the deletion prints says the command it
+    names is the only way to retry (#1255). What became of the branch on
+    GitHub is handed to the local clean-up."""
+    calls = _wire_merge_seams(mp, monkeypatch, rollup=_MP_GREEN)
+    calls["remote_outcome"] = remote
+    assert _run_merge_main(mp, monkeypatch, ["99", "--yes"]) == 0
+    assert calls["rerun_notes"] == [
+        "A re-run of `merge-pr 99` does not retry it: that command is the only way to."
+    ]
+    assert calls["remote"] == remote
 
 
 def test_merge_passes_admin_through(mp, monkeypatch):

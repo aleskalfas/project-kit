@@ -11,9 +11,14 @@ body: >
   made to the branch after the merge was deleted with it, and completing an
   old pull request could delete the branch of a newer one that reused its
   name; now such a branch is kept, and so is one another open pull request
-  uses, which the deletion would have closed. A branch kept or already gone
-  is said in one line and never fails the verb, and the operator's
-  cross-repository confirmation is passed on to the backbone's guard as it is
-  for the merge. The local clean-up is unchanged. Upgrade the capability
-  together with the backbone: it needs the release that has `pkit
-  pull-request delete-branch`.
+  uses as its head or as its base. What became of the branch — deleted, kept,
+  not there, refused, or not known to be deleted — is said in one line and
+  never fails the verb. Where the branch was not deleted, the line names the
+  command that deletes it later (`pkit pull-request delete-branch <PR>
+  --expect <sha>`); `merge-pr`'s line says a re-run of it does not retry the
+  deletion. The local branch is now deleted only once the branch on GitHub
+  was deleted or is gone, and is kept, said in one line, otherwise —
+  including when no merged head is known, where it used to be force-deleted.
+  The operator's cross-repository confirmation is passed on to the backbone's
+  guard as it is for the merge. Upgrade the capability together with the
+  backbone: it needs the release that has `pkit pull-request delete-branch`.

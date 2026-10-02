@@ -468,6 +468,7 @@ def _deletion_document(outcome: str, **fields: Any) -> dict[str, Any]:
         "tip": None,
         "reason_kind": None,
         "reason": None,
+        "merged_head": "sha-merged",
         "guard": {"verdict": "undetermined", "cleared": "undetermined"},
         **fields,
     }
@@ -481,7 +482,7 @@ def test_a_deletion_reads_how_it_ended_with_the_pinned_gh_host(mq, pkit) -> None
     )
     deletion = mq.deletion(["42", "--expect", "sha-merged"], {"gh": {"host": "ghe.example"}})
     assert deletion == mq.BranchDeletion(
-        mq.KEPT, "fix/42-x", "sha-later", "tip-moved", "its tip is sha-lat"
+        mq.KEPT, "fix/42-x", "sha-later", "tip-moved", "its tip is sha-lat", "sha-merged"
     )
     assert pkit.asked() == [
         {
@@ -494,7 +495,11 @@ def test_a_deletion_reads_how_it_ended_with_the_pinned_gh_host(mq, pkit) -> None
 def test_a_refused_deletion_reads_as_refused_with_why(mq, pkit) -> None:
     pkit.answers(
         _deletion_document(
-            "refused", branch=None, reason_kind="foreign-repository", reason="the guard refused"
+            "refused",
+            branch=None,
+            reason_kind="foreign-repository",
+            reason="the guard refused",
+            merged_head=None,
         ),
         code=1,
     )
@@ -506,14 +511,41 @@ def test_a_refused_deletion_reads_as_refused_with_why(mq, pkit) -> None:
     )
 
 
+def test_an_unconfirmed_deletion_reads_as_unconfirmed_with_no_tip(mq, pkit) -> None:
+    """The backbone asked for the deletion and got no usable answer, nor a
+    reading since: whether the branch was deleted is not known, and it states
+    no tip."""
+    pkit.answers(
+        _deletion_document(
+            "unconfirmed",
+            reason_kind="unanswered",
+            reason="the deletion got no usable answer (HTTP 502)",
+        ),
+        code=1,
+    )
+    deletion = mq.deletion(["42", "--expect", "sha-merged"], {})
+    assert deletion == mq.BranchDeletion(
+        mq.UNCONFIRMED,
+        "fix/42-x",
+        "",
+        "unanswered",
+        "the deletion got no usable answer (HTTP 502)",
+        "sha-merged",
+    )
+
+
 @pytest.mark.parametrize(
     ("document", "why"),
     [
         (_deletion_document("landed"), "says no way the deletion ended"),
         ({k: v for k, v in _deletion_document("gone").items() if k != "tip"}, "has no `tip`"),
         (_deletion_document("kept", tip=7), "a `tip` that is not text"),
+        (
+            {k: v for k, v in _deletion_document("deleted").items() if k != "merged_head"},
+            "has no `merged_head`",
+        ),
     ],
-    ids=["unknown-outcome", "missing-field", "field-of-another-type"],
+    ids=["unknown-outcome", "missing-field", "field-of-another-type", "no-merged-head"],
 )
 def test_a_deletion_document_pm_cannot_read_is_no_answer(mq, pkit, document, why) -> None:
     """An unknown `outcome`, or a missing or mistyped field, is no answer: the

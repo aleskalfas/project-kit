@@ -67,11 +67,14 @@ shared with `done-work`; #882):
   - Best-effort branch cleanup: the head branch deleted on GitHub by the
     backbone (`pkit pull-request delete-branch <N> --expect <the head that
     merged>`), only while its tip is the head that merged — a branch kept,
-    with why, or already gone is said in one line — then `git checkout
+    with why, gone, or not known to be deleted is said in one line, naming
+    the command that deletes it later where it was not deleted, since a
+    re-run of this verb does not retry it — then `git checkout
     <default_branch>`, `git pull --ff-only`, `git branch -D <head>`, the local
-    delete only when everything on the branch merged. Each step warns with its
-    reason and continues; none can fail the run — a head branch checked out in
-    a worktree simply leaves a warning where the local delete would have been.
+    delete only when the branch on GitHub was deleted or is gone and
+    everything on the local one merged. Each step warns with its reason and
+    continues; none can fail the run — a head branch checked out in a
+    worktree simply leaves a warning where the local delete would have been.
 
 A merged PR has nothing left to gate (#1011). `merge-pr <N>` on one runs only
 the hooks and the clean-up above, and only for a merge whose after-merge steps
@@ -520,9 +523,18 @@ def _after_merge(
     # Branch cleanup — never fatal, after the hooks. The head branch on GitHub
     # is the backbone's to delete, only at the head that merged; the local
     # steps warn and continue, so a head branch checked out in a worktree
-    # (#587) is a warning on the local delete, not a failed merge.
-    pr_merge.delete_branch(
-        args.pr_number, merged_head, config, allow_foreign_repo=allow_foreign_repo
+    # (#587) is a warning on the local delete, not a failed merge. The record
+    # above says the hooks ran, so a re-run of this verb returns before the
+    # deletion: the command the line names is the only way to retry it.
+    remote = pr_merge.delete_branch(
+        args.pr_number,
+        merged_head,
+        config,
+        allow_foreign_repo=allow_foreign_repo,
+        rerun_note=(
+            f"A re-run of `merge-pr {args.pr_number}` does not retry it: that command is "
+            "the only way to."
+        ),
     )
     head_branch = str(pr.get("headRefName") or "")
     if head_branch:
@@ -534,6 +546,7 @@ def _after_merge(
             config,
             cross_repository=cross,
             merged_head=merged_head,
+            remote=remote,
         )
     else:
         print(

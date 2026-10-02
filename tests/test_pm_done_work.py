@@ -1039,13 +1039,16 @@ def _wire_main_seams(
         calls["order"].append(("closed", issue_number))
         return 0
 
-    def _stub_delete_branch(pr_number, merged_head, config, *, allow_foreign_repo):
+    def _stub_delete_branch(pr_number, merged_head, config, *, allow_foreign_repo, **kwargs):
         calls.setdefault("deletions", []).append((pr_number, merged_head, allow_foreign_repo))
         calls["order"].append(("remote_delete", merged_head))
+        # What became of the branch on GitHub: deleted, unless a test says.
+        return calls.get("remote_outcome", "deleted")
 
     def _stub_cleanup_local(branch, config, **kwargs):
         calls.setdefault("cross", []).append(kwargs.get("cross_repository"))
         calls.setdefault("merged_heads", []).append(kwargs.get("merged_head"))
+        calls.setdefault("remotes", []).append(kwargs.get("remote"))
         calls["order"].append(("local_cleanup", branch))
 
     monkeypatch.setattr(dw, "_post_ci_bypass_audit", _stub_ci_audit)
@@ -1731,6 +1734,32 @@ def test_main_held_by_other_worktree_completes_merge_and_transition(
     assert f"[warn] git branch -D fix/42-slug failed: {branch_err}" in err
     assert _script_error_lines(err) == []
     assert ["git", "pull", "--ff-only"] not in seen
+
+
+@pytest.mark.parametrize("remote", ["deleted", "gone", "kept", "refused", "unconfirmed"])
+def test_the_local_clean_up_is_told_what_became_of_the_branch_on_github(dw, monkeypatch, remote):
+    """The deletion's outcome is handed to the local clean-up, which deletes
+    the local branch only after one deleted or gone (#1255)."""
+    calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+    calls["remote_outcome"] = remote
+    assert _run_main(dw, monkeypatch, ["42", "--yes"]) == 0
+    assert calls["remotes"] == [remote]
+
+
+@pytest.mark.parametrize("remote", ["kept", "refused", "unconfirmed"])
+def test_a_branch_kept_on_github_keeps_the_local_one_and_says_so(dw, monkeypatch, capsys, remote):
+    """With the real local clean-up: the branch on GitHub not deleted, the
+    local branch stays too, in one line, and the landing still succeeds."""
+    real_cleanup = dw.pr_merge.cleanup_local
+    calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+    calls["remote_outcome"] = remote
+    monkeypatch.setattr(dw.pr_merge, "cleanup_local", real_cleanup)
+    seen = _fake_git(monkeypatch, dw)
+    assert _run_main(dw, monkeypatch, ["42", "--yes"]) == 0
+    assert ["git", "branch", "-D", "fix/42-slug"] not in seen
+    assert (
+        f"  kept local branch fix/42-slug: its branch on GitHub was not deleted ({remote})"
+    ) in capsys.readouterr().out
 
 
 def test_cleanup_still_runs_when_move_issue_fails(dw, monkeypatch, capsys):
