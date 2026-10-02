@@ -22,7 +22,7 @@
 # alters the lock or the pyright table — reading the base as the diff-scoped
 # checks below do. CONTRIBUTING.md, "Running checks", has the rules.
 #
-# Then two kinds of line, deliberately apart (ADR-058):
+# Then two kinds of line, deliberately apart (COR-055 point 2; ADR-058):
 #
 #   - `pkit validate` — the project's one check of its own STATE against the
 #     invariants its records own (COR-055): the backbone's registered members
