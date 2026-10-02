@@ -1,0 +1,27 @@
+component: backbone
+kind: patch
+custom:
+  category: Changed
+body: >
+  A component's name can no longer collide with a name the backbone reads
+  beside it (#1300). `backbone` is a reserved adapter name: `pkit new adapter`
+  refuses it, giving the reason, and `pkit init` refuses, before writing
+  anything, a methodology source that ships an adapter under it, since the
+  backbone's changesets and validators are read under that name and both read
+  adapters too. `core`, `project` and `adr` stay reserved for capabilities
+  alone and are free for an adapter. `pkit new capability` also refuses the
+  name of a backbone command (`validate`, `status`, `sync`, … — read from the
+  dispatcher when it runs), whose top-level name every capability yields to;
+  `pkit capabilities install` and `register` do not, since the backbone gains
+  commands with its releases. A project that already has an adapter registered
+  as `backbone` keeps it registered, but sees `pkit validate` fail with an
+  error at that adapter's `component.name` naming the rename: its directory,
+  its `component.name` and its entry in `.pkit/manifest.yaml`. A project with
+  a capability that ships a `commands:` block under a backbone command's name —
+  its `pkit <capability> …` namespace runs the backbone command instead, and
+  an upgrade that adds the command makes it so — sees `pkit validate` fail
+  with an error at that capability's `component.name` naming the rename: `pkit
+  capabilities uninstall <name>` (which keeps an authored capability's files),
+  rename the directory and its `component.name`, and `pkit capabilities
+  register <new-name>`; one a sync restores is its author's to rename. A
+  capability with no `commands:` block is not reported.

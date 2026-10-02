@@ -119,6 +119,40 @@ def test_cli_new_capability_refuses_a_reserved_name(
     assert not (kit_target / ".pkit" / "capabilities" / name).exists()
 
 
+# A backbone command holds its top-level name before any capability, so a
+# capability named after one could never surface its commands as `pkit <name> …`
+# (#1300). The commands are read from the dispatcher when asked, never listed here.
+
+
+@pytest.mark.parametrize("name", ["validate", "status", "sync", "capabilities"])
+def test_stamp_capability_refuses_a_backbone_command_name(kit_target: Path, name: str) -> None:
+    with pytest.raises(
+        click.ClickException, match=f"is the backbone command `pkit {name}`"
+    ) as refused:
+        stamp_capability(kit_target, name=name)
+    assert f"could never surface its commands as `pkit {name} …`" in refused.value.message
+    assert not (kit_target / ".pkit" / "capabilities" / name).exists()
+
+
+def test_stamp_capability_reads_the_backbone_commands_when_asked(
+    kit_target: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A command the backbone gains is refused as soon as it is one."""
+    assert "gather" not in main.commands
+    monkeypatch.setitem(main.commands, "gather", click.Command("gather"))
+    with pytest.raises(click.ClickException, match="is the backbone command `pkit gather`"):
+        stamp_capability(kit_target, name="gather")
+
+
+def test_cli_new_capability_refuses_a_backbone_command_name(kit_target: Path) -> None:
+    result = CliRunner().invoke(main, ["new", "capability", "validate"])
+    assert result.exit_code != 0
+    output = " ".join(result.output.split())
+    assert "capability name 'validate' is the backbone command `pkit validate`" in output
+    assert "which every capability name and alias yields to" in output
+    assert not (kit_target / ".pkit" / "capabilities" / "validate").exists()
+
+
 def test_stamp_capability_refuses_when_pkit_missing(tmp_path: Path) -> None:
     with pytest.raises(click.ClickException, match="does not exist"):
         stamp_capability(tmp_path, name="x")

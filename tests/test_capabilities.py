@@ -441,6 +441,40 @@ def test_cli_refuses_a_reserved_name(
     assert not caps.is_installed(kit_target, name)
 
 
+def _with_commands(cap_dir: Path) -> None:
+    """Give a staged capability a `commands:` block, so it surfaces a namespace."""
+    (cap_dir / "scripts").mkdir(exist_ok=True)
+    (cap_dir / "scripts" / "run.py").write_text("", encoding="utf-8")
+    package = cap_dir / "package.yaml"
+    package.write_text(
+        package.read_text(encoding="utf-8")
+        + "commands:\n  run:\n    script: scripts/run.py\n    help: Run it.\n",
+        encoding="utf-8",
+    )
+
+
+# A capability named after a backbone command is refused only by `pkit new
+# capability`: the backbone's commands grow with its releases, so an upgrade can
+# take a name that was free when the capability shipped, and install and register
+# take it — `pkit validate` reports the namespace the command shadows (#1300).
+
+
+def test_install_takes_a_name_a_backbone_command_holds(kit_target: Path, kit_source: Path) -> None:
+    _with_commands(_stage_capability_in_source(kit_source, "status"))
+    source = caps.find_capability_in_source(kit_source, "status")
+    assert source is not None
+    caps.install_capability(kit_target, source)
+    assert caps.is_installed(kit_target, "status")
+
+
+def test_register_takes_a_name_a_backbone_command_holds(kit_target: Path) -> None:
+    _with_commands(_stage_capability_in_repo(kit_target, "status"))
+    source = caps.find_capability_in_repo(kit_target, "status")
+    assert source is not None
+    caps.register_incubated_capability(kit_target, source)
+    assert caps.is_installed(kit_target, "status")
+
+
 def test_install_dry_run_writes_nothing(kit_target: Path, kit_source: Path) -> None:
     _stage_capability_in_source(kit_source, "evidence")
     source = caps.find_capability_in_source(kit_source, "evidence")

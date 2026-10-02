@@ -41,6 +41,8 @@ The current dependencies:
 
 Use the harness's canonical kebab-case name: `claude-code`, `codex`, `cursor`, etc. The name becomes the directory name and the value of the `component.name` field in `package.yaml`.
 
+**Reserved name: `backbone`.** `pkit new adapter` refuses it, giving the reason, and `pkit init` refuses a methodology source that ships an adapter under it. `backbone` is the name the backbone carries where a component's carry the component's name, and two of those places read adapters as well as capabilities — the component of the backbone's changesets (`component: backbone` under `.changes/unreleased/`; every `package.yaml` under `.pkit/` is a component there) and the owner of its validators (every registered component's validators are owned by its name) — so an adapter named `backbone` would have its changesets and validators read as the backbone's. An adapter registered under it before it was reserved stays registered; `pkit validate` reports it as an error naming the rename. The other names reserved for capabilities (`core`, `project`, `adr`) collide only where a capability's name is read — decision, agent and schema namespaces, an evidence point's checks — so an adapter may take them.
+
 ### 2. Read the contract
 
 Read `.pkit/decisions/core/COR-005-bundle-pattern.md` ("Adapter structure" and "Universal elements"). Every adapter must ship:
@@ -66,7 +68,7 @@ The command:
 - Creates an empty `migrations/` directory.
 - Registers the adapter in the backbone manifest's `components` registry (so `pkit status` sees it immediately).
 
-The command refuses if an adapter with that name already exists or if the slug isn't kebab-case.
+The command refuses if an adapter with that name already exists, if the slug isn't kebab-case, or if the name is reserved (`backbone`, see step 1).
 
 ### 4. Fill in the README
 
