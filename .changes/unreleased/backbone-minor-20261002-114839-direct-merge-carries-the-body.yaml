@@ -2,6 +2,7 @@ component: backbone
 kind: minor
 custom:
   category: Changed
+  pr: "1311"
 body: >
   A pull request merged directly now lands with its body, as one merged
   through a queue does: `pkit pull-request merge`, and so `pkit release merge`
