@@ -339,6 +339,13 @@ def _record_location(*args: str, input: str | None = None) -> tuple[int, str]:
 
 GUIDES_RECORDED_IN = ".pkit/capabilities/project-management/project/docs-locations.yaml"
 
+#: What `record-location` prints when it records the `guides` location of `_guides`.
+GUIDES_NOTICE = (
+    f"recorded project-management guides = tech-docs/guides  ({GUIDES_RECORDED_IN})\n"
+    "  derived from the internal root, tech-docs (explicit); it stays here if the root "
+    "changes. To move it: edit that line and move the documents.\n"
+)
+
 
 def _guides(make_adopter_repo: MakeAdopterRepo) -> AdopterRepo:
     """An adopter whose project-management declares a `guides` location, under `tech-docs/`."""
@@ -354,10 +361,7 @@ def test_record_location_records_a_derived_capability_location_once(
     """`pkit docs record-location` is the backbone's recording on first use for a
     capability's own script: it writes where the location lies now, once."""
     repo = _guides(make_adopter_repo)
-    assert _record_location("project-management", "guides", "--yes") == (
-        0,
-        f"recorded project-management guides = tech-docs/guides  ({GUIDES_RECORDED_IN})\n",
-    )
+    assert _record_location("project-management", "guides", "--yes") == (0, GUIDES_NOTICE)
     assert dr.recorded_capability_locations(repo.root, "project-management") == {
         "guides": "tech-docs/guides"
     }
@@ -373,45 +377,66 @@ def test_record_location_records_a_derived_capability_location_once(
     assert (repo.root / GUIDES_RECORDED_IN).read_text(encoding="utf-8") == before
 
 
-def test_record_location_writes_only_with_consent(
-    make_adopter_repo: MakeAdopterRepo, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize("terminal", [False, True])
+def test_record_location_records_without_asking(
+    make_adopter_repo: MakeAdopterRepo, monkeypatch: pytest.MonkeyPatch, terminal: bool
 ) -> None:
-    """COR-048 point 5, as the sibling backbone writers ask it: `--yes`, or a terminal's
-    confirmation; a non-interactive run without `--yes` refuses and names the commands."""
+    """A capability's own location is read as derived until recorded, so recording
+    changes nothing in use: running the command is the consent (COR-049 point 5). No
+    prompt and no refusal, at a terminal or off one, and the notice says where it came
+    from and where to change it."""
+    monkeypatch.setattr(pc, "stdin_is_tty", lambda: terminal)
+    repo = _guides(make_adopter_repo)
+    assert _record_location("project-management", "guides", input="") == (0, GUIDES_NOTICE)
+    assert dr.recorded_capability_locations(repo.root, "project-management") == {
+        "guides": "tech-docs/guides"
+    }
+
+
+def test_the_notice_names_the_root_the_location_was_derived_from(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """A location declared under the user root says so, with that root's source; an
+    overlay category always derives from the internal root."""
+    repo = make_adopter_repo(capabilities=("project-management",))
+    _write_config(repo, "docs:\n  internal: tech-docs\n")
+    _declare_locations(repo, "project-management", "    manual: {path: manual, root: user}\n")
+    assert dr.recording_notice(repo.root, "project-management", "manual", "docs/manual") == (
+        "recorded project-management manual = docs/manual  "
+        "(.pkit/capabilities/project-management/project/docs-locations.yaml)\n"
+        "  derived from the user root, docs (default); it stays here if the root changes. "
+        "To move it: edit that line and move the documents."
+    )
+    assert dr.recording_notice(
+        repo.root, dr.BACKBONE, "adr-records", "tech-docs/architecture/decisions/"
+    ) == (
+        "recorded adr-records = tech-docs/architecture/decisions  "
+        "(.pkit/agents/project/overlay.yaml)\n"
+        "  derived from the internal root, tech-docs (explicit). Agents that reference "
+        "adr-records now reach this folder. To change it: edit that entry, then pkit sync."
+    )
+
+
+def test_record_location_accepts_yes_with_no_effect_and_dry_run_writes_nothing(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
     repo = _guides(make_adopter_repo)
     written = dr.capability_locations_path(repo.root, "project-management")
-    code, output = _record_location("project-management", "guides")
-    assert code == 1
-    assert (
-        f"refusing to write {GUIDES_RECORDED_IN} without consent: stdin is not a terminal "
-        "and --yes was not given (COR-048 point 5). Nothing was written.\n"
-        "To see the change first, run:\n"
-        "  pkit docs record-location project-management guides --dry-run\n"
-        "To consent non-interactively, run:\n"
-        "  pkit docs record-location project-management guides --yes\n"
-    ) in output
-    assert _record_location("project-management", "guides", "--dry-run") == (
+    would = (
         0,
         f"would record project-management guides = tech-docs/guides  ({GUIDES_RECORDED_IN})\n"
         "Dry run: nothing written.\n",
     )
-    code, output = _record_location("project-management", "guides", "--yes", "--dry-run")
-    assert code == 2
-    assert "--yes and --dry-run exclude each other" in output
+    assert _record_location("project-management", "guides", "--dry-run") == would
+    assert _record_location("project-management", "guides", "--yes", "--dry-run") == would
     assert not written.exists()
-    # On a terminal it asks once; declining writes nothing, agreeing records.
-    monkeypatch.setattr(pc, "stdin_is_tty", lambda: True)
-    code, _output = _record_location("project-management", "guides", input="n\n")
-    assert code == 1
-    assert not written.exists()
-    code, output = _record_location("project-management", "guides", input="y\n")
-    assert code == 0, output
-    assert output.startswith(
-        f"Record project-management guides = tech-docs/guides in {GUIDES_RECORDED_IN}? [Y/n]: y"
+    assert _record_location("project-management", "guides", "--yes") == (0, GUIDES_NOTICE)
+    before = written.read_bytes()
+    assert _record_location("project-management", "guides") == (
+        0,
+        "project-management guides = tech-docs/guides  (recorded already)\n",
     )
-    assert dr.recorded_capability_locations(repo.root, "project-management") == {
-        "guides": "tech-docs/guides"
-    }
+    assert written.read_bytes() == before
 
 
 def test_record_location_refuses_what_no_installed_capability_declares(

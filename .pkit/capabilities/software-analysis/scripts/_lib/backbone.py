@@ -18,9 +18,11 @@ backbone through its commands:
   from the local branch — is passed on;
 - **recording the analysis location** on first use — `pkit docs
   record-location`, the backbone's one writer of a capability's recorded
-  locations (COR-049 point 5): with `--dry-run` to ask whether it is recorded
-  already, and with `--yes` when it is not — the stamp runs it when it places
-  an artefact, so invoking the stamp is the consent;
+  locations: with `--dry-run` to ask whether it is recorded already, and for
+  the recording when it is not, as the stamp places an artefact. The value
+  recorded is the one already in use, so running the stamp is the consent and
+  the command asks nothing (COR-049 point 5); the `--yes` passed is accepted
+  and not needed;
 - **one artefact's friction** — `pkit friction explain <artefact> --json`
   (COR-050 point 13): its state and body, its anchors with the files each path
   anchor stands on, and the commits behind each finding with the paths behind
@@ -248,9 +250,12 @@ def message(root: Path, commit: str) -> str | None:
 
 
 def record_location(root: Path, run: Runner = subprocess.run) -> str | None:
-    """Record the analysis location where it now lies (COR-049 point 5), through
-    `pkit docs record-location`. Returns the line it printed when it recorded,
-    `None` when the location was recorded already. Raises Unreadable when it fails."""
+    """Record the analysis location where it now lies, through `pkit docs
+    record-location`, which asks nothing: the value is the one already in use
+    (COR-049 point 5), and the `--yes` passed is accepted and not needed. Returns
+    the notice it printed when it recorded — what was recorded, the root it was
+    derived from and where to change it — `None` when the location was recorded
+    already. Raises Unreadable when it fails."""
     argv = ["pkit", "docs", "record-location", CAPABILITY, LOCATION, "--yes"]
     proc = _run(root, argv, run)
     if proc.returncode != 0:

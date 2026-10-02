@@ -93,17 +93,27 @@ class ConsentRefused(click.ClickException):
 
 @dataclass(frozen=True)
 class Consent:
-    """How a write to the configuration file may be authorised.
+    """How a write to the configuration file — or any other write that takes
+    its consent forms (COR-048 point 5) — may be authorised.
 
     `yes` is the explicit confirmation flag; `interactive` says whether a
     prompt can be shown (`None` detects a terminal on stdin); `rerun` is the
     exact command the refusal names, so a non-interactive caller learns what
-    to run rather than what went wrong.
+    to run rather than what went wrong. The rest default to the configuration
+    file and are set by a writer of another file: `target` is the file the
+    prompt and the refusal name, `rule` the record the refusal cites, `preview`
+    a command that shows the change without writing it, named by the refusal,
+    and `detail` what the write would change, said above the question and in
+    the refusal (ending in a newline).
     """
 
     yes: bool = False
     interactive: bool | None = None
     rerun: str = "the same command with --yes"
+    target: str = PROJECT_CONFIG_RELPATH.as_posix()
+    rule: str = "COR-048 point 5"
+    preview: str | None = None
+    detail: str = ""
 
     def confirm(self, description: str) -> None:
         """Return when the write is consented to; raise otherwise.
@@ -116,15 +126,15 @@ class Consent:
             return
         interactive = stdin_is_tty() if self.interactive is None else self.interactive
         if not interactive:
+            see_first = f"To see the change first, run:\n  {self.preview}\n" if self.preview else ""
             raise ConsentRefused(
-                f"refusing to write {PROJECT_CONFIG_RELPATH.as_posix()} without consent: "
-                f"stdin is not a terminal and --yes was not given (COR-048 point 5).\n"
-                f"Nothing was written. To consent non-interactively, run:\n"
+                f"refusing to write {self.target} without consent: "
+                f"stdin is not a terminal and --yes was not given ({self.rule}).\n"
+                f"{self.detail}"
+                f"Nothing was written. {see_first}To consent non-interactively, run:\n"
                 f"  {self.rerun}"
             )
-        click.confirm(
-            f"{description} in {PROJECT_CONFIG_RELPATH.as_posix()}?", default=True, abort=True
-        )
+        click.confirm(f"{self.detail}{description} in {self.target}?", default=True, abort=True)
 
 
 def stdin_is_tty() -> bool:
