@@ -62,7 +62,9 @@ VERSION = 1
 #: `gh` reads, when the host knows no merge queues; the squash-commit defaults
 #: one; a merge or an enqueue the cross-repository guard, gh's merge request
 #: and, when it gets no answer, the readings that settle it — the second no
-#: sooner than its window after the request; a dequeue the guard, a reading
+#: sooner than its window after the request — and a merge, before its
+#: request, the squash-commit defaults and, unless the service composes the
+#: PR's body itself, that body, one read each; a dequeue the guard, a reading
 #: or two, and up to two requests, each with the readings that settle it; a
 #: branch deletion the guard, two readings, the request and a reading again.
 #: A test holds each bound here above the backbone's figure with room to
@@ -72,7 +74,7 @@ VERSION = 1
 TIMEOUT_SECONDS: Mapping[str, float] = {
     "read": 90.0,
     "squash-defaults": 60.0,
-    "merge": 210.0,
+    "merge": 240.0,
     "enqueue": 210.0,
     "dequeue": 600.0,
     "delete-branch": 180.0,

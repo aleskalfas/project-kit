@@ -1,0 +1,14 @@
+component: project-management
+kind: patch
+custom:
+  category: Changed
+  pr: "1311"
+  requires_backbone: release
+body: >
+  The bound `done-work`, `merge-pr` and `land-work` put on the backbone's
+  direct merge is now four minutes, up from three and a half, so it still
+  holds the longest the backbone states a merge can run now that it reads the
+  repository's squash-commit defaults and the pull request's body before the
+  merge. Upgrade the capability together with the backbone: the bound is
+  raised for the release in which a direct merge carries the pull request's
+  body.

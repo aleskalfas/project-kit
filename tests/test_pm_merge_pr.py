@@ -987,6 +987,17 @@ def test_a_merge_with_no_answer_back_github_cannot_settle_is_owed(mp, monkeypatc
     assert calls["records"][99] == mp._Record(mp._OWED, "sha-head", "2026-10-01T12:00:00+00:00")
 
 
+# What the backbone reads before a direct merge (#1257): the repository's
+# squash-commit defaults, here the convention's, so the merge leaves the
+# body to the service and asks nothing more before its request.
+_DEFAULTS_READ = ["gh", "api", "repos/{owner}/{repo}"]
+_CONVENTION = '{"squash_merge_commit_title": "PR_TITLE", "squash_merge_commit_message": "PR_BODY"}'
+
+
+def _convention(argv) -> subprocess.CompletedProcess[str]:
+    return subprocess.CompletedProcess(list(argv), 0, stdout=_CONVENTION, stderr="")
+
+
 def _merge_never_answered(mp, monkeypatch, *, answered_from: int = 0):
     """merge-pr's seams, with the real merge request through the backbone in
     this process: the backbone's `gh` merge is ended at its bound — never
@@ -1009,6 +1020,8 @@ def _merge_never_answered(mp, monkeypatch, *, answered_from: int = 0):
         )
 
     def gh(argv):
+        if list(argv) == _DEFAULTS_READ:
+            return _convention(argv)
         state["asked"] += 1
         if answered_from and state["asked"] >= answered_from:
             state["merged"] = True
@@ -1084,6 +1097,8 @@ def test_a_merge_github_refused_owes_nothing(mp, monkeypatch, capsys):
     monkeypatch.setattr(mp.pr_merge, "squash_merge", real_merge)
 
     def refusing(argv):
+        if list(argv) == _DEFAULTS_READ:
+            return _convention(argv)
         return subprocess.CompletedProcess(
             list(argv), 1, stdout="", stderr="GraphQL: Pull request is not mergeable"
         )

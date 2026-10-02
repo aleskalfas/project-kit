@@ -7,7 +7,9 @@ its own code. This module answers all of it in this process, from one model:
 - :class:`HostingService` is GitHub as `gh` reaches it: one pull request and
   its base — open, closed or merged; a head that can move; a base with or
   without a merge queue, the queue's merge method and the repository's
-  squash-commit defaults; the PR queued, waiting to enter, or dropped at a
+  squash-commit defaults, and the commit a direct merge lands — its body
+  passed with the request or composed from the default; the PR queued,
+  waiting to enter, or dropped at a
   head; a merge the service turns into an enqueue; auto-merge allowed or not;
   the remote branches, a protected one, and other open PRs on a branch or
   based on one. A
@@ -63,6 +65,7 @@ ANCHOR = session_guard.CLAUDE_CODE_ANCHOR
 
 READ = "read"  # the GraphQL reading of the PR and its base's queue
 DEFAULTS = "defaults"  # the repository's settings, read for its squash-commit defaults
+BODY = "body"  # the GraphQL reading of the PR's body, just before a direct merge
 MERGE = "merge"  # `gh pr merge --squash`
 MERGE_ADMIN = "merge-admin"  # `gh pr merge --squash --admin`
 ENQUEUE = "enqueue"  # `gh pr merge --auto`
@@ -79,12 +82,13 @@ ISSUE_MERGES = "issue-merges"  # the GraphQL read of the PRs that close an issue
 UNKNOWN = "unknown"  # a request the fake does not model: answered with exit 1
 
 #: The requests a landing makes of the service — the reading, the squash
-#: defaults, the merge requests, the dequeue and the branch deletion — as
-#: against the caller's own reads for its gates.
+#: defaults, the PR's body, the merge requests, the dequeue and the branch
+#: deletion — as against the caller's own reads for its gates.
 LANDING = frozenset(
     {
         READ,
         DEFAULTS,
+        BODY,
         MERGE,
         MERGE_ADMIN,
         ENQUEUE,
@@ -244,6 +248,18 @@ class HostingService:
     node_id: str = "PR_node"
     bases: dict[str, Base] = field(default_factory=lambda: {"main": Base()})
     squash_defaults: tuple[str, str] | None = ("PR_TITLE", "PR_BODY")
+    #: The defaults the service composes with where the account cannot read
+    #: them (`squash_defaults` None): GitHub's own for a new repository.
+    hidden_defaults: tuple[str, str] = ("COMMIT_OR_PR_TITLE", "COMMIT_MESSAGES")
+    #: The messages of the PR's commits, which a `COMMIT_MESSAGES` default
+    #: composes the squash commit's body from, and whose `Co-authored-by:`
+    #: trailers the service adds after it.
+    commits: list[str] = field(
+        default_factory=lambda: ["fix: land it\n\nCo-authored-by: Pair <pair@example.invalid>"]
+    )
+    #: The squash commit a direct merge landed — its subject, a blank line,
+    #: its body — as the service made it; empty until one lands.
+    landed_message: str = ""
     #: The repository lets a PR be merged automatically once its checks pass.
     auto_merge_allowed: bool = True
     #: The PR's own required checks are still running when it is handed to the
@@ -420,6 +436,15 @@ class HostingService:
         """The kind of every request of the landing (:data:`LANDING`), in order."""
         return [kind for kind in self.kinds() if kind in LANDING]
 
+    def body_route(self) -> str:
+        """How the body of the last direct merge asked for went: `passed` when
+        the request carried one (`--body`), `composed` when it left the body
+        to the service; empty when no direct merge was asked for."""
+        asked = [request for request in self.requests if request.kind in (MERGE, MERGE_ADMIN)]
+        if not asked:
+            return ""
+        return "passed" if "--body" in asked[-1].argv else "composed"
+
     def remote_deletion(self) -> str:
         """What deleting the PR's head branch came to: `none` when it was not
         asked for; else what the last request to delete it did."""
@@ -474,6 +499,9 @@ class HostingService:
             return _done(
                 args, stdout=json.dumps({"data": {"repository": {"pullRequest": self._node()}}})
             )
+        if kind == BODY:
+            pr = {"body": self.body}
+            return _done(args, stdout=json.dumps({"data": {"repository": {"pullRequest": pr}}}))
         if kind == DEFAULTS:
             settings: dict[str, Any] = {"name": "project"}
             if self.squash_defaults is not None:
@@ -556,8 +584,38 @@ class HostingService:
             # A base that requires a queue takes a plain merge as an enqueue.
             self.enter_queue()
             return _done(args)
+        self.landed_message = self._squash_message(args)
         self.merge_now()
         return _done(args)
+
+    def _squash_message(self, args: list[str]) -> str:
+        """The squash commit a direct merge lands, as GitHub makes it: the
+        subject passed, the body passed kept as it is — trailers added to
+        none — or, with no body passed, the body composed from the default
+        message: the PR's body, as it stands at the merge (`PR_BODY`); the
+        commits' messages, then a separator and their `Co-authored-by:`
+        trailers (`COMMIT_MESSAGES`, as merges on project-kit's main show it);
+        or nothing (`BLANK`). What GitHub adds to a `PR_BODY` or a `BLANK`
+        composition is not modelled."""
+        subject = _option(args, "--subject") or self.title
+        body = _option(args, "--body")
+        if body is None:
+            _, message = self.squash_defaults or self.hidden_defaults
+            if message == "PR_BODY":
+                body = self.body
+            elif message == "COMMIT_MESSAGES":
+                trailers = [
+                    line
+                    for commit in self.commits
+                    for line in commit.splitlines()
+                    if line.startswith("Co-authored-by:")
+                ]
+                body = "\n\n".join(f"* {commit}" for commit in self.commits)
+                if trailers:
+                    body += "\n\n---------\n\n" + "\n".join(dict.fromkeys(trailers))
+            else:
+                body = ""
+        return f"{subject}\n\n{body}" if body else subject
 
     def _delete_ref(self, args: list[str], request: Request) -> Completed:
         """`updateRefs`, moving one branch to the all-zero commit: deleted only
@@ -1038,7 +1096,9 @@ def _kind(args: list[str]) -> str:
         if "baseRefName:" in query:
             return BASED_ON
         if "pullRequest(number:" in query:
-            return BRANCH if "headRef {" in query else READ
+            if "headRef {" in query:
+                return BRANCH
+            return BODY if re.search(r"^\s*body\s*$", query, re.MULTILINE) else READ
         return UNKNOWN
     if args[:2] == ["api", "repos/{owner}/{repo}"]:
         return DEFAULTS

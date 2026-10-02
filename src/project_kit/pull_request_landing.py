@@ -28,7 +28,9 @@ Every step of a landing that talks to the hosting service lives here, once:
 - **the repository's squash-commit defaults** (:func:`squash_commit_defaults`),
   which a queue composes its squash commit from;
 - **the direct squash merge** (:func:`squash_merge`) and **the enqueue**
-  (:func:`enqueue`), each pinned to the head the caller checked;
+  (:func:`enqueue`), each pinned to the head the caller checked; the direct
+  merge carries the PR's body, read just before it is sent, or left to the
+  service where its default composes the PR's body;
 - **the wait for the queue's merge** (:func:`wait_for_merge`), which declares
   a PR out of the queue only on two readings running and stops at once when
   the head moves;
@@ -108,6 +110,18 @@ SQUASH = "SQUASH"
 #: composes the squash commit from them, not from the merge command.
 PR_TITLE = "PR_TITLE"
 PR_BODY = "PR_BODY"
+
+#: How a direct merge's commit body came to be (:func:`squash_merge`): the
+#: PR's body, read just before the merge, passed with it; or composed by the
+#: service from its default, where that default is the PR's body
+#: (:data:`PR_BODY`). The service keeps a body passed to it as it is — its
+#: HTML comments and its own `Co-authored-by:` lines among it — and adds
+#: nothing to it: not the `Co-authored-by:` trailers of the PR's commits,
+#: which it adds after a body it composes from their messages (#1257). Where
+#: its default is the PR's body, what it composes is that body as it stands
+#: at the merge.
+BODY_PASSED = "passed"
+BODY_COMPOSED = "composed"
 
 #: The bound on one `gh` call, by kind: a reading — one GraphQL query, or one
 #: REST read — and a request that changes the service — `gh pr merge`, which
@@ -194,7 +208,9 @@ NOT_MADE = "not-made"
 #: another repository, a fork; the head named is not the head the PR merged
 #: at; the PR, or the open PRs that use its branch, could not be read.
 #: :data:`NOT_READ` is also why a dequeue the service answered is
-#: unconfirmed: the PR could not be read since to see it out of the queue.
+#: unconfirmed: the PR could not be read since to see it out of the queue;
+#: and why a direct merge was not sent: the PR's body, which it is to carry,
+#: could not be read just before it.
 NOT_MERGED = "not-merged"
 CROSS_REPOSITORY = "cross-repository"
 EXPECT_MISMATCH = "expect-mismatch"
@@ -442,6 +458,11 @@ class Outcome:
     #: :data:`NOT_MADE`, :data:`UNANSWERED`, :data:`HAS_MERGED` or
     #: :data:`NOT_READ`; "" otherwise.
     reason_kind: str = ""
+    #: How a direct merge's body came to be, once the merge was sent:
+    #: :data:`BODY_PASSED` or :data:`BODY_COMPOSED`; "" when no merge was
+    #: sent, and for every other request. Written by the merge's document
+    #: alone (:func:`merge_document`).
+    body: str = ""
 
     def as_json(self) -> dict[str, Any]:
         return {
@@ -548,7 +569,8 @@ def squash_merge(
     head_oid: str = "",
     admin: bool = False,
 ) -> Outcome:
-    """Squash-merge the PR with `subject` as the landed commit's subject.
+    """Squash-merge the PR with `subject` as the landed commit's subject and
+    the PR's body as its body (COR-009; ADR-061 point 8).
 
     `clearance` is the cross-repository guard's for `cwd`, the directory `gh`
     runs in (:func:`session_guard.require`). GitHub's
@@ -561,6 +583,14 @@ def squash_merge(
     after the remote merge has landed — so the exit code would no longer report
     the merge alone.
 
+    The body is read just before the merge is sent, never taken from the
+    caller (:func:`_body_to_pass`): where the repository's default
+    squash-commit message is the PR's body, the service composes it at the
+    merge; otherwise the PR's body as read now is passed. A body that cannot
+    be read sends no merge: not accepted, :data:`NOT_READ`. The outcome's
+    `body` says which way the body went (:data:`BODY_PASSED`,
+    :data:`BODY_COMPOSED`).
+
     Accepted is not proof of a merge: on a base that requires a queue, gh
     enqueues and exits 0. Read the PR afterwards (:func:`read`). A merge that
     got no usable answer is settled by reading (:func:`_settle`): made once
@@ -568,12 +598,52 @@ def squash_merge(
     sent.
     """
     run = _acting(clearance, cwd)
+    try:
+        body = _body_to_pass(pr_number, run)
+    except Unreadable as exc:
+        return Outcome(
+            False,
+            None,
+            f"the body of PR #{pr_number}, which the merge is to carry, could not be read "
+            f"just before it, so no merge was sent: {exc}",
+            NOT_READ,
+        )
     cmd = ["gh", "pr", "merge", str(pr_number), "--squash", "--subject", subject]
+    if body is not None:
+        cmd += ["--body", body]
     if head_oid:
         cmd += ["--match-head-commit", head_oid]
     if admin:
         cmd.append("--admin")
-    return _request(pr_number, run, cmd, _MERGING)
+    outcome = _request(pr_number, run, cmd, _MERGING)
+    return replace(outcome, body=BODY_COMPOSED if body is None else BODY_PASSED)
+
+
+def _body_to_pass(pr_number: int, run: GhRunner) -> str | None:
+    """The body a direct merge of PR `pr_number` passes, read now: None where
+    the service composes the PR's body itself — the repository's default
+    squash-commit message is :data:`PR_BODY` — else the PR's body.
+
+    The service keeps a body passed to it as it is and adds nothing to it —
+    not the `Co-authored-by:` trailers of the PR's commits, which it adds
+    after a body it composes from their messages (:data:`BODY_PASSED`). So
+    the body is left to the service wherever its default is the PR's body:
+    what it composes then is that body, and passing it could only lose what
+    the service adds. Where the default is another (`COMMIT_MESSAGES`,
+    `BLANK`), or cannot be read — an account without access to the
+    repository's settings does not see it — the PR's body is passed: COR-009's
+    body, without the trailers the service would have added to the body it
+    composes. Raises :class:`Unreadable` when the body cannot be read."""
+    try:
+        _, message = squash_commit_defaults(gh=run)
+    except Unreadable:
+        message = ""
+    if message == PR_BODY:
+        return None
+    body = _pull_request(pr_number, "      body", run).get("body")
+    if not isinstance(body, str):
+        raise Unreadable(f"the answer names no body for pull request #{pr_number}")
+    return body
 
 
 def enqueue(
@@ -1042,11 +1112,13 @@ def longest_seconds(subcommand: str) -> float:
     `command_runner.END_GRACE_SECONDS`), every reading at its most calls
     (:data:`CALLS_PER_READING`), every settling reading the request may take
     (:data:`SETTLE_WINDOW_SECONDS`, :data:`SETTLE_INTERVAL_SECONDS`), a
-    dequeue sent :data:`DEQUEUE_ATTEMPTS` times, and every git question of the
-    cross-repository guard at its bound (`session_guard.LONGEST_SECONDS`)
-    where the subcommand runs it. project-management's bound on the
-    subcommand must hold it. `wait` runs as long as it is asked to, and past
-    that by at most :func:`wait_overrun_seconds`.
+    direct merge's readings of the squash-commit defaults and of the PR's
+    body, a dequeue sent :data:`DEQUEUE_ATTEMPTS` times, and every git
+    question of the cross-repository guard at its bound
+    (`session_guard.LONGEST_SECONDS`) where the subcommand runs it.
+    project-management's bound on the subcommand must hold it. `wait` runs
+    as long as it is asked to, and past that by at most
+    :func:`wait_overrun_seconds`.
     """
     reading = _reading_longest()
     one_call = _call_longest(GH_READ_SECONDS)
@@ -1056,9 +1128,14 @@ def longest_seconds(subcommand: str) -> float:
         return reading
     if subcommand == "squash-defaults":
         return one_call
-    if subcommand in ("merge", "enqueue"):
+    if subcommand == "merge":
+        # The guard; the squash-commit defaults and the PR's body, one call
+        # each, read just before the request; the request, and the readings
+        # that settle it.
+        return guard + 2 * one_call + request + _settling_longest(_MERGING, request)
+    if subcommand == "enqueue":
         # The guard, the request, and the readings that settle it.
-        return guard + request + _settling_longest(_MERGING, request)
+        return guard + request + _settling_longest(_ENQUEUING, request)
     if subcommand == "dequeue":
         # The guard; the reading first and, read out of the queue, the one
         # after the interval that finds it queued after all; then each
@@ -1569,6 +1646,15 @@ def outcome_document(
     }
 
 
+def merge_document(
+    pr_number: int, outcome: Outcome, clearance: session_guard.Clearance
+) -> dict[str, Any]:
+    """`merge`'s document: a request's (:func:`outcome_document`), and `body`,
+    how the merge's body came to be — `passed`, `composed`, or null when no
+    merge was sent."""
+    return {**outcome_document(pr_number, outcome, clearance), "body": outcome.body or None}
+
+
 def refusal_document(pr_number: int, refusal: session_guard.Refusal) -> dict[str, Any]:
     """The document of a request the cross-repository guard refused: nothing
     was asked of the service, `accepted` false, `reason_kind`
@@ -1582,6 +1668,12 @@ def refusal_document(pr_number: int, refusal: session_guard.Refusal) -> dict[str
         "reason_kind": session_guard.FOREIGN_REPOSITORY,
         "guard": refusal.as_json(),
     }
+
+
+def merge_refusal_document(pr_number: int, refusal: session_guard.Refusal) -> dict[str, Any]:
+    """The document of a merge the cross-repository guard refused: a refused
+    request's (:func:`refusal_document`), `body` null — no merge was sent."""
+    return {**refusal_document(pr_number, refusal), "body": None}
 
 
 def deletion_document(
