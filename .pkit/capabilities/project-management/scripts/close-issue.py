@@ -972,20 +972,41 @@ def _refuse_held(parent_num: int, fold: dict, config: dict) -> int:
     Open children are the "held by open children" block, each with what
     releases the container (:func:`_say_held_open`). Children that could not be
     read, or a child set that could not be read in full, are the "a read failed"
-    block, each with its remedy (:func:`_say_read_failed`). Both found, both
-    blocks are said, and the engine's reason — which may name either — is left
-    out of the second. Neither found, the engine's reason is said under a
-    header that claims no cause (:func:`_say_held_unexplained`).
+    block, each with its remedy (:func:`_say_read_failed`) — and so is a fold
+    the engine says stopped on a read before it counted a member that holds it
+    (:func:`_stopped_on_a_read`), a failure no read here can see. Both found,
+    both blocks are said; the engine's reason goes in the second only where it
+    names the read that failed, not where it may name an open child. Neither
+    found, the engine's reason is said under a header that claims no cause
+    (:func:`_say_held_unexplained`).
     """
     children = _find_open_children(parent_num, config)
-    failed = bool(children.unread or children.incomplete)
+    stopped_on_a_read = _stopped_on_a_read(fold)
+    failed = bool(children.unread or children.incomplete) or stopped_on_a_read
     if children.open:
         _say_held_open(parent_num, children)
     if failed:
-        _say_read_failed(parent_num, fold, children, engine_reason=not children.open)
+        _say_read_failed(
+            parent_num, fold, children, engine_reason=stopped_on_a_read or not children.open
+        )
     if not children.open and not failed:
         _say_held_unexplained(parent_num, fold)
     return 1
+
+
+def _stopped_on_a_read(fold: dict) -> bool:
+    """Whether the engine's fold stopped on a read before it counted a member
+    that holds it — unresolved, with every member it counted done (``reached``
+    equal to ``total``): its members list, or a candidate's membership, could
+    not be read. The engine counts a member only once its membership is read, so
+    the one it stopped at is never an open child here."""
+    reached, total = fold.get("reached"), fold.get("total")
+    return (
+        fold.get("indeterminate") is True
+        and isinstance(reached, int)
+        and isinstance(total, int)
+        and reached == total
+    )
 
 
 def _say_held_open(parent_num: int, children: _OpenChildren) -> None:
@@ -1049,7 +1070,7 @@ def _say_read_failed(
     abroad_only = bool(children.unread) and all(
         child.repository is not None for child, _ in children.unread
     )
-    if fold is None or children.incomplete or not abroad_only:
+    if fold is None or children.incomplete or not abroad_only or _stopped_on_a_read(fold):
         print(
             "  → re-run once `gh` is reachable and every child's state is "
             "readable; the container holds until the fold resolves.",

@@ -101,7 +101,10 @@ class Tracker:
     (`gh api repos/{owner}/{repo}/issues/<n>`), which also carries its native
     parent: `native_parents` maps an issue to the issue it is natively a
     sub-issue of, in this repository or — given as `owner/repo#<n>` — in
-    another. A closed issue's `state_reason` is GitHub's close reason enum
+    another. The issues are listed through `gh issue list`, and a parent's
+    native sub-issues in this repository through `gh api …/sub_issues`, in the
+    entry shape GitHub answers with. A closed issue's `state_reason` is
+    GitHub's close reason enum
     (`COMPLETED`, `NOT_PLANNED`), set as GitHub sets it: completed for a merged
     pull request's `Closes #N`, and as `gh issue close --reason` says. Each
     close stamps the issue's `closedAt` with a time no other close has; a reopen
@@ -203,6 +206,12 @@ class Tracker:
             return _done(argv, stdout=json.dumps(self.timeline[number]))
         if argv[1] == "api" and argv[-1].endswith("/milestones?state=open"):
             return _done(argv, stdout=json.dumps(self.milestones))
+        if argv[1:3] == ["issue", "list"]:
+            fields = str(_option(argv, "--json")).split(",")
+            return _done(argv, stdout=json.dumps([self._row(n, fields) for n in self.issues]))
+        listed = re.fullmatch(r"repos/\{owner\}/\{repo\}/issues/(\d+)/sub_issues", argv[-1])
+        if argv[1] == "api" and listed:
+            return self._sub_issues(argv, int(listed.group(1)))
         record = re.fullmatch(r"repos/\{owner\}/\{repo\}/issues/(\d+)", argv[-1])
         if argv[1] == "api" and record:
             return self._record(argv, int(record.group(1)))
@@ -256,6 +265,35 @@ class Tracker:
         self.comments[number] = []
         self.timeline[number] = []
         return _done(argv, stdout=f"https://github.com/acme/repo/issues/{number}\n")
+
+    def _row(self, number: int, fields: list[str]) -> dict[str, Any]:
+        """The issue as `gh issue list --json` prints it, in the fields asked for."""
+        issue = self.issues[number]
+        row = {
+            "number": number,
+            "title": issue["title"],
+            "body": issue["body"],
+            "state": issue["state"],
+            "labels": [{"name": name} for name in issue["labels"]],
+            "milestone": issue["milestone"],
+        }
+        return {field: row[field] for field in fields}
+
+    def _sub_issues(self, argv: list[str], parent: int) -> subprocess.CompletedProcess[str]:
+        """The parent's native sub-issues in this repository, as `gh api
+        …/sub_issues` lists them (the real entry's shape: id, number, repository
+        and parent)."""
+        entries = [
+            {
+                "id": 1000 + child,
+                "number": child,
+                "repository_url": REPOSITORY_URL,
+                "parent_issue_url": f"{REPOSITORY_URL}/issues/{parent}",
+            }
+            for child, native in self.native_parents.items()
+            if native == parent
+        ]
+        return _done(argv, stdout=json.dumps(entries))
 
     def _view(self, argv: list[str], number: int, fields: str):
         if number in self.views_fail:

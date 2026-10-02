@@ -57,8 +57,10 @@ _VALID_CONFIG = "schema_version: 1\ndefault_branch: main\nworkstreams: []\n"
 # A fake `gh` answering from `_tracker.json`: `issues` maps each of this
 # repository's issues to its record, `foreign` maps `owner/repo#<n>` to an issue
 # in another repository, `native` maps a parent to its native sub-issues (a
-# number here, or `owner/repo#<n>`), and `unreadable` lists what cannot be read.
-# Every call is appended to `_calls.jsonl`; a call it does not expect fails.
+# number here, or `owner/repo#<n>`), `unreadable` lists what cannot be read, and
+# `unviewable` the issues only `gh issue view` cannot read (their REST record
+# and the issue list still can). Every call is appended to `_calls.jsonl`; a call
+# it does not expect fails.
 _FAKE_GH = """\
 import json, pathlib, sys
 root = pathlib.Path(ROOT)
@@ -93,7 +95,7 @@ def rest(repo, number, record, ref):
 path = args[-1] if args[:1] == ["api"] else ""
 if args[:2] == ["issue", "view"]:
     number = args[2]
-    if number in unreadable or number not in issues:
+    if number in unreadable or number in tracker["unviewable"] or number not in issues:
         fail("GraphQL: Could not resolve to an issue with the number of " + number + ".")
     fields = args[args.index("--json") + 1].split(",")
     print(json.dumps(pick(dict(issues[number], number=int(number)), fields)))
@@ -204,12 +206,14 @@ def _tracker(
     native: dict[int, list[int | str]] | None = None,
     foreign: dict[str, dict[str, Any]] | None = None,
     unreadable: tuple[int | str, ...] = (),
+    unviewable: tuple[int, ...] = (),
 ) -> None:
     tracker = {
         "issues": {str(n): record for n, record in {1: _epic(), **issues}.items()},
         "native": {str(p): [str(c) for c in cs] for p, cs in (native or {}).items()},
         "foreign": foreign or {},
         "unreadable": [str(u) for u in unreadable],
+        "unviewable": [str(u) for u in unviewable],
     }
     (root / "_tracker.json").write_text(json.dumps(tracker), encoding="utf-8")
     (root / "_calls.jsonl").write_text("", encoding="utf-8")
@@ -709,20 +713,22 @@ def test_a_child_whose_issue_cannot_be_read_gets_the_re_run_advice(
     assert "is held by its open child" not in done.stderr
 
 
-def test_an_open_child_whose_record_cannot_be_read_is_said_as_open(
+def test_an_open_child_whose_record_cannot_be_read_is_said_both_ways(
     project: Path, pkit_on_path: Path
 ) -> None:
     # #13 is open in the issue list, and its record cannot be read: the fold
-    # stops at its membership, but what holds #5 is an open child — said as one.
+    # stops at its membership — a read the engine could not make — and what the
+    # refusal reads finds #13 open. Both are said, each with its remedy.
     issues = {CONTAINER: _container(), 13: _issue("OPEN")}
     _tracker(project, issues, native={CONTAINER: [13]}, unreadable=(13,))
 
     done = _close(project)
 
     assert done.returncode == 1, done.stderr
-    assert "#5 is held by its open child(ren):\n  - #13\n" in done.stderr
-    assert "held fail-closed" not in done.stderr
-    assert _RERUN not in done.stderr
+    held_open, _, failed = done.stderr.partition("held fail-closed")
+    assert "#5 is held by its open child(ren):\n  - #13\n" in held_open
+    assert "membership of candidate '13'" in failed
+    assert _RERUN in failed
 
 
 def test_an_open_child_and_a_failed_read_are_both_said_each_with_its_remedy(
@@ -755,24 +761,43 @@ def test_an_open_child_and_a_failed_read_are_both_said_each_with_its_remedy(
     assert _writes(project) == []
 
 
-def test_a_hold_the_children_do_not_explain_claims_no_cause(
+def test_a_fold_stopped_on_a_read_is_said_as_a_failed_read(
     project: Path, pkit_on_path: Path
 ) -> None:
     # #13 is closed in the issue list, and its record cannot be read: the fold
-    # holds at its membership, while every child read here is closed.
+    # stops at its membership before counting a member that holds it — a read
+    # the engine could not make, which no read here sees.
     issues = {CONTAINER: _container(), 13: _issue("CLOSED", labels=["type:task"])}
     _tracker(project, issues, native={CONTAINER: [13]}, unreadable=(13,))
 
     done = _close(project)
 
     assert done.returncode == 1, done.stderr
+    assert "held fail-closed" in done.stderr
+    assert "membership of candidate '13'" in done.stderr
+    assert _RERUN in done.stderr
+    assert "is held by its open child" not in done.stderr
+
+
+def test_a_hold_the_children_do_not_explain_claims_no_cause(
+    project: Path, pkit_on_path: Path
+) -> None:
+    # #13 is closed in the issue list and its record reads; only its state read
+    # (`gh issue view`) fails, so the fold counts it and stops there unresolved
+    # — while every child the refusal reads is closed and readable.
+    issues = {CONTAINER: _container(), 13: _issue("CLOSED", labels=["type:task"])}
+    _tracker(project, issues, native={CONTAINER: [13]}, unviewable=(13,))
+
+    done = _close(project)
+
+    assert done.returncode == 1, done.stderr
     assert (
         "[refused] not cascade-eligible — the process engine's fold over #5's children "
-        "did not open:"
+        "did not open:\n  → member '13'"
     ) in done.stderr
-    assert "membership of candidate '13'" in done.stderr
     assert "held fail-closed" not in done.stderr
     assert "is held by its open child" not in done.stderr
+    assert _RERUN not in done.stderr
 
 
 def test_closing_over_a_closed_child_elsewhere_writes_nothing_there(
