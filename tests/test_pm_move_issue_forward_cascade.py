@@ -1111,6 +1111,32 @@ def test_an_issue_labelled_done_and_closed_as_completed_brings_its_ancestors_lev
         assert world.journal(number)[0]["reason"] == _reason(task, "at done")
 
 
+def test_a_closed_issue_nothing_places_is_told_apart_by_its_close_reason(
+    world: World, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """An issue closed with neither a state label nor a milestone reads as Todo,
+    but nothing recorded it there, so its close reason is read before that Todo
+    is taken for a won't-do close (#1281): closed as completed, it brings its
+    ancestors level; closed as not planned, it moves none."""
+    epic, feature, task = _epic_feature_task(world)
+    world.tracker.close(task, "COMPLETED")
+    _, other_feature, dropped = _epic_feature_task(world)
+    world.tracker.close(dropped, "NOT_PLANNED")
+    capsys.readouterr()
+
+    assert world.move(task, "done") == 0
+    assert world.move(dropped, "done") == 0
+
+    for number in (feature, epic):
+        assert world.moves(number) == TODO_TO_IN_PROGRESS
+        assert world.journal(number)[0]["reason"] == _reason(task, "at done")
+    assert (
+        "[cascade] the forward cascade moves no ancestor: "
+        f"#{dropped} closed as not planned, not as completed."
+    ) in capsys.readouterr().out
+    assert world.moves(other_feature) == []
+
+
 @pytest.mark.parametrize(
     ("reason", "said"), [("NOT_PLANNED", "not planned"), ("DUPLICATE", "duplicate")]
 )

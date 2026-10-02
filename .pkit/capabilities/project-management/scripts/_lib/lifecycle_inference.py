@@ -59,7 +59,8 @@ import re
 from _lib import axis_labels, default_branch
 from _lib.checkbox_gate import unticked_boxes  # noqa: F401 — re-export
 
-# Canonical state ordering (matches move-issue's `order` lists).
+# Canonical state ordering — the one move-issue's forward checks and the forward
+# cascade read.
 STATE_ORDER = ["todo", "backlog", "in-progress", "review", "done"]
 
 
@@ -206,6 +207,26 @@ def state_before_close(
     return infer_current_state(
         state="open", milestone=milestone, labels=labels, substrate_map=substrate_map
     )
+
+
+def recorded_state_before_close(
+    *,
+    milestone: dict | None,
+    labels: list[str],
+    substrate_map: axis_labels.SubstrateMap | None = None,
+) -> str | None:
+    """:func:`state_before_close` where the issue records it — a state label or
+    a milestone — and None where it reads `todo` only because it carries
+    neither.
+
+    For a reader that tells a finished issue from a won't-do one by where it
+    came from: an issue closed with nothing recording its place reads as
+    `todo`, which says nothing of where it was, so such a reader turns to the
+    close reason instead.
+    """
+    if not milestone and axis_labels.resolve_read("state", labels, substrate_map) is None:
+        return None
+    return state_before_close(milestone=milestone, labels=labels, substrate_map=substrate_map)
 
 
 # --- gate inference -------------------------------------------------------

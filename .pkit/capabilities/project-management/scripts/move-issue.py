@@ -480,10 +480,11 @@ def main() -> int:
         # behind brings that ancestor level. An issue already at done came there
         # from where its old label places it — a merge's close leaves review —
         # which tells a finished issue from a won't-do one; where the label
-        # already reads done, its close reason tells them apart instead.
+        # already reads done, or neither a state label nor a milestone records
+        # where it was, its close reason tells them apart instead.
         if not args.no_cascade:
             origin = (
-                infer.state_before_close(
+                infer.recorded_state_before_close(
                     milestone=milestone, labels=labels, substrate_map=substrate_map
                 )
                 if args.to == "done"
@@ -848,7 +849,7 @@ def _legal_targets(workflow: dict, current_state: str, structural_type: str) -> 
 
 def _is_forward(workflow: dict, current: str, target: str) -> bool:
     """Forward = increasing position in the canonical state ordering."""
-    order = ["todo", "backlog", "in-progress", "review", "done"]
+    order = infer.STATE_ORDER
     try:
         return order.index(target) > order.index(current)
     except ValueError:
@@ -1338,7 +1339,7 @@ def _cascade_forward_target(child_target: str) -> str:
     review or done, ancestors are brought to at most in-progress.
     """
     _FORWARD_CASCADE_CAP = "in-progress"
-    order = ["todo", "backlog", "in-progress", "review", "done"]
+    order = infer.STATE_ORDER
     try:
         cap_idx = order.index(_FORWARD_CASCADE_CAP)
         child_idx = order.index(child_target)
@@ -1437,7 +1438,7 @@ def _state_is_behind(current: str, target: str) -> bool:
 
     False for a state outside it — the collapsed ``open`` / ``blocked`` a
     `derive` binding reads — so such an ancestor is left alone, never moved."""
-    order = ["todo", "backlog", "in-progress", "review", "done"]
+    order = infer.STATE_ORDER
     try:
         return order.index(current) < order.index(target)
     except ValueError:
