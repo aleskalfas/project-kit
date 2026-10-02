@@ -33,6 +33,7 @@ not itself executable.
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -157,9 +158,11 @@ def read_subject(subject: str) -> int | containment.ForeignIssue | None:
     """The issue a predicate's subject id names: ``"11"`` is this repository's
     #11, ``"owner/repo#42"`` an issue in another repository — the id the
     closure fold gives a native sub-issue that lives there (`cascade_members`)
-    — and anything else names none."""
+    — and anything else names none: a number is ASCII digits only, and a
+    repository name is spelled in the hosting service's alphabet
+    (`containment.is_repository_name`)."""
     text = subject.strip()
-    if text.isdigit():
+    if re.fullmatch(r"[0-9]+", text):
         return int(text)
     return containment.ForeignIssue.parse(text)
 

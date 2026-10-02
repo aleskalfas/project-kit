@@ -322,6 +322,75 @@ def test_a_member_id_reads_back_as_the_issue_it_names() -> None:
         assert predicates.read_subject(nonsense) is None, nonsense
 
 
+# A name outside the hosting service's alphabet (letters, digits, `-`, `_`, `.`;
+# a number of ASCII digits only): a space, a `#`, a `/`, `..`, a lone dot.
+_NOT_A_NAME = ("acme/oth er", "acme/oth#er", "acme/other/x", "acme/..", "../other", "acme/a..b")
+
+
+@pytest.mark.parametrize("repository", (*_NOT_A_NAME, "acme/."))
+def test_a_subject_naming_no_repository_names_no_issue(repository: str) -> None:
+    assert not containment.is_repository_name(repository)
+    assert predicates.read_subject(f"{repository}#42") is None
+    assert containment.ForeignIssue.parse(f"{repository}#42") is None
+
+
+# Digits Python's `str.isdigit` accepts and no issue number is written in:
+# Arabic-Indic four-two, full-width four-two, a superscript two.
+_NOT_ASCII_DIGITS = [chr(0x664) + chr(0x662), chr(0xFF14) + chr(0xFF12), chr(0xB2)]
+
+
+@pytest.mark.parametrize("number", _NOT_ASCII_DIGITS)
+def test_a_subject_number_is_ascii_digits_only(number: str) -> None:
+    assert predicates.read_subject(number) is None
+    assert predicates.read_subject(f"{ELSEWHERE}#{number}") is None
+
+
+def test_the_service_s_own_names_are_names() -> None:
+    for name in ("acme/other", "Acme-Co/my_repo.v2", "a/.github", "o/r-1"):
+        assert containment.is_repository_name(name), name
+        assert predicates.read_subject(f"{name}#7") == containment.ForeignIssue(name, 7)
+
+
+@pytest.mark.parametrize("repository", _NOT_A_NAME)
+def test_a_sub_issue_naming_no_repository_leaves_the_read_unreadable(
+    monkeypatch, repository: str
+) -> None:
+    entry = {
+        "number": 42,
+        "repository_url": f"https://api.github.com/repos/{repository}",
+        "parent_issue_url": f"{HERE_API}/issues/5",
+    }
+    monkeypatch.setattr(containment, "_gh_call", _answer([{"number": 10}, entry]))
+
+    read = containment.read_native_children({}, parent_number=5)
+    resolution = containment.resolve_children({}, parent_number=5, corpus={}, corpus_complete=True)
+
+    assert read.outcome is containment.NativeReadOutcome.UNREADABLE
+    assert (read.numbers, read.foreign) == (set(), frozenset())
+    assert not resolution.complete
+    assert "names a repository the hosting service could not have spelled" in (
+        resolution.incomplete_reason or ""
+    )
+
+
+@pytest.mark.parametrize("repository", _NOT_A_NAME)
+def test_an_issue_in_no_repository_is_unread_without_a_request(
+    monkeypatch, repository: str
+) -> None:
+    calls: list[list[str]] = []
+
+    def gh(args, _config):
+        calls.append(args)
+        return subprocess.CompletedProcess(args, 0, "{}", "")
+
+    monkeypatch.setattr(containment, "_gh_call", gh)
+    record = containment.read_issue_record({}, issue_number=42, repository=repository)
+
+    assert isinstance(record, containment.UnreadIssue)
+    assert "is not a repository name" in record.detail
+    assert calls == []
+
+
 # --- the fold: a child elsewhere holds its container like any other ------------
 
 

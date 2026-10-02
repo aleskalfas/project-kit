@@ -191,7 +191,22 @@ class NativeParent:
         return self.repository is None and self.number == int(number)
 
 
-_FOREIGN_REF = re.compile(r"^(?P<repo>[^/\s#]+/[^/\s#]+)#(?P<number>\d+)$")
+# An owner and a repository name as the hosting service spells them: ASCII
+# letters, digits, `-`, `_` and `.`. A name is read into a request's path, where
+# any other text could address something else — a space, a `#`, a `/`, or `..`,
+# a step out of the path — so text outside this alphabet names no repository,
+# and what carries it is unreadable (`is_repository_name`).
+_NAME = r"[A-Za-z0-9_.-]+"
+_REPOSITORY_NAME = re.compile(rf"{_NAME}/{_NAME}")
+_FOREIGN_REF = re.compile(rf"(?P<repo>{_NAME}/{_NAME})#(?P<number>[0-9]+)")
+
+
+def is_repository_name(text: str) -> bool:
+    """Whether ``text`` is ``owner/repo`` in the hosting service's alphabet,
+    neither name made of dots alone nor carrying ``..``."""
+    if _REPOSITORY_NAME.fullmatch(text) is None:
+        return False
+    return all(name.strip(".") and ".." not in name for name in text.split("/"))
 
 
 @dataclass(frozen=True, order=True)
@@ -213,9 +228,12 @@ class ForeignIssue:
     @classmethod
     def parse(cls, text: str) -> ForeignIssue | None:
         """The issue ``owner/repo#42`` names, or ``None`` for any other text —
-        the inverse of :attr:`ref`."""
-        m = _FOREIGN_REF.match(text.strip())
-        return cls(m.group("repo"), int(m.group("number"))) if m else None
+        the inverse of :attr:`ref`. A repository name outside the hosting
+        service's alphabet (:func:`is_repository_name`) names none."""
+        m = _FOREIGN_REF.fullmatch(text.strip())
+        if m is None or not is_repository_name(m.group("repo")):
+            return None
+        return cls(m.group("repo"), int(m.group("number")))
 
 
 @dataclass(frozen=True)
@@ -400,7 +418,14 @@ def list_sub_issues_args(*, parent_number: int | str) -> list[str]:
 # same-numbered issue here. One value per line, the id first.
 _LINK_STATE_JQ = '.id, (.parent_issue_url // ""), .repository_url'
 _ISSUE_URL = re.compile(r"/repos/(?P<repo>[^/]+/[^/]+)/issues/(?P<number>\d+)/?$")
-_REPOSITORY_URL = re.compile(r"/repos/(?P<repo>[^/]+/[^/]+)/?$")
+_REPOSITORY_URL = re.compile(rf"/repos/(?P<repo>{_NAME}/{_NAME})/?\Z")
+
+
+def _url_repository(url: str) -> str | None:
+    """The ``owner/repo`` a ``repository_url`` names, or ``None`` where it names
+    none the hosting service could have spelled (:func:`is_repository_name`)."""
+    m = _REPOSITORY_URL.search(url)
+    return m.group("repo") if m is not None and is_repository_name(m.group("repo")) else None
 
 
 def read_link_state(config: dict[str, Any], *, issue_number: int | str) -> IssueLinkState | None:
@@ -499,8 +524,11 @@ def read_issue_record(
     which the endpoint also answers for, and for a record numbered other than
     ``issue_number``: GitHub redirects the read of an issue transferred to
     another repository, and gh follows the redirect to an issue that is not the
-    one asked for.
+    one asked for. A ``repository`` outside the hosting service's alphabet
+    (:func:`is_repository_name`) is unread, and no request is made for it.
     """
+    if repository is not None and not is_repository_name(repository):
+        return UnreadIssue(f"{repository!r} is not a repository name")
     name = f"{repository}#{issue_number}" if repository else f"#{issue_number}"
     where = repository or "{owner}/{repo}"
     try:
@@ -553,8 +581,8 @@ def _parse_native_parent(parent_url: str, repository_url: str) -> NativeParent |
     m = _ISSUE_URL.search(parent_url)
     if not m:
         return None
-    here = _REPOSITORY_URL.search(repository_url)
-    same = here is not None and here.group("repo").lower() == m.group("repo").lower()
+    here = _url_repository(repository_url)
+    same = here is not None and here.lower() == m.group("repo").lower()
     return NativeParent(
         number=int(m.group("number")),
         repository=None if same else m.group("repo"),
@@ -1243,13 +1271,16 @@ class NativeRead:
     ``said`` is what the failed call said (:class:`Said` — GitHub's error body,
     or gh's own line), carried so a consumer reporting an unreadable read can
     quote it rather than guess at the cause. ``None`` for a read that answered,
-    or a failure with no words.
+    or a failure with no words. ``why`` is pm's own reading of an answer it
+    could not use — a listed sub-issue it could not place in a repository —
+    ``None`` otherwise.
     """
 
     numbers: set[int]
     outcome: NativeReadOutcome
     said: Said | None = None
     foreign: frozenset[ForeignIssue] = frozenset()
+    why: str | None = None
 
     @property
     def supported(self) -> bool:
@@ -1293,6 +1324,19 @@ def read_native_children(config: dict[str, Any], *, parent_number: int | str) ->
         if isinstance(entry, dict):
             raw = entry.get("number")
             if isinstance(raw, int):
+                named = str(entry.get("repository_url") or "")
+                if named and _url_repository(named) is None:
+                    # A listed child no repository could hold: unplaced, a child
+                    # set may hold it, so the read is not a child set.
+                    return NativeRead(
+                        numbers=set(),
+                        outcome=NativeReadOutcome.UNREADABLE,
+                        why=(
+                            f"a sub-issue of #{parent_number} names a repository the "
+                            f"hosting service could not have spelled ({named!r}), so it "
+                            "cannot be placed"
+                        ),
+                    )
                 repository = _sub_issue_repository(entry)
                 if repository is None:
                     numbers.add(raw)
@@ -1314,13 +1358,13 @@ def _sub_issue_repository(entry: dict[str, Any]) -> str | None:
     taking it for this repository's issue of the same number on no evidence is
     the misreading this exists to prevent.
     """
-    child = _REPOSITORY_URL.search(str(entry.get("repository_url") or ""))
+    child = _url_repository(str(entry.get("repository_url") or ""))
     if child is None:
         return None
     parent = _ISSUE_URL.search(str(entry.get("parent_issue_url") or ""))
-    if parent is not None and parent.group("repo").lower() == child.group("repo").lower():
+    if parent is not None and parent.group("repo").lower() == child.lower():
         return None
-    return child.group("repo")
+    return child
 
 
 class SubIssueReads:
@@ -1589,7 +1633,7 @@ def resolve_children(
     if fetch_failed:
         incomplete_reason = "the issue list could not be read at all (gh failure)"
     elif native.outcome is NativeReadOutcome.UNREADABLE:
-        incomplete_reason = _quoting(
+        incomplete_reason = native.why or _quoting(
             "the native sub-issues read failed and the failure could not be "
             "attributed to an absent endpoint, so a native child set may exist and "
             "was not seen",
