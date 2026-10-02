@@ -1,0 +1,21 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+  requires_backbone: release
+body: >
+  `done-work`, `merge-pr` and `land-work` no longer conclude that a merge or
+  an enqueue was not made from one reading. When the backbone settles a
+  request that got no answer, the verbs take its word. If the backbone says
+  the request was made, the landing goes on. If two readings found it not
+  made, the landing fails and a re-run can retry it. If the backbone says it
+  is unconfirmed, the verbs report it unconfirmed, exit 4, and name `pkit
+  pull-request read <PR>`. When the backbone gives no answer at all, the verbs
+  read the pull request once. Merged is the merge and queued is waited for;
+  anything else is now unconfirmed, exit 4, where it used to be "not made".
+  When taking a pull request out of the queue ends unconfirmed, the verbs say
+  whether it left is not known, never that it failed. The bounds on the
+  backbone's merge and enqueue are now three minutes, and four on its
+  dequeue, so the backbone's own bounded readings answer first. Upgrade the
+  capability together with the backbone: it needs the release that settles
+  an unanswered request.

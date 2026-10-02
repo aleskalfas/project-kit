@@ -1,0 +1,25 @@
+component: backbone
+kind: minor
+custom:
+  category: Fixed
+body: >
+  A request to the hosting service that gets no answer is no longer reported
+  as refused, and `pkit release merge` no longer waits for ever on a `gh` that
+  never answers. Every `gh` call `pkit pull-request` and `pkit release merge`
+  make is bounded: 15 seconds for a reading and 30 for a request that changes
+  the service, after which `gh` alone is ended. `gh` now runs in the
+  command's own process group, so a caller that ends that group ends a `gh`
+  request in flight too. When `merge`, `enqueue` or `dequeue` gets no answer
+  (`gh` ended at its bound, or a 5xx, a reset or nothing back), the command
+  reads the pull request. If the request's end state shows (merged or queued;
+  out of the queue for a dequeue), it was made: `accepted` is true and
+  `exit_code` null. If it does not show on two readings 10 seconds apart, it
+  was not made: `accepted` false, with `reason_kind: not-made`. If the pull
+  request cannot be read, the request is unconfirmed: `accepted` null, with
+  `reason_kind: unanswered`, and the command exits 1 and names `pkit
+  pull-request read <n>`. A request the service answered with an error stays
+  a refusal in the service's words. These are additions, so `schema_version`
+  stays 1. `pkit release merge` reports an unconfirmed merge or enqueue
+  plainly, claiming neither that the release merged nor that it did not, and
+  exits 4 with nothing deleted. A request settled as not made is refused
+  with exit 1.
