@@ -441,8 +441,11 @@ def test_read_issue_record_says_why_no_issue_was_read(
         lambda args, config: subprocess.CompletedProcess(args, returncode, stdout=stdout),
     )
     read = containment.read_issue_record({}, issue_number=344)
-    assert read == containment.UnreadIssue(why)
+    assert isinstance(read, containment.UnreadIssue)
+    assert (read.why, read.said) == (why, None)
     assert read.detail == why
+    # Only a pull request is an answer about the number; the rest failed to read.
+    assert read.not_an_issue is (why == "#344 is a pull request")
 
 
 def test_read_issue_record_keeps_what_gh_said_when_the_read_fails(containment, monkeypatch) -> None:
@@ -486,6 +489,7 @@ def test_a_record_numbered_otherwise_is_not_the_issue_asked_for(containment, mon
         "the record gh returned is #12's, not #344's "
         "(an issue transferred elsewhere, whose read was redirected)"
     )
+    assert read.not_an_issue
 
 
 def test_a_child_under_another_parent_is_a_conflict_and_nothing_is_posted(

@@ -2461,3 +2461,387 @@ def test_board_with_an_unsupported_axis_demands_nothing(
     assert "classification.priority.unverified" not in found
     assert "classification.workstream.missing" not in found
     assert "classification.workstream.unverified" not in found
+
+
+# --- an existing issue under a parent its type may not sit under (#1313) --------
+# validate-issue reports it — the issue is never rewritten. The parent judged is
+# the one the containment seam resolves from the issue's record (the native
+# parent wherever one was read, else the one the first line asserts), its type
+# read with one more record read; both reads go through the real seam, answered
+# here at `containment.read_issue_record`. The severity is the maintainer's to
+# confirm (`containment_graph.existing_violation_severity`): hard-reject at
+# `--phase create`, a warning at `--phase transition`.
+
+
+def _answer_records(vi, monkeypatch, records: dict) -> list[int]:
+    """Answer the seam's record read from ``records`` — number → (title, native
+    parent number or None, labels[, body]), or None for a read that fails;
+    return the numbers read. An issue the table lacks reads as an untyped one."""
+    asked: list[int] = []
+
+    def fake(config, *, issue_number):
+        number = int(issue_number)
+        asked.append(number)
+        answer = records.get(number, ("an untyped issue", None, ()))
+        if answer is None:
+            return vi.containment.UnreadIssue("gh exited 1")
+        title, native, labels, *body = answer
+        issue = {
+            "title": title,
+            "body": body[0] if body else "",
+            "labels": [{"name": n} for n in labels],
+        }
+        parent = vi.containment.NativeParent(native) if native is not None else None
+        return vi.containment.IssueRecord(issue=issue, parent=parent)
+
+    monkeypatch.setattr(vi.containment, "read_issue_record", fake)
+    return asked
+
+
+def _validate_containment(vi, issue, *, issue_types, titles, body_format, config, **kw):
+    return vi._validate_issue(
+        issue=issue,
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+        config=config,
+        issue_number=42,
+        **kw,
+    )
+
+
+_VALID_TASK_BODY = "## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."
+
+
+def _task(first_line: str) -> dict:
+    return _make_issue(
+        title="[Task] Install the Claude Code CLI inside the sandbox",
+        body=f"{first_line}\n\n{_VALID_TASK_BODY}",
+        labels=["type:feature", "priority:Medium", "workstream:cli"],
+    )
+
+
+def _containment(findings) -> list:
+    return [f for f in findings if f.label == "body.parent-ref.containment"]
+
+
+def _record_of(issue: dict, native: int | None = None) -> tuple:
+    """Issue #42's own record, as the seam reads it: its title, its native parent,
+    no labels, and the body the test validates."""
+    return (issue["title"], native, (), issue["body"])
+
+
+def test_an_issue_under_a_parent_its_type_may_not_sit_under_is_reported(
+    vi, monkeypatch, issue_types, titles, body_format, label_fallback_config
+) -> None:
+    issue = _task("Feature: #7")
+    asked = _answer_records(
+        vi, monkeypatch, {42: _record_of(issue), 7: ("[Task] another", None, ())}
+    )
+    findings = _validate_containment(
+        vi,
+        issue,
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+        config=label_fallback_config,
+        phase="create",
+    )
+
+    assert asked == [42, 7], "the issue's record, then the parent's"
+    found = _containment(findings)
+    assert [f.severity for f in found] == [vi.SEVERITY_HARD_REJECT]
+    assert found[0].detail.startswith(
+        "the first line names #7 as the parent, and a task may not sit under #7, which is a task"
+    )
+    assert "body.parent-ref" not in _labels(findings), "the line's form is fine"
+
+
+@pytest.mark.parametrize(
+    ("phase", "severity"), [("create", "hard-reject"), ("transition", "warning")]
+)
+@pytest.mark.parametrize("hierarchy", ["gated", "advisory"])
+def test_the_violation_is_hard_at_filing_and_a_warning_at_a_transition(
+    vi,
+    monkeypatch,
+    issue_types,
+    titles,
+    body_format,
+    label_fallback_config,
+    phase,
+    severity,
+    hierarchy,
+) -> None:
+    """The graph carries no knob: `hierarchy: advisory` softens only whether a
+    parent is required (DEC-036 D4). The phase decides the severity of one
+    already made — the maintainer's to confirm."""
+    issue = _make_issue(
+        title="[Feature] A capability under a capability",
+        body="EPIC: #7\n\n## What\nx\n",
+        labels=["type:feature", "priority:Medium", "workstream:cli"],
+    )
+    _answer_records(
+        vi, monkeypatch, {42: _record_of(issue), 7: ("[Feature] a capability", None, ())}
+    )
+    findings = _validate_containment(
+        vi,
+        issue,
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+        config=label_fallback_config,
+        phase=phase,
+        hierarchy=hierarchy,
+    )
+    assert [f.severity for f in _containment(findings)] == [severity]
+
+
+def test_a_native_parent_of_a_forbidden_type_is_reported_with_no_first_line(
+    vi, monkeypatch, issue_types, titles, body_format, label_fallback_config
+) -> None:
+    issue = _task("## Context")
+    _answer_records(
+        vi, monkeypatch, {42: _record_of(issue, native=7), 7: ("[Task] another", None, ())}
+    )
+    findings = _validate_containment(
+        vi,
+        issue,
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+        config=label_fallback_config,
+        phase="create",
+    )
+    found = _containment(findings)
+    assert [f.severity for f in found] == [vi.SEVERITY_HARD_REJECT]
+    assert found[0].detail.startswith("#42's native parent is #7, and a task may not sit")
+
+
+def test_a_stale_first_line_under_an_allowed_native_parent_draws_no_containment_finding(
+    vi, monkeypatch, issue_types, titles, body_format, label_fallback_config
+) -> None:
+    """The first line names a Task, the native parent is a Feature: the native
+    parent is judged alone, and the stale line is the seam's to settle."""
+    issue = _task("Feature: #7")
+    asked = _answer_records(
+        vi,
+        monkeypatch,
+        {
+            42: _record_of(issue, native=8),
+            7: ("[Task] another", None, ()),
+            8: ("[Feature] f", None, ()),
+        },
+    )
+    findings = _validate_containment(
+        vi,
+        issue,
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+        config=label_fallback_config,
+        phase="create",
+    )
+    assert asked == [42, 8]
+    assert not [f for f in findings if f.label.startswith("body.parent-ref.containment")]
+
+
+def test_where_the_issues_record_cannot_be_read_the_first_line_parent_is_judged(
+    vi, monkeypatch, issue_types, titles, body_format, label_fallback_config
+) -> None:
+    _answer_records(vi, monkeypatch, {42: None, 7: ("[Task] another", None, ())})
+    findings = _validate_containment(
+        vi,
+        _task("Feature: #7"),
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+        config=label_fallback_config,
+        phase="create",
+    )
+    found = _containment(findings)
+    assert [f.severity for f in found] == [vi.SEVERITY_HARD_REJECT]
+    assert "#42's record could not be read" in found[0].detail
+
+
+def test_a_parent_that_cannot_be_read_is_reported_unchecked_not_violated(
+    vi, monkeypatch, issue_types, titles, body_format, label_fallback_config
+) -> None:
+    issue = _task("Umbrella: #7")
+    _answer_records(vi, monkeypatch, {42: _record_of(issue), 7: None})
+    findings = _validate_containment(
+        vi,
+        issue,
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+        config=label_fallback_config,
+    )
+
+    assert _containment(findings) == []
+    unchecked = [f for f in findings if f.label == "body.parent-ref.containment-unchecked"]
+    assert [f.severity for f in unchecked] == [vi.SEVERITY_WARNING]
+    assert unchecked[0].detail == (
+        "the first line names #7 as the parent, but #7 could not be read (gh exited 1), "
+        "so whether a task may sit under it cannot be checked."
+    )
+
+
+@pytest.mark.parametrize(
+    "parent",
+    [("[Feature] a capability", None, ()), ("an untyped issue", None, ())],
+    ids=["allowed", "untyped"],
+)
+def test_an_allowed_or_untyped_parent_draws_no_containment_finding(
+    vi, monkeypatch, issue_types, titles, body_format, label_fallback_config, parent
+) -> None:
+    issue = _task("Feature: #7")
+    asked = _answer_records(vi, monkeypatch, {42: _record_of(issue), 7: parent})
+    findings = _validate_containment(
+        vi,
+        issue,
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+        config=label_fallback_config,
+    )
+    assert asked == [42, 7]
+    assert not [f for f in findings if f.label.startswith("body.parent-ref.containment")]
+
+
+@pytest.mark.parametrize(
+    "first_line",
+    [
+        "Milestone: [#5](../milestone/5)",
+        "Milestone: #5",
+        "Feature: #42",
+        "## What",
+        "Related: #7",
+    ],
+    ids=["milestone", "old-milestone", "names-itself", "no-parent", "related"],
+)
+def test_no_parent_is_read_where_none_is_asserted(
+    vi, monkeypatch, issue_types, titles, body_format, label_fallback_config, first_line
+) -> None:
+    issue = _task(first_line)
+    asked = _answer_records(vi, monkeypatch, {42: _record_of(issue)})
+    _validate_containment(
+        vi,
+        issue,
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+        config=label_fallback_config,
+    )
+    assert asked == [42], "the issue's own record only"
+
+
+_STORY = {"type": {"title-prefix": {"remap": {"feature": "[Story]", "task": "[Task]"}}}}
+_TYPE_BY_LABEL = {"type": {"label": {"remap": {"bug": "kind/bug"}}}}
+
+
+@pytest.mark.parametrize(
+    ("axes", "child_title", "first_line", "parent", "reported"),
+    [
+        (_STORY, "[Story] A capability under a story", "EPIC: #9", "[Story] a story", True),
+        (_STORY, "[Task] A task under a story here", "Feature: #9", "[Story] a story", False),
+        (_STORY, "[Task] A task under a task here", "Feature: #9", "[Task] a task", True),
+        (_TYPE_BY_LABEL, "[Task] A task under a bug report", "Feature: #9", "[Bug] Login", False),
+    ],
+    ids=["story-under-story", "task-under-story", "task-under-task", "type-by-label"],
+)
+def test_under_a_map_both_types_are_told_by_its_title_prefixes(
+    vi,
+    monkeypatch,
+    issue_types,
+    titles,
+    body_format,
+    label_fallback_config,
+    axes,
+    child_title,
+    first_line,
+    parent,
+    reported,
+) -> None:
+    """The pair a writer refuses is the pair reported: under a map typing a
+    Feature `[Story]`, a `[Story]` under a `[Story]` is a Feature under a Feature;
+    where the map does not carry `type` in titles, no type is told and nothing
+    is reported."""
+    issue = _make_issue(title=child_title, body=f"{first_line}\n\n## What\nx\n", labels=[])
+    _answer_records(vi, monkeypatch, {42: _record_of(issue), 9: (parent, None, ())})
+    findings = _validate_containment(
+        vi,
+        issue,
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+        config=label_fallback_config,
+        phase="create",
+        substrate_map=vi.axis_labels.SubstrateMap(axes=axes),
+    )
+    assert bool(_containment(findings)) is reported
+    assert not [f for f in findings if f.label == "body.parent-ref.containment-unchecked"]
+
+
+def test_without_the_issue_number_the_tracker_is_not_read(
+    vi, monkeypatch, issue_types, titles, body_format, label_fallback_config
+) -> None:
+    asked = _answer_records(vi, monkeypatch, {})
+    vi._validate_issue(
+        issue=_task("Feature: #7"),
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+        config=label_fallback_config,
+    )
+    assert asked == []
+
+
+def _stage_main(vi, tmp_path, monkeypatch, *, map_text: str | None = None) -> None:
+    import shutil
+    from types import SimpleNamespace
+
+    root = tmp_path / ".pkit" / "capabilities" / "project-management"
+    shutil.copytree(
+        REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "schemas", root / "schemas"
+    )
+    (root / "project").mkdir(parents=True)
+    (root / "project" / "config.yaml").write_text(
+        "schema_version: 1\ndefault_branch: main\nworkstreams: [cli]\n", encoding="utf-8"
+    )
+    if map_text is not None:
+        (root / "project" / "substrate-map.yaml").write_text(
+            f"schema_version: 1\n{map_text}", encoding="utf-8"
+        )
+    monkeypatch.setattr(vi, "resolve_capability_root", lambda _explicit: root)
+    monkeypatch.setattr(vi.bootstrap_gate, "enforce", lambda *a, **k: True)
+    monkeypatch.setattr(vi, "check_membership", lambda *a: SimpleNamespace(allowed=True))
+
+
+@pytest.mark.parametrize(("phase", "rc"), [("create", 1), ("transition", 0)])
+def test_main_reports_an_existing_violation_by_phase(
+    vi, tmp_path, monkeypatch, capsys, phase, rc
+) -> None:
+    """Through main(): a hard-reject at `--phase create` makes the exit 1; at
+    `--phase transition` the same finding is a warning and leaves the exit as the
+    other findings have it."""
+    import json
+
+    _stage_main(vi, tmp_path, monkeypatch)
+    issue = _task("Feature: #7")
+    monkeypatch.setattr(vi, "_gh_get_issue", lambda _n, _config: issue)
+    asked = _answer_records(
+        vi,
+        monkeypatch,
+        {42: _record_of(issue), 7: ("[Bug] a kind-prefixed task", None, ())},
+    )
+    monkeypatch.setattr(sys, "argv", ["validate-issue", "42", "--json", "--phase", phase])
+
+    code = vi.main()
+
+    out = json.loads(capsys.readouterr().out)
+    found = [f for f in out["findings"] if f["label"] == "body.parent-ref.containment"]
+    assert asked == [42, 7]
+    assert [f["severity"] for f in found] == ["hard-reject" if phase == "create" else "warning"]
+    others = [f for f in out["findings"] if f["label"] != "body.parent-ref.containment"]
+    assert not [f for f in others if f["severity"] != "warning"], "nothing else blocks"
+    assert code == rc

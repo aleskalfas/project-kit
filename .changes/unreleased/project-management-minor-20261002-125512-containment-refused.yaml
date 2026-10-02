@@ -1,0 +1,50 @@
+component: project-management
+kind: minor
+custom:
+  category: Changed
+body: >
+  A parent of a type the issue's type may not sit under is refused, as the
+  containment record (DEC-005) has always required. `create-issue --parent N`,
+  `set-field <n> --parent N` and `link-parent` used to file, re-parent or link
+  under such a parent — a Task under a Task, a Feature under a Feature — with
+  at most a `[warn]`. `create-issue` and `set-field` now stop before anything is
+  written (no body, no native link, no label), `--dry-run` included, with an
+  error that names the child's type, the parent's type and the first-line forms
+  the child's type allows; `link-parent` reports the issue under a new outcome,
+  `parent's type not allowed`, and does not link it. There is no `--bypass`,
+  neither verb exposes `--force`, and `hierarchy: advisory` does not soften the
+  refusal. To file under a refused parent, pick a parent of one of those types,
+  or change the issue's type.
+
+  The parent is read through the containment seam, and every check tells the
+  issue's type and the parent's one way: in greenfield by the title's prefix
+  (the kind-driven Task prefixes, `[Bug]`, `[Docs]`, …, included) and, for a
+  title carrying none, by the `type:*` label; under a substrate map only by the
+  map's `type` title-prefix binding. An issue or a parent whose type cannot be
+  told is outside the graph, and the pair is accepted with one warning that
+  nothing was checked — so under a map that does not carry `type` in titles,
+  nothing is checked. Without `--parent`, `create-issue` holds the parent its
+  body's first line asserts — under an issue type's own label (`EPIC:`,
+  `Feature:`, `Umbrella:`, `Task:`), in an allowed form or not; a line under
+  another word, such as an EPIC's `Supersedes: #120`, asserts no parent.
+
+  A parent that cannot be read refuses too: `create-issue` exits 3, as for any
+  tracker failure, and `set-field` exits 1. A number that names a pull request,
+  or an issue transferred elsewhere, is refused as no parent: `create-issue`
+  exits 2, `set-field` exits 1. A refused containment leaves `link-parent`'s
+  exit at 0, as a conflict does.
+
+  `create-issue --type epic --parent N` is now refused before anything is read
+  (exit 2): an EPIC's container is a milestone, and issue and milestone numbers
+  are separate. `--milestone N` places an EPIC, and now writes its first line,
+  `Milestone: [#N](../milestone/N)`, beside filing it into the milestone.
+
+  Issues already under such a parent are not rewritten. `validate-issue`
+  reports one as `body.parent-ref.containment` — a hard-reject at
+  `--phase create`, so its exit code is 1, and a warning at `--phase transition`,
+  which leaves the exit code as the other findings set it. It judges the parent
+  the containment seam resolves: the native parent wherever one was read (alone,
+  where the first line names another), else the parent the first line asserts.
+  A parent it cannot read, a number that is no issue, or a native parent in
+  another repository is reported as `body.parent-ref.containment-unchecked` at
+  warning. `edit-issue` does not check containment yet.

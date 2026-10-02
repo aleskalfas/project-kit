@@ -34,6 +34,11 @@ issue gets exactly one outcome:
                            allowed form
   parent #P not found      the named parent is not an issue in this repository
   parent #P is closed      the parent is closed while the issue is open
+  parent's type not        the parent's type is one the issue's type may not
+  allowed                  sit under (`issue-types.yaml`'s containment graph,
+                           DEC-005) — a Task under a Task; the link would
+                           make that containment, so it is reported and not
+                           made
   conflict                 the issue is natively a sub-issue of a different
                            parent than its first line names; an issue has one
                            native parent, so it is reported with both named
@@ -45,6 +50,14 @@ parent is the state the close gate exists to prevent, and it usually means the
 first line is stale, so it is reported instead of linked — reopen the parent or
 re-parent the issue, and a re-run links it. A closed issue under a closed parent
 (history) links normally.
+
+A parent of a type the issue's type may not sit under is refused as
+`create-issue` and `set-field --parent` refuse it
+([project-management:DEC-005-linking-and-containment]): both types are told
+from the titles and labels in the issue list already read, as every check tells
+them (`_lib.containment_graph.issue_type` — under a substrate map only by the
+map's title-prefix binding), so the check costs no read. Where either type
+cannot be told the pair is outside the graph and is linked.
 
 A conflict is not linked either: taking the issue from the parent it has would
 be a re-parent this verb was not asked for. The native parent wins (DEC-005):
@@ -79,8 +92,8 @@ Or via the dispatcher (per COR-021):
   pkit pm link-parent --all-open --dry-run
 
 Exit codes:
-  0  linked, already linked, nothing to link, a conflict reported, dry run, or
-     declined at the prompt
+  0  linked, already linked, nothing to link, a conflict or a parent of a
+     type not allowed reported, dry run, or declined at the prompt
   1  membership or foreign-repo refusal; or, in textual mode, a refusal to
      refresh children views from an issue list that was not read in full
   2  usage error — no selection or both selections, a number that is not an
@@ -106,7 +119,14 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import axis_labels, body_parent_ref, bootstrap_gate, containment, session_guard
+from _lib import (
+    axis_labels,
+    body_parent_ref,
+    bootstrap_gate,
+    containment,
+    containment_graph,
+    session_guard,
+)
 from _lib.containment import (
     LinkOutcome,
     LinkResult,
@@ -134,8 +154,8 @@ class Outcome(Enum):
     """What one selected issue got. The value is its label in the summary.
 
     The plan assigns each issue WOULD_LINK, ALREADY_LINKED, CONFLICT,
-    UNSUPPORTED, MILESTONE_PARENT, NO_PARENT_LINE, NON_CONFORMING or
-    PARENT_UNAVAILABLE; applying it turns WOULD_LINK into LINKED,
+    UNSUPPORTED, MILESTONE_PARENT, NO_PARENT_LINE, NON_CONFORMING,
+    PARENT_UNAVAILABLE or PARENT_TYPE_REFUSED; applying it turns WOULD_LINK into LINKED,
     ALREADY_LINKED, CONFLICT, UNSUPPORTED or FAILED. TEXTUAL replaces WOULD_LINK
     in textual containment mode, where nothing is linked. The declaration order
     is the summary's order.
@@ -149,6 +169,7 @@ class Outcome(Enum):
     NO_PARENT_LINE = "no parent line"
     NON_CONFORMING = "parent line not an allowed form"
     PARENT_UNAVAILABLE = "parent not found or closed"
+    PARENT_TYPE_REFUSED = "parent's type not allowed"
     CONFLICT = "conflict (another native parent)"
     UNSUPPORTED = "not linked (unsupported)"
     FAILED = "failed"
@@ -206,13 +227,16 @@ def main() -> int:
     # Kind-driven Task prefixes ([Bug] / [Docs] / ...) live in classification.yaml;
     # without it a kind-prefixed Task reads as an unrecognised type.
     classification = _read_yaml(capability_root / "schemas" / "classification.yaml", yaml_loader)
+    # The adopter's substrate-map, None for greenfield: an issue's type is told
+    # through it for the containment check (`containment_graph.issue_type`).
+    substrate_map = axis_labels.load_substrate_map(capability_root)
     mode = axis_labels.containment_mode(capability_root)
     textual = mode == axis_labels.CONTAINMENT_TEXTUAL
 
     # One read of every issue, open and closed: it supplies the selected
     # bodies, whether each named parent exists and is open, and — in textual
     # mode — the corpus the children views are rendered from.
-    corpus = containment.fetch_issue_corpus(config, fields="number,title,body,state")
+    corpus = containment.fetch_issue_corpus(config, fields="number,title,body,state,labels")
     if corpus is None:
         print(
             "error: the issue list could not be read (gh failed); nothing was examined.",
@@ -250,6 +274,7 @@ def main() -> int:
             issue_types,
             classification,
             corpus_complete=corpus.complete,
+            substrate_map=substrate_map,
         )
         for number in selected
     ]
@@ -320,13 +345,16 @@ def classify(
     classification: dict,
     *,
     corpus_complete: bool,
+    substrate_map: axis_labels.SubstrateMap | None,
 ) -> Entry:
     """The plan's outcome for one issue, from the issue list alone (no gh).
 
     Reads the first line against the forms the issue's type allows. An issue
-    parent that exists becomes WOULD_LINK — unless it is closed while the issue
-    is open (see the module docstring); whether the link already exists is
-    asked of the native side separately (:func:`check_native_links`).
+    parent that exists becomes WOULD_LINK — unless its type is one the issue's
+    type may not sit under, or it is closed while the issue is open (see the
+    module docstring); whether the link already exists is asked of the native
+    side separately (:func:`check_native_links`). ``substrate_map`` (``None``
+    for greenfield) is the vocabulary both types are told in for that check.
     """
     row = rows[number]
     title = str(row.get("title") or "")
@@ -392,6 +420,33 @@ def classify(
             number,
             Outcome.PARENT_UNAVAILABLE,
             f"parent #{parent} not found — not linked{unread}",
+            parent=parent,
+        )
+    # The containment graph (DEC-005): the link would put the issue under a
+    # parent its type may not sit under, so it is refused, as create-issue and
+    # set-field refuse it. Both types are told from the list already read, in
+    # the map's vocabulary where one is present.
+    child_type = containment_graph.issue_type(
+        title,
+        issue_types,
+        classification=classification,
+        substrate_map=substrate_map,
+        labels=row.get("labels"),
+    )
+    parent_read = containment_graph.typed_parent(
+        parent,
+        str(parent_row.get("title") or ""),
+        issue_types,
+        classification=classification,
+        substrate_map=substrate_map,
+        labels=parent_row.get("labels"),
+    )
+    check = containment_graph.check_parent(issue_types, child_type, parent_read)
+    if check.verdict is containment_graph.Verdict.REFUSED:
+        return Entry(
+            number,
+            Outcome.PARENT_TYPE_REFUSED,
+            f"not linked — {check.message}",
             parent=parent,
         )
     if not _is_open(parent_row) and _is_open(row):

@@ -21,7 +21,7 @@ Behaviour summary (the script is the source of truth — read it for the exact c
 - **Classification labels** — resolves each axis's SUBSTRATE first, then labels only the axes a label carries (per [project-management:DEC-051-axis-carriage-activation]): `type:<kind>` always, plus `priority` / `workstream` when greenfield or when `substrate-map.yaml` binds them to your own labels. An axis your map binds to the board (or a configured board on an axis your map is silent about) is written as a board field by the `after_create_issue` hook, not as a label.
 - **Mandatory assignment** (per [project-management:DEC-019-mandatory-issue-state]) — defaults the assignee to the resolved invoker identity; `--assignee=<login>` overrides.
 - **Auto-add to board** (per DEC-019) — for board-substrate adopters, the new issue is added to the configured Projects v2 board as the final filing step.
-- **Validation refusals** — workstream value not in the adopter's declared list, parent type not in the issue type's `parent_issue_types`, a title `titles.yaml` refuses, and a non-`feature` `--kind` on an epic/feature/umbrella (the kind/structural hard-reject per [project-management:DEC-011-title-formats] / `classification.yaml`'s `structural_restriction` — an EPIC/Feature/Umbrella always carries kind `feature`) — all surface as structured error messages before `gh` is invoked.
+- **Validation refusals** — workstream value not in the adopter's declared list, parent type not in the issue type's `parent_issue_types` (no `--bypass`, no `--force`), a parent number that names a pull request, `--parent` on an EPIC (its container is a milestone — pass `--milestone`), a title `titles.yaml` refuses, and a non-`feature` `--kind` on an epic/feature/umbrella (the kind/structural hard-reject per [project-management:DEC-011-title-formats] / `classification.yaml`'s `structural_restriction` — an EPIC/Feature/Umbrella always carries kind `feature`) — all surface as structured error messages before `gh` is invoked.
 
 ## How to invoke
 
@@ -54,7 +54,7 @@ Direct-path is equivalent for adopters whose kit predates the dispatcher:
 
 - **Success** — the script prints the new issue URL on the final line. Surface it verbatim to the user.
 - **Refusal** — surface the script's stderr message verbatim. The script writes the structured refusal exactly as DEC-021 prescribes; do not paraphrase.
-- **`gh` failure** (exit 3) — surface the stderr (auth, network, repo not found). The remediation usually lies outside the methodology (`gh auth refresh`, network connectivity).
+- **`gh` failure** (exit 3) — surface the stderr (auth, network, repo not found, or a `--parent` that could not be read to hold it to the containment graph). The remediation usually lies outside the methodology (`gh auth refresh`, network connectivity).
 
 ## Intent recognition before invocation
 

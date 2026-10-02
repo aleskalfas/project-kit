@@ -12,10 +12,15 @@
 #
 # Consumed by the create-issue and validate-body skills to dispatch on
 # the type being filed (title prefix, body shape, parent-ref form).
-# DEC-005 requires a filing or re-parent that breaks the containment
-# graph to be refused. Nothing refuses one yet: until that refusal is
-# built, `create-issue` and `set-field --parent` name the parent with a
-# warning where its type is one the child's forms do not offer.
+# DEC-005 refuses a filing or re-parent that breaks the containment
+# graph, and the scripts enforce it from `parent_issue_types`
+# (scripts/_lib/containment_graph.py): `create-issue` and `set-field
+# --parent` refuse a parent of a type the child's may not sit under
+# before anything is written, `link-parent` does not link under one,
+# and `validate-issue` reports an issue already under one. An issue or
+# a parent whose type cannot be told — under a substrate map, only the
+# map's `type` title-prefix binding tells one — is outside the graph,
+# and is accepted with a warning.
 # `can_contain` and `parent_issue_types` name the same issue-type edges
 # from either end; every such edge has an option in the child's
 # `parent_ref_form`, labelled with the parent type's rendered title
@@ -98,11 +103,11 @@ types:
 # (the per-type `parent_ref_required_severity` above) soften to advisory under
 # `hierarchy: advisory`; these nesting rules do NOT. A flat brownfield tracker
 # can still malform a nesting (Feature-in-Feature, EPIC-in-EPIC), and DEC-005
-# requires that to be rejected under either hierarchy. No script rejects one
-# yet — the writers of a first line warn until that refusal is built — and
-# when one does, having no knob to flip is what keeps the rules hard by
-# construction (the no-knob-stays-hard fail-safe, ADR-026 §2) — do not add a
-# severity field here.
+# requires that to be rejected under either hierarchy. The scripts reject it
+# through the per-type edges these invariants describe (`parent_issue_types`,
+# see the header), at hard-reject under either hierarchy; having no knob to
+# flip is what keeps the rules hard by construction (the no-knob-stays-hard
+# fail-safe, ADR-026 §2) — do not add a severity field here.
 containment_invariants:
   - rule: |
       EPIC does not contain EPIC.
