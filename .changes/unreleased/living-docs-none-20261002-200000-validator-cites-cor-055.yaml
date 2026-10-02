@@ -1,0 +1,3 @@
+component: living-docs
+kind: none
+body: Internal — the package metadata's comment on the `living-docs:spaces` validator cites COR-055 point 3 for how a component joins validation, and ADR-058 for the block's keys; nothing you run changes.
