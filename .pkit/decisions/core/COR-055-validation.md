@@ -1,7 +1,7 @@
 ---
 id: COR-055
 title: Validation is one check that installed components join; one severity fails it
-status: proposed
+status: accepted
 date: 2026-10-02
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
