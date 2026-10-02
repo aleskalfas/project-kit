@@ -698,3 +698,27 @@ def test_show_tree_reports_a_self_naming_line_as_naming_none(self_scenario, st) 
     assert resolution["first_line_parent"] is None
     assert resolution["first_line_form"] == "none"
     assert resolution["first_line_names_itself"] is True
+
+
+# --- an unread record and a line the type does not allow ---------------------
+
+
+def test_the_forward_cascade_says_both_causes_of_an_unread_record_with_a_loose_line(
+    mi, monkeypatch, capsys
+) -> None:
+    """The record could not be read to hold the native parent to the first line,
+    and the first line is not a form the type allows: either stops the walk, and
+    the warning says both."""
+    row = replace(ROWS["unread record"], first_line=f"Epic: #{FEATURE}")
+    monkeypatch.setattr(subprocess, "run", _world(row).run)
+    assert _promotion_plan(mi, row) is None
+    err = capsys.readouterr().err
+    forms = ISSUE_TYPES["types"]["task"]["parent_ref_form"]
+    assert (
+        f"[warn] the forward cascade walks nothing: #{CHILD}'s record could not be read to hold "
+        f"its native parent to #{FEATURE}, the parent its first line names (gh exited 1"
+    ) in err
+    assert (
+        f"; and #{CHILD}'s first line `Epic: #{FEATURE}` is not a parent-ref a task may have: "
+        f"{forms}.\n"
+    ) in err

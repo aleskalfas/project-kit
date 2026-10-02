@@ -1695,10 +1695,11 @@ def _first_parent(mover: _MovedIssue, context: _CascadeContext) -> int | None:
     record. Where the two disagree, or only the native one names a parent, it
     starts nowhere, and nothing is written to either parent's chain; it starts
     nowhere, too, from a first line its type does not allow with nothing to hold
-    it to, from one whose native parent cannot be read to compare, and from a
-    first line naming the issue itself, which names no parent. Each is said in a
-    warning, with how to finish where running the move again can; an issue whose
-    first line names no parent and which has no native one has nothing to say.
+    it to, from one whose native parent cannot be read to compare — where both
+    hold, both are said — and from a first line naming the issue itself, which
+    names no parent. Each is said in a warning, with how to finish where running
+    the move again can; an issue whose first line names no parent and which has
+    no native one has nothing to say.
     """
     number = mover.number
     resolution = containment.resolve_parent(
@@ -1723,20 +1724,24 @@ def _first_parent(mover: _MovedIssue, context: _CascadeContext) -> int | None:
         return None
     if resolution.kind is containment.ParentKind.NONE:
         return None
-    if resolution.kind in (containment.ParentKind.TEXTUAL_ONLY, containment.ParentKind.UNREAD) and (
-        resolution.form_note is not None
-    ):
-        print(
-            f"\n[warn] {resolution.form_note}; the forward cascade walks nothing from it.",
-            file=sys.stderr,
-        )
-        return None
     if resolution.kind is containment.ParentKind.UNREAD:
-        if resolution.named is not None:
+        if resolution.form_note is not None:
+            print(
+                f"\n[warn] the forward cascade walks nothing: {resolution.fact}; and "
+                f"{resolution.form_note}.",
+                file=sys.stderr,
+            )
+        elif resolution.named is not None:
             print(
                 f"\n[warn] the forward cascade walks nothing: {resolution.fact}.", file=sys.stderr
             )
             print(f"  {_finish_advice(mover, '`gh` answers')}", file=sys.stderr)
+        return None
+    if resolution.kind is containment.ParentKind.TEXTUAL_ONLY and resolution.form_note is not None:
+        print(
+            f"\n[warn] {resolution.form_note}; the forward cascade walks nothing from it.",
+            file=sys.stderr,
+        )
         return None
     print(
         f"\n[warn] the forward cascade walks nothing: {resolution.fact}; "
