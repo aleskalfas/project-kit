@@ -523,12 +523,19 @@ into it (COR-014). Instead the release flow owns its own merge verb, beside the
   Every `gh` call is bounded, the reading of the release PR among them, so
   no stuck call holds the run. A merge or an enqueue that gets no answer is
   settled by reading the PR (`.pkit/cli/README.md`, "Pull-request
-  commands"): made, the run goes on as it would; not made, on two readings
-  running, it refuses, nothing merged, exit 1; and when GitHub cannot be read
-  since, the run says so plainly — what was asked, that whether it was made
-  is not known, and the command that reads the PR (`pkit pull-request read
-  <n>`) — claiming neither that the release merged nor that it did not, and
-  exits 4 with nothing deleted, for a run once GitHub answers to complete.
+  commands"): made, the run goes on as it would; not seen made on two
+  readings, it refuses, exit 1, saying what the readings saw and that this
+  run saw nothing merged — never that nothing merged, since GitHub may still
+  apply the request — and naming the reading (`pkit pull-request read <n>`)
+  and the re-run that tell; and when GitHub cannot be read since, the run
+  says so plainly — what was asked, that whether it was made is not known,
+  and the command that reads the PR — claiming neither that the release
+  merged nor that it did not, and exits 4 with nothing deleted, for a run
+  once GitHub answers to complete. A run that cannot read the release PR, or
+  how its base merges, before it asks anything says that this run asked
+  nothing. When the head moved while the PR was queued and the queue merged
+  it before it could be taken out, the run says it merged, and at which head,
+  exit 3, nothing deleted; a re-run deletes the head branch.
 - **Does not tag.** `release-tag.yml` cuts the backbone tag on the resulting
   push to `main` (VERSION-driven, PRJ-004); the merge and the tag stay split.
 - **Is idempotent**: on a closed PR it reports there is nothing to merge, and
