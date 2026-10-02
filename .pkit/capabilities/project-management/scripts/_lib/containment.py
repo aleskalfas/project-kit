@@ -428,7 +428,27 @@ class IssueRecord:
     parent: NativeParent | None
 
 
-def read_issue_record(config: dict[str, Any], *, issue_number: int | str) -> IssueRecord | None:
+@dataclass(frozen=True)
+class UnreadIssue:
+    """Why an issue's record could not be read.
+
+    ``why`` is pm's reading of the failure; ``said`` is what ``gh`` printed for
+    it (:class:`Said` — GitHub's error body, else gh's own stderr), quoted as
+    written, ``None`` when it printed nothing.
+    """
+
+    why: str
+    said: Said | None = None
+
+    @property
+    def detail(self) -> str:
+        """``why``, followed by what was said, when anything was."""
+        return _quoting(self.why, self.said)
+
+
+def read_issue_record(
+    config: dict[str, Any], *, issue_number: int | str
+) -> IssueRecord | UnreadIssue:
     """Read an issue and its native parent in one call.
 
     ``gh api repos/{owner}/{repo}/issues/<n>`` — the record
@@ -436,21 +456,37 @@ def read_issue_record(config: dict[str, Any], *, issue_number: int | str) -> Iss
     issue's title, body, labels, state and milestone beside its
     ``parent_issue_url``. A walk up the hierarchy that compares an issue's
     textual parent with its native one therefore costs no second call per issue.
-    ``None`` on any failure (missing ``gh``, non-zero exit, output that is not an
-    issue's record) and for a pull request, which the endpoint also answers for.
+
+    :class:`UnreadIssue` on any failure — missing ``gh``, a non-zero exit (with
+    what gh said), output that is not an issue's record — for a pull request,
+    which the endpoint also answers for, and for a record numbered other than
+    ``issue_number``: GitHub redirects the read of an issue transferred to
+    another repository, and gh follows the redirect to an issue that is not the
+    one asked for.
     """
     try:
         proc = _gh_call(["gh", "api", f"repos/{{owner}}/{{repo}}/issues/{issue_number}"], config)
     except FileNotFoundError:
-        return None
+        return UnreadIssue("`gh` is not on PATH")
     if proc.returncode != 0:
-        return None
+        said = _Refusal.read(proc.stdout or "", proc.stderr or "").said
+        return UnreadIssue(f"gh exited {proc.returncode}", said)
     try:
         record = json.loads(proc.stdout or "")
     except (json.JSONDecodeError, ValueError):
-        return None
-    if not isinstance(record, dict) or "pull_request" in record:
-        return None
+        return UnreadIssue("gh's answer was not JSON")
+    if not isinstance(record, dict):
+        return UnreadIssue("gh's answer was not an issue's record")
+    if "pull_request" in record:
+        return UnreadIssue(f"#{issue_number} is a pull request")
+    number = record.get("number")
+    if not isinstance(number, int) or isinstance(number, bool):
+        return UnreadIssue("gh's answer was not an issue's record")
+    if number != int(issue_number):
+        return UnreadIssue(
+            f"the record gh returned is #{number}'s, not #{issue_number}'s "
+            "(an issue transferred elsewhere, whose read was redirected)"
+        )
     labels = [
         {"name": str(label.get("name", "")) if isinstance(label, dict) else str(label)}
         for label in record.get("labels") or []

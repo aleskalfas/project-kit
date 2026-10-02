@@ -1331,8 +1331,8 @@ def _plan_forward_cascade(
             break
         visited.add(number)
         record = containment.read_issue_record(context.config, issue_number=number)
-        if record is None:
-            stop = f"#{number}, named as #{child}'s parent, could not be read"
+        if isinstance(record, containment.UnreadIssue):
+            stop = f"#{number}, named as #{child}'s parent, could not be read: {record.detail}"
             break
         issue = record.issue
         labels = _label_names(issue)
@@ -1496,10 +1496,11 @@ def _cascade_ancestor(
             return _AncestorOutcome(number, f"left alone at {engine_state} (the engine's reading)")
         # Moved since the plan read it: write from its labels as they are now.
         record = containment.read_issue_record(context.config, issue_number=number)
-        if record is None:
+        if isinstance(record, containment.UnreadIssue):
             return _AncestorOutcome(
                 number,
-                f"not moved: the engine places it at {engine_state} and it could not be read again",
+                f"not moved: the engine places it at {engine_state} and it could not be read "
+                f"again ({record.detail})",
                 complete=False,
                 behind=True,
             )

@@ -2223,7 +2223,7 @@ if args[:1] == ["api"] and args[1].startswith("repos/{owner}/{repo}/issues/"):
         issue = state["issues"].get(number)
         if issue is None:
             sys.exit(1)
-        print(json.dumps(dict(issue, state=issue["state"].lower())))
+        print(json.dumps(dict(issue, number=int(number), state=issue["state"].lower())))
         sys.exit(0)
 if args[:1] == ["api"]:
     print("octocat")

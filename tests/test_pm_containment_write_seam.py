@@ -422,24 +422,70 @@ def test_read_issue_record_without_a_parent_or_a_body(containment, monkeypatch) 
 
 
 @pytest.mark.parametrize(
-    ("returncode", "stdout"),
+    ("returncode", "stdout", "why"),
     [
-        (1, ""),
-        (0, "not json"),
-        (0, "[]"),
-        (0, _issue_record(pull_request={"url": "u"})),
+        (1, "", "gh exited 1"),
+        (0, "not json", "gh's answer was not JSON"),
+        (0, "[]", "gh's answer was not an issue's record"),
+        (0, _issue_record(number=None), "gh's answer was not an issue's record"),
+        (0, _issue_record(pull_request={"url": "u"}), "#344 is a pull request"),
     ],
-    ids=["gh-fails", "not-json", "not-a-record", "a-pull-request"],
+    ids=["gh-fails", "not-json", "not-a-record", "no-number", "a-pull-request"],
 )
-def test_read_issue_record_none_when_no_issue_was_read(
-    containment, monkeypatch, returncode, stdout
+def test_read_issue_record_says_why_no_issue_was_read(
+    containment, monkeypatch, returncode, stdout, why
 ) -> None:
     monkeypatch.setattr(
         containment,
         "_gh_call",
         lambda args, config: subprocess.CompletedProcess(args, returncode, stdout=stdout),
     )
-    assert containment.read_issue_record({}, issue_number=344) is None
+    read = containment.read_issue_record({}, issue_number=344)
+    assert read == containment.UnreadIssue(why)
+    assert read.detail == why
+
+
+def test_read_issue_record_keeps_what_gh_said_when_the_read_fails(containment, monkeypatch) -> None:
+    monkeypatch.setattr(
+        containment,
+        "_gh_call",
+        lambda args, config: subprocess.CompletedProcess(
+            args,
+            1,
+            stdout=json.dumps({"message": "Not Found", "status": "404"}),
+            stderr="gh: Not Found (HTTP 404)\n",
+        ),
+    )
+    read = containment.read_issue_record({}, issue_number=344)
+    assert read.detail == 'gh exited 1. GitHub said: "Not Found"'
+
+    monkeypatch.setattr(
+        containment,
+        "_gh_call",
+        lambda args, config: subprocess.CompletedProcess(
+            args, 4, stdout="", stderr="HTTP 502: Bad Gateway\n"
+        ),
+    )
+    read = containment.read_issue_record({}, issue_number=344)
+    assert read.detail == 'gh exited 4. gh said: "HTTP 502: Bad Gateway"'
+
+
+def test_a_record_numbered_otherwise_is_not_the_issue_asked_for(containment, monkeypatch) -> None:
+    """GitHub redirects the read of an issue transferred to another repository,
+    and gh follows it: the record that comes back is another issue's."""
+    monkeypatch.setattr(
+        containment,
+        "_gh_call",
+        lambda args, config: subprocess.CompletedProcess(
+            args, 0, stdout=_issue_record(number=12), stderr=""
+        ),
+    )
+    read = containment.read_issue_record({}, issue_number=344)
+    assert isinstance(read, containment.UnreadIssue)
+    assert read.detail == (
+        "the record gh returned is #12's, not #344's "
+        "(an issue transferred elsewhere, whose read was redirected)"
+    )
 
 
 def test_a_child_under_another_parent_is_a_conflict_and_nothing_is_posted(

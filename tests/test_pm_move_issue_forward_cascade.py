@@ -254,7 +254,10 @@ def test_a_parent_that_cannot_be_read_stops_the_walk_with_a_warning(
     assert world.promote(task) == 0
 
     err = capsys.readouterr().err
-    assert f"#99, named as #{task}'s parent, could not be read; the walk stops there." in err
+    assert (
+        f"#99, named as #{task}'s parent, could not be read: gh exited 1. "
+        'gh said: "gh: Not Found (HTTP 404)"; the walk stops there.'
+    ) in err
     assert f"[warn] forward cascade from #{task}, not completed:" in err
     assert world.views(task) == ("backlog", "backlog")
 
