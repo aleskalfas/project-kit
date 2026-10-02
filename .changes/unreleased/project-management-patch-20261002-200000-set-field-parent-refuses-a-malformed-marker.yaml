@@ -1,0 +1,15 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `set-field <N> --parent <P>` refuses an issue whose body's first line attempts
+  an `Integration:` marker but is not the valid `Integration: integration/<slug>`
+  form (#1241). It wrote the new parent-ref above the malformed line, which
+  moved it off the first line, where `validate-issue` hard-rejects it, so the
+  bad marker then passed validation. The refusal names the line and the
+  required form, exits 1, and writes nothing — neither the body nor the native
+  sub-issue link — under `--dry-run` too. A valid marker and an unmarked body
+  are rewritten as before, except that a parent-ref prepended to an unmarked
+  body opening with blank lines now replaces them, leaving one blank line before
+  the content instead of the old blank lines below the new one.
