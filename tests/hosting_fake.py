@@ -62,7 +62,8 @@ MERGE_ADMIN = "merge-admin"  # `gh pr merge --squash --admin`
 ENQUEUE = "enqueue"  # `gh pr merge --auto`
 DISABLE_AUTO = "disable-auto"  # `gh pr merge --disable-auto`
 DEQUEUE = "dequeue"  # GitHub's `dequeuePullRequest` mutation
-DELETE_REF = "delete-ref"  # `gh api -X DELETE …/git/refs/heads/<branch>`
+BRANCH = "branch"  # the GraphQL reading of a merged PR's head branch, before its deletion
+DELETE_REF = "delete-ref"  # GitHub's `updateRefs` mutation: delete the branch at its tip
 VIEW = "view"  # `gh pr view`
 LIST = "list"  # `gh pr list`
 CHECKS = "checks"  # `gh pr checks`
@@ -74,7 +75,7 @@ UNKNOWN = "unknown"  # a request the fake does not model: answered with exit 1
 #: defaults, the merge requests, the dequeue and the branch deletion — as
 #: against the caller's own reads for its gates.
 LANDING = frozenset(
-    {READ, DEFAULTS, MERGE, MERGE_ADMIN, ENQUEUE, DISABLE_AUTO, DEQUEUE, DELETE_REF}
+    {READ, DEFAULTS, MERGE, MERGE_ADMIN, ENQUEUE, DISABLE_AUTO, DEQUEUE, BRANCH, DELETE_REF}
 )
 
 # ---- what became of a request ---------------------------------------------------
@@ -91,6 +92,14 @@ NEVER_RECEIVED = "not made, no answer"
 
 _MERGED_AT = "2026-10-01T10:12:00Z"
 _MERGE_COMMIT = "c0ffee" + "0" * 34
+_REPOSITORY_ID = "R_project"
+
+#: What GitHub answers an `updateRefs` it refuses for a branch not at the
+#: commit named, or already gone: no reason, only that something went wrong.
+NO_REASON = (
+    "gh: Something went wrong while executing your query. Please include `ED1C:3173D4` when "
+    "reporting this issue."
+)
 
 
 class NoAnswer(Exception):
@@ -367,7 +376,8 @@ class HostingService:
         asked = [
             request
             for request in self.requests
-            if request.kind == DELETE_REF and request.argv[-1].endswith(f"/heads/{self.head_ref}")
+            if request.kind == DELETE_REF
+            and _field(request.argv, "name") == f"refs/heads/{self.head_ref}"
         ]
         return asked[-1].result if asked else "none"
 
@@ -425,6 +435,9 @@ class HostingService:
                 return _done(args, 1, stderr="GraphQL: the pull request is not in a merge queue")
             self._leave_queue()
             return _done(args)
+        if kind == BRANCH:
+            node = {**self._node(), "repository": {"id": _REPOSITORY_ID}, "headRef": self._ref()}
+            return _done(args, stdout=json.dumps({"data": {"repository": {"pullRequest": node}}}))
         if kind == DELETE_REF:
             return self._delete_ref(args, request)
         if kind == VIEW:
@@ -489,14 +502,25 @@ class HostingService:
         return _done(args)
 
     def _delete_ref(self, args: list[str], request: Request) -> Completed:
-        branch = args[-1].split("/git/refs/heads/", 1)[-1]
+        """`updateRefs`, moving one branch to the all-zero commit: deleted only
+        while it is at the commit named, all-or-nothing, as GitHub does it."""
+        branch = (_field(args, "name") or "").removeprefix("refs/heads/")
+        if _field(args, "repository") != _REPOSITORY_ID or _field(args, "after") != "0" * 40:
+            request.result = "refused, not a deletion here"
+            return _done(args, 1, stderr=NO_REASON)
         if branch in self.protected:
             request.result = "refused, protected"
-            return _done(args, 1, stderr="gh: Cannot delete this protected branch (HTTP 422)")
+            return _done(
+                args, 1, stderr="gh: Cannot delete this branch: it is protected (updateRefs)"
+            )
         if branch not in self.refs:
-            request.result = "gone"
-            return _done(args, 1, stderr="gh: Reference does not exist (HTTP 422)")
-        tip = self.refs.pop(branch)
+            request.result = "refused, gone"
+            return _done(args, 1, stderr=NO_REASON)
+        tip = self.refs[branch]
+        if tip != _field(args, "before"):
+            request.result = f"refused, tip {tip}"
+            return _done(args, 1, stderr=NO_REASON)
+        del self.refs[branch]
         result = "deleted"
         if branch == self.head_ref and tip != (self.merged_head or self.head_oid):
             result += f", tip {tip} moved"
@@ -506,6 +530,27 @@ class HostingService:
                 result += f", closed #{other.number}"
         request.result = result
         return _done(args)
+
+    def _ref(self) -> dict[str, Any] | None:
+        """The PR's head branch as GraphQL's `headRef` answers it: by name, as
+        it stands now — its tip and the open PRs whose head it is — or null
+        once it is gone."""
+        if self.cross_repository or self.head_ref not in self.refs:
+            return None
+        numbers = [
+            other.number
+            for other in self.others
+            if other.head_ref == self.head_ref and other.state == "OPEN"
+        ]
+        if self.state == "OPEN":
+            numbers.insert(0, self.number)
+        return {
+            "target": {"oid": self.refs[self.head_ref]},
+            "associatedPullRequests": {
+                "totalCount": len(numbers),
+                "nodes": [{"number": number} for number in numbers],
+            },
+        }
 
     def _node(self) -> dict[str, Any]:
         """The PR as the GraphQL reading answers it."""
@@ -519,6 +564,8 @@ class HostingService:
             "state": self.state,
             "mergedAt": self.merged_at or None,
             "headRefOid": self.head_oid,
+            "headRefName": self.head_ref,
+            "isCrossRepository": self.cross_repository,
             "isMergeQueueEnabled": rules.queue,
             "isInMergeQueue": self.in_queue,
             "mergeQueue": {"configuration": {"mergeMethod": rules.method}} if rules.queue else None,
@@ -902,13 +949,13 @@ def _kind(args: list[str]) -> str:
         query = next((arg for arg in args if arg.startswith("query=")), "")
         if "dequeuePullRequest" in query:
             return DEQUEUE
+        if "updateRefs" in query:
+            return DELETE_REF
         if "closedByPullRequestsReferences" in query:
             return ISSUE_MERGES
         if "pullRequest(number:" in query:
-            return READ
+            return BRANCH if "headRef {" in query else READ
         return UNKNOWN
-    if args[:3] == ["api", "-X", "DELETE"] and "/git/refs/heads/" in args[-1]:
-        return DELETE_REF
     if args[:2] == ["api", "repos/{owner}/{repo}"]:
         return DEFAULTS
     kinds: Mapping[tuple[str, str], str] = {
@@ -922,6 +969,12 @@ def _kind(args: list[str]) -> str:
 
 def _option(args: list[str], name: str) -> str | None:
     return args[args.index(name) + 1] if name in args[:-1] else None
+
+
+def _field(args: list[str], name: str) -> str | None:
+    """A GraphQL variable `gh api graphql` was given (`-f name=value`)."""
+    prefix = f"{name}="
+    return next((arg[len(prefix) :] for arg in args if arg.startswith(prefix)), None)
 
 
 def _done(args: list[str], returncode: int = 0, *, stdout: str = "", stderr: str = "") -> Completed:

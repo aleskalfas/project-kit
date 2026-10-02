@@ -25,6 +25,7 @@ from click.testing import CliRunner
 
 from project_kit import cli, session_guard
 from project_kit import pull_request_landing as landing
+from tests import hosting_fake as fake
 from tests import sessions
 
 Completed = subprocess.CompletedProcess[str]
@@ -154,6 +155,26 @@ def test_a_queued_pr_reads_its_position_state_time_to_merge_and_head() -> None:
     assert reading.ever_queued and reading.removal is None
     assert not reading.merged
     assert reading.describe() == "position 2 in the queue, awaiting checks, about 4 min to merge"
+
+
+@pytest.mark.parametrize("fork", [False, True], ids=["same-repository", "fork"])
+def test_the_reading_names_the_head_branch_and_whether_it_is_in_a_fork(fork: bool) -> None:
+    """Two facts the reading states for a caller (#1255): the head's ref name,
+    and whether the head is in another repository."""
+    calls: list[list[str]] = []
+    pr = {**_QUEUED, "headRefName": "fix/42-x", "isCrossRepository": fork}
+    reading = landing.read(496, gh=_gh([pr], calls))
+    assert "headRefName" in _query(calls[0]) and "isCrossRepository" in _query(calls[0])
+    assert (reading.head_ref, reading.cross_repository) == ("fix/42-x", fork)
+    document = reading.as_json()
+    assert (document["head_ref"], document["cross_repository"]) == ("fix/42-x", fork)
+
+
+def test_a_reading_that_does_not_say_where_the_head_is_reads_as_a_forks() -> None:
+    """Nothing is done on a branch that may not be the PR's: an answer without
+    `isCrossRepository` reads as a head in another repository."""
+    reading = landing.read(496, gh=_gh([_QUEUED]))
+    assert reading.cross_repository is True
 
 
 @pytest.mark.parametrize(
@@ -526,6 +547,238 @@ def test_a_request_runs_gh_where_the_guard_looked_and_nowhere_else(
     assert places == [Path(here["cwd"]).resolve()]
     for request in (landing.squash_merge, landing.enqueue, landing.dequeue):
         assert "gh" not in inspect.signature(request).parameters
+
+
+# --- delete_branch: the head branch, only at the head that merged (#1255) ------------
+
+
+def _merged_host(**fields: Any) -> fake.HostingService:
+    """The shared fake GitHub, its PR merged at its head `sha-head`, whose
+    branch is still there."""
+    host = fake.HostingService(**fields)
+    host.merge_now()
+    return host
+
+
+def _delete(
+    host: fake.HostingService,
+    here: dict[str, Any],
+    acting: Callable[[landing.GhRunner], None],
+    expect: str = "sha-head",
+) -> landing.BranchDeletion:
+    acting(host)
+    return landing.delete_branch(496, expect=expect, **here)
+
+
+def test_a_branch_at_the_head_that_merged_is_deleted_in_one_compare_and_delete(
+    here: dict[str, Any], acting: Callable[[landing.GhRunner], None]
+) -> None:
+    """One reading, then one request that deletes the branch only while it is
+    at the head named: GitHub's `updateRefs`, the all-zero commit as its end."""
+    host = _merged_host()
+    deletion = _delete(host, here, acting)
+    assert deletion == landing.BranchDeletion(landing.DELETED, "fix/42-land-it")
+    assert host.kinds() == [fake.BRANCH, fake.DELETE_REF]
+    request = host.requests[1].argv
+    assert {
+        "repository=R_project",
+        "name=refs/heads/fix/42-land-it",
+        "before=sha-head",
+        "after=" + "0" * 40,
+    } <= set(request)
+    assert "fix/42-land-it" not in host.refs
+
+
+@pytest.mark.parametrize(
+    ("setup", "outcome", "reason_kind", "tip"),
+    [
+        (lambda host: host.move_branch("sha-later"), "kept", "tip-moved", "sha-later"),
+        (lambda host: host.refs.pop(host.head_ref), "gone", "", ""),
+        (
+            lambda host: setattr(host, "cross_repository", True),
+            "refused",
+            "cross-repository",
+            "",
+        ),
+        (
+            lambda host: host.others.append(
+                fake.OtherPullRequest(501, host.head_ref, host.head_oid)
+            ),
+            "kept",
+            "open-pull-request",
+            "sha-head",
+        ),
+        (
+            lambda host: (
+                host.move_branch("sha-new"),
+                host.others.append(fake.OtherPullRequest(502, host.head_ref, "sha-new")),
+            ),
+            "kept",
+            "tip-moved",
+            "sha-new",
+        ),
+    ],
+    ids=["tip-moved", "already-gone", "fork", "another-open-pr-uses-it", "reused-branch-name"],
+)
+def test_what_the_reading_finds_decides_and_nothing_more_is_asked(
+    here: dict[str, Any],
+    acting: Callable[[landing.GhRunner], None],
+    setup: Callable[[fake.HostingService], object],
+    outcome: str,
+    reason_kind: str,
+    tip: str,
+) -> None:
+    """A tip moved since the merge — a push, or a branch of the same name made
+    since — is kept, with its tip; a branch gone is gone; a fork's is refused;
+    one another open PR uses is kept, since deleting it would close that PR.
+    The reading alone tells, so no deletion is asked for."""
+    host = _merged_host()
+    setup(host)
+    deletion = _delete(host, here, acting)
+    assert (deletion.outcome, deletion.reason_kind, deletion.tip) == (outcome, reason_kind, tip)
+    assert host.kinds() == [fake.BRANCH]
+    assert all(other.state == "OPEN" for other in host.others)
+    if reason_kind == "open-pull-request":
+        assert deletion.reason == (
+            "another open pull request uses this branch (#501); deleting it would close that "
+            "pull request"
+        )
+
+
+def test_more_open_prs_than_the_reading_names_are_counted(
+    here: dict[str, Any], acting: Callable[[landing.GhRunner], None]
+) -> None:
+    """The reading names the first few open PRs on the branch and counts them
+    all; the PR being deleted for is never one of them."""
+    ref = {
+        "target": {"oid": "sha-head"},
+        "associatedPullRequests": {
+            "totalCount": 8,
+            "nodes": [{"number": n} for n in (496, 501, 502, 503, 504)],
+        },
+    }
+    pr = {
+        **_MERGED,
+        "headRefName": "fix/42-x",
+        "isCrossRepository": False,
+        "repository": {"id": "R_project"},
+        "headRef": ref,
+    }
+    acting(_gh([pr]))
+    deletion = landing.delete_branch(496, expect="sha-head", **here)
+    assert (deletion.outcome, deletion.reason_kind) == ("kept", "open-pull-request")
+    assert deletion.reason == (
+        "another open pull request uses this branch (#501, #502, #503, #504 and 3 more); "
+        "deleting it would close that pull request"
+    )
+
+
+def test_a_pr_that_has_not_merged_is_refused_and_nothing_is_deleted(
+    here: dict[str, Any], acting: Callable[[landing.GhRunner], None]
+) -> None:
+    host = fake.HostingService()
+    deletion = _delete(host, here, acting)
+    assert (deletion.outcome, deletion.reason_kind) == ("refused", "not-merged")
+    assert host.kinds() == [fake.BRANCH] and host.head_ref in host.refs
+
+
+def test_a_branch_protected_from_deletion_is_kept_in_the_services_words(
+    here: dict[str, Any], acting: Callable[[landing.GhRunner], None]
+) -> None:
+    """The service refuses the deletion; a second reading finds the branch
+    still at the head that merged, so it is kept, with the service's words."""
+    host = _merged_host()
+    host.protected.add(host.head_ref)
+    deletion = _delete(host, here, acting)
+    assert (deletion.outcome, deletion.reason_kind, deletion.tip) == (
+        "kept",
+        "deletion-refused",
+        "sha-head",
+    )
+    assert deletion.reason == (
+        "the service refused to delete it: gh: Cannot delete this branch: it is protected "
+        "(updateRefs)"
+    )
+    assert host.kinds() == [fake.BRANCH, fake.DELETE_REF, fake.BRANCH]
+
+
+def test_a_push_between_the_reading_and_the_request_is_not_lost(
+    here: dict[str, Any], acting: Callable[[landing.GhRunner], None]
+) -> None:
+    """The compare and the delete are one request: a push that lands after
+    the reading fails the deletion, and the reading after it tells why."""
+    host = _merged_host()
+    host.before(fake.DELETE_REF, lambda h: h.move_branch("sha-raced"))
+    deletion = _delete(host, here, acting)
+    assert (deletion.outcome, deletion.reason_kind, deletion.tip) == (
+        "kept",
+        "tip-moved",
+        "sha-raced",
+    )
+    assert host.refs[host.head_ref] == "sha-raced"
+    assert host.remote_deletion() == "refused, tip sha-raced"
+
+
+def test_a_branch_deleted_between_the_reading_and_the_request_is_gone(
+    here: dict[str, Any], acting: Callable[[landing.GhRunner], None]
+) -> None:
+    host = _merged_host()
+
+    def deleted_meanwhile(h: fake.HostingService) -> None:
+        del h.refs[h.head_ref]
+
+    host.before(fake.DELETE_REF, deleted_meanwhile)
+    assert _delete(host, here, acting).outcome == "gone"
+
+
+def test_a_pr_that_cannot_be_read_is_refused_and_nothing_is_asked(
+    here: dict[str, Any], acting: Callable[[landing.GhRunner], None]
+) -> None:
+    host = _merged_host()
+    host.fail(fake.BRANCH, count=None)
+    deletion = _delete(host, here, acting)
+    assert (deletion.outcome, deletion.reason_kind) == ("refused", "unreadable")
+    assert deletion.reason == "PR #496 could not be read: HTTP 502: Bad Gateway"
+    assert host.kinds() == [fake.BRANCH]
+
+
+def test_a_refused_deletion_with_no_reading_after_it_is_kept_in_the_services_words(
+    here: dict[str, Any], acting: Callable[[landing.GhRunner], None]
+) -> None:
+    host = _merged_host()
+    host.protected.add(host.head_ref)
+    host.fail(fake.BRANCH, first=2)
+    deletion = _delete(host, here, acting)
+    assert (deletion.outcome, deletion.reason_kind) == ("kept", "deletion-refused")
+    assert deletion.reason.endswith("; the branch could not be read since (HTTP 502: Bad Gateway)")
+
+
+def test_the_deletion_is_made_only_where_its_clearance_was_given(
+    here: dict[str, Any], tmp_path: Path, acting: Callable[[landing.GhRunner], None]
+) -> None:
+    host = _merged_host()
+    acting(host)
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    with pytest.raises(ValueError, match="the clearance is for"):
+        landing.delete_branch(496, expect="sha-head", cwd=elsewhere, clearance=here["clearance"])
+    assert host.requests == []
+
+
+def test_the_deletion_runs_gh_where_the_guard_looked_and_takes_no_client(
+    here: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    places: list[Path] = []
+    host = _merged_host()
+
+    def runner(cwd: Path) -> landing.GhRunner:
+        places.append(cwd)
+        return host
+
+    monkeypatch.setattr(landing, "gh_runner", runner)
+    assert landing.delete_branch(496, expect="sha-head", **here).outcome == "deleted"
+    assert places == [Path(here["cwd"]).resolve()]
+    assert "gh" not in inspect.signature(landing.delete_branch).parameters
 
 
 # --- wait_for_merge ---------------------------------------------------------
@@ -928,3 +1181,160 @@ def test_the_readings_and_the_wait_run_no_guard(fake_gh: Any, foreign: Path) -> 
     fake_gh([_QUEUED, _MERGED])
     assert _invoke("read", "496", "--json").exit_code == 0
     assert _invoke("wait", "496", "--json").exit_code == 0
+
+
+# --- `pkit pull-request delete-branch` (#1255) ----------------------------------------
+
+#: The keys of `delete-branch`'s document, each always present.
+_DELETION_KEYS = {
+    "schema_version",
+    "pull_request",
+    "expected",
+    "outcome",
+    "branch",
+    "tip",
+    "reason_kind",
+    "reason",
+    "guard",
+}
+
+
+@pytest.fixture
+def hosted(monkeypatch: pytest.MonkeyPatch) -> fake.HostingService:
+    """The shared fake GitHub as the command's `gh`: its PR merged at
+    `sha-head`, whose head branch is still there."""
+    host = _merged_host()
+    monkeypatch.setattr(landing, "gh_runner", lambda cwd: host)
+    return host
+
+
+def _delete_branch(*options: str, expect: str = "sha-head") -> Any:
+    return _invoke("delete-branch", "496", "--expect", expect, *options)
+
+
+@pytest.mark.parametrize(
+    ("setup", "outcome", "reason_kind", "tip", "code"),
+    [
+        (lambda host: None, "deleted", None, None, 0),
+        (lambda host: host.move_branch("sha-later"), "kept", "tip-moved", "sha-later", 0),
+        (lambda host: host.refs.pop(host.head_ref), "gone", None, None, 0),
+        (
+            lambda host: host.protected.add(host.head_ref),
+            "kept",
+            "deletion-refused",
+            "sha-head",
+            0,
+        ),
+        (
+            lambda host: host.others.append(
+                fake.OtherPullRequest(501, host.head_ref, host.head_oid)
+            ),
+            "kept",
+            "open-pull-request",
+            "sha-head",
+            0,
+        ),
+        (
+            lambda host: setattr(host, "cross_repository", True),
+            "refused",
+            "cross-repository",
+            None,
+            1,
+        ),
+        (
+            lambda host: (setattr(host, "state", "OPEN"), setattr(host, "merged_at", "")),
+            "refused",
+            "not-merged",
+            None,
+            1,
+        ),
+    ],
+    ids=["deleted", "tip-moved", "gone", "protected", "in-use", "fork", "not-merged"],
+)
+def test_delete_branch_writes_one_document_and_exits_by_its_outcome(
+    hosted: fake.HostingService,
+    setup: Callable[[fake.HostingService], object],
+    outcome: str,
+    reason_kind: str | None,
+    tip: str | None,
+    code: int,
+) -> None:
+    """Done, nothing to do and refused, as the noun's other commands: exit 0
+    when deleted, kept or gone; 1 when refused. The document carries every key,
+    null where it does not apply."""
+    setup(hosted)
+    result = _delete_branch("--json")
+    assert result.exit_code == code, result.output
+    [document] = _lines(result.stdout)
+    assert set(document) == _DELETION_KEYS
+    assert document["schema_version"] == landing.SCHEMA_VERSION
+    assert (document["pull_request"], document["expected"]) == (496, "sha-head")
+    assert (document["outcome"], document["reason_kind"], document["tip"]) == (
+        outcome,
+        reason_kind,
+        tip,
+    )
+    assert document["branch"] == "fix/42-land-it"
+    assert (document["reason"] is None) is (reason_kind is None)
+    assert document["guard"]["cleared"] == "undetermined"
+
+
+def test_delete_branch_says_what_became_of_the_branch(hosted: fake.HostingService) -> None:
+    result = _delete_branch()
+    assert (result.exit_code, result.stdout) == (
+        0,
+        "PR #496: deleted remote branch 'fix/42-land-it'\n",
+    )
+    hosted.cross_repository = True
+    refused = _delete_branch()
+    assert refused.exit_code == 1
+    assert refused.stderr.startswith("error: remote branch 'fix/42-land-it' not deleted: PR #496's")
+    assert refused.stderr.endswith("Nothing was deleted.\n")
+
+
+def test_delete_branch_takes_a_commit(hosted: fake.HostingService) -> None:
+    assert _delete_branch(expect=" ").exit_code == 2
+    assert hosted.requests == []
+
+
+def test_in_another_repository_with_no_terminal_the_deletion_is_refused_and_nothing_sent(
+    hosted: fake.HostingService, foreign: Path
+) -> None:
+    """The guard runs before the reading: refused, nothing is asked of the
+    service at all, and the document says why in the noun's terms."""
+    result = _delete_branch("--json")
+    assert result.exit_code == 1
+    [document] = _lines(result.stdout)
+    assert set(document) == _DELETION_KEYS
+    assert (document["outcome"], document["reason_kind"]) == ("refused", "foreign-repository")
+    assert (document["branch"], document["tip"]) == (None, None)
+    assert (document["guard"]["verdict"], document["guard"]["cleared"]) == ("diverged", None)
+    assert "--allow-foreign-repo" in document["reason"]
+    assert hosted.requests == []
+    assert hosted.head_ref in hosted.refs
+
+
+def test_the_flag_confirms_a_deletion_in_another_repository(
+    hosted: fake.HostingService, foreign: Path
+) -> None:
+    result = _delete_branch("--allow-foreign-repo", "--json")
+    assert result.exit_code == 0
+    [document] = _lines(result.stdout)
+    assert document["outcome"] == "deleted"
+    assert (document["guard"]["verdict"], document["guard"]["cleared"]) == ("diverged", "flag")
+
+
+def test_with_no_anchor_the_deletion_needs_no_flag(hosted: fake.HostingService) -> None:
+    """No anchor, no fire: outside any session the guard passes undetermined,
+    never same-repo, and the deletion goes ahead."""
+    result = _delete_branch("--json")
+    assert result.exit_code == 0
+    [document] = _lines(result.stdout)
+    assert document["outcome"] == "deleted"
+    assert document["guard"] == {
+        "verdict": "undetermined",
+        "undetermined_kind": "noncoverage",
+        "anchor": None,
+        "target": None,
+        "cleared": "undetermined",
+    }

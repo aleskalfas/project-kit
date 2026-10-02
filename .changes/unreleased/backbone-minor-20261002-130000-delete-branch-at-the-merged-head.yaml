@@ -1,0 +1,23 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit pull-request delete-branch <n> --expect <sha>` deletes a merged pull
+  request's head branch on the hosting service, and only while its tip is
+  `<sha>`, the head the pull request merged at, so a push made after the
+  merge is not lost and a newer pull request's branch of the same name is
+  not deleted. It runs the cross-repository guard first and takes
+  `--allow-foreign-repo`. It refuses a pull request that has not merged, or
+  whose head is in a fork; it keeps a branch whose tip moved, one another open
+  pull request uses, and one the service refuses to delete, saying why; and it
+  reports a branch already gone. The deletion is one compare-and-delete
+  request (GitHub's `updateRefs` with the expected tip). With `--json` it
+  writes one document: `outcome` (`deleted`, `kept`, `gone`, `refused`),
+  `branch`, `expected`, `tip`, `reason_kind`, `reason` and `guard`; it exits 0
+  when deleted, kept or gone and 1 when refused. `pkit release merge` deletes
+  a release pull request's head branch through it, after the merge, so a
+  branch kept or gone is said in one line and does not fail the run.
+  `pkit pull-request read` reports the head's ref name (`head_ref`) and
+  whether the head is in another repository (`cross_repository`), as
+  additions: `schema_version` stays 1.

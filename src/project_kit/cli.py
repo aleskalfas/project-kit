@@ -15,7 +15,7 @@ import shlex
 import sys
 from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import click
 
@@ -556,11 +556,12 @@ def pull_request() -> None:
 
     Where a pull request's base merges through a merge queue, and where the PR
     stands in it; the repository's squash-commit defaults; the direct squash
-    merge, the enqueue, the wait for the queue's merge and taking a PR out of
-    the queue. Each runs `gh` from the working directory; the three that
-    change the service run the cross-repository guard first. `--json` writes
-    each document as one line of JSON, which is how a capability's script
-    calls it. Reference: `.pkit/cli/README.md`, "Pull-request commands".
+    merge, the enqueue, the wait for the queue's merge, taking a PR out of
+    the queue, and deleting a merged PR's head branch. Each runs `gh` from the
+    working directory; the four that change the service run the
+    cross-repository guard first. `--json` writes each document as one line of
+    JSON, which is how a capability's script calls it. Reference:
+    `.pkit/cli/README.md`, "Pull-request commands".
     """
 
 
@@ -587,14 +588,23 @@ def _allow_foreign_repo_option(command: Callable[..., None]) -> Callable[..., No
 
 
 def _pull_request_cleared(
-    number: int, allow_foreign_repo: bool, as_json: bool
+    number: int,
+    allow_foreign_repo: bool,
+    as_json: bool,
+    refused: Callable[[session_guard.Refusal], dict[str, Any]] | None = None,
 ) -> session_guard.Clearance:
     """The cross-repository guard's clearance for a change from the working
-    directory; a refusal is written — no request made — and exits 1."""
+    directory; a refusal is written — no request made — and exits 1.
+    `refused` is the subcommand's document of a refusal; a request's
+    (`pull_request_landing.refusal_document`) by default."""
     passage = session_guard.clear(Path.cwd(), confirmed=allow_foreign_repo)
     if isinstance(passage, session_guard.Refusal):
         if as_json:
-            document = pull_request_landing.refusal_document(number, passage)
+            document = (
+                refused(passage)
+                if refused is not None
+                else pull_request_landing.refusal_document(number, passage)
+            )
             click.echo(pull_request_landing.render_json(document))
         else:
             click.echo(f"error: {passage.reason} Nothing was asked of GitHub.", err=True)
@@ -744,6 +754,51 @@ def pull_request_dequeue(number: int, allow_foreign_repo: bool, as_json: bool) -
     clearance = _pull_request_cleared(number, allow_foreign_repo, as_json)
     outcome = pull_request_landing.dequeue(number, cwd=clearance.directory, clearance=clearance)
     _say_outcome(number, outcome, clearance, as_json, f"PR #{number} is out of the merge queue")
+
+
+@pull_request.command("delete-branch")
+@click.argument("number", type=int)
+@click.option(
+    "--expect",
+    required=True,
+    metavar="SHA",
+    help="The head the PR merged at, in full: the branch is deleted only while its tip is it.",
+)
+@_allow_foreign_repo_option
+@_pull_request_json_option
+def pull_request_delete_branch(
+    number: int, expect: str, allow_foreign_repo: bool, as_json: bool
+) -> None:
+    """Delete merged PR NUMBER's head branch on the service, only at SHA.
+
+    Refused unless the PR has merged and its head is in this repository, not
+    a fork. The branch is deleted only while its tip is the head the PR merged
+    at, in one compare-and-delete request; otherwise it is kept, and said
+    why, or found gone. The cross-repository guard runs first. Exit 0 when
+    deleted, kept or gone; 1 when refused, with why.
+    """
+    if not expect.strip():
+        raise click.BadParameter("names no commit", param_hint="--expect")
+    clearance = _pull_request_cleared(
+        number,
+        allow_foreign_repo,
+        as_json,
+        refused=lambda refusal: pull_request_landing.deletion_refusal_document(
+            number, expect, refusal
+        ),
+    )
+    deletion = pull_request_landing.delete_branch(
+        number, expect=expect, cwd=clearance.directory, clearance=clearance
+    )
+    if as_json:
+        document = pull_request_landing.deletion_document(number, expect, deletion, clearance)
+        click.echo(pull_request_landing.render_json(document))
+    elif deletion.outcome == pull_request_landing.REFUSED:
+        click.echo(f"error: {deletion.describe()}. Nothing was deleted.", err=True)
+    else:
+        click.echo(f"PR #{number}: {deletion.describe()}")
+    if deletion.outcome == pull_request_landing.REFUSED:
+        raise SystemExit(1)
 
 
 @pull_request.command("wait")
