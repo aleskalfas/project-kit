@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-02T00:02:23Z
+      at: 2026-10-02T00:38:39Z
       outcome: unchanged
-      unchanged-because: The CLI and agents READMEs gained what consent recording a documentation location takes (COR-049 point 5) — adopt's question and --yes, reconcile's --write as the confirmation, record-location asking nothing; this index still names the command surface and the agent definitions they document, and no command or area it lists was added, renamed or removed.
+      unchanged-because: The CLI reference now names every backbone command the cross-repository guard runs on and the fields of its documents; this index only points at that reference and describes no command's behaviour, so it holds
 ---
 
 # project-kit
