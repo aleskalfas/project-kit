@@ -518,6 +518,16 @@ into it (COR-014). Instead the release flow owns its own merge verb, beside the
   confirm the merge the run exits 4 with nothing deleted, for a re-run to
   complete. A direct merge gh accepted that GitHub never reports merged
   exits 3, naming the PR's state — nothing is deleted.
+
+  Every `gh` call is bounded, the reading of the release PR among them, so
+  no stuck call holds the run. A merge or an enqueue that gets no answer is
+  settled by reading the PR (`.pkit/cli/README.md`, "Pull-request
+  commands"): made, the run goes on as it would; not made, on two readings
+  running, it refuses, nothing merged, exit 1; and when GitHub cannot be read
+  since, the run says so plainly — what was asked, that whether it was made
+  is not known, and the command that reads the PR (`pkit pull-request read
+  <n>`) — claiming neither that the release merged nor that it did not, and
+  exits 4 with nothing deleted, for a run once GitHub answers to complete.
 - **Does not tag.** `release-tag.yml` cuts the backbone tag on the resulting
   push to `main` (VERSION-driven, PRJ-004); the merge and the tag stay split.
 - **Is idempotent**: on a closed PR it reports there is nothing to merge, and
