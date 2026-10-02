@@ -153,18 +153,6 @@ def test_a_native_parent_abroad_cannot_be_named_on_a_first_line() -> None:
     )
 
 
-@pytest.mark.parametrize(("body", "native"), [("Feature: #5\n", 5), ("Feature: #5\n", None)])
-def test_records_that_agree_have_nothing_to_settle(body: str, native: int | None) -> None:
-    resolution = _resolve(body, native)
-    assert resolution.fact is None
-    assert resolution.remedy() is None
-    assert resolution.form_note is None
-
-
-def test_a_line_in_a_form_the_type_does_not_allow_is_noted_whatever_the_native_says() -> None:
-    forms = ISSUE_TYPES["types"]["feature"]["parent_ref_form"]
-    resolution = _resolve("Epic: #5\n", 5, structural_type="feature")
-    assert resolution.form_note == (
 @pytest.mark.parametrize(
     ("body", "native"),
     [("Milestone: [#3](../milestone/3)\n", 7), ("Feature: #5\n", 7), ("## What\n", 7)],
@@ -201,6 +189,18 @@ def test_an_issue_of_unknown_type_keeps_the_rewrite_remedy() -> None:
     assert "`set-field 12 --parent 7`" in (resolution.remedy() or "")
 
 
+@pytest.mark.parametrize(("body", "native"), [("Feature: #5\n", 5), ("Feature: #5\n", None)])
+def test_records_that_agree_have_nothing_to_settle(body: str, native: int | None) -> None:
+    resolution = _resolve(body, native)
+    assert resolution.fact is None
+    assert resolution.remedy() is None
+    assert resolution.form_note is None
+
+
+def test_a_line_in_a_form_the_type_does_not_allow_is_noted_whatever_the_native_says() -> None:
+    forms = ISSUE_TYPES["types"]["feature"]["parent_ref_form"]
+    resolution = _resolve("Epic: #5\n", 5, structural_type="feature")
+    assert resolution.form_note == (
         f"#12's first line `Epic: #5` is not a parent-ref a feature may have: {forms}"
     )
 

@@ -1667,6 +1667,17 @@ class ParentResolution:
         native, n = self.native, self.issue
         if native is None or self.kind not in (ParentKind.NATIVE_ONLY, ParentKind.DISAGREE):
             return None
+        if not self.line.issue_form:
+            elsewhere = (
+                f"; {native.ref} is in another repository, which {abroad}"
+                if native.repository is not None and abroad
+                else ""
+            )
+            return (
+                f"→ #{n}'s container is a milestone: no first-line form its type may have "
+                f"names an issue, so no rewrite of its first line names {native.ref}"
+                f"{elsewhere}."
+            )
         if native.repository is None:
             return (
                 f"→ the native parent wins (DEC-005): `set-field {n} --parent {native.number}` "
@@ -1682,17 +1693,6 @@ class ParentResolution:
         return (
             f"→ {native.ref} is in another repository, which no first-line form can name"
             f"{also}{move_link}."
-        if not self.line.issue_form:
-            elsewhere = (
-                f"; {native.ref} is in another repository, which {abroad}"
-                if native.repository is not None and abroad
-                else ""
-            )
-            return (
-                f"→ #{n}'s container is a milestone: no first-line form its type may have "
-                f"names an issue, so no rewrite of its first line names {native.ref}"
-                f"{elsewhere}."
-            )
         )
 
 
