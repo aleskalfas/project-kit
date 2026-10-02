@@ -9,6 +9,7 @@ the rest of new).
 
 from __future__ import annotations
 
+import contextlib
 import math
 import os
 import shlex
@@ -1020,11 +1021,25 @@ def pull_request_land(
         no_request=no_request,
     )
 
+    closed = False
+
     def written(document: dict[str, Any]) -> None:
-        if as_json:
-            click.echo(pull_request_landing.render_json(document))
-        else:
-            _say_landing_event(document)
+        """Write one document. A write that fails closes the output — nothing
+        more is written — and is raised for the landing to judge: before any
+        request it ends the landing, nothing sent; after one, the landing
+        goes on unwritten (`pull_request_landing.land`)."""
+        nonlocal closed
+        if closed:
+            return
+        try:
+            if as_json:
+                click.echo(pull_request_landing.render_json(document))
+            else:
+                _say_landing_event(document)
+        except (OSError, ValueError):
+            closed = True
+            _quiet_standard_output()
+            raise
 
     passage = session_guard.clear(Path.cwd(), confirmed=allow_foreign_repo, dry_run=dry_run)
     if isinstance(passage, session_guard.Refusal):
@@ -1042,10 +1057,25 @@ def pull_request_land(
             dry_run=dry_run,
             on_event=written,
         )
-    written(landing.as_json())
+    # Its output closed, the end goes unwritten; the exit still says how it ended.
+    with contextlib.suppress(OSError, ValueError):
+        written(landing.as_json())
     code = _LAND_EXITS.get(landing.ended, 1)
     if code:
         raise SystemExit(code)
+
+
+def _quiet_standard_output() -> None:
+    """Point the process's standard output at the null device once a write
+    to it failed, so the interpreter's last flush does not fail again and
+    turn the exit into its own. A stream put in its place — a test runner's
+    — is left as it is."""
+    if sys.stdout is not sys.__stdout__:
+        return
+    with contextlib.suppress(OSError, ValueError):
+        null = os.open(os.devnull, os.O_WRONLY)
+        os.dup2(null, sys.stdout.fileno())
+        os.close(null)
 
 
 def _say_landing_event(document: Mapping[str, Any]) -> None:

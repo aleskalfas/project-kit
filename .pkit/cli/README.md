@@ -656,6 +656,7 @@ On a base without a queue, `--direct-only`, `--allow-dropped-head` and `--queued
 - `accepted` is `true` (made), `false`, or `null` (unconfirmed), as in the request documents (above).
 - A dequeue that sends nothing — already out, merged, or not read before it sent — writes neither `requesting` nor `requested`.
 - A reader left with no `end`: a request whose last line is a `requesting` may have been made.
+- A write that fails before any request ends the landing with nothing sent. Once a request has been sent, a failed write stops the writing, not the landing: it finishes its wait and its dequeue, and its exit still says how it ended.
 - The `[warn]` line as a request with no usable answer starts settling stays on standard error.
 - Without `--json`, each event and the end are said as a person reads them; warnings go to standard error.
 

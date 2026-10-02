@@ -14,6 +14,7 @@ on a real process killed while `gh` holds the request.
 
 from __future__ import annotations
 
+import errno
 import json
 import os
 import select
@@ -25,6 +26,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+import click
 import pytest
 from click.testing import CliRunner
 
@@ -862,6 +864,106 @@ def test_a_dry_run_writes_a_reading_and_nothing_else(
     )
 
 
+# ---- a stream that closes ---------------------------------------------------------------
+
+
+class _Closing:
+    """An event stream that closes: every write from the first `closes`
+    picks fails as a write to a closed pipe does. `written` holds what went
+    out before."""
+
+    def __init__(self, closes: Callable[[list[dict[str, Any]], dict[str, Any]], bool]) -> None:
+        self.closes = closes
+        self.closed = False
+        self.written: list[dict[str, Any]] = []
+
+    def __call__(self, document: dict[str, Any]) -> None:
+        if self.closed or self.closes(self.written, document):
+            self.closed = True
+            raise BrokenPipeError(errno.EPIPE, "Broken pipe")
+        self.written.append(document)
+
+
+def _after_a_requesting(written: list[dict[str, Any]], document: dict[str, Any]) -> bool:
+    return any(line["event"] == "requesting" for line in written)
+
+
+def test_a_stream_closed_before_the_first_line_sends_nothing(
+    here: dict[str, Any], host: fake.HostingService
+) -> None:
+    """Before any request a write that fails ends the landing: a `requesting`
+    that cannot be written is a request not sent."""
+    stream = _Closing(lambda written, document: True)
+    with pytest.raises(BrokenPipeError):
+        landing.land(PR, head=HEAD, subject="x", on_event=stream, **here)
+    assert _requests(host) == "read"
+    assert landing._ON_SEND.get() is None
+
+
+def test_a_stream_closed_before_the_requesting_line_sends_no_request(
+    here: dict[str, Any], host: fake.HostingService
+) -> None:
+    stream = _Closing(lambda written, document: document["event"] == "requesting")
+    with pytest.raises(BrokenPipeError):
+        landing.land(PR, head=HEAD, subject="x", on_event=stream, **here)
+    assert [line["event"] for line in stream.written] == ["reading"]
+    assert _requests(host) == "read"
+
+
+def test_a_stream_closed_after_an_enqueue_does_not_abandon_the_landing(
+    here: dict[str, Any], host: fake.HostingService
+) -> None:
+    """Once the enqueue went out, a write that fails stops the writing, not
+    the landing: it waits, sees the head move, and takes the PR out — no
+    PR handed to the queue is left unwatched."""
+    _moves_while_queued(host)
+    stream = _Closing(_after_a_requesting)
+    end = landing.land(PR, head=HEAD, subject="x", on_event=stream, **here)
+    assert [(line["event"], line.get("request")) for line in stream.written] == [
+        ("reading", None),
+        ("requesting", "enqueue"),
+    ]
+    assert (end.ended, end.sent) == (landing.END_HEAD_MOVED, landing.ENQUEUE_REQUEST)
+    assert end.dequeue is not None and end.dequeue.accepted is True
+    assert fake.DEQUEUE in host.kinds()
+
+
+def _echo_closing(
+    monkeypatch: pytest.MonkeyPatch,
+    closes: Callable[[list[dict[str, Any]], dict[str, Any]], bool],
+) -> _Closing:
+    """`click.echo` as standard output a pipe whose reader closes it."""
+    stream = _Closing(closes)
+
+    def echo(message: Any = None, file: Any = None, nl: bool = True, err: bool = False) -> None:
+        stream(json.loads(str(message)))
+
+    monkeypatch.setattr(click, "echo", echo)
+    return stream
+
+
+def test_land_with_its_output_closed_before_the_first_line_sends_nothing(
+    served: fake.HostingService, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _echo_closing(monkeypatch, lambda written, document: True)
+    result = _invoke(*_ARGS, "--json")
+    assert result.exit_code == 1
+    assert _requests(served) == "read"
+
+
+def test_land_with_its_output_closed_after_an_enqueue_still_takes_a_moved_head_out(
+    served: fake.HostingService, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The writing stops; the wait and the dequeue do not; the exit still
+    says how the landing ended — the end document unwritten."""
+    _moves_while_queued(served)
+    stream = _echo_closing(monkeypatch, _after_a_requesting)
+    result = _invoke(*_ARGS, "--json")
+    assert result.exit_code == 3
+    assert [line["event"] for line in stream.written] == ["reading", "requesting"]
+    assert fake.DEQUEUE in served.kinds()
+
+
 # ---- the end document ------------------------------------------------------------------
 
 
@@ -1291,16 +1393,17 @@ def test_a_dry_run_never_asks_where_a_landing_would(
 # ---- the line before a request, on a real process killed between the two --------------
 
 # A stand-in `gh` on PATH. It answers the reading with the PR open on a base
-# without a queue, at the head the test names; on the merge it writes one line
-# into the stream the landing writes to — so the order of the two is the order
-# in one pipe — leaves a marker, and holds the request until it is killed.
+# without a queue, at the head the test names; on the merge it leaves a marker,
+# then writes one line into the stream the landing writes to — so the order of
+# the two is the order in one pipe, and the marker is there once the line is —
+# and holds the request until it is killed.
 _HOLDING_GH = """\
 import json, os, sys, time
 if sys.argv[1:3] == ["pr", "merge"]:
-    with open(os.environ["FAKE_GH_STREAM"], "w", encoding="utf-8") as stream:
-        stream.write("gh: the merge reached gh\\n")
     with open(os.environ["FAKE_GH_MARKER"], "w", encoding="utf-8") as marker:
         marker.write(" ".join(sys.argv[1:]))
+    with open(os.environ["FAKE_GH_STREAM"], "w", encoding="utf-8") as stream:
+        stream.write("gh: the merge reached gh\\n")
     time.sleep(300)
     sys.exit(0)
 pr = {

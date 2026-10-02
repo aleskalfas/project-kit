@@ -1520,8 +1520,10 @@ def wait_for_merge(
     `head_oid`, the head the caller checked, a reading whose head differs ends
     the wait at once (:data:`HEAD_MOVED`): commits nobody checked must not
     merge, and the caller takes the PR out (:func:`dequeue`). `on_change` is
-    handed each reading whose description differs from the one before. Raises
-    :class:`Unreadable` when a reading cannot be taken.
+    handed each reading whose description differs from the one before, once
+    the wait has judged it: what a reading ends — the head check among it —
+    never waits on a write. Raises :class:`Unreadable` when a reading cannot
+    be taken.
     """
     run = _runner(gh)
     pause = sleep if sleep is not None else _sleep
@@ -1533,21 +1535,13 @@ def wait_for_merge(
     estimated = timeout_seconds is not None
     while True:
         reading = read(pr_number, gh=run)
+        ended = _wait_ended(reading, head_oid, seen_out)
         if reading.describe() != last_description:
             last_description = reading.describe()
             on_change(reading)
-        if reading.merged:
-            return Wait(MERGED, reading)
-        if head_oid and reading.head_oid and reading.head_oid != head_oid:
-            return Wait(HEAD_MOVED, reading)
-        if reading.pr_state == "CLOSED":
-            return Wait(LEFT, reading)
-        if reading.queued:
-            seen_out = False
-        elif seen_out:
-            return Wait(LEFT, reading)
-        else:
-            seen_out = True
+        if ended is not None:
+            return Wait(ended, reading)
+        seen_out = not reading.queued
         if not estimated and reading.eta_seconds is not None:
             estimated = True
             deadline = min(
@@ -1561,6 +1555,19 @@ def wait_for_merge(
             pause(interval_seconds)
             continue
         pause(min(interval_seconds, remaining))
+
+
+def _wait_ended(reading: Reading, head_oid: str, seen_out: bool) -> str | None:
+    """How `reading` ends a wait pinned to `head_oid` — merged; at another
+    head; closed, or out of the queue on the reading before too — or None
+    while it goes on."""
+    if reading.merged:
+        return MERGED
+    if head_oid and reading.head_oid and reading.head_oid != head_oid:
+        return HEAD_MOVED
+    if reading.pr_state == "CLOSED" or (seen_out and not reading.queued):
+        return LEFT
+    return None
 
 
 def wait_limit(seconds: float | None) -> str:
@@ -2075,6 +2082,11 @@ class _Lander:
         # Each request's sends so far, and the requests sent and not yet settled.
         self.attempts: dict[str, int] = {}
         self.in_flight: set[str] = set()
+        # Whether a request has gone out, its `requesting` written — from then
+        # on a write that fails stops the writing, never the landing — and
+        # whether the events are still written.
+        self.sending = False
+        self.writing = True
 
     # ---- the sequence ------------------------------------------------------
 
@@ -2331,6 +2343,7 @@ class _Lander:
                 attempt=attempt,
             )
         )
+        self.sending = True
 
     def requested(self, name: str, outcome: Outcome) -> None:
         """Written once request `name` is settled — only after its
@@ -2341,8 +2354,21 @@ class _Lander:
         self.emit(_document(self.pr_number, event="requested", request=name, **outcome.as_json()))
 
     def emit(self, document: dict[str, Any]) -> None:
-        if self.on_event is not None:
+        """Tell `on_event` of one event. A write that fails — the stream
+        closed: an `OSError`, as a broken pipe raises, or a `ValueError`, as
+        a closed file does — before any request ends the landing with nothing
+        sent: a `requesting` not written is a request not sent. Once a
+        request has gone out, it stops the writing and not the landing,
+        which finishes its wait and its dequeue: a PR handed to the queue is
+        never left unwatched for a stream nobody reads."""
+        if self.on_event is None or not self.writing:
+            return
+        try:
             self.on_event(document)
+        except (OSError, ValueError):
+            if not self.sending:
+                raise
+            self.writing = False
 
     def end(
         self,
