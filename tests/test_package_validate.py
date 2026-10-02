@@ -27,7 +27,10 @@ from project_kit.manifest import (
     ORIGIN_EXTERNALLY_SOURCED,
     ORIGIN_INCUBATED_IN_REPO,
     ORIGIN_KIT_SHIPPED,
+    ComponentRegistryEntry,
+    read_backbone_manifest,
     set_capability_origin,
+    write_backbone_manifest,
 )
 from tests.adopter_repo import MakeAdopterRepo
 from tests.process_journal_support import set_journal_logging
@@ -1237,6 +1240,74 @@ def test_pkit_validate_warns_on_an_alias_another_name_shadows_and_passes(
         "→ alias 'analysis' of capability 'evidence' is shadowed by the same alias of "
         "capability 'software-analysis'"
     ) in output
+
+
+def _registered_under(adopter_root: Path, name: str, origin: str) -> None:
+    """A capability registered by hand under `name`, as one registered before the
+    name was reserved is: install and register refuse it now."""
+    _stage_incubated(
+        adopter_root,
+        name,
+        f"schema_version: 1\ncomponent:\n  kind: capability\n  name: {name}\n  version: 0.1.0\n"
+        "description: Grown at home.\nrequires_backbone: '>=1.0.0'\n",
+    )
+    backbone = read_backbone_manifest(adopter_root)
+    assert backbone is not None
+    backbone.components.append(
+        ComponentRegistryEntry(
+            kind="capability",
+            name=name,
+            manifest=f".pkit/capabilities/{name}/manifest.yaml",
+            origin=origin,
+        )
+    )
+    write_backbone_manifest(adopter_root, backbone)
+
+
+@pytest.mark.parametrize(
+    ("origin", "fix"),
+    [
+        # The project's own capability: it renames it.
+        (
+            ORIGIN_INCUBATED_IN_REPO,
+            "Rename it: unregister it with `pkit capabilities uninstall project`",
+        ),
+        # Restored to its pin on every sync (COR-041): the rename is its author's.
+        (ORIGIN_EXTERNALLY_SOURCED, "A sync restores this package, so the rename is its author's"),
+    ],
+)
+def test_a_capability_registered_under_a_reserved_name_is_an_error_naming_the_fix(
+    make_adopter_repo: MakeAdopterRepo, origin: str, fix: str
+) -> None:
+    adopter = make_adopter_repo()
+    _registered_under(adopter.root, "project", origin)
+
+    result = pv.validate_installed_packages(adopter.root)
+    findings = {
+        (report.file.parent.name, f.path): f for report in result.reports for f in report.findings
+    }
+    assert result.errors == 1 and result.warnings == 0, list(findings)
+    finding = findings[("project", "/component/name")]
+    assert finding.severity is pv.Severity.ERROR
+    assert finding.message.startswith(
+        f"capability name 'project' is reserved: {caps.RESERVED_CAPABILITY_NAMES['project']}."
+    )
+    assert fix in finding.message
+
+
+def test_pkit_validate_fails_on_a_capability_registered_under_a_reserved_name(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    adopter = make_adopter_repo()
+    _registered_under(adopter.root, "project", ORIGIN_INCUBATED_IN_REPO)
+
+    result = CliRunner().invoke(main, ["validate", "--no-refs"])
+    assert result.exit_code == 1, result.output
+    assert "error    .pkit/capabilities/project/package.yaml:/component/name" in result.output
+    output = " ".join(result.output.split())
+    assert "→ capability name 'project' is reserved:" in output
+    assert "indistinguishable from the project itself" in output
+    assert "`pkit capabilities register <new-name>`" in output
 
 
 def test_in_the_methodology_source_a_kit_shipped_package_is_its_own() -> None:

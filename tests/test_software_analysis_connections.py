@@ -299,10 +299,12 @@ def test_alone_the_contribution_is_inert_and_its_filler_never_runs(project: Adop
     assert f"software-analysis contributes {READERS!r}: no active provider" in result.output
     assert "0 error(s), 0 warning(s)." in result.output
     assert _resolve(READERS) == {
+        "schema_version": 1,
         "address": READERS,
         "defined": False,
         "from": "resolution",
         "resolved": False,
+        "outcome": "undefined",
         "value": None,
         "why": "role 'pkit::documentation' has no active provider",
     }

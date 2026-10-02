@@ -67,7 +67,12 @@ Use a kebab-case noun that names the *discipline*, not the implementation. Examp
 
 The name becomes the directory name, the value of `component.name` in `package.yaml`, and the prefix in citations: `[<capability-name>:DEC-NNN-<slug>]`.
 
-**Reserved name: `core`.** `core` names the core schemas area (`.pkit/schemas/`) wherever a schemas verb takes an owner, so a capability named `core` would have its `schemas/` silently unreachable. `pkit new capability`, `pkit capabilities install`, and `pkit capabilities register` all refuse it.
+**Reserved names: `core` and `project`.** `pkit new capability`, `pkit capabilities install`, and `pkit capabilities register` all refuse both, giving the reason:
+
+- `core` names the core schemas area (`.pkit/schemas/`) wherever a schemas verb takes an owner, so a capability named `core` would have its `schemas/` silently unreachable.
+- `project` is the name the project's own entries carry where a capability's carry the capability's name — the namespace of the project's decision records and agents (`pkit new decision project …`, `pkit new agent project …`), and the opening name of the project's checks in an evidence point (the software-analysis and living-docs capabilities' DEC-001, point 7) — so a capability named `project` would be indistinguishable from the project itself.
+
+A capability registered under either name before it was reserved stays registered; `pkit validate` reports it as an error naming the rename.
 
 ### 2. Read the contract
 
@@ -94,7 +99,7 @@ The command:
 
 Unlike bundles and adapters, the capability is **not** registered in the backbone manifest by the scaffolding step. Capabilities are kit-shipped from the source-of-edit's perspective; adopters register them per-project via `pkit capabilities install <name>`.
 
-The command refuses if a capability with that name already exists, if the slug isn't kebab-case, or if the name is reserved (`core`, see step 1).
+The command refuses if a capability with that name already exists, if the slug isn't kebab-case, or if the name is reserved (`core` or `project`, see step 1).
 
 ### 4. Fill in the README
 

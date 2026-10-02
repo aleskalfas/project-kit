@@ -392,10 +392,11 @@ def _lint_in_memory(repo_root: Path, data: Any, label: str) -> None:
 # stamps write every detection as `mode: inferred` — a definition has one mode —
 # so a detection stub answers "is the subject in this state?". A `classified`
 # detection (ADR-062) answers `{"state": "<state-id>" | null, "reason": "<why>"}`
-# instead; a definition adopts it by a hand edit to all its states.
+# instead; a definition adopts it by a hand edit to all its states. Each payload
+# is the JSON alone — the stub shows it as the object to print — and a word about
+# it goes in `_STUB_PAYLOAD_NOTES`, which the stub puts on the line below.
 _STUB_PAYLOADS = {
-    "detection": '{"result": <bool>, "reason": "<why>"} (the `inferred` answer its '
-    "detection declares)",
+    "detection": '{"result": <bool>, "reason": "<why>"}',
     "gate": '{"result": <bool>, "reason": "<why>"}',
     "authorisation-artifact gate": '{"exists": <bool>, "produced_by": "<login>", "reason": '
     '"<why>"}',
@@ -404,6 +405,10 @@ _STUB_PAYLOADS = {
     "invariant check": '{"result": <bool>, "reason": "<why>"}',
     "hand-off candidates": '{"candidates": ["<upstream-subject-id>", ...], "reason": "<why>"}',
     "hand-off resolve": '{"downstream": ["<downstream-subject-id>", ...], "reason": "<why>"}',
+}
+
+_STUB_PAYLOAD_NOTES = {
+    "detection": "(the `inferred` answer its detection declares)",
 }
 
 _STUB_TEMPLATE = '''#!/usr/bin/env python3
@@ -418,7 +423,7 @@ predicate over reality. The contract it must follow (COR-033 engine contract,
   side-effect bug.
 - argv: the subject slot first ({subject_note}), then `--json`;
   cwd is the repo root.
-- print ONE JSON object to stdout: {payload}
+- print ONE JSON object to stdout: {payload}{payload_note}
 - FAIL-CLOSED: an error / timeout / non-zero exit / unparseable payload is
   INDETERMINATE, never a pass.
 
@@ -464,12 +469,14 @@ def _stub_body(
         subject_note = "the contract's UPSTREAM PROCESS ADDRESS (the scope, ADR-048)"
     elif payload_key == "hand-off resolve":
         subject_note = "ONE upstream subject id (ADR-048)"
+    note = _STUB_PAYLOAD_NOTES.get(payload_key)
     return _STUB_TEMPLATE.format(
         purpose=purpose,
         address=address,
         operation=operation,
         subject_note=subject_note,
         payload=_STUB_PAYLOADS[payload_key],
+        payload_note=f"\n  {note}" if note else "",
         marker=PREDICATE_STUB_MARKER,
     )
 
