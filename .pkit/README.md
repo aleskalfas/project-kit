@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-02T01:16:33Z
+      at: 2026-10-02T01:43:34Z
       outcome: unchanged
-      unchanged-because: The CLI reference gained what connections resolve --json says about how a resolution ended (outcome, a closed set, and the document's schema_version) and the lifecycle reference tells a script to dispatch on outcome, never on why; this index still names the command surface and the lifecycle area those references document, and no command or area it lists was added, renamed or removed.
+      unchanged-because: "The page maps each area to its README by subject: lifecycle for packaging and register mechanics, cli for the command surface. Both still cover those subjects; neither changed what it is about, only one name the capability commands refuse and one packages-validation error."
 ---
 
 # project-kit

@@ -6,7 +6,9 @@ from pathlib import Path
 
 import click
 import pytest
+from click.testing import CliRunner
 
+from project_kit.cli import main
 from project_kit.manifest import BackboneManifest, write_backbone_manifest
 from project_kit.scaffolds import stamp_capability
 
@@ -78,11 +80,33 @@ def test_stamp_capability_refuses_invalid_slug(kit_target: Path) -> None:
         stamp_capability(kit_target, name="Bad_Name")
 
 
-def test_stamp_capability_refuses_reserved_name_core(kit_target: Path) -> None:
-    """`core` names the core schemas area, so it is refused and nothing is written (#919)."""
-    with pytest.raises(click.ClickException, match="'core' is reserved"):
-        stamp_capability(kit_target, name="core")
-    assert not (kit_target / ".pkit" / "capabilities" / "core").exists()
+# Each reserved name, with a phrase of the reason its refusal gives: `core` names
+# the core schemas area (#919); `project` names the project's own entries (#1269).
+RESERVED = [
+    ("core", "names the core schemas area"),
+    ("project", "indistinguishable from the project itself"),
+]
+
+
+@pytest.mark.parametrize(("name", "reason"), RESERVED)
+def test_stamp_capability_refuses_a_reserved_name(kit_target: Path, name: str, reason: str) -> None:
+    """A reserved name is refused with its reason, and nothing is written."""
+    with pytest.raises(click.ClickException, match=f"'{name}' is reserved") as refused:
+        stamp_capability(kit_target, name=name)
+    assert reason in refused.value.message
+    assert not (kit_target / ".pkit" / "capabilities" / name).exists()
+
+
+@pytest.mark.parametrize(("name", "reason"), RESERVED)
+def test_cli_new_capability_refuses_a_reserved_name(
+    kit_target: Path, name: str, reason: str
+) -> None:
+    result = CliRunner().invoke(main, ["new", "capability", name])
+    assert result.exit_code != 0
+    output = " ".join(result.output.split())
+    assert f"capability name '{name}' is reserved" in output
+    assert reason in output
+    assert not (kit_target / ".pkit" / "capabilities" / name).exists()
 
 
 def test_stamp_capability_refuses_when_pkit_missing(tmp_path: Path) -> None:

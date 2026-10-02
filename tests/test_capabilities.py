@@ -366,47 +366,66 @@ def test_install_refuses_when_already_installed(kit_target: Path, kit_source: Pa
         caps.install_capability(kit_target, source)
 
 
-# --- reserved names (#919) -----------------------------------------
+# --- reserved names (#919, #1269) ----------------------------------
 #
 # `core` routes schemas to the core schemas area, so a capability named
-# `core` would have its schemas silently unreachable. Every path that brings
-# a capability into a project refuses it, naming the reservation.
+# `core` would have its schemas silently unreachable. `project` is the name
+# the project's own entries carry where a capability's carry the capability's
+# (its decision records' and agents' namespace, the opening name of its checks
+# in an evidence point), so a capability named `project` would be
+# indistinguishable from the project. Every path that brings a capability into
+# a project refuses both, naming the reservation and its reason.
+
+RESERVED = [
+    ("core", "core schemas area"),
+    ("project", "indistinguishable from the project itself"),
+]
 
 
-def test_install_refuses_reserved_name_core(kit_target: Path, kit_source: Path) -> None:
-    _stage_capability_in_source(kit_source, "core")
-    source = caps.find_capability_in_source(kit_source, "core")
+@pytest.mark.parametrize(("name", "reason"), RESERVED)
+def test_install_refuses_a_reserved_name(
+    kit_target: Path, kit_source: Path, name: str, reason: str
+) -> None:
+    _stage_capability_in_source(kit_source, name)
+    source = caps.find_capability_in_source(kit_source, name)
     assert source is not None
-    with pytest.raises(click.ClickException, match="'core' is reserved"):
+    with pytest.raises(click.ClickException, match=f"'{name}' is reserved") as refused:
         caps.install_capability(kit_target, source)
-    assert not caps.is_installed(kit_target, "core")
-    assert not (kit_target / ".pkit" / "capabilities" / "core").exists()
+    assert reason in refused.value.message
+    assert not caps.is_installed(kit_target, name)
+    assert not (kit_target / ".pkit" / "capabilities" / name).exists()
 
 
-def test_register_incubated_refuses_reserved_name_core(kit_target: Path) -> None:
-    _stage_capability_in_repo(kit_target, "core")
-    source = caps.find_capability_in_repo(kit_target, "core")
+@pytest.mark.parametrize(("name", "reason"), RESERVED)
+def test_register_incubated_refuses_a_reserved_name(
+    kit_target: Path, name: str, reason: str
+) -> None:
+    _stage_capability_in_repo(kit_target, name)
+    source = caps.find_capability_in_repo(kit_target, name)
     assert source is not None
-    with pytest.raises(click.ClickException, match="'core' is reserved"):
+    with pytest.raises(click.ClickException, match=f"'{name}' is reserved") as refused:
         caps.register_incubated_capability(kit_target, source)
-    assert not caps.is_installed(kit_target, "core")
+    assert reason in refused.value.message
+    assert not caps.is_installed(kit_target, name)
 
 
+@pytest.mark.parametrize(("name", "reason"), RESERVED)
 @pytest.mark.parametrize("verb", ["install", "register"])
-def test_cli_refuses_reserved_name_core(
-    kit_target: Path, kit_source: Path, monkeypatch, verb: str
+def test_cli_refuses_a_reserved_name(
+    kit_target: Path, kit_source: Path, monkeypatch, verb: str, name: str, reason: str
 ) -> None:
     """The CLI names the reservation rather than reporting the capability as missing."""
-    _stage_capability_in_source(kit_source, "core")
-    _stage_capability_in_repo(kit_target, "core")
+    _stage_capability_in_source(kit_source, name)
+    _stage_capability_in_repo(kit_target, name)
     from project_kit import cli as cli_mod
 
     monkeypatch.setattr(cli_mod, "find_source_kit", lambda: kit_source)
-    result = CliRunner().invoke(main, ["capabilities", verb, "core"])
+    result = CliRunner().invoke(main, ["capabilities", verb, name])
     assert result.exit_code != 0
-    assert "capability name 'core' is reserved" in result.output
-    assert "core schemas area" in result.output
-    assert not caps.is_installed(kit_target, "core")
+    output = " ".join(result.output.split())
+    assert f"capability name '{name}' is reserved" in output
+    assert reason in output
+    assert not caps.is_installed(kit_target, name)
 
 
 def test_install_dry_run_writes_nothing(kit_target: Path, kit_source: Path) -> None:
