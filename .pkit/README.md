@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-02T03:05:33Z
+      at: 2026-10-02T03:22:02Z
       outcome: unchanged
-      unchanged-because: the process README now names reason as the journal entry's one place for why a move was taken; this page describes the process area in one line, as the shared substrate and the engine behind pkit process, which still holds
+      unchanged-because: the CLI README now states that the pull-request commands bound each gh call and settle a request with no answer by reading, and the lifecycle README how gh is started; this page maps the cli area as the pkit command-line surface and the lifecycle area as packaging and dependency architecture, one line each, which still holds
 ---
 
 # project-kit
