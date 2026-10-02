@@ -7,8 +7,10 @@ BINDING:
   * the shared `process.cascade` declaration in workflow.yaml has the right shape
     (child = the issue process, reducer `all` over the terminal `done`,
     `on_empty: satisfied`, members + membership predicates);
-  * the `cascade-members` / `cascade-membership` predicate bodies reuse the SAME
-    body parent-ref child-walk pm uses today, so the member set is identical;
+  * `cascade-members` lists a parent's children through the containment seam
+    (native sub-issues and first-line parent-refs), and `cascade-membership`
+    answers "member" for every candidate it can read — never a determinate
+    "not a member" — so no listed child is dropped (#1304);
   * the close-issue wrapper reads the engine's fold for the children-half and
     keeps the checkbox gate as the separate, AND'd other half.
 
@@ -212,11 +214,24 @@ def test_membership_true_when_child_declares_a_parent(monkeypatch) -> None:
     assert out["detail"]["parent_ref"] == 5
 
 
-def test_membership_false_when_no_parent_ref(monkeypatch) -> None:
-    _stub_fetch_issue(monkeypatch, {"body": "## What\nno parent ref here."})
+@pytest.mark.parametrize(
+    "body",
+    [
+        pytest.param("## What\nno parent ref here.", id="no-first-line-ref"),
+        pytest.param("Milestone: [#7](../milestone/7)\n\n## What\n", id="milestone-first-line"),
+    ],
+)
+def test_membership_true_when_the_first_line_names_no_issue(monkeypatch, body: str) -> None:
+    """A candidate the members list returned is a member whatever its first line
+    says (#1304): a native child may name no issue there, and a determinate "not
+    a member" would make the engine drop it and let its container close while it
+    is open. What the first line names stays in `detail`, as an account."""
+    _stub_fetch_issue(monkeypatch, {"body": body})
     out = predicates.cascade_membership(10)
-    assert out["result"] is False
+    assert out["result"] is True
+    assert predicates.INDETERMINATE_KEY not in out
     assert out["detail"]["parent_ref"] is None
+    assert "names no issue" in out["reason"]
 
 
 def test_membership_indeterminate_on_gh_failure(monkeypatch) -> None:

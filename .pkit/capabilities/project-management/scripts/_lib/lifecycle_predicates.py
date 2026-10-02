@@ -322,27 +322,29 @@ def cascade_members(parent_number: int) -> dict[str, Any]:
 
 def cascade_membership(child_number: int) -> dict[str, Any]:
     """COR-037 cascade `membership` predicate for the closure fold (DEC-034):
-    the per-subject confirmation that THIS candidate is a real child member.
+    the per-subject step the engine takes for each candidate `cascade_members`
+    listed.
 
-    The engine threads ONLY the candidate's subject id to a membership predicate
-    (the single-subject runner, COR-032's never-hold-a-tree line) — the folding
-    parent's id is NOT passed to the predicate. So this confirmation answers from
-    the child's OWN reality alone: `result=True` iff the child's body declares a
-    parent-ref first line (`infer.parent_ref`) — i.e. it is a hierarchy member at
-    all. The PARENT-SCOPING (does it belong to THIS parent?) is enforced
-    authoritatively upstream by `cascade_members`, which reads the SAME body
-    parent-ref and emits ONLY children naming the folding parent; the two read one
-    source, so they cannot disagree. This per-candidate step is NOT a parent-
-    scoping check (it has no parent to compare against) — its load-bearing jobs are
-    a liveness re-read (the child still declares *a* parent-ref before its outcome
-    is folded) and, crucially, turning an indeterminate read (a gh failure) into a
-    whole-fold fail-closed hold per COR-037, rather than silently dropping the
-    candidate. It does NOT and cannot re-scope a wrongly-listed foreign-parent
-    child back out — that guarantee rests entirely on `cascade_members`.
+    It answers `result=True` for every candidate it can read, and indeterminate
+    for one it cannot; it never answers a determinate "not a member". Who the
+    container's children are is decided once, by `cascade_members` through the
+    containment seam, which lists native sub-issues as well as issues whose first
+    line names the container (ADR-035). A native child's first line may name no
+    issue at all — a sub-issue linked in GitHub's UI, or one `create-issue
+    --parent N --milestone M` filed, whose first line is the `Milestone:` ref — so
+    a second reading of the first line here would drop a child the seam returned,
+    and let the container close while that child is open (#1304): the engine
+    drops a candidate this predicate determinately rejects, so it rejects none.
 
-    See the implementation report's "membership / parent-threading" note: the
-    engine's single-subject membership contract does not thread the parent, so
-    pm's per-parent specificity lives in `cascade_members`.
+    The engine threads ONLY the candidate's subject id (the single-subject runner,
+    COR-032's never-hold-a-tree line), so this step has no parent to compare
+    against and does not re-scope the members list: parent-faithfulness rests on
+    `cascade_members` alone. What this step does carry is the read: a candidate
+    whose issue cannot be read (a gh failure) is indeterminate, which the engine
+    turns into a whole-fold fail-closed hold per COR-037, rather than silently
+    dropping the candidate. `detail.parent_ref` is what the candidate's first line
+    names, `None` when it names no issue — an account for the reader, not a
+    verdict.
     """
     capability_root = _capability_root()
     if capability_root is None:
@@ -352,12 +354,11 @@ def cascade_membership(child_number: int) -> dict[str, Any]:
     if issue is None:
         return _indeterminate(f"could not read issue #{child_number} (gh failure)")
     parent = infer.parent_ref(str(issue.get("body") or ""))
+    first_line = f"names #{parent}" if parent is not None else "names no issue"
     return {
-        "result": parent is not None,
+        "result": True,
         "reason": (
-            f"#{child_number} names #{parent} as parent (a hierarchy member)"
-            if parent is not None
-            else f"#{child_number} declares no parent-ref (not a hierarchy member)"
+            f"#{child_number} is a member: the members list holds it (its first line {first_line})"
         ),
         "detail": {"parent_ref": parent},
     }

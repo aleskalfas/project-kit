@@ -361,7 +361,7 @@ process:
     members:
       run: cascade-members         # parent-scoped: every child of the parent (the candidate set)
     membership:
-      run: cascade-membership      # per-subject: confirm the candidate is a hierarchy member
+      run: cascade-membership      # per-subject: the candidate can be read (never drops a listed child)
     reducer:
       op: all                      # every child must have reached the terminal `done`
       outcome: done                # the terminal state reached by BOTH pr-merge completion AND won't-do
