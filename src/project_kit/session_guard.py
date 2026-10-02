@@ -30,12 +30,13 @@ Two parts:
   session to compare with, so the guard does not fire, and the verdict says
   undetermined, never that the target is the session's own repository. A git
   fault warns and proceeds. The question goes to standard error, and is asked
-  only when standard input is a terminal: with none, and no confirmation passed
-  with the call, a target in another repository is refused.
+  only when standard input and standard error are both terminals: otherwise,
+  with no confirmation passed with the call, a target in another repository is
+  refused. A dry run never asks, and ends as a run with nobody to ask would.
 
 A function that makes a change requires a clearance and the directory it acts
-in (:func:`require`), so a caller that imports it cannot make the change
-without the guard, nor clear one directory and act in another.
+in (:func:`require`), and acts there, so a caller that imports it cannot make
+the change without the guard, nor clear one directory and act in another.
 
 The anchor is read from the harness. Claude Code's is the one read today, under
 a name that says so (:data:`CLAUDE_CODE_ANCHOR`); the documents and the messages
@@ -69,13 +70,11 @@ from typing import Any, TextIO, cast
 #: provides its own, read under its own name.
 CLAUDE_CODE_ANCHOR = "CLAUDE_PROJECT_DIR"
 
-#: The comparison's verdicts (:class:`Comparison`).
+#: The comparison's verdicts (:class:`Comparison`), which a document's
+#: `verdict` states as they are, whether or not the change was confirmed.
 SAME_REPO = "same-repo"
 DIVERGED = "diverged"
 UNDETERMINED = "undetermined"
-#: A document's verdict for a target in another repository whose change was
-#: confirmed (:meth:`Clearance.as_json`).
-OVERRIDDEN = "overridden"
 
 #: Why a verdict is undetermined: nothing to compare — no anchor, or a side
 #: that is not in a git repository — or git could not be asked.
@@ -87,7 +86,7 @@ FAULT = "fault"
 FLAG = "flag"
 TERMINAL = "terminal"
 
-#: What a command's document names as having refused a change the guard refused.
+#: A command's document's `reason_kind` for a change the guard refused.
 FOREIGN_REPOSITORY = "foreign-repository"
 
 #: The option a command takes to confirm a change in another repository.
@@ -121,7 +120,7 @@ class Clearance:
     comparison: Comparison
 
     def as_json(self) -> dict[str, Any]:
-        """The guard as a command's document states it."""
+        """The guard as a command's document states it, `cleared` how it passed."""
         return _document(self.comparison, self.passed)
 
     def describe(self) -> str:
@@ -144,7 +143,7 @@ class Refusal:
     reason: str
 
     def as_json(self) -> dict[str, Any]:
-        """The guard as a command's document states it."""
+        """The guard as a command's document states it, `cleared` null."""
         return _document(self.comparison, None)
 
 
@@ -211,6 +210,7 @@ def clear(
     *,
     confirmed: bool,
     interactive: bool | None = None,
+    dry_run: bool = False,
     stream: TextIO | None = None,
 ) -> Clearance | Refusal:
     """Let a change in `target_dir` go ahead, or refuse it.
@@ -218,10 +218,11 @@ def clear(
     The session's anchor is read from the harness (:func:`session_anchor`).
     `confirmed` is the confirmation passed with the call (:data:`CONFIRM_OPTION`).
     `interactive` says whether a person can be asked; None asks only when
-    standard input is a terminal. What the guard says — a warning on a git
-    fault, an advisory on a confirmed change, the question — goes to `stream`,
-    standard error by default; a refusal's words are the caller's to say
-    (:attr:`Refusal.reason`).
+    standard input and `stream` are both terminals. A `dry_run` never asks: it
+    ends as a run with nobody to ask would, and its refusal says so. What the
+    guard says — a warning on a git fault, an advisory on a confirmed change,
+    the question — goes to `stream`, standard error by default; a refusal's
+    words are the caller's to say (:attr:`Refusal.reason`).
     """
     out = stream if stream is not None else sys.stderr
     directory = Path(target_dir).resolve()
@@ -243,7 +244,15 @@ def clear(
             file=out,
         )
         return Clearance(directory, FLAG, comparison)
-    if not _at_a_terminal(interactive):
+    if dry_run:
+        return Refusal(
+            directory,
+            comparison,
+            f"the cross-repository guard refused: {comparison.reason}. A dry run does not ask; "
+            "a run at a terminal would ask, and a run without one refuses (COR-039) — pass "
+            f"{CONFIRM_OPTION} to preview the confirmed run.",
+        )
+    if not _at_a_terminal(interactive, out):
         return Refusal(
             directory,
             comparison,
@@ -267,10 +276,10 @@ def clear(
     )
 
 
-def require(clearance: Clearance, directory: Path | str) -> Path:
+def require(clearance: Clearance | None, directory: Path | str) -> Path:
     """`directory`, resolved, once `clearance` is a clearance for it.
 
-    Raises `TypeError` for anything but a clearance — a refusal included — and
+    Raises `TypeError` for anything but a clearance — none, or a refusal — and
     `ValueError` for a clearance of another directory: a change is made only
     where the guard looked.
     """
@@ -393,12 +402,18 @@ def _strip_git(path: str) -> str:
 # ---- the gate ----------------------------------------------------------------
 
 
-def _at_a_terminal(interactive: bool | None) -> bool:
+def _at_a_terminal(interactive: bool | None, out: TextIO) -> bool:
+    """A person can be asked: the question is written to `out` and the answer
+    read from standard input, so both ends must be a terminal."""
     if interactive is not None:
         return interactive
+    return _is_a_terminal(sys.stdin) and _is_a_terminal(out)
+
+
+def _is_a_terminal(stream: object) -> bool:
     try:
-        return sys.stdin.isatty()
-    except (AttributeError, ValueError, OSError):  # no stdin, or a closed one
+        return bool(cast(TextIO, stream).isatty())
+    except (AttributeError, ValueError, OSError):  # no stream, or a closed one
         return False
 
 
@@ -410,14 +425,13 @@ def _answer() -> str:
         return ""
 
 
-def _document(comparison: Comparison, passed: str | None) -> dict[str, Any]:
-    verdict = comparison.verdict
-    if verdict == DIVERGED and passed in (FLAG, TERMINAL):
-        verdict = OVERRIDDEN
+def _document(comparison: Comparison, cleared: str | None) -> dict[str, Any]:
+    """The guard as a document states it: `verdict`, the comparison alone;
+    `cleared`, how the guard let the change through, or None when it refused."""
     return {
-        "verdict": verdict,
-        "passed": passed,
+        "verdict": comparison.verdict,
         "undetermined_kind": comparison.undetermined_kind,
         "anchor": str(comparison.anchor) if comparison.anchor is not None else None,
         "target": str(comparison.target) if comparison.target is not None else None,
+        "cleared": cleared,
     }

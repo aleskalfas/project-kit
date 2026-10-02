@@ -24,6 +24,7 @@ import pytest
 from click.testing import CliRunner
 
 from project_kit import cli, release, session_guard
+from tests import sessions
 
 # --- check-rollup summarisation --------------------------------------
 
@@ -857,15 +858,6 @@ def test_a_clearance_for_another_repository_merges_nothing(
     assert host.commands == []
 
 
-def _repository(path: Path, origin: str) -> Path:
-    path.mkdir(parents=True)
-    subprocess.run(["git", "init", "-q"], cwd=path, check=True, capture_output=True)
-    subprocess.run(
-        ["git", "remote", "add", "origin", origin], cwd=path, check=True, capture_output=True
-    )
-    return path
-
-
 @pytest.fixture
 def cleared_merges(monkeypatch: pytest.MonkeyPatch) -> list[tuple[Path, str, bool]]:
     """`merge_release_pr` stubbed: each run's repository, how its clearance
@@ -885,9 +877,7 @@ def cleared_merges(monkeypatch: pytest.MonkeyPatch) -> list[tuple[Path, str, boo
 @pytest.fixture
 def foreign(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """A session rooted in one repository, and `release merge` run in another."""
-    anchor = _repository(tmp_path / "anchor", "https://github.com/octo/project.git")
-    target = _repository(tmp_path / "target", "https://github.com/octo/other.git")
-    monkeypatch.setenv(session_guard.CLAUDE_CODE_ANCHOR, str(anchor))
+    _, target = sessions.rooted_elsewhere(tmp_path, monkeypatch)
     monkeypatch.setattr(cli, "_target_kit", lambda: target / ".pkit")
     return target
 
@@ -915,7 +905,7 @@ def test_in_a_pipeline_with_no_anchor_it_needs_no_flag(
     monkeypatch: pytest.MonkeyPatch,
     cleared_merges: list[tuple[Path, str, bool]],
 ) -> None:
-    target = _repository(tmp_path / "target", "https://github.com/octo/project.git")
+    target = sessions.repository(tmp_path / "target", "https://github.com/octo/project.git")
     monkeypatch.setattr(cli, "_target_kit", lambda: target / ".pkit")
     result = CliRunner().invoke(cli.main, ["release", "merge", "42"])
     assert result.exit_code == 0
@@ -926,11 +916,12 @@ def test_a_dry_run_reports_the_verdict_and_asks_nothing(
     foreign: Path, cleared_merges: list[tuple[Path, str, bool]]
 ) -> None:
     """A dry run never asks: in another repository without the flag it ends
-    refused, saying a run at a terminal would ask; with it, it reports how
-    the guard passed."""
+    refused, as a run with nobody to ask would, saying what a real run would
+    do; with it, it reports how the guard passed."""
     refused = CliRunner().invoke(cli.main, ["release", "merge", "42", "--dry-run"])
     assert refused.exit_code == 1
-    assert "A run at a terminal would ask" in refused.stderr
+    assert "A dry run does not ask; a run at a terminal would ask" in refused.stderr
+    assert "no terminal to ask" not in refused.stderr
     assert cleared_merges == []
     flagged = CliRunner().invoke(
         cli.main, ["release", "merge", "42", "--dry-run", "--allow-foreign-repo"]

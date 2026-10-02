@@ -609,6 +609,7 @@ def apply_release(
     *,
     tag: bool = False,
     push: bool = False,
+    clearance: session_guard.Clearance | None = None,
     broaden: bool = True,
     today: date | None = None,
 ) -> None:
@@ -653,8 +654,13 @@ def apply_release(
     point at the release commit — which does not exist yet when `apply` runs.
     The intended sequence is: `apply` → commit the release → merge to `main` →
     `pkit version tag --push` on `main`. Pass `tag=True` only when HEAD is
-    already the release commit (e.g. re-running on `main` post-merge).
+    already the release commit (e.g. re-running on `main` post-merge). A tag
+    pushed with `push=True` changes the hosting service, so it needs
+    `clearance`, the cross-repository guard's for the repository, cleared at
+    the entry (ADR-061 point 6): it is required before anything is written.
     """
+    if tag and push:
+        session_guard.require(clearance, source_kit.parent)
     if plan.is_empty:
         click.echo("No pending changesets move a version — nothing to release.")
         # Still consume any `none`-only changesets so the tree is clean.
@@ -680,7 +686,7 @@ def apply_release(
     _delete_changesets(plan.consumed)
 
     if tag and backbone is not None:
-        versioning.tag_version(source_kit, push=push)
+        versioning.tag_version(source_kit, push=push, clearance=clearance)
     elif backbone is not None:
         click.echo(
             "Next: commit the release, then `pkit version tag --push` on main "
@@ -1944,7 +1950,7 @@ def merge_release_pr(
                 f"{queue.removal.at}{why}; enqueuing it again (--force)"
             )
         enqueued = pull_request_landing.enqueue(
-            pr.number, cwd=repo_root, clearance=clearance, head_oid=pr.head_oid, gh=gh
+            pr.number, cwd=repo_root, clearance=clearance, head_oid=pr.head_oid
         )
         if not enqueued.accepted:
             raise click.ClickException(
@@ -1964,7 +1970,6 @@ def merge_release_pr(
         cwd=repo_root,
         clearance=clearance,
         head_oid=pr.head_oid,
-        gh=gh,
     )
     if not merged.accepted:
         raise click.ClickException(f"`gh pr merge {pr.number}` failed: {merged.reason}")
@@ -2160,7 +2165,7 @@ def _await_the_queue(
             f"release PR #{number}'s head moved from {pr.head_oid[:7]} to "
             f"{reading.head_oid[:7]} after its checks were read"
         )
-        out = pull_request_landing.dequeue(number, cwd=repo_root, clearance=clearance, gh=gh)
+        out = pull_request_landing.dequeue(number, cwd=repo_root, clearance=clearance)
         if out.accepted:
             raise ReleaseNotMerged(
                 f"{moved}; it was taken out of the merge queue, so nothing unchecked merges. "
@@ -2585,7 +2590,13 @@ def _heading_version(line: str) -> str | None:
     return line[3:].lstrip().split()[0].strip("[]")
 
 
-def publish_release_notes(repo_root: Path, version: str, *, dry_run: bool = False) -> str:
+def publish_release_notes(
+    repo_root: Path,
+    version: str,
+    *,
+    clearance: session_guard.Clearance,
+    dry_run: bool = False,
+) -> str:
     """Publish (or update) a notes-only GitHub Release for tag `v<version>`.
 
     Extracts the version's `CHANGELOG.md` section as the Release body and
@@ -2597,7 +2608,12 @@ def publish_release_notes(repo_root: Path, version: str, *, dry_run: bool = Fals
     `gh` context (no hardcoded owner/repo). `--dry-run` returns the notes it
     would publish without calling `gh`. Raises `click.ClickException` when the
     version has no changelog section or (via `--verify-tag`) the tag is missing.
+
+    `clearance` is the cross-repository guard's for `repo_root`, cleared at the
+    entry (`session_guard.clear`), before `gh` is asked anything (ADR-061
+    point 6).
     """
+    session_guard.require(clearance, repo_root)
     changelog = repo_root / CHANGELOG_NAME
     if not changelog.is_file():
         raise click.ClickException(

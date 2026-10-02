@@ -587,6 +587,19 @@ def _pull_request_cleared(
     return passage
 
 
+def _cleared_at_entry(
+    directory: Path, allow_foreign_repo: bool, *, unchanged: str, dry_run: bool = False
+) -> session_guard.Clearance:
+    """The cross-repository guard's clearance for a command that changes the
+    hosting service from `directory`, run once at its entry, before anything
+    is read from the service or sent to it (ADR-061 point 6). A refusal exits
+    1 with the guard's reason and `unchanged`, which says what was not done."""
+    passage = session_guard.clear(directory, confirmed=allow_foreign_repo, dry_run=dry_run)
+    if isinstance(passage, session_guard.Refusal):
+        raise click.ClickException(f"{passage.reason} {unchanged}")
+    return passage
+
+
 def _say_outcome(
     number: int,
     outcome: pull_request_landing.Outcome,
@@ -1483,10 +1496,24 @@ def version_promote() -> None:
     default=False,
     help="After tagging, push the new tag to the `origin` remote.",
 )
-def version_tag(push: bool) -> None:
-    """Tag HEAD as `v<version>` from .pkit/VERSION (per PRJ-002 + PRJ-004)."""
+@_allow_foreign_repo_option
+def version_tag(push: bool, allow_foreign_repo: bool) -> None:
+    """Tag HEAD as `v<version>` from .pkit/VERSION (per PRJ-002 + PRJ-004).
+
+    With `--push` the cross-repository guard runs first, before the tag is
+    made: in another repository than the session's anchor's it asks at a
+    terminal and refuses without one, unless `--allow-foreign-repo` confirms
+    it. A tag made only locally needs no guard.
+    """
     source_kit = _target_kit()
-    tag_version(source_kit, push=push)
+    clearance = (
+        _cleared_at_entry(
+            source_kit.parent, allow_foreign_repo, unchanged="Nothing was tagged or pushed."
+        )
+        if push
+        else None
+    )
+    tag_version(source_kit, push=push, clearance=clearance)
 
 
 @version.command("untag")
@@ -1496,10 +1523,20 @@ def version_tag(push: bool) -> None:
     default=False,
     help="Also delete the tag on the `origin` remote.",
 )
-def version_untag(push: bool) -> None:
-    """Remove the `v<version>` tag matching .pkit/VERSION (local; --push for remote)."""
+@_allow_foreign_repo_option
+def version_untag(push: bool, allow_foreign_repo: bool) -> None:
+    """Remove the `v<version>` tag matching .pkit/VERSION (local; --push for remote).
+
+    With `--push` the cross-repository guard runs first, before either tag is
+    deleted, as for `version tag --push`.
+    """
     source_kit = _target_kit()
-    untag_version(source_kit, push=push)
+    clearance = (
+        _cleared_at_entry(source_kit.parent, allow_foreign_repo, unchanged="No tag was deleted.")
+        if push
+        else None
+    )
+    untag_version(source_kit, push=push, clearance=clearance)
 
 
 @version.command("unbump")
@@ -1585,7 +1622,10 @@ def release_plan(as_json: bool) -> None:
     "authored. A floor a changeset declares is still raised.",
 )
 @click.option("--yes", is_flag=True, default=False, help="Skip the confirmation prompt (CI).")
-def release_apply(tag: bool, push: bool, no_broaden: bool, yes: bool) -> None:
+@_allow_foreign_repo_option
+def release_apply(
+    tag: bool, push: bool, no_broaden: bool, yes: bool, allow_foreign_repo: bool
+) -> None:
     """Consume changesets and write versions + changelog (the release write).
 
     The sole main-only writer of version state (PRJ-002 D3). Run from a
@@ -1603,8 +1643,19 @@ def release_apply(tag: bool, push: bool, no_broaden: bool, yes: bool) -> None:
     before anything is written, and one whose range would exclude the backbone
     the release ships (an upper bound `--no-broaden` keeps) is warned of before
     the confirmation. See `.pkit/release/README.md`.
+
+    With `--tag --push` the tag's push changes the hosting service, so the
+    cross-repository guard runs first, before anything is written, as for
+    `version tag --push`.
     """
     source_kit = _target_kit()
+    clearance = (
+        _cleared_at_entry(
+            source_kit.parent, allow_foreign_repo, unchanged="Nothing was written or pushed."
+        )
+        if tag and push
+        else None
+    )
     plan = compute_release(source_kit)
     _print_release_plan(plan)
     _warn_migration_mismatches(source_kit, plan)
@@ -1614,11 +1665,11 @@ def release_apply(tag: bool, push: bool, no_broaden: bool, yes: bool) -> None:
     for warning in check_raised_ranges(plan, broaden=broaden):
         click.echo(f"warning: {warning}", err=True)
     if plan.is_empty:
-        apply_release(source_kit, plan, tag=tag, push=push, broaden=broaden)
+        apply_release(source_kit, plan, tag=tag, push=push, clearance=clearance, broaden=broaden)
         return
     if not yes:
         click.confirm("Write these versions and consume the changesets?", abort=True)
-    apply_release(source_kit, plan, tag=tag, push=push, broaden=broaden)
+    apply_release(source_kit, plan, tag=tag, push=push, clearance=clearance, broaden=broaden)
 
 
 @release.command("check")
@@ -1830,7 +1881,8 @@ def release_merge(
     clean-up alike: in another repository than the session's anchor's it asks
     at a terminal and refuses without one, unless `--allow-foreign-repo`
     confirms it; with no session's anchor, as in a pipeline, it does not fire.
-    A dry run reports the guard's verdict and asks nothing.
+    A dry run never asks: it ends as a run with nobody to ask would, and
+    reports how the guard passed.
     """
     if no_wait and wait_minutes is not None:
         raise click.UsageError("--no-wait and --wait-minutes are mutually exclusive.")
@@ -1838,12 +1890,9 @@ def release_merge(
         raise click.BadParameter("not a number of minutes", param_hint="--wait-minutes")
     wait_seconds = 0.0 if no_wait else (wait_minutes * 60 if wait_minutes is not None else None)
     repo_root = _target_kit().parent
-    passage = session_guard.clear(
-        repo_root, confirmed=allow_foreign_repo, interactive=False if dry_run else None
+    passage = _cleared_at_entry(
+        repo_root, allow_foreign_repo, unchanged="Nothing was merged.", dry_run=dry_run
     )
-    if isinstance(passage, session_guard.Refusal):
-        would_ask = " A run at a terminal would ask." if dry_run else ""
-        raise click.ClickException(f"{passage.reason}{would_ask} Nothing was merged.")
     report = merge_release_pr(
         repo_root,
         pr,
@@ -1867,7 +1916,8 @@ def release_merge(
     default=False,
     help="Print the notes that would be published without calling `gh`.",
 )
-def release_publish_notes(version: str, dry_run: bool) -> None:
+@_allow_foreign_repo_option
+def release_publish_notes(version: str, dry_run: bool, allow_foreign_repo: bool) -> None:
     """Publish a notes-only GitHub Release for `v<version>` from CHANGELOG.md.
 
     Extracts that version's `CHANGELOG.md` section and creates the GitHub
@@ -1877,9 +1927,17 @@ def release_publish_notes(version: str, dry_run: bool) -> None:
     never a file / tarball / wheel channel. Repo is derived from the ambient
     `gh` context (no hardcoded owner/repo). A missing tag is a clear error;
     `--dry-run` prints the notes without calling `gh`.
+
+    The cross-repository guard runs first, as for `release merge`: in another
+    repository than the session's anchor's it asks at a terminal and refuses
+    without one, unless `--allow-foreign-repo` confirms it; with no session's
+    anchor, as in a pipeline, it does not fire. A dry run never asks.
     """
-    source_kit = _target_kit()
-    click.echo(publish_release_notes(source_kit.parent, version, dry_run=dry_run))
+    repo_root = _target_kit().parent
+    passage = _cleared_at_entry(
+        repo_root, allow_foreign_repo, unchanged="Nothing was published.", dry_run=dry_run
+    )
+    click.echo(publish_release_notes(repo_root, version, clearance=passage, dry_run=dry_run))
 
 
 @release.command("check-shareable")

@@ -781,6 +781,14 @@ class Terminal(io.StringIO):
         return f"{self.answer}\n"
 
 
+class Screen(io.StringIO):
+    """Standard error on the terminal a :class:`Terminal`'s operator reads: a
+    question is asked only where both ends are a terminal."""
+
+    def isatty(self) -> bool:
+        return True
+
+
 class NoTerminal(io.StringIO):
     """Standard input that is not a terminal and holds nothing: a pipeline's,
     an agent's."""
@@ -800,9 +808,11 @@ def install(
     stdin: io.StringIO,
 ) -> None:
     """Answer every `gh` and `git` this process runs from `host` and `clone`;
-    run from the clone, with standard input `stdin`, and the session anchor at
-    `anchor` — None unsets it, as outside any session. Any other program a run
-    starts fails the test: the scenario must not reach past the fakes."""
+    run from the clone, with standard input `stdin` — and, where that is a
+    terminal, standard error on the same terminal (:class:`Screen`) — and the
+    session anchor at `anchor` — None unsets it, as outside any session. Any
+    other program a run starts fails the test: the scenario must not reach
+    past the fakes."""
 
     def run(args: Sequence[str], *_: Any, **kwargs: Any) -> Completed:
         argv = [str(arg) for arg in args]
@@ -819,6 +829,8 @@ def install(
     monkeypatch.setattr(subprocess, "run", run)
     monkeypatch.chdir(clone.root)
     monkeypatch.setattr("sys.stdin", stdin)
+    if stdin.isatty():
+        monkeypatch.setattr("sys.stderr", Screen())
     if anchor is None:
         monkeypatch.delenv(ANCHOR, raising=False)
     else:
