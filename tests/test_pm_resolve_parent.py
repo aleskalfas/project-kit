@@ -165,6 +165,42 @@ def test_a_line_in_a_form_the_type_does_not_allow_is_noted_whatever_the_native_s
     forms = ISSUE_TYPES["types"]["feature"]["parent_ref_form"]
     resolution = _resolve("Epic: #5\n", 5, structural_type="feature")
     assert resolution.form_note == (
+@pytest.mark.parametrize(
+    ("body", "native"),
+    [("Milestone: [#3](../milestone/3)\n", 7), ("Feature: #5\n", 7), ("## What\n", 7)],
+)
+def test_an_epic_is_told_its_container_is_a_milestone_not_a_rewrite_that_names_nothing(
+    body: str, native: int
+) -> None:
+    """An EPIC's first line names a milestone, never an issue: `set-field --parent`
+    on it writes `Milestone: #<N>`, so the usual remedy — rewrite the first line
+    to name the native parent — would name nothing. The seam says what applies
+    instead (#1281)."""
+    resolution = _resolve(body, native, structural_type="epic")
+    assert resolution.line.issue_form is False
+    assert resolution.remedy() == (
+        "→ #12's container is a milestone: no first-line form its type may have names an "
+        "issue, so no rewrite of its first line names #7."
+    )
+    assert "set-field" not in (resolution.remedy() or "")
+
+
+def test_an_epic_under_a_native_parent_abroad_says_where_it_is() -> None:
+    resolution = _resolve("Milestone: [#3](../milestone/3)\n", "other/repo#7", "epic")
+    assert resolution.remedy(abroad="the forward cascade does not walk into") == (
+        "→ #12's container is a milestone: no first-line form its type may have names an "
+        "issue, so no rewrite of its first line names other/repo#7; other/repo#7 is in "
+        "another repository, which the forward cascade does not walk into."
+    )
+
+
+def test_an_issue_of_unknown_type_keeps_the_rewrite_remedy() -> None:
+    resolution = _resolve("## What\n", 7, structural_type=None)
+    assert resolution.line.issue_form is True
+    assert resolution.remedy() is not None
+    assert "`set-field 12 --parent 7`" in (resolution.remedy() or "")
+
+
         f"#12's first line `Epic: #5` is not a parent-ref a feature may have: {forms}"
     )
 

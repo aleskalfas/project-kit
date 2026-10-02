@@ -1659,7 +1659,11 @@ class ParentResolution:
         first line is rewritten to name it ([project-management:DEC-005-linking-and-containment]).
         No first-line form can name a native parent in another repository; the
         line then says so — with ``abroad``, what the caller does not do there —
-        and how the native link is moved under the first line's parent instead."""
+        and how the native link is moved under the first line's parent instead.
+
+        Neither applies to an issue whose type has no first-line form naming an
+        issue (an EPIC): its container is a milestone, so no rewrite of its first
+        line names an issue parent, and the line says that instead."""
         native, n = self.native, self.issue
         if native is None or self.kind not in (ParentKind.NATIVE_ONLY, ParentKind.DISAGREE):
             return None
@@ -1678,6 +1682,17 @@ class ParentResolution:
         return (
             f"→ {native.ref} is in another repository, which no first-line form can name"
             f"{also}{move_link}."
+        if not self.line.issue_form:
+            elsewhere = (
+                f"; {native.ref} is in another repository, which {abroad}"
+                if native.repository is not None and abroad
+                else ""
+            )
+            return (
+                f"→ #{n}'s container is a milestone: no first-line form its type may have "
+                f"names an issue, so no rewrite of its first line names {native.ref}"
+                f"{elsewhere}."
+            )
         )
 
 

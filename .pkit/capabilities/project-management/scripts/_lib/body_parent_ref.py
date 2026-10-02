@@ -101,13 +101,17 @@ class FirstLine:
     ``line`` is the line as written; ``number`` the issue it names, or the
     milestone for a milestone line, ``None`` for no parent; ``note`` — for a
     non-conforming line only — says so, quoting the line and the forms the type
-    allows, for the caller to put after the issue's number.
+    allows, for the caller to put after the issue's number. ``issue_form`` says
+    whether the issue's type has a form that names an issue at all: False for a
+    type whose only parent-ref names a milestone (an EPIC, whose container is a
+    milestone), True where the type cannot be told.
     """
 
     form: LineForm
     line: str
     number: int | None = None
     note: str | None = None
+    issue_form: bool = True
 
     @property
     def issue(self) -> int | None:
@@ -156,6 +160,12 @@ def _options(parent_ref_form: str) -> list[tuple[bool, re.Pattern[str]]]:
 def form_allows_milestone(parent_ref_form: str) -> bool:
     """Whether a type's ``parent_ref_form`` offers a milestone parent-ref."""
     return any(is_milestone for is_milestone, _ in _options(parent_ref_form))
+
+
+def form_names_an_issue(parent_ref_form: str) -> bool:
+    """Whether a type's ``parent_ref_form`` offers a parent-ref naming an issue —
+    False for a type whose container is a milestone alone (an EPIC)."""
+    return bool(_issue_option_labels(parent_ref_form))
 
 
 def form_matchers(parent_ref_form: str) -> list[re.Pattern[str]]:
@@ -223,43 +233,33 @@ def read_first_line(body: str, structural_type: str | None, issue_types: dict) -
     the type cannot be told — a brownfield issue with no ``[Type]`` prefix and no
     ``type:*`` label, or a type ``issue_types`` declares no ``parent_ref_form``
     for — any ``<Label>: #<N>`` line conforms, so an untyped tree is walked as it
-    always was, and only a line outside that shape (``Epic:#5``) is noted.
+    always was, and only a line outside that shape (``Epic:#5``) is noted. Each
+    reading says, too, whether the type has a form naming an issue at all
+    (``FirstLine.issue_form``): an EPIC's has none.
     """
     line = first_line(body)
+    form = _parent_ref_form(structural_type, issue_types)
+    issue_form = form is None or bool(_issue_option_labels(form))
     milestone = first_line_milestone(body)
     if milestone is not None:
-        return FirstLine(LineForm.MILESTONE, line, milestone)
+        return FirstLine(LineForm.MILESTONE, line, milestone, issue_form=issue_form)
     number = named_issue(body)
     if number is None:
-        return FirstLine(LineForm.NONE, line)
-    form = _parent_ref_form(structural_type, issue_types)
+        return FirstLine(LineForm.NONE, line, issue_form=issue_form)
     if form is not None:
         ref = parse_first_line(body, form)
         if ref is not None and not ref.milestone:
-            return FirstLine(LineForm.CONFORMING, line, number)
+            return FirstLine(LineForm.CONFORMING, line, number, issue_form=issue_form)
         note = (
             f"first line `{line}` is not a parent-ref a {structural_type} may have: {form.strip()}"
         )
-        return FirstLine(LineForm.NON_CONFORMING, line, number, note)
+        return FirstLine(LineForm.NON_CONFORMING, line, number, note, issue_form)
     if _ANY_ISSUE_LINE.match(line):
         return FirstLine(LineForm.CONFORMING, line, number)
     note = f"first line `{line}` is not in the parent-ref form `<Label>: #<N>`"
     return FirstLine(LineForm.NON_CONFORMING, line, number, note)
 
 
-def parent_issue(body: str, structural_type: str | None, issue_types: dict) -> int | None:
-    """The parent issue a body's first line names in a form the issue's type
-    allows, or ``None`` — :func:`read_first_line` narrowed to a conforming line.
-
-    So ``Related: #45`` names no parent for a typed issue, and neither does a
-    milestone ref, while an untyped issue's ``<Label>: #<N>`` line does.
-    """
-    read = read_first_line(body, structural_type, issue_types)
-    return read.number if read.form is LineForm.CONFORMING else None
-
-
-def _parent_ref_form(structural_type: str | None, issue_types: dict) -> str | None:
-    """The `parent_ref_form` ``issue_types`` declares for the type, or ``None``."""
 def is_only_a_parent_ref(line: str) -> bool:
     """Whether ``line`` is a parent-ref and nothing else: ``<Label>: #<N>`` (any
     spacing after the colon) or a milestone ref in either form, with nothing
@@ -278,6 +278,19 @@ def is_only_a_parent_ref(line: str) -> bool:
     )
 
 
+def parent_issue(body: str, structural_type: str | None, issue_types: dict) -> int | None:
+    """The parent issue a body's first line names in a form the issue's type
+    allows, or ``None`` — :func:`read_first_line` narrowed to a conforming line.
+
+    So ``Related: #45`` names no parent for a typed issue, and neither does a
+    milestone ref, while an untyped issue's ``<Label>: #<N>`` line does.
+    """
+    read = read_first_line(body, structural_type, issue_types)
+    return read.number if read.form is LineForm.CONFORMING else None
+
+
+def _parent_ref_form(structural_type: str | None, issue_types: dict) -> str | None:
+    """The `parent_ref_form` ``issue_types`` declares for the type, or ``None``."""
     types = issue_types.get("types") if isinstance(issue_types, dict) else None
     entry = types.get(structural_type) if isinstance(types, dict) and structural_type else None
     form = entry.get("parent_ref_form") if isinstance(entry, dict) else None
@@ -291,10 +304,11 @@ def milestone_line(number: int) -> str:
 
 @dataclass(frozen=True)
 class ParentLine:
-    """A first line naming an issue parent, as :func:`issue_parent_line` writes
-    it, and what to warn of: ``line`` is empty when the type has no form to
-    write; ``warning`` says why the line does not carry the parent's own label,
-    for the caller to print after ``[warn]``."""
+    """The first line :func:`issue_parent_line` writes for a parent, and what to
+    warn of: ``line`` is empty when the type has no form to write; ``warning``
+    says why the line does not carry the parent's own label — or, where the
+    line names a milestone, that it names no issue — for the caller to print
+    after ``[warn]``."""
 
     line: str
     warning: str | None = None
@@ -318,31 +332,50 @@ def type_label(issue_types: dict, structural_type: str) -> str | None:
 def issue_parent_line(
     parent_ref_form: str, parent_number: int, parent_label: str | None = None
 ) -> ParentLine:
-    """The first line that names issue ``parent_number`` as a parent — the one
-    writer `create-issue` and `set-field --parent` share.
+    """The first line a writer puts on a body given parent ``parent_number`` —
+    the one writer `create-issue` and `set-field --parent` share.
 
     The label is ``parent_label`` — the parent's own label (:func:`type_label`)
     — when it is one of the forms ``parent_ref_form`` allows, so a Task filed
     under an Umbrella opens `Umbrella: #<N>`. Where the parent's type is not
     known (``parent_label`` is ``None``) the line takes the form's first option.
     It takes the first option, too, where the parent's label is not among the
-    forms, and says so in ``warning``: the containment graph is enforced
-    nowhere, so a writer names the parent rather than refuse. A form with no
-    option to write from gives an empty line.
+    forms, and says so in ``warning``: DEC-005 requires a parent the type may
+    not sit under to be refused, and until that refusal is built a writer
+    names the parent this way and warns.
+
+    Where the first option names a milestone the number is a milestone's: a
+    type whose only parent-ref names a milestone (an EPIC) sits under a
+    milestone, never under an issue, so its line `Milestone: #<N>` names
+    milestone N and no issue, and ``warning`` says so whatever the parent's
+    label. A form with no option to write from gives an empty line.
     """
-    first = str(parent_ref_form or "").split(" or ", 1)[0].split(":", 1)[0].strip()
+    form = str(parent_ref_form or "").strip()
+    first = form.split(" or ", 1)[0].split(":", 1)[0].strip()
     if not first:
         return ParentLine("")
-    if parent_label is None:
-        return ParentLine(f"{first}: #{parent_number}")
-    if parent_label in _issue_option_labels(parent_ref_form):
+    issue_labels = _issue_option_labels(form)
+    if parent_label is not None and parent_label in issue_labels:
         return ParentLine(f"{parent_label}: #{parent_number}")
     line = f"{first}: #{parent_number}"
+    if first == MILESTONE_LABEL:
+        if not issue_labels:
+            why = f"this type's container is a milestone, never an issue ({form})"
+        elif parent_label is not None:
+            why = f"`{parent_label}: #<N>` is not a parent-ref this type may have ({form})"
+        else:
+            why = f"the parent's type is not known, and the first form names a milestone ({form})"
+        return ParentLine(
+            line,
+            f"{why}, so the first line `{line}` names milestone {parent_number}, "
+            f"not issue #{parent_number}",
+        )
+    if parent_label is None:
+        return ParentLine(line)
     return ParentLine(
         line,
         f"`{parent_label}: #<N>` is not a parent-ref this type may have "
-        f"({str(parent_ref_form).strip()}), so the first line names #{parent_number} "
-        f"as `{line}`",
+        f"({form}), so the first line names #{parent_number} as `{line}`",
     )
 
 

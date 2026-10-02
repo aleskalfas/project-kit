@@ -318,6 +318,51 @@ def test_an_undeclared_type_has_no_label(bpr, issue_types) -> None:
     assert bpr.type_label(issue_types, "spike") is None
 
 
+# --- an EPIC's container is a milestone (#1281) ----------------------------
+#
+# An EPIC's only parent-ref names a milestone, so the number a writer is given
+# for it is a milestone's: the line it writes, `Milestone: #<N>`, names
+# milestone N and no issue, and the warning says so — whatever the parent's
+# label, and whether or not it is known.
+
+
+@pytest.mark.parametrize("label", [None, "EPIC", "Umbrella", "Feature"])
+def test_an_epics_line_names_a_milestone_and_the_warning_says_so(bpr, forms, label) -> None:
+    written = bpr.issue_parent_line(forms["epic"], 9, label)
+    assert written.line == "Milestone: #9"
+    assert written.warning == (
+        f"this type's container is a milestone, never an issue ({forms['epic']}), so the "
+        "first line `Milestone: #9` names milestone 9, not issue #9"
+    )
+    # And the line it wrote is read as the warning says: a milestone, no issue.
+    assert bpr.named_issue(f"{written.line}\n") is None
+    assert bpr.first_line_milestone(f"{written.line}\n") == 9
+
+
+def test_an_epics_form_names_no_issue_and_its_reading_says_so(bpr, issue_types, forms) -> None:
+    assert not bpr.form_names_an_issue(forms["epic"])
+    assert all(bpr.form_names_an_issue(forms[t]) for t in ("feature", "umbrella", "task"))
+    for line in ("Milestone: [#3](../milestone/3)", "Feature: #12", "## What"):
+        assert bpr.read_first_line(f"{line}\n", "epic", issue_types).issue_form is False
+        assert bpr.read_first_line(f"{line}\n", "task", issue_types).issue_form is True
+    # An issue whose type cannot be told may name an issue parent.
+    assert bpr.read_first_line("Feature: #12\n", None, issue_types).issue_form is True
+
+
+def test_a_milestone_first_option_says_so_where_the_parents_label_is_not_offered(bpr) -> None:
+    """A form whose first option is the milestone's but which offers issue
+    parents too: an unoffered or unknown label falls to the milestone line, and
+    the warning says it names a milestone; an offered label is written as is."""
+    form = "Milestone: [#<N>](../milestone/<N>) or EPIC: #<N>"
+    assert bpr.issue_parent_line(form, 9, "EPIC") == bpr.ParentLine("EPIC: #9")
+    unoffered = bpr.issue_parent_line(form, 9, "Task")
+    assert unoffered.line == "Milestone: #9"
+    assert unoffered.warning is not None
+    assert unoffered.warning.endswith("names milestone 9, not issue #9")
+    unknown = bpr.issue_parent_line(form, 9)
+    assert unknown.warning is not None and "the parent's type is not known" in unknown.warning
+
+
 # --- a parent-ref and nothing else (#1281) ---------------------------------
 
 

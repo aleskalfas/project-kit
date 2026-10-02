@@ -1665,6 +1665,49 @@ def test_main_parent_a_task_may_not_sit_under_is_named_in_the_first_form_with_a_
     )
 
 
+def test_main_parent_on_an_epic_names_a_milestone_and_says_so(
+    sf, tmp_path, monkeypatch, capsys
+) -> None:
+    """An EPIC's container is a milestone: `--parent 9` writes `Milestone: #9`,
+    which names milestone 9 and no issue, so the warning says the line names
+    milestone 9, not issue #9 — and no issue #9 is read or linked."""
+    root = _stage_with_shipped_types(tmp_path)
+    native = _NativeTracker()
+    monkeypatch.setattr(sf.containment, "_gh_call", native)
+
+    class _Reads(dict):
+        """Every issue number read, through `_run_main`'s `others`."""
+
+        def __init__(self, answers: dict) -> None:
+            super().__init__(answers)
+            self.numbers: list[int] = []
+
+        def get(self, key, default=None):
+            self.numbers.append(key)
+            return super().get(key, default)
+
+    reads = _Reads({9: {"title": "[Umbrella] an issue numbered like the milestone"}})
+    captured = _run_main(
+        sf,
+        monkeypatch,
+        root=root,
+        argv=["42", "--parent", "9"],
+        issue={**_TASK_ISSUE, "title": "[EPIC] a thesis"},
+        others=reads,
+    )
+
+    assert captured["rc"] == 0
+    assert 9 not in reads.numbers, "an EPIC's number is a milestone's: issue #9 is not read"
+    assert captured["bodies"][0].startswith("Milestone: #9\n")
+    out = capsys.readouterr().out
+    assert (
+        "  [warn] parent: this type's container is a milestone, never an issue "
+        "(Milestone: [#<N>](../milestone/<N>)), so the first line `Milestone: #9` names "
+        "milestone 9, not issue #9.\n"
+    ) in out
+    assert native.calls == [], "a milestone is not a sub-issue parent: nothing native is read"
+
+
 def test_main_parent_on_a_marked_body_keeps_the_marker_first(
     sf, tmp_path, monkeypatch, capsys
 ) -> None:

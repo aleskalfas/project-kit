@@ -1364,8 +1364,11 @@ def _parent_label(parent_num: int, type_entry: dict, config: dict, issue_types: 
     (`body_parent_ref.type_label`), read from its title prefix as create-issue
     reads it, prefix only (#793). ``None`` — the form's first option is written —
     when the type declares no form to write, or the parent's title cannot be
-    read or carries no type; ``gh_get_issue`` says why it could not be read."""
-    if not type_entry.get("parent_ref_form"):
+    read or carries no type; ``gh_get_issue`` says why it could not be read. No
+    title is read for a type whose forms name no issue (an EPIC): its number is
+    a milestone's, so issue ``parent_num`` is not its parent."""
+    form = type_entry.get("parent_ref_form")
+    if not form or not body_parent_ref.form_names_an_issue(str(form)):
         return None
     parent = gh_get_issue(parent_num, config, fields="title")
     if parent is None:
