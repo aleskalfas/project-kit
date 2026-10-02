@@ -106,7 +106,8 @@ class Tracker:
     pull request's `Closes #N`, and as `gh issue close --reason` says.
     `fail_next` holds `gh issue edit` flags whose next edit fails, once, before
     it changes anything; `views_fail` holds issues whose `gh issue view` fails,
-    as a predicate's read of an unreachable issue does."""
+    as a predicate's read of an unreachable issue does; `comments_fail` holds
+    issues whose `gh issue comment` fails, posting nothing."""
 
     def __init__(self) -> None:
         self.issues: dict[int, dict[str, Any]] = {}
@@ -118,6 +119,7 @@ class Tracker:
         self.calls: list[list[str]] = []
         self.fail_next: set[str] = set()
         self.views_fail: set[int] = set()
+        self.comments_fail: set[int] = set()
 
     def merge(self, pr: int, closes: list[int], merged_by: str = MERGER) -> None:
         """Merge pull request `pr`, whose body closes `closes`, as `merged_by`,
@@ -162,6 +164,8 @@ class Tracker:
                 reason = _option(argv, "--reason") or "completed"
                 self.close(number, reason.upper().replace(" ", "_"))
                 return _done(argv)
+            if number in self.comments_fail:
+                return _done(argv, 1, stderr="HTTP 502: Bad Gateway")
             body = _option(argv, "--body")
             self.comments[number].append(
                 {"body": body, "viewerDidAuthor": True, "includesCreatedEdit": False}
