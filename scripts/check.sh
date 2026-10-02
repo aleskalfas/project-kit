@@ -24,11 +24,12 @@
 #
 # Then two kinds of line, deliberately apart (ADR-058):
 #
-#   - `pkit validate` — the one umbrella over every check of the tree's STATE:
-#     the backbone's registered members (manifests, schemas, configuration,
-#     packages, connections, versions, friction, rule-sets, decisions, refs,
-#     process, data) and each installed capability's. One line, so nothing
-#     registered can be forgotten here; it fails on errors only.
+#   - `pkit validate` — the project's one check of its own STATE against the
+#     invariants its records own (COR-055): the backbone's registered members
+#     (manifests, schemas, configuration, packages, connections, versions,
+#     friction, rule-sets, decisions, refs, process, data) and each installed
+#     capability's. One line, so nothing registered can be forgotten here; it
+#     fails on errors only.
 #   - the diff-scoped checks — migration coverage, the friction change check,
 #     software-analysis' number check (a use case or journey number the base
 #     took first), the documentation check (project-management's
