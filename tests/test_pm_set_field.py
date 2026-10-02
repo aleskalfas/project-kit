@@ -19,6 +19,7 @@ import json
 import re
 import subprocess
 import sys
+from collections.abc import Mapping
 from pathlib import Path
 
 import pytest
@@ -1099,7 +1100,7 @@ def _run_main(
     issue: dict,
     board_state=None,
     board_write_ok: bool = True,
-    others: dict[int, dict] | None = None,
+    others: Mapping[int, dict | None] | None = None,
 ) -> dict:
     """Drive `sf.main()` with the gh seams stubbed; return rc + captured writes.
 
