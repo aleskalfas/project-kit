@@ -1146,7 +1146,7 @@ def test_the_line_done_work_prints_when_the_move_to_done_fails_finishes_the_casc
     The line done-work prints is a command that runs, and running it brings the
     Task's ancestors level."""
     epic, feature, task = _reviewed_task_merged(world, closed=True)
-    monkeypatch.setattr(dw.pr_merge, "delete_remote_branch", lambda *a, **kw: None)
+    monkeypatch.setattr(dw.pr_merge, "delete_branch", lambda *a, **kw: "deleted")
     monkeypatch.setattr(dw.pr_merge, "cleanup_local", lambda *a, **kw: None)
     world.tracker.fail_next.add("state:review")  # the reconcile removes the Review label
     capsys.readouterr()
