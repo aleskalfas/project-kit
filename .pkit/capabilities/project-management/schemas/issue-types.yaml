@@ -11,9 +11,12 @@
 # Task's body and live in body-format.yaml.
 #
 # Consumed by the create-issue and validate-body skills to dispatch on
-# the type being filed (title prefix, body shape, parent-ref form) and
-# by the containment validator to refuse impossible filings (e.g., a
-# Feature inside a Feature).
+# the type being filed (title prefix, body shape, parent-ref form). The
+# containment graph is not enforced by any script: `can_contain` and
+# `parent_issue_types` name the same edges from either end, and every
+# edge has an option in the child's `parent_ref_form`, labelled with the
+# parent type's rendered title prefix — a schema test holds the three
+# together.
 
 schema_version: 1
 
@@ -46,8 +49,8 @@ types:
       Coherent cluster of Tasks that together deliver one capability.
       Has acceptance criteria. Atomic — Features do not nest.
     can_contain: [task]
-    parent_issue_types: [epic, milestone]
-    parent_ref_form: "EPIC: #<N> or Milestone: [#<N>](../milestone/<N>)"
+    parent_issue_types: [epic, umbrella, milestone]
+    parent_ref_form: "EPIC: #<N> or Umbrella: #<N> or Milestone: [#<N>](../milestone/<N>)"
     parent_ref_optional: false
     parent_ref_required_severity: "[validation-severity:hard-reject]"
     has_body: true

@@ -40,7 +40,7 @@
         }
       },
       "uniqueItems": true,
-      "description": "Cross-cut invariants over the containment graph that aren't expressible as a single per-type field (e.g., 'EPIC does not contain EPIC', 'Feature does not nest'). Editorial; the engine's containment checks derive from the per-entry `can_contain` lists."
+      "description": "Cross-cut invariants over the containment graph that aren't expressible as a single per-type field (e.g., 'EPIC does not contain EPIC', 'Feature does not nest'). Editorial: no script enforces them, and none reads the per-entry `can_contain` lists either."
     }
   },
   "$defs": {
@@ -90,7 +90,7 @@
         "parent_ref_form": {
           "type": "string",
           "minLength": 1,
-          "description": "The textual first-line parent reference per MET-004 — the projection of the native sub-issue / Milestone link into the body. `<N>` is the placeholder for the parent's issue number."
+          "description": "The textual first-line parent reference per MET-004 — the projection of the native sub-issue / Milestone link into the body. `<N>` is the placeholder for the parent's issue number. One option for each entry of `parent_issue_types`, an issue parent's labelled with that type's rendered `title_prefix`; `can_contain` and `parent_issue_types` name the same edges from either end."
         },
         "parent_ref_optional": {
           "type": "boolean",

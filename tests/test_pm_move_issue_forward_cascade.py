@@ -187,6 +187,23 @@ def test_an_umbrella_between_the_task_and_its_epic_is_moved_too(
     _no_drift(world, capsys, inner, outer, epic)
 
 
+def test_a_feature_under_an_umbrella_is_walked_to_the_epic(
+    world: World, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """An Umbrella may hold a Feature, and a Feature's first line may name it
+    (#1281): the walk goes through the Feature and the Umbrella to the EPIC."""
+    epic = _container(world, "[EPIC] An epic")
+    umbrella = _container(world, "[Umbrella] A bucket", epic, "EPIC")
+    feature = _container(world, "[Feature] A feature", umbrella, "Umbrella")
+    task = _task(world, feature)
+
+    assert world.promote(task) == 0
+
+    assert "the walk stops there" not in capsys.readouterr().err
+    for number in (feature, umbrella, epic):
+        assert world.moves(number) == [("todo", "backlog", "promote-issue")], number
+
+
 def test_an_ancestor_at_the_target_is_left_alone_and_the_walk_goes_on(
     world: World, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -441,7 +458,7 @@ def test_an_ancestors_first_line_that_is_not_an_allowed_form_stops_the_walk_abov
     err = capsys.readouterr().err
     assert (
         f"the walk stopped: #{feature}'s first line `Epic: #{epic}` is not a parent-ref a "
-        "feature may have: EPIC: #<N> or Milestone: [#<N>](../milestone/<N>)\n"
+        "feature may have: EPIC: #<N> or Umbrella: #<N> or Milestone: [#<N>](../milestone/<N>)\n"
     ) in err
     assert world.moves(feature) == [("todo", "backlog", "promote-issue")]
     assert world.moves(epic) == []

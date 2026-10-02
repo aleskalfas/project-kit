@@ -199,7 +199,7 @@ def test_an_issue_whose_type_cannot_be_told_names_any_labelled_issue(
     [
         ("feature", "Epic: #5"),
         ("feature", "Feature: #12 — auth"),
-        ("feature", "Umbrella: #7"),
+        ("feature", "Task: #7"),
         ("feature", "EPIC:#5"),
         ("task", "Related: #45"),
         ("epic", "Feature: #12"),
@@ -276,3 +276,43 @@ def test_set_first_line_milestone_leaves_an_issue_parent_alone(bpr) -> None:
     body = "EPIC: #10\n\n## What\n"
     assert bpr.set_first_line_milestone(body, 6) == body
     assert bpr.set_first_line_milestone(body, None) == body
+
+
+# --- the one writer of an issue parent's first line (#1281) ---------------
+
+
+@pytest.mark.parametrize(
+    ("parent_type", "line"),
+    [("epic", "EPIC: #9"), ("feature", "Feature: #9"), ("umbrella", "Umbrella: #9")],
+)
+def test_the_line_carries_the_parents_own_label(bpr, issue_types, forms, parent_type, line) -> None:
+    label = bpr.type_label(issue_types, parent_type)
+    assert bpr.issue_parent_line(forms["task"], 9, label) == bpr.ParentLine(line)
+
+
+def test_a_feature_under_an_umbrella_names_it_an_umbrella(bpr, issue_types, forms) -> None:
+    label = bpr.type_label(issue_types, "umbrella")
+    assert bpr.issue_parent_line(forms["feature"], 9, label).line == "Umbrella: #9"
+
+
+def test_a_parent_of_unknown_type_takes_the_first_form(bpr, forms) -> None:
+    assert bpr.issue_parent_line(forms["task"], 9) == bpr.ParentLine("Feature: #9")
+
+
+def test_a_parent_the_forms_do_not_offer_takes_the_first_form_with_a_warning(
+    bpr, issue_types, forms
+) -> None:
+    written = bpr.issue_parent_line(forms["task"], 9, bpr.type_label(issue_types, "task"))
+    assert written.line == "Feature: #9"
+    assert written.warning == (
+        f"`Task: #<N>` is not a parent-ref this type may have ({forms['task']}), so the "
+        "first line names #9 as `Feature: #9`"
+    )
+
+
+def test_a_type_with_no_form_writes_no_line(bpr) -> None:
+    assert bpr.issue_parent_line("", 9, "EPIC") == bpr.ParentLine("")
+
+
+def test_an_undeclared_type_has_no_label(bpr, issue_types) -> None:
+    assert bpr.type_label(issue_types, "spike") is None

@@ -1010,17 +1010,19 @@ def _run_main(
     issue: dict,
     board_state=None,
     board_write_ok: bool = True,
+    others: dict[int, dict] | None = None,
 ) -> dict:
     """Drive `sf.main()` with the gh seams stubbed; return rc + captured writes.
 
     `board_state` stubs the board READ (its own tests cover the orchestration), so
     a main() test states the board situation as data. Board writes are captured
     rather than issued; `board_write_ok=False` makes the write fail at the point of
-    writing (the exit-3 path).
+    writing (the exit-3 path). `issue` answers every issue read but those
+    `others` answers by number (a `--parent`'s title read).
     """
     captured: dict = {"labels": [], "titles": [], "bodies": [], "board": []}
 
-    monkeypatch.setattr(sf, "gh_get_issue", lambda *a, **k: issue)
+    monkeypatch.setattr(sf, "gh_get_issue", lambda n, *a, **k: (others or {}).get(n, issue))
     if board_state is not None:
         monkeypatch.setattr(sf, "_read_board_state", lambda config, **k: board_state)
 
@@ -1516,6 +1518,70 @@ def test_main_parent_moves_the_native_link_with_the_first_line(
     assert captured["bodies"] and captured["bodies"][0].startswith("Feature: #9\n")
     assert "parent: native link moves from #7 to #9" in out
     assert "moved #42 from #7 to #9 as a native sub-issue" in out
+
+
+def _stage_with_shipped_types(tmp_path: Path) -> Path:
+    """A staged capability root carrying the shipped `issue-types.yaml`."""
+    root = _stage_capability_root(tmp_path, has_board=False)
+    shipped = SCRIPTS.parent / "schemas" / "issue-types.yaml"
+    (root / "schemas" / "issue-types.yaml").write_text(
+        shipped.read_text(encoding="utf-8"), encoding="utf-8"
+    )
+    return root
+
+
+@pytest.mark.parametrize(
+    ("parent_title", "line"),
+    [
+        ("[Umbrella] A bucket", "Umbrella: #9"),
+        ("[EPIC] A thesis", "EPIC: #9"),
+        ("no type prefix", "Feature: #9"),
+    ],
+)
+def test_main_parent_names_the_parent_by_its_own_type(
+    sf, tmp_path, monkeypatch, capsys, parent_title: str, line: str
+) -> None:
+    """#1281: the first line carries the parent's own label where the type's form
+    offers it — a Task set under an Umbrella reads `Umbrella: #9`, not the form's
+    first option — and the first option where the parent's type cannot be told."""
+    root = _stage_with_shipped_types(tmp_path)
+    monkeypatch.setattr(sf.containment, "_gh_call", _NativeTracker())
+    captured = _run_main(
+        sf,
+        monkeypatch,
+        root=root,
+        argv=["42", "--parent", "9"],
+        issue=_task_issue("## What\nx\n"),
+        others={9: {"title": parent_title}},
+    )
+
+    assert captured["rc"] == 0
+    assert captured["bodies"][0].startswith(f"{line}\n")
+    assert "[warn]" not in capsys.readouterr().out
+
+
+def test_main_parent_a_task_may_not_sit_under_is_named_in_the_first_form_with_a_warning(
+    sf, tmp_path, monkeypatch, capsys
+) -> None:
+    """A parent whose own label the type's forms do not offer is named in the
+    first option, and the plan says so — set-field names the parent rather than
+    refuse, as no containment gate exists."""
+    root = _stage_with_shipped_types(tmp_path)
+    monkeypatch.setattr(sf.containment, "_gh_call", _NativeTracker())
+    captured = _run_main(
+        sf,
+        monkeypatch,
+        root=root,
+        argv=["42", "--parent", "9"],
+        issue=_task_issue("## What\nx\n"),
+        others={9: {"title": "[Task] another task"}},
+    )
+
+    assert captured["rc"] == 0
+    assert captured["bodies"][0].startswith("Feature: #9\n")
+    assert "  [warn] parent: `Task: #<N>` is not a parent-ref this type may have" in (
+        capsys.readouterr().out
+    )
 
 
 def test_main_parent_on_a_marked_body_keeps_the_marker_first(

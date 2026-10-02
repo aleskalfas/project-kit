@@ -344,6 +344,7 @@ def main() -> int:
         )
 
     parent_ref_line: str | None = None
+    parent_ref_warning: str | None = None
     if args.parent is not None:
         if args.parent < 1:
             errors.append(f"parent must be a positive issue number; got {args.parent}")
@@ -360,7 +361,13 @@ def main() -> int:
                 )
             else:
                 type_entry = (issue_types.get("types") or {}).get(structural_type) or {}
-                parent_ref_line = _parent_ref_line(type_entry, args.parent)
+                parent_line = _parent_line(
+                    type_entry,
+                    args.parent,
+                    _parent_label(args.parent, type_entry, config, issue_types),
+                )
+                parent_ref_line = parent_line.line
+                parent_ref_warning = parent_line.warning
                 if not parent_ref_line:
                     errors.append(
                         f"issue type {structural_type!r} declares no parent_ref_form; "
@@ -472,6 +479,8 @@ def main() -> int:
     for r in results:
         marker = "ok" if r.ok else "refused"
         print(f"  [{marker}] {r.message}")
+    if parent_ref_warning is not None:
+        print(f"  [warn] parent: {parent_ref_warning}.")
 
     body_changed = new_body is not None and new_body != body
     title_changed = new_title is not None and new_title != title
@@ -1321,15 +1330,38 @@ def _adopter_workstreams(config: dict) -> set[str]:
     return set()
 
 
-def _parent_ref_line(type_entry: dict, parent_num: int) -> str:
-    """Build the `<Label>: #<N>` parent-ref line (parity with create-issue)."""
+def _parent_ref_line(type_entry: dict, parent_num: int, parent_label: str | None = None) -> str:
+    """Build the `<Label>: #<N>` parent-ref line (:func:`_parent_line`'s line)."""
+    return _parent_line(type_entry, parent_num, parent_label).line
+
+
+def _parent_line(
+    type_entry: dict, parent_num: int, parent_label: str | None = None
+) -> body_parent_ref.ParentLine:
+    """The `<Label>: #<N>` parent-ref line, through the writer create-issue shares
+    (`body_parent_ref.issue_parent_line`): labelled with ``parent_label`` — the
+    parent's own label — where the type's form offers it, else with the form's
+    first option, a warning saying so where the parent's label was known. Empty
+    when the type declares no form."""
     form = type_entry.get("parent_ref_form")
     if not form:
-        return ""
-    head = str(form).split(":", 1)[0].strip()
-    if " or " in head:
-        head = head.split(" or ", 1)[0].strip()
-    return f"{head}: #{parent_num}"
+        return body_parent_ref.ParentLine("")
+    return body_parent_ref.issue_parent_line(str(form), parent_num, parent_label)
+
+
+def _parent_label(parent_num: int, type_entry: dict, config: dict, issue_types: dict) -> str | None:
+    """The label a first line names issue ``parent_num`` with: its type's own
+    (`body_parent_ref.type_label`), read from its title prefix as create-issue
+    reads it, prefix only (#793). ``None`` — the form's first option is written —
+    when the type declares no form to write, or the parent's title cannot be
+    read or carries no type; ``gh_get_issue`` says why it could not be read."""
+    if not type_entry.get("parent_ref_form"):
+        return None
+    parent = gh_get_issue(parent_num, config, fields="title")
+    if parent is None:
+        return None
+    parent_type = infer_structural_type(str(parent.get("title", "")), issue_types)
+    return body_parent_ref.type_label(issue_types, parent_type) if parent_type else None
 
 
 # ---- gh write-back --------------------------------------------------------

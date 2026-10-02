@@ -197,6 +197,73 @@ def milestone_line(number: int) -> str:
     return f"{MILESTONE_LABEL}: [#{number}](../milestone/{number})"
 
 
+@dataclass(frozen=True)
+class ParentLine:
+    """A first line naming an issue parent, as :func:`issue_parent_line` writes
+    it, and what to warn of: ``line`` is empty when the type has no form to
+    write; ``warning`` says why the line does not carry the parent's own label,
+    for the caller to print after ``[warn]``."""
+
+    line: str
+    warning: str | None = None
+
+
+def type_label(issue_types: dict, structural_type: str) -> str | None:
+    """How a parent-ref labels a parent of ``structural_type``: the type's own
+    rendered ``title_prefix`` (epic → ``EPIC``, feature → ``Feature``, umbrella →
+    ``Umbrella``) — the token the forms in ``issue-types.yaml`` use. ``None``
+    when ``issue_types`` does not declare the type."""
+    types = issue_types.get("types") if isinstance(issue_types, dict) else None
+    entry = types.get(structural_type) if isinstance(types, dict) else None
+    if not isinstance(entry, dict):
+        return None
+    rendered = str(entry.get("title_prefix", ""))
+    if entry.get("title_case", "title") == "upper":
+        rendered = rendered.upper()
+    return rendered or None
+
+
+def issue_parent_line(
+    parent_ref_form: str, parent_number: int, parent_label: str | None = None
+) -> ParentLine:
+    """The first line that names issue ``parent_number`` as a parent — the one
+    writer `create-issue` and `set-field --parent` share.
+
+    The label is ``parent_label`` — the parent's own label (:func:`type_label`)
+    — when it is one of the forms ``parent_ref_form`` allows, so a Task filed
+    under an Umbrella opens `Umbrella: #<N>`. Where the parent's type is not
+    known (``parent_label`` is ``None``) the line takes the form's first option.
+    It takes the first option, too, where the parent's label is not among the
+    forms, and says so in ``warning``: the containment graph is enforced
+    nowhere, so a writer names the parent rather than refuse. A form with no
+    option to write from gives an empty line.
+    """
+    first = str(parent_ref_form or "").split(" or ", 1)[0].split(":", 1)[0].strip()
+    if not first:
+        return ParentLine("")
+    if parent_label is None:
+        return ParentLine(f"{first}: #{parent_number}")
+    if parent_label in _issue_option_labels(parent_ref_form):
+        return ParentLine(f"{parent_label}: #{parent_number}")
+    line = f"{first}: #{parent_number}"
+    return ParentLine(
+        line,
+        f"`{parent_label}: #<N>` is not a parent-ref this type may have "
+        f"({str(parent_ref_form).strip()}), so the first line names #{parent_number} "
+        f"as `{line}`",
+    )
+
+
+def _issue_option_labels(parent_ref_form: str) -> list[str]:
+    """The labels of the issue-parent options of a form (`EPIC`, `Umbrella`, …)."""
+    labels: list[str] = []
+    for raw in str(parent_ref_form).split(" or "):
+        m = _ISSUE_OPTION.match(raw.strip())
+        if m and _MILESTONE_OPTION_MARKER not in raw:
+            labels.append(m.group(1))
+    return labels
+
+
 def first_line_milestone(body: str) -> int | None:
     """The milestone the body's first line names as its parent, or ``None``.
 
