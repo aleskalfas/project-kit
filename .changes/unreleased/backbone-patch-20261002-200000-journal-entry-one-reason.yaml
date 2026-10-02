@@ -1,0 +1,12 @@
+component: backbone
+kind: patch
+custom:
+  category: Changed
+body: >
+  The process shape contract's journal entry has one place for why a move was
+  taken: `reason`, which holds what the caller gives with `pkit process move
+  --reason` — the justification for overriding a gate a binding lets its
+  caller bypass, another subject's move that caused this one, and so on
+  (#1232). The `bypass_reason` field, which nothing wrote, is gone from the
+  contract; an entry that still carries it validates, as the entry admits
+  fields it does not declare. The engine is unchanged.
