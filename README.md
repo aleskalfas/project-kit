@@ -17,9 +17,9 @@ pkit:
         - .pkit/adapters/claude-code/merge-settings.sh
       record: [COR-001, COR-002, COR-017, PRJ-001, PRJ-004, ADR-049]
     revalidated:
-      at: 2026-10-01T16:40:19Z
+      at: 2026-10-02T04:06:09Z
       outcome: unchanged
-      unchanged-because: "the overview's upgrade and pin claims still hold: the pin is now written whole or not at all, which changes no statement on the page"
+      unchanged-because: The page says init announces its target and asks first off the current folder before writing anything; the refusal of a methodology source shipping an adapter under a reserved name also comes before anything is written, so what the page says of init still holds
 ---
 
 # project-kit

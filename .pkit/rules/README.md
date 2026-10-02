@@ -11,9 +11,9 @@ pkit:
         - src/project_kit/install.py
       record: [COR-001, COR-014]
     revalidated:
-      at: 2026-09-30T23:02:08Z
+      at: 2026-10-02T04:06:11Z
       outcome: unchanged
-      unchanged-because: "#840's lint and format pass reshapes the anchored code without changing what it does, so this page still describes it as it is"
+      unchanged-because: The page describes core.md as kit-owned and refreshed on every sync and project.md as never touched; init's new refusal of a source shipping an adapter under a reserved name changes nothing about how the rules files are propagated
 ---
 
 # Rules
