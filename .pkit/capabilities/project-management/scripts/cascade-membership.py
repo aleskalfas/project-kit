@@ -40,7 +40,7 @@ from _lib import lifecycle_predicates as predicates
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Confirm a candidate issue is a child hierarchy member (cascade membership)."
+        description="Confirm a candidate child issue can be read (cascade membership); it rejects none."
     )
     parser.add_argument("issue_number", help="The keyed subject: the CANDIDATE child issue number.")
     parser.add_argument("--json", action="store_true", help="Emit the structured JSON contract.")
