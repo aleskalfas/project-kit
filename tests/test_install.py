@@ -181,6 +181,30 @@ def test_install_kit_dry_run_writes_nothing(tmp_target: Path) -> None:
     assert not (tmp_target / ".pkit").exists()
 
 
+@pytest.mark.usefixtures("stub_adapter_primitives")
+def test_install_kit_refuses_a_source_shipping_an_adapter_under_a_reserved_name(
+    tmp_target: Path, tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Init installs and registers every adapter its source ships, so a source
+    shipping one under a name reserved for adapters (`backbone`, whose changesets
+    and validators the backbone reads under that name) is refused, giving the
+    reason, before anything is written (#1300)."""
+    source = tmp_path_factory.mktemp("source") / ".pkit"
+    (source / "decisions").mkdir(parents=True)
+    (source / "adapters" / "claude-code").mkdir(parents=True)
+    (source / "adapters" / "backbone").mkdir(parents=True)
+    monkeypatch.setattr(install, "find_source_kit", lambda: source)
+
+    with pytest.raises(
+        click.ClickException, match="ships adapter 'backbone' under a reserved"
+    ) as refused:
+        install.install_kit(tmp_target)
+    message = " ".join(refused.value.message.split())
+    assert "the component of the backbone's changesets and the owner of its validators" in message
+    assert "Nothing was installed" in message
+    assert not (tmp_target / ".pkit").exists()
+
+
 def test_install_kit_renders_runtime_ignore_gitignore(tmp_target: Path) -> None:
     # The core-tier renderer (ADR-009 rule 7) runs on install,
     # producing a pkit-owned `.pkit/.gitignore`.

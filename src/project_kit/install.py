@@ -648,6 +648,7 @@ def install_kit(target_root: Path, dry_run: bool = False) -> None:
     _refuse_if_already_initialised(ctx)
     _refuse_if_source_kit_missing(ctx)
     _refuse_if_target_is_source(ctx)
+    _refuse_reserved_adapter_names(ctx)
 
     click.echo(f"Installing project-kit into {target_root}")
     click.echo(f"  source: {source_kit}")
@@ -856,6 +857,28 @@ def _refuse_if_target_is_source(ctx: InstallContext) -> None:
             f"       project-kit self-hosts directly; running pkit init on project-kit\n"
             f"       itself is a no-op."
         )
+
+
+def _refuse_reserved_adapter_names(ctx: InstallContext) -> None:
+    """Refuse a source that ships an adapter under a reserved name, before anything
+    is written: init installs every adapter the source ships and registers it
+    under its directory's name (`_stamp_backbone_manifest`), so it would register
+    that one too. The reasons are `pkit new adapter`'s (`scaffolds.RESERVED_ADAPTER_NAMES`);
+    the rename is the source's. Local import: the scaffolds import the dispatcher,
+    which imports this module."""
+    from project_kit.scaffolds import RESERVED_ADAPTER_NAMES
+
+    adapters = ctx.source_kit / "adapters"
+    if not adapters.is_dir():
+        return
+    for adapter_dir in sorted(p for p in adapters.iterdir() if p.is_dir()):
+        reason = RESERVED_ADAPTER_NAMES.get(adapter_dir.name)
+        if reason is not None:
+            raise click.ClickException(
+                f"the methodology source at {ctx.source_kit} ships adapter "
+                f"{adapter_dir.name!r} under a reserved name: {reason}. Nothing was "
+                f"installed; the adapter is its source's to rename."
+            )
 
 
 def _install_area(src: Path, dst: Path, ctx: InstallContext, *, overwrite: bool = False) -> None:

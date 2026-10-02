@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-02T03:37:55Z
+      at: 2026-10-02T04:06:16Z
       outcome: unchanged
-      unchanged-because: The page maps the lifecycle area to packaging and register mechanics and the cli area to the command surface; both READMEs still cover those subjects and only gained backbone among the names the capability commands refuse and packages validation reports.
+      unchanged-because: The page indexes the lifecycle README as packaging and dependency architecture and the CLI README as the pkit command surface; their new reserved adapter name and backbone-command checks fit those descriptions, so the index still holds
 ---
 
 # project-kit
