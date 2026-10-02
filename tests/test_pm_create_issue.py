@@ -2810,6 +2810,48 @@ def test_parent_flag_disagreeing_with_first_line_is_refused_before_filing(
     assert "#77" in err and "#78" in err
 
 
+@pytest.mark.parametrize("first_line", ["Feature: #2 — auth", "Epic: #2", "Related: #2"])
+def test_parent_flag_disagreeing_with_a_loose_first_line_is_refused_under_advisory(
+    ci, tmp_path, monkeypatch, capsys, first_line
+) -> None:
+    """Under `hierarchy: advisory` a body whose first line is not an allowed form
+    is filed as written — but a loose line still names its parent for every
+    reader, the close gate included, so `--parent 3` beside a line naming #2 is
+    two parents from birth: refused, nothing filed (#1281)."""
+    root = _stage_real_schema_tree(tmp_path)
+    _write_hierarchy_advisory_map(root)
+    rc, link_calls, created = _file_from_body(
+        ci,
+        tmp_path,
+        monkeypatch,
+        body=f"{first_line}\n\n## What\n\nthe work\n",
+        extra=["--parent", "3"],
+        root=root,
+    )
+    assert rc == 2
+    assert created == {}, "nothing may be filed"
+    assert link_calls == []
+    assert "(#3 vs #2)" in capsys.readouterr().err
+
+
+def test_parent_flag_naming_the_loose_lines_issue_is_no_disagreement(
+    ci, tmp_path, monkeypatch
+) -> None:
+    root = _stage_real_schema_tree(tmp_path)
+    _write_hierarchy_advisory_map(root)
+    rc, link_calls, created = _file_from_body(
+        ci,
+        tmp_path,
+        monkeypatch,
+        body="Feature: #2 — auth\n\n## What\n\nthe work\n",
+        extra=["--parent", "2"],
+        root=root,
+    )
+    assert rc == 0
+    assert link_calls == [{"parent": 2, "child": 400}]
+    assert created["body"].lstrip().split("\n", 1)[0] == "Feature: #2 — auth"
+
+
 def test_parent_flag_agreeing_with_first_line_links_once(ci, tmp_path, monkeypatch) -> None:
     """The same issue on both is no conflict: one link, under that parent."""
     rc, link_calls, _created = _file_from_body(

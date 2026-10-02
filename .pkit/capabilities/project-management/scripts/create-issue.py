@@ -592,20 +592,22 @@ def main() -> int:
     # only the flag's own ref, so it never names a second parent). When the flag
     # and the first line name different issues, the native link and the textual
     # record would disagree from the moment of filing, so refuse before any
-    # mutation rather than pick one.
+    # mutation rather than pick one. The disagreement is read as every reader of
+    # the parent reads the line (`body_parent_ref.named_issue`), in any form: a
+    # loose `Feature: #2 — auth` names #2 for the close gate, so it disagrees with
+    # `--parent 3` even where the form check above let the body through
+    # (`hierarchy: advisory`). Linking from the first line alone stays narrower —
+    # only a form the type allows.
     first_line_ref = body_parent_ref.parse_first_line(
         body, str(type_entry.get("parent_ref_form", ""))
     )
     first_line_parent = first_line_ref.issue_number if first_line_ref else None
-    if (
-        args.parent is not None
-        and first_line_parent is not None
-        and first_line_parent != args.parent
-    ):
+    named_parent = body_parent_ref.named_issue(body)
+    if args.parent is not None and named_parent is not None and named_parent != args.parent:
         print(
             f"error: --parent #{args.parent} and the body's first line "
             f"{body_parent_ref.first_line(body)!r} name different parents "
-            f"(#{args.parent} vs #{first_line_parent}). The first line is the "
+            f"(#{args.parent} vs #{named_parent}). The first line is the "
             "textual parent record and the native sub-issue link must name the "
             "same issue — correct one of them, or omit --parent to link the "
             "first line's parent.",
