@@ -1655,6 +1655,27 @@ def test_a_refused_merge_of_a_pr_auto_merge_holds_warns_that_it_is_still_armed(
     ) in capsys.readouterr().err
 
 
+def test_an_unconfirmed_merge_of_a_pr_auto_merge_holds_warns_it_may_still_be_armed(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Auto-merge holds the release PR, and its direct merge gets no answer
+    with GitHub unreadable since: exit 4, unconfirmed, with the landing's
+    warning that, if the merge was not made, auto-merge is still armed."""
+    host, bounded = _no_answer(queue=False, ends="unconfirmed")
+    host.auto_merge = True
+    _fake_run(monkeypatch)
+    report = _land(monkeypatch, bounded)
+    assert report.exit_code == release.EXIT_ACCEPTED
+    assert report.text.startswith("[unconfirmed] the merge of PR #42 got no usable answer")
+    assert (
+        "[warn] whether the merge of PR #42 was made is not known; if it was not, auto-merge is "
+        "still enabled on it: GitHub merges it on its own once the base's requirements are met, "
+        f"at whatever head it has then — not pinned to {HEAD[:7]}, the head that was checked. To "
+        "keep release PR #42 from merging so, turn auto-merge off in its merge box, or run `gh "
+        "pr merge 42 --disable-auto`."
+    ) in capsys.readouterr().err
+
+
 def test_release_decides_on_the_decoded_end_document(monkeypatch: pytest.MonkeyPatch) -> None:
     """The plan and the landing each reach release as their end document
     states them, decoded strictly — never as the landing's in-memory end."""

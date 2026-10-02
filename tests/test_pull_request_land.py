@@ -472,6 +472,139 @@ def test_a_refused_merge_of_a_pr_nothing_holds_gives_no_warning(
     assert (end.ended, end.warnings) == (landing.END_FAILED, ())
 
 
+def _armed(lead: str) -> landing.Notice:
+    """The warning that auto-merge is left armed on PR 496, after `lead`."""
+    return landing.Notice(
+        landing.AUTO_MERGE_ARMED,
+        f"{lead}: GitHub merges it on its own once the base's requirements are met, at whatever "
+        f"head it has then — not pinned to {HEAD[:7]}, the head that was checked",
+    )
+
+
+_STILL_ARMED = _armed("auto-merge is still enabled on PR #496")
+_ARMED_UNLESS_MADE = _armed(
+    "whether the merge of PR #496 was made is not known; if it was not, auto-merge is still "
+    "enabled on it"
+)
+_ENQUEUED_INSTEAD = landing.Notice(
+    landing.ENQUEUED_INSTEAD,
+    "the service queued PR #496 instead of merging it: the queue composes the squash commit, and "
+    "its shape was not judged",
+)
+
+
+def _lift_the_hold(service: fake.HostingService) -> None:
+    service.auto_merge = False
+
+
+@pytest.mark.parametrize(
+    ("setup", "ended", "reason_kind", "warnings"),
+    [
+        (
+            lambda s: setattr(s, "requirements_met", False),
+            landing.END_FAILED,
+            None,
+            (_STILL_ARMED,),
+        ),
+        (
+            lambda s: (s.never_receive(fake.MERGE), s.before(fake.MERGE, _fail_every_read)),
+            landing.END_UNCONFIRMED,
+            landing.UNANSWERED,
+            (_ARMED_UNLESS_MADE,),
+        ),
+        (
+            lambda s: s.after(fake.MERGE, _fail_every_read),
+            landing.END_UNCONFIRMED,
+            landing.NOT_READ,
+            (landing.Notice(landing.NOT_READ, "HTTP 502: Bad Gateway"), _ARMED_UNLESS_MADE),
+        ),
+        (
+            lambda s: (s.before(fake.MERGE, _lift_the_hold), s.never_receive(fake.MERGE)),
+            landing.END_FAILED,
+            landing.NOT_MADE,
+            (),
+        ),
+        (
+            lambda s: (
+                setattr(s, "merge_enqueues", True),
+                s.after(fake.READ, _fail_every_read, nth=2),
+            ),
+            landing.END_UNCONFIRMED,
+            landing.NOT_READ,
+            (_ENQUEUED_INSTEAD,),
+        ),
+        (
+            lambda s: s.after(fake.MERGE, _merged_naming_no_head),
+            landing.END_UNCONFIRMED,
+            landing.NOT_READ,
+            (),
+        ),
+    ],
+    ids=[
+        "failed-refused",
+        "unconfirmed-unanswered",
+        "unconfirmed-a-reading-lost",
+        "not-seen-made-the-hold-gone",
+        "unconfirmed-the-hold-gone-by-the-last-reading",
+        "unconfirmed-merged-naming-no-head",
+    ],
+)
+def test_auto_merge_left_armed_is_warned_of_on_every_end_that_leaves_it(
+    setup: Callable[[fake.HostingService], Any],
+    ended: str,
+    reason_kind: str | None,
+    warnings: tuple[landing.Notice, ...],
+    here: dict[str, Any],
+    host: fake.HostingService,
+) -> None:
+    """Auto-merge holds the PR at the first reading, on a base without a
+    queue. A landing that ends neither merged nor taken out of the queue —
+    failed, unconfirmed — with the hold on its last reading leaves it armed:
+    warned, in words true of the end. None where a merge was not seen made —
+    the readings that did not see it saw the hold gone — where the last
+    reading shows no hold, or where a reading says merged."""
+    _held_at_the_head_without_a_queue(host)
+    setup(host)
+    end = _land(here)
+    assert (end.ended, end.reason_kind, end.warnings) == (ended, reason_kind, warnings)
+
+
+def _held_again(service: fake.HostingService) -> None:
+    """gh accepted the merge, and the service shows the PR held by auto-merge
+    as before, then merges it."""
+    _unmerge(service)
+    service.auto_merge = True
+    service.progress = [fake.unchanged(), fake.lands()]
+
+
+@pytest.mark.parametrize(
+    ("entered", "warnings"),
+    [(True, (_ENQUEUED_INSTEAD,)), (False, ())],
+    ids=["a-queue-entry-it-did-not-have", "the-same-hold"],
+)
+def test_a_pr_auto_merge_held_is_queued_instead_only_with_a_new_queue_entry(
+    entered: bool,
+    warnings: tuple[landing.Notice, ...],
+    here: dict[str, Any],
+    host: fake.HostingService,
+) -> None:
+    """A PR auto-merge holds reads queued before the direct merge as after
+    it. The reading tells a queue entry from the hold: an entry it did not
+    have is a merge the service queued instead; the same hold is not."""
+    _held_at_the_head_without_a_queue(host)
+    if entered:
+        host.merge_enqueues = True
+        host.progress = [fake.unchanged(), fake.unchanged(), fake.lands()]
+    else:
+        host.after(fake.MERGE, _held_again)
+    end = _land(here)
+    assert (end.ended, end.sent, end.warnings) == (
+        landing.END_MERGED,
+        landing.MERGE_REQUEST,
+        warnings,
+    )
+
+
 # ---- the reading the rows match ------------------------------------------------------
 
 

@@ -22,8 +22,10 @@ body: >
   one `end` document whose `ended` is one of twelve kinds, every key in
   every document: its `reason_kind`, `sent`, `dequeue`, `shape`, `warnings`
   (`queue-not-squash`, `squash-defaults`, `unreadable`, `auto-merge-armed`
-  for a refused merge of a pull request auto-merge still holds,
-  `enqueued-instead` for a direct merge the service queued), `guard`,
+  for auto-merge left armed on a pull request it held whose direct merge
+  fails or is unconfirmed, `enqueued-instead` for a direct merge the service
+  queued — for a pull request auto-merge held, a queue entry it did not
+  have), `guard`,
   `merged_head`, `merge_commit` and `bound_seconds`, the longest the landing
   can run with those options. A merged end always names `merged_head`.
   `pull_request_landing.decode_end` decodes the end strictly by its `ended`.
@@ -38,7 +40,9 @@ body: >
   decoded end document. Its outcomes change: every landing run reads once
   more first; a pull request auto-merge holds on a base without a queue is
   gated and merged directly, and where its requirements are unmet gh refuses
-  the merge, exit 1, with a warning that auto-merge is still armed; a head
+  the merge, exit 1, with a warning that auto-merge is still armed, which an
+  unconfirmed merge of such a pull request gives too, for the case that the
+  merge was not made; a head
   that moved between its view and the landing's reading exits 3 with
   nothing sent, where it used to exit 1; a base changed to one whose queue
   would not make the release's commit is refused at the landing's reading,

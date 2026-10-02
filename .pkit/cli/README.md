@@ -593,7 +593,7 @@ The landing sequence, in one command (ADR-061 point 5). It composes the steps ab
 - "Queued" is in the queue, or held by auto-merge until it may enter. A PR auto-merge holds at `H` on a base without a queue takes the last row: the direct merge is sent, not a wait.
 - Auto-merge holds a PR because its base's requirements are not met. Where they are met by the merge, it goes through. Where they are not, `gh` refuses a plain merge in words the module knows for a refusal: the landing ends `failed`, `sent: null`, with an `auto-merge-armed` warning that auto-merge is still enabled on the PR and will merge it, unpinned, once the requirements are met. What the service does here was not established by a real call; it is the test fake's model.
 - After a direct merge, one reading: merged, it ends; not merged, the wait; not read, one warning, then the wait.
-- That reading finding the PR queued: the service queued it instead of merging it. An `enqueued-instead` warning says so, and that the queue's commit shape was not judged; then the wait.
+- That reading finding the PR queued: the service queued it instead of merging it. An `enqueued-instead` warning says so, and that the queue's commit shape was not judged; then the wait. For a PR auto-merge held, which reads queued before the merge as after it, only a queue entry it did not have counts.
 - The rows that send match an open PR: the reading names it `OPEN`.
 - `--admin` passes the direct merge through as an administrator merge.
 - `--no-request`: the caller allows no merge and no enqueue in this landing. A PR queued at `H` is waited for, and one queued at another head is still taken out: the dequeue protects. A row that would send a merge or an enqueue, on any base, ends `refused`, `request-not-allowed`, nothing sent; the dry run ends the same, not `planned`.
@@ -707,8 +707,8 @@ The tests hold the decoder to one shared table of valid and invalid end document
 
 - `queue-not-squash`, `squash-defaults` — a PR waited for, under `--queued-bad-shape warn`, in a queue that would not make its squash commit; `squash-defaults` also where the defaults could not be read.
 - `unreadable` — the reading after a direct merge could not be taken.
-- `auto-merge-armed` — a direct merge refused on a PR auto-merge holds: it stays armed.
-- `enqueued-instead` — a direct merge the service queued instead.
+- `auto-merge-armed` — auto-merge held the PR at the first reading, and its direct merge ends `failed` or `unconfirmed` with the hold still on the last reading: it is left armed — on `unconfirmed`, if the merge was not made. None on `failed`, `not-made`: the readings that did not see the merge saw the hold gone.
+- `enqueued-instead` — a direct merge the service queued instead. For a PR auto-merge held, a queue entry it did not have: the reading tells the entry from the hold.
 
 **The twelve ends.**
 

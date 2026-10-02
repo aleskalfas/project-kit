@@ -1787,10 +1787,11 @@ class Shape:
 
 
 #: Why a landing warns (:class:`Notice`), besides :data:`QUEUE_NOT_SQUASH`,
-#: :data:`SQUASH_DEFAULTS` and :data:`NOT_READ`: a direct merge refused on a
-#: PR auto-merge still holds, which it merges on its own, unpinned, once the
-#: base's requirements are met; and a direct merge the service queued
-#: instead, whose queue's commit shape no reading judged.
+#: :data:`SQUASH_DEFAULTS` and :data:`NOT_READ`: auto-merge left armed on a
+#: PR it held, whose direct merge ends failed or unconfirmed — it merges the
+#: PR on its own, unpinned, once the base's requirements are met; and a
+#: direct merge the service queued instead, whose queue's commit shape no
+#: reading judged.
 AUTO_MERGE_ARMED = "auto-merge-armed"
 ENQUEUED_INSTEAD = "enqueued-instead"
 
@@ -1806,9 +1807,9 @@ class Notice:
     :data:`QUEUE_NOT_SQUASH` or :data:`SQUASH_DEFAULTS` for a PR it waits for
     in a queue that would not make the squash commit, :data:`NOT_READ` for a
     reading after a direct merge that could not be taken,
-    :data:`AUTO_MERGE_ARMED` for a refused direct merge of a PR auto-merge
-    holds, :data:`ENQUEUED_INSTEAD` for a direct merge the service queued —
-    and in words."""
+    :data:`AUTO_MERGE_ARMED` for auto-merge left armed on a PR whose direct
+    merge failed or is unconfirmed, :data:`ENQUEUED_INSTEAD` for a direct
+    merge the service queued — and in words."""
 
     reason_kind: str
     reason: str
@@ -2310,11 +2311,20 @@ class _Lander:
         )
 
     def merge(self) -> Landing:
+        """The direct squash merge (:meth:`merge_directly`), and the
+        auto-merge it leaves armed warned of (:meth:`left_armed`)."""
+        first = cast(Reading, self.reading)
+        landed = self.merge_directly(first)
+        armed = self.left_armed(first, landed)
+        if armed is None:
+            return landed
+        return replace(landed, warnings=(*landed.warnings, armed))
+
+    def merge_directly(self, first: Reading) -> Landing:
         """The direct squash merge, then one reading: merged, it ends; not —
-        or not read, with a warning — the wait. A merge refused on a PR
-        auto-merge holds — `gh` refuses one whose base's requirements, which
-        auto-merge waits for, are unmet — leaves auto-merge armed: warned."""
-        held = cast(Reading, self.reading).waiting_to_enter
+        or not read, with a warning — the wait. That reading finding the PR
+        queued where the `first` did not is a merge the service queued
+        instead: warned."""
         outcome = squash_merge(
             self.pr_number,
             subject=self.subject,
@@ -2323,15 +2333,6 @@ class _Lander:
             head_oid=self.head,
             admin=self.options.admin,
         )
-        if held and outcome.accepted is False and outcome.reason_kind != NOT_MADE:
-            self.warnings.append(
-                Notice(
-                    AUTO_MERGE_ARMED,
-                    f"auto-merge is still enabled on PR #{self.pr_number}: GitHub merges it on "
-                    "its own once the base's requirements are met, at whatever head it has "
-                    f"then — not pinned to {self.head[:7]}, the head that was checked",
-                )
-            )
         stopped = self.unless_made(MERGE_REQUEST, outcome)
         if stopped is not None:
             return stopped
@@ -2343,7 +2344,13 @@ class _Lander:
         self.took(after)
         if after.merged:
             return self.merged(after)
-        if after.queued and not held:
+        # A PR auto-merge held reads queued before the merge as after it, so
+        # for it only a queue entry it did not have is one the service made:
+        # the reading tells the entry (`in_queue`) from the hold
+        # (`waiting_to_enter`), and a hold that merely stays is no enqueue.
+        held = first.waiting_to_enter
+        entered = (after.in_queue and not first.in_queue) if held else after.queued
+        if entered:
             self.warnings.append(
                 Notice(
                     ENQUEUED_INSTEAD,
@@ -2352,6 +2359,37 @@ class _Lander:
                 )
             )
         return self.wait()
+
+    def left_armed(self, first: Reading, landed: Landing) -> Notice | None:
+        """The warning that auto-merge is left armed, on a PR it held at the
+        `first` reading, where the landing ends neither merged nor taken out
+        of the queue — failed, or unconfirmed — and its last reading still
+        shows the hold; None otherwise. Not on a merge not seen made: while
+        the hold shows, a merge with no usable answer reads as made
+        (:func:`_merged_or_queued`), so the readings that did not see it saw
+        the hold gone. A merge refused on such a PR — `gh` refuses one whose
+        base's requirements, which auto-merge waits for, are unmet — leaves
+        it armed; an unconfirmed one leaves it armed if it was not made."""
+        last = landed.reading
+        if not (first.waiting_to_enter and last is not None and last.waiting_to_enter):
+            return None
+        if last.merged or (landed.ended, landed.reason_kind) == (END_FAILED, NOT_MADE):
+            return None
+        n = self.pr_number
+        if landed.ended == END_FAILED:
+            armed = f"auto-merge is still enabled on PR #{n}"
+        elif landed.ended == END_UNCONFIRMED:
+            armed = (
+                f"whether the merge of PR #{n} was made is not known; if it was not, auto-merge "
+                "is still enabled on it"
+            )
+        else:
+            return None
+        return Notice(
+            AUTO_MERGE_ARMED,
+            f"{armed}: GitHub merges it on its own once the base's requirements are met, at "
+            f"whatever head it has then — not pinned to {self.head[:7]}, the head that was checked",
+        )
 
     def enqueue(self) -> Landing:
         """The enqueue, then the wait."""
