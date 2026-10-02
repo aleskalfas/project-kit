@@ -85,6 +85,10 @@ class Issue:
     # containment seam compares them (`containment.compare_parents`); None until
     # `_link_parents` has run.
     parent_resolution: containment.ParentResolution | None = None
+    # Whether the native parent the resolution holds is the issue's native
+    # parent as the tracker has it — one seen in a native child set, or none on
+    # an instance without sub-issues — rather than "none seen" (`_link_parents`).
+    native_parent_known: bool = False
     # What the render says of a child listed under this issue beyond its
     # substrate: a native parent elsewhere, a first line not in an allowed form.
     child_marks: dict[int, tuple[str, ...]] = field(default_factory=dict)
@@ -395,15 +399,23 @@ def _link_parents(
     parent; a first line in a form the issue's type does not allow is marked
     where the child is listed under the parent it names.
 
+    An issue whose native parent no resolved child set holds has none *seen*,
+    which is not the same as none: the parent may be in another repository,
+    outside the fetched issues (a closed parent under ``--state open``, one past
+    ``--limit``), behind a native panel that could not be read, or an issue whose
+    sub-issues were not read (below). So each issue's ``native_parent_known``
+    says whether its native parent is known — seen in a native child set, or
+    none on an instance the seam found without sub-issues — and is False
+    wherever a missing one only means none was seen.
+
     Cost bound: the native read is issued only for *candidate parents* — issues
-    that are structural containers (epic/feature/umbrella/task) OR are named as a
-    parent by some issue's textual ref — not for every corpus issue. A leaf that
-    is neither cannot hold children under the methodology, so skipping its native
-    read cannot drop a child. (The write seam always writes BOTH substrates, so a
-    native sub-issue also carries a textual ref and thus marks its parent a
-    candidate; a hypothetical native-only child under an otherwise-leaf parent is
-    the sole uncovered edge — accepted to keep the walk from issuing one native
-    call per corpus issue.)
+    of a structural type (epic/feature/umbrella/task) OR named as a parent by
+    some issue's first line — not for every corpus issue. An issue that is
+    neither, an untyped one no first line names, has its native sub-issues
+    unread, so a native child of it is not seen: one linked in the tracker's own
+    UI, or one whose first line names a milestone (as `create-issue --parent N
+    --milestone M` files it) or nothing. Accepted to keep the walk from issuing
+    one native call per corpus issue; such a child's native parent is not known.
     """
     corpus = {num: issue.body for num, issue in issues.items()}
     incomplete_parents: list[int] = []
@@ -415,6 +427,7 @@ def _link_parents(
     }
     container_types = {"epic", "feature", "umbrella", "task"}
     native_parents: dict[int, int] = {}
+    native_supported: list[bool] = []
     for num, issue in issues.items():
         is_candidate = issue.structural_type in container_types or num in textual_parents
         if not is_candidate:
@@ -422,6 +435,7 @@ def _link_parents(
         resolution = containment.resolve_children(
             config, parent_number=num, corpus=corpus, corpus_complete=corpus_complete
         )
+        native_supported.append(resolution.native_supported)
         # A per-parent verdict can be incomplete even when the corpus is whole:
         # an UNREADABLE native panel for THIS parent means children may exist
         # unseen. Uncollected, the render would look complete while one parent's
@@ -436,6 +450,9 @@ def _link_parents(
             issue.child_substrate[child.number] = child.substrate.value
             if child.substrate is containment.ChildSubstrate.NATIVE:
                 native_parents[child.number] = num
+    # No native substrate at all: every native read found the endpoint absent,
+    # so an issue with no native parent seen has none.
+    no_native_substrate = bool(native_supported) and not any(native_supported)
     for number, issue in issues.items():
         native = native_parents.get(number)
         resolution = containment.compare_parents(
@@ -444,6 +461,7 @@ def _link_parents(
             containment.NativeParent(native) if native is not None else None,
         )
         issue.parent_resolution = resolution
+        issue.native_parent_known = native is not None or no_native_substrate
         parent = resolution.parent
         if parent is not None and number in _children_of(issues, parent.number):
             issue.parent_number = parent.number
@@ -602,17 +620,29 @@ def _issue_to_dict(issue: Issue) -> dict:
         # How the issue's native parent and its first line stand: `disagree`
         # marks two parents, `non-conforming` a first line in a form the issue's
         # type does not allow.
-        "parent_resolution": _resolution_to_dict(issue.parent_resolution),
+        "parent_resolution": _resolution_to_dict(
+            issue.parent_resolution, native_known=issue.native_parent_known
+        ),
     }
 
 
-def _resolution_to_dict(resolution: containment.ParentResolution | None) -> dict | None:
+def _resolution_to_dict(
+    resolution: containment.ParentResolution | None, *, native_known: bool
+) -> dict | None:
+    """How an issue's two records of its parent stand, for the JSON render.
+
+    ``native_parent_known`` tells a ``native_parent`` of ``null`` that means
+    none from one that means none was seen (`_link_parents`): where it is false,
+    the native parent is not known, and ``kind`` — read from what was seen —
+    says nothing of it. ``first_line_names_itself`` marks a first line naming
+    the issue itself, which names no parent."""
     if resolution is None:
         return None
     native = resolution.native
     return {
         "kind": resolution.kind.value,
         "native_parent": native.number if native is not None else None,
+        "native_parent_known": native_known,
         "first_line_parent": resolution.named,
         "first_line_form": resolution.line.form.value,
         "first_line_names_itself": resolution.names_itself,

@@ -467,10 +467,42 @@ def test_show_tree_says_how_the_records_stand_in_json(st, monkeypatch) -> None:
     assert st._issue_to_dict(issue)["parent_resolution"] == {
         "kind": "disagree",
         "native_parent": 3,
+        "native_parent_known": True,
         "first_line_parent": 2,
         "first_line_form": "conforming",
         "first_line_names_itself": False,
     }
+
+
+def test_show_tree_tells_a_native_parent_not_seen_from_none(st, monkeypatch) -> None:
+    """show-tree sees a native parent only in the child sets it resolves. One in
+    another repository is in none of them, so `native_parent: null` there is
+    "not seen" — `native_parent_known` says so — and never reads as "none"."""
+    row = ROWS["native parent in another repository"]
+    world = _world(row)
+    monkeypatch.setattr(subprocess, "run", world.run)
+    resolution = st._issue_to_dict(_tree(st, world)[CHILD])["parent_resolution"]
+    assert resolution["native_parent"] is None
+    assert resolution["native_parent_known"] is False
+    assert resolution["kind"] == "textual-only"
+
+
+def test_show_tree_knows_there_is_no_native_parent_without_sub_issues(st, monkeypatch) -> None:
+    """On an instance the seam establishes has no sub-issues (a 410 on every
+    native read), no issue has a native parent: `null` then means none."""
+    world = _world(ROWS["conforming line"])
+
+    def without_sub_issues(argv, *args, **kwargs):
+        if str(argv[-1]).endswith("/sub_issues"):
+            return subprocess.CompletedProcess(argv, 1, "", "gh: Gone (HTTP 410)")
+        return world.run(argv, *args, **kwargs)
+
+    monkeypatch.setattr(subprocess, "run", without_sub_issues)
+    issues = _tree(st, world)
+    resolution = st._issue_to_dict(issues[CHILD])["parent_resolution"]
+    assert resolution["native_parent"] is None
+    assert resolution["native_parent_known"] is True
+    assert issues[CHILD].parent_number == FEATURE
 
 
 # --- what each reader costs -------------------------------------------------
