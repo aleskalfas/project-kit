@@ -83,17 +83,26 @@ def _bootstrap(cap: Path, *, repo: str | None = "github.com/acme/widget") -> Pat
 
 
 def _run(
-    script: str, args: list[str], *, cap: Path, pass_root: bool = True
+    script: str,
+    args: list[str],
+    *,
+    cap: Path,
+    pass_root: bool = True,
+    path_prefix: Path | None = None,
 ) -> subprocess.CompletedProcess:
     """Launch a pm script directly, the way an agent or a CI job does.
 
     `pass_root=False` is for the engine-called predicates, which expose no
     `--capability-root` flag: the engine runs them with the repo root as cwd and
     they discover the capability by walking up from there — which is exactly the
-    discovery path the gate uses when no root is handed to it.
+    discovery path the gate uses when no root is handed to it. `path_prefix` puts
+    a directory first on PATH — a stand-in `gh` — so what the tracker answers does
+    not depend on the machine running the test.
     """
     repo_root = cap.parent.parent.parent
     env = dict(os.environ)
+    if path_prefix is not None:
+        env["PATH"] = f"{path_prefix}{os.pathsep}{env.get('PATH', '')}"
     # Mark autonomy so nothing waits on a prompt, and anchor the session to this
     # repo so the (unrelated) foreign-repo guard stays silent.
     env["PM_INVOKER_LOGIN"] = "ci-bot"
@@ -264,6 +273,33 @@ def test_bootstrapped_project_is_unaffected(tmp_path: Path) -> None:
     assert REFUSAL_MARKER not in proc.stderr, proc.stderr
     assert proc.returncode == 0, proc.stderr
     assert "[dry-run]" in proc.stdout
+
+
+def test_a_parent_no_tracker_answers_for_refuses_the_dry_run_as_a_tracker_failure(
+    tmp_path: Path,
+) -> None:
+    """Past the gate, a Task's `--parent 1` is read to be held to the containment
+    graph (#1313) — `--dry-run` included. With no tracker reachable (a `gh` that
+    cannot connect) nothing can be checked: the filing is refused with the
+    gh-failure exit code, 3, before any plan is composed, so nothing is written."""
+    cap = _project(tmp_path)
+    _bootstrap(cap)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    gh = bin_dir / "gh"
+    gh.write_text("#!/bin/sh\necho 'error connecting to api.github.com' >&2\nexit 1\n")
+    gh.chmod(0o755)
+    proc = _run(
+        "create-issue.py",
+        ["--type", "task", "--title", "x", "--workstream", "ws", "--parent", "1", "--dry-run"],
+        cap=cap,
+        path_prefix=bin_dir,
+    )
+    assert proc.returncode == 3, proc.stdout + proc.stderr
+    assert "error: #1 could not be read" in proc.stderr
+    assert "Nothing was filed." in proc.stderr
+    assert "about to create issue" not in proc.stdout
+    assert "[dry-run]" not in proc.stdout
 
 
 def test_a_stamped_but_shape_invalid_config_is_refused(tmp_path: Path) -> None:
