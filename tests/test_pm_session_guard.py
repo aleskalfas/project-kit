@@ -458,18 +458,38 @@ def test_enforce_interactive_prompt_no_refuses(guard, tmp_path, monkeypatch):
 
 
 def test_only_a_flag_or_a_yes_is_a_confirmation_to_pass_on(guard):
-    """A verb passes --allow-foreign-repo on to the backbone exactly when its
-    guard passed by the operator's confirmation; a result that does not say
-    how it passed (a bare True from a stand-in) is none."""
+    """A verb passes --allow-foreign-repo on exactly when the operator gave
+    the flag on its command line — however its own comparison passed — or
+    answered yes at its prompt; a result that does not say (a bare True from a
+    stand-in) is none."""
     assert [guard.confirmed(guard.Passage(True, how)) for how in ("flag", "terminal")] == [
         True,
         True,
     ]
     for how in ("same-repo", "undetermined"):
         assert not guard.confirmed(guard.Passage(True, how))
+        assert guard.confirmed(guard.Passage(True, how, flag=True))
     assert not guard.confirmed(guard.Passage(False))
+    assert not guard.confirmed(guard.Passage(False, None, flag=True))
     assert not guard.confirmed(True) and guard.how_passed(True) == ""
     assert guard.how_passed(guard.Passage(True, "terminal")) == "terminal"
+
+
+@pytest.mark.parametrize("anchored", [True, False], ids=["same-repo", "no-anchor"])
+def test_enforce_keeps_the_operators_flag_whatever_the_comparison_found(guard, tmp_path, anchored):
+    """The flag the operator gave is a confirmation to pass on even where this
+    comparison found nothing to confirm, so a disagreement with the
+    backbone's comparison yields to it."""
+    repo = tmp_path / "A"
+    _git_init(repo)
+    passage = guard.enforce(
+        anchor_dir=str(repo) if anchored else None,
+        target_cwd=str(repo),
+        override=True,
+        interactive=False,
+    )
+    assert passage and passage.how in (guard.PASSED_SAME_REPO, guard.PASSED_UNDETERMINED)
+    assert passage.confirmed
 
 
 def test_autonomy_inferred_from_ci_identity(guard, monkeypatch):

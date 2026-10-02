@@ -17,7 +17,7 @@ hosting service and the clone (`tests.hosting_fake`); project-management's
 only what the callers' own tests stub: the membership and bootstrap gates,
 the capability's configuration, the approval gate (the reviewers), the moves
 `done-work` makes after a merge and merge-pr's after-merge hooks (both
-recorded), and the backbone's naming of the default branch — and, in the row
+recorded), and the backbone's naming of the default branch — and, in the rows
 where the two disagree, project-management's copy of the cross-repository
 guard's comparison. The backbone's guard runs as it is, recorded.
 
@@ -114,10 +114,10 @@ class Cell:
     no such branch) or `none` (no clean-up ran).
     `asked` — the questions a terminal was asked.
     `guard` — the backbone's cross-repository guard (#1254), wherever it did
-    not find the session's own repository: how it passed each change it
-    cleared (`undetermined`, `flag`, `terminal`) or `refused`; empty where it
-    found the session's own repository, and where it did not run, as before
-    #1254.
+    not find the session's own repository: how it cleared each change, as its
+    documents' `cleared` says it (`undetermined`, `flag`, `terminal`), or
+    `refused` where `cleared` is null; empty where it cleared as `same-repo`,
+    and where it did not run, as before #1254.
     """
 
     outcome: str
@@ -482,6 +482,11 @@ def _comparisons_disagree(world: World) -> None:
     world.pm_reads_same_repository = True
 
 
+def _comparisons_disagree_flagged(world: World) -> None:
+    _comparisons_disagree(world)
+    world.options = ("allow-foreign-repo",)
+
+
 def _comparison_faults(world: World) -> None:
     world.clone.comparison_fault = True
 
@@ -552,8 +557,16 @@ _YES_PASSED_ON = (
     "by the flag"
 )
 _FAILS_CLOSED = (
-    "the backbone's guard refuses the merge the verb's let through: a disagreement fails "
-    "closed, nothing is asked of GitHub, and the verb names both verdicts"
+    "the backbone's guard refuses the merge the verb's let through: a disagreement with no "
+    "confirmation fails closed, nothing is asked of GitHub, and the verb names both verdicts"
+)
+_FLAG_OVERRIDES = (
+    "the operator's flag is passed on whatever the verb's own comparison found, so the "
+    "backbone's guard passes by it: a disagreement yields to the operator's confirmation"
+)
+_SIBLINGS_STUBBED = (
+    "the moves and closes after the merge are stubbed here, so their own guards do not run; "
+    "that they are handed the confirmation is test_pm_done_work's"
 )
 _FAULT = "both guards warn and go on: a git fault is no refusal; the backbone's passes undetermined"
 _NO_FIRE = (
@@ -1213,7 +1226,10 @@ SCENARIOS: tuple[Scenario, ...] = (
         ),
         after={
             DONE_WORK: merged(
-                "merged 0", "read×2 merge read delete-ref", guard="flag", note=_FLAG_PASSED_ON
+                "merged 0",
+                "read×2 merge read delete-ref",
+                guard="flag",
+                note=f"{_FLAG_PASSED_ON}; {_SIBLINGS_STUBBED}",
             ),
             MERGE_PR: merged(
                 "0 record=ran", "read×2 merge read delete-ref", guard="flag", note=_FLAG_PASSED_ON
@@ -1228,7 +1244,8 @@ SCENARIOS: tuple[Scenario, ...] = (
                 "0 merge: merged",
                 "read×2 merge read delete-ref",
                 guard="flag",
-                note="its flag reaches done-work, which passes it on to the backbone's guard",
+                note="its flag reaches done-work, which passes it on to the backbone's guard; "
+                + _SIBLINGS_STUBBED,
             ),
         },
     ),
@@ -1253,7 +1270,7 @@ SCENARIOS: tuple[Scenario, ...] = (
                 "read×2 merge read delete-ref",
                 asked=1,
                 guard="flag",
-                note=_YES_PASSED_ON,
+                note=f"{_YES_PASSED_ON}; {_SIBLINGS_STUBBED}",
             ),
             MERGE_PR: merged(
                 "0 record=ran",
@@ -1275,7 +1292,7 @@ SCENARIOS: tuple[Scenario, ...] = (
                 asked=1,
                 guard="flag",
                 note="asked once: land-work's yes is passed on to done-work, whose guard and "
-                "the backbone's pass by it",
+                f"the backbone's pass by it; {_SIBLINGS_STUBBED}",
             ),
         },
     ),
@@ -1308,6 +1325,34 @@ SCENARIOS: tuple[Scenario, ...] = (
             DONE_WORK: stopped("refused 1", "read×2", guard="refused", note=_FAILS_CLOSED),
             MERGE_PR: stopped("1", "read×2", guard="refused", note=_FAILS_CLOSED),
             LAND_WORK: stopped("1 merge: refused", "read×2", guard="refused", note=_FAILS_CLOSED),
+        },
+    ),
+    Scenario(
+        "the-two-comparisons-disagree-with-the-flag",
+        "As the row above, and the operator gives --allow-foreign-repo.",
+        _comparisons_disagree_flagged,
+        Row(
+            merged("merged 0", "read×2 merge read delete-ref", note=_UNGUARDED_REQUEST),
+            merged("0 record=ran", "read×2 merge read delete-ref", note=_UNGUARDED_REQUEST),
+            NotToday("holds one comparison: its guard is the backbone's alone"),
+            merged("0 merge: merged", "read×2 merge read delete-ref", note=_UNGUARDED_REQUEST),
+        ),
+        after={
+            DONE_WORK: merged(
+                "merged 0",
+                "read×2 merge read delete-ref",
+                guard="flag",
+                note=f"{_FLAG_OVERRIDES}; {_SIBLINGS_STUBBED}",
+            ),
+            MERGE_PR: merged(
+                "0 record=ran", "read×2 merge read delete-ref", guard="flag", note=_FLAG_OVERRIDES
+            ),
+            LAND_WORK: merged(
+                "0 merge: merged",
+                "read×2 merge read delete-ref",
+                guard="flag",
+                note=f"{_FLAG_OVERRIDES}; {_SIBLINGS_STUBBED}",
+            ),
         },
     ),
     Scenario(
@@ -1477,7 +1522,7 @@ def _stub_done_work(monkeypatch: pytest.MonkeyPatch, dw: ModuleType, run: _Run) 
     def approved(pr_number: int, pr: dict[str, Any], reason: str | None, config: Any) -> Any:
         return dw._GateResult(passed=True, passed_via="approved (stubbed reviewer)")
 
-    def move(issue_number: int, target: str, root: Path | None) -> int:
+    def move(issue_number: int, target: str, root: Path | None, **kwargs: Any) -> int:
         run.moves.append(f"move #{issue_number} to {target}")
         return 0
 

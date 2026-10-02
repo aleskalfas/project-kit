@@ -445,21 +445,74 @@ def test_main_hands_pr_title_to_the_shared_merge(dw, monkeypatch) -> None:
 
 
 @pytest.mark.parametrize(
-    ("passed", "passed_on"),
-    [("flag", True), ("terminal", True), ("same-repo", False), ("undetermined", False)],
+    ("passed", "flag", "passed_on"),
+    [
+        ("flag", True, True),
+        ("terminal", False, True),
+        ("same-repo", True, True),
+        ("same-repo", False, False),
+        ("undetermined", False, False),
+    ],
 )
 def test_the_merge_carries_the_confirmation_the_guard_got_and_no_other(
-    dw, monkeypatch, passed, passed_on
+    dw, monkeypatch, passed, flag, passed_on
 ) -> None:
     """The backbone runs its own cross-repository guard on the merge, with no
-    terminal: done-work tells it the operator confirmed exactly when its own
-    guard passed by the flag or a yes at the prompt (#1254)."""
+    terminal: done-work tells it the operator confirmed exactly when they did
+    at done-work — the flag on its command line, whatever its own comparison
+    found, or a yes at its prompt (#1254)."""
     calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
-    passage = dw.session_guard.Passage(True, passed)
+    passage = dw.session_guard.Passage(True, passed, flag=flag)
     monkeypatch.setattr(dw.session_guard, "enforce", lambda **kw: passage)
     rc = _run_main(dw, monkeypatch, ["42", "--yes"])
     assert rc == 0
     assert calls["merge_allow_foreign_repo"] is passed_on
+
+
+@pytest.mark.parametrize(
+    ("how", "flag", "confirmed"),
+    [
+        ("flag", True, True),
+        ("terminal", False, True),
+        ("same-repo", True, True),
+        ("same-repo", False, False),
+        ("undetermined", False, False),
+    ],
+    ids=["flag", "yes-at-the-prompt", "flag-same-repo", "same-repo", "undetermined"],
+)
+def test_the_verbs_it_starts_carry_the_confirmation_and_no_other(
+    dw, monkeypatch, how, flag, confirmed
+) -> None:
+    """A confirmed landing is whole: the move-issue and close-issue runs that
+    follow the merge are handed --allow-foreign-repo when the operator
+    confirmed at done-work — the flag, or a yes at its prompt — so their own
+    guards neither refuse nor ask again; and never otherwise (#1254)."""
+    real_move, real_close = dw._invoke_move_issue, dw._invoke_close_issue
+    _wire_main_seams(
+        dw,
+        monkeypatch,
+        rollup=_GREEN_ROLLUP,
+        pr_body=_TWO_ISSUE_PR_BODY,
+        issues={42: _open_issue(_TICKED_BODY), 43: _open_issue(_TICKED_BODY)},
+    )
+    monkeypatch.setattr(dw, "_invoke_move_issue", real_move)
+    monkeypatch.setattr(dw, "_invoke_close_issue", real_close)
+    passage = dw.session_guard.Passage(True, how, flag=flag)
+    monkeypatch.setattr(dw.session_guard, "enforce", lambda **kw: passage)
+    started: list[list[str]] = []
+
+    def run_sibling(cmd: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+        started.append(list(cmd))
+        return subprocess.CompletedProcess(cmd, 0)
+
+    monkeypatch.setattr(dw.subprocess, "run", run_sibling)
+    assert _run_main(dw, monkeypatch, ["42", "--yes"]) == 0
+    assert sorted(Path(argv[1]).name for argv in started) == [
+        "close-issue.py",
+        "close-issue.py",
+        "move-issue.py",
+    ]
+    assert [("--allow-foreign-repo" in argv) for argv in started] == [confirmed] * len(started)
 
 
 def test_the_merge_is_pinned_to_the_head_the_agent_gate_checked(dw, monkeypatch) -> None:
@@ -658,7 +711,7 @@ def test_a_dry_run_and_a_declined_prompt_both_exit_0_and_are_told_apart(dw, monk
 def test_a_step_after_the_merge_failing_is_owed_not_refused(dw, monkeypatch) -> None:
     """The merge stands; what failed after it is owed to a re-run."""
     calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
-    monkeypatch.setattr(dw, "_invoke_move_issue", lambda *a: 1)
+    monkeypatch.setattr(dw, "_invoke_move_issue", lambda *a, **k: 1)
     run = dw.run(["42", "--yes"])
     assert (run.kind, run.exit_code) == (dw.FOLLOW_UP_OWED, 1)
     assert run.reason.startswith("[warn] PR merged but move-issue exited 1")
@@ -974,12 +1027,12 @@ def _wire_main_seams(
         calls["order"].append(("merged", None))
         return True
 
-    def _stub_move(issue_number, target, cap_root_arg):
+    def _stub_move(issue_number, target, cap_root_arg, *, confirmed):
         calls["moved"] = True
         calls["order"].append(("moved", None))
         return 0
 
-    def _stub_close(issue_number, pr_number, cap_root_arg, *, skip_checkbox_gate):
+    def _stub_close(issue_number, pr_number, cap_root_arg, *, skip_checkbox_gate, confirmed):
         calls["closed"].append((issue_number, pr_number, skip_checkbox_gate))
         calls["order"].append(("closed", issue_number))
         return 0
@@ -1681,7 +1734,7 @@ def test_cleanup_still_runs_when_move_issue_fails(dw, monkeypatch, capsys):
     branch cleanup — the two are independent after the merge."""
     calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
 
-    def failing_move(issue_number, target, cap_root_arg):
+    def failing_move(issue_number, target, cap_root_arg, *, confirmed):
         calls["order"].append(("moved", None))
         return 1
 
@@ -1845,7 +1898,7 @@ def test_a_failed_close_warns_with_the_rerun_and_the_rest_still_run(
         issues={42: _open_issue(_TICKED_BODY), 43: _open_issue(_TICKED_BODY)},
     )
 
-    def flaky_close(issue_number, pr_number, cap_root_arg, *, skip_checkbox_gate):
+    def flaky_close(issue_number, pr_number, cap_root_arg, *, skip_checkbox_gate, confirmed):
         calls["order"].append(("closed", issue_number))
         return 3 if issue_number == 42 else 0
 
@@ -1899,8 +1952,10 @@ def test_the_close_is_close_issue_pr_merge_through_the_merged_pr(dw, monkeypatch
         return subprocess.CompletedProcess(cmd, 0)
 
     monkeypatch.setattr(dw.subprocess, "run", fake_run)
-    assert dw._invoke_close_issue(43, 496, Path("/cap"), skip_checkbox_gate=True) == 0
-    assert dw._invoke_close_issue(44, 496, None, skip_checkbox_gate=False) == 0
+    assert (
+        dw._invoke_close_issue(43, 496, Path("/cap"), skip_checkbox_gate=True, confirmed=False) == 0
+    )
+    assert dw._invoke_close_issue(44, 496, None, skip_checkbox_gate=False, confirmed=False) == 0
     assert seen[0][0] == sys.executable
     assert Path(seen[0][1]).name == "close-issue.py"
     assert seen[0][2:] == [
@@ -2100,7 +2155,9 @@ def _wire_lead_in(
 
     monkeypatch.setattr(dw, "resolve_capability_root", real_capability_root)
 
-    def recording_move(issue_number: int, target: str, cap_root_arg: Path | None) -> int:
+    def recording_move(
+        issue_number: int, target: str, cap_root_arg: Path | None, *, confirmed: bool
+    ) -> int:
         calls["order"].append(("moved", target))
         return move_rc if target == "review" else 0
 
@@ -3254,7 +3311,7 @@ def test_a_later_run_moves_an_issue_still_in_progress_through_review(
     run = _wire_second_run(dw, tmp_path, monkeypatch, issues={42: _open_issue("")})
     targets: list[str] = []
 
-    def move(issue_number: int, target: str, cap_root_arg: Any) -> int:
+    def move(issue_number: int, target: str, cap_root_arg: Any, *, confirmed: bool) -> int:
         targets.append(target)
         run.calls["order"].append(("moved", target))
         return 0

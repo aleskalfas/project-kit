@@ -415,6 +415,7 @@ def test_a_done_work_landing_that_closes_two_issues_journals_each_once(
             cross=False,
             merged_head="0" * 40,
             config={},
+            confirmed=False,
         )
         return int(run.exit_code)
 

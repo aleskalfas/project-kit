@@ -244,8 +244,10 @@ def main(argv: list[str] | None = None) -> int:
         return EXIT_UNREADABLE
     # A confirmation given here — the flag, or a yes at the terminal — is
     # passed on to the verbs it composes, so their guards pass by it and the
-    # operator is asked once; and only then (`_passed_through`).
-    args.allow_foreign_repo = session_guard.confirmed(guard)
+    # operator is asked once; and only then (`_passed_through`). A flag the
+    # operator gave stays given, whatever this comparison found.
+    if session_guard.confirmed(guard):
+        args.allow_foreign_repo = True
     try:
         return _land(args, config)
     except _Stop as stop:

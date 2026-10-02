@@ -39,25 +39,27 @@ follows the merge.
 
 The backbone runs the cross-repository guard before each request that changes
 the service (ADR-061 point 6), with no terminal to ask: the verb's own guard
-ran first. A request carries `--allow-foreign-repo` exactly when the verb's
-guard passed by the operator's confirmation (:attr:`MergeRequest.guard_passed`),
-so the operator is asked once and nothing is confirmed that they did not
-confirm. Should the backbone still refuse — its comparison and the verb's
-disagree — the landing is :data:`REFUSED`, naming both verdicts, and nothing
-was requested.
+ran first. A request carries `--allow-foreign-repo` exactly when the operator
+confirmed at the verb — gave the flag on its command line, or answered yes at
+its prompt (:attr:`MergeRequest.allow_foreign_repo`) — so the operator is
+asked once and nothing is confirmed that they did not confirm. Should the
+backbone still refuse — its comparison and the verb's disagree, and the
+operator confirmed nothing — the landing is :data:`REFUSED`, naming both
+verdicts, and nothing was requested.
 """
 
 from __future__ import annotations
 
 import argparse
 import math
+import os
 import subprocess
 import sys
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
-from _lib import default_branch, merge_queue, session_guard
+from _lib import default_branch, merge_queue
 from _lib.gh import gh_run
 
 # How a landing ended (:class:`Landing`): the four ends of a wait for the
@@ -99,12 +101,10 @@ class MergeRequest:
     #: How the verb's own cross-repository guard let it proceed
     #: (`session_guard.how_passed`); "" when it does not say.
     guard_passed: str = ""
-
-    @property
-    def allow_foreign_repo(self) -> bool:
-        """The backbone is told the operator confirmed a change in another
-        repository exactly when the verb's guard passed by that confirmation."""
-        return self.guard_passed in session_guard.CONFIRMED
+    #: The operator confirmed a change in another repository at the verb — the
+    #: flag on its command line, or a yes at its prompt
+    #: (`session_guard.confirmed`): the backbone is told so, and only then.
+    allow_foreign_repo: bool = False
 
 
 class GuardRefused(Exception):
@@ -347,7 +347,9 @@ def dequeue(pr_number: int, config: dict[str, Any], *, allow_foreign_repo: bool 
 
     Returns True once a reading shows the PR neither queued nor merged; False,
     with the reason printed, otherwise — the backbone's guard refusing it
-    among them.
+    among them, when the command that takes the PR out is printed with the
+    flag that confirms it, since running the verb again does not repeat the
+    dequeue.
     """
     args = _confirming(["dequeue", str(pr_number)], allow_foreign_repo)
     try:
@@ -355,6 +357,16 @@ def dequeue(pr_number: int, config: dict[str, Any], *, allow_foreign_repo: bool 
     except merge_queue.Unreadable as exc:
         print(
             f"error: could not take PR #{pr_number} out of the merge queue: {exc}", file=sys.stderr
+        )
+        return False
+    if outcome.reason_kind == merge_queue.FOREIGN_REPOSITORY:
+        print(
+            f"error: the backbone's cross-repository guard refused to take PR #{pr_number} out "
+            f"of the merge queue, and nothing was asked of GitHub: "
+            f"{_backbones_comparison(outcome)}. To take it out there, run "
+            f"`pkit pull-request dequeue {pr_number} --allow-foreign-repo` from "
+            f"{os.getcwd()}, or use the PR's merge box.",
+            file=sys.stderr,
         )
         return False
     if not outcome.accepted:
@@ -524,7 +536,7 @@ def _request(args: list[str], config: dict[str, Any]) -> bool | None:
         return None
     if outcome.accepted:
         return True
-    if outcome.refused_by == merge_queue.FOREIGN_REPOSITORY:
+    if outcome.reason_kind == merge_queue.FOREIGN_REPOSITORY:
         raise GuardRefused(outcome)
     if outcome.exit_code is None:
         print(f"error: {outcome.reason}.", file=sys.stderr)
@@ -542,23 +554,31 @@ def _confirming(args: list[str], allow_foreign_repo: bool) -> list[str]:
     return [*args, "--allow-foreign-repo"] if allow_foreign_repo else args
 
 
-def _guard_refusal(request: MergeRequest, refused: GuardRefused, asked: str) -> str:
-    """Why the landing stopped when the backbone's cross-repository guard
-    refused a request this verb's own guard had let through: the two
-    comparisons disagree. Names both verdicts; nothing was requested."""
-    guard: Mapping[str, Any] = refused.outcome.guard or {}
-    theirs = str(guard.get("verdict") or "another repository")
+def _backbones_comparison(outcome: merge_queue.Outcome) -> str:
+    """What the backbone's guard compared, as its document states it: its
+    verdict, and the session's anchor and the target where it names them."""
+    guard: Mapping[str, Any] = outcome.guard or {}
+    verdict = str(guard.get("verdict") or "another repository")
     anchor, target = guard.get("anchor"), guard.get("target")
     where = f" (the session's anchor {anchor}, the target {target})" if anchor and target else ""
+    return f"its comparison reads {verdict}{where}"
+
+
+def _guard_refusal(request: MergeRequest, refused: GuardRefused, asked: str) -> str:
+    """Why the landing stopped when the backbone's cross-repository guard
+    refused a request this verb's own guard had let through with no
+    confirmation from the operator: the two comparisons disagree. Names both
+    verdicts; nothing was requested."""
     ours = request.guard_passed or "a pass it did not report"
     return (
         f"[refused] the backbone's cross-repository guard refused the {asked} of PR "
-        f"#{request.pr_number}: its comparison reads {theirs}{where}, where this verb's own "
-        f"guard passed it as {ours}. The two comparisons disagree, and a disagreement "
-        "refuses: nothing was asked of GitHub.\n"
-        "          → re-run it; if the two still disagree, run it from a session rooted in "
-        "the target repository, and report the disagreement — the two comparisons are "
-        "held to answer alike."
+        f"#{request.pr_number}: {_backbones_comparison(refused.outcome)}, where this verb's "
+        f"own guard passed it as {ours}. The two comparisons disagree, and with no "
+        "confirmation a disagreement refuses: nothing was asked of GitHub.\n"
+        "          → if the change is meant for that repository, run the verb again with "
+        "--allow-foreign-repo, which it passes on; otherwise run it from a session rooted "
+        "in the target repository. Either way, report the disagreement — the two "
+        "comparisons are held to answer alike."
     )
 
 

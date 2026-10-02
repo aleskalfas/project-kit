@@ -166,8 +166,8 @@ class Wait:
     reading: Reading
 
 
-#: What a request's document names when the backbone's cross-repository guard
-#: refused it, and made no request (`refused_by`).
+#: A request's document's `reason_kind` when the backbone's cross-repository
+#: guard refused it, and made no request.
 FOREIGN_REPOSITORY = "foreign-repository"
 
 
@@ -184,9 +184,11 @@ class Outcome:
     #: :data:`FOREIGN_REPOSITORY` when the backbone's cross-repository guard
     #: refused the request, which was then not made; "" otherwise — and from a
     #: backbone whose document does not say.
-    refused_by: str = ""
-    #: The backbone's guard as its document states it — `verdict`, `passed`,
-    #: `undetermined_kind`, `anchor`, `target` — or None when it does not.
+    reason_kind: str = ""
+    #: The backbone's guard as its document states it — `verdict` (the
+    #: comparison alone), `undetermined_kind`, `anchor`, `target`, `cleared`
+    #: (how it let the request through; null when it refused) — or None when
+    #: it does not.
     guard: Mapping[str, Any] | None = None
 
 
@@ -267,8 +269,8 @@ def request(args: list[str], config: dict[str, Any]) -> Outcome:
     request may then have been made, or not.
 
     The backbone runs the cross-repository guard before the request; a
-    request it refused is not accepted, with `refused_by`
-    :data:`FOREIGN_REPOSITORY` and the guard's verdict."""
+    request it refused is not accepted, with `reason_kind`
+    :data:`FOREIGN_REPOSITORY` and what the guard compared."""
     document = _first(args, config)
     accepted = document.get("accepted")
     if not isinstance(accepted, bool):
@@ -282,7 +284,7 @@ def request(args: list[str], config: dict[str, Any]) -> Outcome:
         accepted=accepted,
         exit_code=exit_code if isinstance(exit_code, int) else None,
         reason=str(document.get("reason") or ""),
-        refused_by=_text(document.get("refused_by")),
+        reason_kind=_text(document.get("reason_kind")),
         guard=guard if isinstance(guard, Mapping) else None,
     )
 

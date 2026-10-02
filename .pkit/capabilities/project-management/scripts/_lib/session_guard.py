@@ -44,10 +44,12 @@ Compute the check ONCE here ([COR-007]); the mutating scripts call
 The backbone holds the same comparison (`project_kit.session_guard`), and its
 commands that change the hosting service — `pkit pull-request merge`,
 `enqueue`, `dequeue` — run it themselves ([ADR-061] point 6). A verb that calls
-them passes `--allow-foreign-repo` on exactly when its own guard passed by
-confirmation (:attr:`Passage.confirmed`), so nobody is asked twice and nothing
-is confirmed that the operator did not confirm; when the two comparisons
-disagree, the backbone refuses. This copy of the comparison stays until the
+them, or starts another verb after its own guard has run, passes
+`--allow-foreign-repo` on when the operator gave it on the verb's command line
+or answered yes at the verb's prompt (:attr:`Passage.confirmed`), and never
+otherwise: nobody is asked twice, nothing is confirmed that the operator did
+not confirm, and when the two comparisons disagree with no confirmation, the
+backbone refuses. This copy of the comparison stays until the
 capability reads the backbone's by command (#1220); a test holds the two to one
 table of cases (`tests/test_session_guard_parity.py`).
 """
@@ -86,7 +88,8 @@ PASSED_SAME_REPO = "same-repo"  # the session's own repo.
 PASSED_UNDETERMINED = "undetermined"  # nothing to compare (no anchor, non-git) or a fault.
 PASSED_FLAG = "flag"  # diverged, confirmed by --allow-foreign-repo.
 PASSED_TERMINAL = "terminal"  # diverged, confirmed at the prompt.
-#: The passes that are the operator's confirmation of a cross-repo mutation.
+#: The passes that are the operator's confirmation of a cross-repo mutation;
+#: the flag given with another pass is one too (:attr:`Passage.flag`).
 CONFIRMED = frozenset({PASSED_FLAG, PASSED_TERMINAL})
 
 
@@ -142,16 +145,22 @@ class Passage:
     how: str | None = None
     #: The comparison it rests on; None when the guard could not evaluate.
     outcome: GuardOutcome | None = None
+    #: The operator gave ``--allow-foreign-repo`` on the verb's command line,
+    #: whatever this comparison found.
+    flag: bool = False
 
     def __bool__(self) -> bool:
         return self.proceed
 
     @property
     def confirmed(self) -> bool:
-        """The operator confirmed a cross-repo mutation: by the flag, or at
-        the prompt. A verb passes ``--allow-foreign-repo`` on to the backbone
-        exactly then."""
-        return self.how in CONFIRMED
+        """The operator confirmed a cross-repo mutation: gave the flag on the
+        command line, or answered yes at the prompt. A verb passes
+        ``--allow-foreign-repo`` on — to the backbone, and to the verbs it
+        starts — exactly then, so a disagreement between its comparison and
+        the backbone's yields to the operator's own confirmation, and to
+        nothing else."""
+        return self.proceed and (self.flag or self.how in CONFIRMED)
 
 
 def how_passed(result: object) -> str:
@@ -642,10 +651,10 @@ def enforce(
             "proceeding without the interlock (residual gap, not a block).",
             file=stream,
         )
-        return Passage(True, PASSED_UNDETERMINED)
+        return Passage(True, PASSED_UNDETERMINED, flag=override)
 
     if outcome.verdict == SAME_REPO:
-        return Passage(True, PASSED_SAME_REPO, outcome)
+        return Passage(True, PASSED_SAME_REPO, outcome, flag=override)
 
     if outcome.verdict == UNDETERMINED:
         if outcome.undetermined_kind == FAULT:
@@ -654,7 +663,7 @@ def enforce(
                 file=stream,
             )
         # NONCOVERAGE: proceed silently — the declared, expected gap.
-        return Passage(True, PASSED_UNDETERMINED, outcome)
+        return Passage(True, PASSED_UNDETERMINED, outcome, flag=override)
 
     if outcome.verdict == OVERRIDDEN:
         print(
@@ -662,7 +671,7 @@ def enforce(
             f"override — {outcome.reason}",
             file=stream,
         )
-        return Passage(True, PASSED_FLAG, outcome)
+        return Passage(True, PASSED_FLAG, outcome, flag=override)
 
     # DIVERGED — operator-gate.
     print(_divergence_message(outcome), file=stream)
