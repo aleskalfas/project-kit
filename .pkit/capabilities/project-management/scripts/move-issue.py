@@ -1598,6 +1598,7 @@ def _plan_forward_cascade(
             record=record,
         )
         if resolution.kind is containment.ParentKind.NONE:
+            stop = resolution.self_note
             break
         if not resolution.walks:
             if resolution.fact is not None:
@@ -1689,10 +1690,10 @@ def _first_parent(mover: _MovedIssue, context: _CascadeContext) -> int | None:
     record. Where the two disagree, or only the native one names a parent, it
     starts nowhere, and nothing is written to either parent's chain; it starts
     nowhere, too, from a first line its type does not allow with nothing to hold
-    it to, and from one whose native parent cannot be read to compare. Each is
-    said in a warning, with how to finish where running the move again can; an
-    issue whose first line names no parent and which has no native one has
-    nothing to say.
+    it to, from one whose native parent cannot be read to compare, and from a
+    first line naming the issue itself, which names no parent. Each is said in a
+    warning, with how to finish where running the move again can; an issue whose
+    first line names no parent and which has no native one has nothing to say.
     """
     number = mover.number
     resolution = containment.resolve_parent(
@@ -1709,6 +1710,12 @@ def _first_parent(mover: _MovedIssue, context: _CascadeContext) -> int | None:
                 "cascade walks to it."
             )
         return resolution.parent.number if resolution.parent is not None else None
+    if resolution.self_note is not None and resolution.native is None:
+        print(
+            f"\n[warn] {resolution.self_note}; the forward cascade walks nothing from it.",
+            file=sys.stderr,
+        )
+        return None
     if resolution.kind is containment.ParentKind.NONE:
         return None
     if resolution.kind in (containment.ParentKind.TEXTUAL_ONLY, containment.ParentKind.UNREAD) and (

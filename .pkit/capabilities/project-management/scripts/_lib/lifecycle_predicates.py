@@ -348,7 +348,8 @@ def cascade_membership(child_number: int) -> dict[str, Any]:
     The read is the containment seam's (`containment.resolve_parent`, one record
     read), and what it finds is an account for the reader, not a verdict:
     `detail.parent_ref` is the issue the candidate's first line names, `None`
-    when it names none, and `detail.parent_kind` how the first line and the
+    when it names none — a line naming the candidate itself names none — and
+    `detail.parent_kind` how the first line and the
     native parent stand (`agreed`, `native-only`, `textual-only`, `disagree`,
     `none`). The candidate is read untyped: which issue a line names, and so the
     kind, does not depend on the type.
@@ -364,7 +365,12 @@ def cascade_membership(child_number: int) -> dict[str, Any]:
         _say_unread(child_number, resolution.unread.detail)
         return _indeterminate(f"could not read issue #{child_number} (gh failure)")
     parent = resolution.named
-    first_line = f"names #{parent}" if parent is not None else "names no issue"
+    if parent is not None:
+        first_line = f"names #{parent}"
+    elif resolution.names_itself:
+        first_line = "names the issue itself, which is no parent"
+    else:
+        first_line = "names no issue"
     native = (
         f"its native parent is {resolution.native.ref}"
         if resolution.native is not None

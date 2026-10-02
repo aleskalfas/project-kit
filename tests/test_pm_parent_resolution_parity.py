@@ -34,7 +34,7 @@ import json
 import re
 import subprocess
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
 from typing import Any
@@ -271,8 +271,8 @@ def _ref(parent: containment.NativeParent | None) -> int | str | None:
 # --- the drivers ------------------------------------------------------------
 
 
-def _forward_cascade(mi: ModuleType, row: Row, capsys) -> tuple[int, ...]:
-    """The ancestors a promotion of the child plans to bring level."""
+def _promotion_plan(mi: ModuleType, row: Row) -> Any:
+    """The forward cascade a promotion of the child plans, as previewed."""
     mover = mi._MovedIssue(
         number=CHILD,
         body=f"{row.first_line}\n\n## What\n",
@@ -292,7 +292,12 @@ def _forward_cascade(mi: ModuleType, row: Row, capsys) -> tuple[int, ...]:
         projection="audit",
         levels=mi._cascade_levels(WORKFLOW),
     )
-    plan = mi._preview_forward_cascade(mover, context)
+    return mi._preview_forward_cascade(mover, context)
+
+
+def _forward_cascade(mi: ModuleType, row: Row, capsys) -> tuple[int, ...]:
+    """The ancestors a promotion of the child plans to bring level."""
+    plan = _promotion_plan(mi, row)
     capsys.readouterr()
     return tuple(ancestor.number for ancestor in plan.ancestors) if plan else ()
 
@@ -464,6 +469,7 @@ def test_show_tree_says_how_the_records_stand_in_json(st, monkeypatch) -> None:
         "native_parent": 3,
         "first_line_parent": 2,
         "first_line_form": "conforming",
+        "first_line_names_itself": False,
     }
 
 
@@ -521,3 +527,142 @@ def test_show_tree_reads_no_issue_upward(st, monkeypatch) -> None:
     _tree(st, world)
     assert not any(world.record_reads(n) for n in world.issues)
     assert all(argv[-1].endswith("/sub_issues") for argv in world.calls)
+
+
+# --- a first line naming the issue itself ------------------------------------
+#
+# Such a line names no parent: no child set holds an issue under itself
+# (ADR-035). The seam classifies it once — the line reads as naming none — and
+# says so in one sentence; every reader agrees, and none acts on the issue as
+# its own parent.
+
+_SELF_LINE = f"Feature: #{CHILD}"
+_SELF_NOTE = f"#{CHILD}'s first line `{_SELF_LINE}` names #{CHILD} itself, which is no parent"
+
+# (native parent, kind, the parent resolved, the parents the gate counts it under)
+_SELF_ROWS = {
+    "no native parent": (None, "none", None, ()),
+    "a native parent": (FEATURE, "native-only", FEATURE, (FEATURE,)),
+}
+
+
+def _self_row(native: int | None, *, first_line: str = _SELF_LINE, unread: bool = False) -> Row:
+    return replace(ROWS["conforming line"], first_line=first_line, native=native, unread=unread)
+
+
+@pytest.fixture(params=sorted(_SELF_ROWS))
+def self_scenario(request, monkeypatch: pytest.MonkeyPatch) -> tuple[Row, str, int | None, tuple]:
+    native, kind, parent, fold = _SELF_ROWS[request.param]
+    row = _self_row(native)
+    monkeypatch.setattr(subprocess, "run", _world(row).run)
+    monkeypatch.setattr(predicates, "_capability_root", lambda: CAPABILITY)
+    monkeypatch.setattr(predicates, "_config", lambda _root: {})
+    return row, kind, parent, fold
+
+
+def test_the_resolver_reads_a_line_naming_the_issue_itself_as_naming_none(self_scenario) -> None:
+    _row, kind, parent, fold = self_scenario
+    resolution = containment.resolve_parent(
+        {}, issue_number=CHILD, structural_type="task", issue_types=ISSUE_TYPES
+    )
+    assert resolution.kind.value == kind
+    assert resolution.named is None
+    assert _ref(resolution.parent) == parent
+    assert resolution.walks is False
+    assert resolution.local_parents == fold
+    assert resolution.line.form is containment.body_parent_ref.LineForm.NONE
+    assert resolution.names_itself is True
+    assert resolution.self_note == _SELF_NOTE
+    assert resolution.form_note is None
+
+
+def test_a_self_naming_line_in_a_form_the_type_does_not_allow_has_no_form_note() -> None:
+    """The line names no parent, so its form is not one to correct: it is said
+    once, as naming the issue itself."""
+    resolution = containment.compare_parents(
+        CHILD,
+        containment.body_parent_ref.read_first_line(f"Epic: #{CHILD}\n", "task", ISSUE_TYPES),
+        None,
+    )
+    assert resolution.kind is containment.ParentKind.NONE
+    assert resolution.form_note is None
+    assert resolution.self_note == (
+        f"#{CHILD}'s first line `Epic: #{CHILD}` names #{CHILD} itself, which is no parent"
+    )
+
+
+def test_the_forward_cascade_walks_nothing_from_a_self_naming_line(
+    self_scenario, mi, capsys
+) -> None:
+    row, _kind, _parent, _fold = self_scenario
+    assert _promotion_plan(mi, row) is None
+    err = capsys.readouterr().err
+    if row.native is None:
+        assert f"[warn] {_SELF_NOTE}; the forward cascade walks nothing from it.\n" in err
+    else:
+        assert (
+            f"[warn] the forward cascade walks nothing: #{CHILD}'s first line names no parent "
+            f"issue, its native parent is #{FEATURE}; nothing is written to #{FEATURE}.\n"
+        ) in err
+
+
+def test_the_forward_cascade_stops_at_an_ancestor_whose_line_names_itself(
+    mi, monkeypatch, capsys
+) -> None:
+    """An ancestor whose first line names itself has no parent: the walk moves
+    it and stops there, saying why, rather than taking it for its own parent."""
+    row = ROWS["conforming line"]
+    world = _world(row)
+    world.issues[FEATURE]["body"] = f"EPIC: #{FEATURE}\n\n## What\n"
+    del world.natives[FEATURE]
+    monkeypatch.setattr(subprocess, "run", world.run)
+    plan = _promotion_plan(mi, row)
+    assert plan is not None
+    assert tuple(ancestor.number for ancestor in plan.ancestors) == (FEATURE,)
+    assert (
+        f"  [warn] #{FEATURE}'s first line `EPIC: #{FEATURE}` names #{FEATURE} itself, which is "
+        "no parent; the walk stops there.\n"
+    ) in capsys.readouterr().err
+
+
+def test_the_closure_report_says_a_self_naming_line_and_checks_no_parent_from_it(
+    self_scenario, cl, capsys
+) -> None:
+    row, _kind, _parent, fold = self_scenario
+    checked, out, err = _closure_report(cl, row, capsys)
+    assert checked == fold
+    assert f"[warn] {_SELF_NOTE}; the closure cascade checks no parent from it.\n" in err
+    assert f"#{CHILD} is checked" not in out + err
+
+
+def test_an_unread_self_naming_record_is_not_said_to_be_checked(cl, monkeypatch, capsys) -> None:
+    row = _self_row(None, unread=True)
+    monkeypatch.setattr(subprocess, "run", _world(row).run)
+    checked, out, err = _closure_report(cl, row, capsys)
+    assert checked == ()
+    assert f"[warn] {_SELF_NOTE}; the closure cascade checks no parent from it.\n" in err
+    assert "parent check skipped." in err
+    assert "is checked" not in out + err
+
+
+def test_the_fold_holds_no_issue_under_itself(self_scenario) -> None:
+    _row, kind, _parent, fold = self_scenario
+    assert _fold_parents() == fold
+    assert CHILD not in containment.resolve_children({}, parent_number=CHILD).numbers
+    out = predicates.cascade_membership(CHILD)
+    assert out["result"] is True
+    assert out["detail"] == {"parent_ref": None, "parent_kind": kind}
+    assert "names the issue itself, which is no parent" in out["reason"]
+
+
+def test_show_tree_reports_a_self_naming_line_as_naming_none(self_scenario, st) -> None:
+    row, kind, parent, _fold = self_scenario
+    world = _world(row)
+    issues = _tree(st, world)
+    assert issues[CHILD].parent_number == parent
+    assert CHILD not in issues[CHILD].children
+    resolution = st._issue_to_dict(issues[CHILD])["parent_resolution"]
+    assert resolution["kind"] == kind
+    assert resolution["first_line_parent"] is None
+    assert resolution["first_line_form"] == "none"
+    assert resolution["first_line_names_itself"] is True

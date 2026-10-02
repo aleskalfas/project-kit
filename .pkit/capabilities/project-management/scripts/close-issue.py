@@ -802,7 +802,8 @@ def _report_parents(
     with no first line naming it, two that disagree, a native parent in another
     repository (which is not checked), or a record that could not be read (the
     first line's parent is checked, and the native one was not compared). An
-    issue with neither record names no parent to check.
+    issue with neither record names no parent to check, and a first line naming
+    the issue itself names none: that is said, and nothing is checked from it.
     """
     resolution = containment.resolve_parent(
         config,
@@ -818,6 +819,11 @@ def _report_parents(
         )
         for parent in parents:
             _check_parent_eligibility(parent, config)
+    if resolution.self_note is not None:
+        print(
+            f"\n[warn] {resolution.self_note}; the closure cascade checks no parent from it.",
+            file=sys.stderr,
+        )
     kind = resolution.kind
     if kind is containment.ParentKind.NONE:
         print(

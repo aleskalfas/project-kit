@@ -115,7 +115,7 @@ from __future__ import annotations
 import json
 import re
 import subprocess
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import Enum
 from typing import Any
 
@@ -1571,6 +1571,12 @@ class ParentResolution:
     ``native`` is the native parent as read; ``line`` the first line, classified
     (``body_parent_ref.read_first_line``), whose ``issue`` is :attr:`named`.
 
+    A first line naming the issue itself names no parent: no child set holds an
+    issue under itself (ADR-035). It is classified as naming none — ``line``'s
+    form is ``NONE`` — ``names_itself`` says it did, and :attr:`self_note` says
+    so in one sentence, so every property here agrees that the line names no
+    parent.
+
     A consumer that **writes** on the parent acts only where :attr:`walks` — the
     two records agree, or a first line in an allowed form is the only record —
     and otherwise stops, saying :attr:`fact` and :meth:`remedy`. A consumer that
@@ -1584,10 +1590,12 @@ class ParentResolution:
     line: body_parent_ref.FirstLine
     native: NativeParent | None = None
     unread: UnreadIssue | None = None
+    names_itself: bool = False
 
     @property
     def named(self) -> int | None:
-        """The issue the first line names as the parent, in any form."""
+        """The issue the first line names as the parent, in any form — never
+        the issue itself."""
         return self.line.issue
 
     @property
@@ -1611,15 +1619,22 @@ class ParentResolution:
     def local_parents(self) -> tuple[int, ...]:
         """Every parent in this repository the issue is a child of — its native
         parent and the issue its first line names, one or both, native first —
-        the parents whose child sets (:func:`resolve_children`) hold it. A line
-        naming the issue itself names no parent: no child set holds an issue
-        under itself."""
+        the parents whose child sets (:func:`resolve_children`) hold it."""
         out: list[int] = []
         if self.native is not None and self.native.repository is None:
             out.append(self.native.number)
-        if self.named is not None and self.named not in out and self.named != self.issue:
+        if self.named is not None and self.named not in out:
             out.append(self.named)
         return tuple(out)
+
+    @property
+    def self_note(self) -> str | None:
+        """What to say of a first line naming the issue itself, after which a
+        consumer says its own consequence, or ``None``."""
+        if not self.names_itself:
+            return None
+        n = self.issue
+        return f"#{n}'s first line `{self.line.line}` names #{n} itself, which is no parent"
 
     @property
     def fact(self) -> str | None:
@@ -1702,7 +1717,9 @@ def compare_parents(
     """Hold an issue's native parent to its first line — the pure comparison
     :func:`resolve_parent` makes after its read, for a caller that derived the
     native parent itself (``show-tree``, from the native child sets it resolved).
-    ``native`` is ``None`` where the issue has none."""
+    ``native`` is ``None`` where the issue has none. A first line naming the
+    issue itself is classified here as naming no parent (:func:`_self_named`)."""
+    line, names_itself = _self_named(issue_number, line)
     named = line.issue
     if native is None:
         kind = ParentKind.TEXTUAL_ONLY if named is not None else ParentKind.NONE
@@ -1712,7 +1729,22 @@ def compare_parents(
         kind = ParentKind.AGREED
     else:
         kind = ParentKind.DISAGREE
-    return ParentResolution(issue=issue_number, kind=kind, line=line, native=native)
+    return ParentResolution(
+        issue=issue_number, kind=kind, line=line, native=native, names_itself=names_itself
+    )
+
+
+def _self_named(
+    issue_number: int, line: body_parent_ref.FirstLine
+) -> tuple[body_parent_ref.FirstLine, bool]:
+    """``line`` as the seam reads it for issue ``issue_number``, and whether it
+    named the issue itself. Such a line names no parent — no child set holds an
+    issue under itself — so it is read as naming none, its form ``NONE`` and no
+    form note (a line naming no parent is in no form to correct); the line as
+    written is kept for the seam's sentence."""
+    if line.issue is None or line.issue != issue_number:
+        return line, False
+    return replace(line, form=body_parent_ref.LineForm.NONE, number=None, note=None), True
 
 
 def resolve_parent(
@@ -1755,9 +1787,15 @@ def resolve_parent(
     if record is None:
         record = read_issue_record(config, issue_number=issue_number)
     if isinstance(record, UnreadIssue):
-        line = body_parent_ref.read_first_line(body or "", structural_type, issue_types)
+        line, names_itself = _self_named(
+            issue_number, body_parent_ref.read_first_line(body or "", structural_type, issue_types)
+        )
         return ParentResolution(
-            issue=issue_number, kind=ParentKind.UNREAD, line=line, unread=record
+            issue=issue_number,
+            kind=ParentKind.UNREAD,
+            line=line,
+            unread=record,
+            names_itself=names_itself,
         )
     line = body_parent_ref.read_first_line(
         str(record.issue.get("body") or ""), structural_type, issue_types

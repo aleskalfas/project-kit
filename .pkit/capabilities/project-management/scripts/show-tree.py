@@ -615,6 +615,7 @@ def _resolution_to_dict(resolution: containment.ParentResolution | None) -> dict
         "native_parent": native.number if native is not None else None,
         "first_line_parent": resolution.named,
         "first_line_form": resolution.line.form.value,
+        "first_line_names_itself": resolution.names_itself,
     }
 
 
