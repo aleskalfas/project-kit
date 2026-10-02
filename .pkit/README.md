@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-02T13:02:21Z
+      at: 2026-10-02T14:53:03Z
       outcome: unchanged
-      unchanged-because: the CLI README now documents pkit pull-request land — its options, --no-request among them, its one refusal order and its strictly decoded end document — and that release merge lands through it; the process README's change corrects how a cascade's membership predicate is glossed; this page maps the cli area as the pkit command-line surface and the process area as the shared process substrate, one line each, which still hold
+      unchanged-because: the decisions, lifecycle, CLI and schemas READMEs now cite COR-055 for what validation owns and the lifecycle README restates COR-052's rule for which inert policy a point declares; this page maps each of those areas in one line, the record system, packaging and lifecycle, the command surface and the schemas, which still hold
 ---
 
 # project-kit

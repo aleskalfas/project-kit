@@ -1,0 +1,3 @@
+component: software-analysis
+kind: none
+body: Internal — DEC-001's rule for parallel work says that a check comparing the branch with its base reports two lines of work numbering an artefact alike, where it said validation does; `pkit analysis check-numbers` already is that check, and nothing you run changes.

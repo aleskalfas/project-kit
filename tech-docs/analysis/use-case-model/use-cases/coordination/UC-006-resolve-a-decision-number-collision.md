@@ -13,9 +13,9 @@ pkit:
         - ACT-clone-session
         - .pkit/decisions/README.md
     revalidated:
-      at: 2026-10-02T02:38:17Z
+      at: 2026-10-02T14:53:05Z
       outcome: unchanged
-      unchanged-because: the change is where an adr record is placed when adr-records is unset; how pkit new decision numbers a record, and the collision check and renumbering this use case walks, are untouched
+      unchanged-because: the decisions README now anchors COR-055 and cites it for why the narration warnings do not fail; how a record's number is minted, the check that no two records share an id and the renumbering this use case walks are untouched
 ---
 
 # UC-006 — Resolve a decision number two clones took
