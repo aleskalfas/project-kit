@@ -443,7 +443,10 @@ def test_the_children_view_names_a_child_elsewhere_with_its_repository() -> None
         parent_number=5, resolution=resolution, titles={42: "This repository's #42"}
     )
     assert "- #42 — This repository's #42  _(textual)_\n" in body
-    assert f"- {FOREIGN}\n" in body
+    # In a code span, which GitHub does not link: writing the view adds no
+    # cross-reference to the issue elsewhere.
+    assert f"- `{FOREIGN}`\n" in body
+    assert body.count(FOREIGN) == body.count(f"`{FOREIGN}`") == 1
 
 
 def test_a_member_id_reads_back_as_the_issue_it_names() -> None:

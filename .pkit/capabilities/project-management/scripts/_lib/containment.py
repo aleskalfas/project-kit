@@ -1213,6 +1213,14 @@ class ResolvedChild:
         """How a report names the child: ``#11``, or ``owner/repo#42``."""
         return f"{self.repository}#{self.number}" if self.repository else f"#{self.number}"
 
+    @property
+    def written(self) -> str:
+        """How a write into an issue or a comment names the child: ``#11``, which
+        GitHub links; ``owner/repo#42`` in a code span, which it does not — a
+        link would add a cross-reference to that issue's timeline, a trace in a
+        repository nothing here writes to."""
+        return f"`{self.ref}`" if self.repository else self.ref
+
 
 @dataclass(frozen=True)
 class ChildResolution:
@@ -2151,8 +2159,10 @@ def render_children_comment_body(
          rendered markdown);
       2. a visible heading + do-not-edit notice so a human reading the rendered
          comment also knows not to hand-edit it;
-      3. one bullet per resolved child — ``- #<n>``, or ``- owner/repo#<n>`` for
-         a sub-issue in another repository (GitHub auto-links either reference),
+      3. one bullet per resolved child, named as :attr:`ResolvedChild.written`
+         names it — ``- #<n>`` (GitHub auto-links it), or ``- `owner/repo#<n>```
+         in a code span for a sub-issue in another repository, which GitHub
+         does not link, so writing the view leaves no trace on that issue —
          with a child's title appended when ``titles`` carries it (``titles`` is
          this repository's, so a child elsewhere is listed without one), and a
          ``(textual)`` provenance marker on a textual-only child (native is the
@@ -2178,7 +2188,7 @@ def render_children_comment_body(
     else:
         for child in resolution.children:
             title = titles.get(child.number) if child.repository is None else None
-            label = child.ref + (f" — {title}" if title else "")
+            label = child.written + (f" — {title}" if title else "")
             marker = "  _(textual)_" if child.substrate is ChildSubstrate.TEXTUAL else ""
             lines.append(f"- {label}{marker}")
     return "\n".join(lines) + "\n"
