@@ -13,7 +13,7 @@ pkit:
         - .pkit/capabilities/software-engineering/skills/**
       record: [COR-013, COR-024, COR-026, COR-030, ADR-013, ADR-052, "project-management:DEC-015", "project-management:DEC-028", "project-management:DEC-032"]
     revalidated:
-      at: 2026-09-29T18:03:42Z
+      at: 2026-10-01T15:01:44Z
       outcome: updated
 ---
 
@@ -35,7 +35,9 @@ It deliberately ships **no conventions content** — the conventions corpus is a
 
 ## The code-review panel
 
-The panel ([software-engineering:DEC-002-code-review-panel]) closes bug #715: before it, the merge gate assessed conventions but nothing reviewed the code, so a PR with real security defects could pass `APPROVED`. Three reviewer agents each emit the [project-management:DEC-028] verdict grammar (`Reviewer agent (local, <name>): APPROVED | CHANGES_REQUESTED` plus the `<!-- pkit-verdict -->` marker) so they fold through the *existing* binary all-must-approve gate — no new aggregation. Each is read-only on what it reviews — it never changes the pull request or the repository — and keeps the working files a review needs, a dumped diff or a reproduction, in the agent workspace (the agents README's "Reviewers" paragraph).
+The panel ([software-engineering:DEC-002-code-review-panel]) closes bug #715: before it, the merge gate assessed conventions but nothing reviewed the code, so a PR with real security defects could pass `APPROVED`. Three reviewer agents each emit the [project-management:DEC-028] verdict grammar (`Reviewer agent (local, <name>): APPROVED | CHANGES_REQUESTED` plus the verdict marker, `<!-- pkit-verdict sha=<head> base=<base> -->` once posted, naming the head and base reviewed) so they fold through the *existing* binary all-must-approve gate — no new aggregation. Each is read-only on what it reviews — it never changes the pull request or the repository — and keeps the working files a review needs, a dumped diff or a reproduction, in the agent workspace (the agents README's "Reviewers" paragraph).
+
+**A diff too large for `gh pr diff`.** Each reviewer reads the PR's diff with `gh pr diff`, and when GitHub refuses it (a PR changing more than 300 files) reads the same diff from the local checkout — `git diff <base>...<head>`, with the base and head its brief names, or the PR's base branch and head commit when the brief names none — requesting changes for a diff it cannot read only when neither source yields it; this paragraph owns that rule, and each panel body carries it and points here.
 
 | Agent | Remit | Blocks (CHANGES_REQUESTED) on | Advises (APPROVED-with-comments) on |
 |---|---|---|---|
@@ -45,10 +47,12 @@ The panel ([software-engineering:DEC-002-code-review-panel]) closes bug #715: be
 
 **Activation** (declared in `review-contributions.yaml`, resolved by pm per [project-management:DEC-032]):
 
-- `code-reviewer` and `security-reviewer` ride the **`touches-code` diff floor** — required whenever a PR's diff touches any non-documentation file, *independent of the closing issue's classification*. This backstops #715's gate-escape: a code-carrying PR filed against a `type:docs` or unclassified issue still pulls in the correctness and security reviewers.
+- `code-reviewer` and `security-reviewer` ride the **`touches-code` diff floor** — required whenever a PR's diff touches any non-documentation file, *independent of the closing issue's classification*. Paths the project lists as never code (pm's `review.floors.not_code`; by default the changesets under `.changes/`) do not count. This backstops #715's gate-escape: a code-carrying PR filed against a `type:docs` or unclassified issue still pulls in the correctness and security reviewers.
 - `docs-reviewer` rides **both** the `touches-code` floor **and** the `type` wildcard (`type: "*"`). The floor makes doc review fire on any code-carrying diff regardless of classification — so a code PR always gets doc review even when unclassified or filed against a `type:docs` issue; the wildcard keeps it firing for a docs-only classified PR (which the floor, correctly, does not require). The wildcard is forward-safe: a new `type` value added later still activates doc review.
 
 **Accepted gap.** An *unclassified docs-only* PR — one whose diff touches no code (so the floor does not fire) and which closes no classified issue (so the `type:*` wildcard has nothing to match) — pulls in no doc reviewer. This is a named, accepted residual: the two activation paths are the diff (floor) and the classification (match), and such a PR presents neither. A docs PR gets doc review as soon as it is classified with any `type` label, or as soon as its diff also touches code.
+
+**A floor approval outlives a change that touches no code.** A reviewer whose every rule is the floor keeps its `APPROVED` while the commits after the head it reviewed touch no code (pm's freshness rule, [project-management:DEC-028] "Stale-verdict handling"), so a wording fix or a changeset after review re-runs neither `code-reviewer` nor `security-reviewer`. `docs-reviewer` also carries the `type: "*"` rule — the documentation is its remit — so any change re-runs it, on a typed and an unclassified PR alike. A `CHANGES_REQUESTED` from any of the three goes stale on any change, since the fix it asks for may sit outside the floor.
 
 So `code-reviewer` alone is *basic* review; the specialists alongside it make *complex* review, composable per install ([project-management:DEC-032]). A project that wants the panel without one of its reviewers opts out of that reviewer alone in pm's `review.agents.contributed_opt_out:`, with a reason — the rest of the panel keeps gating (the project-management README, "Opting out of a contributed reviewer").
 

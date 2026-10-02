@@ -56,9 +56,7 @@ def _registered_verbs() -> dict[str, Path]:
 
 def _exempt_verbs() -> dict[str, str]:
     """`EXEMPT_VERBS` read from the gate module itself — never a local copy."""
-    spec = importlib.util.spec_from_file_location(
-        "pm_bootstrap_gate_under_test", GATE_MODULE
-    )
+    spec = importlib.util.spec_from_file_location("pm_bootstrap_gate_under_test", GATE_MODULE)
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
@@ -155,7 +153,7 @@ def test_no_exempt_verb_calls_the_gate(verb: str) -> None:
 
 
 def test_the_exemption_list_records_a_reason_per_verb() -> None:
-    """"The exemption list is decided and recorded, with the reason for each" —
+    """ "The exemption list is decided and recorded, with the reason for each" —
     the acceptance criterion, pinned. A bare set would let a verb be excused
     without an argument."""
     for verb, reason in EXEMPT.items():
@@ -212,9 +210,7 @@ def _gate_calls_pass_a_root(path: Path) -> bool:
     """Whether every `bootstrap_gate.enforce(...)` call passes `capability_root=`."""
     tree = ast.parse(path.read_text(encoding="utf-8"))
     calls = [
-        node
-        for node in ast.walk(tree)
-        if isinstance(node, ast.Call) and _is_gate_call(node.func)
+        node for node in ast.walk(tree) if isinstance(node, ast.Call) and _is_gate_call(node.func)
     ]
     return bool(calls) and all(
         any(kw.arg == "capability_root" for kw in call.keywords) for call in calls
@@ -223,11 +219,7 @@ def _gate_calls_pass_a_root(path: Path) -> bool:
 
 @pytest.mark.parametrize(
     "verb",
-    sorted(
-        v
-        for v in VERBS
-        if v not in EXEMPT and _has_capability_root_flag(VERBS[v])
-    ),
+    sorted(v for v in VERBS if v not in EXEMPT and _has_capability_root_flag(VERBS[v])),
 )
 def test_a_verb_that_takes_a_root_gates_that_root(verb: str) -> None:
     """A verb invoked with `--capability-root <elsewhere>` must be judged on

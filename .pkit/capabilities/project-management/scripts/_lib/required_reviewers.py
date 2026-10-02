@@ -38,17 +38,28 @@ consumers share:
     (`review.agents.contributed_opt_out`, `_lib.review_opt_outs`, #148)
     before any predicate is matched, so an opted-out contribution is neither
     invoked nor gated — by both consumers alike.
+  * applying the adopter's not-code list (`review.floors.not_code`, `NotCode`,
+    #1178) to the diff before any floor reads it, so a changed path the list
+    matches satisfies no floor — by both consumers alike. The freshness rule
+    reads the author's changes through the same list, so the list decides
+    both who is required and whose approval survives a change.
+  * naming which required reviewers' whole remit is their diff floors, and
+    those floors (`Resolution.floors_by_reviewer`, #1179) — what the verdict
+    freshness rule (`_lib.verdict_freshness`) keys on.
 
 Fail-closed posture (DEC-032 D5)
 --------------------------------
 
-Resolution can fail in four structurally distinct ways, and the result type
+Resolution can fail in five structurally distinct ways, and the result type
 makes a consumer handle each before reading the set:
 
   * **opt-out invalid** — the adopter's opt-out list is malformed, or names a
     capability or reviewer no installed capability contributes. The adopter's
     intent is unknown (a typo'd opt-out means a requirement they meant to
     withdraw still stands), so the consumer refuses and names the entry.
+  * **not-code list invalid** — the adopter's `review.floors.not_code` is not
+    a list of non-empty path patterns. What the adopter meant to leave out of
+    the floors is unknown, so the consumer refuses and names the problem.
   * **collection not ok** — a malformed contribution declaration or an
     installed contribution naming an undeployed agent (unless that
     contribution is opted out). The collection's errors are surfaced; the
@@ -62,7 +73,9 @@ makes a consumer handle each before reading the set:
     determining the PR's diff *while a floor-carrying contribution is
     installed*. Ground truth for *what the diff touches* is unknown, so a
     floor reviewer it might require cannot be dropped. A floor-free collection
-    never fetches the diff, so this failure is unreachable there.
+    never fetches the diff, so this failure is unreachable there. A PR with
+    more changed files than GitHub will list is the same unknown, reported as
+    its own kind because retrying cannot resolve it.
 
 All collapse to `Resolution.ok is False` with a structured `error` the
 consumer turns into its own refusal / error message. An *empty* contributed
@@ -78,24 +91,31 @@ own already-imported `gh` helpers.
 
 from __future__ import annotations
 
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
-from typing import Callable
+from typing import Any
+
+import pathspec
 
 from _lib import axis_labels
 
 try:
     from _lib.review_contributions import (
+        FLOOR_TOUCHES_CODE,
         ContributionCollection,
         ContributionRule,
-        FLOOR_TOUCHES_CODE,
+    )
+    from _lib.review_contributions import (
         collect_contributions as _default_collect_contributions,
     )
 except ImportError:  # pragma: no cover - exercised via spec-loaded fallback
     from review_contributions import (  # type: ignore[no-redef]
+        FLOOR_TOUCHES_CODE,
         ContributionCollection,
         ContributionRule,
-        FLOOR_TOUCHES_CODE,
+    )
+    from review_contributions import (
         collect_contributions as _default_collect_contributions,
     )
 
@@ -136,10 +156,18 @@ ERROR_CLOSING_ISSUES = "closing-issues-unresolvable"
 # Only reached when a floor-carrying rule exists — floor-free collections
 # never fetch the diff (DEC-032 amendment).
 ERROR_CHANGED_FILES = "changed-files-unresolvable"
+# The PR changes more files than GitHub will list, so its changed-file set
+# cannot be read in full. The same unknown as ERROR_CHANGED_FILES, kept apart
+# because it is not transient: a retry reads the same truncated list, so the
+# consumer's remediation is to split the PR or bypass, not to retry.
+ERROR_TOO_MANY_CHANGED_FILES = "too-many-changed-files"
 # The adopter's `review.agents.contributed_opt_out` list is malformed, or an
 # entry names a capability / reviewer no installed capability contributes
 # (#148). `details` carries one message per problem.
 ERROR_OPT_OUT = "opt-out-invalid"
+# The adopter's `review.floors.not_code` is not a list of non-empty path
+# patterns (#1178). `details` carries one message per problem.
+ERROR_NOT_CODE = "not-code-invalid"
 
 
 @dataclass(frozen=True)
@@ -147,10 +175,11 @@ class RequiredReviewersError:
     """A structured reason the required set could not be resolved (DEC-032 D5).
 
     `kind` is `ERROR_COLLECTION`, `ERROR_CLOSING_ISSUES`,
-    `ERROR_CHANGED_FILES`, or `ERROR_OPT_OUT` so a consumer can branch on the
-    failure class without string-matching `message`. For a collection error,
-    `collection` is the failing `ContributionCollection` (its `errors` drive
-    the consumer's refusal text); for an opt-out error `details` lists each
+    `ERROR_CHANGED_FILES`, `ERROR_TOO_MANY_CHANGED_FILES`, `ERROR_OPT_OUT`,
+    or `ERROR_NOT_CODE` so a consumer can branch on the failure class without
+    string-matching `message`. For a collection error, `collection` is the
+    failing `ContributionCollection` (its `errors` drive the consumer's
+    refusal text); for an opt-out or not-code error `details` lists each
     problem, one per offending entry; otherwise both are empty and `message`
     carries the human-readable reason.
     """
@@ -178,6 +207,17 @@ class Resolution:
         withdrawn from this resolution, each with its reason, for the
         consumers to show. Project-wide, not per PR: an entry is listed
         whether or not its contribution would have matched this PR.
+      * `floors_by_reviewer` — for each required reviewer whose whole remit
+        is its diff-property floors — a floor requires it on this PR and
+        every rule it has is a floor-only rule — the floor kinds its rules
+        carry (#1179). A reviewer absent from it — the baseline, or one with
+        any classification rule, matched on this PR or not — is required for
+        the whole change. The freshness rule (`_lib.verdict_freshness`) reads
+        this: a floor-scoped reviewer's approval stands until the author's
+        changes reach one of its floors.
+      * `not_code` — the not-code list this resolution applied to the diff,
+        so the freshness rule reads the author's changes through the same
+        list.
 
     On failure (`ok is False`): `error` is populated and the set fields are
     empty. Every failure kind is fail-closed per DEC-032 D5.
@@ -187,6 +227,8 @@ class Resolution:
     contributed_rules: tuple[ContributionRule, ...] = ()
     contributed_by: dict[str, str] = field(default_factory=dict)
     opted_out: tuple[ContributionOptOut, ...] = ()
+    floors_by_reviewer: dict[str, frozenset[str]] = field(default_factory=dict)
+    not_code: NotCode = field(default_factory=lambda: DEFAULT_NOT_CODE)
     error: RequiredReviewersError | None = None
 
     @property
@@ -210,6 +252,17 @@ class _Unresolvable:
         self.reason = reason
 
 
+class _TooManyChangedFiles(_Unresolvable):
+    """Sentinel: the PR changes more files than GitHub will list.
+
+    Still an `_Unresolvable` — every check that fails closed on one fails
+    closed on this — so a consumer unaware of the distinction stays safe. The
+    resolver reports it as `ERROR_TOO_MANY_CHANGED_FILES` rather than
+    `ERROR_CHANGED_FILES`, because a retry cannot read past the listing's
+    ceiling and the remediation differs.
+    """
+
+
 class _MultiValueAxisError(Exception):
     """An issue carries multiple values on a `mutually_exclusive` axis (DEC-012).
 
@@ -224,9 +277,91 @@ class _MultiValueAxisError(Exception):
     def __init__(self, axis: str, values: list[str]):
         self.axis = axis
         self.values = values
-        super().__init__(
-            f"issue carries multiple {axis} labels: " + ", ".join(sorted(values))
+        super().__init__(f"issue carries multiple {axis} labels: " + ", ".join(sorted(values)))
+
+
+# ---- the adopter's not-code list (#1178) -----------------------------
+
+# Where the list lives in the adopter's pm config (`project/config.yaml`),
+# named by every message so an error points at the line to fix.
+NOT_CODE_PATH = "review.floors.not_code"
+
+# What the list is when the adopter does not set it: changesets. Every pull
+# request that declares a surface change carries one under `.changes/`, and a
+# changeset is a YAML file, which the suffix test would otherwise read as code
+# — so a wording-only pull request would draw the code-review panel.
+DEFAULT_NOT_CODE_PATTERNS = (".changes/**",)
+
+
+@dataclass(frozen=True)
+class NotCode:
+    """Paths that never count as code for a diff-property floor, or the shape
+    errors that void them (`review.floors.not_code`, #1178).
+
+    `patterns` are gitignore-style path patterns — the matching
+    `code_path_to_doc_mapping` uses in the same config — read against each
+    changed path, relative to the repository root. A changed path any pattern
+    matches satisfies no floor; every other path is read exactly as before, so
+    the list narrows the floors and nothing else. A consumer gates on `ok`
+    first: when the list is malformed nothing is excluded and the caller
+    refuses (see the module docstring).
+    """
+
+    patterns: tuple[str, ...] = DEFAULT_NOT_CODE_PATTERNS
+    errors: tuple[str, ...] = ()
+
+    @property
+    def ok(self) -> bool:
+        return not self.errors
+
+    def floor_paths(self, changed_paths: list[str]) -> list[str]:
+        """The changed paths a floor reads: those no pattern matches."""
+        if not self.patterns:
+            return list(changed_paths)
+        spec = pathspec.PathSpec.from_lines("gitignore", self.patterns)
+        return [path for path in changed_paths if not spec.match_file(path)]
+
+
+# The shipped list, in force when the adopter sets none.
+DEFAULT_NOT_CODE = NotCode()
+
+
+def read_not_code(config: Any) -> NotCode:
+    """The not-code list configured in the adopter's pm config, shape-checked.
+
+    `config` is the whole `project/config.yaml` mapping. An absent `review`,
+    `review.floors` or `not_code` — or a `not_code:` left without a value —
+    is the shipped default (`DEFAULT_NOT_CODE_PATTERNS`); an empty list is
+    the adopter's choice that nothing is excluded.
+    """
+    review = config.get("review") if isinstance(config, Mapping) else None
+    floors = review.get("floors") if isinstance(review, Mapping) else None
+    raw = floors.get("not_code") if isinstance(floors, Mapping) else None
+    return parse_not_code(raw)
+
+
+def parse_not_code(raw: Any) -> NotCode:
+    """Shape-check a configured not-code list into `NotCode`.
+
+    `None` is the shipped default. Anything other than a list of non-empty
+    strings is reported, and then no pattern is returned at all: a
+    half-applied list is not what the adopter wrote.
+    """
+    if raw is None:
+        return DEFAULT_NOT_CODE
+    if not isinstance(raw, list):
+        return NotCode(
+            patterns=(),
+            errors=(f"`{NOT_CODE_PATH}` must be a list, got {type(raw).__name__}",),
         )
+    errors = tuple(
+        f"`{NOT_CODE_PATH}[{index}]` must be a non-empty path pattern, got {item!r}"
+        for index, item in enumerate(raw)
+        if not isinstance(item, str) or not item.strip()
+    )
+    if errors:
+        return NotCode(patterns=(), errors=errors)
+    return NotCode(patterns=tuple(item.strip() for item in raw))
 
 
 # Type of the injected closing-issue-numbers resolver. Returns the issue
@@ -250,6 +385,7 @@ def resolve_required_local_reviewers(
     issue_labels: IssueLabelsFn,
     changed_files: ChangedFilesFn,
     opt_outs: OptOuts = NO_OPT_OUTS,
+    not_code: NotCode = DEFAULT_NOT_CODE,
     collect_contributions: Callable[
         [Path], ContributionCollection
     ] = _default_collect_contributions,
@@ -273,6 +409,10 @@ def resolve_required_local_reviewers(
     reviewer is neither in `required_local` nor able to fail the collection
     on an undeployed agent; the baseline term is untouched. Default: none.
 
+    `not_code` is the adopter's not-code list (`read_not_code(config)`,
+    #1178): the changed paths it matches are dropped before any floor reads
+    the diff. Default: the shipped list, as when the config sets none.
+
     The contributed set is the UNION of two match paths (DEC-032 amendment):
 
       * **classification** — rules whose match-predicate holds for the
@@ -287,8 +427,9 @@ def resolve_required_local_reviewers(
     baseline-∪-contributed set; on failure (`ok is False`), `error` carries
     the fail-closed reason (DEC-032 D5) and the set fields are empty.
 
-    Order of the fail-closed checks: the opt-out list's shape first (it needs
-    nothing collected), then the collection with the opt-outs applied (a
+    Order of the fail-closed checks: the opt-out list's shape and the
+    not-code list's shape first (they need nothing collected), then the
+    collection with the opt-outs applied (a
     malformed declaration or undeployed contributed agent is unsatisfiable
     regardless of what the PR closes), then that every opt-out names an
     installed contribution (after the collection, so a broken declaration is
@@ -301,6 +442,14 @@ def resolve_required_local_reviewers(
     """
     if not opt_outs.ok:
         return _opt_out_error(opt_outs.errors)
+    if not not_code.ok:
+        return Resolution(
+            error=RequiredReviewersError(
+                kind=ERROR_NOT_CODE,
+                message="the not-code list is invalid",
+                details=not_code.errors,
+            )
+        )
 
     installed = collect_contributions(repo_root)
     collection = opt_outs.apply(installed)
@@ -332,18 +481,19 @@ def resolve_required_local_reviewers(
 
     classification_rules = collection.reviewers_for_issues(classifications)
 
-    floor_rules = _floor_rules(collection, pr_number, changed_files=changed_files)
+    floor_rules = _floor_rules(
+        collection, pr_number, changed_files=changed_files, not_code=not_code
+    )
     if isinstance(floor_rules, _Unresolvable):
+        too_many = isinstance(floor_rules, _TooManyChangedFiles)
         return Resolution(
             error=RequiredReviewersError(
-                kind=ERROR_CHANGED_FILES,
+                kind=ERROR_TOO_MANY_CHANGED_FILES if too_many else ERROR_CHANGED_FILES,
                 message=floor_rules.reason,
             )
         )
 
-    contributed_rules = _dedup_rules_by_reviewer(
-        list(classification_rules) + list(floor_rules)
-    )
+    contributed_rules = _dedup_rules_by_reviewer(list(classification_rules) + list(floor_rules))
     required_local = _dedup_preserve_order(
         list(baseline_local) + [rule.reviewer for rule in contributed_rules]
     )
@@ -353,7 +503,47 @@ def resolve_required_local_reviewers(
         contributed_rules=contributed_rules,
         contributed_by=contributed_by,
         opted_out=opt_outs.entries,
+        floors_by_reviewer=_floor_only_reviewers(
+            collection,
+            floor_rules=floor_rules,
+            required_for_the_whole_change=set(baseline_local)
+            | {rule.reviewer for rule in classification_rules},
+        ),
+        not_code=not_code,
     )
+
+
+def _floor_only_reviewers(
+    collection: ContributionCollection,
+    *,
+    floor_rules: tuple[ContributionRule, ...],
+    required_for_the_whole_change: set[str],
+) -> dict[str, frozenset[str]]:
+    """Each reviewer whose whole remit is its diff floors, mapped to those
+    floor kinds (#1179).
+
+    A reviewer is floor-scoped only when a floor requires it on this PR and
+    EVERY rule the collection holds for it is a floor and nothing else. A
+    rule carrying a classification match declares a remit wider than the
+    floors — `docs-reviewer` rides `touches-code` but also `type: "*"`, and
+    its job is the documentation — so such a reviewer is required for the
+    whole change even on a PR whose classification matched nothing. So is
+    one the baseline requires. The kinds are every floor the reviewer's rules
+    carry, not just the ones this PR's diff satisfied — a later change that
+    reaches any of them is one the reviewer is there to check.
+    """
+    rules_by_reviewer: dict[str, list[ContributionRule]] = {}
+    for rule in collection.rules:
+        rules_by_reviewer.setdefault(rule.reviewer, []).append(rule)
+    scoped: dict[str, frozenset[str]] = {}
+    for reviewer in dict.fromkeys(rule.reviewer for rule in floor_rules):
+        rules = rules_by_reviewer.get(reviewer, [])
+        if reviewer in required_for_the_whole_change or not all(
+            rule.floor is not None and not rule.predicate for rule in rules
+        ):
+            continue
+        scoped[reviewer] = frozenset(rule.floor for rule in rules if rule.floor is not None)
+    return scoped
 
 
 def _opt_out_error(details: tuple[str, ...]) -> Resolution:
@@ -372,7 +562,8 @@ def _floor_rules(
     pr_number: int,
     *,
     changed_files: ChangedFilesFn,
-) -> "tuple[ContributionRule, ...] | _Unresolvable":
+    not_code: NotCode = DEFAULT_NOT_CODE,
+) -> tuple[ContributionRule, ...] | _Unresolvable:
     """Floor-carrying rules the PR's diff satisfies (DEC-032 amendment).
 
     Short-circuits when no installed contribution carries a floor — a
@@ -390,20 +581,29 @@ def _floor_rules(
     files = changed_files(pr_number)
     if isinstance(files, _Unresolvable):
         return files
-    satisfied_floors = _satisfied_floors(files)
-    return collection.reviewers_for_floors(satisfied_floors)
+    return collection.reviewers_for_floors(satisfied_floors(files, not_code))
 
 
-def _satisfied_floors(changed_paths: list[str]) -> set[str]:
-    """The set of floor kinds the PR's changed files satisfy (DEC-032 amendment).
+def satisfied_floors(
+    changed_paths: list[str] | tuple[str, ...],
+    not_code: NotCode = DEFAULT_NOT_CODE,
+) -> set[str]:
+    """The set of floor kinds a set of changed paths satisfies (DEC-032 amendment).
 
     Maps the raw diff to the abstract floor-kind vocabulary the collection
     matches on, keeping the collection ignorant of *how* a diff property is
-    computed. Currently one floor kind: `touches-code`, satisfied when the diff
-    touches code per `diff_touches_code`.
+    computed. The adopter's not-code list (#1178) is applied first, for every
+    floor kind alike: a changed path it matches satisfies no floor, and every
+    other path is read unchanged. Currently one floor kind: `touches-code`,
+    satisfied when the remaining paths touch code per `diff_touches_code`.
+
+    The resolver reads the PR's whole diff through it; the freshness rule
+    (`_lib.verdict_freshness`, #1179) reads the author's changes since a
+    verdict through it, so both judge a path the same way.
     """
+    floor_paths = not_code.floor_paths(list(changed_paths))
     satisfied: set[str] = set()
-    if diff_touches_code(changed_paths):
+    if diff_touches_code(floor_paths):
         satisfied.add(FLOOR_TOUCHES_CODE)
     return satisfied
 
@@ -414,21 +614,78 @@ def _satisfied_floors(changed_paths: list[str]) -> set[str]:
 # under a `docs/` directory (e.g. `docs/conf.py`, `docs/deploy.sh`), so real
 # code checked into a docs tree cannot slip past the floor. Centralised here so
 # the definition is one edit away.
-_CODE_SUFFIXES = frozenset({
-    # source languages
-    ".py", ".pyi", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs",
-    ".go", ".rs", ".rb", ".java", ".kt", ".kts", ".scala", ".groovy",
-    ".c", ".h", ".cc", ".cpp", ".cxx", ".hpp", ".hh", ".cs", ".swift",
-    ".m", ".mm", ".php", ".pl", ".pm", ".lua", ".r", ".jl", ".dart",
-    ".ex", ".exs", ".erl", ".clj", ".cljs", ".hs", ".ml", ".fs",
-    ".vb", ".sql",
-    # shell / batch scripts
-    ".sh", ".bash", ".zsh", ".fish", ".ksh", ".ps1", ".psm1",
-    ".bat", ".cmd",
-    # configuration / data / schema
-    ".yaml", ".yml", ".json", ".jsonc", ".toml", ".ini", ".cfg",
-    ".conf", ".xml", ".env", ".properties", ".gradle",
-})
+_CODE_SUFFIXES = frozenset(
+    {
+        # source languages
+        ".py",
+        ".pyi",
+        ".ts",
+        ".tsx",
+        ".js",
+        ".jsx",
+        ".mjs",
+        ".cjs",
+        ".go",
+        ".rs",
+        ".rb",
+        ".java",
+        ".kt",
+        ".kts",
+        ".scala",
+        ".groovy",
+        ".c",
+        ".h",
+        ".cc",
+        ".cpp",
+        ".cxx",
+        ".hpp",
+        ".hh",
+        ".cs",
+        ".swift",
+        ".m",
+        ".mm",
+        ".php",
+        ".pl",
+        ".pm",
+        ".lua",
+        ".r",
+        ".jl",
+        ".dart",
+        ".ex",
+        ".exs",
+        ".erl",
+        ".clj",
+        ".cljs",
+        ".hs",
+        ".ml",
+        ".fs",
+        ".vb",
+        ".sql",
+        # shell / batch scripts
+        ".sh",
+        ".bash",
+        ".zsh",
+        ".fish",
+        ".ksh",
+        ".ps1",
+        ".psm1",
+        ".bat",
+        ".cmd",
+        # configuration / data / schema
+        ".yaml",
+        ".yml",
+        ".json",
+        ".jsonc",
+        ".toml",
+        ".ini",
+        ".cfg",
+        ".conf",
+        ".xml",
+        ".env",
+        ".properties",
+        ".gradle",
+    }
+)
 
 # Filename suffixes treated as PURE DOCUMENTATION (not code) by the
 # `touches-code` floor — but ONLY for a file whose suffix is not in
@@ -448,11 +705,26 @@ _DOC_SUFFIXES = (".md", ".mdx", ".markdown", ".rst")
 # with an unrecognized suffix under `docs/` (e.g. `docs/tools/helper`) is NOT an
 # asset and stays code, so a script checked into a docs tree cannot slip past the
 # floor by lacking an extension.
-_DOC_ASSET_SUFFIXES = frozenset({
-    ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".ico", ".svg",
-    ".pdf", ".drawio", ".excalidraw",
-    ".woff", ".woff2", ".ttf", ".otf", ".eot",
-})
+_DOC_ASSET_SUFFIXES = frozenset(
+    {
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".gif",
+        ".webp",
+        ".bmp",
+        ".ico",
+        ".svg",
+        ".pdf",
+        ".drawio",
+        ".excalidraw",
+        ".woff",
+        ".woff2",
+        ".ttf",
+        ".otf",
+        ".eot",
+    }
+)
 
 # Path segments (matched case-insensitively) that mark a DOCUMENTATION
 # directory. A file under such a directory is demoted to documentation ONLY when
@@ -492,6 +764,11 @@ def diff_touches_code(changed_paths: list[str]) -> bool:
     changed files) does not touch code. The suffix sets are a small, central
     allow-list, easy to adjust as the panel's mandate sharpens (DEC-032
     amendment names this the genuine design point).
+
+    This predicate reads the paths it is given. The adopter's not-code list
+    (`NotCode`, #1178) is applied before it, by `satisfied_floors`, so a path
+    the list matches — by default, a changeset under `.changes/` — never
+    reaches the suffix test.
     """
     return any(not _is_documentation_path(path) for path in changed_paths)
 
@@ -524,9 +801,7 @@ def _under_docs_dir(posix: PurePosixPath) -> bool:
     merely NAMED `docs` is not mistaken for one living under `docs/`. Segment
     matching is case-folded so `Docs/` reads the same as `docs/`.
     """
-    return any(
-        segment.lower() in _DOC_DIR_SEGMENTS for segment in posix.parts[:-1]
-    )
+    return any(segment.lower() in _DOC_DIR_SEGMENTS for segment in posix.parts[:-1])
 
 
 def _dedup_rules_by_reviewer(
@@ -552,7 +827,7 @@ def _closing_issue_classifications(
     *,
     closing_issue_numbers: ClosingIssueNumbersFn,
     issue_labels: IssueLabelsFn,
-) -> "list[dict[str, str]] | _Unresolvable":
+) -> list[dict[str, str]] | _Unresolvable:
     """Classification mapping (e.g. `{workstream: design, type: feature}`) per closing issue.
 
     DEC-032 D1's resolution domain is total for the *determinable* cases: a
@@ -582,9 +857,7 @@ def _closing_issue_classifications(
             # Could not read this issue's labels — its classification is
             # UNKNOWN, so a contributed reviewer it might require cannot be
             # dropped. Fail closed rather than treat as "no classification".
-            return _Unresolvable(
-                f"could not read labels for closing issue #{issue_number}"
-            )
+            return _Unresolvable(f"could not read labels for closing issue #{issue_number}")
         try:
             classification = _classification_from_labels(labels)
         except _MultiValueAxisError as exc:
@@ -617,10 +890,7 @@ def _classification_from_labels(labels: list) -> dict[str, str]:
     the operator fixes the labels (or `--bypass`). The guard is per-axis: a
     valid `type` and a broken multi-value `workstream` fail on the workstream.
     """
-    names = [
-        lbl.get("name", "") if isinstance(lbl, dict) else str(lbl)
-        for lbl in labels
-    ]
+    names = [lbl.get("name", "") if isinstance(lbl, dict) else str(lbl) for lbl in labels]
     classification: dict[str, str] = {}
     for axis in CLASSIFICATION_AXES:
         values: list[str] = []

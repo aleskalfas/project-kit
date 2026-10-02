@@ -22,15 +22,9 @@ from pathlib import Path
 
 import pytest
 
-
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = (
-    REPO_ROOT
-    / ".pkit"
-    / "capabilities"
-    / "project-management"
-    / "scripts"
-    / "create-issue.py"
+    REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "create-issue.py"
 )
 
 # The backbone verb's maintainer-side refusal, as `pkit report link` emits it
@@ -55,11 +49,15 @@ def ci():
 
 
 class _FakeLink:
-    """Minimal stand-in for containment.LinkResult — carries `ok` + `detail`."""
+    """Minimal stand-in for containment.LinkResult — carries `ok` + `detail`,
+    and the `outcome` / `refused` create-issue reads; only linked results are
+    faked here, so neither names anything."""
 
     def __init__(self, detail: str, *, ok: bool) -> None:
         self.detail = detail
         self.ok = ok
+        self.outcome = None
+        self.refused = False
 
 
 def _mark_bootstrapped(cap_root: Path) -> None:
@@ -109,20 +107,14 @@ def _stage_capability_tree(tmp_path: Path) -> Path:
         encoding="utf-8",
     )
     (root / "schemas" / "titles.yaml").write_text(
-        "formats:\n"
-        "  issue-task:\n"
-        "    pattern: '^\\[(Task|Bug|Docs|Test|Refactor|Chore)\\] .+$'\n",
+        "formats:\n  issue-task:\n    pattern: '^\\[(Task|Bug|Docs|Test|Refactor|Chore)\\] .+$'\n",
         encoding="utf-8",
     )
-    (root / "schemas" / "body-format.yaml").write_text(
-        "sections: {}\n", encoding="utf-8"
-    )
+    (root / "schemas" / "body-format.yaml").write_text("sections: {}\n", encoding="utf-8")
     (root / "templates" / "Task.md").write_text(
         "---\nname: Task\n---\nFeature: #\n\n## What\nfoo\n", encoding="utf-8"
     )
-    (root / "project" / "config.yaml").write_text(
-        "workstreams: [spyre]\n", encoding="utf-8"
-    )
+    (root / "project" / "config.yaml").write_text("workstreams: [spyre]\n", encoding="utf-8")
     # Empty members → open mode (membership passes for any resolved identity).
     (root / "project" / "members.yaml").write_text("members: []\n", encoding="utf-8")
     _mark_bootstrapped(root)
@@ -169,11 +161,16 @@ def _run_main(ci, root: Path, monkeypatch, *, extra_argv: list[str]) -> int:
         "argv",
         [
             "create-issue.py",
-            "--type", "task",
-            "--title", "fix the reported thing",
-            "--parent", "1",
-            "--workstream", "spyre",
-            "--capability-root", str(root),
+            "--type",
+            "task",
+            "--title",
+            "fix the reported thing",
+            "--parent",
+            "1",
+            "--workstream",
+            "spyre",
+            "--capability-root",
+            str(root),
             "--yes",
             *extra_argv,
         ],
@@ -184,9 +181,7 @@ def _run_main(ci, root: Path, monkeypatch, *, extra_argv: list[str]) -> int:
 # --- the flag links after a successful create -------------------------------
 
 
-def test_from_report_invokes_pkit_report_link_after_create(
-    ci, tmp_path, monkeypatch
-) -> None:
+def test_from_report_invokes_pkit_report_link_after_create(ci, tmp_path, monkeypatch) -> None:
     """`--from-report 77` on a successful create invokes the backbone's
     canonical editor — argv `pkit report link 77 55` — and exits 0. The
     one-linker rule realized: a subprocess to the verb, no body edit here."""
@@ -210,9 +205,7 @@ def test_from_report_link_runs_after_the_create_call(ci, tmp_path, monkeypatch) 
 
     _run_main(ci, root, monkeypatch, extra_argv=["--from-report", "77"])
 
-    create_idx = next(
-        i for i, c in enumerate(calls) if "issue" in c and "create" in c
-    )
+    create_idx = next(i for i, c in enumerate(calls) if "issue" in c and "create" in c)
     pkit_idx = next(i for i, c in enumerate(calls) if c and c[0] == "pkit")
     assert create_idx < pkit_idx
 
@@ -240,14 +233,10 @@ def test_from_report_link_failure_warns_exits_4_and_never_rolls_back(
     assert "pkit report link 77 55" in err  # the exact remediation command
     # No rollback: the create happened, and no destructive gh call followed.
     assert any("create" in c for c in calls if c and c[0] == "gh")
-    assert not any(
-        c[0] == "gh" and ("delete" in c or "close" in c) for c in calls if c
-    )
+    assert not any(c[0] == "gh" and ("delete" in c or "close" in c) for c in calls if c)
 
 
-def test_from_report_surfaces_backbone_refusal_verbatim(
-    ci, tmp_path, monkeypatch, capsys
-) -> None:
+def test_from_report_surfaces_backbone_refusal_verbatim(ci, tmp_path, monkeypatch, capsys) -> None:
     """The maintainer-side same-repo check belongs to the backbone verb; when it
     refuses (not in the report-target repo), its message reaches the user
     verbatim — pm neither duplicates nor paraphrases the gate."""
@@ -284,11 +273,10 @@ def test_without_flag_no_pkit_invocation_and_exit_0(ci, tmp_path, monkeypatch) -
 # --- _link_from_report unit edges -------------------------------------------
 
 
-def test_link_from_report_pkit_missing_warns_with_remediation(
-    ci, monkeypatch, capsys
-) -> None:
+def test_link_from_report_pkit_missing_warns_with_remediation(ci, monkeypatch, capsys) -> None:
     """`pkit` not on PATH: warn (with the remediation command) and return 4 —
     the caller's created issue stays."""
+
     def raise_missing(*a, **k):
         raise FileNotFoundError("pkit")
 
@@ -304,6 +292,7 @@ def test_link_from_report_unparsable_new_number_warns_with_placeholder(
 ) -> None:
     """When the new issue number could not be parsed from the gh output there is
     nothing to link — warn with a placeholder remediation and return 4."""
+
     def boom(*a, **k):  # pragma: no cover — no subprocess may run
         raise AssertionError("no pkit call may run without a new issue number")
 

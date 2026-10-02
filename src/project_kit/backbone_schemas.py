@@ -199,9 +199,7 @@ def edit_distance(a: str, b: str) -> int:
     for i, ca in enumerate(a, start=1):
         current = [i]
         for j, cb in enumerate(b, start=1):
-            current.append(
-                min(previous[j] + 1, current[j - 1] + 1, previous[j - 1] + (ca != cb))
-            )
+            current.append(min(previous[j] + 1, current[j - 1] + 1, previous[j - 1] + (ca != cb)))
         previous = current
     return previous[-1]
 
@@ -320,7 +318,9 @@ def envelope_findings(document: Any, schema: Mapping[str, Any]) -> list[tuple[st
     by position; an unknown key reads through the shared renderer. The value
     inside is the point's to judge, not this schema's."""
     validator = Draft202012Validator(schema)
-    errors = sorted(validator.iter_errors(document), key=lambda e: [str(p) for p in e.absolute_path])
+    errors = sorted(
+        validator.iter_errors(document), key=lambda e: [str(p) for p in e.absolute_path]
+    )
     return [
         ("".join(f"/{_pointer_token(p)}" for p in path), message)
         for error in errors
@@ -346,7 +346,9 @@ class FindingKind(Enum):
     AMBIGUOUS_ROLE = "ambiguous-role"  # a bare role word two or more active roles share
     ORPHANED_ROLE = "orphaned-role"  # a role block whose role has no active provider
     INERT_POINT = "inert-point"  # a point block the active provider's point does not match
-    POINT_SCHEMA_UNAVAILABLE = "point-schema-unavailable"  # the provider's point schema is unreadable
+    POINT_SCHEMA_UNAVAILABLE = (
+        "point-schema-unavailable"  # the provider's point schema is unreadable
+    )
 
 
 @dataclass(frozen=True)
@@ -664,9 +666,8 @@ def _point_findings(
             )
         else:
             defined = wiring.points_of(role)
-            problem = (
-                f"names no data point {provider!r} defines for {role!r} "
-                + (f"(it defines: {_quoted(defined)})" if defined else "(it defines none)")
+            problem = f"names no data point {provider!r} defines for {role!r} " + (
+                f"(it defines: {_quoted(defined)})" if defined else "(it defines none)"
             )
         findings.append(
             ContainerFinding(

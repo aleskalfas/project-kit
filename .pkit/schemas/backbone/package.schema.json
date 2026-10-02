@@ -174,8 +174,20 @@
           "$ref": "#/$defs/non-empty-string"
         },
         "query-contract": {
-          "description": "The one constant declaration that this command honours the query contract (ADR-057 point 3; the literal is ADR-058's): bounded, deterministic, read-only, needing no network. Required on the command a validator names, and on every query command a capability registers. It grants nothing and is trusted, not enforced.",
+          "description": "The one constant declaration that this command honours the query contract (COR-050 point 2 and ADR-057 point 3; the literal is ADR-058's): bounded, deterministic, read-only, needing no network. Required on the command a validator names, and on every query command a capability registers. It grants nothing and is trusted, not enforced.",
           "const": true
+        },
+        "reads": {
+          "description": "What a data point's command filler reads beyond the working tree (COR-052 point 6): `history` — the current history, read from HEAD — and `settled` — the default branch, as the backbone resolves it, never a base named for one run. Absent: the working tree only. Declared by the capability and trusted; it reads them through the backbone's reading commands and does not compare the branch at hand with settled state. The status report and `pkit validate` name each declared state and the commit it was read at; a filler that declares `settled` is not started while the default branch resolves to no commit, unless — in a repository with no remote — it has none yet. Taken only with the query-contract declaration.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "history",
+              "settled"
+            ]
+          }
         }
       }
     },
@@ -566,6 +578,13 @@
         "surface": {
           "description": "Repository-relative path globs this component says ought to be described; paths in it that no artefact anchors to are reported as uncovered (COR-050 point 8).",
           "$ref": "#/$defs/path-list"
+        },
+        "held": {
+          "description": "Folders of held documents: files this component owns that are not artefacts, such as a log of reviews it has carried out (COR-050 point 1). Each lies within one of the component's declared locations; no place reads one of its files as an artefact.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/friction-held"
+          }
         }
       }
     },
@@ -582,6 +601,34 @@
         },
         "path": {
           "$ref": "#/$defs/relative-path"
+        },
+        "description": {
+          "$ref": "#/$defs/non-empty-string"
+        }
+      }
+    },
+    "friction-held": {
+      "description": "A folder of held documents: `path`, a folder — never a glob — inside the declared location `location` names (COR-050 point 1).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "location",
+        "path"
+      ],
+      "properties": {
+        "location": {
+          "description": "A name from `docs.locations`; the folder lies inside it.",
+          "$ref": "#/$defs/location-name"
+        },
+        "path": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/relative-path"
+            },
+            {
+              "pattern": "^[^*?\\[]+$"
+            }
+          ]
         },
         "description": {
           "$ref": "#/$defs/non-empty-string"

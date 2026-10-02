@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -26,6 +27,15 @@ class _ExecCalled(Exception):
         super().__init__(path)
         self.path = path
         self.argv = argv
+
+
+@pytest.fixture(autouse=True)
+def no_inherited_notice(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Every test starts with no pin-fallback notice said: the router sets the
+    notice guard on this process's environment when it degrades, and
+    monkeypatch restores it only for a variable it has recorded."""
+    monkeypatch.setenv(router._PIN_UNRESOLVED_ENV, "")
+    monkeypatch.delenv(router._PIN_UNRESOLVED_ENV)
 
 
 @pytest.fixture
@@ -186,6 +196,58 @@ def test_pin_file_path_is_under_pkit(tmp_path: Path) -> None:
     assert router.pin_file_path(tmp_path) == tmp_path / ".pkit" / "version-pin"
 
 
+# --- write_version_pin: the pin's one writer, whole or not at all (#1211) -------
+
+
+def _pkit_entries(root: Path) -> list[str]:
+    """What `.pkit/` holds — the pin, and any temporary file a write left beside it."""
+    return sorted(entry.name for entry in (root / ".pkit").iterdir())
+
+
+def test_write_version_pin_writes_what_the_reader_reads_and_no_temporary(tmp_path: Path) -> None:
+    (tmp_path / ".pkit").mkdir()
+
+    router.write_version_pin(tmp_path, "1.100.0")
+
+    assert router.pin_file_path(tmp_path).read_bytes() == b"1.100.0\n"
+    assert router.read_version_pin(tmp_path) == "1.100.0"
+    assert _pkit_entries(tmp_path) == ["version-pin"]
+
+
+@pytest.mark.parametrize("failing", ["fsync", "replace"])
+def test_write_version_pin_cut_short_leaves_the_previous_pin_intact(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failing: str
+) -> None:
+    """A write that dies before its bytes reach the disk, or at the rename, leaves
+    the previous pin byte-identical and no temporary file: the router never reads
+    a torn pin as the version to run."""
+    (tmp_path / ".pkit").mkdir()
+    pin = router.pin_file_path(tmp_path)
+    pin.write_bytes(b"1.145.0\n")
+
+    def _cut_short(*_args: object) -> None:
+        raise OSError("the write died here")
+
+    monkeypatch.setattr(os, failing, _cut_short)
+
+    with pytest.raises(OSError, match="the write died here"):
+        router.write_version_pin(tmp_path, "1.146.0")
+
+    assert pin.read_bytes() == b"1.145.0\n"
+    assert _pkit_entries(tmp_path) == ["version-pin"]
+
+
+def test_write_version_pin_none_removes_the_pin_and_absent_is_fine(tmp_path: Path) -> None:
+    (tmp_path / ".pkit").mkdir()
+    router.pin_file_path(tmp_path).write_text("1.100.0\n", encoding="utf-8")
+
+    router.write_version_pin(tmp_path, None)
+    assert not router.pin_file_path(tmp_path).exists()
+
+    router.write_version_pin(tmp_path, None)  # nothing to remove: no error
+    assert _pkit_entries(tmp_path) == []
+
+
 def test_is_routed_child_reads_loop_guard(tmp_path: Path) -> None:
     assert router.is_routed_child({router._LOOP_GUARD_ENV: "1"}) is True
     assert router.is_routed_child({}) is False
@@ -314,13 +376,13 @@ class _FakeCompleted:
 
 def _patch_subprocess(
     monkeypatch: pytest.MonkeyPatch, results: list[object]
-) -> list[dict[str, object]]:
+) -> list[dict[str, Any]]:
     """Patch `router.subprocess.run` to return/raise `results` in order,
     recording each call. A result that is an Exception is raised."""
-    calls: list[dict[str, object]] = []
+    calls: list[dict[str, Any]] = []
     it = iter(results)
 
-    def fake_run(cmd, **kwargs):  # type: ignore[no-untyped-def]
+    def fake_run(cmd, **kwargs):
         calls.append({"cmd": cmd, "kwargs": kwargs})
         outcome = next(it)
         if isinstance(outcome, Exception):
@@ -398,6 +460,88 @@ def test_route2_degrades_when_uvx_absent(
 
     assert ran_self == [True]
     assert "could not be resolved" in capsys.readouterr().err
+
+
+def test_route2_fallback_says_when_this_binary_is_older_than_the_pin(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    no_exec: None,
+    ran_self: list[bool],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A binary older than the pin is a normal state, and the one in which sync and
+    upgrade refuse (#1212): the fallback says so, and still runs the command."""
+    _make_adopter(tmp_path, "1.150.0")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(router, "running_version", lambda: "1.149.0")
+    _patch_subprocess(monkeypatch, [_FakeCompleted(1)])
+
+    router.main(["status"])
+
+    assert ran_self == [True]  # a read-only command still runs
+    err = capsys.readouterr().err
+    assert "pkit 1.149.0 instead, an OLDER pkit than the pin names" in err
+    assert "`pkit sync` and `pkit upgrade` refuse" in err
+    assert f"{router.DISTRIBUTION_GIT_URL}@v1.150.0" in err
+    assert err.count("pkit:") == 1
+
+
+def test_route2_fallback_to_a_newer_binary_does_not_call_it_older(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    no_exec: None,
+    ran_self: list[bool],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    _make_adopter(tmp_path, "1.100.0")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(router, "running_version", lambda: "1.139.0")
+    _patch_subprocess(monkeypatch, [_FakeCompleted(1)])
+
+    router.main(["status"])
+
+    err = capsys.readouterr().err
+    assert "OLDER" not in err
+    assert "Running 1.139.0 instead" in err
+
+
+def test_route2_fallback_notice_is_said_once_per_command(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    no_exec: None,
+    ran_self: list[bool],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A `pkit` subprocess of the degraded command inherits its environment and
+    does not repeat the notice; it still probes the pin, as routing is unchanged."""
+    _make_adopter(tmp_path, "1.150.0")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(router, "running_version", lambda: "1.149.0")
+    calls = _patch_subprocess(monkeypatch, [_FakeCompleted(1), _FakeCompleted(1)])
+
+    router.main(["pm", "open-pr"])  # the command the operator ran
+    router.main(["friction", "check"])  # a `pkit` call it makes, same environment
+
+    assert ran_self == [True, True]
+    assert len(calls) == 2  # each probed the pin
+    assert capsys.readouterr().err.count("pkit:") == 1
+    assert os.environ[router._PIN_UNRESOLVED_ENV] == "1.150.0"
+
+
+@pytest.mark.parametrize(
+    ("version", "than", "older"),
+    [
+        ("1.149.0", "1.150.0", True),
+        ("1.150.0", "1.150.0", False),
+        ("1.151.0", "1.150.0", False),
+        ("1.9.0", "1.10.0", True),  # numeric, not lexical
+        ("1.149", "1.150.0", False),  # not MAJOR.MINOR.PATCH: no order claimed
+        ("1.149.0", "main", False),
+        ("1.149.0rc1", "1.150.0", False),
+    ],
+)
+def test_is_older_release_orders_only_bare_releases(version: str, than: str, older: bool) -> None:
+    assert router._is_older_release(version, than) is older
 
 
 # --- run_bypassed: bootstrap the pin raise with routing truly off ---------------

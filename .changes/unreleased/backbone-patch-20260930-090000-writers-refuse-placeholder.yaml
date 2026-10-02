@@ -1,0 +1,13 @@
+component: backbone
+kind: patch
+custom:
+  category: Changed
+body: >
+  `pkit friction revalidate` refuses a `--because`, and `pkit friction defer` a
+  `--reason`, that still holds a placeholder: words in angle brackets, as a
+  command shown for a person to run writes what they supply — `friction
+  explain` shows `--because "<why the content still holds>"` and `--reason
+  "<why it can wait>"`. Run as shown, the command would have written the
+  placeholder as the justification, a marker bump with nothing behind it.
+  Code in brackets is not a placeholder: a bracket with no space inside, or
+  opening in capitals (`Vec<u8>`, `Map<String, int>`).

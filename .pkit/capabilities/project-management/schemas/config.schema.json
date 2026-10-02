@@ -2,11 +2,10 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "config.schema.json",
   "title": "Adopter config — project-management capability",
-  "description": "Formal shape of the adopter's `project/config.yaml` — the one file every project-management adopter hand-edits at install time (default branch, `gh:` host/owner per DEC-023, Projects-v2 board flags + cached ids, doc-path mappings per DEC-015, milestone categories per DEC-016, review mode + registered agents per DEC-027 / DEC-028, methodology-mesh peers per DEC-022). `additionalProperties: false` is load-bearing: every reader accesses this file through defensive `.get()`, so an unknown or misspelled key would otherwise be silently ignored and degrade behaviour (e.g. `has_projects_v2_boards` with a trailing `s` falls back to label mode unnoticed) — the schema turns that into a loud refusal naming the offending key. Required keys mirror `pre-check.py`'s REQUIRED_ADOPTER_CONFIG_FIELDS so shape validation and the pre-check gate agree. Document-shaped schema: the file IS the resource (no top-level id collection). Companion per COR-018.",
+  "description": "Formal shape of the adopter's `project/config.yaml` — the one file every project-management adopter hand-edits at install time (`gh:` host/owner per DEC-023, Projects-v2 board flags + cached ids, doc-path mappings per DEC-015, milestone categories per DEC-016, review mode + registered agents per DEC-027 / DEC-028, methodology-mesh peers per DEC-022). `additionalProperties: false` is load-bearing: every reader accesses this file through defensive `.get()`, so an unknown or misspelled key would otherwise be silently ignored and degrade behaviour (e.g. `has_projects_v2_boards` with a trailing `s` falls back to label mode unnoticed) — the schema turns that into a loud refusal naming the offending key. Required keys mirror `pre-check.py`'s REQUIRED_ADOPTER_CONFIG_FIELDS so shape validation and the pre-check gate agree. Document-shaped schema: the file IS the resource (no top-level id collection). Companion per COR-018.",
   "type": "object",
   "required": [
     "schema_version",
-    "default_branch",
     "workstreams"
   ],
   "additionalProperties": false,
@@ -32,7 +31,7 @@
     "default_branch": {
       "type": "string",
       "minLength": 1,
-      "description": "The repo's default branch. Drives branch-name generation and base-branch enforcement per DEC-013; pre-check verifies it matches the live repo.",
+      "description": "DEPRECATED — retired into the backbone's `repository.default-branch` (COR-054), which declares the default branch once for every reader; the 0.55.0 upgrade migration carries a value other than `main` over and removes this key. Until then, a value that differs from the backbone's names the branch pm cuts work from and targets pull requests at (DEC-013) only while the backbone declares none, with a warning; a declared value always wins.",
       "pattern": "^[^\\n\\r]+$"
     },
     "workstreams": {
@@ -171,6 +170,22 @@
               "type": "string",
               "minLength": 1,
               "description": "Role from the membership roster whose members are requested as reviewers (the PR author is excluded)."
+            }
+          }
+        },
+        "floors": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Settings of the diff-property floors a capability-contributed reviewer rule can carry (DEC-032).",
+          "properties": {
+            "not_code": {
+              "type": "array",
+              "description": "Paths that never count as code (#1178): gitignore-style patterns, relative to the repository root, the matching `code_path_to_doc_mapping` uses. A changed path one matches satisfies no floor, so it never draws a `touches-code` reviewer; every other path is read as before. The list replaces the default rather than adding to it. Absent: `.changes/**`, the changesets a surface-changing pull request carries. An empty list excludes nothing.",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              }
             }
           }
         },

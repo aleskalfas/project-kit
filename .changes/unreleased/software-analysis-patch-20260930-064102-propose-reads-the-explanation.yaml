@@ -1,0 +1,16 @@
+component: software-analysis
+kind: patch
+custom:
+  category: Fixed
+  requires_backbone: release
+body: >
+  The resolver's `pkit analysis propose` reads what an anchor matches from
+  `pkit friction explain --json` and matches no anchor of its own (#1157):
+  the files each path anchor stands on at the revalidation point and at
+  HEAD, the commits behind each finding with the paths behind them — for a
+  dead anchor, where its files went — and the artefact's body, for an actor
+  or a term its own section. A quote surviving only in a file
+  `friction.exclude` leaves out now reads as gone rather than kept, and such
+  a file is never taken for where code moved. Each commit in its `--json`
+  document carries its `paths`, and the human view lists them, so `git show
+  <commit> -- <paths>` is what changed under the anchor.

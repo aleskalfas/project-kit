@@ -81,7 +81,8 @@ def test_stamp_carries_no_assignee_only_instance(io) -> None:
 def test_claim_yields_owner(io) -> None:
     res = io.resolve_owner(
         comments=[_comment(io, event="claim", instance=2, author="alice", ts=T0)],
-        labels=[], assignee_login="alice",
+        labels=[],
+        assignee_login="alice",
     )
     assert res.owners == frozenset({2})
     assert res.winner == 2
@@ -146,7 +147,9 @@ def test_comment_log_wins_over_lingering_label(io) -> None:
     is authoritative, the lingering `instance:N` label is residual (ADR-041 §2)."""
     comments = [_comment(io, event="claim", instance=2, author="alice", ts=T0)]
     res = io.resolve_owner(
-        comments=comments, labels=[{"name": "instance:5"}], assignee_login="alice",
+        comments=comments,
+        labels=[{"name": "instance:5"}],
+        assignee_login="alice",
     )
     assert res.substrate == "comment"
     assert res.owners == frozenset({2})  # label:5 is residual, ignored
@@ -154,7 +157,8 @@ def test_comment_log_wins_over_lingering_label(io) -> None:
 
 def test_label_resolves_when_no_comment_marker(io) -> None:
     res = io.resolve_owner(
-        comments=[], labels=[{"name": "instance:4"}, {"name": "priority:High"}],
+        comments=[],
+        labels=[{"name": "instance:4"}, {"name": "priority:High"}],
         assignee_login="alice",
     )
     assert res.substrate == "label"
@@ -185,7 +189,12 @@ def test_event_comment_refuses_unknown_event(io) -> None:
 
 def test_label_backend_constructor(io) -> None:
     assert io.instance_label_args(issue_number=7, instance=3) == [
-        "gh", "issue", "edit", "7", "--add-label", "instance:3",
+        "gh",
+        "issue",
+        "edit",
+        "7",
+        "--add-label",
+        "instance:3",
     ]
     assert io.instance_label_args(issue_number=7, instance=3, remove=True)[-2] == "--remove-label"
 
@@ -196,7 +205,8 @@ def test_label_backend_constructor(io) -> None:
 def test_mirror_region_reflects_owner(io) -> None:
     res = io.resolve_owner(
         comments=[_comment(io, event="claim", instance=2, author="alice", ts=T0)],
-        labels=[], assignee_login="alice",
+        labels=[],
+        assignee_login="alice",
     )
     region = io.render_mirror_region(res, names={2: "data"})
     assert io.MIRROR_BEGIN in region and io.MIRROR_END in region
@@ -214,7 +224,8 @@ def test_mirror_body_overwrites_not_appends(io) -> None:
     is healed, and the region never accumulates (ADR-041 §4). Never an append."""
     res1 = io.resolve_owner(
         comments=[_comment(io, event="claim", instance=2, author="alice", ts=T0)],
-        labels=[], assignee_login="alice",
+        labels=[],
+        assignee_login="alice",
     )
     body0 = "## What\n\nSome issue text.\n"
     body1 = io.render_mirror_body(body0, io.render_mirror_region(res1))
@@ -227,7 +238,8 @@ def test_mirror_body_overwrites_not_appends(io) -> None:
             _comment(io, event="claim", instance=2, author="alice", ts=T0),
             _comment(io, event="handoff", instance=2, to=3, author="alice", ts=T1),
         ],
-        labels=[], assignee_login="alice",
+        labels=[],
+        assignee_login="alice",
     )
     body2 = io.render_mirror_body(body1, io.render_mirror_region(res2))
     assert body2.count(io.MIRROR_BEGIN) == 1  # still one region
@@ -256,7 +268,8 @@ def test_selector_reads_own_schema_home(io) -> None:
 
 def _scanned_scripts() -> list[Path]:
     return [
-        p for p in sorted(SCRIPTS.rglob("*.py"))
+        p
+        for p in sorted(SCRIPTS.rglob("*.py"))
         if p != SEAM_MODULE and "__pycache__" not in p.parts
     ]
 

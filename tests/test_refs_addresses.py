@@ -120,9 +120,11 @@ def _address_issues(repo: AdopterRepo, skill: Path) -> list[refs.Issue]:
 
 def test_both_shapes_parse_bracketed_or_not() -> None:
     role = refs.parse_address(f"[{DOCS}]")
+    assert role is not None
     assert role == refs.Address("pkit", "documentation") and role.role == DOCS
     assert str(role) == DOCS
     point = refs.parse_address(READERS)
+    assert point is not None
     assert point == refs.Address("pkit", "documentation", "readers") and point.role == DOCS
     assert str(point) == READERS
 
@@ -245,16 +247,18 @@ def test_an_undeclared_point_is_reported_like_an_unresolved_record_token(
 ) -> None:
     repo = make_adopter_repo()
     _docs_provider(repo)
-    skill = _citing_skill(
-        repo, f"See [{DOCS}:nope] and [missing:DEC-001-gone] for the rule."
-    )
+    skill = _citing_skill(repo, f"See [{DOCS}:nope] and [missing:DEC-001-gone] for the rule.")
     issues = _address_issues(repo, skill)
     [point] = [i for i in issues if f"[{DOCS}:nope]" in i.diagnosis]
     [record] = [i for i in issues if "[missing:DEC-001-gone]" in i.diagnosis]
     # One shape: the citing artifact, a `cites …` diagnosis, the citation kind.
-    assert (point.location, point.kind) == (record.location, record.kind) == (
-        str(skill.relative_to(repo.root)),
-        refs.CITATION,
+    assert (
+        (point.location, point.kind)
+        == (record.location, record.kind)
+        == (
+            str(skill.relative_to(repo.root)),
+            refs.CITATION,
+        )
     )
     assert point.diagnosis == (
         f"cites point '[{DOCS}:nope]', which does not resolve: no installed provider of role "

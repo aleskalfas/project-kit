@@ -32,6 +32,7 @@ from pathlib import Path
 import pytest
 
 from project_kit.process import (
+    InvariantOutcome,
     ProcessEngine,
     load_definition,
     render_status_json,
@@ -214,7 +215,7 @@ def _set_marker(repo: Path, name: str, present: bool) -> None:
         marker.unlink()
 
 
-def _outcomes(repo: Path) -> dict[str, object]:
+def _outcomes(repo: Path) -> dict[str, InvariantOutcome]:
     return {inv.invariant_id: inv for inv in _engine(repo).evaluate_invariants()}
 
 
@@ -226,7 +227,7 @@ def test_unscoped_invariant_evaluated_in_region(fixture_repo: Path) -> None:
     _set_marker(fixture_repo, "_evidence_ok", present=False)
     outcomes = _outcomes(fixture_repo)
     assert "evidence-backed" in outcomes
-    assert outcomes["evidence-backed"].holds is False  # type: ignore[attr-defined]
+    assert outcomes["evidence-backed"].holds is False
 
 
 def test_unscoped_invariant_evaluated_out_of_region(fixture_repo: Path) -> None:
@@ -236,7 +237,7 @@ def test_unscoped_invariant_evaluated_out_of_region(fixture_repo: Path) -> None:
     _set_marker(fixture_repo, "_evidence_ok", present=False)
     outcomes = _outcomes(fixture_repo)
     assert "evidence-backed" in outcomes
-    assert outcomes["evidence-backed"].holds is False  # type: ignore[attr-defined]
+    assert outcomes["evidence-backed"].holds is False
 
 
 # --- the filter: scoped follows the resolved position ---------------------
@@ -247,11 +248,11 @@ def test_scoped_invariant_evaluated_in_region(fixture_repo: Path) -> None:
     _set_marker(fixture_repo, "_ready", present=False)
     outcomes = _outcomes(fixture_repo)
     assert "region-readiness" in outcomes
-    assert outcomes["region-readiness"].holds is False  # type: ignore[attr-defined]
+    assert outcomes["region-readiness"].holds is False
 
     _set_marker(fixture_repo, "_ready", present=True)
     outcomes = _outcomes(fixture_repo)
-    assert outcomes["region-readiness"].holds is True  # type: ignore[attr-defined]
+    assert outcomes["region-readiness"].holds is True
 
 
 def test_scoped_invariant_not_surfaced_out_of_region(fixture_repo: Path) -> None:

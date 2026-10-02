@@ -44,7 +44,7 @@ from typing import TYPE_CHECKING
 from _lib import axis_labels
 
 if TYPE_CHECKING:
-    from _lib.gh import gh_run as _gh_run_type  # pragma: no cover
+    pass  # pragma: no cover
 
 # The four methodology state values a terminal close must clear, plus the
 # terminal value itself.  These are the kit's own (greenfield) values on the
@@ -56,7 +56,7 @@ TERMINAL_STATE_VALUE = "done"
 
 
 def _resolve_state_labels(
-    substrate_map: "axis_labels.SubstrateMap | None",
+    substrate_map: axis_labels.SubstrateMap | None,
 ) -> tuple[str | None, tuple[str, ...]]:
     """Resolve the terminal + non-terminal ``state`` labels for this substrate.
 
@@ -91,7 +91,7 @@ def reconcile_state_labels_to_done(
     config: dict,
     *,
     gh_run,
-    substrate_map: "axis_labels.SubstrateMap | None" = None,
+    substrate_map: axis_labels.SubstrateMap | None = None,
 ) -> bool:
     """Remove all non-terminal ``state:*`` labels and ensure ``state:done``.
 

@@ -216,7 +216,7 @@ def test_init_runs_the_step(
     monkeypatch.setattr(
         install, "provision_query_commands", lambda ctx: ran.append(ctx.target_root)
     )
-    root = make_adopter_repo().root
+    root = make_adopter_repo(fresh=True).root  # the install itself, run in this test
     assert ran == [root]
 
 
@@ -263,8 +263,7 @@ def test_capability_upgrade_provisions_the_refreshed_capability(
 
     assert result.exit_code == 0, result.output
     assert (
-        "  unchanged    query command 'fill-doc-check' (project-management) — already "
-        "provisioned\n"
+        "  unchanged    query command 'fill-doc-check' (project-management) — already provisioned\n"
     ) in result.output
     assert uv.calls == ["offline"]
 
@@ -366,7 +365,7 @@ def local_index(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[_Lo
     requests: list[str] = []
 
     class Handler(http.server.SimpleHTTPRequestHandler):
-        def __init__(self, *args, **kwargs) -> None:  # type: ignore[no-untyped-def]
+        def __init__(self, *args, **kwargs) -> None:
             super().__init__(*args, directory=str(served), **kwargs)
 
         def log_message(self, format: str, *args: object) -> None:  # the base class's names

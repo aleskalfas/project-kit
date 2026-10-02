@@ -42,9 +42,7 @@ def containment():
     """Load the containment module via importlib (sibling _lib import)."""
     if str(LIB) not in sys.path:
         sys.path.insert(0, str(LIB))
-    spec = importlib.util.spec_from_file_location(
-        "pm_containment_read_under_test", SEAM_MODULE
-    )
+    spec = importlib.util.spec_from_file_location("pm_containment_read_under_test", SEAM_MODULE)
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     sys.modules["pm_containment_read_under_test"] = module
@@ -59,16 +57,24 @@ def _native(*numbers: int) -> str:
 
 
 def _stub_native(
-    containment, monkeypatch, *, stdout: str, returncode: int = 0, stderr: str = "",
+    containment,
+    monkeypatch,
+    *,
+    stdout: str,
+    returncode: int = 0,
+    stderr: str = "",
     repo_visible: bool = True,
 ):
     """Stub the native `…/sub_issues` GET at `_gh_call`, and the 404 probe.
 
-    ``stderr`` separates the conclusive statuses (410/422) from everything else.
-    A **404 is ambiguous** — an absent endpoint and an invisible repository are
+    ``stderr`` carries the status; ``stdout`` the error body, where GitHub's
+    words are. A **410** is the one answer that settles absence by status. A
+    **404 is ambiguous** — an absent endpoint and an invisible repository are
     textually identical — so it is settled by probing the parent issue.
-    ``repo_visible`` is that probe's answer (#869).
+    ``repo_visible`` is that probe's answer (#869). Nothing else, and no
+    wording, settles it (#808).
     """
+
     def fake_gh(args, config):
         joined = " ".join(args)
         if "sub_issues" not in joined:  # the parent-issue probe
@@ -151,8 +157,8 @@ def test_mixed_parent_native_wins_no_double_count(containment, monkeypatch) -> N
     #345 is textual-only. The union is {#344 native, #345 textual}, each once."""
     _stub_native(containment, monkeypatch, stdout=_native(344))
     corpus = {
-        344: "EPIC: #342\n\n## What",   # native AND textual → native-wins
-        345: "EPIC: #342\n\n## What",   # textual-only
+        344: "EPIC: #342\n\n## What",  # native AND textual → native-wins
+        345: "EPIC: #342\n\n## What",  # textual-only
         342: "EPIC body",
     }
     res = containment.resolve_children({}, parent_number=342, corpus=corpus)
@@ -187,8 +193,12 @@ def test_unsupported_instance_is_textual_only_and_determinate(containment, monke
     degradation is a COMPLETE answer — the mirror of the write side's UNSUPPORTED
     no-op. There is no native substrate to have missed anything (ADR-035 §5)."""
     _stub_native(
-        containment, monkeypatch, stdout="", returncode=1,
-        stderr="HTTP 404: Not Found", repo_visible=True,
+        containment,
+        monkeypatch,
+        stdout="",
+        returncode=1,
+        stderr="HTTP 404: Not Found",
+        repo_visible=True,
     )
     res = containment.resolve_children(
         {}, parent_number=342, corpus=_MIXED_CORPUS, corpus_complete=True
@@ -208,7 +218,11 @@ def test_unreadable_native_makes_the_resolution_incomplete(containment, monkeypa
     for the set.
     """
     _stub_native(
-        containment, monkeypatch, stdout="", returncode=1, stderr="error connecting: connection reset"
+        containment,
+        monkeypatch,
+        stdout="",
+        returncode=1,
+        stderr="error connecting: connection reset",
     )
     res = containment.resolve_children(
         {}, parent_number=342, corpus=_MIXED_CORPUS, corpus_complete=True
@@ -221,9 +235,9 @@ def test_unreadable_native_makes_the_resolution_incomplete(containment, monkeypa
 def test_parent_excludes_itself_and_foreign_children(containment, monkeypatch) -> None:
     _stub_native(containment, monkeypatch, stdout="[]")
     corpus = {
-        342: "EPIC: #342\n",   # names itself — never its own child
+        342: "EPIC: #342\n",  # names itself — never its own child
         344: "EPIC: #342\n",
-        99: "EPIC: #1\n",      # foreign parent
+        99: "EPIC: #1\n",  # foreign parent
     }
     res = containment.resolve_children({}, parent_number=342, corpus=corpus)
     assert res.numbers == [344]
@@ -299,6 +313,7 @@ def _stub_gh_list(containment, monkeypatch, *, total: int, child_at: int, parent
     Honouring the limit is what gives this test teeth: a caller asking for fewer
     rows than the tracker holds gets a short list, exactly as in production.
     """
+
     def fake_gh(args, config):
         if args[1] == "api":  # the native sub-issues read, not the corpus list
             return subprocess.CompletedProcess(args, 1, stdout="", stderr="HTTP 410: Gone")
@@ -311,9 +326,7 @@ def _stub_gh_list(containment, monkeypatch, *, total: int, child_at: int, parent
             }
             for n in range(1, total + 1)
         ]
-        return subprocess.CompletedProcess(
-            args, 0, stdout=json.dumps(rows[:limit]), stderr=""
-        )
+        return subprocess.CompletedProcess(args, 0, stdout=json.dumps(rows[:limit]), stderr="")
 
     monkeypatch.setattr(containment, "_gh_call", fake_gh)
 
@@ -381,7 +394,10 @@ def test_an_invisible_repository_is_not_an_absent_endpoint(containment, monkeypa
     body carries no parent-ref line.
     """
     _stub_native(
-        containment, monkeypatch, stdout="", returncode=1,
+        containment,
+        monkeypatch,
+        stdout="",
+        returncode=1,
         stderr="HTTP 404: Not Found (https://api.github.com/repos/o/r/issues/342/sub_issues)",
         repo_visible=False,
     )
@@ -393,72 +409,234 @@ def test_an_invisible_repository_is_not_an_absent_endpoint(containment, monkeypa
     assert res.native_supported is True, "the endpoint is not known to be absent"
 
 
-@pytest.mark.parametrize("status", ["HTTP 410: Gone", "HTTP 422: Unprocessable Entity"])
-def test_conclusive_statuses_need_no_probe(containment, monkeypatch, status: str) -> None:
-    """410/422 name feature-absence outright — an invisible repo never yields them.
+# A 422 whose words seem to say the feature is off. No such 422 is documented;
+# the point is that even this one grants nothing (ADR-035).
+_ABSENT_MESSAGE = "Sub-issues are not enabled for this repository"
+_ABSENT_422_BODY = json.dumps({"message": _ABSENT_MESSAGE, "status": "422"})
 
-    `repo_visible=False` would flip a 404; these must resolve UNSUPPORTED anyway,
-    which proves they short-circuit before the probe rather than passing by luck.
+
+def test_a_410_needs_no_probe(containment, monkeypatch) -> None:
+    """A 410 is the conclusive status: an invisible repository never produces
+    it, so the unseeable repository is ruled out (ADR-035).
+
+    `repo_visible=False` would flip a 404; this must resolve UNSUPPORTED anyway,
+    which proves it short-circuits before the probe rather than passing by luck.
     """
     _stub_native(
-        containment, monkeypatch, stdout="", returncode=1, stderr=status, repo_visible=False,
+        containment,
+        monkeypatch,
+        stdout="",
+        returncode=1,
+        stderr="HTTP 410: Gone",
+        repo_visible=False,
     )
     res = containment.resolve_children(
         {}, parent_number=342, corpus=_MIXED_CORPUS, corpus_complete=True
     )
     assert res.native_supported is False
-    assert res.complete is True, "a conclusive absence is still a complete answer"
+    assert res.complete is True, "an established absence is still a complete answer"
+
+
+@pytest.mark.parametrize("repo_visible", [True, False], ids=["parent-visible", "parent-unseen"])
+def test_no_422_is_an_absent_endpoint_whatever_its_message_says(
+    containment, monkeypatch, repo_visible: bool
+) -> None:
+    """The invariant (#808, ADR-035): a 422 never grants the unsupported verdict,
+    not even one whose message says the feature is not enabled. The read is
+    unreadable — an incomplete answer — and GitHub's words are quoted in the
+    reason rather than matched into a verdict. Whether the parent is visible
+    changes nothing, because a 422 is never probed."""
+    _stub_native(
+        containment,
+        monkeypatch,
+        stdout=_ABSENT_422_BODY,
+        returncode=1,
+        stderr=f"gh: {_ABSENT_MESSAGE} (HTTP 422)",
+        repo_visible=repo_visible,
+    )
+    res = containment.resolve_children(
+        {}, parent_number=342, corpus=_MIXED_CORPUS, corpus_complete=True
+    )
+    assert res.complete is False
+    assert res.native_supported is True, "the endpoint is not known to be absent"
+    assert res.incomplete_reason is not None
+    assert res.incomplete_reason.endswith(f'GitHub said: "{_ABSENT_MESSAGE}"')
+
+
+def test_a_422_on_its_status_alone_is_not_an_absent_endpoint(containment, monkeypatch) -> None:
+    """#808: GitHub answers 422 for a request it refused, on instances where
+    sub-issues work, so it proves nothing about the instance: the read is
+    unreadable — an incomplete answer — never a determinate textual-only one."""
+    _stub_native(
+        containment,
+        monkeypatch,
+        stdout=json.dumps({"message": "Validation Failed", "status": "422"}),
+        returncode=1,
+        stderr="gh: Validation Failed (HTTP 422)",
+    )
+    res = containment.resolve_children(
+        {}, parent_number=342, corpus=_MIXED_CORPUS, corpus_complete=True
+    )
+    assert res.complete is False
+    assert res.native_supported is True, "the endpoint is not known to be absent"
+
+
+def test_an_unreadable_read_says_what_was_established_and_quotes_the_failure(
+    containment, monkeypatch
+) -> None:
+    """The reason claims only what the seam established — the failure could not
+    be attributed to an absent endpoint — and then quotes what was said: GitHub's
+    words from its error body, or gh's own line, attributed to gh, when there
+    was no body."""
+    _stub_native(
+        containment,
+        monkeypatch,
+        stdout=json.dumps({"message": "Validation Failed", "status": "422"}),
+        returncode=1,
+        stderr="gh: Validation Failed (HTTP 422)",
+    )
+    reason = containment.resolve_children(
+        {}, parent_number=342, corpus=_MIXED_CORPUS, corpus_complete=True
+    ).incomplete_reason
+    assert reason == (
+        "the native sub-issues read failed and the failure could not be attributed "
+        "to an absent endpoint, so a native child set may exist and was not seen. "
+        'GitHub said: "Validation Failed"'
+    )
+
+    _stub_native(
+        containment,
+        monkeypatch,
+        stdout="",
+        returncode=1,
+        stderr="gh: HTTP 401: Bad credentials",
+    )
+    reason = containment.resolve_children(
+        {}, parent_number=342, corpus=_MIXED_CORPUS, corpus_complete=True
+    ).incomplete_reason
+    assert reason is not None
+    assert reason.endswith('was not seen. gh said: "gh: HTTP 401: Bad credentials"')
+    assert "GitHub said" not in reason
+
+
+def test_a_422_is_not_remembered_as_unsupported_for_the_run(containment, monkeypatch) -> None:
+    """The run's reads (`SubIssueReads`) remember each parent's outcome, and a
+    caller like `link-parent` plans every child of that parent from it. No 422
+    — bare, or saying the feature is not enabled — is what it remembers as
+    "unsupported"."""
+    _stub_native(
+        containment,
+        monkeypatch,
+        stdout="",
+        returncode=1,
+        stderr="gh: HTTP 422: Unprocessable Entity",
+    )
+    reads = containment.SubIssueReads({})
+    assert reads.read(342).outcome is containment.NativeReadOutcome.UNREADABLE
+
+    _stub_native(
+        containment,
+        monkeypatch,
+        stdout=_ABSENT_422_BODY,
+        returncode=1,
+        stderr="gh: Validation Failed (HTTP 422)",
+    )
+    read = reads.read(343)
+    assert read.outcome is containment.NativeReadOutcome.UNREADABLE
+    assert read.said == containment.Said(_ABSENT_MESSAGE)
 
 
 # --- the full attribution table (#869) ---------------------------------------
 
 
-def _classify(containment, monkeypatch, *, stderr: str, repo_visible: bool):
+def _classify(containment, monkeypatch, *, stderr: str, repo_visible: bool, stdout: str = ""):
     """Run the failure classifier with the parent-issue probe stubbed."""
+
     def fake_gh(args, config):
         if "sub_issues" in " ".join(args):
-            return subprocess.CompletedProcess(args, 1, stdout="", stderr=stderr)
-        return subprocess.CompletedProcess(
-            args, 0 if repo_visible else 1, stdout="342", stderr=""
-        )
+            return subprocess.CompletedProcess(args, 1, stdout=stdout, stderr=stderr)
+        return subprocess.CompletedProcess(args, 0 if repo_visible else 1, stdout="342", stderr="")
 
     monkeypatch.setattr(containment, "_gh_call", fake_gh)
-    return containment._classify_native_failure({}, parent_number=342, stderr=stderr)
+    return containment._classify_native_failure({}, parent_number=342, stderr=stderr, stdout=stdout)
 
 
 @pytest.mark.parametrize(
-    "stderr, repo_visible, expected, why",
+    "stdout, stderr, repo_visible, expected, why",
     [
-        # Conclusive: an invisible repository never yields these.
-        ("gh: HTTP 410: Gone", False, "UNSUPPORTED", "410 needs no probe"),
-        ("gh: HTTP 422: Unprocessable Entity", False, "UNSUPPORTED", "422 needs no probe"),
+        # Unchanged by #808: 410 settles absence by status, and 404 is probed.
+        ("", "gh: HTTP 410: Gone", False, "UNSUPPORTED", "410 needs no probe"),
+        # A 422 is UNREADABLE whatever it says, and never probed (#808).
+        (
+            _ABSENT_422_BODY,
+            "gh: Validation Failed (HTTP 422)",
+            True,
+            "UNREADABLE",
+            "no wording in a 422 grants absence, even with the parent visible",
+        ),
+        (
+            "",
+            "gh: HTTP 422: Unprocessable Entity",
+            True,
+            "UNREADABLE",
+            "a 422 on its status alone is not absence",
+        ),
+        (
+            json.dumps({"message": "Sub issue may only have one parent", "status": "422"}),
+            "gh: Sub issue may only have one parent (HTTP 422)",
+            True,
+            "UNREADABLE",
+            "the one-parent rule is not absence",
+        ),
+        (
+            "",
+            "gh: Sub-issue not found (HTTP 422)",
+            True,
+            "UNREADABLE",
+            "a 422 saying 'not found' is not gh's code-less 404, so it is not probed",
+        ),
         # Ambiguous: same status, opposite meanings, settled by the probe.
         (
+            "",
             "gh: HTTP 404: Not Found (https://api.github.com/repos/o/r/issues/342/sub_issues)",
-            True, "UNSUPPORTED", "404 + parent visible -> the endpoint is absent",
+            True,
+            "UNSUPPORTED",
+            "404 + parent visible -> the endpoint is absent",
         ),
         (
+            "",
             "gh: HTTP 404: Not Found (https://api.github.com/repos/o/r/issues/342/sub_issues)",
-            False, "UNREADABLE", "404 + parent unreachable -> a visibility fault",
+            False,
+            "UNREADABLE",
+            "404 + parent unreachable -> a visibility fault",
         ),
         # gh's code-less phrasing of the same ambiguity, per the predicate's own note.
-        ("gh: Not Found", True, "UNSUPPORTED", "bare not-found + parent visible"),
-        ("gh: Not Found", False, "UNREADABLE", "bare not-found + parent unreachable"),
+        ("", "gh: Not Found", True, "UNSUPPORTED", "bare not-found + parent visible"),
+        ("", "gh: Not Found", False, "UNREADABLE", "bare not-found + parent unreachable"),
         # Never ambiguous, so never probed.
-        ("gh: HTTP 401: Bad credentials", True, "UNREADABLE", "auth is not absence"),
-        ("error connecting to api.github.com", True, "UNREADABLE", "network is not absence"),
+        ("", "gh: HTTP 401: Bad credentials", True, "UNREADABLE", "auth is not absence"),
+        ("", "error connecting to api.github.com", True, "UNREADABLE", "network is not absence"),
     ],
 )
 def test_native_failure_attribution(
-    containment, monkeypatch, stderr: str, repo_visible: bool, expected: str, why: str
+    containment,
+    monkeypatch,
+    stdout: str,
+    stderr: str,
+    repo_visible: bool,
+    expected: str,
+    why: str,
 ) -> None:
-    """Every classification case, pinned against realistic `gh` stderr.
+    """Every classification case, pinned against realistic `gh` output.
 
     The two 404 rows are the point: identical text, opposite verdicts, decided by
     whether the repository can be seen at all. A fine-grained token missing
     `Issues: read` returns 404 rather than 401 on a private repo, so without the
     probe that row reads as "this instance has no sub-issues" and a close gate
-    answers from the textual side alone (#869).
+    answers from the textual side alone (#869). The 422 rows are #808's: a 422
+    is UNREADABLE on its status and on any wording, and is never probed.
     """
-    outcome = _classify(containment, monkeypatch, stderr=stderr, repo_visible=repo_visible)
+    outcome = _classify(
+        containment, monkeypatch, stderr=stderr, repo_visible=repo_visible, stdout=stdout
+    )
     assert outcome.name == expected, why

@@ -42,7 +42,7 @@ You do not invent the rules. The eight schemas in this capability are the source
 - An existing issue body needs validation (after edit, at first interaction with an inherited issue, before any state transition).
 - An issue needs to move forward in the lifecycle (Todo → Backlog, Backlog → In Progress, In Progress → Review) or close (Review → Done via PR merge; any → Done via won't-do).
 - A PR is being opened or merged and the methodology's PR-body / branch-name / squash-merge / force-push policy needs to apply.
-- A date-based Milestone is approaching its due date and the rollforward routine needs to run.
+- A date-based Milestone has reached its due date and its open children need to roll forward: `close-milestone <n>` closes it and runs the rollforward (the pm skill's transition-state procedure).
 - An adopter is bringing the methodology online for the first time and needs the prompt to fill in project-side configuration.
 - **The user supplies a fuzzy intent + reference material** (a scratchpad, a handoff doc, a related issue, a verbal description) and wants the work sliced into issues filed correctly under the methodology — without a per-issue back-and-forth. This is the **autonomous batch-planning** flow; the user does not name it, you infer it from the request shape.
 
@@ -75,6 +75,7 @@ Parse the user's request into one of the core operations the pm composite skill 
 - **Create an issue** → invoke the `create-issue` sub-procedure.
 - **Validate a body** → invoke the `validate-body` sub-procedure.
 - **Transition state** → invoke the `transition-state` sub-procedure.
+- **Request reviewer verdicts on a PR** → the `transition-state` sub-procedure's review step.
 - **Batch-plan from fuzzy intent** → invoke the `batch-plan` sub-procedure. Triggered when the user provides intent + reference material (a scratchpad, handoff doc, or related issue) and the slicing decision is part of what they want from you. Your storyboard, `storyboard.md`, walks the scripted scenarios.
 
 Some requests compose multiple operations (e.g., "file the issue and start work on it" = create-issue → transition-state to Backlog → transition-state to In Progress). Walk them in order; abort the chain on any hard-reject from one operation.

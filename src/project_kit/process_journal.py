@@ -16,7 +16,11 @@ it outside the engine: the ignore pattern the `.pkit/.gitignore` render
 contributes through the backbone's runtime-ignore seam (ADR-009 rule 7). Journals
 are ignored unless the project chose to commit them — so a project that enables
 logging clone-local, and a project that never enabled it, both keep journal files
-out of version control, and only an explicit `committed: true` lets them in.
+out of version control, and only an explicit `committed: true` lets them in. A
+component that still declares the pattern itself would defeat that choice, so
+while the journals are committed the render leaves its entry out
+(`JournalSettings.drops_claim`, through `claims_journals`) and validation warns
+on it.
 
 Reading is forgiving (COR-048 point 4): an absent file, key or block, or a value
 that is not a boolean, reads as the default; `pkit validate` is the strict side.
@@ -24,6 +28,7 @@ that is not a boolean, reads as the default; `pkit validate` is the strict side.
 
 from __future__ import annotations
 
+import fnmatch
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -46,6 +51,10 @@ JOURNAL_GLOB = ".pkit/capabilities/*/project/process/**/*.journal.jsonl"
 #: presenting an empty history as if nothing had happened.
 NOT_ENABLED = "journal logging is not enabled for this project"
 
+#: Why the render leaves out a component's entry claiming journals
+#: (`JournalSettings.drops_claim`) — said beside the entry wherever it is named.
+CLAIM_DROPPED = "the backbone owns the journal pattern while journals are committed"
+
 
 @dataclass(frozen=True)
 class JournalSettings:
@@ -59,6 +68,20 @@ class JournalSettings:
         """Whether journal files are kept out of version control: always, unless
         logging is on and the project chose to commit the journals."""
         return not (self.enabled and self.committed)
+
+    def runtime_ignore_patterns(self) -> list[str]:
+        """The journal's contribution to the backbone's runtime-ignore seam: the
+        journal pattern unless the project commits its journals."""
+        return [JOURNAL_GLOB] if self.ignored else []
+
+    def drops_claim(self, pattern: str) -> bool:
+        """Whether the `.pkit/.gitignore` render leaves out a component's
+        `runtime_ignore` entry: the entry claims journals (`claims_journals`) and
+        the project commits them. The backbone owns the journal pattern, so its
+        choice takes precedence over a package older than that ownership
+        (ADR-009 rule 7); while the journals stay ignored the entry is redundant
+        and renders as declared."""
+        return not self.ignored and claims_journals(pattern)
 
     def as_dict(self) -> dict[str, bool]:
         return {ENABLED_KEY: self.enabled, COMMITTED_KEY: self.committed}
@@ -82,10 +105,14 @@ def read_settings(target_root: Path) -> JournalSettings:
     return settings_from(read_config(target_root))
 
 
-def runtime_ignore_patterns(target_root: Path) -> list[str]:
-    """The journal's contribution to the backbone's runtime-ignore seam: the
-    journal pattern unless the project commits its journals."""
-    return [JOURNAL_GLOB] if read_settings(target_root).ignored else []
+def claims_journals(pattern: str) -> bool:
+    """Whether a component's `runtime_ignore` pattern declares journals, the files
+    whose ignore line the backbone owns: the pattern, read as a path, matches
+    `JOURNAL_GLOB`. A component declaring it (a package older than the backbone
+    owning the line) would keep journals ignored when the project commits them,
+    so the render then leaves it out (`JournalSettings.drops_claim`) and
+    `pkit validate` warns on it (`package_validate`)."""
+    return fnmatch.fnmatchcase(pattern.strip(), JOURNAL_GLOB)
 
 
 def _boolean(value: Any) -> bool:

@@ -1,0 +1,24 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit decisions validate`, and the `decisions` member of `pkit validate`,
+  warn of each line of a record that narrates its own revision instead of
+  stating what is true: an amendment heading or marker (`## Amendment (…)`,
+  `**Amendment 1**`, `**Amended by …**`), a revision stamped with an issue
+  number or a date (`**Update (#252)**`, `(clarified, #813)`), and change-log
+  phrasing ("this record originally…", "previously we believed…"). Each is a
+  warning naming the file and line, never an error, so the command's exit code
+  is unchanged: the shapes are read from prose, and a gate that fails on a
+  heuristic reading of prose fails for the wrong reasons. A superseded record,
+  fenced blocks and inline code spans are not read, nor is a record that
+  arrives as a synced copy — a core record, or a kit-shipped capability's, in an
+  adopting project — since it is refined where it is authored. The two permitted
+  in-body markers — a superseded-by line and a `(refinement per <record>)`
+  pointer — match none of the shapes. The decisions README's "Refining an
+  accepted record" is the one place the refine-in-place rule is stated, and
+  gains its steps: fold a correction into the section it belongs to, with no
+  revision marker or residue of the change, and supersede only when the decision
+  is overturned. The `architect` agent and the `decision-author` skill point at
+  it rather than restate it.

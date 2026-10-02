@@ -33,7 +33,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import subprocess
 import sys
 from pathlib import Path
 
@@ -42,11 +41,6 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate  # noqa: E402
-from _lib import axis_carriage  # noqa: E402
-from _lib import axis_labels  # noqa: E402
-from _lib.gh import gh_run, load_adopter_config  # noqa: E402
-
 # Constraint-1 gate (RF-2, #265): the workstream-label MUTATORS mutate kit
 # `workstream:*` labels via `gh label`. Under a PRESENT substrate-map whose
 # `workstream` axis is `unsupported` (or absent), this would violate "never write
@@ -54,15 +48,15 @@ from _lib.gh import gh_run, load_adopter_config  # noqa: E402
 # `axis_labels.workstream_mutator_refusal(...)` after the membership check and
 # REFUSES before any `gh label` op when it trips. Greenfield is unchanged; the
 # richer present-map behaviour stays the adopt-existing Feature #264.
-
-from _lib import session_guard  # noqa: E402
-from _lib.membership import (  # noqa: E402
+from _lib import axis_carriage, axis_labels, bootstrap_gate, session_guard
+from _lib.gh import gh_run, load_adopter_config
+from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
     resolve_capability_root,
     resolve_invoker_identity,
 )
-from _lib.workstreams import (  # noqa: E402
+from _lib.workstreams import (
     parse_workstreams,
     workstreams_path,
 )
@@ -165,9 +159,7 @@ def main() -> int:
     # labels reach `gh label delete`, and no guard covers a label the kit never
     # owned. Only the greenfield (`kit-label`) arm touches labels.
     substrate_map = axis_labels.load_substrate_map(capability_root)
-    kit_label_note = axis_carriage.kit_label_mutation_note(
-        "workstream", config, substrate_map
-    )
+    kit_label_note = axis_carriage.kit_label_mutation_note("workstream", config, substrate_map)
     kit_labels = kit_label_note is None
 
     # Issue-count precondition.
@@ -176,7 +168,8 @@ def main() -> int:
         n = _gh_count_label_uses(axis_labels.label("workstream", args.slug), config)
         if n is not None and n > 0 and not args.force:
             print(
-                f"[refused] {n} issue(s) still tagged `{axis_labels.label('workstream', args.slug)}`. "
+                f"[refused] {n} issue(s) still tagged "
+                f"`{axis_labels.label('workstream', args.slug)}`. "
                 "Re-tag them (or use `merge-workstream` to consolidate into "
                 "another slug) first.\n"
                 "  → Pass --force to remove anyway (will leave orphan labels).",

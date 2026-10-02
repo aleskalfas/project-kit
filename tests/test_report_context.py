@@ -15,7 +15,6 @@ from project_kit import report_context as rc
 from project_kit.command_runner import CommandRun, Ending
 from project_kit.report import kind_marker, parse_report_marker, render_context_line
 
-
 # --- project name: config key ----------------------------------------
 
 
@@ -79,7 +78,8 @@ def test_repo_name_from_url_strips_owner_and_git(url: str, expected) -> None:
 
 def test_git_remote_repo_name_parses_origin(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(
-        rc.subprocess, "run",
+        rc.subprocess,
+        "run",
         lambda cmd, **k: _FakeProc(0, "git@github.com:private-org/widget.git\n"),
     )
     assert rc.git_remote_repo_name(tmp_path) == "widget"  # no org, ever
@@ -90,19 +90,13 @@ def test_git_remote_repo_name_none_without_remote(tmp_path: Path, monkeypatch) -
     assert rc.git_remote_repo_name(tmp_path) is None
 
 
-def test_resolve_project_name_prefers_config_over_remote(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_resolve_project_name_prefers_config_over_remote(tmp_path: Path, monkeypatch) -> None:
     rc.write_project_name(tmp_path, "declared")
-    monkeypatch.setattr(
-        rc.subprocess, "run", lambda cmd, **k: _FakeProc(0, "o/remote.git\n")
-    )
+    monkeypatch.setattr(rc.subprocess, "run", lambda cmd, **k: _FakeProc(0, "o/remote.git\n"))
     assert rc.resolve_project_name(tmp_path) == "declared"
 
 
-def test_resolve_project_name_never_the_directory_basename(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_resolve_project_name_never_the_directory_basename(tmp_path: Path, monkeypatch) -> None:
     # The never-source-from-paths pin (ADR-050): with no config and no remote,
     # the name is UNRESOLVED — the directory's own name must never leak in.
     project_dir = tmp_path / "secret-client-project"
@@ -122,9 +116,7 @@ def _verb(tmp_path: Path, monkeypatch, body: str) -> Path:
     script = tmp_path / "context-workstream.py"
     script.write_text("#!/usr/bin/env python3\n" + body, encoding="utf-8")
     script.chmod(script.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
-    monkeypatch.setattr(
-        dispatcher, "resolve_capability_script", lambda root, cap, cmd: script
-    )
+    monkeypatch.setattr(dispatcher, "resolve_capability_script", lambda root, cap, cmd: script)
     return script
 
 
@@ -160,14 +152,10 @@ def test_pm_workstream_reads_the_printed_value_as_text(
     assert rc.pm_workstream(tmp_path) == expected
 
 
-def test_pm_workstream_none_when_capability_or_verb_absent(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_pm_workstream_none_when_capability_or_verb_absent(tmp_path: Path, monkeypatch) -> None:
     from project_kit import dispatcher
 
-    monkeypatch.setattr(
-        dispatcher, "resolve_capability_script", lambda root, cap, cmd: None
-    )
+    monkeypatch.setattr(dispatcher, "resolve_capability_script", lambda root, cap, cmd: None)
 
     def explode(*args, **kwargs):  # pragma: no cover - must not be reached
         raise AssertionError("no command should run when the verb is absent")
@@ -176,28 +164,68 @@ def test_pm_workstream_none_when_capability_or_verb_absent(
     assert rc.pm_workstream(tmp_path) is None
 
 
+def test_pm_workstream_none_when_the_verb_prints_nothing_silently(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
+    # Absent stays absent: an exit-0 run that printed nothing answered "no
+    # workstream" (a branch that is not issue-shaped, an unlabelled issue).
+    _verb(tmp_path, monkeypatch, "import sys\nsys.stderr.write('no issue on this branch\\n')\n")
+    assert rc.pm_workstream(tmp_path) is None
+    assert capsys.readouterr().err == ""
+
+
 @pytest.mark.parametrize(
-    "body",
+    ("body", "ended"),
     [
-        "import sys\nprint('x')\nsys.exit(1)\n",  # non-zero exit ⇒ omit
-        "import sys\nsys.exit(2)\n",  # the un-bootstrapped refusal ⇒ omit
-        "import sys\nsys.stdout.buffer.write(b'\\xff\\n')\n",  # not UTF-8 ⇒ omit
+        ("import sys\nprint('x')\nsys.exit(1)\n", "exited 1"),  # non-zero exit
+        (
+            "import sys\nsys.stdout.buffer.write(b'\\xff\\n')\n",
+            "standard output is not UTF-8",
+        ),
     ],
 )
-def test_pm_workstream_none_on_failure_silently(
-    tmp_path: Path, monkeypatch, capsys, body: str
+def test_pm_workstream_none_on_failure_says_so(
+    tmp_path: Path, monkeypatch, capsys, body: str, ended: str
 ) -> None:
+    # Broken is not absent (#752): the workstream is omitted all the same —
+    # context never gates a report — but the operator is told why.
     _verb(tmp_path, monkeypatch, body)
     assert rc.pm_workstream(tmp_path) is None
-    assert capsys.readouterr().err == ""  # an ordinary miss degrades to silence
+    err = capsys.readouterr().err
+    assert "warning: workstream omitted — project-management context-workstream" in err
+    assert ended in err
+    assert "pass --workstream to name it" in err
 
 
-def test_pm_workstream_none_when_the_verb_cannot_start(
-    tmp_path: Path, monkeypatch
+def test_pm_workstream_refusal_carries_the_verb_s_own_words(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
+    # The un-bootstrapped project's refusal: exit 2, nothing on stdout, the
+    # hint on stderr — which now reaches the operator, attributed to the verb,
+    # bounded, and with its escape sequences removed.
+    refusal = (
+        "[refused] context-workstream: prerequisites are not met\n"
+        "          \x1b[1m→ To fix: run `pkit project-management bootstrap`\x1b[0m\n"
+    )
+    _verb(tmp_path, monkeypatch, f"import sys\nsys.stderr.write({refusal!r})\nsys.exit(2)\n")
+    assert rc.pm_workstream(tmp_path) is None
+    err = capsys.readouterr().err
+    assert err.splitlines() == [
+        "warning: workstream omitted — project-management context-workstream exited 2; "
+        "pass --workstream to name it.",
+        "  context-workstream said:",
+        "    [refused] context-workstream: prerequisites are not met",
+        "              → To fix: run `pkit project-management bootstrap`",
+    ]
+
+
+def test_pm_workstream_none_when_the_verb_cannot_start_says_so(
+    tmp_path: Path, monkeypatch, capsys
 ) -> None:
     script = _verb(tmp_path, monkeypatch, "print('cli')\n")
     script.chmod(stat.S_IRUSR | stat.S_IWUSR)  # no longer executable
     assert rc.pm_workstream(tmp_path) is None
+    assert "context-workstream could not start:" in capsys.readouterr().err
 
 
 def test_pm_workstream_stops_a_hung_verb_at_the_bound_and_says_so(
@@ -219,17 +247,16 @@ def test_pm_workstream_stops_a_hung_verb_at_the_bound_and_says_so(
 def test_render_context_line_all_shapes() -> None:
     assert render_context_line("alpha", "cli") == "Project: alpha · Workstream: cli"
     assert render_context_line("alpha", None) == "Project: alpha"
-    assert (
-        render_context_line(None, "cli")
-        == "Workstream: cli · (project: not declared)"
-    )
+    assert render_context_line(None, "cli") == "Workstream: cli · (project: not declared)"
     assert render_context_line(None, None) == "(project: not declared)"
 
 
 def test_kind_marker_context_keys_round_trip() -> None:
     marker = kind_marker("bug", project="alpha", workstream="cli")
     assert parse_report_marker(marker) == {
-        "kind": "bug", "project": "alpha", "workstream": "cli",
+        "kind": "bug",
+        "project": "alpha",
+        "workstream": "cli",
     }
     assert parse_report_marker(kind_marker("bug")) == {"kind": "bug"}
 
@@ -239,5 +266,6 @@ def test_kind_marker_tokenizes_whitespace_in_values() -> None:
     # spaces is tokenised (the human context line keeps it verbatim).
     marker = kind_marker("feedback", project="My Project")
     assert parse_report_marker(marker) == {
-        "kind": "feedback", "project": "My-Project",
+        "kind": "feedback",
+        "project": "My-Project",
     }

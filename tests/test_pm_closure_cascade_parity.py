@@ -167,8 +167,7 @@ def _install_defs(pkit: Path) -> None:
     defs_dst = pkit / "schemas" / "_defs"
     defs_dst.mkdir(parents=True, exist_ok=True)
     source = (
-        Path(__file__).resolve().parents[1]
-        / ".pkit" / "schemas" / "_defs" / "process.schema.json"
+        Path(__file__).resolve().parents[1] / ".pkit" / "schemas" / "_defs" / "process.schema.json"
     )
     defs_dst.joinpath("process.schema.json").write_text(
         source.read_text(encoding="utf-8"), encoding="utf-8"
@@ -240,6 +239,7 @@ def test_children_half_opens_when_every_child_done(tracker_repo: Path) -> None:
     _add_child(tracker_repo, "11", "c1", "done")
     _add_child(tracker_repo, "12", "c1", "done")
     fold = _container(tracker_repo).resolve_cascade_outcome()
+    assert fold is not None
     assert fold.opened is True
     assert fold.indeterminate is False
     assert fold.reached == 2 and fold.total == 2
@@ -253,6 +253,7 @@ def test_open_child_holds_the_fold(tracker_repo: Path) -> None:
     _add_child(tracker_repo, "11", "c1", "done")
     _add_child(tracker_repo, "12", "c1", "in-progress")
     fold = _container(tracker_repo).resolve_cascade_outcome()
+    assert fold is not None
     assert fold.opened is False
     assert fold.indeterminate is True  # the open child has no resolved terminal
     assert _close_check(_container(tracker_repo)).allowed is False
@@ -265,6 +266,7 @@ def test_wont_do_child_counts_toward_closure(tracker_repo: Path) -> None:
     _add_child(tracker_repo, "11", "c1", "done")  # pr-merge completion
     _add_child(tracker_repo, "12", "c1", "done")  # won't-do (also closed -> done)
     fold = _container(tracker_repo).resolve_cascade_outcome()
+    assert fold is not None
     assert fold.opened is True
     assert fold.reached == 2 and fold.total == 2
 
@@ -274,6 +276,7 @@ def test_childless_container_is_satisfied_not_blocked(tracker_repo: Path) -> Non
     # (the gate opens), so close-eligibility reduces to the checkbox gate —
     # identical to pm today. NOT fail-closed.
     fold = _container(tracker_repo).resolve_cascade_outcome()  # no children added
+    assert fold is not None
     assert fold.total == 0
     assert fold.opened is True
     assert fold.indeterminate is False  # determinate "satisfied", not a failure
@@ -289,6 +292,7 @@ def test_broken_membership_read_holds_the_gate(tracker_repo: Path) -> None:
     scripts = tracker_repo / ".pkit" / "capabilities" / "tracker" / "scripts"
     _write_script(scripts / "child_membership.py", "import sys\nsys.exit(7)\n")
     fold = _container(tracker_repo).resolve_cascade_outcome()
+    assert fold is not None
     assert fold.indeterminate is True
     assert fold.opened is False  # NOT opened by satisfied — precedence holds
     assert _close_check(_container(tracker_repo)).allowed is False
@@ -300,5 +304,6 @@ def test_broken_members_source_holds_the_gate(tracker_repo: Path) -> None:
     scripts = tracker_repo / ".pkit" / "capabilities" / "tracker" / "scripts"
     _write_script(scripts / "container_children.py", "import sys\nsys.exit(9)\n")
     fold = _container(tracker_repo).resolve_cascade_outcome()
+    assert fold is not None
     assert fold.indeterminate is True
     assert fold.opened is False

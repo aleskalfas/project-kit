@@ -5,3 +5,94 @@ component:
   version: 0.1.0
 description: Software analysis — actors, use cases, journeys and glossary kept as anchored artefacts and kept true by revalidation as the software changes.
 requires_backbone: ">=1.149.0,<2.0.0"
+aliases:
+  - analysis
+
+commands:
+  new:
+    script: scripts/new.py
+    help: "Stamp an analysis artefact under the analysis location (DEC-001 points 2 and 3): `new use-case <slug> --actor <ACT-id> [--area <area>]`, `new journey <slug> --actor <ACT-id> --step <UC-id> --step <UC-id> …`, `new actor <slug>`, `new term <slug>`; each takes --title or --name, and --path and --record for its anchors; an actor or term nothing embodies takes --unanchored-because instead, written as `unanchored-because` in its friction block (COR-050 point 1). A use case or journey gets the next free number on the default branch — every number its history ever gave a file of its place included, a note naming the file when that is the number it follows — on a base named with `--base`, and in the working tree (never on $PKIT_CHECK_BASE's, COR-054 point 3), a file's number read from its name as well as its front matter; a file `friction.exclude` leaves out holds none; an actor or term is `ACT-<slug>` / `TERM-<slug>`. `new revalidation <slug> --change <ref> --trigger <trigger> --outcome <id>=<outcome> … --because <id>=<why> … [--gap \"<gap> => <resolution>\"]… [--by <who> | --by-agent <name> --confirmed-by <who>]` writes a revalidation record, `revalidations/<date>-<slug>.md`, only when there is something to say — a planned revalidation, one that found a regression or a gap, or one where a person decided an artefact was stale (points 5 and 6) — and refuses a text still holding a placeholder. Records the analysis location on first use."
+  validate:
+    script: scripts/validate.py
+    help: "Check the analysis artefacts in the working tree, a file `friction.exclude` leaves out no part of them (DEC-001 points 3 and 4): a file in a place with no front matter or one that does not parse, each artefact's own fields against its companion schema, a placeholder the stamp left unfilled (one the templates or the skill's commands ever shipped, matched exactly, in an own field, the friction block's unanchored-because or the body), a use case's or journey's heading against its id and title, ids shared by two artefacts, a use case or journey whose file's name carries a number its front matter does not give, an actor or step the stamp would refuse, a use case not anchored to its actor, a journey whose use-case anchors do not match its steps, and the revalidation records' front matter, the artefacts they cite and the evidence they copy; reports an open regression (a record's code-regressed artefact not revalidated since), never failing on it; --json prints the findings document `pkit validate` reads. A query: read-only, offline; `pkit sync` provisions its dependencies."
+    query-contract: true
+  check-numbers:
+    script: scripts/check-numbers.py
+    help: "Report a use case or journey whose number the default branch took too since this branch left it, for another line of work's artefact (DEC-001 point 3): the first to reach the default branch keeps the number. An artefact is known by its id, not its path, and a number by its front matter and its file's name on both sides; a number the default branch took since and removed is still taken. A move is no collision, nor is this branch's own work landed byte for byte; the default branch's file of the name this branch gives the number is a warning — possibly its own work landed: merge and keep one file, otherwise renumber — and one of another name a collision. `--base <ref>` names the base (else $PKIT_CHECK_BASE, else the default branch, as the backbone resolves it — COR-054); --json prints the document. Answers about a change, not the tree, so it is a check-gate line of its own and not a validator (ADR-058 point 7). Exit 1 on a collision, or when the base names no commit or shares no history with HEAD; an outdated base is reported and never fails. A query: read-only, offline; `pkit sync` provisions its dependencies."
+    query-contract: true
+  propose:
+    script: scripts/propose.py
+    help: "Say what a flagged artefact's evidence decides (DEC-001 point 5), for the resolving agent: `propose <artefact> [--contradicted <quote> --contradicted-from <source>] [--intended <quote> --intended-from <source>] [--unintended <quote> --unintended-from <source>] [--json]`. Reads `pkit friction explain`, what the artefact quotes from its anchored code at its revalidation point and at HEAD, and where lost code moved. A proposal (holds when the code moved, analysis-stale, code-regressed) with the rule and evidence behind it; read, when nothing mechanical decides, with the outcome the evidence leans to; or ambiguous — the artefact and the code disagree and nothing says whether the change was meant — with the question for a person. A quote from a commit is checked against its message. For an outcome it gives the writer commands a person runs, word for word, never running them. A query: read-only, offline; `pkit sync` provisions its dependencies."
+    query-contract: true
+  fill-readers:
+    script: scripts/fill-readers.py
+    help: "This capability's filler of the pkit::documentation:readers point (DEC-001 point 8): one reader per actor in force, its id the actor's id in lower case (`ACT-tester` → `act-tester`) and its description the actor's name and needs; --json prints the filler envelope the backbone reads. A query: read-only, offline, no parameter; `pkit sync` provisions its dependencies."
+    query-contract: true
+
+# The `software-analysis:artefacts` member of `pkit validate` (ADR-058). The
+# number comparison reads a base, so it is not one (ADR-058 point 7).
+validators:
+  artefacts:
+    command: validate
+
+# COR-049 point 4 — where the analysis lives, relative to the internal root.
+docs:
+  locations:
+    analysis:
+      path: analysis
+      description: The analysis (DEC-001 point 2) — the glossary, the use-case model and the revalidation records; recorded the first time an artefact is stamped (COR-049 point 5), so a later change of root moves nothing.
+
+# COR-050 point 1 — the places holding this capability's anchored artefacts,
+# and its folder of held documents: the revalidation records describe an act
+# and are not anchored artefacts, so their folder is not a place but held — no
+# other component's place reads them as artefacts (DEC-001 point 2). No
+# surface: the project declares the code its analysis ought to cover.
+friction:
+  places:
+    - location: analysis
+      path: glossary.md
+      description: The glossary, one entry per term.
+    - location: analysis
+      path: use-case-model/actors.md
+      description: The actors, one entry per actor.
+    - location: analysis
+      path: use-case-model/use-cases
+      description: The use cases, one file each, in folders by functional area when the project groups them.
+    - location: analysis
+      path: use-case-model/journeys
+      description: The journeys, one file each.
+  held:
+    - location: analysis
+      path: revalidations
+      description: The revalidation records, one file each — the record of an act, not an anchored artefact.
+
+# COR-053 — the analysis role, the evidence point defined under it, and the
+# contribution to the documentation role's readers point (DEC-001 points 7
+# and 8). See the README, "Connections".
+connections:
+  roles: [pkit::analysis]
+  extension-points:
+    accepts:
+      pkit::analysis:revalidation-evidence:
+        schema_version: 1
+        schema: revalidation-evidence.schema.json
+        description: >-
+          Executed results that confirm or refute an analysis artefact at a
+          commit — a test run against a use case, a trace through a journey —
+          one entry per artefact and commit, keyed by the pair. Supplied by a
+          capability that runs such checks, or by the project; this capability
+          runs none. Advisory: a revalidation record copies the entries it
+          draws on as support for an artefact's outcome and never in place of
+          one, so a filler that cannot answer is warned and the rest still
+          count.
+        combination: union
+        inert: fallback
+  extensions:
+    contributes:
+      # The actors in force as readers of the documentation, read from the
+      # analysis in the working tree. Inert while no capability provides the
+      # documentation role.
+      - point: pkit::documentation:readers
+        schema_version: 1
+        command: fill-readers
+        description: One reader per actor in force, its id the actor's id in lower case and its description the actor's name and needs.

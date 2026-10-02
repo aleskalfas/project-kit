@@ -57,10 +57,15 @@ keep those advisory (enforce: false) or don't map them. The mandatory
 `## Doc impact` section remains the universal hard gate; this adds targeted
 enforcement on couplings that genuinely move together.
 
-Diff source: `--base <ref>` (default origin/main). Changed files come from
-`git diff --name-only --diff-filter=ACMRT <base>...HEAD` — added/copied/
-modified/renamed/type-changed; a *deletion* of a code file does not demand a
-doc.
+Diff source: the base — `--base <ref>`, else $PKIT_CHECK_BASE, else the
+default branch — and where HEAD left it, both as the backbone names them
+(`pkit repository base --json`, COR-054), so the check neither resolves a base
+nor computes a merge-base itself. A base that cannot be compared refuses the
+check with the backbone's reason and fix, as the friction change check does; a
+check with no rules and no obligations compares nothing and reads no base.
+Changed files come from `git diff --name-only --diff-filter=ACMRT <fork> HEAD`
+— added/copied/modified/renamed/type-changed; a *deletion* of a code file does
+not demand a doc.
 
 Override (bypassable-with-audit): a line in the PR body's `## Doc impact`
 section that names the triggering code path (or the rule's code glob) marks that
@@ -73,7 +78,8 @@ its filler file); the check prints each one removed.
 Exit codes:
   0  every enforced obligation met (or enforcement off / nothing to check)
   1  an enforced obligation unmet (the mapping with enforce on; a contributed
-     source set enforcing), or the doc-check point does not resolve
+     source set enforcing), the doc-check point does not resolve, or the
+     base cannot be compared
   2  usage error (bad config, git failure, the point unreadable)
 """
 
@@ -85,31 +91,32 @@ import sys
 from pathlib import Path
 
 import pathspec
-from ruamel.yaml import YAML
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate, doc_check  # noqa: E402
-from _lib.gh import gh_run, load_adopter_config  # noqa: E402
-from _lib.membership import (  # noqa: E402
+from _lib import bootstrap_gate, default_branch, doc_check
+from _lib.gh import gh_run, load_adopter_config
+from _lib.membership import (
     CAPABILITY_NAME,
     resolve_capability_root,
 )
 
 
-def _changed_files(base: str) -> list[str] | None:
-    """Non-deleted files changed between merge-base(base, HEAD) and HEAD."""
+def _changed_files(fork: str) -> list[str] | None:
+    """Non-deleted files changed between `fork` — where HEAD left the base — and HEAD."""
     try:
         proc = subprocess.run(
-            ["git", "diff", "--name-only", "--diff-filter=ACMRT", f"{base}...HEAD"],
-            capture_output=True, text=True, check=False,
+            ["git", "diff", "--name-only", "--diff-filter=ACMRT", fork, "HEAD"],
+            capture_output=True,
+            text=True,
+            check=False,
         )
     except FileNotFoundError:
         print("error: git not found.", file=sys.stderr)
         return None
     if proc.returncode != 0:
         print(
-            f"error: git diff against {base!r} failed: {proc.stderr.strip()}",
+            f"error: git diff from {fork[:12]} failed: {proc.stderr.strip()}",
             file=sys.stderr,
         )
         return None
@@ -144,9 +151,7 @@ def _pr_body(args: argparse.Namespace, config: dict) -> str:
             return ""
     # Resolve the PR body from the current branch (CI / local). Best-effort:
     # if there is no PR, overrides simply aren't available.
-    proc = gh_run(
-        ["gh", "pr", "view", "--json", "body", "-q", ".body"], config, check=False
-    )
+    proc = gh_run(["gh", "pr", "view", "--json", "body", "-q", ".body"], config, check=False)
     if proc.returncode != 0:
         return ""
     return proc.stdout or ""
@@ -167,15 +172,22 @@ def main() -> int:
         ),
     )
     parser.add_argument(
-        "--base", default="origin/main",
-        help="Base ref to diff HEAD against (default: origin/main).",
+        "--base",
+        default=None,
+        help=(
+            "Base ref to diff HEAD against (default: $PKIT_CHECK_BASE, else the "
+            "default branch — `pkit repository base` shows it, COR-054)."
+        ),
     )
     parser.add_argument(
-        "--pr-body-file", default=None,
+        "--pr-body-file",
+        default=None,
         help="File containing the PR body (override source). Default: gh pr view.",
     )
     parser.add_argument(
-        "--capability-root", type=Path, default=None,
+        "--capability-root",
+        type=Path,
+        default=None,
         help=f"Default: <repo-root>/.pkit/capabilities/{CAPABILITY_NAME}/.",
     )
     args = parser.parse_args()
@@ -222,7 +234,16 @@ def main() -> int:
         print("check-doc-mapping: no rules configured; skipped.")
         return 0
 
-    changed = _changed_files(args.base)
+    try:
+        base = default_branch.check_base(args.base)
+    except default_branch.Unanswered as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+    if base.problem is not None or base.fork is None:
+        why = base.problem or f"the base {base.ref!r} cannot be compared."
+        print(f"error: {why}", file=sys.stderr)
+        return 1
+    changed = _changed_files(base.fork)
     if changed is None:
         return 2
     changed_set = set(changed)
@@ -244,16 +265,13 @@ def main() -> int:
         triggered = sorted(f for f in changed if _matches(code_glob, f))
         if not triggered:
             continue  # this rule's code surface wasn't touched
-        doc_touched = any(
-            any(_matches(str(d), f) for f in changed_set) for d in docs
-        )
+        doc_touched = any(any(_matches(str(d), f) for f in changed_set) for d in docs)
         if doc_touched:
             print(f"  ✓ {code_glob} → doc updated")
             continue
         # Override: the Doc-impact section names the glob or a triggering file.
         overridden = bool(section) and (
-            code_glob.lower() in section
-            or any(t.lower() in section for t in triggered)
+            code_glob.lower() in section or any(t.lower() in section for t in triggered)
         )
         if overridden:
             print(f"  ⊘ {code_glob} → overridden via `## Doc impact` (audited)")

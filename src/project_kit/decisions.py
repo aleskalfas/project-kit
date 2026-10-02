@@ -141,7 +141,7 @@ def resolve_adr_records_dir(target_root: Path) -> Path:
     yaml = YAML(typ="safe")
     try:
         data = yaml.load(overlay_path)
-    except Exception as exc:  # noqa: BLE001 — surface any YAML error as a click message
+    except Exception as exc:  # surface any YAML error as a click message
         raise click.ClickException(f"failed to parse {_OVERLAY_PATH}: {exc}") from exc
     if not isinstance(data, dict):
         raise click.ClickException(f"{_OVERLAY_PATH}: expected a mapping at top level.")

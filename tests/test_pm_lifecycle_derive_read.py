@@ -54,7 +54,6 @@ from _lib import axis_labels  # noqa: E402
 from _lib import lifecycle_inference as infer  # noqa: E402
 from _lib import lifecycle_predicates as predicates  # noqa: E402
 
-
 # --- fixtures: the four substrate-map shapes ------------------------------
 # The AUJ-shaped derive map (#258 / ADR-026 §5): state derived from open/closed
 # + a Blocked label. `from`/`states` carry prose conditions (the schema defers
@@ -110,9 +109,7 @@ def test_derive_open_issue_no_label_is_open() -> None:
     """An open issue with NO kit state:* label resolves to the collapsed
     open-ish `open` — NOT 'no position' / todo."""
     assert (
-        infer.infer_current_state(
-            state="open", milestone={}, labels=[], substrate_map=DERIVE_MAP
-        )
+        infer.infer_current_state(state="open", milestone={}, labels=[], substrate_map=DERIVE_MAP)
         == axis_labels.DERIVE_STATE_OPEN
     )
 
@@ -120,9 +117,7 @@ def test_derive_open_issue_no_label_is_open() -> None:
 def test_derive_closed_issue_is_done() -> None:
     """A closed issue resolves to the terminal `done` (the derived terminal)."""
     assert (
-        infer.infer_current_state(
-            state="closed", milestone={}, labels=[], substrate_map=DERIVE_MAP
-        )
+        infer.infer_current_state(state="closed", milestone={}, labels=[], substrate_map=DERIVE_MAP)
         == axis_labels.DERIVE_STATE_DONE
     )
 
@@ -291,9 +286,7 @@ def test_greenfield_no_map_is_byte_identical() -> None:
         explicit = infer.infer_current_state(
             state=gh_state, milestone=milestone, labels=labels, substrate_map=None
         )
-        defaulted = infer.infer_current_state(
-            state=gh_state, milestone=milestone, labels=labels
-        )
+        defaulted = infer.infer_current_state(state=gh_state, milestone=milestone, labels=labels)
         assert explicit == defaulted == expected, (
             f"greenfield parity break: state={gh_state} milestone={milestone} "
             f"labels={labels} -> pre={expected} none={explicit} default={defaulted}"
@@ -365,18 +358,13 @@ def test_resolve_read_reverse_remap_and_arms() -> None:
     # greenfield: kit read.
     assert axis_labels.resolve_read("state", ["state:review"], None) == "review"
     # label-bound: reverse remap.
-    assert (
-        axis_labels.resolve_read("state", ["Status:Done"], LABEL_STATE_MAP) == "done"
-    )
+    assert axis_labels.resolve_read("state", ["Status:Done"], LABEL_STATE_MAP) == "done"
     # label-bound, none of the adopter labels present -> None.
     assert axis_labels.resolve_read("state", ["state:todo"], LABEL_STATE_MAP) is None
     # derive-bound -> None (read goes through derive_state, not a label).
     assert axis_labels.resolve_read("state", ["state:todo"], DERIVE_MAP) is None
     # unsupported -> None.
-    assert (
-        axis_labels.resolve_read("state", ["state:todo"], UNSUPPORTED_STATE_MAP)
-        is None
-    )
+    assert axis_labels.resolve_read("state", ["state:todo"], UNSUPPORTED_STATE_MAP) is None
 
 
 # ==========================================================================
@@ -437,10 +425,7 @@ def test_read_open_agrees_with_write_open_no_kit_label() -> None:
     non-terminal state under a derive map, and the read for an open issue is the
     collapsed `open` from open/closed — both ignore the kit label set."""
     for value in ("todo", "backlog", "in-progress", "review"):
-        assert (
-            axis_labels.resolve_write("state", value, DERIVE_MAP)
-            is axis_labels.DEGRADE
-        )
+        assert axis_labels.resolve_write("state", value, DERIVE_MAP) is axis_labels.DEGRADE
     assert (
         infer.infer_current_state(
             state="open", milestone={}, labels=["state:backlog"], substrate_map=DERIVE_MAP
@@ -459,9 +444,7 @@ def _stub_detect(monkeypatch: pytest.MonkeyPatch, issue: dict, substrate_map) ->
     monkeypatch.setattr(predicates, "_capability_root", lambda: REPO_ROOT)
     monkeypatch.setattr(predicates, "_config", lambda _root: {})
     monkeypatch.setattr(predicates, "_fetch_issue", lambda _n, _c, _f: issue)
-    monkeypatch.setattr(
-        predicates.axis_labels, "load_substrate_map", lambda _root: substrate_map
-    )
+    monkeypatch.setattr(predicates.axis_labels, "load_substrate_map", lambda _root: substrate_map)
 
 
 def test_detect_state_is_map_aware_open(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -549,9 +532,7 @@ def test_parent_active_descendant_map_aware(monkeypatch: pytest.MonkeyPatch) -> 
         "fetch_issue_corpus",
         lambda _c, **_kw: _containment.IssueCorpus(rows=tuple(children), complete=True),
     )
-    monkeypatch.setattr(
-        predicates.axis_labels, "load_substrate_map", lambda _root: DERIVE_MAP
-    )
+    monkeypatch.setattr(predicates.axis_labels, "load_substrate_map", lambda _root: DERIVE_MAP)
     out = predicates.parent_has_active_descendant(10)
     assert out["result"] is True
     assert out["detail"]["active_descendants"] == [11]

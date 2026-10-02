@@ -169,20 +169,15 @@ def _stamp_agent_storyboard(
         agent_file = new_agent_file
 
     agent_dir = agent_file.parent
-    storyboard_name = (
-        f"{scenario}.storyboard.md" if scenario is not None else "storyboard.md"
-    )
+    storyboard_name = f"{scenario}.storyboard.md" if scenario is not None else "storyboard.md"
     target = agent_dir / storyboard_name
     if target.exists():
         raise click.ClickException(
-            f"storyboard already exists at "
-            f"{target.relative_to(target_root)}."
+            f"storyboard already exists at {target.relative_to(target_root)}."
         )
 
     title = _name_to_title(scenario if scenario is not None else agent_name)
-    content = STORYBOARD_TEMPLATE.format(
-        title=title, kind="agent", name=agent_name, namespace=ns
-    )
+    content = STORYBOARD_TEMPLATE.format(title=title, kind="agent", name=agent_name, namespace=ns)
     if not dry_run:
         target.write_text(content, encoding="utf-8")
     return target

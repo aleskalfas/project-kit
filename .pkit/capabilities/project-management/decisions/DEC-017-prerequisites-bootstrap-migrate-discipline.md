@@ -37,7 +37,7 @@ The capability ships **three programmatic scripts** under `scripts/`, each with 
 3. The repository (`gh repo view`) is accessible and matches the expected owner/name.
 4. Projects v2 board (conditional on adopter config declaring one): `gh project view` resolves the declared board id.
 5. Required labels exist: every value in [project-management:DEC-012-classification-axes]'s `type` axis as a `type:<value>` label. In label-fallback mode (no board): also `priority:<value>` and `workstream:<value>` per the configured value sets.
-6. Default branch (`gh api repos/:owner/:repo`) matches the value declared in adopter config.
+6. Default branch (`gh api repos/:owner/:repo`) matches the project's declared default branch — the backbone's, declared once for every reader; the capability keeps no setting of its own for it (refinement per COR-054).
 7. The project-side adopter config file is present, parses, and declares every required field.
 
 The check list is data-driven from the capability's schemas plus the adopter config. Adding a check is the same-PR-as-methodology-change discipline below.

@@ -184,9 +184,7 @@ def test_unknown_relation_rejected() -> None:
 def test_malformed_upstream_address_rejected() -> None:
     entry = _entry()
     entry["upstream"] = "no-colon-here"
-    assert _errors(_with_entry(entry)), (
-        "`upstream` must be a <capability>:<process-id> address"
-    )
+    assert _errors(_with_entry(entry)), "`upstream` must be a <capability>:<process-id> address"
 
 
 def test_bad_mode_rejected() -> None:
@@ -325,6 +323,4 @@ def _registry_validator() -> Draft202012Validator:
             resource=Resource.from_contents(document, default_specification=DRAFT202012),
         )
     full = json.loads(_SCHEMA_PATH.read_text(encoding="utf-8"))
-    return Draft202012Validator(
-        {"$ref": f"{full['$id']}#/$defs/process"}, registry=registry
-    )
+    return Draft202012Validator({"$ref": f"{full['$id']}#/$defs/process"}, registry=registry)

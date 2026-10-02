@@ -51,7 +51,6 @@ from project_kit.schemas_validate import (
     validate_path,
 )
 
-
 CollectionForm = Literal["mapping", "list"]
 
 
@@ -152,9 +151,7 @@ def add_entry_to_namespace(
         collection[entry_id] = entry_data
     elif isinstance(collection, list):
         existing_ids = [
-            item.get("id")
-            for item in collection
-            if isinstance(item, dict) and "id" in item
+            item.get("id") for item in collection if isinstance(item, dict) and "id" in item
         ]
         if entry_id in existing_ids:
             raise SchemaAuthoringError(
@@ -181,8 +178,7 @@ def add_entry_to_namespace(
         yaml_path.write_text(original, encoding="utf-8")
         lines = "\n".join(f"  {i.location}\n    → {i.message}" for i in report.issues)
         raise SchemaAuthoringError(
-            f"the new entry would fail validation; original file restored.\n"
-            f"Issues:\n{lines}"
+            f"the new entry would fail validation; original file restored.\nIssues:\n{lines}"
         )
 
     return yaml_path
@@ -348,8 +344,7 @@ def stamp_new_schema(
     """
     if not _KEBAB_CASE.match(name):
         raise SchemaAuthoringError(
-            f"namespace name {name!r} must be kebab-case "
-            f"(matching `^[a-z][a-z0-9-]*$`)."
+            f"namespace name {name!r} must be kebab-case (matching `^[a-z][a-z0-9-]*$`)."
         )
     if not no_namespace and not _KEBAB_CASE.match(collection_name):
         raise SchemaAuthoringError(
@@ -370,9 +365,10 @@ def stamp_new_schema(
     else:
         capability_dir = schemas_dir.parent
         if not capability_dir.is_dir():
+            inside = target_root in capability_dir.parents or capability_dir == target_root
+            shown = capability_dir.relative_to(target_root) if inside else capability_dir
             raise SchemaAuthoringError(
-                f"capability {capability!r} not found at "
-                f"{capability_dir.relative_to(target_root) if target_root in capability_dir.parents or capability_dir == target_root else capability_dir}. "
+                f"capability {capability!r} not found at {shown}. "
                 f"Create the capability first via `pkit new capability`."
             )
         schemas_dir.mkdir(exist_ok=True)
@@ -395,9 +391,7 @@ def stamp_new_schema(
     if no_namespace:
         yaml_path.write_text(_DOCUMENT_YAML_TEMPLATE, encoding="utf-8")
     else:
-        template = (
-            _MAPPING_YAML_TEMPLATE if collection_form == "mapping" else _LIST_YAML_TEMPLATE
-        )
+        template = _MAPPING_YAML_TEMPLATE if collection_form == "mapping" else _LIST_YAML_TEMPLATE
         yaml_path.write_text(template.format(collection=collection_name), encoding="utf-8")
 
     # Stamp the companion. Use ensure_ascii=False so unicode (em-dashes,
@@ -452,9 +446,7 @@ def _build_companion(
             "type": "object",
             "patternProperties": {"^[a-z][a-z0-9-]*$": {"$ref": "#/$defs/entry"}},
             "additionalProperties": False,
-            "description": (
-                "Entries. Keys are kebab-case ids; values match $defs.entry."
-            ),
+            "description": ("Entries. Keys are kebab-case ids; values match $defs.entry."),
         }
         base["$defs"]["entry"] = {
             "type": "object",
@@ -548,13 +540,10 @@ def rename_entry(
     """
     if not _KEBAB_CASE.match(new_id):
         raise SchemaAuthoringError(
-            f"new id {new_id!r} must be kebab-case "
-            f"(matching `^[a-z][a-z0-9-]*$`)."
+            f"new id {new_id!r} must be kebab-case (matching `^[a-z][a-z0-9-]*$`)."
         )
     if new_id == old_id:
-        raise SchemaAuthoringError(
-            f"new id {new_id!r} is identical to old id; nothing to rename."
-        )
+        raise SchemaAuthoringError(f"new id {new_id!r} is identical to old id; nothing to rename.")
 
     owner = find_namespace_owner(target_root, namespace)
     if owner is None:
@@ -578,13 +567,9 @@ def rename_entry(
         changes: list[RenameChange] = []
 
         # Step 1: Update the namespace owner's collection.
-        owner_change = _rename_owner_entry(
-            owner_yaml, owner_companion, namespace, old_id, new_id
-        )
+        owner_change = _rename_owner_entry(owner_yaml, owner_companion, namespace, old_id, new_id)
         if owner_change is None:
-            raise SchemaAuthoringError(
-                f"id {old_id!r} not found in namespace {namespace!r}."
-            )
+            raise SchemaAuthoringError(f"id {old_id!r} not found in namespace {namespace!r}.")
         changes.append(owner_change)
 
         # Step 2: Update value-position typed tokens.
@@ -622,9 +607,7 @@ def rename_entry(
             if not yaml_path.is_file():
                 continue
             for data_path in paths:
-                change = _rename_annotated_key(
-                    yaml_path, data_path, old_id, new_id, namespace
-                )
+                change = _rename_annotated_key(yaml_path, data_path, old_id, new_id, namespace)
                 if change is not None:
                     changes.append(change)
 
@@ -633,9 +616,7 @@ def rename_entry(
         for yaml_path in affected:
             report = validate_path(yaml_path, target_root=target_root)
             if not report.is_clean:
-                lines = "\n".join(
-                    f"  {i.location}\n    → {i.message}" for i in report.issues
-                )
+                lines = "\n".join(f"  {i.location}\n    → {i.message}" for i in report.issues)
                 raise SchemaAuthoringError(
                     f"rename caused validation failure in {yaml_path.relative_to(target_root)}; "
                     f"all changes rolled back.\n{lines}"
@@ -735,7 +716,7 @@ def _walk_keys_from_namespace_for_renames(
     if isinstance(properties, dict):
         for prop_name, prop_schema in properties.items():
             yield from _walk_keys_from_namespace_for_renames(
-                prop_schema, target_namespace, data_pointer + (prop_name,)
+                prop_schema, target_namespace, (*data_pointer, prop_name)
             )
 
 

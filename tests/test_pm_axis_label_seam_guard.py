@@ -99,11 +99,7 @@ def _all_scanned_scripts() -> list[Path]:
     is the only exclusion.
     """
     paths = sorted(SCRIPTS.rglob("*.py"))
-    return [
-        p
-        for p in paths
-        if p != SEAM_MODULE and "__pycache__" not in p.parts
-    ]
+    return [p for p in paths if p != SEAM_MODULE and "__pycache__" not in p.parts]
 
 
 def _text_ends_in_axis_prefix(text: str) -> str | None:
@@ -214,7 +210,7 @@ def _format_constructs_axis_label(node: ast.Call) -> str | None:
     text = tmpl.value
     for prefix in PREFIXES:
         idx = text.find(prefix)
-        if idx != -1 and text[idx + len(prefix):idx + len(prefix) + 1] == "{":
+        if idx != -1 and text[idx + len(prefix) : idx + len(prefix) + 1] == "{":
             return prefix
     return None
 
@@ -235,7 +231,7 @@ def _bare_axis_label_constant(node: ast.Constant) -> str | None:
     for prefix in PREFIXES:
         if not text.startswith(prefix):
             continue
-        value = text[len(prefix):]
+        value = text[len(prefix) :]
         if value and not any(c.isspace() for c in value) and "*" not in value:
             return prefix
     return None
@@ -311,9 +307,7 @@ def _violations(path: Path) -> list[str]:
     return out
 
 
-@pytest.mark.parametrize(
-    "path", _all_scanned_scripts(), ids=lambda p: str(p.relative_to(SCRIPTS))
-)
+@pytest.mark.parametrize("path", _all_scanned_scripts(), ids=lambda p: str(p.relative_to(SCRIPTS)))
 def test_no_inline_axis_label_construction(path: Path) -> None:
     """No pm script constructs an axis-label outside the seam (ADR-026 part (i)).
 
@@ -351,7 +345,7 @@ def test_seam_module_builds_labels_with_a_fully_dynamic_axis() -> None:
     hunts, while every call site that hard-codes the axis does."""
     assert SEAM_MODULE.exists()
     assert not _violations(SEAM_MODULE), (
-        "the seam should build labels with a dynamic axis (`f\"{axis}:{value}\"`), "
+        'the seam should build labels with a dynamic axis (`f"{axis}:{value}"`), '
         "which the guard does not flag — if this fires, the seam has started "
         "hard-coding an axis and now looks like the inline sites it replaces"
     )
@@ -374,9 +368,7 @@ def test_guard_detects_a_reintroduced_concatenation(tmp_path: Path) -> None:
     `'type:' + v` is flagged; the seam-routed form is not. This is the exact
     shape pre-check.py used in its error messages before the fix."""
     bad = tmp_path / "concat.py"
-    bad.write_text(
-        "msg = ', '.join('type:' + v for v in missing)\n", encoding="utf-8"
-    )
+    bad.write_text("msg = ', '.join('type:' + v for v in missing)\n", encoding="utf-8")
     assert _violations(bad), "guard failed to flag a `'type:' + v` concatenation"
 
     good = tmp_path / "concat_ok.py"
@@ -405,14 +397,14 @@ def test_guard_exempts_non_construction_shapes(tmp_path: Path) -> None:
     A full literal used as a *value* still is."""
     exempt = tmp_path / "exempt.py"
     exempt.write_text(
-        'msg = "state:* labels missing"\n'          # glob
-        'pfx = "type:"\n'                            # bare prefix (read key)
-        'if name.startswith("workstream:"):\n'       # bare prefix (read key)
-        '    pass\n'
-        'TYPE_LABEL_TO_PREFIX = {\n'                 # dict-key read-map (G-2)
+        'msg = "state:* labels missing"\n'  # glob
+        'pfx = "type:"\n'  # bare prefix (read key)
+        'if name.startswith("workstream:"):\n'  # bare prefix (read key)
+        "    pass\n"
+        "TYPE_LABEL_TO_PREFIX = {\n"  # dict-key read-map (G-2)
         '    "type:feature": "feat",\n'
         '    "type:bug": "fix",\n'
-        '}\n',
+        "}\n",
         encoding="utf-8",
     )
     assert not _violations(exempt), (
@@ -422,6 +414,4 @@ def test_guard_exempts_non_construction_shapes(tmp_path: Path) -> None:
     # A full literal used as a *value* (not a dict key) is still a construction.
     bare_value = tmp_path / "bare_value.py"
     bare_value.write_text('SENTINEL = "state:todo"\n', encoding="utf-8")
-    assert _violations(bare_value), (
-        "guard failed to flag a bare full-literal label used as a value"
-    )
+    assert _violations(bare_value), "guard failed to flag a bare full-literal label used as a value"

@@ -11,7 +11,9 @@ COR-037 cascade `members` predicate for the issue-lifecycle CLOSURE fold: the
 parent-scoped candidate-member SOURCE. Given the parent issue number (the keyed
 subject the engine threads), returns `{members: ["<n>", ...]}` — the issue
 numbers of EVERY child of the parent (open and closed), discovered via the body
-parent-ref (the same `resolve_children` seam close-issue's `_find_open_children` uses — though by a different acquisition path: this predicate lets the seam fetch and vouch for the corpus, while the diagnostic hint supplies one with its own claim).
+parent-ref (the same `resolve_children` seam close-issue's `_find_open_children` uses — though by a
+different acquisition path: this predicate lets the seam fetch and vouch for the corpus, while the
+diagnostic hint supplies one with its own claim).
 The engine resolves each member's lifecycle outcome and folds them; an open
 child resolves to a non-terminal state and HOLDS the fold, reproducing pm's
 "an open child blocks eligibility" without filtering by state here.
@@ -33,8 +35,8 @@ from pathlib import Path
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate  # noqa: E402
-from _lib import lifecycle_predicates as predicates  # noqa: E402
+from _lib import bootstrap_gate
+from _lib import lifecycle_predicates as predicates
 
 
 def main() -> int:

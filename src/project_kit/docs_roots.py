@@ -270,8 +270,7 @@ def _record_overlay_category(target_root: Path, category: str, rel: str, *, by: 
         return None  # explicit already: never overwritten (COR-049 point 3)
     block = [
         "",
-        f"# --- {category}: recorded by `{by}` from the documentation roots "
-        f"(COR-049 point 5) ---",
+        f"# --- {category}: recorded by `{by}` from the documentation roots (COR-049 point 5) ---",
         f"{category}:",
         f"  - {rel}",
     ]

@@ -1,0 +1,17 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  Friction discovery and its writers now read a file whatever its line endings
+  (COR-050 points 1 and 5). The front-matter reader matched its `---` fences only
+  with `\n` line endings, so a file checked out with `\r\n` — a clone with
+  `core.autocrlf=true` — read as having no front matter wherever that reader was
+  used directly, and the friction writers refused such a file outright. A file's
+  front matter and body are now read with `\r\n` and a lone `\r` as `\n`, so an
+  artefact whose line endings changed while its text did not has the same
+  content; `pkit friction revalidate`, `defer` and `record-status` edit a `\r\n`
+  file and write it back with `\r\n`, byte for byte outside the key they
+  replace. A file that mixes line endings is a new `pkit validate` finding
+  (`mixed-line-endings`), and the writers refuse it, rather than reading a
+  carriage return inside a value as a line break.

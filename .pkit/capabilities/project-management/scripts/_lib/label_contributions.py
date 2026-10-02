@@ -50,9 +50,10 @@ Exports:
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 # The shared contribution-collector core (ADR-038). Same import fallback shape as
 # the reviewer collector, so this module loads both as `_lib.label_contributions`
@@ -160,11 +161,7 @@ def parse_label_contributions(
     if labels is None:
         return (), (malformed(f"{prefix} is missing the `labels:` key"),)
     if not isinstance(labels, list):
-        return (), (
-            malformed(
-                f"{prefix}: `labels` must be a list, got {type(labels).__name__}"
-            ),
-        )
+        return (), (malformed(f"{prefix}: `labels` must be a list, got {type(labels).__name__}"),)
 
     out: list[LabelContribution] = []
     errors: list[ContributionError] = []

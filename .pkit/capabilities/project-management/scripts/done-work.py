@@ -3,11 +3,13 @@
 # requires-python = ">=3.10"
 # dependencies = [
 #   "ruamel.yaml>=0.18",
+#   "pathspec>=0.12",
 # ]
 # ///
 """Project-management capability — done-work (DEC-026 workflow wrapper).
 
-Transitions Review → Done by squash-merging the PR. Per DEC-026:
+Transitions Review → Done by squash-merging the PR (an issue still In Progress
+goes through Review first, #1162). Per DEC-026:
 
     done-work <N> [--bypass "<reason>"] [--bypass-ci "<reason>"]
                   [--skip-checkbox-gate]
@@ -107,11 +109,47 @@ Side-effects, in order (#878; the merge mechanic itself lives once in
     the CI-bypass comment on the PR if `--bypass-ci` overrode a non-green CI
     gate. Each is keyed and posted at most once per act (above). A post that
     fails aborts the run before the merge (exit 2).
-  - `gh pr merge --squash --subject <PR title>` — WITHOUT `--delete-branch`:
-    that flag makes gh check out the default branch locally and delete the
-    local head, and the whole `gh pr merge` exits non-zero when the working
-    tree cannot do so (detached HEAD; the default branch checked out in
-    another worktree) — after the remote merge has already landed.
+  - Only when the issue never reached Review (#1162) — a Task still In
+    Progress, its PR opened without `review-work` — `move-issue.py --to
+    review`, the last step before the merge. workflow.yaml declares no In
+    Progress → Done for a Task; its move to done is Review → Done, the one the
+    merge makes below, so the issue goes through Review in two declared moves
+    rather than ending on a refused one. It runs before the merge because once
+    the merge lands GitHub may close the issue at any moment, and a closed
+    issue reads as done. The PR is open and ready here, which is what Review
+    means, so the move holds if the merge fails; if the move itself fails, the
+    run stops without merging.
+  - `gh pr merge --squash --subject <PR title> --match-head-commit <head>` —
+    pinned to the head the gate checked (the agent gate's own read, else the
+    head this run started from), so a push since fails the merge rather than
+    land unchecked commits; WITHOUT `--delete-branch`: that flag makes gh
+    check out the default branch locally and delete the local head, and the
+    whole `gh pr merge` exits non-zero when the working tree cannot do so
+    (detached HEAD; the default branch checked out in another worktree) —
+    after the remote merge has already landed.
+  - Where the PR's base merges through a queue (#1011, `_lib.merge_queue`),
+    the queue makes the merge: `gh pr merge <N> --auto --match-head-commit
+    <head>` enqueues the PR, and the queue runs the base's required checks on
+    the merge it is about to make and merges once they pass. The queue is
+    read before any gate, so a run it would refuse stops before it posts or
+    moves anything, and again just before the merge, so a queue switched on
+    or a PR dropped meanwhile is seen. The queue is the only path then:
+    `--admin` and `--bypass-ci` are refused, and so are a queue that does not
+    squash, a repository whose squash-commit defaults are not the PR title and
+    body, and a head the queue already dropped (`--force` enqueues it again).
+    done-work prints the PR's place in the queue and waits for the merge — as
+    long as the queue estimates plus a margin, at most 30 minutes, or
+    `--wait-minutes`; every step below runs once the queue has merged it. When
+    the wait ends first, or `--no-wait` returns at once, the issue stays in
+    Review (exit 4); a later `done-work <N>` finds the PR merged and runs those
+    steps. A push after the enqueue takes the PR out of the queue (exit 3).
+    A direct merge counts only once GitHub reports the PR merged: on a base
+    that requires a queue gh exits 0 having only enqueued, and such a PR is
+    waited for like any queued one. When GitHub cannot be read after gh
+    accepted the merge — or after a merge or an enqueue that got no answer
+    back, which is never taken for a failed one — the run says so and exits
+    4 with the issue in Review; a later `done-work <N>` finds the PR merged,
+    or still open, and finishes.
   - Composes over `move-issue.py --to done` IMMEDIATELY after the merge, so
     no best-effort step can stand between the irreversible merge and the
     lifecycle transition.
@@ -130,10 +168,34 @@ Side-effects, in order (#878; the merge mechanic itself lives once in
     fails — merge irreversibility is the architectural constraint per
     DEC-026 failure semantics.
 
+A PR already merged — the queue merged it after a run returned — has nothing
+left to gate. A run that finds no open PR for the issue's branch, or no local
+branch at all, looks for the merged PR that closes the issue (the branch's,
+and the issue's own closing references) and runs only the steps after the
+merge, the move ahead of the move to Done included, so any clone can complete
+it whatever its local branch holds. It refuses only when the issue was
+reopened after that merge: work since then needs a PR of its own.
+
 Exit codes:
   0  merged + done
-  1  membership refusal / approval, checkbox or CI gate fails
+  1  membership refusal / approval, checkbox or CI gate fails; a queue the
+     run may not go around or through
   2  usage error / gh failure
+  3  the merge failed; the PR left the merge queue without merging, or was
+     taken out of it because its head moved; or, called with a pinned head
+     (`run(argv, pinned_head=…)`, as `land-work` calls it), the PR's head is
+     not that one
+  4  accepted, a re-run completes it: the PR is in the merge queue and has
+     not been seen merged, or gh accepted the merge — or a merge or an
+     enqueue got no answer back — and GitHub could not be read to confirm it
+
+One exit code covers several ends — 0 is a merge, a dry run and a declined
+prompt alike — so a verb that composes done-work (`land-work`, #1203) calls
+`run`, which returns how the run ended (`DoneWorkRun`: merged, merged with a
+step after the merge owed, queued, unconfirmed, declined, planned, head
+moved, refused — saying whether running again unchanged can help — or
+unreadable), and decides on that. The exit codes above are what `main`
+returns for each, unchanged.
 """
 
 from __future__ import annotations
@@ -150,75 +212,92 @@ from ruamel.yaml import YAML
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate  # noqa: E402
-from _lib import pr_merge  # noqa: E402
-from _lib import session_guard  # noqa: E402
-from _lib.ci_checks import evaluate_ci_gate  # noqa: E402
-# DEC-007's checkbox close-gate — the ONE implementation (`_lib.checkbox_gate`),
-# shared with close-issue, merge-pr and the engine's gate-checkboxes-ticked
-# predicate.
-from _lib.checkbox_gate import (  # noqa: E402
-    refusal_message as _checkbox_refusal,
-    unticked_box_lines,
-)
-from _lib.criteria import checkbox_headings, tick_hints  # noqa: E402
-from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
-# The closing-reference reader `open-pr` and `validate-pr` use, so all three
-# agree on which issues a PR closes (#1086).
-from _lib.pr_validation import extract_closing_issues  # noqa: E402
-from _lib.membership import (  # noqa: E402
-    CAPABILITY_NAME,
-    Identity,
-    check_membership,
-    resolve_capability_root,
-    resolve_invoker_identity,
-)
-from _lib.placeholder_detection import (  # noqa: E402
-    PHASE_TRANSITION,
-    detect_placeholder_residuals,
-)
-from _lib.closing_issue_fetchers import (  # noqa: E402
-    issue_labels as _issue_labels_fetch,
-    pr_changed_files as _pr_changed_files_fetch,
-    pr_closing_issue_numbers as _pr_closing_issue_numbers_fetch,
-)
-from _lib.agent_verdicts import (  # noqa: E402
+from _lib import axis_labels, bootstrap_gate, merge_queue, pr_merge, session_guard
+
+# The position and transition-table readers move-issue and start-work use, so
+# the move done-work makes ahead of the merge (#1162) and the move it leads to
+# cannot disagree about where the issue is or what it may do.
+from _lib import lifecycle_inference as infer
+from _lib.agent_verdicts import (
     APPROVED,
     CHANGES_REQUESTED,
     PATH_LOCAL,
     PATH_REMOTE,
     Verdict,
+    gate_candidates,
     gate_verdicts,
-    latest_verdicts_per_reviewer,
+    latest_commit_timestamp,
 )
+
 # DEC-049's canonical audit-comment format + projection knob — the ONE
 # definition (`_lib.audit`), shared with `move-issue`'s transition audit.
-from _lib.audit import (  # noqa: E402
+from _lib.audit import (
     audit_key,
     bypass_audit_key,
     render_audit_comment,
     render_ci_bypass_audit_body,
     short_sha,
 )
+from _lib.author_delta import author_delta, base_kept
+
+# DEC-007's checkbox close-gate — the ONE implementation (`_lib.checkbox_gate`),
+# shared with close-issue, merge-pr and the engine's gate-checkboxes-ticked
+# predicate.
+from _lib.checkbox_gate import refusal_message as _checkbox_refusal
+from _lib.checkbox_gate import unticked_box_lines
+from _lib.ci_checks import evaluate_ci_gate
+
 # The one fetch / scan / post-once wiring every audit writer shares (#902).
-from _lib.comment import fetch_comments, post_audit_once  # noqa: E402
-from _lib.review_contributions import collect_contributions  # noqa: E402
-from _lib.review_mode import resolve_mode  # noqa: E402
-from _lib.review_opt_outs import OPT_OUT_PATH, read_opt_outs  # noqa: E402
-from _lib.required_reviewers import (  # noqa: E402
+from _lib.comment import fetch_comments, post_audit_once
+from _lib.criteria import checkbox_headings, tick_hints
+from _lib.gh import gh_get_issue, gh_run, load_adopter_config
+from _lib.membership import (
+    CAPABILITY_NAME,
+    Identity,
+    check_membership,
+    resolve_capability_root,
+    resolve_invoker_identity,
+)
+from _lib.placeholder_detection import (
+    PHASE_TRANSITION,
+    detect_placeholder_residuals,
+)
+
+# The one wiring of the required reviewers and the freshness rule (#1195),
+# shared with review-pr's skip and show-pr's stale marking.
+from _lib.pr_review import REVIEW_VIEW_FIELDS, PrReview, resolve_pr_review
+
+# The closing-reference reader `open-pr` and `validate-pr` use, so all three
+# agree on which issues a PR closes (#1086).
+from _lib.pr_validation import extract_closing_issues
+from _lib.required_reviewers import (
+    ERROR_CHANGED_FILES,
     ERROR_CLOSING_ISSUES,
     ERROR_COLLECTION,
+    ERROR_NOT_CODE,
     ERROR_OPT_OUT,
+    ERROR_TOO_MANY_CHANGED_FILES,
+    NOT_CODE_PATH,
     Resolution,
-    resolve_required_local_reviewers,
 )
+from _lib.review_contributions import collect_contributions
+from _lib.review_mode import resolve_mode
+from _lib.review_opt_outs import OPT_OUT_PATH
+from _lib.structural_type import infer_structural_type
+from _lib.verdict_freshness import FreshnessRule, head_sha
 
 
 def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
     """Fetch the issue's labels (review-mode resolution, DEC-027), body (the
-    DEC-007 checkbox pre-flight) and state (an issue already closed is not
-    gated, #1086) in one round-trip."""
-    return gh_get_issue(issue_number, config, fields="labels,body,state")
+    DEC-007 checkbox pre-flight), state and closing time (an issue already
+    closed is not gated, #1086, nor closed again after a queued merge, #1011),
+    and title and milestone (with the labels and state, where the issue is in
+    its lifecycle and what it may move to, #1162) in one round-trip."""
+    return gh_get_issue(
+        issue_number,
+        config,
+        fields="title,labels,body,state,closedAt,milestone",
+    )
 
 
 # The whole-gate and CI-bypass audit comments' first-line kind markers. They
@@ -245,6 +324,70 @@ REVIEWER_OVERRIDE_AUDIT_WRITER = "done-work-reviewer-override"
 # The first-class satisfaction state DEC-050 adds beside a fresh APPROVED. One
 # spelling, used by every surface that reports a slot's status.
 STATE_SATISFIED_BY_OVERRIDE = "satisfied-by-override"
+
+# The exit of a run whose merge was accepted and not yet seen merged (#1011):
+# the merge queue holds the PR, or GitHub could not be read to confirm a merge
+# gh accepted. A re-run completes it.
+EXIT_ACCEPTED = 4
+
+
+# ---- how a run ended, for a verb that composes done-work (#1203) ----------
+#
+# A composing verb decides on these kinds, never on the exit code, because one
+# code covers several of them: 0 is a merge, a dry run and a declined prompt
+# alike, and 3 a moved head and a PR the queue let go (ADR-061 point 7). The
+# exit codes a direct run returns are unchanged.
+
+#: GitHub reports the PR merged, and every step after the merge ran.
+MERGED = "merged"
+#: GitHub reports the PR merged, and a step after the merge failed: running
+#: done-work again completes it.
+FOLLOW_UP_OWED = "follow-up-owed"
+#: The PR is in the merge queue and has not been seen merged.
+QUEUED = "queued"
+#: Whether the PR merged, or entered the queue, could not be read after a
+#: merge request that may have been made.
+UNCONFIRMED = "unconfirmed"
+#: The confirmation prompt was declined: nothing was posted, moved or merged.
+DECLINED = "declined"
+#: A dry run printed what it would do.
+PLANNED = "planned"
+#: The PR's head is not the one the run was handed, or the queue let the PR
+#: go because its head moved: nothing merged.
+HEAD_MOVED = "head-moved"
+#: Nothing merged: a gate, the queue, GitHub or a step before the merge said
+#: no. `DoneWorkRun.retry` tells whether running again unchanged can help.
+REFUSED = "refused"
+#: Nothing was changed: what the run needed to read could not be read, or the
+#: run could not start (no capability, an un-bootstrapped project).
+UNREADABLE = "unreadable"
+
+
+@dataclass(frozen=True)
+class DoneWorkRun:
+    """How one done-work run ended (`run`), for a verb that composes it."""
+
+    #: One of the kinds above.
+    kind: str
+    #: What a direct run exits with (`main`).
+    exit_code: int
+    #: The line done-work opened its report of this end with; empty for a
+    #: merge and a plan.
+    reason: str = ""
+    #: For :data:`REFUSED`: running again unchanged can help — a request that
+    #: failed, checks still running — where otherwise something must change.
+    retry: bool = False
+
+
+def _ended(
+    kind: str, exit_code: int, message: str = "", *, reason: str = "", retry: bool = False
+) -> DoneWorkRun:
+    """End the run as `kind`: `message` is printed on standard error and its
+    first line kept as the reason; `reason` is for a report printed already."""
+    if message:
+        print(message, file=sys.stderr)
+    first = next((line.strip() for line in message.splitlines() if line.strip()), "")
+    return DoneWorkRun(kind, exit_code, reason=first or reason, retry=retry)
 
 
 def _reviewer_override_key(reviewer: str, reason: str, head: str) -> str:
@@ -273,9 +416,7 @@ def _reviewer_override_key(reviewer: str, reason: str, head: str) -> str:
     only an own, unedited comment with the exact body counts
     (`_lib.audit.own_audit_posted`, #902).
     """
-    return audit_key(
-        REVIEWER_OVERRIDE_AUDIT_WRITER, reviewer.strip(), reason.strip(), head
-    )
+    return audit_key(REVIEWER_OVERRIDE_AUDIT_WRITER, reviewer.strip(), reason.strip(), head)
 
 
 def _bypass_audit_key(writer: str, reason: str, head: str) -> str:
@@ -294,15 +435,39 @@ def _head_key(commits: list) -> str:
     last = commits[-1] if commits else None
     if not isinstance(last, dict):
         return ""
-    return str(
-        last.get("oid")
-        or last.get("committedDate")
-        or last.get("authoredDate")
-        or ""
-    )
+    return str(last.get("oid") or last.get("committedDate") or last.get("authoredDate") or "")
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
+    """Run done-work on `argv` (default: the command line); its exit code."""
+    return run(argv).exit_code
+
+
+def run(
+    argv: list[str] | None = None,
+    *,
+    pinned_head: str | None = None,
+    merged_only: bool = False,
+) -> DoneWorkRun:
+    """Run done-work on `argv` (default: the command line), and say how it
+    ended (`DoneWorkRun`) — for a verb that composes this one (`land-work`,
+    #1203), which decides on that and never on the exit code.
+
+    A composing verb hands it one of two things. `pinned_head` is the head of
+    the open PR it waited for the checks on and had reviewed: the run lands
+    that head or nothing, stopping before any gate when the PR's head is
+    another and before anything is posted or merged when the head the agent
+    gate judged is another (:data:`HEAD_MOVED`). `merged_only` says the verb
+    found no open PR: the run only completes a PR that has merged, and is
+    refused when it finds an open one, which the verb has not checked. Either
+    way the PR lookups tell an answer of "none" from no answer, which ends the
+    run :data:`UNREADABLE` before anything is changed.
+    """
+    if pinned_head is not None and not pinned_head:
+        raise ValueError("pinned_head names no head: pass the PR head to land, or None")
+    if pinned_head is not None and merged_only:
+        raise ValueError("a pinned head lands an open PR; merged_only completes a merged one")
+    composed = pinned_head is not None or merged_only
     parser = argparse.ArgumentParser(
         # No prefix abbreviation: `--bypass-reason` and `--bypass-reviewer-reason`
         # share one destination, so the deprecation notice and the both-spellings
@@ -318,7 +483,8 @@ def main() -> int:
     )
     parser.add_argument("issue_number", type=int)
     parser.add_argument(
-        "--bypass", default=None,
+        "--bypass",
+        default=None,
         help=(
             "Bypass the approval gate with a reason. Writes an audit comment "
             "'Approved by bypass: <reason>' on the issue before merging. Does "
@@ -327,24 +493,30 @@ def main() -> int:
         ),
     )
     parser.add_argument(
-        "--bypass-ci", default=None,
+        "--bypass-ci",
+        default=None,
         help=(
             "Override the CI-status gate (#498) with a reason "
             "(bypassable-with-audit per validation-severity.yaml). Records a "
             "distinct CI-bypass audit comment on the PR before merging. "
             "Independent of --bypass: a merge blocked on both the approval "
-            "gate and red CI needs both flags."
+            "gate and red CI needs both flags. Refused where the base merges "
+            "through a queue, which waits for the required checks itself."
         ),
     )
     parser.add_argument(
-        "--skip-checkbox-gate", action="store_true",
+        "--skip-checkbox-gate",
+        action="store_true",
         help=(
             "Skip the DEC-007 checkbox close-gate. Discouraged; only use "
             "when you have just removed all open boxes by hand."
         ),
     )
     parser.add_argument(
-        "--bypass-reviewer", action="append", default=None, metavar="NAME",
+        "--bypass-reviewer",
+        action="append",
+        default=None,
+        metavar="NAME",
         help=(
             "Satisfy ONE required reviewer's slot on the agent-mode approval "
             "gate by audited override, leaving every other required reviewer "
@@ -367,7 +539,9 @@ def main() -> int:
     # breaking CLI signature change owing a migration (COR-010). Both write
     # `args.bypass_reviewer_reason`; nothing downstream knows which was typed.
     parser.add_argument(
-        "--bypass-reviewer-reason", default=None, metavar="REASON",
+        "--bypass-reviewer-reason",
+        default=None,
+        metavar="REASON",
         help=(
             "The required reason paired with --bypass-reviewer (DEC-050). "
             "Applies to every reviewer named by --bypass-reviewer this "
@@ -378,7 +552,9 @@ def main() -> int:
         ),
     )
     parser.add_argument(
-        "--bypass-reason", dest="bypass_reviewer_reason", default=None,
+        "--bypass-reason",
+        dest="bypass_reviewer_reason",
+        default=None,
         metavar="REASON",
         help=(
             "DEPRECATED alias for --bypass-reviewer-reason, kept because it "
@@ -390,27 +566,33 @@ def main() -> int:
         ),
     )
     parser.add_argument(
-        "--admin", action="store_true",
-        help="Pass --admin to `gh pr merge` (bypass branch protection).",
+        "--admin",
+        action="store_true",
+        help=(
+            "Pass --admin to `gh pr merge` (bypass branch protection). Refused "
+            "where the base merges through a queue: it would merge around it."
+        ),
     )
+    pr_merge.add_queue_arguments(parser)
     parser.add_argument(
-        "--capability-root", type=Path, default=None,
+        "--capability-root",
+        type=Path,
+        default=None,
         help=f"Default: <repo-root>/.pkit/capabilities/{CAPABILITY_NAME}/.",
     )
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--yes", action="store_true")
     session_guard.add_override_argument(parser)
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     capability_root = resolve_capability_root(args.capability_root)
     if capability_root is None:
-        print(f"error: {CAPABILITY_NAME} capability not found.", file=sys.stderr)
-        return 2
+        return _ended(UNREADABLE, 2, f"error: {CAPABILITY_NAME} capability not found.")
 
     # Prerequisite gate (#747): refuse on an un-bootstrapped project rather
     # than operating on assumed defaults. See _lib/bootstrap_gate.py.
     if not bootstrap_gate.enforce("done-work", capability_root=capability_root):
-        return 2
+        return _ended(UNREADABLE, 2, reason="the project is not bootstrapped (see above)")
 
     yaml_loader = YAML(typ="safe")
     config = load_adopter_config(capability_root)
@@ -418,50 +600,130 @@ def main() -> int:
     invoker = resolve_invoker_identity(config=config)
     membership = check_membership(members, invoker)
     if not membership.allowed:
-        print(membership.refusal_message, file=sys.stderr)
-        return 1
+        return _ended(REFUSED, 1, membership.refusal_message)
 
     # Foreign-repo mutation guard (COR-039 / ADR-034) — gate before the PR
     # merge / state transition: target repo (cwd) vs session anchor.
     if not session_guard.enforce(override=args.allow_foreign_repo):
-        return 1
+        return _ended(REFUSED, 1, reason="the foreign-repository guard refused (see above)")
 
     branch = _find_issue_branch(args.issue_number)
-    if branch is None:
-        print(
-            f"error: no local branch matching `*/{args.issue_number}-*` found.",
-            file=sys.stderr,
+    if composed and branch is not None:
+        # A composing verb decides on what this lookup finds, so "gh did not
+        # answer" must not read as "no open PR" (#1203).
+        lookup = _lookup_prs(branch, "open", _OPEN_PR_FIELDS, config)
+        if lookup.problem:
+            return _ended(
+                UNREADABLE,
+                2,
+                f"error: whether {branch!r} has an open PR could not be read: "
+                f"{lookup.problem}. Nothing was changed.",
+            )
+        pr = lookup.first
+    else:
+        pr = _find_pr_for_branch(branch, config) if branch is not None else None
+    if pr is not None and merged_only:
+        return _ended(
+            REFUSED,
+            1,
+            f"error: PR #{pr.get('number')} for {branch!r} is open, and this run was asked "
+            "only to complete a PR that has merged. Nothing was changed.",
+            retry=True,
         )
-        return 2
-
-    pr = _find_pr_for_branch(branch, config)
-    if pr is None:
-        print(
-            f"error: no OPEN PR found for branch {branch!r}. "
-            "Run `review-work` first.",
-            file=sys.stderr,
+    if pr is None or branch is None:
+        # A merge queue may have merged the PR after an earlier run returned
+        # (#1011): what follows the merge is all that is left to do. The PR is
+        # found from the issue as well as from the branch, so a clone whose
+        # branch is gone or stale completes it too.
+        issue_merges = _read_issue_merges(args.issue_number, config)
+        if composed and branch is not None:
+            merged_lookup = _lookup_prs(branch, "merged", _MERGED_PR_FIELDS, config)
+            if merged_lookup.problem:
+                return _ended(
+                    UNREADABLE,
+                    2,
+                    f"error: whether {branch!r} has a merged PR could not be read: "
+                    f"{merged_lookup.problem}. Nothing was changed.",
+                )
+            branch_merged = merged_lookup.merged_last
+        else:
+            branch_merged = (
+                _find_merged_pr_for_branch(branch, config) if branch is not None else None
+            )
+        merged_pr = _latest_merged([branch_merged, *issue_merges.prs])
+        if merged_pr is not None:
+            return _complete_merged_pr(
+                args,
+                merged_pr,
+                issue_merges,
+                capability_root=capability_root,
+                yaml_loader=yaml_loader,
+                config=config,
+            )
+        if composed and issue_merges.problem:
+            return _ended(
+                UNREADABLE,
+                2,
+                f"error: no open PR is left for #{args.issue_number}, and whether a merged PR "
+                f"closes it could not be read: {issue_merges.problem}. Nothing was changed.",
+            )
+        if branch is None:
+            return _ended(
+                REFUSED,
+                2,
+                f"error: no local branch matching `*/{args.issue_number}-*` found, and no "
+                f"merged PR closes #{args.issue_number}.",
+            )
+        return _ended(
+            REFUSED,
+            2,
+            f"error: no OPEN PR found for branch {branch!r}. Run `review-work` first.",
         )
-        return 2
 
     pr_number = pr.get("number")
     pr_title = pr.get("title") or ""
     if pr.get("isDraft"):
-        print(
+        return _ended(
+            REFUSED,
+            2,
             f"error: PR #{pr_number} is still draft. Run `review-work` "
             "to flip it ready before `done-work`.",
-            file=sys.stderr,
         )
-        return 2
+    if pinned_head is not None and str(pr.get("headRefOid") or "") != pinned_head:
+        return _ended(
+            HEAD_MOVED,
+            3,
+            _head_not_pinned(
+                args.issue_number, pr_number, str(pr.get("headRefOid") or ""), pinned_head
+            ),
+        )
+
+    # Whether the base merges through a queue (#1011), read before any gate so
+    # a run the queue would refuse stops before it posts or moves anything. It
+    # is read again just before the merge (`pr_merge.land`).
+    base = str(pr.get("baseRefName") or "") or "the base branch"
+    try:
+        queue = merge_queue.read(pr_number, config)
+        queue_refusal = pr_merge.queue_refusal(
+            queue,
+            base=base,
+            admin=args.admin,
+            bypass_ci=bool(args.bypass_ci),
+            force=args.force,
+            config=config,
+        )
+    except merge_queue.Unreadable as exc:
+        return _ended(
+            UNREADABLE,
+            2,
+            _queue_unreadable(args.issue_number, f"cannot tell how {base} merges: {exc}"),
+        )
+    if queue_refusal:
+        return _ended(REFUSED, 1, queue_refusal)
 
     # Resolve review mode per DEC-027 (issue labels read from the PR view above).
     issue = _gh_get_issue(args.issue_number, config)
-    issue_labels = []
-    if issue:
-        issue_labels = [
-            lbl.get("name", "") if isinstance(lbl, dict) else str(lbl)
-            for lbl in (issue.get("labels") or [])
-        ]
-    mode_resolution = resolve_mode(config, issue_labels=issue_labels)
+    mode_resolution = resolve_mode(config, issue_labels=_label_names(issue))
     print(f"  mode: {mode_resolution.mode} ({mode_resolution.source})")
 
     # Per-reviewer override (DEC-050) — a --bypass-family member. Reason is
@@ -470,25 +732,26 @@ def main() -> int:
     # reviewer; blanks drop out entirely. Validate the pairing before any gate
     # work.
     override_reviewers = tuple(
-        name for name in (
-            raw.strip() for raw in (args.bypass_reviewer or ())
-        ) if name
+        name for name in (raw.strip() for raw in (args.bypass_reviewer or ())) if name
     )
     override_reason = (args.bypass_reviewer_reason or "").strip()
     # The deprecated spelling shares `dest` with the canonical one (one code
     # path), so argparse cannot report which was typed — argv can. Both given
     # is ambiguous under argparse's last-wins, so refuse rather than silently
     # pick; one deprecated spelling warns and proceeds.
-    _spellings = [a for a in sys.argv[1:] if a.split("=", 1)[0] in
-                  ("--bypass-reason", "--bypass-reviewer-reason")]
+    _spellings = [
+        a
+        for a in (sys.argv[1:] if argv is None else argv)
+        if a.split("=", 1)[0] in ("--bypass-reason", "--bypass-reviewer-reason")
+    ]
     if len({a.split("=", 1)[0] for a in _spellings}) > 1:
-        print(
+        return _ended(
+            REFUSED,
+            1,
             "[refused] --bypass-reason and --bypass-reviewer-reason are the "
             "same option (the former is a deprecated alias). Supplying both is "
             "ambiguous — pass only --bypass-reviewer-reason.",
-            file=sys.stderr,
         )
-        return 1
     if any(a.split("=", 1)[0] == "--bypass-reason" for a in _spellings):
         print(
             "[warn] --bypass-reason is a DEPRECATED alias on done-work; use "
@@ -500,13 +763,13 @@ def main() -> int:
             file=sys.stderr,
         )
     if override_reviewers and not override_reason:
-        print(
+        return _ended(
+            REFUSED,
+            1,
             "[refused] --bypass-reviewer requires "
             '--bypass-reviewer-reason "<reason>" (DEC-050: a per-reviewer '
             "override is audited, reason-required).",
-            file=sys.stderr,
         )
-        return 1
     if override_reason and not override_reviewers:
         print(
             "[warn] --bypass-reviewer-reason was supplied without "
@@ -527,7 +790,9 @@ def main() -> int:
         # (DEC-050 Decision 5). Validating under --bypass would make the
         # escape hatch itself refusable. Refusing costs nothing — the operator
         # re-runs with one flag — and leaves --bypass unconditional.
-        print(
+        return _ended(
+            REFUSED,
+            1,
             "[refused] --bypass and --bypass-reviewer cannot be combined.\n"
             "          --bypass discards the ENTIRE approval gate, which "
             "already subsumes waiving one reviewer's slot; --bypass-reviewer "
@@ -535,9 +800,7 @@ def main() -> int:
             "          → Keep --bypass alone to discard the whole gate (one "
             "honest audit), or drop --bypass to waive only "
             f"{', '.join(override_reviewers)}.",
-            file=sys.stderr,
         )
-        return 1
 
     # Mode-conditional gate per DEC-026 + DEC-027 + DEC-028.
     if args.bypass:
@@ -550,53 +813,62 @@ def main() -> int:
         # The per-reviewer override targets the agent-mode reviewer set; human
         # mode has no named required-reviewer set to override.
         if override_reviewers:
-            print(
+            return _ended(
+                REFUSED,
+                1,
                 "[refused] --bypass-reviewer applies to the agent-mode "
                 "reviewer gate, but this PR resolved to human mode "
                 f"(source: {mode_resolution.source}).\n"
                 '          → Use --bypass "<reason>" for a whole-gate override '
                 "in human mode, or set the PR to agent mode.",
-                file=sys.stderr,
             )
-            return 1
         gate_result = _check_approval_gate(pr_number, pr, args.bypass, config)
     else:
         # agent mode — DEC-028 gate, with DEC-032's per-PR resolved set and
         # DEC-050's satisfied-by-override OR-branch.
         gate_result = _check_agent_gate(
-            pr_number, pr, config, mode_resolution.source, capability_root,
+            pr_number,
+            pr,
+            config,
+            mode_resolution.source,
+            capability_root,
             override_reviewers=override_reviewers,
         )
 
     for warning in gate_result.warnings:
         print(warning, file=sys.stderr)
 
+    # A gate that read another head than the pinned one judged that head:
+    # whether it passed or refused, it says nothing of the head to land.
+    if pinned_head is not None and gate_result.head_oid and gate_result.head_oid != pinned_head:
+        return _ended(
+            HEAD_MOVED,
+            3,
+            _head_not_pinned(args.issue_number, pr_number, gate_result.head_oid, pinned_head),
+        )
     if not gate_result.passed:
-        print(gate_result.refusal_message, file=sys.stderr)
-        return 1
+        return _ended(REFUSED, 1, gate_result.refusal_message)
 
     # Residual-placeholder check per DEC-031 — hard-reject at the merge gate.
     # Fetch the PR body (not fetched earlier; _find_pr_for_branch only
     # retrieves number/isDraft/headRefName).
     pr_body = _gh_get_pr_body(pr_number, config)
     if pr_body is not None:
-        pr_placeholder_findings = _check_pr_placeholder(
-            pr_body, pr_number, capability_root
-        )
+        pr_placeholder_findings = _check_pr_placeholder(pr_body, pr_number, capability_root)
         hard_reject = [f for f in pr_placeholder_findings if f[0] == "hard-reject"]
         if hard_reject:
-            print(
-                f"[hard-reject] merge of PR #{pr_number} blocked: "
-                "PR body has not been authored (DEC-031).",
-                file=sys.stderr,
+            return _ended(
+                REFUSED,
+                1,
+                "\n".join(
+                    [
+                        f"[hard-reject] merge of PR #{pr_number} blocked: "
+                        "PR body has not been authored (DEC-031).",
+                        *(f"  [{sev}] {label}: {detail}" for sev, label, detail in hard_reject),
+                        "  → Fill in the required sections of the PR body before merging.",
+                    ]
+                ),
             )
-            for sev, label, detail in hard_reject:
-                print(f"  [{sev}] {label}: {detail}", file=sys.stderr)
-            print(
-                "  → Fill in the required sections of the PR body before merging.",
-                file=sys.stderr,
-            )
-            return 1
 
     # Every issue the PR closes (#1086): `Closes #N` closes each of them on
     # merge, so each is gated before it and closed + cascaded after it. The PR
@@ -605,8 +877,7 @@ def main() -> int:
     # skipped, in which case only the primary is known to close.
     if pr_body is None:
         if not args.skip_checkbox_gate:
-            print(_pr_body_unreadable_refusal(pr_number), file=sys.stderr)
-            return 1
+            return _ended(UNREADABLE, 1, _pr_body_unreadable_refusal(pr_number))
         print(
             f"[warn] PR #{pr_number}'s body could not be read, so any issue it "
             f"closes besides #{args.issue_number} is unknown and is not closed "
@@ -626,8 +897,7 @@ def main() -> int:
     for closing_issue in closing:
         if closing_issue.already_closed:
             print(
-                f"  #{closing_issue.number}: already closed, skipped "
-                "(not gated, not closed again)"
+                f"  #{closing_issue.number}: already closed, skipped (not gated, not closed again)"
             )
             continue
         checkbox_gate = _check_checkbox_gate(
@@ -637,12 +907,15 @@ def main() -> int:
             criteria_headings=criteria_headings,
         )
         if not checkbox_gate.passed:
-            print(checkbox_gate.refusal_message, file=sys.stderr)
-            return 1
+            return _ended(REFUSED, 1, checkbox_gate.refusal_message)
         # Report the outcome even when it passes: a gate nobody can see run is
         # how this one went missing for as long as it did (#734).
         print(f"  checkbox-gate: {checkbox_gate.passed_via} (#{closing_issue.number})")
     to_close = [c.number for c in closing if not c.already_closed]
+
+    # The declared move the issue makes before the merge when it never reached
+    # Review (#1162), so that the merge's own move to done is a declared one.
+    lead_in = _lead_in_to_done(issue, capability_root, yaml_loader)
 
     # CI-status gate (#498). A satisfied approval gate is not evidence CI
     # passed — refuse to land a PR whose checks are red or still running. The
@@ -655,22 +928,21 @@ def main() -> int:
     ci_gate = evaluate_ci_gate(rollup)
     if not ci_gate.passing:
         if not args.bypass_ci:
-            print(
+            # Checks still running are a wait, which a re-run can outlast; a
+            # failed check needs a change.
+            return _ended(
+                REFUSED,
+                1,
                 f"[refused] CI-status gate for PR #{pr_number}: checks are "
                 "not all green.\n"
                 f"          failing/pending: {', '.join(ci_gate.failing_checks)}\n"
                 "          → wait for the checks to pass, or override this CI "
                 'gate explicitly with `--bypass-ci "<reason>"` (--bypass does '
                 "not clear a red CI).",
-                file=sys.stderr,
+                retry=not ci_gate.failed,
             )
-            return 1
         if not args.bypass_ci.strip():
-            print(
-                "[refused] --bypass-ci requires a non-empty reason.",
-                file=sys.stderr,
-            )
-            return 1
+            return _ended(REFUSED, 1, "[refused] --bypass-ci requires a non-empty reason.")
         print(
             "  ci-status: [bypass-ci] checks not green "
             f"({', '.join(ci_gate.failing_checks)}); reason: {args.bypass_ci.strip()}"
@@ -681,38 +953,51 @@ def main() -> int:
     print(f"done-work: #{args.issue_number}")
     print(f"  PR:      #{pr_number}")
     print(f"  gate:    {gate_result.passed_via}")
-
-    if args.dry_run:
-        print(
-            f"(dry-run: would post bypass audit (if any), squash-merge "
-            f"--subject {pr_title!r}, call move-issue, close and cascade "
-            f"{_issue_list(to_close) or 'no issue'} through close-issue, then "
-            f"best-effort cleanup: delete remote branch {branch!r}, checkout "
-            f"main + pull, delete local branch.)"
-        )
-        return 0
-
-    if not args.yes and sys.stdin.isatty():
-        reply = input("Squash-merge + close? [y/N] ").strip().lower()
-        if reply not in ("y", "yes"):
-            print("aborted.", file=sys.stderr)
-            return 0
+    if lead_in is not None:
+        print(f"  lead-in: {lead_in.describe()}")
+    if queue.has_queue:
+        print(f"  queue:   {base} merges through a queue; PR #{pr_number} {queue.describe()}")
 
     # The head commit the whole-gate and CI bypasses are keyed on (#902): the
     # same bypass re-run on an unchanged head is a retry, after new commits it
     # is a new act that gets its own record.
     pr_head = str(pr.get("headRefOid") or "")
 
+    if args.dry_run:
+        lead_in_step = (
+            f"move #{args.issue_number} to {lead_in.to_state}, " if lead_in is not None else ""
+        )
+        merge_step = (
+            f"enqueue (--auto, pinned to {short_sha(gate_result.head_oid or pr_head)}; "
+            "the queue squashes with the PR title and body) and "
+            f"{pr_merge.wait_phrase(pr_merge.wait_seconds(args))}, then "
+            if queue.has_queue
+            else f"squash-merge --subject {pr_title!r}, "
+        )
+        print(
+            f"(dry-run: would post bypass audit (if any), {lead_in_step}{merge_step}"
+            f"call move-issue, close and cascade "
+            f"{_issue_list(to_close) or 'no issue'} through close-issue, then "
+            f"best-effort cleanup: delete remote branch {branch!r}, checkout "
+            "main + pull, delete the local branch if everything on it merged.)"
+        )
+        return _ended(PLANNED, 0)
+
+    if not args.yes and sys.stdin.isatty():
+        question = "Enqueue + close once merged?" if queue.has_queue else "Squash-merge + close?"
+        reply = input(f"{question} [y/N] ").strip().lower()
+        if reply not in ("y", "yes"):
+            return _ended(DECLINED, 0, "aborted.")
+
     # Post bypass audit comment if applicable.
     if args.bypass:
-        if not _post_bypass_audit_idempotent(
-            args.issue_number, args.bypass, config, head=pr_head
-        ):
-            print(
+        if not _post_bypass_audit_idempotent(args.issue_number, args.bypass, config, head=pr_head):
+            return _ended(
+                REFUSED,
+                2,
                 "[warn] could not post bypass audit comment; aborting before merge.",
-                file=sys.stderr,
+                retry=True,
             )
-            return 2
 
     # Post per-reviewer-override audit comment(s) before the merge (DEC-050).
     # Prose, verdict-grammar-distinct, keyed per (reviewer, reason, HEAD) so a
@@ -726,54 +1011,129 @@ def main() -> int:
         pr_comments = fetch_comments("pr", pr_number, config, run=gh_run)
         for audit in gate_result.override_audits:
             if not _post_reviewer_override_audit(
-                pr_number, audit, override_reason, invoker, config,
-                capability_root=capability_root, comments=pr_comments,
+                pr_number,
+                audit,
+                override_reason,
+                invoker,
+                config,
+                capability_root=capability_root,
+                comments=pr_comments,
             ):
-                print(
-                    "[warn] could not post reviewer-override audit comment; "
-                    "aborting before merge.",
-                    file=sys.stderr,
+                return _ended(
+                    REFUSED,
+                    2,
+                    "[warn] could not post reviewer-override audit comment; aborting before merge.",
+                    retry=True,
                 )
-                return 2
 
     # When --bypass-ci overrode a red/pending CI gate, record that explicitly
     # on the PR (bypassable-with-audit; the comment lands before the merge so
     # the trail survives a partial failure).
     if args.bypass_ci and not ci_gate.passing:
         if not _post_ci_bypass_audit(
-            pr_number, args.bypass_ci.strip(), invoker, ci_gate.failing_checks,
-            config, head=pr_head,
+            pr_number,
+            args.bypass_ci.strip(),
+            invoker,
+            ci_gate.failing_checks,
+            config,
+            head=pr_head,
         ):
-            print(
-                "[warn] could not post CI-bypass audit comment; aborting "
-                "before merge.",
-                file=sys.stderr,
+            return _ended(
+                REFUSED,
+                2,
+                "[warn] could not post CI-bypass audit comment; aborting before merge.",
+                retry=True,
             )
-            return 2
 
-    # Squash-merge with an explicit subject so the landed commit subject
-    # equals the gate-validated PR title regardless of commit count
-    # (DEC-013: squash-commit subject = PR title; fixes #33). The mechanic is
-    # `_lib.pr_merge`'s — the one implementation `merge-pr` also runs.
-    if not pr_merge.squash_merge(
-        pr_number, pr_title=pr_title, admin=args.admin, config=config,
-    ):
-        return 3
+    # The lead-in move (#1162), last before the merge, so only the merge stands
+    # between it and the move to done. It is made before the merge rather than
+    # after it: once the merge lands GitHub may close the issue at any moment,
+    # and a closed issue reads as done, from which there is no move to review.
+    # A failure stops the run here, while nothing irreversible has happened.
+    if lead_in is not None:
+        lead_in_rc = _invoke_move_issue(
+            args.issue_number,
+            lead_in.to_state,
+            args.capability_root,
+        )
+        if lead_in_rc != 0:
+            return _ended(
+                REFUSED,
+                lead_in_rc,
+                f"error: move-issue exited {lead_in_rc} moving "
+                f"#{args.issue_number} {lead_in.from_state} → {lead_in.to_state} "
+                f"ahead of the merge, so PR #{pr_number} was NOT merged. Fix "
+                "what move-issue reported, then re-run `done-work "
+                f"{args.issue_number}`.",
+            )
 
-    print(f"  merged PR #{pr_number}")
+    # The merge — or, where the base merges through a queue (#1011), the
+    # enqueue and the wait for the queue's merge. `pr_merge.land` is the one
+    # landing `merge-pr` also makes: it reads the queue again just before the
+    # decision, pins the merge to the head the gate checked — the agent gate's
+    # own read, else the head this run started from — so a push since lands
+    # nothing unchecked, and squash-merges with the PR title as the subject
+    # where there is no queue (DEC-013; fixes #33). What follows the merge runs
+    # only once GitHub reports the PR merged.
+    landing = pr_merge.land(
+        pr_merge.MergeRequest(
+            pr_number=pr_number,
+            pr_title=pr_title,
+            head_oid=gate_result.head_oid or pr_head,
+            base=base,
+            admin=args.admin,
+            bypass_ci=bool(args.bypass_ci),
+            force=args.force,
+            wait_seconds=pr_merge.wait_seconds(args),
+        ),
+        config,
+    )
+    if landing.outcome != pr_merge.MERGED:
+        return _not_merged(args.issue_number, pr_number, base, landing)
+    return _after_merge(
+        args,
+        pr_number=pr_number,
+        to_close=to_close,
+        branch=branch,
+        cross=bool(pr.get("isCrossRepository")),
+        merged_head=_merged_head(landing, gate_result.head_oid or pr_head),
+        config=config,
+    )
 
+
+def _after_merge(
+    args: argparse.Namespace,
+    *,
+    pr_number: int,
+    to_close: list[int],
+    branch: str,
+    cross: bool,
+    merged_head: str,
+    config: dict,
+) -> DoneWorkRun:
+    """Everything that follows the merge: issue N to Done, each issue the
+    merge closed closed and cascaded, then the best-effort branch cleanup.
+
+    The merge is durable by now, so nothing here rolls it back: a failed step
+    warns with the command that finishes it, and the run exits with it after
+    the cleanup (:data:`FOLLOW_UP_OWED`). `branch` is the PR's head branch and
+    `merged_head` the head it merged at: the local branch is deleted only when
+    nothing on it is missing from the merge.
+    """
+    # The first step that failed, as its warning says it.
+    owed = ""
     # Compose over move-issue for the state transition + cascade — FIRST,
     # before any branch cleanup. The merge is irreversible and GitHub's
     # `Closes #N` has already closed the issue, so a best-effort step failing
     # ahead of this call would strand the pm state at Review (#878).
     move_rc = _invoke_move_issue(args.issue_number, "done", args.capability_root)
     if move_rc != 0:
-        print(
+        owed = (
             f"[warn] PR merged but move-issue exited {move_rc}. The merge is "
             "durable; re-run `move-issue --to done` to complete the "
-            "lifecycle transition.",
-            file=sys.stderr,
+            "lifecycle transition."
         )
+        print(owed, file=sys.stderr)
 
     # Close every issue the merge closed as completed and run its closure
     # cascade (#1086), still ahead of the best-effort cleanup. `close-issue`'s
@@ -783,37 +1143,347 @@ def main() -> int:
     close_rc = 0
     for number in to_close:
         rc = _invoke_close_issue(
-            number, pr_number, args.capability_root,
+            number,
+            pr_number,
+            args.capability_root,
             skip_checkbox_gate=args.skip_checkbox_gate,
         )
         if rc != 0:
-            print(
+            warning = (
                 f"[warn] PR merged but close-issue exited {rc} for #{number}. "
                 "The merge is durable; re-run `close-issue "
                 f"{number} --mode pr-merge --pr {pr_number}` to close and "
-                "cascade it.",
-                file=sys.stderr,
+                "cascade it."
             )
+            print(warning, file=sys.stderr)
+            owed = owed or warning
             close_rc = close_rc or rc
 
     # Branch cleanup — best-effort, never fatal. The remote head ref goes
     # through the API so it has no local-checkout dependency; the local steps
     # warn and continue when the working tree cannot switch to the default
     # branch (detached HEAD, the default branch held by another worktree).
-    cross = bool(pr.get("isCrossRepository")) if pr else False
     pr_merge.delete_remote_branch(branch, config, cross_repository=cross)
-    pr_merge.cleanup_local(branch, config, cross_repository=cross)
+    pr_merge.cleanup_local(branch, config, cross_repository=cross, merged_head=merged_head)
 
     if move_rc != 0:
-        return move_rc
+        return _ended(FOLLOW_UP_OWED, move_rc, reason=owed)
     if close_rc != 0:
-        return close_rc
+        return _ended(FOLLOW_UP_OWED, close_rc, reason=owed)
     also = _issue_list(n for n in to_close if n != args.issue_number)
     print(
-        f"\n[ok] merged + closed #{args.issue_number}"
-        + (f" (also closed: {also})" if also else "")
+        f"\n[ok] merged + closed #{args.issue_number}" + (f" (also closed: {also})" if also else "")
     )
-    return 0
+    return _ended(MERGED, 0)
+
+
+# ---- merging through a queue (#1011) -----------------------------------
+
+
+def _queue_unreadable(issue_number: int, reason: str) -> str:
+    return (
+        f"error: {reason}. Nothing was merged; re-run `done-work {issue_number}` once `gh` answers."
+    )
+
+
+def _head_not_pinned(issue_number: int, pr_number: object, head: str, pinned_head: str) -> str:
+    """The refusal when the PR's head is not the one the run was asked to land
+    (`run`'s `pinned_head`)."""
+    return (
+        f"error: PR #{pr_number}'s head is {short_sha(head)}, not "
+        f"{short_sha(pinned_head)}, the head this run was asked to land: its checks "
+        f"and review were for that head. Nothing was posted or merged, and "
+        f"#{issue_number} stays where it is."
+    )
+
+
+def _not_merged(
+    issue_number: int, pr_number: int, base: str, landing: pr_merge.Landing
+) -> DoneWorkRun:
+    """Report a landing that did not end merged, and how the run ended.
+
+    Accepted (exit 4) are a PR the queue was handed, and a merge GitHub could
+    not then confirm — one gh accepted, or a merge or an enqueue that got no
+    answer back: a later run finds the PR merged, or still open, and
+    finishes. Everything else merged nothing, and the issue stays where it is.
+    """
+    reading = landing.reading
+    if landing.outcome == pr_merge.STILL_QUEUED:
+        if landing.message:
+            print(f"[warn] {landing.message}", file=sys.stderr)
+        note = _still_queued_note(issue_number, pr_number, base, reading)
+        print(note)
+        return _ended(QUEUED, EXIT_ACCEPTED, reason=note.strip().splitlines()[0])
+    if landing.outcome == pr_merge.UNCONFIRMED:
+        print(
+            f"\n[unconfirmed] {landing.message}. Nothing after the merge has run, and "
+            f"#{issue_number} stays in Review. Run `done-work {issue_number}` again once "
+            f"GitHub answers: if the PR merged, it moves #{issue_number} to Done, closes and "
+            "cascades the issues the PR closes, and cleans up the branch; if it did not, it "
+            "merges it."
+        )
+        return _ended(UNCONFIRMED, EXIT_ACCEPTED, reason=f"[unconfirmed] {landing.message}")
+    if landing.outcome == pr_merge.REFUSED:
+        return _ended(REFUSED, 1, landing.message)
+    if landing.outcome == pr_merge.UNREADABLE:
+        return _ended(UNREADABLE, 2, _queue_unreadable(issue_number, landing.message))
+    if landing.outcome == pr_merge.HEAD_MOVED:
+        return _ended(
+            HEAD_MOVED,
+            3,
+            f"error: {landing.message} #{issue_number} stays in Review; once the new "
+            f"commits have been reviewed, re-run `done-work {issue_number}`.",
+        )
+    if landing.outcome == pr_merge.FAILED:
+        # gh's reason is printed already (`pr_merge`); whether a push since is
+        # what made it fail is for the caller to read.
+        return _ended(
+            REFUSED,
+            3,
+            reason=f"the merge request for PR #{pr_number} did not go through (gh's reason "
+            "is above); nothing merged",
+            retry=True,
+        )
+    if landing.outcome == pr_merge.LEFT:
+        where = f" ({reading.describe()})" if reading is not None else ""
+        if reading is None or reading.has_queue or reading.ever_queued:
+            what = (
+                f"PR #{pr_number} left the merge queue for {base} without merging, as far "
+                f"as the queue reports{where}: its checks may have failed on the merge it "
+                "was about to make, or the PR no longer merged cleanly onto what merged "
+                "ahead of it"
+            )
+        else:
+            what = f"PR #{pr_number} has not merged, as far as GitHub reports{where}"
+        return _ended(
+            REFUSED,
+            3,
+            f"error: {what}. Nothing after the merge ran and #{issue_number} stays in "
+            f"Review; look at the PR, fix the branch if it needs it, then re-run "
+            f"`done-work {issue_number}`.",
+        )
+    return _ended(REFUSED, 3, reason=f"PR #{pr_number} did not merge ({landing.outcome})")
+
+
+def _merged_head(landing: pr_merge.Landing, gated_head: str) -> str:
+    """The head the PR merged at, as GitHub reports it, else the one gated."""
+    if landing.reading is not None and landing.reading.head_oid:
+        return landing.reading.head_oid
+    return gated_head
+
+
+def _still_queued_note(
+    issue_number: int,
+    pr_number: int,
+    base: str,
+    reading: merge_queue.Reading | None,
+) -> str:
+    if reading is None:
+        stands = (
+            f"was handed to the merge queue for {base}, and whether it has merged since "
+            "could not be read"
+        )
+    else:
+        stands = f"is in the merge queue for {base} ({reading.describe()}) and has not merged yet"
+    return (
+        f"\n[queued] PR #{pr_number} {stands}; #{issue_number} stays in Review until it "
+        f"merges. Run `done-work {issue_number}` again once it has merged: it moves "
+        f"#{issue_number} to Done, closes and cascades the issues the PR closes, and cleans "
+        "up the branch."
+    )
+
+
+# The merged PRs that close an issue, as GitHub links them, and when the issue
+# was last reopened — one read for a run that finds no open PR (#1011).
+_ISSUE_MERGES_QUERY = """\
+query($owner: String!, $repo: String!, $number: Int!) {
+  repository(owner: $owner, name: $repo) {
+    issue(number: $number) {
+      closedByPullRequestsReferences(first: 25, includeClosedPrs: true) {
+        nodes { number state mergedAt headRefName headRefOid isCrossRepository body }
+      }
+      timelineItems(itemTypes: [REOPENED_EVENT], last: 1) {
+        nodes { ... on ReopenedEvent { createdAt } }
+      }
+    }
+  }
+}
+"""
+
+
+@dataclass(frozen=True)
+class _IssueMerges:
+    """What an issue says about the PRs that closed it (#1011)."""
+
+    #: The merged PRs GitHub links to the issue as closing it — those whose
+    #: base is the default branch; a PR into another base is found from the
+    #: branch instead.
+    prs: list[dict]
+    #: When the issue was last reopened; empty when it never was.
+    reopened_at: str = ""
+    #: Why the issue could not be read; empty when it was.
+    problem: str = ""
+
+
+def _read_issue_merges(issue_number: int, config: dict) -> _IssueMerges:
+    """The merged PRs that close the issue and when it was last reopened."""
+    try:
+        proc = gh_run(
+            [
+                "gh",
+                "api",
+                "graphql",
+                "-f",
+                f"query={_ISSUE_MERGES_QUERY}",
+                "-F",
+                "owner={owner}",
+                "-F",
+                "repo={repo}",
+                "-F",
+                f"number={issue_number}",
+            ],
+            config,
+            check=False,
+        )
+    except FileNotFoundError:
+        return _IssueMerges([], problem="`gh` not on PATH")
+    try:
+        payload = json.loads(proc.stdout or "null")
+    except ValueError:
+        payload = None
+    issue = _dig(payload, "data", "repository", "issue")
+    if proc.returncode != 0 or not isinstance(issue, dict):
+        reason = proc.stderr.strip() or f"gh answered no issue #{issue_number}"
+        return _IssueMerges([], problem=reason)
+    nodes = _dig(issue, "closedByPullRequestsReferences", "nodes")
+    prs = [
+        pr
+        for pr in (nodes if isinstance(nodes, list) else [])
+        if isinstance(pr, dict) and pr.get("state") == "MERGED" and pr.get("number")
+    ]
+    reopened = _dig(issue, "timelineItems", "nodes")
+    last = reopened[-1] if isinstance(reopened, list) and reopened else None
+    return _IssueMerges(prs, reopened_at=str(_dig(last, "createdAt") or ""))
+
+
+def _dig(value: object, *keys: str) -> object:
+    """`value[k1][k2]…`, or None where any step is not a mapping holding the key."""
+    for key in keys:
+        if not isinstance(value, dict):
+            return None
+        value = value.get(key)
+    return value
+
+
+def _latest_merged(candidates: list[dict | None]) -> dict | None:
+    """The PR among `candidates` that merged last, or None."""
+    merged = [
+        pr for pr in candidates if isinstance(pr, dict) and pr.get("number") and pr.get("mergedAt")
+    ]
+    return max(merged, key=lambda pr: str(pr.get("mergedAt")), default=None)
+
+
+def _complete_merged_pr(
+    args: argparse.Namespace,
+    merged_pr: dict,
+    issue_merges: _IssueMerges,
+    *,
+    capability_root: Path,
+    yaml_loader: YAML,
+    config: dict,
+) -> DoneWorkRun:
+    """What follows the merge, for a PR already merged (#1011).
+
+    The queue merged it after the run that enqueued it returned, so every gate
+    ran then and only the steps after the merge are left: the move ahead of
+    the move to Done when the issue still needs it (#1162), the move to Done,
+    the close and cascade, and the clean-up of the PR's head branch. They key
+    on the PR — the head it merged at and the issues it closes — and not on
+    this clone's branch, so any clone completes it: the local branch is
+    deleted only when nothing on it is missing from the merge.
+
+    It is the issue's merge only while the issue has not been reopened since:
+    work after a reopen needs a PR of its own, and closing the issue through
+    the old merge would be wrong. When that cannot be read, nothing is done.
+
+    The issues to close are those the PR body names that were not closed
+    before the merge — GitHub closes the rest as it merges, and close-issue's
+    pr-merge close reconciles and cascades them either way.
+    """
+    pr_number = int(merged_pr["number"])
+    merged_at = str(merged_pr.get("mergedAt") or "")
+    issue_number = args.issue_number
+    if issue_merges.problem:
+        return _ended(
+            UNREADABLE,
+            2,
+            f"error: no OPEN PR is left for #{issue_number} and PR #{pr_number} merged at "
+            f"{merged_at}, but whether #{issue_number} was reopened since cannot be read: "
+            f"{issue_merges.problem}. Nothing was changed; re-run `done-work "
+            f"{issue_number}` once `gh` answers.",
+        )
+    if issue_merges.reopened_at > merged_at:
+        return _ended(
+            REFUSED,
+            2,
+            f"error: no OPEN PR is left for #{issue_number}. PR #{pr_number} merged at "
+            f"{merged_at}, but #{issue_number} was reopened at {issue_merges.reopened_at}, "
+            "after it: work since that merge needs a PR of its own (`review-work`). If "
+            f"the merge is what you are completing, run `close-issue {issue_number} "
+            f"--mode pr-merge --pr {pr_number}`.",
+        )
+
+    issue = _gh_get_issue(issue_number, config)
+    closing = _read_closing_issues(
+        issue_number,
+        issue,
+        str(merged_pr.get("body") or ""),
+        config,
+    )
+    to_close = [c.number for c in closing if not c.closed_before(merged_at)]
+    lead_in = _lead_in_to_done(issue, capability_root, yaml_loader)
+    print(f"done-work: #{issue_number}")
+    print(f"  PR:      #{pr_number}, merged at {merged_at}; completing what follows the merge")
+    print(f"  closes:  {_issue_list(to_close) or 'no issue'}")
+    if lead_in is not None:
+        print(
+            f"  lead-in: {lead_in.from_state} → {lead_in.to_state}, then "
+            f"{lead_in.to_state} → {DONE_STATE}"
+        )
+
+    head_branch = str(merged_pr.get("headRefName") or "")
+    if args.dry_run:
+        lead_in_step = f"move #{issue_number} to {lead_in.to_state}, " if lead_in else ""
+        print(
+            f"(dry-run: would {lead_in_step}call move-issue, close and cascade "
+            f"{_issue_list(to_close) or 'no issue'} through close-issue, then "
+            f"best-effort cleanup: delete remote branch {head_branch!r}, checkout "
+            "main + pull, delete the local branch if everything on it merged.)"
+        )
+        return _ended(PLANNED, 0)
+    if not args.yes and sys.stdin.isatty():
+        reply = input("Close + clean up? [y/N] ").strip().lower()
+        if reply not in ("y", "yes"):
+            return _ended(DECLINED, 0, "aborted.")
+    if lead_in is not None:
+        lead_in_rc = _invoke_move_issue(issue_number, lead_in.to_state, args.capability_root)
+        if lead_in_rc != 0:
+            return _ended(
+                FOLLOW_UP_OWED,
+                lead_in_rc,
+                f"error: move-issue exited {lead_in_rc} moving #{issue_number} "
+                f"{lead_in.from_state} → {lead_in.to_state}. PR #{pr_number} has merged; "
+                f"fix what move-issue reported, then re-run `done-work {issue_number}`.",
+            )
+    return _after_merge(
+        args,
+        pr_number=pr_number,
+        to_close=to_close,
+        branch=head_branch,
+        cross=bool(merged_pr.get("isCrossRepository")),
+        merged_head=str(merged_pr.get("headRefOid") or ""),
+        config=config,
+    )
 
 
 # ---- approval gate ---------------------------------------------------
@@ -825,8 +1495,9 @@ class _GateResult:
         passed: bool,
         passed_via: str = "",
         refusal_message: str = "",
-        override_audits: "list[_OverrideAudit] | None" = None,
-        warnings: "list[str] | None" = None,
+        override_audits: list[_OverrideAudit] | None = None,
+        warnings: list[str] | None = None,
+        head_oid: str = "",
     ):
         self.passed = passed
         self.passed_via = passed_via
@@ -837,6 +1508,9 @@ class _GateResult:
         # Soft, non-refusing notices the caller prints to stderr (e.g. the
         # all-slots override nudge, DEC-050).
         self.warnings = warnings or []
+        # The PR head the gate judged its verdicts against (#1179); the merge
+        # is pinned to it. Empty when the gate read no head of its own.
+        self.head_oid = head_oid
 
 
 @dataclass(frozen=True)
@@ -864,7 +1538,7 @@ class _Slot:
     #: Named in `--bypass-reviewer` this invocation (DEC-050).
     overridden: bool
     #: The reviewer's most-blocking GATE-COUNTABLE verdict (marker-carrying, from
-    #: a required identity, PR author excluded, post-dating HEAD), or None when
+    #: a required identity, PR author excluded, fresh), or None when
     #: the gate counted none. The evidence behind `approved` and `status`.
     verdict: Verdict | None
 
@@ -940,37 +1614,36 @@ def _check_approval_gate(
 
     if pr_number is None:
         return _GateResult(
-            passed=False, refusal_message="error: cannot resolve PR number.",
+            passed=False,
+            refusal_message="error: cannot resolve PR number.",
         )
 
     # Fetch the PR's reviews + comments + author.
     proc = gh_run(
-        ["gh", "pr", "view", str(pr_number),
-         "--json", "author,reviews,comments"],
-        config, check=False,
+        ["gh", "pr", "view", str(pr_number), "--json", "author,reviews,comments"],
+        config,
+        check=False,
     )
     if proc.returncode != 0:
         return _GateResult(
             passed=False,
-            refusal_message=(
-                f"error: gh pr view failed: {proc.stderr.strip()}"
-            ),
+            refusal_message=(f"error: gh pr view failed: {proc.stderr.strip()}"),
         )
     try:
         data = json.loads(proc.stdout)
     except (ValueError, json.JSONDecodeError):
         return _GateResult(
-            passed=False, refusal_message="error: gh pr view returned malformed JSON.",
+            passed=False,
+            refusal_message="error: gh pr view returned malformed JSON.",
         )
     author_login = (data.get("author") or {}).get("login") or ""
 
     # Path 1: latest APPROVED review (latest non-COMMENTED state).
     reviews = data.get("reviews") or []
     latest_states = [
-        r.get("state") for r in reviews
-        if isinstance(r, dict) and r.get("state") in (
-            "APPROVED", "CHANGES_REQUESTED", "DISMISSED"
-        )
+        r.get("state")
+        for r in reviews
+        if isinstance(r, dict) and r.get("state") in ("APPROVED", "CHANGES_REQUESTED", "DISMISSED")
     ]
     if latest_states and latest_states[-1] == "APPROVED":
         return _GateResult(passed=True, passed_via="APPROVED review")
@@ -984,7 +1657,8 @@ def _check_approval_gate(
         body = (c.get("body") or "").strip()
         if author and author != author_login and body.startswith("Approved"):
             return _GateResult(
-                passed=True, passed_via=f"`Approved` comment from @{author}",
+                passed=True,
+                passed_via=f"`Approved` comment from @{author}",
             )
 
     # Refused.
@@ -1000,7 +1674,7 @@ def _check_approval_gate(
             "            - Request a review and have it approved.\n"
             "            - Have a non-author commenter post a comment "
             "starting with `Approved`.\n"
-            "            - Re-run with `--bypass \"<reason>\"`."
+            '            - Re-run with `--bypass "<reason>"`.'
         ),
     )
 
@@ -1022,14 +1696,22 @@ class _ClosingIssue:
         """Closed before the merge, so the merge does not close it: it is
         neither gated nor closed again. An unreadable issue is not known to be
         closed, so it stays gated (and fails closed there)."""
-        return (
-            self.issue is not None
-            and str(self.issue.get("state") or "").lower() == "closed"
-        )
+        return self.issue is not None and str(self.issue.get("state") or "").lower() == "closed"
+
+    def closed_before(self, moment: str) -> bool:
+        """Closed before `moment` (an ISO timestamp, a merge's), so that merge
+        did not close it (#1011). An issue closed with no time read is taken
+        as closed by the merge: close-issue then reconciles it, which costs
+        nothing, where skipping it could leave its label and cascade undone."""
+        closed_at = str((self.issue or {}).get("closedAt") or "")
+        return self.already_closed and bool(closed_at) and bool(moment) and closed_at < moment
 
 
 def _read_closing_issues(
-    primary: int, primary_issue: dict | None, pr_body: str, config: dict,
+    primary: int,
+    primary_issue: dict | None,
+    pr_body: str,
+    config: dict,
 ) -> list[_ClosingIssue]:
     """Every issue the PR closes, the one done-work runs for first (#1086).
 
@@ -1116,9 +1798,7 @@ def _check_checkbox_gate(
 
     # Name the verb that ticks each box (#1015): `check-criterion` for the
     # criteria and the Doc impact section, a body edit for any other section.
-    hints = tick_hints(
-        issue_number, body, [line_no for line_no, _ in located], criteria_headings
-    )
+    hints = tick_hints(issue_number, body, [line_no for line_no, _ in located], criteria_headings)
     return _GateResult(
         passed=False,
         refusal_message=_checkbox_refusal(
@@ -1218,47 +1898,42 @@ def _check_agent_gate(
                 "`project/config.yaml` under `review.agents.*`.\n"
                 "              b) Set `review.mode: human` if you want "
                 "human review instead.\n"
-                "              c) Merge with `done-work --bypass \"<reason>\"`."
+                '              c) Merge with `done-work --bypass "<reason>"`.'
             ),
         )
 
     if pr_number is None:
         return _GateResult(
-            passed=False, refusal_message="error: cannot resolve PR number.",
+            passed=False,
+            refusal_message="error: cannot resolve PR number.",
         )
 
-    # Baseline required reviewer names per path (DEC-028's static lists).
+    # Baseline required remote reviewer names (DEC-028's static list); the
+    # local baseline is read with the resolution, below.
     remote_baseline = [
         entry.get("github_login")
         for entry in remote_registered
         if isinstance(entry, dict) and entry.get("github_login")
     ]
-    local_baseline = [
-        entry.get("name")
-        for entry in local_registered
-        if isinstance(entry, dict) and entry.get("name")
-    ]
 
     # --- DEC-032 D1: resolve the required-local set for this PR. -----------
-    # Baseline ∪ contributed, de-duped, via the SHARED resolver `review-pr`
-    # also calls — so the set this gate checks == the set `review-pr` invokes
-    # (invoke-set == gate-set, the whole point of owning resolution once).
-    # Recomputed at gate time (D5) from the current manifest + the PR's
-    # current closing-issue classifications. Fail closed on any blocking
-    # error (D5): a malformed declaration, an undeployed contributed agent,
-    # or an unresolvable closing-issue lookup is never silently dropped.
-    repo_root = capability_root.parent.parent.parent
-    resolution = _resolve_required_local(
-        pr_number, config, repo_root, local_baseline
-    )
+    # Baseline ∪ contributed, de-duped, through the ONE wiring `review-pr`
+    # and `show-pr` also call (`_lib.pr_review`) — so the set this gate
+    # checks == the set `review-pr` invokes (invoke-set == gate-set, the
+    # whole point of owning resolution once), and the freshness rule below
+    # is the one `show-pr` marks stale verdicts by. Recomputed at gate time
+    # (D5) from the current manifest + the PR's current closing-issue
+    # classifications. Fail closed on any blocking error (D5): a malformed
+    # declaration, an undeployed contributed agent, or an unresolvable
+    # closing-issue lookup is never silently dropped.
+    review = _resolve_review(pr_number, config, capability_root.parent.parent.parent)
+    resolution = review.resolution
     if not resolution.ok:
         # An unresolvable set (broken contribution / undeployed agent) cannot
         # be helped by a per-reviewer override — the override operates WITHIN a
         # resolved set (DEC-050 Decision 5). Name that when overrides were
         # supplied so the operator reaches for the whole-gate --bypass instead.
-        return _resolution_refusal(
-            resolution, override_requested=bool(override_reviewers)
-        )
+        return _resolution_refusal(resolution, override_requested=bool(override_reviewers))
     required_local = list(resolution.required_local)
     # Provenance for the refusal message: reviewer name → contributing
     # capability (baseline reviewers have no contributing capability).
@@ -1269,9 +1944,7 @@ def _check_agent_gate(
     # set (a typo, or a name dropped by reclassification/uninstall) — never a
     # silent no-op. The set spans the remote baseline plus the resolved local
     # set (a baseline reviewer may be remote).
-    slot_labels = _required_slot_labels(
-        remote_baseline, required_local, contributed_by
-    )
+    slot_labels = _required_slot_labels(remote_baseline, required_local, contributed_by)
     override_set = set(override_reviewers)
     required_set_all = {name for name, _label in slot_labels}
     unknown_overrides = [n for n in override_reviewers if n not in required_set_all]
@@ -1289,22 +1962,35 @@ def _check_agent_gate(
     if override_set and override_set == required_set_all:
         gate_warnings.append(_all_slots_override_warning(required_set_all))
 
-    def refuse(message: str) -> _GateResult:
+    def refuse(message: str, head_oid: str = "") -> _GateResult:
         """A refusal carrying whatever soft warnings have accrued.
 
         Every refusal from here on goes through this, so a nudge computed BEFORE
         a later failure is still surfaced — a transient `gh` hiccup used to
         swallow the all-slots steer toward `--bypass` on three of the paths.
+        `head_oid` is the head a refusal judged the verdicts against, so a run
+        with a pinned head can tell a refusal of another head (#1203).
         """
         return _GateResult(
-            passed=False, refusal_message=message, warnings=gate_warnings,
+            passed=False,
+            refusal_message=message,
+            warnings=gate_warnings,
+            head_oid=head_oid,
         )
 
-    # Fetch comments + author + the latest commit (one round-trip).
+    # Fetch comments + author + the head and base the freshness rule reads
+    # (one round-trip).
     proc = gh_run(
-        ["gh", "pr", "view", str(pr_number),
-         "--json", "author,comments,commits"],
-        config, check=False,
+        [
+            "gh",
+            "pr",
+            "view",
+            str(pr_number),
+            "--json",
+            ",".join(("author", *REVIEW_VIEW_FIELDS)),
+        ],
+        config,
+        check=False,
     )
     if proc.returncode != 0:
         return refuse(f"error: gh pr view failed: {proc.stderr.strip()}")
@@ -1316,34 +2002,34 @@ def _check_agent_gate(
     comments = data.get("comments") or []
     commits = data.get("commits") or []
 
-    # Latest commit timestamp (DEC-028 step 4 freshness anchor). If it cannot
-    # be established (no commits returned, or the last commit carries neither
-    # committedDate nor authoredDate) the freshness boundary is UNKNOWN — so
-    # the gate REFUSES rather than accept every stale verdict as fresh.
-    # Fail-closed per DEC-032 D5; an unestablishable freshness anchor is not
-    # "no freshness check".
-    latest_commit_ts = ""
-    if commits:
-        last = commits[-1]
-        if isinstance(last, dict):
-            # gh pr view returns commits with committedDate field.
-            latest_commit_ts = str(
-                last.get("committedDate") or last.get("authoredDate") or ""
-            )
-    if not latest_commit_ts:
+    # Latest commit timestamp — the freshness anchor for a verdict that names
+    # no reviewed head (DEC-028 "Stale-verdict handling"), read by the SHARED
+    # `latest_commit_timestamp`. If it cannot be established (no commits
+    # returned, or the last commit carries neither committedDate nor
+    # authoredDate) the PR's head is UNKNOWN — so the gate REFUSES rather than
+    # judge any verdict against it. Fail-closed per DEC-032 D5; an
+    # unestablishable head is not "no freshness check".
+    if not latest_commit_timestamp(commits):
         return refuse(_freshness_unresolvable_refusal(pr_number))
 
-    # --- Steps 1–5: latest fresh verdict per agent per path, selected by
-    # TIMESTAMP (DEC-028 step 5), via the SHARED verdict selection
-    # (`_lib.agent_verdicts`) that `show-pr --field review` also consumes — so
-    # the two never diverge on which comment is a reviewer's current verdict
-    # (COR-007). The gate goes through the strict `gate_verdicts` wrapper, whose
-    # freshness + membership filters are REQUIRED args — the read-surface
-    # primitive's permissive fail-open default is unreachable from here. The
-    # gate scopes the selection to its concern by injecting:
-    #   * freshness — `min_timestamp` drops comments not strictly after the
-    #     latest commit (a fresh CHANGES_REQUESTED after a fresh APPROVED still
-    #     blocks; the latest-by-timestamp rule handles the ordering);
+    # The one freshness rule (#1179), shared with `review-pr`'s skip and
+    # `show-pr`'s stale marker: a verdict naming its reviewed head stands
+    # until the author's changes since reach what its reviewer is required
+    # for; one naming no head falls back to the commit-time anchor above.
+    freshness = review.freshness_rule(data)
+
+    # --- Steps 1–5: latest verdict per agent per path, selected by TIMESTAMP
+    # (DEC-028 step 5) and counted only when fresh, via the SHARED verdict
+    # selection (`_lib.agent_verdicts`) that `show-pr --field review` also
+    # consumes — so the two never diverge on which comment is a reviewer's
+    # current verdict (COR-007). The gate goes through the strict
+    # `gate_verdicts` wrapper, whose freshness + membership filters are
+    # REQUIRED args — the read-surface primitive's permissive fail-open default
+    # is unreachable from here. The gate scopes the selection to its concern by
+    # injecting:
+    #   * freshness — `is_fresh` judges each reviewer's latest verdict, after
+    #     the reduction: a stale latest verdict leaves the reviewer with none
+    #     that counts, and an older verdict it superseded never stands in;
     #   * membership — remote verdicts count only from a baseline login that is
     #     not the PR author (DEC-028 step 2/3); local verdicts only from a name
     #     in the resolved required set (DEC-032 D1).
@@ -1363,7 +2049,7 @@ def _check_agent_gate(
 
     verdicts = gate_verdicts(
         comments,
-        min_timestamp=latest_commit_ts,
+        is_fresh=freshness.is_fresh,
         remote_reviewer_ok=remote_reviewer_ok,
         local_reviewer_ok=local_reviewer_ok,
     )
@@ -1379,13 +2065,28 @@ def _check_agent_gate(
         required_local=required_local_set,
         override_set=override_set,
         verdicts=verdicts,
-        latest_commit_ts=latest_commit_ts,
+        freshness=freshness,
     )
 
     if any(not slot.satisfied for slot in slots):
-        return refuse(_agent_gate_refusal(
-            mode_source=mode_source, slots=slots, opted_out=resolution.opted_out,
-        ))
+        return refuse(
+            head_oid=head_sha(data),
+            message=_agent_gate_refusal(
+                pr_number=pr_number,
+                mode_source=mode_source,
+                slots=slots,
+                opted_out=resolution.opted_out,
+                stale=_stale_verdicts(
+                    slots=slots,
+                    comments=comments,
+                    freshness=freshness,
+                    remote_baseline=remote_baseline_set,
+                    required_local=required_local_set,
+                    remote_reviewer_ok=remote_reviewer_ok,
+                    local_reviewer_ok=local_reviewer_ok,
+                ),
+            ),
+        )
 
     return _GateResult(
         passed=True,
@@ -1396,59 +2097,46 @@ def _check_agent_gate(
         override_audits=_build_override_audits(
             slots=slots,
             comments=comments,
-            latest_commit_ts=latest_commit_ts,
+            freshness=freshness,
             head=_head_key(commits),
             contributed_by=contributed_by,
             remote_reviewer_ok=remote_reviewer_ok,
             local_reviewer_ok=local_reviewer_ok,
         ),
         warnings=gate_warnings,
+        head_oid=head_sha(data),
     )
 
 
-def _resolve_required_local(
-    pr_number: int, config: dict, repo_root: Path, local_baseline: list[str],
-) -> Resolution:
-    """Resolve the PR's required-local set via the shared resolver (DEC-032 D1).
+def _resolve_review(pr_number: int, config: dict, repo_root: Path) -> PrReview:
+    """The PR's required-local set and freshness rule (DEC-032 D1, #1179).
 
-    Delegates to `_lib.required_reviewers.resolve_required_local_reviewers` —
-    the SAME resolution `review-pr` calls — injecting the SHARED closing-issue,
-    label, and changed-files fetchers (`_lib.closing_issue_fetchers`, the one
-    definition both consumers import) wired to this script's `gh` helpers and
-    `collect_contributions`. The fetcher lambdas reference `gh_run` /
-    `gh_get_issue` as module globals, looked up at call time, so the agent-gate
-    tests' monkeypatches of `collect_contributions` / `gh_run` / `gh_get_issue`
-    on this module stay effective. The project's contribution opt-outs (#148)
-    are read from `config` exactly as `review-pr` reads them. Returns a
-    `Resolution`; the caller maps a non-ok result to a `_GateResult` refusal
-    (fail-closed, DEC-032 D5).
+    Through `_lib.pr_review.resolve_pr_review` — the ONE wiring `review-pr`
+    and `show-pr` call too — handing it this module's `gh` helpers,
+    `collect_contributions` and author-change readers. They are module
+    globals, looked up at call time, so the agent-gate tests' monkeypatches
+    of them on this module stay effective. The caller maps a non-ok
+    resolution to a `_GateResult` refusal (fail-closed, DEC-032 D5).
     """
-    return resolve_required_local_reviewers(
+    return resolve_pr_review(
         pr_number,
-        baseline_local=local_baseline,
-        repo_root=repo_root,
-        closing_issue_numbers=lambda n: _pr_closing_issue_numbers_fetch(
-            n, config, gh_run=gh_run
-        ),
-        issue_labels=lambda n: _issue_labels_fetch(
-            n, config, gh_get_issue=gh_get_issue
-        ),
-        changed_files=lambda n: _pr_changed_files_fetch(
-            n, config, gh_run=gh_run
-        ),
-        opt_outs=read_opt_outs(config),
+        config,
+        repo_root,
+        gh_run=gh_run,
+        gh_get_issue=gh_get_issue,
         collect_contributions=collect_contributions,
+        author_delta=author_delta,
+        base_kept=base_kept,
     )
 
 
-def _resolution_refusal(
-    resolution: Resolution, *, override_requested: bool = False
-) -> _GateResult:
+def _resolution_refusal(resolution: Resolution, *, override_requested: bool = False) -> _GateResult:
     """Shape a fail-closed `_GateResult` from a non-ok `Resolution` (D5).
 
     A collection error names the malformed declaration / undeployed agent; an
-    unresolvable closing-issue lookup names what could not be determined. Both
-    refuse rather than proceed on a partial (fail-open) set.
+    unresolvable closing-issue lookup or unreadable changed files name what
+    could not be determined. All refuse rather than proceed on a partial
+    (fail-open) set.
 
     When `override_requested` (the operator passed `--bypass-reviewer`), append
     a note that a per-reviewer override cannot help an unresolvable set — it
@@ -1461,8 +2149,15 @@ def _resolution_refusal(
         message = _contribution_error_refusal(error.collection)
     elif error.kind == ERROR_CLOSING_ISSUES:
         message = _closing_issue_unresolvable_refusal(error.message)
+    elif error.kind in (ERROR_CHANGED_FILES, ERROR_TOO_MANY_CHANGED_FILES):
+        message = _changed_files_unresolvable_refusal(
+            error.message,
+            too_many=error.kind == ERROR_TOO_MANY_CHANGED_FILES,
+        )
     elif error.kind == ERROR_OPT_OUT:
         message = _opt_out_invalid_refusal(error.details)
+    elif error.kind == ERROR_NOT_CODE:
+        message = _not_code_invalid_refusal(error.details)
     else:
         # Defensive: any other (unexpected) kind still fails closed.
         message = error.message
@@ -1505,13 +2200,9 @@ def _required_slot_labels(
     by reviewer name).
     """
     pairs = [
-        (name, f"remote agent (@{name})")
-        for name in remote_baseline
-        if name not in required_local
+        (name, f"remote agent (@{name})") for name in remote_baseline if name not in required_local
     ]
-    pairs += [
-        (name, _reviewer_label(name, contributed_by)) for name in required_local
-    ]
+    pairs += [(name, _reviewer_label(name, contributed_by)) for name in required_local]
     return pairs
 
 
@@ -1522,7 +2213,7 @@ def _build_slots(
     required_local: set[str],
     override_set: set[str],
     verdicts: list[Verdict],
-    latest_commit_ts: str,
+    freshness: FreshnessRule,
 ) -> list[_Slot]:
     """One `_Slot` per required reviewer — the gate's decision, resolved once.
 
@@ -1541,19 +2232,83 @@ def _build_slots(
     by_path = {(verdict.path, verdict.reviewer): verdict for verdict in verdicts}
     slots: list[_Slot] = []
     for name, label in slot_labels:
-        registered = [
-            by_path.get((PATH_LOCAL, name)) if name in required_local else None,
-            by_path.get((PATH_REMOTE, name)) if name in remote_baseline else None,
-        ]
-        candidates = [verdict for verdict in registered if verdict is not None]
-        slots.append(_Slot(
-            reviewer=name,
-            label=label,
-            approved=any(verdict.token == APPROVED for verdict in candidates),
-            overridden=name in override_set,
-            verdict=_most_blocking(candidates, latest_commit_ts),
-        ))
+        candidates = _registered_verdicts(
+            by_path,
+            name,
+            remote_baseline=remote_baseline,
+            required_local=required_local,
+        )
+        slots.append(
+            _Slot(
+                reviewer=name,
+                label=label,
+                approved=any(verdict.token == APPROVED for verdict in candidates),
+                overridden=name in override_set,
+                verdict=_most_blocking(candidates, freshness),
+            )
+        )
     return slots
+
+
+def _registered_verdicts(
+    by_path: dict[tuple[str, str], Verdict],
+    name: str,
+    *,
+    remote_baseline: set[str],
+    required_local: set[str],
+) -> list[Verdict]:
+    """A reviewer's verdicts on the paths it is registered on, local first."""
+    registered = [
+        by_path.get((PATH_LOCAL, name)) if name in required_local else None,
+        by_path.get((PATH_REMOTE, name)) if name in remote_baseline else None,
+    ]
+    return [verdict for verdict in registered if verdict is not None]
+
+
+def _stale_verdicts(
+    *,
+    slots: list[_Slot],
+    comments: list,
+    freshness: FreshnessRule,
+    remote_baseline: set[str],
+    required_local: set[str],
+    remote_reviewer_ok,
+    local_reviewer_ok,
+) -> dict[str, tuple[Verdict, str]]:
+    """For each unsatisfied slot whose latest verdict went stale, that verdict
+    and why — what a refusal names (#1179): the head it reviewed and what
+    changed since.
+
+    Read on the refusal path only, from the gate's own candidates
+    (`gate_candidates`) with the SAME membership and author-exclusion
+    predicates the gate used — so a refusal names exactly the verdict the gate
+    judged stale.
+    """
+    latest = gate_candidates(
+        comments,
+        remote_reviewer_ok=remote_reviewer_ok,
+        local_reviewer_ok=local_reviewer_ok,
+    )
+    by_path = {(verdict.path, verdict.reviewer): verdict for verdict in latest}
+    stale: dict[str, tuple[Verdict, str]] = {}
+    for slot in slots:
+        if slot.satisfied or slot.verdict is not None:
+            continue
+        verdict = _most_blocking(
+            _registered_verdicts(
+                by_path,
+                slot.reviewer,
+                remote_baseline=remote_baseline,
+                required_local=required_local,
+            ),
+            freshness,
+        )
+        if verdict is None:
+            continue
+        assessment = freshness.assess(verdict)
+        if not assessment.fresh:
+            stale[slot.reviewer] = (verdict, assessment.reason)
+    return stale
 
 
 def _contribution_error_refusal(collection) -> str:
@@ -1581,7 +2336,7 @@ def _contribution_error_refusal(collection) -> str:
         "capability, or"
     )
     lines.append("              c) Fix the malformed contribution declaration, or")
-    lines.append("              d) Merge with `done-work --bypass \"<reason>\"`.")
+    lines.append('              d) Merge with `done-work --bypass "<reason>"`.')
     return "\n".join(lines)
 
 
@@ -1597,37 +2352,62 @@ def _opt_out_invalid_refusal(details: tuple[str, ...]) -> str:
         "reviewer-contribution opt-out list is invalid.",
     ]
     lines.extend(f"            → {detail}" for detail in details)
-    lines.extend([
-        "            Remediation:",
-        f"              a) Fix or remove the entry in `{OPT_OUT_PATH}` "
-        "(project/config.yaml) — each names an installed capability, a "
-        "reviewer it contributes, and a reason, or",
-        "              b) Merge with `done-work --bypass \"<reason>\"`.",
-    ])
+    lines.extend(
+        [
+            "            Remediation:",
+            f"              a) Fix or remove the entry in `{OPT_OUT_PATH}` "
+            "(project/config.yaml) — each names an installed capability, a "
+            "reviewer it contributes, and a reason, or",
+            '              b) Merge with `done-work --bypass "<reason>"`.',
+        ]
+    )
+    return "\n".join(lines)
+
+
+def _not_code_invalid_refusal(details: tuple[str, ...]) -> str:
+    """Refusal text when the not-code list is invalid (#1178).
+
+    A malformed `review.floors.not_code` leaves unknown which paths the adopter
+    meant to leave out of the diff-property floors — the gate refuses rather
+    than guess which floor reviewers the PR requires.
+    """
+    lines = [
+        "[refused] agent-mode approval gate cannot be resolved — the not-code list is invalid.",
+    ]
+    lines.extend(f"            → {detail}" for detail in details)
+    lines.extend(
+        [
+            "            Remediation:",
+            f"              a) Fix `{NOT_CODE_PATH}` (project/config.yaml) — a "
+            "list of path patterns, or remove it for the default, or",
+            '              b) Merge with `done-work --bypass "<reason>"`.',
+        ]
+    )
     return "\n".join(lines)
 
 
 def _freshness_unresolvable_refusal(pr_number: int | None) -> str:
-    """Refusal text when the latest-commit freshness anchor cannot be set.
+    """Refusal text when the PR's latest commit cannot be read.
 
-    DEC-028 anchors verdict freshness to the latest commit's timestamp. If no
-    commit timestamp can be established, every verdict's freshness is unknown
-    — the gate refuses rather than accept a possibly-stale APPROVED as fresh
+    DEC-028 judges a verdict against the PR's head: the changes since the head
+    it reviewed, or — for a verdict naming no head — the latest commit's time.
+    If no commit timestamp can be established, the head is unknown — the gate
+    refuses rather than accept a possibly-stale APPROVED as fresh
     (fail-closed, DEC-032 D5).
     """
-    return "\n".join([
-        f"[refused] agent-mode approval gate cannot be resolved for PR "
-        f"#{pr_number} — the latest-commit freshness anchor is unknown.",
-        "            → `gh pr view` returned no commit with a committedDate "
-        "or authoredDate.",
-        "            Verdict freshness is anchored to the latest commit "
-        "(DEC-028); without it a stale APPROVED cannot be distinguished from "
-        "a fresh one, so the gate refuses (fail-closed, DEC-032 D5).",
-        "            Remediation:",
-        "              a) Transient gh failure — retry `done-work`.",
-        "              b) If persistent, merge with "
-        "`done-work --bypass \"<reason>\"`.",
-    ])
+    return "\n".join(
+        [
+            f"[refused] agent-mode approval gate cannot be resolved for PR "
+            f"#{pr_number} — the latest-commit freshness anchor is unknown.",
+            "            → `gh pr view` returned no commit with a committedDate or authoredDate.",
+            "            Verdict freshness is judged against the PR's head "
+            "(DEC-028); without it a stale APPROVED cannot be distinguished from "
+            "a fresh one, so the gate refuses (fail-closed, DEC-032 D5).",
+            "            Remediation:",
+            "              a) Transient gh failure — retry `done-work`.",
+            '              b) If persistent, merge with `done-work --bypass "<reason>"`.',
+        ]
+    )
 
 
 def _closing_issue_unresolvable_refusal(reason: str) -> str:
@@ -1638,31 +2418,75 @@ def _closing_issue_unresolvable_refusal(reason: str) -> str:
     refuses rather than proceed on the baseline alone (DEC-032 D5) — the same
     fail-closed posture the verdict-fetch uses on a gh failure.
     """
-    return "\n".join([
-        "[refused] agent-mode approval gate cannot be resolved — the PR's "
-        "closing-issue classification is unknown.",
-        f"            → {reason}",
-        "            The contributed-reviewer set cannot be determined, so "
-        "the gate refuses rather than merge on a possibly-incomplete set "
-        "(fail-closed, DEC-032 D5).",
-        "            Remediation:",
-        "              a) Transient gh failure resolving closing issues — "
-        "retry `done-work`.",
-        "              b) If persistent, merge with "
-        "`done-work --bypass \"<reason>\"`.",
-    ])
+    return "\n".join(
+        [
+            "[refused] agent-mode approval gate cannot be resolved — the PR's "
+            "closing-issue classification is unknown.",
+            f"            → {reason}",
+            "            The contributed-reviewer set cannot be determined, so "
+            "the gate refuses rather than merge on a possibly-incomplete set "
+            "(fail-closed, DEC-032 D5).",
+            "            Remediation:",
+            "              a) Transient gh failure resolving closing issues — retry `done-work`.",
+            '              b) If persistent, merge with `done-work --bypass "<reason>"`.',
+        ]
+    )
+
+
+def _changed_files_unresolvable_refusal(reason: str, *, too_many: bool) -> str:
+    """Refusal text when the PR's changed files cannot be read (DEC-032 D5).
+
+    Reached only while a diff-floor contribution is installed: without the
+    complete changed-file set the gate cannot tell whether a floor reviewer is
+    required, so it refuses rather than merge on a possibly-incomplete set.
+    `too_many` is the listing that reached GitHub's ceiling — not transient,
+    so the remediation is to split the PR rather than retry.
+    """
+    if too_many:
+        first_remedy = (
+            "              a) Split the PR — not transient: a retry reads the "
+            "same cut-short list, or"
+        )
+    else:
+        first_remedy = (
+            "              a) Transient gh failure reading the PR's changed "
+            "files — retry `done-work`, or"
+        )
+    return "\n".join(
+        [
+            "[refused] agent-mode approval gate cannot be resolved — the PR's "
+            "changed files cannot be read in full.",
+            f"            → {reason}",
+            "            A diff-floor reviewer may be required, so the gate "
+            "refuses rather than merge on a possibly-incomplete set (fail-closed, "
+            "DEC-032 D5).",
+            "            Remediation:",
+            first_remedy,
+            '              b) Merge with `done-work --bypass "<reason>"`.',
+        ]
+    )
 
 
 def _agent_gate_refusal(
-    *, mode_source: str, slots: list[_Slot], opted_out: tuple = (),
+    *,
+    pr_number: int | None = None,
+    mode_source: str,
+    slots: list[_Slot],
+    opted_out: tuple = (),
+    stale: dict[str, tuple[Verdict, str]] | None = None,
 ) -> str:
     """Refusal text naming the full resolved required set + who is unsatisfied.
 
     Names every required reviewer (baseline + contributed, with provenance) and
     its status, so the operator sees exactly which members of the AND-composed
-    set still need to approve (DEC-032 D3). Contributions the project opts out
-    of (#148) are named after the set with their reasons, so a reviewer missing
-    from it reads as withdrawn, not forgotten.
+    set still need to approve (DEC-032 D3). A reviewer whose latest verdict went
+    stale (`stale`, from `_stale_verdicts`) has it named beside its status, with
+    the head it reviewed and what changed since (#1179). A local reviewer whose
+    CHANGES_REQUESTED is still fresh is one `review-pr` skips, so the refusal
+    names `review-pr <N> --force` as the way to have it re-review the PR as it
+    stands. Contributions the project opts out of (#148) are named after the
+    set with their reasons, so a reviewer missing from it reads as withdrawn,
+    not forgotten.
 
     It reads the same `_Slot` records the pass path's `passed_via` reads, which
     is what keeps the two honest with each other: a reviewer with a genuine fresh
@@ -1678,8 +2502,13 @@ def _agent_gate_refusal(
         "            → required reviewers (all must have a fresh APPROVED, or "
         "an operator override):",
     ]
+    stale = stale or {}
     for slot in slots:
-        lines.append(f"                  {slot.label}: {slot.status}")
+        line = f"                  {slot.label}: {slot.status}"
+        if slot.reviewer in stale:
+            verdict, reason = stale[slot.reviewer]
+            line += f" (stale {verdict.token} — {reason})"
+        lines.append(line)
     for opt_out in opted_out:
         lines.append(
             f"            → opted out ({OPT_OUT_PATH}): {opt_out.reviewer} "
@@ -1687,22 +2516,32 @@ def _agent_gate_refusal(
         )
     missing = ", ".join(slot.label for slot in slots if not slot.satisfied)
     lines.append(f"            → still missing a fresh APPROVED: {missing}")
+    number = pr_number if pr_number is not None else "<N>"
     lines.append("            Remediation:")
-    lines.append(
-        "              a) Wait for / trigger each remote agent to post APPROVED."
-    )
-    lines.append(
-        "              b) Run `review-pr <N>` to re-invoke the local agent(s)."
-    )
+    lines.append("              a) Wait for / trigger each remote agent to post APPROVED.")
+    lines.append(f"              b) Run `review-pr {number}` to re-invoke the local agent(s).")
+    rejecting = [
+        slot.label
+        for slot in slots
+        if not slot.satisfied
+        and slot.verdict is not None
+        and slot.verdict.token == CHANGES_REQUESTED
+        and slot.verdict.path == PATH_LOCAL
+    ]
+    if rejecting:
+        lines.append(
+            f"                 It skips a fresh CHANGES_REQUESTED ({', '.join(rejecting)}): "
+            "push the fix it asks for, or have it re-review the PR as it stands "
+            f"with `review-pr {number} --force`."
+        )
     lines.append(
         "              c) Override a false block on ONE reviewer with "
         "`done-work --bypass-reviewer <name> "
         '--bypass-reviewer-reason "<r>"`.'
     )
-    lines.append("              d) Merge with `done-work --bypass \"<reason>\"`.")
+    lines.append('              d) Merge with `done-work --bypass "<reason>"`.')
     lines.append(
-        "              e) If no agent is configured, set `review.mode: human` "
-        "or use --bypass."
+        "              e) If no agent is configured, set `review.mode: human` or use --bypass."
     )
     return "\n".join(lines)
 
@@ -1710,9 +2549,7 @@ def _agent_gate_refusal(
 # ---- per-reviewer override (DEC-050) ---------------------------------
 
 
-def _unknown_override_refusal(
-    unknown: list[str], slot_labels: list[tuple[str, str]]
-) -> str:
+def _unknown_override_refusal(unknown: list[str], slot_labels: list[tuple[str, str]]) -> str:
     """Refusal text for a `--bypass-reviewer <name>` not in the resolved set.
 
     A hard error (DEC-050 Decision 5) — a typo, or a name dropped by
@@ -1721,19 +2558,21 @@ def _unknown_override_refusal(
     exactly what is overridable this invocation.
     """
     resolved = [label for _name, label in slot_labels]
-    return "\n".join([
-        "[refused] --bypass-reviewer named a reviewer not in the freshly-"
-        "resolved required set (DEC-050).",
-        f"            → not required: {', '.join(unknown)}",
-        f"            → resolved required set: {', '.join(resolved) or '(none)'}",
-        "            A per-reviewer override must name a reviewer this PR "
-        "actually requires — check for a typo, or a reviewer dropped by "
-        "reclassification / a capability uninstall / a contribution opt-out.",
-        "            Remediation:",
-        "              a) Re-run naming a reviewer from the resolved set above.",
-        "              b) Merge with `done-work --bypass \"<reason>\"` for a "
-        "whole-gate override.",
-    ])
+    return "\n".join(
+        [
+            "[refused] --bypass-reviewer named a reviewer not in the freshly-"
+            "resolved required set (DEC-050).",
+            f"            → not required: {', '.join(unknown)}",
+            f"            → resolved required set: {', '.join(resolved) or '(none)'}",
+            "            A per-reviewer override must name a reviewer this PR "
+            "actually requires — check for a typo, or a reviewer dropped by "
+            "reclassification / a capability uninstall / a contribution opt-out.",
+            "            Remediation:",
+            "              a) Re-run naming a reviewer from the resolved set above.",
+            '              b) Merge with `done-work --bypass "<reason>"` for a '
+            "whole-gate override.",
+        ]
+    )
 
 
 def _all_slots_override_warning(required_set_all: set[str]) -> str:
@@ -1755,7 +2594,7 @@ def _build_override_audits(
     *,
     slots: list[_Slot],
     comments: list,
-    latest_commit_ts: str,
+    freshness: FreshnessRule,
     head: str,
     contributed_by: dict[str, str],
     remote_reviewer_ok,
@@ -1777,23 +2616,22 @@ def _build_override_audits(
     overridden — the three states the DEC names (`none` / a fresh
     `CHANGES_REQUESTED` / a stale `APPROVED`). Telling a *stale* APPROVED apart
     from no verdict at all needs the reviewer's latest verdict irrespective of
-    freshness, which the gate's read drops by design; so this reads the comments
-    again WITHOUT the freshness anchor but with the SAME membership and
-    author-exclusion predicates the gate used (passed in, never re-derived). The
-    freshness difference is the point; a membership difference would not be — an
-    unfiltered read here let the PR author's own self-approval, which the gate
-    correctly refuses to count, describe what the override waived (ADR-042's
-    named anti-pattern). This read never feeds the gate DECISION, which is
-    already settled in `slots`.
+    freshness, which the gate's read drops by design; so this reads the gate's
+    own candidates (`gate_candidates`) — before freshness, with the SAME
+    membership and author-exclusion predicates the gate used (passed in, never
+    re-derived). The freshness difference is the point; a membership difference
+    would not be — an unfiltered read here let the PR author's own
+    self-approval, which the gate correctly refuses to count, describe what the
+    override waived (ADR-042's named anti-pattern). This read never feeds the
+    gate DECISION, which is already settled in `slots`.
     """
     overridden = [slot for slot in slots if slot.overridden]
     if not overridden:
         return []
-    latest = latest_verdicts_per_reviewer(
+    latest = gate_candidates(
         comments,
         remote_reviewer_ok=remote_reviewer_ok,
         local_reviewer_ok=local_reviewer_ok,
-        require_marker=True,
     )
     # `latest` is sorted local-before-remote, so `_most_blocking`'s first-seen
     # tie-break keeps the prior local-first preference on a severity tie.
@@ -1805,30 +2643,27 @@ def _build_override_audits(
     audits: list[_OverrideAudit] = []
     for slot in overridden:
         state, url = _describe_override_state(
-            _most_blocking(by_name.get(slot.reviewer, []), latest_commit_ts),
-            latest_commit_ts,
+            _most_blocking(by_name.get(slot.reviewer, []), freshness),
+            freshness,
         )
-        audits.append(_OverrideAudit(
-            reviewer=slot.reviewer,
-            capability=contributed_by.get(slot.reviewer),
-            state=state,
-            block_comment_url=url,
-            head=head,
-            redundant=slot.approved,
-            others_approved=tuple(
-                label for label in approved_labels if label != slot.label
-            ),
-            others_overridden=tuple(
-                other.label for other in overridden
-                if other.reviewer != slot.reviewer
-            ),
-        ))
+        audits.append(
+            _OverrideAudit(
+                reviewer=slot.reviewer,
+                capability=contributed_by.get(slot.reviewer),
+                state=state,
+                block_comment_url=url,
+                head=head,
+                redundant=slot.approved,
+                others_approved=tuple(label for label in approved_labels if label != slot.label),
+                others_overridden=tuple(
+                    other.label for other in overridden if other.reviewer != slot.reviewer
+                ),
+            )
+        )
     return audits
 
 
-def _most_blocking(
-    verdicts: list[Verdict], latest_commit_ts: str
-) -> Verdict | None:
+def _most_blocking(verdicts: list[Verdict], freshness: FreshnessRule) -> Verdict | None:
     """The verdict that best describes a slot: the most blocking one.
 
     Used wherever a reviewer posted on both registered paths and a surface must
@@ -1840,43 +2675,42 @@ def _most_blocking(
     best: Verdict | None = None
     for verdict in verdicts:
         if best is None or (
-            _verdict_severity(verdict, latest_commit_ts)
-            > _verdict_severity(best, latest_commit_ts)
+            _verdict_severity(verdict, freshness) > _verdict_severity(best, freshness)
         ):
             best = verdict
     return best
 
 
-def _verdict_severity(verdict: Verdict, latest_commit_ts: str) -> int:
+def _verdict_severity(verdict: Verdict, freshness: FreshnessRule) -> int:
     """Rank a verdict by how much it blocks the gate. Higher = more blocking:
 
         0  a fresh APPROVED           — satisfies the gate; override redundant
-        1  a stale APPROVED           — predates HEAD, no longer counts
+        1  a stale APPROVED           — no longer counts
         2  a stale CHANGES_REQUESTED  — a recorded block, now stale
         3  a fresh CHANGES_REQUESTED  — an active block
 
-    Freshness is relative to `latest_commit_ts` (strictly-after = fresh), the
-    same anchor the gate uses. `Verdict.token` is `APPROVED` or
-    `CHANGES_REQUESTED` by construction — `parse_verdict_line` recognises no
-    third token — so there is no other case to rank.
+    Freshness is the gate's own rule (`freshness`, #1179). `Verdict.token` is
+    `APPROVED` or `CHANGES_REQUESTED` by construction — `parse_verdict_line`
+    recognises no third token — so there is no other case to rank.
     """
-    fresh = verdict.timestamp > latest_commit_ts
+    fresh = freshness.is_fresh(verdict)
     if verdict.token == CHANGES_REQUESTED:
         return 3 if fresh else 2
     return 0 if fresh else 1
 
 
 def _describe_override_state(
-    verdict: Verdict | None, latest_commit_ts: str
+    verdict: Verdict | None, freshness: FreshnessRule
 ) -> tuple[str, str | None]:
     """Human description + block-comment URL for a reviewer's state at override.
 
     Returns `(state, block_comment_url)`. `verdict` is the reviewer's
     most-blocking marker-carrying verdict from a gate-countable identity, or
-    `None` when there was none. Freshness is relative to `latest_commit_ts`
-    (strictly-after = fresh), the same anchor the gate uses. `Verdict.token` is
-    `APPROVED` or `CHANGES_REQUESTED` by construction, so those are the only
-    cases to describe.
+    `None` when there was none. Freshness is the gate's own rule (`freshness`,
+    #1179); a stale verdict's state carries the rule's reason — the head it
+    reviewed and what changed since. `Verdict.token` is `APPROVED` or
+    `CHANGES_REQUESTED` by construction, so those are the only cases to
+    describe.
     """
     if verdict is None:
         # "Nothing the gate counts" rather than "nothing posted": this also
@@ -1884,17 +2718,18 @@ def _describe_override_state(
         # self-approval, DEC-028 step 3). Reporting that as the reviewer's state
         # would misdescribe what the override actually waived.
         return "none (no verdict the gate counts)", None
-    fresh = verdict.timestamp > latest_commit_ts
+    assessment = freshness.assess(verdict)
+    fresh = assessment.fresh
     if verdict.token == CHANGES_REQUESTED:
         url = verdict.url or None
         if fresh:
             return "a fresh CHANGES_REQUESTED (an active block)", url
-        return "a stale CHANGES_REQUESTED (predates the latest commit)", url
+        return f"a stale CHANGES_REQUESTED ({assessment.reason})", url
     if fresh:
         # Overriding an already-fresh-APPROVED reviewer is redundant but
         # allowed — record it honestly rather than pretend it was blocked.
         return "a fresh APPROVED (override redundant)", None
-    return "a stale APPROVED (predates the latest commit)", None
+    return f"a stale APPROVED ({assessment.reason})", None
 
 
 # ---- side-effects ----------------------------------------------------
@@ -1918,7 +2753,11 @@ def _post_bypass_audit_idempotent(
     """Post the whole-gate bypass audit to the issue, once per (reason, head)."""
     key = _bypass_audit_key(BYPASS_AUDIT_WRITER, reason, head)
     return post_audit_once(
-        "issue", issue_number, key, _bypass_audit_body(reason, head, key), config,
+        "issue",
+        issue_number,
+        key,
+        _bypass_audit_body(reason, head, key),
+        config,
         run=gh_run,
         present_note="bypass audit comment already present; idempotent skip",
     )
@@ -1935,7 +2774,8 @@ def _gh_get_status_rollup(pr_number: int | None, config: dict) -> list[dict] | N
         return None
     proc = gh_run(
         ["gh", "pr", "view", str(pr_number), "--json", "statusCheckRollup"],
-        config, check=False,
+        config,
+        check=False,
     )
     if proc.returncode != 0:
         return None
@@ -1957,7 +2797,12 @@ def _ci_bypass_audit_body(
     """Render the CI-bypass audit comment — the shape shared with `merge-pr`
     (`_lib.audit.render_ci_bypass_audit_body`) under this script's kind marker."""
     return render_ci_bypass_audit_body(
-        CI_BYPASS_AUDIT_MARKER, invoker, reason, failing_checks, head, key,
+        CI_BYPASS_AUDIT_MARKER,
+        invoker,
+        reason,
+        failing_checks,
+        head,
+        key,
     )
 
 
@@ -1973,8 +2818,11 @@ def _post_ci_bypass_audit(
     """Post the CI-bypass audit comment to the PR, once per (reason, head)."""
     key = _bypass_audit_key(CI_BYPASS_AUDIT_WRITER, reason, head)
     return post_audit_once(
-        "pr", pr_number, key,
-        _ci_bypass_audit_body(invoker, reason, failing_checks, key, head), config,
+        "pr",
+        pr_number,
+        key,
+        _ci_bypass_audit_body(invoker, reason, failing_checks, key, head),
+        config,
         run=gh_run,
         present_note="ci-bypass audit comment already present; idempotent skip",
         posted_note="ci-bypass audit comment posted",
@@ -2007,7 +2855,8 @@ def _override_scope_sentence(audit: _OverrideAudit) -> str:
     if audit.others_approved:
         also = (
             f" (also overridden: {', '.join(audit.others_overridden)})"
-            if audit.others_overridden else ""
+            if audit.others_overridden
+            else ""
         )
         return (
             "This reviewer's slot is satisfied-by-override for this merge; "
@@ -2044,8 +2893,7 @@ def _reviewer_override_audit_body(
     so neither the gate's verdict reader nor ADR-042's read surface counts it.
     """
     provenance = (
-        f"required by capability `{audit.capability}`"
-        if audit.capability else "baseline reviewer"
+        f"required by capability `{audit.capability}`" if audit.capability else "baseline reviewer"
     )
     reason = reason.strip()
     lines = [
@@ -2099,8 +2947,7 @@ def _post_reviewer_override_audit(
         run=gh_run,
         comments=comments,
         present_note=(
-            f"reviewer-override audit for `{audit.reviewer}` already present; "
-            "idempotent skip"
+            f"reviewer-override audit for `{audit.reviewer}` already present; idempotent skip"
         ),
         posted_note=f"reviewer-override audit posted for `{audit.reviewer}`",
     )
@@ -2156,7 +3003,7 @@ def _gh_get_pr_body(pr_number: int | None, config: dict) -> str | None:
 def _check_pr_placeholder(
     pr_body: str,
     pr_number: int | None,
-    capability_root: "Path",
+    capability_root: Path,
 ) -> list[tuple[str, str, str]]:
     """Run residual-placeholder detection on *pr_body* at PHASE_TRANSITION.
 
@@ -2171,6 +3018,88 @@ def _check_pr_placeholder(
     )
 
 
+# ---- lead-in to done (#1162) -------------------------------------------
+
+# The state the merge moves the issue done-work runs for into.
+DONE_STATE = "done"
+
+
+@dataclass(frozen=True)
+class _LeadIn:
+    """The declared move the issue makes ahead of the merge (#1162)."""
+
+    from_state: str
+    to_state: str
+
+    def describe(self) -> str:
+        return (
+            f"{self.from_state} → {self.to_state} before the merge, "
+            f"{self.to_state} → {DONE_STATE} after it (workflow.yaml declares "
+            f"no {self.from_state} → {DONE_STATE} for this issue's type)"
+        )
+
+
+def _lead_in_to_done(
+    issue: dict | None,
+    capability_root: Path,
+    yaml_loader: YAML,
+) -> _LeadIn | None:
+    """The move the issue must make before the merge's move to done, or None.
+
+    After the merge done-work runs `move-issue --to done`, and workflow.yaml
+    says which states may make that move. For a Task, In Progress is not one
+    of them: the merge's move is Review → Done. A Task whose PR was opened
+    without `review-work` (from a worktree, say) is still In Progress when
+    done-work runs. So done-work first makes the declared move that leads to
+    done, In Progress → Review, and the merge then makes the declared Review →
+    Done. The PR is open and ready by then (a draft is refused earlier), which
+    is what Review means, so the move holds even if the merge that follows
+    fails.
+
+    Where the issue is, what type it is and what it may move to are read with
+    the readers move-issue and start-work use, so this cannot disagree with the
+    move it precedes. None when the issue needs no lead-in (it is done already,
+    or done is a declared move from where it is), when no single declared move
+    leads to done, or when the issue or its type cannot be read. The move to
+    done then runs as it always has and reports what it finds.
+    """
+    if issue is None:
+        return None
+    labels = _label_names(issue)
+    structural_type = infer_structural_type(
+        str(issue.get("title") or ""),
+        _read_schema(capability_root, "issue-types.yaml", yaml_loader),
+        classification=_read_schema(
+            capability_root,
+            "classification.yaml",
+            yaml_loader,
+        ),
+        labels=labels,
+    )
+    if structural_type is None:
+        return None
+    current = infer.infer_current_state(
+        state=str(issue.get("state") or "").lower(),
+        milestone=issue.get("milestone") or {},
+        labels=labels,
+        substrate_map=axis_labels.load_substrate_map(capability_root),
+    )
+    if current == DONE_STATE:
+        return None
+    workflow = _read_schema(capability_root, "workflow.yaml", yaml_loader)
+    targets = infer.legal_targets(workflow, current, structural_type)
+    if DONE_STATE in targets:
+        return None
+    for target in targets:
+        if target != current and DONE_STATE in infer.legal_targets(
+            workflow,
+            target,
+            structural_type,
+        ):
+            return _LeadIn(from_state=current, to_state=target)
+    return None
+
+
 # ---- helpers -----------------------------------------------------------
 
 
@@ -2178,7 +3107,9 @@ def _find_issue_branch(issue_number: int) -> str | None:
     try:
         proc = subprocess.run(
             ["git", "branch", "--list", "--format=%(refname:short)"],
-            capture_output=True, text=True, check=False,
+            capture_output=True,
+            text=True,
+            check=False,
         )
     except FileNotFoundError:
         return None
@@ -2192,22 +3123,64 @@ def _find_issue_branch(issue_number: int) -> str | None:
     return None
 
 
-def _find_pr_for_branch(branch: str, config: dict) -> dict | None:
+# The fields each PR lookup asks for: an open PR's, to gate and merge it; a
+# merged one's, to complete what follows its merge (#1011).
+_OPEN_PR_FIELDS = "number,isDraft,headRefName,headRefOid,title,isCrossRepository,baseRefName"
+_MERGED_PR_FIELDS = "number,headRefName,headRefOid,mergedAt,isCrossRepository,body"
+
+
+@dataclass(frozen=True)
+class _PrLookup:
+    """What `gh pr list --head <branch>` answered: the branch's own PRs in the
+    state asked for — or, in `problem`, why there is no answer, which is not an
+    answer of none (#1203)."""
+
+    prs: tuple[dict, ...] = ()
+    problem: str = ""
+
+    @property
+    def first(self) -> dict | None:
+        """The branch's PR: an open one, of which a branch has at most one."""
+        return self.prs[0] if self.prs else None
+
+    @property
+    def merged_last(self) -> dict | None:
+        """Of the branch's merged PRs, the one that merged last."""
+        numbered = [pr for pr in self.prs if pr.get("number")]
+        return max(numbered, key=lambda pr: str(pr.get("mergedAt") or ""), default=None)
+
+
+def _lookup_prs(branch: str, state: str, fields: str, config: dict) -> _PrLookup:
+    """The PRs from `branch` in `state` (`open`, `merged`), as gh lists them."""
     proc = gh_run(
-        ["gh", "pr", "list", "--head", branch, "--state", "open",
-         "--json", "number,isDraft,headRefName,headRefOid,title,isCrossRepository"],
-        config, check=False,
+        ["gh", "pr", "list", "--head", branch, "--state", state, "--json", fields],
+        config,
+        check=False,
     )
     if proc.returncode != 0:
-        return None
+        return _PrLookup(problem=(proc.stderr or "").strip() or f"gh exited {proc.returncode}")
     try:
         prs = json.loads(proc.stdout)
-        for pr in prs:
-            if pr.get("headRefName") == branch:
-                return pr
-    except (ValueError, KeyError):
-        pass
-    return None
+    except ValueError:
+        return _PrLookup(problem="gh's answer is not JSON")
+    if not isinstance(prs, list):
+        return _PrLookup(problem="gh's answer is not a list of pull requests")
+    return _PrLookup(
+        tuple(pr for pr in prs if isinstance(pr, dict) and pr.get("headRefName") == branch)
+    )
+
+
+def _find_pr_for_branch(branch: str, config: dict) -> dict | None:
+    """The open PR from `branch`, or None — when there is none, and when gh
+    did not answer (a direct run's reading; a composing verb's tells the two
+    apart through `_lookup_prs`)."""
+    return _lookup_prs(branch, "open", _OPEN_PR_FIELDS, config).first
+
+
+def _find_merged_pr_for_branch(branch: str, config: dict) -> dict | None:
+    """The PR from `branch` merged last, or None (#1011): what a run finds when
+    a merge queue merged the PR after the run that enqueued it returned."""
+    return _lookup_prs(branch, "merged", _MERGED_PR_FIELDS, config).merged_last
 
 
 def _issue_list(numbers) -> str:
@@ -2215,11 +3188,11 @@ def _issue_list(numbers) -> str:
     return ", ".join(f"#{n}" for n in numbers)
 
 
-def _invoke_move_issue(
-    issue_number: int, target: str, capability_root_arg: Path | None
-) -> int:
+def _invoke_move_issue(issue_number: int, target: str, capability_root_arg: Path | None) -> int:
     return _run_sibling(
-        "move-issue.py", [str(issue_number), "--to", target], capability_root_arg,
+        "move-issue.py",
+        [str(issue_number), "--to", target],
+        capability_root_arg,
     )
 
 
@@ -2247,7 +3220,9 @@ def _invoke_close_issue(
 
 
 def _run_sibling(
-    script: str, argv: list[str], capability_root_arg: Path | None,
+    script: str,
+    argv: list[str],
+    capability_root_arg: Path | None,
 ) -> int:
     """Run a sibling pm verb non-interactively (`--yes`), passing the capability
     root through; its output streams into this run's. Returns its exit code."""
@@ -2270,16 +3245,30 @@ def _read_members(capability_root: Path, yaml_loader: YAML) -> list[dict]:
     return members if isinstance(members, list) else []
 
 
-def _criteria_headings(capability_root: Path, yaml_loader: YAML) -> frozenset[str]:
-    """The criteria-section headings from `schemas/body-format.yaml`, so the
-    checkbox gate numbers boxes as `check-criterion` does. Fail-open to the
-    historical literal when the schema cannot be read (`checkbox_headings`)."""
-    path = capability_root / "schemas" / "body-format.yaml"
+def _label_names(issue: dict | None) -> list[str]:
+    """The names of a fetched issue's labels; none for an unread issue."""
+    return [
+        lbl.get("name", "") if isinstance(lbl, dict) else str(lbl)
+        for lbl in ((issue or {}).get("labels") or [])
+    ]
+
+
+def _read_schema(capability_root: Path, name: str, yaml_loader: YAML) -> dict:
+    """A capability schema from `schemas/<name>`, or an empty mapping when it is
+    missing or cannot be read — each caller says what an empty one means."""
+    path = capability_root / "schemas" / name
     try:
         data = yaml_loader.load(path.read_text(encoding="utf-8")) if path.is_file() else {}
     except Exception:
         data = {}
-    return checkbox_headings(data if isinstance(data, dict) else {})
+    return data if isinstance(data, dict) else {}
+
+
+def _criteria_headings(capability_root: Path, yaml_loader: YAML) -> frozenset[str]:
+    """The criteria-section headings from `schemas/body-format.yaml`, so the
+    checkbox gate numbers boxes as `check-criterion` does. Fail-open to the
+    historical literal when the schema cannot be read (`checkbox_headings`)."""
+    return checkbox_headings(_read_schema(capability_root, "body-format.yaml", yaml_loader))
 
 
 if __name__ == "__main__":

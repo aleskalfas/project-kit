@@ -72,8 +72,9 @@ from project_kit.router import (
     read_version_pin,
     run_bypassed,
     running_version,
+    write_version_pin,
 )
-from project_kit.sync import run_sync
+from project_kit.sync import refuse_content_downgrade, run_sync
 
 # Capability-dependency check (COR-030) — imported lazily below to avoid
 # any circular-import issues at module load time. The functions used are:
@@ -169,6 +170,15 @@ def run_upgrade(
     # above is skipped — its source is the live checkout.
     refuse_if_source_kit_incomplete(source_kit)
 
+    # #1212: a pkit older than the project's content or pin — the installed tool
+    # the router falls back to when it cannot fetch the pin — must not sync its
+    # older content over the project's or move the pin down. Checked before
+    # anything below writes. It follows the pinned-child branch, which runs the
+    # pin's own code and recovers a content-ahead-of-pin state by raising the
+    # pin, and the tool step, which leaves the project untouched and whose
+    # re-exec under a newer tool is a way past this refusal.
+    refuse_content_downgrade(target_root, source_kit, command="upgrade")
+
     target_version = read_kit_version(source_kit)
     current_version = manifest.backbone_version
 
@@ -227,7 +237,7 @@ def _raise_pin_to(target_root: Path, target_version: str, dry_run: bool) -> None
     """Flip `.pkit/version-pin` forward to `target_version` (ADR-049 pin raise).
 
     Writes only when the pin actually moves — an idempotent no-op when the pin is
-    already at the target. The write is atomic (temp file + `os.replace`) and, by
+    already at the target. The write is atomic (`write_version_pin`) and, by
     call-site placement, happens LAST in an upgrade: after content sync and
     migrations, so a failed upgrade leaves the project consistently at its old
     pin rather than advancing past content that never landed.
@@ -240,9 +250,7 @@ def _raise_pin_to(target_root: Path, target_version: str, dry_run: bool) -> None
     if dry_run:
         click.echo(f"  would raise pin: {prior} -> {target_version} ({pin_path.name})")
         return
-    tmp = pin_path.with_name(pin_path.name + ".tmp")
-    tmp.write_text(target_version + "\n", encoding="utf-8")
-    os.replace(tmp, pin_path)  # atomic on POSIX; the pin never observes a torn write
+    write_version_pin(target_root, target_version)
     click.echo(f"  pin raised: {prior} -> {target_version} (.pkit/version-pin)")
 
 
@@ -272,10 +280,10 @@ def freeze_pin(target_root: Path, version: str) -> None:
     `freeze_at_content`) and `pkit pin <version>` when the target equals the
     current content version (ADR-049). `version` is always a bare
     `MAJOR.MINOR.PATCH` semver — the callers normalise and validate before this
-    point (`_normalize_pin_version`), so the router can always route it."""
+    point (`_normalize_pin_version`), so the router can always route it. The
+    write is atomic (`write_version_pin`)."""
     pin_path = pin_file_path(target_root)
-    pin_path.parent.mkdir(parents=True, exist_ok=True)
-    pin_path.write_text(version + "\n", encoding="utf-8")
+    write_version_pin(target_root, version)
     click.echo(f"Pinned project-kit to {version} ({pin_path.relative_to(target_root)}).")
 
 
@@ -673,7 +681,7 @@ def _is_tty(stream: object) -> bool:
     if stream is None:
         return False
     try:
-        return bool(stream.isatty())  # type: ignore[attr-defined]
+        return bool(stream.isatty())
     except (ValueError, OSError):
         return False
 
@@ -889,8 +897,7 @@ def _run_backbone_migrations(
         return
 
     click.echo(
-        f"  running {len(scripts)} backbone migration(s) "
-        f"({current_version} -> v{target_version})"
+        f"  running {len(scripts)} backbone migration(s) ({current_version} -> v{target_version})"
     )
     execute_migration_scripts(
         scripts,
@@ -971,9 +978,7 @@ def _run_component_migrations(
             f"  running {len(scripts)} migration(s) for {label} "
             f"({installed_manifest.version} -> v{source_version})"
         )
-        execute_migration_scripts(
-            scripts, target_root, label=label, label_rel_to=source_dir
-        )
+        execute_migration_scripts(scripts, target_root, label=label, label_rel_to=source_dir)
         # Re-stamp installed manifest with new version + timestamp.
         _restamp_component_manifest_version(
             installed_manifest_path, installed_manifest, source_version
@@ -981,9 +986,7 @@ def _run_component_migrations(
         ran += 1
 
     if ran == 0:
-        click.echo(
-            f"  no component migrations to run (0 of {len(eligible)} adapter component(s))"
-        )
+        click.echo(f"  no component migrations to run (0 of {len(eligible)} adapter component(s))")
 
 
 def _resolve_component_dirs(
@@ -1028,7 +1031,7 @@ def _restamp_component_manifest_version(
     import datetime as _dt
 
     manifest.version = new_version
-    manifest.installed_at = _dt.datetime.now(_dt.timezone.utc).isoformat()
+    manifest.installed_at = _dt.datetime.now(_dt.UTC).isoformat()
     write_component_manifest(manifest_path, manifest)
 
 
@@ -1060,17 +1063,13 @@ def _check_capability_dep_conflicts_for_upgrade(
     for entry in components:
         if entry.kind != "capability":
             continue
-        pkg_yaml_path = (
-            target_root / ".pkit" / "capabilities" / entry.name / "package.yaml"
-        )
+        pkg_yaml_path = target_root / ".pkit" / "capabilities" / entry.name / "package.yaml"
         if not pkg_yaml_path.is_file():
             continue
         pkg = caps._read_package_yaml(pkg_yaml_path)
         if pkg is None or not pkg.requires_capabilities:
             continue
-        conflicts = caps.check_capability_dependencies(
-            target_root, pkg.requires_capabilities
-        )
+        conflicts = caps.check_capability_dependencies(target_root, pkg.requires_capabilities)
         for conflict in conflicts:
             if conflict.reason == "absent":
                 dep_conflicts.append(

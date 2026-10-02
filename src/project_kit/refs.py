@@ -47,6 +47,7 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path, PurePosixPath
 from typing import Any, Literal
 
+import click
 from ruamel.yaml import YAML
 
 from project_kit import agent_policy, agents_overlay, connections, rule_sets
@@ -173,7 +174,7 @@ def load_artifacts(target_root: Path) -> list[Artifact]:
                 file_path = _resolve_artifact_file(entry)
                 if file_path is None:
                     continue
-                artifacts.append(_load_one(kind, ns, file_path))  # type: ignore[arg-type]
+                artifacts.append(_load_one(kind, ns, file_path))
 
     caps_dir = target_root / ".pkit" / "capabilities"
     if caps_dir.is_dir():
@@ -189,9 +190,7 @@ def load_artifacts(target_root: Path) -> list[Artifact]:
                     file_path = _resolve_artifact_file(entry)
                     if file_path is None:
                         continue
-                    artifacts.append(
-                        _load_one(kind, "core", file_path, capability=cap_name)  # type: ignore[arg-type]
-                    )
+                    artifacts.append(_load_one(kind, "core", file_path, capability=cap_name))
 
     return artifacts
 
@@ -205,12 +204,12 @@ def load_hook_providers(target_root: Path) -> list[Provider]:
     for artifact in load_artifacts(target_root):
         if artifact.kind != "skill":
             continue
-        tier: Literal["project", "core"] = (
-            "project" if artifact.namespace == "project" else "core"
-        )
+        tier: Literal["project", "core"] = "project" if artifact.namespace == "project" else "core"
         for hook in artifact.declared.answers:
             providers.append(
-                Provider(hook=hook, tier=tier, source=artifact.name, implementation=f"/{artifact.name}")
+                Provider(
+                    hook=hook, tier=tier, source=artifact.name, implementation=f"/{artifact.name}"
+                )
             )
 
     # Capabilities and adapters: package.yaml may declare `provides: {hook: impl}`.
@@ -226,23 +225,34 @@ def load_hook_providers(target_root: Path) -> list[Provider]:
             if not isinstance(provides, dict):
                 continue
             component = data.get("component") or {}
-            name = component.get("name", pkg.parent.name) if isinstance(component, dict) else pkg.parent.name
-            tier: Literal["capability", "adapter"] = "capability" if kind == "capability" else "adapter"  # type: ignore[no-redef]
+            name = (
+                component.get("name", pkg.parent.name)
+                if isinstance(component, dict)
+                else pkg.parent.name
+            )
+            tier: Literal["capability", "adapter"] = (
+                "capability" if kind == "capability" else "adapter"
+            )
             for hook, impl in provides.items():
                 if isinstance(hook, str) and isinstance(impl, str):
-                    providers.append(Provider(hook=hook, tier=tier, source=name, implementation=impl))
+                    providers.append(
+                        Provider(hook=hook, tier=tier, source=name, implementation=impl)
+                    )
 
     return providers
 
 
 def validate_corpus(target_root: Path) -> list[Issue]:
-    """Run bidirectional consistency + hook closure + same-tier collision + exactly-one-owner + storyboard + capability-, rule- and address-citation + composes + agent-policy checks."""
+    """Run bidirectional consistency + hook closure + same-tier collision + exactly-one-owner +
+    storyboard + capability-, rule- and address-citation + composes + agent-policy checks."""
     artifacts = load_artifacts(target_root)
     providers = load_hook_providers(target_root)
     return check_corpus(artifacts, providers, target_root)
 
 
-def check_corpus(artifacts: list[Artifact], providers: list[Provider], target_root: Path) -> list[Issue]:
+def check_corpus(
+    artifacts: list[Artifact], providers: list[Provider], target_root: Path
+) -> list[Issue]:
     """Every check over an already-loaded corpus, each finding tagged with its kind."""
     issues: list[Issue] = []
     issues.extend(_kind(_validate_bidirectional(artifacts, target_root), DRIFT))
@@ -478,12 +488,13 @@ def _adr_records_dir_or_none(target_root: Path) -> Path | None:
 
     try:
         return resolve_adr_records_dir(target_root)
-    except Exception:  # noqa: BLE001 — soft resolve; any failure means "not configured"
+    except Exception:  # soft resolve; any failure means "not configured"
         return None
 
 
 def resolve_hook(providers: list[Provider], hook: str) -> Provider | None:
-    """Pick the winning provider for a hook by precedence (project > capability > adapter > core)."""
+    """Pick the winning provider for a hook by precedence (project > capability > adapter >
+    core)."""
     candidates = [p for p in providers if p.hook == hook]
     if not candidates:
         return None
@@ -546,7 +557,9 @@ def find_rot(target_root: Path, artifacts: list[Artifact]) -> list[Issue]:
 
     for art in artifacts:
         loc = (
-            str(art.path.relative_to(target_root)) if target_root in art.path.parents else str(art.path)
+            str(art.path.relative_to(target_root))
+            if target_root in art.path.parents
+            else str(art.path)
         )
         all_records = art.declared.reads_records | art.declared.gates | art.body_refs.records
         all_paths = art.declared.reads_paths | art.declared.owns | art.body_refs.paths
@@ -695,7 +708,7 @@ class _Rewriter:
     def _classify(token: str) -> str:
         if RECORD_RE.match(token):
             return "record"
-        if HOOK_TOKEN_RE.fullmatch(token) and not token in _YAML_FIELD_PATHS:
+        if HOOK_TOKEN_RE.fullmatch(token) and token not in _YAML_FIELD_PATHS:
             return "hook"
         return "path"
 
@@ -765,7 +778,11 @@ def emit_graph_dot(artifacts: list[Artifact]) -> str:
     Only declared (frontmatter) refs become edges — body refs are noise
     for visualisation and would clutter the graph.
     """
-    lines: list[str] = ["digraph refs {", '  rankdir="LR";', '  node [shape=box, fontname="monospace"];']
+    lines: list[str] = [
+        "digraph refs {",
+        '  rankdir="LR";',
+        '  node [shape=box, fontname="monospace"];',
+    ]
     for art in artifacts:
         label = f"{art.kind}\\n{art.name}"
         shape = "oval" if art.kind == "skill" else "box"
@@ -871,18 +888,14 @@ STRIKETHROUGH_RE = re.compile(r"~~[^~\n]+~~")
 # Capability decision citation per COR-017: `[<capability>:<decision-stem>]`.
 # Capability name: kebab-case, 2+ chars, no trailing dash.
 # Decision stem: `DEC-NNN` optionally followed by `-<slug>` segments.
-CAP_CITATION_RE = re.compile(
-    r"\[([a-z][a-z0-9-]*[a-z0-9]):(DEC-\d+(?:-[a-z0-9-]+)*)\]"
-)
+CAP_CITATION_RE = re.compile(r"\[([a-z][a-z0-9-]*[a-z0-9]):(DEC-\d+(?:-[a-z0-9-]+)*)\]")
 
 # Rule citations per COR-051 point 3, built from the RS family's grammar in
 # `rule_sets`: a bare `RS-<SET>-NNN` or `RS-<SET>-NNN#<point>` anywhere, and the
 # component-qualified form in brackets like a capability decision citation.
 _RULE_CITATION = rf"{rule_sets.RULE_ID_PATTERN}(?:#{rule_sets.POINT_NAME_PATTERN})?"
 RULE_CITATION_RE = re.compile(rf"\b{_RULE_CITATION}(?![A-Za-z0-9-])")
-QUALIFIED_RULE_CITATION_RE = re.compile(
-    rf"\[({rule_sets.COMPONENT_PATTERN}):({_RULE_CITATION})\]"
-)
+QUALIFIED_RULE_CITATION_RE = re.compile(rf"\[({rule_sets.COMPONENT_PATTERN}):({_RULE_CITATION})\]")
 
 # Role and point addresses as typed tokens (COR-019, refined per COR-053):
 # `[<publisher>::<role>]` and `[<publisher>::<role>:<point>]`, every part a word
@@ -969,9 +982,7 @@ def _is_path_like(text: str) -> bool:
     return True
 
 
-_FILE_EXT_TAIL_RE = re.compile(
-    r"\.(md|sh|py|ya?ml|json|toml|txt|js|ts|rs|go|sql|html|css)$"
-)
+_FILE_EXT_TAIL_RE = re.compile(r"\.(md|sh|py|ya?ml|json|toml|txt|js|ts|rs|go|sql|html|css)$")
 
 
 def _is_hook_like(text: str) -> bool:
@@ -996,7 +1007,8 @@ def _is_url(text: str) -> bool:
 
 
 def extract_body_refs(body: str) -> BodyRefs:
-    """Apply the COR-013 parser convention to extract path / record / hook / capability / rule / address refs."""
+    """Apply the COR-013 parser convention to extract path / record / hook / capability / rule /
+    address refs."""
     stripped = _strip_skip_regions(body)
     paths: set[str] = set()
     records: set[str] = set()
@@ -1172,8 +1184,7 @@ def _load_one(
                 records=body_refs.records | sibling_refs.records,
                 hooks=body_refs.hooks | sibling_refs.hooks,
                 capability_citations=(
-                    body_refs.capability_citations
-                    | sibling_refs.capability_citations
+                    body_refs.capability_citations | sibling_refs.capability_citations
                 ),
                 rule_citations=body_refs.rule_citations | sibling_refs.rule_citations,
                 addresses=body_refs.addresses | sibling_refs.addresses,
@@ -1189,9 +1200,7 @@ def _load_one(
         declared=declared,
         body_refs=body_refs,
         capability=capability,
-        policy={
-            key: fm[key] for key in agent_policy.POLICY_KEYS if fm.get(key) is not None
-        },
+        policy={key: fm[key] for key in agent_policy.POLICY_KEYS if fm.get(key) is not None},
     )
 
 
@@ -1226,18 +1235,22 @@ def _validate_bidirectional(artifacts: list[Artifact], target_root: Path) -> lis
     """Forward (frontmatter → body) + backward (body → frontmatter) coverage."""
     issues: list[Issue] = []
     for art in artifacts:
-        loc = str(art.path.relative_to(target_root)) if target_root in art.path.parents else str(art.path)
-
-        declared_paths_all = (
-            art.declared.reads_paths | art.declared.owns | art.declared.storyboards
+        loc = (
+            str(art.path.relative_to(target_root))
+            if target_root in art.path.parents
+            else str(art.path)
         )
+
+        declared_paths_all = art.declared.reads_paths | art.declared.owns | art.declared.storyboards
         # Pattern tokens (`<category-name>`) often appear as `owns:` entries
         # and as backticked references in body. The body parser skips
         # template-marker tokens, so backward checks would otherwise demand
         # pattern declarations the parser never extracted. Drop pattern-shaped
         # entries from the literal-path set; they're checked via the pattern
         # block below.
-        declared_paths_all = frozenset(p for p in declared_paths_all if not (p.startswith("<") and p.endswith(">")))
+        declared_paths_all = frozenset(
+            p for p in declared_paths_all if not (p.startswith("<") and p.endswith(">"))
+        )
         declared_records_all = art.declared.reads_records | art.declared.gates
         declared_hooks_all = art.declared.needs | art.declared.answers
 
@@ -1248,7 +1261,7 @@ def _validate_bidirectional(artifacts: list[Artifact], target_root: Path) -> lis
         # references when explicitly declared).
         file_text_lazy: str | None = None
 
-        def _in_file_text() -> str:
+        def _in_file_text(art: Artifact = art) -> str:
             nonlocal file_text_lazy
             if file_text_lazy is None:
                 file_text_lazy = art.path.read_text(encoding="utf-8")
@@ -1298,7 +1311,8 @@ def _validate_bidirectional(artifacts: list[Artifact], target_root: Path) -> lis
                 issues.append(
                     Issue(
                         location=loc,
-                        diagnosis=f"frontmatter declares pattern {pat!r} but it is not referenced anywhere.",
+                        diagnosis=f"frontmatter declares pattern {pat!r} but it is not referenced "
+                        "anywhere.",
                     )
                 )
 
@@ -1320,7 +1334,8 @@ def _validate_bidirectional(artifacts: list[Artifact], target_root: Path) -> lis
             issues.append(
                 Issue(
                     location=loc,
-                    diagnosis=f"body cites path {path!r} but it is not declared in frontmatter `reads.paths` or `owns`.",
+                    diagnosis=f"body cites path {path!r} but it is not declared in frontmatter "
+                    "`reads.paths` or `owns`.",
                 )
             )
         for rec in art.body_refs.records:
@@ -1328,7 +1343,8 @@ def _validate_bidirectional(artifacts: list[Artifact], target_root: Path) -> lis
                 issues.append(
                     Issue(
                         location=loc,
-                        diagnosis=f"body cites record {rec!r} but it is not declared in frontmatter `reads.records` or `gates`.",
+                        diagnosis=f"body cites record {rec!r} but it is not declared in "
+                        "frontmatter `reads.records` or `gates`.",
                     )
                 )
         for hk in art.body_refs.hooks:
@@ -1336,7 +1352,8 @@ def _validate_bidirectional(artifacts: list[Artifact], target_root: Path) -> lis
                 issues.append(
                     Issue(
                         location=loc,
-                        diagnosis=f"body mentions hook {hk!r} but it is not declared in frontmatter `needs` or `answers`.",
+                        diagnosis=f"body mentions hook {hk!r} but it is not declared in "
+                        "frontmatter `needs` or `answers`.",
                     )
                 )
 
@@ -1370,7 +1387,7 @@ def _is_decision_link(path: str) -> bool:
     return "/decisions/" in path or bool(_DECISION_LINK_RE.search(path))
 
 
-def _is_intra_capability_path(path: str, art: "Artifact", target_root: Path) -> bool:
+def _is_intra_capability_path(path: str, art: Artifact, target_root: Path) -> bool:
     """A relative path, cited by a capability-owned artifact, that resolves
     inside that capability's own tree.
 
@@ -1443,11 +1460,7 @@ def _normalize_owned_path(path: str) -> str:
 
 def _paths_overlap(left: str, right: str) -> bool:
     """True when the two paths are equal or one contains the other."""
-    return (
-        left == right
-        or left.startswith(right + "/")
-        or right.startswith(left + "/")
-    )
+    return left == right or left.startswith(right + "/") or right.startswith(left + "/")
 
 
 def _validate_ownership(artifacts: list[Artifact], target_root: Path) -> list[Issue]:
@@ -1604,7 +1617,8 @@ def _validate_storyboards(artifacts: list[Artifact], target_root: Path) -> list[
                 issues.append(
                     Issue(
                         location=loc,
-                        diagnosis=f"declares storyboard {sb_path!r} but the file does not exist at that path.",
+                        diagnosis=f"declares storyboard {sb_path!r} but the file does not exist at "
+                        "that path.",
                     )
                 )
                 continue
@@ -1616,7 +1630,8 @@ def _validate_storyboards(artifacts: list[Artifact], target_root: Path) -> list[
                 Issue(
                     location=loc,
                     diagnosis=f"declares storyboard {sb_path!r} but the body does not cite it. "
-                    "Load-bearing references must appear in the body so the runtime instruction is explicit.",
+                    "Load-bearing references must appear in the body so the runtime instruction is "
+                    "explicit.",
                 )
             )
 
@@ -1650,7 +1665,8 @@ def _validate_storyboards(artifacts: list[Artifact], target_root: Path) -> list[
                 issues.append(
                     Issue(
                         location=rel,
-                        diagnosis=f"storyboard frontmatter `consumers:` entry is malformed: {entry!r}. "
+                        diagnosis="storyboard frontmatter `consumers:` entry is malformed: "
+                        f"{entry!r}. "
                         "Each entry must be a mapping with `kind`, `name`, and `namespace`.",
                     )
                 )
@@ -1672,7 +1688,8 @@ def _validate_storyboards(artifacts: list[Artifact], target_root: Path) -> list[
                 issues.append(
                     Issue(
                         location=rel,
-                        diagnosis=f"storyboard declares consumer agent {ns}/{name} but no such agent exists.",
+                        diagnosis=f"storyboard declares consumer agent {ns}/{name} but no such "
+                        "agent exists.",
                     )
                 )
                 continue
@@ -1693,16 +1710,15 @@ def _validate_storyboards(artifacts: list[Artifact], target_root: Path) -> list[
         # Folder-form agent siblings: parent dir contains <name>.md
         folder_owner_md = parent / f"{parent.name}.md"
         if folder_owner_md.is_file():
-            owner_match = any(
-                c.path == folder_owner_md for c in consumer_artifacts_found
-            )
+            owner_match = any(c.path == folder_owner_md for c in consumer_artifacts_found)
             if not owner_match and consumer_artifacts_found:
                 issues.append(
                     Issue(
                         location=rel,
                         diagnosis=f"storyboard sits in {parent.relative_to(target_root)}/ "
                         f"but none of its declared consumers owns that folder. "
-                        "Move the storyboard to its primary consumer's folder, or update consumers.",
+                        "Move the storyboard to its primary consumer's folder, or update "
+                        "consumers.",
                     )
                 )
 
@@ -1724,9 +1740,7 @@ def _validate_storyboards(artifacts: list[Artifact], target_root: Path) -> list[
 
 def _location(art: Artifact, target_root: Path) -> str:
     return (
-        str(art.path.relative_to(target_root))
-        if target_root in art.path.parents
-        else str(art.path)
+        str(art.path.relative_to(target_root)) if target_root in art.path.parents else str(art.path)
     )
 
 
@@ -1766,7 +1780,9 @@ def _walk_storyboard_files(target_root: Path) -> list[Path]:
     return sorted(found)
 
 
-def _find_agent(artifacts: list[Artifact], name: str | None, namespace: str | None) -> Artifact | None:
+def _find_agent(
+    artifacts: list[Artifact], name: str | None, namespace: str | None
+) -> Artifact | None:
     """The agent a storyboard's `consumers:` entry names.
 
     `namespace` is `core` or `project` for an agent in the agents area, or the
@@ -1787,9 +1803,7 @@ def _find_agent(artifacts: list[Artifact], name: str | None, namespace: str | No
     return None
 
 
-def _validate_capability_citations(
-    artifacts: list[Artifact], target_root: Path
-) -> list[Issue]:
+def _validate_capability_citations(artifacts: list[Artifact], target_root: Path) -> list[Issue]:
     """Every `[<cap>:<stem>]` body citation must resolve to an installed capability decision.
 
     Per COR-017: capability decisions live at
@@ -1803,12 +1817,7 @@ def _validate_capability_citations(
         loc = _location(art, target_root)
         for cap_name, dec_stem in sorted(art.body_refs.capability_citations):
             decision_file = (
-                target_root
-                / ".pkit"
-                / "capabilities"
-                / cap_name
-                / "decisions"
-                / f"{dec_stem}.md"
+                target_root / ".pkit" / "capabilities" / cap_name / "decisions" / f"{dec_stem}.md"
             )
             if decision_file.is_file():
                 continue
@@ -1967,8 +1976,10 @@ def _validate_agent_policy(artifacts: list[Artifact], target_root: Path) -> list
                 continue
             problem = agent_policy.value_problem(key, value)
             if problem is not None:
-                issues.append(Issue(
-                    location=str(agents_overlay.OVERLAY_PATH),
-                    diagnosis=f"`overrides.{agent}.{key}`: {problem}.",
-                ))
+                issues.append(
+                    Issue(
+                        location=str(agents_overlay.OVERLAY_PATH),
+                        diagnosis=f"`overrides.{agent}.{key}`: {problem}.",
+                    )
+                )
     return issues

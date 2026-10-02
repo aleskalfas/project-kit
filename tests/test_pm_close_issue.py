@@ -1,6 +1,6 @@
 """Tests for project-management's close-issue script's pure logic.
 
-Covers checkbox gate detection (`_unticked_boxes`, `_all_boxes_ticked`),
+Covers checkbox gate detection (`_unticked_boxes`, and the gate's `all_boxes_ticked`),
 structural-type inference, parent-chain walking, and — per issue #60 — the
 label-reconciliation helper that close-issue shares with move-issue.
 """
@@ -14,32 +14,20 @@ from unittest.mock import MagicMock
 
 import pytest
 
-
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = (
-    REPO_ROOT
-    / ".pkit"
-    / "capabilities"
-    / "project-management"
-    / "scripts"
-    / "close-issue.py"
+    REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "close-issue.py"
 )
-LIB_PATH = (
-    REPO_ROOT
-    / ".pkit"
-    / "capabilities"
-    / "project-management"
-    / "scripts"
-)
+LIB_PATH = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
 
 sys.path.insert(0, str(LIB_PATH))
+from _lib import axis_labels, checkbox_gate  # noqa: E402
 from _lib.labels import (  # noqa: E402
     NON_TERMINAL_STATE_VALUES,
     TERMINAL_STATE_VALUE,
     _resolve_state_labels,
     reconcile_state_labels_to_done,
 )
-from _lib import axis_labels  # noqa: E402
 
 
 @pytest.fixture(scope="module")
@@ -83,11 +71,7 @@ def test_unticked_boxes_detects_unticked(ci) -> None:
 
 
 def test_unticked_boxes_handles_indentation(ci) -> None:
-    body = (
-        "  - [ ] indented box\n"
-        "    - [ ] more indented\n"
-        "- [x] ticked\n"
-    )
+    body = "  - [ ] indented box\n    - [ ] more indented\n- [x] ticked\n"
     unticked = ci._unticked_boxes(body)
     assert len(unticked) == 2
 
@@ -104,38 +88,30 @@ def test_unticked_boxes_returns_empty_for_no_boxes(ci) -> None:
 
 
 def test_unticked_boxes_returns_empty_for_all_ticked(ci) -> None:
-    body = (
-        "- [x] First\n"
-        "- [x] Second\n"
-        "- [x] Third\n"
-    )
+    body = "- [x] First\n- [x] Second\n- [x] Third\n"
     assert ci._unticked_boxes(body) == []
 
 
 def test_unticked_boxes_ignores_non_checkbox_dash_lines(ci) -> None:
-    body = (
-        "- not a checkbox\n"
-        "- [ ] a real one\n"
-        "- [ ] another\n"
-    )
+    body = "- not a checkbox\n- [ ] a real one\n- [ ] another\n"
     assert len(ci._unticked_boxes(body)) == 2
 
 
 def test_all_boxes_ticked_true_when_all_ticked(ci) -> None:
     body = "- [x] First\n- [x] Second\n"
-    assert ci._all_boxes_ticked(body) is True
+    assert checkbox_gate.all_boxes_ticked(body) is True
 
 
 def test_all_boxes_ticked_false_when_any_unticked(ci) -> None:
     body = "- [ ] First\n- [x] Second\n"
-    assert ci._all_boxes_ticked(body) is False
+    assert checkbox_gate.all_boxes_ticked(body) is False
 
 
 def test_all_boxes_ticked_true_when_no_boxes_at_all(ci) -> None:
     # An issue with no checkboxes can close per DEC-007 (gate applies only
     # when boxes exist).
     body = "## What\nplain prose."
-    assert ci._all_boxes_ticked(body) is True
+    assert checkbox_gate.all_boxes_ticked(body) is True
 
 
 # --- structural type inference ---------------------------------------
@@ -278,9 +254,7 @@ def test_resolve_state_labels_derive_bound_degrades_to_none() -> None:
     """A present map binding `state` to a derive predicate ⇒ no kit `state:*`
     label is written or removed (the RF-1 fix): the resolver returns
     `(None, ())`, so reconcile becomes a no-op on the label substrate."""
-    derive_map = axis_labels.SubstrateMap(
-        axes={"state": {"derive": {"from": "open-closed"}}}
-    )
+    derive_map = axis_labels.SubstrateMap(axes={"state": {"derive": {"from": "open-closed"}}})
     terminal, non_terminal = _resolve_state_labels(derive_map)
     assert terminal is None
     assert non_terminal == ()
@@ -368,9 +342,7 @@ def test_reconcile_regression_60_in_progress_to_done(tmp_path) -> None:
     remove_idx = cmd.index("--remove-label")
     assert cmd[remove_idx + 1] == "state:in-progress"
     # Must NOT include state:done in any --remove-label position
-    remove_labels = [
-        cmd[i + 1] for i, arg in enumerate(cmd) if arg == "--remove-label"
-    ]
+    remove_labels = [cmd[i + 1] for i, arg in enumerate(cmd) if arg == "--remove-label"]
     assert "state:done" not in remove_labels
 
 
@@ -396,14 +368,13 @@ def test_reconcile_removes_multiple_stale_labels() -> None:
     assert result is True
     assert len(captured_cmds) == 1
     cmd = captured_cmds[0]
-    remove_labels = {
-        cmd[i + 1] for i, arg in enumerate(cmd) if arg == "--remove-label"
-    }
+    remove_labels = {cmd[i + 1] for i, arg in enumerate(cmd) if arg == "--remove-label"}
     assert remove_labels == {"state:in-progress", "state:review"}
 
 
 def test_reconcile_returns_false_on_gh_failure() -> None:
     """reconcile_state_labels_to_done returns False when gh exits non-zero."""
+
     def fake_gh_run(cmd, config, *, check=True, **kwargs):
         proc = MagicMock()
         proc.returncode = 1

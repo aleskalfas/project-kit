@@ -17,10 +17,11 @@ DELEGATED to the process engine via `pkit process …` (subprocess, never
 imported, ADR-020): this script reads the issue's position from the
 engine and, after applying its domain side-effect, journals the move
 through the engine (the seam-ordering contract in .pkit/process/
-README.md). The engine's detectors reproduce this script's inference
-precedence, so position is identical (behaviour parity is the acceptance
-bar). The parity-critical wrapper-side concerns STAY here: membership,
-placeholder, authorisation/bypass/TTY, and the forward cascade.
+README.md). The engine's detection — the lifecycle's classifier,
+`detect-state` — reproduces this script's inference precedence, so
+position is identical (behaviour parity is the acceptance bar). The
+parity-critical wrapper-side concerns STAY here: membership, placeholder,
+authorisation/bypass/TTY, and the forward cascade.
 
 The substrate-specific mechanics differ per adopter config. WHICH substrate
 carries `state` is asked of `_lib/axis_carriage` — the map governs the axis
@@ -71,30 +72,33 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import audit as _audit  # noqa: E402
-from _lib import axis_carriage  # noqa: E402
-from _lib import axis_labels  # noqa: E402
-from _lib import bootstrap_gate  # noqa: E402
-from _lib import classification_rules  # noqa: E402
-from _lib import lifecycle_inference as infer  # noqa: E402
-from _lib import session_guard  # noqa: E402
-from _lib import state_timeline  # noqa: E402
+from _lib import audit as _audit
+from _lib import (
+    axis_carriage,
+    axis_labels,
+    bootstrap_gate,
+    move_journal,
+    session_guard,
+    state_timeline,
+)
+from _lib import lifecycle_inference as infer
+
 # The one fetch / scan / post-once wiring every audit writer shares (#902).
-from _lib.comment import post_audit_once  # noqa: E402
-from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
-from _lib.hooks import fire_hooks  # noqa: E402
-from _lib.membership import (  # noqa: E402
+from _lib.comment import post_audit_once
+from _lib.gh import gh_get_issue, gh_run, load_adopter_config
+from _lib.hooks import fire_hooks
+from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
     resolve_capability_root,
     resolve_invoker_identity,
 )
-from _lib.placeholder_detection import (  # noqa: E402
+from _lib.move_journal import PROCESS_ADDRESS
+from _lib.placeholder_detection import (
     PHASE_TRANSITION,
     detect_placeholder_residuals,
 )
-from _lib.structural_type import infer_structural_type  # noqa: E402
-
+from _lib.structural_type import infer_structural_type
 
 SEVERITY_HARD_REJECT = "hard-reject"
 SEVERITY_WARNING = "warning"
@@ -126,7 +130,10 @@ def _pkit_version() -> str:
     """Best-effort pkit version for a `full`-projection provenance stamp."""
     try:
         proc = subprocess.run(
-            ["pkit", "--version"], capture_output=True, text=True, check=False,
+            ["pkit", "--version"],
+            capture_output=True,
+            text=True,
+            check=False,
         )
     except OSError:
         return ""
@@ -141,8 +148,7 @@ def _render_provenance_comment(invoker, from_state, to_state) -> str:
     carrying the pkit version — the governed-vs-ungoverned boundary made visible on
     the issue. Absence of such a comment beside a timeline label change flags an
     out-of-band mutation."""
-    actor = (getattr(invoker, "github_login", None)
-             or getattr(invoker, "email", None) or "unknown")
+    actor = getattr(invoker, "github_login", None) or getattr(invoker, "email", None) or "unknown"
     version = _pkit_version()
     stamp = f" — pkit {version}" if version else ""
     move = f"{from_state} → {to_state}" if from_state else str(to_state)
@@ -176,9 +182,7 @@ def main() -> int:
     parser.add_argument(
         "--to",
         required=True,
-        help=(
-            "Target state: one of todo, backlog, in-progress, review, done."
-        ),
+        help=("Target state: one of todo, backlog, in-progress, review, done."),
     )
     parser.add_argument(
         "--bypass",
@@ -254,15 +258,9 @@ def main() -> int:
         return 1
 
     workflow = _read_yaml(capability_root / "schemas" / "workflow.yaml", yaml_loader)
-    issue_types = _read_yaml(
-        capability_root / "schemas" / "issue-types.yaml", yaml_loader
-    )
-    classification = _read_yaml(
-        capability_root / "schemas" / "classification.yaml", yaml_loader
-    )
-    body_format = _read_yaml(
-        capability_root / "schemas" / "body-format.yaml", yaml_loader
-    )
+    issue_types = _read_yaml(capability_root / "schemas" / "issue-types.yaml", yaml_loader)
+    classification = _read_yaml(capability_root / "schemas" / "classification.yaml", yaml_loader)
+    body_format = _read_yaml(capability_root / "schemas" / "body-format.yaml", yaml_loader)
     config = _read_yaml(capability_root / "project" / "config.yaml", yaml_loader)
 
     # Validate the target state.
@@ -317,12 +315,14 @@ def main() -> int:
     # fallback below is map-aware (agrees with the engine's map-aware detection).
     substrate_map = axis_labels.load_substrate_map(capability_root)
 
-    # Position: read from the engine (DEC-033 D7 — read, don't re-infer). The
-    # engine's detectors reproduce this script's inference precedence (and are
-    # now map-aware, ADR-026 §5), so the result is identical; fall back to the
-    # local inference only when the engine is unreachable (e.g. `pkit` not on
-    # PATH), so a move is never blocked. The fallback is threaded the same map so
-    # it agrees with the engine under a present derive binding.
+    # Position: read from the engine (DEC-033 D5 — read, don't re-infer). The
+    # engine's detection — the lifecycle's classifier — reproduces this script's
+    # inference precedence (and is map-aware, ADR-026 §5), so the result is
+    # identical; fall back to the local inference when the engine is unreachable
+    # (e.g. `pkit` not on PATH) or cannot tell where the issue is (an
+    # indeterminate position), so a move is never blocked. The fallback is
+    # threaded the same map so it agrees with the engine under a present derive
+    # binding.
     engine_status = _engine_status(args.issue_number)
     current_state = _position_from_status(engine_status)
     if current_state is None:
@@ -368,12 +368,21 @@ def main() -> int:
                 print(f"  reconcile: removing stale label {plan.remove_label!r}")
                 if not _gh_apply_state_label(args.issue_number, plan, config):
                     return 3
+                if state == "closed" and not _journal_logging_off(engine_status):
+                    _journal_closed_issue_relabel(
+                        args.issue_number,
+                        args.to,
+                        workflow=workflow,
+                        structural_type=structural_type,
+                        milestone=milestone,
+                        labels=labels,
+                        substrate_map=substrate_map,
+                        actor=invoker.github_login,
+                    )
         return 0
 
     # Look up the transition.
-    transition = _find_transition(
-        workflow, current_state, args.to, structural_type
-    )
+    transition = _find_transition(workflow, current_state, args.to, structural_type)
     if transition is None:
         legal_targets = _legal_targets(workflow, current_state, structural_type)
         print(
@@ -523,15 +532,13 @@ def main() -> int:
         # later has a grown landed-move count and posts its own (#954).
         reason = (args.bypass_reason or "").strip()
         key = _transition_audit_key(
-            current_state, args.to, reason,
+            current_state,
+            args.to,
+            reason,
             _landed_moves(args.issue_number, engine_status, config, substrate_map),
         )
-        audit_comment = (
-            _render_audit_comment(capability_root, invoker, reason) + "\n\n" + key
-        )
-        if not _post_transition_audit_once(
-            args.issue_number, audit_comment, key, config
-        ):
+        audit_comment = _render_audit_comment(capability_root, invoker, reason) + "\n\n" + key
+        if not _post_transition_audit_once(args.issue_number, audit_comment, key, config):
             return 3
 
     # Execute.
@@ -548,14 +555,14 @@ def main() -> int:
             return 3
 
     # Seam-ordering (DEC-033 / process README): the domain side-effect (the
-    # label/board edit) is applied above; now journal the move via the engine.
-    # Best-effort — a refusal or missing `pkit` never fails the move, since
-    # live detection stays authoritative.
+    # label/board edit) is applied above; now journal the move via the engine,
+    # from the position read before it. Best-effort — a refusal or missing
+    # `pkit` never fails the move, since live detection stays authoritative.
     #
     # `--actor` is the resolved GitHub login of the invoker (not the
     # authorisation token), so the engine's cross-authority gate compares
     # like-with-like against an artifact's `produced_by` login (COR-033 P4).
-    _journal_move(args.issue_number, args.to, invoker.github_login)
+    _journal_move(args.issue_number, current_state, args.to, invoker.github_login)
 
     # DEC-049 `full` projection: post a provenance-stamped comment for a governed
     # move not already covered by the bypass audit above, so the governed-vs-
@@ -569,20 +576,26 @@ def main() -> int:
             config,
         )
 
-    # Forward cascade.
+    # Forward cascade. Each parent it moves is journaled the way this move was,
+    # by the same actor, with this move named as the reason.
     if cascade_targets and not args.no_cascade:
+        cascade_reason = _cascade_reason(args.issue_number, current_state, args.to)
         for parent_num in cascade_targets:
-            ok = _cascade_parent(parent_num, args.to, config, substrate_map)
+            ok = _cascade_parent(
+                parent_num,
+                args.to,
+                config,
+                substrate_map,
+                actor=invoker.github_login,
+                reason=cascade_reason,
+            )
             if not ok:
                 print(
                     f"[warn] cascade on #{parent_num} did not complete cleanly.",
                     file=sys.stderr,
                 )
 
-    print(
-        f"\n[ok] transitioned #{args.issue_number}: "
-        f"{current_state} → {args.to}"
-    )
+    print(f"\n[ok] transitioned #{args.issue_number}: {current_state} → {args.to}")
 
     # Fire after_move_issue hooks per DEC-024.
     fire_hooks(
@@ -618,7 +631,7 @@ def _compute_plan(
     target_state: str,
     state_on_board: bool,
     labels: list[str],
-    substrate_map: "axis_labels.SubstrateMap | None" = None,
+    substrate_map: axis_labels.SubstrateMap | None = None,
 ) -> Plan:
     """The label add/remove pair for a state move, or an empty plan.
 
@@ -655,9 +668,7 @@ def _compute_plan(
         if lbl != new_label:
             old_label = lbl
             break
-    return Plan(
-        issue_number=issue_number, add_label=new_label, remove_label=old_label
-    )
+    return Plan(issue_number=issue_number, add_label=new_label, remove_label=old_label)
 
 
 def _print_plan(plan: Plan) -> None:
@@ -714,9 +725,7 @@ def _find_transition(
     return None
 
 
-def _legal_targets(
-    workflow: dict, current_state: str, structural_type: str
-) -> list[str]:
+def _legal_targets(workflow: dict, current_state: str, structural_type: str) -> list[str]:
     """Enumerate legal target states for diagnostic output.
 
     Delegates to `lifecycle_inference.legal_targets`, shared with start-work's
@@ -741,9 +750,7 @@ def _severity_from_token(token: str) -> str:
     return m.group(1)
 
 
-def _transition_audit_key(
-    from_state: str, to_state: str, reason: str, landed_moves: str
-) -> str:
+def _transition_audit_key(from_state: str, to_state: str, reason: str, landed_moves: str) -> str:
     """The idempotency key for one audited transition (#901).
 
     A retry must reproduce it exactly, and a genuinely new audited mutation must
@@ -782,14 +789,12 @@ def _bypass_reason_missing(bypass: bool, bypass_reason: str | None) -> bool:
     return bool(bypass) and not (bypass_reason or "").strip()
 
 
-
-
 def _infer_current_state(
     *,
     state: str,
     milestone: dict | None,
     labels: list[str],
-    substrate_map: "axis_labels.SubstrateMap | None" = None,
+    substrate_map: axis_labels.SubstrateMap | None = None,
 ) -> str:
     """Best-effort live state inference.
 
@@ -835,18 +840,19 @@ def _walk_parent_chain(body: str) -> list[int]:
     return out
 
 
-# ---- process-engine delegation (DEC-033 D5/D7) ----------------------
+# ---- process-engine delegation (DEC-033 D4/D5) ----------------------
 #
 # move-issue delegates POSITION + JOURNAL to the shared process engine
 # (`pkit process …`, COR-033), invoked by subprocess (never imported,
 # ADR-020). It keeps the parity-critical wrapper-side concerns local:
 # bypass/audit, TTY-confirm, placeholder/membership gates, cascade, and
-# the domain side-effect (the label/board edit). The engine's detectors
-# reproduce `_infer_current_state` exactly, so the engine position and
-# the local inference agree; the engine is the single source of position
-# truth (the seam-ordering contract in .pkit/process/README.md).
-
-PROCESS_ADDRESS = "project-management:issue-lifecycle"
+# the domain side-effect (the label/board edit). The engine's detection
+# (pm's classifier, `detect-state`) reproduces `_infer_current_state`
+# exactly, so the engine position and the local inference agree; the
+# engine is the single source of position truth (the seam-ordering
+# contract in .pkit/process/README.md). The journal write is
+# `_lib.move_journal`, the one path close-issue records its closes
+# through too (#1231).
 
 
 def _engine_status(issue_number: int) -> dict | None:
@@ -953,79 +959,57 @@ def _landed_moves(
     if not state_timeline.label_carries_state(config, substrate_map):
         return ""
     events = state_timeline.state_label_events(
-        issue_number, config, substrate_map, run=gh_run,
+        issue_number,
+        config,
+        substrate_map,
+        run=gh_run,
     )
     return "" if events is None else f"state-label-events:{len(events)}"
 
 
-# What a move the engine did not record costs, in each of DEC-049's two modes:
-# with journal logging on the journal is the canonical audit trail and now lacks
-# the move; with it off the tracker is, and the engine keeps no record to miss.
-_JOURNAL_GAP_CLAUSE = (
-    "If this project keeps a journal (journal logging on), the journal is the "
-    "canonical audit trail (DEC-049) and now lacks this move:"
-)
-_TRACKER_TRAIL_CLAUSE = (
-    "If it does not, the tracker is the audit trail and the engine keeps no "
-    "record to miss."
-)
+# Hand a completed move to the engine (`pkit process move --from`, best-effort):
+# the one journaling path, shared with close-issue in `_lib.move_journal`.
+# Bound under this module-private name, which the call sites below and the tests
+# that stand in for it use.
+_journal_move = move_journal.journal_move
 
 
-def _journal_move(
-    issue_number: int, target_state: str, actor: str | None
+def _journal_closed_issue_relabel(
+    issue_number: int,
+    target_state: str,
+    *,
+    workflow: dict,
+    structural_type: str,
+    milestone: dict | None,
+    labels: list[str],
+    substrate_map: axis_labels.SubstrateMap | None,
+    actor: str | None,
 ) -> None:
-    """Hand the completed move to the engine via `pkit process move` (best-effort).
+    """Record the move to done that relabelling a closed issue makes (#1231).
 
-    Per the seam-ordering contract: the domain side-effect (the label/board
-    edit) has ALREADY been applied by the caller; this only records the move,
-    which the engine appends to its journal where the project keeps one
-    (COR-033 point 7) and validates without recording where it does not. A
-    refusal or a missing `pkit` is logged as a warning and never fails the move —
-    live detection stays authoritative, so the next `status` reflects the real
-    position regardless.
-
-    `actor` is the invoker's resolved GitHub login. The engine compares it
-    against an authorisation artifact's `produced_by` login for the
-    cross-authority gate (COR-033 P4). When it is None (login unresolved), we
-    omit `--actor` and let the engine apply its own resolved-identity default.
+    A closed issue reads as done, so moving one to done finds it already there
+    and only reconciles its label — the Review label a merge's `Closes #N` left
+    on the issue `done-work` runs for, say. That label write is the close's
+    move on the tracker, and the only one pkit makes: close-issue, which runs
+    next, finds the label at done and records nothing. So it is recorded here,
+    from where the old label placed the issue (`state_before_close`), as
+    close-issue records a close: not at all when the workflow declares no such
+    move for the issue's type (the engine does not read `applies_to`), which is
+    warned about as a refused move is.
     """
-    argv = [
-        "pkit",
-        "process",
-        "move",
-        PROCESS_ADDRESS,
-        "--to",
-        target_state,
-        "--subject",
-        str(issue_number),
-    ]
-    if actor:
-        argv += ["--actor", actor]
-    try:
-        proc = subprocess.run(
-            argv,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-    except (OSError, FileNotFoundError):
-        print(
-            "  [warn] `pkit` not on PATH — the process engine did not record this "
-            f"move. {_JOURNAL_GAP_CLAUSE} re-run under `pkit` to journal it. "
-            f"{_TRACKER_TRAIL_CLAUSE} The label/position is unaffected (live "
-            "detection stays authoritative).",
-            file=sys.stderr,
+    origin = infer.state_before_close(
+        milestone=milestone, labels=labels, substrate_map=substrate_map
+    )
+    if origin is None or origin == target_state:
+        return
+    if _find_transition(workflow, origin, target_state, structural_type) is None:
+        move_journal.report_unrecorded(
+            issue_number,
+            f"this move was not recorded: no transition {origin!r} → {target_state!r} "
+            f"declared in workflow.yaml for {structural_type!r}",
         )
         return
-    if proc.returncode != 0:
-        detail = (proc.stdout or proc.stderr or "").strip()
-        print(
-            f"  [warn] the process engine refused this move: {detail}. "
-            f"{_JOURNAL_GAP_CLAUSE} `pkit pm history {issue_number} --check-drift` "
-            f"will show the gap. {_TRACKER_TRAIL_CLAUSE} The label/position is "
-            "unaffected.",
-            file=sys.stderr,
-        )
+    _journal_move(issue_number, origin, target_state, actor)
 
 
 # ---- gh wrappers ----------------------------------------------------
@@ -1033,7 +1017,8 @@ def _journal_move(
 
 def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
     return gh_get_issue(
-        issue_number, config,
+        issue_number,
+        config,
         fields="title,body,labels,assignees,state,milestone,url",
     )
 
@@ -1052,8 +1037,7 @@ def _gh_apply_state_label(issue_number: int, plan: Plan, config: dict) -> bool:
         return False
     if proc.returncode != 0:
         print(
-            f"error: gh issue edit failed (exit {proc.returncode}).\n"
-            f"stderr: {proc.stderr.strip()}",
+            f"error: gh issue edit failed (exit {proc.returncode}).\nstderr: {proc.stderr.strip()}",
             file=sys.stderr,
         )
         return False
@@ -1079,9 +1063,7 @@ def _gh_comment(issue_number: int, body: str, config: dict) -> bool:
     return True
 
 
-def _post_transition_audit_once(
-    issue_number: int, body: str, key: str, config: dict
-) -> bool:
+def _post_transition_audit_once(issue_number: int, body: str, key: str, config: dict) -> bool:
     """Post the transition audit comment unless that exact comment is already there.
 
     The shared `_lib.comment.post_audit_once` (#902): only a comment with exactly
@@ -1093,7 +1075,11 @@ def _post_transition_audit_once(
     was needed and failed (the caller then aborts before mutating).
     """
     return post_audit_once(
-        "issue", issue_number, key, body, config,
+        "issue",
+        issue_number,
+        key,
+        body,
+        config,
         run=gh_run,
         present_note="transition audit comment already present; idempotent skip",
     )
@@ -1117,11 +1103,20 @@ def _cascade_forward_target(child_target: str) -> str:
     return order[min(child_idx, cap_idx)]
 
 
+def _cascade_reason(child_number: int, child_from: str, child_to: str) -> str:
+    """The reason a forward-cascaded parent move is journaled with: the child's
+    move that caused it (#1214)."""
+    return f"forward cascade from #{child_number}: {child_from} → {child_to}"
+
+
 def _cascade_parent(
     parent_num: int,
     target_state: str,
     config: dict,
-    substrate_map: "axis_labels.SubstrateMap | None" = None,
+    substrate_map: axis_labels.SubstrateMap | None = None,
+    *,
+    actor: str | None,
+    reason: str,
 ) -> bool:
     """Forward cascade — bump parent if it's behind.
 
@@ -1133,6 +1128,14 @@ def _cascade_parent(
     leaf/Task state and a container must never auto-enter it (DEC-006,
     amendment #38). A child moving to review or done bumps its ancestors to
     at most in-progress.
+
+    A parent it moves is a governed move like the child's own, so it is
+    journaled the same way (#1214; DEC-049's one entry per governed move): after
+    the label write, through `_journal_move`, from the state the parent held
+    before it, by `actor`, with `reason` naming the child's move. A move the
+    engine refuses warns exactly as the child's would. A parent already at or
+    beyond the target is left alone and journaled nothing, so a re-run, or a
+    sibling's later move, adds no second entry.
     """
     parent = _gh_get_issue(parent_num, config)
     if parent is None:
@@ -1171,11 +1174,11 @@ def _cascade_parent(
         labels=parent_labels,
         substrate_map=substrate_map,
     )
-    print(
-        f"[cascade] bumping parent #{parent_num}: "
-        f"{parent_state} → {cascade_target}"
-    )
-    return _gh_apply_state_label(parent_num, plan, config)
+    print(f"[cascade] bumping parent #{parent_num}: {parent_state} → {cascade_target}")
+    if not _gh_apply_state_label(parent_num, plan, config):
+        return False
+    _journal_move(parent_num, parent_state, cascade_target, actor, reason=reason)
+    return True
 
 
 def _state_is_behind(current: str, target: str) -> bool:

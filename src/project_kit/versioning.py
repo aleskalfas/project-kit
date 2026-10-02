@@ -28,8 +28,20 @@ the counter on an existing suffix; `promote_version` drops the
 suffix. Pre-release bumps do NOT broaden `requires_backbone` (per
 the bump-policy: pre-releases are not a stable compatibility target).
 
-The `requires_backbone` rewrite uses regex (not ruamel.yaml round-trip)
-to preserve quoting style, indentation, and trailing comments.
+The release step also raises a `requires_backbone` *floor*, and only on
+declaration: `raise_component_requires_backbone_floor` moves one component's
+lower bound up to the backbone a changeset says the component needs — the one
+the release ships, or an already-shipped one the changeset names. Nothing here
+raises a floor on its own.
+
+The `requires_backbone` rewrites use regex (not ruamel.yaml round-trip)
+to preserve quoting style, indentation, and trailing comments. Every one
+locates the range through one prefix — the top-level key at the start of a
+line — so a comment that mentions the key is never read or rewritten, and the
+broaden and the floor raise always touch the same line. Each rewrite is a pure
+function of the file's text (`broaden_requires_backbone`,
+`raise_requires_backbone_floor`) beside the one that writes it, so the release
+can compute a range before it writes anything.
 """
 
 from __future__ import annotations
@@ -40,6 +52,9 @@ from pathlib import Path
 from typing import Literal
 
 import click
+from packaging.version import Version
+
+from project_kit.migrations import parse_version_tuple
 
 Segment = Literal["patch", "minor", "major"]
 PreKind = Literal["a", "b", "rc"]
@@ -49,12 +64,41 @@ PreKind = Literal["a", "b", "rc"]
 # input gate is the inverse — it requires a suffix).
 _SEMVER_RE = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
 
+# A release version as it is written once released: strict semver with no part
+# padded by a leading zero (`1.50.0`, never `1.050.0`), so a floor names the
+# version the way its release heading and tag spell it.
+_RELEASE_VERSION_RE = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
+
 # PEP 440-aware: optional pre-release suffix `(a|b|rc)<N>` directly
 # appended (no separator) per PEP 440's normal form for pre-releases.
 # Captures: major, minor, patch, kind (or empty), counter (or empty).
 _PEP440_RE = re.compile(r"^(\d+)\.(\d+)\.(\d+)(?:(a|b|rc)(\d+))?$")
 
-_REQUIRES_BACKBONE_RE = re.compile(r'(requires_backbone:\s*"[^"]*,<)(\d+)\.(\d+)\.(\d+)')
+# The top-level `requires_backbone:` key at the start of a line, opening its
+# double-quoted range. Both patterns below start from it, so neither reads a
+# comment that mentions the key (`# was requires_backbone: ">=1.0.0,<1.140.0"`)
+# and both find the same line.
+_REQUIRES_BACKBONE_KEY = r'^requires_backbone:[ \t]*"'
+
+# The range's exclusive upper bound, `<A.B.C`, after whatever clauses precede
+# it: what the broaden widens.
+_REQUIRES_BACKBONE_RE = re.compile(rf'(?m)({_REQUIRES_BACKBONE_KEY}[^"\n]*,<)(\d+)\.(\d+)\.(\d+)')
+
+# A range whose floor the release raises: `">=X.Y.Z,<A.B.C"`, whose upper bound
+# the broaden widens, or `">=X.Y.Z"`, which has no upper bound to widen. Group 1
+# is the range as written, group 2 its floor.
+_REQUIRES_BACKBONE_FLOOR_RE = re.compile(
+    rf'(?m){_REQUIRES_BACKBONE_KEY}(>=(\d+\.\d+\.\d+)(?:,<\d+\.\d+\.\d+)?)"'
+)
+
+# The `requires_backbone:` lines the release rewrites, as the two rewrites locate
+# them: a range whose upper bound the broaden widens, a range whose floor the
+# release raises. The changeset guard admits a changed `requires_backbone` line in
+# a release's package.yaml by these and no other (`release.release_writes`).
+REQUIRES_BACKBONE_RELEASE_LINES: tuple[re.Pattern[str], ...] = (
+    _REQUIRES_BACKBONE_RE,
+    _REQUIRES_BACKBONE_FLOOR_RE,
+)
 
 
 def _apply_segment(major: int, minor: int, patch: int, segment: Segment) -> tuple[int, int, int]:
@@ -331,9 +375,11 @@ def _broaden_kit_components_requires_backbone(
 ) -> None:
     """Walk every kit-shipped package.yaml and broaden the upper bound where needed.
 
-    Mirrors the bash `broaden_kit_components_requires_backbone` helper.
+    Mirrors the bash `broaden_kit_components_requires_backbone` helper. Each
+    file goes through `broaden_requires_backbone`, the rewrite the component
+    broaden writes too, targeting backbone `new_major.new_minor.0`.
     """
-    new_upper = f"{new_major}.{new_minor + 1}.0"
+    backbone = f"{new_major}.{new_minor}.0"
 
     found_any = False
     for pkg_file in sorted(source_kit.rglob("package.yaml")):
@@ -343,8 +389,7 @@ def _broaden_kit_components_requires_backbone(
         rel_path = pkg_file.relative_to(source_kit)
 
         original = pkg_file.read_text(encoding="utf-8")
-        match = _REQUIRES_BACKBONE_RE.search(original)
-        if match is None:
+        if _REQUIRES_BACKBONE_RE.search(original) is None:
             # Skipped silently if no requires_backbone field, with a
             # notice if the field exists but has no parseable upper
             # bound (e.g., `*`).
@@ -355,17 +400,11 @@ def _broaden_kit_components_requires_backbone(
                 )
             continue
 
-        upper_major = int(match.group(2))
-        upper_minor = int(match.group(3))
-
-        # Broaden if new (major, minor) >= existing upper (major, minor).
-        if new_major > upper_major or (new_major == upper_major and new_minor >= upper_minor):
-            updated = _REQUIRES_BACKBONE_RE.sub(rf"\g<1>{new_upper}", original, count=1)
+        broadened = broaden_requires_backbone(original, backbone)
+        if broadened is not None:
+            updated, changed = broadened
             pkg_file.write_text(updated, encoding="utf-8")
-
-            old_range = _extract_range(match.string, match.start())
-            new_range = old_range.rsplit("<", 1)[0] + f'<{new_upper}"'
-            click.echo(f"  broadened {rel_path}: {old_range} -> {new_range}")
+            click.echo(f"  broadened {rel_path}: {changed}")
 
     if not found_any:
         click.echo("  (no kit-shipped package.yaml files found — nothing to broaden)")
@@ -389,11 +428,29 @@ def broaden_component_requires_backbone(pkg_file: Path, backbone: str) -> str | 
     exclusive bound at the next minor" convention the backbone-release broaden
     uses, so the two stay consistent.
 
-    Reuses the shared `_REQUIRES_BACKBONE_RE` rewrite (not a YAML round-trip) so
+    Rewrites through `broaden_requires_backbone` (not a YAML round-trip) so
     quoting, indentation, and trailing comments survive. Returns a
     human-readable `old -> new` range string when it rewrote the bound, `None`
     when it was already wide enough or had no parseable upper bound (the caller
     decides how to report each case).
+    """
+    broadened = broaden_requires_backbone(pkg_file.read_text(encoding="utf-8"), backbone)
+    if broadened is None:
+        return None
+    updated, changed = broadened
+    pkg_file.write_text(updated, encoding="utf-8")
+    return changed
+
+
+def broaden_requires_backbone(package_text: str, backbone: str) -> tuple[str, str] | None:
+    """`package_text` with its `requires_backbone` upper bound widened to cover
+    `backbone`, and the `old -> new` range; None when the bound already covers it
+    or there is no parseable upper bound (e.g. `*`, or the key absent).
+
+    **Widen-only**: the target upper is `X.(Y+1).0` for backbone `X.Y.Z`,
+    written only when it is above the current bound's major.minor. Pure — the
+    one rewrite both broadens write, so the release can compute a range in
+    memory before it writes anything.
     """
     match = _PEP440_RE.match(backbone)
     if match is None:
@@ -404,25 +461,115 @@ def broaden_component_requires_backbone(pkg_file: Path, backbone: str) -> str | 
     bb_major, bb_minor = (int(g) for g in match.group(1, 2))
     new_upper = f"{bb_major}.{bb_minor + 1}.0"
 
-    original = pkg_file.read_text(encoding="utf-8")
-    rb_match = _REQUIRES_BACKBONE_RE.search(original)
+    rb_match = _REQUIRES_BACKBONE_RE.search(package_text)
     if rb_match is None:
-        return None  # no parseable upper bound (e.g. `*`, or field absent)
-
-    upper_major = int(rb_match.group(2))
-    upper_minor = int(rb_match.group(3))
+        return None
 
     # Widen-only: rewrite only when the target upper is strictly above the
     # current one. An already-wider bound (upper > target) is left as-is.
-    if (upper_major, upper_minor) >= (bb_major, bb_minor + 1):
+    if (int(rb_match.group(2)), int(rb_match.group(3))) >= (bb_major, bb_minor + 1):
         return None
 
-    updated = _REQUIRES_BACKBONE_RE.sub(rf"\g<1>{new_upper}", original, count=1)
-    pkg_file.write_text(updated, encoding="utf-8")
-
-    old_range = _extract_range(rb_match.string, rb_match.start())
+    updated = package_text[: rb_match.start(2)] + new_upper + package_text[rb_match.end(4) :]
+    old_range = _extract_range(package_text, rb_match.start())
     new_range = old_range.rsplit("<", 1)[0] + f'<{new_upper}"'
-    return f"{old_range} -> {new_range}"
+    return updated, f"{old_range} -> {new_range}"
+
+
+def is_release_version(version: str) -> bool:
+    """Whether `version` is a release version, `major.minor.patch` with no
+    pre-release suffix and no part padded by a leading zero — the only kind a
+    `requires_backbone` floor is raised to."""
+    return _RELEASE_VERSION_RE.match(version) is not None
+
+
+def is_version(version: str) -> bool:
+    """Whether `version` is a backbone version this module reads,
+    `major.minor.patch[(a|b|rc)N]` — a release or a pre-release."""
+    return _PEP440_RE.match(version) is not None
+
+
+def is_at_or_below(version: str, ceiling: str) -> bool:
+    """Whether `version` sorts at or below `ceiling` in PEP 440 order, where a
+    release sorts above its own pre-releases: `1.150.0` is not at or below
+    `1.150.0rc1`, which precedes it. Raises `click.ClickException` when either is
+    not `major.minor.patch[(a|b|rc)N]`."""
+    for value in (version, ceiling):
+        if _PEP440_RE.match(value) is None:
+            raise click.ClickException(
+                f"version {value!r} is not valid PEP 440 (expected major.minor.patch[(a|b|rc)N])"
+            )
+    return Version(version) <= Version(ceiling)
+
+
+def requires_backbone_floor(package_text: str) -> str | None:
+    """The `>=X.Y.Z` floor of a package file's `requires_backbone`, when the range
+    is one whose floor the release raises: `">=X.Y.Z,<A.B.C"`, whose upper bound
+    the broaden widens, or `">=X.Y.Z"`, which has no upper bound to widen.
+
+    None otherwise — no top-level `requires_backbone` key, a range that does
+    not open with the floor, or one quoted or spaced another way. The floor
+    raise reads the range through this one locator, so what it can raise and
+    what the release lint accepts are the same set.
+    """
+    match = _REQUIRES_BACKBONE_FLOOR_RE.search(package_text)
+    return match.group(2) if match else None
+
+
+def requires_backbone_range(package_text: str) -> str | None:
+    """The `requires_backbone` range as written, without its quotes, when it is
+    one whose floor the release raises (`requires_backbone_floor`); else None."""
+    match = _REQUIRES_BACKBONE_FLOOR_RE.search(package_text)
+    return match.group(1) if match else None
+
+
+def raise_component_requires_backbone_floor(pkg_file: Path, backbone: str) -> str | None:
+    """Raise one component's `requires_backbone` floor to `backbone`.
+
+    The lower-bound counterpart of `broaden_component_requires_backbone`, run
+    only for a component whose changeset declares it needs `backbone`. Rewrites
+    through `raise_requires_backbone_floor`.
+
+    Returns a human-readable `old -> new` floor string when it rewrote the
+    floor, `None` when the floor already admitted nothing older.
+    """
+    try:
+        raised = raise_requires_backbone_floor(pkg_file.read_text(encoding="utf-8"), backbone)
+    except click.ClickException as exc:
+        raise click.ClickException(f"{pkg_file}: {exc.message}") from None
+    if raised is None:
+        return None
+    updated, changed = raised
+    pkg_file.write_text(updated, encoding="utf-8")
+    return changed
+
+
+def raise_requires_backbone_floor(package_text: str, backbone: str) -> tuple[str, str] | None:
+    """`package_text` with its `requires_backbone` floor raised to `backbone`, and
+    the `>=old -> >=new` floor; None when the floor already admits nothing older.
+
+    **Raise-only** — a floor already at or above `backbone` is left untouched.
+    Rewrites the one `>=X.Y.Z` in place, so the upper bound and trailing
+    comments survive. Pure, like `broaden_requires_backbone`. Raises
+    `click.ClickException` when the range has no floor to raise
+    (`requires_backbone_floor`) or `backbone` is not a release version.
+    """
+    if not is_release_version(backbone):
+        raise click.ClickException(
+            f"backbone version {backbone!r} is not a release version (expected "
+            "major.minor.patch, no leading zeros)"
+        )
+    match = _REQUIRES_BACKBONE_FLOOR_RE.search(package_text)
+    if match is None:
+        raise click.ClickException(
+            'requires_backbone is not a range of the form ">=X.Y.Z,<A.B.C" or ">=X.Y.Z" '
+            f"whose floor can be raised to {backbone}"
+        )
+    floor = match.group(2)
+    if parse_version_tuple(floor) >= parse_version_tuple(backbone):
+        return None
+    updated = package_text[: match.start(2)] + backbone + package_text[match.end(2) :]
+    return updated, f">={floor} -> >={backbone}"
 
 
 def _narrow_kit_components_requires_backbone(

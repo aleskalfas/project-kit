@@ -7,22 +7,16 @@ branch-pattern lookup, body template substitution.
 from __future__ import annotations
 
 import importlib.util
+import subprocess
 import sys
 from pathlib import Path
-from types import SimpleNamespace
+from types import ModuleType, SimpleNamespace
+from typing import Any
 
 import pytest
 
-
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SCRIPT_PATH = (
-    REPO_ROOT
-    / ".pkit"
-    / "capabilities"
-    / "project-management"
-    / "scripts"
-    / "open-pr.py"
-)
+SCRIPT_PATH = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "open-pr.py"
 
 
 @pytest.fixture(scope="module")
@@ -100,10 +94,7 @@ def test_conv_type_from_bug_label(op, classification) -> None:
 
 
 def test_conv_type_from_maintenance_label_picks_chore(op, classification) -> None:
-    assert (
-        op._conv_type_from_issue_labels(["type:maintenance"], classification, None)
-        == "chore"
-    )
+    assert op._conv_type_from_issue_labels(["type:maintenance"], classification, None) == "chore"
 
 
 def test_conv_type_returns_none_when_no_type_label(op, classification) -> None:
@@ -114,8 +105,7 @@ def test_conv_type_uses_first_type_label_when_multiple(op, classification) -> No
     # Multiple type labels is a validation error elsewhere; we don't
     # enforce here, but be deterministic.
     assert (
-        op._conv_type_from_issue_labels(["type:bug", "type:feature"], classification, None)
-        == "fix"
+        op._conv_type_from_issue_labels(["type:bug", "type:feature"], classification, None) == "fix"
     )
 
 
@@ -126,15 +116,9 @@ def test_conv_type_from_a_remapped_type_label(op, classification) -> None:
     substrate_map = op.axis_labels.SubstrateMap(
         axes={"type": {"label": {"remap": {"bug": "kind/bug"}}}}
     )
-    assert (
-        op._conv_type_from_issue_labels(["kind/bug"], classification, substrate_map)
-        == "fix"
-    )
+    assert op._conv_type_from_issue_labels(["kind/bug"], classification, substrate_map) == "fix"
     # A leftover kit label is not the substrate under the remap.
-    assert (
-        op._conv_type_from_issue_labels(["type:docs"], classification, substrate_map)
-        is None
-    )
+    assert op._conv_type_from_issue_labels(["type:docs"], classification, substrate_map) is None
 
 
 # --- summary derivation ----------------------------------------------
@@ -142,9 +126,7 @@ def test_conv_type_from_a_remapped_type_label(op, classification) -> None:
 
 def test_summary_strips_type_prefix_and_lowercases(op) -> None:
     title = "[Task] Install the Claude Code CLI inside the sandbox"
-    assert op._summary_from_issue_title(title) == (
-        "install the claude code cli inside the sandbox"
-    )
+    assert op._summary_from_issue_title(title) == ("install the claude code cli inside the sandbox")
 
 
 def test_summary_strips_trailing_period(op) -> None:
@@ -188,9 +170,7 @@ def test_build_pr_body_fills_closes_placeholder(op, tmp_path) -> None:
     (template_dir / "PR.md").write_text(
         "Closes #\n\n## Summary\n\n## Test plan\n", encoding="utf-8"
     )
-    body = op._build_pr_body(
-        capability_root=tmp_path, issue_numbers=[42], body_file=None
-    )
+    body = op._build_pr_body(capability_root=tmp_path, issue_numbers=[42], body_file=None)
     assert body is not None
     assert "Closes #42" in body
 
@@ -200,18 +180,14 @@ def test_build_pr_body_user_supplied_file(op, tmp_path) -> None:
     gets its `Closes #N` line on top, so the PR still closes it on merge."""
     f = tmp_path / "custom.md"
     f.write_text("user-supplied body\n", encoding="utf-8")
-    body = op._build_pr_body(
-        capability_root=tmp_path, issue_numbers=[42], body_file=f
-    )
+    body = op._build_pr_body(capability_root=tmp_path, issue_numbers=[42], body_file=f)
     assert body == "Closes #42\n\nuser-supplied body\n"
 
 
 def test_build_pr_body_user_file_already_closing_is_verbatim(op, tmp_path) -> None:
     f = tmp_path / "custom.md"
     f.write_text("Fixes #42\n\n## Summary\n", encoding="utf-8")
-    body = op._build_pr_body(
-        capability_root=tmp_path, issue_numbers=[42], body_file=f
-    )
+    body = op._build_pr_body(capability_root=tmp_path, issue_numbers=[42], body_file=f)
     assert body == "Fixes #42\n\n## Summary\n"
 
 
@@ -220,9 +196,7 @@ def test_build_pr_body_user_file_gains_the_missing_references(op, tmp_path) -> N
     right after the first, not somewhere down the body."""
     f = tmp_path / "custom.md"
     f.write_text("Closes #42\n\n## Summary\nwork\n", encoding="utf-8")
-    body = op._build_pr_body(
-        capability_root=tmp_path, issue_numbers=[42, 43, 44], body_file=f
-    )
+    body = op._build_pr_body(capability_root=tmp_path, issue_numbers=[42, 43, 44], body_file=f)
     assert body == "Closes #42\nCloses #43\nCloses #44\n\n## Summary\nwork\n"
 
 
@@ -232,9 +206,7 @@ def test_build_pr_body_template_carries_one_line_per_closing_issue(op, tmp_path)
     (template_dir / "PR.md").write_text(
         "Closes #\n\n## Summary\n\n## Test plan\n", encoding="utf-8"
     )
-    body = op._build_pr_body(
-        capability_root=tmp_path, issue_numbers=[42, 43], body_file=None
-    )
+    body = op._build_pr_body(capability_root=tmp_path, issue_numbers=[42, 43], body_file=None)
     assert body is not None
     assert body.startswith("Closes #42\nCloses #43\n\n## Summary")
 
@@ -254,9 +226,7 @@ def test_closing_issues_positional_first(op) -> None:
 
 
 def test_build_pr_body_fallback_when_no_template(op, tmp_path) -> None:
-    body = op._build_pr_body(
-        capability_root=tmp_path, issue_numbers=[42], body_file=None
-    )
+    body = op._build_pr_body(capability_root=tmp_path, issue_numbers=[42], body_file=None)
     assert body == "Closes #42\n"
 
 
@@ -264,9 +234,7 @@ def test_build_pr_body_template_without_closes_placeholder(op, tmp_path) -> None
     template_dir = tmp_path / "templates"
     template_dir.mkdir()
     (template_dir / "PR.md").write_text("## Summary\n\nfoo\n", encoding="utf-8")
-    body = op._build_pr_body(
-        capability_root=tmp_path, issue_numbers=[99], body_file=None
-    )
+    body = op._build_pr_body(capability_root=tmp_path, issue_numbers=[99], body_file=None)
     assert body is not None
     assert "Closes #99" in body
 
@@ -277,13 +245,32 @@ def test_build_pr_body_template_without_closes_placeholder(op, tmp_path) -> None
 CAP_ROOT = REPO_ROOT / ".pkit" / "capabilities" / "project-management"
 
 
+def _no_config(_root: Path) -> dict[str, Any]:
+    """An adopter config declaring nothing: the default branch is the backbone's."""
+    return {}
+
+
+def _backbone_says_main(op: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The backbone's reading, stood in for: the default branch `main` (COR-054)."""
+    lib = op.default_branch
+    monkeypatch.setattr(lib, "_read", {})
+
+    def ask(explicit: str | None, _run: Any) -> Any:
+        branch = lib.Branch("main", False, "origin/main", "c0ffee", None)
+        base = lib.Base(f"origin/{explicit or 'main'}", "c0ffee", "c0ffee", None)
+        return lib.Reading(branch, base)
+
+    monkeypatch.setattr(lib, "_ask", ask)
+
+
 def _stub_main(op, monkeypatch, argv: list[str], issues: dict[int, dict]) -> dict:
     """Pass every gate, serve `issues` by number, capture the create call."""
     monkeypatch.setattr(sys, "argv", argv)
     monkeypatch.setattr(op, "resolve_capability_root", lambda _explicit: CAP_ROOT)
     monkeypatch.setattr(op.bootstrap_gate, "enforce", lambda *a, **k: True)
     monkeypatch.setattr(op.session_guard, "enforce", lambda **k: True)
-    monkeypatch.setattr(op, "load_adopter_config", lambda _root: {"default_branch": "main"})
+    monkeypatch.setattr(op, "load_adopter_config", _no_config)
+    _backbone_says_main(op, monkeypatch)
     monkeypatch.setattr(op, "_read_members", lambda *a: [])
     monkeypatch.setattr(
         op, "resolve_invoker_identity", lambda **k: SimpleNamespace(github_login="me")
@@ -315,8 +302,15 @@ def test_main_repeated_closes_puts_every_reference_in_the_body(op, monkeypatch) 
         op,
         monkeypatch,
         [
-            "open-pr", "--closes", "42", "--closes", "43",
-            "--summary", "land both", "--draft", "--yes",
+            "open-pr",
+            "--closes",
+            "42",
+            "--closes",
+            "43",
+            "--summary",
+            "land both",
+            "--draft",
+            "--yes",
         ],
         {42: _open_issue(), 43: _open_issue()},
     )
@@ -431,12 +425,65 @@ def test_the_answers_render_as_the_doc_impact_bullets(op, monkeypatch, capsys) -
         {42: _open_issue()},
     )
     assert op.main() == 3
-    assert calls == ["main"]  # against origin/<base>
+    assert calls == [None]  # the default branch: the change check's own base (COR-054)
     assert _doc_impact(captured["body"]) == RENDERED
     out = capsys.readouterr()
     assert "doc impact: pre-filled from `pkit friction check` (2 answer(s))" in out.out
     # The page still carrying friction is named; its answer belongs on the page.
     assert "1 artefact(s) still carry friction with no answer on the page: docs/api.md" in out.err
+
+
+def test_a_pr_against_another_base_is_checked_against_that_base(
+    op: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An integration branch is named to the change check, which resolves it as every
+    branch named as a base (COR-054 point 2); only the default branch goes unnamed."""
+    calls: list[str | None] = []
+
+    def check(base: str | None) -> dict[str, Any]:
+        calls.append(base)
+        return FRICTION
+
+    monkeypatch.setattr(op, "_friction_check", check)
+    _stub_main(
+        op,
+        monkeypatch,
+        [
+            "open-pr",
+            "42",
+            "--summary",
+            "s",
+            "--draft",
+            "--yes",
+            "--doc-impact-from-friction",
+            "--base",
+            "integration/7-x",
+        ],
+        {42: _open_issue()},
+    )
+    assert op.main() == 3
+    assert calls == ["integration/7-x"]
+
+
+@pytest.mark.parametrize(
+    ("base", "argv"),
+    [
+        (None, ["pkit", "friction", "check", "--json"]),
+        ("integration/7-x", ["pkit", "friction", "check", "--json", "--base", "integration/7-x"]),
+    ],
+)
+def test_the_change_check_is_named_a_base_only_when_it_is_not_its_own(
+    op: Any, monkeypatch: pytest.MonkeyPatch, base: str | None, argv: list[str]
+) -> None:
+    seen: list[list[str]] = []
+
+    def run(cmd: list[str], **_kwargs: Any) -> subprocess.CompletedProcess[str]:
+        seen.append(cmd)
+        return subprocess.CompletedProcess(cmd, 0, "{}", "")
+
+    monkeypatch.setattr(op.subprocess, "run", run)
+    assert op._friction_check(base) == {}
+    assert seen == [argv]
 
 
 def test_an_authored_doc_impact_section_is_left_as_written(op, monkeypatch, tmp_path) -> None:
@@ -446,7 +493,15 @@ def test_an_authored_doc_impact_section_is_left_as_written(op, monkeypatch, tmp_
     captured = _stub_main(
         op,
         monkeypatch,
-        ["open-pr", "42", "--body-file", str(body), "--draft", "--yes", "--doc-impact-from-friction"],
+        [
+            "open-pr",
+            "42",
+            "--body-file",
+            str(body),
+            "--draft",
+            "--yes",
+            "--doc-impact-from-friction",
+        ],
         {42: _open_issue()},
     )
     assert op.main() == 3
@@ -459,7 +514,10 @@ def test_without_the_flag_the_change_check_is_not_run(op, monkeypatch) -> None:
 
     monkeypatch.setattr(op, "_friction_check", never)
     captured = _stub_main(
-        op, monkeypatch, ["open-pr", "42", "--summary", "s", "--draft", "--yes"], {42: _open_issue()}
+        op,
+        monkeypatch,
+        ["open-pr", "42", "--summary", "s", "--draft", "--yes"],
+        {42: _open_issue()},
     )
     assert op.main() == 3
     assert _doc_impact(captured["body"]) == ["-"]
@@ -472,6 +530,39 @@ def test_no_document_leaves_the_body_as_it_was(op, monkeypatch) -> None:
         "## Doc impact\n\n-\n",
         "not pre-filled — `pkit friction check --json` gave no document",
     )
+
+
+@pytest.mark.parametrize("version", [2, None, "1"])
+def test_a_check_of_another_version_leaves_the_body_as_it_was(
+    op: ModuleType, monkeypatch: pytest.MonkeyPatch, version: object
+) -> None:
+    """A version this capability does not read is not rendered, never read as the one it knows."""
+
+    def check(_base: str) -> dict[str, object]:
+        return {**FRICTION, "schema_version": version}
+
+    monkeypatch.setattr(op, "_friction_check", check)
+    body, note = op._prefill_doc_impact("## Doc impact\n\n-\n", "main")
+    assert (body, note) == (
+        "## Doc impact\n\n-\n",
+        f"not pre-filled — `pkit friction check --json` answered schema_version {version!r}; "
+        "this capability reads 1",
+    )
+
+
+@pytest.mark.parametrize("versioned", [{}, {"schema_version": 1}])
+def test_a_check_without_a_version_reads_as_the_first(
+    op: ModuleType, monkeypatch: pytest.MonkeyPatch, versioned: dict[str, int]
+) -> None:
+    """A backbone from before the key answers version 1: the answers render."""
+
+    def check(_base: str) -> dict[str, object]:
+        return {**FRICTION, **versioned}
+
+    monkeypatch.setattr(op, "_friction_check", check)
+    body, note = op._prefill_doc_impact("## Doc impact\n\n-\n", "main")
+    assert _doc_impact(body) == RENDERED
+    assert note == "pre-filled from `pkit friction check` (2 answer(s))"
 
 
 @pytest.fixture(scope="module")

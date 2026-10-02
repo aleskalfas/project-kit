@@ -32,6 +32,33 @@ non-terminal label (``state:todo``, ``state:backlog``, ``state:in-progress``,
 logic is shared with ``move-issue`` via ``_lib.labels.reconcile_state_labels_to_done``
 so there is no duplicated label-mutation code.
 
+After closing, every path runs the closure cascade (DEC-006), which reports and
+never closes: each parent issue the body's first line names is checked for
+close eligibility, and so is each Milestone the issue sits in (its native
+Milestone field, or a ``Milestone: [#<n>](../milestone/<n>)`` body ref). A
+content-based (or ``either``) Milestone whose every child issue is closed is
+reported as eligible, with the ``close-milestone`` command that closes it
+(#414); a date-based one closes on its date, so its children closing makes
+nothing eligible.
+
+Each close is a governed move to done, recorded with the process engine through
+the path ``move-issue`` records its moves through (``_lib.move_journal``,
+``pkit process move --from``; #1231): after the close and its label reconcile,
+one move from the state the issue held before the close, with the close mode
+as the entry's reason. That state is read from the issue as fetched at the
+start, before anything is written (``lifecycle_inference.state_before_close``):
+its state label, else its milestone, else Todo — read as if it were open, so
+an issue GitHub closed when a pull request merged reads where the merge found
+it. An issue whose label already says done was moved there by whoever wrote
+the label — ``move-issue``, or an earlier run of this script — and is not
+recorded again, so a re-run adds nothing. Whether the move is recorded is the
+engine's: it appends to the journal where the project keeps one and records
+nothing where it does not. A move the workflow does not declare for the issue's
+type — a Task closed from In Progress, say — is not handed to the engine, which
+does not read a transition's ``applies_to``; it, and a move the engine refuses
+because its gate does not pass, are warned about as a direct move's refusal
+is, and the close stands.
+
 The ``state`` write is RESOLVED through the substrate-map seam (ADR-026
 sole-constructor + fail-closed), the same as ``move-issue``: greenfield (no
 ``substrate-map.yaml``) writes the kit's own ``state:done``; a present map that
@@ -55,7 +82,7 @@ Exit codes:
   2  usage error (issue or PR not found; mode contradicts state; `--pr` outside
      pr-merge mode or on a non-leaf)
   3  gh failure
-"""
+"""  # noqa: E501 — a usage line is a command, kept whole
 
 from __future__ import annotations
 
@@ -72,35 +99,41 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import audit as _audit  # noqa: E402
-from _lib import bootstrap_gate  # noqa: E402
-from _lib import axis_labels  # noqa: E402
-from _lib import containment  # noqa: E402
-from _lib import lifecycle_inference as infer  # noqa: E402
-from _lib import session_guard  # noqa: E402
+from _lib import audit as _audit
+from _lib import axis_labels, bootstrap_gate, containment, session_guard
+from _lib import lifecycle_inference as infer
+from _lib.body_parent_ref import MILESTONE_LABEL
+
 # DEC-007's checkbox close-gate — the ONE implementation (`_lib.checkbox_gate`),
 # shared with done-work, merge-pr and the engine's gate-checkboxes-ticked
 # predicate. Aliased to the local names this script has always used.
-from _lib.checkbox_gate import (  # noqa: E402
-    all_boxes_ticked as _all_boxes_ticked,
-    refusal_message as _checkbox_refusal,
-    unticked_boxes as _unticked_boxes,
-)
-from _lib.comment import post_audit_once  # noqa: E402
-from _lib.gh import gh_get_issue, gh_get_pr, gh_run, load_adopter_config  # noqa: E402
-from _lib.hooks import fire_hooks  # noqa: E402
-from _lib.labels import reconcile_state_labels_to_done  # noqa: E402
-from _lib.membership import (  # noqa: E402
+from _lib.checkbox_gate import refusal_message as _checkbox_refusal
+from _lib.checkbox_gate import unticked_boxes as _unticked_boxes
+from _lib.comment import post_audit_once
+from _lib.gh import gh_get_issue, gh_get_pr, gh_run, load_adopter_config
+from _lib.hooks import fire_hooks
+from _lib.labels import reconcile_state_labels_to_done
+from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
     resolve_capability_root,
     resolve_invoker_identity,
 )
-from _lib.structural_type import infer_structural_type  # noqa: E402
-
+from _lib.milestone import (
+    CONTENT_TRIGGERS,
+    fetch_milestone,
+    issue_milestones,
+    list_milestone_children,
+    resolve_close_trigger,
+)
+from _lib.move_journal import PROCESS_ADDRESS, journal_move, report_unrecorded
+from _lib.structural_type import infer_structural_type
 
 VALID_MODES = ("wont-do", "pr-merge", "cascade-eligibility-close")
 DEFAULT_MODE = "wont-do"
+
+# The lifecycle state every close moves an issue to.
+DONE_STATE = "done"
 
 # The writer name in the idempotency key of the `--pr` close comment, so a
 # retry after a failed close does not post the reference twice (`_lib.audit`).
@@ -151,10 +184,7 @@ def main() -> int:
     parser.add_argument(
         "--reason",
         default=None,
-        help=(
-            "Closing reason recorded in the closing comment. Required in "
-            "wont-do mode."
-        ),
+        help=("Closing reason recorded in the closing comment. Required in wont-do mode."),
     )
     parser.add_argument(
         "--skip-checkbox-gate",
@@ -225,14 +255,10 @@ def main() -> int:
     if not session_guard.enforce(override=args.allow_foreign_repo):
         return 1
 
-    issue_types = _read_yaml(
-        capability_root / "schemas" / "issue-types.yaml", yaml_loader
-    )
+    issue_types = _read_yaml(capability_root / "schemas" / "issue-types.yaml", yaml_loader)
     # Kind-driven title prefixes ([Bug]/[Docs]/[Test]/[Refactor]/[Chore]) live in
     # classification.yaml; without it a kind-prefixed Task reads as unrecognised.
-    classification = _read_yaml(
-        capability_root / "schemas" / "classification.yaml", yaml_loader
-    )
+    classification = _read_yaml(capability_root / "schemas" / "classification.yaml", yaml_loader)
 
     # The adopter's optional substrate-map (ADR-026): None ⇒ greenfield (state
     # is a `state:*` label); a present map may bind `state` to a `derive`
@@ -253,6 +279,17 @@ def main() -> int:
         for lbl in (issue.get("labels") or [])
     ]
     structural_type = infer_structural_type(title, issue_types, classification=classification)
+    # The move to done each path below records once it has closed the issue
+    # (#1231), read before anything is written.
+    close_move = _CloseMove.read(
+        args.issue_number,
+        issue,
+        labels,
+        structural_type,
+        workflow=_read_yaml(capability_root / "schemas" / "workflow.yaml", yaml_loader),
+        substrate_map=substrate_map,
+        actor=invoker.github_login,
+    )
 
     print(f"close-issue: #{args.issue_number}")
     print(f"  title:        {title}")
@@ -275,7 +312,8 @@ def main() -> int:
         unticked = [] if args.skip_checkbox_gate else _unticked_boxes(body)
         if unticked:
             print(
-                "\n" + _checkbox_refusal(
+                "\n"
+                + _checkbox_refusal(
                     unticked,
                     remedy=(
                         "tick or remove each unticked checkbox before closing, "
@@ -311,10 +349,14 @@ def main() -> int:
         # Map-aware (RF-1): under a present derive/unsupported `state` map this
         # writes no kit `state:*` label (the open/closed substrate carries it).
         if not reconcile_state_labels_to_done(
-            args.issue_number, labels, config, gh_run=gh_run,
+            args.issue_number,
+            labels,
+            config,
+            gh_run=gh_run,
             substrate_map=substrate_map,
         ):
             return 3
+        close_move.record(f"wont-do close: {args.reason}")
         print(f"\n[ok] closed #{args.issue_number} (wont-do).")
 
     elif args.mode == "pr-merge" and args.pr is not None and state != "closed":
@@ -327,6 +369,7 @@ def main() -> int:
             labels=labels,
             config=config,
             substrate_map=substrate_map,
+            close_move=close_move,
         )
         if rc is not None:
             return rc
@@ -355,10 +398,18 @@ def main() -> int:
         # terminal label must be correct.
         if not args.dry_run:
             if not reconcile_state_labels_to_done(
-                args.issue_number, labels, config, gh_run=gh_run,
+                args.issue_number,
+                labels,
+                config,
+                gh_run=gh_run,
                 substrate_map=substrate_map,
             ):
                 return 3
+            # GitHub closed the issue and wrote no label: the move to done is
+            # recorded here, from where the merge found it — unless its label
+            # already says done (done-work's move-issue wrote it, or a re-run).
+            merged_by = f": closed by merged PR #{args.pr}" if args.pr is not None else ""
+            close_move.record(f"pr-merge close{merged_by}")
         print(f"\n[ok] noted pr-merge close for #{args.issue_number}.")
 
     elif args.mode == "cascade-eligibility-close":
@@ -386,7 +437,8 @@ def main() -> int:
         unticked = _unticked_boxes(body)
         if unticked:
             print(
-                "\n" + _checkbox_refusal(
+                "\n"
+                + _checkbox_refusal(
                     unticked,
                     scope="cascade-eligibility",
                     remedy=(
@@ -431,8 +483,10 @@ def main() -> int:
                 "eligibility (held fail-closed):",
                 file=sys.stderr,
             )
-            print(f"  → {reason or 'the process engine could not fold the children.'}",
-                  file=sys.stderr)
+            print(
+                f"  → {reason or 'the process engine could not fold the children.'}",
+                file=sys.stderr,
+            )
             print(
                 "  → re-run once `gh` is reachable and every child's state is "
                 "readable; the container holds until the fold resolves.",
@@ -478,15 +532,18 @@ def main() -> int:
         if not _gh_close_issue(args.issue_number, reason="completed", config=config):
             return 3
         if not reconcile_state_labels_to_done(
-            args.issue_number, labels, config, gh_run=gh_run,
+            args.issue_number,
+            labels,
+            config,
+            gh_run=gh_run,
             substrate_map=substrate_map,
         ):
             return 3
-        print(
-            f"\n[ok] closed #{args.issue_number} (cascade-eligibility, completed)."
-        )
+        close_move.record("cascade-eligibility close: every child closed and every checkbox ticked")
+        print(f"\n[ok] closed #{args.issue_number} (cascade-eligibility, completed).")
 
-    # Closure cascade — semi-automatic per DEC-006.
+    # Closure cascade — semi-automatic per DEC-006: it reports eligibility and
+    # closes nothing, over the parent issues and the Milestones alike.
     if not args.no_cascade:
         parent_nums = _walk_parent_chain(body)
         if parent_nums:
@@ -497,7 +554,15 @@ def main() -> int:
             for pnum in parent_nums:
                 _check_parent_eligibility(pnum, config)
         else:
-            print("\n[cascade] no parent ref found in body; cascade skipped.")
+            print("\n[cascade] no parent ref found in body; parent check skipped.")
+        milestone_nums = issue_milestones(issue)
+        if milestone_nums:
+            print(
+                f"\n[cascade] milestones to check for eligibility: "
+                f"{', '.join(f'#{n}' for n in milestone_nums)}"
+            )
+            for mnum in milestone_nums:
+                _check_milestone_eligibility(mnum, config, issue_types, classification)
 
     # Fire after_close_issue hooks per DEC-024.
     fire_hooks(
@@ -525,7 +590,8 @@ def _close_leaf_through_pr(
     body: str,
     labels: list[str],
     config: dict,
-    substrate_map: "axis_labels.SubstrateMap | None",
+    substrate_map: axis_labels.SubstrateMap | None,
+    close_move: _CloseMove,
 ) -> int | None:
     """Close an open leaf as completed through merged PR ``args.pr``.
 
@@ -533,8 +599,8 @@ def _close_leaf_through_pr(
     issue and never named this one. Refuses a container (containers close
     through the cascade), a PR that is not merged, and — as every closure path
     does — an unticked checkbox (DEC-007). Returns the exit code to stop with,
-    or None once the issue is closed and labelled, so the caller runs the
-    closure cascade and the after-close hooks.
+    or None once the issue is closed, labelled and ``close_move`` recorded, so
+    the caller runs the closure cascade and the after-close hooks.
     """
     issue_number = args.issue_number
     if structural_type != "task":
@@ -563,7 +629,8 @@ def _close_leaf_through_pr(
     unticked = [] if args.skip_checkbox_gate else _unticked_boxes(body)
     if unticked:
         print(
-            "\n" + _checkbox_refusal(
+            "\n"
+            + _checkbox_refusal(
                 unticked,
                 remedy=(
                     "tick or remove each unticked checkbox before closing, "
@@ -594,9 +661,14 @@ def _close_leaf_through_pr(
     if not _gh_close_issue(issue_number, reason="completed", config=config):
         return 3
     if not reconcile_state_labels_to_done(
-        issue_number, labels, config, gh_run=gh_run, substrate_map=substrate_map,
+        issue_number,
+        labels,
+        config,
+        gh_run=gh_run,
+        substrate_map=substrate_map,
     ):
         return 3
+    close_move.record(f"pr-merge close: completed by merged PR #{args.pr}")
     print(f"\n[ok] closed #{issue_number} (pr-merge through PR #{args.pr}, completed).")
     return None
 
@@ -623,6 +695,73 @@ def _pr_merge_close_comment(pr_number: int) -> tuple[str, str]:
     return key, body
 
 
+# ---- recording the close (#1231) ------------------------------------
+
+
+@dataclass(frozen=True)
+class _CloseMove:
+    """The lifecycle move a close makes — to done, from where the issue was —
+    recorded with the process engine once the close and its label reconcile
+    have landed (DEC-049: one journal entry per governed move)."""
+
+    issue_number: int
+    #: Where the issue was before the close (`state_before_close`), or None when
+    #: nothing records it (a `derive`-bound state).
+    from_state: str | None
+    #: Why the move is not recorded although it is one: the workflow declares
+    #: no `from_state → done` for the issue's type. Empty when it does.
+    undeclared: str
+    actor: str | None
+
+    @classmethod
+    def read(
+        cls,
+        issue_number: int,
+        issue: dict,
+        labels: list[str],
+        structural_type: str | None,
+        *,
+        workflow: dict,
+        substrate_map: axis_labels.SubstrateMap | None,
+        actor: str | None,
+    ) -> _CloseMove:
+        """The move closing ``issue`` makes, read from the issue as fetched —
+        before this run writes anything."""
+        from_state = infer.state_before_close(
+            milestone=issue.get("milestone"), labels=labels, substrate_map=substrate_map
+        )
+        undeclared = ""
+        if from_state is not None and from_state != DONE_STATE:
+            # The engine does not read a transition's `applies_to` (a pm field),
+            # so the type half of "is this move declared" is asked here, of the
+            # table move-issue refuses on.
+            if DONE_STATE not in infer.legal_targets(workflow, from_state, structural_type or ""):
+                kind = repr(structural_type) if structural_type else "an unrecognised type"
+                undeclared = (
+                    f"no transition {from_state!r} → {DONE_STATE!r} declared in "
+                    f"workflow.yaml for {kind}"
+                )
+        return cls(issue_number, from_state, undeclared, actor)
+
+    def record(self, reason: str) -> None:
+        """Hand the move to the engine with ``reason`` — the close mode — on its
+        entry, through the path ``move-issue`` records its moves through.
+
+        One engine call, and none when there is nothing to record: the issue
+        was at done already (its label said so; whoever wrote it recorded the
+        move, so a re-run adds nothing), or nothing says where it was. A move
+        the workflow does not declare for the issue's type is not handed over
+        and is warned about as a refused one is; a move the engine refuses is
+        warned about by the shared path. Neither fails the close.
+        """
+        if self.from_state is None or self.from_state == DONE_STATE:
+            return
+        if self.undeclared:
+            report_unrecorded(self.issue_number, f"this move was not recorded: {self.undeclared}")
+            return
+        journal_move(self.issue_number, self.from_state, DONE_STATE, self.actor, reason=reason)
+
+
 # ---- parent eligibility ---------------------------------------------
 
 
@@ -644,14 +783,58 @@ def _check_parent_eligibility(parent_num: int, config: dict) -> None:
     body = str(parent.get("body") or "")
     unticked = _unticked_boxes(body)
     if unticked:
-        print(
-            f"  · parent #{parent_num} open; not eligible "
-            f"({len(unticked)} unticked box(es))"
-        )
+        print(f"  · parent #{parent_num} open; not eligible ({len(unticked)} unticked box(es))")
         return
     print(
         f"  · parent #{parent_num} open; checkboxes complete — "
         "eligible to close pending sibling check"
+    )
+
+
+def _check_milestone_eligibility(
+    number: int, config: dict, issue_types: dict, classification: dict
+) -> None:
+    """Report whether a Milestone the closed issue sits in became closeable.
+
+    The Milestone counterpart of :func:`_check_parent_eligibility` (#414). A
+    content-based or `either` Milestone is eligible once every child issue is
+    closed — the condition `close-milestone` closes it on, read through the
+    same `_lib.milestone` reads, so the report and the close cannot disagree.
+    A date-based Milestone closes on its date, so its children closing makes
+    nothing eligible. We surface the report with the command that closes the
+    Milestone; we do not close it (DEC-016: closing it is the user's gesture).
+    """
+    milestone = fetch_milestone(number, config)
+    if milestone is None:
+        print(f"  [warn] could not fetch milestone #{number}", file=sys.stderr)
+        return
+    if str(milestone.get("state", "")).lower() == "closed":
+        print(f"  · milestone #{number} already closed")
+        return
+    trigger, inferred = resolve_close_trigger(
+        str(milestone.get("description") or ""), milestone.get("due_on")
+    )
+    trigger_text = f"{trigger} (inferred)" if inferred else trigger
+    if trigger not in CONTENT_TRIGGERS:
+        print(
+            f"  · milestone #{number} open; {trigger_text} — it closes on its "
+            "date, not when its children close"
+        )
+        return
+    children = list_milestone_children(
+        number, str(milestone.get("title", "")), config, issue_types, classification
+    )
+    if children is None:
+        print(f"  [warn] could not list milestone #{number}'s children", file=sys.stderr)
+        return
+    open_count = sum(1 for child in children if child["state"] != "closed")
+    if open_count:
+        print(f"  · milestone #{number} open; not eligible ({open_count} open child issue(s))")
+        return
+    print(
+        f"  · milestone #{number} open; {trigger_text}, all {len(children)} "
+        f"child issue(s) closed — eligible to close: run "
+        f"`pkit pm close-milestone {number}`"
     )
 
 
@@ -662,9 +845,8 @@ def _check_parent_eligibility(parent_num: int, config: dict) -> None:
 # (never imported, ADR-020). The fold reads workflow.yaml's
 # `process.cascade` (all-over-`done` over the parent's child issues). The
 # wrapper keeps the OTHER half — the DEC-007 checkbox gate — local, and
-# ANDs the two. close-issue does not recompute the fold itself.
-
-PROCESS_ADDRESS = "project-management:issue-lifecycle"
+# ANDs the two. close-issue does not recompute the fold itself. The process
+# address is `_lib.move_journal`'s, the one the close's journal entry uses.
 
 
 def _engine_cascade_fold(parent_num: int) -> dict | None:
@@ -678,8 +860,13 @@ def _engine_cascade_fold(parent_num: int) -> dict | None:
     determinate fold reports `opened` true/false.
     """
     argv = [
-        "pkit", "process", "cascade", PROCESS_ADDRESS,
-        "--subject", str(parent_num), "--json",
+        "pkit",
+        "process",
+        "cascade",
+        PROCESS_ADDRESS,
+        "--subject",
+        str(parent_num),
+        "--json",
     ]
     try:
         proc = subprocess.run(argv, capture_output=True, text=True, check=False)
@@ -739,9 +926,7 @@ def _find_open_children(parent_num: int, config: dict) -> list[int] | None:
             file=sys.stderr,
         )
         return None
-    open_children = [
-        n for n in resolution.numbers if states.get(n) != "closed"
-    ]
+    open_children = [n for n in resolution.numbers if states.get(n) != "closed"]
     return sorted(open_children)
 
 
@@ -794,10 +979,14 @@ def _gh_close_issue(issue_number: int, *, reason: str = "completed", config: dic
     return True
 
 
-
 def _walk_parent_chain(body: str) -> list[int]:
     """Extract parent issue numbers from the body's parent-ref first line. A
-    leading DEC-013 `Integration:` marker is skipped first (#763)."""
+    leading DEC-013 `Integration:` marker is skipped first (#763).
+
+    A milestone ref is not an issue parent — its number names a Milestone —
+    so the deprecated plain `Milestone: #<n>` form yields nothing here; the
+    cascade reaches Milestones through `issue_milestones` instead.
+    """
     if not body:
         return []
     body = infer.strip_integration_marker(body)
@@ -809,7 +998,7 @@ def _walk_parent_chain(body: str) -> list[int]:
                 break
             continue
         m = re.match(r"^([A-Za-z]+):\s+#(\d+)", s)
-        if not m:
+        if not m or m.group(1) == MILESTONE_LABEL:
             break
         out.append(int(m.group(2)))
         break

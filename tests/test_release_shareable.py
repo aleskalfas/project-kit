@@ -71,11 +71,7 @@ def test_shareable_flags_missing_requires_backbone(tmp_path: Path) -> None:
     _write_capability(
         source_kit,
         "houseware",
-        "schema_version: 1\n"
-        "component:\n"
-        "  kind: capability\n"
-        "  name: houseware\n"
-        "  version: 0.3.0\n",
+        "schema_version: 1\ncomponent:\n  kind: capability\n  name: houseware\n  version: 0.3.0\n",
     )
 
     report = release.check_shareable(source_kit, "houseware")

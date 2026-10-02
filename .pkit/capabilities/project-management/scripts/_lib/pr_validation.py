@@ -10,8 +10,9 @@ merge (the fail-late trap this module exists to close). Merge stays the backstop
 drafts stay exempt (validation runs only when a PR goes ready-for-review).
 
 The checks:
-  * title matches `titles.yaml`'s `pr` Conventional-Commits regex, and its
-    `<type>` matches the closing issue's `type:*` mapping (when supplied);
+  * title passes `titles.yaml`'s `pr` checks — the Conventional-Commits regex
+    and the declared summary wording rules (warnings) — and its `<type>`
+    matches the closing issue's `type:*` mapping (when supplied);
   * body carries a `Closes/Fixes/Resolves #N` keyword (git-conventions.yaml);
   * body carries a `## Doc impact` section (git-conventions.yaml / DEC-015);
   * body is authored — residual-placeholder detection per DEC-031 (an empty
@@ -33,14 +34,17 @@ from pathlib import Path
 # sys.path) — mirrors `_lib/substrate_writes.py`'s idiom.
 try:
     import axis_labels  # type: ignore[import-not-found]
+    import title_rules  # type: ignore[import-not-found]
     from placeholder_detection import (  # type: ignore[import-not-found]
         PHASE_CREATE,
+        PHASE_TRANSITION,
         detect_placeholder_residuals,
     )
 except ImportError:  # pragma: no cover
-    from _lib import axis_labels  # type: ignore[no-redef]
+    from _lib import axis_labels, title_rules  # type: ignore[no-redef]
     from _lib.placeholder_detection import (  # type: ignore[no-redef]
         PHASE_CREATE,
+        PHASE_TRANSITION,
         detect_placeholder_residuals,
     )
 
@@ -88,41 +92,42 @@ def validate_pr(
     """
     findings: list[Finding] = []
 
-    # Title regex + type cross-check.
-    pattern = _pr_title_pattern(titles)
-    if pattern:
-        m = re.match(pattern, pr_title)
-        if not m:
-            findings.append(
-                Finding(
-                    SEVERITY_HARD_REJECT,
-                    "title.pattern",
-                    f"PR title does not match Conventional Commits pattern: {pattern!r}",
+    # Title: titles.yaml's `pr` checks — the Conventional-Commits pattern and the
+    # declared wording rules on the summary — then the type cross-check, which
+    # needs the closing issues' kinds and so runs here.
+    for severity, label, detail in title_rules.check_title(
+        titles, "pr", pr_title, at_transition=phase == PHASE_TRANSITION
+    ):
+        findings.append(Finding(severity, label, detail))
+    pattern = title_rules.pattern_for(titles, "pr")
+    m = re.match(pattern, pr_title) if pattern else None
+    if m is not None:
+        conv_type = m.group(1)
+        expected_types = _expected_conv_types(closing_type_labels, classification)
+        if expected_types and conv_type not in expected_types:
+            if len(closing_type_labels) > 1:
+                findings.append(
+                    Finding(
+                        SEVERITY_WARNING,
+                        "title.type-mismatch",
+                        f"PR <type>={conv_type!r} differs from closing-issue type "
+                        f"labels' mapping {expected_types!r}; multi-issue PR with "
+                        "mixed types — warning per git-conventions.yaml.",
+                    )
                 )
-            )
-        else:
-            conv_type = m.group(1)
-            expected_types = _expected_conv_types(closing_type_labels, classification)
-            if expected_types and conv_type not in expected_types:
-                if len(closing_type_labels) > 1:
-                    findings.append(
-                        Finding(
-                            SEVERITY_WARNING,
-                            "title.type-mismatch",
-                            f"PR <type>={conv_type!r} differs from closing-issue type "
-                            f"labels' mapping {expected_types!r}; multi-issue PR with "
-                            "mixed types — warning per git-conventions.yaml.",
-                        )
-                    )
-                else:
-                    findings.append(
-                        Finding(
+            else:
+                findings.append(
+                    Finding(
+                        title_rules.declared_severity(
+                            title_rules.format_entry(titles, "pr"),
+                            title_rules.CHECK_TYPE_ALIGNMENT,
                             SEVERITY_HARD_REJECT,
-                            "title.type-mismatch",
-                            f"PR <type>={conv_type!r} does not match the closing issue's "
-                            f"type:* label mapping {expected_types!r}.",
-                        )
+                        ),
+                        "title.type-mismatch",
+                        f"PR <type>={conv_type!r} does not match the closing issue's "
+                        f"type:* label mapping {expected_types!r}.",
                     )
+                )
 
     # Body: closing keyword required.
     if not CLOSING_KEYWORD_RE.search(pr_body):
@@ -190,16 +195,6 @@ def pr_body_format() -> dict:
     return _PR_BODY_FORMAT
 
 
-def _pr_title_pattern(titles: dict) -> str | None:
-    formats = titles.get("formats") or {}
-    entry = formats.get("pr")
-    if isinstance(entry, dict):
-        p = entry.get("pattern")
-        if isinstance(p, str):
-            return p
-    return None
-
-
 def extract_closing_issues(pr_body: str) -> list[int]:
     """The issue numbers a PR body closes (Closes/Fixes/Resolves #N), de-duped."""
     out: list[int] = []
@@ -236,7 +231,7 @@ def with_closing_references(pr_body: str, issue_numbers: list[int]) -> str:
     if last is None:
         head = "\n".join(added)
         return f"{head}\n\n{pr_body}" if pr_body.strip() else f"{head}\n"
-    lines[last + 1:last + 1] = added
+    lines[last + 1 : last + 1] = added
     return "\n".join(lines)
 
 

@@ -3,6 +3,7 @@
 Exercised against throwaway git repos so the real mutations — info/exclude
 writes and `git rm --cached` — run for real, never against the source tree.
 """
+
 from __future__ import annotations
 
 import subprocess
@@ -49,9 +50,13 @@ def repo(tmp_path: Path) -> Path:
         tmp_path,
         BackboneManifest(
             backbone_version="1.0.0",
-            components=[ComponentRegistryEntry(
-                kind="adapter", name="claude-code",
-                manifest=".pkit/adapters/claude-code/project/manifest.yaml")],
+            components=[
+                ComponentRegistryEntry(
+                    kind="adapter",
+                    name="claude-code",
+                    manifest=".pkit/adapters/claude-code/project/manifest.yaml",
+                )
+            ],
         ),
     )
     (tmp_path / ".claude" / "agents").mkdir(parents=True)
@@ -64,11 +69,13 @@ def repo(tmp_path: Path) -> Path:
 
 # --- footprint aggregation ---------------------------------------------------
 
+
 def test_footprint_aggregates_backbone_and_adapter(repo: Path) -> None:
     assert vis.footprint(repo) == [".pkit/", ".claude/skills", ".claude/agents"]
 
 
 # --- runtime-ignore aggregation (ADR-009 rule 7) ------------------------
+
 
 def _install_capability_with_runtime_ignore(
     root: Path, name: str, runtime_ignore: list[str]
@@ -80,15 +87,18 @@ def _install_capability_with_runtime_ignore(
     cdir.mkdir(parents=True)
     body = (
         f"schema_version: 1\ncomponent:\n  kind: capability\n  name: {name}\n"
-        "  version: 0.1.0\nruntime_ignore:\n"
-        + "".join(f"  - {p}\n" for p in runtime_ignore)
+        "  version: 0.1.0\nruntime_ignore:\n" + "".join(f"  - {p}\n" for p in runtime_ignore)
     )
     (cdir / "package.yaml").write_text(body, encoding="utf-8")
     manifest = read_backbone_manifest(root)
     assert manifest is not None
-    manifest.components.append(ComponentRegistryEntry(
-        kind="capability", name=name,
-        manifest=f".pkit/capabilities/{name}/project/manifest.yaml"))
+    manifest.components.append(
+        ComponentRegistryEntry(
+            kind="capability",
+            name=name,
+            manifest=f".pkit/capabilities/{name}/project/manifest.yaml",
+        )
+    )
     write_backbone_manifest(root, manifest)
 
 
@@ -108,7 +118,8 @@ def test_runtime_ignore_includes_backbone_permissions_seam(repo: Path) -> None:
 
 def test_runtime_ignore_aggregates_component_declaration(repo: Path) -> None:
     _install_capability_with_runtime_ignore(
-        repo, "demo", [".pkit/capabilities/demo/project/run.log"])
+        repo, "demo", [".pkit/capabilities/demo/project/run.log"]
+    )
     out = vis.runtime_ignore(repo)
     # The component's declared path is present, after the backbone seam.
     assert ".pkit/capabilities/demo/project/run.log" in out
@@ -118,7 +129,8 @@ def test_runtime_ignore_aggregates_component_declaration(repo: Path) -> None:
 def test_runtime_ignore_is_deduped_and_order_stable(repo: Path) -> None:
     # A component echoing a backbone-seam path collapses to one entry, in order.
     _install_capability_with_runtime_ignore(
-        repo, "dup", [".pkit/**/__pycache__/", ".pkit/capabilities/dup/x.log"])
+        repo, "dup", [".pkit/**/__pycache__/", ".pkit/capabilities/dup/x.log"]
+    )
     out = vis.runtime_ignore(repo)
     assert out.count(".pkit/**/__pycache__/") == 1
     assert out == vis._dedupe(out)  # idempotent
@@ -136,14 +148,17 @@ def test_runtime_ignore_tolerates_component_without_key(repo: Path) -> None:
 _JOURNAL_SAMPLE = ".pkit/capabilities/any-capability/project/process/some-process/7.journal.jsonl"
 
 
-def _journal_ignored(repo: Path) -> bool:
+def _journal_ignored(repo: Path, sample: str = _JOURNAL_SAMPLE) -> bool:
     vis.render_runtime_ignore(repo)
-    target = repo / _JOURNAL_SAMPLE
+    target = repo / sample
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text("{}\n", encoding="utf-8")
     res = subprocess.run(
-        ["git", "check-ignore", "-q", _JOURNAL_SAMPLE],
-        cwd=repo, capture_output=True, text=True, check=False,
+        ["git", "check-ignore", "-q", sample],
+        cwd=repo,
+        capture_output=True,
+        text=True,
+        check=False,
     )
     return res.returncode == 0
 
@@ -184,7 +199,92 @@ def test_refresh_rerenders_only_a_stale_rendered_file(repo: Path) -> None:
     assert "journal.jsonl" not in (repo / ".pkit" / ".gitignore").read_text(encoding="utf-8")
 
 
+# --- the backbone's journal choice takes precedence (ADR-009 rule 7, #1134) ---
+#
+# A package older than the backbone's ownership of the journal line still
+# declares it. While the project commits its journals the render leaves the
+# entry out and names it in a comment line; otherwise the entry renders as
+# declared, redundant beside the backbone's own line.
+
+_STALE_CLAIM = ".pkit/capabilities/stale/project/process/**/*.journal.jsonl"
+_STALE_SAMPLE = ".pkit/capabilities/stale/project/process/some-process/7.journal.jsonl"
+_WHY = "the backbone owns the journal pattern while journals are committed"
+
+
+def _gitignore_lines(repo: Path) -> list[str]:
+    return (repo / ".pkit" / ".gitignore").read_text(encoding="utf-8").splitlines()
+
+
+def test_committed_journals_drop_a_component_claim_on_them(repo: Path) -> None:
+    _install_capability_with_runtime_ignore(
+        repo, "stale", [".pkit/capabilities/stale/project/run.log", _STALE_CLAIM]
+    )
+    set_journal_logging(repo, enabled=True, committed=True)
+
+    resolved = vis.resolve_runtime_ignore(repo)
+    assert _STALE_CLAIM not in resolved.patterns
+    assert ".pkit/capabilities/stale/project/run.log" in resolved.patterns
+    assert resolved.dropped == (vis.DroppedEntries("stale", (_STALE_CLAIM,)),)
+    assert resolved.components == 2
+    assert vis.runtime_ignore(repo) == list(resolved.patterns)
+
+    # The journals the stale package claimed are committed after all...
+    assert not _journal_ignored(repo, _STALE_SAMPLE)
+    lines = _gitignore_lines(repo)
+    assert not [line for line in lines if "journal.jsonl" in line and not line.startswith("#")]
+    # ...and a reader of the file sees why the entry is absent.
+    assert f"# dropped: stale '{_STALE_CLAIM}' — {_WHY}" in lines
+
+
+def test_one_dropped_line_per_component_names_each_entry(repo: Path) -> None:
+    legacy = ".pkit/capabilities/stale/project/process/legacy/*.journal.jsonl"
+    _install_capability_with_runtime_ignore(repo, "stale", [_STALE_CLAIM, legacy, _STALE_CLAIM])
+    set_journal_logging(repo, enabled=True, committed=True)
+
+    resolved = vis.resolve_runtime_ignore(repo)
+    assert resolved.dropped == (vis.DroppedEntries("stale", (_STALE_CLAIM, legacy)),)
+    # A component whose every entry is dropped contributes nothing to the render.
+    assert resolved.components == 1
+    comments = [
+        line
+        for line in vis.render_runtime_ignore_content(repo).splitlines()
+        if line.startswith("# dropped:")
+    ]
+    assert comments == [f"# dropped: stale '{_STALE_CLAIM}', '{legacy}' — {_WHY}"]
+
+
+@pytest.mark.parametrize(("enabled", "committed"), [(False, False), (True, False), (False, True)])
+def test_ignored_journals_render_a_component_claim_as_declared(
+    repo: Path, enabled: bool, committed: bool
+) -> None:
+    _install_capability_with_runtime_ignore(repo, "stale", [_STALE_CLAIM])
+    set_journal_logging(repo, enabled=enabled, committed=committed)
+
+    resolved = vis.resolve_runtime_ignore(repo)
+    assert JOURNAL_GLOB in resolved.patterns
+    assert _STALE_CLAIM in resolved.patterns
+    assert resolved.dropped == ()
+    assert "# dropped:" not in vis.render_runtime_ignore_content(repo)
+    assert _journal_ignored(repo, _STALE_SAMPLE)
+
+
+def test_refresh_reports_the_entries_the_render_drops(repo: Path) -> None:
+    _install_capability_with_runtime_ignore(repo, "stale", [_STALE_CLAIM])
+    vis.render_runtime_ignore(repo)
+    set_journal_logging(repo, enabled=True, committed=True)
+
+    refreshed = vis.refresh_runtime_ignore(repo)
+    assert refreshed is not None
+    assert refreshed.dropped == (vis.DroppedEntries("stale", (_STALE_CLAIM,)),)
+    assert refreshed.report().splitlines()[1:] == [
+        f"  dropped       stale '{_STALE_CLAIM}' — {_WHY}"
+    ]
+    # Re-rendered and current again: nothing more to do or report.
+    assert vis.refresh_runtime_ignore(repo) is None
+
+
 # --- runtime-ignore renderer (ADR-009 rule 7) -----------------------
+
 
 def test_render_strips_pkit_prefix_for_nested_gitignore(repo: Path) -> None:
     # Patterns are stored repo-root-relative; the file lives at `.pkit/.gitignore`,
@@ -225,10 +325,12 @@ def test_render_dry_run_writes_nothing(repo: Path) -> None:
 def test_render_drops_uninstalled_component_lines(repo: Path) -> None:
     # A component's runtime_ignore lines appear while installed...
     _install_capability_with_runtime_ignore(
-        repo, "demo", [".pkit/capabilities/demo/project/run.log"])
+        repo, "demo", [".pkit/capabilities/demo/project/run.log"]
+    )
     vis.render_runtime_ignore(repo)
-    assert "capabilities/demo/project/run.log" in (
-        repo / ".pkit" / ".gitignore").read_text(encoding="utf-8")
+    assert "capabilities/demo/project/run.log" in (repo / ".pkit" / ".gitignore").read_text(
+        encoding="utf-8"
+    )
     # ...and are simply absent on the next render once it's gone (wholesale
     # regeneration — no orphan reconciliation). Drop it from the manifest.
     manifest = read_backbone_manifest(repo)
@@ -236,24 +338,27 @@ def test_render_drops_uninstalled_component_lines(repo: Path) -> None:
     manifest.components = [c for c in manifest.components if c.name != "demo"]
     write_backbone_manifest(repo, manifest)
     vis.render_runtime_ignore(repo)
-    assert "capabilities/demo/project/run.log" not in (
-        repo / ".pkit" / ".gitignore").read_text(encoding="utf-8")
+    assert "capabilities/demo/project/run.log" not in (repo / ".pkit" / ".gitignore").read_text(
+        encoding="utf-8"
+    )
 
 
 def test_render_component_count_reflects_declaring_components(repo: Path) -> None:
     # Backbone seam alone = 1 component.
-    assert vis._runtime_ignore_component_count(repo) == 1
+    assert vis.resolve_runtime_ignore(repo).components == 1
     # Adding a capability that declares runtime_ignore bumps the count.
     _install_capability_with_runtime_ignore(
-        repo, "demo", [".pkit/capabilities/demo/project/run.log"])
-    assert vis._runtime_ignore_component_count(repo) == 2
+        repo, "demo", [".pkit/capabilities/demo/project/run.log"]
+    )
+    assert vis.resolve_runtime_ignore(repo).components == 2
 
 
 def test_rendered_gitignore_actually_matches_declared_path(repo: Path) -> None:
     # The rendered file must *actually ignore* a declared path. Render it, then
     # ask git itself whether a declared runtime-local path is ignored.
     _install_capability_with_runtime_ignore(
-        repo, "demo", [".pkit/capabilities/demo/project/run.log"])
+        repo, "demo", [".pkit/capabilities/demo/project/run.log"]
+    )
     vis.render_runtime_ignore(repo)
     target = repo / ".pkit" / "capabilities" / "demo" / "project" / "run.log"
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -261,13 +366,19 @@ def test_rendered_gitignore_actually_matches_declared_path(repo: Path) -> None:
     # git check-ignore exits 0 when the path IS ignored.
     res = subprocess.run(
         ["git", "check-ignore", "-q", ".pkit/capabilities/demo/project/run.log"],
-        cwd=repo, capture_output=True, text=True, check=False,
+        cwd=repo,
+        capture_output=True,
+        text=True,
+        check=False,
     )
     assert res.returncode == 0, "rendered .pkit/.gitignore must ignore the declared path"
     # And a non-declared sibling is NOT ignored.
     res2 = subprocess.run(
         ["git", "check-ignore", "-q", ".pkit/capabilities/demo/project/keep.txt"],
-        cwd=repo, capture_output=True, text=True, check=False,
+        cwd=repo,
+        capture_output=True,
+        text=True,
+        check=False,
     )
     assert res2.returncode == 1
 
@@ -283,9 +394,7 @@ def test_rendered_gitignore_actually_matches_declared_path(repo: Path) -> None:
 # committed `.pkit/.gitignore` git honours must ignore them.
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
-_PM_PACKAGE = (
-    _REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "package.yaml"
-)
+_PM_PACKAGE = _REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "package.yaml"
 # The clone-local instance-id runtime file (DEC-035 / set-instance, #518).
 _PM_INSTANCE_DECL = ".pkit/capabilities/project-management/project/instance/*.json"
 
@@ -304,12 +413,14 @@ def test_committed_pkit_gitignore_ignores_pm_journal() -> None:
     rendered = _REPO_ROOT / ".pkit" / ".gitignore"
     assert rendered.is_file(), "the source tree must ship a rendered .pkit/.gitignore"
     sample = (
-        ".pkit/capabilities/project-management/project/process/"
-        "issue-lifecycle/000.journal.jsonl"
+        ".pkit/capabilities/project-management/project/process/issue-lifecycle/000.journal.jsonl"
     )
     res = subprocess.run(
         ["git", "check-ignore", "-q", sample],
-        cwd=_REPO_ROOT, capture_output=True, text=True, check=False,
+        cwd=_REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
     )
     assert res.returncode == 0, (
         "committed .pkit/.gitignore must ignore the pm capability's process journal"
@@ -321,9 +432,9 @@ def test_committed_pkit_gitignore_matches_what_the_generator_renders() -> None:
     # `pkit sync` would render from today's declarations. Catches a header or
     # pattern change (or a new `runtime_ignore:` declaration) left un-rendered.
     rendered = _REPO_ROOT / ".pkit" / ".gitignore"
-    assert rendered.read_text(encoding="utf-8") == vis.render_runtime_ignore_content(
-        _REPO_ROOT
-    ), "re-render .pkit/.gitignore (pkit sync) and commit it"
+    assert rendered.read_text(encoding="utf-8") == vis.render_runtime_ignore_content(_REPO_ROOT), (
+        "re-render .pkit/.gitignore (pkit sync) and commit it"
+    )
 
 
 # --- visibility interaction of the rendered .pkit/.gitignore (ADR-009 rule 7) ---
@@ -354,7 +465,10 @@ def test_private_excludes_rendered_pkit_gitignore_no_committed_trace(repo: Path)
     # info/exclude — ask git itself whether the rendered file is ignored.
     res = subprocess.run(
         ["git", "check-ignore", "-q", ".pkit/.gitignore"],
-        cwd=repo, capture_output=True, text=True, check=False,
+        cwd=repo,
+        capture_output=True,
+        text=True,
+        check=False,
     )
     assert res.returncode == 0, "private mode must exclude the rendered .pkit/.gitignore"
     # And it leaves no committed trace: not tracked in the shared tree.
@@ -368,7 +482,10 @@ def test_shared_commits_rendered_pkit_gitignore(repo: Path) -> None:
     vis.render_runtime_ignore(repo)
     res = subprocess.run(
         ["git", "check-ignore", "-q", ".pkit/.gitignore"],
-        cwd=repo, capture_output=True, text=True, check=False,
+        cwd=repo,
+        capture_output=True,
+        text=True,
+        check=False,
     )
     assert res.returncode == 1, "shared mode must not ignore the rendered .pkit/.gitignore"
     # It can be staged and committed (proves "committed the ordinary way").
@@ -412,6 +529,7 @@ def test_private_region_never_contains_root_gitignore_line(repo: Path) -> None:
 
 
 # --- info/exclude region + shared/private ------------------------------------
+
 
 def _exclude(repo: Path) -> str:
     p = repo / ".git" / "info" / "exclude"
@@ -484,6 +602,7 @@ def test_private_dry_run_changes_nothing(repo: Path) -> None:
 
 # --- untrack guards ----------------------------------------------------------
 
+
 def test_untrack_refuses_mid_merge(repo: Path) -> None:
     (repo / ".git" / "MERGE_HEAD").write_text("deadbeef\n", encoding="utf-8")
     with pytest.raises(click.ClickException, match="merge is in progress"):
@@ -512,6 +631,7 @@ def test_untrack_dry_run_lists_without_removing(repo: Path) -> None:
 
 # --- CLI ---------------------------------------------------------------------
 
+
 def test_cli_visibility_status(repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(repo)
     result = CliRunner().invoke(main, ["visibility"])
@@ -533,6 +653,7 @@ def test_cli_visibility_untrack_subcommand(repo: Path, monkeypatch: pytest.Monke
 
 def test_cli_visibility_never_load_bearing(repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     from project_kit import cli_render
+
     monkeypatch.chdir(repo)
     always = CliRunner().invoke(main, ["--color", "always", "visibility"]).output
     never = CliRunner().invoke(main, ["--color", "never", "visibility"]).output

@@ -9,6 +9,7 @@ the rest of new).
 
 from __future__ import annotations
 
+import math
 import os
 import shlex
 import sys
@@ -19,10 +20,25 @@ from typing import TYPE_CHECKING
 import click
 
 if TYPE_CHECKING:
+    from ruamel.yaml.comments import CommentedMap
+
     from project_kit.capabilities import CapabilitySource, MandatoryUpstream
 
-from project_kit import __version__
-from project_kit import cli_render
+from project_kit import (
+    __version__,
+    cli_render,
+    default_branch,
+    friction_check,
+    friction_report,
+    friction_repository,
+    friction_resolve,
+    friction_write,
+    pull_request_landing,
+    router,
+    scratchpads,
+)
+from project_kit import refs as refs_mod
+from project_kit.agents import STORYBOARD_FILE, stamp_new_agent
 from project_kit.decisions import stamp_decision
 from project_kit.dispatcher import CapabilityDispatchGroup
 from project_kit.install import (
@@ -32,12 +48,25 @@ from project_kit.install import (
     install_kit,
     refuse_if_pkit_present,
     refuse_propagation_into_source,
-    source_checkout_root,
     resolve_init_target,
     scan_pkit_installs,
+    source_checkout_root,
     sync_remedy,
 )
 from project_kit.merge import run_merge
+from project_kit.release import (
+    ReleasePlan,
+    apply_release,
+    check_changesets,
+    check_raised_ranges,
+    check_shareable,
+    compute_release,
+    lint_release_format,
+    merge_release_pr,
+    migration_dir_mismatches,
+    publish_release_notes,
+    release_summary,
+)
 from project_kit.scaffolds import (
     AreaVariant,
     MigrationScope,
@@ -48,31 +77,14 @@ from project_kit.scaffolds import (
     stamp_capability,
     stamp_migration,
 )
-from project_kit.agents import STORYBOARD_FILE, stamp_new_agent
-from project_kit.storyboards import ArtifactKind, stamp_new_storyboard
-from project_kit import friction_check, friction_report, friction_repository, friction_write
-from project_kit import refs as refs_mod
-from project_kit import router
-from project_kit import scratchpads
 from project_kit.scratchpads import (
     stamp_new_scratchpad,
     stamp_reported,
     transition_to_done,
     transition_to_dropped,
 )
-from project_kit.release import (
-    ReleasePlan,
-    apply_release,
-    check_changesets,
-    check_shareable,
-    compute_release,
-    lint_release_format,
-    merge_release_pr,
-    migration_dir_mismatches,
-    publish_release_notes,
-    release_summary,
-)
 from project_kit.status import report_status
+from project_kit.storyboards import ArtifactKind, stamp_new_storyboard
 from project_kit.sync import run_sync
 from project_kit.upgrade import (
     freeze_at_content,
@@ -220,32 +232,52 @@ def agents_adopt(agent_name: str) -> None:
 
     lines: list[str] = []
     if result.dirs_created:
-        lines.append(cli_render.style("strong", f"created {len(result.dirs_created)} director(ies):"))
+        lines.append(
+            cli_render.style("strong", f"created {len(result.dirs_created)} director(ies):")
+        )
         for d in result.dirs_created:
             lines.append(f"  {d}/")
-            lines.append(f"    (seed README.md written explaining the directory's purpose)")
+            lines.append("    (seed README.md written explaining the directory's purpose)")
     if result.categories_wired:
-        lines.append(cli_render.style("strong", f"wired {len(result.categories_wired)} overlay categor(ies):"))
+        lines.append(
+            cli_render.style(
+                "strong", f"wired {len(result.categories_wired)} overlay categor(ies):"
+            )
+        )
         for cat in result.categories_wired:
             lines.append(f"  {cat}")
     if result.categories_already_set:
-        lines.append(cli_render.style("strong",
-            f"{len(result.categories_already_set)} categor(ies) already defined (unchanged):"))
+        lines.append(
+            cli_render.style(
+                "strong",
+                f"{len(result.categories_already_set)} categor(ies) already defined (unchanged):",
+            )
+        )
         for cat in result.categories_already_set:
             lines.append(f"  {cat}")
     if result.categories_optional_unset:
-        lines.append(cli_render.style("strong",
-            f"{len(result.categories_optional_unset)} optional categor(ies) left undefined "
-            f"(the agent deploys without them):"))
+        lines.append(
+            cli_render.style(
+                "strong",
+                f"{len(result.categories_optional_unset)} optional categor(ies) left undefined "
+                f"(the agent deploys without them):",
+            )
+        )
         for cat in result.categories_optional_unset:
             lines.append(f"  {cat}")
-        lines.append("  to give the agent your corpus: `pkit agents reconcile --write`, "
-                     "set real paths in overlay.yaml, then `pkit sync`.")
+        lines.append(
+            "  to give the agent your corpus: `pkit agents reconcile --write`, "
+            "set real paths in overlay.yaml, then `pkit sync`."
+        )
     if not result.dirs_created and not result.categories_wired:
-        lines.append(cli_render.style("strong",
-            f"agent {agent_name!r}: no overlay changes needed."
-            if result.categories_optional_unset
-            else f"agent {agent_name!r}: overlay already complete — no changes."))
+        lines.append(
+            cli_render.style(
+                "strong",
+                f"agent {agent_name!r}: no overlay changes needed."
+                if result.categories_optional_unset
+                else f"agent {agent_name!r}: overlay already complete — no changes.",
+            )
+        )
     if result.deployed:
         lines.append("")
         lines.append(cli_render.style("strong", f"agent {agent_name!r} deployed."))
@@ -319,10 +351,17 @@ def config_set(key: str, value: str, yes: bool) -> None:
         ) from exc
     resolved = project_config.resolve_key(schema, key)
     typed = project_config.coerce_value(resolved, value)
+
+    def mutate(data: CommentedMap) -> None:
+        project_config.set_value(data, resolved, typed)
+
+    if not project_config.preview_config(target_root, mutate).changes:
+        click.echo(f"{resolved.dotted} is already {typed}; nothing to write.")
+        return
     rerun = f"pkit config set {shlex.quote(key)} {shlex.quote(value)} --yes"
     project_config.write_config(
         target_root,
-        lambda data: project_config.set_value(data, resolved, typed),
+        mutate,
         consent=project_config.Consent(yes=yes, rerun=rerun),
         description=f"Set {resolved.dotted} = {typed!r}",
     )
@@ -331,12 +370,361 @@ def config_set(key: str, value: str, yes: bool) -> None:
     )
     # The `.pkit/.gitignore` render reads the configuration (the process
     # journal's ignore line, COR-033 point 7): follow the new value now rather
-    # than at the next sync.
+    # than at the next sync, naming each component entry the render now leaves out.
     from project_kit import visibility as vis
 
     refreshed = vis.refresh_runtime_ignore(target_root)
     if refreshed is not None:
-        click.echo(refreshed)
+        click.echo(refreshed.report())
+
+
+@main.group("docs")
+def docs() -> None:
+    """Documentation roots and the locations derived from them (COR-049).
+
+    The roots are the configuration's `docs` key (`pkit config set
+    docs.internal <path>`); `pkit status` shows them and every recorded
+    location. Reference: `.pkit/cli/README.md`, "Configuration file".
+    """
+
+
+@docs.command("record-location")
+@click.argument("capability", metavar="CAPABILITY")
+@click.argument("name", metavar="NAME")
+@click.option(
+    "--yes",
+    is_flag=True,
+    default=False,
+    help="Consent to the write without a prompt (CI). Without it a terminal is asked; "
+    "a non-interactive run refuses.",
+)
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    default=False,
+    help="Say what would be recorded, and write nothing.",
+)
+def docs_record_location(capability: str, name: str, yes: bool, dry_run: bool) -> None:
+    """Record where CAPABILITY's documentation location NAME now lies (COR-049 point 5).
+
+    NAME is a location the capability declares in its package metadata
+    (`docs.locations`), never a path. Until it is recorded it derives from a
+    documentation root; the command writes where it lies now to the
+    capability's `project/docs-locations.yaml`, so a later change of root
+    moves nothing already written. A location already recorded is never
+    overwritten: the command says where it lies and writes nothing. Writing
+    needs consent (COR-048 point 5): a terminal is asked once, `--yes`
+    consents non-interactively, and a non-interactive run without `--yes`
+    refuses and names the command to run; `--dry-run` says what would be
+    recorded and writes nothing. A capability's stamping command runs it with
+    `--yes` when it places the first document there. Exit 1 when CAPABILITY
+    is not installed or declares no location NAME.
+    """
+    from project_kit import docs_roots, project_config
+    from project_kit.friction_discovery import installed_capability_names
+
+    if yes and dry_run:
+        raise click.UsageError(
+            "--yes and --dry-run exclude each other: one writes, the other never does."
+        )
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    if capability not in installed_capability_names(target_root):
+        raise click.ClickException(f"no capability named {capability!r} is installed.")
+    found = docs_roots.capability_location(target_root, capability, name)
+    if found is None:
+        declared = sorted(docs_roots.capability_subpaths(target_root, capability))
+        raise click.ClickException(
+            f"{capability} declares no documentation location {name!r} in its "
+            f"`docs.locations` (declared: {', '.join(declared) or 'none'})."
+        )
+    where = found.path.as_posix()
+    if found.source is docs_roots.Source.EXPLICIT:
+        click.echo(f"{capability} {name} = {where}  (recorded already)")
+        return
+    recorded_in = docs_roots.capability_locations_relpath(capability).as_posix()
+    recording = f"{capability} {name} = {where}  ({recorded_in})"
+    if dry_run:
+        click.echo(f"would record {recording}")
+        click.echo(cli_render.style("strong", "Dry run: nothing written."))
+        return
+    if not yes:
+        if not project_config.stdin_is_tty():
+            rerun = f"pkit docs record-location {shlex.quote(capability)} {shlex.quote(name)}"
+            raise project_config.ConsentRefused(
+                f"refusing to write {recorded_in} without consent: stdin is not a terminal "
+                f"and --yes was not given (COR-048 point 5). Nothing was written.\n"
+                f"To see the change first, run:\n  {rerun} --dry-run\n"
+                f"To consent non-interactively, run:\n  {rerun} --yes"
+            )
+        click.confirm(
+            f"Record {capability} {name} = {where} in {recorded_in}?", default=True, abort=True
+        )
+    docs_roots.record_location(
+        target_root, capability, name, found.path, by="pkit docs record-location"
+    )
+    click.echo(f"recorded {recording}")
+
+
+@main.group("repository")
+def repository() -> None:
+    """Facts about the repository every reader takes from one place (COR-054).
+
+    The default branch is the configuration's `repository` key (`pkit config
+    set repository.default-branch <name>`). Reference: `.pkit/cli/README.md`,
+    "Configuration file".
+    """
+
+
+@repository.command("base")
+@click.option(
+    "--base",
+    "base_ref",
+    metavar="REF",
+    default=None,
+    help=f"The base to read: REF, instead of ${default_branch.CHECK_BASE_ENV}, else the "
+    "default branch. A branch name resolves as the default branch does.",
+)
+@click.option(
+    "--json", "as_json", is_flag=True, default=False, help="Emit the stable JSON document."
+)
+def repository_base_command(base_ref: str | None, as_json: bool) -> None:
+    """The default branch and the base a comparison reads (COR-054 point 5).
+
+    The default branch: declared (`repository.default-branch`, else `main`)
+    and resolved — the remote-tracking reference of its upstream, else
+    origin/<name>, and the local branch only when there is no remote; `unborn`
+    when it has no commit yet. The base: REF, else $PKIT_CHECK_BASE, else the
+    default branch — its commit, where HEAD left it and whether it moved on
+    since. A data point's filler reads the default branch and never the base
+    (COR-052 point 6); no base override reaches it. A reader that used a
+    local branch, and a declaration read as the default, say so on standard
+    error. Read-only; it runs no discovery. It is how a capability's own
+    script reads which commit is settled, without resolving a branch or
+    computing a merge-base itself. Exit 0 when answered — a branch or base
+    that resolves nowhere is an answer, with its problem; 2 on a usage error.
+    """
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    settled = default_branch.settled(target_root, base_ref)
+    _warn_settled(settled)
+    document = settled.as_json()
+    if as_json:
+        click.echo(default_branch.render_json(document), nl=False)
+    else:
+        click.echo(default_branch.render_human(document), nl=False)
+
+
+def _warn_settled(settled: default_branch.Settled) -> None:
+    """What a reader of settled state says about it: a declaration read as the default
+    (COR-048 point 4), and a branch read from the local branch (COR-054 point 2)."""
+    for warning in settled.warnings:
+        click.echo(f"warning: {warning}", err=True)
+
+
+def _settled_base(target_root: Path, base_ref: str | None) -> default_branch.Base:
+    """The base a diff-scoped command compares with — `base_ref`, else
+    `$PKIT_CHECK_BASE`, else the default branch (COR-054 point 3) — with where HEAD
+    left it; the problem, with its fix, refuses the run (point 4)."""
+    settled = default_branch.settled(target_root, base_ref)
+    found = settled.base
+    if found.problem is not None or found.fork is None:
+        raise click.ClickException(found.problem or f"the base {found.ref!r} cannot be compared.")
+    _warn_settled(settled)
+    return found
+
+
+@main.group("pull-request")
+def pull_request() -> None:
+    """Landing a pull request on the hosting service — the one merge mechanic.
+
+    Where a pull request's base merges through a merge queue, and where the PR
+    stands in it; the repository's squash-commit defaults; the direct squash
+    merge, the enqueue, the wait for the queue's merge and taking a PR out of
+    the queue. Each runs `gh` from the working directory. `--json` writes each
+    document as one line of JSON, which is how a capability's script calls it.
+    Reference: `.pkit/cli/README.md`, "Pull-request commands".
+    """
+
+
+def _pull_request_json_option(command: Callable[..., None]) -> Callable[..., None]:
+    return click.option(
+        "--json",
+        "as_json",
+        is_flag=True,
+        default=False,
+        help="Write the document as one line of JSON.",
+    )(command)
+
+
+def _say_outcome(
+    number: int,
+    outcome: pull_request_landing.Outcome,
+    as_json: bool,
+    done: str,
+) -> None:
+    """Write a request's outcome — `done` when accepted — and exit 1 when it was not."""
+    if as_json:
+        click.echo(
+            pull_request_landing.render_json(pull_request_landing.outcome_document(number, outcome))
+        )
+    elif outcome.accepted:
+        click.echo(done)
+    else:
+        click.echo(f"error: {outcome.reason or 'gh refused it'}", err=True)
+    if not outcome.accepted:
+        raise SystemExit(1)
+
+
+@pull_request.command("read")
+@click.argument("number", type=int)
+@_pull_request_json_option
+def pull_request_read(number: int, as_json: bool) -> None:
+    """Whether PR NUMBER's base merges through a queue, and where the PR stands.
+
+    Read-only. Exit 0 when read; 1 when GitHub could not be read, with why.
+    """
+    document = pull_request_landing.reading_document(number)
+    reading = document["reading"]
+    if as_json:
+        click.echo(pull_request_landing.render_json(document))
+    elif reading is not None:
+        if reading["has_queue"]:
+            method = str(reading["merge_method"] or "an unreported method").lower()
+            base = f"merges through a queue, by {method}"
+        else:
+            base = "merges directly"
+        click.echo(f"PR #{number}: {reading['description']}\nBase: {base}")
+    else:
+        click.echo(f"error: PR #{number} could not be read: {document['unreadable']}", err=True)
+    if reading is None:
+        raise SystemExit(1)
+
+
+@pull_request.command("squash-defaults")
+@_pull_request_json_option
+def pull_request_squash_defaults(as_json: bool) -> None:
+    """The repository's default squash-commit title and message.
+
+    A merge queue composes its squash commit from these. Read-only. Exit 0
+    when read; 1 when they could not be read, with why.
+    """
+    document = pull_request_landing.squash_defaults_document()
+    if as_json:
+        click.echo(pull_request_landing.render_json(document))
+    elif document["unreadable"] is None:
+        click.echo(f"Squash commit: title {document['title']}, message {document['message']}")
+    else:
+        click.echo(f"error: {document['unreadable']}", err=True)
+    if document["unreadable"] is not None:
+        raise SystemExit(1)
+
+
+@pull_request.command("merge")
+@click.argument("number", type=int)
+@click.option("--subject", required=True, help="The squash commit's subject: the PR title.")
+@click.option("--head", "head_oid", default="", metavar="SHA", help="Merge only at this head.")
+@click.option("--admin", is_flag=True, default=False, help="Merge around branch protection.")
+@_pull_request_json_option
+def pull_request_merge(
+    number: int, subject: str, head_oid: str, admin: bool, as_json: bool
+) -> None:
+    """Squash-merge PR NUMBER directly, with SUBJECT as the commit's subject.
+
+    Accepted is not proof of a merge: on a base that requires a queue, gh
+    enqueues instead — `pull-request read` says which. Never deletes the head
+    branch. Exit 0 when gh accepted it; 1 otherwise, with gh's reason.
+    """
+    outcome = pull_request_landing.squash_merge(
+        number, subject=subject, head_oid=head_oid, admin=admin
+    )
+    _say_outcome(number, outcome, as_json, f"gh accepted the squash merge of PR #{number}")
+
+
+@pull_request.command("enqueue")
+@click.argument("number", type=int)
+@click.option("--head", "head_oid", default="", metavar="SHA", help="Enqueue only this head.")
+@_pull_request_json_option
+def pull_request_enqueue(number: int, head_oid: str, as_json: bool) -> None:
+    """Hand PR NUMBER to its base's merge queue; the queue makes the merge.
+
+    The queue squashes by its own method, with a commit composed from the
+    repository's squash-commit defaults. Exit 0 once GitHub took it in; 1
+    otherwise, with gh's reason.
+    """
+    outcome = pull_request_landing.enqueue(number, head_oid=head_oid)
+    _say_outcome(number, outcome, as_json, f"enqueued PR #{number}")
+
+
+@pull_request.command("dequeue")
+@click.argument("number", type=int)
+@_pull_request_json_option
+def pull_request_dequeue(number: int, as_json: bool) -> None:
+    """Take PR NUMBER out of its base's merge queue, and confirm it is out.
+
+    Exit 0 once a reading shows it neither queued nor merged; 1 otherwise.
+    """
+    outcome = pull_request_landing.dequeue(number)
+    _say_outcome(number, outcome, as_json, f"PR #{number} is out of the merge queue")
+
+
+@pull_request.command("wait")
+@click.argument("number", type=int)
+@click.option(
+    "--head",
+    "head_oid",
+    default="",
+    metavar="SHA",
+    help="The head that was checked: a reading at another ends the wait.",
+)
+@click.option(
+    "--seconds",
+    type=click.FloatRange(min=0),
+    default=None,
+    help="How long to wait; 0 reads once. Default: as long as the queue estimates, "
+    f"plus {pull_request_landing.ETA_MARGIN_SECONDS / 60:g} min, at most "
+    f"{pull_request_landing.MAX_WAIT_SECONDS / 60:g} min.",
+)
+@_pull_request_json_option
+def pull_request_wait(number: int, head_oid: str, seconds: float | None, as_json: bool) -> None:
+    """Wait for the merge queue to merge PR NUMBER.
+
+    Writes each reading that changes, then how the wait ended. The PR is
+    declared out of the queue only on two readings running. Exit 0 when it
+    merged; 4 when the time ran out with it still queued; 3 when it left the
+    queue unmerged or its head moved; 1 when GitHub could not be read.
+    """
+    if seconds is not None and not math.isfinite(seconds):
+        raise click.BadParameter("not a number of seconds", param_hint="--seconds")
+
+    def report(reading: pull_request_landing.Reading) -> None:
+        if as_json:
+            document = pull_request_landing.wait_reading_document(number, reading)
+            click.echo(pull_request_landing.render_json(document))
+        else:
+            click.echo(f"PR #{number} {reading.describe()}")
+
+    try:
+        wait = pull_request_landing.wait_for_merge(
+            number, timeout_seconds=seconds, on_change=report, head_oid=head_oid
+        )
+    except pull_request_landing.Unreadable as exc:
+        if as_json:
+            document = pull_request_landing.wait_end_document(number, None, str(exc))
+            click.echo(pull_request_landing.render_json(document))
+        else:
+            click.echo(f"error: PR #{number} could not be read: {exc}", err=True)
+        raise SystemExit(1) from None
+    if as_json:
+        click.echo(
+            pull_request_landing.render_json(pull_request_landing.wait_end_document(number, wait))
+        )
+    else:
+        click.echo(f"ended: {wait.ended}")
+    if wait.ended != pull_request_landing.MERGED:
+        raise SystemExit(4 if wait.ended == pull_request_landing.STILL_QUEUED else 3)
 
 
 def _graph_format_options(command: Callable[..., None]) -> Callable[..., None]:
@@ -550,18 +938,22 @@ def connections_resolve(address: str, as_json: bool) -> None:
     The resolution `pkit validate` reports and `pkit status` shows (COR-052):
     the point's value — a `single` point's answer, or the entries of a `union`
     or `additive` point, each with its origin — how it resolved, or why it did
-    not, and every filler considered. Read-only; only this point resolves, so
-    only its command fillers run, as they do there, offline-marked and
-    bounded. It is how a capability's own script
-    reads a point it defines without importing the backbone. Exit 0 when the
-    point resolves; 1 when it does not, or when no active provider defines it,
-    and the output says why.
+    not, and every filler considered — for a command filler that reads beyond
+    the working tree, what it read and at which commit (`reads`). Read-only;
+    only this point resolves, so only its command fillers run, as they do
+    there, offline-marked, bounded and with no base override. Inside a run of
+    `pkit validate` — a validator reading the point — it reads the point from
+    the run cache when the run has already resolved it (`from: run-cache` in
+    the document); otherwise it resolves the point and caches it, so its
+    fillers run once per validate. It is how a capability's
+    own script reads a point it defines without importing the backbone. Exit 0
+    when the point resolves; 1 when it does not, or when no active provider
+    defines it, and the output says why.
     """
     import json
 
-    from project_kit import backbone_schemas
-    from project_kit import data_points
-    from project_kit.status import _data_point_lines  # pyright: ignore[reportPrivateUsage]
+    from project_kit import backbone_schemas, data_points
+    from project_kit.status import _data_point_lines
 
     if backbone_schemas.filler_subpath(address) is None:
         raise click.BadParameter(
@@ -572,10 +964,14 @@ def connections_resolve(address: str, as_json: bool) -> None:
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
-    point, why = data_points.resolve_point(target_root, address)
+    point = data_points.shared_point(target_root, address)
+    source, why = data_points.FROM_RUN_CACHE, ""
+    if point is None:
+        source = data_points.FROM_RESOLUTION
+        point, why = data_points.resolve_point(target_root, address)
     if as_json:
         document = (
-            data_points.point_document(point)
+            data_points.point_document(point, source=source)
             if point is not None
             else data_points.undefined_document(address, why)
         )
@@ -592,8 +988,10 @@ def connections_resolve(address: str, as_json: bool) -> None:
 def friction() -> None:
     """Anchors and friction (COR-050): the reading commands — the checks, the
     debt listing, one artefact's explanation, the places and artefacts
-    discovery finds — which never write, and the writers — revalidate, defer,
-    record-status — which write one block, only with consent.
+    discovery finds — which never write, the writers — revalidate, defer,
+    record-status — which write one block, only with consent, and resolve,
+    which resolves a merge's conflicting revalidations as text and writes no
+    answer.
 
     Reference: `.pkit/cli/README.md`, "Friction checks"; the block itself is
     in `.pkit/schemas/README.md`, "The friction block".
@@ -744,15 +1142,83 @@ def friction_record_status_command(artefact: str, yes: bool, dry_run: bool) -> N
     _friction_write(plan_of, yes, dry_run, rerun)
 
 
+@friction.command("resolve")
+@click.argument("paths", metavar="[PATH]...", nargs=-1)
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    default=False,
+    help="Show the resolution, with each file's diff, and write nothing.",
+)
+@click.option(
+    "--yes",
+    is_flag=True,
+    default=False,
+    help="Stage the resolved files without a prompt. Without it a terminal is asked, after "
+    "the diffs; a run that cannot ask leaves them unstaged and prints the `git add` to run.",
+)
+@click.option(
+    "--json", "as_json", is_flag=True, default=False, help="Emit the stable JSON document."
+)
+def friction_resolve_command(
+    paths: tuple[str, ...], dry_run: bool, yes: bool, as_json: bool
+) -> None:
+    """Resolve a merge's conflicting revalidations as text (COR-050 point 3): each file in
+    conflict — every one, or each PATH — whose conflicts all lie inside `revalidated` blocks.
+
+    Only git's own conflict, untouched by hand, is resolved: the file's three
+    versions are read from the index and merged again, and the result must be
+    the working file. Only the blocks git conflicted on are decided: the answer
+    from the side that changed it, the deferrals merged by anchor, and where
+    both sides revalidated, the base side's answer — only when MERGE_HEAD, the
+    branch merged in, is the change check's base. Any other conflict leaves the
+    file as git left it, and says where. The file is written; it is staged only
+    with --yes or at the prompt. It writes no answer: for each artefact both
+    sides revalidated it names the revalidation owed once the merge is
+    committed, `updated` or `unchanged` as its content bears out against the
+    base side's. PATH is relative to the project root. Outside a merge there is
+    nothing to resolve. Exit 1 when it leaves an artefact's file in conflict.
+    """
+    if yes and dry_run:
+        raise click.UsageError(
+            "--yes and --dry-run exclude each other: one stages, the other writes nothing."
+        )
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    resolution = friction_resolve.plan_resolve(target_root, paths)
+    written = () if dry_run else friction_resolve.write(target_root, resolution)
+    staged: tuple[str, ...] = ()
+    if as_json:
+        if yes and written:
+            staged = friction_resolve.stage(target_root, written)
+        click.echo(
+            friction_resolve.render_json(resolution, dry_run=dry_run, staged=staged), nl=False
+        )
+    else:
+        click.echo(friction_resolve.render_human(resolution, dry_run=dry_run), nl=False)
+        if written:
+            if not yes and friction_write.interactive():
+                click.echo("")
+                click.echo(friction_resolve.render_diffs(resolution), nl=False)
+                yes = click.confirm("Stage the resolved files (`git add`)?", default=True)
+            if yes:
+                staged = friction_resolve.stage(target_root, written)
+            click.echo("")
+            click.echo(friction_resolve.render_staging(written, staged), nl=False)
+    if resolution.exit_code:
+        raise SystemExit(resolution.exit_code)
+
+
 @friction.command("check")
 @click.option(
     "--base",
     "base_ref",
     metavar="REF",
-    envvar=friction_check.BASE_ENV,
-    default=friction_check.DEFAULT_BASE,
-    show_default=True,
-    help=f"Compare against the merge-base of REF and HEAD (or ${friction_check.BASE_ENV}).",
+    default=None,
+    help=f"Compare against the merge-base of REF and HEAD. Default: ${friction_check.BASE_ENV}, "
+    "else the default branch (`pkit repository base` shows it). A branch name resolves as "
+    "the default branch does.",
 )
 @click.option(
     "--all",
@@ -768,22 +1234,24 @@ def friction_record_status_command(artefact: str, yes: bool, dry_run: bool) -> N
 @click.option(
     "--json", "as_json", is_flag=True, default=False, help="Emit the stable JSON document."
 )
-def friction_check_command(base_ref: str, whole_repository: bool, as_json: bool) -> None:
+def friction_check_command(base_ref: str | None, whole_repository: bool, as_json: bool) -> None:
     """The change check (COR-050 point 6): every artefact whose anchor changed in the diff
     carries an answer — updated, unchanged with why, or deferred.
 
     Reads git only and writes nothing: the working tree (uncommitted changes
-    included) against the merge-base of REF. Reports friction, dead anchors of
-    the change, bumps with nothing behind them and an outdated base. Exit 1
-    in enforcing mode on friction, a dead anchor, an unresolved kind or a
-    bump; an outdated base never fails.
+    included) against the merge-base of REF — by default $PKIT_CHECK_BASE,
+    else the default branch (COR-054). Reports friction, dead anchors of the
+    change, bumps with nothing behind them and an outdated base. Exit 1 in
+    enforcing mode on friction, a dead anchor, an unresolved kind or a bump;
+    an outdated base never fails.
 
     With --all, the whole-repository check instead: every artefact at HEAD
     against the current history, each anchor judged from the artefact's
     revalidation point (derived from git, renames followed). Reports stale
     and deferred debt with their origins, dead anchors, over-broad anchors,
-    unanchored artefacts and uncovered surface. Needs the full history, says
-    so in a shallow clone, and exits 0 in either mode.
+    unanchored artefacts — those accepted with a reason listed apart, never
+    counted — and uncovered surface. Needs the full history, says so in a
+    shallow clone, and exits 0 in either mode.
     """
     target_root = find_target_root()
     if target_root is None:
@@ -795,7 +1263,9 @@ def friction_check_command(base_ref: str, whole_repository: bool, as_json: bool)
         else:
             click.echo(friction_repository.render_human(report), nl=False)
         return
-    result = friction_check.run_change_check(target_root, base_ref)
+    settled = default_branch.settled(target_root, base_ref)
+    _warn_settled(settled)
+    result = friction_check.run_change_check(target_root, base_ref, resolved=settled.base)
     if as_json:
         click.echo(friction_check.render_json(result), nl=False)
     else:
@@ -814,8 +1284,10 @@ def friction_debt_command(as_json: bool) -> None:
 
     Exactly the stale and deferred findings of `pkit friction check --all`, from
     the same run of the whole-repository check: HEAD and its history, never the
-    working tree. Artefacts a shallow clone cannot judge are named apart.
-    Writes nothing; exits 0.
+    working tree. Artefacts a shallow clone cannot judge are named apart. Then
+    its unanchored measure: the artefacts with no anchors and no reason,
+    counted, and apart from them those accepted with the reason their
+    `unanchored-because` gives. Writes nothing; exits 0.
     """
     target_root = find_target_root()
     if target_root is None:
@@ -839,9 +1311,13 @@ def friction_explain_command(artefact: str, as_json: bool) -> None:
     Every changed anchor is shown with the commits behind it, and each finding
     with the writer command that answers it (`revalidate … --outcome …`,
     `defer … --anchor … --reason …`) or the edit it needs. The findings are
-    those `pkit friction check --all` reports for ARTEFACT. ARTEFACT is a
-    location (`path`, or `path#id` for a collection entry) or an id, looked up
-    at HEAD. Writes nothing.
+    those `pkit friction check --all` reports for ARTEFACT; an unanchored one
+    shows the reason its `unanchored-because` gives, if any. With --json, each
+    commit also carries its paths (what the check read as the change), each
+    path anchor its files at the revalidation point and at HEAD and those
+    `friction.exclude` leaves out, and the document the artefact's body.
+    ARTEFACT is a location (`path`, or `path#id` for a collection entry) or an
+    id, looked up at HEAD. Writes nothing.
     """
     target_root = find_target_root()
     if target_root is None:
@@ -855,30 +1331,50 @@ def friction_explain_command(artefact: str, as_json: bool) -> None:
 
 @friction.command("artefacts")
 @click.option(
+    "--at",
+    "at",
+    metavar="REV",
+    default=None,
+    help="Read the state of commit REV — its configuration, its places and its files — "
+    "from git objects instead of the working tree. Nothing is checked out.",
+)
+@click.option(
     "--json", "as_json", is_flag=True, default=False, help="Emit the stable JSON document."
 )
-def friction_artefacts_command(as_json: bool) -> None:
+def friction_artefacts_command(at: str | None, as_json: bool) -> None:
     """The declared places, the files they hold and the artefacts in them, as
     discovery finds them (COR-050 point 1).
 
-    One run of the discovery `pkit validate` reads, over the working tree:
-    each place — the project's and each capability's, with its location and
-    root — the files it matches and the skips validation applies (a synced
-    copy, a place outside the repository, a malformed declaration), every file
-    read with its front matter's own fields, and every artefact. Read-only. It
-    is how a capability's own script reads where artefacts are without
-    importing the backbone or walking the places itself. Exit 0 when answered;
-    1 when the configuration cannot be read; 2 on a usage error.
+    One run of the discovery `pkit validate` reads, over the working tree —
+    or, with --at, over one commit: each place — the project's and each
+    capability's, with its location and root — the files it matches and the
+    skips validation applies (a synced copy, a place outside the repository, a
+    malformed declaration), every file read with its front matter's own
+    fields, every artefact with its anchors or the reason it has none, and
+    each folder of held documents
+    a component declares, with the files it holds. Read-only. It is how a
+    capability's own script reads where artefacts are, now or at another
+    state, without importing the backbone or walking the places itself. Exit 0
+    when answered; 1 when the configuration cannot be read or REV names no
+    commit; 2 on a usage error.
     """
     from project_kit import friction_discovery, validators
 
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
-    problem = friction_discovery.unreadable_configuration(target_root)
+    tree = None
+    if at is not None:
+        commit = None if not at or at.startswith("-") else friction_check.commit_of(target_root, at)
+        if commit is None:
+            raise click.ClickException(f"--at {at!r} names no commit of this repository.")
+        tree = friction_check.CommitTree(target_root, commit)
+    problem = friction_discovery.unreadable_configuration(target_root, tree)
     if problem is not None:
         raise click.ClickException(f"{problem}; `pkit validate` reports it.")
-    document = validators.as_one_run(lambda: friction_discovery.artefacts_document(target_root))
+    document = validators.as_one_run(
+        lambda: friction_discovery.artefacts_document(target_root, tree)
+    )
     if as_json:
         click.echo(friction_discovery.render_artefacts_json(document), nl=False)
     else:
@@ -888,7 +1384,8 @@ def friction_artefacts_command(as_json: bool) -> None:
 @main.group(invoke_without_command=True)
 @click.pass_context
 def version(ctx: click.Context) -> None:
-    """Show this pkit's version, or bump the backbone version of the project at the working directory."""
+    """Show this pkit's version, or bump the backbone version of the project at the working
+    directory."""
     if ctx.invoked_subcommand is None:
         click.echo(f"pkit {__version__}")
 
@@ -1038,7 +1535,8 @@ def release_plan(as_json: bool) -> None:
     default=False,
     help="Skip widening released components' requires_backbone to cover the "
     "current backbone. Default is to broaden (releasing under backbone X "
-    "asserts compatibility with X); pass this to keep a range as authored.",
+    "asserts compatibility with X); pass this to keep an upper bound as "
+    "authored. A floor a changeset declares is still raised.",
 )
 @click.option("--yes", is_flag=True, default=False, help="Skip the confirmation prompt (CI).")
 def release_apply(tag: bool, push: bool, no_broaden: bool, yes: bool) -> None:
@@ -1051,13 +1549,24 @@ def release_apply(tag: bool, push: bool, no_broaden: bool, yes: bool) -> None:
     On a component release, widens that component's `requires_backbone` to
     cover the repo's current backbone (the version being released under) unless
     `--no-broaden` is given; a backbone release widens every component as
-    before. Both are widen-only. See `.pkit/release/README.md`.
+    before. Both are widen-only. A changeset declaring `requires_backbone`
+    raises its component's floor — to the backbone the release ships for
+    `release`, or to the already-shipped `X.Y.Z` it names — raise-only, not
+    skipped by `--no-broaden`, and stated in the component's changelog entry; a
+    raise that would leave a range admitting no backbone refuses the release
+    before anything is written, and one whose range would exclude the backbone
+    the release ships (an upper bound `--no-broaden` keeps) is warned of before
+    the confirmation. See `.pkit/release/README.md`.
     """
     source_kit = _target_kit()
     plan = compute_release(source_kit)
     _print_release_plan(plan)
     _warn_migration_mismatches(source_kit, plan)
     broaden = not no_broaden
+    # Before the confirmation: an empty raised range refuses here, and a range that
+    # excludes the backbone the release ships is shown with the plan it belongs to.
+    for warning in check_raised_ranges(plan, broaden=broaden):
+        click.echo(f"warning: {warning}", err=True)
     if plan.is_empty:
         apply_release(source_kit, plan, tag=tag, push=push, broaden=broaden)
         return
@@ -1069,9 +1578,10 @@ def release_apply(tag: bool, push: bool, no_broaden: bool, yes: bool) -> None:
 @release.command("check")
 @click.option(
     "--base",
-    default="origin/main",
-    show_default=True,
-    help="Diff base for surface detection (the PR base ref).",
+    metavar="REF",
+    default=None,
+    help="Diff base for surface detection (the PR base ref). Default: $PKIT_CHECK_BASE, else "
+    "the default branch (`pkit repository base` shows it).",
 )
 @click.option(
     "--skip",
@@ -1080,43 +1590,81 @@ def release_apply(tag: bool, push: bool, no_broaden: bool, yes: bool) -> None:
     help="Escape hatch: pass unconditionally. Also honoured via the "
     "PKIT_CHANGESET_SKIP env var (wired from the `skip-changeset` PR label).",
 )
-def release_check(base: str, skip: bool | None) -> None:
-    """CI guard: fail if a surface-touched component ships no changeset.
+def release_check(base: str | None, skip: bool | None) -> None:
+    """CI guard: fail if the diff touches a component's surface and adds or edits
+    no changeset naming it, or the PR declares a `requires_backbone` floor for a
+    component it neither touches nor moves.
 
-    Escape hatch: a `none` changeset for the component, or the
-    `skip-changeset` label (PKIT_CHANGESET_SKIP env). Surface is a human
-    judgment (PRJ-002 D2) — this path heuristic can mis-fire; the override exists.
+    The diff is taken from where HEAD left the base — REF, else
+    $PKIT_CHECK_BASE, else the default branch (COR-054); a base that resolves
+    nowhere refuses the run with its fix. Escape hatch for the surface check: a
+    `none` changeset for the component, or the `skip-changeset` label
+    (PKIT_CHANGESET_SKIP env). Surface is a human judgment (PRJ-002 D2) — this
+    path heuristic can mis-fire; the override exists. No escape hatch waives
+    the floor tie. A pending changeset the diff leaves alone — another pull
+    request's — does not count for this one, whatever component it names.
     """
     source_kit = _target_kit()
+    fork = _settled_base(source_kit.parent, base).fork
+    assert fork is not None  # `_settled_base` refuses a base without one
     skip_active = bool(skip) or _env_flag("PKIT_CHANGESET_SKIP")
-    result = check_changesets(source_kit, base, skip=skip_active)
+    result = check_changesets(source_kit, fork, skip=skip_active)
 
     if result.skipped:
-        click.echo("changeset guard: skipped (escape hatch active).")
-        return
-    if result.release_exempt:
         click.echo(
-            "changeset guard: release PR — diff is exactly `pkit release apply`'s "
-            "footprint (version bumps + CHANGELOG + consumed changesets); exempt — ok."
+            "changeset guard: surface check skipped (escape hatch active); "
+            "declared floors still checked."
         )
-        return
-    if not result.touched:
-        click.echo("changeset guard: no surface-touched components — ok.")
-        return
-    click.echo(f"changeset guard: touched {', '.join(result.touched)}")
+    elif result.release_exempt:
+        click.echo(
+            "changeset guard: release PR — diff is only what `pkit release apply` "
+            "writes (versions, CHANGELOG, consumed changesets); surface check exempt."
+        )
+    elif result.touched:
+        click.echo(f"changeset guard: touched {', '.join(result.touched)}")
     if result.ok:
-        click.echo("changeset guard: every touched component has a changeset — ok.")
+        if result.skipped or result.release_exempt:
+            click.echo(
+                "changeset guard: every floor this diff declares rides on its component — ok."
+            )
+        else:
+            click.echo(
+                "changeset guard: every touched component has a changeset in this diff — ok."
+                if result.touched
+                else "changeset guard: no surface-touched components — ok."
+            )
         return
-    raise click.ClickException(
-        "surface change without a changeset for: "
-        + ", ".join(result.missing)
-        + ".\n  Add one with `changie new` (per .pkit/release/README.md), hand-write a "
-        "changeset under .changes/unreleased/, drop a `none` changeset if it moves no "
-        "user-facing surface, or apply the `skip-changeset` label."
-        "\n  Decision-only PR (COR/PRJ/ADR/DEC)? Declare `none` for a design-ahead "
-        "decision (the feature ships in a later PR) or a real changeset for a "
-        "self-executing rule change — see PRJ-002."
-    )
+    problems: list[str] = []
+    if not result.surface_ok:
+        problems.append(
+            "surface change without a changeset for: "
+            + ", ".join(result.missing)
+            + ".\n  Only a changeset this diff adds or edits counts, once committed: a pending "
+            "changeset the diff leaves alone declares another pull request's change, not "
+            "this one's, even when it names the same component."
+            "\n  Add one with `changie new` (per .pkit/release/README.md), hand-write a "
+            "changeset under .changes/unreleased/, drop a `none` changeset if it moves no "
+            "user-facing surface, or apply the `skip-changeset` label."
+            "\n  Decision-only PR (COR/PRJ/ADR/DEC)? Declare `none` for a design-ahead "
+            "decision (the feature ships in a later PR) or a real changeset for a "
+            "self-executing rule change — see PRJ-002."
+        )
+    if result.stray_floors:
+        problems.append(
+            "a requires_backbone floor declared for a component this diff neither touches "
+            "nor moves:\n"
+            + "\n".join(
+                f"  {cs.path.name}: {cs.component!r} (kind: {cs.segment}, "
+                f"requires_backbone: {cs.requires_backbone})"
+                for cs in result.stray_floors
+            )
+            + "\n  A floor changes what the component requires, so it rides on a change to "
+            "the component or on a release of it: declare it in the changeset of the pull "
+            "request that changes the component, or — for a need found after the component "
+            "shipped — on a changeset that moves its version (patch or above). The "
+            "`skip-changeset` label does not waive this — see PRJ-002 D4."
+        )
+    raise click.ClickException("\n".join(problems))
 
 
 @release.command("lint")
@@ -1124,38 +1672,55 @@ def release_check(base: str, skip: bool | None) -> None:
     "--skip",
     is_flag=True,
     default=None,
-    help="Escape hatch: pass unconditionally. Also honoured via the "
-    "PKIT_CHANGELOG_LINT_SKIP env var.",
+    help="Escape hatch: pass the format checks unconditionally (a requires_backbone "
+    "floor field is still checked). Also honoured via the PKIT_CHANGELOG_LINT_SKIP "
+    "env var.",
 )
 def release_lint(skip: bool | None) -> None:
     """Format lint: the OBJECTIVE changeset + CHANGELOG.md format subset.
 
     Checks the mechanically-verifiable subset only — a changeset's category is
     a Keep-a-Changelog group, its body is a non-empty sentence (not a bare
-    reference, capitalized, period-ended), and `CHANGELOG.md` headings are
-    well-formed. It does *not* judge plain language / jargon — that is the
-    guide plus review. A reminder, not a proof; see `.pkit/release/README.md`.
+    reference, capitalized, period-ended), a `requires_backbone` floor field
+    says `release` — in a release that ships a release version of the backbone
+    — or names a backbone release the tree records (a `CHANGELOG.md` release
+    heading, or the backbone it carries), at or below the backbone it carries,
+    on a version-moving changeset of a capability or adapter whose range is
+    `">=X.Y.Z,<A.B.C"` or `">=X.Y.Z"`, and `CHANGELOG.md` headings are
+    well-formed. It does
+    *not* judge plain language / jargon — that is the guide plus review. A
+    reminder, not a proof; see `.pkit/release/README.md`.
 
     Reads committed files only (no PR context), so it runs in the shared check
-    aggregator. Escape hatch: `--skip` or the PKIT_CHANGELOG_LINT_SKIP env var.
+    aggregator. Escape hatch: `--skip` or the PKIT_CHANGELOG_LINT_SKIP env var —
+    except for the floor field, which the release itself refuses: an invalid one
+    fails the lint either way, since it would block every later release on main.
     """
     source_kit = _target_kit()
     skip_active = bool(skip) or _env_flag("PKIT_CHANGELOG_LINT_SKIP")
     result = lint_release_format(source_kit, skip=skip_active)
 
-    if result.skipped:
-        click.echo("changelog lint: skipped (escape hatch active).")
-        return
     if result.ok:
-        click.echo("changelog lint: changesets + CHANGELOG.md are well-formed — ok.")
+        click.echo(
+            "changelog lint: skipped (escape hatch active)."
+            if result.skipped
+            else "changelog lint: changesets + CHANGELOG.md are well-formed — ok."
+        )
         return
-    detail = "\n".join(f"  {v.source}: {v.message}" for v in result.violations)
+    shown = result.floor_violations + ([] if result.skipped else result.violations)
+    detail = "\n".join(f"  {v.source}: {v.message}" for v in shown)
+    advice = (
+        "\n  The escape hatch is active, but it does not cover a requires_backbone "
+        "floor field: the release refuses one it cannot raise, which blocks every "
+        "later release on main. Fix the field."
+        if result.skipped
+        else "\n  Fix the entries above, or apply the escape hatch (--skip / "
+        "PKIT_CHANGELOG_LINT_SKIP) if an objective rule mis-fired — it does not "
+        "cover a requires_backbone floor field. See the format guide in "
+        ".pkit/release/README.md."
+    )
     raise click.ClickException(
-        "changeset / changelog format problems (the objective subset):\n"
-        + detail
-        + "\n  Fix the entries above, or apply the escape hatch (--skip / "
-        "PKIT_CHANGELOG_LINT_SKIP) if an objective rule mis-fired. See the "
-        "format guide in .pkit/release/README.md."
+        "changeset / changelog format problems (the objective subset):\n" + detail + advice
     )
 
 
@@ -1167,7 +1732,31 @@ def release_lint(skip: bool | None) -> None:
     default=False,
     help="Report what would be merged without merging.",
 )
-def release_merge(pr: int, dry_run: bool) -> None:
+@click.option(
+    "--no-wait",
+    is_flag=True,
+    default=False,
+    help="Where the base merges through a queue: return once the PR is queued (exit 4). "
+    "Run the same command again once it has merged to delete its head branch.",
+)
+@click.option(
+    "--wait-minutes",
+    type=click.FloatRange(min=0),
+    default=None,
+    metavar="MINUTES",
+    help="Where the base merges through a queue: how long to wait for the queue to merge "
+    f"the PR. Default: {pull_request_landing.wait_limit(None)}.",
+)
+@click.option(
+    "--force",
+    is_flag=True,
+    default=False,
+    help="Where the base merges through a queue: enqueue a head the queue already dropped. "
+    "Without it, such a head is refused until new commits are pushed.",
+)
+def release_merge(
+    pr: int, dry_run: bool, no_wait: bool, wait_minutes: float | None, force: bool
+) -> None:
     """Merge a release PR — the sanctioned path for a `chore(release):` PR.
 
     A release PR closes no issue, so the issue-PR merge gate (`pkit
@@ -1175,13 +1764,28 @@ def release_merge(pr: int, dry_run: bool) -> None:
     release flow's own merge: it is guarded to `release/*` heads (a non-release
     PR is refused, pointing at the issue-PR gate), merges only when the PR is
     open, mergeable, and its required checks are green, and lands it as one
-    squash commit whose subject is the PR title, deleting the head branch
-    (best-effort; never a fork's head). It does **not** tag — `release-tag.yml` cuts the
-    backbone tag on the resulting push to `main` (PRJ-004). Human-gated: a human
-    decides to run it; nothing auto-merges.
+    squash commit whose subject is the PR title — through the base's merge queue
+    where it has one — deleting the head branch once GitHub reports the PR
+    merged (best-effort; never a fork's head). Exit 4 when the queue still holds
+    the PR, or a direct merge could not be confirmed: running it again once the
+    PR has merged deletes the head branch. Exit 3 when the queue dropped the PR
+    or its head moved; nothing is deleted then. A head the queue already
+    dropped is not enqueued again without `--force`. It does **not** tag —
+    `release-tag.yml` cuts the backbone tag on the resulting push to `main`
+    (PRJ-004). Human-gated: a human decides to run it; nothing auto-merges.
     """
+    if no_wait and wait_minutes is not None:
+        raise click.UsageError("--no-wait and --wait-minutes are mutually exclusive.")
+    if wait_minutes is not None and not math.isfinite(wait_minutes):
+        raise click.BadParameter("not a number of minutes", param_hint="--wait-minutes")
+    wait_seconds = 0.0 if no_wait else (wait_minutes * 60 if wait_minutes is not None else None)
     source_kit = _target_kit()
-    click.echo(merge_release_pr(source_kit.parent, pr, dry_run=dry_run))
+    report = merge_release_pr(
+        source_kit.parent, pr, dry_run=dry_run, wait_seconds=wait_seconds, force=force
+    )
+    click.echo(report.text)
+    if report.exit_code:
+        raise SystemExit(report.exit_code)
 
 
 @release.command("publish-notes")
@@ -1255,9 +1859,11 @@ def _print_release_plan(plan: ReleasePlan) -> None:
         click.echo("Release plan:")
         for rel in plan.releases:
             click.echo(
-                f"  {rel.component.name}: {rel.old_version} -> "
-                f"{rel.new_version} ({rel.segment})"
+                f"  {rel.component.name}: {rel.old_version} -> {rel.new_version} ({rel.segment})"
             )
+            if rel.floor_raise is not None:
+                for line in rel.floor_raise.lines:
+                    click.echo(f"    {line}")
             for note in rel.notes:
                 click.echo(f"    - {note}")
     click.echo(f"  changesets to consume: {len(plan.consumed)}")
@@ -1389,8 +1995,7 @@ def init(dry_run: bool, here: bool, yes: bool, root: Path | None) -> None:
 
     if here and root is not None:
         raise click.ClickException(
-            "Pass either --here or --root <path>, not both — they name different "
-            "install targets."
+            "Pass either --here or --root <path>, not both — they name different install targets."
         )
 
     # An explicit --root is the operator naming the target unambiguously — the
@@ -1454,7 +2059,8 @@ def init(dry_run: bool, here: bool, yes: bool, root: Path | None) -> None:
             click.echo(
                 f"⚠ WARNING: {target} has a .git that git cannot open (a broken or "
                 f"partial repository).\n"
-                f"       Proceeding because --root is explicit. Run `git -C {shlex.quote(str(target))} "
+                "       Proceeding because --root is explicit. Run `git -C "
+                f"{shlex.quote(str(target))} "
                 f"status` to see why."
             )
         click.echo(f"pkit init -> {target}  (explicit target, --root)")
@@ -1518,7 +2124,8 @@ def init(dry_run: bool, here: bool, yes: bool, root: Path | None) -> None:
             f"repository.\n"
             f"       project-kit will not install inside a repository it cannot "
             f"confirm.\n"
-            f"       Run `git -C {shlex.quote(str(target))} status` to see why, then repair or remove "
+            f"       Run `git -C {shlex.quote(str(target))} status` to see why, then repair or "
+            "remove "
             f"that .git and\n"
             f"       re-run, or install there anyway with `pkit init --root "
             f"{shlex.quote(str(target))}`."
@@ -1608,7 +2215,8 @@ def init(dry_run: bool, here: bool, yes: bool, root: Path | None) -> None:
                 f"directory.\n"
                 f"       This guards against a non-interactive run installing somewhere "
                 f"you are not standing.\n"
-                f"       Re-run with `pkit init --root {shlex.quote(str(target))}` to install there "
+                f"       Re-run with `pkit init --root {shlex.quote(str(target))}` to install "
+                "there "
                 f"explicitly, or cd into it first."
             )
         # Only a git subfolder reaches here (every other off-cwd reason is refused
@@ -1647,9 +2255,7 @@ def status() -> None:
 
 
 @main.group("report", invoke_without_command=True)
-@click.option(
-    "--tree", is_flag=True, help="Show each report with its tracked-by fixes nested."
-)
+@click.option("--tree", is_flag=True, help="Show each report with its tracked-by fixes nested.")
 @click.pass_context
 def report(ctx: click.Context, tree: bool) -> None:
     """Report a bug, change-request, or feedback about pkit (per PRJ-008 / ADR-047).
@@ -1687,9 +2293,7 @@ def _run_report_list(*, tree: bool = False) -> None:
     # functions union in locally-reported issues that carry no upstream
     # provenance marker (raw-gh-filed reports like #660).
     target_root = find_target_root()
-    notes = (
-        local_reported_notes(target_root, REPORT_TARGET) if target_root else {}
-    )
+    notes = local_reported_notes(target_root, REPORT_TARGET) if target_root else {}
 
     if tree:
         rows = list_my_reports_tree(REPORT_TARGET, target_root)
@@ -1760,9 +2364,7 @@ def report_show(number: int) -> None:
         return
     detail = show_report(REPORT_TARGET, number)
     if detail is None:
-        raise click.ClickException(
-            f"could not read report #{number} on {REPORT_TARGET}."
-        )
+        raise click.ClickException(f"could not read report #{number} on {REPORT_TARGET}.")
     # An honest fallback for an issue the classifier can't place (no report
     # label, marker, or title prefix) — "report" here used to masquerade as a
     # kind (#663; pre-classifier-update #660 rendered that way).
@@ -1794,28 +2396,36 @@ def _require_report_target() -> str:
 
 @report.command("inbox")
 @click.option(
-    "--kind", type=click.Choice(["bug", "feedback", "change-request"]), default=None,
+    "--kind",
+    type=click.Choice(["bug", "feedback", "change-request"]),
+    default=None,
     help="Show only reports of this kind.",
 )
 @click.option(
-    "--group-by", "group_by", type=click.Choice(["project"]), default=None,
+    "--group-by",
+    "group_by",
+    type=click.Choice(["project"]),
+    default=None,
     help="Group reports by the body marker's project= key (ADR-050; reports "
     "without one group under '(no project)').",
 )
 @click.option(
-    "--resolved", is_flag=True, default=False,
+    "--resolved",
+    is_flag=True,
+    default=False,
     help="List open feedbacks/change-requests whose Tracked-by issues are all "
     "closed, and prompt (interactively) to comment + close each. Never closes "
     "without a per-report confirm.",
 )
 @click.option(
-    "--yes", "assume_yes", is_flag=True, default=False,
+    "--yes",
+    "assume_yes",
+    is_flag=True,
+    default=False,
     help="Non-interactive. With --resolved, lists only — never closes (the "
     "report family's --yes asymmetry).",
 )
-def report_inbox(
-    kind: str | None, group_by: str | None, resolved: bool, assume_yes: bool
-) -> None:
+def report_inbox(kind: str | None, group_by: str | None, resolved: bool, assume_yes: bool) -> None:
     """(Maintainer) Triage queue: all reports on the target repo."""
     target = _require_report_target()
     if resolved:
@@ -1884,9 +2494,7 @@ def _run_inbox_resolved(target: str, *, assume_yes: bool) -> None:
         return
     click.echo("")
     for r, tracked in rows:
-        if not click.confirm(
-            f"Post a closing comment on #{r.number} and close it?", default=False
-        ):
+        if not click.confirm(f"Post a closing comment on #{r.number} and close it?", default=False):
             click.echo(f"Skipped #{r.number}.")
             continue
         if close_report_as_resolved(target, r.number, tracked):
@@ -1904,9 +2512,7 @@ def report_link(feedback_n: int, fix_n: int) -> None:
 
     target = _require_report_target()
     if not link_fix(target, feedback_n, fix_n):
-        raise click.ClickException(
-            f"could not link #{fix_n} into #{feedback_n} (gh error)."
-        )
+        raise click.ClickException(f"could not link #{fix_n} into #{feedback_n} (gh error).")
     click.echo(f"Linked #{fix_n} into #{feedback_n}'s Tracked by.")
 
 
@@ -1919,9 +2525,7 @@ def report_unlink(feedback_n: int, fix_n: int) -> None:
 
     target = _require_report_target()
     if not unlink_fix(target, feedback_n, fix_n):
-        raise click.ClickException(
-            f"could not unlink #{fix_n} from #{feedback_n} (gh error)."
-        )
+        raise click.ClickException(f"could not unlink #{fix_n} from #{feedback_n} (gh error).")
     click.echo(f"Unlinked #{fix_n} from #{feedback_n}'s Tracked by.")
 
 
@@ -2064,7 +2668,8 @@ def _run_report(
     # runs only there; --yes / URL / no-auth paths resolve silently).
     interactive = not assume_yes and not want_url and gh_ok
     project, ws = _resolve_report_context(
-        target_root, workstream_override=workstream_override,
+        target_root,
+        workstream_override=workstream_override,
         interactive=interactive,
     )
     try:
@@ -2090,7 +2695,9 @@ def _run_report(
         findings = lint_redaction(note_text)
         payload = attach_note(body, note_path.name, note_text)
         url = build_new_issue_url(
-            REPORT_TARGET, title=title, body=payload.body,
+            REPORT_TARGET,
+            title=title,
+            body=payload.body,
             label=KIND_LABELS[kind],
         )
 
@@ -2099,8 +2706,13 @@ def _run_report(
         # lines — the submit command (the hand-off an agent surfaces, #662)
         # plus WHERE it landed, because the store is per-project (#693).
         draft = stage_report(
-            target_root, kind=kind, title=title, payload=payload,
-            findings=findings, note_path=note_path, project=project,
+            target_root,
+            kind=kind,
+            title=title,
+            payload=payload,
+            findings=findings,
+            note_path=note_path,
+            project=project,
             workstream=ws,
         )
         click.echo(f"staged: pkit report submit {draft.draft_id}")
@@ -2109,35 +2721,50 @@ def _run_report(
 
     if want_url or not gh_ok:
         _run_report_url_path(
-            kind, url, payload, findings,
-            gh_ok=gh_ok, explicit=want_url, open_browser=open_browser,
+            kind,
+            url,
+            payload,
+            findings,
+            gh_ok=gh_ok,
+            explicit=want_url,
+            open_browser=open_browser,
             note_path=note_path,
         )
         return
 
     # API-primary gated path: gh authenticated, interactive.
-    if findings and not _confirm_past_redaction_findings(
-        [render_finding(f) for f in findings]
-    ):
+    if findings and not _confirm_past_redaction_findings([render_finding(f) for f in findings]):
         click.echo("Not posted — edit the note and re-run.")
         return
     if _confirm_send_payload(kind, payload, current_login()):
         outcome = _post_confirmed_payload(
-            target_root, kind=kind, title=title, payload=payload,
-            note_path=note_path, project=project, workstream=ws,
+            target_root,
+            kind=kind,
+            title=title,
+            payload=payload,
+            note_path=note_path,
+            project=project,
+            workstream=ws,
         )
         if outcome == "failed":
             if len(url) <= URL_BUDGET:
                 _echo_url_first(
-                    kind, url, REPORT_TARGET,
+                    kind,
+                    url,
+                    REPORT_TARGET,
                     note="\ngh could not file it — use the prefilled URL instead:",
                 )
                 _echo_browser_identity_warning()
                 _echo_reported_followup(note_path)
             else:
                 draft = stage_report(
-                    target_root, kind=kind, title=title, payload=payload,
-                    findings=findings, note_path=note_path, project=project,
+                    target_root,
+                    kind=kind,
+                    title=title,
+                    payload=payload,
+                    findings=findings,
+                    note_path=note_path,
+                    project=project,
                     workstream=ws,
                 )
                 click.echo(
@@ -2182,8 +2809,7 @@ def _run_report_url_path(
 
     if len(url) > URL_BUDGET:
         alternative = (
-            "Re-run without --url/--open to review + post via gh (the "
-            "confirmed API path)."
+            "Re-run without --url/--open to review + post via gh (the confirmed API path)."
             if gh_ok
             else "Authenticate gh (`gh auth login`) for the confirmed API "
             "path, or run with --yes to stage and have someone submit with "
@@ -2196,18 +2822,13 @@ def _run_report_url_path(
             f"{alternative}"
         )
     _echo_redaction_warnings([render_finding(f) for f in findings])
-    note = "" if explicit else (
-        "gh is not authenticated — falling back to the prefilled URL."
-    )
+    note = "" if explicit else ("gh is not authenticated — falling back to the prefilled URL.")
     _echo_url_first(kind, url, REPORT_TARGET, note=note)
     _echo_browser_identity_warning()
     _echo_overflow_draft_note(payload)
     if open_browser:
         if open_in_browser(url):
-            click.echo(
-                "\nOpened in your browser — check the signed-in account "
-                "before submitting."
-            )
+            click.echo("\nOpened in your browser — check the signed-in account before submitting.")
         else:
             click.echo("\nCould not open a browser — copy the URL above.")
     _echo_reported_followup(note_path)
@@ -2274,15 +2895,11 @@ def _post_confirmed_payload(
             "marker still carry the kind)."
         )
         label = None
-    posted = file_report_via_gh(
-        REPORT_TARGET, title=title, body=payload.body, label=label
-    )
+    posted = file_report_via_gh(REPORT_TARGET, title=title, body=payload.body, label=label)
     if not posted:
         return "failed"
     if payload.overflow_comment is not None:
-        ok, error = post_issue_comment(
-            REPORT_TARGET, posted, payload.overflow_comment
-        )
+        ok, error = post_issue_comment(REPORT_TARGET, posted, payload.overflow_comment)
         if not ok:
             click.echo(
                 f"\n[warn] issue created at {posted}, but the overflow "
@@ -2313,8 +2930,7 @@ def _echo_reported_followup(note_path: Path | None) -> None:
         return
     slug = scratchpads.note_slug(note_path.name)
     click.echo(
-        "\nREQUIRED follow-up — the browser submit cannot stamp the note "
-        "reported (COR-043):"
+        "\nREQUIRED follow-up — the browser submit cannot stamp the note reported (COR-043):"
     )
     click.echo(f"after filing in the browser, run: pkit scratchpad reported {slug} <issue-ref>")
 
@@ -2381,10 +2997,7 @@ def _echo_redaction_warnings(warnings: list[str]) -> None:
     stored warnings flow through the same surface."""
     if not warnings:
         return
-    click.echo(
-        "Warning: possible un-redacted content in the attached note — review "
-        "before filing:"
-    )
+    click.echo("Warning: possible un-redacted content in the attached note — review before filing:")
     for line in warnings:
         click.echo(f"  {line}")
     click.echo("")
@@ -2396,9 +3009,7 @@ def _confirm_past_redaction_findings(warnings: list[str]) -> bool:
     click.echo("Possible un-redacted content in the attached note:")
     for line in warnings:
         click.echo(f"  {line}")
-    return click.confirm(
-        "\nSend anyway? (decline to edit the note first)", default=False
-    )
+    return click.confirm("\nSend anyway? (decline to edit the note first)", default=False)
 
 
 def _echo_overflow_draft_note(payload) -> None:
@@ -2430,16 +3041,16 @@ def _stamp_reported_after_post(
         return
     area = target_root / ".pkit" / "scratchpad"
     if note_path.parent not in (area / "active", area / "reported"):
-        click.echo(
-            f"note {note_path} is outside .pkit/scratchpad/active/ — not "
-            "stamped reported."
-        )
+        click.echo(f"note {note_path} is outside .pkit/scratchpad/active/ — not stamped reported.")
         return
     try:
         ref = scratchpads.normalize_issue_ref(posted.strip())
         stamp = stamp_reported(
-            target_root, note_path.name, (ref,),
-            project=project, workstream=workstream,
+            target_root,
+            note_path.name,
+            (ref,),
+            project=project,
+            workstream=workstream,
         )
     except click.ClickException as exc:
         click.echo(
@@ -2453,53 +3064,71 @@ def _stamp_reported_after_post(
             f"{stamp.dst.relative_to(target_root)}"
         )
     elif stamp.added:
-        click.echo(
-            f"Recorded {', '.join(stamp.added)} on "
-            f"{stamp.dst.relative_to(target_root)}"
-        )
+        click.echo(f"Recorded {', '.join(stamp.added)} on {stamp.dst.relative_to(target_root)}")
 
 
 _REPORT_OPTS = [
     click.option("--title", required=True, help="One-line summary."),
     click.option("--body", "prose", required=True, help="The report text (prose)."),
     click.option(
-        "--file", "do_file", is_flag=True, default=False,
+        "--file",
+        "do_file",
+        is_flag=True,
+        default=False,
         help="Post via `gh` after the confirm. Now the default whenever `gh` is "
         "authenticated; kept as an explicit gesture.",
     ),
     click.option(
-        "--url", "use_url", is_flag=True, default=False,
+        "--url",
+        "use_url",
+        is_flag=True,
+        default=False,
         help="Use the prefilled browser-URL form instead of the gh post (within "
         "the URL budget only — an oversized report is refused with the API/stage "
         "alternatives; the BROWSER's logged-in account authors the submit).",
     ),
     click.option(
-        "--open", "open_browser", is_flag=True, default=False,
+        "--open",
+        "open_browser",
+        is_flag=True,
+        default=False,
         help="Open the prefilled form in your browser (implies --url; degrades "
         "to printing the URL).",
     ),
     click.option(
-        "--yes", "assume_yes", is_flag=True, default=False,
+        "--yes",
+        "assume_yes",
+        is_flag=True,
+        default=False,
         help="Non-interactive: STAGE the composed payload for `pkit report "
         "submit` — the foreign write is never auto-posted (ADR-047: --yes "
         "stages, never posts).",
     ),
     click.option(
-        "--on-behalf-of", default=None,
+        "--on-behalf-of",
+        default=None,
         help="Attribute the report to @login (files under your identity).",
     ),
     click.option(
-        "--include-private", is_flag=True, default=False,
+        "--include-private",
+        is_flag=True,
+        default=False,
         help="Include incubated (in-repo) capability names in the environment block.",
     ),
     click.option(
-        "--scratchpad", "scratchpad_note", default=None, metavar="SLUG",
+        "--scratchpad",
+        "scratchpad_note",
+        default=None,
+        metavar="SLUG",
         help="Attach a scratchpad note (slug, filename, or path) as a collapsed "
         "as-sent section; redaction-linted at compose time, and stamped "
         "reported on a successful post only (COR-043).",
     ),
     click.option(
-        "--workstream", "workstream_override", default=None, metavar="NAME",
+        "--workstream",
+        "workstream_override",
+        default=None,
+        metavar="NAME",
         help="Workstream for the report's context line/marker, overriding the "
         "pm-derived value (branch → issue → workstream, when the "
         "project-management capability is installed; ADR-050).",
@@ -2516,37 +3145,76 @@ def _with_report_opts(fn):
 @report.command("bug")
 @_with_report_opts
 def report_bug(
-    title: str, prose: str, do_file: bool, use_url: bool, open_browser: bool,
-    assume_yes: bool, on_behalf_of: str | None, include_private: bool,
-    scratchpad_note: str | None, workstream_override: str | None,
+    title: str,
+    prose: str,
+    do_file: bool,
+    use_url: bool,
+    open_browser: bool,
+    assume_yes: bool,
+    on_behalf_of: str | None,
+    include_private: bool,
+    scratchpad_note: str | None,
+    workstream_override: str | None,
 ) -> None:
     """File a structured bug report to project-kit."""
     _run_report(
-        "bug", title, prose, on_behalf_of, include_private, do_file, assume_yes,
-        scratchpad_note, workstream_override, use_url, open_browser,
+        "bug",
+        title,
+        prose,
+        on_behalf_of,
+        include_private,
+        do_file,
+        assume_yes,
+        scratchpad_note,
+        workstream_override,
+        use_url,
+        open_browser,
     )
 
 
 @report.command("feedback")
 @_with_report_opts
 def report_feedback(
-    title: str, prose: str, do_file: bool, use_url: bool, open_browser: bool,
-    assume_yes: bool, on_behalf_of: str | None, include_private: bool,
-    scratchpad_note: str | None, workstream_override: str | None,
+    title: str,
+    prose: str,
+    do_file: bool,
+    use_url: bool,
+    open_browser: bool,
+    assume_yes: bool,
+    on_behalf_of: str | None,
+    include_private: bool,
+    scratchpad_note: str | None,
+    workstream_override: str | None,
 ) -> None:
     """File freeform feedback to project-kit."""
     _run_report(
-        "feedback", title, prose, on_behalf_of, include_private, do_file,
-        assume_yes, scratchpad_note, workstream_override, use_url, open_browser,
+        "feedback",
+        title,
+        prose,
+        on_behalf_of,
+        include_private,
+        do_file,
+        assume_yes,
+        scratchpad_note,
+        workstream_override,
+        use_url,
+        open_browser,
     )
 
 
 @report.command("change-request")
 @_with_report_opts
 def report_change_request(
-    title: str, prose: str, do_file: bool, use_url: bool, open_browser: bool,
-    assume_yes: bool, on_behalf_of: str | None, include_private: bool,
-    scratchpad_note: str | None, workstream_override: str | None,
+    title: str,
+    prose: str,
+    do_file: bool,
+    use_url: bool,
+    open_browser: bool,
+    assume_yes: bool,
+    on_behalf_of: str | None,
+    include_private: bool,
+    scratchpad_note: str | None,
+    workstream_override: str | None,
 ) -> None:
     """File a change/feature request to project-kit.
 
@@ -2557,8 +3225,16 @@ def report_change_request(
     it even when the GitHub label is dropped.
     """
     _run_report(
-        "change-request", title, prose, on_behalf_of, include_private,
-        do_file, assume_yes, scratchpad_note, workstream_override, use_url,
+        "change-request",
+        title,
+        prose,
+        on_behalf_of,
+        include_private,
+        do_file,
+        assume_yes,
+        scratchpad_note,
+        workstream_override,
+        use_url,
         open_browser,
     )
 
@@ -2566,7 +3242,10 @@ def report_change_request(
 @report.command("submit")
 @click.argument("draft_id", required=False)
 @click.option(
-    "--yes", "assume_yes", is_flag=True, default=False,
+    "--yes",
+    "assume_yes",
+    is_flag=True,
+    default=False,
     help="Refused. submit is the human half of the stage+submit split and "
     "never runs non-interactively (ADR-047: autonomy stages, only a human "
     "posts).",
@@ -2608,9 +3287,7 @@ def report_submit(draft_id: str | None, assume_yes: bool) -> None:
             return
         click.echo(f"Staged report drafts ({store}):\n")
         for d in drafts:
-            warn = (
-                f"  [{len(d.warnings)} redaction warning(s)]" if d.warnings else ""
-            )
+            warn = f"  [{len(d.warnings)} redaction warning(s)]" if d.warnings else ""
             click.echo(f"  {d.draft_id:<28} {d.kind:<15} {d.title}{warn}")
         click.echo("\nReview + post one with `pkit report submit <id>`.")
         return
@@ -2629,9 +3306,7 @@ def report_submit(draft_id: str | None, assume_yes: bool) -> None:
             "drafts visible here."
         )
     if not gh_authenticated():
-        raise click.ClickException(
-            "submit posts via gh — authenticate first (`gh auth login`)."
-        )
+        raise click.ClickException("submit posts via gh — authenticate first (`gh auth login`).")
     if draft.warnings and not _confirm_past_redaction_findings(list(draft.warnings)):
         click.echo("Not posted — draft kept; edit the source note and restage.")
         return
@@ -2640,13 +3315,17 @@ def report_submit(draft_id: str | None, assume_yes: bool) -> None:
         return
     note_path = (target_root / draft.note) if draft.note else None
     outcome = _post_confirmed_payload(
-        target_root, kind=draft.kind, title=draft.title, payload=draft.payload,
-        note_path=note_path, project=draft.project, workstream=draft.workstream,
+        target_root,
+        kind=draft.kind,
+        title=draft.title,
+        payload=draft.payload,
+        note_path=note_path,
+        project=draft.project,
+        workstream=draft.workstream,
     )
     if outcome == "failed":
         click.echo(
-            f"\ngh could not file it — draft kept; retry `pkit report submit "
-            f"{draft.draft_id}`."
+            f"\ngh could not file it — draft kept; retry `pkit report submit {draft.draft_id}`."
         )
         return
     if outcome == "incomplete":
@@ -2750,9 +3429,7 @@ def upgrade(dry_run: bool, no_pin: bool, no_self_update: bool) -> None:
         # Outside any project: update the tool only ("just update my tool").
         run_tool_update(dry_run=dry_run, self_update=not no_self_update)
         return
-    run_upgrade(
-        target_root, dry_run=dry_run, pin=not no_pin, self_update=not no_self_update
-    )
+    run_upgrade(target_root, dry_run=dry_run, pin=not no_pin, self_update=not no_self_update)
 
 
 @main.command()
@@ -2808,7 +3485,7 @@ def unpin() -> None:
         raise click.ClickException("not in a project tree.")
     pin_path = router.pin_file_path(target_root)
     if pin_path.exists():
-        pin_path.unlink()
+        router.write_version_pin(target_root, None)
         rel = pin_path.relative_to(target_root)
         click.echo(f"Removed pin ({rel}); project now floats on the installed tool.")
     else:
@@ -2844,29 +3521,47 @@ def _visibility_target() -> Path:
 
 
 @visibility.command("shared")
-@click.option("--dry-run", is_flag=True, default=False,
-              help="Preview clearing the .git/info/exclude region without changing anything.")
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    default=False,
+    help="Preview clearing the .git/info/exclude region without changing anything.",
+)
 def visibility_shared(dry_run: bool) -> None:
     """Return pkit to committed (default): clear pkit's `.git/info/exclude` region."""
     from project_kit import visibility as vis
 
-    click.echo(vis.set_visibility(_visibility_target(), "shared", dry_run=dry_run, confirm=click.confirm), nl=False)
+    click.echo(
+        vis.set_visibility(_visibility_target(), "shared", dry_run=dry_run, confirm=click.confirm),
+        nl=False,
+    )
 
 
 @visibility.command("private")
-@click.option("--dry-run", is_flag=True, default=False,
-              help="Preview the .git/info/exclude write + untrack set without changing anything.")
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    default=False,
+    help="Preview the .git/info/exclude write + untrack set without changing anything.",
+)
 def visibility_private(dry_run: bool) -> None:
     """Hide the whole footprint via the per-clone `.git/info/exclude` (no committed
     `.gitignore` is ever written) + a confirm-gated untrack of tracked footprint files."""
     from project_kit import visibility as vis
 
-    click.echo(vis.set_visibility(_visibility_target(), "private", dry_run=dry_run, confirm=click.confirm), nl=False)
+    click.echo(
+        vis.set_visibility(_visibility_target(), "private", dry_run=dry_run, confirm=click.confirm),
+        nl=False,
+    )
 
 
 @visibility.command("untrack")
-@click.option("--dry-run", is_flag=True, default=False,
-              help="Preview the footprint files that would be removed from the index.")
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    default=False,
+    help="Preview the footprint files that would be removed from the index.",
+)
 def visibility_untrack(dry_run: bool) -> None:
     """Remove already-tracked pkit footprint files from the git index (per ADR-009).
 
@@ -2931,9 +3626,7 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
     if target_root is None:
         raise click.ClickException("not in a project tree.")
     if not (target_root / ".pkit").is_dir():
-        raise click.ClickException(
-            f"{target_root}/.pkit/ does not exist. Run 'pkit init' first."
-        )
+        raise click.ClickException(f"{target_root}/.pkit/ does not exist. Run 'pkit init' first.")
 
     source_kit = find_source_kit()
     # The methodology's source repository run by code that is not its own (the
@@ -2951,8 +3644,7 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
 
     if not caps.is_installed(target_root, name):
         raise click.ClickException(
-            f"capability {name!r} is not installed. "
-            f"Use `pkit capabilities install {name}` first."
+            f"capability {name!r} is not installed. Use `pkit capabilities install {name}` first."
         )
 
     # Origin-aware branch (COR-031 D1/D4): an incubated (in-repo) capability has
@@ -2992,8 +3684,7 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
         for conflict in dep_conflicts:
             if conflict.reason == "absent":
                 lines.append(
-                    f"    - '{conflict.dep_name}' ({conflict.dep_version_range}) "
-                    f"is not installed"
+                    f"    - '{conflict.dep_name}' ({conflict.dep_version_range}) is not installed"
                 )
             else:
                 lines.append(
@@ -3019,9 +3710,12 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
     )
     if desynced_dependents and not force:
         click.echo(
-            "\n  " + cli_render.style("strong",
+            "\n  "
+            + cli_render.style(
+                "strong",
                 f"Warning: upgrading {name!r} to v{new_version} would desync "
-                f"{len(desynced_dependents)} installed dependent(s):")
+                f"{len(desynced_dependents)} installed dependent(s):",
+            )
         )
         for dep_cap, declared_range in desynced_dependents:
             click.echo(
@@ -3036,9 +3730,12 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
         )
     if desynced_dependents and force:
         click.echo(
-            "\n  " + cli_render.style("strong",
+            "\n  "
+            + cli_render.style(
+                "strong",
                 f"Warning (--force): upgrading {name!r} to v{new_version} "
-                f"desyncs {len(desynced_dependents)} dependent(s):")
+                f"desyncs {len(desynced_dependents)} dependent(s):",
+            )
         )
         for dep_cap, declared_range in desynced_dependents:
             click.echo(
@@ -3046,8 +3743,7 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
                 f"(v{new_version} is outside this range)"
             )
         click.echo(
-            "  Proceeding under --force; upgrade dependent capabilities "
-            "to restore consistency."
+            "  Proceeding under --force; upgrade dependent capabilities to restore consistency."
         )
     # The same direction for mandatory process connections aimed at this
     # capability (COR-053 point 6): warn, naming each, and proceed under --force.
@@ -3070,9 +3766,12 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
 
     if new_collisions and not interactive:
         click.echo(
-            "\n  " + cli_render.style("strong",
+            "\n  "
+            + cli_render.style(
+                "strong",
                 f"{len(new_collisions)} new naming collision(s) introduced by "
-                f"v{capability_source.package.version}:")
+                f"v{capability_source.package.version}:",
+            )
         )
         for finding in new_collisions:
             click.echo(
@@ -3080,26 +3779,26 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
                 f"collides with {finding.target_path.relative_to(target_root)}"
             )
         raise click.ClickException(
-            f"refusing to upgrade with unresolved collisions. "
-            f"Re-run with --interactive to resolve them."
+            "refusing to upgrade with unresolved collisions. "
+            "Re-run with --interactive to resolve them."
         )
 
     new_skipped: list[tuple[str, str]] = []
     if new_collisions and interactive:
         click.echo(
-            "\n  " + cli_render.style("strong", f"{len(new_collisions)} new collision(s) — resolve per artifact:") + "\n"
+            "\n  "
+            + cli_render.style(
+                "strong", f"{len(new_collisions)} new collision(s) — resolve per artifact:"
+            )
+            + "\n"
         )
         for finding in new_collisions:
-            choice = _resolve_collision_interactive(
-                target_root, finding, dry_run=dry_run
-            )
+            choice = _resolve_collision_interactive(target_root, finding, dry_run=dry_run)
             if choice == "skip":
                 new_skipped.append((finding.artifact_kind, finding.artifact_name))
 
     # Merge prior + new skip state. De-dup by (kind, name).
-    merged_skipped = tuple(
-        sorted(set(prior_skipped).union(new_skipped))
-    )
+    merged_skipped = tuple(sorted(set(prior_skipped).union(new_skipped)))
 
     refreshed_path = caps.refresh_capability(
         target_root,
@@ -3109,13 +3808,14 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
     )
 
     verb = "Would refresh" if dry_run else "Refreshed"
-    skip_note = (
-        f" ({len(merged_skipped)} artifact(s) skipped)" if merged_skipped else ""
-    )
+    skip_note = f" ({len(merged_skipped)} artifact(s) skipped)" if merged_skipped else ""
     click.echo(
-        "\n  " + cli_render.style("strong",
+        "\n  "
+        + cli_render.style(
+            "strong",
             f"{verb} capability {name!r} -> v{capability_source.package.version} "
-            f"at {refreshed_path.relative_to(target_root)}/{skip_note}")
+            f"at {refreshed_path.relative_to(target_root)}/{skip_note}",
+        )
     )
 
     if not dry_run:
@@ -3191,7 +3891,8 @@ def refs() -> None:
 
 @refs.command("validate")
 def refs_validate() -> None:
-    """Bidirectional consistency + hook closure + exactly-one-owner check across the artifact corpus."""
+    """Bidirectional consistency + hook closure + exactly-one-owner check across the artifact
+    corpus."""
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
@@ -3288,7 +3989,9 @@ def refs_lookup(record_id: str) -> None:
 @refs.command("rename")
 @click.argument("old")
 @click.argument("new")
-@click.option("--dry-run", is_flag=True, default=False, help="Report what would change without writing.")
+@click.option(
+    "--dry-run", is_flag=True, default=False, help="Report what would change without writing."
+)
 def refs_rename(old: str, new: str, dry_run: bool) -> None:
     """Bulk rewrite a reference value across every agent/skill (frontmatter + body)."""
     target_root = find_target_root()
@@ -3312,7 +4015,12 @@ def refs_rot() -> None:
         raise click.ClickException("not in a project tree.")
     artifacts = refs_mod.load_artifacts(target_root)
     issues = refs_mod.find_rot(target_root, artifacts)
-    lines = [cli_render.style("title", "Reference rot — superseded records, dropped scratchpads, missing files"), ""]
+    lines = [
+        cli_render.style(
+            "title", "Reference rot — superseded records, dropped scratchpads, missing files"
+        ),
+        "",
+    ]
     if not issues:
         lines.append("  no rotten references found.")
         click.echo("\n".join(lines) + "\n", nl=False)
@@ -3369,8 +4077,10 @@ def hooks_list() -> None:
     if not declared_hooks:
         click.echo("  no hooks declared.")
         return
-    lines = [cli_render.style("title", f"Hooks — {len(declared_hooks)} declared")
-             + "   (bound provider by precedence)"]
+    lines = [
+        cli_render.style("title", f"Hooks — {len(declared_hooks)} declared")
+        + "   (bound provider by precedence)"
+    ]
     for hook in declared_hooks:
         winner = refs_mod.resolve_hook(providers, hook)
         marker = f" -> {winner.tier}:{winner.source}" if winner else " (no provider)"
@@ -3437,9 +4147,10 @@ def migrations() -> None:
 @click.option(
     "--base",
     "base_ref",
-    default="origin/main",
-    show_default=True,
-    help="Base ref to diff against. Default is `origin/main` (CI's typical PR base).",
+    metavar="REF",
+    default=None,
+    help="Base ref to diff against. Default: $PKIT_CHECK_BASE, else the default branch "
+    "(`pkit repository base` shows it).",
 )
 @click.option(
     "--include-working-tree",
@@ -3448,17 +4159,19 @@ def migrations() -> None:
     help="Include staged + unstaged changes in the diff (pre-commit use). "
     "Without this flag, only committed changes are checked (CI's view).",
 )
-def migrations_check_diff(base_ref: str, include_working_tree: bool) -> None:
-    """Verify migration coverage in the diff between `base_ref` and the project state.
+def migrations_check_diff(base_ref: str | None, include_working_tree: bool) -> None:
+    """Verify migration coverage in the diff between the base and the project state.
 
     Walks the diff for migration-triggering changes (renames + deletions
     in kit-owned trees per COR-010 / `.pkit/rules/core.md` rule 7), then
     checks whether the same diff includes a matching migration script.
 
-    Default scope: committed branch changes only (`<base_ref>...HEAD`)
-    — what CI sees on a PR. With `--include-working-tree`, the scope
-    extends to staged + unstaged changes — what's about to be committed.
-    The pre-commit form for local use.
+    The base is REF, else $PKIT_CHECK_BASE, else the default branch
+    (COR-054); the diff starts where HEAD left it, and a base that resolves
+    nowhere refuses the run with its fix. Default scope: committed branch
+    changes only — what CI sees on a PR. With `--include-working-tree`, the
+    scope extends to staged + unstaged changes — what's about to be
+    committed. The pre-commit form for local use.
 
     Exits 0 when covered or no triggers exist; exits 1 when triggers
     exist without matching migrations, listing the affected tiers so the
@@ -3469,9 +4182,11 @@ def migrations_check_diff(base_ref: str, include_working_tree: bool) -> None:
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
+    fork = _settled_base(target_root, base_ref).fork
+    assert fork is not None  # `_settled_base` refuses a base without one
     try:
         report = migrations_mod.check_diff_coverage(
-            target_root, base_ref, include_working_tree=include_working_tree
+            target_root, fork, include_working_tree=include_working_tree
         )
     except RuntimeError as exc:
         raise click.ClickException(str(exc)) from exc
@@ -3482,7 +4197,8 @@ def migrations_check_diff(base_ref: str, include_working_tree: bool) -> None:
 
 @main.group()
 def permissions() -> None:
-    """Inspect the permission model and reconcile it against live harness state (per COR-028). Read-only."""
+    """Inspect the permission model and reconcile it against live harness state (per COR-028).
+    Read-only."""
 
 
 @permissions.command("explain")
@@ -3500,7 +4216,8 @@ def permissions_explain(agent: str | None) -> None:
 @permissions.command("diff")
 @click.argument("agent", required=False)
 def permissions_diff(agent: str | None) -> None:
-    """Reconcile the model against live `.claude/settings.json` — flags live rules no granted privilege justifies, and dimensions the harness can't enforce."""
+    """Reconcile the model against live `.claude/settings.json` — flags live rules no granted
+    privilege justifies, and dimensions the harness can't enforce."""
     from project_kit import permissions as perm
 
     target_root = find_target_root()
@@ -3523,7 +4240,8 @@ def permissions_catalog() -> None:
 
 @permissions.command("overview")
 def permissions_overview() -> None:
-    """Role-grouped catalog overview: guardrails (deny by default) vs enablers (grant to enable), with provenance and who each is granted to."""
+    """Role-grouped catalog overview: guardrails (deny by default) vs enablers (grant to enable),
+    with provenance and who each is granted to."""
     from project_kit import permissions as perm
 
     target_root = find_target_root()
@@ -3535,8 +4253,11 @@ def permissions_overview() -> None:
 @permissions.command("grant")
 @click.argument("subject")
 @click.argument("privilege")
-@click.option("--scope", multiple=True, help="Directory glob constraining the grant "
-              "(repeatable; only for scope-typed privileges).")
+@click.option(
+    "--scope",
+    multiple=True,
+    help="Directory glob constraining the grant (repeatable; only for scope-typed privileges).",
+)
 @click.option("--deny", is_flag=True, default=False, help="Record a deny grant (default: allow).")
 def permissions_grant(subject: str, privilege: str, scope: tuple[str, ...], deny: bool) -> None:
     """Grant SUBJECT a PRIVILEGE (optionally scoped) — writes the model."""
@@ -3617,7 +4338,8 @@ def permissions_mode(mode: str | None) -> None:
 
 @permissions.command("enable")
 def permissions_enable() -> None:
-    """Turn on live enforcement: register the PreToolUse hook + ensure the native guardrail denies (the double-lock). Opt-in per issue #247."""
+    """Turn on live enforcement: register the PreToolUse hook + ensure the native guardrail denies
+    (the double-lock). Opt-in per issue #247."""
     from project_kit import permissions as perm
 
     target_root = find_target_root()
@@ -3631,7 +4353,8 @@ def permissions_enable() -> None:
 
 @permissions.command("disable")
 def permissions_disable() -> None:
-    """Turn off live enforcement: strip the PreToolUse hook registration (native guardrail denies stay)."""
+    """Turn off live enforcement: strip the PreToolUse hook registration (native guardrail denies
+    stay)."""
     from project_kit import permissions as perm
 
     target_root = find_target_root()
@@ -3645,7 +4368,9 @@ def permissions_disable() -> None:
 
 @permissions.command("apply")
 def permissions_apply() -> None:
-    """Additively realize the model into `.claude/settings.json` (union the projected allow rules + ensure guardrail denies) and report the out-of-harness gap. Additive + idempotent; managed-mode wholesale regeneration is separate."""
+    """Additively realize the model into `.claude/settings.json` (union the projected allow rules +
+    ensure guardrail denies) and report the out-of-harness gap. Additive + idempotent; managed-mode
+    wholesale regeneration is separate."""
     from project_kit import permissions as perm
 
     target_root = find_target_root()
@@ -3660,7 +4385,8 @@ def permissions_apply() -> None:
 @permissions.group("setup", invoke_without_command=True)
 @click.pass_context
 def permissions_setup(ctx: click.Context) -> None:
-    """Goal-oriented setup commands (per ADR-007): stand up a composite goal stepwise + resumably. No goal = list goals."""
+    """Goal-oriented setup commands (per ADR-007): stand up a composite goal stepwise + resumably.
+    No goal = list goals."""
     if ctx.invoked_subcommand is not None:
         return
     from project_kit import permissions as perm
@@ -3672,12 +4398,20 @@ def permissions_setup(ctx: click.Context) -> None:
 
 
 @permissions_setup.group("autonomy", invoke_without_command=True)
-@click.option("--profile", default="autonomous", show_default=True,
-              help="The autonomy profile to activate as the goal's intent layer.")
-@click.option("--remove-overrides", is_flag=True, default=False,
-              help="Auto-confirm removal of per-machine overlay attributes that override "
-                   "the posture (settings.local.json only; never the committed baseline). "
-                   "A deliberate trust gesture — NOT covered by any blanket --yes.")
+@click.option(
+    "--profile",
+    default="autonomous",
+    show_default=True,
+    help="The autonomy profile to activate as the goal's intent layer.",
+)
+@click.option(
+    "--remove-overrides",
+    is_flag=True,
+    default=False,
+    help="Auto-confirm removal of per-machine overlay attributes that override "
+    "the posture (settings.local.json only; never the committed baseline). "
+    "A deliberate trust gesture — NOT covered by any blanket --yes.",
+)
 @click.pass_context
 def permissions_setup_autonomy(ctx: click.Context, profile: str, remove_overrides: bool) -> None:
     """Stand up autonomous agents: profile + enforcement + OS sandbox, then prove it.
@@ -3696,6 +4430,7 @@ def permissions_setup_autonomy(ctx: click.Context, profile: str, remove_override
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
+
     # The override-removal consent gate (#399): a dedicated trust gesture, never
     # covered by a blanket --yes. `--remove-overrides` auto-confirms; otherwise
     # prompt interactively. A declined OR non-interactive prompt means warn-only
@@ -3721,7 +4456,8 @@ def permissions_setup_autonomy(ctx: click.Context, profile: str, remove_override
 
 @permissions_setup_autonomy.command("down")
 def permissions_setup_autonomy_down() -> None:
-    """Tear the autonomy goal's live switches down (hook + sandbox), reporting residual state loudly."""
+    """Tear the autonomy goal's live switches down (hook + sandbox), reporting residual state
+    loudly."""
     from project_kit import permissions as perm
 
     target_root = find_target_root()
@@ -3734,11 +4470,19 @@ def permissions_setup_autonomy_down() -> None:
 
 
 @permissions.command("probe")
-@click.option("--subject", default="operator", show_default=True,
-              help="Decide as this subject: `operator` or `agent:<name>`.")
-@click.option("--live", is_flag=True, default=False,
-              help="Also execute reachability probes against the sandbox credential "
-                   "denyRead floor (open-attempt only; never reads content).")
+@click.option(
+    "--subject",
+    default="operator",
+    show_default=True,
+    help="Decide as this subject: `operator` or `agent:<name>`.",
+)
+@click.option(
+    "--live",
+    is_flag=True,
+    default=False,
+    help="Also execute reachability probes against the sandbox credential "
+    "denyRead floor (open-attempt only; never reads content).",
+)
 def permissions_probe(subject: str, live: bool) -> None:
     """Probe-by-probe proof that the current model rejects/allows what it declares.
 
@@ -3762,7 +4506,9 @@ def permissions_probe(subject: str, live: bool) -> None:
 @permissions.group("diagnose", invoke_without_command=True)
 @click.pass_context
 def permissions_diagnose(ctx: click.Context) -> None:
-    """Opt-in permission-prompt diagnostic loop (per PRJ-006): capture deferred (prompted) decisions, classify + rank them, and report remediations it RECOMMENDS. No subcommand = status."""
+    """Opt-in permission-prompt diagnostic loop (per PRJ-006): capture deferred (prompted)
+    decisions, classify + rank them, and report remediations it RECOMMENDS. No subcommand =
+    status."""
     if ctx.invoked_subcommand is not None:
         return
     from project_kit import permissions as perm
@@ -3777,29 +4523,42 @@ def permissions_diagnose(ctx: click.Context) -> None:
 # Default mirrors permissions._DIAGNOSE_DEFAULT_TTL_SECONDS (8h); kept literal
 # here so the option default is available at decorator-eval time without importing
 # the module at CLI load. `diagnose_on` is the single source of truth at runtime.
-@click.option("--ttl", "ttl_seconds", default=8 * 60 * 60, show_default=True,
-              type=int, help="Seconds before the diagnostic session auto-expires "
-                             "(it can't stay silently armed).")
-@click.option("--no-redact", "no_redact", is_flag=True, default=False,
-              help="Log full commands instead of redacting the command tail "
-                   "(redaction is on by default — the tail carries paths/secrets).")
+@click.option(
+    "--ttl",
+    "ttl_seconds",
+    default=8 * 60 * 60,
+    show_default=True,
+    type=int,
+    help="Seconds before the diagnostic session auto-expires (it can't stay silently armed).",
+)
+@click.option(
+    "--no-redact",
+    "no_redact",
+    is_flag=True,
+    default=False,
+    help="Log full commands instead of redacting the command tail "
+    "(redaction is on by default — the tail carries paths/secrets).",
+)
 def permissions_diagnose_on(ttl_seconds: int, no_redact: bool) -> None:
-    """Arm a bounded diagnostic session (TTL-expiring). While armed, the hook appends each deferred decision to a local, git-ignored, size-capped log."""
+    """Arm a bounded diagnostic session (TTL-expiring). While armed, the hook appends each deferred
+    decision to a local, git-ignored, size-capped log."""
     from project_kit import permissions as perm
 
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
     try:
-        click.echo(perm.diagnose_on(target_root, ttl_seconds=ttl_seconds,
-                                    redact=not no_redact), nl=False)
+        click.echo(
+            perm.diagnose_on(target_root, ttl_seconds=ttl_seconds, redact=not no_redact), nl=False
+        )
     except perm.PermissionsError as exc:
         raise click.ClickException(str(exc)) from exc
 
 
 @permissions_diagnose.command("off")
 def permissions_diagnose_off() -> None:
-    """Disarm the diagnostic session (remove the armed marker); the captured log is left in place."""
+    """Disarm the diagnostic session (remove the armed marker); the captured log is left in
+    place."""
     from project_kit import permissions as perm
 
     target_root = find_target_root()
@@ -3821,7 +4580,8 @@ def permissions_diagnose_status() -> None:
 
 @permissions_diagnose.command("report")
 def permissions_diagnose_report() -> None:
-    """Print the classified, frequency-ranked, recommend-only report over the captured log. Applies nothing; reports COVERAGE, not a predicted prompt decrement."""
+    """Print the classified, frequency-ranked, recommend-only report over the captured log. Applies
+    nothing; reports COVERAGE, not a predicted prompt decrement."""
     from project_kit import permissions as perm
 
     target_root = find_target_root()
@@ -3833,7 +4593,8 @@ def permissions_diagnose_report() -> None:
 @permissions.group("sandbox", invoke_without_command=True)
 @click.pass_context
 def permissions_sandbox(ctx: click.Context) -> None:
-    """OS-sandbox confinement (per ADR-004): prompt-free scripting inside the box. No subcommand = status."""
+    """OS-sandbox confinement (per ADR-004): prompt-free scripting inside the box. No subcommand =
+    status."""
     if ctx.invoked_subcommand is not None:
         return
     from project_kit import permissions as perm
@@ -3845,14 +4606,22 @@ def permissions_sandbox(ctx: click.Context) -> None:
 
 
 @permissions_sandbox.command("enable")
-@click.option("--strict", is_flag=True, default=False,
-              help="Also lock the unsandboxed fail-over escape hatch "
-                   "(allowUnsandboxedCommands: false). Optional hardening; breaks "
-                   "legit fail-over like `git push` / `gh` — pair with excludedCommands.")
-@click.option("--dangerously-allow-unconfined", is_flag=True, default=False,
-              help="Operator-only, per-invocation: write failIfUnavailable: false "
-                   "(fail-open). Never a committable default — re-running enable "
-                   "without it restores fail-closed.")
+@click.option(
+    "--strict",
+    is_flag=True,
+    default=False,
+    help="Also lock the unsandboxed fail-over escape hatch "
+    "(allowUnsandboxedCommands: false). Optional hardening; breaks "
+    "legit fail-over like `git push` / `gh` — pair with excludedCommands.",
+)
+@click.option(
+    "--dangerously-allow-unconfined",
+    is_flag=True,
+    default=False,
+    help="Operator-only, per-invocation: write failIfUnavailable: false "
+    "(fail-open). Never a committable default — re-running enable "
+    "without it restores fail-closed.",
+)
 def permissions_sandbox_enable(strict: bool, dangerously_allow_unconfined: bool) -> None:
     """Turn on the OS sandbox with prompt-free scripting (fail-closed, additive, idempotent)."""
     from project_kit import permissions as perm
@@ -3861,9 +4630,14 @@ def permissions_sandbox_enable(strict: bool, dangerously_allow_unconfined: bool)
     if target_root is None:
         raise click.ClickException("not in a project tree.")
     try:
-        click.echo(perm.sandbox_enable(target_root, strict=strict,
-                                       dangerously_allow_unconfined=dangerously_allow_unconfined),
-                   nl=False)
+        click.echo(
+            perm.sandbox_enable(
+                target_root,
+                strict=strict,
+                dangerously_allow_unconfined=dangerously_allow_unconfined,
+            ),
+            nl=False,
+        )
     except perm.PermissionsError as exc:
         raise click.ClickException(str(exc)) from exc
 
@@ -3884,7 +4658,8 @@ def permissions_sandbox_disable() -> None:
 
 @permissions_sandbox.group("toolkit")
 def permissions_sandbox_toolkit() -> None:
-    """Confinement toolkits (per ADR-008): per-tool sandbox allowances, classified narrowing/widening."""
+    """Confinement toolkits (per ADR-008): per-tool sandbox allowances, classified
+    narrowing/widening."""
 
 
 @permissions_sandbox_toolkit.command("list")
@@ -3915,17 +4690,35 @@ def permissions_sandbox_toolkit_show(name: str) -> None:
 
 @permissions_sandbox.command("accommodate")
 @click.argument("tools", nargs=-1)
-@click.option("--detect", is_flag=True, default=False,
-              help="Also scan the project for known tools (lockfiles/manifests) and accommodate them.")
-@click.option("--socket", "socket_path", default=None,
-              help="Allow a one-off unix socket by path (e.g. --socket \"$SSH_AUTH_SOCK\") — "
-                   "narrowing, per-machine, never committed (per ADR-010). Use --name to label it.")
-@click.option("--name", default="manual", show_default=True,
-              help="Logical name for a --socket allowance (its recompute-replace key).")
-@click.option("--remove", is_flag=True, default=False,
-              help="Remove the named toolkits' (or the --socket --name) pkit-authored entries (operator entries untouched).")
-def permissions_sandbox_accommodate(tools: tuple[str, ...], detect: bool, socket_path: str | None,
-                                    name: str, remove: bool) -> None:
+@click.option(
+    "--detect",
+    is_flag=True,
+    default=False,
+    help="Also scan the project for known tools (lockfiles/manifests) and accommodate them.",
+)
+@click.option(
+    "--socket",
+    "socket_path",
+    default=None,
+    help='Allow a one-off unix socket by path (e.g. --socket "$SSH_AUTH_SOCK") — '
+    "narrowing, per-machine, never committed (per ADR-010). Use --name to label it.",
+)
+@click.option(
+    "--name",
+    default="manual",
+    show_default=True,
+    help="Logical name for a --socket allowance (its recompute-replace key).",
+)
+@click.option(
+    "--remove",
+    is_flag=True,
+    default=False,
+    help="Remove the named toolkits' (or the --socket --name) pkit-authored entries (operator "
+    "entries untouched).",
+)
+def permissions_sandbox_accommodate(
+    tools: tuple[str, ...], detect: bool, socket_path: str | None, name: str, remove: bool
+) -> None:
     """Apply NARROWING allowances so legit tooling works inside the box.
 
     Toolkits (build caches, sockets) are recorded in permission-config and auto-applied
@@ -3939,8 +4732,10 @@ def permissions_sandbox_accommodate(tools: tuple[str, ...], detect: bool, socket
         raise click.ClickException("not in a project tree.")
     try:
         if socket_path is not None or (remove and not tools and name != "manual"):
-            click.echo(perm.accommodate_socket(target_root, socket_path or "", name=name,
-                                               remove=remove), nl=False)
+            click.echo(
+                perm.accommodate_socket(target_root, socket_path or "", name=name, remove=remove),
+                nl=False,
+            )
         else:
             click.echo(perm.accommodate(target_root, tools, detect=detect, remove=remove), nl=False)
     except perm.PermissionsError as exc:
@@ -3949,10 +4744,18 @@ def permissions_sandbox_accommodate(tools: tuple[str, ...], detect: bool, socket
 
 @permissions_sandbox.command("exclude")
 @click.argument("command", required=False)
-@click.option("--weaker-tls", is_flag=True, default=False,
-              help="Instead of excluding a command, weaken network TLS isolation (widening).")
-@click.option("--remove", is_flag=True, default=False,
-              help="Put the command back inside the box (remove the exclusion).")
+@click.option(
+    "--weaker-tls",
+    is_flag=True,
+    default=False,
+    help="Instead of excluding a command, weaken network TLS isolation (widening).",
+)
+@click.option(
+    "--remove",
+    is_flag=True,
+    default=False,
+    help="Put the command back inside the box (remove the exclusion).",
+)
 def permissions_sandbox_exclude(command: str | None, weaker_tls: bool, remove: bool) -> None:
     """WIDENING gesture: carve a command OUT of the box so it runs UNCONFINED.
 
@@ -3966,15 +4769,18 @@ def permissions_sandbox_exclude(command: str | None, weaker_tls: bool, remove: b
     if target_root is None:
         raise click.ClickException("not in a project tree.")
     try:
-        click.echo(perm.sandbox_exclude(target_root, command or "", remove=remove,
-                                        weaker_tls=weaker_tls), nl=False)
+        click.echo(
+            perm.sandbox_exclude(target_root, command or "", remove=remove, weaker_tls=weaker_tls),
+            nl=False,
+        )
     except perm.PermissionsError as exc:
         raise click.ClickException(str(exc)) from exc
 
 
 @permissions.group("profile")
 def permissions_profile() -> None:
-    """Named autonomy profiles (per ADR-005): a posture + a layered grant-set you select per project."""
+    """Named autonomy profiles (per ADR-005): a posture + a layered grant-set you select per
+    project."""
 
 
 @permissions_profile.command("list")
@@ -4005,10 +4811,15 @@ def permissions_profile_show(name: str) -> None:
 
 @permissions_profile.command("activate")
 @click.argument("name")
-@click.option("--no-apply", is_flag=True, default=False,
-              help="Set the model only; don't realize to settings (run `apply` yourself later).")
+@click.option(
+    "--no-apply",
+    is_flag=True,
+    default=False,
+    help="Set the model only; don't realize to settings (run `apply` yourself later).",
+)
 def permissions_profile_activate(name: str, no_apply: bool) -> None:
-    """Activate a profile: set posture + layer its grants, then `apply` (unless --no-apply). Does not enable the hook."""
+    """Activate a profile: set posture + layer its grants, then `apply` (unless --no-apply). Does
+    not enable the hook."""
     from project_kit import permissions as perm
 
     target_root = find_target_root()
@@ -4022,7 +4833,8 @@ def permissions_profile_activate(name: str, no_apply: bool) -> None:
 
 @main.group()
 def decisions() -> None:
-    """Decision-record integrity checks across every id-space (core, project, ADR, per-capability DEC, rules)."""
+    """Decision-record integrity checks across every id-space (core, project, ADR, per-capability
+    DEC, rules)."""
 
 
 @decisions.command("validate")
@@ -4041,6 +4853,12 @@ def decisions_validate() -> None:
     filename number, and that no rule id (`RS-<SET>-NNN`, COR-051) is
     claimed twice across the rule sets. Exits non-zero on any duplicate or
     mismatch.
+
+    Then warns, without failing, of every line where a record narrates its
+    own revision — an amendment heading or marker, a revision stamped with an
+    issue number or a date, change-log phrasing — since a record is refined in
+    place and git history is its change log. Superseded records and records
+    that arrive as synced copies are not read.
     """
     from project_kit import decisions_validate as decisions_mod
 
@@ -4049,15 +4867,15 @@ def decisions_validate() -> None:
         raise click.ClickException("not in a project tree.")
     report = decisions_mod.validate_decision_ids(target_root)
     decisions_mod.print_report(report)
+    decisions_mod.print_narration(decisions_mod.revision_narration(target_root))
     if not report.is_clean:
-        raise click.ClickException(
-            f"{len(report.issues)} decision-id issue(s) found."
-        )
+        raise click.ClickException(f"{len(report.issues)} decision-id issue(s) found.")
 
 
 @main.group()
 def schemas() -> None:
-    """Validate capability YAML schemas against their JSON Schema companions (per COR-018 + the .pkit/schemas/ area)."""
+    """Validate capability YAML schemas against their JSON Schema companions (per COR-018 + the
+    .pkit/schemas/ area)."""
 
 
 @schemas.command("validate")
@@ -4094,9 +4912,7 @@ def schemas_validate(path: Path | None, shape_only: bool) -> None:
 
     resolve = not shape_only
     if path is not None:
-        report = schemas_mod.validate_path(
-            path, target_root=find_target_root(), resolve=resolve
-        )
+        report = schemas_mod.validate_path(path, target_root=find_target_root(), resolve=resolve)
     else:
         target_root = find_target_root()
         if target_root is None:
@@ -4181,13 +4997,13 @@ def schemas_add(namespace: str, entry_id: str, from_path: Path | None) -> None:
         source = from_path
     try:
         entry_data = authoring.load_entry_data(source)
-        yaml_path = authoring.add_entry_to_namespace(
-            target_root, namespace, entry_id, entry_data
-        )
+        yaml_path = authoring.add_entry_to_namespace(target_root, namespace, entry_id, entry_data)
     except authoring.SchemaAuthoringError as exc:
         raise click.ClickException(str(exc)) from exc
-    click.echo(f"Added entry {entry_id!r} to namespace {namespace!r} at "
-               f"{yaml_path.relative_to(target_root)}.")
+    click.echo(
+        f"Added entry {entry_id!r} to namespace {namespace!r} at "
+        f"{yaml_path.relative_to(target_root)}."
+    )
 
 
 @schemas.command("rename")
@@ -4225,9 +5041,7 @@ def schemas_rename(namespace: str, old_id: str, new_id: str) -> None:
         f"({len(result.changes)} change(s)):"
     )
     for change in result.changes:
-        click.echo(
-            f"  [{change.kind}] {change.yaml_path.relative_to(target_root)}"
-        )
+        click.echo(f"  [{change.kind}] {change.yaml_path.relative_to(target_root)}")
         click.echo(f"    {change.detail}")
 
 
@@ -4301,14 +5115,10 @@ def data_validate(path: Path, shape_only: bool) -> None:
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
-    report = data_mod.validate_path(
-        path, target_root, resolve_references=not shape_only
-    )
+    report = data_mod.validate_path(path, target_root, resolve_references=not shape_only)
     data_mod.print_report(report)
     if report.has_errors:
-        raise click.ClickException(
-            f"{len(report.errors)} data-validation error(s) found."
-        )
+        raise click.ClickException(f"{len(report.errors)} data-validation error(s) found.")
 
 
 @main.group()
@@ -4363,7 +5173,11 @@ def settings_consolidate(dry_run: bool, yes: bool) -> None:
 
     files = plan.files_to_modify
     click.echo(
-        "  " + cli_render.style("strong", f"Found {len(plan.pairs)} redundant entry(ies) across {len(files)} file(s):") + "\n"
+        "  "
+        + cli_render.style(
+            "strong", f"Found {len(plan.pairs)} redundant entry(ies) across {len(files)} file(s):"
+        )
+        + "\n"
     )
     for source_file in files:
         rel = source_file.relative_to(target_root)
@@ -4380,16 +5194,16 @@ def settings_consolidate(dry_run: bool, yes: bool) -> None:
 
     if not yes:
         file_list = ", ".join(str(f.relative_to(target_root)) for f in files)
-        confirmed = click.confirm(
-            f"  Remove these entries from {file_list}?", default=False
-        )
+        confirmed = click.confirm(f"  Remove these entries from {file_list}?", default=False)
         if not confirmed:
             click.echo("  cancelled.")
             return
 
     modified = consolidator.apply_consolidation(target_root, plan)
     rels = ", ".join(str(f.relative_to(target_root)) for f in modified)
-    click.echo("  " + cli_render.style("strong", f"Removed {len(plan.pairs)} entry(ies) from {rels}."))
+    click.echo(
+        "  " + cli_render.style("strong", f"Removed {len(plan.pairs)} entry(ies) from {rels}.")
+    )
 
 
 # --- Capability commands (per COR-017) ------------------------------------
@@ -4460,9 +5274,7 @@ def install_capability_cmd(name: str, dry_run: bool, plan: bool, as_json: bool) 
     if target_root is None:
         raise click.ClickException("not in a project tree.")
     if not (target_root / ".pkit").is_dir():
-        raise click.ClickException(
-            f"{target_root}/.pkit/ does not exist. Run 'pkit init' first."
-        )
+        raise click.ClickException(f"{target_root}/.pkit/ does not exist. Run 'pkit init' first.")
 
     source_kit = find_source_kit()
     # The methodology's source repository run by code that is not its own (the
@@ -4528,8 +5340,7 @@ def install_capability_cmd(name: str, dry_run: bool, plan: bool, as_json: bool) 
         for conflict in dep_conflicts:
             if conflict.reason == "absent":
                 lines.append(
-                    f"    - '{conflict.dep_name}' ({conflict.dep_version_range}) "
-                    f"is not installed"
+                    f"    - '{conflict.dep_name}' ({conflict.dep_version_range}) is not installed"
                 )
             else:
                 lines.append(
@@ -4558,7 +5369,11 @@ def install_capability_cmd(name: str, dry_run: bool, plan: bool, as_json: bool) 
     skipped: list[tuple[str, str]] = []
 
     if collisions:
-        click.echo("\n  " + cli_render.style("strong", f"{len(collisions)} naming collision(s) detected:") + "\n")
+        click.echo(
+            "\n  "
+            + cli_render.style("strong", f"{len(collisions)} naming collision(s) detected:")
+            + "\n"
+        )
         for finding in collisions:
             choice = _resolve_collision_interactive(target_root, finding, dry_run=dry_run)
             if choice == "skip":
@@ -4575,9 +5390,12 @@ def install_capability_cmd(name: str, dry_run: bool, plan: bool, as_json: bool) 
     verb = "Would install" if dry_run else "Installed"
     skip_note = f" ({len(skipped)} artifact(s) skipped)" if skipped else ""
     click.echo(
-        "\n  " + cli_render.style("strong",
+        "\n  "
+        + cli_render.style(
+            "strong",
             f"{verb} capability {name!r} v{capability_source.package.version} "
-            f"at {installed_path.relative_to(target_root)}/{skip_note}")
+            f"at {installed_path.relative_to(target_root)}/{skip_note}",
+        )
     )
 
     if not dry_run:
@@ -4619,10 +5437,13 @@ def _install_capability_in_source(
 
     verb, copied = ("Would register", "would be") if dry_run else ("Registered", "was")
     click.echo(
-        "\n  " + cli_render.style("strong",
+        "\n  "
+        + cli_render.style(
+            "strong",
             f"{verb} capability {name!r} v{capability_source.package.version} in place at "
             f"{registered_path.relative_to(target_root)}/: it is authored in this "
-            f"repository, the methodology's source, so nothing {copied} copied (ADR-059).")
+            f"repository, the methodology's source, so nothing {copied} copied (ADR-059).",
+        )
     )
 
     if not dry_run:
@@ -4644,8 +5465,11 @@ def _refuse_collisions_in_place(target_root: Path, capability_source: Capability
     if not collisions:
         return
     click.echo(
-        "\n  " + cli_render.style("strong",
-            f"{len(collisions)} naming collision(s) with already-installed content:") + "\n"
+        "\n  "
+        + cli_render.style(
+            "strong", f"{len(collisions)} naming collision(s) with already-installed content:"
+        )
+        + "\n"
     )
     for finding in collisions:
         click.echo(
@@ -4695,9 +5519,7 @@ def register_capability_cmd(name: str, dry_run: bool) -> None:
     if target_root is None:
         raise click.ClickException("not in a project tree.")
     if not (target_root / ".pkit").is_dir():
-        raise click.ClickException(
-            f"{target_root}/.pkit/ does not exist. Run 'pkit init' first."
-        )
+        raise click.ClickException(f"{target_root}/.pkit/ does not exist. Run 'pkit init' first.")
 
     source_kit = find_source_kit()
     # The methodology's source repository run by code that is not its own (the
@@ -4744,9 +5566,12 @@ def register_capability_cmd(name: str, dry_run: bool) -> None:
         current_origin = caps.read_capability_origin(target_root, name)
         if current_origin == caps.INCUBATED_IN_REPO:
             click.echo(
-                "\n  " + cli_render.style("strong",
+                "\n  "
+                + cli_render.style(
+                    "strong",
                     f"capability {name!r} is already registered as "
-                    f"incubated-in-repo; nothing to do.")
+                    f"incubated-in-repo; nothing to do.",
+                )
             )
             return
         # kit-shipped / unset → adopt in place: run the applicable pre-flights
@@ -4761,10 +5586,13 @@ def register_capability_cmd(name: str, dry_run: bool) -> None:
     # source (#1107), so there is no second copy to name.
     if resolved.in_kit_source and not caps.authored_in_source(target_root, source_kit, name):
         click.echo(
-            "\n  " + cli_render.style("strong",
+            "\n  "
+            + cli_render.style(
+                "strong",
                 f"Note: a capability named {name!r} also ships from kit source. "
                 f"Registering the in-repo (incubated) copy; the kit-shipped one "
-                f"is not installed.")
+                f"is not installed.",
+            )
         )
 
     # Pre-flight: self-consistency validation (COR-031 D1). The adopter
@@ -4774,9 +5602,12 @@ def register_capability_cmd(name: str, dry_run: bool) -> None:
     self_problems = caps.validate_capability_self_consistency(capability_source)
     if self_problems:
         click.echo(
-            "\n  " + cli_render.style("strong",
-                f"capability {name!r} is structurally invalid "
-                f"({len(self_problems)} problem(s)):") + "\n"
+            "\n  "
+            + cli_render.style(
+                "strong",
+                f"capability {name!r} is structurally invalid ({len(self_problems)} problem(s)):",
+            )
+            + "\n"
         )
         for problem in self_problems:
             click.echo(f"    - {problem}")
@@ -4800,8 +5631,7 @@ def register_capability_cmd(name: str, dry_run: bool) -> None:
         for conflict in dep_conflicts:
             if conflict.reason == "absent":
                 lines.append(
-                    f"    - '{conflict.dep_name}' ({conflict.dep_version_range}) "
-                    f"is not installed"
+                    f"    - '{conflict.dep_name}' ({conflict.dep_version_range}) is not installed"
                 )
             else:
                 lines.append(
@@ -4828,10 +5658,13 @@ def register_capability_cmd(name: str, dry_run: bool) -> None:
         if not dry_run:
             caps.set_capability_origin(target_root, name, caps.INCUBATED_IN_REPO)
         click.echo(
-            "\n  " + cli_render.style("strong",
+            "\n  "
+            + cli_render.style(
+                "strong",
                 f"{verb} {name!r} v{capability_source.package.version} as "
                 f"incubated-in-repo (was {current_origin}); pkit sync will now "
-                f"leave it untouched.")
+                f"leave it untouched.",
+            )
         )
         return
 
@@ -4851,9 +5684,12 @@ def register_capability_cmd(name: str, dry_run: bool) -> None:
 
     verb = "Would register" if dry_run else "Registered"
     click.echo(
-        "\n  " + cli_render.style("strong",
+        "\n  "
+        + cli_render.style(
+            "strong",
             f"{verb} incubated capability {name!r} v{capability_source.package.version} "
-            f"(in-repo) at {registered_path.relative_to(target_root)}/")
+            f"(in-repo) at {registered_path.relative_to(target_root)}/",
+        )
     )
 
     if not dry_run:
@@ -4893,9 +5729,12 @@ def _upgrade_incubated_capability(
 
     verb = "Would re-deploy" if dry_run else "Re-deployed"
     click.echo(
-        "\n  " + cli_render.style("strong",
+        "\n  "
+        + cli_render.style(
+            "strong",
             f"{verb} incubated capability {name!r} v{source.package.version} "
-            f"from its in-repo tree (no kit-source reconciliation — COR-031).")
+            f"from its in-repo tree (no kit-source reconciliation — COR-031).",
+        )
     )
 
     if not dry_run:
@@ -4930,11 +5769,14 @@ def _upgrade_capability_in_source(
     verb, copied = ("Would re-deploy", "would be") if dry_run else ("Re-deployed", "was")
     ran = "would run" if dry_run else "ran"
     click.echo(
-        "\n  " + cli_render.style("strong",
+        "\n  "
+        + cli_render.style(
+            "strong",
             f"{verb} capability {name!r} v{source.package.version} from its source at "
             f".pkit/capabilities/{name}/: it is authored in this repository, the "
             f"methodology's source, so nothing {copied} copied and no migration {ran} "
-            "(ADR-059).")
+            "(ADR-059).",
+        )
     )
 
     if not dry_run:
@@ -4961,9 +5803,7 @@ def _deploy_capability(target_root: Path, source_kit: Path, name: str) -> None:
     install_mod.provision_query_commands(ctx, component=name)
 
 
-def _check_backbone_satisfied(
-    target_root: Path, capability_source: CapabilitySource
-) -> None:
+def _check_backbone_satisfied(target_root: Path, capability_source: CapabilitySource) -> None:
     """Refuse if the project's backbone version is outside the capability's required range.
 
     The shared backbone-satisfaction pre-flight for both capability-entry
@@ -5038,9 +5878,7 @@ def _warn_mandatory_counterparts(
     broken = caps.mandatory_counterparts_left_unmet(target_root, name, replacement=replacement)
     if not broken:
         return
-    header = (
-        f"Warning (--force): {action} leaves" if force else f"Warning: {action} would leave"
-    )
+    header = f"Warning (--force): {action} leaves" if force else f"Warning: {action} would leave"
     click.echo(
         "\n  "
         + cli_render.style(
@@ -5087,9 +5925,7 @@ def _find_desynced_dependents(
     declared_dependents = caps.find_declared_dependents(target_root, dep_name)
     desynced: list[tuple[str, str]] = []
     for dep_cap in declared_dependents:
-        pkg_yaml_path = (
-            target_root / ".pkit" / "capabilities" / dep_cap / "package.yaml"
-        )
+        pkg_yaml_path = target_root / ".pkit" / "capabilities" / dep_cap / "package.yaml"
         if not pkg_yaml_path.is_file():
             continue
         pkg = caps._read_package_yaml(pkg_yaml_path)
@@ -5113,7 +5949,6 @@ def _resolve_collision_interactive(target_root, finding, *, dry_run: bool) -> st
     Loops on `inspect` (re-prompts after showing diff) until adopter
     picks override or skip. Returns the final choice as a string.
     """
-    from project_kit import capabilities as caps  # local to avoid cycle
 
     while True:
         click.echo(
@@ -5150,8 +5985,10 @@ def _show_unified_diff(existing: Path, incoming: Path) -> None:
         existing_lines = existing.read_text().splitlines(keepends=True)
         incoming_lines = incoming.read_text().splitlines(keepends=True)
         diff = difflib.unified_diff(
-            existing_lines, incoming_lines,
-            fromfile=str(existing), tofile=str(incoming),
+            existing_lines,
+            incoming_lines,
+            fromfile=str(existing),
+            tofile=str(incoming),
         )
         for line in diff:
             click.echo(line, nl=False)
@@ -5281,10 +6118,14 @@ def uninstall_capability_cmd(
         declared_dependents = caps.find_declared_dependents(target_root, name)
         if declared_dependents:
             click.echo(
-                "\n  " + cli_render.style("strong",
+                "\n  "
+                + cli_render.style(
+                    "strong",
                     f"Refusing to uninstall {name!r}: "
                     f"{len(declared_dependents)} installed capability(ies) "
-                    f"declare a dependency on it:") + "\n"
+                    f"declare a dependency on it:",
+                )
+                + "\n"
             )
             for dep_cap in declared_dependents:
                 click.echo(f"    - {dep_cap}")
@@ -5305,7 +6146,12 @@ def uninstall_capability_cmd(
         references = caps.find_references(target_root, name)
         if references:
             click.echo(
-                "\n  " + cli_render.style("strong", f"Refusing to uninstall {name!r}: {len(references)} reference(s) found:") + "\n"
+                "\n  "
+                + cli_render.style(
+                    "strong",
+                    f"Refusing to uninstall {name!r}: {len(references)} reference(s) found:",
+                )
+                + "\n"
             )
             # Show a compact summary (capped to first 10).
             for path, snippet in references[:10]:
@@ -5313,9 +6159,7 @@ def uninstall_capability_cmd(
                 click.echo(f"    {rel}: {snippet}")
             if len(references) > 10:
                 click.echo(f"    ... and {len(references) - 10} more.")
-            raise click.ClickException(
-                "Clean references first, or pass --force to override."
-            )
+            raise click.ClickException("Clean references first, or pass --force to override.")
 
     # --purge on an incubated capability deletes the adopter's only copy of
     # authored work — a destructive op. Confirm before proceeding (the
@@ -5354,16 +6198,21 @@ def uninstall_capability_cmd(
     if outcome.files_deleted:
         verb = "Would remove" if dry_run else "Removed"
         click.echo(
-            "\n  " + cli_render.style("strong",
-                f"{verb} capability {name!r} from "
-                f"{outcome.cap_dir.relative_to(target_root)}")
+            "\n  "
+            + cli_render.style(
+                "strong",
+                f"{verb} capability {name!r} from {outcome.cap_dir.relative_to(target_root)}",
+            )
         )
     elif outcome.in_source and not incubated:
         verb, deleted = ("Would unregister", "would be") if dry_run else ("Unregistered", "was")
         click.echo(
-            "\n  " + cli_render.style("strong",
+            "\n  "
+            + cli_render.style(
+                "strong",
                 f"{verb} capability {name!r}; nothing {deleted} deleted: its source "
-                f"stays at {subtree}.")
+                f"stays at {subtree}.",
+            )
         )
         if not dry_run:
             click.echo(f"  (`pkit capabilities install {name}` registers it again.)")
@@ -5371,15 +6220,16 @@ def uninstall_capability_cmd(
         # Incubated, kept in place (COR-031 D4): unregistered, files retained.
         verb = "Would unregister" if dry_run else "Unregistered"
         click.echo(
-            "\n  " + cli_render.style("strong",
+            "\n  "
+            + cli_render.style(
+                "strong",
                 f"{verb} incubated capability {name!r} in place; your authored "
-                f"files are kept at {outcome.cap_dir.relative_to(target_root)}/")
+                f"files are kept at {outcome.cap_dir.relative_to(target_root)}/",
+            )
         )
         # The source refuses --purge, so it is offered only where it applies.
         if not dry_run and not outcome.in_source:
-            click.echo(
-                "  (pass --purge to delete the authored subtree as well.)"
-            )
+            click.echo("  (pass --purge to delete the authored subtree as well.)")
 
     if not dry_run:
         # Re-run installed adapter primitives so the harness drops stale
@@ -5388,6 +6238,7 @@ def uninstall_capability_cmd(
         # inside `uninstall_capability`, through each adapter's undeploy
         # primitive, since a deploy re-run cannot see it as gone.
         from project_kit import install as install_mod
+
         ctx = install_mod.InstallContext(
             target_root=target_root,
             source_kit=source_kit,
@@ -5415,10 +6266,13 @@ def list_capabilities_cmd() -> None:
     names = sorted(set(available) | set(installed))
 
     if not names:
-        click.echo(cli_render.view(
-            title=cli_render.title("Capabilities", "0 available"),
-            sections=[cli_render.section(empty="(none ship in this kit version)")],
-        ), nl=False)
+        click.echo(
+            cli_render.view(
+                title=cli_render.title("Capabilities", "0 available"),
+                sections=[cli_render.section(empty="(none ship in this kit version)")],
+            ),
+            nl=False,
+        )
         return
 
     rows: list[dict[str, str]] = []
@@ -5427,24 +6281,34 @@ def list_capabilities_cmd() -> None:
         # Only mark origin for installed capabilities; an available-but-not-
         # installed one has no install-state origin to report.
         origin_label = (
-            "incubated" if origin == caps.INCUBATED_IN_REPO
-            else "kit-shipped" if n in installed
+            "incubated"
+            if origin == caps.INCUBATED_IN_REPO
+            else "kit-shipped"
+            if n in installed
             else ""
         )
-        rows.append({
-            "name": n,
-            "status": "installed" if n in installed else "",
-            "origin": origin_label,
-        })
-    click.echo(cli_render.view(
-        title=cli_render.title("Capabilities", f"{len(names)} known",
-                               gloss="install with `pkit capabilities install <name>`"),
-        sections=[cli_render.section(rows=rows, columns=["name", "status", "origin"])],
-        commands=[
-            ("pkit capabilities install <name>", "install a kit-shipped one into this project"),
-            ("pkit capabilities register <name>", "register an in-repo (incubated) one"),
-        ],
-    ), nl=False)
+        rows.append(
+            {
+                "name": n,
+                "status": "installed" if n in installed else "",
+                "origin": origin_label,
+            }
+        )
+    click.echo(
+        cli_render.view(
+            title=cli_render.title(
+                "Capabilities",
+                f"{len(names)} known",
+                gloss="install with `pkit capabilities install <name>`",
+            ),
+            sections=[cli_render.section(rows=rows, columns=["name", "status", "origin"])],
+            commands=[
+                ("pkit capabilities install <name>", "install a kit-shipped one into this project"),
+                ("pkit capabilities register <name>", "register an in-repo (incubated) one"),
+            ],
+        ),
+        nl=False,
+    )
 
 
 @capabilities.command("refresh")
@@ -5521,7 +6385,8 @@ def refresh_capability_cmd(name: str, dry_run: bool) -> None:
 
 @main.group()
 def new() -> None:
-    """Scaffold new methodology artifacts: decisions, adapters, migrations, areas, capabilities, schemas, scratchpads, agents, storyboards."""
+    """Scaffold new methodology artifacts: decisions, adapters, migrations, areas, capabilities,
+    schemas, scratchpads, agents, storyboards."""
 
 
 @new.command("decision")
@@ -5655,7 +6520,7 @@ def new_schema(
             target_root,
             capability=capability,
             name=name,
-            collection_form=collection_form,  # type: ignore[arg-type]
+            collection_form=collection_form,
             collection_name=collection_name,
             no_namespace=no_namespace,
         )
@@ -5989,8 +6854,7 @@ def scratchpad_reported(slug: str, refs: tuple[str, ...], dry_run: bool) -> None
     if stamp.src != stamp.dst:
         verb = "Would move" if dry_run else "Moved"
         click.echo(
-            f"{verb}: {stamp.src.relative_to(target_root)} -> "
-            f"{stamp.dst.relative_to(target_root)}"
+            f"{verb}: {stamp.src.relative_to(target_root)} -> {stamp.dst.relative_to(target_root)}"
         )
     verb = "Would record" if dry_run else "Recorded"
     click.echo(f"{verb}: {', '.join(stamp.added)}")
@@ -6023,9 +6887,7 @@ def scratchpad_list() -> None:
             if folder != "reported":
                 click.echo(f"  {entry.name}")
                 continue
-            refs_text = ", ".join(
-                _reported_ref_text(r) for r in entry.refs
-            ) or "(no refs recorded)"
+            refs_text = ", ".join(_reported_ref_text(r) for r in entry.refs) or "(no refs recorded)"
             drift = "  [modified since reported]" if entry.drifted else ""
             click.echo(f"  {entry.name}  -> {refs_text}{drift}")
             if entry.refs and all(r.state == "closed" for r in entry.refs):
@@ -6083,8 +6945,11 @@ def process() -> None:
     execute guarded moves, render the self-explaining status view.
 
     Content-free — addresses a capability's process definition as
-    `<capability>:<process-id>` and reads the subject's reality. Homed in the
-    binary (ADR-020); capability wrappers call it by subprocess.
+    `<capability>:<process-id>` and reads the subject's reality live, by the
+    definition's one detection mode: `inferred` asks each state's predicate
+    "is the subject here?", `classified` asks a predicate "which state is it
+    in?" (ADR-062). Homed in the binary (ADR-020); capability wrappers call it
+    by subprocess.
     """
 
 
@@ -6104,11 +6969,25 @@ def _load_engine(address: str, subject: str | None) -> ProcessEngine:
 
 @process.command("status")
 @click.argument("address")
-@click.option("--subject", default=None, help="Subject key. Required for a keyed process (COR-032); ignored for a singleton (the fixed key is used).")
-@click.option("--actor", default="operator", show_default=True,
-              help="Evaluate gate prechecks as this actor (cross-authority).")
-@click.option("--json", "as_json", is_flag=True, default=False,
-              help="Emit structured JSON instead of the narrative view.")
+@click.option(
+    "--subject",
+    default=None,
+    help="Subject key. Required for a keyed process (COR-032); ignored for a singleton (the fixed "
+    "key is used).",
+)
+@click.option(
+    "--actor",
+    default="operator",
+    show_default=True,
+    help="Evaluate gate prechecks as this actor (cross-authority).",
+)
+@click.option(
+    "--json",
+    "as_json",
+    is_flag=True,
+    default=False,
+    help="Emit structured JSON instead of the narrative view.",
+)
 def process_status(address: str, subject: str | None, actor: str, as_json: bool) -> None:
     """Where the subject is · why · how it got here · legal moves · next hint."""
     from project_kit import process as process_mod
@@ -6126,9 +7005,18 @@ def process_status(address: str, subject: str | None, actor: str, as_json: bool)
 @process.command("can-move")
 @click.argument("address")
 @click.option("--to", "to_state", required=True, help="Target state id.")
-@click.option("--subject", default=None, help="Subject key. Required for a keyed process (COR-032); ignored for a singleton (the fixed key is used).")
-@click.option("--actor", default="operator", show_default=True,
-              help="The actor being gated (cross-authority is computed against this).")
+@click.option(
+    "--subject",
+    default=None,
+    help="Subject key. Required for a keyed process (COR-032); ignored for a singleton (the fixed "
+    "key is used).",
+)
+@click.option(
+    "--actor",
+    default="operator",
+    show_default=True,
+    help="The actor being gated (cross-authority is computed against this).",
+)
 def process_can_move(address: str, to_state: str, subject: str | None, actor: str) -> None:
     """Validate a candidate move; refuse (fail-closed) with a self-explaining reason."""
     from project_kit import process as process_mod
@@ -6174,12 +7062,43 @@ def _resolve_actor_identity() -> str:
 @process.command("move")
 @click.argument("address")
 @click.option("--to", "to_state", required=True, help="Target state id.")
-@click.option("--subject", default=None, help="Subject key. Required for a keyed process (COR-032); ignored for a singleton (the fixed key is used).")
-@click.option("--actor", default=None,
-              help="The actor performing the move (recorded in the journal; gated "
-                   "cross-authority). Defaults to the resolved gh login of the "
-                   "current user.")
-def process_move(address: str, to_state: str, subject: str | None, actor: str | None) -> None:
+@click.option(
+    "--from",
+    "from_state",
+    default=None,
+    help="The state the subject held before you applied this move's domain side-effect "
+    "(the seam-ordering contract). The move is validated and journaled from there, and "
+    "refused when live detection places the subject at neither this state nor the target. "
+    "Omit it to move from the live position.",
+)
+@click.option(
+    "--subject",
+    default=None,
+    help="Subject key. Required for a keyed process (COR-032); ignored for a singleton (the fixed "
+    "key is used).",
+)
+@click.option(
+    "--actor",
+    default=None,
+    help="The actor performing the move (recorded in the journal; gated "
+    "cross-authority). Defaults to the resolved gh login of the "
+    "current user.",
+)
+@click.option(
+    "--reason",
+    default=None,
+    metavar="TEXT",
+    help="Why the move was taken, recorded on its journal entry as given. The engine does not "
+    "read it, so it never changes whether the move is allowed.",
+)
+def process_move(
+    address: str,
+    to_state: str,
+    from_state: str | None,
+    subject: str | None,
+    actor: str | None,
+    reason: str | None,
+) -> None:
     """Execute a legal move; append the journal entry. Refuses an illegal move."""
     from project_kit import process as process_mod
 
@@ -6187,7 +7106,7 @@ def process_move(address: str, to_state: str, subject: str | None, actor: str | 
         actor = _resolve_actor_identity()
     engine = _load_engine(address, subject)
     try:
-        result = engine.move(to_state, actor)
+        result = engine.move(to_state, actor, from_state=from_state, reason=reason)
     except process_mod.ProcessError as exc:
         raise click.ClickException(str(exc)) from exc
     if not result.ok:
@@ -6198,9 +7117,19 @@ def process_move(address: str, to_state: str, subject: str | None, actor: str | 
 
 @process.command("cascade")
 @click.argument("address")
-@click.option("--subject", default=None, help="Subject key. Required for a keyed process (COR-032); ignored for a singleton (the fixed key is used).")
-@click.option("--json", "as_json", is_flag=True, default=False,
-              help="Emit structured JSON instead of the narrative view.")
+@click.option(
+    "--subject",
+    default=None,
+    help="Subject key. Required for a keyed process (COR-032); ignored for a singleton (the fixed "
+    "key is used).",
+)
+@click.option(
+    "--json",
+    "as_json",
+    is_flag=True,
+    default=False,
+    help="Emit structured JSON instead of the narrative view.",
+)
 def process_cascade(address: str, subject: str | None, as_json: bool) -> None:
     """Resolve the subject's declared cascade fold (COR-037) and report it.
 
@@ -6244,6 +7173,9 @@ def process_cascade(address: str, subject: str | None, as_json: bool) -> None:
                         "opened": resolution.opened,
                         "indeterminate": resolution.indeterminate,
                         "reason": resolution.reason,
+                        # What a predicate the fold could not evaluate said
+                        # (null when none failed, or it said nothing).
+                        "stderr_tail": resolution.stderr_tail or None,
                     }
                 },
                 indent=2,
@@ -6251,17 +7183,26 @@ def process_cascade(address: str, subject: str | None, as_json: bool) -> None:
             )
         )
     else:
-        marker = "✓" if resolution.opened else ("?" if resolution.indeterminate else "✗")
-        click.echo(f"  {marker} folds {resolution.address} ({resolution.op}): {resolution.reason}")
+        click.echo(process_mod.render_cascade_narrative(resolution))
     if not resolution.opened:
         raise SystemExit(1)
 
 
 @process.command("validate")
 @click.argument("address")
-@click.option("--subject", default=None, help="Subject key. Required for a keyed process (COR-032); ignored for a singleton (the fixed key is used).")
-@click.option("--json", "as_json", is_flag=True, default=False,
-              help="Emit structured JSON instead of the narrative view.")
+@click.option(
+    "--subject",
+    default=None,
+    help="Subject key. Required for a keyed process (COR-032); ignored for a singleton (the fixed "
+    "key is used).",
+)
+@click.option(
+    "--json",
+    "as_json",
+    is_flag=True,
+    default=False,
+    help="Emit structured JSON instead of the narrative view.",
+)
 def process_validate(address: str, subject: str | None, as_json: bool) -> None:
     """Run the subject's invariants (COR-035); report which hold and which are
     violated. Read-only; exits non-zero if any invariant is violated."""
@@ -6287,22 +7228,28 @@ def process_validate(address: str, subject: str | None, as_json: bool) -> None:
 
 @process.command("health")
 @click.option(
-    "--process", "focus_process", default=None,
+    "--process",
+    "focus_process",
+    default=None,
     help="Only contracts touching this <capability>:<process-id> (as upstream or downstream).",
 )
 @click.option(
-    "--json", "as_json", is_flag=True, default=False,
+    "--json",
+    "as_json",
+    is_flag=True,
+    default=False,
     help="Emit the byte-stable machine form (per-contract objects + totals; no styling).",
 )
 @click.option(
-    "--interpretation-only", "interpretation_only", is_flag=True, default=False,
+    "--interpretation-only",
+    "interpretation_only",
+    is_flag=True,
+    default=False,
     help="Report INDETERMINATES only (the authoring completion signal, COR-044): "
-         "does every contract resolve and its seams execute? Misses are not "
-         "counted and do not affect the exit code.",
+    "does every contract resolve and its seams execute? Misses are not "
+    "counted and do not affect the exit code.",
 )
-def process_health(
-    focus_process: str | None, as_json: bool, interpretation_only: bool
-) -> None:
+def process_health(focus_process: str | None, as_json: bool, interpretation_only: bool) -> None:
     """Walk every declared hand-off contract (COR-042) and report missed
     hand-offs — upstream subjects at their trigger state with no downstream
     counterpart.
@@ -6395,48 +7342,104 @@ def _split_pair(raw: str, sep: str, flag: str, shape: str) -> tuple[str, str]:
 
 @process.command("new")
 @click.argument("address")
-@click.option("--cardinality", default="singleton", show_default=True,
-              help="Subject cardinality (validated against the shape contract's set).")
-@click.option("--key", "subject_key", default=None,
-              help="Descriptive name of what identifies a KEYED unit (COR-032); keyed only.")
-@click.option("--domain-ref", "domain_ref", default=None, metavar="<pointer>",
-              help="Pointer to where the subject's DOMAIN data lives — distinct from its "
-                   "process position (optional, either cardinality). Free-form: the "
-                   "engine never interprets it.")
-@click.option("--state", "state_flags", multiple=True, required=True, metavar="<id>=<meaning>",
-              help="Declare a state (repeatable; declaration order is kept — it can be "
-                   "load-bearing for detection precedence). Every state gets a detection "
-                   "predicate stub.")
-@click.option("--entry", "entry_flags", multiple=True, metavar="<state-id>",
-              help="Mark a state as an unconditional entry (repeatable).")
-@click.option("--guarded-entry", "guarded_entry_flags", multiple=True, metavar="<state-id>",
-              help="Mark a state as a GUARDED entry (repeatable); scaffolds an entry-guard "
-                   "predicate stub.")
-@click.option("--terminal", "terminal_flags", multiple=True, metavar="<state-id>",
-              help="Mark a state terminal — an outcome a parent may wire (repeatable).")
-@click.option("--transition", "transition_flags", multiple=True,
-              metavar="<from>:<to>:<trigger>[:<authorisation>]",
-              help="Declare a transition (repeatable). `from` may be `*` (any source). "
-                   "Authorisation defaults to `user` (the safe floor: nothing moves "
-                   "autonomously until the author decides otherwise).")
-@click.option("--gate", "gate_flags", multiple=True,
-              metavar="<from>:<to>:<trigger>[:<kind>]",
-              help="Gate a declared transition (repeatable); scaffolds a gate predicate "
-                   "stub. Addresses the transition by its FULL key including the trigger "
-                   "— two edges between the same state pair are legal when their triggers "
-                   "differ, and each is gated separately. Kind defaults to "
-                   "`deterministic`; `authorisation-artifact` is the other stubbed kind "
-                   "(engine-computed kinds ride the deferred subprocess/cascade block "
-                   "surface).")
-@click.option("--invariant", "invariant_flags", multiple=True, metavar="<id>=<why>",
-              help="Declare a position-independent always-check (COR-035, repeatable); "
-                   "scaffolds a check predicate stub.")
-@click.option("--blocked", "blocked_on", default=None,
-              help="Declare the subject's wait reason (COR-034; validated against the "
-                   "shape contract's set). `awaiting-condition` scaffolds a resume_when "
-                   "predicate stub.")
-@click.option("--dry-run", "dry_run", is_flag=True, default=False,
-              help="Report what would be stamped without writing anything.")
+@click.option(
+    "--cardinality",
+    default="singleton",
+    show_default=True,
+    help="Subject cardinality (validated against the shape contract's set).",
+)
+@click.option(
+    "--key",
+    "subject_key",
+    default=None,
+    help="Descriptive name of what identifies a KEYED unit (COR-032); keyed only.",
+)
+@click.option(
+    "--domain-ref",
+    "domain_ref",
+    default=None,
+    metavar="<pointer>",
+    help="Pointer to where the subject's DOMAIN data lives — distinct from its "
+    "process position (optional, either cardinality). Free-form: the "
+    "engine never interprets it.",
+)
+@click.option(
+    "--state",
+    "state_flags",
+    multiple=True,
+    required=True,
+    metavar="<id>=<meaning>",
+    help="Declare a state (repeatable; declaration order is kept — the first state "
+    "whose detection is true is the position, so order can be load-bearing). Every "
+    "state gets an `inferred` detection predicate stub; a definition has one "
+    "detection mode, so adopting `classified` is a hand edit to every state.",
+)
+@click.option(
+    "--entry",
+    "entry_flags",
+    multiple=True,
+    metavar="<state-id>",
+    help="Mark a state as an unconditional entry (repeatable).",
+)
+@click.option(
+    "--guarded-entry",
+    "guarded_entry_flags",
+    multiple=True,
+    metavar="<state-id>",
+    help="Mark a state as a GUARDED entry (repeatable); scaffolds an entry-guard predicate stub.",
+)
+@click.option(
+    "--terminal",
+    "terminal_flags",
+    multiple=True,
+    metavar="<state-id>",
+    help="Mark a state terminal — an outcome a parent may wire (repeatable).",
+)
+@click.option(
+    "--transition",
+    "transition_flags",
+    multiple=True,
+    metavar="<from>:<to>:<trigger>[:<authorisation>]",
+    help="Declare a transition (repeatable). `from` may be `*` (any source). "
+    "Authorisation defaults to `user` (the safe floor: nothing moves "
+    "autonomously until the author decides otherwise).",
+)
+@click.option(
+    "--gate",
+    "gate_flags",
+    multiple=True,
+    metavar="<from>:<to>:<trigger>[:<kind>]",
+    help="Gate a declared transition (repeatable); scaffolds a gate predicate "
+    "stub. Addresses the transition by its FULL key including the trigger "
+    "— two edges between the same state pair are legal when their triggers "
+    "differ, and each is gated separately. Kind defaults to "
+    "`deterministic`; `authorisation-artifact` is the other stubbed kind "
+    "(engine-computed kinds ride the deferred subprocess/cascade block "
+    "surface).",
+)
+@click.option(
+    "--invariant",
+    "invariant_flags",
+    multiple=True,
+    metavar="<id>=<why>",
+    help="Declare a position-independent always-check (COR-035, repeatable); "
+    "scaffolds a check predicate stub.",
+)
+@click.option(
+    "--blocked",
+    "blocked_on",
+    default=None,
+    help="Declare the subject's wait reason (COR-034; validated against the "
+    "shape contract's set). `awaiting-condition` scaffolds a resume_when "
+    "predicate stub.",
+)
+@click.option(
+    "--dry-run",
+    "dry_run",
+    is_flag=True,
+    default=False,
+    help="Report what would be stamped without writing anything.",
+)
 def process_new(
     address: str,
     cardinality: str,
@@ -6519,8 +7522,7 @@ def process_new(
         parts = [p.strip() for p in raw.split(":")]
         if len(parts) not in (3, 4) or not all(parts):
             raise click.ClickException(
-                f"--gate {raw!r} is malformed; expected "
-                "<from>:<to>:<trigger>[:<kind>]."
+                f"--gate {raw!r} is malformed; expected <from>:<to>:<trigger>[:<kind>]."
             )
         kind = parts[3] if len(parts) == 4 else "deterministic"
         # A transition is keyed by (from, to, trigger): addressing a gate by the
@@ -6587,34 +7589,65 @@ def process_new(
 
 @process.command("couple")
 @click.argument("address")
-@click.option("--state", "state_id", required=True,
-              help="The hosting state of the coupling (a state of ADDRESS; the hosting "
-                   "state has no semantic effect on any check — audit colour, COR-042).")
-@click.option("--upstream", required=True,
-              metavar="<capability>:<process-id>|<publisher>::<role>:<point>",
-              help="The upstream process this definition depends on: by implementation, "
-                   "or by role — the process offered at that address by whichever "
-                   "capability is the role's active provider (COR-053 point 2).")
-@click.option("--relation", required=True,
-              help="The connection kind, from COR-038's closed set as the shape contract "
-                   "declares it (read as data — a new relation kind is an enum value, "
-                   "never a code change).")
-@click.option("--mode", required=True,
-              help="pull (read on the reader's turn) | push (mediated OUTSIDE the "
-                   "engine — no eventing); from the shape contract's set.")
-@click.option("--why", required=True,
-              help="The human-readable reason the render surfaces (required, COR-038).")
-@click.option("--version", "interface_version", type=click.IntRange(min=1), default=None,
-              metavar="<n>",
-              help="The upstream interface version this connection targets: it connects "
-                   "only to an offered process at an equal version (COR-053 point 5).")
-@click.option("--mandatory", "mandatory", default=None, metavar="<reason>",
-              help="Mark the connection mandatory, with the reason every refusal and "
-                   "warning it causes quotes: the capability lifecycle then refuses to "
-                   "install or upgrade this capability while the upstream is missing "
-                   "(COR-053 point 6).")
-@click.option("--dry-run", "dry_run", is_flag=True, default=False,
-              help="Report what would change without writing anything.")
+@click.option(
+    "--state",
+    "state_id",
+    required=True,
+    help="The hosting state of the coupling (a state of ADDRESS; the hosting "
+    "state has no semantic effect on any check — audit colour, COR-042).",
+)
+@click.option(
+    "--upstream",
+    required=True,
+    metavar="<capability>:<process-id>|<publisher>::<role>:<point>",
+    help="The upstream process this definition depends on: by implementation, "
+    "or by role — the process offered at that address by whichever "
+    "capability is the role's active provider (COR-053 point 2).",
+)
+@click.option(
+    "--relation",
+    required=True,
+    help="The connection kind, from COR-038's closed set as the shape contract "
+    "declares it (read as data — a new relation kind is an enum value, "
+    "never a code change).",
+)
+@click.option(
+    "--mode",
+    required=True,
+    help="pull (read on the reader's turn) | push (mediated OUTSIDE the "
+    "engine — no eventing); from the shape contract's set.",
+)
+@click.option(
+    "--why",
+    required=True,
+    help="The human-readable reason the render surfaces (required, COR-038).",
+)
+@click.option(
+    "--version",
+    "interface_version",
+    type=click.IntRange(min=1),
+    default=None,
+    metavar="<n>",
+    help="The upstream interface version this connection targets: it connects "
+    "only to an offered process at an equal version (COR-053 point 5).",
+)
+@click.option(
+    "--mandatory",
+    "mandatory",
+    default=None,
+    metavar="<reason>",
+    help="Mark the connection mandatory, with the reason every refusal and "
+    "warning it causes quotes: the capability lifecycle then refuses to "
+    "install or upgrade this capability while the upstream is missing "
+    "(COR-053 point 6).",
+)
+@click.option(
+    "--dry-run",
+    "dry_run",
+    is_flag=True,
+    default=False,
+    help="Report what would change without writing anything.",
+)
 def process_couple(
     address: str,
     state_id: str,
@@ -6695,28 +7728,53 @@ def process_couple(
 
 @process.command("hand-off")
 @click.argument("address")
-@click.option("--upstream", required=True, metavar="<capability>:<process-id>",
-              help="The coupled upstream process the contract checks against.")
-@click.option("--state", "state_id", default=None,
-              help="Hosting state of the coupling; needed only when ADDRESS couples to "
-                   "the same upstream on several states.")
-@click.option("--trigger", required=True,
-              help="The upstream state meaning 'ready to hand off'. Declare a STABLE "
-                   "state — a subject that transits an ephemeral trigger leaves the "
-                   "report, picked up or not (COR-042 authoring smell).")
-@click.option("--candidates", required=True, metavar="<command>",
-              help="The candidate-source command of THIS capability (registered name; "
-                   "scaffolded as a fail-closed stub + registered when new). Subject "
-                   "slot = the upstream process address; payload {candidates: [...]}. "
-                   "A source that can silently return nothing against a wrong root is "
-                   "the sibling authoring smell — error instead (COR-042).")
-@click.option("--resolve", required=True, metavar="<command>",
-              help="The resolve-seam command of THIS capability (registered name; "
-                   "scaffolded as a fail-closed stub + registered when new). Subject "
-                   "slot = one upstream subject id; payload {downstream: [...]} — "
-                   "empty = determinate absence (a miss), error = indeterminate.")
-@click.option("--dry-run", "dry_run", is_flag=True, default=False,
-              help="Report what would change without writing anything.")
+@click.option(
+    "--upstream",
+    required=True,
+    metavar="<capability>:<process-id>",
+    help="The coupled upstream process the contract checks against.",
+)
+@click.option(
+    "--state",
+    "state_id",
+    default=None,
+    help="Hosting state of the coupling; needed only when ADDRESS couples to "
+    "the same upstream on several states. It names a state, so it cannot "
+    "tell apart two entries on one state — the refusal names the hand edit.",
+)
+@click.option(
+    "--trigger",
+    required=True,
+    help="The upstream state meaning 'ready to hand off'. Declare a STABLE "
+    "state — a subject that transits an ephemeral trigger leaves the "
+    "report, picked up or not (COR-042 authoring smell).",
+)
+@click.option(
+    "--candidates",
+    required=True,
+    metavar="<command>",
+    help="The candidate-source command of THIS capability (registered name; "
+    "scaffolded as a fail-closed stub + registered when new). Subject "
+    "slot = the upstream process address; payload {candidates: [...]}. "
+    "A source that can silently return nothing against a wrong root is "
+    "the sibling authoring smell — error instead (COR-042).",
+)
+@click.option(
+    "--resolve",
+    required=True,
+    metavar="<command>",
+    help="The resolve-seam command of THIS capability (registered name; "
+    "scaffolded as a fail-closed stub + registered when new). Subject "
+    "slot = one upstream subject id; payload {downstream: [...]} — "
+    "empty = determinate absence (a miss), error = indeterminate.",
+)
+@click.option(
+    "--dry-run",
+    "dry_run",
+    is_flag=True,
+    default=False,
+    help="Report what would change without writing anything.",
+)
 def process_handoff(
     address: str,
     upstream: str,
@@ -6767,10 +7825,7 @@ def process_handoff(
         )
     else:
         verb = "Would declare contract" if dry_run else "Contract declared"
-        click.echo(
-            f"{verb}: {upstream} -> {address} @{trigger} in {rel} "
-            "(version unchanged)."
-        )
+        click.echo(f"{verb}: {upstream} -> {address} @{trigger} in {rel} (version unchanged).")
         for stub in result.stubs:
             click.echo(
                 f"  stub: {stub.command} -> {stub.script_relpath}  (implement "
@@ -6780,29 +7835,96 @@ def process_handoff(
     if dry_run:
         click.echo("Dry run — nothing was written.")
     elif result.changed:
-        click.echo(
-            "Next: pkit process health --interpretation-only --process " + address
-        )
+        click.echo("Next: pkit process health --interpretation-only --process " + address)
 
 
 @process.command("graph")
 @_graph_format_options
-@click.option("--capability", default=None, help="Atomic filter: keep edges touching this capability.")
-@click.option("--process", "focus_process", default=None, help="Atomic filter: focus on this <capability>:<process-id> (hops counted from it).")
-@click.option("--relation", "relations_csv", default=None, help="Atomic filter: keep only these relation kinds (csv).")
-@click.option("--mode", "mode", type=click.Choice(["pull", "push"]), default=None, help="Atomic filter: keep only edges of this mode.")
-@click.option("--source", "source", type=click.Choice(["derived", "annotated", "resolved"]), default=None, help="Atomic filter: keep only edges of this source (`resolved`: the offered-process edges the wiring resolver adds).")
-@click.option("--depth", type=int, default=None, help="Atomic filter: hops from the focused --process (requires --process). Without --direction it is UNDIRECTED (the depth-bounded neighbourhood), distinct from the directed --upstream-of/--downstream-of closures.")
-@click.option("--direction", type=click.Choice(["in", "out"]), default=None, help="Atomic filter: with --process, keep only its out- or in-edges (requires --process).")
-@click.option("--enforced", is_flag=True, default=False, help="Preset = source:derived ∪ relation:gates-on-readiness (the edges that actually block).")
-@click.option("--advisory", is_flag=True, default=False, help="Preset = relation:informational,triggered-by (no runtime block).")
+@click.option(
+    "--capability", default=None, help="Atomic filter: keep edges touching this capability."
+)
+@click.option(
+    "--process",
+    "focus_process",
+    default=None,
+    help="Atomic filter: focus on this <capability>:<process-id> (hops counted from it).",
+)
+@click.option(
+    "--relation",
+    "relations_csv",
+    default=None,
+    help="Atomic filter: keep only these relation kinds (csv).",
+)
+@click.option(
+    "--mode",
+    "mode",
+    type=click.Choice(["pull", "push"]),
+    default=None,
+    help="Atomic filter: keep only edges of this mode.",
+)
+@click.option(
+    "--source",
+    "source",
+    type=click.Choice(["derived", "annotated", "resolved"]),
+    default=None,
+    help="Atomic filter: keep only edges of this source (`resolved`: the offered-process edges the "
+    "wiring resolver adds).",
+)
+@click.option(
+    "--depth",
+    type=int,
+    default=None,
+    help="Atomic filter: hops from the focused --process (requires --process). Without --direction "
+    "it is UNDIRECTED (the depth-bounded neighbourhood), distinct from the directed "
+    "--upstream-of/--downstream-of closures.",
+)
+@click.option(
+    "--direction",
+    type=click.Choice(["in", "out"]),
+    default=None,
+    help="Atomic filter: with --process, keep only its out- or in-edges (requires --process).",
+)
+@click.option(
+    "--enforced",
+    is_flag=True,
+    default=False,
+    help="Preset = source:derived ∪ relation:gates-on-readiness (the edges that actually block).",
+)
+@click.option(
+    "--advisory",
+    is_flag=True,
+    default=False,
+    help="Preset = relation:informational,triggered-by (no runtime block).",
+)
 @click.option("--seams", is_flag=True, default=False, help="Preset = cross-capability edges only.")
 @click.option("--connectors", is_flag=True, default=False, help="Preset = mode:push.")
-@click.option("--declared", is_flag=True, default=False, help="Preset = source:annotated (the inert depends_on layer).")
-@click.option("--derived", is_flag=True, default=False, help="Preset = source:derived (the composition/aggregation layer).")
-@click.option("--cycles", is_flag=True, default=False, help="Preset = edges lying on a dependency cycle.")
-@click.option("--upstream-of", "upstream_of", default=None, help="Preset = transitive closure of what this <addr> depends on.")
-@click.option("--downstream-of", "downstream_of", default=None, help="Preset = transitive closure of what depends on this <addr>.")
+@click.option(
+    "--declared",
+    is_flag=True,
+    default=False,
+    help="Preset = source:annotated (the inert depends_on layer).",
+)
+@click.option(
+    "--derived",
+    is_flag=True,
+    default=False,
+    help="Preset = source:derived (the composition/aggregation layer).",
+)
+@click.option(
+    "--cycles", is_flag=True, default=False, help="Preset = edges lying on a dependency cycle."
+)
+@click.option(
+    "--upstream-of",
+    "upstream_of",
+    default=None,
+    help="Preset = transitive closure of what this <addr> depends on.",
+)
+@click.option(
+    "--downstream-of",
+    "downstream_of",
+    default=None,
+    help="Preset = transitive closure of what depends on this <addr>.",
+)
 def process_graph(
     fmt_flow: bool,
     fmt_mermaid: bool,

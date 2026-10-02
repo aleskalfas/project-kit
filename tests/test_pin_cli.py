@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
+from typing import Any
 
 import pytest
 from click.testing import CliRunner
@@ -141,9 +142,7 @@ def test_pin_version_refuses_when_manifest_absent(
     assert "pkit sync" in result.output
 
 
-def test_pin_overwrites_an_existing_pin(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_pin_overwrites_an_existing_pin(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _git_repo(tmp_path)
     _write_manifest(tmp_path, "2.0.0")
     monkeypatch.chdir(tmp_path)
@@ -166,9 +165,7 @@ def test_unpin_removes_the_pin(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) 
     assert not router.pin_file_path(tmp_path).exists()
 
 
-def test_unpin_is_idempotent_when_absent(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_unpin_is_idempotent_when_absent(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _git_repo(tmp_path)
     monkeypatch.chdir(tmp_path)
 
@@ -286,10 +283,10 @@ def test_pin_newer_in_routed_context_reconciles_content_not_just_flips_pin(
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv(router._LOOP_GUARD_ENV, "1")  # we are the pinned routed child
 
-    captured: dict[str, object] = {}
+    captured: dict[str, Any] = {}
     real_run = subprocess.run
 
-    def _fake_run(cmd, *args, **kwargs):  # type: ignore[no-untyped-def]
+    def _fake_run(cmd, *args, **kwargs):
         # Intercept only the bootstrap `uvx …` spawn; delegate everything else
         # (the CLI's `git rev-parse` root resolution) to the genuine run, since
         # patching the shared `subprocess` module replaces `run` process-wide.
@@ -313,6 +310,48 @@ def test_pin_newer_in_routed_context_reconciles_content_not_just_flips_pin(
     assert env[router._BYPASS_ENV] == "1"  # routing bypassed for the reconcile
     assert router._LOOP_GUARD_ENV not in env  # cleared → grandchild reconciles for real
     assert router.read_version_pin(tmp_path) == "2.0.0"  # flipped after reconcile
+
+
+# --- Every pin gesture writes through the pin's one writer (#1211) --------------
+
+
+@pytest.mark.parametrize(
+    ("args", "written"),
+    [
+        ([], "1.5.0"),  # freeze at the content version
+        (["1.5.0"], "1.5.0"),  # equal → freeze in place
+        (["2.0.0"], "2.0.0"),  # newer → reconcile, then raise the pin
+    ],
+)
+def test_pin_writes_through_the_one_pin_writer(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, args: list[str], written: str
+) -> None:
+    _git_repo(tmp_path)
+    _write_manifest(tmp_path, "1.5.0")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(upgrade, "run_bypassed", lambda *_a, **_k: 0)
+    writes: list[tuple[Path, str | None]] = []
+    monkeypatch.setattr(upgrade, "write_version_pin", lambda *call: writes.append(call))
+
+    result = CliRunner().invoke(main, ["pin", *args])
+
+    assert result.exit_code == 0, result.output
+    assert writes == [(tmp_path, written)]
+
+
+def test_unpin_removes_through_the_one_pin_writer(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _git_repo(tmp_path)
+    monkeypatch.chdir(tmp_path)
+    router.pin_file_path(tmp_path).write_text("1.99.0\n", encoding="utf-8")
+    writes: list[tuple[Path, str | None]] = []
+    monkeypatch.setattr(router, "write_version_pin", lambda *call: writes.append(call))
+
+    result = CliRunner().invoke(main, ["unpin"])
+
+    assert result.exit_code == 0, result.output
+    assert writes == [(tmp_path, None)]
 
 
 # --- Sync-exclusion invariant (ADR-049): init / sync never touch the pin --------

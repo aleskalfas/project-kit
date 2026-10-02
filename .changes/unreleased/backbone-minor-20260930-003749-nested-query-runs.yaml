@@ -1,0 +1,23 @@
+component: backbone
+kind: minor
+custom:
+  category: Fixed
+body: >
+  A command a query starts now stays inside that query's bound. When a
+  validator reads a data point through `pkit connections resolve` and the
+  point's filler hangs, the filler is given only the time the validator has
+  left, it is stopped in time for the validator to answer, and the finding
+  names the filler rather than the validator — "did not answer within the
+  0.4 s its caller had left" when that time was short; whatever the filler
+  started — a `pkit friction artefacts` it runs, say — no longer outlives `pkit
+  validate`, even when something else killed the reading command, and an
+  interrupt ends the whole tree. Every command the backbone runs is told its
+  deadline in `PKIT_COMMAND_DEADLINE` (seconds since the epoch), so a
+  well-behaved command can tell; a deadline left over in a shell changes
+  nothing. Within one `pkit validate`, each data point now resolves once:
+  whichever of the `connections` member and a validator reading the point asks
+  first resolves it, and the others get that resolution, its fillers not
+  started again — unless the first asker ran out of time, when the next one
+  resolves it. `pkit connections resolve --json` says where the point came
+  from in a new `from` field: `run-cache` when a validate run had already
+  resolved it, `resolution` otherwise.

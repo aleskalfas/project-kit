@@ -81,23 +81,28 @@ ORIGIN_INCUBATED_IN_REPO = "incubated-in-repo"
 # citing a write-carrying category some other record introduced is a review-time
 # red flag. Adopter-defined categories are not listed here and stay the
 # adopter's to share across their own agents.
-WRITE_CARRYING_CATEGORIES: frozenset[str] = frozenset({
-    "process-authoring-targets",  # ADR-051 — the `process-author` agent's teeth
-})
+WRITE_CARRYING_CATEGORIES: frozenset[str] = frozenset(
+    {
+        "process-authoring-targets",  # ADR-051 — the `process-author` agent's teeth
+    }
+)
 
 # Adopter-owned files that sit directly under `.pkit/` rather than inside an
 # area's `project/` tree. Each is written by the lifecycle or by the adopter,
 # never propagated from kit source, so the conservative default below must not
 # claim them.
-_ADOPTER_OWNED_KIT_FILES: frozenset[str] = frozenset({
-    "manifest.yaml",   # install-state: recorded backbone version + registry.
-    "version-pin",     # the adopter's per-project version pin (ADR-049).
-    ".gitignore",      # regenerated per-adopter from runtime_ignore (ADR-009).
-})
+_ADOPTER_OWNED_KIT_FILES: frozenset[str] = frozenset(
+    {
+        "manifest.yaml",  # install-state: recorded backbone version + registry.
+        "version-pin",  # the adopter's per-project version pin (ADR-049).
+        ".gitignore",  # regenerated per-adopter from runtime_ignore (ADR-009).
+    }
+)
 
 # Scratchpad state folders are adopter-owned per COR-012: init stubs them, sync
 # never touches their contents.
 _SCRATCHPAD_STATE_DIRS: frozenset[str] = frozenset({"active", "done", "dropped"})
+
 
 def _load_yaml(text: str):
     """Parse YAML, importing the parser lazily.
@@ -115,6 +120,7 @@ def _load_yaml(text: str):
 
 
 # --- the predicates ----------------------------------------------------------
+
 
 def is_adopter_owned_by_tier(rel_posix: str) -> bool:
     """True when a `.pkit/`-relative path is adopter-owned *by tier alone*.
@@ -229,9 +235,9 @@ def is_adopter_owned_by_tier(rel_posix: str) -> bool:
 # last-marker-wins gets both wrong. An enumeration cannot contradict itself.
 _ADOPTER_TIER_DIRS: tuple[tuple[str, ...], ...] = (
     ("project",),
-    ("*", "project"),                          # `.pkit/<area>/project/`, adapters included
+    ("*", "project"),  # `.pkit/<area>/project/`, adapters included
     ("capabilities", "*", "project"),
-    ("adapters", "*", "project"),              # per-component manifest (install.py)
+    ("adapters", "*", "project"),  # per-component manifest (install.py)
     ("adapters", "*", "settings", "project"),
 )
 
@@ -261,7 +267,7 @@ def _on_adopter_tier(parts: list[str]) -> bool:
             continue
         if pattern == ("*", "project") and parts[0] in _AREAS_EXCLUDED_FROM_WILDCARD:
             continue
-        if all(want in ("*", have) for want, have in zip(pattern, parts)):
+        if all(want in ("*", have) for want, have in zip(pattern, parts, strict=False)):
             return True
     return False
 
@@ -342,9 +348,7 @@ def is_sync_managed(target_root: Path | str, raw_path: str) -> bool:
     return True
 
 
-def sync_managed_offences(
-    target_root: Path | str, category: str, values: list[str]
-) -> list[str]:
+def sync_managed_offences(target_root: Path | str, category: str, values: list[str]) -> list[str]:
     """The entries of *category* that resolve into sync-managed content.
 
     Empty for a category that is not write-carrying: the constraint exists to
@@ -380,7 +384,7 @@ def sync_managed_offences(
 # markers and to sync's own decision.
 _SOURCE_MARKERS: tuple[tuple[str, ...], ...] = (
     ("src", "project_kit", "__init__.py"),  # a file: the package source
-    (".pkit",),                             # a directory: the methodology's tree
+    (".pkit",),  # a directory: the methodology's tree
 )
 
 
@@ -414,6 +418,7 @@ def is_synced_copy(target_root: Path | str, raw_path: str) -> bool:
 # Message text lives beside the predicate so every harness's resolver reports
 # the same rejection in the same words, for the same reason the predicate is
 # shared: a per-adapter copy drifts.
+
 
 def rejection_message(category: str, offences: list[str]) -> list[str]:
     """Lines explaining why *offences* cannot appear in *category*.
@@ -453,6 +458,7 @@ def undefined_category_remediation(category: str) -> list[str] | None:
 
 
 # --- internals ---------------------------------------------------------------
+
 
 def _relative_posix(root: Path, raw_path: str) -> str | None:
     """Normalise an overlay entry to a root-relative POSIX path, or None.

@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-09-29T18:56:20Z
+      at: 2026-10-01T23:49:18Z
       outcome: unchanged
-      unchanged-because: the process, CLI and schemas READMEs changed only within their own sections for opt-in journal logging; the area map holds
+      unchanged-because: The lifecycle and CLI references gain what a filler reads beyond the working tree, the base override a query never sees and unborn; this index's pointers to them and its one-line summaries of them still hold
 ---
 
 # project-kit

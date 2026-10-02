@@ -43,10 +43,9 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate  # noqa: E402
-from _lib.gh import gh_run, load_adopter_config  # noqa: E402
-from _lib import session_guard  # noqa: E402
-from _lib.membership import (  # noqa: E402
+from _lib import bootstrap_gate, session_guard
+from _lib.gh import gh_run, load_adopter_config
+from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
     resolve_capability_root,
@@ -239,8 +238,7 @@ def _gh_get_issue_assignees(issue_number: int, config: dict) -> dict | None:
         return None
     if proc.returncode != 0:
         print(
-            f"error: gh issue view {issue_number} failed.\n"
-            f"stderr: {proc.stderr.strip()}",
+            f"error: gh issue view {issue_number} failed.\nstderr: {proc.stderr.strip()}",
             file=sys.stderr,
         )
         return None
@@ -251,8 +249,8 @@ def _gh_get_issue_assignees(issue_number: int, config: dict) -> dict | None:
 
 
 def _gh_edit_assignees(
-    issue_number: int, *, add: list[str], remove: list[str]
-, config: dict) -> bool:
+    issue_number: int, *, add: list[str], remove: list[str], config: dict
+) -> bool:
     """Apply assignee deltas via `gh issue edit`."""
     if not add and not remove:
         return True
@@ -267,8 +265,7 @@ def _gh_edit_assignees(
         return False
     if proc.returncode != 0:
         print(
-            f"error: gh issue edit failed (exit {proc.returncode}).\n"
-            f"stderr: {proc.stderr.strip()}",
+            f"error: gh issue edit failed (exit {proc.returncode}).\nstderr: {proc.stderr.strip()}",
             file=sys.stderr,
         )
         return False

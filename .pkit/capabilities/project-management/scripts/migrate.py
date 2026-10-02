@@ -43,9 +43,7 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate  # noqa: E402
-from _lib import session_guard  # noqa: E402
-
+from _lib import bootstrap_gate, session_guard
 
 CAPABILITY_NAME = "project-management"
 MIGRATIONS_SUBDIR = "migrations"
@@ -149,9 +147,7 @@ def main() -> int:
         pre_check_path = capability_root / PRE_CHECK_SCRIPT
         if pre_check_path.is_file():
             print("Running pre-check before migration...")
-            result = subprocess.run(
-                [str(pre_check_path)], check=False
-            )
+            result = subprocess.run([str(pre_check_path)], check=False)
             if result.returncode != 0:
                 print(
                     "\nerror: pre-check failed. migrate refuses to run on a "
@@ -246,9 +242,7 @@ def _refresh_bootstrap_stamp(capability_root: Path, *, dry_run: bool) -> None:
 # ----- migration application -----------------------------------------
 
 
-def _apply_migration(
-    migration: Migration, capability_root: Path, *, dry_run: bool
-) -> int:
+def _apply_migration(migration: Migration, capability_root: Path, *, dry_run: bool) -> int:
     print(f"=== Migration {migration.target_version} ===")
     if migration.description:
         for line in migration.description.strip().split("\n"):
@@ -261,7 +255,6 @@ def _apply_migration(
     print()
 
     results: list[ChangeResult] = []
-    fetched_labels: set[str] | None = None
     for change in migration.changes:
         kind = change.get("kind")
         if kind not in RECOGNISED_KINDS:
@@ -344,7 +337,7 @@ def _confirm_change(change: dict[str, Any], *, dry_run: bool) -> bool:
     summary = _describe_change(change)
     if not sys.stdin.isatty():
         print(f"  ! Non-interactive shell; skipping change: {summary}")
-        print(f"    To apply, re-run from an interactive shell.")
+        print("    To apply, re-run from an interactive shell.")
         return False
     while True:
         try:

@@ -10,8 +10,7 @@ from pathlib import Path
 import pytest
 
 SCRIPT = (
-    Path(__file__).resolve().parents[1]
-    / ".pkit/capabilities/project-management/scripts/history.py"
+    Path(__file__).resolve().parents[1] / ".pkit/capabilities/project-management/scripts/history.py"
 )
 
 
@@ -34,8 +33,11 @@ class _Proc:
 
 def test_render_entry_uses_ts_actor_move_trigger(hist) -> None:
     entry = {
-        "ts": "2026-08-12T08:00:00+00:00", "actor": "alice",
-        "from": "backlog", "to": "in-progress", "trigger": "start-work",
+        "ts": "2026-08-12T08:00:00+00:00",
+        "actor": "alice",
+        "from": "backlog",
+        "to": "in-progress",
+        "trigger": "start-work",
     }
     out = hist._render_entry(entry)
     assert "2026-08-12T08:00:00+00:00" in out
@@ -103,9 +105,7 @@ def test_history_says_logging_is_not_enabled_instead_of_an_empty_history(
     assert hist.ENABLE_COMMAND in out
 
 
-def test_check_drift_is_skipped_not_passed_when_logging_is_off(
-    hist, monkeypatch, capsys
-) -> None:
+def test_check_drift_is_skipped_not_passed_when_logging_is_off(hist, monkeypatch, capsys) -> None:
     def no_timeline_read(*_a, **_k):
         raise AssertionError("the timeline must not be read without a journal to diff")
 
@@ -120,9 +120,7 @@ def test_check_drift_is_skipped_not_passed_when_logging_is_off(
     assert "no ungoverned state changes detected" not in out
 
 
-def test_history_with_logging_on_and_no_moves_says_none_recorded(
-    hist, monkeypatch, capsys
-) -> None:
+def test_history_with_logging_on_and_no_moves_says_none_recorded(hist, monkeypatch, capsys) -> None:
     rc = _run_main(hist, monkeypatch, ["42"], hist.EngineJournal(enabled=True, entries=[]))
     out = capsys.readouterr().out
     assert rc == 0
@@ -138,10 +136,18 @@ def test_read_journal_none_on_failure(hist, monkeypatch) -> None:
 
 def test_timeline_state_adds_filters_state_labels(hist, monkeypatch) -> None:
     events = [
-        {"event": "labeled", "label": {"name": "state:backlog"},
-         "actor": {"login": "alice"}, "created_at": "t1"},
-        {"event": "labeled", "label": {"name": "type:feature"},  # not state:*
-         "actor": {"login": "alice"}, "created_at": "t2"},
+        {
+            "event": "labeled",
+            "label": {"name": "state:backlog"},
+            "actor": {"login": "alice"},
+            "created_at": "t1",
+        },
+        {
+            "event": "labeled",
+            "label": {"name": "type:feature"},  # not state:*
+            "actor": {"login": "alice"},
+            "created_at": "t2",
+        },
         {"event": "commented"},  # not a label event
     ]
     monkeypatch.setattr(hist, "gh_run", lambda *a, **k: _Proc(0, json.dumps(events)))
@@ -151,7 +157,8 @@ def test_timeline_state_adds_filters_state_labels(hist, monkeypatch) -> None:
 
 def test_report_drift_clean_when_journal_covers_timeline(hist, monkeypatch, capsys) -> None:
     monkeypatch.setattr(
-        hist, "_timeline_state_adds",
+        hist,
+        "_timeline_state_adds",
         lambda n, c, m=None: [{"created_at": "t", "actor": "a", "label": "state:done"}],
     )
     journal = [{"to": "done"}]  # 1 governed >= 1 observed
@@ -161,7 +168,8 @@ def test_report_drift_clean_when_journal_covers_timeline(hist, monkeypatch, caps
 
 def test_report_drift_flags_unmatched(hist, monkeypatch, capsys) -> None:
     monkeypatch.setattr(
-        hist, "_timeline_state_adds",
+        hist,
+        "_timeline_state_adds",
         lambda n, c, m=None: [
             {"created_at": "t1", "actor": "a", "label": "state:backlog"},
             {"created_at": "t2", "actor": "a", "label": "state:done"},
@@ -181,9 +189,7 @@ def test_report_drift_gh_failure_returns_2(hist, monkeypatch) -> None:
 # --- carriage-aware state labels (DEC-051 decision point 4) ---------------
 
 
-def test_timeline_state_adds_reads_the_adopters_own_state_labels(
-    hist, monkeypatch
-) -> None:
+def test_timeline_state_adds_reads_the_adopters_own_state_labels(hist, monkeypatch) -> None:
     """THE BUG: a `label`-bound `state` carries `Ready` / `Inbox`, which the
     inline `startswith("state:")` never matched — `pkit pm history --check-drift`
     saw zero state changes on a repo full of them."""
@@ -191,12 +197,24 @@ def test_timeline_state_adds_reads_the_adopters_own_state_labels(
         axes={"state": {"label": {"remap": {"backlog": "Ready", "todo": "Inbox"}}}}
     )
     events = [
-        {"event": "labeled", "label": {"name": "Ready"},
-         "actor": {"login": "alice"}, "created_at": "t1"},
-        {"event": "labeled", "label": {"name": "state:done"},  # stale kit label
-         "actor": {"login": "alice"}, "created_at": "t2"},
-        {"event": "labeled", "label": {"name": "type:feature"},
-         "actor": {"login": "alice"}, "created_at": "t3"},
+        {
+            "event": "labeled",
+            "label": {"name": "Ready"},
+            "actor": {"login": "alice"},
+            "created_at": "t1",
+        },
+        {
+            "event": "labeled",
+            "label": {"name": "state:done"},  # stale kit label
+            "actor": {"login": "alice"},
+            "created_at": "t2",
+        },
+        {
+            "event": "labeled",
+            "label": {"name": "type:feature"},
+            "actor": {"login": "alice"},
+            "created_at": "t3",
+        },
     ]
     monkeypatch.setattr(hist, "gh_run", lambda *a, **k: _Proc(0, json.dumps(events)))
     out = hist._timeline_state_adds(42, {}, smap)
@@ -210,6 +228,7 @@ def test_report_drift_skips_when_no_label_carries_state(hist, monkeypatch, capsy
     check must SAY it did not run rather than print a clean bill of health off an
     empty scan. Exit 0 — this is a correct configuration, not a failure — and no
     `gh` call is made."""
+
     def must_not_run(*_a, **_k):  # pragma: no cover - must not run
         raise AssertionError("no timeline read for a non-label state substrate")
 

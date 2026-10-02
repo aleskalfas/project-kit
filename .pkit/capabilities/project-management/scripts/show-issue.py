@@ -31,7 +31,6 @@ from __future__ import annotations
 import argparse
 import json
 import re
-import subprocess
 import sys
 from pathlib import Path
 
@@ -40,19 +39,17 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate  # noqa: E402
-from _lib import axis_labels  # noqa: E402
-from _lib import provenance  # noqa: E402
-from _lib import lifecycle_inference as infer  # noqa: E402
-from _lib.criteria import DOC_IMPACT_HEADINGS, FALLBACK_HEADINGS, checkbox_headings  # noqa: E402
-from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
-from _lib.membership import (  # noqa: E402
+from _lib import axis_labels, bootstrap_gate, provenance
+from _lib import lifecycle_inference as infer
+from _lib.criteria import DOC_IMPACT_HEADINGS, FALLBACK_HEADINGS, checkbox_headings
+from _lib.gh import gh_get_issue, load_adopter_config
+from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
     resolve_capability_root,
     resolve_invoker_identity,
 )
-from _lib.structural_type import infer_structural_type  # noqa: E402
+from _lib.structural_type import infer_structural_type
 
 
 def main() -> int:
@@ -98,8 +95,7 @@ def main() -> int:
 
     if args.field is not None and args.field not in ISSUE_FIELD_NAMES:
         print(
-            f"error: unknown field '{args.field}'.\n"
-            f"valid fields: {', '.join(ISSUE_FIELD_NAMES)}",
+            f"error: unknown field '{args.field}'.\nvalid fields: {', '.join(ISSUE_FIELD_NAMES)}",
             file=sys.stderr,
         )
         return 2
@@ -156,7 +152,7 @@ def _summarise(
     issue: dict,
     issue_types: dict,
     body_format: dict,
-    substrate_map: "axis_labels.SubstrateMap | None" = None,
+    substrate_map: axis_labels.SubstrateMap | None = None,
     classification: dict | None = None,
 ) -> dict:
     title = str(issue.get("title", ""))
@@ -173,9 +169,7 @@ def _summarise(
     ]
     state = str(issue.get("state", "")).lower()
     milestone = issue.get("milestone") or {}
-    milestone_title = (
-        milestone.get("title") if isinstance(milestone, dict) else None
-    )
+    milestone_title = milestone.get("title") if isinstance(milestone, dict) else None
 
     structural_type = infer_structural_type(title, issue_types, classification=classification)
     # DEC-013 (#763): skip a leading `Integration: integration/<slug>` marker so
@@ -213,6 +207,7 @@ def _summarise(
 
     priority_labels = _axis_display("priority")
     workstream_labels = _axis_display("workstream")
+
     def _is_axis_carried(lbl: str) -> bool:
         """Whether a label is already reported on an axis line — kit-prefixed,
         or the adopter's own label for a bound axis (#742), so a remapped label
@@ -351,7 +346,6 @@ def _print_summary(issue_number: int, s: dict) -> None:
         print(f"  url:          {url}")
 
 
-
 def _first_body_line(body: str) -> str:
     return body.lstrip().split("\n", 1)[0] if body.strip() else ""
 
@@ -434,7 +428,8 @@ def _read_members(capability_root: Path, yaml_loader: YAML) -> list[dict]:
 
 def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
     return gh_get_issue(
-        issue_number, config,
+        issue_number,
+        config,
         fields="title,body,labels,assignees,state,milestone,url",
     )
 

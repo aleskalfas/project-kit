@@ -19,6 +19,10 @@ from typing import Any
 
 HEADING = "## Doc impact"
 
+# The version of `pkit friction check --json` this rendering reads. A document
+# without `schema_version` comes from a backbone that predates the key: version 1.
+SCHEMA_VERSION = 1
+
 # The finding kinds of the change check that carry an answer.
 ANSWER_KINDS = ("answered", "revalidated")
 FRICTION_KIND = "friction"
@@ -43,6 +47,18 @@ def _where(finding: Mapping[str, Any]) -> str:
     return location
 
 
+def unread_version(document: Mapping[str, Any]) -> str | None:
+    """Why this rendering does not read `document` — a `schema_version` other than
+    the one it reads — or None when it reads it."""
+    version = document.get("schema_version", SCHEMA_VERSION)
+    if version == SCHEMA_VERSION:
+        return None
+    return (
+        f"`pkit friction check --json` answered schema_version {version!r}; "
+        f"this capability reads {SCHEMA_VERSION}"
+    )
+
+
 def answer_lines(document: Mapping[str, Any]) -> list[str]:
     """One bullet per answer the change check found, in its order."""
     return [
@@ -55,7 +71,11 @@ def answer_lines(document: Mapping[str, Any]) -> list[str]:
 def unanswered(document: Mapping[str, Any]) -> list[str]:
     """The locations still carrying friction — no answer on the page yet."""
     return sorted(
-        {str(f.get("location") or f.get("artefact")) for f in _findings(document) if f.get("kind") == FRICTION_KIND}
+        {
+            str(f.get("location") or f.get("artefact"))
+            for f in _findings(document)
+            if f.get("kind") == FRICTION_KIND
+        }
     )
 
 

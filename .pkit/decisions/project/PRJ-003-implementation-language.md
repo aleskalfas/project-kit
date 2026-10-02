@@ -6,6 +6,8 @@ date: 2026-05-08
 author: Ales Kalfas <kalfas.ales@gmail.com>
 ---
 
+> **Partially superseded by [PRJ-010](PRJ-010-type-checking-mode.md).** The type-checking line in Implications — pyright or mypy, in strict mode — is overturned: the checker is pyright, strict for the package and standard for the tests, gated as PRJ-010 decides. Everything else stands, the language and the commitment to a typed codebase included.
+
 ## Context
 
 The bash dispatcher at `.pkit/cli/pkit` (per PRJ-001) is the bootstrap. It exposes `init`, `status`, `version (bump)`, `new decision`, `deploy-skills`, `merge-settings`. Per the implementation-status note in `.pkit/cli/README.md`, the full CLI surface specified by COR-004 — `sync`, `merge`, `upgrade`, `bundle list/install/remove`, the rest of `new`, `validate` — lands when a proper runtime ships per the build roadmap.

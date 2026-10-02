@@ -406,7 +406,8 @@ def test_a_source_is_reported_as_an_unresolved_kind_never_passed(adopter: Adopte
     assert report.where == f"{PROJECT_SETS}/cmn.md#RS-CMN-001 /origin/source"
     assert "'transcript' is unresolved" in report.message
     # The registry's own verdict, word for word the one an anchor of the kind gets.
-    assert fd.unresolved_kind_reason("transcript", {}) in report.message
+    reason = fd.unresolved_kind_reason("transcript", {})
+    assert reason is not None and reason in report.message
     assert rs.fd.registered_anchor_kinds(adopter.root) == {}
 
 
@@ -436,7 +437,9 @@ def test_a_source_is_judged_through_the_resolver_its_kind_registers(
     front["rules"]["RS-CMN-001"]["origin"]["source"] = {"kind": "transcript", "value": "t-12"}
     front["rules"]["RS-CMN-005"]["origin"]["source"] = {"kind": "transcript", "value": "t-13"}
     write_set(adopter, f"{PROJECT_SETS}/cmn.md", front)
-    declared = fd.ResolverCommand("transcript", "sources", "resolve transcript", query_contract=True)
+    declared = fd.ResolverCommand(
+        "transcript", "sources", "resolve transcript", query_contract=True
+    )
     reads: list[Path] = []
 
     def register(resolver: fd.ResolverCommand) -> None:
@@ -453,8 +456,11 @@ def test_a_source_is_judged_through_the_resolver_its_kind_registers(
     assert [f.kind for f in result.findings] == [Kind.UNRESOLVED_SOURCE_KIND] * 2
     assert reads == [adopter.root]  # the registry is read once per pass
     message = result.findings[0].message
-    assert "the resolver `resolve transcript` that sources registers for it is not run yet" in message
-    assert fd.unresolved_kind_reason("transcript", {}) not in message
+    assert (
+        "the resolver `resolve transcript` that sources registers for it is not run yet" in message
+    )
+    reason = fd.unresolved_kind_reason("transcript", {})
+    assert reason is not None and reason not in message
 
     # Registered without it: refused, as the friction checks refuse it.
     register(fd.ResolverCommand("transcript", "sources", "resolve transcript"))
@@ -512,8 +518,10 @@ def test_a_successor_exists_in_the_set_or_one_inheriting_it(adopter: AdopterRepo
 # --- inheritance --------------------------------------------------------------------
 
 
-def doc(*pins: str, version: str = "1.0.0", **rule_entries: dict[str, Any]) -> dict[str, Any]:
-    entries = {"RS-DOC-001": {"status": "accepted", "origin": dict(QUOTE)}, **rule_entries}
+def doc(
+    *pins: str, version: str = "1.0.0", rules: Mapping[str, dict[str, Any]] | None = None
+) -> dict[str, Any]:
+    entries = {"RS-DOC-001": {"status": "accepted", "origin": dict(QUOTE)}, **(rules or {})}
     return {"rule-set": "DOC", "version": version, "inherits": list(pins), "rules": entries}
 
 
@@ -553,7 +561,7 @@ def test_a_wrong_major_is_a_version_relation_naming_the_new_major(adopter: Adopt
 
 def test_an_inherited_id_is_never_redefined(adopter: AdopterRepo) -> None:
     write_set(adopter, f"{PROJECT_SETS}/cmn.md", cmn())
-    write_set(adopter, f"{PROJECT_SETS}/doc.md", doc("CMN@1", **{"RS-CMN-001": {}}))
+    write_set(adopter, f"{PROJECT_SETS}/doc.md", doc("CMN@1", rules={"RS-CMN-001": {}}))
     result = validate(adopter)
     finding = only(result, Kind.REDEFINED_ID)
     assert finding.location == f"{PROJECT_SETS}/doc.md#RS-CMN-001"
@@ -571,7 +579,7 @@ def test_a_fill_names_a_point_an_inherited_rule_offers(adopter: AdopterRepo) -> 
     fills = {
         "fills": ["RS-CMN-001#cause-location", "RS-CMN-001#nowhere", "RS-OTH-001#p", "RS-CMN-777#x"]
     }
-    write_set(adopter, f"{PROJECT_SETS}/doc.md", doc("CMN@1", **{"RS-DOC-002": fills}))
+    write_set(adopter, f"{PROJECT_SETS}/doc.md", doc("CMN@1", rules={"RS-DOC-002": fills}))
     result = validate(adopter)
 
     undeclared = [(f.pointer, f.message) for f in result.errors if f.kind is Kind.UNDECLARED_FILL]
@@ -585,7 +593,7 @@ def test_each_point_is_filled_at_most_once_along_a_chain(adopter: AdopterRepo) -
     write_set(adopter, f"{PROJECT_SETS}/cmn.md", cmn())
     fill = {"fills": ["RS-CMN-001#cause-location"]}
     # A chain: DOC fills the point, then APP, inheriting DOC, fills it again.
-    write_set(adopter, f"{PROJECT_SETS}/doc.md", doc("CMN@1", **{"RS-DOC-002": fill}))
+    write_set(adopter, f"{PROJECT_SETS}/doc.md", doc("CMN@1", rules={"RS-DOC-002": fill}))
     app = {
         "rule-set": "APP",
         "version": "1.0.0",
@@ -635,7 +643,7 @@ def test_a_fill_of_a_retired_rule_is_orphaned_and_a_retired_fill_counts_for_noth
     write_set(
         adopter,
         f"{PROJECT_SETS}/doc.md",
-        doc("CMN@1", **{"RS-DOC-002": old, "RS-DOC-003": new, "RS-DOC-004": orphan}),
+        doc("CMN@1", rules={"RS-DOC-002": old, "RS-DOC-003": new, "RS-DOC-004": orphan}),
     )
     result = validate(adopter)
 
@@ -659,12 +667,15 @@ def test_a_fill_whose_rule_does_not_anchor_to_the_rule_it_fills(adopter: Adopter
             "fills": ["RS-CMN-005#writer"],
             "pkit": {
                 "friction": {
-                    "anchors": {"artefact": ["RS-CMN-001", "RS-CMN-005#writer"], "path": ["docs/**"]}
+                    "anchors": {
+                        "artefact": ["RS-CMN-001", "RS-CMN-005#writer"],
+                        "path": ["docs/**"],
+                    }
                 }
             },
         },
     }
-    write_set(adopter, f"{PROJECT_SETS}/doc.md", doc("CMN@1", **entries))
+    write_set(adopter, f"{PROJECT_SETS}/doc.md", doc("CMN@1", rules=entries))
     result = validate(adopter)
 
     unanchored = [f for f in result.errors if f.kind is Kind.UNANCHORED_FILL]
@@ -674,7 +685,8 @@ def test_a_fill_whose_rule_does_not_anchor_to_the_rule_it_fills(adopter: Adopter
     ]
     assert kinds(result) == [Kind.UNANCHORED_FILL, Kind.UNANCHORED_FILL]
     assert (
-        "fills RS-CMN-005#reader, but RS-DOC-003 does not anchor to RS-CMN-005" in unanchored[0].message
+        "fills RS-CMN-005#reader, but RS-DOC-003 does not anchor to RS-CMN-005"
+        in unanchored[0].message
     )
     assert "add RS-CMN-005 to `pkit.friction.anchors.artefact`" in unanchored[0].message
 
@@ -694,7 +706,7 @@ def test_a_fill_of_a_method_rule_anchors_to_it_bare_or_as_cited(
         # A component that does not own the set names no rule, so it anchors nothing.
         "RS-DOC-004": {"fills": ["evidence:RS-EV-001#c"], **anchored_to("living-docs:RS-EV-001")},
     }
-    write_set(adopter, f"{PROJECT_SETS}/doc.md", doc("evidence:EV@1", **entries))
+    write_set(adopter, f"{PROJECT_SETS}/doc.md", doc("evidence:EV@1", rules=entries))
     result = validate(adopter)
 
     (finding,) = result.errors
@@ -815,6 +827,45 @@ def test_rule_entries_are_discovered_by_the_friction_pass_as_artefacts(
         PROJECT_SETS,
         ".pkit/capabilities/evidence/rule-sets",
     }
+
+
+def test_a_crlf_rule_set_is_discovered_and_validated_as_its_lf_twin(adopter: AdopterRepo) -> None:
+    """A clone with `core.autocrlf=true` checks the file out with `\\r\\n`: both passes
+    read it as they read the same text with `\\n`."""
+    rel = f"{PROJECT_SETS}/cmn.md"
+    text = rule_set_text(cmn())
+
+    def reading() -> tuple[object, ...]:
+        rule_result = validate(adopter)
+        (rule_set,) = rule_result.discovery.rule_sets
+        friction = fv.validate_friction(adopter.root)
+        return (
+            rule_result.findings,
+            rule_set.front_matter,
+            rule_set.body,
+            [(r.id, r.data, r.section) for r in rule_set.rules],
+            [(a.location, a.carrier, a.body, a.anchors) for a in friction.discovery.artefacts],
+            [(f.kind, f.where) for f in friction.findings],
+        )
+
+    write_set(adopter, rel, cmn())
+    lf = reading()
+    adopter.write({rel: text.replace("\n", "\r\n")})
+    crlf = reading()
+
+    assert crlf == lf
+    assert crlf[0] == ()  # clean, as its twin is
+    assert crlf[4]  # the rules are artefacts
+
+
+def test_a_rule_set_mixing_line_endings_is_the_friction_pass_s_finding(
+    adopter: AdopterRepo,
+) -> None:
+    rel = f"{PROJECT_SETS}/cmn.md"
+    adopter.write({rel: rule_set_text(cmn()).replace("\n", "\r\n", 1)})
+    assert validate(adopter).errors == ()  # the set's shape reads as written
+    (finding,) = fv.validate_friction(adopter.root).errors
+    assert (finding.kind, finding.location) == (fv.FrictionFindingKind.MIXED_LINE_ENDINGS, rel)
 
 
 def test_other_collection_files_are_read_as_before(adopter: AdopterRepo) -> None:

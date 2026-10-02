@@ -33,14 +33,14 @@ class _RecordingRun:
     shells out to `uv tool install` (it is print-only).
     """
 
-    def __init__(self, real_run) -> None:  # type: ignore[no-untyped-def]
+    def __init__(self, real_run) -> None:
         self._real_run = real_run
         self.calls: list[list[str]] = []
         self.ls_remote_stdout = ""
         self.ls_remote_returncode = 1  # default: lookup fails → degrade path
         self.raise_exc: Exception | None = None
 
-    def __call__(self, argv, *args, **kwargs):  # type: ignore[no-untyped-def]
+    def __call__(self, argv, *args, **kwargs):
         self.calls.append(list(argv))
         if list(argv[:2]) != ["git", "ls-remote"]:
             return self._real_run(argv, *args, **kwargs)
@@ -152,7 +152,9 @@ def _fake_source(tmp_path: Path, *, version: str, adapter_requires: str | None) 
     if adapter_requires is not None:
         adir = src / "adapters" / "claude-code"
         adir.mkdir(parents=True)
-        (adir / "package.yaml").write_text(_adapter_pkg("9.9.9", adapter_requires), encoding="utf-8")
+        (adir / "package.yaml").write_text(
+            _adapter_pkg("9.9.9", adapter_requires), encoding="utf-8"
+        )
     return src
 
 
@@ -164,7 +166,9 @@ def test_compat_ignores_stale_installed_ceiling(
     which auto-broadens with the backbone. Reproduces the interaction-gateway
     deadlock (installed adapter `<old>`, source compatible)."""
     pkg = installed_target / ".pkit" / "adapters" / "claude-code" / "package.yaml"
-    pkg.write_text(_adapter_pkg("0.1.0", ">=0.1.0,<0.5.0"), encoding="utf-8")  # stale, excludes source
+    pkg.write_text(
+        _adapter_pkg("0.1.0", ">=0.1.0,<0.5.0"), encoding="utf-8"
+    )  # stale, excludes source
 
     # Real source (find_source_kit unpatched) — its adapter ceiling includes the
     # current backbone. No compatibility error; installed==source ⇒ already-at.
@@ -190,10 +194,14 @@ def test_compat_falls_back_to_installed_when_source_lacks_component(
 ) -> None:
     """For a component the source no longer ships, the check falls back to the
     installed range (it won't be refreshed by sync, so its range still governs)."""
-    src = _fake_source(tmp_path, version="2.0.0", adapter_requires=None)  # source dropped the adapter
+    src = _fake_source(
+        tmp_path, version="2.0.0", adapter_requires=None
+    )  # source dropped the adapter
     monkeypatch.setattr(upgrade, "find_source_kit", lambda: src)
     pkg = installed_target / ".pkit" / "adapters" / "claude-code" / "package.yaml"
-    pkg.write_text(_adapter_pkg("0.1.0", ">=0.1.0,<1.5.0"), encoding="utf-8")  # installed excludes 2.0.0
+    pkg.write_text(
+        _adapter_pkg("0.1.0", ">=0.1.0,<1.5.0"), encoding="utf-8"
+    )  # installed excludes 2.0.0
     with pytest.raises(click.ClickException, match="compatibility check failed"):
         upgrade.run_upgrade(installed_target)
 
@@ -227,7 +235,7 @@ def test_compat_reads_the_range_as_the_resolver_does(
     monkeypatch.setattr(upgrade, "find_source_kit", lambda: src)
     monkeypatch.setattr(upgrade, "run_sync", lambda *args, **kwargs: None)
     if refused:
-        with pytest.raises(click.ClickException, match="requires backbone >=0.1.0,<1.5.0"):
+        with pytest.raises(click.ClickException, match=r"requires backbone >=0\.1\.0,<1\.5\.0"):
             upgrade.run_upgrade(installed_target, dry_run=True)
     else:
         upgrade.run_upgrade(installed_target, dry_run=True)
@@ -391,8 +399,14 @@ def test_self_update_acts_when_stale_and_allowed(monkeypatch: pytest.MonkeyPatch
     _stale(monkeypatch)
     monkeypatch.setattr(upgrade, "_self_update_allowed", lambda: True)
     calls: dict = {"install": None, "reexec": 0}
-    monkeypatch.setattr(upgrade, "_self_update_tool", lambda v: calls.__setitem__("install", v) or True)
-    monkeypatch.setattr(upgrade, "_reexec_after_self_update", lambda: calls.__setitem__("reexec", calls["reexec"] + 1))
+    monkeypatch.setattr(
+        upgrade, "_self_update_tool", lambda v: calls.__setitem__("install", v) or True
+    )
+    monkeypatch.setattr(
+        upgrade,
+        "_reexec_after_self_update",
+        lambda: calls.__setitem__("reexec", calls["reexec"] + 1),
+    )
     upgrade._maybe_self_update_tool(self_update=True, dry_run=False)
     assert calls["install"] == Version("9.9.9")
     assert calls["reexec"] == 1
@@ -404,7 +418,9 @@ def test_self_update_degrades_when_not_allowed(
     _stale(monkeypatch)
     monkeypatch.setattr(upgrade, "_self_update_allowed", lambda: False)
     installed = {"v": False}
-    monkeypatch.setattr(upgrade, "_self_update_tool", lambda v: installed.__setitem__("v", True) or True)
+    monkeypatch.setattr(
+        upgrade, "_self_update_tool", lambda v: installed.__setitem__("v", True) or True
+    )
     upgrade._maybe_self_update_tool(self_update=True, dry_run=False)
     assert installed["v"] is False
     assert "uv tool install --force" in capsys.readouterr().out  # instruct
@@ -416,7 +432,9 @@ def test_self_update_off_instructs(
     _stale(monkeypatch)
     monkeypatch.setattr(upgrade, "_self_update_allowed", lambda: True)
     installed = {"v": False}
-    monkeypatch.setattr(upgrade, "_self_update_tool", lambda v: installed.__setitem__("v", True) or True)
+    monkeypatch.setattr(
+        upgrade, "_self_update_tool", lambda v: installed.__setitem__("v", True) or True
+    )
     upgrade._maybe_self_update_tool(self_update=False, dry_run=False)
     assert installed["v"] is False
     assert "uv tool install --force" in capsys.readouterr().out
@@ -429,7 +447,9 @@ def test_self_update_install_failure_degrades(
     monkeypatch.setattr(upgrade, "_self_update_allowed", lambda: True)
     monkeypatch.setattr(upgrade, "_self_update_tool", lambda v: False)  # install fails
     reexec = {"n": 0}
-    monkeypatch.setattr(upgrade, "_reexec_after_self_update", lambda: reexec.__setitem__("n", reexec["n"] + 1))
+    monkeypatch.setattr(
+        upgrade, "_reexec_after_self_update", lambda: reexec.__setitem__("n", reexec["n"] + 1)
+    )
     upgrade._maybe_self_update_tool(self_update=True, dry_run=False)
     assert reexec["n"] == 0
     assert "uv tool install --force" in capsys.readouterr().out
@@ -441,7 +461,9 @@ def test_self_update_dry_run_reports_no_install(
     _stale(monkeypatch)
     monkeypatch.setattr(upgrade, "_self_update_allowed", lambda: True)
     installed = {"v": False}
-    monkeypatch.setattr(upgrade, "_self_update_tool", lambda v: installed.__setitem__("v", True) or True)
+    monkeypatch.setattr(
+        upgrade, "_self_update_tool", lambda v: installed.__setitem__("v", True) or True
+    )
     upgrade._maybe_self_update_tool(self_update=True, dry_run=True)
     assert installed["v"] is False
     assert "would run" in capsys.readouterr().out
@@ -452,7 +474,9 @@ def test_self_update_current_tool_noops(
 ) -> None:
     _stale(monkeypatch, running="9.9.9", latest="9.9.9")  # equal → current
     installed = {"v": False}
-    monkeypatch.setattr(upgrade, "_self_update_tool", lambda v: installed.__setitem__("v", True) or True)
+    monkeypatch.setattr(
+        upgrade, "_self_update_tool", lambda v: installed.__setitem__("v", True) or True
+    )
     upgrade._maybe_self_update_tool(self_update=True, dry_run=False)
     assert installed["v"] is False
     assert "tool is current" in capsys.readouterr().out
@@ -466,7 +490,8 @@ def test_self_update_allowed_false_when_guarded(monkeypatch: pytest.MonkeyPatch)
 def test_run_tool_update_forwards_no_project(monkeypatch: pytest.MonkeyPatch) -> None:
     seen: dict = {}
     monkeypatch.setattr(
-        upgrade, "_maybe_self_update_tool",
+        upgrade,
+        "_maybe_self_update_tool",
         lambda *, self_update, dry_run: seen.update(su=self_update),
     )
     upgrade.run_tool_update(dry_run=False, self_update=True)
@@ -532,9 +557,7 @@ def test_cli_upgrade_no_self_update_forwards(monkeypatch: pytest.MonkeyPatch) ->
 # --- backbone + component migration execution (per COR-010) ----------
 
 
-def _stage_backbone_migration(
-    source_kit: Path, version: str, script_name: str, body: str
-) -> Path:
+def _stage_backbone_migration(source_kit: Path, version: str, script_name: str, body: str) -> Path:
     """Drop a backbone migration script at <source_kit>/migrations/backbone/<version>/<script>.
 
     Migrations are kit-shipped: they live in the *source* and reach the adopter
@@ -684,7 +707,8 @@ def test_upgrade_skips_capability_migrations_in_component_runner(
     cap_dir = installed_target / ".pkit" / "capabilities" / "evidence-fake"
     (cap_dir / "skills").mkdir(parents=True)
     (cap_dir / "package.yaml").write_text(
-        "schema_version: 1\ncomponent:\n  kind: capability\n  name: evidence-fake\n  version: 0.2.0\n"
+        "schema_version: 1\ncomponent:\n  kind: capability\n  name: evidence-fake\n"
+        "  version: 0.2.0\n"
         'requires_backbone: ">=0.1.0,<99.0.0"\n',
         encoding="utf-8",
     )
@@ -742,8 +766,11 @@ def _stage_installed_capability(
     the installed state, not the source. The package.yaml is written to the
     installed path so _resolve_compatibility can read it.
     """
-    from project_kit import capabilities as caps
-    from project_kit.manifest import ComponentRegistryEntry, read_backbone_manifest, write_backbone_manifest
+    from project_kit.manifest import (
+        ComponentRegistryEntry,
+        read_backbone_manifest,
+        write_backbone_manifest,
+    )
 
     cap_dir = target_root / ".pkit" / "capabilities" / name
     cap_dir.mkdir(parents=True, exist_ok=True)
@@ -752,7 +779,7 @@ def _stage_installed_capability(
     if requires_capabilities:
         lines = ["requires_capabilities:"]
         for req in requires_capabilities:
-            lines.append(f'  - name: {req["name"]}')
+            lines.append(f"  - name: {req['name']}")
             lines.append(f'    version: "{req["version"]}"')
         req_caps_block = "\n" + "\n".join(lines)
 
@@ -770,13 +797,14 @@ requires_backbone: "{requires_backbone}"{req_caps_block}
 
     # Stamp a minimal per-component manifest so version reads work.
     import datetime as _dt
+
     (cap_dir / "manifest.yaml").write_text(
         f"""schema_version: 1
 component:
   kind: capability
   name: {name}
   version: {version}
-  installed_at: '{_dt.datetime.now(_dt.timezone.utc).isoformat()}'
+  installed_at: '{_dt.datetime.now(_dt.UTC).isoformat()}'
 requires_backbone: '{requires_backbone}'
 backend_state: {{}}
 """,
@@ -787,14 +815,15 @@ backend_state: {{}}
     backbone = read_backbone_manifest(target_root)
     assert backbone is not None
     backbone.components = [
-        c for c in backbone.components
-        if not (c.kind == "capability" and c.name == name)
+        c for c in backbone.components if not (c.kind == "capability" and c.name == name)
     ]
-    backbone.components.append(ComponentRegistryEntry(
-        kind="capability",
-        name=name,
-        manifest=f".pkit/capabilities/{name}/manifest.yaml",
-    ))
+    backbone.components.append(
+        ComponentRegistryEntry(
+            kind="capability",
+            name=name,
+            manifest=f".pkit/capabilities/{name}/manifest.yaml",
+        )
+    )
     write_backbone_manifest(target_root, backbone)
 
 
@@ -805,7 +834,8 @@ def test_backbone_upgrade_refuses_when_installed_cap_has_absent_dep(
     is not installed."""
     # Install consumer with a dep on evidence; evidence is NOT installed.
     _stage_installed_capability(
-        installed_target, "consumer",
+        installed_target,
+        "consumer",
         requires_capabilities=[{"name": "evidence", "version": ">=0.1.0,<2.0.0"}],
     )
 
@@ -819,7 +849,8 @@ def test_backbone_upgrade_refuses_when_installed_cap_dep_out_of_range(
     """Backbone upgrade refuses when a declared dependency is installed but out of range."""
     _stage_installed_capability(installed_target, "evidence", version="0.1.0")
     _stage_installed_capability(
-        installed_target, "consumer",
+        installed_target,
+        "consumer",
         requires_capabilities=[{"name": "evidence", "version": ">=0.2.0,<2.0.0"}],
     )
 
@@ -833,7 +864,8 @@ def test_backbone_upgrade_succeeds_when_cap_deps_satisfied(
     """Backbone upgrade proceeds when all capability dependency requirements are satisfied."""
     _stage_installed_capability(installed_target, "evidence", version="0.3.0")
     _stage_installed_capability(
-        installed_target, "consumer",
+        installed_target,
+        "consumer",
         requires_capabilities=[{"name": "evidence", "version": ">=0.2.0,<1.0.0"}],
     )
 
@@ -1264,6 +1296,147 @@ def test_upgrade_dry_run_pinned_does_not_write_pin(
     upgrade.run_upgrade(installed_target, dry_run=True)
 
     assert router.read_version_pin(installed_target) == "0.1.0"  # unchanged
+
+
+# --- the upgrade's pin writes go through the pin's one writer (#1211) -----------
+
+
+def _record_pin_writes(monkeypatch: pytest.MonkeyPatch) -> list[tuple[Path, str | None]]:
+    """Stand in for the pin's one writer and record each write the upgrade asks of it."""
+    writes: list[tuple[Path, str | None]] = []
+    monkeypatch.setattr(upgrade, "write_version_pin", lambda *call: writes.append(call))
+    return writes
+
+
+def test_upgrade_default_pin_writes_through_the_one_pin_writer(
+    installed_target: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    writes = _record_pin_writes(monkeypatch)
+
+    upgrade.run_upgrade(installed_target)  # un-pinned: pins by default
+
+    assert writes == [(installed_target, _recorded_version(installed_target))]
+
+
+def test_upgrade_pin_raise_writes_through_the_one_pin_writer(
+    installed_target: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    router.pin_file_path(installed_target).write_text("0.1.0\n", encoding="utf-8")
+    monkeypatch.delenv(router._LOOP_GUARD_ENV, raising=False)  # not a routed child
+    writes = _record_pin_writes(monkeypatch)
+
+    upgrade.run_upgrade(installed_target)  # pinned behind its content: raises
+
+    assert writes == [(installed_target, _recorded_version(installed_target))]
+
+
+# --- an older pkit never takes a project back (#1212) ---------------------------
+
+# A version no release reaches: the project's content or pin, ahead of this pkit.
+_NEWER = "999.0.0"
+
+
+def _record_content_version(target: Path, version: str) -> None:
+    """Record *version* as the project's content version, as a newer pkit's sync would."""
+    m = manifest.read_backbone_manifest(target)
+    assert m is not None
+    m.backbone_version = version
+    manifest.write_backbone_manifest(target, m)
+
+
+def _tree_bytes(root: Path) -> dict[str, bytes | None]:
+    """Every path under *root* outside `.git/`, with a file's bytes (None for a
+    directory): what a refusal must leave exactly as it was."""
+    return {
+        path.relative_to(root).as_posix(): path.read_bytes() if path.is_file() else None
+        for path in sorted(root.rglob("*"))
+        if path.relative_to(root).parts[0] != ".git"
+    }
+
+
+def _this_pkit() -> str:
+    return manifest.read_kit_version(install.find_source_kit())
+
+
+@pytest.mark.parametrize("dry_run", [False, True], ids=["run", "dry-run"])
+@pytest.mark.parametrize("pinned", [False, True], ids=["no-pin", "pinned"])
+def test_upgrade_refuses_content_newer_than_this_pkit_and_writes_nothing(
+    installed_target: Path, monkeypatch: pytest.MonkeyPatch, pinned: bool, dry_run: bool
+) -> None:
+    """The router's offline fallback runs an older pkit over newer content: upgrade
+    refuses before it writes, so the content does not move back, the pin does not
+    move down, and an un-pinned project is not pinned at the older version."""
+    monkeypatch.delenv(router._LOOP_GUARD_ENV, raising=False)
+    _record_content_version(installed_target, _NEWER)
+    if pinned:
+        router.pin_file_path(installed_target).write_text(f"{_NEWER}\n", encoding="utf-8")
+    before = _tree_bytes(installed_target)
+
+    with pytest.raises(click.ClickException) as excinfo:
+        upgrade.run_upgrade(installed_target, dry_run=dry_run)
+
+    message = excinfo.value.message
+    assert f"refusing to run `pkit upgrade`: this pkit is {_this_pkit()}" in message
+    assert f"content ({_NEWER}, in .pkit/manifest.yaml)" in message
+    assert f"{router.DISTRIBUTION_GIT_URL}@v{_NEWER} project-kit upgrade" in message
+    assert _tree_bytes(installed_target) == before
+
+
+def test_upgrade_refuses_to_move_a_newer_pin_down(
+    installed_target: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Content at this pkit's version, pin ahead of it: the already-at-version path
+    would otherwise rewrite the pin down to this pkit's version."""
+    monkeypatch.delenv(router._LOOP_GUARD_ENV, raising=False)
+    router.pin_file_path(installed_target).write_text(f"{_NEWER}\n", encoding="utf-8")
+    before = _tree_bytes(installed_target)
+
+    with pytest.raises(click.ClickException) as excinfo:
+        upgrade.run_upgrade(installed_target)
+
+    assert f"pin ({_NEWER}, in .pkit/version-pin)" in excinfo.value.message
+    assert router.read_version_pin(installed_target) == _NEWER
+    assert _tree_bytes(installed_target) == before
+
+
+@pytest.mark.parametrize("content", ["equal", "older"])
+def test_upgrade_at_or_ahead_of_the_content_is_unchanged(
+    installed_target: Path, monkeypatch: pytest.MonkeyPatch, content: str
+) -> None:
+    """This pkit at the project's version, or newer: upgrade runs as before and
+    leaves content and pin at this pkit's version."""
+    monkeypatch.delenv(router._LOOP_GUARD_ENV, raising=False)
+    recorded = _this_pkit() if content == "equal" else "0.1.0"
+    _record_content_version(installed_target, recorded)
+    router.pin_file_path(installed_target).write_text(f"{recorded}\n", encoding="utf-8")
+
+    upgrade.run_upgrade(installed_target)  # must not raise
+
+    assert _recorded_version(installed_target) == _this_pkit()
+    assert router.read_version_pin(installed_target) == _this_pkit()
+
+
+def test_upgrade_as_the_pinned_child_still_raises_a_pin_behind_its_content(
+    installed_target: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The pinned child runs the pin's own code, and its auto-advance is how a
+    content-ahead-of-pin state recovers (ADR-049): the refusal comes after it."""
+    _record_content_version(installed_target, _NEWER)
+    router.pin_file_path(installed_target).write_text(f"{_this_pkit()}\n", encoding="utf-8")
+    monkeypatch.setenv(router._LOOP_GUARD_ENV, "1")
+    monkeypatch.setattr(upgrade, "_latest_released_version", lambda: Version(_NEWER))
+    raised_to: list[str] = []
+
+    def _reconciled(pin: str, _argv: list[str], _environ: object = None) -> int:
+        raised_to.append(pin)
+        return 0
+
+    monkeypatch.setattr(upgrade, "run_bypassed", _reconciled)
+
+    upgrade.run_upgrade(installed_target)  # must not raise
+
+    assert raised_to == [_NEWER]
+    assert router.read_version_pin(installed_target) == _NEWER
 
 
 @pytest.mark.parametrize("stdin", [None, "closed"])

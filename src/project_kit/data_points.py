@@ -27,12 +27,31 @@ defines, combines the point's fillers into one value by its declaration:
   takes no parameter. Its `commands:` leaf must declare the query contract
   (`query-contract: true`), or it is not run; it is run through the shared
   runner under the query policy — from the project root with `--json` alone,
-  the offline marker set, in its own process group, bounded — and prints one
-  filler envelope, `{schema_version, value}`, at the point's version. An
+  the offline marker set, the base override removed, in its own process
+  group, bounded (read inside another run, by the time that run has left, in
+  the outermost run's group) — and prints one filler envelope,
+  `{schema_version, value}`, at the point's version. An
   abnormal exit, a timeout, output that is not that envelope, or a value that
   does not fit is no answer — never an empty one. The declaration is trusted,
-  not enforced: nothing here holds the command to no network (ADR-057 point
-  4), so each command filler carries whether it declares it, for the report.
+  not enforced (COR-050 point 2): nothing here holds the command to no network
+  (ADR-057 point 4), so each command filler carries whether it declares it,
+  for the report.
+- **What a command filler reads** (point 6). Its leaf may declare `reads`:
+  `history` — the current history, read at HEAD — and `settled` — the default
+  branch, as `default_branch.resolve` answers it, never a base named for one
+  run: whoever starts the resolution, the query policy removes the override
+  from the filler's environment (`validators.QUERY_DROPPED_ENV`). HEAD, whether
+  the clone is shallow and the default branch are read once per run, and only
+  when a filler declares `reads`. A filler that declares `settled` is not
+  started while the default branch resolves to no commit, unless it has none
+  yet (`DefaultBranch.unborn`): it is inert, with the fetch and the declaration
+  as the fixes and never a base, under the point's inert policy. State that
+  does not exist yet is the filler's to answer empty; history cut short of
+  what it needs, the filler's to detect. Each filler that was asked carries
+  what it declared and the commit it was read at (`Filler.reads`), which the
+  status report, `pkit connections resolve` and the `connections` member's
+  report lines name (COR-052 point 7). A `reads` value this reading does not
+  understand is the packages member's error, and the filler is not started.
 - **The inert policy** (point 6). A filler meant to answer that cannot — its
   version differs, its command gives no answer, its value does not fit the
   point's schema — is inert.
@@ -56,7 +75,15 @@ status report shows how each point resolved. `resolve_point` resolves one
 point alone, for `pkit connections resolve`: only its fillers are asked, so no
 other point's command filler starts. Within a run each point resolves at most
 once, whichever reader asks first, and points never read one another, so a
-point resolved alone is the point resolved among all.
+point resolved alone is the point resolved among all. A run of `pkit validate`
+spans processes — a capability's validator reads a point through `pkit
+connections resolve` — so each resolved point is also kept in the run cache
+(`run_cache`), with the findings its resolution made and the bound it was
+resolved under: whichever process of the run asks first resolves it, and every
+other reads it (`shared_point`), its fillers started once. One resolution is
+never kept: one in which a command filler gave no answer for want of the time
+its asker had left (`CommandRun.clipped`) — a reader with more time might get
+an answer, so the next reader resolves the point itself.
 """
 
 from __future__ import annotations
@@ -73,7 +100,7 @@ from referencing.exceptions import Unresolvable
 
 from project_kit import backbone_schemas as bs
 from project_kit import connections as cx
-from project_kit import validators
+from project_kit import default_branch, run_cache, validators
 from project_kit.command_runner import (
     COMMANDS_KEY,
     Ending,
@@ -105,6 +132,9 @@ REASON_KEY = "reason"
 PROJECT = "project filler"
 DEFAULT = "the default"
 
+# The reference a filler that reads history reads it at (COR-052 point 6).
+HEAD = "HEAD"
+
 
 # --- the model ------------------------------------------------------------
 
@@ -126,6 +156,24 @@ class FillerState(Enum):
 
 
 @dataclass(frozen=True)
+class FillerRead:
+    """One state a command filler declares it reads beyond the working tree, and
+    where it was read (COR-052 points 6 and 7).
+
+    `history`: `ref` is `HEAD` and `commit` its commit — None in a repository
+    with no commit yet — and `shallow` whether the clone's history is cut short.
+    `settled`: `ref` is the reference the default branch was read from and
+    `commit` its commit; with no commit, `ref` is the branch's name when it has
+    none yet (`DefaultBranch.unborn`) and None when it resolves to no commit
+    here — the filler was then not started. `shallow` is None for `settled`."""
+
+    state: str  # `validators.READS_HISTORY` or `READS_SETTLED`
+    ref: str | None
+    commit: str | None
+    shallow: bool | None = None
+
+
+@dataclass(frozen=True)
 class Filler:
     """One filler considered for a point, and what became of it.
 
@@ -141,8 +189,11 @@ class Filler:
     reason: str = ""  # why it is inert or passed over
     # A command filler: whether its command declares the query contract — among
     # its limits, needing no network. Declared and trusted, never enforced
-    # (ADR-057 point 4). None for any other filler.
+    # (COR-050 point 2; ADR-057 point 4). None for any other filler.
     query_contract: bool | None = None
+    # A command filler that declares `reads` and was asked: each state it
+    # declared, and where it was read (COR-052 point 7). Empty for any other.
+    reads: tuple[FillerRead, ...] = ()
 
     @property
     def label(self) -> str:
@@ -277,17 +328,78 @@ class _PointOutcome:
 
 def _resolved(run: _Run, binding: cx.PointBinding) -> _PointOutcome:
     """The point `binding` resolved, once per run: its fillers are asked — a command
-    filler started — at most once, whichever reader asks first. Points do not
-    read one another, so a point resolved alone is the point resolved among all."""
+    filler started — at most once, whichever reader asks first, in this process
+    or, through the run cache, in any process `pkit validate` started. Points do
+    not read one another, so a point resolved alone is the point resolved among all.
+
+    A resolution in which a command filler ran out of the time its asker had
+    left is not put in the run cache: another process of the run may have more
+    time, and reads the point by resolving it. Within this process it is kept —
+    no later reader here has more time than the first."""
+    address = binding.point.address
 
     def resolve() -> _PointOutcome:
+        shared = _shared_outcome(run.root, address)
+        if shared is not None:
+            return shared
         start = len(run.findings)
-        point = _Point(run, binding).resolve()
-        return _PointOutcome(point, tuple(run.findings[start:]))
+        resolution = _Point(run, binding)
+        outcome = _PointOutcome(resolution.resolve(), tuple(run.findings[start:]))
+        if not resolution.clipped:
+            run_cache.write(_cache_key(run.root, address), _entry_of(outcome, resolution.bound))
+        return outcome
 
-    return validators.once_per_run(
-        ("data-point", run.root.resolve(), binding.point.address), resolve
-    )
+    return validators.once_per_run(("data-point", run.root.resolve(), address), resolve)
+
+
+# --- sharing a resolved point across the processes of a run ---------------
+
+
+def _cache_key(target_root: Path, address: str) -> str:
+    return f"data-point {target_root.resolve()} {address}"
+
+
+def _entry_of(outcome: _PointOutcome, bound: float | None) -> dict[str, Any]:
+    """A resolved point as the run cache keeps it: its document, the findings its
+    resolution made, which the `connections` member reports, and the tightest
+    bound a command filler of it ran under — the first asker's; None when none
+    ran."""
+    return {
+        "bound": bound,
+        "point": point_document(outcome.point),
+        "findings": [
+            {
+                "location": f.location,
+                "message": f.message,
+                "severity": f.severity.value,
+                "label": f.label,
+            }
+            for f in outcome.findings
+        ],
+    }
+
+
+def _shared_outcome(target_root: Path, address: str) -> _PointOutcome | None:
+    """The point `address` as another process of the run resolved it, or None:
+    no run cache, the point not yet resolved, or an entry this reading does not
+    understand — a miss, never an error; the point is then resolved here."""
+    entry = run_cache.read(_cache_key(target_root, address))
+    if not isinstance(entry, Mapping):
+        return None
+    shared = cast("Mapping[str, Any]", entry)
+    try:
+        findings = tuple(
+            validators.Finding(
+                str(f["location"]),
+                str(f["message"]),
+                validators.Severity(f["severity"]),
+                str(f["label"]),
+            )
+            for f in cast("list[Mapping[str, Any]]", shared["findings"])
+        )
+        return _PointOutcome(point_from_document(shared["point"]), findings)
+    except (KeyError, TypeError, ValueError):  # not an entry `_entry_of` wrote
+        return None
 
 
 def _filler_schema(target_root: Path) -> tuple[Mapping[str, Any] | None, tuple[str, ...]]:
@@ -298,7 +410,10 @@ def _filler_schema(target_root: Path) -> tuple[Mapping[str, Any] | None, tuple[s
     except bs.BackboneSchemaMissing:
         note = "no filler schema present under .pkit/schemas/backbone/; envelopes not checked."
     except bs.BackboneSchemaInvalid:
-        note = "the filler schema does not load (the `schemas` member says why); envelopes not checked."
+        note = (
+            "the filler schema does not load (the `schemas` member says why); envelopes not "
+            "checked."
+        )
     return None, (note,)
 
 
@@ -320,6 +435,33 @@ def _no_answer(reason: str, *, reported: bool = False) -> _Answer:
     return _Answer(inert=reason, reported=reported)
 
 
+@dataclass(frozen=True)
+class _State:
+    """What a filler may read beyond the working tree, as one run reads it (COR-052
+    point 6): HEAD's commit (None with no commit yet), whether the clone is shallow,
+    and the default branch, resolved as a standing value reads it."""
+
+    head: str | None
+    shallow: bool
+    branch: default_branch.DefaultBranch
+
+
+def _declared_reads(entry: Mapping[Any, Any]) -> tuple[str, ...] | None:
+    """The states a command leaf declares it reads beyond the working tree, in
+    their canonical order — empty when it declares none — or None for a `reads`
+    this reading does not understand: not a non-empty list of distinct known
+    states (the package schema's error)."""
+    if validators.READS_KEY not in entry:
+        return ()
+    declared = entry[validators.READS_KEY]
+    if not isinstance(declared, list) or not declared:
+        return None
+    states = cast("list[Any]", declared)
+    if any(s not in validators.READS_STATES for s in states) or len(set(states)) != len(states):
+        return None
+    return tuple(s for s in validators.READS_STATES if s in states)
+
+
 @dataclass
 class _Candidate:
     """A filler, before it is asked; `ask` evaluates it at most once."""
@@ -331,6 +473,8 @@ class _Candidate:
     location: str  # where a finding about it points
     who: str  # how a finding's message names it
     query_contract: bool | None = None  # a command filler: its command declares the contract
+    # A command filler that declares `reads`: where its states are read, once asked.
+    reads: Callable[[], tuple[FillerRead, ...]] | None = None
     answer: _Answer | None = None
 
     def ask(self) -> _Answer:
@@ -347,7 +491,12 @@ class _Candidate:
         return self.name
 
     def filler(self, state: FillerState, reason: str = "") -> Filler:
-        return Filler(self.source, self.name, self.supplies, state, reason, self.query_contract)
+        """The filler as reported. What it reads is named only once it was asked:
+        one passed over unasked read nothing."""
+        reads = self.reads() if self.reads is not None and self.answer is not None else ()
+        return Filler(
+            self.source, self.name, self.supplies, state, reason, self.query_contract, reads
+        )
 
 
 @dataclass
@@ -365,9 +514,36 @@ class _Run:
     findings: list[validators.Finding] = field(default_factory=list[validators.Finding])
     envelope_findings: tuple[validators.Finding, ...] = ()  # the filler files', before any point
     unsound: dict[str, str] = field(default_factory=dict[str, str])  # address → why it is not read
+    state: _State | None = None  # what fillers read beyond the working tree, once read
 
     def add(self, location: str, message: str, severity: validators.Severity) -> None:
         self.findings.append(validators.Finding(location, message, severity))
+
+    def read_state(self) -> _State:
+        """HEAD, whether the clone is shallow, and the default branch as a standing
+        value reads it — read once per run, when a filler first declares `reads`."""
+        if self.state is None:
+            self.state = _State(
+                head=default_branch.commit_of(self.root, "HEAD"),
+                shallow=default_branch.is_shallow(self.root),
+                branch=default_branch.resolve(self.root, standing=True),
+            )
+        return self.state
+
+    def reads_of(self, states: tuple[str, ...]) -> tuple[FillerRead, ...]:
+        """Where each of `states` is read in this run (`FillerRead`)."""
+        state = self.read_state()
+        reads: list[FillerRead] = []
+        if validators.READS_HISTORY in states:
+            reads.append(FillerRead(validators.READS_HISTORY, HEAD, state.head, state.shallow))
+        if validators.READS_SETTLED in states:
+            branch = state.branch
+            if branch.commit is not None:
+                ref = branch.ref
+            else:
+                ref = branch.name if branch.unborn else None
+            reads.append(FillerRead(validators.READS_SETTLED, ref, branch.commit))
+        return tuple(reads)
 
     def package_location(self, capability: str, pointer: str) -> str:
         component = self.wiring.declarations.by_name(capability)
@@ -446,6 +622,10 @@ class _Point:
     fillers: list[Filler] = field(default_factory=list[Filler])
     inert: list[_Candidate] = field(default_factory=list[_Candidate])
     validator: Draft202012Validator | None = None
+    # The command fillers' runs: the tightest bound one ran under, and whether one
+    # gave no answer for want of the time its asker had left (`CommandRun.clipped`).
+    bound: float | None = None
+    clipped: bool = False
     address: str = field(init=False)
     policy: str = field(init=False)
     inert_policy: str = field(init=False)
@@ -525,6 +705,8 @@ class _Point:
         c = b.counterpart
         entry = _declared(self.run.wiring.declarations, c.capability, c.pointer)
         command = None if VALUE_KEY in entry else self._command(c)
+        # A `reads` not understood names nothing: the filler is not started.
+        states = (_declared_reads(command.entry) if command is not None else ()) or ()
         return _Candidate(
             FillerSource.CONTRIBUTION,
             c.capability,
@@ -537,6 +719,7 @@ class _Point:
                 if command is not None
                 else None
             ),
+            reads=(lambda: self.run.reads_of(states)) if states else None,
         )
 
     def _command(self, c: cx.Counterpart) -> RegisteredCommand | None:
@@ -623,9 +806,11 @@ class _Point:
     def _command_answer(self, reference: str, command: RegisteredCommand | None) -> _Answer:
         """Run a command filler under the query policy and read its envelope
         (COR-052 point 6; the lifecycle README, "How a registered command is
-        run"). It takes no parameter: `--json` alone. Anything but a whole,
-        fitting envelope is no answer. The first three defects are the packages
-        member's errors as well, so under `fallback` they earn no second finding."""
+        run"). It takes no parameter: `--json` alone, and no base named for the
+        run reaches it. Anything but a whole, fitting envelope is no answer. The
+        first four defects are the packages member's errors as well, so under
+        `fallback` they earn no second finding. A filler that declares it reads
+        settled state is not started while the default branch cannot be read."""
         if command is None:
             return _no_answer(
                 f"its command {reference!r} is not declared in `commands:`", reported=True
@@ -636,19 +821,51 @@ class _Point:
                 f"(`{validators.QUERY_CONTRACT_KEY}: true`), so it is not run",
                 reported=True,
             )
+        states = _declared_reads(command.entry)
+        if states is None:
+            return _no_answer(
+                f"its command {reference!r} declares a `{validators.READS_KEY}` that is not a "
+                f"list of distinct states among {', '.join(validators.READS_STATES)}, so it "
+                f"is not run",
+                reported=True,
+            )
         if not command.script.is_file():
             return _no_answer(
                 f"its command {reference!r} names a script that does not exist", reported=True
             )
+        if validators.READS_SETTLED in states:
+            refused = self._unreadable_settled(reference)
+            if refused is not None:
+                return refused
         run = run_command(
             command.script,
             [validators.QUERY_FLAG],
             cwd=self.run.root,
             extra_env=validators.OFFLINE_MARKER,
+            drop_env=validators.QUERY_DROPPED_ENV,
         )
+        self.bound = run.bound_seconds if self.bound is None else min(self.bound, run.bound_seconds)
         if run.ending is not Ending.ANSWERED:
+            self.clipped = self.clipped or run.clipped
             return _no_answer(validators.why_no_answer(run, reference).rstrip("."))
         return self._envelope_answer(reference, run.document)
+
+    def _unreadable_settled(self, reference: str) -> _Answer | None:
+        """The refusal of a filler that reads settled state while the default branch
+        resolves to no commit (COR-052 point 6): state that exists and cannot be
+        reached from this clone gives no answer, never an empty one, so the filler
+        is not started. None when the branch has a commit, or has none yet — state
+        that does not exist yet holds nothing, and the filler answers empty. The
+        fixes are the fetch and the declaration; a base never reaches a filler, so
+        naming one is none."""
+        branch = self.run.read_state().branch
+        if branch.commit is not None or branch.unborn:
+            return None
+        problem = branch.problem or f"the default branch {branch.name!r} resolves to no commit"
+        return _no_answer(
+            f"its command {reference!r} reads the default branch, and {problem.rstrip('.')}; "
+            f"a base named for the run does not reach a filler"
+        )
 
     def _envelope_answer(self, reference: str, document: Any) -> _Answer:
         """A command filler's answer: exactly the envelope — `schema_version` at the
@@ -733,9 +950,7 @@ class _Point:
             behind = [self._contribution(b) for b in eligible if b not in bound]
             if len(bound) > 1:
                 for candidate in [*map(self._contribution, bound), *behind]:
-                    self.fillers.append(
-                        candidate.filler(FillerState.PASSED_OVER, _AMBIGUOUS)
-                    )
+                    self.fillers.append(candidate.filler(FillerState.PASSED_OVER, _AMBIGUOUS))
                 return self._single_ambiguous(project)
             chain.extend(self._contribution(b) for b in bound)
         default = self._default_candidate()
@@ -756,7 +971,9 @@ class _Point:
         if self.inert and self.inert_policy == FAIL:
             return self._unresolved(_FAIL_WHY)
         if answerer is not None:
-            return self._resolved(value=cast(_Answer, answerer.answer).value, origin=answerer.origin)
+            return self._resolved(
+                value=cast(_Answer, answerer.answer).value, origin=answerer.origin
+            )
         if selected is not None and not any(c.name == selected for c in chain):
             return self._unresolved(
                 f"the contributor selection names {selected!r}, which does not contribute to it"
@@ -843,9 +1060,7 @@ class _Point:
                     out.append((entry_id, value))
             return out
 
-        capabilities = [
-            (c.origin, kept(c)) for c in taken if c.source is FillerSource.CONTRIBUTION
-        ]
+        capabilities = [(c.origin, kept(c)) for c in taken if c.source is FillerSource.CONTRIBUTION]
         default = next((kept(c) for c in taken if c.source is FillerSource.DEFAULT), [])
         records = tuple(
             Removal(rid, reason, tuple(dropped.get(rid, ()))) for rid, reason, _i in removals
@@ -907,7 +1122,9 @@ class _Point:
         """An `alone` default with another filler declared: it does not answer, and
         a declared filler that broke never promotes it (COR-052 point 6)."""
         reason = (
-            "not promoted: a declared filler is inert" if self.inert else "another filler is declared"
+            "not promoted: a declared filler is inert"
+            if self.inert
+            else "another filler is declared"
         )
         self.fillers.append(default.filler(FillerState.PASSED_OVER, reason))
 
@@ -1033,7 +1250,10 @@ def _entry_problems(value: Any) -> list[tuple[str, str]]:
         entry_id = _entry_id(entry)
         if entry_id is None:
             problems.append(
-                (f"/{index}", "an entry is a string — its own id — or a mapping with a string `id`.")
+                (
+                    f"/{index}",
+                    "an entry is a string — its own id — or a mapping with a string `id`.",
+                )
             )
         elif entry_id in seen:
             problems.append((f"/{index}", f"entry id {entry_id!r} appears twice."))
@@ -1130,16 +1350,49 @@ def _token(segment: Any) -> str:
 
 
 def summary_lines(resolution: DataResolution) -> list[str]:
-    """The data points' lines under the `connections` heading: a count, then any note."""
+    """The data points' lines under the `connections` heading: a count; then, for
+    each command filler that reads beyond the working tree and was taken or went
+    inert, what it read and at which commit — its answer depends on them (COR-052
+    point 7); then any note."""
     if not resolution.points and not resolution.filler_files:
         return []
     resolved = sum(1 for p in resolution.points if p.resolved)
+    reads = [
+        f"{point.address}: {filler.label} reads {reads_described(filler.reads)}"
+        for point in resolution.points
+        for filler in point.fillers
+        if filler.reads and filler.state in (FillerState.TAKEN, FillerState.INERT)
+    ]
     return [
         f"{len(resolution.points)} data point(s): {resolved} resolved, "
         f"{len(resolution.points) - resolved} unresolved; "
         f"{resolution.filler_files} project filler file(s).",
+        *reads,
         *resolution.notes,
     ]
+
+
+# How many characters of a commit a report line shows.
+_SHORT = 12
+
+
+def reads_described(reads: Iterable[FillerRead]) -> str:
+    """What a filler read and where, as a report line names it: `history (HEAD
+    <sha12>, shallow clone) and the default branch (<ref> at <sha12>)`."""
+    return " and ".join(_read_described(read) for read in reads)
+
+
+def _read_described(read: FillerRead) -> str:
+    if read.state == validators.READS_HISTORY:
+        if read.commit is None:
+            return f"history ({read.ref}, no commit yet)"
+        shallow = ", shallow clone" if read.shallow else ""
+        return f"history ({read.ref} {read.commit[:_SHORT]}{shallow})"
+    if read.commit is not None:
+        return f"the default branch ({read.ref} at {read.commit[:_SHORT]})"
+    if read.ref is not None:
+        return f"the default branch ({read.ref}, no commit yet)"
+    return "the default branch (it resolves to no commit here)"
 
 
 # --- `pkit connections resolve` ------------------------------------------------
@@ -1164,15 +1417,36 @@ def resolve_point(target_root: Path, address: str) -> tuple[ResolvedPoint | None
     return validators.as_one_run(run)
 
 
-def point_document(point: ResolvedPoint) -> dict[str, Any]:
+def shared_point(target_root: Path, address: str) -> ResolvedPoint | None:
+    """The data point `address` as the run in progress already resolved it — in
+    `pkit validate`, or in another command the run started — or None: outside
+    a live run, or not yet kept in it (`_resolved` keeps no resolution cut short
+    by its asker's time). Read before `resolve_point`, it spares even the wiring
+    (the run cache, `run_cache`)."""
+    shared = _shared_outcome(target_root, address)
+    return shared.point if shared is not None else None
+
+
+# Where the point a reading command prints came from: resolved by the command
+# itself, or read from what the run in progress resolved (`shared_point`).
+FROM_RESOLUTION = "resolution"
+FROM_RUN_CACHE = "run-cache"
+
+
+def point_document(point: ResolvedPoint, *, source: str = FROM_RESOLUTION) -> dict[str, Any]:
     """One resolved data point as the stable document `pkit connections resolve
     --json` prints — the read a capability's own script uses to consume a point
     it defines, without importing this package (the CLI README, "Connections
     commands"). Everything the status report shows, as data: `value` is None
-    when the point does not resolve, and never a partial value."""
+    when the point does not resolve, and never a partial value. `from` says
+    whether this command resolved it or read the run's resolution. Each filler's
+    `reads` names, for a command filler that declares it reads beyond the
+    working tree and was asked, each state and where it was read (`FillerRead`):
+    `{state, ref, commit}`, and `shallow` on `history`."""
     return {
         "address": point.address,
         "defined": True,
+        "from": source,
         "provider": point.provider,
         "policy": point.policy,
         "inert_policy": point.inert_policy,
@@ -1197,12 +1471,65 @@ def point_document(point: ResolvedPoint) -> dict[str, Any]:
                 "state": f.state.value,
                 "reason": f.reason,
                 "query_contract": f.query_contract,
+                "reads": [_read_document(read) for read in f.reads],
             }
             for f in point.fillers
         ],
     }
 
 
+def _read_document(read: FillerRead) -> dict[str, Any]:
+    document: dict[str, Any] = {"state": read.state, "ref": read.ref, "commit": read.commit}
+    if read.state == validators.READS_HISTORY:
+        document["shallow"] = read.shallow
+    return document
+
+
+def point_from_document(document: Mapping[str, Any]) -> ResolvedPoint:
+    """The inverse of `point_document`: the resolved point a document states.
+    Raises KeyError, TypeError or ValueError on a document it did not write."""
+    return ResolvedPoint(
+        address=document["address"],
+        provider=document["provider"],
+        policy=document["policy"],
+        inert_policy=document["inert_policy"],
+        participation=document["participation"],
+        fillers=tuple(
+            Filler(
+                FillerSource(f["source"]),
+                f["name"],
+                f["supplies"],
+                FillerState(f["state"]),
+                f["reason"],
+                f["query_contract"],
+                tuple(
+                    FillerRead(r["state"], r["ref"], r["commit"], r.get("shallow"))
+                    for r in f["reads"]
+                ),
+            )
+            for f in document["fillers"]
+        ),
+        resolved=document["resolved"],
+        value=document["value"],
+        origin=document["origin"],
+        entries=tuple(
+            Entry(e["id"], e["value"], e["origin"], tuple(e["replaces"]))
+            for e in document["entries"]
+        ),
+        removals=tuple(
+            Removal(r["id"], r["reason"], tuple(r["removed_from"])) for r in document["removals"]
+        ),
+        why=document["why"],
+    )
+
+
 def undefined_document(address: str, why: str) -> dict[str, Any]:
     """The document for an address no active provider defines as a data point."""
-    return {"address": address, "defined": False, "resolved": False, "why": why, "value": None}
+    return {
+        "address": address,
+        "defined": False,
+        "from": FROM_RESOLUTION,
+        "resolved": False,
+        "why": why,
+        "value": None,
+    }

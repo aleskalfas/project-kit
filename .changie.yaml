@@ -36,12 +36,22 @@ kinds:
   - label: major
   - label: none
 
-# Extra changelog metadata, written under `custom:` in each fragment and read
-# by `project_kit.changesets` (top-level OR `custom:`). Both are optional:
+# Extra metadata, written under `custom:` in each fragment and read by
+# `project_kit.changesets` (top-level OR `custom:`). All are optional:
 # `category` is the Keep-a-Changelog group (orthogonal to `kind`; defaulted at
-# render, irrelevant for `none`), and `pr` is the PR reference used to build
+# render, irrelevant for `none`), `pr` is the PR reference used to build
 # the changelog's `([#N])` link (captured here at author time — release-time
-# derivation is unreliable under squash/rebase).
+# derivation is unreliable under squash/rebase): either the pull request's
+# number, linked to that pull request of the GitHub repository `origin` names,
+# or a full URL, linked as written; `pkit release lint` refuses any other
+# shape (see `.pkit/release/README.md`), and `requires_backbone` declares that
+# the component needs a backbone, so the release raises the floor of its
+# `requires_backbone` range to it: `release` for the backbone the release
+# ships, or an already-shipped `X.Y.Z`, quoted, that `CHANGELOG.md` records at
+# or below the current `.pkit/VERSION` (a capability or adapter's
+# version-moving changeset only; `pkit release lint` refuses it elsewhere, and
+# `pkit release check` refuses one a pull request declares for a component it
+# neither changes nor moves).
 custom:
   - key: category
     label: Category (Keep a Changelog)
@@ -55,7 +65,11 @@ custom:
       - Fixed
       - Security
   - key: pr
-    label: PR number or URL (optional)
+    label: PR number (e.g. 465) or full PR URL — either links the entry (optional)
+    type: string
+    optional: true
+  - key: requires_backbone
+    label: Needs a backbone? `release` (the one this release ships) or a shipped X.Y.Z (optional; raises the component's floor)
     type: string
     optional: true
 

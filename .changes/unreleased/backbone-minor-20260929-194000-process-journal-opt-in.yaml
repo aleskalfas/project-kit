@@ -26,6 +26,10 @@ body: >
   Upgrading keeps behaviour: the backbone migration
   `1.150.0/001-keep-process-journal-logging.sh` records `enabled: true` for a
   project it finds keeping journals, with `committed` following whether those
-  journals are tracked by git, and writes nothing otherwise. Documented in the
+  journals are tracked by git, and writes nothing otherwise. Upgrade the
+  project-management capability together with the backbone: an older version
+  still declares its own journal ignore line; while journals are committed the
+  render leaves that entry out and names it in a comment, and `pkit validate`
+  warns until the capability is upgraded. Documented in the
   process README ("The journal — optional audit") and the CLI reference's
   configuration table.

@@ -33,7 +33,7 @@ Exit codes:
   1  membership refusal
   2  usage error (no categories declared / category not declared / invalid format)
   3  gh failure
-"""
+"""  # noqa: E501 — a usage line is a command, kept whole
 
 from __future__ import annotations
 
@@ -49,16 +49,17 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate  # noqa: E402
-from _lib.gh import gh_run, load_adopter_config  # noqa: E402
-from _lib import session_guard  # noqa: E402
-from _lib.membership import (  # noqa: E402
+import contextlib
+
+from _lib import bootstrap_gate, session_guard, title_rules
+from _lib.gh import gh_run, load_adopter_config
+from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
     resolve_capability_root,
     resolve_invoker_identity,
 )
-
+from _lib.milestone import title_format_regex
 
 VALID_CLOSE_TRIGGERS = ("date-based", "content-based", "either")
 
@@ -88,10 +89,7 @@ def main() -> int:
         "--number",
         type=int,
         default=None,
-        help=(
-            "Override the auto-computed number. Default: max declared "
-            "in this category + 1."
-        ),
+        help=("Override the auto-computed number. Default: max declared in this category + 1."),
     )
     parser.add_argument(
         "--close-trigger",
@@ -116,7 +114,8 @@ def main() -> int:
         "--capability-root",
         type=Path,
         default=None,
-        help=f"Path to the installed capability's directory (default: <repo-root>/.pkit/capabilities/{CAPABILITY_NAME}/).",
+        help="Path to the installed capability's directory (default: "
+        f"<repo-root>/.pkit/capabilities/{CAPABILITY_NAME}/).",
     )
     parser.add_argument("--dry-run", action="store_true", help="Print the plan; don't invoke gh.")
     parser.add_argument("--yes", action="store_true", help="Skip the confirmation prompt.")
@@ -228,6 +227,16 @@ def main() -> int:
         )
         return 2
 
+    # titles.yaml's `milestone` checks (#803): shown before the plan; a blocking
+    # one refuses before any gh call.
+    titles = _read_yaml(capability_root / "schemas" / "titles.yaml", yaml_loader)
+    title_findings = title_rules.check_title(titles, "milestone", title)
+    for severity, label, detail in title_findings:
+        print(f"[{severity}] {label}: {detail}", file=sys.stderr)
+    if any(f[0] in title_rules.BLOCKING_SEVERITIES for f in title_findings):
+        print(f"error: milestone title {title!r} refused (see above).", file=sys.stderr)
+        return 2
+
     body_lines = [f"Close trigger: {close_trigger}"]
     if args.description:
         body_lines.append("")
@@ -241,7 +250,7 @@ def main() -> int:
     print(f"  close_trigger: {close_trigger}")
     if args.due_on:
         print(f"  due_on:        {args.due_on}")
-    print(f"  body:")
+    print("  body:")
     for line in body.splitlines():
         print(f"    {line}")
 
@@ -275,20 +284,6 @@ def main() -> int:
 # ---- numbering ------------------------------------------------------
 
 
-def _title_format_to_regex(title_format: str) -> re.Pattern:
-    """Convert a Python-style title_format to a regex with named `n` group.
-
-    Input: "Milestone {n}: {name}"
-    Output: regex compiled from "^Milestone (?P<n>\\d+): (?P<name>.+)$"
-    """
-    # re.escape() escapes literal braces too — un-escape them so we can
-    # substitute placeholders.
-    escaped = re.escape(title_format)
-    escaped = escaped.replace(r"\{n\}", r"(?P<n>\d+)")
-    escaped = escaped.replace(r"\{name\}", r"(?P<name>.+)")
-    return re.compile(f"^{escaped}$")
-
-
 def _next_number_for_category(title_format: str, config: dict | None = None) -> int | None:
     """Find max existing `n` for milestones matching the category's title format; return n+1.
 
@@ -297,7 +292,7 @@ def _next_number_for_category(title_format: str, config: dict | None = None) -> 
     number, returns max+1. Returns 1 when no existing milestones match.
     Returns None on `gh` failure (caller surfaces).
     """
-    regex = _title_format_to_regex(title_format)
+    regex = title_format_regex(title_format)
     milestones = _gh_list_milestones(config)
     if milestones is None:
         return None
@@ -417,10 +412,8 @@ def _gh_list_milestones(config: dict | None = None) -> list[dict] | None:
                 depth -= 1
                 if depth == 0:
                     chunk = out[start : i + 1]
-                    try:
+                    with contextlib.suppress(json.JSONDecodeError):
                         results.extend(json.loads(chunk))
-                    except json.JSONDecodeError:
-                        pass
         return results
 
 
@@ -449,10 +442,7 @@ def _gh_create_milestone(*, title: str, body: str, due_on: str | None, config: d
     ]
     if due_on:
         # GitHub API expects ISO 8601 with Z; accept date-only and pad.
-        if len(due_on) == 10 and due_on.count("-") == 2:
-            due_iso = f"{due_on}T23:59:59Z"
-        else:
-            due_iso = due_on
+        due_iso = f"{due_on}T23:59:59Z" if len(due_on) == 10 and due_on.count("-") == 2 else due_on
         args.extend(["-f", f"due_on={due_iso}"])
     try:
         proc = subprocess.run(args, capture_output=True, text=True, check=False)

@@ -34,10 +34,9 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate  # noqa: E402
-from _lib.gh import gh_run, load_adopter_config  # noqa: E402
-from _lib import session_guard  # noqa: E402
-from _lib.membership import (  # noqa: E402
+from _lib import bootstrap_gate, session_guard
+from _lib.gh import load_adopter_config
+from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
     members_path,
@@ -99,7 +98,6 @@ def main() -> int:
     members = _read_members(file_path, yaml_loader)
 
     config = load_adopter_config(capability_root)
-
 
     invoker = resolve_invoker_identity(config=config)
     result = check_membership(members, invoker)
@@ -179,9 +177,7 @@ def _read_members(file_path: Path, yaml_loader: YAML) -> list[dict]:
     return members
 
 
-def _write_members(
-    file_path: Path, members: list[dict], yaml_loader: YAML
-) -> None:
+def _write_members(file_path: Path, members: list[dict], yaml_loader: YAML) -> None:
     file_path.parent.mkdir(parents=True, exist_ok=True)
     payload = {"schema_version": 1, "members": members}
     with file_path.open("w", encoding="utf-8") as fh:

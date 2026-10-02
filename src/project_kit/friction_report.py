@@ -14,7 +14,12 @@ never the working tree, as the check does; neither writes anything.
   a deferral, its reason. The entries are exactly those `pkit friction check
   --all` reports (`run_repository_check`); ties keep the check's order,
   upstream first. Artefacts whose points lie beyond a shallow clone are
-  named apart: their debt cannot be told.
+  named apart: their debt cannot be told. An artefact under an excluded
+  path is never judged stale or deferred (COR-050 point 7), so it is not
+  listed. After the debt, the check's unanchored measure (point 8): the
+  artefacts with no anchors and no reason, the only ones counted, and apart
+  from them those whose block gives the reason a person accepted them with
+  none (`unanchored-because`, point 1), each with its reason.
 - **`explain`** judges one artefact through `run_artefact_check` — the
   check's own judgment of it, with the commits behind each finding — and
   shows its anchors, its revalidation and deferral points, what changed since
@@ -23,7 +28,18 @@ never the working tree, as the check does; neither writes anything.
   … --anchor … --reason …`), or the edit it needs where no writer answers
   it. The artefact is named as the writers name one (`friction_write.
   find_artefact`): its location — `path`, or `path#id` for a collection
-  entry — or an id; here it is looked up at HEAD.
+  entry — or an id; here it is looked up at HEAD. An artefact under an
+  excluded path is `excluded`, with the `friction.exclude` entry that leaves
+  it out, and shows only what the check reports of its declarations. The
+  reason its block gives for having no anchors (`unanchored-because`, point
+  1) is shown with its state. Its
+  document also carries what a capability's reader would otherwise compute
+  again (ADR-057 point 2): each path anchor's files at the revalidation point
+  and at HEAD, matched as the check decides a dead anchor, `friction.exclude`
+  applied, and the files it leaves out; each commit's paths behind its
+  finding, what the check read as the change (`fr.CommitBehind`); where a
+  dead path anchor's files went; and the artefact's body as discovery reads
+  it — for a collection entry, the section headed by its id.
 """
 
 from __future__ import annotations
@@ -52,7 +68,9 @@ from project_kit.friction_discovery import (
     Artefact,
     Discovery,
     ResolverCommand,
+    SettingsPath,
     discover_artefacts,
+    held_message,
 )
 from project_kit.friction_write import command_line
 
@@ -68,6 +86,10 @@ REASON = "<why it can wait>"
 #: An artefact the check passes over — no anchors, no deferrals — has this state here.
 UNANCHORED = "unanchored"
 
+#: An artefact under a `friction.exclude` path, never judged stale or deferred (COR-050
+#: point 7), has this state here, whatever it declares.
+EXCLUDED = "excluded"
+
 
 class FrictionReportError(click.ClickException):
     """A reading command could not answer: the artefact is not named, or not at HEAD."""
@@ -75,6 +97,18 @@ class FrictionReportError(click.ClickException):
 
 def _anchor_json(anchor: Anchor | None) -> dict[str, str] | None:
     return None if anchor is None else {"kind": anchor.kind, "value": anchor.value}
+
+
+def _setting_json(setting: SettingsPath | None) -> dict[str, str] | None:
+    """A setting as written — its value, its file and the JSON Pointer to it — or `None`."""
+    if setting is None:
+        return None
+    return {"value": setting.value, "file": setting.file, "pointer": setting.pointer}
+
+
+def _setting_cell(setting: SettingsPath) -> str:
+    """A `friction.exclude` entry as a person finds it: its value, then where it is written."""
+    return f"friction.exclude {setting.value!r} ({setting.file}, {setting.pointer})"
 
 
 def _label(anchor: Anchor) -> str:
@@ -136,13 +170,22 @@ class DebtEntry:
 
 @dataclass(frozen=True)
 class DebtListing:
-    """The debt of every artefact at HEAD, oldest first. It never fails."""
+    """The debt of every artefact at HEAD, oldest first, and the unanchored measure. It
+    never fails.
+
+    `unanchored` and `accepted_unanchored` are the check's measure (COR-050
+    point 8): the artefacts with no anchors and no reason, the only ones
+    counted, and apart from them those whose block gives the reason a person
+    accepted them with none (point 1).
+    """
 
     dormant: bool
     head: HeadState | None  # `None` only while dormant
     shallow: bool | None  # `None` only while dormant
     entries: tuple[DebtEntry, ...]  # oldest first
     unreachable: tuple[fr.ArtefactReport, ...]  # not judged: a point beyond a shallow clone
+    unanchored: tuple[str, ...] = ()  # locations, in walk order
+    accepted_unanchored: tuple[fr.AcceptedUnanchored, ...] = ()  # in walk order
 
     def count(self, kind: fr.RepositoryFindingKind) -> int:
         return sum(1 for e in self.entries if e.finding.kind is kind)
@@ -179,7 +222,15 @@ def run_debt(
     unreachable = tuple(
         r for r in check.artefact_reports if r.state is fr.ArtefactState.UNREACHABLE
     )
-    return DebtListing(False, check.head, bool(check.shallow), tuple(entries), unreachable)
+    return DebtListing(
+        False,
+        check.head,
+        bool(check.shallow),
+        tuple(entries),
+        unreachable,
+        check.unanchored,
+        check.accepted_unanchored,
+    )
 
 
 def _deferral_reasons(
@@ -199,9 +250,17 @@ def _deferral_reasons(
     return reasons
 
 
+#: The version of the document `render_debt_json` returns. A change a reader could
+#: break against — a key removed, renamed or given another meaning — raises it; a key
+#: added does not. A document without it comes from a backbone that predates it:
+#: version 1.
+DEBT_SCHEMA_VERSION = 1
+
+
 def render_debt_json(listing: DebtListing) -> str:
     """The stable machine-readable listing: keys sorted, no ages."""
     document = {
+        "schema_version": DEBT_SCHEMA_VERSION,
         "report": "debt",
         "dormant": listing.dormant,
         "head": (
@@ -213,11 +272,14 @@ def render_debt_json(listing: DebtListing) -> str:
         "counts": {
             **{kind.value: listing.count(kind) for kind in DEBT_KINDS},
             "unreachable": len(listing.unreachable),
+            "unanchored": len(listing.unanchored),
         },
         "debt": [entry.as_json() for entry in listing.entries],
         "unreachable": [
             {"artefact": r.artefact, "location": r.location} for r in listing.unreachable
         ],
+        "unanchored": list(listing.unanchored),
+        "accepted_unanchored": [entry.as_json() for entry in listing.accepted_unanchored],
     }
     return json.dumps(document, indent=2, sort_keys=True) + "\n"
 
@@ -242,8 +304,11 @@ def render_debt_human(listing: DebtListing, *, now: datetime | None = None) -> s
     summary = ", ".join(
         f"{listing.count(kind)} {kind.value}" for kind in DEBT_KINDS if listing.count(kind)
     )
+    summary = summary or "nothing stale or deferred"
+    if listing.unanchored:
+        summary += f"; {len(listing.unanchored)} unanchored"
     lines = [
-        f"{title} — {summary or 'nothing stale or deferred'}"
+        f"{title} — {summary}"
         + cli_render.style("muted", "   (the whole report: pkit friction check --all)"),
         "",
         *_header_lines(listing.head, bool(listing.shallow)),
@@ -281,6 +346,7 @@ def render_debt_human(listing: DebtListing, *, now: datetime | None = None) -> s
                 *(f"  {report.location}" for report in listing.unreachable),
             ]
         )
+    lines.extend(_unanchored_lines(listing))
     shown = [kind for kind in DEBT_KINDS if listing.count(kind)]
     if shown:
         width = max(len(kind.value) for kind in shown)
@@ -296,6 +362,36 @@ def render_debt_human(listing: DebtListing, *, now: datetime | None = None) -> s
         ]
     )
     return "\n".join(lines) + "\n"
+
+
+def _unanchored_lines(listing: DebtListing) -> list[str]:
+    """The unanchored measure (COR-050 point 8): the forgotten artefacts, counted, then
+    apart from them those accepted with a reason (point 1), each with its reason."""
+    lines: list[str] = []
+    if listing.unanchored:
+        lines.extend(
+            [
+                "",
+                cli_render.style("heading", "UNANCHORED")
+                + cli_render.style(
+                    "muted",
+                    " — no anchors and no reason: anchor it, or write its unanchored-because",
+                ),
+                *(f"  {location}" for location in listing.unanchored),
+            ]
+        )
+    accepted = listing.accepted_unanchored
+    if accepted:
+        width = max(len(entry.location) for entry in accepted)
+        lines.extend(
+            [
+                "",
+                cli_render.style("heading", "ACCEPTED UNANCHORED")
+                + cli_render.style("muted", " — not counted: the reason a person gave for none"),
+                *(f"  {entry.location:{width}}  {entry.reason}" for entry in accepted),
+            ]
+        )
+    return lines
 
 
 # --- one artefact, explained ---------------------------------------------------------
@@ -322,7 +418,7 @@ class ExplainedFinding:
     """
 
     finding: fr.RepositoryFinding
-    commits: tuple[fr.Commit, ...]  # oldest first
+    commits: tuple[fr.CommitBehind, ...]  # oldest first, each with the paths behind it
     clears: str
     answers: tuple[Answer, ...]
 
@@ -340,12 +436,20 @@ class ExplainedFinding:
 
 @dataclass(frozen=True)
 class ExplainedAnchor:
-    """One anchor the artefact declares at HEAD, and what the check found about it."""
+    """One anchor the artefact declares at HEAD, and what the check found about it.
+
+    `files`, for a path anchor, are the files it stands on at the revalidation
+    point and at HEAD, as the check decides a dead anchor, and those its glob
+    covers at HEAD that `friction.exclude` leaves out (`fr.AnchorFiles`);
+    `None` for another kind.
+    """
 
     anchor: Anchor
     state: str  # a finding kind, `current`, or `unreachable` when the artefact is not judged
-    changes: int  # commits behind its staleness
+    # Commits behind its staleness only: a dead anchor's commits say where its files went.
+    changes: int
     over_broad: bool
+    files: fr.AnchorFiles | None = None
 
     def as_json(self) -> dict[str, Any]:
         return {
@@ -354,6 +458,7 @@ class ExplainedAnchor:
             "state": self.state,
             "changes": self.changes,
             "over_broad": self.over_broad,
+            "files": None if self.files is None else self.files.as_json(),
         }
 
 
@@ -364,12 +469,14 @@ class Explanation:
     head: HeadState
     shallow: bool
     artefact: Artefact
-    report: fr.ArtefactReport | None  # `None`: no anchors and no deferrals, nothing judged
+    report: fr.ArtefactReport | None  # `None`: nothing judged — no anchors, no deferrals, excluded
     anchors: tuple[ExplainedAnchor, ...]  # in written order
     findings: tuple[ExplainedFinding, ...]  # in the check's order
 
     @property
     def state(self) -> str:
+        if self.artefact.excluded:
+            return EXCLUDED
         return UNANCHORED if self.report is None else self.report.state.value
 
     @property
@@ -401,8 +508,14 @@ def run_explain(
     findings = tuple(
         _explained(traced, location, declared, check.artefact) for traced in check.findings
     )
-    unjudged = check.report is not None and check.report.state is fr.ArtefactState.UNREACHABLE
-    anchors = tuple(_anchor_state(anchor, findings, unjudged) for anchor in declared)
+    unjudged: str | None = None  # what an anchor with no finding shows, when not judged
+    if check.artefact.excluded:
+        unjudged = EXCLUDED
+    elif check.report is not None and check.report.state is fr.ArtefactState.UNREACHABLE:
+        unjudged = fr.ArtefactState.UNREACHABLE.value
+    anchors = tuple(
+        _anchor_state(anchor, findings, unjudged, check.files.get(anchor)) for anchor in declared
+    )
     return Explanation(
         head=check.head,
         shallow=check.shallow,
@@ -418,11 +531,15 @@ def _named(reference: str) -> Callable[[Discovery], Artefact]:
 
     Its location first — `path` for a document, `path#id` for a collection
     entry — then any identifier an artefact anchor may use: its id, a
-    document's path, a method rule's `<component>:<id>`.
+    document's path, a method rule's `<component>:<id>`. A document a component
+    holds is named with its owner, as the writers name it.
     """
 
     def select(discovery: Discovery) -> Artefact:
         file_part = reference.split("#", 1)[0]
+        held = discovery.holding(file_part)
+        if held is not None:  # a component's document, not an artefact (COR-050 point 1)
+            raise FrictionReportError(f"{held_message(held)} There is nothing to explain.")
         for unreadable in discovery.unreadable:
             if unreadable.path == file_part:
                 raise FrictionReportError(
@@ -478,7 +595,10 @@ def _explained(
     )
     answers: tuple[Answer, ...] = ()
     kind = finding.kind
-    if kind is _Kind.STALE and anchor is None:
+    if kind is _Kind.STALE and anchor is None and finding.message.startswith(fr.LET_BACK_IN):
+        clears = "revalidate the artefact: letting it back in cannot be deferred"
+        answers = revalidate
+    elif kind is _Kind.STALE and anchor is None:
         clears, answers = "revalidate the artefact: a move cannot be deferred", revalidate
     elif kind is _Kind.STALE and anchor is not None:
         defer = command_line(
@@ -495,6 +615,12 @@ def _explained(
     elif kind is _Kind.DEFERRED and anchor is not None:
         clears = f"a revalidation that does not keep it (`--keep {_label(anchor)}` keeps it)"
         answers = revalidate
+    elif kind is _Kind.LEFT_OUT and anchor is not None:
+        clears = (
+            "nothing is owed; a revalidation reads the anchor under HEAD's `friction.exclude`, "
+            "which ends the report"
+        )
+        answers = revalidate[1:]
     elif kind is _Kind.DEAD_ANCHOR and anchor is not None:
         clears = (
             f"correct {_label(anchor)} or remove it from the block, then revalidate (the "
@@ -522,21 +648,34 @@ _ANCHOR_STATES = (_Kind.DEAD_ANCHOR, _Kind.UNRESOLVED_KIND, _Kind.STALE, _Kind.D
 
 
 def _anchor_state(
-    anchor: Anchor, findings: Sequence[ExplainedFinding], unjudged: bool
+    anchor: Anchor,
+    findings: Sequence[ExplainedFinding],
+    unjudged: str | None,
+    files: fr.AnchorFiles | None,
 ) -> ExplainedAnchor:
+    """An anchor's state: its first finding's kind, else `unjudged` — why the artefact
+    was not judged — else `current`."""
     about = [f for f in findings if f.finding.anchor == anchor]
     kinds = {f.finding.kind for f in about}
     state = next((k.value for k in _ANCHOR_STATES if k in kinds), None)
     if state is None:
-        state = "unreachable" if unjudged else "current"
+        state = unjudged or "current"
     changes = sum(len(f.commits) for f in about if f.finding.kind is _Kind.STALE)
-    return ExplainedAnchor(anchor, state, changes, _Kind.OVER_BROAD in kinds)
+    return ExplainedAnchor(anchor, state, changes, _Kind.OVER_BROAD in kinds, files)
+
+
+#: The version of the document `render_explain_json` returns. A change a reader could
+#: break against — a key removed, renamed or given another meaning — raises it; a key
+#: added does not. A document without it comes from a backbone that predates it:
+#: version 1.
+EXPLAIN_SCHEMA_VERSION = 1
 
 
 def render_explain_json(explanation: Explanation) -> str:
     """The stable machine-readable explanation: keys sorted, no ages."""
     report = explanation.report
     document = {
+        "schema_version": EXPLAIN_SCHEMA_VERSION,
         "report": "explain",
         "head": {
             "commit": explanation.head.commit,
@@ -545,7 +684,10 @@ def render_explain_json(explanation: Explanation) -> str:
         "history": {"shallow": explanation.shallow},
         "artefact": explanation.artefact.id,
         "location": explanation.artefact.location,
+        "body": explanation.artefact.body,
         "state": explanation.state,
+        "unanchored_because": explanation.artefact.unanchored_because,
+        "excluded_by": _setting_json(explanation.artefact.excluded_by),
         "revalidation_point": (
             None
             if report is None or report.revalidation_point is None
@@ -574,18 +716,22 @@ _STATE_GLOSS = {
     "deferred": "friction deliberately postponed; nothing stale",
     "unreachable": "a point lies beyond this shallow clone — git fetch --unshallow",
     UNANCHORED: "no anchors and no deferrals: nothing to judge",
+    EXCLUDED: "under an excluded path: left out of the measures and the debt",
 }
 
 # What the commits under a finding are, by its kind.
 _COMMITS_LABEL = {
     _Kind.STALE: "changed in, oldest first",
     _Kind.DEFERRED: "postpones, oldest first",
+    _Kind.LEFT_OUT: "left out in, oldest first",
+    _Kind.DEAD_ANCHOR: "where its files went, oldest first",
 }
 
 _ANCHOR_GLOSS = {
     "current": "unchanged since the revalidation point",
     "deferred": "deferred; nothing after its deferral point",
     "unreachable": "not judged: a point lies beyond this shallow clone",
+    EXCLUDED: "not judged: the artefact is under an excluded path",
 }
 
 
@@ -602,6 +748,12 @@ def render_explain_human(explanation: Explanation, *, now: datetime | None = Non
         lines.append(f"  Artefact: {artefact.id}")
     state = explanation.state
     lines.append(f"  State: {state}" + cli_render.style("muted", f"   ({_STATE_GLOSS[state]})"))
+    reason = artefact.unanchored_because
+    if reason is not None:
+        beside = cli_render.style("muted", "   (beside anchors: pkit validate refuses the pair)")
+        lines.append(f"  Unanchored because: {reason}" + (beside if anchors_of(artefact) else ""))
+    if artefact.excluded_by is not None:
+        lines.append(f"  Excluded by: {_setting_cell(artefact.excluded_by)}")
     lines.extend(_header_lines(explanation.head, explanation.shallow))
 
     report = explanation.report
@@ -609,7 +761,7 @@ def render_explain_human(explanation: Explanation, *, now: datetime | None = Non
         lines.extend(["", *_point_lines(report)])
     if explanation.anchors:
         lines.extend(["", *_anchor_lines(explanation)])
-    if report is not None:
+    if report is not None or explanation.findings:
         lines.extend(["", *_finding_lines(explanation, now)])
 
     commands = [
@@ -694,10 +846,10 @@ def _finding_lines(explanation: Explanation, now: datetime) -> list[str]:
         if explained.commits:
             label = _COMMITS_LABEL.get(finding.kind, "behind it")
             if finding.kind is _Kind.STALE and finding.anchor is None:
-                label = "moved in"
-            author_width = max(len(c.author) for c in explained.commits)
+                label = "let back in" if finding.message.startswith(fr.LET_BACK_IN) else "moved in"
+            author_width = max(len(c.commit.author) for c in explained.commits)
             lines.append(f"    {label}:")
-            lines.extend(f"      {_commit_row(c, author_width)}" for c in explained.commits)
+            lines.extend(f"      {_commit_row(c.commit, author_width)}" for c in explained.commits)
         if explained.answers:
             lines.append(f"    clears it — {explained.clears}:")
             width = max(len(a.answer) for a in explained.answers)
@@ -720,6 +872,9 @@ def _finding_lines(explanation: Explanation, now: datetime) -> list[str]:
 __all__ = [
     "BECAUSE",
     "DEBT_KINDS",
+    "DEBT_SCHEMA_VERSION",
+    "EXCLUDED",
+    "EXPLAIN_SCHEMA_VERSION",
     "REASON",
     "UNANCHORED",
     "Answer",

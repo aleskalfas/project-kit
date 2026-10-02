@@ -100,7 +100,7 @@ def _registered(root: Path, *, origin: str = ORIGIN_KIT_SHIPPED) -> dict[str, by
     """Register `_NAME` as the source's manifest does (kit-shipped by default), with an
     install receipt recording an older version — so a refresh treating the subtree as a
     copy would have a migration to run — and return the subtree's bytes as they stand."""
-    caps._register_in_backbone_manifest(root, _NAME, origin=origin)  # pyright: ignore[reportPrivateUsage]
+    caps._register_in_backbone_manifest(root, _NAME, origin=origin)
     (_cap_dir(root) / "manifest.yaml").write_text(
         f"schema_version: 1\ncomponent:\n  kind: capability\n  name: {_NAME}\n  version: 0.1.0\n",
         encoding="utf-8",
@@ -198,9 +198,7 @@ def test_uninstall_without_a_prompt(
 def test_purge_is_refused_in_the_source(source_repo: Path, origin: str) -> None:
     before = _registered(source_repo, origin=origin)
 
-    result = CliRunner().invoke(
-        main, ["capabilities", "uninstall", _NAME, "--purge", "--yes"]
-    )
+    result = CliRunner().invoke(main, ["capabilities", "uninstall", _NAME, "--purge", "--yes"])
 
     assert result.exit_code == 1, result.output
     said = _output(result)

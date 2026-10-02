@@ -102,12 +102,8 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import axis_labels  # noqa: E402
-from _lib import body_parent_ref  # noqa: E402
-from _lib import bootstrap_gate  # noqa: E402
-from _lib import containment  # noqa: E402
-from _lib import session_guard  # noqa: E402
-from _lib.containment import (  # noqa: E402
+from _lib import axis_labels, body_parent_ref, bootstrap_gate, containment, session_guard
+from _lib.containment import (
     LinkOutcome,
     LinkResult,
     NativeParent,
@@ -115,15 +111,14 @@ from _lib.containment import (  # noqa: E402
     SubIssueReads,
     link_sub_issue,
 )
-from _lib.gh import load_adopter_config  # noqa: E402
-from _lib.membership import (  # noqa: E402
+from _lib.gh import load_adopter_config
+from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
     resolve_capability_root,
     resolve_invoker_identity,
 )
-from _lib.structural_type import infer_structural_type  # noqa: E402
-
+from _lib.structural_type import infer_structural_type
 
 VERB = "link-parent"
 
@@ -199,9 +194,7 @@ def main() -> int:
     issue_types = _read_yaml(capability_root / "schemas" / "issue-types.yaml", yaml_loader)
     # Kind-driven Task prefixes ([Bug] / [Docs] / ...) live in classification.yaml;
     # without it a kind-prefixed Task reads as an unrecognised type.
-    classification = _read_yaml(
-        capability_root / "schemas" / "classification.yaml", yaml_loader
-    )
+    classification = _read_yaml(capability_root / "schemas" / "classification.yaml", yaml_loader)
     mode = axis_labels.containment_mode(capability_root)
     textual = mode == axis_labels.CONTAINMENT_TEXTUAL
 
@@ -211,8 +204,7 @@ def main() -> int:
     corpus = containment.fetch_issue_corpus(config, fields="number,title,body,state")
     if corpus is None:
         print(
-            "error: the issue list could not be read (gh failed); nothing was "
-            "examined.",
+            "error: the issue list could not be read (gh failed); nothing was examined.",
             file=sys.stderr,
         )
         return 3
@@ -299,9 +291,7 @@ def main() -> int:
         return stop
 
     if textual:
-        failed = _refresh_children_views(
-            refresh_parents, config=config, corpus=corpus, mode=mode
-        )
+        failed = _refresh_children_views(refresh_parents, config=config, corpus=corpus, mode=mode)
     else:
         entries = apply_links(entries, config, reads)
         failed = any(entry.outcome is Outcome.FAILED for entry in entries)
@@ -386,9 +376,7 @@ def classify(
     return Entry(number, Outcome.WOULD_LINK, f"would link under #{parent}", parent=parent)
 
 
-def check_native_links(
-    entries: list[Entry], config: dict, reads: SubIssueReads
-) -> list[Entry]:
+def check_native_links(entries: list[Entry], config: dict, reads: SubIssueReads) -> list[Entry]:
     """Settle, read-only, which planned links already exist or cannot be made.
 
     Each distinct parent's native sub-issues are read once, through the run's
@@ -487,8 +475,7 @@ def _as_textual(entry: Entry) -> Entry:
         entry,
         outcome=Outcome.TEXTUAL,
         detail=(
-            f"under #{entry.parent} — textual mode links nothing (the first line "
-            "is the record)"
+            f"under #{entry.parent} — textual mode links nothing (the first line is the record)"
         ),
     )
 
@@ -509,8 +496,14 @@ def apply_links(entries: list[Entry], config: dict, reads: SubIssueReads) -> lis
     The linker is handed the run's ``reads``, so its idempotency check reuses
     the parent reads the plan made instead of reading each parent again per
     child.
+
+    Where GitHub refused any link (a failure quoting its words), the run ends
+    with the `containment: textual` way out, once however many it refused: pm
+    never reads a refusal as an instance without sub-issues (ADR-035), so the
+    operator who knows theirs has none is told how to say so.
     """
     applied: list[Entry] = []
+    refused = False
     for entry in entries:
         if entry.outcome is not Outcome.WOULD_LINK or entry.parent is None:
             applied.append(entry)
@@ -521,6 +514,7 @@ def apply_links(entries: list[Entry], config: dict, reads: SubIssueReads) -> lis
             child_number=entry.issue,
             sub_issues=reads,
         )
+        refused = refused or result.refused
         done = _after_link(entry, result)
         marker = {
             Outcome.LINKED: "[ok]",
@@ -530,6 +524,8 @@ def apply_links(entries: list[Entry], config: dict, reads: SubIssueReads) -> lis
         }.get(done.outcome, "[fail]")
         print(f"  {marker} #{done.issue} {done.detail}")
         applied.append(done)
+    if refused:
+        print(f"  → {axis_labels.TEXTUAL_CONTAINMENT_WAY_OUT}")
     return applied
 
 
@@ -546,6 +542,11 @@ def _after_link(entry: Entry, result: LinkResult) -> Entry:
     its record does not carry the parent and GitHub's refusal named the rule —
     is reported like the plan's conflicts, naming the parent where the seam
     could establish it.
+
+    Where GitHub refused the link, its own words follow the line (#808): the
+    seam's ``detail`` already carries them, and a line written here quotes them
+    through :meth:`LinkResult.quoting_refusal`. A refusal is never UNSUPPORTED
+    — a 422 is a FAILED link here whatever it says (ADR-035).
     """
     parent = entry.parent
     if result.outcome is LinkOutcome.LINKED:
@@ -560,7 +561,7 @@ def _after_link(entry: Entry, result: LinkResult) -> Entry:
         return replace(
             entry,
             outcome=Outcome.CONFLICT,
-            detail=_conflict_detail(result.current_parent, parent),
+            detail=result.quoting_refusal(_conflict_detail(result.current_parent, parent)),
         )
     if result.outcome is LinkOutcome.UNSUPPORTED:
         if entry.native is NativeReadOutcome.READ:
@@ -753,10 +754,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--yes",
         action="store_true",
-        help=(
-            "Write without the confirmation prompt. Required in a "
-            "non-interactive run."
-        ),
+        help=("Write without the confirmation prompt. Required in a non-interactive run."),
     )
     session_guard.add_override_argument(parser)
     return parser

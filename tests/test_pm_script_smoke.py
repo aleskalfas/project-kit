@@ -39,17 +39,15 @@ from pathlib import Path
 
 import pytest
 
-
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SCRIPTS_DIR = (
-    REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
-)
+SCRIPTS_DIR = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
 GH_LIB = SCRIPTS_DIR / "_lib" / "gh.py"
 
 
 # ---------------------------------------------------------------------------
 # Helper: load a script as a module without executing __main__ guard
 # ---------------------------------------------------------------------------
+
 
 def _load_script(script_path: Path, module_name: str) -> types.ModuleType:
     """Load a pm script by file path via importlib, inserting its parent on sys.path."""
@@ -102,6 +100,7 @@ def test_gh_get_issue_signature_accepts_fields_kwarg(gh_lib) -> None:
     a fixed set of fields for every caller.
     """
     import inspect
+
     sig = inspect.signature(gh_lib.gh_get_issue)
     params = sig.parameters
     assert "fields" in params, "gh_get_issue must have a 'fields' parameter"

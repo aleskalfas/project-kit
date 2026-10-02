@@ -1,7 +1,8 @@
 """Tests for set-field's pure planning logic (no network) + its exit contract.
 
 Covers label resolution + idempotent diff for priority/workstream, the
-parent-ref body rewrite (replace / prepend / no-op), value-vocabulary reads,
+parent-ref body rewrite (replace / prepend / no-op, and below a DEC-013
+integration marker that stays the first line — #765), value-vocabulary reads,
 the BOARD single-select write (#724 — name → id resolution, and the five
 refusals that each name what the board actually offers), and the honesty posture
 inherited from #709: a requested axis that was not written is `[refused]` with a
@@ -23,12 +24,7 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = (
-    REPO_ROOT
-    / ".pkit"
-    / "capabilities"
-    / "project-management"
-    / "scripts"
-    / "set-field.py"
+    REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "set-field.py"
 )
 SCRIPTS = SCRIPT_PATH.parent
 
@@ -138,9 +134,7 @@ def test_adopter_workstreams_list_form(sf) -> None:
 
 
 def test_adopter_workstreams_mapping_form(sf) -> None:
-    assert sf._adopter_workstreams(
-        {"workstreams": {"cli": {}, "docs": {}}}
-    ) == {"cli", "docs"}
+    assert sf._adopter_workstreams({"workstreams": {"cli": {}, "docs": {}}}) == {"cli", "docs"}
 
 
 # --- label planning (greenfield: substrate_map None) -----------------------
@@ -159,7 +153,7 @@ def test_plan_labels_sets_new_priority(sf) -> None:
 
 
 def test_plan_labels_replaces_stale_priority(sf) -> None:
-    results, add, remove = sf._plan_labels(
+    _results, add, remove = sf._plan_labels(
         priority="High",
         workstream=None,
         current_labels=["priority:Low", "type:feature"],
@@ -181,7 +175,7 @@ def test_plan_labels_idempotent_noop(sf) -> None:
 
 
 def test_plan_labels_batch_priority_and_workstream(sf) -> None:
-    results, add, remove = sf._plan_labels(
+    _results, add, _remove = sf._plan_labels(
         priority="Medium",
         workstream="cli",
         current_labels=[],
@@ -284,15 +278,11 @@ def test_route_axes_degraded_axis_is_a_note_not_a_refusal(sf, axis_labels) -> No
     assert "unsupported under your substrate-map" in note.message
 
 
-def test_route_axes_title_carried_axis_is_refused_never_labelled(
-    sf, axis_labels
-) -> None:
+def test_route_axes_title_carried_axis_is_refused_never_labelled(sf, axis_labels) -> None:
     """A title-prefix binding is SERVED but is not a substrate set-field writes for
     priority — and routing it to the label planner would apply the PREFIX string as
     a `gh --label` the tracker does not have. Refused, non-zero, never written."""
-    sm = axis_labels.SubstrateMap(
-        axes={"priority": {"title-prefix": {"remap": {"High": "[P0]"}}}}
-    )
+    sm = axis_labels.SubstrateMap(axes={"priority": {"title-prefix": {"remap": {"High": "[P0]"}}}})
     label_axes, board_axes, results = sf._route_axes(
         priority="High",
         workstream=None,
@@ -371,9 +361,7 @@ def test_plan_board_fields_matches_field_and_option_case_insensitively(sf) -> No
             },
         ),
     )
-    _, writes = sf._plan_board_fields(
-        board_axes={"priority": "High"}, state=state, issue_number=42
-    )
+    _, writes = sf._plan_board_fields(board_axes={"priority": "High"}, state=state, issue_number=42)
     assert writes[0].option_id == "opt_high"
 
 
@@ -523,11 +511,13 @@ def test_plan_labels_strips_the_adopters_own_stale_label(sf, axis_labels) -> Non
 
 def test_field_list_dedupes_and_preserves_order(sf) -> None:
     fr = sf.FieldResult
-    listed = sf._field_list([
-        fr(field="kind", ok=True, changed=True, message=""),
-        fr(field="title", ok=True, changed=True, message=""),
-        fr(field="kind", ok=True, changed=False, message=""),
-    ])
+    listed = sf._field_list(
+        [
+            fr(field="kind", ok=True, changed=True, message=""),
+            fr(field="title", ok=True, changed=True, message=""),
+            fr(field="kind", ok=True, changed=False, message=""),
+        ]
+    )
     assert listed == "kind, title"
 
 
@@ -545,9 +535,7 @@ def test_axis_values_reads_type_list(sf, classification) -> None:
     }
 
 
-def test_plan_kind_swaps_label_and_realigns_prefix(
-    sf, issue_types, classification
-) -> None:
+def test_plan_kind_swaps_label_and_realigns_prefix(sf, issue_types, classification) -> None:
     results, add, remove, new_title = sf._plan_kind(
         kind="bug",
         title="[Chore] fix the broken verb",
@@ -563,9 +551,7 @@ def test_plan_kind_swaps_label_and_realigns_prefix(
     assert any(r.field == "title" and r.changed for r in results)
 
 
-def test_plan_kind_prefix_already_correct_is_noop(
-    sf, issue_types, classification
-) -> None:
+def test_plan_kind_prefix_already_correct_is_noop(sf, issue_types, classification) -> None:
     # Label changes but the title prefix already matches the target kind.
     results, add, remove, new_title = sf._plan_kind(
         kind="bug",
@@ -581,9 +567,7 @@ def test_plan_kind_prefix_already_correct_is_noop(
     assert not any(r.field == "title" for r in results)
 
 
-def test_plan_kind_idempotent_when_label_and_prefix_match(
-    sf, issue_types, classification
-) -> None:
+def test_plan_kind_idempotent_when_label_and_prefix_match(sf, issue_types, classification) -> None:
     results, add, remove, new_title = sf._plan_kind(
         kind="bug",
         title="[Bug] nothing to do",
@@ -625,9 +609,7 @@ def test_kind_allowed_permissive_on_empty_classification(cr) -> None:
     assert cr.kind_allowed_for_structural_type("bug", "epic", {}) is True
 
 
-def test_plan_kind_feature_on_feature_issue_is_full_noop(
-    sf, issue_types, classification
-) -> None:
+def test_plan_kind_feature_on_feature_issue_is_full_noop(sf, issue_types, classification) -> None:
     # The one --kind path that reaches _plan_kind for a feature-structural issue:
     # kind `feature` on an already-`type:feature` [Feature] issue. Label already
     # correct, structural prefix already correct — nothing mutates.
@@ -672,13 +654,11 @@ def test_unknown_kind_not_in_declared_values(sf, classification) -> None:
     assert "bug" in valid
 
 
-def test_kind_composes_with_priority_workstream_batch(
-    sf, issue_types, classification
-) -> None:
+def test_kind_composes_with_priority_workstream_batch(sf, issue_types, classification) -> None:
     # The aggregate add/remove main builds: kind swap + priority + workstream in
     # one batch, all label writes against a single edit call.
     current = ["type:maintenance", "priority:Low"]
-    k_results, k_add, k_remove, new_title = sf._plan_kind(
+    _k_results, k_add, k_remove, new_title = sf._plan_kind(
         kind="bug",
         title="[Chore] mislabelled defect",
         current_labels=current,
@@ -686,7 +666,7 @@ def test_kind_composes_with_priority_workstream_batch(
         classification=classification,
         substrate_map=None,
     )
-    a_results, a_add, a_remove = sf._plan_labels(
+    _a_results, a_add, a_remove = sf._plan_labels(
         priority="High",
         workstream="cli",
         current_labels=current,
@@ -726,11 +706,99 @@ def test_plan_parent_prepends_when_absent(sf) -> None:
 
 def test_plan_parent_preserves_milestone_link_form_recognised(sf) -> None:
     body = "Milestone: [#6](../milestone/6)\n\n## What\nx\n"
-    new_body, result = sf._plan_parent(body, "EPIC: #3")
+    new_body, _result = sf._plan_parent(body, "EPIC: #3")
     # The existing first line is a recognised parent-ref, so it is REPLACED
     # (not prepended-before).
     assert new_body.startswith("EPIC: #3\n")
     assert "Milestone:" not in new_body.splitlines()[0]
+
+
+@pytest.mark.parametrize(
+    ("body", "expected"),
+    [
+        ("Feature: #1\n\n## What\nx\n", "Feature: #9\n\n## What\nx\n"),
+        ("\n\nFeature: #1\n\n## What\nx\n", "\n\nFeature: #9\n\n## What\nx\n"),
+        ("## What\nx\n", "Feature: #9\n\n## What\nx\n"),
+        ("", "Feature: #9\n"),
+    ],
+    ids=["replace", "replace-after-leading-blanks", "prepend", "empty-body"],
+)
+def test_plan_parent_unmarked_body_exact_rewrite(sf, body, expected) -> None:
+    new_body, result = sf._plan_parent(body, "Feature: #9")
+    assert new_body == expected
+    assert result.changed is True
+
+
+# --- parent-ref planning under a DEC-013 integration marker (#765) ----------
+#
+# A marked body opens with `Integration: integration/<slug>`, directly above the
+# parent-ref with no blank line between (DEC-013). `--parent` rewrites the
+# parent-ref below the marker; it must never push the marker off the first line,
+# where every reader looks for it — a buried marker also loses the issue its
+# integration branch.
+
+_MARKER = "Integration: integration/foo"
+
+
+def test_plan_parent_under_marker_replaces_the_ref_below_it(sf) -> None:
+    body = f"{_MARKER}\nFeature: #1\n\n## What\nx\n"
+    new_body, result = sf._plan_parent(body, "Feature: #9")
+    assert new_body == f"{_MARKER}\nFeature: #9\n\n## What\nx\n"
+    assert result.changed is True
+    assert "was 'Feature: #1'" in result.message
+
+
+def test_plan_parent_under_marker_idempotent_noop(sf) -> None:
+    body = f"{_MARKER}\nFeature: #9\n\n## What\nx\n"
+    new_body, result = sf._plan_parent(body, "Feature: #9")
+    assert new_body == body
+    assert result.changed is False
+    assert "no-op" in result.message
+
+
+def test_plan_parent_under_marker_crlf_reset_is_a_noop(sf) -> None:
+    body = f"{_MARKER}\r\nFeature: #9\r\n\r\n## What\r\n"
+    new_body, result = sf._plan_parent(body, "Feature: #9")
+    assert new_body == body
+    assert result.changed is False
+
+
+@pytest.mark.parametrize(
+    ("body", "expected"),
+    [
+        (f"{_MARKER}\n\n## What\nx\n", f"{_MARKER}\nFeature: #9\n\n## What\nx\n"),
+        (f"{_MARKER}\n## What\nx\n", f"{_MARKER}\nFeature: #9\n\n## What\nx\n"),
+        (f"{_MARKER}\n", f"{_MARKER}\nFeature: #9\n"),
+    ],
+    ids=["blank-then-content", "content-directly-below", "marker-only"],
+)
+def test_plan_parent_under_marker_without_a_ref_inserts_directly_below(sf, body, expected) -> None:
+    new_body, result = sf._plan_parent(body, "Feature: #9")
+    assert new_body == expected
+    assert result.changed is True
+    assert "inserted below the integration marker" in result.message
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        f"{_MARKER}\nFeature: #1\n\n## What\n",
+        f"{_MARKER}\n\n## What\n",
+        f"\n\n{_MARKER}\nFeature: #1\n\n## What\n",
+        f"{_MARKER}\r\nFeature: #1\r\n\r\n## What\r\n",
+        f"{_MARKER}\r\n\r\n## What\r\n",
+    ],
+    ids=["ref", "no-ref", "leading-blanks", "crlf-ref", "crlf-no-ref"],
+)
+def test_plan_parent_under_marker_reads_back_marker_first(sf, body) -> None:
+    """Whatever the layout, the written body opens with the marker and the new
+    parent-ref directly below it, and the readers find both."""
+    new_body, _result = sf._plan_parent(body, "Feature: #9")
+    lines = [ln.strip() for ln in new_body.splitlines()]
+    first = next(i for i, ln in enumerate(lines) if ln)
+    assert lines[first : first + 2] == [_MARKER, "Feature: #9"]
+    assert sf.infer.parent_ref(new_body) == 9
+    assert sf.infer.integration_slug(new_body) == "foo"
 
 
 # --- structural type + parent-ref form -------------------------------------
@@ -780,20 +848,23 @@ def _stub_board_reads(
     monkeypatch.setattr(
         bf,
         "read_project_node_id",
-        lambda config, owner=None, gh_call=None: project
-        or bf.ProjectLookup(ok=True, node_id="PVT_board7"),
+        lambda config, owner=None, gh_call=None: (
+            project or bf.ProjectLookup(ok=True, node_id="PVT_board7")
+        ),
     )
     monkeypatch.setattr(
         bf,
         "read_fields",
-        lambda config, owner=None, gh_call=None: fields_read
-        or bf.BoardFieldsRead(ok=True, fields=({"id": "F", "name": "Priority"},)),
+        lambda config, owner=None, gh_call=None: (
+            fields_read or bf.BoardFieldsRead(ok=True, fields=({"id": "F", "name": "Priority"},))
+        ),
     )
     monkeypatch.setattr(
         bf,
         "resolve_item_id",
-        lambda config, issue_node_id, project_node_id, gh_call=None: item
-        or bf.ItemLookup(ok=True, item_id="PVTI_card42"),
+        lambda config, issue_node_id, project_node_id, gh_call=None: (
+            item or bf.ItemLookup(ok=True, item_id="PVTI_card42")
+        ),
     )
 
 
@@ -821,8 +892,7 @@ def test_read_board_state_composes_the_exact_item_add_remediation(sf, monkeypatc
     _stub_board_reads(sf, monkeypatch)
     state = sf._read_board_state(_BOARD_CONFIG, issue=_BOARD_ISSUE, issue_number=42)
     assert state.membership_remediation == (
-        "gh project item-add 7 --owner an-org "
-        "--url https://github.com/an-org/r/issues/42"
+        "gh project item-add 7 --owner an-org --url https://github.com/an-org/r/issues/42"
     )
 
 
@@ -837,9 +907,7 @@ def test_read_board_state_surfaces_a_read_failure_verbatim(sf, monkeypatch) -> N
     assert state.error == stderr
 
 
-def test_read_board_state_without_an_issue_node_id_is_an_error_not_a_guess(
-    sf, monkeypatch
-) -> None:
+def test_read_board_state_without_an_issue_node_id_is_an_error_not_a_guess(sf, monkeypatch) -> None:
     _stub_board_reads(sf, monkeypatch)
     state = sf._read_board_state(_BOARD_CONFIG, issue={"url": "u"}, issue_number=42)
     assert state.error is not None
@@ -946,9 +1014,7 @@ def _run_main(
 
     monkeypatch.setattr(sf, "gh_get_issue", lambda *a, **k: issue)
     if board_state is not None:
-        monkeypatch.setattr(
-            sf, "_read_board_state", lambda config, **k: board_state
-        )
+        monkeypatch.setattr(sf, "_read_board_state", lambda config, **k: board_state)
 
     def fake_board_write(write, config):
         captured["board"].append(write)
@@ -991,9 +1057,7 @@ _TASK_ISSUE = {
 }
 
 
-def test_main_board_axis_writes_the_board_single_select(
-    sf, tmp_path, monkeypatch, capsys
-) -> None:
+def test_main_board_axis_writes_the_board_single_select(sf, tmp_path, monkeypatch, capsys) -> None:
     """#724's headline: `set-field 42 --priority High` under a board WRITES the
     board field — ids resolved from names — and exits 0."""
     root = _stage_capability_root(tmp_path, has_board=True)
@@ -1133,22 +1197,16 @@ def test_main_board_write_failure_exits_three(sf, tmp_path, monkeypatch, capsys)
     assert "was NOT written" in out
 
 
-def test_write_board_field_routes_through_the_substrate_write_seam(
-    sf, monkeypatch
-) -> None:
+def test_write_board_field_routes_through_the_substrate_write_seam(sf, monkeypatch) -> None:
     """ADR-031: the field-value write is obtained from `substrate_writes`, never
     string-built here — the same primitive the `set-board-field` hook uses."""
     seen: dict = {}
 
     def fake_write_field_value(config, **kwargs):
         seen.update(kwargs)
-        return sf.substrate_writes.SubstrateWriteResult(
-            ok=True, executed=True, detail="set"
-        )
+        return sf.substrate_writes.SubstrateWriteResult(ok=True, executed=True, detail="set")
 
-    monkeypatch.setattr(
-        sf.substrate_writes, "write_field_value", fake_write_field_value
-    )
+    monkeypatch.setattr(sf.substrate_writes, "write_field_value", fake_write_field_value)
     write = sf.BoardWrite(
         axis="priority",
         field_name="Priority",
@@ -1167,9 +1225,7 @@ def test_write_board_field_routes_through_the_substrate_write_seam(
     }
 
 
-def test_write_board_field_failure_prints_gh_stderr_verbatim(
-    sf, monkeypatch, capsys
-) -> None:
+def test_write_board_field_failure_prints_gh_stderr_verbatim(sf, monkeypatch, capsys) -> None:
     stderr = "HTTP 403: Resource not accessible by personal access token"
     monkeypatch.setattr(
         sf.substrate_writes,
@@ -1191,9 +1247,7 @@ def test_write_board_field_failure_prints_gh_stderr_verbatim(
     assert stderr in capsys.readouterr().err
 
 
-def test_main_label_substrate_axis_still_succeeds(
-    sf, tmp_path, monkeypatch, capsys
-) -> None:
+def test_main_label_substrate_axis_still_succeeds(sf, tmp_path, monkeypatch, capsys) -> None:
     """Regression guard: with no board, the normal path is untouched — the label
     is written and the exit is 0."""
     root = _stage_capability_root(tmp_path, has_board=False)
@@ -1216,9 +1270,7 @@ def test_main_idempotent_noop_still_reports_all_fields_set(
     swallow the idempotent case (DEC-038: re-running is a no-op success)."""
     root = _stage_capability_root(tmp_path, has_board=False)
     issue = {"title": "[Task] do a thing", "body": "x\n", "labels": ["priority:High"]}
-    captured = _run_main(
-        sf, monkeypatch, root=root, argv=["42", "--priority", "High"], issue=issue
-    )
+    captured = _run_main(sf, monkeypatch, root=root, argv=["42", "--priority", "High"], issue=issue)
     out = capsys.readouterr().out
 
     assert captured["rc"] == 0
@@ -1278,9 +1330,7 @@ def test_main_mixed_axes_both_substrates_applied_is_a_clean_success(
     assert "updated" in out
 
 
-def test_main_map_binding_wins_over_the_board_flag(
-    sf, tmp_path, monkeypatch, capsys
-) -> None:
+def test_main_map_binding_wins_over_the_board_flag(sf, tmp_path, monkeypatch, capsys) -> None:
     """The #708 config end-to-end: board flag on, substrate-map binds `priority` to
     the adopter's own labels. The binding governs — the adopter's label is written,
     the board is not touched, and the call succeeds. Before DEC-051 this was a
@@ -1356,7 +1406,8 @@ class _NativeTracker:
     ``native`` maps a parent to its sub-issue numbers. ``honour_replace=False``
     refuses a move the way an instance without ``replace_parent`` would;
     ``record_error`` fails the issue-record read; ``unsupported`` answers every
-    sub-issues call the way an instance without the feature does.
+    sub-issues call the way an instance without the feature does;
+    ``refuse_add`` refuses every add with that ``(stdout, stderr)``.
     """
 
     def __init__(
@@ -1366,11 +1417,13 @@ class _NativeTracker:
         honour_replace: bool = True,
         record_error: bool = False,
         unsupported: bool = False,
+        refuse_add: tuple[str, str] | None = None,
     ) -> None:
         self.native = {p: set(c) for p, c in (native or {}).items()}
         self.honour_replace = honour_replace
         self.record_error = record_error
         self.unsupported = unsupported
+        self.refuse_add = refuse_add
         self.calls: list[list[str]] = []
 
     @property
@@ -1405,6 +1458,9 @@ class _NativeTracker:
         raise AssertionError(f"unexpected gh call: {args}")
 
     def _add(self, args: list[str], parent: int) -> subprocess.CompletedProcess:
+        if self.refuse_add is not None:
+            stdout, stderr = self.refuse_add
+            return subprocess.CompletedProcess(args, 1, stdout=stdout, stderr=stderr)
         child = int(args[args.index("-F") + 1].split("=", 1)[1]) - _DB
         holder = self.parent_of(child)
         moving = "replace_parent=true" in args and self.honour_replace
@@ -1454,6 +1510,22 @@ def test_main_parent_moves_the_native_link_with_the_first_line(
     assert "moved #42 from #7 to #9 as a native sub-issue" in out
 
 
+def test_main_parent_on_a_marked_body_keeps_the_marker_first(
+    sf, tmp_path, monkeypatch, capsys
+) -> None:
+    """#765: a marked descendant re-parented through the verb keeps its DEC-013
+    marker as the first line, the new parent-ref directly below it."""
+    native = _NativeTracker({7: {42}})
+    body = "Integration: integration/foo\nFeature: #7\n\n## What\nx\n"
+    captured = _run_parent(sf, monkeypatch, tmp_path, native=native, body=body)
+
+    assert captured["rc"] == 0
+    assert native.native == {7: set(), 9: {42}}
+    assert captured["bodies"][0].startswith(
+        "Integration: integration/foo\nFeature: #9\n\n## What\nx\n"
+    )
+
+
 def test_main_parent_dry_run_plans_the_move_and_writes_nothing(
     sf, tmp_path, monkeypatch, capsys
 ) -> None:
@@ -1484,6 +1556,8 @@ def test_main_parent_refused_move_writes_nothing_and_names_the_kept_parent(
     assert native.native == {7: {42}}
     assert "[failed] #42: parent NOT set — #42 could not be moved to #9" in out
     assert "it stays a native sub-issue of #7" in out
+    assert 'GitHub said: "Validation Failed; Sub issue may only have one parent"' in out
+    assert "containment: textual" not in out, "a conflict is not a refusal to work around"
 
 
 def test_main_parent_unreadable_native_parent_refuses_before_any_write(
@@ -1542,7 +1616,61 @@ def test_main_parent_on_an_instance_without_sub_issues_rewrites_the_first_line(
 
     assert captured["rc"] == 0
     assert captured["bodies"][0].startswith("Feature: #9\n")
-    assert "[warn] native sub-issues unsupported on this instance" in out
+    assert (
+        "[warn] native sub-issues unsupported on this instance; the first line alone "
+        "records the parent"
+    ) in out
+
+
+_WAY_OUT = (
+    "  → If this GitHub does not offer sub-issues, set `containment: textual` in "
+    "project/substrate-map.yaml and pm stops attempting the native link."
+)
+
+
+def test_main_parent_a_422_stops_before_any_write(sf, tmp_path, monkeypatch, capsys) -> None:
+    """#808: a 422 used to read as "unsupported", so an issue with no native
+    parent had its first line rewritten while the link silently failed. A 422
+    is a failure: the call stops before the first line moves, GitHub's words
+    are printed, and the refusal does not also claim a textual ref was recorded
+    — nothing was written. The textual-mode way out follows."""
+    refusal = json.dumps({"message": "Parent issue is locked", "status": "422"})
+    native = _NativeTracker(refuse_add=(refusal, "gh: Parent issue is locked (HTTP 422)"))
+    captured = _run_parent(sf, monkeypatch, tmp_path, native=native, body="## What\nx\n")
+    out = capsys.readouterr().out
+
+    assert captured["rc"] == 3
+    assert captured["bodies"] == [], "the first line must not move without the link"
+    assert (
+        "[failed] #42: parent NOT set — GitHub refused to link #42 under #9 (HTTP 422) "
+        'for a reason pm does not recognise. GitHub said: "Parent issue is locked". '
+        "Nothing was written: the first line and the native link are as they were."
+    ) in out
+    assert "textual ref recorded" not in out
+    assert "unsupported" not in out
+    assert _WAY_OUT in out
+
+
+def test_main_parent_a_move_refused_by_an_unrelated_422_is_no_conflict(
+    sf, tmp_path, monkeypatch, capsys
+) -> None:
+    """#42 is natively under #7 and `--parent 9` moves it. GitHub refuses the
+    move with a 422 unrelated to the one-parent rule: the parent #42 has is the
+    move's precondition, not a finding, so the report is the failure GitHub
+    stated — not a conflict telling the operator to remove a link first."""
+    unrelated = "Validation failed, or the endpoint has been spammed."
+    refusal = json.dumps({"message": unrelated, "status": "422"})
+    native = _NativeTracker({7: {42}}, refuse_add=(refusal, "gh: Validation Failed (HTTP 422)"))
+    captured = _run_parent(sf, monkeypatch, tmp_path, native=native, body="Feature: #7\n")
+    out = capsys.readouterr().out
+
+    assert captured["rc"] == 3
+    assert captured["bodies"] == []
+    assert native.native == {7: {42}}
+    assert "[failed] #42: parent NOT set — GitHub refused to move #42 to #9 (HTTP 422)" in out
+    assert f'GitHub said: "{unrelated}"' in out
+    assert "must be removed first" not in out
+    assert _WAY_OUT in out
 
 
 def test_main_parent_in_textual_containment_writes_no_native_link(
@@ -1567,9 +1695,7 @@ def test_main_parent_in_textual_containment_writes_no_native_link(
     assert captured["bodies"][0].startswith("Feature: #9\n")
 
 
-def test_main_parent_naming_the_issue_itself_is_refused(
-    sf, tmp_path, monkeypatch, capsys
-) -> None:
+def test_main_parent_naming_the_issue_itself_is_refused(sf, tmp_path, monkeypatch, capsys) -> None:
     root = _stage_capability_root(tmp_path, has_board=False)
     native = _NativeTracker()
     monkeypatch.setattr(sf.containment, "_gh_call", native)

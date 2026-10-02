@@ -12,7 +12,6 @@ from pathlib import Path
 
 import pytest
 
-
 REPO_ROOT = Path(__file__).resolve().parent.parent
 LIB_PATH = (
     REPO_ROOT

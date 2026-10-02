@@ -8,7 +8,8 @@ labels used to be string-formatted inline at ~26 write-path sites scattered
 across the mutating scripts; Task A pulled every such construction (and the
 matching read) behind this one seam.
 
-Why a seam, per [ADR-026](../../../../../tech-docs/architecture/decisions/ADR-026-substrate-map-read-path-contract.md):
+Why a seam, per
+[ADR-026](../../../../../tech-docs/architecture/decisions/ADR-026-substrate-map-read-path-contract.md):
 the load-bearing brownfield-adoption invariant (DEC-036, EPIC #217 constraint 1)
 is *never write an unmanaged label*. That invariant only bites if the seam is
 the **sole constructor** of any axis-label on a write path — a writer that
@@ -113,9 +114,9 @@ class _Degrade:
     write-label on the indeterminate paths.
     """
 
-    _instance: "_Degrade | None" = None
+    _instance: _Degrade | None = None
 
-    def __new__(cls) -> "_Degrade":
+    def __new__(cls) -> _Degrade:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
@@ -172,6 +173,21 @@ CONTAINMENT_TEXTUAL: ContainmentMode = "textual"
 
 # The map's top-level key that carries the containment mode. Absent ⇒ `native`.
 CONTAINMENT_KEY = "containment"
+
+# The way out for an operator whose GitHub refused the native sub-issue link and
+# may offer no sub-issues at all. The containment seam never reads a refusal as
+# an instance without sub-issues (ADR-035): a 422 is reported as the failure it
+# is, with GitHub's words, so the adopter who knows the feature is missing says
+# so through this selector. A write caller prints it beside a link GitHub
+# refused (`containment.LinkResult.refused`); never on the read path, since the
+# selector governs writes only and is no way out of an unreadable read. Built
+# from the key, value and file the selector is read from, so it cannot drift
+# from them.
+TEXTUAL_CONTAINMENT_WAY_OUT = (
+    f"If this GitHub does not offer sub-issues, set `{CONTAINMENT_KEY}: "
+    f"{CONTAINMENT_TEXTUAL}` in {SUBSTRATE_MAP_RELATIVE_PATH} and pm stops "
+    "attempting the native link."
+)
 
 
 # An axis's capability disposition — the seam's binary read of the ADR-026
@@ -304,9 +320,7 @@ def _parse_containment(raw: Any) -> ContainmentMode:
 # ----- the ternary resolution API (ADR-026) ------------------------------
 
 
-def axis_disposition(
-    axis: str, substrate_map: SubstrateMap | None
-) -> Disposition:
+def axis_disposition(axis: str, substrate_map: SubstrateMap | None) -> Disposition:
     """Whether ``axis`` is SERVED or degrades, per the ADR-026 ternary.
 
     * No map (``substrate_map is None``) ⇒ ``"served"`` (greenfield identity).
@@ -339,9 +353,7 @@ def axis_disposition(
     return "unsupported"
 
 
-def axis_expects_kit_labels(
-    axis: str, substrate_map: SubstrateMap | None
-) -> bool:
+def axis_expects_kit_labels(axis: str, substrate_map: SubstrateMap | None) -> bool:
     """Whether the kit's own ``<axis>:*`` labels are the substrate for ``axis``.
 
     True only in greenfield (no ``substrate-map.yaml``). With a map present, NO
@@ -378,9 +390,7 @@ def axis_expects_kit_labels(
     return substrate_map is None
 
 
-def axis_is_title_carried(
-    axis: str, substrate_map: SubstrateMap | None
-) -> bool:
+def axis_is_title_carried(axis: str, substrate_map: SubstrateMap | None) -> bool:
     """Whether ``axis`` is carried in the issue TITLE (not a label) under the map.
 
     True only when a map is present AND binds ``axis`` via ``title-prefix``. A
@@ -417,9 +427,7 @@ def axis_is_title_carried(
     return "title-prefix" in binding
 
 
-def axis_is_board_carried(
-    axis: str, substrate_map: SubstrateMap | None
-) -> bool:
+def axis_is_board_carried(axis: str, substrate_map: SubstrateMap | None) -> bool:
     """Whether ``axis`` is carried by a field on the configured Projects-v2 board.
 
     True only when a map is present AND binds ``axis`` via ``board: true``. The
@@ -457,9 +465,7 @@ def axis_is_board_carried(
     return binding.get("board") is True
 
 
-def axis_is_label_bound(
-    axis: str, substrate_map: SubstrateMap | None
-) -> bool:
+def axis_is_label_bound(axis: str, substrate_map: SubstrateMap | None) -> bool:
     """Whether ``axis`` is carried by an adopter-REMAPPED label under the map.
 
     True only when a map is present AND binds ``axis`` via ``label`` (a value→label
@@ -485,9 +491,7 @@ def axis_is_label_bound(
     return isinstance(binding.get("label"), dict)
 
 
-def axis_title_prefix_remap(
-    axis: str, substrate_map: SubstrateMap | None
-) -> dict[str, str] | None:
+def axis_title_prefix_remap(axis: str, substrate_map: SubstrateMap | None) -> dict[str, str] | None:
     """The adopter's ``title-prefix`` remap for ``axis`` — kit-value → prefix — or ``None``.
 
     Returns the ``title-prefix.remap`` mapping (the kit's own methodology value →
@@ -531,7 +535,7 @@ def axis_title_prefix_remap(
 
 
 def hierarchy_disposition(
-    source: "Path | SubstrateMap | None" = None,
+    source: Path | SubstrateMap | None = None,
 ) -> HierarchyMode:
     """The hierarchy MODE in effect — ``gated`` (default) or ``advisory``.
 
@@ -573,7 +577,7 @@ def hierarchy_disposition(
 
 
 def containment_mode(
-    source: "Path | SubstrateMap | None" = None,
+    source: Path | SubstrateMap | None = None,
 ) -> ContainmentMode:
     """The containment SUBSTRATE in effect — ``native`` (default) or ``textual``.
 
@@ -671,9 +675,7 @@ def workstream_mutator_refusal(
     return None
 
 
-def resolve_write(
-    axis: str, value: str, substrate_map: SubstrateMap | None
-) -> str | _Degrade:
+def resolve_write(axis: str, value: str, substrate_map: SubstrateMap | None) -> str | _Degrade:
     """Resolve the substrate value to WRITE for ``(axis, value)``, or :data:`DEGRADE`.
 
     The fail-closed write-path resolver (ADR-026 part (ii)). It returns:
@@ -746,9 +748,7 @@ def resolve_write(
     return DEGRADE
 
 
-def axis_default(
-    axis: str, substrate_map: SubstrateMap | None
-) -> str | None:
+def axis_default(axis: str, substrate_map: SubstrateMap | None) -> str | None:
     """The optional ``default:`` substrate value declared for ``axis``, or ``None``.
 
     A write-side hint the adopter declares to seed an axis when the caller
@@ -859,9 +859,7 @@ def derive_state(*, is_closed: bool, labels: list[str]) -> str:
     return DERIVE_STATE_OPEN
 
 
-def resolve_read(
-    axis: str, labels: list[str], substrate_map: SubstrateMap | None
-) -> str | None:
+def resolve_read(axis: str, labels: list[str], substrate_map: SubstrateMap | None) -> str | None:
     """Read ``axis``'s value from an issue's ``labels`` THROUGH the map.
 
     The read counterpart to :func:`resolve_write` for the LABEL-carried arms
@@ -1029,9 +1027,7 @@ def is_axis_label(name: str, axis: str) -> bool:
     return name.startswith(prefix(axis))
 
 
-def carried_labels(
-    axis: str, labels: list[str], substrate_map: SubstrateMap | None
-) -> list[str]:
+def carried_labels(axis: str, labels: list[str], substrate_map: SubstrateMap | None) -> list[str]:
     """Every label in ``labels`` that carries ``axis``, kit-prefixed OR remapped.
 
     The map-aware counterpart to :func:`is_axis_label`, for a writer replacing an
@@ -1055,15 +1051,10 @@ def carried_labels(
     label vocabulary. Order follows ``labels``; duplicates are not introduced.
     """
     vocabulary = set(axis_label_vocabulary(axis, substrate_map))
-    return [
-        name for name in labels
-        if is_axis_label(name, axis) or name in vocabulary
-    ]
+    return [name for name in labels if is_axis_label(name, axis) or name in vocabulary]
 
 
-def axis_label_vocabulary(
-    axis: str, substrate_map: SubstrateMap | None
-) -> tuple[str, ...]:
+def axis_label_vocabulary(axis: str, substrate_map: SubstrateMap | None) -> tuple[str, ...]:
     """The adopter's own label names for ``axis`` — its declared ``remap`` values.
 
     The vocabulary half of :func:`carried_labels`, exposed because a caller can
@@ -1092,9 +1083,7 @@ def axis_label_vocabulary(
     if not isinstance(remap, dict):
         return ()
     return tuple(
-        dict.fromkeys(
-            mapped for mapped in remap.values() if isinstance(mapped, str) and mapped
-        )
+        dict.fromkeys(mapped for mapped in remap.values() if isinstance(mapped, str) and mapped)
     )
 
 

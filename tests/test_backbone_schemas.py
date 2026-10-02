@@ -57,6 +57,7 @@ def _roles(*roles: str) -> bs.ContainerWiring:
     """Active roles whose providers define no data point."""
     return bs.ContainerWiring(providers={role: f"provider-of-{role}" for role in roles})
 
+
 REVALIDATED_UNCHANGED = {
     "at": "2026-10-02T09:40:12Z",
     "outcome": "unchanged",
@@ -152,6 +153,26 @@ def test_friction_accepts_all_three_anchor_kinds_and_last_check(schema: dict) ->
     )
     report = _validate(schema, block)
     assert report.is_clean, _messages(report)
+
+
+def test_friction_accepts_a_reason_for_no_anchors(schema: dict) -> None:
+    """COR-050 point 1: `unanchored-because` instead of anchors. Beside anchors it is
+    validation's own finding (`friction_validate`), never a shape error here."""
+    for block in (
+        _friction(**{"unanchored-because": "No code embodies it."}),
+        _friction(anchors={"path": ["src/**"]}, **{"unanchored-because": "Stale."}),
+    ):
+        report = _validate(schema, block)
+        assert report.is_clean, _messages(report)
+
+
+@pytest.mark.parametrize("reason", ["", 3, ["a list"]], ids=["empty", "number", "list"])
+def test_friction_refuses_a_reason_for_no_anchors_that_is_no_text(
+    schema: dict, reason: object
+) -> None:
+    report = _validate(schema, _friction(**{"unanchored-because": reason}))
+    (finding,) = report.errors
+    assert finding.location == "/pkit/friction/unanchored-because"
 
 
 def test_friction_refuses_unchanged_without_justification(schema: dict) -> None:
@@ -361,7 +382,10 @@ def test_point_schema_that_cannot_be_applied_is_reported(schema: dict) -> None:
     """No validator, or a `$ref` that does not resolve: the body is left alone, and said so."""
     block = {"reading-evidence": {"schema_version": 1, "last-run": 5}}
     for active, reason in [
-        (bs.ActivePoint(1, unavailable="schemas/x.schema.json is not valid JSON"), "not valid JSON"),
+        (
+            bs.ActivePoint(1, unavailable="schemas/x.schema.json is not valid JSON"),
+            "not valid JSON",
+        ),
         (_active_point(1, {"$ref": "elsewhere.schema.json"}), "does not resolve"),
     ]:
         wiring = bs.ContainerWiring(providers={DOCS: "docs-a"}, points={READING: active})
@@ -501,9 +525,7 @@ def test_schema_names_both_forms_over_one_carrier_definition(schema: dict) -> No
     assert defs["document-front-matter"]["$ref"] == "#/$defs/carrier"
     assert defs["collection-entry"]["$ref"] == "#/$defs/carrier"
     assert schema["$ref"] == "#/$defs/carrier"
-    entry_validator = Draft202012Validator(
-        {"$ref": "#/$defs/collection-entry", "$defs": defs}
-    )
+    entry_validator = Draft202012Validator({"$ref": "#/$defs/collection-entry", "$defs": defs})
     assert entry_validator.is_valid({"id": "x", bs.CONTAINER_KEY: {"friction": {}}})
     assert not entry_validator.is_valid({bs.CONTAINER_KEY: {"friction": {"bogus": 1}}})
 

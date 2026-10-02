@@ -3,16 +3,17 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
 from pathlib import Path
+from typing import Any
 
 import pytest
 
+from tests.pm_composed_move_support import FakeEngine, MoveIssueInProcess, status_at
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SCRIPT = (
-    REPO_ROOT / ".pkit" / "capabilities" / "project-management"
-    / "scripts" / "start-work.py"
-)
+SCRIPT = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "start-work.py"
 
 
 @pytest.fixture(scope="module")
@@ -40,9 +41,10 @@ def test_slug_strips_punctuation(sw) -> None:
 
 
 def test_slug_caps_at_five_words(sw) -> None:
-    assert sw._slug_from_title(
-        "[Feature] one two three four five six seven"
-    ) == "one-two-three-four-five"
+    assert (
+        sw._slug_from_title("[Feature] one two three four five six seven")
+        == "one-two-three-four-five"
+    )
 
 
 def test_slug_handles_empty_after_prefix(sw) -> None:
@@ -88,9 +90,12 @@ _CLASSIFICATION = {
 
 
 def test_branch_prefix_feature(sw) -> None:
-    assert sw._derive_branch_prefix(
-        ["type:feature", "priority:Medium"], "[Task] add x", _CLASSIFICATION, None
-    ) == "feat"
+    assert (
+        sw._derive_branch_prefix(
+            ["type:feature", "priority:Medium"], "[Task] add x", _CLASSIFICATION, None
+        )
+        == "feat"
+    )
 
 
 def test_branch_prefix_bug(sw) -> None:
@@ -98,14 +103,20 @@ def test_branch_prefix_bug(sw) -> None:
 
 
 def test_branch_prefix_docs(sw) -> None:
-    assert sw._derive_branch_prefix(
-        ["workstream:cli", "type:docs"], "[Docs] doc x", _CLASSIFICATION, None
-    ) == "docs"
+    assert (
+        sw._derive_branch_prefix(
+            ["workstream:cli", "type:docs"], "[Docs] doc x", _CLASSIFICATION, None
+        )
+        == "docs"
+    )
 
 
 def test_branch_prefix_missing_returns_none(sw) -> None:
     # No type:* label AND no recognised [Prefix] title ⇒ underivable.
-    assert sw._derive_branch_prefix(["priority:High"], "no bracket prefix", _CLASSIFICATION, None) is None
+    assert (
+        sw._derive_branch_prefix(["priority:High"], "no bracket prefix", _CLASSIFICATION, None)
+        is None
+    )
     assert sw._derive_branch_prefix([], "", _CLASSIFICATION, None) is None
 
 
@@ -130,9 +141,10 @@ def test_branch_prefix_brownfield_bug_title_no_label(sw) -> None:
 def test_branch_prefix_greenfield_label_still_wins(sw) -> None:
     """Greenfield stays byte-identical: `type:bug` label resolves `fix` even
     when the title carries a different (or no) bracket prefix."""
-    assert sw._derive_branch_prefix(
-        ["type:bug"], "no bracket prefix at all", _CLASSIFICATION, None
-    ) == "fix"
+    assert (
+        sw._derive_branch_prefix(["type:bug"], "no bracket prefix at all", _CLASSIFICATION, None)
+        == "fix"
+    )
 
 
 # ---- adopter label-remap arm (#910) ------------------------------------
@@ -148,18 +160,26 @@ def _type_remap_map(module):
 def test_branch_prefix_reads_a_remapped_type_label(sw) -> None:
     """The adopter's `kind/bug` label is their type substrate: it resolves `fix`
     through the map, where the bare `type:` prefix scan found nothing (#910)."""
-    assert sw._derive_branch_prefix(
-        ["kind/bug"], "no bracket prefix", _CLASSIFICATION, _type_remap_map(sw)
-    ) == "fix"
+    assert (
+        sw._derive_branch_prefix(
+            ["kind/bug"], "no bracket prefix", _CLASSIFICATION, _type_remap_map(sw)
+        )
+        == "fix"
+    )
 
 
 def test_branch_prefix_ignores_kit_type_label_under_a_remap(sw) -> None:
     """Under a `type` label remap the kit's `type:*` labels are not the
     substrate, so a leftover `type:docs` does not decide the prefix."""
-    assert sw._derive_branch_prefix(
-        ["type:docs", "kind/bug"], "no bracket prefix", _CLASSIFICATION,
-        _type_remap_map(sw),
-    ) == "fix"
+    assert (
+        sw._derive_branch_prefix(
+            ["type:docs", "kind/bug"],
+            "no bracket prefix",
+            _CLASSIFICATION,
+            _type_remap_map(sw),
+        )
+        == "fix"
+    )
 
 
 # ---- _branch_matches_shape --------------------------------------------
@@ -221,8 +241,7 @@ def test_every_shipped_type_value_resolves_a_branch_prefix(sw) -> None:
         # with no type:* label present (the brownfield path).
         via_title = sw._derive_branch_prefix([], f"[{title_prefix}] x", classification, None)
         assert via_title == via_label, (
-            f"label vs title-prefix arm disagree for kind {value!r}: "
-            f"{via_label!r} vs {via_title!r}"
+            f"label vs title-prefix arm disagree for kind {value!r}: {via_label!r} vs {via_title!r}"
         )
 
 
@@ -233,32 +252,66 @@ def test_every_shipped_type_value_resolves_a_branch_prefix(sw) -> None:
 # test_pm_pr_base_branch.py.
 
 
-def test_base_defaults_to_config_default_branch(sw) -> None:
-    assert sw.infer.resolve_base_branch({"default_branch": "trunk"}, "EPIC: #1\n\n## What\nx") == "trunk"
+@pytest.fixture
+def backbone(sw: Any, monkeypatch: pytest.MonkeyPatch) -> Any:
+    """Stand in for the backbone's reading (`pkit repository base --json`): `answer(name,
+    declared=False)` makes it name `name` as the default branch."""
+    lib = sw.infer.default_branch
+
+    def answer(name: str, declared: bool = False) -> None:
+        monkeypatch.setattr(lib, "_read", {})
+        monkeypatch.setattr(lib, "_warned", set[str]())
+
+        def ask(explicit: str | None, _run: Any) -> Any:
+            branch = lib.Branch(name, declared, f"origin/{name}", "c0ffee", None)
+            base = lib.Base(f"origin/{explicit or name}", "c0ffee", "c0ffee", None)
+            return lib.Reading(branch, base)
+
+        monkeypatch.setattr(lib, "_ask", ask)
+
+    answer("main")
+    return answer
 
 
-def test_base_defaults_to_main_when_unconfigured(sw) -> None:
+def test_base_defaults_to_the_backbone_s_default_branch(sw: Any, backbone: Any) -> None:
+    backbone("trunk", declared=True)
+    assert sw.infer.resolve_base_branch({}, "EPIC: #1\n\n## What\nx") == "trunk"
+
+
+def test_base_defaults_to_main_when_nothing_is_declared(sw: Any, backbone: Any) -> None:
     assert sw.infer.resolve_base_branch({}, "EPIC: #1\n\n## What\nx") == "main"
 
 
-def test_base_is_integration_branch_when_marked(sw) -> None:
+def test_pm_s_old_key_names_the_branch_only_until_the_upgrade(
+    sw: Any, backbone: Any, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Not yet migrated (0.55.0): a value other than the backbone's names the branch while
+    the backbone declares none, with a warning; a declared value always wins."""
+    assert sw.infer.resolve_base_branch({"default_branch": "trunk"}, "EPIC: #1") == "trunk"
+    assert "until the upgrade carries it over" in capsys.readouterr().err
+    backbone("develop", declared=True)
+    assert sw.infer.resolve_base_branch({"default_branch": "trunk"}, "EPIC: #1") == "develop"
+
+
+def test_base_is_integration_branch_when_marked(sw: Any, backbone: Any) -> None:
     body = "Integration: integration/508-multi-instance-ownership\nFeature: #510\n\n## What\nx"
     assert sw.infer.resolve_base_branch({"default_branch": "main"}, body) == (
         "integration/508-multi-instance-ownership"
     )
 
 
-def test_base_ignores_a_malformed_marker(sw) -> None:
+def test_base_ignores_a_malformed_marker(sw: Any, backbone: Any) -> None:
     # A malformed marker is not a valid integration branch — fall back to default.
     body = "Integration: integration/Bad_Slug!!\nFeature: #510\n\n## What\nx"
     assert sw.infer.resolve_base_branch({"default_branch": "main"}, body) == "main"
 
 
-def test_explicit_base_wins_over_marker_and_default(sw) -> None:
+def test_explicit_base_wins_over_marker_and_default(sw: Any, backbone: Any) -> None:
     body = "Integration: integration/508-multi-instance-ownership\nFeature: #510\n"
-    assert sw.infer.resolve_base_branch(
-        {"default_branch": "trunk"}, body, explicit="release/2"
-    ) == "release/2"
+    assert (
+        sw.infer.resolve_base_branch({"default_branch": "trunk"}, body, explicit="release/2")
+        == "release/2"
+    )
 
 
 def test_base_never_reflects_the_checked_out_branch(sw) -> None:
@@ -276,6 +329,8 @@ def test_base_never_reflects_the_checked_out_branch(sw) -> None:
 # shipped workflow.yaml / issue-types.yaml, and record every mutation.
 
 CAP_ROOT = SCRIPT.parent.parent
+# The variable an earlier revision of #1242 handed the engine's answer down in.
+HAND_DOWN_ENV = "PKIT_PM_ISSUE_STATUS"
 
 
 def _task(labels: list[str], *, assignees: list[dict] | None = None) -> dict:
@@ -289,18 +344,83 @@ def _task(labels: list[str], *, assignees: list[dict] | None = None) -> dict:
     }
 
 
+# ---- _create_branch: cut from the commit the backbone resolves (COR-054) ----
+
+
+def _git(cwd: Path, *args: str) -> str:
+    import subprocess
+
+    return subprocess.run(
+        ["git", "-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", *args],
+        cwd=cwd,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+
+
 @pytest.fixture
-def run_main(sw, monkeypatch):
-    """Returns `run(issue, move_rc=0) -> (rc, mutations)` over stubbed seams."""
+def clone_ahead(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, pkit_on_path: Path) -> Path:
+    """A clone of `origin` whose local `main` carries a commit nobody pushed."""
+    source = tmp_path / "source"
+    source.mkdir()
+    _git(source, "init", "-q", "-b", "main")
+    _git(source, "commit", "-q", "--allow-empty", "-m", "shared")
+    work = tmp_path / "work"
+    _git(tmp_path, "clone", "-q", str(source), str(work))
+    _git(work, "commit", "-q", "--allow-empty", "-m", "local only")
+    monkeypatch.chdir(work)
+    return work
+
+
+def test_start_work_cuts_from_the_remote_s_copy_not_a_local_branch_ahead(
+    sw: Any, clone_ahead: Path
+) -> None:
+    shared = _git(clone_ahead, "rev-parse", "origin/main")
+    assert shared != _git(clone_ahead, "rev-parse", "main")
+    assert sw._create_branch("fix/42-thing", "main")
+    assert _git(clone_ahead, "rev-parse", "fix/42-thing") == shared
+
+
+def test_start_work_refuses_a_base_that_resolves_nowhere(
+    sw: Any, clone_ahead: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """`origin` holds no `integration/absent` and the fetch fails: no branch is cut from a
+    guess — not from the local branch, not from HEAD."""
+    assert not sw._create_branch("fix/42-thing", "integration/absent")
+    err = capsys.readouterr().err
+    assert "cannot cut 'fix/42-thing' from 'integration/absent'" in err
+    assert "git fetch origin integration/absent" in err
+    assert "fix/42-thing" not in _git(clone_ahead, "branch", "--list")
+
+
+@pytest.fixture
+def run_main(sw: Any, monkeypatch: pytest.MonkeyPatch, backbone: Any) -> Any:
+    """Returns `run(issue, move_rc=0, engine=None, config=None, move=None,
+    dry_run=False) -> (rc, mutations)` over stubbed seams. `engine` is the
+    process engine, a `FakeEngine` (by default one that gives no answer);
+    `config` adds to the adopter config. `move` runs the composed move-issue in
+    process; without it the move is recorded and answers `move_rc`."""
     from types import SimpleNamespace
 
-    def run(issue: dict, move_rc: int = 0):
+    def run(
+        issue: dict,
+        move_rc: int = 0,
+        engine: FakeEngine | None = None,
+        config: dict | None = None,
+        move: MoveIssueInProcess | None = None,
+        dry_run: bool = False,
+    ):
         mutations: list[tuple] = []
-        monkeypatch.setattr(sys, "argv", ["start-work", "42", "--yes"])
+        argv = ["start-work", "42", "--yes", *(["--dry-run"] if dry_run else [])]
+        monkeypatch.setattr(sys, "argv", argv)
         monkeypatch.setattr(sw, "resolve_capability_root", lambda _e: CAP_ROOT)
         monkeypatch.setattr(sw.bootstrap_gate, "enforce", lambda *a, **k: True)
         monkeypatch.setattr(sw.session_guard, "enforce", lambda **k: True)
-        monkeypatch.setattr(sw, "load_adopter_config", lambda _r: {"default_branch": "main"})
+        monkeypatch.setattr(
+            sw, "load_adopter_config", lambda _r: {"default_branch": "main", **(config or {})}
+        )
+        (engine or FakeEngine()).install(monkeypatch)
         monkeypatch.setattr(sw, "_read_members", lambda *a: [])
         monkeypatch.setattr(
             sw, "resolve_invoker_identity", lambda **k: SimpleNamespace(github_login="me")
@@ -318,13 +438,16 @@ def run_main(sw, monkeypatch):
             mutations.append(("assignee", login))
             return True
 
-        def move_issue(n, target, root, allow):
+        def move_issue(n, target, **_kw):
             mutations.append(("move", target))
             return move_rc
 
         monkeypatch.setattr(sw, "_create_branch", create_branch)
         monkeypatch.setattr(sw, "_set_assignee", set_assignee)
-        monkeypatch.setattr(sw, "_invoke_move_issue", move_issue)
+        if move is None:
+            monkeypatch.setattr(sw.composed_move, "invoke_move_issue", move_issue)
+        else:
+            monkeypatch.setattr(sw.composed_move, "subprocess", SimpleNamespace(run=move.run))
         return sw.main(), mutations
 
     return run
@@ -351,7 +474,9 @@ def test_proceeds_from_backlog(run_main) -> None:
     rc, mutations = run_main(_task(["type:bug", "state:backlog"]))
     assert rc == 0
     assert mutations == [
-        ("branch", "fix/42-do-the-thing"), ("assignee", "me"), ("move", "in-progress"),
+        ("branch", "fix/42-do-the-thing"),
+        ("assignee", "me"),
+        ("move", "in-progress"),
     ]
 
 
@@ -374,7 +499,7 @@ def test_late_move_failure_names_branch_and_assignee(run_main, capsys) -> None:
     assert rc == 3  # move-issue's exit code passes through
     assert [m[0] for m in mutations] == ["branch", "assignee", "move"]
     err = capsys.readouterr().err
-    last_block = err[err.rindex("[failed]"):]
+    last_block = err[err.rindex("[failed]") :]
     assert "the issue did not move" in last_block
     assert "fix/42-do-the-thing" in last_block
     assert "@me" in last_block
@@ -388,3 +513,83 @@ def test_late_move_failure_omits_an_assignee_it_did_not_write(run_main, capsys) 
     err = capsys.readouterr().err
     assert "fix/42-do-the-thing" in err
     assert "@me" not in err
+
+
+# ---- the early check reads the issue's own fields (#1242) --------------
+#
+# start-work's early check reads the state from the labels and milestone of
+# the issue it fetched (`_lib/issue_position`, shared with review-work), and
+# starts no `pkit process` run: the engine's detectors read those same fields.
+# move-issue reads the state itself when it moves. Each test's engine would
+# answer otherwise than the labels, so a run that asked it would show.
+
+
+def test_a_refused_check_asks_no_engine(run_main, capsys) -> None:
+    engine = FakeEngine(status_at("backlog"))
+    rc, mutations = run_main(_task(["type:bug", "state:todo"]), engine=engine)
+    assert rc == 2
+    assert mutations == []
+    assert engine.asks == []
+    assert "the issue is in 'todo'" in capsys.readouterr().err
+
+
+def test_a_dry_run_asks_no_engine(run_main, capsys) -> None:
+    engine = FakeEngine(status_at("todo"))
+    rc, mutations = run_main(_task(["type:bug", "state:backlog"]), engine=engine, dry_run=True)
+    assert rc == 0
+    assert mutations == []
+    assert engine.asks == []
+    assert "(dry-run: would create branch off main" in capsys.readouterr().out
+
+
+def test_a_legal_move_asks_no_engine_before_the_move(run_main) -> None:
+    engine = FakeEngine(status_at("todo"))
+    rc, mutations = run_main(_task(["type:bug", "state:backlog"]), engine=engine)
+    assert rc == 0
+    assert [m[0] for m in mutations] == ["branch", "assignee", "move"]
+    assert engine.asks == []
+
+
+def test_a_board_carried_state_is_read_off_the_labels_as_before(run_main) -> None:
+    # Where the board carries state and the engine gives nothing, the check
+    # reads the labels, as it did before #1242; nothing is newly refused.
+    board = {"has_projects_v2_board": True}
+    rc, mutations = run_main(_task(["type:bug", "state:backlog"]), config=board)
+    assert rc == 0
+    assert [m[0] for m in mutations] == ["branch", "assignee", "move"]
+
+
+def test_a_state_changed_after_the_check_is_refused_by_move_issue(
+    run_main, monkeypatch, capsys
+) -> None:
+    """The check reads Backlog; by the time move-issue reads, the issue is back
+    in Todo. move-issue refuses Todo → In Progress, and start-work ends on what
+    it left behind."""
+    todo = _task(["type:bug", "state:todo"])
+    engine = FakeEngine(status_at("todo"))
+    move = MoveIssueInProcess(monkeypatch, todo)
+    rc, mutations = run_main(_task(["type:bug", "state:backlog"]), engine=engine, move=move)
+    assert rc == 2
+    assert [m[0] for m in mutations] == ["branch", "assignee"]
+    assert len(move.runs) == 1
+    assert len(engine.asks) == 1  # move-issue's own read, at move time
+    err = capsys.readouterr().err
+    assert "no transition 'todo' → 'in-progress'" in err
+    last_block = err[err.rindex("[failed]") :]
+    assert last_block.startswith(
+        "[failed] start-work #42: move-issue --to in-progress failed (exit 2); "
+        "the issue did not move."
+    )
+    assert "branch 'fix/42-do-the-thing' (created and checked out)" in last_block
+    assert "assignee @me" in last_block
+
+
+def test_a_value_in_the_environment_does_not_stand_in_for_the_labels(
+    run_main, monkeypatch, capsys
+) -> None:
+    # A value saying Backlog, from which the check would pass; the labels say Todo.
+    monkeypatch.setenv(HAND_DOWN_ENV, json.dumps({"issue": 42, "status": status_at("backlog")}))
+    rc, mutations = run_main(_task(["type:bug", "state:todo"]))
+    assert rc == 2
+    assert mutations == []
+    assert "the issue is in 'todo'" in capsys.readouterr().err

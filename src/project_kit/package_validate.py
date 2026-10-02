@@ -5,8 +5,9 @@ Every installed component's `package.yaml` validates against one shared
 backbone file schema, `.pkit/schemas/backbone/package.schema.json` (ADR-056):
 the fields the shipped package files use today plus the blocks the newer
 records add — `connections` (COR-053 point 3), `docs.locations` (COR-049 point
-4), `friction.places` / `friction.surface` (COR-050 points 1 and 8). Three
-passes, in order, each producing findings located by JSON Pointer:
+4), `friction.places` / `friction.held` / `friction.surface` (COR-050 points 1
+and 8). Three passes, in order, each producing findings located by JSON
+Pointer:
 
 1. **Shape** — the JSON Schema pass. Known keys are strictly typed, and the
    schema closes every object it declares (`additionalProperties: false`),
@@ -27,18 +28,44 @@ passes, in order, each producing findings located by JSON Pointer:
    accepted data point's companion schema exists under `schemas/`, every
    filler / emitter / subscriber command exists in `commands:`, every filler
    command and every validator's command declares the query contract
-   (`query-contract: true`, ADR-057 point 3 and ADR-058), a contribution
-   names `command` or `value` but not both, documentation locations are
+   (`query-contract: true`; COR-052 point 6, ADR-057 point 3 and ADR-058), a
+   command that declares what it reads beyond the working tree (`reads`, the
+   same point) declares the query contract too — its values are the schema's
+   to check — a contribution names `command` or `value` but not both,
+   documentation locations are
    relative sub-paths, friction places lie inside a declared location or the
-   project, an offered process point names a definition of the component whose
+   project and held folders inside a declared location, an offered process
+   point names a definition of the component whose
    `interface.version`, where it declares one, equals the point's
    `schema_version` (COR-053 point 5), and the generated `depends-on` list says
    what the component's process definitions generate
    (`process_dependencies.staleness`, COR-053 point 4) — a stale copy names
-   `pkit capabilities refresh <name>` as the fix. All ERRORs.
+   `pkit capabilities refresh <name>` as the fix. All ERRORs but one WARNING:
+   a `runtime_ignore` entry that declares the process journals, whose ignore
+   line the backbone owns (`process_journal.claims_journals`) — the mark of a
+   component older than the backbone it runs on — while the project commits
+   its journals, when the `.pkit/.gitignore` render drops the entry
+   (`JournalSettings.drops_claim`). Its fix follows where the package comes
+   from (`Provenance`): the project drops the entry from its own file, upgrades
+   a synced copy's component together with the backbone, and moves an
+   externally sourced one's pin.
 
-The checks across packages — roles and their providers, counterparts against
-point versions, mandatory marks and cycles, fingerprints, the version
+Two checks across packages are this pass's, over the installed components
+only. An `aliases` entry another name shadows — a backbone command, another
+capability's name, or the same alias a capability earlier in the manifest
+declares — is a WARNING at the entry, read from the table the dispatcher binds
+(`dispatcher.installed_alias_table`), so the finding and `pkit <alias>` never
+disagree. The alias is a shorthand; the capability's own name still reaches it.
+And a folder of held documents that oversteps its bounds (COR-050 point 1) —
+equal to or enclosing a documentation root or another declaration's place, or
+sharing files with its own component's place, another held folder or a
+rule-set folder — is an ERROR at its `friction.held` entry, read from friction
+discovery's one judgment of it (`friction_discovery.held_folders`), which also
+leaves it holding nothing: every held file has one holder, and no declaration
+empties another's.
+
+The other checks across packages — roles and their providers, counterparts
+against point versions, mandatory marks and cycles, fingerprints, the version
 relations — are the wiring resolver's (`connections`, COR-053 point 7).
 `check_wiring` hands the pass the resolved `Wiring`, whose errors join the
 issue list and which `pkit validate` shows under its "connections" and
@@ -55,10 +82,10 @@ on the one capability it is about to activate. Same code, same messages.
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import Enum
 from pathlib import Path, PurePosixPath, PureWindowsPath
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from jsonschema import Draft202012Validator
 from packaging.specifiers import InvalidSpecifier, SpecifierSet
@@ -67,7 +94,7 @@ from referencing import Registry, Resource
 from referencing.jsonschema import DRAFT202012
 from ruamel.yaml import YAML
 
-from project_kit import process_dependencies, validators
+from project_kit import lifecycle_ownership, process_dependencies, process_journal, validators
 from project_kit.backbone_schemas import (
     BackboneSchemaMissing,
     expand_schema_error,
@@ -75,10 +102,24 @@ from project_kit.backbone_schemas import (
     render_unknown_key,
 )
 from project_kit.command_runner import command_leaves, resolve_command
-from project_kit.manifest import read_backbone_manifest
-from project_kit.validators import COMMAND_KEY, QUERY_CONTRACT_KEY, VALIDATORS_KEY
+from project_kit.dispatcher import (
+    ALIASES_KEY,
+    ShadowedAlias,
+    ShadowKind,
+    installed_alias_table,
+    static_command_names,
+)
+from project_kit.manifest import (
+    ORIGIN_EXTERNALLY_SOURCED,
+    ORIGIN_KIT_SHIPPED,
+    ComponentRegistryEntry,
+    read_backbone_manifest,
+)
+from project_kit.validators import COMMAND_KEY, QUERY_CONTRACT_KEY, READS_KEY, VALIDATORS_KEY
 
 if TYPE_CHECKING:
+    from types import ModuleType
+
     from project_kit.connections import Wiring
 
 # The kind under which the schema is read from the tree (`load_backbone_schema`).
@@ -94,13 +135,30 @@ POINT_SEPARATOR = ":"
 
 _yaml = YAML(typ="safe")
 
+# The journal settings a package is judged under when the caller has no project's
+# in hand: the defaults, under which the render drops no entry, so none is warned.
+_DEFAULT_JOURNAL = process_journal.JournalSettings()
+
 
 class Severity(Enum):
-    """Whether a finding fails the check. Warnings never do; the one source of them
-    is an unknown key under a schema that leaves its object open (pass 2)."""
+    """Whether a finding fails the check. Warnings never do; their three sources
+    are an unknown key under a schema that leaves its object open (pass 2), a
+    `runtime_ignore` entry declaring the process journals the project commits
+    (pass 3), and an installed capability's alias another name shadows
+    (`shadowed_alias_message`)."""
 
     ERROR = "error"
     WARNING = "warning"
+
+
+class Provenance(Enum):
+    """Where a package file in the tree comes from, which decides how a finding in
+    it is fixed: the project edits its own file, but an edit to a copy is undone
+    by the next sync, so a copy is fixed at its source (`package_provenance`)."""
+
+    OWN = "own"  # the project's: an incubated capability, or the methodology's source
+    SYNCED = "synced"  # a copy a sync makes from the methodology's source (kit-shipped)
+    PINNED = "pinned"  # restored to its pin on every sync (externally sourced, COR-041)
 
 
 @dataclass(frozen=True)
@@ -164,6 +222,8 @@ def validate_package_file(
     *,
     component_dir: Path | None = None,
     expected_name: str | None = None,
+    provenance: Provenance = Provenance.OWN,
+    journal: process_journal.JournalSettings = _DEFAULT_JOURNAL,
 ) -> PackageReport:
     """Read and validate one package file. See `validate_package` for the passes.
 
@@ -190,6 +250,8 @@ def validate_package_file(
         schema,
         component_dir=component_dir if component_dir is not None else path.parent,
         expected_name=expected_name,
+        provenance=provenance,
+        journal=journal,
     )
     return PackageReport(file=path, findings=tuple(findings))
 
@@ -200,6 +262,8 @@ def validate_package(
     *,
     component_dir: Path,
     expected_name: str | None = None,
+    provenance: Provenance = Provenance.OWN,
+    journal: process_journal.JournalSettings = _DEFAULT_JOURNAL,
 ) -> list[PackageFinding]:
     """Validate a parsed package mapping: shape (unknown keys included), unknown
     keys under an open schema, repository checks.
@@ -210,7 +274,12 @@ def validate_package(
     schema existed, and more (ADR-056 point 1: never validate against a shape
     the tree never shipped). `component_dir` is the component's root, where
     `scripts` and `schemas/` are resolved; `expected_name` is the directory
-    name the component must match, when the caller knows it.
+    name the component must match, when the caller knows it; `provenance` is
+    where the file comes from (`package_provenance`), which decides the fix a
+    finding names — the project's own file unless the caller knows otherwise;
+    `journal` is the project's journal settings, which decide whether an entry
+    declaring the process journals is warned — the defaults, never, unless the
+    caller has the project's (`validate_installed_packages`).
 
     One location is reported by one pass: a later pass never adds a finding
     where an earlier one already stands (a key whose type the shape pass
@@ -241,7 +310,9 @@ def validate_package(
         )
         walker = _UnknownKeyWalker(validator)
         _add_pass(findings, walker.walk(raw, schema, registry.resolver(base_uri=schema_id), ""))
-    _add_pass(findings, _repository_findings(raw, component_dir, expected_name))
+    _add_pass(
+        findings, _repository_findings(raw, component_dir, expected_name, provenance, journal)
+    )
     return findings
 
 
@@ -317,7 +388,11 @@ class _UnknownKeyWalker:
 
 
 def _repository_findings(
-    raw: Mapping[Any, Any], component_dir: Path, expected_name: str | None
+    raw: Mapping[Any, Any],
+    component_dir: Path,
+    expected_name: str | None,
+    provenance: Provenance,
+    journal: process_journal.JournalSettings,
 ) -> list[PackageFinding]:
     """The checks that need the tree or a parser the schema lacks.
 
@@ -389,6 +464,16 @@ def _repository_findings(
             for index, value in enumerate(values):
                 _check_relative(findings, f"/{key}/{index}", value, "a repository-relative path")
 
+    for index, pattern in enumerate(_items(raw.get("runtime_ignore"))):
+        if isinstance(pattern, str) and journal.drops_claim(pattern):
+            findings.append(
+                PackageFinding(
+                    f"/runtime_ignore/{index}",
+                    Severity.WARNING,
+                    journal_claim_message(pattern, provenance),
+                )
+            )
+
     commands = raw.get("commands")
     leaves = command_leaves(commands) if isinstance(commands, Mapping) else {}
     for tokens, leaf in leaves.items():
@@ -400,6 +485,14 @@ def _repository_findings(
                 path,
                 f"command {' '.join(tokens)!r} names script {script!r}, which does not "
                 f"exist under {component_dir.name}/.",
+            )
+        if READS_KEY in leaf and leaf.get(QUERY_CONTRACT_KEY) is not True:
+            _error(
+                path.removesuffix("/script") + f"/{READS_KEY}",
+                f"command {' '.join(tokens)!r} declares `{READS_KEY}` without the query "
+                f"contract (`{QUERY_CONTRACT_KEY}: true`): `{READS_KEY}` says what a data "
+                f"point's command filler reads beyond the working tree, and a filler is a "
+                f"query (COR-052 point 6).",
             )
 
     registered = raw.get(VALIDATORS_KEY)
@@ -447,23 +540,40 @@ def _repository_findings(
 
     friction = raw.get("friction")
     if isinstance(friction, Mapping):
-        places = friction.get("places")
-        if isinstance(places, list):
-            for index, place in enumerate(places):
-                if not isinstance(place, Mapping):
+        # A held folder is written as a place is (COR-050 point 1), so both lists
+        # are held to the same two checks; a held folder also names the location
+        # it lies within, and is a folder there, never a glob — which the schema
+        # says too, and this pass repeats for a tree without one.
+        for key, noun in (("places", "place"), ("held", "held folder")):
+            for index, entry in enumerate(_items(friction.get(key))):
+                if not isinstance(entry, Mapping):
                     continue
-                _check_relative(
+                place = cast("Mapping[str, Any]", entry)
+                path = place.get("path")
+                relative = _check_relative(
                     findings,
-                    f"/friction/places/{index}/path",
-                    place.get("path"),
+                    f"/friction/{key}/{index}/path",
+                    path,
                     "a path relative to its location or the project",
                 )
+                if key == "held" and "location" not in place:
+                    _error(
+                        f"/friction/{key}/{index}",
+                        "held folder names no `location`: a held folder lies within one of the "
+                        "component's `docs.locations` (COR-050 point 1).",
+                    )
+                if key == "held" and relative and any(c in "*?[" for c in str(path)):
+                    _error(
+                        f"/friction/{key}/{index}/path",
+                        f"held folder {path!r} is a glob: a held folder is a folder "
+                        f"(COR-050 point 1).",
+                    )
                 location = place.get("location")
                 if isinstance(location, str) and location not in location_names:
                     declared = f" (declared: {sorted(location_names)})." if location_names else "."
                     _error(
-                        f"/friction/places/{index}/location",
-                        f"place names location {location!r}, which `docs.locations` does not "
+                        f"/friction/{key}/{index}/location",
+                        f"{noun} names location {location!r}, which `docs.locations` does not "
                         f"declare{declared}",
                     )
         surface = friction.get("surface")
@@ -550,7 +660,9 @@ def _connection_findings(
                 if "command" in entry:
                     check_command(f"{path}/command", entry["command"])
                     filler = entry["command"] if group == "contributes" else None
-                    leaf = resolve_command(command_leaves, filler) if isinstance(filler, str) else None
+                    leaf = (
+                        resolve_command(command_leaves, filler) if isinstance(filler, str) else None
+                    )
                     if leaf is not None and leaf.get(QUERY_CONTRACT_KEY) is not True:
                         _error(
                             f"{path}/command",
@@ -611,6 +723,35 @@ def _offered_process_findings(
     ]
 
 
+# The way out of a `runtime_ignore` entry declaring process journals, by where the
+# package comes from: only the project's own file is edited in place.
+_JOURNAL_CLAIM_FIX = {
+    Provenance.OWN: "Drop the entry: the backbone declares the pattern for every capability.",
+    Provenance.SYNCED: (
+        "This package is a synced copy the next sync overwrites, so do not edit it: "
+        "upgrade this component together with the backbone, to a version that leaves "
+        "the line to the backbone."
+    ),
+    Provenance.PINNED: (
+        "This package is restored to its pinned release on every sync (COR-041), so do "
+        "not edit it: move the pin to an author release that drops the entry."
+    ),
+}
+
+
+def journal_claim_message(pattern: str, provenance: Provenance = Provenance.OWN) -> str:
+    """The warning on a `runtime_ignore` entry that declares the process journals
+    a project commits (`process_journal.JournalSettings.drops_claim`): what the
+    render does with it, and the way out for a package of that provenance."""
+    return (
+        f"{pattern!r} declares process journals, whose ignore line the backbone owns: it "
+        f"ignores {process_journal.JOURNAL_GLOB!r} unless the project commits its journals, "
+        f"and this project does (`process.journal.committed: true`, COR-033 point 7), so "
+        f"the `.pkit/.gitignore` render drops the entry and names it in a comment line. "
+        f"{_JOURNAL_CLAIM_FIX[provenance]}"
+    )
+
+
 def _component_name(raw: Mapping[Any, Any], expected: str | None, component_dir: Path) -> str:
     """The component's name for a message: as the package declares it, else the
     name its directory gives it."""
@@ -665,7 +806,8 @@ def _check_relative(findings: list[PackageFinding], path: str, value: Any, what:
 
 
 def relative_path_problem(value: str) -> str | None:
-    """Why `value` is not a plain relative path (absolute, or climbing with `..`); None when it is."""
+    """Why `value` is not a plain relative path (absolute, or climbing with `..`); None when it
+    is."""
     if PurePosixPath(value).is_absolute() or PureWindowsPath(value).is_absolute():
         return "is absolute"
     if ".." in PurePosixPath(value).parts:
@@ -699,10 +841,18 @@ class PackagesPass:
 def installed_package_files(target_root: Path) -> list[tuple[str, Path, Path]]:
     """`(name, component_dir, package.yaml)` for every registered capability and adapter
     whose package file is present in the tree, in manifest order."""
+    return [
+        (entry.name, component_dir, package)
+        for entry, component_dir, package in _registered_packages(target_root)
+    ]
+
+
+def _registered_packages(target_root: Path) -> list[tuple[ComponentRegistryEntry, Path, Path]]:
+    """`installed_package_files`, with each component's registry entry."""
     backbone = read_backbone_manifest(target_root)
     if backbone is None:
         return []
-    out: list[tuple[str, Path, Path]] = []
+    out: list[tuple[ComponentRegistryEntry, Path, Path]] = []
     for entry in backbone.components:
         area = _COMPONENT_DIRS.get(entry.kind)
         if area is None:
@@ -710,8 +860,31 @@ def installed_package_files(target_root: Path) -> list[tuple[str, Path, Path]]:
         component_dir = target_root / ".pkit" / area / entry.name
         package = component_dir / "package.yaml"
         if package.is_file():
-            out.append((entry.name, component_dir, package))
+            out.append((entry, component_dir, package))
     return out
+
+
+def package_provenance(
+    target_root: Path, package: Path, origin: str, ownership: ModuleType | None
+) -> Provenance:
+    """Where a registered component's package file comes from.
+
+    Its registry `origin` first: an externally sourced component is restored to
+    its pin (COR-041). Otherwise the tree's ownership predicate
+    (`is_synced_copy`, loaded by the caller through `lifecycle_ownership`)
+    tells a copy a sync makes — a kit-shipped component, in a project that is
+    not the methodology's own source — from the project's own file: an
+    incubated capability, or any package in the source, where the package is
+    authored. A tree without the predicate falls back to the origin alone.
+    """
+    if origin == ORIGIN_EXTERNALLY_SOURCED:
+        return Provenance.PINNED
+    if ownership is None:
+        synced = origin == ORIGIN_KIT_SHIPPED
+    else:
+        relative = package.relative_to(target_root).as_posix()
+        synced = bool(ownership.is_synced_copy(target_root, relative))
+    return Provenance.SYNCED if synced else Provenance.OWN
 
 
 def load_package_schema(target_root: Path) -> tuple[Mapping[str, Any] | None, str | None]:
@@ -726,13 +899,119 @@ def load_package_schema(target_root: Path) -> tuple[Mapping[str, Any] | None, st
 
 
 def validate_installed_packages(target_root: Path) -> PackagesPass:
-    """Validate every registered component's package file (the `packages` member)."""
+    """Validate every registered component's package file (the `packages` member),
+    each with its provenance (`package_provenance`), so a finding names the fix
+    that lasts, and under the project's journal settings, so an entry is warned
+    on exactly when the `.pkit/.gitignore` render drops it; then add, to each
+    capability's report, the aliases of it another name shadows
+    (`_shadowed_alias_findings`) and the held folders of it that overstep their
+    bounds (`_held_folder_findings`)."""
     schema, note = load_package_schema(target_root)
+    ownership = lifecycle_ownership.load_ownership(target_root)
+    journal = process_journal.read_settings(target_root)
+    shadowed = _shadowed_alias_findings(target_root)
+    unbounded = _held_folder_findings(target_root)
     reports = [
-        validate_package_file(package, schema, component_dir=component_dir, expected_name=name)
-        for name, component_dir, package in installed_package_files(target_root)
+        _with_pass(
+            validate_package_file(
+                package,
+                schema,
+                component_dir=component_dir,
+                expected_name=entry.name,
+                provenance=package_provenance(target_root, package, entry.origin, ownership),
+                journal=journal,
+            ),
+            [*shadowed.get(entry.name, []), *unbounded.get(entry.name, [])]
+            if entry.kind == "capability"
+            else [],
+        )
+        for entry, component_dir, package in _registered_packages(target_root)
     ]
     return PackagesPass(reports=tuple(reports), schema_note=note)
+
+
+def _with_pass(report: PackageReport, new: list[PackageFinding]) -> PackageReport:
+    """`report` with one more pass's findings, by the rule of `_add_pass`."""
+    if not new:
+        return report
+    findings = list(report.findings)
+    _add_pass(findings, new)
+    return replace(report, findings=tuple(findings))
+
+
+def _shadowed_alias_findings(target_root: Path) -> dict[str, list[PackageFinding]]:
+    """Each installed capability's aliases another name shadows, as warnings
+    located at the entry, keyed by the capability. Read from the table the
+    dispatcher binds (`dispatcher.installed_alias_table`, one precedence walk),
+    so what is reported is exactly what `pkit <alias>` does not reach."""
+    table = installed_alias_table(target_root, static_command_names())
+    out: dict[str, list[PackageFinding]] = {}
+    for shadow in table.shadowed:
+        out.setdefault(shadow.alias.capability, []).append(
+            PackageFinding(
+                f"/{ALIASES_KEY}/{shadow.alias.index}",
+                Severity.WARNING,
+                shadowed_alias_message(shadow),
+            )
+        )
+    return out
+
+
+def _held_folder_findings(target_root: Path) -> dict[str, list[PackageFinding]]:
+    """Each installed capability's held folders that overstep their bounds, as errors
+    located at the entry, keyed by the capability (COR-050 point 1).
+
+    Read from friction discovery's one judgment (`held_folders`, over the same
+    settings discovery reads), so what is reported is exactly what discovery
+    leaves holding nothing. A held folder discovery cannot read, or one leaving
+    the repository, is the friction pass's finding.
+    """
+    from project_kit import friction_discovery as fd  # discovery reads package metadata too
+
+    settings = fd.read_friction_settings(target_root)
+    out: dict[str, list[PackageFinding]] = {}
+    for folder in fd.held_folders(target_root, settings):
+        if folder.skipped is None or folder.skipped.reason != fd.SKIP_OVERLAP:
+            continue
+        declared = folder.declaration
+        out.setdefault(folder.component, []).append(
+            PackageFinding(
+                declared.pointer,
+                Severity.ERROR,
+                f"held folder {declared.value!r} (at {declared.resolved!r}) "
+                f"{folder.skipped.detail}, so it holds nothing and the places matching its files "
+                f"read them as artefacts: a held folder never equals or encloses a documentation "
+                f"root or another declaration's place, and shares no file with its own "
+                f"component's place, another held folder or a rule-set folder (COR-050 point 1).",
+            )
+        )
+    return out
+
+
+def shadowed_alias_message(shadow: ShadowedAlias) -> str:
+    """The warning on an alias another name shadows: the alias, its capability,
+    what holds the name — which capability, for another's name or alias — and
+    the canonical form that still reaches the capability."""
+    alias, capability, holder = shadow.alias.name, shadow.alias.capability, shadow.holder
+    if shadow.by is ShadowKind.STATIC:
+        held_by = (
+            f"the backbone command `pkit {alias}`, which every capability name and alias yields to"
+        )
+        reached = "runs that command"
+    elif shadow.by is ShadowKind.CAPABILITY:
+        held_by = f"the name of capability {holder!r}, which every alias yields to"
+        reached = f"reaches {holder}"
+    else:
+        held_by = (
+            f"the same alias of capability {holder!r}, registered first (it comes earlier "
+            f"in the backbone manifest)"
+        )
+        reached = f"reaches {holder}"
+    return (
+        f"alias {alias!r} of capability {capability!r} is shadowed by {held_by}: "
+        f"`pkit {alias}` {reached}, never {capability}. An alias is only a shorthand, so "
+        f"this is a warning: `pkit {capability} …` still reaches it."
+    )
 
 
 UMBRELLA_SEVERITY = {
@@ -775,6 +1054,11 @@ def _locate(target_root: Path, file: Path, finding: PackageFinding) -> str:
 
 def _kind(value: Any) -> str:
     return "null" if value is None else type(value).__name__
+
+
+def _items(value: object) -> list[object]:
+    """`value`'s items when it is a list, else none (the shape pass reports the type)."""
+    return cast("list[object]", value) if isinstance(value, list) else []
 
 
 def _token(segment: Any) -> str:

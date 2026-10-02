@@ -1,4 +1,5 @@
 """Tests for the read-view renderer (ADR-006) — one test per encoded convention."""
+
 from __future__ import annotations
 
 from project_kit import cli_render as r
@@ -22,21 +23,22 @@ def test_title_without_count_or_gloss():
 def test_table_computes_widths_across_rows():
     rows = [{"name": "a", "desc": "short"}, {"name": "longer-name", "desc": "x"}]
     out = _doc(sections=[r.section(rows=rows, columns=["name", "desc"])])
-    assert "  a            short" in out          # 'a' padded to len('longer-name')
+    assert "  a            short" in out  # 'a' padded to len('longer-name')
     assert "  longer-name  x" in out
 
 
 def test_constant_empty_column_is_suppressed():
-    rows = [{"name": "a", "source": "", "desc": "d1"},
-            {"name": "b", "source": "", "desc": "d2"}]
+    rows = [{"name": "a", "source": "", "desc": "d1"}, {"name": "b", "source": "", "desc": "d2"}]
     out = _doc(sections=[r.section(rows=rows, columns=["name", "source", "desc"])])
-    assert "  a  d1" in out                        # no gap where source would be
+    assert "  a  d1" in out  # no gap where source would be
     assert "source" not in out
 
 
 def test_column_appears_when_any_row_has_a_value():
-    rows = [{"name": "a", "source": "project", "desc": "d1"},
-            {"name": "b", "source": "shipped", "desc": "d2"}]
+    rows = [
+        {"name": "a", "source": "project", "desc": "d1"},
+        {"name": "b", "source": "shipped", "desc": "d2"},
+    ]
     out = _doc(sections=[r.section(rows=rows, columns=["name", "source", "desc"])])
     assert "project" in out and "shipped" in out
 
@@ -45,7 +47,7 @@ def test_marker_prefixes_rows_and_is_suppressed_when_empty():
     rows = [{"m": "→", "name": "active-one"}, {"m": "", "name": "other"}]
     out = _doc(sections=[r.section(rows=rows, columns=["name"], marker="m")])
     assert "  →  active-one" in out
-    assert "     other" in out                     # placeholder keeps alignment
+    assert "     other" in out  # placeholder keeps alignment
     # all-empty marker column vanishes entirely
     rows2 = [{"m": "", "name": "a"}, {"m": "", "name": "b"}]
     out2 = _doc(sections=[r.section(rows=rows2, columns=["name"], marker="m")])
@@ -53,25 +55,29 @@ def test_marker_prefixes_rows_and_is_suppressed_when_empty():
 
 
 def test_section_header_with_gloss_and_empty_state():
-    out = _doc(sections=[r.section(header="THINGS", gloss="what they are",
-                                   empty="(none yet)")])
+    out = _doc(sections=[r.section(header="THINGS", gloss="what they are", empty="(none yet)")])
     assert "\nTHINGS — what they are\n" in out
     assert "  (none yet)" in out
 
 
 def test_status_footer_default_and_header_placement():
-    foot = _doc(sections=[r.section(rows=[{"n": "a"}], columns=["n"])],
-                status=r.status("Active", "a", gloss="why it matters"))
+    foot = _doc(
+        sections=[r.section(rows=[{"n": "a"}], columns=["n"])],
+        status=r.status("Active", "a", gloss="why it matters"),
+    )
     body_pos = foot.index("  a")
     assert foot.index("Active: a   (why it matters)") > body_pos  # footer: after rows
-    head = _doc(sections=[r.section(rows=[{"n": "a"}], columns=["n"])],
-                status=r.status("Live", "ON", placement="header"))
-    assert head.index("Live: ON") < head.index("  a")             # header: before rows
+    head = _doc(
+        sections=[r.section(rows=[{"n": "a"}], columns=["n"])],
+        status=r.status("Live", "ON", placement="header"),
+    )
+    assert head.index("Live: ON") < head.index("  a")  # header: before rows
 
 
 def test_status_extra_lines_indent_and_labelless_status():
-    out = _doc(sections=[], status=r.status(placement="header",
-                                            extra=["posture lenient · source shipped"]))
+    out = _doc(
+        sections=[], status=r.status(placement="header", extra=["posture lenient · source shipped"])
+    )
     assert "\n  posture lenient · source shipped" in out
 
 
@@ -81,12 +87,14 @@ def test_status_warn_line():
 
 
 def test_legend_and_commands_blocks_aligned_pairs():
-    out = _doc(sections=[],
-               legend=[("→", "the active one"), ("shipped", "ships with core")],
-               commands=[("pkit x", "do x"), ("pkit longer-cmd", "do y")])
+    out = _doc(
+        sections=[],
+        legend=[("→", "the active one"), ("shipped", "ships with core")],
+        commands=[("pkit x", "do x"), ("pkit longer-cmd", "do y")],
+    )
     assert "\nLegend\n" in out and "\nCommands\n" in out
-    assert "  →        the active one" in out      # '→' padded to len('shipped')
-    assert "  pkit x           do x" in out        # padded to len('pkit longer-cmd')
+    assert "  →        the active one" in out  # '→' padded to len('shipped')
+    assert "  pkit x           do x" in out  # padded to len('pkit longer-cmd')
 
 
 def test_empty_legend_and_commands_omitted():
@@ -106,8 +114,11 @@ def test_widths_shared_across_sections():
 
 
 def test_no_horizontal_rules_ever():
-    out = _doc(sections=[r.section(rows=[{"n": "a"}], columns=["n"])],
-               legend=[("x", "y")], commands=[("c", "g")])
+    out = _doc(
+        sections=[r.section(rows=[{"n": "a"}], columns=["n"])],
+        legend=[("x", "y")],
+        commands=[("c", "g")],
+    )
     for forbidden in ("────", "====", "----"):
         assert forbidden not in out
 

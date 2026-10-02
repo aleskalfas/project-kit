@@ -1,0 +1,16 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+  pr: "1227"
+body: >
+  `pkit friction check --all` takes as an artefact's revalidation point the
+  commit that wrote the `at` the artefact carries (#1217). After a merge that
+  kept one side's revalidation — the state `pkit friction resolve` leaves
+  where both sides revalidated — the check could take the other side's
+  revalidation instead, when its commit was dated later: a commit whose `at`
+  the file no longer carries. It then read that side's changes as covered and
+  the kept side's as stale, where the change check, comparing with the base,
+  read the opposite. Such a commit is now passed over, so the two checks agree
+  on the point. `pkit friction debt`, `pkit friction explain` and `pkit
+  friction record-status` read the same walk and follow.

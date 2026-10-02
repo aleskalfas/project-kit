@@ -1,0 +1,11 @@
+component: software-analysis
+kind: patch
+custom:
+  category: Fixed
+  requires_backbone: release
+body: >
+  A revalidation record under a path `friction.exclude` leaves out is no longer
+  counted or checked by `pkit analysis validate`, as an excluded artefact is no
+  part of the analysis. The check reads the `excluded` key the backbone this
+  release ships adds to each held file in `pkit friction artefacts --json`, so
+  the capability requires that backbone.

@@ -1,0 +1,16 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit process move` takes `--from <state>`: the state the subject held before
+  the caller applied the move's domain side-effect. A wrapper that writes its
+  side-effect first and journals second, as the process README's seam-ordering
+  contract has it, finds live detection already reporting the target, and the
+  engine took that for the origin: a move into a state with no transition to
+  itself was refused, and one into a state that has one was journaled as that
+  self-loop. With `--from` the move is validated and journaled from the stated
+  origin, gates included. The engine accepts the stated origin only while live
+  detection places the subject at it or at the target, and refuses otherwise,
+  naming all three. Without `--from` a move starts at the live position, as
+  before. The seam-ordering contract now has the wrapper pass the origin it read.

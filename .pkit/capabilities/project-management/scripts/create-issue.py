@@ -8,7 +8,7 @@
 """Project-management capability — create-issue (verb-subject per DEC-020).
 
 Files a new issue against the methodology's body shape: validates the
-type, stamps the title against `titles.yaml`'s per-type regex,
+type, checks the title against `titles.yaml`'s per-type rules,
 composes the body from the matching `templates/<Type>.md`, applies the
 classification axes (type:*, priority:*, workstream:* per
 `classification.yaml`), and posts the issue via `gh issue create`.
@@ -67,31 +67,33 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate  # noqa: E402
-from _lib import axis_carriage  # noqa: E402
-from _lib import axis_labels  # noqa: E402
-from _lib import body_parent_ref  # noqa: E402
-from _lib import classification_rules  # noqa: E402
-from _lib import containment  # noqa: E402
-from _lib.containment import link_sub_issue  # noqa: E402
-from _lib.gh import gh_project_run, gh_run, load_adopter_config  # noqa: E402
-from _lib.hooks import fire_hooks  # noqa: E402
-from _lib.membership import (  # noqa: E402
+from _lib import (
+    axis_carriage,
+    axis_labels,
+    body_parent_ref,
+    bootstrap_gate,
+    classification_rules,
+    containment,
+    provenance,
+    session_guard,
+    title_rules,
+)
+from _lib.containment import LinkOutcome, link_sub_issue
+from _lib.gh import gh_project_run, gh_run, load_adopter_config
+from _lib.hooks import fire_hooks
+from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
     resolve_capability_root,
     resolve_invoker_identity,
 )
-from _lib.milestone import resolve_milestone  # noqa: E402
-from _lib import provenance  # noqa: E402
-from _lib import session_guard  # noqa: E402
-from _lib.substrate_writes import milestone_create_args  # noqa: E402
-from _lib.placeholder_detection import (  # noqa: E402
+from _lib.milestone import resolve_milestone
+from _lib.placeholder_detection import (
     PHASE_CREATE,
     detect_placeholder_residuals,
 )
-from _lib.structural_type import infer_structural_type  # noqa: E402
-
+from _lib.structural_type import infer_structural_type
+from _lib.substrate_writes import milestone_create_args
 
 VALID_STRUCTURAL_TYPES = ("epic", "feature", "umbrella", "task")
 VALID_KINDS = ("feature", "bug", "docs", "test", "refactor", "maintenance")
@@ -104,8 +106,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
             "File a new issue against the project-management methodology's "
-            "body shape. Composes title + body from the type's template + "
-            "titles regex, applies classification labels, optionally adds "
+            "body shape. Composes title + body from the type's template, "
+            "checks the title against titles.yaml, applies classification labels, optionally adds "
             "to the configured Projects v2 board (per DEC-019)."
         ),
     )
@@ -272,21 +274,11 @@ def main() -> int:
         return 1
 
     # Read schemas + adopter config.
-    issue_types = _read_yaml(
-        capability_root / "schemas" / "issue-types.yaml", yaml_loader
-    )
-    titles = _read_yaml(
-        capability_root / "schemas" / "titles.yaml", yaml_loader
-    )
-    classification = _read_yaml(
-        capability_root / "schemas" / "classification.yaml", yaml_loader
-    )
-    body_format = _read_yaml(
-        capability_root / "schemas" / "body-format.yaml", yaml_loader
-    )
-    config = _read_yaml(
-        capability_root / "project" / "config.yaml", yaml_loader
-    )
+    issue_types = _read_yaml(capability_root / "schemas" / "issue-types.yaml", yaml_loader)
+    titles = _read_yaml(capability_root / "schemas" / "titles.yaml", yaml_loader)
+    classification = _read_yaml(capability_root / "schemas" / "classification.yaml", yaml_loader)
+    body_format = _read_yaml(capability_root / "schemas" / "body-format.yaml", yaml_loader)
+    config = _read_yaml(capability_root / "project" / "config.yaml", yaml_loader)
 
     type_entry = (issue_types.get("types") or {}).get(args.type)
     if not isinstance(type_entry, dict):
@@ -329,20 +321,27 @@ def main() -> int:
     title_prefix = _title_prefix_for(type_entry, classification, args.type, args.kind)
     full_title = f"[{title_prefix}] {args.title.strip()}"
 
-    # Validate against titles.yaml's pattern for this surface.
+    # Run titles.yaml's checks for this type — the pattern and every declared
+    # wording rule (#803) — at their declared severity, before any gh call:
+    # filing writes the title. A blocking finding refuses; a warning is shown
+    # and filing goes on.
     #
     # Left NOT substrate-map-aware (deferred to #4), and safe only because create
     # composes `full_title` from the KIT's own title vocabulary and does NOT
     # honour any substrate-map write-side `title-prefix` remap — so the pattern it
     # checks is always the one it just wrote. This flips to a live false-refuse (a
     # (b)-class gate) if/when #4's write-side prefix honouring lands; revisit then.
-    title_pattern = _title_pattern_for(titles, args.type)
-    if title_pattern and not re.match(title_pattern, full_title):
-        print(
-            f"error: composed title {full_title!r} does not match "
-            f"titles.yaml pattern for {args.type!r}: {title_pattern!r}",
-            file=sys.stderr,
-        )
+    title_findings = title_rules.check_title(titles, title_rules.issue_key(args.type), full_title)
+    for severity, label, detail in title_findings:
+        if severity not in title_rules.BLOCKING_SEVERITIES:
+            print(f"[{severity}] {label}: {detail}", file=sys.stderr)
+    refusals = [f for f in title_findings if f[0] in title_rules.BLOCKING_SEVERITIES]
+    if refusals:
+        for severity, label, detail in refusals:
+            print(
+                f"error: composed title {full_title!r} refused [{severity}] {label}: {detail}",
+                file=sys.stderr,
+            )
         return 2
 
     # The adopter's optional substrate-map (ADR-026 / DEC-036). None ⇒
@@ -464,11 +463,7 @@ def main() -> int:
         axis_labels.resolve_write("workstream", workstream_default, substrate_map),
         str,
     )
-    if (
-        args.workstream is None
-        and workstream_label_carried
-        and not default_writes_a_label
-    ):
+    if args.workstream is None and workstream_label_carried and not default_writes_a_label:
         print(
             f"error: --workstream is required. workstream is carried "
             f"{axis_carriage.describe('workstream', config, substrate_map)}, so a "
@@ -756,7 +751,27 @@ def main() -> int:
             child_number=new_issue_number,
         )
         prefix = "[ok]" if link.ok else "[warn]"
-        print(f"{prefix} {link.detail}", file=sys.stderr)
+        # The seam reports only the native link; the textual ref is this verb's,
+        # written above, and on an instance without sub-issues it is the record.
+        note = (
+            f"{link.detail}; textual ref recorded"
+            if link.outcome is LinkOutcome.UNSUPPORTED
+            else link.detail
+        )
+        print(f"{prefix} {note}", file=sys.stderr)
+        if link.outcome is LinkOutcome.FAILED:
+            # A failed link is not an instance without sub-issues (#808): the
+            # line above says why, in GitHub's words where GitHub refused, and
+            # the issue stays filed under its textual ref. Name the way back,
+            # and — where GitHub refused it — the way out (ADR-035).
+            print(
+                f"[warn] #{new_issue_number} is filed under #{parent_number} by its "
+                f"first line only; once the cause above is fixed, `pkit pm link-parent "
+                f"{new_issue_number}` makes the native link.",
+                file=sys.stderr,
+            )
+            if link.refused:
+                print(f"  → {axis_labels.TEXTUAL_CONTAINMENT_WAY_OUT}", file=sys.stderr)
     elif parent_number is not None and containment == axis_labels.CONTAINMENT_TEXTUAL:
         print(
             f"[ok] containment: textual mode — native sub-issue link skipped; "
@@ -909,7 +924,7 @@ def _build_labels(
     priority: str,
     workstream: str | None,
     config: dict,
-    substrate_map: "axis_labels.SubstrateMap | None",
+    substrate_map: axis_labels.SubstrateMap | None,
 ) -> tuple[list[str], list[str], dict[str, str]]:
     """Resolve the applied-label list for a new issue through the seam (ADR-026).
 
@@ -1111,7 +1126,10 @@ def _resolve_repo_name_with_owner_safe() -> str:
     try:
         proc = subprocess.run(
             ["gh", "repo", "view", "--json", "nameWithOwner", "--jq", ".nameWithOwner"],
-            capture_output=True, text=True, check=False, timeout=5,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=5,
         )
         return proc.stdout.strip() if proc.returncode == 0 else ""
     except (FileNotFoundError, subprocess.TimeoutExpired):
@@ -1200,7 +1218,6 @@ def _title_prefix_for(
     return rendered
 
 
-
 def _parent_ref_label(issue_types: dict, parent_type: str) -> str | None:
     """The parent-ref label for a parent of structural type ``parent_type``.
 
@@ -1217,9 +1234,7 @@ def _parent_ref_label(issue_types: dict, parent_type: str) -> str | None:
     return rendered or None
 
 
-def _detect_parent_structural_type(
-    parent_num: int, config: dict, issue_types: dict
-) -> str | None:
+def _detect_parent_structural_type(parent_num: int, config: dict, issue_types: dict) -> str | None:
     """Best-effort read of a parent issue's structural type from its title (#356).
 
     Reads the parent's title via ``gh issue view`` and infers the structural type
@@ -1264,18 +1279,6 @@ def _parent_ref_form_matchers(parent_ref_form: str) -> list[re.Pattern[str]]:
     return body_parent_ref.form_matchers(parent_ref_form)
 
 
-def _title_pattern_for(titles: dict, structural_type: str) -> str | None:
-    """Look up the titles.yaml regex for the given structural type."""
-    formats = titles.get("formats") or {}
-    key = f"issue-{structural_type}"
-    entry = formats.get(key)
-    if isinstance(entry, dict):
-        pattern = entry.get("pattern")
-        if isinstance(pattern, str):
-            return pattern
-    return None
-
-
 def _adopter_workstreams(config: dict) -> set[str]:
     """Extract the adopter's declared workstream slugs.
 
@@ -1315,9 +1318,7 @@ def _parent_ref_line(
     be detected — the label degrades to the first option in the type's
     ``parent_ref_form`` (the prior behaviour).
     """
-    if milestone_num is not None and "milestone" in (
-        type_entry.get("parent_issue_types") or []
-    ):
+    if milestone_num is not None and "milestone" in (type_entry.get("parent_issue_types") or []):
         return f"Milestone: [#{milestone_num}](../milestone/{milestone_num})"
     if parent_num is None:
         return ""
@@ -1359,7 +1360,7 @@ def _strip_issue_template_frontmatter(raw: str) -> str:
     end = raw.find("\n---\n", 4)
     if end < 0:
         return raw
-    return raw[end + len("\n---\n"):]
+    return raw[end + len("\n---\n") :]
 
 
 # ---- gh helpers ------------------------------------------------------

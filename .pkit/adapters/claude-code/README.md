@@ -13,9 +13,9 @@ pkit:
         - src/project_kit/visibility.py
       record: [COR-002, COR-005, COR-028, ADR-002, ADR-004, ADR-009, ADR-014, ADR-052, ADR-060, "project-management:DEC-030"]
     revalidated:
-      at: 2026-09-29T18:56:19Z
+      at: 2026-10-01T01:25:06Z
       outcome: unchanged
-      unchanged-because: this branch's visibility.py change stays inside the backbone's rendered .pkit/.gitignore (the configured process-journal ignore line); the adapter's settings merge and deploy notes are untouched
+      unchanged-because: "on this branch the anchored code changed only in layout: ruff format and the lint fixes; behaviour and the documented commands are unchanged"
 ---
 
 # Claude Code adapter
@@ -113,7 +113,7 @@ The realizer that makes declared permissions *bite* at runtime (per [COR-028](..
 1. **fail-open hook half** — synthesized as `{subject: all, effect: deny}` grants in the model, derived from the privileges the catalog flags `guardrail: true` (the catalog is the single source of truth). The hook **fails open on decision faults** (malformed payload, ambiguous model): any such fault yields a silent abstain, never a silent block. Set `PKIT_PERMISSIONS_DEBUG=1` to surface decision fault reasons on stderr.
 2. **fail-closed native half** — the catastrophic `deny` patterns in `settings/core/settings.json`. These hold even if the hook is absent, faults, or is version-skewed, so failing open in layer 1 can never bypass them.
 
-**Enforcement-runtime fault taxonomy (ADR-002 amendment).** The fail-open contract covers *decision faults* (hook ran, couldn't resolve). A distinct class — *enforcement-runtime faults* — means the hook **cannot start at all** (python3 missing, decide.py absent, syntax error). This class is **fail-loud**, not fail-open: `pkit permissions enable` and `pkit permissions sandbox enable` run a startup self-check after registering the hook and warn loudly if the hook cannot start, so the operator learns enforcement is not running rather than believing a dead hook is gating calls. `pkit permissions overview` also surfaces this state when enforcement is registered-but-dead: it runs the self-check and reports "ENFORCEMENT-RUNTIME FAULT — hook CANNOT START" with the diagnosed reason.
+**Enforcement-runtime fault taxonomy (ADR-002 point 4).** The fail-open contract covers *decision faults* (hook ran, couldn't resolve). A distinct class — *enforcement-runtime faults* — means the hook **cannot start at all** (python3 missing, decide.py absent, syntax error). This class is **fail-loud**, not fail-open: `pkit permissions enable` and `pkit permissions sandbox enable` run a startup self-check after registering the hook and warn loudly if the hook cannot start, so the operator learns enforcement is not running rather than believing a dead hook is gating calls. `pkit permissions overview` also surfaces this state when enforcement is registered-but-dead: it runs the self-check and reports "ENFORCEMENT-RUNTIME FAULT — hook CANNOT START" with the diagnosed reason.
 
 **enable / disable** (the opt-in toggle, per issue #247's "Option B" — mirroring the [project-management:DEC-030] default-agent precedent). Because the hook fires per tool call, registering it is the adopter's explicit choice, not an install default:
 
@@ -123,7 +123,7 @@ pkit permissions enable
 
 Registers the hook under the top-level `hooks.PreToolUse` key in `.claude/settings.json` (command `${CLAUDE_PROJECT_DIR}/.pkit/adapters/claude-code/permission-hook.py`, matcher `*`) and ensures the fail-closed native guardrail denies are present. Refuses if the claude-code adapter isn't installed. Idempotent.
 
-After registering, runs the **enforcement-runtime self-check** (per the ADR-002 amendment): drives the hook script under `python3` with a probe payload to verify it can start. If the hook cannot start (python3 missing, decide.py absent, etc.), outputs a loud WARNING naming the fault and the remediation — rather than silently proceeding with a dead hook that fail-opens on every call.
+After registering, runs the **enforcement-runtime self-check** (per ADR-002 point 4): drives the hook script under `python3` with a probe payload to verify it can start. If the hook cannot start (python3 missing, decide.py absent, etc.), outputs a loud WARNING naming the fault and the remediation — rather than silently proceeding with a dead hook that fail-opens on every call.
 
 ```
 pkit permissions disable

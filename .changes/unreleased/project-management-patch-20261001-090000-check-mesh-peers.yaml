@@ -1,0 +1,7 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `check-mesh` compares against its configured peers again: with any mesh peer
+  configured it failed with a Python error before comparing the first one.

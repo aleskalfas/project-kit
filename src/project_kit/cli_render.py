@@ -22,6 +22,7 @@ and let the caller print. Styling is provably never load-bearing:
 rendering always carries the full structure (scriptable, accessible). v1 is
 monochrome (bold/dim); colour is a deferred change to the map alone.
 """
+
 from __future__ import annotations
 
 import os
@@ -40,8 +41,7 @@ SEP = "  "
 
 # Closed semantic-role enum (ADR-011 §1). Authors tag meaning, never
 # presentation. The role→style map below is policy and lives here.
-ROLES = ("title", "heading", "strong", "muted", "command",
-         "success", "warn", "danger")
+ROLES = ("title", "heading", "strong", "muted", "command", "success", "warn", "danger")
 
 _BOLD = "\033[1m"
 _DIM = "\033[2m"
@@ -86,8 +86,9 @@ def resolve_color(flag: str = "auto", *, stream: IO[str] | None = None) -> bool:
             decision = False
         else:
             st = stream if stream is not None else sys.stdout
-            decision = bool(getattr(st, "isatty", lambda: False)()) \
-                and os.environ.get("TERM") != "dumb"
+            decision = (
+                bool(getattr(st, "isatty", lambda: False)()) and os.environ.get("TERM") != "dumb"
+            )
     set_color(decision)
     return decision
 
@@ -163,9 +164,7 @@ def resolve_width(flag: int | None = None, *, stream: IO[str] | None = None) -> 
     else:
         env_columns = _columns_from_env()
         width = (
-            env_columns
-            if env_columns is not None
-            else shutil.get_terminal_size((80, 24)).columns
+            env_columns if env_columns is not None else shutil.get_terminal_size((80, 24)).columns
         )
 
     # Guard a zero / nonsensical reading (ADR-024 §3): any value below the floor
@@ -198,8 +197,9 @@ def set_wrap_width(width: int) -> None:
     _wrap_width = width
 
 
-def wrap(text: str, *, indent: str, hang: str = "", width: int | None = None,
-         first_line_indent: int = 0) -> list[str]:
+def wrap(
+    text: str, *, indent: str, hang: str = "", width: int | None = None, first_line_indent: int = 0
+) -> list[str]:
     """Lay out one author-supplied prose field into indented lines (ADR-024).
 
     The one place prose breaks. Two transformations, split by ADR-024 §2:
@@ -298,8 +298,10 @@ def wrap(text: str, *, indent: str, hang: str = "", width: int | None = None,
         if len(pieces) > 1:
             remainder = " ".join(pieces[1:])
             cont_pieces = textwrap.wrap(
-                remainder, width=cont_avail,
-                break_long_words=False, break_on_hyphens=False,
+                remainder,
+                width=cont_avail,
+                break_long_words=False,
+                break_on_hyphens=False,
             ) or [""]
             out.extend(cont_prefix + piece for piece in cont_pieces)
     return out
@@ -307,35 +309,59 @@ def wrap(text: str, *, indent: str, hang: str = "", width: int | None = None,
 
 # --- semantic-data part constructors (A': dicts, not types) ------------------
 
+
 def title(noun: str, count: str | int | None = None, gloss: str | None = None) -> dict:
     """A title part: ``<noun> — <count>   (<gloss>)``. ``count`` is the
     caller-composed qualifier string (e.g. ``"3 available"``)."""
     return {"noun": noun, "count": count, "gloss": gloss}
 
 
-def status(label: str = "", value: str | None = None, gloss: str | None = None,
-           placement: str = "footer", extra: Sequence[str] = (),
-           warn: str | None = None) -> dict:
+def status(
+    label: str = "",
+    value: str | None = None,
+    gloss: str | None = None,
+    placement: str = "footer",
+    extra: Sequence[str] = (),
+    warn: str | None = None,
+) -> dict:
     """A status line: ``<label>: <value>   (<gloss>)`` with optional indented
     ``extra`` sub-lines and a ``warn`` line. ``placement`` is ``"header"`` (a
     framing precondition, leads) or ``"footer"`` (a summary of the body)."""
-    return {"label": label, "value": value, "gloss": gloss,
-            "placement": placement, "extra": list(extra), "warn": warn}
+    return {
+        "label": label,
+        "value": value,
+        "gloss": gloss,
+        "placement": placement,
+        "extra": list(extra),
+        "warn": warn,
+    }
 
 
-def section(rows: Sequence[Mapping[str, str]] = (), columns: Sequence[str] = (),
-            header: str | None = None, gloss: str | None = None,
-            marker: str | None = None, empty: str | None = None) -> dict:
+def section(
+    rows: Sequence[Mapping[str, str]] = (),
+    columns: Sequence[str] = (),
+    header: str | None = None,
+    gloss: str | None = None,
+    marker: str | None = None,
+    empty: str | None = None,
+) -> dict:
     """A body section. ``rows`` are dicts keyed by column name; ``columns`` is
     the ordered key list. A column whose value is empty in every row is
     suppressed. ``marker`` names a column rendered as a one-char row prefix
     (itself suppressed when empty in every row). ``header`` (+ ``gloss``) is the
     CAPS section header; ``empty`` is the one-line empty-state."""
-    return {"rows": [dict(r) for r in rows], "columns": list(columns),
-            "header": header, "gloss": gloss, "marker": marker, "empty": empty}
+    return {
+        "rows": [dict(r) for r in rows],
+        "columns": list(columns),
+        "header": header,
+        "gloss": gloss,
+        "marker": marker,
+        "empty": empty,
+    }
 
 
 # --- rendering --------------------------------------------------------------
+
 
 def _fmt_title(t: Mapping) -> str:
     head = style("title", t["noun"])
@@ -358,7 +384,9 @@ def _fmt_status(s: Mapping) -> list[str]:
         out.append(line)
     out += [INDENT + e for e in s.get("extra", [])]
     if s.get("warn"):
-        out.append(INDENT + f"⚠ {s['warn']}")  # ⚠ is the load-bearing signal (warn role plain in v1)
+        out.append(
+            INDENT + f"⚠ {s['warn']}"
+        )  # ⚠ is the load-bearing signal (warn role plain in v1)
     return out
 
 
@@ -392,15 +420,16 @@ def _marker_on(sections: Sequence[Mapping]) -> bool:
     return False
 
 
-def _fmt_row(r: Mapping, sec: Mapping, widths: Mapping[str, int],
-             shown: Mapping[str, bool], marker_on: bool) -> str:
+def _fmt_row(
+    r: Mapping, sec: Mapping, widths: Mapping[str, int], shown: Mapping[str, bool], marker_on: bool
+) -> str:
     cells: list[str] = []
     if marker_on:
         m = sec.get("marker")
         cells.append((str(r.get(m, " "))[:1] or " ") if m else " ")
     for col in sec["columns"]:
         if shown.get(col):
-            cells.append(f"{str(r.get(col, '')):{widths[col]}}")
+            cells.append(f"{r.get(col, '')!s:{widths[col]}}")
     return (INDENT + SEP.join(cells)).rstrip()
 
 
@@ -411,16 +440,20 @@ def _pairs(items: Sequence[tuple[str, str]]) -> list[str]:
     return [f"{INDENT}{a:{w}}{SEP}{b}" for a, b in items]
 
 
-def view(*, title: Mapping, sections: Sequence[Mapping] = (),
-         status: Mapping | None = None,
-         legend: Sequence[tuple[str, str]] = (),
-         commands: Sequence[tuple[str, str]] = ()) -> str:
+def view(
+    *,
+    title: Mapping,
+    sections: Sequence[Mapping] = (),
+    status: Mapping | None = None,
+    legend: Sequence[tuple[str, str]] = (),
+    commands: Sequence[tuple[str, str]] = (),
+) -> str:
     """Assemble the parts into the read-view layout and return a string."""
     sections = list(sections)
     lines = [_fmt_title(title)]
 
     if status and status.get("placement") == "header":
-        lines += [""] + _fmt_status(status)
+        lines += ["", *_fmt_status(status)]
 
     shown = _shown_columns(sections)
     widths = _widths(sections, shown)
@@ -438,11 +471,11 @@ def view(*, title: Mapping, sections: Sequence[Mapping] = (),
             lines.append(INDENT + sec["empty"])
 
     if status and status.get("placement") != "header":
-        lines += [""] + _fmt_status(status)
+        lines += ["", *_fmt_status(status)]
 
     if legend:
-        lines += ["", style("heading", "Legend")] + _pairs(list(legend))
+        lines += ["", style("heading", "Legend"), *_pairs(list(legend))]
     if commands:
-        lines += ["", style("heading", "Commands")] + _pairs(list(commands))
+        lines += ["", style("heading", "Commands"), *_pairs(list(commands))]
 
     return "\n".join(lines) + "\n"

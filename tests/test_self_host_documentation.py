@@ -150,17 +150,29 @@ def test_the_status_report_shows_roots_places_and_the_records_inside_the_interna
     lines = [line.strip() for line in result.output.splitlines()]
     assert "user root          docs/   (explicit)" in lines
     assert "internal root      tech-docs/   (explicit)" in lines
-    inside = lines.index("inside root        2 recorded location(s) inside the internal root:")
+    inside = lines.index("inside root        3 recorded location(s) inside the internal root:")
     assert lines[inside + 1] == "adr-records -> tech-docs/architecture/decisions"
     # living-docs' definitions location, recorded when the first space
     # definition was placed there (COR-049 point 5; DEC-001 point 2).
     assert lines[inside + 2] == "definitions (living-docs) -> tech-docs/living-docs"
+    # software-analysis' location, recorded by the first stamp (COR-049 point 5;
+    # ADR-055 point 4).
+    assert lines[inside + 3] == "analysis (software-analysis) -> tech-docs/analysis"
     assert f"places             {len(read_friction_settings(REPO).places)} declared:" in lines
     for place in _project_places():
         assert place in lines, place
     # living-docs' default places — the roots — and its definitions (DEC-001 points 1 and 2).
     for place in ("docs/**", "tech-docs/**", "tech-docs/living-docs/rule-sets"):
         assert f"{place} (living-docs)" in lines, place
+    # software-analysis' places under its recorded location (DEC-001 point 2).
+    analysis_places = (
+        "glossary.md",
+        "use-case-model/actors.md",
+        "use-case-model/use-cases",
+        "use-case-model/journeys",
+    )
+    for place in analysis_places:
+        assert f"tech-docs/analysis/{place} (software-analysis)" in lines, place
 
 
 # --- criterion 2: exactly the adopter-facing `.pkit/` READMEs ----------------
@@ -260,8 +272,11 @@ def test_living_docs_validator_passes_over_this_tree(pkit_on_path: Path) -> None
     assert summary[1].endswith("definition tech-docs/living-docs/rule-sets/user.md.")
     assert summary[2].endswith("definition tech-docs/living-docs/rule-sets/technical.md.")
     # Every place is a page (#1010), each reader resolved against the readers point.
+    # software-analysis contributes the actors of pkit's own analysis (#890, #1001)
+    # as readers under the `act-` prefix, beside living-docs' own two.
     assert summary[4] == (
-        "readers (pkit::documentation:readers): maintainer, user; "
+        "readers (pkit::documentation:readers): act-clone-session, "
+        "act-developer-subagent, act-operator, maintainer, user; "
         f"{len(_project_places())} page reader(s) checked."
     )
 
@@ -384,8 +399,8 @@ def test_every_file_of_the_retired_mapping_s_trees_is_surface_or_left_out_for_a_
     )
     assert sorted(declared & excluded) == []
     # The surface reaches outside none of the trees, and every reason still applies.
-    assert all(
-        rel.startswith(SURFACE_TREES) for rel in files if any(m(rel) for m in surface)
-    )
-    stale = [p for p, m in zip(NOT_SURFACE, left_out) if not any(m(rel) for rel in excluded)]
+    assert all(rel.startswith(SURFACE_TREES) for rel in files if any(m(rel) for m in surface))
+    stale = [
+        p for p, m in zip(NOT_SURFACE, left_out, strict=True) if not any(m(rel) for rel in excluded)
+    ]
     assert stale == []

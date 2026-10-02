@@ -11,7 +11,6 @@ from project_kit.process_journal import (
     JOURNAL_GLOB,
     JournalSettings,
     read_settings,
-    runtime_ignore_patterns,
     settings_from,
 )
 
@@ -67,6 +66,33 @@ def test_journals_are_ignored_unless_logged_and_committed(
 
 
 def test_the_ignore_pattern_follows_the_setting(tmp_path: Path) -> None:
-    assert runtime_ignore_patterns(tmp_path) == [JOURNAL_GLOB]
+    assert read_settings(tmp_path).runtime_ignore_patterns() == [JOURNAL_GLOB]
     _write(tmp_path, "process:\n  journal:\n    enabled: true\n    committed: true\n")
-    assert runtime_ignore_patterns(tmp_path) == []
+    assert read_settings(tmp_path).runtime_ignore_patterns() == []
+
+
+# What the project-management package declared before the backbone took the
+# process-journal ignore line over (#1120).
+_STALE_CLAIM = ".pkit/capabilities/project-management/project/process/**/*.journal.jsonl"
+
+
+@pytest.mark.parametrize(
+    ("settings", "dropped"),
+    [
+        (JournalSettings(enabled=False, committed=False), False),
+        (JournalSettings(enabled=False, committed=True), False),
+        (JournalSettings(enabled=True, committed=False), False),
+        (JournalSettings(enabled=True, committed=True), True),
+    ],
+)
+@pytest.mark.parametrize("pattern", [_STALE_CLAIM, JOURNAL_GLOB])
+def test_a_claim_on_the_journals_is_dropped_only_while_they_are_committed(
+    settings: JournalSettings, dropped: bool, pattern: str
+) -> None:
+    """The backbone's choice takes precedence exactly when it leaves the journals in."""
+    assert settings.drops_claim(pattern) is dropped
+
+
+def test_an_entry_that_is_not_a_journal_is_never_dropped() -> None:
+    committed = JournalSettings(enabled=True, committed=True)
+    assert not committed.drops_claim(".pkit/capabilities/demo/project/process/notes.md")

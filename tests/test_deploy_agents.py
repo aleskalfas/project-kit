@@ -14,7 +14,6 @@ from pathlib import Path
 
 import pytest
 
-
 SOURCE_REPO = Path(__file__).resolve().parents[1]
 DEPLOY_SCRIPT = SOURCE_REPO / ".pkit" / "adapters" / "claude-code" / "deploy-agents.sh"
 RESOLVE_SCRIPT = SOURCE_REPO / ".pkit" / "adapters" / "claude-code" / "_resolve_agent.py"
@@ -171,12 +170,19 @@ def _write_capability_agent(root: Path, capability: str, name: str, where: str) 
         encoding="utf-8",
     )
     source = cap_dir / "agents" / f"{name}.md"
-    source.write_text(f"---\nname: {name}\ndescription: From {where}.\n---\n\n# {name}\n", encoding="utf-8")
+    source.write_text(
+        f"---\nname: {name}\ndescription: From {where}.\n---\n\n# {name}\n", encoding="utf-8"
+    )
     return source
 
 
 def _write_area_agent(root: Path, namespace: str, name: str) -> None:
-    _write_agent(root, namespace, name, f"---\nname: {name}\ndescription: From {namespace}.\n---\n\n# {name}\n")
+    _write_agent(
+        root,
+        namespace,
+        name,
+        f"---\nname: {name}\ndescription: From {namespace}.\n---\n\n# {name}\n",
+    )
 
 
 def _deployed_description(root: Path, name: str) -> str:
@@ -271,14 +277,14 @@ def test_deploy_unresolved_category_degrades_not_aborts(mock_kit: Path) -> None:
     )
 
     result = _run_deploy(mock_kit)
-    assert result.returncode == 0, result.stderr            # degrade, not abort
+    assert result.returncode == 0, result.stderr  # degrade, not abort
     assert "skipped" in result.stdout and "broken" in result.stdout
-    assert "<undefined-category>" in result.stdout          # the missing category named
-    assert "overlay.yaml" in result.stdout                  # remediation pointer
-    assert "pkit agents adopt" in result.stdout             # lead command: adopt
+    assert "<undefined-category>" in result.stdout  # the missing category named
+    assert "overlay.yaml" in result.stdout  # remediation pointer
+    assert "pkit agents adopt" in result.stdout  # lead command: adopt
     assert "pkit agents reconcile --write" in result.stdout  # custom-layout fallback named
-    assert "1 agent(s) skipped" in result.stdout            # end-of-run summary
-    assert (mock_kit / ".claude" / "agents" / "fine.md").is_file()      # rest deployed
+    assert "1 agent(s) skipped" in result.stdout  # end-of-run summary
+    assert (mock_kit / ".claude" / "agents" / "fine.md").is_file()  # rest deployed
     assert not (mock_kit / ".claude" / "agents" / "broken.md").exists()  # the gap one skipped
 
 
@@ -289,6 +295,7 @@ def test_deploy_unresolved_category_degrades_not_aborts(mock_kit: Path) -> None:
 # exercised here: the explicit-`[]` form deploys the agent inert, a bare/absent
 # key skips it with remediation that does NOT promise `adopt`, and an entry
 # resolving into sync-managed content is refused outright.
+
 
 def _write_carrying_agent(root: Path, name: str = "process-author") -> None:
     _write_agent(
@@ -331,7 +338,7 @@ def test_deploy_write_carrying_explicit_empty_list_deploys_inert(mock_kit: Path)
     deployed = mock_kit / ".claude" / "agents" / "process-author.md"
     assert deployed.is_file()
     content = deployed.read_text()
-    assert "owns: []" in content                          # inert: owns nothing
+    assert "owns: []" in content  # inert: owns nothing
     assert f"<{WRITE_CARRYING_CATEGORY}>" not in content  # placeholder resolved
 
 
@@ -347,9 +354,9 @@ def test_deploy_write_carrying_bare_key_skips_with_honest_remediation(mock_kit: 
     result = _run_deploy(mock_kit)
     assert result.returncode == 0, result.stderr
     assert "skipped" in result.stdout and "process-author" in result.stdout
-    assert f"<{WRITE_CARRYING_CATEGORY}>" in result.stdout      # the category named
-    assert "cannot serve" in result.stdout                     # adopt ruled out …
-    assert "pkit agents reconcile --write" in result.stdout     # … the real path named
+    assert f"<{WRITE_CARRYING_CATEGORY}>" in result.stdout  # the category named
+    assert "cannot serve" in result.stdout  # adopt ruled out …
+    assert "pkit agents reconcile --write" in result.stdout  # … the real path named
     assert "Deploy it:  pkit agents adopt" not in result.stdout  # generic advice suppressed
     assert not (mock_kit / ".claude" / "agents" / "process-author.md").exists()
 
@@ -370,11 +377,11 @@ def test_deploy_write_carrying_rejects_sync_managed_path(mock_kit: Path) -> None
     _overlay(mock_kit, f"{WRITE_CARRYING_CATEGORY}:\n  - .pkit/agents/core/\n")
 
     result = _run_deploy(mock_kit)
-    assert result.returncode == 0, result.stderr          # degrade, not abort
+    assert result.returncode == 0, result.stderr  # degrade, not abort
     assert "skipped" in result.stdout
-    assert "sync-managed" in result.stdout                # the reason
-    assert ".pkit/agents/core/" in result.stdout          # the offending path, named
-    assert "overlay.yaml" in result.stdout                # where to fix it
+    assert "sync-managed" in result.stdout  # the reason
+    assert ".pkit/agents/core/" in result.stdout  # the offending path, named
+    assert "overlay.yaml" in result.stdout  # where to fix it
     assert not (mock_kit / ".claude" / "agents" / "process-author.md").exists()
 
 
@@ -470,7 +477,7 @@ def test_deploy_missing_ownership_module_fails_loudly(mock_kit: Path) -> None:
     _overlay(mock_kit, f"{WRITE_CARRYING_CATEGORY}: []\n")
 
     result = _run_deploy(mock_kit)
-    assert result.returncode == 0, result.stderr      # still degrades, not aborts
+    assert result.returncode == 0, result.stderr  # still degrades, not aborts
     assert "skipped" in result.stdout
     assert "ownership.py" in result.stdout
     assert "pkit sync" in result.stdout
@@ -480,7 +487,9 @@ def test_deploy_missing_ownership_module_fails_loudly(mock_kit: Path) -> None:
 def test_deploy_reports_bare_optional_key_and_still_deploys(mock_kit: Path) -> None:
     """A bare optional key deploys the agent (ADR-052) and the run says so (#916)."""
     _write_agent(
-        mock_kit, "core", "producer",
+        mock_kit,
+        "core",
+        "producer",
         "---\nname: producer\ndescription: Test.\n"
         "reads:\n  patterns:\n    - <project-conventions>\n---\n\n# Producer\n",
     )
@@ -530,7 +539,8 @@ def test_deploy_emits_kit_marker_in_resolved_file(mock_kit: Path) -> None:
 
 
 def test_deploy_skips_existing_user_content_without_marker(mock_kit: Path) -> None:
-    """An adopter-authored agent at the same name is NOT overwritten — `skipped` status, kit's version is dropped.
+    """An adopter-authored agent at the same name is NOT overwritten — `skipped` status, kit's
+    version is dropped.
 
     Regression for the silent-overwrite bug discovered in
     example-brownfield: kit's `product-manager.md` deployed over the
@@ -584,12 +594,14 @@ def test_deploy_updates_its_own_marked_files(mock_kit: Path) -> None:
 
 
 def test_deploy_picks_up_agents_from_installed_capabilities(mock_kit: Path) -> None:
-    """An agent shipped by an installed capability gets deployed alongside core agents (per COR-017)."""
+    """An agent shipped by an installed capability gets deployed alongside core agents (per
+    COR-017)."""
     # No core agent — just an agent inside an installed capability.
     cap_agents_dir = mock_kit / ".pkit" / "capabilities" / "evidence" / "agents"
     cap_agents_dir.mkdir(parents=True)
     (cap_agents_dir / "evidence-reviewer.md").write_text(
-        "---\nname: evidence-reviewer\ndescription: From the evidence capability.\n---\n\n# Reviewer\n",
+        "---\nname: evidence-reviewer\ndescription: From the evidence capability.\n---\n\n"
+        "# Reviewer\n",
         encoding="utf-8",
     )
 
@@ -656,8 +668,7 @@ def test_deploy_rewrites_whole_tokens_only(mock_kit: Path) -> None:
     ]
     deployed = (mock_kit / ".claude" / "agents" / "scripted.md").read_text(encoding="utf-8")
     expected = (
-        f"Read `{base}/storyboard.md` and `{base}/review.storyboard.md`; "
-        "not `docs/storyboard.md`."
+        f"Read `{base}/storyboard.md` and `{base}/review.storyboard.md`; not `docs/storyboard.md`."
     )
     assert expected in deployed
 
@@ -728,7 +739,9 @@ def test_unmarked_agent_is_preserved(mock_kit: Path) -> None:
 def test_shipped_agent_survives_prune(mock_kit: Path) -> None:
     """A still-shipped agent deploys and is not swept by the prune pass."""
     _write_agent(
-        mock_kit, "core", "keeper",
+        mock_kit,
+        "core",
+        "keeper",
         "---\nname: keeper\ndescription: t\n---\n# keeper\n",
     )
     _predeploy(mock_kit, "orphan", marked=True)  # also stale, to mix
@@ -751,7 +764,9 @@ def _deployed_front_matter(root: Path, name: str) -> dict:
 
 def _policy_agent(root: Path, name: str, policy: str = "") -> None:
     _write_agent(
-        root, "core", name,
+        root,
+        "core",
+        name,
         f"---\nname: {name}\ndescription: Test.\n{policy}---\n\n# {name}\n",
     )
 
@@ -806,7 +821,9 @@ def test_deploy_policy_override_is_not_an_overlay_category(mock_kit: Path) -> No
     """The policy keys sit beside category overrides in one block without
     becoming categories: the category still resolves, the model still lands."""
     _write_agent(
-        mock_kit, "core", "qa",
+        mock_kit,
+        "core",
+        "qa",
         "---\nname: qa\ndescription: Test.\nowns:\n  - <code-paths>\n---\n\n# QA\n",
     )
     _overlay(

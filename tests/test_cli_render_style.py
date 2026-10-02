@@ -5,7 +5,10 @@ The golden test (``test_never_load_bearing_*``) is the net ADR-011 §3 pins:
 ``strip_ansi(render(color=on)) == render(color=off)``. If it holds, style can
 never carry information the plain text doesn't.
 """
+
 from __future__ import annotations
+
+import io
 
 import pytest
 
@@ -23,6 +26,7 @@ def _reset_color():
 
 
 # --- the gate ----------------------------------------------------------------
+
 
 def test_style_plain_when_disabled():
     cli_render.set_color(False)
@@ -55,6 +59,7 @@ def test_unknown_role_is_a_hard_error():
 
 # --- the never-load-bearing invariant (ADR-011 §3) ---------------------------
 
+
 def test_never_load_bearing_per_role():
     for role in ROLES:
         cli_render.set_color(True)
@@ -67,12 +72,14 @@ def test_never_load_bearing_per_role():
 def _representative_view() -> str:
     return view(
         title=title("permissions", "3 grants", gloss="operator"),
-        sections=[section(
-            rows=[{"name": "fs.read", "scope": "./src"},
-                  {"name": "fs.write", "scope": ""}],
-            columns=["name", "scope"],
-            header="GRANTS", gloss="active",
-        )],
+        sections=[
+            section(
+                rows=[{"name": "fs.read", "scope": "./src"}, {"name": "fs.write", "scope": ""}],
+                columns=["name", "scope"],
+                header="GRANTS",
+                gloss="active",
+            )
+        ],
         status=status("Result", "autonomy reached", gloss="probe passed"),
         legend=[("✓", "allowed")],
         commands=[("pkit permissions probe", "prove it")],
@@ -95,8 +102,10 @@ def test_styled_view_actually_emits_codes():
 
 # --- precedence resolution (ADR-011 §2) --------------------------------------
 
-class _FakeStream:
+
+class _FakeStream(io.StringIO):
     def __init__(self, tty: bool):
+        super().__init__()
         self._tty = tty
 
     def isatty(self) -> bool:

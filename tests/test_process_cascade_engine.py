@@ -292,9 +292,7 @@ commands:
             encoding="utf-8",
         )
         (cap / "schemas").mkdir(parents=True, exist_ok=True)
-        (cap / "schemas" / "poi-verification.yaml").write_text(
-            _INNER_DEFINITION, encoding="utf-8"
-        )
+        (cap / "schemas" / "poi-verification.yaml").write_text(_INNER_DEFINITION, encoding="utf-8")
         (cap / "schemas" / "area-discovery.yaml").write_text(
             _OUTER_TEMPLATE.format(reducer=reducer), encoding="utf-8"
         )
@@ -610,6 +608,59 @@ def test_unresolved_member_holds_fold_unresolved(cascade_repo) -> None:
     assert fold is not None
     assert fold.indeterminate is True
     assert fold.opened is False
+
+
+# --- an unevaluable predicate in the fold says why (#752) -----------------
+
+
+def _saying(words: str, code: int) -> str:
+    """A predicate body that writes `words` on stderr and exits `code`."""
+    return f"import sys\nsys.stderr.write({words!r})\nsys.exit({code})\n"
+
+
+def test_a_broken_members_source_says_why(cascade_repo) -> None:
+    repo = cascade_repo(_ALL_REDUCER)
+    scripts = repo / ".pkit" / "capabilities" / "fixture" / "scripts"
+    _write_script(scripts / "area_pois.py", _saying("tracker unreachable\n", 9))
+    fold = _outer(repo, "a1").resolve_cascade_outcome()
+    assert fold is not None
+    assert fold.indeterminate is True and fold.opened is False  # fail-closed, unchanged
+    assert "(the `members` predicate exited 9)" in fold.reason
+    assert fold.stderr_tail == "tracker unreachable"
+    check = _close_check(_outer(repo, "a1"))
+    assert check.allowed is False
+    assert check.outcome.stderr_tail == "tracker unreachable"
+
+
+def test_a_broken_membership_test_says_why(cascade_repo) -> None:
+    repo = cascade_repo(_ALL_REDUCER)
+    _add_poi(repo, "p1", "a1", "verified")
+    scripts = repo / ".pkit" / "capabilities" / "fixture" / "scripts"
+    _write_script(scripts / "poi_in_area.py", _saying("no area index\n", 7))
+    fold = _outer(repo, "a1").resolve_cascade_outcome()
+    assert fold is not None
+    assert fold.indeterminate is True and fold.opened is False
+    assert "couldn't evaluate membership predicate 'poi-in-area': it exited 7" in fold.reason
+    assert fold.stderr_tail == "no area index"
+
+
+def test_an_unevaluable_member_position_says_why(cascade_repo) -> None:
+    repo = cascade_repo(_ALL_REDUCER)
+    _add_poi(repo, "p1", "a1", "draft")
+    scripts = repo / ".pkit" / "capabilities" / "fixture" / "scripts"
+    _write_script(scripts / "poi_detect_draft.py", _saying("poi store locked\n", 4))
+    fold = _outer(repo).resolve_cascade_outcome()
+    assert fold is not None
+    assert fold.indeterminate is True and fold.opened is False
+    assert "position is indeterminate ('draft': couldn't evaluate detection predicate" in (
+        fold.reason
+    )
+    assert fold.stderr_tail == "poi store locked"
+    status = json.loads(render_status_json(_outer(repo), actor="agent"))
+    assert status["position"]["cascade"]["stderr_tail"] == "poi store locked"
+    assert "the predicate said:\n        poi store locked" in render_status_narrative(
+        _outer(repo), actor="agent"
+    )
 
 
 # --- membership enumerated via predicate (never a global list) ------------

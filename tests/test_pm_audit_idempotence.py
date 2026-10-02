@@ -36,12 +36,31 @@ from types import SimpleNamespace
 
 import pytest
 
+from tests import pull_request_backbone
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS_DIR = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
 CAPABILITY_ROOT = SCRIPTS_DIR.parent
 
 sys.path.insert(0, str(SCRIPTS_DIR))
-from _lib import audit  # noqa: E402
+from _lib import audit, merge_queue  # noqa: E402
+
+
+def _direct_merge(module, monkeypatch) -> None:
+    """The merge verbs' base merges directly (#1011): no merge queue to go
+    through, and GitHub reports the PR merged once the stubbed merge has run —
+    the verbs count a merge only when it does."""
+    merged: list[bool] = []
+
+    def read(n, config):
+        return pull_request_backbone.reading(
+            merge_queue, has_queue=False, pr_state="MERGED" if merged else "OPEN"
+        )
+
+    monkeypatch.setattr(module.merge_queue, "read", read)
+    monkeypatch.setattr(
+        module.pr_merge, "squash_merge", lambda n, **kw: merged.append(True) or True
+    )
 
 
 def _load(script: str, module_name: str):
@@ -146,7 +165,7 @@ def test_unreadable_or_empty_lists_do_not_count() -> None:
 def test_short_sha() -> None:
     assert audit.short_sha("0123456789abcdef") == "0123456"
     assert audit.short_sha("") == "unknown"
-    assert audit.short_sha(None) == "unknown"
+    assert audit.short_sha(None) == "unknown"  # pyright: ignore[reportArgumentType] a head that could not be read arrives as None at run time
 
 
 # ---- the shared post-once ---------------------------------------------
@@ -196,20 +215,34 @@ class _FakeGitHub:
 
     def __call__(self, args, config, **kwargs):
         if list(args[:3]) == ["gh", "api", "graphql"]:
-            payload = {"data": {"repository": {"issue": {"timelineItems": {
-                "totalCount": self.assignment_events}}}}}
+            payload = {
+                "data": {
+                    "repository": {
+                        "issue": {"timelineItems": {"totalCount": self.assignment_events}}
+                    }
+                }
+            }
             return subprocess.CompletedProcess(
-                args=args, returncode=0, stdout=json.dumps(payload), stderr="",
+                args=args,
+                returncode=0,
+                stdout=json.dumps(payload),
+                stderr="",
             )
         if list(args[:3]) == ["gh", "api", "--paginate"] and args[3].endswith("/timeline"):
             events = [*self.label_events, {"event": "commented"}]
             return subprocess.CompletedProcess(
-                args=args, returncode=0, stdout=json.dumps(events), stderr="",
+                args=args,
+                returncode=0,
+                stdout=json.dumps(events),
+                stderr="",
             )
         if list(args[:3]) == ["gh", "issue", "edit"]:
             if self.fail_edits:
                 return subprocess.CompletedProcess(
-                    args=args, returncode=1, stdout="", stderr="HTTP 502",
+                    args=args,
+                    returncode=1,
+                    stdout="",
+                    stderr="HTTP 502",
                 )
             self.edits.append(list(args))
             self.assignment_events += 2
@@ -219,8 +252,10 @@ class _FakeGitHub:
             return subprocess.CompletedProcess(args=args, returncode=0, stdout="", stderr="")
         if "view" in args:
             return subprocess.CompletedProcess(
-                args=args, returncode=0,
-                stdout=json.dumps({"comments": self.comments}), stderr="",
+                args=args,
+                returncode=0,
+                stdout=json.dumps({"comments": self.comments}),
+                stderr="",
             )
         if "comment" in args and "--body" in args:
             body = args[args.index("--body") + 1]
@@ -251,14 +286,21 @@ def _dw_bypass(dw, reason, scope):
 
 def _dw_ci_bypass(dw, reason, scope):
     return dw._post_ci_bypass_audit(
-        7, reason, _identity(dw), ("tests (FAILURE)",), {}, head=scope,
+        7,
+        reason,
+        _identity(dw),
+        ("tests (FAILURE)",),
+        {},
+        head=scope,
     )
 
 
 def _dw_reviewer_override(dw, reason, scope):
     audit_rec = dw._OverrideAudit(
-        reviewer="design-reviewer", capability=None,
-        state="none (no verdict the gate counts)", block_comment_url=None,
+        reviewer="design-reviewer",
+        capability=None,
+        state="none (no verdict the gate counts)",
+        block_comment_url=None,
         head=scope,
     )
     return dw._post_reviewer_override_audit(7, audit_rec, reason, _identity(dw), {})
@@ -266,7 +308,12 @@ def _dw_reviewer_override(dw, reason, scope):
 
 def _mp_ci_bypass(mp, reason, scope):
     return mp._post_ci_bypass_audit(
-        7, reason, _identity(mp), ("tests (FAILURE)",), {}, head=scope,
+        7,
+        reason,
+        _identity(mp),
+        ("tests (FAILURE)",),
+        {},
+        head=scope,
     )
 
 
@@ -290,18 +337,14 @@ def _hi_handoff(hi, reason, scope):
 
 
 WRITERS = {
-    "done-work-bypass": _Writer(
-        "dw", _dw_bypass, "<!-- pkit-hook: done-work-bypass -->"),
-    "done-work-ci-bypass": _Writer(
-        "dw", _dw_ci_bypass, "<!-- pkit-hook: done-work-ci-bypass -->"),
+    "done-work-bypass": _Writer("dw", _dw_bypass, "<!-- pkit-hook: done-work-bypass -->"),
+    "done-work-ci-bypass": _Writer("dw", _dw_ci_bypass, "<!-- pkit-hook: done-work-ci-bypass -->"),
     "done-work-reviewer-override": _Writer(
-        "dw", _dw_reviewer_override, "<!-- pkit-hook: done-work-reviewer-override"),
-    "merge-pr-ci-bypass": _Writer(
-        "mp", _mp_ci_bypass, "<!-- pkit-hook: merge-pr-ci-bypass -->"),
-    "move-issue": _Writer(
-        "mi", _mi_transition, "<!-- pkit-audit-key: move-issue:"),
-    "handoff-issue": _Writer(
-        "hi", _hi_handoff, "<!-- pkit-hook: handoff-issue:alice->bob -->"),
+        "dw", _dw_reviewer_override, "<!-- pkit-hook: done-work-reviewer-override"
+    ),
+    "merge-pr-ci-bypass": _Writer("mp", _mp_ci_bypass, "<!-- pkit-hook: merge-pr-ci-bypass -->"),
+    "move-issue": _Writer("mi", _mi_transition, "<!-- pkit-audit-key: move-issue:"),
+    "handoff-issue": _Writer("hi", _hi_handoff, "<!-- pkit-hook: handoff-issue:alice->bob -->"),
 }
 
 
@@ -468,11 +511,13 @@ def _allow_member(module, monkeypatch) -> None:
     monkeypatch.setattr(module, "load_adopter_config", lambda root: {})
     monkeypatch.setattr(module, "_read_members", lambda root, loader: [])
     monkeypatch.setattr(
-        module, "resolve_invoker_identity",
+        module,
+        "resolve_invoker_identity",
         lambda config=None: SimpleNamespace(github_login="octocat", email="o@e.com"),
     )
     monkeypatch.setattr(
-        module, "check_membership",
+        module,
+        "check_membership",
         lambda members, invoker: SimpleNamespace(allowed=True, refusal_message=None),
     )
     monkeypatch.setattr(module.session_guard, "enforce", lambda **kw: True)
@@ -487,35 +532,50 @@ def _wire_done_work(dw, monkeypatch) -> None:
     monkeypatch.setattr(dw, "resolve_capability_root", lambda arg: CAPABILITY_ROOT)
     monkeypatch.setattr(dw, "_find_issue_branch", lambda n: "fix/42-slug")
     monkeypatch.setattr(
-        dw, "_find_pr_for_branch",
+        dw,
+        "_find_pr_for_branch",
         lambda branch, config: {
-            "number": 496, "title": "fix: x", "isDraft": False,
+            "number": 496,
+            "title": "fix: x",
+            "isDraft": False,
             "headRefOid": "0123456789abcdef",
         },
     )
     monkeypatch.setattr(dw, "_gh_get_issue", lambda n, config: {"labels": [], "body": ""})
     monkeypatch.setattr(
-        dw, "resolve_mode",
+        dw,
+        "resolve_mode",
         lambda config, issue_labels=None: SimpleNamespace(mode="human", source="default"),
     )
     monkeypatch.setattr(
-        dw, "_check_approval_gate",
+        dw,
+        "_check_approval_gate",
         lambda pr_number, pr, bypass_reason, config: dw._GateResult(
-            passed=True, passed_via="bypass", refusal_message="",
+            passed=True,
+            passed_via="bypass",
+            refusal_message="",
         ),
     )
     monkeypatch.setattr(dw, "_gh_get_pr_body", lambda n, config: "## Test plan\n- [x] ok\n")
     monkeypatch.setattr(dw, "_check_pr_placeholder", lambda body, n, root: [])
     monkeypatch.setattr(dw, "_gh_get_status_rollup", lambda n, config: _RED)
-    monkeypatch.setattr(dw.pr_merge, "squash_merge", lambda n, **kw: True)
+    _direct_merge(dw, monkeypatch)
     monkeypatch.setattr(dw.pr_merge, "delete_remote_branch", lambda b, c, **kw: None)
     monkeypatch.setattr(dw.pr_merge, "cleanup_local", lambda b, c, **kw: None)
     monkeypatch.setattr(dw, "_invoke_move_issue", lambda n, target, root: 0)
     monkeypatch.setattr(dw, "_invoke_close_issue", lambda n, pr, root, **kw: 0)
     monkeypatch.setattr(
-        sys, "argv",
-        ["done-work.py", "42", "--bypass", "flaky reviewer",
-         "--bypass-ci", "advisory guard", "--yes"],
+        sys,
+        "argv",
+        [
+            "done-work.py",
+            "42",
+            "--bypass",
+            "flaky reviewer",
+            "--bypass-ci",
+            "advisory guard",
+            "--yes",
+        ],
     )
 
 
@@ -523,27 +583,41 @@ def _wire_merge_pr(mp, monkeypatch) -> None:
     _allow_member(mp, monkeypatch)
     monkeypatch.setattr(mp, "resolve_capability_root", lambda arg: CAPABILITY_ROOT)
     monkeypatch.setattr(
-        mp, "_read_yaml",
+        mp,
+        "_read_yaml",
         lambda path, loader: {"formats": {"pr": {"pattern": r"^fix: .+$"}}},
     )
     monkeypatch.setattr(
-        mp, "_gh_get_pr",
+        mp,
+        "_gh_get_pr",
         lambda n, config: {
-            "title": "fix: a thing", "body": "Closes #42\n## Test plan\n- [x] ok",
-            "state": "open", "url": "http://pr/99", "headRefName": "fix/42-slug",
-            "headRefOid": "0123456789abcdef", "statusCheckRollup": _RED,
+            "title": "fix: a thing",
+            "body": "Closes #42\n## Test plan\n- [x] ok",
+            "state": "open",
+            "url": "http://pr/99",
+            "headRefName": "fix/42-slug",
+            "headRefOid": "0123456789abcdef",
+            "statusCheckRollup": _RED,
             "isCrossRepository": False,
         },
     )
     monkeypatch.setattr(
-        mp, "_gather_unticked_findings", lambda n, body, closing, config: {},
+        mp,
+        "_gather_unticked_findings",
+        lambda n, body, closing, config: {},
     )
-    monkeypatch.setattr(mp.pr_merge, "squash_merge", lambda n, **kw: True)
+    _direct_merge(mp, monkeypatch)
     monkeypatch.setattr(mp.pr_merge, "delete_remote_branch", lambda b, c, **kw: None)
     monkeypatch.setattr(mp.pr_merge, "cleanup_local", lambda b, c, **kw: None)
     monkeypatch.setattr(mp, "fire_hooks", lambda name, **kw: None)
+    # The clone's after-merge record (#1011) is not this file's subject; never
+    # write it into the real clone.
+    monkeypatch.setattr(mp, "_read_record", lambda n: None)
+    monkeypatch.setattr(mp, "_write_record", lambda n, state, head: None)
     monkeypatch.setattr(
-        sys, "argv", ["merge-pr.py", "99", "--bypass-ci", "advisory guard", "--yes"],
+        sys,
+        "argv",
+        ["merge-pr.py", "99", "--bypass-ci", "advisory guard", "--yes"],
     )
 
 
@@ -551,14 +625,19 @@ def _wire_move_issue(mi, monkeypatch) -> None:
     _allow_member(mi, monkeypatch)
     monkeypatch.setattr(mi, "resolve_capability_root", lambda arg: CAPABILITY_ROOT)
     monkeypatch.setattr(
-        mi, "_gh_get_issue",
+        mi,
+        "_gh_get_issue",
         lambda n, config: {
-            "title": "[Task] a thing", "body": "", "state": "OPEN",
-            "labels": [{"name": "type:task"}], "milestone": None,
+            "title": "[Task] a thing",
+            "body": "",
+            "state": "OPEN",
+            "labels": [{"name": "type:task"}],
+            "milestone": None,
         },
     )
     monkeypatch.setattr(
-        mi, "_engine_status",
+        mi,
+        "_engine_status",
         lambda n: {"position": {"state": "todo"}, "journal": [{}, {}]},
     )
     monkeypatch.setattr(mi.axis_carriage, "is_board_carried", lambda *a, **kw: False)
@@ -567,9 +646,19 @@ def _wire_move_issue(mi, monkeypatch) -> None:
     monkeypatch.setattr(mi, "_journal_move", lambda *a, **kw: None)
     monkeypatch.setattr(mi, "fire_hooks", lambda name, **kw: None)
     monkeypatch.setattr(
-        sys, "argv",
-        ["move-issue.py", "42", "--to", "backlog", "--bypass",
-         "--bypass-reason", "verbal PM approval", "--yes", "--no-cascade"],
+        sys,
+        "argv",
+        [
+            "move-issue.py",
+            "42",
+            "--to",
+            "backlog",
+            "--bypass",
+            "--bypass-reason",
+            "verbal PM approval",
+            "--yes",
+            "--no-cascade",
+        ],
     )
 
 
@@ -577,11 +666,13 @@ def _wire_handoff_issue(hi, monkeypatch) -> None:
     _allow_member(hi, monkeypatch)
     monkeypatch.setattr(hi, "resolve_capability_root", lambda arg: CAPABILITY_ROOT)
     monkeypatch.setattr(
-        hi, "_gh_get_issue",
+        hi,
+        "_gh_get_issue",
         lambda n, config: {"state": "OPEN", "assignees": [{"login": "alice"}]},
     )
     monkeypatch.setattr(
-        sys, "argv",
+        sys,
+        "argv",
         ["handoff-issue.py", "42", "--to", "@bob", "--reason", "vacation", "--yes"],
     )
 
@@ -598,7 +689,10 @@ MAIN_SCRIPTS = {
 @pytest.mark.parametrize("planting", sorted(PLANTINGS))
 @pytest.mark.parametrize("script", sorted(MAIN_SCRIPTS))
 def test_main_posts_its_audit_despite_a_planted_or_edited_copy(
-    script, planting, request, monkeypatch,
+    script,
+    planting,
+    request,
+    monkeypatch,
 ) -> None:
     fixture, wire, audits = MAIN_SCRIPTS[script]
     module = request.getfixturevalue(fixture)
@@ -649,9 +743,11 @@ def _wire_move_issue_logging_off(mi, monkeypatch) -> _FakeGitHub:
     real_label_write = mi._gh_apply_state_label
     _wire_move_issue(mi, monkeypatch)
     monkeypatch.setattr(
-        mi, "_engine_status",
+        mi,
+        "_engine_status",
         lambda n: {
-            "position": {"state": "todo"}, "journal": [],
+            "position": {"state": "todo"},
+            "journal": [],
             "journal_logging": {"enabled": False, "committed": False},
         },
     )
@@ -663,7 +759,8 @@ def _wire_move_issue_logging_off(mi, monkeypatch) -> _FakeGitHub:
 
 
 def test_logging_off_the_same_bypass_made_again_posts_its_own_audit(
-    mi, monkeypatch,
+    mi,
+    monkeypatch,
 ) -> None:
     """todo → backlog with a bypass, back to todo, then the same bypass for the
     same reason: two audited mutations, two audit comments."""
@@ -679,7 +776,8 @@ def test_logging_off_the_same_bypass_made_again_posts_its_own_audit(
 
 
 def test_logging_off_a_retry_after_a_failed_label_write_posts_nothing_new(
-    mi, monkeypatch,
+    mi,
+    monkeypatch,
 ) -> None:
     """The control: a failed label write leaves the timeline as it was, so the
     retry reproduces the comment exactly and skips."""

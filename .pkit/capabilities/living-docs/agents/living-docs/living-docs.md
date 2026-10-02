@@ -80,12 +80,14 @@ The one write outside the workspace is a reader-review's findings posted as a pu
 
 | Command | What you take from it |
 |---|---|
-| `pkit friction explain <page> --json` | one page: its state, anchors, findings, the commits behind each changed anchor, and the writer command that answers each (`answers`) |
+| `pkit friction explain <page> --json` | one page: its state, anchors, findings, the commits behind each changed anchor (each with the `paths` the check read as the anchor's change), where a dead path anchor's files went, and the writer command that answers each (`answers`) |
 | `pkit friction debt --json` | the stale and deferred debt, oldest first — which pages to take |
 | `pkit friction check --all --json` | the whole-repository check, upstream first; its measures (unanchored artefacts, uncovered surface) and over-broad anchors |
 | `pkit living-docs validate` | the spaces, their findings, and the unclassified documents — listed in the plain output, counted in the `--json` summary |
 | `pkit connections resolve pkit::documentation:readers --json` | the readers: each entry an `id` and a description of who reads and what they need |
 | `pkit connections resolve pkit::work-tracking:doc-check --json` | a code-to-doc mapping, when a work-tracking provider keeps one: the entries whose `source` is `mapping`, each a `code` pattern and the `documents` it obliges |
+
+**You refuse a friction document of a version you do not read.** The `explain`, `debt` and `check --all` documents each carry `schema_version` at the top; you read version `1`. When one carries any other value, stop before reading it: say which command answered which version, that you read `1`, and that the capability and the backbone are out of step — never read it as if it were `1`, and propose nothing from it. A document without the key comes from a backbone that predates it: read it as version `1`.
 
 What validation already judges — places and their assignment, the shape of a page's fields, entry points, definitions, the friction block's shape, dead anchors — you do not judge a second time. When it fails, name the command and its finding instead of re-deriving it.
 
@@ -97,7 +99,7 @@ Read the storyboard. Take the intent from the request's shape; when it is unclea
 
 ### 2. Friction-fix
 
-Start from `pkit friction explain <page> --json`. Read every commit behind a changed anchor with `git show`, limited to what the anchor matches, then read the page against it. For each statement the changed anchor grounds, decide:
+Start from `pkit friction explain <page> --json`. Read every commit behind a changed anchor with `git show <commit> -- <paths>`, taking each commit's own `paths` — what the check read as the anchor's change, the page's own file never among them — and never the anchor's `files`, which are the two trees' view and miss a file that came and went between them. Then read the page against it. A dead path anchor is validation's finding, not yours to judge again, but its finding's commits say where its ground went: each is the removal or the rename away of files it matched (its `paths`), whenever that happened — read them to see what the anchor should point at now. For each statement the changed anchor grounds, decide:
 
 - still true → untouched;
 - no longer true → rewritten to match;

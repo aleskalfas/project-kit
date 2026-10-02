@@ -2,11 +2,19 @@
 filler file and its envelope, capability contributions, the definer's default
 and how it takes part, the three policies with precedence, whole-entry and
 removal overrides, the contributor selection, the inert policy — and the
-`connections` member of `pkit validate` that reports it, over one wiring per run."""
+`connections` member of `pkit validate` that reports it, over one wiring per run,
+each point resolved once across the processes the run starts, unless its first
+reader ran short of time, and never served to a shell a run's variables were
+left in (#1144)."""
 
 from __future__ import annotations
 
 import json
+import os
+import re
+import shutil
+import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -15,11 +23,10 @@ from click.testing import CliRunner
 from ruamel.yaml import YAML
 
 from project_kit import backbone_schemas as bs
-from project_kit import command_runner
+from project_kit import command_runner, run_cache, validators
 from project_kit import connections as cx
 from project_kit import data_points as dp
 from project_kit import package_validate as pv
-from project_kit import validators
 from project_kit.cli import main
 from project_kit.manifest import (
     ComponentRegistryEntry,
@@ -182,7 +189,8 @@ def test_an_address_maps_to_its_filler_path_and_back(address: str, subpath: str)
 
 
 @pytest.mark.parametrize(
-    "address", ["pkit::Documentation:readers", "pkit:documentation:readers", "pkit::docs", "a::b:c.d"]
+    "address",
+    ["pkit::Documentation:readers", "pkit:documentation:readers", "pkit::docs", "a::b:c.d"],
 )
 def test_an_address_outside_the_word_grammar_has_no_filler_path(address: str) -> None:
     assert bs.filler_subpath(address) is None
@@ -190,7 +198,12 @@ def test_an_address_outside_the_word_grammar_has_no_filler_path(address: str) ->
 
 @pytest.mark.parametrize(
     "subpath",
-    ["pkit/documentation.yaml", "a/b/c/d.yaml", "pkit/documentation/readers.yml", "pkit/Doc/readers.yaml"],
+    [
+        "pkit/documentation.yaml",
+        "a/b/c/d.yaml",
+        "pkit/documentation/readers.yml",
+        "pkit/Doc/readers.yaml",
+    ],
 )
 def test_a_path_that_names_no_point_has_no_address(subpath: str) -> None:
     assert bs.filler_address(subpath) is None
@@ -229,8 +242,9 @@ def test_a_malformed_envelope_is_an_error_and_fills_nothing(repo: AdopterRepo) -
         (f"{READERS_FILE}:/schema_versoin", "error"),
     ]
     assert "'schema_version' is a required property" in messages[READERS_FILE]
-    assert "unknown key 'schema_versoin'; did you mean 'schema_version'?" in (
-        messages[f"{READERS_FILE}:/schema_versoin"]
+    assert (
+        "unknown key 'schema_versoin'; did you mean 'schema_version'?"
+        in (messages[f"{READERS_FILE}:/schema_versoin"])
     )
     point = resolution.point(READERS)
     assert point is not None and not point.resolved
@@ -315,7 +329,12 @@ def test_removals_on_a_single_point_are_an_error(repo: AdopterRepo) -> None:
 
 
 def test_single_precedence_project_then_contribution_then_default(repo: AdopterRepo) -> None:
-    _provider(repo, TOOL, combination="single", default={"value": {"name": "d"}, "participation": "always"})
+    _provider(
+        repo,
+        TOOL,
+        combination="single",
+        default={"value": {"name": "d"}, "participation": "always"},
+    )
     point = _point(repo, TOOL)
     assert (point.value, point.origin) == ({"name": "d"}, dp.DEFAULT)
 
@@ -331,7 +350,9 @@ def test_single_precedence_project_then_contribution_then_default(repo: AdopterR
 
 
 def test_an_alone_default_answers_only_when_nothing_is_declared(repo: AdopterRepo) -> None:
-    _provider(repo, TOOL, combination="single", default={"value": {"name": "d"}, "participation": "alone"})
+    _provider(
+        repo, TOOL, combination="single", default={"value": {"name": "d"}, "participation": "alone"}
+    )
     assert _point(repo, TOOL).value == {"name": "d"}
     _contributor(repo, "evidence", {"name": "e"}, address=TOOL)
     point = _point(repo, TOOL)
@@ -352,7 +373,12 @@ def test_single_without_a_declared_policy_is_single(repo: AdopterRepo) -> None:
 
 
 def test_single_with_a_selection_takes_the_selected_contributor(repo: AdopterRepo) -> None:
-    _provider(repo, TOOL, combination="single", default={"value": {"name": "d"}, "participation": "always"})
+    _provider(
+        repo,
+        TOOL,
+        combination="single",
+        default={"value": {"name": "d"}, "participation": "always"},
+    )
     _contributor(repo, "evidence", {"name": "e"}, address=TOOL)
     _contributor(repo, "notes", {"name": "n"}, address=TOOL)
     _config(repo, f"connections:\n  selections:\n    {TOOL}: notes\n")
@@ -368,7 +394,12 @@ def test_single_with_a_selection_takes_the_selected_contributor(repo: AdopterRep
 def test_single_ambiguous_is_unresolved_and_the_default_does_not_stand_in(
     repo: AdopterRepo,
 ) -> None:
-    _provider(repo, TOOL, combination="single", default={"value": {"name": "d"}, "participation": "always"})
+    _provider(
+        repo,
+        TOOL,
+        combination="single",
+        default={"value": {"name": "d"}, "participation": "always"},
+    )
     _contributor(repo, "evidence", {"name": "e"}, address=TOOL)
     _contributor(repo, "notes", {"name": "n"}, address=TOOL)
     point = _point(repo, TOOL)
@@ -392,7 +423,10 @@ def test_single_with_nothing_declared_and_no_default_is_unfilled(repo: AdopterRe
 
 
 def test_union_merges_by_id_the_project_overriding_whole_entries(repo: AdopterRepo) -> None:
-    _provider(repo, default={"value": ["guest", {"id": "operator", "role": "d"}], "participation": "always"})
+    _provider(
+        repo,
+        default={"value": ["guest", {"id": "operator", "role": "d"}], "participation": "always"},
+    )
     _contributor(repo, "evidence", [{"id": "operator", "role": "e"}, "developer"])
     _filler(repo, {"schema_version": 1, "value": [{"id": "developer"}]})
     point = _point(repo)
@@ -428,7 +462,11 @@ def test_union_suppression_with_a_reason_drops_the_entry(repo: AdopterRepo) -> N
     _contributor(repo, "evidence", ["operator", "guest"])
     _filler(
         repo,
-        {"schema_version": 1, "value": [], "remove": [{"id": "guest", "reason": "No anonymous readers."}]},
+        {
+            "schema_version": 1,
+            "value": [],
+            "remove": [{"id": "guest", "reason": "No anonymous readers."}],
+        },
     )
     point = _point(repo)
     assert point.value == ["operator"]
@@ -452,7 +490,13 @@ def test_additive_keeps_every_entry_in_precedence_order(repo: AdopterRepo) -> No
     _filler(repo, {"schema_version": 1, "value": ["p1"]})
     point = _point(repo)
     assert point.value == ["p1", "e1", "e2", "n1", "d1"]
-    assert [e.origin for e in point.entries] == [dp.PROJECT, "evidence", "evidence", "notes", dp.DEFAULT]
+    assert [e.origin for e in point.entries] == [
+        dp.PROJECT,
+        "evidence",
+        "evidence",
+        "notes",
+        dp.DEFAULT,
+    ]
 
 
 def test_additive_collision_with_the_project_is_an_error_until_a_removal_override(
@@ -537,7 +581,13 @@ def test_a_contribution_naming_command_and_value_is_a_package_error(repo: Adopte
     _stage(
         repo,
         "evidence",
-        {"extensions": {"contributes": [{"point": READERS, "schema_version": 1, "command": "noop", "value": []}]}},
+        {
+            "extensions": {
+                "contributes": [
+                    {"point": READERS, "schema_version": 1, "command": "noop", "value": []}
+                ]
+            }
+        },
     )
     report = pv.validate_installed_packages(repo.root)
     errors = {f.path: f.message for r in report.reports for f in r.errors}
@@ -599,12 +649,16 @@ def _command_contributor(
     *,
     contract: bool = True,
     address: str = READERS,
+    reads: Any = None,
 ) -> None:
     """A capability contributing through the command `export`, whose script records
-    its arguments and the offline marker in the run log, then runs `body`."""
+    its arguments and the offline marker in the run log, then runs `body`. `reads`,
+    when given, is the leaf's declaration of what it reads beyond the working tree."""
     leaf: dict[str, Any] = {"script": "scripts/export.py", "help": "Export the readers."}
     if contract:
         leaf["query-contract"] = True
+    if reads is not None:
+        leaf["reads"] = reads
     entry = {"point": address, "schema_version": 1, "command": "export"}
     _stage(
         repo,
@@ -666,7 +720,9 @@ def test_a_command_filler_answers_with_json_alone_offline_marked(repo: AdopterRe
             "answered for version 2; the point is at version 1",
         ),
         (
-            _printing({"schema_version": 1, "value": ["x"], "remove": [{"id": "a", "reason": "r"}]}),
+            _printing(
+                {"schema_version": 1, "value": ["x"], "remove": [{"id": "a", "reason": "r"}]}
+            ),
             "answered with `remove`: removal overrides are the project's alone",
         ),
         (
@@ -674,12 +730,23 @@ def test_a_command_filler_answers_with_json_alone_offline_marked(repo: AdopterRe
             "its value does not fit the point at /1",
         ),
     ],
-    ids=["timeout", "no-document", "abnormal-exit", "no-envelope", "other-version", "removals", "partial"],
+    ids=[
+        "timeout",
+        "no-document",
+        "abnormal-exit",
+        "no-envelope",
+        "other-version",
+        "removals",
+        "partial",
+    ],
 )
 def test_a_command_filler_without_an_answer_is_inert_never_a_partial_value(
     repo: AdopterRepo, monkeypatch: pytest.MonkeyPatch, body: str, reason: str
 ) -> None:
-    monkeypatch.setattr(command_runner, "COMMAND_TIMEOUT_SECONDS", 1)
+    # Only the case that never answers needs a short bound; the others keep the
+    # default, which a machine busy with other test workers does not run out of.
+    if "did not answer" in reason:
+        monkeypatch.setattr(command_runner, "COMMAND_TIMEOUT_SECONDS", 1)
     _provider(repo, inert="fallback", default={"value": ["guest"], "participation": "alone"})
     _command_contributor(repo, "evidence", body)
     resolution = _resolve(repo)
@@ -745,6 +812,170 @@ def test_validate_runs_each_command_filler_once(repo: AdopterRepo) -> None:
     result = CliRunner().invoke(main, ["validate", "--no-refs"])
     assert result.exit_code == 0, result.output
     assert len(_runs(repo)) == 1
+
+
+# --- what a command filler reads beyond the working tree (COR-052 point 6; #1145) ----
+
+EMPTY = {"schema_version": 1, "value": []}
+
+
+def _reads_line(resolution: dp.DataResolution) -> list[str]:
+    """The `connections` member's lines naming what a filler read."""
+    return [line for line in dp.summary_lines(resolution) if " reads " in line]
+
+
+def test_a_filler_s_reads_come_from_its_leaf_and_name_the_commits_read(
+    repo: AdopterRepo,
+) -> None:
+    _provider(repo)
+    _command_contributor(repo, "evidence", _printing(ANSWER), reads=["settled", "history"])
+    head = repo.commit("initial")
+    resolution = _resolve(repo)
+    point = resolution.point(READERS)
+    assert point is not None and point.resolved and point.value == ["developer"]
+    (filler,) = point.fillers
+    # In canonical order, whatever order the leaf declares them in; no remote, so the
+    # default branch is the local one.
+    assert filler.reads == (
+        dp.FillerRead("history", "HEAD", head, False),
+        dp.FillerRead("settled", "main", head),
+    )
+    assert _reads_line(resolution) == [
+        f"{READERS}: evidence (command 'export') reads history (HEAD {head[:12]}) and the "
+        f"default branch (main at {head[:12]})"
+    ]
+    assert len(_runs(repo)) == 1
+
+
+def test_a_filler_that_declares_no_reads_names_none(repo: AdopterRepo) -> None:
+    _provider(repo)
+    _command_contributor(repo, "evidence", _printing(ANSWER))
+    resolution = _resolve(repo)
+    point = resolution.point(READERS)
+    assert point is not None and point.fillers[0].reads == ()
+    assert _reads_line(resolution) == []
+
+
+def test_a_shallow_clone_is_named_beside_the_history_read(repo: AdopterRepo) -> None:
+    _provider(repo)
+    _command_contributor(repo, "evidence", _printing(ANSWER), reads=["history"])
+    head = repo.commit("initial")
+    # Git's own mark of a shallow clone: the commits whose parents it does not hold.
+    (repo.root / ".git" / "shallow").write_text(f"{head}\n", encoding="utf-8")
+    resolution = _resolve(repo)
+    assert _reads_line(resolution) == [
+        f"{READERS}: evidence (command 'export') reads history (HEAD {head[:12]}, shallow clone)"
+    ]
+    point = resolution.point(READERS)
+    assert point is not None
+    assert point.fillers[0].reads == (dp.FillerRead("history", "HEAD", head, True),)
+
+
+@pytest.mark.parametrize(("inert", "severity"), [("fail", E), ("fallback", W)])
+def test_a_filler_reading_a_default_branch_this_clone_lacks_is_not_started(
+    repo: AdopterRepo, inert: str, severity: validators.Severity
+) -> None:
+    """A remote holds the default branch and its copy was never fetched: the filler
+    is not started, and the fixes are the fetch and the declaration — never a base,
+    which does not reach a filler."""
+    _provider(repo, inert=inert)
+    _command_contributor(repo, "evidence", _printing(EMPTY), reads=["settled"])
+    repo.commit("initial")
+    repo.git("remote", "add", "origin", "https://example.invalid/project.git")
+    resolution = _resolve(repo)
+    assert _runs(repo) == []  # never started
+    point = resolution.point(READERS)
+    assert point is not None and not point.resolved and point.value is None
+    (filler,) = point.fillers
+    assert filler.state is dp.FillerState.INERT
+    assert filler.reason.startswith(
+        "its command 'export' reads the default branch, and the default branch 'main' "
+        "resolves to no commit here: 'origin/main' names none — fetch it (`git fetch origin "
+        "main`), or declare the right one (`repository.default-branch` in "
+    )
+    assert filler.reason.endswith("; a base named for the run does not reach a filler")
+    assert "--base" not in filler.reason and "PKIT_CHECK_BASE" not in filler.reason
+    assert "refs/heads/main" not in filler.reason
+    assert filler.reads == (dp.FillerRead("settled", None, None),)
+    (finding,) = resolution.findings
+    assert finding.severity is severity
+    assert filler.reason in finding.message
+    assert _reads_line(resolution) == [
+        f"{READERS}: evidence (command 'export') reads the default branch (it resolves to no "
+        "commit here)"
+    ]
+
+
+def test_an_unborn_default_branch_starts_the_filler_and_empty_is_its_answer(
+    repo: AdopterRepo,
+) -> None:
+    """No commit and no remote: the state does not exist yet, so the filler runs and
+    answers empty. Once a remote holds the branch this clone has not fetched, the
+    state exists and cannot be reached: no answer, never an empty one."""
+    _provider(repo)
+    _command_contributor(repo, "evidence", _printing(EMPTY), reads=["history", "settled"])
+    resolution = _resolve(repo)
+    point = resolution.point(READERS)
+    assert point is not None and point.resolved and point.value == [] and point.entries == ()
+    assert point.fillers[0].reads == (
+        dp.FillerRead("history", "HEAD", None, False),
+        dp.FillerRead("settled", "main", None),
+    )
+    assert _reads_line(resolution) == [
+        f"{READERS}: evidence (command 'export') reads history (HEAD, no commit yet) and the "
+        "default branch (main, no commit yet)"
+    ]
+    assert len(_runs(repo)) == 1
+
+    repo.git("remote", "add", "origin", "https://example.invalid/project.git")
+    unreachable = _point(repo)
+    assert not unreachable.resolved and unreachable.value is None
+    assert unreachable.fillers[0].state is dp.FillerState.INERT
+    assert len(_runs(repo)) == 1  # not started a second time
+
+
+def test_a_reads_the_backbone_does_not_understand_is_never_run(repo: AdopterRepo) -> None:
+    _provider(repo)
+    _command_contributor(repo, "evidence", _printing(ANSWER), reads=["future"])
+    point = _point(repo)
+    (filler,) = point.fillers
+    assert filler.state is dp.FillerState.INERT
+    assert filler.reason == (
+        "its command 'export' declares a `reads` that is not a list of distinct states among "
+        "history, settled, so it is not run"
+    )
+    assert filler.reads == ()
+    assert _runs(repo) == []
+
+
+def test_a_filler_never_sees_the_base_a_pipeline_names(
+    repo: AdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _provider(repo)
+    _command_contributor(
+        repo,
+        "evidence",
+        "base = os.environ.get('PKIT_CHECK_BASE')\n"
+        + "print(json.dumps({'schema_version': 1, 'value': [base or 'none']}))\n",
+        reads=["settled"],
+    )
+    repo.commit("initial")
+    monkeypatch.setenv("PKIT_CHECK_BASE", "integration")
+    assert _point(repo).value == ["none"]
+
+
+def test_what_a_filler_read_reads_back_from_the_point_s_document(repo: AdopterRepo) -> None:
+    """The run cache keeps a point as its document: what each filler read survives."""
+    _provider(repo)
+    _command_contributor(repo, "evidence", _printing(ANSWER), reads=["history", "settled"])
+    head = repo.commit("initial")
+    point = _point(repo)
+    document = dp.point_document(point)
+    assert document["fillers"][0]["reads"] == [
+        {"state": "history", "ref": "HEAD", "commit": head, "shallow": False},
+        {"state": "settled", "ref": "main", "commit": head},
+    ]
+    assert dp.point_from_document(json.loads(json.dumps(document))) == point
 
 
 # --- the status report (COR-052 point 7) ------------------------------------------------
@@ -861,6 +1092,7 @@ def test_resolve_prints_the_point_as_the_status_report_resolves_it(repo: Adopter
     assert json.loads(result.output) == {
         "address": READERS,
         "defined": True,
+        "from": "resolution",
         "provider": "docs-a",
         "policy": "additive",
         "inert_policy": "fallback",
@@ -870,7 +1102,12 @@ def test_resolve_prints_the_point_as_the_status_report_resolves_it(repo: Adopter
         "value": [{"id": "p1", "role": "owner"}, "n1"],
         "origin": "",
         "entries": [
-            {"id": "p1", "origin": dp.PROJECT, "replaces": [], "value": {"id": "p1", "role": "owner"}},
+            {
+                "id": "p1",
+                "origin": dp.PROJECT,
+                "replaces": [],
+                "value": {"id": "p1", "role": "owner"},
+            },
             {"id": "n1", "origin": "notes", "replaces": [], "value": "n1"},
         ],
         "removals": [{"id": "d1", "reason": "Not ours.", "removed_from": [dp.DEFAULT]}],
@@ -882,6 +1119,7 @@ def test_resolve_prints_the_point_as_the_status_report_resolves_it(repo: Adopter
                 "state": "taken",
                 "reason": "",
                 "query_contract": None,
+                "reads": [],
             },
             {
                 "source": "contribution",
@@ -890,6 +1128,7 @@ def test_resolve_prints_the_point_as_the_status_report_resolves_it(repo: Adopter
                 "state": "taken",
                 "reason": "",
                 "query_contract": True,
+                "reads": [],
             },
             {
                 "source": "default",
@@ -898,6 +1137,7 @@ def test_resolve_prints_the_point_as_the_status_report_resolves_it(repo: Adopter
                 "state": "taken",
                 "reason": "",
                 "query_contract": None,
+                "reads": [],
             },
         ],
     }
@@ -918,7 +1158,10 @@ def test_resolve_an_unresolved_point_exits_1_with_no_value(repo: AdopterRepo) ->
     assert result.exit_code == 1
     document = json.loads(result.output)
     assert (document["resolved"], document["value"], document["entries"]) == (False, None, [])
-    assert document["why"] == "a filler meant to answer is inert, and the point's inert policy is `fail`"
+    assert (
+        document["why"]
+        == "a filler meant to answer is inert, and the point's inert policy is `fail`"
+    )
     states = {f["name"]: (f["state"], f["reason"]) for f in document["fillers"]}
     assert states["notes"][0] == "inert"
     assert states["evidence"] == ("passed over", "answered, but the point does not resolve")
@@ -930,6 +1173,7 @@ def test_resolve_an_address_nothing_defines_exits_1_and_says_why(repo: AdopterRe
     assert json.loads(result.output) == {
         "address": READERS,
         "defined": False,
+        "from": "resolution",
         "resolved": False,
         "value": None,
         "why": "role 'pkit::documentation' has no active provider",
@@ -1035,3 +1279,192 @@ def test_a_point_resolved_first_is_shared_by_the_whole_resolution_of_the_run(
     started.clear()
     assert whole == dp.resolve_data_points(repo.root)
     assert sorted(started) == ["evidence", "notes"]
+
+
+# --- one resolution across the processes of a `pkit validate` run (#1144) -------
+
+
+def _point_reader(
+    repo: AdopterRepo, name: str, address: str = READERS, *, order: int | None = None
+) -> None:
+    """A capability whose validator reads `address` as a capability script does —
+    `pkit connections resolve --json`, in a process of its own — and reports
+    where the document came from, and why the point does not resolve, with each
+    inert filler's reason. `order` places it among the backbone's members."""
+    leaf = {"script": "scripts/check.py", "help": "Read the point.", "query-contract": True}
+    validator: dict[str, Any] = {"command": "check"}
+    if order is not None:
+        validator["order"] = order
+    _stage(
+        repo,
+        name,
+        {},
+        commands={"check": leaf},
+        validators={"points": validator},
+    )
+    script = repo.pkit / "capabilities" / name / "scripts" / "check.py"
+    script.write_text(
+        f"#!{sys.executable}\n"
+        "import json, subprocess\n"
+        f"argv = ['pkit', 'connections', 'resolve', {address!r}, '--json']\n"
+        "doc = json.loads(subprocess.run(argv, capture_output=True, text=True).stdout)\n"
+        "inert = [\n"
+        "    f['name'] + ': ' + f['reason'] for f in doc['fillers'] if f['state'] == 'inert'\n"
+        "]\n"
+        "message = '; '.join([doc['why'], *inert])\n"
+        "findings = [] if doc['resolved'] else [\n"
+        "    {'severity': 'error', 'location': 'point', 'message': message}\n"
+        "]\n"
+        "print(json.dumps({'summary': ['from ' + doc['from']], 'findings': findings}))\n",
+        encoding="utf-8",
+    )
+    script.chmod(0o755)
+
+
+def test_within_one_validate_a_point_resolves_once_and_nested_readers_reuse_it(
+    repo: AdopterRepo, pkit_on_path: Path
+) -> None:
+    _provider(repo)
+    _command_contributor(repo, "evidence", _printing(ANSWER))
+    _point_reader(repo, "reader-a")
+    _point_reader(repo, "reader-b")
+    result = CliRunner().invoke(main, ["validate", "--no-refs"])
+    assert result.exit_code == 0, result.output
+    # The `connections` member resolved it; both validators read that resolution.
+    assert len(_runs(repo)) == 1
+    assert result.output.count("from run-cache") == 2, result.output
+    # Without the member, the first reader resolves it and the second reads that.
+    _log(repo).unlink()
+    only = CliRunner().invoke(
+        main, ["validate", "--only", "reader-a:points", "--only", "reader-b:points"]
+    )
+    assert only.exit_code == 0, only.output
+    assert len(_runs(repo)) == 1
+    sources = [
+        line.strip() for line in only.output.splitlines() if line.strip().startswith("from ")
+    ]
+    assert sources == ["from resolution", "from run-cache"]
+
+
+def test_outside_a_validate_run_a_reading_command_resolves_the_point_itself(
+    repo: AdopterRepo, pkit_on_path: Path
+) -> None:
+    _provider(repo)
+    _command_contributor(repo, "evidence", _printing(ANSWER))
+    assert json.loads(_resolve_cli(READERS, "--json").output)["from"] == "resolution"
+    assert json.loads(_resolve_cli(READERS, "--json").output)["from"] == "resolution"
+    assert len(_runs(repo)) == 2
+
+
+# Serial: the validator, its nested reader and the filler must all start inside
+# the filler's six seconds, which a machine busy with other test workers misses.
+@pytest.mark.serial
+def test_a_filler_a_nested_reader_starts_ends_by_the_outer_deadline_and_is_named(
+    repo: AdopterRepo, pkit_on_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # The filler hangs, having started a process of its own. The nested `pkit
+    # connections resolve` bounds it by what remains of the validator's run, less
+    # the time the validator keeps to answer: the validator answers, the filler is
+    # the one named — with the time its caller had left — and its child ends with
+    # the run. The validator keeps most of its bound to answer, and the filler
+    # gets six seconds to start in, so a loaded machine starting the interpreters
+    # cannot change who overran.
+    _provider(repo, inert="fail")
+    body = (
+        "import subprocess\n"
+        "child = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(60)'])\n"
+        f"open({str(repo.root / '.git' / 'child.pid')!r}, 'w').write(str(child.pid))\n"
+        "time.sleep(60)\n"
+    )
+    _command_contributor(repo, "evidence", body)
+    _point_reader(repo, "reader")
+    monkeypatch.setattr(command_runner, "COMMAND_TIMEOUT_SECONDS", 16)
+    monkeypatch.setattr(command_runner, "ANSWER_MARGIN_SECONDS", 10)
+    result = CliRunner().invoke(main, ["validate", "--only", "reader:points"])
+    assert result.exit_code == 1, result.output
+    assert "command 'check'" not in result.output  # the validator itself answered
+    assert "from resolution" in result.output
+    assert re.search(
+        r"evidence: command 'export' did not answer within the [0-9.]+ s its caller had left",
+        result.output,
+    ), result.output
+    child = int((repo.root / ".git" / "child.pid").read_text())
+    for _ in range(50):
+        try:
+            os.kill(child, 0)
+        except ProcessLookupError:
+            break
+        time.sleep(0.1)
+    else:
+        os.kill(child, 9)
+        pytest.fail("the filler's child outlived the run")
+
+
+def test_a_reader_short_of_time_leaves_the_point_to_a_reader_with_more(
+    repo: AdopterRepo, pkit_on_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A validator ordered before `connections` keeps almost all of its bound to
+    # answer, so its nested reader has too little time for the filler, which
+    # takes two seconds. That no-answer is the reader's own and is not kept: the
+    # `connections` member, with a bound of its own, resolves the point, and a
+    # validator after it reads that resolution from the run cache.
+    _provider(repo)
+    _command_contributor(repo, "evidence", "time.sleep(2)\n" + _printing(ANSWER))
+    _point_reader(repo, "early", order=1)
+    _point_reader(repo, "late")
+    monkeypatch.setattr(command_runner, "COMMAND_TIMEOUT_SECONDS", 12)
+    monkeypatch.setattr(command_runner, "ANSWER_MARGIN_SECONDS", 11)
+    result = CliRunner().invoke(main, ["validate", "--no-refs"])
+    assert result.exit_code == 1, result.output  # the early reader's finding
+    # It ran out of the time its caller had left, or had none left to start in.
+    short = rf"within the [0-9.]+ s its caller had left|{re.escape(command_runner.NO_TIME_LEFT)}"
+    assert re.search(short, result.output), result.output
+    assert "1 data point(s): 1 resolved" in result.output
+    sources = [
+        line.strip() for line in result.output.splitlines() if line.strip().startswith("from ")
+    ]
+    assert sources == ["from resolution", "from run-cache"]
+
+
+def test_variables_a_shell_kept_from_a_run_never_serve_its_points(
+    repo: AdopterRepo, monkeypatch: pytest.MonkeyPatch, tmp_path_factory: pytest.TempPathFactory
+) -> None:
+    # A run's cache, copied before the run removed it, and its deadline and
+    # strays directory, left in a shell: `pkit connections resolve` there
+    # resolves the point itself.
+    _provider(repo)
+    _command_contributor(repo, "evidence", _printing(ANSWER))
+    with run_cache.opened():
+        dp.resolve_point(repo.root, READERS)
+        stale = tmp_path_factory.mktemp("stale") / "cache"
+        shutil.copytree(os.environ[run_cache.CACHE_ENV], stale)
+    assert list(stale.glob("*.json"))  # the run kept the point
+    _log(repo).unlink()
+    monkeypatch.setenv(run_cache.CACHE_ENV, str(stale))
+    monkeypatch.setenv(command_runner.DEADLINE_ENV, f"{time.time() + 20:.3f}")
+    monkeypatch.setenv(command_runner.STRAYS_ENV, str(stale.parent / "strays-removed"))
+    document = json.loads(_resolve_cli(READERS, "--json").output)
+    assert (document["from"], document["resolved"]) == ("resolution", True)
+    assert len(_runs(repo)) == 1
+
+
+def test_a_resolved_point_reads_back_from_its_document(repo: AdopterRepo) -> None:
+    _provider(repo, combination="additive", default={"value": ["d1"], "participation": "always"})
+    _command_contributor(repo, "notes", _printing({"schema_version": 1, "value": ["n1"]}))
+    _filler(
+        repo,
+        {"schema_version": 1, "value": ["p1"], "remove": [{"id": "d1", "reason": "Not ours."}]},
+    )
+    resolved = _point(repo)
+    assert resolved.resolved and resolved.entries and resolved.removals
+    assert dp.point_from_document(dp.point_document(resolved)) == resolved
+    _provider(
+        repo,
+        combination="additive",
+        default={"value": ["d1"], "participation": "always"},
+        inert="fail",
+    )
+    _command_contributor(repo, "notes", "sys.exit(3)\n")
+    unresolved = _point(repo)
+    assert not unresolved.resolved and unresolved.why
+    assert dp.point_from_document(dp.point_document(unresolved)) == unresolved

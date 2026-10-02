@@ -1,0 +1,19 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  A `post-comment` hook now posts one comment per firing, and only its own
+  earlier comment can stop it. It used to skip whenever any comment on the
+  issue or PR contained its fixed `<!-- pkit-hook: <id> -->` stamp, so every
+  firing after the first on a subject was dropped (a second transition, the
+  same hook declared on another event), and anyone could suppress it by
+  posting the stamp. The comment now opens with
+  `<!-- pkit-hook: <id>:<firing> -->`, where `<firing>` is a digest of the
+  hook's id, the event, the issue or PR and, on `after_move_issue`, the
+  transition's from and to states. A retry of the same firing skips only when
+  a comment opening with that line was posted, and not edited since, by the
+  account `gh` posts as. A transition an issue makes a second time, and a
+  second close after a reopen, still count as the same firing. Comments
+  posted under the old bare stamp do not hold a post back, so a hook can
+  post once more on an issue or PR that already has one.

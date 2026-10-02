@@ -5,13 +5,14 @@ commands, each naming what it writes and writing only with consent (point 13):
 
 - `revalidate` rewrites the `revalidated` block: a fresh `at`, the outcome,
   and — for `unchanged` — an `unchanged-because` that must differ from the one
-  already written (point 3). It re-states the deferrals the person keeps:
-  each kept one is named on the command line (`--keep`) or confirmed at the
-  prompt; every other entry is removed (point 4).
+  already written (point 3), and that holds no placeholder left unfilled. It
+  re-states the deferrals the person keeps: each kept one is named on the
+  command line (`--keep`) or confirmed at the prompt; every other entry is
+  removed (point 4).
 - `defer` writes the `deferred` list inside `revalidated` — one entry added,
   or an existing entry's reason reworded — and never touches `at`: a deferral
   is not a revalidation (point 4). An anchor the artefact does not carry is
-  refused.
+  refused, and so is a reason that holds a placeholder left unfilled.
 - `record-status` writes the tool-written `last-check` block from the
   whole-repository check at HEAD, only when the state it records changes
   (point 10): `as-of` moving on alone is no change, so a status that holds is
@@ -24,10 +25,14 @@ other byte of the file as it was. Before anything is written the result is
 read back: the front matter must parse to exactly what it held with that one
 key replaced, and the artefact must pass validation's per-artefact judgments
 (`friction_validate.block_findings`), so a writer never writes what `pkit
-validate` would refuse. Entries are kept in one order — deferrals by anchor
-kind, then value; keys in the schema's order (`anchors`, `revalidated`,
-`last-check`; `at`, `outcome`, `unchanged-because`, `deferred`) — so the same
-input always writes the same bytes.
+validate` would refuse. The edit is made in the file read with `\\n` line
+breaks, as discovery reads it, and written back in the one line break the
+file is written with — a `\\r\\n` file stays one, byte for byte outside the
+key; a file that mixes them is refused, since no one line break would keep
+its other bytes, and validation reports it. Entries are kept in one order — deferrals by anchor
+kind, then value; keys in the schema's order (`anchors`, `unanchored-because`,
+`revalidated`, `last-check`; `at`, `outcome`, `unchanged-because`,
+`deferred`) — so the same input always writes the same bytes.
 
 **Consent.** `--yes`; or, on a terminal, a confirmation shown with the diff;
 `--dry-run` shows the diff and writes nothing; a non-interactive run with
@@ -50,7 +55,7 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple, cast
 
 import click
 from ruamel.yaml import YAML
@@ -64,12 +69,16 @@ from project_kit.friction_check import anchors_of, parsed_at
 from project_kit.friction_discovery import (
     FRICTION_KEY,
     RULES_KEY,
+    UNANCHORED_BECAUSE_KEY,
     Anchor,
     Artefact,
     ArtefactKind,
     discover_artefacts,
+    held_message,
+    line_break,
     parse_artefacts,
     split_front_matter,
+    universal_newlines,
 )
 from project_kit.friction_validate import block_findings
 from project_kit.project_config import stdin_is_tty
@@ -88,7 +97,7 @@ UNCHANGED = "unchanged"
 
 # Where each key goes among its siblings: the schema's order, per parent.
 _KEY_ORDER: dict[str, tuple[str, ...]] = {
-    FRICTION_KEY: ("anchors", REVALIDATED, LAST_CHECK),
+    FRICTION_KEY: ("anchors", UNANCHORED_BECAUSE_KEY, REVALIDATED, LAST_CHECK),
     REVALIDATED: (AT, OUTCOME, BECAUSE, DEFERRED),
 }
 
@@ -99,11 +108,26 @@ _UTC_TIMESTAMP = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9
 # How much of a commit the summary shows.
 _SHORT = 12
 
+#: A placeholder: words in angle brackets, as a command shown for a person to run
+#: writes what they supply — `<why the content still holds>`. A justification or a
+#: reason still holding one says nothing, so the writers refuse it. A word with no
+#: space in its brackets (`Vec<u8>`) or opening in capitals (`Map<String, int>`) is
+#: code, not a placeholder.
+PLACEHOLDER = re.compile(r"<[a-z][^<>\n]*\s[^<>\n]*>")
+
 _safe = YAML(typ="safe")
 
 
 class FrictionWriteError(click.ClickException):
     """A writer refused: nothing was written."""
+
+
+class FileNotReplaced(FrictionWriteError):
+    """`replace_file` refused one file; `reason` says why, for a caller writing several."""
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(f"{reason} Nothing was written.")
+        self.reason = reason
 
 
 class ConsentRefused(click.ClickException):
@@ -119,9 +143,14 @@ def find_artefact(target_root: Path, reference: str) -> Artefact:
     Its location first — `path` for a document, `path#id` for a collection
     entry — then any identifier an artefact anchor may use (its id; a
     document's path; a method rule's `<component>:<id>`). A reference naming
-    none, or more than one, is refused with what it could have meant.
+    none, or more than one, is refused with what it could have meant — and one
+    naming a document a component holds says whose it is: a held document is
+    no artefact, and carries no block to write (COR-050 point 1).
     """
     discovery = discover_artefacts(target_root)
+    held = discovery.holding(reference.split("#", 1)[0])
+    if held is not None:
+        raise FrictionWriteError(f"{held_message(held)} Nothing was written.")
     if not discovery.places:
         raise FrictionWriteError(
             "no places are declared (`friction.places` in .pkit/project/config.yaml, or a "
@@ -155,28 +184,43 @@ def find_artefact(target_root: Path, reference: str) -> Artefact:
 
 @dataclass(frozen=True)
 class _Source:
-    """The artefact's file as read for the edit, and the artefact re-read from exactly that text."""
+    """The artefact's file as read for the edit, and the artefact re-read from exactly that text.
+
+    `written` is the file as it is on disk; `text` the same file with its line
+    breaks read as `\\n` (`universal_newlines`), which every edit is made in,
+    and `newline` the one line break the file is written with, which
+    `as_written` gives an edited text back.
+    """
 
     rel: str  # the file, relative to the project root
     path: Path  # the file written — links resolved, so a link stays a link
+    written: str
     text: str
+    newline: str
     offset: int  # where the front matter's YAML starts in `text`
     front_matter: str
     artefact: Artefact
+
+    def as_written(self, text: str) -> str:
+        """`text`, edited with `\\n` line breaks, in the line break the file is written with."""
+        return text if self.newline == "\n" else text.replace("\n", self.newline)
 
 
 def _read_source(target_root: Path, found: Artefact) -> _Source:
     path = (target_root / found.path).resolve()
     try:
-        text = path.read_bytes().decode("utf-8")
+        written = path.read_bytes().decode("utf-8")
     except (OSError, UnicodeDecodeError) as exc:
         raise FrictionWriteError(f"cannot read {found.path}: {exc}. Nothing was written.") from exc
-    if "\r" in text:
+    newline = line_break(written)
+    if newline is None:
         raise FrictionWriteError(
-            f"{found.path} holds carriage returns (`\\r`, as in Windows line endings); the "
-            f"writers keep every other byte of a file as it was only for `\\n` line endings. "
-            f"Nothing was written."
+            f"{found.path} mixes line endings (`\\n` on some lines, `\\r\\n` or a lone `\\r` on "
+            f"others); the writers keep every other byte of a file as it was, which no one line "
+            f"ending would — write it with one first (`pkit validate` reports it). Nothing was "
+            f"written."
         )
+    text = universal_newlines(written)
     front_matter, _body = split_front_matter(text)
     artefacts, reason = parse_artefacts(found.path, found.place, text, rule_set=found.rule_set)
     same = [a for a in artefacts if a.kind is found.kind and a.id == found.id]
@@ -188,7 +232,9 @@ def _read_source(target_root: Path, found: Artefact) -> _Source:
     return _Source(
         rel=found.path,
         path=path,
+        written=written,
         text=text,
+        newline=newline,
         offset=text.index("\n") + 1,
         front_matter=front_matter,
         artefact=same[0],
@@ -211,7 +257,7 @@ def _friction_block(artefact: Artefact) -> Mapping[str, Any]:
     return artefact.friction
 
 
-def _carrier_keys(artefact: Artefact) -> tuple[str, ...]:
+def carrier_keys(artefact: Artefact) -> tuple[str, ...]:
     """The keys from the front matter's root to the mapping that carries the container."""
     if artefact.kind is ArtefactKind.DOCUMENT:
         return ()
@@ -338,9 +384,9 @@ def plan_revalidate(
     the outcome, the justification for `unchanged`, and the kept deferrals.
     A deferral is kept when `keep` names it or `confirm_keep` says so; the
     rest are removed. Refused: an unknown outcome, `unchanged` without a
-    justification or with the one already written, a justification with
-    `updated`, and keeping a deferral the artefact does not carry or whose
-    anchor it no longer declares.
+    justification, with the one already written or with a placeholder left
+    unfilled (`PLACEHOLDER`), a justification with `updated`, and keeping a
+    deferral the artefact does not carry or whose anchor it no longer declares.
     """
     if outcome not in OUTCOMES:
         raise FrictionWriteError(f"the outcome is `updated` or `unchanged`, not {outcome!r}.")
@@ -356,6 +402,8 @@ def plan_revalidate(
             "`--because` is the justification of an `unchanged` outcome; an `updated` "
             "revalidation carries none — its answer is the changed content. Nothing was written."
         )
+    if justification:
+        _filled(justification, "--because")
 
     source = _read_source(target_root, find_artefact(target_root, reference))
     artefact = source.artefact
@@ -461,7 +509,8 @@ def plan_defer(target_root: Path, reference: str, *, anchor: str, reason: str) -
     list sorted. `at`, `outcome` and `unchanged-because` are left byte for
     byte: a deferral is not a revalidation, and an artefact never revalidated
     gets a `revalidated` block holding `deferred` alone. Refused: an empty
-    anchor or reason, and an anchor the artefact does not carry.
+    anchor or reason, a reason with a placeholder left unfilled, and an anchor
+    the artefact does not carry.
     """
     anchor_text = anchor.strip()
     text = reason.strip()
@@ -474,6 +523,7 @@ def plan_defer(target_root: Path, reference: str, *, anchor: str, reason: str) -
         raise FrictionWriteError(
             "a deferral carries its reason: give `--reason`. Nothing was written."
         )
+    _filled(text, "--reason")
 
     source = _read_source(target_root, find_artefact(target_root, reference))
     artefact = source.artefact
@@ -630,8 +680,8 @@ def _unchanged(
         target=target,
         rel=source.rel,
         path=source.path,
-        before=source.text,
-        after=source.text,
+        before=source.written,
+        after=source.written,
         items=(),
         unchanged=why,
         notes=notes,
@@ -650,7 +700,7 @@ def _plan(
     notes: tuple[str, ...] = (),
 ) -> Plan:
     """Splice `key: value` into the block, read the result back, and describe the write."""
-    carrier = _carrier_keys(source.artefact)
+    carrier = carrier_keys(source.artefact)
     keys = (*carrier, bs.CONTAINER_KEY, *parent)
     splice = _splice(source, keys, key, value)
     front_matter = (
@@ -672,8 +722,8 @@ def _plan(
         target=_target(parent, key),
         rel=source.rel,
         path=source.path,
-        before=source.text,
-        after=after,
+        before=source.written,
+        after=source.as_written(after),
         items=items,
         first_line=first,
         last_line=last,
@@ -704,29 +754,44 @@ def _splice(source: _Source, keys: Sequence[str], key: str, value: Any) -> _Spli
     must exist and be written directly, not through an alias.
     """
     fm = source.front_matter
-    try:
-        root = YAML().compose(io.StringIO(fm))
-    except YAMLError as exc:  # pragma: no cover — discovery has already parsed it
-        raise FrictionWriteError(f"{source.rel}: front matter does not parse: {exc}") from exc
-    parent = root
-    for step in keys:
-        pair = _pair(parent, step) if isinstance(parent, MappingNode) else None
-        if pair is None:
-            raise FrictionWriteError(
-                f"{source.artefact.location}: cannot find `{'.'.join(keys)}` written in the file "
-                f"(is it reached through a YAML alias or merge key?); edit the block by hand. "
-                f"Nothing was written."
-            )
-        parent = pair[1]
+    parent = _node_at(_composed(fm), keys)  # discovery has parsed it: it composes
+    if parent is None:
+        raise FrictionWriteError(
+            f"{source.artefact.location}: cannot find `{'.'.join(keys)}` written in the file "
+            f"(is it reached through a YAML alias or merge key?); edit the block by hand. "
+            f"Nothing was written."
+        )
     if not isinstance(parent, MappingNode):
         raise FrictionWriteError(
             f"{source.artefact.location}: `{'.'.join(keys)}` is not a mapping; fix it first — "
             f"`pkit validate` reports it. Nothing was written."
         )
     existing = _pair(parent, key)
-    if parent.flow_style:
+    if _in_flow(parent):
         return _flow_splice(parent, existing, keys[-1], key, value)
     return _block_splice(fm, parent, existing, keys[-1], key, value, source)
+
+
+def _composed(front_matter: str) -> Node | None:
+    """The front matter's node tree, positions included; `None` when it does not parse."""
+    try:
+        root: Node | None = YAML().compose(io.StringIO(front_matter))
+    except YAMLError:
+        return None
+    return root
+
+
+def _node_at(root: Node | None, keys: Sequence[str]) -> Node | None:
+    """The value `keys` lead to from `root`, each step a key written in a mapping; `None`
+    where a step is not written directly — reached through an alias or merge key — or not
+    at all."""
+    node = root
+    for step in keys:
+        pair = _pair(node, step) if isinstance(node, MappingNode) else None
+        if pair is None:
+            return None
+        node = pair[1]
+    return node
 
 
 def _pair(mapping: MappingNode, key: str) -> tuple[Node, Node] | None:
@@ -734,6 +799,44 @@ def _pair(mapping: MappingNode, key: str) -> tuple[Node, Node] | None:
         if isinstance(key_node, ScalarNode) and key_node.value == key:
             return key_node, value_node
     return None
+
+
+class KeySpan(NamedTuple):
+    """Where a key is written: `[start, end)` from its first character to its value's last,
+    and whether the mapping holding it is written in flow style (`{…}`)."""
+
+    start: int
+    end: int
+    flow: bool
+
+
+def key_span(front_matter: str, keys: Sequence[str]) -> KeySpan | None:
+    """Where the last of `keys` is written in `front_matter`: from its key's first character
+    to its value's last — the characters a write in flow style replaces, and in block style
+    the key's lines without their indentation or line break.
+
+    `None` when the front matter does not parse, or the key is not written directly —
+    reached through an alias or merge key — or not at all.
+    """
+    parent = _node_at(_composed(front_matter), keys[:-1])
+    pair = _pair(parent, keys[-1]) if isinstance(parent, MappingNode) and keys else None
+    if pair is None or not isinstance(parent, MappingNode):
+        return None
+    return KeySpan(*_pair_span(*pair), flow=_in_flow(parent))
+
+
+def _in_flow(mapping: MappingNode) -> bool:
+    """Whether a mapping is written in flow style (`{…}`)."""
+    return mapping.flow_style is True
+
+
+def written_key(key: str, value: Any, *, column: int, flow: bool) -> str:
+    """`key: value` as the writers write it, for the span `key_span` gives of a key starting
+    at `column`: in flow style, or in block style with each further line indented from
+    `column` — from the key's first character to the value's last."""
+    if flow:
+        return f"{key}: {_flow(value)}"
+    return _block(key, value, column)[column:].removesuffix("\n")
 
 
 def _rank(parent_key: str, key: str) -> int:
@@ -780,8 +883,8 @@ def _flow_splice(
 ) -> _Splice:
     written = f"{key}: {_flow(value)}"
     if existing is not None:
-        key_node, value_node = existing
-        return _Splice(key_node.start_mark.index, _pair_end(key_node, value_node), written)
+        start, end = _pair_span(*existing)
+        return _Splice(start, end, written)
     rank = _rank(parent_key, key)
     after = [pair for pair in parent.value if _rank(parent_key, _key_text(pair[0])) > rank]
     if after:
@@ -796,6 +899,11 @@ def _flow_splice(
 
 def _key_text(node: Node) -> str:
     return node.value if isinstance(node, ScalarNode) else ""
+
+
+def _pair_span(key_node: Node, value_node: Node) -> tuple[int, int]:
+    """A key and its value in the text: from the key's first character to the value's last."""
+    return cast(int, key_node.start_mark.index), _pair_end(key_node, value_node)
 
 
 def _pair_end(key_node: Node, value_node: Node) -> int:
@@ -989,6 +1097,17 @@ def ask_keep(anchor: Anchor, reason: str) -> bool:
     )
 
 
+def _filled(text: str, flag: str) -> None:
+    """Refuse `text` while it still holds a placeholder: the words are the person's."""
+    found = PLACEHOLDER.search(text)
+    if found is not None:
+        raise FrictionWriteError(
+            f"`{flag}` still holds the placeholder {found.group(0)!r}: write in its place what "
+            f"it asks for — the one piece of judgment the tool cannot supply (COR-050 point "
+            f"3). Nothing was written."
+        )
+
+
 def command_line(*words: str) -> str:
     """A command as the user would type it, each word quoted where the shell needs it."""
     return " ".join(shlex.quote(word) for word in words)
@@ -1056,20 +1175,24 @@ def apply(plan: Plan, *, yes: bool, dry_run: bool, can_ask: bool, rerun: Sequenc
 
 def write(plan: Plan) -> None:
     """Write the plan's file atomically, keeping its mode; refuse if it changed since read."""
+    replace_file(plan.path, plan.rel, plan.before, plan.after)
+
+
+def replace_file(path: Path, rel: str, before: str, after: str) -> None:
+    """Replace the file at `path` (`rel` names it) with `after` atomically, keeping its mode;
+    refuse, writing nothing, unless it still holds `before`."""
     try:
-        current = plan.path.read_bytes().decode("utf-8")
+        current = path.read_bytes().decode("utf-8")
     except (OSError, UnicodeDecodeError) as exc:
-        raise FrictionWriteError(f"cannot read {plan.rel}: {exc}. Nothing was written.") from exc
-    if current != plan.before:
-        raise FrictionWriteError(
-            f"{plan.rel} changed since it was read; run the command again. Nothing was written."
-        )
-    mode = stat.S_IMODE(plan.path.stat().st_mode)
-    tmp = plan.path.with_name(plan.path.name + ".pkit-tmp")
+        raise FileNotReplaced(f"cannot read {rel}: {exc}.") from exc
+    if current != before:
+        raise FileNotReplaced(f"{rel} changed since it was read; run the command again.")
+    mode = stat.S_IMODE(path.stat().st_mode)
+    tmp = path.with_name(path.name + ".pkit-tmp")
     try:
-        tmp.write_bytes(plan.after.encode("utf-8"))
+        tmp.write_bytes(after.encode("utf-8"))
         os.chmod(tmp, mode)
-        os.replace(tmp, plan.path)
+        os.replace(tmp, path)
     finally:
         tmp.unlink(missing_ok=True)
 
@@ -1077,17 +1200,23 @@ def write(plan: Plan) -> None:
 __all__ = [
     "OUTCOMES",
     "ConsentRefused",
+    "FileNotReplaced",
     "FrictionWriteError",
+    "KeySpan",
     "Plan",
     "apply",
     "ask_keep",
+    "carrier_keys",
     "command_line",
     "find_artefact",
     "interactive",
+    "key_span",
     "plan_defer",
     "plan_record_status",
     "plan_revalidate",
     "render_diff",
     "render_plan",
+    "replace_file",
     "write",
+    "written_key",
 ]

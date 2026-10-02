@@ -391,9 +391,7 @@ def _edges_for(address: str, definition: ProcessDefinition) -> list[Edge]:
     return edges
 
 
-def _annotated_edge(
-    address: str, state_id: str | None, entry: Any
-) -> Edge | None:
+def _annotated_edge(address: str, state_id: str | None, entry: Any) -> Edge | None:
     """Build one annotated edge from a `depends_on` entry, or None when the entry
     is malformed (missing upstream / relation / mode). A render is robust to a
     lint-failing definition: it skips the bad entry rather than raising."""
@@ -475,9 +473,7 @@ def apply_filters(graph: Graph, spec: FilterSpec) -> Graph:
     # narrow whatever it kept.
     if spec.enforced:
         edges = [
-            e
-            for e in edges
-            if e.source == SOURCE_DERIVED or e.relation == "gates-on-readiness"
+            e for e in edges if e.source == SOURCE_DERIVED or e.relation == "gates-on-readiness"
         ]
 
     if spec.sources:
@@ -487,11 +483,7 @@ def apply_filters(graph: Graph, spec: FilterSpec) -> Graph:
     if spec.modes:
         edges = [e for e in edges if e.mode in spec.modes]
     if spec.capability:
-        edges = [
-            e
-            for e in edges
-            if spec.capability in (e.capability_from, e.capability_to)
-        ]
+        edges = [e for e in edges if spec.capability in (e.capability_from, e.capability_to)]
     if spec.seams_only:
         edges = [e for e in edges if e.crosses_capability]
 
@@ -532,9 +524,7 @@ def apply_filters(graph: Graph, spec: FilterSpec) -> Graph:
     )
 
 
-def _focus(
-    edges: list[Edge], process: str, direction: str | None, depth: int | None
-) -> list[Edge]:
+def _focus(edges: list[Edge], process: str, direction: str | None, depth: int | None) -> list[Edge]:
     """Keep edges within `depth` hops of `process`, optionally only out- or
     in-edges. `depth` counts hops along the dependency direction for an out
     focus and against it for an in focus; `None` depth means the full reachable
@@ -690,9 +680,7 @@ def expand_presets(
         direction=base.direction,
         seams_only=seams_only,
         upstream_of=upstream_of if upstream_of is not None else base.upstream_of,
-        downstream_of=downstream_of
-        if downstream_of is not None
-        else base.downstream_of,
+        downstream_of=downstream_of if downstream_of is not None else base.downstream_of,
         cycles_only=cycles_only,
         # The OR-preset rides its own boolean (applied as a union pre-filter in
         # apply_filters), never the AND-combined `sources`/`relations` sets.
@@ -717,9 +705,7 @@ def _skipped_lines(graph: Graph) -> list[str]:
         return []
     count = len(graph.skipped)
     noun = "definition" if count == 1 else "definitions"
-    head = cli_render.style(
-        "warn", f"⚠ {count} {noun} could not be loaded:"
-    )
+    head = cli_render.style("warn", f"⚠ {count} {noun} could not be loaded:")
     lines = ["", "  " + head]
     for s in sorted(graph.skipped, key=Skipped.sort_key):
         lines.extend(cli_render.wrap(f"{s.address} — {s.reason}", indent="    "))
@@ -781,9 +767,7 @@ def render_adjacency(
     return "\n".join(lines) + "\n"
 
 
-def _adjacency_edge_lines(
-    glyph: str, other: str, edge: Edge, verbose: bool
-) -> list[str]:
+def _adjacency_edge_lines(glyph: str, other: str, edge: Edge, verbose: bool) -> list[str]:
     """One edge as a glyph line plus, in verbose mode, its `why` wrapped beneath
     (ADR-024: hanging-indent always, width-wrap TTY-only)."""
     label = _relation_label(edge)
@@ -797,9 +781,7 @@ def _adjacency_edge_lines(
     return out
 
 
-def render_flow(
-    graph: Graph, *, verbose: bool = False, title: str = PROCESS_FLOW_TITLE
-) -> str:
+def render_flow(graph: Graph, *, verbose: bool = False, title: str = PROCESS_FLOW_TITLE) -> str:
     """ASCII PIPELINE view: edges drawn DOWNSTREAM (the work-flows-this-way
     reading). The stored edge is the dependency direction (subscriber ->
     upstream); flow reorients it to upstream ==> subscriber, so a reader follows
@@ -818,9 +800,7 @@ def render_flow(
     # upstream, work flows down into ...".
     upstreams = sorted({e.to for e in graph.edges})
     for upstream in upstreams:
-        downstream = sorted(
-            (e for e in graph.edges if e.to == upstream), key=Edge.sort_key
-        )
+        downstream = sorted((e for e in graph.edges if e.to == upstream), key=Edge.sort_key)
         lines.append("")
         lines.append("  " + cli_render.style("strong", upstream))
         for edge in downstream:
@@ -858,7 +838,7 @@ def render_mermaid(graph: Graph) -> str:
     determinism keeps it diff-friendly.)"""
     lines: list[str] = ["flowchart LR"]
     for node in graph.nodes:
-        lines.append(f"  {_mermaid_node_id(node)}[\"{node}\"]")
+        lines.append(f'  {_mermaid_node_id(node)}["{node}"]')
     for edge in sorted(graph.edges, key=Edge.sort_key):
         src = _mermaid_node_id(edge.frm)
         dst = _mermaid_node_id(edge.to)

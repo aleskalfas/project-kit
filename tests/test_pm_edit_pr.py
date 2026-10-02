@@ -34,18 +34,22 @@ def ep():
     return module
 
 
-def _run(ep, monkeypatch, argv: list[str], *, body: str = PR_BODY,
-         known_issues=(42, 43, 44)) -> SimpleNamespace:
+def _run(
+    ep, monkeypatch, argv: list[str], *, body: str = PR_BODY, known_issues=(42, 43, 44)
+) -> SimpleNamespace:
     monkeypatch.setattr(sys, "argv", ["edit-pr", *argv])
     monkeypatch.setattr(ep, "resolve_capability_root", lambda _explicit: CAP_ROOT)
     monkeypatch.setattr(ep.bootstrap_gate, "enforce", lambda *a, **k: True)
     monkeypatch.setattr(ep.session_guard, "enforce", lambda **k: True)
     monkeypatch.setattr(ep, "load_adopter_config", lambda _root: {})
     monkeypatch.setattr(ep, "_read_members", lambda *a: [])
-    monkeypatch.setattr(ep, "resolve_invoker_identity", lambda **k: SimpleNamespace(github_login="me"))
+    monkeypatch.setattr(
+        ep, "resolve_invoker_identity", lambda **k: SimpleNamespace(github_login="me")
+    )
     monkeypatch.setattr(ep, "check_membership", lambda *a: SimpleNamespace(allowed=True))
     monkeypatch.setattr(
-        ep, "_gh_get_issue",
+        ep,
+        "_gh_get_issue",
         lambda n, _config: {"number": n, "state": "OPEN"} if n in known_issues else None,
     )
 
@@ -97,7 +101,9 @@ def test_force_posts_its_audit_comment(ep, monkeypatch) -> None:
     monkeypatch.setattr(
         ep, "_gh_pr_comment", lambda n, body, config: posted.append((n, body)) or True
     )
-    rec = _run(ep, monkeypatch, ["7", "--body", "no closing line, no doc impact", "--force", "--yes"])
+    rec = _run(
+        ep, monkeypatch, ["7", "--body", "no closing line, no doc impact", "--force", "--yes"]
+    )
     assert rec.rc == 0
     assert posted and posted[0][0] == 7
     assert "--force" in posted[0][1]
@@ -105,7 +111,9 @@ def test_force_posts_its_audit_comment(ep, monkeypatch) -> None:
 
 def test_closes_applies_to_a_replaced_body(ep, monkeypatch, tmp_path) -> None:
     new = tmp_path / "body.md"
-    new.write_text("Closes #42\n\n## Summary\nrewritten\n\n## Doc impact\n- [x] none\n", encoding="utf-8")
+    new.write_text(
+        "Closes #42\n\n## Summary\nrewritten\n\n## Doc impact\n- [x] none\n", encoding="utf-8"
+    )
     rec = _run(ep, monkeypatch, ["7", "--body-file", str(new), "--closes", "43", "--yes"])
     assert rec.rc == 0
     assert rec.edits[0]["body"].startswith("Closes #42\nCloses #43\n\n## Summary\nrewritten")

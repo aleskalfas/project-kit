@@ -1,4 +1,5 @@
 """Tests for the read-only `pkit permissions` CLI (explain / diff / catalog)."""
+
 from __future__ import annotations
 
 import shutil
@@ -28,8 +29,13 @@ def _default_linux_platform(monkeypatch):
     monkeypatch.setattr("sys.platform", "linux")
 
 
-def _setup(tmp_path: Path, *, grants: str | None = None, config: str | None = None,
-           settings: str | None = None) -> Path:
+def _setup(
+    tmp_path: Path,
+    *,
+    grants: str | None = None,
+    config: str | None = None,
+    settings: str | None = None,
+) -> Path:
     """Build a tmp project tree with the real privilege catalog + optional
     model / live settings, and return its root."""
     proj = tmp_path / "proj"
@@ -37,18 +43,21 @@ def _setup(tmp_path: Path, *, grants: str | None = None, config: str | None = No
     # Root-walk install marker (#656): find_target_root only accepts a .pkit/
     # ancestor that carries manifest.yaml (or decisions/).
     (proj / ".pkit" / "manifest.yaml").write_text("backbone_version: 0.0.0\n", encoding="utf-8")
-    for f in ("privilege-catalog.yaml", "privilege-catalog.schema.json",
-              "confinement-toolkit.yaml"):
+    for f in (
+        "privilege-catalog.yaml",
+        "privilege-catalog.schema.json",
+        "confinement-toolkit.yaml",
+    ):
         shutil.copy(REPO / ".pkit" / "schemas" / f, proj / ".pkit" / "schemas" / f)
     # The decision core is propagated into every adopter tree; the CLI imports
     # it to build the model through the same loader the hook uses (ADR-002).
     (proj / ".pkit" / "permissions").mkdir(parents=True, exist_ok=True)
     for mod in ("decide.py", "projection.py"):
-        shutil.copy(REPO / ".pkit" / "permissions" / mod,
-                    proj / ".pkit" / "permissions" / mod)
+        shutil.copy(REPO / ".pkit" / "permissions" / mod, proj / ".pkit" / "permissions" / mod)
     # Shipped permission profiles (ADR-005) so `profile list/show/activate` resolve them.
-    shutil.copytree(REPO / ".pkit" / "permissions" / "profiles",
-                    proj / ".pkit" / "permissions" / "profiles")
+    shutil.copytree(
+        REPO / ".pkit" / "permissions" / "profiles", proj / ".pkit" / "permissions" / "profiles"
+    )
     if grants is not None or config is not None:
         (proj / ".pkit" / "permissions" / "project").mkdir(parents=True)
         if grants is not None:
@@ -104,7 +113,7 @@ def test_explain_renders_a_grant(tmp_path, monkeypatch):
         "schema_version: 1\n"
         "grants:\n"
         "  - subject: agent:critic\n"
-        "    privilege: \"[privilege-catalog:repo-read]\"\n"
+        '    privilege: "[privilege-catalog:repo-read]"\n'
         "    effect: allow\n"
     )
     out = _run(_setup(tmp_path, grants=grants), monkeypatch, "explain")
@@ -125,7 +134,7 @@ def test_diff_clean_when_grant_justifies_live_rule(tmp_path, monkeypatch):
         "schema_version: 1\n"
         "grants:\n"
         "  - subject: operator\n"
-        "    privilege: \"[privilege-catalog:issue-tracker]\"\n"
+        '    privilege: "[privilege-catalog:issue-tracker]"\n'
         "    effect: allow\n"
     )
     settings = '{"permissions": {"allow": ["Bash(gh:*)"], "deny": []}}'
@@ -231,7 +240,7 @@ _ALL_VCS = (
     "schema_version: 1\n"
     "grants:\n"
     "  - subject: all\n"
-    "    privilege: \"[privilege-catalog:vcs]\"\n"
+    '    privilege: "[privilege-catalog:vcs]"\n'
     "    effect: allow\n"
 )
 
@@ -246,10 +255,7 @@ def test_enable_registers_hook_and_native_denies(tmp_path, monkeypatch):
     assert "enabled" in out
     data = _settings(proj)
     entries = data["hooks"]["PreToolUse"]
-    assert any(
-        h.get("command") == HOOK_COMMAND
-        for e in entries for h in e.get("hooks", [])
-    )
+    assert any(h.get("command") == HOOK_COMMAND for e in entries for h in e.get("hooks", []))
     # The fail-closed half of the double-lock is present.
     assert "Bash(sudo:*)" in data["permissions"]["deny"]
 
@@ -267,11 +273,17 @@ def test_disable_strips_only_pkit_hook(tmp_path, monkeypatch):
     proj = _with_adapter(_setup(tmp_path))
     # Pre-existing adopter hook that must survive disable.
     (proj / ".claude").mkdir(parents=True, exist_ok=True)
-    (proj / ".claude" / "settings.json").write_text(json.dumps({
-        "hooks": {"PreToolUse": [
-            {"matcher": "Bash", "hooks": [{"type": "command", "command": "echo mine"}]}
-        ]}
-    }))
+    (proj / ".claude" / "settings.json").write_text(
+        json.dumps(
+            {
+                "hooks": {
+                    "PreToolUse": [
+                        {"matcher": "Bash", "hooks": [{"type": "command", "command": "echo mine"}]}
+                    ]
+                }
+            }
+        )
+    )
     _run(proj, monkeypatch, "enable")
     out = _run(proj, monkeypatch, "disable")
     assert "disabled" in out
@@ -295,6 +307,7 @@ def test_enable_refused_without_adapter(tmp_path, monkeypatch):
 
 
 # --- overview ---------------------------------------------------------------
+
 
 def test_overview_groups_guardrails_and_enablers(tmp_path, monkeypatch):
     out = _run(_setup(tmp_path), monkeypatch, "overview")
@@ -324,9 +337,17 @@ def test_overview_shows_enforcement_status_legend_and_commands(tmp_path, monkeyp
     assert "Live enforcement: OFF" in out
     # Register the hook in the same tree → ON.
     (proj / ".claude").mkdir(parents=True, exist_ok=True)
-    (proj / ".claude" / "settings.json").write_text(json.dumps({"hooks": {"PreToolUse": [
-        {"matcher": "*", "hooks": [{"type": "command", "command": HOOK_COMMAND}]}
-    ]}}))
+    (proj / ".claude" / "settings.json").write_text(
+        json.dumps(
+            {
+                "hooks": {
+                    "PreToolUse": [
+                        {"matcher": "*", "hooks": [{"type": "command", "command": HOOK_COMMAND}]}
+                    ]
+                }
+            }
+        )
+    )
     out = _run(proj, monkeypatch, "overview")
     assert "Live enforcement: ON" in out
     # The explanatory scaffolding the user asked for.
@@ -336,13 +357,14 @@ def test_overview_shows_enforcement_status_legend_and_commands(tmp_path, monkeyp
 
 # ---- apply (additive realization, #250) ------------------------------------
 
+
 def test_apply_realizes_allow_and_guardrail_denies(tmp_path, monkeypatch):
     proj = _with_adapter(_setup(tmp_path, grants=_ALL_VCS))
     out = _run(proj, monkeypatch, "apply")
     assert "applied (additive)" in out
     data = _settings(proj)
-    assert "Bash(git:*)" in data["permissions"]["allow"]          # projected allow
-    assert "Bash(sudo:*)" in data["permissions"]["deny"]          # ensured guardrail deny
+    assert "Bash(git:*)" in data["permissions"]["allow"]  # projected allow
+    assert "Bash(sudo:*)" in data["permissions"]["deny"]  # ensured guardrail deny
 
 
 def test_apply_is_idempotent(tmp_path, monkeypatch):
@@ -368,14 +390,14 @@ def test_apply_reports_out_of_harness_gap(tmp_path, monkeypatch):
         "schema_version: 1\n"
         "grants:\n"
         "  - subject: agent:pm\n"
-        "    privilege: \"[privilege-catalog:vcs]\"\n"
+        '    privilege: "[privilege-catalog:vcs]"\n'
         "    effect: allow\n"
     )
     proj = _with_adapter(_setup(tmp_path, grants=grants))
     out = _run(proj, monkeypatch, "apply")
     assert "out-of-harness gap" in out
-    assert "enforced at runtime" in out                 # pm's vcs (per-agent bash)
-    assert "not natively enforceable" in out            # network-egress (enforcement: none)
+    assert "enforced at runtime" in out  # pm's vcs (per-agent bash)
+    assert "not natively enforceable" in out  # network-egress (enforcement: none)
 
 
 def test_apply_refused_without_adapter(tmp_path, monkeypatch):
@@ -384,10 +406,13 @@ def test_apply_refused_without_adapter(tmp_path, monkeypatch):
 
 
 def test_apply_refused_in_managed_mode(tmp_path, monkeypatch):
-    proj = _with_adapter(_setup(
-        tmp_path, grants=_ALL_VCS,
-        config="schema_version: 1\nownership_mode: managed\nposture: lenient\n",
-    ))
+    proj = _with_adapter(
+        _setup(
+            tmp_path,
+            grants=_ALL_VCS,
+            config="schema_version: 1\nownership_mode: managed\nposture: lenient\n",
+        )
+    )
     out = _run_fail(proj, monkeypatch, "apply")
     assert "managed" in out and "#252" in out
 
@@ -472,16 +497,17 @@ def test_apply_never_touches_unledgered_local_rules(tmp_path, monkeypatch):
     (proj / ".claude").mkdir(parents=True, exist_ok=True)
     # Operator/harness-authored local allows, one of which (WebFetch) the
     # profile also expects — pre-existing, so never claimed by the ledger.
-    (proj / ".claude" / "settings.local.json").write_text(json.dumps(
-        {"permissions": {"allow": ["Bash(myown:*)", "WebFetch"]}}))
+    (proj / ".claude" / "settings.local.json").write_text(
+        json.dumps({"permissions": {"allow": ["Bash(myown:*)", "WebFetch"]}})
+    )
     _run(proj, monkeypatch, "profile", "activate", "autonomous", "--no-apply")
     _run(proj, monkeypatch, "apply")
     assert "WebFetch" not in _ledger_doc(proj)["rules"]
     _run(proj, monkeypatch, "profile", "activate", "read-only", "--no-apply")
     _run(proj, monkeypatch, "apply")
     local_allow = _settings_local(proj)["permissions"]["allow"]
-    assert "Bash(myown:*)" in local_allow    # untouched through both applies
-    assert "WebFetch" in local_allow         # operator-authored → heal-immune
+    assert "Bash(myown:*)" in local_allow  # untouched through both applies
+    assert "WebFetch" in local_allow  # operator-authored → heal-immune
     assert "Bash(docker:*)" not in local_allow
 
 
@@ -528,6 +554,7 @@ def test_diff_union_scope_sees_local_realization(tmp_path, monkeypatch):
 
 
 # ---- profiles (#255 / ADR-005) ---------------------------------------------
+
 
 def test_profile_list_shows_shipped_tiers(tmp_path, monkeypatch):
     out = _run(_setup(tmp_path), monkeypatch, "profile", "list")
@@ -593,12 +620,12 @@ def test_profile_activate_marks_active_in_list(tmp_path, monkeypatch):
 
 def test_profile_activate_does_not_clobber_manual_grants(tmp_path, monkeypatch):
     proj = _setup(tmp_path)
-    _run(proj, monkeypatch, "grant", "agent:devops", "docker")          # manual grant
+    _run(proj, monkeypatch, "grant", "agent:devops", "docker")  # manual grant
     _run(proj, monkeypatch, "profile", "activate", "non-destructive", "--no-apply")
     g = (proj / ".pkit" / "permissions" / "project" / "grants.yaml").read_text()
-    assert "[privilege-catalog:docker]" in g                            # still there
+    assert "[privilege-catalog:docker]" in g  # still there
     out = _run(proj, monkeypatch, "explain", "devops")
-    assert "docker" in out                                              # manual grant survives
+    assert "docker" in out  # manual grant survives
 
 
 def test_profile_activate_unknown_refused(tmp_path, monkeypatch):
@@ -620,26 +647,37 @@ def test_active_profile_accessor_reads_sidecar(tmp_path, monkeypatch):
 
 def test_active_profile_accessor_config_fallback(tmp_path, monkeypatch):
     # Adopter mid-migration: active_profile still in config.yaml, no sidecar.
-    proj = _setup(tmp_path, config=(
-        "schema_version: 1\nownership_mode: additive\nposture: lenient\n"
-        "active_profile: read-only\n"))
+    proj = _setup(
+        tmp_path,
+        config=(
+            "schema_version: 1\nownership_mode: additive\nposture: lenient\n"
+            "active_profile: read-only\n"
+        ),
+    )
     assert not (proj / ".pkit" / "permissions" / "project" / "active-profile.yaml").exists()
     assert _perm._active_profile(proj) == "read-only"
 
 
 def test_active_profile_sidecar_wins_over_config(tmp_path, monkeypatch):
-    proj = _setup(tmp_path, config=(
-        "schema_version: 1\nownership_mode: additive\nposture: lenient\n"
-        "active_profile: stale\n"))
+    proj = _setup(
+        tmp_path,
+        config=(
+            "schema_version: 1\nownership_mode: additive\nposture: lenient\nactive_profile: stale\n"
+        ),
+    )
     _perm._set_active_profile(proj, "read-only")
     assert _perm._active_profile(proj) == "read-only"
 
 
 def test_relocate_active_profile_moves_config_to_sidecar(tmp_path, monkeypatch):
-    proj = _setup(tmp_path, config=(
-        "schema_version: 1\nownership_mode: additive\nposture: lenient\n"
-        "confinement_accommodations: []\n"
-        "active_profile: read-only\n"))
+    proj = _setup(
+        tmp_path,
+        config=(
+            "schema_version: 1\nownership_mode: additive\nposture: lenient\n"
+            "confinement_accommodations: []\n"
+            "active_profile: read-only\n"
+        ),
+    )
     moved = _perm._relocate_tracked_active_profile(proj)
     assert len(moved) == 1 and "read-only" in moved[0]
     # Sidecar now carries the value...
@@ -653,9 +691,13 @@ def test_relocate_active_profile_moves_config_to_sidecar(tmp_path, monkeypatch):
 
 
 def test_relocate_active_profile_idempotent(tmp_path, monkeypatch):
-    proj = _setup(tmp_path, config=(
-        "schema_version: 1\nownership_mode: additive\nposture: lenient\n"
-        "active_profile: read-only\n"))
+    proj = _setup(
+        tmp_path,
+        config=(
+            "schema_version: 1\nownership_mode: additive\nposture: lenient\n"
+            "active_profile: read-only\n"
+        ),
+    )
     first = _perm._relocate_tracked_active_profile(proj)
     second = _perm._relocate_tracked_active_profile(proj)
     assert len(first) == 1 and second == []  # second run is a no-op
@@ -664,9 +706,13 @@ def test_relocate_active_profile_idempotent(tmp_path, monkeypatch):
 
 def test_relocate_active_profile_no_clobber_live_sidecar(tmp_path, monkeypatch):
     # A live sidecar value is NEVER overwritten by a (stale) config copy (#288).
-    proj = _setup(tmp_path, config=(
-        "schema_version: 1\nownership_mode: additive\nposture: lenient\n"
-        "active_profile: stale-in-config\n"))
+    proj = _setup(
+        tmp_path,
+        config=(
+            "schema_version: 1\nownership_mode: additive\nposture: lenient\n"
+            "active_profile: stale-in-config\n"
+        ),
+    )
     _perm._set_active_profile(proj, "live-in-sidecar")
     _perm._relocate_tracked_active_profile(proj)
     assert _perm._active_profile(proj) == "live-in-sidecar"  # sidecar wins, unharmed
@@ -675,8 +721,9 @@ def test_relocate_active_profile_no_clobber_live_sidecar(tmp_path, monkeypatch):
 
 
 def test_relocate_active_profile_noop_when_absent(tmp_path, monkeypatch):
-    proj = _setup(tmp_path, config=(
-        "schema_version: 1\nownership_mode: additive\nposture: lenient\n"))
+    proj = _setup(
+        tmp_path, config=("schema_version: 1\nownership_mode: additive\nposture: lenient\n")
+    )
     assert _perm._relocate_tracked_active_profile(proj) == []
 
 
@@ -702,19 +749,19 @@ def test_sandbox_enable_writes_fail_closed_block(tmp_path, monkeypatch):
     proj = _with_adapter(_setup(tmp_path))
     out = _run(proj, monkeypatch, "sandbox", "enable")
     assert "sandbox enabled" in out
-    assert "not hot-reloaded" in out                       # restart note
+    assert "not hot-reloaded" in out  # restart note
     sb = _settings(proj)["sandbox"]
     # ADR-032: `enabled` is harness-co-owned → routes to the gitignored local
     # file (the `/sandbox` panel's home), NOT the committed floor. pkit no longer
     # authors a parallel committed `enabled` key.
     assert "enabled" not in sb
     assert _sb_local(proj)["enabled"] is True
-    assert _sb(proj)["enabled"] is True                    # union resolves on
+    assert _sb(proj)["enabled"] is True  # union resolves on
     assert sb["autoAllowBashIfSandboxed"] is True
-    assert sb["failIfUnavailable"] is True                 # the ADR-004 invariant
-    assert "allowUnsandboxedCommands" not in sb            # reconciled: harness default
+    assert sb["failIfUnavailable"] is True  # the ADR-004 invariant
+    assert "allowUnsandboxedCommands" not in sb  # reconciled: harness default
     for p in CRED_PATHS:
-        assert p in sb["filesystem"]["denyRead"]           # credential floor
+        assert p in sb["filesystem"]["denyRead"]  # credential floor
 
 
 def test_sandbox_enable_idempotent(tmp_path, monkeypatch):
@@ -723,20 +770,24 @@ def test_sandbox_enable_idempotent(tmp_path, monkeypatch):
     before = _settings(proj)
     out = _run(proj, monkeypatch, "sandbox", "enable")
     assert "already" in out
-    assert _settings(proj) == before                       # fixed point, no duplicates
+    assert _settings(proj) == before  # fixed point, no duplicates
 
 
 def test_sandbox_enable_additive_preserves_operator_keys(tmp_path, monkeypatch):
-    settings = json.dumps({"sandbox": {
-        "excludedCommands": ["docker *"],
-        "filesystem": {"denyRead": ["~/secrets"]},
-    }})
+    settings = json.dumps(
+        {
+            "sandbox": {
+                "excludedCommands": ["docker *"],
+                "filesystem": {"denyRead": ["~/secrets"]},
+            }
+        }
+    )
     proj = _with_adapter(_setup(tmp_path, settings=settings))
     _run(proj, monkeypatch, "sandbox", "enable")
     sb = _settings(proj)["sandbox"]
-    assert sb["excludedCommands"] == ["docker *"]          # operator key survives
-    assert "~/secrets" in sb["filesystem"]["denyRead"]     # operator entry survives
-    assert "~/.ssh" in sb["filesystem"]["denyRead"]        # floor unioned in
+    assert sb["excludedCommands"] == ["docker *"]  # operator key survives
+    assert "~/secrets" in sb["filesystem"]["denyRead"]  # operator entry survives
+    assert "~/.ssh" in sb["filesystem"]["denyRead"]  # floor unioned in
 
 
 def test_sandbox_enable_strict_locks_fail_over(tmp_path, monkeypatch):
@@ -785,11 +836,11 @@ def test_sandbox_enable_then_disable_resolves_off(tmp_path, monkeypatch):
     # OFF. This is the load-bearing fix.
     proj = _with_adapter(_setup(tmp_path))
     _run(proj, monkeypatch, "sandbox", "enable")
-    assert _sb(proj)["enabled"] is True                    # union on after enable
-    assert _sb_local(proj)["enabled"] is True              # written to the local key
+    assert _sb(proj)["enabled"] is True  # union on after enable
+    assert _sb_local(proj)["enabled"] is True  # written to the local key
     _run(proj, monkeypatch, "sandbox", "disable")
-    assert _sb(proj)["enabled"] is False                   # union OFF — actually off
-    assert _sb_local(proj)["enabled"] is False             # the harness-read key is off
+    assert _sb(proj)["enabled"] is False  # union OFF — actually off
+    assert _sb_local(proj)["enabled"] is False  # the harness-read key is off
 
 
 def test_sandbox_disable_pops_drifted_committed_enabled_true(tmp_path, monkeypatch):
@@ -798,7 +849,7 @@ def test_sandbox_disable_pops_drifted_committed_enabled_true(tmp_path, monkeypat
     # AND POPS the stale committed source (not set false; #406) so the committed
     # file carries no `enabled` key, and nothing in the union claims on.
     proj = _with_adapter(_setup(tmp_path))
-    _run(proj, monkeypatch, "sandbox", "enable")           # local enabled=true
+    _run(proj, monkeypatch, "sandbox", "enable")  # local enabled=true
     # Inject a drifted committed enabled: true (the regression this guards). Keep a
     # floor key so the committed sandbox block survives the pop.
     committed_path = proj / ".claude" / "settings.json"
@@ -808,10 +859,10 @@ def test_sandbox_disable_pops_drifted_committed_enabled_true(tmp_path, monkeypat
     csb.setdefault("filesystem", {})["denyRead"] = ["~/.ssh"]
     committed_path.write_text(json.dumps(committed))
     _run(proj, monkeypatch, "sandbox", "disable")
-    assert "enabled" not in _settings(proj)["sandbox"]     # popped, not set false (#406)
+    assert "enabled" not in _settings(proj)["sandbox"]  # popped, not set false (#406)
     assert _settings(proj)["sandbox"]["filesystem"]["denyRead"] == ["~/.ssh"]  # floor intact
     assert _sb_local(proj)["enabled"] is False
-    assert _sb(proj)["enabled"] is False                   # union OFF
+    assert _sb(proj)["enabled"] is False  # union OFF
 
 
 def test_sandbox_disable_pops_stale_committed_enabled_false_residue(tmp_path, monkeypatch):
@@ -819,15 +870,15 @@ def test_sandbox_disable_pops_stale_committed_enabled_false_residue(tmp_path, mo
     # tracked residue the old set-to-false branch left behind. disable must POP it,
     # not leave it — the committed file carries no `enabled` source.
     proj = _with_adapter(_setup(tmp_path))
-    _run(proj, monkeypatch, "sandbox", "enable")           # local enabled=true (union on)
+    _run(proj, monkeypatch, "sandbox", "enable")  # local enabled=true (union on)
     committed_path = proj / ".claude" / "settings.json"
     committed = json.loads(committed_path.read_text())
     csb = committed.setdefault("sandbox", {})
-    csb["enabled"] = False                                 # stale residue
+    csb["enabled"] = False  # stale residue
     csb.setdefault("filesystem", {})["denyRead"] = ["~/.ssh"]
     committed_path.write_text(json.dumps(committed))
     _run(proj, monkeypatch, "sandbox", "disable")
-    assert "enabled" not in _settings(proj)["sandbox"]     # residue removed
+    assert "enabled" not in _settings(proj)["sandbox"]  # residue removed
     assert _settings(proj)["sandbox"]["filesystem"]["denyRead"] == ["~/.ssh"]  # floor intact
 
 
@@ -835,16 +886,16 @@ def test_sandbox_disable_removes_emptied_committed_sandbox_block(tmp_path, monke
     # #406: when popping `enabled` leaves the committed sandbox block empty, the
     # empty block is cleaned up too — no `"sandbox": {}` residue.
     proj = _with_adapter(_setup(tmp_path))
-    _run(proj, monkeypatch, "sandbox", "enable")           # local enabled=true (union on)
+    _run(proj, monkeypatch, "sandbox", "enable")  # local enabled=true (union on)
     committed_path = proj / ".claude" / "settings.json"
     committed = json.loads(committed_path.read_text())
-    committed["sandbox"] = {"enabled": True}               # ONLY enabled — block empties
+    committed["sandbox"] = {"enabled": True}  # ONLY enabled — block empties
     committed_path.write_text(json.dumps(committed))
     _run(proj, monkeypatch, "sandbox", "disable")
     committed_after = json.loads(committed_path.read_text())
-    assert "sandbox" not in committed_after                # empty block removed
+    assert "sandbox" not in committed_after  # empty block removed
     assert _sb_local(proj)["enabled"] is False
-    assert _sb(proj)["enabled"] is False                   # union OFF
+    assert _sb(proj)["enabled"] is False  # union OFF
 
 
 def test_sandbox_disable_noop_when_no_committed_sandbox_block(tmp_path, monkeypatch):
@@ -852,27 +903,27 @@ def test_sandbox_disable_noop_when_no_committed_sandbox_block(tmp_path, monkeypa
     # block when none exists. The committed file is left without one; the local key
     # carries the authoritative `enabled: false`.
     proj = _with_adapter(_setup(tmp_path))
-    _run(proj, monkeypatch, "sandbox", "enable")           # local enabled=true (union on)
+    _run(proj, monkeypatch, "sandbox", "enable")  # local enabled=true (union on)
     committed_path = proj / ".claude" / "settings.json"
     committed = json.loads(committed_path.read_text())
-    committed.pop("sandbox", None)                          # no committed sandbox block
+    committed.pop("sandbox", None)  # no committed sandbox block
     committed_path.write_text(json.dumps(committed))
     _run(proj, monkeypatch, "sandbox", "disable")
     committed_after = json.loads(committed_path.read_text())
-    assert "sandbox" not in committed_after                # none invented
-    assert _sb_local(proj)["enabled"] is False             # authoritative value local
+    assert "sandbox" not in committed_after  # none invented
+    assert _sb_local(proj)["enabled"] is False  # authoritative value local
     assert _sb(proj)["enabled"] is False
 
 
 def test_sandbox_status_off_and_on(tmp_path, monkeypatch):
     proj = _with_adapter(_setup(tmp_path))
-    out = _run(proj, monkeypatch, "sandbox")               # no subcommand = status
+    out = _run(proj, monkeypatch, "sandbox")  # no subcommand = status
     assert "OFF" in out and "sandbox enable" in out
     _run(proj, monkeypatch, "sandbox", "enable")
     out = _run(proj, monkeypatch, "sandbox")
     assert "ON" in out and "prompt-free" in out
-    assert "closed" in out                                 # fail mode line
-    assert "complete" in out                               # credential floor line
+    assert "closed" in out  # fail mode line
+    assert "complete" in out  # credential floor line
 
 
 def test_sandbox_status_warns_on_fail_open(tmp_path, monkeypatch):
@@ -889,11 +940,12 @@ def test_sandbox_enable_refused_without_adapter(tmp_path, monkeypatch):
 
 # ---- auto-accommodation of narrowing toolkits on sandbox enable (#22) --------
 
+
 def test_sandbox_enable_auto_accommodates_uv_when_detected(tmp_path, monkeypatch):
     """When uv.lock is present, `sandbox enable` auto-applies the uv-cache
     narrowing allowance via the provenance writer (ADR-008 single-writer rule)."""
     proj = _with_adapter(_setup(tmp_path))
-    (proj / "uv.lock").write_text("")              # signals uv toolkit
+    (proj / "uv.lock").write_text("")  # signals uv toolkit
     out = _run(proj, monkeypatch, "sandbox", "enable")
     assert "auto-accommodated" in out and "uv" in out
     assert "~/.cache/uv" in _sb(proj)["filesystem"]["allowWrite"]
@@ -931,8 +983,8 @@ def test_sandbox_enable_does_not_accommodate_when_uv_absent(tmp_path, monkeypatc
 def test_sandbox_enable_auto_accommodate_provenance_tagged_narrowing(tmp_path, monkeypatch):
     """The auto-applied uv allowance is recorded in sandbox-provenance.yaml as
     authored by the 'uv' toolkit (the provenance writer — ADR-008 rule 2)."""
-    import json as _json
     from ruamel.yaml import YAML as _YAML
+
     proj = _with_adapter(_setup(tmp_path))
     (proj / "pyproject.toml").write_text("[build-system]\n")  # pyproject.toml also detects uv
     _run(proj, monkeypatch, "sandbox", "enable")
@@ -960,6 +1012,7 @@ def test_overview_banner_gains_sandbox_line(tmp_path, monkeypatch):
 
 
 # ---- probe (#276) ------------------------------------------------------------
+
 
 def test_probe_empty_model_guardrails_hold_and_exit_zero(tmp_path, monkeypatch):
     out = _run(_setup(tmp_path), monkeypatch, "probe")
@@ -1028,10 +1081,12 @@ def test_probe_catches_dropped_guardrail_via_golden_expectation(tmp_path, monkey
     # static golden expectation (guardrail: always deny) catches the regression.
     proj = _setup(tmp_path)
     core = proj / ".pkit" / "permissions" / "decide.py"
-    core.write_text(core.read_text().replace(
-        "for pid in sorted(catalog.get(\"privileges\", {})):",
-        "for pid in []:",
-    ))
+    core.write_text(
+        core.read_text().replace(
+            'for pid in sorted(catalog.get("privileges", {})):',
+            "for pid in []:",
+        )
+    )
     out = _run_fail(proj, monkeypatch, "probe")
     assert "BROKEN" in out and "golden expectation" in out
 
@@ -1065,11 +1120,13 @@ def test_probe_double_lock_missing_deny_breaks_only_when_hook_on(tmp_path, monke
 
 def test_probe_live_confinement_honest_verdicts(tmp_path, monkeypatch):
     from project_kit import permissions as perm
+
     proj = _with_adapter(_setup(tmp_path))
     readable = tmp_path / "fake-cred"
     readable.write_text("not-a-secret")
-    monkeypatch.setattr(perm, "SANDBOX_CREDENTIAL_DENY_READ",
-                        [str(readable), str(tmp_path / "absent-cred")])
+    monkeypatch.setattr(
+        perm, "SANDBOX_CREDENTIAL_DENY_READ", [str(readable), str(tmp_path / "absent-cred")]
+    )
     # Sandbox OFF in settings → ALLOWED is "not configured", never a pass.
     out = _run(proj, monkeypatch, "probe", "--live")
     assert "CONFINEMENT FLOOR" in out
@@ -1087,7 +1144,7 @@ def test_probe_subject_agent(tmp_path, monkeypatch):
         "schema_version: 1\n"
         "grants:\n"
         "  - subject: agent:critic\n"
-        "    privilege: \"[privilege-catalog:repo-read]\"\n"
+        '    privilege: "[privilege-catalog:repo-read]"\n'
         "    effect: allow\n"
     )
     proj = _setup(tmp_path, grants=grants)
@@ -1104,10 +1161,10 @@ _WORKSPACE_GRANTS = (
     "schema_version: 1\n"
     "grants:\n"
     "  - subject: all\n"
-    "    privilege: \"[privilege-catalog:workspace]\"\n"
+    '    privilege: "[privilege-catalog:workspace]"\n'
     "    effect: allow\n"
     "  - subject: agent:critic\n"
-    "    privilege: \"[privilege-catalog:workspace]\"\n"
+    '    privilege: "[privilege-catalog:workspace]"\n'
     "    effect: deny\n"
 )
 
@@ -1144,6 +1201,7 @@ def test_probe_invalid_subject_refused(tmp_path, monkeypatch):
 
 # ---- setup goals (ADR-007, #279) ----------------------------------------------
 
+
 def test_setup_lists_goals_when_bare(tmp_path, monkeypatch):
     out = _run(_setup(tmp_path), monkeypatch, "setup")
     assert "autonomy" in out and "resumable" in out
@@ -1175,8 +1233,11 @@ def test_setup_autonomy_first_run_stands_up_and_stops_at_restart(tmp_path, monke
     assert "allowUnsandboxedCommands" not in data["sandbox"]
     assert _sb_local(proj)["allowUnsandboxedCommands"] is False
     assert "unsandboxed escape sealed" in out
-    assert any("permission-hook" in h.get("command", "")
-               for e in data["hooks"]["PreToolUse"] for h in e.get("hooks", []))
+    assert any(
+        "permission-hook" in h.get("command", "")
+        for e in data["hooks"]["PreToolUse"]
+        for h in e.get("hooks", [])
+    )
 
 
 def test_setup_autonomy_relocates_config_active_profile_to_sidecar(tmp_path, monkeypatch):
@@ -1184,9 +1245,15 @@ def test_setup_autonomy_relocates_config_active_profile_to_sidecar(tmp_path, mon
     # in config.yaml. `setup autonomy` finds the profile already active (via the
     # config fallback) AND relocates it to the per-machine sidecar, stripping it
     # from the tracked config.yaml (no-clobber, reported).
-    proj = _with_adapter(_setup(tmp_path, config=(
-        "schema_version: 1\nownership_mode: additive\nposture: lenient\n"
-        "active_profile: autonomous\n")))
+    proj = _with_adapter(
+        _setup(
+            tmp_path,
+            config=(
+                "schema_version: 1\nownership_mode: additive\nposture: lenient\n"
+                "active_profile: autonomous\n"
+            ),
+        )
+    )
     out = _run(proj, monkeypatch, "setup", "autonomy")
     assert "relocated active profile `autonomous` to active-profile.yaml" in out
     sidecar = (proj / ".pkit" / "permissions" / "project" / "active-profile.yaml").read_text()
@@ -1199,8 +1266,8 @@ def test_setup_autonomy_relocates_config_active_profile_to_sidecar(tmp_path, mon
 
 def test_setup_autonomy_resumes_and_reports_pending_outside_box(tmp_path, monkeypatch):
     proj = _with_adapter(_setup(tmp_path))
-    _run(proj, monkeypatch, "setup", "autonomy")          # first run: stands up
-    out = _run(proj, monkeypatch, "setup", "autonomy")    # re-run: skips + verifies
+    _run(proj, monkeypatch, "setup", "autonomy")  # first run: stands up
+    out = _run(proj, monkeypatch, "setup", "autonomy")  # re-run: skips + verifies
     assert "already — profile 'autonomous' active" in out
     assert "already — PreToolUse hook registered" in out
     assert "already — OS sandbox enabled" in out
@@ -1213,6 +1280,7 @@ def test_setup_autonomy_resumes_and_reports_pending_outside_box(tmp_path, monkey
 
 def test_setup_autonomy_declares_goal_only_when_floor_proven(tmp_path, monkeypatch):
     from project_kit import permissions as perm
+
     proj = _with_adapter(_setup(tmp_path))
     _run(proj, monkeypatch, "setup", "autonomy")
     # Simulate running inside the box: the credential floor is OS-rejected.
@@ -1252,7 +1320,7 @@ def test_setup_autonomy_down_reports_residuals_loudly(tmp_path, monkeypatch):
     # the union resolves OFF. The committed floor keeps the operator keys.
     assert _sb_local(proj)["enabled"] is False
     assert _sb(proj)["enabled"] is False
-    assert "~/.ssh" in data["sandbox"]["filesystem"]["denyRead"]   # operator keys left
+    assert "~/.ssh" in data["sandbox"]["filesystem"]["denyRead"]  # operator keys left
     # Idempotent re-run.
     out = _run(proj, monkeypatch, "setup", "autonomy", "down")
     assert "hook already off" in out and "sandbox already off" in out
@@ -1271,6 +1339,7 @@ def test_setup_autonomy_no_dangerous_flag(tmp_path, monkeypatch):
 
 
 # ---- ADR-028: setup autonomy seals the unsandboxed escape (strict default) ---
+
 
 def test_setup_autonomy_seals_unsandboxed_escape_by_default(tmp_path, monkeypatch):
     # ADR-028 cond. 1+2: standing up the autonomy posture writes
@@ -1312,7 +1381,7 @@ def test_setup_autonomy_macos_gates_off_the_os_sandbox(tmp_path, monkeypatch):
     assert "unsupported on macOS" in out
     assert "excludedCommands" in out and "denyRead ~/.config/gh" in out
     assert "#312" in out and "#313" in out
-    assert _sb(proj).get("enabled") is not True             # union resolves OFF
+    assert _sb(proj).get("enabled") is not True  # union resolves OFF
     # No strict seal on macOS — it is a sandbox-escape key, moot without a box.
     assert _sb(proj).get("allowUnsandboxedCommands") is None
 
@@ -1324,7 +1393,7 @@ def test_setup_autonomy_seal_is_reversible_via_non_strict_enable(tmp_path, monke
     proj = _with_adapter(_setup(tmp_path))
     _run(proj, monkeypatch, "setup", "autonomy")
     assert _sb_local(proj)["allowUnsandboxedCommands"] is False
-    out = _run(proj, monkeypatch, "sandbox", "enable")    # no --strict
+    out = _run(proj, monkeypatch, "sandbox", "enable")  # no --strict
     assert "strict off" in out and "escape restored" in out
     assert "allowUnsandboxedCommands" not in _sb(proj)
 
@@ -1332,6 +1401,7 @@ def test_setup_autonomy_seal_is_reversible_via_non_strict_enable(tmp_path, monke
 def _prov_entries(proj: Path) -> list:
     """Read the sandbox-provenance ledger entries (empty when absent)."""
     from ruamel.yaml import YAML as _YAML
+
     p = proj / ".pkit" / "permissions" / "project" / "sandbox-provenance.yaml"
     if not p.is_file():
         return []
@@ -1345,13 +1415,15 @@ def test_non_strict_enable_preserves_operator_hand_set_seal(tmp_path, monkeypatc
     # non-strict `sandbox enable`. pkit reverses only the *posture's* pkit-set
     # seal (ADR-028 cond. 5), never an operator's hand-hardened box. This is the
     # case the unprovenanced `del` broke.
-    proj = _with_adapter(_setup(
-        tmp_path,
-        settings=json.dumps({"sandbox": {"enabled": True, "allowUnsandboxedCommands": False}}),
-    ))
+    proj = _with_adapter(
+        _setup(
+            tmp_path,
+            settings=json.dumps({"sandbox": {"enabled": True, "allowUnsandboxedCommands": False}}),
+        )
+    )
     # No seal provenance exists — the operator set it by raw edit.
     assert not any(e.get("kind") == "seal" for e in _prov_entries(proj))
-    out = _run(proj, monkeypatch, "sandbox", "enable")    # no --strict
+    out = _run(proj, monkeypatch, "sandbox", "enable")  # no --strict
     # The operator's seal is UNTOUCHED — never cleared, never reported as restored.
     assert _settings(proj)["sandbox"]["allowUnsandboxedCommands"] is False
     assert "escape restored" not in out
@@ -1364,13 +1436,15 @@ def test_non_strict_enable_clears_pkit_authored_seal_and_its_provenance(tmp_path
     proj = _with_adapter(_setup(tmp_path))
     _run(proj, monkeypatch, "sandbox", "enable", "--strict")
     assert _sb_local(proj)["allowUnsandboxedCommands"] is False
-    assert any(e.get("kind") == "seal" and e.get("toolkit") == "_strict"
-               for e in _prov_entries(proj)), "strict enable must record seal provenance"
-    out = _run(proj, monkeypatch, "sandbox", "enable")    # no --strict
+    assert any(
+        e.get("kind") == "seal" and e.get("toolkit") == "_strict" for e in _prov_entries(proj)
+    ), "strict enable must record seal provenance"
+    out = _run(proj, monkeypatch, "sandbox", "enable")  # no --strict
     assert "escape restored" in out
     assert "allowUnsandboxedCommands" not in _sb(proj)
-    assert not any(e.get("kind") == "seal" for e in _prov_entries(proj)), \
+    assert not any(e.get("kind") == "seal" for e in _prov_entries(proj)), (
         "seal provenance must be cleared alongside the settings"
+    )
 
 
 def test_seal_round_trips_setup_autonomy_then_non_strict_then_resetup(tmp_path, monkeypatch):
@@ -1383,11 +1457,11 @@ def test_seal_round_trips_setup_autonomy_then_non_strict_then_resetup(tmp_path, 
     assert _sb_local(proj)["allowUnsandboxedCommands"] is False
     assert any(e.get("kind") == "seal" for e in _prov_entries(proj))
 
-    _run(proj, monkeypatch, "sandbox", "enable")          # non-strict: reverse
+    _run(proj, monkeypatch, "sandbox", "enable")  # non-strict: reverse
     assert "allowUnsandboxedCommands" not in _sb(proj)
     assert not any(e.get("kind") == "seal" for e in _prov_entries(proj))
 
-    _run(proj, monkeypatch, "setup", "autonomy")          # re-seal
+    _run(proj, monkeypatch, "setup", "autonomy")  # re-seal
     assert _sb_local(proj)["allowUnsandboxedCommands"] is False
     assert any(e.get("kind") == "seal" for e in _prov_entries(proj))
 
@@ -1419,6 +1493,7 @@ def test_setup_autonomy_seal_leaves_decide_py_untouched(tmp_path, monkeypatch):
 
 # ---- confinement allowances (ADR-008, #281) ----------------------------------
 
+
 def _sb_file(proj: Path, name: str) -> dict:
     p = proj / ".claude" / name
     if not p.is_file():
@@ -1447,7 +1522,7 @@ def _merge_sb(committed: dict, local: dict) -> dict:
         cv, lv = committed.get(key), local.get(key)
         if isinstance(cv, list) or isinstance(lv, list):
             merged = list(cv or [])
-            for item in (lv or []):
+            for item in lv or []:
                 if item not in merged:
                     merged.append(item)
             out[key] = merged
@@ -1475,7 +1550,7 @@ def test_strip_committed_sandbox_enabled_pops_key_and_reports_change():
         committed = {"sandbox": {"enabled": value, "failIfUnavailable": True}}
         changed = perm._strip_committed_sandbox_enabled(committed)
         assert changed is True
-        assert "enabled" not in committed["sandbox"]        # popped, not set false
+        assert "enabled" not in committed["sandbox"]  # popped, not set false
         assert committed["sandbox"]["failIfUnavailable"] is True  # other floor untouched
 
 
@@ -1486,7 +1561,7 @@ def test_strip_committed_sandbox_enabled_removes_emptied_block():
 
     only_enabled = {"sandbox": {"enabled": True}}
     assert perm._strip_committed_sandbox_enabled(only_enabled) is True
-    assert "sandbox" not in only_enabled                     # empty block removed
+    assert "sandbox" not in only_enabled  # empty block removed
 
     with_floors = {"sandbox": {"enabled": True, "filesystem": {"denyRead": ["~/.ssh"]}}}
     assert perm._strip_committed_sandbox_enabled(with_floors) is True
@@ -1576,13 +1651,13 @@ def test_accommodate_widening_only_tool_nudges_to_exclude(tmp_path, monkeypatch)
     proj = _with_adapter(_setup(tmp_path))
     out = _run(proj, monkeypatch, "sandbox", "accommodate", "docker")
     assert "all WIDENING" in out and "sandbox exclude docker" in out
-    assert "excludedCommands" not in _sb(proj)   # never applied here
+    assert "excludedCommands" not in _sb(proj)  # never applied here
 
 
 def test_accommodate_detect(tmp_path, monkeypatch):
     proj = _with_adapter(_setup(tmp_path))
-    (proj / "uv.lock").write_text("")              # signals uv
-    (proj / "Dockerfile").write_text("FROM x")     # signals docker (widening)
+    (proj / "uv.lock").write_text("")  # signals uv
+    (proj / "Dockerfile").write_text("FROM x")  # signals docker (widening)
     out = _run(proj, monkeypatch, "sandbox", "accommodate", "--detect")
     assert "uv" in out
     assert "~/.cache/uv" in _sb(proj)["filesystem"]["allowWrite"]
@@ -1594,10 +1669,12 @@ def test_accommodate_remove_only_pkit_entries(tmp_path, monkeypatch):
     proj = _with_adapter(_setup(tmp_path))
     # operator hand-added the SAME path independently.
     (proj / ".claude").mkdir(parents=True, exist_ok=True)
-    (proj / ".claude" / "settings.json").write_text(json.dumps({
-        "sandbox": {"enabled": True, "filesystem": {"allowWrite": ["~/.cache/uv", "~/mine"]}}
-    }))
-    _run(proj, monkeypatch, "sandbox", "accommodate", "uv")     # pkit also "adds" it (dedup)
+    (proj / ".claude" / "settings.json").write_text(
+        json.dumps(
+            {"sandbox": {"enabled": True, "filesystem": {"allowWrite": ["~/.cache/uv", "~/mine"]}}}
+        )
+    )
+    _run(proj, monkeypatch, "sandbox", "accommodate", "uv")  # pkit also "adds" it (dedup)
     _run(proj, monkeypatch, "sandbox", "accommodate", "uv", "--remove")
     aw = _sb(proj)["filesystem"]["allowWrite"]
     # provenance had uv→~/.cache/uv; removal drops it, but operator's ~/mine stays.
@@ -1637,6 +1714,7 @@ def test_exclude_needs_command_or_flag(tmp_path, monkeypatch):
 
 def test_setup_autonomy_applies_accommodations_and_nudges_widening(tmp_path, monkeypatch):
     from project_kit import permissions as perm
+
     # This test exercises the NUDGE-ONLY (optional widening) path; neutralise the
     # required-exclusion auto-apply (its own tests below) so the run is
     # deterministic regardless of the host platform / installed uv version.
@@ -1654,14 +1732,15 @@ def test_setup_autonomy_applies_accommodations_and_nudges_widening(tmp_path, mon
     assert "Next — run these yourself" in out
     # docker is an OPTIONAL widening (not the macOS-mandatory uv/pkit) → "optional" copy
     assert "`docker` — optional" in out and "run unconfined" in out
-    assert "`pkit permissions sandbox exclude docker`" in out   # backtick-wrapped, own line
-    assert "────" not in out          # no drawn rules (convention)
-    assert "── NEXT" not in out        # no divider header either
+    assert "`pkit permissions sandbox exclude docker`" in out  # backtick-wrapped, own line
+    assert "────" not in out  # no drawn rules (convention)
+    assert "── NEXT" not in out  # no divider header either
     assert "excludedCommands" not in _sb(proj)
 
 
 def test_setup_autonomy_down_reports_accommodation_residual(tmp_path, monkeypatch):
     from project_kit import permissions as perm
+
     # Deterministic across hosts: neutralise the required-exclusion auto-apply so
     # the residual under test is the narrowing accommodation + the operator's
     # manual docker widening (the required exclusion has its own teardown test).
@@ -1669,7 +1748,7 @@ def test_setup_autonomy_down_reports_accommodation_residual(tmp_path, monkeypatc
     proj = _with_adapter(_setup(tmp_path))
     (proj / "uv.lock").write_text("")
     _run(proj, monkeypatch, "setup", "autonomy")
-    _run(proj, monkeypatch, "sandbox", "exclude", "docker")     # a manual widening
+    _run(proj, monkeypatch, "sandbox", "exclude", "docker")  # a manual widening
     out = _run(proj, monkeypatch, "setup", "autonomy", "down")
     assert "narrowing accommodations remain" in out and "uv" in out
     assert "WIDENING exclusions remain" in out and "docker" in out
@@ -1685,19 +1764,19 @@ def test_setup_autonomy_down_reports_accommodation_residual(tmp_path, monkeypatc
 from packaging.version import Version as _V  # noqa: E402
 
 
-def _force_uv(monkeypatch, *, platform="darwin", version="0.9.8"):
+def _force_uv(monkeypatch, *, platform="darwin", version: str | None = "0.9.8"):
     """Make the auto-apply predicate deterministic: pin the platform and the
     installed uv version. version=None simulates uv unreadable / absent."""
     from project_kit import permissions as perm
+
     monkeypatch.setattr("sys.platform", platform)
-    monkeypatch.setattr(perm, "_read_uv_version",
-                        lambda: (_V(version) if version else None))
+    monkeypatch.setattr(perm, "_read_uv_version", lambda: _V(version) if version else None)
 
 
 def test_required_exclusion_auto_applies_on_macos_old_uv_with_marker(tmp_path, monkeypatch):
     _force_uv(monkeypatch, platform="darwin", version="0.9.8")
     proj = _with_adapter(_setup(tmp_path))
-    (proj / "uv.lock").write_text("")                 # real project use
+    (proj / "uv.lock").write_text("")  # real project use
     out = _run(proj, monkeypatch, "setup", "autonomy")
     # Loud, dedicated block (NOT folded into the quiet "accommodations:" line).
     assert "Required exclusion (platform-mandatory" in out
@@ -1713,9 +1792,11 @@ def test_required_exclusion_auto_applies_on_macos_old_uv_with_marker(tmp_path, m
     # Distinct provenance tag — `_required`, NOT `_manual`.
     prov_path = proj / ".pkit" / "permissions" / "project" / "sandbox-provenance.yaml"
     from ruamel.yaml import YAML as _YAML
+
     doc = _YAML(typ="safe").load(prov_path.open())
-    req = [e for e in doc["entries"]
-           if e.get("kind") == "exclude-command" and e.get("value") == "uv"]
+    req = [
+        e for e in doc["entries"] if e.get("kind") == "exclude-command" and e.get("value") == "uv"
+    ]
     assert req and req[0]["toolkit"] == "_required"
     assert all(e.get("toolkit") != "_manual" for e in req)
     # Not surfaced as a nudge too (would be double-reported).
@@ -1724,27 +1805,30 @@ def test_required_exclusion_auto_applies_on_macos_old_uv_with_marker(tmp_path, m
 
 @pytest.mark.parametrize("version", ["0.9.8", "0.9.9", "1.5.0"])
 def test_required_exclusion_auto_applies_on_every_version_while_no_fix(
-        tmp_path, monkeypatch, version):
+    tmp_path, monkeypatch, version
+):
     # With no known-fixed release (the default), the Seatbelt panic is present in
     # EVERY uv release — so auto-apply must fire on any readable version, NOT just
     # at/below the first known-bad. The 0.9.9 case is the regression guard: the
     # old `installed <= known-bad-floor` ceiling wrongly nudged it instead of
     # auto-applying (0.9.9 <= 0.9.8 is False).
     from project_kit import permissions as perm
-    assert perm._UV_KNOWN_FIXED_RELEASE is None      # default: no fix known
+
+    assert perm._UV_KNOWN_FIXED_RELEASE is None  # default: no fix known
     _force_uv(monkeypatch, platform="darwin", version=version)
     proj = _with_adapter(_setup(tmp_path))
     (proj / "uv.lock").write_text("")
     out = _run(proj, monkeypatch, "setup", "autonomy")
     assert "REQUIRED exclusion auto-applied: `uv`" in out
     assert "uv" in _sb(proj)["excludedCommands"]
-    assert "`uv` — REQUIRED on macOS" not in out      # not also nudged
+    assert "`uv` — REQUIRED on macOS" not in out  # not also nudged
 
 
 def test_required_exclusion_auto_applies_below_fixed_release(tmp_path, monkeypatch):
     # A known-fixed release is set, but the installed uv is still below it → the
     # panic still occurs → auto-apply.
     from project_kit import permissions as perm
+
     monkeypatch.setattr(perm, "_UV_KNOWN_FIXED_RELEASE", "0.10.0")
     _force_uv(monkeypatch, platform="darwin", version="0.9.9")
     proj = _with_adapter(_setup(tmp_path))
@@ -1755,11 +1839,11 @@ def test_required_exclusion_auto_applies_below_fixed_release(tmp_path, monkeypat
 
 
 @pytest.mark.parametrize("version", ["0.10.0", "0.10.1"])
-def test_required_exclusion_not_applied_at_or_above_fixed_release(
-        tmp_path, monkeypatch, version):
+def test_required_exclusion_not_applied_at_or_above_fixed_release(tmp_path, monkeypatch, version):
     # At OR above the known-fixed release the box can host the command → no
     # auto-apply (the boundary is exclusive: < fixed required, >= fixed not).
     from project_kit import permissions as perm
+
     monkeypatch.setattr(perm, "_UV_KNOWN_FIXED_RELEASE", "0.10.0")
     _force_uv(monkeypatch, platform="darwin", version=version)
     proj = _with_adapter(_setup(tmp_path))
@@ -1781,6 +1865,7 @@ def test_required_exclusion_not_applied_on_linux(tmp_path, monkeypatch):
 def test_required_exclusion_not_applied_on_fixed_uv(tmp_path, monkeypatch):
     # A uv at/above a known-fixed release: the box can host the command again.
     from project_kit import permissions as perm
+
     monkeypatch.setattr(perm, "_UV_KNOWN_FIXED_RELEASE", "0.10.0")
     _force_uv(monkeypatch, platform="darwin", version="0.10.0")
     proj = _with_adapter(_setup(tmp_path))
@@ -1825,12 +1910,16 @@ def test_required_exclusion_provenance_attribution(tmp_path, monkeypatch):
     _run(proj, monkeypatch, "sandbox", "exclude", "gh")
     prov_path = proj / ".pkit" / "permissions" / "project" / "sandbox-provenance.yaml"
     from ruamel.yaml import YAML as _YAML
+
     doc = _YAML(typ="safe").load(prov_path.open())
-    tags = {(e.get("value"), e.get("toolkit")) for e in doc["entries"]
-            if e.get("kind") == "exclude-command"}
-    assert ("uv", "_required") in tags       # auto-applied, required
-    assert ("gh", "_manual") in tags         # operator-set — distinct tag
-    assert ("uv", "_manual") not in tags     # not mis-attributed
+    tags = {
+        (e.get("value"), e.get("toolkit"))
+        for e in doc["entries"]
+        if e.get("kind") == "exclude-command"
+    }
+    assert ("uv", "_required") in tags  # auto-applied, required
+    assert ("gh", "_manual") in tags  # operator-set — distinct tag
+    assert ("uv", "_manual") not in tags  # not mis-attributed
 
 
 def test_required_exclusion_self_heals_when_uv_fixed(tmp_path, monkeypatch):
@@ -1844,6 +1933,7 @@ def test_required_exclusion_self_heals_when_uv_fixed(tmp_path, monkeypatch):
     assert "uv" in _sb(proj)["excludedCommands"]
     # uv upgraded past a fixed release → re-run self-heals the required entry.
     from project_kit import permissions as perm
+
     monkeypatch.setattr(perm, "_UV_KNOWN_FIXED_RELEASE", "0.10.0")
     _force_uv(monkeypatch, platform="darwin", version="0.10.0")
     out = _run(proj, monkeypatch, "setup", "autonomy")
@@ -1853,9 +1943,13 @@ def test_required_exclusion_self_heals_when_uv_fixed(tmp_path, monkeypatch):
     assert "gh" in _sb(proj)["excludedCommands"]
     prov_path = proj / ".pkit" / "permissions" / "project" / "sandbox-provenance.yaml"
     from ruamel.yaml import YAML as _YAML
+
     doc = _YAML(typ="safe").load(prov_path.open())
-    tags = {(e.get("value"), e.get("toolkit")) for e in doc["entries"]
-            if e.get("kind") == "exclude-command"}
+    tags = {
+        (e.get("value"), e.get("toolkit"))
+        for e in doc["entries"]
+        if e.get("kind") == "exclude-command"
+    }
     assert ("gh", "_manual") in tags
     assert ("uv", "_required") not in tags
 
@@ -1864,7 +1958,7 @@ def test_required_exclusion_teardown_reverses_it_not_manual(tmp_path, monkeypatc
     _force_uv(monkeypatch, platform="darwin", version="0.9.8")
     proj = _with_adapter(_setup(tmp_path))
     (proj / "uv.lock").write_text("")
-    _run(proj, monkeypatch, "sandbox", "exclude", "gh")    # operator manual widening
+    _run(proj, monkeypatch, "sandbox", "exclude", "gh")  # operator manual widening
     _run(proj, monkeypatch, "setup", "autonomy")
     out = _run(proj, monkeypatch, "setup", "autonomy", "down")
     # Teardown reverses the auto-applied required exclusion and reports it.
@@ -1880,7 +1974,7 @@ def test_required_exclusion_idempotent_no_double_apply(tmp_path, monkeypatch):
     proj = _with_adapter(_setup(tmp_path))
     (proj / "uv.lock").write_text("")
     _run(proj, monkeypatch, "setup", "autonomy")
-    out = _run(proj, monkeypatch, "setup", "autonomy")    # re-run
+    out = _run(proj, monkeypatch, "setup", "autonomy")  # re-run
     # Already excluded → no second apply line, single excludedCommands entry.
     assert _sb(proj)["excludedCommands"].count("uv") == 1
     assert "REQUIRED exclusion auto-applied" not in out
@@ -1893,9 +1987,9 @@ def test_required_exclusion_already_in_place_is_reported_not_silent(tmp_path, mo
     _force_uv(monkeypatch, platform="darwin", version="0.9.8")
     proj = _with_adapter(_setup(tmp_path))
     (proj / "uv.lock").write_text("")
-    _run(proj, monkeypatch, "setup", "autonomy")          # first run applies it
-    assert "uv" in _sb(proj)["excludedCommands"]          # precondition: present
-    out = _run(proj, monkeypatch, "setup", "autonomy")    # re-run: no-op apply
+    _run(proj, monkeypatch, "setup", "autonomy")  # first run applies it
+    assert "uv" in _sb(proj)["excludedCommands"]  # precondition: present
+    out = _run(proj, monkeypatch, "setup", "autonomy")  # re-run: no-op apply
     # The already-in-place confirmation is visible…
     assert "required exclusion: ✓ `uv` already excluded" in out
     assert "platform-mandatory" in out and "ADR-027" in out
@@ -1905,6 +1999,7 @@ def test_required_exclusion_already_in_place_is_reported_not_silent(tmp_path, mo
 
 
 # ---- relocate a pre-ADR-029 tracked-file required exclusion (Task #275) -------
+
 
 def _seed_tracked_excl(
     proj: Path, cmd: str, *, toolkit: str | None, floor: dict | None = None
@@ -1918,6 +2013,7 @@ def _seed_tracked_excl(
     (`filesystem.denyRead`, `failIfUnavailable`, …) the relocation must NOT touch.
     Lets a test assert ONLY `excludedCommands` leaves the committed file."""
     from ruamel.yaml import YAML as _YAML
+
     settings_path = proj / ".claude" / "settings.json"
     data = json.loads(settings_path.read_text()) if settings_path.is_file() else {}
     sb = data.setdefault("sandbox", {})
@@ -1946,7 +2042,7 @@ def test_required_exclusion_relocated_from_tracked_to_local_on_setup(tmp_path, m
     # next `setup autonomy`, restoring rule-4's never-committed-by-construction.
     _force_uv(monkeypatch, platform="darwin", version="0.9.8")
     proj = _with_adapter(_setup(tmp_path))
-    (proj / "uv.lock").write_text("")                 # uv still required → not self-healed
+    (proj / "uv.lock").write_text("")  # uv still required → not self-healed
     # Seed the widening ALONGSIDE a committed confinement floor: a credential
     # denyRead and the fail-closed flag. The strip must take ONLY excludedCommands
     # and leave the floor behind (the "must NOT clobber the committed floor"
@@ -1983,6 +2079,7 @@ def test_relocation_keeps_command_live_in_union_no_unexclude_window(tmp_path, mo
     # no point where the command is absent from both files. We spy on each write
     # and assert the live union still excludes uv at that moment.
     from project_kit import permissions as perm
+
     _force_uv(monkeypatch, platform="darwin", version="0.9.8")
     proj = _with_adapter(_setup(tmp_path))
     (proj / "uv.lock").write_text("")
@@ -2043,7 +2140,7 @@ def test_untagged_tracked_exclusion_is_left_untouched(tmp_path, monkeypatch):
 
     out = _run(proj, monkeypatch, "setup", "autonomy")
 
-    assert "uv" in _sb_committed(proj)["excludedCommands"]   # untouched
+    assert "uv" in _sb_committed(proj)["excludedCommands"]  # untouched
     assert "uv" not in _sb_local(proj).get("excludedCommands", [])
     assert "relocated `uv`" not in out
 
@@ -2055,13 +2152,13 @@ def test_relocation_is_idempotent_already_in_local_is_noop(tmp_path, monkeypatch
     proj = _with_adapter(_setup(tmp_path))
     (proj / "uv.lock").write_text("")
     _seed_tracked_excl(proj, "uv", toolkit="_required")
-    _run(proj, monkeypatch, "setup", "autonomy")             # first run relocates
-    assert "excludedCommands" not in _sb_committed(proj)      # already relocated
+    _run(proj, monkeypatch, "setup", "autonomy")  # first run relocates
+    assert "excludedCommands" not in _sb_committed(proj)  # already relocated
 
-    out = _run(proj, monkeypatch, "setup", "autonomy")        # re-run: no-op
+    out = _run(proj, monkeypatch, "setup", "autonomy")  # re-run: no-op
     assert "relocated `uv`" not in out
     assert _sb_local(proj)["excludedCommands"].count("uv") == 1
-    assert "uv" in _sb(proj)["excludedCommands"]              # still live
+    assert "uv" in _sb(proj)["excludedCommands"]  # still live
 
 
 def test_relocation_does_not_touch_decide_py(tmp_path, monkeypatch):
@@ -2092,7 +2189,7 @@ def test_relocated_required_exclusion_self_heals_from_local_when_no_longer_requi
     (proj / "uv.lock").write_text("")
     _seed_tracked_excl(proj, "uv", toolkit="_required")
 
-    _run(proj, monkeypatch, "setup", "autonomy")               # relocates to local
+    _run(proj, monkeypatch, "setup", "autonomy")  # relocates to local
     assert "excludedCommands" not in _sb_committed(proj)
     assert "uv" in _sb_local(proj).get("excludedCommands", [])
 
@@ -2104,7 +2201,7 @@ def test_relocated_required_exclusion_self_heals_from_local_when_no_longer_requi
     # Self-heal REMOVED the relocated exclusion from the LOCAL file — the
     # remove-router found it where relocation put it.
     assert "uv" not in _sb_local(proj).get("excludedCommands", [])
-    assert "uv" not in _sb(proj).get("excludedCommands", [])   # gone from the union
+    assert "uv" not in _sb(proj).get("excludedCommands", [])  # gone from the union
     assert "self-healed: `uv` is no longer a required exclusion" in out
 
 
@@ -2153,12 +2250,14 @@ def test_no_advisory_when_nothing_untagged(tmp_path, monkeypatch):
 
 # ---- per-machine relocation pass (ADR-032 socket + enabled, #303) -------------
 
+
 def _seed_committed_socket(proj: Path, sock: str, *, tagged: bool) -> None:
     """Seed a pre-ADR-032 drift: a host socket path in the COMMITTED
     settings.json's network.allowUnixSockets, optionally with a `socket:`
     provenance tag (tagged=False models a foreign/untagged entry pkit must not
     move)."""
     from ruamel.yaml import YAML as _YAML
+
     sp = proj / ".claude" / "settings.json"
     data = json.loads(sp.read_text()) if sp.is_file() else {}
     net = data.setdefault("sandbox", {}).setdefault("network", {})
@@ -2171,8 +2270,7 @@ def _seed_committed_socket(proj: Path, sock: str, *, tagged: bool) -> None:
         entries = []
         if pp.is_file():
             entries = _YAML(typ="safe").load(pp.open()).get("entries", []) or []
-        entries.append({"kind": "allow-unix-socket", "value": sock,
-                        "toolkit": "socket:ssh-agent"})
+        entries.append({"kind": "allow-unix-socket", "value": sock, "toolkit": "socket:ssh-agent"})
         with pp.open("w") as fh:
             _YAML().dump({"schema_version": 1, "entries": entries}, fh)
 
@@ -2222,9 +2320,9 @@ def test_relocate_drifted_committed_enabled_to_local(tmp_path, monkeypatch):
 
     out = _run(proj, monkeypatch, "setup", "autonomy")
 
-    assert "enabled" not in _sb_committed(proj)          # popped, not set false (#406)
-    assert _sb_local(proj)["enabled"] is True           # moved to harness-co-owned key
-    assert _sb(proj)["enabled"] is True                 # union still on (live-throughout)
+    assert "enabled" not in _sb_committed(proj)  # popped, not set false (#406)
+    assert _sb_local(proj)["enabled"] is True  # moved to harness-co-owned key
+    assert _sb(proj)["enabled"] is True  # union still on (live-throughout)
     assert "relocated `enabled`" in out
 
 
@@ -2235,6 +2333,7 @@ def test_relocate_per_machine_no_clobber_live_local_enabled(tmp_path, monkeypatc
     # `setup autonomy` would then deliberately re-enable the box, masking the
     # property under test). Local `enabled: false` (operator turned it off) wins.
     from project_kit import permissions as perm
+
     proj = _with_adapter(_setup(tmp_path))
     sp = proj / ".claude" / "settings.json"
     sp.parent.mkdir(parents=True, exist_ok=True)
@@ -2257,13 +2356,13 @@ def test_relocate_per_machine_is_idempotent(tmp_path, monkeypatch):
     proj = _with_adapter(_setup(tmp_path))
     sock = "/Users/someone/.1password/agent.sock"
     _seed_committed_socket(proj, sock, tagged=True)
-    _run(proj, monkeypatch, "setup", "autonomy")              # first run relocates
+    _run(proj, monkeypatch, "setup", "autonomy")  # first run relocates
     assert sock not in _sb_committed(proj).get("network", {}).get("allowUnixSockets", [])
 
-    out = _run(proj, monkeypatch, "setup", "autonomy")         # re-run: no-op
+    out = _run(proj, monkeypatch, "setup", "autonomy")  # re-run: no-op
     assert "relocated host socket" not in out
     assert _sb_local(proj)["network"]["allowUnixSockets"].count(sock) == 1
-    assert sock in _sb(proj)["network"]["allowUnixSockets"]    # still live
+    assert sock in _sb(proj)["network"]["allowUnixSockets"]  # still live
 
 
 def test_relocate_per_machine_leaves_committed_floors(tmp_path, monkeypatch):
@@ -2274,14 +2373,24 @@ def test_relocate_per_machine_leaves_committed_floors(tmp_path, monkeypatch):
     sock = "/Users/someone/.1password/agent.sock"
     sp = proj / ".claude" / "settings.json"
     sp.parent.mkdir(parents=True, exist_ok=True)
-    sp.write_text(json.dumps({"sandbox": {
-        "enabled": True,                                   # relocatable
-        "failIfUnavailable": True,                         # floor — stays
-        "autoAllowBashIfSandboxed": True,                  # floor — stays
-        "filesystem": {"denyRead": ["~/.ssh"]},            # floor — stays
-        "network": {"allowedHosts": ["api.github.com"],    # floor — stays
-                    "allowUnixSockets": [sock]},           # host socket — relocatable
-    }}, indent=2) + "\n")
+    sp.write_text(
+        json.dumps(
+            {
+                "sandbox": {
+                    "enabled": True,  # relocatable
+                    "failIfUnavailable": True,  # floor — stays
+                    "autoAllowBashIfSandboxed": True,  # floor — stays
+                    "filesystem": {"denyRead": ["~/.ssh"]},  # floor — stays
+                    "network": {
+                        "allowedHosts": ["api.github.com"],  # floor — stays
+                        "allowUnixSockets": [sock],
+                    },  # host socket — relocatable
+                }
+            },
+            indent=2,
+        )
+        + "\n"
+    )
     _seed_committed_socket(proj, sock, tagged=True)  # tag the socket so it moves
 
     _run(proj, monkeypatch, "setup", "autonomy")
@@ -2316,9 +2425,9 @@ def test_optional_widening_stays_nudge_only_under_auto_apply(tmp_path, monkeypat
     (proj / "uv.lock").write_text("")
     (proj / "Dockerfile").write_text("FROM x")
     out = _run(proj, monkeypatch, "setup", "autonomy")
-    assert "uv" in _sb(proj)["excludedCommands"]          # required: applied
+    assert "uv" in _sb(proj)["excludedCommands"]  # required: applied
     assert "docker" not in _sb(proj)["excludedCommands"]  # optional: NOT applied
-    assert "`docker` — optional" in out                   # docker still nudged
+    assert "`docker` — optional" in out  # docker still nudged
     assert "`pkit permissions sandbox exclude docker`" in out
 
 
@@ -2329,6 +2438,7 @@ def test_optional_widening_stays_nudge_only_under_auto_apply(tmp_path, monkeypat
 #   `_required` provenance; already-in-place confirmed (#274); docker stays nudge.
 #   Tests neutralise the uv member (no uv.lock marker) so gh is exercised alone.
 
+
 def _force_gh(monkeypatch, *, platform="darwin"):
     """Pin the platform for the gh verifier (no version coordinate to mock —
     ADR-030 condition 3: gh's necessity is platform-permanent + detect-fenced)."""
@@ -2337,16 +2447,20 @@ def _force_gh(monkeypatch, *, platform="darwin"):
 
 def _gh_prov_entries(proj: Path) -> list[dict]:
     from ruamel.yaml import YAML as _YAML
+
     prov_path = proj / ".pkit" / "permissions" / "project" / "sandbox-provenance.yaml"
     doc = _YAML(typ="safe").load(prov_path.open())
-    return [e for e in (doc or {}).get("entries", [])
-            if e.get("kind") == "exclude-command" and e.get("value") == "gh"]
+    return [
+        e
+        for e in (doc or {}).get("entries", [])
+        if e.get("kind") == "exclude-command" and e.get("value") == "gh"
+    ]
 
 
 def test_gh_required_exclusion_auto_applies_on_macos_with_github_marker(tmp_path, monkeypatch):
     _force_gh(monkeypatch, platform="darwin")
     proj = _with_adapter(_setup(tmp_path))
-    (proj / ".github").mkdir()                            # real project use
+    (proj / ".github").mkdir()  # real project use
     out = _run(proj, monkeypatch, "setup", "autonomy")
     # Loud, dedicated block — and the egress-cost banner naming UNCONFINED egress.
     assert "Required exclusion (platform-mandatory" in out
@@ -2374,7 +2488,7 @@ def test_gh_required_exclusion_not_applied_on_linux(tmp_path, monkeypatch):
     out = _run(proj, monkeypatch, "setup", "autonomy")
     assert "REQUIRED exclusion auto-applied: `gh`" not in out
     assert "gh" not in _sb(proj).get("excludedCommands", [])
-    assert "`gh` — optional" in out                       # nudge-only on Linux
+    assert "`gh` — optional" in out  # nudge-only on Linux
 
 
 def test_gh_required_exclusion_not_applied_without_github_marker(tmp_path, monkeypatch):
@@ -2412,13 +2526,17 @@ def test_gh_required_exclusion_provenance_attribution(tmp_path, monkeypatch):
     proj = _with_adapter(_setup(tmp_path))
     (proj / ".github").mkdir()
     _run(proj, monkeypatch, "setup", "autonomy")
-    assert "gh" in _sb(proj).get("excludedCommands", [])   # still applied
+    assert "gh" in _sb(proj).get("excludedCommands", [])  # still applied
     prov_path = proj / ".pkit" / "permissions" / "project" / "sandbox-provenance.yaml"
     from ruamel.yaml import YAML as _YAML
+
     doc = _YAML(typ="safe").load(prov_path.open())
-    tags = {(e.get("value"), e.get("toolkit")) for e in doc["entries"]
-            if e.get("kind") == "exclude-command"}
-    assert ("gh", "_required") in tags       # auto-applied, required — not operator-set
+    tags = {
+        (e.get("value"), e.get("toolkit"))
+        for e in doc["entries"]
+        if e.get("kind") == "exclude-command"
+    }
+    assert ("gh", "_required") in tags  # auto-applied, required — not operator-set
     assert ("gh", "_manual") not in tags
 
 
@@ -2428,9 +2546,9 @@ def test_gh_required_exclusion_already_in_place_is_confirmed_not_silent(tmp_path
     _force_gh(monkeypatch, platform="darwin")
     proj = _with_adapter(_setup(tmp_path))
     (proj / ".github").mkdir()
-    _run(proj, monkeypatch, "setup", "autonomy")          # first run applies it
+    _run(proj, monkeypatch, "setup", "autonomy")  # first run applies it
     assert "gh" in _sb(proj)["excludedCommands"]
-    out = _run(proj, monkeypatch, "setup", "autonomy")    # re-run: no-op apply
+    out = _run(proj, monkeypatch, "setup", "autonomy")  # re-run: no-op apply
     assert "required exclusion: ✓ `gh` already excluded" in out
     assert "ADR-030" in out
     # …and it does NOT claim a fresh apply this run.
@@ -2443,7 +2561,7 @@ def test_gh_required_exclusion_self_heals_on_linux_not_manual(tmp_path, monkeypa
     _force_gh(monkeypatch, platform="darwin")
     proj = _with_adapter(_setup(tmp_path))
     (proj / ".github").mkdir()
-    _run(proj, monkeypatch, "sandbox", "exclude", "docker")   # operator manual widening
+    _run(proj, monkeypatch, "sandbox", "exclude", "docker")  # operator manual widening
     _run(proj, monkeypatch, "setup", "autonomy")
     assert "gh" in _sb(proj)["excludedCommands"]
     # Now on Linux: re-run self-heals the required gh entry.
@@ -2463,7 +2581,7 @@ def test_gh_auto_apply_leaves_docker_nudge_only(tmp_path, monkeypatch):
     (proj / ".github").mkdir()
     (proj / "Dockerfile").write_text("FROM x")
     out = _run(proj, monkeypatch, "setup", "autonomy")
-    assert "gh" in _sb(proj)["excludedCommands"]          # required: applied
+    assert "gh" in _sb(proj)["excludedCommands"]  # required: applied
     assert "docker" not in _sb(proj)["excludedCommands"]  # optional: NOT applied
     assert "`docker` — optional" in out
     assert "`pkit permissions sandbox exclude docker`" in out
@@ -2486,27 +2604,28 @@ def _extract_func_source(source: str, name: str) -> str:
     Used to freeze the `decide()` VERDICT path — both the functions it composes
     and the module-level verdict regexes those functions close over."""
     import ast
+
     tree = ast.parse(source)
     lines = source.splitlines()
     for node in tree.body:
         if isinstance(node, ast.FunctionDef) and node.name == name:
-            start = (node.decorator_list[0].lineno if node.decorator_list
-                     else node.lineno) - 1
-            return "\n".join(lines[start:node.end_lineno])
+            start = (node.decorator_list[0].lineno if node.decorator_list else node.lineno) - 1
+            return "\n".join(lines[start : node.end_lineno])
         if isinstance(node, ast.Assign) and any(
             isinstance(t, ast.Name) and t.id == name for t in node.targets
         ):
-            return "\n".join(lines[node.lineno - 1:node.end_lineno])
+            return "\n".join(lines[node.lineno - 1 : node.end_lineno])
     raise AssertionError(f"function or assignment {name!r} not found in module source")
 
 
 def test_decide_verdict_path_byte_identical_to_main():
-    # ADR-032 (corrected): `load_model` gains an additive edit to read
+    # ADR-032: `load_model` gains an additive edit to read
     # `active_profile` from its per-machine home, so decide.py is NOT frozen
     # whole-file. What MUST stay byte-identical is the `decide()` VERDICT path —
     # the verdict logic, not the model-loader. Guard exactly that function (and
     # the pure helpers it composes) against `main`, not the whole file.
     import subprocess
+
     root = Path(__file__).resolve().parent.parent
     decide_py = root / ".pkit" / "permissions" / "decide.py"
     assert decide_py.is_file(), f"decide.py not found at expected path: {decide_py}"
@@ -2520,10 +2639,16 @@ def test_decide_verdict_path_byte_identical_to_main():
     # tests availability without erroring. If NONE resolve, skip: the guard needs
     # the base to compare and has nothing to assert against.
     def _resolves(ref: str) -> bool:
-        return subprocess.run(
-            ["git", "rev-parse", "--verify", "--quiet", ref],
-            cwd=str(root), capture_output=True, text=True, check=False,
-        ).returncode == 0
+        return (
+            subprocess.run(
+                ["git", "rev-parse", "--verify", "--quiet", ref],
+                cwd=str(root),
+                capture_output=True,
+                text=True,
+                check=False,
+            ).returncode
+            == 0
+        )
 
     base_ref = next(
         (ref for ref in ("origin/main", "main") if _resolves(ref)),
@@ -2532,7 +2657,10 @@ def test_decide_verdict_path_byte_identical_to_main():
     if base_ref is None:
         mb = subprocess.run(
             ["git", "merge-base", "HEAD", "@{upstream}"],
-            cwd=str(root), capture_output=True, text=True, check=False,
+            cwd=str(root),
+            capture_output=True,
+            text=True,
+            check=False,
         )
         if mb.returncode == 0 and mb.stdout.strip():
             base_ref = mb.stdout.strip()
@@ -2544,11 +2672,12 @@ def test_decide_verdict_path_byte_identical_to_main():
 
     r = subprocess.run(
         ["git", "show", f"{base_ref}:.pkit/permissions/decide.py"],
-        cwd=str(root), capture_output=True, text=True, check=False,
+        cwd=str(root),
+        capture_output=True,
+        text=True,
+        check=False,
     )
-    assert r.returncode == 0, (
-        f"could not read decide.py from {base_ref}: {r.stderr!r}"
-    )
+    assert r.returncode == 0, f"could not read decide.py from {base_ref}: {r.stderr!r}"
     base = r.stdout
 
     # The verdict path: `decide()` and `hook_decide()` themselves PLUS every pure
@@ -2581,11 +2710,21 @@ def test_decide_verdict_path_byte_identical_to_main():
         # entry point
         "decide",
         # pure helpers on the verdict path
-        "segments", "_strip_leading_cd", "_matches_bash",
-        "_privilege_ids", "_scope_ok",
-        "_extract_host", "_effective_grants", "_read_default_agent",
+        "segments",
+        "_strip_leading_cd",
+        "_matches_bash",
+        "_privilege_ids",
+        "_scope_ok",
+        "_extract_host",
+        "_effective_grants",
+        "_read_default_agent",
         # module-level verdict regexes the above close over
-        "_TOKEN", "_SEP", "_ENVVAR", "_CD_SEP", "_UNTRUSTED", "_BARE_CD",
+        "_TOKEN",
+        "_SEP",
+        "_ENVVAR",
+        "_CD_SEP",
+        "_UNTRUSTED",
+        "_BARE_CD",
     )
     for fn in frozen:
         assert _extract_func_source(working, fn) == _extract_func_source(base, fn), (
@@ -2604,7 +2743,7 @@ def test_setup_autonomy_seeds_profile_recommendations(tmp_path, monkeypatch):
         "schema_version: 1\n"
         "description: test autonomous\n"
         "posture: lenient\n"
-        "recommended_accommodations: [\"[confinement-toolkit:uv]\"]\n"
+        'recommended_accommodations: ["[confinement-toolkit:uv]"]\n'
         "grants: []\n"
     )
     _run(proj, monkeypatch, "setup", "autonomy")
@@ -2624,6 +2763,7 @@ def _hermetic_host_env(monkeypatch):
     both so every test is deterministic regardless of the runner's environment.
     Tests opt in by setting SSH_AUTH_SOCK / running `git init` + local config."""
     import os as _os
+
     monkeypatch.delenv("SSH_AUTH_SOCK", raising=False)
     # Neutralize the developer's global/system gitconfig so `git config --get`
     # sees only what a test configures locally (else this machine's real
@@ -2632,7 +2772,7 @@ def _hermetic_host_env(monkeypatch):
     monkeypatch.setenv("GIT_CONFIG_SYSTEM", _os.devnull)
 
 
-def _listening_socket() -> tuple[Path, "_socketmod.socket"]:
+def _listening_socket() -> tuple[Path, _socketmod.socket]:
     """A live AF_UNIX listening socket at a SHORT path; caller closes the server.
 
     Bound under a short temp dir, not pytest's `tmp_path`: an AF_UNIX socket
@@ -2676,7 +2816,7 @@ def test_accommodate_socket_recompute_replace_no_accretion(tmp_path, monkeypatch
     _run(proj, monkeypatch, "sandbox", "accommodate", "--socket", s1, "--name", "ssh-agent")
     _run(proj, monkeypatch, "sandbox", "accommodate", "--socket", s2, "--name", "ssh-agent")
     socks = _sb(proj)["network"]["allowUnixSockets"]
-    assert s2 in socks and s1 not in socks   # replaced, not accreted
+    assert s2 in socks and s1 not in socks  # replaced, not accreted
 
 
 def test_accommodate_socket_remove(tmp_path, monkeypatch):
@@ -2691,7 +2831,9 @@ def test_accommodate_socket_remove(tmp_path, monkeypatch):
 def test_accommodate_socket_under_floor_warns_but_applies(tmp_path, monkeypatch):
     # --socket is an explicit operator gesture: in-floor warns but proceeds.
     proj = _with_adapter(_setup(tmp_path))
-    out = _run(proj, monkeypatch, "sandbox", "accommodate", "--socket", "~/.ssh/agent.sock", "--name", "x")
+    out = _run(
+        proj, monkeypatch, "sandbox", "accommodate", "--socket", "~/.ssh/agent.sock", "--name", "x"
+    )
     assert "under the credential denyRead floor" in out
 
 
@@ -2729,7 +2871,7 @@ def test_setup_autonomy_in_floor_ssh_sock_nudges_not_applies(tmp_path, monkeypat
 
 
 def test_setup_autonomy_no_ssh_sock_is_quiet(tmp_path, monkeypatch):
-    proj = _with_adapter(_setup(tmp_path))   # autouse fixture deleted SSH_AUTH_SOCK
+    proj = _with_adapter(_setup(tmp_path))  # autouse fixture deleted SSH_AUTH_SOCK
     out = _run(proj, monkeypatch, "setup", "autonomy")
     assert "ssh-agent socket" not in out
 
@@ -2741,8 +2883,10 @@ def test_ssh_agent_toolkit_dropped(tmp_path, monkeypatch):
 
 # ---- setup autonomy NEXT block: gh + commit-signing detection (#293) ---------
 
+
 def _git_init_signing(proj: Path, program: str) -> None:
     import subprocess as _sp
+
     _sp.run(["git", "init", "-q"], cwd=proj, check=True)
     _sp.run(["git", "config", "gpg.format", "ssh"], cwd=proj, check=True)
     _sp.run(["git", "config", "gpg.ssh.program", program], cwd=proj, check=True)
@@ -2785,7 +2929,7 @@ def test_gh_detected_via_repo_marker(tmp_path, monkeypatch):
     (proj / ".github").mkdir()
     out = _run(proj, monkeypatch, "setup", "autonomy")
     assert "`gh` — optional" in out and "sandbox exclude gh" in out
-    assert "gh" not in _sb(proj).get("excludedCommands", [])   # nudge only
+    assert "gh" not in _sb(proj).get("excludedCommands", [])  # nudge only
 
 
 def test_gh_detected_via_path(tmp_path, monkeypatch):
@@ -2810,6 +2954,7 @@ def test_gh_detected_via_path(tmp_path, monkeypatch):
 #       one (gh) renders "optional" copy. Distinction computed at runtime.
 #   (c) the `sandbox exclude` command line is present and unbroken (own line, not
 #       mid-token wrapped).
+
 
 def _next_steps(widening, *, platform, width, host=None):
     """Render _setup_next_steps with a forced platform + wrap width, no signing
@@ -2836,12 +2981,11 @@ def test_next_step_long_desc_hangs_at_six_spaces_not_column_zero():
     label_lines = [ln for ln in out if ln.startswith("    `gh` — optional:")]
     assert label_lines, "expected the label at the 4-space margin"
     # body continuations hang at exactly 6 spaces (not 8 = the command line)
-    conts = [ln for ln in out
-             if ln.startswith("      ") and not ln.startswith("        ")]
+    conts = [ln for ln in out if ln.startswith("      ") and not ln.startswith("        ")]
     assert conts, "expected a hung continuation line at 6 spaces"
     for ln in conts:
-        assert not ln.startswith("       ")        # exactly 6, not 7+
-        assert ln[6] != " "                         # content begins at col 6
+        assert not ln.startswith("       ")  # exactly 6, not 7+
+        assert ln[6] != " "  # content begins at col 6
     # nothing in the block wrapped flush to column 0
     block = out[2:]  # skip the leading blank + heading
     assert not any(ln and not ln.startswith(" ") for ln in block)
@@ -2899,8 +3043,10 @@ def test_next_step_exclude_command_line_unbroken_under_narrow_width():
 
 # ---- run-once SSH stability tip (#299) ---------------------------------------
 
+
 def test_stability_tip_shown_for_volatile_socket_with_1password(tmp_path, monkeypatch):
     from project_kit import permissions as perm
+
     home = tmp_path / "home"
     (home / ".1password").mkdir(parents=True)
     (home / ".1password" / "agent.sock").touch()
@@ -2910,48 +3056,55 @@ def test_stability_tip_shown_for_volatile_socket_with_1password(tmp_path, monkey
     tip = "\n".join(perm._setup_stability_tip(tmp_path))
     assert "Optional — make SSH survive reboots" in tip
     assert "export SSH_AUTH_SOCK=~/.1password/agent.sock" in tip
-    assert "~/.zshrc" in tip                 # shell-aware
-    assert "────" not in tip and "── " not in tip   # no rules (convention)
+    assert "~/.zshrc" in tip  # shell-aware
+    assert "────" not in tip and "── " not in tip  # no rules (convention)
 
 
 def test_stability_tip_absent_when_socket_already_stable(tmp_path, monkeypatch):
     from project_kit import permissions as perm
+
     home = tmp_path / "home"
     (home / ".1password").mkdir(parents=True)
     (home / ".1password" / "agent.sock").touch()
     monkeypatch.setenv("HOME", str(home))
     monkeypatch.setenv("SSH_AUTH_SOCK", str(tmp_path / "stable.sock"))  # non-volatile path
-    assert perm._setup_stability_tip(tmp_path) == []   # self-vanishing
+    assert perm._setup_stability_tip(tmp_path) == []  # self-vanishing
 
 
 def test_stability_tip_absent_without_stable_agent(tmp_path, monkeypatch):
     from project_kit import permissions as perm
+
     home = tmp_path / "home"
-    home.mkdir()                              # no ~/.1password/agent.sock
+    home.mkdir()  # no ~/.1password/agent.sock
     monkeypatch.setenv("HOME", str(home))
     monkeypatch.setenv("SSH_AUTH_SOCK", "/var/run/com.apple.launchd.XYZ/Listeners")
-    assert perm._setup_stability_tip(tmp_path) == []   # nothing to recommend
+    assert perm._setup_stability_tip(tmp_path) == []  # nothing to recommend
 
 
 def test_stability_tip_absent_when_no_ssh_auth_sock(tmp_path, monkeypatch):
     from project_kit import permissions as perm
-    assert perm._setup_stability_tip(tmp_path) == []   # autouse fixture cleared it
+
+    assert perm._setup_stability_tip(tmp_path) == []  # autouse fixture cleared it
 
 
 # --- styling layer (ADR-011): the procedural step-logs are styled but the
 # styling is never load-bearing (Bucket A: sandbox status / probe / toolkit
 # list / setup-list — the always-hand-built surfaces). -----------------------
 
-@pytest.mark.parametrize("args", [
-    ["sandbox"],            # no subcommand → status
-    ["probe"],
-    ["sandbox", "toolkit", "list"],
-    ["setup"],              # no goal → setup-list
-    ["explain"],
-    ["catalog"],
-    ["overview"],
-    ["diff"],
-])
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["sandbox"],  # no subcommand → status
+        ["probe"],
+        ["sandbox", "toolkit", "list"],
+        ["setup"],  # no goal → setup-list
+        ["explain"],
+        ["catalog"],
+        ["overview"],
+        ["diff"],
+    ],
+)
 def test_procedural_step_logs_styling_is_never_load_bearing(tmp_path, monkeypatch, args):
     """Each procedural step-log emits SGR under --color always, yet strips back
     byte-for-byte to its --color never form (ADR-011 §3): structure reads with
@@ -2967,7 +3120,7 @@ def test_procedural_step_logs_styling_is_never_load_bearing(tmp_path, monkeypatc
     assert cli_render.strip_ansi(always) == never
 
 
-# ---- ADR-002 amendment: enforcement-runtime self-check + ADR-014 zero-dep ---
+# ---- ADR-002 point 4: enforcement-runtime self-check + ADR-014 zero-dep -----
 # Tests for:
 #   (a) `enable` and `sandbox enable` run the self-check and are loud on a dead
 #       hook runtime.
@@ -3001,8 +3154,9 @@ def _with_adapter_and_hook(proj: Path) -> Path:
 
 def test_enable_warns_loudly_when_hook_runtime_dead(tmp_path, monkeypatch):
     """When the hook script is missing (dead runtime), `enable` warns loudly
-    rather than silently proceeding (ADR-002 amendment)."""
+    rather than silently proceeding (ADR-002 point 4)."""
     from project_kit import permissions as perm
+
     proj = _with_adapter(_setup(tmp_path))
     # Patch _hook_runtime_check to simulate a dead runtime.
     monkeypatch.setattr(perm, "_hook_runtime_check", lambda _r: (False, "python3 not found"))
@@ -3017,6 +3171,7 @@ def test_enable_warns_loudly_when_hook_runtime_dead(tmp_path, monkeypatch):
 def test_enable_no_warning_when_hook_runtime_healthy(tmp_path, monkeypatch):
     """When the hook runtime is healthy, `enable` outputs no WARNING (clean path)."""
     from project_kit import permissions as perm
+
     proj = _with_adapter_and_hook(_setup(tmp_path))
     monkeypatch.setattr(perm, "_hook_runtime_check", lambda _r: (True, "hook started"))
     out = _run(proj, monkeypatch, "enable")
@@ -3026,8 +3181,9 @@ def test_enable_no_warning_when_hook_runtime_healthy(tmp_path, monkeypatch):
 
 
 def test_sandbox_enable_warns_loudly_when_hook_runtime_dead(tmp_path, monkeypatch):
-    """When the hook runtime is dead, `sandbox enable` warns loudly (ADR-002 amendment)."""
+    """When the hook runtime is dead, `sandbox enable` warns loudly (ADR-002 point 4)."""
     from project_kit import permissions as perm
+
     proj = _with_adapter(_setup(tmp_path))
     monkeypatch.setattr(perm, "_hook_runtime_check", lambda _r: (False, "decide.py missing"))
     # Also stub out the confinement probe so it doesn't add noise.
@@ -3043,6 +3199,7 @@ def test_sandbox_enable_sets_failIfUnavailable_true(tmp_path, monkeypatch):
     """sandbox enable always sets failIfUnavailable: true (ADR-004 / ADR-014 §6).
     Regression test: fail-closed invariant must hold post #21 changes."""
     from project_kit import permissions as perm
+
     proj = _with_adapter(_setup(tmp_path))
     monkeypatch.setattr(perm, "_hook_runtime_check", lambda _r: (True, "ok"))
     monkeypatch.setattr(perm, "_confinement_write_probe", lambda: "denied")
@@ -3054,6 +3211,7 @@ def test_sandbox_enable_confinement_probe_denied_is_quiet(tmp_path, monkeypatch)
     """When the confinement probe is DENIED (box is confining), sandbox enable
     reports it cleanly — no warning."""
     from project_kit import permissions as perm
+
     proj = _with_adapter(_setup(tmp_path))
     monkeypatch.setattr(perm, "_hook_runtime_check", lambda _r: (True, "ok"))
     monkeypatch.setattr(perm, "_confinement_write_probe", lambda: "denied")
@@ -3066,6 +3224,7 @@ def test_sandbox_enable_confinement_probe_allowed_warns_loudly(tmp_path, monkeyp
     """When the confinement probe is ALLOWED (box not confining), sandbox enable
     warns loudly about 'configured but NOT actually confining' (ADR-014 §6)."""
     from project_kit import permissions as perm
+
     proj = _with_adapter(_setup(tmp_path))
     monkeypatch.setattr(perm, "_hook_runtime_check", lambda _r: (True, "ok"))
     monkeypatch.setattr(perm, "_confinement_write_probe", lambda: "allowed")
@@ -3077,14 +3236,23 @@ def test_sandbox_enable_confinement_probe_allowed_warns_loudly(tmp_path, monkeyp
 
 def test_overview_surfaces_enforcement_runtime_fault(tmp_path, monkeypatch):
     """When enforcement is ON but the hook can't start, `overview` surfaces it
-    as a loud, diagnosed fault (ADR-002 amendment)."""
+    as a loud, diagnosed fault (ADR-002 point 4)."""
     from project_kit import permissions as perm
+
     proj = _setup(tmp_path)
     # Register the hook in settings to make enforcement appear ON.
     (proj / ".claude").mkdir(parents=True, exist_ok=True)
-    (proj / ".claude" / "settings.json").write_text(json.dumps({"hooks": {"PreToolUse": [
-        {"matcher": "*", "hooks": [{"type": "command", "command": HOOK_COMMAND}]}
-    ]}}))
+    (proj / ".claude" / "settings.json").write_text(
+        json.dumps(
+            {
+                "hooks": {
+                    "PreToolUse": [
+                        {"matcher": "*", "hooks": [{"type": "command", "command": HOOK_COMMAND}]}
+                    ]
+                }
+            }
+        )
+    )
     # Simulate a dead runtime.
     monkeypatch.setattr(perm, "_hook_runtime_check", lambda _r: (False, "python3 not found"))
     monkeypatch.setattr(perm, "_confinement_write_probe", lambda: "error")
@@ -3098,14 +3266,23 @@ def test_overview_surfaces_enforcement_runtime_fault(tmp_path, monkeypatch):
 
 def test_overview_no_fault_when_runtime_healthy(tmp_path, monkeypatch):
     """When enforcement is ON and the hook runtime is healthy, `overview` reports
-    clean ON status with no fault (ADR-002 amendment)."""
+    clean ON status with no fault (ADR-002 point 4)."""
     from project_kit import permissions as perm
+
     proj = _with_adapter_and_hook(_setup(tmp_path))
     # Register the hook in settings.
     (proj / ".claude").mkdir(parents=True, exist_ok=True)
-    (proj / ".claude" / "settings.json").write_text(json.dumps({"hooks": {"PreToolUse": [
-        {"matcher": "*", "hooks": [{"type": "command", "command": HOOK_COMMAND}]}
-    ]}}))
+    (proj / ".claude" / "settings.json").write_text(
+        json.dumps(
+            {
+                "hooks": {
+                    "PreToolUse": [
+                        {"matcher": "*", "hooks": [{"type": "command", "command": HOOK_COMMAND}]}
+                    ]
+                }
+            }
+        )
+    )
     monkeypatch.setattr(perm, "_hook_runtime_check", lambda _r: (True, "ok"))
     monkeypatch.setattr(perm, "_confinement_write_probe", lambda: "error")
     out = _run(proj, monkeypatch, "overview")
@@ -3116,8 +3293,9 @@ def test_overview_no_fault_when_runtime_healthy(tmp_path, monkeypatch):
 
 def test_overview_sandbox_on_surfaces_confinement_probe(tmp_path, monkeypatch):
     """When sandbox is ON, `overview` runs the confinement write probe and reports
-    its outcome — either verified or NOT-CONFINING (ADR-002 amendment / ADR-014 §6)."""
+    its outcome — either verified or NOT-CONFINING (ADR-004 / ADR-014 §6)."""
     from project_kit import permissions as perm
+
     proj = _with_adapter(_setup(tmp_path))
     monkeypatch.setattr(perm, "_hook_runtime_check", lambda _r: (False, "no hook"))
     # First: probe denied → confinement verified.
@@ -3137,8 +3315,9 @@ def test_overview_sandbox_on_surfaces_confinement_probe(tmp_path, monkeypatch):
 
 def test_sandbox_status_surfaces_confinement_write_probe(tmp_path, monkeypatch):
     """sandbox status reports actual-confinement write probe: VERIFIED or NOT CONFINING
-    (ADR-002 amendment / ADR-014 §6)."""
+    (ADR-004 / ADR-014 §6)."""
     from project_kit import permissions as perm
+
     proj = _with_adapter(_setup(tmp_path))
     monkeypatch.setattr(perm, "_hook_runtime_check", lambda _r: (True, "ok"))
 
@@ -3161,6 +3340,7 @@ def test_confinement_write_probe_allowed_when_not_sandboxed():
     """The confinement write probe returns 'allowed' when not in a sandbox
     (plain terminal). This is the expected state in tests."""
     from project_kit import permissions as perm
+
     result = perm._confinement_write_probe()
     # From a plain test process, the write outside workspace MUST succeed.
     # If somehow it doesn't (very rare), 'error' is also acceptable.
@@ -3171,8 +3351,9 @@ def test_confinement_write_probe_allowed_when_not_sandboxed():
 
 def test_confinement_write_probe_denied_simulation(tmp_path, monkeypatch):
     """Simulate the 'denied' case by making the /tmp write raise PermissionError."""
-    from project_kit import permissions as perm
     import pathlib
+
+    from project_kit import permissions as perm
 
     original_write_text = pathlib.Path.write_text
 
@@ -3208,11 +3389,11 @@ def _toolkit_yaml(name: str, host: str, effect: str = "narrowing") -> str:
         f"  {name}:\n"
         f"    description: Test toolkit for {name}\n"
         f"    detect:\n"
-        f"      - \"{name}.lock\"\n"
+        f'      - "{name}.lock"\n'
         f"    allowances:\n"
         f"      - kind: allow-host\n"
         f"        effect: {effect}\n"
-        f"        value: \"{host}\"\n"
+        f'        value: "{host}"\n'
         f"        note: test note for {host}\n"
     )
 
@@ -3229,7 +3410,7 @@ def test_allow_host_schema_accepts_named_host(tmp_path, monkeypatch):
     # The shipped confinement-toolkit.yaml now includes github-api with allow-host.
     out = _run(_setup(tmp_path), monkeypatch, "sandbox", "toolkit", "list")
     assert "github-api" in out
-    assert "narrowing-but-reported" in out   # effect mark for allow-host narrowing
+    assert "narrowing-but-reported" in out  # effect mark for allow-host narrowing
 
 
 def test_allow_host_auto_applied_on_accommodate(tmp_path, monkeypatch):
@@ -3249,6 +3430,7 @@ def test_allow_host_auto_applied_provenance_tagged(tmp_path, monkeypatch):
     _run(proj, monkeypatch, "sandbox", "accommodate", "my-api")
     prov_path = proj / ".pkit" / "permissions" / "project" / "sandbox-provenance.yaml"
     from ruamel.yaml import YAML as _YAML
+
     _yaml = _YAML(typ="safe")
     with prov_path.open() as fh:
         doc = _yaml.load(fh)
@@ -3274,14 +3456,18 @@ def test_allow_host_idempotent(tmp_path, monkeypatch):
 def test_allow_host_operator_value_preserved(tmp_path, monkeypatch):
     """Operator-set allowedHosts entries survive pkit operations (no silent deletion)."""
     import json as _json
-    proj = _with_adapter(_setup(tmp_path, settings=_json.dumps({
-        "sandbox": {"network": {"allowedHosts": ["my.operator.host"]}}
-    })))
+
+    proj = _with_adapter(
+        _setup(
+            tmp_path,
+            settings=_json.dumps({"sandbox": {"network": {"allowedHosts": ["my.operator.host"]}}}),
+        )
+    )
     _project_toolkit(proj, _toolkit_yaml("my-api", "api.example.com"))
     _run(proj, monkeypatch, "sandbox", "accommodate", "my-api")
     hosts = _sb(proj)["network"]["allowedHosts"]
-    assert "my.operator.host" in hosts        # operator entry preserved
-    assert "api.example.com" in hosts         # pkit entry added
+    assert "my.operator.host" in hosts  # operator entry preserved
+    assert "api.example.com" in hosts  # pkit entry added
 
 
 def test_allow_host_mandatory_reporting_in_sandbox_status(tmp_path, monkeypatch):
@@ -3292,7 +3478,7 @@ def test_allow_host_mandatory_reporting_in_sandbox_status(tmp_path, monkeypatch)
     _run(proj, monkeypatch, "sandbox", "accommodate", "my-api")
     out = _run(proj, monkeypatch, "sandbox")
     assert "session-wide egress to api.example.com; not a security boundary" in out
-    assert "my-api" in out          # source toolkit named
+    assert "my-api" in out  # source toolkit named
 
 
 def test_allow_host_mandatory_reporting_in_permissions_overview(tmp_path, monkeypatch):
@@ -3340,8 +3526,10 @@ def test_allow_host_any_is_widening_not_auto_applied(tmp_path, monkeypatch):
 def test_allow_host_any_guard_in_apply_allowances(tmp_path, monkeypatch):
     """_apply_allowances refuses to write allow-host `*` even if called directly."""
     from project_kit import permissions as perm
+
     proj = _with_adapter(_setup(tmp_path))
     import pytest as _pytest
+
     with _pytest.raises(perm.PermissionsError, match="unambiguously widening"):
         perm._apply_allowances(
             proj,
@@ -3363,7 +3551,7 @@ def test_allow_host_auto_accommodate_on_sandbox_enable(tmp_path, monkeypatch):
     """Named allow-host toolkits are auto-applied on sandbox enable when detected."""
     proj = _with_adapter(_setup(tmp_path))
     _project_toolkit(proj, _toolkit_yaml("my-api", "api.example.com"))
-    (proj / "my-api.lock").write_text("")   # signal detect glob
+    (proj / "my-api.lock").write_text("")  # signal detect glob
     out = _run(proj, monkeypatch, "sandbox", "enable")
     assert "auto-accommodated" in out and "my-api" in out
     assert "api.example.com" in _sb(proj)["network"]["allowedHosts"]
@@ -3375,14 +3563,15 @@ def test_allow_host_not_auto_accommodated_when_any(tmp_path, monkeypatch):
     """A toolkit with widening allow-host `*` is never auto-accommodated on sandbox enable."""
     proj = _with_adapter(_setup(tmp_path))
     _project_toolkit(proj, _toolkit_yaml("open-egress", "*", effect="widening"))
-    (proj / "open-egress.lock").write_text("")   # signal detect glob
+    (proj / "open-egress.lock").write_text("")  # signal detect glob
     out = _run(proj, monkeypatch, "sandbox", "enable")
     assert "open-egress" not in out or "auto-accommodated" not in out
     assert "*" not in _sb(proj).get("network", {}).get("allowedHosts", [])
 
 
 def test_allow_host_remove_cleans_provenance(tmp_path, monkeypatch):
-    """Removing a toolkit with allow-host removes its host from allowedHosts (pkit-authored only)."""
+    """Removing a toolkit with allow-host removes its host from allowedHosts (pkit-authored
+    only)."""
     proj = _with_adapter(_setup(tmp_path))
     _project_toolkit(proj, _toolkit_yaml("my-api", "api.example.com"))
     _run(proj, monkeypatch, "sandbox", "accommodate", "my-api")
@@ -3417,7 +3606,8 @@ def test_allow_host_shipped_github_api_toolkit_present(tmp_path, monkeypatch):
 
 
 def test_allow_host_shipped_anthropic_api_toolkit_present(tmp_path, monkeypatch):
-    """The shipped anthropic-api toolkit is present in the toolkit list as narrowing-but-reported."""
+    """The shipped anthropic-api toolkit is present in the toolkit list as
+    narrowing-but-reported."""
     proj = _setup(tmp_path)
     out = _run(proj, monkeypatch, "sandbox", "toolkit", "list")
     assert "anthropic-api" in out
@@ -3435,7 +3625,8 @@ def test_allow_host_shipped_anthropic_api_toolkit_show(tmp_path, monkeypatch):
 
 
 def test_allow_host_anthropic_api_accommodate_applies_host(tmp_path, monkeypatch):
-    """accommodate anthropic-api writes api.anthropic.com to allowedHosts (single provenance writer)."""
+    """accommodate anthropic-api writes api.anthropic.com to allowedHosts (single provenance
+    writer)."""
     proj = _with_adapter(_setup(tmp_path))
     out = _run(proj, monkeypatch, "sandbox", "accommodate", "anthropic-api")
     assert "narrowing applied" in out
@@ -3459,6 +3650,7 @@ def test_allow_host_anthropic_api_not_auto_detected(tmp_path, monkeypatch):
 # pkit permissions overview / explain MUST surface which capability contributed
 # a deny, so the operator can always see why an agent is denied a privilege.
 # ADR-016 narrowing-but-reported: auto-applied like narrowing, but visible.
+
 
 def _setup_with_capability(
     tmp_path: Path,
@@ -3555,6 +3747,7 @@ def test_overview_enabler_row_shows_capability_denied_subjects(tmp_path, monkeyp
 
 # ---- diagnose (PRJ-006) CLI wiring ------------------------------------------
 
+
 def test_diagnose_on_status_off_round_trip(tmp_path, monkeypatch):
     proj = _setup(tmp_path)
     assert "OFF" in _run(proj, monkeypatch, "diagnose")  # no subcommand = status
@@ -3570,6 +3763,7 @@ def test_diagnose_report_empty(tmp_path, monkeypatch):
 
 
 # ---- diagnose report: prompted-vs-auto-allowed + compound-vs-missing (#317) --
+
 
 def _seed_diagnose_log(proj: Path, records: list[dict]) -> None:
     """Write curated in-memory fixture records to the (gitignored) diagnose log.
@@ -3591,9 +3785,12 @@ def test_diagnose_report_bare_allowlisted_is_auto_allowed(tmp_path, monkeypatch)
     # (a) a bare allowlisted command — the harness flat-matches `Bash(pkit:*)`
     # against the whole string, so it is auto-allowed and is NOT a real prompt.
     proj = _setup(tmp_path, settings=_ALLOW_SETTINGS)
-    _seed_diagnose_log(proj, [
-        {"tool": "Bash", "command": "pkit project-management create-issue …[redacted]"},
-    ])
+    _seed_diagnose_log(
+        proj,
+        [
+            {"tool": "Bash", "command": "pkit project-management create-issue …[redacted]"},
+        ],
+    )
     out = _run(proj, monkeypatch, "diagnose", "report")
     assert "0 real prompt(s) of 1 captured" in out
     assert "1 auto-allowed" in out
@@ -3604,10 +3801,15 @@ def test_diagnose_report_piped_allowlisted_is_compound(tmp_path, monkeypatch):
     # matcher (a real prompt), but every segment head is individually allow-matched,
     # so it is allowlisted-but-compound: a decomposition / butter-verb target.
     proj = _setup(tmp_path, settings=_ALLOW_SETTINGS)
-    _seed_diagnose_log(proj, [
-        {"tool": "Bash",
-         "command": "pkit project-management create-issue …[redacted] | grep …[redacted]"},
-    ])
+    _seed_diagnose_log(
+        proj,
+        [
+            {
+                "tool": "Bash",
+                "command": "pkit project-management create-issue …[redacted] | grep …[redacted]",
+            },
+        ],
+    )
     out = _run(proj, monkeypatch, "diagnose", "report")
     assert "1 real prompt(s) of 1 captured" in out
     assert "1 allowlisted-but-compound" in out
@@ -3620,9 +3822,12 @@ def test_diagnose_report_uncovered_head_is_genuinely_missing(tmp_path, monkeypat
     # (c) a genuinely-uncovered head — no allow pattern matches, so it is a real
     # prompt and a real allowlist gap.
     proj = _setup(tmp_path, settings=_ALLOW_SETTINGS)
-    _seed_diagnose_log(proj, [
-        {"tool": "Bash", "command": "frobnicate …[redacted]"},
-    ])
+    _seed_diagnose_log(
+        proj,
+        [
+            {"tool": "Bash", "command": "frobnicate …[redacted]"},
+        ],
+    )
     out = _run(proj, monkeypatch, "diagnose", "report")
     assert "1 real prompt(s) of 1 captured" in out
     assert "1 genuinely-missing" in out
@@ -3632,13 +3837,18 @@ def test_diagnose_report_axes_over_mixed_fixture(tmp_path, monkeypatch):
     # All three shapes together, plus a compound with one uncovered segment
     # (`frobnicate`) that must read genuinely-missing despite a covered first head.
     proj = _setup(tmp_path, settings=_ALLOW_SETTINGS)
-    _seed_diagnose_log(proj, [
-        {"tool": "Bash", "command": "pkit project-management create-issue …[redacted]"},
-        {"tool": "Bash",
-         "command": "pkit project-management create-issue …[redacted] | grep …[redacted]"},
-        {"tool": "Bash", "command": "frobnicate …[redacted]"},
-        {"tool": "Bash", "command": "git add …[redacted] && frobnicate …[redacted]"},
-    ])
+    _seed_diagnose_log(
+        proj,
+        [
+            {"tool": "Bash", "command": "pkit project-management create-issue …[redacted]"},
+            {
+                "tool": "Bash",
+                "command": "pkit project-management create-issue …[redacted] | grep …[redacted]",
+            },
+            {"tool": "Bash", "command": "frobnicate …[redacted]"},
+            {"tool": "Bash", "command": "git add …[redacted] && frobnicate …[redacted]"},
+        ],
+    )
     out = _run(proj, monkeypatch, "diagnose", "report")
     assert "3 real prompt(s) of 4 captured" in out
     assert "1 auto-allowed" in out
@@ -3650,9 +3860,12 @@ def test_diagnose_report_cd_prefix_segment_not_counted_as_gap(tmp_path, monkeypa
     # A bare `cd <path>` segment is a cwd change, never an intent target (ADR-025),
     # so a `cd … | grep …` compound is allowlisted-but-compound, not a gap.
     proj = _setup(tmp_path, settings=_ALLOW_SETTINGS)
-    _seed_diagnose_log(proj, [
-        {"tool": "Bash", "command": "cd …[redacted] | grep …[redacted]"},
-    ])
+    _seed_diagnose_log(
+        proj,
+        [
+            {"tool": "Bash", "command": "cd …[redacted] | grep …[redacted]"},
+        ],
+    )
     out = _run(proj, monkeypatch, "diagnose", "report")
     assert "1 allowlisted-but-compound" in out
     assert "0 genuinely-missing" in out
@@ -3663,6 +3876,7 @@ def test_diagnose_report_cd_prefix_segment_not_counted_as_gap(tmp_path, monkeypa
 # `setup autonomy` detects per-machine overlay (settings.local.json) attributes
 # that override the intended (platform-aware) posture, warns loudly, and offers
 # to remove them — consent-gated, editing ONLY the gitignored local file.
+
 
 def _force_platform(monkeypatch, plat: str) -> None:
     """Pin sys.platform so the platform-aware intended posture is deterministic
@@ -3764,19 +3978,25 @@ def test_remove_attributes_only_preserves_other_keys(tmp_path, monkeypatch):
     # top-level permissions block survive verbatim).
     proj = _with_adapter(_setup(tmp_path))
     _force_platform(monkeypatch, "linux")
-    _write_local(proj, {
-        "sandbox": {"enabled": True, "allowUnsandboxedCommands": True,
-                    "network": {"allowedHosts": ["example.com"]}},
-        "permissions": {"allow": ["Bash(ls:*)"]},
-    })
+    _write_local(
+        proj,
+        {
+            "sandbox": {
+                "enabled": True,
+                "allowUnsandboxedCommands": True,
+                "network": {"allowedHosts": ["example.com"]},
+            },
+            "permissions": {"allow": ["Bash(ls:*)"]},
+        },
+    )
     findings = _perm._detect_overlay_overrides(proj)
     assert _perm._local_is_purely_overriding(proj, findings) is False
     _perm._remove_overlay_overrides(proj, findings)
     data = json.loads((proj / ".claude" / "settings.local.json").read_text())
-    assert "allowUnsandboxedCommands" not in data["sandbox"]   # the override is gone
-    assert data["sandbox"]["enabled"] is True                  # untouched
+    assert "allowUnsandboxedCommands" not in data["sandbox"]  # the override is gone
+    assert data["sandbox"]["enabled"] is True  # untouched
     assert data["sandbox"]["network"] == {"allowedHosts": ["example.com"]}  # verbatim
-    assert data["permissions"] == {"allow": ["Bash(ls:*)"]}    # unrelated key preserved
+    assert data["permissions"] == {"allow": ["Bash(ls:*)"]}  # unrelated key preserved
 
 
 def test_removal_idempotent_after_clean(tmp_path, monkeypatch):
@@ -3825,9 +4045,9 @@ def test_report_distinguishes_override_from_cruft_labels(tmp_path, monkeypatch):
     kinds = {f.key: f.kind for f in findings}
     assert kinds == {"enabled": "override", "excludedCommands": "cruft"}
     text = "\n".join(_perm._overlay_override_report(proj, findings, confirm=None))
-    assert "✗ local `enabled: false`" in text   # override gets the ✗ defeat marker
+    assert "✗ local `enabled: false`" in text  # override gets the ✗ defeat marker
     assert "· local `excludedCommands`" in text  # cruft gets the · inert marker
-    assert "inert" in text                       # cruft framing present
+    assert "inert" in text  # cruft framing present
 
 
 def test_committed_baseline_never_touched_by_removal(tmp_path, monkeypatch):
@@ -3840,7 +4060,7 @@ def test_committed_baseline_never_touched_by_removal(tmp_path, monkeypatch):
     _write_local(proj, {"sandbox": {"enabled": False, "allowUnsandboxedCommands": True}})
     findings = _perm._detect_overlay_overrides(proj)
     _perm._remove_overlay_overrides(proj, findings)
-    assert committed_path.read_text() == before   # byte-identical, untouched
+    assert committed_path.read_text() == before  # byte-identical, untouched
 
 
 def test_setup_autonomy_cli_unseal_warned_then_reconciled_by_seal_reassert(tmp_path, monkeypatch):
@@ -3853,9 +4073,9 @@ def test_setup_autonomy_cli_unseal_warned_then_reconciled_by_seal_reassert(tmp_p
     _force_platform(monkeypatch, "linux")
     _write_local(proj, {"sandbox": {"enabled": True, "allowUnsandboxedCommands": True}})
     out = _run(proj, monkeypatch, "setup", "autonomy", "--remove-overrides")
-    assert "Overlay overrides" in out                      # warned loudly
-    assert "allowUnsandboxedCommands: true" in out         # named the override
-    assert "already reconciled" in out                     # seal re-assert resolved it
+    assert "Overlay overrides" in out  # warned loudly
+    assert "allowUnsandboxedCommands: true" in out  # named the override
+    assert "already reconciled" in out  # seal re-assert resolved it
     assert _sb_local(proj)["allowUnsandboxedCommands"] is False  # ends SEALED
 
 

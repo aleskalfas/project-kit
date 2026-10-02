@@ -35,13 +35,15 @@ if str(SCRIPTS) not in sys.path:
 
 from _lib import axis_labels  # noqa: E402
 
-
 # The AUJ-shaped fixture map (parsed view). Mirrors the reference instance in
 # schemas/substrate-map.yaml; built in-process so the test does not depend on
 # the example file's exact contents.
 AUJ_MAP = axis_labels.SubstrateMap(
     axes={
-        "priority": {"label": {"remap": {"High": "P0", "Medium": "P1", "Low": "P2"}}, "default": "P1"},
+        "priority": {
+            "label": {"remap": {"High": "P0", "Medium": "P1", "Low": "P2"}},
+            "default": "P1",
+        },
         "type": {"title-prefix": {"remap": {"task": "[Task]", "epic": "[Epic]"}}},
         "workstream": {"unsupported": True},
         "state": {
@@ -79,9 +81,7 @@ def test_absent_axis_is_treated_as_unsupported_not_greenfield() -> None:
     """The load-bearing rule: an axis ABSENT from a present map degrades exactly
     as `unsupported`, NOT as greenfield (ADR-026 §2)."""
     # A map that mentions only priority — type/workstream/state are all absent.
-    partial = axis_labels.SubstrateMap(
-        axes={"priority": {"label": {"remap": {"High": "P0"}}}}
-    )
+    partial = axis_labels.SubstrateMap(axes={"priority": {"label": {"remap": {"High": "P0"}}}})
     assert axis_labels.axis_disposition("priority", partial) == "served"
     for absent in ("type", "workstream", "state"):
         assert axis_labels.axis_disposition(absent, partial) == "unsupported", absent
@@ -142,11 +142,17 @@ def test_hierarchy_does_not_affect_axis_disposition() -> None:
     not change whether an axis is served/unsupported. The two are separate
     questions (parent-requiredness vs. label substrate)."""
     advisory = axis_labels.SubstrateMap(
-        axes={"priority": {"label": {"remap": {"High": "P0"}}}, "workstream": {"unsupported": True}},
+        axes={
+            "priority": {"label": {"remap": {"High": "P0"}}},
+            "workstream": {"unsupported": True},
+        },
         hierarchy="advisory",
     )
     gated = axis_labels.SubstrateMap(
-        axes={"priority": {"label": {"remap": {"High": "P0"}}}, "workstream": {"unsupported": True}},
+        axes={
+            "priority": {"label": {"remap": {"High": "P0"}}},
+            "workstream": {"unsupported": True},
+        },
         hierarchy="gated",
     )
     for m in (advisory, gated):
@@ -203,11 +209,17 @@ def test_containment_does_not_affect_axis_disposition() -> None:
     not change whether an axis is served/unsupported (containment substrate vs.
     label substrate are separate questions)."""
     textual = axis_labels.SubstrateMap(
-        axes={"priority": {"label": {"remap": {"High": "P0"}}}, "workstream": {"unsupported": True}},
+        axes={
+            "priority": {"label": {"remap": {"High": "P0"}}},
+            "workstream": {"unsupported": True},
+        },
         containment="textual",
     )
     native = axis_labels.SubstrateMap(
-        axes={"priority": {"label": {"remap": {"High": "P0"}}}, "workstream": {"unsupported": True}},
+        axes={
+            "priority": {"label": {"remap": {"High": "P0"}}},
+            "workstream": {"unsupported": True},
+        },
         containment="native",
     )
     for m in (textual, native):
@@ -245,10 +257,16 @@ def test_title_prefix_binding_resolves_known_values() -> None:
 # `[Feature]` string).
 TYPE_TITLE_PREFIX_WITH_FEATURE = axis_labels.SubstrateMap(
     axes={
-        "type": {"title-prefix": {"remap": {
-            "task": "[Task]", "epic": "[EPIC]",
-            "feature": "[Feature]", "umbrella": "[Umbrella]",
-        }}},
+        "type": {
+            "title-prefix": {
+                "remap": {
+                    "task": "[Task]",
+                    "epic": "[EPIC]",
+                    "feature": "[Feature]",
+                    "umbrella": "[Umbrella]",
+                }
+            }
+        },
         "priority": {"label": {"remap": {"High": "P0"}}},
     }
 )
@@ -317,9 +335,7 @@ def test_unsupported_axis_resolve_write_degrades() -> None:
 
 
 def test_absent_axis_resolve_write_degrades() -> None:
-    partial = axis_labels.SubstrateMap(
-        axes={"priority": {"label": {"remap": {"High": "P0"}}}}
-    )
+    partial = axis_labels.SubstrateMap(axes={"priority": {"label": {"remap": {"High": "P0"}}}})
     assert axis_labels.resolve_write("workstream", "cli", partial) is axis_labels.DEGRADE
     assert axis_labels.resolve_write("type", "task", partial) is axis_labels.DEGRADE
 

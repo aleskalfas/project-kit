@@ -1,0 +1,13 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `pkit process health --json` and `pkit process health --interpretation-only
+  --json` now say which view they are, in a top-level `view` key: `full` and
+  `interpretation-only` (#711). The two payloads differed only by keys the
+  interpretation view leaves out, so a consumer reading
+  `totals.get("missed", 0)` got `0` from it and concluded "clean", even when
+  the full run had a miss and exited 1 — a false green on the machine surface.
+  Read `view` before any total. The key is added to both payloads and no
+  existing key is renamed or removed, so current consumers keep working.

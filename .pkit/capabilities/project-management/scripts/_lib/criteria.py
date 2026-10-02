@@ -129,9 +129,7 @@ class Criterion:
     checked: bool
 
 
-def extract_criteria(
-    body: str, headings: frozenset[str] | None = None
-) -> list[Criterion]:
+def extract_criteria(body: str, headings: frozenset[str] | None = None) -> list[Criterion]:
     """Enumerate the criteria items with line + checkbox metadata.
 
     Walks the body exactly as `show-issue._extract_criteria` does: collection

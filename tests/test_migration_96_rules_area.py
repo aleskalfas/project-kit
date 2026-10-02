@@ -15,12 +15,8 @@ Adapter migration 0.5.0/001-wire-claude-md-rules-include.sh:
 
 from __future__ import annotations
 
-import shutil
 import subprocess
 from pathlib import Path
-
-import pytest
-
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 BACKBONE_MIGRATION = (
@@ -108,7 +104,7 @@ class TestWireClaudeMdRulesInclude:
         """The created CLAUDE.md has an H1 (rule 13: includes must nest under a host heading)."""
         _run_adapter(tmp_path)
         lines = (tmp_path / "CLAUDE.md").read_text(encoding="utf-8").splitlines()
-        assert any(l.startswith("# ") for l in lines)
+        assert any(line.startswith("# ") for line in lines)
 
     def test_inserts_after_h1_in_existing_file(self, tmp_path: Path) -> None:
         """Existing CLAUDE.md with H1 but no @-include → @-includes inserted after H1."""
@@ -125,8 +121,8 @@ class TestWireClaudeMdRulesInclude:
         assert "Existing instructions." in content
 
         lines = content.splitlines()
-        h1_idx = next(i for i, l in enumerate(lines) if l.startswith("# "))
-        inc_idx = next(i for i, l in enumerate(lines) if "@.pkit/rules/core.md" in l)
+        h1_idx = next(i for i, line in enumerate(lines) if line.startswith("# "))
+        inc_idx = next(i for i, line in enumerate(lines) if "@.pkit/rules/core.md" in line)
         assert inc_idx > h1_idx, "@-include must appear after the H1"
 
     def test_prepends_when_no_h1(self, tmp_path: Path) -> None:
@@ -179,6 +175,4 @@ class TestWireClaudeMdRulesInclude:
 
         content = (tmp_path / "CLAUDE.md").read_text(encoding="utf-8")
         for line in original.splitlines():
-            assert line in content.splitlines(), (
-                f"adopter line {line!r} was lost after migration"
-            )
+            assert line in content.splitlines(), f"adopter line {line!r} was lost after migration"

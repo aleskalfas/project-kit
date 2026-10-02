@@ -25,6 +25,7 @@ was rejected as the gate's home precisely because it does not see these calls.
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import subprocess
@@ -117,8 +118,7 @@ def test_mutator_refuses_before_doing_anything(tmp_path: Path) -> None:
     cap = _project(tmp_path)
     proc = _run(
         "create-issue.py",
-        ["--type", "task", "--title", "x", "--workstream", "ws", "--parent", "1",
-         "--dry-run"],
+        ["--type", "task", "--title", "x", "--workstream", "ws", "--parent", "1", "--dry-run"],
         cap=cap,
     )
     assert proc.returncode == 2, proc.stderr
@@ -150,6 +150,65 @@ def test_engine_called_predicate_refuses_with_no_json_on_stdout(tmp_path: Path) 
     assert proc.returncode != 0
     assert proc.stdout.strip() == ""
     assert REFUSAL_MARKER in proc.stderr
+
+
+def test_an_engine_driven_read_names_bootstrap_as_the_cause(tmp_path: Path) -> None:
+    """The refusal reaches the operator through the engine (#752).
+
+    The engine reads each refusing detection predicate as indeterminate and
+    fails closed — unchanged — but no longer discards the predicate's stderr:
+    `status` and a refused move carry the refusal's hint. Driven through the
+    real issue-lifecycle definition and the real detection predicates, run the
+    way the engine runs every predicate (a registered command, the subject and
+    `--json`, from the repo root). Each predicate is given the test's own
+    interpreter rather than its `uv run --script` shebang, which would resolve
+    its dependencies over the network.
+    """
+    from project_kit.process import (
+        ProcessEngine,
+        load_definition,
+        render_status_json,
+        render_status_narrative,
+    )
+
+    cap = _project(tmp_path)
+    repo_root = cap.parent.parent.parent
+    shutil.copytree(SCRIPTS, cap / "scripts")
+    for script in (cap / "scripts").glob("detect-*.py"):
+        body = script.read_text(encoding="utf-8").split("\n", 1)[1]
+        script.write_text(f"#!{sys.executable}\n{body}", encoding="utf-8")
+
+    definition = load_definition(repo_root, "project-management:issue-lifecycle")
+
+    def engine() -> ProcessEngine:
+        return ProcessEngine.for_subject(definition, repo_root, "42")
+
+    position = engine().resolve_position()
+    assert position.state_id is None and position.indeterminate is True  # fail-closed
+
+    narrative = render_status_narrative(engine(), actor="agent")
+    assert "Where: indeterminate" in narrative
+    assert "the predicate said:" in narrative
+    assert "[refused] detect-state: project-management prerequisites are not met" in narrative
+    # One classifier detects every state: its refusal is shown once (ADR-062 point 13).
+    assert narrative.count("[refused] detect-state") == 1
+    assert "To fix: run `pkit project-management bootstrap`" in narrative
+
+    unevaluated = json.loads(render_status_json(engine(), actor="agent"))["position"]["unevaluated"]
+    assert {entry["state"] for entry in unevaluated} == {
+        "todo",
+        "backlog",
+        "in-progress",
+        "review",
+        "done",
+    }
+    for entry in unevaluated:
+        assert entry["reason"].endswith("it exited 2")
+        assert "pkit project-management bootstrap" in entry["stderr_tail"]
+
+    allowed, reason, _position = engine().can_move("backlog", actor="agent")
+    assert allowed is False
+    assert "To fix: run `pkit project-management bootstrap`" in reason
 
 
 def test_the_refusal_names_the_command_that_fixes_it(tmp_path: Path) -> None:
@@ -199,8 +258,7 @@ def test_bootstrapped_project_is_unaffected(tmp_path: Path) -> None:
     _bootstrap(cap)
     proc = _run(
         "create-issue.py",
-        ["--type", "task", "--title", "x", "--workstream", "ws", "--parent", "1",
-         "--dry-run"],
+        ["--type", "task", "--title", "x", "--workstream", "ws", "--parent", "1", "--dry-run"],
         cap=cap,
     )
     assert REFUSAL_MARKER not in proc.stderr, proc.stderr
@@ -213,9 +271,7 @@ def test_a_stamped_but_shape_invalid_config_is_refused(tmp_path: Path) -> None:
     not enough. Here the misspelling the config schema was built for
     (`has_projects_v2_boards`, trailing `s`) — silently ignored by every reader,
     which used to leave the adopter in label-fallback mode with no signal."""
-    cap = _project(
-        tmp_path, config=VALID_CONFIG + "has_projects_v2_boards: true\n"
-    )
+    cap = _project(tmp_path, config=VALID_CONFIG + "has_projects_v2_boards: true\n")
     _bootstrap(cap)
     proc = _run("show-issue.py", ["1"], cap=cap)
     assert proc.returncode == 2, proc.stdout + proc.stderr

@@ -29,7 +29,12 @@ functionality, through one renderer, and applies the one exit rule.
 **Not registered.** The diff-scoped checks — `pkit friction check`, `pkit
 migrations check-diff`, `pkit release lint` — read a base ref and answer about
 a *change*, not the tree's state. They stay their own lines of the check
-aggregator (`scripts/check.sh`, the enforcement boundary of ADR-019).
+aggregator (`scripts/check.sh`, the enforcement boundary of ADR-019). No base
+named for one run reaches a member either: the query policy removes the
+override from every validator and every data point's filler it starts, so
+`pkit validate` answers the same for the same working tree, HEAD, fetched
+history and default-branch commit, whatever base a pipeline named (ADR-058
+point 7).
 
 **A capability's validator is a query command** in the sense of ADR-057 point
 3 (bounded, deterministic, needing no network, read-only). Its entry names a
@@ -39,9 +44,11 @@ leaf carries the declaration of the query contract, `query-contract: true`.
 The registry runs the leaf's script under the *query policy* over the one
 runner the backbone uses for every command it runs on a component's behalf
 (`command_runner`, ADR-057 point 5): from the project root with the one
-argument `--json`, the offline marker set in its environment, in its own
-process group, bounded by the backbone's one command bound and killed as a
-group when it overruns, reading one JSON document — and nothing else — from
+argument `--json`, the offline marker set in its environment and the base
+override (`PKIT_CHECK_BASE`) removed from it, in its own process group,
+bounded by the backbone's one command bound and killed as a group when it
+overruns — inside another run, by the time that run has left and in the
+outermost run's group — reading one JSON document — and nothing else — from
 its standard output:
 `{"summary": [...], "findings": [{"severity", "location", "message"}, ...]}`;
 diagnostics go to standard error. No answer — a leaf without the declaration,
@@ -49,6 +56,10 @@ an abnormal exit, a timeout, output that is not exactly that document — is an
 *error finding*, never a clean pass: the umbrella fails closed. An exit that is
 uv's report of a dependency missing from its cache is named for what it is, an
 environment not provisioned, with `pkit sync` — which provisions it — as the fix.
+A `pkit` reading command the validator starts stays inside its bound — a
+filler it starts gets the time remaining and the group (`command_runner`, "a
+run inside a run") — and reads a data point the run resolved from the run
+cache (`run_cache`) rather than resolving it again.
 """
 
 from __future__ import annotations
@@ -62,7 +73,7 @@ from typing import Any, TypeVar
 
 from ruamel.yaml import YAML
 
-from project_kit import cli_render
+from project_kit import cli_render, default_branch, run_cache
 from project_kit.command_runner import (
     COMMANDS_KEY,
     CommandRun,
@@ -89,6 +100,17 @@ COMMAND_KEY = "command"
 # it, and the runner here refuses it.
 QUERY_CONTRACT_KEY = "query-contract"
 
+# What a data point's command filler declares it reads beyond the working tree
+# (COR-052 point 6), on its `commands:` leaf beside the query contract: the
+# current history, and settled state — the default branch, as the backbone
+# resolves it. Absent, the working tree only. `data_points` reads it; the
+# package schema refuses any other value, and the packages member a leaf that
+# declares it without the query contract.
+READS_KEY = "reads"
+READS_HISTORY = "history"
+READS_SETTLED = "settled"
+READS_STATES = (READS_HISTORY, READS_SETTLED)
+
 # The one argument the umbrella passes a validator command. The leaf is also a
 # focused surface that prints for people; with this flag it prints the
 # findings document alone.
@@ -101,6 +123,14 @@ QUERY_FLAG = "--json"
 # `pkit init` and `pkit sync` provision them beforehand (`provisioning`). The
 # lifecycle README's literals section documents both.
 OFFLINE_MARKER: Mapping[str, str] = {"PKIT_OFFLINE": "1", "UV_OFFLINE": "1"}
+
+# What a query command never inherits from its caller's environment: the base
+# override a pipeline sets for its comparisons (COR-054 point 3). A query
+# answers about the project's state, and a validator and a data point's filler
+# take no base named for one run (COR-052 point 6, ADR-058 point 7) — so every
+# validator and every filler, whichever command starts it, answers the same
+# whatever base a pipeline named. The lifecycle README's query row says so.
+QUERY_DROPPED_ENV: tuple[str, ...] = (default_branch.CHECK_BASE_ENV,)
 
 # What `uv`, honouring the offline marker, prints on standard error when a
 # script's dependency is not in its cache: the resolver's hint for a registry
@@ -280,7 +310,7 @@ _BACKBONE_MEMBERS: tuple[tuple[str, Callable[[Path], Outcome], str], ...] = (
     ("rule-sets", _rule_sets, "every rule-set file: shape, ids, origins, inheritance"),
     ("decisions", _decisions, "decision-record front matter and id spaces"),
     ("refs", _refs, "the reference graph across agents, skills and hooks"),
-    ("process", _process, "every process definition resolves"),
+    ("process", _process, "every process definition resolves, its states in one detection mode"),
     ("data", _data, "adopter data files bound to a capability schema"),
 )
 
@@ -356,7 +386,8 @@ def capability_validators(target_root: Path) -> tuple[Validator, ...]:
                 Validator(
                     name=f"{owner}:{name}",
                     run=query.run,
-                    order=order if isinstance(order, int) and not isinstance(order, bool)
+                    order=order
+                    if isinstance(order, int) and not isinstance(order, bool)
                     else CAPABILITY_ORDER_DEFAULT,
                     owner=owner,
                     help=command.help,
@@ -375,17 +406,26 @@ def _load_mapping(package: Path) -> Mapping[Any, Any]:
 
 def run_query(target_root: Path, script: Path, *, location: str, reference: str) -> Outcome:
     """Run one validator command under the query policy and read its answer (the
-    contract in the module docstring): with `--json` and the offline marker set,
-    through the shared runner — from the project root, in its own process group,
-    bounded by `command_runner.COMMAND_TIMEOUT_SECONDS`. No answer is an error
+    contract in the module docstring): with `--json`, the offline marker set and
+    the base override removed (`QUERY_DROPPED_ENV`), through the shared runner —
+    from the project root, in its own process group, bounded by
+    `command_runner.COMMAND_TIMEOUT_SECONDS` (inside another run, by the time
+    it has left, in the outermost run's group). No answer is an error
     finding at `location` — the validator's own entry in the package file — so
     the umbrella fails closed."""
     if not script.is_file():
         return _no_answer(
             location,
-            f"command {reference!r} names script {_rel(script, target_root)!r}, which does not exist.",
+            f"command {reference!r} names script {_rel(script, target_root)!r}, which does not "
+            "exist.",
         )
-    run = run_command(script, [QUERY_FLAG], cwd=target_root, extra_env=OFFLINE_MARKER)
+    run = run_command(
+        script,
+        [QUERY_FLAG],
+        cwd=target_root,
+        extra_env=OFFLINE_MARKER,
+        drop_env=QUERY_DROPPED_ENV,
+    )
     if run.ending is Ending.ANSWERED:
         return _answer_of(run.document, location=location, command=reference)
     return _no_answer(location, why_no_answer(run, reference))
@@ -409,7 +449,7 @@ def why_no_answer(run: CommandRun, reference: str) -> str:
     if run.ending is Ending.NOT_STARTED:
         return f"command {reference!r} could not start: {run.detail}"
     if run.ending is Ending.TIMED_OUT:
-        return f"command {reference!r} did not answer within {run.bound_seconds} s."
+        return f"command {reference!r} did not answer within {run.bound_described}."
     if not_provisioned(run):
         return (
             f"command {reference!r}: {NOT_PROVISIONED} (its dependencies are not in "
@@ -470,8 +510,16 @@ def _answer_of(document: Any, *, location: str, command: str) -> Outcome:
 def _finding(entry: Any) -> Finding | None:
     if not isinstance(entry, Mapping):
         return None
-    severity_value, location, message = entry.get("severity"), entry.get("location"), entry.get("message")
-    if not isinstance(severity_value, str) or not isinstance(location, str) or not isinstance(message, str):
+    severity_value, location, message = (
+        entry.get("severity"),
+        entry.get("location"),
+        entry.get("message"),
+    )
+    if (
+        not isinstance(severity_value, str)
+        or not isinstance(location, str)
+        or not isinstance(message, str)
+    ):
         return None
     try:
         severity = Severity(severity_value)
@@ -511,9 +559,7 @@ def select(
             f"unknown validator(s) {', '.join(repr(n) for n in unknown)}; "
             f"registered: {', '.join(v.name for v in registered)}."
         )
-    return tuple(
-        v for v in registered if (not only or v.name in only) and v.name not in skip
-    )
+    return tuple(v for v in registered if (not only or v.name in only) and v.name not in skip)
 
 
 # The values computed so far in the current run of `run_all`; None outside one.
@@ -556,10 +602,13 @@ def as_one_run(compute: Callable[[], _T]) -> _T:
 
 def run_all(target_root: Path, validators: Iterable[Validator]) -> list[Result]:
     """Run the members in order, as one run: a computation several members read
-    (`once_per_run`) is computed once for all of them."""
+    (`once_per_run`) is computed once for all of them — and a resolved data
+    point once for the `pkit` commands a member starts too, through the run
+    cache (`run_cache`), open for the run's length."""
     token = _RUN_VALUES.set({})
     try:
-        return [Result(v, v.run(target_root)) for v in validators]
+        with run_cache.opened():
+            return [Result(v, v.run(target_root)) for v in validators]
     finally:
         _RUN_VALUES.reset(token)
 
@@ -585,9 +634,7 @@ def render(target_root: Path, results: Sequence[Result]) -> str:
             lines.append(f"    {finding.severity.value:<9}{finding.location}{label}")
             lines.append(f"      → {finding.message}")
         lines.append("")
-    counts = ", ".join(
-        f"{sum(r.outcome.count(s) for r in results)} {s.value}(s)" for s in Severity
-    )
+    counts = ", ".join(f"{sum(r.outcome.count(s) for r in results)} {s.value}(s)" for s in Severity)
     lines.append(f"  {len(results)} validator(s) ran; {counts}.")
     errors = sum(len(r.outcome.errors) for r in results)
     verdict = "All checks passed." if not errors else f"{errors} error(s) found."
@@ -611,7 +658,8 @@ def _kind(value: Any) -> str:
 
 
 def location_of(path: Path, target_root: Path, pointer: str = "") -> str:
-    """A finding's location: the path relative to the root, then `:` and the pointer when there is one."""
+    """A finding's location: the path relative to the root, then `:` and the pointer when there is
+    one."""
     rel = _rel(path, target_root)
     return f"{rel}:{pointer}" if pointer else rel
 

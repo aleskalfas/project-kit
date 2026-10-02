@@ -2,6 +2,7 @@ component: project-management
 kind: minor
 custom:
   category: Changed
+  requires_backbone: release
 body: >
   `pkit pm history` and `history --check-drift` follow the project's journal
   setting (`process.journal`, off by default). With journal logging off,
@@ -15,8 +16,13 @@ body: >
   engine journal where one is kept, the tracker otherwise — and what `history`
   and `--check-drift` guarantee with committed, clone-local and no journals. The
   capability no longer declares the process-journal ignore pattern in its
-  `package.yaml`: the backbone owns it and follows the setting. The README gains
-  a "Lifecycle history" section.
+  `package.yaml`: the backbone owns it and follows the setting. Upgrade the
+  capability together with the backbone: it requires the backbone release that
+  makes process journal logging opt-in, which takes the ignore line over. On
+  that backbone an older version of this capability still declares the line;
+  while journals are committed the render leaves that entry out and `pkit
+  validate` warns until the capability is upgraded. The README gains a
+  "Lifecycle history" section.
 
   With journal logging off, `move-issue --bypass` keys its audit comment on the
   issue's count of state-label events on the GitHub timeline instead of the

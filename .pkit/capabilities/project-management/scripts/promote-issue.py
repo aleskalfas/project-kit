@@ -14,10 +14,12 @@ Per DEC-026 (as amended for issue #61):
 
 Two paths:
   - `--milestone` given → resolves <M> to an OPEN milestone (by number or
-    exact title), attaches it via `gh issue edit --milestone`, then calls
-    `move-issue --to backlog`.
-  - `--milestone` omitted → promotes on `--reason` alone: skips
-    `_attach_milestone`, then calls `move-issue --to backlog`. No milestone
+    exact title), calls `move-issue --to backlog`, then attaches the milestone
+    via `gh issue edit --milestone`. The move comes first because the workflow
+    reads a milestone as Backlog: attached first, it left move-issue nothing
+    to move (#1210).
+  - `--milestone` omitted → promotes on `--reason` alone: calls
+    `move-issue --to backlog` and skips `_attach_milestone`. No milestone
     resolution is attempted.
 
 Gates per DEC-026:
@@ -28,9 +30,9 @@ Gates per DEC-026:
     it is never silently downgraded to milestone-free).
   - Current Status = Todo (delegated to `move-issue`'s state machine).
 
-Composes over `move-issue.py`: this wrapper attaches the milestone (if any),
-then invokes `move-issue --to backlog`, **threading `--reason` to move-issue's
-`--bypass-reason`**. Per DEC-049, **move-issue is the sole audit-comment writer**
+Composes over `move-issue.py`: this wrapper invokes `move-issue --to backlog`,
+**threading `--reason` to move-issue's `--bypass-reason`**, then attaches the
+milestone (if any). Per DEC-049, **move-issue is the sole audit-comment writer**
 — it posts the one canonical audit comment (from the schema template); this
 wrapper no longer posts its own (ending the #672 double-post).
 
@@ -46,7 +48,7 @@ Exit codes:
   0  promoted
   1  membership refusal
   2  usage error / gate failure / gh failure
-"""
+"""  # noqa: E501 — a usage line is a command, kept whole
 
 from __future__ import annotations
 
@@ -60,21 +62,16 @@ from ruamel.yaml import YAML
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate  # noqa: E402
-from _lib import axis_carriage  # noqa: E402
-from _lib import axis_labels  # noqa: E402
-from _lib import session_guard  # noqa: E402
-from _lib.gh import gh_run, load_adopter_config  # noqa: E402
-from _lib.milestone import resolve_milestone  # noqa: E402
-from _lib.substrate_writes import write_milestone  # noqa: E402
-from _lib.membership import (  # noqa: E402
+from _lib import axis_carriage, axis_labels, bootstrap_gate, session_guard
+from _lib.gh import gh_run, load_adopter_config
+from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
     resolve_capability_root,
     resolve_invoker_identity,
 )
-
-
+from _lib.milestone import resolve_milestone
+from _lib.substrate_writes import write_milestone
 
 
 def main() -> int:
@@ -110,7 +107,8 @@ def main() -> int:
         "--capability-root",
         type=Path,
         default=None,
-        help=f"Path to the installed capability's directory (default: <repo-root>/.pkit/capabilities/{CAPABILITY_NAME}/).",
+        help="Path to the installed capability's directory (default: "
+        f"<repo-root>/.pkit/capabilities/{CAPABILITY_NAME}/).",
     )
     parser.add_argument(
         "--dry-run",
@@ -190,8 +188,8 @@ def main() -> int:
     if args.dry_run:
         if milestone_title is not None:
             print(
-                f"(dry-run: would attach milestone {milestone_title!r} and call "
-                "move-issue --to backlog, which posts the single audit comment.)"
+                "(dry-run: would call move-issue --to backlog, which posts the single "
+                f"audit comment, then attach milestone {milestone_title!r}.)"
             )
         else:
             print(
@@ -211,10 +209,15 @@ def main() -> int:
     # the authorisation reason to move-issue via `--bypass-reason`, and move-issue
     # posts the one canonical audit comment (rendered from the schema template).
 
-    # Attach the milestone via gh issue edit — only when one was given.
-    if milestone_title is not None:
-        if not _attach_milestone(args.issue_number, milestone_title, config):
-            return 2
+    # The move first, the milestone second (#1210). The workflow reads an issue
+    # with a milestone and no state label as Backlog (`lifecycle_inference`), so
+    # a milestone attached first moved the issue before move-issue read it:
+    # move-issue found it already in Backlog and did nothing, leaving no state
+    # label, no audit comment and no recorded move. In this order move-issue
+    # reads Todo and makes the whole move. Where a label carries the state, a
+    # failure before the milestone lands leaves an issue labelled Backlog: a
+    # re-run finds it there below, skips the move (so the audit comment is not
+    # posted twice) and attaches the milestone.
 
     # Detect the issue's current state before calling move-issue. If
     # the issue is already at Backlog or further (cascade may have
@@ -225,6 +228,10 @@ def main() -> int:
     # special-case the already-promoted state.
     current_state = _detect_current_state(args.issue_number, config, substrate_map)
     if current_state in ("backlog", "in-progress", "review", "done"):
+        if milestone_title is not None and not _attach_milestone(
+            args.issue_number, milestone_title, config
+        ):
+            return 2
         idempotent_detail = (
             "milestone attached; no state transition needed"
             if milestone_title is not None
@@ -239,7 +246,7 @@ def main() -> int:
             # verb for a milestone change on its own records why (#1016).
             print(
                 "  → to change an issue's milestone without a state transition, use "
-                f"`edit-issue {args.issue_number} --milestone <M> --reason \"<why>\"`, "
+                f'`edit-issue {args.issue_number} --milestone <M> --reason "<why>"`, '
                 "which records the change in an audit comment."
             )
         return 0
@@ -250,14 +257,33 @@ def main() -> int:
         args.issue_number, "backlog", reason, args.capability_root, args.allow_foreign_repo
     )
     if rc != 0:
-        applied = "milestone" if milestone_title is not None else "(nothing)"
+        if milestone_title is not None:
+            print(
+                f"[warn] move-issue exited {rc}: #{args.issue_number} was not moved and "
+                f"milestone {milestone_title!r} was not attached (its audit comment may "
+                "already be posted, and a retry does not post it again). Re-run this "
+                "wrapper to complete.",
+                file=sys.stderr,
+            )
+        else:
+            print(
+                f"[warn] (nothing) applied; move-issue exited {rc} (no transition; its "
+                "audit comment may already be posted, and a retry does not post it "
+                "again). Re-run this wrapper or run `move-issue --to backlog` to complete.",
+                file=sys.stderr,
+            )
+        return rc
+
+    # Attach the milestone via gh issue edit — only when one was given.
+    if milestone_title is not None and not _attach_milestone(
+        args.issue_number, milestone_title, config
+    ):
         print(
-            f"[warn] {applied} applied; move-issue exited {rc} (no transition; its audit "
-            "comment may already be posted, and a retry does not post it again). Re-run "
-            "this wrapper or run `move-issue --to backlog` to complete.",
+            f"[warn] #{args.issue_number} was moved to Backlog but milestone "
+            f"{milestone_title!r} was not attached. Re-run this wrapper to attach it.",
             file=sys.stderr,
         )
-        return rc
+        return 2
 
     if milestone_title is not None:
         print(f"\n[ok] promoted #{args.issue_number} Todo → Backlog (milestone: {milestone_title})")
@@ -324,10 +350,7 @@ def _detect_current_state(
     except (ValueError, KeyError, TypeError):
         return None
     labels = data.get("labels") or []
-    names = [
-        label.get("name", "") if isinstance(label, dict) else ""
-        for label in labels
-    ]
+    names = [label.get("name", "") if isinstance(label, dict) else "" for label in labels]
     # Through the seam: identity in greenfield, the reverse remap under a
     # `label` binding. Both return the kit's own state vocabulary, which is what
     # the caller's already-promoted tuple is written in.
@@ -377,9 +400,11 @@ def _invoke_move_issue(
         sys.executable,
         str(_HERE / "move-issue.py"),
         str(issue_number),
-        "--to", target,
+        "--to",
+        target,
         "--bypass",  # Todo → Backlog is bypassable-with-audit per workflow.yaml
-        "--bypass-reason", reason,
+        "--bypass-reason",
+        reason,
         "--yes",
     ]
     if allow_foreign_repo:

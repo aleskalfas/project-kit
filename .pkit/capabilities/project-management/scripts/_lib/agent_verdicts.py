@@ -16,36 +16,46 @@ line is one of two recognised shapes:
     remote path:  Reviewer agent: APPROVED | CHANGES_REQUESTED
     local path:   Reviewer agent (local, <name>): APPROVED | CHANGES_REQUESTED
 
-Two consumers read these comments and MUST agree on what they say (COR-007 —
-one parser, not two):
+Three consumers read these comments and MUST agree on what they say (COR-007 —
+one parser, not three):
 
   * `done-work`'s agent-mode gate collapses to the latest verdict *token* per
-    reviewer (freshness-filtered against the latest commit, restricted to the
-    resolved required set) and checks every required reviewer has a fresh
-    APPROVED.
+    reviewer (restricted to the resolved required set), keeps it only when it
+    is fresh, and checks every required reviewer has a fresh APPROVED.
+  * `review-pr` makes the same gate selection (`gate_candidates`, judged by
+    the same freshness rule) to skip a required reviewer whose latest verdict
+    is still fresh (#1178), so what it skips is exactly what the gate would
+    count.
   * `show-pr --field review` surfaces the latest verdict *token and body* per
     reviewer so an operator can read the reasons through the governed pm
     surface (issue #544); `show-pr --field review-history` surfaces the full
     sequence behind that reduction (`all_verdicts`, issue #905).
 
+What counts as fresh is not decided here: each consumer hands in the one
+freshness predicate (`_lib.verdict_freshness`, #1179), and this module only
+applies it — to each reviewer's latest verdict, after the reduction. A
+verdict a later one superseded never counts, fresh or not: freshness decides
+whether a reviewer's current verdict stands, never which verdict is current.
+
 The gate needs only the token; the read surface needs the body too. So the
 shared record (`Verdict`) carries the token, the full comment body, the
-reviewer identity, the path, and the timestamp — the gate ignores the fields
-it does not need. The "latest verdict per reviewer, selected by timestamp"
-rule (DEC-028 step 5 — a later CHANGES_REQUESTED must override an earlier
-APPROVED regardless of `gh`'s array order) lives here once, so the two
-consumers cannot diverge on which comment is a reviewer's current verdict.
+reviewer identity, the path, the timestamp and the head the verdict reviewed —
+the gate ignores the fields it does not need. The "latest verdict per
+reviewer, selected by timestamp" rule (DEC-028 step 5 — a later
+CHANGES_REQUESTED must override an earlier APPROVED regardless of `gh`'s
+array order) lives here once, so the consumers cannot diverge on which
+comment is a reviewer's current verdict.
 
-This module owns NO `gh` wiring: both consumers fetch the PR's comments via
-their own governed `gh_run` helper and pass the resulting comment list in.
+This module owns NO `gh` wiring: each consumer fetches the PR's comments via
+its own governed `gh_run` helper and passes the resulting comment list in.
 That keeps this module pure-logic and unit-testable without a live repo.
 """
 
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
 APPROVED = "APPROVED"
 CHANGES_REQUESTED = "CHANGES_REQUESTED"
@@ -57,14 +67,71 @@ CHANGES_REQUESTED = "CHANGES_REQUESTED"
 # satisfies the merge gate. The read surface (`show-pr --field review`) stays
 # permissive — it displays every verdict-shaped comment, marked or not. Reuses
 # the HTML-marker convention (`pkit-provenance`, `pkit-hook`, `pkit-freeform`).
+#
+# `review-pr` also names the PR head the reviewer was shown in the marker, and
+# the base branch's head at the time — `<!-- pkit-verdict sha=<oid>
+# base=<oid> -->` (#1179) — which is what the freshness rule reads
+# (`_lib.verdict_freshness`). The bare form is still a marker: a verdict
+# carrying it has no recorded head and is fresh by the latest commit's time.
+# A marker naming a head but no base predates the base pin; its base is not
+# checked.
 VERDICT_MARKER = "<!-- pkit-verdict -->"
 
+# A recorded head is a full object name (40 hex digits, or 64 in a SHA-256
+# repository), never an abbreviation that could later become ambiguous.
+_OBJECT_NAME = r"[0-9a-f]{40}|[0-9a-f]{64}"
+_OBJECT_NAME_RE = re.compile(rf"(?:{_OBJECT_NAME})")
 
-def stamp_verdict(body: str) -> str:
-    """Append the verdict marker to a verdict comment body (idempotent)."""
-    if VERDICT_MARKER in body:
-        return body
-    return f"{body.rstrip()}\n\n{VERDICT_MARKER}\n"
+# Every marker form; `sha` is the reviewed head and `base` the reviewed base
+# when they are named.
+_VERDICT_MARKER_RE = re.compile(
+    rf"<!-- pkit-verdict(?: sha=(?P<sha>{_OBJECT_NAME})(?: base=(?P<base>{_OBJECT_NAME}))?)? -->"
+)
+
+
+def _object_name(oid: str) -> bool:
+    return bool(oid) and _OBJECT_NAME_RE.fullmatch(oid) is not None
+
+
+def verdict_marker(sha: str = "", base: str = "") -> str:
+    """The verdict marker, naming the reviewed head when `sha` is a full
+    object name, and the reviewed base too when `base` is one. A malformed
+    head yields the bare marker, a malformed base a marker naming the head
+    alone — a marker naming a malformed object would not be recognised, and
+    the verdict would not gate."""
+    if not _object_name(sha):
+        return VERDICT_MARKER
+    if _object_name(base):
+        return f"<!-- pkit-verdict sha={sha} base={base} -->"
+    return f"<!-- pkit-verdict sha={sha} -->"
+
+
+def stamp_verdict(body: str, sha: str = "", base: str = "") -> str:
+    """Stamp a verdict comment body with the verdict marker (idempotent).
+
+    Any marker already in the body — a reviewer agent is asked to end its
+    output with the bare one — is replaced, so the body carries exactly one,
+    naming `sha`, the head `review-pr` showed the reviewer, and `base`, the
+    base branch's head at the time. Without a `sha` the bare marker is
+    stamped.
+    """
+    unmarked = _VERDICT_MARKER_RE.sub("", body).rstrip()
+    return f"{unmarked}\n\n{verdict_marker(sha, base)}\n"
+
+
+def read_marker(body: str) -> tuple[bool, str, str]:
+    """Whether `body` carries a verdict marker, and the head and base it names.
+
+    Returns `(marked, sha, base)`; `sha` and `base` are "" where the marker
+    names none, and both are "" for the bare marker or no marker. When a body
+    carries several markers the last one counts — the stamp is appended at
+    the end.
+    """
+    matches = list(_VERDICT_MARKER_RE.finditer(body))
+    if not matches:
+        return False, "", ""
+    last = matches[-1]
+    return True, last.group("sha") or "", last.group("base") or ""
 
 
 # Verdict-comment path (DEC-028): a remote reviewer posts under its GitHub
@@ -104,6 +171,10 @@ class Verdict:
       lets a consumer link back to the exact comment — e.g. `done-work`'s
       per-reviewer-override audit pointing at the block comment it waived
       (project-management:DEC-050).
+    * `sha` — the PR head the reviewer was shown, named by the verdict marker
+      (#1179); empty when the marker names none.
+    * `base` — the base branch's head when the reviewer was shown `sha`,
+      named by the verdict marker (#1179); empty when the marker names none.
     """
 
     reviewer: str
@@ -112,6 +183,26 @@ class Verdict:
     body: str
     timestamp: str
     url: str = ""
+    sha: str = ""
+    base: str = ""
+
+
+def latest_commit_timestamp(commits: list) -> str:
+    """The PR head commit's timestamp — the freshness anchor for a verdict
+    that names no reviewed head (DEC-028 "Stale-verdict handling").
+
+    `commits` is the `gh pr view --json commits` array, oldest first, so the
+    last entry is the head; its `committedDate` (falling back to
+    `authoredDate`) is the instant such a verdict must post-date to be fresh.
+    Returns "" when no timestamp is resolvable: the gate then refuses, and the
+    freshness rule holds a verdict that names no head stale.
+    """
+    if not commits:
+        return ""
+    last = commits[-1]
+    if not isinstance(last, dict):
+        return ""
+    return str(last.get("committedDate") or last.get("authoredDate") or "")
 
 
 def parse_verdict_line(first_line: str) -> tuple[str | None, str, str | None]:
@@ -139,14 +230,13 @@ def all_verdicts(
     *,
     remote_reviewer_ok: Callable[[str], bool] = lambda _login: True,
     local_reviewer_ok: Callable[[str], bool] = lambda _name: True,
-    min_timestamp: str | None = None,
     require_marker: bool = False,
 ) -> list[Verdict]:
     """Every recognised DEC-028 verdict on a PR, in posting order.
 
     The full sequence behind `latest_verdicts_per_reviewer`'s reduction: the
     same recognition (`parse_verdict_line` on the comment's first line) and the
-    same injected filters (marker, freshness, reviewer predicates — see
+    same injected filters (marker, reviewer predicates — see
     `latest_verdicts_per_reviewer` for their semantics), but nothing is
     collapsed — a verdict a later round superseded is still returned. This is
     what `show-pr --field review-history` reads to show earlier review rounds
@@ -173,11 +263,8 @@ def all_verdicts(
 
         # Gate path (#593): only a marker-carrying verdict counts, so a bare
         # verdict-grammar line posted by any non-reviewer path never gates.
-        if require_marker and VERDICT_MARKER not in body:
-            continue
-
-        timestamp = str(comment.get("createdAt") or "")
-        if min_timestamp is not None and timestamp <= min_timestamp:
+        marked, sha, base = read_marker(body)
+        if require_marker and not marked:
             continue
 
         if path == PATH_REMOTE:
@@ -195,8 +282,10 @@ def all_verdicts(
                 token=token,
                 path=path,
                 body=body,
-                timestamp=timestamp,
+                timestamp=str(comment.get("createdAt") or ""),
                 url=str(comment.get("url") or ""),
+                sha=sha,
+                base=base,
             )
         )
 
@@ -229,20 +318,20 @@ def latest_verdicts_per_reviewer(
     *,
     remote_reviewer_ok: Callable[[str], bool] = lambda _login: True,
     local_reviewer_ok: Callable[[str], bool] = lambda _name: True,
-    min_timestamp: str | None = None,
     require_marker: bool = False,
 ) -> list[Verdict]:
     """Collapse a PR's comments to the latest verdict per reviewer (DEC-028).
 
     This is the permissive *read-surface* primitive: `show-pr --field review`
     calls it directly to show every posted verdict (latest per reviewer). Its
-    defaults are deliberately permissive — no freshness anchor, allow-all
-    membership — because a read surface shows whatever verdicts exist. Those
-    defaults are NOT safe for the merge gate: a caller that wants gate
-    semantics must go through `gate_verdicts` (below), whose freshness and
-    membership filters are required, non-defaulted arguments. Do not call this
-    primitive from a gate path — the permissive default would silently count
-    every verdict from anyone at any age (self-approval included).
+    defaults are deliberately permissive — no marker required, allow-all
+    membership — and it judges no freshness, because a read surface shows
+    whatever verdicts exist. Those defaults are NOT safe for the merge gate: a
+    caller that wants gate semantics must go through `gate_verdicts` (below),
+    whose freshness and membership filters are required, non-defaulted
+    arguments. Do not call this primitive from a gate path — the permissive
+    default would silently count every verdict from anyone at any age
+    (self-approval included).
 
     Recognises the DEC-028 verdict shapes in `comments` (the
     `gh pr view --json comments` array) via `all_verdicts`, then reduces them
@@ -259,11 +348,14 @@ def latest_verdicts_per_reviewer(
         membership-in-the-required-set predicates (and its remote predicate
         also excludes the PR author, per DEC-028 step 3); `show-pr` accepts
         every reviewer (it shows whatever verdicts exist).
-      * `min_timestamp` — when set, only comments strictly after it are
-        considered (the gate's freshness anchor: the latest commit
-        timestamp). `show-pr` leaves it `None` — a stale verdict is still the
-        reviewer's current verdict to *display*; freshness is a gate concern,
-        not a read-surface one.
+      * `require_marker` — when set, only a verdict carrying the verdict
+        marker is considered (#593); the gate path sets it.
+
+    Freshness is not a filter here. It applies to the reduction's result —
+    `gate_verdicts` keeps a reviewer's latest verdict only when it is fresh —
+    so a stale latest verdict is never replaced by an older fresh one.
+    `show-pr` marks a stale current verdict by the same predicate and still
+    displays it.
 
     A reviewer is keyed by `(path, reviewer)` so a remote and a local verdict
     from names that happen to collide never overwrite each other. The returned
@@ -274,46 +366,81 @@ def latest_verdicts_per_reviewer(
             comments,
             remote_reviewer_ok=remote_reviewer_ok,
             local_reviewer_ok=local_reviewer_ok,
-            min_timestamp=min_timestamp,
             require_marker=require_marker,
         )
+    )
+
+
+def gate_candidates(
+    comments: list,
+    *,
+    local_reviewer_ok: Callable[[str], bool],
+    remote_reviewer_ok: Callable[[str], bool],
+) -> list[Verdict]:
+    """Each required reviewer's current verdict as the gate reads it, before
+    freshness is judged (DEC-028 steps 2, 3 and 5).
+
+    The latest marker-carrying verdict per reviewer (`require_marker=True`,
+    #593) from an identity the membership predicates accept. The membership
+    predicates are REQUIRED keyword arguments, so a verdict from an unrequired
+    identity — the PR author's self-approval included — cannot reach the gate
+    through a forgotten filter. `gate_verdicts` keeps the fresh ones; a consumer
+    that has to say why a reviewer's current verdict does not count — a
+    refusal, `review-pr`'s re-run — reads this, so it describes exactly the
+    verdict the gate judged.
+
+    The marker filter closes the read side of the DEC-047 spoof: a bare
+    verdict-grammar line — however it reached the PR — counts only if the
+    reviewer path stamped it with a verdict marker.
+
+      * `local_reviewer_ok` / `remote_reviewer_ok` — membership predicates
+        scoping the count to the resolved required set (and excluding the PR
+        author on the remote path, DEC-028 step 3).
+    """
+    return latest_verdicts_per_reviewer(
+        comments,
+        local_reviewer_ok=local_reviewer_ok,
+        remote_reviewer_ok=remote_reviewer_ok,
+        require_marker=True,
     )
 
 
 def gate_verdicts(
     comments: list,
     *,
-    min_timestamp: str,
+    is_fresh: Callable[[Verdict], bool],
     local_reviewer_ok: Callable[[str], bool],
     remote_reviewer_ok: Callable[[str], bool],
 ) -> list[Verdict]:
     """Strict, gate-facing verdict selection for the merge gate (DEC-028).
 
-    Like `latest_verdicts_per_reviewer`, but the security-relevant filters are
-    REQUIRED (non-defaulted) keyword arguments, and it additionally requires the
-    verdict marker (`require_marker=True`, #593) — there is no way to call this
-    permissively. That makes the fail-open default of the read-surface primitive
-    unreachable from the gate path: the gate's correctness no longer depends on
-    `done-work` *remembering* to inject a freshness anchor and
+    Each reviewer's current verdict (`gate_candidates`), kept only when
+    `is_fresh` holds it fresh. The security-relevant filters are REQUIRED
+    (non-defaulted) keyword arguments — there is no way to call this
+    permissively. That makes the fail-open default of the read-surface
+    primitive unreachable from the gate path: the gate's correctness does not
+    depend on `done-work` *remembering* to inject a freshness predicate and
     membership/author-exclusion predicates; forgetting one is a `TypeError` at
     the call site, not a silently weakened gate.
 
-    The marker filter (#593) closes the read side of the DEC-047 spoof: a bare
-    verdict-grammar line — however it reached the PR — counts only if the
-    reviewer path stamped it with `VERDICT_MARKER`.
+    Freshness is judged after the latest-per-reviewer reduction, never before
+    it: a reviewer's latest verdict is its current opinion, and when that
+    verdict is stale the reviewer has no verdict that counts. An older verdict
+    it superseded never stands in, however fresh — otherwise a stale
+    CHANGES_REQUESTED would hand the gate back the APPROVED it overrode.
 
-      * `min_timestamp` — the freshness anchor (the latest-commit timestamp);
-        only comments strictly after it count (DEC-028 step 4). Required so a
-        stale APPROVED can never slip through as fresh.
-      * `local_reviewer_ok` / `remote_reviewer_ok` — membership predicates
-        scoping the count to the resolved required set (and excluding the PR
-        author on the remote path, DEC-028 step 3). Required so a verdict from
-        an unrequired identity (self-approval included) can never count.
+      * `is_fresh` — the freshness predicate (`_lib.verdict_freshness`); a
+        reviewer's current verdict counts only when it holds it fresh
+        (DEC-028 steps 4 and 5). Required so a stale APPROVED can never slip
+        through as fresh.
+      * `local_reviewer_ok` / `remote_reviewer_ok` — as for `gate_candidates`.
     """
-    return latest_verdicts_per_reviewer(
-        comments,
-        min_timestamp=min_timestamp,
-        local_reviewer_ok=local_reviewer_ok,
-        remote_reviewer_ok=remote_reviewer_ok,
-        require_marker=True,
-    )
+    return [
+        verdict
+        for verdict in gate_candidates(
+            comments,
+            local_reviewer_ok=local_reviewer_ok,
+            remote_reviewer_ok=remote_reviewer_ok,
+        )
+        if is_fresh(verdict)
+    ]

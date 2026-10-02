@@ -31,8 +31,9 @@ One case is NOT a silent miss: an **un-bootstrapped project** is refused (exit
 2) by the prerequisite gate every non-exempt pm verb calls (#747). A workstream
 read off assumed kit labels would misreport an adopter who remapped them — a
 confidently wrong answer, worse than none. stdout stays empty, so the
-backbone's consumer (which treats any non-zero exit as "no workstream") sees
-the same degrade it always did.
+backbone's consumer omits the workstream as it does for a miss — and, a
+non-zero exit being a failure rather than a miss, warns, showing the tail of
+this refusal's stderr, so its hint reaches the operator.
 
 Deliberately **not** membership-gated (unlike `show-issue`): it is a passive
 read-only context accessor over the invoker's own branch, and a refusal there
@@ -61,9 +62,9 @@ from pathlib import Path
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import axis_labels, bootstrap_gate  # noqa: E402
-from _lib.gh import gh_get_issue, load_adopter_config  # noqa: E402
-from _lib.membership import CAPABILITY_NAME, resolve_capability_root  # noqa: E402
+from _lib import axis_labels, bootstrap_gate
+from _lib.gh import gh_get_issue, load_adopter_config
+from _lib.membership import CAPABILITY_NAME, resolve_capability_root
 
 #: The issue number embedded in a `<type>/<N>-<slug>` branch name — the same
 #: derivation `open-pr` uses on its closing-issue path (DEC-013).
@@ -100,9 +101,7 @@ def main() -> int:
 
     # Prerequisite gate (#747): refuse on an un-bootstrapped project rather
     # than operating on assumed defaults. See _lib/bootstrap_gate.py.
-    if not bootstrap_gate.enforce(
-        "context-workstream", capability_root=capability_root
-    ):
+    if not bootstrap_gate.enforce("context-workstream", capability_root=capability_root):
         return 2
 
     issue_number = _issue_number_from_branch(_current_branch())

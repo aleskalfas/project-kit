@@ -72,8 +72,10 @@ Single-shot: receive the PR context, read the PR, apply the criteria, emit the v
 
 The invoker (typically `review-pr.py`) provides the PR number. Pull:
 
-- `gh pr view <N> --json title,body,headRefName,baseRefName,files,commits`
+- `gh pr view <N> --json title,body,headRefName,baseRefName,headRefOid,files,commits`
 - `gh pr diff <N>` — the diff you review.
+
+**When `gh pr diff` refuses the diff** — GitHub refuses it for a PR that changes more than 300 files — read the same diff from the local checkout: `git diff <base>...<head>`, with the base and head your brief names, or `origin/<baseRefName>...<headRefOid>` from `gh pr view` when it names none. The diff is unreadable only when neither source yields it. This is the panel's rule, owned by the "The code-review panel" section of the software-engineering README.
 
 Read the changed files in the working tree where you need surrounding context. Grep the diff for the high-signal markers below, then read each hit in context to judge whether it is a real defect (the marker only tells you where to look — interpolation and reachability decide whether it blocks):
 
@@ -83,7 +85,7 @@ pickle   yaml.load   md5   sha1   verify=False
 token   password   secret   api_key
 ```
 
-If the PR or diff can't be fetched, emit `CHANGES_REQUESTED` with the failure as the rationale.
+If the PR can't be fetched, or neither source yields the diff, emit `CHANGES_REQUESTED` with the failure as the rationale.
 
 ### 2. Read the conventions corpus
 
@@ -110,7 +112,7 @@ End your output with the verdict marker on its own line:
 <!-- pkit-verdict -->
 ```
 
-The marker is what the merge gate counts ([project-management:DEC-028-agent-as-approver-paths]): a verdict comment gates **only** when its body carries `<!-- pkit-verdict -->`. `review-pr.py` stamps it when it posts your stdout (idempotently); include it yourself whenever you post a verdict comment directly.
+The marker is what the merge gate counts ([project-management:DEC-028-agent-as-approver-paths]): a verdict comment gates **only** when its body carries a verdict marker. `review-pr.py` stamps it when it posts your stdout (idempotently); include it yourself whenever you post a verdict comment directly. The stamp replaces your marker with one that names the head you reviewed and the base branch's head at the time — `<!-- pkit-verdict sha=<head> base=<base> -->`, each a full commit id — so anything that looks for verdict comments matches the marker's prefix, `<!-- pkit-verdict`, never the bare string, which a stamped comment does not carry (the project-management README, "What the marker carries").
 
 The verdict-line format is load-bearing. The gate-checker parses the first line as a literal string match — deviating from the exact form (case, punctuation, spacing, the `security-reviewer` name) breaks the gate. The verdict token is the bare word `APPROVED` (or `CHANGES_REQUESTED`) on the verdict line — nothing else on that line. "APPROVED with comments" is not a token: an approval-with-advisories is a bare `APPROVED` verdict line whose caveats live in the bullets below, never in the verdict line itself.
 

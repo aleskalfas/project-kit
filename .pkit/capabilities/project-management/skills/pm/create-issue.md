@@ -16,12 +16,12 @@ The deterministic enforcement lives in `scripts/create-issue.py`. It reads `issu
 Behaviour summary (the script is the source of truth — read it for the exact contract):
 
 - **Membership gate** (per [project-management:DEC-021-team-membership-gate]) — closed mode refuses non-members with the standard refusal template; the user fixes by getting added via `add-member` before the operation will proceed.
-- **Title composition** — prepends the type's `title_prefix` (EPIC for epic, Feature/Umbrella/Task for the others) and validates against `titles.yaml`'s per-type regex before any `gh` call.
+- **Title composition** — prepends the type's `title_prefix` (EPIC for epic, Feature/Umbrella/Task for the others) and runs every check `titles.yaml` declares for the type before any `gh` call: the pattern and the wording rules. A refusal (a Conventional Commits prefix after the bracket) stops filing; a warning (a lowercase `scope:` token after the bracket; a Task title under 30 characters after its prefix — EPIC, Feature and Umbrella titles have no length floor) is shown and filing goes on. Write the title in the type's house style from `titles.yaml`'s `description` and `examples_good`: an EPIC, Feature or Umbrella names a territory; a Task says what is true once the work is done, or the work in the imperative for a decision, a document or an exploration.
 - **Body composition** — reads `templates/<Prefix>.md`, strips frontmatter, substitutes the parent-ref line when `--parent` is provided.
 - **Classification labels** — resolves each axis's SUBSTRATE first, then labels only the axes a label carries (per [project-management:DEC-051-axis-carriage-activation]): `type:<kind>` always, plus `priority` / `workstream` when greenfield or when `substrate-map.yaml` binds them to your own labels. An axis your map binds to the board (or a configured board on an axis your map is silent about) is written as a board field by the `after_create_issue` hook, not as a label.
 - **Mandatory assignment** (per [project-management:DEC-019-mandatory-issue-state]) — defaults the assignee to the resolved invoker identity; `--assignee=<login>` overrides.
 - **Auto-add to board** (per DEC-019) — for board-substrate adopters, the new issue is added to the configured Projects v2 board as the final filing step.
-- **Validation refusals** — workstream value not in the adopter's declared list, parent type not in the issue type's `parent_issue_types`, title regex mismatch, and a non-`feature` `--kind` on an epic/feature/umbrella (the kind/structural hard-reject per [project-management:DEC-011-title-formats] / `classification.yaml`'s `structural_restriction` — an EPIC/Feature/Umbrella always carries kind `feature`) — all surface as structured error messages before `gh` is invoked.
+- **Validation refusals** — workstream value not in the adopter's declared list, parent type not in the issue type's `parent_issue_types`, a title `titles.yaml` refuses, and a non-`feature` `--kind` on an epic/feature/umbrella (the kind/structural hard-reject per [project-management:DEC-011-title-formats] / `classification.yaml`'s `structural_restriction` — an EPIC/Feature/Umbrella always carries kind `feature`) — all surface as structured error messages before `gh` is invoked.
 
 ## How to invoke
 
@@ -30,7 +30,7 @@ Dispatch to the script via the kit-level capability-command dispatcher (per [pki
 ```
 pkit project-management create-issue \
   --type <epic|feature|umbrella|task> \
-  --title "<plain-English sentence (no [Type] prefix)>" \
+  --title "<title text in the type's house style (no [Type] prefix)>" \
   [--kind <feature|bug|docs|test|refactor|maintenance>] \
   [--priority <High|Medium|Low>] \
   [--workstream <slug>] \
@@ -58,11 +58,13 @@ Direct-path is equivalent for adopters whose kit predates the dispatcher:
 
 ## Intent recognition before invocation
 
-Four judgments belong to the LLM before invoking the script — these are interpretation, not deterministic:
+Six judgments belong to the LLM before invoking the script — these are interpretation, not deterministic:
 
 1. **Pick the structural type.** Map the user's natural-language intent to one of `epic|feature|umbrella|task`. Default to Task for code-change intents from Implementer-role callers; default to EPIC or Feature for outcome-shaped intents from PM-role callers (per [project-management:DEC-008-pm-and-implementer-roles]). When ambiguous, ask.
 2. **Pick the parent.** From recent context, prior conversation, or by asking. If the type requires a parent (`parent_ref_optional: false` in `issue-types.yaml`) and none is supplied, the script refuses — pre-empt the refusal by asking up front.
 3. **Pick the workstream and priority defaults.** Infer the workstream from file paths or topic when possible; ask if ambiguous. Priority defaults to `Medium`; only override on explicit user signal.
 4. **Draft the body as a definition, not a history.** When you compose the body — especially via `--body-file`, which bypasses the template's outcome-first `## What` prompt — the body must **define the current desired state**: what the issue *is*, and what's true when it closes. Lead with that; keep rationale minimal and after it; put "how we got here" (splits, renames, prior decisions, the discovery story) in the timeline, comments, or a linked decision — never in the lead. A fresh reader should learn the task from the definition, not reconstruct it from the history. Per [project-management:DEC-010-issue-body-minimum-structure]. (PR bodies are the exception: a PR body legitimately describes *what was done* — the why-and-how of a completed change, per [project-management:DEC-013-branch-and-pr-conventions] — so this "lead with the current state" rule is issue-body-only.)
+5. **Scope a follow-up a reviewer produced.** A follow-up gets a Milestone only when it blocks an acceptance criterion of that Milestone's work or is a correctness defect in a check that already enforces something. Otherwise file it without a Milestone — or on the current period of the project's rolling maintenance Milestone, where it keeps one (the standing-theme pattern in [project-management:DEC-016-time-bound-containers]) — and it waits: it is not built in the wave whose review found it.
+6. **Order a Task after an open one that changes the same files** — [batch-plan](batch-plan.md)'s same-module rule.
 
 Everything else is the script's job — pass the inferred arguments through and surface the result.

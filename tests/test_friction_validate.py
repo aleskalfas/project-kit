@@ -15,6 +15,7 @@ from click.testing import CliRunner
 
 from project_kit import connections, docs_roots
 from project_kit import friction_discovery as fd
+from project_kit import friction_repository as fr
 from project_kit import friction_validate as fv
 from project_kit.cli import main
 from project_kit.friction_check import CommitTree
@@ -476,9 +477,9 @@ def test_a_synced_copy_declared_as_a_place_is_refused_even_while_dormant(
     adopter by sync: declared as a place it is an error at its declaration, and
     it is not walked — so the pass is dormant, and the error stands."""
     adopter = make_adopter_repo(capabilities=("evidence",))
-    (evidence,) = [
-        c for c in read_backbone_manifest(adopter.root).components if c.name == "evidence"
-    ]
+    manifest = read_backbone_manifest(adopter.root)
+    assert manifest is not None
+    (evidence,) = [c for c in manifest.components if c.name == "evidence"]
     assert evidence.origin == "kit-shipped"
     adopter.write({CONFIG: _config([place]), place: _anchored("copied")})
     result = fv.validate_friction(adopter.root)
@@ -575,9 +576,7 @@ def test_a_glob_matching_a_synced_copy_and_the_project_s_own_file_refuses_only_t
         f"more — the methodology's sync writes them into this repository, so friction "
         f"discovery does not walk them;"
     )
-    assert fv.summary_lines(result)[0].endswith(
-        "0 report(s); 1 place(s) matching a synced copy."
-    )
+    assert fv.summary_lines(result)[0].endswith("0 report(s); 1 place(s) matching a synced copy.")
 
 
 def test_without_the_tree_s_ownership_module_the_synced_check_is_reported_skipped(
@@ -679,6 +678,225 @@ def test_a_capability_surface_that_is_not_a_list_fails_validate_even_while_dorma
     assert f"error    {EVIDENCE_PACKAGE}:/friction/surface" in friction
 
 
+# --- held documents (COR-050 points 1 and 12) -------------------------------
+
+#: The evidence capability holding its run records, in a folder of its `runs` location.
+HELD_RUNS = (
+    "docs:\n"
+    "  locations:\n"
+    "    runs: {path: evidence}\n"
+    "friction:\n"
+    "  held:\n"
+    "    - {location: runs, path: records, description: The run records.}\n"
+)
+RECORD = "docs/evidence/records/2026-10-01-run.md"
+HELD_POINTER = "/friction/held/0"
+
+
+def test_a_held_document_is_walked_by_no_place_and_neither_measure_counts_it(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """The project's place encloses the held folder: the record is left out of its
+    walk and kept with its owner and that place, never an artefact — so the
+    whole-repository check counts it neither as unanchored nor anywhere else."""
+    adopter = make_adopter_repo(capabilities=("evidence",))
+    _evidence_declares(adopter, HELD_RUNS)
+    adopter.write(
+        {
+            CONFIG: _config(["docs"]),
+            RECORD: "---\ndate: '2026-10-01'\n---\n\n# A run\n",
+            "docs/plain.md": "---\ntitle: Plain\n---\n",
+        }
+    )
+    result = fv.validate_friction(adopter.root)
+    discovery = result.discovery
+
+    assert [a.path for a in discovery.artefacts] == ["docs/plain.md"]
+    assert [f.path for f in discovery.files] == ["docs/plain.md"]
+    (folder,) = discovery.held_folders
+    assert (folder.pattern, folder.component, folder.skipped) == (
+        "docs/evidence/records",
+        "evidence",
+        None,
+    )
+    (held,) = discovery.held
+    assert (held.path, held.owner, held.folder) == (RECORD, "capability:evidence", folder)
+    assert [p.pattern for p in held.places] == ["docs"]
+    assert held.front_matter == {"date": "2026-10-01"}
+    assert (held.unreadable, held.blocks) == (None, ())
+    assert result.errors == ()
+
+    adopter.commit("a record beside a plain artefact", None)
+    repository = fr.run_repository_check(adopter.root)
+    assert repository.artefacts == 1
+    assert repository.unanchored == ("docs/plain.md",)
+
+
+def test_a_friction_block_anywhere_in_a_held_document_fails_validation_even_while_dormant(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """A held document is not an artefact, so nothing would read a block written
+    into it: validation refuses one wherever it is written — the document's own,
+    an entry's, a rule's under `rules` — located at the block, whether any place
+    is declared or not."""
+    adopter = make_adopter_repo(capabilities=("evidence",))
+    _evidence_declares(adopter, HELD_RUNS)
+    entries = "docs/evidence/records/entries.md"
+    rules = "docs/evidence/records/rules.md"
+    adopter.write(
+        {
+            RECORD: _document("run", anchors={"path": ["src/**"]}),
+            entries: "---\nRUN-1:\n  pkit:\n    friction:\n      anchors: {path: [src/**]}\n---\n",
+            rules: (
+                "---\nrule-set: RUNS\nrules:\n  RS-RUNS-001:\n    status: accepted\n"
+                "    pkit:\n      friction:\n        anchors: {path: [src/**]}\n---\n"
+            ),
+            "docs/evidence/records/clean.md": "---\ndate: '2026-10-02'\n---\n",
+        }
+    )
+    result = fv.validate_friction(adopter.root)
+
+    assert result.is_dormant
+    assert [(f.kind, f.location, f.pointer) for f in result.errors] == [
+        (fv.FrictionFindingKind.HELD_BLOCK, RECORD, "/pkit/friction"),
+        (fv.FrictionFindingKind.HELD_BLOCK, entries, "/RUN-1/pkit/friction"),
+        (fv.FrictionFindingKind.HELD_BLOCK, rules, "/rules/RS-RUNS-001/pkit/friction"),
+    ]
+    assert result.errors[0].message == (
+        f"a friction block in a document held by evidence (its held folder 'records', "
+        f"{EVIDENCE_PACKAGE}:{HELD_POINTER}): a held document is not an artefact, so no check "
+        f"reads its anchors or its revalidation — remove the block (COR-050 points 1 and 12)."
+    )
+    assert fv.summary_lines(result) == [
+        "0 place(s), 0 artefact(s), none carrying the `pkit` container; dormant; "
+        "3 finding(s) on held folders and documents."
+    ]
+
+    cli = CliRunner().invoke(main, ["validate", "--no-refs"])
+    assert cli.exit_code == 1, cli.output
+    friction = cli.output.split("\n  friction\n")[1].split("\n  rule-sets\n")[0]
+    assert f"error    {RECORD}:/pkit/friction" in friction
+
+
+def test_a_held_document_whose_front_matter_does_not_parse_fails_validation(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """A typo in a held document's front matter would hide a friction block from
+    the search, so it is an error of its own — dormant or not — and the document
+    lists why it is unreadable."""
+    adopter = make_adopter_repo(capabilities=("evidence",))
+    _evidence_declares(adopter, HELD_RUNS)
+    adopter.write({RECORD: "---\ndate: [2026\npkit:\n  friction: {}\n---\n"})
+    result = fv.validate_friction(adopter.root)
+
+    assert result.is_dormant
+    (held,) = result.discovery.held
+    assert held.unreadable is not None and held.blocks == ()
+    (finding,) = result.errors
+    assert (finding.kind, finding.location, finding.pointer) == (
+        fv.FrictionFindingKind.HELD_UNPARSABLE,
+        RECORD,
+        "",
+    )
+    assert finding.message.startswith(f"front matter does not parse ({held.unreadable}); ")
+    assert finding.message.endswith(
+        "the document is held by evidence (its held folder 'records', "
+        f"{EVIDENCE_PACKAGE}:{HELD_POINTER}), and a friction block in it could not be looked "
+        "for — fix the YAML (COR-050 points 1 and 12)."
+    )
+
+
+def test_a_held_folder_in_another_shape_is_a_finding_and_holds_nothing(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """A held folder names the location it lies within, and is a folder there: one
+    discovery cannot read — plain text, no location, a location not declared, a
+    glob, a path leaving its location — is an error at its entry, and holds
+    nothing, so a place matching its documents walks them as artefacts."""
+    adopter = make_adopter_repo(capabilities=("evidence",))
+    _evidence_declares(
+        adopter,
+        "docs:\n"
+        "  locations:\n"
+        "    runs: {path: evidence}\n"
+        "friction:\n"
+        "  held:\n"
+        "    - records\n"
+        "    - {path: '.'}\n"
+        "    - {location: logs, path: records}\n"
+        "    - {location: runs, path: 'records/*'}\n"
+        "    - {location: runs, path: '../records'}\n",
+    )
+    adopter.write({CONFIG: _config(["docs"]), RECORD: "---\ndate: '2026-10-01'\n---\n"})
+    result = fv.validate_friction(adopter.root)
+
+    assert (result.discovery.held_folders, result.discovery.held) == ((), ())
+    assert [a.path for a in result.discovery.artefacts] == [RECORD]
+    assert {f.kind for f in result.errors} == {fv.FrictionFindingKind.MALFORMED_HELD}
+    reasons = {f.pointer: f.message.split(", so friction discovery")[0] for f in result.errors}
+    assert reasons == {
+        "/friction/held/0": (
+            "the held folder is text ('records'), not an object `{path, location?}`"
+        ),
+        "/friction/held/1": (
+            "the held folder names no `location`: a held folder lies within one of the "
+            "component's `docs.locations`"
+        ),
+        "/friction/held/2": (
+            "the held folder names location 'logs', which `docs.locations` does not declare "
+            "(declared: ['runs'])"
+        ),
+        "/friction/held/3": "the held folder's `path` 'records/*' is a glob, not a folder",
+        "/friction/held/4": (
+            "the held folder's `path` '../records' leaves its location (absolute, or with a "
+            "`..` segment)"
+        ),
+    }
+
+    # The whole list in another shape.
+    package = adopter.root / EVIDENCE_PACKAGE
+    head = package.read_text(encoding="utf-8").split("friction:\n  held:\n")[0]
+    package.write_text(head + "friction:\n  held: {path: records}\n", encoding="utf-8")
+    (finding,) = fv.validate_friction(adopter.root).errors
+    assert (finding.location, finding.pointer) == (EVIDENCE_PACKAGE, "/friction/held")
+    assert finding.message.startswith(
+        "`friction.held` is a mapping, not a list of held folders, so friction discovery "
+        "holds nothing under it"
+    )
+
+
+def test_a_held_folder_leaving_the_repository_through_a_link_is_a_finding(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """A held folder whose location is a link out of the repository holds nothing,
+    and is reported where it is declared, as a place would be — the document
+    names why it is skipped."""
+    adopter = make_adopter_repo(capabilities=("evidence",))
+    outside = adopter.root.parent / f"{adopter.root.name}-outside"  # beside the repository
+    (outside / "records").mkdir(parents=True)
+    (outside / "records" / "run.md").write_text("---\ndate: '2026-10-01'\n---\n")
+    (adopter.root / "docs").mkdir()
+    (adopter.root / "docs" / "evidence").symlink_to(outside, target_is_directory=True)
+    _evidence_declares(adopter, HELD_RUNS)
+    result = fv.validate_friction(adopter.root)
+
+    (folder,) = result.discovery.held_folders
+    assert folder.skipped is not None and folder.skipped.reason == fd.SKIP_OUTSIDE
+    assert result.discovery.held == ()
+    (finding,) = result.errors
+    assert (finding.kind, finding.location, finding.pointer) == (
+        fv.FrictionFindingKind.HELD_OUTSIDE_REPOSITORY,
+        EVIDENCE_PACKAGE,
+        HELD_POINTER,
+    )
+    assert finding.message.startswith(
+        "held folder 'records' resolves to 'docs/evidence/records', which leaves the repository"
+    )
+    assert fv.summary_lines(result)[0].endswith(
+        "; dormant; 1 finding(s) on held folders and documents."
+    )
+
+
 # --- the findings validation owns -------------------------------------------
 
 
@@ -710,6 +928,65 @@ def test_dangling_deferral_is_an_error_naming_the_anchor(adopter: AdopterRepo) -
     assert "path anchor 'lib/**'" in first.message and "'src/**'" in first.message
     assert second.pointer == "/pkit/friction/revalidated/deferred/2/anchor"
     assert "record anchor 'COR-050'" in second.message
+
+
+def test_unanchored_because_alone_is_accepted_and_beside_anchors_is_an_error(
+    adopter: AdopterRepo,
+) -> None:
+    """COR-050 points 1 and 12: the reason stands instead of anchors, never beside them —
+    in a document, in a collection entry and in a rule alike."""
+    reason = {"unanchored-because": "No code embodies it."}
+    adopter.write(
+        {
+            CONFIG: _config(["docs"]),
+            "docs/alone.md": _document("alone", **reason),
+            "docs/empty.md": _document("empty", anchors={}, **reason),
+            "docs/beside.md": _document(
+                "beside", anchors={"path": ["src/**"], "record": ["COR-050"]}, **reason
+            ),
+            "docs/actors.md": (
+                "---\nACT-a:\n  pkit: {friction: {unanchored-because: None of ours.}}\n"
+                "ACT-b:\n  pkit:\n    friction:\n      anchors: {artefact: [ACT-a]}\n"
+                "      unanchored-because: Stale.\n---\n"
+            ),
+            "docs/rule-sets/cmn.md": (  # the internal root's rule-set folder: a rule's block
+                "---\nrule-set: CMN\nversion: 1.0.0\nrules:\n  RS-CMN-001:\n    status: draft\n"
+                "    pkit: {friction: {anchors: {path: [src/**]}, unanchored-because: No.}}\n---\n"
+                "\n## RS-CMN-001 — One\n\nStatement.\n"
+            ),
+        }
+    )
+    result = fv.validate_friction(adopter.root)
+
+    beside = [
+        (f.location, f.pointer, f.message)
+        for f in result.errors
+        if f.kind is fv.FrictionFindingKind.UNANCHORED_BESIDE_ANCHORS
+    ]
+    pointer = "/pkit/friction/unanchored-because"
+    assert [(location, at) for location, at, _message in beside] == [
+        ("docs/actors.md#ACT-b", pointer),
+        ("docs/beside.md", pointer),
+        ("docs/rule-sets/cmn.md#RS-CMN-001", pointer),
+    ]
+    message = beside[1][2]
+    assert "stands beside anchors (path, record)" in message
+    assert "remove the reason, or the anchors (COR-050 point 1)" in message
+    assert len(result.errors) == 3, [f.message for f in result.errors]
+    accepted = {a.location: a.unanchored_because for a in result.discovery.artefacts}
+    assert accepted["docs/alone.md"] == "No code embodies it."
+    assert accepted["docs/actors.md#ACT-a"] == "None of ours."
+
+
+def test_an_empty_unanchored_because_is_a_malformed_block(adopter: AdopterRepo) -> None:
+    empty = _document("a", **{"unanchored-because": ""})
+    adopter.write({CONFIG: _config(["docs"]), "docs/a.md": empty})
+    result = fv.validate_friction(adopter.root)
+    (finding,) = result.errors
+    assert finding.kind is fv.FrictionFindingKind.MALFORMED_BLOCK
+    assert finding.pointer == "/pkit/friction/unanchored-because"
+    (artefact,) = result.discovery.artefacts
+    assert artefact.unanchored_because is None  # no reason: counted as forgotten
 
 
 def test_two_artefact_cycle_and_self_cycle_are_each_reported_once(adopter: AdopterRepo) -> None:
@@ -845,6 +1122,66 @@ def test_unparsable_front_matter_as_the_only_file_in_a_place_keeps_the_pass_awak
     assert "docs/broken.md" in cli.output and "dormant" not in cli.output
 
 
+# --- line endings --------------------------------------------------------------
+
+
+def _crlf(text: str) -> str:
+    """`text` as a clone with `core.autocrlf=true` checks it out: every line ending `\\r\\n`."""
+    return text.replace("\n", "\r\n")
+
+
+def _reading(result: fv.FrictionValidation) -> tuple[list[object], list[object], list[object]]:
+    """What the pass read and found — the artefacts, the files, the findings — as two
+    readings of the same text compare."""
+    artefacts: list[object] = [
+        (a.location, a.kind, a.carrier, a.body, a.anchors, a.revalidated, a.deferrals)
+        for a in result.discovery.artefacts
+    ]
+    files: list[object] = [(f.path, f.front_matter, f.unreadable) for f in result.discovery.files]
+    findings: list[object] = [(f.kind, f.where, f.message) for f in result.findings]
+    return artefacts, files, findings
+
+
+@pytest.mark.parametrize(
+    ("rel", "text"),
+    [("docs/guide.md", VALID_DOCUMENT), ("docs/rules.md", COLLECTION)],
+    ids=["document", "collection-entry"],
+)
+def test_a_crlf_file_is_discovered_and_validated_as_its_lf_twin(
+    adopter: AdopterRepo, rel: str, text: str
+) -> None:
+    adopter.write({CONFIG: _config(["docs"]), rel: text})
+    lf = fv.validate_friction(adopter.root)
+    adopter.write({rel: _crlf(text)})
+    crlf = fv.validate_friction(adopter.root)
+
+    assert _reading(crlf) == _reading(lf)
+    assert all(a.has_friction_block for a in crlf.discovery.artefacts)
+    assert "\r" not in "".join(a.body for a in crlf.discovery.artefacts)
+
+
+def test_a_file_mixing_line_endings_is_an_error_naming_it(adopter: AdopterRepo) -> None:
+    """Read all the same — never skipped — but reported, never a silent misread."""
+    other = _document("other", anchors={"path": ["src/**"]})
+    mixed = _crlf(other).replace("\r\n", "\n", 2)  # the first two lines `\n`, the rest `\r\n`
+    adopter.write(
+        {CONFIG: _config(["docs"]), "docs/guide.md": _crlf(VALID_DOCUMENT), "docs/other.md": mixed}
+    )
+    result = fv.validate_friction(adopter.root)
+
+    (finding,) = result.errors
+    assert finding.kind is fv.FrictionFindingKind.MIXED_LINE_ENDINGS
+    assert (finding.location, finding.pointer) == ("docs/other.md", "")
+    assert "mixes line endings" in finding.message
+    assert "write it with one kind of line ending" in finding.message
+    read = {a.path: a for a in result.discovery.artefacts}
+    assert read["docs/other.md"].anchors == {"path": ("src/**",)}
+
+    cli = CliRunner().invoke(main, ["validate", "--no-refs"])
+    assert cli.exit_code == 1, cli.output
+    assert "docs/other.md" in cli.output and "mixes line endings" in cli.output
+
+
 # --- role blocks against the resolved wiring (COR-053 point 10) --------------
 
 # An incubated capability providing `pkit::documentation`, whose one data point
@@ -935,7 +1272,11 @@ def test_point_block_at_another_version_is_inert_and_not_validated(
 ) -> None:
     """The body breaks the point schema, but at version 2 it is never read."""
     documented.write(
-        {"docs/guide.md": _with_roles(documentation="{reading-evidence: {schema_version: 2, x: 5}}")}
+        {
+            "docs/guide.md": _with_roles(
+                documentation="{reading-evidence: {schema_version: 2, x: 5}}"
+            )
+        }
     )
     result = fv.validate_friction(documented.root)
 
@@ -950,7 +1291,11 @@ def test_compatible_point_block_is_validated_by_the_provider_point_schema(
     documented: AdopterRepo,
 ) -> None:
     documented.write(
-        {"docs/guide.md": _with_roles(documentation="{reading-evidence: {schema_version: 1, last-run: 5}}")}
+        {
+            "docs/guide.md": _with_roles(
+                documentation="{reading-evidence: {schema_version: 1, last-run: 5}}"
+            )
+        }
     )
     result = fv.validate_friction(documented.root)
 
@@ -1063,7 +1408,9 @@ def test_validate_command_prints_the_friction_section_and_fails_on_errors(
     out = result.output
     friction = out.split("\n  friction\n")[1].split("\n  rule-sets\n")[0]
     assert "error    docs/rules.md#RS-CMN-002:/pkit/friction" in friction
-    assert out.index("\n  configuration\n") < out.index("\n  packages\n") < out.index("\n  friction\n")
+    assert (
+        out.index("\n  configuration\n") < out.index("\n  packages\n") < out.index("\n  friction\n")
+    )
 
 
 def test_validate_command_reports_settings_findings_once_under_configuration(
@@ -1105,10 +1452,33 @@ def test_validate_command_is_dormant_and_passes_on_a_fresh_install(adopter: Adop
         ("--- \na: 1\n---\n", ("a: 1\n", "")),  # trailing space on the opening fence
         ("----\na: 1\n---\n", (None, "----\na: 1\n---\n")),  # not a fence
         ("no front matter\n", (None, "no front matter\n")),
+        # Line endings are read universally: both parts come back with `\n`.
+        ("---\r\na: 1\r\n---\r\nbody\r\n", ("a: 1\n", "body\n")),
+        ("---\r\nb: |\r\n  two\r\n  lines\r\n---\r\n", ("b: |\n  two\n  lines\n", "")),
+        ("--- \r\na: 1\r\n---\t\r\n\r\n\r\nbody\r\n", ("a: 1\n", "body\n")),
+        ("---\ra: 1\r---\rbody\r", ("a: 1\n", "body\n")),  # a lone `\r`
+        ("no front matter\r\n", (None, "no front matter\n")),
     ],
 )
 def test_split_front_matter(text: str, expected: tuple[str | None, str]) -> None:
     assert fd.split_front_matter(text) == expected
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("", "\n"),
+        ("one line, no break", "\n"),
+        ("a\nb\n", "\n"),
+        ("a\r\nb\r\n", "\r\n"),
+        ("a\rb\r", "\r"),
+        ("a\r\nb\n", None),
+        ("a\nb\r", None),
+        ("a\r\nb\rc\r\n", None),
+    ],
+)
+def test_line_break_names_the_one_a_text_is_written_with(text: str, expected: str | None) -> None:
+    assert fd.line_break(text) == expected
 
 
 def test_entry_section_runs_to_the_next_heading_of_equal_or_higher_level() -> None:
@@ -1116,6 +1486,26 @@ def test_entry_section_runs_to_the_next_heading_of_equal_or_higher_level() -> No
     assert fd.entry_section(body, "RS-1") == "## RS-1: One\n\ntext\n\n### RS-1 detail\n\nmore\n"
     assert fd.entry_section(body, "RS-10") == "## RS-10 — Ten\n\nten\n"
     assert fd.entry_section(body, "RS-2") == ""
+
+
+def test_entry_section_takes_the_id_as_a_whole_token() -> None:
+    """Two hyphenated ids sharing a prefix: the shorter one's section is never the longer's,
+    whichever comes first."""
+    body = (
+        "## uc-login-sso — Sign in with SSO\n\nsso\n\n"
+        "## uc-login.v2 — Sign in, again\n\nagain\n\n"
+        "## uc-login — Sign in\n\nlogin\n\n"
+        "## uc-login: the details\n\ndetails\n"
+    )
+    assert fd.entry_section(body, "uc-login") == "## uc-login — Sign in\n\nlogin\n"
+    assert fd.entry_section(body, "uc-login-sso") == "## uc-login-sso — Sign in with SSO\n\nsso\n"
+    assert fd.entry_section(body, "uc-login.v2") == "## uc-login.v2 — Sign in, again\n\nagain\n"
+    assert fd.entry_section(body, "uc-log") == ""
+    # Punctuation that continues no id ends it, as the end of the heading does.
+    assert fd.entry_section("## uc-login: Sign in\n\ntext\n", "uc-login") == (
+        "## uc-login: Sign in\n\ntext\n"
+    )
+    assert fd.entry_section("## uc-login.\n\ntext\n", "uc-login") == "## uc-login.\n\ntext\n"
 
 
 def test_is_inside_repository(tmp_path: Path) -> None:
@@ -1151,12 +1541,17 @@ def test_a_glob_with_star_star_inside_a_segment_reads_as_on_python_3_13_and_neve
     repo = make_adopter_repo()
     root = repo.root
     (root / "docs").mkdir(exist_ok=True)
-    (root / "docs" / "page.md").write_text("---\npkit: {friction: {anchors: {path: [src]}}}\n---\n# p\n")
+    (root / "docs" / "page.md").write_text(
+        "---\npkit: {friction: {anchors: {path: [src]}}}\n---\n# p\n"
+    )
     place = friction_discovery.Place(
         pattern="docs/**.md",
         declaration=friction_discovery.SettingsPath(
-            value="docs/**.md", resolved=root / "docs", file=root / ".pkit/project/config.yaml",
-            pointer="/friction/places/0", source="project",
+            value="docs/**.md",
+            resolved=root / "docs",
+            file=root / ".pkit/project/config.yaml",
+            pointer="/friction/places/0",
+            source="project",
         ),
     )
     files = friction_discovery.files_in_place(root, place)

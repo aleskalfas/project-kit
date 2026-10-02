@@ -16,6 +16,13 @@ Gates per DEC-026:
   - Membership (open-mode degrades to no-op).
   - Current branch matches `<type>/<N>-<slug>` AND `<type>` matches
     issue's `type:*` label per DEC-013.
+  - Issue's current state can move to Review per workflow.yaml (or is
+    already there, so a re-run works). Checked before any PR is opened or
+    flipped ready and before reviewers are requested, so a refused move
+    leaves the PR as it was (#947). From Backlog, move to In Progress first.
+    The state is read from the issue's labels and milestone
+    (`_lib/issue_position`, shared with start-work, #1242); move-issue reads
+    it itself when it moves.
   - PR title is Conventional Commits.
 
 Side-effects:
@@ -23,12 +30,20 @@ Side-effects:
   - Flips an existing draft PR to ready via `gh pr ready` if present.
   - Reviewer assignment (v1 ships with simple --reviewer override path;
     full DEC-027 mode resolution lands in Phase D).
-  - Composes over `move-issue.py --to review`.
+  - Composes over `move-issue.py --to review`. If that move still fails
+    after the PR was opened or flipped ready (a network error, or a state
+    that changed since the check so the move is no longer legal), the run
+    ends on a failure naming what it left behind: the PR, its ready state and
+    the reviewers it requested.
 
 Exit codes:
-  0  PR ready + issue in Review
-  1  membership refusal
-  2  usage error / gate failure / gh failure
+  0  PR ready + issue in Review (moved there, or already there)
+  1  membership or foreign-repo refusal / PR body not ready for review
+     (validate-at-ready; --force overrides)
+  2  usage error / gate failure / illegal transition / issue not found
+  3  gh failure: `gh pr create` could not open the PR, or `gh pr ready`
+     could not make it ready
+  *  a failed composed move-issue passes its exit code through
 """
 
 from __future__ import annotations
@@ -44,27 +59,32 @@ from ruamel.yaml import YAML
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import (  # noqa: E402
+from _lib import (
     axis_labels,
     bootstrap_gate,
     classification_rules,
+    composed_move,
+    default_branch,
+    issue_position,
     pr_validation,
     session_guard,
 )
-from _lib import lifecycle_inference as infer  # noqa: E402
-from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
-from _lib.membership import (  # noqa: E402
+from _lib import lifecycle_inference as infer
+from _lib.gh import gh_get_issue, gh_run, load_adopter_config
+from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
     resolve_capability_root,
     resolve_invoker_identity,
 )
-from _lib.placeholder_detection import PHASE_TRANSITION  # noqa: E402
-from _lib.review_mode import (  # noqa: E402
+from _lib.placeholder_detection import PHASE_TRANSITION
+from _lib.review_mode import (
     resolve_mode,
     reviewer_role_from_config,
     role_based_reviewers,
 )
+
+TARGET_STATE = "review"
 
 
 def main() -> int:
@@ -76,11 +96,14 @@ def main() -> int:
     )
     parser.add_argument("issue_number", type=int)
     parser.add_argument(
-        "--reviewer", action="append", default=[],
+        "--reviewer",
+        action="append",
+        default=[],
         help="Reviewer to assign (repeatable). May be a @user, user, or team.",
     )
     parser.add_argument(
-        "--require-human", action="store_true",
+        "--require-human",
+        action="store_true",
         help=(
             "Force human-mode review even when project config defaults to "
             "agent mode. (Phase D — DEC-027 — wires the full mode-resolution "
@@ -88,15 +111,19 @@ def main() -> int:
         ),
     )
     parser.add_argument(
-        "--base", default=None,
+        "--base",
+        default=None,
         help=(
             "Base branch for a newly opened PR (default: the issue's DEC-013 "
             "integration branch when its body carries an `Integration:` marker, "
-            "else the adopter's `default_branch`). Not applied to an existing PR."
+            "else the project's default branch — the backbone's "
+            "`repository.default-branch`, COR-054). Not applied to an existing PR."
         ),
     )
     parser.add_argument(
-        "--capability-root", type=Path, default=None,
+        "--capability-root",
+        type=Path,
+        default=None,
         help=f"Default: <repo-root>/.pkit/capabilities/{CAPABILITY_NAME}/.",
     )
     parser.add_argument("--dry-run", action="store_true")
@@ -127,6 +154,8 @@ def main() -> int:
     yaml_loader = YAML(typ="safe")
     config = load_adopter_config(capability_root)
     classification = _read_classification(capability_root, yaml_loader)
+    workflow = _read_schema(capability_root, "workflow.yaml", yaml_loader)
+    issue_types = _read_schema(capability_root, "issue-types.yaml", yaml_loader)
     members = _read_members(capability_root, yaml_loader)
     invoker = resolve_invoker_identity(config=config)
     membership = check_membership(members, invoker)
@@ -159,9 +188,28 @@ def main() -> int:
         for lbl in (issue.get("labels") or [])
     ]
     substrate_map = axis_labels.load_substrate_map(capability_root)
-    expected_prefix = _derive_branch_prefix(
-        labels, title, classification, substrate_map
+
+    # Gate: the move to Review is legal from where the issue is (#947). Asked
+    # before the PR is opened or flipped ready and before reviewers are
+    # requested, so a refusal changes nothing. The state is read as
+    # start-work's gate reads it (#942, #1242).
+    refusal = composed_move.transition_refusal(
+        "review-work",
+        args.issue_number,
+        issue,
+        labels,
+        issue_position.current_state(issue, labels, substrate_map),
+        target=TARGET_STATE,
+        untouched="no PR opened or made ready, no reviewers requested",
+        workflow=workflow,
+        issue_types=issue_types,
+        classification=classification,
     )
+    if refusal is not None:
+        print(refusal, file=sys.stderr)
+        return 2
+
+    expected_prefix = _derive_branch_prefix(labels, title, classification, substrate_map)
     branch_prefix_match = re.match(r"^([a-z]+)/", branch)
     branch_prefix = branch_prefix_match.group(1) if branch_prefix_match else None
     if expected_prefix and branch_prefix and expected_prefix != branch_prefix:
@@ -174,9 +222,11 @@ def main() -> int:
 
     # Base branch (DEC-013, #903): --base, else the issue's integration marker,
     # else default_branch — the resolution start-work cut the branch by.
-    base = infer.resolve_base_branch(
-        config, str(issue.get("body") or ""), explicit=args.base
-    )
+    try:
+        base = infer.resolve_base_branch(config, str(issue.get("body") or ""), explicit=args.base)
+    except default_branch.Unanswered as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
 
     print(f"review-work: #{args.issue_number}")
     print(f"  branch: {branch}")
@@ -199,6 +249,9 @@ def main() -> int:
     # first (create-draft → edit-pr → review-work), or use open-pr --body-file.
     existing_pr = _find_pr_for_branch(branch, config)
     pr_number: int | None = None
+    # What this run changed on the PR, named if the composed move then fails.
+    opened_url: str | None = None
+    flipped = False
     if existing_pr is None:
         # Open a ready PR (non-draft) — validate the composed body first.
         title = _derive_pr_title(issue, branch)
@@ -210,6 +263,7 @@ def main() -> int:
             return 3
         m = re.search(r"/pull/(\d+)", url)
         pr_number = int(m.group(1)) if m else None
+        opened_url = url
         print(f"  opened ready PR: {url}")
     elif existing_pr.get("isDraft"):
         # Flip draft → ready — validate the draft's current body first.
@@ -220,6 +274,7 @@ def main() -> int:
             return 1
         if not _gh_pr_ready(pr_number, config):
             return 3
+        flipped = True
         print(f"  flipped PR #{pr_number} draft → ready")
     else:
         pr_number = existing_pr.get("number")
@@ -227,7 +282,9 @@ def main() -> int:
 
     # Reviewer assignment per DEC-027 mode resolution.
     mode_resolution = resolve_mode(
-        config, issue_labels=labels, require_human=args.require_human,
+        config,
+        issue_labels=labels,
+        require_human=args.require_human,
     )
     print(f"  mode:   {mode_resolution.mode} ({mode_resolution.source})")
 
@@ -237,11 +294,16 @@ def main() -> int:
         role = reviewer_role_from_config(config)
         if role:
             candidates = role_based_reviewers(
-                members, role, exclude_login=invoker.github_login,
+                members,
+                role,
+                exclude_login=invoker.github_login,
             )
             if candidates:
                 reviewers_to_add = candidates
-                print(f"  human-mode reviewers (role={role}): {', '.join('@' + r for r in candidates)}")
+                print(
+                    f"  human-mode reviewers (role={role}): "
+                    f"{', '.join('@' + r for r in candidates)}"
+                )
             else:
                 print(
                     f"  [warn] human mode but no eligible reviewers for role={role!r}.",
@@ -253,21 +315,44 @@ def main() -> int:
                 file=sys.stderr,
             )
 
+    reviewers_requested: list[str] = []
     if pr_number is not None and reviewers_to_add:
-        if not _gh_pr_add_reviewers(pr_number, reviewers_to_add, config):
+        if _gh_pr_add_reviewers(pr_number, reviewers_to_add, config):
+            reviewers_requested = [r.lstrip("@") for r in reviewers_to_add]
+        else:
             print(
                 "[warn] PR ready but reviewer assignment failed; assign manually.",
                 file=sys.stderr,
             )
 
     # Compose over move-issue for the state transition.
-    rc = _invoke_move_issue(
-        args.issue_number, "review", args.capability_root, args.allow_foreign_repo
+    rc = composed_move.invoke_move_issue(
+        args.issue_number,
+        TARGET_STATE,
+        capability_root_arg=args.capability_root,
+        allow_foreign_repo=args.allow_foreign_repo,
     )
     if rc != 0:
+        print(
+            composed_move.late_failure_message(
+                "review-work",
+                args.issue_number,
+                TARGET_STATE,
+                rc,
+                left=_left_behind(
+                    pr_number=pr_number,
+                    opened_url=opened_url,
+                    flipped=flipped,
+                    reviewers=reviewers_requested,
+                ),
+                nothing_left="This run opened no PR, made none ready and requested no reviewers.",
+                reuses="the ready PR",
+            ),
+            file=sys.stderr,
+        )
         return rc
 
-    print(f"\n[ok] PR ready + #{args.issue_number} In Progress → Review")
+    print(_success_line(args.issue_number, workflow))
     return 0
 
 
@@ -278,7 +363,9 @@ def _find_issue_branch(issue_number: int) -> str | None:
     try:
         proc = subprocess.run(
             ["git", "branch", "--list", "--format=%(refname:short)"],
-            capture_output=True, text=True, check=False,
+            capture_output=True,
+            text=True,
+            check=False,
         )
     except FileNotFoundError:
         return None
@@ -329,14 +416,66 @@ def _derive_pr_title(issue: dict, branch: str) -> str:
 
 
 def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
-    return gh_get_issue(issue_number, config, fields="title,labels,body")
+    return gh_get_issue(issue_number, config, fields="title,labels,body,state,milestone")
+
+
+def _left_behind(
+    *,
+    pr_number: int | None,
+    opened_url: str | None,
+    flipped: bool,
+    reviewers: list[str],
+) -> list[tuple[str, str]]:
+    """What this run changed before the composed move-issue failed, each with
+    its undo: the PR it opened ready or flipped from draft to ready, and the
+    reviewers it requested. A PR that was already ready is not something this
+    run left behind."""
+    left: list[tuple[str, str]] = []
+    if opened_url is not None:
+        pr = f"PR #{pr_number} ({opened_url})" if pr_number is not None else f"PR {opened_url}"
+        pr_arg = str(pr_number) if pr_number is not None else opened_url
+        left.append((f"{pr}, opened ready for review", f"gh pr close {pr_arg}"))
+    elif flipped:
+        left.append(
+            (
+                f"PR #{pr_number}, flipped from draft to ready for review",
+                f"gh pr ready {pr_number} --undo",
+            )
+        )
+    if reviewers:
+        left.append(
+            (
+                f"review requested from {', '.join('@' + r for r in reviewers)} on PR #{pr_number}",
+                f"gh pr edit {pr_number} --remove-reviewer {','.join(reviewers)}",
+            )
+        )
+    return left
+
+
+def _success_line(issue_number: int, workflow: dict) -> str:
+    """The closing line of a run whose move-issue succeeded: the PR is ready
+    and the issue in Review. It claims no move. move-issue reads the state
+    itself when it moves, so only its own output, just above, says whether it
+    moved the issue or found it already in Review."""
+    review = infer.state_display_name(workflow, TARGET_STATE)
+    return f"\n[ok] PR ready; #{issue_number} in {review}"
 
 
 def _find_pr_for_branch(branch: str, config: dict) -> dict | None:
     proc = gh_run(
-        ["gh", "pr", "list", "--head", branch, "--state", "all",
-         "--json", "number,state,isDraft,headRefName"],
-        config, check=False,
+        [
+            "gh",
+            "pr",
+            "list",
+            "--head",
+            branch,
+            "--state",
+            "all",
+            "--json",
+            "number,state,isDraft,headRefName",
+        ],
+        config,
+        check=False,
     )
     if proc.returncode != 0:
         return None
@@ -350,14 +489,11 @@ def _find_pr_for_branch(branch: str, config: dict) -> dict | None:
     return None
 
 
-def _gh_pr_create_ready(
-    branch: str, base: str, title: str, body: str, config: dict
-) -> str | None:
+def _gh_pr_create_ready(branch: str, base: str, title: str, body: str, config: dict) -> str | None:
     proc = gh_run(
-        ["gh", "pr", "create",
-         "--head", branch, "--base", base,
-         "--title", title, "--body", body],
-        config, check=False,
+        ["gh", "pr", "create", "--head", branch, "--base", base, "--title", title, "--body", body],
+        config,
+        check=False,
     )
     if proc.returncode != 0:
         print(f"error: gh pr create failed: {proc.stderr.strip()}", file=sys.stderr)
@@ -365,9 +501,7 @@ def _gh_pr_create_ready(
     return proc.stdout.strip()
 
 
-def _ready_body_ok(
-    body: str, classification: dict, capability_root: Path, force: bool
-) -> bool:
+def _ready_body_ok(body: str, classification: dict, capability_root: Path, force: bool) -> bool:
     """Validate-at-ready (#569): True iff `body` may go ready-for-review.
 
     Runs the shared PR-body validator at the merge-gate phase (empty checkbox →
@@ -410,9 +544,7 @@ def _gh_pr_body(pr_number: int | None, config: dict) -> str:
     if pr_number is None:
         return ""
     try:
-        proc = gh_run(
-            ["gh", "pr", "view", str(pr_number), "--json", "body"], config, check=False
-        )
+        proc = gh_run(["gh", "pr", "view", str(pr_number), "--json", "body"], config, check=False)
     except FileNotFoundError:
         return ""
     if proc.returncode != 0:
@@ -429,7 +561,8 @@ def _gh_pr_ready(pr_number: int | None, config: dict) -> bool:
         return False
     proc = gh_run(
         ["gh", "pr", "ready", str(pr_number)],
-        config, check=False,
+        config,
+        check=False,
     )
     if proc.returncode != 0:
         print(f"error: gh pr ready failed: {proc.stderr.strip()}", file=sys.stderr)
@@ -452,24 +585,6 @@ def _gh_pr_add_reviewers(pr_number: int, reviewers: list[str], config: dict) -> 
     return True
 
 
-def _invoke_move_issue(
-    issue_number: int,
-    target: str,
-    capability_root_arg: Path | None,
-    allow_foreign_repo: bool,
-) -> int:
-    cmd = [
-        sys.executable, str(_HERE / "move-issue.py"),
-        str(issue_number), "--to", target, "--yes",
-    ]
-    if allow_foreign_repo:
-        cmd.append("--allow-foreign-repo")
-    if capability_root_arg is not None:
-        cmd += ["--capability-root", str(capability_root_arg)]
-    proc = subprocess.run(cmd, check=False)
-    return proc.returncode
-
-
 def _read_members(capability_root: Path, yaml_loader: YAML) -> list[dict]:
     path = capability_root / "project" / "members.yaml"
     if not path.is_file():
@@ -489,7 +604,14 @@ def _read_classification(capability_root: Path, yaml_loader: YAML) -> dict:
     (`pr_type_mapping`) and the title-prefix reverse read. A thin or missing
     schema degrades to {} — the prefix then resolves to None and the DEC-013
     branch cross-check is skipped rather than misfiring."""
-    path = capability_root / "schemas" / "classification.yaml"
+    return _read_schema(capability_root, "classification.yaml", yaml_loader)
+
+
+def _read_schema(capability_root: Path, name: str, yaml_loader: YAML) -> dict:
+    """A parsed capability schema (`schemas/<name>`), or {} when absent or
+    unparseable. A missing workflow.yaml therefore declares no legal moves and
+    the transition gate refuses, as move-issue would."""
+    path = capability_root / "schemas" / name
     if not path.is_file():
         return {}
     try:

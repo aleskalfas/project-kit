@@ -148,10 +148,7 @@ COMPANIONS = {"reading-evidence.schema.json": SCHEMA_A}
 
 
 def _located(repo: AdopterRepo, findings: tuple[cx.Finding, ...]) -> list[tuple[str, str]]:
-    return [
-        (cx._locate(repo.root, f), f.severity.value)  # pyright: ignore[reportPrivateUsage]
-        for f in findings
-    ]
+    return [(cx._locate(repo.root, f), f.severity.value) for f in findings]
 
 
 def _role(wiring: cx.Wiring, role: str) -> cx.RoleBinding:
@@ -1186,12 +1183,16 @@ def test_shipped_capabilities_wire_clean(make_adopter_repo: MakeAdopterRepo) -> 
     # The shipped connections: project-management provides `pkit::work-tracking`,
     # defines its doc-check point and fills it with its own mapping filler
     # (#1000); living-docs provides `pkit::documentation`, defines its readers
-    # and reading-evidence points, and contributes to the doc-check point (#1004).
+    # and reading-evidence points, and contributes to the doc-check point (#1004);
+    # software-analysis provides `pkit::analysis`, defines its revalidation-evidence
+    # point, and contributes its actors to the readers point (#1001).
     assert [(r.role, r.active) for r in wiring.roles] == [
+        ("pkit::analysis", "software-analysis"),
         ("pkit::documentation", "living-docs"),
         ("pkit::work-tracking", "project-management"),
     ]
     assert [p.point.address for p in wiring.points] == [
+        "pkit::analysis:revalidation-evidence",
         "pkit::documentation:readers",
         "pkit::documentation:reading-evidence",
         "pkit::work-tracking:doc-check",
@@ -1201,6 +1202,7 @@ def test_shipped_capabilities_wire_clean(make_adopter_repo: MakeAdopterRepo) -> 
     ) == [
         ("living-docs", "fill-doc-check", cx.BindingStatus.BOUND),
         ("project-management", "fill-doc-check", cx.BindingStatus.BOUND),
+        ("software-analysis", "fill-readers", cx.BindingStatus.BOUND),
     ]
 
 

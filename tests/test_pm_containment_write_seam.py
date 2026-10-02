@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import ast
 import importlib.util
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -49,9 +50,7 @@ def containment():
     """Load the containment primitive via importlib (sibling _lib import)."""
     if str(LIB) not in sys.path:
         sys.path.insert(0, str(LIB))
-    spec = importlib.util.spec_from_file_location(
-        "pm_containment_under_test", SEAM_MODULE
-    )
+    spec = importlib.util.spec_from_file_location("pm_containment_under_test", SEAM_MODULE)
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     sys.modules["pm_containment_under_test"] = module
@@ -65,19 +64,23 @@ def containment():
 def test_add_sub_issue_args_constructs_the_post(containment) -> None:
     args = containment.add_sub_issue_args(parent_number=342, child_database_id=999)
     assert args == [
-        "gh", "api",
-        "-X", "POST",
+        "gh",
+        "api",
+        "-X",
+        "POST",
         "repos/{owner}/{repo}/issues/342/sub_issues",
         # `-F` (typed integer field), NOT `-f` — the endpoint rejects a string id
         # with HTTP 422; the live-smoke regression that found this is pinned here.
-        "-F", "sub_issue_id=999",
+        "-F",
+        "sub_issue_id=999",
     ]
 
 
 def test_list_sub_issues_args_constructs_the_paginated_get(containment) -> None:
     args = containment.list_sub_issues_args(parent_number=342)
     assert args == [
-        "gh", "api",
+        "gh",
+        "api",
         "--paginate",
         "repos/{owner}/{repo}/issues/342/sub_issues",
     ]
@@ -176,11 +179,13 @@ def test_link_sub_issue_already_linked_is_noop(containment, monkeypatch) -> None
 # --- graceful degradation: unsupported instance → no-op, not failure -----
 
 
-@pytest.mark.parametrize("status", [404, 410, 422])
+@pytest.mark.parametrize("status", [404, 410])
 def test_link_sub_issue_unsupported_status_degrades(containment, monkeypatch, status) -> None:
-    """A 404 / 410 / 422 from the endpoint means the instance lacks sub-issue
-    support — degrade to a no-op (UNSUPPORTED), NOT a failure. The textual ref
-    is the fallback."""
+    """A 404 (attributed to the endpoint) or a 410 means the instance lacks
+    sub-issue support — degrade to a no-op (UNSUPPORTED), NOT a failure. The
+    textual ref is the fallback. Unchanged by #808: the report is pm's own
+    sentence, with no GitHub message attached."""
+
     def fake_gh(args, config):
         if "--jq" in args:
             return subprocess.CompletedProcess(args, 0, stdout="999\n", stderr="")
@@ -194,12 +199,16 @@ def test_link_sub_issue_unsupported_status_degrades(containment, monkeypatch, st
     result = containment.link_sub_issue({}, parent_number=342, child_number=344)
     assert result.outcome == containment.LinkOutcome.UNSUPPORTED
     assert result.ok is False  # the native link is absent...
-    assert "unsupported" in result.detail.lower()
+    # Only what the seam did to the native link; the textual ref is the caller's.
+    assert result.detail == "native sub-issues unsupported on this instance"
+    assert result.said is None
+    assert result.refused is False
 
 
 def test_link_sub_issue_not_found_phrasing_degrades(containment, monkeypatch) -> None:
     """`gh` sometimes phrases a missing endpoint as "Not Found" without a code —
     still treated as unsupported."""
+
     def fake_gh(args, config):
         if "--jq" in args:
             return subprocess.CompletedProcess(args, 0, stdout="999\n", stderr="")
@@ -212,11 +221,10 @@ def test_link_sub_issue_not_found_phrasing_degrades(containment, monkeypatch) ->
     assert result.outcome == containment.LinkOutcome.UNSUPPORTED
 
 
-def test_link_sub_issue_genuine_failure_is_failed_not_unsupported(
-    containment, monkeypatch
-) -> None:
+def test_link_sub_issue_genuine_failure_is_failed_not_unsupported(containment, monkeypatch) -> None:
     """A non-"unsupported" error (auth/network — e.g. HTTP 500) is FAILED, not
     UNSUPPORTED — a genuine problem to report, still non-fatal to the create."""
+
     def fake_gh(args, config):
         if "--jq" in args:
             return subprocess.CompletedProcess(args, 0, stdout="999\n", stderr="")
@@ -233,6 +241,7 @@ def test_link_sub_issue_genuine_failure_is_failed_not_unsupported(
 def test_link_sub_issue_unresolvable_child_is_failed(containment, monkeypatch) -> None:
     """If the child's database id cannot be resolved, the link is FAILED (no add
     attempted) — but never raises; the create still has the textual ref."""
+
     def fake_gh(args, config):
         if "--jq" in args:
             return subprocess.CompletedProcess(args, 1, stdout="", stderr="boom")
@@ -264,6 +273,7 @@ def test_link_sub_issue_missing_gh_binary_is_failed_not_raised(containment, monk
 def test_link_proceeds_to_add_when_list_unreadable(containment, monkeypatch) -> None:
     """A failed idempotency READ must NOT wrongly report ALREADY — the linker
     proceeds to the add (whose own outcome is authoritative)."""
+
     def fake_gh(args, config):
         if "--jq" in args:
             return subprocess.CompletedProcess(args, 0, stdout="999\n", stderr="")
@@ -375,9 +385,7 @@ def test_a_child_under_another_parent_is_a_conflict_and_nothing_is_posted(
     assert fake.posts == [] and fake.list_reads == []
 
 
-def test_a_child_whose_record_names_this_parent_is_already_linked(
-    containment, monkeypatch
-) -> None:
+def test_a_child_whose_record_names_this_parent_is_already_linked(containment, monkeypatch) -> None:
     fake = _ScriptedLink(_record(999, 342))
     monkeypatch.setattr(containment, "_gh_call", fake)
     result = containment.link_sub_issue({}, parent_number=342, child_number=344)
@@ -460,9 +468,7 @@ def test_move_sub_issue_moves_the_child_in_one_write(containment, monkeypatch) -
     assert post[-2:] == ["-F", "replace_parent=true"]
 
 
-def test_move_sub_issue_refused_names_the_parent_the_child_keeps(
-    containment, monkeypatch
-) -> None:
+def test_move_sub_issue_refused_names_the_parent_the_child_keeps(containment, monkeypatch) -> None:
     fake = _ScriptedLink(
         _record(999, 7), post=(1, _ONE_PARENT_BODY, "gh: Validation Failed (HTTP 422)")
     )
@@ -474,9 +480,7 @@ def test_move_sub_issue_refused_names_the_parent_the_child_keeps(
     assert "#7" in result.detail
 
 
-def test_move_sub_issue_without_a_current_parent_is_a_plain_link(
-    containment, monkeypatch
-) -> None:
+def test_move_sub_issue_without_a_current_parent_is_a_plain_link(containment, monkeypatch) -> None:
     fake = _ScriptedLink(_record(999))
     monkeypatch.setattr(containment, "_gh_call", fake)
     result = containment.move_sub_issue({}, parent_number=342, child_number=344)
@@ -507,6 +511,253 @@ def test_link_sub_issue_reuses_the_runs_reads(containment, monkeypatch) -> None:
         containment.link_sub_issue({}, parent_number=342, child_number=child, sub_issues=reads)
     assert len(fake.list_reads) == 1
     assert len(fake.posts) == 3
+
+
+# --- a 422 is never an instance without sub-issues (#808, ADR-035) ---------
+#
+# GitHub answers 422 for a request it refused, on instances where sub-issues
+# work. Its words may tell one refusal from another — each gets its own outcome
+# and its own operator-visible text — but never grant "unsupported", and they
+# reach the operator as written.
+
+# The refusal #808 was found on, verbatim: a message-only body, no `errors`.
+_OBSERVED_ONE_PARENT = (
+    "An error occurred while adding the sub-issue to the parent issue. "
+    "Sub issue may only have one parent"
+)
+_MALFORMED = 'Invalid request.\n\nFor \'properties/sub_issue_id\', "999" is not of type "integer".'
+_ABSENT = "Sub-issues are not enabled for this repository"
+_UNRECOGNISED = "Validation Failed"
+_UNRECOGNISED_ERROR = "Parent issue is locked"
+
+
+def _body(message: str, *errors: object) -> str:
+    """A 422 error body as `gh api` prints it on stdout."""
+    payload: dict = {"message": message, "status": "422"}
+    if errors:
+        payload["errors"] = list(errors)
+    return json.dumps(payload)
+
+
+def _refused_422(containment, monkeypatch, *, stdout: str, stderr: str = "", child_parent=None):
+    """Link #344 under #342 with the add refused; the child's record shows
+    ``child_parent`` on the re-read (none before the add)."""
+    stderr = stderr or "gh: Validation Failed (HTTP 422)"
+    fake = _ScriptedLink(_record(999), _record(999, child_parent), post=(1, stdout, stderr))
+    monkeypatch.setattr(containment, "_gh_call", fake)
+    return containment.link_sub_issue({}, parent_number=342, child_number=344)
+
+
+def test_the_observed_one_parent_422_is_a_conflict_quoting_github(containment, monkeypatch) -> None:
+    """The response #808 was filed on. Not "unsupported": a conflict that names
+    the parent the child has, says the existing link must go first, and quotes
+    GitHub."""
+    result = _refused_422(
+        containment, monkeypatch, stdout=_body(_OBSERVED_ONE_PARENT), child_parent=7
+    )
+
+    assert result.outcome == containment.LinkOutcome.CONFLICT
+    assert result.current_parent == containment.NativeParent(number=7)
+    assert result.said == containment.Said(_OBSERVED_ONE_PARENT)
+    assert f'GitHub said: "{_OBSERVED_ONE_PARENT}"' in result.detail
+    assert "its native link to #7 must be removed first" in result.detail
+    assert "unsupported" not in result.detail
+    assert result.refused is False, "a conflict is not a refusal to work around"
+
+
+def test_a_malformed_id_422_is_a_failure_naming_the_request(containment, monkeypatch) -> None:
+    """The endpoint's own type check on `sub_issue_id` — pm's request is wrong,
+    the instance is fine. A failure that says so, with GitHub's words."""
+    result = _refused_422(containment, monkeypatch, stdout=_body(_MALFORMED))
+
+    assert result.outcome == containment.LinkOutcome.FAILED
+    assert "malformed" in result.detail and "defect in pm's request" in result.detail
+    # GitHub's words, whitespace folded onto the one line, otherwise as sent.
+    folded = " ".join(_MALFORMED.split())
+    assert result.said == containment.Said(folded)
+    assert f'GitHub said: "{folded}"' in result.detail
+    assert "unsupported" not in result.detail
+
+
+def test_a_422_saying_the_feature_is_off_is_a_failure_quoting_github(
+    containment, monkeypatch
+) -> None:
+    """The invariant (#808, ADR-035): no wording grants the unsupported verdict.
+    A 422 whose message says sub-issues are not enabled is a FAILED link that
+    quotes GitHub — never the quiet no-op — and nothing is probed to make it
+    one."""
+    fake = _ScriptedLink(_record(999), post=(1, _body(_ABSENT), f"gh: {_ABSENT} (HTTP 422)"))
+    monkeypatch.setattr(containment, "_gh_call", fake)
+    result = containment.link_sub_issue({}, parent_number=342, child_number=344)
+
+    assert result.outcome == containment.LinkOutcome.FAILED
+    assert result.said == containment.Said(_ABSENT)
+    assert result.detail.endswith(f'GitHub said: "{_ABSENT}"')
+    assert "unsupported" not in result.detail
+    assert result.refused is True
+    probes = [c for c in fake.calls if c[-2:] == ["--jq", ".number"]]
+    assert probes == [], "a 422 is never probed into a verdict"
+
+
+def test_an_unrecognised_422_is_a_failure_carrying_githubs_message(
+    containment, monkeypatch
+) -> None:
+    """A 422 pm cannot attribute fails towards GitHub's message, never towards
+    "unsupported" — and every message the body carries is shown, `errors[]`
+    included, whether an entry is an object or a bare string."""
+    result = _refused_422(
+        containment,
+        monkeypatch,
+        stdout=_body(_UNRECOGNISED, {"message": _UNRECOGNISED_ERROR}, "and a bare string"),
+    )
+
+    assert result.outcome == containment.LinkOutcome.FAILED
+    said = f"{_UNRECOGNISED}; {_UNRECOGNISED_ERROR}; and a bare string"
+    assert result.said == containment.Said(said)
+    assert result.detail == (
+        "GitHub refused to link #344 under #342 (HTTP 422) for a reason pm does "
+        f'not recognise. GitHub said: "{said}"'
+    )
+    assert result.refused is True
+
+
+def test_an_error_entry_with_only_a_field_and_code_is_shown(containment, monkeypatch) -> None:
+    """GitHub's validation errors may carry only a `code` and the `field` it
+    applies to. Dropping them left the operator with a bare "Validation
+    Failed"; each is rendered `field: code`, or the code alone."""
+    result = _refused_422(
+        containment,
+        monkeypatch,
+        stdout=_body(
+            _UNRECOGNISED,
+            {"resource": "Issue", "field": "sub_issue_id", "code": "invalid"},
+            {"resource": "Issue", "code": "unprocessable"},
+            {"resource": "Issue"},
+        ),
+    )
+
+    assert result.said == containment.Said(f"{_UNRECOGNISED}; sub_issue_id: invalid; unprocessable")
+
+
+def test_each_422_cause_reads_differently_to_the_operator(containment, monkeypatch) -> None:
+    """The regression in one line: the four causes no longer collapse into one
+    "unsupported" sentence."""
+    details = {
+        cause: _refused_422(containment, monkeypatch, **kwargs).detail
+        for cause, kwargs in {
+            "one parent": {"stdout": _body(_OBSERVED_ONE_PARENT), "child_parent": 7},
+            "malformed": {"stdout": _body(_MALFORMED)},
+            "absent": {"stdout": _body(_ABSENT)},
+            "unrecognised": {"stdout": _body(_UNRECOGNISED)},
+        }.items()
+    }
+    assert len(set(details.values())) == len(details), details
+    assert [cause for cause, text in details.items() if "unsupported" in text] == []
+
+
+@pytest.mark.parametrize(
+    "stdout",
+    ["", "<html>bad gateway</html>", "[1, 2]", '{"message": 42, "errors": "not a list"}'],
+    ids=["empty", "not-json", "not-an-object", "wrong-types"],
+)
+def test_an_unparseable_422_body_falls_back_to_ghs_stderr(containment, monkeypatch, stdout) -> None:
+    """No usable body: the refusal is still read, and gh's own line — which
+    carries GitHub's message where gh found one — is what the operator sees,
+    attributed to gh, not passed off as GitHub's own words."""
+    stderr = "gh: Parent issue is locked (HTTP 422)"
+    result = _refused_422(containment, monkeypatch, stdout=stdout, stderr=stderr)
+
+    assert result.outcome == containment.LinkOutcome.FAILED
+    assert result.said == containment.Said(stderr, containment.SPEAKER_GH)
+    assert result.detail.endswith(f'gh said: "{stderr}"')
+    assert "GitHub said" not in result.detail
+
+
+def test_an_unrecognised_422_whose_child_has_since_got_a_parent_is_a_conflict(
+    containment, monkeypatch
+) -> None:
+    """On a plain link, a 422 that names no cause still sends the seam back to
+    the child's record (#1040): the record naming another parent is the
+    evidence of the conflict, and GitHub's words ride along."""
+    result = _refused_422(containment, monkeypatch, stdout=_body(_UNRECOGNISED), child_parent=7)
+
+    assert result.outcome == containment.LinkOutcome.CONFLICT
+    assert result.current_parent == containment.NativeParent(number=7)
+    assert 'GitHub said: "Validation Failed"' in result.detail
+
+
+def test_a_422_that_names_its_cause_does_not_reread_the_child(containment, monkeypatch) -> None:
+    """A malformed id says nothing about the child's parent, so no second read
+    of its record is made to look for one."""
+    fake = _ScriptedLink(_record(999), post=(1, _body(_MALFORMED), "gh: (HTTP 422)"))
+    monkeypatch.setattr(containment, "_gh_call", fake)
+    containment.link_sub_issue({}, parent_number=342, child_number=344)
+
+    assert sum(1 for call in fake.calls if "--jq" in call) == 1
+
+
+def test_a_422_is_never_probed_as_a_404_whatever_its_message(containment, monkeypatch) -> None:
+    """A 422 whose message happens to say "not found" is not gh's code-less 404:
+    it is never settled by the parent probe into "unsupported"."""
+    result = _refused_422(
+        containment,
+        monkeypatch,
+        stdout=_body("Sub-issue not found"),
+        stderr="gh: Sub-issue not found (HTTP 422)",
+    )
+
+    assert result.outcome == containment.LinkOutcome.FAILED
+    assert 'GitHub said: "Sub-issue not found"' in result.detail
+
+
+def test_a_move_refused_by_an_unrelated_422_is_a_failure_not_a_conflict(
+    containment, monkeypatch
+) -> None:
+    """On a move the child's existing parent is the precondition, not a
+    finding. A move GitHub refuses for a reason other than the one-parent rule
+    is a FAILED move quoting GitHub — never a conflict with a remedy ("must be
+    removed first") the refusal never asked for."""
+    unrelated = "Validation failed, or the endpoint has been spammed."
+    fake = _ScriptedLink(
+        _record(999, 7), post=(1, _body(unrelated), "gh: Validation Failed (HTTP 422)")
+    )
+    monkeypatch.setattr(containment, "_gh_call", fake)
+    result = containment.move_sub_issue({}, parent_number=342, child_number=344)
+
+    assert result.outcome == containment.LinkOutcome.FAILED
+    assert result.detail == (
+        "GitHub refused to move #344 to #342 (HTTP 422) for a reason pm does not "
+        f'recognise. GitHub said: "{unrelated}"'
+    )
+    assert "must be removed first" not in result.detail
+    assert result.current_parent is None
+    assert result.refused is True
+    assert sum(1 for call in fake.calls if "--jq" in call) == 1, "no re-read on a move"
+
+
+def test_refused_is_only_a_failed_link_github_refused(containment) -> None:
+    """The caller's cue for the textual-mode way out: a FAILED link carrying a
+    refusal's words. A conflict carrying them, or a failure with none (auth,
+    network), is not one."""
+    words = containment.Said("Nope")
+    assert containment.LinkResult(containment.LinkOutcome.FAILED, said=words).refused
+    assert not containment.LinkResult(containment.LinkOutcome.FAILED).refused
+    assert not containment.LinkResult(containment.LinkOutcome.CONFLICT, said=words).refused
+
+
+def test_quoting_refusal_appends_only_what_was_said(containment) -> None:
+    """The caller-side helper: the refusal's words after the caller's sentence,
+    attributed to whoever said them, and the sentence alone when there were
+    none."""
+    github = containment.LinkResult(containment.LinkOutcome.FAILED, said=containment.Said("Nope"))
+    gh = containment.LinkResult(
+        containment.LinkOutcome.FAILED,
+        said=containment.Said("gh: HTTP 422", containment.SPEAKER_GH),
+    )
+    silent = containment.LinkResult(containment.LinkOutcome.FAILED)
+    assert github.quoting_refusal("not linked") == 'not linked. GitHub said: "Nope"'
+    assert gh.quoting_refusal("not linked") == 'not linked. gh said: "gh: HTTP 422"'
+    assert silent.quoting_refusal("not linked") == "not linked"
 
 
 # --- create-issue obtains the link FROM the primitive --------------------
@@ -609,10 +860,13 @@ def test_render_is_deterministic(containment) -> None:
 def test_create_comment_args_constructs_the_post(containment) -> None:
     args = containment.create_comment_args(parent_number=342, body="hello")
     assert args == [
-        "gh", "api",
-        "-X", "POST",
+        "gh",
+        "api",
+        "-X",
+        "POST",
         "repos/{owner}/{repo}/issues/342/comments",
-        "-f", "body=hello",
+        "-f",
+        "body=hello",
     ]
 
 
@@ -620,10 +874,13 @@ def test_update_comment_args_constructs_the_patch(containment) -> None:
     """The OVERWRITE: a PATCH on the comment id, not a second POST/append."""
     args = containment.update_comment_args(comment_id=99, body="hello")
     assert args == [
-        "gh", "api",
-        "-X", "PATCH",
+        "gh",
+        "api",
+        "-X",
+        "PATCH",
         "repos/{owner}/{repo}/issues/comments/99",
-        "-f", "body=hello",
+        "-f",
+        "body=hello",
     ]
 
 
@@ -632,9 +889,8 @@ def test_update_comment_args_constructs_the_patch(containment) -> None:
 
 def _comments_payload(*entries: tuple[int, str]) -> str:
     import json as _json
-    body = ", ".join(
-        f'{{"id": {cid}, "body": {_json.dumps(text)}}}' for cid, text in entries
-    )
+
+    body = ", ".join(f'{{"id": {cid}, "body": {_json.dumps(text)}}}' for cid, text in entries)
     return f"[{body}]"
 
 
@@ -645,7 +901,8 @@ def test_find_children_comment_round_trips_the_marker(containment, monkeypatch) 
 
     def fake_gh(args, config):
         return subprocess.CompletedProcess(
-            args, 0,
+            args,
+            0,
             stdout=_comments_payload((1, "a normal human comment"), (7, marked)),
             stderr="",
         )
@@ -673,6 +930,7 @@ def test_find_children_comment_none_when_absent(containment, monkeypatch) -> Non
 def test_refresh_native_mode_is_noop(containment, monkeypatch) -> None:
     """In native mode the writer is a no-op (the native panel suffices) — no gh
     call at all, the single mode gate."""
+
     def fake_gh(args, config):  # pragma: no cover — must not be reached
         raise AssertionError("native mode must not touch gh")
 
@@ -709,9 +967,7 @@ def test_refresh_creates_when_no_marked_comment(containment, monkeypatch) -> Non
     assert len(writes) == 1
 
 
-def test_refresh_overwrites_existing_marked_comment_not_appends(
-    containment, monkeypatch
-) -> None:
+def test_refresh_overwrites_existing_marked_comment_not_appends(containment, monkeypatch) -> None:
     """Textual mode, an existing marked comment whose body is STALE → PATCH it in
     place (UPDATED). NEVER a second POST — overwrite, not append."""
     calls: list[list[str]] = []
@@ -803,6 +1059,7 @@ def test_refresh_content_matches_resolve_children(containment, monkeypatch) -> N
 def test_refresh_failed_read_is_failed_not_duplicate_post(containment, monkeypatch) -> None:
     """A failed comment-LIST read must NOT be treated as 'no comment' (which would
     duplicate-post) — it is FAILED, non-fatal to the caller."""
+
     def fake_gh(args, config):
         joined = " ".join(args)
         if "/comments" in joined and "--paginate" in args:
@@ -896,9 +1153,7 @@ def _resolve_element(node: ast.AST, names: dict[str, str]) -> str | None:
     if isinstance(node, ast.Name) and node.id in names:
         return names[node.id]
     if isinstance(node, ast.JoinedStr):
-        return "".join(
-            t for t in (_const_str(p) for p in node.values) if t is not None
-        )
+        return "".join(t for t in (_const_str(p) for p in node.values) if t is not None)
     if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Mod):
         return _const_str(node.left)
     if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
@@ -1027,7 +1282,7 @@ def _has_subsequence(literals: list[str], sub: tuple[str, ...]) -> bool:
     if not sub:
         return True
     n = len(sub)
-    return any(tuple(literals[i:i + n]) == sub for i in range(len(literals) - n + 1))
+    return any(tuple(literals[i : i + n]) == sub for i in range(len(literals) - n + 1))
 
 
 def _is_sub_issue_write(elements: list[str | None]) -> bool:
@@ -1107,9 +1362,7 @@ def _violations(path: Path) -> list[str]:
     return out
 
 
-@pytest.mark.parametrize(
-    "path", _all_scanned_scripts(), ids=lambda p: str(p.relative_to(SCRIPTS))
-)
+@pytest.mark.parametrize("path", _all_scanned_scripts(), ids=lambda p: str(p.relative_to(SCRIPTS)))
 def test_no_inline_sub_issue_write_construction(path: Path) -> None:
     """No pm script string-builds the native sub-issue write outside the seam."""
     violations = _violations(path)
@@ -1137,7 +1390,8 @@ def _violations_for_source(tmp_path: Path, name: str, src: str) -> list[str]:
 
 def test_guard_detects_clean_list_literal_sub_issue_write(tmp_path: Path) -> None:
     bad = _violations_for_source(
-        tmp_path, "bad.py",
+        tmp_path,
+        "bad.py",
         'args = ["gh", "api", "-X", "POST", '
         '"repos/{owner}/{repo}/issues/342/sub_issues", "-f", f"sub_issue_id={cid}"]\n',
     )
@@ -1148,7 +1402,8 @@ def test_guard_detects_fstring_path_sub_issue_write(tmp_path: Path) -> None:
     """The path is an f-string interpolating the parent number — the literal
     `/sub_issues` text is recovered and recognised."""
     bad = _violations_for_source(
-        tmp_path, "bad_fstring.py",
+        tmp_path,
+        "bad_fstring.py",
         'args = ["gh", "api", "-X", "POST", '
         'f"repos/{{owner}}/{{repo}}/issues/{parent}/sub_issues", "-f", body]\n',
     )
@@ -1159,7 +1414,8 @@ def test_guard_detects_extend_accumulation_sub_issue_write(tmp_path: Path) -> No
     """EVASION: `.extend` accumulation. A literal POST spliced across statements
     is caught; a seam-routed `cmd.extend(add_sub_issue_args(...))` is NOT."""
     bad = _violations_for_source(
-        tmp_path, "bad_extend.py",
+        tmp_path,
+        "bad_extend.py",
         "cmd = ['gh', 'api', '-X', 'POST']\n"
         "cmd.extend([f'repos/{{owner}}/{{repo}}/issues/{p}/sub_issues'])\n"
         "cmd.extend(['-f', body])\n",
@@ -1167,7 +1423,8 @@ def test_guard_detects_extend_accumulation_sub_issue_write(tmp_path: Path) -> No
     assert bad, "guard failed to flag a `.extend`-accumulated sub-issue write"
 
     good = _violations_for_source(
-        tmp_path, "good_extend.py",
+        tmp_path,
+        "good_extend.py",
         "cmd = ['gh', 'api']\n"
         "cmd.extend(add_sub_issue_args(parent_number=p, child_database_id=cid))\n",
     )
@@ -1179,9 +1436,9 @@ def test_guard_does_not_flag_the_list_read(tmp_path: Path) -> None:
     covered write — only the WRITE is flagged. A future inline read must stay
     clean."""
     read = _violations_for_source(
-        tmp_path, "read.py",
-        'args = ["gh", "api", "--paginate", '
-        '"repos/{owner}/{repo}/issues/342/sub_issues"]\n',
+        tmp_path,
+        "read.py",
+        'args = ["gh", "api", "--paginate", "repos/{owner}/{repo}/issues/342/sub_issues"]\n',
     )
     assert not read, "guard over-fired on a `/sub_issues` GET read (no POST)"
 
@@ -1191,7 +1448,8 @@ def test_guard_does_not_overfire_on_coincidental_token_lists(tmp_path: Path) -> 
     mentioning the tokens without the `gh api` + POST + path operation is NOT
     flagged."""
     prose = _violations_for_source(
-        tmp_path, "prose.py",
+        tmp_path,
+        "prose.py",
         "HELP = ['POST to /sub_issues to link', 'gh api is the seam']\n",
     )
     assert not prose, "guard over-fired on a prose list mentioning the tokens"
@@ -1209,7 +1467,8 @@ def test_guard_detects_inline_children_comment_post(tmp_path: Path) -> None:
     """An inline `gh api … POST …/comments` build (the children-view CREATE) is
     flagged — it must route through the seam."""
     bad = _violations_for_source(
-        tmp_path, "bad_comment_post.py",
+        tmp_path,
+        "bad_comment_post.py",
         'args = ["gh", "api", "-X", "POST", '
         '"repos/{owner}/{repo}/issues/342/comments", "-f", f"body={text}"]\n',
     )
@@ -1220,7 +1479,8 @@ def test_guard_detects_inline_children_comment_patch(tmp_path: Path) -> None:
     """An inline `gh api … PATCH …/comments` build (the children-view OVERWRITE)
     is flagged — the overwrite is as much a covered write as the create."""
     bad = _violations_for_source(
-        tmp_path, "bad_comment_patch.py",
+        tmp_path,
+        "bad_comment_patch.py",
         'args = ["gh", "api", "-X", "PATCH", '
         'f"repos/{{owner}}/{{repo}}/issues/comments/{cid}", "-f", body]\n',
     )
@@ -1231,9 +1491,9 @@ def test_guard_does_not_flag_the_comment_list_read(tmp_path: Path) -> None:
     """The find-existing READ (`gh api --paginate …/comments`, no POST/PATCH) is
     NOT a covered write — only the write is flagged."""
     read = _violations_for_source(
-        tmp_path, "comment_read.py",
-        'args = ["gh", "api", "--paginate", '
-        '"repos/{owner}/{repo}/issues/342/comments"]\n',
+        tmp_path,
+        "comment_read.py",
+        'args = ["gh", "api", "--paginate", "repos/{owner}/{repo}/issues/342/comments"]\n',
     )
     assert not read, "guard over-fired on a `/comments` GET read (no write marker)"
 
@@ -1242,7 +1502,8 @@ def test_guard_does_not_flag_gh_issue_comment_verb(tmp_path: Path) -> None:
     """`gh issue comment` (handoff's append audit comment) is a DIFFERENT verb,
     not the `gh api …/comments` children-view write — it must not be flagged."""
     other = _violations_for_source(
-        tmp_path, "issue_comment.py",
+        tmp_path,
+        "issue_comment.py",
         'cmd = ["gh", "issue", "comment", str(n), "--body", body]\n',
     )
     assert not other, "guard over-fired on `gh issue comment` (a different verb)"
@@ -1261,6 +1522,7 @@ def test_seam_constructs_the_children_comment_write() -> None:
 
 def _link_with(containment, monkeypatch, *, stderr: str, repo_visible: bool):
     """Attempt a native link whose POST fails with `stderr`, probe stubbed."""
+
     def fake_gh(args, config):
         joined = " ".join(args)
         if ".id" in joined:
@@ -1294,7 +1556,8 @@ def test_link_404_with_an_unreachable_repo_is_failed_not_unsupported(
     notions of the same fact about the instance (#869).
     """
     result = _link_with(
-        containment, monkeypatch,
+        containment,
+        monkeypatch,
         stderr="gh: HTTP 404: Not Found (https://api.github.com/repos/o/r/issues/342/sub_issues)",
         repo_visible=False,
     )

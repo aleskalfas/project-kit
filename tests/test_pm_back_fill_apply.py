@@ -188,10 +188,17 @@ def _field_change(number: int, item_id: str | None) -> dict:
         "kind": "set-board-field",
         "citation": FIELD_INTENT["citation"],
         "argv": [
-            "gh", "project", "item-edit",
-            "--id", item_id, "--field-id", "FIELD_WS",
-            "--project-id", "PROJ_NODE",
-            "--single-select-option-id", "OPT_SPYRE",
+            "gh",
+            "project",
+            "item-edit",
+            "--id",
+            item_id,
+            "--field-id",
+            "FIELD_WS",
+            "--project-id",
+            "PROJ_NODE",
+            "--single-select-option-id",
+            "OPT_SPYRE",
         ],
         "observed": None,
         "prediction": "would-write",
@@ -205,11 +212,11 @@ def fixture_plan() -> dict:
     return _plan(
         intents=[MILESTONE_INTENT, FIELD_INTENT],
         proposed=[
-            _milestone_change(1, observed=None),            # unset → would-write
-            _milestone_change(2, observed="Milestone 1"),   # already set → idempotent
-            _milestone_change(3, observed=None),            # plan saw unset...
-            _field_change(1, item_id="ITEM_1"),             # on board → would-write
-            _field_change(4, item_id=None),                 # not on board → blocked
+            _milestone_change(1, observed=None),  # unset → would-write
+            _milestone_change(2, observed="Milestone 1"),  # already set → idempotent
+            _milestone_change(3, observed=None),  # plan saw unset...
+            _field_change(1, item_id="ITEM_1"),  # on board → would-write
+            _field_change(4, item_id=None),  # not on board → blocked
         ],
     )
 
@@ -222,7 +229,10 @@ def fixture_plan() -> dict:
 
 def _change(apply_mod, *, target, observed, argv=("x",), kind="assign-milestone"):
     return apply_mod.PlannedChange(
-        issue_number=1, kind=kind, target=target, observed=observed,
+        issue_number=1,
+        kind=kind,
+        target=target,
+        observed=observed,
         argv=list(argv) if argv is not None else None,
     )
 
@@ -295,7 +305,10 @@ def test_classify_blocked_when_no_argv(apply_mod) -> None:
 
 def _milestone_planned(apply_mod, number, *, target, observed, argv=True):
     return apply_mod.PlannedChange(
-        issue_number=number, kind="assign-milestone", target=target, observed=observed,
+        issue_number=number,
+        kind="assign-milestone",
+        target=target,
+        observed=observed,
         argv=(["gh", "issue", "edit", str(number), "--milestone", target] if argv else None),
     )
 
@@ -308,8 +321,10 @@ def test_clean_apply_executes_writes_through_the_seam(apply_mod, monkeypatch) ->
     def fake_write_milestone(config, *, issue_number, title):
         seam_calls.append(("milestone", issue_number, title))
         return apply_mod.substrate_writes.SubstrateWriteResult(
-            ok=True, executed=True, argv=("gh", "issue", "edit", str(issue_number),
-                                          "--milestone", title), detail="set",
+            ok=True,
+            executed=True,
+            argv=("gh", "issue", "edit", str(issue_number), "--milestone", title),
+            detail="set",
         )
 
     monkeypatch.setattr(apply_mod.substrate_writes, "write_milestone", fake_write_milestone)
@@ -337,7 +352,8 @@ def test_drift_skip_does_not_overwrite(apply_mod, monkeypatch) -> None:
     changes = [_milestone_planned(apply_mod, 7, target="M2", observed=None)]
     # Fresh read shows a human-set value (drift from the plan's None, not the target).
     records = apply_mod.apply_plan(
-        changes, {},
+        changes,
+        {},
         read_fresh=lambda c: apply_mod.FreshState(current="HumanSet", read_ok=True),
     )
     assert [r.outcome for r in records] == [apply_mod.ApplyOutcome.SKIPPED_DRIFT]
@@ -357,16 +373,15 @@ def test_value_equality_idempotency_skips_already_set(apply_mod, monkeypatch) ->
 
     changes = [_milestone_planned(apply_mod, 2, target="M1", observed="M1")]
     records = apply_mod.apply_plan(
-        changes, {},
+        changes,
+        {},
         read_fresh=lambda c: apply_mod.FreshState(current="M1", read_ok=True),
     )
     assert [r.outcome for r in records] == [apply_mod.ApplyOutcome.SKIPPED_IDEMPOTENT]
     assert called["wrote"] is False
 
 
-def test_partial_apply_rerun_is_noop_for_applied_and_completes_rest(
-    apply_mod, monkeypatch
-) -> None:
+def test_partial_apply_rerun_is_noop_for_applied_and_completes_rest(apply_mod, monkeypatch) -> None:
     """Property 2 (recoverability): simulate a re-run after a partial apply that
     died after issue 1. On the re-run, issue 1's fresh read equals the target (it
     was applied) → skipped idempotent; issue 2 is still unset → applied. The re-run
@@ -386,7 +401,8 @@ def test_partial_apply_rerun_is_noop_for_applied_and_completes_rest(
     # Re-run state: #1 already carries M1 (applied last time), #2 still unset.
     fresh_by_issue = {1: "M1", 2: None}
     records = apply_mod.apply_plan(
-        changes, {},
+        changes,
+        {},
         read_fresh=lambda c: apply_mod.FreshState(
             current=fresh_by_issue[c.issue_number], read_ok=True
         ),
@@ -397,16 +413,18 @@ def test_partial_apply_rerun_is_noop_for_applied_and_completes_rest(
     assert written == [2], "the re-run must only write the not-yet-applied issue"
 
 
-def test_write_failure_is_audited_loop_continues_and_exit_nonzero(
-    apply_mod, monkeypatch
-) -> None:
+def test_write_failure_is_audited_loop_continues_and_exit_nonzero(apply_mod, monkeypatch) -> None:
     """Failure posture (ADR-031 §6): a write FAILURE is recorded, the loop CONTINUES
     to the next change, and the summary yields a NON-ZERO exit — NOT report-and-
     continue-exit-0. The second (good) write still lands."""
+
     def fake_write_milestone(config, *, issue_number, title):
         if issue_number == 1:
             return apply_mod.substrate_writes.SubstrateWriteResult(
-                ok=False, executed=True, error="boom", detail="gh failed: boom",
+                ok=False,
+                executed=True,
+                error="boom",
+                detail="gh failed: boom",
             )
         return apply_mod.substrate_writes.SubstrateWriteResult(ok=True, executed=True, detail="ok")
 
@@ -417,7 +435,8 @@ def test_write_failure_is_audited_loop_continues_and_exit_nonzero(
         _milestone_planned(apply_mod, 2, target="M1", observed=None),
     ]
     records = apply_mod.apply_plan(
-        changes, {},
+        changes,
+        {},
         read_fresh=lambda c: apply_mod.FreshState(current=None, read_ok=True),
     )
     outcomes = {r.issue_number: r.outcome for r in records}
@@ -433,13 +452,20 @@ def test_blocked_change_is_recorded_not_written(apply_mod, monkeypatch) -> None:
     """A blocked change (no argv) is recorded blocked and never executed — and a
     blocked-only batch is exit 0 (a block is not a failure)."""
     monkeypatch.setattr(
-        apply_mod.substrate_writes, "write_field_value",
+        apply_mod.substrate_writes,
+        "write_field_value",
         lambda *a, **k: pytest.fail("a blocked change must not be written"),
     )
-    changes = [apply_mod.PlannedChange(
-        issue_number=9, kind="set-board-field", target="OPT", observed=None,
-        argv=None, blocked_reason="issue not on board",
-    )]
+    changes = [
+        apply_mod.PlannedChange(
+            issue_number=9,
+            kind="set-board-field",
+            target="OPT",
+            observed=None,
+            argv=None,
+            blocked_reason="issue not on board",
+        )
+    ]
     records = apply_mod.apply_plan(
         changes, {}, read_fresh=lambda c: apply_mod.FreshState(current=None, read_ok=True)
     )
@@ -459,9 +485,14 @@ def test_field_value_apply_routes_through_the_seam(apply_mod, monkeypatch) -> No
     monkeypatch.setattr(apply_mod.substrate_writes, "write_field_value", fake_write_field_value)
 
     change = apply_mod.PlannedChange(
-        issue_number=1, kind="set-board-field", target="OPT_SPYRE", observed=None,
+        issue_number=1,
+        kind="set-board-field",
+        target="OPT_SPYRE",
+        observed=None,
         argv=["gh", "project", "item-edit", "--id", "ITEM_1"],
-        item_id="ITEM_1", field_id="FIELD_WS", project_id="PROJ_NODE",
+        item_id="ITEM_1",
+        field_id="FIELD_WS",
+        project_id="PROJ_NODE",
         single_select_option_id="OPT_SPYRE",
     )
     records = apply_mod.apply_plan(
@@ -512,11 +543,13 @@ def test_emit_script_executes_no_write(apply_mod, monkeypatch) -> None:
     """The draft-not-apply form: rendering the script calls NO seam executor — it
     is pure text. pm never touches the corpus in this mode (DEC-037 §2)."""
     monkeypatch.setattr(
-        apply_mod.substrate_writes, "write_milestone",
+        apply_mod.substrate_writes,
+        "write_milestone",
         lambda *a, **k: pytest.fail("emit-script must execute no write"),
     )
     monkeypatch.setattr(
-        apply_mod.substrate_writes, "write_field_value",
+        apply_mod.substrate_writes,
+        "write_field_value",
         lambda *a, **k: pytest.fail("emit-script must execute no write"),
     )
     changes = [_milestone_planned(apply_mod, 1, target="M1", observed=None)]
@@ -543,7 +576,10 @@ def test_emit_script_uses_the_plans_exact_argv(apply_mod) -> None:
     """The emitted write renders the plan's exact reviewed argv verbatim (shlex-
     quoted) — what runs is what the human reviewed, not a re-derivation."""
     change = apply_mod.PlannedChange(
-        issue_number=3, kind="assign-milestone", target="My Milestone", observed=None,
+        issue_number=3,
+        kind="assign-milestone",
+        target="My Milestone",
+        observed=None,
         argv=["gh", "issue", "edit", "3", "--milestone", "My Milestone"],
     )
     script = apply_mod.render_emit_script([change])
@@ -555,8 +591,12 @@ def test_emit_script_renders_blocked_as_comment(apply_mod) -> None:
     """A blocked change (no argv) is emitted as a commented note, not a broken
     write line."""
     change = apply_mod.PlannedChange(
-        issue_number=4, kind="set-board-field", target="OPT", observed=None,
-        argv=None, blocked_reason="issue not on board",
+        issue_number=4,
+        kind="set-board-field",
+        target="OPT",
+        observed=None,
+        argv=None,
+        blocked_reason="issue not on board",
     )
     script = apply_mod.render_emit_script([change])
     assert "# [blocked] #4" in script
@@ -621,9 +661,9 @@ def test_planned_changes_recover_target_and_seam_inputs(apply_mod, fixture_plan)
 
     field = by[(1, "set-board-field")]
     assert field.target == "OPT_SPYRE"
-    assert field.item_id == "ITEM_1"           # recovered from argv --id
+    assert field.item_id == "ITEM_1"  # recovered from argv --id
     assert field.field_id == "FIELD_WS"
-    assert field.project_id == "PROJ_NODE"     # recovered from argv --project-id
+    assert field.project_id == "PROJ_NODE"  # recovered from argv --project-id
     assert field.single_select_option_id == "OPT_SPYRE"
 
     blocked = by[(4, "set-board-field")]
@@ -672,9 +712,17 @@ def _field_entry(number: int, item_id: str, field_id: str, option_id: str) -> di
         "kind": "set-board-field",
         "citation": "hook entry",
         "argv": [
-            "gh", "project", "item-edit", "--id", item_id,
-            "--field-id", field_id, "--project-id", "PROJ_NODE",
-            "--single-select-option-id", option_id,
+            "gh",
+            "project",
+            "item-edit",
+            "--id",
+            item_id,
+            "--field-id",
+            field_id,
+            "--project-id",
+            "PROJ_NODE",
+            "--single-select-option-id",
+            option_id,
         ],
         "observed": None,
         "prediction": "would-write",
@@ -718,22 +766,47 @@ def test_two_field_intents_drive_their_own_write_argv(apply_mod, monkeypatch) ->
         argv = apply_mod.substrate_writes.field_value_args(**kw)
         written.append(argv)
         return apply_mod.substrate_writes.SubstrateWriteResult(
-            ok=True, executed=True, argv=tuple(argv), detail="ok",
+            ok=True,
+            executed=True,
+            argv=tuple(argv),
+            detail="ok",
         )
 
     monkeypatch.setattr(apply_mod.substrate_writes, "write_field_value", _record)
     changes = apply_mod.planned_changes_from_plan(plan)
     records = apply_mod.apply_plan(
-        changes, {}, read_fresh=lambda _c: apply_mod.FreshState(current=None),
+        changes,
+        {},
+        read_fresh=lambda _c: apply_mod.FreshState(current=None),
     )
     assert [r.outcome for r in records] == [apply_mod.ApplyOutcome.APPLIED] * 2
     assert written == [
-        ["gh", "project", "item-edit", "--id", "ITEM_1",
-         "--field-id", "FIELD_PRIORITY", "--project-id", "PROJ_NODE",
-         "--single-select-option-id", "OPT_P2"],
-        ["gh", "project", "item-edit", "--id", "ITEM_1",
-         "--field-id", "FIELD_WORKSTREAM", "--project-id", "PROJ_NODE",
-         "--single-select-option-id", "OPT_SPYRE"],
+        [
+            "gh",
+            "project",
+            "item-edit",
+            "--id",
+            "ITEM_1",
+            "--field-id",
+            "FIELD_PRIORITY",
+            "--project-id",
+            "PROJ_NODE",
+            "--single-select-option-id",
+            "OPT_P2",
+        ],
+        [
+            "gh",
+            "project",
+            "item-edit",
+            "--id",
+            "ITEM_1",
+            "--field-id",
+            "FIELD_WORKSTREAM",
+            "--project-id",
+            "PROJ_NODE",
+            "--single-select-option-id",
+            "OPT_SPYRE",
+        ],
     ]
 
 
@@ -745,10 +818,18 @@ def test_two_milestone_intents_each_recover_their_own_title(apply_mod) -> None:
             dict(MILESTONE_INTENT, milestone_title="Milestone 2"),
         ],
         proposed=[
-            {"issue_number": 1, "kind": "assign-milestone", "observed": None,
-             "argv": ["gh", "issue", "edit", "1", "--milestone", "Milestone 2"]},
-            {"issue_number": 2, "kind": "assign-milestone", "observed": None,
-             "argv": ["gh", "issue", "edit", "2", "--milestone", "Milestone 1"]},
+            {
+                "issue_number": 1,
+                "kind": "assign-milestone",
+                "observed": None,
+                "argv": ["gh", "issue", "edit", "1", "--milestone", "Milestone 2"],
+            },
+            {
+                "issue_number": 2,
+                "kind": "assign-milestone",
+                "observed": None,
+                "argv": ["gh", "issue", "edit", "2", "--milestone", "Milestone 1"],
+            },
         ],
     )
     changes = apply_mod.planned_changes_from_plan(plan)
@@ -760,23 +841,40 @@ def test_two_label_axes_still_each_recover_their_own_label(apply_mod) -> None:
     real key does not regress it on its way in."""
     plan = _plan(
         intents=[
-            {"kind": "set-axis-label", "axis": "priority", "label_value": "P0",
-             "carrier_labels": ["P0", "P1"]},
-            {"kind": "set-axis-label", "axis": "workstream", "label_value": "ws-spyre",
-             "carrier_labels": ["ws-spyre"]},
+            {
+                "kind": "set-axis-label",
+                "axis": "priority",
+                "label_value": "P0",
+                "carrier_labels": ["P0", "P1"],
+            },
+            {
+                "kind": "set-axis-label",
+                "axis": "workstream",
+                "label_value": "ws-spyre",
+                "carrier_labels": ["ws-spyre"],
+            },
         ],
         proposed=[
-            {"issue_number": 1, "kind": "set-axis-label", "axis": "workstream",
-             "observed": None,
-             "argv": ["gh", "issue", "edit", "1", "--add-label", "ws-spyre"]},
-            {"issue_number": 2, "kind": "set-axis-label", "axis": "priority",
-             "observed": None,
-             "argv": ["gh", "issue", "edit", "2", "--add-label", "P0"]},
+            {
+                "issue_number": 1,
+                "kind": "set-axis-label",
+                "axis": "workstream",
+                "observed": None,
+                "argv": ["gh", "issue", "edit", "1", "--add-label", "ws-spyre"],
+            },
+            {
+                "issue_number": 2,
+                "kind": "set-axis-label",
+                "axis": "priority",
+                "observed": None,
+                "argv": ["gh", "issue", "edit", "2", "--add-label", "P0"],
+            },
         ],
     )
     changes = apply_mod.planned_changes_from_plan(plan)
     assert [(c.axis, c.target) for c in changes] == [
-        ("workstream", "ws-spyre"), ("priority", "P0"),
+        ("workstream", "ws-spyre"),
+        ("priority", "P0"),
     ]
 
 
@@ -797,24 +895,36 @@ def test_a_plan_saved_before_the_fix_reconstructs_correctly(apply_mod, bf) -> No
     """
     intents = [
         bf.BackFillIntent(
-            kind="set-board-field", citation="hook entry 0",
-            field_id="FIELD_PRIORITY", single_select_option_id="OPT_P2",
+            kind="set-board-field",
+            citation="hook entry 0",
+            field_id="FIELD_PRIORITY",
+            single_select_option_id="OPT_P2",
         ),
         bf.BackFillIntent(
-            kind="set-board-field", citation="hook entry 1",
-            field_id="FIELD_WORKSTREAM", single_select_option_id="OPT_SPYRE",
+            kind="set-board-field",
+            citation="hook entry 1",
+            field_id="FIELD_WORKSTREAM",
+            single_select_option_id="OPT_SPYRE",
         ),
         bf.BackFillIntent(
-            kind="assign-milestone", citation="hook entry 2",
+            kind="assign-milestone",
+            citation="hook entry 2",
             milestone_title="Milestone 1",
         ),
     ]
     issues = [{"number": 1, "title": "one", "milestone": None}]
     proposed = bf._build_proposed_changes(
-        intents, issues, {(TARGET_REPO, 1): "ITEM_1"}, "PROJ_NODE", TARGET_REPO,
+        intents,
+        issues,
+        {(TARGET_REPO, 1): "ITEM_1"},
+        "PROJ_NODE",
+        TARGET_REPO,
     )
     plan = bf._plan_document(
-        intents, proposed, bf.GateResult(passed=True, checks=[]), truncated=False,
+        intents,
+        proposed,
+        bf.GateResult(passed=True, checks=[]),
+        truncated=False,
     )
     changes = apply_mod.planned_changes_from_plan(plan)
     assert [(c.field_id, c.target) for c in changes] == [
@@ -832,8 +942,12 @@ def test_an_entry_no_intent_declares_is_blocked_not_guessed(apply_mod) -> None:
     plan = _plan(
         intents=[dict(MILESTONE_INTENT, milestone_title="Milestone 1")],
         proposed=[
-            {"issue_number": 1, "kind": "assign-milestone", "observed": "Milestone 9",
-             "argv": ["gh", "issue", "edit", "1", "--milestone", "Milestone 9"]},
+            {
+                "issue_number": 1,
+                "kind": "assign-milestone",
+                "observed": "Milestone 9",
+                "argv": ["gh", "issue", "edit", "1", "--milestone", "Milestone 9"],
+            },
         ],
     )
     changes = apply_mod.planned_changes_from_plan(plan)
@@ -841,7 +955,9 @@ def test_an_entry_no_intent_declares_is_blocked_not_guessed(apply_mod) -> None:
     assert changes[0].argv is None
     assert "no intent" in changes[0].blocked_reason
     records = apply_mod.apply_plan(
-        changes, {}, read_fresh=lambda _c: apply_mod.FreshState(current="Milestone 9"),
+        changes,
+        {},
+        read_fresh=lambda _c: apply_mod.FreshState(current="Milestone 9"),
     )
     assert records[0].outcome is apply_mod.ApplyOutcome.BLOCKED
 
@@ -855,22 +971,32 @@ def test_the_report_phase_associates_by_construction_not_by_key(bf) -> None:
     not quietly introduce the same collapse there.
     """
     intents = [
-        bf.BackFillIntent(kind="set-board-field", citation="c0",
-                          field_id="FIELD_A", single_select_option_id="OPT_A"),
-        bf.BackFillIntent(kind="set-board-field", citation="c1",
-                          field_id="FIELD_B", single_select_option_id="OPT_B"),
+        bf.BackFillIntent(
+            kind="set-board-field",
+            citation="c0",
+            field_id="FIELD_A",
+            single_select_option_id="OPT_A",
+        ),
+        bf.BackFillIntent(
+            kind="set-board-field",
+            citation="c1",
+            field_id="FIELD_B",
+            single_select_option_id="OPT_B",
+        ),
     ]
     proposed = bf._build_proposed_changes(
-        intents, [{"number": 1, "title": "one"}],
-        {(TARGET_REPO, 1): "ITEM_1"}, "PROJ_NODE", TARGET_REPO,
+        intents,
+        [{"number": 1, "title": "one"}],
+        {(TARGET_REPO, 1): "ITEM_1"},
+        "PROJ_NODE",
+        TARGET_REPO,
     )
+
     def _flag(argv, flag):
         return argv[argv.index(flag) + 1]
 
     assert [_flag(c.argv, "--field-id") for c in proposed] == ["FIELD_A", "FIELD_B"]
-    assert [
-        _flag(c.argv, "--single-select-option-id") for c in proposed
-    ] == ["OPT_A", "OPT_B"]
+    assert [_flag(c.argv, "--single-select-option-id") for c in proposed] == ["OPT_A", "OPT_B"]
 
 
 # ============================================================================
@@ -893,7 +1019,8 @@ def _stub_live_gate_passing(bf, monkeypatch) -> None:
     clean pass so they exercise the write decision in isolation. The dedicated G1
     test stubs it to FAIL instead, and asserts the refusal."""
     monkeypatch.setattr(
-        bf, "_residual_gate_for_saved_plan",
+        bf,
+        "_residual_gate_for_saved_plan",
         lambda _plan, _config, _root: bf.GateResult(passed=True, checks=[]),
     )
 
@@ -911,6 +1038,7 @@ def _patch_all_gh(bf, monkeypatch, fake_gh_run) -> None:
     if str(LIB_DIR) not in sys.path:
         sys.path.insert(0, str(LIB_DIR))
     import gh as gh_source  # the `_lib.gh` module
+
     monkeypatch.setattr(gh_source, "gh_run", fake_gh_run)
 
 
@@ -935,9 +1063,16 @@ def test_main_emit_script_from_saved_plan_writes_no_corpus(
     _stub_live_gate_passing(bf, monkeypatch)
     monkeypatch.setattr(bf, "load_adopter_config", lambda _r: {})
     monkeypatch.setattr(
-        sys, "argv",
-        ["back-fill.py", "--capability-root", str(tmp_path), "--emit-script",
-         "--plan", str(plan_file)],
+        sys,
+        "argv",
+        [
+            "back-fill.py",
+            "--capability-root",
+            str(tmp_path),
+            "--emit-script",
+            "--plan",
+            str(plan_file),
+        ],
     )
     rc = bf.main()
     assert rc == 0
@@ -963,7 +1098,8 @@ def test_main_apply_from_saved_plan_clean(bf, tmp_path, monkeypatch, capsys) -> 
         # Fresh-read: every issue's milestone is unset (so all would-write).
         if args[:3] == ["gh", "issue", "view"]:
             return subprocess.CompletedProcess(
-                args, 0, stdout=json.dumps({"milestone": None}), stderr="")
+                args, 0, stdout=json.dumps({"milestone": None}), stderr=""
+            )
         # The write itself.
         if args[:3] == ["gh", "issue", "edit"] and "--milestone" in args:
             writes.append(int(args[3]))
@@ -974,9 +1110,17 @@ def test_main_apply_from_saved_plan_clean(bf, tmp_path, monkeypatch, capsys) -> 
     _stub_live_gate_passing(bf, monkeypatch)
     monkeypatch.setattr(bf, "load_adopter_config", lambda _r: {})
     monkeypatch.setattr(
-        sys, "argv",
-        ["back-fill.py", "--capability-root", str(tmp_path), "--apply",
-         "--plan", str(plan_file), "--yes"],
+        sys,
+        "argv",
+        [
+            "back-fill.py",
+            "--capability-root",
+            str(tmp_path),
+            "--apply",
+            "--plan",
+            str(plan_file),
+            "--yes",
+        ],
     )
     rc = bf.main()
     assert rc == 0
@@ -1000,7 +1144,8 @@ def test_main_apply_drift_skip_end_to_end(bf, tmp_path, monkeypatch, capsys) -> 
         if args[:3] == ["gh", "issue", "view"]:
             # The human set a DIFFERENT milestone since plan time → drift.
             return subprocess.CompletedProcess(
-                args, 0, stdout=json.dumps({"milestone": {"title": "HumanChose"}}), stderr="")
+                args, 0, stdout=json.dumps({"milestone": {"title": "HumanChose"}}), stderr=""
+            )
         if args[:3] == ["gh", "issue", "edit"] and "--milestone" in args:
             writes.append(int(args[3]))
             return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
@@ -1010,9 +1155,17 @@ def test_main_apply_drift_skip_end_to_end(bf, tmp_path, monkeypatch, capsys) -> 
     _stub_live_gate_passing(bf, monkeypatch)
     monkeypatch.setattr(bf, "load_adopter_config", lambda _r: {})
     monkeypatch.setattr(
-        sys, "argv",
-        ["back-fill.py", "--capability-root", str(tmp_path), "--apply",
-         "--plan", str(plan_file), "--yes"],
+        sys,
+        "argv",
+        [
+            "back-fill.py",
+            "--capability-root",
+            str(tmp_path),
+            "--apply",
+            "--plan",
+            str(plan_file),
+            "--yes",
+        ],
     )
     rc = bf.main()
     assert rc == 0
@@ -1033,7 +1186,8 @@ def test_main_apply_write_failure_exits_nonzero(bf, tmp_path, monkeypatch, capsy
     def fake_gh_run(args, config=None, **kw):
         if args[:3] == ["gh", "issue", "view"]:
             return subprocess.CompletedProcess(
-                args, 0, stdout=json.dumps({"milestone": None}), stderr="")
+                args, 0, stdout=json.dumps({"milestone": None}), stderr=""
+            )
         if args[:3] == ["gh", "issue", "edit"] and "--milestone" in args:
             if args[3] == "1":
                 return subprocess.CompletedProcess(args, 1, stdout="", stderr="permission denied")
@@ -1044,9 +1198,17 @@ def test_main_apply_write_failure_exits_nonzero(bf, tmp_path, monkeypatch, capsy
     _stub_live_gate_passing(bf, monkeypatch)
     monkeypatch.setattr(bf, "load_adopter_config", lambda _r: {})
     monkeypatch.setattr(
-        sys, "argv",
-        ["back-fill.py", "--capability-root", str(tmp_path), "--apply",
-         "--plan", str(plan_file), "--yes"],
+        sys,
+        "argv",
+        [
+            "back-fill.py",
+            "--capability-root",
+            str(tmp_path),
+            "--apply",
+            "--plan",
+            str(plan_file),
+            "--yes",
+        ],
     )
     rc = bf.main()
     assert rc == 1, "a write failure must surface a non-zero exit"
@@ -1063,14 +1225,23 @@ def test_main_apply_refuses_saved_plan_with_failed_gate(bf, tmp_path, monkeypatc
     plan_file = _write_plan_file(tmp_path, plan)
 
     monkeypatch.setattr(
-        bf, "gh_run",
+        bf,
+        "gh_run",
         lambda *a, **k: pytest.fail("a refused plan must issue no gh call"),
     )
     monkeypatch.setattr(bf, "load_adopter_config", lambda _r: {})
     monkeypatch.setattr(
-        sys, "argv",
-        ["back-fill.py", "--capability-root", str(tmp_path), "--apply",
-         "--plan", str(plan_file), "--yes"],
+        sys,
+        "argv",
+        [
+            "back-fill.py",
+            "--capability-root",
+            str(tmp_path),
+            "--apply",
+            "--plan",
+            str(plan_file),
+            "--yes",
+        ],
     )
     rc = bf.main()
     assert rc == 2
@@ -1082,9 +1253,17 @@ def test_main_apply_refuses_unknown_schema_version(bf, tmp_path, monkeypatch, ca
     plan_file = _write_plan_file(tmp_path, plan)
     monkeypatch.setattr(bf, "load_adopter_config", lambda _r: {})
     monkeypatch.setattr(
-        sys, "argv",
-        ["back-fill.py", "--capability-root", str(tmp_path), "--apply",
-         "--plan", str(plan_file), "--yes"],
+        sys,
+        "argv",
+        [
+            "back-fill.py",
+            "--capability-root",
+            str(tmp_path),
+            "--apply",
+            "--plan",
+            str(plan_file),
+            "--yes",
+        ],
     )
     rc = bf.main()
     assert rc == 2
@@ -1111,9 +1290,16 @@ def test_main_apply_declines_in_non_interactive_without_yes(
     # Force non-interactive.
     monkeypatch.setattr(sys.stdin, "isatty", lambda: False)
     monkeypatch.setattr(
-        sys, "argv",
-        ["back-fill.py", "--capability-root", str(tmp_path), "--apply",
-         "--plan", str(plan_file)],  # NO --yes
+        sys,
+        "argv",
+        [
+            "back-fill.py",
+            "--capability-root",
+            str(tmp_path),
+            "--apply",
+            "--plan",
+            str(plan_file),
+        ],  # NO --yes
     )
     rc = bf.main()
     assert rc == 2
@@ -1131,7 +1317,8 @@ def test_main_apply_yes_pre_approves(bf, tmp_path, monkeypatch, capsys) -> None:
     def fake_gh_run(args, config=None, **kw):
         if args[:3] == ["gh", "issue", "view"]:
             return subprocess.CompletedProcess(
-                args, 0, stdout=json.dumps({"milestone": None}), stderr="")
+                args, 0, stdout=json.dumps({"milestone": None}), stderr=""
+            )
         if args[:3] == ["gh", "issue", "edit"] and "--milestone" in args:
             wrote["n"] += 1
             return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
@@ -1142,9 +1329,17 @@ def test_main_apply_yes_pre_approves(bf, tmp_path, monkeypatch, capsys) -> None:
     monkeypatch.setattr(bf, "load_adopter_config", lambda _r: {})
     monkeypatch.setattr(sys.stdin, "isatty", lambda: False)
     monkeypatch.setattr(
-        sys, "argv",
-        ["back-fill.py", "--capability-root", str(tmp_path), "--apply",
-         "--plan", str(plan_file), "--yes"],
+        sys,
+        "argv",
+        [
+            "back-fill.py",
+            "--capability-root",
+            str(tmp_path),
+            "--apply",
+            "--plan",
+            str(plan_file),
+            "--yes",
+        ],
     )
     rc = bf.main()
     assert rc == 0
@@ -1157,7 +1352,8 @@ def test_main_rejects_plan_in_report_mode(bf, tmp_path, monkeypatch, capsys) -> 
     plan_file = _write_plan_file(tmp_path, _plan([], []))
     monkeypatch.setattr(bf, "load_adopter_config", lambda _r: {})
     monkeypatch.setattr(
-        sys, "argv",
+        sys,
+        "argv",
         ["back-fill.py", "--capability-root", str(tmp_path), "--plan", str(plan_file)],
     )
     rc = bf.main()
@@ -1173,7 +1369,8 @@ def test_main_rejects_plan_in_report_mode(bf, tmp_path, monkeypatch, capsys) -> 
 def test_fresh_milestone_read_returns_current_title(bf, monkeypatch, apply_mod) -> None:
     def fake_gh_run(args, config, **kw):
         return subprocess.CompletedProcess(
-            args, 0, stdout=json.dumps({"milestone": {"title": "M1"}}), stderr="")
+            args, 0, stdout=json.dumps({"milestone": {"title": "M1"}}), stderr=""
+        )
 
     monkeypatch.setattr(bf, "gh_run", fake_gh_run)
     change = apply_mod.PlannedChange(
@@ -1187,6 +1384,7 @@ def test_fresh_milestone_read_returns_current_title(bf, monkeypatch, apply_mod) 
 def test_fresh_milestone_read_fails_closed_on_gh_error(bf, monkeypatch, apply_mod) -> None:
     """A gh failure on the re-validate read → read_ok False, so classify fails
     closed to skip (never overwrite against an unconfirmed value)."""
+
     def fake_gh_run(args, config, **kw):
         return subprocess.CompletedProcess(args, 1, stdout="", stderr="boom")
 
@@ -1201,19 +1399,37 @@ def test_fresh_milestone_read_fails_closed_on_gh_error(bf, monkeypatch, apply_mo
 def test_fresh_field_value_read_matches_field_id(bf, monkeypatch, apply_mod) -> None:
     """The field-value re-read returns the option id of the matching field (by
     field id) from the GraphQL field-values surface."""
+
     def fake_gh_run(args, config, **kw):
         return subprocess.CompletedProcess(
-            args, 0,
-            stdout=json.dumps({"data": {"node": {"fieldValues": {"nodes": [
-                {"optionId": "OPT_OTHER", "field": {"id": "FIELD_OTHER"}},
-                {"optionId": "OPT_SPYRE", "field": {"id": "FIELD_WS"}},
-            ]}}}}),
-            stderr="")
+            args,
+            0,
+            stdout=json.dumps(
+                {
+                    "data": {
+                        "node": {
+                            "fieldValues": {
+                                "nodes": [
+                                    {"optionId": "OPT_OTHER", "field": {"id": "FIELD_OTHER"}},
+                                    {"optionId": "OPT_SPYRE", "field": {"id": "FIELD_WS"}},
+                                ]
+                            }
+                        }
+                    }
+                }
+            ),
+            stderr="",
+        )
 
     monkeypatch.setattr(bf, "gh_run", fake_gh_run)
     change = apply_mod.PlannedChange(
-        issue_number=1, kind="set-board-field", target="OPT_SPYRE", observed=None,
-        argv=["x"], item_id="ITEM_1", field_id="FIELD_WS",
+        issue_number=1,
+        kind="set-board-field",
+        target="OPT_SPYRE",
+        observed=None,
+        argv=["x"],
+        item_id="ITEM_1",
+        field_id="FIELD_WS",
     )
     fresh = bf._read_fresh_state(change, {})
     assert fresh.current == "OPT_SPYRE"
@@ -1226,16 +1442,24 @@ def test_fresh_field_value_read_confirmed_unset_when_field_absent(
     """When the item carries no value for the field, the read is a CONFIRMED unset
     (read_ok True, current None) — not a failure. So an unset field is a clean
     would-write, not a fail-closed skip."""
+
     def fake_gh_run(args, config, **kw):
         return subprocess.CompletedProcess(
-            args, 0,
+            args,
+            0,
             stdout=json.dumps({"data": {"node": {"fieldValues": {"nodes": []}}}}),
-            stderr="")
+            stderr="",
+        )
 
     monkeypatch.setattr(bf, "gh_run", fake_gh_run)
     change = apply_mod.PlannedChange(
-        issue_number=1, kind="set-board-field", target="OPT_SPYRE", observed=None,
-        argv=["x"], item_id="ITEM_1", field_id="FIELD_WS",
+        issue_number=1,
+        kind="set-board-field",
+        target="OPT_SPYRE",
+        observed=None,
+        argv=["x"],
+        item_id="ITEM_1",
+        field_id="FIELD_WS",
     )
     fresh = bf._read_fresh_state(change, {})
     assert fresh.current is None
@@ -1250,13 +1474,21 @@ def test_field_value_read_does_not_issue_a_mutation(bf, monkeypatch, apply_mod) 
     def fake_gh_run(args, config, **kw):
         seen.append(" ".join(args))
         return subprocess.CompletedProcess(
-            args, 0, stdout=json.dumps({"data": {"node": {"fieldValues": {"nodes": []}}}}),
-            stderr="")
+            args,
+            0,
+            stdout=json.dumps({"data": {"node": {"fieldValues": {"nodes": []}}}}),
+            stderr="",
+        )
 
     monkeypatch.setattr(bf, "gh_run", fake_gh_run)
     change = apply_mod.PlannedChange(
-        issue_number=1, kind="set-board-field", target="OPT", observed=None,
-        argv=["x"], item_id="ITEM_1", field_id="FIELD_WS",
+        issue_number=1,
+        kind="set-board-field",
+        target="OPT",
+        observed=None,
+        argv=["x"],
+        item_id="ITEM_1",
+        field_id="FIELD_WS",
     )
     bf._read_fresh_state(change, {})
     assert seen, "the field read should have issued a gh call"
@@ -1264,9 +1496,7 @@ def test_field_value_read_does_not_issue_a_mutation(bf, monkeypatch, apply_mod) 
     assert all("mutation" not in s.lower() for s in seen)
 
 
-def test_apply_and_emit_field_reread_share_one_query_constant(
-    bf, apply_mod, monkeypatch
-) -> None:
+def test_apply_and_emit_field_reread_share_one_query_constant(bf, apply_mod, monkeypatch) -> None:
     """The --apply field read and the emit-script field guard must read the SAME
     GraphQL query — one shared source of truth (back_fill_apply.FIELD_REREAD_QUERY),
     not two byte-identical literals that a future edit could silently desync.
@@ -1289,15 +1519,18 @@ def test_apply_and_emit_field_reread_share_one_query_constant(
     def fake_gh_run(args, config, **kw):
         seen.append(list(args))
         return subprocess.CompletedProcess(
-            args, 0,
+            args,
+            0,
             stdout=json.dumps({"data": {"node": {"fieldValues": {"nodes": []}}}}),
-            stderr="")
+            stderr="",
+        )
 
     monkeypatch.setattr(bf, "gh_run", fake_gh_run)
     bf._read_fresh_state(change, {})
     issued = [a for call in seen for a in call]
-    assert f"query={shared}" in issued, \
+    assert f"query={shared}" in issued, (
         "the --apply field read must issue the shared query constant, not a copy"
+    )
 
 
 # ============================================================================
@@ -1311,12 +1544,16 @@ def test_apply_and_emit_field_reread_share_one_query_constant(
 # ============================================================================
 
 
-def _field_change_obj(apply_mod, *, observed="OPT_PLAN"):
+def _field_change_obj(apply_mod, *, observed: str | None = "OPT_PLAN"):
     """A set-board-field PlannedChange wired for the fresh read + classify trace."""
     return apply_mod.PlannedChange(
-        issue_number=7, kind="set-board-field", target="OPT_SPYRE", observed=observed,
+        issue_number=7,
+        kind="set-board-field",
+        target="OPT_SPYRE",
+        observed=observed,
         argv=["gh", "project", "item-edit", "--id", "ITEM_1"],
-        item_id="ITEM_1", field_id="FIELD_WS",
+        item_id="ITEM_1",
+        field_id="FIELD_WS",
     )
 
 
@@ -1332,7 +1569,8 @@ def _field_change_obj(apply_mod, *, observed="OPT_PLAN"):
             id="errors-bearing-exit-0",
         ),
         pytest.param(
-            {"data": {"node": {"fieldValues": {"nodes": None}}}}, id="nodes-null",
+            {"data": {"node": {"fieldValues": {"nodes": None}}}},
+            id="nodes-null",
         ),
     ],
 )
@@ -1344,6 +1582,7 @@ def test_field_read_fails_closed_on_non_confirming_graphql(
     never a crash. This is the disconfirming-instance class the original suite
     missed: each of these previously either crashed (`None.get()`) or returned a
     false confirmed-unset that would overwrite an unread value."""
+
     def fake_gh_run(args, config, **kw):
         return subprocess.CompletedProcess(args, 0, stdout=json.dumps(payload), stderr="")
 
@@ -1362,11 +1601,14 @@ def test_field_read_confirmed_unset_only_on_present_empty_node_list(
     a PRESENT empty list — distinct from a null nodes (which fails closed). This
     pins the boundary the R1 fix turns on: `[]` is a real read of "no value", and
     against an unset target that is a clean would-write."""
+
     def fake_gh_run(args, config, **kw):
         return subprocess.CompletedProcess(
-            args, 0,
+            args,
+            0,
             stdout=json.dumps({"data": {"node": {"fieldValues": {"nodes": []}}}}),
-            stderr="")
+            stderr="",
+        )
 
     monkeypatch.setattr(bf, "gh_run", fake_gh_run)
     # observed=None so an unset-confirmed read is no-drift → would-write.
@@ -1388,25 +1630,29 @@ def test_apply_loop_survives_a_throwing_fresh_read(apply_mod) -> None:
             raise RuntimeError("transient GraphQL transport error")
         return apply_mod.FreshState(current=None, read_ok=True)
 
-    applied: list[int] = []
+    applied: list[int | None] = []
     import types
+
     result_ok = types.SimpleNamespace(ok=True, detail="done", error="")
     # Stub the seam so issue 2's write "succeeds" without touching gh.
     orig = apply_mod.substrate_writes.write_milestone
-    apply_mod.substrate_writes.write_milestone = (
-        lambda *a, **k: (applied.append(k.get("issue_number")), result_ok)[1]
-    )
+    apply_mod.substrate_writes.write_milestone = lambda *a, **k: (
+        applied.append(k.get("issue_number")),
+        result_ok,
+    )[1]
     try:
         records = apply_mod.apply_plan([boom, ok], {}, read_fresh=read_fresh)
     finally:
         apply_mod.substrate_writes.write_milestone = orig
 
     by = {r.issue_number: r for r in records}
-    assert by[1].outcome is apply_mod.ApplyOutcome.SKIPPED_DRIFT, \
+    assert by[1].outcome is apply_mod.ApplyOutcome.SKIPPED_DRIFT, (
         "a throwing read is a fail-closed skip, not a crash"
+    )
     assert "raised" in by[1].detail
-    assert by[2].outcome is apply_mod.ApplyOutcome.APPLIED, \
+    assert by[2].outcome is apply_mod.ApplyOutcome.APPLIED, (
         "the loop must continue past the bad read and apply the rest"
+    )
 
 
 # ============================================================================
@@ -1416,24 +1662,40 @@ def test_apply_loop_survives_a_throwing_fresh_read(apply_mod) -> None:
 # ============================================================================
 
 
-def test_field_read_value_kind_matches_single_select_target(
-    bf, monkeypatch, apply_mod
-) -> None:
+def test_field_read_value_kind_matches_single_select_target(bf, monkeypatch, apply_mod) -> None:
     """Single-select: the fresh read returns the optionId (the value-kind the
     single-select target compares against), idempotency holds when it equals the
     target."""
+
     def fake_gh_run(args, config, **kw):
         return subprocess.CompletedProcess(
-            args, 0,
-            stdout=json.dumps({"data": {"node": {"fieldValues": {"nodes": [
-                {"optionId": "OPT_SPYRE", "field": {"id": "FIELD_WS"}},
-            ]}}}}),
-            stderr="")
+            args,
+            0,
+            stdout=json.dumps(
+                {
+                    "data": {
+                        "node": {
+                            "fieldValues": {
+                                "nodes": [
+                                    {"optionId": "OPT_SPYRE", "field": {"id": "FIELD_WS"}},
+                                ]
+                            }
+                        }
+                    }
+                }
+            ),
+            stderr="",
+        )
 
     monkeypatch.setattr(bf, "gh_run", fake_gh_run)
     change = apply_mod.PlannedChange(
-        issue_number=1, kind="set-board-field", target="OPT_SPYRE", observed="OPT_SPYRE",
-        argv=["x"], item_id="ITEM_1", field_id="FIELD_WS",
+        issue_number=1,
+        kind="set-board-field",
+        target="OPT_SPYRE",
+        observed="OPT_SPYRE",
+        argv=["x"],
+        item_id="ITEM_1",
+        field_id="FIELD_WS",
     )
     fresh = bf._read_fresh_state(change, {})
     assert fresh.current == "OPT_SPYRE"  # an option id, not text
@@ -1443,18 +1705,37 @@ def test_field_read_value_kind_matches_single_select_target(
 def test_field_read_value_kind_matches_text_target(bf, monkeypatch, apply_mod) -> None:
     """Text field: the fresh read returns the text value (text-field back-fill
     compares text), so a text target compares against text."""
+
     def fake_gh_run(args, config, **kw):
         return subprocess.CompletedProcess(
-            args, 0,
-            stdout=json.dumps({"data": {"node": {"fieldValues": {"nodes": [
-                {"text": "Spyre", "field": {"id": "FIELD_TXT"}},
-            ]}}}}),
-            stderr="")
+            args,
+            0,
+            stdout=json.dumps(
+                {
+                    "data": {
+                        "node": {
+                            "fieldValues": {
+                                "nodes": [
+                                    {"text": "Spyre", "field": {"id": "FIELD_TXT"}},
+                                ]
+                            }
+                        }
+                    }
+                }
+            ),
+            stderr="",
+        )
 
     monkeypatch.setattr(bf, "gh_run", fake_gh_run)
     change = apply_mod.PlannedChange(
-        issue_number=1, kind="set-board-field", target="Spyre", observed="Spyre",
-        argv=["x"], item_id="ITEM_1", field_id="FIELD_TXT", text_value="Spyre",
+        issue_number=1,
+        kind="set-board-field",
+        target="Spyre",
+        observed="Spyre",
+        argv=["x"],
+        item_id="ITEM_1",
+        field_id="FIELD_TXT",
+        text_value="Spyre",
     )
     fresh = bf._read_fresh_state(change, {})
     assert fresh.current == "Spyre"
@@ -1471,13 +1752,26 @@ def test_field_read_value_kind_matches_text_target(bf, monkeypatch, apply_mod) -
 
 def _field_planned(apply_mod, number, *, target, observed):
     return apply_mod.PlannedChange(
-        issue_number=number, kind="set-board-field", target=target, observed=observed,
+        issue_number=number,
+        kind="set-board-field",
+        target=target,
+        observed=observed,
         argv=[
-            "gh", "project", "item-edit", "--id", f"ITEM_{number}",
-            "--field-id", "FIELD_WS", "--project-id", "PROJ_NODE",
-            "--single-select-option-id", target,
+            "gh",
+            "project",
+            "item-edit",
+            "--id",
+            f"ITEM_{number}",
+            "--field-id",
+            "FIELD_WS",
+            "--project-id",
+            "PROJ_NODE",
+            "--single-select-option-id",
+            target,
         ],
-        item_id=f"ITEM_{number}", field_id="FIELD_WS", project_id="PROJ_NODE",
+        item_id=f"ITEM_{number}",
+        field_id="FIELD_WS",
+        project_id="PROJ_NODE",
         single_select_option_id=target,
     )
 
@@ -1525,7 +1819,7 @@ def test_emit_script_field_guard_skips_a_concurrent_drift(apply_mod, tmp_path) -
         "#!/usr/bin/env bash\n"
         'if [ "$1" = "api" ]; then echo "OPT_HUMAN_DRIFT"; exit 0; fi\n'
         'if [ "$1" = "project" ] && [ "$2" = "item-edit" ]; then\n'
-        f'  touch {shlex.quote(str(edit_marker))}\n'
+        f"  touch {shlex.quote(str(edit_marker))}\n"
         "  exit 0\n"
         "fi\n"
         "exit 0\n",
@@ -1536,10 +1830,15 @@ def test_emit_script_field_guard_skips_a_concurrent_drift(apply_mod, tmp_path) -
     env = dict(os.environ, PATH=f"{bin_dir}:{os.environ['PATH']}")
     script = "set -euo pipefail\n" + fragment + "\n"
     result = sp.run(
-        ["bash", "-c", script], env=env, capture_output=True, text=True, check=True,
+        ["bash", "-c", script],
+        env=env,
+        capture_output=True,
+        text=True,
+        check=True,
     )
-    assert not edit_marker.exists(), \
+    assert not edit_marker.exists(), (
         "the guard must NOT run item-edit when the field drifted to another value"
+    )
     assert "DRIFT" in result.stderr
 
 
@@ -1560,9 +1859,9 @@ def test_emit_script_field_guard_writes_on_clean_unset(apply_mod, tmp_path) -> N
     fake_gh = bin_dir / "gh"
     fake_gh.write_text(
         "#!/usr/bin/env bash\n"
-        'if [ "$1" = "api" ]; then echo ""; exit 0; fi\n'   # field is unset
+        'if [ "$1" = "api" ]; then echo ""; exit 0; fi\n'  # field is unset
         'if [ "$1" = "project" ] && [ "$2" = "item-edit" ]; then\n'
-        f'  touch {shlex.quote(str(edit_marker))}\n'
+        f"  touch {shlex.quote(str(edit_marker))}\n"
         "  exit 0\n"
         "fi\n"
         "exit 0\n",
@@ -1583,9 +1882,7 @@ def _extract_emit_jq(apply_mod, change) -> str:
     # The fragment embeds `--jq <quoted-program>` inside a `current=$(...)` command
     # substitution, which now sits in an `if !` condition — take the substitution's
     # body and tokenise that, so the extractor does not depend on the guard's shape.
-    reread_line = next(
-        line for line in fragment.split("\n") if "current=$(" in line
-    )
+    reread_line = next(line for line in fragment.split("\n") if "current=$(" in line)
     inner = reread_line.split("current=$(", 1)[1]
     inner = inner[: inner.rindex(")")]
     tokens = shlex.split(inner)
@@ -1596,22 +1893,48 @@ def _extract_emit_jq(apply_mod, change) -> str:
     "payload,expected",
     [
         pytest.param(
-            {"data": {"node": {"fieldValues": {"nodes": [
-                {"optionId": "OPT_TARGET", "field": {"id": "FIELD_WS"}}]}}}},
-            "OPT_TARGET", id="single-select-match",
+            {
+                "data": {
+                    "node": {
+                        "fieldValues": {
+                            "nodes": [{"optionId": "OPT_TARGET", "field": {"id": "FIELD_WS"}}]
+                        }
+                    }
+                }
+            },
+            "OPT_TARGET",
+            id="single-select-match",
         ),
         pytest.param(
-            {"data": {"node": {"fieldValues": {"nodes": [
-                {"text": "Some Text", "field": {"id": "FIELD_WS"}}]}}}},
-            "Some Text", id="text-match",
+            {
+                "data": {
+                    "node": {
+                        "fieldValues": {
+                            "nodes": [{"text": "Some Text", "field": {"id": "FIELD_WS"}}]
+                        }
+                    }
+                }
+            },
+            "Some Text",
+            id="text-match",
         ),
         pytest.param(
-            {"data": {"node": {"fieldValues": {"nodes": []}}}}, "", id="empty-unset",
+            {"data": {"node": {"fieldValues": {"nodes": []}}}},
+            "",
+            id="empty-unset",
         ),
         pytest.param(
-            {"data": {"node": {"fieldValues": {"nodes": [
-                {"optionId": "OPT_OTHER", "field": {"id": "OTHER_FIELD"}}]}}}},
-            "", id="another-fields-value-is-still-unset-for-ours",
+            {
+                "data": {
+                    "node": {
+                        "fieldValues": {
+                            "nodes": [{"optionId": "OPT_OTHER", "field": {"id": "OTHER_FIELD"}}]
+                        }
+                    }
+                }
+            },
+            "",
+            id="another-fields-value-is-still-unset-for-ours",
         ),
     ],
 )
@@ -1628,7 +1951,10 @@ def test_emit_field_jq_program_confirms_a_value_over_graphql_shapes(
     jq_program = _extract_emit_jq(apply_mod, change)
     result = sp.run(
         ["jq", "-r", jq_program],
-        input=json.dumps(payload), capture_output=True, text=True, check=True,
+        input=json.dumps(payload),
+        capture_output=True,
+        text=True,
+        check=True,
     )
     assert result.stdout.strip() == expected
 
@@ -1661,11 +1987,13 @@ def test_emit_field_jq_program_fails_on_an_unconfirmed_read(apply_mod, payload) 
     jq_program = _extract_emit_jq(apply_mod, change)
     result = sp.run(
         ["jq", "-r", jq_program],
-        input=json.dumps(payload), capture_output=True, text=True, check=False,
+        input=json.dumps(payload),
+        capture_output=True,
+        text=True,
+        check=False,
     )
     assert result.returncode != 0, (
-        f"an unconfirmed read must not exit 0 with a value the guard would trust: "
-        f"{result.stdout!r}"
+        f"an unconfirmed read must not exit 0 with a value the guard would trust: {result.stdout!r}"
     )
 
 
@@ -1679,7 +2007,9 @@ def test_emit_header_does_not_falsely_claim_field_recheck(apply_mod) -> None:
     assert "server-side\nno-op" not in script
     assert "server-side no-op" not in script
     # The header now describes a field re-read guard.
-    assert "board-field write re-reads" in script or "board-field write re-reads" in script.replace("\n", " ")
+    assert "board-field write re-reads" in script or "board-field write re-reads" in script.replace(
+        "\n", " "
+    )
 
 
 def test_emit_script_states_the_fail_closed_posture(apply_mod) -> None:
@@ -1738,7 +2068,7 @@ def _graphql_stub_body(payload: str, *, exit_code: int = 0, write_marker: Path) 
     """
     return (
         'if [ "$1" = "api" ]; then\n'
-        "  prog=\"\"\n"
+        '  prog=""\n'
         "  while [ $# -gt 0 ]; do\n"
         '    if [ "$1" = "--jq" ]; then prog="$2"; fi\n'
         "    shift\n"
@@ -1766,7 +2096,10 @@ def _run_emitted(fragment: str, bin_dir: Path):
     env = dict(os.environ, PATH=f"{bin_dir}:{os.environ['PATH']}")
     return sp.run(
         ["bash", "-c", "set -euo pipefail\n" + fragment + "\n"],
-        env=env, capture_output=True, text=True, check=False,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
     )
 
 
@@ -1780,23 +2113,24 @@ def test_field_guard_errors_and_writes_nothing_when_the_board_read_fails(
     """
     change = _field_planned(apply_mod, 9, target="OPT_TARGET", observed=None)
     marker = tmp_path / "write-ran"
-    _stub_gh(tmp_path / "bin", (
-        'if [ "$1" = "api" ]; then echo "gh: HTTP 403" >&2; exit 1; fi\n'
-        f"touch {shlex.quote(str(marker))}\n"
-        "exit 0\n"
-    ))
+    _stub_gh(
+        tmp_path / "bin",
+        (
+            'if [ "$1" = "api" ]; then echo "gh: HTTP 403" >&2; exit 1; fi\n'
+            f"touch {shlex.quote(str(marker))}\n"
+            "exit 0\n"
+        ),
+    )
     result = _run_emitted(apply_mod._emit_one(change), tmp_path / "bin")
     assert not marker.exists(), "an unreadable board must not produce a write"
     assert result.returncode != 0, "an unreadable board stops the run"
     assert "ERROR #9" in result.stderr
 
 
-def test_field_guard_names_the_issue_the_field_and_the_likely_causes(
-    apply_mod, tmp_path
-) -> None:
+def test_field_guard_names_the_issue_the_field_and_the_likely_causes(apply_mod, tmp_path) -> None:
     """The error has to be actionable: which issue, which field, and what to check."""
     change = _field_planned(apply_mod, 9, target="OPT_TARGET", observed=None)
-    _stub_gh(tmp_path / "bin", 'exit 1\n')
+    _stub_gh(tmp_path / "bin", "exit 1\n")
     err = _run_emitted(apply_mod._emit_one(change), tmp_path / "bin").stderr
     assert "#9" in err
     assert "FIELD_WS" in err
@@ -1805,9 +2139,7 @@ def test_field_guard_names_the_issue_the_field_and_the_likely_causes(
     assert "project" in err and "scope" in err
 
 
-def test_field_guard_writes_nothing_on_a_graphql_errors_payload(
-    apply_mod, tmp_path
-) -> None:
+def test_field_guard_writes_nothing_on_a_graphql_errors_payload(apply_mod, tmp_path) -> None:
     """The regression test #816 asks for by name.
 
     GitHub returns HTTP 200 with a populated `errors` array and a null `data` on a
@@ -1816,10 +2148,14 @@ def test_field_guard_writes_nothing_on_a_graphql_errors_payload(
     """
     change = _field_planned(apply_mod, 9, target="OPT_TARGET", observed=None)
     marker = tmp_path / "write-ran"
-    _stub_gh(tmp_path / "bin", _graphql_stub_body(
-        json.dumps({"errors": [{"message": "API rate limit exceeded"}], "data": None}),
-        exit_code=0, write_marker=marker,
-    ))
+    _stub_gh(
+        tmp_path / "bin",
+        _graphql_stub_body(
+            json.dumps({"errors": [{"message": "API rate limit exceeded"}], "data": None}),
+            exit_code=0,
+            write_marker=marker,
+        ),
+    )
     result = _run_emitted(apply_mod._emit_one(change), tmp_path / "bin")
     assert not marker.exists(), "a GraphQL errors payload must not produce a write"
     assert result.returncode != 0
@@ -1832,10 +2168,13 @@ def test_field_guard_still_writes_a_confirmed_unset(apply_mod, tmp_path) -> None
     to fill it. Only a board that will not answer is an error."""
     change = _field_planned(apply_mod, 9, target="OPT_TARGET", observed=None)
     marker = tmp_path / "write-ran"
-    _stub_gh(tmp_path / "bin", _graphql_stub_body(
-        json.dumps({"data": {"node": {"fieldValues": {"nodes": []}}}}),
-        write_marker=marker,
-    ))
+    _stub_gh(
+        tmp_path / "bin",
+        _graphql_stub_body(
+            json.dumps({"data": {"node": {"fieldValues": {"nodes": []}}}}),
+            write_marker=marker,
+        ),
+    )
     result = _run_emitted(apply_mod._emit_one(change), tmp_path / "bin")
     assert result.returncode == 0, result.stderr
     assert marker.exists(), "a CONFIRMED unset field must still be written"
@@ -1846,38 +2185,49 @@ def test_field_guard_still_skips_a_confirmed_drift(apply_mod, tmp_path) -> None:
     is a concurrent human edit, skipped and reported, and the run continues."""
     change = _field_planned(apply_mod, 9, target="OPT_TARGET", observed=None)
     marker = tmp_path / "write-ran"
-    _stub_gh(tmp_path / "bin", _graphql_stub_body(
-        json.dumps({"data": {"node": {"fieldValues": {"nodes": [
-            {"optionId": "OPT_HUMAN", "field": {"id": "FIELD_WS"}}]}}}}),
-        write_marker=marker,
-    ))
+    _stub_gh(
+        tmp_path / "bin",
+        _graphql_stub_body(
+            json.dumps(
+                {
+                    "data": {
+                        "node": {
+                            "fieldValues": {
+                                "nodes": [{"optionId": "OPT_HUMAN", "field": {"id": "FIELD_WS"}}]
+                            }
+                        }
+                    }
+                }
+            ),
+            write_marker=marker,
+        ),
+    )
     result = _run_emitted(apply_mod._emit_one(change), tmp_path / "bin")
     assert result.returncode == 0, result.stderr
     assert not marker.exists()
     assert "DRIFT" in result.stderr
 
 
-def test_milestone_guard_writes_nothing_when_the_re_read_fails(
-    apply_mod, tmp_path
-) -> None:
+def test_milestone_guard_writes_nothing_when_the_re_read_fails(apply_mod, tmp_path) -> None:
     """The second fail-open fragment. `gh issue view` fails; before the fix the
     milestone read as "" — which differs from the target — and the write ran,
     overwriting whatever the failed read could not see."""
     change = _milestone_planned(apply_mod, 5, target="Milestone 1", observed=None)
     marker = tmp_path / "write-ran"
-    _stub_gh(tmp_path / "bin", (
-        'if [ "$1" = "issue" ] && [ "$2" = "view" ]; then exit 1; fi\n'
-        f"touch {shlex.quote(str(marker))}\n"
-        "exit 0\n"
-    ))
+    _stub_gh(
+        tmp_path / "bin",
+        (
+            'if [ "$1" = "issue" ] && [ "$2" = "view" ]; then exit 1; fi\n'
+            f"touch {shlex.quote(str(marker))}\n"
+            "exit 0\n"
+        ),
+    )
     result = _run_emitted(apply_mod._emit_one(change), tmp_path / "bin")
     assert not marker.exists(), "an unreadable milestone must not produce a write"
     assert "failing closed" in result.stderr
 
 
-def test_milestone_guard_skips_rather_than_stopping_the_run(
-    apply_mod, tmp_path
-) -> None:
+def test_milestone_guard_skips_rather_than_stopping_the_run(apply_mod, tmp_path) -> None:
     """The scope line the ruling draws: the ERROR is the board's, not every
     substrate's. A milestone read needs no board, no `project` token scope and no
     Projects-v2 surface, so a project with no board at all must gain NO new failure
@@ -1888,19 +2238,24 @@ def test_milestone_guard_skips_rather_than_stopping_the_run(
         _milestone_planned(apply_mod, 6, target="Milestone 1", observed=None),
     ]
     script = apply_mod.render_emit_script(changes)
-    _stub_gh(tmp_path / "bin", (
-        'if [ "$1" = "issue" ] && [ "$2" = "view" ]; then exit 1; fi\n'
-        "exit 0\n"
-    ))
+    _stub_gh(
+        tmp_path / "bin", ('if [ "$1" = "issue" ] && [ "$2" = "view" ]; then exit 1; fi\nexit 0\n')
+    )
     import os
     import subprocess as sp
+
     env = dict(os.environ, PATH=f"{tmp_path / 'bin'}:{os.environ['PATH']}")
     result = sp.run(
-        ["bash", "-c", script], env=env, capture_output=True, text=True, check=False,
+        ["bash", "-c", script],
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
     )
     assert result.returncode == 0, result.stderr
-    assert result.stderr.count("failing closed") == 2, \
+    assert result.stderr.count("failing closed") == 2, (
         "each unreadable milestone is reported and the run continues"
+    )
     assert "back-fill emit-script complete." in result.stderr
 
 
@@ -1911,13 +2266,16 @@ def test_milestone_guard_still_writes_and_still_skips_a_satisfied_value(
     change = _milestone_planned(apply_mod, 5, target="Milestone 1", observed=None)
     for current, expect_write in (("", True), ("Milestone 1", False)):
         marker = tmp_path / f"write-ran-{expect_write}"
-        _stub_gh(tmp_path / "bin", (
-            'if [ "$1" = "issue" ] && [ "$2" = "view" ]; then '
-            f"printf '%s\\n' {shlex.quote(current)}; exit 0; fi\n"
-            'if [ "$1" = "issue" ] && [ "$2" = "edit" ]; then '
-            f"touch {shlex.quote(str(marker))}; exit 0; fi\n"
-            "exit 0\n"
-        ))
+        _stub_gh(
+            tmp_path / "bin",
+            (
+                'if [ "$1" = "issue" ] && [ "$2" = "view" ]; then '
+                f"printf '%s\\n' {shlex.quote(current)}; exit 0; fi\n"
+                'if [ "$1" = "issue" ] && [ "$2" = "edit" ]; then '
+                f"touch {shlex.quote(str(marker))}; exit 0; fi\n"
+                "exit 0\n"
+            ),
+        )
         result = _run_emitted(apply_mod._emit_one(change), tmp_path / "bin")
         assert result.returncode == 0, result.stderr
         assert marker.exists() is expect_write, f"current={current!r}"
@@ -1928,10 +2286,12 @@ def test_a_project_with_no_board_emits_no_board_read_at_all(apply_mod) -> None:
     back-fill — what a project with no board produces, since `board_number(config)`
     returning None means no `set-board-field` intent resolves — emits no GraphQL
     board read, and so cannot reach the new error at all."""
-    script = apply_mod.render_emit_script([
-        _milestone_planned(apply_mod, 1, target="M1", observed=None),
-        _milestone_planned(apply_mod, 2, target="M1", observed="M0"),
-    ])
+    script = apply_mod.render_emit_script(
+        [
+            _milestone_planned(apply_mod, 1, target="M1", observed=None),
+            _milestone_planned(apply_mod, 2, target="M1", observed="M0"),
+        ]
+    )
     assert "gh api graphql" not in script
     assert "fieldValues" not in script
     assert "ERROR" not in script
@@ -1942,14 +2302,16 @@ def test_a_project_with_no_board_makes_no_gh_call_resolving_one(bf, monkeypatch)
     """The structural half of the same criterion, at the source: with no board
     configured, the board resolution short-circuits BEFORE any `gh` call — so a
     milestone-only back-fill neither reads a board nor can fail on one."""
+
     def _explode(*args, **kwargs):
         raise AssertionError("a project with no board must make no gh call")
 
     monkeypatch.setattr(bf, "gh_run", _explode)
     assert bf._resolve_project_node_id({}) is None
-    assert bf._resolve_project_node_id(
-        {"has_projects_v2_board": False, "projects_v2_board_id": 7}
-    ) is None
+    assert (
+        bf._resolve_project_node_id({"has_projects_v2_board": False, "projects_v2_board_id": 7})
+        is None
+    )
 
 
 # ============================================================================
@@ -1980,32 +2342,40 @@ def test_main_apply_saved_plan_refuses_when_live_gate_now_fails(
     monkeypatch.setattr(bf, "load_adopter_config", lambda _r: {})
     # The LIVE gate now FAILS (auth flipped invalid after plan-save).
     monkeypatch.setattr(
-        bf, "_residual_gate_for_saved_plan",
+        bf,
+        "_residual_gate_for_saved_plan",
         lambda _plan, _config, _root: bf.GateResult(
             passed=False,
             checks=[("gh auth", "fail", "token expired since plan-save")],
         ),
     )
     monkeypatch.setattr(
-        sys, "argv",
-        ["back-fill.py", "--capability-root", str(tmp_path), "--apply",
-         "--plan", str(plan_file), "--yes"],
+        sys,
+        "argv",
+        [
+            "back-fill.py",
+            "--capability-root",
+            str(tmp_path),
+            "--apply",
+            "--plan",
+            str(plan_file),
+            "--yes",
+        ],
     )
     rc = bf.main()
     assert rc == 2, "a now-failing live gate must refuse the saved-plan apply"
     assert "REFUSED" in capsys.readouterr().err
 
 
-def test_saved_plan_live_gate_rechecks_board_for_field_intent(
-    bf, tmp_path, monkeypatch
-) -> None:
+def test_saved_plan_live_gate_rechecks_board_for_field_intent(bf, tmp_path, monkeypatch) -> None:
     """The live re-gate keys the board-resolvability member off the SAVED plan's
     declared intents: a plan declaring a set-board-field intent re-checks the board
     against the live repo, so a board deleted since plan-save fails the gate."""
     field_plan = _plan(intents=[FIELD_INTENT], proposed=[])
     # Residual subset passes, but the live board no longer resolves.
-    monkeypatch.setattr(bf, "_residual_pre_check",
-                        lambda _root: bf.GateResult(passed=True, checks=[]))
+    monkeypatch.setattr(
+        bf, "_residual_pre_check", lambda _root: bf.GateResult(passed=True, checks=[])
+    )
     monkeypatch.setattr(bf, "_resolve_project_node_id", lambda _config: None)
     gate = bf._residual_gate_for_saved_plan(field_plan, {}, tmp_path)
     assert gate.passed is False, "a declared field intent with no live board must fail"
@@ -2018,10 +2388,12 @@ def test_saved_plan_live_gate_skips_board_check_without_field_intent(
     """A plan declaring only a milestone intent does not re-check board
     resolvability — the board member is conjoined on a declared field intent."""
     ms_plan = _plan(intents=[MILESTONE_INTENT], proposed=[])
-    monkeypatch.setattr(bf, "_residual_pre_check",
-                        lambda _root: bf.GateResult(passed=True, checks=[]))
     monkeypatch.setattr(
-        bf, "_resolve_project_node_id",
+        bf, "_residual_pre_check", lambda _root: bf.GateResult(passed=True, checks=[])
+    )
+    monkeypatch.setattr(
+        bf,
+        "_resolve_project_node_id",
         lambda _config: pytest.fail("board must not be probed without a field intent"),
     )
     gate = bf._residual_gate_for_saved_plan(ms_plan, {}, tmp_path)

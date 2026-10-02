@@ -51,9 +51,7 @@ def guard():
 
 
 def _git(args: list[str], cwd: Path) -> None:
-    subprocess.run(
-        ["git", *args], cwd=cwd, check=True, capture_output=True, text=True
-    )
+    subprocess.run(["git", *args], cwd=cwd, check=True, capture_output=True, text=True)
 
 
 def _git_init(path: Path) -> None:
@@ -71,8 +69,20 @@ def _git_init_with_origin(path: Path, origin_url: str) -> None:
 def _add_worktree(repo: Path, dest: Path) -> None:
     """Add a linked worktree of `repo` at `dest` (needs a commit to branch from)."""
     # A worktree needs at least one commit on the repo to attach to.
-    _git(["-c", "user.email=t@t", "-c", "user.name=t", "commit",
-          "--allow-empty", "-q", "-m", "init"], cwd=repo)
+    _git(
+        [
+            "-c",
+            "user.email=t@t",
+            "-c",
+            "user.name=t",
+            "commit",
+            "--allow-empty",
+            "-q",
+            "-m",
+            "init",
+        ],
+        cwd=repo,
+    )
     _git(["worktree", "add", "-q", str(dest)], cwd=repo)
 
 
@@ -121,9 +131,7 @@ def test_override_lets_cross_repo_proceed(guard, tmp_path):
     repo_b = tmp_path / "B"
     _git_init(repo_a)
     _git_init(repo_b)
-    outcome = guard.evaluate(
-        anchor_dir=str(repo_a), target_cwd=str(repo_b), override=True
-    )
+    outcome = guard.evaluate(anchor_dir=str(repo_a), target_cwd=str(repo_b), override=True)
     assert outcome.verdict == guard.OVERRIDDEN
     assert not outcome.blocks
 
@@ -209,11 +217,11 @@ def test_normalize_origin_url_canonicalises_transports(guard):
     single `host/owner/repo` identity, while an unrecognised form (a local
     filesystem path) falls back to the conservative strip+casefold."""
     forms = [
-        "git@github.com:org/repo.git",         # scp-like ssh
-        "ssh://git@github.com/org/repo.git",   # ssh URL
-        "https://github.com/org/repo.git",     # https
-        "https://github.com/org/repo",         # https, no .git
-        "git@github.com:Org/Repo.git",         # casing not significant
+        "git@github.com:org/repo.git",  # scp-like ssh
+        "ssh://git@github.com/org/repo.git",  # ssh URL
+        "https://github.com/org/repo.git",  # https
+        "https://github.com/org/repo",  # https, no .git
+        "git@github.com:Org/Repo.git",  # casing not significant
     ]
     normalised = {guard.normalize_origin_url(f) for f in forms}
     assert normalised == {"github.com/org/repo"}, normalised
@@ -318,9 +326,7 @@ def test_enforce_diverged_autonomous_refuses(guard, tmp_path, capsys):
     repo_b = tmp_path / "B"
     _git_init(repo_a)
     _git_init(repo_b)
-    proceed = guard.enforce(
-        anchor_dir=str(repo_a), target_cwd=str(repo_b), interactive=False
-    )
+    proceed = guard.enforce(anchor_dir=str(repo_a), target_cwd=str(repo_b), interactive=False)
     assert proceed is False
     err = capsys.readouterr().err
     assert "cross-repo mutation interlock" in err
@@ -411,9 +417,7 @@ def test_enforce_fault_proceeds_and_warns(guard, tmp_path, monkeypatch, capsys):
         raise guard._GitFault("git rev-parse could not run: simulated")
 
     monkeypatch.setattr(guard, "_run_git", _boom)
-    proceed = guard.enforce(
-        anchor_dir=str(repo_a), target_cwd=str(repo_b), interactive=False
-    )
+    proceed = guard.enforce(anchor_dir=str(repo_a), target_cwd=str(repo_b), interactive=False)
     assert proceed is True
     err = capsys.readouterr().err
     assert "[warning]" in err
@@ -437,9 +441,7 @@ def test_enforce_interactive_prompt_yes_proceeds(guard, tmp_path, monkeypatch, c
     _git_init(repo_a)
     _git_init(repo_b)
     monkeypatch.setattr("builtins.input", lambda *a, **k: "y")
-    proceed = guard.enforce(
-        anchor_dir=str(repo_a), target_cwd=str(repo_b), interactive=True
-    )
+    proceed = guard.enforce(anchor_dir=str(repo_a), target_cwd=str(repo_b), interactive=True)
     assert proceed is True
 
 
@@ -450,9 +452,7 @@ def test_enforce_interactive_prompt_no_refuses(guard, tmp_path, monkeypatch):
     _git_init(repo_a)
     _git_init(repo_b)
     monkeypatch.setattr("builtins.input", lambda *a, **k: "")
-    proceed = guard.enforce(
-        anchor_dir=str(repo_a), target_cwd=str(repo_b), interactive=True
-    )
+    proceed = guard.enforce(anchor_dir=str(repo_a), target_cwd=str(repo_b), interactive=True)
     assert proceed is False
 
 
@@ -476,13 +476,7 @@ def test_add_override_argument_registers_flag(guard):
 
 # --- WR-1: structural coverage — the guard is wired EVERYWHERE it should be --
 
-_SCRIPTS_DIR = (
-    REPO_ROOT
-    / ".pkit"
-    / "capabilities"
-    / "project-management"
-    / "scripts"
-)
+_SCRIPTS_DIR = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
 
 # The EXPLICIT exempt set: pm scripts that do NOT mutate adopter state (no local
 # file write, no `gh` create/edit/close/merge/delete/label/board op) and so are
@@ -500,6 +494,7 @@ _READ_ONLY_EXEMPT = frozenset(
         "detect-done.py",
         "detect-in-progress.py",
         "detect-review.py",
+        "detect-state.py",
         "detect-todo.py",
         # Transition gates / invariant checks (read-only predicates).
         "gate-checkboxes-ticked.py",
@@ -558,11 +553,11 @@ def _enforces_guard(script: Path) -> bool:
         mod = None
         if line.startswith("from _lib import "):
             # e.g. `from _lib import criterion_cli  # noqa`
-            mod = line[len("from _lib import "):].split("#", 1)[0].split(" as ")[0]
+            mod = line[len("from _lib import ") :].split("#", 1)[0].split(" as ")[0]
             mod = mod.split(",")[0].strip()
         elif line.startswith("from _lib."):
             # e.g. `from _lib.criterion_cli import run_criterion_verb`
-            mod = line[len("from _lib."):].split(" import ", 1)[0].strip()
+            mod = line[len("from _lib.") :].split(" import ", 1)[0].strip()
         if not mod:
             continue
         lib_file = lib_dir / f"{mod}.py"

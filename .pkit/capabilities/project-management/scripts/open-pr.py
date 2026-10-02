@@ -32,7 +32,9 @@ Inputs:
     against the base and render the answers the changed pages carry
     (updated, unchanged, deferred, new) as the `## Doc impact` bullets, when
     the section is unwritten: the template's placeholder, empty, or absent.
-    An authored section is never touched. Rendering only (DEC-053 point 2):
+    An authored section is never touched, and a document of a
+    `schema_version` other than 1 is not rendered (one without the key, from
+    a backbone before it, reads as 1). Rendering only (DEC-053 point 2):
     the section meets no documentation obligation; the pages do.
 
 Membership gate per DEC-021 runs at startup.
@@ -48,7 +50,7 @@ Exit codes:
   1  membership refusal / validation refusal
   2  usage error (not on a feature branch; closing issue not found)
   3  gh failure
-"""
+"""  # noqa: E501 — a usage line is a command, kept whole
 
 from __future__ import annotations
 
@@ -65,25 +67,28 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import (  # noqa: E402
+import contextlib
+
+from _lib import (
     axis_labels,
     bootstrap_gate,
     classification_rules,
+    default_branch,
     doc_impact,
     pr_validation,
     provenance,
     session_guard,
 )
-from _lib import lifecycle_inference as infer  # noqa: E402
-from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
-from _lib.hooks import fire_hooks  # noqa: E402
-from _lib.membership import (  # noqa: E402
+from _lib import lifecycle_inference as infer
+from _lib.gh import gh_get_issue, gh_run, load_adopter_config
+from _lib.hooks import fire_hooks
+from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
     resolve_capability_root,
     resolve_invoker_identity,
 )
-from _lib.placeholder_detection import PHASE_TRANSITION  # noqa: E402
+from _lib.placeholder_detection import PHASE_TRANSITION
 
 
 def main() -> int:
@@ -164,7 +169,7 @@ def main() -> int:
         action="store_true",
         help=(
             "Render the `## Doc impact` section from `pkit friction check --json` "
-            "against origin/<base>: one bullet per answer the changed pages carry. "
+            "against the base: one bullet per answer the changed pages carry. "
             "Fills only an unwritten section (the template's placeholder, empty, "
             "or absent); an authored one is left as it is. Rendering only: the "
             "section meets no documentation obligation (DEC-053)."
@@ -176,7 +181,8 @@ def main() -> int:
         help=(
             "Base branch (default: the closing issue's DEC-013 integration "
             "branch when its body carries an `Integration:` marker, else the "
-            "adopter's `default_branch` in project/config.yaml)."
+            "project's default branch — the backbone's `repository.default-branch`, "
+            "COR-054)."
         ),
     )
     parser.add_argument(
@@ -243,12 +249,8 @@ def main() -> int:
     if not session_guard.enforce(override=args.allow_foreign_repo):
         return 1
 
-    git_conventions = _read_yaml(
-        capability_root / "schemas" / "git-conventions.yaml", yaml_loader
-    )
-    classification = _read_yaml(
-        capability_root / "schemas" / "classification.yaml", yaml_loader
-    )
+    git_conventions = _read_yaml(capability_root / "schemas" / "git-conventions.yaml", yaml_loader)
+    classification = _read_yaml(capability_root / "schemas" / "classification.yaml", yaml_loader)
 
     branch = _current_branch()
     if branch is None:
@@ -308,16 +310,15 @@ def main() -> int:
 
     # Derive the PR title.
     summary = args.summary or _summary_from_issue_title(issue_title)
-    if args.scope:
-        pr_title = f"{conv_type}({args.scope}): {summary}"
-    else:
-        pr_title = f"{conv_type}: {summary}"
+    pr_title = f"{conv_type}({args.scope}): {summary}" if args.scope else f"{conv_type}: {summary}"
 
     # Base branch (DEC-013, #903): --base, else the closing issue's integration
     # marker, else default_branch — the resolution start-work cut the branch by.
-    base = infer.resolve_base_branch(
-        config, str(issue.get("body") or ""), explicit=args.base
-    )
+    try:
+        base = infer.resolve_base_branch(config, str(issue.get("body") or ""), explicit=args.base)
+    except default_branch.Unanswered as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
 
     # Build the PR body.
     body = _build_pr_body(
@@ -329,7 +330,7 @@ def main() -> int:
         return 2
     doc_impact_note = None
     if args.doc_impact_from_friction:
-        body, doc_impact_note = _prefill_doc_impact(body, base)
+        body, doc_impact_note = _prefill_doc_impact(body, _check_base_for(base, config))
     # Seam: stamp exactly one provenance footer onto the PR body (ADR-037).
     body = provenance.stamp(body, provenance.read_versions(capability_root))
 
@@ -350,9 +351,7 @@ def main() -> int:
             capability_root=capability_root,
             phase=PHASE_TRANSITION,
         )
-        blocking = [
-            f for f in findings if f.severity in pr_validation.BLOCKING_SEVERITIES
-        ]
+        blocking = [f for f in findings if f.severity in pr_validation.BLOCKING_SEVERITIES]
         if blocking:
             print(
                 "[refused] PR body is not ready for review (validate-at-ready, #569):",
@@ -409,6 +408,7 @@ def main() -> int:
 
     # Fire after_open_pr hooks per DEC-024.
     import re as _re
+
     pr_number_match = _re.search(r"/pull/(\d+)", url)
     pr_number = int(pr_number_match.group(1)) if pr_number_match else None
     if pr_number is not None:
@@ -445,9 +445,7 @@ def _extract_issue_number(branch: str) -> int | None:
     return int(m.group(1))
 
 
-def _closing_issues(
-    positional: int | None, closes: list[int] | None, branch: str
-) -> list[int]:
+def _closing_issues(positional: int | None, closes: list[int] | None, branch: str) -> list[int]:
     """The issues the PR closes, primary first, without repeats.
 
     The positional `<N>` (as review-work and done-work take it) and
@@ -531,13 +529,29 @@ def _strip_html_comments(text: str) -> str:
     return re.sub(r"<!--.*?-->\s*", "", text, flags=re.DOTALL)
 
 
-def _prefill_doc_impact(body: str, base: str) -> tuple[str, str]:
+def _check_base_for(base: str, config: dict) -> str | None:
+    """What the change check is told to compare with for a PR against `base`:
+    nothing for the default branch — the check's own base is that branch — else
+    `base`, which the check resolves as it resolves every branch named as a base
+    (COR-054 point 2). Where the backbone cannot say which the default branch
+    is, `base` is named: the pre-fill never refuses."""
+    try:
+        return None if base == default_branch.name(config) else base
+    except default_branch.Unanswered:
+        return base
+
+
+def _prefill_doc_impact(body: str, base: str | None) -> tuple[str, str]:
     """`body` with its unwritten `## Doc impact` section rendered from the
-    change check's answers, and one line saying what happened. Never refuses:
-    no answers, or no check to read, leave the body as it was."""
+    change check's answers against `base` (`None`: the check's own), and one
+    line saying what happened. Never refuses: no answers, or no check to read,
+    leave the body as it was."""
     document = _friction_check(base)
     if document is None:
         return body, "not pre-filled — `pkit friction check --json` gave no document"
+    unread = doc_impact.unread_version(document)
+    if unread is not None:
+        return body, f"not pre-filled — {unread}"
     still = doc_impact.unanswered(document)
     if still:
         print(
@@ -554,11 +568,13 @@ def _prefill_doc_impact(body: str, base: str) -> tuple[str, str]:
     return body, f"pre-filled from `pkit friction check` ({len(lines)} answer(s))"
 
 
-def _friction_check(base: str) -> dict | None:
-    """`pkit friction check --json` against origin/<base>, or None. The check
-    exits 1 in enforcing mode on friction and still prints its document, so
-    the document decides, not the exit code."""
-    argv = ["pkit", "friction", "check", "--json", "--base", f"origin/{base}"]
+def _friction_check(base: str | None) -> dict | None:
+    """`pkit friction check --json` against `base`, or None. The check resolves the
+    base as it resolves every branch named as one (COR-054 point 2), so for the
+    default branch no `--base` is passed at all: its own base is that branch. It
+    exits 1 in enforcing mode on friction and still prints its document, so the
+    document decides, not the exit code."""
+    argv = ["pkit", "friction", "check", "--json", *(["--base", base] if base else [])]
     try:
         proc = subprocess.run(argv, capture_output=True, text=True, check=False)
     except FileNotFoundError:
@@ -586,8 +602,7 @@ def _current_branch() -> str | None:
         return None
     if proc.returncode != 0:
         print(
-            f"error: could not determine current branch.\n"
-            f"stderr: {proc.stderr.strip()}",
+            f"error: could not determine current branch.\nstderr: {proc.stderr.strip()}",
             file=sys.stderr,
         )
         return None
@@ -604,22 +619,16 @@ def _post_force_audit(pr_number: int, findings: list, config: dict) -> None:
     lines = ["[audit] non-draft PR opened despite validate-at-ready findings (--force):"]
     for f in findings:
         lines.append(f"  - [{f.severity}] {f.label}: {f.detail}")
-    try:
+    with contextlib.suppress(FileNotFoundError):
         gh_run(
             ["gh", "pr", "comment", str(pr_number), "--body", "\n".join(lines)],
             config,
             check=False,
         )
-    except FileNotFoundError:
-        pass
 
 
-def _gh_pr_create(
-    *, title: str, body: str, base: str, draft: bool
-, config: dict) -> str | None:
-    with tempfile.NamedTemporaryFile(
-        "w", suffix=".md", encoding="utf-8", delete=False
-    ) as f:
+def _gh_pr_create(*, title: str, body: str, base: str, draft: bool, config: dict) -> str | None:
+    with tempfile.NamedTemporaryFile("w", suffix=".md", encoding="utf-8", delete=False) as f:
         f.write(body)
         body_path = f.name
     cmd = [
@@ -649,10 +658,8 @@ def _gh_pr_create(
             return None
         return proc.stdout.strip() or None
     finally:
-        try:
+        with contextlib.suppress(OSError):
             Path(body_path).unlink(missing_ok=True)
-        except OSError:
-            pass
 
 
 def _read_yaml(path: Path, yaml_loader: YAML) -> dict:

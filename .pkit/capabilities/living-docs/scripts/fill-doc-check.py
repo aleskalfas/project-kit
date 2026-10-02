@@ -22,7 +22,14 @@ project root, with `--json` alone and the offline marker set. It takes no
 parameter: it reads the repository — HEAD and its history, through `pkit
 friction check --all --json`, and which documents are pages, from the working
 tree through `pkit friction artefacts --json` — writes nothing and needs no
-network. The contribution is inert while no capability provides the
+network. Its `commands:` entry declares what it reads beyond the working tree,
+`reads: [history]`, so the backbone's report names the commit HEAD was read
+at; it reads no settled state and no base — the base a pull request is
+compared with bounds the consumer's diff, never this filler (COR-052 point 6).
+History that does not exist yet holds nothing: with no commit it answers `[]`.
+History that exists and this clone cannot reach gives no answer: a page whose
+friction lies beyond a shallow clone's history exits 1, never with an empty
+answer. The contribution is inert while no capability provides the
 work-tracking role; nothing here asks.
 
 Usage:
@@ -46,9 +53,9 @@ from typing import Any
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import doc_check, spaces  # noqa: E402
-from _lib.artefacts import Unreadable  # noqa: E402
-from _lib.declarations import project_root  # noqa: E402
+from _lib import doc_check, spaces
+from _lib.artefacts import Unreadable
+from _lib.declarations import project_root
 
 
 def obligations(root: Path) -> list[dict[str, Any]]:

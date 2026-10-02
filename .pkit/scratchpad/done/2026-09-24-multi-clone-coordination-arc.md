@@ -2,6 +2,22 @@
 authors:
   - Aleš Kalfas <kalfas.ales@gmail.com>
 started: 2026-09-24
+retired: 2026-09-29
+produced:
+  - tech-docs/analysis/use-case-model/use-cases/coordination/UC-001-resume-after-all-sessions-died.md
+  - tech-docs/analysis/use-case-model/use-cases/coordination/UC-002-resume-an-interrupted-task.md
+  - tech-docs/analysis/use-case-model/use-cases/coordination/UC-003-find-work-when-the-clone-holds-none.md
+  - tech-docs/analysis/use-case-model/use-cases/coordination/UC-004-see-every-clone-at-once.md
+  - tech-docs/analysis/use-case-model/use-cases/coordination/UC-005-release-with-unfinished-work.md
+  - tech-docs/analysis/use-case-model/use-cases/coordination/UC-006-resolve-a-decision-number-collision.md
+  - tech-docs/analysis/use-case-model/use-cases/coordination/UC-007-resume-sessions-during-a-stabilisation.md
+  - tech-docs/analysis/use-case-model/use-cases/coordination/UC-008-land-integration-work-during-a-stabilisation.md
+  - tech-docs/analysis/use-case-model/use-cases/coordination/UC-009-delegate-a-task-to-a-developer-subagent.md
+  - tech-docs/analysis/use-case-model/use-cases/coordination/UC-010-stabilise-a-milestone.md
+  - tech-docs/analysis/use-case-model/journeys/JRN-001-restart-after-every-session-died.md
+  - tech-docs/analysis/use-case-model/journeys/JRN-002-release-under-stabilisation.md
+  - tech-docs/analysis/revalidations/2026-09-29-multi-clone-coordination.md
+  - 'EPIC #943'
 ---
 
 # Multi clone coordination arc
@@ -54,3 +70,31 @@ COR provisional numbering · DEC-049 reciprocal (content vs projection) · PRJ-0
 ## Status
 
 Active. Waiting on EPIC #885 (#886–#890). Next: land the core record (#886), tooling (#887, #888), pm adoption (#889), then author the scenario file (#890) and **re-walk S1–S9 against this design — expect new gaps** — then file the coordination EPIC citing the scenarios and retire this note.
+
+## Closing (2026-09-29, amended 2026-09-30 after review)
+
+Retired as produced by the coordination use cases and EPIC #943. The scenarios became project-kit's first analysis artefacts, under `tech-docs/analysis/` (#890): use cases UC-001 to UC-009 for S1 to S9 in order, UC-010 for stabilising a Milestone (the first half of S5, and a goal of its own: a stabilisation may lift with no release), and journeys JRN-001 (S1 → S4 → S3) and JRN-002 (stabilise → release), with the actors and glossary terms they rest on. Where a use case describes design not built yet, its text says so, names the EPIC and Feature that will build it, and says which anchors that Feature must add; its anchors today are the records and code that exist.
+
+The re-walk is recorded in `tech-docs/analysis/revalidations/2026-09-29-multi-clone-coordination.md`, beside gaps A to D. It found six more, E to J, and the `critic` and `architect` review of #890's pull request (2026-09-30) found three more, K1 to K3. None is fixed: each has a proposed fix, pending authorisation, which the slicing above must carry when EPIC #943's Features are filed. Where the review raised alternatives, the record lists them undecided.
+
+- **E** (S1, S4) — proposed: `brief` reads ownership through the ADR-041 seam from one batched read of the open assigned issues and their comments, not from label queries: the default substrate is the comment log. Open: a second query for unowned, unassigned issues; DEC-043's mirror read against ADR-041's fold. → F1 T1.2.
+- **F** (S3) — proposed: reclaimable items are a group of their own, not intersected with the instance's workstreams, which would remove exactly what gap A added; an empty position names the filter that emptied it. Open: whether free items are filtered too; two reclaims at once. → F1 T1.2.
+- **G** (S5) — proposed: one release-scope computation, read by the gate, the guards and `brief`, dropping a deferred parent with its subtree. Open: the deferral's record; a Task both deferred and a Milestone child; which "open parent" (K4). → F2 T2.1 and T2.2.
+- **H** (S6) — proposed: `renumber` refuses when the record already landed, or `<new>` is taken; "refuses if `<old>` is on main under another slug" above was inverted. Open: the slug or the merge-base as the test. → F3 T3.2.
+- **I** (S8) — proposed: the new-front test reads "landed" on the branch the work lands on, so continuing an integration arc is no new front. Alternative: leave integration-marked work out of the start guard. → F2 T2.2.
+- **J** (S9) — proposed: a worktree inherits its clone's instance id through git's common directory; open whether its own id file wins. → #1140, under EPIC #508, not a Feature of this slicing.
+- **K1** (S5, S7) — proposed: the start guard refuses only a new front outside release scope; as written it refused release-scope work too. → F2 T2.2.
+- **K2** (S5, S7) — a required status computed per head commit misses a stabilisation or a deferral, which push no commit. The design must choose: re-run open pull requests' status on those tracker events, evaluate at merge time (a merge queue, #1011), or declare the residual gap (ADR-019 point 3). → F2 T2.3 and T2.5.
+- **K3** (S5) — proposed: state the rule for a pull request that closes no issue, the release pull request among them — in scope, or release pull requests exempt by project configuration. → F2 T2.3 and T2.5.
+
+Use cases per Feature, for the slicing: F1 — UC-001, UC-002, UC-003, UC-004, UC-009, without their stabilisation parts; F2 — UC-005, UC-007, UC-008, UC-010, and the stabilisation parts of UC-001 (step 5), UC-003 (2a) and UC-004 (step 4); F3 — UC-006. Each Feature adds, as anchors of its use cases, the paths its new commands create, and revalidates them.
+
+**`brief`'s stabilisation part moves into F2.** `brief` shows whether a stabilisation is on and limits what is free to pick to release scope, which needs F2's release-scope computation and the stabilisation fields (T2.1, T2.2); and UC-007 builds on UC-001's position, so F2 needs F1's `brief` (T1.2). Declared as they stood, the two dependencies would make a cycle between F1 and F2. So F1 T1.2 ships `brief` without the stabilisation, and F2 T2.2 adds it to `brief`.
+
+Dependencies across the slicing, to declare when the Features are filed:
+
+- **F2 needs F1.** UC-007 builds on UC-001's position, and F2 T2.2 extends the `brief` that F1 T1.2 ships.
+- **F1 needs EPIC #508.** UC-003's claim is `handoff-issue --to-instance self`, #521.
+- **EPIC #943 is blocked by EPIC #508's claim work (#508, #521).** The lifecycle commands make no ownership claims today — only `set-instance` reads the instance id — and every position rests on those claims.
+
+Before the Features are filed: the authorisations listed above, and those the revalidation record adds (J refining DEC-035 point 1; never-merged intent notes refining DEC-044 point 2; E and DEC-043's read cost), and the operator's confirmation of the agent-made fixes. The `critic` and `architect` re-run asked for under Reviews ran on #890's pull request (2026-09-30).

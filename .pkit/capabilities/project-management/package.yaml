@@ -4,8 +4,11 @@ component:
   name: project-management
   version: 0.54.0
 description: Project-management discipline realized from the pm-workflow methodology — issue hierarchy, state machine, body validation, naming conventions — encoded as schemas a methodology-agnostic engine (skills + agent) consumes at runtime.
-# Floor 1.144.0: create-issue --from-report invokes the backbone's
-# `pkit report link` (shipped in v1.144.0) per DEC-048's one-linker rule.
+# The floor is the newest backbone this package needs: `pkit report link`
+# (shipped in v1.144.0), which create-issue --from-report invokes per DEC-048's
+# one-linker rule; and the backbone release that took over the process-journal
+# ignore line this package no longer declares — the changeset that dropped the
+# line raises the floor to it at that release (`requires_backbone: release`).
 requires_backbone: ">=1.144.0,<2.0.0"
 aliases:
   - pm
@@ -56,7 +59,7 @@ commands:
     help: File a new Milestone in a declared category (per DEC-016). Computes the next number from existing milestones; composes title from category's title_format; posts to GitHub with the `Close trigger:` body line.
   close-milestone:
     script: scripts/close-milestone.py
-    help: "Close a Milestone through the validated path (per DEC-016). Respects the close-trigger: content-based refuses while any child issue is open (unless --force); date-based warns + closes (open children need manual rollforward — automation is a follow-up). Appends an audit line to the description; --dry-run previews."
+    help: "Close a Milestone through the validated path (per DEC-016). Respects the close-trigger: content-based refuses while any child issue is open (unless --force, which leaves them on it); a date-based close, or an either one from its due date, rolls each open child forward — state kept, through edit-issue --milestone — to the Milestone's Rollforward target: line, else the next-numbered open Milestone of its category, or --target; closed children stay. No single target: nothing is moved or closed until you name one. Appends an audit line naming the target; a re-run finishes a rollforward a failed move cut short (exit 4); --dry-run lists every move."
   validate-issue:
     script: scripts/validate-issue.py
     help: Validate an existing GitHub issue against the methodology's body + classification rules — including the DEC-011 kind/structural cross-check (a non-feature type:* label on an epic/feature/umbrella). Findings tagged by severity per validation-severity.yaml.
@@ -95,7 +98,7 @@ commands:
     help: "Open a GitHub PR per the methodology's branch + title conventions. The closing issue is the positional <N> (as review-work / done-work take it) or --closes <N>, else the branch name's <N>; --closes repeats (one PR can close several issues, each with its own Closes #N line). The title is composed as <type>(<scope>): <summary> — <type> from --type or the primary issue's type:* label, <scope> from --scope, <summary> (the description part) from --summary or the issue title."
   merge-pr:
     script: scripts/merge-pr.py
-    help: Merge a PR per git-conventions.yaml's merge convention — one squash commit titled after the PR, head branch deleted on merge (remote ref via the API; local cleanup best-effort). Enforces the DEC-007 checkbox close-gate on every closing issue + the PR body.
+    help: Merge a PR per git-conventions.yaml's merge convention — one squash commit titled after the PR, head branch deleted on merge (remote ref via the API; local cleanup best-effort). Enforces the DEC-007 checkbox close-gate on every closing issue + the PR body. Where the base merges through a queue it enqueues instead and waits for the merge before the after-merge hooks fire (--wait-minutes; --no-wait returns at once, exit 4); a later run completes a PR the queue merged.
   close-pr:
     script: scripts/close-pr.py
     help: Close a PR without merging; optionally records an audit reason and deletes the source branch.
@@ -174,7 +177,10 @@ commands:
     help: "Workflow wrapper (DEC-026): flips a ready PR back to draft; dismisses prior APPROVED reviews. Issue stays in Review."
   done-work:
     script: scripts/done-work.py
-    help: "Workflow wrapper (DEC-026): Review → Done. Squash-merges PR via three-way approval gate (APPROVED review / Approved-prefix comment / --bypass); composes over move-issue."
+    help: "Workflow wrapper (DEC-026): Review → Done. Squash-merges PR via three-way approval gate (APPROVED review / Approved-prefix comment / --bypass); composes over move-issue. Where the base merges through a queue it enqueues instead, prints the PR's place and waits for the merge (as long as the queue estimates, at most 30 min; --wait-minutes; --no-wait returns at once, exit 4); a later run from any clone finds the PR merged and completes the close and cascade."
+  land-work:
+    script: scripts/land-work.py
+    help: "Land an issue's PR in one command (#1203), composing review-pr and done-work: pin the PR's head, wait for its checks (--wait-minutes, default 30; --no-wait reads once — no check reported yet is never green; a PR conflicting with its base stops at once), have the reviewers whose verdicts are not fresh for that head review it, then merge it through done-work. Without --yes, off a terminal, it merges nothing: it runs done-work's gates as a dry run and stops on a `ready:` line giving the command that merges that head (--yes --expect-head <sha>; exit 8). One line per step; one exit code per next action (README, \"Landing a pull request in one command\"); a re-run resumes. No flag skips the checks or the review."
   handoff-issue:
     script: scripts/handoff-issue.py
     help: "Workflow wrapper (DEC-026): reassign an in-flight issue to a new owner. Audit comment records the handoff; no state transition."
@@ -184,21 +190,24 @@ commands:
   self-test:
     script: scripts/self-test.py
     help: "Smoke-test the capability's core transition cycle on the live repo. Creates a throwaway issue, advances it through the state machine, and closes it. Use --dry-run to preview without mutating."
+  detect-state:
+    script: scripts/detect-state.py
+    help: "Process classifier (DEC-033): read-only; answers which lifecycle state an issue is in, from one read of the issue — the detection every state of the shipped issue lifecycle names. Invoked by the process engine."
   detect-todo:
     script: scripts/detect-todo.py
-    help: "Process detection predicate (DEC-033): read-only; reports whether an issue's inferred lifecycle position is Todo. Invoked by the process engine."
+    help: "Process detection predicate (DEC-033): read-only; reports whether an issue's inferred lifecycle position is Todo. Registered for direct use; the shipped lifecycle detects with `detect-state`."
   detect-backlog:
     script: scripts/detect-backlog.py
-    help: "Process detection predicate (DEC-033): read-only; reports whether an issue's inferred lifecycle position is Backlog. Invoked by the process engine."
+    help: "Process detection predicate (DEC-033): read-only; reports whether an issue's inferred lifecycle position is Backlog. Registered for direct use; the shipped lifecycle detects with `detect-state`."
   detect-in-progress:
     script: scripts/detect-in-progress.py
-    help: "Process detection predicate (DEC-033): read-only; reports whether an issue's inferred lifecycle position is In Progress. Invoked by the process engine."
+    help: "Process detection predicate (DEC-033): read-only; reports whether an issue's inferred lifecycle position is In Progress. Registered for direct use; the shipped lifecycle detects with `detect-state`."
   detect-review:
     script: scripts/detect-review.py
-    help: "Process detection predicate (DEC-033): read-only; reports whether an issue's inferred lifecycle position is Review. Invoked by the process engine."
+    help: "Process detection predicate (DEC-033): read-only; reports whether an issue's inferred lifecycle position is Review. Registered for direct use; the shipped lifecycle detects with `detect-state`."
   detect-done:
     script: scripts/detect-done.py
-    help: "Process detection predicate (DEC-033): read-only; reports whether an issue's inferred lifecycle position is Done. Invoked by the process engine."
+    help: "Process detection predicate (DEC-033): read-only; reports whether an issue's inferred lifecycle position is Done. Registered for direct use; the shipped lifecycle detects with `detect-state`."
   gate-checkboxes-ticked:
     script: scripts/gate-checkboxes-ticked.py
     help: "Process gate predicate (DEC-033 / DEC-007): read-only deterministic close-gate; result=True iff the issue body has no unticked checkbox. Invoked by the process engine."

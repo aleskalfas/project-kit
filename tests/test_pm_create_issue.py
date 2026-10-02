@@ -16,15 +16,9 @@ from pathlib import Path
 
 import pytest
 
-
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = (
-    REPO_ROOT
-    / ".pkit"
-    / "capabilities"
-    / "project-management"
-    / "scripts"
-    / "create-issue.py"
+    REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "create-issue.py"
 )
 
 
@@ -84,16 +78,12 @@ _CLASSIFICATION = {
 def test_title_prefix_task_bug_kind_yields_bug(ci) -> None:
     """A `--kind bug` Task is prefixed `[Bug]`, not `[Task]` (the core of #356)."""
     type_entry = {"title_prefix": "Task", "title_case": "title"}
-    assert (
-        ci._title_prefix_for(type_entry, _CLASSIFICATION, "task", "bug") == "Bug"
-    )
+    assert ci._title_prefix_for(type_entry, _CLASSIFICATION, "task", "bug") == "Bug"
 
 
 def test_title_prefix_task_feature_kind_yields_task(ci) -> None:
     type_entry = {"title_prefix": "Task", "title_case": "title"}
-    assert (
-        ci._title_prefix_for(type_entry, _CLASSIFICATION, "task", "feature") == "Task"
-    )
+    assert ci._title_prefix_for(type_entry, _CLASSIFICATION, "task", "feature") == "Task"
 
 
 def test_title_prefix_task_each_kind_maps_to_its_prefix(ci) -> None:
@@ -105,30 +95,22 @@ def test_title_prefix_task_each_kind_maps_to_its_prefix(ci) -> None:
         "maintenance": "Chore",
     }
     for kind, prefix in expected.items():
-        assert (
-            ci._title_prefix_for(type_entry, _CLASSIFICATION, "task", kind) == prefix
-        )
+        assert ci._title_prefix_for(type_entry, _CLASSIFICATION, "task", kind) == prefix
 
 
 def test_title_prefix_epic_ignores_kind_uses_structural_upper(ci) -> None:
     """EPIC is not kind-driven: kind defaults to feature, prefix stays `EPIC`
     (uppercased), NOT `Task` (what title_prefix_by_value['feature'] would give)."""
     type_entry = {"title_prefix": "EPIC", "title_case": "upper"}
-    assert (
-        ci._title_prefix_for(type_entry, _CLASSIFICATION, "epic", "feature") == "EPIC"
-    )
+    assert ci._title_prefix_for(type_entry, _CLASSIFICATION, "epic", "feature") == "EPIC"
 
 
 def test_title_prefix_feature_and_umbrella_ignore_kind(ci) -> None:
     feature_entry = {"title_prefix": "Feature", "title_case": "title"}
     umbrella_entry = {"title_prefix": "Umbrella", "title_case": "title"}
+    assert ci._title_prefix_for(feature_entry, _CLASSIFICATION, "feature", "feature") == "Feature"
     assert (
-        ci._title_prefix_for(feature_entry, _CLASSIFICATION, "feature", "feature")
-        == "Feature"
-    )
-    assert (
-        ci._title_prefix_for(umbrella_entry, _CLASSIFICATION, "umbrella", "feature")
-        == "Umbrella"
+        ci._title_prefix_for(umbrella_entry, _CLASSIFICATION, "umbrella", "feature") == "Umbrella"
     )
 
 
@@ -181,9 +163,7 @@ def test_parent_ref_line_uses_detected_parent_label(ci) -> None:
     type_entry = {
         "parent_ref_form": "Feature: #<N> or Umbrella: #<N> or EPIC: #<N>",
     }
-    assert (
-        ci._parent_ref_line(type_entry, 128, parent_label="EPIC") == "EPIC: #128"
-    )
+    assert ci._parent_ref_line(type_entry, 128, parent_label="EPIC") == "EPIC: #128"
 
 
 def test_parent_ref_line_label_none_falls_back_to_first_option(ci) -> None:
@@ -201,9 +181,7 @@ def test_detect_parent_structural_type_reads_title_and_infers(ci, monkeypatch) -
         stderr = ""
 
     monkeypatch.setattr(ci.subprocess, "run", lambda *a, **k: _Proc())
-    assert (
-        ci._detect_parent_structural_type(128, {}, _ISSUE_TYPES()) == "epic"
-    )
+    assert ci._detect_parent_structural_type(128, {}, _ISSUE_TYPES()) == "epic"
 
 
 def test_detect_parent_structural_type_none_on_gh_failure(ci, monkeypatch) -> None:
@@ -230,10 +208,7 @@ def test_detect_parent_structural_type_none_on_non_json(ci, monkeypatch) -> None
 
 
 def test_parent_ref_form_matchers_accept_each_allowed_option(ci) -> None:
-    form = (
-        "Feature: #<N> or Umbrella: #<N> or EPIC: #<N>"
-        " or Milestone: [#<N>](../milestone/<N>)"
-    )
+    form = "Feature: #<N> or Umbrella: #<N> or EPIC: #<N> or Milestone: [#<N>](../milestone/<N>)"
     matchers = ci._parent_ref_form_matchers(form)
 
     def accepted(line: str) -> bool:
@@ -284,8 +259,7 @@ def test_parent_ref_line_milestone_emits_link_form(ci) -> None:
     type_entry = {
         "parent_issue_types": ["feature", "umbrella", "epic", "milestone"],
         "parent_ref_form": (
-            "Feature: #<N> or Umbrella: #<N> or EPIC: #<N>"
-            " or Milestone: [#<N>](../milestone/<N>)"
+            "Feature: #<N> or Umbrella: #<N> or EPIC: #<N> or Milestone: [#<N>](../milestone/<N>)"
         ),
     }
     result = ci._parent_ref_line(type_entry, parent_num=None, milestone_num=6)
@@ -318,9 +292,7 @@ def test_compose_body_substitutes_milestone_link_form(ci, tmp_path: Path) -> Non
     """compose_body replaces the `Milestone: #` placeholder with the link form."""
     template = tmp_path / "EPIC.md"
     template.write_text(
-        "---\nname: EPIC\n---\n"
-        "Milestone: #\n\n"
-        "## Outcome\nfoo\n",
+        "---\nname: EPIC\n---\nMilestone: #\n\n## Outcome\nfoo\n",
         encoding="utf-8",
     )
     body = ci._compose_body(template, parent_ref="Milestone: [#6](../milestone/6)")
@@ -332,14 +304,7 @@ def test_compose_body_substitutes_milestone_link_form(ci, tmp_path: Path) -> Non
 
 
 def test_strip_frontmatter_removes_leading_yaml_block(ci) -> None:
-    raw = (
-        "---\n"
-        "name: Task\n"
-        "about: foo\n"
-        "labels: ['type:feature']\n"
-        "---\n"
-        "body content here\n"
-    )
+    raw = "---\nname: Task\nabout: foo\nlabels: ['type:feature']\n---\nbody content here\n"
     stripped = ci._strip_issue_template_frontmatter(raw)
     assert stripped.strip() == "body content here"
 
@@ -360,9 +325,7 @@ def test_strip_frontmatter_returns_input_when_unclosed(ci) -> None:
 def test_compose_body_substitutes_parent_ref(ci, tmp_path: Path) -> None:
     template = tmp_path / "Task.md"
     template.write_text(
-        "---\nname: Task\nlabels: ['type:feature']\n---\n"
-        "Feature: #\n\n"
-        "## What\nfoo\n",
+        "---\nname: Task\nlabels: ['type:feature']\n---\nFeature: #\n\n## What\nfoo\n",
         encoding="utf-8",
     )
     body = ci._compose_body(template, parent_ref="Feature: #42")
@@ -376,14 +339,10 @@ def test_compose_body_returns_minimal_body_when_template_missing(ci, tmp_path: P
     assert "EPIC: #5" in body
 
 
-def test_compose_body_no_parent_ref_leaves_template_placeholder(
-    ci, tmp_path: Path
-) -> None:
+def test_compose_body_no_parent_ref_leaves_template_placeholder(ci, tmp_path: Path) -> None:
     template = tmp_path / "Task.md"
     template.write_text(
-        "---\nname: Task\n---\n"
-        "Feature: #\n\n"
-        "## What\nfoo\n",
+        "---\nname: Task\n---\nFeature: #\n\n## What\nfoo\n",
         encoding="utf-8",
     )
     body = ci._compose_body(template, parent_ref="")
@@ -419,27 +378,126 @@ def test_adopter_workstreams_skips_non_string_entries(ci) -> None:
     assert ci._adopter_workstreams(config) == {"cli", "schemas"}
 
 
-# --- titles pattern lookup -------------------------------------------
+# --- titles.yaml checks at filing (#803) ----------------------------
+# main() runs against a staged capability tree carrying the SHIPPED titles.yaml,
+# with every gh call faked; a refused title must stop before `gh issue create`.
+
+_SHIPPED_TITLES = (
+    REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "schemas" / "titles.yaml"
+)
 
 
-def test_title_pattern_for_returns_per_type_regex(ci) -> None:
-    titles = {
-        "formats": {
-            "issue-task": {"pattern": r"^\[Task\] .+$"},
-            "issue-feature": {"pattern": r"^\[Feature\] .+$"},
-        },
-    }
-    assert ci._title_pattern_for(titles, "task") == r"^\[Task\] .+$"
-    assert ci._title_pattern_for(titles, "feature") == r"^\[Feature\] .+$"
+def _stage_filing_tree(tmp_path: Path) -> Path:
+    root = tmp_path / ".pkit" / "capabilities" / "project-management"
+    (root / "schemas").mkdir(parents=True)
+    (root / "templates").mkdir(parents=True)
+    (root / "project").mkdir(parents=True)
+    (root / "schemas" / "issue-types.yaml").write_text(
+        "types:\n"
+        "  task:\n"
+        "    title_prefix: Task\n"
+        "    title_case: title\n"
+        "    parent_issue_types: [feature, umbrella, epic, milestone]\n"
+        "    parent_ref_form: 'Feature: #<N>'\n"
+        "    parent_ref_optional: false\n",
+        encoding="utf-8",
+    )
+    (root / "schemas" / "titles.yaml").write_text(
+        _SHIPPED_TITLES.read_text(encoding="utf-8"), encoding="utf-8"
+    )
+    (root / "templates" / "Task.md").write_text("Feature: #\n\n## What\nfoo\n", encoding="utf-8")
+    (root / "project" / "config.yaml").write_text(
+        "schema_version: 1\ndefault_branch: main\nworkstreams: [spyre]\n", encoding="utf-8"
+    )
+    (root / "project" / "members.yaml").write_text("members: []\n", encoding="utf-8")
+    (root / "project" / "bootstrap-stamp.yaml").write_text(
+        "schema_version: 1\nbootstrap:\n  completed_at: '2026-01-01T00:00:00+00:00'\n"
+        "  capability_version: 0.0.0-test\n  by: bootstrap\n  repo:\n",
+        encoding="utf-8",
+    )
+    return root
 
 
-def test_title_pattern_for_returns_none_for_unknown_type(ci) -> None:
-    titles = {"formats": {"issue-task": {"pattern": "x"}}}
-    assert ci._title_pattern_for(titles, "umbrella") is None
+def _linked(ci):
+    """A native link that succeeded, as create-issue reads a link result."""
+    from types import SimpleNamespace
+
+    return SimpleNamespace(ok=True, detail="", outcome=ci.LinkOutcome.LINKED, refused=False)
 
 
-def test_title_pattern_for_returns_none_on_empty_schema(ci) -> None:
-    assert ci._title_pattern_for({}, "task") is None
+def _file_task(ci, tmp_path, monkeypatch, title: str) -> tuple[int, list[list[str]]]:
+    """Run create-issue main() for a Task titled ``title``; return (rc, every argv run)."""
+    root = _stage_filing_tree(tmp_path)
+    calls: list[list[str]] = []
+
+    def fake_run(cmd, *args, **kwargs):
+        class _Proc:
+            returncode = 0
+            stdout = ""
+            stderr = ""
+
+        calls.append(list(cmd))
+        if "issue" in cmd and "create" in cmd:
+            _Proc.stdout = "https://github.com/acme/repo/issues/55\n"
+        return _Proc()
+
+    monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
+    monkeypatch.setattr(ci.subprocess, "run", fake_run)
+    monkeypatch.setattr(ci.session_guard, "enforce", lambda **k: True)
+    monkeypatch.setattr(ci, "link_sub_issue", lambda *a, **k: _linked(ci))
+    monkeypatch.setattr(
+        ci.sys,
+        "argv",
+        [
+            "create-issue.py",
+            "--type",
+            "task",
+            "--title",
+            title,
+            "--parent",
+            "1",
+            "--workstream",
+            "spyre",
+            "--capability-root",
+            str(root),
+            "--yes",
+        ],
+    )
+    return ci.main(), calls
+
+
+def _issue_created(calls: list[list[str]]) -> bool:
+    return any("issue" in c and "create" in c for c in calls)
+
+
+def test_filing_refuses_a_conventional_commits_title_before_gh(
+    ci, tmp_path, monkeypatch, capsys
+) -> None:
+    rc, calls = _file_task(
+        ci, tmp_path, monkeypatch, "fix(igw): support a prompt file for the gateway"
+    )
+
+    assert rc == 2
+    assert not _issue_created(calls)
+    assert "title.conventional-commits-prefix" in capsys.readouterr().err
+
+
+def test_filing_warns_on_a_scope_prefix_and_files(ci, tmp_path, monkeypatch, capsys) -> None:
+    rc, calls = _file_task(ci, tmp_path, monkeypatch, "interaction-gateway: support a prompt file")
+
+    assert rc == 0
+    assert _issue_created(calls)
+    assert "[warning] title.scope-prefix" in capsys.readouterr().err
+
+
+def test_filing_a_clean_title_raises_no_title_finding(ci, tmp_path, monkeypatch, capsys) -> None:
+    rc, calls = _file_task(
+        ci, tmp_path, monkeypatch, "Evidence points are keyed so two providers can report one"
+    )
+
+    assert rc == 0
+    assert _issue_created(calls)
+    assert "title." not in capsys.readouterr().err
 
 
 # --- parent-requiredness gate under hierarchy mode (DEC-036 D4, #272) -----
@@ -484,7 +542,8 @@ def test_advisory_softens_requiredness_gate_real_guard(ci) -> None:
     wrongly KEEPING the gate — shown only to make the failure mode the real
     assertion catches explicit. It is not production code.
     """
-    def buggy_is_gated(type_entry, hierarchy):  # noqa: ARG001
+
+    def buggy_is_gated(type_entry, hierarchy):
         # BUG: ignores the hierarchy mode, always gates.
         return True
 
@@ -500,9 +559,7 @@ def test_advisory_softens_requiredness_gate_real_guard(ci) -> None:
 # --- gh issue create milestone form (#223 regression) -----------------
 
 
-def test_gh_create_issue_passes_milestone_by_name_not_number(
-    ci, monkeypatch
-) -> None:
+def test_gh_create_issue_passes_milestone_by_name_not_number(ci, monkeypatch) -> None:
     """`gh issue create --milestone` matches by name only (#223).
 
     Regression: the resolver normalises --milestone to the milestone
@@ -598,9 +655,7 @@ def test_add_to_board_returns_created_item_id(ci, monkeypatch) -> None:
 
     monkeypatch.setattr(ci.subprocess, "run", fake_run)
 
-    item_id = ci._gh_add_to_board(
-        7, "https://github.com/acme/repo/issues/9", config={}
-    )
+    item_id = ci._gh_add_to_board(7, "https://github.com/acme/repo/issues/9", config={})
     assert item_id == "PVTI_newitem"
     # The membership write asks for json so the item id is recoverable.
     assert "--format" in captured["cmd"]
@@ -614,10 +669,7 @@ def test_add_to_board_none_on_gh_failure(ci, monkeypatch) -> None:
         stderr = "boom"
 
     monkeypatch.setattr(ci.subprocess, "run", lambda *a, **k: _Proc())
-    assert (
-        ci._gh_add_to_board(7, "https://github.com/acme/repo/issues/9", config={})
-        is None
-    )
+    assert ci._gh_add_to_board(7, "https://github.com/acme/repo/issues/9", config={}) is None
 
 
 def test_add_to_board_none_on_unparseable_json(ci, monkeypatch) -> None:
@@ -627,10 +679,7 @@ def test_add_to_board_none_on_unparseable_json(ci, monkeypatch) -> None:
         stderr = ""
 
     monkeypatch.setattr(ci.subprocess, "run", lambda *a, **k: _Proc())
-    assert (
-        ci._gh_add_to_board(7, "https://github.com/acme/repo/issues/9", config={})
-        is None
-    )
+    assert ci._gh_add_to_board(7, "https://github.com/acme/repo/issues/9", config={}) is None
 
 
 # --- #453: `gh project` calls thread GH_HOST + --owner via the sole-constructor ---
@@ -755,13 +804,12 @@ def test_resolve_project_node_id_none_when_board_unresolvable(ci, monkeypatch) -
 def test_resolve_project_node_id_uses_cached_config_without_gh_view(ci, monkeypatch) -> None:
     """Cache HIT (#310): a `projects_v2_node_id` in config is returned directly and
     NO `gh project view` (subprocess) call is issued — the per-create read is skipped."""
+
     def boom(*a, **k):  # pragma: no cover — must not be reached on a cache hit
         raise AssertionError("no gh call may run when projects_v2_node_id is cached")
 
     monkeypatch.setattr(ci.subprocess, "run", boom)
-    node_id = ci._resolve_project_node_id(
-        7, "acme", config={"projects_v2_node_id": "PVT_cached"}
-    )
+    node_id = ci._resolve_project_node_id(7, "acme", config={"projects_v2_node_id": "PVT_cached"})
     assert node_id == "PVT_cached"
 
 
@@ -800,16 +848,11 @@ def test_resolve_project_node_id_empty_cache_falls_back_to_live(ci, monkeypatch)
         return _Proc()
 
     monkeypatch.setattr(ci.subprocess, "run", fake_run)
-    assert (
-        ci._resolve_project_node_id(7, "acme", config={"projects_v2_node_id": ""})
-        == "PVT_live"
-    )
+    assert ci._resolve_project_node_id(7, "acme", config={"projects_v2_node_id": ""}) == "PVT_live"
     assert ran["n"] == 1
 
 
-def test_main_board_path_uses_cached_node_id_no_project_view(
-    ci, tmp_path, monkeypatch
-) -> None:
+def test_main_board_path_uses_cached_node_id_no_project_view(ci, tmp_path, monkeypatch) -> None:
     """BOARD path end-to-end with `projects_v2_node_id` cached in config: main()
     reaches the hook with the CACHED project_node_id and issues NO `gh project
     view` call — the per-create read #310 eliminates on the common path."""
@@ -848,11 +891,16 @@ def test_main_board_path_uses_cached_node_id_no_project_view(
         "argv",
         [
             "create-issue.py",
-            "--type", "task",
-            "--title", "do a thing",
-            "--parent", "1",
-            "--workstream", "spyre",
-            "--capability-root", str(root),
+            "--type",
+            "task",
+            "--title",
+            "do a thing",
+            "--parent",
+            "1",
+            "--workstream",
+            "spyre",
+            "--capability-root",
+            str(root),
             "--yes",
         ],
     )
@@ -956,9 +1004,7 @@ def _stage_capability_tree(tmp_path: Path, *, has_board: bool) -> Path:
         encoding="utf-8",
     )
     (root / "schemas" / "titles.yaml").write_text(
-        "formats:\n"
-        "  issue-task:\n"
-        "    pattern: '^\\[(Task|Bug|Docs|Test|Refactor|Chore)\\] .+$'\n",
+        "formats:\n  issue-task:\n    pattern: '^\\[(Task|Bug|Docs|Test|Refactor|Chore)\\] .+$'\n",
         encoding="utf-8",
     )
     (root / "schemas" / "body-format.yaml").write_text("sections: {}\n", encoding="utf-8")
@@ -1021,9 +1067,7 @@ def _gh_command_dispatcher(create_url: str):
     return fake_run
 
 
-def test_main_board_path_assembles_context_hook_reads_and_seeds(
-    ci, tmp_path, monkeypatch
-) -> None:
+def test_main_board_path_assembles_context_hook_reads_and_seeds(ci, tmp_path, monkeypatch) -> None:
     """BOARD path: after create + board-add, main() fires the hook with a
     context carrying `issue.board_item_id` and top-level `project_node_id`
     (the keys `_lib/hooks.py` reads), and the REAL set-board-field hook reaches
@@ -1041,11 +1085,16 @@ def test_main_board_path_assembles_context_hook_reads_and_seeds(
         "argv",
         [
             "create-issue.py",
-            "--type", "task",
-            "--title", "do a thing",
-            "--parent", "1",
-            "--workstream", "spyre",
-            "--capability-root", str(root),
+            "--type",
+            "task",
+            "--title",
+            "do a thing",
+            "--parent",
+            "1",
+            "--workstream",
+            "spyre",
+            "--capability-root",
+            str(root),
             "--yes",
         ],
     )
@@ -1097,9 +1146,7 @@ def test_main_board_path_assembles_context_hook_reads_and_seeds(
     assert seam_call["single_select_option_id"] == "OPT_spyre"
 
 
-def test_main_label_fallback_path_omits_board_keys_hook_skips(
-    ci, tmp_path, monkeypatch
-) -> None:
+def test_main_label_fallback_path_omits_board_keys_hook_skips(ci, tmp_path, monkeypatch) -> None:
     """LABEL-FALLBACK path (no board configured): main() assembles a context
     with NEITHER `issue.board_item_id` NOR a populated `project_node_id`, so the
     REAL set-board-field hook skips and no field write is attempted."""
@@ -1116,11 +1163,16 @@ def test_main_label_fallback_path_omits_board_keys_hook_skips(
         "argv",
         [
             "create-issue.py",
-            "--type", "task",
-            "--title", "do a thing",
-            "--parent", "1",
-            "--workstream", "spyre",
-            "--capability-root", str(root),
+            "--type",
+            "task",
+            "--title",
+            "do a thing",
+            "--parent",
+            "1",
+            "--workstream",
+            "spyre",
+            "--capability-root",
+            str(root),
             "--yes",
         ],
     )
@@ -1202,14 +1254,20 @@ def test_main_parent_invokes_native_sub_issue_link_and_writes_textual_ref(
 
     monkeypatch.setattr(ci, "link_sub_issue", fake_link)
     monkeypatch.setattr(
-        ci.sys, "argv",
+        ci.sys,
+        "argv",
         [
             "create-issue.py",
-            "--type", "task",
-            "--title", "do a thing",
-            "--parent", "1",
-            "--workstream", "spyre",
-            "--capability-root", str(root),
+            "--type",
+            "task",
+            "--title",
+            "do a thing",
+            "--parent",
+            "1",
+            "--workstream",
+            "spyre",
+            "--capability-root",
+            str(root),
             "--yes",
         ],
     )
@@ -1250,24 +1308,26 @@ def test_main_no_parent_does_not_invoke_native_link(ci, tmp_path, monkeypatch) -
 
     monkeypatch.setattr(ci, "link_sub_issue", boom)
     monkeypatch.setattr(
-        ci.sys, "argv",
+        ci.sys,
+        "argv",
         [
             "create-issue.py",
-            "--type", "task",
-            "--title", "do a thing",
-            "--workstream", "spyre",
-            "--capability-root", str(root),
+            "--type",
+            "task",
+            "--title",
+            "do a thing",
+            "--workstream",
+            "spyre",
+            "--capability-root",
+            str(root),
             "--yes",
         ],
     )
     assert ci.main() == 0
 
 
-def test_main_parent_native_link_unsupported_does_not_fail_create(
-    ci, tmp_path, monkeypatch
-) -> None:
-    """A native no-op (unsupported instance) never fails the create — main()
-    still returns 0 and the issue is created with its textual ref."""
+def _create_with_link(ci, tmp_path, monkeypatch, link: _FakeLink) -> int:
+    """Run `create-issue --parent 1` for issue #57 with the native link stubbed."""
     root = _stage_capability_tree(tmp_path, has_board=False)
 
     monkeypatch.setattr(
@@ -1276,35 +1336,102 @@ def test_main_parent_native_link_unsupported_does_not_fail_create(
         _gh_command_dispatcher("https://github.com/acme/repo/issues/57"),
     )
     monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
-
+    monkeypatch.setattr(ci, "link_sub_issue", lambda *a, **k: link)
     monkeypatch.setattr(
-        ci, "link_sub_issue",
-        lambda *a, **k: _FakeLink(
-            "native sub-issues unsupported on this instance; textual ref recorded",
-            ok=False,
-        ),
-    )
-    monkeypatch.setattr(
-        ci.sys, "argv",
+        ci.sys,
+        "argv",
         [
             "create-issue.py",
-            "--type", "task",
-            "--title", "do a thing",
-            "--parent", "1",
-            "--workstream", "spyre",
-            "--capability-root", str(root),
+            "--type",
+            "task",
+            "--title",
+            "do a thing",
+            "--parent",
+            "1",
+            "--workstream",
+            "spyre",
+            "--capability-root",
+            str(root),
             "--yes",
         ],
     )
-    assert ci.main() == 0
+    return ci.main()
+
+
+def test_main_parent_native_link_unsupported_does_not_fail_create(
+    ci, tmp_path, monkeypatch, capsys
+) -> None:
+    """A native no-op (unsupported instance) never fails the create — main()
+    still returns 0 and the issue is created with its textual ref, which
+    create-issue (not the seam) says it recorded. Nothing is left to fix, so no
+    way back or way out is suggested."""
+    link = _FakeLink(
+        "native sub-issues unsupported on this instance",
+        ok=False,
+        outcome=ci.LinkOutcome.UNSUPPORTED,
+    )
+    assert _create_with_link(ci, tmp_path, monkeypatch, link) == 0
+    err = capsys.readouterr().err
+    assert "[warn] native sub-issues unsupported on this instance; textual ref recorded" in err
+    assert "link-parent" not in err
+    assert "containment: textual" not in err
+
+
+def test_main_parent_native_link_failure_warns_and_names_the_way_back(
+    ci, tmp_path, monkeypatch, capsys
+) -> None:
+    """#808: a failed link — a 422 GitHub refused for a reason other than an
+    absent feature, say — is not an unsupported instance. The create still
+    succeeds on its textual ref (the spine), but the warning carries the seam's
+    sentence with GitHub's words and names the command that makes the link once
+    the cause is fixed."""
+    detail = (
+        "GitHub refused to link #57 under #1 (HTTP 422) for a reason pm does not "
+        'recognise. GitHub said: "Parent issue is locked"'
+    )
+    link = _FakeLink(detail, ok=False, outcome=ci.LinkOutcome.FAILED, refused=True)
+    assert _create_with_link(ci, tmp_path, monkeypatch, link) == 0
+    err = capsys.readouterr().err
+    assert f"[warn] {detail}\n" in err
+    assert "#57 is filed under #1 by its first line only" in err
+    assert "`pkit pm link-parent 57`" in err
+    # GitHub refused it, and pm never reads a refusal as an instance without
+    # sub-issues (ADR-035): the way out follows.
+    assert (
+        "  → If this GitHub does not offer sub-issues, set `containment: textual` in "
+        "project/substrate-map.yaml and pm stops attempting the native link."
+    ) in err
+
+
+def test_main_parent_native_link_failure_github_did_not_refuse_has_no_way_out(
+    ci, tmp_path, monkeypatch, capsys
+) -> None:
+    """A failure GitHub did not refuse (a missing `gh`, a server error) still
+    names the way back, but not the textual-mode way out — nothing suggests the
+    instance lacks sub-issues."""
+    link = _FakeLink(
+        "`gh` not on PATH; native sub-issue link skipped",
+        ok=False,
+        outcome=ci.LinkOutcome.FAILED,
+    )
+    assert _create_with_link(ci, tmp_path, monkeypatch, link) == 0
+    err = capsys.readouterr().err
+    assert "`pkit pm link-parent 57`" in err
+    assert "containment: textual" not in err
 
 
 class _FakeLink:
-    """Minimal stand-in for containment.LinkResult — carries `ok` + `detail`."""
+    """Minimal stand-in for containment.LinkResult — carries `ok`, `detail` and,
+    for a link that is not `ok`, the `outcome` create-issue reports on and
+    whether GitHub `refused` it."""
 
-    def __init__(self, detail: str, *, ok: bool) -> None:
+    def __init__(
+        self, detail: str, *, ok: bool, outcome: object = None, refused: bool = False
+    ) -> None:
         self.detail = detail
         self.ok = ok
+        self.outcome = outcome
+        self.refused = refused
 
 
 # --- #356 end-to-end: classification-faithful create via main() ------------
@@ -1326,23 +1453,17 @@ def _stage_real_schema_tree(tmp_path: Path) -> Path:
     (root / "templates").mkdir(parents=True)
     (root / "project").mkdir(parents=True)
 
-    real_schemas = (
-        REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "schemas"
-    )
+    real_schemas = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "schemas"
     for name in ("issue-types.yaml", "titles.yaml", "classification.yaml"):
         (root / "schemas" / name).write_text(
             (real_schemas / name).read_text(encoding="utf-8"), encoding="utf-8"
         )
-    (root / "schemas" / "body-format.yaml").write_text(
-        "sections: {}\n", encoding="utf-8"
-    )
+    (root / "schemas" / "body-format.yaml").write_text("sections: {}\n", encoding="utf-8")
 
     (root / "templates" / "Task.md").write_text(
         "---\nname: Task\n---\nFeature: #\n\n## What\nfoo\n", encoding="utf-8"
     )
-    (root / "project" / "config.yaml").write_text(
-        "workstreams: [spyre]\n", encoding="utf-8"
-    )
+    (root / "project" / "config.yaml").write_text("workstreams: [spyre]\n", encoding="utf-8")
     (root / "project" / "members.yaml").write_text("members: []\n", encoding="utf-8")
     _mark_bootstrapped(root)
     return root
@@ -1394,15 +1515,22 @@ def test_main_task_under_epic_emits_epic_parent_ref(ci, tmp_path, monkeypatch) -
 
     monkeypatch.setattr(ci, "_gh_create_issue", capturing_create)
     monkeypatch.setattr(
-        ci.sys, "argv",
+        ci.sys,
+        "argv",
         [
             "create-issue.py",
-            "--type", "task",
-            "--title", "fix the faithful create bug here",
-            "--kind", "bug",
-            "--parent", "128",
-            "--workstream", "spyre",
-            "--capability-root", str(root),
+            "--type",
+            "task",
+            "--title",
+            "fix the faithful create bug here",
+            "--kind",
+            "bug",
+            "--parent",
+            "128",
+            "--workstream",
+            "spyre",
+            "--capability-root",
+            str(root),
             "--yes",
         ],
     )
@@ -1414,9 +1542,7 @@ def test_main_task_under_epic_emits_epic_parent_ref(ci, tmp_path, monkeypatch) -
     assert created["title"].startswith("[Bug] ")
 
 
-def test_main_body_file_accepts_any_allowed_parent_ref_form(
-    ci, tmp_path, monkeypatch
-) -> None:
+def test_main_body_file_accepts_any_allowed_parent_ref_form(ci, tmp_path, monkeypatch) -> None:
     """Acceptance 5: a --body-file whose first line is any allowed parent-ref form
     for the type is accepted as-is (here `EPIC: #128` for a Task)."""
     root = _stage_real_schema_tree(tmp_path)
@@ -1444,16 +1570,24 @@ def test_main_body_file_accepts_any_allowed_parent_ref_form(
 
     monkeypatch.setattr(ci, "_gh_create_issue", capturing_create)
     monkeypatch.setattr(
-        ci.sys, "argv",
+        ci.sys,
+        "argv",
         [
             "create-issue.py",
-            "--type", "task",
-            "--title", "file with a prepared body here",
-            "--kind", "bug",
-            "--parent", "128",
-            "--workstream", "spyre",
-            "--body-file", str(body_file),
-            "--capability-root", str(root),
+            "--type",
+            "task",
+            "--title",
+            "file with a prepared body here",
+            "--kind",
+            "bug",
+            "--parent",
+            "128",
+            "--workstream",
+            "spyre",
+            "--body-file",
+            str(body_file),
+            "--capability-root",
+            str(root),
             "--yes",
         ],
     )
@@ -1512,14 +1646,19 @@ def test_main_body_file_advisory_non_parent_ref_first_line_files_parentless(
 
     monkeypatch.setattr(ci, "_gh_create_issue", capturing_create)
     monkeypatch.setattr(
-        ci.sys, "argv",
+        ci.sys,
+        "argv",
         [
             "create-issue.py",
-            "--type", "task",
-            "--title", "file a parentless prepared body here",
+            "--type",
+            "task",
+            "--title",
+            "file a parentless prepared body here",
             # No --parent — the whole point of #557 on a flat tracker.
-            "--body-file", str(body_file),
-            "--capability-root", str(root),
+            "--body-file",
+            str(body_file),
+            "--capability-root",
+            str(root),
             "--yes",
         ],
     )
@@ -1560,14 +1699,20 @@ def test_main_body_file_advisory_valid_parent_ref_first_line_accepted(
 
     monkeypatch.setattr(ci, "_gh_create_issue", capturing_create)
     monkeypatch.setattr(
-        ci.sys, "argv",
+        ci.sys,
+        "argv",
         [
             "create-issue.py",
-            "--type", "task",
-            "--title", "file a prepared body with a ref here",
-            "--parent", "1",
-            "--body-file", str(body_file),
-            "--capability-root", str(root),
+            "--type",
+            "task",
+            "--title",
+            "file a prepared body with a ref here",
+            "--parent",
+            "1",
+            "--body-file",
+            str(body_file),
+            "--capability-root",
+            str(root),
             "--yes",
         ],
     )
@@ -1606,14 +1751,20 @@ def test_main_body_file_advisory_parent_given_non_parent_ref_first_line_silent(
 
     monkeypatch.setattr(ci, "_gh_create_issue", capturing_create)
     monkeypatch.setattr(
-        ci.sys, "argv",
+        ci.sys,
+        "argv",
         [
             "create-issue.py",
-            "--type", "task",
-            "--title", "file a prepared body with a parent but no ref line",
-            "--parent", "1",
-            "--body-file", str(body_file),
-            "--capability-root", str(root),
+            "--type",
+            "task",
+            "--title",
+            "file a prepared body with a parent but no ref line",
+            "--parent",
+            "1",
+            "--body-file",
+            str(body_file),
+            "--capability-root",
+            str(root),
             "--yes",
         ],
     )
@@ -1649,15 +1800,22 @@ def test_main_body_file_greenfield_non_parent_ref_first_line_hard_errors(
     monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
     monkeypatch.setattr(ci, "link_sub_issue", lambda *a, **k: _FakeLink("ok", ok=True))
     monkeypatch.setattr(
-        ci.sys, "argv",
+        ci.sys,
+        "argv",
         [
             "create-issue.py",
-            "--type", "task",
-            "--title", "file a prepared body here",
-            "--parent", "1",
-            "--workstream", "spyre",
-            "--body-file", str(body_file),
-            "--capability-root", str(root),
+            "--type",
+            "task",
+            "--title",
+            "file a prepared body here",
+            "--parent",
+            "1",
+            "--workstream",
+            "spyre",
+            "--body-file",
+            str(body_file),
+            "--capability-root",
+            str(root),
             "--yes",
         ],
     )
@@ -1703,14 +1861,20 @@ def test_main_body_file_parent_ref_optional_type_skips_first_line_check(
 
     monkeypatch.setattr(ci, "_gh_create_issue", capturing_create)
     monkeypatch.setattr(
-        ci.sys, "argv",
+        ci.sys,
+        "argv",
         [
             "create-issue.py",
-            "--type", "task",
-            "--title", "file an optional-parent body here",
-            "--workstream", "spyre",
-            "--body-file", str(body_file),
-            "--capability-root", str(root),
+            "--type",
+            "task",
+            "--title",
+            "file an optional-parent body here",
+            "--workstream",
+            "spyre",
+            "--body-file",
+            str(body_file),
+            "--capability-root",
+            str(root),
             "--yes",
         ],
     )
@@ -1770,14 +1934,20 @@ def test_main_parent_textual_containment_skips_native_link_keeps_textual_ref(
 
     monkeypatch.setattr(ci, "link_sub_issue", boom)
     monkeypatch.setattr(
-        ci.sys, "argv",
+        ci.sys,
+        "argv",
         [
             "create-issue.py",
-            "--type", "task",
-            "--title", "do a thing",
-            "--parent", "1",
-            "--workstream", "spyre",
-            "--capability-root", str(root),
+            "--type",
+            "task",
+            "--title",
+            "do a thing",
+            "--parent",
+            "1",
+            "--workstream",
+            "spyre",
+            "--capability-root",
+            str(root),
             "--yes",
         ],
     )
@@ -1788,9 +1958,7 @@ def test_main_parent_textual_containment_skips_native_link_keeps_textual_ref(
     assert "Feature: #1" in created_body["body"]
 
 
-def test_main_parent_native_containment_invokes_native_link(
-    ci, tmp_path, monkeypatch
-) -> None:
+def test_main_parent_native_containment_invokes_native_link(ci, tmp_path, monkeypatch) -> None:
     """An explicit `containment: native` ⇒ the native sub-issue link fires exactly
     as #344 (greenfield-equivalent)."""
     root = _stage_capability_tree(tmp_path, has_board=False)
@@ -1811,14 +1979,20 @@ def test_main_parent_native_containment_invokes_native_link(
 
     monkeypatch.setattr(ci, "link_sub_issue", fake_link)
     monkeypatch.setattr(
-        ci.sys, "argv",
+        ci.sys,
+        "argv",
         [
             "create-issue.py",
-            "--type", "task",
-            "--title", "do a thing",
-            "--parent", "1",
-            "--workstream", "spyre",
-            "--capability-root", str(root),
+            "--type",
+            "task",
+            "--title",
+            "do a thing",
+            "--parent",
+            "1",
+            "--workstream",
+            "spyre",
+            "--capability-root",
+            str(root),
             "--yes",
         ],
     )
@@ -1851,14 +2025,20 @@ def test_main_parent_absent_containment_key_defaults_to_native_link(
 
     monkeypatch.setattr(ci, "link_sub_issue", fake_link)
     monkeypatch.setattr(
-        ci.sys, "argv",
+        ci.sys,
+        "argv",
         [
             "create-issue.py",
-            "--type", "task",
-            "--title", "do a thing",
-            "--parent", "1",
-            "--workstream", "spyre",
-            "--capability-root", str(root),
+            "--type",
+            "task",
+            "--title",
+            "do a thing",
+            "--parent",
+            "1",
+            "--workstream",
+            "spyre",
+            "--capability-root",
+            str(root),
             "--yes",
         ],
     )
@@ -1918,14 +2098,19 @@ def test_main_label_fallback_workstream_unsupported_files_without_workstream(
 
     monkeypatch.setattr(ci, "_gh_create_issue", capturing_create)
     monkeypatch.setattr(
-        ci.sys, "argv",
+        ci.sys,
+        "argv",
         [
             "create-issue.py",
-            "--type", "task",
-            "--title", "do a thing",
-            "--parent", "1",
+            "--type",
+            "task",
+            "--title",
+            "do a thing",
+            "--parent",
+            "1",
             # NOTE: no --workstream — the whole point of #443.
-            "--capability-root", str(root),
+            "--capability-root",
+            str(root),
             "--yes",
         ],
     )
@@ -1953,14 +2138,19 @@ def test_main_label_fallback_greenfield_still_requires_workstream(
     monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
     monkeypatch.setattr(ci, "link_sub_issue", lambda *a, **k: _FakeLink("ok", ok=True))
     monkeypatch.setattr(
-        ci.sys, "argv",
+        ci.sys,
+        "argv",
         [
             "create-issue.py",
-            "--type", "task",
-            "--title", "do a thing",
-            "--parent", "1",
+            "--type",
+            "task",
+            "--title",
+            "do a thing",
+            "--parent",
+            "1",
             # No --workstream, and greenfield ⇒ the gate must still fire.
-            "--capability-root", str(root),
+            "--capability-root",
+            str(root),
             "--yes",
         ],
     )
@@ -1978,12 +2168,7 @@ def test_main_label_fallback_workstream_served_map_still_requires_workstream(
     root = _stage_capability_tree(tmp_path, has_board=False)
     # A present map binding workstream to a label remap ⇒ SERVED.
     (root / "project" / "substrate-map.yaml").write_text(
-        "schema_version: 1\n"
-        "axes:\n"
-        "  workstream:\n"
-        "    label:\n"
-        "      remap:\n"
-        "        spyre: Spyre\n",
+        "schema_version: 1\naxes:\n  workstream:\n    label:\n      remap:\n        spyre: Spyre\n",
         encoding="utf-8",
     )
 
@@ -1995,14 +2180,19 @@ def test_main_label_fallback_workstream_served_map_still_requires_workstream(
     monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
     monkeypatch.setattr(ci, "link_sub_issue", lambda *a, **k: _FakeLink("ok", ok=True))
     monkeypatch.setattr(
-        ci.sys, "argv",
+        ci.sys,
+        "argv",
         [
             "create-issue.py",
-            "--type", "task",
-            "--title", "do a thing",
-            "--parent", "1",
+            "--type",
+            "task",
+            "--title",
+            "do a thing",
+            "--parent",
+            "1",
             # No --workstream; the axis is SERVED ⇒ the gate must still fire.
-            "--capability-root", str(root),
+            "--capability-root",
+            str(root),
             "--yes",
         ],
     )
@@ -2051,14 +2241,19 @@ def test_main_label_fallback_workstream_served_default_files_without_workstream(
 
     monkeypatch.setattr(ci, "_gh_create_issue", capturing_create)
     monkeypatch.setattr(
-        ci.sys, "argv",
+        ci.sys,
+        "argv",
         [
             "create-issue.py",
-            "--type", "task",
-            "--title", "do a thing",
-            "--parent", "1",
+            "--type",
+            "task",
+            "--title",
+            "do a thing",
+            "--parent",
+            "1",
             # No --workstream — the default supplies it, so the gate must not fire.
-            "--capability-root", str(root),
+            "--capability-root",
+            str(root),
             "--yes",
         ],
     )
@@ -2105,15 +2300,20 @@ def test_main_label_fallback_workstream_title_prefix_bound_no_gate(
 
     monkeypatch.setattr(ci, "_gh_create_issue", capturing_create)
     monkeypatch.setattr(
-        ci.sys, "argv",
+        ci.sys,
+        "argv",
         [
             "create-issue.py",
-            "--type", "task",
-            "--title", "do a thing",
-            "--parent", "1",
+            "--type",
+            "task",
+            "--title",
+            "do a thing",
+            "--parent",
+            "1",
             # No --workstream — a title-carried axis is not label-written, so the
             # gate must not fire.
-            "--capability-root", str(root),
+            "--capability-root",
+            str(root),
             "--yes",
         ],
     )
@@ -2122,9 +2322,7 @@ def test_main_label_fallback_workstream_title_prefix_bound_no_gate(
     assert not any(lbl.startswith("workstream:") for lbl in created["labels"])
 
 
-def test_main_label_fallback_workstream_derive_bound_no_gate(
-    ci, tmp_path, monkeypatch
-) -> None:
+def test_main_label_fallback_workstream_derive_bound_no_gate(ci, tmp_path, monkeypatch) -> None:
     """#559: label-fallback + a `derive`-bound `workstream` axis + no
     `--workstream` ⇒ create SUCCEEDS (rc 0) and NO workstream label is written.
     A derive axis has no write-label (`resolve_write` DEGRADEs unconditionally on
@@ -2158,15 +2356,20 @@ def test_main_label_fallback_workstream_derive_bound_no_gate(
 
     monkeypatch.setattr(ci, "_gh_create_issue", capturing_create)
     monkeypatch.setattr(
-        ci.sys, "argv",
+        ci.sys,
+        "argv",
         [
             "create-issue.py",
-            "--type", "task",
-            "--title", "do a thing",
-            "--parent", "1",
+            "--type",
+            "task",
+            "--title",
+            "do a thing",
+            "--parent",
+            "1",
             # No --workstream — a derive axis is never label-written, so the gate
             # must not fire.
-            "--capability-root", str(root),
+            "--capability-root",
+            str(root),
             "--yes",
         ],
     )
@@ -2204,16 +2407,22 @@ def test_main_label_fallback_workstream_unsupported_skips_value_validation(
 
     monkeypatch.setattr(ci, "_gh_create_issue", capturing_create)
     monkeypatch.setattr(
-        ci.sys, "argv",
+        ci.sys,
+        "argv",
         [
             "create-issue.py",
-            "--type", "task",
-            "--title", "do a thing",
-            "--parent", "1",
+            "--type",
+            "task",
+            "--title",
+            "do a thing",
+            "--parent",
+            "1",
             # `quantum` is NOT in config.yaml's `workstreams: [spyre]`, but the axis
             # is unsupported ⇒ the value is discarded, so validation must be skipped.
-            "--workstream", "quantum",
-            "--capability-root", str(root),
+            "--workstream",
+            "quantum",
+            "--capability-root",
+            str(root),
             "--yes",
         ],
     )
@@ -2240,14 +2449,20 @@ def test_main_label_fallback_greenfield_rejects_unknown_workstream_value(
     monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
     monkeypatch.setattr(ci, "link_sub_issue", lambda *a, **k: _FakeLink("ok", ok=True))
     monkeypatch.setattr(
-        ci.sys, "argv",
+        ci.sys,
+        "argv",
         [
             "create-issue.py",
-            "--type", "task",
-            "--title", "do a thing",
-            "--parent", "1",
-            "--workstream", "quantum",  # not in `workstreams: [spyre]`
-            "--capability-root", str(root),
+            "--type",
+            "task",
+            "--title",
+            "do a thing",
+            "--parent",
+            "1",
+            "--workstream",
+            "quantum",  # not in `workstreams: [spyre]`
+            "--capability-root",
+            str(root),
             "--yes",
         ],
     )
@@ -2275,10 +2490,16 @@ def _type_title_prefix_map(ci):
     """
     return ci.axis_labels.SubstrateMap(
         axes={
-            "type": {"title-prefix": {"remap": {
-                "task": "[Task]", "epic": "[EPIC]",
-                "feature": "[Feature]", "umbrella": "[Umbrella]",
-            }}},
+            "type": {
+                "title-prefix": {
+                    "remap": {
+                        "task": "[Task]",
+                        "epic": "[EPIC]",
+                        "feature": "[Feature]",
+                        "umbrella": "[Umbrella]",
+                    }
+                }
+            },
             "priority": {"label": {"remap": {"High": "P0", "Medium": "P1", "Low": "P2"}}},
         }
     )
@@ -2364,9 +2585,7 @@ _BOARD_CONFIG_ONLY = {"has_projects_v2_board": True, "projects_v2_board_id": 7}
 def test_build_labels_map_binding_beats_the_board_flag(ci) -> None:
     """A `label` binding governs the axis it names, board flag or not — the label
     is written, and it is the ADOPTER's (`P0`), not the kit's `priority:High`."""
-    sm = ci.axis_labels.SubstrateMap(
-        axes={"priority": {"label": {"remap": {"High": "P0"}}}}
-    )
+    sm = ci.axis_labels.SubstrateMap(axes={"priority": {"label": {"remap": {"High": "P0"}}}})
     labels, advisories, resolved = ci._build_labels(
         kind="feature",
         priority="High",
@@ -2510,11 +2729,16 @@ def _file_from_body(
         "argv",
         [
             "create-issue.py",
-            "--type", issue_type,
-            "--title", "a prepared body filed here",
-            "--workstream", "spyre",
-            "--body-file", str(body_file),
-            "--capability-root", str(root),
+            "--type",
+            issue_type,
+            "--title",
+            "a prepared body filed here",
+            "--workstream",
+            "spyre",
+            "--body-file",
+            str(body_file),
+            "--capability-root",
+            str(root),
             "--yes",
             *extra,
         ],

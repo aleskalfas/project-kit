@@ -33,9 +33,15 @@ pkit = "project_kit.router:main"
 [dependency-groups]
 dev = [
     "pytest>=8.0",
-    "ruff>=0.6",
-    "pyright>=1.1.380",
+    # The floor the ruff settings below need (`per-file-target-version`); the
+    # lock pins the exact version the gate formats and lints with.
+    "ruff>=0.15",
+    # The `nodejs` extra puts the Node runtime pyright runs on into the lock, so
+    # syncing installs it and no run downloads one or needs it on the host's
+    # path (PRJ-010 point 7). The lock pins the version the gate checks with.
+    "pyright[nodejs]>=1.1.380",
     "pathspec>=0.12",  # used by check-doc-mapping.py (PM script); needed to import it under pytest
+    "pytest-xdist>=3.8.0",  # scripts/check.sh runs the suite in parallel workers (#1182)
 ]
 
 [tool.hatch.version]
@@ -120,10 +126,10 @@ withhold = [
 # self-host install-state receipt, functionally inert since a capability install
 # overwrites it with a freshly-stamped one. It is not withheld because
 # `is_adopter_owned_by_tier` is a TIER rule and that file is install *state*
-# sitting in a kit-owned directory, so the predicate cannot see it. Its former
-# removal plan — ADR-033's single-declaration follow-on — was retired by that
-# record's #813 amendment, so it needs a home of its own rather than a pointer
-# to a retired goal.
+# sitting in a kit-owned directory, so the predicate cannot see it. ADR-033 does
+# not pursue a single declaration of the kit-owned tree shared by build and
+# propagator (its COR-007 follow-on implication), so removing this file needs a
+# plan of its own rather than a pointer to that record.
 packages = ["src/project_kit"]
 exclude = ["/src/project_kit"]
 # The editable wheel exposes `src/` through a `.pth` rather than shipping the
@@ -198,10 +204,30 @@ path = "hatch_build.py"
 ".pkit/decisions/README.md" = "project_kit/_kit/decisions/README.md"
 ".pkit/scratchpad/README.md" = "project_kit/_kit/scratchpad/README.md"
 
+# Lint and format are gated by `scripts/check.sh` (#840). The settings below
+# are the house style, settled so that a finding the gate reports is a defect
+# to fix, not a disagreement to argue: every rule this project writes against
+# on purpose is switched off here with its reason, and every other finding is
+# fixed rather than silenced.
 [tool.ruff]
+# One length for code and prose alike: the formatter lays code out to it, and
+# the line-length rule holds the strings, docstrings and comments the
+# formatter cannot break to the same limit.
 line-length = 100
 target-version = "py311"
 src = ["src", "tests"]
+
+# Where a tree runs on an older Python than the package's own floor, ruff is
+# told so; otherwise pyupgrade offers rewrites onto an API that runtime lacks
+# (`datetime.UTC` and `enum.StrEnum` are 3.11).
+[tool.ruff.per-file-target-version]
+# Capability scripts run under `uv run --script`, and their PEP 723 headers
+# declare `requires-python = ">=3.10"`.
+".pkit/capabilities/**/*.py" = "py310"
+# The permission hook and the modules it imports run under the bare system
+# `python3` inside the macOS sandbox (ADR-014) — Python 3.9 on a stock macOS.
+".pkit/adapters/claude-code/permission-hook.py" = "py39"
+".pkit/permissions/*.py" = "py39"
 
 [tool.ruff.lint]
 select = [
@@ -213,13 +239,66 @@ select = [
     "SIM",   # flake8-simplify
     "RUF",   # ruff-specific
 ]
+ignore = [
+    # A nested `if` here separates a precondition from the check it guards —
+    # typically a call made for its effect, often with a comment between the
+    # two. Folding them into one `and` hides that call inside a condition.
+    "SIM102",  # collapsible-if
+    # Predicates here are written as guard ladders: `if a: return False`,
+    # `if b: return False`, … then `return True`. Returning the last condition
+    # directly breaks the ladder's parallel shape, which is what makes each
+    # case readable on its own.
+    "SIM103",  # needless-bool
+]
+# The prose in strings, docstrings and comments uses typographic characters on
+# purpose: the en dash in ranges (`1–3`), the multiplication sign (`3×`), the
+# minus sign, set union (`∪`) and the information sign in a status line. They
+# are allowed by name, so the ambiguous-unicode rules (RUF001–RUF003) still
+# catch a confusable nobody chose. The em dash, the arrows and the middle dot
+# the project also writes are not in ruff's confusables table and need no entry.
+allowed-confusables = ["–", "×", "−", "∪", "ℹ"]
 
+[tool.ruff.lint.per-file-ignores]
+# A capability script runs by path and puts its own folder on `sys.path` before
+# it imports its `_lib` package, so code ahead of those imports is the script's
+# shape rather than a stray import (E402, module-import-not-at-top-of-file).
+".pkit/capabilities/**/scripts/**/*.py" = ["E402"]
+
+# Type checking is gated by `scripts/check.sh` (PRJ-010): the package in pyright's
+# strict mode through a ratchet, everything else pyright checks in standard mode,
+# outright. `scripts/pyright_ratchet.py` runs pyright and judges both, and it
+# refuses this table narrowing what the package is checked for: an `include`,
+# `exclude` or `ignore` entry that leaves part of `src` out, a strict list that
+# stops covering it, or `reportMissingModuleSource` (the one rule strict mode does
+# not override) set below a warning. A rule relaxed for the tests is relaxed here,
+# with its reason.
 [tool.pyright]
-include = ["src", "tests"]
-typeCheckingMode = "strict"
+# The package, its tests, and the gate's own tooling.
+include = ["src", "tests", "scripts"]
+# The mode is set by directory (PRJ-010 point 1): a module in the package is
+# strict from its first commit without being listed anywhere.
+strict = ["src"]
+typeCheckingMode = "standard"
 pythonVersion = "3.11"
-reportMissingTypeStubs = false  # click stubs are bundled; no third-party stubs needed today
+# pyright honours no `# type: ignore` (PRJ-010 point 5); a suppression names its
+# rules, only outside the package, with its reason on the line.
+enableTypeIgnoreComments = false
+# The import paths (PRJ-010 point 7). `src` is the package's, which pyright adds on
+# its own only while this list is unset. The tests put project-management's
+# `scripts` directory on their import path at run time to import its `_lib`
+# package, and a few put `_lib` itself there to patch `gh` as a top-level
+# module; pyright is told the same.
+extraPaths = [
+    "src",
+    ".pkit/capabilities/project-management/scripts",
+    ".pkit/capabilities/project-management/scripts/_lib",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra --strict-markers"
+# `scripts/check.sh` runs the suite in parallel workers, then the `serial` tests
+# on their own, in one process (tests/README.md, "Running the suite").
+markers = [
+    "serial: cannot share the machine with other test workers; runs after the parallel pass",
+]

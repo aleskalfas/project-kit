@@ -1,0 +1,11 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit process move` takes `--reason <text>`: why the caller took the move,
+  recorded on its journal entry as given — a move one subject's move caused in
+  another, say. The engine reads it for nothing, so it never changes whether a
+  move is allowed, and with journal logging off it is not recorded anywhere.
+  `pkit process status` shows it after the move it explains. The process shape
+  contract's journal entry gains the `reason` field.

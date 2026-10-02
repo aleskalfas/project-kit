@@ -33,6 +33,10 @@ ComponentKind = Literal["adapter", "capability"]
 # (additive, no migration — COR-031 D2).
 ORIGIN_KIT_SHIPPED = "kit-shipped"
 ORIGIN_INCUBATED_IN_REPO = "incubated-in-repo"
+# COR-041's third origin: content pulled whole from an external source at a
+# pin and restored to it by reconciliation. Its fetch is not built yet; the
+# wire value is named so a reader can tell an entry carrying it apart.
+ORIGIN_EXTERNALLY_SOURCED = "externally-sourced"
 
 
 # Singleton YAML instance: round-trip mode preserves comments and key
@@ -45,12 +49,12 @@ _yaml.indent(mapping=2, sequence=4, offset=2)
 
 def _yaml_load(text: str) -> Any:
     """Typed wrapper around ruamel.yaml's untyped load."""
-    return _yaml.load(text)  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
+    return _yaml.load(text)
 
 
 def _yaml_dump(data: Any, stream: io.IOBase) -> None:
     """Typed wrapper around ruamel.yaml's untyped dump."""
-    _yaml.dump(data, stream)  # pyright: ignore[reportUnknownMemberType]
+    _yaml.dump(data, stream)
 
 
 @dataclass(frozen=True)

@@ -9,8 +9,8 @@ and still hit a gate refusal (or the inverse — the gate could pass on a set
 regression guard against exactly that divergence.
 
 **This guard exercises each consumer's REAL post-resolution wiring, not just
-the shared helper's output twice.** Both `_resolve_required_local` methods are
-~5-line pass-throughs to the same `resolve_required_local_reviewers`, so
+the shared helper's output twice.** Both `_resolve_review` methods are
+~5-line pass-throughs to the same `_lib.pr_review.resolve_pr_review`, so
 comparing their return values only proves "the same function returns the same
 value when called twice" — a near-tautology that says nothing about what each
 consumer *does* with the resolution. The real, load-bearing property is
@@ -54,9 +54,7 @@ from types import MappingProxyType, SimpleNamespace
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SCRIPTS_DIR = (
-    REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
-)
+SCRIPTS_DIR = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
 DW_PATH = SCRIPTS_DIR / "done-work.py"
 RPR_PATH = SCRIPTS_DIR / "review-pr.py"
 RC_PATH = SCRIPTS_DIR / "_lib" / "review_contributions.py"
@@ -147,26 +145,32 @@ def _dedup_collection(rc):
 def _scenarios(rc):
     return {
         "baseline-only-no-closing": lambda: (
-            rc.ContributionCollection(rules=()), {},
+            rc.ContributionCollection(rules=()),
+            {},
         ),
         "baseline-only-no-workstream": lambda: (
-            _design_collection(rc), {42: ["type:feature"]},
+            _design_collection(rc),
+            {42: ["type:feature"]},
         ),
         "baseline-only-non-matching": lambda: (
-            _design_collection(rc), {42: ["workstream:backend"]},
+            _design_collection(rc),
+            {42: ["workstream:backend"]},
         ),
         "compose-design": lambda: (
-            _design_collection(rc), {42: ["workstream:design"]},
+            _design_collection(rc),
+            {42: ["workstream:design"]},
         ),
         "multi-issue-union": lambda: (
             _multi_collection(rc),
             {42: ["workstream:design"], 43: ["workstream:backend"]},
         ),
         "dedup": lambda: (
-            _dedup_collection(rc), {42: ["workstream:design"]},
+            _dedup_collection(rc),
+            {42: ["workstream:design"]},
         ),
         "opted-out-design": lambda: (
-            _design_collection(rc), {42: ["workstream:design"]},
+            _design_collection(rc),
+            {42: ["workstream:design"]},
         ),
         "opted-out-one-of-two": lambda: (
             _multi_collection(rc),
@@ -178,14 +182,20 @@ def _scenarios(rc):
 # The contribution opt-outs (#148) a scenario configures, identically for both
 # consumers; a scenario absent here configures none.
 _SCENARIO_OPT_OUTS = {
-    "opted-out-design": [{
-        "capability": "ux-ui-design", "reviewer": "design-reviewer",
-        "reason": "No design review in this project.",
-    }],
-    "opted-out-one-of-two": [{
-        "capability": "backend-discipline", "reviewer": "backend-reviewer",
-        "reason": "Backend changes are reviewed upstream.",
-    }],
+    "opted-out-design": [
+        {
+            "capability": "ux-ui-design",
+            "reviewer": "design-reviewer",
+            "reason": "No design review in this project.",
+        }
+    ],
+    "opted-out-one-of-two": [
+        {
+            "capability": "backend-discipline",
+            "reviewer": "backend-reviewer",
+            "reason": "Backend changes are reviewed upstream.",
+        }
+    ],
 }
 
 
@@ -232,12 +242,17 @@ def _closing_refs_response(args, labels, refs_rc):
     """The CompletedProcess for a `gh pr view --json closingIssuesReferences`."""
     if refs_rc != 0:
         return subprocess.CompletedProcess(
-            args=args, returncode=refs_rc, stdout="", stderr="gh boom",
+            args=args,
+            returncode=refs_rc,
+            stdout="",
+            stderr="gh boom",
         )
     refs = [{"number": n} for n in labels]
     return subprocess.CompletedProcess(
-        args=args, returncode=0,
-        stdout=json.dumps({"closingIssuesReferences": refs}), stderr="",
+        args=args,
+        returncode=0,
+        stdout=json.dumps({"closingIssuesReferences": refs}),
+        stderr="",
     )
 
 
@@ -257,18 +272,24 @@ def _invoke_set(rpr, monkeypatch, tmp_path, *, collection, labels, opt_outs=()):
     """Drive `review-pr.main()` against the stubbed world; return invoked names.
 
     Exercises the REAL invoke loop (`main()`'s `for name in required_local:`),
-    not `_resolve_required_local` in isolation. Returns the list of reviewer
+    not `_resolve_review` in isolation. Returns the list of reviewer
     names `review-pr` actually invoked, in order.
     """
     refs_rc = _stub_closing_resolution(
-        rpr, monkeypatch, collection=collection, labels=labels,
+        rpr,
+        monkeypatch,
+        collection=collection,
+        labels=labels,
     )
 
     def fake_gh_run(args, config, **kwargs):
         if "closingIssuesReferences" in " ".join(args):
             return _closing_refs_response(args, labels, refs_rc)
         return subprocess.CompletedProcess(
-            args=args, returncode=0, stdout="{}", stderr="",
+            args=args,
+            returncode=0,
+            stdout="{}",
+            stderr="",
         )
 
     monkeypatch.setattr(rpr, "gh_run", fake_gh_run)
@@ -286,12 +307,15 @@ def _invoke_set(rpr, monkeypatch, tmp_path, *, collection, labels, opt_outs=()):
 
     monkeypatch.setattr(rpr, "resolve_capability_root", lambda arg: cap_root)
     monkeypatch.setattr(
-        rpr, "load_adopter_config", lambda root: _review_config(opt_outs),
+        rpr,
+        "load_adopter_config",
+        lambda root: _review_config(opt_outs),
     )
     monkeypatch.setattr(rpr, "_read_members", lambda root, loader: [])
     monkeypatch.setattr(rpr, "resolve_invoker_identity", lambda config: "dev")
     monkeypatch.setattr(
-        rpr, "check_membership",
+        rpr,
+        "check_membership",
         lambda members, invoker: SimpleNamespace(allowed=True, refusal_message=""),
     )
     monkeypatch.setattr(rpr, "_find_issue_branch", lambda n: f"feat/{n}-x")
@@ -299,7 +323,17 @@ def _invoke_set(rpr, monkeypatch, tmp_path, *, collection, labels, opt_outs=()):
 
     invoked: list[str] = []
 
-    def fake_invoke(name, pr_number, config, timeout=None, effort=None):
+    def fake_invoke(
+        name,
+        pr_number,
+        config,
+        timeout=None,
+        effort=None,
+        *,
+        base=None,
+        head="HEAD",
+        sha="",
+    ):
         invoked.append(name)
         return "APPROVED", "body"
 
@@ -316,7 +350,14 @@ def _invoke_set(rpr, monkeypatch, tmp_path, *, collection, labels, opt_outs=()):
 
 
 def _run_gate(
-    dw, monkeypatch, *, collection, labels, approved_names, refs_rc=0, opt_outs=(),
+    dw,
+    monkeypatch,
+    *,
+    collection,
+    labels,
+    approved_names,
+    refs_rc=0,
+    opt_outs=(),
 ):
     """Run `_check_agent_gate` against the stubbed world with `approved_names`
     having a fresh APPROVED. Returns the `_GateResult`.
@@ -328,17 +369,18 @@ def _run_gate(
     local name is approved.
     """
     _stub_closing_resolution(
-        dw, monkeypatch, collection=collection, labels=labels, refs_rc=refs_rc,
+        dw,
+        monkeypatch,
+        collection=collection,
+        labels=labels,
+        refs_rc=refs_rc,
     )
 
     comments = [
         {
             "author": {"login": "reviewer"},
             # Carries the verdict marker the gate now requires (#593).
-            "body": (
-                f"Reviewer agent (local, {name}): APPROVED\n\nbody."
-                "\n\n<!-- pkit-verdict -->"
-            ),
+            "body": (f"Reviewer agent (local, {name}): APPROVED\n\nbody.\n\n<!-- pkit-verdict -->"),
             "createdAt": _FRESH_TS,
         }
         for name in approved_names
@@ -349,12 +391,15 @@ def _run_gate(
             return _closing_refs_response(args, labels, refs_rc)
         # gh pr view --json author,comments,commits
         return subprocess.CompletedProcess(
-            args=args, returncode=0,
-            stdout=json.dumps({
-                "author": {"login": "author"},
-                "comments": comments,
-                "commits": [{"committedDate": _COMMIT_TS}],
-            }),
+            args=args,
+            returncode=0,
+            stdout=json.dumps(
+                {
+                    "author": {"login": "author"},
+                    "comments": comments,
+                    "commits": [{"committedDate": _COMMIT_TS}],
+                }
+            ),
             stderr="",
         )
 
@@ -409,14 +454,22 @@ def test_invoke_set_equals_gate_set(dw, rpr, rc, monkeypatch, tmp_path, label) -
     opt_outs = _SCENARIO_OPT_OUTS.get(label, ())
 
     invoked = _invoke_set(
-        rpr, monkeypatch, tmp_path,
-        collection=collection, labels=labels, opt_outs=opt_outs,
+        rpr,
+        monkeypatch,
+        tmp_path,
+        collection=collection,
+        labels=labels,
+        opt_outs=opt_outs,
     )
     assert invoked, "every scenario invokes at least the baseline reviewer"
 
     # Direction 1: approving exactly the invoked set satisfies the gate.
     passing = _run_gate(
-        dw, monkeypatch, collection=collection, labels=labels, approved_names=invoked,
+        dw,
+        monkeypatch,
+        collection=collection,
+        labels=labels,
+        approved_names=invoked,
         opt_outs=opt_outs,
     )
     assert passing.passed, (
@@ -431,8 +484,12 @@ def test_invoke_set_equals_gate_set(dw, rpr, rc, monkeypatch, tmp_path, label) -
     for withheld in invoked:
         remaining = [n for n in invoked if n != withheld]
         refusing = _run_gate(
-            dw, monkeypatch, collection=collection, labels=labels,
-            approved_names=remaining, opt_outs=opt_outs,
+            dw,
+            monkeypatch,
+            collection=collection,
+            labels=labels,
+            approved_names=remaining,
+            opt_outs=opt_outs,
         )
         assert not refusing.passed, (
             f"[{label}] gate PASSED without {withheld!r} approved, yet "
@@ -443,7 +500,11 @@ def test_invoke_set_equals_gate_set(dw, rpr, rc, monkeypatch, tmp_path, label) -
 
 
 def test_opted_out_reviewer_neither_invoked_nor_required(
-    dw, rpr, rc, monkeypatch, tmp_path,
+    dw,
+    rpr,
+    rc,
+    monkeypatch,
+    tmp_path,
 ) -> None:
     """#148: an opted-out contribution is out of BOTH sets, and the rest of the
     contributions still apply. On a PR closing a design issue and a backend
@@ -455,21 +516,33 @@ def test_opted_out_reviewer_neither_invoked_nor_required(
     opt_outs = _SCENARIO_OPT_OUTS["opted-out-one-of-two"]
 
     invoked = _invoke_set(
-        rpr, monkeypatch, tmp_path,
-        collection=collection, labels=labels, opt_outs=opt_outs,
+        rpr,
+        monkeypatch,
+        tmp_path,
+        collection=collection,
+        labels=labels,
+        opt_outs=opt_outs,
     )
     assert invoked == ["reviewer", "design-reviewer"]
 
     gate = _run_gate(
-        dw, monkeypatch, collection=collection, labels=labels,
-        approved_names=["reviewer", "design-reviewer"], opt_outs=opt_outs,
+        dw,
+        monkeypatch,
+        collection=collection,
+        labels=labels,
+        approved_names=["reviewer", "design-reviewer"],
+        opt_outs=opt_outs,
     )
     assert gate.passed, gate.refusal_message
     assert "backend-reviewer" not in gate.passed_via
 
     without_design = _run_gate(
-        dw, monkeypatch, collection=collection, labels=labels,
-        approved_names=["reviewer"], opt_outs=opt_outs,
+        dw,
+        monkeypatch,
+        collection=collection,
+        labels=labels,
+        approved_names=["reviewer"],
+        opt_outs=opt_outs,
     )
     assert not without_design.passed
     # The refusal names the opt-out with its reason, so the missing
@@ -501,22 +574,27 @@ def test_invoke_set_equals_gate_set_on_fail_closed(dw, rpr, rc, monkeypatch, tmp
     _mark_bootstrapped(cap_root)
     (tmp_path / ".claude" / "agents").mkdir(parents=True, exist_ok=True)
     monkeypatch.setattr(rpr, "resolve_capability_root", lambda arg: cap_root)
-    monkeypatch.setattr(rpr, "load_adopter_config", lambda root: {
-        "review": {"agents": {"local_registered": [{"name": "reviewer"}]}}
-    })
+    monkeypatch.setattr(
+        rpr,
+        "load_adopter_config",
+        lambda root: {"review": {"agents": {"local_registered": [{"name": "reviewer"}]}}},
+    )
     monkeypatch.setattr(rpr, "_read_members", lambda root, loader: [])
     monkeypatch.setattr(rpr, "resolve_invoker_identity", lambda config: "dev")
     monkeypatch.setattr(
-        rpr, "check_membership",
+        rpr,
+        "check_membership",
         lambda members, invoker: SimpleNamespace(allowed=True, refusal_message=""),
     )
     monkeypatch.setattr(rpr, "_find_issue_branch", lambda n: f"feat/{n}-x")
     monkeypatch.setattr(rpr, "_find_pr_for_branch", lambda branch, config: {"number": 99})
     invoked: list[str] = []
-    monkeypatch.setattr(
-        rpr, "_invoke_agent",
-        lambda name, pr, config, timeout=None, effort=None: (invoked.append(name), ("APPROVED", "body"))[1],
-    )
+
+    def fake_invoke(name, pr, config, timeout=None, effort=None, **_brief):
+        invoked.append(name)
+        return "APPROVED", "body"
+
+    monkeypatch.setattr(rpr, "_invoke_agent", fake_invoke)
     monkeypatch.setattr(rpr, "_post_comment", lambda pr, body, config: True)
     monkeypatch.setattr(sys, "argv", ["review-pr", "99"])
     assert rpr.main() == 2
@@ -524,7 +602,11 @@ def test_invoke_set_equals_gate_set_on_fail_closed(dw, rpr, rc, monkeypatch, tmp
 
     # done-work side: the same failure makes the gate refuse (fail-closed).
     gate = _run_gate(
-        dw, monkeypatch, collection=collection, labels=labels,
-        approved_names=["reviewer"], refs_rc=1,
+        dw,
+        monkeypatch,
+        collection=collection,
+        labels=labels,
+        approved_names=["reviewer"],
+        refs_rc=1,
     )
     assert not gate.passed

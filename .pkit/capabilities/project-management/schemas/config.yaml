@@ -1,7 +1,7 @@
 # Adopter config shape — binding carrier for the project-management capability.
 #
 # The real config lives in an adopter's `project/config.yaml`: the one file
-# every adopter hand-edits at install time (default branch, `gh:` host/owner,
+# every adopter hand-edits at install time (`gh:` host/owner,
 # Projects-v2 board flags, doc-path mappings, milestone categories, review
 # mode, mesh peers). This kit-shipped schema file exists so that:
 #   (a) it declares the COR-023 `binds_to:` glob, letting `pkit data validate`
@@ -47,9 +47,12 @@ pkit_schema: project-management:config
 
 # --- reference instance -------------------------------------------------
 
-# The repo's default branch — drives branch-name generation and base-branch
-# enforcement (per [project-management:DEC-013-branch-and-pr-conventions]).
-default_branch: main
+# The repo's default branch — what work is cut from and pull requests target
+# (per [project-management:DEC-013-branch-and-pr-conventions]) — is declared
+# once, for every reader, as the backbone's `repository.default-branch` in
+# `.pkit/project/config.yaml` (COR-054), `main` when undeclared. This file
+# declares no default branch; the 0.55.0 upgrade retires a `default_branch:`
+# key into the backbone's.
 
 # Legacy shim: the canonical workstream taxonomy lives in
 # `project/workstreams.yaml` (per [project-management:DEC-018-workstream-
@@ -95,6 +98,9 @@ has_projects_v2_board: false
 #       - capability: software-engineering
 #         reviewer: docs-reviewer
 #         reason: "Docs are reviewed by the tech-writing team."
+#   floors:                           # per DEC-032 — the diff-property floors (#1178)
+#     not_code:                       #   paths that satisfy no floor; absent = [".changes/**"]
+#       - ".changes/**"
 #
 # mesh_peers:                         # per DEC-022
 #   - github://owner/repo

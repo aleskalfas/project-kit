@@ -19,16 +19,27 @@ plain `changie new` writes exactly what this parser reads):
     body: Add the `pkit release` command.   # the note
     category: Added              # optional Keep-a-Changelog group (see below)
     pr: 465                      # optional PR reference for the changelog link
+    requires_backbone: release   # optional: raise the component's floor (see below)
 
-`category` and `pr` are optional and read from either the top level (a
-hand-written changeset) or a nested `custom:` map (what `changie new` writes
-via the `custom:` block in `.changie.yaml`). `category` is one of the
-Keep-a-Changelog groups (`Added`, `Changed`, `Fixed`, `Removed`,
+`category`, `pr` and `requires_backbone` are optional and read from either the
+top level (a hand-written changeset) or a nested `custom:` map (what `changie
+new` writes via the `custom:` block in `.changie.yaml`). `category` is one of
+the Keep-a-Changelog groups (`Added`, `Changed`, `Fixed`, `Removed`,
 `Deprecated`, `Security`); it is **orthogonal to the `kind` segment** (a
 `patch` may be `Fixed` or `Changed`) and defaults at render time when absent.
 It is irrelevant for `none` changesets, which move no version. `pr` is
 captured at author time (release-time derivation is unreliable under
 squash/rebase) and the changelog degrades gracefully when it is absent.
+
+`requires_backbone` declares that the component needs a backbone: the release
+step raises the lower bound of the component's `requires_backbone` range to it.
+`release` names the backbone the release ships; an explicit `X.Y.Z` names an
+already-shipped one — a release the tree records, at or below the current
+backbone. The parser keeps
+whatever was written — an unquoted number as its text in the file, and an empty
+value as no field at all; the release step and its lint refuse any other value,
+and the field on a changeset that cannot carry it
+(`project_kit.release.floor_problems`).
 
 changie also writes a `time` field; it is ignored here. `none` is the escape
 hatch — a declared "this touched a component's tree but is not a surface
@@ -42,6 +53,7 @@ import secrets
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any, cast
 
 import click
 from ruamel.yaml import YAML
@@ -54,6 +66,12 @@ _SEGMENT_RANK = {seg: rank for rank, seg in enumerate(SEGMENTS)}
 # The synthetic component name for the backbone tier (`.pkit/VERSION`), which
 # has no `package.yaml`. Reserved — a real component may not take this name.
 BACKBONE = "backbone"
+
+# The changeset field that raises a component's `requires_backbone` floor, named
+# after the package key it writes, and the value that names the backbone this
+# release ships. Its other value is an explicit, already-shipped `X.Y.Z`.
+FLOOR_FIELD = "requires_backbone"
+FLOOR_RELEASE = "release"
 
 _yaml = YAML(typ="safe")
 
@@ -71,6 +89,12 @@ class Changeset:
     path: Path
     category: str | None = None  # optional Keep-a-Changelog group; defaulted at render
     pr: str | None = None  # optional PR reference for the changelog link
+    requires_backbone: str | None = None  # the floor field as written; see FLOOR_FIELD
+
+    @property
+    def names_release(self) -> bool:
+        """Whether the floor field names the backbone this release ships (`release`)."""
+        return self.requires_backbone == FLOOR_RELEASE
 
 
 @dataclass(frozen=True)
@@ -155,8 +179,16 @@ def discover_components(source_kit: Path) -> list[Component]:
 
 def parse_changeset(path: Path) -> Changeset:
     """Parse one changeset file. Raises `click.ClickException` on a bad shape."""
-    data = _yaml.load(path.read_text(encoding="utf-8")) or {}
-    if not isinstance(data, dict):
+    return parse_changeset_text(path.read_text(encoding="utf-8"), path)
+
+
+def parse_changeset_text(text: str, path: Path) -> Changeset:
+    """Parse a changeset from its text, as the file at `path` holds it — or held
+    it, when the text is read from another revision. Raises
+    `click.ClickException` on a bad shape."""
+    loaded: object = _yaml.load(text) or {}
+    data = _as_mapping(loaded)
+    if not isinstance(loaded, dict):
         raise click.ClickException(f"changeset {path.name} is not a YAML mapping")
 
     component = data.get("component")
@@ -170,12 +202,11 @@ def parse_changeset(path: Path) -> Changeset:
             f"changeset {path.name} has kind {segment!r} — expected one of {', '.join(SEGMENTS)}"
         )
 
-    # `category` / `pr` are optional and accepted either top-level (a
-    # hand-written changeset) or under changie's nested `custom:` map. A
-    # missing value is never an error — the changelog defaults the category
-    # and omits the link.
-    custom = data.get("custom")
-    custom = custom if isinstance(custom, dict) else {}
+    # `category` / `pr` / the floor field are optional and accepted either
+    # top-level (a hand-written changeset) or under changie's nested `custom:`
+    # map. A missing value is never an error — the changelog defaults the
+    # category and omits the link, and no floor moves.
+    custom = _as_mapping(data.get("custom"))
     category = custom.get("category") or data.get("category")
     pr = custom.get("pr") or data.get("pr")
 
@@ -186,7 +217,44 @@ def parse_changeset(path: Path) -> Changeset:
         path=path,
         category=str(category).strip() if category else None,
         pr=str(pr).strip() if pr else None,
+        requires_backbone=_floor_field(custom, data, text),
     )
+
+
+def _floor_field(custom: dict[str, Any], data: dict[str, Any], text: str) -> str | None:
+    """The floor field as written, under `custom:` first, then top-level; None
+    when neither carries a value — an empty or whitespace-only one declares
+    nothing.
+
+    YAML reads an unquoted `1.150` as the number 1.15, which would name a
+    different version than the one written, so a value that is not a string is
+    kept as its text in the file, for the release step to refuse by what the
+    author wrote."""
+    for source, nested in ((custom, True), (data, False)):
+        value = source.get(FLOOR_FIELD)
+        if value is None:
+            continue
+        if isinstance(value, str):
+            if value.strip():
+                return value.strip()
+            continue
+        return _scalar_as_written(text, FLOOR_FIELD, nested=nested) or str(value)
+    return None
+
+
+def _scalar_as_written(text: str, key: str, *, nested: bool) -> str | None:
+    """The text of `key`'s scalar value on its line in `text` — on an indented
+    line when `nested` (under `custom:`), else at the start of one."""
+    line = rf"(?m)^([ \t]*){re.escape(key)}:[ \t]*([^\s#][^#\n]*?)[ \t]*(?:#[^\n]*)?$"
+    for match in re.finditer(line, text):
+        if bool(match.group(1)) == nested:
+            return match.group(2)
+    return None
+
+
+def _as_mapping(value: object) -> dict[str, Any]:
+    """`value` when it is a YAML mapping, else an empty one."""
+    return cast("dict[str, Any]", value) if isinstance(value, dict) else {}
 
 
 def load_changesets(repo_root: Path) -> list[Changeset]:

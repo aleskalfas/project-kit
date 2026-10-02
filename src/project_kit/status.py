@@ -52,7 +52,11 @@ def _report_status() -> None:
     source_pkit = os.environ.get("PKIT_SOURCE_BIN") or str(Path(__file__).resolve())
 
     click.echo()
-    click.echo(cli_render.style("title", "project-kit status — how the methodology is wired in this project"))
+    click.echo(
+        cli_render.style(
+            "title", "project-kit status — how the methodology is wired in this project"
+        )
+    )
     click.echo()
     click.echo(f"  {'Project root:':<22} {target_root}")
     click.echo(f"  {'Source pkit:':<22} {source_pkit}")
@@ -61,7 +65,9 @@ def _report_status() -> None:
     pkit_dir = target_root / ".pkit"
     if not pkit_dir.is_dir():
         click.echo()
-        click.echo("  " + cli_render.style("strong", "project-kit is NOT installed in this project."))
+        click.echo(
+            "  " + cli_render.style("strong", "project-kit is NOT installed in this project.")
+        )
         click.echo("  Run 'pkit init' from this project's root to install.")
         click.echo()
         return
@@ -226,9 +232,7 @@ def _report_capabilities(target_root: Path, source_kit: Path) -> None:
     # from kit source.
     if installed:
         labelled = [
-            f"{name} (incubated)"
-            if origins.get(name) == caps.INCUBATED_IN_REPO
-            else name
+            f"{name} (incubated)" if origins.get(name) == caps.INCUBATED_IN_REPO else name
             for name in installed
         ]
         installed_value = ", ".join(labelled)
@@ -249,7 +253,7 @@ def _report_suggestions(target_root: Path, source_kit: Path) -> None:
 
     try:
         found = plans.suggest(target_root, source_kit)
-    except Exception:  # noqa: BLE001 — soft probe
+    except Exception:  # soft probe
         return
     if not found:
         return
@@ -272,13 +276,16 @@ def _report_documentation(target_root: Path) -> None:
     click.echo()
     click.echo("  " + cli_render.style("heading", "Documentation"))
     roots = docs_roots.resolve_roots(target_root)
-    for label, audience in (("user root", docs_roots.USER_KEY), ("internal root", docs_roots.INTERNAL_KEY)):
+    for label, audience in (
+        ("user root", docs_roots.USER_KEY),
+        ("internal root", docs_roots.INTERNAL_KEY),
+    ):
         path, source = roots.for_audience(audience)
         click.echo(f"    {label:<18} {path.as_posix()}/   ({source.value})")
     try:
         inside = docs_roots.inside_root(target_root, roots)
         outside = docs_roots.outside_root(target_root, roots)
-    except Exception:  # noqa: BLE001 — soft probe; a broken overlay is validate's finding
+    except Exception:  # soft probe; a broken overlay is validate's finding
         inside, outside = [], []
     for label, where, recorded in (
         ("inside root", "inside", inside),
@@ -311,7 +318,7 @@ def _report_friction(target_root: Path) -> None:
     click.echo("  " + cli_render.style("heading", "Friction"))
     try:
         settings = read_friction_settings(target_root)
-    except Exception:  # noqa: BLE001 — soft probe; a broken configuration is validate's finding
+    except Exception:  # soft probe; a broken configuration is validate's finding
         return
     # A value the reader does not recognise falls back to the default, and says so.
     mode_source = "explicit" if settings.mode == settings.mode_or_default else "default"
@@ -347,7 +354,7 @@ def _report_rule_sets(target_root: Path) -> None:
     try:
         discovery = rule_sets.discover_rule_sets(target_root)
         checks = rule_sets.pin_checks(discovery)
-    except Exception:  # noqa: BLE001 — soft probe; a broken rule set is validate's finding
+    except Exception:  # soft probe; a broken rule set is validate's finding
         return
     if not discovery.rule_sets and not discovery.unreadable:
         click.echo(f"    {'found':<18} none")
@@ -397,7 +404,7 @@ def _report_connections(target_root: Path) -> None:
     click.echo("  " + cli_render.style("heading", "Connections"))
     try:
         wiring = connections.shared_wiring(target_root)
-    except Exception:  # noqa: BLE001 — soft probe; a broken declaration is validate's finding
+    except Exception:  # soft probe; a broken declaration is validate's finding
         return
     for line in (
         *_role_lines(wiring),
@@ -567,11 +574,9 @@ def _report_data_points(target_root: Path) -> None:
     try:
         prefix = connections.fillers_prefix(target_root)
         resolution = data_points.shared_resolution(target_root)
-    except Exception:  # noqa: BLE001 — soft probe; a broken declaration is validate's finding
+    except Exception:  # soft probe; a broken declaration is validate's finding
         return
-    click.echo(
-        f"    {'fillers':<18} {prefix.as_posix()}/   ({resolution.filler_files} file(s))"
-    )
+    click.echo(f"    {'fillers':<18} {prefix.as_posix()}/   ({resolution.filler_files} file(s))")
     if not resolution.points:
         click.echo(f"    {'points':<18} none defined")
         return
@@ -590,8 +595,13 @@ def _data_point_lines(point: ResolvedPoint) -> list[str]:
 
     A command filler says whether its command declares the query contract —
     needing no network among its limits — which is declared and trusted, never
-    enforced: nothing holds a command to no network (ADR-057 point 4).
+    enforced (COR-050 point 2): nothing holds a command to no network (ADR-057
+    point 4). One that reads beyond the working tree, once asked, says what it
+    read and at which commit, since its answer depends on them (COR-052 point
+    7).
     """
+    from project_kit.data_points import reads_described
+
     default = f" · default {point.participation}" if point.participation else ""
     outcome = "resolved" if point.resolved else f"unresolved: {point.why}"
     lines = [
@@ -619,7 +629,8 @@ def _data_point_lines(point: ResolvedPoint) -> list[str]:
                 if filler.query_contract
                 else "no query-contract declaration"
             )
-            how = f"{filler.name} ({filler.supplies}; {declared})"
+            reads = f"; reads {reads_described(filler.reads)}" if filler.reads else ""
+            how = f"{filler.name} ({filler.supplies}; {declared}{reads})"
         reason = f" — {filler.reason}" if filler.reason else ""
         lines.append(f"{_LIST_INDENT}{'filler':<8} {how}: {filler.state.value}{reason}")
     return lines
@@ -645,7 +656,7 @@ def _report_decisions(target_root: Path) -> None:
 
     try:
         adr_dir = resolve_adr_records_dir(target_root)
-    except Exception:  # noqa: BLE001 — soft probe; absence is fine
+    except Exception:  # soft probe; absence is fine
         return
     adr_count = _count_files(adr_dir, "ADR-*.md")
     click.echo(f"    {'adr':<18} {adr_count} records")
@@ -695,9 +706,9 @@ def _count_artifacts(parent: Path) -> int:
         return 0
     count = 0
     for entry in parent.iterdir():
-        if entry.is_file() and entry.suffix == ".md":
-            count += 1
-        elif entry.is_dir() and (entry / f"{entry.name}.md").is_file():
+        if (entry.is_file() and entry.suffix == ".md") or (
+            entry.is_dir() and (entry / f"{entry.name}.md").is_file()
+        ):
             count += 1
     return count
 
@@ -739,7 +750,7 @@ def _has_kit_marker(agent_file: Path) -> bool:
     """
     try:
         with agent_file.open("r", encoding="utf-8") as f:
-            head = "".join(line for _, line in zip(range(5), f))
+            head = "".join(line for _, line in zip(range(5), f, strict=False))
     except OSError:
         return False
     return _KIT_AGENT_MARKER in head

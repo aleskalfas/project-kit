@@ -6,15 +6,29 @@ moves through guarded transitions, and renders a self-explaining status view.
 It knows nothing about issues, docs, screens, or trips — only states,
 transitions, gates, a position, and a journal.
 
-Ship-narrow (COR-033 P5 + COR-032): singleton or keyed subject, `inferred`
-detection, static transition targets. A keyed process operates per a supplied
-subject identifier (required — no singleton default) and never enumerates its
-subjects; the engine simply threads that identifier through every predicate it
-runs and through the per-subject journal path. The remaining deferred extension
-points (stored / hybrid detection, hooks, breadth, resolver / open-region
-targets, cross-subject enumeration/cascade, overflow/hand-off orchestration) are
-not implemented here; the shape contract's enums already reject their values, so
-an unrecognised value fails closed.
+Ship-narrow (COR-033 P5 + COR-032): singleton or keyed subject, the two live
+detection modes, static transition targets. A keyed process operates per a
+supplied subject identifier (required — no singleton default) and never
+enumerates its subjects; the engine simply threads that identifier through every
+predicate it runs and through the per-subject journal path. The remaining
+deferred extension points (stored / hybrid detection, hooks, breadth, resolver /
+open-region targets, cross-subject enumeration/cascade, overflow/hand-off
+orchestration) are not implemented here; the shape contract's enums already
+reject their values, so an unrecognised value fails closed.
+
+Detection (COR-033 point 5, ADR-062): every state of a definition declares the
+same mode. Under `inferred` each state's predicate answers "is the subject in
+this state?" (`{result, reason}`); under `classified` a predicate — a
+*classifier* — answers "which state is the subject in?" (`{state, reason}`),
+and the states that name it share its one answer through the runner's answer
+memo. The `state` reading lives in position resolution alone: gates,
+invariants, `resume_when`, entry guards and the cascade's `members` /
+`membership` read `result` exactly as before, whatever their answer carries. A
+definition whose states declare more than one mode resolves no position — no
+detection runs, and every state is indeterminate for the one reason naming the
+modes. An answer a classifier gives that the engine cannot read leaves each of
+its states indeterminate, never "none of these"; a classifier says "none of
+mine" only by answering `state: null` with a reason.
 
 Composition (COR-036): the engine's one genuinely-new capability — it RESOLVES
 another process's terminal outcome and exposes it as an input to a parent's
@@ -47,10 +61,11 @@ position and stops; it never descends into B's gate back to A), so it cannot
 deepen the stack; it is bounded-safe incidentally, not by the guard. The guard is
 retained as cheap, correct insurance and as the right seam to extend if
 nesting-through-gates is ever added (at which point the transitive case becomes
-reachable and the stack catches it). While the inner has not reached a wired terminal outcome, the parent is parked as the
-`awaiting-subprocess-outcome` blocked reason — an AUTO-CLEARING overlay reusing
-COR-034's model, where the "condition" is the single-level subprocess resolution
-carried by the subprocess-outcome gates (no `resume_when`; it clears when a wired outcome
+reachable and the stack catches it). While the inner has not reached a wired
+terminal outcome, the parent is parked as the `awaiting-subprocess-outcome`
+blocked reason — an AUTO-CLEARING overlay reusing COR-034's model, where the
+"condition" is the single-level subprocess resolution carried by the
+subprocess-outcome gates (no `resume_when`; it clears when a wired outcome
 resolves and a legal move opens). All coupling lives in the parent; the inner
 references nothing upward, so it stays reusable. Resolution is READ-ONLY.
 
@@ -171,7 +186,12 @@ subprocess. Predicate commands the engine runs are themselves resolved through
 the owning capability's `package.yaml` command registry and run under the
 predicate policy of the backbone's one command runner (`command_runner`,
 ADR-057 point 5): explicit argv — never a shell string — in their own process
-group, bounded, and killed as a group when they overrun.
+group, bounded, and killed as a group when they overrun. A predicate that gives
+no answer is indeterminate, fail-closed, and the engine says why wherever it
+reports the verdict: the reason names how the run ended, and what the predicate
+wrote on stderr rides beside it (`stderr_tail` — the stream's tail, bounded and
+stripped of escape sequences and control characters), attributed to the
+predicate in the narrative views and in a field of its own in the JSON ones.
 """
 
 from __future__ import annotations
@@ -180,17 +200,37 @@ import json
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from jsonschema import Draft202012Validator
 from ruamel.yaml import YAML
 
 from project_kit import cli_render, process_journal
-from project_kit.command_runner import Ending, registered_commands, run_command
-from project_kit.validators import Finding, Outcome
+from project_kit.command_runner import (
+    Ending,
+    diagnostic_tail,
+    registered_commands,
+    run_command,
+)
 from project_kit.install import find_target_root
+from project_kit.validators import Finding, Outcome
 
 _yaml = YAML(typ="safe")
+
+# The detection modes this engine implements (COR-033 point 5). `inferred` asks
+# each state's predicate whether the subject is in that state; `classified` asks
+# a predicate which state the subject is in. A definition declares one of them
+# for every state; any other value is a mode this engine does not implement.
+INFERRED = "inferred"
+CLASSIFIED = "classified"
+DETECTION_MODES = (INFERRED, CLASSIFIED)
+
+# What a refused move says while the position is indeterminate — `can_move`'s
+# refusal, and the reason `status` gives each move it lists from there.
+_INDETERMINATE_REFUSAL = (
+    "position is indeterminate — a detection predicate could not be evaluated; "
+    "refusing to move (fail-closed)"
+)
 
 # Singleton subject key (COR-033 P5: ship-narrow, one journey per process).
 # A singleton process has no subject id, so every singleton journey tracks under
@@ -233,24 +273,49 @@ class PredicateOutcome:
 
     `indeterminate` is the fail-closed flag: the predicate errored, timed out,
     returned unparseable JSON, or could not be resolved. When set, `result` is
-    False and `reason` explains why it could not be evaluated.
+    False and `reason` explains why it could not be evaluated — naming how the
+    run ended — and `stderr_tail` carries what the predicate itself said on
+    standard error, bounded and made safe to show (`PredicateFailure`).
     """
 
     result: bool
     reason: str
     indeterminate: bool = False
     detail: dict[str, Any] = field(default_factory=dict)
+    stderr_tail: str = ""
+
+
+@dataclass(frozen=True)
+class PredicateFailure:
+    """Why a predicate gave the engine no answer: fail-closed, indeterminate.
+
+    `cause` is the engine's own account, a clause after "it": `exited 2`,
+    `did not answer within 30 s and was stopped`, `could not start: …`,
+    `printed no JSON document on its standard output`. `stderr_tail` is the
+    predicate's own last words on standard error — its last lines, bounded in
+    lines and bytes, escape sequences and control characters removed
+    (`command_runner.diagnostic_tail`) — or "" when it said nothing or nothing
+    was read. Carried beside the reason rather than inside it: the cause is
+    the engine's, the words are the predicate's, attributed to it wherever
+    they are shown."""
+
+    cause: str
+    stderr_tail: str = ""
 
 
 @dataclass
 class PredicateRunner:
     """Resolves + runs a capability's predicate commands, caching each result.
 
-    Caching is per-invocation per `(command, args)` (COR-033 performance note):
-    a predicate is evaluated at most once even when several transitions share
-    it. The cache is keyed before the gate-kind interpretation, so the same
-    command reused as a detection predicate and a gate predicate runs once;
-    each caller applies its own interpretation to the raw payload.
+    Caching is per runner per `(command, with)` — the answer memo (COR-033
+    performance note, ADR-062 point 11): a predicate is evaluated at most once
+    even when several transitions share it, and a classifier runs once for all
+    the states that name it. The cache is keyed before any interpretation, so
+    the same command reused as a detection predicate and a gate predicate runs
+    once; each caller applies its own interpretation to the raw payload. An
+    engine owns one runner, so the subject an invocation names has one memo for
+    the whole invocation; an embedded inner process or a cascade member gets a
+    fresh engine, and with it a fresh memo, each time its position is resolved.
     """
 
     capability: str
@@ -258,23 +323,25 @@ class PredicateRunner:
     repo_root: Path
     subject: str
     _command_registry: dict[str, Path] = field(default_factory=dict)
-    _raw_cache: dict[tuple[str, tuple[tuple[str, Any], ...]], dict[str, Any] | None] = field(
-        default_factory=dict
+    _raw_cache: dict[tuple[str, tuple[tuple[str, Any], ...]], dict[str, Any] | PredicateFailure] = (
+        field(default_factory=dict)
     )
 
     def __post_init__(self) -> None:
         self._command_registry = _load_command_registry(self.capability_dir)
 
-    def evaluate_detection(self, predicate: dict[str, Any]) -> PredicateOutcome:
-        """Run a detection predicate; the position is the state whose detection
-        returns result=True. Uses the predicate's own `result`."""
+    def evaluate_detection(
+        self, predicate: dict[str, Any], *, kind: str = "detection"
+    ) -> PredicateOutcome:
+        """Run a predicate and read its own `result` — the reading of an
+        `inferred` detection, and of every predicate outside position
+        resolution that answers `{result, reason}`: an invariant's check, a
+        `membership` test, a `resume_when`, which name themselves by `kind` when
+        they cannot be evaluated. A `state` in the answer is never read here
+        (ADR-062 point 5); an answer with no `result` is false."""
         payload = self._run(predicate)
-        if payload is None:
-            return PredicateOutcome(
-                result=False,
-                reason=f"couldn't evaluate detection predicate {predicate.get('run')!r}",
-                indeterminate=True,
-            )
+        if isinstance(payload, PredicateFailure):
+            return _unevaluable(kind, predicate, payload)
         result = bool(payload.get("result", False))
         reason = str(payload.get("reason", ""))
         return PredicateOutcome(result=result, reason=reason, detail=dict(payload))
@@ -292,20 +359,17 @@ class PredicateRunner:
         silent pass.
         """
         kind = gate.get("kind")
-        predicate = gate.get("predicate")
-        if not isinstance(predicate, dict):
+        declared = gate.get("predicate")
+        if not isinstance(declared, dict):
             return PredicateOutcome(
                 result=False,
                 reason="gate has no predicate to evaluate",
                 indeterminate=True,
             )
+        predicate = cast("dict[str, Any]", declared)
         payload = self._run(predicate)
-        if payload is None:
-            return PredicateOutcome(
-                result=False,
-                reason=f"couldn't evaluate gate predicate {predicate.get('run')!r}",
-                indeterminate=True,
-            )
+        if isinstance(payload, PredicateFailure):
+            return _unevaluable("gate", predicate, payload)
 
         if kind == "deterministic":
             return PredicateOutcome(
@@ -351,17 +415,25 @@ class PredicateRunner:
         `ProcessError` (a definition bug, per `_invoke`); callers that must not
         hard-fail on it catch and fold it into their indeterminacy.
         """
+        payload = self._run(predicate)
+        return payload if isinstance(payload, dict) else None
+
+    def answer(self, predicate: dict[str, Any]) -> dict[str, Any] | PredicateFailure:
+        """Resolve + run a predicate and return its parsed JSON object, or the
+        `PredicateFailure` saying why there is none — through the answer memo,
+        with no interpretation. For the engine's own readings that are not a
+        `result`: a classifier's `{state, reason}` and a cascade's `members`."""
         return self._run(predicate)
 
-    def _run(self, predicate: dict[str, Any]) -> dict[str, Any] | None:
-        """Resolve + run a predicate command, returning parsed JSON or None.
-
-        None means indeterminate (unresolved name, non-zero exit, timeout, or
-        unparseable JSON) — the caller maps that to a fail-closed outcome.
+    def _run(self, predicate: dict[str, Any]) -> dict[str, Any] | PredicateFailure:
+        """Resolve + run a predicate command, returning its parsed JSON object,
+        or the `PredicateFailure` saying why there is none (unresolved name
+        shape, no start, non-zero exit, timeout, unparseable output, an answer
+        that is not an object) — the caller maps that to a fail-closed outcome.
         """
         run_name = predicate.get("run")
         if not isinstance(run_name, str) or not run_name:
-            return None
+            return PredicateFailure("names no command to run")
         with_args = predicate.get("with")
         cache_key = (run_name, _freeze(with_args))
         if cache_key in self._raw_cache:
@@ -371,7 +443,7 @@ class PredicateRunner:
         self._raw_cache[cache_key] = payload
         return payload
 
-    def _invoke(self, run_name: str, with_args: Any) -> dict[str, Any] | None:
+    def _invoke(self, run_name: str, with_args: Any) -> dict[str, Any] | PredicateFailure:
         script = self._command_registry.get(run_name)
         if script is None:
             # Unregistered command: a self-explaining engine error, surfaced to
@@ -387,13 +459,35 @@ class PredicateRunner:
         # first argv to every predicate, so a keyed predicate resolves the right
         # unit's reality. Singleton processes pass the fixed SINGLETON_SUBJECT.
         # The predicate policy over the shared runner: the caller's environment
-        # unchanged (a predicate may reach the network), and anything but an
-        # answered JSON object — no start, a timeout, a non-zero exit,
-        # unparseable output — is indeterminate, fail-closed.
+        # unchanged but for the run's deadline (a predicate may reach the
+        # network), and anything but an answered JSON object — no start, a
+        # timeout, a non-zero exit, unparseable output — is indeterminate,
+        # fail-closed, carrying how the run ended and what the predicate said.
         run = run_command(script, [self.subject, "--json"], cwd=self.repo_root)
-        if run.ending is not Ending.ANSWERED or not isinstance(run.document, dict):
-            return None
+        if run.ending is not Ending.ANSWERED:
+            return PredicateFailure(run.ending_described, run.stderr_tail)
+        if not isinstance(run.document, dict):
+            return PredicateFailure("answered with JSON that is not an object", run.stderr_tail)
         return run.document
+
+
+def _unevaluable(
+    kind: str, predicate: dict[str, Any], failure: PredicateFailure
+) -> PredicateOutcome:
+    """The fail-closed outcome of a `kind` predicate that gave no answer: the
+    reason names the predicate and how its run ended; its own words ride
+    beside, in `stderr_tail`."""
+    return PredicateOutcome(
+        result=False,
+        reason=f"couldn't evaluate {kind} predicate {predicate.get('run')!r}: it {failure.cause}",
+        indeterminate=True,
+        stderr_tail=failure.stderr_tail,
+    )
+
+
+def _mapping(value: Any) -> dict[str, Any] | None:
+    """`value` as a definition's mapping, or None when it is not one."""
+    return cast("dict[str, Any]", value) if isinstance(value, dict) else None
 
 
 def _freeze(value: Any) -> tuple[tuple[str, Any], ...]:
@@ -401,6 +495,124 @@ def _freeze(value: Any) -> tuple[tuple[str, Any], ...]:
     if not isinstance(value, dict):
         return ()
     return tuple(sorted((str(k), repr(v)) for k, v in value.items()))
+
+
+# --- classified detection (ADR-062) ----------------------------------------
+
+# What makes two detections name one classifier: the same command under the
+# same `with` mapping (ADR-062 point 2) — the answer memo's key.
+ClassifierKey = tuple[str, tuple[tuple[str, Any], ...]]
+
+
+def _classifier_key(predicate: dict[str, Any]) -> ClassifierKey:
+    """The classifier a `classified` detection's predicate names."""
+    run_name = predicate.get("run")
+    return (
+        run_name if isinstance(run_name, str) else repr(run_name),
+        _freeze(predicate.get("with")),
+    )
+
+
+@dataclass(frozen=True)
+class _ClassifierReading:
+    """One classifier's answer, read once for all of its states (ADR-062 point 3).
+
+    `placed` is the state the answer places the subject in, or None. `outcome`
+    is what each of its other states reads: false when the answer was readable
+    (it named another of its states, or `null` with a reason that is not
+    blank), indeterminate
+    when the run gave no answer or one the engine cannot read."""
+
+    placed: str | None
+    outcome: PredicateOutcome
+
+    @property
+    def placed_nowhere(self) -> bool:
+        """It answered `state: null` with a reason that is not blank — none of
+        its states."""
+        return self.placed is None and not self.outcome.indeterminate
+
+    def outcome_for(self, state_id: str) -> PredicateOutcome:
+        if state_id == self.placed:
+            return PredicateOutcome(
+                result=True, reason=self.outcome.reason, detail=self.outcome.detail
+            )
+        return self.outcome
+
+
+def _read_classifier(
+    predicate: dict[str, Any],
+    answer: dict[str, Any] | PredicateFailure,
+    its_states: list[str],
+    declared: set[str],
+) -> _ClassifierReading:
+    """Read a classifier's answer `{state, reason}` by ADR-062 point 3.
+
+    `state` naming one of `its_states` places the subject there; `null` with a
+    `reason` that is a string and not blank places it in none of them — the
+    reason is all that tells a deliberate "none" from an accident, so one of
+    whitespace alone is no reason. Anything else is unreadable and leaves every
+    one of its states indeterminate: no `state` key, `null` without a reason or
+    with a blank one, a value neither a string nor `null`, the empty string, or
+    a string that is not the id of one of its states — compared exactly, with
+    no trimming or case folding. A `result` beside `state` is not read. No
+    answer at all is indeterminate as for any predicate."""
+    if isinstance(answer, PredicateFailure):
+        return _ClassifierReading(None, _unevaluable("detection", predicate, answer))
+    if "state" not in answer:
+        return _unreadable(predicate, answer, "no `state` key")
+    value = answer["state"]
+    reason = answer.get("reason")
+    if value is None:
+        if not isinstance(reason, str):
+            return _unreadable(predicate, answer, "`state` is null without a reason")
+        if not reason.strip():
+            return _unreadable(predicate, answer, "`state` is null with a blank reason")
+        return _ClassifierReading(
+            None, PredicateOutcome(result=False, reason=reason, detail=dict(answer))
+        )
+    if not isinstance(value, str):
+        return _unreadable(predicate, answer, "`state` is neither a string nor null")
+    if not value:
+        return _unreadable(predicate, answer, "`state` is the empty string")
+    if value not in its_states:
+        why = (
+            "`state` names a state another predicate detects"
+            if value in declared
+            else "`state` names a state the definition does not declare"
+        )
+        return _unreadable(predicate, answer, why)
+    readable = PredicateOutcome(result=False, reason=str(reason or ""), detail=dict(answer))
+    return _ClassifierReading(value, readable)
+
+
+def _unreadable(predicate: dict[str, Any], answer: dict[str, Any], why: str) -> _ClassifierReading:
+    """An answer the engine cannot read: every state of the classifier is
+    indeterminate. The reason names the predicate and quotes what it answered,
+    bounded and with control characters removed as a standard-error tail is."""
+    quoted = diagnostic_tail(json.dumps(answer, sort_keys=True, ensure_ascii=False))
+    outcome = PredicateOutcome(
+        result=False,
+        reason=(
+            f"couldn't read the answer of detection predicate {predicate.get('run')!r}: "
+            f"{why}; it answered {quoted}"
+        ),
+        indeterminate=True,
+    )
+    return _ClassifierReading(None, outcome)
+
+
+def _modes_described(modes: dict[str | None, list[str]]) -> str:
+    """Each declared detection mode with the states that declare it; a detection
+    that declares none is "no mode"."""
+    return "; ".join(
+        f"{'no mode' if mode is None else repr(mode)} by {_states_listed(ids)}"
+        for mode, ids in modes.items()
+    )
+
+
+def _states_listed(state_ids: list[str]) -> str:
+    return ", ".join(repr(state_id) for state_id in state_ids)
 
 
 def _load_command_registry(capability_dir: Path) -> dict[str, Path]:
@@ -425,10 +637,42 @@ class ProcessDefinition:
     process_id: str
     capability_dir: Path
     data: dict[str, Any]
+    # The file the definition was read from, when it was read from one.
+    source: Path | None = None
 
     @property
     def states(self) -> list[dict[str, Any]]:
         return [s for s in self.data.get("states", []) if isinstance(s, dict)]
+
+    def detection_modes(self) -> dict[str | None, list[str]]:
+        """Each detection mode the states declare, with the states that declare
+        it, in declaration order; None for a detection that declares no mode.
+        COR-033 point 5: a definition has one. A state with no detection
+        declares none and is not counted."""
+        modes: dict[str | None, list[str]] = {}
+        for state in self.states:
+            detection = _mapping(state.get("detection"))
+            if detection is None:
+                continue
+            mode = detection.get("mode")
+            label = mode if isinstance(mode, str) or mode is None else repr(mode)
+            modes.setdefault(label, []).append(str(state.get("id", "")))
+        return modes
+
+    def classifiers(self) -> dict[ClassifierKey, list[str]]:
+        """Each classifier the `classified` detections name — one command under
+        one `with` mapping (ADR-062 point 2) — with the states that name it, in
+        declaration order: its states."""
+        classifiers: dict[ClassifierKey, list[str]] = {}
+        for state in self.states:
+            detection = _mapping(state.get("detection"))
+            if detection is None or detection.get("mode") != CLASSIFIED:
+                continue
+            predicate = _mapping(detection.get("predicate"))
+            if predicate is not None:
+                key = _classifier_key(predicate)
+                classifiers.setdefault(key, []).append(str(state.get("id", "")))
+        return classifiers
 
     @property
     def transitions(self) -> list[dict[str, Any]]:
@@ -567,15 +811,40 @@ class TransitionCheck:
 class Position:
     """The resolved position of a subject.
 
-    `state_id` is None when no state's detection predicate matched (the subject
-    has no inferable position). `indeterminate` is True when at least one
-    detection predicate could not be evaluated, so the position cannot be
-    trusted — a fail-closed condition for `move`.
+    `state_id` is None when no state's detection is true (the subject has no
+    position). `indeterminate` is True when no state's detection is true and at
+    least one could not be evaluated, so the position cannot be trusted — a
+    fail-closed condition for `move`. `placed_nowhere` carries, when no state's
+    detection is true, each classifier that answered `state: null`, its command
+    and the reason it gave (ADR-062 point 14): what an operator is shown beside
+    "no position", and what `status --json` carries as `position.placed_nowhere`.
     """
 
     state_id: str | None
     indeterminate: bool
     detection_reasons: dict[str, PredicateOutcome] = field(default_factory=dict)
+    placed_nowhere: tuple[tuple[str, str], ...] = ()
+
+    @property
+    def unevaluated(self) -> dict[str, PredicateOutcome]:
+        """The states whose detection could not be evaluated, each with the
+        outcome saying why — what an indeterminate position is made of."""
+        return {sid: o for sid, o in self.detection_reasons.items() if o.indeterminate}
+
+    def unevaluated_by_cause(self) -> list[tuple[list[str], PredicateOutcome]]:
+        """The unevaluated states grouped by cause — one reason and one
+        standard-error tail — in declaration order. A classifier that gives no
+        readable answer, or a definition that mixes modes, leaves several
+        states indeterminate for one cause; the narrative views and a refusal
+        show it once, with those states listed beside it (ADR-062 point 13)."""
+        groups: dict[tuple[str, str], tuple[list[str], PredicateOutcome]] = {}
+        for state_id, outcome in self.unevaluated.items():
+            key = (outcome.reason, outcome.stderr_tail)
+            if key in groups:
+                groups[key][0].append(state_id)
+            else:
+                groups[key] = ([state_id], outcome)
+        return list(groups.values())
 
 
 @dataclass(frozen=True)
@@ -620,6 +889,8 @@ class BlockedState:
     since: str | None = None
     assignee: str | None = None
     prompt: str | None = None
+    # What the `resume_when` predicate said when it could not be evaluated.
+    stderr_tail: str = ""
 
 
 @dataclass(frozen=True)
@@ -645,7 +916,8 @@ class InvariantOutcome:
     failure was an evaluation failure rather than a confirmed False.
 
     `why` is the declaration's explanatory prose, surfaced on a violation.
-    `reason` is the predicate's own reason (or the indeterminacy explanation).
+    `reason` is the predicate's own reason (or the indeterminacy explanation),
+    and `stderr_tail` what the check said when it could not be evaluated.
     """
 
     invariant_id: str
@@ -653,6 +925,7 @@ class InvariantOutcome:
     why: str
     reason: str
     indeterminate: bool = False
+    stderr_tail: str = ""
 
 
 @dataclass(frozen=True)
@@ -666,7 +939,9 @@ class SubprocessResolution:
     resolved (a cyclic embedding, an unresolvable inner address, a keyed inner
     with no supplied subject, or an indeterminate inner position). When set,
     `outcome` is None and `reason` explains why — and every `subprocess-outcome`
-    gate reading it fails closed, exactly like an unrecognised gate kind.
+    gate reading it fails closed, exactly like an unrecognised gate kind. When
+    the inner's position is indeterminate, `stderr_tail` carries what its
+    unevaluable detection predicate said.
 
     Single-inner: this resolves ONE determinate inner subject. It never
     enumerates a keyed inner's subjects (that breadth is cascade, deferred).
@@ -676,6 +951,7 @@ class SubprocessResolution:
     outcome: str | None
     indeterminate: bool
     reason: str
+    stderr_tail: str = ""
 
 
 @dataclass(frozen=True)
@@ -699,7 +975,8 @@ class CascadeResolution:
     read that confirms zero members is held `indeterminate=True` (gate shut), not
     treated as an empty set, so `satisfied` never fail-OPENS on a broken read.
     `reached` / `total` are the audit colour (how many of how many members
-    reached the named outcome).
+    reached the named outcome). When a predicate the fold ran could not be
+    evaluated, `stderr_tail` carries what it said.
 
     Single-level breadth (COR-037): the engine resolves each member's outcome via
     COR-036's single-inner resolution (the per-subject step) and folds — it adds
@@ -716,6 +993,7 @@ class CascadeResolution:
     opened: bool
     indeterminate: bool
     reason: str
+    stderr_tail: str = ""
 
 
 class ProcessEngine:
@@ -852,32 +1130,63 @@ class ProcessEngine:
     # --- position resolution ---------------------------------------------
 
     def resolve_position(self) -> Position:
-        """Run each state's detection predicate; the position is the state whose
-        predicate returns result=True. If any predicate is indeterminate and no
-        state has yet matched, the position is indeterminate (fail-closed)."""
+        """Resolve the subject's position from each state's detection, read by
+        the definition's one detection mode (COR-033 point 5, ADR-062).
+
+        Each detection comes out true, false or indeterminate; the position is
+        the first state in declaration order whose detection is true; failing
+        that, indeterminate if any detection was; failing that, none.
+
+        Before any detection runs, the modes the states declare are collected.
+        More than one, and none runs: every state is indeterminate for the one
+        reason naming each mode and the states that declare it, so no position
+        is ever resolved from some of the states. A mode this engine does not
+        implement leaves every state indeterminate (fail-closed, never silently
+        in no state). Under `inferred` each state's predicate is read by its
+        `result`. Under `classified` each classifier runs once, through the
+        answer memo, and its one answer is read for each of its states.
+        """
+        definition = self.definition
+        modes = definition.detection_modes()
+        if len(modes) > 1:
+            return _mixed_modes_position(definition, modes)
+        classifiers = definition.classifiers()
+        declared = {str(state.get("id", "")) for state in definition.states}
+        readings: dict[ClassifierKey, _ClassifierReading] = {}
+        placed_nowhere: list[tuple[str, str]] = []
         reasons: dict[str, PredicateOutcome] = {}
         matched: str | None = None
         any_indeterminate = False
-        for state in self.definition.states:
+        for state in definition.states:
             state_id = str(state.get("id", ""))
-            detection = state.get("detection")
-            if not isinstance(detection, dict):
+            detection = _mapping(state.get("detection"))
+            if detection is None:
                 continue
-            if detection.get("mode") != "inferred":
-                # Ship-narrow: only `inferred` is implemented. A future mode is
-                # treated as indeterminate (fail-closed), never silently in-state.
+            mode = detection.get("mode")
+            if mode not in DETECTION_MODES:
                 reasons[state_id] = PredicateOutcome(
                     result=False,
-                    reason=f"detection mode {detection.get('mode')!r} not implemented "
-                    "(ship-narrow)",
+                    reason=f"detection mode {mode!r} is not implemented by this engine "
+                    f"(it implements {_states_listed(list(DETECTION_MODES))})",
                     indeterminate=True,
                 )
                 any_indeterminate = True
                 continue
-            predicate = detection.get("predicate")
-            if not isinstance(predicate, dict):
+            predicate = _mapping(detection.get("predicate"))
+            if predicate is None:
                 continue
-            outcome = self.runner.evaluate_detection(predicate)
+            if mode == INFERRED:
+                outcome = self.runner.evaluate_detection(predicate)
+            else:
+                key = _classifier_key(predicate)
+                reading = readings.get(key)
+                if reading is None:
+                    answer = self.runner.answer(predicate)
+                    reading = _read_classifier(predicate, answer, classifiers[key], declared)
+                    readings[key] = reading
+                    if reading.placed_nowhere:
+                        placed_nowhere.append((key[0], reading.outcome.reason))
+                outcome = reading.outcome_for(state_id)
             reasons[state_id] = outcome
             if outcome.indeterminate:
                 any_indeterminate = True
@@ -886,7 +1195,10 @@ class ProcessEngine:
         if matched is not None:
             return Position(state_id=matched, indeterminate=False, detection_reasons=reasons)
         return Position(
-            state_id=None, indeterminate=any_indeterminate, detection_reasons=reasons
+            state_id=None,
+            indeterminate=any_indeterminate,
+            detection_reasons=reasons,
+            placed_nowhere=tuple(placed_nowhere),
         )
 
     # --- composition: resolve one inner outcome (COR-036) -----------------
@@ -975,7 +1287,9 @@ class ProcessEngine:
         # in practice this fires only on the direct self-embed (A subject S runs A
         # subject S). Fail closed, surfaced, like an unrecognised gate kind.
         if inner_key in self._resolution_stack:
-            chain = " -> ".join(f"{addr}#{subj}" for addr, subj in (*self._resolution_stack, inner_key))
+            chain = " -> ".join(
+                f"{addr}#{subj}" for addr, subj in (*self._resolution_stack, inner_key)
+            )
             return SubprocessResolution(
                 address=address,
                 outcome=None,
@@ -1011,11 +1325,16 @@ class ProcessEngine:
 
         inner_position = inner_engine.resolve_position()
         if inner_position.indeterminate:
+            # Name the first detection that could not be evaluated, with what
+            # its predicate said, so the parent's view says why.
+            state_id, failed = next(iter(inner_position.unevaluated.items()), ("", None))
+            why = f" ({state_id!r}: {failed.reason})" if failed else ""
             return SubprocessResolution(
                 address=address,
                 outcome=None,
                 indeterminate=True,
-                reason=f"inner process {address!r} position is indeterminate",
+                reason=f"inner process {address!r} position is indeterminate{why}",
+                stderr_tail=failed.stderr_tail if failed else "",
             )
         inner_state = inner_def.state(inner_position.state_id) if inner_position.state_id else None
         if inner_state is not None and inner_state.get("terminal"):
@@ -1023,8 +1342,7 @@ class ProcessEngine:
                 address=address,
                 outcome=inner_position.state_id,
                 indeterminate=False,
-                reason=f"inner process {address!r} reached outcome "
-                f"{inner_position.state_id!r}",
+                reason=f"inner process {address!r} reached outcome {inner_position.state_id!r}",
             )
         # Determinate but not yet at a terminal outcome: a correct wait, not an
         # error (the parent is awaiting-subprocess-outcome).
@@ -1146,12 +1464,13 @@ class ProcessEngine:
         # member ids (one predicate, threaded with the parent subject). The
         # engine never enumerates the child's subjects itself.
         candidates = self._cascade_candidates(members_predicate)
-        if candidates is None:
+        if isinstance(candidates, PredicateFailure):
             return self._cascade_failed(
                 address,
                 reducer,
                 f"could not read cascade members for parent {self.subject!r} "
-                "(the `members` predicate was indeterminate); failing closed",
+                f"(the `members` predicate {candidates.cause}); failing closed",
+                stderr_tail=candidates.stderr_tail,
             )
 
         reached = 0
@@ -1183,15 +1502,17 @@ class ProcessEngine:
                     opened=False,
                     indeterminate=True,
                     reason=f"membership of candidate {member_id!r} of {address!r} "
-                    "is indeterminate (the `membership` predicate errored / timed "
-                    "out); the fold stays unresolved (fail-closed)",
+                    f"is indeterminate ({belongs.reason}); the fold stays "
+                    "unresolved (fail-closed)",
+                    stderr_tail=belongs.stderr_tail,
                 )
             if not belongs.result:
                 # A determinate non-member: cleanly excluded (a real non-member),
                 # not folded.
                 continue
             total += 1
-            member_outcome, member_reason = self._resolve_member_outcome(address, member_id)
+            member = self._resolve_member_outcome(address, member_id)
+            member_outcome = None if member.indeterminate else member.outcome
             if member_outcome is None:
                 # Unresolved / indeterminate member holds the WHOLE fold unresolved
                 # (fail-closed) — the gate stays shut, never a false "all reached X".
@@ -1208,7 +1529,8 @@ class ProcessEngine:
                     opened=False,
                     indeterminate=True,
                     reason=f"member {member_id!r} of {address!r} has no resolved "
-                    f"outcome yet; the fold stays unresolved (fail-closed): {member_reason}",
+                    f"outcome yet; the fold stays unresolved (fail-closed): {member.reason}",
+                    stderr_tail=member.stderr_tail,
                 )
             if member_outcome == outcome:
                 reached += 1
@@ -1216,7 +1538,7 @@ class ProcessEngine:
         # The DETERMINATELY-empty set (COR-037 amended): enumeration completed
         # without error, every candidate's membership resolved determinately, and
         # zero confirmed members remain. We only reach here BECAUSE the precedence
-        # guards above did not fire — `candidates is None` (broken enumeration) and
+        # guards above did not fire — a failed `members` read (broken enumeration) and
         # any indeterminate membership both return earlier, so this branch can
         # never be entered on a broken read. The binding's `on_empty` policy
         # decides the gate, and BOTH possible answers stay DETERMINATE (never
@@ -1278,10 +1600,11 @@ class ProcessEngine:
         )
 
     def _cascade_failed(
-        self, address: str, reducer: Any, reason: str
+        self, address: str, reducer: Any, reason: str, *, stderr_tail: str = ""
     ) -> CascadeResolution:
-        """A fail-closed cascade resolution for a malformed declaration (the gate
-        reads it as indeterminate, like an unrecognised gate kind)."""
+        """A fail-closed cascade resolution for a malformed declaration or a
+        `members` read that gave no answer (the gate reads it as indeterminate,
+        like an unrecognised gate kind)."""
         op = reducer.get("op") if isinstance(reducer, dict) else None
         outcome = reducer.get("outcome") if isinstance(reducer, dict) else None
         threshold = reducer.get("threshold") if isinstance(reducer, dict) else None
@@ -1295,23 +1618,27 @@ class ProcessEngine:
             opened=False,
             indeterminate=True,
             reason=reason,
+            stderr_tail=stderr_tail,
         )
 
-    def _cascade_candidates(self, members_predicate: dict[str, Any]) -> list[str] | None:
+    def _cascade_candidates(
+        self, members_predicate: dict[str, Any]
+    ) -> list[str] | PredicateFailure:
         """Read the parent-scoped candidate member ids from the `members`
-        predicate (COR-037 candidate-set seam), or None if indeterminate.
+        predicate (COR-037 candidate-set seam), or the failure saying why it is
+        indeterminate.
 
         Run ONCE, threaded with THIS parent's subject (the runner's `subject`),
         the predicate returns `{members: ["id", ...]}` — the candidate set the
         engine folds over. This is the content-free seam the engine reads the set
         through; the engine never enumerates the child's subjects itself.
         """
-        payload = self.runner._run(members_predicate)
-        if payload is None:
-            return None
+        payload = self.runner.answer(members_predicate)
+        if isinstance(payload, PredicateFailure):
+            return payload
         raw = payload.get("members")
         if not isinstance(raw, list):
-            return None
+            return PredicateFailure("answered without a `members` list")
         # Preserve order, drop non-string / empty ids defensively.
         return [str(m) for m in raw if isinstance(m, str) and m]
 
@@ -1337,19 +1664,17 @@ class ProcessEngine:
             repo_root=self.repo_root,
             subject=member_id,
         )
-        return member_runner.evaluate_detection(membership_predicate)
+        return member_runner.evaluate_detection(membership_predicate, kind="membership")
 
-    def _resolve_member_outcome(
-        self, address: str, member_id: str
-    ) -> tuple[str | None, str]:
+    def _resolve_member_outcome(self, address: str, member_id: str) -> SubprocessResolution:
         """Resolve ONE member's terminal outcome via COR-036's single-inner
-        resolution (the per-subject step the fold reuses). Returns
-        `(outcome, reason)`: `outcome` is the member's terminal state id, or None
-        when the member has not reached a terminal outcome or could not be
-        resolved (either way the fold treats it as unresolved → fail-closed). The
-        `reason` is the resolution's own reason, surfaced so the fold can show a
-        distinct cause (still-moving vs a cyclic self-embed) on an unresolved
-        member.
+        resolution (the per-subject step the fold reuses). Returns the
+        resolution: its `outcome` is the member's terminal state id, or None
+        when the member has not reached a terminal outcome; `indeterminate` when
+        it could not be resolved (either way the fold treats it as unresolved →
+        fail-closed). Its `reason` (and `stderr_tail`) are surfaced so the fold
+        can show a distinct cause (still-moving vs a cyclic self-embed vs a
+        detection that could not be evaluated) on an unresolved member.
 
         The member is resolved exactly as composition resolves an embedded inner:
         a synthetic embedding `{runs: <child address>, subject: <member id>}` run
@@ -1378,10 +1703,7 @@ class ProcessEngine:
         transitive composition case; the pair key never has to see the `s→t→s`
         chain because the chain is never expanded.
         """
-        resolution = self._resolve_inner({"runs": address, "subject": member_id})
-        if resolution.indeterminate:
-            return None, resolution.reason
-        return resolution.outcome, resolution.reason
+        return self._resolve_inner({"runs": address, "subject": member_id})
 
     # --- move prechecks --------------------------------------------------
 
@@ -1393,6 +1715,23 @@ class ProcessEngine:
             if origin == state_id or origin == "*":
                 out.append(t)
         return out
+
+    def legal_move_checks(self, position: Position, actor: str) -> list[TransitionCheck]:
+        """The moves out of `position` as `can_move` judges them — what `status`
+        lists under its legal moves.
+
+        From a determinate position (a state, or none) these are the live
+        prechecks. From an indeterminate one `can_move` refuses every move, so
+        each `from: "*"` move is listed refused and indeterminate with that
+        refusal, and no gate is run: `status` never offers a move `can_move`
+        would refuse."""
+        if not position.indeterminate:
+            return self.precheck_transitions(position.state_id, actor)
+        refused = PredicateOutcome(result=False, reason=_INDETERMINATE_REFUSAL, indeterminate=True)
+        return [
+            TransitionCheck(transition=t, outcome=refused, has_gate=isinstance(t.get("gate"), dict))
+            for t in self.transitions_from(position.state_id)
+        ]
 
     def precheck_transitions(self, state_id: str | None, actor: str) -> list[TransitionCheck]:
         """Live-precheck every transition out of the current state (COR-033
@@ -1460,6 +1799,7 @@ class ProcessEngine:
                 result=False,
                 reason=resolution.reason,
                 indeterminate=True,
+                stderr_tail=resolution.stderr_tail,
             )
         passed = resolution.outcome == expected
         if passed:
@@ -1503,13 +1843,12 @@ class ProcessEngine:
                 "reached": resolution.reached,
                 "total": resolution.total,
             },
+            stderr_tail=resolution.stderr_tail,
         )
 
     # --- blocked (the derived human-pause / wait overlay, COR-034) -------
 
-    def has_no_legal_move(
-        self, position: Position, checks: list[TransitionCheck]
-    ) -> bool:
+    def has_no_legal_move(self, position: Position, checks: list[TransitionCheck]) -> bool:
         """The shipped core 'no legal move' detection (COR-033, named by COR-034).
 
         True when the subject is parked: it has an inferred, non-terminal,
@@ -1524,9 +1863,7 @@ class ProcessEngine:
             return False
         return not any(check.allowed for check in checks)
 
-    def has_pending_human_move(
-        self, position: Position, checks: list[TransitionCheck]
-    ) -> bool:
+    def has_pending_human_move(self, position: Position, checks: list[TransitionCheck]) -> bool:
         """Whether the subject's *sole forward progress* is an untaken human
         move (COR-034 awaiting-human rule).
 
@@ -1610,6 +1947,7 @@ class ProcessEngine:
             return None
 
         blocked_on = str(declaration.get("blocked_on", ""))
+        stderr_tail = ""
         if blocked_on == "awaiting-human":
             # No side-predicate: blocked iff a pending human move sits ahead.
             if not self.has_pending_human_move(position, checks):
@@ -1625,11 +1963,12 @@ class ProcessEngine:
                 # rather than silently resuming on a missing predicate.
                 resume_reason = "resume_when missing; cannot evaluate self-clear"
             else:
-                outcome = self.runner.evaluate_detection(resume_when)
+                outcome = self.runner.evaluate_detection(resume_when, kind="resume_when")
                 # resume_when holds (and is determinate) -> auto-clear.
                 if outcome.result and not outcome.indeterminate:
                     return None
                 resume_reason = outcome.reason or "resume condition not yet met"
+                stderr_tail = outcome.stderr_tail
         elif blocked_on == "awaiting-subprocess-outcome":
             # COR-036 (single-inner): blocked while parked in a `subprocess`
             # state whose embedded inner has not reached a WIRED terminal
@@ -1684,6 +2023,7 @@ class ProcessEngine:
             since=self._wait_since(),
             assignee=assignee if isinstance(assignee, str) and assignee else None,
             prompt=self._current_prompt(checks),
+            stderr_tail=stderr_tail,
         )
 
     def _current_prompt(self, checks: list[TransitionCheck]) -> str | None:
@@ -1821,7 +2161,7 @@ class ProcessEngine:
                     )
                 )
                 continue
-            outcome = self.runner.evaluate_detection(check)
+            outcome = self.runner.evaluate_detection(check, kind="invariant check")
             outcomes.append(
                 InvariantOutcome(
                     invariant_id=invariant_id,
@@ -1830,32 +2170,56 @@ class ProcessEngine:
                     why=why,
                     reason=outcome.reason,
                     indeterminate=outcome.indeterminate,
+                    stderr_tail=outcome.stderr_tail,
                 )
             )
         return outcomes
 
-    def can_move(self, to_state: str, actor: str) -> tuple[bool, str, Position]:
+    def can_move(
+        self, to_state: str, actor: str, *, from_state: str | None = None
+    ) -> tuple[bool, str, Position]:
         """Validate a candidate move to `to_state`. Returns (allowed, reason,
         position). Refuses (fail-closed) on an indeterminate position, an
-        unknown target, no matching transition, or a gate that does not pass."""
+        unknown target, no matching transition, or a gate that does not pass.
+
+        The move starts where live detection places the subject, unless the
+        caller names `from_state`: the state the subject held before the caller
+        applied the move's domain side-effect (the seam-ordering contract). By
+        then live detection may already report the target, so the move is
+        validated from the stated origin instead. Reality keeps the last word:
+        the stated origin is accepted only while live detection places the
+        subject at it or at the target."""
         position = self.resolve_position()
         if self.definition.state(to_state) is None:
             return False, f"unknown target state {to_state!r}", position
+        if from_state is not None and self.definition.state(from_state) is None:
+            return False, f"unknown origin state {from_state!r}", position
         if position.indeterminate:
+            refusal = [_INDETERMINATE_REFUSAL]
+            # One line per cause, with the states it leaves indeterminate.
+            for state_ids, outcome in position.unevaluated_by_cause():
+                refusal.append(
+                    _explained(
+                        f"    {_states_listed(state_ids)}: {outcome.reason}",
+                        outcome.stderr_tail,
+                        "      ",
+                    )
+                )
+            return False, "\n".join(refusal), position
+        if from_state is not None and position.state_id not in (from_state, to_state):
+            live = position.state_id or "(no position)"
             return (
                 False,
-                "position is indeterminate — a detection predicate could not be "
-                "evaluated; refusing to move (fail-closed)",
+                f"the subject is at {live!r}, which is neither the stated origin "
+                f"{from_state!r} nor the target {to_state!r}",
                 position,
             )
-        candidates = [
-            c for c in self.precheck_transitions(position.state_id, actor) if c.to == to_state
-        ]
+        origin = _move_origin(position, from_state)
+        candidates = [c for c in self.precheck_transitions(origin, actor) if c.to == to_state]
         if not candidates:
-            origin = position.state_id or "(no position)"
             return (
                 False,
-                f"no transition from {origin!r} to {to_state!r}",
+                f"no transition from {origin or '(no position)'!r} to {to_state!r}",
                 position,
             )
         for check in candidates:
@@ -1863,35 +2227,49 @@ class ProcessEngine:
                 return True, f"move to {to_state!r} permitted: {check.outcome.reason}", position
         # All matching transitions refused; surface the first reason.
         first = candidates[0]
-        return False, f"gate refused: {first.outcome.reason}", position
+        refusal = _explained(
+            f"gate refused: {first.outcome.reason}", first.outcome.stderr_tail, "    "
+        )
+        return False, refusal, position
 
-    def move(self, to_state: str, actor: str) -> MoveResult:
+    def move(
+        self,
+        to_state: str,
+        actor: str,
+        *,
+        from_state: str | None = None,
+        reason: str | None = None,
+    ) -> MoveResult:
         """Execute a legal move: validate, then append a journal entry when the
         project keeps a journal. Refuses (no journal write) when `can_move`
         refuses. The verdict — allowed or refused, and why — is the same with
         journal logging on or off (COR-033 point 7): with it off, a legal move
-        succeeds and records nothing."""
-        allowed, reason, position = self.can_move(to_state, actor)
+        succeeds and records nothing. `from_state` is `can_move`'s — the origin a
+        caller that has already applied the domain side-effect names — and the
+        entry records it as where the move came from. `reason` is why the caller
+        took the move, recorded on the entry as given: the engine neither reads
+        nor judges it, so it never changes the verdict."""
+        allowed, verdict, position = self.can_move(to_state, actor, from_state=from_state)
         if not allowed:
-            return MoveResult(ok=False, reason=reason)
+            return MoveResult(ok=False, reason=verdict)
         if not self.journal_enabled:
             # Deliberately skips the wait reconcile below too, not only the move
             # entry: `reconcile_blocked` only journals the wait's enter/resume
             # audit, and with no journal there is nothing to record. Blocked-ness
             # is the live overlay (`evaluate_blocked`), recomputed on every read
             # and authoritative either way, so no verdict is lost here.
-            return MoveResult(ok=True, reason=reason)
+            return MoveResult(ok=True, reason=verdict)
 
+        origin = _move_origin(position, from_state)
         check = next(
-            c
-            for c in self.precheck_transitions(position.state_id, actor)
-            if c.to == to_state and c.allowed
+            c for c in self.precheck_transitions(origin, actor) if c.to == to_state and c.allowed
         )
         entry = self._build_journal_entry(
-            from_state=position.state_id,
+            from_state=origin,
             to_state=to_state,
             check=check,
             actor=actor,
+            reason=reason,
         )
         _validate_journal_entry(entry, self.definition)
         self._append_journal(entry)
@@ -1905,7 +2283,7 @@ class ProcessEngine:
         # the source state at this instant. The enter/resume EVENTS are journal
         # entries themselves — there is no separate emission channel.
         self.reconcile_blocked(actor, assume_state=to_state)
-        return MoveResult(ok=True, reason=reason, journal_entry=entry)
+        return MoveResult(ok=True, reason=verdict, journal_entry=entry)
 
     def reconcile_blocked(
         self, actor: str, assume_state: str | None = None
@@ -2061,6 +2439,7 @@ class ProcessEngine:
         to_state: str,
         check: TransitionCheck,
         actor: str,
+        reason: str | None = None,
     ) -> dict[str, Any]:
         transition = check.transition
         entry: dict[str, Any] = {
@@ -2082,6 +2461,8 @@ class ProcessEngine:
         severity = transition.get("severity")
         if isinstance(severity, str):
             entry["severity"] = severity
+        if reason:
+            entry["reason"] = reason
         return entry
 
     def _append_journal(self, entry: dict[str, Any]) -> None:
@@ -2089,6 +2470,62 @@ class ProcessEngine:
         path.parent.mkdir(parents=True, exist_ok=True)
         with path.open("a", encoding="utf-8") as fh:
             fh.write(json.dumps(entry, sort_keys=True) + "\n")
+
+
+def _move_origin(position: Position, from_state: str | None) -> str | None:
+    """Where a move starts: the origin its caller stated, else the live position."""
+    return from_state if from_state is not None else position.state_id
+
+
+def _mixed_modes_position(
+    definition: ProcessDefinition, modes: dict[str | None, list[str]]
+) -> Position:
+    """The position of a definition whose states declare more than one detection
+    mode (COR-033 point 5, ADR-062 point 7): no detection is run, and every
+    state is indeterminate for the one reason naming each mode and its states."""
+    mixed = PredicateOutcome(
+        result=False,
+        reason=(
+            f"the definition's states declare more than one detection mode — "
+            f"{_modes_described(modes)} — so no detection was run; every state of a "
+            "definition declares the same mode"
+        ),
+        indeterminate=True,
+    )
+    reasons = {
+        str(state.get("id", "")): mixed
+        for state in definition.states
+        if isinstance(state.get("detection"), dict)
+    }
+    return Position(state_id=None, indeterminate=True, detection_reasons=reasons)
+
+
+def detection_faults(definition: ProcessDefinition) -> list[str]:
+    """The two faults validation reports in a definition's detections, each an
+    error (ADR-062 point 9): its states declare more than one mode, and its
+    `classified` detections name one command under different `with` mappings —
+    separate classifiers the runner gives the same input, so an answer one of
+    them can read is unreadable for the other."""
+    faults: list[str] = []
+    modes = definition.detection_modes()
+    if len(modes) > 1:
+        faults.append(
+            f"its states declare more than one detection mode — {_modes_described(modes)}; "
+            "every state of a definition declares the same mode"
+        )
+    by_command: dict[str, list[list[str]]] = {}
+    for (run_name, _with), state_ids in definition.classifiers().items():
+        by_command.setdefault(run_name, []).append(state_ids)
+    for run_name, groups in by_command.items():
+        if len(groups) > 1:
+            named = "; ".join(_states_listed(state_ids) for state_ids in groups)
+            faults.append(
+                f"its `classified` detections name command {run_name!r} under "
+                f"{len(groups)} different `with` mappings ({named}); they are separate "
+                "classifiers that the runner gives the same input, so an answer one of "
+                "them can read is unreadable for the other"
+            )
+    return faults
 
 
 def _running_pkit_version() -> str:
@@ -2154,6 +2591,7 @@ def load_definition(repo_root: Path, address: str) -> ProcessDefinition:
             process_id=process_id,
             capability_dir=capability_dir,
             data=process,
+            source=by_convention,
         )
 
     # Fall back to a scan: find the schema file whose process.id matches.
@@ -2172,9 +2610,7 @@ def load_definition(repo_root: Path, address: str) -> ProcessDefinition:
             if isinstance(block, dict) and block.get("id") == process_id:
                 matches.append((candidate, block))
         if len(matches) > 1:
-            offenders = ", ".join(
-                str(path.relative_to(repo_root)) for path, _ in matches
-            )
+            offenders = ", ".join(str(path.relative_to(repo_root)) for path, _ in matches)
             raise ProcessError(
                 f"ambiguous process definition for {address!r}: multiple schema "
                 f"files declare process.id {process_id!r} ({offenders}). Exactly "
@@ -2186,6 +2622,7 @@ def load_definition(repo_root: Path, address: str) -> ProcessDefinition:
                 process_id=process_id,
                 capability_dir=capability_dir,
                 data=matches[0][1],
+                source=matches[0][0],
             )
 
     raise ProcessError(
@@ -2198,7 +2635,12 @@ def load_definition(repo_root: Path, address: str) -> ProcessDefinition:
 def definitions_outcome(repo_root: Path) -> Outcome:
     """The `process` member of `pkit validate`: every process definition the
     installed capabilities declare resolves — exactly one file per address,
-    whose `process.id` matches (the loader every `pkit process` command uses).
+    whose `process.id` matches (the loader every `pkit process` command uses) —
+    and its detections are readable (ADR-062 point 9): its states declare one
+    detection mode, and its `classified` detections name no command under
+    different `with` mappings. Both are errors. This is the check that reaches
+    every definition, a capability's companion schema that restates the
+    process block included (ADR-062 point 12).
 
     A subject's invariants are `pkit process validate <address>`'s: a runtime
     check with a subject and its predicates, which the umbrella does not run.
@@ -2208,15 +2650,25 @@ def definitions_outcome(repo_root: Path) -> Outcome:
     addresses = discover_process_addresses(repo_root)
     findings: list[Finding] = []
     for address in addresses:
+        capability = address.partition(":")[0]
         try:
-            load_definition(repo_root, address)
+            definition = load_definition(repo_root, address)
         except ProcessError as exc:
-            capability = address.partition(":")[0]
             findings.append(Finding(f".pkit/capabilities/{capability}/schemas", str(exc)))
+            continue
+        location = (
+            str(definition.source.relative_to(repo_root))
+            if definition.source is not None
+            else f".pkit/capabilities/{capability}/schemas"
+        )
+        findings.extend(
+            Finding(location, f"process {address}: {fault}")
+            for fault in detection_faults(definition)
+        )
     if not addresses:
         summary = "no process definitions declared."
     else:
-        summary = f"{len(addresses)} process definition(s) resolved; {len(findings)} error(s)."
+        summary = f"{len(addresses)} process definition(s) checked; {len(findings)} error(s)."
     return Outcome((summary,), tuple(findings))
 
 
@@ -2227,9 +2679,7 @@ def _read_process_block(path: Path, repo_root: Path) -> dict[str, Any]:
     except Exception as exc:
         raise ProcessError(f"could not read process definition {path}: {exc}") from exc
     if not isinstance(raw, dict) or not isinstance(raw.get("process"), dict):
-        raise ProcessError(
-            f"{path.relative_to(repo_root)} has no top-level `process:` block"
-        )
+        raise ProcessError(f"{path.relative_to(repo_root)} has no top-level `process:` block")
     return raw["process"]
 
 
@@ -2275,12 +2725,31 @@ def _validate_journal_entry(entry: dict[str, Any], definition: ProcessDefinition
     errors = sorted(validator.iter_errors(entry), key=lambda e: list(e.path))
     if errors:
         first = errors[0]
-        raise ProcessError(
-            f"journal entry failed shape validation: {first.message}"
-        )
+        raise ProcessError(f"journal entry failed shape validation: {first.message}")
 
 
 # --- rendering ------------------------------------------------------------
+
+
+def _said_lines(stderr_tail: str, indent: str) -> list[str]:
+    """A predicate's own words under the line naming its failure, attributed to
+    it and kept as it laid them out (never re-wrapped). Nothing when it said
+    nothing."""
+    if not stderr_tail:
+        return []
+    return [f"{indent}the predicate said:", *(f"{indent}  {ln}" for ln in stderr_tail.splitlines())]
+
+
+def _explained(reason: str, stderr_tail: str, indent: str) -> str:
+    """`reason` followed by what the predicate said — the form of a refusal
+    message, which reaches the operator as one string."""
+    return "\n".join([reason, *_said_lines(stderr_tail, indent)])
+
+
+def _json_tail(stderr_tail: str) -> str | None:
+    """`stderr_tail` as the JSON views carry it, beside `reason` and never
+    inside it: null when the predicate said nothing."""
+    return stderr_tail or None
 
 
 def _prompt_lines(prompt: str, base_indent: str) -> list[str]:
@@ -2309,9 +2778,7 @@ def render_status_narrative(engine: ProcessEngine, actor: str) -> str:
     position = engine.resolve_position()
     lines: list[str] = []
     lines.append(
-        cli_render.style(
-            "title", f"Process {definition.capability}:{definition.process_id}"
-        )
+        cli_render.style("title", f"Process {definition.capability}:{definition.process_id}")
         + f"  (subject {engine.subject!r}, definition v{definition.version})"
     )
     lines.append("")
@@ -2319,12 +2786,26 @@ def render_status_narrative(engine: ProcessEngine, actor: str) -> str:
     # Where + why.
     if position.indeterminate and position.state_id is None:
         lines.append("  " + cli_render.style("strong", "Where: indeterminate"))
-        for state_id, outcome in position.detection_reasons.items():
-            if outcome.indeterminate:
-                lines.append(f"    couldn't evaluate {state_id!r}: {outcome.reason}")
+        # One line per cause, with the states it leaves indeterminate (ADR-062
+        # point 13): a classifier's failure is shown once, not once per state.
+        for state_ids, outcome in position.unevaluated_by_cause():
+            lines.append(f"    couldn't evaluate {_states_listed(state_ids)}: {outcome.reason}")
+            lines.extend(_said_lines(outcome.stderr_tail, "      "))
     elif position.state_id is None:
         lines.append("  " + cli_render.style("strong", "Where: no position"))
         lines.append("    no state's detection predicate matched current reality")
+        # Why each classifier placed the subject in none of its states (ADR-062
+        # point 14) — the one way to tell a deliberate "none" from an accident.
+        # The reason is predicate prose (ADR-024): hanging-indent always,
+        # width-wrap on a TTY.
+        for command, reason in position.placed_nowhere:
+            lines.extend(
+                cli_render.wrap(
+                    f"{command!r} places the subject in none of its states: {reason}",
+                    indent="    ",
+                    hang="  ",
+                )
+            )
     else:
         state = definition.state(position.state_id) or {}
         meaning = state.get("meaning")
@@ -2340,15 +2821,11 @@ def render_status_narrative(engine: ProcessEngine, actor: str) -> str:
                 indent="    ",
                 first_line_indent=len(visible_prefix),
             )
-            styled_prefix = (
-                "  " + cli_render.style("strong", f"Where: {position.state_id} — ")
-            )
+            styled_prefix = "  " + cli_render.style("strong", f"Where: {position.state_id} — ")
             lines.append(styled_prefix + prose[0])
             lines.extend(prose[1:])
         else:
-            lines.append(
-                "  " + cli_render.style("strong", f"Where: {position.state_id}")
-            )
+            lines.append("  " + cli_render.style("strong", f"Where: {position.state_id}"))
         if state.get("terminal"):
             lines.append("    (terminal state)")
         # COR-036: when parked in a subprocess state, surface the embedded inner
@@ -2359,6 +2836,7 @@ def render_status_narrative(engine: ProcessEngine, actor: str) -> str:
             lines.append(f"    embeds {resolution.address}")
             if resolution.indeterminate:
                 lines.append(f"    inner indeterminate: {resolution.reason}")
+                lines.extend(_said_lines(resolution.stderr_tail, "      "))
             elif resolution.outcome is not None:
                 lines.append(f"    inner outcome: {resolution.outcome}")
             else:
@@ -2369,6 +2847,7 @@ def render_status_narrative(engine: ProcessEngine, actor: str) -> str:
         if cascade is not None and engine._has_cascade_gated_move(position.state_id):
             lines.append(f"    folds {cascade.address} ({cascade.op})")
             lines.append(f"    fold: {cascade.reason}")
+            lines.extend(_said_lines(cascade.stderr_tail, "      "))
 
     # How it got here (journal — kept only when the project enables it, COR-033
     # point 7; with it off, say so rather than showing an empty history).
@@ -2382,9 +2861,11 @@ def render_status_narrative(engine: ProcessEngine, actor: str) -> str:
     else:
         for entry in journal:
             frm = entry.get("from", "·")
+            reason = entry.get("reason")
             lines.append(
                 f"    {entry.get('ts', '')}  {frm} -> {entry.get('to')}  "
                 f"[{entry.get('trigger')}] by {entry.get('actor')}"
+                + (f" — {reason}" if reason else "")
             )
 
     # Invariants (COR-035) — surface VIOLATIONS on every status read (the
@@ -2418,15 +2899,14 @@ def render_status_narrative(engine: ProcessEngine, actor: str) -> str:
             # invariant reason is an own-line author/predicate prose field
             # (ADR-024): hanging-indent always, width-wrap on a TTY.
             lines.extend(cli_render.wrap(inv.reason, indent="        "))
+            lines.extend(_said_lines(inv.stderr_tail, "        "))
 
     # Blocked overlay (COR-034) — the derived, live wait, if any.
-    checks = engine.precheck_transitions(position.state_id, actor)
+    checks = engine.legal_move_checks(position, actor)
     blocked = engine.evaluate_blocked(position, checks, actor)
     if blocked is not None:
         lines.append("")
-        lines.append(
-            "  " + cli_render.style("strong", f"Blocked: {blocked.blocked_on}")
-        )
+        lines.append("  " + cli_render.style("strong", f"Blocked: {blocked.blocked_on}"))
         # resume_reason is an own-line author-supplied prose field (ADR-024):
         # the "resume when: " label is a fixed-width first-line prefix; hang
         # aligns continuation lines under the reason text.
@@ -2437,6 +2917,7 @@ def render_status_narrative(engine: ProcessEngine, actor: str) -> str:
                 hang="             ",  # len("resume when: ") = 13
             )
         )
+        lines.extend(_said_lines(blocked.stderr_tail, "        "))
         if blocked.since:
             lines.append(f"        since: {blocked.since}")
         if blocked.assignee:
@@ -2478,6 +2959,7 @@ def render_status_narrative(engine: ProcessEngine, actor: str) -> str:
             # check.outcome.reason is an own-line prose field (ADR-024):
             # hanging-indent always, width-wrap on a TTY.
             lines.extend(cli_render.wrap(check.outcome.reason, indent="        "))
+            lines.extend(_said_lines(check.outcome.stderr_tail, "        "))
             # The question posed on this move (COR-034), if it carries one.
             if check.prompt:
                 lines.extend(_prompt_lines(check.prompt, "        "))
@@ -2492,7 +2974,7 @@ def render_status_json(engine: ProcessEngine, actor: str) -> str:
     """Structured status for an agent / machine consumer."""
     definition = engine.definition
     position = engine.resolve_position()
-    checks = engine.precheck_transitions(position.state_id, actor)
+    checks = engine.legal_move_checks(position, actor)
     state = definition.state(position.state_id) if position.state_id else None
     blocked = engine.evaluate_blocked(position, checks, actor)
     # COR-036: the live cross-process resolution when parked in a subprocess
@@ -2515,6 +2997,21 @@ def render_status_json(engine: ProcessEngine, actor: str) -> str:
             "indeterminate": position.indeterminate,
             "meaning": state.get("meaning") if state else None,
             "terminal": bool(state.get("terminal")) if state else None,
+            # The states whose detection could not be evaluated — why the
+            # position is indeterminate — each with the engine's reason and
+            # what its predicate said (null when it said nothing).
+            "unevaluated": [
+                {"state": state_id, "reason": o.reason, "stderr_tail": _json_tail(o.stderr_tail)}
+                for state_id, o in position.unevaluated.items()
+            ],
+            # When no state is true: each classifier that answered `state:
+            # null`, with the reason it gave (ADR-062 point 14) — what tells a
+            # deliberate "none" from detections that are all false. Empty when a
+            # state is true, and always under `inferred`.
+            "placed_nowhere": [
+                {"predicate": command, "reason": reason}
+                for command, reason in position.placed_nowhere
+            ],
             # COR-036: the embedded inner process's resolved outcome (None when
             # the current state embeds none). `outcome` is the inner's reached
             # terminal, or null while it has not finished (a correct wait).
@@ -2526,6 +3023,7 @@ def render_status_json(engine: ProcessEngine, actor: str) -> str:
                     "outcome": resolution.outcome,
                     "indeterminate": resolution.indeterminate,
                     "reason": resolution.reason,
+                    "stderr_tail": _json_tail(resolution.stderr_tail),
                 }
             ),
             # COR-037: the live fold over the declared child's members (None when
@@ -2543,6 +3041,7 @@ def render_status_json(engine: ProcessEngine, actor: str) -> str:
                     "opened": cascade.opened,
                     "indeterminate": cascade.indeterminate,
                     "reason": cascade.reason,
+                    "stderr_tail": _json_tail(cascade.stderr_tail),
                 }
             ),
         },
@@ -2558,21 +3057,13 @@ def render_status_json(engine: ProcessEngine, actor: str) -> str:
                 "since": blocked.since,
                 "assignee": blocked.assignee,
                 "prompt": blocked.prompt,
+                "stderr_tail": _json_tail(blocked.stderr_tail),
             }
         ),
         # COR-035: the position-independent always-checks, evaluated live.
         # Always present (the full set, so an agent reads every invariant's
         # state); a violated invariant has holds=False and is the surfaced half.
-        "invariants": [
-            {
-                "id": inv.invariant_id,
-                "holds": inv.holds,
-                "indeterminate": inv.indeterminate,
-                "why": inv.why,
-                "reason": inv.reason,
-            }
-            for inv in engine.evaluate_invariants()
-        ],
+        "invariants": [_invariant_json(inv) for inv in engine.evaluate_invariants()],
         # COR-033 point 7: the journal is optional audit. `journal_logging` says
         # whether this project keeps one (and whether it commits it), so a reader
         # can tell "logging is off" from "no moves recorded yet" — `journal` is
@@ -2586,6 +3077,7 @@ def render_status_json(engine: ProcessEngine, actor: str) -> str:
                 "allowed": c.allowed,
                 "indeterminate": c.indeterminate,
                 "reason": c.outcome.reason,
+                "stderr_tail": _json_tail(c.outcome.stderr_tail),
                 "why": c.transition.get("why"),
                 "hint": c.transition.get("hint"),
                 # COR-034: the question on this move (None unless authored).
@@ -2595,6 +3087,15 @@ def render_status_json(engine: ProcessEngine, actor: str) -> str:
         ],
     }
     return json.dumps(payload, indent=2, sort_keys=True) + "\n"
+
+
+def render_cascade_narrative(resolution: CascadeResolution) -> str:
+    """The `cascade` operation's narrative (COR-037): the fold's verdict on one
+    line — ✓ opened, ? unresolved, ✗ a determinate "not yet" — and, when a
+    predicate the fold ran could not be evaluated, what it said."""
+    marker = "✓" if resolution.opened else ("?" if resolution.indeterminate else "✗")
+    line = f"  {marker} folds {resolution.address} ({resolution.op}): {resolution.reason}"
+    return _explained(line, resolution.stderr_tail, "    ")
 
 
 def render_validate_narrative(engine: ProcessEngine) -> str:
@@ -2638,12 +3139,11 @@ def render_validate_narrative(engine: ProcessEngine) -> str:
         # reason is an own-line author/predicate prose field (ADR-024):
         # hanging-indent always, width-wrap on a TTY.
         lines.extend(cli_render.wrap(inv.reason, indent="        "))
+        lines.extend(_said_lines(inv.stderr_tail, "        "))
     violations = [inv for inv in outcomes if not inv.holds]
     lines.append("")
     if violations:
-        lines.append(
-            "  " + cli_render.style("strong", f"{len(violations)} invariant(s) violated")
-        )
+        lines.append("  " + cli_render.style("strong", f"{len(violations)} invariant(s) violated"))
     else:
         lines.append("  " + cli_render.style("strong", "all invariants hold"))
     return "\n".join(lines) + "\n"
@@ -2652,8 +3152,9 @@ def render_validate_narrative(engine: ProcessEngine) -> str:
 def render_validate_json(engine: ProcessEngine) -> str:
     """Structured `validate` result (COR-035) for an agent / machine consumer.
 
-    Reports each invariant's `{id, holds, why, reason}` plus an `ok` summary
-    (True iff every invariant holds). Read-only."""
+    Reports each invariant's `{id, holds, indeterminate, why, reason,
+    stderr_tail}` plus an `ok` summary (True iff every invariant holds).
+    Read-only."""
     definition = engine.definition
     outcomes = engine.evaluate_invariants()
     payload: dict[str, Any] = {
@@ -2661,15 +3162,18 @@ def render_validate_json(engine: ProcessEngine) -> str:
         "subject": engine.subject,
         "version": definition.version,
         "ok": all(inv.holds for inv in outcomes),
-        "invariants": [
-            {
-                "id": inv.invariant_id,
-                "holds": inv.holds,
-                "indeterminate": inv.indeterminate,
-                "why": inv.why,
-                "reason": inv.reason,
-            }
-            for inv in outcomes
-        ],
+        "invariants": [_invariant_json(inv) for inv in outcomes],
     }
     return json.dumps(payload, indent=2, sort_keys=True) + "\n"
+
+
+def _invariant_json(inv: InvariantOutcome) -> dict[str, Any]:
+    """One invariant's verdict as the `status` and `validate` JSON views carry it."""
+    return {
+        "id": inv.invariant_id,
+        "holds": inv.holds,
+        "indeterminate": inv.indeterminate,
+        "why": inv.why,
+        "reason": inv.reason,
+        "stderr_tail": _json_tail(inv.stderr_tail),
+    }

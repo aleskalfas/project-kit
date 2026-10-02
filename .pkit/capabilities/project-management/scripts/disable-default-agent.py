@@ -43,16 +43,14 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate  # noqa: E402
-from _lib import session_guard  # noqa: E402
-from _lib.gh import load_adopter_config  # noqa: E402
-from _lib.membership import (  # noqa: E402
+from _lib import bootstrap_gate, session_guard
+from _lib.gh import load_adopter_config
+from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
     resolve_capability_root,
     resolve_invoker_identity,
 )
-
 
 HARNESS = "claude-code"
 LIVE_RELATIVE = Path("project") / "adapter-overlays" / f"{HARNESS}.json"
@@ -94,9 +92,7 @@ def _strip_overlay_keys_from_target(target_path: Path, overlay_keys: set[str]) -
         return False
     for key in keys_to_strip:
         del data[key]
-    target_path.write_text(
-        json.dumps(data, indent=2, sort_keys=False) + "\n", encoding="utf-8"
-    )
+    target_path.write_text(json.dumps(data, indent=2, sort_keys=False) + "\n", encoding="utf-8")
     return True
 
 
@@ -109,11 +105,14 @@ def main() -> int:
         ),
     )
     parser.add_argument(
-        "--capability-root", type=Path, default=None,
+        "--capability-root",
+        type=Path,
+        default=None,
         help=f"Default: <repo-root>/.pkit/capabilities/{CAPABILITY_NAME}/.",
     )
     parser.add_argument(
-        "--skip-sync", action="store_true",
+        "--skip-sync",
+        action="store_true",
         help="Strip + remove the live overlay but skip pkit sync. Mostly for tests.",
     )
     session_guard.add_override_argument(parser)

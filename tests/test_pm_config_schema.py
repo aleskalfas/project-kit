@@ -53,7 +53,7 @@ def _errors(validator: Draft202012Validator, doc: Any) -> list[str]:
 
 def _minimal() -> dict[str, Any]:
     """The smallest config the capability accepts — pre-check's required set."""
-    return {"schema_version": 1, "default_branch": "main", "workstreams": []}
+    return {"schema_version": 1, "workstreams": []}
 
 
 # --- accept ---------------------------------------------------------------
@@ -104,12 +104,15 @@ def test_full_surface_config_validates(validator: Draft202012Validator) -> None:
             "agents": {
                 "remote_registered": [{"github_login": "claude-bot"}],
                 "local_registered": [{"name": "reviewer"}, {"name": "code-review"}],
-                "contributed_opt_out": [{
-                    "capability": "software-engineering",
-                    "reviewer": "docs-reviewer",
-                    "reason": "Docs are reviewed by the tech-writing team.",
-                }],
+                "contributed_opt_out": [
+                    {
+                        "capability": "software-engineering",
+                        "reviewer": "docs-reviewer",
+                        "reason": "Docs are reviewed by the tech-writing team.",
+                    }
+                ],
             },
+            "floors": {"not_code": [".changes/**", "docs/examples/**"]},
         },
         "mesh_peers": ["github://owner/repo"],
         "mesh_source": "github://governance-owner/repo/path/to/mesh.yaml",
@@ -158,7 +161,7 @@ def test_unknown_nested_key_refused(validator: Draft202012Validator) -> None:
 # --- reject: missing required keys ---------------------------------------
 
 
-@pytest.mark.parametrize("missing", ["schema_version", "default_branch", "workstreams"])
+@pytest.mark.parametrize("missing", ["schema_version", "workstreams"])
 def test_missing_required_key_refused(validator: Draft202012Validator, missing: str) -> None:
     """The required set mirrors `pre-check.py`'s REQUIRED_ADOPTER_CONFIG_FIELDS,
     so shape validation and the pre-check gate agree on what a config must
@@ -166,6 +169,15 @@ def test_missing_required_key_refused(validator: Draft202012Validator, missing: 
     doc = _minimal()
     del doc[missing]
     assert any(missing in m for m in _errors(validator, doc))
+
+
+def test_the_default_branch_is_an_optional_deprecated_alias(
+    validator: Draft202012Validator,
+) -> None:
+    """`default_branch` is a deprecated alias of the backbone's
+    `repository.default-branch` (COR-054): no longer required, still accepted."""
+    assert _errors(validator, _minimal()) == []
+    assert _errors(validator, _minimal() | {"default_branch": "develop"}) == []
 
 
 def test_required_set_matches_pre_check() -> None:
@@ -208,23 +220,51 @@ def test_review_mode_is_a_closed_set(validator: Draft202012Validator) -> None:
     assert _errors(validator, doc)
 
 
-@pytest.mark.parametrize("entry", [
-    {"capability": "software-engineering", "reviewer": "docs-reviewer"},
-    {"capability": "software-engineering", "reviewer": "docs-reviewer", "reason": ""},
-    {"capability": "software-engineering", "reviewer": "docs-reviewer", "reason": "  "},
-    {"capability": "software-engineering", "reason": "No docs gate."},
-    {
-        "capability": "software-engineering", "reviewer": "docs-reviewer",
-        "reason": "No docs gate.", "workstream": "design",
-    },
-])
+@pytest.mark.parametrize(
+    "entry",
+    [
+        {"capability": "software-engineering", "reviewer": "docs-reviewer"},
+        {"capability": "software-engineering", "reviewer": "docs-reviewer", "reason": ""},
+        {"capability": "software-engineering", "reviewer": "docs-reviewer", "reason": "  "},
+        {"capability": "software-engineering", "reason": "No docs gate."},
+        {
+            "capability": "software-engineering",
+            "reviewer": "docs-reviewer",
+            "reason": "No docs gate.",
+            "workstream": "design",
+        },
+    ],
+)
 def test_contributed_opt_out_entry_shape(
-    validator: Draft202012Validator, entry: dict[str, Any],
+    validator: Draft202012Validator,
+    entry: dict[str, Any],
 ) -> None:
     """An opt-out withdraws a merge gate (#148): it names the capability and
     the reviewer, states a reason, and carries nothing else."""
     doc = _minimal() | {"review": {"agents": {"contributed_opt_out": [entry]}}}
     assert _errors(validator, doc)
+
+
+@pytest.mark.parametrize(
+    "floors",
+    [
+        {"not_code": ".changes/**"},
+        {"not_code": [".changes/**", 7]},
+        {"not_code": [""]},
+        {"not_code": ["  "]},
+        {"not-code": [".changes/**"]},
+    ],
+)
+def test_not_code_shape(validator: Draft202012Validator, floors: dict[str, Any]) -> None:
+    """`review.floors.not_code` is a list of non-empty path patterns (#1178),
+    and the `floors` block is closed like every other."""
+    doc = _minimal() | {"review": {"floors": floors}}
+    assert _errors(validator, doc)
+
+
+def test_an_empty_not_code_is_valid(validator: Draft202012Validator) -> None:
+    doc = _minimal() | {"review": {"floors": {"not_code": []}}}
+    assert _errors(validator, doc) == []
 
 
 def test_doc_mapping_rule_needs_both_halves(validator: Draft202012Validator) -> None:

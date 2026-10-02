@@ -40,6 +40,7 @@ import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -64,6 +65,7 @@ def bf():
 def axis_labels():
     sys.path.insert(0, str(SCRIPTS_DIR))
     from _lib import axis_labels as mod
+
     yield mod
 
 
@@ -199,7 +201,7 @@ def test_malformed_hook_entry_is_reported_not_crashed(bf, tmp_path) -> None:
         "hooks:\n"
         "  after_create_issue:\n"
         "    - kind: set-board-field\n"
-        "      single_select_option_id: \"OPT\"\n"  # no field_id
+        '      single_select_option_id: "OPT"\n'  # no field_id
     )
     cap = _cap_root_with_hooks(tmp_path, hooks)
     intents, errors = bf._resolve_intents(cap, None)
@@ -215,8 +217,10 @@ def test_one_proposed_change_per_issue_per_intent(bf) -> None:
     intents = [
         bf.BackFillIntent(kind="assign-milestone", citation="c", milestone_title="M1"),
         bf.BackFillIntent(
-            kind="set-board-field", citation="c",
-            field_id="F", single_select_option_id="O",
+            kind="set-board-field",
+            citation="c",
+            field_id="F",
+            single_select_option_id="O",
         ),
     ]
     issues = [
@@ -241,8 +245,10 @@ def test_field_value_argv_is_constructed_through_the_sole_constructor(bf) -> Non
     from _lib import substrate_writes
 
     intent = bf.BackFillIntent(
-        kind="set-board-field", citation="c",
-        field_id="FIELD_WS", single_select_option_id="OPT_SPYRE",
+        kind="set-board-field",
+        citation="c",
+        field_id="FIELD_WS",
+        single_select_option_id="OPT_SPYRE",
     )
     issues = [{"number": 7, "title": "seven", "milestone": None}]
     item_ids = {(TARGET_REPO, 7): "ITEM_7"}
@@ -251,8 +257,10 @@ def test_field_value_argv_is_constructed_through_the_sole_constructor(bf) -> Non
     )
     [change] = proposed
     expected = substrate_writes.field_value_args(
-        item_id="ITEM_7", field_id="FIELD_WS",
-        project_id="PROJ_X", single_select_option_id="OPT_SPYRE",
+        item_id="ITEM_7",
+        field_id="FIELD_WS",
+        project_id="PROJ_X",
+        single_select_option_id="OPT_SPYRE",
     )
     assert change.argv == expected
     assert change.argv[:3] == ["gh", "project", "item-edit"]
@@ -310,8 +318,10 @@ def test_field_write_blocked_when_issue_not_on_board(bf) -> None:
     argv (ADR-031: never invent ids). This is the PER-ISSUE case — distinct from
     the global board-unresolvable gate (DEC-037 §2)."""
     intent = bf.BackFillIntent(
-        kind="set-board-field", citation="c",
-        field_id="F", single_select_option_id="O",
+        kind="set-board-field",
+        citation="c",
+        field_id="F",
+        single_select_option_id="O",
     )
     issues = [{"number": 11, "title": "eleven", "milestone": None}]
     # board resolves (project_id present)… but #11 is not in item_ids.
@@ -331,18 +341,38 @@ def test_board_item_ids_keyed_on_repo_and_number(bf, monkeypatch) -> None:
     """A Projects-v2 board can carry colliding issue numbers from multiple repos.
     The item map is keyed on (repo, number) so #42 in the target repo and #42 in
     another repo resolve to DISTINCT item ids — no cross-repo collision."""
+
     def fake_gh_run(args, config, **kwargs):
         return subprocess.CompletedProcess(
-            args, 0,
-            stdout=json.dumps({"data": {"node": {"items": {
-                "pageInfo": {"hasNextPage": False, "endCursor": None},
-                "nodes": [
-                    {"id": "ITEM_TARGET_42", "content": {
-                        "number": 42, "repository": {"nameWithOwner": TARGET_REPO}}},
-                    {"id": "ITEM_OTHER_42", "content": {
-                        "number": 42, "repository": {"nameWithOwner": "other/repo"}}},
-                ],
-            }}}}),
+            args,
+            0,
+            stdout=json.dumps(
+                {
+                    "data": {
+                        "node": {
+                            "items": {
+                                "pageInfo": {"hasNextPage": False, "endCursor": None},
+                                "nodes": [
+                                    {
+                                        "id": "ITEM_TARGET_42",
+                                        "content": {
+                                            "number": 42,
+                                            "repository": {"nameWithOwner": TARGET_REPO},
+                                        },
+                                    },
+                                    {
+                                        "id": "ITEM_OTHER_42",
+                                        "content": {
+                                            "number": 42,
+                                            "repository": {"nameWithOwner": "other/repo"},
+                                        },
+                                    },
+                                ],
+                            }
+                        }
+                    }
+                }
+            ),
             stderr="",
         )
 
@@ -357,8 +387,10 @@ def test_field_value_resolves_target_repo_item_not_a_colliding_one(bf) -> None:
     field write for the TARGET repo's #42 carries the target's item id — the other
     repo's #42 item id never leaks into the plan's argv."""
     intent = bf.BackFillIntent(
-        kind="set-board-field", citation="c",
-        field_id="FIELD_WS", single_select_option_id="OPT_SPYRE",
+        kind="set-board-field",
+        citation="c",
+        field_id="FIELD_WS",
+        single_select_option_id="OPT_SPYRE",
     )
     issues = [{"number": 42, "title": "forty-two", "milestone": None}]
     item_ids = {
@@ -426,32 +458,51 @@ def test_auj_field_value_case_produces_would_write_under_real_config(
     def fake_gh_run(args, config, **kwargs):
         if args[:4] == ["gh", "project", "view", "7"]:
             return subprocess.CompletedProcess(
-                args, 0, stdout=json.dumps({"id": "PROJ_NODE"}), stderr="")
+                args, 0, stdout=json.dumps({"id": "PROJ_NODE"}), stderr=""
+            )
         if args[:3] == ["gh", "repo", "view"]:
             return subprocess.CompletedProcess(
-                args, 0, stdout=json.dumps({"nameWithOwner": TARGET_REPO}), stderr="")
+                args, 0, stdout=json.dumps({"nameWithOwner": TARGET_REPO}), stderr=""
+            )
         if args[:3] == ["gh", "issue", "list"]:
             return subprocess.CompletedProcess(
-                args, 0,
+                args,
+                0,
                 stdout=json.dumps([{"number": 1, "title": "one", "milestone": None}]),
-                stderr="")
+                stderr="",
+            )
         if args[:3] == ["gh", "api", "graphql"]:
             return subprocess.CompletedProcess(
-                args, 0,
-                stdout=json.dumps({"data": {"node": {"items": {
-                    "pageInfo": {"hasNextPage": False, "endCursor": None},
-                    "nodes": [{"id": "ITEM_1", "content": {
-                        "number": 1, "repository": {"nameWithOwner": TARGET_REPO}}}],
-                }}}}),
-                stderr="")
+                args,
+                0,
+                stdout=json.dumps(
+                    {
+                        "data": {
+                            "node": {
+                                "items": {
+                                    "pageInfo": {"hasNextPage": False, "endCursor": None},
+                                    "nodes": [
+                                        {
+                                            "id": "ITEM_1",
+                                            "content": {
+                                                "number": 1,
+                                                "repository": {"nameWithOwner": TARGET_REPO},
+                                            },
+                                        }
+                                    ],
+                                }
+                            }
+                        }
+                    }
+                ),
+                stderr="",
+            )
         return subprocess.CompletedProcess(args, 0, stdout="{}", stderr="")
 
     monkeypatch.setattr(bf, "load_adopter_config", fake_load_config)
     monkeypatch.setattr(bf, "gh_run", fake_gh_run)
     _patch_gate_checks(bf, monkeypatch, auth_ok=True, repo_ok=True, map_ok=True)
-    monkeypatch.setattr(
-        sys, "argv", ["back-fill.py", "--capability-root", str(cap), "--json"]
-    )
+    monkeypatch.setattr(sys, "argv", ["back-fill.py", "--capability-root", str(cap), "--json"])
 
     rc = bf.main()
     assert rc == 0
@@ -472,17 +523,20 @@ def _patch_gate_checks(
 ) -> None:
     """Patch the pre-check module the gate loads so its three residual probes
     return the requested statuses — without touching real gh or a real map."""
-    fake_module = type("FakePreCheck", (), {})()
+    fake_module = SimpleNamespace()
     fake_module._check_gh_auth = lambda: _Check(
-        "`gh` authenticated", "ok" if auth_ok else "fail",
+        "`gh` authenticated",
+        "ok" if auth_ok else "fail",
         "auth ok" if auth_ok else "no active authentication",
     )
     fake_module._check_repo_accessible = lambda: _Check(
-        "repo accessible", "ok" if repo_ok else "fail",
+        "repo accessible",
+        "ok" if repo_ok else "fail",
         "owner/repo" if repo_ok else "`gh repo view` failed",
     )
     fake_module._check_substrate_map_parse = lambda _root: _Check(
-        "substrate-map.yaml parses", "ok" if map_ok else "fail",
+        "substrate-map.yaml parses",
+        "ok" if map_ok else "fail",
         "parses" if map_ok else "present but unparseable",
     )
     monkeypatch.setattr(bf, "_load_pre_check_module", lambda _root: fake_module)
@@ -500,7 +554,7 @@ def test_gate_refuses_on_auth_failure(bf, tmp_path, monkeypatch) -> None:
     _patch_gate_checks(bf, monkeypatch, auth_ok=False, repo_ok=True)
     gate = bf._residual_pre_check(cap)
     assert gate.passed is False
-    assert any(s == "fail" and "auth" in l.lower() for l, s, _ in gate.checks)
+    assert any(s == "fail" and "auth" in label.lower() for label, s, _ in gate.checks)
 
 
 def test_gate_refuses_on_repo_inaccessible(bf, tmp_path, monkeypatch) -> None:
@@ -516,7 +570,7 @@ def test_gate_refuses_on_map_parse_failure(bf, tmp_path, monkeypatch) -> None:
     _patch_gate_checks(bf, monkeypatch, auth_ok=True, repo_ok=True, map_ok=False)
     gate = bf._residual_pre_check(cap)
     assert gate.passed is False
-    assert any(s == "fail" and "map" in l.lower() for l, s, _ in gate.checks)
+    assert any(s == "fail" and "map" in label.lower() for label, s, _ in gate.checks)
 
 
 def test_gate_skips_map_parse_when_no_map_present(bf, tmp_path, monkeypatch) -> None:
@@ -525,7 +579,7 @@ def test_gate_skips_map_parse_when_no_map_present(bf, tmp_path, monkeypatch) -> 
     cap = _cap_root_with_hooks(tmp_path, AUJ_HOOKS)  # no map written
     called = {"map_parse": False}
 
-    fake = type("FakePreCheck", (), {})()
+    fake = SimpleNamespace()
     fake._check_gh_auth = lambda: _Check("`gh` authenticated", "ok", "ok")
     fake._check_repo_accessible = lambda: _Check("repo accessible", "ok", "ok")
 
@@ -546,18 +600,13 @@ def test_gate_proceeds_under_a_degraded_axis(bf, tmp_path, monkeypatch) -> None:
     `workstream: unsupported`) does NOT refuse the back-fill. The gate runs ONLY
     the residual subset — the degraded-axis matrix is never consulted by the gate.
     With auth/repo/map all ok, the gate passes despite an unsupported axis."""
-    degraded_map = (
-        "schema_version: 1\n"
-        "axes:\n"
-        "  workstream:\n"
-        "    unsupported: true\n"
-    )
+    degraded_map = "schema_version: 1\naxes:\n  workstream:\n    unsupported: true\n"
     cap = _cap_root_with_hooks(tmp_path, AUJ_HOOKS, map_yaml=degraded_map)
     _patch_gate_checks(bf, monkeypatch, auth_ok=True, repo_ok=True, map_ok=True)
     gate = bf._residual_pre_check(cap)
     assert gate.passed is True
     # The gate's checks are ONLY the residual subset — no per-axis disposition line.
-    labels = " ".join(l for l, _, _ in gate.checks).lower()
+    labels = " ".join(label for label, _, _ in gate.checks).lower()
     assert "axis" not in labels
     assert "workstream" not in labels
 
@@ -587,7 +636,8 @@ def test_fourth_member_refuses_field_intent_with_unresolvable_board(
 
     monkeypatch.setattr(bf, "load_adopter_config", fake_load_config)
     monkeypatch.setattr(
-        bf, "gh_run",
+        bf,
+        "gh_run",
         lambda args, config, **kw: subprocess.CompletedProcess(args, 0, "{}", ""),
     )
     _patch_gate_checks(bf, monkeypatch, auth_ok=True, repo_ok=True, map_ok=True)
@@ -614,20 +664,21 @@ def test_fourth_member_does_not_gate_a_milestone_only_back_fill(
     def fake_gh_run(args, config, **kwargs):
         if args[:3] == ["gh", "repo", "view"]:
             return subprocess.CompletedProcess(
-                args, 0, stdout=json.dumps({"nameWithOwner": TARGET_REPO}), stderr="")
+                args, 0, stdout=json.dumps({"nameWithOwner": TARGET_REPO}), stderr=""
+            )
         if args[:3] == ["gh", "issue", "list"]:
             return subprocess.CompletedProcess(
-                args, 0,
+                args,
+                0,
                 stdout=json.dumps([{"number": 1, "title": "one", "milestone": None}]),
-                stderr="")
+                stderr="",
+            )
         return subprocess.CompletedProcess(args, 0, stdout="{}", stderr="")
 
     monkeypatch.setattr(bf, "load_adopter_config", fake_load_config)
     monkeypatch.setattr(bf, "gh_run", fake_gh_run)
     _patch_gate_checks(bf, monkeypatch, auth_ok=True, repo_ok=True, map_ok=True)
-    monkeypatch.setattr(
-        sys, "argv", ["back-fill.py", "--capability-root", str(cap), "--json"]
-    )
+    monkeypatch.setattr(sys, "argv", ["back-fill.py", "--capability-root", str(cap), "--json"])
 
     rc = bf.main()
     assert rc == 0
@@ -650,15 +701,20 @@ def test_truncation_warns_and_flags_when_corpus_hits_limit(
         if args[:3] == ["gh", "issue", "list"]:
             # Return EXACTLY --limit (2) issues → truncation suspected.
             return subprocess.CompletedProcess(
-                args, 0,
-                stdout=json.dumps([
-                    {"number": 1, "title": "one", "milestone": None},
-                    {"number": 2, "title": "two", "milestone": None},
-                ]),
-                stderr="")
+                args,
+                0,
+                stdout=json.dumps(
+                    [
+                        {"number": 1, "title": "one", "milestone": None},
+                        {"number": 2, "title": "two", "milestone": None},
+                    ]
+                ),
+                stderr="",
+            )
         if args[:3] == ["gh", "repo", "view"]:
             return subprocess.CompletedProcess(
-                args, 0, stdout=json.dumps({"nameWithOwner": TARGET_REPO}), stderr="")
+                args, 0, stdout=json.dumps({"nameWithOwner": TARGET_REPO}), stderr=""
+            )
         return subprocess.CompletedProcess(args, 0, stdout="{}", stderr="")
 
     monkeypatch.setattr(bf, "load_adopter_config", lambda _r: {})
@@ -667,7 +723,8 @@ def test_truncation_warns_and_flags_when_corpus_hits_limit(
 
     # --json: the flag is carried.
     monkeypatch.setattr(
-        sys, "argv",
+        sys,
+        "argv",
         ["back-fill.py", "--capability-root", str(cap), "--limit", "2", "--json"],
     )
     assert bf.main() == 0
@@ -690,19 +747,23 @@ def test_no_truncation_flag_when_below_limit(bf, tmp_path, monkeypatch, capsys) 
     def fake_gh_run(args, config, **kwargs):
         if args[:3] == ["gh", "issue", "list"]:
             return subprocess.CompletedProcess(
-                args, 0,
+                args,
+                0,
                 stdout=json.dumps([{"number": 1, "title": "one", "milestone": None}]),
-                stderr="")
+                stderr="",
+            )
         if args[:3] == ["gh", "repo", "view"]:
             return subprocess.CompletedProcess(
-                args, 0, stdout=json.dumps({"nameWithOwner": TARGET_REPO}), stderr="")
+                args, 0, stdout=json.dumps({"nameWithOwner": TARGET_REPO}), stderr=""
+            )
         return subprocess.CompletedProcess(args, 0, stdout="{}", stderr="")
 
     monkeypatch.setattr(bf, "load_adopter_config", lambda _r: {})
     monkeypatch.setattr(bf, "gh_run", fake_gh_run)
     _patch_gate_checks(bf, monkeypatch, auth_ok=True, repo_ok=True, map_ok=True)
     monkeypatch.setattr(
-        sys, "argv",
+        sys,
+        "argv",
         ["back-fill.py", "--capability-root", str(cap), "--limit", "500", "--json"],
     )
     assert bf.main() == 0
@@ -725,12 +786,15 @@ def test_report_header_surfaces_hook_coupling_scope_boundary(
     def fake_gh_run(args, config, **kwargs):
         if args[:3] == ["gh", "issue", "list"]:
             return subprocess.CompletedProcess(
-                args, 0,
+                args,
+                0,
                 stdout=json.dumps([{"number": 1, "title": "one", "milestone": None}]),
-                stderr="")
+                stderr="",
+            )
         if args[:3] == ["gh", "repo", "view"]:
             return subprocess.CompletedProcess(
-                args, 0, stdout=json.dumps({"nameWithOwner": TARGET_REPO}), stderr="")
+                args, 0, stdout=json.dumps({"nameWithOwner": TARGET_REPO}), stderr=""
+            )
         return subprocess.CompletedProcess(args, 0, stdout="{}", stderr="")
 
     monkeypatch.setattr(bf, "load_adopter_config", lambda _r: {})
@@ -753,10 +817,13 @@ def test_plan_document_carries_argv_citation_and_prediction(bf) -> None:
     intents = [bf.BackFillIntent(kind="assign-milestone", citation="cite-me", milestone_title="M1")]
     proposed = [
         bf.ProposedChange(
-            issue_number=3, issue_title="t", kind="assign-milestone",
+            issue_number=3,
+            issue_title="t",
+            kind="assign-milestone",
             citation="cite-me",
             argv=["gh", "issue", "edit", "3", "--milestone", "M1"],
-            observed=None, prediction="would-write",
+            observed=None,
+            prediction="would-write",
         )
     ]
     gate = bf.GateResult(passed=True, checks=[("`gh` authenticated", "ok", "ok")])
@@ -782,27 +849,50 @@ def _serve_reads(args):
     graphql READ query are the only legitimate calls."""
     if args[:3] == ["gh", "repo", "view"]:
         return subprocess.CompletedProcess(
-            args, 0, stdout=json.dumps({"nameWithOwner": TARGET_REPO}), stderr="")
+            args, 0, stdout=json.dumps({"nameWithOwner": TARGET_REPO}), stderr=""
+        )
     if args[:4] == ["gh", "project", "view", "7"]:
         return subprocess.CompletedProcess(
-            args, 0, stdout=json.dumps({"id": "PROJ_NODE"}), stderr="")
+            args, 0, stdout=json.dumps({"id": "PROJ_NODE"}), stderr=""
+        )
     if args[:3] == ["gh", "issue", "list"]:
         return subprocess.CompletedProcess(
-            args, 0,
-            stdout=json.dumps([
-                {"number": 1, "title": "one", "milestone": None},
-                {"number": 2, "title": "two", "milestone": {"title": "Milestone 1"}},
-            ]),
-            stderr="")
+            args,
+            0,
+            stdout=json.dumps(
+                [
+                    {"number": 1, "title": "one", "milestone": None},
+                    {"number": 2, "title": "two", "milestone": {"title": "Milestone 1"}},
+                ]
+            ),
+            stderr="",
+        )
     if args[:3] == ["gh", "api", "graphql"]:
         return subprocess.CompletedProcess(
-            args, 0,
-            stdout=json.dumps({"data": {"node": {"items": {
-                "pageInfo": {"hasNextPage": False, "endCursor": None},
-                "nodes": [{"id": "ITEM_1", "content": {
-                    "number": 1, "repository": {"nameWithOwner": TARGET_REPO}}}],
-            }}}}),
-            stderr="")
+            args,
+            0,
+            stdout=json.dumps(
+                {
+                    "data": {
+                        "node": {
+                            "items": {
+                                "pageInfo": {"hasNextPage": False, "endCursor": None},
+                                "nodes": [
+                                    {
+                                        "id": "ITEM_1",
+                                        "content": {
+                                            "number": 1,
+                                            "repository": {"nameWithOwner": TARGET_REPO},
+                                        },
+                                    }
+                                ],
+                            }
+                        }
+                    }
+                }
+            ),
+            stderr="",
+        )
     return None
 
 
@@ -817,9 +907,14 @@ def _is_mutating_call(call: list[str]) -> bool:
     (no mutation keyword); any mutation keyword in the body makes it mutating."""
     joined = " ".join(call)
     subcommand_mutations = [
-        "item-edit", "item-add",
-        "issue edit", "issue create", "issue comment",
-        "label create", "label edit", "label delete",
+        "item-edit",
+        "item-add",
+        "issue edit",
+        "issue create",
+        "issue comment",
+        "label create",
+        "label edit",
+        "label delete",
     ]
     if any(m in joined for m in subcommand_mutations):
         return True
@@ -855,17 +950,17 @@ def test_no_mutating_gh_call_is_ever_issued(bf, tmp_path, monkeypatch) -> None:
     # captured — not only calls through back-fill's own binding.
     sys.path.insert(0, str(LIB_DIR))
     import gh as gh_source  # the `_lib.gh` module, imported as top-level `gh`
+
     monkeypatch.setattr(gh_source, "gh_run", fake_gh_run)
     monkeypatch.setattr(bf, "gh_run", fake_gh_run)
     # substrate_writes binds `gh_run` at import time; rebind its name too.
     from _lib import substrate_writes
+
     monkeypatch.setattr(substrate_writes, "gh_run", fake_gh_run)
 
     monkeypatch.setattr(bf, "load_adopter_config", lambda _r: dict(AUJ_BOARD_CONFIG))
     _patch_gate_checks(bf, monkeypatch, auth_ok=True, repo_ok=True, map_ok=True)
-    monkeypatch.setattr(
-        sys, "argv", ["back-fill.py", "--capability-root", str(cap), "--json"]
-    )
+    monkeypatch.setattr(sys, "argv", ["back-fill.py", "--capability-root", str(cap), "--json"])
 
     rc = bf.main()
     assert rc == 0
@@ -880,13 +975,18 @@ def test_no_write_detector_catches_a_graphql_mutation(bf) -> None:
     (the exact GraphQL write form ADR-031 covers) — the old blanket graphql
     exemption would have let it pass."""
     read_call = [
-        "gh", "api", "graphql", "-f",
+        "gh",
+        "api",
+        "graphql",
+        "-f",
         "query=query($project: ID!) { node(id: $project) { id } }",
     ]
     mutation_call = [
-        "gh", "api", "graphql", "-f",
-        "query=mutation { updateProjectV2ItemFieldValue(input: {}) "
-        "{ clientMutationId } }",
+        "gh",
+        "api",
+        "graphql",
+        "-f",
+        "query=mutation { updateProjectV2ItemFieldValue(input: {}) { clientMutationId } }",
     ]
     assert _is_mutating_call(read_call) is False
     assert _is_mutating_call(mutation_call) is True

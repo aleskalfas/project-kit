@@ -34,8 +34,13 @@ def ci():
     return module
 
 
-def _issue(*, title="[Task] landed elsewhere", state="OPEN", body="EPIC: #10\n\n## What\nx\n",
-           labels=("state:in-progress",)) -> dict:
+def _issue(
+    *,
+    title="[Task] landed elsewhere",
+    state="OPEN",
+    body="EPIC: #10\n\n## What\nx\n",
+    labels=("state:in-progress",),
+) -> dict:
     return {
         "title": title,
         "body": body,
@@ -49,8 +54,16 @@ MERGED = {"number": 1042, "state": "MERGED", "mergedAt": "2026-09-27T10:00:00Z",
 OPEN_PR = {"number": 1042, "state": "OPEN", "mergedAt": None, "url": "u"}
 
 
-def _run(ci, monkeypatch, argv: list[str], *, issue: dict, pr: dict | None = MERGED,
-         comments: list | None = None, parents: dict | None = None) -> SimpleNamespace:
+def _run(
+    ci,
+    monkeypatch,
+    argv: list[str],
+    *,
+    issue: dict,
+    pr: dict | None = MERGED,
+    comments: list | None = None,
+    parents: dict | None = None,
+) -> SimpleNamespace:
     """Run main() with every gate passed; record each `gh` write."""
     monkeypatch.setattr(sys, "argv", ["close-issue", *argv])
     monkeypatch.setattr(ci, "resolve_capability_root", lambda _explicit: CAP_ROOT)
@@ -58,10 +71,14 @@ def _run(ci, monkeypatch, argv: list[str], *, issue: dict, pr: dict | None = MER
     monkeypatch.setattr(ci.session_guard, "enforce", lambda **k: True)
     monkeypatch.setattr(ci, "load_adopter_config", lambda _root: {})
     monkeypatch.setattr(ci, "_read_members", lambda *a: [])
-    monkeypatch.setattr(ci, "resolve_invoker_identity", lambda **k: SimpleNamespace(github_login="me"))
+    monkeypatch.setattr(
+        ci, "resolve_invoker_identity", lambda **k: SimpleNamespace(github_login="me")
+    )
     monkeypatch.setattr(ci, "check_membership", lambda *a: SimpleNamespace(allowed=True))
     monkeypatch.setattr(ci.axis_labels, "load_substrate_map", lambda *_a, **_k: None)
     monkeypatch.setattr(ci, "fire_hooks", lambda *a, **k: None)
+    # Recording the close with the engine (#1231) is test_pm_close_issue_journal's.
+    monkeypatch.setattr(ci, "journal_move", lambda *a, **k: None)
 
     issues = {42: issue, **(parents or {})}
     monkeypatch.setattr(ci, "_gh_get_issue", lambda n, _config: issues.get(n))
@@ -93,8 +110,13 @@ def _writes(rec) -> list[list[str]]:
 
 def test_closes_an_open_leaf_as_completed_through_a_merged_pr(ci, monkeypatch, capsys) -> None:
     parent = {"title": "[EPIC] e", "state": "OPEN", "body": "- [ ] open box\n", "labels": []}
-    rec = _run(ci, monkeypatch, ["42", "--mode", "pr-merge", "--pr", "1042", "--yes"],
-               issue=_issue(), parents={10: parent})
+    rec = _run(
+        ci,
+        monkeypatch,
+        ["42", "--mode", "pr-merge", "--pr", "1042", "--yes"],
+        issue=_issue(),
+        parents={10: parent},
+    )
     assert rec.rc == 0
     assert rec.pr_reads == [1042]
     writes = _writes(rec)
@@ -114,47 +136,71 @@ def test_the_comment_is_posted_once_across_a_retry(ci, monkeypatch) -> None:
     re-run and does not post it again (the shared audit idempotence)."""
     _key, body = ci._pr_merge_close_comment(1042)
     posted = [{"body": body, "viewerDidAuthor": True, "includesCreatedEdit": False}]
-    rec = _run(ci, monkeypatch, ["42", "--mode", "pr-merge", "--pr", "1042", "--yes"],
-               issue=_issue(), comments=posted)
+    rec = _run(
+        ci,
+        monkeypatch,
+        ["42", "--mode", "pr-merge", "--pr", "1042", "--yes"],
+        issue=_issue(),
+        comments=posted,
+    )
     assert rec.rc == 0
     assert not any(c[:3] == ["gh", "issue", "comment"] for c in _writes(rec))
     assert ["gh", "issue", "close", "42", "--reason", "completed"] in _writes(rec)
 
 
 def test_refuses_a_pr_that_is_not_merged(ci, monkeypatch, capsys) -> None:
-    rec = _run(ci, monkeypatch, ["42", "--mode", "pr-merge", "--pr", "1042", "--yes"],
-               issue=_issue(), pr=OPEN_PR)
+    rec = _run(
+        ci,
+        monkeypatch,
+        ["42", "--mode", "pr-merge", "--pr", "1042", "--yes"],
+        issue=_issue(),
+        pr=OPEN_PR,
+    )
     assert rec.rc == 1
     assert _writes(rec) == []
     assert "not merged" in capsys.readouterr().err
 
 
 def test_an_unreadable_pr_is_a_usage_error(ci, monkeypatch) -> None:
-    rec = _run(ci, monkeypatch, ["42", "--mode", "pr-merge", "--pr", "1042", "--yes"],
-               issue=_issue(), pr=None)
+    rec = _run(
+        ci,
+        monkeypatch,
+        ["42", "--mode", "pr-merge", "--pr", "1042", "--yes"],
+        issue=_issue(),
+        pr=None,
+    )
     assert rec.rc == 2
     assert _writes(rec) == []
 
 
 def test_refuses_a_container(ci, monkeypatch, capsys) -> None:
-    rec = _run(ci, monkeypatch, ["42", "--mode", "pr-merge", "--pr", "1042", "--yes"],
-               issue=_issue(title="[Feature] a container"))
+    rec = _run(
+        ci,
+        monkeypatch,
+        ["42", "--mode", "pr-merge", "--pr", "1042", "--yes"],
+        issue=_issue(title="[Feature] a container"),
+    )
     assert rec.rc == 2
     assert rec.pr_reads == []
     assert "cascade-eligibility-close" in capsys.readouterr().err
 
 
 def test_the_checkbox_gate_applies(ci, monkeypatch, capsys) -> None:
-    rec = _run(ci, monkeypatch, ["42", "--mode", "pr-merge", "--pr", "1042", "--yes"],
-               issue=_issue(body="EPIC: #10\n\n- [ ] not yet\n"))
+    rec = _run(
+        ci,
+        monkeypatch,
+        ["42", "--mode", "pr-merge", "--pr", "1042", "--yes"],
+        issue=_issue(body="EPIC: #10\n\n- [ ] not yet\n"),
+    )
     assert rec.rc == 1
     assert _writes(rec) == []
     assert "not yet" in capsys.readouterr().err
 
 
 def test_dry_run_writes_nothing(ci, monkeypatch) -> None:
-    rec = _run(ci, monkeypatch, ["42", "--mode", "pr-merge", "--pr", "1042", "--dry-run"],
-               issue=_issue())
+    rec = _run(
+        ci, monkeypatch, ["42", "--mode", "pr-merge", "--pr", "1042", "--dry-run"], issue=_issue()
+    )
     assert rec.rc == 0
     assert _writes(rec) == []
 
@@ -165,8 +211,12 @@ def test_pr_outside_pr_merge_mode_is_a_usage_error(ci, monkeypatch) -> None:
 
 
 def test_already_closed_issue_only_reconciles_labels(ci, monkeypatch, capsys) -> None:
-    rec = _run(ci, monkeypatch, ["42", "--mode", "pr-merge", "--pr", "1042", "--yes"],
-               issue=_issue(state="CLOSED"))
+    rec = _run(
+        ci,
+        monkeypatch,
+        ["42", "--mode", "pr-merge", "--pr", "1042", "--yes"],
+        issue=_issue(state="CLOSED"),
+    )
     assert rec.rc == 0
     writes = _writes(rec)
     assert not any(c[:3] in (["gh", "issue", "comment"], ["gh", "issue", "close"]) for c in writes)

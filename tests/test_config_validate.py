@@ -58,7 +58,13 @@ def test_shipped_config_schema_is_draft_2020_12_without_a_version_key() -> None:
     assert "schema_version" not in schema["properties"]
     assert schema["additionalProperties"] is False
     assert set(schema["properties"]) == {
-        "name", "docs", "friction", "connections", "process", "project",
+        "name",
+        "docs",
+        "friction",
+        "connections",
+        "process",
+        "repository",
+        "project",
     }
 
 
@@ -332,7 +338,8 @@ def test_process_journal_values_must_be_booleans(make_adopter_repo: MakeAdopterR
     _write_config(repo, "process:\n  journal:\n    enabled: 'yes'\n    committed: 1\n")
     report = _run(repo)
     assert _paths(report, cv.Severity.ERROR) == [
-        "/process/journal/committed", "/process/journal/enabled",
+        "/process/journal/committed",
+        "/process/journal/enabled",
     ]
 
 
@@ -355,9 +362,7 @@ def test_config_set_turns_journal_logging_on_and_the_ignore_line_follows(
     runner = CliRunner()
 
     enabled = runner.invoke(main, ["config", "set", "process.journal.enabled", "true", "--yes"])
-    committed = runner.invoke(
-        main, ["config", "set", "process.journal.committed", "true", "--yes"]
-    )
+    committed = runner.invoke(main, ["config", "set", "process.journal.committed", "true", "--yes"])
 
     assert enabled.exit_code == 0, enabled.output
     assert committed.exit_code == 0, committed.output
@@ -365,6 +370,32 @@ def test_config_set_turns_journal_logging_on_and_the_ignore_line_follows(
     assert "journal.jsonl" not in gitignore.read_text(encoding="utf-8")
     config = YAML(typ="safe").load(report_context.project_config_path(repo.root).read_text())
     assert config["process"] == {"journal": {"enabled": True, "committed": True}}
+
+
+def test_config_set_committing_journals_reports_the_component_entry_the_render_drops(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """A package older than the backbone's ownership of the journal line still
+    claims it; committing the journals drops the entry, and the write says so."""
+    repo = make_adopter_repo(capabilities=("evidence",))
+    stale = ".pkit/capabilities/evidence/project/process/**/*.journal.jsonl"
+    package = repo.root / ".pkit" / "capabilities" / "evidence" / "package.yaml"
+    package.write_text(
+        package.read_text(encoding="utf-8") + f"runtime_ignore:\n  - {stale}\n", encoding="utf-8"
+    )
+    runner = CliRunner()
+
+    enabled = runner.invoke(main, ["config", "set", "process.journal.enabled", "true", "--yes"])
+    committed = runner.invoke(main, ["config", "set", "process.journal.committed", "true", "--yes"])
+
+    assert enabled.exit_code == 0, enabled.output
+    assert "dropped" not in enabled.output
+    assert committed.exit_code == 0, committed.output
+    why = "the backbone owns the journal pattern while journals are committed"
+    assert f"  dropped       evidence '{stale}' — {why}" in committed.output.splitlines()
+    lines = (repo.root / ".pkit" / ".gitignore").read_text(encoding="utf-8").splitlines()
+    assert f"# dropped: evidence '{stale}' — {why}" in lines
+    assert not [line for line in lines if "journal.jsonl" in line and not line.startswith("#")]
 
 
 def test_friction_findings_on_a_valid_configuration_are_pinned(

@@ -129,7 +129,11 @@ def ensure(root: Path, *, dry_run: bool = False) -> list[tuple[str, str]]:
     folder = root / WORKSPACE_DIR
     if folder.is_symlink():
         lines.append(
-            ("refused", f"{WORKSPACE_DIR} is a symlink, never the workspace — remove the link so a folder can take its place")
+            (
+                "refused",
+                f"{WORKSPACE_DIR} is a symlink, never the workspace — remove the link so a folder "
+                "can take its place",
+            )
         )
     elif folder.is_dir():
         lines.append(("unchanged", f"{WORKSPACE_DIR}/"))
@@ -143,7 +147,10 @@ def ensure(root: Path, *, dry_run: bool = False) -> list[tuple[str, str]]:
     exclude = exclude_file(root)
     if exclude is None:
         lines.append(
-            ("skipped", f"{WORKSPACE_DIR}/ exclusion — not a git repository, nothing to exclude it from")
+            (
+                "skipped",
+                f"{WORKSPACE_DIR}/ exclusion — not a git repository, nothing to exclude it from",
+            )
         )
     elif _has_entry(exclude):
         lines.append(("unchanged", f"{WORKSPACE_DIR}/ excluded in {_shown(exclude, root)}"))

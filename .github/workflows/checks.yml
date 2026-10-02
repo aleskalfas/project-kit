@@ -12,6 +12,12 @@ on:
     # `labeled`/`unlabeled` so the changeset guard's `skip-changeset` escape
     # hatch actually re-runs the check when the label is added/removed.
     types: [opened, synchronize, reopened, labeled, unlabeled]
+  # The merge queue (#1011; ADR-055 point 5): when `main` merges through a
+  # queue, `checks` — the status `main` requires — runs on the merge the queue
+  # is about to make, so the friction and migration results that gate it are
+  # computed against the true base, not the one the pull request last saw.
+  merge_group:
+    types: [checks_requested]
   push:
     branches: [main]
 
@@ -45,24 +51,36 @@ jobs:
 
       - name: Run the check aggregator
         env:
-          # PR: diff against the PR base. Push to main: against main (no-op diff).
-          PKIT_CHECK_BASE: origin/${{ github.event.pull_request.base.ref || 'main' }}
+          # PR: diff against the PR base. Merge queue: against the commit the
+          # queued merge is built on (`merge_group.base_sha` — `main`, or the
+          # merge queued ahead of this one), so the diff is this pull request's
+          # alone and the base is never outdated. Push to main: against main
+          # (no-op diff).
+          PKIT_CHECK_BASE: ${{ github.event.merge_group.base_sha || format('origin/{0}', github.event.pull_request.base.ref || 'main') }}
         run: ./scripts/check.sh
 
-      # Surface-without-changeset guard (PRJ-002). PR-scoped: it needs the PR
-      # base ref and the PR labels (the `skip-changeset` escape hatch), neither
-      # of which a local pre-push hook has — so it lives here, not in
-      # scripts/check.sh. Escape hatches: a `none` changeset for the component,
-      # or the `skip-changeset` label (surfaced below as PKIT_CHANGESET_SKIP).
+      # Changeset guard (PRJ-002). PR-scoped: it needs the PR base ref and the
+      # PR labels (the `skip-changeset` escape hatch), neither of which a local
+      # pre-push hook has — so it lives here, not in scripts/check.sh. Two
+      # checks: a surface change carries a changeset of its own (one the PR
+      # adds or edits; another PR's pending changeset does not count), and a
+      # requires_backbone floor the PR declares rides on a change to its
+      # component or a release of it. Escape hatches for the surface check: a `none` changeset for the
+      # component, or the `skip-changeset` label (surfaced below as
+      # PKIT_CHANGESET_SKIP).
       #
-      # Release PRs (`release/*` head from release-pr.yml) are skipped here as a
-      # belt: their diff is exactly `pkit release apply`'s footprint (version
-      # bumps + CHANGELOG + the changesets it just consumed), which would trip
-      # the guard with no changeset present. The guard *also* self-exempts that
-      # diff shape (release.py `is_release_diff`) — the primary, self-contained
-      # check — so this `if:` guard is defence-in-depth, not the sole line.
-      - name: Changeset guard (surface change ⇒ changeset)
-        if: github.event_name == 'pull_request' && !startsWith(github.head_ref, 'release/')
+      # Release PRs (from release-pr.yml) need no hatch: the guard recognises a
+      # diff that is only what `pkit release apply` writes — versions, the
+      # self-host manifest's backbone_version, CHANGELOG, the changesets it
+      # consumed — by its content, whatever the branch is called, and passes
+      # its surface check. The floor tie runs on every PR; a release diff only
+      # deletes changesets, so it declares no floor.
+      #
+      # It does not run on the queue's merge: a merge group carries no pull
+      # request labels to read the escape hatch from, and the guard has already
+      # judged the pull request's diff, which the queued merge does not change.
+      - name: Changeset guard (surface change ⇒ changeset; floor ⇒ its component)
+        if: github.event_name == 'pull_request'
         env:
           PKIT_CHANGESET_SKIP: ${{ contains(github.event.pull_request.labels.*.name, 'skip-changeset') && '1' || '' }}
         run: uv run pkit release check --base "origin/${{ github.event.pull_request.base.ref }}"

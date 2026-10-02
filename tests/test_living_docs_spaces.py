@@ -6,7 +6,7 @@ The capability's first artefacts, each held to living-docs DEC-001:
   member of `pkit validate` — over an adopter repository with the capability
   installed: one test per rule it applies (an out-of-root place without an
   assignment, a place enclosing a root, a record declared as a page, another
-  component's place, an entry point outside its space, a page's fields, the
+  component's place or held document, an entry point outside its space, a page's fields, the
   most specific place, a definition that does not inherit LDOC), and the
   readers each page's reader resolves against, named in its summary (reader
   resolution itself is `test_living_docs_points.py`'s);
@@ -322,8 +322,11 @@ def test_a_rule_set_file_declared_as_a_page_is_an_error(project: AdopterRepo) ->
     assert "is a rule-set file, an anchor target (COR-051)" in message
 
 
-def _install_component_with_place(repo: AdopterRepo) -> None:
-    """Another capability, declaring a place under the internal root."""
+def _install_component_with_place(
+    repo: AdopterRepo, friction: Mapping[str, Any] | None = None
+) -> None:
+    """Another capability, declaring a place under the internal root — or, with
+    `friction`, what that block says."""
     cap = repo.root / ".pkit" / "capabilities" / "analysis-test"
     cap.mkdir(parents=True)
     (cap / "package.yaml").write_text(
@@ -334,7 +337,7 @@ def _install_component_with_place(repo: AdopterRepo) -> None:
                 "description": "An analysis capability, for the test.",
                 "requires_backbone": ">=0.0.0",
                 "docs": {"locations": {"analysis": {"path": "analysis"}}},
-                "friction": {"places": [{"location": "analysis", "path": "."}]},
+                "friction": dict(friction or {"places": [{"location": "analysis", "path": "."}]}),
             }
         ),
         encoding="utf-8",
@@ -362,6 +365,27 @@ def test_another_component_s_place_is_never_a_page(project: AdopterRepo) -> None
     location, message = only_error(run(project))
     assert location == "tech-docs/analysis/uc-001.md:/kind"
     assert "is an artefact of analysis-test, which declares the place it is in" in message
+
+
+def test_a_document_another_component_holds_is_never_a_page_nor_unclassified(
+    project: AdopterRepo,
+) -> None:
+    """A folder of held documents (COR-050 point 1) under the internal root: no place
+    walks its files, and each is its owner's — counted "of another component",
+    never an unclassified document, and never a page (DEC-001 point 1)."""
+    _install_component_with_place(project, {"held": [{"location": "analysis", "path": "records"}]})
+    record = "tech-docs/analysis/records/2026-10-01-run.md"
+    project.write({record: "---\ndate: '2026-10-01'\n---\n\n# A run\n"})
+    document = run(project)
+    assert errors(document) == []
+    assert "1 of another component" in document["summary"][3]
+    assert "0 unclassified document(s)" in document["summary"][3]
+    project.write({record: "---\ndate: '2026-10-01'\nreader: user\n---\n"})
+    location, message = only_error(run(project))
+    assert location == f"{record}:/reader"
+    assert "is a document analysis-test holds in a folder it declares (COR-050 point 1)" in (
+        message
+    )
 
 
 # --- entry points (DEC-001 point 1) ------------------------------------------------------
@@ -432,6 +456,55 @@ def test_a_document_carrying_neither_field_is_unclassified_for_onboarding(
     document = run(project)
     assert errors(document) == []
     assert "1 unclassified document(s) for onboarding" in document["summary"][3]
+
+
+def test_a_page_left_unanchored_counts_unless_its_block_gives_an_accepted_reason(
+    project: AdopterRepo,
+) -> None:
+    """DEC-001 point 8: onboarding leaves no page unanchored without an accepted reason —
+    the reason the page's friction block gives for having no anchors, the core's
+    `unanchored-because` (COR-050 point 1), read as the backbone reads it. Counted
+    apart, never failed; an anchored page is in neither count."""
+    reason = "A signpost: nothing it lists is its own."
+    project.write(
+        {
+            "docs/sponsor.md": (
+                "---\nreader: user\nkind: signpost\npkit:\n  friction:\n"
+                f"    unanchored-because: '{reason}'\n---\n\n# Sponsor\n"
+            ),
+            "docs/anchored.md": (
+                "---\nreader: user\nkind: signpost\npkit:\n  friction:\n"
+                "    anchors: {path: [README.md]}\n---\n\n# Anchored\n"
+            ),
+        }
+    )
+    document = run(project)
+    assert errors(document) == []
+    (line,) = [line for line in document["summary"] if line.startswith("pages unanchored:")]
+    assert line == (
+        "pages unanchored: 3 without an accepted reason, 1 accepted with one "
+        "(`unanchored-because`); onboarding leaves none without (DEC-001 point 8)."
+    )
+
+    human = subprocess.run(
+        [sys.executable, str(project.root / SCRIPT)],
+        cwd=project.root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert human.returncode == 0, human.stderr
+    lines = human.stdout.splitlines()
+    forgotten = lines.index(
+        "page(s) unanchored without an accepted reason, for onboarding to anchor or accept (3):"
+    )
+    assert lines[forgotten + 1 : forgotten + 4] == [
+        "  README.md",
+        "  docs/guide.md",
+        "  tech-docs/README.md",
+    ]
+    accepted = lines.index("page(s) accepted unanchored, each with its reason (1):")
+    assert lines[accepted + 1] == f"  docs/sponsor.md — {reason}"
 
 
 # --- definitions (DEC-001 point 2) -------------------------------------------------------
@@ -575,9 +648,7 @@ def _template_front_matter(name: str) -> dict[str, Any]:
 #: Every template but the space definition's is a page template, named for its kind:
 #: a kind arrives with its template (RS-LDOC-004; the page schema's `kind`).
 PAGE_TEMPLATES = sorted(
-    path.stem
-    for path in (CAPABILITY / "templates").glob("*.md")
-    if path.stem != "space-definition"
+    path.stem for path in (CAPABILITY / "templates").glob("*.md") if path.stem != "space-definition"
 )
 
 
@@ -604,10 +675,11 @@ def test_the_page_schema_refuses_a_wrong_reader(reader: Any) -> None:
 
 # --- one home for discovery (#1099; ADR-057 point 2) -------------------------------------
 
-#: What re-reading the declarations or walking the places would take — each a
-#: pattern over a script's code (comments and docstrings left out) and what it
-#: would mean. Where artefacts are is the backbone's discovery, read through
-#: `pkit friction artefacts --json`; a second computation of it drifts.
+#: What re-reading the declarations, walking the places or matching an anchor would
+#: take — each a pattern over a script's code (comments and docstrings left out)
+#: and what it would mean. Where artefacts are is the backbone's discovery, read
+#: through `pkit friction artefacts --json`, and what an anchor matches its
+#: explanation's, `pkit friction explain --json`; a second computation drifts.
 DISCOVERY_TOKENS = {
     r"\bfnmatch\b": "a glob matcher (fnmatch)",
     r"\b(?:import|from)\s+glob\b": "a glob matcher (glob)",
@@ -621,6 +693,7 @@ DISCOVERY_TOKENS = {
     ),
     r"\.get\(\s*['\"]locations['\"]|docs-locations": "a capability's locations resolved",
     r"manifest\.yaml": "the installed capabilities read",
+    r":\([^)]*\bglob\b[^)]*\)|GIT_GLOB_PATHSPECS": "a pattern matched as git's glob pathspec",
 }
 
 

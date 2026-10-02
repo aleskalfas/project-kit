@@ -42,9 +42,7 @@ def _pinned_report_context(monkeypatch: pytest.MonkeyPatch) -> None:
     ensurable, #663) so the send path never depends on the machine's real gh
     state (#662: gh auth now selects the API-primary path). Tests override
     per-case; the context-stamp test overrides with concrete values."""
-    monkeypatch.setattr(
-        cli_mod, "_resolve_report_context", lambda *a, **k: (None, None)
-    )
+    monkeypatch.setattr(cli_mod, "_resolve_report_context", lambda *a, **k: (None, None))
     monkeypatch.setattr(rep, "gh_authenticated", lambda: False)
     monkeypatch.setattr(rep, "current_login", lambda: "tester")
     monkeypatch.setattr(rep, "ensure_kind_label", lambda *a, **k: True)
@@ -126,9 +124,7 @@ def test_stamp_reported_omits_absent_context_fields(kit_target: Path) -> None:
 
 def test_stamp_reported_dry_run_moves_nothing(kit_target: Path) -> None:
     src = _stamp_note(kit_target)
-    stamp = scratchpads.stamp_reported(
-        kit_target, "my-note", ("owner/repo#7",), dry_run=True
-    )
+    stamp = scratchpads.stamp_reported(kit_target, "my-note", ("owner/repo#7",), dry_run=True)
     assert src.is_file() and not stamp.dst.exists()
     assert not (kit_target / ".pkit" / "scratchpad" / "reported").exists()
 
@@ -194,9 +190,7 @@ def test_drifted_reported_notes_lists_names(kit_target: Path) -> None:
     _stamp_note(kit_target)
     stamp = scratchpads.stamp_reported(kit_target, "my-note", ("owner/repo#7",))
     assert scratchpads.drifted_reported_notes(kit_target) == []
-    stamp.dst.write_text(
-        stamp.dst.read_text(encoding="utf-8") + "\nedit\n", encoding="utf-8"
-    )
+    stamp.dst.write_text(stamp.dst.read_text(encoding="utf-8") + "\nedit\n", encoding="utf-8")
     assert scratchpads.drifted_reported_notes(kit_target) == [stamp.dst.name]
 
 
@@ -270,12 +264,12 @@ def test_list_notes_resolves_reported_refs_live(
 ) -> None:
     _stamp_note(kit_target, "plain-note")
     _stamp_note(kit_target, "sent-note")
-    scratchpads.stamp_reported(
-        kit_target, "sent-note", ("owner/repo#7", "owner/repo#8")
-    )
+    scratchpads.stamp_reported(kit_target, "sent-note", ("owner/repo#7", "owner/repo#8"))
     resolved = {
         "owner/repo#7": scratchpads.ReportedRefState(
-            "owner/repo#7", "closed", title="the fix",
+            "owner/repo#7",
+            "closed",
+            title="the fix",
             url="https://github.com/owner/repo/issues/7",
         ),
         "owner/repo#8": scratchpads.ReportedRefState("owner/repo#8", "open"),
@@ -308,12 +302,17 @@ def test_resolve_ref_reads_state_title_url_in_one_gh_read(
 
     def fake(args):
         captured["args"] = args
-        return {"state": "CLOSED", "title": "the fix",
-                "url": "https://github.com/owner/repo/issues/7"}
+        return {
+            "state": "CLOSED",
+            "title": "the fix",
+            "url": "https://github.com/owner/repo/issues/7",
+        }
 
     monkeypatch.setattr(scratchpads, "_gh_json", fake)
     assert scratchpads.resolve_ref("owner/repo#7") == scratchpads.ReportedRefState(
-        "owner/repo#7", "closed", title="the fix",
+        "owner/repo#7",
+        "closed",
+        title="the fix",
         url="https://github.com/owner/repo/issues/7",
     )
     assert captured["args"][:4] == ["gh", "issue", "view", "7"]
@@ -333,9 +332,7 @@ def cli_target(kit_target: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 def test_cli_scratchpad_reported_moves_and_records(cli_target: Path) -> None:
     _stamp_note(cli_target)
-    res = CliRunner().invoke(
-        main, ["scratchpad", "reported", "my-note", "owner/repo#7"]
-    )
+    res = CliRunner().invoke(main, ["scratchpad", "reported", "my-note", "owner/repo#7"])
     assert res.exit_code == 0, res.output
     assert "Moved:" in res.output and "reported/" in res.output
     assert "Recorded: owner/repo#7" in res.output
@@ -354,14 +351,10 @@ def test_cli_scratchpad_reported_accepts_issue_url(cli_target: Path) -> None:
 def test_cli_scratchpad_reported_append_and_idempotent(cli_target: Path) -> None:
     _stamp_note(cli_target)
     scratchpads.stamp_reported(cli_target, "my-note", ("owner/repo#7",))
-    res = CliRunner().invoke(
-        main, ["scratchpad", "reported", "my-note", "owner/repo#8"]
-    )
+    res = CliRunner().invoke(main, ["scratchpad", "reported", "my-note", "owner/repo#8"])
     assert res.exit_code == 0, res.output
     assert "Recorded: owner/repo#8" in res.output and "Moved:" not in res.output
-    res = CliRunner().invoke(
-        main, ["scratchpad", "reported", "my-note", "owner/repo#8"]
-    )
+    res = CliRunner().invoke(main, ["scratchpad", "reported", "my-note", "owner/repo#8"])
     assert res.exit_code == 0, res.output
     assert "Already recorded: owner/repo#8" in res.output
 
@@ -382,13 +375,14 @@ def test_cli_scratchpad_list_states_drift_and_retire_prompt(
     _stamp_note(cli_target, "plain-note")
     _stamp_note(cli_target, "sent-note")
     stamp = scratchpads.stamp_reported(cli_target, "sent-note", ("owner/repo#7",))
-    stamp.dst.write_text(
-        stamp.dst.read_text(encoding="utf-8") + "\nedit\n", encoding="utf-8"
-    )
+    stamp.dst.write_text(stamp.dst.read_text(encoding="utf-8") + "\nedit\n", encoding="utf-8")
     monkeypatch.setattr(
-        scratchpads, "resolve_ref",
+        scratchpads,
+        "resolve_ref",
         lambda ref: scratchpads.ReportedRefState(
-            ref, "closed", title="the fix",
+            ref,
+            "closed",
+            title="the fix",
             url="https://github.com/owner/repo/issues/7",
         ),
     )
@@ -396,16 +390,10 @@ def test_cli_scratchpad_list_states_drift_and_retire_prompt(
     assert res.exit_code == 0, res.output
     assert "active/" in res.output and "2026-08-10-plain-note.md" in res.output
     # a resolved ref renders state + title + url in one row (#678)
-    assert (
-        "owner/repo#7 (closed) the fix  (https://github.com/owner/repo/issues/7)"
-        in res.output
-    )
+    assert "owner/repo#7 (closed) the fix  (https://github.com/owner/repo/issues/7)" in res.output
     assert "[modified since reported]" in res.output
     # all refs closed → the retire prompt names the exact done command
-    assert (
-        "retire with: pkit scratchpad done sent-note --produced owner/repo#7"
-        in res.output
-    )
+    assert "retire with: pkit scratchpad done sent-note --produced owner/repo#7" in res.output
 
 
 def test_cli_scratchpad_list_open_refs_no_retire_prompt(
@@ -414,7 +402,8 @@ def test_cli_scratchpad_list_open_refs_no_retire_prompt(
     _stamp_note(cli_target)
     scratchpads.stamp_reported(cli_target, "my-note", ("owner/repo#7",))
     monkeypatch.setattr(
-        scratchpads, "resolve_ref",
+        scratchpads,
+        "resolve_ref",
         lambda ref: scratchpads.ReportedRefState(ref, "open"),
     )
     res = CliRunner().invoke(main, ["scratchpad", "list"])
@@ -441,9 +430,7 @@ def test_cli_scratchpad_list_unknown_renders_state_unknown(
 def test_cli_scratchpad_done_from_reported(cli_target: Path) -> None:
     _stamp_note(cli_target)
     scratchpads.stamp_reported(cli_target, "my-note", ("owner/repo#7",))
-    res = CliRunner().invoke(
-        main, ["scratchpad", "done", "my-note", "--produced", "owner/repo#7"]
-    )
+    res = CliRunner().invoke(main, ["scratchpad", "done", "my-note", "--produced", "owner/repo#7"])
     assert res.exit_code == 0, res.output
     assert "reported/" in res.output and "done/" in res.output
 
@@ -453,9 +440,7 @@ def test_cli_scratchpad_done_from_reported(cli_target: Path) -> None:
 
 def _write_note(kit_target: Path, text: str = "exploration body\n") -> Path:
     note = _stamp_note(kit_target)
-    note.write_text(
-        note.read_text(encoding="utf-8") + "\n" + text, encoding="utf-8"
-    )
+    note.write_text(note.read_text(encoding="utf-8") + "\n" + text, encoding="utf-8")
     return note
 
 
@@ -465,13 +450,13 @@ def test_cli_report_attach_inlines_note_and_stamps_on_post(
     note = _write_note(cli_target, "the exploration text\n")
     monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
     monkeypatch.setattr(
-        rep, "file_report_via_gh",
+        rep,
+        "file_report_via_gh",
         lambda target, **k: "https://github.com/aleskalfas/project-kit/issues/700",
     )
     res = CliRunner().invoke(
         main,
-        ["report", "bug", "--title", "t", "--body", "b", "--file",
-         "--scratchpad", "my-note"],
+        ["report", "bug", "--title", "t", "--body", "b", "--file", "--scratchpad", "my-note"],
         input="y\n",
     )
     assert res.exit_code == 0, res.output
@@ -489,18 +474,16 @@ def test_cli_report_post_stamps_context_into_frontmatter(
     # The resolved project/workstream pair flows through the #643 stamp
     # kwargs into the reported note's frontmatter (ADR-050).
     note = _write_note(cli_target)
-    monkeypatch.setattr(
-        cli_mod, "_resolve_report_context", lambda *a, **k: ("alpha", "cli")
-    )
+    monkeypatch.setattr(cli_mod, "_resolve_report_context", lambda *a, **k: ("alpha", "cli"))
     monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
     monkeypatch.setattr(
-        rep, "file_report_via_gh",
+        rep,
+        "file_report_via_gh",
         lambda target, **k: "https://github.com/aleskalfas/project-kit/issues/700",
     )
     res = CliRunner().invoke(
         main,
-        ["report", "bug", "--title", "t", "--body", "b", "--file",
-         "--scratchpad", "my-note"],
+        ["report", "bug", "--title", "t", "--body", "b", "--file", "--scratchpad", "my-note"],
         input="y\n",
     )
     assert res.exit_code == 0, res.output
@@ -530,8 +513,18 @@ def test_cli_report_attach_yes_stages_and_never_stamps(
     monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
     res = CliRunner().invoke(
         main,
-        ["report", "bug", "--title", "t", "--body", "b", "--file", "--yes",
-         "--scratchpad", "my-note"],
+        [
+            "report",
+            "bug",
+            "--title",
+            "t",
+            "--body",
+            "b",
+            "--file",
+            "--yes",
+            "--scratchpad",
+            "my-note",
+        ],
     )
     assert res.exit_code == 0, res.output
     assert "staged: pkit report submit " in res.output
@@ -546,13 +539,13 @@ def test_cli_report_attach_redaction_prompt_declines(
     posted = {"v": False}
     monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
     monkeypatch.setattr(
-        rep, "file_report_via_gh",
+        rep,
+        "file_report_via_gh",
         lambda *a, **k: posted.__setitem__("v", True) or "x",
     )
     res = CliRunner().invoke(
         main,
-        ["report", "bug", "--title", "t", "--body", "b", "--file",
-         "--scratchpad", "my-note"],
+        ["report", "bug", "--title", "t", "--body", "b", "--file", "--scratchpad", "my-note"],
         input="n\n",  # decline at the edit-or-send-anyway prompt
     )
     assert res.exit_code == 0, res.output
@@ -579,17 +572,18 @@ def test_cli_report_attach_oversize_single_confirm_posts_both(
     comment_calls: list = []
     monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
     monkeypatch.setattr(
-        rep, "file_report_via_gh",
+        rep,
+        "file_report_via_gh",
         lambda target, **k: "https://github.com/aleskalfas/project-kit/issues/701",
     )
     monkeypatch.setattr(
-        rep, "post_issue_comment",
+        rep,
+        "post_issue_comment",
         lambda target, issue, body: comment_calls.append((issue, body)) or (True, ""),
     )
     res = CliRunner().invoke(
         main,
-        ["report", "bug", "--title", "t", "--body", "b", "--file",
-         "--scratchpad", "my-note"],
+        ["report", "bug", "--title", "t", "--body", "b", "--file", "--scratchpad", "my-note"],
         input="y\n",  # ONE confirm covers body + overflow comment
     )
     assert res.exit_code == 0, res.output
@@ -605,16 +599,14 @@ def test_cli_report_attach_partial_failure_does_not_stamp(
     note = _write_note(cli_target, "y" * 70_000 + "\n")
     monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
     monkeypatch.setattr(
-        rep, "file_report_via_gh",
+        rep,
+        "file_report_via_gh",
         lambda target, **k: "https://github.com/aleskalfas/project-kit/issues/702",
     )
-    monkeypatch.setattr(
-        rep, "post_issue_comment", lambda target, issue, body: (False, "boom")
-    )
+    monkeypatch.setattr(rep, "post_issue_comment", lambda target, issue, body: (False, "boom"))
     res = CliRunner().invoke(
         main,
-        ["report", "bug", "--title", "t", "--body", "b", "--file",
-         "--scratchpad", "my-note"],
+        ["report", "bug", "--title", "t", "--body", "b", "--file", "--scratchpad", "my-note"],
         input="y\n",
     )
     assert res.exit_code == 0, res.output
@@ -642,9 +634,7 @@ def test_cli_report_attach_missing_note_errors(cli_target: Path) -> None:
 def test_cli_report_warns_on_drifted_reported_note(cli_target: Path) -> None:
     _stamp_note(cli_target)
     stamp = scratchpads.stamp_reported(cli_target, "my-note", ("owner/repo#7",))
-    stamp.dst.write_text(
-        stamp.dst.read_text(encoding="utf-8") + "\nedit\n", encoding="utf-8"
-    )
+    stamp.dst.write_text(stamp.dst.read_text(encoding="utf-8") + "\nedit\n", encoding="utf-8")
     res = CliRunner().invoke(main, ["report", "bug", "--title", "t", "--body", "b"])
     assert res.exit_code == 0, res.output
     assert "modified since reported" in res.output

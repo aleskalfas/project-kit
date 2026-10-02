@@ -189,7 +189,7 @@ def test_parse_ls_files_mode_non_executable_is_flagged() -> None:
     [
         (UV_SCRIPT_SHEBANG, True),
         ("#!/usr/bin/env python3", False),
-        ("\"\"\"A library module with no shebang.\"\"\"", False),
+        ('"""A library module with no shebang."""', False),
     ],
 )
 def test_is_uv_script_entrypoint_discriminates(

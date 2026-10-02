@@ -1,0 +1,29 @@
+component: backbone
+kind: minor
+custom:
+  category: Changed
+body: >
+  A change to `friction.exclude` is read as a change to the path anchors whose
+  files it moves, and both friction checks agree on an artefact under an
+  excluded path. Each state is read under the exclusions it declared: the
+  change check (`pkit friction check`) reads its base under the base's, and
+  the whole-repository check (`pkit friction check --all`), with `friction
+  debt` and `friction explain`, reads an artefact's revalidation point under
+  the point's, never every state under HEAD's. Narrowing `friction.exclude`
+  over files an anchor did not stand on is friction the covered artefacts
+  answer in the pull request, and stale debt dated from that commit once
+  merged; widening it is friction where a file it takes from an anchor
+  changed while the anchor stood on it, dated from that change, and is
+  otherwise a new, non-failing `left-out` finding in both checks. So a pull
+  request that only edits the configuration can now fail an enforcing check.
+  A widening no longer erases stale debt, and a narrowing no longer dates it
+  from changes made while the files were left out. An artefact a narrowing
+  lets back in must revalidate in that change, and is stale from that commit
+  otherwise; an artefact under an excluded path owes no answer, though a new
+  `at` on it is judged like any other. A path anchor an exclusion leaves
+  matching only excluded files is dead and says why, `excluded since this
+  diff` or `excluded since <commit>`, and `friction explain` lists the point's
+  files under the point's exclusions and the commits behind each exclusion
+  change. A state whose `friction.exclude` does not read is reported as
+  `unreadable` and read as the state it is compared with. `pkit friction
+  artefacts --json` gives each held file an `excluded` key.

@@ -20,10 +20,17 @@ from referencing.jsonschema import DRAFT202012
 
 from project_kit import backbone_schemas as bs
 from project_kit import capabilities as caps
+from project_kit import lifecycle_ownership, process_journal, refs, scaffolds
 from project_kit import package_validate as pv
-from project_kit import refs, scaffolds
 from project_kit.cli import main
+from project_kit.manifest import (
+    ORIGIN_EXTERNALLY_SOURCED,
+    ORIGIN_INCUBATED_IN_REPO,
+    ORIGIN_KIT_SHIPPED,
+    set_capability_origin,
+)
 from tests.adopter_repo import MakeAdopterRepo
+from tests.process_journal_support import set_journal_logging
 
 REPO = Path(__file__).resolve().parents[1]
 
@@ -111,7 +118,9 @@ def test_every_shipped_package_file_validates_with_no_findings(
     schema: dict[str, Any], package: Path
 ) -> None:
     report = pv.validate_package_file(package, schema, expected_name=package.parent.name)
-    assert report.findings == (), [f"{f.severity.value} {f.path}: {f.message}" for f in report.findings]
+    assert report.findings == (), [
+        f"{f.severity.value} {f.path}: {f.message}" for f in report.findings
+    ]
 
 
 def test_scaffold_templates_validate_with_no_findings(
@@ -121,8 +130,8 @@ def test_scaffold_templates_validate_with_no_findings(
     from ruamel.yaml import YAML
 
     for template, kind in (
-        (scaffolds._CAPABILITY_PACKAGE_YAML_TEMPLATE, "capability"),  # pyright: ignore[reportPrivateUsage]
-        (scaffolds._PACKAGE_YAML_TEMPLATE, "adapter"),  # pyright: ignore[reportPrivateUsage]
+        (scaffolds._CAPABILITY_PACKAGE_YAML_TEMPLATE, "capability"),
+        (scaffolds._PACKAGE_YAML_TEMPLATE, "adapter"),
     ):
         text = template.format(kind=kind, name="demo", requires_backbone=">=1.0.0,<2.0.0")
         raw = YAML(typ="safe").load(text)
@@ -307,9 +316,7 @@ def test_every_component_requires_the_fields_cor_017_lists(
 # word (`backbone_schemas.ADDRESS_WORD_PATTERN`), which the configuration
 # schema's selection keys admit.
 _ROLE_PATTERN = f"^{bs.ADDRESS_WORD_PATTERN}::{bs.ADDRESS_WORD_PATTERN}$"
-_POINT_PATTERN = (
-    f"^{bs.ADDRESS_WORD_PATTERN}::{bs.ADDRESS_WORD_PATTERN}:{bs.ADDRESS_WORD_PATTERN}$"
-)
+_POINT_PATTERN = f"^{bs.ADDRESS_WORD_PATTERN}::{bs.ADDRESS_WORD_PATTERN}:{bs.ADDRESS_WORD_PATTERN}$"
 
 
 def test_the_citation_grammar_re_exports_the_one_address_word() -> None:
@@ -372,12 +379,28 @@ def test_an_address_that_is_not_words_is_refused(
     ("overrides", "path", "fragment"),
     [
         ({"schema_version": 3}, "/schema_version", "is not one of [1, 2]"),
-        ({"component": {"kind": "capability", "name": "demo", "version": 1}}, "/component/version", "not of type 'string'"),
-        ({"component": {"kind": "bundle", "name": "demo", "version": "0.1.0"}}, "/component/kind", "is not one of"),
-        ({"requires_capabilities": "project-management"}, "/requires_capabilities", "not of type 'array'"),
+        (
+            {"component": {"kind": "capability", "name": "demo", "version": 1}},
+            "/component/version",
+            "not of type 'string'",
+        ),
+        (
+            {"component": {"kind": "bundle", "name": "demo", "version": "0.1.0"}},
+            "/component/kind",
+            "is not one of",
+        ),
+        (
+            {"requires_capabilities": "project-management"},
+            "/requires_capabilities",
+            "not of type 'array'",
+        ),
         ({"aliases": ["Bad Name"]}, "/aliases/0", "does not match"),
         ({"footprint": [".claude", ".claude"]}, "/footprint", "non-unique"),
-        ({"commands": {"publish": {"script": "scripts/publish.py"}}}, "/commands/publish", "'help' is a required property"),
+        (
+            {"commands": {"publish": {"script": "scripts/publish.py"}}},
+            "/commands/publish",
+            "'help' is a required property",
+        ),
     ],
 )
 def test_wrong_type_is_an_error(
@@ -425,9 +448,7 @@ def test_point_under_a_role_the_package_does_not_provide_is_an_error(
     }
 
 
-def test_missing_companion_schema_is_an_error(
-    schema: dict[str, Any], component_dir: Path
-) -> None:
+def test_missing_companion_schema_is_an_error(schema: dict[str, Any], component_dir: Path) -> None:
     connections = _connections()
     point = connections["extension-points"]["accepts"]["pkit::documentation:reading-evidence"]
     point["schema"] = "nope.schema.json"
@@ -448,7 +469,11 @@ def test_referenced_command_that_does_not_exist_is_an_error(
     connections = _connections(
         extensions={
             "subscribes": [
-                {"point": "pkit::analysis:use-case-created", "schema_version": 1, "command": "refresh"}
+                {
+                    "point": "pkit::analysis:use-case-created",
+                    "schema_version": 1,
+                    "command": "refresh",
+                }
             ],
             "contributes": [
                 {"point": "pkit::analysis:glossary", "schema_version": 1, "command": "create page"}
@@ -486,7 +511,9 @@ def test_a_validator_names_a_declared_command_that_declares_the_query_contract(
     schema: dict[str, Any], component_dir: Path
 ) -> None:
     undeclared = _messages(
-        _validate(_package(validators={"citations": {"command": "refresh"}}), schema, component_dir),
+        _validate(
+            _package(validators={"citations": {"command": "refresh"}}), schema, component_dir
+        ),
         pv.Severity.ERROR,
     )
     assert undeclared == {
@@ -496,7 +523,9 @@ def test_a_validator_names_a_declared_command_that_declares_the_query_contract(
         )
     }
     no_contract = _messages(
-        _validate(_package(validators={"citations": {"command": "publish"}}), schema, component_dir),
+        _validate(
+            _package(validators={"citations": {"command": "publish"}}), schema, component_dir
+        ),
         pv.Severity.ERROR,
     )
     assert no_contract == {
@@ -514,6 +543,60 @@ def test_a_validator_names_a_declared_command_that_declares_the_query_contract(
     assert set(_messages(_validate(raw, schema, component_dir), pv.Severity.ERROR)) == {
         "/commands/create/page/query-contract",
         "/validators/citations/command",
+    }
+
+
+def _reading(reads: Any, *, contract: bool = True) -> dict[str, Any]:
+    """The package with `publish` declaring `reads` (COR-052 point 6)."""
+    raw = _package()
+    raw["commands"]["publish"]["reads"] = reads
+    if contract:
+        raw["commands"]["publish"]["query-contract"] = True
+    return raw
+
+
+@pytest.mark.parametrize("reads", [["history"], ["settled"], ["history", "settled"]])
+def test_a_query_command_may_declare_what_it_reads_beyond_the_working_tree(
+    schema: dict[str, Any], component_dir: Path, reads: list[str]
+) -> None:
+    assert _validate(_reading(reads), schema, component_dir) == []
+
+
+@pytest.mark.parametrize(
+    ("reads", "path", "fragment"),
+    [
+        (
+            ["history", "remote"],
+            "/commands/publish/reads/1",
+            "is not one of ['history', 'settled']",
+        ),
+        ([], "/commands/publish/reads", "should be non-empty"),
+        (["history", "history"], "/commands/publish/reads", "has non-unique elements"),
+        ("history", "/commands/publish/reads", "is not of type 'array'"),
+    ],
+    ids=["unknown-value", "empty", "duplicate", "not-a-list"],
+)
+def test_a_reads_the_schema_refuses_is_an_error(
+    schema: dict[str, Any], component_dir: Path, reads: Any, path: str, fragment: str
+) -> None:
+    errors = _messages(_validate(_reading(reads), schema, component_dir), pv.Severity.ERROR)
+    assert set(errors) == {path}, errors
+    assert fragment in errors[path]
+
+
+def test_reads_without_the_query_contract_is_an_error(
+    schema: dict[str, Any], component_dir: Path
+) -> None:
+    errors = _messages(
+        _validate(_reading(["settled"], contract=False), schema, component_dir),
+        pv.Severity.ERROR,
+    )
+    assert errors == {
+        "/commands/publish/reads": (
+            "command 'publish' declares `reads` without the query contract "
+            "(`query-contract: true`): `reads` says what a data point's command filler reads "
+            "beyond the working tree, and a filler is a query (COR-052 point 6)."
+        )
     }
 
 
@@ -575,9 +658,7 @@ def test_an_offered_process_point_carries_its_definition_s_interface_version(
 ) -> None:
     # Another file than `review.yaml` declares the id: the message names that file.
     _write_definition(component_dir, "reviewing.yaml", "  interface:\n    version: 1\n")
-    errors = _messages(
-        _validate(_offering_review(2), schema, component_dir), pv.Severity.ERROR
-    )
+    errors = _messages(_validate(_offering_review(2), schema, component_dir), pv.Severity.ERROR)
     assert errors == {
         f"{_REVIEW_POINTER}/schema_version": (
             f"offered process point {_REVIEW!r} is at schema_version 2 in demo/package.yaml, "
@@ -600,9 +681,7 @@ def test_an_offered_process_point_whose_definition_declares_no_interface_version
 def test_an_offered_process_point_names_an_existing_definition(
     schema: dict[str, Any], component_dir: Path
 ) -> None:
-    errors = _messages(
-        _validate(_offering_review(1), schema, component_dir), pv.Severity.ERROR
-    )
+    errors = _messages(_validate(_offering_review(1), schema, component_dir), pv.Severity.ERROR)
     assert errors == {
         f"{_REVIEW_POINTER}/process": (
             f"offered process point {_REVIEW!r} names process 'review', which no definition "
@@ -626,16 +705,97 @@ def test_depends_on_must_carry_the_generated_mark(
     errors = _messages(
         _validate(_package(connections=connections), schema, component_dir), pv.Severity.ERROR
     )
-    assert errors == {
-        "/connections/extensions/depends-on": "'generated' is a required property"
-    }
+    assert errors == {"/connections/extensions/depends-on": "'generated' is a required property"}
     connections["extensions"]["depends-on"]["generated"] = True
     assert _validate(_package(connections=connections), schema, component_dir) == []
 
 
+# What the project-management package declared before the backbone took the
+# process-journal ignore line over (#1120).
+STALE_JOURNAL_LINE = ".pkit/capabilities/project-management/project/process/**/*.journal.jsonl"
+
+# The journal settings under which the render drops a component's claim.
+JOURNALS_COMMITTED = process_journal.JournalSettings(enabled=True, committed=True)
+
+
+@pytest.mark.parametrize("pattern", [STALE_JOURNAL_LINE, process_journal.JOURNAL_GLOB])
+def test_a_runtime_ignore_entry_declaring_committed_process_journals_is_warned(
+    schema: dict[str, Any], component_dir: Path, pattern: str
+) -> None:
+    """Journals' ignore line is the backbone's; while the project commits them the
+    render drops a component's claim on them — a warning, never an error."""
+    raw = _package(runtime_ignore=[".pkit/capabilities/demo/project/instance/*.json", pattern])
+    findings = pv.validate_package(
+        raw, schema, component_dir=component_dir, expected_name="demo", journal=JOURNALS_COMMITTED
+    )
+    assert _messages(findings, pv.Severity.ERROR) == {}
+    assert _messages(findings, pv.Severity.WARNING) == {
+        "/runtime_ignore/1": pv.journal_claim_message(pattern)
+    }
+
+
+@pytest.mark.parametrize(
+    "journal",
+    [
+        process_journal.JournalSettings(),
+        process_journal.JournalSettings(enabled=True, committed=False),
+        process_journal.JournalSettings(enabled=False, committed=True),
+    ],
+)
+def test_a_claim_on_journals_kept_out_of_version_control_is_not_warned(
+    schema: dict[str, Any], component_dir: Path, journal: process_journal.JournalSettings
+) -> None:
+    """While the journals stay ignored the claim is redundant: nothing to warn about."""
+    raw = _package(runtime_ignore=[STALE_JOURNAL_LINE])
+    findings = pv.validate_package(
+        raw, schema, component_dir=component_dir, expected_name="demo", journal=journal
+    )
+    assert findings == []
+
+
+@pytest.mark.parametrize(
+    "pattern",
+    [
+        ".pkit/capabilities/demo/project/instance/*.json",
+        ".pkit/capabilities/demo/project/process/notes.md",
+        ".pkit/capabilities/demo/project/journal.jsonl",
+    ],
+)
+def test_a_runtime_ignore_entry_that_is_not_a_journal_is_not_warned(
+    schema: dict[str, Any], component_dir: Path, pattern: str
+) -> None:
+    raw = _package(runtime_ignore=[pattern])
+    findings = pv.validate_package(
+        raw, schema, component_dir=component_dir, expected_name="demo", journal=JOURNALS_COMMITTED
+    )
+    assert findings == []
+
+
+@pytest.mark.parametrize(
+    ("provenance", "fix"),
+    [
+        (pv.Provenance.OWN, "Drop the entry"),
+        (pv.Provenance.SYNCED, "a synced copy the next sync overwrites, so do not edit it"),
+        (pv.Provenance.PINNED, "move the pin to an author release that drops the entry"),
+    ],
+)
+def test_the_journal_warning_names_the_backbone_pattern_and_the_way_out(
+    provenance: pv.Provenance, fix: str
+) -> None:
+    message = pv.journal_claim_message(STALE_JOURNAL_LINE, provenance)
+    assert repr(process_journal.JOURNAL_GLOB) in message
+    assert "`process.journal.committed: true`" in message
+    assert "the `.pkit/.gitignore` render drops the entry" in message
+    assert fix in message
+
+
 @pytest.mark.parametrize(
     ("path_value", "problem"),
-    [("../pages", "contains a `..` segment"), ("/srv/docs", "is absolute"), ("a/../b", "contains a `..` segment")],
+    [
+        ("../pages", "contains a `..` segment"),
+        ("/srv/docs", "is absolute"),
+        ("a/../b", "contains a `..` segment"),
+    ],
 )
 def test_docs_location_must_be_a_relative_sub_path(
     schema: dict[str, Any], component_dir: Path, path_value: str, problem: str
@@ -676,6 +836,59 @@ def test_friction_places_lie_inside_a_declared_location_or_the_project(
         "/friction/surface/1": (
             "'../elsewhere/**' is not a repository-relative path: it contains a `..` segment."
         ),
+    }
+
+
+def test_friction_held_folders_name_a_location_and_are_folders_in_it(
+    schema: dict[str, Any], component_dir: Path
+) -> None:
+    """A held folder is written as a place is, but names the location it lies within
+    and is a folder there — never a glob (COR-050 point 1). The schema says so and
+    refuses another key in an entry; the repository checks hold its path and
+    location as a place's, and repeat the two held rules for a tree without a
+    schema, with the same locations."""
+    raw = _package(
+        docs={"locations": {"records": {"path": "records"}}},
+        friction={
+            "held": [
+                {"location": "records", "path": "revalidations", "description": "The records."},
+                {"path": "notes/acts"},
+                {"location": "logs", "path": "runs"},
+                {"location": "records", "path": "../outside"},
+                {"location": "records", "path": "runs/*"},
+            ]
+        },
+    )
+    errors = _messages(_validate(raw, schema, component_dir), pv.Severity.ERROR)
+    assert errors == {
+        "/friction/held/1": "'location' is a required property",
+        "/friction/held/2/location": (
+            "held folder names location 'logs', which `docs.locations` does not declare "
+            "(declared: ['records'])."
+        ),
+        "/friction/held/3/path": (
+            "'../outside' is not a path relative to its location or the project: it contains "
+            "a `..` segment."
+        ),
+        "/friction/held/4/path": "'runs/*' does not match '^[^*?\\\\[]+$'",
+    }
+    raw["friction"]["held"].append({"location": "records", "path": "runs", "kind": "records"})
+    errors = _messages(_validate(raw, schema, component_dir), pv.Severity.ERROR)
+    assert "/friction/held/5/kind" in errors
+
+    without_schema = _messages(_validate(raw, None, component_dir), pv.Severity.ERROR)
+    assert without_schema["/friction/held/1"] == (
+        "held folder names no `location`: a held folder lies within one of the component's "
+        "`docs.locations` (COR-050 point 1)."
+    )
+    assert without_schema["/friction/held/4/path"] == (
+        "held folder 'runs/*' is a glob: a held folder is a folder (COR-050 point 1)."
+    )
+    assert set(without_schema) == {
+        "/friction/held/1",
+        "/friction/held/2/location",
+        "/friction/held/3/path",
+        "/friction/held/4/path",
     }
 
 
@@ -754,7 +967,7 @@ def test_if_condition_resolves_a_ref_against_the_schema_root() -> None:
         "then": {"properties": {"kind": {}, "command": {}}},
         "else": {"properties": {"kind": {}, "process": {}}},
     }
-    walker = pv._UnknownKeyWalker(Draft202012Validator(schema))  # pyright: ignore[reportPrivateUsage]
+    walker = pv._UnknownKeyWalker(Draft202012Validator(schema))
     resource = Resource.from_contents(schema, default_specification=DRAFT202012)
     resolver = Registry().with_resource(schema["$id"], resource).resolver(base_uri=schema["$id"])
     assert walker.walk({"kind": "event", "command": "x"}, schema, resolver, "") == []
@@ -824,7 +1037,8 @@ def test_install_time_check_refuses_the_new_repository_checks_too(
         "schema_version: 1\ncomponent:\n  kind: capability\n  name: homegrown\n  version: 0.1.0\n"
         "requires_backbone: '>=1.0.0'\n"
         "connections:\n  roles: [pkit::documentation]\n  extension-points:\n    accepts:\n"
-        "      pkit::analysis:use-cases: {schema_version: 1, schema: x.schema.json, description: d}\n",
+        "      pkit::analysis:use-cases: {schema_version: 1, schema: x.schema.json, description: "
+        "d}\n",
     )
     problems = caps.validate_capability_self_consistency(source)
     assert any("does not provide" in p for p in problems)
@@ -913,6 +1127,125 @@ def test_pkit_validate_fails_on_a_package_error(make_adopter_repo: MakeAdopterRe
     assert result.exit_code == 1
     assert ".pkit/capabilities/evidence/package.yaml:/component/version" in result.output
     assert "5 is not of type 'string'" in result.output
+
+
+@pytest.mark.parametrize(
+    ("origin", "fix"),
+    [
+        # A synced copy: the next sync overwrites an edit.
+        (ORIGIN_KIT_SHIPPED, "upgrade this component together with the backbone"),
+        # Restored to its pin on every sync (COR-041).
+        (ORIGIN_EXTERNALLY_SOURCED, "move the pin to an author release that drops the entry"),
+        # The project's own file.
+        (ORIGIN_INCUBATED_IN_REPO, "Drop the entry"),
+    ],
+)
+def test_pkit_validate_warns_on_an_installed_package_declaring_process_journals(
+    make_adopter_repo: MakeAdopterRepo, origin: str, fix: str
+) -> None:
+    """The reverse skew: an older package on a backbone that owns the journal line,
+    in a project that commits its journals. The warning's fix is the one that
+    lasts for where the package comes from."""
+    adopter = make_adopter_repo(capabilities=("evidence",))
+    set_capability_origin(adopter.root, "evidence", origin)
+    set_journal_logging(adopter.root, enabled=True, committed=True)
+    package = _installed_package(adopter.root, "evidence")
+    stale = ".pkit/capabilities/evidence/project/process/**/*.journal.jsonl"
+    package.write_text(
+        package.read_text(encoding="utf-8") + f"runtime_ignore:\n  - {stale}\n", encoding="utf-8"
+    )
+
+    result = CliRunner().invoke(main, ["validate", "--no-refs"])
+    assert result.exit_code == 0, result.output
+    assert "0 error(s), 1 warning(s)" in result.output
+    assert "warning  .pkit/capabilities/evidence/package.yaml:/runtime_ignore/0" in result.output
+    assert f"→ {stale!r} declares process journals" in result.output
+    assert fix in " ".join(result.output.split())
+
+
+def test_pkit_validate_is_silent_on_a_claim_while_journals_are_kept_out(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """Journals the project does not commit stay ignored by the backbone's own
+    line, so the same stale claim is redundant and not warned about."""
+    adopter = make_adopter_repo(capabilities=("evidence",))
+    set_journal_logging(adopter.root, enabled=True, committed=False)
+    package = _installed_package(adopter.root, "evidence")
+    stale = ".pkit/capabilities/evidence/project/process/**/*.journal.jsonl"
+    package.write_text(
+        package.read_text(encoding="utf-8") + f"runtime_ignore:\n  - {stale}\n", encoding="utf-8"
+    )
+
+    result = CliRunner().invoke(main, ["validate", "--no-refs"])
+    assert result.exit_code == 0, result.output
+    assert "0 error(s), 0 warning(s)" in result.output
+
+
+def _declare_aliases(package: Path, *aliases: str) -> None:
+    listed = "".join(f"  - {alias}\n" for alias in aliases)
+    package.write_text(
+        package.read_text(encoding="utf-8") + f"aliases:\n{listed}", encoding="utf-8"
+    )
+
+
+@pytest.mark.parametrize(
+    ("alias", "shadowed_by"),
+    [
+        # A backbone command: every capability name and alias yields to it.
+        ("status", "the backbone command `pkit status`, which every capability name and alias"),
+        # Another capability's own name.
+        ("software-analysis", "the name of capability 'software-analysis', which every alias"),
+        # The same alias, declared by a capability earlier in the manifest.
+        ("analysis", "the same alias of capability 'software-analysis', registered first"),
+    ],
+)
+def test_an_alias_another_name_shadows_is_warned_naming_what_holds_it(
+    make_adopter_repo: MakeAdopterRepo, alias: str, shadowed_by: str
+) -> None:
+    """`software-analysis` comes first in the manifest and declares `analysis`, so
+    the later `evidence` cannot take its name or its alias, nor a backbone command."""
+    adopter = make_adopter_repo(capabilities=("software-analysis", "evidence"))
+    _declare_aliases(_installed_package(adopter.root, "evidence"), "ev", alias)
+
+    result = pv.validate_installed_packages(adopter.root)
+    findings = {
+        (report.file.parent.name, f.path): f for report in result.reports for f in report.findings
+    }
+    assert result.errors == 0 and result.warnings == 1, list(findings)
+    finding = findings[("evidence", "/aliases/1")]
+    assert finding.severity is pv.Severity.WARNING
+    message = " ".join(finding.message.split())
+    assert message.startswith(
+        f"alias {alias!r} of capability 'evidence' is shadowed by {shadowed_by}"
+    )
+    assert f"`pkit {alias}`" in message and "never evidence" in message
+    assert "`pkit evidence …` still reaches it" in message
+
+
+def test_pkit_validate_warns_on_an_alias_another_name_shadows_and_passes(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    adopter = make_adopter_repo(capabilities=("software-analysis", "evidence"))
+    _declare_aliases(_installed_package(adopter.root, "evidence"), "analysis")
+
+    result = CliRunner().invoke(main, ["validate", "--no-refs"])
+    assert result.exit_code == 0, result.output
+    assert "0 error(s), 1 warning(s)" in result.output
+    assert "warning  .pkit/capabilities/evidence/package.yaml:/aliases/0" in result.output
+    output = " ".join(result.output.split())
+    assert (
+        "→ alias 'analysis' of capability 'evidence' is shadowed by the same alias of "
+        "capability 'software-analysis'"
+    ) in output
+
+
+def test_in_the_methodology_source_a_kit_shipped_package_is_its_own() -> None:
+    """The source is where a kit-shipped package is authored, so the fix is to edit it."""
+    package = REPO / ".pkit" / "capabilities" / "project-management" / "package.yaml"
+    ownership = lifecycle_ownership.load_ownership(REPO)
+    assert ownership is not None
+    provenance = pv.package_provenance(REPO, package, ORIGIN_KIT_SHIPPED, ownership)
+    assert provenance is pv.Provenance.OWN
 
 
 def test_packages_pass_without_a_schema_in_the_tree_runs_repository_checks_only(

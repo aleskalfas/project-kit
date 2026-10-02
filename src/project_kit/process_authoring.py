@@ -43,19 +43,24 @@ adopter through the capability-authoring path, or through `pkit capabilities
 register`, is the skill's judgment, never the stamp's).
 
 Mutations round-trip through `ruamel.yaml` (comments, key order, and quoting
-preserved — the same discipline as `schemas_authoring`), lint the result
-against the shape contract before leaving it on disk, and restore the prior
-file on a lint failure so a partial mutation never lingers.
+preserved — the same discipline as `schemas_authoring`) and lint the result
+against the shape contract before leaving it on disk. Each stamp's writes —
+definition, stubs, registrations — run as one `_StampRun`: any failure part-way
+removes what the run created and restores what it rewrote, so a partial
+mutation never lingers.
 """
 
 from __future__ import annotations
 
+import contextlib
+import io
 import json
 import re
 import stat
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from types import TracebackType
+from typing import Any, cast
 
 from jsonschema import Draft202012Validator
 from ruamel.yaml import YAML
@@ -70,7 +75,7 @@ from project_kit.process import (
     parse_address,
 )
 from project_kit.process_graph import installed_capabilities
-from project_kit.process_health import implementation_address
+from project_kit.process_health import implementation_address, is_unimplemented_stub
 
 _KEBAB_CASE = re.compile(r"^[a-z][a-z0-9-]*$")
 
@@ -148,9 +153,7 @@ def relation_vocabulary(repo_root: Path) -> list[str]:
 
 def mode_vocabulary(repo_root: Path) -> list[str]:
     """The `depends_on` mode set (pull | push), read from the shape contract."""
-    return _enum_from_contract(
-        repo_root, ("depends_on", "properties", "mode", "enum"), "mode"
-    )
+    return _enum_from_contract(repo_root, ("depends_on", "properties", "mode", "enum"), "mode")
 
 
 def upstream_address_pattern(repo_root: Path) -> str:
@@ -190,9 +193,7 @@ def blocked_on_vocabulary(repo_root: Path) -> list[str]:
 
 def gate_kind_vocabulary(repo_root: Path) -> list[str]:
     """The gate kind set (COR-033 P4), read from the shape contract."""
-    return _enum_from_contract(
-        repo_root, ("gate", "properties", "kind", "enum"), "gate kind"
-    )
+    return _enum_from_contract(repo_root, ("gate", "properties", "kind", "enum"), "gate kind")
 
 
 # The two gate kinds whose check is a capability predicate the stamp can stub.
@@ -219,15 +220,13 @@ def lint_process_block(repo_root: Path, process: dict[str, Any]) -> list[str]:
     schema = {"$ref": "#/$defs/process", "$defs": contract["$defs"]}
     validator = Draft202012Validator(schema)
     errors = sorted(validator.iter_errors(process), key=lambda e: list(e.path))
-    return [
-        f"{'/'.join(str(p) for p in e.path) or '(root)'}: {e.message}" for e in errors
-    ]
+    return [f"{'/'.join(str(p) for p in e.path) or '(root)'}: {e.message}" for e in errors]
 
 
-def _lint_or_restore(repo_root: Path, path: Path, original: str, label: str) -> None:
-    """Re-lint a just-written definition file; restore the prior bytes and
-    raise when the result does not conform (a stamp must never leave a
-    definition dirtier than it found it)."""
+def _require_conforming(repo_root: Path, path: Path, label: str) -> None:
+    """Re-lint a just-written definition file and raise when it does not
+    conform. Called inside a `_StampRun`, which then takes the whole run back:
+    a stamp must never leave a definition dirtier than it found it."""
     yaml = YAML(typ="safe")
     try:
         raw = yaml.load(path.read_text(encoding="utf-8"))
@@ -237,18 +236,138 @@ def _lint_or_restore(repo_root: Path, path: Path, original: str, label: str) -> 
             if isinstance(block, dict)
             else ["no top-level `process:` block after the edit"]
         )
-    except Exception as exc:  # unparseable after the edit — same restore path
+    except Exception as exc:  # unparseable after the edit — same take-back path
         issues = [f"definition unreadable after the edit: {exc}"]
     if issues:
-        path.write_text(original, encoding="utf-8")
         raise ProcessAuthoringError(
-            f"{label} left the definition non-conforming; restored the prior "
-            "file. Lint: " + "; ".join(issues)
+            f"{label} left the definition non-conforming. Lint: " + "; ".join(issues)
         )
 
 
+class _StampRun:
+    """Every write one stamp run makes, so a run that fails part-way takes
+    itself back — lint-or-restore, widened from the one file a stamp edits to
+    every file its run touches.
+
+    A file the run created is removed, a file it rewrote gets its prior bytes
+    back, and a directory it created is removed once empty again. Nothing that
+    existed before the run is ever removed: a file counts as created only
+    through an exclusive create, which refuses a file already there rather than
+    adopt it.
+
+    Used as a context manager around a run's writes. Any failure inside — a
+    refusal, a lint failure, an OS error, an interrupt — takes the run back
+    before it propagates. An interrupt propagates as itself; anything else as a
+    `ProcessAuthoringError` that says the tree is as it was, or names exactly
+    what could not be taken back.
+    """
+
+    def __init__(self, repo_root: Path, label: str) -> None:
+        self._repo_root = repo_root
+        self._label = label
+        self._created_files: list[Path] = []
+        self._created_dirs: list[Path] = []
+        self._prior_bytes: dict[Path, bytes] = {}
+
+    def create(self, path: Path, text: str, *, what: str) -> None:
+        """Write `text` to a NEW file at `path`, creating missing parent
+        directories; refuses when the path is taken."""
+        self._make_parents(path.parent)
+        try:
+            handle = path.open("x", encoding="utf-8")
+        except FileExistsError as exc:
+            raise ProcessAuthoringError(
+                f"{path.relative_to(self._repo_root)} already exists; refusing to "
+                f"overwrite it with {what}."
+            ) from exc
+        self._created_files.append(path)
+        with handle:
+            handle.write(text)
+
+    def rewrite(self, path: Path, text: str) -> None:
+        """Replace an existing file's text, keeping its prior bytes to restore."""
+        self._prior_bytes.setdefault(path, path.read_bytes())
+        path.write_text(text, encoding="utf-8")
+
+    def _make_parents(self, directory: Path) -> None:
+        missing: list[Path] = []
+        while not directory.exists():
+            missing.append(directory)
+            directory = directory.parent
+        for created in reversed(missing):
+            created.mkdir()
+            self._created_dirs.append(created)
+
+    def __enter__(self) -> _StampRun:
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        if exc is None:
+            return
+        unremoved, unrestored = self._take_back()
+        if not isinstance(exc, Exception):
+            return  # an interrupt: taken back, and it propagates as itself
+        cause = (
+            str(exc)
+            if isinstance(exc, ProcessAuthoringError)
+            else f"{self._label} failed part-way: {exc}"
+        )
+        if not unremoved and not unrestored:
+            raise ProcessAuthoringError(
+                f"{cause}\n{self._label} took back everything it had written; "
+                "the tree is as it was before the run."
+            ) from exc
+        steps: list[str] = []
+        if unremoved:
+            steps.append("remove " + self._listed(unremoved))
+        if unrestored:
+            steps.append("restore from version control " + self._listed(unrestored))
+        raise ProcessAuthoringError(
+            f"{cause}\n{self._label} could not take back all it had written. "
+            f"Before re-running, {' and '.join(steps)}."
+        ) from exc
+
+    def _take_back(self) -> tuple[list[Path], list[Path]]:
+        """Undo every recorded write, newest first; returns the created files
+        that could not be removed and the rewritten files that could not be
+        restored."""
+        unrestored: list[Path] = []
+        for path, prior in self._prior_bytes.items():
+            try:
+                path.write_bytes(prior)
+            except OSError:
+                unrestored.append(path)
+        unremoved: list[Path] = []
+        for path in reversed(self._created_files):
+            try:
+                path.unlink(missing_ok=True)
+            except OSError:
+                unremoved.append(path)
+        for directory in reversed(self._created_dirs):
+            # One that still holds something keeps it: a file listed above, or
+            # one this run did not write and so never removes.
+            with contextlib.suppress(OSError):
+                directory.rmdir()
+        return unremoved, unrestored
+
+    def _listed(self, paths: list[Path]) -> str:
+        return ", ".join(str(p.relative_to(self._repo_root)) for p in paths)
+
+
+def _dumped(rt: YAML, data: Any) -> str:
+    """A round-trip tree as the text a stamp writes."""
+    buffer = io.StringIO()
+    rt.dump(data, buffer)
+    return buffer.getvalue()
+
+
 def _lint_in_memory(repo_root: Path, data: Any, label: str) -> None:
-    """The dry-run counterpart of `_lint_or_restore`: lint the MUTATED but
+    """The dry-run counterpart of `_require_conforming`: lint the MUTATED but
     unwritten round-trip tree, so a preview reports the same conformance
     verdict a real run would — without a write to undo. (ruamel's round-trip
     containers are dict/list subclasses and its scalars are str subclasses, so
@@ -269,11 +388,17 @@ def _lint_in_memory(repo_root: Path, data: Any, label: str) -> None:
 # --- predicate stubs (the predicate-runner contract, scaffolded) ------------
 
 # Payload examples per stub purpose — the runner-contract shape the implemented
-# predicate must print (COR-033 engine contract; ADR-048 for the seams).
+# predicate must print (COR-033 engine contract; ADR-048 for the seams). The
+# stamps write every detection as `mode: inferred` — a definition has one mode —
+# so a detection stub answers "is the subject in this state?". A `classified`
+# detection (ADR-062) answers `{"state": "<state-id>" | null, "reason": "<why>"}`
+# instead; a definition adopts it by a hand edit to all its states.
 _STUB_PAYLOADS = {
-    "detection": '{"result": <bool>, "reason": "<why>"}',
+    "detection": '{"result": <bool>, "reason": "<why>"} (the `inferred` answer its '
+    "detection declares)",
     "gate": '{"result": <bool>, "reason": "<why>"}',
-    "authorisation-artifact gate": '{"exists": <bool>, "produced_by": "<login>", "reason": "<why>"}',
+    "authorisation-artifact gate": '{"exists": <bool>, "produced_by": "<login>", "reason": '
+    '"<why>"}',
     "entry guard": '{"result": <bool>, "reason": "<why>"}',
     "resume_when": '{"result": <bool>, "reason": "<why>"}',
     "invariant check": '{"result": <bool>, "reason": "<why>"}',
@@ -333,9 +458,7 @@ def _stub_body(
     purpose: str, address: str, operation: str, cardinality: str, payload_key: str
 ) -> str:
     subject_note = (
-        "the fixed singleton sentinel"
-        if cardinality == "singleton"
-        else "the subject id"
+        "the fixed singleton sentinel" if cardinality == "singleton" else "the subject id"
     )
     if payload_key == "hand-off candidates":
         subject_note = "the contract's UPSTREAM PROCESS ADDRESS (the scope, ADR-048)"
@@ -391,26 +514,18 @@ def _refuse_existing_stub_scripts(
     )
 
 
-def _write_stub_script(capability_dir: Path, stub: PredicateStub, body: str) -> Path:
+def _write_stub_script(
+    run: _StampRun, capability_dir: Path, stub: PredicateStub, body: str
+) -> Path:
     script_path = capability_dir / stub.script_relpath
-    script_path.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        # Exclusive create: never clobber an existing script, even if the
-        # caller's pre-flight was skipped or the file appeared since.
-        with script_path.open("x", encoding="utf-8") as f:
-            f.write(body)
-    except FileExistsError as exc:
-        raise ProcessAuthoringError(
-            f"{script_path} already exists; refusing to overwrite it with a "
-            "predicate stub."
-        ) from exc
-    script_path.chmod(
-        script_path.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
-    )
+    # Exclusive create: never clobber an existing script, even if the caller's
+    # pre-flight was skipped or the file appeared since.
+    run.create(script_path, body, what="a predicate stub")
+    script_path.chmod(script_path.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
     return script_path
 
 
-def _register_commands(capability_dir: Path, stubs: list[PredicateStub]) -> None:
+def _register_commands(run: _StampRun, capability_dir: Path, stubs: list[PredicateStub]) -> None:
     """Append each stub to the capability `package.yaml` commands tree,
     round-trip-preserving. Collisions were pre-flighted by the caller."""
     package_path = capability_dir / "package.yaml"
@@ -432,15 +547,14 @@ def _register_commands(capability_dir: Path, stubs: list[PredicateStub]) -> None
             "script": stub.script_relpath,
             "help": f"Predicate ({stub.purpose}). Stub — implement before relying on it.",
         }
-    with package_path.open("w", encoding="utf-8") as f:
-        rt.dump(data, f)
+    run.rewrite(package_path, _dumped(rt, data))
 
 
 def _command_name(process_id: str, *parts: str) -> str:
     return "-".join([process_id, *parts])
 
 
-def _gate_command_name(process_id: str, transition: "TransitionSpec") -> str:
+def _gate_command_name(process_id: str, transition: TransitionSpec) -> str:
     """A gate stub's command name, derived from the FULL transition key.
 
     A transition is keyed by (from, to, trigger): two edges between the same
@@ -450,9 +564,7 @@ def _gate_command_name(process_id: str, transition: "TransitionSpec") -> str:
     declaration, which keeps the derived name a well-formed command name.
     """
     source = transition.from_state.strip("*") or "any"
-    return _command_name(
-        process_id, "gate", source, transition.to_state, transition.trigger
-    )
+    return _command_name(process_id, "gate", source, transition.to_state, transition.trigger)
 
 
 def _script_relpath(command: str) -> str:
@@ -536,8 +648,7 @@ def _locate_definition_file(repo_root: Path, definition: ProcessDefinition) -> P
             if isinstance(block, dict) and block.get("id") == definition.process_id:
                 return candidate
     raise ProcessAuthoringError(
-        f"definition file for {definition.capability}:{definition.process_id} "
-        "could not be located."
+        f"definition file for {definition.capability}:{definition.process_id} could not be located."
     )
 
 
@@ -581,6 +692,10 @@ class NewProcessResult:
     warnings: tuple[str, ...] = ()
 
 
+# What marks a definition as `process new`'s own output — a phrase of the
+# header below, which a test pins there.
+_SCAFFOLD_SIGNATURE = "`pkit process new` (COR-044)"
+
 _DEFINITION_HEADER = """\
 # yaml-language-server: $schema={schema_rel}
 #
@@ -592,6 +707,63 @@ _DEFINITION_HEADER = """\
 # deferred `amend` operation (which bumps `version`; couple/hand-off edits do
 # not).
 """
+
+
+def _interrupted_new_recovery(repo_root: Path, capability_dir: Path, definition_path: Path) -> str:
+    """The way out when `definition_path` is what an interrupted `process new`
+    left behind, as a sentence to append to the one-shot refusal; "" otherwise.
+
+    A run that FAILS takes itself back (`_StampRun`); a run killed outright
+    cannot. Its writes go definition, stubs, registrations, so what it leaves
+    is the scaffold's definition with not one of the commands it runs
+    registered — a shape a finished scaffold never has, since registering them
+    is its last write. Recognised by exactly that, the recovery names every
+    file to remove: the definition and each stub script at a derived path that
+    still carries the stub marker — never a script someone has started to
+    implement.
+    """
+    try:
+        text = definition_path.read_text(encoding="utf-8")
+    except OSError:
+        return ""
+    if _SCAFFOLD_SIGNATURE not in text:
+        return ""
+    try:
+        parsed: Any = YAML(typ="safe").load(text)
+    except Exception:
+        parsed = None  # cut short mid-write — and stubs come after it, so none exist
+    runs = sorted(_run_references(parsed))
+    if set(runs) & set(_load_command_registry(capability_dir)):
+        return ""
+    leftovers = [definition_path] + [
+        script
+        for script in (capability_dir / _script_relpath(name) for name in runs)
+        if is_unimplemented_stub(script)
+    ]
+    listed = " ".join(str(path.relative_to(repo_root)) for path in leftovers)
+    return (
+        " It looks left behind by an interrupted `process new`: it carries the "
+        "scaffold's header, yet not one of the commands it runs is registered in "
+        "package.yaml — and registering them is the scaffold's last write. "
+        f"Remove what that run left, then re-run:\n  rm {listed}"
+    )
+
+
+def _run_references(node: Any) -> set[str]:
+    """Every predicate command a parsed definition runs (each `run:` value)."""
+    found: set[str] = set()
+    children: list[Any] = []
+    if isinstance(node, dict):
+        mapping = cast("dict[Any, Any]", node)
+        run = mapping.get("run")
+        if isinstance(run, str):
+            found.add(run)
+        children = list(mapping.values())
+    elif isinstance(node, list):
+        children = cast("list[Any]", node)
+    for child in children:
+        found |= _run_references(child)
+    return found
 
 
 def stamp_new_process(
@@ -643,6 +815,7 @@ def stamp_new_process(
             f"{definition_path.relative_to(repo_root)} already exists; "
             "`process new` is a one-shot scaffold (evolving a live definition "
             "is the deferred `amend` operation)."
+            + _interrupted_new_recovery(repo_root, capability_dir, definition_path)
         )
     try:
         load_definition(repo_root, address)
@@ -679,9 +852,7 @@ def stamp_new_process(
     seen: set[str] = set()
     for spec in states:
         if not _KEBAB_CASE.match(spec.state_id):
-            raise ProcessAuthoringError(
-                f"state id {spec.state_id!r} must be kebab-case."
-            )
+            raise ProcessAuthoringError(f"state id {spec.state_id!r} must be kebab-case.")
         if spec.state_id in seen:
             raise ProcessAuthoringError(f"state {spec.state_id!r} declared twice.")
         seen.add(spec.state_id)
@@ -692,8 +863,7 @@ def stamp_new_process(
             )
         if spec.entry and spec.guarded_entry:
             raise ProcessAuthoringError(
-                f"state {spec.state_id!r} is marked both plain entry and "
-                "guarded entry; pick one."
+                f"state {spec.state_id!r} is marked both plain entry and guarded entry; pick one."
             )
     state_ids = {s.state_id for s in states}
 
@@ -703,13 +873,11 @@ def stamp_new_process(
     for t in transitions:
         if t.from_state != "*" and t.from_state not in state_ids:
             raise ProcessAuthoringError(
-                f"transition {t.from_state!r} -> {t.to_state!r} names an "
-                f"undeclared source state."
+                f"transition {t.from_state!r} -> {t.to_state!r} names an undeclared source state."
             )
         if t.to_state not in state_ids:
             raise ProcessAuthoringError(
-                f"transition {t.from_state!r} -> {t.to_state!r} names an "
-                f"undeclared target state."
+                f"transition {t.from_state!r} -> {t.to_state!r} names an undeclared target state."
             )
         if not _KEBAB_CASE.match(t.trigger):
             raise ProcessAuthoringError(
@@ -751,9 +919,7 @@ def stamp_new_process(
 
     for inv in invariants:
         if not _KEBAB_CASE.match(inv.invariant_id):
-            raise ProcessAuthoringError(
-                f"invariant id {inv.invariant_id!r} must be kebab-case."
-            )
+            raise ProcessAuthoringError(f"invariant id {inv.invariant_id!r} must be kebab-case.")
         if not inv.why.strip():
             raise ProcessAuthoringError(
                 f"invariant {inv.invariant_id!r} needs a why — it is surfaced "
@@ -799,9 +965,7 @@ def stamp_new_process(
     for t in transitions:
         if t.gate_kind is not None:
             payload_key = (
-                "authorisation-artifact gate"
-                if t.gate_kind == "authorisation-artifact"
-                else "gate"
+                "authorisation-artifact gate" if t.gate_kind == "authorisation-artifact" else "gate"
             )
             add_stub(
                 _gate_command_name(process_id, t),
@@ -853,9 +1017,7 @@ def stamp_new_process(
     if blocked_on is not None:
         blocked_block: dict[str, Any] = {"blocked_on": blocked_on}
         if blocked_on == "awaiting-condition":
-            blocked_block["resume_when"] = {
-                "run": _command_name(process_id, "resume-when")
-            }
+            blocked_block["resume_when"] = {"run": _command_name(process_id, "resume-when")}
         subject_block["blocked"] = blocked_block
 
     states_block: list[dict[str, Any]] = []
@@ -917,22 +1079,22 @@ def stamp_new_process(
             "was written): " + "; ".join(lint)
         )
 
-    # All checks passed: write definition, stubs, registrations.
+    # All checks passed: write definition, stubs, registrations — as one run
+    # that takes itself back on any failure, so a failed scaffold leaves
+    # nothing behind for the one-shot refusal to trip over.
     if not dry_run:
         schema_rel = Path("..") / ".." / ".." / "schemas" / "_defs" / "process.schema.json"
-        yaml = _round_trip_yaml()
-        definition_path.parent.mkdir(parents=True, exist_ok=True)
-        with definition_path.open("w", encoding="utf-8") as f:
-            f.write(
-                _DEFINITION_HEADER.format(
-                    schema_rel=schema_rel.as_posix(), address=address
-                )
-            )
-            f.write("\n")
-            yaml.dump({"process": process_block}, f)
-        for stub in stubs:
-            _write_stub_script(capability_dir, stub, bodies[stub.command])
-        _register_commands(capability_dir, stubs)
+        header = _DEFINITION_HEADER.format(schema_rel=schema_rel.as_posix(), address=address)
+        definition_text = header + "\n" + _dumped(_round_trip_yaml(), {"process": process_block})
+        with _StampRun(repo_root, "`process new`") as run:
+            run.create(definition_path, definition_text, what="a scaffolded definition")
+            _require_conforming(repo_root, definition_path, "`process new`")
+            for stub in stubs:
+                _write_stub_script(run, capability_dir, stub, bodies[stub.command])
+            # Last, deliberately: a definition none of whose commands is
+            # registered is then the mark of a run cut short before it could
+            # take itself back (`_interrupted_new_recovery`).
+            _register_commands(run, capability_dir, stubs)
 
     warnings: list[str] = []
     if not any(s.entry or s.guarded_entry for s in states):
@@ -1102,9 +1264,9 @@ def couple_process(
         existing.append(new_entry)
 
     if not dry_run:
-        with definition_path.open("w", encoding="utf-8") as f:
-            rt.dump(data, f)
-        _lint_or_restore(repo_root, definition_path, original, "`process couple`")
+        with _StampRun(repo_root, "`process couple`") as run:
+            run.rewrite(definition_path, _dumped(rt, data))
+            _require_conforming(repo_root, definition_path, "`process couple`")
     else:
         _lint_in_memory(repo_root, data, "`process couple --dry-run`")
     return CoupleResult(
@@ -1201,6 +1363,88 @@ def _rt_state_block(data: Any, state_id: str, definition_path: Path) -> Any:
 
 
 @dataclass(frozen=True)
+class _HostingEntry:
+    """One `depends_on` entry that names the hand-off's upstream: its state, its
+    1-based place in that state's `depends_on` list, and the entry itself."""
+
+    state_id: str
+    position: int
+    entry: dict[str, Any]
+
+    def describe(self) -> str:
+        return (
+            f"entry {self.position} ({self.entry.get('relation', '?')}, "
+            f"{self.entry.get('mode', '?')})"
+        )
+
+
+def _handoff_block_lines(trigger: str, candidates: str, resolve: str) -> list[str]:
+    """The `handoff:` sub-block a hand-off would write, as YAML lines — what the
+    author pastes when the stamp cannot place it."""
+    return [
+        "handoff:",
+        f"  trigger: {trigger}",
+        "  candidates:",
+        f"    run: {candidates}",
+        "  resolve:",
+        f"    run: {resolve}",
+    ]
+
+
+def _ambiguous_hosting_message(
+    repo_root: Path,
+    address: str,
+    upstream: str,
+    hosting: list[_HostingEntry],
+    definition_path: Path,
+    *,
+    handoff_lines: list[str],
+) -> str:
+    """Why more than one `depends_on` entry could host the contract, and the
+    way out that actually exists.
+
+    `--state` picks a STATE, so it settles entries on different states only.
+    Two entries on ONE state — the same upstream depended on in two ways, which
+    `couple` legally appends — are told apart by nothing `hand-off` accepts, so
+    suggesting `--state` there would send the author in a circle. That case
+    names the entries and the hand edit instead.
+    """
+    by_state: dict[str, list[_HostingEntry]] = {}
+    for hosted in hosting:
+        by_state.setdefault(hosted.state_id, []).append(hosted)
+    shared = [sid for sid, entries in by_state.items() if len(entries) > 1]
+
+    if len(by_state) > 1:
+        message = (
+            f"{address!r} couples to {upstream!r} on several states "
+            f"({', '.join(by_state)}); pass --state to name the hosting state."
+        )
+        for sid in shared:
+            message += (
+                f" State {sid!r} carries {len(by_state[sid])} entries on that "
+                "upstream, which no flag tells apart — pass --state "
+                f"{sid} to see how to host the contract there by hand."
+            )
+        return message
+
+    ((sid, entries),) = by_state.items()
+    listed = ", ".join(hosted.describe() for hosted in entries)
+    paste = "\n".join("  " + line for line in handoff_lines)
+    return (
+        f"state {sid!r} of {address!r} carries {len(entries)} `depends_on` "
+        f"entries on upstream {upstream!r} — {listed} — and `process hand-off` "
+        "has no flag that tells entries on one state apart (--state names a "
+        "state, not an entry), so the stamp cannot choose which one hosts the "
+        "contract. Add it by hand: in "
+        f"{definition_path.relative_to(repo_root)}, give the entry you mean "
+        f"this key, beside its `upstream:` and `relation:`\n{paste}\n"
+        "then run `pkit process health --interpretation-only --process "
+        f"{address}`, which names anything still missing — a seam command not "
+        "yet registered, or a malformed block."
+    )
+
+
+@dataclass(frozen=True)
 class HandoffResult:
     definition_path: Path
     state_id: str
@@ -1250,14 +1494,17 @@ def handoff_process(
     capability_dir = definition.capability_dir
 
     # Find the coupling: the depends_on entry naming this upstream.
-    hosting: list[tuple[str, dict[str, Any]]] = []
+    hosting: list[_HostingEntry] = []
     for state in definition.states:
         sid = state.get("id")
-        for entry in state.get("depends_on") or []:
+        for position, entry in enumerate(state.get("depends_on") or [], start=1):
             if isinstance(entry, dict) and entry.get("upstream") == upstream:
-                hosting.append((sid if isinstance(sid, str) else "?", entry))
+                mapping = cast("dict[str, Any]", entry)
+                hosting.append(
+                    _HostingEntry(sid if isinstance(sid, str) else "?", position, mapping)
+                )
     if state_id is not None:
-        hosting = [(sid, e) for sid, e in hosting if sid == state_id]
+        hosting = [h for h in hosting if h.state_id == state_id]
     if not hosting:
         where = f" on state {state_id!r}" if state_id is not None else ""
         raise ProcessAuthoringError(
@@ -1265,13 +1512,6 @@ def handoff_process(
             "a hand-off contract is a sub-block of an existing `depends_on` "
             "entry — run `pkit process couple` first (COR-042)."
         )
-    if len(hosting) > 1:
-        states_list = ", ".join(sid for sid, _ in hosting)
-        raise ProcessAuthoringError(
-            f"{address!r} couples to {upstream!r} on several states "
-            f"({states_list}); pass --state to name the hosting entry."
-        )
-    hosting_state, _ = hosting[0]
 
     if not trigger.strip():
         raise ProcessAuthoringError("a hand-off contract requires a trigger state.")
@@ -1300,6 +1540,21 @@ def handoff_process(
                 f"{label} command name {name!r} must be kebab-case (it "
                 "registers in the capability's package.yaml)."
             )
+
+    # Refused only now, so the block the message offers to paste carries a
+    # trigger and seam names that have passed the checks above.
+    if len(hosting) > 1:
+        raise ProcessAuthoringError(
+            _ambiguous_hosting_message(
+                repo_root,
+                address,
+                upstream,
+                hosting,
+                definition_path,
+                handoff_lines=_handoff_block_lines(trigger, candidates, resolve),
+            )
+        )
+    hosting_state = hosting[0].state_id
 
     # Scaffold + register the seam stubs for names not yet registered.
     registry = _load_command_registry(capability_dir)
@@ -1331,13 +1586,9 @@ def handoff_process(
                 "candidates and resolve must be two distinct commands (the two "
                 "seams answer different questions, ADR-048)."
             )
-        stub = PredicateStub(
-            command=name, script_relpath=_script_relpath(name), purpose=purpose
-        )
+        stub = PredicateStub(command=name, script_relpath=_script_relpath(name), purpose=purpose)
         new_stubs.append(stub)
-        bodies[name] = _stub_body(
-            purpose, address, "hand-off", definition.cardinality, payload_key
-        )
+        bodies[name] = _stub_body(purpose, address, "hand-off", definition.cardinality, payload_key)
     # Pre-flight before the definition is touched: a seam whose script path is
     # taken must refuse with the definition still unedited.
     _refuse_existing_stub_scripts(repo_root, capability_dir, new_stubs)
@@ -1388,14 +1639,16 @@ def handoff_process(
     if dry_run:
         _lint_in_memory(repo_root, data, "`process hand-off --dry-run`")
     else:
-        with definition_path.open("w", encoding="utf-8") as f:
-            rt.dump(data, f)
-        _lint_or_restore(repo_root, definition_path, original, "`process hand-off`")
-
-        for stub in new_stubs:
-            _write_stub_script(capability_dir, stub, bodies[stub.command])
-        if new_stubs:
-            _register_commands(capability_dir, new_stubs)
+        # One run: a seam stub or registration that fails after the edit takes
+        # the edit back too. Left in place, the contract would name commands
+        # nothing registers, and a re-run would no-op on "already declared".
+        with _StampRun(repo_root, "`process hand-off`") as run:
+            run.rewrite(definition_path, _dumped(rt, data))
+            _require_conforming(repo_root, definition_path, "`process hand-off`")
+            for stub in new_stubs:
+                _write_stub_script(run, capability_dir, stub, bodies[stub.command])
+            if new_stubs:
+                _register_commands(run, capability_dir, new_stubs)
 
     return HandoffResult(
         definition_path=definition_path,

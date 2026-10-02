@@ -36,15 +36,15 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate  # noqa: E402
-from _lib.gh import gh_run, load_adopter_config  # noqa: E402
-from _lib.membership import (  # noqa: E402
+from _lib import bootstrap_gate
+from _lib.gh import load_adopter_config
+from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
     resolve_capability_root,
     resolve_invoker_identity,
 )
-from _lib.workstreams import (  # noqa: E402
+from _lib.workstreams import (
     duplicate_names,
     parse_workstreams,
     workstreams_path,
@@ -146,10 +146,7 @@ def main() -> int:
             print(f"      reason: {w.deprecated_reason}")
     if dupes:
         print()
-        print(
-            "[warn] duplicate active workstream names: "
-            + ", ".join(repr(n) for n in dupes)
-        )
+        print("[warn] duplicate active workstream names: " + ", ".join(repr(n) for n in dupes))
     return 0
 
 

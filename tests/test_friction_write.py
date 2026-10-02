@@ -15,7 +15,7 @@ from __future__ import annotations
 import copy
 import json
 import random
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -145,6 +145,30 @@ def test_revalidate_unchanged_needs_a_justification_and_updated_takes_none(
             fw.plan_revalidate(repo.root, "guide", outcome="unchanged", because=because)
     with pytest.raises(fw.FrictionWriteError, match="carries none"):
         fw.plan_revalidate(repo.root, "guide", outcome="updated", because="why")
+
+
+def test_a_placeholder_left_unfilled_is_refused_and_code_in_brackets_is_not(
+    repo: AdopterRepo,
+) -> None:
+    """A command shown for a person writes what they supply as a placeholder; run as
+    shown, it would write the placeholder as the justification or the reason."""
+    _put(repo, GUIDE)
+    shown = (
+        "<why the content still holds>",
+        "the flag moved; defect <the defect reference> reported",
+    )
+    for because in shown:
+        with pytest.raises(fw.FrictionWriteError, match="still holds the placeholder"):
+            fw.plan_revalidate(repo.root, "guide", outcome="unchanged", because=because)
+    with pytest.raises(fw.FrictionWriteError, match="`--reason` still holds the placeholder"):
+        fw.plan_defer(repo.root, "guide", anchor="src/cli/**", reason="<why it can wait>")
+    result = _cli("revalidate", "guide", "--outcome", "unchanged", "--because", shown[1], "--yes")
+    assert result.exit_code != 0 and "'<the defect reference>'" in result.output
+    assert _read(repo) == GUIDE
+
+    code = "parse() now returns Vec<u8> and a Map<String, int>; a < b and c > d still hold"
+    fw.write(fw.plan_revalidate(repo.root, "guide", outcome="unchanged", because=code, now=NOW))
+    assert _block(repo)["revalidated"]["unchanged-because"] == code
 
 
 def test_revalidate_updated_drops_the_old_justification(repo: AdopterRepo) -> None:
@@ -582,6 +606,134 @@ def test_a_block_that_would_not_validate_is_not_written(repo: AdopterRepo) -> No
     assert _read(repo) == broken
 
 
+def test_a_reason_for_no_anchors_beside_anchors_is_not_written_over(repo: AdopterRepo) -> None:
+    """Validation refuses `unanchored-because` beside anchors (COR-050 point 12), so a
+    writer reading its result back refuses to write over the pair."""
+    beside = GUIDE.replace("    anchors:\n", "    unanchored-because: Stale.\n    anchors:\n")
+    _put(repo, beside)
+    with pytest.raises(fw.FrictionWriteError, match="stands beside anchors"):
+        fw.plan_revalidate(repo.root, "guide", outcome="updated")
+    assert _read(repo) == beside
+
+
+# --- line endings ------------------------------------------------------------------------------
+
+RULE_SET_PATH = "docs/rule-sets/cmn.md"
+
+RULE_SET = (
+    "---\n"
+    "name: cmn\n"
+    "rules:\n"
+    "  RS-CMN-001:\n"
+    "    title: Name things\n"
+    "    pkit:\n"
+    "      friction:\n"
+    "        anchors: {record: [COR-050]}\n"
+    "---\n\n## RS-CMN-001 — Name things\n\nUse names.\n"
+)
+
+
+def _crlf(text: str) -> str:
+    """`text` as a clone with `core.autocrlf=true` checks it out: every line ending `\\r\\n`."""
+    return text.replace("\n", "\r\n")
+
+
+#: Each writer's plan, by its command's name.
+_PLANNERS: dict[str, Callable[..., fw.Plan]] = {
+    "revalidate": fw.plan_revalidate,
+    "defer": fw.plan_defer,
+    "record-status": fw.plan_record_status,
+}
+
+
+@pytest.mark.parametrize(
+    ("rel", "text", "command", "reference", "options"),
+    [
+        pytest.param(
+            GUIDE_PATH,
+            GUIDE,
+            "revalidate",
+            "guide",
+            {"outcome": "unchanged", "because": "the change is internal", "now": NOW},
+            id="document-revalidate",
+        ),
+        pytest.param(
+            GUIDE_PATH,
+            GUIDE,
+            "defer",
+            "guide",
+            {"anchor": "src/cli/**", "reason": "later"},
+            id="document-defer",
+        ),
+        pytest.param(GUIDE_PATH, GUIDE, "record-status", "guide", {}, id="document-record-status"),
+        pytest.param(
+            "docs/rules.md",
+            COLLECTION,
+            "revalidate",
+            "docs/rules.md#beta",
+            {"outcome": "updated", "now": NOW},
+            id="entry-revalidate",
+        ),
+        pytest.param(
+            RULE_SET_PATH,
+            RULE_SET,
+            "defer",
+            "RS-CMN-001",
+            {"anchor": "COR-050", "reason": "amended"},
+            id="rule-defer",
+        ),
+        pytest.param(
+            RULE_SET_PATH,
+            RULE_SET,
+            "revalidate",
+            "RS-CMN-001",
+            {"outcome": "unchanged", "because": "the record's amendment is editorial", "now": NOW},
+            id="rule-revalidate",
+        ),
+    ],
+)
+def test_a_crlf_file_is_written_back_with_crlf_byte_for_byte(
+    repo: AdopterRepo,
+    rel: str,
+    text: str,
+    command: str,
+    reference: str,
+    options: dict[str, Any],
+) -> None:
+    """The write a writer plans for the `\\n` file, planned for its `\\r\\n` twin: the
+    same key, the same lines, and every line ending `\\r\\n` — each other byte as it was."""
+    _put(repo, text, rel)
+    repo.commit("base", files=None, date=HISTORY_EPOCH)  # record-status reads HEAD
+    lf = _PLANNERS[command](repo.root, reference, **options)
+    assert lf.changes
+
+    _put(repo, _crlf(text), rel)
+    crlf = _PLANNERS[command](repo.root, reference, **options)
+    fw.write(crlf)
+
+    assert _read(repo, rel) == _crlf(lf.after)
+    assert crlf.before == _crlf(text)
+    assert (crlf.target, crlf.first_line, crlf.last_line, crlf.items) == (
+        lf.target,
+        lf.first_line,
+        lf.last_line,
+        lf.items,
+    )
+    assert _validation_errors(repo) == []
+
+
+def test_a_file_mixing_line_endings_is_refused_and_left_as_it_is(repo: AdopterRepo) -> None:
+    mixed = _crlf(GUIDE).replace("\r\n", "\n", 1)
+    _put(repo, mixed)
+    for plan in (
+        lambda: fw.plan_defer(repo.root, "guide", anchor="src/cli/**", reason="later"),
+        lambda: fw.plan_revalidate(repo.root, "guide", outcome="updated"),
+    ):
+        with pytest.raises(fw.FrictionWriteError, match=f"{GUIDE_PATH} mixes line endings"):
+            plan()
+    assert _read(repo) == mixed
+
+
 # --- property: what the writers write reads back, and validates -----------------------------
 
 AWKWARD = (
@@ -735,6 +887,7 @@ def _sorted_deferrals(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return sorted(entries, key=lambda e: (e["anchor"]["kind"], e["anchor"]["value"]))
 
 
+# Slow by design: 40 random documents, each written four times, read back and validated.
 def test_written_blocks_read_back_identically_and_validate(repo: AdopterRepo) -> None:
     for seed in range(40):
         rng = random.Random(seed)
@@ -772,7 +925,10 @@ def test_written_blocks_read_back_identically_and_validate(repo: AdopterRepo) ->
                     keep=[f"{e['anchor']['kind']}:{e['anchor']['value']}" for e in keep],
                     now=now,
                 )
-                revalidated = {"at": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "outcome": outcome}
+                revalidated: dict[str, Any] = {
+                    "at": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    "outcome": outcome,
+                }
                 if because is not None:
                     revalidated["unchanged-because"] = because.strip()
                 if keep:
@@ -812,10 +968,7 @@ def test_the_read_back_reads_a_role_block_against_the_wiring(repo: AdopterRepo) 
     (#1054 made the wiring a required input of the container check; #1055's
     read-back met it without one.)"""
     role_block = (
-        "  documentation:\n"
-        "    reading-evidence:\n"
-        "      schema_version: 1\n"
-        "      last-run: never\n"
+        "  documentation:\n    reading-evidence:\n      schema_version: 1\n      last-run: never\n"
     )
     _put(repo, HEAD + REVALIDATED + role_block + TAIL)
     plan = fw.plan_defer(repo.root, "guide", anchor="path:src/cli/**", reason="the redesign")

@@ -506,11 +506,14 @@ def as_outcome(report: ConfigReport) -> validators.Outcome:
     elif not report.findings:
         state = "valid."
     else:
-        state = ", ".join(
-            f"{len(report.by_severity(sev))} {sev.value}"
-            for sev in Severity
-            if report.by_severity(sev)
-        ) + "."
+        state = (
+            ", ".join(
+                f"{len(report.by_severity(sev))} {sev.value}"
+                for sev in Severity
+                if report.by_severity(sev)
+            )
+            + "."
+        )
     findings = tuple(
         validators.Finding(
             f"{report.location}:{finding.path}" if finding.path else report.location,

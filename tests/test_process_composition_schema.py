@@ -53,9 +53,7 @@ def _base_definition() -> dict[str, Any]:
                 "detection": {"mode": "inferred", "predicate": {"run": "detect-open"}},
             }
         ],
-        "transitions": [
-            {"from": "open", "to": "done", "trigger": "go", "authorisation": "user"}
-        ],
+        "transitions": [{"from": "open", "to": "done", "trigger": "go", "authorisation": "user"}],
     }
 
 

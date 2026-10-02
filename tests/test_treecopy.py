@@ -10,7 +10,6 @@ through one caller.
 
 from __future__ import annotations
 
-import os
 import stat
 from pathlib import Path, PurePath
 
@@ -92,10 +91,9 @@ def test_adopter_owned_preserved_when_present(tmp_path: Path) -> None:
 
     treecopy.refresh_owned_tree(src, dst, is_owned=_project_owned)
 
-    assert (
-        (dst / "project" / "config.yaml").read_text(encoding="utf-8")
-        == "adopter customisation"
-    ), "adopter-owned file must never be overwritten"
+    assert (dst / "project" / "config.yaml").read_text(
+        encoding="utf-8"
+    ) == "adopter customisation", "adopter-owned file must never be overwritten"
 
 
 def test_adopter_owned_orphan_never_pruned(tmp_path: Path) -> None:
@@ -159,9 +157,7 @@ def test_dry_run_writes_nothing(tmp_path: Path) -> None:
     _write(src / "a.txt", "a")
     _write(dst / "orphan.txt", "should-not-be-pruned-in-dry-run")
 
-    treecopy.refresh_owned_tree(
-        src, dst, is_owned=treecopy.nothing_owned, dry_run=True
-    )
+    treecopy.refresh_owned_tree(src, dst, is_owned=treecopy.nothing_owned, dry_run=True)
 
     assert not (dst / "a.txt").exists(), "dry-run must not copy"
     assert (dst / "orphan.txt").is_file(), "dry-run must not prune"
@@ -181,9 +177,7 @@ def test_owned_source_not_seeded_when_seed_owned_false(tmp_path: Path) -> None:
     _write(src / "project" / "config.yaml", "source project's config")
     _write(src / "project" / "process" / "7.journal.jsonl", '{"subject":"7"}')
 
-    treecopy.refresh_owned_tree(
-        src, dst, is_owned=_project_owned, seed_owned=False
-    )
+    treecopy.refresh_owned_tree(src, dst, is_owned=_project_owned, seed_owned=False)
 
     assert (dst / "core" / "kit.txt").read_text(encoding="utf-8") == "kit"
     assert not (dst / "project" / "config.yaml").exists()
@@ -199,9 +193,7 @@ def test_owned_source_dirs_not_materialised_when_seed_owned_false(
     _write(src / "kit.txt", "kit")
     (src / "project" / "process" / "issue-lifecycle").mkdir(parents=True)
 
-    treecopy.refresh_owned_tree(
-        src, dst, is_owned=_project_owned, seed_owned=False
-    )
+    treecopy.refresh_owned_tree(src, dst, is_owned=_project_owned, seed_owned=False)
 
     assert not (dst / "project" / "process").exists()
 
@@ -214,13 +206,9 @@ def test_adopter_content_survives_seed_owned_false(tmp_path: Path) -> None:
     _write(dst / "project" / "config.yaml", "the ADOPTER's config")
     _write(dst / "project" / "notes.md", "adopter's own file")
 
-    treecopy.refresh_owned_tree(
-        src, dst, is_owned=_project_owned, seed_owned=False
-    )
+    treecopy.refresh_owned_tree(src, dst, is_owned=_project_owned, seed_owned=False)
 
-    assert (dst / "project" / "config.yaml").read_text(
-        encoding="utf-8"
-    ) == "the ADOPTER's config"
+    assert (dst / "project" / "config.yaml").read_text(encoding="utf-8") == "the ADOPTER's config"
     assert (dst / "project" / "notes.md").exists()
 
 

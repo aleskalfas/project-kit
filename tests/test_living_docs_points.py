@@ -9,7 +9,8 @@ inert `fallback`) — and contributes to the work-tracking role's
 Three layers:
 
 - the pieces — the package declaration, the two companion schemas, reading the
-  readers point's document, the obligations a friction report gives rise to;
+  readers point's document, the obligations a friction report gives rise to, and
+  the report versions read (one without `schema_version` as version 1);
 - reader resolution through the real backbone, in an adopter repository: a
   page's reader resolves against the point or fails naming the page and the
   readers the point holds; an out-of-step contributor leaves the whole point
@@ -131,6 +132,9 @@ def test_the_package_provides_the_role_and_declares_both_points_and_the_contribu
     }
     command = package["commands"]["fill-doc-check"]
     assert command["query-contract"] is True
+    # It reads history at HEAD beyond the working tree, and never settled state or a
+    # base: the base a pull request is compared with bounds the consumer's diff.
+    assert command["reads"] == ["history"]
     assert (CAPABILITY / command["script"]).is_file()
 
 
@@ -325,6 +329,36 @@ def test_a_page_whose_friction_cannot_be_judged_is_no_answer() -> None:
 
 def test_a_dormant_check_owes_nothing() -> None:
     assert doc_check_lib.obligations({"dormant": True, "artefacts": []}, PAGES) == []
+
+
+def _check_answering(document: dict[str, Any]) -> Any:
+    """A runner answering `pkit friction check --all --json` with `document`."""
+
+    def run(argv: list[str], **_kw: Any) -> subprocess.CompletedProcess[str]:
+        assert argv == ["pkit", "friction", "check", "--all", "--json"]
+        return subprocess.CompletedProcess(argv, 0, json.dumps(document), "")
+
+    return run
+
+
+@pytest.mark.parametrize("version", [2, None, "1"])
+def test_a_check_of_another_version_is_no_answer(version: Any) -> None:
+    """A version this capability does not read is no answer — the point fails closed —
+    never read as the one it knows."""
+    run = _check_answering({**REPORT, "schema_version": version})
+    with pytest.raises(doc_check_lib.NoAnswer) as refused:
+        doc_check_lib.read_friction(".", run)
+    assert str(refused.value) == (
+        f"`pkit friction check --all --json` answered schema_version {version!r}; "
+        f"this capability reads 1"
+    )
+
+
+def test_a_check_without_a_version_reads_as_the_first() -> None:
+    """A backbone from before the key answers version 1."""
+    assert doc_check_lib.read_friction(".", _check_answering(REPORT)) == REPORT
+    versioned = {**REPORT, "schema_version": 1}
+    assert doc_check_lib.read_friction(".", _check_answering(versioned)) == versioned
 
 
 # --- reader resolution through the backbone ------------------------------------------------
@@ -533,6 +567,7 @@ def test_the_contribution_is_inert_without_a_work_tracking_provider(
     assert json.loads(resolved.output) == {
         "address": DOC_CHECK,
         "defined": False,
+        "from": "resolution",
         "resolved": False,
         "value": None,
         "why": "role 'pkit::work-tracking' has no active provider",
@@ -560,6 +595,48 @@ def test_nothing_committed_owes_nothing(tracked_project: AdopterRepo) -> None:
     assert ours == []
     filler = next(f for f in document["fillers"] if f["name"] == "living-docs")
     assert (filler["state"], filler["query_contract"]) == ("taken", True)
+    assert filler["reads"] == [
+        {"state": "history", "ref": "HEAD", "commit": None, "shallow": False}
+    ]
+
+
+def _fill_doc_check(root: Path) -> subprocess.CompletedProcess[str]:
+    """The filler run as the backbone runs it, from `root`."""
+    return subprocess.run(
+        [sys.executable, str(root / LD / "scripts" / "fill-doc-check.py"), "--json"],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
+def test_history_not_yet_made_is_empty_and_history_cut_short_is_no_answer(
+    docs_project: AdopterRepo, tmp_path: Path
+) -> None:
+    """The two cases a filler that reads history tells apart (COR-052 point 6): with
+    no commit there is nothing owed and it answers `[]`; in a shallow clone that
+    stops short of where a page was last judged it gives no answer, never `[]`."""
+    unmade = _fill_doc_check(docs_project.root)
+    assert unmade.returncode == 0, unmade.stderr
+    assert json.loads(unmade.stdout) == {"schema_version": 1, "value": []}
+
+    repo = docs_project
+    page: dict[str, Any] = {"reader": "user", "kind": "signpost"}
+    repo.write(
+        {
+            "src/a.py": "A = 1\n",
+            "docs/guide.md": friction_document(None, anchors={"path": ["src/a.py"]}, **page),
+        }
+    )
+    repo.commit("base")
+    for version in (2, 3, 4):
+        repo.commit(f"a {version}", {"src/a.py": f"A = {version}\n"})
+    shallow = tmp_path / "shallow"
+    repo.git("clone", "-q", "--depth", "2", f"file://{repo.root}", str(shallow))
+    cut = _fill_doc_check(shallow)
+    assert (cut.returncode, cut.stdout) == (1, ""), cut.stderr
+    assert "git fetch --unshallow" in cut.stderr
 
 
 def test_the_filler_contributes_page_friction_and_uncovered_surface(
@@ -569,7 +646,7 @@ def test_the_filler_contributes_page_friction_and_uncovered_surface(
     artefacts, obligations in project-management's shape beside the mapping's. The
     stale page owes; the deferred one does not."""
     repo = tracked_project
-    page = {"reader": "user", "kind": "signpost"}
+    page: dict[str, Any] = {"reader": "user", "kind": "signpost"}
     repo.write(
         {
             "src/a.py": "A = 1\n",
@@ -641,11 +718,12 @@ def _track(repo: AdopterRepo, config: str) -> None:
 
 def _check_doc_mapping(repo: AdopterRepo, body: Path) -> subprocess.CompletedProcess[str]:
     """project-management's check of the branch against `base`, reading the point
-    through the real `pkit` first on PATH."""
+    through the real `pkit` first on PATH. The base is named as a reference, read as
+    named, so the backbone has nothing to say of it on standard error (COR-054)."""
     env = {k: v for k, v in os.environ.items() if k != "PKIT_OFFLINE"}
     script = repo.root / PM / "scripts" / "check-doc-mapping.py"
     return subprocess.run(
-        [sys.executable, str(script), "--base", "base", "--pr-body-file", str(body)],
+        [sys.executable, str(script), "--base", "refs/heads/base", "--pr-body-file", str(body)],
         cwd=repo.root,
         capture_output=True,
         text=True,

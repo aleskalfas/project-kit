@@ -17,9 +17,9 @@ pkit:
         - .pkit/adapters/claude-code/merge-settings.sh
       record: [COR-001, COR-002, COR-017, PRJ-001, PRJ-004, ADR-049]
     revalidated:
-      at: 2026-09-29T18:07:15Z
+      at: 2026-10-01T16:40:19Z
       outcome: unchanged
-      unchanged-because: refs.py now reads the address word pattern from backbone_schemas; the front page's install and check story holds
+      unchanged-because: "the overview's upgrade and pin claims still hold: the pin is now written whole or not at all, which changes no statement on the page"
 ---
 
 # project-kit

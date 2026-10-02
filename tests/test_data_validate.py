@@ -40,9 +40,7 @@ def kit_target(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
     monkeypatch.chdir(tmp_path)
     (tmp_path / ".pkit").mkdir()
-    write_backbone_manifest(
-        tmp_path, BackboneManifest(backbone_version="1.28.0", components=[])
-    )
+    write_backbone_manifest(tmp_path, BackboneManifest(backbone_version="1.28.0", components=[]))
     return tmp_path
 
 
@@ -139,9 +137,7 @@ def test_resolve_binding_via_field(kit_target: Path) -> None:
 def test_resolve_binding_field_wins_over_capability_binding(kit_target: Path) -> None:
     """When both field and capability binding could apply, field is authoritative."""
     _stage_capability_schema(kit_target, "trip-planning", "trip")
-    _stage_capability_schema(
-        kit_target, "trip-planning", "transport", binds_to=["trips/*/*.yaml"]
-    )
+    _stage_capability_schema(kit_target, "trip-planning", "transport", binds_to=["trips/*/*.yaml"])
     data_path = kit_target / "trips" / "japan-2026" / "trip.yaml"
     data_path.parent.mkdir(parents=True)
     data_path.write_text(
@@ -174,9 +170,7 @@ def test_resolve_binding_rejects_non_string_field(kit_target: Path) -> None:
 
 def test_resolve_binding_field_with_unknown_capability(kit_target: Path) -> None:
     data_path = kit_target / "data.yaml"
-    data_path.write_text(
-        "pkit_schema: missing-cap:thing\nschema_version: 1\n", encoding="utf-8"
-    )
+    data_path.write_text("pkit_schema: missing-cap:thing\nschema_version: 1\n", encoding="utf-8")
     result = dv.resolve_binding(data_path, kit_target)
     assert isinstance(result, dv.BindingError)
     assert "missing-cap" in result.message
@@ -186,9 +180,7 @@ def test_resolve_binding_field_with_unknown_capability(kit_target: Path) -> None
 def test_resolve_binding_field_with_unknown_schema_in_capability(kit_target: Path) -> None:
     _stage_capability_schema(kit_target, "trip-planning", "trip")
     data_path = kit_target / "data.yaml"
-    data_path.write_text(
-        "pkit_schema: trip-planning:nope\nschema_version: 1\n", encoding="utf-8"
-    )
+    data_path.write_text("pkit_schema: trip-planning:nope\nschema_version: 1\n", encoding="utf-8")
     result = dv.resolve_binding(data_path, kit_target)
     assert isinstance(result, dv.BindingError)
     assert "trip-planning" in result.message
@@ -199,9 +191,7 @@ def test_resolve_binding_field_with_unknown_schema_in_capability(kit_target: Pat
 
 
 def test_resolve_binding_via_capability_glob(kit_target: Path) -> None:
-    _stage_capability_schema(
-        kit_target, "trip-planning", "trip", binds_to=["trips/*/trip.yaml"]
-    )
+    _stage_capability_schema(kit_target, "trip-planning", "trip", binds_to=["trips/*/trip.yaml"])
     data_path = kit_target / "trips" / "japan-2026" / "trip.yaml"
     data_path.parent.mkdir(parents=True)
     data_path.write_text("schema_version: 1\ntitle: Japan\n", encoding="utf-8")
@@ -213,9 +203,7 @@ def test_resolve_binding_via_capability_glob(kit_target: Path) -> None:
 
 
 def test_resolve_binding_capability_glob_does_not_match(kit_target: Path) -> None:
-    _stage_capability_schema(
-        kit_target, "trip-planning", "trip", binds_to=["trips/*/trip.yaml"]
-    )
+    _stage_capability_schema(kit_target, "trip-planning", "trip", binds_to=["trips/*/trip.yaml"])
     data_path = kit_target / "elsewhere" / "thing.yaml"
     data_path.parent.mkdir(parents=True)
     data_path.write_text("schema_version: 1\n", encoding="utf-8")
@@ -227,12 +215,8 @@ def test_resolve_binding_capability_glob_does_not_match(kit_target: Path) -> Non
 
 def test_resolve_binding_ambiguous_across_capabilities(kit_target: Path) -> None:
     """Two capabilities with overlapping bindings → ambiguous; refuse and hint at the field."""
-    _stage_capability_schema(
-        kit_target, "cap-a", "shared", binds_to=["shared/*.yaml"]
-    )
-    _stage_capability_schema(
-        kit_target, "cap-b", "shared", binds_to=["shared/*.yaml"]
-    )
+    _stage_capability_schema(kit_target, "cap-a", "shared", binds_to=["shared/*.yaml"])
+    _stage_capability_schema(kit_target, "cap-b", "shared", binds_to=["shared/*.yaml"])
     data_path = kit_target / "shared" / "file.yaml"
     data_path.parent.mkdir(parents=True)
     data_path.write_text("schema_version: 1\n", encoding="utf-8")
@@ -280,9 +264,7 @@ def test_schema_version_mismatch_refuses(kit_target: Path) -> None:
     """Data declares schema_version 1; capability schema is at 2 — refuse with hint."""
     _stage_capability_schema(kit_target, "trip-planning", "trip", schema_version=2)
     data_path = kit_target / "trip.yaml"
-    data_path.write_text(
-        "pkit_schema: trip-planning:trip\nschema_version: 1\n", encoding="utf-8"
-    )
+    data_path.write_text("pkit_schema: trip-planning:trip\nschema_version: 1\n", encoding="utf-8")
     issues = dv.validate_data_file(data_path, kit_target)
     assert len(issues) == 1
     msg = issues[0].message
@@ -403,9 +385,7 @@ def test_cli_data_validate_failure(kit_target: Path) -> None:
         required=["title"],
     )
     data_path = kit_target / "trip.yaml"
-    data_path.write_text(
-        "pkit_schema: trip-planning:trip\nschema_version: 1\n", encoding="utf-8"
-    )
+    data_path.write_text("pkit_schema: trip-planning:trip\nschema_version: 1\n", encoding="utf-8")
     result = CliRunner().invoke(main, ["data", "validate", str(data_path)])
     assert result.exit_code != 0
     assert "error(s)" in result.output
@@ -536,9 +516,7 @@ records:
     )
     issues = dv.validate_data_file(data_path, kit_target)
     assert len(issues) >= 1
-    assert any(
-        "NotKebabCase" in i.message or "pattern" in i.message for i in issues
-    )
+    assert any("NotKebabCase" in i.message or "pattern" in i.message for i in issues)
 
 
 def test_evidence_record_rejects_additional_field(kit_target: Path) -> None:
@@ -560,9 +538,7 @@ records:
     )
     issues = dv.validate_data_file(data_path, kit_target)
     assert len(issues) >= 1
-    assert any(
-        "surprise" in i.message or "additional" in i.message.lower() for i in issues
-    )
+    assert any("surprise" in i.message or "additional" in i.message.lower() for i in issues)
 
 
 def test_evidence_record_accepts_iso_timestamp(kit_target: Path) -> None:
@@ -613,9 +589,7 @@ records:
     )
     issues = dv.validate_data_file(data_path, kit_target)
     assert len(issues) >= 1
-    assert any(
-        "yesterday" in i.message or "pattern" in i.message for i in issues
-    )
+    assert any("yesterday" in i.message or "pattern" in i.message for i in issues)
 
 
 def test_evidence_record_schema_self_validates(kit_target: Path) -> None:
@@ -626,8 +600,17 @@ def test_evidence_record_schema_self_validates(kit_target: Path) -> None:
     # data. We verify the JSON Schema accepts the shape `{schema_version,
     # binds_to, records: []}` so the capability schema YAML is self-
     # consistent with its companion.
-    src_yaml = kit_target / ".pkit" / "capabilities" / "evidence" / "schemas" / "evidence-record.yaml"
-    companion = kit_target / ".pkit" / "capabilities" / "evidence" / "schemas" / "evidence-record.schema.json"
+    src_yaml = (
+        kit_target / ".pkit" / "capabilities" / "evidence" / "schemas" / "evidence-record.yaml"
+    )
+    companion = (
+        kit_target
+        / ".pkit"
+        / "capabilities"
+        / "evidence"
+        / "schemas"
+        / "evidence-record.schema.json"
+    )
     raw = dv._yaml.load(src_yaml.read_text(encoding="utf-8"))
     schema_doc = json.loads(companion.read_text(encoding="utf-8"))
     from jsonschema import Draft202012Validator
@@ -894,12 +877,7 @@ def test_reference_cli_shape_only_flag(kit_target: Path) -> None:
 # tree via REPO_ROOT.
 
 _PM_WORKSTREAMS_SEED = (
-    REPO_ROOT
-    / ".pkit"
-    / "capabilities"
-    / "project-management"
-    / "project"
-    / "workstreams.yaml"
+    REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "project" / "workstreams.yaml"
 )
 
 

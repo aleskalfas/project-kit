@@ -31,11 +31,13 @@ exactly the four-step precedence above — the parity bar. The swap is a CHANGE 
 PREDICATE, not of the engine/position contract (DEC-033): first-matching-detection
 still wins; only WHICH reality the predicate reads changes.
 
-The detectors built on top of this are mutually exclusive (each returns
-`result = (infer_current_state(...) == my_state)`), so the engine's
-"first matching state wins" rule is satisfied regardless of state order — the
-order in workflow.yaml is belt-and-suspenders, not the sole guarantee. Because
-this reader is the single home of the position read (the engine detectors and
+The lifecycle's classifier built on top of this (`detect-state`, which every
+state names) answers the one state this returns, so at most one state's
+detection is true and the order of states in workflow.yaml decides nothing
+among them; the per-state detectors, registered for direct use, are
+mutually exclusive for the same reason (each returns
+`result = (infer_current_state(...) == my_state)`). Because this reader is the
+single home of the position read (the classifier, the detectors and
 move-issue's local alias all delegate here), making it map-aware makes the whole
 detection path map-aware at one point — and that read AGREES with how
 move-issue / close-issue WRITE under a derive map (they write/strip no kit
@@ -54,7 +56,7 @@ from __future__ import annotations
 
 import re
 
-from _lib import axis_labels
+from _lib import axis_labels, default_branch
 from _lib.checkbox_gate import unticked_boxes  # noqa: F401 — re-export
 
 # Canonical state ordering (matches move-issue's `order` lists).
@@ -78,16 +80,14 @@ def workflow_process(workflow: dict | None) -> dict:
     return workflow
 
 
-def legal_targets(
-    workflow: dict | None, current_state: str, structural_type: str
-) -> list[str]:
+def legal_targets(workflow: dict | None, current_state: str, structural_type: str) -> list[str]:
     """The states workflow.yaml lets an issue of `structural_type` move to
     from `current_state`, in declaration order.
 
     The one reading of the transition table's legality: move-issue refuses a
-    move whose target is not in this list, and the composing verbs (start-work)
-    ask the same question before they mutate anything (#942), so a pre-check
-    and the move it guards cannot disagree. A transition counts only when its
+    move whose target is not in this list, and the composing verbs (start-work,
+    review-work) ask the same question before they mutate anything (#942,
+    #947), so a pre-check and the move it guards cannot disagree. A transition counts only when its
     `applies_to` names `[issue-types:<structural_type>]`.
     """
     transitions = workflow_process(workflow).get("transitions") or []
@@ -106,12 +106,23 @@ def legal_targets(
     return out
 
 
+def state_display_name(workflow: dict | None, state_id: str) -> str:
+    """The `display_name` workflow.yaml gives `state_id` ("In Progress"), or the
+    id itself when it declares none."""
+    for state in workflow_process(workflow).get("states") or []:
+        if isinstance(state, dict) and state.get("id") == state_id:
+            name = state.get("display_name")
+            if isinstance(name, str) and name:
+                return name
+    return state_id
+
+
 def infer_current_state(
     *,
     state: str,
     milestone: dict | None,
     labels: list[str],
-    substrate_map: "axis_labels.SubstrateMap | None" = None,
+    substrate_map: axis_labels.SubstrateMap | None = None,
 ) -> str:
     """Best-effort live position — reproduces move-issue `_infer_current_state`.
 
@@ -143,9 +154,10 @@ def infer_current_state(
     predicate SWAP, faithful to DEC-033 — the engine/position contract is
     unchanged, only WHICH predicate over reality resolves position.
 
-    This reader is the single home of the position read: the engine detectors
-    (`lifecycle_predicates.detect_state`, `parent_has_active_descendant`,
-    `cascade_members`) and move-issue's local alias all delegate here, so making
+    This reader is the single home of the position read: the engine's
+    detection (`lifecycle_predicates.classify_state`, and `detect_state`
+    behind the per-state commands), `parent_has_active_descendant`, `cascade_members`
+    and move-issue's local alias all delegate here, so making
     THIS map-aware makes the whole detection path map-aware in one place — the
     read agrees with how move-issue / close-issue WRITE under a derive map (they
     write/strip no kit `state:*` label; the open/closed substrate carries state).
@@ -168,6 +180,32 @@ def infer_current_state(
     if milestone:
         return "backlog"
     return "todo"
+
+
+def state_before_close(
+    *,
+    milestone: dict | None,
+    labels: list[str],
+    substrate_map: axis_labels.SubstrateMap | None = None,
+) -> str | None:
+    """The lifecycle state an issue held before it closed: the move to `done` a
+    close makes starts here (#1231).
+
+    A closed issue reads as `done` whatever else it carries, so this is
+    :func:`infer_current_state` read as if the issue were still open — its state
+    label, else its milestone, else `todo` — whether or not it has closed since.
+    On an open issue it is the issue's position; on one GitHub closed when a pull
+    request merged, it is where the issue was when the merge closed it, for as
+    long as nothing has written its label to `done` since.
+
+    None under a `derive`-bound `state`: open/closed is then the only state the
+    issue carries, so nothing records where in the lifecycle it was.
+    """
+    if axis_labels.state_derive_binding(substrate_map) is not None:
+        return None
+    return infer_current_state(
+        state="open", milestone=milestone, labels=labels, substrate_map=substrate_map
+    )
 
 
 # --- gate inference -------------------------------------------------------
@@ -273,24 +311,25 @@ def integration_slug(body: str) -> str | None:
     return m.group(1) if m else None
 
 
-def resolve_base_branch(
-    config: dict, body: str, *, explicit: str | None = None
-) -> str:
+def resolve_base_branch(config: dict, body: str, *, explicit: str | None = None) -> str:
     """The base branch for an issue's work (DEC-013 `base-branch`) — the ONE
     resolution shared by start-work (branch start-point) and every PR-opening
     verb (open-pr, create-draft, review-work), so the branch and its PR agree.
 
     Precedence: an `explicit` caller choice (a verb's `--base`) wins; else the
     closing issue's `Integration: integration/<slug>` marker names the base;
-    else the adopter's `default_branch` (`main` only when the config declares
-    none). A malformed marker is not a branch and falls through to the default.
-    Takes no HEAD input, so the checked-out branch can never leak in (#835)."""
+    else the project's default branch, as the backbone declares it (COR-054;
+    `_lib/default_branch`). A malformed marker is not a branch and falls
+    through to the default. Takes no HEAD input, so the checked-out branch can
+    never leak in (#835). Raises `default_branch.Unanswered` when the default
+    branch is needed and the backbone cannot say it: the verbs refuse rather
+    than cut from, or target, a guessed branch."""
     if explicit:
         return explicit
     slug = integration_slug(body)
     if slug:
         return f"integration/{slug}"
-    return str(config.get("default_branch") or "main")
+    return default_branch.name(config)
 
 
 def parent_ref(child_body: str) -> int | None:

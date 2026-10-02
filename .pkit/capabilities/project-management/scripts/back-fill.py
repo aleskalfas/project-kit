@@ -217,7 +217,7 @@ from typing import Any
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import (  # noqa: E402
+from _lib import (
     axis_carriage,
     axis_labels,
     back_fill_apply,
@@ -226,8 +226,8 @@ from _lib import (  # noqa: E402
     session_guard,
     substrate_writes,
 )
-from _lib.gh import gh_run, load_adopter_config  # noqa: E402
-from _lib.hooks import HOOKS_RELATIVE_PATH, load_hooks_file  # noqa: E402
+from _lib.gh import gh_run, load_adopter_config
+from _lib.hooks import HOOKS_RELATIVE_PATH, load_hooks_file
 
 CAPABILITY_NAME = "project-management"
 PLAN_SCHEMA_VERSION = 1
@@ -273,8 +273,8 @@ class BackFillIntent:
     else empty.
     """
 
-    kind: str            # one of back_fill_apply.APPLIABLE_KINDS
-    citation: str        # why this intent is proposed
+    kind: str  # one of back_fill_apply.APPLIABLE_KINDS
+    citation: str  # why this intent is proposed
     axis_default_note: str = ""
     # set-board-field params (the field-value write inputs, ADR-031 / hook schema)
     field_id: str | None = None
@@ -306,8 +306,8 @@ class ProposedChange:
     # None when blocked (e.g. the field write needs a board item id we can't
     # resolve for this issue — reported, not fabricated).
     argv: list[str] | None
-    observed: str | None          # current value read at plan time (for the human)
-    prediction: str               # "already-satisfied" | "would-write" | "blocked"
+    observed: str | None  # current value read at plan time (for the human)
+    prediction: str  # "already-satisfied" | "would-write" | "blocked"
     blocked_reason: str = ""
     # Which classification axis this change carries — `set-axis-label` only, None
     # for the two non-label kinds. It is what matches a proposed entry back to its
@@ -508,9 +508,7 @@ def main() -> int:
     return _with_set_outcome(0, args.set_axis, plan)
 
 
-def _unhonoured_set_requests(
-    raw: list[str] | None, plan: dict[str, Any] | None
-) -> list[str]:
+def _unhonoured_set_requests(raw: list[str] | None, plan: dict[str, Any] | None) -> list[str]:
     """The ``--set`` items that did not become an intent in ``plan``, in order.
 
     An item is honoured iff the plan carries a ``set-axis-label`` intent for that
@@ -603,9 +601,7 @@ def _derive_plan(
     # they resolve on their own path and join the same list — from here down every
     # phase treats all three kinds uniformly.
     set_overrides, set_errors = _parse_set_axis(getattr(args, "set_axis", None))
-    label_intents, label_errors = _resolve_label_intents(
-        substrate_map, config, set_overrides
-    )
+    label_intents, label_errors = _resolve_label_intents(substrate_map, config, set_overrides)
     intents += label_intents
     intent_errors += set_errors + label_errors
 
@@ -642,21 +638,21 @@ def _derive_plan(
     target_repo = _resolve_repo_name_with_owner(config)
     item_ids = _resolve_board_item_ids(config, project_node_id, issues)
     proposed = _build_proposed_changes(
-        intents, issues, item_ids, project_node_id, target_repo,
+        intents,
+        issues,
+        item_ids,
+        project_node_id,
+        target_repo,
         substrate_map=substrate_map,
     )
     return (
-        _plan_document(
-            intents, proposed, gate, truncated=truncated, intent_errors=intent_errors
-        ),
+        _plan_document(intents, proposed, gate, truncated=truncated, intent_errors=intent_errors),
         False,
         intent_errors,
     )
 
 
-def _print_no_intents(
-    args: argparse.Namespace, intent_errors: list[str] | None = None
-) -> None:
+def _print_no_intents(args: argparse.Namespace, intent_errors: list[str] | None = None) -> None:
     """The phase-appropriate 'no intents declared' message.
 
     ``intent_errors`` is why nothing resolved, and it must survive every phase.
@@ -672,10 +668,12 @@ def _print_no_intents(
         # carrying the errors, so a machine consumer sees the same reasons a
         # human would.
         empty_gate = GateResult(passed=True, checks=[])
-        print(json.dumps(
-            _plan_document([], [], empty_gate, truncated=False, intent_errors=errors),
-            indent=2,
-        ))
+        print(
+            json.dumps(
+                _plan_document([], [], empty_gate, truncated=False, intent_errors=errors),
+                indent=2,
+            )
+        )
         return
     for err in errors:
         print(f"  ! {err}", file=sys.stderr)
@@ -842,9 +840,7 @@ def _print_intent_errors(plan: dict[str, Any]) -> None:
             print(f"  ! {err}", file=sys.stderr)
 
 
-def _confirm_apply(
-    changes: list[back_fill_apply.PlannedChange], *, pre_approved: bool
-) -> bool:
+def _confirm_apply(changes: list[back_fill_apply.PlannedChange], *, pre_approved: bool) -> bool:
     """The reviewed-batch confirmation gate (DEC-037 §2 / migrate-family posture).
 
     The human confirms ONCE for the reviewed batch (per-issue clicks become a
@@ -909,12 +905,14 @@ def _residual_pre_check(capability_root: Path) -> GateResult:
         # Defensive: the sibling diagnostic is missing/unloadable. Fail closed —
         # we cannot confirm the residual prerequisites, so we must not proceed to
         # propose writes against an unverified substrate.
-        checks.append((
-            "residual pre-check",
-            "fail",
-            "could not load pre-check.py to run the residual gate "
-            "(auth / repo-access / map-parse). Refusing to proceed.",
-        ))
+        checks.append(
+            (
+                "residual pre-check",
+                "fail",
+                "could not load pre-check.py to run the residual gate "
+                "(auth / repo-access / map-parse). Refusing to proceed.",
+            )
+        )
         return GateResult(passed=False, checks=checks)
 
     # 1. gh auth, 2. repo accessible — always residual hard-fails.
@@ -946,13 +944,15 @@ def _add_board_unresolvable_failure(gate: GateResult) -> None:
     it once at the top, distinct from the per-issue membership block.
     """
     gate.passed = False
-    gate.checks.append((
-        "Projects v2 board resolvable",
-        "fail",
-        "declared set-board-field intent(s) cannot be served: no Projects v2 "
-        "board resolvable (has_projects_v2_board false/unset, projects_v2_board_id "
-        "missing, or the board number does not resolve via `gh project view`).",
-    ))
+    gate.checks.append(
+        (
+            "Projects v2 board resolvable",
+            "fail",
+            "declared set-board-field intent(s) cannot be served: no Projects v2 "
+            "board resolvable (has_projects_v2_board false/unset, projects_v2_board_id "
+            "missing, or the board number does not resolve via `gh project view`).",
+        )
+    )
 
 
 def _load_pre_check_module(capability_root: Path) -> Any | None:
@@ -966,9 +966,7 @@ def _load_pre_check_module(capability_root: Path) -> Any | None:
     if not pre_check_path.is_file():
         return None
     try:
-        spec = importlib.util.spec_from_file_location(
-            "pm_pre_check_for_back_fill", pre_check_path
-        )
+        spec = importlib.util.spec_from_file_location("pm_pre_check_for_back_fill", pre_check_path)
         if spec is None or spec.loader is None:
             return None
         module = importlib.util.module_from_spec(spec)
@@ -1084,10 +1082,7 @@ def _parse_set_axis(raw: list[str] | None) -> tuple[dict[str, str], list[str]]:
         axis, sep, value = item.partition("=")
         axis, value = axis.strip(), value.strip()
         if not sep or not axis or not value:
-            errors.append(
-                f"--set {item!r} is not in AXIS=VALUE form (e.g. "
-                f"--set priority=High)."
-            )
+            errors.append(f"--set {item!r} is not in AXIS=VALUE form (e.g. --set priority=High).")
             continue
         if axis not in LABEL_BACK_FILL_AXES:
             errors.append(
@@ -1281,9 +1276,7 @@ def _workstream_default_note(
 # ----- corpus enumeration --------------------------------------------
 
 
-def _enumerate_corpus(
-    config: dict[str, Any], *, limit: int, state: str
-) -> list[dict[str, Any]]:
+def _enumerate_corpus(config: dict[str, Any], *, limit: int, state: str) -> list[dict[str, Any]]:
     """List the corpus issues with the fields the report needs (a READ).
 
     Pulls ``number``, ``title``, ``milestone`` (for value-equality annotation of
@@ -1299,10 +1292,15 @@ def _enumerate_corpus(
     try:
         proc = gh_run(
             [
-                "gh", "issue", "list",
-                "--state", state,
-                "--limit", str(limit),
-                "--json", "number,title,milestone,labels",
+                "gh",
+                "issue",
+                "list",
+                "--state",
+                state,
+                "--limit",
+                str(limit),
+                "--json",
+                "number,title,milestone,labels",
             ],
             config,
             check=False,
@@ -1419,9 +1417,13 @@ def _resolve_board_item_ids(
     # Bound the pagination so a misconfigured board can't loop unboundedly.
     for _ in range(50):
         api_args = [
-            "gh", "api", "graphql",
-            "-f", f"query={query}",
-            "-F", f"project={project_node_id}",
+            "gh",
+            "api",
+            "graphql",
+            "-f",
+            f"query={query}",
+            "-F",
+            f"project={project_node_id}",
         ]
         if cursor:
             api_args += ["-F", f"cursor={cursor}"]
@@ -1448,16 +1450,14 @@ def _resolve_board_item_ids(
                 continue
             number = content.get("number")
             repo_block = content.get("repository") or {}
-            repo = (
-                repo_block.get("nameWithOwner")
-                if isinstance(repo_block, dict)
-                else None
-            )
+            repo = repo_block.get("nameWithOwner") if isinstance(repo_block, dict) else None
             item_id = node.get("id")
             if (
                 isinstance(number, int)
-                and isinstance(repo, str) and repo
-                and isinstance(item_id, str) and item_id
+                and isinstance(repo, str)
+                and repo
+                and isinstance(item_id, str)
+                and item_id
             ):
                 out[(repo, number)] = item_id
         page = items_block.get("pageInfo") or {}
@@ -1513,18 +1513,14 @@ def _build_proposed_changes(
         for intent in intents:
             if intent.kind == "set-board-field":
                 proposed.append(
-                    _propose_field_value(
-                        intent, number, title, item_ids, project_id, target_repo
-                    )
+                    _propose_field_value(intent, number, title, item_ids, project_id, target_repo)
                 )
             elif intent.kind == SET_AXIS_LABEL_KIND:
                 change = _propose_axis_label(intent, number, title, issue, substrate_map)
                 if change is not None:
                     proposed.append(change)
             else:  # assign-milestone
-                proposed.append(
-                    _propose_milestone(intent, number, title, issue)
-                )
+                proposed.append(_propose_milestone(intent, number, title, issue))
     return proposed
 
 
@@ -1550,8 +1546,7 @@ def _propose_field_value(
     item_id = item_ids.get((target_repo, number))
     if item_id is None or project_id is None:
         reason = (
-            f"issue not on the configured Projects v2 board (no item id for "
-            f"{target_repo}#{number})"
+            f"issue not on the configured Projects v2 board (no item id for {target_repo}#{number})"
             if project_id is not None
             else "no Projects v2 board resolvable for this milestone-only back-fill"
         )
@@ -1661,9 +1656,7 @@ def _propose_axis_label(
         issue_title=title,
         kind=SET_AXIS_LABEL_KIND,
         citation=_full_citation(intent),
-        argv=back_fill_apply.axis_label_args(
-            issue_number=number, label=label_value
-        ),
+        argv=back_fill_apply.axis_label_args(issue_number=number, label=label_value),
         observed=None,
         prediction="would-write",
         axis=axis,
@@ -1789,10 +1782,13 @@ def _print_context_header(capability_root: Path, config: dict[str, Any]) -> None
     print("back-fill (report): project-management capability")
     print(f"  target repo: {repo}")
     print(f"  capability:  {capability_root} (v{version})")
-    print(f"  intent src:  {capability_root / HOOKS_RELATIVE_PATH} "
-          f"({BACK_FILL_SOURCE_EVENT} hooks)")
-    print(f"               {capability_root / axis_labels.SUBSTRATE_MAP_RELATIVE_PATH} "
-          f"(per-axis `default:` on a label-carried axis)")
+    print(
+        f"  intent src:  {capability_root / HOOKS_RELATIVE_PATH} ({BACK_FILL_SOURCE_EVENT} hooks)"
+    )
+    print(
+        f"               {capability_root / axis_labels.SUBSTRATE_MAP_RELATIVE_PATH} "
+        f"(per-axis `default:` on a label-carried axis)"
+    )
     print(
         "  posture:     REPORT ONLY — no issue is mutated. Applying this plan "
         "is a separate operation (DEC-037 §2)."
@@ -1900,17 +1896,13 @@ def _print_report_from_plan(plan: dict[str, Any]) -> None:
         # several axes at once) and is absent for the two non-label kinds, whose
         # lines are byte-identical to before.
         axis_note = f" ({change['axis']})" if change.get("axis") else ""
-        print(
-            f"    {marker} #{change.get('issue_number')} "
-            f"{change.get('kind')}{axis_note}"
-        )
+        print(f"    {marker} #{change.get('issue_number')} {change.get('kind')}{axis_note}")
         if change.get("argv") is not None:
             print(f"               would run: {_render_argv(change['argv'])}")
         if change.get("observed") is not None:
             print(f"               observed: {change['observed']!r}")
         if change.get("prediction") == "already-satisfied":
-            print("               (value already matches — likely a no-op; "
-                  "re-validated at apply)")
+            print("               (value already matches — likely a no-op; re-validated at apply)")
         if change.get("prediction") == "blocked":
             print(f"               blocked: {change.get('blocked_reason', '')}")
     print()
@@ -1949,10 +1941,7 @@ def _describe_intent_dict(intent: dict[str, Any]) -> str:
             f"set-board-field: Projects-v2 field_id={intent.get('field_id')} "
             f"→ {which} (across the corpus)"
         )
-    return (
-        f"assign-milestone: milestone={intent.get('milestone_title')!r} "
-        "(across the corpus)"
-    )
+    return f"assign-milestone: milestone={intent.get('milestone_title')!r} (across the corpus)"
 
 
 def _render_argv(argv: list[str]) -> str:
@@ -2069,9 +2058,7 @@ def _read_current_axis_label(
         if isinstance(entry, dict) and isinstance(entry.get("name"), str)
     ]
     carried = axis_labels.carried_labels(axis, names, substrate_map)
-    return back_fill_apply.FreshState(
-        current=carried[0] if carried else None, read_ok=True
-    )
+    return back_fill_apply.FreshState(current=carried[0] if carried else None, read_ok=True)
 
 
 def _read_current_field_value(
@@ -2205,9 +2192,7 @@ def _print_apply_summary(
 
 def _resolve_repo_name_with_owner(config: dict[str, Any]) -> str:
     try:
-        proc = gh_run(
-            ["gh", "repo", "view", "--json", "nameWithOwner"], config, check=False
-        )
+        proc = gh_run(["gh", "repo", "view", "--json", "nameWithOwner"], config, check=False)
     except FileNotFoundError:
         return "<unresolved>"
     if proc.returncode != 0:

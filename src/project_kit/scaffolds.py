@@ -268,9 +268,7 @@ def stamp_capability(target_root: Path, name: str) -> CapabilityScaffoldResult:
     package_yaml = capability_dir / "package.yaml"
     requires_backbone = _default_requires_backbone(target_root)
     package_yaml.write_text(
-        _CAPABILITY_PACKAGE_YAML_TEMPLATE.format(
-            name=name, requires_backbone=requires_backbone
-        ),
+        _CAPABILITY_PACKAGE_YAML_TEMPLATE.format(name=name, requires_backbone=requires_backbone),
         encoding="utf-8",
     )
 

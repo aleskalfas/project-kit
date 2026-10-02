@@ -37,6 +37,7 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+from collections.abc import MutableMapping
 from pathlib import Path
 
 # Bypass: set by an operator to force in-process execution and skip all routing.
@@ -47,6 +48,11 @@ _BYPASS_ENV = "PKIT_NO_ROUTE"
 # re-resolving the pin). Only route 2 sets it — route 1's dispatcher runs
 # `python -m project_kit`, which never enters this router.
 _LOOP_GUARD_ENV = "PKIT_ROUTED"
+# Notice guard: set to the pin when route 2 degrades to running self, so a `pkit`
+# subprocess the degraded command spawns (a capability script calling `pkit …`)
+# does not repeat the notice: it is said once per command the operator runs.
+# Routing itself is untouched — the subprocess still probes the pin.
+_PIN_UNRESOLVED_ENV = "PKIT_PIN_UNRESOLVED"
 
 # The PRJ-004 canonical distribution URL. Route 2 pins by git tag `v<version>`
 # appended after `@` (PRJ-004's tag-pinning form); tag⟺`.pkit/VERSION`
@@ -87,7 +93,7 @@ def main(argv: list[str] | None = None) -> None:
     _run_self()
 
 
-def _route(argv: list[str], environ) -> None:  # type: ignore[no-untyped-def]
+def _route(argv: list[str], environ) -> None:
     """Select and take a route. Returns iff the caller should run self."""
     root = _enclosing_project(Path.cwd())
     if root is None:
@@ -115,12 +121,12 @@ def _route(argv: list[str], environ) -> None:  # type: ignore[no-untyped-def]
 # --- Routing predicates (all stdlib, all cheap) --------------------------------
 
 
-def _routing_suppressed(environ) -> bool:  # type: ignore[no-untyped-def]
+def _routing_suppressed(environ) -> bool:
     """True when routing must be skipped: operator bypass or the loop guard."""
     return _env_true(environ, _BYPASS_ENV) or _env_true(environ, _LOOP_GUARD_ENV)
 
 
-def _env_true(environ, name: str) -> bool:  # type: ignore[no-untyped-def]
+def _env_true(environ, name: str) -> bool:
     """True when an env var is set to a truthy value (`1` / `true` / `yes`)."""
     return environ.get(name, "").strip().lower() in {"1", "true", "yes"}
 
@@ -252,7 +258,8 @@ def read_version_pin(root: Path) -> str | None:
     Cheap and stdlib-only — a plain file read on the pre-click hot path
     (ADR-039), mirroring `_read_pkit_version`. This is the pin *source* the
     router honours (ADR-049); it is the sole reader of the pin directive shared
-    by the router (route 2) and the `pin` / `upgrade` gestures.
+    by the router (route 2) and the `pin` / `upgrade` gestures, as
+    `write_version_pin` is its sole writer.
     """
     try:
         text = pin_file_path(root).read_text(encoding="utf-8").strip()
@@ -261,7 +268,36 @@ def read_version_pin(root: Path) -> str | None:
     return text or None
 
 
-def is_routed_child(environ) -> bool:  # type: ignore[no-untyped-def]
+def write_version_pin(root: Path, version: str | None) -> None:
+    """Set `root/.pkit/version-pin` to `version`, or remove it when `version` is None.
+
+    The one writer of the pin directive (ADR-049): the default pin after an
+    upgrade, the pinned raise, `pkit pin` and `pkit unpin` all come here, and
+    None means unpinned here as it does from `read_version_pin`. The router runs
+    whatever version this file names, so a write cut short must never leave a
+    torn pin for it to route to (#1211). The new pin is written to a temporary
+    file beside the pin, flushed to disk, and only then renamed over it: the
+    file holds the previous pin, byte for byte, or the new one, never part of
+    it, and a write that fails leaves no temporary file. Removing is a single
+    unlink, already whole or not at all, and removing an absent pin does nothing.
+    """
+    path = pin_file_path(root)
+    if version is None:
+        path.unlink(missing_ok=True)
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(path.name + ".tmp")
+    try:
+        with temporary.open("w", encoding="utf-8") as stream:
+            stream.write(version + "\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def is_routed_child(environ) -> bool:
     """True when this process was re-exec'd by the router into a pinned version.
 
     The router sets the loop-guard env on the child it re-execs (route 2). A
@@ -271,7 +307,7 @@ def is_routed_child(environ) -> bool:  # type: ignore[no-untyped-def]
     return _env_true(environ, _LOOP_GUARD_ENV)
 
 
-def is_route_bypassed(environ) -> bool:  # type: ignore[no-untyped-def]
+def is_route_bypassed(environ) -> bool:
     """True when routing was explicitly bypassed via PKIT_NO_ROUTE.
 
     Set by `run_bypassed` on the child it bootstraps (ADR-049). A `pkit upgrade`
@@ -308,7 +344,7 @@ def running_version() -> str:
 # --- Route executors -----------------------------------------------------------
 
 
-def _exec_source_dispatcher(root: Path, argv: list[str], environ) -> None:  # type: ignore[no-untyped-def]
+def _exec_source_dispatcher(root: Path, argv: list[str], environ) -> None:
     """Route 1: exec the checkout's `.pkit/cli/pkit`. Returns only on degrade.
 
     Sets no loop guard: the dispatcher runs `python -m project_kit`, which does
@@ -341,7 +377,7 @@ def _exec_source_dispatcher(root: Path, argv: list[str], environ) -> None:  # ty
     )
 
 
-def _stamp_cli_version(root: Path, environ) -> None:  # type: ignore[no-untyped-def]
+def _stamp_cli_version(root: Path, environ) -> None:
     """Inject `PKIT_CLI_VERSION = <checkout .pkit/VERSION>` for the dispatched
     process, so provenance reports `cli == tree` in a source checkout.
 
@@ -358,7 +394,7 @@ def _stamp_cli_version(root: Path, environ) -> None:  # type: ignore[no-untyped-
         environ[_CLI_VERSION_ENV] = version
 
 
-def _run_pinned(pin: str, running: str, argv: list[str], environ) -> None:  # type: ignore[no-untyped-def]
+def _run_pinned(pin: str, running: str, argv: list[str], environ: MutableMapping[str, str]) -> None:
     """Route 2: run the command under the pinned wheel, or degrade loudly to self.
 
     Two phases keep degradation clean (ADR-039 D2). First a resolution *probe*
@@ -373,17 +409,64 @@ def _run_pinned(pin: str, running: str, argv: list[str], environ) -> None:  # ty
     env[_LOOP_GUARD_ENV] = "1"  # the pinned wheel's router must not route again
 
     if not _pin_is_resolvable(pin, env):
-        _warn(
-            f"this project pins project-kit {pin} but the running binary is "
-            f"{running}, and the pinned version could not be resolved (offline, "
-            f"missing tag, auth, or uvx unavailable). Running {running} instead — "
-            f"output may not match the pinned methodology. Align the pin, or re-run "
-            f"where `uvx --from {DISTRIBUTION_GIT_URL}@v{pin} project-kit` resolves."
-        )
+        _notice_pin_unresolved(pin, running, environ)
         return
 
     completed = subprocess.run([*_pinned_base(pin), *argv], env=env)
     sys.exit(completed.returncode)
+
+
+def _notice_pin_unresolved(pin: str, running: str, environ: MutableMapping[str, str]) -> None:
+    """Say, once per command, that route 2 runs this binary instead of the pin.
+
+    A binary older than the pin is a normal state — a pin raise leaves the
+    installed tool where it was — so the notice says when this one is older:
+    read-only commands still run, and `sync` and `upgrade` refuse rather than
+    write its older content over the project's (#1212). The notice guard keeps
+    a `pkit` subprocess of this command from repeating it.
+    """
+    if environ.get(_PIN_UNRESOLVED_ENV) == pin:
+        return
+    environ[_PIN_UNRESOLVED_ENV] = pin
+    unresolved = (
+        f"this project pins project-kit {pin}, which could not be resolved (offline, "
+        "missing tag, auth, or uvx unavailable)"
+    )
+    rerun = f"re-run where `uvx --from {DISTRIBUTION_GIT_URL}@v{pin} project-kit` resolves"
+    if _is_older_release(running, pin):
+        _warn(
+            f"{unresolved}, so this command runs pkit {running} instead, an OLDER pkit than "
+            f"the pin names. Read-only commands run, though their output may not match the "
+            f"pinned methodology; `pkit sync` and `pkit upgrade` refuse rather than write "
+            f"{running}'s older content over the project's. To run {pin}, {rerun}."
+        )
+        return
+    _warn(
+        f"{unresolved}, and the running binary is {running}. Running {running} instead — "
+        f"output may not match the pinned methodology. Align the pin, or {rerun}."
+    )
+
+
+def _is_older_release(version: str, than: str) -> bool:
+    """True iff release *version* is strictly older than release *than*.
+
+    Stdlib-only, for the pre-click hot path: both must be bare
+    `MAJOR.MINOR.PATCH` releases (the only pin `pkit pin` writes, ADR-049);
+    anything else is not ordered, so the caller claims no order it cannot show.
+    """
+    parsed, parsed_than = _release_tuple(version), _release_tuple(than)
+    if parsed is None or parsed_than is None:
+        return False
+    return parsed < parsed_than
+
+
+def _release_tuple(version: str) -> tuple[int, int, int] | None:
+    """*version*'s `MAJOR.MINOR.PATCH` parts, or None when it is not that shape."""
+    parts = version.split(".")
+    if len(parts) != 3 or not all(part.isascii() and part.isdigit() for part in parts):
+        return None
+    major, minor, patch = (int(part) for part in parts)
+    return major, minor, patch
 
 
 def _pinned_base(pin: str) -> list[str]:
@@ -391,7 +474,7 @@ def _pinned_base(pin: str) -> list[str]:
     return ["uvx", "--from", f"{DISTRIBUTION_GIT_URL}@v{pin}", "project-kit"]
 
 
-def run_bypassed(pin: str, argv: list[str], environ=None) -> int:  # type: ignore[no-untyped-def]
+def run_bypassed(pin: str, argv: list[str], environ=None) -> int:
     """Run `pkit <argv>` at the wheel for `pin`, with routing bypassed; return the exit code.
 
     Uses the same `uvx --from …@v<pin>` base route 2 pins against, but sets
@@ -418,7 +501,7 @@ def run_bypassed(pin: str, argv: list[str], environ=None) -> int:  # type: ignor
     return completed.returncode
 
 
-def _pin_is_resolvable(pin: str, env) -> bool:  # type: ignore[no-untyped-def]
+def _pin_is_resolvable(pin: str, env) -> bool:
     """True iff the pinned wheel can be resolved and run (a `--version` probe).
 
     Any launch failure (`uvx` absent) or non-zero exit (fetch/build/tag error)

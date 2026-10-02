@@ -13,6 +13,7 @@ one place.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import sys
 import tempfile
 from pathlib import Path
@@ -20,8 +21,7 @@ from pathlib import Path
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
-from _lib import provenance
-from _lib import session_guard
+from _lib import provenance, session_guard
 from _lib.criteria import (
     SECTION_CRITERIA,
     SECTION_DOC_IMPACT,
@@ -36,7 +36,6 @@ from _lib.membership import (
     resolve_capability_root,
     resolve_invoker_identity,
 )
-
 
 # How each addressable section names its items in the result lines.
 _ITEM_NOUNS = {
@@ -97,8 +96,7 @@ def run_criterion_verb(*, verb: str, target_checked: bool) -> int:
     action = "tick" if target_checked else "untick"
     noun, plural = _ITEM_NOUNS[args.section]
     print(f"{verb}: #{args.issue_number}")
-    print(f"  action:  {action} {len(targets)} "
-          f"{noun if len(targets) == 1 else plural}")
+    print(f"  action:  {action} {len(targets)} {noun if len(targets) == 1 else plural}")
 
     # Which `## <Name>` section carries the criteria checkboxes is
     # issue-type-dependent and owned by the body-format schema (`## Success
@@ -107,9 +105,7 @@ def run_criterion_verb(*, verb: str, target_checked: bool) -> int:
     # it cannot be read — so indices stay in parity with `show-issue --field
     # criteria`. `--section doc-impact` addresses the `## Doc impact` section
     # instead, numbered as `show-issue --field doc-impact` numbers it (#1015).
-    headings = section_headings(
-        args.section, _read_body_format(capability_root, yaml_loader)
-    )
+    headings = section_headings(args.section, _read_body_format(capability_root, yaml_loader))
 
     plan = plan_batch(
         body,
@@ -147,9 +143,7 @@ def run_criterion_verb(*, verb: str, target_checked: bool) -> int:
             print("aborted.", file=sys.stderr)
             return 0
 
-    stamped = provenance.stamp(
-        plan.new_body or "", provenance.read_versions(capability_root)
-    )
+    stamped = provenance.stamp(plan.new_body or "", provenance.read_versions(capability_root))
     if not _gh_write_body(args.issue_number, stamped, config):
         return 3
 
@@ -182,7 +176,7 @@ def _build_parser(verb: str, target_checked: bool) -> argparse.ArgumentParser:
             "followed by the expected TEXT at that index (a guard — the verb "
             "refuses unless the line still matches). An integer argument starts "
             "a new target; a non-integer argument is the preceding index's "
-            "guard. Example: `1 \"docs updated\" 3 5`."
+            'guard. Example: `1 "docs updated" 3 5`.'
         ),
     )
     parser.add_argument(
@@ -237,9 +231,7 @@ def _parse_targets(tokens: list[str]) -> list[Target]:
             if pending_index is not None:
                 targets.append(Target(index=pending_index))
             if as_int < 1:
-                raise ValueError(
-                    f"criterion index must be 1-based (>= 1); got {as_int}"
-                )
+                raise ValueError(f"criterion index must be 1-based (>= 1); got {as_int}")
             pending_index = as_int
         else:
             if pending_index is None:
@@ -271,9 +263,7 @@ def _gh_write_body(issue_number: int, body: str, config: dict) -> bool:
     The body always goes through a temp file (avoids shell length limits), exactly
     as edit-issue._gh_apply_edit does.
     """
-    with tempfile.NamedTemporaryFile(
-        "w", suffix=".md", encoding="utf-8", delete=False
-    ) as f:
+    with tempfile.NamedTemporaryFile("w", suffix=".md", encoding="utf-8", delete=False) as f:
         f.write(body)
         body_path = f.name
     try:
@@ -291,10 +281,8 @@ def _gh_write_body(issue_number: int, body: str, config: dict) -> bool:
             )
             return False
     finally:
-        try:
+        with contextlib.suppress(OSError):
             Path(body_path).unlink(missing_ok=True)
-        except OSError:
-            pass
     return True
 
 

@@ -4,6 +4,7 @@ detection + the escape hatches."""
 from __future__ import annotations
 
 import subprocess
+from datetime import date
 from pathlib import Path
 
 import pytest
@@ -128,6 +129,377 @@ def test_touched_components_maps_prefixes_and_subtrees(tmp_path: Path) -> None:
     assert set(touched) == {"backbone", "claude-code"}
 
 
+# --- Only the diff's own changesets declare its change (#782) ----------------
+
+
+def _another_pull_request(source_kit: Path, component: str, kind: str = "minor") -> Path:
+    """Land a changeset for `component` on `main`, as another pull request would,
+    and return to `feature`, which has it only once it merges `main`. Returns the
+    changeset's path."""
+    repo = source_kit.parent
+    _git(repo, "checkout", "-q", "main")
+    directory = changesets.unreleased_dir(repo)
+    directory.mkdir(parents=True, exist_ok=True)
+    path = directory / f"other-{component}-{kind}.yaml"
+    path.write_text(f"component: {component}\nkind: {kind}\nbody: note\n", encoding="utf-8")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", f"another pull request ({component})")
+    _git(repo, "checkout", "-q", "feature")
+    return path
+
+
+@pytest.mark.parametrize("skip", [False, True])
+def test_a_pending_changeset_from_another_pull_request_does_not_declare_this_ones(
+    tmp_path: Path, skip: bool
+) -> None:
+    """The false pass of #782: the diff touches the backbone and declares nothing,
+    while a pending changeset an earlier pull request merged names the backbone.
+    The escape hatch still waives the check."""
+    source_kit = _make_repo(tmp_path)
+    repo = source_kit.parent
+    _another_pull_request(source_kit, "backbone")
+    _git(repo, "merge", "-q", "main")  # the branch starts after it landed
+    _commit_change(source_kit, "src/project_kit/foo.py")
+
+    result = release.check_changesets(source_kit, "main", skip=skip)
+
+    assert [cs.component for cs in changesets.load_changesets(repo)] == ["backbone"]
+    assert result.touched == ["backbone"]
+    assert result.missing == ["backbone"]
+    assert result.skipped is skip
+    assert result.ok is skip
+
+
+def test_a_changeset_merged_in_from_the_base_does_not_declare_this_diffs_change(
+    tmp_path: Path,
+) -> None:
+    """Merging the base brings its pending changesets onto the branch, but the
+    diff runs from where the branch left the base, so none of them is in it — the
+    shape CI checks too, on the pull request merged into its base."""
+    source_kit = _make_repo(tmp_path)
+    repo = source_kit.parent
+    _commit_change(source_kit, "src/project_kit/foo.py")
+    _another_pull_request(source_kit, "backbone")
+    _git(repo, "merge", "-q", "--no-edit", "main")
+
+    result = release.check_changesets(source_kit, "main")
+
+    assert result.missing == ["backbone"]
+    assert not result.ok
+
+
+@pytest.mark.parametrize("kind", ["patch", "none"])
+@pytest.mark.parametrize("merged_base", [False, True])
+def test_the_branchs_own_changeset_counts_after_the_base_moves_on(
+    tmp_path: Path, kind: str, merged_base: bool
+) -> None:
+    """A branch cut from an older `main` adds its changeset; `main` has since
+    gained others, for the same component and another. The branch's own still
+    declares its change, whether or not it has merged `main` since."""
+    source_kit = _make_repo(tmp_path)
+    repo = source_kit.parent
+    _add_changeset(source_kit, "backbone", kind)
+    _commit_change(source_kit, "src/project_kit/foo.py")
+    _another_pull_request(source_kit, "backbone")
+    _another_pull_request(source_kit, "claude-code")
+    if merged_base:
+        _git(repo, "merge", "-q", "--no-edit", "main")
+
+    result = release.check_changesets(source_kit, "main")
+
+    assert result.touched == ["backbone"]
+    assert result.missing == []
+    assert result.ok
+
+
+def test_editing_a_pending_changeset_declares_this_diffs_change(tmp_path: Path) -> None:
+    """A pull request may extend a pending changeset's note to cover its own
+    change instead of adding a file: the edit makes the changeset the diff's."""
+    source_kit = _make_repo(tmp_path)
+    repo = source_kit.parent
+    pending = _another_pull_request(source_kit, "backbone")
+    _git(repo, "merge", "-q", "main")
+    pending.write_text(
+        "component: backbone\nkind: minor\nbody: note, and this change too\n", encoding="utf-8"
+    )
+    _commit_change(source_kit, "src/project_kit/foo.py")
+
+    result = release.check_changesets(source_kit, "main")
+
+    assert result.missing == []
+    assert result.ok
+
+
+@pytest.mark.parametrize("renames", ["true", "false"])
+def test_renaming_a_pending_changeset_counts_as_this_diffs(tmp_path: Path, renames: str) -> None:
+    """A renamed changeset is the diff's, as an edited one is — the floor tie reads
+    it the same way. Git names a rename by its destination, and with rename
+    detection off it lists the destination as added, so the reading holds
+    either way."""
+    source_kit = _make_repo(tmp_path)
+    repo = source_kit.parent
+    _git(repo, "config", "diff.renames", renames)
+    pending = _another_pull_request(source_kit, "backbone")
+    _git(repo, "merge", "-q", "main")
+    _git(repo, "mv", str(pending), str(pending.with_name("backbone-minor-renamed.yaml")))
+    _commit_change(source_kit, "src/project_kit/foo.py")
+
+    result = release.check_changesets(source_kit, "main")
+
+    assert result.missing == []
+    assert result.ok
+
+
+def test_release_check_says_a_pending_changeset_from_elsewhere_does_not_count(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source_kit = _make_repo(tmp_path)
+    _another_pull_request(source_kit, "backbone")
+    _git(source_kit.parent, "merge", "-q", "main")
+    _commit_change(source_kit, "src/project_kit/foo.py")
+    monkeypatch.chdir(source_kit.parent)
+    monkeypatch.delenv("PKIT_CHANGESET_SKIP", raising=False)
+
+    result = CliRunner().invoke(main, ["release", "check", "--base", "main"])
+
+    assert result.exit_code == 1, result.output
+    assert "surface change without a changeset for: backbone." in result.output
+    assert (
+        "a pending changeset the diff leaves alone declares another pull request's change, "
+        "not this one's, even when it names the same component." in result.output
+    )
+
+
+# --- A declared floor rides on a change to its component or a release of it --
+# (PRJ-002 D4)
+
+
+def _add_floor_changeset(
+    source_kit: Path,
+    component: str,
+    value: str = "1.5.0",
+    *,
+    kind: str = "minor",
+    body: str = "Needs the backbone.",
+) -> None:
+    directory = changesets.unreleased_dir(source_kit.parent)
+    directory.mkdir(parents=True, exist_ok=True)
+    (directory / f"{component}-floor.yaml").write_text(
+        f"component: {component}\nkind: {kind}\nbody: {body}\n"
+        f"custom:\n  requires_backbone: {value}\n",
+        encoding="utf-8",
+    )
+
+
+def _merge_earlier_pr(source_kit: Path, *changes: tuple[str, str, str]) -> None:
+    """Land `changes` — floor changesets as (component, value, kind) — on `main`
+    as an earlier pull request, then restart `feature` from it."""
+    repo = source_kit.parent
+    _git(repo, "checkout", "-q", "main")
+    for component, value, kind in changes:
+        _add_floor_changeset(source_kit, component, value, kind=kind)
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "an earlier pull request")
+    _git(repo, "checkout", "-q", "-B", "feature")
+
+
+def test_a_floor_on_a_none_changeset_for_an_untouched_component_is_refused(
+    tmp_path: Path,
+) -> None:
+    """A backbone change declaring a floor for an adapter it neither changes nor
+    releases: the floor would change what the adapter requires under an unchanged
+    version."""
+    source_kit = _make_repo(tmp_path)
+    _add_changeset(source_kit, "backbone", "minor")
+    _add_floor_changeset(source_kit, "claude-code", kind="none")
+    _commit_change(source_kit, "src/project_kit/foo.py")
+
+    result = release.check_changesets(source_kit, "main")
+
+    assert result.missing == []
+    assert [cs.path.name for cs in result.stray_floors] == ["claude-code-floor.yaml"]
+    assert not result.ok
+
+
+@pytest.mark.parametrize("kind", ["patch", "minor", "major"])
+def test_a_floor_only_release_of_an_untouched_component_passes(tmp_path: Path, kind: str) -> None:
+    """The correction path: a need found after the component shipped is declared on
+    a changeset that moves its version, in a pull request that changes nothing
+    under its tree."""
+    source_kit = _make_repo(tmp_path)
+    _add_floor_changeset(source_kit, "claude-code", "1.4.0", kind=kind)
+    _commit_change(source_kit, "docs/notes.md")
+
+    result = release.check_changesets(source_kit, "main")
+
+    assert result.touched == []
+    assert result.stray_floors == []
+    assert result.ok
+
+
+def test_a_floor_riding_on_a_change_to_its_component_passes(tmp_path: Path) -> None:
+    source_kit = _make_repo(tmp_path)
+    _add_floor_changeset(source_kit, "claude-code", "release")
+    _commit_change(source_kit, ".pkit/adapters/claude-code/new-file.md")
+
+    result = release.check_changesets(source_kit, "main")
+
+    assert result.touched == ["claude-code"]
+    assert result.stray_floors == []
+    assert result.ok
+
+
+def test_a_readme_touch_counts_as_a_change_to_the_component(tmp_path: Path) -> None:
+    """The tie reads paths: any file under the component's tree — a README edit
+    too — is a change to the component, so it passes a floor the tie would refuse
+    otherwise. A reminder, not a proof; the lint still refuses a floor on a `none`
+    changeset, whatever the diff."""
+    source_kit = _make_repo(tmp_path)
+    _add_floor_changeset(source_kit, "claude-code", kind="none")
+    _commit_change(source_kit, ".pkit/adapters/claude-code/README.md", "cosmetic\n")
+
+    result = release.check_changesets(source_kit, "main")
+
+    assert result.touched == ["claude-code"]
+    assert result.stray_floors == []
+
+
+def test_a_pending_floor_an_earlier_diff_added_is_not_this_diffs(tmp_path: Path) -> None:
+    """Only the changesets the diff adds or edits are tied to it."""
+    source_kit = _make_repo(tmp_path)
+    _merge_earlier_pr(source_kit, ("claude-code", "1.5.0", "none"))
+    _add_changeset(source_kit, "backbone", "minor")
+    _commit_change(source_kit, "src/project_kit/foo.py")
+
+    result = release.check_changesets(source_kit, "main")
+
+    assert result.stray_floors == []
+    assert result.ok
+
+
+def test_a_note_only_edit_of_a_pending_floor_declares_nothing(tmp_path: Path) -> None:
+    """The diff edits the changeset, but the floor it carries is the one the file
+    held at the merge base: nothing is declared here, so nothing is judged."""
+    source_kit = _make_repo(tmp_path)
+    _merge_earlier_pr(source_kit, ("claude-code", "1.5.0", "none"))
+    _add_floor_changeset(source_kit, "claude-code", "'1.5.0'", kind="none", body="Reworded.")
+    _git(source_kit.parent, "add", "-A")
+    _git(source_kit.parent, "commit", "-q", "-m", "reword the note")
+
+    result = release.check_changesets(source_kit, "main")
+
+    assert result.stray_floors == []
+    assert result.ok
+
+
+@pytest.mark.parametrize(
+    ("edit", "stray"),
+    [
+        (("claude-code", "1.4.0", "none"), True),  # the value changed
+        (("claude-code", "1.4.0", "patch"), False),  # a correction on a release of it
+    ],
+)
+def test_changing_a_pending_floor_value_declares_it_here(
+    tmp_path: Path, edit: tuple[str, str, str], stray: bool
+) -> None:
+    source_kit = _make_repo(tmp_path)
+    _merge_earlier_pr(source_kit, ("claude-code", "1.5.0", "none"))
+    component, value, kind = edit
+    _add_floor_changeset(source_kit, component, value, kind=kind)
+    _git(source_kit.parent, "add", "-A")
+    _git(source_kit.parent, "commit", "-q", "-m", "correct the declared floor")
+
+    result = release.check_changesets(source_kit, "main")
+
+    assert [cs.requires_backbone for cs in result.stray_floors] == (["1.4.0"] if stray else [])
+    assert result.ok is not stray
+
+
+def test_moving_a_pending_floor_to_another_component_declares_it_here(tmp_path: Path) -> None:
+    source_kit = _make_repo(tmp_path)
+    _merge_earlier_pr(source_kit, ("backbone", "1.5.0", "none"))
+    directory = changesets.unreleased_dir(source_kit.parent)
+    (directory / "backbone-floor.yaml").write_text(
+        "component: claude-code\nkind: none\nbody: Needs the backbone.\n"
+        "custom:\n  requires_backbone: 1.5.0\n",
+        encoding="utf-8",
+    )
+    _git(source_kit.parent, "add", "-A")
+    _git(source_kit.parent, "commit", "-q", "-m", "move the floor")
+
+    result = release.check_changesets(source_kit, "main")
+
+    assert [cs.component for cs in result.stray_floors] == ["claude-code"]
+
+
+def test_the_escape_hatch_does_not_waive_the_floor_tie(tmp_path: Path) -> None:
+    """The label waives the surface check, never the tie: a hatch that passed a
+    floor would let any pull request raise any component's floor."""
+    source_kit = _make_repo(tmp_path)
+    _add_floor_changeset(source_kit, "claude-code", kind="none")
+    _commit_change(source_kit, "src/project_kit/foo.py")
+
+    result = release.check_changesets(source_kit, "main", skip=True)
+
+    assert result.skipped
+    assert result.missing == ["backbone"]  # waived
+    assert [cs.path.name for cs in result.stray_floors] == ["claude-code-floor.yaml"]
+    assert not result.ok
+
+
+def test_release_check_names_a_stray_floor(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    source_kit = _make_repo(tmp_path)
+    _add_floor_changeset(source_kit, "claude-code", kind="none")
+    _commit_change(source_kit, "docs/notes.md")
+    monkeypatch.chdir(source_kit.parent)
+
+    result = CliRunner().invoke(main, ["release", "check", "--base", "main"])
+
+    assert result.exit_code == 1, result.output
+    assert "no surface-touched components — ok" not in result.stdout
+    assert "a requires_backbone floor declared for a component this diff neither touches" in (
+        result.output
+    )
+    assert "claude-code-floor.yaml: 'claude-code' (kind: none, requires_backbone: 1.5.0)" in (
+        result.output
+    )
+    assert "on a changeset that moves its version (patch or above)" in result.output
+    assert "surface change without a changeset" not in result.output
+
+
+def test_release_check_with_the_label_still_refuses_a_stray_floor(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source_kit = _make_repo(tmp_path)
+    _add_floor_changeset(source_kit, "claude-code", kind="none")
+    _commit_change(source_kit, "src/project_kit/foo.py")
+    monkeypatch.chdir(source_kit.parent)
+    monkeypatch.setenv("PKIT_CHANGESET_SKIP", "1")
+
+    result = CliRunner().invoke(main, ["release", "check", "--base", "main"])
+
+    assert result.exit_code == 1, result.output
+    assert "surface check skipped (escape hatch active)" in result.stdout
+    assert "claude-code-floor.yaml" in result.output
+    assert "does not waive this" in result.output
+    assert "surface change without a changeset" not in result.output
+
+
+def test_release_check_with_the_label_and_no_stray_floor_passes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source_kit = _make_repo(tmp_path)
+    _commit_change(source_kit, "src/project_kit/foo.py")
+    monkeypatch.chdir(source_kit.parent)
+    monkeypatch.setenv("PKIT_CHANGESET_SKIP", "1")
+
+    result = CliRunner().invoke(main, ["release", "check", "--base", "main"])
+
+    assert result.exit_code == 0, result.output
+    assert "surface check skipped (escape hatch active)" in result.stdout
+    assert "every floor this diff declares rides on its component — ok" in result.stdout
+
+
 # --- The release-PR exemption (#503): a release-apply footprint is exempt ---
 
 
@@ -247,6 +619,239 @@ def test_docs_only_diff_is_not_a_release(tmp_path: Path) -> None:
     assert result.ok  # not surface at all
 
 
+# --- A release is recognised by what it writes (#1161) -----------------------
+
+_SELF_HOST_MANIFEST = (
+    "schema_version: 1\n"
+    "backbone_version: {version}\n"
+    "components:\n"
+    "  - kind: adapter\n"
+    "    name: claude-code\n"
+    "    manifest: .pkit/adapters/claude-code/project/manifest.yaml\n"
+)
+
+
+def _package(kind: str, name: str, version: str, requires: str, *, comment: str = "") -> str:
+    return (
+        f"schema_version: 1\ncomponent:\n  kind: {kind}\n  name: {name}\n  version: {version}\n"
+        f'{comment}requires_backbone: "{requires}"\n'
+    )
+
+
+def _write_files(repo: Path, files: dict[str, str]) -> None:
+    for relpath, content in files.items():
+        target = repo / relpath
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(content, encoding="utf-8")
+
+
+def _v1_149_base(source_kit: Path) -> None:
+    """Land on `main` what the v1.149.0 release started from — a self-host
+    manifest, two capabilities beside the adapter, a changelog, and a pending
+    changeset for each component — then restart `feature` from it."""
+    repo = source_kit.parent
+    _git(repo, "checkout", "-q", "main")
+    _write_files(
+        repo,
+        {
+            ".pkit/manifest.yaml": _SELF_HOST_MANIFEST.format(version="1.5.0"),
+            ".pkit/adapters/claude-code/package.yaml": _package(
+                "adapter", "claude-code", "0.5.0", ">=0.1.0,<1.6.0"
+            ),
+            ".pkit/capabilities/project-management/package.yaml": _package(
+                "capability",
+                "project-management",
+                "0.53.0",
+                ">=1.4.0,<2.0.0",
+                comment="# Floor 1.4.0: it runs a backbone command.\n",
+            ),
+            ".pkit/capabilities/software-engineering/package.yaml": _package(
+                "capability", "software-engineering", "0.1.0", ">=1.0.0,<2.0.0"
+            ),
+            "CHANGELOG.md": "# Changelog\n\n## 1.5.0 — 2026-08-01\n\n### Added\n\n- Earlier.\n",
+        },
+    )
+    for component in ("backbone", "claude-code", "project-management", "software-engineering"):
+        _add_changeset(source_kit, component, "minor")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "the pull requests the release consumes")
+    _git(repo, "checkout", "-q", "-B", "feature")
+
+
+def _v1_149_release(source_kit: Path, *, manifest: str | None = None) -> None:
+    """Commit the v1.149.0 release commit's shape by hand: the backbone VERSION,
+    three package.yaml files (the adapter's version and requires_backbone, each
+    capability's version only), the self-host manifest's backbone_version,
+    CHANGELOG.md prepended, the consumed changesets deleted. `manifest`
+    replaces the manifest the release writes."""
+    repo = source_kit.parent
+    _write_files(
+        repo,
+        {
+            ".pkit/VERSION": "1.6.0\n",
+            ".pkit/adapters/claude-code/package.yaml": _package(
+                "adapter", "claude-code", "0.6.0", ">=0.1.0,<1.7.0"
+            ),
+            ".pkit/capabilities/project-management/package.yaml": _package(
+                "capability",
+                "project-management",
+                "0.54.0",
+                ">=1.4.0,<2.0.0",
+                comment="# Floor 1.4.0: it runs a backbone command.\n",
+            ),
+            ".pkit/capabilities/software-engineering/package.yaml": _package(
+                "capability", "software-engineering", "0.2.0", ">=1.0.0,<2.0.0"
+            ),
+            ".pkit/manifest.yaml": manifest or _SELF_HOST_MANIFEST.format(version="1.6.0"),
+            "CHANGELOG.md": "# Changelog\n\n## 1.6.0 — 2026-08-24\n\n### Added\n\n- A release.\n\n"
+            "## 1.5.0 — 2026-08-01\n\n### Added\n\n- Earlier.\n",
+        },
+    )
+    for cs in changesets.unreleased_dir(repo).glob("*.yaml"):
+        cs.unlink()
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "chore(release): v1.6.0")
+
+
+def test_a_release_shaped_like_v1_149_0_passes_on_its_content(tmp_path: Path) -> None:
+    """The self-host manifest's backbone_version is a release write: the diff
+    passes the surface check it trips, with no label and no branch name."""
+    source_kit = _make_repo(tmp_path)
+    _v1_149_base(source_kit)
+    _v1_149_release(source_kit)
+
+    result = release.check_changesets(source_kit, "main")
+
+    assert release.is_release_diff(source_kit, "main")
+    assert result.missing == [
+        "backbone",
+        "claude-code",
+        "project-management",
+        "software-engineering",
+    ]
+    assert result.release_exempt
+    assert result.ok
+
+
+def test_release_check_passes_a_release_with_no_escape_hatch(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source_kit = _make_repo(tmp_path)
+    _v1_149_base(source_kit)
+    _v1_149_release(source_kit)
+    monkeypatch.chdir(source_kit.parent)
+    monkeypatch.delenv("PKIT_CHANGESET_SKIP", raising=False)
+
+    result = CliRunner().invoke(main, ["release", "check", "--base", "main"])
+
+    assert result.exit_code == 0, result.output
+    assert "release PR — diff is only what `pkit release apply` writes" in result.stdout
+    assert "escape hatch" not in result.stdout
+
+
+def test_a_manifest_edit_beside_backbone_version_is_not_the_release(tmp_path: Path) -> None:
+    """The release rewrites the manifest's backbone_version line only; a registry
+    entry riding along is a real edit, so the guard runs normally."""
+    source_kit = _make_repo(tmp_path)
+    _v1_149_base(source_kit)
+    _v1_149_release(
+        source_kit,
+        manifest=_SELF_HOST_MANIFEST.format(version="1.6.0")
+        + "  - kind: capability\n    name: extra\n    manifest: extra/manifest.yaml\n",
+    )
+
+    result = release.check_changesets(source_kit, "main")
+
+    assert not release.is_release_diff(source_kit, "main")
+    assert not result.release_exempt
+    assert not result.ok
+
+
+def test_a_requires_backbone_range_the_release_never_writes_is_not_the_release(
+    tmp_path: Path,
+) -> None:
+    """The guard admits a changed `requires_backbone` line only in the shapes the
+    broaden and the floor raise rewrite; a range opened to `*` riding along is a
+    real edit, so the guard runs normally."""
+    source_kit = _make_repo(tmp_path)
+    _v1_149_base(source_kit)
+    _v1_149_release(source_kit)
+    _commit_change(
+        source_kit,
+        ".pkit/capabilities/software-engineering/package.yaml",
+        _package("capability", "software-engineering", "0.2.0", "*"),
+    )
+
+    result = release.check_changesets(source_kit, "main")
+
+    assert not release.is_release_diff(source_kit, "main")
+    assert not result.release_exempt
+    assert not result.ok
+
+
+def test_a_diff_that_only_consumes_changesets_is_not_a_release(tmp_path: Path) -> None:
+    source_kit = _make_repo(tmp_path)
+    _v1_149_base(source_kit)
+    for cs in changesets.unreleased_dir(source_kit.parent).glob("*.yaml"):
+        cs.unlink()
+    _git(source_kit.parent, "add", "-A")
+    _git(source_kit.parent, "commit", "-q", "-m", "drop the changesets")
+
+    assert not release.is_release_diff(source_kit, "main")
+
+
+@pytest.mark.parametrize(
+    ("pending", "floor", "heading"),
+    [
+        # A backbone release: the declared floor rises to the backbone it ships.
+        ((("backbone", "minor", None), ("houseware", "minor", "release")), "1.6.0", "## 1.6.0"),
+        # A component release: the floor rises to an already-shipped backbone.
+        ((("houseware", "patch", "1.5.0"),), "1.5.0", "## 2026-09-30"),
+    ],
+)
+def test_what_release_apply_writes_is_a_release_diff(
+    tmp_path: Path,
+    pending: tuple[tuple[str, str, str | None], ...],
+    floor: str,
+    heading: str,
+) -> None:
+    """The tie between the release step and the guard: the real `apply` — the
+    versions, the broaden, a declared floor and the changelog line stating it
+    (#1135), the self-host manifest, the consumed changesets — committed, is a
+    diff the guard recognises as the release."""
+    source_kit = _make_repo(tmp_path)
+    repo = source_kit.parent
+    _git(repo, "checkout", "-q", "main")
+    _write_files(
+        repo,
+        {
+            ".pkit/manifest.yaml": _SELF_HOST_MANIFEST.format(version="1.5.0"),
+            ".pkit/capabilities/houseware/package.yaml": _package(
+                "capability", "houseware", "0.3.0", ">=1.0.0,<1.5.0"
+            ),
+        },
+    )
+    for component, kind, value in pending:
+        if value is None:
+            _add_changeset(source_kit, component, kind)
+        else:
+            _add_floor_changeset(source_kit, component, value, kind=kind)
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "the pull requests the release consumes")
+    _git(repo, "checkout", "-q", "-B", "feature")
+
+    release.apply_release(source_kit, release.compute_release(source_kit), today=date(2026, 9, 30))
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "chore(release)")
+
+    houseware = (source_kit / "capabilities" / "houseware" / "package.yaml").read_text()
+    assert f'requires_backbone: ">={floor},' in houseware
+    changelog = (repo / "CHANGELOG.md").read_text(encoding="utf-8")
+    assert heading in changelog
+    assert f"Requires backbone >={floor}." in changelog
+    assert release.is_release_diff(source_kit, "main")
+
+
 # --- The root the guard reads (#877): the working directory, not the checkout
 # that owns the interpreter ----------------------------------------------------
 
@@ -295,7 +900,6 @@ def test_guard_reads_the_worktree_at_cwd_not_the_interpreter_checkout(
     worktree — the `extra` capability exists only there — and says which tree it
     is operating on."""
 
-
     checkout, worktree = _make_checkout_with_worktree(tmp_path)
     _point_interpreter_at(monkeypatch, checkout)
     monkeypatch.chdir(worktree)
@@ -317,12 +921,11 @@ def test_guard_from_the_checkout_itself_is_silent_and_unchanged(
     """Self-host / dev live-edit: cwd is the checkout, both roots coincide — no
     notice, and the worktree-only component is invisible."""
 
-
     checkout, _worktree = _make_checkout_with_worktree(tmp_path)
     _point_interpreter_at(monkeypatch, checkout)
     monkeypatch.chdir(checkout)
 
-    result = CliRunner().invoke(main, ["release", "check", "--base", "main"])
+    result = CliRunner().invoke(main, ["release", "check", "--base", "refs/heads/main"])
 
     assert result.exit_code == 0, result.output
     assert "no surface-touched components" in result.stdout

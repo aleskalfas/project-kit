@@ -17,8 +17,9 @@ pkit:
         - .pkit/adapters/claude-code/_resolve_agent.py
       record: [COR-005, COR-006, COR-011, COR-013, COR-014, COR-015, COR-016, COR-026, COR-049, ADR-051, ADR-052]
     revalidated:
-      at: 2026-09-29T18:14:54Z
-      outcome: updated
+      at: 2026-10-01T09:44:11Z
+      outcome: unchanged
+      unchanged-because: "typing-only change in the package for the type-checking gate (PRJ-010): suppression comments removed; behaviour unchanged"
 ---
 
 # Agents
@@ -88,7 +89,7 @@ You are the **software engineer** for this project. …
 - `tools` — the harness-recognised tool names this agent is granted (e.g. for Claude Code: `Read`, `Edit`, `Bash`, `Agent`, …). The adapter translates this to the harness's expected format at deploy time.
 - `model`, `effort` — optional: the model the agent runs on and the effort it reasons at. Absent means **inherit** — the deploy writes nothing and the harness default applies. An adopter overrides either per agent from the overlay. See "Model and effort" below. Agents only; the shipped agents set neither.
 - `reads` — references the agent consults at task time. Split into `paths` (filesystem locations), `records` (decision-record IDs like `COR-NNN` or `PRJ-NNN`), and `patterns` (overlay-resolved placeholders). The `paths`/`records`-vs-`patterns` split is a load-bearing authoring lever, not just a filing convention: a category referenced through `reads.paths` or `reads.records` is a **hard** (required) read — if the overlay leaves it undefined the agent is skipped at deploy — whereas a category referenced *only* through `reads.patterns` is an **optional** (corpus) read — undefined resolves to a dropped item and the agent still deploys as a generalist. So a required read goes in `reads.paths`; an optional/corpus read whose absence is a normal early state (a project-conventions corpus, say) goes in `reads.patterns`. The undefined-category behaviour of each channel is spelled out under "Validation" below; the semantics are fixed by the optional-read contract (ADR-052 D1).
-- `owns` — paths the agent has write authority over; entries may be literal paths or `<category>` placeholders the overlay resolves. Every kit-relevant path is meant to have exactly one owning agent; `pkit refs validate` enforces that by flagging cross-agent overlaps over *resolved* paths — see "Exactly-one-owner over `owns:`" below for what it does and does not check. When a *core* agent's `owns:` carries a placeholder the adopter populates, that category is **write-carrying** and picks up extra rules (see "Write-carrying categories"). Agents-only (skills don't own paths).
+- `owns` — paths the agent has write authority over; entries may be literal paths or `<category>` placeholders the overlay resolves. Every kit-relevant path is meant to have exactly one owning agent; `pkit refs validate` enforces that by flagging cross-agent overlaps over *resolved* paths — see "Exactly-one-owner over `owns:`" below for what it does and does not check. When a *core* agent's `owns:` carries a placeholder the adopter populates, that category is **write-carrying** and picks up extra rules (see "Write-carrying categories"). When an agent's `owns:` resolves to paths that hold decision records, its body cites the rule for editing them — `.pkit/decisions/README.md`, "Refining an accepted record" — where it describes editing records, and does not restate it: agents reference rather than embed (COR-006). Agents-only (skills don't own paths).
 - `needs` — hook names this agent invokes. See the "Hooks" section.
 - `answers` — hook names a skill provides. Skills only.
 - `gates` — record IDs whose `accepted` status is load-bearing for a skill to run. Skills only; entries here automatically count as `reads.records`.

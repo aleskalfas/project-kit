@@ -19,15 +19,23 @@ after the resolved subcommand pass through verbatim; the script's exit
 code becomes the CLI's exit code; standard streams are inherited. The
 proxy is a person's focused surface, so it takes the lookup and not the
 bounded run: nothing here is timed out or captured.
+
+Which top-level name an `aliases:` entry gets is one precedence walk
+(`resolve_aliases`): a backbone command, then a capability's own name, then
+the first capability in manifest order to declare the alias. The dispatcher
+binds what the walk binds; `pkit validate`'s packages member reports what it
+shadows (`installed_alias_table`), so the two never disagree.
 """
 
 from __future__ import annotations
 
 import subprocess
 import sys
-from collections.abc import Mapping
+from collections.abc import Collection, Iterable, Mapping
+from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import click
 from ruamel.yaml import YAML
@@ -42,8 +50,11 @@ from project_kit.command_runner import (
 from project_kit.install import find_target_root
 from project_kit.manifest import read_backbone_manifest
 
-
 _yaml = YAML(typ="safe")
+
+# The package key that lists a capability's other top-level names (`pm` for
+# `project-management`).
+ALIASES_KEY = "aliases"
 
 
 class CapabilityDispatchGroup(click.Group):
@@ -60,83 +71,181 @@ class CapabilityDispatchGroup(click.Group):
         static = super().get_command(ctx, cmd_name)
         if static is not None:
             return static
-        capability_commands = _discover_capability_commands()
+        capability_commands = _discover_capability_commands(self.commands)
         return capability_commands.get(cmd_name)
 
     def list_commands(self, ctx: click.Context) -> list[str]:
         static = list(super().list_commands(ctx))
-        dynamic = list(_discover_capability_commands().keys())
+        dynamic = list(_discover_capability_commands(self.commands).keys())
         return sorted(set(static + dynamic))
 
 
-def _discover_capability_commands() -> dict[str, click.Group]:
+# --- the alias table: one precedence walk ------------------------------
+
+
+class ShadowKind(Enum):
+    """What holds the top-level name an alias asks for, in precedence order."""
+
+    STATIC = "static"  # a backbone command (`pkit validate`, `pkit status`, …)
+    CAPABILITY = "capability"  # another capability's own name
+    ALIAS = "alias"  # the same alias, declared by a capability earlier in the manifest
+
+
+@dataclass(frozen=True)
+class DeclaredAlias:
+    """One `aliases:` entry: the name, the capability declaring it, and its
+    position in that package's `aliases` list (where a finding on it points)."""
+
+    name: str
+    capability: str
+    index: int
+
+
+@dataclass(frozen=True)
+class ShadowedAlias:
+    """A declared alias another name holds: `pkit <alias>` never reaches its capability."""
+
+    alias: DeclaredAlias
+    by: ShadowKind
+    holder: str | None  # the capability whose name or alias holds it; None for a backbone command
+
+
+@dataclass(frozen=True)
+class AliasTable:
+    """The precedence walk's answer: the aliases bound, and the ones shadowed."""
+
+    bound: Mapping[str, str]  # alias -> the capability it reaches
+    shadowed: tuple[ShadowedAlias, ...]
+
+
+def resolve_aliases(
+    names: Collection[str], declared: Iterable[DeclaredAlias], static: Collection[str]
+) -> AliasTable:
+    """Walk the declared aliases, in manifest order, against the names already held.
+
+    Precedence: a backbone command (`static`), then a capability's own name
+    (`names`, every capability that surfaces a namespace), then the first
+    capability to declare the alias. An alias that loses is shadowed — unless
+    the name it asks for already reaches its own capability (its own name, or
+    its own alias repeated), where nothing is lost.
+    """
+    bound: dict[str, str] = {}
+    shadowed: list[ShadowedAlias] = []
+    for alias in declared:
+        if alias.name in static:
+            shadowed.append(ShadowedAlias(alias, ShadowKind.STATIC, None))
+        elif alias.name in names:
+            if alias.name != alias.capability:
+                shadowed.append(ShadowedAlias(alias, ShadowKind.CAPABILITY, alias.name))
+        elif alias.name in bound:
+            if bound[alias.name] != alias.capability:
+                shadowed.append(ShadowedAlias(alias, ShadowKind.ALIAS, bound[alias.name]))
+        else:
+            bound[alias.name] = alias.capability
+    return AliasTable(bound=bound, shadowed=tuple(shadowed))
+
+
+def installed_alias_table(target_root: Path, static: Collection[str]) -> AliasTable:
+    """The alias table of the capabilities installed under `target_root` — the
+    one the dispatch group binds — for `pkit validate` to report what it shadows."""
+    return _alias_table(_namespace_capabilities(target_root), static)
+
+
+def static_command_names() -> frozenset[str]:
+    """The backbone's own top-level commands, which every capability name and
+    alias yields to. They are the CLI's root group's, and the CLI imports this
+    module, so the group is imported here, when asked."""
+    from project_kit.cli import main
+
+    return frozenset(main.commands)
+
+
+# --- discovery -----------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class _NamespaceCapability:
+    """An installed capability that surfaces a namespace, as its package declares it."""
+
+    name: str
+    cap_dir: Path
+    commands: dict[str, Any]
+    description: str
+    aliases: tuple[DeclaredAlias, ...]
+
+
+def _namespace_capabilities(target_root: Path) -> list[_NamespaceCapability]:
+    """Every installed capability whose `package.yaml` declares a `commands:`
+    block, in manifest order.
+
+    Capabilities without one do not surface a namespace — installation alone
+    doesn't create a CLI surface; declaration does. A `package.yaml` that
+    cannot be read skips its capability; the others still register.
+    """
+    backbone = read_backbone_manifest(target_root)
+    if backbone is None:
+        return []
+    out: list[_NamespaceCapability] = []
+    for component in backbone.components:
+        if component.kind != "capability":
+            continue
+        cap_dir = target_root / ".pkit" / "capabilities" / component.name
+        package_yaml = cap_dir / "package.yaml"
+        if not package_yaml.is_file():
+            continue
+        commands_tree, description, aliases = _read_commands_description_and_aliases(package_yaml)
+        if commands_tree is None:
+            continue
+        out.append(
+            _NamespaceCapability(
+                name=component.name,
+                cap_dir=cap_dir,
+                commands=commands_tree,
+                description=description,
+                aliases=tuple(
+                    DeclaredAlias(alias, component.name, index) for index, alias in aliases
+                ),
+            )
+        )
+    return out
+
+
+def _alias_table(capabilities: list[_NamespaceCapability], static: Collection[str]) -> AliasTable:
+    return resolve_aliases(
+        {capability.name for capability in capabilities},
+        (alias for capability in capabilities for alias in capability.aliases),
+        static,
+    )
+
+
+def _discover_capability_commands(static: Collection[str]) -> dict[str, click.Group]:
     """Walk installed capabilities and build their top-level command groups.
 
-    Returns `{capability_name: click.Group}` for every installed
-    capability whose `package.yaml` declares a `commands:` block, plus
-    one entry per declared alias (e.g. `pm` → the `project-management`
-    group) pointing at the same group object.
-
-    Capabilities without a `commands:` block do not surface a namespace
-    here — installation alone doesn't create a CLI surface; declaration
-    does.
-
-    Resolution rules:
-      - Static (decorator-registered) subcommands take precedence over
-        anything here (enforced by `CapabilityDispatchGroup.get_command`).
-      - A capability's canonical name takes precedence over any alias.
-        Aliases register in a second pass and only fill slots not
-        already claimed by a canonical name.
-      - First-declared-wins among alias collisions (deterministic in
-        manifest order).
-
-    Errors reading a single capability's `package.yaml` cause that
-    capability to be skipped; other capabilities still register.
+    Returns `{capability_name: click.Group}` for every capability that
+    surfaces a namespace (`_namespace_capabilities`), plus one entry per
+    alias the precedence walk binds (e.g. `pm` → the `project-management`
+    group) pointing at the same group object. `static` is the group's own
+    commands: they take precedence over anything here (enforced first by
+    `CapabilityDispatchGroup.get_command`), and the walk yields to them too,
+    so an alias a backbone command holds is reported, never bound.
     """
     target_root = find_target_root()
     if target_root is None:
         return {}
 
-    backbone = read_backbone_manifest(target_root)
-    if backbone is None:
-        return {}
-
-    out: dict[str, click.Group] = {}
-    pending_aliases: list[tuple[str, str]] = []  # (alias, canonical_name)
-    for component in backbone.components:
-        if component.kind != "capability":
-            continue
-        cap_dir = target_root / ".pkit" / "capabilities" / component.name
-        if not cap_dir.is_dir():
-            continue
-        package_yaml = cap_dir / "package.yaml"
-        if not package_yaml.is_file():
-            continue
-
-        commands_tree, description, aliases = _read_commands_description_and_aliases(
-            package_yaml
+    capabilities = _namespace_capabilities(target_root)
+    out: dict[str, click.Group] = {
+        capability.name: _build_capability_group(
+            capability.name, capability.commands, capability.cap_dir, capability.description
         )
-        if commands_tree is None:
-            continue
-
-        out[component.name] = _build_capability_group(
-            component.name, commands_tree, cap_dir, description
-        )
-        for alias in aliases:
-            pending_aliases.append((alias, component.name))
-
-    for alias, canonical_name in pending_aliases:
-        if alias in out:
-            # Canonical capability name claims the slot, or an earlier
-            # alias already won the deterministic first-declared rule.
-            continue
-        out[alias] = out[canonical_name]
+        for capability in capabilities
+    }
+    for alias, capability in _alias_table(capabilities, static).bound.items():
+        out[alias] = out[capability]
     return out
 
 
-def resolve_capability_script(
-    target_root: Path, capability: str, command: str
-) -> Path | None:
+def resolve_capability_script(target_root: Path, capability: str, command: str) -> Path | None:
     """Resolve an installed capability's command leaf to its script path —
     `command` is a reference, a path through the `commands:` tree (tokens
     separated by spaces), resolved by the same lookup the dispatch group
@@ -165,13 +274,14 @@ def resolve_capability_script(
 
 def _read_commands_description_and_aliases(
     package_yaml: Path,
-) -> tuple[dict[str, Any] | None, str, list[str]]:
+) -> tuple[dict[str, Any] | None, str, list[tuple[int, str]]]:
     """Parse `commands:`, `description:`, and optional `aliases:` from package.yaml.
 
     Returns (commands_tree, description, aliases). `commands_tree` is
     None when the file is unreadable or has no `commands:` block.
     `description` defaults to "" on failure. `aliases` defaults to []
-    when missing or malformed; only string entries are kept.
+    when missing or malformed; only non-empty string entries are kept,
+    each with its position in the list.
     """
     try:
         raw = _yaml.load(package_yaml.read_text(encoding="utf-8"))
@@ -181,12 +291,9 @@ def _read_commands_description_and_aliases(
         return None, "", []
     description = str(raw.get("description", ""))
     commands = raw.get("commands")
-    aliases_raw = raw.get("aliases", [])
-    aliases = (
-        [a for a in aliases_raw if isinstance(a, str) and a]
-        if isinstance(aliases_raw, list)
-        else []
-    )
+    aliases_raw: object = raw.get(ALIASES_KEY, [])
+    entries = cast("list[object]", aliases_raw) if isinstance(aliases_raw, list) else []
+    aliases = [(index, a) for index, a in enumerate(entries) if isinstance(a, str) and a]
     if not isinstance(commands, dict):
         return None, description, aliases
     return commands, description, aliases
@@ -268,9 +375,7 @@ def _make_sub_group(name: str, help_text: str) -> click.Group:
     return grp
 
 
-def _make_proxy_command(
-    name: str, script_path: Path, help_text: str
-) -> click.Command:
+def _make_proxy_command(name: str, script_path: Path, help_text: str) -> click.Command:
     """Factory for a leaf command that proxies args to a capability script."""
     short_help = _short_help(help_text)
 

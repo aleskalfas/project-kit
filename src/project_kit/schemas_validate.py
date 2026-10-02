@@ -1,4 +1,4 @@
-"""Schema validation — YAML schemas against their JSON Schema companions + cross-file reference resolution.
+"""Schema validation: YAML schemas against JSON Schema companions + cross-file reference resolution.
 
 Per the conventions in `.pkit/schemas/` + COR-018 / COR-019: every
 capability YAML schema ships a companion JSON Schema at the side-by-side
@@ -54,21 +54,21 @@ from __future__ import annotations
 import datetime as _dt
 import json
 import re
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 
 import click
 from jsonschema import Draft202012Validator
-
-from project_kit import backbone_schemas, cli_render
-from project_kit.validators import Finding, Outcome
 from referencing import Registry, Resource
 from referencing.exceptions import Unresolvable
 from referencing.jsonschema import DRAFT202012
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
+from project_kit import backbone_schemas, cli_render
+from project_kit.validators import Finding, Outcome
 
 _yaml = YAML(typ="safe")
 
@@ -80,9 +80,7 @@ _TOKEN_PATTERN = re.compile(r"^\[([a-z][a-z0-9-]*):([a-z][a-z0-9-]*)\]$")
 # pattern-mismatch error message *whose failing instance is a typed token*.
 # Used to suppress these messages when the resolver pass has already
 # explained the namespace mismatch at the same data location.
-_SHAPE_TOKEN_NOMATCH_PATTERN = re.compile(
-    r"^'\[[a-z][a-z0-9-]*:[a-z][a-z0-9-]*\]' does not match "
-)
+_SHAPE_TOKEN_NOMATCH_PATTERN = re.compile(r"^'\[[a-z][a-z0-9-]*:[a-z][a-z0-9-]*\]' does not match ")
 
 # JSON Schema annotation declaring where a schema's id collection lives.
 # The value is a JSON Pointer (RFC 6901) into the YAML data. e.g.,
@@ -383,7 +381,7 @@ def _external_schema_target(yaml_path: Path) -> str | None:
         # Top-level `$schema:` key — column 0, no leading indent.
         stripped = line.rstrip()
         if stripped.startswith("$schema:") and not line[:1].isspace():
-            target = stripped[len("$schema:"):].strip().strip("'\"")
+            target = stripped[len("$schema:") :].strip().strip("'\"")
             if target and _companion_pointer_is_external(target, own_companion_name):
                 return target
     return None
@@ -474,9 +472,7 @@ def discover_schema_pairs_at(path: Path) -> list[SchemaPair]:
     if path.is_file() and path.suffix == ".yaml":
         if _external_schema_target(path) is not None:
             return []
-        return [
-            SchemaPair(yaml_path=path, companion_path=path.with_suffix(".schema.json"))
-        ]
+        return [SchemaPair(yaml_path=path, companion_path=path.with_suffix(".schema.json"))]
     if path.is_dir():
         return [
             SchemaPair(yaml_path=p, companion_path=p.with_suffix(".schema.json"))
@@ -539,9 +535,7 @@ def validate_pair(
     schema, reason = _load_json_schema(pair.companion_path)
     if schema is None:
         assert reason is not None
-        issues.append(
-            ValidationIssue(location=companion_rel, message=f"companion is {reason}")
-        )
+        issues.append(ValidationIssue(location=companion_rel, message=f"companion is {reason}"))
         return issues
 
     # 3. YAML must parse.
@@ -570,12 +564,8 @@ def validate_pair(
     if resolve:
         if namespace_cache is None:
             namespace_cache = {}
-        issues.extend(
-            _resolve_references(pair, data, namespace_cache, yaml_rel)
-        )
-        issues.extend(
-            _resolve_key_references(pair, schema, data, namespace_cache, yaml_rel)
-        )
+        issues.extend(_resolve_references(pair, data, namespace_cache, yaml_rel))
+        issues.extend(_resolve_key_references(pair, schema, data, namespace_cache, yaml_rel))
     # 6. Suppress shape pattern-mismatch issues where the resolver has
     # already explained the same data position with a more informative
     # message (e.g., a wrong-namespace token fires both checks; only the
@@ -692,8 +682,7 @@ def validate_instance(
         return [
             ValidationIssue(
                 location=yaml_rel,
-                message=f"declared $schema {instance.declared_target!r} "
-                f"({schema_rel}) is {reason}",
+                message=f"declared $schema {instance.declared_target!r} ({schema_rel}) is {reason}",
             )
         ]
 
@@ -817,7 +806,7 @@ def validate_path(
 
 
 def _checked_summary(report: ValidationReport) -> str:
-    """"N schema(s)" — plus " and M instance(s)" when any were checked."""
+    """ "N schema(s)" — plus " and M instance(s)" when any were checked."""
     summary = f"{report.pairs_checked} schema(s)"
     if report.instances_checked:
         summary += f" and {report.instances_checked} instance(s)"
@@ -832,10 +821,20 @@ def print_report(report: ValidationReport) -> None:
         if report.pairs_checked == 0 and report.instances_checked == 0:
             click.echo("  No schemas found to validate.")
         else:
-            click.echo("  " + cli_render.style("strong", f"Validated {_checked_summary(report)}. All checks passed."))
+            click.echo(
+                "  "
+                + cli_render.style(
+                    "strong", f"Validated {_checked_summary(report)}. All checks passed."
+                )
+            )
         return
 
-    click.echo("  " + cli_render.style("strong", f"{len(report.issues)} issue(s) found across {_checked_summary(report)}:"))
+    click.echo(
+        "  "
+        + cli_render.style(
+            "strong", f"{len(report.issues)} issue(s) found across {_checked_summary(report)}:"
+        )
+    )
     for issue in report.issues:
         click.echo(f"    {issue.location}")
         click.echo(f"      → {issue.message}")
@@ -868,9 +867,7 @@ def _run_validation(
         )
     for instance in instances:
         all_issues.extend(
-            validate_instance(
-                instance, target_root=target_root, shared_registry=registry
-            )
+            validate_instance(instance, target_root=target_root, shared_registry=registry)
         )
     return ValidationReport(
         pairs_checked=len(pairs),
@@ -935,9 +932,7 @@ def _dedup_pattern_when_resolver_covers(
     shape free-form string) survive untouched.
     """
     resolver_covered = {
-        issue.location
-        for issue in issues
-        if issue.message.startswith("unresolved reference")
+        issue.location for issue in issues if issue.message.startswith("unresolved reference")
     }
     if not resolver_covered:
         return issues
@@ -945,8 +940,7 @@ def _dedup_pattern_when_resolver_covers(
         issue
         for issue in issues
         if not (
-            issue.location in resolver_covered
-            and _SHAPE_TOKEN_NOMATCH_PATTERN.match(issue.message)
+            issue.location in resolver_covered and _SHAPE_TOKEN_NOMATCH_PATTERN.match(issue.message)
         )
     ]
 
@@ -996,10 +990,7 @@ def _build_shared_registry(
     paths: list[Path] = []
     seen: set[Path] = set()
     groups = [_collect_registry_paths(pair, target_root) for pair in pairs]
-    groups += [
-        _collect_instance_registry_paths(instance, target_root)
-        for instance in instances
-    ]
+    groups += [_collect_instance_registry_paths(instance, target_root) for instance in instances]
     for group in groups:
         for p in group:
             if p not in seen:
@@ -1078,7 +1069,7 @@ def _try_add_to_registry(
     uri = schema.get("$id", schema_path.name)
     try:
         resource = Resource.from_contents(schema, default_specification=DRAFT202012)
-    except Exception as exc:  # noqa: BLE001 — referencing's surface is broad
+    except Exception as exc:  # referencing's surface is broad
         return registry, ValidationIssue(
             location=schema_rel,
             message=f"sibling companion could not be loaded as a Draft 2020-12 "
@@ -1136,9 +1127,7 @@ def _resolve_references(
     return issues
 
 
-def _walk_tokens(
-    data: Any, path: tuple[str, ...] = ()
-) -> Iterator[tuple[str, str, str, str]]:
+def _walk_tokens(data: Any, path: tuple[str, ...] = ()) -> Iterator[tuple[str, str, str, str]]:
     """Yield (token, namespace, id, location_pointer) for every token-shaped string.
 
     Walks both keys and values. `location_pointer` is a JSON-Pointer-style
@@ -1154,10 +1143,10 @@ def _walk_tokens(
                 assert m is not None
                 pointer = "/" + "/".join(path) + ("/" if path else "") + f"(key){key_str}"
                 yield key_str, m.group(1), m.group(2), pointer
-            yield from _walk_tokens(v, path + (key_str,))
+            yield from _walk_tokens(v, (*path, key_str))
     elif isinstance(data, list):
         for idx, item in enumerate(data):
-            yield from _walk_tokens(item, path + (str(idx),))
+            yield from _walk_tokens(item, (*path, str(idx)))
     elif isinstance(data, str):
         m = _TOKEN_PATTERN.match(data)
         if m:
@@ -1190,7 +1179,9 @@ def _load_namespace_target(schemas_dir: Path, namespace: str) -> _NamespaceCache
             f"{_ID_COLLECTION_ANNOTATION!r}: {pointer!r}"
         )
     if not yaml_file.is_file():
-        return f"sibling data file {yaml_file.name!r} not found at {schemas_dir.name}/{yaml_file.name}"
+        return (
+            f"sibling data file {yaml_file.name!r} not found at {schemas_dir.name}/{yaml_file.name}"
+        )
     try:
         yaml_data = _yaml.load(yaml_file.read_text(encoding="utf-8"))
     except YAMLError as exc:
@@ -1224,7 +1215,7 @@ def _collect_ids(collection: Any) -> list[str] | None:
     (caller treats as a failure).
     """
     if isinstance(collection, dict):
-        return [str(k) for k in collection.keys()]
+        return [str(k) for k in collection]
     if isinstance(collection, list):
         ids: list[str] = []
         for item in collection:
@@ -1258,7 +1249,7 @@ def _walk_keys_from_namespace(
     properties = schema.get("properties")
     if isinstance(properties, dict):
         for prop_name, prop_schema in properties.items():
-            yield from _walk_keys_from_namespace(prop_schema, data_pointer + (prop_name,))
+            yield from _walk_keys_from_namespace(prop_schema, (*data_pointer, prop_name))
 
 
 def _resolve_key_references(
@@ -1292,8 +1283,8 @@ def _resolve_key_references(
             issues.append(
                 ValidationIssue(
                     location=f"{yaml_rel}{path_str}",
-                    message=f"x-pkit-keys-from-namespace targets the schema's own namespace; "
-                    f"remove the annotation (per COR-019).",
+                    message="x-pkit-keys-from-namespace targets the schema's own namespace; "
+                    "remove the annotation (per COR-019).",
                 )
             )
             continue
@@ -1309,7 +1300,7 @@ def _resolve_key_references(
                 )
             )
             continue
-        for key in node.keys():
+        for key in node:
             key_str = str(key)
             if key_str not in result.valid_ids:
                 issues.append(
@@ -1344,9 +1335,7 @@ def _resolve_json_pointer(data: Any, pointer: str) -> Any:
             try:
                 idx = int(part)
             except ValueError as exc:
-                raise KeyError(
-                    f"step {part!r} is not an integer index for list"
-                ) from exc
+                raise KeyError(f"step {part!r} is not an integer index for list") from exc
             if idx < 0 or idx >= len(current):
                 raise KeyError(f"step {part!r} out of range for list of length {len(current)}")
             current = current[idx]
@@ -1471,17 +1460,12 @@ def detail_namespace(target_root: Path, namespace: str) -> NamespaceDetail | str
         return f"{unknown_namespace_message(namespace)} Available namespaces: {avail}."
     if len(matches) > 1:
         locs = ", ".join(f"{m.owner}/{m.name}" for m in matches)
-        return (
-            f"namespace {namespace!r} is ambiguous — declared by multiple "
-            f"owners: {locs}."
-        )
+        return f"namespace {namespace!r} is ambiguous — declared by multiple owners: {locs}."
     summary = matches[0]
     if summary.load_error:
         return f"namespace {namespace!r}: {summary.load_error}"
     assert summary.id_collection_pointer is not None
-    data = _stringify_dates(
-        _yaml.load(summary.yaml_path.read_text(encoding="utf-8"))
-    )
+    data = _stringify_dates(_yaml.load(summary.yaml_path.read_text(encoding="utf-8")))
     collection = _resolve_json_pointer(data, summary.id_collection_pointer)
     entries: list[tuple[str, Any]] = []
     if isinstance(collection, dict):
@@ -1539,54 +1523,36 @@ def resolve_token_to_target(target_root: Path, token: str) -> TokenResolution | 
 def print_schema_list(summaries: list[SchemaSummary]) -> None:
     """Render the schema list grouped by owner (the core area, then each capability)."""
     if not summaries:
-        click.echo(
-            "  No schemas found under .pkit/schemas/ or .pkit/capabilities/*/schemas/."
-        )
+        click.echo("  No schemas found under .pkit/schemas/ or .pkit/capabilities/*/schemas/.")
         return
     by_owner: dict[str, list[SchemaSummary]] = {}
     for s in summaries:
         by_owner.setdefault(s.owner, []).append(s)
     click.echo()
     for owner in sorted(by_owner):
-        heading = (
-            "core schemas area"
-            if owner == CORE_SCHEMAS_OWNER
-            else f"capability: {owner}"
-        )
+        heading = "core schemas area" if owner == CORE_SCHEMAS_OWNER else f"capability: {owner}"
         click.echo("  " + cli_render.style("heading", heading))
         for s in sorted(by_owner[owner], key=lambda x: x.name):
             if s.load_error:
                 click.echo(f"    {s.name:24}  ERROR: {s.load_error}")
             elif s.is_namespace_owner:
                 shown = ", ".join(s.entry_ids[:6])
-                suffix = (
-                    f", ... +{len(s.entry_ids) - 6} more"
-                    if len(s.entry_ids) > 6
-                    else ""
-                )
-                click.echo(
-                    f"    {s.name:24}  {len(s.entry_ids):>2} entr(ies): {shown}{suffix}"
-                )
+                suffix = f", ... +{len(s.entry_ids) - 6} more" if len(s.entry_ids) > 6 else ""
+                click.echo(f"    {s.name:24}  {len(s.entry_ids):>2} entr(ies): {shown}{suffix}")
             else:
                 click.echo(f"    {s.name:24}  (consumer — no namespace declared)")
         click.echo()
 
 
-def print_namespace_detail(
-    detail: NamespaceDetail, target_root: Path | None = None
-) -> None:
+def print_namespace_detail(detail: NamespaceDetail, target_root: Path | None = None) -> None:
     """Render one namespace's entries (ordered, with one-line summaries)."""
     click.echo()
     click.echo(cli_render.style("title", f"Namespace: {detail.namespace}"))
-    owner = (
-        "core schemas area" if detail.owner == CORE_SCHEMAS_OWNER else detail.owner
-    )
+    owner = "core schemas area" if detail.owner == CORE_SCHEMAS_OWNER else detail.owner
     click.echo(f"  Owner:      {owner}")
     click.echo(f"  YAML:       {_rel(detail.yaml_path, target_root)}")
     click.echo(f"  Companion:  {_rel(detail.companion_path, target_root)}")
-    click.echo(
-        f"  Collection: {detail.id_collection_pointer}  ({len(detail.entries)} entry/ies)"
-    )
+    click.echo(f"  Collection: {detail.id_collection_pointer}  ({len(detail.entries)} entry/ies)")
     click.echo()
     click.echo("  " + cli_render.style("heading", "Entries:"))
     for entry_id, entry_data in detail.entries:
@@ -1599,18 +1565,14 @@ def print_namespace_detail(
                     summary_text = value.strip().split("\n", 1)[0].strip()
                     break
         if summary_text:
-            shown = (
-                summary_text if len(summary_text) <= 70 else summary_text[:67] + "..."
-            )
+            shown = summary_text if len(summary_text) <= 70 else summary_text[:67] + "..."
             click.echo(f"    {entry_id:22}  {shown}")
         else:
             click.echo(f"    {entry_id}")
     click.echo()
 
 
-def print_token_resolution(
-    resolution: TokenResolution, target_root: Path | None = None
-) -> None:
+def print_token_resolution(resolution: TokenResolution, target_root: Path | None = None) -> None:
     """Render a token-resolution result."""
     click.echo()
     click.echo(cli_render.style("title", f"Token: {resolution.token}"))
@@ -1631,4 +1593,3 @@ def print_token_resolution(
     else:
         click.echo(f"    {resolution.entry}")
     click.echo()
-

@@ -3,6 +3,7 @@
 # requires-python = ">=3.10"
 # dependencies = [
 #   "ruamel.yaml>=0.18",
+#   "pathspec>=0.12",
 # ]
 # ///
 """Project-management capability — review-pr (DEC-028 + DEC-032 invocation).
@@ -16,15 +17,15 @@ identity. The verdict format is per DEC-028:
 
 followed by free-form commentary the agent produces.
 
-    review-pr <N>
+    review-pr <N> [--force]
 
 The required set is resolved per PR (DEC-032 D1) as the baseline
 (`review.agents.local_registered:`) UNIONED with every contributed reviewer
 whose match-predicate matches the classification of any issue the PR closes,
 less any contribution the project opts out of
 (`review.agents.contributed_opt_out:`, #148 — listed in the output with its
-reason). Crucially, this resolution is the SAME shared helper `done-work`'s gate
-checks (`_lib.required_reviewers.resolve_required_local_reviewers`), so the
+reason). Crucially, this resolution is the SAME shared wiring `done-work`'s gate
+checks (`_lib.pr_review.resolve_pr_review`), so the
 set `review-pr` invokes equals the set the gate later checks — the
 developer-at-keyboard flow produces exactly the verdicts the gate needs, with
 no divergence (DEC-032 D4).
@@ -34,18 +35,39 @@ Gates:
   - PR must exist for the issue's branch.
   - The resolved required-local set must be non-empty.
   - Resolution must succeed: a not-ok contribution collection (malformed
-    declaration / undeployed contributed agent), an invalid opt-out list, or
-    an unresolvable closing-issue lookup surfaces as an error and aborts — a
-    required reviewer is never silently skipped (fail-closed, DEC-032 D5),
-    consistent with the gate's posture.
+    declaration / undeployed contributed agent), an invalid opt-out or
+    not-code list, an unresolvable closing-issue lookup, or changed files
+    that cannot be read surfaces as an error and aborts — a required reviewer
+    is never silently skipped (fail-closed, DEC-032 D5), consistent with the
+    gate's posture.
 
 Side-effects:
-  - For each locally-registered agent: invoke (via the harness's agent
-    runtime), capture verdict + body, post as comment.
-  - Idempotent at the PR level: post-dating-latest-commit handles
-    staleness automatically per DEC-028. Re-running invokes the agent(s)
-    again and posts fresh verdicts; prior verdicts remain in the
-    comment history (the gate-checker selects latest-per-agent).
+  - For each required reviewer: read the PR's head commit and its base
+    branch's head, invoke the reviewer (via the harness's agent runtime) on
+    that head, read the head again, and post the verdict as a comment whose
+    marker names the head the reviewer was shown and the base it was reviewed
+    against (`<!-- pkit-verdict sha=<oid> base=<oid> -->`, #1179). A head
+    that moved during the review is reported and the verdict is still posted
+    against the head it reviewed — the freshness rule then judges the
+    changes since, exactly as for any later push; the native review is
+    skipped, since GitHub would attach it to a head the reviewer never saw.
+    When the head cannot be read the verdict names none and is judged by
+    the latest commit's time.
+  - Skips a required reviewer whose verdict is still fresh (#1178): its
+    latest verdict is one the freshness rule (`_lib.verdict_freshness`, the
+    one `done-work`'s gate applies, #1179) holds fresh, read with the SAME
+    selection the gate counts (`gate_candidates`, judged as `gate_verdicts`
+    judges them), so a skipped reviewer is exactly one the gate would accept
+    as it stands. It prints
+    `[<name>] fresh verdict <APPROVED|CHANGES_REQUESTED> — not re-run`. A
+    change the reviewer checks makes its verdict stale, so the next run
+    invokes it and says why:
+    `[<name>] stale verdict <APPROVED|CHANGES_REQUESTED> (<reason>) — re-run`,
+    the reason naming what changed, or a commit that could not be fetched,
+    or a shallow checkout. `--force` re-runs a fresh one (per DEC-046, the
+    override of a stop the script makes). Prior verdicts remain in the
+    comment history (the gate-checker selects latest-per-agent). When the
+    PR's verdicts cannot be read, every required reviewer runs.
 
 Agent invocation:
   At v1, the kit invokes Claude Code agents via the `claude` CLI when
@@ -58,11 +80,15 @@ Agent invocation:
   own agent under `.claude/agents/`, or replace the default entirely.
 
 Exit codes:
-  0  all required reviewers invoked + comments posted
+  0  every required reviewer invoked + comment posted, or skipped as fresh
   1  membership refusal
   2  usage error / no agents configured / gh failure / required set
-     unresolvable (fail-closed)
-  3  one or more agent invocations failed (verdicts not posted)
+     unresolvable (fail-closed); or, called with a pinned head, the PR's head
+     could not be read before a review, and no further reviewer ran
+  3  one or more agent invocations failed (verdicts not posted); or, called
+     with a pinned head (`review(argv, pinned_head=…)`, as `land-work` calls
+     it), the PR was found at another head — where its verdicts were read, or
+     before or after a review — and no further reviewer ran
 """
 
 from __future__ import annotations
@@ -74,38 +100,42 @@ import re
 import shutil
 import subprocess
 import sys
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 from ruamel.yaml import YAML
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate  # noqa: E402
-from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
-from _lib import session_guard  # noqa: E402
-from _lib.agent_verdicts import stamp_verdict  # noqa: E402
-from _lib.membership import (  # noqa: E402
+from _lib import bootstrap_gate, session_guard
+from _lib.agent_verdicts import PATH_LOCAL, gate_candidates, stamp_verdict
+from _lib.audit import short_sha
+from _lib.author_delta import author_delta, base_kept
+from _lib.gh import gh_get_issue, gh_run, load_adopter_config
+from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
     resolve_capability_root,
     resolve_invoker_identity,
 )
-from _lib.closing_issue_fetchers import (  # noqa: E402
-    issue_labels as _issue_labels_fetch,
-    pr_changed_files as _pr_changed_files_fetch,
-    pr_closing_issue_numbers as _pr_closing_issue_numbers_fetch,
-)
-from _lib.required_reviewers import (  # noqa: E402
+
+# The one wiring of the required reviewers and the freshness rule (#1195),
+# shared with done-work's gate and show-pr.
+from _lib.pr_review import REVIEW_VIEW_FIELDS, PrReview, resolve_pr_review
+from _lib.required_reviewers import (
+    ERROR_CHANGED_FILES,
     ERROR_CLOSING_ISSUES,
     ERROR_COLLECTION,
+    ERROR_NOT_CODE,
     ERROR_OPT_OUT,
+    ERROR_TOO_MANY_CHANGED_FILES,
+    NOT_CODE_PATH,
     RequiredReviewersError,
     Resolution,
-    resolve_required_local_reviewers,
 )
-from _lib.review_contributions import collect_contributions  # noqa: E402
-from _lib.review_opt_outs import OPT_OUT_PATH, read_opt_outs  # noqa: E402
-
+from _lib.review_contributions import collect_contributions
+from _lib.review_opt_outs import OPT_OUT_PATH
+from _lib.verdict_freshness import FreshnessRule, head_sha
 
 # ---- per-agent reviewer timeout (issue #766) -------------------------
 #
@@ -161,8 +191,7 @@ def _resolve_agent_timeout(cli_value: str | None, env: dict) -> int:
         value = int(raw)
     except (TypeError, ValueError):
         raise ValueError(
-            f"invalid reviewer timeout from {source}: {raw!r} is not an integer "
-            "number of seconds."
+            f"invalid reviewer timeout from {source}: {raw!r} is not an integer number of seconds."
         ) from None
     if value <= 0:
         raise ValueError(
@@ -173,7 +202,9 @@ def _resolve_agent_timeout(cli_value: str | None, env: dict) -> int:
 
 
 def _resolve_agent_effort(
-    cli_value: str | None, env: dict, config: dict | None,
+    cli_value: str | None,
+    env: dict,
+    config: dict | None,
 ) -> tuple[str | None, str | None]:
     """Resolve the reviewer effort level and the source that set it.
 
@@ -205,12 +236,63 @@ def _resolve_agent_effort(
     if not isinstance(raw, str) or raw not in EFFORT_LEVELS:
         raise ValueError(
             f"invalid reviewer effort from {source}: {raw!r} — must be one of "
-            + ", ".join(EFFORT_LEVELS) + "."
+            + ", ".join(EFFORT_LEVELS)
+            + "."
         )
     return raw, source
 
 
+@dataclass
+class ReviewRun:
+    """What one review-pr run did, for a verb that composes it (`land-work`, #1203):
+    the exit code `main` returns, and what became of each required reviewer."""
+
+    exit_code: int
+    pr_number: int | None = None
+    #: Reviewers whose fresh verdict was left standing: name → token.
+    kept: dict[str, str] = field(default_factory=dict)
+    #: The comment body of each kept verdict.
+    kept_bodies: dict[str, str] = field(default_factory=dict)
+    #: Verdicts posted this run: name → (token, the comment as posted).
+    posted: dict[str, tuple[str, str]] = field(default_factory=dict)
+    #: Reviewers that ran into a problem and posted no verdict: name → why.
+    failed: dict[str, str] = field(default_factory=dict)
+    #: Reviewers a dry run would invoke.
+    would_run: list[str] = field(default_factory=list)
+    #: With a pinned head, the head the PR was found at instead; None while it
+    #: held, and when it could not be read (`reason` says so).
+    moved_to: str | None = None
+    #: Why the run stopped short of the reviewers (exit 1 or 2), as the line
+    #: it reported that with; empty otherwise.
+    reason: str = ""
+
+
+def _stopped(
+    exit_code: int, message: str = "", *, reason: str = "", pr_number: int | None = None
+) -> ReviewRun:
+    """A run that stopped short: `message` is printed on standard error and
+    its first line kept as the reason; `reason` is for one reported already."""
+    if message:
+        print(message, file=sys.stderr)
+    first = next((line.strip() for line in message.splitlines() if line.strip()), "")
+    return ReviewRun(exit_code, pr_number=pr_number, reason=first or reason)
+
+
 def main() -> int:
+    return review().exit_code
+
+
+def review(argv: list[str] | None = None, *, pinned_head: str = "") -> ReviewRun:
+    """Run review-pr on `argv` (default: the command line).
+
+    `pinned_head` is for a verb that composes this one (`land-work`, #1203): the
+    PR head it waited for the checks on. A reviewer is then invoked only on
+    that head, and a fresh verdict is kept only when it was judged fresh for
+    that head. When the PR is found at another head — where the verdicts are
+    read, before an invocation or after one — no further reviewer runs (exit
+    3, `ReviewRun.moved_to`); when the head cannot be read before an
+    invocation, none runs either (exit 2, `ReviewRun.reason`).
+    """
     parser = argparse.ArgumentParser(
         description=(
             "Invoke every locally-registered review agent against the PR's "
@@ -219,97 +301,100 @@ def main() -> int:
     )
     parser.add_argument("issue_number", type=int)
     parser.add_argument(
-        "--capability-root", type=Path, default=None,
+        "--capability-root",
+        type=Path,
+        default=None,
         help=f"Default: <repo-root>/.pkit/capabilities/{CAPABILITY_NAME}/.",
     )
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument(
-        "--no-native", action="store_true",
+        "--no-native",
+        action="store_true",
         help="Don't post a native GitHub review (APPROVE / REQUEST_CHANGES) — "
         "only the comment verdict. Per DEC-028 (amended). The native review is "
         "what shows in the PR UI and satisfies branch protection; it is skipped "
         "automatically when you authored the PR (GitHub blocks self-approval).",
     )
     parser.add_argument(
-        "--timeout", default=None, metavar="SECONDS",
+        "--timeout",
+        default=None,
+        metavar="SECONDS",
         help="Per-agent reviewer timeout in seconds (one uniform value applied "
         f"to every reviewer). Precedence: this flag > ${AGENT_TIMEOUT_ENV} env "
         f"var > default {DEFAULT_AGENT_TIMEOUT}. Must be a positive integer.",
     )
     parser.add_argument(
-        "--effort", default=None, metavar="LEVEL",
+        "--effort",
+        default=None,
+        metavar="LEVEL",
         help="Effort level every reviewer reasons at (one uniform value). "
         f"Precedence: this flag > ${AGENT_EFFORT_ENV} env var > "
         "`review.agents.effort` in the project config > unset (the harness "
         "default). One of: " + ", ".join(EFFORT_LEVELS) + ".",
     )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Re-run every required reviewer, including one whose latest "
+        "verdict is still fresh (skipped otherwise).",
+    )
     session_guard.add_override_argument(parser)
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     try:
         agent_timeout = _resolve_agent_timeout(args.timeout, os.environ)
     except ValueError as exc:
-        print(f"error: {exc}", file=sys.stderr)
-        return 2
+        return _stopped(2, f"error: {exc}")
 
     capability_root = resolve_capability_root(args.capability_root)
     if capability_root is None:
-        print(f"error: {CAPABILITY_NAME} capability not found.", file=sys.stderr)
-        return 2
+        return _stopped(2, f"error: {CAPABILITY_NAME} capability not found.")
 
     # Prerequisite gate (#747): refuse on an un-bootstrapped project rather
     # than operating on assumed defaults. See _lib/bootstrap_gate.py.
     if not bootstrap_gate.enforce("review-pr", capability_root=capability_root):
-        return 2
+        return _stopped(2, reason="the project is not bootstrapped (see above)")
 
     yaml_loader = YAML(typ="safe")
     config = load_adopter_config(capability_root)
     try:
         agent_effort, effort_source = _resolve_agent_effort(
-            args.effort, os.environ, config,
+            args.effort,
+            os.environ,
+            config,
         )
     except ValueError as exc:
-        print(f"error: {exc}", file=sys.stderr)
-        return 2
+        return _stopped(2, f"error: {exc}")
     members = _read_members(capability_root, yaml_loader)
     invoker = resolve_invoker_identity(config=config)
     membership = check_membership(members, invoker)
     if not membership.allowed:
-        print(membership.refusal_message, file=sys.stderr)
-        return 1
+        return _stopped(1, membership.refusal_message)
 
     # Foreign-repo mutation guard (COR-039 / ADR-034) — gate before posting any
     # review comment: target repo (cwd) vs session anchor (CLAUDE_PROJECT_DIR).
     if not session_guard.enforce(override=args.allow_foreign_repo):
-        return 1
+        return _stopped(1, reason="the foreign-repository guard refused (see above)")
 
     # Resolve registered local agents.
     local_agents = _get_local_registered(config)
     if not local_agents:
-        print(
+        return _stopped(
+            2,
             "error: no agents configured in `review.agents.local_registered:`. "
             "Add an entry pointing at a deployed agent in .claude/agents/.",
-            file=sys.stderr,
         )
-        return 2
 
     # Find the issue's branch + PR.
     branch = _find_issue_branch(args.issue_number)
     if branch is None:
-        print(
-            f"error: no local branch matching `*/{args.issue_number}-*` found.",
-            file=sys.stderr,
-        )
-        return 2
+        return _stopped(2, f"error: no local branch matching `*/{args.issue_number}-*` found.")
 
     pr = _find_pr_for_branch(branch, config)
     if pr is None:
-        print(
-            f"error: no OPEN PR found for branch {branch!r}. "
-            "Run `review-work` first.",
-            file=sys.stderr,
+        return _stopped(
+            2, f"error: no OPEN PR found for branch {branch!r}. Run `review-work` first."
         )
-        return 2
 
     pr_number = pr.get("number")
     print(f"review-pr: #{args.issue_number}")
@@ -320,12 +405,10 @@ def main() -> int:
 
     # DEC-032 D4: resolve the PR's required-local set — baseline ∪ contributed
     # reviewers matched against the closing issues' classification — via the
-    # SAME shared helper `done-work`'s gate checks. Invoking exactly this set
+    # SAME shared wiring `done-work`'s gate checks. Invoking exactly this set
     # is what makes invoke-set == gate-set (no divergence).
-    baseline_local = [a["name"] for a in local_agents]
-    resolution = _resolve_required_local(
-        pr_number, config, repo_root, baseline_local
-    )
+    review = _resolve_review(pr_number, config, repo_root)
+    resolution = review.resolution
     if not resolution.ok:
         # HARD ABORT on a non-ok resolution — and this is a DELIBERATE choice,
         # not a gate-safety requirement. review-pr is advisory: it posts
@@ -344,8 +427,7 @@ def main() -> int:
         # to warn-and-continue (it wouldn't make merges any safer) nor lean on
         # it as if dropping it would open a gate hole (it wouldn't; done-work
         # closes that hole).
-        print(_resolution_error_message(resolution), file=sys.stderr)
-        return 2
+        return _stopped(2, _resolution_error_message(resolution), pr_number=pr_number)
     required_local = list(resolution.required_local)
     contributed_by = dict(resolution.contributed_by)
     print(f"  agents: {', '.join(required_local)}")
@@ -360,63 +442,164 @@ def main() -> int:
     else:
         print(f"  effort: {agent_effort} ({effort_source})")
 
+    # A reviewer whose verdict is still fresh for this head is not re-run
+    # (#1178) unless --force: re-running it reviews the same diff again. A
+    # reviewer whose verdict went stale is re-run with the reason said, so a
+    # re-run is never silent about why (#1179).
+    states = _VerdictStates()
+    read: _VerdictStates | None = None
+    if not args.force:
+        read = _read_verdict_states(pr_number, review, config)
+        if read is None:
+            print("  fresh verdicts: could not be read — every required reviewer runs")
+        else:
+            states = read
+    fresh = states.fresh
+
+    # With a pinned head, a verdict is kept only as fresh for that head: the
+    # freshness was judged against the head the verdicts were read with.
+    run = ReviewRun(0, pr_number=pr_number)
+    if pinned_head and not args.force and read is not None and states.head != pinned_head:
+        if not states.head:
+            return _stopped(
+                2,
+                f"error: PR #{pr_number}'s head could not be read with its verdicts, so "
+                f"whether they stand for {short_sha(pinned_head)}, the head this review was "
+                "asked to review, cannot be told. No reviewer ran.",
+                pr_number=pr_number,
+            )
+        print(
+            f"  verdicts read at {short_sha(states.head)}, not {short_sha(pinned_head)}, the "
+            "head this review was asked to review — no reviewer run."
+        )
+        run.moved_to = states.head
+        run.exit_code = 3
+        return run
+
     # For each required reviewer, invoke and post verdict.
     failures = 0
     for name in required_local:
+        if name in fresh:
+            print(f"  [{name}] fresh verdict {fresh[name]} — not re-run")
+            run.kept[name] = fresh[name]
+            run.kept_bodies[name] = states.bodies.get(name, "")
+            continue
+        if name in states.stale:
+            token, reason = states.stale[name]
+            print(f"  [{name}] stale verdict {token} ({reason}) — re-run")
+
         agent_file = repo_root / ".claude" / "agents" / f"{name}.md"
         if not agent_file.is_file():
             provenance = (
                 f" (required by capability `{contributed_by[name]}`)"
-                if name in contributed_by else ""
+                if name in contributed_by
+                else ""
             )
             print(
-                f"  [{name}] error: agent file not found at {agent_file}"
-                f"{provenance}",
+                f"  [{name}] error: agent file not found at {agent_file}{provenance}",
                 file=sys.stderr,
             )
             failures += 1
+            run.failed[name] = f"agent file not found at {agent_file}{provenance}"
             continue
 
         if args.dry_run:
             print(f"  [{name}] (dry-run) would invoke against PR #{pr_number}")
+            run.would_run.append(name)
             continue
 
+        # The head this reviewer is shown (#1179): read before the invocation,
+        # named in its brief, and recorded in its verdict's marker together
+        # with the base branch's head it is reviewed against.
+        reviewed, reviewed_base = _read_tips(pr_number, config)
+        if pinned_head and not reviewed:
+            # Not "moved": nothing is known about the head, so no reviewer is
+            # shown one that may not be the pinned head.
+            run.reason = (
+                f"PR #{pr_number}'s head could not be read before {name}'s review, so "
+                f"whether it is {short_sha(pinned_head)}, the head this review was asked "
+                "to review, cannot be told"
+            )
+            print(f"  [{name}] not run — {run.reason}.", file=sys.stderr)
+            break
+        if pinned_head and reviewed != pinned_head:
+            print(
+                f"  [{name}] not run — the PR's head is {short_sha(reviewed)}, not "
+                f"{short_sha(pinned_head)}, the head this review was asked to review."
+            )
+            run.moved_to = reviewed
+            break
         verdict, body = _invoke_agent(
-            name, pr_number, config, agent_timeout, effort=agent_effort,
+            name,
+            pr_number,
+            config,
+            agent_timeout,
+            effort=agent_effort,
+            base=pr.get("baseRefName"),
+            head=branch,
+            sha=reviewed,
         )
         if verdict is None:
             print(f"  [{name}] invocation failed; no verdict to post.", file=sys.stderr)
             failures += 1
+            run.failed[name] = "the invocation failed, so there is no verdict to post"
             continue
 
-        comment = _format_verdict_comment(name, verdict, body)
+        head_now, _base_now = _read_tips(pr_number, config)
+        head_unchanged = _report_head_check(name, reviewed, head_now)
+        comment = _format_verdict_comment(name, verdict, body, sha=reviewed, base=reviewed_base)
         if not _post_comment(pr_number, comment, config):
             print(f"  [{name}] could not post verdict comment.", file=sys.stderr)
             failures += 1
+            run.failed[name] = "its verdict comment could not be posted"
             continue
 
         print(f"  [{name}] posted {verdict}")
+        run.posted[name] = (verdict, comment)
 
         # DEC-028 (amended): also deliver a NATIVE GitHub review carrying the
         # verdict state, so it shows in the PR UI and satisfies branch-protection
         # "required approving reviews". The comment above is what done-work's gate
         # reads; the native review is the GitHub-facing signal. Best-effort — a
         # failure or a self-approval degrade never fails review-pr (the comment
-        # verdict stands).
+        # verdict stands). GitHub attaches a native review to the PR's current
+        # head, so it is skipped when that is not the head the reviewer saw.
         if not args.no_native:
-            _deliver_native_review(pr_number, verdict, comment, config)
+            if head_unchanged:
+                _deliver_native_review(pr_number, verdict, comment, config)
+            else:
+                print(
+                    "  [native] skipped — the PR's head is not the one the "
+                    "reviewer saw. The comment verdict stands."
+                )
+        if pinned_head and head_now and head_now != pinned_head:
+            # A head that could not be read again is not a move: the next
+            # reviewer's read, or the merge's own check, tells.
+            run.moved_to = head_now
+            break
 
-    if failures > 0:
-        return 3
-    return 0
+    if fresh:
+        print("  --force re-runs a reviewer whose verdict is fresh.")
+    if run.reason:
+        run.exit_code = 2
+    elif failures > 0 or run.moved_to is not None:
+        run.exit_code = 3
+    return run
 
 
 # ---- agent invocation ------------------------------------------------
 
 
 def _invoke_agent(
-    name: str, pr_number: int | None, config: dict,
-    timeout: int = DEFAULT_AGENT_TIMEOUT, effort: str | None = None,
+    name: str,
+    pr_number: int | None,
+    config: dict,
+    timeout: int = DEFAULT_AGENT_TIMEOUT,
+    effort: str | None = None,
+    *,
+    base: str | None = None,
+    head: str = "HEAD",
+    sha: str = "",
 ) -> tuple[str | None, str]:
     """Invoke a Claude Code agent against the PR diff.
 
@@ -432,6 +615,10 @@ def _invoke_agent(
     passed to the harness as `--effort`; None passes nothing and the harness
     default applies. Resolved once by the caller (`_resolve_agent_effort`),
     the same uniform value for every reviewer.
+
+    `base` and `head` are the PR's base branch and its branch, named in the
+    brief's local-diff fallback (see `_review_brief`); `sha` is the PR head
+    commit the reviewer is to review, "" when it could not be read.
 
     At v1 this uses the `claude` CLI when available. Adopters with
     custom harnesses or invocation patterns override by editing this
@@ -450,16 +637,7 @@ def _invoke_agent(
         )
         return None, ""
 
-    # Build the prompt — the agent receives the PR diff + a clear
-    # instruction to return one of the two verdicts as the first line.
-    prompt = (
-        f"Review the diff of PR #{pr_number} in this repository. "
-        f"Apply your usual review criteria. Output your verdict on the "
-        f"VERY FIRST LINE in one of these exact forms:\n\n"
-        f"  Reviewer agent (local, {name}): APPROVED\n"
-        f"  Reviewer agent (local, {name}): CHANGES_REQUESTED\n\n"
-        "Then add any commentary, findings, or rationale below."
-    )
+    prompt = _review_brief(name, pr_number, base=base, head=head, sha=sha)
 
     try:
         command = [claude_bin, "-p", prompt, "--agent", name]
@@ -467,7 +645,10 @@ def _invoke_agent(
             command += ["--effort", effort]
         proc = subprocess.run(
             command,
-            capture_output=True, text=True, check=False, timeout=timeout,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=timeout,
         )
     except (subprocess.TimeoutExpired, FileNotFoundError) as exc:
         print(f"  [{name}] invocation error: {exc}", file=sys.stderr)
@@ -512,7 +693,7 @@ def _invoke_agent(
         # Body is the commentary following the verdict line; any preamble
         # before it is throat-clearing and dropped (the verdict line itself
         # is regenerated by `_format_verdict_comment`).
-        body = "\n".join(lines[idx + 1:])
+        body = "\n".join(lines[idx + 1 :])
         return verdict, body
 
     # No grammar-matching line anywhere → fail-closed. Surface the agent's
@@ -527,19 +708,118 @@ def _invoke_agent(
     return None, ""
 
 
-def _format_verdict_comment(name: str, verdict: str, body: str) -> str:
+def _review_brief(
+    name: str,
+    pr_number: int | None,
+    *,
+    base: str | None,
+    head: str,
+    sha: str = "",
+) -> str:
+    """The prompt each reviewer receives: the PR, the head under review, a
+    fallback for its diff, the verdict grammar.
+
+    The brief names the head commit the reviewer is reviewing (#1179) — the
+    one its verdict will be recorded against — so the reviewer can tell when
+    the PR moved under it. GitHub refuses `gh pr diff` for a PR changing more
+    than 300 files, so the brief also names the same diff in this checkout:
+    the three-dot range from the PR's base branch to that head (to its branch
+    when the head could not be read), which diffs from their merge base. An
+    unknown base is left as a placeholder the reviewer fills from the PR's
+    `baseRefName`.
+    """
+    reviewing = (
+        f"You are reviewing its head commit {sha}; your verdict is recorded against that commit. "
+        if sha
+        else ""
+    )
+    return (
+        f"Review the diff of PR #{pr_number} in this repository. "
+        f"{reviewing}"
+        f"If `gh pr diff {pr_number}` refuses it as too large (GitHub stops at "
+        "300 changed files), read it from this checkout instead: "
+        f"`git diff origin/{base or '<base>'}...{sha or head}`. "
+        f"Apply your usual review criteria. Output your verdict on the "
+        f"VERY FIRST LINE in one of these exact forms:\n\n"
+        f"  Reviewer agent (local, {name}): APPROVED\n"
+        f"  Reviewer agent (local, {name}): CHANGES_REQUESTED\n\n"
+        "Then add any commentary, findings, or rationale below."
+    )
+
+
+def _format_verdict_comment(
+    name: str,
+    verdict: str,
+    body: str,
+    *,
+    sha: str = "",
+    base: str = "",
+) -> str:
     """Compose the verdict comment in DEC-028's local-path format, stamped with
-    the verdict marker (#593) so the merge gate counts it."""
+    the verdict marker (#593) so the merge gate counts it — naming `sha`, the
+    head the reviewer was shown, and `base`, the base branch's head it was
+    reviewed against, when they are known (#1179)."""
     first_line = f"Reviewer agent (local, {name}): {verdict}"
     composed = f"{first_line}\n\n{body.strip()}" if body.strip() else first_line
-    return stamp_verdict(composed)
+    return stamp_verdict(composed, sha, base)
+
+
+def _read_tips(pr_number: int | None, config: dict) -> tuple[str, str]:
+    """The PR's head commit and its base branch's head as GitHub reports them
+    (`headRefOid`, `baseRefOid`), each "" when it cannot be read."""
+    if pr_number is None:
+        return "", ""
+    proc = gh_run(
+        ["gh", "pr", "view", str(pr_number), "--json", "headRefOid,baseRefOid"],
+        config,
+        check=False,
+    )
+    if proc.returncode != 0:
+        return "", ""
+    try:
+        data = json.loads(proc.stdout)
+    except ValueError:
+        return "", ""
+    if not isinstance(data, dict):
+        return "", ""
+    return str(data.get("headRefOid") or ""), str(data.get("baseRefOid") or "")
+
+
+def _report_head_check(name: str, reviewed: str, now: str) -> bool:
+    """Whether the PR's head is still the one `name` reviewed; says so when not.
+
+    A verdict is posted against the head it reviewed either way (#1179) — the
+    freshness rule judges what changed since. When the head was never read the
+    verdict names none, is judged by the latest commit's time, and nothing is
+    claimed about a head, so the check passes.
+    """
+    if not reviewed:
+        print(
+            f"  [{name}] the PR's head could not be read — the verdict names no "
+            "reviewed head and is judged by the latest commit's time."
+        )
+        return True
+    if now == reviewed:
+        return True
+    if now:
+        moved = f"moved from {short_sha(reviewed)} to {short_sha(now)} during the review"
+    else:
+        moved = f"could not be read again after the review of {short_sha(reviewed)}"
+    print(
+        f"  [{name}] the PR's head {moved} — the verdict is recorded against "
+        f"{short_sha(reviewed)}, and the changes since decide whether it stands."
+    )
+    return False
 
 
 # ---- native GitHub review delivery (DEC-028, amended) ----------------
 
 
 def _deliver_native_review(
-    pr_number: int, verdict: str, body: str, config: dict,
+    pr_number: int,
+    verdict: str,
+    body: str,
+    config: dict,
 ) -> None:
     """Post a native `gh pr review` carrying the verdict state (DEC-028, amended).
 
@@ -565,7 +845,8 @@ def _deliver_native_review(
     event = "--approve" if verdict == "APPROVED" else "--request-changes"
     proc = gh_run(
         ["gh", "pr", "review", str(pr_number), event, "--body", body],
-        config, check=False,
+        config,
+        check=False,
     )
     if proc.returncode != 0:
         print(
@@ -581,7 +862,9 @@ def _deliver_native_review(
 def _gh_pr_author(pr_number: int, config: dict) -> str | None:
     """The PR author's login, or None if it can't be determined."""
     proc = gh_run(
-        ["gh", "pr", "view", str(pr_number), "--json", "author"], config, check=False,
+        ["gh", "pr", "view", str(pr_number), "--json", "author"],
+        config,
+        check=False,
     )
     if proc.returncode != 0:
         return None
@@ -602,59 +885,148 @@ def _gh_current_login(config: dict) -> str | None:
 # ---- required-set resolution (DEC-032 D1/D4) -------------------------
 
 
-def _resolve_required_local(
-    pr_number: int | None, config: dict, repo_root: Path, baseline_local: list[str],
-) -> Resolution:
-    """Resolve the PR's required-local set via the shared resolver (DEC-032 D1).
+def _resolve_review(pr_number: int | None, config: dict, repo_root: Path) -> PrReview:
+    """The PR's required-local set and freshness rule (DEC-032 D1, #1179).
 
-    Delegates to `_lib.required_reviewers.resolve_required_local_reviewers` —
-    the SAME resolution `done-work`'s gate-checker calls — wiring in this
-    script's own `gh`-backed closing-issue, label, and changed-files fetchers
-    and the project's contribution opt-outs (#148), read from `config` the
-    same way the gate reads them. Because both
-    consumers go through one helper, the set this command invokes equals the
-    set the gate later checks (DEC-032 D4, no divergence). Returns a
-    `Resolution`; a non-ok result aborts (fail-closed, DEC-032 D5).
+    Through `_lib.pr_review.resolve_pr_review` — the ONE wiring `done-work`'s
+    gate-checker and `show-pr` call too — handing it this script's `gh`
+    helpers, `collect_contributions` and author-change readers, looked up at
+    call time so the tests' monkeypatches on this module stay effective.
+    Because the consumers go through one wiring, the set this command invokes
+    equals the set the gate later checks (DEC-032 D4, no divergence), and a
+    verdict it skips as fresh is one the gate counts. A non-ok resolution
+    aborts (fail-closed, DEC-032 D5).
 
     A `None` `pr_number` (unresolvable PR) yields a non-ok resolution rather
     than a `gh` call against a missing number.
     """
     if pr_number is None:
-        return Resolution(
-            error=RequiredReviewersError(
-                kind=ERROR_CLOSING_ISSUES,
-                message="cannot resolve PR number",
+        return PrReview(
+            Resolution(
+                error=RequiredReviewersError(
+                    kind=ERROR_CLOSING_ISSUES,
+                    message="cannot resolve PR number",
+                ),
             ),
+            author_delta=author_delta,
+            base_kept=base_kept,
         )
-    return resolve_required_local_reviewers(
+    return resolve_pr_review(
         pr_number,
-        baseline_local=baseline_local,
-        repo_root=repo_root,
-        closing_issue_numbers=lambda n: _pr_closing_issue_numbers_fetch(
-            n, config, gh_run=gh_run
-        ),
-        issue_labels=lambda n: _issue_labels_fetch(
-            n, config, gh_get_issue=gh_get_issue
-        ),
-        changed_files=lambda n: _pr_changed_files_fetch(
-            n, config, gh_run=gh_run
-        ),
-        opt_outs=read_opt_outs(config),
+        config,
+        repo_root,
+        gh_run=gh_run,
+        gh_get_issue=gh_get_issue,
         collect_contributions=collect_contributions,
+        author_delta=author_delta,
+        base_kept=base_kept,
     )
+
+
+# ---- fresh-verdict skip (#1178) --------------------------------------
+
+
+@dataclass(frozen=True)
+class _VerdictStates:
+    """Each required local reviewer's current verdict, judged by the gate's
+    freshness rule: `fresh` maps a reviewer to its token; `stale` maps one to
+    its token and the rule's reason. A reviewer in neither has no verdict the
+    gate would read."""
+
+    fresh: dict[str, str] = field(default_factory=dict)
+    stale: dict[str, tuple[str, str]] = field(default_factory=dict)
+    #: The comment body of each fresh verdict, for a caller to quote.
+    bodies: dict[str, str] = field(default_factory=dict, compare=False)
+    #: The PR head the verdicts were judged against; "" when it was not read.
+    head: str = field(default="", compare=False)
+
+
+def _read_verdict_states(
+    pr_number: int | None,
+    review: PrReview,
+    config: dict,
+) -> _VerdictStates | None:
+    """The required reviewers' current verdicts on the PR, fresh and stale.
+
+    Fetches the PR's comments, commits, head and base in one round-trip (the
+    fetch `done-work`'s gate makes), completes the PR's freshness rule from
+    them (`PrReview.freshness_rule`, the gate's own), and hands both to
+    `_local_verdict_states`. Returns None when they cannot be read — the
+    caller then runs every required reviewer, the direction that can only
+    produce more verdicts.
+    """
+    if pr_number is None:
+        return None
+    proc = gh_run(
+        ["gh", "pr", "view", str(pr_number), "--json", ",".join(REVIEW_VIEW_FIELDS)],
+        config,
+        check=False,
+    )
+    if proc.returncode != 0:
+        return None
+    try:
+        data = json.loads(proc.stdout)
+    except ValueError:
+        return None
+    if not isinstance(data, dict):
+        return None
+    states = _local_verdict_states(
+        data.get("comments") or [],
+        review.freshness_rule(data),
+        review.resolution.required_local,
+    )
+    return replace(states, head=head_sha(data))
+
+
+def _local_verdict_states(
+    comments: list,
+    freshness: FreshnessRule,
+    required_local: tuple[str, ...] | list[str],
+) -> _VerdictStates:
+    """Each required local reviewer's current verdict, fresh or stale.
+
+    The selection is `done-work`'s own: `gate_candidates` (marker required,
+    latest verdict per reviewer by timestamp), scoped to the required local
+    set, each judged by the gate's freshness rule — so the fresh ones are
+    exactly what `gate_verdicts` would count. A reviewer this skips is one the
+    gate counts as it stands: a fresh APPROVED satisfies it, a fresh
+    CHANGES_REQUESTED blocks it until the author changes something. A stale
+    one carries the rule's reason — a change since, a retargeted base, a
+    commit that could not be fetched, a shallow checkout — for the re-run to
+    name. Only local-path verdicts are read: `review-pr` invokes local
+    reviewers, and a remote verdict is not one of theirs.
+    """
+    required = set(required_local)
+    states = _VerdictStates()
+    for verdict in gate_candidates(
+        comments,
+        local_reviewer_ok=lambda name: name in required,
+        remote_reviewer_ok=lambda _login: False,
+    ):
+        if verdict.path != PATH_LOCAL:
+            continue
+        assessment = freshness.assess(verdict)
+        if assessment.fresh:
+            states.fresh[verdict.reviewer] = verdict.token
+            states.bodies[verdict.reviewer] = verdict.body
+        else:
+            states.stale[verdict.reviewer] = (verdict.token, assessment.reason)
+    return states
 
 
 def _resolution_error_message(resolution: Resolution) -> str:
     """Human error text for a non-ok `Resolution` that aborts review-pr.
 
     A not-ok contribution collection (malformed declaration / undeployed
-    contributed agent) or an unresolvable closing-issue lookup aborts
-    `review-pr` rather than invoke a partial set. The rationale for choosing a
-    hard abort here — review-pr is advisory and done-work is the real gate, so
-    this is a deliberate consistent-posture / minimum-surface choice, NOT a
-    gate-safety requirement — is documented at the abort call site in `main()`.
-    The text still frames the abort as fail-closed because that is what the
-    operator sees and what keeps both consumers' messaging consistent.
+    contributed agent), an unresolvable closing-issue lookup, or changed files
+    that cannot be read aborts `review-pr` rather than invoke a partial set,
+    and each kind names its own remediation — a retry only where one can help.
+    The rationale for choosing a hard abort here — review-pr is advisory and
+    done-work is the real gate, so this is a deliberate consistent-posture /
+    minimum-surface choice, NOT a gate-safety requirement — is documented at
+    the abort call site in `main()`. The text still frames the abort as
+    fail-closed because that is what the operator sees and what keeps both
+    consumers' messaging consistent.
     """
     error = resolution.error
     assert error is not None  # `not resolution.ok` guarantees this.
@@ -664,9 +1036,7 @@ def _resolution_error_message(resolution: Resolution) -> str:
     ]
     if error.kind == ERROR_COLLECTION and error.collection is not None:
         for err in error.collection.errors:
-            where = (
-                f"capability `{err.capability}`" if err.capability else "manifest"
-            )
+            where = f"capability `{err.capability}`" if err.capability else "manifest"
             lines.append(f"  → [{err.kind}] {where}: {err.message}")
         lines.append(
             "  Remediation: redeploy the contributing capability's agents, "
@@ -680,6 +1050,23 @@ def _resolution_error_message(resolution: Resolution) -> str:
             "(project/config.yaml) — each names an installed capability, a "
             "reviewer it contributes, and a reason."
         )
+    elif error.kind == ERROR_NOT_CODE:
+        for detail in error.details:
+            lines.append(f"  → {detail}")
+        lines.append(
+            f"  Remediation: fix `{NOT_CODE_PATH}` (project/config.yaml) — a "
+            "list of path patterns — or remove it for the default."
+        )
+    elif error.kind == ERROR_TOO_MANY_CHANGED_FILES:
+        lines.append(f"  → {error.message}")
+        lines.append(
+            "  Remediation: not transient — a retry reads the same cut-short "
+            "list. Split the PR, or merge it with "
+            '`done-work --bypass "<reason>"`.'
+        )
+    elif error.kind == ERROR_CHANGED_FILES:
+        lines.append(f"  → {error.message}")
+        lines.append("  Remediation: transient gh failure reading the PR's changed files — retry.")
     else:
         lines.append(f"  → {error.message}")
         lines.append(
@@ -705,7 +1092,9 @@ def _find_issue_branch(issue_number: int) -> str | None:
     try:
         proc = subprocess.run(
             ["git", "branch", "--list", "--format=%(refname:short)"],
-            capture_output=True, text=True, check=False,
+            capture_output=True,
+            text=True,
+            check=False,
         )
     except FileNotFoundError:
         return None
@@ -721,9 +1110,19 @@ def _find_issue_branch(issue_number: int) -> str | None:
 
 def _find_pr_for_branch(branch: str, config: dict) -> dict | None:
     proc = gh_run(
-        ["gh", "pr", "list", "--head", branch, "--state", "open",
-         "--json", "number,isDraft,headRefName"],
-        config, check=False,
+        [
+            "gh",
+            "pr",
+            "list",
+            "--head",
+            branch,
+            "--state",
+            "open",
+            "--json",
+            "number,isDraft,headRefName,baseRefName",
+        ],
+        config,
+        check=False,
     )
     if proc.returncode != 0:
         return None
@@ -742,7 +1141,8 @@ def _post_comment(pr_number: int | None, body: str, config: dict) -> bool:
         return False
     proc = gh_run(
         ["gh", "pr", "comment", str(pr_number), "--body", body],
-        config, check=False,
+        config,
+        check=False,
     )
     if proc.returncode != 0:
         print(f"error: gh pr comment failed: {proc.stderr.strip()}", file=sys.stderr)

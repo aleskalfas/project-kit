@@ -2,13 +2,23 @@
 
 These are the READ-ONLY checks the process engine (COR-033) runs to resolve a
 keyed issue's position and to evaluate its gates. The engine invokes each as a
-plain subprocess `[script, <issue-number>, --json]` through the backbone's command runner — its own process group, killed at the 30-second bound; see the process README's predicate-runner section — (no shell, no `with` args
+plain subprocess `[script, <issue-number>, --json]` through the backbone's command runner — its own
+process group, killed at the 30-second bound; see the process README's predicate-runner section —
+(no shell, no `with` args
 threaded — see the per-state detector scripts for how the target state is
 fixed), reads structured JSON on stdout, and acts on it:
 
-  detection / deterministic gate -> {result: bool, reason: str, detail?: {}}
+  classified detection (the lifecycle's one classifier, `detect-state`)
+                                 -> {state: str|null, reason: str, detail?: {}}
+  inferred detection (the per-state `detect-<state>`) / deterministic gate
+                                 -> {result: bool, reason: str, detail?: {}}
   authorisation-artifact gate    -> {exists: bool, produced_by: str|null,
                                      reason: str, detail?: {}}
+
+The shipped lifecycle detects with the classifier (COR-033 point 5): every
+state names it, so the engine reads an issue once per reading of its position.
+The per-state detectors stay registered, for direct use; both read the issue
+through the one function below, so they cannot disagree.
 
 Every function here fetches issue/PR state via the adopter-pinned `gh` helper
 and returns the contract dict. They are strictly read-only (COR-033: `status`
@@ -31,12 +41,10 @@ _HERE = Path(__file__).parent.parent
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
-from _lib import axis_labels  # noqa: E402
-from _lib import containment  # noqa: E402
-from _lib import lifecycle_inference as infer  # noqa: E402
-from _lib.gh import gh_run, load_adopter_config  # noqa: E402
-from _lib.membership import resolve_capability_root  # noqa: E402
-
+from _lib import axis_labels, containment
+from _lib import lifecycle_inference as infer
+from _lib.gh import gh_run, load_adopter_config
+from _lib.membership import resolve_capability_root
 
 # A predicate that genuinely COULD NOT evaluate (gh failure, capability
 # missing) carries this marker key. The thin predicate script strips it and
@@ -59,7 +67,6 @@ def _indeterminate(reason: str) -> dict[str, Any]:
 _MERGED_PRS_LIMIT = 100
 
 
-
 # --- shared issue access --------------------------------------------------
 
 
@@ -80,7 +87,9 @@ def _issue_labels(issue: dict[str, Any]) -> list[str]:
 
 def _fetch_issue(issue_number: int, config: dict[str, Any], fields: str) -> dict[str, Any] | None:
     """Read-only `gh issue view`. Returns None on any failure (fail-closed at
-    the engine: an unevaluable predicate is indeterminate)."""
+    the engine: an unevaluable predicate is indeterminate), and says why on
+    standard error — a predicate's diagnostics channel, which the engine shows
+    beside the indeterminate verdict — passing on what `gh` itself said."""
     try:
         proc = gh_run(
             ["gh", "issue", "view", str(issue_number), "--json", fields],
@@ -88,34 +97,45 @@ def _fetch_issue(issue_number: int, config: dict[str, Any], fields: str) -> dict
             check=False,
         )
     except FileNotFoundError:
+        _say_unread(issue_number, "`gh` is not installed or not on PATH")
         return None
     if proc.returncode != 0:
+        said = (proc.stderr or "").strip()
+        _say_unread(issue_number, f"`gh issue view` exited {proc.returncode}", said)
         return None
 
     try:
         parsed = json.loads(proc.stdout)
     except (json.JSONDecodeError, ValueError):
+        _say_unread(issue_number, "`gh issue view` printed no JSON document")
         return None
-    return parsed if isinstance(parsed, dict) else None
+    if not isinstance(parsed, dict):
+        _say_unread(issue_number, "`gh issue view` printed JSON that is not an object")
+        return None
+    return parsed
+
+
+def _say_unread(issue_number: int, cause: str, said: str = "") -> None:
+    """Why issue #N could not be read, on standard error."""
+    print(f"could not read issue #{issue_number}: {cause}", file=sys.stderr)
+    if said:
+        print(said, file=sys.stderr)
 
 
 # --- position detection ---------------------------------------------------
 
 
-def detect_state(issue_number: int, target_state: str) -> dict[str, Any]:
-    """Detection predicate for one lifecycle state.
-
-    Resolves the issue's live position via `infer_current_state` (move-issue's
-    exact precedence) and returns result=True iff it equals `target_state`.
-    Because every state's detector shares this single resolver, the detectors
-    are mutually exclusive — exactly one matches — so the engine's
-    "first-matching-state" rule reproduces move-issue regardless of state order.
+def _inferred_state(issue_number: int) -> str | dict[str, Any]:
+    """The issue's live position by move-issue's exact precedence
+    (`infer_current_state`), from ONE read of the issue — or, when it cannot be
+    read, the indeterminate payload saying why. The one function the classifier
+    and the per-state detectors answer from, so they cannot disagree.
 
     Map-aware (ADR-026 §5): the adopter's substrate-map is loaded and threaded
     into `infer_current_state`, so under a present map binding `state` to a
     `derive` predicate the position resolves from open/closed (+ a blocked label)
-    rather than a kit `state:*` label. No map ⇒ the kit `state:*` precedence,
-    byte-unchanged.
+    rather than a kit `state:*` label — `open` or `blocked`, values the lifecycle
+    does not declare. No map ⇒ the kit `state:*` precedence, byte-unchanged.
     """
     capability_root = _capability_root()
     if capability_root is None:
@@ -125,12 +145,61 @@ def detect_state(issue_number: int, target_state: str) -> dict[str, Any]:
     issue = _fetch_issue(issue_number, config, "state,milestone,labels")
     if issue is None:
         return _indeterminate(f"could not read issue #{issue_number} (gh failure)")
-    state = str(issue.get("state", "")).lower()
-    milestone = issue.get("milestone") or {}
-    labels = _issue_labels(issue)
-    resolved = infer.infer_current_state(
-        state=state, milestone=milestone, labels=labels, substrate_map=substrate_map
+    return infer.infer_current_state(
+        state=str(issue.get("state", "")).lower(),
+        milestone=issue.get("milestone") or {},
+        labels=_issue_labels(issue),
+        substrate_map=substrate_map,
     )
+
+
+def classify_state(issue_number: int) -> dict[str, Any]:
+    """The issue lifecycle's classifier — which state is the issue in?
+
+    The lifecycle's five states all name it under `mode: classified` (COR-033
+    point 5), so the engine runs it once per reading of an issue's position, and
+    it reads the issue once. It answers `{state, reason}`: the inferred state
+    when that is one of the lifecycle's states; `state: null`, with the inferred
+    value in the reason, when the inference yields a value the lifecycle does
+    not declare — a derive binding's `open` / `blocked`, a stray `state:<x>`
+    label — which places the issue in none of them, as the five per-state
+    detectors say by each answering false. When the issue cannot be read it
+    returns the indeterminate payload; the script says why on standard error and
+    exits non-zero.
+    """
+    inferred = _inferred_state(issue_number)
+    if isinstance(inferred, dict):
+        return inferred
+    if inferred in infer.STATE_ORDER:
+        return {
+            "state": inferred,
+            "reason": f"#{issue_number} inferred state is {inferred!r}",
+            "detail": {"inferred_state": inferred},
+        }
+    return {
+        "state": None,
+        "reason": (
+            f"#{issue_number} inferred state is {inferred!r}, which is not a state of the "
+            "issue lifecycle"
+        ),
+        "detail": {"inferred_state": inferred},
+    }
+
+
+def detect_state(issue_number: int, target_state: str) -> dict[str, Any]:
+    """Detection predicate for one lifecycle state — the per-state detector,
+    registered for direct use (the shipped lifecycle names the classifier).
+
+    Answers from the same read as `classify_state` (`_inferred_state`):
+    result=True iff the issue's inferred position equals `target_state`. So for
+    every lifecycle state S, `detect_state(n, S).result` is
+    `classify_state(n).state == S`, and the detectors are mutually exclusive —
+    at most one matches — so the engine's first-true-state rule reproduces
+    move-issue regardless of state order.
+    """
+    resolved = _inferred_state(issue_number)
+    if isinstance(resolved, dict):
+        return resolved
     return {
         "result": resolved == target_state,
         "reason": f"#{issue_number} inferred state is {resolved!r}",
@@ -184,8 +253,7 @@ def parent_has_active_descendant(parent_number: int) -> dict[str, Any]:
     return {
         "result": bool(active),
         "reason": (
-            f"#{parent_number} has active descendant(s): "
-            f"{', '.join(f'#{n}' for n in active)}"
+            f"#{parent_number} has active descendant(s): {', '.join(f'#{n}' for n in active)}"
             if active
             else f"#{parent_number} has no in-progress-or-further descendant"
         ),
@@ -238,8 +306,7 @@ def cascade_members(parent_number: int) -> dict[str, Any]:
     resolution = containment.resolve_children(config, parent_number=parent_number)
     if not resolution.complete:
         return _indeterminate(
-            f"the child set for #{parent_number} may be incomplete: "
-            f"{resolution.incomplete_reason}"
+            f"the child set for #{parent_number} may be incomplete: {resolution.incomplete_reason}"
         )
     members = [str(n) for n in resolution.numbers]
     return {
@@ -354,10 +421,7 @@ def gate_pr_merged(issue_number: int, actor: str | None = None) -> dict[str, Any
     return {
         "exists": True,
         "produced_by": merged_by,
-        "reason": (
-            f"PR #{pr.get('number')} closing #{issue_number} merged by "
-            f"{merged_by!r}"
-        ),
+        "reason": (f"PR #{pr.get('number')} closing #{issue_number} merged by {merged_by!r}"),
         "detail": {"pr_number": pr.get("number"), "merged_by": merged_by},
     }
 
@@ -409,9 +473,7 @@ def _find_merged_pr_for_issue(issue_number: int, config: dict[str, Any]) -> Any:
         if issue_number in infer.closing_issue_numbers(body):
             merged_by_raw = pr.get("mergedBy")
             merged_by = (
-                merged_by_raw.get("login")
-                if isinstance(merged_by_raw, dict)
-                else merged_by_raw
+                merged_by_raw.get("login") if isinstance(merged_by_raw, dict) else merged_by_raw
             )
             return {"number": pr.get("number"), "merged_by": merged_by}
     # No match within the fetched page. If we hit the ceiling there may be an

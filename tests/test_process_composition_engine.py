@@ -182,12 +182,8 @@ commands:
 
     _write_script(scripts / "inner_detect_draft.py", _marker_detect("_inner", "draft"))
     _write_script(scripts / "inner_detect_verified.py", _marker_detect("_inner", "verified"))
-    _write_script(
-        scripts / "outer_detect_discovering.py", _marker_detect("_outer", "discovering")
-    )
-    _write_script(
-        scripts / "outer_detect_discovered.py", _marker_detect("_outer", "discovered")
-    )
+    _write_script(scripts / "outer_detect_discovering.py", _marker_detect("_outer", "discovering"))
+    _write_script(scripts / "outer_detect_discovered.py", _marker_detect("_outer", "discovered"))
 
     (repo / "_outer").write_text("discovering", encoding="utf-8")
     (repo / "_inner").write_text("draft", encoding="utf-8")
@@ -247,6 +243,35 @@ def test_resolution_indeterminate_when_inner_position_indeterminate(composed_rep
     assert resolution is not None
     assert resolution.indeterminate is True
     assert resolution.outcome is None
+
+
+def test_an_indeterminate_inner_says_why(composed_repo: Path) -> None:
+    # #752: the parent's view names the inner detection that could not be
+    # evaluated and carries what its predicate said; fail-closed is unchanged.
+    scripts = composed_repo / ".pkit" / "capabilities" / "fixture" / "scripts"
+    _write_script(
+        scripts / "inner_detect_draft.py",
+        "import sys\nsys.stderr.write('inner store offline\\n')\nsys.exit(4)\n",
+    )
+    resolution = _outer(composed_repo).resolve_subprocess_outcome("discovering")
+    assert resolution is not None
+    assert resolution.indeterminate is True
+    assert (
+        "position is indeterminate ('draft': couldn't evaluate detection predicate "
+        "'inner-detect-draft': it exited 4)"
+    ) in resolution.reason
+    assert resolution.stderr_tail == "inner store offline"
+
+    proceed = _proceed_check(_outer(composed_repo))
+    assert proceed.allowed is False and proceed.indeterminate is True
+    assert proceed.outcome.stderr_tail == "inner store offline"
+    sub = json.loads(render_status_json(_outer(composed_repo), actor="agent"))["position"][
+        "subprocess"
+    ]
+    assert sub["stderr_tail"] == "inner store offline"
+    narrative = render_status_narrative(_outer(composed_repo), actor="agent")
+    assert "inner indeterminate:" in narrative
+    assert "the predicate said:\n        inner store offline" in narrative
 
 
 # --- the subprocess-outcome gate ------------------------------------------
@@ -316,7 +341,7 @@ def test_unwired_inner_outcome_is_a_correct_wait(composed_repo: Path) -> None:
     # gave it. Here we rewrite the inner so its terminal is `rejected` (which the
     # parent's `verified` gate does not match): the inner IS terminal, but the
     # parent's only gate tests `verified`, so no legal move -> still blocked.
-    inner = (composed_repo / ".pkit" / "capabilities" / "fixture" / "schemas" / "verification.yaml")
+    inner = composed_repo / ".pkit" / "capabilities" / "fixture" / "schemas" / "verification.yaml"
     inner.write_text(
         _INNER_DEFINITION.replace("id: verified", "id: rejected")
         .replace("run: inner-detect-verified", "run: inner-detect-verified")
@@ -373,8 +398,13 @@ def test_status_render_is_read_only(composed_repo: Path) -> None:
     assert not _outer(composed_repo).read_journal(), "status must not write the journal"
     # And the inner journal is untouched too.
     inner_journal = (
-        composed_repo / ".pkit" / "capabilities" / "fixture"
-        / "project" / "process" / "verification"
+        composed_repo
+        / ".pkit"
+        / "capabilities"
+        / "fixture"
+        / "project"
+        / "process"
+        / "verification"
     )
     assert not inner_journal.exists(), "resolving the inner must not write its journal"
 

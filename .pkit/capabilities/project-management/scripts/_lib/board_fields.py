@@ -263,9 +263,7 @@ def read_fields(
             ok=False,
             error=f"`gh project field-list {number}` returned no `fields` list.",
         )
-    return BoardFieldsRead(
-        ok=True, fields=tuple(f for f in fields if isinstance(f, dict))
-    )
+    return BoardFieldsRead(ok=True, fields=tuple(f for f in fields if isinstance(f, dict)))
 
 
 def resolve_item_id(
@@ -298,9 +296,13 @@ def resolve_item_id(
         "{ nodes { id project { id } } } } } }"
     )
     args = [
-        "gh", "api", "graphql",
-        "-f", f"query={query}",
-        "-F", f"issue={issue_node_id}",
+        "gh",
+        "api",
+        "graphql",
+        "-f",
+        f"query={query}",
+        "-F",
+        f"issue={issue_node_id}",
     ]
     proc, error = _invoke(args, config, owner=None, gh_call=gh_call)
     if proc is None:
@@ -350,9 +352,7 @@ def find_field(
     return None
 
 
-def field_names(
-    fields: tuple[dict[str, Any], ...] | list[dict[str, Any]]
-) -> list[str]:
+def field_names(fields: tuple[dict[str, Any], ...] | list[dict[str, Any]]) -> list[str]:
     """Every field name on the board, in read order — for a diagnostic."""
     return [f["name"] for f in fields if isinstance(f.get("name"), str)]
 
@@ -379,11 +379,7 @@ def option_names(field: dict[str, Any]) -> list[str]:
     options = field.get("options")
     if not isinstance(options, list):
         return []
-    return [
-        o["name"]
-        for o in options
-        if isinstance(o, dict) and isinstance(o.get("name"), str)
-    ]
+    return [o["name"] for o in options if isinstance(o, dict) and isinstance(o.get("name"), str)]
 
 
 def option_id(field: dict[str, Any], value: str) -> str | None:

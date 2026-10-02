@@ -39,8 +39,12 @@ seam (`_lib.containment.move_sub_issue`; never a raw `gh` call here):
   * The native write comes FIRST, the first-line rewrite straight after it. A
     move GitHub refuses stops the call before any write, naming the parent the
     issue stays under (exit 3) — so the two records never end up naming
-    different parents because of this verb. On an instance without native
-    sub-issues the link is skipped and the first line stays the record.
+    different parents because of this verb. So does any other link or move
+    GitHub refuses, with GitHub's own message quoted: a 422 is never read as an
+    instance without sub-issues (#808, ADR-035), so it stops the call as a
+    failure, followed by the `containment: textual` way out. On an instance the
+    seam establishes has no native sub-issues the link is skipped and the
+    first line stays the record.
   * A parent-ref that names a milestone is not a sub-issue relationship, and
     `textual` containment writes no native links at all; in both cases only
     the first line changes.
@@ -155,24 +159,29 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate  # noqa: E402
-from _lib import axis_carriage  # noqa: E402
-from _lib import axis_labels  # noqa: E402
-from _lib import board_fields  # noqa: E402
-from _lib import body_parent_ref  # noqa: E402
-from _lib import classification_rules  # noqa: E402
-from _lib import containment  # noqa: E402
-from _lib import provenance  # noqa: E402
-from _lib import session_guard  # noqa: E402
-from _lib import substrate_writes  # noqa: E402
-from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
-from _lib.membership import (  # noqa: E402
+import contextlib
+
+from _lib import (
+    axis_carriage,
+    axis_labels,
+    board_fields,
+    body_parent_ref,
+    bootstrap_gate,
+    classification_rules,
+    containment,
+    provenance,
+    session_guard,
+    substrate_writes,
+)
+from _lib import lifecycle_inference as infer
+from _lib.gh import gh_get_issue, gh_run, load_adopter_config
+from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
     resolve_capability_root,
     resolve_invoker_identity,
 )
-from _lib.structural_type import infer_structural_type  # noqa: E402
+from _lib.structural_type import infer_structural_type
 
 
 @dataclass(frozen=True)
@@ -261,18 +270,14 @@ def main() -> int:
         return 1
 
     issue_types = _read_yaml(capability_root / "schemas" / "issue-types.yaml", yaml_loader)
-    classification = _read_yaml(
-        capability_root / "schemas" / "classification.yaml", yaml_loader
-    )
+    classification = _read_yaml(capability_root / "schemas" / "classification.yaml", yaml_loader)
     substrate_map = axis_labels.load_substrate_map(capability_root)
 
     # `id` + `url` are for the board path: `id` is the issue's GraphQL node id (the
     # key the card lookup asks `projectItems` on) and `url` renders the exact
     # `gh project item-add` remediation when the card is missing. Both ride the one
     # `gh issue view` round-trip this call already makes.
-    issue = gh_get_issue(
-        args.issue_number, config, fields="title,body,labels,id,url"
-    )
+    issue = gh_get_issue(args.issue_number, config, fields="title,body,labels,id,url")
     if issue is None:
         return 2
     title = str(issue.get("title", ""))
@@ -291,8 +296,7 @@ def main() -> int:
     valid_kinds = _axis_values(classification, "type")
     if args.kind is not None and valid_kinds and args.kind not in valid_kinds:
         errors.append(
-            f"kind {args.kind!r} is not a declared type value "
-            f"({', '.join(sorted(valid_kinds))})"
+            f"kind {args.kind!r} is not a declared type value ({', '.join(sorted(valid_kinds))})"
         )
     elif args.kind is not None:
         # Refuse the kind/structural mismatch DEC-011 declares a hard-reject:
@@ -345,7 +349,9 @@ def main() -> int:
         elif args.parent == args.issue_number:
             errors.append(f"cannot set --parent: #{args.issue_number} cannot be its own parent")
         else:
-            structural_type = infer_structural_type(title, issue_types, classification=classification)
+            structural_type = infer_structural_type(
+                title, issue_types, classification=classification
+            )
             if structural_type is None:
                 errors.append(
                     f"cannot set --parent: issue title {title!r} has no recognised "
@@ -425,9 +431,7 @@ def main() -> int:
 
     board_writes: list[BoardWrite] = []
     if board_axes:
-        board_state = _read_board_state(
-            config, issue=issue, issue_number=args.issue_number
-        )
+        board_state = _read_board_state(config, issue=issue, issue_number=args.issue_number)
         board_results, board_writes = _plan_board_fields(
             board_axes=board_axes,
             state=board_state,
@@ -517,9 +521,7 @@ def main() -> int:
     ):
         return 3
     if body_changed:
-        stamped = provenance.stamp(
-            new_body or "", provenance.read_versions(capability_root)
-        )
+        stamped = provenance.stamp(new_body or "", provenance.read_versions(capability_root))
         if not _gh_write_body(args.issue_number, stamped, config):
             if native_changed:
                 print(
@@ -582,7 +584,7 @@ def _route_axes(
     priority: str | None,
     workstream: str | None,
     config: dict,
-    substrate_map: "axis_labels.SubstrateMap | None",
+    substrate_map: axis_labels.SubstrateMap | None,
     board_id: int | str | None = None,
 ) -> tuple[dict[str, str], dict[str, str], list[FieldResult]]:
     """Split the requested priority/workstream axes by the substrate that owns them.
@@ -666,7 +668,7 @@ def _plan_labels(
     priority: str | None,
     workstream: str | None,
     current_labels: list[str],
-    substrate_map: "axis_labels.SubstrateMap | None",
+    substrate_map: axis_labels.SubstrateMap | None,
 ) -> tuple[list[FieldResult], list[str], list[str]]:
     """Resolve priority/workstream to add/remove label sets (idempotent).
 
@@ -1014,8 +1016,7 @@ def _plan_board_fields(
                 ok=True,
                 changed=True,
                 message=(
-                    f"{axis}: set board field `{field_name}` = {value!r} on "
-                    f"{state.board_ref}"
+                    f"{axis}: set board field `{field_name}` = {value!r} on {state.board_ref}"
                 ),
             )
         )
@@ -1030,7 +1031,7 @@ def _plan_kind(
     current_labels: list[str],
     issue_types: dict,
     classification: dict,
-    substrate_map: "axis_labels.SubstrateMap | None",
+    substrate_map: axis_labels.SubstrateMap | None,
 ) -> tuple[list[FieldResult], list[str], list[str], str | None]:
     """Resolve a kind change to a `type:*` label swap + title-prefix realignment.
 
@@ -1080,8 +1081,7 @@ def _plan_kind(
                 ok=True,
                 changed=False,
                 message=(
-                    f"kind: unsupported under your substrate-map "
-                    f"(value {kind!r}); not labelled"
+                    f"kind: unsupported under your substrate-map (value {kind!r}); not labelled"
                 ),
             )
         )
@@ -1113,8 +1113,7 @@ def _plan_kind(
                 field="kind",
                 ok=True,
                 changed=True,
-                message=f"kind: set {resolved!r}"
-                + (f" (was {', '.join(stale)})" if stale else ""),
+                message=f"kind: set {resolved!r}" + (f" (was {', '.join(stale)})" if stale else ""),
             )
         )
 
@@ -1161,14 +1160,21 @@ def _plan_parent(body: str, parent_ref_line: str) -> tuple[str, FieldResult]:
     """Rewrite the body's first parent-ref line to `parent_ref_line` (idempotent).
 
     A parent-ref is the first non-blank body line in one of the recognised forms
-    (`<Label>: #<N>` or `Milestone: [#<N>](../milestone/<N>)`). When the first
-    line already matches a parent-ref shape, it is replaced; otherwise the new
-    parent-ref is prepended. Setting the parent to the value already present is a
-    no-op.
+    (`<Label>: #<N>` or `Milestone: [#<N>](../milestone/<N>)`), read past a
+    leading DEC-013 `Integration:` marker, which sits directly above it. When
+    that line already matches a parent-ref shape, it is replaced; otherwise the
+    new parent-ref is added — directly below the marker on a marked body, so the
+    marker stays the first line with no blank line between the two (#765), and
+    at the top of an unmarked one — with a blank line before the content that
+    follows. Setting the parent to the value already present is a no-op.
     """
     lines = body.splitlines()
-    # Find the first non-blank line index.
-    first_idx = next((i for i, ln in enumerate(lines) if ln.strip()), None)
+    content = [i for i, ln in enumerate(lines) if ln.strip()]
+    # The marker is found by the same skip every parent-ref reader applies, so
+    # this write puts the parent-ref exactly where the readers look for it.
+    marker_idx = content[0] if infer.strip_integration_marker(body) != body else None
+    ref_candidates = content[1:] if marker_idx is not None else content
+    first_idx = ref_candidates[0] if ref_candidates else None
 
     if first_idx is not None and _is_parent_ref(lines[first_idx]):
         if lines[first_idx].strip() == parent_ref_line:
@@ -1180,14 +1186,23 @@ def _plan_parent(body: str, parent_ref_line: str) -> tuple[str, FieldResult]:
             )
         old = lines[first_idx].strip()
         lines[first_idx] = parent_ref_line
-        new_body = "\n".join(lines)
-        if body.endswith("\n"):
-            new_body += "\n"
-        return new_body, FieldResult(
+        return _rejoin(lines, body), FieldResult(
             field="parent",
             ok=True,
             changed=True,
             message=f"parent: set {parent_ref_line!r} (was {old!r})",
+        )
+
+    if marker_idx is not None:
+        # No parent-ref under the marker — insert one directly below it.
+        below = marker_idx + 1
+        followed_by_content = below < len(lines) and bool(lines[below].strip())
+        lines[below:below] = [parent_ref_line, *([""] if followed_by_content else [])]
+        return _rejoin(lines, body), FieldResult(
+            field="parent",
+            ok=True,
+            changed=True,
+            message=f"parent: set {parent_ref_line!r} (inserted below the integration marker)",
         )
 
     # No parent-ref present — prepend one with a blank-line separator.
@@ -1198,6 +1213,12 @@ def _plan_parent(body: str, parent_ref_line: str) -> tuple[str, FieldResult]:
         changed=True,
         message=f"parent: set {parent_ref_line!r} (prepended)",
     )
+
+
+def _rejoin(lines: list[str], body: str) -> str:
+    """Join edited body `lines` back into a body, keeping `body`'s final newline."""
+    joined = "\n".join(lines)
+    return joined + "\n" if body.endswith("\n") else joined
 
 
 def _links_natively(parent_ref_line: str, capability_root: Path) -> bool:
@@ -1214,9 +1235,7 @@ def _links_natively(parent_ref_line: str, capability_root: Path) -> bool:
     )
 
 
-def _plan_native_parent(
-    holder: containment.NativeParent | None, parent: int
-) -> FieldResult:
+def _plan_native_parent(holder: containment.NativeParent | None, parent: int) -> FieldResult:
     """The native half of `--parent`: add the link, move it, or leave it."""
     if holder is not None and holder.is_issue(parent):
         return FieldResult(
@@ -1285,7 +1304,6 @@ def _adopter_workstreams(config: dict) -> set[str]:
     return set()
 
 
-
 def _parent_ref_line(type_entry: dict, parent_num: int) -> str:
     """Build the `<Label>: #<N>` parent-ref line (parity with create-issue)."""
     form = type_entry.get("parent_ref_form")
@@ -1300,9 +1318,7 @@ def _parent_ref_line(type_entry: dict, parent_num: int) -> str:
 # ---- gh write-back --------------------------------------------------------
 
 
-def _gh_edit_labels(
-    issue_number: int, add: list[str], remove: list[str], config: dict
-) -> bool:
+def _gh_edit_labels(issue_number: int, add: list[str], remove: list[str], config: dict) -> bool:
     cmd = ["gh", "issue", "edit", str(issue_number)]
     for lbl in add:
         cmd.extend(["--add-label", lbl])
@@ -1323,33 +1339,34 @@ def _gh_edit_labels(
     return True
 
 
-def _write_native_parent(
-    issue_number: int, parent: int, config: dict, *, had_parent: bool
-) -> bool:
+def _write_native_parent(issue_number: int, parent: int, config: dict, *, had_parent: bool) -> bool:
     """Put the issue natively under `parent` through the containment seam.
 
     True when the caller may go on to rewrite the first line: the link is in
     place (added, moved, or found already there), or the instance has no native
     sub-issues and the issue had no native parent — then the first line is the
     only record, as in `create-issue`. False, with the reason printed, when the
-    link could not be put in place: a move GitHub refused (the issue stays
-    under the parent it has), an "unsupported" answer for an issue that does
-    have a native parent, or a failed write. Nothing else has been written at
-    that point.
+    link could not be put in place: a move GitHub refused on the one-parent
+    rule (the issue stays under the parent it has), an "unsupported" answer for
+    an issue that does have a native parent, or a failed write. Any 422 GitHub
+    refused for another reason is a failed write — the seam never reads one as
+    "unsupported" (#808, ADR-035) — reported with GitHub's own words and
+    followed by the `containment: textual` way out. Nothing else has been
+    written at that point.
     """
-    result = containment.move_sub_issue(
-        config, parent_number=parent, child_number=issue_number
-    )
+    result = containment.move_sub_issue(config, parent_number=parent, child_number=issue_number)
     if result.ok:
         print(f"  [ok] {result.detail}")
         return True
     if result.outcome is containment.LinkOutcome.UNSUPPORTED and not had_parent:
-        print(f"  [warn] {result.detail}")
+        print(f"  [warn] {result.detail}; the first line alone records the parent")
         return True
     print(
         f"\n[failed] #{issue_number}: parent NOT set — {result.detail}. Nothing "
         "was written: the first line and the native link are as they were."
     )
+    if result.refused:
+        print(f"  → {axis_labels.TEXTUAL_CONTAINMENT_WAY_OUT}")
     return False
 
 
@@ -1404,9 +1421,7 @@ def _gh_write_title(issue_number: int, title: str, config: dict) -> bool:
 
 def _gh_write_body(issue_number: int, body: str, config: dict) -> bool:
     """Write the rewritten body via `gh issue edit --body-file` (edit-issue's pattern)."""
-    with tempfile.NamedTemporaryFile(
-        "w", suffix=".md", encoding="utf-8", delete=False
-    ) as f:
+    with tempfile.NamedTemporaryFile("w", suffix=".md", encoding="utf-8", delete=False) as f:
         f.write(body)
         body_path = f.name
     try:
@@ -1424,10 +1439,8 @@ def _gh_write_body(issue_number: int, body: str, config: dict) -> bool:
             )
             return False
     finally:
-        try:
+        with contextlib.suppress(OSError):
             Path(body_path).unlink(missing_ok=True)
-        except OSError:
-            pass
     return True
 
 

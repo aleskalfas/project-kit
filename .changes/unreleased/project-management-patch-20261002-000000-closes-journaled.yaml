@@ -1,0 +1,25 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+  requires_backbone: release
+body: >
+  Each close `close-issue` makes is now journaled. A won't-do close, a
+  cascade-eligible container's close and a pr-merge close — the one `done-work`
+  runs on each issue a merged pull request closes — wrote the Done label and
+  recorded nothing, so with journal logging on `pkit pm history <N>
+  --check-drift` reported drift for closes pkit itself made. Each now records
+  one move to Done, after the close and its label reconcile, from the state the
+  issue held before the close: its state label, else its milestone, else Todo,
+  so an issue GitHub closed when a pull request merged is recorded from where
+  the merge found it. The close mode is the entry's reason, which `pkit pm
+  history` shows (`wont-do close: <reason>`, `cascade-eligibility close: …`,
+  `pr-merge close: closed by merged PR #<M>`). `move-issue --to done` on an
+  issue GitHub already closed — the move `done-work` makes on its own issue
+  after a merge — records the close as it rewrites the stale label. An issue
+  already labelled Done is not recorded again, so a re-run adds nothing. A close
+  the engine refuses, or one the workflow does not declare for the issue's type
+  (a Task closed from In Progress), is warned about as a refused move is; the
+  close stands and the exit code is unchanged. Upgrade the capability together
+  with the backbone: it needs the release that adds `pkit process move
+  --reason`.

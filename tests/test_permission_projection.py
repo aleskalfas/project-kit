@@ -6,6 +6,7 @@ output; the same-code *proof* (apply emits exactly project()'s output) is an
 acceptance criterion of the apply task (#250/#252), which doesn't exist yet — so
 there is no tautological two-producer fixture here.
 """
+
 from __future__ import annotations
 
 import importlib.util
@@ -21,6 +22,7 @@ CATALOG = REPO / ".pkit" / "schemas" / "privilege-catalog.yaml"
 
 def _load(path, name):
     spec = importlib.util.spec_from_file_location(name, path)
+    assert spec is not None and spec.loader is not None
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
@@ -50,10 +52,12 @@ def test_cmd_only_allow_for_all_projects_to_settings(projection, catalog):
 def test_denies_are_not_projected(projection, catalog):
     # The guardrail denies (flag_any/subcommand recognizers) must NOT be rendered
     # — re-deriving them as positional prefixes would weaken the fail-closed half.
-    model = {"grants": [
-        {"subject": "all", "privilege": _tok("destructive-fs"), "effect": "deny"},
-        {"subject": "all", "privilege": _tok("vcs-history-rewrite"), "effect": "deny"},
-    ]}
+    model = {
+        "grants": [
+            {"subject": "all", "privilege": _tok("destructive-fs"), "effect": "deny"},
+            {"subject": "all", "privilege": _tok("vcs-history-rewrite"), "effect": "deny"},
+        ]
+    }
     out = projection.project(model, catalog)
     assert out["settings"] == {"allow": [], "deny": []}
 
@@ -72,32 +76,48 @@ def test_per_agent_bash_routes_to_runtime(projection, catalog):
 
 
 def test_per_agent_tool_routes_to_runtime(projection, catalog):
-    model = {"grants": [{"subject": "agent:critic", "privilege": _tok("web-fetch"), "effect": "allow"}]}
+    model = {
+        "grants": [{"subject": "agent:critic", "privilege": _tok("web-fetch"), "effect": "allow"}]
+    }
     out = projection.project(model, catalog)
     assert out["settings"]["allow"] == []
     assert any(r["privilege"] == "web-fetch" for r in out["runtime"])
 
 
 def test_scoped_grant_is_unprojectable(projection, catalog):
-    model = {"grants": [{
-        "subject": "all", "privilege": _tok("docker"), "effect": "allow",
-        "scope": ["services/**"],
-    }]}
+    model = {
+        "grants": [
+            {
+                "subject": "all",
+                "privilege": _tok("docker"),
+                "effect": "allow",
+                "scope": ["services/**"],
+            }
+        ]
+    }
     out = projection.project(model, catalog)
     assert out["settings"]["allow"] == []
     assert len(out["unprojectable"]) == 1 and out["unprojectable"][0]["privilege"] == "docker"
 
 
 def test_full_model_projection_routes_each_grant(projection, catalog):
-    model = {"grants": [
-        {"subject": "all", "privilege": _tok("privilege-escalation"), "effect": "deny"},
-        {"subject": "operator",
-         "privilege": [_tok("vcs"), _tok("issue-tracker"), _tok("kit"), _tok("repo-read")],
-         "effect": "allow"},
-        {"subject": "agent:pm", "privilege": _tok("vcs"), "effect": "allow"},
-        {"subject": "agent:devops", "privilege": _tok("docker"),
-         "scope": ["services/**"], "effect": "allow"},
-    ]}
+    model = {
+        "grants": [
+            {"subject": "all", "privilege": _tok("privilege-escalation"), "effect": "deny"},
+            {
+                "subject": "operator",
+                "privilege": [_tok("vcs"), _tok("issue-tracker"), _tok("kit"), _tok("repo-read")],
+                "effect": "allow",
+            },
+            {"subject": "agent:pm", "privilege": _tok("vcs"), "effect": "allow"},
+            {
+                "subject": "agent:devops",
+                "privilege": _tok("docker"),
+                "scope": ["services/**"],
+                "effect": "allow",
+            },
+        ]
+    }
     out = projection.project(model, catalog)
     # Only `all` bash projects to settings; operator bash → runtime. So operator's
     # repo-read (tool) is the only thing reaching settings here.

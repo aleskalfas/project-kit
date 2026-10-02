@@ -5,6 +5,7 @@ adapter's `_resolve_agent.py` — the (B) factoring's anti-drift net: the
 reference-detection key-set, and the *value*-resolution behaviour the backbone's
 `expand_placeholders` mirrors (exercised against the real resolver).
 """
+
 from __future__ import annotations
 
 import re
@@ -26,6 +27,7 @@ REPO = Path(__file__).resolve().parent.parent
 
 # --- anti-drift guard: backbone keys must match the adapter resolver ---------
 
+
 def test_resolvable_keys_match_adapter_resolver():
     """The (B) backbone scan only stays correct if its resolvable-key set — and
     the ADR-052 hard/optional channel split — equals what `_resolve_agent.py`
@@ -36,7 +38,7 @@ def test_resolvable_keys_match_adapter_resolver():
     def _named_tuple(name: str) -> tuple[str, ...]:
         # Match the module-level assignment `NAME[: annotation] = (...)` at the
         # start of a line, ignoring any comment mentions of the same name.
-        m = re.search(rf'(?m)^{name}[^=(\n]*=\s*\(([^)]*)\)', resolver)
+        m = re.search(rf"(?m)^{name}[^=(\n]*=\s*\(([^)]*)\)", resolver)
         assert m, f"could not find the {name} tuple in _resolve_agent.py"
         return tuple(re.findall(r'"([a-z]+)"', m.group(1)))
 
@@ -68,8 +70,10 @@ def test_policy_vocabulary_matches_adapter_resolver():
 
 # --- fixtures ----------------------------------------------------------------
 
-def _agent(dir_: Path, name: str, *, owns=None, reads_paths=None,
-           reads_patterns=None, body="body") -> Path:
+
+def _agent(
+    dir_: Path, name: str, *, owns=None, reads_paths=None, reads_patterns=None, body="body"
+) -> Path:
     dir_.mkdir(parents=True, exist_ok=True)
     fm = ["---"]
     if owns:
@@ -101,18 +105,23 @@ def _project(tmp_path: Path, *, overlay: str | None = None) -> Path:
     lifecycle.mkdir(parents=True)
     shutil.copy2(REPO / ".pkit" / "lifecycle" / "ownership.py", lifecycle / "ownership.py")
     if overlay is not None:
-        (proj / ".pkit" / "agents" / "project" / "overlay.yaml").write_text(overlay, encoding="utf-8")
+        (proj / ".pkit" / "agents" / "project" / "overlay.yaml").write_text(
+            overlay, encoding="utf-8"
+        )
     return proj
 
 
 # --- resolution parity with the adapter resolver (#699) ---------------------
+
 
 def _resolve_via_adapter(source: Path, agent_name: str, overlay: Path):
     """Run the adapter resolver on one agent; return (returncode, frontmatter, stderr)."""
     resolver = REPO / ".pkit" / "adapters" / "claude-code" / "_resolve_agent.py"
     proc = subprocess.run(
         [str(resolver), str(source), agent_name, str(overlay)],
-        capture_output=True, text=True, check=False,
+        capture_output=True,
+        text=True,
+        check=False,
     )
     m = re.match(r"^---\n(.*?\n)---\n", proc.stdout, re.DOTALL)
     fm = YAML(typ="safe").load(m.group(1)) if m else None
@@ -137,6 +146,7 @@ def test_expand_placeholders_matches_adapter_resolver(tmp_path):
         src = _agent(proj / ".pkit" / "agents" / "core", agent_name, owns=declared)
         code, fm, stderr = _resolve_via_adapter(src, agent_name, overlay)
         assert code == 0, stderr
+        assert fm is not None
         entries, undefined = ao.expand_placeholders(
             declared, agent_name=agent_name, overlay=ao.load_overlay_values(proj)
         )
@@ -144,13 +154,16 @@ def test_expand_placeholders_matches_adapter_resolver(tmp_path):
         assert [e.value for e in entries] == fm["owns"]
 
 
-@pytest.mark.parametrize(("declared", "override"), [
-    ({}, {}),
-    ({"model": "sonnet", "effort": "low"}, {}),
-    ({"model": "opus"}, {"model": "haiku", "effort": "high"}),
-    ({"model": "opus", "effort": "max"}, {"model": "inherit", "effort": "inherit"}),
-    ({"model": "sonet"}, {"effort": "extreme"}),
-])
+@pytest.mark.parametrize(
+    ("declared", "override"),
+    [
+        ({}, {}),
+        ({"model": "sonnet", "effort": "low"}, {}),
+        ({"model": "opus"}, {"model": "haiku", "effort": "high"}),
+        ({"model": "opus", "effort": "max"}, {"model": "inherit", "effort": "inherit"}),
+        ({"model": "sonet"}, {"effort": "extreme"}),
+    ],
+)
 def test_effective_policy_matches_adapter_resolver(tmp_path, declared, override):
     """What `pkit agents` reports as an agent's effective model and effort is
     exactly what the deploy writes (#1047): a key for a real value, none for
@@ -158,7 +171,8 @@ def test_effective_policy_matches_adapter_resolver(tmp_path, declared, override)
     and whether or not the written value was refused."""
     overlay_text = (
         "overrides:\n  a:\n" + "".join(f"    {k}: {v}\n" for k, v in override.items())
-        if override else ""
+        if override
+        else ""
     )
     proj = _project(tmp_path, overlay=overlay_text)
     src = proj / ".pkit" / "agents" / "core" / "a.md"
@@ -170,6 +184,7 @@ def test_effective_policy_matches_adapter_resolver(tmp_path, declared, override)
         src, "a", proj / ".pkit" / "agents" / "project" / "overlay.yaml"
     )
     assert code == 0, stderr
+    assert fm is not None
 
     status = {s.name: s for s in ao.agent_overlay_statuses(proj)}["a"]
     reported = {s.key: s.value for s in status.policy if s.value != ap.INHERIT}
@@ -201,7 +216,8 @@ def test_expand_placeholders_records_category_provenance(tmp_path):
     proj = _project(tmp_path, overlay="code-paths:\n  - src/app/\n")
     entries, _ = ao.expand_placeholders(
         ["<code-paths>", "CONTRIBUTING.md"],
-        agent_name="a", overlay=ao.load_overlay_values(proj),
+        agent_name="a",
+        overlay=ao.load_overlay_values(proj),
     )
     assert [(e.value, e.category) for e in entries] == [
         ("src/app/", "code-paths"),
@@ -220,11 +236,16 @@ def test_load_overlay_values_bare_key_resolves_to_undefined(tmp_path):
 
 # --- discovery + reference-detection -----------------------------------------
 
+
 def test_referenced_categories_only_from_resolvable_keys(tmp_path):
     proj = _project(tmp_path, overlay="")
-    src = _agent(proj / ".pkit" / "agents" / "core", "a",
-                 owns=["<architecture-docs>"], reads_paths=["<workflow-docs>", "README.md"],
-                 body="prose mentions <not-a-real-ref> which must be ignored")
+    src = _agent(
+        proj / ".pkit" / "agents" / "core",
+        "a",
+        owns=["<architecture-docs>"],
+        reads_paths=["<workflow-docs>", "README.md"],
+        body="prose mentions <not-a-real-ref> which must be ignored",
+    )
     cats = ao.agent_referenced_categories(src)
     assert cats == {"architecture-docs", "workflow-docs"}  # body token NOT counted
 
@@ -252,6 +273,7 @@ def test_capability_wins_over_core_and_project_over_capability(tmp_path):
 
 # --- status ------------------------------------------------------------------
 
+
 def test_missing_category_marks_agent_skipped(tmp_path):
     proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
     _agent(proj / ".pkit" / "agents" / "core", "needs-arch", owns=["<architecture-docs>"])
@@ -274,6 +296,7 @@ def test_per_agent_override_satisfies_reference(tmp_path):
 
 
 # --- reconcile ---------------------------------------------------------------
+
 
 def test_reconcile_dry_run_does_not_write(tmp_path):
     proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
@@ -311,13 +334,14 @@ def test_reconcile_write_appends_commented_stubs_idempotently(tmp_path):
 
 # --- reconcile: three-state regression (issue #40) ---------------------------
 
+
 def test_reconcile_missing_state_adds_stub(tmp_path):
     """State 1 (missing): category absent from overlay → stub is added."""
     proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
     _agent(proj / ".pkit" / "agents" / "core", "a", owns=["<architecture-docs>"])
     overlay = proj / ".pkit" / "agents" / "project" / "overlay.yaml"
 
-    added, report = ao.reconcile_overlay(proj, write=True)
+    added, _report = ao.reconcile_overlay(proj, write=True)
 
     assert "architecture-docs" in added
     assert "# architecture-docs:" in overlay.read_text()
@@ -354,10 +378,7 @@ def test_reconcile_commented_stub_state_reports_guidance_no_duplicate(tmp_path):
 
 def test_reconcile_defined_state_reports_complete(tmp_path):
     """State 3 (defined): uncommented entry with paths → overlay is complete."""
-    overlay_text = (
-        "workflow-docs:\n  - README.md\n"
-        "architecture-docs:\n  - docs/ARCH.md\n"
-    )
+    overlay_text = "workflow-docs:\n  - README.md\narchitecture-docs:\n  - docs/ARCH.md\n"
     proj = _project(tmp_path, overlay=overlay_text)
     _agent(proj / ".pkit" / "agents" / "core", "a", owns=["<architecture-docs>"])
 
@@ -370,6 +391,7 @@ def test_reconcile_defined_state_reports_complete(tmp_path):
 
 
 # --- CLI ---------------------------------------------------------------------
+
 
 def test_cli_agents_lists_status(tmp_path, monkeypatch):
     proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
@@ -398,6 +420,7 @@ def test_cli_agents_skip_report_leads_with_adopt_and_names_reconcile(tmp_path, m
 
 def test_cli_agents_never_load_bearing(tmp_path, monkeypatch):
     from project_kit import cli_render
+
     proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
     _agent(proj / ".pkit" / "agents" / "core", "needs-arch", owns=["<architecture-docs>"])
     monkeypatch.chdir(proj)
@@ -409,6 +432,7 @@ def test_cli_agents_never_load_bearing(tmp_path, monkeypatch):
 
 # --- reconcile: detect-then-fill (issue #45) ---------------------------------
 
+
 def test_reconcile_auto_fills_when_conventional_dir_exists(tmp_path):
     """State 4 (detect-then-fill): missing category + conventional default dir
     exists → written uncommented; agent becomes deployable after write."""
@@ -419,7 +443,7 @@ def test_reconcile_auto_fills_when_conventional_dir_exists(tmp_path):
     # Create the conventional default directory.
     (proj / "docs" / "architecture").mkdir(parents=True)
 
-    added, report = ao.reconcile_overlay(proj, write=True)
+    added, _report = ao.reconcile_overlay(proj, write=True)
 
     assert "architecture-docs" in added
     text = overlay.read_text()
@@ -471,10 +495,7 @@ def test_reconcile_stubs_when_conventional_dir_absent(tmp_path):
 
 def test_reconcile_does_not_overwrite_adopter_set_value(tmp_path):
     """An adopter-set (uncommented, non-conventional) value is never clobbered."""
-    overlay_text = (
-        "workflow-docs:\n  - README.md\n"
-        "architecture-docs:\n  - docs/custom-arch/\n"
-    )
+    overlay_text = "workflow-docs:\n  - README.md\narchitecture-docs:\n  - docs/custom-arch/\n"
     proj = _project(tmp_path, overlay=overlay_text)
     _agent(proj / ".pkit" / "agents" / "core", "a", owns=["<architecture-docs>"])
     overlay = proj / ".pkit" / "agents" / "project" / "overlay.yaml"
@@ -497,14 +518,13 @@ def test_reconcile_mixed_auto_fill_and_stub(tmp_path):
     one without (stub).  Both returned in added; correct form for each."""
     proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
     # Agent references both architecture-docs and adr-records.
-    _agent(proj / ".pkit" / "agents" / "core", "a",
-           owns=["<architecture-docs>", "<adr-records>"])
+    _agent(proj / ".pkit" / "agents" / "core", "a", owns=["<architecture-docs>", "<adr-records>"])
     overlay = proj / ".pkit" / "agents" / "project" / "overlay.yaml"
 
     # Only architecture-docs conventional dir exists; adr-records dir does not.
     (proj / "docs" / "architecture").mkdir(parents=True)
 
-    added, report = ao.reconcile_overlay(proj, write=True)
+    added, _report = ao.reconcile_overlay(proj, write=True)
 
     assert set(added) == {"architecture-docs", "adr-records"}
     text = overlay.read_text()
@@ -539,9 +559,7 @@ def test_reconcile_conventional_defaults_map_covers_architect_categories():
     """The CONVENTIONAL_CATEGORY_DEFAULTS map must declare defaults for every
     category referenced by the core architect agent, matching the paths
     documented in that agent's prose."""
-    architect_src = (
-        REPO / ".pkit" / "agents" / "core" / "architect.md"
-    )
+    architect_src = REPO / ".pkit" / "agents" / "core" / "architect.md"
     cats = ao.agent_referenced_categories(architect_src)
     # Both architect categories have a registered conventional default.
     for cat in cats:
@@ -563,14 +581,18 @@ def test_reconcile_write_fills_write_carrying_category_with_empty_list(tmp_path)
     seed (ADR-051 Decision point 1).
     """
     proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
-    _agent(proj / ".pkit" / "agents" / "core", "process-author",
-           owns=[f"<{_WRITE_CARRYING}>"], body=f"owns `<{_WRITE_CARRYING}>`")
+    _agent(
+        proj / ".pkit" / "agents" / "core",
+        "process-author",
+        owns=[f"<{_WRITE_CARRYING}>"],
+        body=f"owns `<{_WRITE_CARRYING}>`",
+    )
 
     added, report = ao.reconcile_overlay(proj, write=True)
     assert added == [_WRITE_CARRYING]
     text = (proj / ".pkit" / "agents" / "project" / "overlay.yaml").read_text()
     assert f"{_WRITE_CARRYING}: []" in text
-    assert f"# {_WRITE_CARRYING}:" not in text          # uncommented, not a stub
+    assert f"# {_WRITE_CARRYING}:" not in text  # uncommented, not a stub
     assert "empty list" in report
     # The category now resolves — the agent is no longer skipped.
     assert ao.missing_categories(proj) == []
@@ -589,8 +611,12 @@ def test_reconcile_write_carrying_resolves_to_empty_owns(tmp_path):
 
 def test_reconcile_write_carrying_dry_run_does_not_write(tmp_path):
     proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
-    _agent(proj / ".pkit" / "agents" / "core", "process-author",
-           owns=[f"<{_WRITE_CARRYING}>"], body=f"owns `<{_WRITE_CARRYING}>`")
+    _agent(
+        proj / ".pkit" / "agents" / "core",
+        "process-author",
+        owns=[f"<{_WRITE_CARRYING}>"],
+        body=f"owns `<{_WRITE_CARRYING}>`",
+    )
     before = (proj / ".pkit" / "agents" / "project" / "overlay.yaml").read_text()
 
     added, report = ao.reconcile_overlay(proj, write=False)
@@ -601,8 +627,12 @@ def test_reconcile_write_carrying_dry_run_does_not_write(tmp_path):
 
 def test_reconcile_write_carrying_idempotent(tmp_path):
     proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
-    _agent(proj / ".pkit" / "agents" / "core", "process-author",
-           owns=[f"<{_WRITE_CARRYING}>"], body=f"owns `<{_WRITE_CARRYING}>`")
+    _agent(
+        proj / ".pkit" / "agents" / "core",
+        "process-author",
+        owns=[f"<{_WRITE_CARRYING}>"],
+        body=f"owns `<{_WRITE_CARRYING}>`",
+    )
     ao.reconcile_overlay(proj, write=True)
     after_first = (proj / ".pkit" / "agents" / "project" / "overlay.yaml").read_text()
 
@@ -616,8 +646,12 @@ def test_reconcile_write_carrying_does_not_overwrite_adopter_paths(tmp_path):
     """An adopter who nominated real paths keeps them — never reset to `[]`."""
     overlay = f"{_WRITE_CARRYING}:\n  - .pkit/capabilities/mine/schemas/flow.yaml\n"
     proj = _project(tmp_path, overlay=overlay)
-    _agent(proj / ".pkit" / "agents" / "core", "process-author",
-           owns=[f"<{_WRITE_CARRYING}>"], body=f"owns `<{_WRITE_CARRYING}>`")
+    _agent(
+        proj / ".pkit" / "agents" / "core",
+        "process-author",
+        owns=[f"<{_WRITE_CARRYING}>"],
+        body=f"owns `<{_WRITE_CARRYING}>`",
+    )
 
     added, _ = ao.reconcile_overlay(proj, write=True)
     assert added == []
@@ -628,10 +662,18 @@ def test_reconcile_mixes_empty_fill_with_conventional_fill(tmp_path):
     """The two fill kinds coexist: one gets `[]`, the other its conventional dir."""
     proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
     (proj / "docs" / "architecture").mkdir(parents=True)
-    _agent(proj / ".pkit" / "agents" / "core", "process-author",
-           owns=[f"<{_WRITE_CARRYING}>"], body=f"owns `<{_WRITE_CARRYING}>`")
-    _agent(proj / ".pkit" / "agents" / "core", "architect",
-           owns=["<architecture-docs>"], body="owns `<architecture-docs>`")
+    _agent(
+        proj / ".pkit" / "agents" / "core",
+        "process-author",
+        owns=[f"<{_WRITE_CARRYING}>"],
+        body=f"owns `<{_WRITE_CARRYING}>`",
+    )
+    _agent(
+        proj / ".pkit" / "agents" / "core",
+        "architect",
+        owns=["<architecture-docs>"],
+        body="owns `<architecture-docs>`",
+    )
 
     added, _ = ao.reconcile_overlay(proj, write=True)
     assert set(added) == {_WRITE_CARRYING, "architecture-docs"}
@@ -643,8 +685,12 @@ def test_reconcile_mixes_empty_fill_with_conventional_fill(tmp_path):
 def test_agents_status_says_write_carrying_is_not_adoptable(tmp_path, monkeypatch):
     """The `pkit agents` skip report must not send the adopter to a command that refuses."""
     proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
-    _agent(proj / ".pkit" / "agents" / "core", "process-author",
-           owns=[f"<{_WRITE_CARRYING}>"], body=f"owns `<{_WRITE_CARRYING}>`")
+    _agent(
+        proj / ".pkit" / "agents" / "core",
+        "process-author",
+        owns=[f"<{_WRITE_CARRYING}>"],
+        body=f"owns `<{_WRITE_CARRYING}>`",
+    )
     monkeypatch.chdir(proj)
     result = CliRunner().invoke(main, ["agents"])
     assert result.exit_code == 0, result.output
@@ -655,17 +701,20 @@ def test_agents_status_says_write_carrying_is_not_adoptable(tmp_path, monkeypatc
 
 # --- optional reads: patterns-only categories (ADR-052) ----------------------
 
+
 def test_optional_undefined_deploys_and_drops_item(tmp_path):
     """A patterns-only category undefined in the overlay: the resolver deploys
     the agent (exit 0) and drops the item; the backbone reports it deployable
     with the category classed optional (ADR-052 Decision 3)."""
     proj = _project(tmp_path, overlay="")
     overlay = proj / ".pkit" / "agents" / "project" / "overlay.yaml"
-    src = _agent(proj / ".pkit" / "agents" / "core", "producer",
-                 reads_patterns=["<project-conventions>"])
+    src = _agent(
+        proj / ".pkit" / "agents" / "core", "producer", reads_patterns=["<project-conventions>"]
+    )
 
     code, fm, stderr = _resolve_via_adapter(src, "producer", overlay)
     assert code == 0, stderr
+    assert fm is not None
     reads = fm.get("reads") or {}
     assert reads.get("patterns", []) == []  # the undefined optional item dropped
 
@@ -680,11 +729,13 @@ def test_optional_defined_substitutes_the_path(tmp_path):
     resolved path just like any placeholder (ADR-052: defined → the path)."""
     proj = _project(tmp_path, overlay="project-conventions:\n  - docs/conventions/\n")
     overlay = proj / ".pkit" / "agents" / "project" / "overlay.yaml"
-    src = _agent(proj / ".pkit" / "agents" / "core", "producer",
-                 reads_patterns=["<project-conventions>"])
+    src = _agent(
+        proj / ".pkit" / "agents" / "core", "producer", reads_patterns=["<project-conventions>"]
+    )
 
     code, fm, stderr = _resolve_via_adapter(src, "producer", overlay)
     assert code == 0, stderr
+    assert fm is not None
     assert fm["reads"]["patterns"] == ["docs/conventions/"]
 
     st = {s.name: s for s in ao.agent_overlay_statuses(proj)}["producer"]
@@ -698,9 +749,13 @@ def test_patterns_plus_hard_reference_stays_hard(tmp_path):
     resolver exits non-zero and the backbone reports it not deployable."""
     proj = _project(tmp_path, overlay="")
     overlay = proj / ".pkit" / "agents" / "project" / "overlay.yaml"
-    src = _agent(proj / ".pkit" / "agents" / "core", "dual",
-                 owns=["<shared-cat>"], reads_patterns=["<shared-cat>"],
-                 body="owns `<shared-cat>`")
+    src = _agent(
+        proj / ".pkit" / "agents" / "core",
+        "dual",
+        owns=["<shared-cat>"],
+        reads_patterns=["<shared-cat>"],
+        body="owns `<shared-cat>`",
+    )
 
     code, _fm, stderr = _resolve_via_adapter(src, "dual", overlay)
     assert code != 0
@@ -715,8 +770,7 @@ def test_reconcile_surfaces_optional_category_as_optional(tmp_path):
     """reconcile adds a patterns-only category as an *optional* commented stub,
     framed 'the agent already deploys', and the agent stays deployable."""
     proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
-    _agent(proj / ".pkit" / "agents" / "core", "producer",
-           reads_patterns=["<project-conventions>"])
+    _agent(proj / ".pkit" / "agents" / "core", "producer", reads_patterns=["<project-conventions>"])
     overlay = proj / ".pkit" / "agents" / "project" / "overlay.yaml"
 
     added, report = ao.reconcile_overlay(proj, write=True)
@@ -737,12 +791,14 @@ def test_optional_drop_parity_with_adapter_resolver(tmp_path):
     the resolved patterns list is empty."""
     proj = _project(tmp_path, overlay="")
     overlay = proj / ".pkit" / "agents" / "project" / "overlay.yaml"
-    src = _agent(proj / ".pkit" / "agents" / "core", "producer",
-                 reads_patterns=["<project-conventions>"])
+    src = _agent(
+        proj / ".pkit" / "agents" / "core", "producer", reads_patterns=["<project-conventions>"]
+    )
 
     code, fm, _stderr = _resolve_via_adapter(src, "producer", overlay)
     st = {s.name: s for s in ao.agent_overlay_statuses(proj)}["producer"]
     assert (code == 0) is st.deployable is True
+    assert fm is not None
     assert (fm.get("reads") or {}).get("patterns", []) == []
 
 
@@ -752,11 +808,13 @@ def test_optional_bare_key_deploys_but_is_reported(tmp_path):
     `warning:` line instead of dropping it silently (#916)."""
     proj = _project(tmp_path, overlay="project-conventions:\n")
     overlay = proj / ".pkit" / "agents" / "project" / "overlay.yaml"
-    src = _agent(proj / ".pkit" / "agents" / "core", "producer",
-                 reads_patterns=["<project-conventions>"])
+    src = _agent(
+        proj / ".pkit" / "agents" / "core", "producer", reads_patterns=["<project-conventions>"]
+    )
 
     code, fm, stderr = _resolve_via_adapter(src, "producer", overlay)
     assert code == 0, stderr
+    assert fm is not None
     assert (fm.get("reads") or {}).get("patterns", []) == []
     assert "warning: " in stderr and "<project-conventions>" in stderr
 
@@ -765,8 +823,9 @@ def test_optional_absent_key_is_not_reported(tmp_path):
     """An absent optional key is the normal early state: dropped with no warning."""
     proj = _project(tmp_path, overlay="")
     overlay = proj / ".pkit" / "agents" / "project" / "overlay.yaml"
-    src = _agent(proj / ".pkit" / "agents" / "core", "producer",
-                 reads_patterns=["<project-conventions>"])
+    src = _agent(
+        proj / ".pkit" / "agents" / "core", "producer", reads_patterns=["<project-conventions>"]
+    )
 
     code, _fm, stderr = _resolve_via_adapter(src, "producer", overlay)
     assert code == 0, stderr
@@ -775,7 +834,8 @@ def test_optional_absent_key_is_not_reported(tmp_path):
 
 # --- adopt (issue #47) -------------------------------------------------------
 
-def _deploy_ok(target_root: Path, agent_name: str) -> bool:  # noqa: ARG001
+
+def _deploy_ok(target_root: Path, agent_name: str) -> bool:
     """Stub deploy_fn that always succeeds (avoids invoking deploy-agents.sh in tests)."""
     return True
 
@@ -788,8 +848,12 @@ def test_adopt_refuses_write_carrying_category_with_the_honest_reason(tmp_path):
     then have to fill by hand.
     """
     proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
-    _agent(proj / ".pkit" / "agents" / "core", "process-author",
-           owns=[f"<{_WRITE_CARRYING}>"], body=f"owns `<{_WRITE_CARRYING}>`")
+    _agent(
+        proj / ".pkit" / "agents" / "core",
+        "process-author",
+        owns=[f"<{_WRITE_CARRYING}>"],
+        body=f"owns `<{_WRITE_CARRYING}>`",
+    )
 
     with pytest.raises(click.ClickException) as exc:
         ao.adopt_agent(proj, "process-author", deploy_fn=_deploy_ok)
@@ -801,8 +865,12 @@ def test_adopt_refuses_write_carrying_category_with_the_honest_reason(tmp_path):
 def test_adopt_deploys_when_write_carrying_category_already_set(tmp_path):
     """Already `[]`: nothing to create, so adopt just deploys rather than erroring."""
     proj = _project(tmp_path, overlay=f"{_WRITE_CARRYING}: []\n")
-    _agent(proj / ".pkit" / "agents" / "core", "process-author",
-           owns=[f"<{_WRITE_CARRYING}>"], body=f"owns `<{_WRITE_CARRYING}>`")
+    _agent(
+        proj / ".pkit" / "agents" / "core",
+        "process-author",
+        owns=[f"<{_WRITE_CARRYING}>"],
+        body=f"owns `<{_WRITE_CARRYING}>`",
+    )
 
     result = ao.adopt_agent(proj, "process-author", deploy_fn=_deploy_ok)
     assert result.categories_wired == ()
@@ -816,8 +884,7 @@ def test_adopt_deploys_agent_whose_optional_category_is_undefined(tmp_path):
     category as optional-unset instead of refusing (#916)."""
     overlay_text = "workflow-docs:\n  - README.md\n"
     proj = _project(tmp_path, overlay=overlay_text)
-    _agent(proj / ".pkit" / "agents" / "core", "producer",
-           reads_patterns=["<project-conventions>"])
+    _agent(proj / ".pkit" / "agents" / "core", "producer", reads_patterns=["<project-conventions>"])
     overlay = proj / ".pkit" / "agents" / "project" / "overlay.yaml"
 
     result = ao.adopt_agent(proj, "producer", deploy_fn=_deploy_ok)
@@ -831,8 +898,12 @@ def test_adopt_wires_hard_category_and_sets_optional_aside(tmp_path):
     """Mixed agent: the hard category is wired to its conventional default, the
     optional one is set aside — neither blocks the other."""
     proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
-    _agent(proj / ".pkit" / "agents" / "core", "mixed",
-           owns=["<architecture-docs>"], reads_patterns=["<project-conventions>"])
+    _agent(
+        proj / ".pkit" / "agents" / "core",
+        "mixed",
+        owns=["<architecture-docs>"],
+        reads_patterns=["<project-conventions>"],
+    )
 
     result = ao.adopt_agent(proj, "mixed", deploy_fn=_deploy_ok)
     assert result.categories_wired == ("architecture-docs",)
@@ -843,8 +914,7 @@ def test_adopt_wires_hard_category_and_sets_optional_aside(tmp_path):
 def test_adopt_cli_reports_optional_category_left_undefined(tmp_path, monkeypatch):
     """CLI: the optional category is named as optional, not as a blocker."""
     proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
-    _agent(proj / ".pkit" / "agents" / "core", "producer",
-           reads_patterns=["<project-conventions>"])
+    _agent(proj / ".pkit" / "agents" / "core", "producer", reads_patterns=["<project-conventions>"])
     monkeypatch.chdir(proj)
     monkeypatch.setattr(ao, "_deploy_agent", lambda *a, **k: True)
 
@@ -858,8 +928,7 @@ def test_adopt_cli_reports_optional_category_left_undefined(tmp_path, monkeypatc
 def test_adopt_fresh_creates_dirs_and_wires_overlay(tmp_path):
     """Fresh adopt: conventional dirs created + overlay wired uncommented + deployed."""
     proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
-    _agent(proj / ".pkit" / "agents" / "core", "a",
-           owns=["<architecture-docs>", "<adr-records>"])
+    _agent(proj / ".pkit" / "agents" / "core", "a", owns=["<architecture-docs>", "<adr-records>"])
     overlay = proj / ".pkit" / "agents" / "project" / "overlay.yaml"
 
     result = ao.adopt_agent(proj, "a", deploy_fn=_deploy_ok)
@@ -909,10 +978,7 @@ def test_adopt_idempotent(tmp_path):
 
 def test_adopt_does_not_overwrite_adopter_set_value(tmp_path):
     """Adopter-set overlay value is never clobbered by adopt."""
-    overlay_text = (
-        "workflow-docs:\n  - README.md\n"
-        "architecture-docs:\n  - docs/custom-arch/\n"
-    )
+    overlay_text = "workflow-docs:\n  - README.md\narchitecture-docs:\n  - docs/custom-arch/\n"
     proj = _project(tmp_path, overlay=overlay_text)
     _agent(proj / ".pkit" / "agents" / "core", "a", owns=["<architecture-docs>"])
     overlay = proj / ".pkit" / "agents" / "project" / "overlay.yaml"
@@ -929,6 +995,7 @@ def test_adopt_does_not_overwrite_adopter_set_value(tmp_path):
 def test_adopt_unknown_agent_raises(tmp_path):
     """Requesting adopt for an unknown agent → clear ClickException."""
     import click
+
     proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
     with pytest.raises(click.ClickException, match="unknown agent"):
         ao.adopt_agent(proj, "does-not-exist", deploy_fn=_deploy_ok)
@@ -937,6 +1004,7 @@ def test_adopt_unknown_agent_raises(tmp_path):
 def test_adopt_agent_no_categories_raises(tmp_path):
     """Agent that references no overlay categories → clear ClickException."""
     import click
+
     proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
     # Agent with no placeholder owns/reads.
     _agent(proj / ".pkit" / "agents" / "core", "plain", body="nothing special")
@@ -973,7 +1041,6 @@ def test_adopt_cli_fresh(tmp_path, monkeypatch):
     monkeypatch.chdir(proj)
 
     # Patch adopt_agent to avoid real disk + deploy side-effects.
-    import project_kit.cli as cli_mod
     import project_kit.agents_overlay as ao_mod
 
     called: list[str] = []

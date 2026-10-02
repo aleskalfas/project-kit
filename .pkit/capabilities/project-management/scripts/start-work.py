@@ -17,7 +17,10 @@ Gates per DEC-026:
   - Issue not assigned to someone else (hard refusal points at handoff-issue).
   - Issue's current state can move to In Progress per workflow.yaml (or is
     already there). Checked before any mutation, so a refused move leaves no
-    branch or assignee behind (#942). From Todo, move to Backlog first.
+    branch or assignee behind (#942). From Todo, move to Backlog first. The
+    state is read from the issue's labels and milestone
+    (`_lib/issue_position`, shared with review-work, #1242); move-issue
+    reads it itself when it moves.
   - If a branch exists, matches `<type>/<N>-<slug>` (idempotent).
 
 Side-effects:
@@ -25,7 +28,8 @@ Side-effects:
     label; slug from the issue title).
   - Sets assignee to the current invoker.
   - Composes over `move-issue.py --to in-progress`. If that move still fails
-    after the branch / assignee were written (e.g. a network error), the run
+    after the branch / assignee were written (a network error, or a state
+    that changed since the check so the move is no longer legal), the run
     ends on a failure naming what it left behind.
 
 Exit codes:
@@ -38,7 +42,6 @@ Exit codes:
 from __future__ import annotations
 
 import argparse
-import json
 import re
 import subprocess
 import sys
@@ -48,21 +51,23 @@ from ruamel.yaml import YAML
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import (  # noqa: E402
+from _lib import (
     axis_labels,
     bootstrap_gate,
     classification_rules,
-    lifecycle_inference as infer,
+    composed_move,
+    default_branch,
+    issue_position,
     session_guard,
 )
-from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
-from _lib.membership import (  # noqa: E402
+from _lib import lifecycle_inference as infer
+from _lib.gh import gh_get_issue, gh_run, load_adopter_config
+from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
     resolve_capability_root,
     resolve_invoker_identity,
 )
-from _lib.structural_type import infer_structural_type  # noqa: E402
 
 TARGET_STATE = "in-progress"
 
@@ -77,7 +82,9 @@ def main() -> int:
     )
     parser.add_argument("issue_number", type=int)
     parser.add_argument(
-        "--capability-root", type=Path, default=None,
+        "--capability-root",
+        type=Path,
+        default=None,
         help=f"Default: <repo-root>/.pkit/capabilities/{CAPABILITY_NAME}/.",
     )
     parser.add_argument("--dry-run", action="store_true")
@@ -121,10 +128,9 @@ def main() -> int:
     # Gate: not assigned to someone else.
     assignees = issue.get("assignees") or []
     other_assignees = [
-        a.get("login") for a in assignees
-        if isinstance(a, dict)
-        and a.get("login")
-        and a.get("login") != invoker.github_login
+        a.get("login")
+        for a in assignees
+        if isinstance(a, dict) and a.get("login") and a.get("login") != invoker.github_login
     ]
     if other_assignees:
         print(
@@ -144,15 +150,18 @@ def main() -> int:
 
     # Gate: the move to In Progress is legal from where the issue is (#942).
     # Asked before the branch create / assignee write, so a refusal changes
-    # nothing. Same position read and transition table move-issue consults.
-    refusal = _transition_refusal(
+    # nothing. The state is read as review-work's gate reads it (#1242).
+    refusal = composed_move.transition_refusal(
+        "start-work",
         args.issue_number,
         issue,
         labels,
+        issue_position.current_state(issue, labels, substrate_map),
+        target=TARGET_STATE,
+        untouched="no branch, no assignee",
         workflow=workflow,
         issue_types=issue_types,
         classification=classification,
-        substrate_map=substrate_map,
     )
     if refusal is not None:
         print(refusal, file=sys.stderr)
@@ -193,7 +202,11 @@ def main() -> int:
     # Branch base (#835): the default branch, or a DEC-013 integration branch when
     # the issue is marked — never the incidental HEAD. Shared with the PR-opening
     # verbs so the PR targets the branch this one was cut from (#903).
-    base = infer.resolve_base_branch(config, str(issue.get("body") or ""))
+    try:
+        base = infer.resolve_base_branch(config, str(issue.get("body") or ""))
+    except default_branch.Unanswered as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
 
     print(f"start-work: #{args.issue_number}")
     print(f"  branch:    {branch_name}")
@@ -201,7 +214,10 @@ def main() -> int:
     print(f"  assignee:  {invoker.github_login or '(unknown invoker)'}")
 
     if args.dry_run:
-        print(f"(dry-run: would create branch off {base}, set assignee, and call move-issue --to in-progress.)")
+        print(
+            f"(dry-run: would create branch off {base}, set assignee, and call move-issue --to "
+            "in-progress.)"
+        )
         return 0
 
     if not args.yes and sys.stdin.isatty():
@@ -223,8 +239,7 @@ def main() -> int:
     # Set assignee. "Written" means this run added it: an invoker who was
     # already assigned is not something this run left behind.
     already_assigned = any(
-        isinstance(a, dict) and a.get("login") == invoker.github_login
-        for a in assignees
+        isinstance(a, dict) and a.get("login") == invoker.github_login for a in assignees
     )
     assignee_written = False
     if invoker.github_login and not already_assigned:
@@ -238,17 +253,27 @@ def main() -> int:
             )
 
     # Compose over move-issue.
-    rc = _invoke_move_issue(
-        args.issue_number, TARGET_STATE, args.capability_root, args.allow_foreign_repo
+    rc = composed_move.invoke_move_issue(
+        args.issue_number,
+        TARGET_STATE,
+        capability_root_arg=args.capability_root,
+        allow_foreign_repo=args.allow_foreign_repo,
     )
     if rc != 0:
         print(
-            _late_failure_message(
+            composed_move.late_failure_message(
+                "start-work",
                 args.issue_number,
+                TARGET_STATE,
                 rc,
-                branch_name=branch_name if branch_created else None,
-                base=base,
-                assignee=invoker.github_login if assignee_written else None,
+                left=_left_behind(
+                    args.issue_number,
+                    branch_name=branch_name if branch_created else None,
+                    base=base,
+                    assignee=invoker.github_login if assignee_written else None,
+                ),
+                nothing_left="This run created no branch and wrote no assignee.",
+                reuses="the branch",
             ),
             file=sys.stderr,
         )
@@ -262,112 +287,34 @@ def main() -> int:
 
 
 def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
-    return gh_get_issue(
-        issue_number, config, fields="title,labels,assignees,state,body,milestone"
-    )
+    return gh_get_issue(issue_number, config, fields="title,labels,assignees,state,body,milestone")
 
 
-def _transition_refusal(
+def _left_behind(
     issue_number: int,
-    issue: dict,
-    labels: list[str],
-    *,
-    workflow: dict,
-    issue_types: dict,
-    classification: dict,
-    substrate_map: axis_labels.SubstrateMap | None,
-) -> str | None:
-    """Why the composed `move-issue --to in-progress` would refuse, or None.
-
-    Reads the issue's position through `lifecycle_inference.infer_current_state`
-    and its structural type through `infer_structural_type` (the readers
-    move-issue uses), and the legal moves through
-    `lifecycle_inference.legal_targets` (the table move-issue refuses on). An
-    issue already In Progress passes: move-issue treats that as an idempotent
-    no-op, so re-running start-work still works. When one intermediate move
-    leads on to In Progress (Todo → Backlog), the refusal names it."""
-    title = str(issue.get("title", ""))
-    structural_type = infer_structural_type(
-        title, issue_types, classification=classification, labels=labels
-    )
-    if structural_type is None:
-        return (
-            f"error: cannot determine structural type for issue #{issue_number}: "
-            f"title {title!r} matches no known [Type] prefix and no `type:*` "
-            "kind label is present. Nothing was changed.\n"
-            "  → Restore the issue's title prefix (e.g. [Task]) and re-run."
-        )
-    current = infer.infer_current_state(
-        state=str(issue.get("state", "")).lower(),
-        milestone=issue.get("milestone") or {},
-        labels=labels,
-        substrate_map=substrate_map,
-    )
-    if current == TARGET_STATE:
-        return None
-    targets = infer.legal_targets(workflow, current, structural_type)
-    if TARGET_STATE in targets:
-        return None
-    lines = [
-        f"[refused] start-work #{issue_number}: the issue is in {current!r}, and "
-        f"workflow.yaml declares no move {current!r} → {TARGET_STATE!r} for "
-        f"{structural_type!r}. Nothing was changed (no branch, no assignee).",
-    ]
-    stepping_stones = [
-        s for s in targets
-        if TARGET_STATE in infer.legal_targets(workflow, s, structural_type)
-    ]
-    if stepping_stones:
-        lines.append(
-            f"  → move it first: `move-issue {issue_number} --to {stepping_stones[0]}`, "
-            f"then re-run `start-work {issue_number}`."
-        )
-    else:
-        lines.append(
-            f"  legal targets from {current!r}: "
-            f"{', '.join(targets) if targets else '<none>'}"
-        )
-    return "\n".join(lines)
-
-
-def _late_failure_message(
-    issue_number: int,
-    rc: int,
     *,
     branch_name: str | None,
     base: str,
     assignee: str | None,
-) -> str:
-    """The closing failure when the composed move-issue fails after mutating.
-
-    Names each thing this run left behind (the branch it created, the assignee
-    it wrote) so the caller can retry or undo. The output must not end on the
-    branch-creation line as if the run had succeeded (#942)."""
-    lines = [
-        f"\n[failed] start-work #{issue_number}: move-issue --to {TARGET_STATE} "
-        f"failed (exit {rc}); the issue did not move.",
-    ]
-    left = []
+) -> list[tuple[str, str]]:
+    """What this run changed before the composed move-issue failed, each with
+    its undo: the branch it created and the assignee it wrote, where it did."""
+    left: list[tuple[str, str]] = []
     if branch_name is not None:
         left.append(
-            f"  - branch {branch_name!r} (created and checked out). Undo: "
-            f"`git checkout {base} && git branch -D {branch_name}`"
+            (
+                f"branch {branch_name!r} (created and checked out)",
+                f"git checkout {base} && git branch -D {branch_name}",
+            )
         )
     if assignee is not None:
         left.append(
-            f"  - assignee @{assignee}. Undo: "
-            f"`gh issue edit {issue_number} --remove-assignee {assignee}`"
+            (
+                f"assignee @{assignee}",
+                f"gh issue edit {issue_number} --remove-assignee {assignee}",
+            )
         )
-    if left:
-        lines.append("  Left behind by this run:")
-        lines.extend(left)
-    else:
-        lines.append("  This run created no branch and wrote no assignee.")
-    lines.append(
-        f"  Fix the cause above and re-run `start-work {issue_number}` "
-        "(it reuses the branch)."
-    )
-    return "\n".join(lines)
+    return left
 
 
 def _derive_branch_prefix(
@@ -419,7 +366,9 @@ def _existing_branch_for_issue(issue_number: int) -> str | None:
     try:
         proc = subprocess.run(
             ["git", "branch", "--list", "--format=%(refname:short)"],
-            capture_output=True, text=True, check=False,
+            capture_output=True,
+            text=True,
+            check=False,
         )
     except FileNotFoundError:
         return None
@@ -439,41 +388,59 @@ def _branch_matches_shape(name: str, issue_number: int) -> bool:
 
 def _create_branch(name: str, base: str) -> bool:
     """Create `name` off `base` — the default branch or a DEC-013 integration
-    branch (#835) — NOT off the incidental `HEAD`. The base is fetched first so the
-    branch is cut from an up-to-date ref; fetch failure (e.g. offline) degrades to
-    the local `base` ref."""
-    fetched = subprocess.run(
-        ["git", "fetch", "origin", base],
-        capture_output=True, text=True, check=False,
-    ).returncode == 0
-    start_point = f"origin/{base}" if fetched else base
+    branch (#835) — NOT off the incidental `HEAD`. It is cut from the commit the
+    backbone resolves `base` to, as it resolves every branch named as a base
+    (COR-054 point 2): the remote-tracking reference of its upstream, else
+    `origin/<base>`, and the local branch only when there is no remote. The
+    remote's copy is fetched first, best-effort, so the cut is up to date; a base
+    that resolves nowhere refuses with the backbone's reason and fix — the branch
+    is never cut from a guess."""
+    _fetch("origin", base)
+    try:
+        found = default_branch.branch(base)
+        remote, slash, _rest = found.ref.partition("/")
+        if found.tip is not None and slash and remote != "origin" and _fetch(remote, base):
+            found = default_branch.branch(base)  # the upstream is another remote's: fetched too
+    except default_branch.Unanswered as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return False
+    if found.tip is None:
+        print(f"error: cannot cut {name!r} from {base!r}: {found.problem}", file=sys.stderr)
+        return False
     proc = subprocess.run(
-        ["git", "checkout", "-b", name, start_point],
-        capture_output=True, text=True, check=False,
+        ["git", "checkout", "-b", name, found.tip],
+        capture_output=True,
+        text=True,
+        check=False,
     )
-    if proc.returncode != 0 and start_point != base:
-        # origin/<base> unresolvable (e.g. base not on origin) — fall back to the
-        # local base ref before giving up.
-        start_point = base
-        proc = subprocess.run(
-            ["git", "checkout", "-b", name, base],
-            capture_output=True, text=True, check=False,
-        )
     if proc.returncode != 0:
         print(
-            f"error: git checkout -b {name!r} off {base!r} failed: "
-            f"{proc.stderr.strip()}",
+            f"error: git checkout -b {name!r} off {found.ref!r} failed: {proc.stderr.strip()}",
             file=sys.stderr,
         )
         return False
-    print(f"  created branch: {name} (off {start_point})")
+    print(f"  created branch: {name} (off {found.ref} at {found.tip[:12]})")
     return True
+
+
+def _fetch(remote: str, branch: str) -> bool:
+    """Fetch `branch` from `remote`, best-effort: whether it was fetched."""
+    return (
+        subprocess.run(
+            ["git", "fetch", remote, branch],
+            capture_output=True,
+            text=True,
+            check=False,
+        ).returncode
+        == 0
+    )
 
 
 def _set_assignee(issue_number: int, login: str, config: dict) -> bool:
     proc = gh_run(
         ["gh", "issue", "edit", str(issue_number), "--add-assignee", login],
-        config, check=False,
+        config,
+        check=False,
     )
     if proc.returncode != 0:
         print(
@@ -482,27 +449,6 @@ def _set_assignee(issue_number: int, login: str, config: dict) -> bool:
         )
         return False
     return True
-
-
-def _invoke_move_issue(
-    issue_number: int,
-    target: str,
-    capability_root_arg: Path | None,
-    allow_foreign_repo: bool,
-) -> int:
-    cmd = [
-        sys.executable,
-        str(_HERE / "move-issue.py"),
-        str(issue_number),
-        "--to", target,
-        "--yes",
-    ]
-    if allow_foreign_repo:
-        cmd.append("--allow-foreign-repo")
-    if capability_root_arg is not None:
-        cmd += ["--capability-root", str(capability_root_arg)]
-    proc = subprocess.run(cmd, check=False)
-    return proc.returncode
 
 
 def _read_members(capability_root: Path, yaml_loader: YAML) -> list[dict]:
