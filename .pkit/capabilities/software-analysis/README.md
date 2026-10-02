@@ -12,8 +12,9 @@ pkit:
         - .pkit/capabilities/software-analysis/agents/**
       record: ["software-analysis:DEC-001", COR-049, COR-050, COR-052, COR-053]
     revalidated:
-      at: 2026-10-01T23:29:59Z
-      outcome: updated
+      at: 2026-10-01T23:21:18Z
+      outcome: unchanged
+      unchanged-because: COR-052 point 6 gains what a command filler may read beyond the working tree and point 7 the report of it; this page's filler, fill-readers, reads the working tree only, through pkit friction artefacts, declares no reads and fails closed as before, so it holds
 ---
 
 # software-analysis capability

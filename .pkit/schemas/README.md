@@ -19,9 +19,9 @@ pkit:
         - src/project_kit/working_tree.py
       record: [COR-018, COR-019, COR-020, COR-023, COR-029, COR-048, COR-050, COR-051, COR-052, COR-053, ADR-056, ADR-057]
     revalidated:
-      at: 2026-10-01T23:47:29Z
+      at: 2026-10-01T23:49:17Z
       outcome: unchanged
-      unchanged-because: COR-053 changed in one rationale sentence, on why events take no consent model; this page takes the address form of a connection and the methodology-owned front-matter block from the record, says nothing of consent for events, and both are as they were
+      unchanged-because: The package schema gains an optional reads key on a command leaf, what a data point's filler reads beyond the working tree (COR-052 point 6); this page summarises the package schema by its blocks and leaves its keys to the lifecycle README, which documents reads, and its filler-envelope account is untouched, so it holds
 ---
 
 # Schemas

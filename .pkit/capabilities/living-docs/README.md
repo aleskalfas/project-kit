@@ -12,7 +12,7 @@ pkit:
       record: ["living-docs:DEC-001", COR-049, COR-050, COR-051, COR-053]
       artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006]
     revalidated:
-      at: 2026-10-01T23:30:00Z
+      at: 2026-10-01T23:49:19Z
       outcome: updated
 ---
 
@@ -126,7 +126,7 @@ An analysis capability, such as software-analysis, can supply readers too, under
 
 **Accepts `pkit::documentation:reading-evidence`** (version 1): results of executed checks that follow the documentation, such as a simulated user running a guide. Each entry is an `id`, `<path>@<commit>`, with the `path` it followed, the `commit`, the `outcome` (`passed` or `failed`) and an optional `description` (`schemas/reading-evidence.schema.json`). `union`, with no default. This capability runs no such check: a capability that does, or your project file, supplies the evidence, and until one does the point shows as unfilled. It is advisory (inert policy `fallback`): a filler that cannot answer is warned about, and the rest still count.
 
-**Contributes to `pkit::work-tracking:doc-check`**, the documentation check of a work-tracking capability such as project-management ([project-management:DEC-053-doc-check-slot]). Its command, `fill-doc-check`, reads the core's whole-repository friction check at HEAD (`pkit friction check --all --json`) and prints obligations with the source `friction`:
+**Contributes to `pkit::work-tracking:doc-check`**, the documentation check of a work-tracking capability such as project-management ([project-management:DEC-053-doc-check-slot]). Its command, `fill-doc-check`, reads the core's whole-repository friction check at HEAD (`pkit friction check --all --json`) and prints obligations with the source `friction`. It declares that it reads history (`reads: [history]` on its `commands:` entry), so `pkit validate` and `pkit status` name the commit it read HEAD at; it reads no base — the base a pull request is compared with bounds the work-tracking check's diff, never this command:
 
 - `page-stale` — one per page the check reports stale, naming the page as `document`. The page's answer in the pull request's diff meets it. A deferred page gives none: its deferral is the answer ([project-management:DEC-053-doc-check-slot] point 4), and `pkit friction debt` keeps reporting it until someone revalidates the page.
 - `code-undocumented` — one per path of the declared surface that nothing anchors, naming the code as `path` and no `document`: no page's change meets it, only a page anchoring the path. The command reads HEAD, so the obligation leaves the point once a page on the branch anchors the code; until then the check reports it unmet, with the fix — anchor the path from a page.

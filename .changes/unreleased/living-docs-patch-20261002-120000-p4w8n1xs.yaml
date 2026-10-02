@@ -1,0 +1,12 @@
+component: living-docs
+kind: patch
+custom:
+  category: Changed
+  requires_backbone: release
+body: >
+  `fill-doc-check`, this capability's filler of the documentation-check point,
+  declares that it reads history (`reads: [history]` on its `commands:` entry),
+  so `pkit validate` and `pkit status` name the commit it read HEAD at. What it
+  answers is unchanged: nothing owed in a repository with no commit, and no
+  answer where a page's friction lies beyond a shallow clone's history. It needs
+  the backbone this release ships, since an older one refuses the `reads` key.

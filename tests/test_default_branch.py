@@ -328,6 +328,58 @@ def test_before_the_first_commit_it_says_commit_first(tmp_path: Path) -> None:
     repo = GitRepo.init(tmp_path / "work")
     branch = db.resolve(repo.root)
     assert branch.problem == "the default branch 'main' has no commit yet: commit first."
+    assert branch.unborn and branch.as_json()["unborn"] is True
+
+
+def test_unborn_only_with_no_remote_and_head_on_the_branch_before_its_first_commit(
+    tmp_path: Path,
+) -> None:
+    """The one state that does not exist yet (COR-052 point 6); every other branch
+    without a commit is a branch this clone cannot read."""
+    assert not db.resolve(_repo(tmp_path / "committed").root).unborn
+    elsewhere = GitRepo.init(tmp_path / "elsewhere", branch="topic")  # HEAD is not main
+    assert db.resolve(elsewhere.root).commit is None
+    assert not db.resolve(elsewhere.root).unborn
+    fetched_none = GitRepo.init(tmp_path / "remote")  # a remote holds what is not fetched
+    fetched_none.git("remote", "add", "origin", "https://example.invalid/project.git")
+    assert db.resolve(fetched_none.root).commit is None
+    assert not db.resolve(fetched_none.root).unborn
+    assert not db.resolve(tmp_path).unborn  # no git at all
+
+
+def test_as_a_standing_value_the_problem_never_names_a_base(tmp_path: Path) -> None:
+    """A data point's filler takes no base (COR-054 point 3): the fixes are the fetch
+    and the declaration alone."""
+    repo = _repo(tmp_path)
+    remote = _bare(tmp_path, repo)
+    repo.git("remote", "add", "origin", str(remote))
+    comparison = db.resolve(repo.root).problem
+    standing = db.resolve(repo.root, standing=True).problem
+    assert comparison is not None and standing is not None
+    assert "--base" in comparison and "refs/heads/main" in comparison
+    assert standing == (
+        "the default branch 'main' resolves to no commit here: 'origin/main' names none — "
+        "fetch it (`git fetch origin main`), or declare the right one "
+        "(`repository.default-branch` in .pkit/project/config.yaml). The local branch 'main' "
+        "is not read while a remote holds the shared one — it can lag it or carry work "
+        "nobody pushed."
+    )
+    _declare(repo, TRUNK)
+    repo.git("remote", "remove", "origin")
+    assert db.resolve(repo.root, standing=True).problem == (
+        "the default branch 'trunk' resolves to no commit here: there is no remote and no "
+        "local branch 'trunk' — declare the right one (`repository.default-branch` in "
+        ".pkit/project/config.yaml)."
+    )
+
+
+def test_a_shallow_clone_is_said_to_be_one(tmp_path: Path) -> None:
+    repo = _repo(tmp_path)
+    repo.commit("second", {"second.md": "2\n"})
+    assert not db.is_shallow(repo.root)
+    shallow = _clone(tmp_path, f"file://{repo.root}", "--depth=1", name="shallow")
+    assert db.is_shallow(shallow.root)
+    assert not db.is_shallow(tmp_path / "no-git")
 
 
 def test_a_declared_branch_this_repository_lacks_is_reported(tmp_path: Path) -> None:
@@ -504,6 +556,7 @@ def test_the_reading_command_names_the_default_branch_and_the_base(
             "commit": repo.head(),
             "resolved": db.RESOLVED_REMOTE,
             "problem": None,
+            "unborn": False,
         },
         "base": {
             "ref": "origin/main",
@@ -775,6 +828,7 @@ def test_all_three_readers_agree_on_a_default_branch_that_is_not_main(
         "commit": trunk,
         "resolved": db.RESOLVED_LOCAL,
         "problem": None,
+        "unborn": False,
     }
     assert (settled["base"]["ref"], settled["base"]["tip"], settled["base"]["fork"]) == (
         TRUNK,

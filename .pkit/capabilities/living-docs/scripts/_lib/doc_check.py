@@ -30,6 +30,10 @@ backbone that predates it, and reads as version 1), or a page whose friction lie
 beyond a shallow clone's history, is no answer — raised, never an empty list:
 the point is `fail`, and a gate never passes on fewer obligations than it
 should. A repository with no commit owes nothing: there is no HEAD to judge.
+These are the two cases a filler that reads history tells apart (COR-052 point
+6): history that does not exist yet holds nothing, and the answer is `[]`;
+history that exists and a shallow clone cut short is no answer — only the
+filler knows how far back it reads, so detecting it is this module's.
 """
 
 from __future__ import annotations

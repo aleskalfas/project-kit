@@ -189,7 +189,9 @@ def test_an_engine_driven_read_names_bootstrap_as_the_cause(tmp_path: Path) -> N
     narrative = render_status_narrative(engine(), actor="agent")
     assert "Where: indeterminate" in narrative
     assert "the predicate said:" in narrative
-    assert "[refused] detect-todo: project-management prerequisites are not met" in narrative
+    assert "[refused] detect-state: project-management prerequisites are not met" in narrative
+    # One classifier detects every state: its refusal is shown once (ADR-062 point 13).
+    assert narrative.count("[refused] detect-state") == 1
     assert "To fix: run `pkit project-management bootstrap`" in narrative
 
     unevaluated = json.loads(render_status_json(engine(), actor="agent"))["position"]["unevaluated"]

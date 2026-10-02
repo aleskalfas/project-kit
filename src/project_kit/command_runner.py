@@ -72,8 +72,10 @@ never beyond `COMMAND_TIMEOUT_SECONDS`; the outermost kill is never late.
   anything but an answered JSON object is indeterminate, fail-closed;
 - the *query* policy (`validators.run_query`, ADR-057 point 3, ADR-058): the
   leaf must declare the query contract, `--json` as the one argument, the
-  offline marker set, and the answer validated against the shape asked for;
-  anything else is no answer, an error finding;
+  offline marker set, the base override removed (`validators.QUERY_DROPPED_ENV`) —
+  a query answers about state, never about a base named for one run (COR-052
+  point 6) — and the answer validated against the shape asked for; anything
+  else is no answer, an error finding;
 - the *context-read* policy (`report_context.pm_workstream`, ADR-050): no
   arguments, the caller's environment unchanged but for the run's deadline —
   the verb asks the tracker — and the value read as the text an exit-0 run
@@ -101,7 +103,7 @@ import subprocess
 import tempfile
 import time
 import unicodedata
-from collections.abc import Mapping, Sequence
+from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -343,11 +345,14 @@ def run_command(
     *,
     cwd: Path,
     extra_env: Mapping[str, str] | None = None,
+    drop_env: Collection[str] = (),
 ) -> CommandRun:
     """Run `script` with `args` from `cwd`, in its own process group, bounded by
     `COMMAND_TIMEOUT_SECONDS`, and read its answer. `extra_env` is laid over
-    the caller's environment, and the run's deadline over both. Standard output
-    is the answer and nothing else; standard error is diagnostics.
+    the caller's environment, then each variable `drop_env` names is removed —
+    whether the caller's or `extra_env`'s — and the run's deadline is laid over
+    what remains. Standard output is the answer and nothing else; standard
+    error is diagnostics.
 
     Inside a live run (`inherited_deadline`) the run is nested (the module
     docstring): bounded by the time remaining, in the outermost run's process
@@ -358,11 +363,10 @@ def run_command(
     if bound <= 0:
         return CommandRun(Ending.NOT_STARTED, 0, detail=NO_TIME_LEFT)
     tree = _Tree.nested() if inherited is not None else _Tree.outermost()
-    env = {
-        **os.environ,
-        **(extra_env or {}),
-        DEADLINE_ENV: _written_deadline(now + bound - ANSWER_MARGIN_SECONDS),
-    }
+    env = {**os.environ, **(extra_env or {})}
+    for name in drop_env:
+        env.pop(name, None)
+    env[DEADLINE_ENV] = _written_deadline(now + bound - ANSWER_MARGIN_SECONDS)
     env.pop(STRAYS_ENV, None)  # only a live run's directory is passed on
     if tree.strays:
         env[STRAYS_ENV] = tree.strays
