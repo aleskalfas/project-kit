@@ -563,7 +563,7 @@ Exit `0` means the command reached an end it can state; the document says which.
 
 The options: `[--seconds <s>] [--allow-dropped-head] [--admin] [--direct-only] [--queued-bad-shape refuse|warn] [--no-request] [--allow-foreign-repo] [--dry-run]`.
 
-The landing sequence, in one command (ADR-061 point 5). It composes the steps above but the deletion, once, so no caller holds a copy of them. `release merge` lands through it, by import.
+The landing sequence, in one command (ADR-061 point 5). It composes the steps above but the deletion, once, so a caller that lands through it holds no copy of them. `release merge` lands through it, by import.
 
 - **The guard** runs once, at the entry (above). Its clearance covers every request the landing makes, so a dequeue sent after a long wait never waits on a question.
 - **One reading**, then the first row of the table below that matches it, the options applied.

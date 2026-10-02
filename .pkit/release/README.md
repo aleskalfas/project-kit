@@ -477,19 +477,43 @@ into it (COR-014). Instead the release flow owns its own merge verb, beside the
     landing's in-memory end; an end that does not decode ends the run,
     exit 1, nothing deleted; every word of the report is release's own.
 - **Exits by how the landing ended.**
-  - `0` — merged, after the clean-up; or closed, nothing to merge.
+  - `0` — merged, after the clean-up; or closed, nothing to merge. Exit 0
+    does not mean merged.
   - `4` — queued, or unconfirmed: nothing deleted, a re-run completes it.
-  - `3` — the head moved, the queue dropped the PR, or GitHub never reports
-    a merge gh accepted; nothing deleted.
-  - `1` — refused, unreadable or failed; or a gate refused.
-- **What landing through the sequence changed.**
-  - A head that moved between release's view and the landing's reading
-    exits 3, with nothing sent; the pinned request used to fail, exit 1.
-  - A PR auto-merge holds on a base without a queue is gated and merged
+  - `3` — the head moved; the queue dropped the PR; or, no queue seen,
+    GitHub never reports it merged once it was merged or queued; nothing
+    deleted.
+  - `1` — refused, unreadable or failed; a gate refused; or the landing's
+    end did not decode.
+- **What landing through the sequence changed**, one outcome each:
+  - Every run that lands reads the PR once more first: the plan's reading,
+    and the squash-commit defaults where the base has a queue.
+  - A PR auto-merge holds on a base without a queue is gated, then merged
     directly; it used to be taken for a queued PR and waited for without
-    the gates.
-  - A queue switched on, or a base changed, after release's view is judged
-    at the landing's reading, just before the request.
+    the gates. Its base's requirements met, it merges, exit 0.
+  - The same PR, its base's requirements unmet, is refused by gh: exit 1,
+    with a warning that auto-merge is still armed and will merge it,
+    unpinned, once they are met.
+  - A head that moved between release's view and the landing's reading
+    exits 3, nothing sent; the pinned request used to fail, exit 1.
+  - A base changed after release's view, to one whose queue would not make
+    the release's commit, is refused at the landing's reading, exit 1; the
+    PR used to be enqueued there.
+  - A queue switched on after release's view is found at the landing's
+    reading: the defaults are read, and the PR is enqueued; it used to be
+    merged directly, which gh turned into an enqueue nothing had judged.
+  - A release PR closed without merging after release's view now exits 0,
+    "nothing to merge"; gh's refused merge used to exit 1. Exit 0 does not
+    mean the release merged: a script that needs to know reads the PR —
+    `pkit pull-request read <n> --json`, its `reading.merged` — never the
+    exit code.
+  - A direct merge GitHub reports merged at another head than the checked
+    one deletes the head branch at the head that merged, with a warning,
+    exit 0; it used to name the checked head, so the deletion was refused
+    and the branch kept.
+  - A PR the plan finds queued that leaves the queue before the landing's
+    reading is refused, nothing sent, exit 1; release used to wait for it
+    and report it dropped, exit 3.
 - **Merges** per the project's merge convention: one squash commit on the
   base branch whose subject is the PR title, pinned to the head whose checks
   it read, head branch deleted on merge. The merge is the backbone's one merge
