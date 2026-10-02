@@ -40,7 +40,7 @@
         }
       },
       "uniqueItems": true,
-      "description": "Cross-cut invariants over the containment graph that aren't expressible as a single per-type field (e.g., 'EPIC does not contain EPIC', 'Feature does not nest'). Editorial: no script enforces them, and none reads the per-entry `can_contain` lists either."
+      "description": "Cross-cut invariants over the containment graph that aren't expressible as a single per-type field (e.g., 'EPIC does not contain EPIC', 'Feature does not nest'). DEC-005 requires a filing or re-parent that breaks them, or the per-entry `can_contain` / `parent_issue_types` edges, to be refused; nothing refuses one yet, and until that refusal is built `create-issue` and `set-field --parent` name the parent with a warning where its type is one the child's forms do not offer."
     }
   },
   "$defs": {
