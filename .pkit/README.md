@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-02T04:50:42Z
+      at: 2026-10-02T09:51:38Z
       outcome: unchanged
-      unchanged-because: the CLI README now says a pull-request request is refused only on an answer recognised as one, states the settling window and the dequeue's own ends, and the lifecycle README how gh is started; this page maps the cli area as the pkit command-line surface and the lifecycle area as packaging and dependency architecture, one line each, which still holds
+      unchanged-because: the CLI README now says a direct pull-request merge carries the PR's body, how the body goes by the repository's squash-commit default, and the gap a caller's body gates keep; this page maps the cli area as the pkit command-line surface, one line, which still holds
 ---
 
 # project-kit
