@@ -120,19 +120,20 @@ def test_label_names_or_label_objects_type_alike() -> None:
 
 
 @pytest.mark.parametrize(
-    "call",
+    ("name", "args"),
     [
-        lambda: graph.issue_type("[Task] x", ISSUE_TYPES, classification=CLASSIFICATION),
-        lambda: graph.typed_parent(9, "[Task] x", ISSUE_TYPES, classification=CLASSIFICATION),
-        lambda: graph.read_parent(9, {}, ISSUE_TYPES, classification=CLASSIFICATION),
+        ("issue_type", ("[Task] x", ISSUE_TYPES)),
+        ("typed_parent", (9, "[Task] x", ISSUE_TYPES)),
+        ("read_parent", (9, {}, ISSUE_TYPES)),
     ],
-    ids=["issue_type", "typed_parent", "read_parent"],
 )
-def test_a_call_that_does_not_pass_the_map_fails_loudly(call) -> None:
+def test_a_call_that_does_not_pass_the_map_fails_loudly(name, args) -> None:
     """Without `substrate_map=` a caller would type a mapped tracker with the kit's
-    prefixes; it is a TypeError instead, never a silent greenfield read."""
+    prefixes; it is a TypeError instead, never a silent greenfield read. (Called by
+    name: a type checker refuses the call this test makes on purpose.)"""
+    function = getattr(graph, name)
     with pytest.raises(TypeError, match="substrate_map"):
-        call()
+        function(*args, classification=CLASSIFICATION)
 
 
 # --- reading a parent through the seam ---------------------------------------------
