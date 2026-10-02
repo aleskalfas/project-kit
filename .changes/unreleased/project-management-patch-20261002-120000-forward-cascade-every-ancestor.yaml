@@ -3,30 +3,28 @@ kind: patch
 custom:
   category: Fixed
 body: >
-  The forward cascade now reaches every ancestor of a moved issue and moves
-  each only through transitions `workflow.yaml` declares (#1230, #1229). It
-  stopped one level up, so a Task starting moved its Feature and left the
-  Feature's EPIC behind; and a parent still in Todo under a child starting from
-  Backlog was written straight to In Progress, a move the workflow does not
-  declare, which the engine refused to record — `pkit pm history <N>
-  --check-drift` then showed drift for a move pkit made. `move-issue` now walks
-  from the issue to the top of its hierarchy and brings each ancestor that is
-  behind up to the issue's state, capped at In Progress: one in Todo goes to
-  Backlog and then to In Progress, two label writes and two journaled moves,
-  each naming the issue's move as its reason. An ancestor at or past the target
-  is left alone and the walk goes on above it. The preview and `--dry-run` list
-  each ancestor's steps. The walk follows the parent each first line names, read
-  against the issue's type, so `Related: #N` is no longer followed and a
-  milestone ref ends the walk; it stops with a warning at an ancestor it cannot
-  read, one that is not a container, one it has passed already, and one whose
-  native parent differs from its first line. A move to Done from Todo or
-  Backlog (a won't-do close) moves no ancestor. A cascade that did not complete
-  ends with a `[warn]` block naming each ancestor's outcome; the issue's own move
-  stands, the exit code stays 0, and running the same `move-issue` again
-  finishes it — an issue already at its target now walks its ancestors too.
-  Where state is not written as a label (a board, a derivation, the title, a
-  degraded axis, or a label binding with no Backlog or In Progress value) the
-  cascade does not run and one line says so. After upgrading, the first forward
-  move under a chain the one-level cascade left behind brings its upper
-  ancestors level — an EPIC in Todo goes to Backlog and then In Progress — with
-  no hook and no comment, as for every cascaded move.
+  The forward cascade reaches every ancestor of a moved issue (#1230, #1229).
+  An EPIC that stayed behind when a Task under its Feature started now moves
+  too. An ancestor in Todo shows Backlog and then In Progress — two moves the
+  workflow declares — where it was written straight to In Progress, a move the
+  engine refused to record and `pkit pm history <N> --check-drift` then showed
+  as drift. And `move-issue <N> --to done` from Todo or Backlog, a won't-do
+  close, used to bring the issue's ancestors to In Progress and no longer moves
+  them. Each ancestor behind is brought up to the moved issue's state, capped at
+  In Progress, with no milestone, no hook and no comment; where a journal is
+  kept, each step is recorded with that move as its reason. An ancestor at or
+  past the target is left alone and the walk goes on above it, so the first
+  forward move after upgrading brings a chain left behind level. The preview
+  and `--dry-run` list each ancestor's steps. The walk stops, with a warning, at
+  an ancestor it cannot read, one that is not a container, one it has passed,
+  one whose first line is a parent-ref its type does not allow, and one whose
+  native parent is not the parent its first line names — the moved issue's own
+  included, settled by `set-field <N> --parent <P>`. A cascade cut short ends
+  with a `[warn]` block, the issue's move stands and the exit code stays 0;
+  running the same `move-issue` again finishes it, with no prompt — on an issue
+  already at Done, once it has closed as completed. `close-issue`'s closure
+  cascade quotes a first line that looks like a parent-ref its type does not
+  allow, with the allowed forms, instead of reporting that the body names no
+  parent. `done-work`'s warning after a failed move to Done names the issue in
+  the `move-issue` line it prints. Where state is not written as a label, the
+  cascade does not run and one line says so.
