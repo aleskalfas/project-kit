@@ -721,3 +721,83 @@ def test_a_missing_parent_on_a_short_list_says_the_list_was_short(lp, schemas):
     entry = _classify(lp, schemas, [_issue(1, "[Task] t", "Feature: #2\n")], 1, complete=False)
     assert entry.outcome is lp.Outcome.PARENT_UNAVAILABLE
     assert "not read in full" in entry.detail
+
+
+# --- a parent the type may not sit under is reported, never linked (#1313) ------
+# A first line in an allowed form may still name a parent of a type the issue's
+# type may not sit under — `Feature: #2` where #2 is a Task. The link would make
+# that containment, so link-parent refuses it as create-issue and set-field do.
+
+
+def _shipped_types() -> dict:
+    return YAML(typ="safe").load((CAPABILITY / "schemas" / "issue-types.yaml").read_text())["types"]
+
+
+_TYPES = _shipped_types()
+
+
+def _title(structural_type: str) -> str:
+    entry = _TYPES[structural_type]
+    prefix = entry["title_prefix"]
+    return f"[{prefix.upper() if entry.get('title_case') == 'upper' else prefix}] x"
+
+
+def _first_form_label(child: str) -> str:
+    """The label of the first issue-parent option of `child`'s form."""
+    return str(_TYPES[child]["parent_ref_form"]).split(":", 1)[0].strip()
+
+
+# Every type a first line can link from (an EPIC's form names a milestone only),
+# against every type the parent can be, from the shipped schema.
+_LINKABLE = [
+    c for c in sorted(_TYPES) if any(p != "milestone" for p in _TYPES[c]["parent_issue_types"])
+]
+_PAIRS = [(c, p) for c in _LINKABLE for p in sorted(_TYPES)]
+
+
+@pytest.mark.parametrize(("child", "parent"), _PAIRS)
+def test_a_parent_is_linked_exactly_where_the_schema_lets_the_type_sit_under_it(
+    lp, schemas, child: str, parent: str
+) -> None:
+    rows = [
+        _issue(1, _title(child), f"{_first_form_label(child)}: #2\n"),
+        _issue(2, _title(parent), ""),
+    ]
+    entry = _classify(lp, schemas, rows, 1)
+
+    if parent in _TYPES[child]["parent_issue_types"]:
+        assert entry.outcome is lp.Outcome.WOULD_LINK
+    else:
+        assert entry.outcome is lp.Outcome.PARENT_TYPE_REFUSED
+        article = "an" if child[0] in "aeiou" else "a"
+        parent_article = "an" if parent[0] in "aeiou" else "a"
+        assert entry.detail.startswith(
+            f"not linked — {article} {child} may not sit under #2, which is "
+            f"{parent_article} {parent}: "
+        )
+        assert f"`{_TYPES[child]['parent_ref_form']}`" in entry.detail
+
+
+def test_a_parent_whose_type_cannot_be_told_is_linked(lp, schemas):
+    """An untyped parent is outside the containment graph, so a legacy tree links."""
+    rows = [_issue(1, "[Task] t", "Feature: #2\n"), _issue(2, "an untyped issue", "")]
+    assert _classify(lp, schemas, rows, 1).outcome is lp.Outcome.WOULD_LINK
+
+
+def test_a_task_under_a_kind_prefixed_task_is_refused_and_nothing_is_posted(
+    lp, tmp_path, monkeypatch, capsys
+):
+    """`[Bug] …` is a Task: a Task whose first line names it is reported, not
+    linked, and the others in the run still link."""
+    issues = [
+        *_tracker(),
+        _issue(200, "[Bug] a kind-prefixed task", "Feature: #90\n"),
+        _issue(201, "[Task] under a task", "Feature: #200\n"),
+    ]
+    fake = FakeGitHub(issues)
+    rc, out, _guard = _run(lp, monkeypatch, capsys, _stage(tmp_path), fake, "101", "201", "--yes")
+
+    assert rc == 0
+    assert fake.posts == [(90, 101)]
+    assert "#201  not linked — a task may not sit under #200, which is a task" in out.out
+    assert "done: 1 linked, 1 parent's type not allowed" in out.out
