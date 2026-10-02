@@ -13,9 +13,9 @@ pkit:
         - ACT-clone-session
         - .pkit/decisions/README.md
     revalidated:
-      at: 2026-10-01T01:25:10Z
+      at: 2026-10-02T02:38:17Z
       outcome: unchanged
-      unchanged-because: "on this branch the anchored code changed only in layout: ruff format and the lint fixes; behaviour and the documented commands are unchanged"
+      unchanged-because: the change is where an adr record is placed when adr-records is unset; how pkit new decision numbers a record, and the collision check and renumbering this use case walks, are untouched
 ---
 
 # UC-006 — Resolve a decision number two clones took
