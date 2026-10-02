@@ -1,0 +1,21 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  A native sub-issue that lives in another repository is now read as that
+  issue, not as this repository's issue of the same number (#1308). The close
+  gate took such a child for the local issue numbered like it and folded that
+  issue's state — or a pull request's. It now holds its container like any
+  other child, named `owner/repo#<n>`, its state read in its own repository by
+  open/closed alone (nothing is written there): closed counts as done, open
+  holds, and one that cannot be read leaves the container held. So a container
+  may now hold where it closed — its child elsewhere is open while the local
+  issue of that number was closed — or close where it held — its child
+  elsewhere is closed while that local issue was open. `show-tree` no longer
+  lists the local issue under the container for it, and the textual children
+  view names it `owner/repo#<n>`. And `close-issue <N>
+  --mode=cascade-eligibility-close` now says what holds a container: an open
+  child is named (with its repository, for one elsewhere) with what releases
+  the container, and the advice to re-run once `gh` is reachable appears only
+  when a read failed, with the read that failed.

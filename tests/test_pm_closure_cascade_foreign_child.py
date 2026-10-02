@@ -1,4 +1,6 @@
-"""A native child in another repository is identified as what it is (#1308).
+"""A native child in another repository is identified; a held container says what holds it.
+
+Issue #1308.
 
 GitHub's native sub-issues may live in another repository. The containment
 seam's native read kept only each sub-issue's number, so a child elsewhere was
@@ -9,9 +11,15 @@ names it `owner/repo#<n>` and reads its state there — one read, by the tracker
 own open/closed alone — closed is done, open holds, and one that cannot be read
 leaves the fold indeterminate. Nothing is written in another repository.
 
+`close-issue --mode=cascade-eligibility-close` on a held container now says what
+holds it: an open child, named (with its repository, for one elsewhere) with
+what releases the container; or a read that failed, with the re-run advice — and
+only then.
+
 Pinned through the real engine and the shipped predicate scripts against a fake
 `gh` on PATH, which logs every call it is given (the pattern of
-`tests/test_pm_closure_cascade_native_child.py`).
+`tests/test_pm_closure_cascade_native_child.py`), and `close-issue` run as a
+script with the real `pkit` on PATH.
 """
 
 from __future__ import annotations
@@ -382,4 +390,120 @@ def test_a_child_here_costs_what_it_did_and_one_elsewhere_one_read(project: Path
         ["issue", "view", "11", "--json", "state,milestone,labels"],
     ]
     # A child elsewhere: one read of its record, there.
+    assert _naming_elsewhere(project) == [["api", f"repos/{ELSEWHERE}/issues/42"]]
+
+
+# --- close-issue: what holds a container, and nothing written elsewhere --------
+
+
+def _close(root: Path) -> subprocess.CompletedProcess[str]:
+    script = root / ".pkit" / "capabilities" / "project-management" / "scripts" / "close-issue.py"
+    return subprocess.run(
+        [str(script), str(CONTAINER), "--mode=cascade-eligibility-close", "--yes"],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        timeout=300,
+    )
+
+
+_RERUN = "re-run once `gh` is reachable"
+
+
+def _writes(root: Path) -> list[list[str]]:
+    """Every call that writes: an issue changed, or an API call that is not a read."""
+    return [
+        call
+        for call in _calls(root)
+        if call[:2] in (["issue", "comment"], ["issue", "close"], ["issue", "edit"])
+        or (call[:1] == ["api"] and any(arg in ("-X", "--method", "-f", "-F") for arg in call))
+    ]
+
+
+def test_a_container_held_by_an_open_child_names_it_and_what_releases_it(
+    project: Path, pkit_on_path: Path
+) -> None:
+    issues = {CONTAINER: _container(), 11: _issue("OPEN", "Feature: #5\n")}
+    _tracker(project, issues)
+
+    done = _close(project)
+
+    assert done.returncode == 1, done.stderr
+    assert "#5 is held by its open child(ren):\n  - #11\n" in done.stderr
+    assert "→ close each open child; #5 becomes eligible when the last one closes." in done.stderr
+    assert _RERUN not in done.stderr
+    assert "held fail-closed" not in done.stderr
+    assert _writes(project) == []
+
+
+def test_a_container_held_by_an_open_child_elsewhere_names_its_repository(
+    project: Path, pkit_on_path: Path
+) -> None:
+    issues = {CONTAINER: _container()}
+    _tracker(project, issues, native={CONTAINER: [FOREIGN]}, foreign={FOREIGN: _issue("OPEN")})
+
+    done = _close(project)
+
+    assert done.returncode == 1, done.stderr
+    assert f"  - {FOREIGN}, a sub-issue in another repository\n" in done.stderr
+    assert (
+        f"→ {FOREIGN} holds #5 until it is closed in {ELSEWHERE}, or its sub-issue link "
+        "under #5 is removed; nothing is written in another repository from here."
+    ) in done.stderr
+    assert _RERUN not in done.stderr
+    assert _writes(project) == []
+
+
+def test_a_child_elsewhere_that_cannot_be_read_is_named_with_the_re_run_advice(
+    project: Path, pkit_on_path: Path
+) -> None:
+    issues = {CONTAINER: _container()}
+    foreign = {FOREIGN: _issue("OPEN")}
+    _tracker(project, issues, native={CONTAINER: [FOREIGN]}, foreign=foreign, unreadable=(FOREIGN,))
+
+    done = _close(project)
+
+    assert done.returncode == 1, done.stderr
+    assert "held fail-closed" in done.stderr
+    assert (
+        f"→ {FOREIGN}, a sub-issue in another repository, could not be read: gh exited 1"
+    ) in done.stderr
+    assert f"{FOREIGN} holds #5 until it is closed in {ELSEWHERE}" in done.stderr
+    assert _RERUN in done.stderr
+    assert "is held by its open child" not in done.stderr
+    assert _writes(project) == []
+
+
+def test_a_child_whose_issue_cannot_be_read_gets_the_re_run_advice(
+    project: Path, pkit_on_path: Path
+) -> None:
+    # #13 is natively under #5, but its issue cannot be read: the fold stops at
+    # its membership, a read that failed.
+    issues = {CONTAINER: _container(), 13: _issue("OPEN")}
+    _tracker(project, issues, native={CONTAINER: [13]}, unreadable=(13,))
+
+    done = _close(project)
+
+    assert done.returncode == 1, done.stderr
+    assert "held fail-closed" in done.stderr
+    assert "membership of candidate '13'" in done.stderr
+    assert _RERUN in done.stderr
+    assert "is held by its open child" not in done.stderr
+
+
+def test_closing_over_a_closed_child_elsewhere_writes_nothing_there(
+    project: Path, pkit_on_path: Path
+) -> None:
+    issues = {CONTAINER: _container()}
+    foreign = {FOREIGN: _issue("CLOSED", labels=[])}
+    _tracker(project, issues, native={CONTAINER: [FOREIGN]}, foreign=foreign)
+
+    done = _close(project)
+
+    assert done.returncode == 0, done.stderr
+    assert "[ok] closed #5 (cascade-eligibility, completed)." in done.stdout
+    writes = _writes(project)
+    assert ["issue", "close", "5", "--reason", "completed"] in writes
+    assert not [call for call in writes if any(ELSEWHERE in arg for arg in call)]
+    # The child elsewhere is only ever read.
     assert _naming_elsewhere(project) == [["api", f"repos/{ELSEWHERE}/issues/42"]]
