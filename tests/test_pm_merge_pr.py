@@ -8,6 +8,7 @@ best-effort branch cleanup through the shared `_lib.pr_merge` mechanic).
 from __future__ import annotations
 
 import importlib.util
+import subprocess
 import sys
 from pathlib import Path
 
@@ -984,6 +985,112 @@ def test_a_merge_with_no_answer_back_github_cannot_settle_is_owed(mp, monkeypatc
         "after the merge has run."
     ) in out
     assert calls["records"][99] == mp._Record(mp._OWED, "sha-head", "2026-10-01T12:00:00+00:00")
+
+
+def _merge_never_answered(mp, monkeypatch, *, answered_from: int = 0):
+    """merge-pr's seams, with the real merge request through the backbone in
+    this process: the backbone's `gh` merge is ended at its bound — never
+    answered — until the `answered_from`th one (0: never), which merges. The
+    PR reads open, on a base without a queue, until `state["merged"]`. A
+    clock the backbone's settling sleeps advance."""
+    real_merge = mp.pr_merge.squash_merge
+    calls = _wire_merge_seams(mp, monkeypatch, rollup=_MP_GREEN)
+    monkeypatch.setattr(mp.pr_merge, "squash_merge", real_merge)
+    state = {"merged": False, "asked": 0}
+
+    def read(pr_number, config):
+        merged = state["merged"]
+        return pull_request_backbone.reading(
+            mp.merge_queue,
+            has_queue=False,
+            pr_state="MERGED" if merged else "OPEN",
+            merged_at="t" if merged else "",
+            head_oid="sha-head",
+        )
+
+    def gh(argv):
+        state["asked"] += 1
+        if answered_from and state["asked"] >= answered_from:
+            state["merged"] = True
+            return subprocess.CompletedProcess(list(argv), 0, stdout="", stderr="")
+        raise subprocess.TimeoutExpired(list(argv), 30.0)
+
+    now = [0.0]
+
+    def sleep(seconds):
+        now[0] += seconds
+
+    monkeypatch.setattr(mp.merge_queue, "read", read)
+    pull_request_backbone.in_process(
+        monkeypatch, mp.merge_queue, gh=gh, read=read, sleep=sleep, clock=lambda: now[0]
+    )
+    return calls, state
+
+
+def test_a_merge_not_seen_made_that_shows_later_is_completed_by_a_rerun(mp, monkeypatch, capsys):
+    """The merge got no answer, and the backbone's two readings did not see it
+    made (#1256): the run exits 3, recording the after-merge steps as owed —
+    the service may still apply it — and says how it ends. The service applies
+    it after all: a re-run from this clone finds the PR merged, without a
+    queue, and completes it — the hooks fire and the head branch is deleted at
+    the head it merged at — rather than refusing it as merged by someone else."""
+    calls, state = _merge_never_answered(mp, monkeypatch)
+    rc = _run_merge_main(mp, monkeypatch, ["99", "--yes"])
+    captured = capsys.readouterr()
+    assert rc == 3
+    assert calls["order"] == []
+    assert "and was not seen made on two readings" in captured.err
+    assert "error: the merge of PR #99 was not seen made" in captured.err
+    assert "Run `merge-pr 99` again from this clone" in captured.err
+    assert calls["records"][99].state == mp._OWED
+
+    state["merged"] = True
+    opened = mp._gh_get_pr
+    monkeypatch.setattr(
+        mp, "_gh_get_pr", lambda n, config: {**opened(n, config), "state": "MERGED"}
+    )
+    rc = _run_merge_main(mp, monkeypatch, ["99", "--yes"])
+    out = capsys.readouterr().out
+    assert rc == 0, out
+    assert "a run from this clone returned before it saw the merge" in out
+    assert calls["order"] == _AFTER_THE_MERGE
+    assert calls["deletions"] == [(99, "sha-head", False)]
+    assert calls["records"][99].state == mp._RAN
+
+
+def test_a_retry_that_merges_replaces_what_an_earlier_run_left_owed(mp, monkeypatch, capsys):
+    """The rule for a stale owed record: the run that fires the hooks records
+    that it did, whichever run that is. A retry that merges the PR as a first
+    run would fires them once and leaves the record `ran`, so nothing an
+    earlier run left owed outlives the merge."""
+    calls, _ = _merge_never_answered(mp, monkeypatch, answered_from=2)
+    assert _run_merge_main(mp, monkeypatch, ["99", "--yes"]) == 3
+    assert calls["records"][99].state == mp._OWED
+    capsys.readouterr()
+
+    rc = _run_merge_main(mp, monkeypatch, ["99", "--yes"])
+    out = capsys.readouterr().out
+    assert rc == 0, out
+    assert calls["order"] == _AFTER_THE_MERGE
+    assert calls["records"][99].state == mp._RAN
+
+
+def test_a_merge_github_refused_owes_nothing(mp, monkeypatch, capsys):
+    """GitHub answered the merge with a refusal: nothing it may yet act on was
+    sent, so nothing is owed, and a PR someone else merges later is refused
+    as before."""
+    real_merge = mp.pr_merge.squash_merge
+    calls = _wire_merge_seams(mp, monkeypatch, rollup=_MP_GREEN)
+    monkeypatch.setattr(mp.pr_merge, "squash_merge", real_merge)
+
+    def refusing(argv):
+        return subprocess.CompletedProcess(
+            list(argv), 1, stdout="", stderr="GraphQL: Pull request is not mergeable"
+        )
+
+    pull_request_backbone.in_process(monkeypatch, mp.merge_queue, gh=refusing)
+    assert _run_merge_main(mp, monkeypatch, ["99", "--yes"]) == 3
+    assert calls["records"] == {}
 
 
 def test_the_record_is_kept_in_the_clones_git_directory(mp, tmp_path, monkeypatch):

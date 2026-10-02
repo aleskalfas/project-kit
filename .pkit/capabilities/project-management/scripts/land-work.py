@@ -837,14 +837,21 @@ def _done_work_failed(
     failure: str, issue: int, head: _Head | None, config: dict[str, Any], *, merging: bool
 ) -> tuple[int, str]:
     """The code and the line for a done-work run that raised: what happened to
-    the PR is read from GitHub — when the run was one that could merge it."""
+    the PR is read from GitHub — when the run was one that could merge it.
+    One reading that does not find it merged says what it found, never that
+    it did not merge: a request done-work sent before it raised may still
+    show, and the re-run reads the PR first."""
     if head is None:
         return EXIT_RETRY, (
             f"merge: stopped — done-work failed ({failure}) completing #{issue}'s merged PR. "
             f"Run `land-work {issue}` again to complete it"
         )
     number = head.pr_number
-    reading = _read_pr(number, config) if merging else _Checks(state="OPEN")
+    if not merging:
+        return EXIT_RETRY, (
+            f"merge: not merged — done-work failed ({failure}). Run `land-work {issue}` again"
+        )
+    reading = _read_pr(number, config)
     if reading.problem:
         return EXIT_ACCEPTED, (
             f"merge: unconfirmed — done-work failed ({failure}), and whether PR #{number} "
@@ -856,8 +863,11 @@ def _done_work_failed(
             f"merge: merged{_as_commit(number, config)}, but done-work failed after the merge "
             f"({failure}). Run `land-work {issue}` again to complete #{issue}"
         )
+    state = reading.state.lower() or "of no reported state"
     return EXIT_RETRY, (
-        f"merge: not merged — done-work failed ({failure}). Run `land-work {issue}` again"
+        f"merge: not seen merged — done-work failed ({failure}), and one reading since finds "
+        f"PR #{number} {state}. Run `land-work {issue}` again: it reads the PR first, and "
+        "completes it if it has merged"
     )
 
 

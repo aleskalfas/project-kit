@@ -57,22 +57,24 @@ VERSION = 1
 
 #: How long pm waits for each of the backbone's answers, by subcommand, in
 #: seconds. The backbone bounds each of its own `gh` calls (a reading, a
-#: request), and each bound here holds the longest the subcommand's calls can
-#: take, and starting `pkit`: a reading is up to three `gh` reads, when the
-#: host knows no merge queues; the squash-commit defaults one; a merge or an
-#: enqueue gh's merge request and, when it gets no answer, the two readings
-#: that settle it and the interval between them; a dequeue a reading, the
-#: request, and a reading again — or the two that settle it; a branch
-#: deletion two readings, the request and a reading again. A test holds them
-#: to the backbone's bounds, so the backbone's document comes back before pm
-#: stops waiting. A run that has not answered by then is ended with everything
-#: it started, the `gh` it runs among it.
+#: request) and states the longest each subcommand can run, every call at its
+#: bound (`pull_request_landing.longest_seconds`): a reading is up to three
+#: `gh` reads, when the host knows no merge queues; the squash-commit defaults
+#: one; a merge or an enqueue the cross-repository guard, gh's merge request
+#: and, when it gets no answer, the readings that settle it — the second no
+#: sooner than its window after the request; a dequeue the guard, a reading
+#: or two, and up to two requests, each with the readings that settle it; a
+#: branch deletion the guard, two readings, the request and a reading again.
+#: A test holds each bound here above the backbone's figure with room to
+#: start `pkit`, so the backbone's document comes back before pm stops
+#: waiting. A run that has not answered by then is ended with everything it
+#: started, the `gh` it runs among it.
 TIMEOUT_SECONDS: Mapping[str, float] = {
-    "read": 60.0,
+    "read": 90.0,
     "squash-defaults": 60.0,
-    "merge": 180.0,
-    "enqueue": 180.0,
-    "dequeue": 240.0,
+    "merge": 210.0,
+    "enqueue": 210.0,
+    "dequeue": 600.0,
     "delete-branch": 180.0,
 }
 
@@ -180,12 +182,21 @@ class Wait:
 FOREIGN_REPOSITORY = "foreign-repository"
 
 #: A request's document's `reason_kind` when the request got no answer and
-#: the backbone settled it by reading: :data:`NOT_MADE`, two readings running
-#: found its end state not reached, so it was not made (`accepted` false);
-#: :data:`UNANSWERED`, the PR could not be read since, so whether it was made
-#: is not known (`accepted` null) — unconfirmed.
+#: the backbone settled it by reading: :data:`NOT_MADE`, two readings did not
+#: see it made (`accepted` false) — what they saw, not that it was not made,
+#: since the service may still apply it; :data:`UNANSWERED`, the PR could not
+#: be read since, so whether it was made is not known (`accepted` null) —
+#: unconfirmed. A dequeue the service answered whose PR could not be read
+#: since is unconfirmed too, :data:`NOT_READ`; one that found the PR merged
+#: is not accepted, :data:`HAS_MERGED`.
 NOT_MADE = "not-made"
 UNANSWERED = "unanswered"
+NOT_READ = "unreadable"
+HAS_MERGED = "merged"
+
+# The `reason_kind`s that come with a null `accepted`: whether the request
+# was made is not known.
+_UNCONFIRMED_KINDS = (UNANSWERED, NOT_READ)
 
 
 @dataclass(frozen=True)
@@ -193,7 +204,8 @@ class Outcome:
     """What a merge request the backbone made came to (`_lib.pr_merge`)."""
 
     #: True once made; False when not; None when the backbone could not tell
-    #: whether it was made (`reason_kind` :data:`UNANSWERED`): unconfirmed.
+    #: whether it was made (`reason_kind` :data:`UNANSWERED`, or
+    #: :data:`NOT_READ` for a dequeue): unconfirmed.
     accepted: bool | None
     #: gh's exit code; None when gh could not be run, or the backbone judged
     #: the request on a reading.
@@ -204,8 +216,9 @@ class Outcome:
     #: :data:`FOREIGN_REPOSITORY` when the backbone's cross-repository guard
     #: refused the request, which was then not made; :data:`NOT_MADE` or
     #: :data:`UNANSWERED` when the request got no answer and the backbone
-    #: settled it by reading; "" otherwise — and from a backbone whose
-    #: document does not say.
+    #: settled it by reading; :data:`NOT_READ` or :data:`HAS_MERGED` for a
+    #: dequeue (above); "" otherwise — and from a backbone whose document does
+    #: not say.
     reason_kind: str = ""
     #: The backbone's guard as its document states it — `verdict` (the
     #: comparison alone), `undetermined_kind`, `anchor`, `target`, `cleared`
@@ -333,15 +346,16 @@ def request(args: list[str], config: dict[str, Any]) -> Outcome:
     The backbone runs the cross-repository guard before the request; a
     request it refused is not accepted, with `reason_kind`
     :data:`FOREIGN_REPOSITORY` and what the guard compared. A request that
-    got no answer the backbone settles by reading: made, accepted; not made
-    on two readings running, not accepted with `reason_kind` :data:`NOT_MADE`;
+    got no answer the backbone settles by reading: made, accepted; not seen
+    made on two readings, not accepted with `reason_kind` :data:`NOT_MADE`;
     the PR not readable since, `accepted` None with `reason_kind`
-    :data:`UNANSWERED` — the one answer whose `accepted` is null, which says
+    :data:`UNANSWERED` — or, for a dequeue the service answered,
+    :data:`NOT_READ`: the only answers whose `accepted` is null, which say
     whether it was made is not known."""
     document = _first(args, config)
     accepted = document.get("accepted")
     reason_kind = _text(document.get("reason_kind"))
-    unconfirmed = "accepted" in document and accepted is None and reason_kind == UNANSWERED
+    unconfirmed = "accepted" in document and accepted is None and reason_kind in _UNCONFIRMED_KINDS
     if not (isinstance(accepted, bool) or unconfirmed):
         raise Unreadable(
             f"the backbone's answer does not say whether the request was accepted "

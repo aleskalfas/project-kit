@@ -1262,6 +1262,17 @@ def _not_merged(
             f"error: {landing.message} #{issue_number} stays in Review; once the new "
             f"commits have been reviewed, re-run `done-work {issue_number}`.",
         )
+    if landing.outcome == pr_merge.FAILED and landing.requested:
+        # The backbone's two readings did not see the request made, and said
+        # so (`pr_merge`); the service may still apply it.
+        return _ended(
+            REFUSED,
+            3,
+            reason=f"the merge request for PR #{pr_number} was not seen made (the backbone's "
+            f"reason is above), and may still show; run `done-work {issue_number}` again: it "
+            "reads the PR first, and completes it if it has merged",
+            retry=True,
+        )
     if landing.outcome == pr_merge.FAILED:
         # gh's reason is printed already (`pr_merge`); whether a push since is
         # what made it fail is for the caller to read.

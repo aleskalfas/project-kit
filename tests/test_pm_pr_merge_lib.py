@@ -167,13 +167,18 @@ def test_enqueue_is_auto_pinned_to_the_checked_head_and_nothing_else(lib, monkey
     assert captured[0] == ["gh", "pr", "merge", "42", "--auto", "--match-head-commit", "a" * 40]
 
 
+_HEAD_MODIFIED = (
+    "GraphQL: Head branch was modified. Review and try the merge again. (mergePullRequest)"
+)
+
+
 def test_a_refused_enqueue_reports_gh_and_returns_false(lib, monkeypatch, capsys) -> None:
     def refusing(args, config, **kwargs):
-        return subprocess.CompletedProcess(args, 1, stdout="", stderr="Head sha didn't match")
+        return subprocess.CompletedProcess(args, 1, stdout="", stderr=_HEAD_MODIFIED)
 
     _backbone_gh(monkeypatch, lib, refusing)
     assert lib.enqueue(42, config={}) is False
-    assert "Head sha didn't match" in capsys.readouterr().err
+    assert _HEAD_MODIFIED in capsys.readouterr().err
 
 
 def test_squash_merge_threads_config_to_the_backbone(lib, monkeypatch) -> None:
@@ -198,12 +203,15 @@ def test_squash_merge_reports_gh_failure(lib, monkeypatch, capsys) -> None:
             args=args,
             returncode=1,
             stdout="",
-            stderr="Pull request is not mergeable",
+            stderr="GraphQL: Pull request is not mergeable (mergePullRequest)",
         ),
     )
     assert lib.squash_merge(42, pr_title="fix: x", admin=False, config={}) is False
     err = capsys.readouterr().err
-    assert "error: gh pr merge failed (exit 1): Pull request is not mergeable" in err
+    assert (
+        "error: gh pr merge failed (exit 1): GraphQL: Pull request is not mergeable "
+        "(mergePullRequest)"
+    ) in err
 
 
 def test_squash_merge_without_pr_number_is_a_failure(lib, monkeypatch, capsys) -> None:
@@ -815,7 +823,8 @@ class _Queue:
         def fake_gh(args):
             self.commands.append(list(args))
             code = 1 if gh_fails else 0
-            return subprocess.CompletedProcess(args, code, stdout="", stderr="refused")
+            said = "GraphQL: the service refused it" if gh_fails else ""
+            return subprocess.CompletedProcess(args, code, stdout="", stderr=said)
 
         now = [0.0]
 
@@ -966,9 +975,13 @@ def test_an_unreadable_queue_lands_nothing(lib, monkeypatch):
 
 
 def test_a_refused_enqueue_is_a_failure(lib, monkeypatch):
+    """GitHub answered the enqueue with a refusal: nothing it may yet act on
+    was sent, so the landing does not count the request as sent."""
     queue = _Queue(lib, monkeypatch, [_reading(lib)], gh_fails=True)
-    assert lib.land(_request(lib), {}).outcome == lib.FAILED
+    landing = lib.land(_request(lib), {})
+    assert (landing.outcome, landing.requested) == (lib.FAILED, False)
     assert len(queue.merges()) == 1
+    assert queue.sleeps == []
 
 
 @pytest.mark.parametrize(
@@ -1114,11 +1127,12 @@ def test_a_request_with_no_answer_back_that_github_reports_open_is_unconfirmed_n
 
 def _settled(lib, accepted: bool | None, kind: str) -> Any:
     """The backbone's answer to a request that got no answer, settled by
-    reading: not made (`accepted` false), or unconfirmed (`accepted` null)."""
+    reading: not seen made (`accepted` false), or unconfirmed (`accepted`
+    null)."""
     reason = (
-        "the merge of PR #42 got no answer (HTTP 502: Bad Gateway), and two readings since, "
-        "10 s apart, find PR #42 neither merged nor queued (not in the queue): the merge was "
-        "not made"
+        "the merge of PR #42 got no usable answer (HTTP 502: Bad Gateway), and was not seen "
+        "made on two readings 40 s apart, the second 40 s after it was sent: PR #42 reads "
+        "neither merged nor queued (not in the queue)"
         if kind == "not-made"
         else "the merge of PR #42 got no answer (HTTP 502: Bad Gateway), and PR #42 could not "
         "be read since (HTTP 502): whether the merge was made is not known"
@@ -1129,17 +1143,21 @@ def _settled(lib, accepted: bool | None, kind: str) -> Any:
 @pytest.mark.parametrize(
     ("first", "asked"), [({"has_queue": False}, "merge"), ({}, "enqueue")], ids=["merge", "enqueue"]
 )
-def test_a_request_the_backbone_settled_as_not_made_is_a_failure_in_its_words(
+def test_a_request_the_backbone_did_not_see_made_is_a_failure_still_counted_as_sent(
     lib, monkeypatch, capsys, first, asked
 ) -> None:
-    """Two readings running found the request not made: nothing merged, and
-    the verb may run again — the backbone's words say why."""
+    """Two readings did not see the request made: the landing fails, in the
+    backbone's words, which say what the readings saw — and counts the
+    request as sent (`requested`), since GitHub may still apply it, so a verb
+    can owe what follows a merge that shows later."""
     _Queue(lib, monkeypatch, [_reading(lib, **first)])
     answered = _answering(lib, monkeypatch, _settled(lib, False, "not-made"))
     landing = lib.land(_request(lib), {})
-    assert landing.outcome == lib.FAILED
+    assert (landing.outcome, landing.requested) == (lib.FAILED, True)
     assert [args[0] for args in answered] == [asked]
-    assert "the merge was not made." in capsys.readouterr().err
+    err = capsys.readouterr().err
+    assert "and was not seen made on two readings 40 s apart" in err
+    assert "was not made" not in err
 
 
 @pytest.mark.parametrize(
@@ -1192,6 +1210,55 @@ def test_a_dequeue_whose_end_is_not_known_says_so_and_how_to_read_it(
     assert "whether taking it out of the merge queue worked is not known" in landing.message
     assert "`pkit pull-request read 42`; if it is still queued, take it out" in landing.message
     assert "failed" not in landing.message
+
+
+def test_a_dequeue_the_service_answered_but_no_reading_confirms_is_not_known(
+    lib, monkeypatch
+) -> None:
+    """The service accepted the dequeue, and the PR could not be read since:
+    more evidence than no answer at all, so never "failed" — not known, as
+    the backbone's `accepted: null`, `unreadable` says."""
+    moved = _reading(lib, head_oid="sha-pushed", in_queue=True)
+    _Queue(lib, monkeypatch, [_reading(lib, in_queue=True), moved])
+    _answering(
+        lib,
+        monkeypatch,
+        lib.merge_queue.Outcome(
+            None, 0, "the service accepted the dequeue of PR #42, and …", "unreadable"
+        ),
+    )
+    landing = lib.land(_request(lib), {})
+    assert "whether taking it out of the merge queue worked is not known" in landing.message
+    assert "failed" not in landing.message
+
+
+def test_a_dequeue_that_finds_the_pr_merged_says_it_merged_not_to_take_it_out(
+    lib, monkeypatch
+) -> None:
+    """The queue merged the PR before it could be taken out: the landing says
+    it merged, at which head — never "it may still merge… take it out
+    yourself", which is no longer true of a merged PR."""
+    moved = _reading(lib, head_oid="sha-pushed", in_queue=True)
+    _Queue(lib, monkeypatch, [_reading(lib, in_queue=True), moved])
+    _answering(
+        lib,
+        monkeypatch,
+        lib.merge_queue.Outcome(
+            False,
+            None,
+            "PR #42 has merged at head sha-pus (merged at t), which no dequeue undoes",
+            "merged",
+        ),
+    )
+    landing = lib.land(_request(lib), {})
+    assert landing.outcome == lib.HEAD_MOVED
+    assert landing.message == (
+        "PR #42's head moved from sha-hea to sha-pus after its gates checked it, and it merged "
+        "before it could be taken out of the merge queue: PR #42 has merged at head sha-pus "
+        "(merged at t), which no dequeue undoes. The commits pushed after its gates checked it "
+        "may be in that merge; look at it."
+    )
+    assert "take it out yourself" not in landing.message.lower()
 
 
 def test_a_merge_at_a_head_the_gates_did_not_check_is_warned(lib, monkeypatch, capsys) -> None:

@@ -1083,8 +1083,12 @@ def test_done_work_raising_still_ends_with_a_step_line(world, capsys, monkeypatc
     monkeypatch.setattr(run.land.done_work, "run", boom)
     rc, out, _err = run.run("--yes", capsys=capsys)
     assert rc == run.land.EXIT_RETRY
+    # One reading after done-work raised says what it found, never "not merged":
+    # a request done-work sent may still show, and the re-run reads it first.
     assert out.splitlines()[-1] == (
-        f"merge: not merged — done-work failed (RuntimeError: boom). Run `land-work {ISSUE}` again"
+        f"merge: not seen merged — done-work failed (RuntimeError: boom), and one reading since "
+        f"finds PR #{PR} open. Run `land-work {ISSUE}` again: it reads the PR first, and "
+        "completes it if it has merged"
     )
 
 
