@@ -53,10 +53,11 @@ re-parent the issue, and a re-run links it. A closed issue under a closed parent
 
 A parent of a type the issue's type may not sit under is refused as
 `create-issue` and `set-field --parent` refuse it
-([project-management:DEC-005-linking-and-containment]): its type is read from
-its title in the issue list already read (`_lib.containment_graph`), so the
-check costs no read. A parent whose type cannot be told from its title is
-outside the graph and is linked.
+([project-management:DEC-005-linking-and-containment]): both types are told
+from the titles and labels in the issue list already read, as every check tells
+them (`_lib.containment_graph.issue_type` — under a substrate map only by the
+map's title-prefix binding), so the check costs no read. Where either type
+cannot be told the pair is outside the graph and is linked.
 
 A conflict is not linked either: taking the issue from the parent it has would
 be a re-parent this verb was not asked for. The native parent wins (DEC-005):
@@ -226,13 +227,16 @@ def main() -> int:
     # Kind-driven Task prefixes ([Bug] / [Docs] / ...) live in classification.yaml;
     # without it a kind-prefixed Task reads as an unrecognised type.
     classification = _read_yaml(capability_root / "schemas" / "classification.yaml", yaml_loader)
+    # The adopter's substrate-map, None for greenfield: an issue's type is told
+    # through it for the containment check (`containment_graph.issue_type`).
+    substrate_map = axis_labels.load_substrate_map(capability_root)
     mode = axis_labels.containment_mode(capability_root)
     textual = mode == axis_labels.CONTAINMENT_TEXTUAL
 
     # One read of every issue, open and closed: it supplies the selected
     # bodies, whether each named parent exists and is open, and — in textual
     # mode — the corpus the children views are rendered from.
-    corpus = containment.fetch_issue_corpus(config, fields="number,title,body,state")
+    corpus = containment.fetch_issue_corpus(config, fields="number,title,body,state,labels")
     if corpus is None:
         print(
             "error: the issue list could not be read (gh failed); nothing was examined.",
@@ -270,6 +274,7 @@ def main() -> int:
             issue_types,
             classification,
             corpus_complete=corpus.complete,
+            substrate_map=substrate_map,
         )
         for number in selected
     ]
@@ -340,6 +345,7 @@ def classify(
     classification: dict,
     *,
     corpus_complete: bool,
+    substrate_map: axis_labels.SubstrateMap | None,
 ) -> Entry:
     """The plan's outcome for one issue, from the issue list alone (no gh).
 
@@ -347,7 +353,8 @@ def classify(
     parent that exists becomes WOULD_LINK — unless its type is one the issue's
     type may not sit under, or it is closed while the issue is open (see the
     module docstring); whether the link already exists is asked of the native
-    side separately (:func:`check_native_links`).
+    side separately (:func:`check_native_links`). ``substrate_map`` (``None``
+    for greenfield) is the vocabulary both types are told in for that check.
     """
     row = rows[number]
     title = str(row.get("title") or "")
@@ -417,15 +424,24 @@ def classify(
         )
     # The containment graph (DEC-005): the link would put the issue under a
     # parent its type may not sit under, so it is refused, as create-issue and
-    # set-field refuse it. The parent's title is in the list already read.
+    # set-field refuse it. Both types are told from the list already read, in
+    # the map's vocabulary where one is present.
+    child_type = containment_graph.issue_type(
+        title,
+        issue_types,
+        classification=classification,
+        substrate_map=substrate_map,
+        labels=row.get("labels"),
+    )
     parent_read = containment_graph.typed_parent(
         parent,
         str(parent_row.get("title") or ""),
         issue_types,
         classification=classification,
-        substrate_map=None,
+        substrate_map=substrate_map,
+        labels=parent_row.get("labels"),
     )
-    check = containment_graph.check_parent(issue_types, structural_type, parent_read)
+    check = containment_graph.check_parent(issue_types, child_type, parent_read)
     if check.verdict is containment_graph.Verdict.REFUSED:
         return Entry(
             number,

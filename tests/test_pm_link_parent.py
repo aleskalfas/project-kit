@@ -72,8 +72,9 @@ def _stage(tmp_path: Path, *, containment: str | None = None) -> Path:
     return root
 
 
-def _issue(number: int, title: str, body: str, state: str = "OPEN") -> dict:
-    return {"number": number, "title": title, "body": body, "state": state}
+def _issue(number: int, title: str, body: str, state: str = "OPEN", labels=()) -> dict:
+    labelled = [{"name": name} for name in labels]
+    return {"number": number, "title": title, "body": body, "state": state, "labels": labelled}
 
 
 def _tracker() -> list[dict]:
@@ -667,10 +668,17 @@ def schemas() -> tuple[dict, dict]:
     )
 
 
-def _classify(lp, schemas, rows, number, *, complete=True):
+def _classify(lp, schemas, rows, number, *, complete=True, substrate_map=None):
     issue_types, classification = schemas
     by_number = {row["number"]: row for row in rows}
-    return lp.classify(number, by_number, issue_types, classification, corpus_complete=complete)
+    return lp.classify(
+        number,
+        by_number,
+        issue_types,
+        classification,
+        corpus_complete=complete,
+        substrate_map=substrate_map,
+    )
 
 
 def test_an_unrecognised_title_has_no_parent_line(lp, schemas):
@@ -801,3 +809,50 @@ def test_a_task_under_a_kind_prefixed_task_is_refused_and_nothing_is_posted(
     assert fake.posts == [(90, 101)]
     assert "#201  not linked — a task may not sit under #200, which is a task" in out.out
     assert "done: 1 linked, 1 parent's type not allowed" in out.out
+
+
+def test_an_untitled_kind_labelled_parent_is_a_task_from_the_list_read(lp, schemas):
+    """The issue list carries labels: a parent with no type prefix and a `type:bug`
+    label is a Task in greenfield, so a Task under it is refused."""
+    rows = [
+        _issue(1, "[Task] t", "Feature: #2\n"),
+        _issue(2, "Login crashes", "", labels=("type:bug",)),
+    ]
+    assert _classify(lp, schemas, rows, 1).outcome is lp.Outcome.PARENT_TYPE_REFUSED
+
+
+_STORY = {"type": {"title-prefix": {"remap": {"feature": "[Story]", "task": "[Task]"}}}}
+_TYPE_BY_LABEL = {"type": {"label": {"remap": {"bug": "kind/bug"}}}}
+
+
+@pytest.mark.parametrize(
+    ("axes", "parent", "outcome"),
+    [
+        (_STORY, _issue(2, "[Task] a task", ""), "PARENT_TYPE_REFUSED"),
+        (_STORY, _issue(2, "[Story] a story", ""), "WOULD_LINK"),
+        (_TYPE_BY_LABEL, _issue(2, "[Bug] Login crashes", ""), "WOULD_LINK"),
+        (_TYPE_BY_LABEL, _issue(2, "Login crashes", "", labels=("type:bug",)), "WOULD_LINK"),
+    ],
+    ids=["story-map-task", "story-map-story", "label-map-kind-prefix", "label-map-kind-label"],
+)
+def test_under_a_map_both_types_are_told_by_its_title_prefixes(lp, schemas, axes, parent, outcome):
+    """Under a map a type is told only by the map's title-prefix binding: a Task
+    under a `[Task]` is refused, under a `[Story]` (a Feature) linked; where the
+    map does not carry `type` in titles no type is told, and the pair links."""
+    rows = [_issue(1, "[Task] t", "Feature: #2\n"), parent]
+    entry = _classify(lp, schemas, rows, 1, substrate_map=lp.axis_labels.SubstrateMap(axes=axes))
+    assert entry.outcome is getattr(lp.Outcome, outcome)
+
+
+def test_the_issue_list_is_read_with_labels(lp, tmp_path, monkeypatch, capsys):
+    fake = FakeGitHub(_tracker())
+    seen: list[str] = []
+    real = lp.containment.fetch_issue_corpus
+
+    def spy(config, **kwargs):
+        seen.append(kwargs.get("fields", ""))
+        return real(config, **kwargs)
+
+    monkeypatch.setattr(lp.containment, "fetch_issue_corpus", spy)
+    _run(lp, monkeypatch, capsys, _stage(tmp_path), fake, "101", "--dry-run")
+    assert seen and "labels" in seen[0].split(",")
